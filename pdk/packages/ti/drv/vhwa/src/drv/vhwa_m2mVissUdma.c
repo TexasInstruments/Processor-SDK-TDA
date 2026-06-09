@@ -75,7 +75,7 @@
  *
  **/
 static void vhwaM2mVissSetupPacketInfo(const Vhwa_M2mVissChParams *chPrms,
-    uint32_t complRin);
+    uint32_t complRingNum);
 static void vhwaM2mVissSetupGlbceCntxtPacketInfo(uint8_t *pTrMem,
     uint32_t complRingNum);
 /**

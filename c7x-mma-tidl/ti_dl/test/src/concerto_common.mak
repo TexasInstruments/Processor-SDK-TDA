@@ -25,13 +25,21 @@ CSOURCES += $(foreach file, $(TIDL_TB_FILES), ../$(file))
 CSOURCES += $(foreach file, $(COMMON_FILES), ../../../../common/$(file))
 
 # include search directories needed by all platforms
-ifeq ($(RTOS_SDK),mcu_plus_sdk)
+ifeq ($(RTOS_SDK),mcu_sdk)
+IDIRS += $(MCU_SDK_PATH)/source
+IDIRS += $(MCU_SDK_PATH)/source/drivers
+IDIRS += $(MCU_SDK_PATH)/source/drivers/hw_include
+IDIRS += $(DMA_UTILS_PATH)
+IDIRS += $(DMA_UTILS_PATH)/include
+IDIRS += $(DMA_UTILS_PATH)/csl
+IDIRS += $(DMA_UTILS_PATH)/udma_standalone/include
+else ifeq ($(RTOS_SDK),mcu_plus_sdk)
 IDIRS += $(MCU_PLUS_SDK_PATH)
 IDIRS += $(MCU_PLUS_SDK_PATH)/source
 IDIRS += $(MCU_PLUS_SDK_PATH)/source/drivers
 IDIRS += $(MCU_PLUS_SDK_PATH)/source/drivers/dmautils
 IDIRS += $(VISION_APPS_PATH)
-else
+else ifeq ($(RTOS_SDK),pdk)
 IDIRS += $(PDK_PATH)
 IDIRS += $(PDK_PATH)/ti/drv/udma/dmautils
 IDIRS += $(PDK_PATH)/ti/csl
@@ -53,6 +61,10 @@ ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J721S2 j721s2))
 endif
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J784S4 j784s4))
     CFLAGS += -DSOC_J784S4
+endif
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+    CFLAGS += -DSOC_TDA54
+    DEFS+=DMA_UTILS_STANDALONE
 endif
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J742S2 j742s2))
     CFLAGS += -DSOC_J742S2
@@ -76,8 +88,11 @@ ifeq ($(TIDL_WRITE_PRINTS_TO_BUF), 1)
 DEFS+=TIDL_WRITE_PRINTS_TO_BUF
 endif
 
-ifeq ($(RTOS_SDK),mcu_plus_sdk)
+ifeq ($(RTOS_SDK),$(filter $(RTOS_SDK), mcu_plus_sdk))
 DEFS+=MCU_PLUS_SDK
+endif
+ifeq ($(RTOS_SDK),$(filter $(RTOS_SDK), mcu_sdk))
+DEFS+=MCU_SDK
 endif
 
 ifeq ($(TIDL_PRESILICON_SDK_UC_ENABLE), 1)
@@ -95,6 +110,6 @@ else ifeq ($(ENABLE_SDK_10_1_COMPATIBILITY), 1)
 DEFS+=ENABLE_SDK_10_1_COMPATIBILITY
 endif
 
-ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), am62a AM62A j722s J722S))
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), am62a AM62A j722s J722S TDA54 tda54))
     DEFS += DMA_UTILS_STANDALONE
 endif

@@ -957,6 +957,17 @@ static void Dss_dispDrvClientCb(void *arg0)
             }
         }
 
+        /* Refresh CLUT data*/
+        if (instObj->pipeParams[instObj->pipeId].lutRefreshEnable == UTRUE)
+        {
+            /* Get video pipe registers */
+            socInfo = Dss_getSocInfo();
+            pipeRegs = socInfo->pipeRegs[instObj->pipeId];
+            GT_assert(DssTrace, (NULL != pipeRegs));
+            /* Refresh CLUT table */
+            CSL_dssVidPipeSetClutConfig(pipeRegs, instObj->pipeParams[instObj->pipeId].pipeCfg.clutData);
+        }
+
         if(NULL != instObj->fdmCbParams.fdmCbFxn)
         {
             /* Give callback to application if periodic call back is enabled or

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024 Texas Instruments Incorporated
+ *  Copyright (C) 2024-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -307,7 +307,7 @@ static void App_initTxParams(appTxObj* appObj)
     uint32_t loopCnt = 0U;
 
     /* set instance to be used for transmit */
-    if (0U == CSITX_INSTANCE)    
+    if (0U == CSITX_INSTANCE)
     {
         appObj->instId = CSITX_INSTANCE_ID_0;
     }
@@ -316,14 +316,14 @@ static void App_initTxParams(appTxObj* appObj)
     Csitx_initParamsInit(&appObj->initPrms);
     /* set instance configuration parameters */
     Csitx_createParamsInit(&appObj->createPrms);
-    
-    if (0U == CSITX_INSTANCE)    
+
+    if (0U == CSITX_INSTANCE)
     {
         appObj->createPrms.instCfg.dphyCfg.inst = CSITX_INSTANCE_ID_0;
     }
 
     appObj->createPrms.numCh = APP_TX_CH_NUM;
-    
+
     /* set channel configuration parameters */
     for (loopCnt = 0U ; loopCnt < appObj->createPrms.numCh ; loopCnt++)
     {
@@ -352,7 +352,7 @@ static void App_initTxParams(appTxObj* appObj)
     appObj->createPrms.instCfg.rxCompEnable    = (uint32_t)1U;
     appObj->createPrms.instCfg.rxv1p3MapEnable = (uint32_t)1U;
     appObj->createPrms.instCfg.numDataLanes    = 4U;
-    
+
     for (loopCnt = 0U ;
          loopCnt < appObj->createPrms.instCfg.numDataLanes ;
          loopCnt++)

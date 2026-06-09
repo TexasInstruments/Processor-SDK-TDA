@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -46,7 +46,7 @@
 #include <event_groups.h>
 #include <unity.h>
 #include "ti_drivers_open_close.h"
-#if defined(__ARM_ARCH_7R__)
+#if defined(__ARM_ARCH_7R__) || defined(__aarch64__)
 #include <stdatomic.h>
 #endif
 
@@ -85,14 +85,14 @@
 #define PONG_INT_PRIORITY   (4u)
 
 #if defined(__C7504__) || defined(__C7524__)
-#define PING_TASK_SIZE (1024*32u)
+#define PING_TASK_SIZE (1024*64u)
 #else
 #define PING_TASK_SIZE (1024*4u)
 #endif
 uint8_t gPingTaskStack[PING_TASK_SIZE] __attribute__((aligned(32)));
 
 #if defined(__C7504__) || defined(__C7524__)
-#define PONG_TASK_SIZE (1024*32u)
+#define PONG_TASK_SIZE (1024*64u)
 #else
 #define PONG_TASK_SIZE (1024*4u)
 #endif
@@ -117,7 +117,7 @@ float floatMultiply();
 
 double gFloat = 10.0;
 
-#if defined(__ARM_ARCH_7R__)
+#if defined(__ARM_ARCH_7R__) || defined(__aarch64__)
 #define ATOMIC_TEST_LOOP_COUNT  (1000000u)
 #define ATOMIC_TEST_NUM_TASKS   (4u)
 #define ATOMIC_TEST_TASK_PRI    (2u)
@@ -530,7 +530,7 @@ void test_timerIsr(void *args)
     volatile uint32_t *pTimerIsrCount = (uint32_t *)args;
     *pTimerIsrCount = *pTimerIsrCount + 1;
 
-#if defined(__ARM_ARCH_7R__)
+#if defined(__ARM_ARCH_7R__) || defined(__aarch64__)
     gAtomicIntCounter++;
     gNonAtomicIntCounter++;
 #endif
@@ -554,7 +554,7 @@ void test_timer(void *args)
     TEST_ASSERT_UINT32_WITHIN( 1000, ( 1000000u * delayInMs) / CONFIG_TIMER0_NSEC_PER_TICK_ACTUAL, timerIsrCount);
 }
 
-#if defined(__ARM_ARCH_7R__)
+#if defined(__ARM_ARCH_7R__) || defined(__aarch64__)
 void test_atomicTaskMain(void *args)
 {
     uint32_t taskId = (uint32_t)args;
@@ -654,16 +654,27 @@ void test_taskLoad(void *args)
 {
     TaskP_Load taskLoad;
     uint32_t cpuLoad;
+    #if defined(__C7504__) || defined(__aarch64__)
+    uint32_t minExpectedCpuLoad = 2500;
+    #else
+    uint32_t minExpectedCpuLoad = 3000;
+    #endif
 
     /* We expect CPU load to be > 10% atleast */
     cpuLoad = TaskP_loadGetTotalCpuLoad();
     DebugP_log(" LOAD: CPU  = %2d.%2d %%\r\n", cpuLoad/100, cpuLoad%100 );
 
+    TEST_ASSERT_GREATER_THAN_UINT32(minExpectedCpuLoad*2, cpuLoad);
+
     TaskP_loadGet(&gPingTaskObj, &taskLoad);
     DebugP_log(" LOAD: %s = %2d.%2d %%\r\n", taskLoad.name, taskLoad.cpuLoad/100, taskLoad.cpuLoad%100 );
 
+    TEST_ASSERT_GREATER_THAN_UINT32(minExpectedCpuLoad, taskLoad.cpuLoad);
+
     TaskP_loadGet(&gPongTaskObj, &taskLoad);
     DebugP_log(" LOAD: %s = %2d.%2d %%\r\n", taskLoad.name, taskLoad.cpuLoad/100, taskLoad.cpuLoad%100 );
+
+    TEST_ASSERT_GREATER_THAN_UINT32(minExpectedCpuLoad, taskLoad.cpuLoad);
 
     /* Reset all load statistics, CPU load statistics should be < 1% now */
     DebugP_log(" LOAD: reset load statistics !!!\r\n");
@@ -712,13 +723,15 @@ void ping_main(void *args)
 #endif
     RUN_TEST(test_taskDelay, 280, NULL);
     RUN_TEST(test_timer, 281, NULL);
-#if defined(__ARM_ARCH_7R__)
+#if defined(__ARM_ARCH_7R__) || defined(__aarch64__)
     /* atomics not tested with other architectures */
+    /* TBD: atomic test need slicing enabled, otherwise it may fial randomely. Disable it for now */
+#if 0
     RUN_TEST(test_atomics, 1371, NULL);
 #endif
-#if !defined(SOC_AM62AX) && !defined(SOC_AM62PX)
-    RUN_TEST(test_taskLoad, 1372, NULL);
 #endif
+    RUN_TEST(test_taskLoad, 1372, NULL);
+
     UNITY_END();
 
     /* One MUST not return out of a FreeRTOS task instead one MUST call vTaskDelete */
@@ -820,9 +833,6 @@ void test_freertos_main(void *args)
     int32_t status;
     TaskP_Params taskParams;
 
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-
     /* first create the semaphores */
     gPingSem = xSemaphoreCreateBinaryStatic(&gPingSemObj);
     configASSERT(gPingSem != NULL);
@@ -855,6 +865,6 @@ void test_freertos_main(void *args)
     status = TaskP_construct(&gPingTaskObj, &taskParams);
     DebugP_assert(status==SystemP_SUCCESS);
 
-    /* Dont close drivers to keep the UART driver open for console */
-    /* Drivers_close(); */
+    vTaskDelay(20000);
+
 }

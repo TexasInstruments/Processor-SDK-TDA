@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2018-2025 Texas Instruments Incorporated
+ *  Copyright (c) 2025-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -359,6 +359,7 @@ static const UdmaTestPktdmaChPrm gUdmaTestPktdmaChPrm[] =
         .mappedChGrp    = UDMA_MAPPED_TX_GROUP_SAUL,
         .peerChNum      = UDMA_TEST_PKTDMA_SAUL_TX_PEER_CH,
     },
+/* Removed ICSSG params for PKTDMA since it is not supported by j722s */
 #if !defined(SOC_J722S)
     {
         .pktdmachPrmId  = UDMA_TEST_PKTDMA_CH_PRMID_ICSSG_0_TX,
@@ -391,6 +392,7 @@ static const UdmaTestPktdmaChPrm gUdmaTestPktdmaChPrm[] =
         .mappedChGrp    = UDMA_MAPPED_RX_GROUP_SAUL,
         .peerChNum      = UDMA_TEST_PKTDMA_SAUL_RX_PEER_CH,
     },
+/* Removed ICSSG params for PKTDMA since it is not supported by j722s */
 #if !defined(SOC_J722S)
     {
         .pktdmachPrmId  = UDMA_TEST_PKTDMA_CH_PRMID_ICSSG_0_RX,

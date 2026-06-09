@@ -405,3 +405,23 @@ int32_t CSL_druGetQueueStatus(const CSL_DRU_t *pRegs,
 
     return (retVal);
 }
+
+int32_t CSL_druGetCauseRegs(const CSL_DRU_t *pRegs, CSL_DRU_CAUSE *druCause)
+{
+    int32_t retVal = CSL_PASS;
+    uint32_t i;
+
+    if ((NULL == pRegs) || (NULL == druCause))
+    {
+        retVal = CSL_EBADARGS;
+    }
+    else
+    {
+        for (i = 0U; i < CSL_DRU_NUM_CAUSE; i++)
+        {
+            druCause->CAUSE[i] = CSL_REG64_RD(&pRegs->CAUSE.CAUSE[i]);
+        }
+    }
+
+    return retVal;
+}

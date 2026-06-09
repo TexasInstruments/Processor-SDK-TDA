@@ -127,6 +127,11 @@ if (common.getSocName() == "am62ax" )
     uart_driver_config_file = "/drivers/uart/templates/uart_config_am62ax.c.xdt";
     uart_driver_open_close_config = "/drivers/uart/templates/uart_open_close_config_am62ax.c.xdt";
 }
+if (common.getSocName() == "am62dx" )
+{
+    uart_driver_config_file = "/drivers/uart/templates/uart_config_am62dx.c.xdt";
+    uart_driver_open_close_config = "/drivers/uart/templates/uart_open_close_config_am62dx.c.xdt";
+}
 if (common.getSocName() == "am62px")
 {
     uart_driver_config_file = "/drivers/uart/templates/uart_config_am62px.c.xdt";
@@ -137,7 +142,17 @@ if (common.getSocName() == "j722s")
     uart_driver_config_file = "/drivers/uart/templates/uart_config_j722s.c.xdt";
     uart_driver_open_close_config = "/drivers/uart/templates/uart_open_close_config_j722s.c.xdt";
 }
+if (common.getSocName() == "am62lx")
+{
+    uart_driver_config_file = "/drivers/uart/templates/uart_config_am62lx.c.xdt";
+    uart_driver_open_close_config = "/drivers/uart/templates/uart_open_close_config_am62lx.c.xdt";
+}
 
+if (common.getSocName() == "am275x" )
+{
+    uart_driver_config_file = "/drivers/uart/templates/uart_config_am275x.c.xdt";
+    uart_driver_open_close_config = "/drivers/uart/templates/uart_open_close_config_am275x.c.xdt";
+}
 let uart_module = {
     displayName: "UART",
 
@@ -475,6 +490,10 @@ function getConfigurables()
                 },
             ],
             description: "TX trigger level",
+            longDescription:`TX Trigger level: If 64 characters are to be sent and TX Trigger level is set to 32
+                             then, in 2 Controller Interrupts the data will be sent in chunks of 32 bytes. If 
+                             50 characters are to be sent and TX Trigger level is set to 8, then in 6 Controller Interrupts
+                             48 bytes will be sent and in the last interrupt, 2 bytes will be sent. `,
         },
         /* Open attributes */
         {
@@ -542,6 +561,28 @@ function getConfigurables()
             ],
             description: "FULL unblocks or performs a callback when read buffer filled with the total num of bytes passed to UART_read().PARTIAL does whenever a few bytes passed/read timeout error occurs.",
         },
+        {
+            name: "dmaMode",
+            displayName: "Dma Mode",
+            default: "PKTDMA",
+            hidden: false,
+            options: [
+                {
+                    name: "PKTDMA",
+                    displayName: "PKTDMA"
+                },
+                {
+                    name: "BCDMA",
+                    displayName: "BCDMA"
+                },
+            ],
+            description: "BCDMA or PKTDMA mode of transfer.",
+        },
+        {
+            name : "uartTraceInstance",
+            default : false,
+            hidden : true,
+        }
     )
 
     if(common.isMcuDomainSupported())
@@ -558,8 +599,6 @@ function getConfigurables()
     {
         config.push(common.getDMWithBootConfig());
     }
-
-    config.push(common.getSkipDeinitFromSblConfig());
 
     return config;
 }
@@ -589,7 +628,7 @@ function validate(inst, report) {
     }
     switch(inst.operMode) {
       case "16X":
-    if((inst.baudRate > Number(230400)) && (inst.baudRate != Number(3000000))) {
+    if((inst.baudRate > Number(230400)) && (inst.baudRate != Number(3000000)) && (inst.inputClkFreq == Number(48000000))) {
         report.logError("Operating mode should be 13X for the configured baudrate", inst, "operMode");
         }
         break;

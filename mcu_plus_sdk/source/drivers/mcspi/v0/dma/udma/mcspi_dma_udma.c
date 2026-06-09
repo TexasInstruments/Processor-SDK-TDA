@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -57,15 +57,15 @@ static void MCSPI_udmaIsrRx(Udma_EventHandle eventHandle,
                                   void *args);
 static int32_t MCSPI_udmaStop(MCSPI_Object *obj, const MCSPI_Attrs *attrs,
                               MCSPI_ChObject *chObj, uint32_t chNum);
-static int32_t MCSPI_udmaInitRxCh(MCSPI_Handle handle, MCSPI_ChObject *chObj);
-static int32_t MCSPI_udmaInitTxCh(MCSPI_Handle handle, MCSPI_ChObject *chObj);
+static int32_t MCSPI_udmaInitRxCh(MCSPI_Handle handle, const MCSPI_ChObject *chObj);
+static int32_t MCSPI_udmaInitTxCh(MCSPI_Handle handle, const MCSPI_ChObject *chObj);
 static int32_t MCSPI_udmaDeInitCh(Udma_ChHandle chHandle,
                                   Udma_EventHandle eventHandle);
 static int32_t MCSPI_udmaConfigPdmaRx(MCSPI_Object *obj,
                                       MCSPI_ChObject *chObj,
                                       MCSPI_Transaction *transaction,
                                       uint32_t numWords,
-                                      uint8_t *rxBufPtr);
+                                      const uint8_t *rxBufPtr);
 static int32_t MCSPI_udmaConfigPdmaTx(MCSPI_Object *obj,
                                       MCSPI_ChObject *chObj,
                                       MCSPI_Transaction *transaction,
@@ -104,8 +104,8 @@ static int32_t MCSPI_udmaChInit(MCSPI_Handle handle, const MCSPI_ChConfig *chCfg
 
     if(MCSPI_TR_MODE_TX_RX == chObj->chCfg.trMode)
     {
-        status  = MCSPI_udmaInitRxCh(handle, chObj);
-        status |= MCSPI_udmaInitTxCh(handle, chObj);
+        status  = MCSPI_udmaInitTxCh(handle, chObj);
+        status += MCSPI_udmaInitRxCh(handle, chObj);
     }
     else if(MCSPI_TR_MODE_TX_ONLY == chObj->chCfg.trMode)
     {
@@ -114,6 +114,10 @@ static int32_t MCSPI_udmaChInit(MCSPI_Handle handle, const MCSPI_ChConfig *chCfg
     else if(MCSPI_TR_MODE_RX_ONLY == chObj->chCfg.trMode)
     {
         status = MCSPI_udmaInitRxCh(handle, chObj);
+    }
+    else
+    {
+      /* Do Nothing */
     }
     chObj->dmaChCfg.isOpen = TRUE;
 
@@ -160,6 +164,10 @@ static int32_t MCSPI_udmaClose(MCSPI_Handle handle, const MCSPI_ChConfig *chCfg)
                 MCSPI_udmaDeInitCh(chObj->dmaChCfg.rxChHandle,
                                    chObj->dmaChCfg.cqRxEvtHandle);
             }
+            else
+            {
+              /* Do Nothing */
+            }
             chObj->dmaChCfg.isOpen = FALSE;
         }
     }
@@ -180,7 +188,7 @@ static int32_t MCSPI_udmaTransfer(MCSPI_Object *obj,
         {
             status  = MCSPI_udmaConfigPdmaRx(obj, chObj, transaction,
                                             transaction->count, chObj->curRxBufPtr);
-            status |= MCSPI_udmaConfigPdmaTx(obj, chObj, transaction,
+            status += MCSPI_udmaConfigPdmaTx(obj, chObj, transaction,
                                              transaction->count, chObj->curTxBufPtr);
         }
         else
@@ -211,6 +219,10 @@ static int32_t MCSPI_udmaTransfer(MCSPI_Object *obj,
         {
             status = SystemP_FAILURE;
         }
+    }
+    else
+    {
+      /* Do Nothing */
     }
 
     /* Initiate Transfer */
@@ -257,7 +269,7 @@ static void MCSPI_udmaHpdInit(Udma_ChHandle chHandle,
     return;
 }
 
-static int32_t MCSPI_udmaInitRxCh(MCSPI_Handle handle, MCSPI_ChObject *chObj)
+static int32_t MCSPI_udmaInitRxCh(MCSPI_Handle handle, const MCSPI_ChObject *chObj)
 {
     int32_t             retVal;
     MCSPI_Config        *config;
@@ -311,7 +323,7 @@ static int32_t MCSPI_udmaInitRxCh(MCSPI_Handle handle, MCSPI_ChObject *chObj)
     return retVal;
 }
 
-static int32_t MCSPI_udmaInitTxCh(MCSPI_Handle handle, MCSPI_ChObject *chObj)
+static int32_t MCSPI_udmaInitTxCh(MCSPI_Handle handle, const MCSPI_ChObject *chObj)
 {
     int32_t             retVal;
     MCSPI_Config        *config;
@@ -369,17 +381,23 @@ static int32_t MCSPI_udmaDeInitCh(Udma_ChHandle chHandle,
                                   Udma_EventHandle eventHandle)
 {
     int32_t status = UDMA_SOK;
+    uint8_t chanEnStatus;
 
-    /* Disable Channel */
-    status = Udma_chDisable(chHandle, UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
+    status = Udma_chGetChanEnStatus(chHandle, &chanEnStatus);
     DebugP_assert(UDMA_SOK == status);
+    if(chanEnStatus == 1U)
+    {
+        /* Disable Channel */
+        status = Udma_chDisable(chHandle, UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
+        DebugP_assert(UDMA_SOK == status);
+    }
 
     /* UnRegister Event */
     status = Udma_eventUnRegister(eventHandle);
     DebugP_assert(UDMA_SOK == status);
 
     /* Flush any pending request from the free queue */
-    while(1)
+    while(true)
     {
         uint64_t pDesc;
         int32_t  tempRetVal;
@@ -451,7 +469,7 @@ static int32_t MCSPI_udmaConfigPdmaRx(MCSPI_Object *obj,
                                       MCSPI_ChObject *chObj,
                                       MCSPI_Transaction *transaction,
                                       uint32_t numWords,
-                                      uint8_t *rxBufPtr)
+                                      const uint8_t *rxBufPtr)
 {
     int32_t             retVal;
     Udma_ChPdmaPrms     pdmaPrms;
@@ -538,6 +556,14 @@ static int32_t MCSPI_udmaStop(MCSPI_Object *obj, const MCSPI_Attrs *attrs,
     {
         CSL_REG32_FINS(baseAddr + MCSPI_CHCONF(chNum), MCSPI_CH0CONF_DMAR, CSL_MCSPI_CH0CONF_DMAR_DISABLED);
     }
+    else
+    {
+      /* Do Nothing */
+    }
+
+    /* Update chconfig and chcontrol register values */
+    chObj->chCtrlRegVal = MCSPI_readChCtrlReg(baseAddr, chNum);
+    chObj->chConfRegVal = MCSPI_readChConf(baseAddr, chNum);
 
     return status;
 }
@@ -562,6 +588,10 @@ static void MCSPI_udmaStart(MCSPI_ChObject *chObj, const MCSPI_Attrs *attrs,
     {
         CSL_REG32_FINS(baseAddr + MCSPI_CHCONF(chNum), MCSPI_CH0CONF_DMAR, CSL_MCSPI_CH0CONF_DMAR_ENABLED);
     }
+    else
+    {
+      /* Do Nothing */
+    }
 
     /* Manual CS assert */
     if(MCSPI_CH_MODE_SINGLE == attrs->chMode)
@@ -572,15 +602,16 @@ static void MCSPI_udmaStart(MCSPI_ChObject *chObj, const MCSPI_Attrs *attrs,
                 baseAddr + MCSPI_CHCONF(chNum),
                 MCSPI_CH0CONF_FORCE,
                 CSL_MCSPI_CH0CONF_FORCE_ASSERT);
+            chObj->chConfRegVal = MCSPI_readChConf(baseAddr, chNum);
             chObj->csEnable = FALSE;
         }
     }
 
-    /* Enable channel */
-    CSL_REG32_FINS(
-        baseAddr + MCSPI_CHCTRL(chNum),
-        MCSPI_CH0CTRL_EN,
-        CSL_MCSPI_CH0CTRL_EN_ACT);
+    /* Update chconfig and chcontrol register values */ 
+    /* Enable channel */   
+    chObj->chCtrlRegVal  = MCSPI_readChCtrlReg(baseAddr, chNum);  
+    chObj->chCtrlRegVal  |= CSL_MCSPI_CH0CTRL_EN_MASK;
+    CSL_REG32_WR(baseAddr + MCSPI_CHCTRL(chNum), chObj->chCtrlRegVal);
 
     /*
      * Note: Once the channel is enabled, DMA will trigger its transfer.
@@ -601,6 +632,8 @@ static void MCSPI_udmaIsrTx(Udma_EventHandle eventHandle,
     uint32_t            chNum, effByteCnt, peerData;
     Udma_ChHandle       txChHandle;
     const MCSPI_Attrs  *attrs;
+    volatile uint32_t   chStat;
+    volatile uint32_t timeout = MCSPI_MAX_TIMEOUT_VALUE; /* Timeout for 1 sec*/
 
     /* Check parameters */
     if(NULL != args)
@@ -612,6 +645,7 @@ static void MCSPI_udmaIsrTx(Udma_EventHandle eventHandle,
         attrs = config->attrs;
 
         transaction = obj->currTransaction;
+        DebugP_assert(NULL != transaction);
         chNum = transaction->channel;
         chObj = &obj->chObj[chNum];
         txChHandle  = chObj->dmaChCfg.txChHandle;
@@ -648,6 +682,16 @@ static void MCSPI_udmaIsrTx(Udma_EventHandle eventHandle,
                 effByteCnt = (pHpd->descInfo & CSL_UDMAP_CPPI5_PD_DESCINFO_PKTLEN_MASK) >> CSL_UDMAP_CPPI5_PD_DESCINFO_PKTLEN_SHIFT;
                 obj->currTransaction->count = (effByteCnt >> chObj->bufWidthShift);
 
+                do
+                {
+                    /* Wait for end of transfer. */
+                    chStat = CSL_REG32_RD(obj->baseAddr + MCSPI_CHSTAT(chNum));
+                    timeout -= 1U;
+                    if (timeout == 0U) 
+                    {
+                        break;
+                    }
+                }while ((chStat & CSL_MCSPI_CH0STAT_EOT_MASK) == 0U);
                 /* Stop MCSPI Channel */
                 MCSPI_udmaStop(obj, attrs, chObj, chNum);
                 /* Update the driver internal status. */
@@ -688,7 +732,12 @@ static void MCSPI_udmaIsrRx(Udma_EventHandle eventHandle,
     MCSPI_Transaction  *transaction;
     uint32_t            chNum, effByteCnt, peerData;
     Udma_ChHandle       rxChHandle;
+    #ifdef DRV_VERSION_UDMA_V1
+    Udma_ChHandle       txChHandle;
+    #endif
     const MCSPI_Attrs  *attrs;
+    volatile uint32_t   chStat;
+    volatile uint32_t timeout = MCSPI_MAX_TIMEOUT_VALUE; /* Timeout for 1 sec*/
 
     /* Check parameters */
     if(NULL != args)
@@ -702,6 +751,9 @@ static void MCSPI_udmaIsrRx(Udma_EventHandle eventHandle,
         chNum = transaction->channel;
         chObj = &obj->chObj[chNum];
         rxChHandle  = chObj->dmaChCfg.rxChHandle;
+        #ifdef DRV_VERSION_UDMA_V1
+        txChHandle  = chObj->dmaChCfg.txChHandle;
+        #endif
         effByteCnt = transaction->count << chObj->bufWidthShift;
 
         if (eventType == UDMA_EVENT_TYPE_DMA_COMPLETION)
@@ -728,10 +780,26 @@ static void MCSPI_udmaIsrRx(Udma_EventHandle eventHandle,
                 };
                 /* Clear Data */
                 Udma_clearPeerData(rxChHandle, peerData);
+                #ifdef DRV_VERSION_UDMA_V1
+                /* Teardown channel */
+                retVal = Udma_TeardownChan(rxChHandle);
+                retVal = Udma_TeardownChan(txChHandle);
+                #endif
 
                 /* Get Byte count received */
                 effByteCnt = (pHpd->descInfo & CSL_UDMAP_CPPI5_PD_DESCINFO_PKTLEN_MASK) >> CSL_UDMAP_CPPI5_PD_DESCINFO_PKTLEN_SHIFT;
                 obj->currTransaction->count = (effByteCnt >> chObj->bufWidthShift);
+
+                do
+                {
+                    /* Wait for end of transfer. */
+                    chStat = CSL_REG32_RD(obj->baseAddr + MCSPI_CHSTAT(chNum));
+                    timeout -= 1U;
+                    if (timeout == 0U) 
+                    {
+                        break;
+                    }
+                }while ((chStat & CSL_MCSPI_CH0STAT_EOT_MASK) == 0U);
 
                 /* Stop MCSPI Channel */
                 MCSPI_udmaStop(obj, attrs, chObj, chNum);

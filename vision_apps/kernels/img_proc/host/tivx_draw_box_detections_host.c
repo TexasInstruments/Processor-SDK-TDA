@@ -159,6 +159,9 @@ vx_status tivxAddKernelDrawBoxDetections(vx_context context)
         {
             /* add supported target's */
             tivxKernelsHostUtilsAddKernelTargetDsp(kernel);
+#if defined(SOC_J721S2) || defined(SOC_J784S4)
+            tivxAddKernelTarget(kernel, TIVX_TARGET_DSP_C7_1);
+#endif
         }
         if (status == VX_SUCCESS)
         {

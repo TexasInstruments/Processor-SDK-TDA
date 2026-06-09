@@ -35,7 +35,7 @@
 /**
  *  \file vhwa_vpac_priv.h
  *
- *  \brief VHWA Driver J721S2/J784S4/J742S2 SOC file containing private APIs used by 
+ *  \brief VHWA Driver J721E/J721S2/J784S4/J742S2 SOC file containing private APIs used by 
            VHWA VPAC controller driver.
  */
 
@@ -49,7 +49,11 @@
 #if defined (VHWA_MCU_PLUS_SDK)
 #include <drivers/hw_include/cslr_vpac.h>
 #else
+#if defined(SOC_J721E)
+#include <ti/csl/cslr_vpac.h>
+#else
 #include <ti/csl/cslr_vpac3.h>
+#endif
 #endif
 
 #ifdef __cplusplus

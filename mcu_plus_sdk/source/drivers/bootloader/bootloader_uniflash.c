@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -32,12 +32,18 @@
 
 #include <drivers/bootloader/bootloader_uniflash.h>
 #include <drivers/bootloader/bootloader_priv.h>
+#include <stdlib.h>
 #include <string.h>
 #include <board/flash.h>
+#include "kernel/dpl/CacheP.h"
 
 #if defined(DRV_VERSION_MMCSD_V0) || defined(DRV_VERSION_MMCSD_V1)
 #include <drivers/mmcsd.h>
 #include <drivers/bootloader/bootloader_mmcsd_raw.h>
+#endif
+
+#if defined (DRV_BOOTLOADER_FORMAT_MCELF)
+#include <drivers/bootloader/tiELFuParser/tielfup32.h>
 #endif
 
 static void Bootloader_uniflashInitRespHeader(Bootloader_UniflashResponseHeader *respHeader);
@@ -51,6 +57,11 @@ static int32_t Bootloader_uniflashFlashPhyTuningData(uint32_t flashIndex);
 #if defined(DRV_VERSION_MMCSD_V0) || defined(DRV_VERSION_MMCSD_V1)
 static int32_t Bootloader_uniflashFlashFileMMCSDRaw(uint32_t flashIndex, uint8_t *buf, uint32_t fileSize, uint32_t flashOffset);
 static int32_t Bootloader_uniflashFlashVerifyFileMMCSDRaw(uint32_t flashIndex, uint8_t *fileBuf, uint32_t fileSize, uint8_t *verifyBuf, uint32_t verifyBufSize, uint32_t flashOffset);
+#endif
+
+#if defined (DRV_BOOTLOADER_FORMAT_MCELF)
+static int32_t Bootloader_uniflashFlashMcelfXipFile(uint32_t flashIndex, uint8_t *fileBuf, uint32_t fileSize);
+static int32_t Bootloader_uniflashFlashVerifyMcelfXipFile(uint32_t flashIndex, uint8_t *fileBuf, uint32_t fileSize, uint8_t *verifyBuf, uint32_t verifyBufSize);
 #endif
 
 int32_t Bootloader_uniflashProcessFlashCommands(Bootloader_UniflashConfig *config, Bootloader_UniflashResponseHeader *respHeader)
@@ -87,6 +98,8 @@ int32_t Bootloader_uniflashProcessFlashCommands(Bootloader_UniflashConfig *confi
 	{
 		/* do nothing */
 	}
+
+    config->verifyBufSize = config->bufSize;
 
 	if(SystemP_SUCCESS == status)
 	{
@@ -132,7 +145,12 @@ int32_t Bootloader_uniflashProcessFlashCommands(Bootloader_UniflashConfig *confi
 
 	        case BOOTLOADER_UNIFLASH_OPTYPE_FLASH_XIP:
 	            /* flash the XIP file, flash offsets are within the file itself */
-	            status = Bootloader_uniflashFlashXipFile(config->flashIndex, config->buf + sizeof(Bootloader_UniflashFileHeader), config->bufSize);
+
+#if defined (DRV_BOOTLOADER_FORMAT_MCELF)
+					status = Bootloader_uniflashFlashMcelfXipFile(config->flashIndex, config->buf + sizeof(Bootloader_UniflashFileHeader), config->bufSize);
+#else
+					status = Bootloader_uniflashFlashXipFile(config->flashIndex, config->buf + sizeof(Bootloader_UniflashFileHeader), config->bufSize);
+#endif
 	            if(status != SystemP_SUCCESS)
 	            {
 	                respHeader->statusCode = BOOTLOADER_UNIFLASH_STATUSCODE_FLASH_ERROR;
@@ -140,7 +158,11 @@ int32_t Bootloader_uniflashProcessFlashCommands(Bootloader_UniflashConfig *confi
 	            else
 	            {
 	                /* verify the file at the given offset */
-	                status = Bootloader_uniflashFlashVerifyXipFile(config->flashIndex, config->buf + sizeof(Bootloader_UniflashFileHeader), config->bufSize, config->verifyBuf, config->verifyBufSize);
+#if defined (DRV_BOOTLOADER_FORMAT_MCELF)
+						status = Bootloader_uniflashFlashVerifyMcelfXipFile(config->flashIndex, config->buf + sizeof(Bootloader_UniflashFileHeader), config->bufSize, config->verifyBuf, config->verifyBufSize);
+#else
+						status = Bootloader_uniflashFlashVerifyXipFile(config->flashIndex, config->buf + sizeof(Bootloader_UniflashFileHeader), config->bufSize, config->verifyBuf, config->verifyBufSize);
+#endif
 	                if(status != SystemP_SUCCESS)
 	                {
 	                    respHeader->statusCode = BOOTLOADER_UNIFLASH_STATUSCODE_FLASH_VERIFY_ERROR;
@@ -149,7 +171,11 @@ int32_t Bootloader_uniflashProcessFlashCommands(Bootloader_UniflashConfig *confi
 	            break;
 	        case BOOTLOADER_UNIFLASH_OPTYPE_FLASH_VERIFY_XIP:
 	            /* verify the file. Flash offsets are within the file itself */
-	            status = Bootloader_uniflashFlashVerifyXipFile(config->flashIndex, config->buf + sizeof(Bootloader_UniflashFileHeader), config->bufSize, config->verifyBuf, config->verifyBufSize);
+#if defined (DRV_BOOTLOADER_FORMAT_MCELF)
+					status = Bootloader_uniflashFlashVerifyMcelfXipFile(config->flashIndex, config->buf + sizeof(Bootloader_UniflashFileHeader), config->bufSize, config->verifyBuf, config->verifyBufSize);
+#else
+					status = Bootloader_uniflashFlashVerifyXipFile(config->flashIndex, config->buf + sizeof(Bootloader_UniflashFileHeader), config->bufSize, config->verifyBuf, config->verifyBufSize);
+#endif
 	            if(status != SystemP_SUCCESS)
 	            {
 	                respHeader->statusCode = BOOTLOADER_UNIFLASH_STATUSCODE_FLASH_VERIFY_ERROR;
@@ -224,7 +250,7 @@ static int32_t Bootloader_uniflashFlashFile(uint32_t flashIndex, uint8_t *buf, u
 	flashAttrs = Flash_getAttrs(flashIndex);
 	flashHandle = Flash_getHandle(flashIndex);
 
-	if(flashAttrs == 0 || flashHandle == NULL)
+	if((flashAttrs == 0) || (flashHandle == NULL))
 	{
 	   status=SystemP_FAILURE;
 	}
@@ -252,7 +278,7 @@ static int32_t Bootloader_uniflashFlashFile(uint32_t flashIndex, uint8_t *buf, u
 	    curOffset = flashOffset;
 	    curChunk = 1;
 	    totalChunks = (fileSize + (chunkSize-(uint32_t)1))/chunkSize;
-	    while(curChunk <= totalChunks && status == SystemP_SUCCESS)
+	    while((curChunk <= totalChunks) && (status == SystemP_SUCCESS))
 	    {
 	        if(remainSize < chunkSize)
 	        {
@@ -263,15 +289,16 @@ static int32_t Bootloader_uniflashFlashFile(uint32_t flashIndex, uint8_t *buf, u
 	        if(status == SystemP_SUCCESS)
 	        {
 	            status = Flash_eraseBlk(flashHandle, blockNum);
-	            if(status == SystemP_SUCCESS)
-	            {
-	                status = Flash_write(flashHandle, curOffset, srcAddr, chunkSize);
-	            }
 	        }
 	        curOffset += chunkSize;
 	        srcAddr = srcAddr + chunkSize;
 	        remainSize -= chunkSize;
 	        curChunk++;
+	    }
+
+        if(status == SystemP_SUCCESS)
+	    {
+	        status = Flash_write(flashHandle, flashOffset, buf, fileSize);
 	    }
 	}
 
@@ -287,52 +314,29 @@ static int32_t Bootloader_uniflashFlashVerifyFile(uint32_t flashIndex, uint8_t *
 	flashAttrs = Flash_getAttrs(flashIndex);
 	flashHandle = Flash_getHandle(flashIndex);
 
-	if(flashAttrs == 0 || flashHandle == NULL)
+	if((flashAttrs == 0) || (flashHandle == NULL))
 	{
 	   status=SystemP_FAILURE;
 	}
 
 	if(status==SystemP_SUCCESS)
 	{
-	    uint32_t curOffset, totalChunks, curChunk, chunkSize, remainSize;
-	    uint8_t *srcAddr;
 	    int32_t diff;
 
+	    /* clear verify buf to avoid comparing stale data */
+	    memset(verifyBuf, 0, (size_t)fileSize);
 
-	    /* start writing from buffer to flash */
-	    chunkSize = verifyBufSize;
+	    status = Flash_read(flashHandle, flashOffset, verifyBuf, fileSize);
 
-	    srcAddr = fileBuf;
-	    remainSize = fileSize;
-	    curOffset = flashOffset;
-	    curChunk = 1;
-	    totalChunks = (fileSize + (chunkSize-(uint32_t)1))/chunkSize;
-	    while(curChunk <= totalChunks && status == SystemP_SUCCESS)
+	    if(status == SystemP_SUCCESS)
 	    {
-	        if(remainSize < chunkSize)
+	        /* check if data read from flash matches, data read from file */
+	        diff = memcmp(verifyBuf, fileBuf, (size_t)fileSize);
+
+	        if(diff != (int32_t)0U)
 	        {
-	            chunkSize = remainSize;
+	            status = SystemP_FAILURE;
 	        }
-
-	        /* clear verify buf to avoid comparing stale data */
-	        memset(verifyBuf, 0, verifyBufSize);
-
-	        status = Flash_read(flashHandle, curOffset, verifyBuf, chunkSize);
-
-	        if(status == SystemP_SUCCESS)
-	        {
-	            /* check if data read from flash matches, data read from file */
-	            diff = memcmp(verifyBuf, srcAddr, chunkSize);
-
-	            if(diff != (int32_t)0)
-	            {
-	                status = SystemP_FAILURE;
-	            }
-	        }
-	        curOffset += chunkSize;
-	        srcAddr = srcAddr + chunkSize;
-	        remainSize -= chunkSize;
-	        curChunk++;
 	    }
 	}
 
@@ -351,7 +355,7 @@ static int32_t Bootloader_uniflashFlashErase(uint32_t flashIndex, uint32_t flash
 	flashAttrs = Flash_getAttrs(flashIndex);
 	flashHandle = Flash_getHandle(flashIndex);
 
-	if(flashAttrs == 0 || flashHandle == NULL)
+	if((flashAttrs == 0) || (flashHandle == NULL))
 	{
 	   status=SystemP_FAILURE;
 	}
@@ -383,7 +387,7 @@ static int32_t Bootloader_uniflashFlashErase(uint32_t flashIndex, uint32_t flash
 	    curOffset = flashOffset;
 	    curChunk = 1;
 	    totalChunks = (eraseSize + (chunkSize-(uint32_t)1))/chunkSize;
-	    while(curChunk <= totalChunks && status == SystemP_SUCCESS)
+	    while((curChunk <= totalChunks) && (status == SystemP_SUCCESS))
 	    {
 	        if(remainSize < chunkSize)
 	        {
@@ -408,9 +412,10 @@ static int32_t Bootloader_uniflashFlashOrVerifyRprcXipFile(uint32_t flashIndex, 
     Bootloader_RprcFileHeader     header;
     Bootloader_RprcSectionHeader section;
     int32_t status = SystemP_SUCCESS;
+    uint8_t *currentBuf = buf;
 
-    memcpy(&header, buf, sizeof(Bootloader_RprcFileHeader));
-    buf += sizeof(Bootloader_RprcFileHeader);
+    memcpy(&header, currentBuf, sizeof(Bootloader_RprcFileHeader));
+    currentBuf = currentBuf + sizeof(Bootloader_RprcFileHeader);
     if(header.magic != (uint32_t)BOOTLOADER_RPRC_MAGIC_NUMBER)
     {
         status = SystemP_FAILURE;
@@ -419,25 +424,31 @@ static int32_t Bootloader_uniflashFlashOrVerifyRprcXipFile(uint32_t flashIndex, 
     {
         uint32_t i;
 
-        for(i=0; i<header.sectionCount; i++)
+        for(i=0; i < header.sectionCount; i++)
         {
-            memcpy(&section, buf, sizeof(Bootloader_RprcSectionHeader));
-            buf+= sizeof(Bootloader_RprcSectionHeader);
+            memcpy(&section, currentBuf, sizeof(Bootloader_RprcSectionHeader));
+            currentBuf = currentBuf + sizeof(Bootloader_RprcSectionHeader);
 
             if((verifyBuf != 0) && (verifyBufSize != (uint32_t)0))
             {
             	/* verify the section */
-                status = Bootloader_uniflashFlashVerifyFile(flashIndex, buf, section.size, verifyBuf, verifyBufSize, section.addr);
+                status = Bootloader_uniflashFlashVerifyFile(flashIndex, currentBuf, section.size, verifyBuf, verifyBufSize, section.addr);
             }
             else
             {
                 /* flash the section */
-                status = Bootloader_uniflashFlashFile(flashIndex, buf, section.size, section.addr);
+                status = Bootloader_uniflashFlashFile(flashIndex, currentBuf, section.size, section.addr);
             }
-            buf = buf + section.size;
+            currentBuf = currentBuf + section.size;
 
             if(status != SystemP_SUCCESS)
+            {
                 break;
+            }
+            else
+            {
+                /* do nothing */
+            }
         }
     }
     return status;
@@ -452,7 +463,7 @@ static int32_t Bootloader_uniflashFlashOrVerifyXipFile(uint32_t flashIndex, uint
 
     memset(&mHdrCore[0], 0xFF, BOOTLOADER_MAX_INPUT_FILES*sizeof(Bootloader_MetaHeaderCore));
     memcpy(&mHdrStr, ptr, sizeof(Bootloader_MetaHeaderStart));
-    ptr += sizeof(Bootloader_MetaHeaderStart);
+    ptr = ptr + sizeof(Bootloader_MetaHeaderStart);
 
     if(mHdrStr.magicStr != (uint32_t)BOOTLOADER_META_HDR_MAGIC_STR)
     {
@@ -466,7 +477,7 @@ static int32_t Bootloader_uniflashFlashOrVerifyXipFile(uint32_t flashIndex, uint
         for(i=0U; i<mHdrStr.numFiles; i++)
         {
             memcpy(&mHdrCore[i], ptr, sizeof(Bootloader_MetaHeaderCore));
-            ptr += sizeof(Bootloader_MetaHeaderCore);
+            ptr = ptr + sizeof(Bootloader_MetaHeaderCore);
         }
 
         /* Parse individual rprc files */
@@ -477,8 +488,18 @@ static int32_t Bootloader_uniflashFlashOrVerifyXipFile(uint32_t flashIndex, uint
                 /* flash or verify the file */
                 status = Bootloader_uniflashFlashOrVerifyRprcXipFile(flashIndex, buf + mHdrCore[i].imageOffset, verifyBuf, verifyBufSize);
                 if(status != SystemP_SUCCESS)
+				{
                     break;
+				}
+				else
+				{
+					/* do nothing */
+				}
             }
+			else
+			{
+				/* do nothing */
+			}
         }
     }
     return status;
@@ -494,6 +515,94 @@ static int32_t Bootloader_uniflashFlashXipFile(uint32_t flashIndex, uint8_t *fil
     return Bootloader_uniflashFlashOrVerifyXipFile(flashIndex, fileBuf, fileSize, 0, 0);
 }
 
+#if defined (DRV_BOOTLOADER_FORMAT_MCELF)
+static int32_t Bootloader_uniflashFlashOrVerifyMcelfXipFile(uint32_t flashIndex, uint8_t *fileBuf, uint32_t fileSize, uint8_t *verifyBuf, uint32_t verifyBufSize)
+{
+	int32_t retval = SystemP_FAILURE;
+	Flash_Attrs *flashAttrs;
+	Flash_Handle flashHandle;
+	uint32_t eraseBlockSize = 0xFFFFFFFFu;
+
+	if(fileBuf != NULL)
+	{
+		ELFUP_ELFPH pht[20];
+		ELFUP_Handle elfuph;
+		int32_t status = SystemP_SUCCESS;
+
+		memset(pht, 0xff, sizeof(pht));
+
+		ELFUP_init(&elfuph, pht, 20);
+
+		flashAttrs = Flash_getAttrs(flashIndex);
+		flashHandle = Flash_getHandle(flashIndex);
+		if((flashAttrs == NULL) || (flashHandle == NULL))
+		{
+			status = SystemP_FAILURE;
+		}
+		else
+		{
+			eraseBlockSize = flashAttrs->pageCount * flashAttrs->pageSize;
+		}
+
+		for(uint32_t offset = 0; (offset < fileSize) && (!((elfuph.stateNext == ELFUP_PARSER_STATE_END || elfuph.stateNext == ELFUP_PARSER_STATE_ERROR))); offset++)
+		{
+			ELFUP_update(&elfuph, fileBuf[offset]);
+		}
+
+		if(elfuph.stateNext == ELFUP_PARSER_STATE_END)
+		{
+			/* now we have the program header table */
+			for(uint32_t  i =0; i < elfuph.ELFHeader.ELFH.ePhnum; i++)
+			{
+				Bootloader_ELFPH32 * entry = &(pht[i].ELFPH);
+				if(entry->type == PT_LOAD)
+				{
+
+					uint32_t dest_addr = entry->paddr & ~(0xF0000000U);
+					uint32_t src_addr = (uint32_t)fileBuf + entry->offset;
+					uint32_t size = entry->memsz;
+
+					if((dest_addr % eraseBlockSize) == 0U)
+					{
+						/* Only flash to offsets which are a multiple of blockSize */
+
+						if((NULL != verifyBuf) && (verifyBufSize > 0U))
+						{
+							status = Bootloader_uniflashFlashVerifyFile(flashIndex, (uint8_t*)src_addr, size, verifyBuf, verifyBufSize, dest_addr);
+						}
+						else
+						{
+							status = Bootloader_uniflashFlashFile(flashIndex, (uint8_t*)src_addr, size, dest_addr);
+						}
+						if(status == SystemP_FAILURE)
+						{
+							break;
+						}
+					}
+					else
+					{
+						status = SystemP_FAILURE;
+						break;
+					}
+				}
+			}
+		}
+		retval = status;
+	}
+	return(retval);
+}
+
+static int32_t Bootloader_uniflashFlashVerifyMcelfXipFile(uint32_t flashIndex, uint8_t *fileBuf, uint32_t fileSize, uint8_t *verifyBuf, uint32_t verifyBufSize)
+{
+	return Bootloader_uniflashFlashOrVerifyMcelfXipFile(flashIndex, fileBuf, fileSize, verifyBuf, verifyBufSize);
+}
+
+static int32_t Bootloader_uniflashFlashMcelfXipFile(uint32_t flashIndex, uint8_t *fileBuf, uint32_t fileSize)
+{
+	return Bootloader_uniflashFlashOrVerifyMcelfXipFile(flashIndex, fileBuf, fileSize, NULL, 0);
+}
+#endif
+
 static int32_t Bootloader_uniflashFlashPhyTuningData(uint32_t flashIndex)
 {
 	int32_t status = SystemP_SUCCESS;
@@ -504,9 +613,9 @@ static int32_t Bootloader_uniflashFlashPhyTuningData(uint32_t flashIndex)
 	flashAttrs = Flash_getAttrs(flashIndex);
 	flashHandle = Flash_getHandle(flashIndex);
 
-	if(flashAttrs == 0 || flashHandle == NULL)
+	if((flashAttrs == 0) || (flashHandle == NULL))
 	{
-	   status=SystemP_FAILURE;
+	   status = SystemP_FAILURE;
 	}
 	else
 	{
@@ -522,7 +631,11 @@ static int32_t Bootloader_uniflashFlashPhyTuningData(uint32_t flashIndex)
 		{
 		    status = Flash_eraseBlk(flashHandle, blockNum);
 		}
-		status = Flash_write(flashHandle, phyTuningDataFlashOffset, (uint8_t *)phyTuningData, phyTuningDataSize);
+
+		if(status == SystemP_SUCCESS)
+		{
+			status = Flash_write(flashHandle, phyTuningDataFlashOffset, (uint8_t *)phyTuningData, phyTuningDataSize);
+		}
 	}
 
 	return status;
@@ -544,7 +657,7 @@ static int32_t Bootloader_uniflashFlashFileMMCSDRaw(uint32_t mmcsdIndex, uint8_t
     }
     else
     {
-        status = MMCSD_enableBootPartition(handle, 1);
+        status = MMCSD_enableBootPartition(handle, MMCSD_BOOT_PARTITION_BOOT0);
     }
 
     if(status != SystemP_SUCCESS)
@@ -571,7 +684,7 @@ static int32_t Bootloader_uniflashFlashVerifyFileMMCSDRaw(uint32_t mmcsdIndex, u
 	}
     else
     {
-        status = MMCSD_enableBootPartition(handle, 1);
+        status = MMCSD_enablePartitionAccess(handle, MMCSD_HW_PARTITION_BOOT0);
     }
 
     if(status != SystemP_SUCCESS)
@@ -601,14 +714,14 @@ static int32_t Bootloader_uniflashFlashVerifyFileMMCSDRaw(uint32_t mmcsdIndex, u
 	        }
 
 	        /* clear verify buf to avoid comparing stale data */
-	        memset(verifyBuf, 0, verifyBufSize);
+	        memset(verifyBuf, 0, (size_t)verifyBufSize);
 
             status = Bootloader_MmcsdRaw_readFromOffset(handle, verifyBuf, chunkSize, curOffset);
 
 	        if(status == SystemP_SUCCESS)
 	        {
 	            /* check if data read from flash matches, data read from file */
-	            diff = memcmp(verifyBuf, srcAddr, chunkSize);
+	            diff = memcmp(verifyBuf, srcAddr, (size_t)chunkSize);
 
 	            if(diff != (int32_t)0)
 	            {

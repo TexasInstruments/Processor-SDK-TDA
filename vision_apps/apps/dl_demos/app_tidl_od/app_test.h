@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2020 Texas Instruments Incorporated
+ * Copyright (c) 2020-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -136,13 +136,14 @@ static void print_new_checksum_structs()
     printf("};\n\n");
 }
 
-
+#if !defined(SOC_AM62A)
 static void populate_gatherer(vx_uint32 set_idx, vx_uint32 sample_idx, vx_uint32 calculated_checksum)
 {
     checksums_gatherer[set_idx][sample_idx] = calculated_checksum;
 }
-
+#endif
 // #define CHECK_MIDDLE
+#if !defined(SOC_AM62A)
 static vx_bool app_test_check_image(vx_image img, vx_uint32 expected_checksum,
                              vx_uint32 *actual_checksum)
 {
@@ -194,3 +195,4 @@ static vx_bool app_test_check_image(vx_image img, vx_uint32 expected_checksum,
     }
     return return_bool;
 }
+#endif

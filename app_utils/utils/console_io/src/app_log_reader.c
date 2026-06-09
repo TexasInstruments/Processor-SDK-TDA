@@ -109,7 +109,7 @@ int32_t  appLogRdInit(app_log_init_prm_t *prm)
     uint32_t cpu_id;
     app_log_rd_obj_t *obj = &g_app_log_rd_obj;
 
-    if(prm->shared_mem == NULL || prm->log_rd_max_cpus >= APP_LOG_MAX_CPUS)
+    if(prm->shared_mem == NULL || prm->log_rd_max_cpus > APP_LOG_MAX_CPUS)
     {
         status = -1;
     }
@@ -325,4 +325,3 @@ void* appLogRdRun(app_log_rd_obj_t *obj)
     return NULL;
     #endif
 }
-

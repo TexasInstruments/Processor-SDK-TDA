@@ -86,12 +86,12 @@ static vx_status VX_CALLBACK tivxDofVisualizeDelete(
        uint16_t num_params, void *priv_arg);
 
 static void visualizeFlowAndConfidance3(
-                 uint32_t *flow_ptr,
-                 uint8_t *image1_ptr,
-                 uint8_t *image2_ptr,
-                 uint8_t *confidence_ptr,
+                 uint32_t *restrict flow_ptr,
+                 uint8_t *restrict image1_ptr,
+                 uint8_t *restrict image2_ptr,
+                 uint8_t *restrict confidence_ptr,
                  uint32_t flow_image_format,
-                 uint32_t flow_hight, /* flow height in lines */
+                 uint32_t flow_height, /* flow height in lines */
                  uint32_t flow_stride, /* in bytes */
                  uint32_t valid_width, /* valid width in pixels */
                  uint32_t image_stride, /* in bytes */
@@ -295,10 +295,10 @@ extern const uint8_t g_vx_dof_visualise_nv12_0_lut_128x128[16384];    /* 128 × 
 extern const uint8_t g_vx_dof_visualise_nv12_1_lut_128x128[8192];     /* 128 × 128 × 0.5 bytes (UV plane) */
 
 static void visualizeFlowAndConfidance3(
-                uint32_t *flow_ptr,
-                uint8_t *image1_ptr,
-                uint8_t *image2_ptr,
-                uint8_t *confidence_ptr,
+                uint32_t *restrict flow_ptr,
+                uint8_t *restrict image1_ptr,
+                uint8_t *restrict image2_ptr,
+                uint8_t *restrict confidence_ptr,
                 uint32_t flow_image_format,
                 uint32_t flow_height, /* flow height in lines */
                 uint32_t flow_stride, /* in bytes */
@@ -326,14 +326,14 @@ static void visualizeFlowAndConfidance3(
     lut_pos_limit = lut_offset -1;
     lut_neg_limit = -lut_offset;
 
-    uint8_t *cur_ptr   = &image1_ptr[0];
-    uint8_t *Y_ptr     = &image1_ptr[0];
-    uint8_t *Cb_ptr    = &image2_ptr[0];
-    uint8_t *Cr_ptr    = &image2_ptr[1];
+    uint8_t *restrict cur_ptr   = &image1_ptr[0];
+    uint8_t *restrict Y_ptr     = &image1_ptr[0];
+    uint8_t *restrict Cb_ptr    = &image2_ptr[0];
+    uint8_t *restrict Cr_ptr    = &image2_ptr[1];
 
-    const uint8_t *rgb_lut_ptr = g_vx_dof_visualise_rgb888_0_lut_128x128;
-    const uint8_t *luma_lut_ptr = g_vx_dof_visualise_nv12_0_lut_128x128;
-    const uint8_t *cbcr_lut_ptr = g_vx_dof_visualise_nv12_1_lut_128x128;
+    const uint8_t *restrict rgb_lut_ptr = g_vx_dof_visualise_rgb888_0_lut_128x128;
+    const uint8_t *restrict luma_lut_ptr = g_vx_dof_visualise_nv12_0_lut_128x128;
+    const uint8_t *restrict cbcr_lut_ptr = g_vx_dof_visualise_nv12_1_lut_128x128;
 
     if(flow_image_format == (vx_df_image)VX_DF_IMAGE_RGB)
     {

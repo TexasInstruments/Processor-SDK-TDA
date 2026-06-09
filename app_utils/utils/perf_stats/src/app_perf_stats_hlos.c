@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -432,6 +432,7 @@ void appPerfStatsResetHwaLoadCalcAll()
 
 void appPerfStatsHwaUpdateLoad(app_perf_hwa_id_t id, uint32_t active_time_in_usecs, uint32_t pixels_processed)
 {
+    #ifndef VDK
     app_perf_stats_obj_t *obj = &g_app_perf_stats_obj;
     app_perf_stats_hwa_load_t *hwaLoad;
     uint64_t cur_time;
@@ -454,5 +455,6 @@ void appPerfStatsHwaUpdateLoad(app_perf_hwa_id_t id, uint32_t active_time_in_use
 
         appPerfStatsUnLock(obj);
     }
+    #endif
 }
 

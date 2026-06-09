@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020, Texas Instruments Incorporated
+ * Copyright (c) 2018-2024, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,12 +34,12 @@
  *  \cond SOC_AM64X || SOC_AM243X
  *  \defgroup DRV_SCICLIENT_MODULE APIs for SCI Client or SYSFW/DMSC FW
  *  \endcond
- *  \cond SOC_AM62X || SOC_AM62AX || SOC_AM62PX || SOC_J722S
+ *  \cond SOC_AM62X || SOC_AM62AX || SOC_AM62PX || SOC_AM62DX || SOC_J722S || SOC_AM275X
  *  \defgroup DRV_SCICLIENT_MODULE APIs for SCI Client or SYSFW
  *  \endcond
  *  \ingroup DRV_MODULE
  *
- *  @{
+ ** @{
  *
  * System Controller Interface (SCI) Client
  *
@@ -152,8 +152,8 @@
  * |Type | Byte Index| Data Type| Header
  * |:----|:---------:|:--------:|:------
  * |TISCI Header| [0:1]| U16| Message_type
- * || [2]| U8| Host
- * || [3]| U8| Sequence_id
+ * || [2]| uint8_t| Host
+ * || [3]| uint8_t| Sequence_id
  * || [4:7]| U32| Flags
  * |Payload | Depends on type of message||Payload Fields|
  *  \endcond
@@ -187,6 +187,19 @@
  * example DeepSleep, and sense wake-up events to bring device back online to
  * active state.
  *
+ * ### TIFS Security Management
+ * The TIFS firmware manages SoC central security
+ * resources. The security subsystem provides APIs to other software entities to
+ * avail these features in a controlled and secure way.
+ * The security management firmware is subdivided into modules listed below:
+ * - Firewall management
+ * - ISC management
+ * - Boot authentication
+ * - SA2UL context management (for encryption and authentication)
+ * - Crypto APIs (to access common SA2UL functions such as PKA, RNG)
+ * - Secure keys management
+ * - Secure debug
+ *
  * ### DM Resource Management
  * The DM firmware Resource Management (RM) (sub) system manages SoC shared
  * resources.  RM manages access and configuration of shared resources amongst
@@ -200,19 +213,6 @@
  * - UDMA-P management
  * - PSI-L management
  * - Non-secure proxy management
- *
- * ### TIFS Security Management
- * The TIFS firmware manages SoC central security
- * resources. The security subsystem provides APIs to other software entities to
- * avail these features in a controlled and secure way.
- * The security management firmware is subdivided into modules listed below:
- * - Firewall management
- * - ISC management
- * - Boot authentication
- * - SA2UL context management (for encryption and authentication)
- * - Crypto APIs (to access common SA2UL functions such as PKA, RNG)
- * - Secure keys management
- * - Secure debug
  *
  * ### Communication with DM
  * DM is a "black box" with respect to the other processing
@@ -235,8 +235,8 @@
  * |Type | Byte Index| Data Type| Header
  * |:----|:---------:|:--------:|:------
  * |TISCI Header| [0:1]| U16| Message_type
- * || [2]| U8| Host
- * || [3]| U8| Sequence_id
+ * || [2]| uint8_t| Host
+ * || [3]| uint8_t| Sequence_id
  * || [4:7]| U32| Flags
  * |Payload | Depends on type of message||Payload Fields|
  *  \endcond
@@ -297,7 +297,7 @@
  * The Sciclient shall be responsible for abstracting all interaction with the
  * secure proxy and the ring accelerator.
  *
- *  @{
+ ** @{
  */
 
 /**
@@ -319,6 +319,10 @@
 #include <stddef.h>
 #include <kernel/dpl/SystemP.h>
 
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
 /* Windows Visual Studio build doesn't  __attribute__ indentifier, so forcing it be to dummy for getting build working */
 #ifdef _MSC_VER
   #ifndef __attribute__
@@ -330,16 +334,17 @@
 #define TISCI_BIT(n)  (1UL << (n))
 
 /**
- * \brief Defines the sysfw DEVGRP type. This is meant to be used in code
- * or data structures that require distinction of devgrps.
- */
-typedef uint8_t devgrp_t;
-
-/**
  * \brief Defines the sysfw DOMGRP type. This is meant to be used in code
  * or data structures that require distinction of domgrps.
  */
 typedef uint8_t domgrp_t;
+
+#ifndef SYSFW_DEVGRPS_H
+/**
+ * \brief Defines the sysfw DEVGRP type. This is meant to be used in code
+ * or data structures that require distinction of devgrps.
+ */
+typedef uint8_t devgrp_t;
 
 /* External definitions */
 
@@ -370,6 +375,8 @@ typedef uint8_t domgrp_t;
 #define DEVGRP_DMSC             ((0x01U) << 7U)
 /** Match everything - STRICTLY INTERNAL USAGE ONLY */
 #define DEVGRP_DMSC_ALL         (0xFFU)
+
+#endif
 
 /**
  * Maximum number of devgrps that are supported by SYSFW.
@@ -413,6 +420,16 @@ typedef uint8_t domgrp_t;
 #include <drivers/sciclient/include/tisci/am62ax/tisci_hosts.h>
 #include <drivers/sciclient/include/am62ax/sciclient_fmwMsgParams.h>
 #endif
+#if defined (SOC_AM62DX)
+#include <drivers/sciclient/include/tisci/am62dx/tisci_resasg_types.h>
+#include <drivers/sciclient/include/tisci/am62dx/tisci_hosts.h>
+#include <drivers/sciclient/include/tisci/am62dx/tisci_sec_proxy.h>
+#include <drivers/sciclient/include/tisci/am62dx/tisci_boardcfg_constraints.h>
+#include <drivers/sciclient/include/tisci/am62dx/tisci_devices.h>
+#include <drivers/sciclient/include/tisci/am62dx/tisci_clocks.h>
+#include <drivers/sciclient/include/tisci/am62dx/tisci_hosts.h>
+#include <drivers/sciclient/include/am62dx/sciclient_fmwMsgParams.h>
+#endif
 #if defined (SOC_AM62PX)
 #include <drivers/sciclient/include/tisci/am62px/tisci_resasg_types.h>
 #include <drivers/sciclient/include/tisci/am62px/tisci_hosts.h>
@@ -432,12 +449,32 @@ typedef uint8_t domgrp_t;
 #include <drivers/sciclient/include/tisci/j722s/tisci_clocks.h>
 #include <drivers/sciclient/include/j722s/sciclient_fmwMsgParams.h>
 #endif
+#if defined (SOC_AM275X)
+#include <drivers/sciclient/include/tisci/am275x/tisci_resasg_types.h>
+#include <drivers/sciclient/include/tisci/am275x/tisci_hosts.h>
+#include <drivers/sciclient/include/tisci/am275x/tisci_sec_proxy.h>
+#include <drivers/sciclient/include/tisci/am275x/tisci_boardcfg_constraints.h>
+#include <drivers/sciclient/include/tisci/am275x/tisci_devices.h>
+#include <drivers/sciclient/include/tisci/am275x/tisci_clocks.h>
+#include <drivers/sciclient/include/am275x/sciclient_fmwMsgParams.h>
+#endif
+#if defined (SOC_AM62LX)
+#include <drivers/sciclient/include/tisci/am62lx/tisci_resasg_types.h>
+#include <drivers/sciclient/include/tisci/am62lx/tisci_hosts.h>
+#include <drivers/sciclient/include/tisci/am62lx/tisci_sec_proxy.h>
+#include <drivers/sciclient/include/tisci/am62lx/tisci_boardcfg_constraints.h>
+#include <drivers/sciclient/include/tisci/am62lx/tisci_devices.h>
+#include <drivers/sciclient/include/tisci/am62lx/tisci_clocks.h>
+#include <drivers/sciclient/include/tisci/am62lx/tisci_hosts.h>
+#include <drivers/sciclient/include/am62lx/sciclient_fmwMsgParams.h>
+#endif
 #include <drivers/sciclient/include/tisci/security/tisci_sec_macros.h>
 #include <drivers/sciclient/include/tisci/security/tisci_firewall.h>
 #include <drivers/sciclient/include/tisci/security/tisci_procboot.h>
 #include <drivers/sciclient/include/tisci/security/tisci_keystore.h>
 #include <drivers/sciclient/include/tisci/security/tisci_dkek.h>
 #include <drivers/sciclient/include/tisci/security/tisci_keywriter.h>
+#include <drivers/sciclient/include/tisci/lpm/tisci_lpm.h>
 #include <drivers/sciclient/include/tisci/pm/tisci_pm_clock.h>
 #include <drivers/sciclient/include/tisci/pm/tisci_pm_device.h>
 #include <drivers/sciclient/include/tisci/pm/tisci_pm_core.h>
@@ -449,13 +486,15 @@ typedef uint8_t domgrp_t;
 #include <drivers/sciclient/include/tisci/rm/tisci_rm_core.h>
 #include <drivers/sciclient/include/tisci/rm/tisci_rm_proxy.h>
 #include <drivers/sciclient/include/tisci/security/tisci_sec_handover.h>
+#include <drivers/sciclient/include/tisci/security/tisci_secure_jtag.h>
+#include <drivers/sciclient/include/tisci/security/tisci_soc_uid.h>
+#include <drivers/sciclient/include/sciclient_lpm.h>
 #include <drivers/sciclient/include/sciclient_pm.h>
 #include <drivers/sciclient/include/sciclient_rm.h>
 #include <drivers/sciclient/include/sciclient_firewall.h>
 #include <drivers/sciclient/include/sciclient_dkek.h>
 #include <drivers/sciclient/include/sciclient_procboot.h>
 #include <drivers/sciclient/include/sciclient_boardcfg.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -474,7 +513,7 @@ extern "C" {
 typedef struct
 {
     uint16_t       messageType;
-    /**< [IN] Type of message */
+    /**< [IN] Type of message. */
     uint32_t       flags;
     /**< [IN] Flags for messages that are being transmitted.
      *
@@ -519,14 +558,6 @@ typedef struct
  *
  */
 int32_t Sciclient_loadFirmware(const uint32_t *pSciclient_firmware);
-
-/**
- *  \brief  Waits for boot notification from SYSFW
- *
- *  \return SystemP_SUCCESS on success, else failure
- *
- */
-int32_t Sciclient_waitForBootNotification(void);
 
 /**
  *  \brief  This API is called once for registering interrupts and creating
@@ -589,6 +620,46 @@ int32_t Sciclient_service(const Sciclient_ReqPrm_t *pReqPrm,
 
 int32_t Sciclient_deinit(void);
 
+#if defined(ENABLE_SCICLIENT_INTERRUPT_MODE)
+/**
+ *  \brief  API to enable interrupt mode for sciclient operations.
+ *          By default, sciclient operates in polling mode. This function switches
+ *          sciclient to interrupt mode where message responses trigger interrupts
+ *          instead of polling. This improves performance and reduces CPU usage.
+ *
+ *  \return CSL_PASS on success, else failure
+ */
+int32_t Sciclient_updateOperModeToInterrupt(void);
+
+/**
+ *  \brief   API to temporarily disable interrupts without unregistering.
+ *           This function disables the secure proxy response interrupt at the
+ *           interrupt controller level. The interrupt can be re-enabled using
+ *           Sciclient_enableIntr(). This is useful when temporarily suspending
+ *           interrupt handling without fully switching back to polling mode.
+ *
+ *           Note: Only has effect when already in interrupt mode.
+ */
+void Sciclient_disableIntr(void);
+
+/**
+ *  \brief   API to re-enable interrupts after Sciclient_disableIntr().
+ *           This function re-enables the secure proxy response interrupt that
+ *           was previously disabled with Sciclient_disableIntr().
+ *
+ *           Note: Only has effect when already in interrupt mode.
+ */
+void Sciclient_enableIntr(void);
+#endif
+
+/**
+ *  \brief   API to disable interrupt mode and switch back to polling mode.
+ *           This function deconfigures interrupts and switches sciclient back to
+ *           polling mode. All registered ISRs are unregistered and semaphores
+ *           are destroyed.
+ */
+void Sciclient_updateOperModeToPolled(void);
+
 /**
  *  \brief   API to verify that firmware ABI matches the supported ABI.
  *
@@ -610,7 +681,16 @@ int32_t Sciclient_triggerSecHandover(void);
  *
  *  \return SystemP_SUCCESS on success, else failure
  */
-int32_t Sciclient_getVersionCheck(bool doLog);
+int32_t Sciclient_getVersionCheck(uint32_t doLog);
+
+/**
+ *  \brief   API to send a get version command to DM and optionally log the results to console
+ *
+ *  \param doLog [in] 0: No logging to console, 1: log version results to console
+ *
+ *  \return SystemP_SUCCESS on success, else failure
+ */
+int32_t Sciclient_getDMVersion(uint32_t doLog);
 
 /**<
  *  \brief   API to get the TISCI Device ID of the core on which driver is currently running.
@@ -619,10 +699,17 @@ int32_t Sciclient_getVersionCheck(bool doLog);
  */
 uint32_t Sciclient_getSelfDevIdCore(void);
 
+/**
+ *  \brief  Waits for boot notification from SYSFW
+ *
+ *  \return SystemP_SUCCESS on success, else failure
+ *
+ */
+int32_t Sciclient_waitForBootNotification(void);
+
 /* ========================================================================== */
 /*                       Static Function Definitions                          */
 /* ========================================================================== */
-
 
 #ifdef __cplusplus
 }
@@ -636,7 +723,7 @@ uint32_t Sciclient_getSelfDevIdCore(void);
  * \ingroup DRV_SCICLIENT_MODULE
  * \defgroup TISCI Texas Instruments System Controller Interface
  *
- *  @{
+ ** @{
  *
  * ##Power and Clock Management Features
  * Public APIs are provided to:

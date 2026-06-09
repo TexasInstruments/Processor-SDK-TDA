@@ -169,12 +169,12 @@ template<> int32_t TidlParseOnnx::parse<OnnxStr("Conv")> ()
     {
       layer.strideOffsetMethod = TIDL_StrideOffsetCenter;
     }
-    pads[2] = max(pads[0], pads[2]);
-    pads[3] = max(pads[1], pads[3]);
     padL = pads[1];
     padR = pads[3];
     padT = pads[0];
     padB = pads[2];
+    pads[2] = max(pads[0], pads[2]);
+    pads[3] = max(pads[1], pads[3]);
   }
   else if ((strcmp(autoPad, "SAME_UPPER") == 0) || (strcmp(autoPad, "SAME_LOWER") == 0))
   {

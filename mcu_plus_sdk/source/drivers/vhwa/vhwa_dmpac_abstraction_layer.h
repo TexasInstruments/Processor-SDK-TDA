@@ -75,11 +75,7 @@ extern "C" {
     #include     "ti/drv/fvid2/include/fvid2_api.h"
     #include     "ti/csl/csl_types.h"
     #include     "ti/drv/udma/udma.h"
-    #if defined(SOC_J721E)
-    #include     "ti/drv/vhwa/soc/V0/vhwa_dmpac_priv.h"
-    #elif defined(SOC_J721S2) || defined(SOC_J784S4) || defined (SOC_J742S2)
     #include     "ti/drv/vhwa/soc/vhwa_dmpac_priv.h"
-    #endif
 #endif
 
 /* ========================================================================== */

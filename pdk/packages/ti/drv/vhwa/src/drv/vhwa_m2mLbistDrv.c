@@ -205,7 +205,9 @@ Int32 Vhwa_m2mLbistControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
     Ptr cmdStatusArgs)
 {
     int32_t                     status = FVID2_SOK;
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     uint32_t                    cnt;
+#endif
     Vhwa_M2mLbistDrvInstObj    *instObj = NULL;
 
     if ((Vhwa_M2mLbistDrvInstObj *)handle == &gVhwaM2mLbistDrvInstObj)
@@ -224,6 +226,7 @@ Int32 Vhwa_m2mLbistControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
         {
 #ifdef VHWA_M2M_VPAC_INSTANCE
 #if (VHWA_M2M_VPAC_INSTANCE == 0)
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
             case VHWA_M2M_IOCTL_LBIST_VPAC0_ACQUIRE_LOCK:
                 for (cnt = VHWA_VPAC0_VISS_LOCK_IDX; cnt <= VHWA_VPAC0_NF_LOCK_IDX; cnt ++)
                 {
@@ -265,6 +268,7 @@ Int32 Vhwa_m2mLbistControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                     }
                 }
                 break;
+#endif
 #endif
 
 #if (VHWA_M2M_VPAC_INSTANCE == 1)
@@ -314,6 +318,7 @@ Int32 Vhwa_m2mLbistControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
 #endif
 
 #ifdef VHWA_M2M_DMPAC_INSTANCE
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
             case VHWA_M2M_IOCTL_LBIST_DMPAC_ACQUIRE_LOCK:
                 for (cnt = VHWA_DMPAC_DOF_LOCK_IDX; cnt <= VHWA_DMPAC_SDE_LOCK_IDX; cnt ++)
                 {
@@ -342,6 +347,7 @@ Int32 Vhwa_m2mLbistControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                     }
                 }
                 break;
+#endif
 #endif
             default:
                 status = FVID2_EINVALID_PARAMS;

@@ -293,6 +293,7 @@ int32_t tivxVpacMscPmdFrameComplCb(Fvid2_Handle handle, void *appData);
 static void tivxVpacMscPmdErrorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData);
 static void tivxVpacMscPmdWdTimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData);
 
+#if !defined(VPAC3L)
 /* Config register readback callback */
 int32_t tivxVpacMscPmdConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms);
 
@@ -303,6 +304,7 @@ static void tivxVpacMscPmdFreeReadbackBuffers(tivxVpacMscPmdObj *mscObj);
 static vx_status tivxEnableVpacMscSafetyMechanisms(
     tivxVpacMscPmdObj *mscObj,
     const tivx_obj_desc_user_data_object_t *usr_data_obj);
+#endif
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -330,126 +332,119 @@ void tivxAddTargetKernelVpacMscGaussianPyramid(void)
 
     inst_start = TIVX_VPAC_MSC_G_PMG_START_IDX;
     self_cpu = tivxGetSelfCpuId();
-    /* LDRA_JUSTIFY_START
-    <metric start> statement branch <metric end>
-    <justification start>
-    Rationale: The component level negative test framework and test applications cannot reach this portion.
-    This failure case is out of scope for the imaging test framework.
-    Effect on this unit: If the control reaches here, the code base is NOT expected to accumulate and return an error.
-    This behaviour is part of the application design. However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if (((vx_enum)TIVX_CPU_ID_VPAC1 == self_cpu)
-#if (VPAC_COUNT > 1)
-        || ((vx_enum)TIVX_CPU_ID_VPAC2 == self_cpu)
-#endif
-        )
-    /* LDRA_JUSTIFY_END */ 
 
+    /* Reset all values to 0 */
+    memset(&gTivxVpacMscPmdInstObj[inst_start], 0x0,
+        sizeof(tivxVpacMscPmdInstObj) * VHWA_M2M_MSC_MAX_INST);
+
+    for (cnt = 0u; cnt < VHWA_M2M_MSC_MAX_INST; cnt ++)
     {
-        /* Reset all values to 0 */
-        memset(&gTivxVpacMscPmdInstObj[inst_start], 0x0,
-            sizeof(tivxVpacMscPmdInstObj) * VHWA_M2M_MSC_MAX_INST);
-
-        for (cnt = 0u; (cnt < VHWA_M2M_MSC_MAX_INST) && (status == (vx_status)VX_SUCCESS); cnt ++)
+        if(status != (vx_status)VX_SUCCESS)
         {
-            inst_obj = &gTivxVpacMscPmdInstObj[inst_start + cnt];
+            break;
+        }
+        inst_obj = &gTivxVpacMscPmdInstObj[inst_start + cnt];
 
-            if (0u == cnt)
+        if (0u == cnt)
+        {
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
+                However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if (self_cpu == (vx_enum)TIVX_CPU_ID_VPAC1)
+            /* LDRA_JUSTIFY_END */
             {
-                /* LDRA_JUSTIFY_START
-                <metric start> branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                This failure case is out of scope for the imaging test framework.
-                Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                if (self_cpu == (vx_enum)TIVX_CPU_ID_VPAC1)
-                /* LDRA_JUSTIFY_END */
-                {
-                    strncpy(target_name, TIVX_TARGET_VPAC_MSC1,
-                        TIVX_TARGET_MAX_NAME);
-                }
-                #if (VPAC_COUNT > 1)
-                /* LDRA_JUSTIFY_START
-                <metric start> statement branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                This failure case is out of scope for the imaging test framework.
-                Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                else if ((vx_enum)TIVX_CPU_ID_VPAC2 == self_cpu)
-                {
-                    strncpy(target_name, TIVX_TARGET_VPAC2_MSC1,
-                        TIVX_TARGET_MAX_NAME);
-                }
-                #endif
-                /* LDRA_JUSTIFY_START
-                <metric start> statement branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                The CPU ID is validated by the framework and only supported CPU IDs (TIVX_CPU_ID_VPAC1, TIVX_CPU_ID_VPAC2) are assigned to this target.
-                This failure case is out of scope for the imaging test framework.
-                Effect on this unit: If the control reaches here, our code base is expected to log the error message for unsupported CPU ID.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                else
-                {
-                    /* Unsupported CPU ID */
-                    VX_PRINT(VX_ZONE_ERROR, "Unsupported CPU ID\n");
-                }
-                /* LDRA_JUSTIFY_END */
+                strncpy(target_name, TIVX_TARGET_VPAC_MSC1,
+                    TIVX_TARGET_MAX_NAME);
             }
+            #if (VPAC_COUNT > 1)
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
+                However, due to the stated rationale, this is not tested.
+            <justification end> */
+            else if ((vx_enum)TIVX_CPU_ID_VPAC2 == self_cpu)
+            {
+                strncpy(target_name, TIVX_TARGET_VPAC2_MSC1,
+                    TIVX_TARGET_MAX_NAME);
+            }
+            #endif
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            The CPU ID is validated by the framework and only supported CPU IDs (TIVX_CPU_ID_VPAC1, TIVX_CPU_ID_VPAC2) are assigned to this target.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to log the error message for unsupported CPU ID.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             else
             {
-                /* LDRA_JUSTIFY_START
-                <metric start> branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                This failure case is out of scope for the imaging test framework.
-                Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                if (self_cpu == (vx_enum)TIVX_CPU_ID_VPAC1)
-                /* LDRA_JUSTIFY_END */
-                {
-                    strncpy(target_name, TIVX_TARGET_VPAC_MSC2,
-                        TIVX_TARGET_MAX_NAME);
-                }
-                #if (VPAC_COUNT > 1)
-                /* LDRA_JUSTIFY_START
-                <metric start> statement branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                This failure case is out of scope for the imaging test framework.
-                Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                else if ((vx_enum)TIVX_CPU_ID_VPAC2 == self_cpu)
-                /* LDRA_JUSTIFY_END */
-                {
-                    strncpy(target_name, TIVX_TARGET_VPAC2_MSC2,
-                        TIVX_TARGET_MAX_NAME);
-                }
-                #endif
-                /* LDRA_JUSTIFY_START
-                <metric start> statement branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                The CPU ID is validated by the framework and only supported CPU IDs (TIVX_CPU_ID_VPAC1, TIVX_CPU_ID_VPAC2) are assigned to this target.
-                This failure case is out of scope for the imaging test framework.
-                Effect on this unit: If the control reaches here, our code base is expected to log the error message for unsupported CPU ID.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                else
-                {
-                    /* Unsupported CPU ID */
-                    VX_PRINT(VX_ZONE_ERROR, "Unsupported CPU ID\n");
-                }
-                /* LDRA_JUSTIFY_END */
+                /* Unsupported CPU ID */
+                VX_PRINT(VX_ZONE_ERROR, "Unsupported CPU ID\n");
+                status = (vx_status)VX_FAILURE;
             }
+            /* LDRA_JUSTIFY_END */
+        }
+        else
+        {
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
+                However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if (self_cpu == (vx_enum)TIVX_CPU_ID_VPAC1)
+            /* LDRA_JUSTIFY_END */
+            {
+                strncpy(target_name, TIVX_TARGET_VPAC_MSC2,
+                    TIVX_TARGET_MAX_NAME);
+            }
+            #if (VPAC_COUNT > 1)
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
+                However, due to the stated rationale, this is not tested.
+            <justification end> */
+            else if ((vx_enum)TIVX_CPU_ID_VPAC2 == self_cpu)
+            /* LDRA_JUSTIFY_END */
+            {
+                strncpy(target_name, TIVX_TARGET_VPAC2_MSC2,
+                    TIVX_TARGET_MAX_NAME);
+            }
+            #endif
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            The CPU ID is validated by the framework and only supported CPU IDs (TIVX_CPU_ID_VPAC1, TIVX_CPU_ID_VPAC2) are assigned to this target.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to log the error message for unsupported CPU ID.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
+            else
+            {
+                /* Unsupported CPU ID */
+                VX_PRINT(VX_ZONE_ERROR, "Unsupported CPU ID\n");
+                status = (vx_status)VX_FAILURE;
+            }
+            /* LDRA_JUSTIFY_END */
+        }
 
+        if((vx_status)VX_SUCCESS == status)
+        {
             inst_obj->target_kernel = tivxAddTargetKernel(
                                 (vx_enum)VX_KERNEL_GAUSSIAN_PYRAMID,
                                 target_name,
@@ -536,6 +531,7 @@ void tivxAddTargetKernelVpacMscGaussianPyramid(void)
                         {
                             /* Unsupported CPU ID */
                             VX_PRINT(VX_ZONE_ERROR, "Unsupported CPU ID\n");
+                            status = (vx_status)VX_FAILURE;
                         }
                         /* LDRA_JUSTIFY_END */
                         inst_obj->alloc_sc_fwd_dir = 1U;
@@ -585,6 +581,7 @@ void tivxAddTargetKernelVpacMscGaussianPyramid(void)
                         {
                             /* Unsupported CPU ID */
                             VX_PRINT(VX_ZONE_ERROR, "Unsupported CPU ID\n");
+                            status = (vx_status)VX_FAILURE;
                         }
                         /* LDRA_JUSTIFY_END */
                         inst_obj->alloc_sc_fwd_dir = 0U;
@@ -608,33 +605,32 @@ void tivxAddTargetKernelVpacMscGaussianPyramid(void)
             }
             /* LDRA_JUSTIFY_END */
         }
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to perform clean-up operations.
+    }
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    This failure case is out of scope for the imaging test framework.
+    Effect on this unit: If the control reaches here, our code base is expected to perform clean-up operations.
         However, due to the stated rationale, this is not tested.
-        <justification end> */
-        /* Clean up allocated resources */
-        if ((vx_status)VX_SUCCESS != status)
+    <justification end> */
+    /* Clean up allocated resources */
+    if ((vx_status)VX_SUCCESS != status)
+    {
+        for (cnt = 0u; cnt < VHWA_M2M_MSC_MAX_INST; cnt ++)
         {
-            for (cnt = 0u; cnt < VHWA_M2M_MSC_MAX_INST; cnt ++)
+            inst_obj = &gTivxVpacMscPmdInstObj[cnt];
+            if (inst_obj->target_kernel != NULL)
             {
-                inst_obj = &gTivxVpacMscPmdInstObj[cnt];
-                if (inst_obj->target_kernel != NULL)
-                {
-                    (void)tivxRemoveTargetKernel(inst_obj->target_kernel);
-                }
-                if (inst_obj->lock != NULL)
-                {
-                    (void)tivxMutexDelete(&inst_obj->lock);
-                }
+                (void)tivxRemoveTargetKernel(inst_obj->target_kernel);
+            }
+            if (inst_obj->lock != NULL)
+            {
+                (void)tivxMutexDelete(&inst_obj->lock);
             }
         }
-        /* LDRA_JUSTIFY_END */           
-
     }
+    /* LDRA_JUSTIFY_END */           
 }
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
@@ -686,126 +682,120 @@ void tivxAddTargetKernelVpacMscPyramid(void)
 
     inst_start = TIVX_VPAC_MSC_PMD_START_IDX;
     self_cpu = tivxGetSelfCpuId();
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start>
-    Rationale: The component level negative test framework and test applications cannot reach this portion.
-    This failure case is out of scope for the imaging test framework.
-    Effect on this unit: If the control reaches here, the code base is NOT expected to accumulate and return an error.
-    This behaviour is part of the application design. However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if ((self_cpu == (vx_enum)TIVX_CPU_ID_VPAC1)
-#if (VPAC_COUNT > 1)
-        || ((vx_enum)TIVX_CPU_ID_VPAC2 == self_cpu)
-#endif
-        )
-    /* LDRA_JUSTIFY_END */
+
+    /* Reset all values to 0 */
+    memset(&gTivxVpacMscPmdInstObj[inst_start], 0x0,
+        sizeof(tivxVpacMscPmdInstObj) * VHWA_M2M_MSC_MAX_INST);
+
+    for (cnt = 0u; cnt < VHWA_M2M_MSC_MAX_INST; cnt ++)
     {
-        /* Reset all values to 0 */
-        memset(&gTivxVpacMscPmdInstObj[inst_start], 0x0,
-            sizeof(tivxVpacMscPmdInstObj) * VHWA_M2M_MSC_MAX_INST);
-
-        for (cnt = 0u; (cnt < VHWA_M2M_MSC_MAX_INST) && (status == (vx_status)VX_SUCCESS); cnt ++)
+        if(status != (vx_status)VX_SUCCESS)
         {
-            inst_obj = &gTivxVpacMscPmdInstObj[inst_start + cnt];
+            break;
+        }
+        inst_obj = &gTivxVpacMscPmdInstObj[inst_start + cnt];
 
-            if (0u == cnt)
+        if (0u == cnt)
+        {
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
+                However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if (self_cpu == (vx_enum)TIVX_CPU_ID_VPAC1)
+            /* LDRA_JUSTIFY_END */
             {
-                /* LDRA_JUSTIFY_START
-                <metric start> branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                This failure case is out of scope for the imaging test framework.
-                Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                if (self_cpu == (vx_enum)TIVX_CPU_ID_VPAC1)
-                /* LDRA_JUSTIFY_END */
-                {
-                    strncpy(target_name, TIVX_TARGET_VPAC_MSC1,
-                        TIVX_TARGET_MAX_NAME);
-                }
-                #if (VPAC_COUNT > 1)
-                /* LDRA_JUSTIFY_START
-                <metric start> branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                This failure case is out of scope for the imaging test framework.
-                Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                else if ((vx_enum)TIVX_CPU_ID_VPAC2 == self_cpu)
-                /* LDRA_JUSTIFY_END */
-                {
-                    strncpy(target_name, TIVX_TARGET_VPAC2_MSC1,
-                        TIVX_TARGET_MAX_NAME);
-                }
-                #endif
-                /* LDRA_JUSTIFY_START
-                <metric start> statement branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                The CPU ID is validated by the framework and only supported CPU IDs (TIVX_CPU_ID_VPAC1, TIVX_CPU_ID_VPAC2) are assigned to this target.
-                This failure case is out of scope for the imaging test framework.
-                Effect on this unit: If the control reaches here, our code base is expected to log the error message for unsupported CPU ID.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                else
-                {
-                    /* Unsupported CPU ID */
-                    VX_PRINT(VX_ZONE_ERROR, "Unsupported CPU ID\n");
-                }
-                /* LDRA_JUSTIFY_END */
+                strncpy(target_name, TIVX_TARGET_VPAC_MSC1,
+                    TIVX_TARGET_MAX_NAME);
             }
+            #if (VPAC_COUNT > 1)
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
+                However, due to the stated rationale, this is not tested.
+            <justification end> */
+            else if ((vx_enum)TIVX_CPU_ID_VPAC2 == self_cpu)
+            /* LDRA_JUSTIFY_END */
+            {
+                strncpy(target_name, TIVX_TARGET_VPAC2_MSC1,
+                    TIVX_TARGET_MAX_NAME);
+            }
+            #endif
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            The CPU ID is validated by the framework and only supported CPU IDs (TIVX_CPU_ID_VPAC1, TIVX_CPU_ID_VPAC2) are assigned to this target.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to log the error message for unsupported CPU ID.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             else
             {
-                /* LDRA_JUSTIFY_START
-                <metric start> branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                This failure case is out of scope for the imaging test framework.
-                Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                if (self_cpu == (vx_enum)TIVX_CPU_ID_VPAC1)
-                /* LDRA_JUSTIFY_END */
-                {
-                    strncpy(target_name, TIVX_TARGET_VPAC_MSC2,
-                        TIVX_TARGET_MAX_NAME);
-                }
-                #if (VPAC_COUNT > 1)
-                /* LDRA_JUSTIFY_START
-                <metric start> statement branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                This failure case is out of scope for the imaging test framework.
-                Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                else if ((vx_enum)TIVX_CPU_ID_VPAC2 == self_cpu)
-                /* LDRA_JUSTIFY_END */
-                {
-                    strncpy(target_name, TIVX_TARGET_VPAC2_MSC2,
-                        TIVX_TARGET_MAX_NAME);
-                }
-                #endif
-                /* LDRA_JUSTIFY_START
-                <metric start> statement branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                The CPU ID is validated by the framework and only supported CPU IDs (TIVX_CPU_ID_VPAC1, TIVX_CPU_ID_VPAC2) are assigned to this target.
-                This failure case is out of scope for the imaging test framework.
-                Effect on this unit: If the control reaches here, our code base is expected to log the error message for unsupported CPU ID.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                else
-                {
-                    /* Unsupported CPU ID */
-                    VX_PRINT(VX_ZONE_ERROR, "Unsupported CPU ID\n");
-                }
-                /* LDRA_JUSTIFY_END */
+                /* Unsupported CPU ID */
+                VX_PRINT(VX_ZONE_ERROR, "Unsupported CPU ID\n");
+                status = (vx_status)VX_FAILURE;
             }
+            /* LDRA_JUSTIFY_END */
+        }
+        else
+        {
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
+                However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if (self_cpu == (vx_enum)TIVX_CPU_ID_VPAC1)
+            /* LDRA_JUSTIFY_END */
+            {
+                strncpy(target_name, TIVX_TARGET_VPAC_MSC2,
+                    TIVX_TARGET_MAX_NAME);
+            }
+            #if (VPAC_COUNT > 1)
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated.
+                However, due to the stated rationale, this is not tested.
+            <justification end> */
+            else if ((vx_enum)TIVX_CPU_ID_VPAC2 == self_cpu)
+            /* LDRA_JUSTIFY_END */
+            {
+                strncpy(target_name, TIVX_TARGET_VPAC2_MSC2,
+                    TIVX_TARGET_MAX_NAME);
+            }
+            #endif
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            The CPU ID is validated by the framework and only supported CPU IDs (TIVX_CPU_ID_VPAC1, TIVX_CPU_ID_VPAC2) are assigned to this target.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to log the error message for unsupported CPU ID.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
+            else
+            {
+                /* Unsupported CPU ID */
+                VX_PRINT(VX_ZONE_ERROR, "Unsupported CPU ID\n");
+                status = (vx_status)VX_FAILURE;
+            }
+            /* LDRA_JUSTIFY_END */
+        }
 
+        if ((vx_status)VX_SUCCESS == status)
+        {
             inst_obj->target_kernel = tivxAddTargetKernelByName(
                             TIVX_KERNEL_VPAC_MSC_PYRAMID_NAME,
                             target_name,
@@ -893,6 +883,7 @@ void tivxAddTargetKernelVpacMscPyramid(void)
                         {
                             /* Unsupported CPU ID */
                             VX_PRINT(VX_ZONE_ERROR, "Unsupported CPU ID\n");
+                            status = (vx_status)VX_FAILURE;
                         }
                         /* LDRA_JUSTIFY_END */
                         inst_obj->alloc_sc_fwd_dir = 1U;
@@ -934,6 +925,7 @@ void tivxAddTargetKernelVpacMscPyramid(void)
                         {
                             /* Unsupported CPU ID */
                             VX_PRINT(VX_ZONE_ERROR, "Unsupported CPU ID\n");
+                            status = (vx_status)VX_FAILURE;
                         }
                         inst_obj->alloc_sc_fwd_dir = 0U;
                     }
@@ -956,33 +948,32 @@ void tivxAddTargetKernelVpacMscPyramid(void)
             }
             /* LDRA_JUSTIFY_END */
         }
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to perform clean-up operations.
+    }
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    This failure case is out of scope for the imaging test framework.
+    Effect on this unit: If the control reaches here, our code base is expected to perform clean-up operations.
         However, due to the stated rationale, this is not tested.
-        <justification end> */
-        /* Clean up allocated resources */
-        if ((vx_status)VX_SUCCESS != status)
+    <justification end> */
+    /* Clean up allocated resources */
+    if ((vx_status)VX_SUCCESS != status)
+    {
+        for (cnt = 0u; cnt < VHWA_M2M_MSC_MAX_INST; cnt ++)
         {
-            for (cnt = 0u; cnt < VHWA_M2M_MSC_MAX_INST; cnt ++)
+            inst_obj = &gTivxVpacMscPmdInstObj[cnt];
+            if (inst_obj->target_kernel != NULL)
             {
-                inst_obj = &gTivxVpacMscPmdInstObj[cnt];
-                if (inst_obj->target_kernel != NULL)
-                {
-                    (void)tivxRemoveTargetKernel(inst_obj->target_kernel);
-                }
-                if (inst_obj->lock != NULL)
-                {
-                    (void)tivxMutexDelete(&inst_obj->lock);
-                }
+                (void)tivxRemoveTargetKernel(inst_obj->target_kernel);
+            }
+            if (inst_obj->lock != NULL)
+            {
+                (void)tivxMutexDelete(&inst_obj->lock);
             }
         }
-        /* LDRA_JUSTIFY_END */           
-
     }
+    /* LDRA_JUSTIFY_END */           
 }
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
@@ -1375,7 +1366,6 @@ static vx_status VX_CALLBACK tivxVpacMscPmdCreate(
         single_phase[0][cnt] = 0;
         cnt++;
         single_phase[0][cnt] = 0;
-        cnt++;
         cnt = 0u;
         single_phase[1][cnt] = 16;
         cnt++;
@@ -1386,7 +1376,6 @@ static vx_status VX_CALLBACK tivxVpacMscPmdCreate(
         single_phase[1][cnt] = 64;
         cnt++;
         single_phase[1][cnt] = 16;
-        cnt++;
 
         for (cnt = 0u; cnt < MSC_MAX_SP_COEFF_SET; cnt ++)
         {
@@ -1612,12 +1601,13 @@ static vx_status VX_CALLBACK tivxVpacMscPmdDelete(
                 (void)tivxEventDelete(&msc_obj->wait_for_compl);
             }
 
+#if !defined(VPAC3L)
             /* Free config register readback buffers if allocated */
             if ((msc_obj->readback_mem_ptr_phys != 0u) || (msc_obj->golden_reg_mem_ptr_phys != 0u))
             {
                 tivxVpacMscPmdFreeReadbackBuffers(msc_obj);
             }
-
+#endif
             tivxVpacMscPmdFreeObject(inst_obj, msc_obj);
         }
     }
@@ -1664,6 +1654,10 @@ static vx_status VX_CALLBACK tivxVpacMscPmdProcess(
     Vhwa_M2mMscPsaSign       psa;
     uint32_t                psa_store_idx = 0u;
     tivx_obj_desc_t         *out_pmd_base_desc;
+    #if !defined(VPAC3L)
+    vx_status               validate_reg_status = (vx_status)VX_SUCCESS;
+    #endif
+
     /* LDRA_JUSTIFY_START
     <metric start>  statement branch <metric end>
     <justification start>
@@ -1694,8 +1688,6 @@ static vx_status VX_CALLBACK tivxVpacMscPmdProcess(
     /* LDRA_JUSTIFY_END */           
 
     {
-        status = (vx_status)VX_FAILURE;
-
         void *temp_kernel_context = NULL;
         status = tivxGetTargetKernelInstanceContext(kernel, &temp_kernel_context, &size);
         /* LDRA_JUSTIFY_START
@@ -1813,8 +1805,12 @@ static vx_status VX_CALLBACK tivxVpacMscPmdProcess(
             psa_store_idx = MSC_MAX_OUTPUT - 1u;
         }
 
-        for (oct_cnt = 0u; (oct_cnt < msc_obj->num_pmd_subsets) && (status == (vx_status)VX_SUCCESS); oct_cnt ++)
+        for (oct_cnt = 0u; oct_cnt < msc_obj->num_pmd_subsets; oct_cnt ++)
         {
+            if(status != (vx_status)VX_SUCCESS)
+            {
+                break;
+            }
             ss_info = &msc_obj->ss_info[oct_cnt];
 
             /* MSC Parameters requires to be set in the driver,
@@ -2051,10 +2047,10 @@ static vx_status VX_CALLBACK tivxVpacMscPmdProcess(
                         status = (vx_status)VX_ERROR_TIMEOUT;
                     }
                     /* LDRA_JUSTIFY_END */
-
+#if !defined(VPAC3L)
                     /* Call the control command for statusreg/configReg validate */
                     {
-                        status = Fvid2_control(msc_obj->handle, VHWA_M2M_IOCTL_MSC_VALIDATE_REG, NULL, NULL);
+                        fvid2_status = Fvid2_control(msc_obj->handle, VHWA_M2M_IOCTL_MSC_VALIDATE_REG, NULL, NULL);
                         /* LDRA_JUSTIFY_START
                         <metric start> statement branch <metric end>
                         <justification start>
@@ -2063,13 +2059,14 @@ static vx_status VX_CALLBACK tivxVpacMscPmdProcess(
                         Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
                         However, due to the stated rationale, this is not tested.
                         <justification end> */
-                        if (FVID2_SOK != status)
+                        if (FVID2_SOK != fvid2_status)
                         {
-                            VX_PRINT(VX_ZONE_ERROR, "Register validation failed (Fvid2_control returned %d)\n", status);
-                            status = (vx_status)VX_FAILURE;
+                            VX_PRINT(VX_ZONE_ERROR, "Register validation failed (Fvid2_control returned %d)\n", fvid2_status);
+                            validate_reg_status = (vx_status)VX_FAILURE;
                         }
                         /* LDRA_JUSTIFY_END */
                     }
+#endif
                 }
             }
         }
@@ -2117,6 +2114,13 @@ static vx_status VX_CALLBACK tivxVpacMscPmdProcess(
             size /* pixels processed */
             );
     }
+
+    #if !defined(VPAC3L)
+    if(((vx_status)VX_SUCCESS != status) || ((vx_status)VX_SUCCESS != validate_reg_status))
+    {
+        status = (vx_status)VX_FAILURE;
+    }
+    #endif
 
     return (status);
 }
@@ -2228,6 +2232,7 @@ static vx_status VX_CALLBACK tivxVpacMscPmdControl(
                 break;
             }
             /* MSC: Add case to control callback for safety mechanism */
+#if !defined(VPAC3L)
             case TIVX_VPAC_MSC_CMD_ENABLE_SAFETY_MECHANISM:
             {
                 status = tivxEnableVpacMscSafetyMechanisms(msc_obj,
@@ -2247,6 +2252,7 @@ static vx_status VX_CALLBACK tivxVpacMscPmdControl(
                 /* LDRA_JUSTIFY_END */
                 break;
             }
+#endif
             default:
             {
                 VX_PRINT(VX_ZONE_ERROR, "Invalid Command Id\n");
@@ -2584,12 +2590,10 @@ static vx_status tivxVpacMscPmdCalcSubSetInfo(tivxVpacMscPmdObj *msc_obj, tivx_t
     tivx_obj_desc_image_t      *out_img_desc;
     tivxVpacMscPmdSubSetInfo   *ss_info;
     uint32_t                    max_ds_factor;
-    tivx_target_kernel          target_kernel;
     /*! If input is NV12 and output is chroma only, then input height should be divided by half 
      *  from input image descriptor. div_factor stores that information*/
     uint32_t                    div_factor = TIVX_VPAC_MSC_INIT_DIV_FACTOR;
 
-    target_kernel = tivxTargetKernelInstanceGetKernel(kernel);
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
     <justification start>
@@ -2602,13 +2606,6 @@ static vx_status tivxVpacMscPmdCalcSubSetInfo(tivxVpacMscPmdObj *msc_obj, tivx_t
     /* LDRA_JUSTIFY_END */ 
 
     {
-
-        if ((gTivxVpacMscPmdInstObj[TIVX_VPAC_MSC_G_PMG_START_IDX].target_kernel == target_kernel) ||
-            (gTivxVpacMscPmdInstObj[TIVX_VPAC_MSC_G_PMG_START_IDX+1U].target_kernel == target_kernel))
-        {
-            max_ds_factor = msc_obj->max_ds_factor;
-        }
-
         max_ds_factor = msc_obj->max_ds_factor;
 
         num_subsets = 0U;
@@ -2653,8 +2650,12 @@ static vx_status tivxVpacMscPmdCalcSubSetInfo(tivxVpacMscPmdObj *msc_obj, tivx_t
             /* Atleast, one subset is required */
             num_subsets ++;
 
-            for (cnt = 0u; (cnt < num_pmd_levels) && (status == (vx_status)VX_SUCCESS); cnt ++)
+            for (cnt = 0u; cnt < num_pmd_levels; cnt ++)
             {
+                if(status != (vx_status)VX_SUCCESS)
+                {
+                    break;
+                }
                 out_img_desc = msc_obj->out_img_desc[cnt];
 
                 if ((vx_df_image)VX_DF_IMAGE_NV12 == in_img_desc->format)
@@ -2976,31 +2977,6 @@ static vx_status tivxVpacMscPmdSetMscParams(tivxVpacMscPmdObj *msc_obj,
                 /* Unsupported format */
             }
         }
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        edit this
-        Rationale: The component level negative test framework and test applications CAN reach this portion.
-        No existing test case can reach this portion. A test case will be added to cover this gap in a future release.
-        Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application.
-        This behaviour is part of the application design. However, due to the stated rationale, this is not tested.
-        <justification end> */
-        else if((vx_df_image)VX_DF_IMAGE_U8 == in_img_desc->format)
-        {
-            if(TIVX_VPAC_MSC_MODE_LUMA_ONLY == msc_obj->yc_mode)
-            {
-                msc_prms->outFmt[idx].dataFormat = FVID2_DF_LUMA_ONLY;
-            }
-            else
-            {
-                msc_prms->outFmt[idx].dataFormat = FVID2_DF_CHROMA_ONLY;
-            }
-        }
-        else
-        {
-            /* do nothing */
-        }
-        /* LDRA_JUSTIFY_END */
         out_start_idx ++;
     }
     return status;
@@ -3848,6 +3824,7 @@ static vx_status tivxVpacMscPmdEnableErrorEventsCmd(tivxVpacMscPmdObj *msc_obj,
 
     return status;
 }
+#if !defined(VPAC3L)
 /* MSC: Enable safety mechanism function */
 static vx_status tivxEnableVpacMscSafetyMechanisms(
     tivxVpacMscPmdObj *mscObj,
@@ -4388,7 +4365,7 @@ static void tivxVpacMscPmdFreeReadbackBuffers(tivxVpacMscPmdObj *mscObj)
         mscObj->config_reg_mem_size = 0u;
     }
 }
-
+#endif
 /* ========================================================================== */
 /*                              Driver Callbacks                              */
 /* ========================================================================== */
@@ -4453,6 +4430,7 @@ static void tivxVpacMscPmdWdTimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerEr
 }
 /* LDRA_JUSTIFY_END */
 
+#if !defined(VPAC3L)
 int32_t tivxVpacMscPmdConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms)
 {
     Vhwa_M2mMscConfigRegMemParams *msc_config_reg_prms = (Vhwa_M2mMscConfigRegMemParams *)configRegPrms;
@@ -4562,6 +4540,7 @@ int32_t tivxVpacMscPmdConfigRegMemCompareCb(Fvid2_Handle handle, void *configReg
 
     return status;
 }
+#endif
 BUILD_ASSERT((sizeof(Vhwa_M2mMscPsaSign) == sizeof(((tivx_vpac_msc_psa_timestamp_data_t *)0)->psa_values))? 1U : 0U);
 
 

@@ -121,6 +121,7 @@
 #define ENABLE_FVID2
 #define ENABLE_VHWA_VPAC0
 #undef ENABLE_VHWA_DMPAC
+#define ENABLE_AEWB_KERNELS
 
 #if defined (ENABLE_DSS_DSI) && !defined(ENABLE_I2C)
 #error "DSI output depends on I2C, Include ENABLE_I2C"

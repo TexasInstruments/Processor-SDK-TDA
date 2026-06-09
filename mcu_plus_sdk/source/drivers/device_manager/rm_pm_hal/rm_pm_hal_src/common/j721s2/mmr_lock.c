@@ -3,7 +3,7 @@
  *
  * Cortex-M3 (CM3) firmware for power management
  *
- * Copyright (C) 2019-2024, Texas Instruments Incorporated
+ * Copyright (C) 2019-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,8 +60,13 @@
 #define MMR_MCU_CTRL_BASE_PARTITION_2                   BIT(2)
 #define MMR_WKUP_CTRL_BASE_PARTITION_6                  BIT(3)
 
+#define MMR_WKUPMCU2MAIN_LPSC_STATUS                    0x42000810U
+#define MMR_LPSC_STATUS_ENABLE                          ((u32) 0x03U)
+
 static volatile s32 mmr_lock_count = 0;
 static volatile u32 mmr_read_value = 0U;
+static volatile s32 main_mmr_lock_count = 0;
+static volatile u32 main_mmr_read_value = 0U;
 
 void mmr_read(u32 base, u32 partition, u32 value)
 {
@@ -102,31 +107,51 @@ void mmr_lock(u32 base, u32 partition)
 void mmr_unlock_all(void)
 {
 	u32 key = osal_hwip_disable();
+	u32 wkupmcu2main_lpsc_status = (u32) (readl(MMR_WKUPMCU2MAIN_LPSC_STATUS) & MMR_LPSC_STATUS_ENABLE);
 
 	/* Initailize the value to zero */
 	mmr_read_value = 0U;
 
 	/* Check the previous unlock status of MMR partitions and store the status */
 	mmr_read(WKUP_CTRL_BASE, 2, MMR_WKUP_CTRL_BASE_PARTITION_2);
-	mmr_read(MAIN_CTRL_BASE, 2, MMR_MAIN_CTRL_BASE_PARTITION_2);
 	mmr_read(MCU_CTRL_BASE, 2, MMR_MCU_CTRL_BASE_PARTITION_2);
 	mmr_read(WKUP_CTRL_BASE, 6, MMR_WKUP_CTRL_BASE_PARTITION_6);
 
 	if (mmr_lock_count == 0) {
 		/* Unlock CLKSEL MMR partitions */
 		mmr_unlock(WKUP_CTRL_BASE, 2);
-		mmr_unlock(MAIN_CTRL_BASE, 2);
 		mmr_unlock(MCU_CTRL_BASE, 2);
 		/* Unlock WKUP_MCU_WARM_RST_CTRL MMR partitions*/
 		mmr_unlock(WKUP_CTRL_BASE, 6);
 	}
 	mmr_lock_count += 1;
+
+	/* Unlock Main MMR's only if Main domain is ON and accessible by DM. */
+	if (wkupmcu2main_lpsc_status == MMR_LPSC_STATUS_ENABLE) {
+		/*
+		 * Update the main MMR read value to zero only if main domain is ON and accessible.
+		 * This is to avoid the false update of main MMR read value if main domain is OFF.
+		 */
+		main_mmr_read_value = 0U;
+		mmr_read(MAIN_CTRL_BASE, 2, MMR_MAIN_CTRL_BASE_PARTITION_2);
+		main_mmr_read_value = ((u32) (mmr_read_value & MMR_MAIN_CTRL_BASE_PARTITION_2));
+		/*
+		 * Main MMR lock count is seperated to avoid false update of main MMR read value
+		 * when main domain is OFF.
+		 */
+		if (main_mmr_lock_count == 0) {
+			mmr_unlock(MAIN_CTRL_BASE, 2);
+		}
+		main_mmr_lock_count += 1;
+	}
+
 	osal_hwip_restore(key);
 }
 
 void mmr_lock_all(void)
 {
 	u32 key = osal_hwip_disable();
+	u32 wkupmcu2main_lpsc_status = (u32) (readl(MMR_WKUPMCU2MAIN_LPSC_STATUS) & MMR_LPSC_STATUS_ENABLE);
 
 	mmr_lock_count -= 1;
 	if (mmr_lock_count == 0) {
@@ -135,10 +160,6 @@ void mmr_lock_all(void)
 		if ((mmr_read_value & MMR_WKUP_CTRL_BASE_PARTITION_2) == MMR_WKUP_CTRL_BASE_PARTITION_2) {
 			/* Lock CLKSEL MMR partitions */
 			mmr_lock(WKUP_CTRL_BASE, 2);
-		}
-		if ((mmr_read_value & MMR_MAIN_CTRL_BASE_PARTITION_2) == MMR_MAIN_CTRL_BASE_PARTITION_2) {
-			/* Lock CLKSEL MMR partitions */
-			mmr_lock(MAIN_CTRL_BASE, 2);
 		}
 		if ((mmr_read_value & MMR_MCU_CTRL_BASE_PARTITION_2) == MMR_MCU_CTRL_BASE_PARTITION_2) {
 			/* Lock CLKSEL MMR partitions */
@@ -149,5 +170,17 @@ void mmr_lock_all(void)
 			mmr_lock(WKUP_CTRL_BASE, 6);
 		}
 	}
+
+	/* Lock Main MMR's only if Main domain is ON and accessible by DM. */
+	if (wkupmcu2main_lpsc_status == MMR_LPSC_STATUS_ENABLE) {
+		main_mmr_lock_count -= 1;
+		if (main_mmr_lock_count == 0) {
+			if ((main_mmr_read_value & MMR_MAIN_CTRL_BASE_PARTITION_2) == MMR_MAIN_CTRL_BASE_PARTITION_2) {
+				/* Lock CLKSEL MMR partitions */
+				mmr_lock(MAIN_CTRL_BASE, 2);
+			}
+		}
+	}
+
 	osal_hwip_restore(key);
 }

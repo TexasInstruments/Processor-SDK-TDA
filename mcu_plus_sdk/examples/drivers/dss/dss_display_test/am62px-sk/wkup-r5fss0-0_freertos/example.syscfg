@@ -2,7 +2,7 @@
  * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
  * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
  * @cliArgs --device "AM62Px" --package "AMH" --part "Default" --context "wkup-r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
- * @versions {"tool":"1.16.1+2960"}
+ * @versions {"tool":"1.20.0+3587"}
  */
 
 /**
@@ -34,25 +34,33 @@ const mpu_armv78  = mpu_armv7.addInstance();
 /**
  * Write custom configuration values to the imported modules.
  */
-bootloader1.appImageOffset = "0x800000";
-bootloader1.$name          = "CONFIG_BOOTLOADER_FLASH_MCU";
+bootloader1.$name          = "CONFIG_BOOTLOADER_FLASH_HSM";
+bootloader1.appImageOffset = "0x240000";
 
-bootloader2.appImageOffset = "0x1200000";
-bootloader2.$name          = "CONFIG_BOOTLOADER_FLASH_LINUX";
+bootloader2.appImageOffset = "0x800000";
+bootloader2.$name          = "CONFIG_BOOTLOADER_FLASH_MCU";
 
-bootloader3.appImageOffset = "0x240000";
-bootloader3.$name          = "CONFIG_BOOTLOADER_FLASH_HSM";
+bootloader3.appImageOffset = "0x1200000";
+bootloader3.$name          = "CONFIG_BOOTLOADER_FLASH_LINUX";
 
-bootloader1.flashDriver                             = flash1;
-bootloader2.flashDriver                             = flash1;
-bootloader3.flashDriver                             = flash1;
-flash1.$name                                        = "CONFIG_FLASH_SBL";
-flash1.serialFlashDriver.$name                      = "board_flash_serialFlash_serialflash0";
-flash1.serialFlashDriver.peripheralDriver.dmaEnable = true;
-flash1.serialFlashDriver.peripheralDriver.phyEnable = true;
-flash1.serialFlashDriver.peripheralDriver.$name     = "CONFIG_OSPI_SBL";
+flash1.$name                                            = "CONFIG_FLASH_SBL";
+bootloader1.flashDriver                                 = flash1;
+bootloader2.flashDriver                                 = flash1;
+bootloader3.flashDriver                                 = flash1;
+flash1.serialFlashDriver.$name                          = "board_flash_serialFlash_serialflash0";
+flash1.serialFlashDriver.peripheralDriver.dmaEnable     = true;
+flash1.serialFlashDriver.peripheralDriver.phyEnable     = true;
+flash1.serialFlashDriver.peripheralDriver.$name         = "CONFIG_OSPI_SBL";
+flash1.serialFlashDriver.peripheralDriver.phySkipTuning = true;
 
-dss1.$name = "CONFIG_DSS0";
+dss1.$name                                   = "CONFIG_DSS0";
+dss1.selectOverlayManager                    = "OVR2";
+dss1.selectVP                                = "VP2";
+dss1.selectDisplayInterface                  = "DPI";
+dss1.DPIPanel[0].$name                       = "CONFIG_PANEL0";
+dss1.DPIPanel[0].bridgeSII9022A.$name        = "board_panel_bridge_bridge_sii9022a0";
+dss1.DPIPanel[0].i2cInstance.I2C_child.$name = "drivers_i2c_v0_i2c_v0_template0";
+dss1.DPIPanel[0].i2cInstance.I2C.$assign     = "I2C1";
 
 uart1.intrEnable                 = "DISABLE";
 uart1.$name                      = "CONFIG_UART_SBL";
@@ -64,9 +72,21 @@ const udma                                           = scripting.addModule("/dri
 const udma1                                          = udma.addInstance({}, false);
 udma1.$name                                          = "CONFIG_UDMA0";
 flash1.serialFlashDriver.peripheralDriver.udmaDriver = udma1;
+bootloader1.udmaDriver                               = udma1;
+bootloader2.udmaDriver                               = udma1;
+bootloader3.udmaDriver                               = udma1;
+
+const udma_blkcopy_channel                                   = scripting.addModule("/drivers/udma/udma_blkcopy_channel", {}, false);
+const udma_blkcopy_channel1                                  = udma_blkcopy_channel.addInstance({}, false);
+udma_blkcopy_channel1.$name                                  = "CONFIG_UDMA_BLKCOPY_CH0";
+flash1.serialFlashDriver.peripheralDriver.udmaBlkCopyChannel = udma_blkcopy_channel1;
+bootloader1.udmaBlkCopyChannel                               = udma_blkcopy_channel1;
+bootloader2.udmaBlkCopyChannel                               = udma_blkcopy_channel1;
+bootloader3.udmaBlkCopyChannel                               = udma_blkcopy_channel1;
 
 debug_log.enableCssLog       = false;
 debug_log.enableUartLog      = true;
+debug_log.uartTrace          = true;
 debug_log.uartLog.$name      = "CONFIG_UART_APP";
 debug_log.uartLog.intrEnable = "DISABLE";
 
@@ -126,6 +146,37 @@ flash1.serialFlashDriver.peripheralDriver.OSPI.D2.$suggestSolution   = "OSPI0_D2
 flash1.serialFlashDriver.peripheralDriver.OSPI.D1.$suggestSolution   = "OSPI0_D1";
 flash1.serialFlashDriver.peripheralDriver.OSPI.D0.$suggestSolution   = "OSPI0_D0";
 dss1.DSS.$suggestSolution                                            = "DSS0";
+dss1.DSS.DATA0.$suggestSolution                                      = "VOUT0_DATA0";
+dss1.DSS.DATA1.$suggestSolution                                      = "VOUT0_DATA1";
+dss1.DSS.DATA2.$suggestSolution                                      = "VOUT0_DATA2";
+dss1.DSS.DATA3.$suggestSolution                                      = "VOUT0_DATA3";
+dss1.DSS.DATA4.$suggestSolution                                      = "VOUT0_DATA4";
+dss1.DSS.DATA5.$suggestSolution                                      = "VOUT0_DATA5";
+dss1.DSS.DATA6.$suggestSolution                                      = "VOUT0_DATA6";
+dss1.DSS.DATA7.$suggestSolution                                      = "VOUT0_DATA7";
+dss1.DSS.DATA8.$suggestSolution                                      = "VOUT0_DATA8";
+dss1.DSS.DATA9.$suggestSolution                                      = "VOUT0_DATA9";
+dss1.DSS.DATA10.$suggestSolution                                     = "VOUT0_DATA10";
+dss1.DSS.DATA11.$suggestSolution                                     = "VOUT0_DATA11";
+dss1.DSS.DATA12.$suggestSolution                                     = "VOUT0_DATA12";
+dss1.DSS.DATA13.$suggestSolution                                     = "VOUT0_DATA13";
+dss1.DSS.DATA14.$suggestSolution                                     = "VOUT0_DATA14";
+dss1.DSS.DATA15.$suggestSolution                                     = "VOUT0_DATA15";
+dss1.DSS.DATA16.$suggestSolution                                     = "GPMC0_AD8";
+dss1.DSS.DATA17.$suggestSolution                                     = "GPMC0_AD9";
+dss1.DSS.DATA18.$suggestSolution                                     = "GPMC0_AD10";
+dss1.DSS.DATA19.$suggestSolution                                     = "GPMC0_AD11";
+dss1.DSS.DATA20.$suggestSolution                                     = "GPMC0_AD12";
+dss1.DSS.DATA21.$suggestSolution                                     = "GPMC0_AD13";
+dss1.DSS.DATA22.$suggestSolution                                     = "GPMC0_AD14";
+dss1.DSS.DATA23.$suggestSolution                                     = "GPMC0_AD15";
+dss1.DSS.DE.$suggestSolution                                         = "VOUT0_DE";
+dss1.DSS.EXTPCLKIN.$suggestSolution                                  = "GPMC0_WAIT1";
+dss1.DSS.HSYNC.$suggestSolution                                      = "VOUT0_HSYNC";
+dss1.DSS.PCLK.$suggestSolution                                       = "VOUT0_PCLK";
+dss1.DSS.VSYNC.$suggestSolution                                      = "VOUT0_VSYNC";
+dss1.DPIPanel[0].i2cInstance.I2C.SCL.$suggestSolution                = "I2C1_SCL";
+dss1.DPIPanel[0].i2cInstance.I2C.SDA.$suggestSolution                = "I2C1_SDA";
 uart1.UART.RXD.$suggestSolution                                      = "UART0_RXD";
 uart1.UART.TXD.$suggestSolution                                      = "UART0_TXD";
 debug_log.uartLog.WKUP_UART.$suggestSolution                         = "WKUP_USART0";

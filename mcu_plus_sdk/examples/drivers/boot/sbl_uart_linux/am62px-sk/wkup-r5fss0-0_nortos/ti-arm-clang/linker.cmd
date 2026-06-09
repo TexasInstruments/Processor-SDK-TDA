@@ -1,16 +1,20 @@
-/*
- * Auto generated file - DO NOT MODIFY
- */
 
---stack_size=16384
---heap_size=32768
+--stack_size=8192
+--heap_size=8192
+
+/* ATCM base address */
+gAtcmBaseAddr = 0x78000000;
+
 -e_vectors_sbl  /* for SBL make sure to set entry point to _vectors_sbl */
 
 __IRQ_STACK_SIZE = 4096;
+/* This is the size of stack when R5 is in IRQ mode
+ * - In both NORTOS and FreeRTOS nesting is disabled for FIQ
+ */
 __FIQ_STACK_SIZE = 256;
-__SVC_STACK_SIZE = 256;
-__ABORT_STACK_SIZE = 256;
-__UNDEFINED_STACK_SIZE = 256;
+__SVC_STACK_SIZE = 256; /* This is the size of stack when R5 is in SVC mode */
+__ABORT_STACK_SIZE = 256;  /* This is the size of stack when R5 is in ABORT mode */
+__UNDEFINED_STACK_SIZE = 256;  /* This is the size of stack when R5 is in UNDEF mode */
 
 SECTIONS
 {
@@ -29,8 +33,8 @@ SECTIONS
     .bss:    {} palign(8) > HSM_RAM
     RUN_START(__BSS_START)
     RUN_END(__BSS_END)
-    .sysmem: {} palign(8) > HSM_RAM
-    .stack:  {} palign(8) > HSM_RAM
+    .sysmem: {} palign(8) > ATCM
+    .stack:  {} palign(8) > ATCM
     GROUP {
         .irqstack: {. = . + __IRQ_STACK_SIZE;} align(8)
         RUN_START(__IRQ_STACK_START)
@@ -38,6 +42,8 @@ SECTIONS
         .fiqstack: {. = . + __FIQ_STACK_SIZE;} align(8)
         RUN_START(__FIQ_STACK_START)
         RUN_END(__FIQ_STACK_END)
+    } > ATCM
+    GROUP {
         .svcstack: {. = . + __SVC_STACK_SIZE;} align(8)
         RUN_START(__SVC_STACK_START)
         RUN_END(__SVC_STACK_END)
@@ -49,15 +55,15 @@ SECTIONS
         RUN_END(__UNDEFINED_STACK_END)
     } > HSM_RAM
 
-    .bss.filebuf (NOLOAD) : {} > DDR
+    .bss.filebuf(NOLOAD) : {} > APPIMAGE
 }
 
 MEMORY
 {
-    /* R5F_VECS : ORIGIN = 0x00000000 , LENGTH = 0x00000040
-    R5F_TCMA : ORIGIN = 0x00000040 , LENGTH = 0x00007FC0
-    R5F_TCMB0: ORIGIN = 0x41010000 , LENGTH = 0x00008000 */
     HSM_RAM_VECS: ORIGIN = 0x43C00000 , LENGTH = 0x100
-    HSM_RAM  : ORIGIN = 0x43C00100 , LENGTH = 0x3c800 - 0x100
-    DDR      : ORIGIN = 0xA0000000 , LENGTH = 0x40000000
+    HSM_RAM  : ORIGIN = 0x43C00100 , LENGTH = 0x40000
+    ATCM :  ORIGIN = 0x78000000 , LENGTH = 0x8000
+
+    /* This section is used by the SBL to temporarily load the appimage for authentication */
+    APPIMAGE  : ORIGIN = 0x84000000 , LENGTH = 0x2000000
 }

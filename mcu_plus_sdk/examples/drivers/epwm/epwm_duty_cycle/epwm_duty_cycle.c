@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-24 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,15 +30,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <kernel/dpl/DebugP.h>
-#include <kernel/dpl/AddrTranslateP.h>
-#include <kernel/dpl/SemaphoreP.h>
-#include <kernel/dpl/HwiP.h>
-#include <drivers/epwm.h>
-#include "ti_drivers_config.h"
-#include "ti_drivers_open_close.h"
-#include "ti_board_open_close.h"
-
 /*
  * This example uses the ePWM module to generate a signal for a specified time
  * and with a specified duty cycle.
@@ -52,6 +43,23 @@
  *
  * This example also showcases how to configure and use the ePWM module.
  */
+
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
+#include <kernel/dpl/DebugP.h>
+#include <kernel/dpl/AddrTranslateP.h>
+#include <kernel/dpl/SemaphoreP.h>
+#include <kernel/dpl/HwiP.h>
+#include <drivers/epwm.h>
+#include "ti_drivers_config.h"
+#include "ti_drivers_open_close.h"
+#include "ti_board_open_close.h"
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 /* Output channel - A or B */
 #define APP_EPWM_OUTPUT_CH              (EPWM_OUTPUT_CH_A)
@@ -77,9 +85,19 @@
 #define APP_EPWM_COMPA_VAL              (APP_EPWM_PRD_VAL - ((APP_EPWM_DUTY_CYCLE * \
                                             APP_EPWM_PRD_VAL) / 100U))
 
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
 /* Global variables and objects */
 static HwiP_Object       gEpwmHwiObject;
 static SemaphoreP_Object gEpwmSyncSemObject;
+/* Variable to hold base address of EPWM that is used */
+uint32_t gEpwmBaseAddr;
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
 
 /* Function Prototypes */
 static void App_epwmIntrISR(void *handle);
@@ -87,18 +105,15 @@ static void App_epwmConfig(uint32_t epwmBaseAddr,
                            uint32_t epwmCh,
                            uint32_t epwmFuncClk);
 
-/* variable to hold base address of EPWM that is used */
-uint32_t gEpwmBaseAddr;
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
 void epwm_duty_cycle_main(void *args)
 {
     int32_t             status;
     uint32_t            numIsrCnt = (APP_EPWM_RUN_TIME * APP_EPWM_OUTPUT_FREQ);
     HwiP_Params         hwiPrms;
-
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
 
     DebugP_log("EPWM Duty Cycle Test Started ...\r\n");
     DebugP_log("Please refer EXAMPLES_DRIVERS_EPWM_DUTY_CYCLE example user \
@@ -114,6 +129,7 @@ guide for the test setup to probe EPWM signal. \r\n");
     /* Register & enable interrupt */
     HwiP_Params_init(&hwiPrms);
     hwiPrms.intNum      = CONFIG_EPWM0_INTR;
+    hwiPrms.eventId     = CONFIG_EPWM0_EVENT_ID;
     hwiPrms.callback    = &App_epwmIntrISR;
     hwiPrms.isPulse     = CONFIG_EPWM0_INTR_IS_PULSE;
     status              = HwiP_construct(&gEpwmHwiObject, &hwiPrms);
@@ -136,8 +152,6 @@ guide for the test setup to probe EPWM signal. \r\n");
     DebugP_log("EPWM Duty Cycle Test Passed!!\r\n");
     DebugP_log("All tests have passed!!\r\n");
 
-    Board_driversClose();
-    Drivers_close();
 }
 
 static void App_epwmIntrISR(void *handle)

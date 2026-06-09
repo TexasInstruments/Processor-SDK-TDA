@@ -30,7 +30,11 @@ LDIRS += $(APP_UTILS_PATH)/lib/$(TARGET_PLATFORM)/$(TARGET_CPU)/$(TARGET_OS)/$(T
 LDIRS += $(MMALIB_PATH)/lib/$(C7X_VERSION)/$(TARGET_BUILD)
 LDIRS += $(TIDL_PATH)/ti_dl/lib/$(TARGET_PLATFORM)/dsp/algo/$(TARGET_BUILD)
 LDIRS += $(TIADALG_PATH)/lib/$(TARGET_CPU)/$(TARGET_BUILD)
+ifeq ($(ENABLE_NEW_TIDL_STRUCTURE),yes)
+LDIRS += $(TIDL_PATH)/tiovx_kernels/lib/$(TARGET_PLATFORM)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+else
 LDIRS += $(TIDL_PATH)/arm-tidl/tiovx_kernels/lib/$(TARGET_PLATFORM)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+endif
 
 STATIC_LIBS += vx_app_c7x_target_kernel
 STATIC_LIBS += vx_target_kernels_stereo
@@ -68,16 +72,7 @@ TIOVX_LIBS += vx_target_kernels_ivision_common
 TIOVX_LIBS += vx_framework vx_platform_board_rtos vx_kernels_target_utils
 TIOVX_LIBS += vx_target_kernels_source_sink
 
-TIDL_LIBS =
-TIDL_LIBS += common_C7100
-TIDL_LIBS += mmalib_C7100
-TIDL_LIBS += mmalib_cn_C7100
-TIDL_LIBS += tidl_algo
-TIDL_LIBS += tidl_priv_algo
-TIDL_LIBS += tidl_obj_algo
-TIDL_LIBS += tidl_custom
-
-SYS_STATIC_LIBS += $(TIOVX_LIBS) $(TIDL_LIBS)
+SYS_STATIC_LIBS += $(TIOVX_LIBS)
 
 ADDITIONAL_STATIC_LIBS += ti.osal.ae71
 ADDITIONAL_STATIC_LIBS += ipc.ae71

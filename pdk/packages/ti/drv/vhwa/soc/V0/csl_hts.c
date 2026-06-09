@@ -73,7 +73,7 @@ static void HtsDmaSchConsStop(uint32_t baseAddr,
 
 static void HtsSetDmaSchProdConfig(uint32_t baseAddr,
     const CSL_HtsDmaProdConfig *cfg,
-    uint32_t isDmaProdPaSupported);
+    uint32_t isPaSupported);
 static void HtsDmaSchProdStart(uint32_t baseAddr,
     const CSL_HtsDmaProdConfig *cfg, uint32_t isPaSupported);
 static void HtsDmaSchProdStop(uint32_t baseAddr,

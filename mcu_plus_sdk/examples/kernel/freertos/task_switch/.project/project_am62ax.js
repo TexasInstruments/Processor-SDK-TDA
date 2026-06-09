@@ -66,6 +66,7 @@ const libdirs_freertos_r5 = {
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/rm_pm_hal/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciclient_direct/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/self_reset/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib",
         "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/lib",
         "${MCU_PLUS_SDK_PATH}/source/board/lib",
@@ -96,6 +97,7 @@ const libs_freertos_dm_r5f = {
         "freertos.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
         "drivers.am62ax.dm-r5f.ti-arm-clang.${ConfigName}.lib",
         "board.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
     ],
 };
 
@@ -111,6 +113,12 @@ const lnkfiles = {
         "linker.cmd",
     ]
 };
+
+const defines_dm_r5f = {
+    common:[
+        "ENABLE_SCICLIENT_DIRECT",
+    ]
+}
 
 const syscfgfile = "../example.syscfg";
 
@@ -142,7 +150,7 @@ const templates_freertos_c75 =
         output: "../main.c",
         options: {
             entryFunction: "task_switch_main",
-            stackSize: 64*1024,
+            stackSize: 16*1024,
         },
     }
 ];
@@ -235,6 +243,7 @@ function getComponentBuildProperty(buildOption) {
         build_property.libdirs = libdirs_freertos_r5;
         build_property.libs = libs_freertos_dm_r5f;
         build_property.templates = templates_freertos_dm_r5f;
+        build_property.defines = defines_dm_r5f;
     }
     else if(buildOption.cpu.includes("a53")) {
         build_property.includes = includes_a53;

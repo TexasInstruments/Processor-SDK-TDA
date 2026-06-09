@@ -294,6 +294,11 @@ static vx_user_data_object setCreateParams(vx_context context, uint32_t read_raw
                 prms->traceWriteLevel               = 0;
               }
               prms->coreId                          = coreId;
+
+#ifdef TDA54_VDK_HOST_EMULATION
+              prms->flowCtrl                        = 1; /* Force reference code flow for VDK host-emulation mode */
+#endif
+
 #ifdef HOST_EMULATION
               char traceName[TIDL_STRING_SIZE];
               snprintf(traceName, TIDL_STRING_SIZE, "/tmp/C7x_%d_tidl_trace_", coreId + 1);
@@ -513,13 +518,13 @@ static vx_status readInput(vx_context context, vx_user_data_object config, vx_te
             /* Reset the input buffer, this will take care of padding requirement for TIDL */
             memset(input_buffer, 0, capacity);
 
-            start_offset = (0 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + ioBufDesc->inPadL[id];
+            start_offset = (0 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + ioBufDesc->inPadL[id];
             pB = (vx_uint8 *)input_buffer + start_offset;
 
-            start_offset = (1 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + ioBufDesc->inPadL[id];
+            start_offset = (1 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + ioBufDesc->inPadL[id];
             pG = (vx_uint8 *)input_buffer + start_offset;
 
-            start_offset = (2 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + ioBufDesc->inPadL[id];
+            start_offset = (2 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + ioBufDesc->inPadL[id];
             pR = (vx_uint8 *)input_buffer + start_offset;
 
             for(i = 0; i < ioBufDesc->inHeight[id]; i++)
@@ -768,21 +773,22 @@ typedef struct {
 #define ADD_SET_TARGET_PARAMETERS_MULTI(testArgName, nextmacro, ...) \
     CT_EXPAND(nextmacro(testArgName "/ALL_C7X_TARGETS", __VA_ARGS__, TIVX_TARGET_DSP_C7_1_PRI_1, TIVX_TARGET_DSP_C7_2_PRI_1))
 
-#else
+#else /*SOC_AM62A, SOC_J721E, SOC_TDA54 */
 #define ADD_SET_TARGET_PARAMETERS(testArgName, nextmacro, ...) \
     CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_DSP_C7_1_PRI_1", __VA_ARGS__, 0, TIVX_TARGET_DSP_C7_1_PRI_1))
 
 #define ADD_SET_TARGET_PARAMETERS_MULTI(testArgName, nextmacro, ...) \
     CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_DSP_C7_1_PRI_1", __VA_ARGS__, TIVX_TARGET_DSP_C7_1_PRI_1, NULL, NULL, NULL))
 #endif
+
 #define ADD_SET_TARGET_PRIORITY_PARAMETERS(testArgName, nextmacro, ...) \
     CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_DSP_C7_1_PRI_1/TIVX_TARGET_DSP_C7_1_PRI_2", __VA_ARGS__, TIVX_TARGET_DSP_C7_1_PRI_1, TIVX_TARGET_DSP_C7_1_PRI_2))
-
 
 #define PARAMETERS \
     CT_GENERATE_PARAMETERS("mobilenetv1", ADD_SET_TARGET_PARAMETERS, ARG, "tidl_io_mobilenet_v1_1.bin", "tidl_net_mobilenet_v1.bin", 0, 0), \
     CT_GENERATE_PARAMETERS("mobilenetv1", ADD_SET_TARGET_PARAMETERS, ARG, "tidl_io_mobilenet_v1_1.bin", "tidl_net_mobilenet_v1.bin", 0, 1)
-#ifdef SOC_AM62A
+
+#if defined(SOC_AM62A) || defined(SOC_TDA54)
 /* Enabling layer level traces results into insufficicient memory in DDR shared buffer hence disabling layer level traces*/
 #define PARAMETERS_PRIORITY \
     CT_GENERATE_PARAMETERS("mobilenetv1", ADD_SET_TARGET_PRIORITY_PARAMETERS, ARG, "tidl_io_mobilenet_v1_1.bin", "tidl_net_mobilenet_v1.bin", 0, 0),
@@ -1588,8 +1594,11 @@ TESTCASE_TESTS(tivxTIDL,
     #if (C7XMMA_COUNT > 1)
     testMultiTIDL,
     testTIDLPreempt
-    #else
+    #elif defined(SOC_AM62A) || defined (SOC_J721E) || defined (SOC_J721S2)
     testTIDLPreempt,
+    DISABLED_testMultiTIDL
+    #elif defined(SOC_TDA54)
+    DISABLED_testTIDLPreempt,
     DISABLED_testMultiTIDL
     #endif
     )

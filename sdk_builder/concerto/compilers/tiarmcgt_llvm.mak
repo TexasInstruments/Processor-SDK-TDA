@@ -81,7 +81,40 @@ ifeq ($(TARGET_CPU),R5F)
 TARGET_CPU_FLAGS := -mfloat-abi=hard -mfpu=vfpv3-d16 -mcpu=cortex-r5 -march=armv7-r -fno-strict-aliasing
 endif
 
+ifeq ($(TARGET_CPU),M55)
+TARGET_CPU_FLAGS := \
+	-mcpu=cortex-m55 \
+	-mfloat-abi=hard \
+	-fshort-enums \
+	-DBUILD_M55 \
+	-mthumb \
+
+TARGET_LD_FLAGS := \
+	-mcpu=cortex-m55 \
+	--ram_model \
+	--reread_libs \
+
+endif
+
+ifeq ($(TARGET_CPU),R52P)
+TARGET_CPU_FLAGS := \
+	-mcpu=cortex-r52 \
+	-mfloat-abi=hard \
+	-mfpu=neon-fp-armv8 \
+	-mthumb \
+	-Wno-gnu-variable-sized-type-not-at-end \
+	-Wno-unused-function \
+
+TARGET_LD_FLAGS := \
+	--diag_suppress=10063 \
+	--priority \
+	--ram_model \
+	--reread_libs \
+
+endif
+
 $(_MODULE)_COPT += $(TARGET_CPU_FLAGS)
+$(_MODULE)_LOPT += $(TARGET_LD_FLAGS)
 
 ifeq ($(BUILD_IGNORE_LIB_ORDER),yes)
 LINK_START_GROUP=-Wl,--start-group
@@ -103,7 +136,7 @@ $(_MODULE)_LIBRARIES:= $(foreach ldir,$($(_MODULE)_LDIRS),-L$(ldir)) \
                        $(LINK_END_GROUP)
 $(_MODULE)_AFLAGS   := $($(_MODULE)_INCLUDES)
 $(_MODULE)_LDFLAGS  += $($(_MODULE)_LOPT) --use_memcpy=fast --use_memset=fast --diag_suppress=10063-D --diag_suppress=10068-D
-$(_MODULE)_CPLDFLAGS := $(foreach ldf,$($(_MODULE)_LDFLAGS),-Wl,$(ldf)) $(TARGET_CPU_FLAGS) $($(_MODULE)_LINKER_CMD_FILES)
+$(_MODULE)_CPLDFLAGS := $(foreach ldf,$($(_MODULE)_LDFLAGS),-Wl,$(ldf)) $($(_MODULE)_LINKER_CMD_FILES)
 $(_MODULE)_CFLAGS   := -c $($(_MODULE)_INCLUDES) $($(_MODULE)_DEFINES) $($(_MODULE)_COPT) $(CFLAGS)
 
 ifdef DEBUG

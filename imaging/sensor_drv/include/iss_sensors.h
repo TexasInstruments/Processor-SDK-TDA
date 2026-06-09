@@ -78,8 +78,10 @@
  *******************************************************************************
  */
 
+#if defined(SOC_AM62A)
 /* FPD-Link initialization using B7 implementation */
-// #define B7_IMPLEMENTATION
+#define B7_IMPLEMENTATION
+#endif
 
 /**
  *  \brief RPC Commands application can send to sensor driver
@@ -848,7 +850,7 @@ int32_t IssSensor_DeInit(void);
  *
  * \brief Function to register a sensor driver with the driver framework
  *
- * @param pSensorPrms     All sensor properties and the APIs
+ * @param pSensorHandle      All sensor properties and the APIs
  *
  * \return 0 in case of success
  *         error otherwise
@@ -857,7 +859,7 @@ int32_t IssSensor_DeInit(void);
  *******************************************************************************
 */
 
-int32_t IssSensor_Register(IssSensors_Handle *pSensorPrms);
+int32_t IssSensor_Register(IssSensors_Handle *pSensorHandle);
 
 
 /**
@@ -869,7 +871,7 @@ int32_t IssSensor_Register(IssSensors_Handle *pSensorPrms);
  *        given sensor.
  *
  * @param name         Name of the sensor
- * @param pCreatePrms     [OUT]  Pointer to sensor create parmas structure
+ * @param sensor_prms     [OUT]  Pointer to sensor create parmas structure
  *
  * \return 0 in case of success
  *         error otherwise
@@ -877,7 +879,7 @@ int32_t IssSensor_Register(IssSensors_Handle *pSensorPrms);
  * \ingroup group_vision_function_imaging_sensordrv
  *******************************************************************************
 */
-int32_t IssSensor_GetSensorInfo(const char *name, IssSensor_CreateParams *pCreatePrms);
+int32_t IssSensor_GetSensorInfo(const char *name, IssSensor_CreateParams *sensor_prms);
 
 /**
  *******************************************************************************
@@ -893,30 +895,6 @@ int32_t IssSensor_GetSensorInfo(const char *name, IssSensor_CreateParams *pCreat
  *******************************************************************************
 */
 IssSensors_Handle *IssSensor_getSensorHandleFromName(const char *name);
-
-#ifndef DEPRECATED
-#define IssSensor_GetSensorHandle IssSensor_getSensorHandleFromName
-#endif /* DEPRECATED */
-
-/**
- *******************************************************************************
- *
- * \brief Function to get the sensor handle for the given sensor.
- *        This is used by the DCC Network Handler to Read/Write sensor
- *        register.
- *        Returns sensor handle only if it is opened.
- *
- *
- * @param dccId        DCC Id of the sensor
- * @param pInfo     [OUT]  Pointer to sensor information structure
- *
- * \return 0 in case of success
- *         error otherwise
- *
- * \ingroup group_vision_function_imaging_sensordrv
- *******************************************************************************
-*/
-IssSensors_Handle *IssSensor_GetSensorHandle(const char *name);
 
 /**
  *******************************************************************************
@@ -1021,14 +999,14 @@ int32_t IssSensor_Delete(IssSensors_Handle* handle);
  * \brief Function to configure UB960 deserializer
  *
  * @param script                 Array of type I2CParams with last entry being {0xFFFF, 0x00, 0x00}
- * @param ub960InstanceId        ID 0/1 indicating which UB960 on the board is to be configured
+ * @param desHubInstId        ID 0/1 indicating which UB960 on the board is to be configured
  * \return 0 in case of success
  *         error otherwise
  *
  * \ingroup group_vision_function_imaging_sensordrv
  *******************************************************************************
 */
-int32_t IssSensor_cfgDesScript(const I2cParams *script, int8_t ub960InstanceId);
+int32_t IssSensor_cfgDesScript(const I2cParams *script, int8_t desHubInstId);
 
 /**
  *******************************************************************************
@@ -1093,7 +1071,7 @@ int32_t IssSensor_PowerOn(IssSensors_Handle* handle, uint32_t chMask);
  * \ingroup group_vision_function_imaging_sensordrv
  *******************************************************************************
 */
-int32_t IssSensor_PowerOff(IssSensors_Handle* handle, uint32_t chId);
+int32_t IssSensor_PowerOff(IssSensors_Handle* handle, uint32_t chMask);
 
 /**
  *******************************************************************************
@@ -1149,11 +1127,11 @@ int32_t IssSensor_GetAeParams(IssSensors_Handle *handle, uint32_t chId, IssSenso
 int32_t IssSensor_GetAwbParams(IssSensors_Handle *handle, uint32_t chId, IssSensor_WhiteBalanceParams *pWbPrms);
 void IssSensor_CloseHandle(void);
 
-int32_t enableUB960Broadcast(int8_t ub960InstanceId);
-int32_t disableUB960Broadcast(int8_t ub960InstanceId);
+int32_t enableUB960Broadcast(int8_t desHubInstId);
+int32_t disableUB960Broadcast(int8_t desHubInstId);
 int32_t UB960_SelectPort(uint32_t chId);
 int32_t UB960_SetAlias(uint32_t chId, uint8_t slot,  uint8_t phy_i2c_addr_7bit, uint8_t alias_i2c_addr_7bit);
-int32_t UB960_SetSerAlias(uint32_t chId, uint8_t alias_i2c_addr_7bit);
+int32_t UB960_SetSerAlias(uint32_t chId, uint8_t ser_alias_i2c_addr_7bit);
 int32_t UB960_SetSensorAlias(uint32_t chId, uint8_t sensor_phy_i2c_addr_7bit, uint8_t ser_alias_i2c_addr_7bit);
 
 

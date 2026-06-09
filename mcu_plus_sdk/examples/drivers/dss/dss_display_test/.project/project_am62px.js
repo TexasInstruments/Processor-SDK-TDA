@@ -25,7 +25,8 @@ const filedirs_freertos_wkup_r5 = {
     common: [
         "..",       /* core_os_combo base */
         "../../..", /* Example base */
-        "../../../../../boot/common/soc/am62px/",
+        "../../../../../boot/common/soc/am62px",
+        "../../../../dss_test_pattern"
     ],
 };
 
@@ -33,6 +34,7 @@ const filedirs_nortos_wkup_r5 = {
     common: [
         "..",       /* core_os_combo base */
         "../../..", /* Example base */
+        "../../../../dss_test_pattern"
     ],
 };
 
@@ -45,6 +47,7 @@ const libdirs_nortos_wkup_r5f = {
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciclient_direct/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciserver/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/self_reset/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib",
     ],
 };
 
@@ -57,6 +60,7 @@ const libdirs_freertos_wkup_r5f = {
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/rm_pm_hal/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciclient_direct/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/self_reset/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib",
     ],
 };
 
@@ -77,6 +81,7 @@ const libs_nortos_wkup_r5f = {
         "sciclient_direct.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "rm_pm_hal.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "self_reset.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
     ],
 };
 
@@ -89,6 +94,7 @@ const libs_freertos_wkup_r5f = {
         "sciclient_direct.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "rm_pm_hal.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "self_reset.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
     ],
 };
 
@@ -101,6 +107,7 @@ const lnkfiles = {
 const defines_dm_r5 = {
     common: [
         "ENABLE_SCICLIENT_DIRECT",
+        "R5F_CORE",
     ],
 }
 
@@ -122,9 +129,19 @@ const templates_freertos_wkup_r5f =
             abortStackSize: 0x0100,
             undefinedStackSize: 0x0100,
             dmStubstacksize: 0x0400,
-            dssFrameBuf: "true"
+            dssFrameBuf: "true",
+            dmWithBootloader: "true"
         },
     },
+    {
+        input: ".project/templates/am62px/freertos/main_freertos_dm.c.xdt",
+        output: "../main.c",
+        options: {
+            entryFunction: "dss_display_test_main",
+            dmWithBootloader: "true",
+            stackSize: 0x8000,
+        },
+    }
 ];
 
 const templates_nortos_wkup_r5f =
@@ -149,12 +166,12 @@ const templates_nortos_wkup_r5f =
         output: "../main.c",
         options: {
             entryFunction: "dss_display_test_main",
+            stackSize: 0x8000,
         },
     }
 ];
 
 const buildOptionCombos = [
-    { device: device, cpu: "wkup-r5fss0-0", cgt: "ti-arm-clang", board: "am62px-sk", os: "nortos"},
     { device: device, cpu: "wkup-r5fss0-0", cgt: "ti-arm-clang", board: "am62px-sk", os: "freertos"},
 ];
 

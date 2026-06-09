@@ -74,12 +74,11 @@ function getDefaultInstance() {
     let cpu = common.getSelfSysCfgCoreName();
     let defaultInstanceMap = {
         "r5fss0-0": 0,
-        "r5fss0-1": 1,
-        "r5fss1-0": 2,
-        "r5fss1-1": 3,
         "m4fss0-0": 0,
         "a53ss0-0": 0,
-        "a53ss0-1": 1,
+        "a53ss0-1": 0,
+        "a53ss1-0": 0,
+        "a53ss1-1": 0,
     }
     return defaultInstanceMap[cpu];
 }
@@ -108,27 +107,47 @@ function getStaticConfigArr() {
         }
         staticConfigArr = staticConfig_r5f;
     }
-    if(cpu.match(/m4f*/)) {
+    else if(cpu.match(/m4f*/))
+    {
         staticConfigArr = staticConfig_m4f;
     }
-    if(cpu.match(/a53*/)) {
+    else if(cpu.match(/a53*/))
+    {
         let staticConfig_a53 = [];
-
-        for(let i=6; i<8; i++)
+        let i = 0;
+        switch(cpu)
         {
-            staticConfig_a53.push(
-                {
-                    name: `TIMER${i}`,
-                    timerBaseAddr: 0x02400000 + i*0x10000,
-                    timerHwiIntNum: 152 + i,
-                    timerInputPreScaler: 1,
-                    clkSelMuxAddr: 0x430081B0 + 4*i,
-                    disableClkSourceConfig: true,
-                }
-            )
+            case "a53ss0-0":
+                i = 6;
+                break;
+            case "a53ss0-1":
+                i = 7;
+                break;
+            case "a53ss1-0":
+                i = 4;
+                break;
+            case "a53ss1-1":
+                i = 5;
+                break;
+            default  :
+               break;
+
         }
+        staticConfig_a53.push(
+            {
+                name: `TIMER${i}`,
+                timerBaseAddr: 0x02400000 + i*0x10000,
+                timerHwiIntNum: 152 + i,
+                timerInputPreScaler: 1,
+                clkSelMuxAddr: 0x001081B0 + 4*i,
+                disableClkSourceConfig: false,
+                lockUnlockDomain: "SOC_DOMAIN_ID_MAIN",
+                lockUnlockPartition: 2,
+            }
+        )
         staticConfigArr = staticConfig_a53;
     }
+
     return staticConfigArr;
 }
 

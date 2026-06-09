@@ -1,8 +1,9 @@
 /**
  * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
  * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
- * @cliArgs --device "AM62Ax" --package "AMB" --part "Default" --context "r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
- * @versions {"tool":"1.16.1+2960"}
+ * @cliArgs --device "AM62Ax" --part "Default" --package "AMB" --context "r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
+ * @v2CliArgs --device "AM62A7-Q1" --package "FCBGA (AMB)" --variant "AM62A74-M" --context "r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
+ * @versions {"tool":"1.23.0+4000"}
  */
 
 /**
@@ -13,6 +14,8 @@ const bootloader1   = bootloader.addInstance();
 const ddr           = scripting.addModule("/drivers/ddr/ddr", {}, false);
 const ddr1          = ddr.addInstance();
 const gtc           = scripting.addModule("/drivers/gtc/gtc");
+const qos           = scripting.addModule("/drivers/qos/qos", {}, false);
+const qos1          = qos.addInstance();
 const freertos_fat  = scripting.addModule("/fs/freertos_fat/freertos_fat", {}, false);
 const freertos_fat1 = freertos_fat.addInstance();
 const clock         = scripting.addModule("/kernel/dpl/clock");
@@ -24,28 +27,39 @@ const mpu_armv73    = mpu_armv7.addInstance();
 const mpu_armv74    = mpu_armv7.addInstance();
 const mpu_armv75    = mpu_armv7.addInstance();
 const mpu_armv76    = mpu_armv7.addInstance();
+const mpu_armv77    = mpu_armv7.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
  */
 bootloader1.EMMCAppImageOffset = "0x800000";
-bootloader1.bootMedia          = "MEM";
 bootloader1.$name              = "CONFIG_BOOTLOADER_APP";
+bootloader1.bootMedia          = "SD";
 
 ddr1.$name = "CONFIG_DDR0";
+
+qos1.$name = "CONFIG_QOS0";
 
 freertos_fat1.$name                  = "CONFIG_FREERTOS_FAT0";
 freertos_fat1.peripheralDriver.$name = "CONFIG_MMCSD0";
 
-debug_log.enableUartLog                      = true;
-debug_log.enableCssLog                       = false;
-debug_log.uartLog.$name                      = "CONFIG_UART0";
-debug_log.uartLog.useWakeupDomainPeripherals = false;
-debug_log.uartLog.intrEnable                 = "DISABLE";
+debug_log.enableUartLog                           = true;
+debug_log.enableCssLog                            = false;
+debug_log.sysfwUartTrace                          = true;
+debug_log.uartLog.$name                           = "CONFIG_UART0";
+debug_log.uartLog.useWakeupDomainPeripherals      = false;
+debug_log.uartLog.intrEnable                      = "DISABLE";
+debug_log.sysfwUartLog.$name                      = "CONFIG_UART_TRACE0";
+debug_log.sysfwUartLog.useWakeupDomainPeripherals = false;
+debug_log.sysfwUartLog.UART.$assign               = "USART1";
+debug_log.sysfwUartLog.UART.RXD.$assign           = "MCASP0_AFSR";
+debug_log.sysfwUartLog.UART.TXD.$assign           = "MCASP0_ACLKR";
+debug_log.sysfwUartLog.UART.RTSn.$assign          = "MCASP0_AXR2";
+debug_log.sysfwUartLog.UART.CTSn.$assign          = "MCASP0_AXR3";
 
 mpu_armv71.accessPermissions = "Supervisor RD+WR, User RD";
 mpu_armv71.allowExecute      = false;
-mpu_armv71.attributes        = "NonCached";
+mpu_armv71.attributes        = "Device";
 mpu_armv71.$name             = "SOC_MEM_REGION";
 
 mpu_armv72.accessPermissions = "Supervisor RD+WR, User RD";
@@ -68,6 +82,10 @@ mpu_armv75.$name      = "TCMA";
 mpu_armv76.baseAddr = 0x43C00000;
 mpu_armv76.size     = 18;
 mpu_armv76.$name    = "HSM_RAM";
+
+mpu_armv77.$name    = "ATCM_SOC";
+mpu_armv77.baseAddr = 0x78000000;
+mpu_armv77.size     = 15;
 
 /**
  * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future

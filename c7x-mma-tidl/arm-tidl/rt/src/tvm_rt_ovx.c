@@ -521,7 +521,7 @@ create_graph_tvm_tiovx(TVMAppObj *obj, sTVMRT_Params_t *prms)
       TIVX_TARGET_DSP_C7_1_PRI_6,
       TIVX_TARGET_DSP_C7_1_PRI_7,
       TIVX_TARGET_DSP_C7_1_PRI_8,
-#if defined(SOC_J784S4) || defined(SOC_J722S) || defined (SOC_J742S2)
+#if defined(SOC_J784S4) || defined (SOC_J722S) || defined (SOC_TDA54) || defined (SOC_J742S2)
       TIVX_TARGET_DSP_C7_2_PRI_1,
       TIVX_TARGET_DSP_C7_2_PRI_2,
       TIVX_TARGET_DSP_C7_2_PRI_3,
@@ -557,7 +557,7 @@ create_graph_tvm_tiovx(TVMAppObj *obj, sTVMRT_Params_t *prms)
     printf("TVM_RT_OVX: ERROR: Invalid core number specified - %d , please specify 1,2,3 or 4 as core number\n", prms->coreNum);
     return VX_ERROR_INVALID_VALUE;
   }
-#elif defined(SOC_J722S) || defined (SOC_J742S2)
+#elif defined (SOC_J722S) || defined (SOC_TDA54) || defined (SOC_J742S2)
   if((prms->coreNum < 1) || (prms->coreNum > 2))
   {
     printf("TVM_RT_OVX: ERROR: Invalid core number specified - %d , please specify 1,2 as core number\n", prms->coreNum);

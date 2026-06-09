@@ -1,5 +1,5 @@
 /*
- * FreeRTOS Kernel V10.4.1
+ * FreeRTOS Kernel V11.1.0
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -25,7 +25,7 @@
  * 1 tab == 4 spaces!
  */
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -55,12 +55,21 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <stdint.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include <kernel/dpl/HwiP.h>
 #include <kernel/dpl/ClockP.h>
 #include <kernel/dpl/DebugP.h>
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 /* Let the user override the pre-loading of the initial LR with the address of
  * prvTaskExitError() in case is messes up unwinding of the stack in the
@@ -76,6 +85,8 @@
 #define portTHUMB_MODE_BIT               ( ( StackType_t ) 0x20 )
 #define portINTERRUPT_ENABLE_BIT         ( 0x80UL )
 #define portTHUMB_MODE_ADDRESS           ( 0x01UL )
+#define portINITIAL_FPSR                 ( ( StackType_t ) 0x0 )
+#define portNUM_FPU_REGS                 ( 32U )
 
 /* A critical section is exited when the critical section nesting count reaches
  * this value. */
@@ -87,6 +98,11 @@
  * does not have an FPU context, or any other value if the task does have an FPU
  * context. */
 #define portNO_FLOATING_POINT_CONTEXT    ( ( StackType_t ) 0 )
+
+/* Tasks are created with a floating point context. A variable is stored as
+ * part of the tasks context that holds portFLOATING_POINT_CONTEXT if the task
+ * have an FPU context. */
+#define portFLOATING_POINT_CONTEXT       ( ( StackType_t ) 1 )
 
 /* Refer arm_acle spec for the defines */
 #define SY       (15U)       /*   Full system Any-Any                    */
@@ -101,6 +117,26 @@
 #define OSH      (3U)        /*   Outer shareable Any-Any                */
 #define OSHST    (2U)        /*   Outer shareable Store-Store            */
 #define OSHLD    (1U)        /*   Outer shareable Load-Load, Load-Store  */
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
+/*
+ * Starts the first task executing.  This function is necessarily written in
+ * assembly code so is implemented in portASM.s.
+ */
+extern void vPortRestoreTaskContext( void );
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
 
 /* A variable is used to keep track of the critical section nesting.  This
  * variable has to be stored as part of the task context and must be initialised to
@@ -123,26 +159,9 @@ uint32_t ulPortInterruptNesting = 0UL;
 /* set to true when schedular gets enabled in xPortStartScheduler */
 uint32_t ulPortSchedularRunning = pdFALSE;
 
-/* Faulty Stack Pointer at Data Abort. */
-uint32_t ulFaultySP;
-
-/* Faulty Link Register at Data Abort. */
-uint32_t ulFaultyLR;
-
-/* Faulty General Purpose Registers at Data Abort. */
-uint32_t ulFaultyGPR[13];
-
-uint32_t ulGetDataFaultStatusRegister( void );
-uint32_t ulGetDataFaultAddressRegister( void );
-uint32_t ulGetInstructionFaultStatusRegister( void );
-uint32_t ulGetInstructionFaultAddressRegister( void );
-uint32_t ulGetCPSR( void );
-
-/*
- * Starts the first task executing.  This function is necessarily written in
- * assembly code so is implemented in portASM.s.
- */
-extern void vPortRestoreTaskContext( void );
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
 static void prvTaskExitError( void )
 {
@@ -220,10 +239,27 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     *pxTopOfStack = portNO_CRITICAL_NESTING;
     pxTopOfStack--;
 
+#if (configFLOATING_POINT_CONTEXT==0)
     /* The task will start without a floating point context.  A task that uses
      * the floating point hardware must call vPortTaskUsesFPU() before executing
      * any floating point instructions. */
     *pxTopOfStack = portNO_FLOATING_POINT_CONTEXT;
+#else
+    /* The task will start with a floating point context. */
+
+    *pxTopOfStack = portINITIAL_FPSR;
+    pxTopOfStack--;
+
+    /* Next all the FPU bank registers S0 to S31 */
+    uint32_t ulNumFpuReg = portNUM_FPU_REGS;
+    while ( ulNumFpuReg -- )
+    {
+        *pxTopOfStack = ( StackType_t ) 0x00000000;     /* S0 to S31 */
+        pxTopOfStack--;
+    }
+
+    *pxTopOfStack = portFLOATING_POINT_CONTEXT;
+#endif
 
     return pxTopOfStack;
 }
@@ -261,7 +297,7 @@ void vPortYeildFromISR( uint32_t xSwitchRequired )
     }
 }
 
-void vPortTimerTickHandler()
+void vPortTimerTickHandler( void )
 {
     if( ulPortSchedularRunning == pdTRUE )
     {
@@ -275,6 +311,7 @@ void vPortTimerTickHandler()
 
 void vPortTaskUsesFPU( void )
 {
+#if (configFLOATING_POINT_CONTEXT==0)
     uint32_t ulInitialFPSCR = 0;
 
     /* A task is registering the fact that it needs an FPU context.  Set the
@@ -283,6 +320,7 @@ void vPortTaskUsesFPU( void )
 
     /* Initialise the floating point status register. */
     __asm__ volatile ( "FMXR 	FPSCR, %0" ::"r" ( ulInitialFPSCR ) : "memory" );
+#endif
 }
 
 void vPortEnterCritical( void )
@@ -344,13 +382,13 @@ void vPortExitCritical( void )
 }
 
 /* initialize high resolution timer for CPU and task load calculation */
-void vPortConfigTimerForRunTimeStats()
+void vPortConfigTimerForRunTimeStats( void )
 {
     /* we assume clock is initialized before the schedular is started */
 }
 
 /* return current counter value of high speed counter in units of usecs */
-uint32_t uiPortGetRunTimeCounterValue()
+uint32_t uiPortGetRunTimeCounterValue( void )
 {
     uint64_t timeInUsecs = ClockP_getTimeUsec();
 
@@ -370,14 +408,14 @@ uint32_t uiPortGetRunTimeCounterValue()
  * i.e FreeRTOS API should not be called from FIQ, however right now we dont enforce it by checking
  * if we are in FIQ when this API is called.
  */
-void vPortValidateInterruptPriority()
+void vPortValidateInterruptPriority( void )
 {
 }
 
 /* This is called as part of vTaskEndScheduler(), in our port, there is nothing to do here.
  * interrupt are disabled by FreeRTOS before calling this.
  */
-void vPortEndScheduler()
+void vPortEndScheduler( void )
 {
     /* nothing to do */
 }
@@ -398,9 +436,9 @@ static StackType_t uxIdleTaskStack[ configMINIMAL_STACK_SIZE ];
  * implementation of vApplicationGetIdleTaskMemory() to provide the memory that is
  * used by the Idle task.
  */
-void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
-                                    StackType_t **ppxIdleTaskStackBuffer,
-                                    uint32_t *pulIdleTaskStackSize )
+void vApplicationGetIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer,
+                                    StackType_t ** ppxIdleTaskStackBuffer,
+                                    configSTACK_DEPTH_TYPE * pulIdleTaskStackSize )
 {
     /* Pass out a pointer to the StaticTask_t structure in which the Idle task’s
      * state will be stored.
@@ -423,9 +461,9 @@ static StackType_t uxTimerTaskStack[ configTIMER_TASK_STACK_DEPTH ];
  * application must provide an implementation of vApplicationGetTimerTaskMemory()
  * to provide the memory that is used by the Timer service task.
  */
-void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer,
-                                     StackType_t **ppxTimerTaskStackBuffer,
-                                     uint32_t *pulTimerTaskStackSize )
+void vApplicationGetTimerTaskMemory( StaticTask_t ** ppxTimerTaskTCBBuffer,
+                                     StackType_t ** ppxTimerTaskStackBuffer,
+                                     configSTACK_DEPTH_TYPE * pulTimerTaskStackSize )
 {
     /* Pass out a pointer to the StaticTask_t structure in which the Timer
      * task’s state will be stored.
@@ -450,65 +488,4 @@ __attribute__((weak)) void vApplicationIdleHook( void )
     vApplicationLoadHook();
 
     __asm__ __volatile__ ("wfi"   "\n\t": : : "memory");
-}
-
-uint32_t ulGetDataFaultStatusRegister( void )
-{
-    uint32_t DFSR;
-    __asm volatile("MRC     p15, #0, r0, c5, c0, #0\n");
-    __asm volatile ( "MOV %0, r0" : "=r" (DFSR) );
-    return DFSR;
-}
-
-uint32_t ulGetDataFaultAddressRegister( void )
-{
-    uint32_t DFAR;
-    __asm volatile("MRC     p15, #0, r0, c6, c0, #0\n");
-    __asm volatile ( "MOV %0, r0" : "=r" (DFAR) );
-    return DFAR;
-}
-
-uint32_t ulGetInstructionFaultStatusRegister( void )
-{
-    uint32_t IFSR;
-    __asm volatile("MRC     p15, #0, r0, c5, c0, #1\n");
-    __asm volatile ( "MOV %0, r0" : "=r" (IFSR) );
-    return IFSR;
-}
-
-uint32_t ulGetInstructionFaultAddressRegister( void )
-{
-    uint32_t IFAR;
-    __asm volatile("MRC     p15, #0, r0, c6, c0, #2\n");
-    __asm volatile ( "MOV %0, r0" : "=r" (IFAR) );
-    return IFAR;
-}
-
-uint32_t ulGetCPSR( void )
-{
-    volatile uint32_t CPSR;
-	__asm volatile ( "MRS %0, CPSR" : "=r" (CPSR) );
-    return CPSR;
-}
-
-void vPortDumpExceptionState( void )
-{
-    volatile uint32_t DFSR, DFAR, IFSR, IFAR, CPSR;
-
-    DFSR = ulGetDataFaultStatusRegister();
-    DFAR = ulGetDataFaultAddressRegister();
-    IFSR = ulGetInstructionFaultStatusRegister();
-    IFAR = ulGetInstructionFaultAddressRegister();
-    CPSR = ulGetCPSR();
-
-    DebugP_exceptionLog("[FATAL]: Core has Aborted!!!\nDFAR =0x%x DFSR =0x%x\n", (uintptr_t)DFAR, (uintptr_t)DFSR);
-    DebugP_exceptionLog("IFAR =0x%x IFSR =0x%x\n", (uintptr_t)IFAR, (uintptr_t)IFSR);
-    DebugP_exceptionLog("CPSR =0x%x SP =0x%x\n", (uintptr_t)CPSR, (uintptr_t)ulFaultySP);
-    DebugP_exceptionLog("LR =0x%x R0 =0x%x\n", (uintptr_t)ulFaultyLR, (uintptr_t)ulFaultyGPR[0]);
-    DebugP_exceptionLog("R1 =0x%x R2 =0x%x\n", (uintptr_t)ulFaultyGPR[1], (uintptr_t)ulFaultyGPR[2]);
-    DebugP_exceptionLog("R3 =0x%x R4 =0x%x\n", (uintptr_t)ulFaultyGPR[3], (uintptr_t)ulFaultyGPR[4]);
-    DebugP_exceptionLog("R5 =0x%x R6 =0x%x\n", (uintptr_t)ulFaultyGPR[5], (uintptr_t)ulFaultyGPR[6]);
-    DebugP_exceptionLog("R7 =0x%x R8 =0x%x\n", (uintptr_t)ulFaultyGPR[7], (uintptr_t)ulFaultyGPR[8]);
-    DebugP_exceptionLog("R9 =0x%x R10 =0x%x\n", (uintptr_t)ulFaultyGPR[9], (uintptr_t)ulFaultyGPR[10]);
-    DebugP_exceptionLog("R11 =0x%x R12 =0x%x\n", (uintptr_t)ulFaultyGPR[11], (uintptr_t)ulFaultyGPR[12]);
 }

@@ -307,12 +307,12 @@ int32_t appVhwaRemoteServiceDeInit(void);
 /** \brief Performs registration of remote service for VPAC (firewall, etc.)
  *
  */
-int32_t appVhwaVpacRemoteServiceInit();
+int32_t appVhwaVpacRemoteServiceInit(void);
 
 /** \brief Performs unregistration of remote service for VPAC
  *
  */
-int32_t appVhwaVpacRemoteServiceDeInit();
+int32_t appVhwaVpacRemoteServiceDeInit(void);
 
 /** \brief Performs registration of remote service for VISS node
  *

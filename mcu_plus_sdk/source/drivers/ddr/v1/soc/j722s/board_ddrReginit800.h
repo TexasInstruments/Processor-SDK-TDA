@@ -1,4 +1,4 @@
-/* Copyright (c) 2023, Texas Instruments Incorporated
+/* Copyright (C) 2023-25, Texas Instruments Incorporated
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +26,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
-#define DDR_TYPE LPDDR4
-
-#ifndef BOARD_DDRREGINIT_H_
-#define BOARD_DDRREGINIT_H_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*
  * This file was generated with the
@@ -44,6 +36,26 @@ extern "C" {
  * Density (per channel): 16Gb
  * Number of Ranks: 2
 */
+
+#ifndef BOARD_DDRREGINIT_H_
+#define BOARD_DDRREGINIT_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+#define DDR_TYPE LPDDR4
+
 #define DDRSS_PLL_FHS_CNT 5
 #define DDRSS_PLL_FREQUENCY_1 400000000
 #define DDRSS_PLL_FREQUENCY_2 400000000
@@ -51,6 +63,16 @@ extern "C" {
 #define DDRSS_CTL_REG_INIT_COUNT (435U)
 #define DDRSS_PHY_INDEP_REG_INIT_COUNT (424U)
 #define DDRSS_PHY_REG_INIT_COUNT (827U)
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Global Variables                                  */
+/* ========================================================================== */
 
 uint32_t DDRSS_ctlReg[] = {
     0x00000B00U, // DDRSS_CTL_0_VAL
@@ -3441,8 +3463,15 @@ uint16_t DDRSS_phyRegNum[] = {
     1922,
     1923,
 };
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif  /* BOARD_DDRREGINIT_H_ */

@@ -1,23 +1,11 @@
     /* UDMA */
-%   let udmaModule = system.modules['/drivers/udma/udma']
     {
-        static uint32_t udmaSkipDeinitFromSbl[CONFIG_UDMA_NUM_INSTANCES] =
-        {
-        % for(let i = 0; i < udmaModule.$instances.length; i++) {
-            % let instance = udmaModule.$instances[i];
-            % let config = udmaModule.getInstanceConfig(instance);
-            `config.skipDeinitFromSbl.toString(10).toUpperCase()`,
-        % }
-        };
         uint32_t        instId;
         int32_t         retVal = UDMA_SOK;
 
         for(instId = 0U; instId < CONFIG_UDMA_NUM_INSTANCES; instId++)
         {
-            if (!udmaSkipDeinitFromSbl[instId])
-            {
-                retVal += Udma_deinit(&gUdmaDrvObj[instId]);
-                DebugP_assert(UDMA_SOK == retVal);
-            }
+            retVal += Udma_deinit(&gUdmaDrvObj[instId]);
+            DebugP_assert(UDMA_SOK == retVal);
         }
     }

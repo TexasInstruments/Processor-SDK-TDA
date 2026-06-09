@@ -47,7 +47,7 @@
 #if defined (SOC_AM62X)
 #define LBIST_INSTANCE      (LBIST_MAIN_M4F)
 #define PBIST_INSTANCE      (SDL_PBIST_INST_MCU)
-#elif defined (SOC_AM62AX)
+#elif defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_AM62DX)
 #define LBIST_INSTANCE      (LBIST_MCU_R5F)
 #define PBIST_INSTANCE      (SDL_PBIST_INST_MCU)
 #endif
@@ -59,10 +59,6 @@ void bist_check_result_main(void *args)
     bool result = false;
 
     SDL_dplInit();
-
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
 
     ret = SDL_LBIST_checkResult(LBIST_INSTANCE, &result);
     if ((ret != SDL_PASS) || (result == false))
@@ -87,7 +83,5 @@ void bist_check_result_main(void *args)
         DebugP_log("Some tests have failed!!\r\n");
     }
 
-    Board_driversClose();
-    Drivers_close();
 }
 

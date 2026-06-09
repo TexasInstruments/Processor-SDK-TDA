@@ -1,7 +1,7 @@
 /*
  * Data version: 000000_000000
  *
- * Copyright (C) 2017-2024, Texas Instruments Incorporated
+ * Copyright (C) 2017-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

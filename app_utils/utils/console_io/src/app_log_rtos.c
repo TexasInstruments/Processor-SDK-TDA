@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -59,17 +59,19 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+#include <string.h>
 
 #include "app_log_priv.h"
-#include <HwiP.h>
-#include <TimerP.h>
-#include <utils/rtos/include/app_rtos.h>
-#include <string.h>
 #include "app_global_timer_priv.h"
 
-#if !defined(MCU_PLUS_SDK)
+#include <HwiP.h>
+#include <TimerP.h>
+
+#include <utils/rtos/include/app_rtos.h>
+
+#if defined(PDK)
 #include <sciclient/sciclient.h>
-#else
+#elif defined(MCU_PLUS_SDK)
 #include <kernel/dpl/ClockP.h>
 #include <drivers/device_manager/sciclient.h>
 #endif

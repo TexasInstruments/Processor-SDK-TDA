@@ -82,6 +82,10 @@
 #include "app_img_mosaic_module.h"
 #include "app_display_module.h"
 
+#if defined(APP_CTOOLS_ENABLED) && !defined(x86_64)
+#include <ctools_wrapper.h>
+#endif
+
 #ifdef QNX
 #include "omx_encode_module.h"
 #endif
@@ -366,6 +370,11 @@ static vx_status app_run_graph_interactive(AppObj *obj)
                         printf("fp is null\n");
                     }
                     break;
+            #if defined(APP_CTOOLS_ENABLED) && !defined(x86_64)
+                case 'c':
+                    runCtoolsDdrBw();
+                break;
+            #endif
                 case 'x':
                     obj->stop_app_task = 1;
                     obj->stop_load_cpu_task = 1;

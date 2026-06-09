@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -38,6 +38,7 @@
 #include <drivers/bootloader.h>
 #include <drivers/pinmux.h>
 #include <drivers/gtc.h>
+#include <drivers/rtc.h>
 
 /*  In this sample bootloader, we load appimages for RTO/Baremetal and Linux at different offset
     i.e the appimage for Linux (for A53) and RTOS/Baremetal (for M4) is flashed at different offset in flash
@@ -54,7 +55,7 @@
 /* This buffer needs to be defined for OSPI nand boot in case of HS device for
    image authentication
    The size of the buffer should be large enough to accomodate the appimage */
-uint8_t gAppimage[0x800000] __attribute__ ((section (".app"), aligned (128)));
+uint8_t gAppimage[0x800000] __attribute__ ((section (".bss.app"), aligned (128)));
 
 
 /* call this API to stop the booting process and spin, do that you can connect
@@ -98,8 +99,13 @@ int main()
     Bootloader_socWaitForFWBoot();
     Bootloader_profileAddProfilePoint("TIFS init");
 
+    RTC_erratumi2327Init();
+
     System_init();
     Bootloader_profileAddProfilePoint("System_init");
+
+    Board_init();
+    Bootloader_profileAddProfilePoint("Board_init");
 
     Drivers_open();
     Bootloader_profileAddProfilePoint("Drivers_open");
@@ -116,6 +122,8 @@ int main()
 
     if(SystemP_SUCCESS == status)
     {
+        Bootloader_openDma();
+
         Bootloader_BootImageInfo bootImageInfo;
 		Bootloader_Params bootParams;
         Bootloader_Handle bootHandle;
@@ -132,6 +140,12 @@ int main()
 
         bootHandle = Bootloader_open(CONFIG_BOOTLOADER0, &bootParams);
         bootHandleDM = Bootloader_open(CONFIG_BOOTLOADER_FLASH_DM, &bootParamsDM);
+
+        /* For DDR inline ECC, priming is done using BIST engine in interrupt mode. Wait for the DDR init to be done */
+        while(!DDR_isInitDone())
+        {
+            ClockP_usleep(100);
+        }
 
         if(bootHandle != NULL)
         {
@@ -150,6 +164,14 @@ int main()
             if(status == SystemP_SUCCESS)
             {
                 status = Bootloader_bootCpu(bootHandle, &bootImageInfo.cpuInfo[CSL_CORE_ID_A53SS0_1]);
+            }
+            if(status == SystemP_SUCCESS)
+            {
+                status = Bootloader_bootCpu(bootHandle, &bootImageInfo.cpuInfo[CSL_CORE_ID_A53SS1_0]);
+            }
+            if(status == SystemP_SUCCESS)
+            {
+                status = Bootloader_bootCpu(bootHandle, &bootImageInfo.cpuInfo[CSL_CORE_ID_A53SS1_1]);
             }
         }
 
@@ -177,6 +199,8 @@ int main()
 		}
 
         Bootloader_close(bootHandle);
+
+        Bootloader_closeDma();
     }
 
     if(status != SystemP_SUCCESS )
@@ -192,6 +216,7 @@ int main()
     Bootloader_JumpSelfCpu();
 
     Drivers_close();
+    Board_deinit();
     System_deinit();
 
     return 0;

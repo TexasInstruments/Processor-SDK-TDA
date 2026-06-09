@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2023
+ *  Copyright (c) Texas Instruments Incorporated 2023-24
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 /**
  *  \ingroup CSL_DSS
  *  \defgroup CSL_DSSVIDEOPIPE DSS Video Pipe Hardware Layer
- * 
- *  This is hardware include layer for DSS video pipe region.
+ *
+ * This is hardware include layer for DSS video pipe region.
  *  @{
  */
 
@@ -216,6 +216,7 @@ typedef struct
      *   FVID2_DF_ABGR16_4444,<br>
      *   FVID2_DF_RGBA16_4444,<br>
      *   FVID2_DF_BGRA16_4444<br>
+     *   FVID2_DF_RGBX16_5551<br>
      *   For valid values see #Fvid2_DataFormat<br>
      *
      *   <b>scanFormat</b>:<br>

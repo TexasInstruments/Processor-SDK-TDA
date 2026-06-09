@@ -21,31 +21,36 @@ endif
 
 qnx:
 ifeq ($(BUILD_QNX_MPU),yes)
-	$(MAKE) -C $(PSDK_QNX_PATH)/qnx all        VISION_APPS_BUILD_FLAGS_MAK=$(VISION_APPS_BUILD_FLAGS_MAK) QNX_BASE=$(QNX_BASE) PROFILE=$(PROFILE) BOARD=$(BOARD) -s
+	$(MAKE) -C $(PSDK_QNX_BUILD_PATH) all        VISION_APPS_BUILD_FLAGS_MAK=$(VISION_APPS_BUILD_FLAGS_MAK) QNX_BASE=$(QNX_BASE) PROFILE=$(PROFILE) BOARD=$(BOARD) -s
 endif
 
 qnx_clean:
 ifeq ($(BUILD_QNX_MPU),yes)
-	$(MAKE) -C $(PSDK_QNX_PATH)/qnx clean      QNX_BASE=$(QNX_BASE) PROFILE=$(PROFILE) BOARD=$(BOARD)
+	$(MAKE) -C $(PSDK_QNX_BUILD_PATH) clean      QNX_BASE=$(QNX_BASE) PROFILE=$(PROFILE) BOARD=$(BOARD)
 endif
 
 qnx_scrub:
 ifeq ($(BUILD_QNX_MPU),yes)
-	$(MAKE) -C $(PSDK_QNX_PATH)/qnx scrub      QNX_BASE=$(QNX_BASE) PROFILE=$(PROFILE) BOARD=$(BOARD)
+	$(MAKE) -C $(PSDK_QNX_BUILD_PATH) scrub      QNX_BASE=$(QNX_BASE) PROFILE=$(PROFILE) BOARD=$(BOARD)
 endif
 
 qnx_fs_create:
 ifeq ($(BUILD_QNX_MPU),yes)
-	$(MAKE) -C $(PSDK_QNX_PATH)/qnx qnx_fs_clean       QNX_BASE=$(QNX_BASE) PROFILE=$(PROFILE) BOARD=$(BOARD)
-	$(MAKE) -C $(PSDK_QNX_PATH)/qnx qnx_fs_create      QNX_BASE=$(QNX_BASE) PROFILE=$(PROFILE) BOARD=$(BOARD)
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
+	$(MAKE) -C $(PSDK_QNX_BUILD_PATH) qnx_fs_clean       QNX_BASE=$(QNX_BASE) PROFILE=$(PROFILE) BOARD=$(BOARD)
+	$(MAKE) -C $(PSDK_QNX_BUILD_PATH) qnx_fs_create      QNX_BASE=$(QNX_BASE) PROFILE=$(PROFILE) BOARD=$(BOARD)
+endif
 endif
 
 qnx_fs_copy_spl_uboot:
 ifeq ($(BUILD_QNX_MPU),yes)
-	$(MAKE) -C $(PSDK_QNX_PATH)/qnx qnx_fs_copy_spl_uboot      QNX_BASE=$(QNX_BASE) PROFILE=$(PROFILE) BOARD=$(BOARD)
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
+	$(MAKE) -C $(PSDK_QNX_BUILD_PATH) qnx_fs_copy_spl_uboot      QNX_BASE=$(QNX_BASE) PROFILE=$(PROFILE) BOARD=$(BOARD)
+endif
 endif
 
 qnx_fs_install:
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
 ifeq ($(BUILD_CPU_MPU1),yes)
 	# copy application binaries and scripts
 	mkdir -p $(QNX_FS_PATH)/vision_apps
@@ -203,7 +208,7 @@ ifeq ($(HS),1)
 endif
 endif
 	sync
-
+endif
 
 # MODIFY_QNX_SD_FS macro for making PSDK RTOS modifications to the QNX to file system
 define MODIFY_QNX_SD_FS =
@@ -217,21 +222,26 @@ define MODIFY_QNX_SD_FS =
 endef
 
 qnx_fs_create_sd: qnx_fs_create
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
 	sudo chmod 777 -R $(QNX_SD_FS_ROOT_PATH)
 	rm -rf $(QNX_SD_FS_BOOT_PATH)/*
 	rm -rf $(QNX_SD_FS_QNX_PATH)/*
 	rm -rf $(QNX_SD_FS_ROOT_PATH)/*
 	cp -rfv $(QNX_BOOT_PATH)/* $(QNX_SD_FS_BOOT_PATH)/
 	cp -rfv $(QNX_FS_PATH)/* $(QNX_SD_FS_QNX_PATH)/
+endif
 
 qnx_fs_install_firmware:
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
 	# copy remote core firmware's
 	mkdir -p $(QNX_SD_FS_ROOT_PATH)/lib/firmware
 	rm $(QNX_SD_FS_ROOT_PATH)/lib/firmware/$(QNX_FIRMWARE_PREFIX)-*-fw -f
 	cp -v $(QNX_AUX_FS_PATH)/lib/firmware/$(QNX_FIRMWARE_PREFIX)-*-fw $(QNX_SD_FS_ROOT_PATH)/lib/firmware/
 	sync
+endif
 
 qnx_fs_install_sd: qnx_fs_copy_spl_uboot qnx_fs_install qnx_fs_install_firmware
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
 	$(call MODIFY_QNX_SD_FS)
 ifeq ($(BUILD_CPU_MCU1_0),yes)
 ifeq ($(BUILD_TARGET_MODE),yes)
@@ -240,26 +250,36 @@ endif
 endif
 	sync
 	$(call SET_AUTORUN_ECU_TO_QNX_SD_FS)
+endif
 
 qnx_fs_install_nfs: qnx_fs_copy_spl_uboot qnx_fs_install
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
+	-cp $(PSDK_QNX_BUILD_PATH)/bsp/images/ifs-$(SOC)-evm-ti-spl-nfs-with-asix.raw $(QNX_AUX_FS_PATH)/qnx-ifs-spl-nfs-asix
+	-cp $(PSDK_QNX_BUILD_PATH)/bsp/images/ifs-$(SOC)-evm-ti-spl-nfs-with-cpsw2g.raw $(QNX_AUX_FS_PATH)/qnx-ifs-spl-nfs-cpsw2g
+	-cp $(PSDK_QNX_BUILD_PATH)/bsp/images/ifs-$(SOC)-evm-ti-spl-nfs-with-cpsw.raw $(QNX_AUX_FS_PATH)/qnx-ifs-spl-nfs-cpsw
 ifeq ($(BUILD_CPU_MCU1_0),yes)
 ifeq ($(BUILD_TARGET_MODE),yes)
 	$(call UBOOT_INSTALL,qnx,$(QNX_BOOT_PATH))
 endif
 endif
 	sync
+endif
 
 qnx_fs_install_nfs_test_data:
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
 	$(call INSTALL_TEST_DATA,$(QNX_FS_PATH),vision_apps)
 	sync
+endif
 
 qnx_fs_install_tar: qnx_fs_install_nfs qnx_fs_install_nfs_test_data
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
 	# Creating bootfs tar
 	cd $(QNX_BOOT_PATH) && tar czf $(VISION_APPS_PATH)/spl_bootfs.tar.gz .
 	# Creating qnxfs tar
 	cd $(QNX_FS_PATH) && tar czf $(VISION_APPS_PATH)/spl_qnxfs.tar.gz .
 	# Creating rootfs tar
 	cd $(QNX_AUX_FS_PATH) && sudo tar cpzf $(VISION_APPS_PATH)/spl_rootfs.tar.xz .
+endif
 
 qnx_fs_install_nfs_tar: qnx_fs_install_tar
 	# Creating rootfs tar
@@ -277,18 +297,28 @@ qnx_fs_install_nfs_tar: qnx_fs_install_tar
 	rm -rf $(QNX_AUX_FS_PATH)/qnxfs
 
 qnx_fs_install_sd_sbl: qnx_fs_install sbl_bootimage_install_sd
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
 	$(call MODIFY_QNX_SD_FS)
+endif
 
 qnx_fs_install_sd_sbl_hs: qnx_fs_install sbl_bootimage_hs_install_sd
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
 	$(call MODIFY_QNX_SD_FS)
+endif
 
 qnx_fs_install_ospi: qnx_fs_install sbl_bootimage_install_ospi
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
 	$(call MODIFY_QNX_SD_FS)
+endif
 
 qnx_fs_install_sd_test_data:
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
 	$(call INSTALL_TEST_DATA,$(QNX_SD_FS_QNX_PATH),vision_apps)
+endif
 
 qnx_fs_install_sd_sbl_combined: qnx_fs_install sbl_combined_bootimage_install_sd
+ifneq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
 	$(call MODIFY_QNX_SD_FS)
+endif
 
 .PHONY: qnx qnx_clean qnx_scrub

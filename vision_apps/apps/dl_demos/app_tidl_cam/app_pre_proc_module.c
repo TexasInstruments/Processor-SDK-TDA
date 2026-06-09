@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017-2024 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -62,7 +62,7 @@
 
 #include "app_pre_proc_module.h"
 
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(QNX) || defined(LINUX))
 #include <vx_internal.h>
 #define EDGEAI_KERNELS_APP_MAX_TENSOR_DIMS    4
 #define CLIP_255(x) ((x)<0?0:(((x)>255)?255:(x)))
@@ -72,7 +72,7 @@ tivxDLPreProcArmv8Params *local_preproc_config = NULL;
 static void createOutputTensors(vx_context context, vx_user_data_object config, vx_tensor output_tensors[]);
 static inline vx_enum get_vx_tensor_datatype(int32_t tidl_datatype);
 
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(QNX) || defined(LINUX))
 static vx_size getTensorDataType(vx_int32 tidl_type)
 {
     vx_size openvx_type = VX_TYPE_INVALID;
@@ -138,7 +138,7 @@ vx_status app_init_pre_proc(vx_context context, PreProcObj *preProcObj, char *ob
 {
     vx_status status = VX_SUCCESS;
 
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(QNX) || defined(LINUX))
     uint32_t i =0;
     local_preproc_config = tivxMemAlloc(sizeof(tivxDLPreProcArmv8Params), TIVX_MEM_EXTERNAL);
     if(local_preproc_config == NULL) {
@@ -266,7 +266,7 @@ void app_deinit_pre_proc(PreProcObj *preProcObj)
         vxReleaseArray(&preProcObj->file_prefix);
         vxReleaseUserDataObject(&preProcObj->write_cmd);
     }
-#if defined(AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(QNX) || defined(LINUX))
     if (local_preproc_config)
     {
         tivxMemFree(local_preproc_config, sizeof(tivxDLPreProcArmv8Params), TIVX_MEM_EXTERNAL);
@@ -293,7 +293,7 @@ vx_status app_create_graph_pre_proc(vx_graph graph, PreProcObj *preProcObj, vx_o
     vx_image  input   = (vx_image)vxGetObjectArrayItem((vx_object_array)input_arr, 0);
     vx_tensor output  = (vx_tensor)vxGetObjectArrayItem((vx_object_array)preProcObj->output_tensor_arr[0], 0);
 
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(QNX) || defined(LINUX))
     /*For Image Classification, TIDL node expects input image resolution of 224*224*/
     vx_uint32 in_width, in_height, dl_width, dl_height; 
     uint32_t in_stride;

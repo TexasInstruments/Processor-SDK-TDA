@@ -1,5 +1,5 @@
 /**
- *   Copyright (c) Texas Instruments Incorporated 2024
+ *   Copyright (c) Texas Instruments Incorporated 2023-24
  *   All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -145,7 +145,7 @@ void AppMscMain(void *args)
 
     status = App_MscInit();
 
-    //GTC_enable();
+    GTC_enable();
 
     if (FVID2_SOK == status)
     {
@@ -224,7 +224,7 @@ int32_t AppMsc_DeInit(void)
     return (retVal);
 }
 
-int32_t AppMscFrameComplCb0(Fvid2_Handle handle, void *appData)
+int32_t AppMsc_frameComplCb0(Fvid2_Handle handle, void *appData)
 {
     App_MscTestObj *tObj = (App_MscTestObj *)appData;
 
@@ -236,7 +236,7 @@ int32_t AppMscFrameComplCb0(Fvid2_Handle handle, void *appData)
     return FVID2_SOK;
 }
 
-int32_t AppMscFrameComplCb1(Fvid2_Handle handle, void *appData)
+int32_t AppMsc_frameComplCb1(Fvid2_Handle handle, void *appData)
 {
     App_MscTestObj *tObj = (App_MscTestObj *)appData;
 
@@ -248,7 +248,7 @@ int32_t AppMscFrameComplCb1(Fvid2_Handle handle, void *appData)
     return FVID2_SOK;
 }
 
-void AppMscErrorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData)
+void AppMsc_errorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData)
 {
     App_MscTestObj *tObj = (App_MscTestObj *)appData;
 
@@ -262,7 +262,7 @@ void AppMscErrorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData)
     }
 }
 
-void AppMscWdtimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData)
+void AppMsc_wdtimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData)
 {
     App_MscTestObj *tObj = (App_MscTestObj *)appData;
 
@@ -295,18 +295,13 @@ int32_t AppMsc_Create(App_MscTestParams *tObj, uint32_t hndlIdx)
 
         if(tObj->testCfg[hndlIdx]->mscThreadId == (uint32_t)VPAC_MSC_INST_ID_0)
         {
-            appObj->cbPrms.cbFxn   = AppMscFrameComplCb0;
+            appObj->cbPrms.cbFxn   = AppMsc_frameComplCb0;
             appObj->cbPrms.appData = appObj;
         }
         else
         {
-            appObj->cbPrms.cbFxn   = AppMscFrameComplCb1;
+            appObj->cbPrms.cbFxn   = AppMsc_frameComplCb1;
             appObj->cbPrms.appData = appObj;
-        }
-
-        if(tObj->isPerformanceTest)
-        {
-            //appObj->createArgs.getTimeStamp = GTC_getCount64;
         }
 
         appObj->handle = Fvid2_create(FVID2_VHWA_M2M_MSC_DRV_ID,
@@ -419,7 +414,7 @@ int32_t AppMsc_SetParams(App_MscTestParams *tObj, uint32_t hndlIdx)
         errPrms.errEvents =
             VHWA_MSC_VBUSM_RD_ERR | VHWA_MSC_SL2_WR_ERR;
 
-        errPrms.cbFxn = AppMscErrorCb;
+        errPrms.cbFxn = AppMsc_errorCb;
 
         errPrms.appData = appObj;
 
@@ -432,14 +427,13 @@ int32_t AppMsc_SetParams(App_MscTestParams *tObj, uint32_t hndlIdx)
         wdTimererrEvtPrms.WdTimererrEvents =
             VHWA_MSC0_WDTIMER_ERR | VHWA_MSC1_WDTIMER_ERR;
 
-        wdTimererrEvtPrms.cbFxn = AppMscWdtimerErrorCb;
+        wdTimererrEvtPrms.cbFxn = AppMsc_wdtimerErrorCb;
 
         wdTimererrEvtPrms.appData = appObj;
 
         status = Fvid2_control(appObj->handle,
             VHWA_M2M_IOCTL_MSC_REGISTER_WDTIMER_ERR_CB, &wdTimererrEvtPrms, NULL);
     }
-
     return (status);
 }
 
@@ -660,6 +654,8 @@ static void App_MscTest(App_MscTestParams  *tObj)
     int32_t                 status = FVID2_SOK;
     uint32_t                repCnt;
     uint32_t                inFrmSize, outFrmSize;
+    uint64_t                timeCount;
+    uint64_t                perf;
 
     status = AppMsc_Create(tObj, 0);
     if (FVID2_SOK != status)
@@ -699,6 +695,11 @@ static void App_MscTest(App_MscTestParams  *tObj)
         gMscTestDstBufFreeIdx += outFrmSize;
     }
 
+    if(tObj->isPerformanceTest)
+    {
+        timeCount = ClockP_getTimeUsec();
+    }
+
     for (repCnt = 0u; (repCnt < tObj->repeatCnt) &&
             (FVID2_SOK == status); repCnt ++)
     {
@@ -731,6 +732,26 @@ static void App_MscTest(App_MscTestParams  *tObj)
                         repCnt);
         }
     }
+    if(tObj->isPerformanceTest)
+    {
+        timeCount = ClockP_getTimeUsec() - timeCount;
+        DebugP_log ("Performance:\n\t FrameCount: %d: Time in uSec: %d\n",
+                    tObj->repeatCnt, timeCount);
+
+        perf = (uint64_t)tObj->testCfg[0]->inFrm.inWidth
+               *(uint64_t)tObj->testCfg[0]->inFrm.inHeight
+               *(uint64_t)tObj->repeatCnt;
+        if(FVID2_DF_YUV420SP_UV == tObj->testCfg[0]->inFrm.inDataFmt)
+        {
+            perf = perf*3U/2U;
+        }
+        DebugP_log("Width %d\n",(uint64_t)tObj->testCfg[0]->inFrm.inWidth);
+        DebugP_log("Height %d\n",(uint64_t)tObj->testCfg[0]->inFrm.inHeight);
+
+        DebugP_log ("\t MPix/s: %d.%d\n",
+            (uint32_t)(perf/timeCount),
+             (uint32_t)(((perf*(uint64_t)100)/timeCount)%100));
+    }
 
     AppMsc_Delete(tObj, 0);
 
@@ -759,7 +780,7 @@ static int32_t App_MscInit(void)
         if(UDMA_SOK != status)
         {
             DebugP_log("[Error] UDMA prms init failed!!\n");
-            status = FVID2_EFAIL;
+            status = UDMA_EFAIL;
         }
         udmaInitPrms.instId = UDMA_INST_ID_0;
         udmaInitPrms.enableUtc = UTRUE;
@@ -767,7 +788,7 @@ static int32_t App_MscInit(void)
         if(UDMA_SOK != status)
         {
             DebugP_log("[Error] UDMA init failed!!\n");
-            status = FVID2_EFAIL;
+            status = UDMA_EFAIL;
         }
     }
 
@@ -778,12 +799,10 @@ static int32_t App_MscInit(void)
 
 static void App_MscDeInit()
 {
-    //int32_t         status;
     Udma_DrvHandle  drvHandle = &gMscAppUdmaDrvObj;
 
     AppMsc_DeInit();
 
-    //status = Udma_deinit(drvHandle);
     Udma_deinit(drvHandle);
 
     Fvid2_deInit(NULL);

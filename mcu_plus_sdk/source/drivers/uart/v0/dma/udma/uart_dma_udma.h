@@ -56,6 +56,12 @@ typedef struct UartDma_UdmaArgs_s
     /**< UDMA TX HPD memory pointers */
     void            *rxHpdMem;
     /**< UDMA RX HPD memory pointers */
+    void            *txTrpdMem;
+    /**< UDMA TR PD memory pointers */
+    void            *rxTrpdMem;
+    /**< UDMA TR PD memory pointers */
+    uint32_t        trpdMemSize;
+    /**< Size of TR PD memory */
     uint32_t        hpdMemSize;
     /**< Size of TR PD memory */
     void            *txRingMem;

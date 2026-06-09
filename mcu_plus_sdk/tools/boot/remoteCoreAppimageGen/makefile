@@ -1,8 +1,16 @@
 
 export MCU_PLUS_SDK_PATH?=$(abspath ../../..)
 include $(MCU_PLUS_SDK_PATH)/imports.mak
-include board/$(BOARD)/config.mak
 include $(MCU_PLUS_SDK_PATH)/devconfig/devconfig.mak
+
+ifeq ($(DEVICE),$(filter $(DEVICE), am62x am62ax am62px))
+BOARD?=$(DEVICE)-sk
+endif
+ifeq ($(DEVICE),$(filter $(DEVICE), am62dx))
+BOARD?=$(DEVICE)-evm
+endif
+
+include board/$(BOARD)/config.mak
 
 CG_TOOL_ROOT=$(CGT_TI_ARM_CLANG_PATH)
 
@@ -53,14 +61,23 @@ ifeq ($(DEVICE_TYPE),HS)
 # Sign the appimage using appimage signing script
 ifeq ($(ENC_ENABLED),no)
 	@echo Boot image signing: Encryption is disabled.
-	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(APPIMAGE) --authtype 2 --key $(APP_SIGNING_KEY) --output $(APPIMAGE_HS)
+	#
+    #   Authentication type 0 with load address 0x84000000
+    #
+	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(APPIMAGE) --authtype 0 --loadaddr 84000000 --key $(APP_SIGNING_KEY) --output $(APPIMAGE_HS)
 else
 	@echo Boot image signing: Encryption is enabled.
-	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(APPIMAGE) --authtype 2 --key $(APP_SIGNING_KEY) --enc y --enckey $(APP_ENCRYPTION_KEY) --output $(APPIMAGE_HS)
+	#
+    #   Authentication type 0 with load address 0x84000000
+    #
+	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(APPIMAGE) --authtype 0 --loadaddr 84000000 --key $(APP_SIGNING_KEY) --enc y --enckey $(APP_ENCRYPTION_KEY) --output $(APPIMAGE_HS)
 	$(RM) $(APPIMAGE)-enc
 endif
 else
-	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(APPIMAGE) --authtype 2 --key $(APP_SIGNING_KEY) --output $(APPIMAGE_HS_FS)
+	#
+    #   Authentication type 0 with load address 0x84000000
+    #
+	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(APPIMAGE) --authtype 0 --loadaddr 84000000 --key $(APP_SIGNING_KEY) --output $(APPIMAGE_HS_FS)
 endif
 
 	$(RM) $(BOOTIMAGE_TEMP_OUT_FILE)
@@ -68,7 +85,7 @@ endif
 
 $(RPRC):
 	@echo Creating ATF RPRC image
-	$(OUTRPRC_CMD) $(ELF) $(SW_VERSION) >> $(BOOTIMAGE_TEMP_OUT_FILE)
+	$(OUTRPRC_CMD) $(ELF) $(SW_VERSION)>> $(BOOTIMAGE_TEMP_OUT_FILE)
 	$(COPY) $(RPRC_NAME) $(RPRC)  >> $(BOOTIMAGE_TEMP_OUT_FILE)
 	$(RM) $(RPRC_NAME)
 

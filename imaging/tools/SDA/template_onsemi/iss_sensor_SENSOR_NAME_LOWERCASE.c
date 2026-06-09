@@ -128,7 +128,6 @@ IssSensors_Handle SENSOR_NAME_LOWERCASESensorHandle = {
 /*
  * \brief DCC Parameters of SENSOR_NAME_UPPERCASE
  */
-extern IssSensors_Handle *gIssSensorTable[ISS_SENSORS_MAX_SUPPORTED_SENSOR];
 static uint16_t redGain_prev[ISS_SENSORS_MAX_CHANNEL];
 static uint16_t greenGain_prev[ISS_SENSORS_MAX_CHANNEL];
 static uint16_t blueGain_prev[ISS_SENSORS_MAX_CHANNEL];
@@ -498,7 +497,11 @@ static int32_t SENSOR_NAME_UPPERCASE_WriteReg(
     }
 
     // 16-bit address is used by most ADAS sensors from OVT/Sony/Onsemi
+    #if defined(MCU_PLUS_SDK)
+    transaction.targetAddress = i2cAddr;
+    #else
     transaction.slaveAddress = i2cAddr;
+    #endif
     transaction.writeBuf     = rawRegVal;
     transaction.writeCount   = 4;
     transaction.readBuf      = NULL;

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -60,29 +60,6 @@
  *
  */
 
-#include "app_remote_service_priv.h"
-#include <utils/misc/include/app_misc.h>
-#include <utils/rtos/include/app_rtos.h>
-#include <utils/timer/include/app_timer.h>
-
-#if !defined(MCU_PLUS_SDK)
-#include <ipc/ipc.h>
-#else
-#include <ipc_rpmsg.h>
-#include <ipc_notify.h>
-#include <ClockP.h>
-#include <utils/ipc/include/mcu_sdk_ipc.h>
-#include <common/app.h>
-#define IPC_RPMESSAGE_MAX_MSG_SIZE        (96u)
-#endif
-
-
-/* #define APP_REMOTE_SERVICE_DEBUG */
-
-#define APP_REMOTE_SERVICE_MAX_TASK_NAME ( 12u)
-
-#define IPC_RPMESSAGE_OBJ_SIZE      (256u)
-#define IPC_RPMESSAGE_BUF_SIZE(n)   (IPC_RPMESSAGE_MSG_SIZE*(n)+IPC_RPMESSAGE_OBJ_SIZE)
 
 /*
  * Currently registered remote services for J7 devices:
@@ -109,27 +86,69 @@
  * 4.   VISS_SERVER_REMOTE_SERVICE      appVissRemoteServiceInit()
 */
 
-#define APP_REMOTE_SERVICE_HANDLERS_MAX  (  10u)
+#include "app_remote_service_priv.h"
+#include <utils/misc/include/app_misc.h>
+#include <utils/rtos/include/app_rtos.h>
+#include <utils/timer/include/app_timer.h>
 
+#if defined(PDK)
+#include <ipc/ipc.h>
+#elif defined(MCU_SDK)
+#include <Ipc_Notify_Hal_Cfg.h>
+#include <RPMessage.h>
+#include <Ipc_Notify.h>
+#include <RPMessage.h>
+#include <ClockP.h>
+#include <utils/ipc/include/mcu_sdk_ipc.h>
+#define IPC_RPMESSAGE_MAX_MSG_SIZE        (96u)
+#elif defined(MCU_PLUS_SDK)
+#include <ipc_rpmsg.h>
+#include <ipc_notify.h>
+#include <ClockP.h>
+#include <utils/ipc/include/mcu_sdk_ipc.h>
+#define IPC_RPMESSAGE_MAX_MSG_SIZE        (96u)
+#endif
 
-#if !defined(MCU_PLUS_SDK)
+/* #define APP_REMOTE_SERVICE_DEBUG */
+
+#define APP_REMOTE_SERVICE_MAX_TASK_NAME (12u)
+#define IPC_RPMESSAGE_OBJ_SIZE           (256u)
+#define APP_REMOTE_SERVICE_HANDLERS_MAX  (10u)
+#define IPC_RPMESSAGE_BUF_SIZE(n)        ((IPC_RPMESSAGE_MSG_SIZE*(n))+IPC_RPMESSAGE_OBJ_SIZE)
+
+#if defined(PDK)
 #define APP_REMOTE_SERVICE_RPMSG_TX_NUM_BUF   (1u)
 #define APP_REMOTE_SERVICE_RPMSG_TX_BUF_SIZE  IPC_RPMESSAGE_BUF_SIZE(APP_REMOTE_SERVICE_RPMSG_TX_NUM_BUF)
+
 static uint8_t g_app_remote_service_rpmsg_tx_buf[APP_REMOTE_SERVICE_RPMSG_TX_BUF_SIZE] __attribute__ ((aligned(1024)));
 #endif
 
 #if defined(SYSBIOS) || defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
 
+#if defined(R5F) || defined(R52P) || defined(M55)
+
+#if defined(SAFERTOS)
+#define APP_REMOTE_SERVICE_RPMSG_RX_TASK_ALIGNMENT    (8192u)
+#define APP_REMOTE_SERVICE_RX_TASK_ALIGNMENT          APP_REMOTE_SERVICE_RX_TASK_STACK_SIZE
+#else
+#define APP_REMOTE_SERVICE_RPMSG_RX_TASK_ALIGNMENT    (1024u)
+#define APP_REMOTE_SERVICE_RX_TASK_ALIGNMENT          (8192u)
+#endif
+
+#elif defined(C7X_FAMILY)
+#define APP_REMOTE_SERVICE_RPMSG_RX_TASK_ALIGNMENT    (1024u)
+#define APP_REMOTE_SERVICE_RX_TASK_ALIGNMENT          (8192u)
+
+#else
+#define APP_REMOTE_SERVICE_RPMSG_RX_TASK_ALIGNMENT    (1024u)
+#define APP_REMOTE_SERVICE_RX_TASK_ALIGNMENT          (8192u)
+
+#endif
+
+#if defined(PDK)
 #define APP_REMOTE_SERVICE_RPMSG_RX_NUM_BUF   (8u)
 #define APP_REMOTE_SERVICE_RPMSG_RX_BUF_SIZE  IPC_RPMESSAGE_BUF_SIZE(APP_REMOTE_SERVICE_RPMSG_RX_NUM_BUF)
 
-#if defined(R5F) && defined(SAFERTOS)
-#define APP_REMOTE_SERVICE_RPMSG_RX_TASK_ALIGNMENT    (8192u)
-#else
-#define APP_REMOTE_SERVICE_RPMSG_RX_TASK_ALIGNMENT    (1024u)
-#endif
-
-#if !defined(MCU_PLUS_SDK)
 static uint8_t g_app_remote_service_rpmsg_rx_buf[APP_REMOTE_SERVICE_RPMSG_RX_BUF_SIZE] __attribute__ ((aligned(APP_REMOTE_SERVICE_RPMSG_RX_TASK_ALIGNMENT)));
 #endif
 
@@ -137,25 +156,25 @@ static uint8_t g_app_remote_service_rpmsg_rx_buf[APP_REMOTE_SERVICE_RPMSG_RX_BUF
  * - stack size and stack ptr MUST be 8KB aligned
  * - AND min stack size MUST be 16KB
  * - AND stack assigned for task context is "size - 8KB"
- *       - 8KB chunk for the stack area is used for interrupt handling in this task context
+ * - 8KB chunk for the stack area is used for interrupt handling in this task context
  */
-#if defined(R5F)
+
+#if defined(R5F) || defined(R52P) || defined(M55)
 #define APP_REMOTE_SERVICE_RX_TASK_STACK_SIZE   (4*1024u)
-#else
+
+#elif defined(C7X_FAMILY)
+
 #if defined (SOC_AM62A)
 #define APP_REMOTE_SERVICE_RX_TASK_STACK_SIZE   (64*1024u)
 #else
 #define APP_REMOTE_SERVICE_RX_TASK_STACK_SIZE   (32*1024u)
 #endif
+
+#else
+#define APP_REMOTE_SERVICE_RX_TASK_STACK_SIZE   (32*1024u)
 #endif
 
 #define APP_REMOTE_SERVICE_RX_TASK_PRI          (10u)
-
-#if defined(R5F) && defined(SAFERTOS)
-#define APP_REMOTE_SERVICE_RX_TASK_ALIGNMENT    APP_REMOTE_SERVICE_RX_TASK_STACK_SIZE
-#else
-#define APP_REMOTE_SERVICE_RX_TASK_ALIGNMENT    (8192u)
-#endif
 
 static uint8_t g_app_remote_service_rx_task_stack[APP_REMOTE_SERVICE_RX_TASK_STACK_SIZE]
 __attribute__ ((section(".bss:taskStackSection")))
@@ -163,26 +182,25 @@ __attribute__ ((aligned(APP_REMOTE_SERVICE_RX_TASK_ALIGNMENT)))
     ;
 #endif
 
-#if defined(MCU_PLUS_SDK)
+#if defined(MCU_PLUS_SDK) || defined(MCU_SDK)
 RPMessage_Object    rpMsgtxObject, rpMsgrxObject;
 #endif
 
 typedef struct {
-
     app_remote_service_init_prms_t prm;
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
     RPMessage_Handle rpmsg_tx_handle;
     uint32_t rpmsg_tx_endpt;
     #if defined(SYSBIOS) || defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
     RPMessage_Handle rpmsg_rx_handle;
     #endif
-#else
+#elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
     RPMessage_Object* rpmsg_tx_handle;
     uint16_t rpmsg_tx_endpt;
     #if defined(SYSBIOS) || defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
     RPMessage_Object* rpmsg_rx_handle;
     #endif
-#endif 
+#endif
     #if defined(SYSBIOS) || defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
     app_rtos_task_handle_t task_handle;
     uint32_t task_stack_size;
@@ -227,12 +245,12 @@ static int32_t appRemoteServiceRunHandler(char *service_name, uint32_t cmd, void
 #if defined(SYSBIOS) || defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
 static void appRemoteServiceRxTaskMain(void *arg0, void *arg1)
 {
-#if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
     uint32_t src_cpu_id;
-#else
+    #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
     uint16_t src_cpu_id;
-#endif    
-    
+    #endif
+
     app_remote_service_obj_t *obj = &g_app_remote_service_obj;
     uint32_t reply_endpt;
     int32_t status = -1;
@@ -245,7 +263,7 @@ static void appRemoteServiceRxTaskMain(void *arg0, void *arg1)
     {
         len = 0;
 
-#if !defined(MCU_PLUS_SDK)
+        #if defined(PDK)
         status = RPMessage_recv(obj->rpmsg_rx_handle,
                         &obj->rpmsg_rx_msg_buf,
                         &len,
@@ -260,8 +278,8 @@ static void appRemoteServiceRxTaskMain(void *arg0, void *arg1)
         }
         if(status == IPC_SOK)
         {
-#else        
-        len= sizeof(obj->rpmsg_rx_msg_buf);             
+        #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
+        len= sizeof(obj->rpmsg_rx_msg_buf);
         status = RPMessage_recv(obj->rpmsg_rx_handle,
                             &obj->rpmsg_rx_msg_buf,
                             &len,
@@ -271,7 +289,7 @@ static void appRemoteServiceRxTaskMain(void *arg0, void *arg1)
                             );
         if(status == SystemP_SUCCESS)
         {
-#endif  
+        #endif
             app_service_msg_header_t *header;
 
             header = (app_service_msg_header_t *)&obj->rpmsg_rx_msg_buf[0];
@@ -297,7 +315,7 @@ static void appRemoteServiceRxTaskMain(void *arg0, void *arg1)
             }
             else
             {
-#if !defined(MCU_PLUS_SDK) 
+                #if defined(PDK)
                 /* send ack */
                 status = RPMessage_send(
                             obj->rpmsg_rx_handle,
@@ -327,7 +345,7 @@ static void appRemoteServiceRxTaskMain(void *arg0, void *arg1)
                         header->cmd, header->prm_size);
                     #endif
                 }
-#else
+                #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
                 status = RPMessage_send(
                             &obj->rpmsg_rx_msg_buf,
                             len,
@@ -341,22 +359,22 @@ static void appRemoteServiceRxTaskMain(void *arg0, void *arg1)
                     appLogPrintf("REMOTE_SERVICE: TX: %s (port %d) -> %s (port %d) cmd = 0x%08x, prm_size = %d bytes ... Failed !!!\n",
                         Ipc_mpGetSelfName(),
                         obj->prm.rpmsg_rx_endpt,
-                        SOC_getCoreName(src_cpu_id),
+                        Ipc_mpGetName(src_cpu_id),
                         reply_endpt,
                         header->cmd, header->prm_size);
-                } 
+                }
                 else
                 {
                     #ifdef APP_REMOTE_SERVICE_DEBUG
                     appLogPrintf("REMOTE_SERVICE: TX: %s (port %d) -> %s (port %d) cmd = 0x%08x, prm_size = %d bytes ... !!!\n",
                         Ipc_mpGetSelfName(),
                         obj->prm.rpmsg_rx_endpt,
-                        SOC_getCoreName(src_cpu_id),
+                        Ipc_mpGetName(src_cpu_id),
                         reply_endpt,
                         header->cmd, header->prm_size);
                     #endif
-                }                                     
-#endif
+                }
+                #endif
             }
         }
     }
@@ -390,11 +408,11 @@ int32_t appRemoteServiceRun(uint32_t dst_app_cpu_id, const char *service_name, u
         else
         {
             uint16_t tx_payload_size, rx_payload_size;
-#if !defined(MCU_PLUS_SDK)
+            #if defined(PDK)
             uint32_t rx_cpu_id;
-#else
+            #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
             uint16_t rx_cpu_id;
-#endif
+            #endif
             uint32_t dst_ipc_cpu_id;
             uint32_t rx_endpt;
             app_service_msg_header_t *header;
@@ -430,7 +448,7 @@ int32_t appRemoteServiceRun(uint32_t dst_app_cpu_id, const char *service_name, u
                 cmd, prm_size);
             #endif
             /* send to destination */
-#if !defined(MCU_PLUS_SDK)            
+            #if defined(PDK)
             status = RPMessage_send(
                         obj->rpmsg_tx_handle,
                         dst_ipc_cpu_id,
@@ -439,7 +457,7 @@ int32_t appRemoteServiceRun(uint32_t dst_app_cpu_id, const char *service_name, u
                         obj->rpmsg_tx_msg_buf,
                         tx_payload_size
                         );
-#else                        
+            #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
             status = RPMessage_send(
                         obj->rpmsg_tx_msg_buf,
                         tx_payload_size,
@@ -447,8 +465,8 @@ int32_t appRemoteServiceRun(uint32_t dst_app_cpu_id, const char *service_name, u
                         obj->prm.rpmsg_rx_endpt,    /* dst end pt */
                         obj->rpmsg_tx_endpt, /* src endpt */
                         SystemP_WAIT_FOREVER
-                        ); 
-#endif  
+                        );
+            #endif
             if(status!=0)
             {
                 appLogPrintf("REMOTE_SERVICE: TX: FAILED: %s (port %d) -> %s (port %d) cmd = 0x%08x, prm_size = %d bytes\n",
@@ -472,7 +490,7 @@ int32_t appRemoteServiceRun(uint32_t dst_app_cpu_id, const char *service_name, u
                     rx_endpt = 0;
                     rx_cpu_id = 0;
                     memset(obj->rpmsg_tx_msg_buf, 0, IPC_RPMESSAGE_MSG_SIZE);
-#if !defined(MCU_PLUS_SDK)
+                    #if defined(PDK)
                     status = RPMessage_recv(obj->rpmsg_tx_handle,
                                     obj->rpmsg_tx_msg_buf,
                                     &rx_payload_size,
@@ -485,7 +503,7 @@ int32_t appRemoteServiceRun(uint32_t dst_app_cpu_id, const char *service_name, u
                         && rx_endpt == obj->prm.rpmsg_rx_endpt
                         && rx_cpu_id == dst_ipc_cpu_id)
                     {
-#else
+                    #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
                     rx_payload_size = sizeof(obj->rpmsg_tx_msg_buf);
                     status = RPMessage_recv(obj->rpmsg_tx_handle,
                                     obj->rpmsg_tx_msg_buf,
@@ -499,7 +517,7 @@ int32_t appRemoteServiceRun(uint32_t dst_app_cpu_id, const char *service_name, u
                         && rx_endpt == obj->prm.rpmsg_rx_endpt
                         && rx_cpu_id == dst_ipc_cpu_id)
                     {
-#endif
+                    #endif
                         status = header->status;
                         if(prm!=NULL)
                         {
@@ -566,7 +584,7 @@ static int32_t appRemoteServiceCreateRpmsgRxTask(app_remote_service_obj_t *obj)
 static void appRemoteServiceDeleteRpmsgRxTask(app_remote_service_obj_t *obj)
 {
 
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
     uint32_t sleep_time = 16U;
 
     RPMessage_unblock(obj->rpmsg_rx_handle);
@@ -582,10 +600,9 @@ static void appRemoteServiceDeleteRpmsgRxTask(app_remote_service_obj_t *obj)
             break;
         }
     }
-#else
+#elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
     RPMessage_unblock(obj->rpmsg_rx_handle);
 #endif
-
     appRtosTaskDelete(&obj->task_handle);
 }
 #endif
@@ -654,7 +671,7 @@ int32_t appRemoteServiceInit(app_remote_service_init_prms_t *prm)
     if(status==0)
     {
 
-#if !defined(MCU_PLUS_SDK) 
+        #if defined(PDK)
         RPMessage_Params rpmsg_prm;
 
         RPMessageParams_init(&rpmsg_prm);
@@ -667,18 +684,20 @@ int32_t appRemoteServiceInit(app_remote_service_init_prms_t *prm)
         obj->rpmsg_tx_handle =
             RPMessage_create(&rpmsg_prm, &obj->rpmsg_tx_endpt);
 
-        if(obj->rpmsg_tx_handle==NULL)
-#else
+        #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
         RPMessage_CreateParams rpmsg_prm;
-
         RPMessage_CreateParams_init(&rpmsg_prm);
         obj->rpmsg_tx_endpt = 26;
         rpmsg_prm.localEndPt = obj->rpmsg_tx_endpt;
         status = RPMessage_construct(&rpMsgtxObject, &rpmsg_prm);
         obj->rpmsg_tx_handle = &rpMsgtxObject;
-        if(status != SystemP_SUCCESS)
-#endif
+        #endif
 
+        #if defined(MCU_PLUS_SDK) || defined(MCU_SDK)
+        if(status != SystemP_SUCCESS)
+        #elif defined(PDK)
+        if(obj->rpmsg_tx_handle==NULL)
+        #endif
         {
             appLogPrintf("REMOTE_SERVICE: ERROR: Unable to create rpmessage tx handle !!!\n");
             status = -1;
@@ -687,8 +706,7 @@ int32_t appRemoteServiceInit(app_remote_service_init_prms_t *prm)
     #if defined(SYSBIOS) || defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
     if(status==0)
     {
-
-#if !defined(MCU_PLUS_SDK)
+        #if defined(PDK)
         RPMessage_Params rpmsg_prm;
         uint32_t rx_endpt;
 
@@ -702,43 +720,51 @@ int32_t appRemoteServiceInit(app_remote_service_init_prms_t *prm)
         obj->rpmsg_rx_handle =
             RPMessage_create(&rpmsg_prm, &rx_endpt);
 
-        if(obj->rpmsg_rx_handle==NULL)
-#else
+        #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
         RPMessage_CreateParams rpmsg_prm;
-
         RPMessage_CreateParams_init(&rpmsg_prm);
-        // prm->rpmsg_rx_endpt = 28;
         rpmsg_prm.localEndPt = prm->rpmsg_rx_endpt; /* TBD- Check this*/
         status = RPMessage_construct(&rpMsgrxObject, &rpmsg_prm);
         obj->rpmsg_rx_handle = &rpMsgrxObject;
-        if(status != SystemP_SUCCESS)
-#endif
+        #endif
 
+        #if defined(MCU_PLUS_SDK) || defined(MCU_SDK)
+        if(status != SystemP_SUCCESS)
+        #elif defined(PDK)
+        if(obj->rpmsg_rx_handle==NULL)
+        #endif
         {
             appLogPrintf("REMOTE_SERVICE: ERROR: Unable to create rpmessage rx handle !!!\n");
             status = -1;
         }
 
-#if !defined(MCU_PLUS_SDK)
+        #if defined(PDK)
         /* announce service to linux side */
         status = RPMessage_announce(RPMESSAGE_ALL, prm->rpmsg_rx_endpt, "rpmsg_chrdev");
+
         if(status != 0)
         {
             appLogPrintf("REMOTE_SERVICE: RPMessage_announce() for rpmsg-proto failed\n");
             status = -1;
         }
-#else
+        #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
+        #if defined(SOC_FAMILY_TDA5)
+        status = RPMessage_announce(CORE_ID_A720_0, prm->rpmsg_rx_endpt, "rpmsg_chrdev");
+        #elif defined(SOC_FAMILY_J7) || defined(SOC_FAMILY_AM)
         status = RPMessage_announce(CSL_CORE_ID_A53SS0_0, prm->rpmsg_rx_endpt, "rpmsg_chrdev");
+        #endif
+
         if(status != 0)
         {
             appLogPrintf("REMOTE_SERVICE: RPMessage_announce() for rpmsg-proto failed\n");
             status = -1;
         }
+
         if (APP_HOST_TYPE_LINUX != appGetHostOSType())
         {
             ClockP_usleep(500*1000); /* wait for log messages from remote cores to be flushed, otherwise this delay is not needed */
         }
-#endif
+        #endif
 
     }
     if(status==0)
@@ -750,6 +776,7 @@ int32_t appRemoteServiceInit(app_remote_service_init_prms_t *prm)
         }
     }
     #endif
+
     if(status==0)
     {
         int32_t appRemoteServiceTestInit();
@@ -822,36 +849,39 @@ int32_t appRemoteServiceDeInit()
 
     appLogPrintf("REMOTE_SERVICE: Deinit ... !!!\n");
 
-    {
-        int32_t appRemoteServiceTestDeInit();
+    int32_t appRemoteServiceTestDeInit();
+    appRemoteServiceTestDeInit();
 
-        appRemoteServiceTestDeInit();
-    }
-
-    #if defined(SYSBIOS) || defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
+#if defined(SYSBIOS) || defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
     appRemoteServiceDeleteRpmsgRxTask(obj);
-    #endif
+#endif
 
-#if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
     if(obj->rpmsg_tx_handle!=NULL)
     {
         RPMessage_delete(&obj->rpmsg_tx_handle);
         obj->rpmsg_tx_handle = NULL;
     }
-#else
-    RPMessage_destruct(obj->rpmsg_tx_handle);
-#endif
+    #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
+    if(obj->rpmsg_tx_handle!=NULL)
+    {
+        RPMessage_destruct(obj->rpmsg_tx_handle);
+    }
+    #endif
 
     #if defined(SYSBIOS) || defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
-#if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
     if(obj->rpmsg_rx_handle!=NULL)
     {
         RPMessage_delete(&obj->rpmsg_rx_handle);
         obj->rpmsg_rx_handle = NULL;
     }
-#else
+    #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
+    if(obj->rpmsg_rx_handle!=NULL)
+    {
         RPMessage_destruct(obj->rpmsg_rx_handle);
-#endif
+    }
+    #endif
     #endif
 
     appRtosSemaphoreDelete(&obj->tx_lock);

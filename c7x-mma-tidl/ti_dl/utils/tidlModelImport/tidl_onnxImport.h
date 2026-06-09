@@ -92,6 +92,12 @@ int32_t TIDL_onnxMapAddBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_Layer
 int32_t TIDL_onnxMapSubBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_LayerPC_t &layer);
 int32_t TIDL_onnxMapDivBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_LayerPC_t &layer);
 int32_t TIDL_onnxMapSoftmaxBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_LayerPC_t &layer);
+int32_t TIDL_onnxMapSoftplusBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_LayerPC_t &layer);
+int32_t TIDL_onnxMapSoftsignBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_LayerPC_t &layer);
+int32_t TIDL_onnxMapCeilBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_LayerPC_t &layer);
+int32_t TIDL_onnxMapRoundBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_LayerPC_t &layer);
+int32_t TIDL_onnxMapCeluBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_LayerPC_t &layer);
+int32_t TIDL_onnxMapSeluBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_LayerPC_t &layer);
 int32_t TIDL_onnxMapSplitBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_LayerPC_t &layer);
 int32_t TIDL_onnxMapSliceBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_LayerPC_t &layer);
 int32_t TIDL_onnxMapFlattenBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_LayerPC_t &layer);

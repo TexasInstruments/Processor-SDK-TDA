@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2025 Texas Instruments Incorporated
+ * Copyright (c) 2025-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -599,7 +599,7 @@ static vx_status setCreateParams_batch(vx_context context, vx_user_data_object c
             prms->quantRangeUpdateFactor        = 0.0;
             prms->traceLogLevel                 = 0;
             prms->traceWriteLevel               = 0;
-            // prms->coreId                        = 3;
+            // prms->coreId                     = 3;
             /*4D BEV Modfication*/
             prms->coreId                        = coreNum -1 ;
             prms->coreStartIdx                  = coreStartIdx -1 ;

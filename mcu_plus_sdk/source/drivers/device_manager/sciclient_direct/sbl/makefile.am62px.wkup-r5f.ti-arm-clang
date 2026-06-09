@@ -26,7 +26,6 @@ FILES_common := \
     sciclient_rm_irq.c \
     sciclient_boardcfg.c \
     sciclient_procboot.c \
-    sciclient_rom.c \
     sciclient_secureProxyCfg.c \
     sciclient_secureproxy.c \
     uart_print.c \
@@ -66,6 +65,7 @@ DEFINES_common := \
     -DCONFIG_TRACE_BUFFER \
     -DCONFIG_TRACE_UART \
     -DCONFIG_DEVICE_TYPE_GP \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mcpu=cortex-r5 \
@@ -75,7 +75,6 @@ CFLAGS_common := \
     -Wall \
     -Werror \
     -g \
-    -Wno-gnu-variable-sized-type-not-at-end \
 
 CFLAGS_release := \
     -Os \

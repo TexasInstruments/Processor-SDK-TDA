@@ -70,12 +70,14 @@
 
 /* undef below to use local time instead of global time */
 #define APP_TIMER_USE_GLOBAL_TIME
-
 #define APP_TIMER_HZ_TO_MHZ (1000000u)
 
-
-#define GTC_TIMER_MAPPED_BASE       (0xa90000UL)
-#define GTC_TIMER_MAPPED_SIZE       (512)
+/* Hardcoding to base address value since values are redefined in mcu_sdk hw_soc_baseaddress */
+#if defined(MCU_SDK)
+#define GTC_TIMER_MAPPED_BASE           (0x5e100000UL)
+#elif defined(MCU_PLUS_SDK) || defined(PDK)
+#define GTC_TIMER_MAPPED_BASE           (0xa90000UL)
+#endif
+#define GTC_TIMER_MAPPED_SIZE           (512)
 
 #endif
-

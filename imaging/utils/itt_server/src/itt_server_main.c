@@ -108,12 +108,12 @@ static int32_t IttCtrl_registerHandler(const char *cmd, NetworkCtrl_Handler hand
     int32_t i;
     int32_t firstFreeIdx;
 
-    int32_t result = 0;
+    int32_t status = -2;
 
     firstFreeIdx = -1;
     if(NULL == cmd)
     {
-        result = -1;
+        status = -1;
     }
     else
     {
@@ -130,27 +130,25 @@ static int32_t IttCtrl_registerHandler(const char *cmd, NetworkCtrl_Handler hand
                 {
                     /* command already registered, exit with error */
                     appLogPrintf("%s: command %s already registered \n", __FUNCTION__, cmd);
-                    result = -1;
+                    status = -1;
                     break;
                 }
             }
             else
             {
-                if(firstFreeIdx==-1)
-                {
-                    firstFreeIdx = i;
-                }
+                firstFreeIdx = i;
+                status = 0;
+                break;
             }
         }
 
-        /* no space to register command */
-        if((result == 0) && (firstFreeIdx==-1))
+        if(status == -2)
         {
-            appLogPrintf("%s: no space to register command \n", __FUNCTION__);
-            result = -1;
+            appLogPrintf("%s, no space to register command! \n", __FUNCTION__);
+            status = -1;
         }
 
-        if(result == 0)
+        if(status == 0)
         {
             /* command not registered, register it */
             pObj->cmdHandler[firstFreeIdx].handler = handler;
@@ -159,7 +157,7 @@ static int32_t IttCtrl_registerHandler(const char *cmd, NetworkCtrl_Handler hand
         }
     }
 
-    return result;
+    return status;
 }
 
 int32_t IttCtrl_unregisterHandler(const char *cmd)

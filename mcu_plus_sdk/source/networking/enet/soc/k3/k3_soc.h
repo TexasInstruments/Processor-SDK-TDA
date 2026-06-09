@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2020
+ *  Copyright (C) Texas Instruments Incorporated 2024
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -223,6 +223,19 @@ int32_t EnetSoc_mapPort2QsgmiiId(Enet_Type enetType,
  */
 uint32_t EnetSoc_getRxFlowCount(Enet_Type enetType,
                                uint32_t instId);
+
+/*!
+ * \brief Get number of CPTS HW push count.
+ *
+ * Gets the total number of CPTS HW push instances supported by IP.
+ *
+ * \param enetType  Enet Peripheral type
+ * \param instId    Enet Peripheral instance id
+ *
+ * \return Number of HW push instances.
+ */
+uint32_t EnetSoc_getHwPushCount(Enet_Type enetType,
+                                uint32_t instId);
 
 /*!
  * \brief Get CPSW TX channel peer ID.

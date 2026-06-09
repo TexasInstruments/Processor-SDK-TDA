@@ -1,6 +1,8 @@
 /*
- * FreeRTOS Kernel V10.4.3
- * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel V11.1.0
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,24 +24,22 @@
  * https://www.FreeRTOS.org
  * https://github.com/FreeRTOS
  *
- * 1 tab == 4 spaces!
  */
 
 /* When switching out a task, if the task tag contains a buffer address then
-save the flop context into the buffer. */
-#define traceTASK_SWITCHED_OUT()											\
-	if( pxCurrentTCB->pxTaskTag != NULL )									\
-	{																		\
-		extern void vPortSaveFPURegisters( void * );						\
-		vPortSaveFPURegisters( ( void * ) ( pxCurrentTCB->pxTaskTag ) );	\
-	}
+ * save the flop context into the buffer. */
+#define traceTASK_SWITCHED_OUT()                                         \
+    if( pxCurrentTCB->pxTaskTag != NULL )                                \
+    {                                                                    \
+        extern void vPortSaveFPURegisters( void * );                     \
+        vPortSaveFPURegisters( ( void * ) ( pxCurrentTCB->pxTaskTag ) ); \
+    }
 
 /* When switching in a task, if the task tag contains a buffer address then
-load the flop context from the buffer. */
-#define traceTASK_SWITCHED_IN()												\
-	if( pxCurrentTCB->pxTaskTag != NULL )									\
-	{																		\
-		extern void vPortRestoreFPURegisters( void * );						\
-		vPortRestoreFPURegisters( ( void * ) ( pxCurrentTCB->pxTaskTag ) );	\
-	}
-
+ * load the flop context from the buffer. */
+#define traceTASK_SWITCHED_IN()                                             \
+    if( pxCurrentTCB->pxTaskTag != NULL )                                   \
+    {                                                                       \
+        extern void vPortRestoreFPURegisters( void * );                     \
+        vPortRestoreFPURegisters( ( void * ) ( pxCurrentTCB->pxTaskTag ) ); \
+    }

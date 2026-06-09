@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
  */
 
 #include "MmuP_armv8_internal.h"
+#include "CacheP_armv8.h"
 
 __attribute__((aligned(65536))) uintptr_t *gMmuLevel1Table;
 __attribute__((aligned(65536))) uint64_t gMmuTableArray[MMUP_TABLE_LEN * MMUP_TABLE_ARRAY_LEN];
@@ -253,7 +254,7 @@ static uint8_t MmuP_tableWalk(uint8_t level, uintptr_t *tablePtr, uintptr_t *vad
     return 1;
 }
 
-static void MmuP_setConfig()
+static void MmuP_setConfig(void)
 {
 	uint32_t i;
 	int32_t status;
@@ -280,7 +281,7 @@ void MmuP_MapAttrs_init(MmuP_MapAttrs *attrs)
     attrs->global = 1;
 }
 
-void MmuP_enable()
+void MmuP_enable(void)
 {
     uintptr_t key;
     uint32_t type;
@@ -367,10 +368,10 @@ int32_t MmuP_map(uint64_t vaddr, uint64_t paddr, uint32_t size, MmuP_MapAttrs *m
     DebugP_assertNoLog((paddr & (MMUP_GRANULE_SIZE - 1)) == 0);
     DebugP_assertNoLog((size & (MMUP_GRANULE_SIZE - 1)) == 0);
 
-    key = HwiP_disable();
+    key = (uint32_t)HwiP_disable();
 
     /* determine the current state of the MMU */
-    enabled = MmuP_isEnabled();
+    enabled = (uint8_t)MmuP_isEnabled();
 
     /* disable the MMU (if already disabled, does nothing) */
     MmuP_disable();
@@ -408,7 +409,7 @@ int32_t MmuP_map(uint64_t vaddr, uint64_t paddr, uint32_t size, MmuP_MapAttrs *m
     return (status);
 }
 
-void MmuP_init()
+void MmuP_init(void)
 {
     uint64_t tcr = 0;
     uint32_t i, tableLen = gMmuInfo.tableLength;
@@ -437,6 +438,19 @@ void MmuP_init()
      *  If not running in SMP mode, Core_getId() always returns 0,
      *  and the below init code will be run.
      */
+#if defined(AMP_FREERTOS_A53)
+        /* Initialize table array */
+        for (i = 0; i < MMUP_TABLE_ARRAY_LEN; i++)
+        {
+            gMmuTableArray[tableLen * i] = i + 1;
+        }
+
+        gMmuTableArray[tableLen * (i - 1)] = (~0);
+        gMmuTableArraySlot = 0;
+
+        /* Allocate level1 Table */
+        gMmuLevel1Table = (uintptr_t *)MmuP_allocTable();
+#else
     if (Armv8_getCoreId() == 0)
     {
         /* Initialize table array */
@@ -451,7 +465,7 @@ void MmuP_init()
         /* Allocate level1 Table */
         gMmuLevel1Table = (uintptr_t *)MmuP_allocTable();
     }
-
+#endif
     /* Install MMU translation tables */
     MmuP_setTableBase(gMmuLevel1Table);
 
@@ -459,11 +473,14 @@ void MmuP_init()
      * Call init function. This function is part of the application and will
      * add MMU mappings. If in SMP mode, core 0 has already done this.
      */
+#if defined(AMP_FREERTOS_A53)
+    MmuP_setConfig();
+#else
     if (Armv8_getCoreId() == 0)
     {
         MmuP_setConfig();
     }
-
+#endif
     /* Invalidate entire TLB */
     MmuP_tlbInvAll();
 

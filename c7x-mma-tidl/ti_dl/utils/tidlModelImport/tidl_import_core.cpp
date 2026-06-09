@@ -228,7 +228,7 @@ void setDefaultParams(tidl_import_config * params)
   params->partialInitDuringCompile = 0;
   params->softmax16BitScaleUpdate = 0;
   params->use16BitForTopK = 0;
-  params->enableTFROptimization = 0;
+  params->enableTFROptimization = -1;
   params->enableShapeFolding = 0;
   params->optimizeBatchNormHigherDims = 0;
   params->forceBatchSplitInLowLatencyMode = 0;
@@ -385,12 +385,6 @@ int32_t tidlValidateImportParams(tidl_import_config * params)
     }
   }
 
-  if(strcmp((char *)params->outputFeature16bitNamesList,"") !=0 && params->numParamBits == 8 && params->enableHighResOptimization ==1)
-  {
-    TIDL_GLOBAL_REPORT_ERROR("Invalid configuration: OutputFeature16bitNamesList set along with numParamBits=8 and enableHighResOptimization=1 is not supported");
-    return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
-  }
-
   if((params->randParams != 0) && (params->randParams != 1))
   {
     TIDL_GLOBAL_REPORT_ERROR("Invalid randParams(%d) setting, it should be either 0 or 1", params->randParams);
@@ -484,7 +478,7 @@ int32_t tidlValidateImportParams(tidl_import_config * params)
     TIDL_GLOBAL_REPORT_ERROR("Invalid numBatches parameter(%d) setting, it should be in between 1 and 1024 ", params->numBatches[0]);
     return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
   }
-#if defined (SOC_J784S4) || defined (SOC_J722S) || defined(SOC_J742S2)
+#if defined (SOC_J784S4) || defined (SOC_J722S) || defined(SOC_J742S2) || defined(SOC_TDA54)
   else if((params->numCores != 1) && (params->numCores != 2) && (params->numCores != 3) && (params->numCores != 4))
   {
     std::string cores="1";
@@ -1054,7 +1048,7 @@ float tidlRunPerfSimTool(tidl_import_config * params, int32_t NCExecMode)
 #ifdef _WIN32
   sprintf(sysCommand, "cd %s && %s %s %d %d 2", dirName, fileName, absPath, params->compileConstraintsFlag, params->reserved[0]);
 #else
-  sprintf(sysCommand, "cd %s && ./%s %s %s %d %d 2", dirName, fileName, absPath, (char*)params->ncTempInfoDir, params->compileConstraintsFlag, params->reserved[0]);
+  sprintf(sysCommand, "cd %s && ./%s %s %s %d", dirName, fileName, absPath, (char*)params->ncTempInfoDir, params->compileConstraintsFlag);
 #endif
   if(gParams.debugTraceLevel > 0)
   {
@@ -1881,10 +1875,10 @@ sTIDL_tfOutReshapeMap_t sTIDL_OutReshapeTable[] =
   { TIDL_PadLayer                      ,  TIDL_tfOutReshapePadLayer },
   { TIDL_ColorConversionLayer          ,  TIDL_tfOutReshapeColorConversionLayer },
   { TIDL_OdOutputReformatLayer         ,  TIDL_tfOutReshapeOdOutputReformatLayer },
-  { TIDL_DataConvertLayer              ,  TIDL_tfOutReshapeDataConvert },
+  { TIDL_DataConvertLayer              ,  TIDL_tfOutReshapeIdentity },
   { TIDL_CustomLayer                   ,  TIDL_tfOutReshapeCustomLayer },
   { TIDL_BatchReshapeLayer             ,  TIDL_tfOutReshapeBatchReshape },
-  { TIDL_ReduceLayer                   ,  TIDL_tfOutReshapeReduceMaxLayer },
+  { TIDL_ReduceLayer                   ,  TIDL_tfOutReshapeReduceLayer },
   { TIDL_ScatterElementsLayer          ,  TIDL_tfOutReshapeScatterElementsLayer},
   { TIDL_SqueezeLayer                  ,  TIDL_tfOutReshapeSqueeze },
   { TIDL_TanhLayer                     ,  TIDL_tfOutReshapeTanh },
@@ -1898,6 +1892,12 @@ sTIDL_tfOutReshapeMap_t sTIDL_OutReshapeTable[] =
   { TIDL_GridSampleLayer               ,  TIDL_tfOutReshapeGridSampleLayer },
   { TIDL_TopKLayer                     ,  TIDL_tfOutReshapeTopKLayer},
   { TIDL_DeformableConvLayer           ,  TIDL_tfOutReshapeDeformConvLayer },
+  { TIDL_TileLayer                     ,  TIDL_tfOutReshapeTileLayer},
+  { TIDL_LogicalOpLayer                ,  TIDL_tfOutReshapeLogicalOpLayer},
+  { TIDL_RMSNormalizationLayer         ,  TIDL_tfOutReshapeIdentity },
+  { TIDL_LSTMLayer                     ,  TIDL_tfOutReshapeLSTMLayer },
+  { TIDL_GRULayer                      ,  TIDL_tfOutReshapeGRULayer },
+  { TIDL_RNNLayer                      ,  TIDL_tfOutReshapeRNNLayer },
   { TIDL_UnsupportedLayer              ,  TIDL_tfOutReshapeIdentity },
   { TIDL_PriorBoxLayer                 ,  TIDL_tfOutReshapeIdentity },
   { TIDL_PermuteLayer                  ,  TIDL_tfOutReshapeIdentity },
@@ -1912,8 +1912,8 @@ sTIDL_tfOutReshapeMap_t sTIDL_OutReshapeTable[] =
   { TIDL_DequantizeLayer               ,  TIDL_tfOutReshapeIdentity },
   { TIDL_QuantizeLayer                 ,  TIDL_tfOutReshapeIdentity },
   { TIDL_SqrtLayer                     ,  TIDL_tfOutReshapeIdentity },
-  { TIDL_ReduceMeanLayer               ,  TIDL_tfOutReshapeIdentity },
-  { TIDL_ReduceSumLayer                ,  TIDL_tfOutReshapeIdentity },
+  { TIDL_ReduceMeanLayer               ,  TIDL_tfOutReshapeReduceLayer },
+  { TIDL_ReduceSumLayer                ,  TIDL_tfOutReshapeReduceLayer },
   { TIDL_PowLayer                      ,  TIDL_tfOutReshapeIdentity },
   { TIDL_DivLayer                      ,  TIDL_tfOutReshapeIdentity },
   { TIDL_SubLayer                      ,  TIDL_tfOutReshapeIdentity },
@@ -1941,6 +1941,14 @@ sTIDL_tfOutReshapeMap_t sTIDL_OutReshapeTable[] =
   { TIDL_TanLayer                      ,  TIDL_tfOutReshapeIdentity },
   { TIDL_ExpandLayer                   ,  TIDL_tfOutReshapeIdentity },
   { TIDL_SwishLayer                    ,  TIDL_tfOutReshapeIdentity },
+  { TIDL_SoftPlusLayer                 ,  TIDL_tfOutReshapeIdentity },
+  { TIDL_SoftSignLayer                 ,  TIDL_tfOutReshapeIdentity },
+  { TIDL_CeilLayer                     ,  TIDL_tfOutReshapeIdentity },
+  { TIDL_CeluLayer                     ,  TIDL_tfOutReshapeIdentity },
+  { TIDL_SeluLayer                     ,  TIDL_tfOutReshapeIdentity },
+  { TIDL_RoundLayer                    ,  TIDL_tfOutReshapeIdentity },
+  { TIDL_SignLayer                     ,  TIDL_tfOutReshapeIdentity },
+  { TIDL_GroupNormLayer                ,  TIDL_tfOutReshapeIdentity },
 };
 
 int32_t tidl_updateHighResOptimization(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex)
@@ -1957,7 +1965,7 @@ bool tidl_isYuvLayerPresent(void)
 {
   bool isYuvLayerPresent = false;
   int32_t i;
-  for(i=0; i<TIDL_NUM_IN_BUFS; i++)
+  for(i=0; i<TIDL_MAX_ALG_IN_BUFS; i++)
   {
     if(TIDL_inYuvFormatYuv420_NV12 == gParams.inYuvFormat[i])
     {
@@ -2205,7 +2213,7 @@ int32_t doesNetworkContainUnsupportedConvolutionConfig(sTIDL_OrgNetwork_t &orgTI
         *otfUnsupportedCode = DISABLE_DUE_TO_CONV_PAD;
         break;
       }
-      else if(orgTIDLNetStructure.TIDLPCLayers[i].layerParams.convParams.strideW > 2 || orgTIDLNetStructure.TIDLPCLayers[i].layerParams.convParams.strideH > 2)
+      else if( (orgTIDLNetStructure.TIDLPCLayers[i].layerParams.convParams.strideW > 2 || orgTIDLNetStructure.TIDLPCLayers[i].layerParams.convParams.strideH > 2) && (orgTIDLNetStructure.TIDLPCLayers[i].layerParams.convParams.padH > 0 || orgTIDLNetStructure.TIDLPCLayers[i].layerParams.convParams.padW > 0))
       {
         status = 1;
         *layerId = i;
@@ -2662,7 +2670,7 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
     frequency_map[key].first += 1;
   }
 
-  TIDL_IMPORT_CHECK_AND_RETURN(tidl_convertEltwiseToBNLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_convertEltwiseToBNLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_addConstDataLayers (orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex, &gParams), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_addInDataLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
@@ -2714,7 +2722,7 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
 
   //layerNorm:
-  TIDL_IMPORT_CHECK_AND_RETURN(tidl_splitLayerNormLayer(orgTIDLNetStructure, &dataIndex, orgTIDLNetStructure.numLayers), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_splitNormLayer(orgTIDLNetStructure, &dataIndex, orgTIDLNetStructure.numLayers), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
 
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_mergeLayerNormLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
@@ -2797,7 +2805,21 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_addTransposeForGridSample(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, dataIndex), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
+
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_addPadLayerBeforeConvForAsymmetricPadding(orgTIDLNetStructure, &dataIndex, orgTIDLNetStructure.numLayers), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
+  
   // Call Reshape functions to determine the input/output shape of each layer.
+  tidl_updateOutDataShape(orgTIDLNetStructure, 0, orgTIDLNetStructure.numLayers, (sTIDL_tfOutReshapeMap_t *)&sTIDL_OutReshapeTable);
+
+  /* Should be called after the updateOutDataShape function call when the dimensions are induced*/
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_addReshapeAcrossRMSNormLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
+
+  // Covert Concat with axis > channel to concat on channel axis
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_convertConcatAxisToChannel(orgTIDLNetStructure, &dataIndex), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
   tidl_updateOutDataShape(orgTIDLNetStructure, 0, orgTIDLNetStructure.numLayers, (sTIDL_tfOutReshapeMap_t *)&sTIDL_OutReshapeTable);
 
   //swish
@@ -2812,6 +2834,12 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
 
   /*Conversion of reduceMean Layer to matmul*/
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_convertReduceMeanReduceSumToMatMulLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, dataIndex), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
+  tidl_updateOutDataShape(orgTIDLNetStructure, 0, orgTIDLNetStructure.numLayers, (sTIDL_tfOutReshapeMap_t *)&sTIDL_OutReshapeTable);
+  
+  // Remove no-op tile layer where repeats are all 1
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeNoOpTileLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, dataIndex), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
   tidl_updateOutDataShape(orgTIDLNetStructure, 0, orgTIDLNetStructure.numLayers, (sTIDL_tfOutReshapeMap_t *)&sTIDL_OutReshapeTable);
@@ -2846,16 +2874,21 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
     TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
     TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
   }
-  
+
   // converting instance normalization layer into layer norm
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_convertInstanceNormalizationToLayerNorm(orgTIDLNetStructure, &dataIndex, orgTIDLNetStructure.numLayers), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
   
   //layerNorm:
-  TIDL_IMPORT_CHECK_AND_RETURN(tidl_splitLayerNormLayer(orgTIDLNetStructure, &dataIndex, orgTIDLNetStructure.numLayers, true), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_splitNormLayer(orgTIDLNetStructure, &dataIndex, orgTIDLNetStructure.numLayers, true), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
   
+  //converting groupNormalization layer into instance normalization
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_convertGroupNormToInstanceNorm(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
+
   /** Fuse Patch Merging Block */
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_fusePatchMergingBlock (orgTIDLNetStructure, &dataIndex, orgTIDLNetStructure.numLayers), "");
   /* recheck through slices if something is still there with stride > 1*/
@@ -3114,6 +3147,9 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_handleTopKLayers(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
 
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_handleRecurrentLayers(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
+
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_fuseTransposeMatMul(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
 
@@ -3172,9 +3208,16 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
 
   TIDL_convertDeconv2DtoConv(orgTIDLNetStructure, layerIndex);
   pair<std::int32_t, std::string> disableOtfState; /*first=errorcode, second=layerIndex*/
+  
 
   TIDL_correctDeviceConfig(orgTIDLNetStructure, disableOtfState);
 
+  /*If OTF is disabled, change quantization style to TIDL_QuantStyleNP2Fixed:*/
+  if(disableOtfState.first != NOT_DISABLE && gParams.quantizationStyle == TIDL_QuantStyleAsymNP2)
+  {
+    gParams.quantizationStyle = TIDL_QuantStyleNP2Fixed;
+  }
+  
   if(TIDL_isPadOTF(gParams.deviceName))
   {
     int32_t padLayerRemoved = tidl_mergeColumnPadIntoConv (orgTIDLNetStructure, orgTIDLNetStructure.numLayers);
@@ -3403,6 +3446,13 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
 
   /* Merge left over reshape layers */
   if(tidl_mergeReshapeLayers(orgTIDLNetStructure))
+  {
+    TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
+    TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
+  }
+
+  // Merge duplicate outputs
+  if(tidl_mergeDuplicateOutputs(orgTIDLNetStructure))
   {
     TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
     TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");

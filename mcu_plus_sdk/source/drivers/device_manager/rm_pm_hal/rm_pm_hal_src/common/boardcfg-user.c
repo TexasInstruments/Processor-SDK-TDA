@@ -3,7 +3,7 @@
  *
  * Boardcfg API for receiving and storing board configuration
  *
- * Copyright (C) 2018-2024, Texas Instruments Incorporated
+ * Copyright (C) 2018-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -50,6 +50,8 @@
 
 #include <boardcfg/boardcfg.h>
 #include <boardcfg/boardcfg_user_copy.h>
+#include <boardcfg/pm_boardcfg_validate.h>
+#include <boardcfg/boardcfg_pm_data.h>
 #include <extboot/extboot.h>
 #include <tisci/tisci_protocol.h>
 #include <rm.h>
@@ -82,6 +84,34 @@ struct boardcfg_rm_local {
 	struct boardcfg_rm_resasg_entry config_rm_resasg_entries[RESASG_ENTRIES_MAX];
 };
 
+/**
+ * \brief Local data for PM board config data
+ *
+ * \param config_pm_received Represents whether or not the PM portion of board
+ *                           configuration has been received.
+ * \param config_pm_valid Represents whether or not the PM portion of board
+ *                        configuration has passed validation.
+ * \param config_lpm_valid Represents whether or not the LPM portion of PM board
+ *                                              configuration has passed validation.
+ * \param config_pm_size Size of the PM board configuration data.
+ * \param pm_abi_maj		 Represents the major version of the PM board config
+ * \param config_pm_devgrp Cumulative device group for the PM configuration.
+ * \param pm_resv       Realign config_pm_cfg to even byte since
+ *                           config_pm_devgrp is only one byte.
+ * \param config_pm_cfg Local static copy of all PM board configuration data.
+ * \param config_pm_rsvd_entries Local static, fixed size reserved array
+ */
+struct boardcfg_pm_local {
+	ftbool				config_pm_received;
+	ftbool				config_pm_valid;
+	ftbool				config_lpm_valid;
+	u16				config_pm_size;
+	u8				pm_abi_maj;
+	devgrp_t			config_pm_devgrp;
+	u8				pm_resv;
+	struct boardcfg_pm		config_pm_cfg;
+	struct boardcfg_pm_rsvd_entry	config_pm_rsvd_entries[PM_RSVD_ENTRIES_MAX];
+};
 
 /* \brief File local static location for RM board config */
 static struct boardcfg_rm_local local_rm_config = {
@@ -91,6 +121,13 @@ static struct boardcfg_rm_local local_rm_config = {
 	.config_rm_devgrp	= DEVGRP_ALL,
 };
 
+static struct boardcfg_pm_local local_pm_config = {
+	.config_pm_received	= FT_FALSE,
+	.config_pm_valid	= FT_FALSE,
+	.config_lpm_valid	= FT_FALSE,
+	.config_pm_size		= 0u,
+};
+
 static inline size_t boardcfg_rm_max_size(void)
 {
 	size_t avail_size;
@@ -98,6 +135,32 @@ static inline size_t boardcfg_rm_max_size(void)
 	avail_size = sizeof(struct boardcfg_rm_local) - offsetof(struct boardcfg_rm_local, config_rm_cfg);
 
 	return avail_size;
+}
+
+static inline size_t boardcfg_pm_max_size(void)
+{
+	size_t avail_size;
+
+	avail_size = sizeof(struct boardcfg_pm_local) - offsetof(struct boardcfg_pm_local, config_pm_cfg);
+
+	return avail_size;
+}
+
+/**
+ * \brief Compare the size value passed to the known size value of PM boardcfg.
+ *
+ * \param size Size obtained from substructure header to be compared.
+ * \return true if size matches, false otherwise.
+ */
+static bool boardcfg_validate_size_pm(u16 size, const struct boardcfg_substructure_pm_header *subhdr)
+{
+	bool ret = true;
+
+	if (size != subhdr->size) {
+		ret = false;
+	}
+
+	return ret;
 }
 
 /**
@@ -286,6 +349,62 @@ s32 boardcfg_memcpy_rm(u8 host __attribute__((unused)),
 }
 #endif
 
+static s32 boardcfg_memcpy_pm(local_phys_addr_t to, soc_phys_addr_t from,
+			      u32 size, u32 max_size)
+{
+	ftbool mapped = FT_TRUE;
+	mapped_addr_t from_mapped = 0U;
+	volatile u32 from_mapped_addr = 0U;
+	s32 ret;
+
+	if (size <= max_size) {
+		ret = rat_map_tmp_region_user(from, &from_mapped);
+
+		/* EINVAL would mean that the address is already in the mapped regions
+		*/
+		if (ret == -EINVAL) {
+			ret = SUCCESS;
+			mapped = FT_FALSE;
+		}
+
+		from_mapped_addr = ioremap(soc_phys_low_u32(from));
+		memcpy((void *) to, (void *) from_mapped_addr, size);
+
+		if (mapped == FT_TRUE) {
+			ret = rat_unmap_tmp_region_user(from);
+		}
+	} else {
+		ret = -EINVAL;
+	}
+
+	return ret;
+}
+
+static s32 boardcfg_memcpy_abi(local_phys_addr_t to, soc_phys_addr_t from, u32 size)
+{
+	s32 ret;
+	ftbool mapped = FT_TRUE;
+	mapped_addr_t from_mapped = 0U;
+	volatile u32 from_mapped_addr = 0U;
+
+	ret = rat_map_tmp_region_user(from, &from_mapped);
+
+	/* EINVAL would mean that the address is already in the mapped regions
+	 */
+	if (ret == -EINVAL) {
+		ret = SUCCESS;
+		mapped = FT_FALSE;
+	}
+
+	from_mapped_addr = ioremap(soc_phys_low_u32(from));
+	memcpy((void *) to, (void *) from_mapped_addr, size);
+	if (mapped == FT_TRUE) {
+		ret = rat_unmap_tmp_region_user(from);
+	}
+
+	return ret;
+}
+
 s32 boardcfg_rm_receive_and_validate(u8		host,
 				     u32	boardcfg_rmp_low,
 				     u32	boardcfg_rmp_high,
@@ -415,46 +534,303 @@ s32 boardcfg_get_rm_devgrp(devgrp_t *devgrp)
 	return r;
 }
 
+/**
+ * \brief Ensure the LPM config struct in provided PM boardcfg is valid.
+ *
+ * Ensure the LPM config portion of the PM boardcfg is valid by checking the magic
+ * number and validating the size provided in the substructure header.
+ */
+static bool boardcfg_validate_pm_lpm_cfg(const struct boardcfg_pm_lpm_cfg *lpm_cfg)
+{
+	u8 lpm_mode;
+	u8 initiator_host_id;
+	bool ret = true;
+
+	if (lpm_cfg == NULL) {
+		ret = false;
+	}
+
+	if ((ret == true) &&
+	    (lpm_cfg->subhdr.magic != BOARDCFG_PM_LPM_CFG_MAGIC_NUM)) {
+		ret = false;
+	}
+
+	if (ret == true) {
+		ret = boardcfg_validate_size_pm((u16) sizeof(*lpm_cfg),
+						&lpm_cfg->subhdr);
+	}
+
+	/* Check validity of the mode and initiator fields in the lpm_cfg */
+	lpm_mode = local_pm_config.config_pm_cfg.lpm_cfg.boardcfg_lpm_mode;
+	if ((ret == true) && is_lpm_mode_valid(lpm_mode)) {
+		initiator_host_id = local_pm_config.config_pm_cfg.lpm_cfg.boardcfg_suspend_initiator;
+		if (is_suspend_initiator_valid(initiator_host_id)) {
+			local_pm_config.config_lpm_valid = FT_TRUE;
+		}
+	}
+
+	return ret;
+}
+
+/**
+ * \brief Ensure the PMIC reserved struct in provided PM boardcfg is valid.
+ *
+ * Ensure the PMIC reserved portion of the PM boardcfg is valid by checking the magic
+ * number and validating the size provided in the substructure header.
+ */
+static bool boardcfg_validate_pm_rsvd_pmic_cfg(
+	const struct boardcfg_pm_rsvd_pmic_cfg *rsvd_pmic_cfg)
+{
+	bool ret = true;
+
+	if (rsvd_pmic_cfg == NULL) {
+		ret = false;
+	}
+
+	if ((ret == true) &&
+	    (rsvd_pmic_cfg->subhdr.magic != BOARDCFG_PM_PMIC_CFG_MAGIC_NUM)) {
+		ret = false;
+	}
+
+	if (ret == true) {
+		ret = boardcfg_validate_size_pm((u16) sizeof(*rsvd_pmic_cfg),
+						&rsvd_pmic_cfg->subhdr);
+	}
+
+	return ret;
+}
+
+/**
+ * \brief Ensure the PM reserved struct in provided PM boardcfg is valid.
+ *
+ * Ensure the reserved portion of the PM boardcfg is valid by checking the magic
+ * number and validating the size provided in the substructure header.
+ *
+ * The size provided in reserved structure should not be less than the size of the array
+ * appended at the end of PM boardcfg.
+ *
+ * \param rsvd_cfg Reserved Struct from provided PM boardcfg.
+ *
+ * \return true on success, false otherwise.
+ */
+static bool boardcfg_validate_pm_rsvd_cfg(const struct boardcfg_pm_rsvd_cfg *rsvd_cfg)
+{
+	bool ret = true;
+
+	if (rsvd_cfg == NULL) {
+		ret = false;
+	}
+
+	if ((ret == true) &&
+	    (rsvd_cfg->subhdr.magic != BOARDCFG_PM_RSVD_ENTRY_CFG_MAGIC_NUM)) {
+		ret = false;
+	}
+
+	if (ret == true) {
+		ret = boardcfg_validate_size_pm((u16) sizeof(*rsvd_cfg), &rsvd_cfg->subhdr);
+	}
+
+	if (ret == true) {
+		if (((rsvd_cfg->reserved_entry_size >
+		      (PM_RSVD_ENTRIES_MAX *
+		       sizeof(struct boardcfg_pm_rsvd_entry))) ||
+		     ((rsvd_cfg->reserved_entry_size %
+		       sizeof(struct boardcfg_pm_rsvd_entry)) > 0u))) {
+			ret = false;
+		}
+	}
+
+	return ret;
+}
+
+/**
+ * \brief Ensure the PLL config struct in provided PM boardcfg is valid.
+ *
+ * Ensure the PLL configuration portion of the PM boardcfg is valid by checking the magic
+ * number and validating the size provided in the substructure header.
+ */
+static bool boardcfg_validate_pm_pll_cfg(
+	const struct boardcfg_pm_pll_cfg *pll_cfg)
+{
+	bool ret = true;
+
+	if (pll_cfg == NULL) {
+		ret = false;
+	}
+
+	if ((ret == true) &&
+	    (pll_cfg->subhdr.magic != BOARDCFG_PM_PLL_CFG_MAGIC_NUM)) {
+		ret = false;
+	}
+
+	if (ret == true) {
+		ret = boardcfg_validate_size_pm((u16) sizeof(*pll_cfg),
+						&pll_cfg->subhdr);
+	}
+
+	return ret;
+}
+
+/**
+ * \brief Ensure the Dev struct in provided PM boardcfg is valid.
+ *
+ * Ensure the device configuration portion of the PM boardcfg is valid by checking the magic
+ * number and validating the size provided in the substructure header.
+ */
+static bool boardcfg_validate_pm_dev_cfg(const struct boardcfg_pm_dev_cfg *dev_cfg)
+{
+	bool ret = true;
+
+	if (dev_cfg == NULL) {
+		ret = false;
+	}
+
+	if ((ret == true) &&
+	    (dev_cfg->subhdr.magic != BOARDCFG_PM_DEV_CFG_MAGIC_NUM)) {
+		ret = false;
+	}
+
+	if (ret == true) {
+		ret = boardcfg_validate_size_pm((u16) sizeof(*dev_cfg),
+						&dev_cfg->subhdr);
+	}
+
+	return ret;
+}
+
 s32 boardcfg_pm_receive_and_validate(u8		host __attribute__((unused)),
-				     u32	boardcfg_pmp_low __attribute__((unused)),
-				     u32	boardcfg_pmp_high __attribute__((unused)),
-				     u16	boardcfg_pm_size __attribute__((unused)),
+				     u32	boardcfg_pmp_low,
+				     u32	boardcfg_pmp_high,
+				     u16	boardcfg_pm_size,
 				     devgrp_t	boardcfg_pm_devgrp)
 {
+	bool valid_check;
 	s32 ret = SUCCESS;
 	devgrp_t devgrp = boardcfg_pm_devgrp;
+	size_t bcfg_pm_max_size = boardcfg_pm_max_size();
+	size_t pm_abi_size = sizeof(struct boardcfg_abi_pm_rev);
+	soc_phys_addr_t boardcfg_addr;
+	static struct boardcfg_abi_pm_rev local_pm_abi;
 
-	if ((devgrp & (DEVGRP_04 | DEVGRP_05 | DEVGRP_HSM)) != 0U) {
-		ret = -EINVAL;
-	} else if (devgrp == DEVGRP_ALL) {
-		devgrp = DEVGRP_DMSC_ALL;
-	} else {
-		if ((devgrp & DEVGRP_03) != 0U) {
-			devgrp |= DEVGRP_02;
+	if (local_pm_config.config_pm_received == FT_FALSE) {
+		local_pm_config.config_pm_received = FT_TRUE;
+
+		if (ft_is_false(extboot_is_present())) {
+			boardcfg_addr = soc_phys_create(boardcfg_pmp_low, boardcfg_pmp_high);
+
+			/* Only copy over the ABI field first */
+			ret = boardcfg_memcpy_abi((local_phys_addr_t) &local_pm_abi, boardcfg_addr, pm_abi_size);
+
+			if (ret == SUCCESS) {
+				if ((local_pm_abi.boardcfg_abi_maj == BOARDCFG_PM_ABI_MAJ_VALUE_V0) &&
+					(local_pm_abi.boardcfg_abi_min == BOARDCFG_PM_ABI_MIN_VALUE_V0)) {
+					local_pm_config.pm_abi_maj = BOARDCFG_PM_ABI_MAJ_VALUE_V0;
+
+					/* If we have the V0 boardcfg, then the size is just 2 bytes */
+					ret = boardcfg_memcpy_pm((local_phys_addr_t) &local_pm_config.config_pm_cfg, boardcfg_addr, boardcfg_pm_size, pm_abi_size);
+				} else if ((local_pm_abi.boardcfg_abi_maj == BOARDCFG_PM_ABI_MAJ_VALUE_V1) &&
+					(local_pm_abi.boardcfg_abi_min == BOARDCFG_PM_ABI_MIN_VALUE_V1)) {
+					local_pm_config.pm_abi_maj = BOARDCFG_PM_ABI_MAJ_VALUE_V1;
+					ret = boardcfg_memcpy_pm((local_phys_addr_t) &local_pm_config.config_pm_cfg, boardcfg_addr, boardcfg_pm_size, bcfg_pm_max_size);
+				} else {
+					ret = -EINVAL;
+				}
+			}
 		}
-		if ((devgrp & DEVGRP_02) != 0U) {
-			devgrp |= DEVGRP_01;
+
+		/* If pm_boardcfg ABI is V1, check the validity of all substructures inside pm boardcfg */
+		if (local_pm_config.pm_abi_maj == BOARDCFG_PM_ABI_MAJ_VALUE_V1) {
+			if (ret == SUCCESS) {
+				valid_check = boardcfg_validate_pm_lpm_cfg(&local_pm_config.config_pm_cfg.lpm_cfg);
+
+				if (valid_check == false) {
+					ret = -EINVAL;
+				}
+			}
+
+			if (ret == SUCCESS) {
+				valid_check = boardcfg_validate_pm_pll_cfg(&local_pm_config.config_pm_cfg.pll_cfg);
+
+				if (valid_check == false) {
+					ret = -EINVAL;
+				}
+			}
+
+			if (ret == SUCCESS) {
+				valid_check = boardcfg_validate_pm_dev_cfg(&local_pm_config.config_pm_cfg.dev_cfg);
+
+				if (valid_check == false) {
+					ret = -EINVAL;
+				}
+			}
+
+			if (ret == SUCCESS) {
+				valid_check = boardcfg_validate_pm_rsvd_pmic_cfg(&local_pm_config.config_pm_cfg.rsvd_pmic_cfg);
+
+				if (valid_check == false) {
+					ret = -EINVAL;
+				}
+			}
+
+			if (ret == SUCCESS) {
+				valid_check = boardcfg_validate_pm_rsvd_cfg(&local_pm_config.config_pm_cfg.rsvd_cfg);
+
+				if (valid_check == false) {
+					ret = -EINVAL;
+				}
+			}
 		}
-		if ((devgrp & DEVGRP_01) != 0U) {
-			devgrp |= DEVGRP_00;
-		}
-		if ((devgrp & DEVGRP_00) != 0U) {
-			devgrp |= DEVGRP_DMSC;
+
+		if (ret == SUCCESS) {
+		local_pm_config.config_pm_valid = FT_TRUE;
 		}
 	}
 
 	if (ret == SUCCESS) {
+		if ((devgrp & (DEVGRP_04 | DEVGRP_05 | DEVGRP_HSM)) != 0U) {
+			ret = -EINVAL;
+		} else if (devgrp == DEVGRP_ALL) {
+			devgrp = DEVGRP_DMSC_ALL;
+		} else {
+			if ((devgrp & DEVGRP_03) != 0U) {
+				devgrp |= DEVGRP_02;
+			}
+			if ((devgrp & DEVGRP_02) != 0U) {
+				devgrp |= DEVGRP_01;
+			}
+			if ((devgrp & DEVGRP_01) != 0U) {
+				devgrp |= DEVGRP_00;
+			}
+			if ((devgrp & DEVGRP_00) != 0U) {
+				devgrp |= DEVGRP_DMSC;
+			}
+		}
+	}
+
+	if ((ret == SUCCESS) &&
+	    (ft_is_true(local_pm_config.config_pm_valid))) {
 		pm_devgroup_set_enabled(devgrp);
 	}
 
-	/*
-	 * We do not do any validation of the PM boardcfg data on HS devices
-	 * as the data is not consumed. if and when the PM data is consumed,
-	 * the same functions used for RM can be used for validating PM data
-	 * as well.
-	 *
-	 */
+
 	return ret;
+}
+
+bool is_lpm_boardcfg_valid(void)
+{
+	return ft_is_true(local_pm_config.config_lpm_valid);
+}
+
+struct boardcfg_pm_lpm_cfg *boardcfg_pm_extract_lpm_cfg(void)
+{
+	struct boardcfg_pm_lpm_cfg *lpm_cfg_ptr;
+	if (is_lpm_boardcfg_valid()) {
+		lpm_cfg_ptr = &local_pm_config.config_pm_cfg.lpm_cfg;
+	} else {
+		lpm_cfg_ptr = NULL;
+	}
+
+	return lpm_cfg_ptr;
 }
 
 /* \brief Wrapper function to trigger auto boardcfg processing */

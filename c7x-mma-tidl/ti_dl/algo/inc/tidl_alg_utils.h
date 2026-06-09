@@ -249,6 +249,8 @@ void * TIDL_getMemoryChunkFromSysmem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MA
 */
 void TIDL_resetSysmem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX]);
 
+void TIDL_reset_OneMem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX], int32_t i);
+
 int32_t TIDL_getDatElementSign(int32_t elementType);
 
 
@@ -309,18 +311,16 @@ int32_t dataId, int32_t pitch[]);
 /**
 ----------------------------------------------------------------------------
 @ingroup    TIDL_IVISION_SUPPORT
-@fn         TIDL_getLayerTypeForOutDataID
-@brief      Function to Check whether current data buffer is Input to
-current algorithm instance
+@fn         TIDL_getLayerIDForOutDataID
+@brief      Function to give the layer with specified outData ID
 
 @param      pTIDLNetStructure : Base pointer for net
 @param      dataId            : Current data buffer ID
 @remarks    None
-@return     Address of the Data Params Structure Base - If Successful
-NULL - If Faile - Requested dataID Not found
+@return     Layer ID of the layer in sTIDL_Network_t
 ----------------------------------------------------------------------------
 */
-int32_t TIDL_getLayerTypeForOutDataID(const sTIDL_Network_t * pTIDLNetStructure,
+int32_t TIDL_getLayerIDForOutDataID(const sTIDL_Network_t * pTIDLNetStructure,
   int32_t dataId);
 
 
@@ -536,6 +536,14 @@ void ** outPtr, sTIDL_LayerBuf_t *TIDLLayersBufPtr);
 int32_t TIDL_applyConstraintsOnGC(const TIDL_CreateParams * createParams,
                         sWorkloadSuperGroup_t * wlSuperGroup,
                         sGCHelperHandle * gcHelperHandle);
+
+#if defined TIDL_DYNAMIC_SHAPE
+int32_t TIDL_resolveLayerOutputShape(IVISION_InBufs *inBufs,
+                                     IVISION_InBufs *outBufs,
+                                     TIDL_Handle intAlgHandle,
+                                     sTIDL_AlgLayer_t *algLayer,
+                                     sTIDL_Layer_t *TIDLLayer);
+#endif
 
 int32_t TIDL_getLayerInPtrs(
   IVISION_InBufs      *inBufs,

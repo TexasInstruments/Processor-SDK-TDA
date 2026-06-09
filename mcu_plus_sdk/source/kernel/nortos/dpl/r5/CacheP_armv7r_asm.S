@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -476,117 +476,184 @@ CacheP_setDLFO:
 
         bx      lr
 
-/* FUNCTION DEF: uint32_t CacheP_armR5GetIcacheLineSize(void) */
-        .global CacheP_armR5GetIcacheLineSize
-    CacheP_armR5GetIcacheLineSize:
-        DMB
-        MRC       p15, #0, r0, c0, c0, #1   // Read Cache Type Register
-        UBFX      r0, r0, #0, #4            //Extract the iMinLine
-        ADD       r0, r0, #2                // Convert words to bytes
-        MOV       r1, #1
-        LSL       r0, r1, r0                // Calculate the line size
-        BX        lr
+/* FUNCTION DEF: uint32_t CacheP_GetNumSets(void ) */
+        .global CacheP_GetNumSets
+        .type CacheP_GetNumSets,%function
+        .section ".text.cache","ax",%progbits
+        .arm
+        .align 2
+CacheP_GetNumSets:
+    dmb
+    mrc       p15, #1, r0, c0, c0, #0   // Read Cache Size ID Register
+    lsl       r0, r0, #(31-27)
+    lsr       r0, r0, #(31-27+13)       // Extract bits from [27:13]
+    add       r0, r0, #1
+    bx        lr
 
-/* FUNCTION DEF: void CacheP_armR5InvalidateIcacheMva( uint32_t address ) */
-        .global CacheP_armR5InvalidateIcacheMva
-    CacheP_armR5InvalidateIcacheMva:
-        DMB     // Ensure all previous memory accesses are completed
-        MCR     p15, #0, r0, c7, c5, #1
-        DSB
-        BX      lr
+/* FUNCTION DEF: uint32_t CacheP_GetNumWays(void ) */
+        .global CacheP_GetNumWays
+        .type CacheP_GetNumWays,%function
+        .section ".text.cache","ax",%progbits
+        .arm
+        .align 2
+CacheP_GetNumWays:
+    dmb
+    mrc       p15, #1, r0, c0, c0, #0   // Read Cache Size ID Register
+    lsl       r0, r0, #(31-12)
+    lsr       r0, r0, #(31-12+3)        // Extract bits from [12:3]
+    add       r0, r0, #1
+    bx        lr
 
-/* FUNCTION DEF: void CacheP_armR5InvalidateDcacheSetWay( uint32_t set, uint32_t way ) */
-    .global CacheP_armR5InvalidateDcacheSetWay
-CacheP_armR5InvalidateDcacheSetWay:
-    DMB     // Ensure all previous memory accesses are completed
-    AND     r1, r1, #0x3
-    LSL     r0, #(32-9)
-    LSR     r0, #(32-9)                     // set &= 0x1FF
-    LSL     r1, r1, #30
-    ORR     r0, r1, r0, LSL #5
-    MCR     p15, #0, r0, c7, c6, #2
-    DSB
-    BX      lr
+/* FUNCTION DEF: void CacheP_CleanInvalidateDcacheSetWay( uint32_t set, uint32_t way ) */
+        .global CacheP_CleanInvalidateDcacheSetWay
+        .type CacheP_CleanInvalidateDcacheSetWay,%function
+        .section ".text.cache","ax",%progbits
+        .arm
+        .align 2
+CacheP_CleanInvalidateDcacheSetWay:
+    dmb     // Ensure all previous memory accesses are completed
+    and     r1, r1, #0x3
+    lsl     r0, #(32-9)
+    lsr     r0, #(32-9)                     // set &= 0x1FF
+    lsl     r1, r1, #30
+    orr     r0, r1, r0, LSL #5
+    mcr     p15, #0, r0, c7, c14, #2
+    dsb
+    bx      lr
 
-/* FUNCTION DEF: void CacheP_armR5CleanDcacheSetWay( uint32_t set, uint32_t way ) */
-    .global CacheP_armR5CleanDcacheSetWay
-CacheP_armR5CleanDcacheSetWay:
-    DMB     // Ensure all previous memory accesses are completed
-    AND     r1, r1, #0x3
-    LSL     r0, #(32-9)
-    LSR     r0, #(32-9)                     // set &= 0x1FF
-    LSL     r1, r1, #30
-    ORR     r0, r1, r0, LSL #5
-    MCR     p15, #0, r0, c7, c10, #2
-    DSB
-    BX      lr
+/* FUNCTION DEF: uint32_t CacheP_GetIcacheLineSize(void) */
+        .global CacheP_GetIcacheLineSize
+        .type CacheP_CleanInvalidateDcacheSetWay,%function
+        .section ".text","ax",%progbits
+        .arm
+        .align 2
+CacheP_GetIcacheLineSize:
+    dmb
+    mrc       p15, #0, r0, c0, c0, #1   // Read Cache Type Register
+    ubfx      r0, r0, #0, #4            //Extract the iMinLine
+    add       r0, r0, #2                // Convert words to bytes
+    mov       r1, #1
+    lsl       r0, r1, r0                // Calculate the line size
+    bx        lr
 
-/* FUNCTION DEF: void CacheP_armR5CleanInvalidateDcacheSetWay( uint32_t set, uint32_t way ) */
-    .global CacheP_armR5CleanInvalidateDcacheSetWay
-CacheP_armR5CleanInvalidateDcacheSetWay:
-    DMB     // Ensure all previous memory accesses are completed
-    AND     r1, r1, #0x3
-    LSL     r0, #(32-9)
-    LSR     r0, #(32-9)                     // set &= 0x1FF
-    LSL     r1, r1, #30
-    ORR     r0, r1, r0, LSL #5
-    MCR     p15, #0, r0, c7, c14, #2
-    DSB
-    BX      lr
+/* FUNCTION DEF: void CacheP_InvalidateIcacheMva( uint32_t address ) */
+        .global CacheP_InvalidateIcacheMva
+        .type CacheP_CleanInvalidateDcacheSetWay,%function
+        .section ".text","ax",%progbits
+        .arm
+        .align 2
+CacheP_InvalidateIcacheMva:
+    dmb     // Ensure all previous memory accesses are completed
+    mcr     p15, #0, r0, c7, c5, #1
+    dsb
+    bx      lr
 
-/* FUNCTION DEF: void CacheP_armR5DisableEcc( void ) */
-    .global CacheP_armR5DisableEcc
-CacheP_armR5DisableEcc:
-    PUSH    {lr}
-    MOV     r0, #0
-    BL      CacheP_armR5DisableAllCache    // Disable instruction and data caches
+/* FUNCTION DEF: void CacheP_InvalidateDcacheSetWay( uint32_t set, uint32_t way ) */
+        .global CacheP_InvalidateDcacheSetWay
+        .type CacheP_CleanInvalidateDcacheSetWay,%function
+        .section ".text","ax",%progbits
+        .arm
+        .align 2
+CacheP_InvalidateDcacheSetWay:
+    dmb     // Ensure all previous memory accesses are completed
+    and     r1, r1, #0x3
+    lsl     r0, #(32-9)
+    lsr     r0, #(32-9)                     // set &= 0x1FF
+    lsl     r1, r1, #30
+    orr     r0, r1, r0, LSL #5
+    mcr     p15, #0, r0, c7, c6, #2
+    dsb
+    bx      lr
 
-    MRC     p15, #0, r0, c1, c0, #1         // Read Auxiliary Control register
-    BIC     r0, r0, #(0x7<<3)               // Clear CEC field
-    ORR     r0, r0, #(1<<5)                 // Set CEC field to 3'b100 (disable parity checking)
-    ORR     r0, r0, #(1<<9)                 // Enable Write Through Cache RAMS
-    MCR     p15, #0, r0, c1, c0, #1         // Write Auxiliary Control register
+/* FUNCTION DEF: void CacheP_CleanDcacheSetWay( uint32_t set, uint32_t way ) */
+        .global CacheP_CleanDcacheSetWay
+        .type CacheP_CleanInvalidateDcacheSetWay,%function
+        .section ".text","ax",%progbits
+        .arm
+        .align 2
+CacheP_CleanDcacheSetWay:
+    dmb     // Ensure all previous memory accesses are completed
+    and     r1, r1, #0x3
+    lsl     r0, #(32-9)
+    lsr     r0, #(32-9)                     // set &= 0x1FF
+    lsl     r1, r1, #30
+    orr     r0, r1, r0, LSL #5
+    mcr     p15, #0, r0, c7, c10, #2
+    dsb
+    bx      lr
 
-    BL      CacheP_armR5InvalidateAllCache
-    MOV     r0, #1
-    BL      CacheP_armR5EnableAllCache    // Enable instruction and data caches
-    POP     {lr}
-    BX      lr
+/* FUNCTION DEF: void CacheP_DisableEcc( void ) */
+        .global CacheP_DisableEcc
+        .type CacheP_CleanInvalidateDcacheSetWay,%function
+        .section ".text","ax",%progbits
+        .arm
+        .align 2
+CacheP_DisableEcc:
+    push    {lr}
+    mov     r0, #0
+    bl      CacheP_DisableAllCache    // Disable instruction and data caches
 
-/* FUNCTION DEF: void CacheP_armR5InvalidateAllCache( void ) */
-    .global CacheP_armR5InvalidateAllCache
-CacheP_armR5InvalidateAllCache:
-    PUSH    {lr}
-    BL      CacheP_invL1pAll
-    BL      CacheP_invL1dAll
-    POP     {lr}
-    BX      lr
+    mrc     p15, #0, r0, c1, c0, #1         // Read Auxiliary Control register
+    bic     r0, r0, #(0x7<<3)               // Clear CEC field
+    orr     r0, r0, #(1<<5)                 // Set CEC field to 3'b100 (disable parity checking)
+    orr     r0, r0, #(1<<9)                 // Enable Write Through Cache RAMS
+    mcr     p15, #0, r0, c1, c0, #1         // Write Auxiliary Control register
 
-/* FUNCTION DEF: void CacheP_armR5EnableAllCache( uint32_t enable ) */
-    .global CacheP_armR5EnableAllCache
-CacheP_armR5EnableAllCache:
-    PUSH    {lr}
-    BL      CacheP_enableL1p
-    BL      CacheP_enableL1d
-    POP     {lr}
-    BX      lr
+    bl      CacheP_InvalidateAllCache
+    mov     r0, #1
+    bl      CacheP_EnableAllCache    // Enable instruction and data caches
+    pop     {lr}
+    bx      lr
 
-/* FUNCTION DEF: void CacheP_armR5DisableAllCache( uint32_t enable ) */
-    .global CacheP_armR5DisableAllCache
-CacheP_armR5DisableAllCache:
-    PUSH    {lr}
-    BL      CacheP_disableL1p
-    BL      CacheP_disableL1d
-    POP     {lr}
-    BX      lr
+/* FUNCTION DEF: void CacheP_InvalidateAllCache( void ) */
+        .global CacheP_InvalidateAllCache
+        .type CacheP_CleanInvalidateDcacheSetWay,%function
+        .section ".text","ax",%progbits
+        .arm
+        .align 2
+CacheP_InvalidateAllCache:
+    push    {lr}
+    bl      CacheP_invL1pAll
+    bl      CacheP_invL1dAll
+    pop     {lr}
+    bx      lr
 
-/* FUNCTION DEF: void CacheP_armR5EnableAxiAccess( void ) */
-    .global CacheP_armR5EnableAxiAccess
-CacheP_armR5EnableAxiAccess:
-    MRC     p15, #0, r0, c1, c0, #1         // Read Auxiliary Control register
-    ORR     r0, r0, #(1<<24)                // Set AXISCEN bit (enable AXI slave cache RAM access)
-    MCR     p15, #0, r0, c1, c0, #1         // Write Auxiliary Control register
-    BX      lr
+/* FUNCTION DEF: void CacheP_EnableAllCache( uint32_t enable ) */
+        .global CacheP_EnableAllCache
+        .type CacheP_CleanInvalidateDcacheSetWay,%function
+        .section ".text","ax",%progbits
+        .arm
+        .align 2
+CacheP_EnableAllCache:
+    push    {lr}
+    bl      CacheP_enableL1p
+    bl      CacheP_enableL1d
+    pop     {lr}
+    bx      lr
+
+/* FUNCTION DEF: void CacheP_DisableAllCache( uint32_t enable ) */
+        .global CacheP_DisableAllCache
+        .type CacheP_CleanInvalidateDcacheSetWay,%function
+        .section ".text","ax",%progbits
+        .arm
+        .align 2
+CacheP_DisableAllCache:
+    push    {lr}
+    bl      CacheP_disableL1p
+    bl      CacheP_disableL1d
+    pop     {lr}
+    bx      lr
+
+/* FUNCTION DEF: void CacheP_EnableAxiAccess( void ) */
+        .global CacheP_EnableAxiAccess
+        .type CacheP_CleanInvalidateDcacheSetWay,%function
+        .section ".text","ax",%progbits
+        .arm
+        .align 2
+CacheP_EnableAxiAccess:
+    mrc     p15, #0, r0, c1, c0, #1         // Read Auxiliary Control register
+    orr     r0, r0, #(1<<24)                // Set AXISCEN bit (enable AXI slave cache RAM access)
+    mcr     p15, #0, r0, c1, c0, #1         // Write Auxiliary Control register
+    bx      lr
 
     .end
-

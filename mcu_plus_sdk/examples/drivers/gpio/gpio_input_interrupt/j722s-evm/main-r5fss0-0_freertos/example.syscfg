@@ -21,9 +21,9 @@ const mpu_armv75 = mpu_armv7.addInstance();
 /**
  * Write custom configuration values to the imported modules.
  */
+gpio1.$name                = "GPIO_PIN_INTERRUPT_TEST";
 gpio1.trigType             = "RISE_EDGE";
 gpio1.pinDir               = "OUTPUT";
-gpio1.$name                = "GPIO_PIN_INTERRUPT_TEST";
 gpio1.GPIO.$assign         = "GPIO0";
 gpio1.GPIO.gpioPin.$assign = "GPMC0_AD0";
 

@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/* Copyright (c) 2021 Texas Instruments Incorporated                         */
+/* Copyright (c) 2021-26 Texas Instruments Incorporated                      */
 /* http://www.ti.com/                                                        */
 /*                                                                           */
 /*  Redistribution and  use in source  and binary forms, with  or without    */
@@ -32,28 +32,33 @@
 /*  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.     */
 /*                                                                           */
 /*****************************************************************************/
+
 #include <stdint.h>
 #include <string.h>
-
 #include "MmuP_c75.h"
+#include "kernel/dpl/StartuphooksP.h"
 
-/* below are set in linker command file */
-extern uint32_t __BSS_START;
-extern uint32_t __BSS_END;
+int _system_pre_init(void);
+void _system_post_cinit(void);
+void _c_int00_secure(void);
 
 extern char __TI_STACK_END[];
 register volatile uint64_t __SP;
+
+/* Below symbols are set in linker command file */
+extern uint32_t __BSS_START;
+extern uint32_t __BSS_END;
 
 /*****************************************************************************/
 /* C_INT00() - C ENVIRONMENT ENTRY POINT                                     */
 /*****************************************************************************/
 #pragma CODE_SECTION(_c_int00_secure, ".text:_c_int00_secure")
-void _c_int00_secure()
+void _c_int00_secure(void)
 {
    /*------------------------------------------------------------------------*/
    /* SETUP __SP IN A POSITION-INDEPENDENT MANNER (I.E. NO _symval())        */
    /*------------------------------------------------------------------------*/
-    __SP = (((uint64_t)&__TI_STACK_END) - 16) & ~0b111;
+    __SP = (((uint64_t)&__TI_STACK_END) - 16U) & ~((uint64_t)(0b111));
 
    MmuP_init();
 }
@@ -81,6 +86,7 @@ int _system_pre_init(void)
     /* initialize .bss to zero */
     uint32_t bss_size = ((uintptr_t)&__BSS_END - (uintptr_t)&__BSS_START);
     memset((void*)&__BSS_START, 0x00, bss_size);
+    extended_system_pre_init();
     return 1;
 }
 
@@ -100,4 +106,5 @@ void _system_post_cinit(void)
 {
     extern void c7x_startup_init(void);
     c7x_startup_init();
+    extended_system_post_cinit();
 }

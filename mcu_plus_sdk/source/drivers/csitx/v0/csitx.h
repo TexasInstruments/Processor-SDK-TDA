@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2020
+ *  Copyright (c) Texas Instruments Incorporated 2020-25
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -94,6 +94,7 @@
 /* ========================================================================== */
 /*                             Include Files                                  */
 /* ========================================================================== */
+
 #include <drivers/hw_include/csl_csitx.h>
 #include <drivers/fvid2.h>
 #include <drivers/csitx/v0/include/csitx_cfg.h>
@@ -170,6 +171,7 @@ extern "C" {
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
+
 /**
  *  \brief Structure containing Channels configurations.
  */
@@ -366,6 +368,7 @@ typedef struct
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
+
 /**
  *  \brief CSITX Driver Init function.
  *
@@ -430,8 +433,9 @@ void Csitx_instCfgInit(Csitx_InstCfg *instCfg);
  *
  */
 void Csitx_instStatusInit(Csitx_InstStatus *status);
+
 /* ========================================================================== */
-/*                       Function Definitions                          */
+/*                         Function Definitions                               */
 /* ========================================================================== */
 
 /* None */

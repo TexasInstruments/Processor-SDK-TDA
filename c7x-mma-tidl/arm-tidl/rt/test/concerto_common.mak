@@ -15,10 +15,17 @@ TIDL_TB_FILES += configparser.c
 CSOURCES += $(foreach file, $(TIDL_TB_FILES), ../src/$(file))
 
 # include search directories needed by all platforms
-ifeq ($(RTOS_SDK),mcu_plus_sdk)
-    DEFS+=MCU_PLUS_SDK
+ifeq ($(RTOS_SDK),mcu_sdk)
+    IDIRS += $(MCU_SDK_PATH)/source
+    IDIRS += $(MCU_SDK_PATH)/source/drivers
+    IDIRS += $(MCU_SDK_PATH)/source/drivers/hw_include
     IDIRS += $(DMA_UTILS_PATH)
+    IDIRS += $(DMA_UTILS_PATH)/include
+    IDIRS += $(DMA_UTILS_PATH)/csl
+    IDIRS += $(DMA_UTILS_PATH)/udma_standalone/include
+else ifeq ($(RTOS_SDK),mcu_plus_sdk)
     IDIRS += $(MCU_PLUS_SDK_PATH)/source
+    IDIRS += $(DMA_UTILS_PATH)
 else
     IDIRS += $(PDK_PATH)
 endif
@@ -44,7 +51,11 @@ ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J721S2 j721s2))
 endif
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J784S4 j784s4))
     CFLAGS += -DSOC_J784S4
-else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a))
+endif
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+    CFLAGS += -DSOC_TDA54
+endif
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a))
     CFLAGS += -DSOC_AM62A
     CFLAGS += -DSOC_AM62AX
 endif
@@ -57,6 +68,12 @@ endif
 
 DEFS+=BUILD_C7X_1
 DEFS+=TIDLRT_BUILD
+
+ifeq ($(RTOS_SDK),mcu_sdk)
+DEFS+=MCU_SDK
+else ifeq ($(RTOS_SDK),mcu_plus_sdk)
+DEFS+=MCU_PLUS_SDK
+endif
 
 ifeq ($(CODE_COVERAGE_ENABLED_FOR_TIDL), yes)
 DEFS+= CODE_COVERAGE_ENABLED_FOR_TIDL

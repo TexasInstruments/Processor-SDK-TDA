@@ -84,7 +84,7 @@
 #include "avp_display_module.h"
 #include "avp_test.h"
 #if defined(APP_CTOOLS_ENABLED) && !defined(x86_64)
-#include "avp_cpt_ddr_bw.h"
+#include "ctools_wrapper.h"
 #endif
 
 #ifndef x86_64

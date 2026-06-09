@@ -1,5 +1,5 @@
 /**
- *   Copyright (c) Texas Instruments Incorporated 2024
+ *   Copyright (c) Texas Instruments Incorporated 2023-24
  *   All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -91,10 +91,12 @@ typedef struct
 {
     uint32_t loopBack;
     uint32_t mscThreadId;
+
     /*  This flag indicates, process the input either simultaneously or sequentially 
-         0: Sequential process of input (scale Y and UV planes one after another), 
-         1: Simultaneous processing of input (scale both Y and UV planes at the same time) */
+     *  0: Sequential process of input (scale Y and UV planes one after another), 
+     *  1: Simultaneous processing of input (scale both Y and UV planes at the same time) */
     uint32_t isEnableSimulProcessing;
+
     /* Input Frame Parameter */
     struct {
         uint32_t inWidth, inHeight, inPitch, inDataFmt, inCcsf, skipInputLine;
@@ -158,9 +160,9 @@ typedef struct
     SemaphoreP_Object       waitForProcessCmpl;
     /**< Semaphore to wait for completion */
     uint32_t                    errStat;
-    /**<Stores error status value*/
-    uint32_t                       wdTimerErrStatus;
-    /**< Store watchdog timer error interrupt status*/
+    /**<Stores error status value */
+    uint32_t                wdTimerErrStatus;
+    /**< Store watchdog timer error interrupt status */
 
 } App_MscTestObj;
 

@@ -59,13 +59,15 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+#ifndef ISS_SENSORS_OX05C1S_H_
+#define ISS_SENSORS_OX05C1S_H_
+
 #include <iss_sensors.h>
 #include <iss_sensor_priv.h>
 #include <iss_sensor_if.h>
 #include <iss_sensor_serdes.h>
 
 #include "ox05c1s_sensor_config.h"
-#include "ox05c1s_sensor_config_rggb.h"
 #include "ox05c1s_gain_table.h"
 
 
@@ -79,11 +81,53 @@
 #define OX05C1S_META_HEIGHT_BEFORE (0)
 #define OX05C1S_META_HEIGHT_AFTER (0)
 
-//Gang_TODO: features depends on user input (can we assume WDR in prototyping?)
-#define ISS_SENSOR_OX05C1S_FEATURES     (ISS_SENSOR_FEATURE_MANUAL_EXPOSURE     | \
-                                                       ISS_SENSOR_FEATURE_MANUAL_GAIN         | \
-                                                       ISS_SENSOR_FEATURE_LINEAR_MODE  | \
-                                                       ISS_SENSOR_FEATURE_DCC_SUPPORTED)
+#define ISS_SENSOR_OX05C1S_FEATURES     ((uint32_t)ISS_SENSOR_FEATURE_MANUAL_EXPOSURE     | \
+                                         (uint32_t)ISS_SENSOR_FEATURE_MANUAL_GAIN         | \
+                                         (uint32_t)ISS_SENSOR_FEATURE_LINEAR_MODE         | \
+                                         (uint32_t)ISS_SENSOR_FEATURE_DCC_SUPPORTED)
+
+/* AE Registers */
+/* Exposure Time */
+#define AEC_HCG_CTRL_01 0x3501U
+#define AEC_HCG_CTRL_02 0x3502U
+
+/* Analog Gain 8 bits (4.4 bits format)*/
+/* High Conversion Gain (HCG) */
+#define AEC_HCG_CTRL_08 0x3508U /* [3:0] Integer */
+#define AEC_HCG_CTRL_09 0x3509U /* [7:4] Fraction */
+
+/* Digital Gain is (4.10 bits format)*/
+/* High Conversion Gain (HCG) */
+#define AEC_HCG_CTRL_0A 0x350AU /* [3:0] Integer */
+#define AEC_HCG_CTRL_0B 0x350BU /* [7:0] Fraction MSB */
+#define AEC_HCG_CTRL_0C 0x350CU /* [7:6] Fraction LSB */
+
+/* AWB Registers are in 5.10b format */
+/*
+     The format is 5.10b, where the integer part is contained in the higher bits
+     [6:2] of the first register, while the fractional part is stored in the
+     lower bits [1:0] of the first register and continues through all the bits
+     [7:0] in the second register
+*/
+/* B Gain */
+/* High Conversion Gain (HCG) */
+#define AWB_GAIN_HCG_0 0x5280U
+#define AWB_GAIN_HCG_1 0x5281U
+
+/* G Gain */
+/* High Conversion Gain (HCG) */
+/* Gb */
+#define AWB_GAIN_HCG_2 0x5282U
+#define AWB_GAIN_HCG_3 0x5283U
+
+/* Gr */
+#define AWB_GAIN_HCG_4 0x5284U
+#define AWB_GAIN_HCG_5 0x5285U
+
+/* R Gain */
+/* High Conversion Gain (HCG) */
+#define AWB_GAIN_HCG_6 0x5286U
+#define AWB_GAIN_HCG_7 0x5287U
 
 /*
  *******************************************************************************
@@ -94,7 +138,7 @@ static int32_t OX05C1S_Probe(uint32_t chId, void *pSensorHdl);
 static int32_t OX05C1S_Config(uint32_t chId, void *pSensorHdl, uint32_t sensor_features_requested);
 static int32_t OX05C1S_StreamOn(uint32_t chId, void *pSensorHdl);
 static int32_t OX05C1S_StreamOff(uint32_t chId, void *pSensorHdl);
-static int32_t OX05C1S_PowerOn(uint32_t chMask, void *pSensorHdl);
+static int32_t OX05C1S_PowerOn(uint32_t chId, void *pSensorHdl);
 static int32_t OX05C1S_PowerOff(uint32_t chId, void *pSensorHdl);
 static int32_t OX05C1S_GetExpParams(uint32_t chId, void *pSensorHdl, IssSensor_ExposureParams *pExpPrms);
 static int32_t OX05C1S_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_ExposureParams *pExpPrms);
@@ -118,3 +162,5 @@ static int32_t OX05C1S_ReadReg(uint8_t         i2cAddr,
                             uint16_t        regAddr,
                             uint8_t         *regVal,
                             uint32_t        numRegs);
+
+#endif /* End of ISS_SENSORS_OX05C1S_H_*/

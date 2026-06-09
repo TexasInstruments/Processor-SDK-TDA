@@ -1,7 +1,7 @@
 /*
- * Data version: 240627_084252
+ * Data version: 250904_120008
  *
- * Copyright (C) 2017-2024 Texas Instruments Incorporated - http://www.ti.com/
+ * Copyright (C) 2017-2026 Texas Instruments Incorporated - http://www.ti.com/
  * ALL RIGHTS RESERVED
  */
 #ifndef SOC_AM62AX_DEVICES_H

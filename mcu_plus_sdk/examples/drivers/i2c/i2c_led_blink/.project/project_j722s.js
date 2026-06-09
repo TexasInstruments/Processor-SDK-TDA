@@ -228,7 +228,7 @@ const templates_freertos_main_r5f =
 const templates_freertos_c75ss0 =
 [
     {
-        input: ".project/templates/j722s/common/linker_c75ss0.cmd.xdt",
+        input: ".project/templates/j722s/common/linker_c75ss.cmd.xdt",
         output: "linker.cmd",
     },
     {
@@ -248,7 +248,7 @@ const templates_freertos_c75ss0 =
 const templates_freertos_c75ss1 =
 [
     {
-        input: ".project/templates/j722s/common/linker_c75ss1.cmd.xdt",
+        input: ".project/templates/j722s/common/linker_c75ss.cmd.xdt",
         output: "linker.cmd",
     },
     {
@@ -311,6 +311,7 @@ function getComponentBuildProperty(buildOption) {
             build_property.libdirs = libdirs_nortos;
             build_property.libs = libs_nortos_mcu_r5f;
             build_property.templates = templates_nortos_mcu_r5f;
+            build_property.defines = defines_wkup_r5;
         }
     }
     else if(buildOption.cpu.match(/main-r5f*/)) {

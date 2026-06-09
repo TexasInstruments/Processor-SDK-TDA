@@ -21,13 +21,14 @@ IDIRS+=$(VISION_APPS_PATH)/platform/$(SOC)/rtos
 IDIRS+=$(VISION_APPS_PATH)/platform/$(SOC)/rtos/mcu1_0/generated
 
 ifeq ($(RTOS),SAFERTOS)
-	IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_r5f}/source_code_and_projects/SafeRTOS/api/$(SAFERTOS_ISA_EXT_r5f)
-	IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_r5f}/source_code_and_projects/SafeRTOS/api/PrivWrapperStd
-	IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_r5f}/source_code_and_projects/SafeRTOS/config
-	IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_r5f}/source_code_and_projects/SafeRTOS/kernel/include_api
-	IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_r5f}/source_code_and_projects/SafeRTOS/kernel/include_prv
-	IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_r5f}/source_code_and_projects/SafeRTOS/portable/$(SAFERTOS_ISA_EXT_r5f)
-	IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_r5f}/source_code_and_projects/SafeRTOS/portable/$(SAFERTOS_ISA_EXT_r5f)/$(SAFERTOS_COMPILER_EXT_r5f)
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/r5f/api/$(SAFERTOS_ISA_EXT_r5f)
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/r5f/api/PrivWrapperStd
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/r5f/config
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/r5f/kernel/include_api
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/r5f/kernel/include_prv
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/r5f/queue_registry
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/r5f/portable/$(SAFERTOS_ISA_EXT_r5f)
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/r5f/portable/$(SAFERTOS_ISA_EXT_r5f)/$(SAFERTOS_COMPILER_EXT_r5f)
 endif
 
 LDIRS += $(MCU_PLUS_SDK_PATH)/source/kernel/$(RTOS_TYPE)/lib/
@@ -43,7 +44,7 @@ include $($(_MODULE)_SDIR)/../concerto_r5f_inc.mak
 # CPU instance specific libraries
 STATIC_LIBS += app_rtos_common_mcu1_0
 
-ifeq ($(RTOS),FREERTOS)
+ifeq ($(RTOS), $(filter $(RTOS), FREERTOS SAFERTOS))
 	STATIC_LIBS += app_rtos
 endif
 
@@ -54,5 +55,3 @@ ADDITIONAL_STATIC_LIBS += sciserver.j722s.wkup-r5f.ti-arm-clang.${TARGET_BUILD}.
 ADDITIONAL_STATIC_LIBS += drivers.j722s.wkup-r5f.ti-arm-clang.${TARGET_BUILD}.lib
 ADDITIONAL_STATIC_LIBS += rm_pm_hal.j722s.wkup-r5f.ti-arm-clang.${TARGET_BUILD}.lib
 ADDITIONAL_STATIC_LIBS += self_reset.j722s.wkup-r5f.ti-arm-clang.${TARGET_BUILD}.lib
-
-DEFS        += $(RTOS)

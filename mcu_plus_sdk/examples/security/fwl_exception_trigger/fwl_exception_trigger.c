@@ -60,9 +60,6 @@ void fwl_exception_trigger_main(void *args)
     uint32_t val, addr = 0U;
     char ch;
 
-    Drivers_open();
-    Board_driversOpen();
-
     /* Send entry string */
     DebugP_log("Enter \'D\' to trigger SYSFW firewall exception..\r\n");
     DebugP_log("Enter \'C\' to trigger CMBN firewall exception..\r\n");
@@ -91,9 +88,6 @@ void fwl_exception_trigger_main(void *args)
      * it means an incorrect address was used and no exception got triggered.
     */
     DebugP_log("Something went wrong!\r\n");
-
-    Board_driversClose();
-    Drivers_close();
 
     return;
 }

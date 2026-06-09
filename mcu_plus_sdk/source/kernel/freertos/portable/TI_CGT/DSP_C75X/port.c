@@ -1,5 +1,5 @@
 /*
- * FreeRTOS Kernel V10.4.1
+ * FreeRTOS Kernel V11.1.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -25,7 +25,7 @@
  * 1 tab == 4 spaces!
  */
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -55,18 +55,17 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 #include <stdint.h>
-#include <stdio.h>
-#include <string.h>
 #include <c7x.h>    /* for C7x intrinsics */
 #include <FreeRTOS.h>
 #include <task.h>
 #include <kernel/dpl/DebugP.h>
 #include <kernel/nortos/dpl/c75/CycleCounterP_c75.h>
-#include <kernel/nortos/dpl/c75/TaskSupport_c75.h>
 #include <kernel/nortos/dpl/c75/CacheP_c75.h>
 #include <drivers/hw_include/cslr_soc.h>
 #include <kernel/freertos/dpl/common/ClockP_freertos_priv.h>
+#include <kernel/freertos/dpl/c75/TaskSupport_c75.h>
 #include <kernel/nortos/dpl/c75/csl_clec.h>
 
 /* Let the user override the pre-loading of the initial LR with the address of
@@ -111,13 +110,8 @@ uint32_t ulPortInterruptNesting = 0UL;
 /* set to true when schedular gets enabled in xPortStartScheduler */
 uint32_t ulPortSchedularRunning = pdFALSE;
 
-
 /* set to true when scheduler gets enabled in xPortStartScheduler */
 uint32_t uxPortIncorrectYieldCount = 0UL;
-
-/* below are set in linker command file */
-extern uint32_t __BSS_START;
-extern uint32_t __BSS_END;
 
 /*
  * Task control block.  A task control block (TCB) is allocated for each task,
@@ -209,6 +203,12 @@ typedef struct tskTaskControlBlock       /* The old naming convention is used to
 } tskTCB;
 
 extern  tskTCB * volatile pxCurrentTCB;
+
+/**
+ * The function that handles the timer tick while the scheduler is suspended.
+ */
+void vPortTimerTickHandler( void );
+
 /*
  * Starts the first task executing.  This function is necessarily written in
  * assembly code so is implemented in portASM.s.
@@ -301,15 +301,15 @@ BaseType_t xPortStartScheduler(void)
 
 void vPortYeildFromISR( uint32_t xSwitchRequired )
 {
-    if( xSwitchRequired != pdFALSE )
+    if( xSwitchRequired != (uint32_t) pdFALSE )
     {
         ulPortYieldRequired = pdTRUE;
     }
 }
 
-void vPortTimerTickHandler()
+void vPortTimerTickHandler( void )
 {
-    if( ulPortSchedularRunning == pdTRUE )
+    if( ulPortSchedularRunning == (uint32_t) pdTRUE )
     {
         /* Increment the RTOS tick. */
         if( xTaskIncrementTick() != pdFALSE )
@@ -329,7 +329,7 @@ void vPortTaskUsesFPU( void )
 
 
 /* initialize high resolution timer for CPU and task load calculation */
-void vPortConfigTimerForRunTimeStats()
+void vPortConfigTimerForRunTimeStats( void )
 {
 
     /* we assume clock is initialized before the schedular is started */
@@ -337,13 +337,13 @@ void vPortConfigTimerForRunTimeStats()
 }
 
 /* return current counter value of high speed counter in units of 10's of usecs */
-uint32_t uiPortGetRunTimeCounterValue()
+uint32_t uiPortGetRunTimeCounterValue( void )
 {
 // #if 1
     uint64_t ts = __TSC;
     uint64_t timeInUsecs;
 
-    timeInUsecs = (ts * 1000000) / (850 * 1000 * 1000);
+    timeInUsecs = (ts * 1000000UL) / (850UL * 1000UL * 1000UL);
     /* note, there is no overflow protection for this 32b value in FreeRTOS
      *
      * Dividing by 10 to reduce the resolution and avoid overflow for longer duration
@@ -361,14 +361,14 @@ uint32_t uiPortGetRunTimeCounterValue()
  * i.e FreeRTOS API should not be called from FIQ, however right now we dont enforce it by checking
  * if we are in FIQ when this API is called.
  */
-void vPortValidateInterruptPriority()
+void vPortValidateInterruptPriority( void )
 {
 }
 
 /* This is called as part of vTaskEndScheduler(), in our port, there is nothing to do here.
  * interrupt are disabled by FreeRTOS before calling this.
  */
-void vPortEndScheduler()
+void vPortEndScheduler( void )
 {
     /* nothing to do */
 }
@@ -387,16 +387,17 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask,
  * implementation of vApplicationGetIdleTaskMemory() to provide the memory that is
  * used by the Idle task.
  */
-void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
-                                    StackType_t **ppxIdleTaskStackBuffer,
-                                    uint32_t *pulIdleTaskStackSize )
+void vApplicationGetIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer,
+                                    StackType_t ** ppxIdleTaskStackBuffer,
+                                    configSTACK_DEPTH_TYPE * pulIdleTaskStackSize )
 {
 /* If the buffers to be provided to the Idle task are declared inside this
  * function then they must be declared static – otherwise they will be allocated on
  * the stack and so not exists after this function exits.
  */
 static StaticTask_t xIdleTaskTCB;
-static StackType_t uxIdleTaskStack[ (32 * 1024) ];
+/* Align to 16KB so that the upper 8KB will be 8KB aligned (used for TCSP) */
+static StackType_t uxIdleTaskStack[ configMINIMAL_STACK_SIZE ] __attribute__((aligned(16*1024)));;
 
     /* Pass out a pointer to the StaticTask_t structure in which the Idle task’s
      * state will be stored.
@@ -410,23 +411,24 @@ static StackType_t uxIdleTaskStack[ (32 * 1024) ];
      * Note that, as the array is necessarily of type StackType_t,
      * configMINIMAL_STACK_SIZE is specified in words, not bytes.
      */
-    *pulIdleTaskStackSize = sizeof(uxIdleTaskStack)/sizeof(uxIdleTaskStack[0]);
+    *pulIdleTaskStackSize = (sizeof(uxIdleTaskStack)/sizeof(uxIdleTaskStack[0]));
 }
 
 /* configSUPPORT_STATIC_ALLOCATION and configUSE_TIMERS are both set to 1, so the
  * application must provide an implementation of vApplicationGetTimerTaskMemory()
  * to provide the memory that is used by the Timer service task.
  */
-void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer,
-                                     StackType_t **ppxTimerTaskStackBuffer,
-                                     uint32_t *pulTimerTaskStackSize )
+void vApplicationGetTimerTaskMemory( StaticTask_t ** ppxTimerTaskTCBBuffer,
+                                     StackType_t ** ppxTimerTaskStackBuffer,
+                                     configSTACK_DEPTH_TYPE * pulTimerTaskStackSize )
 {
 /* If the buffers to be provided to the Timer task are declared inside this
  * function then they must be declared static – otherwise they will be allocated on
  * the stack and so not exists after this function exits.
  */
 static StaticTask_t xTimerTaskTCB;
-static StackType_t uxTimerTaskStack[ (32 * 1024) ];
+/* Align to 16KB so that the upper 8KB will be 8KB aligned (used for TCSP) */
+static StackType_t uxTimerTaskStack[ configMINIMAL_STACK_SIZE ] __attribute__((aligned(16*1024)));;
 
     /* Pass out a pointer to the StaticTask_t structure in which the Timer
      * task's state will be stored.
@@ -440,13 +442,13 @@ static StackType_t uxTimerTaskStack[ (32 * 1024) ];
      * Note that, as the array is necessarily of type StackType_t,
      * configTIMER_TASK_STACK_DEPTH is specified in words, not bytes.
      */
-    *pulTimerTaskStackSize = sizeof(uxTimerTaskStack)/sizeof(uxTimerTaskStack[0]);
+    *pulTimerTaskStackSize = (sizeof(uxTimerTaskStack)/sizeof(uxTimerTaskStack[0]));
 }
 
 
 
 
-void vPortRestoreTaskContext()
+void vPortRestoreTaskContext( void )
 {
     void * dummyTaskSp;
 
@@ -472,7 +474,7 @@ void vPortYield( void )
         //DebugP_log("Doing switch to same task:%p",(uintptr_t)oldSP);
         uxPortIncorrectYieldCount++;
     }
-    if (pxCurrentTCB->uxCriticalNesting == 0)
+    if (pxCurrentTCB->uxCriticalNesting == 0U)
     {
         /* Enable interrupts if task was preempted outside critical section */
         portENABLE_INTERRUPTS();
@@ -502,25 +504,34 @@ void vPortYieldAsyncFromISR( void )
     /* Enable interrupts if task was preempted outside critical section */
     portDISABLE_INTERRUPTS();
 
+    /* If the Interrupt occured while NLCINIT was being executed,
+     * The NLC state might get corrupted when re-entering the interrupted task.
+     * Refer the issue: DOCU-470.
+     * Workaround is to execute a dummy NLCINIT that refreshes the NLC hardware state.
+     * For FreeRTOS, this is only a problem with the configUSE_TIME_SLICING turned on.
+     */
+#if (1U == configUSE_TIME_SLICING)
+    vPortRefreshNLC();
+#endif
 }
 
 /*
  * Returns true if the current core is in ISR context; low prio ISR, med prio ISR or timer tick ISR. High prio ISRs
  * aren't detected here, but they normally cannot call C code, so that should not be an issue anyway.
  */
-BaseType_t xPortInIsrContext()
+BaseType_t xPortInIsrContext( void )
 {
     BaseType_t inISR = false;
-    if (ulPortInterruptNesting != 0)
+    if (ulPortInterruptNesting != 0U)
     {
         inISR =  true;
     }
     return inISR;
 }
 
-void vPortAssertIfInISR()
+void vPortAssertIfInISR( void )
 {
-    if( xPortInIsrContext() )
+    if( xPortInIsrContext() == true )
     {
         DebugP_log( "port_interruptNesting\n\n");
     }
@@ -535,5 +546,14 @@ void vApplicationIdleHook( void )
     void vApplicationLoadHook();
 
     vApplicationLoadHook();
-}
 
+   /* Errata fix : CPU BP Misprediction Corrupts IDLE Handshake with PMC
+    * Disable Branch Prediction
+    */
+    __BPCR = 0x1;
+
+    asm(" IDLE ");
+
+   /* Enable Branch Prediction */
+    __BPCR = 0x0;
+}

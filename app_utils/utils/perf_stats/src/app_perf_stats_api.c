@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -89,24 +89,28 @@ int32_t appPerfStatsCpuLoadReset(uint32_t app_cpu_id)
 
 int32_t appPerfStatsCpuLoadGet(uint32_t app_cpu_id, app_perf_stats_cpu_load_t *cpu_load)
 {
-    int32_t status;
+    int32_t status = 0;
 
+    #ifndef VDK
     status = appRemoteServiceRun(app_cpu_id, APP_PERF_STATS_SERVICE_NAME,
         APP_PERF_STATS_CMD_GET_CPU_LOAD,
         cpu_load, sizeof(app_perf_stats_cpu_load_t),
         0);
+    #endif
 
     return status;
 }
 
 int32_t appPerfStatsCpuTaskStatsGet(uint32_t app_cpu_id, app_perf_stats_task_stats_t *cpu_stats)
 {
-    int32_t status;
+    int32_t status = 0;
 
+    #ifndef VDK
     status = appRemoteServiceRun(app_cpu_id, APP_PERF_STATS_SERVICE_NAME,
         APP_PERF_STATS_CMD_GET_CPU_TASK_STATS,
         cpu_stats, sizeof(app_perf_stats_task_stats_t),
         0);
+    #endif
 
     return status;
 }
@@ -125,12 +129,14 @@ int32_t appPerfStatsCpuTaskStacksStatsGet(uint32_t app_cpu_id, app_perf_stats_ta
 
 int32_t appPerfStatsCpuMemStatsGet(uint32_t app_cpu_id, app_perf_stats_mem_stats_t *cpu_stats)
 {
-    int32_t status;
+    int32_t status = 0;
 
+    #ifndef VDK
     status = appRemoteServiceRun(app_cpu_id, APP_PERF_STATS_SERVICE_NAME,
         APP_PERF_STATS_CMD_GET_CPU_MEM_STATS,
         cpu_stats, sizeof(app_perf_stats_mem_stats_t),
         0);
+    #endif
 
     return status;
 }
@@ -161,8 +167,10 @@ int32_t appPerfStatsCpuTiovxStatsGet(uint32_t app_cpu_id, app_perf_stats_tiovx_s
 
 int32_t appPerfStatsCpuLoadPrintAll()
 {
-    uint32_t cpu_id;
     int32_t status=0;
+
+    #ifndef VDK
+    uint32_t cpu_id;
     app_perf_stats_cpu_load_t cpu_load;
 
     printf("\n");
@@ -181,10 +189,12 @@ int32_t appPerfStatsCpuLoadPrintAll()
         }
     }
     printf("\n");
+    #endif
 
     return status;
 }
 
+#ifndef VDK
 static void appPerfStatsCpuLoadExport(FILE *fp)
 {
     char line[APP_PERF_MAX_LINE_SIZE];
@@ -208,8 +218,10 @@ static void appPerfStatsCpuLoadExport(FILE *fp)
         }
     }
 }
+#endif
 
 
+#ifndef VDK
 static void appPerfStatsHwaStatsExport(FILE *fp)
 {
     app_perf_stats_hwa_stats_t hwa_load;
@@ -219,7 +231,7 @@ static void appPerfStatsHwaStatsExport(FILE *fp)
     char line[APP_PERF_MAX_LINE_SIZE];
     int32_t status=0;
 
-    #if defined(SOC_AM62A)
+    #if defined(SOC_FAMILY_AM)
     status = appPerfStatsHwaStatsGet(APP_IPC_CPU_MCU1_0, &hwa_load);
     if(status==0)
     {
@@ -241,7 +253,7 @@ static void appPerfStatsHwaStatsExport(FILE *fp)
             }
         }
     }
-    #else
+    #elif defined(SOC_FAMILY_J7)
     status = appPerfStatsHwaStatsGet(APP_IPC_CPU_MCU2_0, &hwa_load);
     if(status==0)
     {
@@ -326,7 +338,9 @@ static void appPerfStatsHwaStatsExport(FILE *fp)
         }
     }
 }
+#endif
 
+#ifndef VDK
 static void appPerfStatsDdrStatsExport(FILE *fp)
 {
     char line[APP_PERF_MAX_LINE_SIZE];
@@ -349,7 +363,9 @@ static void appPerfStatsDdrStatsExport(FILE *fp)
             ddr_stats.write_bw_peak+ddr_stats.read_bw_peak);
     }
 }
+#endif
 
+#ifndef VDK
 static void appPerfStatsCpuStatsExportMemTable(FILE *fp, uint32_t app_cpu_id, app_perf_stats_mem_stats_t *cpu_stats)
 {
     uint32_t i;
@@ -385,7 +401,9 @@ static void appPerfStatsCpuStatsExportMemTable(FILE *fp, uint32_t app_cpu_id, ap
     }
     return;
 }
+#endif
 
+#ifndef VDK
 static void appPerfStatsCpuStatsExportTaskTable(FILE *fp, uint32_t app_cpu_id, app_perf_stats_task_stats_t *cpu_stats)
 {
     uint32_t i;
@@ -409,7 +427,9 @@ static void appPerfStatsCpuStatsExportTaskTable(FILE *fp, uint32_t app_cpu_id, a
     }
     return;
 }
+#endif
 
+#ifndef VDK
 static void appPerfStatsCpuStatsExport(FILE *fp)
 {
     uint32_t cpu_id;
@@ -450,11 +470,14 @@ static void appPerfStatsCpuStatsExport(FILE *fp)
         }
     }
 }
+#endif
 
 int32_t appPerfStatsCpuStatsPrintAll()
 {
-    uint32_t cpu_id;
     int32_t status=0;
+
+    #ifndef VDK
+    uint32_t cpu_id;
     app_perf_stats_task_stats_t cpu_task_stats;
     app_perf_stats_mem_stats_t cpu_mem_stats;
 
@@ -500,13 +523,17 @@ int32_t appPerfStatsCpuStatsPrintAll()
         }
     }
     printf("\n");
+    #endif
+
     return status;
 }
 
 int32_t appPerfStatsCpuLoadResetAll()
 {
-    uint32_t cpu_id;
     int32_t status=0;
+
+    #ifndef VDK
+    uint32_t cpu_id;
 
     for(cpu_id=0; cpu_id<APP_IPC_CPU_MAX; cpu_id++)
     {
@@ -515,6 +542,8 @@ int32_t appPerfStatsCpuLoadResetAll()
             status = appPerfStatsCpuLoadReset(cpu_id);
         }
     }
+    #endif
+
     return status;
 }
 
@@ -531,6 +560,8 @@ int32_t appPerfStatsPrintAll()
 int32_t appPerfStatsCpuTaskStatsPrint(uint32_t app_cpu_id, app_perf_stats_task_stats_t *cpu_stats)
 {
     int32_t status = 0;
+
+    #ifndef VDK
     uint32_t i;
 
     if(cpu_stats->num_tasks>APP_PERF_STATS_TASK_MAX)
@@ -546,6 +577,8 @@ int32_t appPerfStatsCpuTaskStatsPrint(uint32_t app_cpu_id, app_perf_stats_task_s
             cpu_stats->task_stats[i].task_load%100
             );
     }
+    #endif
+
     return status;
 }
 
@@ -576,6 +609,8 @@ int32_t appPerfStatsCpuTaskStacksStatsPrint(uint32_t app_cpu_id, app_perf_stats_
 int32_t appPerfStatsCpuMemStatsPrint(uint32_t app_cpu_id, app_perf_stats_mem_stats_t *cpu_stats)
 {
     int32_t status = 0;
+
+    #ifndef VDK
     uint32_t i;
 
     if(cpu_stats->num_tasks>APP_PERF_STATS_TASK_MAX)
@@ -605,6 +640,8 @@ int32_t appPerfStatsCpuMemStatsPrint(uint32_t app_cpu_id, app_perf_stats_mem_sta
         }
     }
     printf("\n");
+    #endif
+
     return status;
 }
 
@@ -666,6 +703,7 @@ int32_t appPerfStatsCpuLoadPrint(uint32_t app_cpu_id, app_perf_stats_cpu_load_t 
 {
     int32_t status = 0;
 
+    #ifndef VDK
     printf("CPU: %6s: TOTAL LOAD = %3d.%2d %% ( HWI = %3d.%2d %%, SWI = %3d.%2d %% )\n",
                 appIpcGetCpuName(app_cpu_id),
                 cpu_load->cpu_load/100u,
@@ -675,6 +713,7 @@ int32_t appPerfStatsCpuLoadPrint(uint32_t app_cpu_id, app_perf_stats_cpu_load_t 
                 cpu_load->swi_load/100u,
                 cpu_load->swi_load%100u
             );
+    #endif
 
     return status;
 }
@@ -682,26 +721,34 @@ int32_t appPerfStatsCpuLoadPrint(uint32_t app_cpu_id, app_perf_stats_cpu_load_t 
 #if defined(LINUX) || defined(QNX)
 int32_t appPerfStatsRegisterTask(void *task_handle, const char *name)
 {
+    #ifndef VDK
     /* NOT supported for LINUX */
     return -1;
+    #else
+    return 0;
+    #endif
 }
 #endif
 
 void appPerfPointSetName(app_perf_point_t *prm, const char *name)
 {
+    #ifndef VDK
     strncpy(prm->name, name, APP_PERF_POINT_NAME_MAX -1U);
     prm->name[APP_PERF_POINT_NAME_MAX-1] = 0;
 
     appPerfPointReset(prm);
+    #endif
 }
 
 void appPerfPointReset(app_perf_point_t *prm)
 {
+    #ifndef VDK
     prm->sum = 0;
     prm->avg = 0;
     prm->min = 0xFFFFFFFFu;
     prm->max = 0;
     prm->num = 0;
+    #endif
 }
 
 /**
@@ -711,12 +758,15 @@ void appPerfPointReset(app_perf_point_t *prm)
  */
 void appPerfPointBegin(app_perf_point_t *prm)
 {
+    #ifndef VDK
     prm->tmp = appLogGetTimeInUsec();
+    #endif
 }
 
 
 void appPerfPointEnd(app_perf_point_t *prm)
 {
+    #ifndef VDK
     uint64_t tmp, num;
 
     tmp  = appLogGetTimeInUsec() - prm->tmp;
@@ -736,16 +786,20 @@ void appPerfPointEnd(app_perf_point_t *prm)
     prm->avg  = prm->sum/num;
 
     prm->num = num;
+    #endif
 }
 
 void appPerfPointGet(app_perf_point_t *prm, app_perf_point_t *perf)
 {
+    #ifndef VDK
     *perf = *prm;
     perf->name[APP_PERF_POINT_NAME_MAX-1] = 0;
+    #endif
 }
 
 void appPerfPointPrint(app_perf_point_t *prm)
 {
+    #ifndef VDK
     app_perf_point_t perf;
 
     appPerfPointGet(prm, &perf);
@@ -757,10 +811,12 @@ void appPerfPointPrint(app_perf_point_t *prm)
         (perf.max),
         (perf.num)
         );
+    #endif
 }
 
 void appPerfPointPrintFPS(app_perf_point_t *prm)
 {
+    #ifndef VDK
     uint32_t fps;
     app_perf_point_t perf;
 
@@ -780,6 +836,7 @@ void appPerfPointPrintFPS(app_perf_point_t *prm)
         fps/100,
         fps%100
         );
+    #endif
 }
 
 void appPerfPointExport(FILE *fp, app_perf_point_t *prm[], uint32_t num_points)
@@ -829,6 +886,8 @@ void appPerfPointExport(FILE *fp, app_perf_point_t *prm[], uint32_t num_points)
 FILE *appPerfStatsExportOpenFile(const char *output_file_path, const char *output_file_prefix)
 {
     FILE *fp = NULL;
+
+    #ifndef VDK
     if ( (output_file_path!=NULL)
         && (output_file_prefix!=NULL) )
     {
@@ -850,6 +909,7 @@ FILE *appPerfStatsExportOpenFile(const char *output_file_path, const char *outpu
     {
         printf("appPerfStatsExportOpenFile error: Invalid arguments!\n");
     }
+    #endif
 
     return fp;
 }
@@ -858,6 +918,7 @@ int32_t appPerfStatsExportCloseFile(FILE *fp)
 {
     int32_t retVal = 0;
 
+    #ifndef VDK
     if(fp!=NULL)
     {
         fclose(fp);
@@ -867,6 +928,7 @@ int32_t appPerfStatsExportCloseFile(FILE *fp)
         retVal = -1;
         printf("appPerfStatsExportCloseFile error: File handle was NULL!\n");
     }
+    #endif
 
     return retVal;
 }
@@ -875,6 +937,7 @@ int32_t appPerfStatsExportAll(FILE *fp, app_perf_point_t *perf_points[], uint32_
 {
     int32_t retVal = 0;
 
+    #ifndef VDK
     if(fp!=NULL)
     {
         char line[APP_PERF_MAX_LINE_SIZE];
@@ -896,6 +959,7 @@ int32_t appPerfStatsExportAll(FILE *fp, app_perf_point_t *perf_points[], uint32_
         retVal = -1;
         printf("appPerfStatsExportAll error: File handle was NULL!\n");
     }
+    #endif
 
     return retVal;
 }
@@ -972,7 +1036,9 @@ int32_t appPerfStatsHwaLoadPrint(app_perf_stats_hwa_stats_t *hwa_load)
 
 int32_t appPerfStatsHwaLoadPrintAll()
 {
-    int32_t status;
+    int32_t status = 0;
+
+    #ifndef VDK
     app_perf_stats_hwa_stats_t hwa_load;
 
     printf("\n");
@@ -980,13 +1046,13 @@ int32_t appPerfStatsHwaLoadPrintAll()
     printf("===========================\n");
     printf("\n");
 
-    #if defined(SOC_AM62A)
+    #if defined(SOC_FAMILY_AM)
     status = appPerfStatsHwaStatsGet(APP_IPC_CPU_MCU1_0, &hwa_load);
     if(status==0)
     {
         appPerfStatsHwaLoadPrint(&hwa_load);
     }
-    #else
+    #elif defined(SOC_FAMILY_J7)
     status = appPerfStatsHwaStatsGet(APP_IPC_CPU_MCU2_0, &hwa_load);
     if(status==0)
     {
@@ -1013,19 +1079,22 @@ int32_t appPerfStatsHwaLoadPrintAll()
         appPerfStatsHwaLoadPrint(&hwa_load);
     }
     printf("\n");
+    #endif
+
     return status;
 }
 
 int32_t appPerfStatsHwaLoadResetAll()
 {
-    int32_t status;
+    int32_t status = 0;
 
-    #if defined(SOC_AM62A)
+    #ifndef VDK
+    #if defined(SOC_FAMILY_AM)
     status = appRemoteServiceRun(APP_IPC_CPU_MCU1_0, APP_PERF_STATS_SERVICE_NAME,
         APP_PERF_STATS_CMD_RESET_HWA_LOAD_CALC,
         NULL, 0,
         0);
-    #else
+    #elif defined(SOC_FAMILY_J7)
     status = appRemoteServiceRun(APP_IPC_CPU_MCU2_0, APP_PERF_STATS_SERVICE_NAME,
         APP_PERF_STATS_CMD_RESET_HWA_LOAD_CALC,
         NULL, 0,
@@ -1047,6 +1116,7 @@ int32_t appPerfStatsHwaLoadResetAll()
         APP_PERF_STATS_CMD_RESET_HWA_LOAD_CALC,
         NULL, 0,
         0);
+    #endif
 
     return status;
 }
@@ -1082,7 +1152,9 @@ int32_t appPerfStatsDdrStatsPrint(app_perf_stats_ddr_stats_t *ddr_load)
 
 int32_t appPerfStatsDdrStatsPrintAll()
 {
-    int32_t status;
+    int32_t status = 0;
+
+    #ifndef VDK
     app_perf_stats_ddr_stats_t ddr_stats;
 
     printf("\n");
@@ -1095,17 +1167,21 @@ int32_t appPerfStatsDdrStatsPrintAll()
         appPerfStatsDdrStatsPrint(&ddr_stats);
     }
     printf("\n");
+    #endif
+
     return status;
 }
 
 int32_t appPerfStatsDdrStatsResetAll()
 {
-    int32_t status;
+    int32_t status = 0;
 
+    #ifndef VDK
     status = appRemoteServiceRun(APP_PERF_STATS_GET_DDR_STATS_CORE, APP_PERF_STATS_SERVICE_NAME,
         APP_PERF_STATS_CMD_RESET_DDR_STATS,
         NULL, 0,
         0);
+    #endif
 
     return status;
 }

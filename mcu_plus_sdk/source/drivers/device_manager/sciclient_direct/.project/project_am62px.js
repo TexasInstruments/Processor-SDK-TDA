@@ -12,7 +12,6 @@ const files_r5f = {
         "sciclient_rm_irq.c",
         "sciclient_boardcfg.c",
         "sciclient_procboot.c",
-        "sciclient_rom.c",
         "sciclient_secureProxyCfg.c",
         "sciclient_secureproxy.c",
         "uart_print.c",
@@ -29,6 +28,7 @@ const includes_r5f = {
         "../rm_pm_hal/rm_pm_hal_src/rm",
         "../rm_pm_hal/rm_pm_hal_src/rm/include",
         "../rm_pm_hal/rm_pm_hal_src/include/soc/am62px",
+        "../rm_pm_hal/rm_pm_hal_src/include/lib/",
     ],
 };
 
@@ -46,13 +46,15 @@ const defines_r5f = {
         "MAKEFILE_BUILD",
         "BUILD_MCU1_0",
         "BUILD_MCU",
-    //    "CONFIG_LPM_DM",
+        "CONFIG_LPM_DM",
         "CONFIG_GET_FW_CAPS",
         "CONFIG_PM",
         "CONFIG_PSC",
         "CONFIG_CLOCK",
         "CONFIG_CLK_PLL_16FFT",
         "CONFIG_CLK_PLL_16FFT_FRACF_CALIBRATION",
+        "CONFIG_PM_CLK_SSC",
+        "CONFIG_GET_DEVICE_MULTIPLE",
         "CONFIG_DM_BUILD",
         "CONFIG_RM",
         "CONFIG_RM_IRQ",
@@ -62,11 +64,8 @@ const defines_r5f = {
         "CONFIG_INTERRUPT_AGGREGATOR_UNMAPPED_EVENTS",
         "CONFIG_RM_RA_NAV_RING",
         "CONFIG_RM_UDMAP",
-        "CONFIG_UDMAP_CHANNEL_BURST_SIZE",
-        "CONFIG_UDMAP_TX_CHANNEL_TEARDOWN_TYPE",
         "CONFIG_UDMAP_BCDMA",
         "CONFIG_UDMAP_PKTDMA",
-    //    "CONFIG_LPM_DM",
         "CONFIG_TRACE",
         "CONFIG_TRACE_BUFFER",
         "CONFIG_TRACE_UART",
@@ -78,6 +77,7 @@ const cflags = {
     common: [],
     remove: [
         "-Wno-unused-function",
+        "-Wno-gnu-variable-sized-type-not-at-end",
     ],
 };
 

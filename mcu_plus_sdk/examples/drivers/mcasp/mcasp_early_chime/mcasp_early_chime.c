@@ -62,6 +62,7 @@
 #define AIC31_INTERFACE_REG                 (0x9U)
 
 #define AIC31_CODEC_DATA_PATH_REG           (0x7U)
+#define AIC32_CLK_SRC_REG                   (0x8U)
 #define AIC_OP_POWER_REG                    (0x25U)
 #define AIC_DAC_OP_SWITCH_CTRL_REG          (0x29U)
 #define AIC_LDAC_VOL_CTRL                   (0x2BU)
@@ -91,9 +92,6 @@ void mcasp_chime(void *args)
     int32_t status = SystemP_SUCCESS;
     MCASP_Handle mcaspHandle;
 
-    Drivers_open();
-    Board_driversOpen();
-
     SemaphoreP_constructBinary(&gSemAudioChime, 0);
 
     mcasp_aic31_codec_config();
@@ -120,11 +118,6 @@ void mcasp_chime(void *args)
     }while (transaction != NULL);
 
     MCASP_stopTransferTx(mcaspHandle);
-
-    Board_driversClose();
-    Drivers_close();
-
-   vTaskDelete(NULL);
 }
 
 
@@ -182,8 +175,11 @@ static void mcasp_aic31_codec_config(void)
     /* Select Page0 */
     I2C_writeReg(i2cHandle, deviceAddress, AIC31_PAGE_SEL_REG, 0U);
 
+    /* Select codec to be in master mode for FS and BCLK */
+    I2C_writeReg(i2cHandle, deviceAddress, AIC32_CLK_SRC_REG, (1U << 6U) | (1U << 7U));
+
     /* I2S interface */
-    I2C_writeReg(i2cHandle, deviceAddress, AIC31_INTERFACE_REG, (0x0U << 6U));
+    I2C_writeReg(i2cHandle, deviceAddress, AIC31_INTERFACE_REG, (0x0U << 6U) | (0x3 << 4U));
 
     /* Configure data path */
     /* Left DAC datapath plays left and Right path datapath plays right */
@@ -226,7 +222,7 @@ static void I2C_writeReg(I2C_Handle handle, uint8_t devAddr, uint8_t reg,
     I2C_Transaction_init(&i2cTransaction);
     i2cTransaction.writeBuf   = txBuffer;
     i2cTransaction.writeCount = 2;
-    i2cTransaction.slaveAddress = devAddr;
+    i2cTransaction.targetAddress = devAddr;
     txBuffer[0] = reg;
     txBuffer[1] = val;
     I2C_transfer(handle, &i2cTransaction);

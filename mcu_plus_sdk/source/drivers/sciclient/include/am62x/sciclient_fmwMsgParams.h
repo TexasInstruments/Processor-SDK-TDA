@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2022 Texas Instruments Incorporated
+ *  Copyright (C) 2022-26 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -29,6 +29,13 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
+ */
+
+/**
+ * \ingroup DRV_SCICLIENT_MODULE
+ * \defgroup SCICLIENT_FMW_MSG_PARAMS sciclient_fmwMsgParams.h
+ *
+ * @{
  */
 
 /**
@@ -66,12 +73,12 @@ extern "C" {
  */
 /* ABI Major revision - Major revision changes
 *       indicate backward compatibility breakage */
-#define SCICLIENT_FIRMWARE_ABI_MAJOR                     (3U)
+#define SCICLIENT_FIRMWARE_ABI_MAJOR                     (4U)
 /* ABI Minor revision - Minor revision changes
 *       indicate backward compatibility is maintained,
 *       however, new messages OR extensions to existing
 *       messages might have been adde */
-#define SCICLIENT_FIRMWARE_ABI_MINOR                     (5U)
+#define SCICLIENT_FIRMWARE_ABI_MINOR                     (0U)
 /** @} */
 
 /**
@@ -81,17 +88,17 @@ extern "C" {
  *  Context IDs for Sciclient_ConfigPrms_t .
  */
 /** r5(Secure): Cortex R5 Context 0 */
-#define SCICLIENT_CONTEXT_R5_SEC_0                   (0U)
+#define SCICLIENT_CONTEXT_R5_SEC_0                     (0U)
 /** r5(Non Secure): Cortex R5 Context 1 */
-#define SCICLIENT_CONTEXT_R5_NONSEC_0                (1U)
+#define SCICLIENT_CONTEXT_R5_NONSEC_0                  (1U)
 /** r5(Secure): Cortex R5 Context 2 */
-#define SCICLIENT_CONTEXT_R5_SEC_1                   (2U)
+#define SCICLIENT_CONTEXT_R5_SEC_1                     (2U)
 /** r5(Non Secure): Cortex R5 Context 3 */
-#define SCICLIENT_CONTEXT_R5_NONSEC_1                (3U)
+#define SCICLIENT_CONTEXT_R5_NONSEC_1                  (3U)
 /** a53(Secure): Cortex A53 context 0 */
 #define SCICLIENT_CONTEXT_A53_SEC_0                    (4U)
 /** a53(Non Secure): Cortex A53 context 1 */
-#define SCICLIENT_CONTEXT_A53_SEC_1                 (5U)
+#define SCICLIENT_CONTEXT_A53_SEC_1                    (5U)
 /** a53(Non Secure): Cortex A53 context 2 */
 #define SCICLIENT_CONTEXT_A53_NONSEC_0                 (6U)
 /** a53(Non Secure): Cortex A53 context 3 */
@@ -101,10 +108,16 @@ extern "C" {
 /** r5(Secure):  GPU Context 0 */
 #define SCICLIENT_CONTEXT_GPU_NONSEC_0                 (9U)
 /** r5(Non Secure): ICSSG_0 Context 1 */
-#define SCICLIENT_CONTEXT_A53_NONSEC_2             (10U)
+#define SCICLIENT_CONTEXT_A53_NONSEC_2                 (10U)
+/** DM2TIFS(Secure): DM to TIFS Message forwarding.
+ *  Note: Although this context uses a secure thread, it can only forward
+ *  messages from non-secure hosts to TIFS. If the forwarded message is
+ *  marked as secure queue only then TIFS will reject the message.
+ */
+#define SCICLIENT_CONTEXT_DM2TIFS                      (11U)
 
 /** Total number of possible contexts for application. */
-#define SCICLIENT_CONTEXT_MAX_NUM                      (11U)
+#define SCICLIENT_CONTEXT_MAX_NUM                      (12U)
 /** @} */
 
 /**
@@ -200,24 +213,24 @@ extern "C" {
 /** @} */
 
 /**
- *  \anchor Sciclient_McuR5fIds
- *  \name MCU Pulsar IDs
+ *  \anchor Sciclient_WkupR5fIds
+ *  \name WKUP Pulsar IDs
  *  @{
- *  MCU Device CPU IDs.
+ *  WKUP Device CPU IDs.
  */
-#define SCICLIENT_DEV_MCU_R5FSS0_CORE0  (TISCI_DEV_WKUP_R5FSS0_CORE0)
-#define SCICLIENT_DEV_MCU_R5FSS0_CORE1  (TISCI_DEV_WKUP_R5FSS0_CORE0)
+#define SCICLIENT_DEV_WKUP_R5FSS0_CORE0  (TISCI_DEV_WKUP_R5FSS0_CORE0)
+#define SCICLIENT_DEV_WKUP_R5FSS0_CORE1  (TISCI_DEV_WKUP_R5FSS0_CORE0)
 /** @} */
 
 /**
- *  \anchor Sciclient_McuR5fProcIds
- *  \name MCU Pulsar Processor IDs
+ *  \anchor Sciclient_WkupR5fProcIds
+ *  \name WKUP Pulsar Processor IDs
  *  @{
- *  MCU Device Processor IDs.
+ *  WKUP Device Processor IDs.
  */
-#define SCICLIENT_DEV_MCU_R5FSS0_CORE0_PROCID  \
+#define SCICLIENT_DEV_WKUP_R5FSS0_CORE0_PROCID  \
     (SCICLIENT_PROC_ID_R5FSS0_CORE0)
-#define SCICLIENT_DEV_MCU_R5FSS0_CORE1_PROCID  \
+#define SCICLIENT_DEV_WKUP_R5FSS0_CORE1_PROCID  \
     (SCICLIENT_PROC_ID_R5FSS0_CORE0)
 /** @} */
 
@@ -237,3 +250,5 @@ extern "C" {
 #endif
 
 #endif /* #ifndef SCICLIENT_FMWMSGPARAMS_H_ */
+
+/** @} */

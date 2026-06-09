@@ -80,7 +80,7 @@
 int32_t TIDL_getBiasParamSize(int32_t deviceName, int32_t numOutChannels)
 {
   int32_t biasParamSize = 0;
-
+  #if defined (__C7120__) || defined (__C7604__)
   if(TIDL_isBiasHighPrecision(deviceName) == TRUE)
   {
     biasParamSize = (numOutChannels * ((int32_t)( ((int32_t)(sizeof(int64_t))))));//AM Specific change
@@ -89,6 +89,13 @@ int32_t TIDL_getBiasParamSize(int32_t deviceName, int32_t numOutChannels)
   {
     biasParamSize = (numOutChannels * ((int32_t)( ((int32_t)(sizeof(int32_t))))));
   }
+  #endif
+  #if defined (__C7504__) || defined (__C7524__)
+  biasParamSize = (numOutChannels * ((int32_t)( ((int32_t)(sizeof(int64_t))))));//AM Specific change
+  #endif
+  #ifdef __C7100__
+  biasParamSize = (numOutChannels * ((int32_t)( ((int32_t)(sizeof(int32_t))))));
+  #endif
 
   return biasParamSize;
 

@@ -68,7 +68,7 @@
 void tivxAddTargetKernelImgHist(void);
 void tivxRemoveTargetKernelImgHist(void);
 
-#if defined(SOC_J784S4) 
+#if defined(SOC_J784S4) || defined(SOC_TDA54)
 void tivxAddTargetKernelDrawBevBoxDetections(void);
 void tivxAddTargetKernelDrawBevCamBoxDetections(void);
 void tivxRemoveTargetKernelDrawBevBoxDetections(void);
@@ -78,7 +78,7 @@ void tivxRemoveTargetKernelDLPreProc4DArmv8(void);
 #endif
 static Tivx_Target_Kernel_List  gTivx_target_kernel_list[] = {
     {&tivxAddTargetKernelImgHist, &tivxRemoveTargetKernelImgHist},
-#if defined(SOC_J784S4)
+#if defined(SOC_J784S4) || defined(SOC_TDA54)
     {&tivxAddTargetKernelDLPreProc4DArmv8, &tivxRemoveTargetKernelDLPreProc4DArmv8},
     {&tivxAddTargetKernelDrawBevBoxDetections, &tivxRemoveTargetKernelDrawBevBoxDetections},
     {&tivxAddTargetKernelDrawBevCamBoxDetections, &tivxRemoveTargetKernelDrawBevCamBoxDetections}

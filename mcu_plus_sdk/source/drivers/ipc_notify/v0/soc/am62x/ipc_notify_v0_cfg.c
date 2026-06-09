@@ -51,18 +51,24 @@ uint32_t gIpcNotifyMailboxBaseAddr[IPC_NOTIFY_MAILBOX_MAX_INSTANCES + 1U] = {
  * - then indexed by destination core ID
  *
  * FIFO Allocations
- *   0 : M4F -> A53
- *   1 : A53 -> M4F
+ *   0 : M4F -> A530-0
+ *   1 : A530-0 -> M4F
  *   2 : R5F -> A53
- *   3 : A53 -> R5F
+ *   3 : A530-0 -> R5F
  *   4 : M4F -> R5F
  *   5 : R5F -> M4F
- *
+ *   6 : A530-0 -> A530-1
+ *   7 : A530-1 -> A530-0
+ *   8 : M4F  -> A530-1
+ *   9 : A530-1 -> M4F
+ *   10: R5F -> A530-1
+ *   11: A530-1 -> R5F
  *
  * User ID:
  * M4F Rx: 2
  * R5F Rx: 1
- * A53 Rx: 0
+ * A530-0 Rx: 0
+ * A530-1 Rx: 1
  */
 IpcNotify_MailboxConfig gIpcNotifyMailboxConfig[CSL_CORE_ID_MAX][CSL_CORE_ID_MAX] =
 {
@@ -78,7 +84,7 @@ IpcNotify_MailboxConfig gIpcNotifyMailboxConfig[CSL_CORE_ID_MAX][CSL_CORE_ID_MAX
             0U, 0U, 0U
         },
         { /* to A53SS0_1 */
-            MAILBOX_UNUSED
+            0U, 8U, 1U
         },
         { /* to A53SS1_0 */
             MAILBOX_UNUSED
@@ -102,7 +108,7 @@ IpcNotify_MailboxConfig gIpcNotifyMailboxConfig[CSL_CORE_ID_MAX][CSL_CORE_ID_MAX
             0U, 2U, 0U
         },
         { /* to A53SS0_1 */
-            MAILBOX_UNUSED
+            0U, 10U, 1U
         },
         { /* to A53SS1_0 */
             MAILBOX_UNUSED
@@ -126,7 +132,7 @@ IpcNotify_MailboxConfig gIpcNotifyMailboxConfig[CSL_CORE_ID_MAX][CSL_CORE_ID_MAX
             MAILBOX_UNUSED
         },
         { /* to A53SS0_1 */
-            MAILBOX_UNUSED
+            0U, 6U, 1U
         },
         { /* to A53SS1_0 */
             MAILBOX_UNUSED
@@ -141,13 +147,13 @@ IpcNotify_MailboxConfig gIpcNotifyMailboxConfig[CSL_CORE_ID_MAX][CSL_CORE_ID_MAX
     /* from A53SS0_1 */
     {
         { /* to M4FSS */
-            MAILBOX_UNUSED
+            0U, 9U, 2U
         },
         { /* to R5FSS0-0 */
-            MAILBOX_UNUSED
+            0U, 11U, 1U
         },
         { /* to A53SS0_0 */
-            MAILBOX_UNUSED
+            0U, 7U, 0U
         },
         { /* to A53SS0_1 */
             MAILBOX_UNUSED
@@ -242,11 +248,11 @@ IpcNotify_InterruptConfig gIpcNotifyInterruptConfig_m4fss0_0[IPC_NOFTIY_INTERRUP
     {
         .intNum = 16U + 50U,   /* interrupt line on M4FSS CPU, +16 offset to account for M4 internal interrupts */
         .eventId = 0U,   /* not used */
-        .numCores = 2U,  /* number of cores that send messages which tied to this interrupt line */
+        .numCores = 3U,  /* number of cores that send messages which tied to this interrupt line */
         .coreIdList = { /* core ID's tied to this interrupt line */
             CSL_CORE_ID_A53SS0_0,
+            CSL_CORE_ID_A53SS0_1,
             CSL_CORE_ID_R5FSS0_0,
-            CSL_CORE_ID_INVALID,
             CSL_CORE_ID_INVALID,
             CSL_CORE_ID_INVALID,
             CSL_CORE_ID_INVALID,
@@ -257,17 +263,16 @@ IpcNotify_InterruptConfig gIpcNotifyInterruptConfig_m4fss0_0[IPC_NOFTIY_INTERRUP
 };
 uint32_t gIpcNotifyInterruptConfigNum_m4fss0_0 = IPC_NOFTIY_INTERRUPT_CONFIG_M4FSS_NUM;
 
-/* Interrupt config for A53SS0_0 */
 #define IPC_NOFTIY_INTERRUPT_CONFIG_A53SS0_0_NUM   (1u)
 IpcNotify_InterruptConfig gIpcNotifyInterruptConfig_a53ss0_0[IPC_NOFTIY_INTERRUPT_CONFIG_A53SS0_0_NUM] = {
     {
         .intNum = 108U,   /* interrupt line on A53SS0_0 CPU */
         .eventId = 0U,    /* not used */
-        .numCores = 2U,   /* number of cores that send messages which tied to this interrupt line */
+        .numCores = 3U,   /* number of cores that send messages which tied to this interrupt line */
         .coreIdList = {   /* core ID's tied to this interrupt line */
             CSL_CORE_ID_M4FSS0_0,
             CSL_CORE_ID_R5FSS0_0,
-            CSL_CORE_ID_INVALID,
+            CSL_CORE_ID_A53SS0_1,
             CSL_CORE_ID_INVALID,
             CSL_CORE_ID_INVALID,
             CSL_CORE_ID_INVALID,
@@ -277,17 +282,37 @@ IpcNotify_InterruptConfig gIpcNotifyInterruptConfig_a53ss0_0[IPC_NOFTIY_INTERRUP
 };
 uint32_t gIpcNotifyInterruptConfigNum_a53ss0_0 = IPC_NOFTIY_INTERRUPT_CONFIG_A53SS0_0_NUM;
 
+/* Interrupt config for A53SS0_1 */
+#define IPC_NOFTIY_INTERRUPT_CONFIG_A53SS0_1_NUM   (1u)
+IpcNotify_InterruptConfig gIpcNotifyInterruptConfig_a53ss0_1[IPC_NOFTIY_INTERRUPT_CONFIG_A53SS0_1_NUM] = {
+    {
+        .intNum = 109U,   /* interrupt line on A53SS0_1 CPU */
+        .eventId = 0U,    /* not used */
+        .numCores = 3U,   /* number of cores that send messages which tied to this interrupt line */
+        .coreIdList = {   /* core ID's tied to this interrupt line */
+            CSL_CORE_ID_M4FSS0_0,
+            CSL_CORE_ID_R5FSS0_0,
+            CSL_CORE_ID_A53SS0_0,
+            CSL_CORE_ID_INVALID,
+            CSL_CORE_ID_INVALID,
+            CSL_CORE_ID_INVALID,
+            CSL_CORE_ID_INVALID
+        },
+    },
+};
+uint32_t gIpcNotifyInterruptConfigNum_a53ss0_1 = IPC_NOFTIY_INTERRUPT_CONFIG_A53SS0_1_NUM;
+
 /* Interrupt config for A53SS0_0 */
 #define IPC_NOFTIY_INTERRUPT_CONFIG_R5FSS0_0_NUM   (1u)
 IpcNotify_InterruptConfig gIpcNotifyInterruptConfig_r5fss0_0[IPC_NOFTIY_INTERRUPT_CONFIG_R5FSS0_0_NUM] = {
     {
         .intNum = 254U,   /* interrupt line on R5FSS0_0 CPU */
         .eventId = 0U,    /* not used */
-        .numCores = 2U,   /* number of cores that send messages which tied to this interrupt line */
+        .numCores = 3U,   /* number of cores that send messages which tied to this interrupt line */
         .coreIdList = {   /* core ID's tied to this interrupt line */
             CSL_CORE_ID_M4FSS0_0,
             CSL_CORE_ID_A53SS0_0,
-            CSL_CORE_ID_INVALID,
+            CSL_CORE_ID_A53SS0_1,
             CSL_CORE_ID_INVALID,
             CSL_CORE_ID_INVALID,
             CSL_CORE_ID_INVALID,

@@ -9,7 +9,7 @@
  *
  *  \par
  *  ============================================================================
- *  @n   (C) Copyright 2017, Texas Instruments, Inc.
+ *  @n   (C) Copyright 2024, Texas Instruments, Inc.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions

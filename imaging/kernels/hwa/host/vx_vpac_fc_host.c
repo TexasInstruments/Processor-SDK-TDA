@@ -605,7 +605,7 @@ static vx_status VX_CALLBACK tivxAddKernelVpacFcValidate(vx_node node,
 
         for (vx_uint32 i = 0U; i <= 9U; i++)
         {
-            vx_image msc_out = NULL;
+            vx_image msc_out;
             vx_df_image msc_out_fmt;
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
@@ -640,6 +640,7 @@ static vx_status VX_CALLBACK tivxAddKernelVpacFcValidate(vx_node node,
                 <justification end> */
                 default:
                     /* Should not reach here since loop goes from 0 to 9 */
+                    msc_out = NULL;
                     break;
                 /* LDRA_JUSTIFY_END */
             }
@@ -698,8 +699,8 @@ static vx_status VX_CALLBACK tivxAddKernelVpacFcValidate(vx_node node,
 
             for (vx_uint32 i = 1U; i <= 9U; i++)
             {
-                vx_image msc_out = NULL;
-                vx_df_image msc_out_fmt = (vx_df_image)VX_DF_IMAGE_VIRT;
+                vx_image msc_out;
+                vx_df_image msc_out_fmt;
                 /* LDRA_JUSTIFY_START
                 <metric start> branch <metric end>
                 <justification start>
@@ -731,6 +732,8 @@ static vx_status VX_CALLBACK tivxAddKernelVpacFcValidate(vx_node node,
                 <justification end> */
                 default:
                     /* Should not reach here since loop goes from 1 to 9 */
+                    msc_out = NULL;
+                    msc_out_fmt = (vx_df_image)VX_DF_IMAGE_VIRT;
                     break;
                 /* LDRA_JUSTIFY_END */
                 }
@@ -763,9 +766,9 @@ static vx_status VX_CALLBACK tivxAddKernelVpacFcValidate(vx_node node,
             /*  Verify mapping of msc_out with msc_out_msc_in_map for condition 1 */
             for (vx_uint32 i = 0U; i <= 9U; i += 2U)
             {
-                vx_image msc_out = NULL;
-                vx_image msc_out_next = NULL;
-                vx_df_image msc_out_fmt = (vx_df_image)VX_DF_IMAGE_VIRT;
+                vx_image msc_out;
+                vx_image msc_out_next;
+                vx_df_image msc_out_fmt;
                 /* LDRA_JUSTIFY_START
                 <metric start> branch <metric end>
                 <justification start>
@@ -785,6 +788,9 @@ static vx_status VX_CALLBACK tivxAddKernelVpacFcValidate(vx_node node,
                 case 8U: msc_out = msc_out8; msc_out_next = msc_out9; break;
                 default:
                     /* Should not reach here since loop goes from 0 to 8 in steps of 2 */
+                    msc_out = NULL;
+                    msc_out_next = NULL;
+                    msc_out_fmt = (vx_df_image)VX_DF_IMAGE_VIRT;
                     break;
                 }
 
@@ -918,7 +924,7 @@ static vx_status VX_CALLBACK tivxAddKernelVpacFcValidate(vx_node node,
         {
             for (vx_uint32 i = 0U; i <= 9U; i++)
             {
-            vx_image msc_out = NULL;
+            vx_image msc_out;
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
             <justification start>
@@ -1466,7 +1472,6 @@ vx_status tivxAddKernelVpacFc(vx_context context)
                         (vx_enum)VX_TYPE_IMAGE,
                         (vx_enum)VX_PARAMETER_STATE_OPTIONAL
             );
-            param_idx++;
         }
         if ((vx_status)VX_SUCCESS == status)
         {

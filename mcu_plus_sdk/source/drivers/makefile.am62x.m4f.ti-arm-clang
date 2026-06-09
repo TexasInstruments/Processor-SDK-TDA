@@ -20,7 +20,10 @@ FILES_common := \
     csl_sec_proxy.c \
     ddr.c \
     ddr_soc.c \
+    epwm.c \
     i2c_v0.c \
+    i2c_v0_lld.c \
+    i2c_soc.c \
     gpio.c \
     pinmux.c \
     mcspi_v0.c \
@@ -32,6 +35,7 @@ FILES_common := \
     ipc_rpmsg_vring.c \
     mcan.c \
     sciclient.c \
+    sciclient_lpm.c \
     sciclient_pm.c \
     sciclient_rm.c \
     sciclient_rm_irq.c \
@@ -39,7 +43,6 @@ FILES_common := \
     sciclient_firewall.c \
     sciclient_irq_rm.c \
     sciclient_fmwSecureProxyMap.c \
-    sciclient_boardcfg.c \
     sciclient_soc_priv.c \
     soc.c \
     uart_v0.c \
@@ -48,9 +51,12 @@ FILES_common := \
 
 FILES_PATH_common = \
     i2c/v0 \
+    i2c/v0/lld \
+    i2c/v0/soc/am62x \
     pinmux/am62x \
     mcan/v0 \
     ipc_notify/v0 \
+    epwm/v0 \
     gpio/v0 \
     mcspi/v0 \
     mcspi/v0/dma \
@@ -67,43 +73,43 @@ FILES_PATH_common = \
     bootloader \
     bootloader/soc/am62x \
     ddr/v0 \
-    ddr/v0/cdn_drv/ \
-    ddr/v0/cdn_drv/priv \
-    ddr/v0/cdn_drv/include \
-    ddr/v0/cdn_drv/include/16bit \
-    ddr/v0/cdn_drv/include/32bit \
-    ddr/v0/cdn_drv/include/common \
-    ddr/v0/cdn_drv/src \
+    ddr/cdn_drv/ \
+    ddr/cdn_drv/common/include \
+    ddr/cdn_drv/v0/include \
+    ddr/cdn_drv/common \
+    ddr/cdn_drv/v0 \
+    ddr \
     ddr/v0/soc/am62x \
     mmcsd \
-    mmcsd/v1 \
+    mmcsd/v0 \
+    mmcsd/soc \
+    mmcsd/soc/am62x \
     ospi \
     ospi/v0 \
     ospi/v0/dma \
     ospi/v0/dma/udma \
+    ospi/v0/ospi_tuning/ospi_tuning_algo/algo_v1 \
+    pmu \
+    qos \
+    qos/v0 \
     uart/v0 \
     uart/v0/dma \
-    udma \
-    udma/soc \
-    udma/hw_include \
-    udma/soc/am62x \
+    udma/v0 \
+    udma/v0/hw_include \
+    udma/v0/soc \
+    udma/v0/soc/am62x \
+    rtc \
+    rtc/v0 \
+    rtc/v0/soc/am62x \
     soc/am62x \
+    spinlock/v0 \
     elm/v0 \
     gpmc/v0 \
     gpmc/v0/dma \
     gpmc/v0/dma/udma \
     utils \
-    dss \
-    dss/v0 \
-    dss/v0/common \
-    dss/v0/dctrl \
-    dss/v0/disp \
-    dss/v0/hw_include \
-    dss/v0/hw_include/V3 \
-    dss/v0/include \
-    dss/v0/soc \
-    dss/v0/soc/am62x \
-    fvid2/v0 \
+    watchdog/v1 \
+    watchdog/v1/soc/am62x \
 
 INCLUDES_common := \
     -I${CG_TOOL_ROOT}/include/c \
@@ -111,6 +117,7 @@ INCLUDES_common := \
 
 DEFINES_common := \
     -DSOC_AM62X \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mcpu=cortex-m4 \

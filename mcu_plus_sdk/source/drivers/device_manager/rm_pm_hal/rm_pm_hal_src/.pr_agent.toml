@@ -1,0 +1,10 @@
+[config]
+pr_commands = [
+    "/review",
+    "/improve --pr_code_suggestions.commitable_code_suggestions=true --pr_code_suggestions.suggestions_score_threshold=7"
+]
+push_commands = [
+    "/describe",
+    "/review"
+]
+handle_push_trigger = true

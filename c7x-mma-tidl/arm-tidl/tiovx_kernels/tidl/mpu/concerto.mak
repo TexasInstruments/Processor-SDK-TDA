@@ -1,16 +1,18 @@
-ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), X86 x86_64 A15 M4 A72 A53 R5F))
+ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), X86 x86_64 A15 M4 A72 A53 R5F A720))
 
 include $(PRELUDE)
 TARGET      := vx_nested_kernels_tidl
 TARGETTYPE  := library
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J784S4 j784s4 J722S j722s J742S2 j742s2))
 CSOURCES    := $(call all-c-files)
+endif
 IDIRS       += $(TIOVX_PATH)/kernels/ivision/include
 IDIRS       += $(TIOVX_PATH)/kernels/include
 IDIRS       += $(TIOVX_PATH)/include
 IDIRS       += $(TIDL_TIOVX_KERNELS_PATH)/tidl/include
 IDIRS       += $(TIDL_TIOVX_KERNELS_PATH)/include
 IDIRS       += $(IVISION_PATH)
-IDIRS       += $(TIDL_PATH)/arm-tidl/rt/inc
+IDIRS       += $(TIDL_RT_PATH)/inc
 IDIRS       += $(VXLIB_PATH)/packages
 IDIRS       += $(APP_UTILS_PATH)/utils/file_io/include
 

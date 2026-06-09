@@ -1,7 +1,9 @@
-
 /*
- * FreeRTOS Kernel V10.4.3
- * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel V11.1.0
+ * Copyright (C) 2015-2019 Cadence Design Systems, Inc.
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -11,8 +13,7 @@
  * subject to the following conditions:
  *
  * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software. If you wish to use our Amazon
- * FreeRTOS name, please do so in a fair use way that does not cause confusion.
+ * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -24,30 +25,6 @@
  * https://www.FreeRTOS.org
  * https://github.com/FreeRTOS
  *
- * 1 tab == 4 spaces!
- */
-
-/*
- * Copyright (c) 2015-2019 Cadence Design Systems, Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #include <stdlib.h>
@@ -81,7 +58,7 @@ unsigned port_interruptNesting = 0;  // Interrupt nesting level
 // User exception dispatcher when exiting
 void _xt_user_exit(void);
 
-/* 
+/*
  * Stack initialization
  */
 #if portUSING_MPU_WRAPPERS
@@ -90,7 +67,8 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
 StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t pxCode, void *pvParameters )
 #endif
 {
-    StackType_t * sp, * tp;
+    StackType_t * sp;
+    StackType_t * tp;
     XtExcFrame * frame;
 
     #if XCHAL_CP_NUM > 0
@@ -150,61 +128,61 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
 
 void vPortEndScheduler( void )
 {
-	/* It is unlikely that the Xtensa port will get stopped.  If required simply
-	disable the tick interrupt here. */
+    /* It is unlikely that the Xtensa port will get stopped.  If required simply
+    disable the tick interrupt here. */
 }
 
 /*-----------------------------------------------------------*/
 
 BaseType_t xPortStartScheduler( void )
 {
-	// Interrupts are disabled at this point and stack contains PS with enabled interrupts when task context is restored
+    // Interrupts are disabled at this point and stack contains PS with enabled interrupts when task context is restored
 
-	#if XCHAL_CP_NUM > 0
-	/* Initialize co-processor management for tasks. Leave CPENABLE alone. */
-	_xt_coproc_init();
-	#endif
+    #if XCHAL_CP_NUM > 0
+    /* Initialize co-processor management for tasks. Leave CPENABLE alone. */
+    _xt_coproc_init();
+    #endif
 
-	/* Init the tick divisor value */
-	_xt_tick_divisor_init();
+    /* Init the tick divisor value */
+    _xt_tick_divisor_init();
 
-	/* Setup the hardware to generate the tick. */
-	_frxt_tick_timer_init();
+    /* Setup the hardware to generate the tick. */
+    _frxt_tick_timer_init();
 
-	#if XT_USE_THREAD_SAFE_CLIB
-	// Init C library
-	vPortClibInit();
-	#endif
+    #if XT_USE_THREAD_SAFE_CLIB
+    // Init C library
+    vPortClibInit();
+    #endif
 
-	port_xSchedulerRunning = 1;
+    port_xSchedulerRunning = 1;
 
-	// Cannot be directly called from C; never returns
-	__asm__ volatile ("call0    _frxt_dispatch\n");
+    // Cannot be directly called from C; never returns
+    __asm__ volatile ("call0    _frxt_dispatch\n");
 
-	/* Should not get here. */
-	return pdTRUE;
+    /* Should not get here. */
+    return pdTRUE;
 }
 /*-----------------------------------------------------------*/
 
 BaseType_t xPortSysTickHandler( void )
 {
-	BaseType_t ret;
-	uint32_t interruptMask;
+    BaseType_t ret;
+    uint32_t interruptMask;
 
-	portbenchmarkIntLatency();
+    portbenchmarkIntLatency();
 
-	/* Interrupts upto configMAX_SYSCALL_INTERRUPT_PRIORITY must be
-	 * disabled before calling xTaskIncrementTick as it access the
-	 * kernel lists. */
-	interruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
-	{
-		ret = xTaskIncrementTick();
-	}
-	portCLEAR_INTERRUPT_MASK_FROM_ISR( interruptMask );
+    /* Interrupts upto configMAX_SYSCALL_INTERRUPT_PRIORITY must be
+     * disabled before calling xTaskIncrementTick as it access the
+     * kernel lists. */
+    interruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
+    {
+        ret = xTaskIncrementTick();
+    }
+    portCLEAR_INTERRUPT_MASK_FROM_ISR( interruptMask );
 
-	portYIELD_FROM_ISR( ret );
+    portYIELD_FROM_ISR( ret );
 
-	return ret;
+    return ret;
 }
 /*-----------------------------------------------------------*/
 
@@ -212,19 +190,20 @@ BaseType_t xPortSysTickHandler( void )
  * Used to set coprocessor area in stack. Current hack is to reuse MPU pointer for coprocessor area.
  */
 #if portUSING_MPU_WRAPPERS
-void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
-                                const struct xMEMORY_REGION * const xRegions,
-                                StackType_t * pxBottomOfStack,
-                                uint32_t ulStackDepth )
-{
-    #if XCHAL_CP_NUM > 0
-        xMPUSettings->coproc_area = ( StackType_t * ) ( ( uint32_t ) ( pxBottomOfStack + ulStackDepth - 1 ));
-        xMPUSettings->coproc_area = ( StackType_t * ) ( ( ( portPOINTER_SIZE_TYPE ) xMPUSettings->coproc_area ) & ( ~( ( portPOINTER_SIZE_TYPE ) portBYTE_ALIGNMENT_MASK ) ) );
-        xMPUSettings->coproc_area = ( StackType_t * ) ( ( ( uint32_t ) xMPUSettings->coproc_area - XT_CP_SIZE ) & ~0xf );
 
-        /* NOTE: we cannot initialize the coprocessor save area here because FreeRTOS is going to
-         * clear the stack area after we return. This is done in pxPortInitialiseStack().
-         */
-    #endif
-}
+    void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
+                                    const struct xMEMORY_REGION * const xRegions,
+                                    StackType_t * pxBottomOfStack,
+                                    configSTACK_DEPTH_TYPE uxStackDepth )
+    {
+        #if XCHAL_CP_NUM > 0
+            xMPUSettings->coproc_area = ( StackType_t * ) ( ( uint32_t ) ( pxBottomOfStack + uxStackDepth - 1 ) );
+            xMPUSettings->coproc_area = ( StackType_t * ) ( ( ( portPOINTER_SIZE_TYPE ) xMPUSettings->coproc_area ) & ( ~( ( portPOINTER_SIZE_TYPE ) portBYTE_ALIGNMENT_MASK ) ) );
+            xMPUSettings->coproc_area = ( StackType_t * ) ( ( ( uint32_t ) xMPUSettings->coproc_area - XT_CP_SIZE ) & ~0xf );
+
+            /* NOTE: we cannot initialize the coprocessor save area here because FreeRTOS is going to
+             * clear the stack area after we return. This is done in pxPortInitialiseStack().
+             */
+        #endif
+    }
 #endif /* if portUSING_MPU_WRAPPERS */

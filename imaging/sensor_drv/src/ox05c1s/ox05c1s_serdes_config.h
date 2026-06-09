@@ -59,11 +59,11 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#ifndef _OX05C1S_SERDES_H_
-#define _OX05C1S_SERDES_H_
+#ifndef OX05C1S_SERDES_H
+#define OX05C1S_SERDES_H
 
-#define OX05C1S_SEN_I2C_ADDR (0x6C)   /* 8-bit address */
-#define OX05C1S_SER_I2C_ADDR (0x30)   /* 8-bit address */
+#define OX05C1S_SEN_I2C_ADDR (0x6CU)   /* 8-bit address */
+#define OX05C1S_SER_I2C_ADDR (0x30U)   /* 8-bit address */
 
 //Gang_TODO: check this with Brandon
 I2cParams SerCfg_OX05C1S[] = {
@@ -81,6 +81,6 @@ I2cParams SerCfg_OX05C1S[] = {
     {0xFFFF, 0x00, 0x0} /* End of script */
 };
 
-#endif /* _OX05C1S_SERDES_H_ */
+#endif /* OX05C1S_SERDES_H */
 
 

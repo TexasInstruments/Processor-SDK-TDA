@@ -1,8 +1,9 @@
 /**
  * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
  * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
- * @cliArgs --device "J722S_TDA4VEN_TDA4AEN_AM67" --package "AMW" --part "Default" --context "wkup-r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
- * @versions {"tool":"1.20.0+3587"}
+ * @cliArgs --device "J722S_TDA4VEN_TDA4AEN_AM67" --part "Default" --package "AMW" --context "wkup-r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
+ * @v2CliArgs --device "TDA4VEN-Q1" --package "FCBGA (AMW)" --context "wkup-r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
+ * @versions {"tool":"1.26.2+4477"}
  */
 
 /**
@@ -10,13 +11,12 @@
  */
 const bootloader  = scripting.addModule("/drivers/bootloader/bootloader", {}, false);
 const bootloader1 = bootloader.addInstance();
+const bootloader2 = bootloader.addInstance();
 const ddr         = scripting.addModule("/drivers/ddr/ddr", {}, false);
 const ddr1        = ddr.addInstance();
 const gtc         = scripting.addModule("/drivers/gtc/gtc");
 const mmcsd       = scripting.addModule("/drivers/mmcsd/mmcsd", {}, false);
 const mmcsd1      = mmcsd.addInstance();
-const qos         = scripting.addModule("/drivers/qos/qos", {}, false);
-const qos1        = qos.addInstance();
 const clock       = scripting.addModule("/kernel/dpl/clock");
 const debug_log   = scripting.addModule("/kernel/dpl/debug_log");
 const mpu_armv7   = scripting.addModule("/kernel/dpl/mpu_armv7", {}, false);
@@ -41,16 +41,29 @@ const mpu_armv715 = mpu_armv7.addInstance();
  */
 bootloader1.$name              = "CONFIG_BOOTLOADER_APP";
 bootloader1.bootMedia          = "EMMC";
-bootloader1.EMMCAppImageOffset = "0x80000";
+bootloader1.EMMCAppImageOffset = "0xC0000";
 
-ddr1.$name             = "CONFIG_DDR0";
-ddr1.skipDeinitFromSbl = true;
+bootloader2.$name              = "CONFIG_BOOTLOADER_HSM";
+bootloader2.bootMedia          = "EMMC";
+bootloader2.EMMCAppImageOffset = "0x80000";
 
-mmcsd1.$name            = "CONFIG_MMCSD0";
+ddr1.$name = "CONFIG_DDR0";
+
 bootloader1.MMCSDDriver = mmcsd1;
-mmcsd1.modeSelectEMMC   = "HS400";
+bootloader2.MMCSDDriver = mmcsd1;
+mmcsd1.$name            = "CONFIG_MMCSD0";
 
-qos1.$name = "CONFIG_QOS0";
+const udma             = scripting.addModule("/drivers/udma/udma", {}, false);
+const udma1            = udma.addInstance({}, false);
+udma1.$name            = "CONFIG_UDMA0";
+bootloader1.udmaDriver = udma1;
+bootloader2.udmaDriver = udma1;
+
+const udma_blkcopy_channel     = scripting.addModule("/drivers/udma/udma_blkcopy_channel", {}, false);
+const udma_blkcopy_channel1    = udma_blkcopy_channel.addInstance({}, false);
+udma_blkcopy_channel1.$name    = "CONFIG_UDMA_BLKCOPY_CH0";
+bootloader1.udmaBlkCopyChannel = udma_blkcopy_channel1;
+bootloader2.udmaBlkCopyChannel = udma_blkcopy_channel1;
 
 debug_log.enableCssLog              = false;
 debug_log.enableUartLog             = true;

@@ -40,7 +40,7 @@
 
 #if defined (SOC_AM62X)
 #define RESET_REQ_INTR_NUM (CSLR_MCU_M4FSS0_CORE0_NVIC_GLUELOGIC_MAINRESET_REQUEST_GLUE_MAIN_RESETZ_SYNC_STRETCH_0 + 16U)
-#elif defined (SOC_AM62AX) || defined (SOC_AM62PX)
+#elif defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_AM62DX)
 #define RESET_REQ_INTR_NUM (CSLR_MCU_R5FSS0_CORE0_CPU0_INTR_GLUELOGIC_MAINRESET_REQUEST_GLUE_MAIN_RESETZ_SYNC_STRETCH_0)
 #endif
 void resetReqIsr(void *args)
@@ -63,7 +63,7 @@ void resetReqIsr(void *args)
 
     if (status == SystemP_SUCCESS)
     {
-#if defined(SOX_AM62X)
+#if defined(SOC_AM62X)
         /* Disable LPSC MCU2Main */
         status = SOC_getPSCState(SOC_PSC_DOMAIN_ID_MCU, CSL_WKUP_GP_CORE_CTL_MCU,
                 CSL_WKUP_LPSC_MCU2MAIN_ISO, &pscDomainState, &pscModuleStateMCU2Main);
@@ -73,7 +73,7 @@ void resetReqIsr(void *args)
             status = SOC_setPSCState(SOC_PSC_DOMAIN_ID_MCU, CSL_WKUP_GP_CORE_CTL_MCU, \
                             CSL_WKUP_LPSC_MCU2MAIN_ISO, SOC_PSC_DISABLE);
         }
-#elif defined (SOX_AM62AX) || defined (SOC_AM62PX)
+#elif defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_AM62DX)
         /* Disable LPSC DM2MCU */
         status = SOC_getPSCState(SOC_PSC_DOMAIN_ID_MCU, CSL_WKUP_GP_CORE_CTL_MCU,
                 CSL_WKUP_LPSC_DM2MCU_ISO, &pscDomainState, &pscModuleStateMCU2Main);
@@ -108,21 +108,28 @@ void resetReqIsr(void *args)
                         CSL_WKUP_LPSC_MAIN2MCU_ISO, pscModuleStateMain2MCU);
     }
 
+
+#if defined (SOC_AM62X)
     /* Restore back previous state of LSPC MCU2Main */
-    if (((status == SystemP_SUCCESS)) && (pscModuleStateMCU2Main != SOC_PSC_DISABLE))
+    if ((status == SystemP_SUCCESS) && (pscModuleStateMCU2Main != SOC_PSC_DISABLE))
     {
         SOC_setPSCState(SOC_PSC_DOMAIN_ID_MCU, CSL_WKUP_GP_CORE_CTL_MCU, \
-                        CSL_WKUP_LPSC_MAIN2MCU_ISO, pscModuleStateMCU2Main);
+                        CSL_WKUP_LPSC_MCU2MAIN_ISO, pscModuleStateMCU2Main);
     }
+#elif defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_AM62DX)
+    /* Restore back previous state of LSPC DM2MCU */
+    if ((status == SystemP_SUCCESS) && (pscModuleStateMCU2Main != SOC_PSC_DISABLE))
+    {
+        SOC_setPSCState(SOC_PSC_DOMAIN_ID_MCU, CSL_WKUP_GP_CORE_CTL_MCU, \
+                        CSL_WKUP_LPSC_DM2MCU_ISO, pscModuleStateMCU2Main);
+    }
+#endif
 }
 
 void reset_isolation_main (void * args)
 {
     int32_t status = SystemP_FAILURE;
     uint32_t pscMain2MCUDisable, pscMCU2MainDisable, debugIsolationEnable, psMCU2DMDisable;
-
-    Drivers_open();
-    Board_driversOpen();
 
     /* Disabling Main2MCU PSC. This would restrict the main domain from accessing
     MCU domain peripherals/registers. Care must be taken no Main domain cores access
@@ -169,6 +176,4 @@ void reset_isolation_main (void * args)
 
     DebugP_log("All tests have passed!!\r\n");
 
-    Board_driversClose();
-    Drivers_close();
 }

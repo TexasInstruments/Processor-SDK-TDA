@@ -1,5 +1,5 @@
 /*
- * Data version: 250905_121741
+ * Data version: 251105_135430
  *
  * Copyright (C) 2017-2025 Texas Instruments Incorporated - http://www.ti.com/
  * ALL RIGHTS RESERVED
@@ -193,5 +193,6 @@
 #define AM275X_DEV_MCASP2_LOCAL_AUXCLK_SEL_DEV_VD 337U
 #define AM275X_DEV_MCASP3_LOCAL_AUXCLK_SEL_DEV_VD 338U
 #define AM275X_DEV_MCASP4_LOCAL_AUXCLK_SEL_DEV_VD 339U
+#define AM275X_DEV_WKUP_PSRAMECC_RET0 340U
 
 #endif /* SOC_AM275X_DEVICES_H */

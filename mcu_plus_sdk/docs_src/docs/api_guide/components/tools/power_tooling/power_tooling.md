@@ -1,0 +1,8 @@
+# Power Tooling
+\cond SOC_J722S
+-# \subpage INTRODUCTION
+-# \subpage JTAG_POWER_ANALYSIS_USERGUIDE
+-# \subpage DM_POWER_CONFIG_USERGUIDE
+-# \subpage DM_POWER_ANALYSIS_TOOL
+-# \subpage POWER_TOOLING_DEV_NOTES
+\endcond

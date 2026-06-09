@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -69,17 +69,24 @@
 #define PING_TASK_PRI  (2u)
 #define PONG_TASK_PRI  (3u)
 
-
-#if (defined (SOC_AM62AX) || defined (SOC_J722S))
+#if defined (SOC_AM62AX) || defined (SOC_AM62DX) || defined (SOC_AM275X) || defined (SOC_J722S)
+#if defined(__C7504__) || defined(__C7524__)
+#define PING_TASK_SIZE (1024*64u)
+#else
 #define PING_TASK_SIZE (4096u)
+#endif
 #else
 #define PING_TASK_SIZE (1024u)
 #endif
 
 StackType_t gPingTaskStack[PING_TASK_SIZE] __attribute__((aligned(32)));
 
-#if (defined (SOC_AM62AX) || defined (SOC_J722S))
+#if defined (SOC_AM62AX) || defined (SOC_AM62DX)|| defined (SOC_AM275X) || defined (SOC_J722S)
+#if defined(__C7504__) || defined(__C7524__)
+#define PONG_TASK_SIZE (1024*64u)
+#else
 #define PONG_TASK_SIZE (4096u)
+#endif
 #else
 #define PONG_TASK_SIZE (1024u)
 #endif
@@ -120,7 +127,11 @@ void ping_main(void *args)
     uint64_t curTime;
 
     DebugP_log("\r\n");
-    DebugP_log("[FreeRTOS] ping task ... start !!!\r\n");
+    #if defined(AMP_FREERTOS_A53)
+    DebugP_log("[FreeRTOS] ping task ... start on a53_core%d !!!\r\n", Armv8_getCoreId());
+    #else
+    DebugP_log("[FreeRTOS] ping task ... start!!!\r\n");
+    #endif
     { /* switch between ping and pong tasks using semaphores */
         count = NUM_TASK_SWITCHES;
         curTime = ClockP_getTimeUsec();
@@ -182,9 +193,17 @@ void ping_main(void *args)
     vTaskDelay( ClockP_usecToTicks(101*1000) );
 
     DebugP_log("\r\n");
+    #if defined(AMP_FREERTOS_A53)
+    DebugP_log("[FreeRTOS] ping task ... done on a53_core%d !!!\r\n", Armv8_getCoreId());
+    #else
     DebugP_log("[FreeRTOS] ping task ... done !!!\r\n");
+    #endif
     DebugP_log("\r\n");
+    #if defined(AMP_FREERTOS_A53)
+    DebugP_log("All tests have passed on a53_core%d !!!\r\n", Armv8_getCoreId());
+    #else
     DebugP_log("All tests have passed!!\r\n");
+    #endif
 
     /* One MUST not return out of a FreeRTOS task instead one MUST call vTaskDelete */
     vTaskDelete(NULL);
@@ -229,10 +248,6 @@ void pong_main(void *args)
 
 void task_switch_main(void *args)
 {
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
-
     /* first create the semaphores */
     gPingSem = xSemaphoreCreateBinaryStatic(&gPingSemObj);
     configASSERT(gPingSem != NULL);
@@ -261,7 +276,6 @@ void task_switch_main(void *args)
                                   &gPingTaskObj ); /* pointer to statically allocated task object memory */
     configASSERT(gPingTask != NULL);
 
-    Board_driversClose();
-    /* Dont close drivers to keep the UART driver open for console */
-    /* Drivers_close(); */
+    vTaskDelay(60000);
+
 }

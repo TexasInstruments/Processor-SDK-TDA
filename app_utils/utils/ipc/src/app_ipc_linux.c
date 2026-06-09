@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017-2025 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -225,6 +225,48 @@ static const char *g_app_cpu_id_name[APP_IPC_CPU_MAX] =
     "c7x_1",
     "c7x_2",
     "mcu_r5"
+};
+#endif
+
+#if defined (SOC_TDA54)
+static uint32_t g_app_to_ipc_cpu_id[APP_IPC_CPU_MAX] =
+{
+    (uint32_t)(-1),
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+};
+
+static const char *g_app_cpu_id_name[APP_IPC_CPU_MAX] =
+{
+    "mpu1_0",
+    "mcu0",
+    "mcu1",
+    "mcu2",
+    "mcu3",
+    "mcu4",
+    "rmcu0_0",
+    "rmcu0_1",
+    "rmcu1_0",
+    "rmcu1_1",
+    "rmcu2_0",
+    "rmcu2_1",
+    "c7x_1",
+    "c7x_2",
+    "c7x_3",
+    "c7x_4",
 };
 #endif
 

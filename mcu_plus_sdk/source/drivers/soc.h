@@ -65,12 +65,24 @@ extern "C"
 #include <drivers/soc/am62ax/soc.h>
 #endif
 
+#if defined (SOC_AM62DX)
+#include <drivers/soc/am62dx/soc.h>
+#endif
+
 #if defined (SOC_AM62PX)
 #include <drivers/soc/am62px/soc.h>
 #endif
 
+#if defined (SOC_AM275X)
+#include <drivers/soc/am275x/soc.h>
+#endif
+
 #if defined (SOC_J722S)
 #include <drivers/soc/j722s/soc.h>
+#endif
+
+#if defined (SOC_AM62LX)
+#include <drivers/soc/am62lx/soc.h>
 #endif
 
 #ifdef __cplusplus

@@ -55,6 +55,7 @@ CFLAGS_common := \
     --diag_suppress=770 \
     --diag_suppress=69 \
     --diag_suppress=70 \
+    -DBUILD_C7X \
     --advice:performance=none \
 
 CFLAGS_debug := \

@@ -83,7 +83,7 @@
 #include <utils/hwa/include/app_hwa.h>
 #endif
 
-#if defined(ENABLE_I2C) && defined(ENABLE_CSI2RX)
+#if (defined(ENABLE_I2C) && defined(ENABLE_CSI2RX)) || defined(ENABLE_AEWB_KERNELS)
 #include <utils/sensors/include/app_sensors.h>
 #include <utils/iss/include/app_iss.h>
 #endif
@@ -117,8 +117,10 @@
 /* Imaging header files */
 #if defined(ENABLE_TIOVX)
 
-#if (defined(ENABLE_VHWA_VPAC0) || defined(ENABLE_VHWA_VPAC1))
+#if defined(ENABLE_AEWB_KERNELS)
 #include <TI/j7_imaging_aewb.h>
+#endif
+#if (defined(ENABLE_VHWA_VPAC0) || defined(ENABLE_VHWA_VPAC1))
 #include <TI/hwa_vpac_viss.h>
 #include <TI/hwa_vpac_ldc.h>
 #include <TI/hwa_vpac_msc.h>
@@ -401,7 +403,7 @@ int32_t appInit()
         ipc_init_prm.enable_tiovx_ipc_announce = 0;
     }
     ipc_init_prm.num_cpus = 0;
-    #ifdef ENABLE_IPC_MPU1_0
+    #ifdef ENABLE_IPC_MPU1
     ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_MPU1_0;
     ipc_init_prm.num_cpus++;
     log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_MPU1_0] = 1;
@@ -893,7 +895,7 @@ int32_t appInit()
     APP_ASSERT_SUCCESS(status);
     #endif
 
-    #if defined(ENABLE_I2C) && defined(ENABLE_CSI2RX)
+    #if (defined(ENABLE_I2C) && defined(ENABLE_CSI2RX)) || defined(ENABLE_AEWB_KERNELS)
     status = appIssInit();
     APP_ASSERT_SUCCESS(status);
 
@@ -1064,6 +1066,7 @@ static void appRegisterOpenVXTargetKernels()
         #endif
         #ifdef CPU_c7x_1
         tivxRegisterImgProcTargetC71Kernels();
+        tivxRegisterImgProcTargetC66Kernels();
         #endif
         #ifdef CPU_c7x_2
         tivxRegisterStereoTargetKernels();
@@ -1075,7 +1078,7 @@ static void appRegisterOpenVXTargetKernels()
         #if defined(ENABLE_VHWA_VPAC0) || defined(ENABLE_VHWA_VPAC1)
         tivxRegisterImgProcTargetR5FKernels();
         #endif
-        #if defined(ENABLE_VHWA_VPAC0) || defined(ENABLE_VHWA_VPAC1)
+        #ifdef ENABLE_AEWB_KERNELS
         tivxRegisterImagingTargetAewbKernels();
         #endif
     appLogPrintf("APP: OpenVX Target kernel init ... Done !!!\n");
@@ -1122,6 +1125,7 @@ static void appUnRegisterOpenVXTargetKernels()
         #endif
         #ifdef CPU_c7x_1
         tivxUnRegisterImgProcTargetC71Kernels();
+        tivxUnRegisterImgProcTargetC66Kernels();
         #endif
         #ifdef CPU_c7x_2
         tivxUnRegisterStereoTargetKernels();
@@ -1133,7 +1137,7 @@ static void appUnRegisterOpenVXTargetKernels()
         #if defined(ENABLE_VHWA_VPAC0) || defined(ENABLE_VHWA_VPAC1)
         tivxUnRegisterImgProcTargetR5FKernels();
         #endif
-        #if defined(ENABLE_VHWA_VPAC0) || defined(ENABLE_VHWA_VPAC1)
+        #ifdef ENABLE_AEWB_KERNELS
         tivxUnRegisterImagingTargetAewbKernels();
         #endif
     appLogPrintf("APP: OpenVX Target kernel deinit ... Done !!!\n");

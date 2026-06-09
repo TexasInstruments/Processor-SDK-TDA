@@ -445,7 +445,7 @@ extern "C" {
 
 #define CSL_HTS_NUM_NF_CONSUMERS                 (1U)
 #define CSL_HTS_NUM_NF_PRODUCERS                 (1U)
-#define CSL_HTS_NUM_NF_PA_PRODUCERS              (0U)
+#define CSL_HTS_NUM_NF_PA_PRODUCERS              (1U)
 
 #define CSL_HTS_NUM_NF_PIPELINE                  (1U)
 #define CSL_HTS_NUM_NF_SCHEDULERS                (1U)

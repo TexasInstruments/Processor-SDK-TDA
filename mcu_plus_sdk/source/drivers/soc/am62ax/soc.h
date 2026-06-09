@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2022-2023 Texas Instruments Incorporated
+ *  Copyright (C) 2022-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -54,7 +54,6 @@ extern "C"
 #else
 #include <drivers/sciclient.h>
 #endif
-
 /**
  *  \anchor SOC_DomainId_t
  *  \name SOC Domain ID
@@ -102,6 +101,20 @@ extern "C"
 #define SOC_BOOTMODE_MMCSD      (0X36C3)
 
 /**
+ * \brief IO Drive Strength Register offsets
+ */
+#define SOC_H_IO_DRVSTRNGTH0    (0x40C0U)
+#define SOC_H_IO_DRVSTRNGTH1    (0x40C4U)
+#define SOC_V_IO_DRVSTRNGTH0    (0x40D0U)
+#define SOC_V_IO_DRVSTRNGTH1    (0x40D4U)
+
+/**
+ * \brief IO Drive Strength field definitions
+ */
+#define SOC_IO_DRVSTRNGTH_MASK  CSL_MCU_CTRL_MMR_CFG0_H_IO_DRVSTRNGTH0_DRV_STR_MASK
+#define SOC_IO_DRVSTRNGTH_MAX   CSL_MCU_CTRL_MMR_CFG0_H_IO_DRVSTRNGTH0_DRV_STR_MAX
+
+/**
  * \brief Enable clock to specified module
  *
  * \param moduleId [in] see \ref tisci_devices for list of device ID's
@@ -111,6 +124,19 @@ extern "C"
  * \return SystemP_FAILURE Module clock could not be enabled
  */
 int32_t SOC_moduleClockEnable(uint32_t moduleId, uint32_t enable);
+
+/**
+ * \brief Set module clock to specified frequency and with a specific parent
+ *
+ * \param moduleId [in] see \ref tisci_devices for list of module ID's
+ * \param clkId [in] see \ref tisci_clocks for list of clocks associated with the specified module ID
+ * \param clkParent [in] see \ref tisci_clocks for list of clock parents associated with the specified module ID
+ * \param clkRate [in] Frequency to set in Hz
+ *
+ * \return SystemP_SUCCESS Module clock is enabled
+ * \return SystemP_FAILURE Module clock could not be enabled
+ */
+int32_t SOC_moduleSetClockFrequencyWithParent(uint32_t moduleId, uint32_t clkId, uint32_t clkParent, uint64_t clkRate);
 
 /**
  * \brief Set module clock to specified frequency
@@ -179,6 +205,14 @@ void SOC_controlModuleUnlockMMR(uint32_t domainId, uint32_t partition);
  *
  */
 void SOC_unlockAllMMR(void);
+
+/**
+ * \brief Enable or disable ePWM time base clock from Control MMR
+ *
+ * \param epwmInstance [in] ePWM instance number [0 - (CSL_EPWM_PER_CNT-1)]
+ * \param enable       [in] TRUE to enable and FALSE to disable
+ */
+void SOC_setEpwmTbClk(uint32_t epwmInstance, uint32_t enable);
 
 /**
  * \brief Get module clock frequency
@@ -310,6 +344,34 @@ int32_t SOC_getPSCState(uint32_t instNum, uint32_t domainNum, uint32_t moduleNum
  * \return SystemP_SUCCESS on success, else failure
  */
 int32_t SOC_setPSCState(uint32_t instNum, uint32_t domainNum, uint32_t moduleNum, uint32_t pscState);
+
+/**
+ * \brief Update the boot block size for FSS subsystem.
+ *
+ * Selects the size of the boot block to be used for the OSPI flash
+ * interface. Default value is 1'b0 - S0_BOOT_SIZE_64MB for the MMR
+ * register. Set 1'b1 - S0_BOOT_SIZE_128MB to update the value.
+ *
+ */
+void SOC_setFSSCtrlFlashBootSize(void);
+
+/**
+ * \brief Get Physical Address from virtual address.
+ *
+ * \param virtAddr [IN] : Virtual Address(Alias)
+ *
+ * \return Physical Address
+ */
+uint64_t Soc_getPhyAddr(uint64_t virtAddr);
+
+/**
+ * \brief Fix fast mode drive strength
+ *
+ * Some devices have all drive strengths hardcoded to the nominal value.
+ * This function updates the drive strength registers on boot to the right
+ * values for fast drive strength. Only fast mode is supported and fixed.
+ */
+void SOC_fixFastDriveStrength(void);
 
 /** @} */
 

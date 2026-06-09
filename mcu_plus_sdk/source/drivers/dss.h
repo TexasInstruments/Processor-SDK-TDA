@@ -44,6 +44,10 @@ extern "C"
 #include <drivers/dss/v0/dss.h>
 #endif
 
+#if defined (DRV_VERSION_DSS_V1)
+#include <drivers/dss/v1/dss.h>
+#endif
+
 #ifdef __cplusplus
 }
 #endif

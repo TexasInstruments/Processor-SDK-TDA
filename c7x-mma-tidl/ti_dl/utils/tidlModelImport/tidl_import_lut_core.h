@@ -67,11 +67,98 @@ using namespace std;
 
 #include "ti_dl.h"
 #include <cmath>
-#include "tidl_import_diag.h"
 #include "tidl_import_lut.h"
 
 #define NUM_ELEMENTS_PERBINS (256U)
 #define ADJUST_NUM_NON_LINEAR_OPS (5U)
+
+#define TIDL_NUM_LUT_METHOD_DEVICE (3U)
+#define TIDL_NUM_LUT_DATATYPE (2U)
+#define TIDL_LUT_TOTAL_NONLINEAR_OPS (TIDL_TOTAL_NONLINEAR_ACT_OPS - ADJUST_NUM_NON_LINEAR_OPS)
+#define TIDL_LUT_8_BIT_DTYPE (0U) //0
+#define TIDL_LUT_16_BIT_DTYPE (1U)
+#define LINEAR_MODE (2U)
+#define COLS (2U)
+#define TIDL_LOGIT_CLIP_MIN (0.000009999999747378752f)
+
+const int32_t TIDL_LUTMethodMapTable[TIDL_NUM_LUT_DATATYPE][TIDL_LUT_TOTAL_NONLINEAR_OPS][TIDL_NUM_LUT_METHOD_DEVICE] = {
+  //8-bit
+  //J784s4 || J721E || J721s2,        AM62a,                        J722s,                         Ops     
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Sigmoid --     
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Tanh --         
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_HardSigmoid --
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_ELU --          
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_GELU --         
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_LeakyReLU --   
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_Asin        
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_HardSwish   
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_Mish        
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_Log         
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_Asinh       
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Abs         
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Sin         
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_Exp         
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_Pow         
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Floor       
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_Erf         
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Sqrt        
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_Acos        
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Atan        
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Sinh        
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Cos         
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Cosh        
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Neg         
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_Tan
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_Logit 
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_Reciprocal         
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_SiLU 
+  TIDL_HW_LUT_8B,                  TIDL_SW_SINGLEPOINT_LUT_8B,     TIDL_HW_ILUT_8B,                // TIDL_Swish  
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_SoftPlus  
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_SoftSign  
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Ceil
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Celu
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Selu
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Round
+  TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Sign
+
+  //16-bit
+  TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Sigmoid     
+  TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Tanh        
+  TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_HardSigmoid 
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_ELU         
+  TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_GELU        
+  TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,   // TIDL_LeakyReLU
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,   // TIDL_Asin        
+  TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_HardSwish   
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,   // TIDL_Mish        
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,   // TIDL_Log         
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,   // TIDL_Asinh       
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Abs         
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Sin  //TIDL_HW_INTERPOLATED_LUT_16B       
+  TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,   // TIDL_Exp         
+  TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,   // TIDL_Pow         
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Floor       
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Erf         
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Sqrt        
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,   // TIDL_Acos        
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Atan        
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Sinh        
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Cos         
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Cosh        
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Neg         
+  TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,   // TIDL_Tan
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,   // TIDL_Logit 
+  TIDL_SW_SINGLEPOINT_LUT_16B,    TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,   // TIDL_Reciprocal
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_SINGLEPOINT_LUT_16B,     TIDL_SW_SINGLEPOINT_LUT_16B,   // TIDL_SiLU 
+  TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Swish   
+  TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_SoftPlus
+  TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_SoftSign
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Ceil
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Celu
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Selu
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Round
+  TIDL_HW_INTERPOLATED_LUT_16B,    TIDL_SW_NONLUT_16B,              TIDL_SW_NONLUT_16B,            // TIDL_Sign
+};
 
 void TIDL_prepareXval(double *Xdata);
 

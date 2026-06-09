@@ -92,7 +92,8 @@ __attribute__ ((aligned(8192)));
 #endif
 
 #if defined(SAFERTOS)
-extern void xTaskStartScheduler( void );
+extern void System_lateInit(void);
+extern signed long xTaskStartScheduler( void );
 #else
 extern void vTaskStartScheduler( void );
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020, Texas Instruments Incorporated
+ * Copyright (c) 2018-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,20 +51,6 @@
 /* ========================================================================== */
 
 #if defined (BUILD_DM_R5)
-#if !defined (MCU_PLUS_SDK)
-const uint32_t gSciclient_boardCfgLow[(SCICLIENT_BOARDCFG_SIZE_IN_BYTES+3U)/4U]
-    __attribute__(( aligned(128), section(".boardcfg_data") ))
-    = SCICLIENT_BOARDCFG;
-const uint32_t gSciclient_boardCfgLow_rm[(SCICLIENT_BOARDCFG_RM_SIZE_IN_BYTES+3U)/4U]
-    __attribute__(( aligned(128), section(".boardcfg_data") ))
-    = SCICLIENT_BOARDCFG_RM;
-const uint32_t gSciclient_boardCfgLow_sec[(SCICLIENT_BOARDCFG_SECURITY_SIZE_IN_BYTES+3U)/4U]
-    __attribute__(( aligned(128), section(".boardcfg_data") ))
-    = SCICLIENT_BOARDCFG_SECURITY;
-const uint32_t gSciclient_boardCfgLow_pm[(SCICLIENT_BOARDCFG_PM_SIZE_IN_BYTES+3U)/4U]
-    __attribute__(( aligned(128), section(".boardcfg_data") ))
-    = SCICLIENT_BOARDCFG_PM;
-#else
 const uint8_t gSciclient_boardCfgLow[SCICLIENT_BOARDCFG_SIZE_IN_BYTES]
     __attribute__(( aligned(128), section(".boardcfg_data") ))
     = SCICLIENT_BOARDCFG;
@@ -77,7 +63,6 @@ const uint8_t gSciclient_boardCfgLow_sec[SCICLIENT_BOARDCFG_SECURITY_SIZE_IN_BYT
 const uint8_t gSciclient_boardCfgLow_pm[SCICLIENT_BOARDCFG_PM_SIZE_IN_BYTES]
     __attribute__(( aligned(128), section(".boardcfg_data") ))
     = SCICLIENT_BOARDCFG_PM;
-#endif
 
 int32_t Sciclient_boardCfg(const Sciclient_BoardCfgPrms_t * pInPrms)
 {
@@ -110,13 +95,8 @@ int32_t Sciclient_boardCfg(const Sciclient_BoardCfgPrms_t * pInPrms)
         .pRespPayload    = (uint8_t *) NULL,
         .respPayloadSize = (uint32_t) 0
     };
-#if !defined(MCU_PLUS_SDK)
-    CacheP_wbInv((const void*) request.tisci_boardcfgp_low, request.tisci_boardcfg_size);
-
-#else
     CacheP_wbInv((void*)request.tisci_boardcfgp_low,
                 request.tisci_boardcfg_size,CacheP_TYPE_ALL);
-#endif
     if((CSL_PASS != Sciclient_service(&reqParam, &respParam))
         || ((respParam.flags & TISCI_MSG_FLAG_ACK) != TISCI_MSG_FLAG_ACK))
     {
@@ -159,12 +139,8 @@ int32_t Sciclient_boardCfgPm(const Sciclient_BoardCfgPrms_t * pInPrms)
         .pRespPayload    = (uint8_t *) NULL,
         .respPayloadSize = (uint32_t) 0
     };
-#if !defined(MCU_PLUS_SDK)
-    CacheP_wbInv((const void*) request.tisci_boardcfg_pmp_low, request.tisci_boardcfg_pm_size);
-#else
     CacheP_wbInv((void*)request.tisci_boardcfg_pmp_low,
                 request.tisci_boardcfg_pm_size,CacheP_TYPE_ALL);
-#endif
     if((CSL_PASS != Sciclient_service(&reqParam, &respParam))
         || ((respParam.flags & TISCI_MSG_FLAG_ACK) != TISCI_MSG_FLAG_ACK))
     {
@@ -205,12 +181,8 @@ int32_t Sciclient_boardCfgRm(const Sciclient_BoardCfgPrms_t * pInPrms)
         .pRespPayload    = (uint8_t *) NULL,
         .respPayloadSize = (uint32_t) 0
     };
-#if !defined(MCU_PLUS_SDK)
-    CacheP_wbInv((const void*) request.tisci_boardcfg_rmp_low, request.tisci_boardcfg_rm_size);
-#else
     CacheP_wbInv((void*)request.tisci_boardcfg_rmp_low,
                 request.tisci_boardcfg_rm_size,CacheP_TYPE_ALL);
-#endif
     if((CSL_PASS != Sciclient_service(&reqParam, &respParam))
         || ((respParam.flags & TISCI_MSG_FLAG_ACK) != TISCI_MSG_FLAG_ACK))
     {
@@ -250,12 +222,8 @@ int32_t Sciclient_boardCfgSec(const Sciclient_BoardCfgPrms_t * pInPrms)
         .pRespPayload    = (uint8_t *) NULL,
         .respPayloadSize = (uint32_t) 0
     };
-#if !defined(MCU_PLUS_SDK)
-    CacheP_wbInv((const void*) request.tisci_boardcfg_securityp_low, request.tisci_boardcfg_security_size);
-#else
     CacheP_wbInv((void*)request.tisci_boardcfg_securityp_low,
                 request.tisci_boardcfg_security_size,CacheP_TYPE_ALL);
-#endif
     if((CSL_PASS != Sciclient_service(&reqParam, &respParam))
         || ((respParam.flags & TISCI_MSG_FLAG_ACK) != TISCI_MSG_FLAG_ACK))
     {
@@ -275,17 +243,10 @@ int32_t Sciclient_getDefaultBoardCfgInfo(Sciclient_DefaultBoardCfgInfo_t *pBoard
 
     if(CSL_PASS == retVal)
     {
-#if !defined (MCU_PLUS_SDK)
-        pBoardCfgInfo->boardCfgLow          = &gSciclient_boardCfgLow[0U];
-        pBoardCfgInfo->boardCfgLowRm        = &gSciclient_boardCfgLow_rm[0U];
-        pBoardCfgInfo->boardCfgLowSec       = &gSciclient_boardCfgLow_sec[0U];
-        pBoardCfgInfo->boardCfgLowPm        = &gSciclient_boardCfgLow_pm[0U];
-#else
         pBoardCfgInfo->boardCfgLow          = (const uint32_t*) &gSciclient_boardCfgLow[0U];
         pBoardCfgInfo->boardCfgLowRm        = (const uint32_t*) &gSciclient_boardCfgLow_rm[0U];
         pBoardCfgInfo->boardCfgLowSec       = (const uint32_t*) &gSciclient_boardCfgLow_sec[0U];
         pBoardCfgInfo->boardCfgLowPm        = (const uint32_t*) &gSciclient_boardCfgLow_pm[0U];
-#endif
         pBoardCfgInfo->boardCfgLowSize      = SCICLIENT_BOARDCFG_SIZE_IN_BYTES;
         pBoardCfgInfo->boardCfgLowRmSize    = SCICLIENT_BOARDCFG_RM_SIZE_IN_BYTES;
         pBoardCfgInfo->boardCfgLowSecSize   = SCICLIENT_BOARDCFG_SECURITY_SIZE_IN_BYTES;

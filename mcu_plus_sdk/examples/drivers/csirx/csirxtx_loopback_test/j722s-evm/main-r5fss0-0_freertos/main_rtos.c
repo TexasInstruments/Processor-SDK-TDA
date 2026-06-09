@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2018-2022
+ *  Copyright (c) Texas Instruments Incorporated 2018-2025
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -197,7 +197,7 @@ void taskFxn(void* a0)
              retVal += Sciclient_pmGetModuleClkFreq(CSITX_MOD,
                                        CSITX_MOD_MAIN_CLK,
                                        &clkFreq, SystemP_WAIT_FOREVER);
-             App_consolePrintf("\nClock Freq: CSITX_MOD_MAIN_CLK = %lldHz\n", clkFreq);        
+             App_consolePrintf("\nClock Freq: CSITX_MOD_MAIN_CLK = %lldHz\n", clkFreq);
         }
 
         if (CSL_PASS == retVal)

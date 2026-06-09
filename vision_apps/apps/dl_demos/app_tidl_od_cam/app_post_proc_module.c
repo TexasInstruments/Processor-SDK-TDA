@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2024 Texas Instruments Incorporated
+ * Copyright (c) 2024-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -60,10 +60,13 @@
  *
  */
 
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
 #include "app_post_proc_module.h"
 #include "tivx_dl_post_proc_host.h"
 tivxDLPostProcParams *local_postproc_config;
+
+static char img_labels[TIVX_DL_POST_PROC_MAX_NUM_CLASSNAMES][TIVX_DL_POST_PROC_MAX_SIZE_CLASSNAME] = {""};
+static int32_t label_offset3[TIVX_DL_POST_PROC_MAX_NUM_CLASSNAMES] = {0};
 
 vx_status app_init_post_proc(vx_context context, PostProcObj *postProcObj, char *objName, vx_int32 num_cameras, vx_int32 bufq_depth)
 {
@@ -77,24 +80,22 @@ vx_status app_init_post_proc(vx_context context, PostProcObj *postProcObj, char 
         return status;
     }
     local_postproc_config->task_type = TIVX_DL_POST_PROC_DETECTION_TASK_TYPE;
-    local_postproc_config->od_prms.ioBufDesc = &postProcObj->params.ioBufDesc; 
-    local_postproc_config->od_prms.viz_th = 0.95; 
+    local_postproc_config->od_prms.ioBufDesc = &postProcObj->ioBufDesc;
+    local_postproc_config->od_prms.formatter[0] = 0;
+    local_postproc_config->od_prms.formatter[1] = 1;
+    local_postproc_config->od_prms.formatter[2] = 2;
+    local_postproc_config->od_prms.formatter[3] = 3;
+    local_postproc_config->od_prms.formatter[4] = 5;
+    local_postproc_config->od_prms.formatter[5] = 4;
+    local_postproc_config->od_prms.scaleX = DISPLAY_WIDTH/416;
+    local_postproc_config->od_prms.scaleY = DISPLAY_HEIGHT/416;
+    local_postproc_config->od_prms.viz_th = 0.2;
 
     local_postproc_config->num_input_tensors = postProcObj->num_input_tensors;
 
-    if(local_postproc_config->od_prms.ioBufDesc->outWidth[0] == 1001) {
-        for(int32_t i=0; i < TIVX_DL_POST_PROC_MAX_NUM_CLASSNAMES; i++)
-        {
-           local_postproc_config->od_prms.labelOffset[i] = 0;
-        }
-    }else if(local_postproc_config->od_prms.ioBufDesc->outWidth[0] == 1000) {
-        for(int32_t i=0; i < TIVX_DL_POST_PROC_MAX_NUM_CLASSNAMES; i++)
-        {
-           local_postproc_config->od_prms.labelOffset[i] = 1; 
-        }
-    }
-    //memcpy(local_postproc_config->od_prms.classnames, imgnet_labels, 1000*256);
-
+    local_postproc_config->od_prms.labelOffset = label_offset3;
+    local_postproc_config->od_prms.classnames = img_labels;
+ 
     postProcObj->config = vxCreateUserDataObject(context, "PostProcConfig", sizeof(tivxDLPostProcParams), local_postproc_config);
     status = vxGetStatus((vx_reference)postProcObj->config);
 
@@ -135,7 +136,7 @@ vx_status app_update_post_proc(vx_context context, PostProcObj *postProcObj, vx_
                     (void **)&tidlParams, VX_READ_ONLY, VX_MEMORY_TYPE_HOST, 0);
 
     ioBufDesc = (sTIDL_IOBufDesc_t *)&tidlParams->ioBufDesc;
-    memcpy(&postProcObj->params.ioBufDesc, ioBufDesc, sizeof(sTIDL_IOBufDesc_t));
+    memcpy(&postProcObj->ioBufDesc, ioBufDesc, sizeof(sTIDL_IOBufDesc_t));
 
     postProcObj->num_input_tensors = ioBufDesc->numInputBuf;
     postProcObj->num_output_tensors = ioBufDesc->numOutputBuf;
@@ -147,7 +148,7 @@ vx_status app_update_post_proc(vx_context context, PostProcObj *postProcObj, vx_
     return status;
 }
 
-void app_deinit_post_proc(PostProcObj *postProcObj, vx_int32 bufq_depth)
+void app_deinit_post_proc(vx_context context, PostProcObj *postProcObj, vx_int32 bufq_depth)
 {
     vxReleaseUserDataObject(&postProcObj->config);
 
@@ -161,6 +162,7 @@ void app_deinit_post_proc(PostProcObj *postProcObj, vx_int32 bufq_depth)
     {
         tivxMemFree(local_postproc_config, sizeof(tivxDLPostProcParams), TIVX_MEM_EXTERNAL);
     }
+    tivxRemoveKernelDLPostProc(context);
 }
 
 void app_delete_post_proc(PostProcObj *postProcObj)
@@ -215,4 +217,4 @@ vx_status app_create_graph_post_proc(vx_graph graph, PostProcObj *postProcObj, v
     vxReleaseImage(&result);
     return(status);
 }
-#endif //defined(SOC_AM62A) && defined(QNX)
+#endif //defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))

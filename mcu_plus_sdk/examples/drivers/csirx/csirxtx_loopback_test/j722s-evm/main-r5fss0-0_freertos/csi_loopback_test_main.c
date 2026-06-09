@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2022
+ *  Copyright (c) Texas Instruments Incorporated 2022-25
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -129,18 +129,18 @@ static void CsiLoopback_initCaptParams(CsiLoopback_RxInstObj *appInstObj);
  * \brief   App event callback function for CSITX events
  *
  * \param   status             status of the event
- *                          
+ *
  *          appData            pointer to the CSITX test Object
  * \retval  none.
  */
 void CsiLoopback_eventCallback(Csitx_EventStatus status,void *appData);
 
 /**
- * \brief   App callback function for timer interrupt. stops the CSIRX and 
+ * \brief   App callback function for timer interrupt. stops the CSIRX and
  *          CSITX streams
  *
  * \param   arg             CSI RX Capture Test Object
- *                          
+ *
  *
  * \retval  none.
  */
@@ -447,7 +447,7 @@ static int32_t CsiLoopback_txDelete(CsiLoopback_TxInstObj* appInstObj)
     {
         appInstObj->drvHandle = NULL;
     }
- 
+
     if (FVID2_SOK == retVal)
     {
         GT_0trace(AppTrace, GT_INFO, APP_NAME ": Tx Driver deleted\r\n");

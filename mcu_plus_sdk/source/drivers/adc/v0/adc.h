@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Texas Instruments Incorporated
+ * Copyright (C) 2021-2025 Texas Instruments Incorporated
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -106,8 +106,6 @@ extern "C" {
 
 /** \brief  Macro defines the maximum number of samples FIFO0 can store. */
 #define ADC_FIFO_SIZE                   (64U)
-/** \brief  Macro defines the maximum number of channels in ADC. */
-#define ADC_MAX_NUM_CHN                 (uint32_t)(8U)
 
 /** \brief  Returns the ADC max range given the bit support */
 #define ADC_GET_RANGE(bit)              (((uint32_t) 1U) << (bit))
@@ -123,8 +121,6 @@ extern "C" {
  */
 /**
  * \brief  Enum to select the channel for input.
- *
- *         ADC have 8 channels from which it can take input.
  */
 typedef uint32_t adcChannel_t;
 
@@ -390,7 +386,7 @@ typedef struct adcSequencerStatus
  * \param   powerUp         ADC is powered up if it is TRUE.
  *                          ADC is powered down if it is FALSE.
  */
-void ADCPowerUp(uint32_t baseAddr, uint32_t powerUp);
+void ADC_powerUp(uint32_t baseAddr, uint32_t powerUp);
 
 /**
  * \brief   This function checks if the ADC module is powered up.
@@ -400,7 +396,7 @@ void ADCPowerUp(uint32_t baseAddr, uint32_t powerUp);
  * \retval  state           Returns TRUE if ADC is powered up.
  *                          Else returns FALSE.
  */
-uint32_t AdcIsPoweredUp(uint32_t baseAddr);
+uint32_t Adc_isPoweredUp(uint32_t baseAddr);
 
 /**
  * \brief   This API will configure clock divider for the ADC Module.
@@ -414,7 +410,7 @@ uint32_t AdcIsPoweredUp(uint32_t baseAddr);
  *          value as clkDivider.
  *          This API is applicable only for TDA3XX.
  */
-int32_t ADCSetClkDivider(uint32_t baseAddr, uint32_t clkDivider);
+int32_t ADC_setClkDivider(uint32_t baseAddr, uint32_t clkDivider);
 
 /**
  * \brief   This API is used to initialize the ADC module.
@@ -427,7 +423,7 @@ int32_t ADCSetClkDivider(uint32_t baseAddr, uint32_t clkDivider);
  * \param   calibration     Writing 0 does not start internal calibration.
  *                          Writing 1 starts internal calibration.
  */
-void ADCInit(uint32_t baseAddr,
+void ADC_init(uint32_t baseAddr,
              uint32_t errCorrection,
              uint32_t errOffset,
              uint32_t calibration);
@@ -441,7 +437,7 @@ void ADCInit(uint32_t baseAddr,
  * \param   dmaLineEnable   DMA Line is enabled if it is TRUE.
  *                          DMA Line is disabled if it is FALSE.
  */
-void ADCFIFODMAAccessEnable(uint32_t baseAddr,
+void ADC_FIFODMAAccessEnable(uint32_t baseAddr,
                             uint32_t fifoNum,
                             uint32_t dmaLineEnable);
 
@@ -456,7 +452,7 @@ void ADCFIFODMAAccessEnable(uint32_t baseAddr,
  *
  * \return  status          ADC step configure status.
  */
-int32_t ADCSetStepParams(uint32_t               baseAddr,
+int32_t ADC_setStepParams(uint32_t               baseAddr,
                          uint32_t               stepId,
                          const adcStepConfig_t *configParams);
 
@@ -469,7 +465,7 @@ int32_t ADCSetStepParams(uint32_t               baseAddr,
  * \param   stepEnable      Step is enabled if it is TRUE.
  *                          Step is disabled if it is FALSE.
  */
-void ADCStepEnable(uint32_t baseAddr,
+void ADC_stepEnable(uint32_t baseAddr,
                    uint32_t stepId,
                    uint32_t stepEnable);
 
@@ -478,7 +474,7 @@ void ADCStepEnable(uint32_t baseAddr,
  *
  * \param   baseAddr        Base Address of the ADC Registers.
  */
-void ADCClearAllSteps(uint32_t baseAddr);
+void ADC_clearAllSteps(uint32_t baseAddr);
 
 /**
  * \brief   This API will start ADC.
@@ -487,7 +483,7 @@ void ADCClearAllSteps(uint32_t baseAddr);
  * \param   adcEnable       ADC is enabled/started  if it is TRUE.
  *                          ADC is disabled/stopped  if it is FALSE.
  */
-void ADCStart(uint32_t baseAddr, uint32_t adcEnable);
+void ADC_start(uint32_t baseAddr, uint32_t adcEnable);
 
 /**
  * \brief   This API is used to configure the ADC module for storing step ID
@@ -499,7 +495,7 @@ void ADCStart(uint32_t baseAddr, uint32_t adcEnable);
  *                          Step ID is not stored along with ADC data in FIFO,
  *                          if it is FALSE.
  */
-void ADCStepIdTagEnable(uint32_t baseAddr, uint32_t stepIdTag);
+void ADC_stepIdTagEnable(uint32_t baseAddr, uint32_t stepIdTag);
 
 /**
  * \brief   This API will read and return FIFO data.
@@ -510,7 +506,7 @@ void ADCStepIdTagEnable(uint32_t baseAddr, uint32_t stepIdTag);
  *
  * \return  data            FIFO data.
  */
-uint32_t ADCGetFIFOData(uint32_t baseAddr, uint32_t fifoNum);
+uint32_t ADC_getFIFOData(uint32_t baseAddr, uint32_t fifoNum);
 
 /**
  * \brief   This API will return number of word present in the FIFO.
@@ -521,7 +517,7 @@ uint32_t ADCGetFIFOData(uint32_t baseAddr, uint32_t fifoNum);
  *
  * \return  FIFO level      Number of words present in the FIFO.
  */
-uint32_t ADCGetFIFOWordCount(uint32_t baseAddr, uint32_t fifoNum);
+uint32_t ADC_getFIFOWordCount(uint32_t baseAddr, uint32_t fifoNum);
 
 /**
  * \brief   This API will configure threshold level for a FIFO.
@@ -538,7 +534,7 @@ uint32_t ADCGetFIFOWordCount(uint32_t baseAddr, uint32_t fifoNum);
  *  \note   Actual value programmed is (threshold - 1) to get the threshold
  *          level as threshold.
  */
-int32_t ADCSetCPUFIFOThresholdLevel(uint32_t baseAddr,
+int32_t ADC_setCPUFIFOThresholdLevel(uint32_t baseAddr,
                                     uint32_t fifoNum,
                                     uint32_t threshold);
 
@@ -553,7 +549,7 @@ int32_t ADCSetCPUFIFOThresholdLevel(uint32_t baseAddr,
  *                          will be generated.
  *
  */
-uint32_t ADCGetCPUFIFOThresholdLevel(uint32_t baseAddr, uint32_t fifoNum);
+uint32_t ADC_getCPUFIFOThresholdLevel(uint32_t baseAddr, uint32_t fifoNum);
 
 /**
  * \brief   This API will configure DMA request level for a FIFO.
@@ -570,7 +566,7 @@ uint32_t ADCGetCPUFIFOThresholdLevel(uint32_t baseAddr, uint32_t fifoNum);
  * \note   Actual value programmed is (threshold - 1) to get the threshold
  *         level as threshold.
  */
-int32_t ADCSetDMAFIFOThresholdLevel(uint32_t baseAddr,
+int32_t ADC_setDMAFIFOThresholdLevel(uint32_t baseAddr,
                                     uint32_t fifoNum,
                                     uint32_t threshold);
 
@@ -584,7 +580,7 @@ int32_t ADCSetDMAFIFOThresholdLevel(uint32_t baseAddr,
  * \return  threshold       Number of words in FIFO after which DMA request
  *                          will be generated.
  */
-uint32_t ADCGetDMAFIFOThresholdLevel(uint32_t baseAddr, uint32_t fifoNum);
+uint32_t ADC_getDMAFIFOThresholdLevel(uint32_t baseAddr, uint32_t fifoNum);
 
 /**
  * \brief   This API is used to enable interrupts.
@@ -593,7 +589,7 @@ uint32_t ADCGetDMAFIFOThresholdLevel(uint32_t baseAddr, uint32_t fifoNum);
  * \param   intrMask        Interrupts to enable.
  *                          Refer enum #adcIntrSrc_t.
  */
-void ADCEnableIntr(uint32_t baseAddr, uint32_t intrMask);
+void ADC_enableIntr(uint32_t baseAddr, uint32_t intrMask);
 
 /**
  * \brief   This API is used to disable interrupts.
@@ -601,14 +597,14 @@ void ADCEnableIntr(uint32_t baseAddr, uint32_t intrMask);
  * \param   baseAddr        Base Address of the ADC Registers.
  * \param   intrMask        Interrupts to disable.
  */
-void ADCDisableIntr(uint32_t baseAddr, uint32_t intrMask);
+void ADC_disableIntr(uint32_t baseAddr, uint32_t intrMask);
 
 /**
  * \brief   This API is used for EOI for ADC.
  *
  * \param   baseAddr        Base Address of the ADC Registers.
  */
-void ADCWriteEOI(uint32_t baseAddr);
+void ADC_writeEOI(uint32_t baseAddr);
 
 /**
  * \brief   This API is used to get the pending interrupts.
@@ -617,7 +613,7 @@ void ADCWriteEOI(uint32_t baseAddr);
  *
  * \return  status          Pending interrupt status/occurred.
  */
-uint32_t ADCGetIntrStatus(uint32_t baseAddr);
+uint32_t ADC_getIntrStatus(uint32_t baseAddr);
 
 /**
  * \brief   This API is used to clear the interrupt status.
@@ -625,7 +621,7 @@ uint32_t ADCGetIntrStatus(uint32_t baseAddr);
  * \param   baseAddr        Base Address of the ADC Registers.
  * \param   intrMask        Interrupts to clear status.
  */
-void ADCClearIntrStatus(uint32_t baseAddr, uint32_t intrMask);
+void ADC_clearIntrStatus(uint32_t baseAddr, uint32_t intrMask);
 
 /**
  * \brief   This API is used to get the raw interrupt status.
@@ -634,7 +630,7 @@ void ADCClearIntrStatus(uint32_t baseAddr, uint32_t intrMask);
  *
  * \return  status          Pending interrupt status/occurred.
  */
-uint32_t ADCGetIntrRawStatus(uint32_t baseAddr);
+uint32_t ADC_getIntrRawStatus(uint32_t baseAddr);
 
 /**
  * \brief   This API is used to configure the range for ADC.
@@ -645,7 +641,7 @@ uint32_t ADCGetIntrRawStatus(uint32_t baseAddr);
  *
  * \return  status          configuration status.
  */
-int32_t ADCSetRange(uint32_t baseAddr, uint32_t highRange, uint32_t lowRange);
+int32_t ADC_setRange(uint32_t baseAddr, uint32_t highRange, uint32_t lowRange);
 
 /**
  * \brief   This API is used to get the range for conversion.
@@ -654,7 +650,7 @@ int32_t ADCSetRange(uint32_t baseAddr, uint32_t highRange, uint32_t lowRange);
  * \param   highRange       Allowable upper range of data.
  * \param   lowRange        Allowable lower range of data.
  */
-void ADCGetRange(uint32_t  baseAddr,
+void ADC_getRange(uint32_t  baseAddr,
                  uint32_t *highRange,
                  uint32_t *lowRange);
 
@@ -665,7 +661,7 @@ void ADCGetRange(uint32_t  baseAddr,
  * \param   status          Current status of the sequencer.
  *                          Refer struct #adcSequencerStatus_t.
  */
-void ADCGetSequencerStatus(uint32_t              baseAddr,
+void ADC_getSequencerStatus(uint32_t              baseAddr,
                            adcSequencerStatus_t *status);
 
 /**
@@ -676,7 +672,7 @@ void ADCGetSequencerStatus(uint32_t              baseAddr,
  *                          Refer enum #adcIdleMode_t.
  * \note    This API is applicable only for TDA3XX.
  */
-void ADCSetIdleMode(uint32_t baseAddr, uint32_t idleMode);
+void ADC_setIdleMode(uint32_t baseAddr, uint32_t idleMode);
 
 /**
  * \brief   This API is used get the ADC revision ID.
@@ -685,7 +681,7 @@ void ADCSetIdleMode(uint32_t baseAddr, uint32_t idleMode);
  * \param   revId           Contains Revision ID of ADC module..
  *                          Refer struct #adcRevisionId_t.
  */
-void ADCGetRevisionId(uint32_t baseAddr, adcRevisionId_t *revId);
+void ADC_getRevisionId(uint32_t baseAddr, adcRevisionId_t *revId);
 
 /* ========================================================================== */
 /*                       Static Function Definitions                          */

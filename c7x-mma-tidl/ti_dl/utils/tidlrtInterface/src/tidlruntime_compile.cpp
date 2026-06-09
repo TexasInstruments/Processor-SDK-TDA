@@ -74,6 +74,7 @@ TIDLRT_CompileSession::TIDLRT_CompileSession(const std::map<std::string, std::st
 	m_import_ops.setDefaultParams(&m_compile_option.m_options);
 	m_compile_option.m_options.numCores = -1;
 	strcpy((char *)m_compile_option.m_options.inData, "");
+	strcpy((char *)m_compile_option.m_options.quantParamsPrototxtFile, "");
 
 	status = m_compile_option.TIDLRT_CompileSession_Options_Parse(options);
 	if (status == -1)

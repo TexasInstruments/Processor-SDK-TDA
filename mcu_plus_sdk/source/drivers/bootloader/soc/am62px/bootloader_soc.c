@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -50,8 +50,6 @@
 #define BOOTLOADER_SYS_STATUS_DEV_TYPE_GP      (0x03U)
 #define BOOTLOADER_SYS_STATUS_DEV_TYPE_TEST    (0x05U)
 #define BOOTLOADER_SYS_STATUS_DEV_SUBTYPE_FS   (0x00000A00U)
-
-#define FSS_DATA_REGION_FIREWALL_ID     (7U)
 
 Bootloader_resMemSections gResMemSection =
 {
@@ -125,7 +123,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .tisciProcId    = SCICLIENT_PROC_ID_A53SS0_CORE_0,
         .tisciDevId     = TISCI_DEV_A53SS0_CORE_0,
         .tisciClockId   = TISCI_DEV_A53SS0_CORE_0_A53_CORE0_ARM_CLK_CLK,
-        .defaultClockHz = (uint32_t)(1250*1000000),
+        .defaultClockHz = (uint32_t)(1400*1000000),
         .coreName       = "a530-0",
     },
 
@@ -133,7 +131,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .tisciProcId    = SCICLIENT_PROC_ID_A53SS0_CORE_1,
         .tisciDevId     = TISCI_DEV_A53SS0_CORE_1,
         .tisciClockId   = TISCI_DEV_A53SS0_CORE_1_A53_CORE1_ARM_CLK_CLK,
-        .defaultClockHz = (uint32_t)(1250*1000000),
+        .defaultClockHz = (uint32_t)(1400*1000000),
         .coreName       = "a530-1",
     },
 
@@ -141,7 +139,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .tisciProcId    = SCICLIENT_PROC_ID_A53SS0_CORE_2,
         .tisciDevId     = TISCI_DEV_A53SS0_CORE_2,
         .tisciClockId   = TISCI_DEV_A53SS0_CORE_2_A53_CORE2_ARM_CLK_CLK,
-        .defaultClockHz = (uint32_t)(1250*1000000),
+        .defaultClockHz = (uint32_t)(1400*1000000),
         .coreName       = "a531-0",
     },
 
@@ -149,7 +147,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .tisciProcId    = SCICLIENT_PROC_ID_A53SS0_CORE_3,
         .tisciDevId     = TISCI_DEV_A53SS0_CORE_3,
         .tisciClockId   = TISCI_DEV_A53SS0_CORE_3_A53_CORE3_ARM_CLK_CLK,
-        .defaultClockHz = (uint32_t)(1250*1000000),
+        .defaultClockHz = (uint32_t)(1400*1000000),
         .coreName       = "a531-1",
     },
 
@@ -242,9 +240,57 @@ Bootloader_SelfCoreJump selfcoreEntry = NULL;
 extern int32_t Sciclient_triggerSecHandover(void);
 extern int32_t Sciclient_waitForBootNotification(void);
 
+static int32_t Bootloader_socOpenFirewallRegion(uint16_t fwl, uint16_t region, uint32_t control, uint64_t startAddr, uint64_t endAddr)
+{
+    int32_t status = SystemP_FAILURE;
+
+    const struct tisci_msg_fwl_set_firewall_region_req fwl_set_req =
+    {
+        .fwl_id = fwl,
+        .region = region,
+        .n_permission_regs = 3,
+        /*
+         * The firewall control register layout is
+         *  ---------------------------------------------------------------------------
+         * |  31:10   |      9     |     8      |     7:5    |      4      |   3:0     |
+         *  ---------------------------------------------------------------------------
+         * | Reserved | Cache Mode | Background |  Reserved  | Lock Config |  Enable   |
+         *  ---------------------------------------------------------------------------
+         *
+         * Enable = 0xA implies firewall is enabled. Any other value means not enabled
+         *
+         */
+        .control = control,
+        /*
+            * The firewall permission register layout is
+            *  ---------------------------------------------------------------------------
+            * |  31:24   |    23:16   |  15:12     |   11:8     |   7:4      |   3:0      |
+            *  ---------------------------------------------------------------------------
+            * | Reserved |   Priv ID  | NSUSR-DCRW | NSPRI-DCRW | SUSER-DCRW | SPRIV-DCRW |
+            *  ---------------------------------------------------------------------------
+            *
+            * PRIV_ID = 0xC3 implies all.
+            * In each of the 4 nibbles from 15:0 the 4 bits means Debug, Cache, Read, Write Access for
+            * Non-secure user, Non-secure Priv, Secure user, Secure Priv respectively. To enable all access
+            * bits for all users, we set each of these nibbles to 0b1111 = 0xF. So 15:0 becomes 0xFFFF
+            *
+            */
+        .permissions[0] = 0xC3FFFF,
+        .permissions[1] = 0xC3FFFF,
+        .permissions[2] = 0xC3FFFF,
+        .start_address  = startAddr,
+        .end_address    = endAddr,
+    };
+    struct tisci_msg_fwl_set_firewall_region_resp fwl_set_resp = { 0 };
+
+    status = Sciclient_firewallSetRegion(&fwl_set_req, &fwl_set_resp, SystemP_TIMEOUT);
+
+    return status;
+}
+
 uint32_t Bootloader_socRprcToCslCoreId(uint32_t rprcCoreId)
 {
-    uint32_t cslCoreId = CSL_CORE_ID_MAX; //todo: Change core id max for HSM and add entry in CSL
+    uint32_t cslCoreId = CSL_CORE_ID_MAX;
     uint32_t i;
 
     uint32_t rprcCoreIds[CSL_CORE_ID_MAX] =
@@ -252,16 +298,34 @@ uint32_t Bootloader_socRprcToCslCoreId(uint32_t rprcCoreId)
         5U, 4U, 0U, 1U, 2U, 3U, 6U
     };
 
-    for(i = 0U; i < CSL_CORE_ID_MAX; i++)
+    if(Bootloader_socIsSmpEnable( rprcCoreId) == true)
     {
-        if(rprcCoreId == rprcCoreIds[i])
+        cslCoreId = CSL_CORE_ID_A53SS0_0;
+    }
+    else
+    {
+        for(i = 0U; i < CSL_CORE_ID_MAX; i++)
         {
-            cslCoreId = i;
-            break;
+            if(rprcCoreId == rprcCoreIds[i])
+            {
+                cslCoreId = i;
+                break;
+            }
         }
     }
 
     return cslCoreId;
+}
+
+bool Bootloader_socIsSmpEnable(uint32_t rprcCoreId)
+{
+    bool smpEnable = false;
+    if(rprcCoreId == FREERTOS_SMP_RPRC_CORE_ID)
+    {
+        smpEnable = true;
+    }
+
+    return smpEnable;
 }
 
 uint32_t Bootloader_socGetSciclientCpuProcId(uint32_t cpuId)
@@ -336,7 +400,7 @@ void Bootloader_socGetR5fAtcmAddrAndSize(uint32_t cpuId, uint32_t *addr, uint32_
     switch(cpuId)
     {
         case CSL_CORE_ID_WKUP_R5FSS0_0:
-            *addr = CSL_WKUP_R5FSS0_CORE0_ATCM_BASE;
+            *addr = CSL_WKUP_R5FSS0_ATCM_BASE;
             break;
         case CSL_CORE_ID_MCU_R5FSS0_0:
             *addr = CSL_MCU_R5FSS0_CORE0_ATCM_BASE;
@@ -355,7 +419,7 @@ void Bootloader_socGetR5fBtcmAddrAndSize(uint32_t cpuId, uint32_t *addr, uint32_
     switch(cpuId)
     {
         case CSL_CORE_ID_WKUP_R5FSS0_0:
-            *addr = CSL_WKUP_R5FSS0_CORE0_BTCM_BASE;
+            *addr = CSL_WKUP_R5FSS0_BTCM_BASE;
             break;
         case CSL_CORE_ID_MCU_R5FSS0_0:
             *addr = CSL_MCU_R5FSS0_CORE0_BTCM_BASE;
@@ -957,36 +1021,27 @@ int32_t Bootloader_socOpenFirewalls(void)
 {
     int32_t status = SystemP_FAILURE;
 
-    /* Unlock FSS data region firewall */
-    const struct tisci_msg_fwl_set_firewall_region_req fwl_set_req =
-    {
-        .fwl_id = FSS_DATA_REGION_FIREWALL_ID,
-        .region = 0,
-        .n_permission_regs = 3,
-        .control = 0x30A, /* 0x3 - Firewall cached, background region, Unlocked. 0xA - Enable Firewall */
-        /*
-         * The firewall permission register layout is
-         *  ---------------------------------------------------------------------------
-         * |  31:24   |    23:16   |  15:12     |   11:8     |   7:4      |   3:0      |
-         *  ---------------------------------------------------------------------------
-         * | Reserved |   Priv ID  | NSUSR-DCRW | NSPRI-DCRW | SUSER-DCRW | SPRIV-DCRW |
-         *  ---------------------------------------------------------------------------
-         *
-         * PRIV_ID = 0xC3 implies all.
-         * In each of the 4 nibbles from 15:0 the 4 bits means Debug, Cache, Read, Write Access for
-         * Non-secure user, Non-secure Priv, Secure user, Secure Priv respectively. To enable all access
-         * bits for all users, we set each of these nibbles to 0b1111 = 0xF. So 15:0 becomes 0xFFFF
-         *
-         */
-        .permissions[0] = 0xC3FFFF,
-        .permissions[1] = 0xC3FFFF,
-        .permissions[2] = 0xC3FFFF,
-        .start_address  = CSL_FSS0_DAT_REG1_BASE,
-        .end_address    = 0x67FFFFFF,
-    };
-    struct tisci_msg_fwl_set_firewall_region_resp fwl_set_resp = { 0 };
+    /* Nibbles from left to right, 3 implies cached, background region, 0 implies config is unlocked, and A implies enable firewall  */
+    uint32_t fwlControl = 0x30A;
 
-    status = Sciclient_firewallSetRegion(&fwl_set_req, &fwl_set_resp, SystemP_TIMEOUT);
+    /* There are 3 firewall regions, 1 per FSS memory region. We need to open all these regions. */
+    status = Bootloader_socOpenFirewallRegion(CSL_STD_FW_FSS0_FSAS_0_DAT_REG1_ID, 0, fwlControl,
+            CSL_STD_FW_FSS0_FSAS_0_DAT_REG1_DAT_REG1_START,
+            CSL_STD_FW_FSS0_FSAS_0_DAT_REG1_DAT_REG1_END);
+
+    if(status==SystemP_SUCCESS)
+    {
+        status = Bootloader_socOpenFirewallRegion(CSL_STD_FW_FSS0_FSAS_0_DAT_REG0_ID, 1, fwlControl,
+                CSL_STD_FW_FSS0_FSAS_0_DAT_REG0_DAT_REG0_START,
+                CSL_STD_FW_FSS0_FSAS_0_DAT_REG0_DAT_REG0_END);
+    }
+
+    if(status==SystemP_SUCCESS)
+    {
+        status = Bootloader_socOpenFirewallRegion(CSL_STD_FW_FSS0_FSAS_0_DAT_REG3_ID, 2, fwlControl,
+                CSL_STD_FW_FSS0_FSAS_0_DAT_REG3_DAT_REG3_START,
+                CSL_STD_FW_FSS0_FSAS_0_DAT_REG3_DAT_REG3_END);
+    }
 
     return status;
 }
@@ -996,12 +1051,13 @@ int32_t Bootloader_socAuthImage(uint32_t certLoadAddr)
     int32_t status = SystemP_FAILURE;
 
     struct tisci_msg_proc_auth_boot_req authReq;
+    struct tisci_msg_proc_auth_boot_resp authResp = {0};
 
     /* Request TIFS (SYSFW) to authenticate (and decrypt if mentioned in the x509 cert) the image */
     authReq.certificate_address_hi = 0U;
     authReq.certificate_address_lo = certLoadAddr;
 
-    status = Sciclient_procBootAuthAndStart(&authReq, SystemP_WAIT_FOREVER);
+    status = Sciclient_procBootAuthAndStart(&authReq, &authResp, SystemP_WAIT_FOREVER);
 
     return status;
 }
@@ -1043,9 +1099,9 @@ void Bootloader_socWriteSBLBootMagicNum()
     CacheP_wbInv ((void *)magicNumAddr, 4, CacheP_TYPE_ALL);
 }
 
-uint32_t Bootloader_socIsSBLBoot()
+int32_t Bootloader_socIsSBLBoot(void)
 {
-    uint32_t isBootSBLBoot = FALSE;
+    int32_t status = SystemP_FAILURE;
     uint32_t *magicNumAddr = (uint32_t *)(BOOTLOADER_SBL_BOOT_MAGIC_NUM_HSRAM_ADDR);
 
     CacheP_inv ((void *)magicNumAddr, 4, CacheP_TYPE_ALL);
@@ -1053,8 +1109,38 @@ uint32_t Bootloader_socIsSBLBoot()
     /* If magic number is written then it is SBL bootflow */
     if(*(magicNumAddr) == (uint32_t)BOOTLOADER_SBL_BOOT_MAGIC_NUM)
     {
-        isBootSBLBoot = TRUE;
+        status = SystemP_SUCCESS;
     }
 
-    return isBootSBLBoot;
+    return status;
+}
+
+void Bootloader_socCpuPowerOff(uint32_t cpuId)
+{
+    uint32_t sciclientCpuDevId;
+    uint32_t status = SystemP_SUCCESS;
+
+    sciclientCpuDevId = Bootloader_socGetSciclientCpuDevId(cpuId);
+
+    switch(cpuId)
+    {
+        case CSL_CORE_ID_MCU_R5FSS0_0:
+        case CSL_CORE_ID_WKUP_R5FSS0_0:
+        case CSL_CORE_ID_A53SS0_0:
+        case CSL_CORE_ID_A53SS0_1:
+        case CSL_CORE_ID_A53SS1_0:
+        case CSL_CORE_ID_A53SS1_1:
+        case CSL_CORE_ID_HSM_M4FSS0_0:
+            status = Sciclient_pmSetModuleState(sciclientCpuDevId,
+                TISCI_MSG_VALUE_DEVICE_SW_STATE_AUTO_OFF,
+                TISCI_MSG_FLAG_AOP,
+                SystemP_WAIT_FOREVER);
+
+            if(status != SystemP_SUCCESS)
+            {
+                DebugP_logError("CPU power off failed for %s\r\n", Bootloader_socGetCoreName(cpuId));
+            }
+            break;
+    }
+
 }

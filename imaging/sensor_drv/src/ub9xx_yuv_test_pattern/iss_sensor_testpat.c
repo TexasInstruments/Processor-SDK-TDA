@@ -97,8 +97,6 @@ IssSensors_Handle testpatSensorHandle = {
  */
 IssCapture_CmplxIoLaneCfg           testpatCsi2CmplxIoLaneCfg;
 
-extern IssSensors_Handle * gIssSensorTable[ISS_SENSORS_MAX_SUPPORTED_SENSOR];
-
 int32_t IssSensor_testpat_Init(void)
 {
     int32_t status;

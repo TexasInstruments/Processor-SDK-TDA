@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2025 Texas Instruments Incorporated
+ *  Copyright (C) 2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -69,7 +69,6 @@ extern "C" {
  */
 typedef void (*Dss_evtMgrCbFxn)(const uint32_t *event,
                                 uint32_t numEvents,
-                                uint32_t instId,
                                 void *arg);
 
 /* ========================================================================== */
@@ -78,7 +77,7 @@ typedef void (*Dss_evtMgrCbFxn)(const uint32_t *event,
 
 struct Dss_EvtMgrInitParams_t
 {
-    uint32_t dssCommonRegionId[DSS_INST_COUNT];
+    uint32_t dssCommonRegionId;
     /**< DSS Common Region Id. Refer \ref CSL_DssCommRegId for values */
     uint32_t numIrq;
     /**< Number of valid entries in below two arrays */
@@ -200,8 +199,7 @@ static inline void Dss_evtMgrInitParamsInit(Dss_EvtMgrInitParams *evtMgrParams)
     uint32_t i;
     if(NULL != evtMgrParams)
     {
-        evtMgrParams->dssCommonRegionId[0] = CSL_DSS_COMM_REG_ID_0;
-        evtMgrParams->dssCommonRegionId[1] = CSL_DSS_COMM_REG_ID_2;
+        evtMgrParams->dssCommonRegionId = CSL_DSS_COMM_REG_ID_0;
         evtMgrParams->numIrq = 0U;
         for(i=0U; i<DSS_EVT_MGR_INST_ID_MAX; i++)
         {

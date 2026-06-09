@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2022 Texas Instruments Incorporated
+ * Copyright (c) 2022-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -67,3 +67,4 @@
 void appUtilsTaskInit(void)
 {
 }
+

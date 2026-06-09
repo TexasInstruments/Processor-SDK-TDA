@@ -68,10 +68,6 @@
 #include <utils/ipc/include/app_ipc.h>
 #include <stddef.h>
 
-/* MISRA-C 2012 compliance: Explicit declaration of offsetof macro usage */
-#ifndef offsetof
-#define offsetof(type, member) ((size_t) &((type *)0)->member)
-#endif
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -110,14 +106,14 @@ static void tivxVpacFcFreeObject(tivxVpacFcInstObj *instObj,
     tivxVpacFcObj *fcObj);
 
 static vx_status tivxVpacFcCheckInputDesc(uint16_t num_params, tivx_obj_desc_t *obj_desc[]);
-static vx_status tivxVpacFcMapUserDesc(void **target_ptr, tivx_obj_desc_user_data_object_t *user_data_obj, uint32_t size);
+static vx_status tivxVpacFcMapUserDesc(void **target_ptr, tivx_obj_desc_user_data_object_t *desc, uint32_t size);
 static vx_status tivxVpacFcVissMscSetParams(tivxVpacVissObj *vissObj, tivxVpacMscScaleObj *mscObj, const tivx_vpac_viss_params_t *tivxVissPrms,
     const tivx_vpac_fc_viss_msc_params_t *fcPrms, const tivx_obj_desc_raw_image_t *raw_img_desc, tivx_obj_desc_image_t *img_desc_fc_out[]);
 
 static vx_status tivxVpacFcVissMscMapFormat(Fvid2_Format *Vissfmt, Fvid2_Format *Mscfmt, uint32_t out_start, uint32_t mux_val, uint32_t vxFmt, uint32_t *plane_count);
-static vx_status tivxVpacFcUnmapUserDesc(void **target_ptr, tivx_obj_desc_user_data_object_t *user_data_obj);
+static vx_status tivxVpacFcUnmapUserDesc(void **target_ptr, tivx_obj_desc_user_data_object_t *desc);
 
-static void tivxVpacFcMscScaleCopyOutPrmsToScCfg(Msc_ScConfig *sc_cfg, uint32_t cnt);
+static void tivxVpacFcMscScaleCopyOutPrmsToScCfg(Msc_ScConfig *scCfg, uint32_t cnt);
 
 int32_t tivxVpacFcFrameComplCb(Fvid2_Handle handle, void *appData);
 
@@ -129,12 +125,6 @@ int32_t tivxVpacFcFrameComplCb(Fvid2_Handle handle, void *appData);
 static tivx_target_kernel vx_vpac_fc_target_kernel = NULL;
 
 tivxVpacFcInstObj       gTivxVpacFcInstObj;
-tivxVpacVissInstObj     gTivxVpacVissInstObj;
-tivxVpacMscScaleInstObj gTivxVpacMscMScaleInstObj[TIVX_VPAC_MSC_NUM_INST];
-
-extern tivx_mutex             viss_aewb_lock[VHWA_M2M_VISS_MAX_HANDLES];
-extern tivx_ae_awb_params_t   viss_aewb_results[VHWA_M2M_VISS_MAX_HANDLES];
-extern uint32_t               viss_aewb_channel[VHWA_M2M_VISS_MAX_HANDLES];
 
 /* ========================================================================== */
 /*                          Function Definitions                              */
@@ -145,9 +135,6 @@ void tivxAddTargetKernelVpacFc(void)
     vx_status status = (vx_status)VX_FAILURE;
     char target_name[TIVX_TARGET_MAX_NAME];
     vx_enum self_cpu;
-
-    tivxVpacMscScaleInstObj *inst_obj;
-    uint32_t                inst_start;
 
     self_cpu = tivxGetSelfCpuId();
     /* LDRA_JUSTIFY_START
@@ -281,9 +268,9 @@ static void tivxVpacFcSetIsInvalidFlag(tivx_obj_desc_t *obj_desc[])
     <justification end> */
     if ((uint32_t)tivxFlagIsBitSet(obj_desc[TIVX_KERNEL_VPAC_FC_VISS_RAW_IDX]->flags, TIVX_REF_FLAG_IS_INVALID) == 1U)
     {
+        out_start = TIVX_KERNEL_VPAC_FC_MSC_SCALE_OUT0_IMG_IDX;
         for (cnt = 0U; cnt < TIVX_KERNEL_VPAC_FC_MAX_IMAGE_OUTPUT; cnt ++)
         {
-            out_start = TIVX_KERNEL_VPAC_FC_MSC_SCALE_OUT0_IMG_IDX;
             if (NULL != obj_desc[out_start])
             {
                 tivxFlagBitSet(&obj_desc[out_start]->flags, TIVX_REF_FLAG_IS_INVALID);
@@ -304,9 +291,9 @@ static void tivxVpacFcSetIsInvalidFlag(tivx_obj_desc_t *obj_desc[])
     /* LDRA_JUSTIFY_END */
     else
     {
+        out_start = TIVX_KERNEL_VPAC_FC_MSC_SCALE_OUT0_IMG_IDX;
         for (cnt = 0U; cnt < TIVX_KERNEL_VPAC_FC_MAX_IMAGE_OUTPUT; cnt ++)
         {
-            out_start = TIVX_KERNEL_VPAC_FC_MSC_SCALE_OUT0_IMG_IDX;
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
             <justification start>
@@ -1010,22 +997,22 @@ static vx_status VX_CALLBACK tivxVpacFcCreate(
             {
             case TIVX_VPAC_FC_VISS_OUT0:
                 fcPathInfo->edgeInfo[edge_counter].startPort = VHWA_FC_PORT_VISS_OUT_Y12;
-                fcPathInfo->edgeInfo[edge_counter].endPort = (uint64_t)(VHWA_FC_PORT_MSC0_IN_0 + thread_id);
+                fcPathInfo->edgeInfo[edge_counter].endPort = (uint64_t)VHWA_FC_PORT_MSC0_IN_0 + (uint64_t)thread_id;
                 edge_counter++;
                 break;
             case TIVX_VPAC_FC_VISS_OUT1:
                 fcPathInfo->edgeInfo[edge_counter].startPort = VHWA_FC_PORT_VISS_OUT_UV12;
-                fcPathInfo->edgeInfo[edge_counter].endPort = (uint64_t)(VHWA_FC_PORT_MSC0_IN_0 + thread_id);
+                fcPathInfo->edgeInfo[edge_counter].endPort = (uint64_t)VHWA_FC_PORT_MSC0_IN_0 + (uint64_t)thread_id;
                 edge_counter++;
                 break;
             case TIVX_VPAC_FC_VISS_OUT2:
                 fcPathInfo->edgeInfo[edge_counter].startPort = VHWA_FC_PORT_VISS_OUT_Y8;
-                fcPathInfo->edgeInfo[edge_counter].endPort = (uint64_t)(VHWA_FC_PORT_MSC0_IN_0 + thread_id);
+                fcPathInfo->edgeInfo[edge_counter].endPort = (uint64_t)VHWA_FC_PORT_MSC0_IN_0 + (uint64_t)thread_id;
                 edge_counter++;
                 break;
             case TIVX_VPAC_FC_VISS_OUT3:
                 fcPathInfo->edgeInfo[edge_counter].startPort = VHWA_FC_PORT_VISS_OUT_UV8;
-                fcPathInfo->edgeInfo[edge_counter].endPort = (uint64_t)(VHWA_FC_PORT_MSC0_IN_0 + thread_id);
+                fcPathInfo->edgeInfo[edge_counter].endPort = (uint64_t)VHWA_FC_PORT_MSC0_IN_0 + (uint64_t)thread_id;
                 edge_counter++;
                 break;
             case TIVX_VPAC_FC_MSC_CH_INVALID:
@@ -1062,7 +1049,7 @@ static vx_status VX_CALLBACK tivxVpacFcCreate(
             switch(fcPrms->msc_out_msc_in_map[cnt])
             {
             case TIVX_VPAC_FC_MSC0:
-                fcPathInfo->edgeInfo[edge_counter].startPort = (uint64_t)(VHWA_FC_PORT_MSC0_OUT_0 + cnt);
+                fcPathInfo->edgeInfo[edge_counter].startPort = (uint64_t)VHWA_FC_PORT_MSC0_OUT_0 + (uint64_t)cnt;
                 fcPathInfo->edgeInfo[edge_counter].endPort = VHWA_FC_PORT_DDR;
                 edge_counter++;
                 viss_output_msc0_cnt++;
@@ -1076,7 +1063,7 @@ static vx_status VX_CALLBACK tivxVpacFcCreate(
             However, due to the stated rationale, this is not tested.
             <justification end> */
             case TIVX_VPAC_FC_MSC1:
-                fcPathInfo->edgeInfo[edge_counter].startPort = (uint64_t)(VHWA_FC_PORT_MSC1_OUT_0 + cnt);
+                fcPathInfo->edgeInfo[edge_counter].startPort = (uint64_t)VHWA_FC_PORT_MSC1_OUT_0 + (uint64_t)cnt;
                 fcPathInfo->edgeInfo[edge_counter].endPort = VHWA_FC_PORT_DDR;
                 edge_counter++;
                 viss_output_msc1_cnt++;
@@ -1691,15 +1678,10 @@ static vx_status VX_CALLBACK tivxVpacFcProcess(
     uint64_t                   start_time, cur_time;
 
     tivxVpacFcObj                       *fcObj = NULL;
-    Vhwa_M2mFcGraphPathInfo             *fcPathInfo = NULL;
     tivx_vpac_fc_viss_msc_params_t      *fcPrms;
 
     tivxVpacVissObj                     *vissObj = NULL;
-    Vhwa_M2mVissParams                  *vissDrvPrms = NULL;
     tivx_vpac_viss_params_t             *tivxVissPrms;
-
-    tivxVpacMscScaleObj                 *msc_obj = NULL;
-    Vhwa_M2mMscParams                   *msc_prms = NULL;
 
     tivx_obj_desc_raw_image_t           *raw_img_desc_fc_in = NULL;
     tivx_obj_desc_image_t               *img_desc_fc_out[TIVX_KERNEL_VPAC_FC_MAX_IMAGE_OUTPUT];
@@ -1709,8 +1691,6 @@ static vx_status VX_CALLBACK tivxVpacFcProcess(
     tivx_ae_awb_params_t                *ae_awb_result = NULL;
     tivx_obj_desc_user_data_object_t    *aewb_res_desc = NULL;
     tivx_obj_desc_user_data_object_t    *h3a_out_desc = NULL;
-    tivx_obj_desc_user_data_object_t    *dcc_buf_desc = NULL;
-    tivx_obj_desc_distribution_t        *raw_histogram_desc = NULL;
 
     tivx_ae_awb_params_t                 aewb_params;
     tivx_h3a_data_t                     *h3a_out = NULL;
@@ -1761,7 +1741,6 @@ static vx_status VX_CALLBACK tivxVpacFcProcess(
         /* LDRA_JUSTIFY_END */
         {
             vissObj = &fcObj->vissObj;
-            msc_obj = &fcObj->msc_obj;
 
             /* Assign object descriptors */
             config_desc = (tivx_obj_desc_user_data_object_t *)
@@ -2018,6 +1997,7 @@ static vx_status VX_CALLBACK tivxVpacFcProcess(
             if ((vx_status)VX_SUCCESS != status)
             {
                 VX_PRINT(VX_ZONE_ERROR, "Failed to apply AEWB Result\n");
+                status = (vx_status)VX_FAILURE;
             }
             /* LDRA_JUSTIFY_END */
         }
@@ -2571,221 +2551,209 @@ static vx_status tivxVpacFcVissMscSetParams(tivxVpacVissObj *vissObj, tivxVpacMs
         vissDrvPrms->outPrms[out_cnt].enable = UFALSE;
     }
 
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start>
-    Rationale: The component level negative test framework and test applications cannot reach this portion.
-    This branch statement checks for errors accumulated in previous steps. Since no error is accumulated due to previously stated rationales, this branch statement cannot be reached.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if ((vx_status)VX_SUCCESS == status)
-    /* LDRA_JUSTIFY_END */
+    for (msc_inst = 0U; msc_inst < TIVX_KERNEL_VPAC_FC_MAX_MSC_INPUT_THREADS; msc_inst ++)
     {
-        for (msc_inst = 0U; msc_inst < TIVX_KERNEL_VPAC_FC_MAX_MSC_INPUT_THREADS; msc_inst ++)
+        for (out_cnt = 0u; out_cnt < TIVX_KERNEL_VPAC_FC_VISS_MAX_IMAGE_OUTPUT; out_cnt ++)
         {
-            for (out_cnt = 0u; out_cnt < TIVX_KERNEL_VPAC_FC_VISS_MAX_IMAGE_OUTPUT; out_cnt ++)
+
+            if (out_cnt == fcPrms->msc_in_thread_viss_out_map[msc_inst] )
             {
-
-                if (out_cnt == fcPrms->msc_in_thread_viss_out_map[msc_inst] )
+                outPrms = &vissDrvPrms->outPrms[out_cnt];
+                                
+                status = tivxVpacFcVissMscMapFormat(
+                &outPrms->fmt, &msc_prms->inFmt, out_cnt,
+                mux_val[out_cnt], vxFmt, &plane_count);
+                /* LDRA_JUSTIFY_START
+                <metric start> branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot reach this portion.
+                This branch statement checks for errors accumulated in previous steps. Since no error is accumulated due to previously stated rationales, this branch statement cannot be reached.
+                Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
+                if ((vx_status)VX_SUCCESS == status)
+                /* LDRA_JUSTIFY_END */
                 {
-                    outPrms = &vissDrvPrms->outPrms[out_cnt];
-                                    
-                    status = tivxVpacFcVissMscMapFormat(
-                    &outPrms->fmt, &msc_prms->inFmt, out_cnt,
-                    mux_val[out_cnt], vxFmt, &plane_count);
-                    /* LDRA_JUSTIFY_START
-                    <metric start> branch <metric end>
-                    <justification start>
-                    Rationale: The component level negative test framework and test applications cannot reach this portion.
-                    This branch statement checks for errors accumulated in previous steps. Since no error is accumulated due to previously stated rationales, this branch statement cannot be reached.
-                    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-                    However, due to the stated rationale, this is not tested.
-                    <justification end> */
-                    if ((vx_status)VX_SUCCESS == status)
-                    /* LDRA_JUSTIFY_END */
+                    outPrms->enable = UTRUE;
+                    outPrms->fmt.width = raw_img_desc->params.width;
+                    outPrms->fmt.height = raw_img_desc->params.height;
+
+
+                    for (cnt = 0u; cnt < TIVX_IMAGE_MAX_PLANES; cnt ++)
                     {
-                        outPrms->enable = UTRUE;
-                        outPrms->fmt.width = raw_img_desc->params.width;
-                        outPrms->fmt.height = raw_img_desc->params.height;
-
-
-                        for (cnt = 0u; cnt < TIVX_IMAGE_MAX_PLANES; cnt ++)
+                        if(FVID2_CCSF_BITS8_PACKED == outPrms->fmt.ccsFormat)
                         {
-                            if(FVID2_CCSF_BITS8_PACKED == outPrms->fmt.ccsFormat)
-                            {
-                                outPrms->fmt.pitch[cnt] = outPrms->fmt.width;
-                            }
-                            else
-                            {
-                                outPrms->fmt.pitch[cnt] = outPrms->fmt.width * 2U;
-                            }
+                            outPrms->fmt.pitch[cnt] = outPrms->fmt.width;
+                        }
+                        else
+                        {
+                            outPrms->fmt.pitch[cnt] = outPrms->fmt.width * 2U;
                         }
                     }
-                    /* LDRA_JUSTIFY_START
-                    <metric start> branch <metric end>
-                    <justification start>
-                    Rationale: The component level negative test framework and test applications cannot reach this portion.
-                    This branch statement checks for errors accumulated in previous steps. Since no error is accumulated due to previously stated rationales, this branch statement cannot be reached.
-                    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-                    However, due to the stated rationale, this is not tested.
-                    <justification end> */
-                    else
-                    {
-                        VX_PRINT(VX_ZONE_ERROR, "Failed to map format for output%d\n", out_cnt);
-                    }
-                    /* LDRA_JUSTIFY_END */
                 }
-
-                if ((vx_status)VX_SUCCESS != status)
-                {
-                    break;
-                }
-            }
-        }
-
-        msc_prms->inFmt.width    = raw_img_desc->params.width;
-        msc_prms->inFmt.height   = raw_img_desc->params.height;
-        if(FVID2_CCSF_BITS8_PACKED == msc_prms->inFmt.ccsFormat)
-        {
-            msc_prms->inFmt.pitch[0] = raw_img_desc->params.width;
-            msc_prms->inFmt.pitch[1] = raw_img_desc->params.width;
-        }
-        else
-        {
-            msc_prms->inFmt.pitch[0] = raw_img_desc->params.width * 2U;
-            msc_prms->inFmt.pitch[1] = raw_img_desc->params.width * 2U;
-        }
-
-        msc_prms->mscCfg.tapSel = MSC_TAP_SEL_5TAPS;
-
-        if(((0x01U == plane_count) || (0x04U == plane_count)))
-        {
-            /* Set MSC input params to luma only */
-            msc_prms->inFmt.dataFormat = FVID2_DF_LUMA_ONLY;
-            msc_prms->isEnableSimulProcessing = (uint32_t)false;
-            if(0x01U == plane_count)
-            {
-                if (vissDrvPrms->outPrms[0U].enable == UTRUE)
-                {
-                    vissDrvPrms->outPrms[0U].fmt.dataFormat = FVID2_DF_LUMA_ONLY;
-                }
-            }
-            else
-            {
-                if (vissDrvPrms->outPrms[2U].enable == UTRUE)
-                {
-                    vissDrvPrms->outPrms[2U].fmt.dataFormat = FVID2_DF_LUMA_ONLY;
-                }
-            }
-        }
-#if defined (VPAC3) || defined (VPAC3L)
-        else if(((0x02U == plane_count) || (0x08U == plane_count)))
-        {
-            /* set msc input as chroma only */
-            msc_prms->inFmt.dataFormat = FVID2_DF_CHROMA_ONLY;
-            msc_prms->isEnableSimulProcessing = (uint32_t)false;
-            if(0x02U == plane_count)
-            {
-                if (vissDrvPrms->outPrms[1U].enable == UTRUE)
-                {
-                    vissDrvPrms->outPrms[1U].fmt.dataFormat = FVID2_DF_CHROMA_ONLY;
-                }
-            }
-            else
-            {
-                if (vissDrvPrms->outPrms[3U].enable == UTRUE)
-                {
-                    vissDrvPrms->outPrms[3U].fmt.dataFormat = FVID2_DF_CHROMA_ONLY;
-                }
-            }
-        }
-        else if((((0x03U == plane_count) || (0x0CU == plane_count)) && (TIVX_VPAC_VISS_CHROMA_MODE_420 == tivxVissPrms->fcp[0].chroma_mode)))
-        {
-            /* set msc input as yuv420 */
-            msc_prms->inFmt.dataFormat = FVID2_DF_YUV420SP_UV;
-            msc_prms->isEnableSimulProcessing = (uint32_t)true;
-
-            if(0x03U == plane_count)
-            {
-                if (vissDrvPrms->outPrms[0U].enable == UTRUE)
-                {
-                    vissDrvPrms->outPrms[0U].fmt.dataFormat = FVID2_DF_YUV420SP_UV;
-                    vissDrvPrms->outPrms[1U].enable = UFALSE;
-                }
-            }
-            else
-            {
-                if (vissDrvPrms->outPrms[2U].enable == UTRUE)
-                {
-                    vissDrvPrms->outPrms[2U].fmt.dataFormat = FVID2_DF_YUV420SP_UV;
-                    vissDrvPrms->outPrms[3U].enable = UFALSE;
-                }
-            }
-        }
-        else if((((0x03U == plane_count) || (0x0CU == plane_count)) && (TIVX_VPAC_VISS_CHROMA_MODE_422 == tivxVissPrms->fcp[0].chroma_mode)))
-        {
-            /* set msc input as yuv422 */
-            msc_prms->inFmt.dataFormat = FVID2_DF_YUV422SP_UV;
-            msc_prms->isEnableSimulProcessing = (uint32_t)true;
-            if(0x03U == plane_count)
-            {
-                if (vissDrvPrms->outPrms[0U].enable == UTRUE)
-                {
-                    vissDrvPrms->outPrms[0U].fmt.dataFormat = FVID2_DF_YUV422SP_UV;
-                    vissDrvPrms->outPrms[1U].enable = UFALSE;
-                }
-            }
-        }
-#endif
-        else
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Invalid MSC input Format\n");
-            status = (vx_status)VX_FAILURE;
-        }
-
-        /* Map MSC output params and Scalar config  */
-        for (cnt = 0U; cnt < TIVX_KERNEL_VPAC_FC_MAX_IMAGE_OUTPUT; cnt++)
-        {
-            scCfg = &msc_prms->mscCfg.scCfg[cnt];
-
-            if (NULL != img_desc_fc_out[cnt])
-            {
-                scCfg->enable = UTRUE;
-
-                /* Set MSC output format based on FC output */
-                msc_prms->outFmt[cnt].width = img_desc_fc_out[cnt]->width;
-                scCfg->outWidth = msc_prms->outFmt[cnt].width;
-
-                msc_prms->outFmt[cnt].height = img_desc_fc_out[cnt]->height;
-                scCfg->outHeight = msc_prms->outFmt[cnt].height;
-
-                msc_prms->outFmt[cnt].pitch[0] = img_desc_fc_out[cnt]->width;
-                msc_prms->outFmt[cnt].pitch[1] = img_desc_fc_out[cnt]->width;
-
-                if(((cnt % 2U) == 0U))
-                {
-                    msc_prms->outFmt[cnt].dataFormat = FVID2_DF_LUMA_ONLY;
-                    scCfg->inRoi.cropHeight = msc_prms->inFmt.height;
-                }
-        #if defined (VPAC3) || defined (VPAC3L)
+                /* LDRA_JUSTIFY_START
+                <metric start> branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot reach this portion.
+                This branch statement checks for errors accumulated in previous steps. Since no error is accumulated due to previously stated rationales, this branch statement cannot be reached.
+                Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 else
                 {
-                    msc_prms->outFmt[cnt].dataFormat = FVID2_DF_CHROMA_ONLY;
-                    scCfg->inRoi.cropHeight = msc_prms->inFmt.height / 2U;
-
+                    VX_PRINT(VX_ZONE_ERROR, "Failed to map format for output%d\n", out_cnt);
                 }
-        #endif
-                msc_prms->outFmt[cnt].ccsFormat = msc_prms->inFmt.ccsFormat;
-
-                scCfg->inRoi.cropWidth = msc_prms->inFmt.width;
-                
-                tivxVpacFcMscScaleCopyOutPrmsToScCfg(scCfg, cnt);
+                /* LDRA_JUSTIFY_END */
             }
+
+            if ((vx_status)VX_SUCCESS != status)
+            {
+                break;
+            }
+        }
+    }
+
+    msc_prms->inFmt.width    = raw_img_desc->params.width;
+    msc_prms->inFmt.height   = raw_img_desc->params.height;
+    if(FVID2_CCSF_BITS8_PACKED == msc_prms->inFmt.ccsFormat)
+    {
+        msc_prms->inFmt.pitch[0] = raw_img_desc->params.width;
+        msc_prms->inFmt.pitch[1] = raw_img_desc->params.width;
+    }
+    else
+    {
+        msc_prms->inFmt.pitch[0] = raw_img_desc->params.width * 2U;
+        msc_prms->inFmt.pitch[1] = raw_img_desc->params.width * 2U;
+    }
+
+    msc_prms->mscCfg.tapSel = MSC_TAP_SEL_5TAPS;
+
+    if(((0x01U == plane_count) || (0x04U == plane_count)))
+    {
+        /* Set MSC input params to luma only */
+        msc_prms->inFmt.dataFormat = FVID2_DF_LUMA_ONLY;
+        msc_prms->isEnableSimulProcessing = (uint32_t)false;
+        if(0x01U == plane_count)
+        {
+            if (vissDrvPrms->outPrms[0U].enable == UTRUE)
+            {
+                vissDrvPrms->outPrms[0U].fmt.dataFormat = FVID2_DF_LUMA_ONLY;
+            }
+        }
+        else
+        {
+            if (vissDrvPrms->outPrms[2U].enable == UTRUE)
+            {
+                vissDrvPrms->outPrms[2U].fmt.dataFormat = FVID2_DF_LUMA_ONLY;
+            }
+        }
+    }
+#if defined (VPAC3) || defined (VPAC3L)
+    else if(((0x02U == plane_count) || (0x08U == plane_count)))
+    {
+        /* set msc input as chroma only */
+        msc_prms->inFmt.dataFormat = FVID2_DF_CHROMA_ONLY;
+        msc_prms->isEnableSimulProcessing = (uint32_t)false;
+        if(0x02U == plane_count)
+        {
+            if (vissDrvPrms->outPrms[1U].enable == UTRUE)
+            {
+                vissDrvPrms->outPrms[1U].fmt.dataFormat = FVID2_DF_CHROMA_ONLY;
+            }
+        }
+        else
+        {
+            if (vissDrvPrms->outPrms[3U].enable == UTRUE)
+            {
+                vissDrvPrms->outPrms[3U].fmt.dataFormat = FVID2_DF_CHROMA_ONLY;
+            }
+        }
+    }
+    else if((((0x03U == plane_count) || (0x0CU == plane_count)) && (TIVX_VPAC_VISS_CHROMA_MODE_420 == tivxVissPrms->fcp[0].chroma_mode)))
+    {
+        /* set msc input as yuv420 */
+        msc_prms->inFmt.dataFormat = FVID2_DF_YUV420SP_UV;
+        msc_prms->isEnableSimulProcessing = (uint32_t)true;
+
+        if(0x03U == plane_count)
+        {
+            if (vissDrvPrms->outPrms[0U].enable == UTRUE)
+            {
+                vissDrvPrms->outPrms[0U].fmt.dataFormat = FVID2_DF_YUV420SP_UV;
+                vissDrvPrms->outPrms[1U].enable = UFALSE;
+            }
+        }
+        else
+        {
+            if (vissDrvPrms->outPrms[2U].enable == UTRUE)
+            {
+                vissDrvPrms->outPrms[2U].fmt.dataFormat = FVID2_DF_YUV420SP_UV;
+                vissDrvPrms->outPrms[3U].enable = UFALSE;
+            }
+        }
+    }
+    else if((((0x03U == plane_count) || (0x0CU == plane_count)) && (TIVX_VPAC_VISS_CHROMA_MODE_422 == tivxVissPrms->fcp[0].chroma_mode)))
+    {
+        /* set msc input as yuv422 */
+        msc_prms->inFmt.dataFormat = FVID2_DF_YUV422SP_UV;
+        msc_prms->isEnableSimulProcessing = (uint32_t)true;
+        if(0x03U == plane_count)
+        {
+            if (vissDrvPrms->outPrms[0U].enable == UTRUE)
+            {
+                vissDrvPrms->outPrms[0U].fmt.dataFormat = FVID2_DF_YUV422SP_UV;
+                vissDrvPrms->outPrms[1U].enable = UFALSE;
+            }
+        }
+    }
+#endif
+    else
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Invalid MSC input Format\n");
+        status = (vx_status)VX_FAILURE;
+    }
+
+    /* Map MSC output params and Scalar config  */
+    for (cnt = 0U; cnt < TIVX_KERNEL_VPAC_FC_MAX_IMAGE_OUTPUT; cnt++)
+    {
+        scCfg = &msc_prms->mscCfg.scCfg[cnt];
+
+        if (NULL != img_desc_fc_out[cnt])
+        {
+            scCfg->enable = UTRUE;
+
+            /* Set MSC output format based on FC output */
+            msc_prms->outFmt[cnt].width = img_desc_fc_out[cnt]->width;
+            scCfg->outWidth = msc_prms->outFmt[cnt].width;
+
+            msc_prms->outFmt[cnt].height = img_desc_fc_out[cnt]->height;
+            scCfg->outHeight = msc_prms->outFmt[cnt].height;
+
+            msc_prms->outFmt[cnt].pitch[0] = img_desc_fc_out[cnt]->width;
+            msc_prms->outFmt[cnt].pitch[1] = img_desc_fc_out[cnt]->width;
+
+            if(((cnt % 2U) == 0U))
+            {
+                msc_prms->outFmt[cnt].dataFormat = FVID2_DF_LUMA_ONLY;
+                scCfg->inRoi.cropHeight = msc_prms->inFmt.height;
+            }
+    #if defined (VPAC3) || defined (VPAC3L)
             else
             {
-                scCfg->enable = UFALSE;
+                msc_prms->outFmt[cnt].dataFormat = FVID2_DF_CHROMA_ONLY;
+                scCfg->inRoi.cropHeight = msc_prms->inFmt.height / 2U;
+
             }
+    #endif
+            msc_prms->outFmt[cnt].ccsFormat = msc_prms->inFmt.ccsFormat;
+
+            scCfg->inRoi.cropWidth = msc_prms->inFmt.width;
+            
+            tivxVpacFcMscScaleCopyOutPrmsToScCfg(scCfg, cnt);
+        }
+        else
+        {
+            scCfg->enable = UFALSE;
         }
     }
 

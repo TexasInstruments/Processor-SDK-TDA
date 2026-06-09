@@ -73,11 +73,7 @@ extern "C" {
     #include     "ti/drv/fvid2/include/fvid2_api.h"
     #include     "ti/csl/csl_types.h"
     #include     "ti/drv/udma/udma.h"
-    #if defined(SOC_J721E)
-    #include     "ti/drv/vhwa/soc/V0/vhwa_vpac_priv.h"
-    #elif defined(SOC_J721S2) || defined(SOC_J784S4) || defined (SOC_J742S2)
     #include     "ti/drv/vhwa/soc/vhwa_vpac_priv.h"
-    #endif
 #endif
 
 /* ========================================================================== */
@@ -121,7 +117,7 @@ extern "C" {
 
 static inline int32_t VhwaAl_SemaphoreP_pend(VhwaAl_SemaphoreP_Struct obj, uint32_t timeout);
 static inline void VhwaAl_SemaphoreP_post(VhwaAl_SemaphoreP_Struct obj);
-static inline void VhwaAl_Cache_Inv(void *blockPtr, uint32_t byteCnt, uint32_t type);
+static inline void VhwaAl_Cache_Inv(void *addr, uint32_t size, uint32_t type);
 static inline void VhwaAl_Cache_Wb(void *addr, uint32_t size, uint32_t type);
 static inline void VhwaAl_HwiP_clearInterrupt(uint32_t interruptNum);
 
@@ -147,9 +143,9 @@ static inline int32_t VhwaAl_SemaphoreP_pend(VhwaAl_SemaphoreP_Struct obj, uint3
 static inline void VhwaAl_SemaphoreP_post(VhwaAl_SemaphoreP_Struct obj)
 {
     #if defined(VHWA_MCU_PLUS_SDK)
-    SemaphoreP_post(&obj);
+    (void)SemaphoreP_post(&obj);
     #elif defined (VHWA_PDK)
-    SemaphoreP_post(obj);
+    (void)SemaphoreP_post(obj);
     #endif
 }
 

@@ -1,5 +1,5 @@
 # Script to add x509 certificate to SBL
-# for combined boot - SBL+TIFS+
+# for combined boot - SBL+SYSFW+
 # The certificate used will be ROM format
 #
 # Python 3 script
@@ -15,6 +15,10 @@ from textwrap import dedent
 import sys
 
 g_sha_to_use = "sha512"
+
+g_valid_key_versions = ["1.5", "2.2"]
+
+g_signopt = ""
 
 g_sha_oids = {
 	"sha256" : "2.16.840.1.101.3.4.2.1",
@@ -61,32 +65,33 @@ swrv = INTEGER:{SWRV}
 extImgSize = INTEGER:{EXT_IMAGE_SIZE}
 numComp = INTEGER:{NUM_COMP}
 sbl = SEQUENCE:sbl
-fw = SEQUENCE:tifs
-{TIFS_INNER_CERT_EXT}
+fw = SEQUENCE:sysfw
+{SYSFW_INNER_CERT_EXT}
 bd2 = SEQUENCE:boardcfg
 {SBLDATA_CERT_EXT}
+{APPLICATION_CERT_EXT}
 
 [ sbl ]
 
 compType = INTEGER:1
 bootCore = INTEGER:16
-compOpts = INTEGER:0
+compOpts = INTEGER:{SBL_COMPOPTS}
 destAddr = FORMAT:HEX,OCT:{SBL_LOAD_ADDR}
 compSize = INTEGER:{SBL_SIZE}
 shaType = OID:{SHA_OID}
 shaValue = FORMAT:HEX,OCT:{SBL_SHA_VAL}
 
-[ tifs ]
+[ sysfw ]
 
 compType = INTEGER:2
 bootCore = INTEGER:0
 compOpts = INTEGER:0
-destAddr = FORMAT:HEX,OCT:{TIFS_LOAD_ADDR}
-compSize = INTEGER:{TIFS_SIZE}
+destAddr = FORMAT:HEX,OCT:{SYSFW_LOAD_ADDR}
+compSize = INTEGER:{SYSFW_SIZE}
 shaType = OID:{SHA_OID}
-shaValue = FORMAT:HEX,OCT:{TIFS_SHA_VAL}
+shaValue = FORMAT:HEX,OCT:{SYSFW_SHA_VAL}
 
-{TIFS_INNER_CERT_SEQ}
+{SYSFW_INNER_CERT_SEQ}
 
 [ boardcfg ]
 
@@ -99,6 +104,8 @@ shaType = OID:{SHA_OID}
 shaValue = FORMAT:HEX,OCT:{BOARDCFG_SHA_VAL}
 
 {SBLDATA_CERT_SEQ}
+
+{APPLICATION_CERT_SEQ}
 '''
 
 g_sbldata_cert_ext = 'bd3 = SEQUENCE:sbl data'
@@ -116,18 +123,18 @@ shaValue = FORMAT:HEX,OCT:{BOARDCFG_SBLDATA_SHA_VAL}
 '''
 
 
-g_inner_cert_ext = 'bd1 = SEQUENCE:tifs_inner_cert'
+g_inner_cert_ext = 'bd1 = SEQUENCE:sysfw_inner_cert'
 
 g_inner_cert_seq = '''
-[ tifs_inner_cert ]
+[ sysfw_inner_cert ]
 
 compType = INTEGER:3
 bootCore = INTEGER:0
 compOpts = INTEGER:0
 destAddr = FORMAT:HEX,OCT:00000000
-compSize = INTEGER:{TIFS_INNER_CERT_SIZE}
+compSize = INTEGER:{SYSFW_INNER_CERT_SIZE}
 shaType = OID:{SHA_OID}
-shaValue = FORMAT:HEX,OCT:{TIFS_INNER_CERT_SHA_VAL}
+shaValue = FORMAT:HEX,OCT:{SYSFW_INNER_CERT_SHA_VAL}
 '''
 
 g_dbg_seq = '''
@@ -153,6 +160,21 @@ iterationCnt = INTEGER:{ENC_ITER_CNT}
 salt         = FORMAT:HEX,OCT:{ENC_SALT}
 
 {extra_enc_comp_seq}
+'''
+
+g_application_cert_ext = 'bd3 = SEQUENCE:application'
+
+g_application_cert_seq = '''
+
+[ application ]
+
+compType = INTEGER:17
+bootCore = INTEGER:16
+compOpts = INTEGER:0
+destAddr = FORMAT:HEX,OCT:{APPLICATION_LOAD_ADDR}
+compSize = INTEGER:{APPLICATION_SIZE}
+shaType  = OID:{SHA_OID}
+shaValue = FORMAT:HEX,OCT:{APPLICATION_SHA_VAL}
 '''
 
 def get_sha_val(f_name, sha_type):
@@ -204,6 +226,8 @@ def get_encrypted_file_iv_rs(bin_file_name, enc_key):
 
 
 def get_cert(args):
+    global g_signopt
+
     swrev = args.swrv
 
     if(swrev is None):
@@ -221,17 +245,32 @@ def get_cert(args):
             print("Invalid debug extension, exiting ...")
             exit(2)
 
+    # Key version has to be one of 1.5, 2.2
+    if(args.keyversion not in g_valid_key_versions):
+        print("[WARNING]{} is not a valid key version. Valid types are : {}. Using 1.5 by default".format(args.keyversion, ','.join(g_valid_key_versions)))
+        g_signopt = ""
+    else:
+        if(args.keyversion == "2.2"):
+            g_signopt = "-sigopt rsa_padding_mode:pss -sigopt rsa_pss_saltlen:64"
+        else:
+            g_signopt = ""
+
     inner_c_ext = ''
     inner_c_seq = ''
     ext_enc_seq = ''
     sbl_enc_seq = ''
     sbldata_c_ext = ''
     sbldata_c_seq = ''
+    application_c_ext = ''
+    application_c_seq = ''
 
     num_comp = 4 if args.enable_sbldata == 'yes' else 3
+    if args.application_loadaddr is not None:
+          num_comp += 1
 
+    sbl_compOpts = 160 if args.dual_stage_boot == 'yes' else 0
 
-    full_image_size = os.path.getsize(args.sbl_bin) + os.path.getsize(args.tifs_bin) + os.path.getsize(args.boardcfg_blob)
+    full_image_size = os.path.getsize(args.sbl_bin) + os.path.getsize(args.sysfw_bin) + os.path.getsize(args.boardcfg_blob)
 
     if args.sbl_enc:
 		# SBL encryption is enabled
@@ -258,20 +297,29 @@ def get_cert(args):
                                 BOARDCFG_SBLDATA_SIZE = os.path.getsize(args.boardcfg_sbldata_blob),
                                 BOARDCFG_SBLDATA_SHA_VAL = get_sha_val(args.boardcfg_sbldata_blob, g_sha_to_use))
 
+    if args.application_loadaddr is not None:
+        full_image_size += os.path.getsize(args.application_bin)
+        application_c_ext = g_application_cert_ext
+        application_c_seq = g_application_cert_seq.format(
+                                SHA_OID = g_sha_oids[g_sha_to_use],
+                                APPLICATION_LOAD_ADDR = '{:08X}'.format(int(args.application_loadaddr, 16)),
+                                APPLICATION_SIZE = os.path.getsize(args.application_bin),
+                                APPLICATION_SHA_VAL = get_sha_val(args.application_bin, g_sha_to_use))
 
-    if(args.tifs_inner_cert is not None):
-        if(not os.path.exists(args.tifs_inner_cert)):
+
+    if(args.sysfw_inner_cert is not None):
+        if(not os.path.exists(args.sysfw_inner_cert)):
             # Invalid inner cert
-            print("TIFS Inner certificate file does not exist")
+            print("SYSFW Inner certificate file does not exist")
             exit(2)
         else:
-            full_image_size += os.path.getsize(args.tifs_inner_cert)
+            full_image_size += os.path.getsize(args.sysfw_inner_cert)
             num_comp += 1
             inner_c_ext = g_inner_cert_ext
             inner_c_seq = g_inner_cert_seq.format(
-                            TIFS_INNER_CERT_SIZE = os.path.getsize(args.tifs_inner_cert),
+                            SYSFW_INNER_CERT_SIZE = os.path.getsize(args.sysfw_inner_cert),
                             SHA_OID = g_sha_oids[g_sha_to_use],
-                            TIFS_INNER_CERT_SHA_VAL = get_sha_val(args.tifs_inner_cert, g_sha_to_use),
+                            SYSFW_INNER_CERT_SHA_VAL = get_sha_val(args.sysfw_inner_cert, g_sha_to_use),
                             )
 
     sbl_size = os.path.getsize(args.sbl_bin)
@@ -287,19 +335,22 @@ def get_cert(args):
                 NUM_COMP = num_comp,
                 SHA_OID = g_sha_oids[g_sha_to_use],
                 SWRV = swrev,
+                SBL_COMPOPTS = sbl_compOpts,
                 SBL_LOAD_ADDR = '{:08X}'.format(int(args.sbl_loadaddr, 16)),
                 SBL_SIZE = sbl_size,
                 SBL_SHA_VAL = sbl_sha_val,
-                TIFS_LOAD_ADDR = '{:08X}'.format(int(args.tifs_loadaddr, 16)),
-                TIFS_SIZE = os.path.getsize(args.tifs_bin),
-                TIFS_SHA_VAL = get_sha_val(args.tifs_bin, g_sha_to_use),
-                TIFS_INNER_CERT_EXT = inner_c_ext,
-                TIFS_INNER_CERT_SEQ = inner_c_seq,
+                SYSFW_LOAD_ADDR = '{:08X}'.format(int(args.sysfw_loadaddr, 16)),
+                SYSFW_SIZE = os.path.getsize(args.sysfw_bin),
+                SYSFW_SHA_VAL = get_sha_val(args.sysfw_bin, g_sha_to_use),
+                SYSFW_INNER_CERT_EXT = inner_c_ext,
+                SYSFW_INNER_CERT_SEQ = inner_c_seq,
                 BOARDCFG_LOAD_ADDR = '{:08X}'.format(int(args.bcfg_loadaddr, 16)),
                 BOARDCFG_SIZE = os.path.getsize(args.boardcfg_blob),
                 BOARDCFG_SHA_VAL = get_sha_val(args.boardcfg_blob, g_sha_to_use),
                 SBLDATA_CERT_EXT = sbldata_c_ext,
                 SBLDATA_CERT_SEQ = sbldata_c_seq,
+                APPLICATION_CERT_EXT = application_c_ext,
+                APPLICATION_CERT_SEQ = application_c_seq,
                 EXT_IMAGE_SIZE = full_image_size,
                 )
 
@@ -315,24 +366,28 @@ def get_cert(args):
 
 # MAIN
 
-my_parser = argparse.ArgumentParser(description="Creates a ROM-boot-able combined image when the SBL, TIFS and BoardCfg data are provided")
+my_parser = argparse.ArgumentParser(description="Creates a ROM-boot-able combined image when the SBL, SYSFW and BoardCfg data are provided")
 
 my_parser.add_argument('--swrv',             type=str, help='Software revision number')
-my_parser.add_argument('--sbl-bin',          type=str, required=True, help='Path to the SBL binary')
+my_parser.add_argument('--sbl-bin',          type=str, required=True, help='Path to the SBL binary or the ATF binary')
 my_parser.add_argument('--sbl-enc',          action='store_true', required=False, help='Encrypt SBL or not')
 my_parser.add_argument('--enc-key',          type=str, required=False, help='Path to the SBL Encryption Key')
-my_parser.add_argument('--tifs-bin',        type=str, required=True, help='Path to the tifs binary')
-my_parser.add_argument('--tifs-inner-cert', type=str, help='Path to the tifs inner certificate')
+my_parser.add_argument('--sysfw-bin',        type=str, required=True, help='Path to the sysfw binary')
+my_parser.add_argument('--sysfw-inner-cert', type=str, help='Path to the sysfw inner certificate')
 my_parser.add_argument('--boardcfg-blob',    type=str, required=True, help='Path to the boardcfg blob')
-my_parser.add_argument('--boardcfg-sbldata-blob',    type=str, required=True, help='Path to the SBLDATA boardcfg blob for split architecture')
+my_parser.add_argument('--boardcfg-sbldata-blob',    type=str, required=False, help='Path to the SBLDATA boardcfg blob for split architecture')
+my_parser.add_argument('--application-bin',          type=str, required=False, help='Path to the application binary')
 my_parser.add_argument('--sbl-loadaddr',     type=str, required=True, help='Load address at which SBL needs to be loaded')
-my_parser.add_argument('--tifs-loadaddr',   type=str, required=True, help='Load address at which TIFS needs to be loaded')
+my_parser.add_argument('--sysfw-loadaddr',   type=str, required=True, help='Load address at which SYSFW needs to be loaded')
 my_parser.add_argument('--bcfg-loadaddr',    type=str, required=True, help='Load address at which BOARDCFG needs to be loaded')
-my_parser.add_argument('--bcfg-sbldata-loadaddr',    type=str, required=True, help='Load address at which SBLDATA BOARDCFG needs to be loaded for split architecture')
+my_parser.add_argument('--bcfg-sbldata-loadaddr',    type=str, required=False, help='Load address at which SBLDATA BOARDCFG needs to be loaded for split architecture')
+my_parser.add_argument('--application-loadaddr',      type=str, required=False, help='Load address at which application binary needs to be loaded')
 my_parser.add_argument('--key',              type=str, required=True, help='Path to the signing key to be used while creating the certificate')
-my_parser.add_argument('--rom-image',        type=str, required=True, help='Output file combined ROM image of SBL+TIFS+Boardcfg')
+my_parser.add_argument('--rom-image',        type=str, required=True, help='Output file combined ROM image of SBL+SYSFW+Boardcfg')
 my_parser.add_argument('--debug',            type=str, help='Debug options for the image')
-my_parser.add_argument('--enable-sbldata',  type=str, default="no", choices=["no","yes"], help='Enable to use split architecture of system firmware')
+my_parser.add_argument('--enable-sbldata',   type=str, default="no", choices=["no","yes"], help='Enable to use split architecture of system firmware')
+my_parser.add_argument('--dual-stage-boot',  type=str, default="no", choices=["no","yes"], help='Enable dual stage ATF integrated ROM boot')
+my_parser.add_argument('--keyversion',       type=str, default="1.5", help='Image signing key version. [1.5/2.2]. 1.5 - RSASSA PKCS v1.5 scheme, 2.2 - RSASSA PSS scheme. Default is 1.5')
 
 args = my_parser.parse_args()
 
@@ -348,10 +403,10 @@ cert_name = "cert"+str(randint(111, 999))
 out_name = args.rom_image
 
 # Generate the certificate
-subprocess.check_output('openssl req -new -x509 -key {} -nodes -outform DER -out {} -config {} -{}'.format(args.key, cert_name, cert_file_name, g_sha_to_use), shell=True)
+subprocess.check_output('openssl req -new -x509 -key {} -nodes -outform DER -out {} -config {} -{} {}'.format(args.key, cert_name, cert_file_name, g_sha_to_use, g_signopt), shell=True)
 
 
-# Concatenate the certificate, SBL, TIFS, and Boardcfg, TIFS Inner Cert
+# Concatenate the certificate, SBL, SYSFW, and Boardcfg, SYSFW Inner Cert
 final_fh = open(args.rom_image, 'wb+')
 cert_fh = open(cert_name, 'rb')
 sbl_fh = None
@@ -359,31 +414,37 @@ if args.sbl_enc:
 	sbl_fh = open(get_enc_filename(args.sbl_bin), 'rb')
 else:
 	sbl_fh = open(args.sbl_bin, 'rb')
-tifs_fh = open(args.tifs_bin, 'rb')
-if(args.tifs_inner_cert is not None and os.path.exists(args.tifs_inner_cert)):
-	tifs_inner_cert_fh = open(args.tifs_inner_cert, 'rb')
+sysfw_fh = open(args.sysfw_bin, 'rb')
+if(args.sysfw_inner_cert is not None and os.path.exists(args.sysfw_inner_cert)):
+	sysfw_inner_cert_fh = open(args.sysfw_inner_cert, 'rb')
 bcfg_fh = open(args.boardcfg_blob, 'rb')
 if args.enable_sbldata == 'yes':
     bcfg_sbldata_fh = open(args.boardcfg_sbldata_blob, 'rb')
+if args.application_loadaddr is not None:
+    application_fh = open(args.application_bin, 'rb')
 
 shutil.copyfileobj(cert_fh, final_fh)
 shutil.copyfileobj(sbl_fh, final_fh)
-shutil.copyfileobj(tifs_fh, final_fh)
-if(args.tifs_inner_cert is not None and os.path.exists(args.tifs_inner_cert)):
-	shutil.copyfileobj(tifs_inner_cert_fh, final_fh)
+shutil.copyfileobj(sysfw_fh, final_fh)
+if(args.sysfw_inner_cert is not None and os.path.exists(args.sysfw_inner_cert)):
+	shutil.copyfileobj(sysfw_inner_cert_fh, final_fh)
 shutil.copyfileobj(bcfg_fh, final_fh)
 if args.enable_sbldata == 'yes':
     shutil.copyfileobj(bcfg_sbldata_fh, final_fh)
+if args.application_loadaddr is not None:
+    shutil.copyfileobj(application_fh, final_fh)
 
 final_fh.close()
 cert_fh.close()
 sbl_fh.close()
-tifs_fh.close()
+sysfw_fh.close()
 bcfg_fh.close()
 if args.enable_sbldata == 'yes':
     bcfg_sbldata_fh.close()
-if(args.tifs_inner_cert is not None and os.path.exists(args.tifs_inner_cert)):
-	tifs_inner_cert_fh.close()
+if args.application_loadaddr is not None:
+    application_fh.close()
+if(args.sysfw_inner_cert is not None and os.path.exists(args.sysfw_inner_cert)):
+	sysfw_inner_cert_fh.close()
 
 # Delete the temporary files
 os.remove(cert_file_name)

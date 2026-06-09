@@ -225,7 +225,7 @@ int32_t handleInData(tidl_import_config *params, sTIDL_OrgNetwork_t  &orgTIDLNet
     strcpy((char*)params->inData, tempInData);
     for(int i = 0; i < numInputs; i++)
     {
-      params->rawDataInElementType[i] = 6; //indicating floating point raw data
+      params->rawDataInElementType[i] = TIDL_SinglePrecFloat; //indicating floating point raw data
     }
   }
 

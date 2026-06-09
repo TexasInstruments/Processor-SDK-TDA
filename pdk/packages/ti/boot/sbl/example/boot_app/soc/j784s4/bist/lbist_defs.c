@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2024
+ *  Copyright (c) Texas Instruments Incorporated 2024-26
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -80,7 +80,6 @@
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
-
 char * LBIST_getPostStatusString(SDL_LBIST_postStatus postStatus);
 
 /* ========================================================================== */
@@ -111,7 +110,7 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
   .coreName               = "Main R5F0-0",
   .instance               = SDL_LBIST_INST_MAINR5F0,
   .secondaryCoreNeeded    = true,             /* Secondary core needed */
-  .wfiCheckNeeded         = false,            /* wfi check needed */
+  .wfiCheckNeeded         = false,            /* wfi check not needed */
   .secCoreName            = "Main R5F0-1",    /* Secondary core */
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_R5FSS0_CORE0, /* Main R5F core 0 Proc Id */
@@ -126,7 +125,7 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
   .coreName               = "Main R5F1-0",
   .instance               = SDL_LBIST_INST_MAINR5F1,
   .secondaryCoreNeeded    = true,            /* Secondary core needed */
-  .wfiCheckNeeded         = false,           /* wfi check needed */
+  .wfiCheckNeeded         = false,           /* wfi check not needed */
   .secCoreName            = "Main R5F1-1",   /* Secondary core */
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_R5FSS1_CORE0, /* Main R5F core 0 Proc Id */
@@ -140,9 +139,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "C7x0 ",
   .instance               = SDL_LBIST_INST_C7X0,
-  .secondaryCoreNeeded    = false,  /* Secondary core needed */
-  .wfiCheckNeeded         = false,  /* wfi check needed */
-  .secCoreName            = "None",   /* Secondary core */
+  .secondaryCoreNeeded    = false,  /* Secondary core not needed */
+  .wfiCheckNeeded         = false,  /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_COMPUTE_CLUSTER_J7AHP0_C71SS0_CORE0_0,  /* C7x Proc Id */
   .tisciSecProcId         = 0u,
@@ -155,9 +154,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "C7x1 ",
   .instance               = SDL_LBIST_INST_C7X1,
-  .secondaryCoreNeeded    = false,  /* Secondary core needed */
-  .wfiCheckNeeded         = false,  /* wfi check needed */
-  .secCoreName            = "None",   /* Secondary core */
+  .secondaryCoreNeeded    = false,  /* Secondary core not needed */
+  .wfiCheckNeeded         = false,  /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_COMPUTE_CLUSTER_J7AHP0_C71SS1_CORE0_0,  /* C7x Proc Id */
   .tisciSecProcId         = 0u,
@@ -166,14 +165,13 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
   .numAuxDevices          = 0u,                        /* No Aux devices */
  },
 
-
  /* VPAC0 */
  {
   .coreName               = "VPAC0",
   .instance               = SDL_LBIST_INST_VPAC0,
-  .secondaryCoreNeeded    = false,           /* Secondary core needed */
-  .wfiCheckNeeded         = false,           /* wfi check needed */
-  .secCoreName            = "None",          /* Secondary core */
+  .secondaryCoreNeeded    = false,           /* Secondary core not needed */
+  .wfiCheckNeeded         = false,           /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = 0,  /* No proc id */
   .tisciSecProcId         = 0,  /* No Proc Id */
@@ -186,14 +184,14 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "DMPAC",
   .instance               = SDL_LBIST_INST_DMPAC,
-  .secondaryCoreNeeded    = false,           /* Secondary core needed */
-  .wfiCheckNeeded         = false,           /* wfi check needed */
-  .secCoreName            = "None",          /* Secondary core */
+  .secondaryCoreNeeded    = true,           /* Secondary core needed */
+  .wfiCheckNeeded         = false,           /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = 0u,  /* No proc id */
   .tisciSecProcId         = 0u,  /* No Proc Id */
   .tisciDeviceId          = TISCI_DEV_DMPAC0,                       /* DMPAC Device Id */
-  .tisciSecDeviceId       = 0u,
+  .tisciSecDeviceId       = TISCI_DEV_DMPAC0_SDE_0,
   .numAuxDevices          = 0u,                                     /* No Aux devices */
  },
 
@@ -201,9 +199,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "A72SS0",
   .instance               = SDL_LBIST_INST_A72,
-  .secondaryCoreNeeded    = false,          /* Secondary core needed */
-  .wfiCheckNeeded         = false,          /* wfi check needed */
-  .secCoreName            = "None",         /* Secondary core */
+  .secondaryCoreNeeded    = false,          /* Secondary core not needed */
+  .wfiCheckNeeded         = false,          /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = 0u,  /* No Proc Id */
   .tisciSecProcId         = 0u,  /* No proc id */
@@ -216,9 +214,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "VPAC1",
   .instance               = SDL_LBIST_INST_VPAC1,
-  .secondaryCoreNeeded    = false,           /* Secondary core needed */
-  .wfiCheckNeeded         = false,           /* wfi check needed */
-  .secCoreName            = "None",          /* Secondary core */
+  .secondaryCoreNeeded    = false,           /* Secondary core not needed */
+  .wfiCheckNeeded         = false,           /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = 0u,  /* No proc id */
   .tisciSecProcId         = 0u,  /* No Proc Id */
@@ -231,14 +229,14 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "A72SS1",
   .instance               = SDL_LBIST_INST_A72_1,
-  .secondaryCoreNeeded    = false,          /* Secondary core needed */
-  .wfiCheckNeeded         = false,          /* wfi check needed */
-  .secCoreName            = "None",         /* Secondary core */
+  .secondaryCoreNeeded    = false,          /* Secondary core not needed */
+  .wfiCheckNeeded         = false,          /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = 0u,  /* No Proc Id */
   .tisciSecProcId         = 0u,  /* No proc id */
   .tisciDeviceId          = TISCI_DEV_A72SS1,  /* A72SS1 Device Id */
-  .tisciSecDeviceId       = 0u,  /* No dev id */
+  .tisciSecDeviceId       = 0u,
   .numAuxDevices          = 0u,  /* Number of Aux devices */
  },
 
@@ -246,9 +244,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "C7x2 ",
   .instance               = SDL_LBIST_INST_C7X2,
-  .secondaryCoreNeeded    = false,  /* Secondary core needed */
-  .wfiCheckNeeded         = false,  /* wfi check needed */
-  .secCoreName            = "None",   /* Secondary core */
+  .secondaryCoreNeeded    = false,  /* Secondary core not needed */
+  .wfiCheckNeeded         = false,  /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_COMPUTE_CLUSTER_J7AHP0_C71SS2_CORE0_0,  /* C7x Proc Id */
   .tisciSecProcId         = 0u,
@@ -261,9 +259,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "C7x3 ",
   .instance               = SDL_LBIST_INST_C7X3,
-  .secondaryCoreNeeded    = false,  /* Secondary core needed */
-  .wfiCheckNeeded         = false,  /* wfi check needed */
-  .secCoreName            = "None",   /* Secondary core */
+  .secondaryCoreNeeded    = false,  /* Secondary core not needed */
+  .wfiCheckNeeded         = false,  /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_COMPUTE_CLUSTER_J7AHP0_C71SS3_CORE0_0,  /* C7x Proc Id */
   .tisciSecProcId         = 0u,
@@ -276,9 +274,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "A72SS0 core 0",
   .instance               = SDL_LBIST_INST_A72SS0_CORE0,
-  .secondaryCoreNeeded    = false,          /* Secondary core needed */
-  .wfiCheckNeeded         = false,          /* wfi check needed */
-  .secCoreName            = "None",         /* Secondary core */
+  .secondaryCoreNeeded    = false,          /* Secondary core not needed */
+  .wfiCheckNeeded         = false,          /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_COMPUTE_CLUSTER_J7AHP0_A72SS0_CORE0_0, /* A72SS0 core 0 Proc Id */
   .tisciSecProcId         = 0u,  /* No proc id */
@@ -291,9 +289,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "A72SS0 core 1",
   .instance               = SDL_LBIST_INST_A72SS0_CORE1,
-  .secondaryCoreNeeded    = false,          /* Secondary core needed */
-  .wfiCheckNeeded         = false,          /* wfi check needed */
-  .secCoreName            = "None",         /* Secondary core */
+  .secondaryCoreNeeded    = false,          /* Secondary core not needed */
+  .wfiCheckNeeded         = false,          /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_COMPUTE_CLUSTER_J7AHP0_A72SS0_CORE1_0, /* A72SS0 core 1 Proc Id */
   .tisciSecProcId         = 0u,  /* No proc id */
@@ -306,9 +304,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "A72SS0 core 2",
   .instance               = SDL_LBIST_INST_A72SS0_CORE2,
-  .secondaryCoreNeeded    = false,          /* Secondary core needed */
-  .wfiCheckNeeded         = false,          /* wfi check needed */
-  .secCoreName            = "None",         /* Secondary core */
+  .secondaryCoreNeeded    = false,          /* Secondary core  not needed */
+  .wfiCheckNeeded         = false,          /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_COMPUTE_CLUSTER_J7AHP0_A72SS0_CORE2_0, /* A72SS0 core 2 Proc Id */
   .tisciSecProcId         = 0u,  /* No proc id */
@@ -321,9 +319,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "A72SS0 core 3",
   .instance               = SDL_LBIST_INST_A72SS0_CORE3,
-  .secondaryCoreNeeded    = false,          /* Secondary core needed */
-  .wfiCheckNeeded         = false,          /* wfi check needed */
-  .secCoreName            = "None",         /* Secondary core */
+  .secondaryCoreNeeded    = false,          /* Secondary core not needed */
+  .wfiCheckNeeded         = false,          /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_COMPUTE_CLUSTER_J7AHP0_A72SS0_CORE3_0, /* A72SS0 core 3 Proc Id */
   .tisciSecProcId         = 0u,  /* No proc id */
@@ -336,9 +334,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "A72SS1 core 0",
   .instance               = SDL_LBIST_INST_A72SS1_CORE0,
-  .secondaryCoreNeeded    = false,          /* Secondary core needed */
-  .wfiCheckNeeded         = false,          /* wfi check needed */
-  .secCoreName            = "None",         /* Secondary core */
+  .secondaryCoreNeeded    = false,          /* Secondary core not needed */
+  .wfiCheckNeeded         = false,          /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_COMPUTE_CLUSTER_J7AHP0_A72SS1_CORE0_0, /* A72SS1 core 0 Proc Id */
   .tisciSecProcId         = 0u,  /* No proc id */
@@ -351,9 +349,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "A72SS1 core 1",
   .instance               = SDL_LBIST_INST_A72SS1_CORE1,
-  .secondaryCoreNeeded    = false,          /* Secondary core needed */
-  .wfiCheckNeeded         = false,          /* wfi check needed */
-  .secCoreName            = "None",         /* Secondary core */
+  .secondaryCoreNeeded    = false,          /* Secondary core not needed */
+  .wfiCheckNeeded         = false,          /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_COMPUTE_CLUSTER_J7AHP0_A72SS1_CORE1_0, /* A72SS1 core 1 Proc Id */
   .tisciSecProcId         = 0u,  /* No proc id */
@@ -366,9 +364,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "A72SS1 core 2",
   .instance               = SDL_LBIST_INST_A72SS1_CORE2,
-  .secondaryCoreNeeded    = false,          /* Secondary core needed */
-  .wfiCheckNeeded         = false,          /* wfi check needed */
-  .secCoreName            = "None",         /* Secondary core */
+  .secondaryCoreNeeded    = false,          /* Secondary core not needed */
+  .wfiCheckNeeded         = false,          /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_COMPUTE_CLUSTER_J7AHP0_A72SS1_CORE2_0, /* A72SS1 core 2 Proc Id */
   .tisciSecProcId         = 0u,  /* No proc id */
@@ -381,9 +379,9 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
  {
   .coreName               = "A72SS1 core 3",
   .instance               = SDL_LBIST_INST_A72SS1_CORE3,
-  .secondaryCoreNeeded    = false,          /* Secondary core needed */
-  .wfiCheckNeeded         = false,          /* wfi check needed */
-  .secCoreName            = "None",         /* Secondary core */
+  .secondaryCoreNeeded    = false,          /* Secondary core not needed */
+  .wfiCheckNeeded         = false,          /* wfi check not needed */
+  .secCoreName            = "None",
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_COMPUTE_CLUSTER_J7AHP0_A72SS1_CORE3_0, /* A72SS1 core 3 Proc Id */
   .tisciSecProcId         = 0u,  /* No proc id */
@@ -397,13 +395,13 @@ LBIST_TestHandle_t LBIST_TestHandleArray[LBIST_MAX_CORE_INDEX+1] =
   .coreName               = "Main R5F2-0",
   .instance               = SDL_LBIST_INST_MAINR5F2,
   .secondaryCoreNeeded    = true,             /* Secondary core needed */
-  .wfiCheckNeeded         = false,            /* wfi check needed */
+  .wfiCheckNeeded         = false,            /* wfi check not needed */
   .secCoreName            = "Main R5F2-1",    /* Secondary core */
   .cpuStatusFlagMask      = TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI, /* Expected boot status value for wfi */
   .tisciProcId            = SCICLIENT_PROC_ID_R5FSS2_CORE0, /* Main R5F core 0 Proc Id */
   .tisciSecProcId         = 0u, /* Main R5F core 1 Proc Id */
   .tisciDeviceId          = TISCI_DEV_R5FSS2_CORE0,   /* Main R5F core 0 Device Id */
-  .tisciSecDeviceId       = 0u,   /* Main R5F core 1 Device Id */
+  .tisciSecDeviceId       = TISCI_DEV_R5FSS2_CORE1,   /* Main R5F core 1 Device Id */
   .numAuxDevices          = 0u,                       /* No Aux devices */
  }, 
 };

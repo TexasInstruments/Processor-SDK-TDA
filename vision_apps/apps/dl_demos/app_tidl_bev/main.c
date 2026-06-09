@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2025 Texas Instruments Incorporated
+ * Copyright (c) 2025-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -1117,12 +1117,12 @@ static void app_deinit(AppObj *obj)
 
     app_deinit_display(&obj->displayObj);
 
-#ifndef x86_64
+    #ifndef x86_64
     if(obj->displayObj.display_option == 1 && obj->enable_gui)
     {
         appGrpxDeInit();
     }
-#endif
+    #endif
 
     /* Release reference to background image */
     vxReleaseImage(&obj->background);
@@ -1267,14 +1267,14 @@ static vx_status app_create_graph(AppObj *obj)
     
     add_graph_parameter_by_node_index(obj->graph, obj->scalerObj_b2.node, 0);
     obj->scalerObj_b2.graph_parameter_index = graph_parameter_index;
-    graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = 0;
+    graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = graph_parameter_index;
     graph_parameters_queue_params_list[graph_parameter_index].refs_list_size = AVP_BUFFER_Q_DEPTH;
     graph_parameters_queue_params_list[graph_parameter_index].refs_list = (vx_reference*)&obj->scalerObj_b2.input_images[0];
     graph_parameter_index++;
 
     add_graph_parameter_by_node_index(obj->graph, obj->scalerObj_b3.node, 0);
     obj->scalerObj_b3.graph_parameter_index = graph_parameter_index;
-    graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = 0;
+    graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = graph_parameter_index;
     graph_parameters_queue_params_list[graph_parameter_index].refs_list_size = AVP_BUFFER_Q_DEPTH;
     graph_parameters_queue_params_list[graph_parameter_index].refs_list = (vx_reference*)&obj->scalerObj_b3.input_images[0];
     graph_parameter_index++;
@@ -1282,7 +1282,7 @@ static vx_status app_create_graph(AppObj *obj)
                 
     add_graph_parameter_by_node_index(obj->graph, obj->scalerObj_b4.node, 0);
     obj->scalerObj_b4.graph_parameter_index = graph_parameter_index;
-    graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = 0;
+    graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = graph_parameter_index;
     graph_parameters_queue_params_list[graph_parameter_index].refs_list_size = AVP_BUFFER_Q_DEPTH;
     graph_parameters_queue_params_list[graph_parameter_index].refs_list = (vx_reference*)&obj->scalerObj_b4.input_images[0];
     graph_parameter_index++;
@@ -1290,21 +1290,21 @@ static vx_status app_create_graph(AppObj *obj)
 
     add_graph_parameter_by_node_index(obj->graph, obj->scalerObj_b5.node, 0);
     obj->scalerObj_b5.graph_parameter_index = graph_parameter_index;
-    graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = 0;
+    graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = graph_parameter_index;
     graph_parameters_queue_params_list[graph_parameter_index].refs_list_size = AVP_BUFFER_Q_DEPTH;
     graph_parameters_queue_params_list[graph_parameter_index].refs_list = (vx_reference*)&obj->scalerObj_b5.input_images[0];
     graph_parameter_index++;
 
     add_graph_parameter_by_node_index(obj->graph, obj->scalerObj_b6.node, 0);
     obj->scalerObj_b6.graph_parameter_index = graph_parameter_index;
-    graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = 0;
+    graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = graph_parameter_index;
     graph_parameters_queue_params_list[graph_parameter_index].refs_list_size = AVP_BUFFER_Q_DEPTH;
     graph_parameters_queue_params_list[graph_parameter_index].refs_list = (vx_reference*)&obj->scalerObj_b6.input_images[0];
     graph_parameter_index++;
 
     add_graph_parameter_by_node_index(obj->graph, obj->scalerObj_lidar_canvas.node, 0);
     obj->scalerObj_lidar_canvas.graph_parameter_index = graph_parameter_index;
-    graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = 0;
+    graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = graph_parameter_index;
     graph_parameters_queue_params_list[graph_parameter_index].refs_list_size = AVP_BUFFER_Q_DEPTH;
     graph_parameters_queue_params_list[graph_parameter_index].refs_list = (vx_reference*)&obj->scalerObj_lidar_canvas.input_images[0];
     graph_parameter_index++;
@@ -1312,21 +1312,21 @@ static vx_status app_create_graph(AppObj *obj)
 #ifdef LIDAR_XYCORD_PER_FRAME
                         add_graph_parameter_by_node_index(obj->graph, obj->TIDLObj.node, 7);
                         obj->TIDLObj.graph_parameter_index = graph_parameter_index;
-                        graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = 0;
+                        graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = graph_parameter_index;
                         graph_parameters_queue_params_list[graph_parameter_index].refs_list_size = AVP_BUFFER_Q_DEPTH;
                         graph_parameters_queue_params_list[graph_parameter_index].refs_list = (vx_reference*)&obj->TIDLObj.input_xycord[0];
                         graph_parameter_index++;
                         
                         add_graph_parameter_by_node_index(obj->graph, obj->BEVPostProcObj.node, 3);
                         obj->BEVPostProcObj.graph_parameter_index = graph_parameter_index;
-                        graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = 0;
+                        graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = graph_parameter_index;
                         graph_parameters_queue_params_list[graph_parameter_index].refs_list_size = AVP_BUFFER_Q_DEPTH;
                         graph_parameters_queue_params_list[graph_parameter_index].refs_list = (vx_reference*)&obj->BEVPostProcObj.input_lidar[0];
                         graph_parameter_index++;
 
                         add_graph_parameter_by_node_index(obj->graph, obj->BEVPostProcObj_cam.node, 3);
                         obj->BEVPostProcObj_cam.graph_parameter_index = graph_parameter_index;
-                        graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = 0;
+                        graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = graph_parameter_index;
                         graph_parameters_queue_params_list[graph_parameter_index].refs_list_size = AVP_BUFFER_Q_DEPTH;
                         graph_parameters_queue_params_list[graph_parameter_index].refs_list = (vx_reference*)&obj->BEVPostProcObj_cam.input_lidar2cam[0];
                         graph_parameter_index++;
@@ -1336,7 +1336,7 @@ static vx_status app_create_graph(AppObj *obj)
     {
         add_graph_parameter_by_node_index(obj->graph, obj->imgMosaicObj.node, 1);
         obj->imgMosaicObj.graph_parameter_index = graph_parameter_index;
-        graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = 1;
+        graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = graph_parameter_index;
         graph_parameters_queue_params_list[graph_parameter_index].refs_list_size = AVP_BUFFER_Q_DEPTH;
         graph_parameters_queue_params_list[graph_parameter_index].refs_list = (vx_reference*)&obj->imgMosaicObj.output_image[0];
         graph_parameter_index++;
@@ -1847,15 +1847,7 @@ static vx_status app_run_graph_for_one_frame_pipeline(AppObj *obj, vx_int32 fram
             readTensorInput(input_file_nameldr2flc,BEVPostProcObj_cam->input_lidar2cam_arr[obj->enqueueCnt],3);
             readTensorInput(input_file_nameldr2rc,BEVPostProcObj_cam->input_lidar2cam_arr[obj->enqueueCnt],4);
             readTensorInput(input_file_nameldr2fc,BEVPostProcObj_cam->input_lidar2cam_arr[obj->enqueueCnt],5);
-
 #endif                  
-                    
-            
-                
-            
-            
-        
-        
         appPerfPointEnd(&obj->fileio_perf);
 
         APP_PRINTF("App Reading Input Done!\n");
@@ -2356,7 +2348,11 @@ static void set_img_mosaic_defaults(AppObj *obj, ImgMosaicObj *imgMosaicObj)
 static void set_display_defaults(DisplayObj *displayObj)
 {
     displayObj->display_option = 0;
+    #ifdef SOC_TDA54
+    displayObj->display_pipe_id = 0;
+    #else
     displayObj->display_pipe_id = 2;
+    #endif
 }
 
 static void app_pipeline_params_defaults(AppObj *obj)

@@ -8,6 +8,8 @@ export DEFINES
 export MCU_PLUS_SDK_PATH?=$(abspath ../../../..)
 include $(MCU_PLUS_SDK_PATH)/imports.mak
 
+CG_TOOL_ROOT=$(CGT_TI_ARM_CLANG_PATH)
+
 CC=$(CGT_TI_ARM_CLANG_PATH)/bin/tiarmclang
 AR=$(CGT_TI_ARM_CLANG_PATH)/bin/tiarmar
 
@@ -104,8 +106,6 @@ $(OBJDIR)/%.obj %.obj: %.c
 $(OBJDIR)/%.obj %.obj: %.S
 	@echo  Compiling: $(LIBNAME): $<
 	$(CC) -c $(ASMFLAGS) -o $(OBJDIR)/$@ $<
-
-SYS_OS := $(shell uname -s)
 
 all: $(LIBDIR)/$(LIBNAME)
 

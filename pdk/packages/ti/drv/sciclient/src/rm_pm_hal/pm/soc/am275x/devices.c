@@ -1,5 +1,5 @@
 /*
- * Data version: 250905_121741
+ * Data version: 251105_135430
  *
  * Copyright (C) 2017-2025 Texas Instruments Incorporated - http://www.ti.com/
  * ALL RIGHTS RESERVED
@@ -286,6 +286,7 @@ BUILD_ASSERT_GLOBAL(sizeof(dev_idx_t) == (size_t) 2, dev_idx_t_is_16bit);
 #define AM275X_DEV_MCASP2_LOCAL_AUXCLK_SEL_DEV_VD_CLOCKS 2014
 #define AM275X_DEV_MCASP3_LOCAL_AUXCLK_SEL_DEV_VD_CLOCKS 2018
 #define AM275X_DEV_MCASP4_LOCAL_AUXCLK_SEL_DEV_VD_CLOCKS 2022
+#define AM275X_DEV_PSRAM2KX32E_WKUP_0_CLOCKS 2026
 
 static const struct dev_data am275x_dev_adc12fc_16ffc_main_0 __attribute__((__section__(".const.devgroup.MAIN"))) = {
 	.soc			= {
@@ -1887,11 +1888,11 @@ static const struct psc_drv_data am275x_dev_am275_main_psc_wrap_main_0 __attribu
 static struct psc_data am275x_sam62a_mcu_psc_wrap_wkup_0_data __attribute__((__section__(".bss.devgroup.MCU_WAKEUP")));
 static const struct psc_pd_data am275x_sam62a_mcu_psc_wrap_wkup_0_pd_data[AM275X_PSC_PD_PD_MCUSS + 1] __attribute__((__section__(".const.devgroup.MCU_WAKEUP"))) = {
 	[AM275X_PSC_PD_GP_CORE_CTL_MCU] = {
-		.depends	= AM275X_PSC_PD_PD_MCUSS,
-		.flags		= PSC_PD_EXISTS | PSC_PD_DEPENDS,
+		.flags	= PSC_PD_EXISTS,
 	},
 	[AM275X_PSC_PD_PD_MCUSS] =	  {
-		.flags	= PSC_PD_EXISTS | PSC_PD_ALWAYSON,
+		.depends	= AM275X_PSC_PD_GP_CORE_CTL_MCU,
+		.flags		= PSC_PD_EXISTS | PSC_PD_ALWAYSON | PSC_PD_DEPENDS,
 	},
 };
 static struct psc_pd am275x_sam62a_mcu_psc_wrap_wkup_0_powerdomains[AM275X_PSC_PD_PD_MCUSS + 1] __attribute__((__section__(".bss.devgroup.MCU_WAKEUP")));
@@ -1912,7 +1913,7 @@ static const struct lpsc_module_data am275x_sam62a_mcu_psc_wrap_wkup_0_mod_data[
 	[AM275X_PSC_LPSC_LPSC_MAIN2MCU_ISO] = {
 		.powerdomain		= AM275X_PSC_PD_GP_CORE_CTL_MCU,
 		.depends_psc_idx	= AM275X_PSC_INST_SAM62A_MCU_PSC_WRAP_WKUP_0,
-		.depends		= AM275X_PSC_LPSC_LPSC_MCU_COMMON,
+		.depends		= AM275X_PSC_LPSC_LPSC_DM2SAFE_ISO,
 		.lpsc_dev.dev_array	=     {
 			DEV_ID_NONE,
 			0,
@@ -1922,7 +1923,7 @@ static const struct lpsc_module_data am275x_sam62a_mcu_psc_wrap_wkup_0_mod_data[
 	[AM275X_PSC_LPSC_LPSC_DM2MCU_ISO] =   {
 		.powerdomain		= AM275X_PSC_PD_GP_CORE_CTL_MCU,
 		.depends_psc_idx	= AM275X_PSC_INST_SAM62A_MCU_PSC_WRAP_WKUP_0,
-		.depends		= AM275X_PSC_LPSC_LPSC_MCU_COMMON,
+		.depends		= AM275X_PSC_LPSC_LPSC_DM2SAFE_ISO,
 		.lpsc_dev.dev_array	=     {
 			DEV_ID_NONE,
 			0,
@@ -1962,7 +1963,7 @@ static const struct lpsc_module_data am275x_sam62a_mcu_psc_wrap_wkup_0_mod_data[
 	[AM275X_PSC_LPSC_LPSC_MCU_R5] =	      {
 		.powerdomain		= AM275X_PSC_PD_PD_MCUSS,
 		.depends_psc_idx	= AM275X_PSC_INST_SAM62A_MCU_PSC_WRAP_WKUP_0,
-		.depends		= AM275X_PSC_LPSC_LPSC_MCU_COMMON,
+		.depends		= AM275X_PSC_LPSC_LPSC_DM2SAFE_ISO,
 		.lpsc_dev.dev_array	=     {
 			DEV_ID_NONE,
 			0,
@@ -1972,7 +1973,7 @@ static const struct lpsc_module_data am275x_sam62a_mcu_psc_wrap_wkup_0_mod_data[
 	[AM275X_PSC_LPSC_LPSC_MCU_MCANSS_0] = {
 		.powerdomain		= AM275X_PSC_PD_PD_MCUSS,
 		.depends_psc_idx	= AM275X_PSC_INST_SAM62A_MCU_PSC_WRAP_WKUP_0,
-		.depends		= AM275X_PSC_LPSC_LPSC_MCU_COMMON,
+		.depends		= AM275X_PSC_LPSC_LPSC_DM2SAFE_ISO,
 		.lpsc_dev.dev_array	=     {
 			DEV_ID_NONE,
 			0,
@@ -1982,7 +1983,7 @@ static const struct lpsc_module_data am275x_sam62a_mcu_psc_wrap_wkup_0_mod_data[
 	[AM275X_PSC_LPSC_LPSC_MCU_MCANSS_1] = {
 		.powerdomain		= AM275X_PSC_PD_PD_MCUSS,
 		.depends_psc_idx	= AM275X_PSC_INST_SAM62A_MCU_PSC_WRAP_WKUP_0,
-		.depends		= AM275X_PSC_LPSC_LPSC_MCU_COMMON,
+		.depends		= AM275X_PSC_LPSC_LPSC_DM2SAFE_ISO,
 		.lpsc_dev.dev_array	=     {
 			DEV_ID_NONE,
 			0,
@@ -1994,8 +1995,8 @@ static const struct lpsc_module_data am275x_sam62a_mcu_psc_wrap_wkup_0_mod_data[
 		.depends_psc_idx	= AM275X_PSC_INST_AM275_MAIN_PSC_WRAP_MAIN_0,
 		.depends		= AM275X_PSC_LPSC_LPSC_MAIN_DM,
 		.lpsc_dev.dev_array	=     {
+			AM275X_DEV_WKUP_PSRAMECC_RET0,
 			DEV_ID_NONE,
-			0,
 		},
 		.flags			= LPSC_MODULE_EXISTS | LPSC_DEPENDS,
 	},
@@ -3032,6 +3033,16 @@ static const struct dev_data am275x_dev_mcasp4_local_auxclk_sel_dev_VD __attribu
 	.n_clocks		= 4,
 	.pm_devgrp		= PM_DEVGRP_00,
 };
+static const struct dev_data am275x_dev_psram2kx32e_wkup_0 __attribute__((__section__(".const.devgroup.MAIN"))) = {
+	.soc			= {
+		.psc_idx	= AM275X_PSC_INST_SAM62A_MCU_PSC_WRAP_WKUP_0,
+		.pd		= AM275X_PSC_PD_PD_MCUSS,
+		.mod		= AM275X_PSC_LPSC_LPSC_MCU_COMMON,
+	},
+	.dev_clk_idx		= AM275X_DEV_PSRAM2KX32E_WKUP_0_CLOCKS,
+	.n_clocks		= 1,
+	.pm_devgrp		= PM_DEVGRP_00,
+};
 
 static const struct dev_clk_data MCU_WAKEUP_dev_clk_data[117] __attribute__((__section__(".const.devgroup.MCU_WAKEUP"))) = {
 	DEV_CLK(AM275X_DEV_AM275_MCU_GPIO_INTROUTER_WKUP_0_CLOCKS,		AM275X_DEV_MCU_MCU_GPIOMUX_INTROUTER0_INTR_CLK,
@@ -3372,7 +3383,7 @@ static const struct dev_clk_data MCU_WAKEUP_dev_clk_data[117] __attribute__((__s
 		4),
 };
 static struct dev_clk MCU_WAKEUP_dev_clk[117] __attribute__((__section__(".bss.devgroup.MCU_WAKEUP")));
-static const struct dev_clk_data MAIN_dev_clk_data[2026] __attribute__((__section__(".const.devgroup.MAIN"))) = {
+static const struct dev_clk_data MAIN_dev_clk_data[2027] __attribute__((__section__(".const.devgroup.MAIN"))) = {
 	DEV_CLK_MUX(AM275X_DEV_ADC12FC_16FFC_MAIN_0_CLOCKS,										    AM275X_DEV_ADC0_ADC_CLK,
 		    CLK_AM275X_ADC_CLK_SEL_OUT0,											    1,
 		    4),
@@ -8738,8 +8749,11 @@ static const struct dev_clk_data MAIN_dev_clk_data[2026] __attribute__((__sectio
 		       AM275X_DEV_MCASP4_LOCAL_AUXCLK_SEL_DEV_VD_CLK_PARENT_HSDIV3_16FFT_MAIN_4_HSDIVOUT0_CLK,
 		       CLK_AM275X_HSDIV3_16FFT_MAIN_4_HSDIVOUT0_CLK,									    1,
 		       2),
+	DEV_CLK(AM275X_DEV_PSRAM2KX32E_WKUP_0_CLOCKS,											    AM275X_DEV_WKUP_PSRAMECC_RET0_CLK_CLK,
+		CLK_AM275X_WKUP_CLKSEL_OUT0,
+		4),
 };
-static struct dev_clk MAIN_dev_clk[2026] __attribute__((__section__(".bss.devgroup.MAIN")));
+static struct dev_clk MAIN_dev_clk[2027] __attribute__((__section__(".bss.devgroup.MAIN")));
 static const struct dev_clk_data TIFS_INTERNAL_dev_clk_data[1] __attribute__((__section__(".const.devgroup.TIFS_INTERNAL"))) = {
 	DEV_CLK(AM275X_DEV_DMSS_AM275_MAIN_0_RINGACC_0_CLOCKS, AM275X_DEV_DMASS0_RINGACC_0_CLK, CLK_AM275X_SAM62_PLL_CTRL_WRAP_MAIN_0_CHIP_DIV1_CLK_CLK, 2),
 };
@@ -8767,7 +8781,7 @@ const size_t soc_devgroup_count = ARRAY_SIZE(soc_devgroups);
 const struct soc_device_data *const soc_psc_multiple_domains[0] = {
 };
 
-const struct dev_data *const soc_device_data_arr[AM275X_DEV_MCASP4_LOCAL_AUXCLK_SEL_DEV_VD + 1U] = {
+const struct dev_data *const soc_device_data_arr[AM275X_DEV_WKUP_PSRAMECC_RET0 + 1U] = {
 	[AM275X_DEV_ADC0] = &am275x_dev_adc12fc_16ffc_main_0,
 	[AM275X_DEV_DBG_INTROUTER0] = &am275x_dev_am275_debug_introuter_main_0,
 	[AM275X_DEV_MAIN_GPIOMUX_INTROUTER0] = &am275x_dev_am275_main_gpio_introuter_main_0,
@@ -8954,9 +8968,10 @@ const struct dev_data *const soc_device_data_arr[AM275X_DEV_MCASP4_LOCAL_AUXCLK_
 	[AM275X_DEV_MCASP2_LOCAL_AUXCLK_SEL_DEV_VD] = &am275x_dev_mcasp2_local_auxclk_sel_dev_VD,
 	[AM275X_DEV_MCASP3_LOCAL_AUXCLK_SEL_DEV_VD] = &am275x_dev_mcasp3_local_auxclk_sel_dev_VD,
 	[AM275X_DEV_MCASP4_LOCAL_AUXCLK_SEL_DEV_VD] = &am275x_dev_mcasp4_local_auxclk_sel_dev_VD,
+	[AM275X_DEV_WKUP_PSRAMECC_RET0] = &am275x_dev_psram2kx32e_wkup_0,
 };
 
-struct device soc_devices[AM275X_DEV_MCASP4_LOCAL_AUXCLK_SEL_DEV_VD + 1U];
+struct device soc_devices[AM275X_DEV_WKUP_PSRAMECC_RET0 + 1U];
 const size_t soc_device_count = ARRAY_SIZE(soc_device_data_arr);
 
 struct device *const this_dev = soc_devices + AM275X_DEV_SMS0;

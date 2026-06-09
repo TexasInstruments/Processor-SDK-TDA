@@ -64,7 +64,7 @@
 
 #ifdef _HOST_BUILD
 
-    #if defined (__C7100__) || defined (__C7120__) || defined (__C7504__) || defined (__C7524__)
+    #if defined (__C7100__) || defined (__C7120__) || defined (__C7504__) || defined (__C7524__) || defined (__C7604__)
         #include "c7x.h"
     #else
         #include "c6xsim/C6xSimulator.h"
@@ -98,7 +98,7 @@
 
 #else  /* _HOST_BUILD */
 
-    #if defined (__C7100__) || defined (__C7120__) || defined (__C7504__) || defined (__C7524__)
+    #if defined (__C7100__) || defined (__C7120__) || defined (__C7504__) || defined (__C7524__) || defined (__C7604__)
         #include <c7x.h>
         #ifndef CORE_DSP /* defined when BAM_PLUGIN=yes */
         #include <vcop/vcop.h>
@@ -124,7 +124,7 @@
      * ---------------------------------------------------------------- */
     #define EMIT_PRAGMA(x) _Pragma(#x)
     #define CODE_SECTION(fn, section) EMIT_PRAGMA(CODE_SECTION(fn, section))
-#if defined (__C7100__) || defined (__C7120__) || defined (__C7504__) || defined (__C7524__)
+#if defined (__C7100__) || defined (__C7120__) || defined (__C7504__) || defined (__C7524__) || defined (__C7604__)
     #define _setFADCR(v) (__FPCR = v)
     #define _getFADCR()  (__FPCR)
 #else

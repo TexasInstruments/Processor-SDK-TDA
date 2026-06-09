@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2020 Texas Instruments Incorporated
+ * Copyright (c) 2020-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -79,6 +79,9 @@
 void appEthFwEarlyInit();
 int32_t appEthFwInit();
 int32_t appEthFwRemoteServerInit();
+#if defined(MCU_PLUS_SDK)
+int32_t appEthFwLateAnnounce();
+#endif
 
 int32_t appEthFwDeInit();
 

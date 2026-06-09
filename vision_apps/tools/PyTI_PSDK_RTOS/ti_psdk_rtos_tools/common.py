@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Texas Instruments Incorporated
+# Copyright (c) 2026 Texas Instruments Incorporated
 #
 # All rights reserved not granted herein.
 #
@@ -70,7 +70,7 @@ class Common :
      " */ \n" \
      "/* \n" \
      " * \n" \
-     " * Copyright (c) 2025 Texas Instruments Incorporated \n" \
+     " * Copyright (c) 2026 Texas Instruments Incorporated \n" \
      " * \n" \
      " * All rights reserved not granted herein. \n" \
      " * \n" \

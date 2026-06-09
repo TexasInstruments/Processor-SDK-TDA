@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -98,7 +98,7 @@ int32_t App_loadImages(void)
     {
         bootConfig = (Bootloader_Config *)bootHandle;
         bootConfig->coresPresentMap = 0;
-        status = Bootloader_parseMultiCoreAppImage(&bootHandle, &bootImageInfo);
+        status = Bootloader_parseMultiCoreAppImage(bootHandle, &bootImageInfo);
 
         /* Load CPUs */
         if (!Bootloader_socIsMCUResetIsoEnabled())
@@ -191,11 +191,11 @@ int main()
     bool    bEndOfTransfer = false;
 
     Bootloader_socWaitForFWBoot();
-    status = Bootloader_socOpenFirewalls();
-
-    DebugP_assertNoLog(status == SystemP_SUCCESS);
 
     System_init();
+    status = Bootloader_socOpenFirewalls();
+    DebugP_assertNoLog(status == SystemP_SUCCESS);
+
     Drivers_open();
 
     status = Board_driversOpen();
@@ -238,7 +238,6 @@ int main()
 
                 if(SystemP_SUCCESS == status)
                 {
-
                     status = App_loadImages();
 
                     if(status != SystemP_SUCCESS)
@@ -256,13 +255,14 @@ int main()
     {
         DebugP_log("Some tests have failed!!\r\n");
     }
-    Board_driversClose();
-    Drivers_close();
 
     /* Call DPL deinit to close the tick timer and disable interrupts before jumping to DM*/
     Dpl_deinit();
-    System_deinit();
 
     Bootloader_JumpSelfCpu();
+    Board_driversClose();
+    Drivers_close();
+    System_deinit();
+
     return 0;
 }

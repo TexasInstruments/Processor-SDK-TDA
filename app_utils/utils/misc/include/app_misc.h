@@ -146,4 +146,3 @@ void appUtilsTaskInit(void);
 /* @} */
 
 #endif /* APP_UTILS_MISC_H_ */
-

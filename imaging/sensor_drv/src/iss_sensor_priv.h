@@ -70,12 +70,11 @@
 #if defined (MCU_PLUS_SDK)
 #include <board/board_control.h>
 #include <drivers/i2c/v0/i2c.h>
+#include <drivers/csirx/v0/hw_include/csirx_if.h>
 #if defined(SOC_AM62A)
-    #include <drivers/csirx/v0/hw_include/csirx_if.h>
     #include <drivers/csirx/v0/soc/am62ax/csirx_soc.h>
-#else
-    #include <drivers/csirx/v1/hw_include/V1/csirx_if.h>
-    #include <drivers/csirx/v1/soc/csirx_soc.h>
+#elif defined(SOC_J722S)
+    #include <drivers/csirx/v0/soc/j722s/csirx_soc.h>
 #endif
 #else
 #include <app_remote_service.h>

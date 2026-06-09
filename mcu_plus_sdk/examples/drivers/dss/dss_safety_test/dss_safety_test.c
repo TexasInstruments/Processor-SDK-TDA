@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2025 Texas Instruments Incorporated
+ *  Copyright (C) 2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -112,8 +112,12 @@ static void DispApp_pipelineSafetyErrCallback(uint32_t pipeId,
 static int32_t DispApp_logSafetyCheckData();
 
 extern void Disp_prepareFrameBuffer(uint32_t instCount,
-                                       Dss_ConfigPipelineParams *pipelineParams,
-                                       void *frameBuffer[CONFIG_DSS_NUM_FRAMES_PER_PIPELINE]);
+                            uint32_t inDataFmt, \
+                            uint32_t inWidth, \
+                            uint32_t inHeight,\
+                            uint32_t pitch, \
+                            void* \
+                            frameBuffer[CONFIG_DSS_NUM_FRAMES_PER_PIPELINE]);
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -144,6 +148,8 @@ static volatile uint32_t gLoopCount;
 void DispApp_initFrames()
 {
     uint32_t instCnt = 0;
+    uint32_t numPipes = gDssConfigPipelineParams.numTestPipes <= DSS_DISP_INST_MAX \
+                        ? gDssConfigPipelineParams.numTestPipes : DSS_DISP_INST_MAX;
 
     for(instCnt = 0; instCnt < CONFIG_DSS_NUM_FRAMES_PER_PIPELINE; instCnt++)
     {
@@ -151,20 +157,27 @@ void DispApp_initFrames()
         gsecondPipeFrameBufferPointer[instCnt] = &gSecondPipelineFrameBuf[instCnt];
     }
 
-    for(instCnt = 0U; instCnt<gDssConfigPipelineParams[CONFIG_DSS0].numTestPipes; instCnt++)
+    for(instCnt = 0U; instCnt< numPipes ; instCnt++)
     {
-        if(instCnt != 0)
+        if(instCnt == 0)
         {
-            Disp_prepareFrameBuffer(instCnt,&gDssConfigPipelineParams[CONFIG_DSS0],
-                                       gsecondPipeFrameBufferPointer);
+            Disp_prepareFrameBuffer(instCnt,
+                                    gDssConfigPipelineParams.inDataFmt[instCnt],
+                                    gDssConfigPipelineParams.inWidth[instCnt],
+                                    gDssConfigPipelineParams.inHeight[instCnt],
+                                    gDssConfigPipelineParams.pitch[instCnt][0],
+                                    gfirstPipeFrameBufferPointer);
         }
         else
         {
-            Disp_prepareFrameBuffer(instCnt,&gDssConfigPipelineParams[CONFIG_DSS0],
-                                       gfirstPipeFrameBufferPointer);
+            Disp_prepareFrameBuffer(instCnt,
+                                    gDssConfigPipelineParams.inDataFmt[instCnt],
+                                    gDssConfigPipelineParams.inWidth[instCnt],
+                                    gDssConfigPipelineParams.inHeight[instCnt],
+                                    gDssConfigPipelineParams.pitch[instCnt][0],
+                                    gsecondPipeFrameBufferPointer);
         }
     }
-
 }
 
 /*
@@ -277,7 +290,7 @@ static int32_t DispApp_runTest(Dss_Object *appObj)
     DebugP_log("Display in progress ... DO NOT HALT !!!\r\n");
 
     /* Start driver */
-    for(instCnt=0U; instCnt<gDssConfigPipelineParams[CONFIG_DSS0].numTestPipes; instCnt++)
+    for(instCnt=0U; instCnt<gDssConfigPipelineParams.numTestPipes; instCnt++)
     {
         instObj = &appObj->instObj[instCnt];
 
@@ -293,7 +306,7 @@ static int32_t DispApp_runTest(Dss_Object *appObj)
 
     while(gLoopCount++ < DISP_NUM_FRAMES_COUNT)
     {
-        for(instCnt=0U; instCnt<gDssConfigPipelineParams[CONFIG_DSS0].numTestPipes; instCnt++)
+        for(instCnt=0U; instCnt<gDssConfigPipelineParams.numTestPipes; instCnt++)
         {
             instObj = &appObj->instObj[instCnt];
             (void) SemaphoreP_pend(&instObj->syncSem, SystemP_WAIT_FOREVER);
@@ -305,8 +318,8 @@ static int32_t DispApp_runTest(Dss_Object *appObj)
             /* Corrupt frame to introduce data integrity error */
             if(gLoopCount == DISP_FRAME_CORRUPT_NUM)
             {
-                for(uint32_t count = 0; count < gDssConfigPipelineParams[CONFIG_DSS0].inHeight[instCnt] * \
-                gDssConfigPipelineParams[CONFIG_DSS0].pitch[instCnt][0]; count++)
+                for(uint32_t count = 0; count < gDssConfigPipelineParams.inHeight[instCnt] * \
+                gDssConfigPipelineParams.pitch[instCnt][0]; count++)
                 {
                     *(uint8_t *)(frmList.frames[0]->addr[0] + count) = 0xAA;
                 }
@@ -334,7 +347,7 @@ static int32_t DispApp_runTest(Dss_Object *appObj)
         }
     }
 
-    for(instCnt=0U; instCnt<gDssConfigPipelineParams[CONFIG_DSS0].numTestPipes; instCnt++)
+    for(instCnt=0U; instCnt<gDssConfigPipelineParams.numTestPipes; instCnt++)
     {
         instObj = &appObj->instObj[instCnt];
         retVal  = Fvid2_stop(instObj->drvHandle, NULL);
@@ -379,29 +392,29 @@ static void DispApp_initDssParams(Dss_Object *appObj)
     Dss_dctrlGlobalDssParamsInit(globalDssParams);
 
     /* Configure VP params */
-    vpParams->vpId = gDssVpParams[CONFIG_DSS0].vpId;
-    vpParams->lcdOpTimingCfg.mInfo.standard = gDssVpParams[CONFIG_DSS0].lcdOpTimingCfg.mInfo.standard;
-    vpParams->lcdOpTimingCfg.mInfo.width = gDssVpParams[CONFIG_DSS0].lcdOpTimingCfg.mInfo.width;
-    vpParams->lcdOpTimingCfg.mInfo.height = gDssVpParams[CONFIG_DSS0].lcdOpTimingCfg.mInfo.height;
-    vpParams->lcdOpTimingCfg.mInfo.hFrontPorch = gDssVpParams[CONFIG_DSS0].lcdOpTimingCfg.mInfo.hFrontPorch;
-    vpParams->lcdOpTimingCfg.mInfo.hBackPorch = gDssVpParams[CONFIG_DSS0].lcdOpTimingCfg.mInfo.hBackPorch;
-    vpParams->lcdOpTimingCfg.mInfo.hSyncLen = gDssVpParams[CONFIG_DSS0].lcdOpTimingCfg.mInfo.hSyncLen;
-    vpParams->lcdOpTimingCfg.mInfo.vFrontPorch = gDssVpParams[CONFIG_DSS0].lcdOpTimingCfg.mInfo.vFrontPorch;
-    vpParams->lcdOpTimingCfg.mInfo.vBackPorch = gDssVpParams[CONFIG_DSS0].lcdOpTimingCfg.mInfo.vBackPorch;
-    vpParams->lcdOpTimingCfg.mInfo.vSyncLen = gDssVpParams[CONFIG_DSS0].lcdOpTimingCfg.mInfo.vSyncLen;
+    vpParams->vpId = gDssVpParams.vpId;
+    vpParams->lcdOpTimingCfg.mInfo.standard = gDssVpParams.lcdOpTimingCfg.mInfo.standard;
+    vpParams->lcdOpTimingCfg.mInfo.width = gDssVpParams.lcdOpTimingCfg.mInfo.width;
+    vpParams->lcdOpTimingCfg.mInfo.height = gDssVpParams.lcdOpTimingCfg.mInfo.height;
+    vpParams->lcdOpTimingCfg.mInfo.hFrontPorch = gDssVpParams.lcdOpTimingCfg.mInfo.hFrontPorch;
+    vpParams->lcdOpTimingCfg.mInfo.hBackPorch = gDssVpParams.lcdOpTimingCfg.mInfo.hBackPorch;
+    vpParams->lcdOpTimingCfg.mInfo.hSyncLen = gDssVpParams.lcdOpTimingCfg.mInfo.hSyncLen;
+    vpParams->lcdOpTimingCfg.mInfo.vFrontPorch = gDssVpParams.lcdOpTimingCfg.mInfo.vFrontPorch;
+    vpParams->lcdOpTimingCfg.mInfo.vBackPorch = gDssVpParams.lcdOpTimingCfg.mInfo.vBackPorch;
+    vpParams->lcdOpTimingCfg.mInfo.vSyncLen = gDssVpParams.lcdOpTimingCfg.mInfo.vSyncLen;
 
-    vpParams->lcdOpTimingCfg.dvoFormat = gDssVpParams[CONFIG_DSS0].lcdOpTimingCfg.dvoFormat;
-    vpParams->lcdOpTimingCfg.videoIfWidth = gDssVpParams[CONFIG_DSS0].lcdOpTimingCfg.videoIfWidth;
+    vpParams->lcdOpTimingCfg.dvoFormat = gDssVpParams.lcdOpTimingCfg.dvoFormat;
+    vpParams->lcdOpTimingCfg.videoIfWidth = gDssVpParams.lcdOpTimingCfg.videoIfWidth;
 
-    vpParams->lcdPolarityCfg.actVidPolarity =  gDssVpParams[CONFIG_DSS0].lcdPolarityCfg.actVidPolarity;
-    vpParams->lcdPolarityCfg.hsPolarity = gDssVpParams[CONFIG_DSS0].lcdPolarityCfg.hsPolarity;
-    vpParams->lcdPolarityCfg.vsPolarity = gDssVpParams[CONFIG_DSS0].lcdPolarityCfg.vsPolarity;
-    vpParams->lcdPolarityCfg.pixelClkPolarity = gDssVpParams[CONFIG_DSS0].lcdPolarityCfg.pixelClkPolarity ;
+    vpParams->lcdPolarityCfg.actVidPolarity =  gDssVpParams.lcdPolarityCfg.actVidPolarity;
+    vpParams->lcdPolarityCfg.hsPolarity = gDssVpParams.lcdPolarityCfg.hsPolarity;
+    vpParams->lcdPolarityCfg.vsPolarity = gDssVpParams.lcdPolarityCfg.vsPolarity;
+    vpParams->lcdPolarityCfg.pixelClkPolarity = gDssVpParams.lcdPolarityCfg.pixelClkPolarity ;
 
     /* Configure VP Advance Params*/
-    advVpParams->vpId = gDssAdvVpParams[CONFIG_DSS0].vpId;
-    advVpParams->lcdAdvSignalCfg.hVAlign = gDssAdvVpParams[CONFIG_DSS0].lcdAdvSignalCfg.hVAlign;
-    advVpParams->lcdAdvSignalCfg.hVClkControl = gDssAdvVpParams[CONFIG_DSS0].lcdAdvSignalCfg.hVClkControl;
+    advVpParams->vpId = gDssAdvVpParams.vpId;
+    advVpParams->lcdAdvSignalCfg.hVAlign = gDssAdvVpParams.lcdAdvSignalCfg.hVAlign;
+    advVpParams->lcdAdvSignalCfg.hVClkControl = gDssAdvVpParams.lcdAdvSignalCfg.hVClkControl;
 
     /* Configure VP Safety Params */
     for(uint8_t count = 0; count < CSL_DSS_VP_SAFETY_REGION_MAX; count++)
@@ -430,16 +443,16 @@ static void DispApp_initDssParams(Dss_Object *appObj)
     }
 
     /* Configure Overlay Params */
-    overlayParams->overlayId =  gDssOverlayParams[CONFIG_DSS0].overlayId;
-    overlayParams->colorbarEnable =  gDssOverlayParams[CONFIG_DSS0].colorbarEnable;
-    overlayParams->overlayCfg.colorKeyEnable =  gDssOverlayParams[CONFIG_DSS0].overlayCfg.colorKeyEnable;
-    overlayParams->overlayCfg.colorKeySel =  gDssOverlayParams[CONFIG_DSS0].overlayCfg.colorKeySel;
-    overlayParams->overlayCfg.backGroundColor =  gDssOverlayParams[CONFIG_DSS0].overlayCfg.backGroundColor;
+    overlayParams->overlayId =  gDssOverlayParams.overlayId;
+    overlayParams->colorbarEnable =  gDssOverlayParams.colorbarEnable;
+    overlayParams->overlayCfg.colorKeyEnable =  gDssOverlayParams.overlayCfg.colorKeyEnable;
+    overlayParams->overlayCfg.colorKeySel =  gDssOverlayParams.overlayCfg.colorKeySel;
+    overlayParams->overlayCfg.backGroundColor =  gDssOverlayParams.overlayCfg.backGroundColor;
 
     /* Configure Overlay Layer params */
-    layerParams->overlayId = gDssOverlayLayerParams[CONFIG_DSS0].overlayId;
-    memcpy((void*)layerParams->pipeLayerNum, (void* )gDssOverlayLayerParams[CONFIG_DSS0].pipeLayerNum, \
-    sizeof(gDssOverlayLayerParams[CONFIG_DSS0].pipeLayerNum));
+    layerParams->overlayId = gDssOverlayLayerParams.overlayId;
+    memcpy((void*)layerParams->pipeLayerNum, (void* )gDssOverlayLayerParams.pipeLayerNum, \
+    sizeof(gDssOverlayLayerParams.pipeLayerNum));
 
 }
 
@@ -461,7 +474,7 @@ static void DispApp_create(Dss_Object *appObj)
 
     if(retVal == FVID2_SOK)
     {
-        for(instCnt=0U; instCnt<gDssConfigPipelineParams[CONFIG_DSS0].numTestPipes; instCnt++)
+        for(instCnt=0U; instCnt<gDssConfigPipelineParams.numTestPipes; instCnt++)
         {
             instObj = &appObj->instObj[instCnt];
 
@@ -513,7 +526,7 @@ static void DispApp_create(Dss_Object *appObj)
 
             if(FVID2_SOK == retVal)
             {
-                if(gDssConfigPipelineParams[CONFIG_DSS0].safetyCheck[instCnt] == TRUE)
+                if(gDssConfigPipelineParams.safetyCheck[instCnt] == TRUE)
                 {
                     retVal = Fvid2_control(
                         instObj->drvHandle,
@@ -564,7 +577,7 @@ static void DispApp_delete(Dss_Object *appObj)
     vpParams = &appObj->vpParams;
     pErrorStats = &appObj->errorStats;
 
-    for(instCnt=0U; instCnt<gDssConfigPipelineParams[CONFIG_DSS0].numTestPipes; instCnt++)
+    for(instCnt=0U; instCnt<gDssConfigPipelineParams.numTestPipes; instCnt++)
     {
         instObj = &appObj->instObj[instCnt];
 
@@ -677,7 +690,7 @@ static int32_t DispApp_allocAndQueueFrames(const Dss_Object *appObj,
     {
         /* init Fvid2_Frame to 0's  */
         Fvid2Frame_init((Fvid2_Frame *)(frm + frmId));
-        if(instObj->instId == gDssConfigPipelineParams[CONFIG_DSS0].instId[0U])
+        if(instObj->instId == gDssConfigPipelineParams.instId[0U])
         {
             frm[frmId].addr[0U] = (uint64_t)gfirstPipeFrameBufferPointer[frmId];
         }
@@ -717,13 +730,13 @@ static void DispApp_initPipelineParams(Dss_Object *appObj)
     Dss_DispParams *dispParams;
     Dss_InstObject *instObj;
 
-    numPipes = gDssConfigPipelineParams[CONFIG_DSS0].numTestPipes;
+    numPipes = gDssConfigPipelineParams.numTestPipes;
 
     for(instCnt=0U; instCnt<numPipes; instCnt++)
     {
         /* Initialize video pipes */
         instObj = &appObj->instObj[instCnt];
-        instObj->instId = gDssConfigPipelineParams[CONFIG_DSS0].instId[instCnt];
+        instObj->instId = gDssConfigPipelineParams.instId[instCnt];
 
         Dss_dispCreateParamsInit(&instObj->createParams);
         Fvid2CbParams_init(&instObj->cbParams);
@@ -734,34 +747,34 @@ static void DispApp_initPipelineParams(Dss_Object *appObj)
         dispParams = &instObj->dispParams;
         Dss_dispParamsInit(dispParams);
 
-        dispParams->pipeCfg.pipeType = gDssConfigPipelineParams[CONFIG_DSS0].pipeType[instCnt];
-        dispParams->pipeCfg.inFmt.width = gDssConfigPipelineParams[CONFIG_DSS0].inWidth[instCnt];
-        dispParams->pipeCfg.inFmt.height = gDssConfigPipelineParams[CONFIG_DSS0].inHeight[instCnt];
+        dispParams->pipeCfg.pipeType = gDssConfigPipelineParams.pipeType[instCnt];
+        dispParams->pipeCfg.inFmt.width = gDssConfigPipelineParams.inWidth[instCnt];
+        dispParams->pipeCfg.inFmt.height = gDssConfigPipelineParams.inHeight[instCnt];
 
         for(uint32_t count = 0U; count < FVID2_MAX_PLANES; count++)
         {
             dispParams->pipeCfg.inFmt.pitch[count] =
-                                        gDssConfigPipelineParams[CONFIG_DSS0].pitch[instCnt][count];
+                                        gDssConfigPipelineParams.pitch[instCnt][count];
         }
 
         dispParams->pipeCfg.inFmt.dataFormat =
-                                        gDssConfigPipelineParams[CONFIG_DSS0].inDataFmt[instCnt];
+                                        gDssConfigPipelineParams.inDataFmt[instCnt];
         dispParams->pipeCfg.inFmt.scanFormat =
-                                        gDssConfigPipelineParams[CONFIG_DSS0].inScanFmt[instCnt];
-        dispParams->pipeCfg.outWidth = gDssConfigPipelineParams[CONFIG_DSS0].outWidth[instCnt];
-        dispParams->pipeCfg.outHeight = gDssConfigPipelineParams[CONFIG_DSS0].outHeight[instCnt];
-        dispParams->pipeCfg.scEnable = gDssConfigPipelineParams[CONFIG_DSS0].scEnable[instCnt];
+                                        gDssConfigPipelineParams.inScanFmt[instCnt];
+        dispParams->pipeCfg.outWidth = gDssConfigPipelineParams.outWidth[instCnt];
+        dispParams->pipeCfg.outHeight = gDssConfigPipelineParams.outHeight[instCnt];
+        dispParams->pipeCfg.scEnable = gDssConfigPipelineParams.scEnable[instCnt];
 
         dispParams->alphaCfg.globalAlpha =
-                                gDssConfigPipelineParams[CONFIG_DSS0].globalAlpha[instCnt];
+                                gDssConfigPipelineParams.globalAlpha[instCnt];
         dispParams->alphaCfg.preMultiplyAlpha =
-                                gDssConfigPipelineParams[CONFIG_DSS0].preMultiplyAlpha[instCnt];
-        dispParams->layerPos.startX = gDssConfigPipelineParams[CONFIG_DSS0].posx[instCnt];
-        dispParams->layerPos.startY = gDssConfigPipelineParams[CONFIG_DSS0].posy[instCnt];
+                                gDssConfigPipelineParams.preMultiplyAlpha[instCnt];
+        dispParams->layerPos.startX = gDssConfigPipelineParams.posx[instCnt];
+        dispParams->layerPos.startY = gDssConfigPipelineParams.posy[instCnt];
 
         Dss_dispPipeMflagParamsInit(&instObj->mflagParams);
 
-        if(gDssConfigPipelineParams[CONFIG_DSS0].safetyCheck[instCnt] == TRUE)
+        if(gDssConfigPipelineParams.safetyCheck[instCnt] == TRUE)
         {
             Dss_dispPipeSafetyChkParamsInit(&instObj->safetyParams);
 
@@ -778,7 +791,7 @@ static void DispApp_initPipelineParams(Dss_Object *appObj)
             instObj->safetyParams.safetyChkCfg.regionSize.height = gDssPipelineSafetyParams[instCnt].safetyChkCfg.regionSize.height;
 
             instObj->safetyParams.safetyErrCbFxn = DispApp_pipelineSafetyErrCallback;
-            instObj->safetyParams.appData = &gDssConfigPipelineParams[CONFIG_DSS0].pipeType[instCnt];
+            instObj->safetyParams.appData = &gDssPipelineSafetyParams[instCnt].safetyChkCfg.safetyChkMode;
         }
     }
 }
@@ -833,14 +846,17 @@ static int32_t DispApp_configDctrl(Dss_Object *appObj)
         DebugP_log("Dctrl Set VP Params IOCTL Failed!!!\r\n");
     }
 
-    retVal = Fvid2_control(
-        appObj->dctrlHandle,
-        IOCTL_DSS_DCTRL_SET_OLDI_PARAMS,
-        oldiParams,
-        NULL);
-    if(retVal != FVID2_SOK)
+    if (appObj->oldiParams != NULL)
     {
-        DebugP_log("DCTRL Set OLDI Params IOCTL Failed!!!\r\n");
+        retVal = Fvid2_control(
+            appObj->dctrlHandle,
+            IOCTL_DSS_DCTRL_SET_OLDI_PARAMS,
+            oldiParams,
+            NULL);
+        if(retVal != FVID2_SOK)
+        {
+            DebugP_log("DCTRL Set OLDI Params IOCTL Failed!!!\r\n");
+        }
     }
 
     retVal = Fvid2_control(
@@ -921,7 +937,7 @@ static void DispApp_pipelineSafetyErrCallback(uint32_t pipeId,
                                               uint32_t capturedSign,
                                               void *appData)
 {
-    if(pipeId == CSL_DSS_VID_PIPE_ID_VID1)
+    if(Dss_dispIsVidInst(pipeId) == TRUE)
     {
         if(gSafetyCallbackDataVID.safetyInterupt != true && gLoopCount < DISP_NUM_FRAMES_COUNT)
         {
@@ -932,7 +948,7 @@ static void DispApp_pipelineSafetyErrCallback(uint32_t pipeId,
             gSafetyCallbackDataVID.cbData.capturedSign = capturedSign;
         }
     }
-    else if(pipeId == CSL_DSS_VID_PIPE_ID_VIDL1)
+    else if(Dss_dispIsVidLInst(pipeId) == TRUE)
     {
         if(gSafetyCallbackDataVIDL.safetyInterupt != true && gLoopCount < DISP_NUM_FRAMES_COUNT)
         {
@@ -987,11 +1003,11 @@ static int32_t DispApp_logSafetyCheckData()
 
     }
 
-    for(uint32_t instCnt=0U; instCnt<gDssConfigPipelineParams[CONFIG_DSS0].numTestPipes; instCnt++)
+    for(uint32_t instCnt=0U; instCnt<gDssConfigPipelineParams.numTestPipes; instCnt++)
     {
-        if(gDssConfigPipelineParams[CONFIG_DSS0].safetyCheck[instCnt] == TRUE)
+        if(gDssConfigPipelineParams.safetyCheck[instCnt] == TRUE)
         {
-            if(gDssConfigPipelineParams[CONFIG_DSS0].pipeId[instCnt] == CSL_DSS_VID_PIPE_ID_VID1)
+            if(Dss_dispIsVidInst(gDssConfigPipelineParams.pipeId[instCnt]) == TRUE)
             {
                 DebugP_log("****************************************************\r\n");
 
@@ -1025,7 +1041,7 @@ static int32_t DispApp_logSafetyCheckData()
                 }
 
             }
-            else if(gDssConfigPipelineParams[CONFIG_DSS0].pipeId[instCnt] == CSL_DSS_VID_PIPE_ID_VIDL1)
+            else if(Dss_dispIsVidLInst(gDssConfigPipelineParams.pipeId[instCnt]) == TRUE)
             {
                 DebugP_log("****************************************************\r\n");
 

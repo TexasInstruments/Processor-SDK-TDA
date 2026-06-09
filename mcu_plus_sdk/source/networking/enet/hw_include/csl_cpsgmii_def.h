@@ -9,7 +9,7 @@
  *
  *  \par
  *  ============================================================================
- *  @n   (C) Copyright 2009-2011, Texas Instruments, Inc.
+ *  @n   (C) Copyright 2024, Texas Instruments, Inc.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -62,6 +62,10 @@ extern "C" {
 #endif
 
 #include <drivers/hw_include/cslr_soc.h>
+
+#if defined (SOC_J722S)
+#include <cpsw/V5/V5_0/csl_cpsw_ss.h>
+#endif
 
 /**
 @defgroup CSL_SGMII_SYMBOL  SGMII Symbols Defined
@@ -179,7 +183,7 @@ typedef struct {
     /**  Link speed */
     CSL_SGMII_LINKSPEED     linkSpeed;
 
-#if defined(SOC_J721E) || defined (SOC_J74202) || defined (SOC_J721S2) || defined (SOC_J7200) || defined(SOC_AM65XX) || defined(SOC_AM64X) || defined(SOC_AM243X) || defined (SOC_AM62X)
+#if defined(SOC_J721E) || defined (SOC_J74202) || defined (SOC_J721S2) || defined (SOC_J7200) || defined(SOC_AM65XX) || defined(SOC_AM64X) || defined(SOC_AM243X) || defined (SOC_AM62X) || defined (SOC_AM62LX) || defined(SOC_AM62AX) || defined(SOC_AM62PX) || defined(SOC_AM62DX)|| defined(SOC_AM275X)|| defined (SOC_J722S)
     /**  Link speed */
     CSL_SGMII_MODE          sgmiiMode;
 #endif

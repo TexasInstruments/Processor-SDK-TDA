@@ -5,69 +5,43 @@
     "documentationPath": "../docs",
     "includePaths": [
         "../source",
+        "../source/networking/enet/core/sysconfig",
     ],
     "components": [
-        "/kernel/dpl",
-        "/drivers/drivers",
         "/board/board",
+        "/drivers/drivers",
         "/fs/fs",
-        "/pdm_utils/tools/dm_power_config",
+        "/kernel/dpl",
+        "/networking/networking",
+        "/optiflash/optiflash",
+        "/security/security",
     ],
     "devices": [
-        "AM64x_beta",
-        "AM243x_ALV_beta",
-        "AM243x_ALX_beta",
-        "AM273x",
-        "AWR294X",
-        "AM263x_beta",
         "AM62x",
+        "AM62SIP",
         "AM62Ax",
         "AM62Px",
+        "AM275x",
         "J722S",
+        "AM62Dx",
+        "AM62Lx",
     ],
     "contexts": {
-        "AM64x_beta": [
-            "r5fss0-0",
-            "r5fss0-1",
-            "r5fss1-0",
-            "r5fss1-1",
-            "m4fss0-0",
-            "a53ss0-0",
-        ],
-        "AM243x_ALV_beta": [
-            "r5fss0-0",
-            "r5fss0-1",
-            "r5fss1-0",
-            "r5fss1-1",
-            "m4fss0-0",
-        ],
-        "AM243x_ALX_beta": [
-            "r5fss0-0",
-            "r5fss0-1",
-            "r5fss1-0",
-            "r5fss1-1",
-            "m4fss0-0",
-        ],
-        "AM273x": [
-            "r5fss0-0",
-            "r5fss0-1",
-            "c66ss0"
-        ],
-        "AWR294X": [
-            "r5fss0-0",
-            "r5fss0-1",
-            "c66ss0"
-        ],
-        "AM263x_beta": [
-            "r5fss0-0",
-            "r5fss0-1",
-            "r5fss1-0",
-            "r5fss1-1",
-            "hsm0-0",
-        ],
         "AM62x": [
             "m4fss0-0",
             "r5fss0-0",
+            "a53ss0-0",
+            "a53ss0-1",
+            "a53ss1-0",
+            "a53ss1-1",
+        ],
+        "AM62SIP": [
+            "m4fss0-0",
+            "r5fss0-0",
+            "a53ss0-0",
+            "a53ss0-1",
+            "a53ss1-0",
+            "a53ss1-1",
         ],
         "AM62Ax": [
             "mcu-r5fss0-0",
@@ -77,6 +51,15 @@
         ],
         "AM62Px": [
             "mcu-r5fss0-0",
+            "wkup-r5fss0-0",
+        ],
+        "AM275x": [
+            "r5fss0-0",
+            "r5fss0-1",
+            "r5fss1-0",
+            "r5fss1-1",
+            "c75ss0-0",
+            "c75ss1-0",
             "wkup-r5fss0-0",
         ],
         "J722S": [
@@ -91,6 +74,21 @@
             "a53ss1-1",
             "hsm0-0",
         ],
+        "AM62Dx": [
+            "mcu-r5fss0-0",
+            "r5fss0-0",
+            "c75ss0-0",
+            "a53ss0-0",
+            "a53ss0-1",
+            "a53ss1-0",
+            "a53ss1-1",
+        ],
+
+        "AM62Lx": [
+            "a53ss0-0",
+            "a53ss0-1",
+        ],
+
     },
     "pinmuxUIOptions": {
         "group": "merged",
@@ -99,5 +97,5 @@
         "showSignals": true,
         "showUsed": true
     },
-    "minToolVersion" : "1.20.0"
+    "minToolVersion" : "1.26.2"
 }

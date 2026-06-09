@@ -414,6 +414,8 @@ typedef struct
      *   Y position of the video buffer
      *   The line at the top has the Y-position 0 <br>
      */
+    uint32_t lutRefreshEnable;
+    /**< Enable refresh LUT */
 } Dss_DispParams;
 
 /**
@@ -714,6 +716,7 @@ static inline void Dss_dispParamsInit(Dss_DispParams *dssParams)
         CSL_dssVidPipeVC1CfgInit(&(dssParams->vc1Cfg));
         Dss_dispPipeCropParamsInit(&(dssParams->cropParams));
         Fvid2PosConfig_init(&(dssParams->layerPos));
+        dssParams->lutRefreshEnable = UFALSE;
     }
 }
 

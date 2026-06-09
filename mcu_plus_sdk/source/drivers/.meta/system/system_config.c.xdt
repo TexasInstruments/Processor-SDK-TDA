@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -45,6 +45,7 @@
     % if((socName.match(/am62x/) && cpuName.match(/r5/)) ||
     %    (socName.match(/am62ax/) && cpuName.match(/^r5/))||
     %    (socName.match(/am62px/) && cpuName.match(/wkup-r5/)) ||
+    %    (socName.match(/am275x/) && cpuName.match(/wkup-r5/)) ||
     %    (socName.match(/j722s/) && cpuName.match(/wkup-r5/))){
 #include <drivers/device_manager/sciclient.h>
     % } else {
@@ -52,9 +53,23 @@
     % }
 % }
 
+% if (common.isPSCISupported()) {
+% let soc = system.getScript(`/drivers/soc/drivers_${common.getSocName()}`);
+% let driverVer = soc.getDriverVer("psci");
+% let psciConfigTemplate = '/drivers/scp/psci/'+ driverVer + '/psci_config.c.xdt';
+`system.getTemplate(psciConfigTemplate)()`
+% }
+
+% if (common.isSCMIClientSupported()) {
+% let soc = system.getScript(`/drivers/soc/drivers_${common.getSocName()}`);
+% let driverVer = soc.getDriverVer("scmi");
+% let scmiConfigTemplate = '/drivers/scp/scmi/'+ driverVer + '/scmi_config.c.xdt';
+`system.getTemplate(scmiConfigTemplate)()`
+% }
+
 % for(let subTemplate of args) {
     % if (subTemplate.driver_config) {
-    `system.getTemplate(subTemplate.driver_config)(subTemplate.moduleName)`
+`system.getTemplate(subTemplate.driver_config)(subTemplate.moduleName)`
     % }
 % }
 
@@ -65,53 +80,104 @@ void PowerClock_deinit(void);
 /*
  * Common Functions
  */
-
+% if(common.isSafeRTOSSupported()) {
 #if defined(OS_SAFERTOS)
-void System_lateInit(void)
-{
-    % if (common.isSciClientSupported()) {
-    /* We should do sciclient init before we enable power and clock to the peripherals */
-    `system.getTemplate(sciclientInitTemplate)()`
-    % }
-    PowerClock_init();
-    /* Now we can do pinmux */
-    Pinmux_init();
-    /* finally we initialize all peripheral drivers */
-    % for(let subTemplate of args) {
-        % if (subTemplate.driver_init) {
-        `system.getTemplate(subTemplate.driver_init)()`
+    void System_lateInit(void)
+    {
+        % if (common.isSciClientSupported()) {
+        /* We should do sciclient init before we enable power and clock to the peripherals */
+        `system.getTemplate(sciclientInitTemplate)()`
         % }
-    % }
-    % if(cpuName.match(/a53/)) {
-        }
+        PowerClock_init();
+        /* Now we can do pinmux */
+        Pinmux_init();
+        /* finally we initialize all peripheral drivers */
+        % for(let subTemplate of args) {
+            % if (subTemplate.driver_init) {
+            `system.getTemplate(subTemplate.driver_init)()`
+            % }
+        % }
+        % if(cpuName.match(/a53/)) {
+            }
 
-    % }
-}
+        % }
+    }
 #endif
 
+% }
 void System_init(void)
 {
     /* DPL init sets up address transalation unit, on some CPUs this is needed
      * to access SCICLIENT services, hence this needs to happen first
      */
     Dpl_init();
-#if !defined(OS_SAFERTOS)
-    % if (common.isSciClientSupported()) {
-    /* We should do sciclient init before we enable power and clock to the peripherals */
-    `system.getTemplate(sciclientInitTemplate)()`
+#if defined(SOC_J722S) && !defined(OS_SAFERTOS)
+% if(cpuName.match(/a53/)) {
+    % if (common.isSmpSupported()) {
+        % if(cpuName.match(/a53ss0-0/)) {
+    if(0 == Armv8_getCoreId())
+    {
+        % }
+    % }
 % }
+% if (common.isSciClientSupported()) {
+    /* We should do sciclient init before we enable power and clock to the peripherals */
+`system.getTemplate(sciclientInitTemplate)()`
+% }
+% if (common.isSCMIClientSupported()) {
+% let soc = system.getScript(`/drivers/soc/drivers_${common.getSocName()}`);
+% let driverVer = soc.getDriverVer("scmi");
+% let scmiInitTemplate = '/drivers/scp/scmi/'+ driverVer + '/scmi_init.c.xdt';
+    /* We should do scmi init and open before we enable power and clock to the peripherals */
+`system.getTemplate(scmiInitTemplate)()`
+% }
+
+   `system.getTemplate("/kernel/dpl/pmu_init.c.xdt")()`
+
     PowerClock_init();
     /* Now we can do pinmux */
     Pinmux_init();
     /* finally we initialize all peripheral drivers */
-% for(let subTemplate of args) {
+% let driverOrder = system.getScript('/common').getDriverOpenOrder();
+% let orderedTemplates = [];
+% let otherTemplates = [];
+% for (let module_name of driverOrder) {
+    % for(let subTemplate of args) {
+        % if (subTemplate.driver_init && subTemplate.driver_init.match(module_name)) {
+            % orderedTemplates.push(subTemplate);
+        %}
+    % }
+%}
+% for(let subTemplate of args){
+    % let templateAdded = 0;
+    % for(let orderedTemplate of orderedTemplates) {
+        % if (orderedTemplate == subTemplate) {
+            % templateAdded= 1;
+            % break;
+        %}
+    % }
+    % if (templateAdded == 0){
+        % otherTemplates.push(subTemplate);
+    %}
+%}
+% orderedTemplates = orderedTemplates.concat(otherTemplates);
+% for(let subTemplate of orderedTemplates) {
     % if (subTemplate.driver_init) {
-    `system.getTemplate(subTemplate.driver_init)()`
+`system.getTemplate(subTemplate.driver_init)()`
     % }
 % }
+% if (common.isPSCISupported()) {
+% let soc = system.getScript(`/drivers/soc/drivers_${common.getSocName()}`);
+% let driverVer = soc.getDriverVer("psci");
+% let psciInitTemplate = '/drivers/scp/psci/'+ driverVer + '/psci_init.c.xdt';
+`system.getTemplate(psciInitTemplate)()`
+% }
 % if(cpuName.match(/a53/)) {
+    % if (common.isSmpSupported()) {
+        % if(cpuName.match(/a53ss0-0/)) {
     }
-
+        % }
+    % }
 % }
 #endif
 }
@@ -119,21 +185,42 @@ void System_init(void)
 void System_deinit(void)
 {
 % if(cpuName.match(/a53/)) {
+    % if (common.isSmpSupported()) {
+        % if(cpuName.match(/a53ss0-0/)) {
     if(0 == Armv8_getCoreId())
     {
+        % }
+    % }
+% }
+% if (common.isPSCISupported()) {
+% let soc = system.getScript(`/drivers/soc/drivers_${common.getSocName()}`);
+% let driverVer = soc.getDriverVer("psci");
+% let psciDeinitTemplate = '/drivers/scp/psci/'+ driverVer + '/psci_deinit.c.xdt';
+`system.getTemplate(psciDeinitTemplate)()`
 % }
 % for(let subTemplate of args) {
     % if (subTemplate.driver_deinit) {
 `system.getTemplate(subTemplate.driver_deinit)()`
     % }
 % }
+% if(!(socName.match(/am62lx/))){
     PowerClock_deinit();
+% }
 % if (common.isSciClientSupported()) {
 `system.getTemplate(sciclientDeInitTemplate)()`
 % }
+% if (common.isSCMIClientSupported()) {
+% let soc = system.getScript(`/drivers/soc/drivers_${common.getSocName()}`);
+% let driverVer = soc.getDriverVer("scmi");
+% let scmideInitTemplate = '/drivers/scp/scmi/'+ driverVer + '/scmi_deinit.c.xdt';
+`system.getTemplate(scmideInitTemplate)()`
+% }
 % if(cpuName.match(/a53/)) {
+    % if (common.isSmpSupported()) {
+        % if(cpuName.match(/a53ss0-0/)) {
     }
-
+        % }
+    % }
 % }
     Dpl_deinit();
 }

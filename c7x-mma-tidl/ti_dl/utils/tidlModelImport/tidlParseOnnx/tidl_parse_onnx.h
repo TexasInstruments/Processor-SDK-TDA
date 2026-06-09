@@ -90,6 +90,39 @@ extern "C" int32_t TIDL_isInputConstInGraph(GraphProto &onnGraph, const string n
 #define INPUT_NOT_REQUIRED (0)
 #define INPUT_REQUIRED (1)
 
+const std::vector<int32_t> unsupportedDataTypes = {TIDL_UnsignedDoubleWord, TIDL_SignedDoubleWord, TIDL_SignedWord, TIDL_UnsignedWord};
+const std::vector<int32_t> supportedLayerTypes = {
+    TIDL_GatherLayer, 
+    TIDL_ArgOpLayer, 
+    TIDL_ScatterElementsLayer, 
+    TIDL_SliceLayer,
+    TIDL_FlattenLayer, 
+    TIDL_CastLayer, 
+    TIDL_ReshapeLayer, 
+    TIDL_SqueezeLayer, 
+    TIDL_UnsqueezeLayer, 
+    TIDL_TransposeLayer, 
+    TIDL_SliceLayer, 
+    TIDL_ConcatLayer, 
+    TIDL_SplitLayer, 
+    TIDL_TopKLayer,
+};
+
+static std::map<std::string, int32_t> activationMap = {
+    {"Relu",            TIDL_RelU},
+    {"Tanh",            TIDL_Tanh},
+    {"Sigmoid",         TIDL_Sigmoid},
+    {"LeakyRelu",       TIDL_LeakyReLU},
+    {"HardSigmoid",     TIDL_HardSigmoid},
+    {"Elu",             TIDL_ELU}
+};
+
+static std::map<int32_t, std::pair<float32_tidl, float32_tidl>> activationAlphaBetaMap = {
+    {TIDL_LeakyReLU,       {0.01f, 0.0f}},
+    {TIDL_HardSigmoid,     {0.2f, 0.5f}},
+    {TIDL_ELU,             {1.0f, 0.0f}}
+};
+
 /// @brief Parses Onnx layers
 struct TidlParseOnnx
 {
@@ -99,9 +132,10 @@ struct TidlParseOnnx
     int32_t index;
 
     int32_t status;
+    bool isModelShapeInfered;
 
     /// @brief Constructor of TidlParseOnnx
-    TidlParseOnnx(GraphProto& graph, int32_t index, sTIDL_LayerPC_t layer);
+    TidlParseOnnx(GraphProto& graph, int32_t index, sTIDL_LayerPC_t layer, bool& isModelShapeInfered);
 
     /// @brief The parse function: fills in attributes into sTIDL_Layer_PC_t struct
     template <char... S>
@@ -130,7 +164,10 @@ struct TidlParseOnnx
     int32_t getConstSize (TensorProto& tensor);
     int32_t containsSuffix(std::string str, std::string suffix);
     int32_t getTIDLDataTypeFromOnnxDataType (int32_t onnxDataType);
+    std::string getOriginalNameFromDuplicateName(std::string duplicateName);
     int32_t convertIndicesToInt32(sBuffer_t& weights);
+    bool isLayerIONumSupported(sTIDL_LayerPC_t &layer);
+    bool isLayerIODataTypesSupported(sTIDL_LayerPC_t &layer);
 };
 
 

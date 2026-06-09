@@ -157,8 +157,6 @@ IssSensors_Handle raw_testpat_SensorHandle = {
  */
 IssCapture_CmplxIoLaneCfg           raw_testpat_Csi2CmplxIoLaneCfg;
 
-extern IssSensors_Handle * gIssSensorTable[ISS_SENSORS_MAX_SUPPORTED_SENSOR];
-
 int32_t IssSensor_rawtestpat_Init(void)
 {
     int32_t status;
@@ -197,9 +195,12 @@ static int32_t rawtestpat_Config(uint32_t chId, void *pSensorHdl, uint32_t senso
     int32_t status = 0;
     I2cParams *deserCfg = NULL;
     uint8_t  ub97x_I2cAddr;
+    int8_t ub97xInstanceId = getDeserializerInstIdFromChId(chId);
+
+#if !defined(MCU_PLUS_SDK)
     uint8_t  ub97xI2CInstanceId;
     uint8_t  domain;
-    int8_t ub97xInstanceId = getDeserializerInstIdFromChId(chId);
+#endif
 
     if(ub97xInstanceId < 0)
     {
@@ -301,11 +302,14 @@ static int32_t rawtestpat_PowerOn(uint32_t chId, void *pSensorHdl)
 {
     (void)pSensorHdl;
     int32_t status;
-    uint8_t  domain;
     uint8_t  ub97x_I2cAddr;
-    uint8_t  ub97x_I2cInstId;
     uint8_t  ub97x_devId_regAddr = 0x0;
     uint8_t  ub97x_devId_regVal = 0xAB;
+
+#if !defined(MCU_PLUS_SDK)
+    uint8_t  domain;
+    uint8_t  ub97x_I2cInstId;
+#endif
 
     I2C_Handle sensorI2cHandle = NULL;
     static uint8_t sensorI2cByteOrder = BOARD_I2C_REG_ADDR_MSB_FIRST;

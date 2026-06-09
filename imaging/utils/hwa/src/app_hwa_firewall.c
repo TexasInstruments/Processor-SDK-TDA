@@ -249,7 +249,14 @@ static vx_status appConfigureSl2Firewall(
 
         fwl_req.n_permission_regs = numPerms;
         fwl_req.start_address = startAddr;
-        fwl_req.end_address = (startAddr + (uint64_t)size) - 1U;
+        if(size > 0U)
+        {
+            fwl_req.end_address = (startAddr + (uint64_t)size) - (uint64_t)1U;
+        }
+        else
+        {
+            fwl_req.end_address = startAddr;
+        }
 
         sciclient_status = Sciclient_firewallSetRegion(&fwl_req, &fwl_resp, FWL_TIMEOUT_VALUE);
         if (sciclient_status != 0)

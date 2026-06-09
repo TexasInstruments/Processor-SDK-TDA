@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2025 Texas Instruments Incorporated
+ *  Copyright (C) 2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -65,7 +65,6 @@
 
 static void Dss_dispErrCbFxn(const uint32_t *event,
                              uint32_t numEvents,
-                             uint32_t instId,
                              void *arg);
 
 /* ========================================================================== */
@@ -91,10 +90,11 @@ int32_t Dss_dispDrvPrivInit(uint32_t numInst,
     Dss_DispDrvInstObj *instObj;
     Dss_DispDrvCommonObj *pObj;
     Dss_EvtMgrClientInfo *pClientInfo;
+    const Dss_DispDrvInitParams *params = initParams;
 
     /* Check for errors */
     GT_assert(DssTrace, (numInst <= DSS_DISP_INST_MAX));
-    GT_assert(DssTrace, (NULL != initParams));
+    GT_assert(DssTrace, (NULL != params));
 
     /* Initialize common object */
     pObj = &gDss_DispDrvCommonObj;
@@ -128,7 +128,7 @@ int32_t Dss_dispDrvPrivInit(uint32_t numInst,
         for(instCnt=0U; instCnt<numInst; instCnt++)
         {
             /* Copy the information */
-            instObj->drvInstId = initParams->drvInstId;
+            instObj->drvInstId = params->drvInstId;
 
             /* Allocate instance semaphore */
             status = SemaphoreP_constructBinary(&instObj->lockSem, 1);
@@ -150,19 +150,7 @@ int32_t Dss_dispDrvPrivInit(uint32_t numInst,
 
                 /* Register functional events */
                 Dss_getEnabledPipeErrEvents(&enabledEvents[0U], &numEvents);
-
-                /* Register for events for DSS instance based on Pipe ID*/
-                if(instObj->drvInstId <= CSL_DSS_VID_PIPE_ID_VIDL1)
-                {
-                    /* Pipe 1, L1 correspond to DSS0 */
-                    evtMgrId = Dss_getEvtMgrFuncIntrId();
-                }
-                else
-                {
-                    /* Pipe 2, L2 correspond to DSS1 */
-                    evtMgrId = Dss1_getEvtMgrFuncIntrId();
-                }
-
+                evtMgrId = Dss_getEvtMgrFuncIntrId();
                 numHandle = instObj->numRegEvtHandle;
                 instObj->evtGroupHandle[instObj->numRegEvtHandle] =
                             Dss_evtMgrRegister(
@@ -172,7 +160,6 @@ int32_t Dss_dispDrvPrivInit(uint32_t numInst,
                                 numEvents,
                                 Dss_dispErrCbFxn,
                                 (void *)&gDss_DispEvtMgrClientInfo[(instObj->drvInstId*DSS_DISP_INST_EVT_MGR_MAX_CLIENTS) + numHandle]);//todo: Check for this, one more place like this exists.
-                GT_assert(DssTrace, (NULL != instObj->evtGroupHandle[instObj->numRegEvtHandle]));
                 instObj->numRegEvtHandle++;
             }
 
@@ -182,7 +169,7 @@ int32_t Dss_dispDrvPrivInit(uint32_t numInst,
             instObj->drvState.isStarting = FALSE;
             instObj->drvState.isStopping = FALSE;
 
-            initParams++;
+            params++;
             instObj++;
         }
     }
@@ -408,7 +395,6 @@ int32_t Dss_dispDrvDeleteInstObj(Dss_DispDrvInstObj *instObj)
 
 static void Dss_dispErrCbFxn(const uint32_t *event,
                              uint32_t numEvents,
-                             uint32_t instId,
                              void *arg)
 {
     uint32_t  i, currEvent, pipeId = 0U;
@@ -417,14 +403,6 @@ static void Dss_dispErrCbFxn(const uint32_t *event,
     Dss_DispDrvInstObj *instObj;
 
     Dss_convEventGrouptoModule(eventGroup, &pipeId);
-    if(instId == DSS1_EVT_MGR_INST_ID_FUNC)
-    {
-        /*  Pipe ID 2,L2 in SW correspond to the two Pipes for second DSS instance i.e DSS1,
-         *  Here using Instance id we know whether the event has occured for DSS0 or DSS1.
-         *  The event is same for both DSS0/1, therfore conversion to module will return Pipe id
-         *  as 1 or L1 only, we need to convert it back appropriately to match SW construct for DSS1 */
-        pipeId = pipeId + 2U;
-    }
     GT_assert(DssTrace, (CSL_DSS_MODULE_INVALID != pipeId));
     instObj = &gDss_DispDrvInstObj[pipeId];
     for(i=0U; i<numEvents; i++)
@@ -441,7 +419,7 @@ static void Dss_dispErrCbFxn(const uint32_t *event,
         }
         else
         {
-            GT_assert(DssTrace, FALSE);
+            GT_assert(DssTrace, (bool)FALSE);
         }
     }
 

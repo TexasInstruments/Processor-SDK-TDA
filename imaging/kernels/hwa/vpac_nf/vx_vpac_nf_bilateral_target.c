@@ -325,8 +325,6 @@ void tivxAddTargetKernelVpacNfBilateral(void)
         <justification end> */
         else
         {
-            status = (vx_status)VX_FAILURE;
-
             /* TODO: how to handle this condition */
             VX_PRINT(VX_ZONE_ERROR,
                 "Failed to Add NF Bilateral TargetKernel\n");
@@ -381,6 +379,8 @@ static vx_status VX_CALLBACK tivxVpacNfBilateralProcess(
     Fvid2_FrameList                  *outFrmList;
     uint64_t                         cur_time;
     tivx_obj_desc_t         *out_base_desc = NULL;
+    vx_status                        validate_reg_status = (vx_status)VX_SUCCESS;
+
 
     status = tivxCheckNullParams(obj_desc, num_params,
                 TIVX_KERNEL_VPAC_NF_BILATERAL_MAX_PARAMS);
@@ -477,6 +477,8 @@ static vx_status VX_CALLBACK tivxVpacNfBilateralProcess(
         nf_bilateral_obj->timestamp = out_base_desc->timestamp;
 
         /* Set Weight Coefficients for NF */
+        fvid2_status = Fvid2_control(nf_bilateral_obj->handle, IOCTL_VHWA_M2M_NF_SET_FILTER_COEFF,
+            &nf_bilateral_obj->wgtTbl, NULL);
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
         <justification start>
@@ -485,27 +487,13 @@ static vx_status VX_CALLBACK tivxVpacNfBilateralProcess(
         Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
         However, due to the stated rationale, this is not tested.
         <justification end> */
-        if ((vx_status)VX_SUCCESS == status)
-        /* LDRA_JUSTIFY_END */
+        if (FVID2_SOK != fvid2_status)
         {
-            /* Set NF coeff */
-            fvid2_status = Fvid2_control(nf_bilateral_obj->handle, IOCTL_VHWA_M2M_NF_SET_FILTER_COEFF,
-                &nf_bilateral_obj->wgtTbl, NULL);
-            /* LDRA_JUSTIFY_START
-            <metric start> branch <metric end>
-            <justification start>
-            Rationale: The component level negative test framework and test applications cannot reach this portion.
-            This failure case is out of scope for the imaging test framework.
-            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-            However, due to the stated rationale, this is not tested.
-            <justification end> */
-            if (FVID2_SOK != fvid2_status)
-            {
-                VX_PRINT(VX_ZONE_ERROR, "Set coeff request failed\n");
-                status = (vx_status)VX_FAILURE;
-            }
-            /* LDRA_JUSTIFY_END */
+            VX_PRINT(VX_ZONE_ERROR, "Set coeff request failed\n");
+            status = (vx_status)VX_FAILURE;
         }
+        /* LDRA_JUSTIFY_END */
+
         /* Initialize NF Input Frame List */
         inFrmList->frames[0U] =
             &nf_bilateral_obj->inFrm;
@@ -633,7 +621,7 @@ static vx_status VX_CALLBACK tivxVpacNfBilateralProcess(
             if (FVID2_SOK != fvid2_status)
             {
             VX_PRINT(VX_ZONE_ERROR, "Register validation failed (Fvid2_control returned %d)\n", fvid2_status);
-            status = (vx_status)VX_FAILURE;
+            validate_reg_status = (vx_status)VX_FAILURE;
             }
             /* LDRA_JUSTIFY_END */
         }
@@ -656,6 +644,11 @@ static vx_status VX_CALLBACK tivxVpacNfBilateralProcess(
             (uint32_t)cur_time,
             dst->imagepatch_addr[0U].dim_x*dst->imagepatch_addr[0U].dim_y /* pixels processed */
             );
+    }
+
+    if(((vx_status)VX_SUCCESS != status) || ((vx_status)VX_SUCCESS != validate_reg_status))
+    {
+        status = (vx_status)VX_FAILURE;
     }
 
     return status;
@@ -1544,7 +1537,7 @@ static void tivxVpacNfBilateralGenerateLut(uint8_t subRangeBits, const vx_float6
             f_lut,
             8U,
             NULL,
-            &i_lut[tableNum * LUT_ROWS * rangeLutEntries]
+            &i_lut[(uint32_t)tableNum * LUT_ROWS * rangeLutEntries]
             );
 
         /* LDRA_JUSTIFY_START

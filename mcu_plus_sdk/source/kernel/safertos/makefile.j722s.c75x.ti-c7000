@@ -23,7 +23,6 @@ FILES_common := \
     Exception.c \
     csl_clec.c \
     HwiP_c75.c \
-    HwiP_safertos_c7x.c \
     MmuP_c75.c \
     Startup.c \
     DebugP_shmLogWriter.c \
@@ -39,7 +38,9 @@ FILES_common := \
     QueueP_nortos.c \
     ClockP_safertos.c \
     ClockP_safertos_c75.c \
+    HwiP_safertos_c7x.c \
     SemaphoreP_safertos.c \
+    StartuphooksP_safertos.c \
     HeapP_safertos.c \
     DebugP_safertos.c \
     DebugP_shmLogReader_safertos.c \
@@ -54,6 +55,7 @@ FILES_common := \
     semaphore.c \
     mutex.c \
     streambuffer.c \
+    weakStubs.c \
     portable.c \
 
 ASMFILES_common := \
@@ -61,6 +63,7 @@ ASMFILES_common := \
     Clobber_asm.S \
     Exception_asm.S \
     Hwi_asm.S \
+    Hwi_switch_asm.S \
     Mmu_asm.S \
     csl_c7xecr.S \
 
@@ -82,6 +85,7 @@ INCLUDES_common := \
     -I${CG_TOOL_ROOT}/include \
     -I${MCU_PLUS_SDK_PATH}/source \
     -I../nortos/dpl/c75 \
+    -I../nortos/dpl/c75/soc/j722s \
     -Idpl/c75 \
     -Ic75/api/230_C7x \
     -Ic75/api/NoWrapper \
@@ -113,10 +117,11 @@ CFLAGS_common := \
     --diag_suppress=770 \
     --diag_suppress=69 \
     --diag_suppress=70 \
+    -DBUILD_C7X \
     --advice:performance=none \
     -DHwi_bootToNonSecure__D=true \
     -DException_vectors__D \
-    --symdebug:dwarf \
+    --advice:performance=none  \
 
 CFLAGS_debug := \
     -Dxdc_target_name__=C71 \

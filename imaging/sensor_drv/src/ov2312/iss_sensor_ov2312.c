@@ -143,8 +143,6 @@ IssSensors_Handle ov2312SensorHandle = {
 /*
  * \brief DCC Parameters of ov2312
  */
-extern IssSensors_Handle * gIssSensorTable[ISS_SENSORS_MAX_SUPPORTED_SENSOR];
-
 
 int32_t IssSensor_OV2312_Init(void)
 {

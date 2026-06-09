@@ -89,7 +89,6 @@ AppViss_TestObject  gAppVissTestObject[VHWA_M2M_VISS_MAX_HANDLES];
 
 bool gConfigThroughUDMA = false;
 bool gCopyGlbceCtxThroughBcdmaFlag = false;
-
 uint32_t configTicks;
 
 /* ========================================================================== */
@@ -119,29 +118,30 @@ void AppVissMain(void *args)
 
     status = VissApp_init();
 
-    //GTC_enable();
+    GTC_enable();
     int32_t testCaseID = -1;
 
     if (FVID2_SOK == status)
     {
-        // for (testCnt = 0u; testCnt <
-        //         (sizeof(gAppVissTestPrms) / sizeof(AppViss_TestParams));
-        //         testCnt ++)
-        // {
         while(1)
         {
             DebugP_log (" Enter test ID to run [-1 for all tests, 0 >=  Specific test case]: ");
             scanf("%d", &testCaseID);
             
             tPrms = &gAppVissTestPrms[testCaseID];
-            // tPrms = &gAppVissTestPrms[testCnt];
 
             gVissTestSrcBufFreeIdx = 0u;
             gVissTestDstBufFreeIdx = 0u;
 
             DebugP_log (" Starting Test %s\n", tPrms->testName);
-            status = AppViss_test(tPrms);
-
+            if(tPrms->isEnableTest == TRUE)
+            {
+                status = AppViss_test(tPrms);
+            }
+            else
+            {
+                DebugP_log ("Test Case Disabled\n");
+            }
             if (FVID2_SOK != status)
             {
                 DebugP_log ("Error Running TestCase: %s\n", tPrms->testName);
@@ -173,7 +173,7 @@ int32_t AppViss_Init(Udma_DrvHandle udmaDrvHndl)
     /* enable config through UDMA */
     initPrms.configThroughUdmaFlag = gConfigThroughUDMA;
     initPrms.copyGlbceCtxThroughBcdmaFlag = gCopyGlbceCtxThroughBcdmaFlag;
-    
+
     status = Vhwa_m2mVissInit(&initPrms);
     if (FVID2_SOK != status)
     {
@@ -198,21 +198,15 @@ int32_t AppViss_Init(Udma_DrvHandle udmaDrvHndl)
 
 void AppViss_deInit(Udma_DrvHandle udmaDrvHndl)
 {
-    int32_t         status;
-
     Vhwa_m2mVissDeInit();
 
-    status = Udma_deinit(udmaDrvHndl);
-    if(UDMA_SOK != status)
-    {
-        DebugP_log("[Error] UDMA deinit failed!!\n");
-    }
+    Udma_deinit(udmaDrvHndl);
 
     Fvid2_deInit(NULL);
 }
 
 
-int32_t AppVissFrameComplCb(Fvid2_Handle handle, void *appData)
+int32_t AppViss_frameComplCb(Fvid2_Handle handle, void *appData)
 {
     AppViss_TestObject *tObj = (AppViss_TestObject *)appData;
 
@@ -224,7 +218,7 @@ int32_t AppVissFrameComplCb(Fvid2_Handle handle, void *appData)
     return FVID2_SOK;
 }
 
-void AppVissErrorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData)
+void AppViss_errorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData)
 {
     AppViss_TestObject *tObj = (AppViss_TestObject *)appData;
 
@@ -239,14 +233,14 @@ void AppVissErrorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData)
     }
 }
 
-void AppVissWdtimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData)
+void AppViss_wdtimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData)
 {
     AppViss_TestObject *tObj = (AppViss_TestObject *)appData;
     if (NULL != tObj)
     {
         tObj->wdTimerErrStatus |= wdTimerErrEvents;
 
-        if(0u != tObj->wdTimerErrStatus)
+        if(0u != tObj->errStat)
         {
             SemaphoreP_post(&tObj->waitForProcessCmpl);
         }
@@ -264,13 +258,8 @@ int32_t AppViss_Create(AppViss_TestParams *tPrms, uint32_t hidx)
     {
         tObj->createArgs.enablePsa = FALSE;
 
-        tObj->cbPrms.cbFxn   = AppVissFrameComplCb;
+        tObj->cbPrms.cbFxn   = AppViss_frameComplCb;
         tObj->cbPrms.appData = tObj;
-
-        if(tPrms->isPerformanceTest)
-        {
-            //tObj->createArgs.getTimeStamp = GTC_getCount64;
-        }
 
         tObj->handle = Fvid2_create(FVID2_VHWA_M2M_VISS_DRV_ID,
             VHWA_M2M_VISS_DRV_INST0, (void *)&tObj->createArgs,
@@ -320,7 +309,7 @@ int32_t AppViss_SetParams(AppViss_TestParams *tPrms, uint32_t hidx)
 
     status = Fvid2_control(tObj->handle, IOCTL_VHWA_M2M_VISS_SET_PARAMS,
         (void *)&tCfg->vissPrms, NULL);
-
+    
     if(FVID2_SOK == status)
     {
         errPrms.errEvents = 
@@ -341,7 +330,7 @@ int32_t AppViss_SetParams(AppViss_TestParams *tPrms, uint32_t hidx)
             #endif
             ;
         
-        errPrms.cbFxn = AppVissErrorCb;
+        errPrms.cbFxn = AppViss_errorCb;
 
         errPrms.appData = tObj;
 
@@ -352,7 +341,7 @@ int32_t AppViss_SetParams(AppViss_TestParams *tPrms, uint32_t hidx)
     if (FVID2_SOK == status)
     {
         wdTimererrEvtPrms.WdTimererrEvents = VHWA_VISS_WDTIMER_ERR;
-        wdTimererrEvtPrms.cbFxn = AppVissWdtimerErrorCb;
+        wdTimererrEvtPrms.cbFxn = AppViss_wdtimerErrorCb;
         wdTimererrEvtPrms.appData = tObj;
         status = Fvid2_control(tObj->handle,
             IOCTL_VHWA_M2M_VISS_REGISTER_WDTIMER_ERR_CB, &wdTimererrEvtPrms, NULL);
@@ -364,13 +353,10 @@ int32_t AppViss_SetAllConfig(AppViss_TestParams *tPrms, uint32_t hidx)
 {
     int32_t             status = FVID2_EBADARGS;
     Vhwa_M2mVissParams *vissPrms = NULL;
-    // AppViss_TestObject   *tObj = &gAppVissTestObject[hidx];
 
     if ((NULL != tPrms) && (hidx < VHWA_M2M_VISS_MAX_HANDLES))
     {
         vissPrms = &tPrms->testCfg[hidx]->vissPrms;
-
-        // configTicks = tObj->createArgs.getTimeStamp();
 
         status = AppViss_SetParams(tPrms, hidx);
         if (FVID2_SOK != status)
@@ -454,7 +440,6 @@ int32_t AppViss_SetAllConfig(AppViss_TestParams *tPrms, uint32_t hidx)
             }
         }
 #endif
-        // configTicks = tObj->createArgs.getTimeStamp() - configTicks;
     }
 
     return status;
@@ -1469,7 +1454,7 @@ static int32_t VissApp_init()
         if(UDMA_SOK != status)
         {
             DebugP_log("[Error] UDMA prms init failed!!\n");
-            status = FVID2_EFAIL;
+            status = UDMA_EFAIL;
         }
         udmaInitPrms.instId = UDMA_INST_ID_0;
         udmaInitPrms.enableUtc = UTRUE;
@@ -1477,7 +1462,7 @@ static int32_t VissApp_init()
         if(UDMA_SOK != status)
         {
             DebugP_log("[Error] UDMA init failed!!\n");
-            status = FVID2_EFAIL;
+            status = UDMA_EFAIL;
         }
     }
 
@@ -1491,7 +1476,9 @@ static int32_t AppViss_test(AppViss_TestParams *tPrms)
     int32_t     status;
     uint32_t    repCnt;
     uint32_t    hCnt;
-
+    uint64_t    timeCount;
+    uint64_t    perf;
+    
     for(hCnt = 0U; hCnt < tPrms->numHandles; hCnt++)
     {
         status = AppViss_Create(tPrms, hCnt);
@@ -1518,6 +1505,11 @@ static int32_t AppViss_test(AppViss_TestParams *tPrms)
         }
     }
 
+    if(tPrms->isPerformanceTest)
+    {
+        timeCount = ClockP_getTimeUsec();
+    }
+    
     for (repCnt = 0U; repCnt < tPrms->repeatCnt; repCnt ++)
     {
         for(hCnt = 0U; hCnt < tPrms->numHandles; hCnt++)
@@ -1550,6 +1542,22 @@ static int32_t AppViss_test(AppViss_TestParams *tPrms)
                 DebugP_log (" Completed RepeatCnt = %d\n", repCnt);
             }
         }
+    }
+    if(tPrms->isPerformanceTest)
+    {
+        timeCount = ClockP_getTimeUsec() - timeCount;
+        DebugP_log ("Performance:\n\t FrameCount: %d: Time in uSec: %d\n",
+                    tPrms->repeatCnt, timeCount);
+
+        perf = (uint64_t)tPrms->testCfg[0]->vissPrms.inFmt.width
+                *(uint64_t)tPrms->testCfg[0]->vissPrms.inFmt.height
+                *(uint64_t)tPrms->repeatCnt;
+        DebugP_log("Width %d\n",(uint64_t)tPrms->testCfg[0]->vissPrms.inFmt.width);
+        DebugP_log("Height %d\n",(uint64_t)tPrms->testCfg[0]->vissPrms.inFmt.height);
+
+        DebugP_log ("\t MPix/s: %d.%d\n",
+            (uint32_t)(perf/timeCount),
+                (uint32_t)(((perf*(uint64_t)100)/timeCount)%100));
     }
 
     AppViss_Delete(tPrms, 0U);

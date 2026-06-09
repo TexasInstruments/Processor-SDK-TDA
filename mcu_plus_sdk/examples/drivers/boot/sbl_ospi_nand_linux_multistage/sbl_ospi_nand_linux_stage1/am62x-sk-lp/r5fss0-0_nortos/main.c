@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -38,6 +38,7 @@
 #include <drivers/bootloader.h>
 #include <drivers/pinmux.h>
 #include <drivers/gtc.h>
+#include <drivers/rtc.h>
 #include <sdl/include/sdl_types.h>
 #include <sdl/dpl/sdl_dpl.h>
 #include <sdl/sdl_pbist.h>
@@ -65,7 +66,7 @@ void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle);
 /* This buffer needs to be defined for OSPI nand boot in case of HS device for
    image authentication
    The size of the buffer should be large enough to accomodate the appimage */
-uint8_t gAppimage[0x800000] __attribute__ ((section (".app"), aligned (128)));
+uint8_t gAppimage[0x800000] __attribute__ ((section (".bss.app"), aligned (128)));
 
 /* call this API to stop the booting process and spin, do that you can connect
  * debugger, load symbols and then make the 'loop' variable as 0 to continue execution
@@ -130,7 +131,7 @@ int32_t App_loadLinuxImages(Bootloader_Handle bootHandle, Bootloader_BootImageIn
 
     if(bootHandle != NULL)
     {
-		status = Bootloader_parseAndLoadLinuxAppImage(bootHandle, bootImageInfo);
+		status = Bootloader_parseMultiCoreAppImage(bootHandle, bootImageInfo);
 
 		if(status == SystemP_SUCCESS)
 		{
@@ -263,11 +264,17 @@ int main()
     Bootloader_profileReset();
 
     Bootloader_socWaitForFWBoot();
-    //Bootloader_socOpenFirewalls();
 
+    RTC_erratumi2327Init();
 
     System_init();
     Bootloader_profileAddProfilePoint("System_init");
+
+    status = Bootloader_socOpenFirewalls();
+    DebugP_assert(status == SystemP_SUCCESS);
+
+    Board_init();
+    Bootloader_profileAddProfilePoint("Board_init");
 
     Drivers_open();
     Bootloader_profileAddProfilePoint("Drivers_open");
@@ -283,6 +290,8 @@ int main()
 
     if(SystemP_SUCCESS == status)
     {
+        Bootloader_openDma();
+
         Bootloader_BootImageInfo bootImageInfo;
 		Bootloader_Params bootParams;
         Bootloader_Handle bootHandle;
@@ -349,6 +358,8 @@ int main()
 		}
 
         Bootloader_close(bootHandle);
+
+        Bootloader_closeDma();
     }
 
     if(status != SystemP_SUCCESS )
@@ -356,14 +367,15 @@ int main()
         DebugP_log("Some tests have failed!!\r\n");
     }
 
-    Board_driversClose();
-    Drivers_close();
-
     /* Call DPL deinit to close the tick timer and disable interrupts before jumping to Stage2*/
     Dpl_deinit();
 
-    Bootloader_JumpSelfCpu();
+    Board_driversClose();
+    Drivers_close();
 
+    Bootloader_socCpuResetReleaseSelf();
+
+    Board_deinit();
     System_deinit();
 
     return 0;

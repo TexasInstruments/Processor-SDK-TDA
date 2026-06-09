@@ -1,28 +1,33 @@
 
-DEVICE ?= j722s
+DEVICE ?= am62px
 
 GCC_ARCH64_VERSION=9.2-2019.12
 CGT_C6X_VERSION=8.3.12
 C6X_DSPLIB_VERSION=3_4_0_0
 CGT_C7X_VERSION=5.0.0.LTS
-CGT_ARMLLVM_VERSION=4.0.1.LTS
+CGT_ARMLLVM_VERSION=4.0.4.LTS
 CGT_PRU_VERSION=2.3.3
-SYSCONFIG_VERSION=1.20.0
-SYSCONFIG_BUILD=3587
+SYSCONFIG_VERSION=1.26.2
+SYSCONFIG_BUILD=4477
 SW_VERSION=0x0A010000
+CCS_FOLDER_VERSION=2031
 
 ifeq ($(OS),Windows_NT)
     TOOLS_PATH?=C:/ti
-    CCS_PATH?=$(TOOLS_PATH)/ccs1250/ccs
+    CCS_PATH?=$(TOOLS_PATH)/ccs$(CCS_FOLDER_VERSION)/ccs
     CCS_ECLIPSE=$(CCS_PATH)/eclipse/eclipsec
     CYGWIN_PATH?=$(CCS_PATH)/utils/cygwin
     MKDIR=$(CYGWIN_PATH)/mkdir -p
     RMDIR=$(CYGWIN_PATH)/rm -rf
     RM=$(CYGWIN_PATH)/rm -f
     COPY=$(CYGWIN_PATH)/cp
+    MOVE=$(CYGWIN_PATH)/mv
+    CAT=$(CYGWIN_PATH)/cat
+    SED=$(CYGWIN_PATH)/sed
     TOUCH=$(CYGWIN_PATH)/touch
     PATHSEP=\\
     CHMOD=$(CYGWIN_PATH)/echo
+    SCRIPT_EXT=bat
     SHELL=cmd.exe
     CGT_GCC_AARCH64_PATH=$(TOOLS_PATH)/gcc-arm-$(GCC_ARCH64_VERSION)-mingw-w64-i686-aarch64-none-elf
     CGT_GCC_ARM_PATH=$(TOOLS_PATH)/gcc-arm-none-eabi-7-2017-q4-major-win32
@@ -31,15 +36,19 @@ else
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S),Linux)
         export TOOLS_PATH?=$(HOME)/ti
-        export CCS_PATH?=$(TOOLS_PATH)/ccs1250/ccs
+        export CCS_PATH?=$(TOOLS_PATH)/ccs$(CCS_FOLDER_VERSION)/ccs
         export CCS_ECLIPSE=$(CCS_PATH)/eclipse/eclipse
         export MKDIR=mkdir -p
         export RMDIR=rm -rf
         export RM=rm -f
         export COPY=cp
+        export MOVE=mv
+        export CAT=cat
+        export SED=sed
         export TOUCH=touch
         export PATHSEP=/
         export CHMOD=chmod
+        export SCRIPT_EXT=sh
         CGT_GCC_AARCH64_PATH=$(TOOLS_PATH)/gcc-arm-$(GCC_ARCH64_VERSION)-x86_64-aarch64-none-elf
         CGT_GCC_ARM_PATH=$(TOOLS_PATH)/gcc-arm-none-eabi-7-2017-q4-major
         CGT_GCC_ARMV7_PATH=$(CGT_GCC_ARM_PATH)
@@ -61,6 +70,20 @@ SYSCFG_CLI_PATH ?= $(SYSCFG_PATH)
 SYSCFG_NODE = $(SYSCFG_PATH)/nodejs/node
 SYSCFG_NWJS = $(SYSCFG_PATH)/nw/nw
 SYSCFG_SDKPRODUCT=$(MCU_PLUS_SDK_PATH)/.metadata/product.json
+SYSCFG_GUI_SCRIPT=$(SYSCFG_PATH)/sysconfig_gui.$(SCRIPT_EXT)
+SYSCFG_TEST_FLAGS?=--excludeTests eslint
+
+################################################################################
+# Configure SafeRTOS Package versions for SOC/ISA
+################################################################################
+SAFERTOS_VERSION_r5f=009-006-199-024-319-001
+SAFERTOS_VERSION_c7x=009-006-230-005-319-001
+# ISA based directory extensions used in SafeRTOS Package
+SAFERTOS_ISA_EXT_r5f=199_TI_CR5
+SAFERTOS_ISA_EXT_c7x=230_C7x
+# Compiler based directory extensions used in SafeRTOS Package
+SAFERTOS_COMPILER_EXT_r5f=024_Clang
+SAFERTOS_COMPILER_EXT_c7x=005_TI_CGT
 
 # Variable pointing to location of prebuilt industrial communication libraries
 MCU_PLUS_SDK_IND_COMMS_LIBS_PATH ?= $(MCU_PLUS_SDK_PATH)/source/commercial/industrial_comms_libs

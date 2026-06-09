@@ -73,6 +73,8 @@
 #include "tivx_hwa_host_priv.h"
 #include <TI/hwa_vpac_fc.h>
 
+void tivxSetSelfCpuId(vx_enum cpu_id);
+
 static vx_status VX_CALLBACK publishKernels(vx_context context);
 static vx_status VX_CALLBACK unPublishKernels(vx_context context);
 
@@ -152,7 +154,6 @@ void tivxHwaLoadKernels(vx_context context)
     if ((0U == gIsHwaKernelsLoad) && (NULL != context))
     /* LDRA_JUSTIFY_END */
     {
-        void tivxSetSelfCpuId(vx_enum cpu_id);
         vx_status status;
 
         tivxRegisterHwaKernels();
@@ -253,7 +254,6 @@ void tivxHwaUnLoadKernels(vx_context context)
         if ((0u == gIsHwaKernelsLoad) && (NULL != context))
         /* LDRA_JUSTIFY_END */
         {
-            void tivxSetSelfCpuId(vx_enum cpu_id);
             vx_status status;
 
             status = vxUnloadKernels(context, TIVX_MODULE_NAME_HWA);

@@ -195,7 +195,6 @@ static void TIDL_resizeUpdateWorkload(const sWorkloadUnit_t *workloadUnit,
   {
     getLinkPtrs(workloadUnit, NOT_VALID, linkIdx, linkPtrList);
     sLink_t *link = linkPtrList[0];
-
     const sBufParams_t *buf = getBufParamsFromBufIndex(gcHelperHandle, link->sink.bufDBindex);
 
     /* In resize LFMP case, there exists overlap in the output as well. This is because resize expects 'padded'
@@ -211,7 +210,7 @@ static void TIDL_resizeUpdateWorkload(const sWorkloadUnit_t *workloadUnit,
       2) Offset the read from staging buffer by amount equal to the output overlap size.
         This is handled by TIDL in the following code.
       */
-    if ((link->subType == (int32_t)LINK_X_FM_OUT_PART_TO_FULL) && (numSplit > 1))
+    if ((link->subType == (int32_t)LINK_X_FM_OUT_PART_TO_FULL) && ((numSplit > 1) || tidlLayer->multiCoreMode == TIDL_MULTI_CORE_SPATIAL_WITH_JOIN))
     {
       link->src[0].offset = link->src[0].offset + ((outPad * outPitch) + outPad);
     }
@@ -223,7 +222,8 @@ static void TIDL_resizeUpdateWorkload(const sWorkloadUnit_t *workloadUnit,
         link->sink.offset = link->sink.offset - ((outPad * outPitch) + outPad);
       }
       /* SFMP case we overwrite padded region of the final buffer by links responsible for generating output info */
-      else if ((numSplit == 1) && ((link->type == (int32_t)LINK_PROC) || (link->subType == (int32_t)LINK_X_FM_OUT_PART_TO_FULL)))
+      // Condition modified to don't reset the offset when the mode is TIDL_ResizePadZero , resizePadZeroOffset is 1 for resize ratio 2.
+      else if (((numSplit == 1) && (tidlLayer->multiCoreMode != TIDL_MULTI_CORE_SPATIAL_WITH_JOIN)) && ((((link->subType == (int32_t)LINK_P) && ((params->mode != TIDL_ResizePadZero) || ((params->resizePadZeroOffset == 0) || (params->resizeRatio[TIDL_DIM_WIDTH] == 4) )))) || (link->subType == (int32_t)LINK_X_FM_OUT_PART_TO_FULL)))
       {
         link->sink.offset = link->sink.offset - ((outPad * outPitch) + outPad);
       }

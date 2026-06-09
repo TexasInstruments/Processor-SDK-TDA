@@ -38,6 +38,7 @@
 
 	let isSingleCore = true;
 	let useDdr = true;
+    let enableUdmaBuffers = false;
 	let addrBaseDdr = 0x80000000;
 	let codeDataSizeDdr = 0x1000000;
 
@@ -46,6 +47,8 @@
 		stackSize = options.stackSize;
 	if(options && options.heapSize)
 		heapSize = options.heapSize;
+    if(options && options.enableUdmaBuffers)
+        enableUdmaBuffers = options.enableUdmaBuffers;
 
 	if(isSingleCore == true) {
 		codeDataAddrDdr = addrBaseDdr;
@@ -60,11 +63,41 @@
 		}
 	}
 
+    if(enableUdmaBuffers == true) {
+        codeDataAddrDdrUdma = 0x88000000;
+        codeDataSizeDdrUdma = 0x08000000;
+        codeDataAddrOcram = 0x70000000;
+        codeDataSizeOcram = 0x00010000;
+	    if(options && options.codeDataAddrDdrUdma)
+	        codeDataAddrDdrUdma = options.codeDataAddrDdrUdma;
+	    if(options && options.codeDataSizeDdrUdma)
+	        codeDataSizeDdrUdma = options.codeDataSizeDdrUdma;
+        if(options && options.codeDataAddrOcram)
+	        codeDataAddrOcram = options.codeDataAddrOcram;
+	    if(options && options.codeDataSizeOcram)
+	        codeDataSizeOcram = options.codeDataSizeOcram;
+    }
+
 	if(options && options.addrBaseDdr)
 		addrBaseDdr = options.addrBaseDdr;
 	if(options && options.codeDataSizeDdr)
 		codeDataSizeDdr = options.codeDataSizeDdr;
+	if (options && options.enableDMARegion && options.dmaHeapSize) {
+		codeDataSizeDdr -= options.dmaHeapSize;
+	}
+    let globalScratchBuf = "false";
+    if(options && options.globalScratchBuf)
+    globalScratchBuf = options.globalScratchBuf;
 
+	let globalScratchBufSize = 0x2000000;
+	if(options && options.globalScratchBufSize)
+		globalScratchBufSize = options.globalScratchBufSize
+
+	let globalScratchBufSizeInMB = globalScratchBufSize / (1024 * 1024)
+
+    let ddr2 = "false"
+    if(options && options.ddr2)
+    ddr2 = options.ddr2;
 	%%}
 
 ENTRY(_c_int00)
@@ -76,8 +109,15 @@ MEMORY {
 
 	% if(useDdr) {
 	DDR : ORIGIN =  0x`(codeDataAddrDdr).toString(16).toUpperCase()`, LENGTH = 0x`(codeDataSizeDdr).toString(16).toUpperCase()`
+	% if (options && options.enableDMARegion && options.dmaHeapSize) {
+	DDR_DMA : ORIGIN =  0x`(codeDataAddrDdr+codeDataSizeDdr).toString(16).toUpperCase()`, LENGTH = 0x`(options.dmaHeapSize).toString(16).toUpperCase()`
+	% }
 	% }
 
+    % if(enableUdmaBuffers) {
+    DDR_UDMA : ORIGIN = 0x`(codeDataAddrDdrUdma).toString(16).toUpperCase()`, LENGTH = 0x`(codeDataSizeDdrUdma).toString(16).toUpperCase()`
+    OCRAM    : ORIGIN = 0x`(codeDataAddrOcram).toString(16).toUpperCase()`, LENGTH = 0x`(codeDataSizeOcram).toString(16).toUpperCase()`
+    % }
 	/* shared memory segments */
 	/* On A53,
 	 * - make sure there is a MMU entry which maps below regions as non-cache
@@ -89,6 +129,14 @@ MEMORY {
     % if(args.project.ipcVringRTOS === true){
     RTOS_NORTOS_IPC_SHM_MEM : ORIGIN = 0xA0400000, LENGTH = 0x300000
     %}
+    % if(globalScratchBuf == "true") {
+    /* global scratch buffer region in DDR (`globalScratchBufSizeInMB` MB) */
+    GLOBAL_SCRATCH_BUFF  (RWIX): ORIGIN = 0x82000080 LENGTH = 0x0`(globalScratchBufSize).toString(16).toUpperCase()`
+    % }
+    % if(ddr2 == "true") {
+    /* global scratch buffer region in DDR (32 MB) */
+    DDR2  (RWIX): ORIGIN = 0x82000080 LENGTH = 0x02000000
+    % }
 }
 
 SECTIONS {
@@ -117,6 +165,14 @@ SECTIONS {
     .bss.ipc_vring_mem   (NOLOAD) : { KEEP(*(.bss.ipc_vring_mem)) } > RTOS_NORTOS_IPC_SHM_MEM
     % }
 
+    % if(globalScratchBuf == "true") {
+    /* global scratch buffer region */
+    .globalScratchBuffer (NOLOAD) : {} > GLOBAL_SCRATCH_BUFF
+    % }
+    % if(ddr2 == "true") {
+    /* global scratch buffer region */
+    DDR2 (NOLOAD) : {} > DDR2
+    % }
     .bss : {
         __bss_start__ = .;
         *(.bss)
@@ -139,4 +195,16 @@ SECTIONS {
         KEEP(*(.stack))
         . = . + __TI_STACK_SIZE;
     } > DDR
+    % if (options && options.enableDMARegion) {
+
+    .enet_dma_mem (NOLOAD) : {
+        *(*ENET_DMA_PKT_MEMPOOL)
+     } > DDR_DMA
+    % }
+    % if(enableUdmaBuffers) {
+        .udma_buffer_ddr (NOLOAD) : { *(.udma_buffer_ddr) } > DDR_UDMA
+        .udma_buffer_msmc (NOLOAD) : { *(.udma_buffer_msmc) } > DDR_UDMA
+        .udma_buffer_internal (NOLOAD) : { *(.udma_buffer_internal) } > OCRAM
+        .udma_buffer_ospi (NOLOAD) : { *(.udma_buffer_ospi) } > DDR_UDMA
+    % }
 }

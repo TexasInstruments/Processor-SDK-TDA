@@ -510,7 +510,7 @@ static uint32_t get_checksum(uint16_t median, uint16_t motion, uint16_t vert,
     CT_EXPAND(nextmacro(testArgName "/safety_mechanism=ConfigRegValidate", __VA_ARGS__, 3)), \
     CT_EXPAND(nextmacro(testArgName "/safety_mechanism=all", __VA_ARGS__, 4))
 
-#if !defined (x86_64)
+#if !defined (x86_64) && !defined(SOC_J722S)
     #define PARAMETERS \
     CT_GENERATE_PARAMETERS("dof_real_input", ADD_MEDIAN_FILTER, ADD_MOTION_SMOOTHNESS_FACTOR, ADD_VERTICAL_SEARCH_RANGE, ADD_HORIZONTAL_SEARCH_RANGE, ADD_IIR_FILTER_ALPHA, ADD_ENABLE_LK, ADD_ENABLE_SOF, ADD_SAFETY_MECHANISM, ARG)
 #else
@@ -652,7 +652,7 @@ TEST_WITH_ARG(tivxHwaDmpacDof, testGraphProcessing, Arg,
             ASSERT(status==VX_SUCCESS);
         }
 
-        #if !defined (x86_64)
+        #if !defined (x86_64) && !defined(SOC_J722S)
         tivx_dmpac_dof_safety_mech_prms_init(&safety_mechanism_params);
 
         if(0U != arg_->enable_safety_mechanism)
@@ -691,7 +691,7 @@ TEST_WITH_ARG(tivxHwaDmpacDof, testGraphProcessing, Arg,
         #endif
 
         VX_CALL(vxProcessGraph(graph));
-        #if !defined (x86_64)
+        #if !defined (x86_64) && !defined(SOC_J722S)
         if(1U == arg_->enable_safety_mechanism)
         {
             /* safety_mechanism=reconfigReinitReg */
@@ -8011,9 +8011,13 @@ typedef struct {
     CT_EXPAND(nextmacro(testArgName "/safety_mechanism=ConfigRegValidate", __VA_ARGS__, 3)), \
     CT_EXPAND(nextmacro(testArgName "/safety_mechanism=all", __VA_ARGS__, 4))
 
+#if !defined(SOC_J722S)
 #define PARAMETERS_DOF_SOF_UPDATE_CTRL_COMMANDS \
     CT_GENERATE_PARAMETERS("testGraphProcessingMultiFrame", ADD_ENABLE_LK, ENABLE_SOF, ADD_SAFETY_MECHANISM, ARG)
-
+#else
+#define PARAMETERS_DOF_SOF_UPDATE_CTRL_COMMANDS \
+    CT_GENERATE_PARAMETERS("testGraphProcessingMultiFrame", ADD_ENABLE_LK, ENABLE_SOF, ARG)
+#endif
 /* Note: SOF and DOF param update control commands are not supported in host emulation.
  * The checksums below are reused from testGraphProcessing by processing frames with
  * equivalent existing configuration combinations in testGraphProcessing.
@@ -8044,10 +8048,11 @@ PARAMETERS_DOF_SOF_UPDATE_CTRL_COMMANDS)
     vx_reference dof_ref[1];
     vx_reference sof_ref[1];
     vx_enum flowVectorType = VX_DF_IMAGE_U16;
+    #if !defined(SOC_J722S)
     tivx_dmpac_dof_safety_mechanism_params_t safety_mechanism_params;
     vx_user_data_object safety_mechanism_obj = NULL;
     vx_reference safety_ref[1] = { NULL };
-
+    #endif
     ASSERT(vx_true_e == tivxIsTargetEnabled(TIVX_TARGET_DMPAC_DOF));
 
     {
@@ -8148,7 +8153,7 @@ PARAMETERS_DOF_SOF_UPDATE_CTRL_COMMANDS)
             status = load_image_into_pyramid_level(input_reference, i, "tivx/dof/tivx_test_ofTestCase1_11_pl");
             ASSERT(status==VX_SUCCESS);
         }
-
+#if !defined (x86_64) && !defined(SOC_J722S)
         tivx_dmpac_dof_safety_mech_prms_init(&safety_mechanism_params);
 
         if(0U != arg_->enable_safety_mechanism)
@@ -8182,6 +8187,7 @@ PARAMETERS_DOF_SOF_UPDATE_CTRL_COMMANDS)
             VX_CALL(tivxNodeSendCommand(node_dof, 0, TIVX_DMPAC_DOF_CMD_ENABLE_DMPAC_SAFETY_MECHANISM, safety_ref, 1));
             VX_CALL(vxReleaseUserDataObject(&safety_mechanism_obj));
         }
+#endif
         rect.start_x = 0;
         rect.start_y = 0;
         rect.end_x = flow_width;
@@ -8199,7 +8205,7 @@ PARAMETERS_DOF_SOF_UPDATE_CTRL_COMMANDS)
 
         sof_ref[0] = (vx_reference) sof_config_obj;
         VX_CALL(tivxNodeSendCommand(node_dof, 0, TIVX_DMPAC_DOF_CMD_SET_SOF_PARAMS, sof_ref, 1));
-
+#if !defined (x86_64) && !defined(SOC_J722S)
         if(0U != arg_->enable_safety_mechanism)
         {
             ASSERT_VX_OBJECT(safety_mechanism_obj = vxCreateUserDataObject(context, "tivx_dmpac_dof_safety_mechanism_params_t", sizeof(tivx_dmpac_dof_safety_mechanism_params_t), &safety_mechanism_params), (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
@@ -8207,7 +8213,7 @@ PARAMETERS_DOF_SOF_UPDATE_CTRL_COMMANDS)
             VX_CALL(tivxNodeSendCommand(node_dof, 0, TIVX_DMPAC_DOF_CMD_ENABLE_DMPAC_SAFETY_MECHANISM, safety_ref, 1));
             VX_CALL(vxReleaseUserDataObject(&safety_mechanism_obj));
         }
-
+#endif
         VX_CALL(vxProcessGraph(graph));
         checksum_expected = dof_multiFrame_control_command_cksm[arg_->enable_lk*3 + 1];
         checksum_actual = tivx_utils_simple_image_checksum(flow_vector_out, 0, rect);
@@ -8220,7 +8226,7 @@ PARAMETERS_DOF_SOF_UPDATE_CTRL_COMMANDS)
 
         dof_ref[0] = (vx_reference) param_obj;
         VX_CALL(tivxNodeSendCommand(node_dof, 0, TIVX_DMPAC_DOF_CMD_SET_DOF_PARAMS, dof_ref, 1));
-
+#if !defined (x86_64) && !defined(SOC_J722S)
         if(0U != arg_->enable_safety_mechanism)
         {
             ASSERT_VX_OBJECT(safety_mechanism_obj = vxCreateUserDataObject(context, "tivx_dmpac_dof_safety_mechanism_params_t", sizeof(tivx_dmpac_dof_safety_mechanism_params_t), &safety_mechanism_params), (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
@@ -8228,7 +8234,7 @@ PARAMETERS_DOF_SOF_UPDATE_CTRL_COMMANDS)
             VX_CALL(tivxNodeSendCommand(node_dof, 0, TIVX_DMPAC_DOF_CMD_ENABLE_DMPAC_SAFETY_MECHANISM, safety_ref, 1));
             VX_CALL(vxReleaseUserDataObject(&safety_mechanism_obj));
         }
-
+#endif
         VX_CALL(vxProcessGraph(graph));
         checksum_expected = dof_multiFrame_control_command_cksm[arg_->enable_lk*3 + 2];
         checksum_actual = tivx_utils_simple_image_checksum(flow_vector_out, 0, rect);

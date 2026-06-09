@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021-23 Texas Instruments Incorporated
+ *  Copyright (C) 2021-26 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -54,12 +54,14 @@
 /*                             Include Files                                  */
 /* ========================================================================== */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <kernel/dpl/SystemP.h>
 #include <kernel/dpl/SemaphoreP.h>
 #include <kernel/dpl/HwiP.h>
 #include <drivers/hw_include/csl_types.h>
 #include <drivers/hw_include/cslr_mmcsd.h>
+#include <kernel/dpl/CacheP.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -98,12 +100,27 @@ extern "C" {
 #define MMCSD_TRANSPEED_DDR50           (0x3BU)
 #define MMCSD_TRANSPEED_HS200           (0x2BU)
 #define MMCSD_TRANSPEED_HS400           (0x4BU)
+
 /*
 * \brief Macros that can be used for selecting the bus voltage
 */
 #define MMCSD_BUS_VOLT_1_8V    (0x5U) /* Embedded */
 #define MMCSD_BUS_VOLT_3_0V    (0x6U) /* Typical */
 #define MMCSD_BUS_VOLT_3_3V    (0x7U) /* Flattop */
+
+/*
+* \brief Macros that can be used to select the boot partition for EMMC.
+*/
+#define MMCSD_BOOT_PARTITION_BOOT0     (0x1U)
+#define MMCSD_BOOT_PARTITION_BOOT1     (0x2U)
+
+/*
+* \brief Macros that can be used to select the partition for enabling access in 
+* the EMMC.
+*/
+#define MMCSD_HW_PARTITION_UDA     (0x0U)
+#define MMCSD_HW_PARTITION_BOOT0   (0x1U)
+#define MMCSD_HW_PARTITION_BOOT1   (0x2U)
 
 /*
 * \brief Macros that can be used for selecting command types
@@ -135,8 +152,19 @@ extern "C" {
 #define MMCSD_SUPPORT_MMC_HS_DDR   (0x04U) /* HS (Up to 52Mhz) */
 #define MMCSD_SUPPORT_MMC_HS200    (0x08U) /* HS200 (Up to 200Mhz) */
 #define MMCSD_SUPPORT_MMC_HS400    (0x10U) /* HS400 (Up to 400Mhz) */
-#define MMCSD_SUPPORT_MMC_HS400_ES (0x20U) /* HS400 Enhanced Strobe (Up to 400Mhz) */
 #define MMCSD_SUPPORT_MMC_ALL      (0xFFU) /* All modes */
+
+/*
+* \brief Strobe select value for HS400 operating mode
+*/
+#define MMCSD_STRBSEL_MMC_HS400    (0x66U)
+
+/*
+* \brief Macros that can be used for selecting the OTAPDLYSEL value based on
+* core voltage for HS400 operating mode
+*/
+#define MMCSD_OTAPDLYSEL_MMC_HS400_0_75V   (0x6U)
+#define MMCSD_OTAPDLYSEL_MMC_HS400_0_85V   (0x5U)
 
 /*
 * \brief Macros that can be used for selecting supported SD modes
@@ -162,20 +190,29 @@ extern "C" {
 #define MMCSD_PHY_TUNING_TYPE_MANUAL          (1U)
 
 /*
+* \brief Macros that can be used for selecting PHY driver type for eMMCPHY
+* buffer type
+*/
+#define MMCSD_PHY_DRIVER_TYPE_0               (0U)
+#define MMCSD_PHY_DRIVER_TYPE_1               (1U)
+#define MMCSD_PHY_DRIVER_TYPE_2               (2U)
+#define MMCSD_PHY_DRIVER_TYPE_3               (3U)
+#define MMCSD_PHY_DRIVER_TYPE_4               (4U)
+
+/*
 * \brief Macros that can be used for selecting PHY modes
 */
 #define MMCSD_PHY_MODE_HS400                  (1U)
 #define MMCSD_PHY_MODE_HS200                  (2U)
 #define MMCSD_PHY_MODE_HSSDR50                (3U)
 #define MMCSD_PHY_MODE_HSDDR50                (4U)
-#define MMCSD_PHY_MODE_ENHANCED_STROBE        (5U)
-#define MMCSD_PHY_MODE_SDR104                 (6U)
-#define MMCSD_PHY_MODE_SDR50                  (7U)
-#define MMCSD_PHY_MODE_DDR50                  (8U)
-#define MMCSD_PHY_MODE_SDR25                  (9U)
-#define MMCSD_PHY_MODE_SDR12                  (10U)
-#define MMCSD_PHY_MODE_HS                     (11U)
-#define MMCSD_PHY_MODE_DS                     (12U)
+#define MMCSD_PHY_MODE_SDR104                 (5U)
+#define MMCSD_PHY_MODE_SDR50                  (6U)
+#define MMCSD_PHY_MODE_DDR50                  (7U)
+#define MMCSD_PHY_MODE_SDR25                  (8U)
+#define MMCSD_PHY_MODE_SDR12                  (9U)
+#define MMCSD_PHY_MODE_HS                     (10U)
+#define MMCSD_PHY_MODE_DS                     (11U)
 
 /*
 * \brief Macros that can be used for selecting UHS 1 modes
@@ -189,6 +226,12 @@ extern "C" {
 #define MMCSD_UHS_MODE_UHS2                  (7U)
 
 typedef void* MMCSD_Handle;
+
+typedef enum{
+    MMCSD_TRANS_SUCCESS = 0U,
+    MMCSD_TRANS_FAILURE = 1U,
+    MMCSD_TRANS_IRRECOVERABLE = 2U
+} MMCSD_TransStatus;
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -243,6 +286,12 @@ typedef struct
 
     uint8_t transferSpeed;
     /* Transfer speed in code - Freq Unit x Mult Factor */
+
+    uint16_t dsr;
+    /* Driver stage register */
+
+    bool impDsr;
+    /* DSR implementation check value. Obtained from the CSD register read. */
 
     uint8_t supportedModes;
     /* Supported speed modes by the device - HS200, HS400 etc */
@@ -335,8 +384,26 @@ typedef struct
     uint32_t isTuning;
     /* Is transaction used for tuning */
 
+    uint32_t retries;
+    /* Number of transaction retries */
+
     uint32_t response[4];
     /**< Command response per MMC device specification */
+
+    uint32_t status;
+    /* Status of the transaction */
+
+    uint32_t startResidualBytes;
+    /* Start Residual data length in bytes */
+
+    uint32_t endResidualBytes;
+    /* Start Residual data length in bytes */
+
+    uint8_t startResidual[CacheP_CACHELINE_ALIGNMENT] __attribute__((aligned(CacheP_CACHELINE_ALIGNMENT)));
+    /* Start Residual data for unaligned buffer */
+
+    uint8_t endResidual[CacheP_CACHELINE_ALIGNMENT] __attribute__((aligned(CacheP_CACHELINE_ALIGNMENT)));
+    /* End Residual data for unaligned buffer */
 
 } MMCSD_Transaction;
 
@@ -361,15 +428,6 @@ typedef struct
     uint32_t enableDma;
     /**< DMA enable */
 
-    uint32_t intrEnable;
-    /**< Module interrupt enable */
-
-    uint32_t intrNum;
-    /**< Module interrupt vector */
-
-    uint32_t eventId;
-    /**< Module interrupt event ID */
-
     uint32_t cardType;
     /**< Type of card */
 
@@ -387,6 +445,9 @@ typedef struct
 
     uint32_t phyType;
     /**< HW or SW PHY */
+
+    uint32_t phyDriverType;
+    /**< Driver type for source impedance of eMMCPHY buffer type */
 
     uint32_t tuningType;
     /**< Manual SW tuning or auto HW tuning for SDR104/HS200/HS400 modes */
@@ -429,9 +490,6 @@ typedef struct
     uint32_t isUHS;
     /**< Is card UHS */
 
-    uint32_t isCmd23;
-    /**< Is command 23 supported */
-
     uint32_t is1_8V;
     /**< Is 1.8V supported by card */
 
@@ -450,9 +508,6 @@ typedef struct
     uint32_t enableDma;
     /**< DMA enable */
 
-    uint32_t intrEnable;
-    /**< Module interrupt enable */
-
     volatile uint32_t cmdComp;
     /**< Command completion flag */
 
@@ -463,16 +518,22 @@ typedef struct
     /*< Command CRC error flag */
 
     volatile uint32_t cmdEBError;
-    /*< Command CRC error flag */
+    /*< Command EndBit error flag */
 
     volatile uint32_t cmdIndexError;
     /*< Command Index error flag */
+
+    volatile uint32_t dataTimeoutError;
+    /*< Data Timeout error flag */
 
     volatile uint32_t dataCRCError;
     /*< Data CRC error flag */
 
     volatile uint32_t dataEBError;
     /*< Data end bit error */
+
+    volatile uint32_t admaError;
+    /*< ADMA error flag */
 
 	volatile uint32_t cmdError;
 	/*< Any error in processing of the command */
@@ -508,6 +569,15 @@ typedef struct
     uint32_t uhsmode;
     /**< Flag to indicate hs mode */
 
+    uint32_t isRetuneValid;
+    /**< Flag to indicate if retune is valid */
+
+    SemaphoreP_Object       readMutex;
+    /**< Transfer Mutex */
+
+    SemaphoreP_Object       writeMutex;
+    /**< Transfer Mutex */
+
     SemaphoreP_Object       cmdMutex;
     /**< Command Mutex */
 
@@ -535,6 +605,13 @@ typedef struct
     MMCSD_Object *object;
     /**< Pointer to driver specific data object */
 } MMCSD_Config;
+
+typedef struct
+{
+    uint8_t start;
+    uint8_t end;
+    uint8_t length;
+} MMCSD_TuningPassOrFailWindow;
 
 /* ========================================================================== */
 /*                                Externs                                     */
@@ -684,7 +761,10 @@ uint32_t MMCSD_getBlockCount(MMCSD_Handle handle);
 uint32_t MMCSD_isHC(MMCSD_Handle handle);
 
 /**
- *  \brief  This function enables the boot partition if the connected media is eMMC
+ *  \brief  This function enables the boot partition and gives access to the partition
+ *          if the connected media is eMMC. This function essentially calls
+ *          MMCSD_setEcsdBootPartitionEnable and MMCSD_enablePartitionAccess and
+ *          is there to keep backward compatibility.
  *
  *  \pre    MMCSD controller has been opened using #MMCSD_open()
  *
@@ -697,6 +777,37 @@ uint32_t MMCSD_isHC(MMCSD_Handle handle);
  *  \sa     #MMCSD_open()
  */
 int32_t MMCSD_enableBootPartition(MMCSD_Handle handle, uint32_t partitionNum);
+
+/**
+ *  \brief  This function enables the boot partition in the ECSD if the connected 
+ *          media is eMMC
+ *
+ *  \pre    MMCSD controller has been opened using #MMCSD_open()
+ *
+ *  \param  handle         #MMCSD_Handle returned from #MMCSD_open()
+ *  \param  partitionNum   Boot partition to be enabled in the ECSD.
+ *
+ *  \return #SystemP_SUCCESS on successful read; else error on failure
+ *
+ *  \sa     #MMCSD_init()
+ *  \sa     #MMCSD_open()
+ */
+int32_t MMCSD_setEcsdBootPartitionEnable(MMCSD_Handle handle, uint32_t partitionNum);
+
+/**
+ *  \brief  This function gives access to the partition if the connected media is eMMC
+ *
+ *  \pre    MMCSD controller has been opened using #MMCSD_open()
+ *
+ *  \param  handle         #MMCSD_Handle returned from #MMCSD_open()
+ *  \param  partitionNum   Partition to be given access to.
+ *
+ *  \return #SystemP_SUCCESS on successful operation; else error on failure
+ *
+ *  \sa     #MMCSD_init()
+ *  \sa     #MMCSD_open()
+ */
+int32_t MMCSD_enablePartitionAccess(MMCSD_Handle handle, uint32_t partitionNum);
 
 /**
  *  \brief  This function disables the boot partition if the connected media is eMMC

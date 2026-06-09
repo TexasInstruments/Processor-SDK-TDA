@@ -22,6 +22,8 @@ endif
 	@if [ ! -d $(MMALIB_PATH) ]; then echo 'ERROR: $(MMALIB_PATH) not found !!!'; exit 1; fi
 ifeq ($(RTOS_SDK),pdk)
 	@if [ ! -d $(PDK_PATH) ]; then echo 'ERROR: $(PDK_PATH) not found !!!'; exit 1; fi
+else ifeq ($(RTOS_SDK),mcu_sdk)
+	@if [ ! -d $(MCU_SDK_PATH) ]; then echo 'ERROR: $(MCU_SDK_PATH) not found !!!'; exit 1; fi
 else
 	@if [ ! -d $(MCU_PLUS_SDK_PATH) ]; then echo 'ERROR: $(MCU_PLUS_SDK_PATH) not found !!!'; exit 1; fi
 endif

@@ -78,9 +78,9 @@ const vector<TidlConstraint> tidlConstraintReshape =
         }
     ),
     TIDL_CSTR(
-        "Number of non-singleton variable input dimensions must be less than <= 6",
-        "Number of non-singleton variable input dimensions must be less than <= 6",
-        "Number of non-singleton variable input dimensions must be less than <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
             int32_t numDims = tidlGetNonSingletonNumDims(layer->allowlistingMetaData.varTensorsDims[0]);

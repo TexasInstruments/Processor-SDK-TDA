@@ -539,9 +539,11 @@ int32_t Vhwa_m2mSdeRegisterIsr(Vhwa_M2mSdeInstObj *instObj);
 
 Vhwa_M2mSdeHandleObj *Vhwa_m2mSdeGetHandleObj(uint32_t cnt);
 
+#if !defined(SOC_J722S)
 int32_t Vhwa_m2mSdeConfigRegReadback(const Vhwa_M2mSdeHandleObj *hObj, const Vhwa_M2mSdeInstObj *instObj);
 
 int32_t vhwaM2mSdeUpdateConfigRegGroup(VhwaDmpacSdeSocReadBack *RegVal, const Vhwa_M2mSdeInstObj *instObj, const Vhwa_M2mSdeHandleObj *hObj);
+#endif
 
 #ifdef __cplusplus
 }

@@ -114,7 +114,7 @@ static vx_status tivxVpacLdcSetMeshParams(Ldc_Config *ldc_cfg,
     const tivx_obj_desc_image_t *mesh_img_desc);
 static vx_status tivxVpacLdcSetLutParamsCmd(tivxVpacLdcObj *ldc_obj,
     tivx_obj_desc_user_data_object_t *luma_user_desc,
-    tivx_obj_desc_user_data_object_t *chroma_lut_desc);
+    tivx_obj_desc_user_data_object_t *chroma_user_desc);
 static vx_status tivxVpacLdcGetErrStatusCmd(const tivxVpacLdcObj *ldc_obj,
     tivx_obj_desc_scalar_t *scalar_obj_desc);
 static vx_status tivxVpacLdcSetRdBwLimitCmd(tivxVpacLdcObj *ldc_obj,
@@ -133,11 +133,13 @@ static vx_status tivxVpacLdcMapTivxToVhwaErrEvents(uint32_t tivx_err_events,
 static int32_t tivxVpacLdcFrameComplCb(Fvid2_Handle handle, void *appData);
 static void tivxVpacLdcErrorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData);
 static void tivxVpacLdcWdTimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData);
+#if !defined(VPAC3L)
 int32_t tivxVpacLdcConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms);
-
+#endif
 static vx_status vpacLdcInstObjInit(void);
 static void vpacLdcInstObjDeinit(void);
 
+#if !defined(VPAC3L)
 static vx_status tivxEnableVpacLdcSafetyMechanisms(
     tivxVpacLdcObj *ldcObj,
     const tivx_obj_desc_user_data_object_t *usr_data_obj);
@@ -145,7 +147,7 @@ static vx_status tivxEnableVpacLdcSafetyMechanisms(
 static vx_status tivxVpacLdcAllocReadbackBuffers(tivxVpacLdcObj *ldcObj);
 
 static void tivxVpacLdcFreeReadbackBuffers(tivxVpacLdcObj *ldcObj);
-
+#endif
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
@@ -308,12 +310,24 @@ void tivxAddTargetKernelVpacLdc(void)
         <justification end> */
         else
         {
-            /* TODO: how to handle this condition */
-            VX_PRINT(VX_ZONE_ERROR, "Failed to Add LDC TargetKernel\n");
             status = (vx_status)VX_FAILURE;
         }
         /* LDRA_JUSTIFY_END */
     }
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    This failure case is out of scope for the imaging test framework.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
+    if((vx_status)VX_SUCCESS != status)
+    {
+        /* TODO: how to handle this condition */
+        VX_PRINT(VX_ZONE_ERROR, "Failed to Add LDC TargetKernel\n");
+    }
+    /* LDRA_JUSTIFY_END */
 }
 
 /* LDRA_JUSTIFY_START
@@ -336,7 +350,6 @@ void tivxRemoveTargetKernelVpacLdc(void)
     else
     {
         VX_PRINT(VX_ZONE_ERROR, "Failed to Remove Ldc TargetKernel\n");
-        status = (vx_status)VX_FAILURE;
     }
     vpacLdcInstObjDeinit();
 }
@@ -436,11 +449,22 @@ void tivxAddTargetKernelVpacLdc2(void)
         <justification end> */
         else
         {
-            /* TODO: how to handle this condition */
-            VX_PRINT(VX_ZONE_ERROR, "Failed to Add LDC TargetKernel\n");
             status = (vx_status)VX_FAILURE;
         }
         /* LDRA_JUSTIFY_END */
+    }
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    This failure case is out of scope for the imaging test framework.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
+    if((vx_status)VX_SUCCESS != status)
+    {
+        /* TODO: how to handle this condition */
+        VX_PRINT(VX_ZONE_ERROR, "Failed to Add LDC TargetKernel\n");
     }
 }
 
@@ -464,7 +488,6 @@ void tivxRemoveTargetKernelVpacLdc2(void)
     else
     {
         VX_PRINT(VX_ZONE_ERROR, "Failed to Remove Ldc TargetKernel\n");
-        status = (vx_status)VX_FAILURE;
     }
     vpacLdcInstObjDeinit();
 }
@@ -492,6 +515,9 @@ static vx_status VX_CALLBACK tivxVpacLdcProcess(
     Fvid2_FrameList       *outFrmList;
     uint64_t               cur_time = 0ULL;
     tivx_obj_desc_t         *out_base_desc = NULL;
+    #if !defined(VPAC3L)
+    vx_status               validate_reg_status = (vx_status)VX_SUCCESS;
+    #endif
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -527,8 +553,6 @@ static vx_status VX_CALLBACK tivxVpacLdcProcess(
     if ((vx_status)VX_SUCCESS == status)
     /* LDRA_JUSTIFY_END */
     {
-        status = (vx_status)VX_FAILURE;
-
         void *temp_kernel_context = NULL;
         status = tivxGetTargetKernelInstanceContext(kernel, &temp_kernel_context, &size);
         /* LDRA_JUSTIFY_START
@@ -707,6 +731,7 @@ static vx_status VX_CALLBACK tivxVpacLdcProcess(
         }
         else
         #endif
+        if(in_frm_desc[0] != NULL)
         {
             for (plane_cnt = 0u; plane_cnt < TIVX_IMAGE_MAX_PLANES; plane_cnt ++)
             {
@@ -715,143 +740,152 @@ static vx_status VX_CALLBACK tivxVpacLdcProcess(
                 (int32_t)in_frm_desc[0]->mem_ptr[plane_cnt].mem_heap_region);
             }
         }
+        else
+        {
+            /* Do Nothing */
+            VX_PRINT(VX_ZONE_ERROR, "Null frame descriptor for inputs \n");
+            status = (vx_status)VX_FAILURE;
+        }
 
         out_base_desc = (tivx_obj_desc_t *)out_frm_desc[0];
         ldc_obj->timestamp = out_base_desc->timestamp;
-        for (out_cnt = 0u; out_cnt < ldc_obj->num_output; out_cnt ++)
+        if((vx_status)VX_SUCCESS == status)
         {
-            frm = &ldc_obj->outFrm[out_cnt];
-            for (plane_cnt = 0u; plane_cnt < TIVX_IMAGE_MAX_PLANES;
-                plane_cnt ++)
+            for (out_cnt = 0u; out_cnt < ldc_obj->num_output; out_cnt ++)
             {
-                frm->addr[plane_cnt] = tivxMemShared2PhysPtr(
-                    out_frm_desc[out_cnt]->mem_ptr[plane_cnt].shared_ptr,
-                    (int32_t)out_frm_desc[out_cnt]->mem_ptr[plane_cnt].mem_heap_region);
-            }
-            #if defined(VPAC3) || defined(VPAC3L)
-            if(out_cnt == 0U)
-            {
-                /* LDRA_JUSTIFY_START
-                <metric start> branch  <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                The parameter is expected to be pre-validated from a software layer above imaging.
-                Therefore, this failure case is out of scope for the imaging test framework.
-                Effect on this unit: If control reaches here, the code base is expected to prevent undefined behaviour by avoiding dereferencing a NULL pointer.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                if((out_frm_desc[0] != NULL) && (out_frm_desc[1] != NULL) && (NULL != in_frm_desc[1]))
-                /* LDRA_JUSTIFY_END */
+                frm = &ldc_obj->outFrm[out_cnt];
+                for (plane_cnt = 0u; plane_cnt < TIVX_IMAGE_MAX_PLANES;
+                    plane_cnt ++)
+                {
+                    frm->addr[plane_cnt] = tivxMemShared2PhysPtr(
+                        out_frm_desc[out_cnt]->mem_ptr[plane_cnt].shared_ptr,
+                        (int32_t)out_frm_desc[out_cnt]->mem_ptr[plane_cnt].mem_heap_region);
+                }
+                #if defined(VPAC3) || defined(VPAC3L)
+                if(out_cnt == 0U)
                 {
                     /* LDRA_JUSTIFY_START
                     <metric start> branch  <metric end>
                     <justification start>
                     Rationale: The component level negative test framework and test applications cannot reach this portion.
-                    The parameters are pre-validated by the host kernel before the control reaches here.
-                    Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application.
-                    This behaviour is part of the application design. An error print statement can be added in a future release if required.
+                    The parameter is expected to be pre-validated from a software layer above imaging.
+                    Therefore, this failure case is out of scope for the imaging test framework.
+                    Effect on this unit: If control reaches here, the code base is expected to prevent undefined behaviour by avoiding dereferencing a NULL pointer.
+                    However, due to the stated rationale, this is not tested.
                     <justification end> */
-                    if(((((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[0]->format) &&
-                        ((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[1]->format)) ||
-                        (((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[0]->format) &&
-                        ((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[1]->format)) ||
-                        (((vx_df_image)TIVX_DF_IMAGE_P12 ==out_frm_desc[0]->format) &&
-                        ((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[1]->format)) ||
-                        (((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[0]->format) &&
-                        ((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[1]->format)) ||
-                        (((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[0]->format) &&
-                        ((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[1]->format)) ||
-                        (((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[0]->format) &&
-                        ((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[1]->format)) ||
-                        (((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[0]->format) &&
-                        ((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[1]->format)) ||
-                        (((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[0]->format) &&
-                        ((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[1]->format)) ||
-                        (((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[0]->format) &&
-                        ((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[1]->format))))
+                    if((out_frm_desc[0] != NULL) && (out_frm_desc[1] != NULL) && (NULL != in_frm_desc[1]))
                     /* LDRA_JUSTIFY_END */
                     {
-                        frm->addr[0] = tivxMemShared2PhysPtr(
-                                out_frm_desc[0]->mem_ptr[0].shared_ptr,
-                                (int32_t)out_frm_desc[0]->mem_ptr[0].mem_heap_region);
-                        frm->addr[1] = tivxMemShared2PhysPtr(
-                                out_frm_desc[1]->mem_ptr[0].shared_ptr,
-                                (int32_t)out_frm_desc[1]->mem_ptr[0].mem_heap_region);
+                        /* LDRA_JUSTIFY_START
+                        <metric start> branch  <metric end>
+                        <justification start>
+                        Rationale: The component level negative test framework and test applications cannot reach this portion.
+                        The parameters are pre-validated by the host kernel before the control reaches here.
+                        Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application.
+                        This behaviour is part of the application design. An error print statement can be added in a future release if required.
+                        <justification end> */
+                        if(((((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[0]->format) &&
+                            ((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[1]->format)) ||
+                            (((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[0]->format) &&
+                            ((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[1]->format)) ||
+                            (((vx_df_image)TIVX_DF_IMAGE_P12 ==out_frm_desc[0]->format) &&
+                            ((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[1]->format)) ||
+                            (((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[0]->format) &&
+                            ((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[1]->format)) ||
+                            (((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[0]->format) &&
+                            ((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[1]->format)) ||
+                            (((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[0]->format) &&
+                            ((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[1]->format)) ||
+                            (((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[0]->format) &&
+                            ((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[1]->format)) ||
+                            (((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[0]->format) &&
+                            ((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[1]->format)) ||
+                            (((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[0]->format) &&
+                            ((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[1]->format))))
+                        /* LDRA_JUSTIFY_END */
+                        {
+                            frm->addr[0] = tivxMemShared2PhysPtr(
+                                    out_frm_desc[0]->mem_ptr[0].shared_ptr,
+                                    (int32_t)out_frm_desc[0]->mem_ptr[0].mem_heap_region);
+                            frm->addr[1] = tivxMemShared2PhysPtr(
+                                    out_frm_desc[1]->mem_ptr[0].shared_ptr,
+                                    (int32_t)out_frm_desc[1]->mem_ptr[0].mem_heap_region);
+                        }
                     }
                 }
-            }
-            else
-            {
-                /* LDRA_JUSTIFY_START
-                <metric start> statement branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications cannot reach this portion.
-                The parameter is expected to be pre-validated from a software layer above imaging.
-                Therefore, this failure case is out of scope for the imaging test framework.
-                Effect on this unit: If control reaches here, the code base is expected to prevent undefined behaviour by avoiding dereferencing a NULL pointer.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                if((out_frm_desc[2] != NULL) && (out_frm_desc[3] != NULL) && (NULL != in_frm_desc[1]))
+                else
                 {
-                    if(((((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[2]->format) &&
-                        ((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[3]->format)) ||
-                        (((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[2]->format) &&
-                        ((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[3]->format)) ||
-                        (((vx_df_image)TIVX_DF_IMAGE_P12 ==out_frm_desc[2]->format) &&
-                        ((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[3]->format)) ||
-                        (((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[2]->format) &&
-                        ((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[3]->format)) ||
-                        (((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[2]->format) &&
-                        ((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[3]->format)) ||
-                        (((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[2]->format) &&
-                        ((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[3]->format)) ||
-                        (((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[2]->format) &&
-                        ((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[3]->format)) ||
-                        (((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[2]->format) &&
-                        ((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[3]->format)) ||
-                        (((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[2]->format) &&
-                        ((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[3]->format))))
+                    /* LDRA_JUSTIFY_START
+                    <metric start> statement branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications cannot reach this portion.
+                    The parameter is expected to be pre-validated from a software layer above imaging.
+                    Therefore, this failure case is out of scope for the imaging test framework.
+                    Effect on this unit: If control reaches here, the code base is expected to prevent undefined behaviour by avoiding dereferencing a NULL pointer.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
+                    if((out_frm_desc[2] != NULL) && (out_frm_desc[3] != NULL) && (NULL != in_frm_desc[1]))
                     {
-                        frm->addr[0] = tivxMemShared2PhysPtr(
-                                out_frm_desc[2]->mem_ptr[0].shared_ptr,
-                                (int32_t)out_frm_desc[2]->mem_ptr[0].mem_heap_region);
-                        frm->addr[1] = tivxMemShared2PhysPtr(
-                                out_frm_desc[3]->mem_ptr[0].shared_ptr,
-                                (int32_t)out_frm_desc[3]->mem_ptr[0].mem_heap_region);
+                        if(((((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[2]->format) &&
+                            ((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[3]->format)) ||
+                            (((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[2]->format) &&
+                            ((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[3]->format)) ||
+                            (((vx_df_image)TIVX_DF_IMAGE_P12 ==out_frm_desc[2]->format) &&
+                            ((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[3]->format)) ||
+                            (((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[2]->format) &&
+                            ((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[3]->format)) ||
+                            (((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[2]->format) &&
+                            ((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[3]->format)) ||
+                            (((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[2]->format) &&
+                            ((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[3]->format)) ||
+                            (((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[2]->format) &&
+                            ((vx_df_image)TIVX_DF_IMAGE_P12 == out_frm_desc[3]->format)) ||
+                            (((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[2]->format) &&
+                            ((vx_df_image)VX_DF_IMAGE_U8 == out_frm_desc[3]->format)) ||
+                            (((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[2]->format) &&
+                            ((vx_df_image)VX_DF_IMAGE_U16 == out_frm_desc[3]->format))))
+                        {
+                            frm->addr[0] = tivxMemShared2PhysPtr(
+                                    out_frm_desc[2]->mem_ptr[0].shared_ptr,
+                                    (int32_t)out_frm_desc[2]->mem_ptr[0].mem_heap_region);
+                            frm->addr[1] = tivxMemShared2PhysPtr(
+                                    out_frm_desc[3]->mem_ptr[0].shared_ptr,
+                                    (int32_t)out_frm_desc[3]->mem_ptr[0].mem_heap_region);
+                        }
                     }
+                    /* LDRA_JUSTIFY_END */
                 }
-                /* LDRA_JUSTIFY_END */
+                #endif        
+                outFrmList->numFrames ++;
             }
-            #endif        
-            outFrmList->numFrames ++;
+
+            /* Clearing error status from previous frame
+            *  User should consume the error status before
+            *  submitting next frame for processing
+            */
+            ldc_obj->wdTimerErrStatus = 0u;
+            ldc_obj->err_stat = 0u;
+
+            cur_time = tivxPlatformGetTimeInUsecs();
+
+            /* Submit LDC Request*/
+            fvid2_status = Fvid2_processRequest(ldc_obj->handle, inFrmList,
+                outFrmList, FVID2_TIMEOUT_FOREVER);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if (FVID2_SOK != fvid2_status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to Submit Request\n");
+                status = (vx_status)VX_FAILURE;
+            }
+            /* LDRA_JUSTIFY_END */
         }
-
-        /* Clearing error status from previous frame
-        *  User should consume the error status before
-        *  submitting next frame for processing
-        */
-        ldc_obj->wdTimerErrStatus = 0u;
-        ldc_obj->err_stat = 0u;
-
-        cur_time = tivxPlatformGetTimeInUsecs();
-
-        /* Submit LDC Request*/
-        fvid2_status = Fvid2_processRequest(ldc_obj->handle, inFrmList,
-            outFrmList, FVID2_TIMEOUT_FOREVER);
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */
-        if (FVID2_SOK != fvid2_status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to Submit Request\n");
-            status = (vx_status)VX_FAILURE;
-        }
-        /* LDRA_JUSTIFY_END */
     }
 
     /* LDRA_JUSTIFY_START
@@ -916,7 +950,7 @@ static vx_status VX_CALLBACK tivxVpacLdcProcess(
             status = (vx_status)VX_ERROR_TIMEOUT;
         }
         /* LDRA_JUSTIFY_END */
-
+#if !defined(VPAC3L)
         /* Call the control command for statusReg/configReg validate */
         {
             fvid2_status = Fvid2_control(ldc_obj->handle, VHWA_M2M_IOCTL_LDC_VALIDATE_REG, NULL, NULL);
@@ -931,11 +965,11 @@ static vx_status VX_CALLBACK tivxVpacLdcProcess(
             if (FVID2_SOK != fvid2_status)
             {
                 VX_PRINT(VX_ZONE_ERROR, "Register validation failed (Fvid2_control returned %d)\n", fvid2_status);
-                status = (vx_status)VX_FAILURE;
+                validate_reg_status = (vx_status)VX_FAILURE;
             }
             /* LDRA_JUSTIFY_END */
         }
-
+#endif
     }
 
     /* LDRA_JUSTIFY_START
@@ -976,6 +1010,12 @@ static vx_status VX_CALLBACK tivxVpacLdcProcess(
             );
     }
 
+    #if !defined(VPAC3L)
+    if(((vx_status)VX_SUCCESS != status) || ((vx_status)VX_SUCCESS != validate_reg_status))
+    {
+        status = (vx_status)VX_FAILURE;
+    }
+    #endif
     return (status);
 }
 
@@ -1002,12 +1042,14 @@ static vx_status VX_CALLBACK tivxVpacLdcCreate(
     tivx_obj_desc_image_t            *out3_img_desc = NULL;
     void                             *target_ptr;
     tivx_obj_desc_user_data_object_t *dcc_buf_desc = NULL;
+#if defined(VPAC3) || defined(VPAC3L)
     uint32_t                            in0_height = 0U;
     uint32_t                            in1_height = 0U;
     uint32_t                            out0_height = 0U;
     uint32_t                            out1_height = 0U;
     uint32_t                            out2_height = 0U;
     uint32_t                            out3_height = 0U;
+#endif
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -1400,12 +1442,16 @@ static vx_status VX_CALLBACK tivxVpacLdcCreate(
             }
         }
         #endif
-        /* Initialize LDC Config with defaults */
-        Ldc_ConfigInit(ldc_cfg);
 
-        /* Set up input and output image formats */
-        ldc_obj->num_output = 1U;
-        status = tivxVpacLdcSetFmt(ldc_prms, &ldc_cfg->inFmt, in0_img_desc);
+        if((vx_status)VX_SUCCESS == status)
+        {
+            /* Initialize LDC Config with defaults */
+            Ldc_ConfigInit(ldc_cfg);
+
+            /* Set up input and output image formats */
+            ldc_obj->num_output = 1U;
+            status = tivxVpacLdcSetFmt(ldc_prms, &ldc_cfg->inFmt, in0_img_desc);
+        }
         #if defined(VPAC3) || defined(VPAC3L)
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
@@ -2338,12 +2384,13 @@ static vx_status VX_CALLBACK tivxVpacLdcDelete(
                 (void)tivxEventDelete(&ldc_obj->waitForProcessCmpl);
             }
 
-            //* Free config register readback buffers if allocated */
+#if !defined(VPAC3L)
+            /* Free config register readback buffers if allocated */
             if ((ldc_obj->readback_mem_ptr_phys != 0u) || (ldc_obj->golden_reg_mem_ptr_phys != 0u))
             {
                 tivxVpacLdcFreeReadbackBuffers(ldc_obj);
             }
-
+#endif
             tivxVpacLdcFreeObject(&gTivxVpacLdcInstObj, ldc_obj);
         }
     }
@@ -2541,6 +2588,7 @@ static vx_status VX_CALLBACK tivxVpacLdcControl(
             }
 #endif
 
+#if !defined(VPAC3L)
             case TIVX_VPAC_LDC_CMD_ENABLE_VPAC_SAFETY_MECHANISM:
             {
                 status = tivxEnableVpacLdcSafetyMechanisms(ldc_obj,
@@ -2560,7 +2608,7 @@ static vx_status VX_CALLBACK tivxVpacLdcControl(
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-
+#endif
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
             <justification start>
@@ -3785,6 +3833,7 @@ static vx_status tivxVpacLdcEnableErrorEventsCmd(tivxVpacLdcObj *ldc_obj,
     return status;
 }
 
+#if !defined(VPAC3L)
 /* Callback for config register and golden register memory comparison */
 int32_t tivxVpacLdcConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms)
 {
@@ -4451,7 +4500,7 @@ static vx_status tivxEnableVpacLdcSafetyMechanisms(
 
     return status;
 }
-
+#endif
 /* ========================================================================== */
 /*                              Driver Callbacks                              */
 /* ========================================================================== */

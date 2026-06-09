@@ -161,6 +161,11 @@ int32_t TIDL_gatherLayerDspProcessNew( const TIDL_NetworkCommonParams *commonPar
                                             sTIDL_sysMemHandle_t *sysMems);
 
 void TIDL_UpdateScaleFactors(TIDL_Handle intAlgHandle, int32_t i, int32_t updateStats, int64_t accMin, int64_t accMax);
+
+int32_t TIDL_gatherLayerDspAlloc(const TIDL_LayerSpecificParams *layerSpecificParams,
+                             const TIDL_NetworkCommonParams *commonParams,
+                             int32_t layerIdx,
+                             int32_t memorySize[TIDL_LAYER_MEMORY_MAX]);
 /* ========================================================================== */
 /*                       Static Function Definitions                          */
 /* ========================================================================== */

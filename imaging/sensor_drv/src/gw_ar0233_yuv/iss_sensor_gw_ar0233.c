@@ -158,8 +158,6 @@ IssSensors_Handle gw_ar0233SensorHandle = {
  */
 IssCapture_CmplxIoLaneCfg           gw_ar0233Csi2CmplxIoLaneCfg;
 
-extern IssSensors_Handle * gIssSensorTable[ISS_SENSORS_MAX_SUPPORTED_SENSOR];
-
 int32_t IssSensor_gw_ar0233_Init(void)
 {
     int32_t status;

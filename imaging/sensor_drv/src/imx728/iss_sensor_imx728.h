@@ -154,7 +154,7 @@ struct {
     */
     
 static int32_t IMX728_Probe(uint32_t chId, void *pSensorHdl);
-static int32_t IMX728_Config(uint32_t chId, void *pSensorHdl, uint32_t sensor_features_requested);
+static int32_t IMX728_Config(uint32_t chId, void *pSensorHdl, uint32_t sensorFeaturesRequested);
 static int32_t IMX728_StreamOn(uint32_t chId, void *pSensorHdl);
 static int32_t IMX728_StreamOff(uint32_t chId, void *pSensorHdl);
 static int32_t IMX728_PowerOn(uint32_t chId, void *pSensorHdl);
@@ -177,11 +177,11 @@ static int32_t IMX728_ReadReg(uint8_t      i2cInstId,
                                 uint8_t      skip_error);
     
 static int32_t IMX728_WriteReg(uint8_t    i2cInstId,
-                                uint8_t    i2cAddr,
-                                uint16_t   regAddr,
-                                uint8_t    *regValue,
-                                uint32_t   numRegs,
-                                uint8_t    skip_error);
+                               uint8_t    i2cAddr,
+                               uint16_t   regAddr,
+                               uint8_t    *regVal,
+                               uint32_t   numRegs,
+                               uint8_t    skip_error);
     
 #endif // ISS_SENSOR_IMX728_H_
 

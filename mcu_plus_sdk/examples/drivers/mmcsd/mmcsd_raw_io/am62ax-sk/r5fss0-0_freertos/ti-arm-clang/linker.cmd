@@ -1,6 +1,3 @@
---retain="*(.bootCode)";
---retain="*(.startupCode)";
---retain="*(.startupData)";
 --retain="*(.irqStack)";
 --retain="*(.fiqStack)";
 --retain="*(.abortStack)";
@@ -40,15 +37,12 @@ __FIQ_STACK_SIZE = 0x0100;
 __SVC_STACK_SIZE = 0x0100; /* This is the size of stack when R5 is in SVC mode */
 __ABORT_STACK_SIZE = 0x0100;  /* This is the size of stack when R5 is in ABORT mode */
 __UNDEFINED_STACK_SIZE = 0x0100;  /* This is the size of stack when R5 is in UNDEF mode */
-
+__DM_STUB_STACK_SIZE = 0x0400; /* DM stub stack size */
 
 SECTIONS
 {
     /* This has the R5F entry point and vector table, this MUST be at 0x0 */
     .vectors            : {} palign(8)      > DDR
-    .bootCode           : align = 8, load = R5F_TCMB, run = R5F_TCMA
-    .startupCode        : align = 8, load = R5F_TCMB, run = R5F_TCMA
-    .startupData        : align = 8, load = R5F_TCMB, run = R5F_TCMA, type = NOINIT
 
     /* This has the R5F boot code until MPU is enabled,  this MUST be at a address < 0x80000000
      * i.e this cannot be placed in DDR
@@ -61,16 +55,17 @@ SECTIONS
         .text:abort: palign(8) /* this helps in loading symbols when using XIP mode */
     } load = R5F_TCMB, run = R5F_TCMA
 
-    .text            : {} palign(8)      > DDR
-    .const           : {} palign(8)      > DDR
-    .rodata          : {} palign(8)      > DDR
-    .cinit           : {} palign(8)      > DDR
-    .far             : {} align(4)       > DDR
-    .data            : {} palign(128)    > DDR
-    .sysmem          : {}                > DDR
-    .data_buffer     : {} palign(128)    > DDR
-    .const.devgroup  : { *(.const.devgroup*) } align(4) > DDR
-    .boardcfg_data   : {} align(4)       > DDR
+    .lpm_data (NOLOAD)      : {} align(4)       > DDR_LPM_DATA
+    .text                   : {} palign(8)      > DDR
+    .const                  : {} palign(8)      > DDR
+    .rodata                 : {} palign(8)      > DDR
+    .cinit                  : {} palign(8)      > DDR
+    .far                    : {} align(4)       > DDR
+    .data                   : {} palign(128)    > DDR
+    .sysmem                 : {}                > DDR
+    .data_buffer            : {} palign(128)    > DDR
+    .const.devgroup         : { *(.const.devgroup*) } align(4) > DDR
+    .boardcfg_data          : {} align(4)       > DDR
 
     GROUP {
         .bss.devgroup : { *(.bss.devgroup*) } align(4)
@@ -78,6 +73,45 @@ SECTIONS
         .bss:    {} palign(4)   /* This is where uninitialized globals go */
         RUN_END(__BSS_END)
     } > DDR
+
+    GROUP{
+
+        .dm_stub_text : {
+            _privileged_code_begin = .;
+            _text_secure_start = .;
+            dm_stub*(.text)
+        }  palign(8)
+
+        .dm_stub_data : {
+            _privileged_data_begin = .;
+            dm_stub*(.data)
+            _privileged_data_end = .;
+        }  palign(8)
+
+        .dm_stub_bss : {
+            _start_bss = .;
+            dm_stub*(.bss)
+            _end_bss = .;
+        }  palign(8)
+
+        .dm_stub_rodata : {
+            _start_rodata = .;
+            dm_stub*(.rodata)
+            _end_rodata = .;
+        }  palign(8)
+
+    .dm_stub_stack : {
+            _start_stack = .;
+            . += __DM_STUB_STACK_SIZE;
+            _end_stack = .;
+        }  palign(8)
+    }  load = R5F_TCMB, run = R5F_TCMA
+
+    /* Trace buffer used during low power mode */
+    .lpm_trace_buf : (NOLOAD) {} > WKUP_SRAM_TRACE_BUFF
+
+    /* DM RM/PM HAL trace buffer at fixed DDR location */
+    .dm_rmpm_trace_buf : (NOLOAD) {} > DDR_DM_RMPM_TRACE
 
     /* USB or any other LLD buffer for benchmarking */
     .benchmark_buffer (NOLOAD) {} ALIGN (8) > DDR
@@ -117,12 +151,19 @@ SECTIONS
 
 MEMORY
 {
-    R5F_TCMA_VEC   (RWIX)       : ORIGIN = 0x00000000 LENGTH = 0x00000040
-    R5F_TCMA       (RWIX)       : ORIGIN = 0x00000040 LENGTH = 0x00007FC0
-    R5F_TCMB_VEC   (RWIX)       : ORIGIN = 0x41010000 LENGTH = 0x00000040
-    R5F_TCMB       (RWIX)       : ORIGIN = 0x41010040 LENGTH = 0x00007FC0
+    R5F_TCMA_VEC   (RWIX)      : ORIGIN = 0x00000000 LENGTH = 0x00000040
+    R5F_TCMA       (RWIX)      : ORIGIN = 0x00000040 LENGTH = 0x00007FC0
+    R5F_TCMB_VEC   (RWIX)      : ORIGIN = 0x41010000 LENGTH = 0x00000040
+    R5F_TCMB       (RWIX)      : ORIGIN = 0x41010040 LENGTH = 0x00007FC0
+
+    WKUP_SRAM_TRACE_BUFF (RWIX) : ORIGIN = 0x41880000 LENGTH = 0x0000800
 
     HSM_RAM                     : ORIGIN = 0x43C00000 LENGTH = 0x3FF00
-    DDR                         : ORIGIN = 0x9CA00000 LENGTH = 0x1D00000
+    /* DDR for DM LPM data [ size 640.00 KB ] */
+    DDR_LPM_DATA    (RWIX)      : ORIGIN = 0x9CA00000 LENGTH = 0x000A0000
+    /* DDR for DM RM/PM HAL trace buffer [ size 20 KB ] */
+    DDR_DM_RMPM_TRACE (RWIX)    : ORIGIN = 0x9CAA0000 LENGTH = 0x00005000
+    /* DDR for DM R5F code/data [ size 27 MiB + 364 KB ] */
+    DDR                         : ORIGIN = 0x9CAA5000 LENGTH = 0x1B5B000
 
 }

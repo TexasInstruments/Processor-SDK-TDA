@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019-2025 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -67,7 +67,10 @@
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#if !defined(SOC_TDA54)
 #include <sciclient/sciclient.h>
+#endif
+
 #if defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 199309L)
 #include <time.h>   /* for nanosleep */
 int nanosleep(const struct timespec *req, struct timespec *rem);
@@ -85,6 +88,11 @@ static uint64_t mhzFreq = (uint64_t)0U;
 
 #define GET_GTC_LO_VALUE (*(volatile uint32_t*)(GTC_BASE_ADDR + 0x8U))
 #define GET_GTC_HI_VALUE (*(volatile uint32_t*)(GTC_BASE_ADDR + 0xCU))
+
+/* Temporarily disabled, to be enabled once sci-client is enabled in mcu_sdk*/
+#if defined(SOC_TDA54)
+#define GTC_CLOCK_FREQ (200 * 1000 * 1000)
+#endif
 
 #define PRI_MAX  sched_get_priority_max(SCHED_FIFO)
 #define PRI_MIN  sched_get_priority_min(SCHED_FIFO)
@@ -114,20 +122,24 @@ int32_t appLogGlobalTimeInit(void)
 <metric start> branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_TIMER_QNX_UM01
 <justification end> */
-        if (0 == status)
-        {
-            #if defined(SOC_J722S) || defined(SOC_AM62A)
-            status = Sciclient_pmGetModuleClkFreq(TISCI_DEV_WKUP_GTC0,
-                                               TISCI_DEV_WKUP_GTC0_GTC_CLK,
-                                               &clkFreq,
-                                               SCICLIENT_SERVICE_WAIT_FOREVER);
-            #else
-            status = Sciclient_pmGetModuleClkFreq(TISCI_DEV_GTC0,
-                                               TISCI_DEV_GTC0_GTC_CLK,
-                                               &clkFreq,
-                                               SCICLIENT_SERVICE_WAIT_FOREVER);
-            #endif
-        }
+    if (0 == status)
+    {
+        #if defined(SOC_J722S) || defined(SOC_AM62A)
+        status = Sciclient_pmGetModuleClkFreq(TISCI_DEV_WKUP_GTC0,
+                                           TISCI_DEV_WKUP_GTC0_GTC_CLK,
+                                           &clkFreq,
+                                           SCICLIENT_SERVICE_WAIT_FOREVER);
+
+        /* Temporarily disabled, to be enabled once sci-client is enabled in mcu_sdk*/
+        #elif defined(SOC_TDA54)
+        clkFreq = GTC_CLOCK_FREQ;
+        #else
+        status = Sciclient_pmGetModuleClkFreq(TISCI_DEV_GTC0,
+                                           TISCI_DEV_GTC0_GTC_CLK,
+                                           &clkFreq,
+                                           SCICLIENT_SERVICE_WAIT_FOREVER);
+        #endif
+    }
 /* LDRA_JUSTIFY_END */
 
 /* LDRA_JUSTIFY_START

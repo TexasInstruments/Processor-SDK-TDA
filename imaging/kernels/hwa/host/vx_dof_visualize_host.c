@@ -370,7 +370,6 @@ vx_status tivxAddKernelDofVisualize(vx_context context)
                         (vx_enum)VX_TYPE_IMAGE,
                         (vx_enum)VX_PARAMETER_STATE_REQUIRED
             );
-            param_idx++;
         }
         if (status == (vx_status)VX_SUCCESS)
         {

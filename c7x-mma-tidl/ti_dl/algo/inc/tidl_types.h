@@ -155,6 +155,12 @@ typedef void* TIDL_KernelHandle;
 #define TIDL_FUNCTION_OPTIMIZED_C7x   ((int32_t) 1)
 /** \brief Max function style */
 #define TIDL_FUNC_STYLE_MAX           ((int32_t) 2)
+/** \brief Performance modelling of the function */
+#define  TIDL_FUNCTION_PERFMODEL_FLAG ((int32_t) 0x40)
+/** \brief Masking Bits of performance modelling flag. */
+#define TIDL_FUNCTION_PERFMODEL_MASK  ((TIDL_FUNCTION_PERFMODEL_FLAG - 1))
+/** \brief Performance modelling of the function */
+#define TIDL_FUNCTION_PERFMODEL       ((int32_t) (TIDL_FUNCTION_PERFMODEL_FLAG | TIDL_FUNCTION_OPTIMIZED_C7x) )
 /* @} */
 
 #define TIDL_NUM_BLOCKS(width, stride) (((width)+(stride)-1U)/(stride))
@@ -174,7 +180,8 @@ typedef void* TIDL_KernelHandle;
 #define TIDL_32BIT_SIMD_WIDTH_RND          (TIDL_32BIT_SIMD_WIDTH >> 1U)
 #define TIDL_32BIT_NUM_SIMD_BLOCKS(width)  (((width)+(TIDL_32BIT_SIMD_WIDTH)-1)>>(TIDL_32BIT_SIMD_WIDTH_SHIFT))
 
-#if __C7X_VEC_SIZE_BITS__ == 512
+#if __C7X_VEC_SIZE_BITS__ == 1024
+#elif __C7X_VEC_SIZE_BITS__ == 512
 #define VPRED_ZERO (0x0ULL)
 #define REINTERPRET_VPRED(x) __as_uchar8((x))
 typedef unsigned long long vpred_ull;

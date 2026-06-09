@@ -11,6 +11,7 @@ const files_r5f = {
         "DebugP_memTraceLogWriter.c",
         "DebugP_log.c",
         "TimerP.c",
+        "HwiP_armv7r_exception_handlers_nortos.c",
         "HwiP_armv7r_vim.c",
         "MpuP_armv7r.c",
         "CacheP_armv7r.c",
@@ -30,13 +31,14 @@ const files_r5f = {
         "DebugP_shmLogReader_freertos.c",
         "TaskP_freertos.c",
         "EventP_freertos.c",
+        "MailboxP_freertos.c",
         // picked from freertos "kernel"
         "event_groups.c",
         "tasks.c",
         "timers.c",
         "queue.c",
         "list.c",
-        "heap_4.c",
+        "heap_3.c",
         // picked from freertos "posix"
         "FreeRTOS_POSIX_clock.c",
         "FreeRTOS_POSIX_mqueue.c",
@@ -63,7 +65,6 @@ const files_c75x = {
         "CycleCounterP_c75.c",
         "Exception.c",
         "HwiP_c75.c",
-        "HwiP_freertos_c7x.c",
         "IntrinsicsSupport.c",
         "MmuP_c75.c",
         "Startup.c",
@@ -83,6 +84,7 @@ const files_c75x = {
         // picked from freertos DPL
         "ClockP_freertos.c",
         "ClockP_freertos_c75.c",
+        "HwiP_freertos_c7x.c",
         //"freertos_mmu.c",  //defined in sysconfig hence not required
         "SemaphoreP_freertos.c",
         "HeapP_freertos.c",
@@ -145,6 +147,7 @@ const files_a53 = {
         "DebugP_shmLogReader_freertos.c",
         "TaskP_freertos.c",
         "EventP_freertos.c",
+        "MailboxP_freertos.c",
         // picked from freertos "kernel"
         "event_groups.c",
         "tasks.c",
@@ -198,6 +201,7 @@ const files_a53_smp = {
         "DebugP_shmLogReader_freertos.c",
         "TaskP_freertos.c",
         "EventP_freertos.c",
+        "MailboxP_freertos.c",
         // picked from freertos "kernel"
         "event_groups.c",
         "tasks.c",
@@ -249,7 +253,7 @@ const includes_a53 = {
 
 const includes_a53_smp = {
     common: [
-        "FreeRTOS-Kernel-smp/include",
+        "FreeRTOS-Kernel/include",
         "portable_smp/GCC/ARM_CA53",
         "config/am62ax/a53-smp",
         "FreeRTOS-POSIX/include",
@@ -268,6 +272,7 @@ const includes_c75x = {
         "FreeRTOS-POSIX/include/private",
         "FreeRTOS-POSIX/FreeRTOS-Plus-POSIX/include",
         "FreeRTOS-POSIX/FreeRTOS-Plus-POSIX/include/portable",
+        "../nortos/dpl/c75/soc/am62ax",
     ],
 };
 
@@ -287,6 +292,7 @@ const cflags_a53 = {
 const defines_a53_smp = {
     common: [
         "SMP_FREERTOS",
+        "SMP_QUADCORE_FREERTOS",
     ],
 };
 
@@ -302,6 +308,7 @@ const asmfiles_r5f = {
         // picked from nortos DPL
         "boot_armv7r_asm.S",
         "HwiP_armv7r_asm.S",
+        "HwiP_armv7r_exception_handlers_nortos_asm.S",
         "MpuP_armv7r_asm.S",
         "CacheP_armv7r_asm.S",
         "CpuId_armv7r_asm.S",
@@ -404,8 +411,8 @@ const filedirs_a53_smp = {
         "dpl/common",
         "dpl/a53",
         // picked from freertos "kernel"
-        "FreeRTOS-Kernel-smp/",
-        "FreeRTOS-Kernel-smp/portable/MemMang",
+        "FreeRTOS-Kernel/",
+        "FreeRTOS-Kernel/portable/MemMang",
         // picked from freertos "posix"
         "FreeRTOS-POSIX/FreeRTOS-Plus-POSIX/source/",
         // picked from freertos "portable"

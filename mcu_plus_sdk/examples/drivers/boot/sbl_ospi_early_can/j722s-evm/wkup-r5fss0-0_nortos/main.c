@@ -31,6 +31,7 @@
  */
 
 #include <stdlib.h>
+#include "ti_board_config.h"
 #include "ti_drivers_config.h"
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
@@ -53,7 +54,6 @@ Bootloader_CpuInfo bootCpuInfo[CSL_CORE_ID_MAX];
    image authentication
    The size of the buffer should be large enough to accomodate the appimage */
 uint8_t gAppimage[0x32000] __attribute__ ((section (".bss.filebuf"), aligned (128)));
-
 /* call this API to stop the booting process and spin, do that you can connect
  * debugger, load symbols and then make the 'loop' variable as 0 to continue execution
  * with debugger connected.
@@ -84,7 +84,7 @@ int32_t App_loadImages(void)
     {
         bootConfig = (Bootloader_Config *)bootHandle;
         bootConfig->coresPresentMap = 0;
-        status = Bootloader_parseMultiCoreAppImage(&bootHandle, &bootImageInfo);
+        status = Bootloader_parseMultiCoreAppImage(bootHandle, &bootImageInfo);
 
         /* Load CPUs */
         if (!Bootloader_socIsMCUResetIsoEnabled())
@@ -184,6 +184,9 @@ int main()
     System_init();
     Bootloader_profileAddProfilePoint("System_init");
 
+    Board_init();
+    Bootloader_profileAddProfilePoint("Board_init");
+
     Drivers_open();
     Bootloader_profileAddProfilePoint("Drivers_open");
 
@@ -223,6 +226,8 @@ int main()
 
         /* Call DPL deinit to close the tick timer and disable interrupts before jumping to Stage2*/
         Dpl_deinit();
+
+        Board_deinit();
         System_deinit();
         Bootloader_JumpSelfCpu();
     }
@@ -236,8 +241,7 @@ void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle)
      *  In Fast XSPI mode, reintialization is not required unless
      *  user configures it or PHY configuration failed
      */
-    if(SystemP_SUCCESS != OSPI_skipProgramming(oHandle))
-    {
+
         OSPI_setProtocol(oHandle, OSPI_FLASH_PROTOCOL(8,8,8,1));
         OSPI_enableDDR(oHandle);
         OSPI_setDualOpCodeMode(oHandle);
@@ -245,6 +249,5 @@ void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle)
         OSPI_enableSDR(oHandle);
         OSPI_clearDualOpCodeMode(oHandle);
         OSPI_setProtocol(oHandle, OSPI_FLASH_PROTOCOL(1,1,1,0));
-    }
 
 }

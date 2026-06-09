@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2020
+ *  Copyright (c) Texas Instruments Incorporated 2020-25
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -72,7 +72,7 @@ extern "C" {
 /** \brief Number of Channels: Maximum number of channels for configuration
  *         Application can save some memory by reducing this to actual number
  *         of channels used rather than all available channels. */
-#define CSITX_NUM_CH                             (4U)
+#define CSITX_NUM_CH                             (8U)
 /** \brief Number of Pixel Interfaces: Maximum number of Pixel Interfaces for configuration */
 #define CSITX_NUM_PIXEL_IF                       (4U)
 /** \brief Channel ID: Default channel ID used for initialization */

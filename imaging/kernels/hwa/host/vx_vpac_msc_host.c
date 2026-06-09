@@ -87,7 +87,7 @@
 /* ========================================================================== */
 
 static vx_status VX_CALLBACK tivxVpacMscScaleValidate(vx_node node,
-    const vx_reference parameters[ ], vx_uint32 num, vx_meta_format metas[]);
+    const vx_reference parameters[ ], vx_uint32 num_params, vx_meta_format metas[]);
 static vx_status VX_CALLBACK tivxVpacMscScaleInitialize(vx_node node,
     const vx_reference parameters[ ], vx_uint32 num_params);
 static vx_status VX_CALLBACK tivxVpacMscPyramidValidate(vx_node node,
@@ -236,7 +236,6 @@ vx_status tivxAddKernelVpacMscMultiScale(vx_context context)
                         (vx_enum)VX_TYPE_IMAGE,
                         (vx_enum)VX_PARAMETER_STATE_OPTIONAL
             );
-            param_idx++;
         }
         if (status == (vx_status)VX_SUCCESS)
         {
@@ -383,7 +382,6 @@ vx_status tivxAddKernelVpacMscPyramid(vx_context context)
                         (vx_enum)VX_TYPE_PYRAMID,
                         (vx_enum)VX_PARAMETER_STATE_REQUIRED
             );
-            param_idx++;
         }
         if (status == (vx_status)VX_SUCCESS)
         {
@@ -629,7 +627,6 @@ vx_status tivxAddKernelVpacMscMultiOut(vx_context context)
                         (vx_enum)VX_TYPE_IMAGE,
                         (vx_enum)VX_PARAMETER_STATE_OPTIONAL
             );
-            param_idx++;
         }
         if (status == (vx_status)VX_SUCCESS)
         {
@@ -710,7 +707,6 @@ void tivx_vpac_msc_coefficients_params_init(
     coeff->single_phase[0][idx] = 0;
     idx++;
     coeff->single_phase[0][idx] = 0;
-    idx++;
     idx = 0;
     coeff->single_phase[1][idx] = 0;
     idx++;
@@ -721,7 +717,6 @@ void tivx_vpac_msc_coefficients_params_init(
     coeff->single_phase[1][idx] = 0;
     idx++;
     coeff->single_phase[1][idx] = 0;
-    idx++;
 
     if((vx_enum)VX_INTERPOLATION_BILINEAR == interpolation)
     {
@@ -859,7 +854,6 @@ void tivx_vpac_msc_coefficients_params_init(
             coeff->single_phase[i][idx] = 64;
             idx++;
             coeff->single_phase[i][idx] = 16;
-            idx++;
         }
         for(i = 0; i < (32u*5u); i++)
         {
@@ -1138,8 +1132,12 @@ static vx_status VX_CALLBACK tivxVpacMscScaleValidate(vx_node node,
         /* LDRA_JUSTIFY_END */
         {
             vx_bool loop_exit = (vx_bool)vx_false_e;
-            for (cnt = 0u; (cnt < TIVX_KERNEL_VPAC_MSC_SCALE_MAX_OUTPUT) && (status == (vx_status)VX_SUCCESS) && ((vx_bool)vx_false_e == loop_exit); cnt ++)
+            for (cnt = 0u; cnt < TIVX_KERNEL_VPAC_MSC_SCALE_MAX_OUTPUT; cnt ++)
             {
+                if((status != (vx_status)VX_SUCCESS) || ((vx_bool)vx_true_e == loop_exit))
+                {
+                    break;
+                }
                 if (NULL == out_img[cnt])
                 {
                     /* all images must be continuous */
@@ -1251,8 +1249,12 @@ static vx_status VX_CALLBACK tivxVpacMscScaleValidate(vx_node node,
             }
             /* LDRA_JUSTIFY_END */
             vx_bool loop_exit3 = (vx_bool)vx_false_e;
-            for (cnt = 0u; (cnt < TIVX_KERNEL_VPAC_MSC_SCALE2_MAX_OUTPUT) && (status == (vx_status)VX_SUCCESS) && ((vx_bool)vx_false_e == loop_exit3); cnt ++)
+            for (cnt = 0u; cnt < TIVX_KERNEL_VPAC_MSC_SCALE2_MAX_OUTPUT; cnt ++)
             {
+                if((status != (vx_status)VX_SUCCESS) || ((vx_bool)vx_true_e == loop_exit3))
+                {
+                    break;
+                }
                 if (((vx_df_image)VX_DF_IMAGE_U8 != out_img_fmt[cnt]) &&
                     ((vx_df_image)VX_DF_IMAGE_U16 != out_img_fmt[cnt]) &&
                     ((vx_df_image)TIVX_DF_IMAGE_P12 != out_img_fmt[cnt]))
@@ -1269,8 +1271,12 @@ static vx_status VX_CALLBACK tivxVpacMscScaleValidate(vx_node node,
                 }
             }
             vx_bool loop_exit2 = (vx_bool)vx_false_e;
-            for (cnt = 0u; ((cnt < (TIVX_KERNEL_VPAC_MSC_SCALE2_MAX_OUTPUT/2U)) && (status == (vx_status)VX_SUCCESS) && ((vx_bool)vx_false_e == loop_exit2)); cnt++)
+            for (cnt = 0u; cnt < (TIVX_KERNEL_VPAC_MSC_SCALE2_MAX_OUTPUT/2U); cnt++)
             {
+                if((status != (vx_status)VX_SUCCESS) || ((vx_bool)vx_true_e == loop_exit2))
+                {
+                    break;
+                }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
                 <justification start>
@@ -1579,6 +1585,7 @@ static vx_status VX_CALLBACK tivxVpacMscPyramidInitialize(vx_node node,
     return status;
 }
 
+#if !defined(VPAC3L)
 /* MSC: Initialize safety mechanism parameters */
 void tivx_vpac_msc_safety_mech_prms_init(tivx_vpac_msc_safety_mechanism_params_t *prms)
 {
@@ -1589,6 +1596,7 @@ void tivx_vpac_msc_safety_mech_prms_init(tivx_vpac_msc_safety_mechanism_params_t
         prms->enable_readback_config_registers = (uint32_t)vx_false_e;
     }
 }
+#endif
 /* ========================================================================== */
 /*                          Local Functions                                   */
 /* ========================================================================== */

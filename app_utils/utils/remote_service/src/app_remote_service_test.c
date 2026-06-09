@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -156,7 +156,7 @@ typedef struct {
 } app_remote_service_load_test_obj_t;
 
 static app_remote_service_load_test_obj_t g_app_remote_service_load_test_obj;
-#if !defined(SOC_AM62A)
+#if defined(SOC_FAMILY_J7)
 static uint32_t calcLoad(app_remote_service_load_test_obj_t *obj)
 {
     uint32_t ld;
@@ -167,15 +167,21 @@ static uint32_t calcLoad(app_remote_service_load_test_obj_t *obj)
         #if defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2)
         ld = (uint32_t)(((float)obj->ld * 7.1755) - 0.5732); // empirical way to determine the loop count for %load
         if(ld > 700) // 100% load
+        {
             ld = 700;
+        }
         #elif defined (SOC_J722S)
         ld = (obj->ld  * 2 ) + 1; // empirical way to determine the loop count for %load
         if(ld > 195) // 100% load
-            ld = 195; 
+        {
+            ld = 195;
+        }
         #elif defined (SOC_J721E)
         ld = (uint32_t)(((float)obj->ld * 7.0249) - 1.0093);
         if(ld > 695)
+        {
             ld = 695;
+        }
         #endif
     #endif
     return ld;
@@ -186,14 +192,21 @@ static uint32_t calcLoad(app_remote_service_load_test_obj_t *obj)
  * thus may require updates any time a new compiler version is used */
 void appRemoteServiceLoadTestTaskLoad( app_remote_service_load_test_obj_t *obj)
 {
-    volatile int i = 0, j =0, a = 1, count;
+    volatile int i = 0, a = 1;
     uint32_t cpu_id = appIpcGetSelfCpuId();
 
     uint32_t ld = obj->ld;
-    #if defined(SOC_AM62A)
+
+    #if defined(SOC_FAMILY_AM)
     if (cpu_id == APP_IPC_CPU_MCU1_0)
+    {
         ld += (2 + (ld/12));
-    #else
+    }
+    if (cpu_id == APP_IPC_CPU_C7x_1)
+    {
+        ld = (ld / 2) + (ld / 8);
+    }
+    #elif defined(SOC_FAMILY_J7)
     if ((cpu_id == APP_IPC_CPU_MCU1_0) || (cpu_id == APP_IPC_CPU_MCU2_0)
         #ifndef SOC_J722S
         || (cpu_id == APP_IPC_CPU_MCU2_1) || (cpu_id == APP_IPC_CPU_MCU3_0) || \
@@ -203,10 +216,8 @@ void appRemoteServiceLoadTestTaskLoad( app_remote_service_load_test_obj_t *obj)
     {
         ld += (2 + (ld/12));
     }
-    #endif
-
     #if defined(SOC_J784S4) || defined(SOC_J742S2)
-    if ((cpu_id == APP_IPC_CPU_MCU4_0) || (cpu_id == APP_IPC_CPU_MCU4_1) )
+    if ((cpu_id == APP_IPC_CPU_MCU4_0) || (cpu_id == APP_IPC_CPU_MCU4_1))
     {
         ld += (2 + (ld/12));
     }
@@ -214,47 +225,40 @@ void appRemoteServiceLoadTestTaskLoad( app_remote_service_load_test_obj_t *obj)
 
     #if defined(SOC_J721E)
     if (ld > 95 && (cpu_id == APP_IPC_CPU_C6x_1 || cpu_id == APP_IPC_CPU_C6x_2))
+    {
         ld = 95;
-    if (cpu_id == APP_IPC_CPU_C7x_1)
-    {
-        ld = calcLoad(obj);
     }
     #endif
 
-    #if  defined(SOC_J784S4)  || defined(SOC_J742S2)
     if (cpu_id == APP_IPC_CPU_C7x_1)
     {
         ld = calcLoad(obj);
     }
-    else if (cpu_id == APP_IPC_CPU_C7x_2)
-    {
-        ld = calcLoad(obj);
-    }
-    #endif
 
-    #if defined(SOC_J721S2)
-    if (cpu_id == APP_IPC_CPU_C7x_1)
+    #if defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J722S) || defined(SOC_J721S2)
+    if (cpu_id == APP_IPC_CPU_C7x_2)
     {
+        #if defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J722S)
         ld = calcLoad(obj);
-    }
-    else if (cpu_id == APP_IPC_CPU_C7x_2) // no mma in c7x_2
+        #endif
+
+        #if defined(SOC_J721S2)
         ld = (ld / 2) + (ld / 8);
+        #endif
+    }
     #endif
 
-    #if defined(SOC_J722S)
-    ld = calcLoad(obj);
-    #endif
-
-    #if defined(SOC_J784S4)
+    #if defined(SOC_J784S4) || defined(SOC_J742S2)
     if (cpu_id == APP_IPC_CPU_C7x_3)
     {
+        #if defined(SOC_J784S4)
         ld = calcLoad(obj);
-    }
-    #endif
+        #endif
 
-    #if defined(SOC_J742S2)
-    if (cpu_id == APP_IPC_CPU_C7x_3)
+        #if defined(SOC_J742S2)
         ld = (ld / 2) + (ld / 8);
+        #endif
+    }
     #endif
 
     #if defined(SOC_J784S4)
@@ -262,6 +266,7 @@ void appRemoteServiceLoadTestTaskLoad( app_remote_service_load_test_obj_t *obj)
     {
         ld = calcLoad(obj);
     }
+    #endif
     #endif
 
     if(obj->enable_mma_load) // some c7x_cores doesn't have mma
@@ -296,7 +301,7 @@ static void MMAloadInit(MMALoadTestObj *obj)
 
     uint16_t m = 64;
     uint16_t n = 64;
-    
+
     uint16_t heightIn0 = m;
     uint16_t widthIn0  = n;
     uint16_t numChannelsIn0 = 1;
@@ -334,9 +339,9 @@ static void MMAloadInit(MMALoadTestObj *obj)
     uint32_t dstSize  = obj->dst_addr.stride_y * heightOut  * numChannelsOut;
 
     obj->src0 = (void *)appMemAlloc(APP_MEM_HEAP_L2, src0Size, MMALIB_L2DATA_ALIGNMENT);
-    obj->src1 = (void *)appMemAlloc(APP_MEM_HEAP_L2, src1Size, MMALIB_L2DATA_ALIGNMENT);  
-    obj->dst  = (void *)appMemAlloc(APP_MEM_HEAP_L2, dstSize, MMALIB_L2DATA_ALIGNMENT);  
-    
+    obj->src1 = (void *)appMemAlloc(APP_MEM_HEAP_L2, src1Size, MMALIB_L2DATA_ALIGNMENT);
+    obj->dst  = (void *)appMemAlloc(APP_MEM_HEAP_L2, dstSize, MMALIB_L2DATA_ALIGNMENT);
+
     int32_t *src0Buff = (int32_t *)obj->src0;
     int32_t *src1Buff = (int32_t *)obj->src1;
 
@@ -386,8 +391,8 @@ static void MMAloadInit(MMALoadTestObj *obj)
 
 static void MMAloadDeInit(MMALoadTestObj *obj){
     appMemFree(APP_MEM_HEAP_L2, obj->src0, MMALIB_L2DATA_ALIGNMENT);
-    appMemFree(APP_MEM_HEAP_L2, obj->src1, MMALIB_L2DATA_ALIGNMENT);  
-    appMemFree(APP_MEM_HEAP_L2, obj->dst, MMALIB_L2DATA_ALIGNMENT);  
+    appMemFree(APP_MEM_HEAP_L2, obj->src1, MMALIB_L2DATA_ALIGNMENT);
+    appMemFree(APP_MEM_HEAP_L2, obj->dst, MMALIB_L2DATA_ALIGNMENT);
     appMemFree(APP_MEM_HEAP_DDR, obj->handle, obj->handleSize);
 }
 
@@ -578,7 +583,6 @@ int32_t appRemoteServiceTestHandler(char *service_name, uint32_t cmd, void *prm,
     {
         uint64_t global_time;
         uint32_t delay;
-
         delay = 1;
         if(prm!=NULL)
         {
@@ -711,7 +715,7 @@ int32_t appRemoteServiceTestRunCmd1(uint32_t cpu_id)
 
         appMemCacheWbInv((void*)virt_ptr, 256);
 
-        #if defined(A72) || defined(A53)
+        #if defined(A72) || defined(A53) || defined(A720)
         asm("    DSB SY");
         #endif
 
@@ -719,7 +723,7 @@ int32_t appRemoteServiceTestRunCmd1(uint32_t cpu_id)
 
         appMemCacheInv((void*)virt_ptr, 256);
 
-        #if defined(A72) || defined(A53)
+        #if defined(A72) || defined(A53) || defined(A720)
         asm("    DSB SY");
         #endif
 

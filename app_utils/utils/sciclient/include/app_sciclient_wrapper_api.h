@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2018 Texas Instruments Incorporated
+ * Copyright (c) 2018-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -63,9 +63,9 @@
 #ifndef APP_SCICLIENT_WRAPPER_API_H_
 #define APP_SCICLIENT_WRAPPER_API_H_
 
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
 #include <sciclient/sciclient.h>
-#else
+#elif defined(MCU_PLUS_SDK)
 #include <SystemP.h>
 #define SCICLIENT_SERVICE_WAIT_FOREVER SystemP_WAIT_FOREVER
 #endif

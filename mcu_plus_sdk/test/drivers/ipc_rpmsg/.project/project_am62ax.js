@@ -88,6 +88,7 @@ const libs_freertos_dm_r5f = {
         "sciserver.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
         "self_reset.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
         "unity.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
     ]
 };
 
@@ -112,6 +113,7 @@ const lnkfiles = {
         "linker.cmd",
     ]
 };
+
 
 const syscfgfile = "../example.syscfg";
 
@@ -166,7 +168,7 @@ const templates_freertos_c75 =
         output: "../main.c",
         options: {
             entryFunction: "test_main",
-            stackSize: 64*1024,
+            stackSize: 16*1024,
         },
     }
 ];
@@ -185,6 +187,12 @@ const templates_freertos_a53 =
         },
     }
 ];
+
+const defines_dm_r5f = {
+    common:[
+        "ENABLE_SCICLIENT_DIRECT",
+    ]
+}
 
 const buildOptionCombos = [
     { device: device, cpu: "mcu-r5fss0-0", cgt: "ti-arm-clang", board: "am62ax-sk", os: "freertos", isPartOfSystemProject: true},
@@ -244,6 +252,7 @@ function getComponentBuildProperty(buildOption) {
         build_property.libdirs = libdirs_freertos_dm_r5f;
         build_property.libs = libs_freertos_dm_r5f;
         build_property.templates = templates_freertos_dm_r5f;
+        build_property.defines = defines_dm_r5f;
     }
     else if(buildOption.cpu.match(/c75*/))
     {

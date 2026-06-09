@@ -1371,9 +1371,12 @@ Rationale: The component level negative test framework and test applications can
     }
     /* LDRA_JUSTIFY_END */
 
-    for (cnt = 0U; (cnt < CSL_LSE_MAX_OUTPUT_CH) &&
-            (FVID2_SOK == status); cnt ++)
+    for (cnt = 0U; cnt < CSL_LSE_MAX_OUTPUT_CH; cnt ++)
     {
+        if (FVID2_SOK != status)
+        {
+            break;
+        }
         outCfg = &cfg->outChCfg[cnt];
 
         if ((uint32_t)UTRUE == outCfg->enable)
@@ -1449,9 +1452,12 @@ Rationale: The component level negative test framework and test applications can
         }
     }
 
-    for (cnt = 0U; (cnt < CSL_LSE_MAX_INPUT_CH) &&
-            (FVID2_SOK == status); cnt ++)
+    for (cnt = 0U; cnt < CSL_LSE_MAX_INPUT_CH; cnt ++)
     {
+        if (FVID2_SOK != status)
+        {
+            break;
+        }
         inCfg = &cfg->inChCfg[cnt];
 
         if ((uint32_t)UTRUE == inCfg->enable)

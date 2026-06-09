@@ -38,6 +38,10 @@
 #include <drivers/bootloader.h>
 #include <drivers/pinmux.h>
 #include <drivers/gtc.h>
+#include <sdl/include/sdl_types.h>
+#include <sdl/dpl/sdl_dpl.h>
+#include <sdl/sdl_pbist.h>
+#include <sdl/sdl_lbist.h>
 
 /*  In this sample bootloader, we load appimages for RTOS/Baremetal and Linux at different offset
     i.e the appimage for Linux (for A53) and RTOS/Baremetal (for R5, MCU R5) is flashed at different offset in flash
@@ -51,12 +55,18 @@
     Linux appimage (for A53) flash at offset 0xC00000 of flash
 */
 
-void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle);
+/*
+ * Timeout for the PBIST/LBIST completion
+ */
+#define SDL_BIST_MAX_TIMEOUT_VALUE       (10000000u)
+
+/* Enable/Disable MCU LBIST on SBL */
+#define ENABLE_MCU_LBIST                 (0u)
 
 /* This buffer needs to be defined for OSPI nand boot in case of HS device for
    image authentication
    The size of the buffer should be large enough to accomodate the appimage */
-uint8_t gAppimage[0x800000] __attribute__ ((section (".app"), aligned (128)));
+uint8_t gAppimage[0x800000] __attribute__ ((section (".bss.app"), aligned (128)));
 
 /* call this API to stop the booting process and spin, do that you can connect
  * debugger, load symbols and then make the 'loop' variable as 0 to continue execution
@@ -69,19 +79,19 @@ void loop_forever()
         ;
 }
 
-int32_t App_loadSelfcoreImage(Bootloader_Handle bootHandle, Bootloader_BootImageInfo *bootImageInfo)
+int32_t App_loadSelfcoreImage(Bootloader_LoadImageParams *bootLoadParams)
 {
 	int32_t status = SystemP_FAILURE;
 
-    if(bootHandle != NULL)
+    if(bootLoadParams->bootHandle != NULL)
     {
-        status = Bootloader_parseMultiCoreAppImage(bootHandle, bootImageInfo);
+        status = Bootloader_parseMultiCoreAppImage(bootLoadParams->bootHandle, &bootLoadParams->bootImageInfo);
 
         if(status == SystemP_SUCCESS)
         {
-            bootImageInfo->cpuInfo[CSL_CORE_ID_WKUP_R5FSS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_WKUP_R5FSS0_0);
+            (&bootLoadParams->bootImageInfo)->cpuInfo[CSL_CORE_ID_WKUP_R5FSS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_WKUP_R5FSS0_0);
             Bootloader_profileAddCore(CSL_CORE_ID_WKUP_R5FSS0_0);
-            status = Bootloader_loadSelfCpu(bootHandle, &(bootImageInfo->cpuInfo[CSL_CORE_ID_WKUP_R5FSS0_0]));
+            status = Bootloader_loadSelfCpu(bootLoadParams->bootHandle, &((&bootLoadParams->bootImageInfo)->cpuInfo[CSL_CORE_ID_WKUP_R5FSS0_0]));
         }
     }
 
@@ -117,6 +127,93 @@ void App_driversOpen()
     }
 }
 
+int32_t App_waitForMcuPbist()
+{
+    int32_t status = SystemP_FAILURE;
+    int32_t timeoutCount = 0;
+
+    if (!Bootloader_socIsMCUResetIsoEnabled())
+    {
+        /* wait for the PBIST to be completed */
+        while(timeoutCount < SDL_BIST_MAX_TIMEOUT_VALUE)
+        {
+            if(PBIST_DONE == SDL_SBL_PBIST_checkDone(SDL_PBIST_INST_MCU))
+            {
+                status = SystemP_SUCCESS;
+                break;
+            }
+            timeoutCount++;
+        }
+    }
+    else
+    {
+        status = SystemP_SUCCESS;
+    }
+
+    return status;
+}
+
+
+int32_t App_startMcuLbist()
+{
+    int32_t status = SystemP_FAILURE;
+
+    /* Start LBIST if MCU reset isolation is not enabled */
+    if (!Bootloader_socIsMCUResetIsoEnabled())
+    {
+        if (SDL_LBIST_selfTest(LBIST_MCU_R5F, SDL_LBIST_TEST) == SDL_PASS)
+        {
+            status = SystemP_SUCCESS;
+        }
+    }
+    else
+    {
+        status = SystemP_SUCCESS;
+    }
+    return status;
+}
+
+int32_t App_waitForMcuLbist()
+{
+    int32_t status = SystemP_FAILURE;
+    int32_t timeoutCount = 0;
+
+    if (!Bootloader_socIsMCUResetIsoEnabled())
+    {
+        /* wait for the LBIST to be completed */
+        while(timeoutCount < SDL_BIST_MAX_TIMEOUT_VALUE)
+        {
+            if(LBIST_DONE == SDL_LBIST_checkDone(LBIST_MCU_R5F))
+            {
+                status = SystemP_SUCCESS;
+                break;
+            }
+            timeoutCount++;
+        }
+
+        if (status == SystemP_SUCCESS)
+        {
+            status = SDL_LBIST_selfTest(LBIST_MCU_R5F, SDL_LBIST_TEST_RELEASE);
+            timeoutCount = 0;
+            while(timeoutCount < SDL_BIST_MAX_TIMEOUT_VALUE)
+            {
+                if(LBIST_DONE == SDL_LBIST_checkDone(LBIST_MCU_R5F))
+                {
+                    status = SystemP_SUCCESS;
+                    break;
+                }
+                timeoutCount++;
+            }
+        }
+    }
+    else
+    {
+        status = SystemP_SUCCESS;
+    }
+
+    return status;
+}
+
 int main()
 {
     int32_t status;
@@ -124,23 +221,31 @@ int main()
     Bootloader_profileReset();
 
     Bootloader_socWaitForFWBoot();
-    status = Bootloader_socOpenFirewalls();
-
-    DebugP_assertNoLog(status == SystemP_SUCCESS);
-
 
     System_init();
     Module_clockSBLEnable();
     Module_clockSBLSetFrequency();
     Bootloader_profileAddProfilePoint("System_init");
 
+    status = Bootloader_socOpenFirewalls();
+    DebugP_assertNoLog(status == SystemP_SUCCESS);
+
+    /* wait for PBIST completion */
+    status = App_waitForMcuPbist();
+    Bootloader_profileAddProfilePoint("App_waitForMcuPbist");
+
+#if (ENABLE_MCU_LBIST == 1u)
+    /* start MCU LBIST*/
+    status = App_startMcuLbist();
+#endif
+    Board_init();
+    Bootloader_profileAddProfilePoint("Board_init");
+
     Drivers_open();
     Bootloader_profileAddProfilePoint("Drivers_open");
 
     App_driversOpen();
     Bootloader_profileAddProfilePoint("SBL Drivers_open");
-
-    flashFixUpOspiBoot(gOspiHandle[CONFIG_OSPI_SBL], gFlashHandle[CONFIG_FLASH_SBL]);
 
     status = Board_driversOpen();
     DebugP_assert(status == SystemP_SUCCESS);
@@ -152,28 +257,34 @@ int main()
 
     if(SystemP_SUCCESS == status)
     {
-        Bootloader_BootImageInfo bootImageInfoDM;
-		Bootloader_Params bootParamsDM;
-        Bootloader_Handle bootHandleDM;
+        Bootloader_openDma();
 
-        Bootloader_Params_init(&bootParamsDM);
+        Bootloader_LoadImageParams bootDM;
 
-        Bootloader_BootImageInfo_init(&bootImageInfoDM);
+        Bootloader_Params_init(&bootDM.bootParams);
 
-        bootHandleDM = Bootloader_open(CONFIG_BOOTLOADER_FLASH_SBL, &bootParamsDM);
+        Bootloader_BootImageInfo_init(&bootDM.bootImageInfo);
+
+        bootDM.bootHandle = Bootloader_open(CONFIG_BOOTLOADER_FLASH_SBL, &bootDM.bootParams);
 
         if(SystemP_SUCCESS == status)
 		{
-            if(bootHandleDM != NULL)
+            if(bootDM.bootHandle != NULL)
             {
-                ((Bootloader_Config *)bootHandleDM)->scratchMemPtr = gAppimage;
-                status = App_loadSelfcoreImage(bootHandleDM, &bootImageInfoDM);
+                ((Bootloader_Config *)bootDM.bootHandle)->scratchMemPtr = gAppimage;
+                status = App_loadSelfcoreImage(&bootDM);
                 Bootloader_profileAddProfilePoint("App_loadSelfcoreImage");
             }
         }
 
-        Bootloader_profileUpdateAppimageSize(Bootloader_getMulticoreImageSize(bootHandleDM));
+        Bootloader_profileUpdateAppimageSize(Bootloader_getMulticoreImageSize(bootDM.bootHandle));
         Bootloader_profileUpdateMediaAndClk(BOOTLOADER_MEDIA_FLASH, OSPI_getInputClk(gOspiHandle[CONFIG_OSPI_SBL]));
+
+#if (ENABLE_MCU_LBIST == 1u)
+        /* wait for LBIST completion */
+        status = App_waitForMcuLbist();
+        Bootloader_profileAddProfilePoint("App_waitForMcuLbist");
+#endif
 
 		if(SystemP_SUCCESS == status)
 		{
@@ -184,6 +295,9 @@ int main()
 			UART_flushTxFifo(gUartHandle[CONFIG_UART_SBL]);
 		}
 
+        Bootloader_close(bootDM.bootHandle);
+
+        Bootloader_closeDma();
     }
 
     if(status != SystemP_SUCCESS )
@@ -201,26 +315,8 @@ int main()
 
     Bootloader_JumpSelfCpu();
 
+    Board_deinit();
     System_deinit();
 
     return 0;
-}
-
-void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle)
-{
-    /*
-     *  In Fast XSPI mode, reintialization is not required unless
-     *  user configures it or PHY configuration failed
-     */
-    if(SystemP_SUCCESS != OSPI_skipProgramming(oHandle))
-    {
-        OSPI_setProtocol(oHandle, OSPI_FLASH_PROTOCOL(8,8,8,1));
-        OSPI_enableDDR(oHandle);
-        OSPI_setDualOpCodeMode(oHandle);
-        Flash_reset(fHandle);
-        OSPI_enableSDR(oHandle);
-        OSPI_clearDualOpCodeMode(oHandle);
-        OSPI_setProtocol(oHandle, OSPI_FLASH_PROTOCOL(1,1,1,0));
-    }
-
 }

@@ -15,14 +15,14 @@
 % let dmaRestrictRegions = module.getDmaRestrictedRegions();
 
 /* Regions restricted for DMA. We should use CPU memcpy in these cases */
-static OSPI_AddrRegion gOspiDmaRestrictRegions[] = 
+static OSPI_AddrRegion gOspiDmaRestrictRegions[] =
 {
 % for(let i = 0; i < dmaRestrictRegions.length; i++) {
     % let region = dmaRestrictRegions[i];
     {
         .regionStartAddr = `region.start`,
         .regionSize      = `region.size`,
-    },  
+    },
 % }
     {
         .regionStartAddr = 0xFFFFFFFFU,
@@ -40,20 +40,55 @@ static OSPI_Attrs gOspiAttrs[CONFIG_OSPI_NUM_INSTANCES] =
     {
         .baseAddr             = `config.baseAddr`,
         .dataBaseAddr         = `config.dataBaseAddr`,
+        .moduleId             = `config.clockFrequencies[0].moduleId`,
+        .clkId                = `config.clockFrequencies[0].clkId`,
         .inputClkFreq         = `config.inputClkFreq`U,
         .intrNum              = `config.intrNum`U,
         .intrEnable           = `config.intrEnable.toString(10).toUpperCase()`,
         .intrPriority         = `config.intrPriority`U,
         .dmaEnable            = `config.dmaEnable.toString(10).toUpperCase()`,
         .phyEnable            = `config.phyEnable.toString(10).toUpperCase()`,
-        .ospiSkipProg         = `config.ospiSkipProg.toString(10).toUpperCase()`,
+        .phySkipTuning        = `config.phySkipTuning.toString(10).toUpperCase()`,
         .dacEnable            = `config.dacEnable.toString(10).toUpperCase()`,
         .chipSelect           = OSPI_`config.chipSelect`,
         .frmFmt               = OSPI_FF_`config.frmFmt`,
         .decChipSelect        = `config.decChipSelect`,
+        .readMode             = OSPI_`config.readMode`,
         .baudRateDiv          = `config.baudRateDiv`,
         .phaseDelayElement    = `config.phaseDetectDelayElement`,
+        .validateOtp          = `config.validateOtp.toString(10).toUpperCase()`,
         .dmaRestrictedRegions = gOspiDmaRestrictRegions,
+        % if(config.phyEnable == true){
+        .phyConfiguration     = {
+            .phyControlMode = OSPI_FLASH_CFG_PHY_MASTER_CONTROL_REG_`config.phyControlMode.toUpperCase()`,
+            .dllLockMode    = OSPI_PHY_DLL_`config.dllLockMode.toUpperCase()`,
+            % if(config.protocol == "8d_8d_8d" || config.protocol == "4s_4d_4d"){
+            .phyParams = {
+                .radius = `config.radius.toString(10)`,
+                .rxTxDllMin = `config.rxTxDllMin.toString(10)`,
+                .rxTxDllMax = `config.rxTxDllMax.toString(10)`,
+                .minReadDelay = `config.minReadDelay.toString(10)`,
+                .maxReadDelay = `config.maxReadDelay.toString(10)`,
+                .minPassSize = `config.minPassSize.toString(10)`,
+                .diagonalShift = `config.diagonalShift.toString(10)`,
+                .maxDiagonalShift = `config.maxDiagonalShift.toString(10)`,
+                .numConsecutiveFail = `config.numConsecutiveFail.toString(10)`,
+                .numConsecutivePass = `config.numConsecutivePass.toString(10)`,
+                .rdDelaySearchStep = `config.rdDelaySearchStep.toString(10)`,
+            }
+            % }
+            % else{
+            .tuningWindowParams = {
+                .txDllHighWindowEnd     = `config.txDllHighWindowEnd.toString(10)`,
+                .rxLowSearchStart       = `config.rxLowSearchStart.toString(10)`,
+                .rxHighSearchEnd        = `config.rxHighSearchEnd.toString(10)`,
+                .rxTxDLLSearchStep      = `config.rxTxDLLSearchStep.toString(10)`,
+                .rdDelayMin             = `config.rdDelayMin.toString(10)`,
+                .rdDelayMax             = `config.rdDelayMax.toString(10)`,
+            }
+            %}
+        }
+        % }
     },
 % }
 };

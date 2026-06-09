@@ -97,6 +97,17 @@ $(_MODULE)_AOPT += --silicon_version=7504
 else ifeq ($(TARGET_CPU),C7524)
 $(_MODULE)_COPT += --silicon_version=7524
 $(_MODULE)_AOPT += --silicon_version=7524
+else ifeq ($(TARGET_CPU),C7604)
+$(_MODULE)_COPT += --silicon_version=7604
+$(_MODULE)_COPT += --mma_version=3_1024
+$(_MODULE)_COPT += --diag_suppress=303
+$(_MODULE)_COPT += --diag_suppress=770
+$(_MODULE)_COPT += --diag_suppress=69
+$(_MODULE)_COPT += --diag_suppress=70
+$(_MODULE)_COPT += -disable_inlining --endian=little
+$(_MODULE)_COPT += --diag_suppress=1
+$(_MODULE)_COPT += --vectypes=off
+$(_MODULE)_AOPT += --silicon_version=7604
 endif
 
 # Turn of C7x compiler advice, this is enabled from 4.1.0 version onwards

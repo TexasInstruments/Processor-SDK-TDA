@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -50,7 +50,17 @@ extern "C" {
  */
 
 /**
+ * \brief initialize PMU Cycle Counter
+ *
+ */
+void CycleCounterP_init(const uint64_t cpuFreqHz);
+
+/**
  * \brief Get 32b CPU cycle counter value
+ *
+ * For A53 and C75 CPUs, this API typecast a 64-bit register to 32-bit value.
+ * It is recommended to use CycleCounterP_getCount64() for A53 and C75 cores.
+ *
  *
  * Make sure to handle overflow condition in your application.
  *
@@ -70,7 +80,7 @@ void CycleCounterP_reset(void);
  * \brief Get 64b CPU cycle counter value
  *
  * Only support with below CPUs,
- * - A53
+ * - A53, C75
  *
  * \return 64b cycle counter value
  */

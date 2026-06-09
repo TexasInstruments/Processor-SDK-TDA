@@ -65,9 +65,9 @@
 const vector<TidlConstraint> tidlConstraintResize =
 {
     TIDL_CSTR(
-        "Number of non-singleton variable input dimensions must be less than <= 4",
-        "Number of non-singleton variable input dimensions must be less than <= 4",
-        "Number of non-singleton variable input dimensions must be less than <= 4",
+        "Number of non-singleton variable input dimensions must be <= 4",
+        "Number of non-singleton variable input dimensions must be <= 4",
+        "Number of non-singleton variable input dimensions must be <= 4",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
             int32_t numDims = tidlGetNonSingletonNumDims(layer->allowlistingMetaData.varTensorsDims[0]);
@@ -217,7 +217,7 @@ const vector<TidlConstraint> tidlConstraintResize =
                 int32_t coordinate_transformation_mode = layer->layerPCParams.resizeParams.coordinate_transformation_mode;
                 if(coordinate_transformation_mode == TIDL_Resize_align_corners)
                 {
-                    TIDL_GLOBAL_REPORT_WARNING("Resize layer - %s with 'align_corners' coordinate_transformation_mode is not optimal", (char*)layer->name);
+                    TIDL_GLOBAL_REPORT_WARNING("Resize layer - %s with 'align_corners' coordinate_transformation_mode is not optimal and might result in incorrect output", (char*)layer->name);
                 }
                 if(!(coordinate_transformation_mode == TIDL_Resize_half_pixel || coordinate_transformation_mode == TIDL_Resize_asymmetric
                     || coordinate_transformation_mode == TIDL_Resize_pytorch_half_pixel || coordinate_transformation_mode == TIDL_Resize_align_corners))

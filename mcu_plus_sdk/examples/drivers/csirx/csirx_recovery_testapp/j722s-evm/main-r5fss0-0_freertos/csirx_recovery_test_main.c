@@ -99,6 +99,7 @@
      '0': for Rev B or older boards.
      '1': for Rev C board. */
 #define FUSION_BOARD_VER                       (1U)
+
 /**< D3 IMX390 sensor type. */
 #define D3IMX390_CM_MODULE                     (0U)
 #define D3IMX390_RCM_MODULE                    (1U)
@@ -131,12 +132,12 @@
             (APP_CAPT_FRAME_HEIGHT * APP_CAPT_FRAME_WIDTH * APP_CAPT_FRAME_BPP))
 
 /**< For Ub960 Pattern Generator, most significant byte of active line length in
- * bytes 
+ * bytes
  */
 #define APP_CAPT_FRAME_LINE_LEN_HIGH           ((APP_CAPT_FRAME_PITCH & 0xFF00)>>8)
 
 /**< For Ub960 Pattern Generator, least significant byte of active line length in
- * bytes 
+ * bytes
  */
 #define APP_CAPT_FRAME_LINE_LEN_LOW            (APP_CAPT_FRAME_PITCH & 0x00FF)
 
@@ -147,7 +148,7 @@
 #define APP_CAPT_FRAME_HEIGHT_HIGH             ((APP_CAPT_FRAME_HEIGHT & 0xFF00)>>8)
 
 /**< For Ub960 Pattern Generator, least significant byte of number of active
- * lines per frame 
+ * lines per frame
  */
 #define APP_CAPT_FRAME_HEIGHT_LOW              (APP_CAPT_FRAME_HEIGHT & 0x00FF)
 
@@ -165,7 +166,7 @@
 /**< Print Driver Logs. Set to '1' to enable printing. */
 #define APP_PRINT_DRV_LOGS                                     (0U)
 
-#define SENSOR_CFG_SIZE  (3907U)
+#define SENSOR_CFG_SIZE  (3075U)
 
 /**
  * @{
@@ -240,7 +241,6 @@
 
 /**< Number of channels */
 #define APP_CAPT_CH_MAX                           ((uint32_t)4U)
-
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
@@ -289,7 +289,7 @@ typedef struct
 /**
  *  \brief Common application object.
  */
-typedef struct 
+typedef struct
 {
     Csirx_InitParams initPrms;
    /**< Csirx init time parameters */
@@ -316,7 +316,7 @@ static void CsirxApp_consolePrintf(const char *pcString, ...);
  * \brief   This function is ISR for timer interrupt
  *
  * \param   arg             CSI RX Capture Test Object
- *                          
+ *
  *
  * \retval  none.
  */
@@ -1193,7 +1193,7 @@ int Csirx_recoveryTest(void)
             }
         }
     }
-    
+
     /*  APP start */
     retVal = CsirxApp_csiTest(appCommonObj);
     if (FVID2_SOK != retVal)
@@ -1263,7 +1263,7 @@ void CsirxApp_timerIsr(void *arg)
     {
         TimerP_stop(gTimerBaseAddr[CONFIG_TIMER0]);
         timerIsrCount = 0;
-        
+
         // CsirxApp_CaptCommonObj *appCommonObj=(CsirxApp_CaptCommonObj*)arg;
         // /* Stop the streams immediately after the timeout is reached */
         // for(uint32_t i = 0U; i < APP_CAPT_TEST_INST_NUM; i++)
@@ -1359,7 +1359,7 @@ static int32_t CsirxApp_init(CsirxApp_CaptCommonObj* appCommonObj)
     Fvid2_InitPrms initPrms;
     Udma_InitPrms   udmaInitPrms;
     Udma_DrvHandle drvHandle;
-    
+
     /* set instance initialization parameters */
     /* This will be updated once UDMA init is done */
     Csirx_initParamsInit(&appCommonObj->initPrms);
@@ -1401,15 +1401,15 @@ static int32_t CsirxApp_recover(CsirxApp_CaptInstObj* appInstObj)
     int32_t retVal = FVID2_SOK;
     Csirx_DPhyCfg dphyCfg;
     uint8_t i2cAddr = 0U, regAddr8, regVal;
-    
+
     /* Fvid2_Stop */
     /* Stopped as part of the timer ISR, hence can be skipped here. */
-    
+
     /* Soft Resetting Deserializer */
     Board_fpdUb9702GetI2CAddr(&i2cAddr, appInstObj->boardCsiInstID);
 
     regAddr8 = UB9702_DESER_RESET_CTL_REG_ADDR;
-    regVal = UB9702_DESER_RESET_VALUE; 
+    regVal = UB9702_DESER_RESET_VALUE;
     Board_i2c8BitRegWr(gI2cHandle, i2cAddr, regAddr8, &regVal, 1,
                                 APP_I2C_TRANSACTION_TIMEOUT);
 
@@ -1606,7 +1606,7 @@ static int32_t CsirxApp_csiTest(CsirxApp_CaptCommonObj* appCommonObj)
                                 NULL,
                                 NULL);
 #endif
- 
+
         retVal += Fvid2_control(appCommonObj->appInstObj[i].drvHandle,
                                 IOCTL_CSIRX_GET_INST_STATUS,
                                 &appCommonObj->appInstObj[i].captStatus,
@@ -1662,7 +1662,7 @@ static int32_t CsirxApp_csiTest(CsirxApp_CaptCommonObj* appCommonObj)
                   appCommonObj->appInstObj[i].errFrmNo[loopCnt],
                   appCommonObj->appInstObj[i].errFrmTs[loopCnt]);
             }
- 
+
         }
 #endif
         GT_4trace(CsirxAppTrace, GT_INFO,
@@ -1913,6 +1913,8 @@ static int32_t CsirxApp_sensorConfig(CsirxApp_CaptInstObj* appInstObj)
     uint32_t sensorIdx;
     uint16_t regAddr;
     uint8_t i2cswitchreg;
+#else
+    uint8_t i2cswitchreg;
 #endif
     uint8_t i2cInst = 0U, i2cAddr = 0U, regAddr8, regVal;
 
@@ -1920,21 +1922,21 @@ static int32_t CsirxApp_sensorConfig(CsirxApp_CaptInstObj* appInstObj)
     uint32_t *sensorI2cAddr;
     uint16_t deSerConfig[500][3] = {};
 
-    /* 
+    /*
      * SOC GPIO0_68 CSI2_EXP_RSTz is muxed to Padconfig Package MMC2_DAT0
-     * Muxmode = 7 configures MMC2_DAT0 as GPIO_68 
+     * Muxmode = 7 configures MMC2_DAT0 as GPIO_68
      */
     Pinmux_config(gMainPinmuxData, PINMUX_DOMAIN_ID_MAIN);
 
-    /* 
-     * Set SOC GPIO0_68 CSI2_EXP_RSTz CSI2 Expansion Interface Reset as output 
-     * and write high for normal operation 
+    /*
+     * Set SOC GPIO0_68 CSI2_EXP_RSTz CSI2 Expansion Interface Reset as output
+     * and write high for normal operation
      */
     GPIO_setDirMode(CSL_GPIO0_BASE, CONFIG_GPIO0_PIN, GPIO_DIRECTION_OUTPUT);
     GPIO_pinWriteHigh(CSL_GPIO0_BASE, CONFIG_GPIO0_PIN);
-    
-    /* 
-     * 24bit I2C GPIO EXP1 TCA6424ARGJR (SLV ADDR 0x23) is connected to I2C0 
+
+    /*
+     * 24bit I2C GPIO EXP1 TCA6424ARGJR (SLV ADDR 0x23) is connected to I2C0
      * which needs to be programmed to use CSI fusion expansion boards connected
      * to Main I2C2 instance bus.
      */
@@ -1943,9 +1945,9 @@ static int32_t CsirxApp_sensorConfig(CsirxApp_CaptInstObj* appInstObj)
     {
         gI2cHandle = I2C_getHandle(BOARD_CSI_I2C_SWITCH_INSTANCE);
         /*
-         * CSI2_A Expansion Connector is connected to channel 0 of 2-Channel 
+         * CSI2_A Expansion Connector is connected to channel 0 of 2-Channel
          * I2C Bus Switch TCA9543APWR (Switch 1). A value of 0x01 needs to
-         * be programmed to enable Channel 0. The address of TCA9543APWR is 
+         * be programmed to enable Channel 0. The address of TCA9543APWR is
          * 0x70 on J7AEN (defined by hardware).
          */
         i2cswitchreg = 0x01;
@@ -1954,7 +1956,7 @@ static int32_t CsirxApp_sensorConfig(CsirxApp_CaptInstObj* appInstObj)
 
     /* Check for the Fusion2 board */
     uint8_t bDet = BFALSE;
-    bDet = Board_detectBoard(BOARD_ID_FUSION2, BOARD_CSI_I2C_SWITCH_INSTANCE); 
+    bDet = Board_detectBoard(BOARD_ID_FUSION2, BOARD_CSI_I2C_SWITCH_INSTANCE);
     if (BTRUE == bDet)
     {
         gFusion2Det = BTRUE;
@@ -2022,16 +2024,15 @@ static int32_t CsirxApp_sensorConfig(CsirxApp_CaptInstObj* appInstObj)
 
             timeOut = deSerConfig[cnt][2];
             status = Board_i2c8BitRegWr(gI2cHandle, i2cAddr, regAddr8, &regVal, 1,
-                                     APP_I2C_TRANSACTION_TIMEOUT);
+                                        APP_I2C_TRANSACTION_TIMEOUT);
             if (0U != status)
             {
                 GT_3trace(CsirxAppTrace,
-                          GT_INFO,
-                          APP_NAME ": Failed to Set de-serializer register %x: Value:%x\n instance %d\n",
-                          deSerConfig[cnt][0],
-                          deSerConfig[cnt][1],
-              appInstObj->instId
-              );
+                        GT_INFO,
+                        APP_NAME ": Failed to Set de-serializer register %x: Value:%x\n instance %d\n",
+                        deSerConfig[cnt][0],
+                        deSerConfig[cnt][1],
+                        appInstObj->instId);
                 break;
             }
             else
@@ -2052,7 +2053,7 @@ static int32_t CsirxApp_sensorConfig(CsirxApp_CaptInstObj* appInstObj)
                      cnt ++)
                 {
                     regAddr8 = gUb953SensorCfg[cnt][0] & 0xFF;
-                    if(0x07 == regAddr8) 
+                    if(0x07 == regAddr8)
                     {
                         if(D3IMX390_CM_MODULE == appInstObj->cameraSensor)
                         {
@@ -2064,98 +2065,98 @@ static int32_t CsirxApp_sensorConfig(CsirxApp_CaptInstObj* appInstObj)
                             regVal =  0x25;
                             timeOut = 0x80;
                         }
-                   }
-                   else if(0x0D == regAddr8)
-                   {
-                       if(D3IMX390_CM_MODULE == appInstObj->cameraSensor)
-                       {
+                    }
+                    else if(0x0D == regAddr8)
+                    {
+                        if(D3IMX390_CM_MODULE == appInstObj->cameraSensor)
+                        {
                             regVal =  0x01;
                             timeOut = 0x10;
-                       }
-                       else if (D3IMX390_RCM_MODULE == appInstObj->cameraSensor)
-                       {
+                        }
+                        else if (D3IMX390_RCM_MODULE == appInstObj->cameraSensor)
+                        {
                             regVal =  0x03;
                             timeOut = 0x10;
-                       }
-                   }
-                   else
-                   {
+                        }
+                    }
+                    else
+                    {
                         regVal = gUb953SensorCfg[cnt][1] & 0xFF;
                         timeOut = gUb953SensorCfg[cnt][2];
-                   }
-                   status = Board_i2c8BitRegWr(gI2cHandle,
-                                              i2cAddr,
-                                              regAddr8,
-                                              &regVal,
-                                              1,
-                                              APP_I2C_TRANSACTION_TIMEOUT);
+                    }
+                    status = Board_i2c8BitRegWr(gI2cHandle,
+                                                i2cAddr,
+                                                regAddr8,
+                                                &regVal,
+                                                1,
+                                                APP_I2C_TRANSACTION_TIMEOUT);
 
-                   if (0 != status)
-                   {
-                       GT_3trace(CsirxAppTrace, GT_INFO,
-                                 APP_NAME
-                                 ": Failed to Set UB953 register %x: Value:%x for CSIRX instance %d\n",
-                                 gUb953SensorCfg[cnt][0],
-                                 gUb953SensorCfg[cnt][1],
-                 appInstObj->instId);
-                      break;
-                   }
-                   else
-                   {
-                       App_wait(timeOut);
-                   }
-                }    
-             }        
+                    if (0 != status)
+                    {
+                        GT_3trace(CsirxAppTrace, GT_INFO,
+                                APP_NAME
+                                ": Failed to Set UB953 register %x: Value:%x for CSIRX instance %d\n",
+                                gUb953SensorCfg[cnt][0],
+                                gUb953SensorCfg[cnt][1],
+                                appInstObj->instId);
+                        break;
+                    }
+                    else
+                    {
+                        App_wait(timeOut);
+                    }
+                }
+             }
              else
              {
                  break;
              }
-         }
+        }
 
-         if (0 == status)
-         {
-              GT_1trace(CsirxAppTrace, GT_INFO,
-                        APP_NAME ": Configuring IMX390 Sensor for CSIRX instance %d\r\n",appInstObj->instId);
-         }
-         for (sensorIdx = 0U ; sensorIdx < APP_CAPT_CH_NUM ; sensorIdx++)
-         {
-             if (0 == status)
-             {
-                  /* Sensor 0 configuration */
-                  i2cAddr = sensorI2cAddr[sensorIdx];
-                  for (cnt = 0; cnt < SENSOR_CFG_SIZE; cnt ++)
-                  {
-                      regAddr = gSensorCfg[cnt][0];
-                      regVal = gSensorCfg[cnt][1];
-     
-                      status = Board_i2c16BitRegWr(gI2cHandle,
-                                                   i2cAddr,
-                                                   regAddr,
-                                                   &regVal,
-                                                   1,
-                                                   0,
-                                                   APP_I2C_TRANSACTION_TIMEOUT);
-                      if (0 != status)
-                      {
-                          GT_4trace(CsirxAppTrace, GT_INFO,
-                                         APP_NAME
-                                         ": Failed to Set Sensor%x register %x: Value:0x%x for CSIRX instance %d\n",
-                                         sensorIdx,
-                                         regAddr,
-                                         regVal,
-                                        appInstObj->instId);
-                          break;
-                      }
-                  }
-              }
-              else
-              {
-                  break;
-              }
-         }
+        if (0 == status)
+        {
+            GT_1trace(CsirxAppTrace, GT_INFO,
+                      APP_NAME ": Configuring IMX390 Sensor for CSIRX instance %d\r\n",appInstObj->instId);
+        }
+        for (sensorIdx = 0U ; sensorIdx < APP_CAPT_CH_NUM ; sensorIdx++)
+        {
+            if (0 == status)
+            {
+                /* Sensor 0 configuration */
+                i2cAddr = sensorI2cAddr[sensorIdx];
+                for (cnt = 0; cnt < SENSOR_CFG_SIZE; cnt ++)
+                {
+                    regAddr = gSensorCfg[cnt][0];
+                    regVal = gSensorCfg[cnt][1];
+
+                    status = Board_i2c16BitRegWr(gI2cHandle,
+                                                i2cAddr,
+                                                regAddr,
+                                                &regVal,
+                                                1,
+                                                0,
+                                                APP_I2C_TRANSACTION_TIMEOUT);
+                    if (0 != status)
+                    {
+                        GT_4trace(CsirxAppTrace, GT_INFO,
+                                APP_NAME
+                                ": Failed to Set Sensor%x register %x: Value:0x%x for CSIRX instance %d\n",
+                                sensorIdx,
+                                regAddr,
+                                regVal,
+                                appInstObj->instId);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
 #endif
-          if (0 == status)
-          {
+        if (0 == status)
+        {
             if(BTRUE == gFusion2Det)
             {
                 Board_fpdUb9702GetI2CAddr(&i2cAddr, appInstObj->boardCsiInstID);
@@ -2171,42 +2172,42 @@ static int32_t CsirxApp_sensorConfig(CsirxApp_CaptInstObj* appInstObj)
                 {
                     i2cAddr = 0x36U;
                 }
-                regAddr8 = 0x33;
-                regVal = 0x3;
-                status = Board_i2c8BitRegWr(gI2cHandle,
-                                            i2cAddr,
-                                            regAddr8,
-                                            &regVal,
-                                            1,
-                                            APP_I2C_TRANSACTION_TIMEOUT);
+            }
+            regAddr8 = 0x33;
+            regVal = 0x3;
+            status = Board_i2c8BitRegWr(gI2cHandle,
+                                        i2cAddr,
+                                        regAddr8,
+                                        &regVal,
+                                        1,
+                                        APP_I2C_TRANSACTION_TIMEOUT);
 
-                 if (0 != status)
-                {
-                    GT_1trace(CsirxAppTrace, GT_INFO,
-                              APP_NAME ": Failed to enable CSI port for CSIRX instance %d\n", appInstObj->instId);
-                }
+            if (0 != status)
+            {
+                GT_1trace(CsirxAppTrace, GT_INFO,
+                        APP_NAME ": Failed to enable CSI port for CSIRX instance %d\n", appInstObj->instId);
             }
             if (0U != retVal)
             {
                 GT_1trace(CsirxAppTrace, GT_INFO,
-                                APP_NAME ": ERROR in Sensor Configuration for CSIRX instace %d!!!\r\n",appInstObj->instId);
+                        APP_NAME ": ERROR in Sensor Configuration for CSIRX instace %d!!!\r\n",appInstObj->instId);
             }
             else
             {
                 GT_1trace(CsirxAppTrace, GT_INFO,
-                            APP_NAME ": Sensor Configuration done for CSIRX instance %d!!!\r\n",appInstObj->instId);
+                         APP_NAME ": Sensor Configuration done for CSIRX instance %d!!!\r\n",appInstObj->instId);
             }
-         }
-         else
-         {
-                GT_1trace(CsirxAppTrace, GT_INFO,
-                          APP_NAME ": Sensor Configuration Failed for CSIRX instance %d!!!\r\n",appInstObj->instId);
-         }
-    }    
-     
+        }
+        else
+        {
+            GT_1trace(CsirxAppTrace, GT_INFO,
+                    APP_NAME ": Sensor Configuration Failed for CSIRX instance %d!!!\r\n",appInstObj->instId);
+        }
+    }
+
     return (retVal);
-}    
-   
+}
+
 
 #if defined(FREERTOS)
 void CsirxApp_printLoad(void)

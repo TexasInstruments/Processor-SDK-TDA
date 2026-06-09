@@ -1,6 +1,6 @@
 /*
 *
-* Copyright (c) 2025 Texas Instruments Incorporated
+* Copyright (c) 2025-2026 Texas Instruments Incorporated
 *
 * All rights reserved not granted herein.
 *
@@ -69,12 +69,11 @@
 extern tivx_resource_stats_t g_tivx_resource_stats_table[TIVX_RESOURCE_STATS_TABLE_SIZE];
 extern uint32_t g_ipc_cpu_id_map[TIVX_CPU_ID_MAX];
 
-
 void ownPlatformGetTargetPerfStats(uint32_t app_cpu_id, uint32_t target_values[TIVX_TARGET_RESOURCE_COUNT])
 {
-    app_perf_stats_tiovx_stats_t tiovx_stats;
+/* Enable once perf_stats is enabled in app_utils
     int32_t status;
-
+    app_perf_stats_tiovx_stats_t tiovx_stats;
     status = appPerfStatsCpuTiovxStatsGet(app_cpu_id, &tiovx_stats);
 
     if (status == (vx_status)VX_SUCCESS)
@@ -84,6 +83,7 @@ void ownPlatformGetTargetPerfStats(uint32_t app_cpu_id, uint32_t target_values[T
         target_values[2] = tiovx_stats.target_kernel_instance_max;
         target_values[3] = tiovx_stats.target_kernel_max;
     }
+*/
 }
 
 void ownIpcGetCpuMap(uint32_t cpu_id_map[TIVX_CPU_ID_MAX])

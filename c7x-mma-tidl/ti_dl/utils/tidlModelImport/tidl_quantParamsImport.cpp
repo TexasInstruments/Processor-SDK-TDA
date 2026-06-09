@@ -518,70 +518,67 @@ void TIDL_populateTIDLPCNet(sTIDL_LayerPC_t *currPCLayer,
                             int32_t layerIndex, 
                             TIDLNetQuantParams *QuantParamsMsg)
 {
-  if (!QuantParamsMsg->layers(layerIndex).outputs(0).is_symmetric() &&
-      currPCLayer->layerType == TIDL_ConvolutionLayer)
+
+  // populate min/max for weight tensor
+  if(tensorQuantParams == TIDL_WEIGHT_QUANT_PARAMS)
   {
-    // populate bias tensor correctly
-    if(QuantParamsMsg->layers(layerIndex).bias_size() > 0)
+    if (QuantParamsMsg->layers(layerIndex).weights_size() > 0)
     {
-      int32_t size = QuantParamsMsg->layers(layerIndex).bias_size();
-      currPCLayer->quantParams[tensorQuantParams].size = size;
-
-      // store bias values
-      float ptr[size];
-      for(int i=0; i<size; i++)
+      float min = QuantParamsMsg->layers(layerIndex).weights(0).min();
+      float max = QuantParamsMsg->layers(layerIndex).weights(0).max();
+      for(int i= 0; i<QuantParamsMsg->layers(layerIndex).weights_size(); i++)
       {
-          ptr[i] = QuantParamsMsg->layers(layerIndex).bias(i).value(0);
+        min = std::min (min, QuantParamsMsg->layers(layerIndex).weights(i).min());
+        max = std::max (max, QuantParamsMsg->layers(layerIndex).weights(i).max());
       }
-
-      void* data = new void*[size];
-      memcpy(data, &ptr, size*sizeof(float));
-      currPCLayer->bias.ptr = data;
+      currPCLayer->quantParams[tensorQuantParams].min = min;
+      currPCLayer->quantParams[tensorQuantParams].max = max;
     }
   }
-  else
-  {
-    // populate min/max for weight tensor
-    if(tensorQuantParams == TIDL_WEIGHT_QUANT_PARAMS)
+  // populate min/max for bias tensor
+  else if(tensorQuantParams == TIDL_BIAS_QUANT_PARAMS){
+    if(QuantParamsMsg->layers(layerIndex).bias_size() > 0)
     {
-      if(QuantParamsMsg->layers(layerIndex).weights_size() > 0)
+      int32_t bias_size = QuantParamsMsg->layers(layerIndex).bias_size();
+      float min = QuantParamsMsg->layers(layerIndex).bias(0).min();
+      float max = QuantParamsMsg->layers(layerIndex).bias(0).max();
+      int32_t size = 0;
+      for (int i = 0; i < bias_size; i++)
       {
-        currPCLayer->quantParams[tensorQuantParams].min = QuantParamsMsg->layers(layerIndex).weights(0).min();
-        currPCLayer->quantParams[tensorQuantParams].max = QuantParamsMsg->layers(layerIndex).weights(0).max();
+        size += QuantParamsMsg->layers(layerIndex).bias(i).size();
+        min = std::min (min, QuantParamsMsg->layers(layerIndex).bias(i).min());
+        max = std::max (max, QuantParamsMsg->layers(layerIndex).bias(i).max());
       }
-    }
-    // populate min/max for bias tensor
-    else if(tensorQuantParams == TIDL_BIAS_QUANT_PARAMS){
-      if(QuantParamsMsg->layers(layerIndex).bias_size() > 0)
-      {
-        int32_t size = QuantParamsMsg->layers(layerIndex).bias(0).size();
-        currPCLayer->quantParams[tensorQuantParams].size = size;
-        currPCLayer->quantParams[tensorQuantParams].min = QuantParamsMsg->layers(layerIndex).bias(0).min();
-        currPCLayer->quantParams[tensorQuantParams].max = QuantParamsMsg->layers(layerIndex).bias(0).max();
+      currPCLayer->quantParams[tensorQuantParams].size = size;
+      currPCLayer->quantParams[tensorQuantParams].min = min;
+      currPCLayer->quantParams[tensorQuantParams].max = max;
 
-        if(size>0)
+      if(size>0)
+      {
+        // store bias values
+        int32_t offset = 0;
+        float ptr[size];
+        for(int i=0; i<bias_size; i++)
         {
-          // store bias values
-          float ptr[size];
-          for(int i=0; i<size; i++)
+          for (int j=0; j<QuantParamsMsg->layers(layerIndex).bias(i).size(); j++)
           {
-              ptr[i] = QuantParamsMsg->layers(layerIndex).bias(0).value(i);
+            ptr[offset++] = QuantParamsMsg->layers(layerIndex).bias(i).value(j);
           }
-
-          void* data = new void*[size];
-          memcpy(data, &ptr, size*sizeof(float));
-          currPCLayer->bias.ptr = data;
         }
+
+        void* data = new float[size];
+        memcpy(data, &ptr, size*sizeof(float));
+        currPCLayer->bias.ptr = data;
       }
     }
-    // populate min/max for slope tensor
-    else if(tensorQuantParams == TIDL_SLOPE_QUANT_PARAMS)
+  }
+  // populate min/max for slope tensor
+  else if(tensorQuantParams == TIDL_SLOPE_QUANT_PARAMS)
+  {
+    if(QuantParamsMsg->layers(layerIndex).slope_size() > 0)
     {
-      if(QuantParamsMsg->layers(layerIndex).slope_size() > 0)
-      {
-        currPCLayer->quantParams[tensorQuantParams].min = QuantParamsMsg->layers(layerIndex).slope(0).min();
-        currPCLayer->quantParams[tensorQuantParams].max = QuantParamsMsg->layers(layerIndex).slope(0).max();
-      }
+      currPCLayer->quantParams[tensorQuantParams].min = QuantParamsMsg->layers(layerIndex).slope(0).min();
+      currPCLayer->quantParams[tensorQuantParams].max = QuantParamsMsg->layers(layerIndex).slope(0).max();
     }
   }
 

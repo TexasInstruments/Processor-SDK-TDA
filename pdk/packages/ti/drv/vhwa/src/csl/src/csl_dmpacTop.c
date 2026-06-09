@@ -123,7 +123,7 @@ However, due to the stated rationale, this is not tested.
 }
 
 int32_t CSL_dmpacFocoSetConfig(CSL_dmpac_foco_coreRegs *focoRegs,
-                               uint32_t cn,
+                               uint32_t channel,
                                const Dmpac_FocoConfig *cfg)
 {
     volatile uint32_t regVal;
@@ -144,7 +144,7 @@ However, due to the stated rationale, this is not tested.
 /* LDRA_JUSTIFY_END */
     {
         /* Configure the DMPAC FOCO Module */
-        regVal = CSL_REG32_RD(&focoRegs->FOCO_CTRL[cn].CH_COUNT);
+        regVal = CSL_REG32_RD(&focoRegs->FOCO_CTRL[channel].CH_COUNT);
         CSL_FINS(
               regVal,
               DMPAC_FOCO_CORE_FOCO_CTRL_CH_COUNT_PRELOAD,
@@ -157,9 +157,9 @@ However, due to the stated rationale, this is not tested.
               regVal,
               DMPAC_FOCO_CORE_FOCO_CTRL_CH_COUNT_TRIG,
               cfg->trig);
-        CSL_REG32_WR(&focoRegs->FOCO_CTRL[cn].CH_COUNT, regVal);
+        CSL_REG32_WR(&focoRegs->FOCO_CTRL[channel].CH_COUNT, regVal);
 
-        regVal = CSL_REG32_RD(&focoRegs->FOCO_CTRL[cn].CH_CTRL);
+        regVal = CSL_REG32_RD(&focoRegs->FOCO_CTRL[channel].CH_CTRL);
         CSL_FINS(
               regVal,
               DMPAC_FOCO_CORE_FOCO_CTRL_CH_CTRL_CH_EN,
@@ -184,7 +184,7 @@ However, due to the stated rationale, this is not tested.
               regVal,
               DMPAC_FOCO_CORE_FOCO_CTRL_CH_CTRL_MASK,
               cfg->mask);
-        CSL_REG32_WR(&focoRegs->FOCO_CTRL[cn].CH_CTRL, regVal);
+        CSL_REG32_WR(&focoRegs->FOCO_CTRL[channel].CH_CTRL, regVal);
     }
 
     return status;

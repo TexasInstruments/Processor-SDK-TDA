@@ -11,6 +11,7 @@ const files_r5f = {
         "DebugP_memTraceLogWriter.c",
         "DebugP_log.c",
         "TimerP.c",
+        "HwiP_armv7r_exception_handlers_nortos.c",
         "HwiP_armv7r_vim.c",
         "MpuP_armv7r.c",
         "CacheP_armv7r.c",
@@ -30,13 +31,14 @@ const files_r5f = {
         "DebugP_shmLogReader_freertos.c",
         "TaskP_freertos.c",
         "EventP_freertos.c",
+        "MailboxP_freertos.c",
         // picked from freertos "kernel"
         "event_groups.c",
         "tasks.c",
         "timers.c",
         "queue.c",
         "list.c",
-        "heap_4.c",
+        "heap_3.c",
         // picked from freertos "posix"
         "FreeRTOS_POSIX_clock.c",
         "FreeRTOS_POSIX_mqueue.c",
@@ -77,6 +79,7 @@ const asmfiles_r5f = {
         // picked from nortos DPL
         "boot_armv7r_asm.S",
         "HwiP_armv7r_asm.S",
+        "HwiP_armv7r_exception_handlers_nortos_asm.S",
         "MpuP_armv7r_asm.S",
         "CacheP_armv7r_asm.S",
         "CpuId_armv7r_asm.S",

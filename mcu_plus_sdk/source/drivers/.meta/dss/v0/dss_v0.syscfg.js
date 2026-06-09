@@ -2,6 +2,7 @@ let common = system.getScript("/common");
 let hwi = system.getScript("/kernel/dpl/hwi.js");
 let pinmux = system.getScript("/drivers/pinmux/pinmux");
 let soc = system.getScript(`/drivers/dss/soc/dss_${common.getSocName()}`);
+let vesaTime = system.getScript(`/drivers/dss/dss_vesa_timings`);
 
 function getConfigArr() {
 	return soc.getConfigArr();
@@ -10,12 +11,28 @@ function getConfigArr() {
 function getInstanceConfig(moduleInstance) {
     let solution = moduleInstance[getInterfaceName(moduleInstance)].$solution;
     let configArr = getConfigArr();
-    // Cannot use this method as we have only one peripheral named DSS0, yet two instances of IP
-    // let config = configArr.find(o => o.name === solution.peripheralName);
-    // By default assuming DSS0, if detected otherwise, updating the config Index to retreive the correct config.
-    let config = configArr[0];
-    if (moduleInstance.$name == "CONFIG_DSS1"){
-        config = configArr[1];
+    let config = configArr.find(o => o.name === solution.peripheralName);
+
+    if(common.getSocName() == "am62lx" )
+    {
+        if(moduleInstance.selectDisplayInterface == "DPI")
+        {
+            config.clockIds = [...config.clockIdsVP1];
+            config.clockFrequencies = [...config.clockFrequenciesVP1];
+        }
+    }
+    else
+    {
+        if(moduleInstance.selectDisplayInterface == "OLDI")
+        {
+            config.clockIds = [...config.clockIdsVP1];
+            config.clockFrequencies = [...config.clockFrequenciesVP1];
+        }
+        else if(moduleInstance.selectDisplayInterface == "DPI")
+        {
+            config.clockIds = [...config.clockIdsVP2];
+            config.clockFrequencies = [...config.clockFrequenciesVP2];
+        }
     }
 
     config.clockFrequencies[0].clkRate = moduleInstance.pixelClkFreq;
@@ -43,8 +60,8 @@ function pinmuxRequirements(inst) {
 
     let resources = [];
     let pinResource = {};
-    // TODO add a function to return this display interface correclty, hardcoded for now
-    if(inst.selectDisplayInterface == "HDMI")
+
+    if(inst.selectDisplayInterface == "DPI")
     {
         pinResource = pinmux.getPinRequirements(interfaceName, "DATA0", "DSS DATA0 Pin");
         pinmux.setConfigurableDefault( pinResource, "rx", false );
@@ -198,7 +215,6 @@ function pinmuxRequirements(inst) {
         displayName: "DSS Instance",
         interfaceName: interfaceName,
         resources: resources,
-        canShareWith: ((inst) => "CONFIG_DSS1")
     };
 
     return [peripheral];
@@ -222,13 +238,44 @@ let default_frame_format = "BGRA32_8888";
 
 /* Add frame formats here and update the number of bytes pixel in the funtion below */
 const dss_frame_formats = [
-    { name : "BGRA32_8888", displayName : "BGRA32" },
-    { name : "ARGB32_8888", displayName : "ARGB32" },
-    { name : "RGBA32_8888", displayName : "RGBA32" },
-    { name : "RGB24_888", displayName : "RGB24" },
-    { name : "BGR24_888", displayName : "BGR24" },
-    { name : "YUV420SP_UV", displayName : "YUV420 Semi Planar" },
-    { name : "YUV422I_YUYV", displayName : "YUV422 Interleaved" },
+    /* 32-bit frame formats */
+    { name : "BGRA32_8888", displayName : "ARGB32-8888 (FVID2 : BGRA32_8888)" },
+    { name : "ARGB32_8888", displayName : "BGRA32-8888 (FVID2 : ARGB32_8888)" },
+    { name : "RGBA32_8888", displayName : "ABGR32-8888 (FVID2 : RGBA32_8888)" },
+    { name : "ABGR32_8888", displayName : "RGBA32-8888 (FVID2 : ABGR32_8888)" },
+    { name : "BGRA32_1010102", displayName : "ARGB32-2101010 (FVID2 : BGRA32_1010102)" },
+    { name : "RGBA32_1010102", displayName : "ABGR32-2101010 (FVID2 : RGBA32_1010102)" },
+    { name : "BGRX32_8888", displayName : "XRGB32-8888 (FVID2 : BGRX32_8888)" },
+    { name : "RGBX24_8888", displayName : "XBGR32-8888 (FVID2 : RGBX24_8888)" },
+    { name : "XBGR24_8888", displayName : "RGBX32-8888 (FVID2 : XBGR24_8888)" },
+    { name : "XRGB32_8888", displayName : "BGRX32-8888 (FVID2 : XRGB32_8888)" },
+    { name : "BGRX32_1010102", displayName : "XRGB32-2101010 (FVID2 : BGRX32_1010102)" },
+    { name : "RGBX32_1010102", displayName : "XBGR32-2101010 (FVID2 : RGBX32_1010102)" },
+    /* 24-bit frame formats */
+    { name : "RGB24_888", displayName : "BGR24-888 (FVID2 : RGB24_888)" },
+    { name : "BGR24_888", displayName : "RGB24-888 (FVID2 : BGR24_888)" },
+    /* 64-bit frame formats */
+    { name : "BGRA64_16161616", displayName :  "ARGB64-16161616 (FVID2 : BGRA64_16161616)" },
+    { name : "ABGR64_16161616", displayName :  "RGBA64-16161616 (FVID2 : ABGR64_16161616)" },
+    { name : "BGRX64_16161616", displayName :  "XRGB64-16161616 (FVID2 : BGRX64_16161616)" },
+    { name : "XBGR64_16161616", displayName :  "RGBX64-16161616 (FVID2 : XBGR64_16161616)" },
+    /* 16-bit frame formats */
+    { name : "BGRA16_4444", displayName :  "ARGB16-4444 (FVID2 : BGRA16_4444)" },
+    { name : "RGBA16_4444", displayName :  "ABGR16-4444 (FVID2 : RGBA16_4444)" },
+    { name : "ABGR16_4444", displayName :  "RGBA16-4444 (FVID2 : ABGR16_4444)" },
+    { name : "BGR16_565", displayName :  "RGB16-565 (FVID2 : BGR16_565)" },
+    { name : "RGB16_565", displayName :  "BGR16-565 (FVID2 : RGB16_565)" },
+    { name : "BGRA16_5551", displayName :  "ARGB16-1555 (FVID2 : BGRA16_5551)" },
+    { name : "RGBA16_5551", displayName :  "ABGR16-1555 (FVID2 : RGBA16_5551)" },
+    { name : "BGRX_4444", displayName :  "XRGB16-4444 (FVID2 : BGRX_4444)" },
+    { name : "RGBX16_4444", displayName :  "XBGR16-4444 (FVID2 : RGBX16_4444)" },
+    { name : "XBGR_4444", displayName :  "RGBX16-4444 (FVID2 : XBGR_4444)" },
+    { name : "BGRX16_5551", displayName :  "XRGB16-1555 (FVID2 : BGRX16_5551)" },
+    { name : "RGBX16_5551", displayName :  "XBGR16-1555 (FVID2 : RGBX16_5551)" },
+    /* YUV frame formats */
+    { name : "YUV420SP_UV", displayName :  "YUV420-NV12 (FVID2 : YUV420SP_UV)" },
+    { name : "YUV422I_YUYV", displayName :  "YUV422_YUV2 (FVID2 : YUV422I_YUYV)" },
+    { name : "YUV422I_UYVY", displayName :  "YUV422-UYVY (FVID2 : YUV422I_UYVY)" },
 ];
 
 function getBytesPerPixel(format)
@@ -238,14 +285,44 @@ function getBytesPerPixel(format)
         case "BGRA32_8888":
         case "ARGB32_8888":
         case "RGBA32_8888":
+        case "ABGR32_8888":
+        case "BGRA32_1010102":
+        case "RGBA32_1010102":
+        case "BGRX32_8888":
+        case "RGBX24_8888":
+        case "XBGR24_8888":
+        case "XRGB32_8888":
+        case "BGRX32_1010102":
+        case "RGBX32_1010102":
             return 4;
         case "RGB24_888":
         case "BGR24_888":
             return 3;
-        case "YUV422I_YUYV":
+        case "BGRA64_16161616":
+        case "ABGR64_16161616":
+        case "XBGR64_16161616":
+        case "BGRX64_16161616":
+            return 8;
+        case "BGRA16_4444":
+        case "RGBA16_4444":
+        case "ABGR16_4444":
+        case "BGR16_565":
+        case "RGB16_565":
+        case "BGRA16_5551":
+        case "RGBA16_5551":
+        case "BGRX_4444":
+        case "RGBX16_4444":
+        case "XBGR_4444":
+        case "BGRX16_5551":
+        case "RGBX16_5551":
             return 2;
+        case "YUV422I_YUYV":
+        case "YUV422I_UYVY":
+            return 2;
+        /* Planar format -> 3/2 bytes per pixel */
         case "YUV420SP_UV":
-            return 1.5;
+            return Math.floor(3/2);
+
     }
 }
 
@@ -286,16 +363,25 @@ function getVideoPipelineChange(inst,ui)
     else
     {
 
-        if(inst.selectVideoPipeline == "VID1")
+        if(inst.dispShare == true)
         {
             inst.zorder0 = "VID1";
+            inst.zorder1 =  "VIDL1";
+            ui.zorder1.hidden = false;
         }
         else
         {
-            inst.zorder0 = "VIDL1";
-        }
+            if(inst.selectVideoPipeline == "VID1")
+            {
+                inst.zorder0 = "VID1";
+            }
+            else
+            {
+                inst.zorder0 = "VIDL1";
+            }
 
-        ui.zorder1.hidden = true;
+            ui.zorder1.hidden = true;
+        }
 
         if(inst.selectVideoPipeline == "VIDL1")
         {
@@ -351,6 +437,90 @@ function getVideoPipelineChange(inst,ui)
     }
 }
 
+function getPanelAttributes(dispInterface, resolution)
+{
+    switch(dispInterface)
+    {
+        case "OLDI":
+            return soc.getDefaultOldiPanelAttributes();
+        case "DPI":
+        {
+            let configArr = vesaTime.getVesaTiming();
+            let config = configArr.find(o => o.resolution.name === resolution);
+            return config;
+        }
+        default:
+        {
+            if(soc.getOLDISupported() == true)
+            {
+                return soc.getDefaultOldiPanelAttributes();
+            }
+            else
+            {
+                let configArr = vesaTime.getVesaTiming();
+                let config = configArr.find(o => o.resolution.name === "1080P_60");
+                return config;
+            }
+        }
+
+    }
+}
+
+function getDisplayShareFunctionality(hidecofigs)
+{
+    if(common.getSocName() == "am62x" || common.getSocName() == "am62lx")
+    {
+        return true;
+    }
+
+    return hidecofigs;
+}
+
+function getDisplayInterfaceChange(inst,ui)
+{
+    let hidecofigs = false;
+
+    if (inst.selectDisplayInterface == "DPI")
+    {
+        hidecofigs = true;
+    }
+
+    ui.oldiMapType.hidden = hidecofigs;
+    ui.oldiBitDepth.hidden = hidecofigs;
+    ui.oldiDataEnablePolarity.hidden = hidecofigs;
+    ui.dualModeSync.hidden = hidecofigs;
+
+    if(inst.selectDisplayInterface == "OLDI")
+    {
+        inst.pixelClkFreq = soc.getDefaultOldiPixelFreq();
+    }
+    else if(inst.selectDisplayInterface == "DPI")
+    {
+        inst.pixelClkFreq = getPanelAttributes(inst.selectDisplayInterface, inst.selectDPIResolution).pixelClock;
+    }
+
+    inst.panelWidth =  getPanelAttributes(inst.selectDisplayInterface, inst.selectDPIResolution).width;
+    inst.panelHeight = getPanelAttributes(inst.selectDisplayInterface, inst.selectDPIResolution).height;
+    inst.hBackPorch = getPanelAttributes(inst.selectDisplayInterface, inst.selectDPIResolution).horizontalBackPorch;
+    inst.hFrontPorch = getPanelAttributes(inst.selectDisplayInterface, inst.selectDPIResolution).horizontalFrontPorch;
+    inst.vBackPorch = getPanelAttributes(inst.selectDisplayInterface, inst.selectDPIResolution).verticalBackPorch;
+    inst.vFrontPorch = getPanelAttributes(inst.selectDisplayInterface, inst.selectDPIResolution).verticalFrontPorch;
+    inst.hSyncLength = getPanelAttributes(inst.selectDisplayInterface, inst.selectDPIResolution).hsycnLength;
+    inst.vSyncLength = getPanelAttributes(inst.selectDisplayInterface, inst.selectDPIResolution).vsyncLength;
+
+    if(inst.vidOutputFrameWidth + inst.vidPosX > inst.panelWidth)
+    {
+        inst.vidPosX = inst.panelWidth - inst.vidOutputFrameWidth;
+    }
+    if(inst.vidOutputFrameHeight + inst.vidPosY > inst.panelHeight)
+    {
+        inst.vidPosY = inst.panelHeight - inst.vidOutputFrameHeight;
+    }
+
+    inst.vidlPosX = inst.panelWidth - inst.vidlOutputFrameWidth;
+    inst.vidlPosY = inst.panelHeight - inst.vidlOutputFrameHeight;
+}
+
 let dss_module_name = "/drivers/dss/dss";
 
 let dss_module = {
@@ -358,13 +528,13 @@ let dss_module = {
 
     templates: {
         "/drivers/system/system_config.c.xdt": {
-            driver_config: "/drivers/dss/templates/dss_config.c.xdt",
+            driver_config: "/drivers/dss/templates/v0/dss_config.c.xdt",
         },
         "/drivers/system/system_config.h.xdt": {
-            driver_config: "/drivers/dss/templates/dss.h.xdt",
+            driver_config: "/drivers/dss/templates/v0/dss.h.xdt",
         },
         "/drivers/system/drivers_open_close.h.xdt": {
-            driver_open_close_config: "/drivers/dss/templates/dss_open_close.h.xdt",
+            driver_open_close_config: "/drivers/dss/templates/v0/dss_open_close.h.xdt",
         },
         "/drivers/pinmux/pinmux_config.c.xdt": {
             moduleName: dss_module_name,
@@ -389,7 +559,16 @@ let dss_module = {
             name: "selectVideoPipeline",
             displayName: "Video Pipeline",
             default: soc.getDefaultVideoPipeline().name,
-            options: soc.getVideoPipeline(),
+            options: function (inst) {
+
+                if(inst.dispShare == true)
+                {
+                    return [{ name : "VID1", displayName : "VID" },
+                    { name : "VIDL1", displayName : "VIDL" }];
+                }
+
+                return soc.getVideoPipeline();
+            },
             hidden: false,
             onChange: function(inst,ui){
                 getVideoPipelineChange(inst,ui);
@@ -401,21 +580,16 @@ let dss_module = {
             default: soc.getDefaultOverlayManager().name,
             options: soc.getOverlayManager(),
             getDisabledOptions : (inst) => {
-                if(inst.$name == "CONFIG_DSS0")
+                if(inst.dispShare == true)
                 {
-                    return [{ name : "OVR3", displayName : "OVR3", reason:"Not supported for DSS0"},
-                        { name : "OVR4", displayName : "OVR4", reason:"Not supported for DSS0"}
-                    ];
+                    return [{ name : "OVR2", displayName : "OVR2", reason:"Not supported for configuration"}];
                 }
-                else if (inst.$name == "CONFIG_DSS1")
+                else
                 {
-                    return [{ name : "OVR1", displayName : "OVR1", reason:"Not supported for DSS1"},
-                        { name : "OVR2", displayName : "OVR2", reason:"Not supported for DSS1"},
-                        { name : "OVR3", displayName : "OVR3", reason:"Not enabled for DSS1"}
-                    ];
+                    return soc.getDisabledOverlayManager();
                 }
-            },
 
+            },
         },
         {
             name: "selectVP",
@@ -423,132 +597,79 @@ let dss_module = {
             default: soc.getDefaultVideoPort().name,
             options: soc.getVideoPort(),
             getDisabledOptions : (inst) => {
-                if(inst.$name == "CONFIG_DSS0")
+                if(inst.dispShare == true)
                 {
-                    return [{ name : "VP3", displayName : "OVR3", reason:"Not supported for DSS0"},
-                        { name : "VP4", displayName : "OVR4", reason:"Not supported for DSS0"}
-                    ];
+                    return [{ name : "VP2", displayName : "VP2", reason:"Not supported for configuration"}];
                 }
-                else if (inst.$name == "CONFIG_DSS1")
+                else
                 {
-                    return [{ name : "VP1", displayName : "VP1", reason:"Not supported for DSS1"},
-                        { name : "VP2", displayName : "VP2", reason:"Not supported for DSS1"},
-                        { name : "VP3", displayName : "VP3", reason:"Not enabled for DSS1"}
-                    ];
+                    return soc.getDisabledVideoPort();
                 }
-            },
-
+            }
         },
         {
             name: "selectDisplayInterface",
             displayName: "Display Interface",
             default: soc.getDefaultDisplayInterface().name,
             options: soc.getDisplayInterface(),
-            onChange: function (inst, ui) {
-                if (inst.selectDisplayInterface == "OLDI") {
-                    /* Make Oldi hidden as false */
-                    ui.oldiMapType.hidden = false;
-                    ui.oldiBitDepth.hidden = false;
-                    ui.oldiDataEnablePolarity.hidden = false;
-                    ui.dualModeSync.hidden = false;
-
-                    inst.pixelClkFreq = 1051925000;
-                    inst.panelWidth =  1920;
-                    inst.panelHeight = 1200;
-                    inst.hBackPorch = 32;
-                    inst.hFrontPorch = 52;
-                    inst.vBackPorch = 24;
-                    inst.vFrontPorch = 8;
-                    inst.hSyncLength = 24;
-                    inst.vSyncLength = 3;
-                }
-                else if (inst.selectDisplayInterface == "HDMI") {
-
-                    /* Make Oldi hidden as true */
-                    ui.oldiMapType.hidden = true;
-                    ui.oldiBitDepth.hidden = true;
-                    ui.oldiDataEnablePolarity.hidden = true;
-                    ui.dualModeSync.hidden = true;
-
-                    inst.pixelClkFreq = 148500000;
-                    inst.panelWidth =  1920;
-                    inst.panelHeight =  1080;
-                    inst.hBackPorch = 148;
-                    inst.hFrontPorch = 88;
-                    inst.vBackPorch = 36;
-                    inst.vFrontPorch = 4;
-                    inst.hSyncLength = 44;
-                    inst.vSyncLength = 5;
-                }
-                else if (inst.selectDisplayInterface == "DSI") {
-
-                    /* Make OLDI hidden as true */
-                    ui.oldiMapType.hidden = true;
-                    ui.oldiBitDepth.hidden = true;
-                    ui.oldiDataEnablePolarity.hidden = true;
-                    ui.dualModeSync.hidden = true;
-
-                    inst.pixelClkFreq = 150000000;
-                    inst.panelWidth =  1920;
-                    inst.panelHeight =  1080;
-                    inst.hBackPorch = 40;
-                    inst.hFrontPorch = 8;
-                    inst.vBackPorch = 55;
-                    inst.vFrontPorch = 60;
-                    inst.hSyncLength = 32;
-                    inst.vSyncLength = 55;
-
-                    inst.hSyncPolarity = "POL_LOW";
-                    inst.vSyncPolarity = "POL_LOW";
-                }
-            },
-            getDisabledOptions : (inst) => {
-                if(inst.$name == "CONFIG_DSS0")
+            onChange: function (inst, ui)
+            {
+                if(inst.selectDisplayInterface == "OLDI")
                 {
-                    return [{ name : "DSI", displayName : "DSI Panel", reason:"Not supported for DSS0"} ];
+                    ui.selectDPIResolution.hidden = true;
+                    inst.selectDPIResolution = vesaTime.getDefaultVesaTiming().resolution.name;
                 }
-                else if (inst.$name == "CONFIG_DSS1")
+                else if(inst.selectDisplayInterface == "DPI")
                 {
-                    return [{ name : "HDMI", displayName : "HDMI Panel", reason:"Not enabled for DSS1"},
-                        { name : "OLDI", displayName : "OLDI Panel", reason:"Not enabled for DSS1"}
-                    ];
+                    inst.selectDPIResolution = vesaTime.getDefaultVesaTiming().resolution.name;
+                    ui.selectDPIResolution.hidden = false;
                 }
-            },
+                getDisplayInterfaceChange(inst,ui);
+            }
+        },
+        {
+            name : "selectDPIResolution",
+            displayName : "DPI Resolution",
+            default : vesaTime.getDefaultVesaTiming().resolution.name,
+            hidden : soc.getOLDISupported(),
+            options : vesaTime.getVesaResolution(),
+            onChange: function (inst, ui)
+            {
+                getDisplayInterfaceChange(inst,ui);
+            }
         },
         {
             name: "numFramesPerPipeline",
             displayName: "Pipeline Frames",
             description: "Number of frames per pipeline",
             default: 2,
-            displayFormat : "dec"
+            displayFormat : "dec",
+            hidden: false,
         },
         {
-            name : "splashScreen",
-            displayName : "Enable Splash Screen",
+            name : "dispShare",
+            displayName : "Display Share With HLOS",
             default : false,
-            onChange: function(inst, ui)
-            {
-                ui.splashImageAddress.hidden = true;
+            hidden: getDisplayShareFunctionality(false),
+            onChange: function(inst,ui){
 
-                if(inst.splashScreen == true)
+                if(inst.dispShare == true)
                 {
-                    ui.splashImageAddress.hidden = false;
+                    inst.selectVideoPipeline = "VIDL1";
+                    getVideoPipelineChange(inst,ui);
+                    inst.selectVP = soc.getDefaultVideoPort().name;
+                    inst.selectOverlayManager = soc.getDefaultOverlayManager().name;
+                    inst.selectDisplayInterface = soc.getDefaultDisplayInterface().name;
+                    ui.selectDPIResolution.hidden = true;
+                    inst.selectDPIResolution = vesaTime.getDefaultVesaTiming().resolution.name;
+                    getDisplayInterfaceChange(inst,ui);
+                }
+                else
+                {
+                    inst.selectVideoPipeline = "All";
+                    getVideoPipelineChange(inst,ui);
                 }
             }
-
-        },
-        {
-            name : "loadBuffersRuntime",
-            displayName : "Load custom frames at runtime",
-            default : false,
-
-        },
-        {
-            name : "splashImageAddress",
-            displayName : "Splash Image Address",
-            default : 0xA00000,
-            displayFormat : "hex",
-            hidden : true,
         },
         {
             name : "vidPipelineConfig",
@@ -558,37 +679,59 @@ let dss_module = {
                 {
                     name: "vidFrameFormat",
                     displayName: "Frame Format",
+                    longDescription: "\n \
+        Frame formats are based on FVID2 layer. \n \
+        Please refer to FVID2 datatypes.h to know more about frame formats pixel alignment. \n \
+        \n \
+        FVID2_DF_ARGB32_8888 \n \
+        In 8-bit byte memory  \n \
+        B0       B1       B2        B3       B4       B5       B6      B7 \n \
+        ========================================================================== \n \
+        |  A    |  R     | G      |  B     |    A  |    R    |    G   |   B   |     \n \
+        ==========================================================================  \n \
+        \n \
+        FVID2_DF_YUV422I_UYVY   \n \
+        B0      B1       B2        B3        B4        B5        B6       B7    \n \
+        =========================================================================   \n \
+        |  U    |  Y     | V      |  Y       |  U     |  Y      |  V     |   Y   |  \n \
+        =========================================================================   \n \
+        \n \
+        FVID2_DF_ARGB16_4444 \n \
+        B0      B1       B2        B3        B4        B5        B6      B7 \n \
+        ======================================================================  \n \
+        |  AR   |  GB   | AR    |   GB     |   AR   |    GB   |    AR  |   GB | \n \
+        ======================================================================  \n \ ",
                     default: default_frame_format,
                     options: dss_frame_formats,
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDPipeline(),
                 },
                 {
                     name: "vidInputFrameWidth",
                     displayName: "Input Frame Width",
                     default : 480,
                     displayFormat: "dec",
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDPipeline(),
                 },
                 {
                     name: "vidInputFrameheight",
                     displayName: "Input Frame Height",
                     default : 360,
                     displayFormat: "dec",
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDPipeline(),
                 },
                 {
                     name: "vidOutputFrameWidth",
                     displayName: "Output Frame Width",
                     default : 720,
                     displayFormat: "dec",
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDPipeline(),
                 },
                 {
                     name: "vidOutputFrameHeight",
                     displayName: "Output Frame Height",
                     default : 540,
                     displayFormat: "dec",
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDPipeline(),
                 },
                 {
                     name : "vidPosX",
@@ -596,7 +739,7 @@ let dss_module = {
                     description: "X axis position of frame in pixel",
                     default: 0,
                     displayFormat : "dec",
-                    hidden: false
+                    hidden: !soc.getDefaultVIDPipeline()
                 },
                 {
                     name : "vidPosY",
@@ -604,14 +747,14 @@ let dss_module = {
                     description: "Y axis position of frame in pixel",
                     default: 0,
                     displayFormat : "dec",
-                    hidden: false
+                    hidden: !soc.getDefaultVIDPipeline()
                 },
                 {
                     name : "vidGlobalAlpha",
                     displayName: "Global Alpha",
                     default : 0xFF,
                     displayFormat : "hex",
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDPipeline(),
                 },
                 {
                     name : "vidPremultiplyAlpha",
@@ -624,7 +767,7 @@ let dss_module = {
                         {name :"false", displayName: "Disable"},
                         {name :"true", displayName : "Enable"}
                     ],
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDPipeline(),
                 },
                 {
                     name : "vidScaler",
@@ -635,7 +778,7 @@ let dss_module = {
                         {name : "true", displayName :"Enable"},
                         {name : "false", displayName : "Disable"}
                     ],
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDPipeline(),
 
                 },
                 {
@@ -646,7 +789,7 @@ let dss_module = {
                         { name : "false", displayName: "Disable" },
                         { name : "true", displayName : "Enable" },
                     ],
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDPipeline(),
                 }
             ]
         },
@@ -658,37 +801,59 @@ let dss_module = {
                 {
                     name: "vidlFrameFormat",
                     displayName: "Frame Format",
+                    longDescription: "\n \
+        Frame formats are based on FVID2 layer. \n \
+        Please refer to FVID2 datatypes.h to know more about frame formats pixel alignment. \n \
+        \n \
+        FVID2_DF_ARGB32_8888 \n \
+        In 8-bit byte memory  \n \
+        B0       B1       B2        B3       B4       B5       B6      B7 \n \
+        ========================================================================== \n \
+        |  A    |  R     | G      |  B     |    A  |    R    |    G   |   B   |     \n \
+        ==========================================================================  \n \
+        \n \
+        FVID2_DF_YUV422I_UYVY   \n \
+        B0      B1       B2        B3        B4        B5        B6       B7    \n \
+        =========================================================================   \n \
+        |  U    |  Y     | V      |  Y       |  U     |  Y      |  V     |   Y   |  \n \
+        =========================================================================   \n \
+        \n \
+        FVID2_DF_ARGB16_4444 \n \
+        B0      B1       B2        B3        B4        B5        B6      B7 \n \
+        ======================================================================  \n \
+        |  AR   |  GB   | AR    |   GB     |   AR   |    GB   |    AR  |   GB | \n \
+        ======================================================================  \n \ ",
                     default: default_frame_format,
                     options: dss_frame_formats,
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDLPipeline(),
                 },
                 {
                     name: "vidlInputFrameWidth",
                     displayName: "Input Frame Width",
                     default : 480,
                     displayFormat: "dec",
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDLPipeline(),
                 },
                 {
                     name: "vidlInputFrameheight",
                     displayName: "Input Frame Height",
                     default : 360,
                     displayFormat: "dec",
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDLPipeline(),
                 },
                 {
                     name: "vidlOutputFrameWidth",
                     displayName: "Output Frame Width",
                     default : 480,
                     displayFormat: "dec",
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDLPipeline(),
                 },
                 {
                     name: "vidlOutputFrameHeight",
                     displayName: "Output Frame Height",
                     default : 360,
                     displayFormat: "dec",
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDLPipeline(),
                 },
                 {
                     name : "vidlPosX",
@@ -696,22 +861,22 @@ let dss_module = {
                     description: "X axis position of frame in pixel",
                     default: 1440,
                     displayFormat : "dec",
-                    hidden: false
+                    hidden: !soc.getDefaultVIDLPipeline()
                 },
                 {
                     name : "vidlPosY",
                     displayName: "Y Axis Position",
                     description: "Y axis position of frame in pixel",
-                    default: 720,
+                    default: soc.getDefaultDisplayInterface().name == "DPI" ? 720 : 840,
                     displayFormat : "dec",
-                    hidden: false
+                    hidden: !soc.getDefaultVIDLPipeline()
                 },
                 {
                     name : "vidlGlobalAlpha",
                     displayName: "Global Alpha",
                     default : 0xFF,
                     displayFormat : "hex",
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDLPipeline(),
                 },
                 {
                     name : "vidlPremultiplyAlpha",
@@ -724,7 +889,7 @@ let dss_module = {
                         {name :"false", displayName: "Disable"},
                         {name :"true", displayName : "Enable"}
                     ],
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDLPipeline(),
                 },
                 {
                     name : "vidlSafetyConfig",
@@ -734,7 +899,94 @@ let dss_module = {
                         { name : "false", displayName: "Disable" },
                         { name : "true", displayName : "Enable" },
                     ],
-                    hidden : false,
+                    hidden : !soc.getDefaultVIDLPipeline(),
+                }
+            ]
+        },
+        {
+
+            name: "ovrConfig",
+            displayName: "Overlay Manager Configuration",
+            collapsed: true,
+            config: [
+                {
+                    name: "colorBarEnable",
+                    displayName: "Colorbar",
+                    description: "Enable colorbar",
+                    default: "false",
+                    options: [
+                        { name: "true", displayName: "Enable" },
+                        { name: "false", displayName: "Disable" }
+                    ],
+                    onChange : function(inst,ui) {
+
+                        getVideoPipelineChange(inst,ui);
+
+                        if (inst.colorBarEnable == "false")
+                        {
+
+                            ui.dispShare.hidden = getDisplayShareFunctionality(false);
+                            ui.numFramesPerPipeline.hidden = false;
+                            ui.vpSafetyConfig.hidden = false;
+                        }
+                        else
+                        {
+
+                            ui.dispShare.hidden = getDisplayShareFunctionality(true);
+                            ui.numFramesPerPipeline.hidden = true;
+                            ui.vpSafetyConfig.hidden = true;
+                        }
+                    }
+                },
+                {
+                    name: "colorKeyEnable",
+                    displayName: "Transparency Color Key",
+                    description: "Transparency Color Key Enable",
+                    default: "false",
+                    options: [
+                        { name: "true", displayName: "Enable" },
+                        { name: "false", displayName: "Disable" }
+                    ]
+                },
+                {
+                    name: "colorKeySelection",
+                    displayName: "Transparency Color Key Selection",
+                    longDescription: `Transparency Color Key Selection for Source or Destination\n` + "\n" +
+                        `0 : Destination transparency color key selected\n` + "\n" +
+                        `1 : Source transparency color key selected\n`,
+                    default: "TRANS_COLOR_DEST",
+                    options: [
+                        { name: "TRANS_COLOR_DEST", displayName: "Destination" },
+                        { name: "TRANS_COLOR_SRC", displayName: "Source" }
+                    ]
+                },
+                {
+                    name: "backgroundColor",
+                    displayName: "Background Color",
+                    description: "Default solid background color",
+                    default: 0xc8c800,
+                    displayFormat: "hex"
+                },
+                {
+                    name: "layerConfig",
+                    displayName: "Overlay Layer Configuration",
+                    collapsed: true,
+                    config: [
+                        {
+                            name: "zorder0",
+                            displayName: "Layer 0 Input",
+                            default: soc.getZorder0DefaultLayer().name,
+                            hidden: false,
+                            options: soc.getZorderOptions(),
+                        },
+                        {
+                            name: "zorder1",
+                            displayName: "Layer 1 Input",
+                            default: soc.getZorder1DefaultLayer().name,
+                            hidden : soc.getZorder1DefaultLayer().ui,
+                            options: soc.getZorderOptions(),
+                        }
+                    ]
                 }
             ]
         },
@@ -752,56 +1004,56 @@ let dss_module = {
                     name: "panelWidth",
                     displayName: "Panel Width",
                     description: "Width of Panel in pixel",
-                    default: soc.getPanelAttributes().width,
+                    default: getPanelAttributes().width,
                     displayFormat: "dec",
                 },
                 {
                     name: "panelHeight",
                     displayName: "Panel Height",
                     description: "Height of Panel in pixel",
-                    default: soc.getPanelAttributes().height,
+                    default: getPanelAttributes().height,
                     displayFormat: "dec",
                 },
                 {
                     name: "hBackPorch",
                     displayName: "Horizontal Back Porch",
                     description: "Horizontal Back Porch in pixel",
-                    default: soc.getPanelAttributes().horizontalBackPorch,
+                    default: getPanelAttributes().horizontalBackPorch,
                     displayFormat: "dec",
                 },
                 {
                     name: "hFrontPorch",
                     displayName: "Horizontal Front Porch",
                     description: "Horizontal Front Porch in pixel",
-                    default: soc.getPanelAttributes().horizontalFrontPorch,
+                    default: getPanelAttributes().horizontalFrontPorch,
                     displayFormat: "dec",
                 },
                 {
                     name: "vBackPorch",
                     displayName: "Vertical Back Porch",
                     description: "Vertical Back Porch in pixel",
-                    default: soc.getPanelAttributes().verticalBackPorch,
+                    default: getPanelAttributes().verticalBackPorch,
                     displayFormat: "dec",
                 },
                 {
                     name: "vFrontPorch",
                     displayName: "Vertical Front Porch",
                     description: "Veritcal Front Porch in pixel",
-                    default: soc.getPanelAttributes().verticalFrontPorch,
+                    default: getPanelAttributes().verticalFrontPorch,
                     displayFormat: "dec",
                 },
                 {
                     name: "hSyncLength",
                     displayName: "Horizontal Sync Length",
                     description: "Horizontal sync length in pixel",
-                    default: soc.getPanelAttributes().hsycnLength,
+                    default: getPanelAttributes().hsycnLength,
                     displayFormat: "dec",
                 },
                 {
                     name: "vSyncLength",
                     displayName: "Vertical Sync Length",
                     description: "Vertical sync length in pixel",
-                    default: soc.getPanelAttributes().vsyncLength,
+                    default: getPanelAttributes().vsyncLength,
                     displayFormat: "dec",
                 },
                 {
@@ -909,143 +1161,9 @@ let dss_module = {
                                 { name : "true", displayName : "Enable" },
                             ],
                         }
-
                     ],
                 },
-                {
-                    name : "vpGammaConfig",
-                    displayName : "Enable VP Gamma Correction",
-                    default : "false",
-                    hidden: false,
-                    options: [
-                        { name : "false", displayName: "Disable" },
-                        { name : "true", displayName : "Enable" },
-                    ],
-                }
             ],
-        },
-        {
-
-            name: "ovrConfig",
-            displayName: "Overlay Manager Configuration",
-            collapsed: true,
-            config: [
-                {
-                    name: "colorBarEnable",
-                    displayName: "Colorbar",
-                    description: "Enable colorbar",
-                    default: "false",
-                    options: [
-                        { name: "true", displayName: "Enable" },
-                        { name: "false", displayName: "Disable" }
-                    ],
-                    onChange : function(inst,ui) {
-                        if (inst.colorBarEnable == "false") {
-
-                            ui.vidFrameFormat.hidden = false;
-                            ui.vidInputFrameWidth.hidden = false;
-                            ui.vidInputFrameheight.hidden = false;
-                            ui.vidOutputFrameWidth.hidden = false;
-                            ui.vidOutputFrameHeight.hidden = false;
-                            ui.vidPosX.hidden = false;
-                            ui.vidPosY.hidden = false;
-                            ui.vidGlobalAlpha.hidden = false;
-                            ui.vidPremultiplyAlpha.hidden = false;
-                            ui.vidScaler.hidden = false;
-
-                            ui.vidlFrameFormat.hidden = false;
-                            ui.vidlInputFrameWidth.hidden = false;
-                            ui.vidlInputFrameheight.hidden = false;
-                            ui.vidlOutputFrameWidth.hidden = false;
-                            ui.vidlOutputFrameHeight.hidden = false;
-                            ui.vidlPosX.hidden = false;
-                            ui.vidlPosY.hidden = false;
-                            ui.vidlGlobalAlpha.hidden = false;
-                            ui.vidlPremultiplyAlpha.hidden = false;
-                            ui.selectVideoPipeline.hidden = false;
-                        }
-                        else
-                        {
-                            ui.vidFrameFormat.hidden = true;
-                            ui.vidInputFrameWidth.hidden = true;
-                            ui.vidInputFrameheight.hidden = true;
-                            ui.vidOutputFrameWidth.hidden = true;
-                            ui.vidOutputFrameHeight.hidden = true;
-                            ui.vidPosX.hidden = true;
-                            ui.vidPosY.hidden = true;
-                            ui.vidGlobalAlpha.hidden = true;
-                            ui.vidPremultiplyAlpha.hidden = true;
-                            ui.vidScaler.hidden = true;
-
-                            ui.vidlFrameFormat.hidden = true;
-                            ui.vidlInputFrameWidth.hidden = true;
-                            ui.vidlInputFrameheight.hidden = true;
-                            ui.vidlOutputFrameWidth.hidden = true;
-                            ui.vidlOutputFrameHeight.hidden = true;
-                            ui.vidlPosX.hidden = true;
-                            ui.vidlPosY.hidden = true;
-                            ui.vidlGlobalAlpha.hidden = true;
-                            ui.vidlPremultiplyAlpha.hidden = true;
-                            ui.selectVideoPipeline.hidden = true;
-                        }
-                    }
-                },
-                {
-                    name: "colorKeyEnable",
-                    displayName: "Transparency Color Key",
-                    description: "Transparency Color Key Enable",
-                    default: "false",
-                    options: [
-                        { name: "true", displayName: "Enable" },
-                        { name: "false", displayName: "Disable" }
-                    ]
-                },
-                {
-                    name: "colorKeySelection",
-                    displayName: "Transparency Color Key Selection",
-                    longDescription: `Transparency Color Key Selection for Source or Destination\n` + "\n" +
-                        `0 : Destination transparency color key selected\n` + "\n" +
-                        `1 : Source transparency color key selected\n`,
-                    default: "TRANS_COLOR_DEST",
-                    options: [
-                        { name: "TRANS_COLOR_DEST", displayName: "Destination" },
-                        { name: "TRANS_COLOR_SRC", displayName: "Source" }
-                    ]
-                },
-                {
-                    name: "backgroundColor",
-                    displayName: "Background Color",
-                    description: "Default solid background color",
-                    default: 0xc8c800,
-                    displayFormat: "hex"
-                },
-                {
-                    name: "layerConfig",
-                    displayName: "Overlay Layer Configuration",
-                    collapsed: true,
-                    config: [
-                        {
-                            name: "zorder0",
-                            displayName: "Layer 0 Input",
-                            default: "VID1",
-                            options: [
-                                { name: "VID1", displayName: "VID" },
-                                { name: "VIDL1", displayName: "VIDL" }
-                            ],
-                        },
-                        {
-                            name: "zorder1",
-                            displayName: "Layer 1 Input",
-                            default: "VIDL1",
-                            hidden : false,
-                            options: [
-                                { name: "VID1", displayName: "VID" },
-                                { name: "VIDL1", displayName: "VIDL" }
-                            ],
-                        }
-                    ]
-                }
-            ]
         },
         {
             name : "oldiConfig",
@@ -1056,23 +1174,92 @@ let dss_module = {
                     name : "oldiMapType",
                     displayName: "OLDI Map Type",
                     default: "OLDI_MAP_TYPE_F",
-                    hidden: false,
+                    hidden: !soc.getOLDISupported(),
                     options : [
                         { name: "OLDI_MAP_TYPE_F", displayName : "DUAL LINK 24 BIT VESA"},
+                        { name: "OLDI_MAP_TYPE_E", displayName : "DUAL LINK 24 BIT JEIDA"},
+                        { name: "OLDI_MAP_TYPE_D", displayName : "DUAL LINK 18 BIT"},
                         { name: "OLDI_MAP_TYPE_C", displayName : "SINGLE LINK 24 BIT VESA"},
+                        { name: "OLDI_MAP_TYPE_B", displayName : "SINGLE LINK 24 BIT JEIDA"},
+                        { name: "OLDI_MAP_TYPE_A", displayName : "SINGLE LINK 18 BIT"},
+                    ],
+                    getDisabledOptions : function(inst){
+                        if(inst.oldiBitDepth == "24_BITS")
+                        {
+                            let disableOption = [];
 
-                    ]
+                            disableOption.push({ name: "OLDI_MAP_TYPE_D", displayName : "DUAL LINK 18 BIT" , reason:"Input Bit Depth is 24 bits."},
+                            { name: "OLDI_MAP_TYPE_A", displayName : "SINGLE LINK 18 BIT", reason:"Input Bit Depth is 24 bits."});
+
+                            if(inst.dualModeSync == "OLDI_DUALMODESYNC_ENABLE")
+                            {
+                                disableOption.push({ name: "OLDI_MAP_TYPE_C", displayName : "SINGLE LINK 24 BIT VESA", reason:"Dual mode sync is enabled."},
+                                { name: "OLDI_MAP_TYPE_B", displayName : "SINGLE LINK 24 BIT JEIDA", reason:"Dual mode sync is enabled."});
+                            }
+                            else
+                            {
+                                disableOption.push({ name: "OLDI_MAP_TYPE_F", displayName : "DUAL LINK 24 BIT VESA", reason:"Dual mode sync is disabled."},
+                                { name: "OLDI_MAP_TYPE_E", displayName : "DUAL LINK 24 BIT JEIDA", reason:"Dual mode sync is disabled."});
+                            }
+
+                            return disableOption;
+                        }
+                        else
+                        {
+                            let disableOption = [];
+
+                            disableOption.push({ name: "OLDI_MAP_TYPE_C", displayName : "SINGLE LINK 24 BIT VESA", reason:"Input Bit Depth is 18 bits."},
+                                { name: "OLDI_MAP_TYPE_B", displayName : "SINGLE LINK 24 BIT JEIDA", reason:"Input Bit Depth is 18 bits."},
+                                { name: "OLDI_MAP_TYPE_F", displayName : "DUAL LINK 24 BIT VESA", reason:"Input Bit Depth is 18 bits."},
+                                { name: "OLDI_MAP_TYPE_E", displayName : "DUAL LINK 24 BIT JEIDA", reason:"Input Bit Depth is 18 bits."},);
+
+                            if(inst.dualModeSync == "OLDI_DUALMODESYNC_ENABLE")
+                            {
+                                disableOption.push({ name: "OLDI_MAP_TYPE_A", displayName : "SINGLE LINK 18 BIT", reason:"Dual mode sync is enabled."});
+                            }
+                            else
+                            {
+                                disableOption.push({ name: "OLDI_MAP_TYPE_D", displayName : "DUAL LINK 18 BIT" , reason:"Dual mode sync is disabled."});
+                            }
+
+                            return disableOption;
+                        }
+                    }
                 },
                 {
                     name : "oldiBitDepth",
                     displayName: "Input Bit Depth",
                     description : "Input RGB data Bit Depth from DSS",
                     default : "24_BITS",
-                    hidden: false,
+                    hidden: !soc.getOLDISupported(),
                     options : [
                         {name : "24_BITS", displayName : "24 Bit"},
                         {name : "18_BITS", displayName : "18 Bit"}
-                    ]
+                    ],
+                    onChange: function (inst){
+                        if(inst.oldiBitDepth == "24_BITS")
+                        {
+                            if(inst.dualModeSync == "OLDI_DUALMODESYNC_ENABLE")
+                            {
+                                inst.oldiMapType = "OLDI_MAP_TYPE_F";
+                            }
+                            else
+                            {
+                                inst.oldiMapType = "OLDI_MAP_TYPE_C";
+                            }
+                        }
+                        else
+                        {
+                            if(inst.dualModeSync == "OLDI_DUALMODESYNC_ENABLE")
+                            {
+                                inst.oldiMapType = "OLDI_MAP_TYPE_D";
+                            }
+                            else
+                            {
+                                inst.oldiMapType = "OLDI_MAP_TYPE_A";
+                            }
+                        }
+                    }
                 },
                 {
                     name : "oldiDataEnablePolarity",
@@ -1081,7 +1268,7 @@ let dss_module = {
                                    0 : DE is active-high\n, \
                                    1 : DE is active-low",
                     default : "POL_LOW",
-                    hidden: false,
+                    hidden: !soc.getOLDISupported(),
                     options: [
                         { name : "POL_HIGH", displayName : "Active High Polarity" },
                         { name : "POL_LOW", displayName : "Active Low Polarity"}
@@ -1092,11 +1279,35 @@ let dss_module = {
                     name : "dualModeSync",
                     displayName: "Dual Mode Sync",
                     default : "OLDI_DUALMODESYNC_ENABLE",
-                    hidden: false,
+                    hidden: !soc.getOLDISupported(),
                     options : [
                         {name : "OLDI_DUALMODESYNC_ENABLE", displayName: "Enable"},
                         {name : "OLDI_DUALMODESYNC_DISABLE", displayName : "Disable"}
-                    ]
+                    ],
+                    onChange : function(inst){
+                        if(inst.oldiBitDepth == "24_BITS")
+                        {
+                            if(inst.dualModeSync == "OLDI_DUALMODESYNC_ENABLE")
+                            {
+                                inst.oldiMapType = "OLDI_MAP_TYPE_F";
+                            }
+                            else
+                            {
+                                inst.oldiMapType = "OLDI_MAP_TYPE_C";
+                            }
+                        }
+                        else
+                        {
+                            if(inst.dualModeSync == "OLDI_DUALMODESYNC_ENABLE")
+                            {
+                                inst.oldiMapType = "OLDI_MAP_TYPE_D";
+                            }
+                            else
+                            {
+                                inst.oldiMapType = "OLDI_MAP_TYPE_A";
+                            }
+                        }
+                    }
 
                 }
             ]
@@ -1110,8 +1321,10 @@ let dss_module = {
     getPeripheralPinNames,
     getClockEnableIds,
     getClockFrequencies,
-    getBytesPerPixel
+    getBytesPerPixel,
+
 };
+
 
 function addModuleInstances(instance) {
     let modInstances = new Array();
@@ -1200,6 +1413,22 @@ function addModuleInstances(instance) {
         }
     }
 
+    if(instance.selectDisplayInterface == "DPI")
+    {
+        modInstances.push({
+            name: "DPIPanel",
+            displayName: "DPI Panel/Bridge",
+            moduleName: 'board/panel/panel',
+            useArray: true,
+            minInstanceCount: 1,
+            maxInstanceCount: 1,
+            requiredArgs: {
+                resolutionDPI : instance.selectDPIResolution,
+                ownedBy : true
+            },
+        })
+    }
+
     return modInstances;
 }
 
@@ -1218,37 +1447,45 @@ function validate(inst, report) {
 
     if(inst.selectVideoPipeline == "VID1" )
     {
-        if(inst.vidOutputFrameWidth > inst.panelWidth){
-            report.logError("Output frame width is more than the panel width in pixels.", inst, "vidOutputFrameWidth");
+        if(inst.vidOutputFrameWidth + inst.vidPosX > inst.panelWidth){
+            report.logError("Output frame width and output frame position together are more than the panel width in pixels.", inst, "vidOutputFrameWidth");
+            report.logError("Output frame width and output frame position together are more than the panel width in pixels.", inst, "vidPosX");
         }
-        if(inst.vidOutputFrameHeight > inst.panelHeight){
-            report.logError("Output frame height is more than the panel height in pixels.", inst, "vidOutputFrameHeight");
+        if(inst.vidOutputFrameHeight + inst.vidPosY > inst.panelHeight){
+            report.logError("Output frame height and output frame position together are more than the panel height in pixels.", inst, "vidOutputFrameHeight");
+            report.logError("Output frame height and output frame position together are more than the panel height in pixels.", inst, "vidPosY");
         }
         common.validate.checkNumberRange(inst, report, "vidGlobalAlpha", 0x0, 0xFF, "hex");
     }
     else if(inst.selectVideoPipeline == "VIDL1")
     {
-        if(inst.vidlOutputFrameWidth > inst.panelWidth){
-            report.logError("Output frame width is more than the panel width in pixels.", inst, "vidlOutputFrameWidth");
+        if(inst.vidlOutputFrameWidth + inst.vidlPosX > inst.panelWidth){
+            report.logError("Output frame width and output frame position together are more than the panel width in pixels.", inst, "vidlOutputFrameWidth");
+            report.logError("Output frame width and output frame position together are more than the panel width in pixels.", inst, "vidlPosX");
         }
-        if(inst.vidlOutputFrameHeight > inst.panelHeight){
-            report.logError("Output frame height is more than the panel height in pixels.", inst, "vidlOutputFrameHeight");
+        if(inst.vidlOutputFrameHeight + inst.vidlPosY > inst.panelHeight){
+            report.logError("Output frame height and output frame position together are more than the panel height in pixels.", inst, "vidlOutputFrameHeight");
+            report.logError("Output frame height and output frame position together are more than the panel height in pixels.", inst, "vidlPosY");
         }
         common.validate.checkNumberRange(inst, report, "vidlGlobalAlpha", 0x0, 0xFF, "hex");
     }
     else
     {
-        if(inst.vidOutputFrameWidth > inst.panelWidth){
-            report.logError("Output frame width is more than the panel width in pixels.", inst, "vidOutputFrameWidth");
+        if(inst.vidOutputFrameWidth + inst.vidPosX > inst.panelWidth){
+            report.logError("Output frame width and output frame position together are more than the panel width in pixels.", inst, "vidOutputFrameWidth");
+            report.logError("Output frame width and output frame position together are more than the panel width in pixels.", inst, "vidPosX");
         }
-        if(inst.vidOutputFrameHeight > inst.panelHeight){
-            report.logError("Output frame height is more than the panel height in pixels.", inst, "vidOutputFrameHeight");
+        if(inst.vidOutputFrameHeight + inst.vidPosY > inst.panelHeight){
+            report.logError("Output frame height and output frame position together are more than the panel height in pixels.", inst, "vidOutputFrameHeight");
+            report.logError("Output frame height and output frame position together are more than the panel height in pixels.", inst, "vidPosY");
         }
-        if(inst.vidlOutputFrameWidth > inst.panelWidth){
-            report.logError("Output frame width is more than the panel width in pixels.", inst, "vidlOutputFrameWidth");
+        if(inst.vidlOutputFrameWidth + inst.vidlPosX > inst.panelWidth){
+            report.logError("Output frame width and output frame position together are more than the panel width in pixels.", inst, "vidlOutputFrameWidth");
+            report.logError("Output frame width and output frame position together are more than the panel width in pixels.", inst, "vidlPosX");
         }
-        if(inst.vidlOutputFrameHeight > inst.panelHeight){
-            report.logError("Output frame height is more than the panel height in pixels.", inst, "vidlOutputFrameHeight");
+        if(inst.vidlOutputFrameHeight + inst.vidlPosY > inst.panelHeight){
+            report.logError("Output frame height and output frame position together are more than the panel height in pixels.", inst, "vidlOutputFrameHeight");
+            report.logError("Output frame height and output frame position together are more than the panel height in pixels.", inst, "vidlPosY");
         }
 
         common.validate.checkNumberRange(inst, report, "vidGlobalAlpha", 0x0, 0xFF, "hex");
@@ -1257,85 +1494,25 @@ function validate(inst, report) {
 
     common.validate.checkNumberRange(inst, report, "backgroundColor", 0x0, 0xFFFFFFFF, "hex");
 
-    if(inst.selectVideoPipeline == "All" && inst.zorder0 == inst.zorder1)
+
+    if((inst.selectVideoPipeline == "All" || inst.dispShare == true ) && inst.zorder0 == inst.zorder1)
     {
         report.logError("ZORDER for different layers can not point to the same pipeline", inst, "zorder0");
     }
-    if(inst.selectVideoPipeline != "All" && inst.zorder0 != inst.selectVideoPipeline)
+    if(inst.selectVideoPipeline != "All" && inst.dispShare == false && inst.zorder0 != inst.selectVideoPipeline)
     {
         report.logError("Selected pipeline is different for Zorder",inst, "zorder0");
     }
 
-    if(inst.selectDisplayInterface == "OLDI" && inst.selectVP == "VP2")
+    if((inst.selectOverlayManager == "OVR1" && inst.selectVP != "VP1") || (inst.selectOverlayManager == "OVR2" && inst.selectVP != "VP2"))
     {
-        report.logError("OLDI can not be used with VP 2.", inst, "selectVP");
-    }
-    else if(inst.selectDisplayInterface == "HDMI" && inst.selectVP == "VP1")
-    {
-        report.logError("HDMI can not be used with VP 1.", inst, "selectVP");
+        report.logError("Selected Video Port does not link with selected overlay manager.",inst, "selectVP");
     }
 
-    if(inst.selectOverlayManager == "OVR1" && inst.selectVP == "VP2")
+    if((inst.selectVP == "VP1" && inst.selectDisplayInterface != soc.getConnectDisplayInterface(inst.selectVP)) ||
+       (inst.selectVP == "VP2" && inst.selectDisplayInterface != soc.getConnectDisplayInterface(inst.selectVP)))
     {
-        report.logError("VP1 must be used with OVR1.", inst, "selectVP");
-    }
-    if (inst.selectOverlayManager == "OVR2" && inst.selectVP == "VP1")
-    {
-        report.logError("VP2 must be used with OVR2.", inst, "selectVP");
-    }
-
-    // if (inst.selectDisplayInterface == "DSI" && inst. == "VP1")
-    // {
-    //     report.logError("VP2 must be used with OVR2.", inst, "selectVP");
-    // }
-
-
-    if(inst.selectDisplayInterface == "OLDI")
-    {
-        if (inst.pixelClkFreq != 1051925000 ||
-        inst.panelWidth !=  1920 ||
-        inst.panelHeight != 1200 ||
-        inst.hBackPorch != 32 ||
-        inst.hFrontPorch != 52 ||
-        inst.vBackPorch != 24 ||
-        inst.vFrontPorch != 8 ||
-        inst.hSyncLength != 24 ||
-        inst.vSyncLength != 3 )
-        {
-            report.logError("Only 1920x1200 is supported on OLDI.", inst, "selectVP");
-        }
-    }
-
-    if(inst.selectDisplayInterface == "HDMI")
-    {
-        if (inst.pixelClkFreq != 148500000 ||
-        inst.panelWidth !=  1920 ||
-        inst.panelHeight !=  1080 ||
-        inst.hBackPorch != 148 ||
-        inst.hFrontPorch != 88 ||
-        inst.vBackPorch != 36 ||
-        inst.vFrontPorch != 4 ||
-        inst.hSyncLength != 44 ||
-        inst.vSyncLength != 5 )
-        {
-            report.logError("Only 1920x1080@60 with standard VESA timings is supported on HDMI.", inst, "selectVP");
-        }
-    }
-
-    if(inst.selectDisplayInterface == "DSI")
-    {
-        if (inst.pixelClkFreq != 150000000 ||
-        inst.panelWidth !=  1920 ||
-        inst.panelHeight !=  1080 ||
-        inst.hBackPorch != 40 ||
-        inst.hFrontPorch != 8 ||
-        inst.vBackPorch != 55 ||
-        inst.vFrontPorch != 60 ||
-        inst.hSyncLength != 32 ||
-        inst.vSyncLength != 55 )
-        {
-            report.logError("Only 1920x1080@60 with provided parameters is supported on DSI.", inst, "selectVP");
-        }
+        report.logError("Selected display interface does not link with selected video port.",inst, "selectDisplayInterface");
     }
 
 }

@@ -712,74 +712,78 @@ s32 boardcfg_pm_receive_and_validate(u8		host __attribute__((unused)),
 	soc_phys_addr_t boardcfg_addr;
 	static struct boardcfg_abi_pm_rev local_pm_abi;
 
-	if (ft_is_false(extboot_is_present())) {
-		boardcfg_addr = soc_phys_create(boardcfg_pmp_low, boardcfg_pmp_high);
+	if (local_pm_config.config_pm_received == FT_FALSE) {
+		local_pm_config.config_pm_received = FT_TRUE;
 
-		/* Only copy over the ABI field first */
-		ret = boardcfg_memcpy_abi((local_phys_addr_t) &local_pm_abi, boardcfg_addr, pm_abi_size);
+		if (ft_is_false(extboot_is_present())) {
+			boardcfg_addr = soc_phys_create(boardcfg_pmp_low, boardcfg_pmp_high);
 
-		if (ret == SUCCESS) {
-			if (local_pm_abi.boardcfg_abi_maj == BOARDCFG_PM_ABI_MAJ_VALUE_V0 &&
-			    local_pm_abi.boardcfg_abi_min == BOARDCFG_PM_ABI_MIN_VALUE_V0) {
-				local_pm_config.pm_abi_maj = BOARDCFG_PM_ABI_MAJ_VALUE_V0;
+			/* Only copy over the ABI field first */
+			ret = boardcfg_memcpy_abi((local_phys_addr_t) &local_pm_abi, boardcfg_addr, pm_abi_size);
 
-				/* If we have the V0 boardcfg, then the size is just 2 bytes */
-				ret = boardcfg_memcpy_pm((local_phys_addr_t) &local_pm_config.config_pm_cfg, boardcfg_addr, boardcfg_pm_size, pm_abi_size);
-			} else if (local_pm_abi.boardcfg_abi_maj == BOARDCFG_PM_ABI_MAJ_VALUE_V1 &&
-				   local_pm_abi.boardcfg_abi_min == BOARDCFG_PM_ABI_MIN_VALUE_V1) {
-				local_pm_config.pm_abi_maj = BOARDCFG_PM_ABI_MAJ_VALUE_V1;
-				ret = boardcfg_memcpy_pm((local_phys_addr_t) &local_pm_config.config_pm_cfg, boardcfg_addr, boardcfg_pm_size, bcfg_pm_max_size);
-			} else {
-				ret = -EINVAL;
-			}
-		}
-	}
+			if (ret == SUCCESS) {
+				if ((local_pm_abi.boardcfg_abi_maj == BOARDCFG_PM_ABI_MAJ_VALUE_V0) &&
+					(local_pm_abi.boardcfg_abi_min == BOARDCFG_PM_ABI_MIN_VALUE_V0)) {
+					local_pm_config.pm_abi_maj = BOARDCFG_PM_ABI_MAJ_VALUE_V0;
 
-	/* If pm_boardcfg ABI is V1, check the validity of all substructures inside pm boardcfg */
-	if (local_pm_config.pm_abi_maj == BOARDCFG_PM_ABI_MAJ_VALUE_V1) {
-		if (ret == SUCCESS) {
-			valid_check = boardcfg_validate_pm_lpm_cfg(&local_pm_config.config_pm_cfg.lpm_cfg);
-
-			if (valid_check == false) {
-				ret = -EINVAL;
+					/* If we have the V0 boardcfg, then the size is just 2 bytes */
+					ret = boardcfg_memcpy_pm((local_phys_addr_t) &local_pm_config.config_pm_cfg, boardcfg_addr, boardcfg_pm_size, pm_abi_size);
+				} else if ((local_pm_abi.boardcfg_abi_maj == BOARDCFG_PM_ABI_MAJ_VALUE_V1) &&
+					(local_pm_abi.boardcfg_abi_min == BOARDCFG_PM_ABI_MIN_VALUE_V1)) {
+					local_pm_config.pm_abi_maj = BOARDCFG_PM_ABI_MAJ_VALUE_V1;
+					ret = boardcfg_memcpy_pm((local_phys_addr_t) &local_pm_config.config_pm_cfg, boardcfg_addr, boardcfg_pm_size, bcfg_pm_max_size);
+				} else {
+					ret = -EINVAL;
+				}
 			}
 		}
 
-		if (ret == SUCCESS) {
-			valid_check = boardcfg_validate_pm_pll_cfg(&local_pm_config.config_pm_cfg.pll_cfg);
+		/* If pm_boardcfg ABI is V1, check the validity of all substructures inside pm boardcfg */
+		if (local_pm_config.pm_abi_maj == BOARDCFG_PM_ABI_MAJ_VALUE_V1) {
+			if (ret == SUCCESS) {
+				valid_check = boardcfg_validate_pm_lpm_cfg(&local_pm_config.config_pm_cfg.lpm_cfg);
 
-			if (valid_check == false) {
-				ret = -EINVAL;
+				if (valid_check == false) {
+					ret = -EINVAL;
+				}
+			}
+
+			if (ret == SUCCESS) {
+				valid_check = boardcfg_validate_pm_pll_cfg(&local_pm_config.config_pm_cfg.pll_cfg);
+
+				if (valid_check == false) {
+					ret = -EINVAL;
+				}
+			}
+
+			if (ret == SUCCESS) {
+				valid_check = boardcfg_validate_pm_dev_cfg(&local_pm_config.config_pm_cfg.dev_cfg);
+
+				if (valid_check == false) {
+					ret = -EINVAL;
+				}
+			}
+
+			if (ret == SUCCESS) {
+				valid_check = boardcfg_validate_pm_rsvd_pmic_cfg(&local_pm_config.config_pm_cfg.rsvd_pmic_cfg);
+
+				if (valid_check == false) {
+					ret = -EINVAL;
+				}
+			}
+
+			if (ret == SUCCESS) {
+				valid_check = boardcfg_validate_pm_rsvd_cfg(&local_pm_config.config_pm_cfg.rsvd_cfg);
+
+				if (valid_check == false) {
+					ret = -EINVAL;
+				}
 			}
 		}
 
 		if (ret == SUCCESS) {
-			valid_check = boardcfg_validate_pm_dev_cfg(&local_pm_config.config_pm_cfg.dev_cfg);
-
-			if (valid_check == false) {
-				ret = -EINVAL;
-			}
-		}
-
-		if (ret == SUCCESS) {
-			valid_check = boardcfg_validate_pm_rsvd_pmic_cfg(&local_pm_config.config_pm_cfg.rsvd_pmic_cfg);
-
-			if (valid_check == false) {
-				ret = -EINVAL;
-			}
-		}
-
-		if (ret == SUCCESS) {
-			valid_check = boardcfg_validate_pm_rsvd_cfg(&local_pm_config.config_pm_cfg.rsvd_cfg);
-
-			if (valid_check == false) {
-				ret = -EINVAL;
-			}
-		}
-	}
-
-	if (ret == SUCCESS) {
 		local_pm_config.config_pm_valid = FT_TRUE;
+		}
 	}
 
 	if (ret == SUCCESS) {
@@ -812,18 +816,21 @@ s32 boardcfg_pm_receive_and_validate(u8		host __attribute__((unused)),
 	return ret;
 }
 
-bool is_lpm_boardcfg_valid()
+bool is_lpm_boardcfg_valid(void)
 {
 	return ft_is_true(local_pm_config.config_lpm_valid);
 }
 
-struct boardcfg_pm_lpm_cfg *boardcfg_pm_extract_lpm_cfg()
+struct boardcfg_pm_lpm_cfg *boardcfg_pm_extract_lpm_cfg(void)
 {
+	struct boardcfg_pm_lpm_cfg *lpm_cfg_ptr;
 	if (is_lpm_boardcfg_valid()) {
-		return &local_pm_config.config_pm_cfg.lpm_cfg;
+		lpm_cfg_ptr = &local_pm_config.config_pm_cfg.lpm_cfg;
 	} else {
-		return NULL;
+		lpm_cfg_ptr = NULL;
 	}
+
+	return lpm_cfg_ptr;
 }
 
 /* \brief Wrapper function to trigger auto boardcfg processing */

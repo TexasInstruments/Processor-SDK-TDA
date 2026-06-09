@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023 Texas Instruments Incorporated
+# Copyright (c) 2025 Texas Instruments Incorporated
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,4 +31,5 @@
 #
 
 obj-y += mmr_lock.o
+obj-y += pm_boardcfg_validate.o
 

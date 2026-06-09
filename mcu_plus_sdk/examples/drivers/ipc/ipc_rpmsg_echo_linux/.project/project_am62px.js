@@ -4,7 +4,7 @@ let device = "am62px";
 
 const files = {
     common: [
-        "ipc_rpmsg_echo_linux.c",
+        "ipc_rpmsg_echo.c",
         "main.c",
     ],
 };
@@ -12,7 +12,7 @@ const files = {
 const files_r5f = {
     common: [
         "sbl_ospi_linux_stage2.c",
-        "ipc_rpmsg_echo_linux.c",
+        "ipc_rpmsg_echo.c",
         "main.c",
     ],
 };
@@ -52,6 +52,7 @@ const libdirs_freertos_wkup_r5f = {
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/rm_pm_hal/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciclient_direct/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/self_reset/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib",
     ],
 };
 
@@ -81,6 +82,7 @@ const libs_freertos_r5f = {
         "drivers.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "board.am62px.r5f.ti-arm-clang.${ConfigName}.lib",
         "sciserver.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
     ],
 };
 
@@ -98,6 +100,13 @@ const lnkfiles = {
     ]
 };
 
+const defines_mcu = {
+    common:[
+        "ENABLE_MCU_ONLY_LPM",
+        "REMOTE_CORE",
+    ]
+}
+
 const syscfgfile = "../example.syscfg";
 
 const readmeDoxygenPageTag = "EXAMPLES_DRIVERS_IPC_RPMESSAGE_LINUX_ECHO";
@@ -113,6 +122,7 @@ const templates_freertos_mcu_r5f =
         output: "../main.c",
         options: {
             entryFunction: "ipc_rpmsg_echo_main",
+            skipDriversClose: "true",
         },
     }
 ];
@@ -122,6 +132,18 @@ const templates_freertos_wkup_r5f =
     {
         input: ".project/templates/am62px/common/linker_wkup-r5f.cmd.xdt",
         output: "linker.cmd",
+        options: {
+            dmWithBootloader: "true",
+        }
+    },
+    {
+        input: ".project/templates/am62px/freertos/main_freertos_dm.c.xdt",
+        output: "../main.c",
+        options: {
+            entryFunction: "ipc_rpmsg_echo_main",
+            dmWithBootloader: "true",
+            skipDriversClose: "true",
+        }
     },
 ];
 
@@ -136,12 +158,13 @@ function getComponentProperty() {
     property.dirPath = path.resolve(__dirname, "..");
     property.type = "executable";
     property.name = "ipc_rpmsg_echo_linux";
+    property.linuxAppName = "ipc_rpmsg_echo";
     property.isInternal = false;
     property.isLinuxInSystem = true;
     property.isLinuxFwGen = true;
     property.ipcVringRTOS = true;
+    property.isBootLoaderStage2 = true;
     property.buildOptionCombos = buildOptionCombos;
-    property.dmWithBootloader = true;
 
     return property;
 }
@@ -162,6 +185,7 @@ function getComponentBuildProperty(buildOption) {
             build_property.libdirs = libdirs_freertos_mcu_r5f;
             build_property.libs = libs_freertos_mcu_r5f;
             build_property.templates = templates_freertos_mcu_r5f;
+            build_property.defines = defines_mcu;
         }
     }
     if(buildOption.cpu.match(/wkup-r5f*/)) {

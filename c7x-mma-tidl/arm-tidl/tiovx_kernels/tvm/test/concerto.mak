@@ -1,4 +1,4 @@
-ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), A72 A53))
+ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), A72 A53 A720))
 
 ifeq ($(BUILD_CONFORMANCE_TEST),yes)
 
@@ -8,7 +8,7 @@ TARGETTYPE  := library
 CSOURCES    := $(call all-c-files)
 IDIRS       += $(TIOVX_PATH)/conformance_tests
 IDIRS       += $(IVISION_PATH)
-IDIRS       += $(TIDL_PATH)/arm-tidl/rt/inc
+IDIRS       += $(TIDL_RT_PATH)/inc
 IDIRS       += $(TIOVX_PATH)/utils/include
 IDIRS       += $(TIOVX_PATH)/kernels/include
 IDIRS       += $(TIOVX_PATH)/include

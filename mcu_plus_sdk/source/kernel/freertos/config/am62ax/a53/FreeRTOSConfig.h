@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2023 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -105,14 +105,14 @@
                                                      *
                                                      * void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer,
                                                      *      StackType_t **ppxTimerTaskStackBuffer,
-                                                     *      uint32_t *pulTimerTaskStackSize );
+                                                     *      configSTACK_DEPTH_TYPE *pulTimerTaskStackSize );
                                                      *
                                                      * void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
                                                      *      StackType_t **ppxIdleTaskStackBuffer,
-                                                     *      uint32_t *pulIdleTaskStackSize );
+                                                     *      configSTACK_DEPTH_TYPE *pulIdleTaskStackSize );
                                                      */
 #define configSUPPORT_DYNAMIC_ALLOCATION        (1)
-#define configTOTAL_HEAP_SIZE                   (32*1024) /* not used when heap_3.c is the selected heap */
+#define configTOTAL_HEAP_SIZE                   (192*1024) /* not used when heap_3.c is the selected heap */
 #define configAPPLICATION_ALLOCATED_HEAP        (0)
 
 /* run-time stats config */
@@ -164,5 +164,8 @@ uint32_t uiPortGetRunTimeCounterValue();
 #define INCLUDE_vSemaphoreDelete        (1)
 #define INCLUDE_xTimerPendFunctionCall  (1)
 #define INCLUDE_xTaskGetIdleTaskHandle  (1)
+#define INCLUDE_xSemaphoreGetMutexHolder (1)
 
+/* FPU support mode: 1 = manual (call vPortTaskUsesFPU), 2 = automatic (all tasks) */
+#define configUSE_TASK_FPU_SUPPORT       (2)
 #endif /* TI_FREERTOS_CONFIG_H */

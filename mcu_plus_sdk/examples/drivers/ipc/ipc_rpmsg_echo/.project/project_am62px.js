@@ -75,6 +75,7 @@ const libs_freertos_wkup_r5f = {
         "rm_pm_hal.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "sciserver.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "self_reset.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
     ]
 };
 
@@ -83,6 +84,12 @@ const lnkfiles = {
         "linker.cmd",
     ]
 };
+
+const defines_dm_r5f = {
+    common:[
+        "ENABLE_SCICLIENT_DIRECT",
+    ]
+}
 
 const syscfgfile = "../example.syscfg";
 
@@ -185,6 +192,7 @@ function getComponentBuildProperty(buildOption) {
         build_property.libdirs = libdirs_freertos_wkup_r5f;
         build_property.libs = libs_freertos_wkup_r5f;
         build_property.templates = templates_freertos_wkup_r5f;
+        build_property.defines = defines_dm_r5f;
     }
 
     return build_property;

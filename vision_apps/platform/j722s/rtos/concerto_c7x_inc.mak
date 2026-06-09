@@ -24,7 +24,11 @@ LDIRS += $(APP_UTILS_PATH)/lib/$(TARGET_PLATFORM)/$(TARGET_CPU)/$(TARGET_OS)/$(T
 LDIRS += $(MMALIB_PATH)/lib/$(C7X_VERSION)/$(TARGET_BUILD)
 LDIRS += $(TIDL_PATH)/ti_dl/lib/$(TARGET_PLATFORM)/dsp/algo/$(TARGET_BUILD)
 LDIRS += $(TIADALG_PATH)/lib/$(TARGET_CPU)/$(TARGET_BUILD)
+ifeq ($(ENABLE_NEW_TIDL_STRUCTURE),yes)
+LDIRS += $(TIDL_PATH)/tiovx_kernels/lib/$(TARGET_PLATFORM)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+else
 LDIRS += $(TIDL_PATH)/arm-tidl/tiovx_kernels/lib/$(TARGET_PLATFORM)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+endif
 
 STATIC_LIBS += vx_app_c7x_target_kernel
 STATIC_LIBS += vx_target_kernels_stereo
@@ -66,16 +70,7 @@ TIOVX_LIBS += vx_target_kernels_dsp
 TIOVX_LIBS += vx_target_kernels_j7_arm
 TIOVX_LIBS += vx_target_kernels_source_sink
 
-TIDL_LIBS =
-TIDL_LIBS += common_C7524
-TIDL_LIBS += mmalib_C7524
-TIDL_LIBS += mmalib_cn_C7524
-TIDL_LIBS += tidl_algo
-TIDL_LIBS += tidl_priv_algo
-TIDL_LIBS += tidl_obj_algo
-TIDL_LIBS += tidl_custom
-
-SYS_STATIC_LIBS += $(TIOVX_LIBS) $(TIDL_LIBS)
+SYS_STATIC_LIBS += $(TIOVX_LIBS)
 
 ADDITIONAL_STATIC_LIBS += vxlib_C7524.lib
 
@@ -86,7 +81,7 @@ ifeq ($(RTOS),FREERTOS)
 endif
 
 ifeq ($(RTOS),SAFERTOS)
-	CFLAGS += -DOS_SAFERTOS
+	DEFS += OS_$(RTOS)
 	ADDITIONAL_STATIC_LIBS += safertos.j722s.c75x.ti-c7000.${TARGET_BUILD}.lib
 endif
 ADDITIONAL_STATIC_LIBS += libc.a

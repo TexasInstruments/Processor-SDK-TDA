@@ -514,7 +514,7 @@ class sysfw_trace_cli:
 
         from sysfw_boardcfg_validator import *
 
-        sysfw_cli_job(args_arr=["-b", "tifs_v2019.11.elf","-l","/tmp/validation.log", "-i","-o","tifs_v2109.11.new.elf"]);
+        sysfw_cli_job(args_arr=["-b", "sysfw_v2019.11.elf","-l","/tmp/validation.log", "-i","-o","sysfw_v2109.11.new.elf"]);
         ''')
         parser = argparse.ArgumentParser(prog=__file__,
                                          description=help_text,
@@ -539,7 +539,7 @@ class sysfw_trace_cli:
             help="SoC supported by input binary",
             action="store",
             type=str,
-            choices={'am6', 'am65x_sr2', 'am64x', 'j721e', 'j721e_legacy', 'j7200', 'am62x', 'am62ax', 'am62px', 'j722s'},
+            choices={'am6', 'am65x_sr2', 'am64x', 'j721e', 'j721e_legacy', 'j7200', 'am62x', 'am62ax', 'am62dx', 'am62px', 'am275x', 'am62lx', 'j722s'},
             required=True)
 
         # Required output arguments

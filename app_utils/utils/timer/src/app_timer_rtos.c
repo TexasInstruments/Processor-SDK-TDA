@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -67,19 +67,28 @@
 #include <string.h>
 #include "app_global_timer_priv.h"
 
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
 #include <sciclient/sciclient.h>
-#else
+#elif defined(MCU_PLUS_SDK)
 #include <kernel/dpl/ClockP.h>
 #include <drivers/device_manager/sciclient.h>
 #define SCICLIENT_SERVICE_WAIT_FOREVER SystemP_WAIT_FOREVER
+#elif defined(MCU_SDK)
+#include <ClockP.h>
+#define SCICLIENT_SERVICE_WAIT_FOREVER SystemP_WAIT_FOREVER
 #endif
+
 
 static uintptr_t GTC_BASE_ADDR = 0;
 static uint64_t mhzFreq = 0;
 
 #define GET_GTC_LO_VALUE (*(volatile uint32_t*)(GTC_BASE_ADDR + 0x8U))
 #define GET_GTC_HI_VALUE (*(volatile uint32_t*)(GTC_BASE_ADDR + 0xCU))
+
+/* JIRA: ADASVISION-7144 - Temporarily disabled, to be enabled once sci-client is enabled in mcu_sdk*/
+#if defined(SOC_TDA54)
+#define GTC_CLOCK_FREQ (200 * 1000 * 1000)
+#endif
 
 #ifdef APP_TIMER_USE_GLOBAL_TIME
 
@@ -119,11 +128,11 @@ uint64_t appLogGetGlobalTimeInUsec(void)
 #else
 uint64_t appLogGetLocalTimeInUsec(void)
 {
-    #if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
     return TimerP_getTimeInUsecs(); /* in units of usecs */
-    #else
+#elif defined(MCU_PLUS_SDK)
     return ClockP_getTimeUsec(); /* in units of usecs */
-    #endif
+#endif
 }
 #endif
 
@@ -144,7 +153,7 @@ uint64_t appLogGetTimeInUsec(void)
 int32_t appLogGlobalTimeInit(void)
 {
     int32_t status = 0;
-    uint64_t clkFreq;
+    uint64_t clkFreq = 0;
 
     #ifdef C66
     GTC_BASE_ADDR = (uintptr_t)GTC_TIMER_MAPPED_BASE_C66;
@@ -167,8 +176,8 @@ int32_t appLogGlobalTimeInit(void)
     }
     #endif
 
-    /* needs to be enabled only once, do it from R5F */
-    #if defined(R5F)
+    /* needs to be enabled only once, do it from R5F (TDA4) or M55 (TDA5) */
+    #if defined(R5F) || defined(M55)
     /* Configure GTC Timer - running at 200MHz as per config and default mux mode */
     /* 200 MHz depends on 'MCU_PLL1' and is selected through 'GTCCLK_SEL' mux */
     /* Enable GTC */
@@ -182,6 +191,9 @@ int32_t appLogGlobalTimeInit(void)
                                            TISCI_DEV_WKUP_GTC0_GTC_CLK,
                                            &clkFreq,
                                            SCICLIENT_SERVICE_WAIT_FOREVER);
+        /* JIRA: ADASVISION-7144 - Temporarily disabled, to be enabled once sci-client is enabled in mcu_sdk*/
+        #elif defined(SOC_TDA54)
+        clkFreq = GTC_CLOCK_FREQ;
         #else
         status = Sciclient_pmGetModuleClkFreq(TISCI_DEV_GTC0,
                                            TISCI_DEV_GTC0_GTC_CLK,
@@ -210,5 +222,9 @@ int32_t appLogGlobalTimeDeInit(void)
 
 void appLogWaitMsecs(uint32_t time_in_msecs)
 {
+#if defined(PC)
+    ClockP_usleep((uint64_t)time_in_msecs * 1000U);
+#else
     appRtosTaskSleepInMsecs(time_in_msecs);
+#endif
 }

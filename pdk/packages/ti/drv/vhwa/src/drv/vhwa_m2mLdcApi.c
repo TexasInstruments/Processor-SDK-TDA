@@ -127,7 +127,7 @@ static int32_t vhwaM2mLdcCheckLdcCfg(const Vhwa_M2mLdcInstObj *instObj,
  * \return  required block size in bytes.
  *
  **/
-static uint32_t vhwaM2mLdcCalcSl2MemSize(const Ldc_Config *ldcCfg,
+static uint32_t vhwaM2mLdcCalcSl2MemSize(const Ldc_Config *cfg,
                                     uint32_t outId);
 
 /**
@@ -141,7 +141,7 @@ static uint32_t vhwaM2mLdcCalcSl2MemSize(const Ldc_Config *ldcCfg,
  * \return  required block size in bytes.
  *
  **/
-static void vhwaM2mLdcGetBlockSize(const Ldc_Config *ldcCfg,
+static void vhwaM2mLdcGetBlockSize(const Ldc_Config *cfg,
                                    uint32_t *blockWidth,
                                    uint32_t *blockHeight);
 
@@ -408,7 +408,7 @@ Int32 vhwa_m2mLdcProcessReq(Fdrv_Handle handle, Fvid2_FrameList *inFrmList,
  *
  **/
 Int32 vhwa_m2mLdcGetProcessReq(Fdrv_Handle handle,
-    Fvid2_FrameList *inProcessList, Fvid2_FrameList *outProcessList,
+    Fvid2_FrameList *inFrmList, Fvid2_FrameList *outFrmList,
     UInt32 timeout);
 
 static void vhwaM2mLdcCalcHtsDepth(Vhwa_M2mLdcHandleObj *hObj);
@@ -419,6 +419,7 @@ static void vhwaM2mLdcInitChParamsFromLdcConfig(const Vhwa_M2mLdcInstObj *instOb
 static void vhwaM2mLdcCalcChSl2Params(const Vhwa_M2mLdcInstObj *instObj,
     Vhwa_M2mLdcHandleObj *hObj);
 
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 /**
  * \brief   Reconfigure LDC MMR registers as needed for the current handle/queue.
  *
@@ -431,6 +432,7 @@ static void vhwaM2mLdcCalcChSl2Params(const Vhwa_M2mLdcInstObj *instObj,
 static int32_t Vhwa_m2mLdcReconfigReinitReg(Vhwa_M2mLdcInstObj *instObj,
                                             const Vhwa_M2mLdcHandleObj *hObj,
                                             const Vhwa_M2mLdcQueueObj *qObj);
+#endif
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -929,7 +931,7 @@ Vhwa_M2mLdcHandleObj *Vhwa_m2mLdcGetHandleObj(uint32_t cnt)
     return &gM2mLdcHandleObj[cnt];
 }
 /* LDRA_JUSTIFY_END */
-
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 int32_t Vhwa_m2mLdcReInit(void)
 {
     int32_t                status = FVID2_SOK;
@@ -991,7 +993,7 @@ int32_t Vhwa_m2mLdcReInit(void)
 
     return (status);
 }
-
+#endif
 
 /* ========================================================================== */
 /*                          FVID2 Function implementation                     */
@@ -1404,7 +1406,9 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
     Vhwa_HtsLimiter        *htsLimit = NULL;
     Ldc_RemapLutCfg        *lutCfg = NULL;
     Ldc_WdTimerErrEventParams *wdTimerEePrms = NULL;
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     uint32_t                cookie;
+#endif
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -1839,7 +1843,7 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
             case VHWA_M2M_IOCTL_LDC_ENABLE_RECONFIG_REINIT_REG:
             {
                 /* LDRA_JUSTIFY_START
@@ -2218,7 +2222,7 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-
+#endif
             /* Default Case */
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
@@ -2582,6 +2586,7 @@ The test framework does not support the configuration required to trigger this e
                 status = Vhwa_m2mLdcSetIntrInHW(instObj->vhwaIrqNum, instObj->socInfo.vpacIntdRegs, hObj);
             }
 
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
             /* Invoke the reconfig-MMR if enableReconfigReinitReg enabled for the current handle */
             if (UTRUE == hObj->enableReconfigReinitReg)
             {
@@ -2589,6 +2594,7 @@ The test framework does not support the configuration required to trigger this e
                 hObj->enableReconfigReinitReg = (uint32_t)UFALSE;
                 hObj->isCfgUpdated = 0u;
             }
+#endif
 
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
@@ -3785,12 +3791,13 @@ static int32_t vhwaM2mLdcSetConfigInHW(const Vhwa_M2mLdcInstObj *instObj,
         /* Configure HTS */
         status = CSL_htsSetThreadConfig(socInfo->htsRegs, &hObj->htsCfg);
     }
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     /* Update the LdcConfigRegisterGroup with config register values for frame specific Static Config, HTS registers */
     if((uint32_t)UTRUE == hObj->enableConfigRegValidate)
     {
         status = vhwaM2mLdcUpdateConfigRegGroup(goldenRegVal, instObj, hObj);
     }
-
+#endif
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
     <justification start>
@@ -3826,6 +3833,7 @@ static int32_t vhwaM2mLdcSubmitRequest(Vhwa_M2mLdcInstObj *instObj,
     hObj = qObj->hObj;
 
     /* Update the LdcStatusRegisterGroup with valid status register values for dynamic registers */
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     if((uint32_t)UTRUE == hObj->enableStatusRegValidate)
     {
         status = vhwaM2mLdcUpdateStatusRegGroup(hObj);
@@ -3834,7 +3842,7 @@ static int32_t vhwaM2mLdcSubmitRequest(Vhwa_M2mLdcInstObj *instObj,
     {
         status = FVID2_SOK;
     }
-
+#endif
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
     <justification start>
@@ -3864,6 +3872,7 @@ static int32_t vhwaM2mLdcSubmitRequest(Vhwa_M2mLdcInstObj *instObj,
     Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
     However, due to the stated rationale, this is not tested.
     <justification end> */
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate))
     /* LDRA_JUSTIFY_END */
     {
@@ -3882,7 +3891,7 @@ static int32_t vhwaM2mLdcSubmitRequest(Vhwa_M2mLdcInstObj *instObj,
             status = vhwaM2mLdcUpdateConfigRegGroup(goldenRegVal, instObj, hObj);
         }
     }
-
+#endif
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
     <justification start>
@@ -5093,6 +5102,7 @@ static int32_t vhwaM2mLdcCheckCreatePrms(uint32_t drvId, uint32_t drvInstId)
     return (status);
 }
 
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 static int32_t Vhwa_m2mLdcReconfigReinitReg(Vhwa_M2mLdcInstObj *instObj,
                                             const Vhwa_M2mLdcHandleObj *hObj,
                                             const Vhwa_M2mLdcQueueObj *qObj)
@@ -6738,6 +6748,7 @@ int32_t vhwaM2mLdcUpdateConfigRegGroup(VhwaVpacLdcSocReadBack *RegVal, const Vhw
 
     return status;
 }
+#endif
 
 int32_t Vhwa_m2mLdcGetSl2Info(Vhwa_M2mLdcSl2Info *sl2Info)
 {

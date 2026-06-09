@@ -33,7 +33,8 @@
  /**
   *  \file    safety_app.c
   *
-  *  \brief   This file contains safety checkers app code containing PM, RM and TIFS checkers.
+  *  \brief   This file contains safety checkers app code demonstrating
+  *           the use of PM, RM and TIFS checker APIs.
   *
   */
 
@@ -54,20 +55,19 @@
 #include <kernel/dpl/SystemP.h>
 #include <kernel/dpl/SemaphoreP.h>
 #include <kernel/dpl/ClockP.h>
-#include <sciclient.h>
 #include <safety_checkers_common.h>
 #include <safety_checkers_pm.h>
 #include <safety_checkers_tifs.h>
-#include "tifs_checkers_fwl_config.h"
+#include "safety_app_fwl_config.h"
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
 #define SAFETY_APP_RM_CHECKERS_REG_BLOB_SIZE    25000U
-#define SAFETY_APP_TASK_PRI                    (configMAX_PRIORITIES-1)
-#define SAFETY_APP_STACK_SIZE                  (4*1024U)
-#define SAFETY_APP_LOOP_COUNT                  (10U)
+#define SAFETY_LOOP_TASK_PRI                    (configMAX_PRIORITIES-1)
+#define SAFETY_LOOP_STACK_SIZE                  (4*1024U)
+#define SAFETY_LOOP_NUM_ITERATIONS              (10U)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -79,23 +79,23 @@
 /*                            Global Variables                                */
 /* ========================================================================== */
 
-uintptr_t    gSafetyApp_pscRegisterData[SAFETY_CHECKERS_PM_PSC_REGDUMP_SIZE];
-uintptr_t    gSafetyApp_pllRegisterData[SAFETY_CHECKERS_PM_PLL_REGDUMP_SIZE];
-uintptr_t    gSafetyApp_rmRegisterData[SAFETY_APP_RM_CHECKERS_REG_BLOB_SIZE];
+uintptr_t    pscRegisterData[SAFETY_CHECKERS_PM_PSC_REGDUMP_SIZE];
+uintptr_t    pllRegisterData[SAFETY_CHECKERS_PM_PLL_REGDUMP_SIZE];
+uintptr_t    rmRegisterData[SAFETY_APP_RM_CHECKERS_REG_BLOB_SIZE];
 
-SafetyCheckers_TifsFwlConfig *gSafetyApp_pFwlConfig = gSafetyCheckers_TifsFwlConfig;
-uint32_t gSafetyApp_tifsFwlCfgSize = TIFS_CHECKER_FWL_MAX_NUM;
+SafetyCheckers_TifsFwlConfig *pFwlConfig = gSafetyApp_TifsFwlConfig;
+uint32_t gSafetyCheckersTifsCfgSize = TIFS_CHECKER_FWL_MAX_NUM;
 
-uint8_t gSafetyApp_taskStack[SAFETY_APP_STACK_SIZE] __attribute__((aligned(32)));
-TaskP_Object gSafetyApp_safetyLoopTask;
+uint8_t gSafetyLoopTaskStack[SAFETY_LOOP_STACK_SIZE] __attribute__((aligned(32)));
+TaskP_Object gSafetyLoopTask;
 
-static SemaphoreP_Object gSafetyApp_BinarySemTaskSync;
+static SemaphoreP_Object gBinarySemTaskSync;
 
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
 
-static void SafetyApp_safetyLoop(void *args);
+void SafetyApp_safetyLoop(void *args);
 
 static void SafetyApp_clockCbFxn(ClockP_Object *obj, void *args);
 
@@ -107,101 +107,108 @@ void SafetyApp_main(void *args)
 {
     uint32_t  status = SystemP_SUCCESS;
 
+    /* Due to AM62a's design, DMSS CSI is not turned on by default */
+#if defined(SOC_AM62AX)
+    status = Sciclient_pmSetModuleState(TISCI_DEV_DMASS1_INTAGGR_0,
+                                        TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
+                                        (TISCI_MSG_FLAG_AOP |
+                                        TISCI_MSG_FLAG_DEVICE_RESET_ISO),
+                                        0xFFFFFFFFU);
+#endif
+
     /* Creating a binary semaphore to sync the main task and safety loop*/
-    status = SemaphoreP_constructBinary(&gSafetyApp_BinarySemTaskSync, 0);
+    status = SemaphoreP_constructBinary(&gBinarySemTaskSync, 0);
     if(status != SystemP_SUCCESS)
     {
         DebugP_log("Binary semaphore object creation failed!!");
+        return;
     }
 
-    if(status == SystemP_SUCCESS)
+    /* Get PM Checkers Register Configuration */
+    status = SafetyCheckers_pmGetPscRegCfg(pscRegisterData, SAFETY_CHECKERS_PM_PSC_REGDUMP_SIZE);
+    if (status == SystemP_SUCCESS)
     {
-        /* Get PM Checkers Register Configuration */
-        status = SafetyCheckers_pmGetPscRegCfg(gSafetyApp_pscRegisterData, SAFETY_CHECKERS_PM_PSC_REGDUMP_SIZE);
-        if (status == SystemP_SUCCESS)
-        {
-            DebugP_log("Get PSC configuration successful.\r\n");
-        }
-        else
-        {
-            DebugP_log("Get PSC configuration unsuccessful.\r\n");
-        }
-
-        status = SafetyCheckers_pmGetPllRegCfg(gSafetyApp_pllRegisterData, SAFETY_CHECKERS_PM_PLL_REGDUMP_SIZE);
-        if (status == SystemP_SUCCESS)
-        {
-            DebugP_log("Get PLL configuration successful.\r\n");
-        }
-        else
-        {
-            DebugP_log("Get PLL configuration unsuccessful.\r\n");
-        }
-
-        /* Get RM Checkers Register Configuration */
-        status = SafetyCheckers_rmGetRegCfg(gSafetyApp_rmRegisterData, SAFETY_APP_RM_CHECKERS_REG_BLOB_SIZE);
-        if (status == SystemP_SUCCESS)
-        {
-            DebugP_log("Get RM configuration successful.\r\n");
-        }
-        else
-        {
-            DebugP_log("Get RM configuration unsuccessful.\r\n");
-        }
-
-        /* Request TIFS firewall open */
-        status = SafetyCheckers_tifsReqFwlOpen();
-        if (status == SystemP_SUCCESS)
-        {
-            DebugP_log("Firewall open successful.\r\n");
-        }
-        else
-        {
-            DebugP_log("Firewall open unsuccessful.\r\n");
-        }
-
-        /* Get TIFS Checkers Register Configuration */
-        status = SafetyCheckers_tifsGetFwlCfg(gSafetyApp_pFwlConfig, gSafetyApp_tifsFwlCfgSize);
-        if (status == SystemP_SUCCESS)
-        {
-            DebugP_log("Get firewall configuration successful.\r\n");
-        }
-        else
-        {
-            DebugP_log("Get firewall configuration unsuccessful.\r\n");
-        }
-
-        /* Place to verify and save firewall configuration as golden reference */
-
-        /* Creating safety loop thread */
-        TaskP_Params SafetyLoopTaskParams;
-
-        TaskP_Params_init(&SafetyLoopTaskParams);
-        SafetyLoopTaskParams.name = "SAFETY_LOOP";
-        SafetyLoopTaskParams.stackSize = SAFETY_APP_STACK_SIZE;
-        SafetyLoopTaskParams.stack = gSafetyApp_taskStack;
-        SafetyLoopTaskParams.priority = SAFETY_APP_TASK_PRI;
-
-        SafetyLoopTaskParams.taskMain = SafetyApp_safetyLoop;
-
-        status = TaskP_construct(&gSafetyApp_safetyLoopTask, &SafetyLoopTaskParams);
-
-        if (status == SystemP_FAILURE)
-        {
-            DebugP_log("Safety loop task creation failed!!\r\n");
-            TaskP_destruct(&gSafetyApp_safetyLoopTask);
-            SemaphoreP_post(&gSafetyApp_BinarySemTaskSync);
-        }
-
-        /* Semaphore pend to see if safety loop has finished execution */
-        SemaphoreP_pend(&gSafetyApp_BinarySemTaskSync, SystemP_WAIT_FOREVER);
-        /* Semaphore destruct once safety loop execution has been completed */
-        SemaphoreP_destruct(&gSafetyApp_BinarySemTaskSync);
+        DebugP_log("Get PSC configuration successful.\r\n");
     }
+    else
+    {
+        DebugP_log("Get PSC configuration unsuccessful.\r\n");
+    }
+
+    status = SafetyCheckers_pmGetPllRegCfg(pllRegisterData, SAFETY_CHECKERS_PM_PLL_REGDUMP_SIZE);
+    if (status == SystemP_SUCCESS)
+    {
+        DebugP_log("Get PLL configuration successful.\r\n");
+    }
+    else
+    {
+        DebugP_log("Get PLL configuration unsuccessful.\r\n");
+    }
+
+    /* Get RM Checkers Register Configuration */
+    status = SafetyCheckers_rmGetRegCfg(rmRegisterData, SAFETY_APP_RM_CHECKERS_REG_BLOB_SIZE);
+    if (status == SystemP_SUCCESS)
+    {
+        DebugP_log("Get RM configuration successful.\r\n");
+    }
+    else
+    {
+        DebugP_log("Get RM configuration unsuccessful.\r\n");
+    }
+
+    /* Request TIFS firewall open */
+    status = SafetyCheckers_tifsReqFwlOpen();
+    if (status == SystemP_SUCCESS)
+    {
+        DebugP_log("Firewall open successful.\r\n");
+    }
+    else
+    {
+        DebugP_log("Firewall open unsuccessful.\r\n");
+    }
+
+    /* Get TIFS Checkers Register Configuration */
+    status = SafetyCheckers_tifsGetFwlCfg(pFwlConfig, gSafetyCheckersTifsCfgSize);
+    if (status == SystemP_SUCCESS)
+    {
+        DebugP_log("Get firewall configuration successful.\r\n");
+    }
+    else
+    {
+        DebugP_log("Get firewall configuration unsuccessful.\r\n");
+    }
+
+    /* Place to verify and save firewall configuration as golden reference */
+
+    /* Creating safety loop thread */
+    TaskP_Params SafetyLoopTaskParams;
+
+    TaskP_Params_init(&SafetyLoopTaskParams);
+    SafetyLoopTaskParams.name = "SAFETY_LOOP";
+    SafetyLoopTaskParams.stackSize = SAFETY_LOOP_STACK_SIZE;
+    SafetyLoopTaskParams.stack = gSafetyLoopTaskStack;
+    SafetyLoopTaskParams.priority = SAFETY_LOOP_TASK_PRI;
+
+    SafetyLoopTaskParams.taskMain = SafetyApp_safetyLoop;
+
+    status = TaskP_construct(&gSafetyLoopTask, &SafetyLoopTaskParams);
+
+    if (status == SystemP_FAILURE)
+    {
+        DebugP_log("Safety loop task creation failed!!\r\n");
+        TaskP_destruct(&gSafetyLoopTask);
+        SemaphoreP_post(&gBinarySemTaskSync);
+    }
+
+    /* Semaphore pend to see if safety loop has finished execution */
+    SemaphoreP_pend(&gBinarySemTaskSync, SystemP_WAIT_FOREVER);
+    SemaphoreP_destruct(&gBinarySemTaskSync);
 }
 
-static void SafetyApp_safetyLoop(void *args)
+void SafetyApp_safetyLoop(void *args)
 {
-    uint32_t  status = SystemP_SUCCESS, numIter = SAFETY_APP_LOOP_COUNT;
+    uint32_t  status = SystemP_SUCCESS, numIter = SAFETY_LOOP_NUM_ITERATIONS;
+    uint32_t  mismatch = 0U;
     ClockP_Object clockObj;
     ClockP_Params clockParams;
     SemaphoreP_Object binarySemFromCbFxn;
@@ -241,54 +248,50 @@ static void SafetyApp_safetyLoop(void *args)
                 if(status == SystemP_SUCCESS)
                 {
                     /* Verify PM Checkers Register Configuration */
-                    status = SafetyCheckers_pmVerifyPscRegCfg(gSafetyApp_pscRegisterData, SAFETY_CHECKERS_PM_PSC_REGDUMP_SIZE);
+                    status = SafetyCheckers_pmVerifyPscRegCfg(pscRegisterData, SAFETY_CHECKERS_PM_PSC_REGDUMP_SIZE);
                     if (status == SAFETY_CHECKERS_REG_DATA_MISMATCH)
                     {
                         DebugP_log("PSC register mismatch with golden reference.\r\n");
-                        break;
+                        mismatch++;
                     }
 
-                    status = SafetyCheckers_pmGetPllRegCfg(gSafetyApp_pllRegisterData, SAFETY_CHECKERS_PM_PLL_REGDUMP_SIZE);
+                    status = SafetyCheckers_pmGetPllRegCfg(pllRegisterData, SAFETY_CHECKERS_PM_PLL_REGDUMP_SIZE);
                     if (status == SAFETY_CHECKERS_REG_DATA_MISMATCH)
                     {
                         DebugP_log("PLL register mismatch with golden reference.\r\n");
-                        break;
+                        mismatch++;
                     }
 
                     status = SafetyCheckers_pmRegisterLock();
                     if (status == SAFETY_CHECKERS_FAIL)
                     {
                         DebugP_log("PM register lock failed.\r\n");
-                        break;
+                        mismatch++;
                     }
 
                     /* Verify RM Checkers Register Configuration */
-                    status = SafetyCheckers_rmVerifyRegCfg(gSafetyApp_rmRegisterData, SAFETY_APP_RM_CHECKERS_REG_BLOB_SIZE);
+                    status = SafetyCheckers_rmVerifyRegCfg(rmRegisterData, SAFETY_APP_RM_CHECKERS_REG_BLOB_SIZE);
                     if (status == SAFETY_CHECKERS_REG_DATA_MISMATCH)
                     {
                         DebugP_log("RM register mismatch with golden reference.\r\n");
-                        break;
+                        mismatch++;
                     }
 
                     /* Verify TIFS Checkers Register Configuration */
-                    status = SafetyCheckers_tifsVerifyFwlCfg(gSafetyApp_pFwlConfig, gSafetyApp_tifsFwlCfgSize);
+                    status = SafetyCheckers_tifsVerifyFwlCfg(pFwlConfig, gSafetyCheckersTifsCfgSize);
                     if (status == SAFETY_CHECKERS_REG_DATA_MISMATCH)
                     {
                         DebugP_log("Firewall register mismatch with golden reference.\r\n");
-                        break;
+                        mismatch++;
                     }
 
                     numIter--;
                 }
             }
 
-            if (status == SAFETY_CHECKERS_SOK)
+            if (mismatch == 0U)
             {
                 DebugP_log("No register mismatch with golden reference.\r\n");
-            }
-            else
-            {
-                DebugP_log("ERROR: Safety Checker Testing Failed.\r\n");
             }
         }
     }
@@ -306,7 +309,7 @@ static void SafetyApp_safetyLoop(void *args)
 
     ClockP_destruct(&clockObj);
     SemaphoreP_destruct(&binarySemFromCbFxn);
-    SemaphoreP_post(&gSafetyApp_BinarySemTaskSync);
+    SemaphoreP_post(&gBinarySemTaskSync);
     TaskP_exit();
 }
 

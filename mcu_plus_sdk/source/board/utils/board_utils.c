@@ -66,8 +66,15 @@
 /* ========================================================================== */
 
 static Board_DetectCfg_t  gBoardDetCfg[BOARD_ID_MAX_BOARDS] =
- {{BOARD_EVM_EEPROM_TARGET_ADDR, "J722SX-EVM"},
-  {BOARD_CSI2_EEPROM_TARGET_ADDR, "J7X-FUSION2-CSI"}};
+{
+#if !defined(SOC_J722S)
+    {BOARD_EVM_EEPROM_TARGET_ADDR, "AM62A-SK-LP"},
+    {BOARD_CSI2_EEPROM_TARGET_ADDR, "AM62A-FUSION2-CSI"},
+#else
+    {BOARD_EVM_EEPROM_TARGET_ADDR, "J722SX-EVM"},
+    {BOARD_CSI2_EEPROM_TARGET_ADDR, "J7X-FUSION2-CSI"},
+#endif
+};
 
 /* ========================================================================== */
 /*                          Function Definitions                              */
@@ -147,7 +154,7 @@ int32_t Board_getBoardData(Board_IdInfo_t *info, uint32_t boardID, uint32_t i2cI
         status = I2C_STS_ERR;
     }
 
-    i2cTransaction.slaveAddress = gBoardDetCfg[boardID].targetAddress;
+    i2cTransaction.targetAddress = gBoardDetCfg[boardID].targetAddress;
     i2cTransaction.writeBuf      = (uint8_t *)&txBuf[0];
     i2cTransaction.writeCount    = 2;
 
@@ -161,28 +168,28 @@ int32_t Board_getBoardData(Board_IdInfo_t *info, uint32_t boardID, uint32_t i2cI
     if (SystemP_SUCCESS != status)
     {
         status = I2C_STS_ERR;
-        return status;
     }
 
-    /* Checking whether the board contents are flashed or not */
-    if (headerInfo.magicNumber == BOARD_EEPROM_MAGIC_NUMBER)
+    if (status == I2C_STS_SUCCESS)
     {
-        txBuf[0] = (char)(((uint32_t) 0xFF00 & offsetAddress) >> 8);
-        txBuf[1] = (char)((uint32_t) 0xFF & offsetAddress);
-        i2cTransaction.readBuf   = info;
-        i2cTransaction.readCount = headerInfo.payloadSize +
-                                   BOARD_EEPROM_HEADER_FIELD_SIZE;
-        status = I2C_transfer(handle, &i2cTransaction);
-        if (SystemP_SUCCESS != status)
+        /* Checking whether the board contents are flashed or not */
+        if (headerInfo.magicNumber == BOARD_EEPROM_MAGIC_NUMBER)
         {
-            status = I2C_STS_ERR;
-            return status;
+            txBuf[0] = (char)(((uint32_t) 0xFF00 & offsetAddress) >> 8);
+            txBuf[1] = (char)((uint32_t) 0xFF & offsetAddress);
+            i2cTransaction.readBuf   = info;
+            i2cTransaction.readCount = headerInfo.payloadSize +
+                                    BOARD_EEPROM_HEADER_FIELD_SIZE;
+            status = I2C_transfer(handle, &i2cTransaction);
+            if (SystemP_SUCCESS != status)
+            {
+                status = I2C_STS_ERR;
+            }
         }
-    }
-    else
-    {
-        status = SystemP_FAILURE;
-        return status;
+        else
+        {
+            status = SystemP_FAILURE;
+        }
     }
 
     return status;

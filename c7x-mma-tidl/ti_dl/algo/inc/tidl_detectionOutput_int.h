@@ -72,6 +72,7 @@
 #ifndef ITIDL_DETECTIONOUTPUT_INT_H
 #define ITIDL_DETECTIONOUTPUT_INT_H
 #include "tidl_alg_int.h"
+#include "tidl_mathlib_utils.h"
 
 #define SSD_CONF_DATA_Q (((uint32_t)1U<<15U) - 1U)
 
@@ -121,29 +122,5 @@ int32_t TIDL_sparseDetScoreCalc_cn(const sTIDL_DetectOutputParams_t * params, sT
 //{
 //  return (float32_tidl)exp((float64_tidl)x);
 //}
-
-static inline float32_tidl divsp(float32_tidl x, float32_tidl y)
-{
-  return (x/y);
-}
-
-static inline float32_tidl divsp_i(float32_tidl x, float32_tidl y)
-{
-  float32_tidl recp_y = __recip(y);
-
-  float32_tidl TWO  = 2.0f;
-  //float32_tidl Maxe = 3.402823466E+38f;
-  float32_tidl result;
-
-  recp_y = recp_y*(TWO - (y*recp_y));
-  recp_y = recp_y*(TWO - (y*recp_y));
-  result = x*recp_y;
-
-  //if ((_fabsf(y) > Maxe) && (_fabs(y) <= Maxe)) {
-    //result = 0.0f;
-  //}
-
-  return result;
-}
 
 #endif /* ITIDL_DETECTIONOUTPUT_INT_H*/

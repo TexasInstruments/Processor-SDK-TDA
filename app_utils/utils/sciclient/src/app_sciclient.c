@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2018 Texas Instruments Incorporated
+ * Copyright (c) 2018-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -63,9 +63,9 @@
 #include <utils/console_io/include/app_log.h>
 #include <stdio.h>
 
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
 #include <sciclient/sciclient.h>
-#else
+#elif defined(MCU_PLUS_SDK)
 #include <sciclient.h>
 #include <SystemP.h>
 #include <utils/ipc/include/app_ipc.h>
@@ -92,6 +92,28 @@ static uint32_t g_app_to_ipc_cpu_id[APP_IPC_CPU_MAX] =
 };
 #endif
 
+#if defined (SOC_TDA54)
+static uint32_t g_app_to_ipc_cpu_id[APP_IPC_CPU_MAX] =
+{
+    CSL_CORE_ID_A720_0,
+    CSL_CORE_ID_MCU0,
+    CSL_CORE_ID_MCU1,
+    CSL_CORE_ID_MCU2,
+    CSL_CORE_ID_MCU3,
+    CSL_CORE_ID_MCU4,
+    CSL_CORE_ID_RMCU0_0,
+    CSL_CORE_ID_RMCU0_1,
+    CSL_CORE_ID_RMCU1_0,
+    CSL_CORE_ID_RMCU1_1,
+    CSL_CORE_ID_RMCU2_0,
+    CSL_CORE_ID_RMCU2_1,
+    CSL_CORE_ID_DSP0,
+    CSL_CORE_ID_DSP1,
+    CSL_CORE_ID_DSP2,
+    CSL_CORE_ID_DSP3
+};
+#endif
+
 int32_t appSciclientDmscGetVersion(char *version_str, uint32_t version_str_size)
 {
     int32_t retVal = 0;
@@ -103,9 +125,9 @@ int32_t appSciclientDmscGetVersion(char *version_str, uint32_t version_str_size)
         TISCI_MSG_FLAG_AOP,
         (uint8_t *)&request,
         sizeof(request),
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
         SCICLIENT_SERVICE_WAIT_FOREVER
-#else
+#elif defined(MCU_PLUS_SDK)
         SystemP_WAIT_FOREVER
 #endif
     };
@@ -158,12 +180,12 @@ int32_t appSciclientInit(uint32_t self_cpu_id)
 
     appLogPrintf("SCICLIENT: Init ... !!!\n");
 
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
     Sciclient_ConfigPrms_t  sciClientCfg;
     Sciclient_configPrmsInit(&sciClientCfg);
 
     retVal = Sciclient_init(&sciClientCfg);
-#else
+#elif defined(MCU_PLUS_SDK)
     retVal = Sciclient_init(g_app_to_ipc_cpu_id[self_cpu_id]);
     DebugP_assertNoLog(SystemP_SUCCESS == retVal);
 #endif

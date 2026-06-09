@@ -1,6 +1,8 @@
 /*
- * FreeRTOS Kernel V10.4.3
- * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel V11.1.0
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,42 +24,40 @@
  * https://www.FreeRTOS.org
  * https://github.com/FreeRTOS
  *
- * 1 tab == 4 spaces!
  */
 
 #ifndef DATA_MODEL_H
 #define DATA_MODEL_H
 
 #if __DATA_MODEL__ == __DATA_MODEL_SMALL__
-	#define pushm_x pushm.w
-	#define popm_x popm.w
-	#define push_x push.w
-	#define pop_x pop.w
-	#define mov_x mov.w
-	#define cmp_x cmp.w
+    #define pushm_x    pushm.w
+    #define popm_x     popm.w
+    #define push_x     push.w
+    #define pop_x      pop.w
+    #define mov_x      mov.w
+    #define cmp_x      cmp.w
 #endif
 
 #if __DATA_MODEL__ == __DATA_MODEL_MEDIUM__
-	#define pushm_x pushm.a
-	#define popm_x popm.a
-	#define push_x pushx.a
-	#define pop_x popx.a
-	#define mov_x mov.w
-	#define cmp_x cmp.w
+    #define pushm_x    pushm.a
+    #define popm_x     popm.a
+    #define push_x     pushx.a
+    #define pop_x      popx.a
+    #define mov_x      mov.w
+    #define cmp_x      cmp.w
 #endif
 
 #if __DATA_MODEL__ == __DATA_MODEL_LARGE__
-	#define pushm_x pushm.a
-	#define popm_x popm.a
-	#define push_x pushx.a
-	#define pop_x popx.a
-	#define mov_x movx.a
-	#define cmp_x cmpx.a
+    #define pushm_x    pushm.a
+    #define popm_x     popm.a
+    #define push_x     pushx.a
+    #define pop_x      popx.a
+    #define mov_x      movx.a
+    #define cmp_x      cmpx.a
 #endif
 
 #ifndef pushm_x
-	#error The assembler options must define one of the following symbols: __DATA_MODEL_SMALL__, __DATA_MODEL_MEDIUM__, or __DATA_MODEL_LARGE__
+    #error The assembler options must define one of the following symbols: __DATA_MODEL_SMALL__, __DATA_MODEL_MEDIUM__, or __DATA_MODEL_LARGE__
 #endif
 
 #endif /* DATA_MODEL_H */
-

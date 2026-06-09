@@ -130,18 +130,16 @@ static I2C_Handle gI2cHandle = NULL;
 
 int32_t appI2cInit(void)
 {
-    uint32_t index;
-    I2C_HwAttrs i2cConfig;
-
     #if defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2)
     SET_DEVICE_STATE_ON(TISCI_DEV_I2C5);
     #endif
 
     #if !defined (MCU_PLUS_SDK)
-
     /* Initialize I2C Driver */
-    for(index = 0; index < I2C_HWIP_MAX_CNT; index++)
+    for(uint32_t index = 0; index < I2C_HWIP_MAX_CNT; index++)
     {
+        I2C_HwAttrs i2cConfig;
+
         (void)I2C_socGetInitCfg(index, &i2cConfig);
         i2cConfig.enableIntr = false;
         (void)I2C_socSetInitCfg(index, &i2cConfig);
@@ -250,7 +248,9 @@ static int32_t appOv2775Config(const AppSensorCmdParams *prms)
     uint8_t sensorI2cAddr[APP_MAX_SENSORS] = { 0 } ;
     uint8_t desI2cAddr, i2cAddr;
     uint8_t regAddr8, regVal8;
+#if !defined(MCU_PLUS_SDK)
     uint8_t i2cInst;
+#endif
     uint16_t regAddr16;
 
     #if defined (MCU_PLUS_SDK)
@@ -401,7 +401,9 @@ static int32_t appImx390Config(AppSensorCmdParams *prms)
     uint8_t sensorI2cAddr[APP_MAX_SENSORS] = { 0 } ;
     uint8_t desI2cAddr, i2cAddr;
     uint8_t regAddr8, regVal8;
+#if !defined(MCU_PLUS_SDK)
     uint8_t i2cInst;
+#endif
     uint16_t regAddr16;
     uint32_t portIdx;
 

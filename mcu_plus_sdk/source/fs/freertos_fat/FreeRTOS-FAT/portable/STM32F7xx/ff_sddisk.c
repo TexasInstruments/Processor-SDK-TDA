@@ -48,11 +48,19 @@
 #endif
 
 /* Misc definitions. */
-#define sdSIGNATURE                          0x41404342UL
-#define sdHUNDRED_64_BIT                     ( 100ull )
-#define sdBYTES_PER_MB                       ( 1024ull * 1024ull )
-#define sdSECTORS_PER_MB                     ( sdBYTES_PER_MB / 512ull )
-#define sdIOMAN_MEM_SIZE                     4096
+#define sdSIGNATURE         0x41404342U
+#define sdHUNDRED_64_BIT    ( ( uint64_t ) 100U )
+#define sdBYTES_PER_MB      ( ( uint64_t ) 1024U * 1024U )
+#define sdSECTORS_PER_MB    ( ( uint64_t ) sdBYTES_PER_MB / 512U )
+#ifndef sdIOMAN_MEM_SIZE
+
+/* Define the amount of cache space. Use a multiple of 512,
+ * with a minimum of 3 or 4 time 512 bytes. */
+    #define sdIOMAN_MEM_SIZE                 4096U
+#endif
+
+#define CACHE_LINE_BITS                      0x1FU
+#define CACHE_LINE_SIZE                      32U
 
 /* DMA constants. */
 #define SD_DMAx_Tx_CHANNEL                   DMA_CHANNEL_4
@@ -66,7 +74,7 @@
 
 /* Define a time-out for all DMA transactions in msec. */
 #ifndef sdMAX_TIME_TICKS
-    #define sdMAX_TIME_TICKS    pdMS_TO_TICKS( 2000UL )
+    #define sdMAX_TIME_TICKS    pdMS_TO_TICKS( 2000U )
 #endif
 
 #ifndef configSD_DETECT_PIN
@@ -87,6 +95,8 @@
 #endif
 
 #ifdef STM32F7xx
+
+    #define SRAM1_MAX_SIZE    ( 368U * 1024U )
 
 /* This driver was originally developed for STM32F4xx.
  * With a few defines it can also be used for STM32F7xx : */
@@ -220,7 +230,36 @@ static CardDetect_t xCardDetect;
 
 static __attribute__( ( section( ".first_data" ) ) ) uint8_t pucDMABuffer[ 512 ] __attribute__( ( aligned( 32 ) ) );
 
+#if ( FF_USE_STATIC_CACHE != 0 )
+    static __attribute__( ( section( ".first_data" ) ) ) uint8_t pucFFBuffer[ sdIOMAN_MEM_SIZE ] __attribute__( ( aligned( 32 ) ) );
+#endif
+
 /*-----------------------------------------------------------*/
+
+#ifdef STM32F7xx
+    static BaseType_t xIsCachable( uint32_t ulAddress )
+    {
+        BaseType_t xReturn = pdFALSE;
+
+        /* Is D-cache enabled? */
+        if( ( SCB->CCR & ( uint32_t ) SCB_CCR_DC_Msk ) != 0U )
+        {
+            /* Is this a cacheable area, meaning, it it in SRAM1? */
+            if( ( ulAddress >= SRAM1_BASE ) && ( ulAddress < ( SRAM1_BASE + SRAM1_MAX_SIZE ) ) )
+            {
+                xReturn = pdTRUE;
+            }
+        }
+
+        return xReturn;
+    }
+#else /* ifdef STM32F7xx */
+    static BaseType_t xIsCachable( uint32_t ulAddress )
+    {
+        return pdFALSE;
+    }
+/*-----------------------------------------------------------*/
+#endif /* STM32F7xx */
 
 static int32_t prvFFRead( uint8_t * pucBuffer,
                           uint32_t ulSectorNumber,
@@ -239,23 +278,28 @@ static int32_t prvFFRead( uint8_t * pucBuffer,
         uint64_t ullReadAddr;
         HAL_SD_ErrorTypedef sd_result;
 
-        ullReadAddr = 512ull * ( uint64_t ) ulSectorNumber;
+        ullReadAddr = ( uint64_t ) 512U * ( uint64_t ) ulSectorNumber;
 
         #if ( SDIO_USES_DMA == 0 )
             {
-                sd_result = HAL_SD_ReadBlocks( &xSDHandle, ( uint32_t * ) pucBuffer, ullReadAddr, 512ul, ulSectorCount );
+                sd_result = HAL_SD_ReadBlocks( &xSDHandle, ( uint32_t * ) pucBuffer, ullReadAddr, ulSectorCount );
             }
         #else
             {
-                if( ( ( ( size_t ) pucBuffer ) & 0x1Ful ) == 0ul )
+                /* Is the buffer aligned with a cache line? */
+                if( ( ( ( size_t ) pucBuffer ) & CACHE_LINE_BITS ) == 0U )
                 {
                     /* The buffer is word-aligned, call DMA read directly. */
-                    sd_result = HAL_SD_ReadBlocks_DMA( &xSDHandle, ( uint32_t * ) pucBuffer, ullReadAddr, 512ul, ulSectorCount );
+                    sd_result = HAL_SD_ReadBlocks_DMA( &xSDHandle, ( uint32_t * ) pucBuffer, ullReadAddr, ulSectorCount );
 
                     if( sd_result == SD_OK )
                     {
                         sd_result = HAL_SD_CheckReadOperation( &xSDHandle, sdMAX_TIME_TICKS );
-                        prvCacheInvalidate( ( uint32_t * ) pucBuffer, 512ul * ulSectorCount );
+
+                        if( xIsCachable( ( uint32_t ) pucBuffer ) != pdFALSE )
+                        {
+                            prvCacheInvalidate( ( uint32_t * ) pucBuffer, 512U * ulSectorCount );
+                        }
                     }
                 }
                 else
@@ -267,8 +311,8 @@ static int32_t prvFFRead( uint8_t * pucBuffer,
 
                     for( ulSector = 0; ulSector < ulSectorCount; ulSector++ )
                     {
-                        ullReadAddr = 512ull * ( ( uint64_t ) ulSectorNumber + ( uint64_t ) ulSector );
-                        sd_result = HAL_SD_ReadBlocks_DMA( &xSDHandle, ( uint32_t * ) pucDMABuffer, ullReadAddr, 512ul, 1 );
+                        ullReadAddr = ( uint64_t ) 512U * ( ( uint64_t ) ulSectorNumber + ( uint64_t ) ulSector );
+                        sd_result = HAL_SD_ReadBlocks_DMA( &xSDHandle, ( uint32_t * ) pucDMABuffer, ullReadAddr, 1U );
 
                         if( sd_result == SD_OK )
                         {
@@ -279,8 +323,12 @@ static int32_t prvFFRead( uint8_t * pucBuffer,
                                 break;
                             }
 
-                            prvCacheInvalidate( ( uint32_t * ) pucDMABuffer, 512ul * 1 );
-                            memcpy( pucBuffer + 512ul * ulSector, pucDMABuffer, 512ul );
+                            if( xIsCachable( ( uint32_t ) pucDMABuffer ) != pdFALSE )
+                            {
+                                prvCacheInvalidate( ( uint32_t * ) pucDMABuffer, 512U );
+                            }
+
+                            memcpy( pucBuffer + 512U * ulSector, pucDMABuffer, 512U );
                         }
                     }
                 }
@@ -294,17 +342,17 @@ static int32_t prvFFRead( uint8_t * pucBuffer,
         else
         {
             /* Some error occurred. */
-            FF_PRINTF( "prvFFRead: %lu: %lu (%s)\n", ulSectorNumber, sd_result, prvSDCodePrintable( sd_result ) );
+            FF_PRINTF( "prvFFRead: %u: %lu (%s)\n", ( unsigned ) ulSectorNumber, sd_result, prvSDCodePrintable( sd_result ) );
         }
     }
     else
     {
         /* Make sure no random data is in the returned buffer. */
-        memset( ( void * ) pucBuffer, '\0', ulSectorCount * 512UL );
+        memset( ( void * ) pucBuffer, '\0', ulSectorCount * 512U );
 
         if( pxDisk->xStatus.bIsInitialised != pdFALSE )
         {
-            FF_PRINTF( "prvFFRead: warning: %lu + %lu > %lu\n", ulSectorNumber, ulSectorCount, pxDisk->ulNumberOfSectors );
+            FF_PRINTF( "prvFFRead: warning: %u + %u > %u\n", ( unsigned ) ulSectorNumber, ( unsigned ) ulSectorCount, ( unsigned ) pxDisk->ulNumberOfSectors );
         }
     }
 
@@ -328,19 +376,24 @@ static int32_t prvFFWrite( uint8_t * pucBuffer,
     {
         HAL_SD_ErrorTypedef sd_result;
         uint64_t ullWriteAddr;
-        ullWriteAddr = 512ull * ulSectorNumber;
+        ullWriteAddr = ( uint64_t ) 512U * ( uint64_t ) ulSectorNumber;
 
         #if ( SDIO_USES_DMA == 0 )
             {
-                sd_result = HAL_SD_WriteBlocks( &xSDHandle, ( uint32_t * ) pucBuffer, ullWriteAddr, 512ul, ulSectorCount );
+                sd_result = HAL_SD_WriteBlocks( &xSDHandle, ( uint32_t * ) pucBuffer, ullWriteAddr, ulSectorCount );
             }
         #else
             {
-                if( ( ( ( size_t ) pucBuffer ) & 0x1Ful ) == 0ul )
+                /* Is the buffer aligned with a cache line? */
+                if( ( ( ( uintptr_t ) pucBuffer ) & CACHE_LINE_BITS ) == 0U )
                 {
-                    /* The buffer is word-aligned, call DMA reawrite directly. */
-                    prvCacheClean( ( uint32_t * ) pucBuffer, 512ul * ulSectorCount );
-                    sd_result = HAL_SD_WriteBlocks_DMA( &xSDHandle, ( uint32_t * ) pucBuffer, ullWriteAddr, 512ul, ulSectorCount );
+                    /* The buffer is word-aligned, call DMA write directly. */
+                    if( xIsCachable( ( uint32_t ) pucBuffer ) != pdFALSE )
+                    {
+                        prvCacheClean( ( uint32_t * ) pucBuffer, 512U * ulSectorCount );
+                    }
+
+                    sd_result = HAL_SD_WriteBlocks_DMA( &xSDHandle, ( uint32_t * ) pucBuffer, ullWriteAddr, ulSectorCount );
 
                     if( sd_result == SD_OK )
                     {
@@ -357,10 +410,15 @@ static int32_t prvFFWrite( uint8_t * pucBuffer,
 
                     for( ulSector = 0; ulSector < ulSectorCount; ulSector++ )
                     {
-                        memcpy( pucDMABuffer, pucBuffer + 512ul * ulSector, 512ul );
-                        ullWriteAddr = 512ull * ( ulSectorNumber + ulSector );
-                        prvCacheClean( ( uint32_t * ) pucDMABuffer, 512ul * 1ul );
-                        sd_result = HAL_SD_WriteBlocks_DMA( &xSDHandle, ( uint32_t * ) pucDMABuffer, ullWriteAddr, 512ul, 1 );
+                        memcpy( pucDMABuffer, pucBuffer + 512U * ulSector, 512U );
+                        ullWriteAddr = ( uint64_t ) 512U * ( ulSectorNumber + ulSector );
+
+                        if( xIsCachable( ( uint32_t ) pucDMABuffer ) != pdFALSE )
+                        {
+                            prvCacheClean( ( uint32_t * ) pucDMABuffer, 512U );
+                        }
+
+                        sd_result = HAL_SD_WriteBlocks_DMA( &xSDHandle, ( uint32_t * ) pucDMABuffer, ullWriteAddr, 1 );
 
                         if( sd_result == SD_OK )
                         {
@@ -383,14 +441,14 @@ static int32_t prvFFWrite( uint8_t * pucBuffer,
         }
         else
         {
-            FF_PRINTF( "prvFFWrite: %lu: %lu (%s)\n", ulSectorNumber, sd_result, prvSDCodePrintable( sd_result ) );
+            FF_PRINTF( "prvFFWrite: %u: %lu (%s)\n", ( unsigned ) ulSectorNumber, sd_result, prvSDCodePrintable( sd_result ) );
         }
     }
     else
     {
         if( pxDisk->xStatus.bIsInitialised != pdFALSE )
         {
-            FF_PRINTF( "prvFFWrite: warning: %lu + %lu > %lu\n", ulSectorNumber, ulSectorCount, pxDisk->ulNumberOfSectors );
+            FF_PRINTF( "prvFFWrite: warning: %u + %u > %u\n", ( unsigned ) ulSectorNumber, ( unsigned ) ulSectorCount, ( unsigned ) pxDisk->ulNumberOfSectors );
         }
     }
 
@@ -399,34 +457,10 @@ static int32_t prvFFWrite( uint8_t * pucBuffer,
 /*-----------------------------------------------------------*/
 
 #ifdef STM32F7xx
-
-    static BaseType_t xIsCachable( uint32_t ulAddress )
-    {
-        BaseType_t xReturn = pdFALSE;
-
-        /* Is D-cache enabled? */
-        if( ( SCB != NULL ) && ( ( SCB->CCR & ( uint32_t ) SCB_CCR_DC_Msk ) != 0ul ) )
-        {
-            /* Is this a chacheable area? */
-            if( ( ulAddress >= RAMDTCM_BASE + 0x10000 ) && ( ulAddress < RAMDTCM_BASE + 0x4CC00 ) )
-            {
-                xReturn = pdTRUE;
-            }
-        }
-
-        return xReturn;
-    }
-/*-----------------------------------------------------------*/
-#endif /* STM32F7xx */
-
-#ifdef STM32F7xx
     static void prvCacheClean( uint32_t * pulAddress,
                                int32_t ulSize )
     {
-        if( xIsCachable( ( uint32_t ) pulAddress ) )
-        {
-            SCB_CleanDCache_by_Addr( pulAddress, ulSize );
-        }
+        SCB_CleanDCache_by_Addr( pulAddress, ulSize );
     }
 /*-----------------------------------------------------------*/
 #endif /* STM32F7xx */
@@ -435,10 +469,7 @@ static int32_t prvFFWrite( uint8_t * pucBuffer,
     static void prvCacheInvalidate( uint32_t * pulAddress,
                                     int32_t ulSize )
     {
-        if( xIsCachable( ( uint32_t ) pulAddress ) )
-        {
-            SCB_InvalidateDCache_by_Addr( pulAddress, ulSize );
-        }
+        SCB_InvalidateDCache_by_Addr( pulAddress, ulSize );
     }
 /*-----------------------------------------------------------*/
 #endif /* STM32F7xx */
@@ -508,6 +539,15 @@ static void vGPIO_SD_Init( SD_HandleTypeDef * xSDHandle )
 }
 /*-----------------------------------------------------------*/
 
+FF_Disk_t * FF_SDDiskInitWithSettings( const char * pcName,
+                                       const FFInitSettings_t * pxSettings )
+{
+    ( void ) pxSettings; /* Unused */
+
+    return FF_SDDiskInit( pcName );
+}
+/*-----------------------------------------------------------*/
+
 FF_Disk_t * FF_SDDiskInit( const char * pcName )
 {
     FF_Error_t xFFError;
@@ -552,6 +592,9 @@ FF_Disk_t * FF_SDDiskInit( const char * pcName )
                 xParameters.fnWriteBlocks = prvFFWrite;
                 xParameters.fnReadBlocks = prvFFRead;
                 xParameters.pxDisk = pxDisk;
+                #if ( FF_USE_STATIC_CACHE != 0 )
+                    xParameters.pucCacheMemory = ( uint8_t * ) pucFFBuffer;
+                #endif
 
                 /* prvFFRead()/prvFFWrite() are not re-entrant and must be
                  * protected with the use of a semaphore. */
@@ -562,11 +605,11 @@ FF_Disk_t * FF_SDDiskInit( const char * pcName )
                  * prvFFRead()/prvFFWrite() from different tasks. */
                 xParameters.pvSemaphore = ( void * ) xPlusFATMutex;
 
-                pxDisk->pxIOManager = FF_CreateIOManger( &xParameters, &xFFError );
+                pxDisk->pxIOManager = FF_CreateIOManager( &xParameters, &xFFError );
 
                 if( pxDisk->pxIOManager == NULL )
                 {
-                    FF_PRINTF( "FF_SDDiskInit: FF_CreateIOManger: %s\n", ( const char * ) FF_GetErrMessage( xFFError ) );
+                    FF_PRINTF( "FF_SDDiskInit: FF_CreateIOManager: %s\n", ( const char * ) FF_GetErrMessage( xFFError ) );
                     FF_SDDiskDelete( pxDisk );
                     pxDisk = NULL;
                 }
@@ -693,7 +736,7 @@ BaseType_t FF_SDDiskMount( FF_Disk_t * pxDisk )
     else
     {
         pxDisk->xStatus.bIsMounted = pdTRUE;
-        FF_PRINTF( "****** FreeRTOS+FAT initialized %lu sectors\n", pxDisk->pxIOManager->xPartition.ulTotalSectors );
+        FF_PRINTF( "****** FreeRTOS+FAT initialized %u sectors\n", ( unsigned ) pxDisk->pxIOManager->xPartition.ulTotalSectors );
         xReturn = pdPASS;
     }
 
@@ -796,10 +839,10 @@ BaseType_t FF_SDDiskShowPartition( FF_Disk_t * pxDisk )
         FF_PRINTF( "Partition Nr   %8u\n", pxDisk->xStatus.bPartitionNumber );
         FF_PRINTF( "Type           %8u (%s)\n", pxIOManager->xPartition.ucType, pcTypeName );
         FF_PRINTF( "VolLabel       '%8s' \n", pxIOManager->xPartition.pcVolumeLabel );
-        FF_PRINTF( "TotalSectors   %8lu\n", pxIOManager->xPartition.ulTotalSectors );
-        FF_PRINTF( "SecsPerCluster %8lu\n", pxIOManager->xPartition.ulSectorsPerCluster );
-        FF_PRINTF( "Size           %8lu MB\n", ulTotalSizeMB );
-        FF_PRINTF( "FreeSize       %8lu MB ( %d perc free )\n", ulFreeSizeMB, iPercentageFree );
+        FF_PRINTF( "TotalSectors   %8u\n", ( unsigned ) pxIOManager->xPartition.ulTotalSectors );
+        FF_PRINTF( "SecsPerCluster %8u\n", ( unsigned ) pxIOManager->xPartition.ulSectorsPerCluster );
+        FF_PRINTF( "Size           %8u MB\n", ( unsigned ) ulTotalSizeMB );
+        FF_PRINTF( "FreeSize       %8u MB ( %d perc free )\n", ( unsigned ) ulFreeSizeMB, iPercentageFree );
     }
 
     return xReturn;
@@ -820,7 +863,7 @@ static void prvSDIO_SD_Init( void )
     xSDHandle.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
 
     /* Use fastest CLOCK at 0. */
-    xSDHandle.Init.ClockDiv = 32;
+    xSDHandle.Init.ClockDiv = 0U;
 
     #if ( SDIO_USES_DMA != 0 )
         {
@@ -927,7 +970,7 @@ static BaseType_t prvSDMMCInit( BaseType_t xDriveNumber )
     if( prvSDDetect() == pdFALSE )
     {
         FF_PRINTF( "No SD card detected\n" );
-        return 0;
+        return pdFAIL;
     }
 
     /* When starting up, skip debouncing of the Card Detect signal. */
@@ -951,12 +994,12 @@ static BaseType_t prvSDMMCInit( BaseType_t xDriveNumber )
             }
         }
     #endif /* if ( BUS_4BITS != 0 ) */
-    FF_PRINTF( "HAL_SD_Init: %d: %s type: %s Capacity: %lu MB\n",
+    FF_PRINTF( "HAL_SD_Init: %d: %s type: %s Capacity: %u MB\n",
                SD_state, prvSDCodePrintable( ( uint32_t ) SD_state ),
                xSDHandle.CardType == HIGH_CAPACITY_SD_CARD ? "SDHC" : "SD",
-               xSDCardInfo.CardCapacity / ( 1024 * 1024 ) );
+               ( unsigned ) ( xSDCardInfo.CardCapacity / ( 1024 * 1024 ) ) );
 
-    return SD_state == SD_OK ? 1 : 0;
+    return ( SD_state == SD_OK ) ? pdPASS : pdFAIL;
 }
 /*-----------------------------------------------------------*/
 
@@ -1191,7 +1234,7 @@ static const char * prvSDCodePrintable( uint32_t ulCode )
 
     static uint32_t prvEventWaitFunction( SD_HandleTypeDef * pxHandle )
     {
-        uint32_t ulReturn;
+        uint32_t ulReturn = 1U;
 
         /*
          * It was measured how quickly a DMA interrupt was received. It varied
@@ -1203,23 +1246,14 @@ static const char * prvSDCodePrintable( uint32_t ulCode )
          * >= 5 ms :    0 times
          */
 
-        if( xTaskCheckForTimeOut( &xDMATimeOut, &xDMARemainingTime ) != pdFALSE )
-        {
-            /* The timeout has been reached, no need to block. */
-            ulReturn = 1UL;
-        }
-        else
+        if( xTaskCheckForTimeOut( &xDMATimeOut, &xDMARemainingTime ) == pdFALSE )
         {
             /* The timeout has not been reached yet, block on the semaphore. */
             xSemaphoreTake( xSDCardSemaphore, xDMARemainingTime );
 
-            if( xTaskCheckForTimeOut( &xDMATimeOut, &xDMARemainingTime ) != pdFALSE )
+            if( xTaskCheckForTimeOut( &xDMATimeOut, &xDMARemainingTime ) == pdFALSE )
             {
-                ulReturn = 1UL;
-            }
-            else
-            {
-                ulReturn = 0UL;
+                ulReturn = 0U;
             }
         }
 

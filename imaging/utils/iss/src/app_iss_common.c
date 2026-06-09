@@ -200,9 +200,9 @@ static uint8_t is_viss_plugin(uint32_t plugin_id);
 static uint8_t is_aewb_plugin(uint32_t plugin_id);
 static uint8_t is_ldc_plugin(uint32_t plugin_id);
 static int32_t appSplitVpacDcc(uint8_t *dcc_buf_in, uint32_t prmSize,
-                        uint8_t ** dcc_buf_viss, uint32_t *dcc_buf_viss_num_bytes,
-                        uint8_t ** dcc_buf_aewb, uint32_t *dcc_buf_aewb_num_bytes,
-                        uint8_t ** dcc_buf_ldc, uint32_t *dcc_buf_ldc_num_bytes);
+                        uint8_t **dcc_buf_viss, uint32_t *viss_bytes,
+                        uint8_t **dcc_buf_aewb, uint32_t *aewb_bytes,
+                        uint8_t **dcc_buf_ldc,  uint32_t *ldc_bytes);
 
 int32_t appIssGetDCCSizeVISS(const char * sensor_name, uint32_t wdr_mode)
 {
@@ -841,9 +841,9 @@ int32_t appIssGetResizeParams(uint16_t in_width, uint16_t in_height, uint16_t tg
     /*X and Y dimensions will be scaled by same factor to maintain aspect ratio*/
     rsz_ratio = (rsz_ratio_x < rsz_ratio_y) ? rsz_ratio_x : rsz_ratio_y;
     tmp = (in_width*rsz_ratio)/1024U;
-    *out_width = (uint16_t)((tmp>>3U)<<3U);/*Align to 8x*/
+    *out_width = (uint16_t)((tmp & 0xFFF8U) & 0xFFFFU); /*Align to 8x*/
     tmp = (in_height*rsz_ratio)/1024U;
-    *out_height = (uint16_t)((tmp>>3U)<<3U);/*Align to 8x*/
+    *out_height = (uint16_t)((tmp & 0xFFF8U) & 0xFFFFU); /*Align to 8x*/
 
     return 0;
 }
@@ -1041,8 +1041,18 @@ static int32_t appSplitVpacDcc(uint8_t *dcc_buf_in, uint32_t prmSize,
 
                     if (0 == status)
                     {
+                        uint64_t next_offset = (uint64_t)offset + (uint64_t)sz;
+
                         pluginBuf = &pluginBuf[sz];
-                        offset += sz;
+
+                        if(next_offset > 0xFFFFFFFFU)
+                        {
+                            offset = 0xFFFFFFFFU;
+                        }
+                        else
+                        {
+                            offset = (uint32_t)next_offset;
+                        }
                     }
                 }
             }

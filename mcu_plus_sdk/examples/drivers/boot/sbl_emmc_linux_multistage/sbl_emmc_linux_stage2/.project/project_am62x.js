@@ -54,6 +54,7 @@ const readmeDoxygenPageTag = "EXAMPLES_DRIVERS_SBL_EMMC_LINUX_MULTISTAGE";
 
 const buildOptionCombos = [
     { device: device, cpu: "r5fss0-0", cgt: "ti-arm-clang", board: "am62x-sk", os: "nortos"},
+    { device: device, cpu: "r5fss0-0", cgt: "ti-arm-clang", board: "am62x-sip-sk", os: "nortos"},
     { device: device, cpu: "r5fss0-0", cgt: "ti-arm-clang", board: "am62x-sk-lp", os: "nortos"},
 ];
 
@@ -64,7 +65,7 @@ function getComponentProperty() {
     property.type = "executable";
     property.name = "sbl_emmc_linux_stage2";
     property.isInternal = false;
-    property.isBootLoader = false;
+    property.isBootLoaderStage2 = true;
     property.buildOptionCombos = buildOptionCombos;
 
     return property;

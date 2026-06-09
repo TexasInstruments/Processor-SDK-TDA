@@ -131,7 +131,7 @@ void taskFxn(void* a0)
                                 TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
                                 TISCI_MSG_FLAG_AOP,
                                 SystemP_WAIT_FOREVER);
-    
+
     if (CSL_PASS == retVal)
     {
         Csirx_recoveryTest();

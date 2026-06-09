@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) Texas Instruments Incorporated 2024
+*  Copyright (c) Texas Instruments Incorporated 2023-24
 *
 *  Redistribution and use in source and binary forms, with or without
 *  modification, are permitted provided that the following conditions
@@ -51,7 +51,7 @@
 #if defined(VHWA_VPAC_IP_REV_VPAC3L)
 #define VHWA_MSC_TIRTOS_CFG                                                    \
 {                                                                              \
-    /* 0 - Thread 0, 1-in 10-out 1920x1080 YUV 12bit Packed input/output */    \
+    /* 0 - Thread 0, 1-in 10-out 1920x1080 12bit packed input and 12bit packed output */    \
     {                                                                          \
         "TC_MSC_FUNC_TC00",                                                    \
         1u,                     /* NumHandles */                               \
@@ -60,7 +60,7 @@
         {&gAppMscTestCfg[3U] },                                                \
         TRUE,                                                                  \
     },                                                                         \
-    /* 2 - Thread 0, 1-in 5-out 1920x1080 Y12 UV8 */    \
+    /* 1 - Thread 0, 1-in 5-out 1920x1080 Y12 UV8 */    \
     {                                                                          \
         "TC_MSC_FUNC_TC01",                                                    \
         1u,                     /* NumHandles */                               \

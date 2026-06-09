@@ -2,11 +2,14 @@ export MCU_PLUS_SDK_PATH?=$(abspath ../../..)
 include $(MCU_PLUS_SDK_PATH)/imports.mak
 
 #Processor SDK QNX image path
-PSDK_QNX_PATH?=~/ti-processor-sdk-qnx_am62ax_08_06_00_01/psdkqa
+PSDK_QNX_PATH?=~/ti-processor-sdk-qnx_am62ax_09_01_00_01/psdkqa
 QNX_IFS_PATH=$(PSDK_QNX_PATH)/bootfs
 
 #Path for prebuit images in Processor SDK QNX
 PSDK_QNX_PREBUILT_IMAGES=$(PSDK_QNX_PATH)/sbl_bootfiles/atf_optee_dir
+
+# With or without OP-TEE (1 or 0). Default value is 1.
+ENABLE_OPTEE_BIN=1
 
 #Input qnx binaries
 ATF_BIN_NAME=bl31.bin
@@ -14,9 +17,13 @@ OPTEE_BIN_NAME=bl32.bin
 QNX_BIN_NAME=qnx-ifs
 
 #QNX image load address
-ATF_LOAD_ADDR=0x9e780000
+ATF_LOAD_ADDR=0x80000000
 OPTEE_LOAD_ADDR=0x9e800000
 QNX_LOAD_ADDR=0x80080000
+
+ifdef FDT_BIN_NAME
+FDT_LOAD_ADDR=0x88000000
+endif
 
 #Output appimage name
 QNX_BOOTIMAGE_NAME=qnx.appimage

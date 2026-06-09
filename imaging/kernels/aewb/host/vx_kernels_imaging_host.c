@@ -70,10 +70,6 @@ static vx_status VX_CALLBACK unPublishKernels(vx_context context);
 
 static uint32_t gIsImagingKernelsLoad = 0u;
 
-vx_status tivxAddKernelAewb(vx_context context);
-
-vx_status tivxRemoveKernelAewb(vx_context context);
-
 static Tivx_Host_Kernel_List  gTivx_host_kernel_list[] = {
     {&tivxAddKernelAewb, &tivxRemoveKernelAewb},
 };

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2021-2023 Texas Instruments Incorporated - http://www.ti.com
+ * Copyright (c) 2021-2026 Texas Instruments Incorporated - http://www.ti.com
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -38,25 +38,17 @@
 #include <stdint.h>
 #include <string.h>
 #include <kernel/dpl/DebugP.h>
+#include <kernel/dpl/AddrTranslateP.h>
 #include <drivers/hw_include/hw_types.h>
 #include <drivers/soc.h>
 #include <drivers/ddr.h>
 #include <drivers/ddr/v1/cdn_drv.h>
-#include <drivers/ddr/v0/csl_emif.h>
+#include <drivers/ddr/v1/csl_emif.h>
 #include <kernel/dpl/ClockP.h>
+#include <kernel/dpl/AddrTranslateP.h>
 #include <kernel/dpl/CacheP.h>
-
-#if defined (SOC_AM62AX)
-#include <drivers/ddr/v1/soc/am62ax/ddr_soc.h>
-#endif
-
-#if defined (SOC_AM62PX)
-#include <drivers/ddr/v1/soc/am62px/ddr_soc.h>
-#endif
-
-#if defined (SOC_J722S)
-#include <drivers/ddr/v1/soc/j722s/ddr_soc.h>
-#endif
+#include <kernel/dpl/HwiP.h>
+#include <drivers/hw_include/cslr.h>
 
 #if !defined (MCU_R5)
 /* ========================================================================== */
@@ -90,10 +82,46 @@
 #define DDR_REQ_TYPE_1    1
 #define DDR_REQ_TYPE_2    2
 
+/* FSP frequency handshake timeout values */
+#define DDR_FSP_REQ_TIMEOUT_US      100000U  /* 100 milliseconds */
+#define DDR_FSP_ACK_TIMEOUT_US      10U     /* 10 microseconds */
+
+/* Writing a 0x1 will clear 1-bit ecc error count */
+#define DDR_ECC_1B_ERR_CNT_CLEAR        (1U)
+
+#define DDR_GET_CFG_REG_ADDR(reg)       (DDR_CTL_CFG_BASE+reg)
+
+#define DDR_ECC_REGION_START_RESET_VAL  0xFFFF0000U
+
+/* Default priority map values */
+#define DDR_SS_DEF_LPT_PRIMAP           0x01234567U
+#define DDR_SS_DEF_HPT_PRIMAP           0x01234567U
+
+/* Initial frequency set for LPDDR before training*/
+#define LPDDR_INIT_FREQ 25000000U
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/**
+ *  \brief Structure containing ECC region params
+ */
+typedef struct {
+    uint64_t startAddr;
+    uint64_t endAddr;
+    uint64_t pattern;
+} DDR_ECCRegion;
+
 /* ========================================================================== */
 /*                 Internal Function Declarations                             */
 /* ========================================================================== */
 
+static int32_t DDR_primeMem(uint64_t start, uint64_t end, uint64_t pattern);
+static uint32_t DDR_utilLog2(uint64_t num);
+static void DDR_isr(void *arg);
+static void DDR_changeFreqAck(DDR_Params *prms);
+static void DDR_infoHandlerCallback(const LPDDR4_PrivateData* pD, LPDDR4_InfoType infoType);
 
 /* ========================================================================== */
 /*                         Global Variables Declarations                      */
@@ -101,12 +129,31 @@
 
 static LPDDR4_Config gLpddrCfg;
 static LPDDR4_PrivateData gLpddrPd;
+static uint8_t gDDRInitDoneFlag = 0U;
+
+static DDR_ECCRegion gDDRECCRegion[3] =
+{
+    {
+        0xFFFFFFFFFFFFFFFFU,
+        0xFFFFFFFFFFFFFFFFU,
+        0xFFFFFFFFFFFFFFFFU
+    },
+    {
+        0xFFFFFFFFFFFFFFFFU,
+        0xFFFFFFFFFFFFFFFFU,
+        0xFFFFFFFFFFFFFFFFU
+    },
+    {
+        0xFFFFFFFFFFFFFFFFU,
+        0xFFFFFFFFFFFFFFFFU,
+        0xFFFFFFFFFFFFFFFFU
+    },
+};
 
 /* ========================================================================== */
 /*                         Extern Function declerations                       */
 /* ========================================================================== */
 extern void DDR_socEnableVttRegulator(void);
-extern void DDR_ResetDDR_PLL(void);
 
 
 /* ========================================================================== */
@@ -130,34 +177,56 @@ static void DDR_setFreq(uint64_t freq)
     }
 }
 
+static void DDR_infoHandlerCallback(const LPDDR4_PrivateData* pD, LPDDR4_InfoType infoType)
+{
+    if (infoType == LPDDR4_DRV_SOC_PLL_UPDATE)
+    {
+        /* This callback is invoked during the start sequence to handle
+         * frequency handshake. Retrieve params from ddr_instance. */
+        DDR_Params *prms = (DDR_Params *)pD->ddr_instance;
+        uint32_t ddrType = (HW_RD_REG32(DDR_CTL_REG_BASE) & DDR_TYPE_MASK);
+
+        if ((prms != NULL) && (ddrType == LPDDR4_MEMORY))
+        {
+            DDR_changeFreqAck(prms);
+        }
+    }
+
+    return;
+}
+
 static void DDR_changeFreqAck(DDR_Params *prms)
 {
     uint32_t req, req_type, counter;
+    uint64_t timeout;
 
     /*unlock MMR reg 5*/
     /*Partition5 lockkey0*/
-#if defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_J722S)
     HW_WR_REG32((CSL_WKUP_CTRL_MMR0_CFG0_BASE + CSL_WKUP_CTRL_MMR_CFG0_LOCK5_KICK0), KEY0);
     /*Partition5 lockkey1*/
     HW_WR_REG32(( CSL_WKUP_CTRL_MMR0_CFG0_BASE + CSL_WKUP_CTRL_MMR_CFG0_LOCK5_KICK1), KEY1);
-#else
-    HW_WR_REG32((CSL_CTRL_MMR0_CFG0_BASE + CSL_MAIN_CTRL_MMR_CFG0_LOCK5_KICK0), KEY0);
-    /*Partition5 lockkey1*/
-    HW_WR_REG32(( CSL_CTRL_MMR0_CFG0_BASE + CSL_MAIN_CTRL_MMR_CFG0_LOCK5_KICK1), KEY1);
-#endif
 
+    ClockP_usleep(500U);
 
-    ClockP_usleep(500);
-
-    for(counter = 0; counter < prms->fshcount; counter++)
+    for(counter = 0U; counter < prms->fshcount; counter++)
     {
-        req = (HW_RD_REG32(CSL_WKUP_CTRL_MMR0_CFG0_BASE + DDR_FSP_CLKCHNG_REQ) & 0x80);
-        while((req ) == 0x0)
+        /* Wait for frequency change request with timeout */
+        timeout = DDR_FSP_REQ_TIMEOUT_US;
+        req = (HW_RD_REG32(CSL_WKUP_CTRL_MMR0_CFG0_BASE + DDR_FSP_CLKCHNG_REQ) & 0x80U);
+        while((req == 0x0U) && (timeout > 0U))
         {
-            req = (HW_RD_REG32(CSL_WKUP_CTRL_MMR0_CFG0_BASE + DDR_FSP_CLKCHNG_REQ) & 0x80);
+            ClockP_usleep(1U);
+            timeout--;
+            req = (HW_RD_REG32(CSL_WKUP_CTRL_MMR0_CFG0_BASE + DDR_FSP_CLKCHNG_REQ) & 0x80U);
         }
 
-        req_type = HW_RD_REG32(CSL_WKUP_CTRL_MMR0_CFG0_BASE + DDR_FSP_CLKCHNG_REQ) & 0x03;
+        if(timeout == 0U)
+        {
+            DebugP_logError("Timeout waiting for DDR FSP frequency change request\r\n");
+            DebugP_assert(FALSE);
+        }
+
+        req_type = HW_RD_REG32(CSL_WKUP_CTRL_MMR0_CFG0_BASE + DDR_FSP_CLKCHNG_REQ) & 0x03U;
 
         if(req_type == DDR_REQ_TYPE_1)
         {
@@ -169,47 +238,49 @@ static void DDR_changeFreqAck(DDR_Params *prms)
         }
         else if(req_type == DDR_REQ_TYPE_0)
         {
-            DDR_setFreq(25000000);
+            DDR_setFreq(LPDDR_INIT_FREQ);
         }
 
         /*set the ack bit*/
-        HW_WR_REG32((CSL_WKUP_CTRL_MMR0_CFG0_BASE + DDR_FSP_CLKCHNG_ACK), 0x1);
-        while(((HW_RD_REG32((CSL_WKUP_CTRL_MMR0_CFG0_BASE + DDR_FSP_CLKCHNG_REQ))) & 0x80) == 0x80);
+        HW_WR_REG32((CSL_WKUP_CTRL_MMR0_CFG0_BASE + DDR_FSP_CLKCHNG_ACK), 0x1U);
+
+        /* Wait for request bit to clear with timeout */
+        timeout = DDR_FSP_ACK_TIMEOUT_US;
+        while((((HW_RD_REG32((CSL_WKUP_CTRL_MMR0_CFG0_BASE + DDR_FSP_CLKCHNG_REQ))) & 0x80U) == 0x80U) && (timeout > 0U))
+        {
+            ClockP_usleep(1U);
+            timeout--;
+        }
+
+        if(timeout == 0U)
+        {
+            DebugP_logError("Timeout waiting for DDR FSP frequency change acknowledge\r\n");
+            DebugP_assert(FALSE);
+        }
+
         /*clear the ack bit */
-        HW_WR_REG32((CSL_WKUP_CTRL_MMR0_CFG0_BASE + DDR_FSP_CLKCHNG_ACK), 0x0);
+        HW_WR_REG32((CSL_WKUP_CTRL_MMR0_CFG0_BASE + DDR_FSP_CLKCHNG_ACK), 0x0U);
     }
 }
 
-static int32_t DDR_setClock(DDR_Params *prms)
+static int32_t DDR_initFreq(DDR_Params *prms)
 {
     int32_t status = SystemP_SUCCESS;
+    uint32_t ddrType = (HW_RD_REG32(DDR_CTL_REG_BASE) & DDR_TYPE_MASK);
 
-    if((HW_RD_REG32(DDR_CTL_REG_BASE) & DDR_TYPE_MASK) == DDR4_MEMORY)
-    {
-        /* Type is DDR4*/
-        DDR_setFreq(prms->clk1Freq);
-    }
-    else
-    {
-        /* Type is LPDDR4. Start Frequency handshake.*/
-        DDR_setFreq(25000000);
+    switch(ddrType) {
 
-        /*trigger the start bit (from PI)*/
-        HW_WR_REG32(DDR_CTL_REG_BASE + DDR_PI_REG_BLOCK_OFFS + DDR_PI_0_SFR_OFFS,   TRIGGER_START_BIT);
-
-        ClockP_usleep(500);
-
-        /*trigger the start bit (from CTL)*/
-        HW_WR_REG32(DDR_CTL_REG_BASE + DDR_CTL_0_SFR_OFFS,   TRIGGER_START_BIT);
-
-        DDR_changeFreqAck(prms);
-
-        ClockP_usleep(500);
-
-        /*PI INT S`TATUS*/
-        while(((HW_RD_REG32(DDR_CTL_REG_BASE + DDR_PI_REG_BLOCK_OFFS + DDR_PI_87_SFR_OFFS)) & 0x1) != 0x1);
-        /*CTL_342[25] = int status init[1] = 1 - The MC initialization has been completed.*/
-        while((HW_RD_REG32(DDR_CTL_REG_BASE + DDR_CTL_350_SFR_OFFS)&0x02000000)!= 0x02000000);
+        case DDR4_MEMORY:
+            /* Type is DDR4. Set frequency */
+            DDR_setFreq(prms->clk1Freq);
+            break;
+        case LPDDR4_MEMORY:
+            /* Type is LPDDR4. Set initial frequency to 25 MHz */
+            DDR_setFreq(LPDDR_INIT_FREQ);
+            break;
+        default:
+            DebugP_logError("Cannot init frequnecy due to unrecognized ddrType!!!\n");
+            status = SystemP_FAILURE;
     }
 
     return status;
@@ -232,7 +303,7 @@ static int32_t DDR_probe(void)
     return ret;
 }
 
-static int32_t DDR_initDrv(void)
+static int32_t DDR_initDrv(DDR_Params *prm)
 {
     uint32_t status = 0U;
     int32_t ret = SystemP_SUCCESS;
@@ -246,15 +317,13 @@ static int32_t DDR_initDrv(void)
 
     if(ret == SystemP_SUCCESS)
     {
-#if defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_J722S)
         gLpddrCfg.ctlBase = (struct LPDDR4_CtlRegs_s *)DDR_CTL_CFG_BASE;
-#else
-        gLpddrCfg.ctlBase = (struct LPDDR4_CtlRegs_s *)CSL_DDR16SS0_CTL_CFG_BASE;
-#endif
-
-        gLpddrCfg.infoHandler = NULL;
+        gLpddrCfg.infoHandler = DDR_infoHandlerCallback;
 
         status = LPDDR4_Init(&gLpddrPd, &gLpddrCfg);
+
+        gLpddrPd.ddr_instance = (void *)prm;
+
         if ((status > 0U) ||
             (gLpddrPd.ctlBase != (struct LPDDR4_CtlRegs_s *)gLpddrCfg.ctlBase) ||
             (gLpddrPd.ctlInterruptHandler != gLpddrCfg.ctlInterruptHandler) ||
@@ -311,23 +380,10 @@ static int32_t DDR_start(void)
 
     status = LPDDR4_ReadReg(&gLpddrPd, LPDDR4_CTL_REGS, offset, &regval);
 
-    if((HW_RD_REG32(DDR_CTL_REG_BASE) & DDR_TYPE_MASK) == DDR4_MEMORY)
+    if ((status > 0U) || ((regval & 0x1U) != 0U))
     {
-        /* DDR4 memory */
-        if ((status > 0U) || ((regval & 0x1U) != 0U))
-        {
-            DebugP_logError("DDR4_ReadReg failed !!!\r\n");
-            ret = SystemP_FAILURE;
-        }
-    }
-    else
-    {
-        /* LPDDR4 memory */
-        if ((status > 0U) || ((regval & 0x1U) != 1U))
-        {
-            DebugP_logError("LPDDR4_ReadReg failed !!!\r\n");
-            ret = SystemP_FAILURE;
-        }
+        DebugP_logError("DDR4_ReadReg/LPDDR4_ReadReg failed !!!\r\n");
+        ret = SystemP_FAILURE;
     }
 
     if(ret == SystemP_SUCCESS)
@@ -367,97 +423,279 @@ static uint32_t DDR_isEnabled (DDR_Params *prm)
     return isEnabled;
 }
 
+static void DDR_isr(void *arg)
+{
+    bool irqStatus;
+    int32_t status;
+    static uint8_t isrCnt = 0;
+    uint32_t regVal = 0U;
+    CSL_emif_sscfgRegs *pEmifSsRegs;
+
+    status = LPDDR4_CheckCtlInterrupt(&gLpddrPd, LPDDR4_INTR_BIST_DONE,
+						     &irqStatus);
+    if ((status == 0U) && irqStatus)
+    {
+        /* Clear LPDDR4_INTR_BIST_DONE */
+        status = LPDDR4_AckCtlInterrupt(&gLpddrPd, LPDDR4_INTR_BIST_DONE);
+        if (status == 0U)
+        {
+            isrCnt++;
+            status = SystemP_SUCCESS;
+        }
+        else
+        {
+            status = SystemP_FAILURE;
+        }
+    }
+    else
+    {
+        status = SystemP_FAILURE;
+    }
+
+    if(status == SystemP_SUCCESS)
+    {
+        /* Before continuing we have to stop BIST - BIST_GO = 0 */
+        LPDDR4_WriteReg(&gLpddrPd, LPDDR4_CTL_REGS, DDR_BIST_GO_REG/sizeof(uint32_t), 0);
+
+        switch (isrCnt)
+        {
+            case 1:
+                if(gDDRECCRegion[1].startAddr != 0xFFFFFFFFFFFFFFFF && gDDRECCRegion[1].endAddr != 0xFFFFFFFFFFFFFFFF)
+                {
+                    DDR_primeMem(gDDRECCRegion[1].startAddr, gDDRECCRegion[1].endAddr, gDDRECCRegion[1].pattern);
+                    break;
+                }
+
+            case 2:
+                if(gDDRECCRegion[2].startAddr != 0xFFFFFFFFFFFFFFFF && gDDRECCRegion[2].endAddr != 0xFFFFFFFFFFFFFFFF)
+                {
+                    DDR_primeMem(gDDRECCRegion[2].startAddr, gDDRECCRegion[2].endAddr, gDDRECCRegion[2].pattern);
+                    break;
+                }
+
+            default:
+                pEmifSsRegs = (CSL_emif_sscfgRegs *)AddrTranslateP_getLocalAddr(DDR_SS_CFG_BASE);
+
+                if (status == SystemP_SUCCESS)
+                {
+                    CSL_REG32_WR( &pEmifSsRegs->ECC_1B_ERR_CNT_REG, 1u );
+
+                    status = CSL_emifClearECCInterruptStatus((CSL_emif_sscfgRegs *)DDR_SS_CFG_BASE,
+                                                            CSL_EMIF_SSCFG_V2A_INT_SET_REG_ECC1BERR_EN_MASK
+                                                            | CSL_EMIF_SSCFG_V2A_INT_SET_REG_ECCM1BERR_EN_MASK
+                                                            | CSL_EMIF_SSCFG_V2A_INT_SET_REG_ECC2BERR_EN_MASK);
+
+                    if (status == SystemP_SUCCESS)
+                    {
+                        status = CSL_emifEnableECCInterrupts((CSL_emif_sscfgRegs *)DDR_SS_CFG_BASE,
+                                                            CSL_EMIF_SSCFG_V2A_INT_SET_REG_ECC1BERR_EN_MASK
+                                                            | CSL_EMIF_SSCFG_V2A_INT_SET_REG_ECCM1BERR_EN_MASK
+                                                            | CSL_EMIF_SSCFG_V2A_INT_SET_REG_ECC2BERR_EN_MASK);
+                    }
+                }
+
+                regVal = pEmifSsRegs->ECC_CTRL_REG;
+                regVal |= CSL_FMK(EMIF_SSCFG_ECC_CTRL_REG_ECC_CK, 1U);
+                CSL_REG32_WR( &pEmifSsRegs->ECC_CTRL_REG, regVal );
+
+                gDDRInitDoneFlag = 1U;
+
+                break;
+        }
+    }
+}
+
+static uint32_t DDR_utilLog2(uint64_t num)
+{
+    uint32_t i=0, k;
+
+    if(num != 0)
+    {
+        for(i = 63; i >= 0; i--)
+        {
+            k = (num >> i) & 0x01;
+            if(k == 1)
+            {
+                break;
+            }
+        }
+    }
+
+    return i;
+}
+
+static int32_t DDR_primeMem(uint64_t start, uint64_t end, uint64_t pattern)
+{
+    uint64_t size = end - start + 1;
+    uint64_t bistStart;
+    uint32_t regVal;
+    uint32_t tmp;
+    uint32_t i = 0;
+
+    /* When inline ECC is enabled, from system point of view the 8/9th of the SDRAM
+     * data space are seen as consecutive byte addresses. But BIST engine data space
+     * view is not consecutive, it is with data and inline ECC values together. i.e
+     * 512-byte data block and it's 64-byte ECC. BIST view for a given address will
+     * be 1/9th lesser.
+     *      BIST VIEW = BIST START ADDRESS - (BIST START ADDRESS / 9);       --> (1)
+     *
+     * Change the start address to match the BIST engine view with the actual system
+     * point of view. The start address given to the bist engine should be in such
+     * a way that BIST VIEW matches with given start address.
+     * i.e,           BIST VIEW = START ADDRESS;
+     * Using (1) =>   BIST START ADDRESS - (BIST START ADDRESS / 9) = START ADDRESS;
+     *                BIST START ADDRESS = (START ADDRESS * 9) / 8;           --> (2)
+     *
+     * For example, let START ADDRESS = 0x20000
+     * Using (2) =>     BIST START ADDRESS = 0x24000
+     * Using (1) =>     BIST VIEW = 0x20000 which is equal to the START ADDRESS.
+     */
+    bistStart = (start * 9U) / 8U;
+
+    /* Set BIST_START_ADDR_0 [31:0] */
+    CSL_REG32_WR(DDR_GET_CFG_REG_ADDR(DDR_BIST_START_ADDRESS_0_REG), bistStart & DDR_BIST_START_ADDR_0_MASK);
+
+    /* Set BIST_START_ADDR_0 [32] */
+    CSL_REG32_WR(DDR_GET_CFG_REG_ADDR(DDR_BIST_START_ADDRESS_1_REG), (bistStart >> 32) & DDR_BIST_START_ADDR_1_MASK);
+
+    tmp = (uint32_t)DDR_utilLog2(size);
+    regVal = CSL_FMK(DDR_ADDRESS_SPACE, tmp);
+    CSL_REG32_WR(DDR_GET_CFG_REG_ADDR(DDR_ADDRESS_SPACE_REG), regVal);
+
+    /* Enable BIST data check bit */
+    regVal = CSL_REG32_RD(DDR_GET_CFG_REG_ADDR(DDR_BIST_DATA_CHECK_REG));
+    regVal |= CSL_FMK(BIST_DATA_CHECK_REG, regVal);
+    CSL_REG32_WR(DDR_GET_CFG_REG_ADDR(DDR_BIST_DATA_CHECK_REG), regVal);
+    /* Clear the address check bit */
+    regVal = CSL_REG32_RD(DDR_GET_CFG_REG_ADDR(DDR_BIST_ADDRESS_CHECK_REG));
+    regVal &= ~CSL_FMK(BIST_ADDRESS_CHECK_REG, regVal);
+    CSL_REG32_WR(DDR_GET_CFG_REG_ADDR(DDR_BIST_ADDRESS_CHECK_REG), regVal);
+
+    regVal = BIST_MODE_MEM_INIT;
+    CSL_REG32_WR(DDR_GET_CFG_REG_ADDR(DDR_BIST_TEST_MODE_REG), regVal);
+
+    regVal = pattern & (DDR_BIST_DATA_PATTERN0_MASK);
+    CSL_REG32_WR(DDR_GET_CFG_REG_ADDR(DDR_BIST_DATA_PATTERN_0_REG), regVal);
+
+    regVal = (pattern >> 32) & (DDR_BIST_DATA_PATTERN1_MASK);
+    CSL_REG32_WR(DDR_GET_CFG_REG_ADDR(DDR_BIST_DATA_PATTERN_1_REG), regVal);
+
+    while (i < BIST_GO_START_TIMEOUT)
+    {
+        i++;
+    }
+
+    regVal = CSL_REG32_RD(DDR_GET_CFG_REG_ADDR(DDR_BIST_GO_REG));
+    regVal |= DDR_BIST_GO_MASK;
+    CSL_REG32_WR(DDR_GET_CFG_REG_ADDR(DDR_BIST_GO_REG), regVal);
+
+    return SystemP_SUCCESS;
+}
+
 static int32_t DDR_inlineECCCfg (DDR_Params *prm)
 {
     int32_t status = SystemP_SUCCESS;
+    uint32_t lpddrStatus = 0U;
+    uint32_t regval = 0U;
 
     if (prm->eccRegion != NULL)
     {
-        /* Disable inline ECC */
-        DDR_enableInlineECC (0U);
-
         CSL_EmifConfig emifCfg;
-        uintptr_t      memPtr;
         memset(&emifCfg, 0, sizeof(emifCfg));
 
         emifCfg.bEnableMemoryECC = TRUE;
         emifCfg.bReadModifyWriteEnable = TRUE;
-        emifCfg.bECCCheck = TRUE;
+        emifCfg.bECCCheck = FALSE;
         emifCfg.bWriteAlloc = TRUE;
         emifCfg.ECCThreshold = 1U;
 
         emifCfg.pMemEccCfg.startAddr[0] = prm->eccRegion->ddrEccStart0;
-        emifCfg.pMemEccCfg.endAddr[0] = prm->eccRegion->ddrEccEnd0;
+        emifCfg.pMemEccCfg.endAddr[0] = prm->eccRegion->ddrEccPrimeEnd0;
         emifCfg.pMemEccCfg.startAddr[1] = prm->eccRegion->ddrEccStart1;
-        emifCfg.pMemEccCfg.endAddr[1] = prm->eccRegion->ddrEccEnd1;
+        emifCfg.pMemEccCfg.endAddr[1] = prm->eccRegion->ddrEccPrimeEnd1;
         emifCfg.pMemEccCfg.startAddr[2] = prm->eccRegion->ddrEccStart2;
-        emifCfg.pMemEccCfg.endAddr[2] = prm->eccRegion->ddrEccEnd2;
+        emifCfg.pMemEccCfg.endAddr[2] = prm->eccRegion->ddrEccPrimeEnd2;
 
         status = CSL_emifConfig((CSL_emif_sscfgRegs *)DDR_SS_CFG_BASE,
                             &emifCfg);
 
         if (status == SystemP_SUCCESS)
         {
-            /* Prime memory section 1 with known pattern */
-            if (prm->eccRegion->ddrEccStart0 < prm->eccRegion->ddrEccEnd0)
+            if(prm->eccRegion->ddrEccStart0 != DDR_ECC_REGION_START_RESET_VAL &&
+                                               prm->eccRegion->ddrEccEnd0)
             {
-                for (memPtr = prm->eccRegion->ddrEccStart0;
-                        memPtr < prm->eccRegion->ddrEccEnd0; memPtr += 4)
-                {
-                    *((uint32_t *) (memPtr + DDR_DRAM_START_ADDR)) = memPtr + DDR_DRAM_START_ADDR;
-                }
-
-                CacheP_wbInv((void *)(prm->eccRegion->ddrEccStart0 + DDR_DRAM_START_ADDR),
-                    prm->eccRegion->ddrEccEnd0 - prm->eccRegion->ddrEccStart0,
-                                                            CacheP_TYPE_ALL);
+                gDDRECCRegion[0].startAddr = prm->eccRegion->ddrEccStart0;
+                gDDRECCRegion[0].endAddr = prm->eccRegion->ddrEccEnd0;
+                gDDRECCRegion[0].pattern = 0x0;
+            }
+            if(prm->eccRegion->ddrEccStart1 != DDR_ECC_REGION_START_RESET_VAL &&
+                                                    prm->eccRegion->ddrEccEnd1)
+            {
+                gDDRECCRegion[1].startAddr = prm->eccRegion->ddrEccStart1;
+                gDDRECCRegion[1].endAddr = prm->eccRegion->ddrEccEnd1;
+                gDDRECCRegion[1].pattern = 0x0;
+            }
+            if(prm->eccRegion->ddrEccStart2 != DDR_ECC_REGION_START_RESET_VAL &&
+                                                    prm->eccRegion->ddrEccEnd2)
+            {
+                gDDRECCRegion[2].startAddr = prm->eccRegion->ddrEccStart2;
+                gDDRECCRegion[2].endAddr = prm->eccRegion->ddrEccEnd2;
+                gDDRECCRegion[2].pattern = 0x0;
             }
 
-            /* Prime memory section 2 with known pattern */
-            if (prm->eccRegion->ddrEccStart1 < prm->eccRegion->ddrEccEnd1)
-            {
-                for (memPtr = prm->eccRegion->ddrEccStart1;
-                        memPtr < prm->eccRegion->ddrEccEnd1; memPtr += 4)
-                {
-                    *((uint32_t *) (memPtr + DDR_DRAM_START_ADDR)) = memPtr + DDR_DRAM_START_ADDR;
-                }
+            HwiP_Params hwiParams;
+            HwiP_Object hwiObj;
+            HwiP_Params_init(&hwiParams);
+            hwiParams.intNum = DDR_IRQ_NUM;
+            hwiParams.eventId = HWIP_INVALID_EVENT_ID;
+            hwiParams.callback = DDR_isr;
+            HwiP_construct(&hwiObj, &hwiParams);
 
-                CacheP_wbInv((void *)(prm->eccRegion->ddrEccStart1 + DDR_DRAM_START_ADDR),
-                    prm->eccRegion->ddrEccEnd1 - prm->eccRegion->ddrEccStart1,
-                                                            CacheP_TYPE_ALL);
+            /* Un-mask master register IRQ for BIST */
+            lpddrStatus = LPDDR4_ReadReg(&gLpddrPd, LPDDR4_CTL_REGS, \
+                                         DDR_INT_MASTER_MASK_REG_OFFSET, \
+                                         &regval);
+            regval &= ~DDR_INT_MASTER_BIT;
+            lpddrStatus += LPDDR4_WriteReg(&gLpddrPd, LPDDR4_CTL_REGS, \
+                                           DDR_INT_MASTER_MASK_REG_OFFSET, \
+                                           regval);
+
+            /* Un-mask BIST register IRQ */
+            lpddrStatus += LPDDR4_ReadReg(&gLpddrPd, LPDDR4_CTL_REGS, \
+                                          DDR_INI_BIST_MASK_REG_OFFSET, \
+                                          &regval);
+            regval &= ~DDR_INT_BIST_BIT;
+            lpddrStatus += LPDDR4_WriteReg(&gLpddrPd, LPDDR4_CTL_REGS, \
+                                           DDR_INI_BIST_MASK_REG_OFFSET, \
+                                           regval);
+
+            if(lpddrStatus != 0U)
+            {
+                status = SystemP_FAILURE;
             }
 
-            /* Prime memory section 3 with known pattern */
-            if (prm->eccRegion->ddrEccStart2 < prm->eccRegion->ddrEccEnd2)
+            if(status == SystemP_SUCCESS)
             {
-                for (memPtr = prm->eccRegion->ddrEccStart2;
-                        memPtr < prm->eccRegion->ddrEccEnd2; memPtr += 4)
+                /* Start DDR primeing */
+                if(gDDRECCRegion[0].startAddr != 0xFFFFFFFFFFFFFFFF && gDDRECCRegion[0].endAddr != 0xFFFFFFFFFFFFFFFF)
                 {
-                    *((uint32_t *) (memPtr + DDR_DRAM_START_ADDR)) = memPtr + DDR_DRAM_START_ADDR;
+                    DDR_primeMem(gDDRECCRegion[0].startAddr, gDDRECCRegion[0].endAddr, gDDRECCRegion[0].pattern);
                 }
-
-                CacheP_wbInv((void *)(prm->eccRegion->ddrEccStart2 + DDR_DRAM_START_ADDR),
-                    prm->eccRegion->ddrEccEnd2 - prm->eccRegion->ddrEccStart2,
-                                                            CacheP_TYPE_ALL);
+                else if(gDDRECCRegion[1].startAddr != 0xFFFFFFFFFFFFFFFF && gDDRECCRegion[1].endAddr != 0xFFFFFFFFFFFFFFFF)
+                {
+                    DDR_primeMem(gDDRECCRegion[1].startAddr, gDDRECCRegion[1].endAddr, gDDRECCRegion[1].pattern);
+                }
+                else if(gDDRECCRegion[2].startAddr != 0xFFFFFFFFFFFFFFFF && gDDRECCRegion[2].endAddr != 0xFFFFFFFFFFFFFFFF)
+                {
+                    DDR_primeMem(gDDRECCRegion[2].startAddr, gDDRECCRegion[2].endAddr, gDDRECCRegion[2].pattern);
+                }
+                else
+                {
+                    /* Do nothing */
+                }
             }
+
         }
-
-        if (status == SystemP_SUCCESS)
-        {
-            status = CSL_emifClearECCInterruptStatus((CSL_emif_sscfgRegs *)DDR_SS_CFG_BASE,
-                                                    CSL_EMIF_SSCFG_V2A_INT_SET_REG_ECC1BERR_EN_MASK
-                                                    | CSL_EMIF_SSCFG_V2A_INT_SET_REG_ECCM1BERR_EN_MASK
-                                                    | CSL_EMIF_SSCFG_V2A_INT_SET_REG_ECC2BERR_EN_MASK);
-
-            if (status == SystemP_SUCCESS)
-            {
-                status = CSL_emifEnableECCInterrupts((CSL_emif_sscfgRegs *)DDR_SS_CFG_BASE,
-                                                    CSL_EMIF_SSCFG_V2A_INT_SET_REG_ECC1BERR_EN_MASK
-                                                    | CSL_EMIF_SSCFG_V2A_INT_SET_REG_ECCM1BERR_EN_MASK
-                                                    | CSL_EMIF_SSCFG_V2A_INT_SET_REG_ECC2BERR_EN_MASK);
-            }
-        }
-
-        DDR_enableInlineECC (1U);
     }
     else
     {
@@ -467,57 +705,64 @@ static int32_t DDR_inlineECCCfg (DDR_Params *prm)
     return status;
 }
 
+uint8_t DDR_isInitDone(void)
+{
+    return gDDRInitDoneFlag;
+}
+
 int32_t DDR_init(DDR_Params *prm)
 {
     uint32_t isEnabled = 0;
     int32_t status = SystemP_SUCCESS;
-    uint32_t regData;
 
-    DDR_socEnableVttRegulator();
-    DDR_ResetDDR_PLL();
-
-
-    /* power and clock to DDR and EMIF is done form outside using SysConfig */
-
-    /* Configure MSMC2DDR Bridge Control register. Configure REGION_IDX, SDRAM_IDX and SDRAM_3QT.*/
-#if defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_J722S)
-    regData = HW_RD_REG32(DDR_SS_CFG_BASE + 0x20);
-    regData |=  (regData & 0xFFFFF000U) | 0x1EFU;
-    HW_WR_REG32((DDR_SS_CFG_BASE + 0x20), regData);
-#else
-    regData = HW_RD_REG32(CSL_DDR16SS0_SS_CFG_BASE + 0x20);
-    regData |=  (regData & 0xFFFFF000U) | 0x1EFU;
-    HW_WR_REG32((CSL_DDR16SS0_SS_CFG_BASE + 0x20), 0x1EF);
-#endif
-
-    /* Configure DDRSS_ECC_CTRL_REG register. Disable ECC. */
-#if defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_J722S)
-    HW_WR_REG32((DDR_SS_CFG_BASE + 0x120), 0x00);
-#else
-    HW_WR_REG32((CSL_DDR16SS0_SS_CFG_BASE + 0x120), 0x00);
-#endif
-
-    status = DDR_probe();
-    if(status == SystemP_SUCCESS)
+    /* NULL check*/
+    if (prm == NULL)
     {
-        status = DDR_initDrv();
+        DebugP_logError("DDR_init: NULL parameter pointer\r\n");
+        status = SystemP_FAILURE;
     }
 
-    isEnabled = DDR_isEnabled(prm);
-
-    if (!isEnabled)
+    if(status == SystemP_SUCCESS)
     {
-        if(status == SystemP_SUCCESS)
+        DDR_socEnableVttRegulator();
+
+        /* power and clock to DDR and EMIF is done form outside using SysConfig */
+
+        /* Configure MSMC2DDR Bridge Control register. Configure REGION_IDX, SDRAM_IDX and SDRAM_3QT.*/
+        CSL_emif_sscfgRegs *pEmifSsRegs = (CSL_emif_sscfgRegs *)AddrTranslateP_getLocalAddr(DDR_SS_CFG_BASE);
+        CSL_REG32_FINS(&pEmifSsRegs->V2A_CTL_REG, EMIF_SSCFG_V2A_CTL_REG_SDRAM_IDX, prm->sdramIdx);
+
+        /* Configure DDRSS_ECC_CTRL_REG register. Disable ECC. */
+        HW_WR_REG32((DDR_SS_CFG_BASE + 0x120), 0x00);
+
+        /* Set priority mapping of VBUSM to DDRSS priorties */
+        HW_WR_REG32((DDR_SS_CFG_BASE + CSL_EMIF_SSCFG_V2A_LPT_DEF_PRI_MAP_REG), DDR_SS_DEF_LPT_PRIMAP);
+        HW_WR_REG32((DDR_SS_CFG_BASE + CSL_EMIF_SSCFG_V2A_HPT_DEF_PRI_MAP_REG), DDR_SS_DEF_HPT_PRIMAP);
+
+        status = DDR_probe();
+
+    }
+
+    if(status == SystemP_SUCCESS)
+    {
+        status = DDR_initDrv(prm);
+    }
+
+    if(status == SystemP_SUCCESS)
+    {
+        isEnabled = DDR_isEnabled(prm);
+
+        if (!isEnabled)
         {
             status = DDR_initHwRegs(prm);
-        }
-        if(status == SystemP_SUCCESS)
-        {
-            status = DDR_setClock(prm);
-        }
-        if(status == SystemP_SUCCESS)
-        {
-            status = DDR_start();
+            if(status == SystemP_SUCCESS)
+            {
+                status = DDR_initFreq(prm);
+            }
+            if(status == SystemP_SUCCESS)
+            {
+                status = DDR_start();
+            }
         }
     }
 
@@ -526,6 +771,10 @@ int32_t DDR_init(DDR_Params *prm)
         if (prm->enableEccFlag)
         {
             status = DDR_inlineECCCfg (prm);
+        }
+        else
+        {
+            gDDRInitDoneFlag = 1U;
         }
     }
 

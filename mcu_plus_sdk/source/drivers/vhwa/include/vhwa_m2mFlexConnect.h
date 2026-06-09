@@ -305,7 +305,7 @@ typedef struct
  *                          #Vhwa_M2mFcInitPrms. This parameter should not be 0.
  *  \return                 Returns 0 on success else returns error value
  */
-int32_t Vhwa_m2mFcInit(const Vhwa_M2mFcInitPrms *fcInitPrms);
+int32_t Vhwa_m2mFcInit(const Vhwa_M2mFcInitPrms *initPrms);
 
 /**
  *  \brief DeInitializes vhwa Flex-Connect
@@ -321,7 +321,7 @@ void Vhwa_m2mFcDeInit(void);
  *
  *  \return FVID2_SOK if successful, else suitable error code
  */
-int32_t Vhwa_m2mFcAllocSl2(const Vhwa_M2mFcSl2AllocPrms *sl2allocPrms);
+int32_t Vhwa_m2mFcAllocSl2(const Vhwa_M2mFcSl2AllocPrms *sl2AllocPrms);
 
 /**
  *  \brief Function to free allocated SL2.
@@ -346,7 +346,7 @@ static inline void Vhwa_m2mFcInitPrmsInit(Vhwa_M2mFcInitPrms *initPrms);
  *
  *  \return None
  */
-static inline void Vhwa_m2mFcDrvCreatePrmsInit(Vhwa_M2mFcCreatePrms *initPrms);
+static inline void Vhwa_m2mFcDrvCreatePrmsInit(Vhwa_M2mFcCreatePrms *createPrms);
 
 /**
  *  \brief Vhwa_M2mFcSl2AllocPrms structure init function.
@@ -355,7 +355,7 @@ static inline void Vhwa_m2mFcDrvCreatePrmsInit(Vhwa_M2mFcCreatePrms *initPrms);
  *
  *  \return None
  */
-static inline void Vhwa_m2mFcDrvSl2AllocPrmsInit(Vhwa_M2mFcSl2AllocPrms *initPrms);
+static inline void Vhwa_m2mFcDrvSl2AllocPrmsInit(Vhwa_M2mFcSl2AllocPrms *sl2AllocPrms);
 
 /* ========================================================================== */
 /*                          Function Definitions                              */

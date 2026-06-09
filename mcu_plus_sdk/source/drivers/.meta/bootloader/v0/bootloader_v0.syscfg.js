@@ -5,6 +5,10 @@ function getConfigArr() {
 	return soc.getConfigArr();
 }
 
+function getDmaRestrictedRegions () {
+    return soc.getDmaRestrictedRegions();
+}
+
 let bootloader_module_name = "/drivers/bootloader/bootloader";
 function getConfig(){
     let cfg = [
@@ -28,6 +32,13 @@ function getConfig(){
                 else {
                     ui.appImageBaseAddress.hidden = true;
                 }
+                if(inst.bootMedia == "SD") {
+                    ui.appImageBaseAddress.hidden = false;
+                    inst.bootloaderDma = false;
+                }
+                else {
+                    ui.appImageBaseAddress.hidden = true;
+                }
                 /* EMMCAppImageOffset applicable only for EMMC boot */
                 if(inst.bootMedia == "EMMC") {
                     ui.EMMCAppImageOffset.hidden = false;
@@ -37,6 +48,13 @@ function getConfig(){
                 }
             },
 
+        },
+        {
+            name: "bootloaderDma",
+            displayName: "Enable DMA Transfer",
+            description: "Use DMA to transfer data at the bootloader layer. Selecting it here enables it for all the added Bootloaders",
+            default: true,
+            hidden: true,
         },
         {
             name: "appImageOffset",
@@ -114,6 +132,7 @@ let bootloader_module = {
     },
     config : getConfig(),
     sharedModuleInstances: moduleInstances,
+    getDmaRestrictedRegions,
 };
 
 function moduleInstances(instance){
@@ -135,7 +154,14 @@ function moduleInstances(instance){
 
     if(instance.bootMedia == "EMMC") {
         let requiredArgs = {};
-        requiredArgs.moduleSelect = "MMC0";
+        if(system.deviceData.device === "AM275x")
+        {
+            requiredArgs.moduleSelect = "MMC";
+        }
+        else
+        {
+            requiredArgs.moduleSelect = "MMC0";
+        }
         if(common.isDMWithBootSupported())
         {
             requiredArgs.addedByBootloader = true;
@@ -145,6 +171,19 @@ function moduleInstances(instance){
             displayName: "EMMC Driver Configuration",
             moduleName: '/drivers/mmcsd/mmcsd',
             requiredArgs: requiredArgs,
+        });
+    }
+
+    if(instance.bootloaderDma == true) {
+        modInstances.push({
+            name: "udmaDriver",
+            displayName: "UDMA Configuration",
+            moduleName: "/drivers/udma/udma",
+        });
+        modInstances.push({
+            name: "udmaBlkCopyChannel",
+            displayName: "UDMA Block Copy Channel Configuration",
+            moduleName: '/drivers/udma/udma_blkcopy_channel',
         });
     }
 

@@ -1,8 +1,9 @@
 /**
  * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
  * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
- * @cliArgs --device "J722S_TDA4VEN_TDA4AEN_AM67" --package "AMW" --part "Default" --context "wkup-r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
- * @versions {"tool":"1.20.0+3587"}
+ * @cliArgs --device "J722S_TDA4VEN_TDA4AEN_AM67" --part "Default" --package "AMW" --context "wkup-r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
+ * @v2CliArgs --device "TDA4VEN-Q1" --package "FCBGA (AMW)" --context "wkup-r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
+ * @versions {"tool":"1.26.2+4477"}
  */
 
 /**
@@ -55,20 +56,17 @@ flash1.serialFlashDriver.peripheralDriver.dmaEnable = true;
 flash1.serialFlashDriver.peripheralDriver.phyEnable = true;
 flash1.serialFlashDriver.peripheralDriver.$name     = "CONFIG_OSPI_SBL";
 
-ddr1.$name             = "CONFIG_DDR0";
-ddr1.skipDeinitFromSbl = true;
+ddr1.$name = "CONFIG_DDR0";
 
 qos1.$name = "CONFIG_QOS0";
 
 uart1.intrEnable                 = "DISABLE";
 uart1.useWakeupDomainPeripherals = false;
 uart1.$name                      = "CONFIG_UART_HLOS";
-uart1.skipDeinitFromSbl          = true;
 uart1.UART.$assign               = "USART0";
 
 uart2.$name                      = "CONFIG_UART0";
 uart2.intrEnable                 = "DISABLE";
-uart2.skipDeinitFromSbl          = true;
 uart2.useWakeupDomainPeripherals = false;
 uart2.UART.$assign               = "USART5";
 uart2.UART.RXD.$assign           = "MMC2_DAT3";
@@ -77,7 +75,14 @@ uart2.UART.TXD.$assign           = "MMC2_DAT2";
 const udma                                           = scripting.addModule("/drivers/udma/udma", {}, false);
 const udma1                                          = udma.addInstance({}, false);
 udma1.$name                                          = "CONFIG_UDMA0";
+bootloader1.udmaDriver                               = udma1;
 flash1.serialFlashDriver.peripheralDriver.udmaDriver = udma1;
+
+const udma_blkcopy_channel                                   = scripting.addModule("/drivers/udma/udma_blkcopy_channel", {}, false);
+const udma_blkcopy_channel1                                  = udma_blkcopy_channel.addInstance({}, false);
+udma_blkcopy_channel1.$name                                  = "CONFIG_UDMA_BLKCOPY_CH0";
+bootloader1.udmaBlkCopyChannel                               = udma_blkcopy_channel1;
+flash1.serialFlashDriver.peripheralDriver.udmaBlkCopyChannel = udma_blkcopy_channel1;
 
 debug_log.enableCssLog              = false;
 debug_log.enableUartLog             = true;
@@ -162,7 +167,6 @@ mpu_armv716.baseAddr = 0x79100000;
 mpu_armv716.size     = 19;
 
 dm_power_config1.$name                  = "BOARD_ECU_0";
-dm_power_config1.skipDeinitFromSbl      = true;
 dm_power_config1.enable_MAIN_R5FSS_1    = false;
 dm_power_config1.enable_MCU_R5FSS_0     = false;
 dm_power_config1.MAIN_A53SS_0           = 1000;

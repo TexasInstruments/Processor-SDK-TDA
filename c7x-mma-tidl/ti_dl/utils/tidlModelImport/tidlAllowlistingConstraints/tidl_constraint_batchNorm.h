@@ -65,9 +65,9 @@
 const vector<TidlConstraint> tidlConstraintBatchNorm =
 {
     TIDL_CSTR(
-        "Number of variable input dimensions must be less than 6",
-        "Number of variable input dimensions must be less than 6",
-        "Number of variable input dimensions must be less than 6",
+        "Number of variable input dimensions must be <= 6",
+        "Number of variable input dimensions must be <= 6",
+        "Number of variable input dimensions must be <= 6",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
             if(md.varTensorsDims[0].size() > 6)

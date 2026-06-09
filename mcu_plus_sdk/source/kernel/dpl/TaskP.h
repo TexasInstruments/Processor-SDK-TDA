@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -85,7 +85,7 @@ typedef struct {
 /**
  * \brief Max size of task object across all OS's
  */
-#define TaskP_OBJECT_SIZE_MAX       (256u)
+#define TaskP_OBJECT_SIZE_MAX       (240U)
 /**
  * \brief Opaque task object used with the task APIs
  */
@@ -109,6 +109,7 @@ typedef struct TaskP_Params_ {
     void         *args;         /**< User arguments that are passed back as parater to task main */
     TaskP_FxnMain taskMain;     /**< Entry point function to the task */
     uintptr_t     coreAffinity; /**< Core affinity for the task (Applicable in case of SMP only)*/
+    uint64_t taskPrivilege; /**< Task Privilege (Appilcable only for R5F SAFERTOS) */
 
 } TaskP_Params;
 
@@ -195,9 +196,10 @@ void TaskP_loadResetAll(void);
  *
  * \return CPU load in units of percentage with 2 decimal point precision, i.e 1234 means 12.34%
  */
-uint32_t TaskP_loadGetTotalCpuLoad();
+uint32_t TaskP_loadGetTotalCpuLoad(void);
 uint32_t TaskP_disable(void);
 void TaskP_restore(uint32_t key);
+void TaskP_endScheduler(void);
 
 /** @} */
 

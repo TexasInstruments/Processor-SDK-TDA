@@ -4,7 +4,7 @@ let device = "j722s";
 
 const files = {
     common: [
-        "gpio_input_interrupt.c",
+        "gpio_input_interrupt_v2.c",
         "main.c",
         "board.c",
     ],

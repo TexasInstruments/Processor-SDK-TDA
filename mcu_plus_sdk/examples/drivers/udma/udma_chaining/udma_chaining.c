@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -96,9 +96,6 @@ void *udma_chaining_main(void *args)
     uint8_t        *trpdMem;
     uint64_t        trpdMemPhy;
 
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
     chHandle0 = gConfigUdma0BlkCopyChHandle[0];  /* Has to be done after driver open */
     chHandle1 = gConfigUdma0BlkCopyChHandle[1];  /* Has to be done after driver open */
     DebugP_log("[UDMA] Chaining application started ...\r\n");
@@ -113,7 +110,11 @@ void *udma_chaining_main(void *args)
     DebugP_assert(UDMA_SOK == retVal);
 
     /* Chain channels CH0 -> CH1 */
+#ifdef DRV_VERSION_UDMA_V0
     retVal = Udma_chSetChaining(chHandle0, chHandle1, CSL_UDMAP_TR_FLAGS_TRIGGER_GLOBAL0);
+#else
+    retVal = Udma_chSetChaining(chHandle0, chHandle1, CSL_UDMAP_TR_FLAGS_TRIGGER_LOCAL0);
+#endif
     DebugP_assert(UDMA_SOK == retVal);
 
     /* Init buffers */
@@ -173,8 +174,6 @@ void *udma_chaining_main(void *args)
 
     SemaphoreP_destruct(&gUdmaTestDoneSem);
     DebugP_log("All tests have passed!!\r\n");
-    Board_driversClose();
-    Drivers_close();
 
     return NULL;
 }
@@ -212,8 +211,13 @@ static void App_udmaTrpdInit(Udma_ChHandle chHandle,
     }
     else
     {
+#ifdef DRV_VERSION_UDMA_V0
         /* Set global trigger for channel 1 */
         pTr->flags   |= CSL_FMK(UDMAP_TR_FLAGS_TRIGGER0, CSL_UDMAP_TR_FLAGS_TRIGGER_GLOBAL0);
+#else
+        /* Set local trigger for channel 1 */
+        pTr->flags   |= CSL_FMK(UDMAP_TR_FLAGS_TRIGGER0, CSL_UDMAP_TR_FLAGS_TRIGGER_LOCAL_EVENT);
+#endif
     }
     pTr->flags   |= CSL_FMK(UDMAP_TR_FLAGS_TRIGGER0_TYPE, CSL_UDMAP_TR_FLAGS_TRIGGER_TYPE_ALL);
     pTr->flags   |= CSL_FMK(UDMAP_TR_FLAGS_TRIGGER1, CSL_UDMAP_TR_FLAGS_TRIGGER_NONE);

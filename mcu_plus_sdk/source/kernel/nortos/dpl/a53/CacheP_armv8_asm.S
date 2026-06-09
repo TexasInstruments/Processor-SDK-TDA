@@ -205,6 +205,7 @@ CacheP_enableL1D:
         mrs     x0, sctlr_el1            /* read SCTLR_EL1 */
         orr     x0, x0, #0x0004          /* set C bit */
         msr     sctlr_el1, x0            /* DCache enabled */
+        dsb     sy
         isb
         ret
         .endfunc
@@ -219,6 +220,7 @@ CacheP_enableL1P:
         mrs     x0, sctlr_el1            /* read SCTLR_EL1 */
         orr     x0, x0, #0x1000          /* set I bit */
         msr     sctlr_el1, x0            /* ICache enabled */
+        dsb     sy
         isb
         ret
         .endfunc
@@ -385,7 +387,7 @@ CacheP_disableEL3:
         ret
         .endfunc
 
-#if defined (SMP_FREERTOS)
+
 /* FUNCTION DEF: void CacheP_enableSMP(void) */
         .global CacheP_enableSMP
         .section .text.CacheP_enableSMP
@@ -393,8 +395,13 @@ CacheP_disableEL3:
 
 CacheP_enableSMP:
         mrs     x0, s3_1_c15_c2_1           /* Read CPUECTLR_EL1 */
+        mov     x1, x0
+        and     x1, x1, #0x40
+        cmp     x1, #0x40
+        beq     smp_enabled
         orr     x0, x0, #0x40
         msr     s3_1_c15_c2_1, x0           /* Enable data coherency with other cores */
+        smp_enabled:
         ret
         .endfunc
-#endif
+

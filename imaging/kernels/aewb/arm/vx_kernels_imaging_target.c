@@ -62,16 +62,9 @@
 
 #include <TI/tivx.h>
 #include <TI/tivx_target_kernel.h>
+#include <TI/j7_kernels_imaging_aewb.h>
 #include "tivx_imaging_kernels_priv.h"
 #include "tivx_kernels_target_utils.h"
-
-void tivxAddTargetKernelAewb(void);
-
-void tivxRemoveTargetKernelAewb(void);
-
-/* Function prototypes for imaging target kernels */
-void tivxRegisterImagingTargetAewbKernels(void);
-void tivxUnRegisterImagingTargetAewbKernels(void);
 
 static Tivx_Target_Kernel_List  gTivx_target_kernel_list[] = {
     {&tivxAddTargetKernelAewb, &tivxRemoveTargetKernelAewb},

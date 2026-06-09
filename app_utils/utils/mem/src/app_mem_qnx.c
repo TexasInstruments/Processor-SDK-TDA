@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2018-2025 Texas Instruments Incorporated
+ * Copyright (c) 2018-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -8,7 +8,7 @@
  *
  * Texas Instruments Incorporated grants a world-wide, royalty-free, non-exclusive
  * license under copyrights and patents it now or hereafter owns or controls to make,
- * have made, use, import, offer to sell and sell ("Utilize") this software subject to the
+ * have made, use, import, offer to sell and sell ("Utilize") this soFftware subject to the
  * terms herein.  With respect to the foregoing patent license, such license is granted
  * solely to the extent that any such patent is necessary to Utilize the software alone.
  * The patent license shall not apply to any combinations which include this software,
@@ -70,14 +70,13 @@
 #include <errno.h>
 #include <hw/inout.h>
 #include <string.h>
-#include <CacheP.h>
 #include <process.h>
 #include <pthread.h>
-
 #include <app_mem_priv.h>
 #include <utils/console_io/include/app_log.h>
 #include <utils/mem/include/app_mem.h>
 #include <SharedMemoryAllocatorUsr.h>
+#include <CacheP.h>
 
 //#define APP_MEM_DEBUG
 /**
@@ -240,7 +239,7 @@ int32_t appMemTranslateDmaBufFd(uint64_t dmaBufFd, uint32_t size, uint64_t *virt
 
     /* If we have been given a valid region, check to see that the provided memory falls within the carveout space */
     if ( ((obj->valid_base_mem == 1U) &&
-          ((dmaBufFd >= (uint64_t)(g_app_mem_obj.base)) && (dmaBufFd < (uint64_t)(g_app_mem_obj.base + g_app_mem_obj.size))) ) || 
+          ((dmaBufFd >= (uint64_t)(g_app_mem_obj.base)) && (dmaBufFd < (uint64_t)(g_app_mem_obj.base + g_app_mem_obj.size))) ) ||
          (obj->valid_base_mem == 0U) ) /* TIOVX-1940- LDRA Uncovered Branch Id: TIOVX_CODE_COVERAGE_QNX_MEM_UM13 */
     {
         /* Enter critical section */
@@ -400,7 +399,7 @@ void *appMemAlloc(uint32_t block, uint32_t size, uint32_t align)
         (void)pthread_mutex_lock(&obj->mem_mutex);
 
         /* Find empty buffer */
-        for(i=0U; 
+        for(i=0U;
 /* LDRA_JUSTIFY_START
 <metric start> branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_QNX_MEM_UM09
@@ -609,19 +608,31 @@ int32_t appMemStats(uint32_t block, app_mem_stats_t *stats)
 void  appMemCacheInv(void *ptr, uint32_t size)
 {
     /* Use the OSAL Cache APIs */
+#ifdef SOC_FAMILY_TDA5
+    CacheP_inv(ptr, size, 0);
+#else
     CacheP_Inv(ptr, size);
+#endif
 }
 
 void  appMemCacheWbInv(void *ptr, uint32_t size)
 {
     /* Use the OSAL Cache APIs */
+#ifdef SOC_FAMILY_TDA5
+    CacheP_wbInv(ptr, size, 0);
+#else
     CacheP_wbInv(ptr, size);
+#endif
 }
 
 void  appMemCacheWb(void *ptr, uint32_t size)
 {
     /* Use the OSAL Cache APIs */
+#ifdef SOC_FAMILY_TDA5
+    CacheP_wb(ptr, size, 0);
+#else
     CacheP_wb(ptr, size);
+#endif
 }
 
 /* Note: needed for linking tivx mem platform layer*/
@@ -750,8 +761,8 @@ void *appMemMap(void *phys_ptr, uint32_t size)
     if(status==0
     && dev_mem_fd >= 0)
     {
-        #ifdef APP_LOG_DEBUG
-        appLogPrintf("APP_LOG: Mapping %p ...\n", phys_ptr);
+        #ifdef APP_MEM_DEBUG
+        appLogPrintf("APP_MEM: Mapping %p ...\n", phys_ptr);
         #endif
         /* Mapping this physical address to qnx user space */
         taddr = (uintptr_t)phys_ptr;
@@ -782,8 +793,8 @@ void *appMemMap(void *phys_ptr, uint32_t size)
         {
             virt_ptr = (void*)((uintptr_t)virt_ptr + ((uintptr_t)phys_ptr % pageSize));
         }
-        #ifdef APP_LOG_DEBUG
-        appLogPrintf("APP_LOG: Mapped %p -> %p of size %d bytes \n", phys_ptr, virt_ptr, size);
+        #ifdef APP_MEM_DEBUG
+        appLogPrintf("APP_MEM: Mapped %p -> %p of size %d bytes \n", phys_ptr, virt_ptr, size);
         #endif
     }
 /* LDRA_JUSTIFY_START
@@ -792,12 +803,12 @@ void *appMemMap(void *phys_ptr, uint32_t size)
 <justification end> */
     if(virt_ptr==NULL)
     {
-        appLogPrintf("APP_LOG: ERROR: Unable to map memory @ %p of size %d bytes !!!\n", phys_ptr, size);
+        appLogPrintf("APP_MEM: ERROR: Unable to map memory @ %p of size %d bytes !!!\n", phys_ptr, size);
     }
 /* LDRA_JUSTIFY_END */
 #else
-    #ifdef APP_LOG_DEBUG
-    appLogPrintf("APP_LOG: Mapping %p ...\n", phys_ptr);
+    #ifdef APP_MEM_DEBUG
+    appLogPrintf("APP_MEM: Mapping %p ...\n", phys_ptr);
     #endif
 
     /* Mapping this physical address to qnx user space */
@@ -828,8 +839,8 @@ void *appMemMap(void *phys_ptr, uint32_t size)
     {
         virt_ptr = (void*)((uintptr_t)virt_ptr + ((uintptr_t)phys_ptr % pageSize));
     }
-    #ifdef APP_LOG_DEBUG
-    appLogPrintf("APP_LOG: Mapped %p -> %p of size %d bytes \n", phys_ptr, virt_ptr, size);
+    #ifdef APP_MEM_DEBUG
+    appLogPrintf("APP_MEM: Mapped %p -> %p of size %d bytes \n", phys_ptr, virt_ptr, size);
     #endif
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
@@ -837,7 +848,7 @@ void *appMemMap(void *phys_ptr, uint32_t size)
 <justification end> */
     if(virt_ptr==NULL)
     {
-        appLogPrintf("APP_LOG: ERROR: Unable to map memory @ %p of size %d bytes !!!\n", phys_ptr, size);
+        appLogPrintf("APP_MEM: ERROR: Unable to map memory @ %p of size %d bytes !!!\n", phys_ptr, size);
     }
 /* LDRA_JUSTIFY_END */
 #endif
@@ -851,8 +862,8 @@ int32_t appMemUnMap(void *virt_ptr, uint32_t size)
     uintptr_t taddr;
     uint32_t  tsize;
 
-    #ifdef APP_LOG_DEBUG
-    appLogPrintf("APP_LOG: UnMapped memory at virtual address @ 0x%p of size %d bytes \n", virt_ptr, size);
+    #ifdef APP_MEM_DEBUG
+    appLogPrintf("APP_MEM: UnMapped memory at virtual address @ 0x%p of size %d bytes \n", virt_ptr, size);
     #endif
 
     taddr = (uint64_t)virt_ptr;

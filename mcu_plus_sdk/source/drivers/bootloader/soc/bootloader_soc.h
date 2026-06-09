@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021-2023 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -57,8 +57,14 @@ extern "C"
 #if defined (SOC_AM62AX)
 #include <drivers/bootloader/soc/am62ax/bootloader_soc.h>
 #endif
+#if defined (SOC_AM62DX)
+#include <drivers/bootloader/soc/am62dx/bootloader_soc.h>
+#endif
 #if defined (SOC_AM62PX)
 #include <drivers/bootloader/soc/am62px/bootloader_soc.h>
+#endif
+#if defined (SOC_AM275X)
+#include <drivers/bootloader/soc/am275x/bootloader_soc.h>
 #endif
 #if defined (SOC_J722S)
 #include <drivers/bootloader/soc/j722s/bootloader_soc.h>

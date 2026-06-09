@@ -34,7 +34,8 @@ cppflags-y += -I$(srctree)/rm_pm_hal/pm/drivers/lpm/soc/$(TARGET_SOC)/
 cppflags-y += -I$(srctree)/rm_pm_hal/pm/drivers/lpm/
 
 obj-y += soc/
+obj-$(CONFIG_LPM_MIN) += lpm_handler_min.o
 
-obj-y += lpm_handler.o padcfg.o rtc.o gtc.o ctrl_mmr.o wkup_periph.o
+obj-$(CONFIG_LPM_DM) += lpm_handler.o padcfg.o rtc.o gtc.o ctrl_mmr.o wkup_periph.o
 
 obj-$(CONFIG_LPM_INCLUDE_OSAL) += osal/

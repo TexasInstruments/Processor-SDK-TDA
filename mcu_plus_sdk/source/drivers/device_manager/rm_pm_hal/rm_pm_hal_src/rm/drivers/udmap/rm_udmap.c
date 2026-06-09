@@ -491,68 +491,78 @@ struct udmap_valid_masks_local {
  * \brief Local list of valid param mask per channel type.
  */
 static const struct udmap_valid_masks_local local_rm_udmap_ch_valid_masks[UDMAP_NUM_CHAN_TYPES] = {
-	[UDMAP_TX_CHAN] =		 {
+	[UDMAP_TX_CHAN] =			 {
 		UDMAP_TX_CHAN_DEVMASK,
 		0U,
 		0U,
 	},
-	[UDMAP_TX_HCHAN] =		 {
+	[UDMAP_TX_HCHAN] =			 {
 		UDMAP_TX_CHAN_DEVMASK,
 		0U,
 		0U,
 	},
-	[UDMAP_TX_UHCHAN] =		 {
+	[UDMAP_TX_UHCHAN] =			 {
 		UDMAP_TX_CHAN_DEVMASK,
 		0U,
 		0U,
 	},
-	[UDMAP_TX_ECHAN] =		 {
+	[UDMAP_TX_ECHAN] =			 {
 		UDMAP_TX_CHAN_DEVMASK,
 		0U,
 		0U,
 	},
-	[UDMAP_RX_CHAN] =		 {
+	[UDMAP_RX_CHAN] =			 {
 		UDMAP_RX_CHAN_DEVMASK,
 		UDMAP_UDMA_RX_FLOW_CFG_DEVMASK,
 		UDMAP_UDMA_RX_FLOW_SIZE_DEVMASK,
 	},
-	[UDMAP_RX_HCHAN] =		 {
+	[UDMAP_RX_HCHAN] =			 {
 		UDMAP_RX_CHAN_DEVMASK,
 		UDMAP_UDMA_RX_FLOW_CFG_DEVMASK,
 		UDMAP_UDMA_RX_FLOW_SIZE_DEVMASK,
 	},
-	[UDMAP_RX_UHCHAN] =		 {
+	[UDMAP_RX_UHCHAN] =			 {
 		UDMAP_RX_CHAN_DEVMASK,
 		UDMAP_UDMA_RX_FLOW_CFG_DEVMASK,
 		UDMAP_UDMA_RX_FLOW_SIZE_DEVMASK,
 	},
-	[DMSS_BCDMA_TX_CHAN] =		 {
+	[DMSS_BCDMA_TX_CHAN] =			 {
 		UDMAP_BCDMA_TX_CHAN_DEVMASK,
 		0U,
 		0U,
 	},
-	[DMSS_BCDMA_RX_CHAN] =		 {
+	[DMSS_BCDMA_RX_CHAN] =			 {
 		UDMAP_BCDMA_RX_CHAN_DEVMASK,
 		0U,
 		0U,
 	},
-	[DMSS_BCDMA_BLOCK_COPY_CHAN] =	 {
+	[DMSS_BCDMA_BLOCK_COPY_CHAN] =		 {
 		UDMAP_BCDMA_CHAN_DEVMASK,
 		0U,
 		0U,
 	},
-	[DMSS_PKTDMA_TX_CHAN] =		 {
+	[DMSS_PKTDMA_TX_CHAN] =			 {
 		UDMAP_PKTDMA_TX_CHAN_DEVMASK,
 		0U,
 		0U,
 	},
-	[DMSS_PKTDMA_RX_CHAN] =		 {
+	[DMSS_PKTDMA_RX_CHAN] =			 {
 		UDMAP_PKTDMA_RX_CHAN_DEVMASK,
 		UDMAP_PKTDMA_RX_FLOW_CFG_DEVMASK,
 		UDMAP_PKTDMA_RX_FLOW_SIZE_DEVMASK,
 	},
-	[DMSS_BCDMA_BLOCK_COPY_HCCHAN] = {
+	[DMSS_BCDMA_BLOCK_COPY_HCCHAN] =	 {
 		UDMAP_BCDMA_CHAN_DEVMASK,
+		0U,
+		0U,
+	},
+	[DMSS_BCDMA_TX_HCCHAN] =		 {
+		UDMAP_BCDMA_TX_CHAN_DEVMASK,
+		0U,
+		0U,
+	},
+	[DMSS_BCDMA_RX_HCCHAN] =		 {
+		UDMAP_BCDMA_RX_CHAN_DEVMASK,
 		0U,
 		0U,
 	},
@@ -1778,6 +1788,8 @@ static s32 udmap_validate_burst_size(u8 chan_type, u8 burst_size,
 		    (chan_type == UDMAP_TX_ECHAN) ||
 		    (chan_type == UDMAP_RX_HCHAN) ||
 		    (chan_type == UDMAP_RX_UHCHAN) ||
+		    (chan_type == DMSS_BCDMA_TX_HCCHAN) ||
+		    (chan_type == DMSS_BCDMA_RX_HCCHAN) ||
 		    (chan_type == DMSS_BCDMA_BLOCK_COPY_CHAN) ||
 		    (chan_type == DMSS_BCDMA_BLOCK_COPY_HCCHAN)) {
 			/*
@@ -1793,6 +1805,8 @@ static s32 udmap_validate_burst_size(u8 chan_type, u8 burst_size,
 		    (chan_type == UDMAP_TX_ECHAN) ||
 		    (chan_type == UDMAP_RX_HCHAN) ||
 		    (chan_type == UDMAP_RX_UHCHAN) ||
+		    (chan_type == DMSS_BCDMA_TX_HCCHAN) ||
+		    (chan_type == DMSS_BCDMA_RX_HCCHAN) ||
 		    (chan_type == DMSS_BCDMA_BLOCK_COPY_HCCHAN)) {
 			/*
 			 * Only high capacity channels can support burst size

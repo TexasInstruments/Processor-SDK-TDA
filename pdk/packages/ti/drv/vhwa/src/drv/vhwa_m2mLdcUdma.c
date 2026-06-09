@@ -76,7 +76,7 @@
  *
  **/
 static void vhwaM2mLdcSetupPacketInfo(Vhwa_M2mLdcChParams *chPrms,
-                                      uint32_t complRin);
+                                      uint32_t complRingNum);
 
 /**
  * \brief   Local Function to initialize transfer recoder for all

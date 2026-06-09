@@ -65,6 +65,22 @@
 const vector<TidlConstraint> tidlConstraintArgOp =
 {
     TIDL_CSTR(
+        "Number of non-singleton variable input dimensions must be <= 4",
+        "Number of non-singleton variable input dimensions must be <= 4",
+        "Number of non-singleton variable input dimensions must be <= 4",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            ostringstream oss;
+            int32_t numDims = tidlGetNonSingletonNumDims(layer->allowlistingMetaData.varTensorsDims[0]);
+            if(numDims > 4)
+            {
+                oss << "Maximum number of input dimension supported is 4, found " << numDims << " input dimensions";
+                logs = oss.str();
+                return false;
+            }
+            return true;
+        }
+    ),
+    TIDL_CSTR(
         "Only keepdims = 1 (default) is supported",
         "Only keepdims = 1 (default) is supported",
         "",
@@ -81,24 +97,8 @@ const vector<TidlConstraint> tidlConstraintArgOp =
         }
     ),
     TIDL_CSTR(
-        "Number of non-singleton variable input dimensions must be less than <= 4",
-        "Number of non-singleton variable input dimensions must be less than <= 4",
-        "Number of non-singleton variable input dimensions must be less than <= 4",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            ostringstream oss;
-            int32_t numDims = tidlGetNonSingletonNumDims(layer->allowlistingMetaData.varTensorsDims[0]);
-            if(numDims > 4)
-            {
-                oss << "Maximum number of input dimension supported is 4, found " << numDims << " input dimensions";
-                logs = oss.str();
-                return false;
-            }
-            return true;
-        }
-    ),
-    TIDL_CSTR(
-        "Selecting last index is not supported by TIDL_RT",
-        "select_last_index isn't supported",
+        "select_last_index = 1 is only supported in firmware version >= 11_00_07_00",
+        "select_last_index = 1 is only supported in firmware version >= 11_00_07_00",
         "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             if(layer->layerPCParams.argOpParams.selectLastIndex)

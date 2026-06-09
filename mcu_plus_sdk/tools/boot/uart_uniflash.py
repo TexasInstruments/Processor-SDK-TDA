@@ -87,7 +87,7 @@ python uart_uniflash.py -p <COM port> --cfg=myconfig.cfg
 def open_serial_port(serial_port, baudrate, timeout=10):
     ser = None
     try:
-        ser = serial.Serial(port=serial_port, baudrate=baudrate, timeout=10)
+        ser = serial.Serial(port=serial_port, baudrate=baudrate, timeout=60)
     except serial.serialutil.SerialException:
         print('[ERROR] Serial port [' + serial_port + '] not found or not accessible !!!')
         sys.exit()
@@ -414,7 +414,7 @@ def main(argv):
                     if linecfg.filename is not None:
                         f_size = os.path.getsize(linecfg.filename)
 
-                    if((f_size + BOOTLOADER_UNIFLASH_HEADER_SIZE >= BOOTLOADER_UNIFLASH_BUF_SIZE) and (linecfg.optype in ["flash", "flashverify"])):
+                    if((f_size + BOOTLOADER_UNIFLASH_HEADER_SIZE >= BOOTLOADER_UNIFLASH_BUF_SIZE) and (linecfg.optype in ["flash", "flashverify", 'flash-emmc'])):
                         # Send by parts
                         status, timetaken = send_file_by_parts(linecfg, serialport)
                     else:

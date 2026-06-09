@@ -102,6 +102,14 @@ extern "C" {
 #define ENET_CFG_CPSW_IET                           (ENET_ON)
 #define ENET_CFG_CPSW_MACPORT_IET                   (ENET_ON)
 
+#if defined(SOC_J721E) || defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J721S2)
+/*! \brief CPSW IET Preempt Fragment Size Workaround (HW errata i2208). */
+#define ENET_CFG_CPSW_MACPORT_IET_PREEMPT_FRAG_WORKAROUND   (ENET_OFF)
+
+/*! \brief MAC ports affected by IET Preempt Fragment Size errata -> CPSW5G - MAC ports 2-4 , CPSW9G - MAC ports 3-8 @ 2.5G speed*/
+#define ENET_CFG_IET_PREEMPT_FRAG_ERRATA_PORT_MASK         (0x0U)
+#endif
+
 /*! \brief MDIO Clause-45 frame support. */
 #define ENET_CFG_MDIO_CLAUSE45                      (ENET_ON)
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2020-2022
+ *  Copyright (c) Texas Instruments Incorporated 2020-2025
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -57,16 +57,19 @@
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
+
 /* None */
 
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
+
 /* None */
 
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
+
 /*
  * UDMA Memories
  */
@@ -87,11 +90,14 @@ uint32_t gCsitxUdmaMasterEvntInitDone = UNINITIALIZED;
 /* ========================================================================== */
 /*                  Internal/Private Function Declarations                   */
 /* ========================================================================== */
+
 static uint16_t CsitxDrv_getIcnt0(const Csitx_ChCfg *chCfg);
 static uint32_t CsitxDrv_dtIndex(const CsitxDrv_ChObj *chObj);
+
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */
+
 int32_t CsitxDrv_setDMACfgParams(CsitxDrv_ChObj *chObj)
 {
     int32_t retVal = FVID2_SOK;
@@ -771,9 +777,11 @@ uint8_t* CsitxDrv_getTrpdMemAddr(uint32_t chIdx, uint32_t qCnt)
 {
     return (&gCsitxUdmaTprdMem[chIdx][qCnt][0U]);
 }
+
 /* ========================================================================== */
 /*                       Static Function Definitions                          */
 /* ========================================================================== */
+
 static uint16_t CsitxDrv_getIcnt0(const Csitx_ChCfg *chCfg)
 {
     uint16_t icnt0     = 0U;

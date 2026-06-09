@@ -3895,6 +3895,7 @@ typedef struct
 #define SET_NODE_TARGET_SAFETY_PARAMETERS \
     CT_GENERATE_PARAMETERS("target", ADD_SET_TARGET_PARAMETERS, ADD_SAFETY_MECHANISM_VPAC12_10, ARG, NULL)
 
+#if !defined(VPAC3L)
 TEST_WITH_ARG(tivxHwaVpacLdc, testPsaSignValue_safety_10_12, SetTarget_safety_Arg, SET_NODE_TARGET_SAFETY_PARAMETERS)
 {
     vx_context context = context_->vx_context_;
@@ -4119,10 +4120,11 @@ TEST_WITH_ARG(tivxHwaVpacLdc, testPsaSignValue, SetTarget_Arg, SET_NODE_TARGET_P
     vx_user_data_object psa_obj;
     tivx_vpac_ldc_psa_timestamp_data_t psa_status;
     uint64_t input_timestamp = 0;
+#if !defined(VPAC3L)
     tivx_vpac_ldc_safety_mechanism_params_t safety_mechanism_params;
     vx_user_data_object safety_mechanism_obj;
     vx_reference safety_ref[1];
-
+#endif
     sensor_name = SENSOR_SONY_IMX390_UB953_D3;
     sensor_dcc_mode = 0;
     sensor_dcc_id = 390;
@@ -4156,7 +4158,9 @@ TEST_WITH_ARG(tivxHwaVpacLdc, testPsaSignValue, SetTarget_Arg, SET_NODE_TARGET_P
         VX_CALL(readNV12Input(file, input));
 
         tivx_vpac_ldc_params_init(&params);
+#if !defined(VPAC3L)
         tivx_vpac_ldc_safety_mech_prms_init(&safety_mechanism_params);
+#endif
         params.luma_interpolation_type = 1;
         params.dcc_camera_id = sensor_dcc_id;
         params.enable_psa = 1U;
@@ -4204,7 +4208,7 @@ TEST_WITH_ARG(tivxHwaVpacLdc, testPsaSignValue, SetTarget_Arg, SET_NODE_TARGET_P
 
         VX_CALL(vxSetNodeTarget(node, VX_TARGET_STRING, arg_->target_string));
         VX_CALL(vxVerifyGraph(graph));
-        
+#if !defined(VPAC3L)
         ASSERT_VX_OBJECT(safety_mechanism_obj = vxCreateUserDataObject(context,
         "tivx_vpac_ldc_safety_mechanism_params_t",
         sizeof(tivx_vpac_ldc_safety_mechanism_params_t),
@@ -4215,6 +4219,7 @@ TEST_WITH_ARG(tivxHwaVpacLdc, testPsaSignValue, SetTarget_Arg, SET_NODE_TARGET_P
         
         VX_CALL(tivxNodeSendCommand(node, 0, TIVX_VPAC_LDC_CMD_ENABLE_VPAC_SAFETY_MECHANISM, safety_ref, 1));
         VX_CALL(vxReleaseUserDataObject(&safety_mechanism_obj));
+#endif
         VX_CALL(vxProcessGraph(graph));
 
         ASSERT_VX_OBJECT(psa_obj = 
@@ -4264,7 +4269,7 @@ TEST_WITH_ARG(tivxHwaVpacLdc, testPsaSignValue, SetTarget_Arg, SET_NODE_TARGET_P
         tivxHwaUnLoadKernels(context);
     }
 }
-
+#endif
 #ifndef VPAC3L
 #ifndef x86_64
 /*
@@ -9173,13 +9178,15 @@ TESTCASE_TESTS(tivxHwaVpacLdc,
     testGraphProcessing_RGB_Plane_Split
     #endif
     #ifndef x86_64
-    ,
     #if defined(TEST_LDC_TRIGGER_WATCHDOG_TIMER)
-    testErrorInterrupts
     ,
+    testErrorInterrupts
     #endif
+    #if !defined(VPAC3L)
+    ,
     testPsaSignValue,
     testPsaSignValue_safety_10_12
+    #endif
     #ifndef VPAC3L
     ,
     testSl2Firewall

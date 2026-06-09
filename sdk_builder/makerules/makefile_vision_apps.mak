@@ -22,7 +22,7 @@ VISION_APPS_LINUX_C7x_1_IPC_STRIP=$(VISION_APPS_PATH)/out/$(TARGET_SOC)/C7504/$(
 
 edgeai_deps:
 ifneq (,$(filter yes,$(BUILD_LINUX_MPU) $(BUILD_QNX_MPU) $(BUILD_EMULATION_MODE)))
-ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86_64 A72 A53))
+ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86_64 A72 A53 A720))
 ifeq ($(TARGET_OS), $(filter $(TARGET_OS), LINUX QNX))
 	$(MAKE) -C $(VISION_APPS_PATH) tivision_apps
 	$(MAKE) edgeai
@@ -59,6 +59,7 @@ ifeq ($(BUILD_CPU_C7x_1),yes)
 	$(SYSCFG_NODE) $(SYSCFG_CLI_PATH)/dist/cli.js --product $(MCU_PLUS_SDK_PATH)/.metadata/product.json --context c75ss0-0 --part Default --package AMB --output $(PSDK_PATH)/vision_apps/platform/$(SOC)/rtos/c7x_1/generated $(PSDK_PATH)/vision_apps/platform/$(SOC)/rtos/c7x_1/example.syscfg
 endif
 endif
+	$(MAKE) -C $(VISION_APPS_PATH) check_ipc_cores
 	$(MAKE) -C $(VISION_APPS_PATH)
 ifeq ($(SOC), am62a)
 ifeq ($(BUILD_QNX_MPU),no)

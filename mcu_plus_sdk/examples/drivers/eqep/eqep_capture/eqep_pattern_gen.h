@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-24 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -33,9 +33,23 @@
 #ifndef EQEP_PATTERN_GEN_H_
 #define EQEP_PATTERN_GEN_H_
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
 
 typedef struct EqepAppPatternParams_s
 {
@@ -50,6 +64,10 @@ typedef struct EqepAppPatternParams_s
     uint32_t generateIdxPulse;
 /** \brief Enable/Disable Index Pulse */
 }EqepAppPatternParams;
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
 
 void App_eqepGeneratePattern(EqepAppPatternParams *patParam);
 

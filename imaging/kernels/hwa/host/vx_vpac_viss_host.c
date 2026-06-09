@@ -949,36 +949,8 @@ static vx_status VX_CALLBACK tivxAddKernelVpacVissValidate(vx_node node,
 
         for(i=0; i<(int32_t)TIVX_VPAC_VISS_FCP_NUM_INSTANCES; i++)
         {
-            /* LDRA_JUSTIFY_START
-            <metric start> branch <metric end>
-            <justification start>
-            Rationale: The component level negative test framework and test applications cannot reach this portion.
-            The number of FCP instances is hardcoded to 1 for VPAC3L devices.
-            Therefore, the loop only iterates once, and the else branch is never taken.
-            Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application.
-            This behaviour is part of the application design. An error accumulation statement can be added in a future release if required.
-            <justification end> */
-            if(i==0)
-            /* LDRA_JUSTIFY_END */  
-            {
-                if ((TIVX_VPAC_VISS_EE_MODE_OFF != params.fcp[i].ee_mode) &&
-                    (TIVX_VPAC_VISS_EE_MODE_FCP0_Y12 != params.fcp[i].ee_mode) &&
-                    (TIVX_VPAC_VISS_EE_MODE_FCP0_Y8 != params.fcp[i].ee_mode))
-                {
-                    status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
-                    VX_PRINT(VX_ZONE_ERROR, "Parameter fcp[%d].ee_mode should be either:\n TIVX_VPAC_VISS_EE_MODE_OFF or TIVX_VPAC_VISS_EE_MODE_FCP0_Y12 or TIVX_VPAC_VISS_EE_MODE_FCP0_Y8\n", i);
-                }
-            }
-            /* LDRA_JUSTIFY_START
-            <metric start> statement branch <metric end>
-            <justification start>
-            Rationale: The component level negative test framework and test applications cannot reach this portion.
-            The number of FCP instances is hardcoded to 2 for VPAC3 devices.
-            Therefore, the loop only iterates twice, and the else branch is never taken.
-            Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application.
-            This behaviour is part of the application design. An error accumulation statement can be added in a future release if required.
-            <justification end> */
-            else if(i==1)
+            #if defined(VPAC3)
+            if(i==1) /* TIVX_VPAC_VISS_FCP1 */
             {
                 if ((TIVX_VPAC_VISS_EE_MODE_OFF != params.fcp[i].ee_mode) &&
                     (TIVX_VPAC_VISS_EE_MODE_FCP1_Y12 != params.fcp[i].ee_mode) &&
@@ -988,9 +960,16 @@ static vx_status VX_CALLBACK tivxAddKernelVpacVissValidate(vx_node node,
                     VX_PRINT(VX_ZONE_ERROR, "Parameter fcp[%d].ee_mode should be either:\n TIVX_VPAC_VISS_EE_MODE_OFF or TIVX_VPAC_VISS_EE_MODE_FCP1_Y12 or TIVX_VPAC_VISS_EE_MODE_FCP1_Y8\n", i);
                 }
             }
-            else
+            else /* TIVX_VPAC_VISS_FCP0 */
+            #endif
             {
-                /* FCP index out of expected range */
+                if ((TIVX_VPAC_VISS_EE_MODE_OFF != params.fcp[i].ee_mode) &&
+                    (TIVX_VPAC_VISS_EE_MODE_FCP0_Y12 != params.fcp[i].ee_mode) &&
+                    (TIVX_VPAC_VISS_EE_MODE_FCP0_Y8 != params.fcp[i].ee_mode))
+                {
+                    status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
+                    VX_PRINT(VX_ZONE_ERROR, "Parameter fcp[%d].ee_mode should be either:\n TIVX_VPAC_VISS_EE_MODE_OFF or TIVX_VPAC_VISS_EE_MODE_FCP0_Y12 or TIVX_VPAC_VISS_EE_MODE_FCP0_Y8\n", i);
+                }
             }
             if (((TIVX_VPAC_VISS_MUX1_UV12 == params.fcp[i].mux_output1) || (TIVX_VPAC_VISS_MUX3_UV8 == params.fcp[i].mux_output3)) &&
                 (TIVX_VPAC_VISS_CHROMA_MODE_420 != params.fcp[i].chroma_mode) &&
@@ -1318,7 +1297,6 @@ vx_status tivxAddKernelVpacViss(vx_context context)
                         (vx_enum)VX_TYPE_DISTRIBUTION,
                         (vx_enum)VX_PARAMETER_STATE_OPTIONAL
             );
-            param_idx++;
         }
         if (status == (vx_status)VX_SUCCESS)
         {
@@ -1483,6 +1461,7 @@ void tivx_h3a_aew_config_init(tivx_h3a_aew_config *prms)
         memset(prms, 0x0, sizeof(tivx_h3a_aew_config));
     }
 }
+#if !defined(VPAC3L)
 void tivx_vpac_viss_safety_mech_prms_init(tivx_vpac_viss_safety_mechanism_params_t *prms)
 {
     if (NULL != prms)
@@ -1494,4 +1473,5 @@ void tivx_vpac_viss_safety_mech_prms_init(tivx_vpac_viss_safety_mechanism_params
     }
 }
 
+#endif
 #endif

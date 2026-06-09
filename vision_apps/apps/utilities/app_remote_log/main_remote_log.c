@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2018 Texas Instruments Incorporated
+ * Copyright (c) 2018-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -67,13 +67,18 @@
 #include <utils/file_io/include/app_fileio.h>
 #include <utils/ipc/include/app_ipc.h>
 #include <stdint.h>
+
 #include <app_mem_map.h>
 #include <app_cfg.h>
+#include <common.h>
 
 #if defined(QNX)
 #include <sys/slog.h>
 #define _SLOG_VISION_APPS 50
 #endif
+
+extern core_config_t core_config[];
+extern uint8_t num_cpus;
 
 #if 0
 #if defined(QNX)
@@ -101,62 +106,18 @@ int main(void)
     appLogInitPrmSetDefault(&log_init_prm);
     appFileIOInitPrmSetDefault(&fileio_init_prm);
 
-    #ifdef ENABLE_IPC_MPU1_0
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_MPU1_0] = 1;
-    #endif
-    #ifdef ENABLE_IPC_MCU1_0
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_MCU1_0] = 1;
-    fileio_init_prm.fileio_rd_cpu_enable[APP_IPC_CPU_MCU1_0] = 1;
-    #endif
-    #ifdef ENABLE_IPC_MCU2_0
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_MCU2_0] = 1;
-    fileio_init_prm.fileio_rd_cpu_enable[APP_IPC_CPU_MCU2_0] = 1;
-    #endif
-    #ifdef ENABLE_IPC_MCU2_1
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_MCU2_1] = 1;
-    fileio_init_prm.fileio_rd_cpu_enable[APP_IPC_CPU_MCU2_1] = 1;
-    #endif
-    #ifdef ENABLE_IPC_MCU3_0
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_MCU3_0] = 1;
-    fileio_init_prm.fileio_rd_cpu_enable[APP_IPC_CPU_MCU3_0] = 1;
-    #endif
-    #ifdef ENABLE_IPC_MCU3_1
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_MCU3_1] = 1;
-    fileio_init_prm.fileio_rd_cpu_enable[APP_IPC_CPU_MCU3_1] = 1;
-    #endif
-    #ifdef ENABLE_IPC_MCU4_0
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_MCU4_0] = 1;
-    fileio_init_prm.fileio_rd_cpu_enable[APP_IPC_CPU_MCU4_0] = 1;
-    #endif
-    #ifdef ENABLE_IPC_MCU4_1
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_MCU4_1] = 1;
-    fileio_init_prm.fileio_rd_cpu_enable[APP_IPC_CPU_MCU4_1] = 1;
-    #endif
-    #ifdef ENABLE_IPC_C6x_1
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_C6x_1] = 1;
-    fileio_init_prm.fileio_rd_cpu_enable[APP_IPC_CPU_C6x_1] = 1;
-    #endif
-    #ifdef ENABLE_IPC_C6x_2
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_C6x_2] = 1;
-    fileio_init_prm.fileio_rd_cpu_enable[APP_IPC_CPU_C6x_2] = 1;
-    #endif
-    #ifdef ENABLE_IPC_C7x_1
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_C7x_1] = 1;
-    fileio_init_prm.fileio_rd_cpu_enable[APP_IPC_CPU_C7x_1] = 1;
-    #endif
-    #ifdef ENABLE_IPC_C7x_2
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_C7x_2] = 1;
-    fileio_init_prm.fileio_rd_cpu_enable[APP_IPC_CPU_C7x_2] = 1;
-    #endif
-    #ifdef ENABLE_IPC_C7x_3
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_C7x_3] = 1;
-    fileio_init_prm.fileio_rd_cpu_enable[APP_IPC_CPU_C7x_3] = 1;
-    #endif
-    #ifdef ENABLE_IPC_C7x_4
-    log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_C7x_4] = 1;
-    fileio_init_prm.fileio_rd_cpu_enable[APP_IPC_CPU_C7x_4] = 1;
-    #endif
-    
+    for (int i = 0; i < num_cpus; i++)
+    {
+        if (core_config[i].enable_log_rd_cpu)
+        {
+            log_init_prm.log_rd_cpu_enable[core_config[i].cpu] = 1;
+        }
+        if (core_config[i].enable_fileio)
+        {
+            fileio_init_prm.fileio_rd_cpu_enable[core_config[i].cpu] = 1;
+        }
+    }
+
     log_init_prm.shared_mem = (app_log_shared_mem_t *)APP_LOG_MEM_ADDR;
     log_init_prm.self_cpu_index = APP_IPC_CPU_MPU1_0;
     strncpy(log_init_prm.self_cpu_name, "MPU1_0", APP_LOG_MAX_CPU_NAME);
@@ -167,7 +128,7 @@ int main(void)
     fileio_init_prm.self_cpu_index = APP_IPC_CPU_MPU1_0;
     strncpy(fileio_init_prm.self_cpu_name, "MPU1_0", APP_FILEIO_MAX_CPU_NAME);
     fileio_init_prm.fileio_rd_max_cpus = APP_IPC_CPU_MAX;
-    
+
     appLogRdInit(&log_init_prm);
     appFileIORdInit(&fileio_init_prm);
 
@@ -178,6 +139,3 @@ int main(void)
 
     return 0;
 }
-
-
-

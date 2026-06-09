@@ -3,7 +3,7 @@ let path = require('path');
 let device = "j722s";
 const files_freertos_main_r5 = {
     common: [
-        "dss_safety_test.c",
+        "dss_safety_test_v1.c",
         "dss_display_pattern.c",
         "main.c",
     ],
@@ -11,7 +11,7 @@ const files_freertos_main_r5 = {
 
 const files_nortos_main_r5 = {
     common: [
-        "dss_safety_test.c",
+        "dss_safety_test_v1.c",
         "dss_display_pattern.c",
         "main.c",
     ],

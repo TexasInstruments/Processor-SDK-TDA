@@ -5,24 +5,37 @@ include $(MCU_PLUS_SDK_PATH)/imports.mak
 include $(BOARD_CONFIG)
 include $(MCU_PLUS_SDK_PATH)/devconfig/devconfig.mak
 
+ifeq ($(DEVICE),$(filter $(DEVICE), am62x am62ax am62px))
+BOARD?=$(DEVICE)-sk
+endif
+
 LD=$(CGT_GCC_AARCH64_PATH)/bin/aarch64-none-elf-ld
 
 QNX_IMAGE_LIST = \
 	$(ATF_BIN_NAME) \
-	$(OPTEE_BIN_NAME) \
 	$(QNX_BIN_NAME)
+
+ifeq ($(ENABLE_OPTEE_BIN),$(filter $(ENABLE_OPTEE_BIN), 1))
+QNX_IMAGE_LIST+=$(OPTEE_BIN_NAME)
+endif
 
 ifdef FDT_BIN_NAME
 QNX_IMAGE_LIST+=$(FDT_BIN_NAME)
 endif
 
 ATF_RPRC = $(addsuffix .rprc, $(basename $(ATF_BIN_NAME)))
-OPTEE_RPRC := $(addsuffix .rprc, $(basename $(OPTEE_BIN_NAME)))
 QNX_RPRC := $(addsuffix .rprc, $(basename $(QNX_BIN_NAME)))
 
+ifeq ($(ENABLE_OPTEE_BIN),$(filter $(ENABLE_OPTEE_BIN), 1))
+OPTEE_RPRC := $(addsuffix .rprc, $(basename $(OPTEE_BIN_NAME)))
+endif
+
 ATF_ELF = $(addsuffix .elf, $(basename $(ATF_BIN_NAME)))
-OPTEE_ELF := $(addsuffix .elf, $(basename $(OPTEE_BIN_NAME)))
 QNX_ELF := $(addsuffix .elf, $(basename $(QNX_BIN_NAME)))
+
+ifeq ($(ENABLE_OPTEE_BIN),$(filter $(ENABLE_OPTEE_BIN), 1))
+OPTEE_ELF := $(addsuffix .elf, $(basename $(OPTEE_BIN_NAME)))
+endif
 
 ifdef FDT_BIN_NAME
 FDT_RPRC := $(addsuffix .rprc, $(basename $(FDT_BIN_NAME)))
@@ -31,8 +44,11 @@ endif
 
 RPRC_LIST = \
 	$(ATF_RPRC) \
-	$(OPTEE_RPRC) \
 	$(QNX_RPRC)
+
+ifeq ($(ENABLE_OPTEE_BIN),$(filter $(ENABLE_OPTEE_BIN), 1))
+RPRC_LIST += $(OPTEE_RPRC)
+endif
 
 ifdef FDT_BIN_NAME
 RPRC_LIST += $(FDT_RPRC)
@@ -41,16 +57,20 @@ endif
 ELF_FILE_LIST = $(RPRC_LIST:.rprc=.elf)
 
 ifeq ($(BOARD), j722s-evm)
+	COMBINED_APPIMAGE_LOAD_ADDR=C2000000
 	COMBINED_APPIMAGE_PARAMS = \
 		$(RTOS_IMG_LIST) \
 		$(BOOTIMAGE_CORE_ID_a53ss0-0) $(ATF_RPRC) \
-		$(BOOTIMAGE_CORE_ID_load_only) $(OPTEE_RPRC) \
 		$(BOOTIMAGE_CORE_ID_load_only) $(QNX_RPRC)
 else
+	COMBINED_APPIMAGE_LOAD_ADDR=84000000
 	COMBINED_APPIMAGE_PARAMS = \
 		$(BOOTIMAGE_CORE_ID_a53ss0-0) $(ATF_RPRC) \
-		$(BOOTIMAGE_CORE_ID_load_only) $(OPTEE_RPRC) \
 		$(BOOTIMAGE_CORE_ID_load_only) $(QNX_RPRC)
+endif
+
+ifeq ($(ENABLE_OPTEE_BIN),$(filter $(ENABLE_OPTEE_BIN), 1))
+COMBINED_APPIMAGE_PARAMS += $(BOOTIMAGE_CORE_ID_load_only) $(OPTEE_RPRC)
 endif
 
 ifdef FDT_BIN_NAME
@@ -101,46 +121,56 @@ ifeq ($(DEVICE_TYPE),HS)
 # Sign the appimage using appimage signing script
 ifeq ($(ENC_ENABLED),no)
 	@echo Boot image signing: Encryption is disabled.
-	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(QNX_BOOTIMAGE) --authtype 2 --key $(APP_SIGNING_KEY) --output $(QNX_BOOTIMAGE_HS)
+    #
+    #   Authentication type 0 with load address 0x84000000
+    #
+	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(QNX_BOOTIMAGE) --authtype 0 --loadaddr $(COMBINED_APPIMAGE_LOAD_ADDR) --key $(APP_SIGNING_KEY) --output $(QNX_BOOTIMAGE_HS) --keyversion $(VERSION)
 else
 	@echo Boot image signing: Encryption is enabled.
-	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(QNX_BOOTIMAGE) --authtype 2 --key $(APP_SIGNING_KEY) --enc y --enckey $(APP_ENCRYPTION_KEY) --output $(QNX_BOOTIMAGE_HS)
+    #
+    #   Authentication type 0 with load address 0x84000000
+    #
+	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(QNX_BOOTIMAGE) --authtype 0 --loadaddr $(COMBINED_APPIMAGE_LOAD_ADDR) --key $(APP_SIGNING_KEY) --enc y --enckey $(APP_ENCRYPTION_KEY) --output $(QNX_BOOTIMAGE_HS) --keyversion $(VERSION)
 	$(RM) $(QNX_BOOTIMAGE)-enc
 endif
-	$(RM) $(QNX_BOOTIMAGE)
-	$(RM) $(QNX_BOOTIMAGE_HS_FS)
 else
-	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(QNX_BOOTIMAGE) --authtype 2 --key $(APP_SIGNING_KEY) --output $(QNX_BOOTIMAGE_HS_FS)
-	$(RM) $(QNX_BOOTIMAGE_HS)
+    #
+    #   Authentication type 0 with load address 0x84000000
+    #
+	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(QNX_BOOTIMAGE) --authtype 0 --loadaddr $(COMBINED_APPIMAGE_LOAD_ADDR) --key $(APP_SIGNING_KEY) --output $(QNX_BOOTIMAGE_HS_FS) --keyversion $(VERSION)
 endif
 	$(RM) $(BOOTIMAGE_TEMP_OUT_FILE)
 	@echo Combined boot image: $@ Done !!!
 
 $(ATF_RPRC): $(ATF_ELF)
 	@echo Creating ATF RPRC image
-	$(OUTRPRC_CMD) $(ATF_ELF) $(SW_VERSION) >> $(BOOTIMAGE_TEMP_OUT_FILE)
+	$(OUTRPRC_CMD) $(ATF_ELF) $(SW_VERSION)>> $(BOOTIMAGE_TEMP_OUT_FILE)
 
+ifeq ($(ENABLE_OPTEE_BIN),$(filter $(ENABLE_OPTEE_BIN), 1))
 $(OPTEE_RPRC): $(OPTEE_ELF)
 	@echo Creating OPTEE RPRC image
-	$(OUTRPRC_CMD) $(OPTEE_ELF) $(SW_VERSION) >> $(BOOTIMAGE_TEMP_OUT_FILE)
+	$(OUTRPRC_CMD) $(OPTEE_ELF) $(SW_VERSION)>> $(BOOTIMAGE_TEMP_OUT_FILE)
+endif
 
 $(QNX_RPRC): $(QNX_ELF)
 	@echo Creating QNX RPRC image
-	$(OUTRPRC_CMD) $(QNX_ELF) $(SW_VERSION) >> $(BOOTIMAGE_TEMP_OUT_FILE)
+	$(OUTRPRC_CMD) $(QNX_ELF) $(SW_VERSION)>> $(BOOTIMAGE_TEMP_OUT_FILE)
 
 ifdef FDT_BIN_NAME
 $(FDT_RPRC): $(FDT_ELF)
 	@echo Creating FDT RPRC image
-	$(OUTRPRC_CMD) $(FDT_ELF) $(SW_VERSION) >> $(BOOTIMAGE_TEMP_OUT_FILE)
+	$(OUTRPRC_CMD) $(FDT_ELF) $(SW_VERSION)>> $(BOOTIMAGE_TEMP_OUT_FILE)
 endif
 
 $(ATF_ELF):
 	@echo Creating ATF ELF image
 	$(LD) -b binary -A aarch64 --oformat elf64-littleaarch64 --section-start=.data=$(ATF_LOAD_ADDR) -e $(ATF_LOAD_ADDR) $(PSDK_QNX_PREBUILT_IMAGES)/$(ATF_BIN_NAME) -o $(ATF_ELF)
 
+ifeq ($(ENABLE_OPTEE_BIN),$(filter $(ENABLE_OPTEE_BIN), 1))
 $(OPTEE_ELF):
 	@echo Creating OPTEE ELF image
 	$(LD) -b binary -A aarch64 --oformat elf64-littleaarch64 --section-start=.data=$(OPTEE_LOAD_ADDR) -e $(OPTEE_LOAD_ADDR) $(PSDK_QNX_PREBUILT_IMAGES)/$(OPTEE_BIN_NAME) -o $(OPTEE_ELF)
+endif
 
 $(QNX_ELF):
 	@echo Creating QNX-IFS ELF image

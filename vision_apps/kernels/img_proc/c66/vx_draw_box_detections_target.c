@@ -318,6 +318,13 @@ void tivxAddTargetKernelDrawBoxDetections()
         strncpy(target_name, TIVX_TARGET_MPU_0, TIVX_TARGET_MAX_NAME);
         status = (vx_status)VX_SUCCESS;
     }
+#if defined(SOC_J721S2) || defined(SOC_J784S4)
+    else if (self_cpu == TIVX_CPU_ID_DSP_C7_1)
+    {
+        strncpy(target_name, TIVX_TARGET_DSP_C7_1, TIVX_TARGET_MAX_NAME);
+        status = (vx_status)VX_SUCCESS;
+    }
+#endif
     else
     {
         status = tivxKernelsTargetUtilsAssignTargetNameDsp(target_name);

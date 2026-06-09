@@ -245,6 +245,26 @@ struct tisci_msg_enter_sleep_resp {
 } __attribute__((__packed__));
 
 /**
+ * \brief Request for TI_SCI_MSG_GET_SUSPEND_INITIATOR.
+ *
+ * \param hdr TISCI header to provide ACK/NAK flags to the host.
+ */
+struct tisci_msg_get_suspend_initiator_req {
+	struct tisci_header hdr;
+} __attribute__((__packed__));
+
+/**
+ * \brief Response for TI_SCI_MSG_GET_SUSPEND_INITIATOR.
+ *
+ * \param hdr TISCI header to provide ACK/NAK flags to the host.
+ * \param current_initiator Value that tells who is the current suspend initiator.
+ */
+struct tisci_msg_get_suspend_initiator_resp {
+	struct tisci_header	hdr;
+	u32			current_initiator;
+} __attribute__((__packed__));
+
+/**
  * \brief Request for TISCI_MSG_FIRMWARE_LOAD.
  *
  * \param hdr TISCI header to provide ACK/NAK flags to the host.
@@ -662,5 +682,30 @@ struct tisci_msg_lpm_abort_req {
 struct tisci_msg_lpm_abort_resp {
 	struct tisci_header hdr;
 } __attribute__((__packed__));
+
+/**
+ * \brief Request for TISCI_MSG_LPM_SAVE_ADDR.
+ *
+ * \param hdr TISCI header to provide ACK/NAK flags to the host.
+ * \param ctx_addr	Address where the LPM data is to be saved
+ * \param size	Size of the context area
+ *
+ * This message is to be sent when the system is booting up, in order
+ * to relay the context saving address to TIFS.
+ */
+struct tisci_msg_lpm_save_ctx_addr_req {
+	struct tisci_header	hdr;
+	u64			ctx_addr;
+	u32			size;
+}  __attribute__((__packed__));
+
+/**
+ * \brief Response for TISCI_MSG_LPM_SAVE_ADDR.
+ *
+ * \param hdr TISCI header to provide ACK/NAK flags to the host.
+ */
+struct tisci_msg_lpm_save_ctx_addr_resp {
+	struct tisci_header hdr;
+}  __attribute__((__packed__));
 
 #endif

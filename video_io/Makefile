@@ -22,25 +22,34 @@ endif
 
 ifeq ($(BUILD_TARGET_MODE),yes)
     ifeq ($(PROFILE), $(filter $(PROFILE), debug all))
-        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):R5F:1:debug:TIARMCGT_LLVM
         ifeq ($(BUILD_LINUX_MPU),yes)
             TARGET_COMBOS += $(TARGET_SOC):LINUX:$(MPU_CPU):1:debug:GCC_LINUX_ARM
         endif
         ifeq ($(BUILD_QNX_MPU),yes)
             TARGET_COMBOS += $(TARGET_SOC):QNX:$(MPU_CPU):1:debug:GCC_QNX_ARM
         endif
+        ifeq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
+            TARGET_COMBOS += $(TARGET_SOC):$(RTOS):M55:1:debug:TIARMCGT_LLVM
+        else
+            TARGET_COMBOS += $(TARGET_SOC):$(RTOS):R5F:1:debug:TIARMCGT_LLVM
+        endif
     endif
 
     ifeq ($(PROFILE), $(filter $(PROFILE), release all))
-        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):R5F:1:release:TIARMCGT_LLVM
         ifeq ($(BUILD_LINUX_MPU),yes)
             TARGET_COMBOS += $(TARGET_SOC):LINUX:$(MPU_CPU):1:release:GCC_LINUX_ARM
         endif
         ifeq ($(BUILD_QNX_MPU),yes)
             TARGET_COMBOS += $(TARGET_SOC):QNX:$(MPU_CPU):1:release:GCC_QNX_ARM
         endif
+        ifeq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
+            TARGET_COMBOS += $(TARGET_SOC):$(RTOS):M55:1:release:TIARMCGT_LLVM
+        else
+            TARGET_COMBOS += $(TARGET_SOC):$(RTOS):R5F:1:release:TIARMCGT_LLVM
+        endif
     endif
 endif
+
 
 CONCERTO_ROOT ?= $(PSDK_BUILDER_PATH)/concerto
 BUILD_MULTI_PROJECT := 1

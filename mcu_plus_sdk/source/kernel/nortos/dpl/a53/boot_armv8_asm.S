@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -47,8 +47,20 @@
 #include <kernel/nortos/dpl/a53/soc/gic_base_address_am62a.h>
 #endif
 
+#ifdef SOC_AM62DX
+#include <kernel/nortos/dpl/a53/soc/gic_base_address_am62d.h>
+#endif
+
 #ifdef SOC_AM64X
 #include <kernel/nortos/dpl/a53/soc/gic_base_address_am64.h>
+#endif
+
+#ifdef SOC_AM62X
+#include <kernel/nortos/dpl/a53/soc/gic_base_address_am62x.h>
+#endif
+
+#ifdef SOC_AM62LX
+#include <kernel/nortos/dpl/a53/soc/gic_base_address_am62lx.h>
 #endif
 
 .macro GICD_WRITE_LOOP x, y, offset
@@ -71,13 +83,13 @@
     GICD_WRITE_LOOP 0, 31, 0x0D00
 .endm
 
-
-    .section .text.boot, "ax"
+    /* Creating a separate section containing _c_int00 function to ensure the code starts from here. */
+    .section .text.boot:_c_int00, "ax"
     .func _c_int00
 _c_int00:
     mrs     x0, currentel
     cmp     x0, #0xC
-    bne     2f
+    bne     _c_int00_atf          /* Current EL is not EL3, hence application booted with ATF. */
     ldr     x0, =CacheP_wbInvAll
     blr     x0
     ldr     x0, =CacheP_disableEL3
@@ -162,6 +174,7 @@ _c_int00:
     mov     x0, #0xF
     msr     s3_4_c12_c9_5, x0     /* Enable GIC system register interface
                                    and disable IRQ/FIQ bypass (icc_sre_el2) */
+
     bl      switch_to_el1
 3:
     ldr     x0, =gnu_targets_arm_rtsv8A_startupAsm
@@ -178,6 +191,54 @@ switch_to_el2:
     msr     spsr_el3, x0
     msr     elr_el3, x30
     eret
+
+    .endfunc
+
+
+    .section .text.boot, "ax"
+    .func _c_int00_atf
+_c_int00_atf:
+    mrs     x0, currentel       /* Read again as currentEL may have changed */
+    cmp     x0, #0x8
+    bne     2f
+
+    /*
+     * ----------------------
+     * Switch from EL2 to EL1
+     * ----------------------
+     */
+    ldr     x0, =CacheP_wbInvAll /* Cache invalidation since it is not done in EL3 by ATF */
+    blr     x0
+    mrs     x0, cnthctl_el2
+    orr     x0, x0, #0x3        /* Enable EL1/EL0 access to timers */
+    msr     cnthctl_el2, x0
+    msr     cntvoff_el2, xzr
+    mov     x0, #0x33ff
+    msr     cptr_el2, x0        /* Disable all trap bits */
+    msr     hstr_el2, xzr       /* Disable all coprocessor trap bits */
+    mov     x0, #0x0002         /* 64bit EL1, Disable hypervisor call (HVC)
+                                   instruction, Set/Way Invalidation Override */
+    movk    x0, #0xA000, lsl #16
+    msr     hcr_el2, x0
+    mov     x0, #0x0838
+    movk    x0, #0x30d0, lsl #16
+    msr     sctlr_el1, x0
+    mrs     x0, actlr_el2
+    orr     x0, x0, #2
+    msr     actlr_el2, x0
+    isb
+    mov     x0, #0xF
+    msr     s3_4_c12_c9_5, x0     /* Enable GIC system register interface
+                                   and disable IRQ/FIQ bypass (icc_sre_el2) */
+    isb
+    mov     x0, #0x1
+    msr     s3_0_c12_c12_7, x0    /* Enable Non-secure group 1 interrupts */
+    isb
+
+    bl      switch_to_el1
+2:
+    ldr     x0, =gnu_targets_arm_rtsv8A_startupAsm
+    br      x0
 
     .endfunc
 
@@ -211,8 +272,14 @@ gnu_targets_arm_rtsv8A_startupAsm:
     /* Initialize stack for each cores */
     mrs     x0, mpidr_el1
     and     x0, x0, #0xff
+    tst     x0, x0
+    beq     core0_stackinit
     cmp     x0, #1
     beq      core1_stackinit
+    cmp     x0, #2
+    beq      core2_stackinit
+    cmp     x0, #3
+    beq      core3_stackinit
 
 core0_stackinit:
     ldr     x0, =__TI_STACK_BASE
@@ -224,6 +291,22 @@ core0_stackinit:
 
 core1_stackinit:
     ldr     x0, =__TI_STACK_BASE1
+    ldr     x1, =__TI_STACK_SIZE
+    add     x0, x0, x1
+    and     x0, x0, #(~0xf)     /* 16-byte align SP */
+    mov     sp, x0              /* Initialize SP */
+    b       stack_initend
+
+core2_stackinit:
+    ldr     x0, =__TI_STACK_BASE2
+    ldr     x1, =__TI_STACK_SIZE
+    add     x0, x0, x1
+    and     x0, x0, #(~0xf)     /* 16-byte align SP */
+    mov     sp, x0              /* Initialize SP */
+    b       stack_initend
+
+core3_stackinit:
+    ldr     x0, =__TI_STACK_BASE3
     ldr     x1, =__TI_STACK_SIZE
     add     x0, x0, x1
     and     x0, x0, #(~0xf)     /* 16-byte align SP */

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -75,10 +75,6 @@ void sciclient_get_version_main(void *args)
 {
     int32_t         retVal = SystemP_SUCCESS;
 
-    /* Open drivers to open UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
-
     /* Check for the SYSFW version by sending a request */
     struct tisci_msg_version_req request;
     const Sciclient_ReqPrm_t      reqPrm =
@@ -122,9 +118,11 @@ void sciclient_get_version_main(void *args)
 
         DebugP_log("[SCICLIENT] CPU clock frequency = %" PRId64 " Hz \r\n", clkRate);
     }
-
+#if defined (AMP_FREERTOS_A53)
+    DebugP_log("All tests have passed on a53_core%d !!\r\n", Armv8_getCoreId());
+#else
     DebugP_log("All tests have passed!!\r\n");
-
+#endif
 #if defined (ENABLE_DM_TRACE)
     gTrace_Task = xTaskCreateStatic( Sciclient_dmTrace,            /* Pointer to the function that implements the task. */
                                    "Sciclient_dmTrace",            /* Text name for the task.  This is to facilitate debugging only. */

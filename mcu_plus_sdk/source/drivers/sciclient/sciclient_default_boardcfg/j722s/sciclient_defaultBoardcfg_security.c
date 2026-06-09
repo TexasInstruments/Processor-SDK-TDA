@@ -125,7 +125,8 @@ __attribute__(( aligned(128), section(".boardcfg_data") )) =
         },
         .allowed_hosts = { TISCI_HOST_ID_WKUP_0_R5_0, TISCI_HOST_ID_ALL, 0, 0 },
         .allow_dkek_export_tisci = 0x5A,
-        .rsvd = {0, 0, 0},
+        .fwl_reinit_devgrp_opt = 0,
+        .rsvd = {0, 0},
     },
     /* SA2UL RM config */
     .sa2ul_auth_cfg = {
@@ -144,8 +145,8 @@ __attribute__(( aligned(128), section(".boardcfg_data") )) =
             .magic = TISCI_BOARDCFG_SEC_DBG_CTRL_MAGIC_NUM,
             .size = sizeof(struct tisci_boardcfg_secure_debug_config),
 		},
-		.allow_jtag_unlock = 0x5A,
-		.allow_wildcard_unlock = 0x5A,
+		.allow_jtag_unlock = 0x0,
+		.allow_wildcard_unlock = 0x0,
 		.min_cert_rev = 0x0,
 		.jtag_unlock_hosts = {0, 0, 0, 0},
 	},

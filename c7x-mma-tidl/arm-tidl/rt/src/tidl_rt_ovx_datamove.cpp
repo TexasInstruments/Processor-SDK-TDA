@@ -754,16 +754,59 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
   
         int32_t c, h, w, b, lp, cp, pp = 1, bp;
         int32_t offset;
-        b = ioBufDesc->inNumBatches[id];
-        c = ioBufDesc->inNumChannels[id] * ioBufDesc->inDIM1[id] * ioBufDesc->inDIM2[id];
-        w = ioBufDesc->inWidth[id];
-        h = ioBufDesc->inHeight[id];
-        lp = w + ioBufDesc->inPadL[id] + ioBufDesc->inPadR[id];
-        cp = ioBufDesc->inChannelPitch[id];
-        bp = c * cp;
+        
         void *rtPtr  = in[tidlrt_id]->ptr;
-        void * ivPtr = input_buffer;
-        offset = lp*ioBufDesc->inPadT[id] + ioBufDesc->inPadL[id];
+        void *ivPtr = input_buffer;
+
+        if (in[tidlrt_id]->dimValues[TIDLRT_DIM_BATCH] > 0)
+        {
+            b =  in[tidlrt_id]->dimValues[TIDLRT_DIM_BATCH];
+        }
+        else
+        {
+            b = ioBufDesc->inNumBatches[id];
+        }
+
+        if (in[tidlrt_id]->dimValues[TIDLRT_DIM_NUMCH] > 0)
+        {
+            c =  in[tidlrt_id]->dimValues[TIDLRT_DIM_NUMCH] * in[tidlrt_id]->dimValues[TIDLRT_DIM_DIM2] * in[tidlrt_id]->dimValues[TIDLRT_DIM_DIM1];
+        }
+        else
+        {
+            c = ioBufDesc->inNumChannels[id] * ioBufDesc->inDIM1[id] * ioBufDesc->inDIM2[id];
+        }
+
+        if (in[tidlrt_id]->dimValues[TIDLRT_DIM_HEIGHT] > 0)
+        {
+            h =  in[tidlrt_id]->dimValues[TIDLRT_DIM_HEIGHT];
+        }
+        else
+        {
+            h = ioBufDesc->inHeight[id];
+        }
+
+        if (in[tidlrt_id]->dimValues[TIDLRT_DIM_WIDTH] > 0)
+        {
+            w =  in[tidlrt_id]->dimValues[TIDLRT_DIM_WIDTH];
+        }
+        else
+        {
+            w = ioBufDesc->inWidth[id];
+        }
+
+        if (in[tidlrt_id]->pitch[TIDLRT_CHANNEL_PITCH] > 0)
+        {
+            cp = in[tidlrt_id]->pitch[TIDLRT_CHANNEL_PITCH];
+        }
+        else
+        {
+            cp = ioBufDesc->inChannelPitch[id];
+        }
+
+        bp = c * cp;
+        lp = w + in[tidlrt_id]->padValues[0] + in[tidlrt_id]->padValues[1];
+        offset = lp * in[tidlrt_id]->padValues[2] + in[tidlrt_id]->padValues[0];
+
         float scale = ioBufDesc->inTensorScale[id];
         float inScale = in[tidlrt_id]->scale;
         int32_t zp = in[tidlrt_id]->zeroPoint;
@@ -1386,6 +1429,21 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
         int32_t b, c, h, w, bp, lp, cp, pp = 1;
         int32_t offset, zp, zp_iobuf;
         float outScale;
+        void * rtPtr = out[tidlrt_id]->ptr;
+        void *ivPtr  = output_buffer;
+
+        /*
+         * Just like cp_data_in_tensor_tidlrt_tiovx update for supporting
+         * runtime changing shapes, we should we picking these values from
+         * out tensor instead of ioBufDesc. But currently the way output
+         * buffer is allocated to onnxruntime is based on ioBufDesc. So
+         * the output buffer from onnxruntime is always asme size as decided in
+         * ioBufDesc and not actual model. Based on that case this logic still
+         * works. Correct fix is to not allocate based on ioBufDesc but actual
+         * output shape as calculated and updated in TIDL_OutArgs after
+         * TIDL_Process. This requires change in onnxruntime. Post that this
+         * logic should also be updated. It is a TODO 
+         */ 
 
         b = ioBufDesc->outNumBatches[id];
         c = ioBufDesc->outNumChannels[id] * ioBufDesc->outDIM1[id] * ioBufDesc->outDIM2[id];
@@ -1394,9 +1452,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
         lp = w + ioBufDesc->outPadL[id] + ioBufDesc->outPadR[id];
         cp = ioBufDesc->outChannelPitch[id];
         bp = c * cp;
-        void * rtPtr = out[tidlrt_id]->ptr;
-        void *ivPtr  = output_buffer;
-        offset = lp*ioBufDesc->outPadT[id] + ioBufDesc->outPadL[id];
+        offset = lp * ioBufDesc->outPadT[id] + ioBufDesc->outPadL[id];
+
         if(out[tidlrt_id]->elementType == TIDLRT_Float32)
         {
             out[tidlrt_id]->scale = 1.0;

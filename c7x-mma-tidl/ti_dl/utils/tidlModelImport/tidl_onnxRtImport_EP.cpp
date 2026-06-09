@@ -855,7 +855,7 @@ bool TIDL_checkFusedPattern(int idx, shared_ptr<TIDL_fusedNode> node, std::vecto
   }
 
   /* adding this check here also in case if some in-between node does not have shapes(that node will not go under check present in TIDL_onnxAllowlistFusedLayers func) */
-  if(TIDL_checkLayerInputDimExist(onnxGraph, idx) == -1)
+  if(TIDL_checkLayerInputOutputDimsExist(onnxGraph, idx) == -1)
   {
     return false;
   }
@@ -883,6 +883,11 @@ bool TIDL_checkFusedPattern(int idx, shared_ptr<TIDL_fusedNode> node, std::vecto
 
       if (node->enforceInputOrder == true)
       {
+        /* Skiping inputs which are coming from network main inputs */
+        if(inputs[i] == -1)
+        {
+          continue;
+        }
         if (onnxGraph.node(inputs[i]).op_type().compare(node->inputs[i]->opType) == 0)
         {
           found = true;
@@ -892,6 +897,11 @@ bool TIDL_checkFusedPattern(int idx, shared_ptr<TIDL_fusedNode> node, std::vecto
       {
         for(int j = 0; j < inputs.size(); j++)
         {
+          /* Skiping inputs which are coming from network main inputs */
+          if(inputs[j] == -1)
+          {
+            continue;
+          }
           if(onnxGraph.node(inputs[j]).op_type().compare(node->inputs[i]->opType) == 0)
           {
             found = true;
@@ -919,6 +929,11 @@ bool TIDL_checkFusedPattern(int idx, shared_ptr<TIDL_fusedNode> node, std::vecto
       bool found = false;
       for(int j=0;j<outputs.size();j++)
       {
+        /* Skiping outputs which are coming from network main outputs */
+        if(outputs[j] == -1)
+        {
+          continue;
+        }
         if(onnxGraph.node(outputs[j]).op_type().compare(node->outputs[i]->opType) == 0)
         {
           found = true;
@@ -943,6 +958,11 @@ bool TIDL_checkFusedPattern(int idx, shared_ptr<TIDL_fusedNode> node, std::vecto
 
     if (node->enforceInputOrder == true)
     {
+      /* Skiping inputs which are coming from network main inputs */
+      if(inputs[i] == -1)
+      {
+        continue;
+      }
       if (TIDL_checkFusedPattern(inputs[i],node->inputs[i],fusedNodes,onnxGraph))
       {
         found = true;
@@ -952,6 +972,11 @@ bool TIDL_checkFusedPattern(int idx, shared_ptr<TIDL_fusedNode> node, std::vecto
     {
       for(int j = 0; j < inputs.size(); j++)
       {
+        /* Skiping inputs which are coming from network main inputs */
+        if(inputs[j] == -1)
+        {
+          continue;
+        }
         if(std::find(fusedNodes.begin(), fusedNodes.end(),inputs[j]) != fusedNodes.end())
         {
           found = true;
@@ -972,17 +997,21 @@ bool TIDL_checkFusedPattern(int idx, shared_ptr<TIDL_fusedNode> node, std::vecto
     }
   }
 
-
   /* last node in the pattern */
   if(node->outputs.size() == 0)
   {
     return true;
   }
 
-
   /* now verify all outputs of curr node matches with our pattern node */
   for(int i1=0;i1<outputs.size();i1++)
   {
+    /* Skiping outputs which are coming from network main outputs */
+    if(outputs[i1] == -1)
+    {
+      continue;
+    }
+
     bool found = false;
     for(int i2=0;i2<node->outputs.size();i2++)
     {
@@ -1025,7 +1054,7 @@ std::vector<std::vector<int>> TIDL_onnxAllowlistFusedLayers(GraphProto& onnxGrap
   for(int i=0;i<onnxGraph.node_size();i++)
   {
     /* check input/output shapes - if shapes are not there then do not check fused combinations, this will be denied */
-    if(TIDL_checkLayerInputDimExist(onnxGraph, i) == -1)
+    if(TIDL_checkLayerInputOutputDimsExist(onnxGraph, i) == -1)
     {
       continue;
     }
@@ -1376,7 +1405,8 @@ std::vector<int> sortOnnxGraphInTopologicalOrder(GraphProto& onnxGraph)
       std::string inputName = onnxGraph.node(i).input(j);
 
       // Handle case in case same input is present
-      if(std::find(uniqueInputNames.begin(),uniqueInputNames.end(),inputName) != uniqueInputNames.end())
+      if((strcmp(inputName.c_str(), "") == 0) ||
+         std::find(uniqueInputNames.begin(),uniqueInputNames.end(),inputName) != uniqueInputNames.end())
       {
         continue;
       }
@@ -1430,7 +1460,8 @@ std::vector<int> sortOnnxGraphInTopologicalOrder(GraphProto& onnxGraph)
           std::string inputName = onnxGraph.node(k).input(l);
 
           // Handle case in case same input is present
-          if(std::find(uniqueInputNames.begin(),uniqueInputNames.end(),inputName) != uniqueInputNames.end())
+          if((strcmp(inputName.c_str(), "") == 0) ||
+              std::find(uniqueInputNames.begin(),uniqueInputNames.end(),inputName) != uniqueInputNames.end())
           {
             continue;
           }
@@ -1672,6 +1703,22 @@ int32_t TIDL_getSupportedNodesImport(std::string& data, std::string ortVersion, 
       {
         if(!TIDL_checkIsSubgraphNoOps(onnxGraph, nodeGroup))
         {
+          // Remove NoOp layers in the node group which do not have both inputs and outputsin the current node group
+          std::vector<int> isolatedNoopNodeIndices=getIsolatedNoOpNodes(onnxGraph,nodeGroup,inputAdjacencyList,outputAdjacencyList);
+          for (int j = 0; j < isolatedNoopNodeIndices.size(); j++)
+          {
+            if (!gDiags.gDiagList.empty())
+            {
+              int index = std::find(sortedNodeIndices.begin(),sortedNodeIndices.end(),isolatedNoopNodeIndices[j]) - sortedNodeIndices.begin();
+              TIDL_LOG_UNSUPPORTED_AT(gDiags.gDiagList,index, "Subgraph have isolated non compute node --- layer type - %s,  Node name - %s", onnxGraph.node(isolatedNoopNodeIndices[j]).op_type().c_str(), onnxGraph.node(isolatedNoopNodeIndices[j]).name().c_str());
+            }
+            auto it = std::find(nodeGroup.begin(),nodeGroup.end(),isolatedNoopNodeIndices[j]);
+            if (it != nodeGroup.end())
+            {
+              nodeGroup.erase(it);
+            }
+          }
+          
           suportedNodeGroups.push_back(nodeGroup);
           num_subGraphs++;
         }
@@ -1705,6 +1752,21 @@ int32_t TIDL_getSupportedNodesImport(std::string& data, std::string ortVersion, 
   {
     if(!TIDL_checkIsSubgraphNoOps(onnxGraph, nodeGroup))
     {
+
+      std::vector<int> isolatedNoopNodeIndices=getIsolatedNoOpNodes(onnxGraph,nodeGroup,inputAdjacencyList,outputAdjacencyList);
+      for (int j = 0; j < isolatedNoopNodeIndices.size(); j++)
+      { 
+        if (!gDiags.gDiagList.empty())
+        {
+          int index = std::find(sortedNodeIndices.begin(),sortedNodeIndices.end(),isolatedNoopNodeIndices[j]) - sortedNodeIndices.begin();
+          TIDL_LOG_UNSUPPORTED_AT(gDiags.gDiagList,index, "Subgraph have isolated non compute node --- layer type - %s,  Node name - %s", onnxGraph.node(isolatedNoopNodeIndices[j]).op_type().c_str(), onnxGraph.node(isolatedNoopNodeIndices[j]).name().c_str());
+        }
+        auto it = std::find(nodeGroup.begin(),nodeGroup.end(),isolatedNoopNodeIndices[j]);
+        if (it != nodeGroup.end())
+        {
+          nodeGroup.erase(it);
+        }
+      }
       suportedNodeGroups.push_back(nodeGroup);
       num_subGraphs++;
     }
@@ -1874,12 +1936,12 @@ int32_t TIDL_writeQuantizedInput(onnxRtParams_t * onnxRtParams, char * inputName
   }
   FILE* fp = fopen(inputName, "ab+");
 
-  int32_t w[TIDL_NUM_IN_BUFS];
-  int32_t h[TIDL_NUM_IN_BUFS];
-  int32_t c[TIDL_NUM_IN_BUFS];
-  int32_t d2[TIDL_NUM_IN_BUFS];
-  int32_t d1[TIDL_NUM_IN_BUFS];
-  int32_t n[TIDL_NUM_IN_BUFS];
+  int32_t w[TIDL_MAX_ALG_IN_BUFS];
+  int32_t h[TIDL_MAX_ALG_IN_BUFS];
+  int32_t c[TIDL_MAX_ALG_IN_BUFS];
+  int32_t d2[TIDL_MAX_ALG_IN_BUFS];
+  int32_t d1[TIDL_MAX_ALG_IN_BUFS];
+  int32_t n[TIDL_MAX_ALG_IN_BUFS];
 
   float * inQuantFactor = *inQuantFactorInput;
   float * scratch_mem = NULL;
@@ -1986,8 +2048,13 @@ int32_t TIDL_subgraphImport(onnxRtParams_t * onnxRtParams, TIDL_OnnxrtEPData* op
     int32_t numParamBits = options->osrt_options.m_num_param_bits;
     int32_t inferenceMode = options->osrt_options.m_inference_mode;
 
-    float * inQuantFactorCurrTensor = (float *)malloc(16 * sizeof(float));
-    memset(inQuantFactorCurrTensor, 0, 16 * sizeof(float));
+    float * inQuantFactorCurrTensor = (float *)malloc(TIDL_MAX_ALG_IN_BUFS * sizeof(float));
+    if (inQuantFactorCurrTensor == NULL)
+    {
+      TIDL_GLOBAL_REPORT_ERROR("Could not allocate memory of size %d", sizeof(float)*TIDL_MAX_ALG_IN_BUFS);
+      return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+    }
+    memset(inQuantFactorCurrTensor, 0, TIDL_MAX_ALG_IN_BUFS * sizeof(float));
     TIDL_IMPORT_CHECK_AND_RETURN(TIDL_writeQuantizedInput(onnxRtParams, const_cast<char *>(inputName.c_str()), isCurrFrameIdx1, numParamBits, inferenceMode, &inQuantFactorCurrTensor), "");
 
     if((currFrameIdx == options->osrt_options.m_calibration_frames))
@@ -2012,6 +2079,8 @@ int32_t TIDL_subgraphImport(onnxRtParams_t * onnxRtParams, TIDL_OnnxrtEPData* op
       TIDL_copyFile(subGraphId + "_tidl_net.bin", options->osrt_options.m_artifacts_folder, options->osrt_options.m_temp_folder);
       TIDL_copyFile(subGraphId + "_tidl_io_1.bin", options->osrt_options.m_artifacts_folder, options->osrt_options.m_temp_folder);
     }
+    free(inQuantFactorCurrTensor);
+    inQuantFactorCurrTensor = NULL;
   }
   else
   {
@@ -2691,7 +2760,12 @@ int32_t TIDL_computeImportFunc(OnnxTIDLSubGraphParams * state_subGraph, std::str
   state_subGraph->currFrameIdx_++;
     /* [TIDL-4702] : Update the subgraph string_buf for each frame */
   TIDL_onnxRTUpdateSubgraphStringBuf((std::string* )state_subGraph->string_buf);
-
+  // Update inDataNamesList for each frame
+  for (int i = 0; i < onnxRtParams->numNetInData; i++)
+  {
+    TIDL_updateNamesList ((char*)gParams.inDataNamesList, i, (char *)onnxRtParams->inDataNames[i]);
+  }
+  
   if ((state_subGraph->currFrameIdx_ == 1))
   {
     int8_t subgraphName[TIDLRT_STRING_SIZE];

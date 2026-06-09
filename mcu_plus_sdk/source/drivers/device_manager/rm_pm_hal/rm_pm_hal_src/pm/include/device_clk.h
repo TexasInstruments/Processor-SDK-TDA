@@ -84,6 +84,8 @@
 
 struct device;
 
+struct ssc_data;
+
 /**
  * \brief Const clock device data
  *
@@ -280,43 +282,45 @@ sbool device_clk_get_hw_ready(struct device *dev, dev_clk_idx_t clk_idx);
 sbool device_clk_get_sw_gated(struct device *dev, dev_clk_idx_t clk_idx);
 
 /**
- * \brief Allow or block SSC (Spread Spectrum Clocking)
+ * \brief Set the SSC for a device's clock
  *
- * This allows or blocks SSC operation for this clock while it is running.
- * If all clocks downsteam from a PLL are either disabled and/or allow SSC,
- * SSC will be enabled for that PLL.
- *
- * \param dev
- * The device ID that the clock is connected to.
- *
- * \param clk_idx
- * The index of the clock on this device.
- *
- * \param allow
- * True to allow SSC, SFALSE to block SSC while the clock is enabled.
- */
-void device_clk_set_ssc(struct device *dev, dev_clk_idx_t clk_idx, sbool allow);
-
-/**
- * \brief Get the current state of the SSC flag for this device clock.
+ * This locates the correct clock and calls the internal clock API
+ * set function. Configures the SSC on the PLL.
  *
  * \param dev
  * The device ID that the clock is connected to.
  *
  * \param clk_idx
  * The index of the clock on this device.
+ *
+ * \param mod_freq_hz
+ * The desired modulation frequency in Hz. The modulation period is the time
+ * required to cycle the clock nominal frequency from an initial value through
+ * all the different values along the modulation profile and back to the
+ * initial value. The modulation frequency is the inverse of the period. The
+ * minimum allowable frequency is 32 kHz and maximum is fREFCLK / 200. For
+ * example, if the fREFCLK is 25 MHz, the maximum allowable modulation
+ * frequency would be 125 kHz.
+ *
+ * \param mod_depth
+ * The target modulation depth in "permyriad". The modulation depth refers to
+ * the maximum variation in frequency as a percentage of the clock center
+ * frequency. The minimum modulation depth is 0.1% and the maximum is 3.1%.
+ * Modulation depth can be adjusted in 0.1% increments.
+ *
+ * \param spread_type
+ * The target spread type. Both center and down spread are supported.
+ *
+ * \param enable
+ * Enable or Disable SSC
  *
  * \return
- * True if SSC is allowed for this clock, SFALSE if SSC is blocked.
+ * True if the new SSC configuration was accepted, SFALSE otherwise.
  */
-sbool device_clk_get_ssc(struct device *dev, dev_clk_idx_t clk_idx);
+sbool device_clk_set_ssc(struct device *dev, dev_clk_idx_t clk_idx, u32 modfreq_hz, u32 mod_depth, u8 spread_type, sbool enable);
 
 /**
- * \brief Get the current SSC state of this clock.
- *
- * Although the device clock can allow SSC, SSC is not actually enabled unless
- * it is allowed by all other users of the PLL. This call can be used to
- * determine if SSC has actually been activated.
+ * \brief Get the current SSC configuration of a device clock.
  *
  * \param dev
  * The device ID that the clock is connected to.
@@ -324,10 +328,13 @@ sbool device_clk_get_ssc(struct device *dev, dev_clk_idx_t clk_idx);
  * \param clk_idx
  * The index of the clock on this device.
  *
+ * \param ssc_data
+ * The current SSC configuration of the clock.
+ *
  * \return
- * True if SSC is active.
+ * True if the SSC configuration was found, SFALSE otherwise.
  */
-sbool device_clk_get_hw_ssc(struct device *dev, dev_clk_idx_t clk_idx);
+sbool device_clk_get_ssc(struct device *dev, dev_clk_idx_t clk_idx, struct ssc_data *ssc_datap);
 
 /**
  * \brief Allow or block frequency changes.

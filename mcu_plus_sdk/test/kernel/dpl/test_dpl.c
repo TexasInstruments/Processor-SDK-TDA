@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -43,6 +43,7 @@
 #include <kernel/dpl/CycleCounterP.h>
 #include <kernel/dpl/EventP.h>
 #include <kernel/dpl/QueueP.h>
+#include <kernel/dpl/MailboxP.h>
 #include <drivers/soc.h>
 #include <unity.h>
 #include "ti_drivers_open_close.h"
@@ -57,11 +58,17 @@
 
 #define EVENT_TASK_PRI             (14U)    /* One less than highest priority kernel timer task */
 #if defined(__C7504__) || defined(__C7524__)
-#define EVENT_TASK_STACK_SIZE      (32*1024U)
+#define EVENT_TASK_STACK_SIZE      (64*1024U)
 #else
 #define EVENT_TASK_STACK_SIZE      (4*1024U)
 #endif
+
+#if !defined(OS_SAFERTOS)
 static uint8_t gTaskStack[EVENT_TASK_STACK_SIZE] __attribute__((aligned(32)));
+#else
+static uint8_t gTaskStack[EVENT_TASK_STACK_SIZE] __attribute__((aligned(EVENT_TASK_STACK_SIZE)));
+#endif
+
 static TaskP_Object gEventTask;
 static EventP_Object gMyEvent;
 int32_t gEventSetStatusFromISR;
@@ -69,6 +76,49 @@ int32_t gEventSet2StatusFromISR;
 int32_t gEventClearStatusFromISR;
 int32_t gEventGetBitsStatusFromISR;
 uint32_t gEventGetBitsFromISR;
+
+/* MailboxP Test Object and Definitions */
+#if defined(__C7504__) || defined(__C7524__)
+#define TEST_MBOX_TASK_STACK_SIZE      (32*1024U)
+#else
+#define TEST_MBOX_TASK_STACK_SIZE      (4*1024U)
+#endif
+#define TEST_MBOX_TASK1_PRIO             (14U)
+#define TEST_MBOX_TASK2_PRIO             (14U)
+#define TEST_MBOX_MSG_SIZE               (10U)
+#define TEST_MBOX_BUFF_COUNT             (3U)
+
+#if defined(SOC_AM275X)
+/* am275x doesn't have access for ddr region */
+#define RESTRICTED_ADDRESS      (0xE0000000U)
+#else
+/* am62x/am62ax/am62dx/am62px socs doesn't have access for fss1 region */
+#define RESTRICTED_ADDRESS      (0x68000000U)
+#endif
+
+struct test_mboxTaskTestParam
+{
+    MailboxP_Handle hMboxClientRx;
+    MailboxP_Handle hMboxClientTx;
+};
+
+struct test_mboxIsrTestParam
+{
+    MailboxP_Handle hMboxClientRx;
+    MailboxP_Handle hMboxClientTx;
+    int32_t numMsgs1;
+    int32_t numMsgs2;
+    int32_t status1AtIsr;
+    int32_t status2AtIsr;
+    uint8_t msgAtIsr[TEST_MBOX_MSG_SIZE];
+};
+
+static uint8_t gTestMboxTask1Stack[EVENT_TASK_STACK_SIZE] __attribute__((aligned(32)));
+static MailboxP_Object gMyMboxClientTx;
+static MailboxP_Object gMyMboxClientRx;
+static TaskP_Object gTestMboxTaskObj;
+static uint8_t gMailBoxBuff[TEST_MBOX_MSG_SIZE*TEST_MBOX_BUFF_COUNT];
+
 
 /* User defined heap memory and handle */
 #define MY_HEAP_MEM_SIZE (2 * 1024u)
@@ -83,15 +133,29 @@ static HeapP_Object gMyHeap;
 
 #define MY_TASK_PRI         (14U)   /* One less than highest priority kernel timer task */
 #if defined(__C7504__) || defined(__C7524__)
-#define MY_TASK_STACK_SIZE      (32*1024U)
+#define MY_TASK_STACK_SIZE      (64*1024U)
 #else
 #define MY_TASK_STACK_SIZE  (4*1024U)
 #endif
+
+#if !defined(OS_SAFERTOS)
 static uint8_t gMyTaskStack[MY_TASK_STACK_SIZE] __attribute__((aligned(32)));
+#else
+static uint8_t gMyTaskStack[MY_TASK_STACK_SIZE] __attribute__((aligned(MY_TASK_STACK_SIZE)));
+#endif
+
 static TaskP_Object gMyTask;
 
 #if defined(_TMS320C6X)
 void test_c66x(void);
+#endif
+#if defined(AMP_FREERTOS_A53)
+#define APP_UART_BUFSIZE              (60U)
+uint8_t gUartBuffer[APP_UART_BUFSIZE];
+volatile uint32_t gNumBytesWritten = 0U;
+
+/* Semaphore to indicate Write completion used in callback api's */
+static SemaphoreP_Object gUartWriteDoneSem;
 #endif
 
 static void myISR1(void *args)
@@ -112,6 +176,42 @@ static void myISR3(void *args)
 {
     gInISR = 1;
 }
+
+#if defined(AMP_FREERTOS_A53)
+void spi_interrupt_callback(UART_Handle handle, UART_Transaction *trans)
+{
+    DebugP_assertNoLog(UART_TRANSFER_STATUS_SUCCESS == trans->status);
+    gNumBytesWritten = trans->count;
+    SemaphoreP_post(&gUartWriteDoneSem);
+
+    return;
+}
+
+void test_spiInterrupt(void *args)
+{
+    int32_t          transferOK, status;
+    UART_Transaction trans;
+
+    DebugP_log("Testing of SPI Interrupt on a53_core%d started ...\r\n", Armv8_getCoreId());
+
+    status = SemaphoreP_constructBinary(&gUartWriteDoneSem, 0);
+    DebugP_assert(SystemP_SUCCESS == status);
+
+    UART_Transaction_init(&trans);
+
+    /* Send entry string */
+    gNumBytesWritten = 0U;
+    trans.buf   = &gUartBuffer[0U];
+    strncpy(trans.buf,"This is to test spi interrupt (uart) on core \r\n", APP_UART_BUFSIZE);
+    trans.count = strlen(trans.buf);
+    transferOK = UART_write(gUartHandle[CONFIG_UART0], &trans);
+
+    /* Wait for write completion */
+    SemaphoreP_pend(&gUartWriteDoneSem, SystemP_WAIT_FOREVER);
+    DebugP_assert(gNumBytesWritten == strlen(trans.buf));
+    DebugP_log("Testing of SPI Interrupt on a53_core%d Success ...!!!\r\n", Armv8_getCoreId());
+}
+#endif
 
 void test_hwiProfile(void *args)
 {
@@ -700,6 +800,149 @@ void myTaskMain(void *args)
     TaskP_exit();
 }
 
+void test_MailboxTask1(void *args)
+{
+    struct test_mboxTaskTestParam* pTaskArgs = (struct test_mboxTaskTestParam*) args;
+    uint8_t msgBuff[TEST_MBOX_MSG_SIZE];
+
+    int32_t status = MailboxP_post(pTaskArgs->hMboxClientTx, "PINGT", SystemP_NO_WAIT);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, status);
+
+    status = MailboxP_pend(pTaskArgs->hMboxClientRx, msgBuff, SystemP_WAIT_FOREVER);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, status);
+
+    /* fill the \0 char to avoid mem overflows in error cases */
+    TEST_ASSERT_EQUAL_STRING("PONGM", msgBuff);
+    TaskP_exit();
+}
+
+static void testMboxEchoIsr(void *args)
+{
+    struct test_mboxIsrTestParam *pTestParms = (struct test_mboxIsrTestParam*) args;
+    pTestParms->numMsgs1 = MailboxP_getNumPendingMsgs(pTestParms->hMboxClientRx);
+    pTestParms->status1AtIsr = MailboxP_pend(pTestParms->hMboxClientRx, pTestParms->msgAtIsr, SystemP_NO_WAIT);
+    pTestParms->status2AtIsr = MailboxP_post(pTestParms->hMboxClientTx, pTestParms->msgAtIsr, SystemP_NO_WAIT);
+    pTestParms->numMsgs2 = MailboxP_getNumPendingMsgs(pTestParms->hMboxClientTx);
+}
+
+void test_mailbox(void *args)
+{
+    int32_t status;
+    MailboxP_Params mboxParams;
+    TaskP_Params    taskParams;
+    MailboxP_Handle mboxClientTxHandle;
+    MailboxP_Handle mboxClientRxHandle;
+    uint8_t msgBuff[TEST_MBOX_MSG_SIZE];
+    struct test_mboxTaskTestParam taskArgs;
+
+    MailboxP_Params_init(&mboxParams);
+    mboxParams.name = (uint8_t *)"testMbox";
+    mboxParams.buf  = (void *)gMailBoxBuff;
+    mboxParams.size =  TEST_MBOX_MSG_SIZE;
+    mboxParams.count = TEST_MBOX_BUFF_COUNT;
+    mboxParams.bufsize = TEST_MBOX_MSG_SIZE * TEST_MBOX_BUFF_COUNT;
+
+    mboxClientTxHandle = MailboxP_create(&gMyMboxClientTx, &mboxParams);
+    TEST_ASSERT_NOT_NULL(mboxClientTxHandle);
+
+    mboxClientRxHandle = MailboxP_create(&gMyMboxClientRx, &mboxParams);
+    TEST_ASSERT_NOT_NULL(mboxClientRxHandle);
+
+    taskArgs.hMboxClientTx = mboxClientTxHandle;
+    taskArgs.hMboxClientRx = mboxClientRxHandle;
+
+    TaskP_Params_init(&taskParams);
+    taskParams.name = "MAILBOX_TASK1";
+    taskParams.stackSize = TEST_MBOX_TASK_STACK_SIZE;
+    taskParams.stack = gTestMboxTask1Stack;
+    taskParams.priority = TEST_MBOX_TASK1_PRIO;
+    taskParams.args = &taskArgs;
+    taskParams.taskMain = test_MailboxTask1;
+
+
+    //############
+    TEST_ASSERT_EQUAL_INT32(0x0, MailboxP_getNumPendingMsgs(mboxClientTxHandle));
+    TEST_ASSERT_EQUAL_INT32(0x0, MailboxP_getNumPendingMsgs(mboxClientRxHandle));
+
+    status = MailboxP_pend(mboxClientTxHandle, msgBuff, SystemP_NO_WAIT);
+    TEST_ASSERT_EQUAL_INT32(SystemP_TIMEOUT, status);
+
+    status = TaskP_construct(&gTestMboxTaskObj, &taskParams);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, status);
+    status = MailboxP_pend(mboxClientTxHandle, msgBuff, SystemP_WAIT_FOREVER);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, status);
+    TEST_ASSERT_EQUAL_STRING("PINGT", msgBuff);
+
+    status = MailboxP_post(mboxClientRxHandle, "PONGM", SystemP_WAIT_FOREVER);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, status);
+    ClockP_sleep(1); // allow for test_MailboxTask1 to run
+
+    //############
+    TEST_ASSERT_EQUAL_INT32(0x0, MailboxP_getNumPendingMsgs(mboxClientTxHandle));
+    TEST_ASSERT_EQUAL_INT32(0x0, MailboxP_getNumPendingMsgs(mboxClientRxHandle));
+    status = TaskP_construct(&gTestMboxTaskObj, &taskParams);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, status);
+    ClockP_sleep(1); // allow for test_MailboxTask1 to run
+
+    status = MailboxP_pend(mboxClientTxHandle, msgBuff, SystemP_NO_WAIT);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, status);
+    TEST_ASSERT_EQUAL_STRING("PINGT", msgBuff);
+
+    status = MailboxP_post(mboxClientRxHandle, "PONGM", SystemP_NO_WAIT);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, status);
+
+    TEST_ASSERT_EQUAL_INT32(0x1, MailboxP_getNumPendingMsgs(mboxClientRxHandle));
+    ClockP_sleep(1); // allow for test_MailboxTask1 to run
+    TEST_ASSERT_EQUAL_INT32(0x0, MailboxP_getNumPendingMsgs(mboxClientRxHandle));
+    TEST_ASSERT_EQUAL_INT32(0x0, MailboxP_getNumPendingMsgs(mboxClientTxHandle));
+
+    //############
+    HwiP_Params hwiParams;
+    HwiP_Object hwiObj;
+
+    struct test_mboxIsrTestParam isrParams;
+    isrParams.hMboxClientTx = mboxClientTxHandle;
+    isrParams.hMboxClientRx = mboxClientRxHandle;
+    strcpy((char*)isrParams.msgAtIsr, "TEST");
+    isrParams.numMsgs1 = -1;
+    isrParams.numMsgs2 = -1;
+    isrParams.status1AtIsr = SystemP_FAILURE;
+    isrParams.status2AtIsr = SystemP_FAILURE;
+
+    HwiP_Params_init(&hwiParams);
+    hwiParams.intNum = TEST_INT_NUM;
+    hwiParams.callback = testMboxEchoIsr;
+    hwiParams.args = &isrParams;
+    hwiParams.eventId = HWIP_INVALID_EVENT_ID;
+    status = HwiP_construct(&hwiObj, &hwiParams);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, status);
+
+    TEST_ASSERT_EQUAL_INT32(0x0, MailboxP_getNumPendingMsgs(mboxClientTxHandle));
+    TEST_ASSERT_EQUAL_INT32(0x0, MailboxP_getNumPendingMsgs(mboxClientRxHandle));
+
+    status = MailboxP_post(mboxClientRxHandle, "PONGM", SystemP_NO_WAIT);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, status);
+
+    HwiP_post(hwiParams.intNum);
+    status = MailboxP_pend(mboxClientTxHandle, msgBuff, SystemP_NO_WAIT);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, status);
+    TEST_ASSERT_EQUAL_STRING("PONGM", msgBuff);
+    HwiP_destruct(&hwiObj);
+
+    TEST_ASSERT_EQUAL_INT32(isrParams.numMsgs1, 1);
+    TEST_ASSERT_EQUAL_INT32(isrParams.numMsgs2, 1);
+    TEST_ASSERT_EQUAL_INT32(isrParams.status1AtIsr, SystemP_SUCCESS);
+    TEST_ASSERT_EQUAL_INT32(isrParams.status2AtIsr, SystemP_SUCCESS);
+    TEST_ASSERT_EQUAL_STRING("PONGM", isrParams.msgAtIsr);
+
+    TEST_ASSERT_EQUAL_INT32(0x0, MailboxP_getNumPendingMsgs(mboxClientTxHandle));
+    TEST_ASSERT_EQUAL_INT32(0x0, MailboxP_getNumPendingMsgs(mboxClientRxHandle));
+
+    //############
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, MailboxP_delete(mboxClientTxHandle));
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, MailboxP_delete(mboxClientRxHandle));
+}
+
 void test_task(void *args)
 {
     int32_t status;
@@ -738,9 +981,9 @@ void test_task(void *args)
 static void eventIsr(void *args)
 {
     gEventGetBitsStatusFromISR = EventP_getBits(&gMyEvent, &gEventGetBitsFromISR);
-    gEventSetStatusFromISR = EventP_setBits(&gMyEvent, EVENT_BIT_FROM_ISR);
     gEventSet2StatusFromISR = EventP_setBits(&gMyEvent, EVENT_BIT2_FROM_ISR);
     gEventClearStatusFromISR = EventP_clearBits(&gMyEvent, EVENT_BIT2_FROM_ISR);
+    gEventSetStatusFromISR = EventP_setBits(&gMyEvent, EVENT_BIT_FROM_ISR);
 }
 
 void eventTaskMain(void *args)
@@ -1159,6 +1402,115 @@ void test_queue(void *args)
     TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, status);
 }
 
+#if defined(__ARM_ARCH_7R__)
+
+/* Global counters for exceptions */
+volatile uint32_t gDataAbortTracker;
+volatile uint32_t gPrefetchAbortTracker;
+volatile uint32_t gUndefinedInstructionTracker;
+
+/* Strong definition of user exception handleres */
+void HwiP_user_data_abort_handler_c(DFSR dfsr, ADFSR adfsr, volatile uint32_t dfar, volatile uint32_t lr,
+                                    volatile uint32_t spsr);
+void HwiP_user_prefetch_abort_handler_c(IFSR ifsr, AIFSR aifsr, volatile uint32_t ifar,
+                                        volatile uint32_t lr, volatile uint32_t spsr);
+void HwiP_user_undefined_handler_c(volatile uint32_t lr, volatile uint32_t spsr);
+
+/* User-defined Data Abort handler */
+void HwiP_user_data_abort_handler_c(DFSR dfsr, ADFSR adfsr, volatile uint32_t dfar, volatile uint32_t lr,
+                                    volatile uint32_t spsr)
+{
+    if (gDataAbortTracker > 0U)
+    {
+        /** This is only for test purpose.
+         * Returning from a data abort exception may result in unexpected behaviour. */
+        gDataAbortTracker--;
+    }
+    else
+    {
+        /* Unexpected fault - loop forever */
+        volatile uint32_t loop = 1U;
+        while (loop != 0U) { ; }
+    }
+
+    (void)dfsr;
+    (void)adfsr;
+    (void)dfar;
+    (void)lr;
+    (void)spsr;
+}
+
+/* User-defined Prefetch Abort handler */
+void HwiP_user_prefetch_abort_handler_c(IFSR ifsr, AIFSR aifsr, volatile uint32_t ifar,
+                                        volatile uint32_t lr, volatile uint32_t spsr)
+{
+    if (gPrefetchAbortTracker > 0U)
+    {
+        /** This is only for test purpose.
+         * Returning from a prefetch abort exception may result in unexpected behaviour. */
+        gPrefetchAbortTracker--;
+    }
+    else
+    {
+        /* Unexpected fault - loop forever */
+        volatile uint32_t loop = 1U;
+        while (loop != 0U) { ; }
+    }
+
+    (void)ifsr;
+    (void)aifsr;
+    (void)ifar;
+    (void)lr;
+    (void)spsr;
+}
+
+/* User-defined Undefined Instruction handler */
+void HwiP_user_undefined_handler_c(volatile uint32_t lr, volatile uint32_t spsr)
+{
+    if (gUndefinedInstructionTracker > 0U)
+    {
+        /** This is only for test purpose.
+         * Returning from an undefined exception may result in unexpected behaviour. */
+        gUndefinedInstructionTracker--;
+    }
+    else
+    {
+        /* Unexpected fault - loop forever */
+        volatile uint32_t loop = 1U;
+        while (loop != 0U) { ; }
+    }
+
+    (void)lr;
+    (void)spsr;
+}
+
+void test_exceptionUserHandlers(void *args)
+{
+    /** Undefined Instruction exception */
+    gUndefinedInstructionTracker = 1U;                          /* Set tracker to mark as expected fault    */
+    DebugP_log("Triggering Undefined Instruction exception...\r\n");
+    /* MRC command to operate debug related register, causing an undef exception                            */
+    __asm__ __volatile__("MRC p14,#0,r0,c0,c2,#2");             /* This should cause undefined exception    */
+    TEST_ASSERT_EQUAL_UINT32(0U, gUndefinedInstructionTracker); /* Validate Undefined Instruction tracker   */
+
+    /** Prefetch Abort exception */
+    DebugP_log("Triggering Prefetch Abort exception...\r\n");
+    gPrefetchAbortTracker = 1U;                                 /* Set tracker to mark as expected fault    */
+    typedef void (*function_ptr)();
+    function_ptr trigger_prefetch_abort = (function_ptr)RESTRICTED_ADDRESS;
+    trigger_prefetch_abort();                                   /* This should cause prefetch abort         */
+    TEST_ASSERT_EQUAL_UINT32(0U, gPrefetchAbortTracker);        /* Validate Prefetch Abort tracker          */
+
+    /** Data Abort exception */
+    DebugP_log("Triggering Data Abort exception...\r\n");
+    gDataAbortTracker = 1U;                                     /* Set tracker to mark as expected fault    */
+    uint32_t *ptr = (uint32_t *)RESTRICTED_ADDRESS;
+    *ptr = 0xFFFFFFFF;                                          /* This should cause data abort             */
+    TEST_ASSERT_EQUAL_UINT32(0U, gDataAbortTracker);            /* Validate Data Abort tracker              */
+}
+
+#endif /* #if defined(__ARM_ARCH_7R__) */
+
 void setUp(void)
 {
 }
@@ -1169,9 +1521,6 @@ void tearDown(void)
 
 void test_main(void *args)
 {
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-
     UNITY_BEGIN();
 
     RUN_TEST(test_hwi, 282, NULL);
@@ -1187,24 +1536,29 @@ void test_main(void *args)
     RUN_TEST(test_debugLog, 292, NULL);
     RUN_TEST(test_hwiProfile, 293, NULL);
     RUN_TEST(test_queue, 3808, NULL);
-
     /* tasks are not supported in nortos */
-    #if defined (OS_FREERTOS) || defined (OS_SAFERTOS)
+    #if defined (OS_FREERTOS)
     RUN_TEST(test_task, 294, NULL);
     RUN_TEST(test_event, 805, NULL);
     #endif
 
-    #if defined(__ARM_ARCH_7R__) && defined(OS_FREERTOS)
+    #if defined (OS_FREERTOS) && ((!defined(BUILD_C7X)) || defined(SOC_J722S))
+    RUN_TEST(test_mailbox, 13390, NULL);
+    #endif
+
+    #if defined(__ARM_ARCH_7R__) && (defined(OS_FREERTOS) || defined(OS_THREADX) || !defined(__C7524__))
     /* nested ISR not supported for now */
     #elif defined(_TMS320C6X)
     /* nested ISR not supported in C66x */
-    #elif defined(__C7504__) || defined(__C7524__)
+    #elif defined(__C7504__)
+    /* nested ISR not supported in C75x */
+    #elif defined(__C7524__)
     /* nested ISR not supported in C75x */
     #else
     RUN_TEST(test_hwiNested, 295, NULL);
     #endif
 
-    #if defined(__ARM_ARCH_7R__)
+    #if defined(__ARM_ARCH_7R__) && !defined(OS_THREADX) && !defined(OS_SAFERTOS)
     /* floating point operations in ISR supported in R5F only */
     RUN_TEST(test_mainToIsrWithFloatOperations, 1571, NULL);
     #endif
@@ -1220,8 +1574,15 @@ void test_main(void *args)
 #endif
 
     RUN_TEST(test_addrconversion, 898, NULL);
+#if defined(AMP_FREERTOS_A53)
+    RUN_TEST(test_spiInterrupt, 3808, NULL);
+#endif
+
+    #if defined(__ARM_ARCH_7R__) && !defined(OS_SAFERTOS)
+    /* debug aid for exceptions supported in R5F only */
+    RUN_TEST(test_exceptionUserHandlers, 7111, NULL);
+    #endif
 
     UNITY_END();
 
-    Drivers_close();
 }

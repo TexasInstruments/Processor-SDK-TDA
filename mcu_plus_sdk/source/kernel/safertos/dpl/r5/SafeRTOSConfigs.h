@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024 Texas Instruments Incorporated
+ *  Copyright (C) 2024-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -35,6 +35,16 @@ extern "C"
 {
 #endif
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
 #define configTIMER_TASK_PRIORITY           ( configMAX_PRIORITIES - 1U )
 #define configSTACK_CHECK_MARGIN            ( 0U )
 #define configTICK_RATE_HZ                  ( 1000UL )
@@ -45,6 +55,36 @@ extern "C"
 #define configMINIMAL_STACK_SIZE_NO_FPU     ( 512U ) /* Needs to be a power of two value. */
 #define configTIMER_TASK_STACK_SIZE         ( 2 * configMINIMAL_STACK_SIZE_NO_FPU )
 #define configIDLE_TASK_STACK_SIZE          ( configMINIMAL_STACK_SIZE_WITH_FPU )
+
+/* ========================================================================== */
+/*                         Global Variables Declarations                      */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                       Static Function Definitions                          */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                  Internal/Private Structure Declarations                   */
+/* ========================================================================== */
+
+/* None */
 
 #ifdef __cplusplus
 }

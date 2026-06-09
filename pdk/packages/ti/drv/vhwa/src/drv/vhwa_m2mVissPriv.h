@@ -1378,7 +1378,7 @@ void Vhwa_m2mVissGlbceInit(Vhwa_M2mVissInstObj *instObj,
 int32_t Vhwa_memVissSetVissStartModules(Vhwa_M2mVissInstObj *instObj,
             Vhwa_M2mVissHandleObj *hObj);
 int32_t Vhwa_m2mVissReadHistogram(Vhwa_M2mVissInstObj *instObj,
-    const Vhwa_M2mVissHandleObj *hObj, Fcp_HistData *histData);
+    const Vhwa_M2mVissHandleObj *hObj, Fcp_HistData *fcphistData);
 
 int32_t Vhwa_m2mVissRegisterIsr(Vhwa_M2mVissInstObj *instObj);
 void Vhwa_m2mVissUnregisterIsr(Vhwa_M2mVissInstObj *instObj);
@@ -1463,6 +1463,7 @@ void Vhwa_m2mDisableFcVissHtsIntr(void);
 
 int32_t Vhwa_m2mVissAcquireHwaLock(uint32_t semTimeout);
 
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 /**
  * \brief Performs configuration register readback for VISS module.
  *
@@ -1496,6 +1497,7 @@ int32_t Vhwa_m2mVissSubmitReadbackUDMABuf(Vhwa_M2mVissInstObj *instObj,
         Vhwa_M2mVissHandleObj *hObj);
 uint32_t Vhwa_m2mVissCalcNumOfTrsForReadback(const Vhwa_M2mVissHandleObj *hObj);
 void Vhwa_m2mVissUpdateReadbackBufObj(Vhwa_M2mVissHandleObj *hObj);
+#endif
 #ifdef __cplusplus
 }
 #endif

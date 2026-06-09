@@ -132,13 +132,13 @@ s32 boardcfg_pm_receive_and_validate(u8 host, u32 boardcfg_pmp_low, u32 boardcfg
  *
  * \return Pointer to the structure representing the LPM boardcfg, NULL in case of failure
  */
-struct boardcfg_pm_lpm_cfg *boardcfg_pm_extract_lpm_cfg();
+struct boardcfg_pm_lpm_cfg *boardcfg_pm_extract_lpm_cfg(void);
 
 /**
  * \brief Is the LPM config inside of PM boarcfg valid
  * \return boolean
  */
-bool is_lpm_boardcfg_valid();
+bool is_lpm_boardcfg_valid(void);
 
 /**
  * \brief Receive a boardcfg security placed at an external address and validate

@@ -61,6 +61,10 @@
 #endif
 #endif
 
+#define RM_INIT_STATUS_DEVGRP_ALL ((u8) 255U)
+#define RM_INIT_STATUS_FALSE      ((u8) 0U)
+static u8 rm_init_status = RM_INIT_STATUS_FALSE;
+
 s32 rm_init(void)
 {
 	s32 r = SUCCESS;
@@ -91,6 +95,8 @@ s32 rm_init(void)
 	if (r != SUCCESS) {
 		rm_trace_sub((TRACE_RM_ACTION_RM_INIT |
 			      TRACE_RM_ACTION_FAIL), 0U, 0U);
+	} else {
+		rm_init_status = RM_INIT_STATUS_DEVGRP_ALL;
 	}
 
 	return r;
@@ -100,26 +106,44 @@ s32 rm_deinit(devgrp_t devgrp, sbool rom_deinit)
 {
 	s32 r = SUCCESS;
 
+	/* Before processing the RM deinitializaton request for a given devgrp, check if
+	 * RM is even initialized for the given devgrp.
+	 * - if not, skip the rm_deinit request.
+	 * - if yes, proceed with rm_deinit for the given devgrp.
+	 */
+	if ((rm_init_status != RM_INIT_STATUS_FALSE) && ((rm_init_status & devgrp) == devgrp)) {
 #ifdef CONFIG_RM_IRQ
-	if (r == SUCCESS) {
-		r = rm_irq_deinit(devgrp, rom_deinit);
-	}
+		if (r == SUCCESS) {
+			r = rm_irq_deinit(devgrp, rom_deinit);
+		}
 #endif
 #ifdef CONFIG_RM_RA
-	if (r == SUCCESS) {
-		r = rm_ra_deinit(devgrp, rom_deinit);
-	}
+		if (r == SUCCESS) {
+			r = rm_ra_deinit(devgrp, rom_deinit);
+		}
 #endif
 #ifdef CONFIG_RM_UDMAP
-	if (r == SUCCESS) {
-		r = rm_udmap_deinit(devgrp, rom_deinit);
-	}
+		if (r == SUCCESS) {
+			r = rm_udmap_deinit(devgrp, rom_deinit);
+		}
 #endif
 #ifdef CONFIG_RM_PROXY
-	if (r == SUCCESS) {
-		r = rm_proxy_deinit(devgrp);
-	}
+		if (r == SUCCESS) {
+			r = rm_proxy_deinit(devgrp);
+		}
 #endif
+
+		if (r == SUCCESS) {
+			/* If devgrp is DEVGRP_ALL (0x00), then set the deinit status for all devgrps.
+			 * Otherwise, unset the bits corresponding to the de-initialized devgrp.
+			 */
+			if (devgrp == 0U) {
+				rm_init_status = RM_INIT_STATUS_FALSE;
+			} else {
+				rm_init_status = ((u8) (rm_init_status & (~devgrp)));
+			}
+		}
+	}
 
 	return r;
 }

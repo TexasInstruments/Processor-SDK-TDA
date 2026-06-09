@@ -27,6 +27,7 @@ ipc.vringAllocationPDK = false;
 ipc.wkup_r5fss0_0      = "notify";
 
 debug_log.enableUartLog      = true;
+debug_log.uartTrace          = true;
 debug_log.uartLog.$name      = "CONFIG_UART0";
 debug_log.uartLog.intrEnable = "DISABLE";
 

@@ -1,9 +1,44 @@
 %%{
     let options = args.options;
+    let globalScratchBuf = "false";
+
+    let vringBaseAddr = 0xA0400000;
+    let vringSize = 0x300000;
+
+    let enableUdmaBuffers = false;
+    if(options && options.globalScratchBuf)
+    globalScratchBuf = options.globalScratchBuf;
+
+    let globalScratchBufSize = 0x2000000;
+    if(options && options.globalScratchBufSize)
+        globalScratchBufSize = options.globalScratchBufSize
+
+    if(options && options.vringSize)
+        vringSize = options.vringSize;
+
+    if(options && options.vringBaseAddr)
+        vringBaseAddr = options.vringBaseAddr;
+
+    if(options && options.enableUdmaBuffers)
+        enableUdmaBuffers = options.enableUdmaBuffers;
+
+    let globalScratchBufSizeInMB = globalScratchBufSize / (1024 * 1024)
+
+    if(enableUdmaBuffers == true) {
+        codeDataAddrDdrUdma = 0x90000000;
+        codeDataSizeDdrUdma = 0x08000000;
+        codeDataAddrOcram = 0x70000000;
+        codeDataSizeOcram = 0x00010000;
+	    if(options && options.codeDataAddrDdrUdma)
+	        codeDataAddrDdrUdma = options.codeDataAddrDdrUdma;
+	    if(options && options.codeDataSizeDdrUdma)
+	        codeDataSizeDdrUdma = options.codeDataSizeDdrUdma;
+        if(options && options.codeDataAddrOcram)
+	        codeDataAddrOcram = options.codeDataAddrOcram;
+	    if(options && options.codeDataSizeOcram)
+	        codeDataSizeOcram = options.codeDataSizeOcram;
+    }
 %%}
---retain="*(.bootCode)";
---retain="*(.startupCode)";
---retain="*(.startupData)";
 --retain="*(.irqStack)";
 --retain="*(.fiqStack)";
 --retain="*(.abortStack)";
@@ -43,15 +78,12 @@ __FIQ_STACK_SIZE = 0x0`(args.options.fiqStackSize).toString(16).toUpperCase()`;
 __SVC_STACK_SIZE = 0x0`(args.options.svcStackSize).toString(16).toUpperCase()`; /* This is the size of stack when R5 is in SVC mode */
 __ABORT_STACK_SIZE = 0x0`(args.options.abortStackSize).toString(16).toUpperCase()`;  /* This is the size of stack when R5 is in ABORT mode */
 __UNDEFINED_STACK_SIZE = 0x0`(args.options.undefinedStackSize).toString(16).toUpperCase()`;  /* This is the size of stack when R5 is in UNDEF mode */
-
+__DM_STUB_STACK_SIZE = 0x0`(args.options.dmStubstacksize).toString(16).toUpperCase()`; /* DM stub stack size */
 
 SECTIONS
 {
     /* This has the R5F entry point and vector table, this MUST be at 0x0 */
     .vectors            : {} palign(8)      > DDR
-    .bootCode           : align = 8, load = R5F_TCMB, run = R5F_TCMA
-    .startupCode        : align = 8, load = R5F_TCMB, run = R5F_TCMA
-    .startupData        : align = 8, load = R5F_TCMB, run = R5F_TCMA, type = NOINIT
 
     /* This has the R5F boot code until MPU is enabled,  this MUST be at a address < 0x80000000
      * i.e this cannot be placed in DDR
@@ -81,16 +113,17 @@ SECTIONS
     /* this is used when Debug log's to shared memory is enabled, else this is not used */
     .bss.log_shared_mem  (NOLOAD) : {} > DDR_LOG_SHM_MEM
     % }
-    .text            : {} palign(8)      > DDR
-    .const           : {} palign(8)      > DDR
-    .rodata          : {} palign(8)      > DDR
-    .cinit           : {} palign(8)      > DDR
-    .far             : {} align(4)       > DDR
-    .data            : {} palign(128)    > DDR
-    .sysmem          : {}                > DDR
-    .data_buffer     : {} palign(128)    > DDR
-    .const.devgroup  : { *(.const.devgroup*) } align(4) > DDR
-    .boardcfg_data   : {} align(4)       > DDR
+    .lpm_data (NOLOAD)      : {} align(4)       > DDR_LPM_DATA
+    .text                   : {} palign(8)      > DDR
+    .const                  : {} palign(8)      > DDR
+    .rodata                 : {} palign(8)      > DDR
+    .cinit                  : {} palign(8)      > DDR
+    .far                    : {} align(4)       > DDR
+    .data                   : {} palign(128)    > DDR
+    .sysmem                 : {}                > DDR
+    .data_buffer            : {} palign(128)    > DDR
+    .const.devgroup         : { *(.const.devgroup*) } align(4) > DDR
+    .boardcfg_data          : {} align(4)       > DDR
 
     GROUP {
         .bss.devgroup : { *(.bss.devgroup*) } align(4)
@@ -98,6 +131,51 @@ SECTIONS
         .bss:    {} palign(4)   /* This is where uninitialized globals go */
         RUN_END(__BSS_END)
     } > DDR
+
+    % if(args.isInstrumentation) {
+    GROUP {
+        __llvm_prf_cnts
+        __llvm_prf_bits
+    } > DDR
+    % }
+    GROUP{
+
+        .dm_stub_text : {
+            _privileged_code_begin = .;
+            _text_secure_start = .;
+            dm_stub*(.text)
+        }  palign(8)
+
+        .dm_stub_data : {
+            _privileged_data_begin = .;
+            dm_stub*(.data)
+            _privileged_data_end = .;
+        }  palign(8)
+
+        .dm_stub_bss : {
+            _start_bss = .;
+            dm_stub*(.bss)
+            _end_bss = .;
+        }  palign(8)
+
+        .dm_stub_rodata : {
+            _start_rodata = .;
+            dm_stub*(.rodata)
+            _end_rodata = .;
+        }  palign(8)
+
+    .dm_stub_stack : {
+            _start_stack = .;
+            . += __DM_STUB_STACK_SIZE;
+            _end_stack = .;
+        }  palign(8)
+    }  load = R5F_TCMB, run = R5F_TCMA
+
+    /* Trace buffer used during low power mode */
+    .lpm_trace_buf : (NOLOAD) {} > WKUP_SRAM_TRACE_BUFF
+
+    /* DM RM/PM HAL trace buffer at fixed DDR location */
+    .dm_rmpm_trace_buf : (NOLOAD) {} > DDR_DM_RMPM_TRACE
 
     /* USB or any other LLD buffer for benchmarking */
     .benchmark_buffer (NOLOAD) {} ALIGN (8) > DDR
@@ -132,32 +210,63 @@ SECTIONS
         .fini_array: {} palign(8)   /* Contains function pointers called after main */
     } > DDR
 
+    % if(globalScratchBuf == "true") {
+    /* global scratch buffer region */
+    .globalScratchBuffer (NOLOAD) : {} > DDR2
+    % }
+    % if(enableUdmaBuffers) {
+    GROUP {
+        .udma_buffer_ddr  (NOLOAD) : { *(.udma_buffer_ddr) }
+        .udma_buffer_msmc (NOLOAD) : { *(.udma_buffer_msmc) }
+        .udma_buffer_ospi (NOLOAD) : { *(.udma_buffer_ospi) }
+    } > DDR_UDMA
+
+    GROUP {
+        .udma_buffer_internal (NOLOAD) : { *(.udma_buffer_internal) }
+    } > OCRAM
+    % }
 }
 
 
 MEMORY
 {
-    R5F_TCMA_VEC   (RWIX)       : ORIGIN = 0x00000000 LENGTH = 0x00000040
-    R5F_TCMA       (RWIX)       : ORIGIN = 0x00000040 LENGTH = 0x00007FC0
-    R5F_TCMB_VEC   (RWIX)       : ORIGIN = 0x41010000 LENGTH = 0x00000040
-    R5F_TCMB       (RWIX)       : ORIGIN = 0x41010040 LENGTH = 0x00007FC0
+    R5F_TCMA_VEC   (RWIX)      : ORIGIN = 0x00000000 LENGTH = 0x00000040
+    R5F_TCMA       (RWIX)      : ORIGIN = 0x00000040 LENGTH = 0x00007FC0
+    R5F_TCMB_VEC   (RWIX)      : ORIGIN = 0x41010000 LENGTH = 0x00000040
+    R5F_TCMB       (RWIX)      : ORIGIN = 0x41010040 LENGTH = 0x00007FC0
+
+    WKUP_SRAM_TRACE_BUFF (RWIX) : ORIGIN = 0x41880000 LENGTH = 0x0000800
 
     HSM_RAM                     : ORIGIN = 0x43C00000 LENGTH = 0x3FF00
-    DDR                         : ORIGIN = 0x9CA00000 LENGTH = 0x1D00000
+    /* DDR for DM LPM data [ size 640.00 KB ] */
+    DDR_LPM_DATA    (RWIX)      : ORIGIN = 0x9CA00000 LENGTH = 0x000A0000
+    /* DDR for DM RM/PM HAL trace buffer [ size 20 KB ] */
+    DDR_DM_RMPM_TRACE (RWIX)    : ORIGIN = 0x9CAA0000 LENGTH = 0x00005000
+    /* DDR for DM R5F code/data [ size 27 MiB + 364 KB ] */
+    DDR                         : ORIGIN = 0x9CAA5000 LENGTH = 0x1B5B000
     % if(args.project.isLinuxInSystem === true){
     DDR_IPC_RESOURCE_TABLE_LINUX: ORIGIN = 0x9C900000 LENGTH = 0x400    /* For resource table   */
     DDR_IPC_TRACE_LINUX         : ORIGIN = 0x9C900400 LENGTH = 0xFFC00  /* IPC trace buffer     */
     %}
 
+    % if(enableUdmaBuffers) {
+    DDR_UDMA : ORIGIN = 0x`(codeDataAddrDdrUdma).toString(16).toUpperCase()`, LENGTH = 0x`(codeDataSizeDdrUdma).toString(16).toUpperCase()`
+    OCRAM    : ORIGIN = 0x`(codeDataAddrOcram).toString(16).toUpperCase()`, LENGTH = 0x`(codeDataSizeOcram).toString(16).toUpperCase()`
+    % }
     % if(args.project.ipcVringRTOS === true){
      /*
      3MB from address 0XA0000000 is used by RTOS IPC on Vision apps.
      As the C7x binary is taken from vision apps, C7x will be writing to this memory.
      So, for MCU+SDK we are using memory which is not used by Vision apps RTOS IPC.
      */
-    DDR_IPC_VRING_RTOS          : ORIGIN = 0xA0400000 LENGTH = 0x300000   /* IPC VRING for RTOS/NoRTOS */
+    DDR_IPC_VRING_RTOS          : ORIGIN = 0x`vringBaseAddr.toString(16).toUpperCase()` LENGTH = 0x`vringSize.toString(16).toUpperCase()`   /* IPC VRING for RTOS/NoRTOS */
     %}
     % if(args.project.isLogSHM === true){
     DDR_LOG_SHM_MEM             : ORIGIN = 0xA1000000 LENGTH = 0x40000    /* Shared memory log */
     %}
+    % if(globalScratchBuf == "true") {
+
+    /* global scratch buffer region in DDR (`globalScratchBufSizeInMB` MB) */
+    DDR2           (RWIX)      : ORIGIN = 0xA8000000 LENGTH = 0x0`(globalScratchBufSize).toString(16).toUpperCase()`
+    % }
 }

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -183,7 +183,8 @@ void HwiP_post(uint32_t intNum);
  * \brief Disable all interrupts
  *
  * \note In case of ARM R5F, ARM M4F, this only disables IRQ. \n
- *       FIQ is not disabled.
+ *       FIQ is not disabled. \n
+ *       In case of ARM M4F, this only disables interrupts which has priority between 1-7.
  *
  * \return interrupt state before disable, typically used by \ref HwiP_restore later
  */
@@ -218,9 +219,9 @@ void HwiP_restore(uintptr_t oldIntState);
  * To get the exact CPU mode of the executing CPU, use the low level CPU specific system
  * calls/registers.
  *
- * \note In case of ARM R5F, this only checks if caller is inside IRQ or not.
- *       This means when HwiP_inISR returns 1, CPU is in IRQ mode
- *       and when HwiP_inISR return 0, CPU could be in system mode or FIQ or abort mode and so on
+ * \note In case of ARM R5F, this only checks if caller is not inside inside system mode or not.
+ *       This means when HwiP_inISR returns 1, CPU is in IRQ mode or FIQ or abort mode.
+ *       And when HwiP_inISR return 0, CPU is not in system mode.
  *
  * \return 0 not in interrupt mode, 1 in interrupt mode
  */
@@ -254,6 +255,64 @@ int32_t HwiP_registerNmiHandler(HwiP_FxnCallback nmiHandler, void *args);
  * \return \ref SystemP_SUCCESS on success, \ref SystemP_FAILURE on error
  */
 int32_t HwiP_unregisterNmiHandler(void);
+
+/**
+ * \brief Provide additional information about data and instruction parity, ECC, and external TCM errors.
+ *
+ * \note Refer to ARMv7-R architecture manual for more details
+ */
+typedef struct {
+    volatile uint32_t index;
+    /* index bit*/
+    volatile uint32_t side_ext;
+    /* side extension*/
+    volatile uint32_t recoverable_error;
+    /* recoverable error*/
+    volatile uint32_t cacheway;
+    /* cacheway*/
+}AIFSR;
+
+/**
+ * \brief Holds status information regarding the source of the last instruction abort.
+ *
+ * \note Refer to ARMv7-R architecture manual for more details
+ */
+typedef struct {
+    volatile uint32_t status;
+    /* status */
+    volatile uint32_t sd;
+    /* SD bit */
+}IFSR;
+
+/**
+ * \brief Provide additional information about data and instruction parity, ECC, and external TCM errors.
+ *
+ * \note Refer to ARMv7-R architecture manual for more details
+ */
+typedef struct {
+    volatile uint32_t index;
+    /* index bit*/
+    volatile uint32_t side_ext;
+    /* side extension*/
+    volatile uint32_t recoverable_error;
+    /* recoverable error*/
+    volatile uint32_t cacheway;
+    /* cacheway*/
+}ADFSR;
+
+/**
+ * \brief Holds status information regarding the source of the last data abort.
+ *
+ * \note Refer to ARMv7-R architecture manual for more details
+ */
+typedef struct {
+    volatile uint32_t status;
+    /* status */
+    volatile uint32_t sd;
+    /* SD bit */
+    volatile uint32_t rw;
+    /* read or write error */
+}DFSR;
 
 /** @} */
 

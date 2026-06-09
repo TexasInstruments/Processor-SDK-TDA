@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2018 Texas Instruments Incorporated
+ * Copyright (c) 2018-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -90,7 +90,11 @@
 #include <drivers/udma.h>
 #include <drivers/udma/udma_priv.h>
 #endif
-#else
+#elif defined(MCU_SDK)
+/* MCU_SDK only has udma_standalone, used for both host emulation and target builds */
+/* Target builds also use udma_standalone since no separate full UDMA driver headers exist */
+#include <udma_standalone/udma.h>
+#elif defined(PDK)
 #include <ti/drv/udma/udma.h>
 #endif
 

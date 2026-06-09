@@ -1,0 +1,41 @@
+%%{
+    let module = system.modules['/drivers/rtc/rtc'];
+%%}
+
+/*
+ * GPTIMER
+ */
+#include <drivers/rtc.h>
+#include <kernel/dpl/AddrTranslateP.h>
+
+% for(let i = 0; i < module.$instances.length; i++) {
+    % let instance = module.$instances[i];
+    % let config = module.getInstanceConfig(instance);
+#define `config.$name`                  (`i`u)
+#define `config.$name`_BASE_ADDR        (`config.baseAddr.toString(16).toUpperCase()`)
+#define `config.$name`_INT_NUM          (`config.intrNum`u)
+#define `config.$name`_INPUT_CLK_HZ     (`config.timerInputClkHz`u)
+% }
+
+#define RTC_NUM_INSTANCES  (`module.$instances.length`u)
+
+/*
+ * RTC
+ */
+% for(let i = 0; i < module.$instances.length; i++) {
+    % let instance = module.$instances[i];
+    % let config = module.getInstanceConfig(instance);
+#define `config.$name`_CLOCK_SRC_MUX_ADDR (0x`config.clkSelMuxAddr.toString(16).toUpperCase()`u)
+#define `config.$name`_CLOCK_SRC_`config.clkSource` (0x`config.clkSelMuxValue.toString(16).toUpperCase()`u)
+%}
+
+/* RTC Driver handles */
+extern RTC_Handle gRTCHandle[RTC_NUM_INSTANCES];
+
+/*
+ * RTC Driver Advance Parameters - to be used only when Driver_open() and
+ * Driver_close() is not used by the application
+ */
+/* RTC Driver Parameters */
+
+extern RTC_Params gRTCParams[RTC_NUM_INSTANCES];

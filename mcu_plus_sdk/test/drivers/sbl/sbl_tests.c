@@ -30,6 +30,9 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
 
 #include <stdio.h>
 #include <unity.h>
@@ -40,13 +43,18 @@
 #include <drivers/qos.h>
 #include "qos_data.h"
 
+/* ========================================================================== */
+/*                 Internal Function Declarations                             */
+/* ========================================================================== */
+
 void validate_dss_qos_config(void *args);
+
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
 void sbl_tests(void *args)
 {
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
 
     UNITY_BEGIN();
 
@@ -54,8 +62,6 @@ void sbl_tests(void *args)
 
     UNITY_END();
 
-    Board_driversClose();
-    Drivers_close();
 }
 
 void validate_dss_qos_config(void *args)

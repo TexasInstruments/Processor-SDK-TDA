@@ -190,7 +190,7 @@ static int32_t Vhwa_sdeSetSl2Prms(const Vhwa_M2mSdeInstObj *instObj,
  *
  **/
 static void Vhwa_sdeSetHtsLimitParams(Vhwa_M2mSdeHandleObj *hObj,
-                                      const Vhwa_HtsLimiter *bwLimit);
+                                      const Vhwa_HtsLimiter *htsLimit);
 
 /**
  * \brief   Implementation of SET_PARAMS ioctl.
@@ -204,7 +204,7 @@ static void Vhwa_sdeSetHtsLimitParams(Vhwa_M2mSdeHandleObj *hObj,
  *
  **/
 static int32_t Vhwa_sdeSetParams(Vhwa_M2mSdeInstObj *instObj,
-    Vhwa_M2mSdeHandleObj *hObj, Vhwa_M2mSdePrms *sdeCfg);
+    Vhwa_M2mSdeHandleObj *hObj, Vhwa_M2mSdePrms *sdePrms);
 
 /**
  * \brief   Sets the error event parameters
@@ -344,9 +344,10 @@ Int32 vhwa_m2mSdeProcessReq(Fdrv_Handle handle, Fvid2_FrameList *inFrmList,
  *
  **/
 Int32 vhwa_m2mSdeGetProcessReq(Fdrv_Handle handle,
-    Fvid2_FrameList *inProcessList, Fvid2_FrameList *outProcessList,
+    Fvid2_FrameList *inFrmList, Fvid2_FrameList *outFrmList,
     UInt32 timeout);
 
+#if !defined(SOC_J722S)
 /**
  * \brief   Reconfigure SDE MMR registers as needed for the current handle/queue.
  *
@@ -396,6 +397,7 @@ static int32_t VhwaM2mSdeUpdateStatusRegGroup(Vhwa_M2mSdeHandleObj *hObj);
  * @return Returns 0 on success, or a negative error code on failure.
  */
 int32_t vhwaM2mSdeSetDefaultGoldenRegMemValues(const Vhwa_M2mSdeHandleObj *hObj, const Vhwa_M2mSdeInstObj *instObj);
+#endif
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -1140,7 +1142,9 @@ Int32 vhwa_m2mSdeControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
     Sde_ErrEventParams     *eePrms = NULL;
     Vhwa_HtsLimiter        *htsLimit = NULL;
     Sde_WdTimerErrEventParams *wdTimerEePrms = NULL;
+#if !defined(SOC_J722S)
     uint32_t                cookie;
+#endif
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -1424,7 +1428,7 @@ Int32 vhwa_m2mSdeControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-
+#if !defined(SOC_J722S)
             case VHWA_M2M_IOCTL_SDE_ENABLE_RECONFIG_REINIT_REG:
             {
                 /* LDRA_JUSTIFY_START
@@ -1766,7 +1770,7 @@ Int32 vhwa_m2mSdeControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 }
                 break;
             }
-
+#endif
             /* Default Case */
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
@@ -2050,12 +2054,14 @@ Int32 vhwa_m2mSdeProcessReq(Fdrv_Handle handle, Fvid2_FrameList *inFrmList,
                 status = Vhwa_m2mSdeSetIntrInHW(instObj->vhwaIrqNum, instObj->socInfo.dmpacIntdRegs, hObj);
             }
 
+#if !defined(SOC_J722S)
             /* Invoke the reconfig-MMR if enableReconfigReinitReg enabled for the current handle */
             if (UTRUE == hObj->enableReconfigReinitReg)
             {
                 status = Vhwa_m2mSdeReconfigReinitReg(instObj, hObj, qObj);
                 hObj->enableReconfigReinitReg = (uint32_t)UFALSE;
             }
+#endif
 
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
@@ -2508,6 +2514,7 @@ int32_t Vhwa_m2mSdeFreeSl2(void)
     return (retVal);
 }
 
+#if !defined(SOC_J722S)
 int32_t Vhwa_m2mSdeReInit(void)
 {
     int32_t                status = FVID2_SOK;
@@ -2641,7 +2648,7 @@ int32_t Vhwa_m2mSdeReInit(void)
 
     return (status);
 }
-
+#endif
 /* ========================================================================== */
 /*                           Local Functions                                  */
 /* ========================================================================== */
@@ -4053,7 +4060,7 @@ static int32_t Vhwa_sdeSubmitRequest(Vhwa_M2mSdeInstObj *instObj,
     GT_assert(VhwaSdeTrace, (NULL != qObj->hObj));
 
     hObj = qObj->hObj;
-
+#if !defined(SOC_J722S)
     VhwaDmpacSdeSocReadBack *goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
 
     /* Submit Rings to the Ring Accelerator */
@@ -4063,17 +4070,19 @@ static int32_t Vhwa_sdeSubmitRequest(Vhwa_M2mSdeInstObj *instObj,
     {
         status = VhwaM2mSdeUpdateStatusRegGroup(hObj);
     }
-
+#endif
     if (FVID2_SOK == status)
     {
         status = Vhwa_m2mSdeSubmitRing(instObj, hObj);
     }
 
+#if !defined(SOC_J722S)
     /* Update the SdeConfigRegisterGroup with config register values for frame specific Static Config, INTD and HTS registers */
     if((uint32_t)UTRUE == hObj->enableConfigRegValidate)
     {
         status = vhwaM2mSdeUpdateConfigRegGroup(goldenRegVal, instObj, hObj);
     }
+#endif
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
     <justification start>
@@ -4282,6 +4291,7 @@ Vhwa_M2mSdeHandleObj *Vhwa_m2mSdeGetHandleObj(uint32_t cnt)
 }
 /* LDRA_JUSTIFY_END */
 
+#if !defined(SOC_J722S)
 static int32_t Vhwa_m2mSdeReconfigReinitReg(const Vhwa_M2mSdeInstObj *instObj, const Vhwa_M2mSdeHandleObj *hObj, const Vhwa_M2mSdeQueueObj *qObj)
 {
     int32_t status = FVID2_SOK;
@@ -5511,6 +5521,7 @@ int32_t vhwaM2mSdeUpdateConfigRegGroup(VhwaDmpacSdeSocReadBack *RegVal, const Vh
 
     return status;
 }
+#endif
 int32_t Vhwa_m2mSdeGetSl2Info(Vhwa_M2mSdeSl2Info *sl2Info)
 {
     int32_t retVal = FVID2_SOK;

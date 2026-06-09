@@ -34,8 +34,8 @@
 /**
  *  \ingroup CSL_DSS
  *  \defgroup CSL_DSSOVERLAY DSS Overlay Hardware Layer
- * 
- *  This is hardware include layer for DSS overlay region.
+ *
+ * This is hardware include layer for DSS overlay region.
  *  @{
  */
 

@@ -34,6 +34,24 @@ define INSTALL_TEST_DATA =
 
 endef
 
+define INSTALL_TEST_DATA_VDK =
+	sudo mount $(PSDK_PATH)/out/rootfs-img.ext4 $(1)
+	sudo mkdir -p $(1)/$(2)/test_data
+	sudo mkdir -p $(1)/$(2)/test_data/output
+	-sudo cp $(TIOVX_PATH)/conformance_tests/test_data/*.bmp $(1)/$(2)/test_data
+	-sudo cp $(TIOVX_PATH)/conformance_tests/test_data/*.txt $(1)/$(2)/test_data
+	-sudo cp -r $(TIOVX_PATH)/conformance_tests/test_data/harriscorners $(1)/$(2)/test_data/
+	sudo rm -rf $(1)/$(2)/test_data/tivx/tidl_models
+	sudo rm -rf $(1)/$(2)/test_data/psdkra/tidl_models
+	-sudo cp -rL $(TIOVX_PATH)/conformance_tests/test_data/tivx $(1)/$(2)/test_data/
+	-sudo cp -rL $(TIOVX_PATH)/conformance_tests/test_data/psdkra $(1)/$(2)/test_data/
+	sudo rm -rf $(1)/$(2)/test_data/tivx/tidl_models
+	sudo rm -rf $(1)/$(2)/test_data/psdkra/tidl_models
+	#-sudo cp -r $(TIOVX_PATH)/conformance_tests/test_data/tidl_models/$(SOC)/tivx/tidl_models $(1)/$(2)/test_data/tivx/tidl_models
+	sudo umount $(1)
+
+endef
+
 ifneq ($(SOC),$(filter $(SOC), am62a j722s))
 define INSTALL_TEST_DATA +=
 	-cp -r $(TIOVX_PATH)/conformance_tests/test_data/tidl_models/$(SOC)/psdkra/tidl_models $(1)/$(2)/test_data/psdkra/tidl_models

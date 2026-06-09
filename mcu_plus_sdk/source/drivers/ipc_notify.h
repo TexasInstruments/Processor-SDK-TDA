@@ -125,10 +125,12 @@ typedef struct IpcNotify_Params_ {
                           */
 
     uint32_t linuxCoreId; /**< When linux IPC is enabled, this is the core ID of linux */
+
+    uint32_t timeout;
 } IpcNotify_Params;
 
 /**
- * \brief Enum to list the various messages sent by remote proc kernal driver.
+ * \brief Enum to list the various messages sent by remote proc kernel driver.
  *
  * Client ID for this always will be 0xFF \ref IPC_NOTIFY_CLIENT_ID_RP_MBOX
  *

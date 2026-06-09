@@ -85,7 +85,7 @@
 int32_t TIDL_getDatElementSize(int32_t elementType)
 {
   int32_t size = 1;
-  if ((elementType == TIDL_SignedChar) || (elementType == TIDL_UnsignedChar))
+  if ((elementType == TIDL_SignedChar) || (elementType == TIDL_UnsignedChar) || (elementType == TIDL_Bool))
   {
     size = 1;
   }

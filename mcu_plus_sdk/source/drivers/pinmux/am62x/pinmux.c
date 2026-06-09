@@ -52,10 +52,10 @@
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
-#define CSL_MAIN_PADCONFIG_LOCK0_KICK0_OFFSET   (0x1008)
-#define CSL_MAIN_PADCONFIG_LOCK1_KICK0_OFFSET   (0x5008)
-#define CSL_MCU_PADCONFIG_LOCK0_KICK0_OFFSET    (0x1008)
-#define CSL_MCU_PADCONFIG_LOCK1_KICK0_OFFSET    (0x5008)
+#define CSL_MAIN_PADCONFIG_LOCK0_KICK0_OFFSET   (0x1008U)
+#define CSL_MAIN_PADCONFIG_LOCK1_KICK0_OFFSET   (0x5008U)
+#define CSL_MCU_PADCONFIG_LOCK0_KICK0_OFFSET    (0x1008U)
+#define CSL_MCU_PADCONFIG_LOCK1_KICK0_OFFSET    (0x5008U)
 
 /* define the unlock and lock values */
 #define KICK_LOCK_VAL                           (0x00000000U)
@@ -90,8 +90,10 @@ void Pinmux_config(const Pinmux_PerCfg_t *pinmuxCfg, uint32_t domainId)
 {
     uint32_t            baseAddr;
     volatile uint32_t  *regAddr;
+    const Pinmux_PerCfg_t *ptrPinMuxCfg = pinmuxCfg;
+    uint32_t index = 0;
 
-    if(NULL != pinmuxCfg)
+    if(NULL != ptrPinMuxCfg)
     {
         if(PINMUX_DOMAIN_ID_MAIN == domainId)
         {
@@ -104,11 +106,11 @@ void Pinmux_config(const Pinmux_PerCfg_t *pinmuxCfg, uint32_t domainId)
         baseAddr = (uint32_t) AddrTranslateP_getLocalAddr(baseAddr);
 
         Pinmux_unlockMMR(domainId);
-        while( pinmuxCfg->offset != PINMUX_END )
+        while( ptrPinMuxCfg[index].offset != PINMUX_END )
         {
-            regAddr = (volatile uint32_t *)(baseAddr + pinmuxCfg->offset);
-            CSL_REG32_WR(regAddr, pinmuxCfg->settings);
-            pinmuxCfg++;
+            regAddr = (volatile uint32_t *)(baseAddr + (uint32_t)(ptrPinMuxCfg[index].offset));
+            CSL_REG32_WR(regAddr, ptrPinMuxCfg[index].settings);
+            index++;
         }
         Pinmux_lockMMR(domainId);
     }
@@ -118,14 +120,14 @@ void Pinmux_config(const Pinmux_PerCfg_t *pinmuxCfg, uint32_t domainId)
 
 void Pinmux_lockMMR(uint32_t domainId)
 {
-    #if 0
+    #if defined(ENABLE_LOCK_MMR)
     uint32_t            baseAddr;
     volatile uint32_t  *kickAddr;
     #endif
 
     if(PINMUX_DOMAIN_ID_MAIN == domainId)
     {
-        #if 0 /* in AM62x, main dowmin MMRs are left unlocked since when working with linux kernel, linux kernel assumes MMRs are unlocked */
+        #if defined(ENABLE_LOCK_MMR) /* in AM62x, main dowmin MMRs are left unlocked since when working with linux kernel, linux kernel assumes MMRs are unlocked */
         baseAddr = (uint32_t) AddrTranslateP_getLocalAddr(CSL_PADCFG_CTRL0_CFG0_BASE);
         /* Lock 0 */
         kickAddr = (volatile uint32_t *) (baseAddr + CSL_MAIN_PADCONFIG_LOCK0_KICK0_OFFSET);
@@ -171,13 +173,13 @@ void Pinmux_unlockMMR(uint32_t domainId)
     {
         baseAddr = (uint32_t) AddrTranslateP_getLocalAddr(CSL_PADCFG_CTRL0_CFG0_BASE);
         /* Lock 0 */
-        kickAddr = (volatile uint32_t *) (baseAddr + CSL_MAIN_PADCONFIG_LOCK0_KICK0_OFFSET);
+        kickAddr = (volatile uint32_t *) (baseAddr + (uint32_t)CSL_MAIN_PADCONFIG_LOCK0_KICK0_OFFSET);
         CSL_REG32_WR(kickAddr, KICK0_UNLOCK_VAL);   /* KICK 0 */
         kickAddr++;
         CSL_REG32_WR(kickAddr, KICK1_UNLOCK_VAL);   /* KICK 1 */
 
         /* Lock 1 */
-        kickAddr = (volatile uint32_t *) (baseAddr + CSL_MAIN_PADCONFIG_LOCK1_KICK0_OFFSET);
+        kickAddr = (volatile uint32_t *) (baseAddr + (uint32_t)CSL_MAIN_PADCONFIG_LOCK1_KICK0_OFFSET);
         CSL_REG32_WR(kickAddr, KICK0_UNLOCK_VAL);   /* KICK 0 */
         kickAddr++;
         CSL_REG32_WR(kickAddr, KICK1_UNLOCK_VAL);   /* KICK 1 */
@@ -187,13 +189,13 @@ void Pinmux_unlockMMR(uint32_t domainId)
     {
         baseAddr = (uint32_t) AddrTranslateP_getLocalAddr(CSL_MCU_PADCFG_CTRL0_CFG0_BASE);
         /* Lock 0 */
-        kickAddr = (volatile uint32_t *) (baseAddr + CSL_MCU_PADCONFIG_LOCK0_KICK0_OFFSET);
+        kickAddr = (volatile uint32_t *) (baseAddr + (uint32_t)CSL_MCU_PADCONFIG_LOCK0_KICK0_OFFSET);
         CSL_REG32_WR(kickAddr, KICK0_UNLOCK_VAL);   /* KICK 0 */
         kickAddr++;
         CSL_REG32_WR(kickAddr, KICK1_UNLOCK_VAL);   /* KICK 1 */
 
         /* Lock 1 */
-        kickAddr = (volatile uint32_t *) (baseAddr + CSL_MCU_PADCONFIG_LOCK1_KICK0_OFFSET);
+        kickAddr = (volatile uint32_t *) (baseAddr + (uint32_t)CSL_MCU_PADCONFIG_LOCK1_KICK0_OFFSET);
         CSL_REG32_WR(kickAddr, KICK0_UNLOCK_VAL);   /* KICK 0 */
         kickAddr++;
         CSL_REG32_WR(kickAddr, KICK1_UNLOCK_VAL);   /* KICK 1 */

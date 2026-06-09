@@ -2,11 +2,26 @@
 let common = system.getScript("/common");
 
 const driverVer = {
+    "bootloader": {
+        version: "v0",
+    },
+    "ddr": {
+        version: "v1",
+    },
+    "ecap": {
+        version: "v0",
+    },
     "epwm": {
+        version: "v0",
+    },
+    "eqep": {
         version: "v0",
     },
     "gpio":{
         version:"v0",
+    },
+    "gtc": {
+        version: "v0",
     },
     "i2c": {
         version: "v0",
@@ -26,22 +41,19 @@ const driverVer = {
     "mcu_bist": {
         version: "v0",
     },
-    "sciclient": {
-        version: "v0",
-    },
-    "bootloader": {
-        version: "v0",
-    },
     "mmcsd": {
-        version: "v1",
-    },
-    "ddr": {
-        version: "v1",
-    },
-    "gtc": {
         version: "v0",
     },
     "ospi": {
+        version: "v0",
+    },
+    "qos": {
+        version: "v0",
+    },
+    "rtc": {
+        version: "v0",
+    },
+    "sciclient": {
         version: "v0",
     },
     "uart": {
@@ -51,12 +63,14 @@ const driverVer = {
         version: "v0",
     },
     "watchdog": {
-        version: "v0",
+        version: "v1",
     },
 };
 
 const topModules_wkup = [
+    "/drivers/ecap/ecap",
     "/drivers/epwm/epwm",
+    "/drivers/eqep/eqep",
     "/drivers/mcu_bist/mcu_bist",
     "/drivers/gpio/gpio",
     "/drivers/bootloader/bootloader",
@@ -65,10 +79,14 @@ const topModules_wkup = [
     "/drivers/gtc/gtc",
     "/drivers/ospi/ospi",
     "/drivers/mcasp/mcasp",
+    "/drivers/mcspi/mcspi",
     "/drivers/uart/uart",
     "/drivers/i2c/i2c",
     "/drivers/ipc/ipc",
+    "/drivers/rtc/rtc",
     "/drivers/udma/udma",
+    "/drivers/qos/qos",
+    "/drivers/watchdog/watchdog",
 ];
 
 const topModules_mcu = [
@@ -78,10 +96,17 @@ const topModules_mcu = [
     "/drivers/ipc/ipc",
     "/drivers/mcan/mcan",
     "/drivers/mcspi/mcspi",
+    "/drivers/ospi/ospi",
+    "/drivers/rtc/rtc",
     "/drivers/uart/uart",
+    "/drivers/udma/udma",
 ];
 
 const topModules_c75 = [
+    "/drivers/ecap/ecap",
+    "/drivers/epwm/epwm",
+    "/drivers/eqep/eqep",
+    "/drivers/gpio/gpio",
     "/drivers/i2c/i2c",
     "/drivers/mcasp/mcasp",
     "/drivers/uart/uart",
@@ -90,7 +115,9 @@ const topModules_c75 = [
 ];
 
 const topModules_a53 = [
+    "/drivers/ecap/ecap",
     "/drivers/epwm/epwm",
+    "/drivers/eqep/eqep",
     "/drivers/gpio/gpio",
     "/drivers/gtc/gtc",
     "/drivers/uart/uart",
@@ -99,6 +126,9 @@ const topModules_a53 = [
     "/drivers/i2c/i2c",
     "/drivers/mcan/mcan",
     "/drivers/mcspi/mcspi",
+    "/drivers/mcasp/mcasp",
+    "/drivers/mmcsd/mmcsd",
+    "/drivers/ospi/ospi",
     "/drivers/watchdog/watchdog",
 ];
 

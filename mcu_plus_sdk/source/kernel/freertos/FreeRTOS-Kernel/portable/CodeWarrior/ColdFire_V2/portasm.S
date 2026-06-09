@@ -1,6 +1,8 @@
 /*
- * FreeRTOS Kernel V10.4.3
- * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel V11.1.0
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,14 +24,13 @@
  * https://www.FreeRTOS.org
  * https://github.com/FreeRTOS
  *
- * 1 tab == 4 spaces!
  */
 
 /*
  * Purpose: Lowest level routines for all ColdFire processors.
  *
  * Notes:
- * 
+ *
  * ulPortSetIPL() and mcf5xxx_wr_cacr() copied with permission from FreeScale
  * supplied source files.
  */
@@ -49,22 +50,22 @@
 
 .macro portSAVE_CONTEXT
 
-	lea.l		(-60, sp), sp
-	movem.l		d0-a6, (sp)
-	move.l		_pxCurrentTCB, a0
-	move.l		sp, (a0)
+    lea.l       (-60, sp), sp
+    movem.l     d0-a6, (sp)
+    move.l      _pxCurrentTCB, a0
+    move.l      sp, (a0)
 
-	.endm
+    .endm
 
 .macro portRESTORE_CONTEXT
 
-	move.l		_pxCurrentTCB, a0
-	move.l		(a0), sp
-	movem.l		(sp), d0-a6
-	lea.l		(60, sp), sp
-	rte
+    move.l      _pxCurrentTCB, a0
+    move.l      (a0), sp
+    movem.l     (sp), d0-a6
+    lea.l       (60, sp), sp
+    rte
 
-	.endm
+    .endm
 
 /********************************************************************/
 /*
@@ -114,17 +115,15 @@ _mcf5xxx_wr_cacrx:
 /* Yield interrupt. */
 _vPortYieldISR:
 vPortYieldISR:
-	portSAVE_CONTEXT
-	jsr _vPortYieldHandler
-	portRESTORE_CONTEXT
+    portSAVE_CONTEXT
+    jsr _vPortYieldHandler
+    portRESTORE_CONTEXT
 
 /********************************************************************/
 
 
 vPortStartFirstTask:
 _vPortStartFirstTask:
-	portRESTORE_CONTEXT
+    portRESTORE_CONTEXT
 
     .end
-
-

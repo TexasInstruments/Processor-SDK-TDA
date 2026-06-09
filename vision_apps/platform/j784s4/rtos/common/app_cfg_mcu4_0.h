@@ -72,5 +72,6 @@
 
 #define ENABLE_FVID2
 #define ENABLE_VHWA_VPAC1
+#define ENABLE_AEWB_KERNELS
 
 #endif /* APP_CFG_MCU4_0_H_ */

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -38,6 +38,9 @@ extern "C"
 {
 #endif
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
 
 #include <kernel/dpl/HwiP.h>
 #include <kernel/dpl/ClockP.h>
@@ -49,9 +52,17 @@ extern "C"
 #include <timersAPI.h>
 #include <taskAPI.h>
 
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
 #ifndef pdMS_TO_TICKS
     #define pdMS_TO_TICKS( xTimeInMs )    ( ( portTickType ) ( ( ( portTickType ) ( xTimeInMs ) * ( portTickType ) configTICK_RATE_HZ ) / ( portTickType ) 1000U ) )
 #endif
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
 
 typedef struct ClockP_Control_
 {
@@ -62,13 +73,32 @@ typedef struct ClockP_Control_
     uint32_t timerReloadCount;
 } ClockP_Control;
 
-extern ClockP_Control gClockCtrl;
-extern ClockP_Config gClockConfig;
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
 
 void ClockP_timerClearOverflowInt(uint32_t timerBaseAddr);
 uint32_t ClockP_getTimerCount(uint32_t timerBaseAddr);
 void ClockP_timerTickIsr(void *args);
 
+/* ========================================================================== */
+/*                         Global Variables Declarations                      */
+/* ========================================================================== */
+
+extern ClockP_Control gClockCtrl;
+extern ClockP_Config gClockConfig;
+
+/* ========================================================================== */
+/*                       Static Function Definitions                          */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                  Internal/Private Structure Declarations                   */
+/* ========================================================================== */
+
+/* None */
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,4 @@
-ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), x86_64 A72 A53))
+ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), x86_64 A72 A53 A720))
 ifeq ($(TARGET_OS), $(filter $(TARGET_OS), LINUX QNX))
 
 include $(PRELUDE)
@@ -6,7 +6,7 @@ include $(PRELUDE)
 TARGETTYPE  := exe
 TARGET      := vx_app_arm_mem
 
-ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53))
+ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
 CSOURCES    := main_mem.c
 include $(VISION_APPS_PATH)/apps/concerto_mpu_inc.mak
 endif

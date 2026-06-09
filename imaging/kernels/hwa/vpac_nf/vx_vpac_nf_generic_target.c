@@ -317,8 +317,6 @@ void tivxAddTargetKernelVpacNfGeneric(void)
         <justification end> */
         else
         {
-            status = (vx_status)VX_FAILURE;
-
             /* TODO: how to handle this condition */
             VX_PRINT(VX_ZONE_ERROR,
                 "Failed to Add NF Generic TargetKernel\n");
@@ -379,6 +377,7 @@ static vx_status VX_CALLBACK tivxVpacNfGenericProcess(
     Fvid2_FrameList             *outFrmList;
     uint64_t                    cur_time;
     tivx_obj_desc_t             *out_base_desc = NULL;
+    vx_status                   validate_reg_status = (vx_status)VX_SUCCESS;
 
     status = tivxCheckNullParams(obj_desc, num_params,
                 TIVX_KERNEL_VPAC_NF_GENERIC_MAX_PARAMS);
@@ -503,8 +502,9 @@ static vx_status VX_CALLBACK tivxVpacNfGenericProcess(
                     }
                     else
                     {
-                        temp_lut[((m + 2) * 5) + (k + 2)] = pConv[((m + ((int32_t)conv->rows/2)) * (int32_t)conv->columns) +
-                                                                       (k + ((int32_t)conv->columns/2))];
+                        int32_t conv_cols = (int32_t)conv->columns;
+                        temp_lut[((m + 2) * 5) + (k + 2)] = pConv[((m + ((int32_t)conv->rows/2)) * conv_cols) +
+                                                                       (k + (conv_cols/2))];
                     }
                 }
             }
@@ -713,7 +713,7 @@ static vx_status VX_CALLBACK tivxVpacNfGenericProcess(
             if (FVID2_SOK != ctrl_status)
             {
                 VX_PRINT(VX_ZONE_ERROR, "Register validation failed (Fvid2_control returned %d)\n", ctrl_status);
-                status = (vx_status)VX_FAILURE;
+                validate_reg_status = (vx_status)VX_FAILURE;
             }
             /* LDRA_JUSTIFY_END */
         }
@@ -751,6 +751,11 @@ static vx_status VX_CALLBACK tivxVpacNfGenericProcess(
     {
         tivxCheckStatus(&status, tivxMemBufferUnmap(conv_target_ptr, conv->mem_size,
             (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_ONLY));
+    }
+
+    if(((vx_status)VX_SUCCESS != status) || ((vx_status)VX_SUCCESS != validate_reg_status))
+    {
+        status = (vx_status)VX_FAILURE;
     }
 
     return status;
@@ -1017,8 +1022,9 @@ static vx_status VX_CALLBACK tivxVpacNfGenericCreate(
                     }
                     else
                     {
-                        temp_lut[((m + 2) * 5) + (k + 2)] = pConv[((m + ((int32_t)conv->rows/2)) * (int32_t)conv->columns) +
-                                                                       (k + ((int32_t)conv->columns/2))];
+                        int32_t conv_cols = (int32_t)conv->columns;
+                        temp_lut[((m + 2) * 5) + (k + 2)] = pConv[((m + ((int32_t)conv->rows/2)) * conv_cols) +
+                                                                       (k + (conv_cols/2))];
                     }
                 }
             }

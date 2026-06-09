@@ -19,7 +19,7 @@
         "
         connection="TIXDS110_Connection.xml"
         toolChain="TICLANG"
-        cgtVersion="3.2.0"
+        cgtVersion="4.0.4"
         device="Cortex R.J722S"
         deviceCore="MAIN_Cortex_R5_0_0"
         ignoreDefaultDeviceSettings="true"
@@ -92,7 +92,7 @@
             "
         ></configuration>
         <pathVariable name="MCU_PLUS_SDK_PATH" path="${COM_TI_MCU_PLUS_SDK_AMXXX_INSTALL_DIR}" scope="project" />
-        <file path="../../../gpio_input_interrupt.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        <file path="../../../gpio_input_interrupt_v2.c" openOnCreation="false" excludeFromBuild="false" action="copy">
         </file>
         <file path="../main.c" openOnCreation="false" excludeFromBuild="false" action="copy">
         </file>

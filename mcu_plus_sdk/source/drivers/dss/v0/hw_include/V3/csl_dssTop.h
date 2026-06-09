@@ -81,16 +81,6 @@ extern "C" {
 /** @} */
 
 /**
- *  \anchor CSL_DssNumPipePerIntance
- *  \name   DSS Number of Video Pipelines per DSS Instance
- *
- *  @{
- */
-/** \brief Number of video pipes per DSS Instance */
-#define CSL_DSS_NUM_PIPE_PER_DSS_INSTANCE                     ((uint32_t) 0x2U)
-/** @} */
-
-/**
  *  \anchor CSL_DssCommRegId
  *  \name   DSS Common Region Id
  *  \brief  Id for different Common Regions
@@ -101,13 +91,8 @@ extern "C" {
 #define CSL_DSS_COMM_REG_ID_0                       ((uint32_t) 0x0U)
 /** \brief Common Region 1 */
 #define CSL_DSS_COMM_REG_ID_1                       ((uint32_t) 0x1U)
-/** \brief Common Region 2 i.e. S1 region */
-#define CSL_DSS_COMM_REG_ID_2                       ((uint32_t) 0x2U)
-/** \brief Common Region 3 i.e. S2 region */
-#define CSL_DSS_COMM_REG_ID_3                       ((uint32_t) 0x3U)
 /** \brief Common Region Max Id */
-#define CSL_DSS_COMM_REG_ID_MAX                     ((uint32_t) 0x4U)
-
+#define CSL_DSS_COMM_REG_ID_MAX                     ((uint32_t) 0x2U)
 /** @} */
 
 /**
@@ -121,12 +106,8 @@ extern "C" {
 #define CSL_DSS_VID_PIPE_ID_VID1                    ((uint32_t) 0x0U)
 /** \brief Video Lite Pipeline 1 */
 #define CSL_DSS_VID_PIPE_ID_VIDL1                   ((uint32_t) 0x1U)
-/** \brief Video Pipeline 2 */
-#define CSL_DSS_VID_PIPE_ID_VID2                    ((uint32_t) 0x2U)
-/** \brief Video Lite Pipeline 2 */
-#define CSL_DSS_VID_PIPE_ID_VIDL2                   ((uint32_t) 0x3U)
 /** \brief Video Pipeline Max Id */
-#define CSL_DSS_VID_PIPE_ID_MAX                     ((uint32_t) 0x4U)
+#define CSL_DSS_VID_PIPE_ID_MAX                     ((uint32_t) 0x2U)
 /** \brief Video Pipeline invalid */
 #define CSL_DSS_VID_PIPE_ID_INVALID                 ((uint32_t) 0xFFU)
 /** @} */
@@ -142,12 +123,8 @@ extern "C" {
 #define CSL_DSS_OVERLAY_ID_1                        ((uint32_t) 0x0U)
 /** \brief Overlay 2 */
 #define CSL_DSS_OVERLAY_ID_2                        ((uint32_t) 0x1U)
-/** \brief Overlay 3 */
-#define CSL_DSS_OVERLAY_ID_3                        ((uint32_t) 0x2U)
-/** \brief Overlay 4 */
-#define CSL_DSS_OVERLAY_ID_4                        ((uint32_t) 0x3U)
 /** \brief Overlay Max Id */
-#define CSL_DSS_OVERLAY_ID_MAX                      ((uint32_t) 0x4U)
+#define CSL_DSS_OVERLAY_ID_MAX                      ((uint32_t) 0x2U)
 /** @} */
 
 /**
@@ -161,12 +138,8 @@ extern "C" {
 #define CSL_DSS_VP_ID_1                             ((uint32_t) 0x0U)
 /** \brief Video Port 2 */
 #define CSL_DSS_VP_ID_2                             ((uint32_t) 0x1U)
-/** \brief Video Port 3 */
-#define CSL_DSS_VP_ID_3                             ((uint32_t) 0x2U)
-/** \brief Video Port 4 */
-#define CSL_DSS_VP_ID_4                             ((uint32_t) 0x3U)
 /** \brief Video Port Max Id */
-#define CSL_DSS_VP_ID_MAX                           ((uint32_t) 0x4U)
+#define CSL_DSS_VP_ID_MAX                           ((uint32_t) 0x2U)
 /** @} */
 
 /**
@@ -180,10 +153,6 @@ extern "C" {
 #define CSL_DSS_VP_ID_1_MASK                        ((uint32_t) 0x1U)
 /** \brief Video Port 2 */
 #define CSL_DSS_VP_ID_2_MASK                        ((uint32_t) 0x2U)
-/** \brief Video Port 3 */
-#define CSL_DSS_VP_ID_3_MASK                        ((uint32_t) 0x4U)
-/** \brief Video Port 4 */
-#define CSL_DSS_VP_ID_4_MASK                        ((uint32_t) 0x8U)
 /** @} */
 
 /**

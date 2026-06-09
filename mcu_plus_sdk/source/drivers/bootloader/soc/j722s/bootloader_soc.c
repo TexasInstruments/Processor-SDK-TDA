@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,6 +30,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <string.h>
 #include <drivers/bootloader.h>
 #include <drivers/bootloader/bootloader_priv.h>
@@ -37,7 +41,10 @@
 #include <kernel/dpl/CacheP.h>
 #include <kernel/dpl/HwiP.h>
 #include <drivers/soc.h>
-#include <drivers/module_cfg.h>
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 #define BOOTLOADER_HSM_M4F_SRAM0_0_BASE        (0x00000000)
 #define BOOTLOADER_HSM_M4F_SRAM1_BASE          (0x00030000)
@@ -52,13 +59,6 @@
 #define BOOTLOADER_SYS_STATUS_DEV_TYPE_TEST    (0x05U)
 #define BOOTLOADER_SYS_STATUS_DEV_SUBTYPE_FS   (0x00000A00U)
 
-Bootloader_resMemSections gResMemSection =
-{
-    .numSections    = 1,
-    .memSection[0].memStart   = 0x43c40000,
-    .memSection[0].memEnd     = 0x43c7f000,
-};
-
 #undef BOOTLOADER_SOC_ATCM_FILL
 #undef BOOTLOADER_SOC_BTCM_FILL
 
@@ -67,6 +67,17 @@ Bootloader_resMemSections gResMemSection =
  * GEL files
  */
 #define BOOTLOADER_A53_WHILELOOP_LOAD_ADDR      (0x70000040)
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+Bootloader_resMemSections gResMemSection =
+{
+    .numSections    = 1,
+    .memSection[0].memStart   = 0x43c40000,
+    .memSection[0].memEnd     = 0x43c7f000,
+};
 
 /* list the R5F cluster where this bootloader runs, this is fixed to R5FSS0-0*/
 uint32_t gBootloaderSelfCpuList[] = {
@@ -104,7 +115,7 @@ const uint32_t gSOC_a53WhileLoop[2]  =
 
 Bootloader_CoreBootInfo gCoreBootInfo[] =
 {
-    { /* CSL_CORE_ID_MCU_R5FSS0_0 */
+    {   /* CSL_CORE_ID_MCU_R5FSS0_0 */
         .tisciProcId    = SCICLIENT_PROC_ID_MCU_R5FSS0_CORE0,
         .tisciDevId     = TISCI_DEV_MCU_R5FSS0_CORE0,
         .tisciClockId   = TISCI_DEV_MCU_R5FSS0_CORE0_CPU0_CLK,
@@ -112,7 +123,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .coreName       = "mcu-r5f",
     },
 
-    { /* CSL_CORE_ID_WKUP_R5FSS0_0 */
+    {   /* CSL_CORE_ID_WKUP_R5FSS0_0 */
         .tisciProcId    = SCICLIENT_PROC_ID_WKUP_R5FSS0_CORE0,
         .tisciDevId     = TISCI_DEV_WKUP_R5FSS0_CORE0,
         .tisciClockId   = TISCI_DEV_WKUP_R5FSS0_CORE0_CPU_CLK,
@@ -120,7 +131,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .coreName       = "wkup-r5f",
     },
 
-    { /* CSL_CORE_ID_MAIN_R5FSS0_0 */
+    {   /* CSL_CORE_ID_MAIN_R5FSS0_0 */
         .tisciProcId    = SCICLIENT_PROC_ID_R5FSS0_CORE0,
         .tisciDevId     = TISCI_DEV_R5FSS0_CORE0,
         .tisciClockId   = TISCI_DEV_R5FSS0_CORE0_CPU_CLK,
@@ -128,7 +139,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .coreName       = "main-r5f",
     },
 
-    { /* CSL_CORE_ID_C75SS0_0 */
+    {   /* CSL_CORE_ID_C75SS0_0 */
         .tisciProcId    = SCICLIENT_PROC_ID_C7X256V0_C7XV_CORE_0,
         .tisciDevId     = TISCI_DEV_C7X256V0_C7XV_CORE_0,
         .tisciClockId   = TISCI_DEV_C7X256V0_C7XV_CORE_0_C7XV_CLK,
@@ -136,7 +147,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .coreName       = "c75ss0-0",
     },
 
-    { /* CSL_CORE_ID_C75SS1_0 */
+    {   /* CSL_CORE_ID_C75SS1_0 */
         .tisciProcId    = SCICLIENT_PROC_ID_C7X256V1_C7XV_CORE_0,
         .tisciDevId     = TISCI_DEV_C7X256V1_C7XV_CORE_0,
         .tisciClockId   = TISCI_DEV_C7X256V1_C7XV_CORE_0_C7XV_CLK,
@@ -144,7 +155,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .coreName       = "c75ss1-0",
     },
 
-    { /* CSL_CORE_ID_A53SS0_0 */
+    {   /* CSL_CORE_ID_A53SS0_0 */
         .tisciProcId    = SCICLIENT_PROC_ID_A53SS0_CORE_0,
         .tisciDevId     = TISCI_DEV_A53SS0_CORE_0,
         .tisciClockId   = TISCI_DEV_A53SS0_CORE_0_A53_CORE0_ARM_CLK_CLK,
@@ -152,7 +163,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .coreName       = "a530-0",
     },
 
-    { /* CSL_CORE_ID_A53SS0_1 */
+    {   /* CSL_CORE_ID_A53SS0_1 */
         .tisciProcId    = SCICLIENT_PROC_ID_A53SS0_CORE_1,
         .tisciDevId     = TISCI_DEV_A53SS0_CORE_1,
         .tisciClockId   = TISCI_DEV_A53SS0_CORE_1_A53_CORE1_ARM_CLK_CLK,
@@ -160,7 +171,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .coreName       = "a530-1",
     },
 
-    { /* CSL_CORE_ID_A53SS1_0 */
+    {   /* CSL_CORE_ID_A53SS1_0 */
         .tisciProcId    = SCICLIENT_PROC_ID_A53SS0_CORE_2,
         .tisciDevId     = TISCI_DEV_A53SS0_CORE_2,
         .tisciClockId   = TISCI_DEV_A53SS0_CORE_2_A53_CORE2_ARM_CLK_CLK,
@@ -168,7 +179,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .coreName       = "a531-0",
     },
 
-    { /* CSL_CORE_ID_A53SS1_1 */
+    {   /* CSL_CORE_ID_A53SS1_1 */
         .tisciProcId    = SCICLIENT_PROC_ID_A53SS0_CORE_3,
         .tisciDevId     = TISCI_DEV_A53SS0_CORE_3,
         .tisciClockId   = TISCI_DEV_A53SS0_CORE_3_A53_CORE3_ARM_CLK_CLK,
@@ -176,7 +187,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .coreName       = "a531-1",
     },
 
-    { /* CSL_CORE_ID_HSM_M4FSS0_0 */
+    {   /* CSL_CORE_ID_HSM_M4FSS0_0 */
         .tisciProcId    = SCICLIENT_PROC_ID_HSM_M4FSS0_CORE0,
         .tisciDevId     = TISCI_DEV_HSM0,
         .tisciClockId   = TISCI_DEV_HSM0_DAP_CLK,
@@ -315,53 +326,22 @@ Bootloader_CoreAddrTranslateInfo gAddrTranslateInfo[] =
 
 Bootloader_SelfCoreJump selfcoreEntry = NULL;
 
-extern SOC_ModuleClockFrequency gSocModulesClockFrequency[];
-extern uint32_t gSocModulesClockFrequencyNum;
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
 
 extern int32_t Sciclient_triggerSecHandover(void);
 extern int32_t Sciclient_waitForBootNotification(void);
 
-uint32_t Bootloader_isCpuACore(uint32_t cpuId)
-{
-    uint32_t devId = Bootloader_socGetSciclientCpuDevId(cpuId);
-    uint32_t retVal = FALSE;
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
 
-    if (devId == TISCI_DEV_A53SS0_CORE_0 ||
-         devId == TISCI_DEV_A53SS0_CORE_1 ||
-         devId == TISCI_DEV_A53SS0_CORE_2 ||
-         devId == TISCI_DEV_A53SS0_CORE_3)
-    {
-        retVal = TRUE; // A core
-    }
-    return retVal; // Not an A core
-}
+/* None */
 
-uint32_t Bootloader_isCpuClockSetRequired(uint32_t cpuId)
-{
-    /* Check cpuInfo->cpuId as parameter and find if tisci id is part of gSocModulesClockFrequency array */
-    uint32_t i;
-    uint32_t devId;
-    uint32_t retVal = TRUE;
-
-    if (TRUE == Bootloader_isCpuACore(cpuId))
-    {
-        devId = TISCI_DEV_A53SS0_CORE_0; // A core, use a default value
-    }
-    else
-    {
-        devId = Bootloader_socGetSciclientCpuDevId(cpuId);
-    }
-
-    for (i = 0; i < gSocModulesClockFrequencyNum; i++)
-    {
-        if (gSocModulesClockFrequency[i].moduleId == devId)
-        {
-            retVal = FALSE; // Clock set not required
-        }
-    }
-
-    return retVal; // Clock set required
-}
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
 static int32_t Bootloader_socOpenFirewallRegion(uint16_t fwl, uint16_t region, uint32_t control, uint64_t startAddr, uint64_t endAddr)
 {
@@ -413,9 +393,20 @@ static int32_t Bootloader_socOpenFirewallRegion(uint16_t fwl, uint16_t region, u
 
 uint32_t Bootloader_socRprcToCslCoreId(uint32_t rprcCoreId)
 {
-    /* For j722s, since rprc core IDs are same as CSL core IDs. This API is not needed
-    Retaining this API to make it same with the sitara devices */
+    /* For J722S, since RPRC core IDs are same as CSL core IDs, this API is not needed.
+     * Retaining this API with the same signature with the other devices. */
     return rprcCoreId;
+}
+
+bool Bootloader_socIsSmpEnable(uint32_t rprcCoreId)
+{
+    bool smpEnable = false;
+    if(rprcCoreId == FREERTOS_SMP_RPRC_CORE_ID)
+    {
+        smpEnable = true;
+    }
+
+    return smpEnable;
 }
 
 uint32_t Bootloader_socGetSciclientCpuProcId(uint32_t cpuId)
@@ -562,8 +553,8 @@ void Bootloader_socInitR5FAtcmBtcm(uint32_t cpuId)
     #endif
 }
 
-/* init M4 IRAM with valid reset vector and valid wait instruction */
-void Bootloader_socInitHSMM4fIram()
+/* Init M4 IRAM with valid reset vector and valid wait instruction */
+void Bootloader_socInitHSMM4fIram(void)
 {
     uint32_t m4f_iram_base_addr = CSL_SMS0_HSM_SRAM0_0_BASE;
 
@@ -572,7 +563,7 @@ void Bootloader_socInitHSMM4fIram()
     *(volatile uint32_t *)(m4f_iram_base_addr + 0x400) = 0xBF30BF30; /* WFI instruction */
 }
 
-/*init c7x L2SRAM with valid wait instruction*/
+/* Init c7x L2SRAM with valid wait instruction */
 void Bootloader_socInitC7xL2Sram(uint32_t cpuId)
 {
     uint32_t c75_l2sram_base_addr;
@@ -635,7 +626,7 @@ int32_t Bootloader_socCpuSetClock(uint32_t cpuId, uint32_t cpuHz)
     uint32_t sciclientCpuDevId;
     uint32_t sciclientCpuClkId;
 
-    if((cpuId != CSL_CORE_ID_HSM_M4FSS0_0) && (cpuId != CSL_CORE_ID_C75SS0_0) && (cpuId != CSL_CORE_ID_C75SS1_0))
+    if(cpuId != CSL_CORE_ID_HSM_M4FSS0_0)
     {
         sciclientCpuDevId = Bootloader_socGetSciclientCpuDevId(cpuId);
         sciclientCpuClkId = Bootloader_socGetSciclientCpuClkId(cpuId);
@@ -857,6 +848,26 @@ int32_t Bootloader_socCpuPowerOnResetC7x(uint32_t cpuId, uintptr_t entry_point, 
 
     sciclientCpuDevId = Bootloader_socGetSciclientCpuDevId(cpuId);
 
+    /* Turn on LPSC for C7x UMC memory. This is required to load in to C7x UMC memory */
+    if(cpuId == CSL_CORE_ID_C75SS0_0)
+    {
+        status = Sciclient_pmSetModuleState(TISCI_DEV_C7X256V0_CORE0, TISCI_MSG_VALUE_DEVICE_SW_STATE_ON, TISCI_MSG_FLAG_AOP, SystemP_WAIT_FOREVER);
+    }
+    else if(cpuId == CSL_CORE_ID_C75SS1_0)
+    {
+        status = Sciclient_pmSetModuleState(TISCI_DEV_C7X256V1_CORE0, TISCI_MSG_VALUE_DEVICE_SW_STATE_ON, TISCI_MSG_FLAG_AOP, SystemP_WAIT_FOREVER);
+    }
+    else
+    {
+        /* No action required */
+        ;
+    }
+
+    if(status != SystemP_SUCCESS)
+    {
+        DebugP_logError("UMC memory power on failed for %s\r\n", Bootloader_socGetCoreName(cpuId));
+    }
+
     status = Sciclient_pmSetModuleState(sciclientCpuDevId,
         TISCI_MSG_VALUE_DEVICE_SW_STATE_AUTO_OFF,
         TISCI_MSG_FLAG_AOP,
@@ -1060,12 +1071,12 @@ int32_t Bootloader_socCpuSetEntryPoint(uint32_t cpuId, uintptr_t entryPoint)
     return status;
 }
 
-void __attribute__((__noreturn__)) Bootloader_socSelfCPUjump()
+void __attribute__((__noreturn__)) Bootloader_socSelfCPUjump(void)
 {
     selfcoreEntry();
 }
 
-int32_t Bootloader_socCpuResetReleaseSelf()
+int32_t Bootloader_socCpuResetReleaseSelf(void)
 {
     int32_t status = SystemP_SUCCESS;
     uint32_t sciclientCpuProcIdCore0, sciclientCpuDevIdCore0;
@@ -1218,14 +1229,14 @@ int32_t Bootloader_socOpenFirewalls(void)
 
     /* There are 3 firewall regions, 1 per FSS memory region. We need to open all these regions. */
     status = Bootloader_socOpenFirewallRegion(CSL_STD_FW_FSS0_FSAS_0_DAT_REG1_ID,
-                    0, 
+                    0,
                     fwlControl,
                     CSL_STD_FW_FSS0_FSAS_0_DAT_REG1_DAT_REG1_START,
                     CSL_STD_FW_FSS0_FSAS_0_DAT_REG1_DAT_REG1_END);
 
     if(status == SystemP_SUCCESS)
     {
-        status = Bootloader_socOpenFirewallRegion(CSL_STD_FW_FSS0_FSAS_0_DAT_REG0_ID, 
+        status = Bootloader_socOpenFirewallRegion(CSL_STD_FW_FSS0_FSAS_0_DAT_REG0_ID,
                         1,
                         fwlControl,
                         CSL_STD_FW_FSS0_FSAS_0_DAT_REG0_DAT_REG0_START,
@@ -1249,12 +1260,13 @@ int32_t Bootloader_socAuthImage(uint32_t certLoadAddr)
     int32_t status = SystemP_FAILURE;
 
     struct tisci_msg_proc_auth_boot_req authReq;
+    struct tisci_msg_proc_auth_boot_resp authResp = {0};
 
     /* Request TIFS (SYSFW) to authenticate (and decrypt if mentioned in the x509 cert) the image */
     authReq.certificate_address_hi = 0U;
     authReq.certificate_address_lo = certLoadAddr;
 
-    status = Sciclient_procBootAuthAndStart(&authReq, SystemP_WAIT_FOREVER);
+    status = Sciclient_procBootAuthAndStart(&authReq, &authResp, SystemP_WAIT_FOREVER);
 
     return status;
 }
@@ -1264,7 +1276,7 @@ Bootloader_resMemSections* Bootloader_socGetSBLMem(void)
     return &gResMemSection;
 }
 
-uint32_t Bootloader_socIsMCUResetIsoEnabled()
+uint32_t Bootloader_socIsMCUResetIsoEnabled(void)
 {
     uint32_t status = 0;
 
@@ -1287,7 +1299,7 @@ void Bootloader_socSetSBLMem(uint32_t startAddress, uint32_t regionlength)
     gResMemSection.memSection[0].memEnd = startAddress + regionlength;
 }
 
-void Bootloader_socWriteSBLBootMagicNum()
+void Bootloader_socWriteSBLBootMagicNum(void)
 {
     uint32_t *magicNumAddr = (uint32_t *)BOOTLOADER_SBL_BOOT_MAGIC_NUM_OCM_RAM_ADDR;
 
@@ -1296,7 +1308,7 @@ void Bootloader_socWriteSBLBootMagicNum()
     CacheP_wbInv ((void *)magicNumAddr, 4, CacheP_TYPE_ALL);
 }
 
-uint32_t Bootloader_socIsSBLBoot()
+uint32_t Bootloader_socIsSBLBoot(void)
 {
     uint32_t isBootSBLBoot = FALSE;
     uint32_t *magicNumAddr = (uint32_t *)(BOOTLOADER_SBL_BOOT_MAGIC_NUM_OCM_RAM_ADDR);
@@ -1310,4 +1322,29 @@ uint32_t Bootloader_socIsSBLBoot()
     }
 
     return isBootSBLBoot;
+}
+
+void Bootloader_socCpuPowerOff(uint32_t cpuId)
+{
+    uint32_t sciclientCpuDevId;
+    uint32_t status = SystemP_SUCCESS;
+
+    sciclientCpuDevId = Bootloader_socGetSciclientCpuDevId(cpuId);
+
+    switch(cpuId)
+    {
+        /* Applicable to all the cores */
+        default:
+            status = Sciclient_pmSetModuleState(sciclientCpuDevId,
+                TISCI_MSG_VALUE_DEVICE_SW_STATE_AUTO_OFF,
+                TISCI_MSG_FLAG_AOP,
+                SystemP_WAIT_FOREVER);
+
+            if(status != SystemP_SUCCESS)
+            {
+                DebugP_logError("CPU power off failed for %s\r\n", Bootloader_socGetCoreName(cpuId));
+            }
+            break;
+    }
+
 }

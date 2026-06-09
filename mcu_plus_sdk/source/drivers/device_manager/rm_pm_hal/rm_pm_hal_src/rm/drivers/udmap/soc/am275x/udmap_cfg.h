@@ -3,7 +3,7 @@
  *
  * UDMAP SoC-specific configuration definitions
  *
- * Data version: 241217_073541
+ * Data version: 251105_135430
  *
  * Copyright (C) 2024-2025, Texas Instruments Incorporated
  * All rights reserved.

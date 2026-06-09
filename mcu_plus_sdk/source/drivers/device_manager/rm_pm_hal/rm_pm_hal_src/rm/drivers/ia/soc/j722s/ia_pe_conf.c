@@ -132,13 +132,21 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 	},
 	[11] = {
 		/*
+		 * For: A53_5 response
+		 */
+		.id		= J722S_DEV_DMASS0_INTAGGR_0,
+		.event_id	= 0x05FFU,
+		.vint		= 0x0027U,
+	},
+	[12] = {
+		/*
 		 * For: DM err_event
 		 */
 		.id		= J722S_DEV_DMASS0_INTAGGR_0,
 		.event_id	= 0x000FU,
 		.vint		= 0x002AU,
 	},
-	[12] = {
+	[13] = {
 		/*
 		 * For: DM nonsec_low_priority_rx
 		 */

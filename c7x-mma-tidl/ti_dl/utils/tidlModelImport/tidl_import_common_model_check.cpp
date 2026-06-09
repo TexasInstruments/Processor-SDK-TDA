@@ -1918,6 +1918,13 @@ static const std::unordered_set<int32_t> individualUnsupportedTIDLOps {
   TIDL_CoshLayer,
   TIDL_TanLayer,
   TIDL_SwishLayer,
+  TIDL_SoftPlusLayer,
+  TIDL_SoftSignLayer,
+  TIDL_CeilLayer,
+  TIDL_CeluLayer,
+  TIDL_SeluLayer,
+  TIDL_RoundLayer,
+  TIDL_SignLayer,
 };
 
 int tidlModelCheck(tidl_import_config * params, sTIDL_OrgNetwork_t * orgTIDLNetStructure)
@@ -2254,6 +2261,20 @@ void tidlModelCheckLayer(const sTIDL_LayerPC_t &layerPC, DiagList_t &diags)
     case TIDL_NegLayer:
       break;
     case TIDL_SwishLayer:
+      break;
+    case TIDL_SoftPlusLayer:
+      break;
+    case TIDL_SoftSignLayer:
+      break;
+    case TIDL_CeilLayer:
+      break;
+    case TIDL_CeluLayer:
+      break;
+    case TIDL_SeluLayer:
+      break;
+    case TIDL_RoundLayer:
+      break;
+    case TIDL_SignLayer:
       break;
     default:
       TIDL_LOG_UNSUPPORTED(diags, "Unknown layer type: %d", layerPC.layerType);

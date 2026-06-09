@@ -5,7 +5,7 @@ let device = "j722s";
 const files = {
     common: [
         "main.c",
-		"sciclient_ccs_init.c"
+        "sciclient_ccs_init.c"
     ],
 };
 

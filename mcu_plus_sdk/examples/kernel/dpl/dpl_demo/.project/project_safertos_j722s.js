@@ -79,6 +79,7 @@ const includes_safertos_r5f = {
         "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/r5f/api/PrivWrapperStd",
         "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/r5f/portable/199_TI_CR5",
         "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/r5f/portable/199_TI_CR5/024_Clang",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/r5f/queue_registry",
         "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/r5f/config",
     ],
 };
@@ -201,7 +202,7 @@ function getComponentProperty() {
     property.isSkipTopLevelBuild = true;
     property.isInternal = false;
     property.tirexResourceSubClass = [ "example.gettingstarted" ];
-    property.description = "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters."
+    property.description = "An Example for the demonstration of Driver Porting Layer (DPL) API calls. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters."
     property.buildOptionCombos = buildOptionCombos;
 
     return property;

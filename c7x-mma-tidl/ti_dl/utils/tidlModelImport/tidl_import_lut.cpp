@@ -82,7 +82,7 @@ using namespace std;
 #define TIDL_LUT_DEVICEID 0
 #elif defined(SOC_AM62A)
 #define TIDL_LUT_DEVICEID 1
-#elif defined(SOC_J722S)
+#elif defined(SOC_J722S) || defined(SOC_TDA54)
 #define TIDL_LUT_DEVICEID 2
 #else
 #error "unsupported SOC"

@@ -1,6 +1,6 @@
 let common = system.getScript("/common");
 
-let ospi_input_clk_freq = 133333333;
+let ospi_input_clk_freq = 166666666;
 
 const ospi_config_r5fss = [
     {
@@ -9,7 +9,28 @@ const ospi_config_r5fss = [
         dataBaseAddr        : "CSL_FSS0_DAT_REG1_BASE",
         inputClkFreq        : ospi_input_clk_freq,
         dacEnable           : false,
-        baudRateDiv         : 4,
+        baudRateDiv         : 8,
+        intrNum             : 171,
+        phaseDelayElement   : 3,
+        clockIds            : [ "TISCI_DEV_FSS0", "TISCI_DEV_FSS0_FSAS_0", "TISCI_DEV_FSS0_OSPI_0" ],
+        clockFrequencies    : [
+            {
+                moduleId: "TISCI_DEV_FSS0_OSPI_0",
+                clkId   : "TISCI_DEV_FSS0_OSPI_0_OSPI_RCLK_CLK",
+                clkRate : ospi_input_clk_freq,
+            },
+        ],
+    },
+];
+
+const ospi_config_a53ss = [
+    {
+        name                : "OSPI0",
+        baseAddr            : "CSL_FSS0_OSPI0_CTRL_BASE",
+        dataBaseAddr        : "CSL_FSS0_DAT_REG1_BASE",
+        inputClkFreq        : ospi_input_clk_freq,
+        dacEnable           : false,
+        baudRateDiv         : 8,
         intrNum             : 171,
         phaseDelayElement   : 3,
         clockIds            : [ "TISCI_DEV_FSS0", "TISCI_DEV_FSS0_FSAS_0", "TISCI_DEV_FSS0_OSPI_0" ],
@@ -30,14 +51,115 @@ const ospi_dma_restrict_regions = [
     { start : "CSL_MCU_M4FSS0_DRAM_BASE", size : "CSL_MCU_M4FSS0_DRAM_SIZE" },
 ];
 
+const ospi_phyTuning_ddr_config =
+[
+    {
+        phyControlMode          : "PHY_MASTER_MODE",
+        dllLockMode             : "HALF_CYCLE_LOCK",
+        radius                  : 10,
+        rxTxDllMin              : 0,
+        rxTxDllMax              : 127,
+        minReadDelay            : 0,
+        maxReadDelay            : 4,
+        minPassSize             : 100,
+        diagonalShift           : 10,
+        maxDiagonalShift        : 70,
+        numConsecutiveFail      : 5,
+        numConsecutivePass      : 10,
+        rdDelaySearchStep       : 16,
+    }
+];
+
+const ospi_phyTuning_sdr_config =
+[
+    {
+        phyControlMode          : "PHY_MASTER_MODE",
+        dllLockMode             : "HALF_CYCLE_LOCK",
+        rdDelayMin              : 0,
+        rdDelayMax              : 3,
+        txDllLowWindowStart     : 0,
+        txDllLowWindowEnd       : 0,
+        txDllHighWindowStart    : 0,
+        txDllHighWindowEnd      : 127,
+        rxLowSearchStart        : 0,
+        rxLowSearchEnd          : 0,
+        rxHighSearchStart       : 0,
+        rxHighSearchEnd         : 127,
+        txLowSearchStart        : 0,
+        txLowSearchEnd          : 0,
+        txHighSearchStart       : 0,
+        txHighSearchEnd         : 0,
+        txDLLSearchOffset       : 0,
+        rxTxDLLSearchStep       : 4,
+    }
+];
+
+const ospi_fast_phyTuning_ddr_config =
+[
+    {
+        phyControlMode          : "PHY_MASTER_MODE",
+        dllLockMode             : "HALF_CYCLE_LOCK",
+        radius                  : 5,
+        rxTxDllMin              : 0,
+        rxTxDllMax              : 127,
+        minReadDelay            : 0,
+        maxReadDelay            : 4,
+        minPassSize             : 100,
+        diagonalShift           : 10,
+        maxDiagonalShift        : 70,
+        numConsecutiveFail      : 5,
+        numConsecutivePass      : 10,
+        rdDelaySearchStep       : 16,
+    }
+];
+
+const ospi_fast_phyTuning_sdr_config =
+[
+    {
+        phyControlMode          : "PHY_MASTER_MODE",
+        dllLockMode             : "HALF_CYCLE_LOCK",
+        rdDelayMin              : 0,
+        rdDelayMax              : 1,
+        txDllLowWindowStart     : 0,
+        txDllLowWindowEnd       : 0,
+        txDllHighWindowStart    : 0,
+        txDllHighWindowEnd      : 127,
+        rxLowSearchStart        : 0,
+        rxLowSearchEnd          : 0,
+        rxHighSearchStart       : 0,
+        rxHighSearchEnd         : 127,
+        txLowSearchStart        : 0,
+        txLowSearchEnd          : 0,
+        txHighSearchStart       : 0,
+        txHighSearchEnd         : 0,
+        txDLLSearchOffset       : 0,
+        rxTxDLLSearchStep       : 8,
+    }
+];
+
 function getDefaultConfig()
 {
-    return ospi_config_r5fss[0];
+    if(common.getSelfSysCfgCoreName().match(/r5f*/))
+    {
+        return ospi_config_r5fss[0];
+    }
+    else if(common.getSelfSysCfgCoreName().match(/a53*/))
+    {
+        return ospi_config_a53ss[0];
+    }
+
 }
 
 function getConfigArr() {
+    if(common.getSelfSysCfgCoreName().match(/r5f*/))
+    {
+        return ospi_config_r5fss;
+    }
+    if(common.getSelfSysCfgCoreName().match(/a53*/))
+    {
+        return ospi_config_a53ss;
+    }
 
-    return ospi_config_r5fss;
 }
 
 function getDmaRestrictedRegions() {
@@ -49,11 +171,44 @@ function getSupportedDataLines() {
     return 8;
 }
 
+function getPhyTuningParamsDDR() {
+
+    return ospi_phyTuning_ddr_config[0];
+}
+
+function getPhyTuningParamsSDR() {
+    return ospi_phyTuning_sdr_config[0];
+}
+
+function getFastPhyTuningParamsDDR() {
+    return ospi_fast_phyTuning_ddr_config[0];
+}
+
+function getFastPhyTuningParamsSDR() {
+    return ospi_fast_phyTuning_sdr_config[0];
+}
+
+function getDefaultPhyControlMode()
+{
+    return ospi_phyTuning_ddr_config[0];
+}
+
+function getDefaultDllLockMode()
+{
+    return ospi_phyTuning_ddr_config[0];
+}
+
 exports = {
     getDefaultConfig,
     getConfigArr,
     getDmaRestrictedRegions,
     getSupportedDataLines,
+    getPhyTuningParamsDDR,
+    getPhyTuningParamsSDR,
+    getFastPhyTuningParamsDDR,
+    getFastPhyTuningParamsSDR,
+    getDefaultPhyControlMode,
+    getDefaultDllLockMode,
 };
 
 

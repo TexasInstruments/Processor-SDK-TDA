@@ -3,9 +3,9 @@
  *
  * UDMAP driver instance data definition
  *
- * Data version: 240627_084252
+ * Data version: 250904_120008
  *
- * Copyright (C) 2022-2024, Texas Instruments Incorporated
+ * Copyright (C) 2022-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -82,14 +82,14 @@ static const struct rm_mmr mmr_DMASS0_BCDMA_0_BCDMA_RCHANRT = {
 	.base		= 0x4a820000U,
 };
 
-static const struct rm_mmr mmr_DMASS0_BCDMA_0_BCCFG = {
+static const struct rm_mmr mmr_DMASS0_BCDMA_0_BCDMA_BCHAN = {
 	.fwl_id		= RM_MMR_FWL_INVALID,
 	.fwl_ch_start	= 0U,
 	.fwl_ch_end	= 0U,
 	.base		= 0x48420000U,
 };
 
-static const struct rm_mmr mmr_DMASS0_BCDMA_0_BCRT = {
+static const struct rm_mmr mmr_DMASS0_BCDMA_0_BCDMA_BCHANRT = {
 	.fwl_id		= RM_MMR_FWL_INVALID,
 	.fwl_ch_start	= 0U,
 	.fwl_ch_end	= 0U,
@@ -173,7 +173,7 @@ static const struct rm_mmr mmr_DMASS0_PKTDMA_0_PKTDMA_RCHANRT = {
 	.base		= 0x4a800000U,
 };
 
-static const struct rm_mmr mmr_DMASS0_PKTDMA_0_RXFCFG = {
+static const struct rm_mmr mmr_DMASS0_PKTDMA_0_PKTDMA_RFLOW = {
 	.fwl_id		= RM_MMR_FWL_INVALID,
 	.fwl_ch_start	= 0U,
 	.fwl_ch_end	= 0U,
@@ -326,21 +326,21 @@ static struct udmap_used_mapping rom_usage_DMASS0_PKTDMA_0[4U] = {
 	},
 };
 
-static const struct rm_mmr mmr_DMASS1_BCDMA_0_GCFG = {
+static const struct rm_mmr mmr_DMASS1_BCDMA_0_BCDMA_GCFG = {
 	.fwl_id		= RM_MMR_FWL_INVALID,
 	.fwl_ch_start	= 0U,
 	.fwl_ch_end	= 0U,
 	.base		= 0x4e230000U,
 };
 
-static const struct rm_mmr mmr_DMASS1_BCDMA_0_RXCCFG = {
+static const struct rm_mmr mmr_DMASS1_BCDMA_0_BCDMA_RCHAN = {
 	.fwl_id		= RM_MMR_FWL_INVALID,
 	.fwl_ch_start	= 0U,
 	.fwl_ch_end	= 0U,
 	.base		= 0x4e200000U,
 };
 
-static const struct rm_mmr mmr_DMASS1_BCDMA_0_RXCRT = {
+static const struct rm_mmr mmr_DMASS1_BCDMA_0_BCDMA_RCHANRT = {
 	.fwl_id		= RM_MMR_FWL_INVALID,
 	.fwl_ch_start	= 0U,
 	.fwl_ch_end	= 0U,
@@ -370,11 +370,11 @@ struct udmap_instance udmap_inst[3] = {
 		.gcfg = &mmr_DMASS0_BCDMA_0_BCDMA_GCFG,
 		.tchan = &mmr_DMASS0_BCDMA_0_BCDMA_TCHAN,
 		.rchan = &mmr_DMASS0_BCDMA_0_BCDMA_RCHAN,
-		.bchan = &mmr_DMASS0_BCDMA_0_BCCFG,
+		.bchan = &mmr_DMASS0_BCDMA_0_BCDMA_BCHAN,
 		.rflow = NULL,
 		.tchanrt = &mmr_DMASS0_BCDMA_0_BCDMA_TCHANRT,
 		.rchanrt = &mmr_DMASS0_BCDMA_0_BCDMA_RCHANRT,
-		.bchanrt = &mmr_DMASS0_BCDMA_0_BCRT,
+		.bchanrt = &mmr_DMASS0_BCDMA_0_BCDMA_BCHANRT,
 		.n_tx_ch = UDMAP_DMASS0_BCDMA_0_TX_CHAN_MAX_INDEX,
 		.n_rx_ch = UDMAP_DMASS0_BCDMA_0_RX_CHAN_MAX_INDEX,
 		.n_bc_ch = UDMAP_DMASS0_BCDMA_0_BC_CHAN_MAX_INDEX,
@@ -404,7 +404,7 @@ struct udmap_instance udmap_inst[3] = {
 		.tchan = &mmr_DMASS0_PKTDMA_0_PKTDMA_TCHAN,
 		.rchan = &mmr_DMASS0_PKTDMA_0_PKTDMA_RCHAN,
 		.bchan = NULL,
-		.rflow = &mmr_DMASS0_PKTDMA_0_RXFCFG,
+		.rflow = &mmr_DMASS0_PKTDMA_0_PKTDMA_RFLOW,
 		.tchanrt = &mmr_DMASS0_PKTDMA_0_PKTDMA_TCHANRT,
 		.rchanrt = &mmr_DMASS0_PKTDMA_0_PKTDMA_RCHANRT,
 		.bchanrt = NULL,
@@ -433,13 +433,13 @@ struct udmap_instance udmap_inst[3] = {
 		.root_id = AM62AX_DEV_DMASS1,
 		.initialized = SFALSE,
 		.devgrp = SOC_DEVGRP_AM62AX_MAIN,
-		.gcfg = &mmr_DMASS1_BCDMA_0_GCFG,
+		.gcfg = &mmr_DMASS1_BCDMA_0_BCDMA_GCFG,
 		.tchan = NULL,
-		.rchan = &mmr_DMASS1_BCDMA_0_RXCCFG,
+		.rchan = &mmr_DMASS1_BCDMA_0_BCDMA_RCHAN,
 		.bchan = NULL,
 		.rflow = NULL,
 		.tchanrt = NULL,
-		.rchanrt = &mmr_DMASS1_BCDMA_0_RXCRT,
+		.rchanrt = &mmr_DMASS1_BCDMA_0_BCDMA_RCHANRT,
 		.bchanrt = NULL,
 		.n_tx_ch = UDMAP_DMASS1_BCDMA_0_TX_CHAN_MAX_INDEX,
 		.n_rx_ch = UDMAP_DMASS1_BCDMA_0_RX_CHAN_MAX_INDEX,

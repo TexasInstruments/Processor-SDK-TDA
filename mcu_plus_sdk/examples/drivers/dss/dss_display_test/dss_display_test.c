@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2025 Texas Instruments Incorporated
+ *  Copyright (C) 2023-24 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -47,26 +47,22 @@
 #include <kernel/dpl/ClockP.h>
 #include <kernel/dpl/DebugP.h>
 #include <kernel/dpl/SemaphoreP.h>
-/* TODO: Add a board header file for Board_control */
 #include "ti_drivers_open_close.h"
 #include "ti_drivers_config.h"
 #include "ti_board_open_close.h"
-#if defined (SOC_J722S)
-#include <board/board_control.h>
-#endif
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
-/* Number of frames */
-# if defined (CONFIG_DSS0) && defined (CONFIG_DSS1)
-#define DISP_NUM_FRAMES_COUNT              ((uint32_t)4000U)
-# else
-#define DISP_NUM_FRAMES_COUNT              ((uint32_t)2000U)
-#endif
+/* Number of frames (10 seconds 600 frames) */
+#define DISP_NUM_FRAMES_COUNT              ((uint32_t)600U)
+
 /* Max frame size based on resolution */
 #define DISP_FRAME_SIZE_MAX                (3840U*1080U)
+
+/* Max pixel width */
+#define DISP_FRAME_PIXEL_WIDTH_MAX          (4U)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -78,44 +74,42 @@
 /*                          Function Declarations                             */
 /* ========================================================================== */
 
-static void DispApp_commonInit(Dss_Object *appObj);
-static void DispApp_dssInstanceInit(Dss_Object *appObj, uint32_t dssInstanceNum);
-static void DispApp_deInit();
-static void DispApp_create(Dss_Object *appObj, uint32_t dssInstanceNum);
-static void DispApp_delete(Dss_Object *appObj, uint32_t dssInstanceNum);
-static int32_t DispApp_configDctrl(Dss_Object *appObj, uint32_t dssInstanceNum);
-static int32_t DispApp_runTest();
-static void DispApp_initPipelineParams(Dss_Object *appObj, uint32_t dssInstanceNum);
+static void DispApp_init(Dss_Object *appObj);
+static void DispApp_deInit(Dss_Object *appObj);
+static void DispApp_create(Dss_Object *appObj);
+static void DispApp_delete(Dss_Object *appObj);
+static int32_t DispApp_configDctrl(Dss_Object *appObj);
+static int32_t DispApp_runTest(Dss_Object *appObj);
+static void DispApp_initPipelineParams(Dss_Object *appObj);
 static int32_t DispApp_allocAndQueueFrames(const Dss_Object *appObj,
-                                           Dss_InstObject *instObj, uint32_t dssInstanceNum);
+                                           Dss_InstObject *instObj);
 static int32_t DispApp_pipeCbFxn(Fvid2_Handle handle, void *appData);
-static void DispApp_initDssParams(Dss_Object *appObj, uint32_t dssInstanceNum);
-static int32_t DispApp_setupHDMI( void );
-static int32_t DispApp_setupDSI2DPBridge(void);
-static void DispApp_enableDisableRequiredInstance(uint32_t dss0Enable, uint32_t dss1Enable, Dss_RmInfo *rmInfo);
+static void DispApp_initDssParams(Dss_Object *appObj);
 
 extern void Disp_prepareFrameBuffer(uint32_t instCount,
-                                       Dss_ConfigPipelineParams *pipelineParams,
-                                       void *frameBuffer[CONFIG_DSS_NUM_FRAMES_PER_PIPELINE]);
+                            uint32_t inDataFmt, \
+                            uint32_t inWidth, \
+                            uint32_t inHeight,\
+                            uint32_t pitch, \
+                            void* \
+                            frameBuffer[CONFIG_DSS_NUM_FRAMES_PER_PIPELINE]);
 
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
 
 uint32_t gStopProfileTime, gStartProfileTime;
-volatile uint32_t gLoopCount = 0U;
-SemaphoreP_Object gSyncSem;
 
 /*
  * Global frame buffers. Maximum frames per handle is considered 2 and first frame
  * is used for first pipeline instance and other is used for second pipeline instance.
  */
-uint8_t gFirstPipelineFrameBuf[CONFIG_DSS_NUM_INSTANCES][CONFIG_DSS_NUM_FRAMES_PER_PIPELINE][DISP_FRAME_SIZE_MAX]__attribute__ ((section (".dssFrameBuffer"), aligned (4096)));
-uint8_t gSecondPipelineFrameBuf[CONFIG_DSS_NUM_INSTANCES][CONFIG_DSS_NUM_FRAMES_PER_PIPELINE][DISP_FRAME_SIZE_MAX]__attribute__ ((section (".dssFrameBuffer"), aligned (4096))) ;
+uint8_t gFirstPipelineFrameBuf[CONFIG_DSS_NUM_FRAMES_PER_PIPELINE][DISP_FRAME_SIZE_MAX * DISP_FRAME_PIXEL_WIDTH_MAX]__attribute__ ((section (".dssFrameBuffer"), aligned (4096)));
+uint8_t gSecondPipelineFrameBuf[CONFIG_DSS_NUM_FRAMES_PER_PIPELINE][DISP_FRAME_SIZE_MAX * DISP_FRAME_PIXEL_WIDTH_MAX]__attribute__ ((section (".dssFrameBuffer"), aligned (4096))) ;
 
 /* Pointer to frame buffers per pipleline */
-void *firstPipeFrameBufferPointer[CONFIG_DSS_NUM_INSTANCES][CONFIG_DSS_NUM_FRAMES_PER_PIPELINE];
-void *secondPipeFrameBufferPointer[CONFIG_DSS_NUM_INSTANCES][CONFIG_DSS_NUM_FRAMES_PER_PIPELINE];
+void *firstPipeFrameBufferPointer[CONFIG_DSS_NUM_FRAMES_PER_PIPELINE];
+void *secondPipeFrameBufferPointer[CONFIG_DSS_NUM_FRAMES_PER_PIPELINE];
 
 /* ========================================================================== */
 /*                          Function Definitions                              */
@@ -124,30 +118,36 @@ void *secondPipeFrameBufferPointer[CONFIG_DSS_NUM_INSTANCES][CONFIG_DSS_NUM_FRAM
 void DispApp_initFrames()
 {
     uint32_t instCnt = 0;
+    uint32_t numPipes = gDssConfigPipelineParams.numTestPipes <= DSS_DISP_INST_MAX \
+                        ? gDssConfigPipelineParams.numTestPipes : DSS_DISP_INST_MAX;
 
-    for (uint32_t dssInstanceNum = 0U; dssInstanceNum < CONFIG_DSS_NUM_INSTANCES; dssInstanceNum++)
+    for(instCnt = 0; instCnt < CONFIG_DSS_NUM_FRAMES_PER_PIPELINE; instCnt++)
     {
-        for(instCnt = 0; instCnt < CSL_DSS_NUM_PIPE_PER_DSS_INSTANCE; instCnt++)
-        {
-            firstPipeFrameBufferPointer[dssInstanceNum][instCnt] = &gFirstPipelineFrameBuf[dssInstanceNum][instCnt];
-            secondPipeFrameBufferPointer[dssInstanceNum][instCnt] = &gSecondPipelineFrameBuf[dssInstanceNum][instCnt];
-        }
-
-        for(instCnt = 0U; instCnt<gDssConfigPipelineParams[dssInstanceNum].numTestPipes; instCnt++)
-        {
-            if(instCnt != 0)
-            {
-                Disp_prepareFrameBuffer(instCnt,&gDssConfigPipelineParams[dssInstanceNum],
-                                        secondPipeFrameBufferPointer[dssInstanceNum]);
-            }
-            else
-            {
-                Disp_prepareFrameBuffer(instCnt,&gDssConfigPipelineParams[dssInstanceNum],
-                                        firstPipeFrameBufferPointer[dssInstanceNum]);
-            }
-        }
+        firstPipeFrameBufferPointer[instCnt] = &gFirstPipelineFrameBuf[instCnt];
+        secondPipeFrameBufferPointer[instCnt] = &gSecondPipelineFrameBuf[instCnt];
     }
 
+    for(instCnt = 0U; instCnt< numPipes ; instCnt++)
+    {
+        if(instCnt == 0)
+        {
+            Disp_prepareFrameBuffer(instCnt,
+                                    gDssConfigPipelineParams.inDataFmt[instCnt],
+                                    gDssConfigPipelineParams.inWidth[instCnt],
+                                    gDssConfigPipelineParams.inHeight[instCnt],
+                                    gDssConfigPipelineParams.pitch[instCnt][0],
+                                    firstPipeFrameBufferPointer);
+        }
+        else
+        {
+            Disp_prepareFrameBuffer(instCnt,
+                                    gDssConfigPipelineParams.inDataFmt[instCnt],
+                                    gDssConfigPipelineParams.inWidth[instCnt],
+                                    gDssConfigPipelineParams.inHeight[instCnt],
+                                    gDssConfigPipelineParams.pitch[instCnt][0],
+                                    secondPipeFrameBufferPointer);
+        }
+    }
 }
 
 /*
@@ -156,29 +156,22 @@ void DispApp_initFrames()
 void dss_display_test_main(void *args)
 {
     int32_t retVal = FVID2_SOK;
-    int32_t status = SystemP_SUCCESS;
-
-    Drivers_open();
-
-    status = Board_driversOpen();
-    DebugP_assert(SystemP_SUCCESS == status);
 
     /* Initialise frames */
     DispApp_initFrames();
 
-    /* Init sequence common across all isntances */
-    DispApp_commonInit(&gDssObjects[0]);
+    DispApp_init(&gDssObjects[CONFIG_DSS0]);
 
-    for (uint32_t dssInstanceNum = 0U; dssInstanceNum < CONFIG_DSS_NUM_INSTANCES; dssInstanceNum++)
-    {
-        DispApp_dssInstanceInit(&gDssObjects[dssInstanceNum], dssInstanceNum);
+    DebugP_log("DSS display application started...\r\n");
 
-        DebugP_log("DSS display application started...\r\n");
-    }
+    retVal = DispApp_runTest(&gDssObjects[CONFIG_DSS0]);
 
-    retVal = DispApp_runTest();
+    DebugP_log("Number of frames = %d, elapsed msec = %d, fps = %0.2f\r\n",
+            DISP_NUM_FRAMES_COUNT,
+            gStopProfileTime - gStartProfileTime,
+            (float)((float)DISP_NUM_FRAMES_COUNT / ((gStopProfileTime - gStartProfileTime)/1000.0)));
 
-    DispApp_deInit();
+    DispApp_deInit(&gDssObjects[CONFIG_DSS0]);
 
     if(FVID2_SOK == retVal)
     {
@@ -189,16 +182,14 @@ void dss_display_test_main(void *args)
         DebugP_log("DSS display test Failed!!\r\n");
     }
 
-    Board_driversClose();
-    Drivers_close();
-
     return;
 }
 
-static void DispApp_commonInit(Dss_Object *appObj)
+static void DispApp_init(Dss_Object *appObj)
 {
-    int32_t retVal = FVID2_SOK;
+    int32_t         retVal = FVID2_SOK;
     Fvid2_InitPrms  initPrms;
+
     Fvid2InitPrms_init(&initPrms);
     retVal = Fvid2_init(&initPrms);
     if(retVal != FVID2_SOK)
@@ -208,20 +199,7 @@ static void DispApp_commonInit(Dss_Object *appObj)
 
     Dss_initParamsInit(&appObj->initParams);
 
-#if defined (CONFIG_DSS0) && defined (CONFIG_DSS1)
-    /* Enabling both instances of DSS in driver */
-    DispApp_enableDisableRequiredInstance(TRUE, TRUE, &(appObj->initParams.socParams.rmInfo));
-#elif defined (CONFIG_DSS1) &&  !defined (CONFIG_DSS0)
-    /* Enabling DSS1 and disabling DSS0 which is enabled by default */
-    DispApp_enableDisableRequiredInstance(FALSE, TRUE, &(appObj->initParams.socParams.rmInfo));
-#endif
     Dss_init(&appObj->initParams);
-
-}
-
-static void DispApp_dssInstanceInit(Dss_Object *appObj, uint32_t instanceId)
-{
-    int32_t retVal = FVID2_SOK;
 
     if(FVID2_SOK == retVal)
     {
@@ -251,110 +229,111 @@ static void DispApp_dssInstanceInit(Dss_Object *appObj, uint32_t instanceId)
     return;
 }
 
-static void DispApp_deInit()
+static void DispApp_deInit(Dss_Object *appObj)
 {
     int32_t  retVal = FVID2_SOK;
-    Dss_Object *appObj;
 
-    for (uint32_t dssInstanceNum = 0U; dssInstanceNum < CONFIG_DSS_NUM_INSTANCES; dssInstanceNum++)
-    {
-        /* Delete DCTRL handle */
-        appObj = &gDssObjects[dssInstanceNum];
-        retVal = Fvid2_delete(appObj->dctrlHandle, NULL);
-    }
+    /* Delete DCTRL handle */
+    retVal = Fvid2_delete(appObj->dctrlHandle, NULL);
     retVal += Dss_deInit();
     retVal += Fvid2_deInit(NULL);
     if(retVal != FVID2_SOK)
     {
-         DebugP_log("DCTRL handle delete failed!!!\r\n");
+        DebugP_log("DCTRL handle delete failed!!!\r\n");
     }
     else
     {
-         DebugP_log("DispApp_deInit() - DONE !!!\r\n");
+        DebugP_log("DispApp_deInit() - DONE !!!\r\n");
     }
 
     return;
 }
 
-static int32_t DispApp_runTest()
+static int32_t DispApp_runTest(Dss_Object *appObj)
 {
     int32_t retVal = FVID2_SOK;
     uint32_t instCnt = 0U;
-    uint32_t dssInstanceNum = 0U;
-    Dss_Object *appObj;
+    volatile uint32_t loopCount = 0U;
     Dss_InstObject *instObj;
+    Fvid2_FrameList  frmList;
 
-    for(dssInstanceNum = 0U; dssInstanceNum < CONFIG_DSS_NUM_INSTANCES; dssInstanceNum++)
+    /* Create driver */
+    DispApp_create(appObj);
+
+    DebugP_log("Starting display ... !!!\r\n");
+    DebugP_log("Display in progress ... DO NOT HALT !!!\r\n");
+
+    /* Start driver */
+    for(instCnt=0U; instCnt<gDssConfigPipelineParams.numTestPipes; instCnt++)
     {
-        appObj = &gDssObjects[dssInstanceNum];
-        /* Create driver */
-        DispApp_create(appObj, dssInstanceNum);
-    }
+        instObj = &appObj->instObj[instCnt];
 
-    for(dssInstanceNum = 0U; dssInstanceNum < CONFIG_DSS_NUM_INSTANCES; dssInstanceNum++)
-    {
-        appObj = &gDssObjects[dssInstanceNum];
-
-        DebugP_log("Starting display ... !!!\r\n");
-        DebugP_log("Display in progress ... DO NOT HALT !!!\r\n");
-        /* Start driver */
-        for(instCnt=0U; instCnt<gDssConfigPipelineParams[dssInstanceNum].numTestPipes; instCnt++)
+        retVal = Fvid2_start(instObj->drvHandle, NULL);
+        if(retVal != FVID2_SOK)
         {
-            instObj = &appObj->instObj[instCnt];
-
-            retVal = Fvid2_start(instObj->drvHandle, NULL);
-            if(retVal != FVID2_SOK)
-            {
-                DebugP_log("Display Start Failed!!!\r\n");
-                break;
-            }
+            DebugP_log("Display Start Failed!!!\r\n");
+            break;
         }
     }
 
     gStartProfileTime = (ClockP_getTimeUsec() / 1000U);
 
-    retVal = SemaphoreP_constructBinary(&gSyncSem,  1U);
-
-    while(gLoopCount < DISP_NUM_FRAMES_COUNT)
+    while(loopCount++ < DISP_NUM_FRAMES_COUNT)
     {
-        (void) SemaphoreP_pend(&gSyncSem, SystemP_WAIT_FOREVER);
-    }
-
-    for(dssInstanceNum = 0U; dssInstanceNum < CONFIG_DSS_NUM_INSTANCES; dssInstanceNum++)
-    {
-        appObj = &gDssObjects[dssInstanceNum];
-        for(instCnt=0U; instCnt<gDssConfigPipelineParams[dssInstanceNum].numTestPipes; instCnt++)
+        for(instCnt=0U; instCnt<gDssConfigPipelineParams.numTestPipes; instCnt++)
         {
             instObj = &appObj->instObj[instCnt];
-            retVal  = Fvid2_stop(instObj->drvHandle, NULL);
-            if(retVal != FVID2_SOK)
+            (void) SemaphoreP_pend(&instObj->syncSem, SystemP_WAIT_FOREVER);
+            retVal = Fvid2_dequeue(instObj->drvHandle,
+                                   &frmList,
+                                   0U,
+                                   FVID2_TIMEOUT_NONE);
+
+            if(FVID2_SOK == retVal)
             {
-                DebugP_log("Display Stop Failed!!!\r\n");
+                retVal = Fvid2_queue(instObj->drvHandle, &frmList, 0U);
+                if(FVID2_SOK != retVal)
+                {
+                    DebugP_log("Display Queue Failed!!!\r\n");
+                    break;
+                }
+            }
+            else if (FVID2_EAGAIN == retVal)
+            {
+                /* Do nothing as this is first callback */
+            }
+            else
+            {
+                /* Error */
+                DebugP_log("Display Dequeue Failed!!!\r\n");
                 break;
             }
         }
     }
+
+    for(instCnt=0U; instCnt<gDssConfigPipelineParams.numTestPipes; instCnt++)
+    {
+        instObj = &appObj->instObj[instCnt];
+        retVal  = Fvid2_stop(instObj->drvHandle, NULL);
+        if(retVal != FVID2_SOK)
+        {
+            DebugP_log("Display Stop Failed!!!\r\n");
+            break;
+        }
+    }
+
     gStopProfileTime = (ClockP_getTimeUsec() / 1000U);
 
-    DebugP_log("Number of frames = %d, elapsed msec = %d, fps = %0.2f\n",
-        DISP_NUM_FRAMES_COUNT,
-        gStopProfileTime - gStartProfileTime,
-        (float)((float)DISP_NUM_FRAMES_COUNT / ((gStopProfileTime - gStartProfileTime)/1000.0)));
-
-    for(dssInstanceNum = 0U; dssInstanceNum < CONFIG_DSS_NUM_INSTANCES; dssInstanceNum++)
+    if(FVID2_SOK == retVal)
     {
-        appObj = &gDssObjects[dssInstanceNum];
-        if(FVID2_SOK == retVal)
-        {
-            /* Delete driver */
-            DispApp_delete(appObj, dssInstanceNum);
-        }
+        /* Delete driver */
+        DispApp_delete(appObj);
     }
 
     return retVal;
 }
 
-static void DispApp_initDssParams(Dss_Object *appObj, uint32_t dssInstanceNum)
+static void DispApp_initDssParams(Dss_Object *appObj)
 {
     Dss_DctrlVpParams *vpParams;
     Dss_DctrlAdvVpParams *advVpParams;
@@ -376,56 +355,45 @@ static void DispApp_initDssParams(Dss_Object *appObj, uint32_t dssInstanceNum)
 
 
     /* Configure VP params */
-    vpParams->vpId = gDssVpParams[dssInstanceNum].vpId;
-    vpParams->lcdOpTimingCfg.mInfo.standard = gDssVpParams[dssInstanceNum].lcdOpTimingCfg.mInfo.standard;
-    vpParams->lcdOpTimingCfg.mInfo.width = gDssVpParams[dssInstanceNum].lcdOpTimingCfg.mInfo.width;
-    vpParams->lcdOpTimingCfg.mInfo.height = gDssVpParams[dssInstanceNum].lcdOpTimingCfg.mInfo.height;
-    vpParams->lcdOpTimingCfg.mInfo.hFrontPorch = gDssVpParams[dssInstanceNum].lcdOpTimingCfg.mInfo.hFrontPorch;
-    vpParams->lcdOpTimingCfg.mInfo.hBackPorch = gDssVpParams[dssInstanceNum].lcdOpTimingCfg.mInfo.hBackPorch;
-    vpParams->lcdOpTimingCfg.mInfo.hSyncLen = gDssVpParams[dssInstanceNum].lcdOpTimingCfg.mInfo.hSyncLen;
-    vpParams->lcdOpTimingCfg.mInfo.vFrontPorch = gDssVpParams[dssInstanceNum].lcdOpTimingCfg.mInfo.vFrontPorch;
-    vpParams->lcdOpTimingCfg.mInfo.vBackPorch = gDssVpParams[dssInstanceNum].lcdOpTimingCfg.mInfo.vBackPorch;
-    vpParams->lcdOpTimingCfg.mInfo.vSyncLen = gDssVpParams[dssInstanceNum].lcdOpTimingCfg.mInfo.vSyncLen;
-    vpParams->lcdOpTimingCfg.mInfo.pixelClock = gDssVpParams[dssInstanceNum].lcdOpTimingCfg.mInfo.pixelClock;
+    vpParams->vpId = gDssVpParams.vpId;
+    vpParams->lcdOpTimingCfg.mInfo.standard = gDssVpParams.lcdOpTimingCfg.mInfo.standard;
+    vpParams->lcdOpTimingCfg.mInfo.width = gDssVpParams.lcdOpTimingCfg.mInfo.width;
+    vpParams->lcdOpTimingCfg.mInfo.height = gDssVpParams.lcdOpTimingCfg.mInfo.height;
+    vpParams->lcdOpTimingCfg.mInfo.hFrontPorch = gDssVpParams.lcdOpTimingCfg.mInfo.hFrontPorch;
+    vpParams->lcdOpTimingCfg.mInfo.hBackPorch = gDssVpParams.lcdOpTimingCfg.mInfo.hBackPorch;
+    vpParams->lcdOpTimingCfg.mInfo.hSyncLen = gDssVpParams.lcdOpTimingCfg.mInfo.hSyncLen;
+    vpParams->lcdOpTimingCfg.mInfo.vFrontPorch = gDssVpParams.lcdOpTimingCfg.mInfo.vFrontPorch;
+    vpParams->lcdOpTimingCfg.mInfo.vBackPorch = gDssVpParams.lcdOpTimingCfg.mInfo.vBackPorch;
+    vpParams->lcdOpTimingCfg.mInfo.vSyncLen = gDssVpParams.lcdOpTimingCfg.mInfo.vSyncLen;
 
-    vpParams->lcdOpTimingCfg.dvoFormat = gDssVpParams[dssInstanceNum].lcdOpTimingCfg.dvoFormat;
-    vpParams->lcdOpTimingCfg.videoIfWidth = gDssVpParams[dssInstanceNum].lcdOpTimingCfg.videoIfWidth;
+    vpParams->lcdOpTimingCfg.dvoFormat = gDssVpParams.lcdOpTimingCfg.dvoFormat;
+    vpParams->lcdOpTimingCfg.videoIfWidth = gDssVpParams.lcdOpTimingCfg.videoIfWidth;
 
-    vpParams->lcdPolarityCfg.actVidPolarity =  gDssVpParams[dssInstanceNum].lcdPolarityCfg.actVidPolarity;
-    vpParams->lcdPolarityCfg.hsPolarity = gDssVpParams[dssInstanceNum].lcdPolarityCfg.hsPolarity;
-    vpParams->lcdPolarityCfg.vsPolarity = gDssVpParams[dssInstanceNum].lcdPolarityCfg.vsPolarity;
-    vpParams->lcdPolarityCfg.pixelClkPolarity = gDssVpParams[dssInstanceNum].lcdPolarityCfg.pixelClkPolarity ;
-
-    if (TRUE == gDssVpParams[dssInstanceNum].gammaCfg.gammaEnable)
-    {
-        vpParams->gammaCfg.gammaEnable = gDssVpParams[dssInstanceNum].gammaCfg.gammaEnable;
-        for (uint32_t i = 0; i < CSL_DSS_NUM_LUT_ENTRIES; i++)
-        {
-            /* Writing R(23:16), G(15:8),B(7:0) components with white color, output : white screen */
-            vpParams->gammaCfg.gammaData[i] = 0xFFFFFF;
-        }
-    }
+    vpParams->lcdPolarityCfg.actVidPolarity =  gDssVpParams.lcdPolarityCfg.actVidPolarity;
+    vpParams->lcdPolarityCfg.hsPolarity = gDssVpParams.lcdPolarityCfg.hsPolarity;
+    vpParams->lcdPolarityCfg.vsPolarity = gDssVpParams.lcdPolarityCfg.vsPolarity;
+    vpParams->lcdPolarityCfg.pixelClkPolarity = gDssVpParams.lcdPolarityCfg.pixelClkPolarity ;
 
     /* Configure VP Advance Params*/
-    advVpParams->vpId = gDssAdvVpParams[dssInstanceNum].vpId;
-    advVpParams->lcdAdvSignalCfg.hVAlign = gDssAdvVpParams[dssInstanceNum].lcdAdvSignalCfg.hVAlign;
-    advVpParams->lcdAdvSignalCfg.hVClkControl = gDssAdvVpParams[dssInstanceNum].lcdAdvSignalCfg.hVClkControl;
+    advVpParams->vpId = gDssAdvVpParams.vpId;
+    advVpParams->lcdAdvSignalCfg.hVAlign = gDssAdvVpParams.lcdAdvSignalCfg.hVAlign;
+    advVpParams->lcdAdvSignalCfg.hVClkControl = gDssAdvVpParams.lcdAdvSignalCfg.hVClkControl;
 
     /* Configure Overlay Params */
-    overlayParams->overlayId =  gDssOverlayParams[dssInstanceNum].overlayId;
-    overlayParams->colorbarEnable =  gDssOverlayParams[dssInstanceNum].colorbarEnable;
-    overlayParams->overlayCfg.colorKeyEnable =  gDssOverlayParams[dssInstanceNum].overlayCfg.colorKeyEnable;
-    overlayParams->overlayCfg.colorKeySel =  gDssOverlayParams[dssInstanceNum].overlayCfg.colorKeySel;
-    overlayParams->overlayCfg.backGroundColor =  gDssOverlayParams[dssInstanceNum].overlayCfg.backGroundColor;
+    overlayParams->overlayId =  gDssOverlayParams.overlayId;
+    overlayParams->colorbarEnable =  gDssOverlayParams.colorbarEnable;
+    overlayParams->overlayCfg.colorKeyEnable =  gDssOverlayParams.overlayCfg.colorKeyEnable;
+    overlayParams->overlayCfg.colorKeySel =  gDssOverlayParams.overlayCfg.colorKeySel;
+    overlayParams->overlayCfg.backGroundColor =  gDssOverlayParams.overlayCfg.backGroundColor;
 
     /* Configure Overlay Layer params */
-    layerParams->overlayId = gDssOverlayLayerParams[dssInstanceNum].overlayId;
-    memcpy((void*)layerParams->pipeLayerNum, (void* )gDssOverlayLayerParams[dssInstanceNum].pipeLayerNum, \
-    sizeof(gDssOverlayLayerParams[dssInstanceNum].pipeLayerNum));
+    layerParams->overlayId = gDssOverlayLayerParams.overlayId;
+    memcpy((void*)layerParams->pipeLayerNum, (void* )gDssOverlayLayerParams.pipeLayerNum, \
+    sizeof(gDssOverlayLayerParams.pipeLayerNum));
 
 }
 
-static void DispApp_create(Dss_Object *appObj, uint32_t dssInstanceNum)
+static void DispApp_create(Dss_Object *appObj)
 {
     int32_t retVal = FVID2_SOK;
     int32_t status = SystemP_SUCCESS;
@@ -433,17 +401,17 @@ static void DispApp_create(Dss_Object *appObj, uint32_t dssInstanceNum)
     Dss_InstObject *instObj;
 
     /* Init VP, Overlay and Panel params */
-    DispApp_initDssParams(appObj, dssInstanceNum);
+    DispApp_initDssParams(appObj);
 
     /* Configure DSS pipeline params */
-    DispApp_initPipelineParams(appObj, dssInstanceNum);
+    DispApp_initPipelineParams(appObj);
 
     /* Config IOCTL for VP, Overlay and Panel */
-    retVal = DispApp_configDctrl(appObj, dssInstanceNum);
+    retVal = DispApp_configDctrl(appObj);
 
     if(retVal == FVID2_SOK)
     {
-        for(instCnt=0U; instCnt<gDssConfigPipelineParams[dssInstanceNum].numTestPipes; instCnt++)
+        for(instCnt=0U; instCnt<gDssConfigPipelineParams.numTestPipes; instCnt++)
         {
             instObj = &appObj->instObj[instCnt];
 
@@ -494,7 +462,7 @@ static void DispApp_create(Dss_Object *appObj, uint32_t dssInstanceNum)
 
             if(FVID2_SOK == retVal)
             {
-                retVal = DispApp_allocAndQueueFrames(appObj, instObj, dssInstanceNum);
+                retVal = DispApp_allocAndQueueFrames(appObj, instObj);
                 if(retVal != FVID2_SOK)
                 {
                     DebugP_log("Display Alloc and Queue Failed!!!\r\n");
@@ -516,7 +484,7 @@ static void DispApp_create(Dss_Object *appObj, uint32_t dssInstanceNum)
     return;
 }
 
-static void DispApp_delete(Dss_Object *appObj, uint32_t dssInstanceNum)
+static void DispApp_delete(Dss_Object *appObj)
 {
     int32_t retVal;
     uint32_t instCnt;
@@ -529,7 +497,7 @@ static void DispApp_delete(Dss_Object *appObj, uint32_t dssInstanceNum)
     vpParams = &appObj->vpParams;
     pErrorStats = &appObj->errorStats;
 
-    for(instCnt=0U; instCnt<gDssConfigPipelineParams[dssInstanceNum].numTestPipes; instCnt++)
+    for(instCnt=0U; instCnt<gDssConfigPipelineParams.numTestPipes; instCnt++)
     {
         instObj = &appObj->instObj[instCnt];
 
@@ -627,7 +595,7 @@ static void DispApp_delete(Dss_Object *appObj, uint32_t dssInstanceNum)
 }
 
 static int32_t DispApp_allocAndQueueFrames(const Dss_Object *appObj,
-                                           Dss_InstObject *instObj, uint32_t dssInstanceNum)
+                                           Dss_InstObject *instObj)
 {
     int32_t  retVal = FVID2_SOK;
     uint32_t frmId, numFrames;
@@ -642,28 +610,40 @@ static int32_t DispApp_allocAndQueueFrames(const Dss_Object *appObj,
     {
         /* init Fvid2_Frame to 0's  */
         Fvid2Frame_init((Fvid2_Frame *)(frm + frmId));
-        if(instObj->instId == gDssConfigPipelineParams[dssInstanceNum].instId[0U])
+        if(instObj->instId == gDssConfigPipelineParams.instId[0U])
         {
-            frm[frmId].addr[0U] = (uint64_t)firstPipeFrameBufferPointer[dssInstanceNum][frmId];
+            frm[frmId].addr[0U] = (uint64_t)firstPipeFrameBufferPointer[frmId];
+
+            /* YUV 420 NV12 format is dual plane format. Here in a single buffer
+             * we are calculating location of second plane by taking frame
+             * input width and height. Fixing static indexes for pipeline
+             * params so that we can link a frame buffer to first pipeline used.
+             */
+            if(instObj->dispParams.pipeCfg.inFmt.dataFormat == FVID2_DF_YUV420SP_UV)
+            {
+                frm[frmId].addr[1U] = (uint64_t)firstPipeFrameBufferPointer[frmId] +
+                                        instObj->dispParams.pipeCfg.inFmt.width * \
+                                        instObj->dispParams.pipeCfg.inFmt.height;
+            }
         }
         else
         {
-            frm[frmId].addr[0U] = (uint64_t)secondPipeFrameBufferPointer[dssInstanceNum][frmId];
+            frm[frmId].addr[0U] = (uint64_t)secondPipeFrameBufferPointer[frmId];
+
+            /* YUV 420 NV12 format is dual plane format. Here in a single buffer
+             * we are calculating location of second plane by taking frame
+             * input width and height. Fixing static indexes for pipeline
+             * params so that we can link a frame buffer to first pipeline used.
+             */
+            if(instObj->dispParams.pipeCfg.inFmt.dataFormat == FVID2_DF_YUV420SP_UV)
+            {
+                frm[frmId].addr[1U] = (uint64_t)secondPipeFrameBufferPointer[frmId] +
+                                        instObj->dispParams.pipeCfg.inFmt.width * \
+                                        instObj->dispParams.pipeCfg.inFmt.height;
+            }
+
         }
 
-#if defined (DISP_APP_LOAD_BUFFERS_AT_RUNTIME)
-        uint32_t num = 0U;
-        DebugP_log("Please load frame %d at 0x%llx for display pipe instance %d. \r\nPress 1 and enter when done!\r\n", frmId, frm[frmId].addr[0U], instObj->instId);
-        do
-        {
-            DebugP_scanf("%d", &num);
-        } while (0U == num);
-
-        if (Fvid2_isDataFmtYuv420Sp(instObj->dispParams.pipeCfg.inFmt.dataFormat))
-        {
-            frm[frmId].addr[1U] = frm[frmId].addr[0U] + (instObj->dispParams.pipeCfg.inFmt.width)*(instObj->dispParams.pipeCfg.inFmt.height);
-        }
-#endif
         frm[frmId].fid = FVID2_FID_FRAME;
         frm[frmId].appData = instObj;
 
@@ -689,19 +669,19 @@ static int32_t DispApp_allocAndQueueFrames(const Dss_Object *appObj,
     return (retVal);
 }
 
-static void DispApp_initPipelineParams(Dss_Object *appObj, uint32_t dssInstanceNum)
+static void DispApp_initPipelineParams(Dss_Object *appObj)
 {
     uint32_t instCnt = 0U, numPipes = 0U;
     Dss_DispParams *dispParams;
     Dss_InstObject *instObj;
 
-    numPipes = gDssConfigPipelineParams[dssInstanceNum].numTestPipes;
+    numPipes = gDssConfigPipelineParams.numTestPipes;
 
     for(instCnt=0U; instCnt<numPipes; instCnt++)
     {
         /* Initialize video pipes */
         instObj = &appObj->instObj[instCnt];
-        instObj->instId = gDssConfigPipelineParams[dssInstanceNum].instId[instCnt];
+        instObj->instId = gDssConfigPipelineParams.instId[instCnt];
 
         Dss_dispCreateParamsInit(&instObj->createParams);
         Fvid2CbParams_init(&instObj->cbParams);
@@ -712,33 +692,33 @@ static void DispApp_initPipelineParams(Dss_Object *appObj, uint32_t dssInstanceN
         dispParams = &instObj->dispParams;
         Dss_dispParamsInit(dispParams);
 
-        dispParams->pipeCfg.pipeType = gDssConfigPipelineParams[dssInstanceNum].pipeType[instCnt];
-        dispParams->pipeCfg.inFmt.width = gDssConfigPipelineParams[dssInstanceNum].inWidth[instCnt];
-        dispParams->pipeCfg.inFmt.height = gDssConfigPipelineParams[dssInstanceNum].inHeight[instCnt];
+        dispParams->pipeCfg.pipeType = gDssConfigPipelineParams.pipeType[instCnt];
+        dispParams->pipeCfg.inFmt.width = gDssConfigPipelineParams.inWidth[instCnt];
+        dispParams->pipeCfg.inFmt.height = gDssConfigPipelineParams.inHeight[instCnt];
 
         for(uint32_t count = 0U; count < FVID2_MAX_PLANES; count++)
         {
             dispParams->pipeCfg.inFmt.pitch[count] =
-                                        gDssConfigPipelineParams[dssInstanceNum].pitch[instCnt][count];
+                                        gDssConfigPipelineParams.pitch[instCnt][count];
         }
 
         dispParams->pipeCfg.inFmt.dataFormat =
-                                        gDssConfigPipelineParams[dssInstanceNum].inDataFmt[instCnt];
+                                        gDssConfigPipelineParams.inDataFmt[instCnt];
         dispParams->pipeCfg.inFmt.scanFormat =
-                                        gDssConfigPipelineParams[dssInstanceNum].inScanFmt[instCnt];
-        dispParams->pipeCfg.outWidth = gDssConfigPipelineParams[dssInstanceNum].outWidth[instCnt];
-        dispParams->pipeCfg.outHeight = gDssConfigPipelineParams[dssInstanceNum].outHeight[instCnt];
-        dispParams->pipeCfg.scEnable = gDssConfigPipelineParams[dssInstanceNum].scEnable[instCnt];
+                                        gDssConfigPipelineParams.inScanFmt[instCnt];
+        dispParams->pipeCfg.outWidth = gDssConfigPipelineParams.outWidth[instCnt];
+        dispParams->pipeCfg.outHeight = gDssConfigPipelineParams.outHeight[instCnt];
+        dispParams->pipeCfg.scEnable = gDssConfigPipelineParams.scEnable[instCnt];
 
 #if(1U==DISP_APP_ENABLE_FLIP)
         dispParams->pipeCfg.flipType = FVID2_FLIP_TYPE_V;
 #endif
         dispParams->alphaCfg.globalAlpha =
-                                gDssConfigPipelineParams[dssInstanceNum].globalAlpha[instCnt];
+                                gDssConfigPipelineParams.globalAlpha[instCnt];
         dispParams->alphaCfg.preMultiplyAlpha =
-                                gDssConfigPipelineParams[dssInstanceNum].preMultiplyAlpha[instCnt];
-        dispParams->layerPos.startX = gDssConfigPipelineParams[dssInstanceNum].posx[instCnt];
-        dispParams->layerPos.startY = gDssConfigPipelineParams[dssInstanceNum].posy[instCnt];
+                                gDssConfigPipelineParams.preMultiplyAlpha[instCnt];
+        dispParams->layerPos.startX = gDssConfigPipelineParams.posx[instCnt];
+        dispParams->layerPos.startY = gDssConfigPipelineParams.posy[instCnt];
 
 #if(1U == DISP_APP_ENBALE_PIPE_CROP)
         dispParams->cropParams.cropEnable = TRUE;
@@ -751,36 +731,9 @@ static void DispApp_initPipelineParams(Dss_Object *appObj, uint32_t dssInstanceN
     }
 }
 
-int32_t DispApp_setupHDMI( void )
-{
-    BOARD_HdmiCfg_t hdmiCfg;
-
-    hdmiCfg.resolution = BOARD_CTRL_HDMI_RES_1080P;
-    hdmiCfg.i2cInstance = HDMI_AND_DSI_BRIDGE_I2C_CONFIG;
-    hdmiCfg.i2cHandle = gI2cHandle[HDMI_AND_DSI_BRIDGE_I2C_CONFIG];
-    Board_control(BOARD_CTRL_CMD_CFG_HDMI, &hdmiCfg);
-
-    return 0;
-}
-
-int32_t DispApp_setupDSI2DPBridge(void)
-{
-    BOARD_DSI2DPBridgeCfg_t dsiBridgeCfg;
-
-    dsiBridgeCfg.resolution = BOARD_CTRL_DSI_BRIDGE_1080P;
-    dsiBridgeCfg.i2cInstance = HDMI_AND_DSI_BRIDGE_I2C_CONFIG;
-    dsiBridgeCfg.i2cHandle = gI2cHandle[HDMI_AND_DSI_BRIDGE_I2C_CONFIG];
-    Board_control(BOARD_CTRL_CMD_CFG_DSI2DP_BRIDGE, &dsiBridgeCfg);
-
-    return 0;
-}
-
-
-static int32_t DispApp_configDctrl(Dss_Object *appObj, uint32_t dssInstanceNum)
+static int32_t DispApp_configDctrl(Dss_Object *appObj)
 {
     int32_t retVal = FVID2_SOK;
-    /* executeOnce flag specifies the IOCTL calls that should be common across DSS0 and DSS1, to be called only once */
-    static uint32_t executeOnce = 0U;
 
     Dss_DctrlVpParams *vpParams;
     Dss_DctrlOverlayParams *overlayParams;
@@ -796,55 +749,14 @@ static int32_t DispApp_configDctrl(Dss_Object *appObj, uint32_t dssInstanceNum)
     advVpParams = &appObj->advVpParams;
     globalDssParams= &appObj->globalDssParams;
 
-    if (0U == executeOnce)
-    {
-        retVal = Fvid2_control(
-            appObj->dctrlHandle,
-            IOCTL_DSS_DCTRL_SET_PATH,
-            appObj->dctrlPathInfo,
-            NULL);
-    }
-
+    retVal = Fvid2_control(
+        appObj->dctrlHandle,
+        IOCTL_DSS_DCTRL_SET_PATH,
+        appObj->dctrlPathInfo,
+        NULL);
     if(retVal != FVID2_SOK)
     {
         DebugP_log("Dctrl Set Path IOCTL Failed!!!\r\n");
-    }
-
-    if (DSS_OLDI_INTERFACE == gDssDisplayInterface[dssInstanceNum])
-    {
-        retVal = Fvid2_control(appObj->dctrlHandle,
-                                IOCTL_DSS_DCTRL_SET_OLDI_PARAMS,
-                                oldiParams,
-                                NULL);
-        if(retVal != FVID2_SOK)
-        {
-            DebugP_log("DCTRL Set OLDI Params IOCTL Failed!!!\r\n");
-        }
-    }
-    else if (DSS_HDMI_INTERFACE == gDssDisplayInterface[dssInstanceNum])
-    {
-        retVal = DispApp_setupHDMI();
-        if(retVal != FVID2_SOK)
-        {
-            DebugP_log("HDMI Setup Has Failed!!!\r\n");
-        }
-    }
-    else if (DSS_DSI_INTERFACE == gDssDisplayInterface[dssInstanceNum])
-    {
-        if(FVID2_SOK == retVal)
-        {
-            /* Configuring the DSI to DP bridge */
-            DispApp_setupDSI2DPBridge();
-            retVal = Fvid2_control(
-                appObj->dctrlHandle,
-                IOCTL_DSS_DCTRL_SET_DSI_PARAMS,
-                &gDsiParams,
-                NULL);
-            if(retVal != FVID2_SOK)
-            {
-                DebugP_log("DSI Setup Has Failed!!!\r\n");
-            }
-        }
     }
 
     retVal = Fvid2_control(
@@ -867,6 +779,19 @@ static int32_t DispApp_configDctrl(Dss_Object *appObj, uint32_t dssInstanceNum)
         DebugP_log("Dctrl Set VP Params IOCTL Failed!!!\r\n");
     }
 
+    if (appObj->oldiParams != NULL)
+    {
+        retVal = Fvid2_control(
+            appObj->dctrlHandle,
+            IOCTL_DSS_DCTRL_SET_OLDI_PARAMS,
+            oldiParams,
+            NULL);
+        if(retVal != FVID2_SOK)
+        {
+            DebugP_log("DCTRL Set OLDI Params IOCTL Failed!!!\r\n");
+        }
+    }
+
     retVal = Fvid2_control(
         appObj->dctrlHandle,
         IOCTL_DSS_DCTRL_SET_OVERLAY_PARAMS,
@@ -887,15 +812,11 @@ static int32_t DispApp_configDctrl(Dss_Object *appObj, uint32_t dssInstanceNum)
         DebugP_log("DCTRL Set Layer Params IOCTL Failed!!!\r\n");
     }
 
-    if (0U == executeOnce){
-        retVal = Fvid2_control(
-            appObj->dctrlHandle,
-            IOCTL_DSS_DCTRL_SET_GLOBAL_DSS_PARAMS,
-            globalDssParams,
-            NULL);
-        executeOnce++;
-    }
-
+    retVal = Fvid2_control(
+        appObj->dctrlHandle,
+        IOCTL_DSS_DCTRL_SET_GLOBAL_DSS_PARAMS,
+        globalDssParams,
+        NULL);
     if(retVal != FVID2_SOK)
     {
         DebugP_log("DCTRL Set Global DSS Params IOCTL Failed!!!\r\n");
@@ -908,83 +829,10 @@ static int32_t DispApp_pipeCbFxn(Fvid2_Handle handle, void *appData)
 {
     int32_t retVal  = FVID2_SOK;
     Dss_InstObject *instObj = (Dss_InstObject *) appData;
-    Fvid2_FrameList  frmList;
 
     GT_assert (DssTrace, (NULL != instObj));
-
-    retVal = Fvid2_dequeue(instObj->drvHandle,
-                            &frmList,
-                            0U,
-                            FVID2_TIMEOUT_NONE);
-
-    if(FVID2_SOK == retVal)
-    {
-        retVal = Fvid2_queue(instObj->drvHandle, &frmList, 0U);
-        if(FVID2_SOK != retVal)
-        {
-            DebugP_log("Display Queue Failed!!!\r\n");
-        }
-    }
-    else if (FVID2_EAGAIN == retVal)
-    {
-    /* Do nothing as this is first callback */
-    }
-    else
-    {
-        /* Error */
-        DebugP_log("Display Dequeue Failed!!!\r\n");
-    }
-    gLoopCount++;
-
-    if (gLoopCount == DISP_NUM_FRAMES_COUNT)
-    {
-        (void) SemaphoreP_post(&gSyncSem);
-    }
+    (void) SemaphoreP_post(&instObj->syncSem);
 
     return (retVal);
 }
 
-static void DispApp_enableDisableRequiredInstance(uint32_t dss0Enable, uint32_t dss1Enable, Dss_RmInfo *rmInfo)
-{
-    /* Update availability of common region, video pipe, video port and overlay based on the instance Enablement */
-    uint32_t i = 0U;
-    uint32_t assignVal = dss0Enable;
-    rmInfo->dss0Enabled = assignVal;
-    /* For DSS0 */
-    for(i=CSL_DSS_COMM_REG_ID_0; i<CSL_DSS_COMM_REG_ID_2; i++)
-    {
-        rmInfo->isCommRegAvailable[i] = assignVal;
-    }
-    for(i=CSL_DSS_VID_PIPE_ID_VID1; i<CSL_DSS_VID_PIPE_ID_VID2; i++)
-    {
-        rmInfo->isPipeAvailable[i] = assignVal;
-    }
-    for(i=CSL_DSS_OVERLAY_ID_1; i<CSL_DSS_OVERLAY_ID_3; i++)
-    {
-        rmInfo->isOverlayAvailable[i] = assignVal;
-    }
-    for(i=CSL_DSS_VP_ID_1; i<CSL_DSS_VP_ID_3; i++)
-    {
-        rmInfo->isPortAvailable[i] = assignVal;
-    }
-
-    assignVal = dss1Enable;
-    rmInfo->dss1Enabled = assignVal;
-    /* For DSS1 */
-    for(i=CSL_DSS_COMM_REG_ID_2; i<CSL_DSS_COMM_REG_ID_MAX; i++)
-    {
-        rmInfo->isCommRegAvailable[i] = assignVal;
-    }
-    for(i=CSL_DSS_VID_PIPE_ID_VID2; i<CSL_DSS_VID_PIPE_ID_MAX; i++)
-    {
-        rmInfo->isPipeAvailable[i] = assignVal;
-    }
-    for(i=CSL_DSS_OVERLAY_ID_3; i<CSL_DSS_OVERLAY_ID_MAX; i++)
-    {
-        rmInfo->isOverlayAvailable[i] = assignVal;
-    }
-    for(i=CSL_DSS_VP_ID_3; i<CSL_DSS_VP_ID_MAX; i++)
-    {
-        rmInfo->isPortAvailable[i] = assignVal;
-    }
-}

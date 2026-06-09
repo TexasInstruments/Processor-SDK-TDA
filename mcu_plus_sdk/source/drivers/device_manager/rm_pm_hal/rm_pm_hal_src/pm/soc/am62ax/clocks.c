@@ -1,7 +1,7 @@
 /*
- * Data version: 240627_084252
+ * Data version: 250904_120008
  *
- * Copyright (C) 2017-2024, Texas Instruments Incorporated
+ * Copyright (C) 2017-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -195,9 +195,9 @@ enum {
 	PLL_ENTRY_ARM0_24MHZ_2500MHZ_F24BIT,
 	PLL_ENTRY_ARM0_25MHZ_2500MHZ,
 	PLL_ENTRY_ARM0_26MHZ_2500MHZ_F24BIT,
-	PLL_ENTRY_DDR_24MHZ_1866_5MHZ_F24BIT,
-	PLL_ENTRY_DDR_25MHZ_1866_5MHZ_F24BIT,
-	PLL_ENTRY_DDR_26MHZ_1866_5MHZ_F24BIT,
+	PLL_ENTRY_DDR_24MHZ_1866MHZ_F24BIT,
+	PLL_ENTRY_DDR_25MHZ_1866MHZ_F24BIT,
+	PLL_ENTRY_DDR_26MHZ_1866MHZ_F24BIT,
 	PLL_ENTRY_SMS_24MHZ_2400MHZ,
 	PLL_ENTRY_SMS_25MHZ_2400MHZ,
 	PLL_ENTRY_SMS_26MHZ_2400MHZ_F24BIT,
@@ -232,7 +232,7 @@ const struct clk_range soc_clock_ranges[AM62AX_FREQ_RANGE_ID_MAX] = {
 const struct clk_default soc_clock_freq_defaults[10] = {
 	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_0_DEFAULT,	1000000000UL, 1000000000UL, 1000000000UL),
 	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_1_DEFAULT,	960000000UL,  960000000UL,  960000000UL),
-	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_12_DEFAULT, 1866500000UL, 1866500000UL, 1866500000UL),
+	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_12_DEFAULT, 1866000000UL, 1866000000UL, 1866000001UL),
 	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_15_DEFAULT, 2400000000UL, 2400000000UL, 2400000000UL),
 	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_17_DEFAULT, 2040000000UL, 2040000000UL, 2040000000UL),
 	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_5_DEFAULT,	2250000000UL, 2250000000UL, 2250000000UL),
@@ -386,28 +386,28 @@ const struct pll_table_entry soc_pll_table[27] = {
 		.pllfm		= 2581111U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DDR_24MHZ_1866_5MHZ_F24BIT] = {
-		.freq_min_hz	= 1866500000U,
-		.freq_max_hz	= 1866500000U,
+	[PLL_ENTRY_DDR_24MHZ_1866MHZ_F24BIT] =	 {
+		.freq_min_hz	= 1866000000U,
+		.freq_max_hz	= 1866000000U,
 		.plld		= 1U,
 		.pllm		= 77U,
-		.pllfm		= 12932438U,
+		.pllfm		= 12582912U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DDR_25MHZ_1866_5MHZ_F24BIT] = {
-		.freq_min_hz	= 1866500000U,
-		.freq_max_hz	= 1866500000U,
+	[PLL_ENTRY_DDR_25MHZ_1866MHZ_F24BIT] =	 {
+		.freq_min_hz	= 1866000000U,
+		.freq_max_hz	= 1866000001U,
 		.plld		= 1U,
 		.pllm		= 74U,
-		.pllfm		= 11072963U,
+		.pllfm		= 10737419U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DDR_26MHZ_1866_5MHZ_F24BIT] = {
-		.freq_min_hz	= 1866500000U,
-		.freq_max_hz	= 1866500000U,
+	[PLL_ENTRY_DDR_26MHZ_1866MHZ_F24BIT] =	 {
+		.freq_min_hz	= 1866000000U,
+		.freq_max_hz	= 1866000000U,
 		.plld		= 1U,
 		.pllm		= 71U,
-		.pllfm		= 13228190U,
+		.pllfm		= 12905551U,
 		.clkod		= 1U,
 	},
 	[PLL_ENTRY_SMS_24MHZ_2400MHZ] =		 {
@@ -473,9 +473,9 @@ static const u8 pllfracf2_ssmod_16fft_main_1_entries[4] = {
 	PLL_TABLE_LAST,
 };
 static const u8 pllfracf2_ssmod_16fft_main_12_entries[4] = {
-	PLL_ENTRY_DDR_24MHZ_1866_5MHZ_F24BIT,
-	PLL_ENTRY_DDR_25MHZ_1866_5MHZ_F24BIT,
-	PLL_ENTRY_DDR_26MHZ_1866_5MHZ_F24BIT,
+	PLL_ENTRY_DDR_24MHZ_1866MHZ_F24BIT,
+	PLL_ENTRY_DDR_25MHZ_1866MHZ_F24BIT,
+	PLL_ENTRY_DDR_26MHZ_1866MHZ_F24BIT,
 	PLL_TABLE_LAST,
 };
 static const u8 pllfracf2_ssmod_16fft_main_15_entries[4] = {
@@ -3722,7 +3722,7 @@ const struct clk_data soc_clock_data[260] = {
 		.drv		= &clk_drv_pll_16fft,
 		.freq_idx	= AM62AX_FREQ_VALUE_PLLFRACF2_SSMOD_16FFT_MAIN_17,
 		.data		= &clk_data_pllfracf2_ssmod_16fft_main_17.data_pll.data,
-		.flags		= 0,
+		.flags		= CLK_DATA_FLAG_ALLOW_SSC_CHANGE,
 	},
 	[CLK_AM62AX_PLLFRACF2_SSMOD_16FFT_MAIN_2_FOUTVCOP_CLK] =				{
 		.parent		=								{
@@ -3762,7 +3762,7 @@ const struct clk_data soc_clock_data[260] = {
 		.drv		= &clk_drv_pll_16fft,
 		.freq_idx	= AM62AX_FREQ_VALUE_PLLFRACF2_SSMOD_16FFT_MAIN_7,
 		.data		= &clk_data_pllfracf2_ssmod_16fft_main_7.data_pll.data,
-		.flags		= 0,
+		.flags		= CLK_DATA_FLAG_NO_HW_REINIT,
 	},
 	[CLK_AM62AX_PLLFRACF2_SSMOD_16FFT_MAIN_8_FOUTVCOP_CLK] =				{
 		.parent		=								{
@@ -4154,7 +4154,7 @@ const struct clk_data soc_clock_data[260] = {
 			1,
 		},
 		.drv	= &clk_drv_div_pll_16fft_hsdiv.drv,
-		.flags	= CLK_DATA_FLAG_MODIFY_PARENT_FREQ,
+		.flags	= CLK_DATA_FLAG_MODIFY_PARENT_FREQ | CLK_DATA_FLAG_NO_HW_REINIT,
 		.type	= CLK_TYPE_DIV,
 		.data	= &clk_data_hsdiv0_16fft_main_7_hsdiv0.data_div.data,
 	},

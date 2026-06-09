@@ -1,5 +1,5 @@
-/********************************************************************
- * Copyright (C) 2013-2017 Texas Instruments Incorporated.
+/*
+ *  Copyright (C) Texas Instruments Incorporated 2024
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@ extern "C"
 #endif
 #if defined(SOC_AM273X) || defined(SOC_AWR294X)
 #include <cpdma/V0/cslr_cpdma.h>
-#elif defined(SOC_AM263X)
+#elif defined(SOC_AM263X) || defined (SOC_AM263PX)
 #include <cpdma/V1/cslr_cpdma.h>
 #else
 #error "SOC not supported"

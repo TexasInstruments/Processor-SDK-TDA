@@ -14,16 +14,21 @@ __UNDEFINED_STACK_SIZE = 256;
 
 SECTIONS
 {
-    .vectors:{} palign(8) > DDR2
-
     GROUP {
-        .const:  {} palign(8)
-        .text:   {} palign(8)
+        .vectors: {} palign(8)
+    } load = BTCM_VECS, run = ATCM_VECS
+
+    GROUP{
         .text.hwi: palign(8)
         .text.cache: palign(8)
         .text.mpu: palign(8)
         .text.boot: palign(8)
+    } load = BTCM, run = ATCM
+
+    GROUP {
         .data:   {} palign(8)
+        .const:  {} palign(8)
+        .text:   {} palign(8)
         .rodata: {} palign(8)
         .boardcfg_data   : {} palign(8)
     } > DDR2
@@ -55,27 +60,12 @@ SECTIONS
     .bss.app(NOLOAD) : {} > APPIMAGE
 }
 
-/*
-NOTE: Below memory is reserved for DMSC usage
- - During Boot till security handoff is complete
-   0x701E0000 - 0x701FFFFF (128KB)
- - After "Security Handoff" is complete (i.e at run time)
-   0x701FC000 - 0x701FFFFF (16KB)
-
- Security handoff is complete when this message is sent to the DMSC,
-   TISCI_MSG_SEC_HANDOVER
-
- This should be sent once all cores are loaded and all application
- specific firewall calls are setup.
-*/
-
 MEMORY
 {
-    /*R5F_TCMA_VEC : ORIGIN = 0x00000000 LENGTH = 0x00000040
-    R5F_TCMA     : ORIGIN = 0x00000040 LENGTH = 0x00007FC0 */
-
-    /* R5F_TCMB_VECS: ORIGIN = 0x41010000 , LENGTH = 0x00000100
-    R5F_TCMB     : ORIGIN = 0x41010100 , LENGTH = 0x00008000 - 0x100 */
+    BTCM_VECS    : ORIGIN = 0x41010000 , LENGTH = 0x40
+    BTCM         : ORIGIN = 0x41010040 , LENGTH = 0x8000 - 0x40
+    ATCM_VECS    : ORIGIN = 0x0 , LENGTH = 0x40
+    ATCM         : ORIGIN = 0x40 , LENGTH = 0x8000 - 0x40
 
     /* HSM_RAM_VECS : ORIGIN = 0x43C00000 , LENGTH = 0x100
     HSM_RAM      : ORIGIN = 0x43C00100 , LENGTH = 0x3c800 - 0x100 */
@@ -84,5 +74,5 @@ MEMORY
     DDR2         : ORIGIN = 0xA0340000 , LENGTH = 0x200000
 
     /* This section is used by the SBL to temporarily load the appimage for authentication */
-    APPIMAGE  : ORIGIN = 0x82000000 , LENGTH = 0x800000
+    APPIMAGE  : ORIGIN = 0x84000000 , LENGTH = 0x1900000
 }

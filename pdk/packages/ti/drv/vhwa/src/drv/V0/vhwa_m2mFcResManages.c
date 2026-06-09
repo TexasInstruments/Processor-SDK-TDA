@@ -98,7 +98,7 @@ int32_t Vhwa_m2mFcInitAndAllocRes(const Vhwa_M2mFcGraphObj *graphObj)
     for(cnt = 0; cnt < VHWA_FC_MAX_NODES; cnt++)
     {
         nodeId = graphObj->graphNodeObj[cnt].nodeId;
-        if(VHWA_FC_NODE_NONE != nodeId)
+        if((nodeId > VHWA_FC_NODE_NONE) && (nodeId < VHWA_FC_MAX_NODES))
         {
             gResourceList[nodeId].nodeStatus = VHWA_FC_NODE_STATUS_M2M;
         }

@@ -31,8 +31,17 @@ function getConfigurables()
             element.default = ipc_options_default;
             element.options = [ ...ipc_options ];
         }
-        if((element.name == "a53ss0_0") && (getSelfIpcCoreName() != "a53ss0_0")) {
-            element.default = "NONE";
+        if(common.getSocName() == "am62x")
+        {
+            if((element.name == "a53ss0_0" || element.name == "a53ss0_1") && (getSelfIpcCoreName() != "a53ss0_0" && getSelfIpcCoreName() != "a53ss0_1")) {
+                element.default = "NONE";
+            }
+        }
+        else
+        {
+            if((element.name == "a53ss0_0") && (getSelfIpcCoreName() != "a53ss0_0")) {
+                element.default = "NONE";
+            }
         }
       });
 
@@ -48,9 +57,7 @@ function getConfigurables()
                 { name: 1},
                 { name: 2},
                 { name: 4},
-                { name: 6},
                 { name: 8},
-                { name: 12},
                 { name: 16},
             ],
             hidden: hideVringConfig,
@@ -78,7 +85,9 @@ function getConfigurables()
 
         if(common.getSocName().match(/am62x/) ||
            common.getSocName().match(/am62ax/)||
+           common.getSocName().match(/am62dx/)||
            common.getSocName().match(/am62px/) ||
+           common.getSocName().match(/am275x/) ||
            common.getSocName().match(/j722s/))
            {
                 if(element.name == "vringNumBuf")
@@ -87,14 +96,30 @@ function getConfigurables()
                     element.options.push({ name: 64});
                     element.options.push({ name: 128});
                     element.options.push({ name: 256});
-                    element.default = 256;
-                    element.readOnly = true;
+                    if(common.getSocName().match(/am275x/))
+                    {
+                        element.default = 8;
+                        element.readOnly = false;
+                    }
+                    else
+                    {
+                        element.default = 256;
+                        element.readOnly = false;
+                    }
                 }
 
                 if (element.name == "vringMsgSize")
                 {
-                    element.default = 512;
-                    element.readOnly = true;
+                    if(common.getSocName().match(/am275x/))
+                    {
+                        element.default = 64;
+                        element.readOnly = false;
+                    }
+                    else
+                    {
+                        element.default = 512;
+                        element.readOnly = true;
+                    }
                 }
            }
 
@@ -102,24 +127,51 @@ function getConfigurables()
 
         let vringAllocationPDKHidden = true;
         let vringAllocationPDKDefault = false;
+        let isRemoteCoreQNX = false;
+        let isRemoteCoreQNXHidden = false;
 
         if(common.getSocName().match(/am62x/) ||
         common.getSocName().match(/am62ax/)||
+        common.getSocName().match(/am62dx/)||
         common.getSocName().match(/am62px/) ||
+        common.getSocName().match(/am275x/) ||
         common.getSocName().match(/j722s/))
         {
             vringAllocationPDKHidden = false;
-            vringAllocationPDKDefault = true;
+            if (common.getSocName().match(/am275x/))
+            {
+                vringAllocationPDKDefault = false;
+            }
+            else
+            {
+                vringAllocationPDKDefault = true;
+            }
         }
         config.push(
             {
                 name: "vringAllocationPDK",
                 displayName: "PDK IPC",
-                description: `Enable IPC to work with PDK implementation`,
+                description: `Enable IPC to work with cores running MCAL or QNX`,
                 default: vringAllocationPDKDefault,
                 hidden: vringAllocationPDKHidden,
             },
-        );
+            );
+
+        if(common.getSocName().match(/am62x/)||
+        common.getSocName().match(/am62ax/)||
+        common.getSocName().match(/am62px/)||
+        common.getSocName().match(/j722s/))
+        {
+            config.push(
+                {
+                    name: "remoteCoreQNX",
+                    displayName: "Remote Core QNX",
+                    description: `Enable if one of the remote cores is running QNX. This is needed to set vring alignment to 4K`,
+                    default: isRemoteCoreQNX,
+                    hidden: isRemoteCoreQNXHidden,
+                },
+            );
+        }
 
     /* create a instance like obj, so that we can get to the defaults as we would when inside onChange */
     const instanceLikeObj = _.reduce(config, (result, configurable) => {
@@ -151,6 +203,9 @@ function getConfigurables()
         if(element.name == "vringAllocationPDK")
         element.onChange = onChangePdkIpc;
 
+        if(element.name == "remoteCoreQNX")
+        element.onChange = onChangeQnxIpc;
+
         });
 
     return config;
@@ -159,15 +214,51 @@ function onChangePdkIpc(instance, ui)
 {
     if (instance.vringAllocationPDK == true)
     {
-        instance.vringNumBuf = 256;
+        if (common.getSocName().match(/am275x/))
+        {
+            instance.vringNumBuf = 16;
+        }
+        else
+        {
+            instance.vringNumBuf = 256;
+        }
         instance.vringMsgSize = 512;
-        ui.vringNumBuf.readOnly = true;
         ui.vringMsgSize.readOnly = true;
+
+        if (ui.remoteCoreQNX != undefined)
+            ui.remoteCoreQNX.hidden = false;
     }
     else
     {
         ui.vringNumBuf.readOnly = false;
         ui.vringMsgSize.readOnly = false;
+        if (ui.remoteCoreQNX != undefined)
+            ui.remoteCoreQNX.hidden = true;
+    }
+    onChange(instance, ui);
+}
+
+function onChangeQnxIpc(instance, ui)
+{
+    if (instance.remoteCoreQNX == true)
+    {
+            instance.vringNumBuf = 256;
+            instance.vringMsgSize = 512;
+            ui.vringMsgSize.readOnly = true;
+            ui.vringNumBuf.readOnly = false;
+    }
+    else
+    {
+        ui.vringNumBuf.readOnly = false;
+        if (instance.vringAllocationPDK == true)
+        {
+            ui.vringNumBuf.readOnly = false;
+            ui.vringMsgSize.readOnly = true;
+        }
+        else
+        {
+            ui.vringMsgSize.readOnly = false;
+        }
     }
     onChange(instance, ui);
 }
@@ -274,12 +365,36 @@ function getRPMessageVringRxTxMap(instance)
     }
     else
     {
-        for( let src of enabledCpus ) {
-            rxTxMap[src] = {};
-            for( let dst of enabledCpus ) {
-                rxTxMap[src][dst] = -1;
-                if(dst != src) { /* NO VRING for a CPU to itself */
-                    rxTxMap[src][dst] = getVringIndexPDK(enabledCpus.length, ipc_soc.getIPCCoreID(src), ipc_soc.getIPCCoreID(dst));
+        if (common.getSocName().match(/am275x/))
+        {
+            /* for each name, construct a N x N object mapping SRC CPU to DST CPU VRING ID,
+            Assign VRING IDs to each SRC/DST pair, skip assignment when SRC == DST */
+            for( let src of enabledCpus ) {
+                rxTxMap[src] = {};
+                for( let dst of enabledCpus ) {
+                    rxTxMap[src][dst] = -1;
+                    if(dst != src) { /* NO VRING for a CPU to itself */
+                        rxTxMap[src][dst] = vringId;
+                        vringId++;
+                    }
+                }
+            }
+        }
+        else
+        {
+            let length = enabledCpus.length;
+            if(((common.getSocName().match(/am62ax/)) || (common.getSocName().match(/am62dx/))) && (instance.vringAllocationPDK == true)){
+                /* QNX uses pdk based vring allocation.As per PDK, length used for vring logic
+                should be max cpu's for am62ax */
+                length = ipc_soc.getMaxCpus();
+            }
+            for( let src of enabledCpus ) {
+                rxTxMap[src] = {};
+                for( let dst of enabledCpus ) {
+                    rxTxMap[src][dst] = -1;
+                    if(dst != src) { /* NO VRING for a CPU to itself */
+                        rxTxMap[src][dst] = getVringIndexPDK(length, ipc_soc.getIPCCoreID(src), ipc_soc.getIPCCoreID(dst));
+                    }
                 }
             }
         }

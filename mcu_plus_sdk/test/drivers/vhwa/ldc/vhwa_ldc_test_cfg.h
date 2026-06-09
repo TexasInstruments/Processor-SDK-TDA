@@ -44,7 +44,7 @@
 /* ========================================================================== */
 
     {
-        /* 3, 2MP NV12 8p to 8p, with block size aligned */
+        /* 0, 2MP NV12 8p to 8p, with block size aligned */
         1920, 1080, 1920, FVID2_DF_YUV420SP_UV, FVID2_CCSF_BITS8_PACKED,
         {TRUE, FALSE},
         {
@@ -158,5 +158,6 @@
             {1920*3/2, FVID2_CCSF_BITS12_PACKED},
         },
     },
+    
 
 #endif

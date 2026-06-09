@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2023-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -46,22 +46,32 @@
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
-#if defined (SOC_AM273X) || defined (SOC_AWR294X) || defined (SOC_AM263X)
-#define TEST_FLASH_OFFSET_BASE      (0x10000U)
-#else
 #define TEST_FLASH_OFFSET_BASE      (0x200000U)
+
+#if defined (SOC_AM62AX) || defined (SOC_AM62X)
+#define TEST_FLASH_PAGE_SIZE        (4096)
+#define TEST_FLASH_BLOCK_SIZE       (262144)
+#define TEST_FLASH_DATA_MAX_VALUE   (256)
+#define TEST_FLASH_BUF_LEN          (15U)
+#define TEST_FLASH_BYTE_OFFSET      (8U)
+#define TEST_FLASH_TEMP_BUF_SIZE    (32U)
+#define TEST_FLASH_BUF_LEN_DMA      (2024U)
 #endif
+#if !defined(SOC_AM62AX)
 #define TEST_FLASH_DATA_SIZE        (256U)
 #define TEST_FLASH_RX_BUF_SIZE      (2048U)
 #define TEST_FLASH_BUF_LEN_ODD      (15U)
 #define TEST_FLASH_BYTE_OFFSET_ODD  (7U)
 #define TEST_FLASH_TEMP_BUF_SIZE    (32U)
 #define TEST_FLASH_BUF_LEN_ODD_DMA  (2021U)
-
+#endif
 /* ========================================================================== */
 /*                             Global Variables                               */
 /* ========================================================================== */
-
+#if defined(SOC_AM62AX) || defined (SOC_AM62X)
+uint8_t gFlashTestTxBuf[TEST_FLASH_BLOCK_SIZE];
+uint8_t gFlashTestRxBuf[TEST_FLASH_BLOCK_SIZE]; // __attribute__((aligned(128U)));
+#else
 uint8_t gFlashTestTxBuf[TEST_FLASH_DATA_SIZE] =
 {
     0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,
@@ -83,14 +93,29 @@ uint8_t gFlashTestTxBuf[TEST_FLASH_DATA_SIZE] =
 };
 
 uint8_t gFlashTestRxBuf[TEST_FLASH_RX_BUF_SIZE] __attribute__((aligned(128U)));
-
+#endif
 /* ========================================================================== */
 /*                 Internal Function Declarations                             */
 /* ========================================================================== */
 
 /* Testcases */
+#if defined(SOC_AM62AX) || defined (SOC_AM62X)
+static void test_nand_flash_readwrite(void *args);
+static void test_nand_flash_read_multiple(void *args);
+static void test_nand_flash_skip_bad_block(void *args);
+#else
 static void test_flash_readwrite(void *args);
 static void test_flash_read_multiple(void *args);
+#endif
+
+#if !defined(SOC_AM62AX)
+static void test_flash_readWriteBottomHybridLayout(void *args);
+static void test_flash_readWriteTopHybridLayout(void *args);
+static void test_flash_readWriteSplitLayout(void *args);
+#endif
+
+extern uint32_t isHybridLayout;
+extern uint32_t hybridLayoutType;
 
 /* ========================================================================== */
 /*                          Function Definitions                              */
@@ -98,12 +123,17 @@ static void test_flash_read_multiple(void *args);
 
 void test_main(void *args)
 {
+    Board_flashClose();
+    Drivers_ospiClose();
+    Drivers_ospiOpen();
+
     UNITY_BEGIN();
-
-    /* Open OSPI and other drivers */
-    Drivers_open();
-
+#if defined(SOC_AM62AX) || defined (SOC_AM62X)
+    RUN_TEST(test_nand_flash_readwrite, 246, NULL);
+#else
     RUN_TEST(test_flash_readwrite, 246, NULL);
+#endif
+
 #if defined (SOC_AM273X) || defined (SOC_AWR294X) || defined (SOC_AM263X)
     Drivers_qspiClose();
     Drivers_qspiOpen();
@@ -111,12 +141,20 @@ void test_main(void *args)
     Drivers_ospiClose();
     Drivers_ospiOpen();
 #endif
+#if defined(SOC_AM62AX) || defined (SOC_AM62X)
+    RUN_TEST(test_nand_flash_read_multiple, 247, NULL);
+    RUN_TEST(test_nand_flash_skip_bad_block, 4852, NULL);
+#else
     RUN_TEST(test_flash_read_multiple, 247, NULL);
+#endif
+
+#if !defined(SOC_AM62AX)
+    RUN_TEST(test_flash_readWriteBottomHybridLayout, 8884, NULL);
+    RUN_TEST(test_flash_readWriteTopHybridLayout, 8885, NULL);
+    RUN_TEST(test_flash_readWriteSplitLayout, 8886, NULL);
+#endif
 
     UNITY_END();
-
-    /* Close OSPI and other drivers */
-    Drivers_close();
 
     return;
 }
@@ -131,6 +169,279 @@ void tearDown(void)
 }
 
 /* Testcases */
+#if defined(SOC_AM62AX) || defined (SOC_AM62X)
+static void test_nand_flash_readwrite(void *args)
+{
+    int32_t retVal = SystemP_SUCCESS;
+    uint32_t blk, offset, page;
+
+    /* Open Flash drivers with OSPI instance as input */
+    retVal = Board_driversOpen();
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+    Flash_Attrs *flashAttrs = Flash_getAttrs(CONFIG_FLASH0);
+
+    uint16_t uOffset = 0;
+    uint16_t uValue;
+
+    /* Fill the gFlashTestTxBuf with values 0-255 */
+    while(uOffset < TEST_FLASH_PAGE_SIZE)
+    {
+        for(uValue = 0; uValue < TEST_FLASH_DATA_MAX_VALUE; uValue++)
+        {
+            gFlashTestTxBuf[uOffset ++] = uValue;
+        }
+    }
+
+    uint32_t loopCnt = 10U;
+    uint32_t i;
+
+    /* Set an invalid block count */
+    uint32_t currBlock = flashAttrs->blockCount + 1;
+
+    for(i=0; i<loopCnt; i++)
+    {
+        memset(gFlashTestRxBuf, '\0', TEST_FLASH_PAGE_SIZE);
+        offset = TEST_FLASH_OFFSET_BASE + i*(flashAttrs->pageSize*flashAttrs->pageCount);
+        Flash_offsetToBlkPage(gFlashHandle[CONFIG_FLASH0], offset, &blk, &page);
+        if(currBlock != blk)
+        {
+            Flash_eraseBlk(gFlashHandle[CONFIG_FLASH0], blk);
+            currBlock = blk;
+        }
+        Flash_write(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestTxBuf, TEST_FLASH_PAGE_SIZE);
+        Flash_read(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestRxBuf, TEST_FLASH_PAGE_SIZE);
+        retVal |= memcmp(gFlashTestTxBuf, gFlashTestRxBuf, TEST_FLASH_PAGE_SIZE);
+    }
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+    Board_driversClose();
+}
+static void test_nand_flash_read_multiple(void *args)
+{
+    int32_t retVal = SystemP_SUCCESS;
+    uint32_t blk, offset, page;
+
+    /* Open Flash drivers with OSPI instance as input */
+    retVal = Board_driversOpen();
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+    Flash_Attrs *flashAttrs = Flash_getAttrs(CONFIG_FLASH0);
+
+    /* Write two blocks of data (512 KB)*/
+    uint32_t loopCnt = 2 * flashAttrs->pageCount;
+    uint32_t i;
+
+    memset(gFlashTestRxBuf, '\0', TEST_FLASH_PAGE_SIZE);
+
+    /* Set an invalid block count */
+    uint32_t currBlock = flashAttrs->blockCount + 1;
+
+    for(i=0; i<loopCnt; i++)
+    {
+        offset = TEST_FLASH_OFFSET_BASE + i*(flashAttrs->pageSize);
+        Flash_offsetToBlkPage(gFlashHandle[CONFIG_FLASH0], offset, &blk, &page);
+        if(currBlock != blk)
+        {
+            Flash_eraseBlk(gFlashHandle[CONFIG_FLASH0], blk);
+            currBlock = blk;
+        }
+        Flash_write(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestTxBuf, TEST_FLASH_PAGE_SIZE);
+    }
+
+    /* READ CHECKS */
+
+    uint8_t recvBuf[TEST_FLASH_TEMP_BUF_SIZE] __attribute__((aligned(128U)));
+    uint8_t checkBuf[TEST_FLASH_TEMP_BUF_SIZE];
+    uint32_t checkIndex = 0U;
+
+    /*
+     * CHECK 1 : Read odd bytes from an aligned offset
+     */
+    /* Set an aligned offset */
+    offset = TEST_FLASH_OFFSET_BASE + 4096;
+
+    /* Fill the check buffer */
+    for(i = 0; i < TEST_FLASH_BUF_LEN; i++)
+    {
+        checkBuf[i] = gFlashTestTxBuf[(offset+i)%TEST_FLASH_DATA_MAX_VALUE];
+    }
+
+    /* Read the bytes from the aligned offset */
+    memset(recvBuf, 0, TEST_FLASH_TEMP_BUF_SIZE);
+    Flash_read(gFlashHandle[CONFIG_FLASH0], offset, recvBuf, TEST_FLASH_BUF_LEN);
+
+    retVal = memcmp(checkBuf, recvBuf, TEST_FLASH_BUF_LEN);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+    /*
+     * CHECK 2 : Read  bytes from unaligned offset
+     */
+    /* Set an unaligned offset(offset should be 8byte alligned) */
+    offset = TEST_FLASH_OFFSET_BASE + 104;
+
+    /* Fill the check buffer */
+    for(i = 0; i < TEST_FLASH_BUF_LEN; i++)
+    {
+        checkBuf[i] = gFlashTestTxBuf[(offset+i)%TEST_FLASH_PAGE_SIZE];
+    }
+    /* Read the bytes from the unaligned offset */
+    memset(recvBuf, 0, TEST_FLASH_TEMP_BUF_SIZE);
+    Flash_read(gFlashHandle[CONFIG_FLASH0], offset, recvBuf, TEST_FLASH_BUF_LEN);
+
+    retVal = memcmp(checkBuf, recvBuf, TEST_FLASH_BUF_LEN);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+    /*
+     * CHECK 3: Read across page boundary
+     */
+    /* Set offset back some  bytes */
+    offset = TEST_FLASH_OFFSET_BASE + TEST_FLASH_PAGE_SIZE - TEST_FLASH_BYTE_OFFSET;
+
+    /* Expected index in check buffer*/
+    checkIndex = TEST_FLASH_PAGE_SIZE - TEST_FLASH_BYTE_OFFSET;
+
+    /* Fill the check buffer */
+    for(i = 0; i < TEST_FLASH_BUF_LEN; i++)
+    {
+        checkBuf[i] = gFlashTestTxBuf[(checkIndex+i)%TEST_FLASH_PAGE_SIZE];
+    }
+
+    /* Read the bytes from the offset across the pages */
+    memset(recvBuf, 0, TEST_FLASH_TEMP_BUF_SIZE);
+    Flash_read(gFlashHandle[CONFIG_FLASH0], offset, recvBuf, TEST_FLASH_BUF_LEN);
+
+    retVal = memcmp(checkBuf, recvBuf, TEST_FLASH_BUF_LEN);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+    /*
+     * CHECK 4 : Read across block boundary
+     */
+    /* Set offset back some  bytes */
+    offset = TEST_FLASH_OFFSET_BASE + flashAttrs->pageCount*flashAttrs->pageSize - TEST_FLASH_BYTE_OFFSET;
+
+    /* Expected index in test buffer*/
+    checkIndex = TEST_FLASH_PAGE_SIZE - TEST_FLASH_BYTE_OFFSET;
+
+    /* Fill the check buffer */
+    for(i = 0; i < TEST_FLASH_BUF_LEN; i++)
+    {
+        checkBuf[i] = gFlashTestTxBuf[(checkIndex+i)%TEST_FLASH_PAGE_SIZE];
+    }
+
+    /* Read the  bytes from the offset across the block */
+    memset(recvBuf, 0, TEST_FLASH_TEMP_BUF_SIZE);
+    Flash_read(gFlashHandle[CONFIG_FLASH0], offset, recvBuf, TEST_FLASH_BUF_LEN);
+
+    retVal = memcmp(checkBuf, recvBuf, TEST_FLASH_BUF_LEN);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+    /*
+     * CHECK 5 : Read odd bytes > 1024 from unaligned source address bytes so that DMA is used for read
+     */
+
+    /* Set an unaligned offset */
+    offset = TEST_FLASH_OFFSET_BASE + TEST_FLASH_BYTE_OFFSET;
+
+    Flash_read(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestRxBuf, TEST_FLASH_BUF_LEN_DMA);
+
+    for(i = 0; i < TEST_FLASH_BUF_LEN_DMA; i++)
+    {
+        if(gFlashTestTxBuf[(i+TEST_FLASH_BYTE_OFFSET)%256] != gFlashTestRxBuf[i])
+        {
+            retVal = SystemP_FAILURE;
+            break;
+        }
+    }
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+    Board_driversClose();
+}
+
+static void test_nand_flash_skip_bad_block(void *args)
+{
+    int32_t retVal = SystemP_SUCCESS;
+    uint32_t blk, offset1, offset2, page;
+
+    uint32_t uOffset = 0;
+    uint16_t uValue;
+
+    /* Fill the gFlashTestTxBuf with values 0-255 */
+    while(uOffset < TEST_FLASH_BLOCK_SIZE)
+    {
+        for(uValue = 0; uValue < TEST_FLASH_DATA_MAX_VALUE; uValue++)
+        {
+            gFlashTestTxBuf[uOffset ++] = uValue;
+        }
+    }
+
+    /* Open Flash drivers with OSPI instance as input */
+    retVal = Board_driversOpen();
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+    Flash_Attrs *flashAttrs = Flash_getAttrs(CONFIG_FLASH0);
+    Flash_Config *config = (Flash_Config*)(gFlashHandle[CONFIG_FLASH0]);
+    Flash_NandOspiObject *obj = (Flash_NandOspiObject*)(config->object);
+
+    offset1 = TEST_FLASH_OFFSET_BASE;
+    offset2 = TEST_FLASH_OFFSET_BASE + 2*(flashAttrs->blockSize);
+
+    /* Replace the spare area data with bad spare area data */
+    uint32_t *goodData = obj->spareAreaData;
+    obj->spareAreaData = obj->badSpareAreaData;
+
+    memset(gFlashTestRxBuf, '\0', TEST_FLASH_PAGE_SIZE);
+
+    /* Write bad spare area data at offset 1 */
+    Flash_offsetToBlkPage(gFlashHandle[CONFIG_FLASH0], offset1, &blk, &page);
+    Flash_eraseBlk(gFlashHandle[CONFIG_FLASH0], blk);
+    Flash_write(gFlashHandle[CONFIG_FLASH0], offset1, gFlashTestTxBuf, TEST_FLASH_PAGE_SIZE);
+
+    /* Write bad spare area data at offset 2 */
+    Flash_offsetToBlkPage(gFlashHandle[CONFIG_FLASH0], offset2, &blk, &page);
+    Flash_eraseBlk(gFlashHandle[CONFIG_FLASH0], blk);
+    Flash_write(gFlashHandle[CONFIG_FLASH0], offset2, gFlashTestTxBuf, TEST_FLASH_PAGE_SIZE);
+
+    Board_driversClose();
+
+    /* Replace bad spare area data with good spare area data */
+    obj->spareAreaData = goodData;
+
+    /* Enable bad block check */
+    obj->badBlockCheck = TRUE;
+
+    retVal = Board_driversOpen();
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+    memset(gFlashTestRxBuf, '\0', TEST_FLASH_PAGE_SIZE);
+
+    /* Perform read write on the bad blocks */
+    Flash_offsetToBlkPage(gFlashHandle[CONFIG_FLASH0], offset1, &blk, &page);
+    Flash_eraseBlk(gFlashHandle[CONFIG_FLASH0], blk);
+    Flash_write(gFlashHandle[CONFIG_FLASH0], offset1+(flashAttrs->pageSize*16), gFlashTestTxBuf, TEST_FLASH_BLOCK_SIZE);
+    Flash_read(gFlashHandle[CONFIG_FLASH0], offset1+(flashAttrs->pageSize*16), gFlashTestRxBuf, TEST_FLASH_BLOCK_SIZE);
+
+    retVal |= memcmp(gFlashTestTxBuf, gFlashTestRxBuf, TEST_FLASH_PAGE_SIZE);
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+    Board_driversClose();
+
+    /* Disable bad block check */
+    obj->badBlockCheck = FALSE;
+
+    retVal = Board_driversOpen();
+    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+    /* Erase bad blocks to clear bad spare area data */
+    Flash_offsetToBlkPage(gFlashHandle[CONFIG_FLASH0], offset1, &blk, &page);
+    Flash_eraseBlk(gFlashHandle[CONFIG_FLASH0], blk);
+
+    Flash_offsetToBlkPage(gFlashHandle[CONFIG_FLASH0], offset2, &blk, &page);
+    Flash_eraseBlk(gFlashHandle[CONFIG_FLASH0], blk);
+
+    Board_driversClose();
+}
+#else
 static void test_flash_readwrite(void *args)
 {
     int32_t retVal = SystemP_SUCCESS;
@@ -307,4 +618,155 @@ static void test_flash_read_multiple(void *args)
     TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
 
     Board_driversClose();
+    Drivers_ospiClose();
 }
+#endif
+
+#if !defined(SOC_AM62AX)
+static void test_flash_readWriteBottomHybridLayout(void *args)
+{
+    int32_t retVal = SystemP_SUCCESS;
+    uint32_t blk, offset, page;
+
+    Flash_NorOspiHybridLayoutCfg *lCfg = (Flash_NorOspiHybridLayoutCfg*)(gFlashConfig[CONFIG_FLASH0].layoutCfg);
+
+    if(lCfg != NULL)
+    {
+        lCfg->isHybridLayout = 1U;
+        lCfg->hybridLayoutType = 0U;
+
+        /* Open Flash drivers with OSPI instance as input */
+        Drivers_ospiOpen();
+        retVal = Board_driversOpen();
+        TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+        offset = 0x0;
+        memset(gFlashTestRxBuf, '\0', TEST_FLASH_DATA_SIZE);
+        Flash_offsetToSectorPage(gFlashHandle[CONFIG_FLASH0], offset, &blk, &page);
+        Flash_eraseSector(gFlashHandle[CONFIG_FLASH0], blk);
+        Flash_write(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestTxBuf, TEST_FLASH_DATA_SIZE);
+        Flash_read(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        retVal |= memcmp(gFlashTestTxBuf, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+        offset = 0x20000;
+        memset(gFlashTestRxBuf, '\0', TEST_FLASH_DATA_SIZE);
+        Flash_offsetToBlkPage(gFlashHandle[CONFIG_FLASH0], offset, &blk, &page);
+        Flash_eraseBlk(gFlashHandle[CONFIG_FLASH0], blk);
+        Flash_write(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestTxBuf, TEST_FLASH_DATA_SIZE);
+        Flash_read(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        retVal |= memcmp(gFlashTestTxBuf, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+        lCfg->isHybridLayout = 0U;
+        lCfg->hybridLayoutType = 0U;
+
+        Board_driversClose();
+        Drivers_ospiClose();
+    }
+}
+
+static void test_flash_readWriteTopHybridLayout(void *args)
+{
+    int32_t retVal = SystemP_SUCCESS;
+    uint32_t blk, offset, page;
+
+    Flash_NorOspiHybridLayoutCfg *lCfg = (Flash_NorOspiHybridLayoutCfg*)(gFlashConfig[CONFIG_FLASH0].layoutCfg);
+
+    if(lCfg != NULL)
+    {
+        lCfg->isHybridLayout = 1U;
+        lCfg->hybridLayoutType = 1U;
+
+        /* Open Flash drivers with OSPI instance as input */
+        Drivers_ospiOpen();
+        retVal = Board_driversOpen();
+        TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+        offset = 0x03FE0000;
+        memset(gFlashTestRxBuf, '\0', TEST_FLASH_DATA_SIZE);
+        Flash_offsetToSectorPage(gFlashHandle[CONFIG_FLASH0], offset, &blk, &page);
+        Flash_eraseSector(gFlashHandle[CONFIG_FLASH0], blk);
+        Flash_write(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestTxBuf, TEST_FLASH_DATA_SIZE);
+        Flash_read(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        retVal |= memcmp(gFlashTestTxBuf, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+        offset = 0x03FC0000;
+        memset(gFlashTestRxBuf, '\0', TEST_FLASH_DATA_SIZE);
+        Flash_offsetToBlkPage(gFlashHandle[CONFIG_FLASH0], offset, &blk, &page);
+        Flash_eraseBlk(gFlashHandle[CONFIG_FLASH0], blk);
+        Flash_write(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestTxBuf, TEST_FLASH_DATA_SIZE);
+        Flash_read(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        retVal |= memcmp(gFlashTestTxBuf, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+        lCfg->isHybridLayout = 0U;
+        lCfg->hybridLayoutType = 0U;
+
+        Board_driversClose();
+        Drivers_ospiClose();
+    }
+}
+
+static void test_flash_readWriteSplitLayout(void *args)
+{
+    int32_t retVal = SystemP_SUCCESS;
+    uint32_t blk, offset, page;
+
+    Flash_NorOspiHybridLayoutCfg *lCfg = (Flash_NorOspiHybridLayoutCfg*)(gFlashConfig[CONFIG_FLASH0].layoutCfg);
+
+    if(lCfg != NULL)
+    {
+        lCfg->isHybridLayout = 1U;
+        lCfg->hybridLayoutType = 2U;
+
+        /* Open Flash drivers with OSPI instance as input */
+        Drivers_ospiOpen();
+        retVal = Board_driversOpen();
+        TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+        offset = 0x0;
+        memset(gFlashTestRxBuf, '\0', TEST_FLASH_DATA_SIZE);
+        Flash_offsetToSectorPage(gFlashHandle[CONFIG_FLASH0], offset, &blk, &page);
+        Flash_eraseSector(gFlashHandle[CONFIG_FLASH0], blk);
+        Flash_write(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestTxBuf, TEST_FLASH_DATA_SIZE);
+        Flash_read(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        retVal |= memcmp(gFlashTestTxBuf, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+        offset = 0x00010000;
+        memset(gFlashTestRxBuf, '\0', TEST_FLASH_DATA_SIZE);
+        Flash_offsetToBlkPage(gFlashHandle[CONFIG_FLASH0], offset, &blk, &page);
+        Flash_eraseBlk(gFlashHandle[CONFIG_FLASH0], blk);
+        Flash_write(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestTxBuf, TEST_FLASH_DATA_SIZE);
+        Flash_read(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        retVal |= memcmp(gFlashTestTxBuf, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+        offset = 0x03FF0000;
+        memset(gFlashTestRxBuf, '\0', TEST_FLASH_DATA_SIZE);
+        Flash_offsetToSectorPage(gFlashHandle[CONFIG_FLASH0], offset, &blk, &page);
+        Flash_eraseSector(gFlashHandle[CONFIG_FLASH0], blk);
+        Flash_write(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestTxBuf, TEST_FLASH_DATA_SIZE);
+        Flash_read(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        retVal |= memcmp(gFlashTestTxBuf, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+        offset = 0x03FC0000;
+        memset(gFlashTestRxBuf, '\0', TEST_FLASH_DATA_SIZE);
+        Flash_offsetToBlkPage(gFlashHandle[CONFIG_FLASH0], offset, &blk, &page);
+        Flash_eraseBlk(gFlashHandle[CONFIG_FLASH0], blk);
+        Flash_write(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestTxBuf, TEST_FLASH_DATA_SIZE);
+        Flash_read(gFlashHandle[CONFIG_FLASH0], offset, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        retVal |= memcmp(gFlashTestTxBuf, gFlashTestRxBuf, TEST_FLASH_DATA_SIZE);
+        TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+
+        lCfg->isHybridLayout = 0U;
+        lCfg->hybridLayoutType = 0U;
+
+        Board_driversClose();
+        Drivers_ospiClose();
+    }
+}
+#endif

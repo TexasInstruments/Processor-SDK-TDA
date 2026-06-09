@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Texas Instruments Incorporated
+ * Copyright (C) 2021-2024 Texas Instruments Incorporated
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -100,6 +100,13 @@
 #define UART_CTS_ENABLE                  (UART_EFR_HW_ENALE_CTS_VALUE)
 #define UART_RTS_CTS_ENABLE              (UART_EFR_HW_ENABLE_RTS_CTS_FLOW_CONTROL_VALUE)
 
+#define UART_TIMEOUTL                       (0x98U)
+#define UART_TIMEOUTH                       (0x9CU)
+
+#define UART_EFR2                             (0x8CU)
+#define UART_EFR2_TIMEOUT_BEHAVE_SHIFT        (0x6U)
+#define UART_EFR2_TIMEOUT_BEHAVE_MASK         (0x6U)
+
 /* ========================================================================== */
 /*                         Structures and Enums                               */
 /* ========================================================================== */
@@ -192,6 +199,7 @@ static void UART_flowCtrlTrigLvlConfig(uint32_t baseAddr,
 static uint32_t UART_spaceAvail(uint32_t baseAddr);
 static uint32_t UART_getRxError(uint32_t baseAddr);
 static uint32_t UART_regConfigModeEnable(uint32_t baseAddr, uint32_t modeFlag);
+static void UART_i2310WA(uint32_t baseAddr);
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
@@ -219,7 +227,7 @@ void UART_init(void)
         object = gUartConfig[cnt].object;
         DebugP_assert(NULL != object);
         memset(object, 0, sizeof(UART_Object));
-        gUartConfig[cnt].attrs->baseAddr = (uint32_t) AddrTranslateP_getLocalAddr(gUartConfig[cnt].attrs->baseAddr);
+        gUartConfig[cnt].attrs->baseAddr = (uint32_t) AddrTranslateP_getLocalAddr((uint64_t)gUartConfig[cnt].attrs->baseAddr);
     }
 
     /* Create driver lock */
@@ -348,7 +356,7 @@ UART_Handle UART_open(uint32_t index, const UART_Params *prms)
 
     if(SystemP_SUCCESS == status)
     {
-        object->isOpen = TRUE;
+        object->isOpen = 1U;
         handle = (UART_Handle) config;
     }
 
@@ -441,7 +449,7 @@ void UART_close(UART_Handle handle)
             object->hwiHandle = NULL;
         }
 
-        object->isOpen = FALSE;
+        object->isOpen = 0U;
         SemaphoreP_post(&gUartDrvObj.lockObj);
     }
 
@@ -822,7 +830,7 @@ void UART_flushTxFifo(UART_Handle handle)
     const UART_Attrs   *attrs;
     uint32_t            isTxFifoEmpty, startTicks, elapsedTicks;
     uint32_t            timeout = UART_TRANSMITEMPTY_TRIALCOUNT;
-    uint32_t            timeoutElapsed  = FALSE;
+    uint32_t            timeoutElapsed  = 0U;
 
     config = (UART_Config *) handle;
 
@@ -833,7 +841,7 @@ void UART_flushTxFifo(UART_Handle handle)
 
         /* Update current tick value to perform timeout operation */
         startTicks = ClockP_getTicks();
-        while (FALSE == timeoutElapsed)
+        while (0U == timeoutElapsed)
         {
             /* Get TX FIFO status */
             isTxFifoEmpty = UART_spaceAvail(attrs->baseAddr);
@@ -848,14 +856,14 @@ void UART_flushTxFifo(UART_Handle handle)
             if (elapsedTicks >= timeout)
             {
                 /* timeout occured */
-                timeoutElapsed = TRUE;
+                timeoutElapsed = 1U;
             }
             else
             {
                 TaskP_yield();
             }
         }
-        DebugP_assert(FALSE == timeoutElapsed);
+        DebugP_assert(0U == timeoutElapsed);
     }
 
     return;
@@ -917,7 +925,7 @@ static Bool UART_writeCancelNoCB(UART_Handle *handle, UART_Object *object, UART_
         if (object->prms.transferMode == UART_CONFIG_MODE_DMA)
         {
             /* Disable DMA TX channel */
-            UART_dmaDisableChannel(handle, (Bool)TRUE);
+            UART_dmaDisableChannel(handle, 1U);
             if (object->writeTrans != NULL)
             {
                 object->writeTrans->count = 0;
@@ -967,7 +975,7 @@ static Bool UART_readCancelNoCB(UART_Handle *handle, UART_Object *object, UART_A
         if (object->prms.transferMode == UART_CONFIG_MODE_DMA)
         {
             /* Disable DMA TX channel */
-            UART_dmaDisableChannel(handle, (Bool)FALSE);
+            UART_dmaDisableChannel(handle, 0U);
             if (object->readTrans != NULL)
             {
                 object->readTrans->count = 0;
@@ -1134,6 +1142,12 @@ static int32_t UART_checkOpenParams(const UART_Params *prms)
     }
     if((UART_TRANSFER_MODE_CALLBACK == prms->writeMode) &&
        (NULL == prms->writeCallbackFxn))
+    {
+        status = SystemP_FAILURE;
+    }
+    if((UART_CONFIG_MODE_INTERRUPT == prms->transferMode) &&
+       (TRUE != prms->skipIntrReg) &&
+       (0xFFFFU == prms->intrNum))
     {
         status = SystemP_FAILURE;
     }
@@ -1708,7 +1722,7 @@ static void UART_flowCtrlTrigLvlConfig(uint32_t baseAddr,
 static uint32_t UART_spaceAvail(uint32_t baseAddr)
 {
     uint32_t lcrRegValue = 0;
-    uint32_t retVal      = FALSE;
+    uint32_t retVal      = 0U;
 
     /* Switching to Register Operational Mode of operation. */
     lcrRegValue = UART_regConfigModeEnable(baseAddr, UART_REG_OPERATIONAL_MODE);
@@ -1723,7 +1737,7 @@ static uint32_t UART_spaceAvail(uint32_t baseAddr)
         (HW_RD_REG32(baseAddr + UART_LSR) &
             (UART_LSR_TX_SR_E_MASK | UART_LSR_TX_FIFO_E_MASK)))
     {
-        retVal = (uint32_t) TRUE;
+        retVal = 1U;
     }
 
     /* Restoring the value of LCR. */
@@ -1835,7 +1849,7 @@ static void UART_masterIsr(void *arg)
         DebugP_assert(NULL != object);
         DebugP_assert(NULL != attrs);
 
-        while ((Bool)TRUE)
+        while (true)
         {
             intType = UART_getIntrIdentityStatus(attrs->baseAddr);
 
@@ -1853,6 +1867,13 @@ static void UART_masterIsr(void *arg)
                     {
                         /* Disable Interrupt first, to avoid further RX timeout */
                         UART_intrDisable(attrs->baseAddr, UART_INTR_RHR_CTI | UART_INTR_LINE_STAT);
+
+                        /* Work around for errata i2310 */
+                        if (FALSE == UART_checkCharsAvailInFifo(attrs->baseAddr))
+                        {
+                            UART_i2310WA(attrs->baseAddr);
+                        }
+
                         /* RX timeout, log the RX timeout errors */
                         object->rxTimeoutCnt++;
                     }
@@ -1909,7 +1930,7 @@ static void UART_masterIsr(void *arg)
                 /* TX FIFO threshold reached */
                 if (object->writeSizeRemaining > 0U)
                 {
-                    object->writeSizeRemaining = (size_t)UART_writeData(object, attrs, (object->writeSizeRemaining));
+                    object->writeSizeRemaining = (uint32_t)UART_writeData(object, attrs, (object->writeSizeRemaining));
                     if ((object->writeSizeRemaining) == 0U)
                     {
                         UART_intrDisable(attrs->baseAddr, UART_INTR_THR);
@@ -1998,7 +2019,7 @@ static int32_t UART_writePolling(UART_Object *object,
 {
     uint32_t            timeout, startTicks, elapsedTicks;
     int32_t             retVal          = SystemP_SUCCESS;
-    uint32_t            timeoutElapsed  = FALSE;
+    uint32_t            timeoutElapsed  = 0U;
     uint32_t            baseAddr        = attrs->baseAddr;
     uint32_t            lineStatus      = 0U;
 
@@ -2006,7 +2027,7 @@ static int32_t UART_writePolling(UART_Object *object,
     object->writeSizeRemaining = trans->count;
     /* Update current tick value to perform timeout operation */
     startTicks = ClockP_getTicks();
-    while ((FALSE == timeoutElapsed)
+    while ((0U == timeoutElapsed)
            && (0U != object->writeSizeRemaining))
     {
         /* Transfer DATA */
@@ -2016,7 +2037,7 @@ static int32_t UART_writePolling(UART_Object *object,
         if (elapsedTicks >= timeout)
         {
             /* timeout occured */
-            timeoutElapsed = TRUE;
+            timeoutElapsed = 1U;
         }
     }
 
@@ -2142,13 +2163,13 @@ static int32_t UART_readPolling(UART_Config      *config,
 {
     uint32_t            timeout, startTicks, elapsedTicks;
     int32_t             retVal          = SystemP_SUCCESS;
-    uint32_t            timeoutElapsed  = FALSE;
+    uint32_t            timeoutElapsed  = 0U;
 
     timeout = trans->timeout;
     object->readSizeRemaining = trans->count;
     /* Update current tick value to perform timeout operation */
     startTicks = ClockP_getTicks();
-    while ((FALSE == timeoutElapsed)
+    while ((0U == timeoutElapsed)
            && (0U != object->readSizeRemaining))
     {
         /* Transfer DATA */
@@ -2158,7 +2179,7 @@ static int32_t UART_readPolling(UART_Config      *config,
         if (elapsedTicks >= timeout)
         {
             /* timeout occured */
-            timeoutElapsed = TRUE;
+            timeoutElapsed = 1U;
         }
     }
 
@@ -2371,6 +2392,30 @@ static inline void UART_procLineStatusErr(UART_Config *config)
     }
 
     return;
+}
+
+/* Work around for errata i2310
+ *
+ * Fixes Erroneous clear/trigger of timeout interrupt
+ *  - If timeout interrupt is erroneously set, and the FIFO is empty
+ *      - Set a high value of timeout counter in TIMEOUTH and TIMEOUTL registers
+ *      - Set EFR2 bit 6 to 1 to change timeout mode to periodic
+ *      - Read the IIR register to clear the interrupt
+ *      - Set EFR2 bit 6 back to 0 to change timeout mode back to the original mode
+ *
+ * Errata document : https://www.ti.com/lit/pdf/sprz457
+ */
+static void UART_i2310WA(uint32_t baseAddr)
+{
+    HW_WR_REG32(baseAddr + UART_TIMEOUTL, 0xFF);
+
+    HW_WR_REG32(baseAddr + UART_TIMEOUTH, 0xFF);
+
+    HW_WR_FIELD32(baseAddr + UART_EFR2, UART_EFR2_TIMEOUT_BEHAVE, 1);
+
+    HW_RD_REG32(baseAddr + UART_IIR);
+
+    HW_WR_FIELD32(baseAddr + UART_EFR2, UART_EFR2_TIMEOUT_BEHAVE, 0);
 }
 
 /* ========================================================================== */

@@ -3,9 +3,9 @@
  *
  * Static IA IRQ maps for Processing Entities for AM62X device
  *
- * Data version: 240823_113849
+ * Data version: 250903_173617
  *
- * Copyright (C) 2021-2024, Texas Instruments Incorporated
+ * Copyright (C) 2021-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 #include "ia_pe_conf.h"
 
 const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
-	[0] = {
+	[0] =  {
 		/*
 		 * For: MAIN_0_R5_0 response
 		 */
@@ -50,7 +50,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x0000U,
 		.vint		= 0x0028U,
 	},
-	[1] = {
+	[1] =  {
 		/*
 		 * For: MAIN_0_R5_1 response
 		 */
@@ -58,7 +58,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x0001U,
 		.vint		= 0x0029U,
 	},
-	[2] = {
+	[2] =  {
 		/*
 		 * For: A53_0 response
 		 */
@@ -66,7 +66,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x0002U,
 		.vint		= 0x0000U,
 	},
-	[3] = {
+	[3] =  {
 		/*
 		 * For: A53_1 response
 		 */
@@ -74,7 +74,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x0003U,
 		.vint		= 0x0001U,
 	},
-	[4] = {
+	[4] =  {
 		/*
 		 * For: A53_2 response
 		 */
@@ -82,7 +82,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x0004U,
 		.vint		= 0x0002U,
 	},
-	[5] = {
+	[5] =  {
 		/*
 		 * For: A53_3 response
 		 */
@@ -90,7 +90,15 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x0005U,
 		.vint		= 0x0003U,
 	},
-	[6] = {
+	[6] =  {
+		/*
+		 * For: M4_0 response
+		 */
+		.id		= AM62X_DEV_DMASS0_INTAGGR_0,
+		.event_id	= 0x05FFU,
+		.vint		= 0x00AFU,
+	},
+	[7] =  {
 		/*
 		 * For: A53_4 response
 		 */
@@ -98,15 +106,15 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x0006U,
 		.vint		= 0x0004U,
 	},
-	[7] = {
+	[8] =  {
 		/*
 		 * For: DM2TIFS response
 		 */
 		.id		= AM62X_DEV_DMASS0_INTAGGR_0,
-		.event_id	= 0x05FFU,
+		.event_id	= 0x05FEU,
 		.vint		= 0x004FU,
 	},
-	[8] = {
+	[9] =  {
 		/*
 		 * For: DM err_event
 		 */
@@ -114,7 +122,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x000BU,
 		.vint		= 0x002AU,
 	},
-	[9] = {
+	[10] = {
 		/*
 		 * For: DM nonsec_low_priority_rx
 		 */

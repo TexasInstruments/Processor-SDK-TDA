@@ -3,7 +3,7 @@ let path = require('path');
 let device = "j722s";
 const files_freertos_main_r5 = {
     common: [
-        "dss_display_test.c",
+        "dss_display_test_v1.c",
         "dss_display_pattern.c",
         "main.c",
     ],
@@ -11,7 +11,7 @@ const files_freertos_main_r5 = {
 
 const files_nortos_main_r5 = {
     common: [
-        "dss_display_test.c",
+        "dss_display_test_v1.c",
         "dss_display_pattern.c",
         "main.c",
     ],
@@ -24,6 +24,7 @@ const filedirs_freertos_main_r5 = {
     common: [
         "..",       /* core_os_combo base */
         "../../..", /* Example base */
+        "../../../../dss_test_pattern"
     ],
 };
 
@@ -31,6 +32,7 @@ const filedirs_nortos_main_r5 = {
     common: [
         "..",       /* core_os_combo base */
         "../../..", /* Example base */
+        "../../../../dss_test_pattern"
     ],
 };
 
@@ -101,6 +103,14 @@ const templates_freertos_main_r5f =
             dssFrameBuf: "true"
         },
     },
+    {
+        input: ".project/templates/j722s/freertos/main_freertos.c.xdt",
+        output: "../main.c",
+        options: {
+            entryFunction: "dss_display_test_main",
+        },
+    }
+
 ];
 
 const templates_nortos_main_r5f =

@@ -35,7 +35,7 @@
 
 --stack_size=`stackSize`
 --heap_size=`heapSize`
--e_self_reset_start  /* This is the entry of the application, _vector MUST be plabed starting address 0x0 */
+-e_self_reset_start  /* This is the entry of the application, _vector MUST be placed starting address 0x0 */
 
 __IRQ_STACK_SIZE = `irqStackSize`;
 __FIQ_STACK_SIZE = `fiqStackSize`;
@@ -65,7 +65,7 @@ SECTIONS
                 LOAD_END( lnkKernelDataEndAddr )                : {} > R5F_TCMB0
 
     /* This is rest of code. This can be placed in DDR if DDR is available and needed */
-    GROUP LOAD_START( lnkFlashStartAddr ), LOAD_END( lnkFlashEndAddr ) 
+    GROUP LOAD_START( lnkFlashStartAddr ), LOAD_END( lnkFlashEndAddr )
     {
         .KERNEL_FUNCTION LOAD_START( lnkKernelFuncStartAddr ),
                          LOAD_END( lnkKernelFuncEndAddr )       : {} palign( 0x10000 )
@@ -152,13 +152,13 @@ MEMORY
     % }
 
     % if(args.project.isLinuxInSystem === true){
-    DDR_IPC_VRING_LINUX           : ORIGIN = 0xA2000000, LENGTH = 0x100000   /* IPC VRING with Linux */
-    DDR_IPC_RESOURCE_TABLE_LINUX  : ORIGIN = 0xA2100000, LENGTH = 0x400      /* For resource table   */
-    DDR_IPC_TRACE_LINUX           : ORIGIN = 0xA2100400, LENGTH = 0xFFC00    /* IPC trace buffer     */
+    DDR_IPC_VRING_LINUX           : ORIGIN = 0xA0000000, LENGTH = 0x100000   /* IPC VRING with Linux */
+    DDR_IPC_RESOURCE_TABLE_LINUX  : ORIGIN = 0xA0100000, LENGTH = 0x400      /* For resource table   */
+    DDR_IPC_TRACE_LINUX           : ORIGIN = 0xA0100400, LENGTH = 0xFFC00    /* IPC trace buffer     */
     % }
-    DDR_CODE_DATA                 : ORIGIN = 0xA2200000, LENGTH = 0xE00000   /* Code/Data            */
+    DDR_CODE_DATA                 : ORIGIN = 0xA0200000, LENGTH = 0xE00000   /* Code/Data            */
     % if(args.project.ipcVringRTOS === true){
-    DDR_IPC_VRING_RTOS            : ORIGIN = 0xA5000000, LENGTH = 0x1C00000   /* IPC VRING for RTOS/NoRTOS */
+    DDR_IPC_VRING_RTOS            : ORIGIN = 0xA5000000, LENGTH = 0x1000000   /* IPC VRING for RTOS/NoRTOS */
     % }
     % if(dssFrameBuf == "true") {
     /* DSS frame buffer region in DDR (128 MiB) */

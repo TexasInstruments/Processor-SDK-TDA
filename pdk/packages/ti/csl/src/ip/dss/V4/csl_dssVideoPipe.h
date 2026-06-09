@@ -544,6 +544,18 @@ void CSL_dssVidPipeSetCropConfig(CSL_dss_pipeRegs *pipeRegs,
                                  const Fvid2_EdgeCropConfig *cropCfg,
                                  uint32_t cropEnable);
 
+/**
+ *  \brief Configure CLUT entries for DSS Video Pipe
+ *
+ *  \param pipeRegs    Pointer to a #CSL_dss_pipeRegs structure
+ *                     containing the Video Pipe configuration
+ *  \param clutData    Pointer to an array of CLUT entries.
+ *
+ *  \return None
+ */
+void CSL_dssVidPipeSetClutConfig(CSL_dss_pipeRegs *pipeRegs,
+                                 const uint32_t *clutData);
+
 /* ========================================================================== */
 /*                      Static Function Declarations                          */
 /* ========================================================================== */
@@ -644,8 +656,8 @@ static inline void CSL_dssVidPipeDmaCfgInit(
     if(NULL != dmaCfg)
     {
         dmaCfg->bufPreloadControl  = CSL_DSS_VID_PIPE_PRELOAD_CONTROL_HW;
-        dmaCfg->bufLowThreshold    = 0x09FFU;
-        dmaCfg->bufHighThreshold   = 0x09F8U;
+        dmaCfg->bufLowThreshold    = 0x0FF8U;
+        dmaCfg->bufHighThreshold   = 0x0FFFU;
         dmaCfg->selfRefreshControl = CSL_DSS_VID_PIPE_REFRESH_CONTROL_SW;
         dmaCfg->selfRefreshEnable  = UFALSE;
         dmaCfg->arbitration        = CSL_DSS_VID_PIPE_PRIORITY_NORMAL;

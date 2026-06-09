@@ -65,9 +65,9 @@
 ALGBASE_PATH ?= $(abspath ../../../)
 PSDK_INSTALL_PATH ?= $(abspath ../../../../)
 include $(ALGBASE_PATH)/makerules/config.mk
-override BUILD_WITH_CUDA=0
+override BUILD_WITH_CUDA=no
 
-override BUILD_WITH_OPENACC=0
+override BUILD_WITH_OPENACC=no
 
 COMMON_DIR= ../../../common
 CUSTOM_DIR= ../../custom
@@ -190,9 +190,10 @@ HFILES += tidl_onnxrt_common.h
 endif
 
 CFILES += ../../common/src/tidl_common_utils_infer_import.c
+CFILES += ../../common/src/tidl_shapeInference.c
 
 TARGET_PLATFORM = PC
-BUILD_WITH_CUDA = 0
+BUILD_WITH_CUDA = no
 
 ifdef SystemRoot
 PROTOBUF_LIB_DIR?=$(TIDL_PROTOBUF_PATH)/lib/Release
@@ -246,6 +247,7 @@ CFLAGS += -I ../tfliteImport
 CFLAGS += -I .
 CFLAGS += -I ../../../arm-tidl/rt/inc
 CFLAGS += -I ../../common
+CFLAGS += -I ../../common/inc
 
 #CFLAGS+= /D_MSC_VER=1700 /Gd
 ifdef SystemRoot
@@ -308,6 +310,8 @@ else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J722S j722s))
     CFLAGS += -DSOC_J722S
 else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a))
     CFLAGS += -DSOC_AM62A
+else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+    CFLAGS += -DSOC_TDA54
 endif
 
 ##############################################################

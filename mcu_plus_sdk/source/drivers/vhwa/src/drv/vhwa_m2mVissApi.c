@@ -115,7 +115,7 @@ Int32 vhwa_m2mVissProcessReq(Fdrv_Handle handle, Fvid2_FrameList *inFrmList,
  *
  **/
 Int32 vhwa_m2mVissGetProcessReq(Fdrv_Handle handle,
-    Fvid2_FrameList *inProcessList, Fvid2_FrameList *outProcessList,
+    Fvid2_FrameList *inFrmList, Fvid2_FrameList *outFrmList,
     UInt32 timeout);
 
 int32_t vhwaVissCheckFrameList(Vhwa_M2mVissHandleObj *hObj,
@@ -138,7 +138,7 @@ static int32_t vhwaM2mVissAllocSl2(Vhwa_M2mVissInstObj *instObj,
 static void Vhwa_m2mVissUpdateFcConnPrms(Vhwa_M2mVissHandleObj *hObj,
                                     const Vhwa_M2mVissFcConPrms *sl2FcPrms);
 static void Vhwa_m2mVissUpdateFcPrms(Vhwa_M2mVissHandleObj *hObj,
-                                    const Vhwa_M2mVissFcUpdatePrms *sl2FcPrms);
+                                    const Vhwa_M2mVissFcUpdatePrms *fcPrms);
 
 void Vhwa_m2mVissGetSl2Prms(Vhwa_M2mVissHandleObj *hObj,
                             Vhwa_M2mVissSl2Prms *sl2Prms);
@@ -146,7 +146,7 @@ void Vhwa_m2mVissGetSl2Prms(Vhwa_M2mVissHandleObj *hObj,
 static int32_t vhwaM2mVissSubmitGlbceCtxSaveRequest(Vhwa_M2mVissInstObj *instObj, const Vhwa_M2mVissHandleObj *hObj);
 
 static int32_t vhwaM2mVissSubmitGlbceCtxRestoreRequest(Vhwa_M2mVissInstObj *instObj, const Vhwa_M2mVissHandleObj *hObj);
-
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 int32_t Vhwa_M2mVissConfigRegMemCompare(const Vhwa_M2mVissHandleObj *hObj, const Vhwa_M2mVissInstObj *instObj);
 
 int32_t Vhwa_M2mVissUpdateBuffers(const Vhwa_M2mVissHandleObj *hObj);
@@ -194,7 +194,7 @@ static int32_t vhwaM2mVissUpdateStatusRegGroup(Vhwa_M2mVissHandleObj *hObj);
 static int32_t Vhwa_m2mVissReconfigReinitReg(Vhwa_M2mVissInstObj *instObj,
                                              Vhwa_M2mVissHandleObj *hObj,
                                              const Vhwa_M2mVissQueueObj *qObj);
-
+#endif
 
 /* Implementation of FVID2 APIs */
 
@@ -229,29 +229,6 @@ Int32 vhwa_m2mVissDelete(Fdrv_Handle handle, Ptr deleteArgs);
  **/
 Int32 vhwa_m2mVissControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
     Ptr cmdStatusArgs);
-
-/**
- * \brief   FVID2 Process Request function.
- *
- * \param   handle              FVID2 driver handle.
- *
- * \return  FVID2_SOK on success, else FVID2 error code
- *
- **/
-Int32 vhwa_m2mVissProcessReq(Fdrv_Handle handle, Fvid2_FrameList *inFrmList,
-    Fvid2_FrameList *outFrmList, uint32_t timeout);
-
-/**
- * \brief   FVID2 Get Process Request function.
- *
- * \param   handle              FVID2 driver handle.
- *
- * \return  FVID2_SOK on success, else FVID2 error code
- *
- **/
-Int32 vhwa_m2mVissGetProcessReq(Fdrv_Handle handle,
-    Fvid2_FrameList *inProcessList, Fvid2_FrameList *outProcessList,
-    UInt32 timeout);
 
 /**
  * \brief   Implementation of REGISTER_ERR_CB ioctl.
@@ -926,6 +903,7 @@ Vhwa_M2mVissHandleObj *Vhwa_m2mVissGetHandleObj(uint32_t cnt)
 }
 /* LDRA_JUSTIFY_END */
 
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 int32_t Vhwa_m2mVissReInit(void)
 {
     int32_t                status = FVID2_SOK;
@@ -1059,7 +1037,7 @@ int32_t Vhwa_m2mVissReInit(void)
 
     return (status);
 }
-
+#endif
 /* ========================================================================== */
 /*                          FVID2 Function implementation                     */
 /* ========================================================================== */
@@ -1489,7 +1467,9 @@ Int32 vhwa_m2mVissControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
     Vhwa_HtsLimiter         *htsLimit = NULL;
     Viss_ErrEventParams     *eePrms = NULL;
     Viss_WdTimerErrEventParams *wdTimerEePrms = NULL;
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     uint32_t                cookie;
+#endif
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -2552,6 +2532,7 @@ Int32 vhwa_m2mVissControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 /* LDRA_JUSTIFY_END */
                 break;
             }
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
             case VHWA_M2M_IOCTL_VISS_ENABLE_RECONFIG_REINIT_REG:
             {
                 /* LDRA_JUSTIFY_START
@@ -2895,7 +2876,7 @@ Int32 vhwa_m2mVissControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 /* LDRA_JUSTIFY_END */
                 break;
             }            
-
+#endif
             /* Default Case */
             default:
             {
@@ -3160,13 +3141,14 @@ Int32 vhwa_m2mVissProcessReq(Fdrv_Handle handle, Fvid2_FrameList *inFrmList,
                 /* Enable Selected HW Interrupts*/
                 status = Vhwa_m2mVissSetIntrInHW(instObj->vhwaIrqNum, instObj->socInfo.vpacIntdRegs, hObj);
             }
-
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
             /* Invoke the reconfig-MMR if enableReconfigReinitReg enabled for the current handle */
             if (UTRUE == hObj->enableReconfigReinitReg)
             {
                 status = Vhwa_m2mVissReconfigReinitReg(instObj, hObj, qObj);
                 hObj->enableReconfigReinitReg = (uint32_t)UFALSE;
             }
+#endif
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
             <justification start>
@@ -4640,11 +4622,13 @@ static int32_t vhwaM2mVissSubmitRequest(Vhwa_M2mVissInstObj *instObj,
         {
             status = Vhwa_m2mVissCheckConfUDMAComp(instObj, hObj);
         }
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
         /* Update the VissStatusRegisterGroup with valid status register values for dynamic registers */
         if((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableStatusRegValidate))
         {
             status = vhwaM2mVissUpdateStatusRegGroup(hObj);
         }
+#endif
         /* Start HTS pipeline */
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
@@ -5563,6 +5547,8 @@ static int32_t vhwaM2mVissSubmitGlbceCtxSaveRequest(Vhwa_M2mVissInstObj *instObj
 
     return status;
 }
+
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 static int32_t Vhwa_m2mVissReconfigReinitReg(Vhwa_M2mVissInstObj *instObj,
                                              Vhwa_M2mVissHandleObj *hObj,
                                              const Vhwa_M2mVissQueueObj *qObj)
@@ -7076,6 +7062,7 @@ int32_t Vhwa_m2mVissConfigRegReadback(Vhwa_M2mVissHandleObj *hObj, Vhwa_M2mVissI
 
     return status;
 }
+#endif
 
 int32_t Vhwa_m2mVissGetSl2Info(Vhwa_M2mVissSl2Info *sl2Info)
 {
@@ -7120,6 +7107,7 @@ int32_t Vhwa_m2mVissGetSl2Info(Vhwa_M2mVissSl2Info *sl2Info)
     return retVal;
 }
 
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 int32_t Vhwa_m2mVissSubmitReadbackUDMABuf(Vhwa_M2mVissInstObj *instObj,
     Vhwa_M2mVissHandleObj *hObj)
 {
@@ -7560,3 +7548,4 @@ int32_t Vhwa_M2mVissUpdateBuffers(const Vhwa_M2mVissHandleObj *hObj)
 
     return status;
 }
+#endif

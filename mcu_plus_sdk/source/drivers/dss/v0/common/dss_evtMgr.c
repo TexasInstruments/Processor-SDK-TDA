@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2025 Texas Instruments Incorporated
+ *  Copyright (C) 2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -130,9 +130,7 @@ int32_t Dss_evtMgrInit(const Dss_EvtMgrInitParams *initParams)
     GT_assert(DssTrace, (NULL != initParams));
     GT_assert(DssTrace, (initParams->numIrq <= DSS_EVT_MGR_INST_ID_MAX));
     GT_assert(DssTrace,
-              (initParams->dssCommonRegionId[0] < CSL_DSS_COMM_REG_ID_MAX));
-    GT_assert(DssTrace,
-              (initParams->dssCommonRegionId[1] < CSL_DSS_COMM_REG_ID_MAX));
+              (initParams->dssCommonRegionId < CSL_DSS_COMM_REG_ID_MAX));
 
     if(FALSE == gDss_EvtMgrCommonObj.isInitDone)
     {
@@ -169,7 +167,7 @@ int32_t Dss_evtMgrInit(const Dss_EvtMgrInitParams *initParams)
             for(cnt=0U; cnt<initParams->numIrq; cnt++)
             {
                 instObj = &gDss_EvtMgrInstObj[cnt];
-                instObj->dssCommonRegionId = initParams->dssCommonRegionId[cnt];
+                instObj->dssCommonRegionId = initParams->dssCommonRegionId;
                 instObj->irqNum = initParams->irqNum[cnt];
                 instObj->instId = initParams->instId[cnt];
                 instObj->isInitDone = TRUE;
@@ -586,7 +584,6 @@ static void Dss_evtMgrMasterIsr(void *arg)
             {
                 evtMgrInfo->clientCb(evtMgrInfo->setEvents,
                                      numEvents,
-                                     evtMgrInfo->instObj->instId,
                                      evtMgrInfo->arg);
             }
 

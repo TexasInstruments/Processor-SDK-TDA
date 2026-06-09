@@ -62,6 +62,10 @@
 #endif
 
 /* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+/* ========================================================================== */
 /*                           File Scope Variables                             */
 /* ========================================================================== */
 
@@ -118,8 +122,31 @@ IpFma_Status IpFma_Dss_GetCommonMRegs(IpFma_DssCommonMRegs* out, uint32_t instan
     {
         IpFma_RegDesc commonRegs[] =
         {
-            { CSL_DSS_COMMON_M_DSS_REVISION, 0U, IPFMA_WIDTH_32 },
-            { CSL_DSS_COMMON_M_DSS_CBA_CFG,  0U, IPFMA_WIDTH_32 }
+            { CSL_DSS_COMMON_M_DSS_REVISION,                  0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_DSS_CBA_CFG,                   0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_DISPC_IRQENABLE_SET,           0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_VID_IRQENABLE_0,               0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_VID_IRQENABLE_1,               0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_VID_IRQENABLE_2,               0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_VID_IRQENABLE_3,               0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_VP_IRQENABLE_0,                0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_VP_IRQENABLE_1,                0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_VP_IRQENABLE_2,                0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_VP_IRQENABLE_3,                0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_WB_IRQENABLE,                  0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_DISPC_SECURE_DISABLE,          0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_DISPC_GLOBAL_MFLAG_ATTRIBUTE,  0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_DISPC_GLOBAL_OUTPUT_ENABLE,    0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_DISPC_GLOBAL_BUFFER,           0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_FBDC_COMMON_CONTROL,           0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_FBDC_CONSTANT_COLOR_0,         0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_FBDC_CONSTANT_COLOR_1,         0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_DISPC_CONNECTIONS,             0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_DISPC_MSS_VP1,                 0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_DISPC_MSS_VP3,                 0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_GLOBAL_DMA_THREADSIZE,         0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_GLOBAL_DMA_THREADSIZESTATUS,   0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_M_GLOBAL_GOBITMODE,              0U, IPFMA_WIDTH_32 },
         };
 
         for (uint32_t index = 0U; index < CSL_DSS_COMM_REG_ID_MAX; index++)
@@ -130,12 +157,35 @@ IpFma_Status IpFma_Dss_GetCommonMRegs(IpFma_DssCommonMRegs* out, uint32_t instan
             }
         }
 
-        status = IpFma_GetRegsValues(instanceBaseAddress, commonRegs, sizeof(commonRegs)/sizeof(IpFma_RegDesc));
+        status = IpFma_GetRegsValues(instanceBaseAddress, commonRegs, (uint32_t)(sizeof(commonRegs)/sizeof(commonRegs[0])));
 
         if (IPFMA_OK == status)
         {
-            out->dssRevision    = (uint32_t) commonRegs[0].value;
-            out->dssCbaCfg      = (uint32_t) commonRegs[1].value;
+            out->dssRevision                    = (uint32_t)commonRegs[0].value;
+            out->dssCbaCfg                      = (uint32_t)commonRegs[1].value;
+            out->dssDispcIrqEnableSet           = (uint32_t)commonRegs[2].value;
+            out->dssVidIrqEnable0               = (uint32_t)commonRegs[3].value;
+            out->dssVidIrqEnable1               = (uint32_t)commonRegs[4].value;
+            out->dssVidIrqEnable2               = (uint32_t)commonRegs[5].value;
+            out->dssVidIrqEnable3               = (uint32_t)commonRegs[6].value;
+            out->dssVpIrqEnable0                = (uint32_t)commonRegs[7].value;
+            out->dssVpIrqEnable1                = (uint32_t)commonRegs[8].value;
+            out->dssVpIrqEnable2                = (uint32_t)commonRegs[9].value;
+            out->dssVpIrqEnable3                = (uint32_t)commonRegs[10].value;
+            out->dssWbIrqEnable                 = (uint32_t)commonRegs[11].value;
+            out->dssDispcSecureDisable          = (uint32_t)commonRegs[12].value;
+            out->dssDispcGlobalMFlagAttribute   = (uint32_t)commonRegs[13].value;
+            out->dssDispcGlobalOutputEnable     = (uint32_t)commonRegs[14].value;
+            out->dssDispcGlobalBuffer           = (uint32_t)commonRegs[15].value;
+            out->dssFbdcCommonControl           = (uint32_t)commonRegs[16].value;
+            out->dssFbdcConstantColor0          = (uint32_t)commonRegs[17].value;
+            out->dssFbdcConstantColor1          = (uint32_t)commonRegs[18].value;
+            out->dssDispcConnections            = (uint32_t)commonRegs[19].value;
+            out->dssDispcMssVp1                 = (uint32_t)commonRegs[20].value;
+            out->dssDispcMssVp3                 = (uint32_t)commonRegs[21].value;
+            out->dssGlobalDmaThreadSize         = (uint32_t)commonRegs[22].value;
+            out->dssGlobalDmaThreadSizeStatus   = (uint32_t)commonRegs[23].value;
+            out->dssGlobalGobitMode             = (uint32_t)commonRegs[24].value;
         }
     }
 
@@ -156,7 +206,16 @@ IpFma_Status IpFma_Dss_GetCommonSRegs(IpFma_DssCommonSRegs* out, uint32_t instan
         IpFma_RegDesc commonRegs[] =
         {
             { CSL_DSS_COMMON_S0_DISPC_IRQSTATUS, 0U, IPFMA_WIDTH_32 },
-            { CSL_DSS_COMMON_S0_WB_IRQSTATUS,    0U, IPFMA_WIDTH_32 }
+            { CSL_DSS_COMMON_S0_WB_IRQSTATUS,    0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_S0_VID_IRQENABLE_0, 0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_S0_VID_IRQENABLE_1, 0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_S0_VID_IRQENABLE_2, 0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_S0_VID_IRQENABLE_3, 0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_S0_VP_IRQENABLE_0,  0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_S0_VP_IRQENABLE_1,  0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_S0_VP_IRQENABLE_2,  0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_S0_VP_IRQENABLE_3,  0U, IPFMA_WIDTH_32 },
+            { CSL_DSS_COMMON_S0_WB_IRQENABLE,    0U, IPFMA_WIDTH_32 },
         };
 
         for (uint32_t index = 0U; index < CSL_DSS_COMM_REG_ID_MAX; index++)
@@ -167,12 +226,21 @@ IpFma_Status IpFma_Dss_GetCommonSRegs(IpFma_DssCommonSRegs* out, uint32_t instan
             }
         }
 
-        status = IpFma_GetRegsValues(instanceBaseAddress, commonRegs, sizeof(commonRegs)/sizeof(IpFma_RegDesc));
+        status = IpFma_GetRegsValues(instanceBaseAddress, commonRegs, (uint32_t)(sizeof(commonRegs)/sizeof(commonRegs[0])));
 
         if (IPFMA_OK == status)
         {
-            out->dssDispcIrqStatus  = (uint32_t) commonRegs[0].value;
-            out->dssWbIrqStatus     = (uint32_t) commonRegs[1].value;
+            out->dssDispcIrqStatus  = (uint32_t)commonRegs[0].value;
+            out->dssWbIrqStatus     = (uint32_t)commonRegs[1].value;
+            out->dssVidIrqEnable0   = (uint32_t)commonRegs[2].value;
+            out->dssVidIrqEnable1   = (uint32_t)commonRegs[3].value;
+            out->dssVidIrqEnable2   = (uint32_t)commonRegs[4].value;
+            out->dssVidIrqEnable3   = (uint32_t)commonRegs[5].value;
+            out->dssVpIrqEnable0    = (uint32_t)commonRegs[6].value;
+            out->dssVpIrqEnable1    = (uint32_t)commonRegs[7].value;
+            out->dssVpIrqEnable2    = (uint32_t)commonRegs[8].value;
+            out->dssVpIrqEnable3    = (uint32_t)commonRegs[9].value;
+            out->dssWbIrqEnable     = (uint32_t)commonRegs[10].value;
         }
     }
 
@@ -190,16 +258,45 @@ IpFma_Status IpFma_Dss_GetVideoPipeRegs(IpFma_DssVideoPipeRegs* out, uint32_t in
     }
     else
     {
-        /* Example using BUF_SIZE_STATUS register and 9 FIR_COEF_H0 registers. */
-        const uint32_t videoPipeRegsNum = 1U;
-        const uint32_t totalNumberOfVideoPipeRegs = IPFMA_DSS_VIDEO_PIPE_FIR_COEF_H0_REG_NUM + videoPipeRegsNum;
-
-        IpFma_RegDesc videoPipeRegs[totalNumberOfVideoPipeRegs];
-        videoPipeRegs[0] = (IpFma_RegDesc) { CSL_DSS_VID1_BUF_SIZE_STATUS,  0U,  IPFMA_WIDTH_32 };
-        for (uint32_t index = 0U; index < IPFMA_DSS_VIDEO_PIPE_FIR_COEF_H0_REG_NUM; index++)
+        IpFma_RegDesc videoPipeRegs[]=
         {
-            videoPipeRegs[index + 1] = (IpFma_RegDesc) { CSL_DSS_VID1_FIR_COEF_H0(index),  0U,  IPFMA_WIDTH_32 };
-        }
+            { CSL_DSS_VID1_ATTRIBUTES,          0U, IPFMA_WIDTH_32 }, /* 0 */
+            { CSL_DSS_VID1_ATTRIBUTES2,         0U, IPFMA_WIDTH_32 }, /* 1 */
+            { CSL_DSS_VID1_BUF_THRESHOLD,       0U, IPFMA_WIDTH_32 }, /* 2 */
+            { CSL_DSS_VID1_CSC_COEF0,           0U, IPFMA_WIDTH_32 }, /* 3 */
+            { CSL_DSS_VID1_CSC_COEF1,           0U, IPFMA_WIDTH_32 }, /* 4 */
+            { CSL_DSS_VID1_CSC_COEF2,           0U, IPFMA_WIDTH_32 }, /* 5 */
+            { CSL_DSS_VID1_CSC_COEF3,           0U, IPFMA_WIDTH_32 }, /* 6 */
+            { CSL_DSS_VID1_CSC_COEF4,           0U, IPFMA_WIDTH_32 }, /* 7 */
+            { CSL_DSS_VID1_CSC_COEF5,           0U, IPFMA_WIDTH_32 }, /* 8 */
+            { CSL_DSS_VID1_CSC_COEF6,           0U, IPFMA_WIDTH_32 }, /* 9 */
+            { CSL_DSS_VID1_GLOBAL_ALPHA,        0U, IPFMA_WIDTH_32 }, /* 10 */
+            { CSL_DSS_VID1_MFLAG_THRESHOLD,     0U, IPFMA_WIDTH_32 }, /* 11 */
+            { CSL_DSS_VID1_CSC_COEF7,           0U, IPFMA_WIDTH_32 }, /* 12 */
+            { CSL_DSS_VID1_FBDC_ATTRIBUTES,     0U, IPFMA_WIDTH_32 }, /* 13 */
+            { CSL_DSS_VID1_FBDC_CLEAR_COLOR,    0U, IPFMA_WIDTH_32 }, /* 14 */
+            { CSL_DSS_VID1_CLUT_0,              0U, IPFMA_WIDTH_32 }, /* 15 */
+            { CSL_DSS_VID1_CLUT_1,              0U, IPFMA_WIDTH_32 }, /* 16 */
+            { CSL_DSS_VID1_CLUT_2,              0U, IPFMA_WIDTH_32 }, /* 17 */
+            { CSL_DSS_VID1_CLUT_3,              0U, IPFMA_WIDTH_32 }, /* 18 */
+            { CSL_DSS_VID1_CLUT_4,              0U, IPFMA_WIDTH_32 }, /* 19 */
+            { CSL_DSS_VID1_CLUT_5,              0U, IPFMA_WIDTH_32 }, /* 20 */
+            { CSL_DSS_VID1_CLUT_6,              0U, IPFMA_WIDTH_32 }, /* 21 */
+            { CSL_DSS_VID1_CLUT_7,              0U, IPFMA_WIDTH_32 }, /* 22 */
+            { CSL_DSS_VID1_CLUT_8,              0U, IPFMA_WIDTH_32 }, /* 23 */
+            { CSL_DSS_VID1_CLUT_9,              0U, IPFMA_WIDTH_32 }, /* 24 */
+            { CSL_DSS_VID1_CLUT_10,             0U, IPFMA_WIDTH_32 }, /* 25 */
+            { CSL_DSS_VID1_CLUT_11,             0U, IPFMA_WIDTH_32 }, /* 26 */
+            { CSL_DSS_VID1_CLUT_12,             0U, IPFMA_WIDTH_32 }, /* 27 */
+            { CSL_DSS_VID1_CLUT_13,             0U, IPFMA_WIDTH_32 }, /* 28 */
+            { CSL_DSS_VID1_CLUT_14,             0U, IPFMA_WIDTH_32 }, /* 29 */
+            { CSL_DSS_VID1_CLUT_15,             0U, IPFMA_WIDTH_32 }, /* 30 */
+            { CSL_DSS_VID1_LUMAKEY,             0U, IPFMA_WIDTH_32 }, /* 31 */
+            { CSL_DSS_VID1_DMA_BUFSIZE,         0U, IPFMA_WIDTH_32 }, /* 32 */
+            { CSL_DSS_VID1_CROP,                0U, IPFMA_WIDTH_32 }, /* 33 */
+            { CSL_DSS_VID1_SECURE,              0U, IPFMA_WIDTH_32 }, /* 34 */
+            { CSL_DSS_VID1_PIPE_GO,             0U, IPFMA_WIDTH_32 }  /* 35 */
+        };
 
         for (uint32_t index = 0U; index < CSL_DSS_VID_PIPE_ID_MAX; index++)
         {
@@ -209,21 +306,51 @@ IpFma_Status IpFma_Dss_GetVideoPipeRegs(IpFma_DssVideoPipeRegs* out, uint32_t in
             }
         }
 
-        status = IpFma_GetRegsValues(instanceBaseAddress, videoPipeRegs, sizeof(videoPipeRegs)/sizeof(IpFma_RegDesc));
+        status = IpFma_GetRegsValues(instanceBaseAddress, videoPipeRegs, (uint32_t)(sizeof(videoPipeRegs)/sizeof(videoPipeRegs[0])));
 
         if(IPFMA_OK == status)
         {
-            out->dssBufSizeStatus   = (uint32_t) videoPipeRegs[0].value;
-            for (uint32_t index = 0U; index < IPFMA_DSS_VIDEO_PIPE_FIR_COEF_H0_REG_NUM; index++)
-            {
-                out->dssFirCoefH0[index]    = (uint32_t) videoPipeRegs[index + 1].value;
-            }
+            out->dssAttributes          = (uint32_t)videoPipeRegs[0].value;
+            out->dssAttributes2         = (uint32_t)videoPipeRegs[1].value;
+            out->dssBufThreshold        = (uint32_t)videoPipeRegs[2].value;
+            out->dssCscCoef0            = (uint32_t)videoPipeRegs[3].value;
+            out->dssCscCoef1            = (uint32_t)videoPipeRegs[4].value;
+            out->dssCscCoef2            = (uint32_t)videoPipeRegs[5].value;
+            out->dssCscCoef3            = (uint32_t)videoPipeRegs[6].value;
+            out->dssCscCoef4            = (uint32_t)videoPipeRegs[7].value;
+            out->dssCscCoef5            = (uint32_t)videoPipeRegs[8].value;
+            out->dssCscCoef6            = (uint32_t)videoPipeRegs[9].value;
+            out->dssGlobalAlpha         = (uint32_t)videoPipeRegs[10].value;
+            out->dssMflagThreshold      = (uint32_t)videoPipeRegs[11].value;
+            out->dssCscCoef7            = (uint32_t)videoPipeRegs[12].value;
+            out->dssFbdcAttributes      = (uint32_t)videoPipeRegs[13].value;
+            out->dssFbdcClearColor      = (uint32_t)videoPipeRegs[14].value;
+            out->dssClut0               = (uint32_t)videoPipeRegs[15].value;
+            out->dssClut1               = (uint32_t)videoPipeRegs[16].value;
+            out->dssClut2               = (uint32_t)videoPipeRegs[17].value;
+            out->dssClut3               = (uint32_t)videoPipeRegs[18].value;
+            out->dssClut4               = (uint32_t)videoPipeRegs[19].value;
+            out->dssClut5               = (uint32_t)videoPipeRegs[20].value;
+            out->dssClut6               = (uint32_t)videoPipeRegs[21].value;
+            out->dssClut7               = (uint32_t)videoPipeRegs[22].value;
+            out->dssClut8               = (uint32_t)videoPipeRegs[23].value;
+            out->dssClut9               = (uint32_t)videoPipeRegs[24].value;
+            out->dssClut10              = (uint32_t)videoPipeRegs[25].value;
+            out->dssClut11              = (uint32_t)videoPipeRegs[26].value;
+            out->dssClut12              = (uint32_t)videoPipeRegs[27].value;
+            out->dssClut13              = (uint32_t)videoPipeRegs[28].value;
+            out->dssClut14              = (uint32_t)videoPipeRegs[29].value;
+            out->dssClut15              = (uint32_t)videoPipeRegs[30].value;
+            out->dssLumaKey             = (uint32_t)videoPipeRegs[31].value;
+            out->dssDmaBufSize          = (uint32_t)videoPipeRegs[32].value;
+            out->dssCrop                = (uint32_t)videoPipeRegs[33].value;
+            out->dssSecure              = (uint32_t)videoPipeRegs[34].value;
+            out->dssPipeGo              = (uint32_t)videoPipeRegs[35].value;
         }
     }
 
     return status;
 }
-
 
 IpFma_Status IpFma_Dss_GetVideoPipeLayerRegs(IpFma_DssVideoPipeLayerRegs* out, uint32_t instanceId)
 {
@@ -238,8 +365,45 @@ IpFma_Status IpFma_Dss_GetVideoPipeLayerRegs(IpFma_DssVideoPipeLayerRegs* out, u
     {
         IpFma_RegDesc videoPipeLayer[] =
         {
-            { CSL_DSS_VIDL1_BUF_SIZE_STATUS,    0U, IPFMA_WIDTH_32 },
-            { CSL_DSS_VIDL1_SAFETY_ATTRIBUTES,  0U, IPFMA_WIDTH_32 }
+            { CSL_DSS_VIDL1_BUF_SIZE_STATUS,     0U, IPFMA_WIDTH_32 }, /* 0 */
+            { CSL_DSS_VIDL1_SAFETY_ATTRIBUTES,   0U, IPFMA_WIDTH_32 }, /* 1 */
+            { CSL_DSS_VIDL1_ATTRIBUTES,          0U, IPFMA_WIDTH_32 }, /* 2 */
+            { CSL_DSS_VIDL1_ATTRIBUTES2,         0U, IPFMA_WIDTH_32 }, /* 3 */
+            { CSL_DSS_VIDL1_BUF_THRESHOLD,       0U, IPFMA_WIDTH_32 }, /* 4 */
+            { CSL_DSS_VIDL1_CSC_COEF0,           0U, IPFMA_WIDTH_32 }, /* 5 */
+            { CSL_DSS_VIDL1_CSC_COEF1,           0U, IPFMA_WIDTH_32 }, /* 6 */
+            { CSL_DSS_VIDL1_CSC_COEF2,           0U, IPFMA_WIDTH_32 }, /* 7 */
+            { CSL_DSS_VIDL1_CSC_COEF3,           0U, IPFMA_WIDTH_32 }, /* 8 */
+            { CSL_DSS_VIDL1_CSC_COEF4,           0U, IPFMA_WIDTH_32 }, /* 9 */
+            { CSL_DSS_VIDL1_CSC_COEF5,           0U, IPFMA_WIDTH_32 }, /* 10 */
+            { CSL_DSS_VIDL1_CSC_COEF6,           0U, IPFMA_WIDTH_32 }, /* 11 */
+            { CSL_DSS_VIDL1_GLOBAL_ALPHA,        0U, IPFMA_WIDTH_32 }, /* 12 */
+            { CSL_DSS_VIDL1_MFLAG_THRESHOLD,     0U, IPFMA_WIDTH_32 }, /* 13 */
+            { CSL_DSS_VIDL1_CSC_COEF7,           0U, IPFMA_WIDTH_32 }, /* 14 */
+            { CSL_DSS_VIDL1_FBDC_ATTRIBUTES,     0U, IPFMA_WIDTH_32 }, /* 15 */
+            { CSL_DSS_VIDL1_FBDC_CLEAR_COLOR,    0U, IPFMA_WIDTH_32 }, /* 16 */
+            { CSL_DSS_VIDL1_CLUT_0,              0U, IPFMA_WIDTH_32 }, /* 17 */
+            { CSL_DSS_VIDL1_CLUT_1,              0U, IPFMA_WIDTH_32 }, /* 18 */
+            { CSL_DSS_VIDL1_CLUT_2,              0U, IPFMA_WIDTH_32 }, /* 19 */
+            { CSL_DSS_VIDL1_CLUT_3,              0U, IPFMA_WIDTH_32 }, /* 20 */
+            { CSL_DSS_VIDL1_CLUT_4,              0U, IPFMA_WIDTH_32 }, /* 21 */
+            { CSL_DSS_VIDL1_CLUT_5,              0U, IPFMA_WIDTH_32 }, /* 22 */
+            { CSL_DSS_VIDL1_CLUT_6,              0U, IPFMA_WIDTH_32 }, /* 23 */
+            { CSL_DSS_VIDL1_CLUT_7,              0U, IPFMA_WIDTH_32 }, /* 24 */
+            { CSL_DSS_VIDL1_CLUT_8,              0U, IPFMA_WIDTH_32 }, /* 25 */
+            { CSL_DSS_VIDL1_CLUT_9,              0U, IPFMA_WIDTH_32 }, /* 26 */
+            { CSL_DSS_VIDL1_CLUT_10,             0U, IPFMA_WIDTH_32 }, /* 27 */
+            { CSL_DSS_VIDL1_CLUT_11,             0U, IPFMA_WIDTH_32 }, /* 28 */
+            { CSL_DSS_VIDL1_CLUT_12,             0U, IPFMA_WIDTH_32 }, /* 29 */
+            { CSL_DSS_VIDL1_CLUT_13,             0U, IPFMA_WIDTH_32 }, /* 30 */
+            { CSL_DSS_VIDL1_CLUT_14,             0U, IPFMA_WIDTH_32 }, /* 31 */
+            { CSL_DSS_VIDL1_CLUT_15,             0U, IPFMA_WIDTH_32 }, /* 32 */
+            { CSL_DSS_VIDL1_LUMAKEY,             0U, IPFMA_WIDTH_32 }, /* 33 */
+            { CSL_DSS_VIDL1_DMA_BUFSIZE,         0U, IPFMA_WIDTH_32 }, /* 34 */
+            { CSL_DSS_VIDL1_CROP,                0U, IPFMA_WIDTH_32 }, /* 35 */
+            { CSL_DSS_VIDL1_SECURE,              0U, IPFMA_WIDTH_32 }, /* 36 */
+            { CSL_DSS_VIDL1_PIPE_GO,             0U, IPFMA_WIDTH_32 }  /* 37 */
+
         };
 
         for (uint32_t index = 0U; index < CSL_DSS_VID_PIPE_ID_MAX; index++)
@@ -250,12 +414,48 @@ IpFma_Status IpFma_Dss_GetVideoPipeLayerRegs(IpFma_DssVideoPipeLayerRegs* out, u
             }
         }
 
-        status = IpFma_GetRegsValues(instanceBaseAddress, videoPipeLayer, sizeof(videoPipeLayer)/sizeof(IpFma_RegDesc));
+        status = IpFma_GetRegsValues(instanceBaseAddress, videoPipeLayer, (uint32_t)(sizeof(videoPipeLayer)/sizeof(videoPipeLayer[0])));
 
         if (IPFMA_OK == status)
         {
-            out->dssBufSizeStatus       = (uint32_t) videoPipeLayer[0].value;
-            out->dssSafetyAttributes    = (uint32_t) videoPipeLayer[1].value;
+            out->dssBufSizeStatus       = (uint32_t)videoPipeLayer[0].value;
+            out->dssSafetyAttributes    = (uint32_t)videoPipeLayer[1].value;
+            out->dssAttributes          = (uint32_t)videoPipeLayer[2].value;
+            out->dssAttributes2         = (uint32_t)videoPipeLayer[3].value;
+            out->dssBufThreshold        = (uint32_t)videoPipeLayer[4].value;
+            out->dssCscCoef0            = (uint32_t)videoPipeLayer[5].value;
+            out->dssCscCoef1            = (uint32_t)videoPipeLayer[6].value;
+            out->dssCscCoef2            = (uint32_t)videoPipeLayer[7].value;
+            out->dssCscCoef3            = (uint32_t)videoPipeLayer[8].value;
+            out->dssCscCoef4            = (uint32_t)videoPipeLayer[9].value;
+            out->dssCscCoef5            = (uint32_t)videoPipeLayer[10].value;
+            out->dssCscCoef6            = (uint32_t)videoPipeLayer[11].value;
+            out->dssGlobalAlpha         = (uint32_t)videoPipeLayer[12].value;
+            out->dssMflagThreshold      = (uint32_t)videoPipeLayer[13].value;
+            out->dssCscCoef7            = (uint32_t)videoPipeLayer[14].value;
+            out->dssFbdcAttributes      = (uint32_t)videoPipeLayer[15].value;
+            out->dssFbdcClearColor      = (uint32_t)videoPipeLayer[16].value;
+            out->dssClut0               = (uint32_t)videoPipeLayer[17].value;
+            out->dssClut1               = (uint32_t)videoPipeLayer[18].value;
+            out->dssClut2               = (uint32_t)videoPipeLayer[19].value;
+            out->dssClut3               = (uint32_t)videoPipeLayer[20].value;
+            out->dssClut4               = (uint32_t)videoPipeLayer[21].value;
+            out->dssClut5               = (uint32_t)videoPipeLayer[22].value;
+            out->dssClut6               = (uint32_t)videoPipeLayer[23].value;
+            out->dssClut7               = (uint32_t)videoPipeLayer[24].value;
+            out->dssClut8               = (uint32_t)videoPipeLayer[25].value;
+            out->dssClut9               = (uint32_t)videoPipeLayer[26].value;
+            out->dssClut10              = (uint32_t)videoPipeLayer[27].value;
+            out->dssClut11              = (uint32_t)videoPipeLayer[28].value;
+            out->dssClut12              = (uint32_t)videoPipeLayer[29].value;
+            out->dssClut13              = (uint32_t)videoPipeLayer[30].value;
+            out->dssClut14              = (uint32_t)videoPipeLayer[31].value;
+            out->dssClut15              = (uint32_t)videoPipeLayer[32].value;
+            out->dssLumaKey             = (uint32_t)videoPipeLayer[33].value;
+            out->dssDmaBufSize          = (uint32_t)videoPipeLayer[34].value;
+            out->dssCrop                = (uint32_t)videoPipeLayer[35].value;
+            out->dssSecure              = (uint32_t)videoPipeLayer[36].value;
+            out->dssPipeGo              = (uint32_t)videoPipeLayer[37].value;
         }
     }
 
@@ -274,8 +474,15 @@ IpFma_Status IpFma_Dss_GetOverlayRegs(IpFma_DssOverlayRegs* out, uint32_t instan
     else
     {
         IpFma_RegDesc overlayRegs[] = {
-            { CSL_DSS_OVR1_CONFIG,      0U, IPFMA_WIDTH_32 },
-            { CSL_DSS_OVR1_VIRTUALVP,   0U, IPFMA_WIDTH_32 }
+            { CSL_DSS_OVR1_CONFIG,             0U, IPFMA_WIDTH_32 }, /* 0 */
+            { CSL_DSS_OVR1_VIRTUALVP,          0U, IPFMA_WIDTH_32 }, /* 1 */
+            { CSL_DSS_OVR1_DEFAULT_COLOR,      0U, IPFMA_WIDTH_32 }, /* 2 */
+            { CSL_DSS_OVR1_DEFAULT_COLOR2,     0U, IPFMA_WIDTH_32 }, /* 3 */
+            { CSL_DSS_OVR1_TRANS_COLOR_MAX,    0U, IPFMA_WIDTH_32 }, /* 4 */
+            { CSL_DSS_OVR1_TRANS_COLOR_MAX2,   0U, IPFMA_WIDTH_32 }, /* 5 */
+            { CSL_DSS_OVR1_TRANS_COLOR_MIN,    0U, IPFMA_WIDTH_32 }, /* 6 */
+            { CSL_DSS_OVR1_TRANS_COLOR_MIN2,   0U, IPFMA_WIDTH_32 }, /* 7 */
+            { CSL_DSS_OVR1_SECURE,             0U, IPFMA_WIDTH_32 }  /* 8 */
         };
 
         for (uint32_t index = 0U; index < CSL_DSS_OVERLAY_ID_MAX; index++)
@@ -286,12 +493,19 @@ IpFma_Status IpFma_Dss_GetOverlayRegs(IpFma_DssOverlayRegs* out, uint32_t instan
             }
         }
 
-        status = IpFma_GetRegsValues(instanceBaseAddress, overlayRegs, sizeof(overlayRegs)/sizeof(IpFma_RegDesc));
+        status = IpFma_GetRegsValues(instanceBaseAddress, overlayRegs, (uint32_t)(sizeof(overlayRegs)/sizeof(overlayRegs[0])));
 
         if(IPFMA_OK == status)
         {
-            out->dssConfig      = (uint32_t) overlayRegs[0].value;
-            out->dssVirtualVp   = (uint32_t) overlayRegs[1].value;
+            out->dssConfig            = (uint32_t)overlayRegs[0].value;
+            out->dssVirtualVp         = (uint32_t)overlayRegs[1].value;
+            out->dssDefaultColor      = (uint32_t)overlayRegs[2].value;
+            out->dssDefaultColor2     = (uint32_t)overlayRegs[3].value;
+            out->dssTransColorMax     = (uint32_t)overlayRegs[4].value;
+            out->dssTransColorMax2    = (uint32_t)overlayRegs[5].value;
+            out->dssTransColorMin     = (uint32_t)overlayRegs[6].value;
+            out->dssTransColorMin2    = (uint32_t)overlayRegs[7].value;
+            out->dssSecure            = (uint32_t)overlayRegs[8].value;
         }
     }
 
@@ -310,8 +524,45 @@ IpFma_Status IpFma_Dss_GetVideoPortRegs(IpFma_DssVideoPortRegs* out, uint32_t in
     else
     {
         IpFma_RegDesc videoPortRegs[] = {
-            { CSL_DSS_VP1_CONFIG,   0U, IPFMA_WIDTH_32 },
-            { CSL_DSS_VP1_CONTROL,  0U, IPFMA_WIDTH_32 }
+            
+            { CSL_DSS_VP1_CONFIG,           0U, IPFMA_WIDTH_32 }, /* 0 */
+            { CSL_DSS_VP1_CONTROL,          0U, IPFMA_WIDTH_32 }, /* 1 */
+            { CSL_DSS_VP1_CSC_COEF0,        0U, IPFMA_WIDTH_32 }, /* 2 */
+            { CSL_DSS_VP1_CSC_COEF1,        0U, IPFMA_WIDTH_32 }, /* 3 */
+            { CSL_DSS_VP1_CSC_COEF2,        0U, IPFMA_WIDTH_32 }, /* 4 */
+            { CSL_DSS_VP1_DATA_CYCLE_0,     0U, IPFMA_WIDTH_32 }, /* 5 */
+            { CSL_DSS_VP1_DATA_CYCLE_1,     0U, IPFMA_WIDTH_32 }, /* 6 */
+            { CSL_DSS_VP1_DATA_CYCLE_2,     0U, IPFMA_WIDTH_32 }, /* 7 */
+            { CSL_DSS_VP1_LINE_NUMBER,      0U, IPFMA_WIDTH_32 }, /* 8 */
+            { CSL_DSS_VP1_POL_FREQ,         0U, IPFMA_WIDTH_32 }, /* 9 */
+            { CSL_DSS_VP1_SIZE_SCREEN,      0U, IPFMA_WIDTH_32 }, /* 10 */
+            { CSL_DSS_VP1_TIMING_H,         0U, IPFMA_WIDTH_32 }, /* 11 */
+            { CSL_DSS_VP1_TIMING_V,         0U, IPFMA_WIDTH_32 }, /* 12 */
+            { CSL_DSS_VP1_CSC_COEF3,        0U, IPFMA_WIDTH_32 }, /* 13 */
+            { CSL_DSS_VP1_CSC_COEF4,        0U, IPFMA_WIDTH_32 }, /* 14 */
+            { CSL_DSS_VP1_CSC_COEF5,        0U, IPFMA_WIDTH_32 }, /* 15 */
+            { CSL_DSS_VP1_CSC_COEF6,        0U, IPFMA_WIDTH_32 }, /* 16 */
+            { CSL_DSS_VP1_CSC_COEF7,        0U, IPFMA_WIDTH_32 }, /* 17 */
+            { CSL_DSS_VP1_GAMMA_TABLE_0,    0U, IPFMA_WIDTH_32 }, /* 18 */
+            { CSL_DSS_VP1_GAMMA_TABLE_1,    0U, IPFMA_WIDTH_32 }, /* 19 */
+            { CSL_DSS_VP1_GAMMA_TABLE_2,    0U, IPFMA_WIDTH_32 }, /* 20 */
+            { CSL_DSS_VP1_GAMMA_TABLE_3,    0U, IPFMA_WIDTH_32 }, /* 21 */
+            { CSL_DSS_VP1_GAMMA_TABLE_4,    0U, IPFMA_WIDTH_32 }, /* 22 */
+            { CSL_DSS_VP1_GAMMA_TABLE_5,    0U, IPFMA_WIDTH_32 }, /* 23 */
+            { CSL_DSS_VP1_GAMMA_TABLE_6,    0U, IPFMA_WIDTH_32 }, /* 24 */
+            { CSL_DSS_VP1_GAMMA_TABLE_7,    0U, IPFMA_WIDTH_32 }, /* 25 */
+            { CSL_DSS_VP1_GAMMA_TABLE_8,    0U, IPFMA_WIDTH_32 }, /* 26 */
+            { CSL_DSS_VP1_GAMMA_TABLE_9,    0U, IPFMA_WIDTH_32 }, /* 27 */
+            { CSL_DSS_VP1_GAMMA_TABLE_10,   0U, IPFMA_WIDTH_32 }, /* 28 */
+            { CSL_DSS_VP1_GAMMA_TABLE_11,   0U, IPFMA_WIDTH_32 }, /* 29 */
+            { CSL_DSS_VP1_GAMMA_TABLE_12,   0U, IPFMA_WIDTH_32 }, /* 30 */
+            { CSL_DSS_VP1_GAMMA_TABLE_13,   0U, IPFMA_WIDTH_32 }, /* 31 */
+            { CSL_DSS_VP1_GAMMA_TABLE_14,   0U, IPFMA_WIDTH_32 }, /* 32 */
+            { CSL_DSS_VP1_GAMMA_TABLE_15,   0U, IPFMA_WIDTH_32 }, /* 33 */
+            { CSL_DSS_VP1_DSS_OLDI_CFG,     0U, IPFMA_WIDTH_32 }, /* 34 */
+            { CSL_DSS_VP1_DSS_OLDI_STATUS,  0U, IPFMA_WIDTH_32 }, /* 35 */
+            { CSL_DSS_VP1_DSS_OLDI_LB,      0U, IPFMA_WIDTH_32 }, /* 36 */
+            { CSL_DSS_VP1_SECURE,           0U, IPFMA_WIDTH_32 }  /* 37 */
         };
 
         for (uint32_t index = 0U; index < CSL_DSS_VP_ID_MAX; index++)
@@ -322,12 +573,48 @@ IpFma_Status IpFma_Dss_GetVideoPortRegs(IpFma_DssVideoPortRegs* out, uint32_t in
             }
         }
 
-        status = IpFma_GetRegsValues(instanceBaseAddress, videoPortRegs, sizeof(videoPortRegs)/sizeof(IpFma_RegDesc));
+        status = IpFma_GetRegsValues(instanceBaseAddress, videoPortRegs, (uint32_t)(sizeof(videoPortRegs)/sizeof(videoPortRegs[0])));
 
         if (IPFMA_OK == status)
         {
-            out->dssConfig  = (uint32_t) videoPortRegs[0].value;
-            out->dssControl = (uint32_t) videoPortRegs[1].value;
+            out->dssConfig        = (uint32_t)videoPortRegs[0].value;
+            out->dssControl       = (uint32_t)videoPortRegs[1].value;
+            out->dssCscCoef0      = (uint32_t)videoPortRegs[2].value;
+            out->dssCscCoef1      = (uint32_t)videoPortRegs[3].value;
+            out->dssCscCoef2      = (uint32_t)videoPortRegs[4].value;
+            out->dssDataCycle0    = (uint32_t)videoPortRegs[5].value;
+            out->dssDataCycle1    = (uint32_t)videoPortRegs[6].value;
+            out->dssDataCycle2    = (uint32_t)videoPortRegs[7].value;
+            out->dssLineNumber    = (uint32_t)videoPortRegs[8].value;
+            out->dssPolFreq       = (uint32_t)videoPortRegs[9].value;
+            out->dssSizeScreen    = (uint32_t)videoPortRegs[10].value;
+            out->dssTimingH       = (uint32_t)videoPortRegs[11].value;
+            out->dssTimingV       = (uint32_t)videoPortRegs[12].value;
+            out->dssCscCoef3      = (uint32_t)videoPortRegs[13].value;
+            out->dssCscCoef4      = (uint32_t)videoPortRegs[14].value;
+            out->dssCscCoef5      = (uint32_t)videoPortRegs[15].value;
+            out->dssCscCoef6      = (uint32_t)videoPortRegs[16].value;
+            out->dssCscCoef7      = (uint32_t)videoPortRegs[17].value;
+            out->dssGammaTable0   = (uint32_t)videoPortRegs[18].value;
+            out->dssGammaTable1   = (uint32_t)videoPortRegs[19].value;
+            out->dssGammaTable2   = (uint32_t)videoPortRegs[20].value;
+            out->dssGammaTable3   = (uint32_t)videoPortRegs[21].value;
+            out->dssGammaTable4   = (uint32_t)videoPortRegs[22].value;
+            out->dssGammaTable5   = (uint32_t)videoPortRegs[23].value;
+            out->dssGammaTable6   = (uint32_t)videoPortRegs[24].value;
+            out->dssGammaTable7   = (uint32_t)videoPortRegs[25].value;
+            out->dssGammaTable8   = (uint32_t)videoPortRegs[26].value;
+            out->dssGammaTable9   = (uint32_t)videoPortRegs[27].value;
+            out->dssGammaTable10  = (uint32_t)videoPortRegs[28].value;
+            out->dssGammaTable11  = (uint32_t)videoPortRegs[29].value;
+            out->dssGammaTable12  = (uint32_t)videoPortRegs[30].value;
+            out->dssGammaTable13  = (uint32_t)videoPortRegs[31].value;
+            out->dssGammaTable14  = (uint32_t)videoPortRegs[32].value;
+            out->dssGammaTable15  = (uint32_t)videoPortRegs[33].value;
+            out->dssOldiConfig    = (uint32_t)videoPortRegs[34].value;
+            out->dssOldiStatus    = (uint32_t)videoPortRegs[35].value;
+            out->dssOldiLb        = (uint32_t)videoPortRegs[36].value;
+            out->dssSecure        = (uint32_t)videoPortRegs[37].value;
         }
     }
 
@@ -346,8 +633,18 @@ IpFma_Status IpFma_Dss_GetWriteBackPipeRegs(IpFma_DssWriteBackPipeRegs* out, uin
     else
     {
         IpFma_RegDesc writeBackPipeRegs[] = {
-            { CSL_DSS_WB_ATTRIBUTES, 0U, IPFMA_WIDTH_32 },
-            { CSL_DSS_WB_POSITION,   0U, IPFMA_WIDTH_32 }
+            { CSL_DSS_WB_ATTRIBUTES,         0U, IPFMA_WIDTH_32 }, /* 0 */
+            { CSL_DSS_WB_ATTRIBUTES2,        0U, IPFMA_WIDTH_32 }, /* 1 */
+            { CSL_DSS_WB_BUF_THRESHOLD,      0U, IPFMA_WIDTH_32 }, /* 2 */
+            { CSL_DSS_WB_CSC_COEF0,          0U, IPFMA_WIDTH_32 }, /* 3 */
+            { CSL_DSS_WB_CSC_COEF1,          0U, IPFMA_WIDTH_32 }, /* 4 */
+            { CSL_DSS_WB_CSC_COEF2,          0U, IPFMA_WIDTH_32 }, /* 5 */
+            { CSL_DSS_WB_CSC_COEF3,          0U, IPFMA_WIDTH_32 }, /* 6 */
+            { CSL_DSS_WB_CSC_COEF4,          0U, IPFMA_WIDTH_32 }, /* 7 */
+            { CSL_DSS_WB_CSC_COEF5,          0U, IPFMA_WIDTH_32 }, /* 8 */
+            { CSL_DSS_WB_CSC_COEF6,          0U, IPFMA_WIDTH_32 }, /* 9 */
+            { CSL_DSS_WB_MFLAG_THRESHOLD,    0U, IPFMA_WIDTH_32 }, /* 10 */
+            { CSL_DSS_WB_SECURE,             0U, IPFMA_WIDTH_32 }  /* 11 */
         };
 
         for (uint32_t index = 0U; index < CSL_DSS_WB_PIPE_ID_MAX; index++)
@@ -358,12 +655,22 @@ IpFma_Status IpFma_Dss_GetWriteBackPipeRegs(IpFma_DssWriteBackPipeRegs* out, uin
             }
         }
 
-        status = IpFma_GetRegsValues(instanceBaseAddress, writeBackPipeRegs, sizeof(writeBackPipeRegs)/sizeof(IpFma_RegDesc));
+        status = IpFma_GetRegsValues(instanceBaseAddress, writeBackPipeRegs, (uint32_t)(sizeof(writeBackPipeRegs)/sizeof(writeBackPipeRegs[0])));
 
         if (IPFMA_OK == status)
         {
-            out->dssAttributes  = (uint32_t) writeBackPipeRegs[0].value;
-            out->dssPosition    = (uint32_t) writeBackPipeRegs[1].value;
+            out->dssAttributes        = (uint32_t)writeBackPipeRegs[0].value;
+            out->dssAttributes2       = (uint32_t)writeBackPipeRegs[1].value;
+            out->dssBufThreshold      = (uint32_t)writeBackPipeRegs[2].value;
+            out->dssCscCoef0          = (uint32_t)writeBackPipeRegs[3].value;
+            out->dssCscCoef1          = (uint32_t)writeBackPipeRegs[4].value;
+            out->dssCscCoef2          = (uint32_t)writeBackPipeRegs[5].value;
+            out->dssCscCoef3          = (uint32_t)writeBackPipeRegs[6].value;
+            out->dssCscCoef4          = (uint32_t)writeBackPipeRegs[7].value;
+            out->dssCscCoef5          = (uint32_t)writeBackPipeRegs[8].value;
+            out->dssCscCoef6          = (uint32_t)writeBackPipeRegs[9].value;
+            out->dssMflagThreshold    = (uint32_t)writeBackPipeRegs[10].value;
+            out->dssSecure            = (uint32_t)writeBackPipeRegs[11].value;
         }
     }
 
@@ -385,6 +692,98 @@ IpFma_Status IpFma_Dss_CompareCommonMRegs(const IpFma_DssCommonMRegs* expected, 
             status = IPFMA_E_MISMATCH;
         }
         if ((IPFMA_OK == status) && (expected->dssRevision != actual->dssRevision))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDispcIrqEnableSet != actual->dssDispcIrqEnableSet))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVidIrqEnable0 != actual->dssVidIrqEnable0))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVidIrqEnable1 != actual->dssVidIrqEnable1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVidIrqEnable2 != actual->dssVidIrqEnable2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVidIrqEnable3 != actual->dssVidIrqEnable3))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVpIrqEnable0 != actual->dssVpIrqEnable0))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVpIrqEnable1 != actual->dssVpIrqEnable1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVpIrqEnable2 != actual->dssVpIrqEnable2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVpIrqEnable3 != actual->dssVpIrqEnable3))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssWbIrqEnable != actual->dssWbIrqEnable))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDispcSecureDisable != actual->dssDispcSecureDisable))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDispcGlobalMFlagAttribute != actual->dssDispcGlobalMFlagAttribute))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDispcGlobalOutputEnable != actual->dssDispcGlobalOutputEnable))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDispcGlobalBuffer != actual->dssDispcGlobalBuffer))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssFbdcCommonControl != actual->dssFbdcCommonControl))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssFbdcConstantColor0 != actual->dssFbdcConstantColor0))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssFbdcConstantColor1 != actual->dssFbdcConstantColor1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDispcConnections != actual->dssDispcConnections))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDispcMssVp1 != actual->dssDispcMssVp1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDispcMssVp3 != actual->dssDispcMssVp3))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGlobalDmaThreadSize != actual->dssGlobalDmaThreadSize))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGlobalDmaThreadSizeStatus != actual->dssGlobalDmaThreadSizeStatus))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGlobalGobitMode != actual->dssGlobalGobitMode))
         {
             status = IPFMA_E_MISMATCH;
         }
@@ -412,6 +811,42 @@ IpFma_Status IpFma_Dss_CompareCommonSRegs(const IpFma_DssCommonSRegs* expected, 
         {
             status = IPFMA_E_MISMATCH;
         }
+        if ((IPFMA_OK == status) && (expected->dssVidIrqEnable0 != actual->dssVidIrqEnable0))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVidIrqEnable1 != actual->dssVidIrqEnable1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVidIrqEnable2 != actual->dssVidIrqEnable2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVidIrqEnable3 != actual->dssVidIrqEnable3))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVpIrqEnable0 != actual->dssVpIrqEnable0))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVpIrqEnable1 != actual->dssVpIrqEnable1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVpIrqEnable2 != actual->dssVpIrqEnable2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssVpIrqEnable3 != actual->dssVpIrqEnable3))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssWbIrqEnable != actual->dssWbIrqEnable))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
     }
 
     return status;
@@ -427,17 +862,149 @@ IpFma_Status IpFma_Dss_CompareVideoPipeRegs(const IpFma_DssVideoPipeRegs* expect
     }
     else
     {
-        if (expected->dssBufSizeStatus != actual->dssBufSizeStatus)
+        if (expected->dssAttributes != actual->dssAttributes)
         {
             status = IPFMA_E_MISMATCH;
         }
-        for (uint32_t index = 0U; index < IPFMA_DSS_VIDEO_PIPE_FIR_COEF_H0_REG_NUM; index++)
+        if ((IPFMA_OK == status) && (expected->dssAttributes2 != actual->dssAttributes2))
         {
-            if ((IPFMA_OK == status) && (expected->dssFirCoefH0[index] != actual->dssFirCoefH0[index]))
-            {
-                status = IPFMA_E_MISMATCH;
-                break;
-            }
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssBufThreshold != actual->dssBufThreshold))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef0 != actual->dssCscCoef0))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef1 != actual->dssCscCoef1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef2 != actual->dssCscCoef2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef3 != actual->dssCscCoef3))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef4 != actual->dssCscCoef4))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef5 != actual->dssCscCoef5))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef6 != actual->dssCscCoef6))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGlobalAlpha != actual->dssGlobalAlpha))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssMflagThreshold != actual->dssMflagThreshold))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef7 != actual->dssCscCoef7))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssFbdcAttributes != actual->dssFbdcAttributes))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssFbdcClearColor != actual->dssFbdcClearColor))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut0  != actual->dssClut0))  
+        {
+            status = IPFMA_E_MISMATCH; 
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut1 != actual->dssClut1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut2 != actual->dssClut2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut3 != actual->dssClut3))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut4 != actual->dssClut4))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut5 != actual->dssClut5))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut6 != actual->dssClut6))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut7 != actual->dssClut7))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut8 != actual->dssClut8))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut9 != actual->dssClut9))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut10 != actual->dssClut10))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut11 != actual->dssClut11))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut12 != actual->dssClut12))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut13 != actual->dssClut13))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut14 != actual->dssClut14))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut15 != actual->dssClut15))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssLumaKey != actual->dssLumaKey))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDmaBufSize != actual->dssDmaBufSize))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCrop != actual->dssCrop))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssSecure != actual->dssSecure))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssPipeGo != actual->dssPipeGo))
+        {
+            status = IPFMA_E_MISMATCH;
         }
     }
 
@@ -459,6 +1026,150 @@ IpFma_Status IpFma_Dss_CompareVideoPipeLayerRegs(const IpFma_DssVideoPipeLayerRe
             status = IPFMA_E_MISMATCH;
         }
         if ((IPFMA_OK == status) && (expected->dssSafetyAttributes != actual->dssSafetyAttributes))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssAttributes != actual->dssAttributes))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssAttributes2 != actual->dssAttributes2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssBufThreshold != actual->dssBufThreshold))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef0 != actual->dssCscCoef0))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef1 != actual->dssCscCoef1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef2 != actual->dssCscCoef2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef3 != actual->dssCscCoef3))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef4 != actual->dssCscCoef4))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef5 != actual->dssCscCoef5))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef6 != actual->dssCscCoef6))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGlobalAlpha != actual->dssGlobalAlpha))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssMflagThreshold != actual->dssMflagThreshold))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef7 != actual->dssCscCoef7))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssFbdcAttributes != actual->dssFbdcAttributes))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssFbdcClearColor != actual->dssFbdcClearColor))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut0  != actual->dssClut0))
+        {
+            status = IPFMA_E_MISMATCH;
+        }        
+        if ((IPFMA_OK == status) && (expected->dssClut1 != actual->dssClut1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut2 != actual->dssClut2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut3 != actual->dssClut3))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut4 != actual->dssClut4))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut5 != actual->dssClut5))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut6 != actual->dssClut6))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut7 != actual->dssClut7))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut8 != actual->dssClut8))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut9 != actual->dssClut9))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut10 != actual->dssClut10))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut11 != actual->dssClut11))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut12 != actual->dssClut12))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut13 != actual->dssClut13))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut14 != actual->dssClut14))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssClut15 != actual->dssClut15))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssLumaKey != actual->dssLumaKey))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDmaBufSize != actual->dssDmaBufSize))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCrop != actual->dssCrop))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssSecure != actual->dssSecure))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssPipeGo != actual->dssPipeGo))
         {
             status = IPFMA_E_MISMATCH;
         }
@@ -485,6 +1196,34 @@ IpFma_Status IpFma_Dss_CompareOverlayRegs(const IpFma_DssOverlayRegs* expected, 
         {
             status = IPFMA_E_MISMATCH;
         }
+        if ((IPFMA_OK == status) && (expected->dssDefaultColor != actual->dssDefaultColor))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDefaultColor2 != actual->dssDefaultColor2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssTransColorMax != actual->dssTransColorMax))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssTransColorMax2 != actual->dssTransColorMax2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssTransColorMin != actual->dssTransColorMin))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssTransColorMin2 != actual->dssTransColorMin2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssSecure != actual->dssSecure))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
     }
 
     return status;
@@ -508,6 +1247,150 @@ IpFma_Status IpFma_Dss_CompareVideoPortRegs(const IpFma_DssVideoPortRegs* expect
         {
             status = IPFMA_E_MISMATCH;
         }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef0 != actual->dssCscCoef0))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef1 != actual->dssCscCoef1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef2 != actual->dssCscCoef2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDataCycle0 != actual->dssDataCycle0))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDataCycle1 != actual->dssDataCycle1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssDataCycle2 != actual->dssDataCycle2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssLineNumber != actual->dssLineNumber))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssPolFreq != actual->dssPolFreq))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssSizeScreen != actual->dssSizeScreen))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssTimingH != actual->dssTimingH))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssTimingV != actual->dssTimingV))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef3 != actual->dssCscCoef3))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef4 != actual->dssCscCoef4))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef5 != actual->dssCscCoef5))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef6 != actual->dssCscCoef6))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef7 != actual->dssCscCoef7))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable0  != actual->dssGammaTable0))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable1  != actual->dssGammaTable1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable2  != actual->dssGammaTable2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable3  != actual->dssGammaTable3))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable4  != actual->dssGammaTable4))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable5  != actual->dssGammaTable5))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable6  != actual->dssGammaTable6))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable7  != actual->dssGammaTable7))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable8  != actual->dssGammaTable8))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable9  != actual->dssGammaTable9))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable10 != actual->dssGammaTable10))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable11 != actual->dssGammaTable11))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable12 != actual->dssGammaTable12))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable13 != actual->dssGammaTable13))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable14 != actual->dssGammaTable14))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssGammaTable15 != actual->dssGammaTable15))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssOldiConfig != actual->dssOldiConfig))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssOldiStatus != actual->dssOldiStatus))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssOldiLb != actual->dssOldiLb))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssSecure != actual->dssSecure))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
     }
 
     return status;
@@ -527,7 +1410,47 @@ IpFma_Status IpFma_Dss_CompareWriteBackPipeRegs(const IpFma_DssWriteBackPipeRegs
         {
             status = IPFMA_E_MISMATCH;
         }
-        if ((IPFMA_OK == status) && (expected->dssPosition != actual->dssPosition))
+        if ((IPFMA_OK == status) && (expected->dssAttributes2 != actual->dssAttributes2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssBufThreshold != actual->dssBufThreshold))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef0 != actual->dssCscCoef0))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef1 != actual->dssCscCoef1))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef2 != actual->dssCscCoef2))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef3 != actual->dssCscCoef3))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef4 != actual->dssCscCoef4))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef5 != actual->dssCscCoef5))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssCscCoef6 != actual->dssCscCoef6))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssMflagThreshold != actual->dssMflagThreshold))
+        {
+            status = IPFMA_E_MISMATCH;
+        }
+        if ((IPFMA_OK == status) && (expected->dssSecure != actual->dssSecure))
         {
             status = IPFMA_E_MISMATCH;
         }

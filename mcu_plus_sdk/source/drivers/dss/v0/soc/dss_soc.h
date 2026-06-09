@@ -53,9 +53,9 @@
 #include <drivers/dss/v0/soc/am62px/dss_soc_priv.h>
 #endif
 
-#if defined (SOC_J722S)
-#include <drivers/dss/v0/soc/j722s/dss_soc.h>
-#include <drivers/dss/v0/soc/j722s/dss_soc_priv.h>
+#if defined (SOC_AM62LX)
+#include <drivers/dss/v0/soc/am62lx/dss_soc.h>
+#include <drivers/dss/v0/soc/am62lx/dss_soc_priv.h>
 #endif
 
 #ifdef __cplusplus

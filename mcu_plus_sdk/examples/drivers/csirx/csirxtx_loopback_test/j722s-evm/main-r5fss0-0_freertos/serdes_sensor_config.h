@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2022
+ *  Copyright (c) Texas Instruments Incorporated 2022-25
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -87,7 +87,7 @@
 
 /**
  * @{
- * Generic Alias Addresses for serialisers attached to the UB960 Instance0 
+ * Generic Alias Addresses for serialisers attached to the UB960 Instance0
  */
 #define D3IMX390_UB960_INST0_PORT_0_SER_ADDR       (0x74U)
 

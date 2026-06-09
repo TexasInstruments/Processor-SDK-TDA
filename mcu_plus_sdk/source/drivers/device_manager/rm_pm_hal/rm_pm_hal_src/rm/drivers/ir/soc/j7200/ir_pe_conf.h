@@ -38,7 +38,7 @@
 #ifndef J7200_IR_PE_CONF_H
 #define J7200_IR_PE_CONF_H
 
-/** Count of IR init list (33 entries) */
-#define IR_SOC_PE_INIT_NUM (0x21U)
+/** Count of IR init list (35 entries) */
+#define IR_SOC_PE_INIT_NUM (0x23U)
 
 #endif /* J7200_IR_PE_CONF_H */

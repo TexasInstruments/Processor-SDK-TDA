@@ -16,24 +16,42 @@ ConfigName:=$(PROFILE)
 LIBNAME:=drivers.am62ax.a53.gcc-aarch64.$(PROFILE).lib
 
 FILES_common := \
+    ecap.c \
+    epwm.c \
     csl_sec_proxy.c \
     csl_bcdma.c \
+    csl_dru.c \
     csl_intaggr.c \
     csl_lcdma_ringacc.c \
     csl_pktdma.c \
     epwm.c \
+    eqep.c \
     gpio.c \
     gtc.c \
     gtc_soc.c \
     i2c_v0.c \
+    i2c_v0_lld.c \
+    i2c_soc.c \
     ipc_notify_v0.c \
     ipc_notify_v0_cfg.c \
     ipc_rpmsg.c \
     ipc_rpmsg_vring.c \
     mcan.c \
+    mcasp.c \
+    mcasp_dma.c \
+    mcasp_soc.c \
     mcspi_v0.c \
     mcspi_dma.c \
     mcspi_dma_udma.c \
+    mmcsd_v0.c \
+    mmcsd_priv.c \
+    mmcsd_soc.c \
+    ospi_v0.c \
+    ospi_dma.c \
+    ospi_dma_udma.c \
+    ospi_nor_flash.c \
+    ospi_phy.c \
+    ospi_phy_tuning.c \
     pinmux.c \
     sciclient.c \
     sciclient_pm.c \
@@ -43,7 +61,6 @@ FILES_common := \
     sciclient_firewall.c \
     sciclient_irq_rm.c \
     sciclient_fmwSecureProxyMap.c \
-    sciclient_boardcfg.c \
     sciclient_soc_priv.c \
     soc.c \
     uart_v0.c \
@@ -61,15 +78,21 @@ FILES_common := \
     udma_rmcfg.c \
     udma_soc.c \
     utils.c \
+    vtm.c \
     watchdog_rti.c \
     watchdog_soc.c \
 
 FILES_PATH_common = \
+    ecap/v0 \
     epwm/v0 \
+    eqep/v0 \
     gpio/v0 \
     gtc/v0 \
     gtc/v0/soc/am62ax \
+    hw_include/dru/v2/ \
     i2c/v0 \
+    i2c/v0/lld \
+    i2c/v0/soc/am62ax \
     ipc_notify/v0 \
     ipc_notify/v0/soc/am62ax \
     ipc_rpmsg/ \
@@ -77,6 +100,18 @@ FILES_PATH_common = \
     mcspi/v0/dma \
     mcspi/v0/dma/udma \
     mcan/v0 \
+    mcasp/v1 \
+    mcasp/v1/dma_priv \
+    mcasp/v1/soc/am62ax \
+    mmcsd \
+    mmcsd/v0 \
+    mmcsd/soc \
+    mmcsd/soc/am62ax \
+    ospi \
+    ospi/v0 \
+    ospi/v0/dma \
+    ospi/v0/dma/udma \
+    ospi/v0/ospi_tuning/ospi_tuning_algo/algo_v1 \
     pinmux/am62ax \
     pinmux/am62ax \
     sciclient \
@@ -85,10 +120,10 @@ FILES_PATH_common = \
     uart/v0 \
     uart/v0/dma \
     uart/v0/dma/udma \
-    udma \
-    udma/hw_include \
-    udma/soc \
-    udma/soc/am62ax \
+    udma/v0 \
+    udma/v0/hw_include \
+    udma/v0/soc \
+    udma/v0/soc/am62ax \
     utils \
     watchdog/v1 \
     watchdog/v1/soc/am62ax \
@@ -98,6 +133,8 @@ INCLUDES_common := \
 
 DEFINES_common := \
     -DSOC_AM62AX \
+    -DENABLE_PHY_TUNING_SOC_BUILD \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mcpu=cortex-a53+fp+simd \

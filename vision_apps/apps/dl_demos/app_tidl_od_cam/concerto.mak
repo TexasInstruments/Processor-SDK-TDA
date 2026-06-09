@@ -9,7 +9,7 @@ CSOURCES    += app_pre_proc_module.c
 CSOURCES    += app_draw_detections_module.c
 
 ifeq ($(SOC),$(filter $(SOC), am62a))
-ifeq ($(TARGET_OS),$(filter $(TARGET_OS), QNX))
+ifeq ($(TARGET_OS),$(filter $(TARGET_OS), LINUX QNX))
 CSOURCES    += app_post_proc_module.c
 endif
 endif
@@ -46,6 +46,14 @@ CSOURCES    += main_linux_arm.c
 
 include $(VISION_APPS_PATH)/apps/concerto_mpu_inc.mak
 
+# AM62A Linux: Link drm_wrapper for DRM/KMS display with zero-copy
+ifeq ($(TARGET_PLATFORM)$(TARGET_OS), AM62ALINUX)
+STATIC_LIBS += app_utils_drm_wrapper
+SYS_SHARED_LIBS += drm
+IDIRS += $(LINUX_FS_PATH)/usr/include/libdrm/
+IDIRS += $(LINUX_FS_PATH)/usr/include/drm/
+endif
+
 IDIRS       += $(VISION_APPS_KERNELS_IDIRS)
 
 STATIC_LIBS += $(VISION_APPS_KERNELS_LIBS)
@@ -64,7 +72,7 @@ IDIRS += $(VISION_APPS_PATH)/kernels/fileio/include
 IDIRS += $(VISION_APPS_PATH)/modules/include
 
 ifeq ($(SOC),$(filter $(SOC), am62a))
-ifeq ($(TARGET_OS),$(filter $(TARGET_OS), QNX))
+ifeq ($(TARGET_OS),$(filter $(TARGET_OS), LINUX QNX))
 IDIRS += $(EDGEAI_KERNELS_PATH)/include
 IDIRS += $(TIOVX_PATH)/source/include
 endif

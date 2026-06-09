@@ -1,7 +1,7 @@
 /*
  * Data version: 250223_004013
  *
- * Copyright (C) 2021-2025, Texas Instruments Incorporated
+ * Copyright (C) 2021-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,11 +37,14 @@
 #include <config.h>
 #include <types/short_types.h>
 
-#define TISCI_MSG_FLAG_FW_CAP_MAX (0x03U)
+#define TISCI_MSG_FLAG_FW_CAP_MAX (0x06U)
 const u64 soc_fw_caps[TISCI_MSG_FLAG_FW_CAP_MAX] = {
 	TISCI_MSG_FLAG_FW_CAP_GENERIC_CAP,
-	TISCI_MSG_FLAG_FW_CAP_LPM_DM_MANAGED,
+	TISCI_MSG_FLAG_FW_CAP_LPM_BOARDCFG_MANAGED,
 	TISCI_MSG_FLAG_FW_CAP_DM,
+	TISCI_MSG_FLAG_FW_CAP_LPM_ENCRYPT_IMAGE,
+	TISCI_MSG_FLAG_FW_CAP_LPM_IRQ_CONTEXT_LOST,
+	TISCI_MSG_FLAG_FW_CAP_LPM_CLK_CONTEXT_LOST,
 };
 
 #endif /* SOC_J784S4_CAPABILITIES_H */

@@ -32,6 +32,7 @@
 
 #include <kernel/dpl/DebugP.h>
 #include <drivers/i2c.h>
+#include <drivers/pinmux.h>
 #include "ti_drivers_config.h"
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
@@ -53,11 +54,7 @@ void i2c_temperature_main(void *arg0)
     I2C_Handle      i2cHandle;
     I2C_Transaction i2cTransaction;
 
-    Drivers_open();
-    Board_driversOpen();
-
     i2cHandle = gI2cHandle[CONFIG_I2C0];
-
     /* Determine if I2C sensor is present */
     deviceAddress = Board_getSocTemperatureSensorAddr();
     status = I2C_probe(i2cHandle, deviceAddress);
@@ -77,7 +74,7 @@ void i2c_temperature_main(void *arg0)
         I2C_Transaction_init(&i2cTransaction);
         i2cTransaction.writeBuf   = txBuffer;
         i2cTransaction.writeCount = 1;
-        i2cTransaction.slaveAddress = deviceAddress;
+        i2cTransaction.targetAddress = deviceAddress;
         txBuffer[0] = TMP10X_RESULT_REG;
         status = I2C_transfer(i2cHandle, &i2cTransaction);
         if(status == SystemP_SUCCESS)
@@ -86,7 +83,7 @@ void i2c_temperature_main(void *arg0)
             I2C_Transaction_init(&i2cTransaction);
             i2cTransaction.readBuf = rxBuffer;
             i2cTransaction.readCount = 2;
-            i2cTransaction.slaveAddress = deviceAddress;
+            i2cTransaction.targetAddress = deviceAddress;
 
             /* Take 20 samples and print them out onto the console */
             for(sample = 0; sample < 20; sample++)
@@ -132,9 +129,6 @@ void i2c_temperature_main(void *arg0)
     {
         DebugP_log("Some tests have failed!!\r\n");
     }
-
-    Board_driversClose();
-    Drivers_close();
 
     return;
 }

@@ -6,3 +6,9 @@
 var crovFiles = [
     "kernel/freertos/rov/FreeRTOS.rov.js",
 ];
+% if (args.project.device != "j722s") {
+
+var objectViewerFiles = [
+    "kernel/freertos/rov_theia/FreeRTOS_Theia.rov.js",
+];
+% }

@@ -64,9 +64,9 @@
 
 const vector<TidlConstraint> tidlConstraintInnerProduct = {
     TIDL_CSTR(
-        "Number of non-singleton variable input dimensions must be less than <= 4",
-        "Number of non-singleton variable input dimensions must be less than <= 4",
-        "Number of non-singleton variable input dimensions must be less than <= 4",
+        "Number of non-singleton variable input dimensions must be <= 4",
+        "Number of non-singleton variable input dimensions must be <= 4",
+        "Number of non-singleton variable input dimensions must be <= 4",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
@@ -197,7 +197,7 @@ const vector<TidlConstraint> tidlConstraintInnerProduct = {
     #endif
     TIDL_CSTR(
         "Filter and input must be of same dimensions or broadcast-able",
-        "",
+        "Filter and input must be of same dimensions or broadcast-able",
         "Filter and input must be of same dimensions or broadcast-able",
         [](const sTIDL_LayerPC_t *layer, string &logs){
 
@@ -259,9 +259,9 @@ const vector<TidlConstraint> tidlConstraintInnerProduct = {
         }
     ),
     TIDL_CSTR(
-        "Bias tensor input should be a vector of [1, N] or [N] where N should match output dimension",
-        "Bias tensor input should be a vector of [1, N] or [N] where N should match output dimension",
-        "Bias tensor input should be a vector of [1, N] or [N] where N should match output dimension",
+        "Bias tensor input should be a vector of [1, N] or [N] where N should match output width",
+        "Bias tensor input should be a vector of [1, N] or [N] where N should match output width",
+        "Bias tensor input should be a vector of [1, N] or [N] where N should match output width",
         [](const sTIDL_LayerPC_t *layer, string &logs){
 
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;

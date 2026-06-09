@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023-2025 Texas Instruments Incorporated
+ *  Copyright (C) 2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -62,6 +62,11 @@ extern "C" {
 /* ========================================================================== */
 
 /**
+ * \brief To send the MSB of a register offset address first
+ */
+#define BOARD_I2C_REG_ADDR_MSB_FIRST        (0x0U)
+
+/**
  *  \brief Command to configure the HDMI transmitter on the board
  */
 #define BOARD_CTRL_CMD_CFG_HDMI             (0)
@@ -100,16 +105,6 @@ extern "C" {
  *  \brief Macro to choose the DSI2DP Bridge resolution 1080p
  */
 #define BOARD_CTRL_DSI_BRIDGE_1080P         (1U)
-
-/**
- *  \brief I2C transation timeout
- */
-#define I2C_TRANSACTION_TIMEOUT             (2000U)
-
-/** 
- * \brief To send the MSB of a register offset address first
- */
-#define BOARD_I2C_REG_ADDR_MSB_FIRST        (0x0U)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -155,50 +150,50 @@ typedef struct
 int32_t Board_control(uint32_t cmd, void *arg);
 
 void Board_fpdUb960GetI2CAddr(uint8_t *i2cAddr,
-                             uint32_t csiInst);
+                              uint32_t csiInst);
 
 void Board_fpdUb9702GetI2CAddr(uint8_t *i2cAddr,
-                             uint32_t csiInst);
+                               uint32_t csiInst);
 
 int32_t Board_i2c8BitRegWrSingle(void *handle,
-                                uint32_t slaveAddr,
-                                uint8_t *regData,
-                                uint32_t i2cTimeout);
+                                 uint32_t slaveAddr,
+                                 uint8_t *regData,
+                                 uint32_t i2cTimeout);
 
 int32_t Board_i2c8BitRegRdSingle(void *handle,
-                                uint32_t slaveAddr,
-                                uint8_t *regData,
-                                uint32_t i2cTimeout);
+                                 uint32_t slaveAddr,
+                                 uint8_t *regData,
+                                 uint32_t i2cTimeout);
 
 int32_t Board_i2c8BitRegWr(void *handle,
-                                uint32_t slaveAddr,
-                                uint8_t regAddr,
-                                uint8_t *regData,
-                                uint8_t numOfBytes,
-                                uint32_t i2cTimeout);
+                           uint32_t slaveAddr,
+                           uint8_t regAddr,
+                           uint8_t *regData,
+                           uint8_t numOfBytes,
+                           uint32_t i2cTimeout);
 
 int32_t Board_i2c8BitRegRd(void *handle,
-                                uint32_t slaveAddr,
-                                uint8_t regAddr,
-                                uint8_t *regData,
-                                uint8_t numOfBytes,
-                                uint32_t i2cTimeout);
+                           uint32_t slaveAddr,
+                           uint8_t regAddr,
+                           uint8_t *regData,
+                           uint8_t numOfBytes,
+                           uint32_t i2cTimeout);
 
 int32_t Board_i2c16BitRegWr(void *handle,
-                                 uint32_t slaveAddr,
-                                 uint16_t regAddr,
-                                 uint8_t *regData,
-                                 uint8_t numOfBytes,
-                                 uint8_t byteOrdSel,
-                                 uint32_t i2cTimeout);
+                            uint32_t slaveAddr,
+                            uint16_t regAddr,
+                            uint8_t *regData,
+                            uint8_t numOfBytes,
+                            uint8_t byteOrdSel,
+                            uint32_t i2cTimeout);
 
 int32_t Board_i2c16BitRegRd(void   *handle,
-                                 uint32_t slaveAddr,
-                                 uint16_t regAddr,
-                                 uint8_t *regData,
-                                 uint8_t numOfBytes,
-                                 uint8_t byteOrdSel,
-                                 uint32_t i2cTimeout);
+                            uint32_t slaveAddr,
+                            uint16_t regAddr,
+                            uint8_t *regData,
+                            uint8_t numOfBytes,
+                            uint8_t byteOrdSel,
+                            uint32_t i2cTimeout);
 
 int32_t Board_enableCSII2c(uint32_t i2cInstance);
 

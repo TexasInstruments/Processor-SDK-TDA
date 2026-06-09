@@ -3,7 +3,7 @@
  *
  * PM subsystem board configuration data
  *
- * Copyright (C) 2021 Texas Instruments Incorporated - http://www.ti.com/
+ * Copyright (C) 2022-2025 Texas Instruments Incorporated - http://www.ti.com/
  *
  * This software is licensed under the standard terms and conditions in the
  * Texas Instruments Incorporated Technology and Software Publicly

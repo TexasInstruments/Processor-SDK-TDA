@@ -169,7 +169,7 @@ typedef struct
 #define SAFETY_CHECKERS_CSIRX_REG_TYPE_VIRTUAL_CHANNEL              (0x4U)
 #define SAFETY_CHECKERS_CSIRX_REG_TYPE_DATATYPE_FRAMESIZE           (0x5U)
 #define SAFETY_CHECKERS_CSIRX_NUM_REGTYPE_MAX                       (0x6U)
-/* @} */
+/** @} */
 #define SAFETY_CHECKERS_CSIRX_MAX_FRAME_SIZE                        (((uint32_t)2.5*1024U*1024U*1024U)/2U)
 #define SAFETY_CHECKERS_CSIRX_EVENT_INIT_DONE                       (0x1U)
 #define SAFETY_CHECKERS_CSIRX_SENSOR_CFG_END_MARKER                 (0xFFFU)
@@ -293,7 +293,7 @@ int32_t  SafetyCheckers_csirxVerifySensorCfg(void *handle,
                                              uint32_t slaveAddr,
                                              uint16_t (*regData)[3]);
 
-/* @} */
+/** @} */
 /* ========================================================================== */
 /*                       Static Function Definitions                          */
 /* ========================================================================== */

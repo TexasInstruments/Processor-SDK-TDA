@@ -6,9 +6,6 @@ export `args.sdkPath`?=$(abspath `args.relPath`)
 include $(`args.sdkPath`)/imports.mak
 
 CG_TOOL_ROOT=$(`args.cgtOptions.path`)
-% if (args.project.name == "sciserver" || args.project.name == "sciclient_direct") {
-VERSION_FOLDER_PATH=$(MCU_PLUS_SDK_PATH)/source/drivers/device_manager/version
-% }
 
 CC=$(`args.cgtOptions.path`)/bin/`args.cgtOptions.cc`
 AR=$(`args.cgtOptions.path`)/bin/`args.cgtOptions.ar`
@@ -42,7 +39,7 @@ ASMFILES_`prop` := \
 
     % }
 % }
-% if (args.project.device == "awr294x" || args.project.device == "j722s") {
+% if (args.project.device == "awr294x" || args.project.device == "j722s" || (args.project.os == "safertos")) {
 % obj = args.project.asmextnfiles;
 % for (prop in obj) {
     % if ( obj.hasOwnProperty(prop) && Array.isArray(obj[prop]) ) {
@@ -122,26 +119,24 @@ ARFLAGS_`prop` := \
 
     % }
 % }
-% if (args.project.name == "sciclient_direct" || args.project.name == "sciclient") {
+% if ((args.project.device == "j722s") && (args.project.name == "sciclient_direct" || args.project.name == "sciclient")) {
 ifeq ($(ENABLE_DM_TRACE),yes)
 DEFINES_common += -DENABLE_DM_TRACE
 FILES_common += sciclient_trace_internal.c
 endif
 
-
 % }
-% if (args.project.name == "sciserver" || args.project.name == "sciserver_tirtos") {
+% if ((args.project.device == "j722s") && (args.project.name == "sciserver" || args.project.name == "sciserver_tirtos")) {
 ifeq ($(ENABLE_DM_TRACE),yes)
 DEFINES_common += -DENABLE_DM_TRACE
 FILES_PATH_common += ../sciclient_direct
 FILES_common += sciclient_trace_internal.c
 endif
 
-
 % }
 FILES := $(FILES_common) $(FILES_$(PROFILE))
 ASMFILES := $(ASMFILES_common) $(ASMFILES_$(PROFILE))
-% if (args.project.device == "awr294x" || args.project.device == "j722s") {
+% if (args.project.device == "awr294x" || args.project.device == "j722s" || (args.project.os == "safertos")) {
 ASMEXTNFILES := $(ASMEXTNFILES_common) $(ASMEXTNFILES_$(PROFILE))
 % }
 FILES_PATH := $(FILES_PATH_common) $(FILES_PATH_$(PROFILE))
@@ -158,7 +153,7 @@ LIBDIR := lib
 OBJDIR := obj/`args.project.device`/`args.project.cgt`/$(PROFILE)/`args.project.cpu`/`args.project.name`/
 OBJS := $(FILES:%.c=%.obj)
 OBJS += $(ASMFILES:%.S=%.obj)
-% if (args.project.device == "awr294x" || args.project.device == "j722s") {
+% if (args.project.device == "awr294x" || args.project.device == "j722s" || (args.project.os == "safertos")) {
 OBJS += $(ASMEXTNFILES:%.asm=%.obj)
 % }
 DEPS := $(FILES:%.c=%.d)
@@ -166,7 +161,7 @@ DEPS := $(FILES:%.c=%.d)
 vpath %.obj $(OBJDIR)
 vpath %.c $(FILES_PATH)
 vpath %.S $(FILES_PATH)
-% if (args.project.device == "awr294x" || args.project.device == "j722s") {
+% if (args.project.device == "awr294x" || args.project.device == "j722s" || (args.project.os == "safertos")) {
 vpath %.asm $(FILES_PATH)
 % }
 
@@ -196,7 +191,7 @@ $(OBJDIR)/%.obj %.obj: %.S
 % if ((args.project.cgt == "gcc-aarch64") || (args.project.cgt == "gcc-armv7")) {
 	$(CC) -c -x assembler-with-cpp $(CFLAGS) $(INCLUDES) $(DEFINES) -o $(OBJDIR)$@ $<
 % }
-% if (args.project.device == "awr294x" || args.project.device == "j722s") {
+% if (args.project.device == "awr294x" || args.project.device == "j722s" || (args.project.os == "safertos")) {
 
 $(OBJDIR)/%.obj %.obj: %.asm
 	@echo  Compiling: $(LIBNAME): $<
@@ -211,35 +206,7 @@ $(OBJDIR)/%.obj %.obj: %.asm
 % }
 % }
 
-% if (args.project.name == "sciserver" || args.project.name == "sciclient_direct") {
-.PHONY: gen_rmpmhal_version
-.PHONY: gen_sciserver_version
-
-all: `args.project.name`.c $(LIBDIR)/$(LIBNAME)
-
-`args.project.name`.c: $(VERSION_FOLDER_PATH)/rmpmhal_version.h $(VERSION_FOLDER_PATH)/sciserver_version.h
-$(VERSION_FOLDER_PATH)/rmpmhal_version.h: gen_rmpmhal_version
-$(VERSION_FOLDER_PATH)/sciserver_version.h: gen_sciserver_version
-
-MODULE_NAME=`args.project.name`
-
-gen_rmpmhal_version:
-ifneq ($(OS),Windows_NT)
-	@echo \# Check and update: $(VERSION_FOLDER_PATH)/rmpmhal_version.h
-	@$(VERSION_FOLDER_PATH)/generate_rmpmhal_ver.sh > $(VERSION_FOLDER_PATH)/$(MODULE_NAME)-rmpmhal_version.h.tmp
-	@if [ -s $(VERSION_FOLDER_PATH)/$(MODULE_NAME)-rmpmhal_version.h.tmp ]; then if cmp -s $(VERSION_FOLDER_PATH)/rmpmhal_version.h $(VERSION_FOLDER_PATH)/$(MODULE_NAME)-rmpmhal_version.h.tmp; then rm $(VERSION_FOLDER_PATH)/$(MODULE_NAME)-rmpmhal_version.h.tmp; else mv $(VERSION_FOLDER_PATH)/$(MODULE_NAME)-rmpmhal_version.h.tmp $(VERSION_FOLDER_PATH)/rmpmhal_version.h; fi; else rm $(VERSION_FOLDER_PATH)/$(MODULE_NAME)-rmpmhal_version.h.tmp; fi
-endif
-
-gen_sciserver_version:
-ifneq ($(OS),Windows_NT)
-	@echo \# Check and update: $(VERSION_FOLDER_PATH)/sciserver_version.h
-	@$(VERSION_FOLDER_PATH)/generate_sciserver_ver.sh > $(VERSION_FOLDER_PATH)/$(MODULE_NAME)-sciserver_version.h.tmp
-	@if [ -s $(VERSION_FOLDER_PATH)/$(MODULE_NAME)-sciserver_version.h.tmp ]; then if cmp -s $(VERSION_FOLDER_PATH)/sciserver_version.h $(VERSION_FOLDER_PATH)/$(MODULE_NAME)-sciserver_version.h.tmp; then rm $(VERSION_FOLDER_PATH)/$(MODULE_NAME)-sciserver_version.h.tmp; else mv $(VERSION_FOLDER_PATH)/$(MODULE_NAME)-sciserver_version.h.tmp $(VERSION_FOLDER_PATH)/sciserver_version.h; fi; else rm $(VERSION_FOLDER_PATH)/$(MODULE_NAME)-sciserver_version.h.tmp; fi
-endif
-% }
-% else {
 all: $(LIBDIR)/$(LIBNAME)
-% }
 
 $(LIBDIR)/$(LIBNAME): $(OBJS) | $(LIBDIR)
 	@echo  .

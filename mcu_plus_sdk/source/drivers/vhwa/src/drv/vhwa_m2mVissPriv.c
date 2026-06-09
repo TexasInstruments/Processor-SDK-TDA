@@ -242,9 +242,12 @@ int32_t Vhwa_m2mVissSetOutChParams(Vhwa_M2mVissInstObj *instObj,
         hObj->outChPrms[cnt].isEnabled = (uint32_t)UFALSE;
     }
 
-    for (cnt = 0u; (cnt < VHWA_M2M_VISS_MAX_OUTPUTS) && (FVID2_SOK == status);
-         cnt ++)
+    for (cnt = 0u; cnt < VHWA_M2M_VISS_MAX_OUTPUTS; cnt ++)
     {
+        if (FVID2_SOK != status)
+        {
+            break;
+        }
         outPrms = &vsPrms->outPrms[cnt];
         outFmt  = &outPrms->fmt;
 
@@ -1221,8 +1224,12 @@ static int32_t vhwaM2mVissInitOutChPrmsForRGB888(Vhwa_M2mVissInstObj *instObj,
 
     /* Need to update three channels for RGB888 output,
      * all of them are almost same. */
-    for (cnt = 0U; (cnt < 3u) && (FVID2_SOK == status); cnt ++)
+    for (cnt = 0U; cnt < 3u; cnt ++)
     {
+        if (FVID2_SOK != status)
+        {
+            break;
+        }
         if (mode == (1U << cnt))
         {
             chPrms = &hObj->outChPrms[outId];

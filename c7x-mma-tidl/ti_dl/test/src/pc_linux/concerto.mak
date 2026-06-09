@@ -31,7 +31,7 @@ LDIRS += $(MMALIB_PATH)/lib/$(TARGET_C7X_VERSION)/$(TARGET_BUILD)
 ifeq ($(BUILD_LIDAR_PREPROC), 1)
 LDIRS += $(PSDK_INSTALL_PATH)/tiadalg/lib/x86_64/$(TARGET_BUILD)
 endif
-# path to tidl_algo and tidl_priv_algo
+# path to tidl_algo and tidl_priv
 ifeq ($(TIDL_BUILD_PATHS), LEGACY)
 LDIRS += $($(_MODULE)_SDIR)/../../../lib/PC/dsp/algo/$(TARGET_BUILD)
 else
@@ -45,34 +45,56 @@ endif
 #ADDITIONAL_STATIC_LIBS += rts7120_le.lib
 #endif
 
+ifeq ($(RTOS_SDK),mcu_sdk)
+  DEFS += MCU_SDK
+else ifeq ($(RTOS_SDK),mcu_plus_sdk)
+  DEFS += MCU_PLUS_SDK
+endif
+
 # External libraries: The order in which they are defined ins important
-ifeq ($(RTOS_SDK),mcu_plus_sdk)
+ifeq ($(RTOS_SDK),$(filter $(RTOS_SDK), mcu_sdk mcu_plus_sdk))
+  LDIRS += $(DMA_UTILS_PATH)/lib
+endif
+ifeq ($(RTOS_SDK),mcu_sdk)
+  # Add MCU_SDK library path for system libraries
+  ifeq ($(TARGET_BUILD),debug)
+    LDIRS += $(MCU_SDK_PATH)/build/tda54/lib/Debug
+  else
+    LDIRS += $(MCU_SDK_PATH)/build/tda54/lib/Release
+  endif
+endif
+
+ifeq ($(RTOS_SDK),$(filter $(RTOS_SDK), mcu_plus_sdk mcu_sdk))
   ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a))
     ADDITIONAL_STATIC_LIBS += dmautils.am62ax.c75x.ti-c7x-hostemu.$(TARGET_BUILD).lib
   else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J722S j722s))
     ADDITIONAL_STATIC_LIBS += dmautils.j722s.c75ssx-0.ti-c7x-hostemu.$(TARGET_BUILD).lib
+  else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+    ADDITIONAL_STATIC_LIBS += dmautils.tda54.c76x.ti-c7x-hostemu.$(TARGET_BUILD).lib
+    ADDITIONAL_STATIC_LIBS += libdrivers-ti_sdk_cfg_default_hostemu_gcc-linux.a
   endif
-  
-  LDIRS += $(DMA_UTILS_PATH)/lib
 else
-  ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), am62a AM62A j722s J722S))
+  ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), am62a AM62A j722s J722S TDA54 tda54))
+    DEFS += DMA_UTILS_STANDALONE
   else
+    ifndef DMA_UTILS_STANDALONE
     ADDITIONAL_STATIC_LIBS += udma.lib
     ADDITIONAL_STATIC_LIBS += sciclient.lib
     ADDITIONAL_STATIC_LIBS += ti.osal.lib
+    endif
 	LDIRS += $(PDK_PATH)/ti/osal/lib/nonos/$(SOC)/c7x-hostemu/$(TARGET_BUILD)
 	LDIRS += $(PDK_PATH)/ti/drv/sciclient/lib/$(SOC)_hostemu/c7x-hostemu/$(TARGET_BUILD)
   endif
   ADDITIONAL_STATIC_LIBS += dmautils.lib
   ADDITIONAL_STATIC_LIBS += ti.csl.lib
 
-  ifeq ($(ENABLE_SDK_9_2_COMPATIBILITY), 1)    
+  ifeq ($(ENABLE_SDK_9_2_COMPATIBILITY), 1)
   else
     ADDITIONAL_STATIC_LIBS += ti.csl.init.lib
-  endif   
-  
+  endif
+
   LDIRS += $(PDK_PATH)/ti/drv/udma/lib/$(SOC)_hostemu/c7x-hostemu/$(TARGET_BUILD)
-  LDIRS += $(PDK_PATH)/ti/csl/lib/$(SOC)/c7x-hostemu/$(TARGET_BUILD)  
+  LDIRS += $(PDK_PATH)/ti/csl/lib/$(SOC)/c7x-hostemu/$(TARGET_BUILD)
 endif
 
 # Custom Library
@@ -80,13 +102,15 @@ STATIC_LIBS += tidl_custom
 
 # internal libraries
 STATIC_LIBS += tidl_algo
-STATIC_LIBS += tidl_obj_algo
-STATIC_LIBS += tidl_priv_algo
+STATIC_LIBS += tidl_ref
+STATIC_LIBS += tidl_kernels
+STATIC_LIBS += tidl_priv
 
 
 # External libraries: The order in which they are defined ins important
 # Also, must be defined after the internal libraries
 STATIC_LIBS += mmalib_cn_x86_64
+STATIC_LIBS += perfEst_x86_64
 STATIC_LIBS += mmalib_x86_64
 STATIC_LIBS += common_x86_64
 STATIC_LIBS += $(TARGET_C7X_VERSION)$(C7x_HOSTEMU_COMPILER_STRING)-host-emulation
@@ -96,12 +120,8 @@ DEFS += BUILD_LIDAR_PREPROC
 endif
 # CUDA
 # TODO may have LDIRS, IDIRS, {STATIC, SHARED}_LIBS
-ifeq ($(BUILD_WITH_CUDA), 1)
+ifeq ($(BUILD_WITH_CUDA),yes)
 DEFS += BUILD_WITH_CUDA
-endif
-
-ifeq ($(TIDL_KERNEL_TEST), 1)
-DEFS += TIDL_KERNEL_TEST
 endif
 
 # OPENCV

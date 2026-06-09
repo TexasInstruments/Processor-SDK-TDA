@@ -20,6 +20,8 @@ else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J721S2 j721s2))
 BUILD_DEFS += SOC_J721S2
 else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J784S4 j784s4))
 BUILD_DEFS += SOC_J784S4
+else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+BUILD_DEFS += SOC_TDA54
 else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J742S2 j742s2))
 BUILD_DEFS += SOC_J742S2
 else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J722S j722s))
@@ -30,7 +32,7 @@ else
 BUILD_DEFS += SOC_J721E
 endif
 
-ifneq ($(BUILD_WITH_OPENACC) ,1)
+ifneq ($(BUILD_WITH_OPENACC),yes)
 CPPFLAGS  += --std=c++11 \
              -Wno-maybe-uninitialized \
              -Wno-unused-variable \

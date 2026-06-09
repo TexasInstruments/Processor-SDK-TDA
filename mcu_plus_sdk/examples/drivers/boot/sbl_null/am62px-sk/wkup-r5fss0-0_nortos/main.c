@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -44,7 +44,7 @@
 /* This buffer needs to be defined for OSPI nand boot in case of HS device for
    image authentication
    The size of the buffer should be large enough to accomodate the appimage */
-uint8_t gAppimage[0x800000] __attribute__ ((section (".app"), aligned (128)));
+uint8_t gAppimage[0x800000] __attribute__ ((section (".bss.app"), aligned (128)));
 
 
 
@@ -109,6 +109,21 @@ void App_driversOpen()
     }
 }
 
+void App_boardDriversClose()
+{
+    Flash_close(gFlashHandle[CONFIG_FLASH_SBL]);
+    gFlashHandle[CONFIG_FLASH_SBL] = NULL;
+}
+
+void App_driversClose()
+{
+    OSPI_close(gOspiHandle[CONFIG_OSPI_SBL]);
+    gOspiHandle[CONFIG_OSPI_SBL] = NULL;
+
+    UART_close(gUartHandle[CONFIG_UART_SBL]);
+    gUartHandle[CONFIG_UART_SBL] = NULL;
+}
+
 int main()
 {
     int32_t status;
@@ -116,15 +131,17 @@ int main()
     Bootloader_profileReset();
 
     Bootloader_socWaitForFWBoot();
-    status = Bootloader_socOpenFirewalls();
-
-    DebugP_assertNoLog(status == SystemP_SUCCESS);
-
 
     System_init();
     Module_clockSBLEnable();
     Module_clockSBLSetFrequency();
     Bootloader_profileAddProfilePoint("System_init");
+
+    status = Bootloader_socOpenFirewalls();
+    DebugP_assertNoLog(status == SystemP_SUCCESS);
+
+    Board_init();
+    Bootloader_profileAddProfilePoint("Board_init");
 
     Drivers_open();
     Bootloader_profileAddProfilePoint("Drivers_open");
@@ -148,6 +165,8 @@ int main()
 
     if(SystemP_SUCCESS == status)
     {
+        Bootloader_openDma();
+
         Bootloader_BootImageInfo bootImageInfo;
 		Bootloader_Params bootParams;
         Bootloader_Handle bootHandle;
@@ -164,6 +183,12 @@ int main()
 
         bootHandle = Bootloader_open(CONFIG_BOOTLOADER0, &bootParams);
         bootHandleDM = Bootloader_open(CONFIG_BOOTLOADER_FLASH_DM, &bootParamsDM);
+
+        /* For DDR inline ECC, priming is done using BIST engine in interrupt mode. Wait for the DDR init to be done */
+        while(!DDR_isInitDone())
+        {
+            ClockP_usleep(100);
+        }
 
         if(bootHandle != NULL)
         {
@@ -208,6 +233,8 @@ int main()
         }
 
         Bootloader_close(bootHandle);
+
+        Bootloader_closeDma();
     }
 
     if(status != SystemP_SUCCESS )
@@ -216,13 +243,17 @@ int main()
     }
 
     Board_driversClose();
+    App_boardDriversClose();
 
-    Drivers_close();
-
-    /* Call DPL deinit to close the tick timer and disable interrupts before jumping to DM*/
+    /* Call DPL deinit to close the tick timer and disable interrupts before jumping to DM */
     Dpl_deinit();
 
     Bootloader_JumpSelfCpu();
+
+    Drivers_close();
+    App_driversClose();
+
+    Board_deinit();
     System_deinit();
 
     return 0;

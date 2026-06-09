@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Texas Instruments Incorporated
+ * Copyright (C) 2022-2026 Texas Instruments Incorporated
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,6 +48,7 @@
  * \brief  This file contains pad configure register offsets and bit-field
  *         value macros for different configurations,
  *
+ *           BIT[23]        ISOBYPASS       bypass the isolation on given pin
  *           BIT[21]        TXDISABLE       disable the pin's output driver
  *           BIT[18]        RXACTIVE        enable the pin's input buffer (typically kept enabled)
  *           BIT[17]        PULLTYPESEL     set the iternal resistor pull direction high or low (if enabled)
@@ -82,7 +83,7 @@ extern "C" {
 /** @} */
 
 /** \brief Macro to mark end of pinmux config array */
-#define PINMUX_END                      (-1)
+#define PINMUX_END                      ((int16_t) -1)
 
 /** \brief Pin mode - it is at 0th bit. No shift requried */
 #define PIN_MODE(mode)                  ((uint32_t) mode)
@@ -92,10 +93,18 @@ extern "C" {
 #define PIN_PULL_DIRECTION              (((uint32_t) 0x1U) << 17U)
 /** \brief Receiver enable */
 #define PIN_INPUT_ENABLE                (((uint32_t) 0x1U) << 18U)
+/** \brief Drive strength */
+#define	PIN_DRIVE_STRENGTH(strength)    ((uint32_t)(strength) << 19U)
 /** \brief Driver disable */
 #define PIN_OUTPUT_DISABLE              (((uint32_t) 0x1U) << 21U)
+/** \brief Isolation bypass enable  */
+#define PIN_ISOLATION_BYPASS            (((uint32_t) 0x1U) << 23U)
 /** \brief Wakeup enable */
 #define PIN_WAKEUP_ENABLE               (((uint32_t) 0x1U) << 29U)
+
+#define PIN_DRV_STR_FAST                PIN_DRIVE_STRENGTH(2U)
+#define PIN_DRV_STR_NOMINAL             PIN_DRIVE_STRENGTH(0U)
+
 
 /** \brief Main domain pad config register offset in control module */
 enum Pinmux_MainOffsets
@@ -249,6 +258,7 @@ enum Pinmux_MainOffsets
 	PIN_RGMII1_TXC		 = 0x0130,
 	PIN_RGMII1_TX_CTL	 = 0x012C,
 	PIN_RGMII2_RD1		 = 0x0188,
+    PIN_EXTINTN		     = 0x01F4,
 	PIN_PORZ_OUT		 = 0x0250,
 	PIN_RESETSTATZ		 = 0x024C,
 	PIN_MMC1_SDWP		 = 0x0244,

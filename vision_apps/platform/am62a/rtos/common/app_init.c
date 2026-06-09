@@ -361,7 +361,7 @@ int32_t appInit()
         ipc_init_prm.enable_tiovx_ipc_announce = 0;
     }
     ipc_init_prm.num_cpus = 0;
-    #ifdef ENABLE_IPC_MPU1_0
+    #ifdef ENABLE_IPC_MPU1
     ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_MPU1_0;
     ipc_init_prm.num_cpus++;
     log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_MPU1_0] = 1;
@@ -513,7 +513,7 @@ int32_t appInit()
                     if((ipc_init_prm.enabled_cpu_id_list[i]!=APP_IPC_CPU_MPU1_0) && (ipc_init_prm.enabled_cpu_id_list[i] != APP_IPC_CPU_MCU2_0))
 #else
                     if(ipc_init_prm.enabled_cpu_id_list[i]!=APP_IPC_CPU_MPU1_0)
-#endif    
+#endif
                     {
                         sync_cpu_id_list[num_sync_cpus] = ipc_init_prm.enabled_cpu_id_list[i];
                         num_sync_cpus++;

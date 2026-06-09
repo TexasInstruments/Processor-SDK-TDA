@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021-2023 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,6 +30,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <inttypes.h>
 #include <string.h>
 #if defined ENABLE_SCICLIENT_DIRECT
@@ -42,6 +46,10 @@
 #include <kernel/dpl/DebugP.h>
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 /**
  *  \anchor Sciclient_TestEnables
@@ -176,6 +184,7 @@ struct App_sciclientTestParams
 /* ========================================================================== */
 /*                 Internal Function Declarations                             */
 /* ========================================================================== */
+
 static int32_t  App_sciclientParser(void);
 static uint32_t App_sciclientGetNumTests(void);
 static int32_t  App_sciclientTestMain(App_sciclientTestParams_t *testParams);
@@ -442,14 +451,12 @@ App_sciclientTestParams_t gSciclientTestcaseParams[] =
 
 void sciclient_unit_test_main(void *args)
 {
-    /* Open drivers to open UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
+    /* UART driver should be open for terminal output via a call to
+     * Drivers_open() before calling this function */
 
     App_sciclientParser();
 
-    Board_driversClose();
-    Drivers_close();
+    /* Board_driversClose() and Drivers_close() to follow after this function */
 }
 
 static uint32_t App_sciclientGetNumTests(void)
@@ -652,7 +659,7 @@ static int32_t App_invalidReqPrmTest(void)
     if (status == CSL_PASS)
     {
         status = Sciclient_service(NULL, &respPrm_good);
-        if (SystemP_FAILURE == status)
+        if ((SystemP_FAILURE == status)||(CSL_EBADARGS == status))
         {
             status = CSL_PASS;
             DebugP_log(" NULL Arg Test PASSED \n");
@@ -662,7 +669,7 @@ static int32_t App_invalidReqPrmTest(void)
             DebugP_log(" NULL Arg Test FAILED \n");
         }
         status = Sciclient_service(&reqPrm_badTxSize, &respPrm_good);
-        if (SystemP_FAILURE == status)
+        if ((SystemP_FAILURE == status)||(CSL_EBADARGS == status))
         {
             status = CSL_PASS;
             DebugP_log(" Tx Payload Check PASSED \n");
@@ -672,7 +679,7 @@ static int32_t App_invalidReqPrmTest(void)
             DebugP_log(" Tx Payload Check FAILED \n");
         }
         status = Sciclient_service(&reqPrm_good, &respPrm_badRxsize);
-        if (SystemP_FAILURE == status)
+        if ((SystemP_FAILURE == status)||(CSL_EBADARGS == status))
         {
             status = CSL_PASS;
             DebugP_log(" Rx Payload Check PASSED \n");
@@ -700,7 +707,7 @@ static int32_t App_timeoutTest(void)
     struct tisci_msg_version_resp response;
     Sciclient_RespPrm_t           respPrm =
     {
-        0,
+        0U,
         (uint8_t *) &response,
         sizeof (response)
     };
@@ -708,16 +715,14 @@ static int32_t App_timeoutTest(void)
     if (status == CSL_PASS)
     {
         status = Sciclient_service(&reqPrm, &respPrm);
-        if (SystemP_FAILURE == status)
+        if ((SystemP_TIMEOUT == status)||(CSL_ETIMEOUT == status))
         {
             status = CSL_PASS;
-            DebugP_log(
-                             " Timeout test PASSED \n");
+            DebugP_log(" Timeout test PASSED \n");
         }
         else
         {
-            DebugP_log(
-                             " Timeout Test FAILED \n");
+            DebugP_log(" Timeout Test FAILED \n");
         }
     }
     return status;
@@ -1357,11 +1362,10 @@ static void App_sciclientPrintResults(void)
         {
             strcpy(testResult, "NRY");
         }
-        DebugP_log(
-                          "%d\t         %s\t                         ",
-                          testcaseIdx, testParams->testCaseName);
-        DebugP_log(
-                          "%s\r\n", testResult);
+
+        DebugP_log("%d\t\t%s\t\t\t\t",
+                   testcaseIdx, testParams->testCaseName);
+        DebugP_log("%s\r\n", testResult);
     }
 
     DebugP_log(

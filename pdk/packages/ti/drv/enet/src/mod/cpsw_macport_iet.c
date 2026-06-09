@@ -129,6 +129,10 @@ static int32_t CpswMacPort_setPreemptQueue(CSL_Xge_cpswRegs *regs,
 static void CpswMacPort_getQueuePreemptStatus(CSL_Xge_cpswRegs *regs,
                                               uint32_t portNum,
                                               EnetMacPort_QueuePreemptCfg *queuePreemptCfg);
+
+static bool isPreemptFragWorkaroundNeeded(Enet_Type enetType,
+                                             Enet_MacPort macPort);
+
 #endif
 
 /* ========================================================================== */
@@ -142,6 +146,24 @@ static void CpswMacPort_getQueuePreemptStatus(CSL_Xge_cpswRegs *regs,
 /* ========================================================================== */
 
 #if ENET_CFG_IS_ON(CPSW_MACPORT_IET)
+static bool isPreemptFragWorkaroundNeeded(Enet_Type enetType, Enet_MacPort macPort)
+{
+    #if ENET_CFG_IS_ON(CPSW_MACPORT_IET_PREEMPT_FRAG_WORKAROUND)
+        uint32_t portMask = (1U << macPort);
+        #if defined(SOC_J721E) || defined(SOC_J784S4)
+            return ((enetType == ENET_CPSW_9G && macPort >= ENET_MAC_PORT_3) &&
+                    (portMask & ENET_CFG_IET_PREEMPT_FRAG_ERRATA_PORT_MASK));
+        #elif defined(SOC_J7200) || defined(SOC_J721S2)
+            return ((enetType == ENET_CPSW_5G && macPort >= ENET_MAC_PORT_2) &&
+                    (portMask & ENET_CFG_IET_PREEMPT_FRAG_ERRATA_PORT_MASK));
+        #else
+            return false;
+        #endif
+    #else
+        return false;
+    #endif
+}
+
 int32_t CpswMacPort_ioctlIet(EnetMod_Handle hMod,
                              uint32_t cmd,
                              Enet_IoctlPrms *prms)
@@ -246,7 +268,16 @@ int32_t CpswMacPort_ioctlIet(EnetMod_Handle hMod,
                            "MAC %u: Port mismatch %u\n", portNum, inArgs->macPort);
 
             CSL_CPSW_getPortIetControlReg(regs, portNum, &ietControl);
-            ietControl.macAddFragSize = inArgs->preemptMinFragSize;
+            uint8_t fragSize = inArgs->preemptMinFragSize;
+
+            if (isPreemptFragWorkaroundNeeded(hPort->enetType, inArgs->macPort) && fragSize == 0U)
+            {
+                /* Workaround : refer HW errata i2208 
+                Setting the Mininum fragment size to 128 as setting it 64 results in Express Packet Drops at 2.5G speed*/
+                fragSize = 1;
+                ENETTRACE_WARN("Errata i2208: RX min fragment size cannot be less than 128");
+            }
+            ietControl.macAddFragSize = fragSize;
             CSL_CPSW_setPortIetControlReg(regs, portNum, &ietControl);
         }
         break;

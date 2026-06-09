@@ -72,6 +72,8 @@
 #define HOST_ID_DM2DMSC (250U)
 /** DMSC2DM(Non Secure): DMSC to DM communication */
 #define HOST_ID_DMSC2DM (251U)
+/** A72_5(Non Secure): Cortex A72 context 5 on Main island */
+#define HOST_ID_A72_5 (240U)
 
 /**
  * Host catch all. Used in board configuration resource assignments to define
@@ -80,6 +82,6 @@
 #define HOST_ID_ALL (128U)
 
 /** Number of unique hosts on the SoC */
-#define HOST_ID_CNT (17U)
+#define HOST_ID_CNT (18U)
 
 #endif /* J7200_HOSTS_H */

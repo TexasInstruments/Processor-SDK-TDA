@@ -3,7 +3,7 @@
  *
  * DM Stub LPM memset and memcpy for relocation in stub
  *
- * Copyright (C) 2022-2023, Texas Instruments Incorporated
+ * Copyright (C) 2022-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,13 +56,13 @@ void *lpm_memcpy(void *_d, void const *_s, size_t n) __attribute__((no_builtin("
 	unsigned char *d = _d;
 	unsigned const char *s = _s;
 	size_t p;
+	size_t i = 0;
 
 	p = n;
 	while (p != 0U) {
 		p--;
-		*d = *s;
-		d = d + 1;
-		s = s + 1;
+		d[i] = s[i];
+		i++;
 	}
 
 	return _d;

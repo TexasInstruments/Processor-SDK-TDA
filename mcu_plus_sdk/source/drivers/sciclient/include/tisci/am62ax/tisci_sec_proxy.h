@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2017-2023 Texas Instruments Incorporated
+ *  Copyright (C) 2022-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -49,7 +49,7 @@
  *
  * Secure Proxy indices for AM62AX device
  *
- * Data version: 230918_161414
+ * Data version: 250904_120008
  *
  */
 #ifndef AM62AX_TISCI_SEC_PROXY_H
@@ -227,7 +227,7 @@ extern "C"
 /** Thread ID macro for DM2TIFS low_priority */
 #define TISCI_SEC_PROXY_DM2TIFS_WRITE_LOW_PRIORITY_THREAD_ID (23U)
 /** Num messages macro for DM2TIFS low_priority */
-#define TISCI_SEC_PROXY_DM2TIFS_WRITE_LOW_PRIORITY_NUM_MESSAGES (2U)
+#define TISCI_SEC_PROXY_DM2TIFS_WRITE_LOW_PRIORITY_NUM_MESSAGES (4U)
 
 /*
  * Secure Proxy configurations for TIFS2DM host

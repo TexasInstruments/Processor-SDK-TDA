@@ -396,7 +396,7 @@ static inline void DofCfg_init(Dof_Config *dofCfg);
  *
  *  \return         None
  */
-static inline void Dof_DecisionTreesInit(Dof_ConfScoreParam *dofCfg);
+static inline void Dof_DecisionTreesInit(Dof_ConfScoreParam *dofCSParam);
 
 /* ========================================================================== */
 /*                          Function Definitions                              */

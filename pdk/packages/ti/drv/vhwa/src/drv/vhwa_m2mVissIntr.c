@@ -580,7 +580,7 @@ static void vhwaM2mVissFrmDoneIsr(Vhwa_M2mVissInstObj *instObj)
                 {
                     CSL_lseGetPsaSign(instObj->regAddrs.lseRegs,
                                       &doneHndlObj->lseCfg,
-                                      doneHndlObj->psa.psaSign);
+                                      &doneHndlObj->psa.psaSign[0U]);
                 }
 
                 /* Call Application callback, for the completed handle object */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Texas Instruments Incorporated
+ * Copyright (c) 2020-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,13 @@
 // #include <ti/drv/uart/UART_stdio.h>
 
 /* Set VERBOSE to 1 for trace information on message routing */
-#define VERBOSE 0
+// #define VERBOSE 0
+
+// #if VERBOSE
+// #define Sciserver_printf UART_printf
+// #else
+// #define Sciserver_printf(...)
+// #endif
 
 /**
  * sciserver_stringify - Turn expression into a string literal
@@ -72,8 +78,6 @@
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
-
-/* None */
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -109,7 +113,7 @@ static int32_t Sciserver_ProcessFullMessage(uint32_t *msg_recv,
 /*                            Global Variables                                */
 /* ========================================================================== */
 
-const char *sciserver_version_str = sciserver_stringify(SCISERVER_MAJOR_VERSION_NAME) "." sciserver_stringify(SCISERVER_SUBVERSION) \
+const char *sciserver_version_str = SCISERVER_MAJOR_VERSION_NAME "." sciserver_stringify(SCISERVER_SUBVERSION) \
                                    "." sciserver_stringify(SCISERVER_PATCHVERSION) \
                                    SCISERVER_SCMVERSION;
 
@@ -152,7 +156,7 @@ int32_t Sciserver_init(Sciserver_CfgPrms_t *pPrms)
     {
         if (pPrms == NULL)
         {
-            ret = SystemP_FAILURE;
+            ret = CSL_EBADARGS;
         }
         if (CSL_PASS == ret)
         {
@@ -172,15 +176,12 @@ int32_t Sciserver_deinit(void)
 {
     int32_t ret = CSL_PASS;
 
-    if (gSciserverState.initDone == SCISERVER_INIT_DONE)
-    {
-        if (CSL_PASS == ret)
-        {
-            gSciserverState.ctrlState = SCISERVER_CTRL_CMD_HALT;
-            gSciserverState.processState = SCISERVER_PROCESS_STATE_WAIT;
-            gSciserverState.initDone = SCISERVER_INIT_NOT_DONE;
-        }
-    }
+	if (gSciserverState.initDone == SCISERVER_INIT_DONE)
+	{
+		gSciserverState.ctrlState = SCISERVER_CTRL_CMD_HALT;
+		gSciserverState.processState = SCISERVER_PROCESS_STATE_WAIT;
+		gSciserverState.initDone = SCISERVER_INIT_NOT_DONE;
+	}
     else
     {
         ret = CSL_EFAIL;
@@ -215,14 +216,11 @@ int32_t Sciserver_interruptHandler(Sciserver_hwiData *uhd, bool* soft_error)
     uint32_t hw_host = 0U;
 
     *soft_error = false;
-    if (ret == CSL_PASS)
-    {
-        memset(uhd->hw_msg_buffer, 0, SCISERVER_HW_QUEUE_SIZE);
-        msg_words = ((uint32_t) SCISERVER_HW_QUEUE_SIZE + 3U) / 4U;
-        ret = Sciserver_SproxyMsgRead(uhd->hw_msg_queue_id,
-                                      uhd->hw_msg_buffer,
-                                      msg_words);
-    }
+    memset(uhd->hw_msg_buffer, 0, SCISERVER_HW_QUEUE_SIZE);
+    msg_words = ((uint32_t) SCISERVER_HW_QUEUE_SIZE + 3U) / 4U;
+    ret = Sciserver_SproxyMsgRead(uhd->hw_msg_queue_id,
+                                  uhd->hw_msg_buffer,
+                                  msg_words);
 
     if (ret == CSL_PASS)
     {
@@ -302,12 +300,10 @@ int32_t Sciserver_processtask(Sciserver_taskData *utd)
                 utd->hw_msg_buffer_list[utd->state->current_buffer_idx],
                 &respMsgSize,
                 utd->user_msg_data[utd->state->current_buffer_idx]->host);
-
         if(CSL_PASS != ret)
         {
             Sciserver_printf("ERROR:: Sciserver_processtask: User process message status - FAIL\n");
         }
-
         respMsg = utd->hw_msg_buffer_list[utd->state->current_buffer_idx];
     }
     else
@@ -329,7 +325,7 @@ int32_t Sciserver_processtask(Sciserver_taskData *utd)
             Sciserver_SetMsgHostId(respMsg, TISCI_HOST_ID_DM);
             Sciserver_printf("Sciserver_processtask: Updated response message value for DMSC2DM\n");
         }
-        /* Check AOP flag before sending a respone back */
+        /* Check AOP flag before sending a response back */
         if((tisci_flags & TISCI_MSG_FLAG_AOP) == TISCI_MSG_FLAG_AOP){
             Sciserver_printf("Sciserver_processtask: Sending AOP response message to host with Message type = 0x%x \nMessage to be sent to the host = %d\n",
                              ((struct tisci_header *)respMsg)->type, respHost);
@@ -344,7 +340,6 @@ int32_t Sciserver_processtask(Sciserver_taskData *utd)
 
         utd->state->state = SCISERVER_TASK_PENDING;
     }
-
     if(CSL_PASS == ret)
     {
         Sciserver_printf("Exiting Sciserver_processtask function with status - PASS\n");
@@ -442,19 +437,23 @@ static int32_t Sciserver_ProcessFullMessage(uint32_t *msg_recv,
     /* Store the request sequence value */
     reqSeq = hdr->seq;
 
-    memcpy(reqMsgBuffer, msg_recv, reqMsgSize);
+    memcpy((void *)reqMsgBuffer, (const void *)msg_recv, reqMsgSize);
 
     reqPrm.messageType = hdr->type;
-    reqPrm.flags = (TISCI_MSG_FLAG_AOP | (hdr->flags));
     reqPrm.pReqPayload = reqMsgBuffer;
     reqPrm.reqPayloadSize = reqMsgSize;
     reqPrm.timeout = SCICLIENT_SERVICE_WAIT_FOREVER;
 
     /*
-     * If here, the message is intended to be forwarded to another service
-     * provider.
+     * The message is being forwarded to another service provider.
+     * Mark it with the forward status and set the AOP flag in the
+     * message’s flags. The AOP flag tells TIFS to send a response
+     * when the message is forwarded, which Sciserver uses to determine
+     * whether TIFS has processed the message. This ensures proper
+     * synchronization between DM and TIFS.
      */
     reqPrm.forwardStatus = SCISERVER_FORWARD_MSG;
+    reqPrm.flags = (hdr->flags | (uint32_t) TISCI_MSG_FLAG_AOP);
 
     respPrm.flags = 0;
     respPrm.pRespPayload = respMsgBuffer;
@@ -462,12 +461,11 @@ static int32_t Sciserver_ProcessFullMessage(uint32_t *msg_recv,
 
     ret = Sciclient_service(&reqPrm, &respPrm);
 
-    memcpy(msg_recv, respMsgBuffer, respMsgSize);
+    memcpy((void *)msg_recv, (const void *)respMsgBuffer, respMsgSize);
 
     /* Must restore the seq field. When forwarded message is processed by
      * TIFS, the returned message would have incorrect sequence value */
     hdr->seq = reqSeq;
-
     if(ret == CSL_PASS)
     {
         Sciserver_printf("Exiting Sciserver_ProcessFullMessage function with status - PASS\n");
@@ -632,6 +630,16 @@ static int32_t Sciserver_UserProcessMsg(uint32_t *msg_recv,
             respMsgSize = sizeof(struct tisci_msg_get_freq_resp);
             Sciserver_printf("case: TISCI_MSG_GET_FREQ\n");
             break;
+#ifdef CONFIG_PM_CLK_SSC
+        case TISCI_MSG_SET_CLOCK_SSC:
+            reqMsgSize = sizeof(struct tisci_msg_set_clock_ssc_req);
+            respMsgSize = sizeof(struct tisci_msg_set_clock_ssc_resp);
+            break;
+        case TISCI_MSG_GET_CLOCK_SSC:
+            reqMsgSize = sizeof(struct tisci_msg_get_clock_ssc_req);
+            respMsgSize = sizeof(struct tisci_msg_get_clock_ssc_resp);
+            break;
+#endif
         case TISCI_MSG_SET_DEVICE:
             reqMsgSize = sizeof(struct tisci_msg_set_device_req);
             respMsgSize = sizeof(struct tisci_msg_set_device_resp);
@@ -642,6 +650,12 @@ static int32_t Sciserver_UserProcessMsg(uint32_t *msg_recv,
             respMsgSize = sizeof(struct tisci_msg_get_device_resp);
             Sciserver_printf("case: TISCI_MSG_GET_DEVICE\n");
             break;
+#ifdef CONFIG_GET_DEVICE_MULTIPLE
+        case TISCI_MSG_GET_DEVICE_MULTIPLE:
+            reqMsgSize = (int32_t)sizeof(struct tisci_msg_get_device_multiple_req);
+            respMsgSize = (int32_t)sizeof(struct tisci_msg_get_device_multiple_resp);
+            break;
+#endif
         case TISCI_MSG_SET_DEVICE_RESETS:
             reqMsgSize = sizeof(struct tisci_msg_set_device_resets_req);
             respMsgSize = sizeof(struct tisci_msg_set_device_resets_resp);
@@ -656,6 +670,11 @@ static int32_t Sciserver_UserProcessMsg(uint32_t *msg_recv,
             reqMsgSize = sizeof(struct tisci_query_fw_caps_req);
             respMsgSize = sizeof(struct tisci_query_fw_caps_resp);
             Sciserver_printf("case: TISCI_MSG_QUERY_FW_CAPS\n");
+            break;
+        case TISCI_MSG_DM_VERSION:
+            reqMsgSize = sizeof(struct tisci_msg_dm_version_req);
+            respMsgSize = sizeof(struct tisci_msg_dm_version_resp);
+            Sciserver_printf("This is security message and forwarding to TIFS with message type: 0x%x\n", hdr->type);
             break;
 #ifdef CONFIG_LPM_DM
         case TISCI_MSG_PREPARE_SLEEP:
@@ -673,17 +692,50 @@ static int32_t Sciserver_UserProcessMsg(uint32_t *msg_recv,
             respMsgSize = sizeof(struct tisci_msg_lpm_wake_reason_resp);
             Sciserver_printf("case: TISCI_MSG_LPM_WAKE_REASON\n");
             break;
+        case TISCI_MSG_LPM_SET_DEVICE_CONSTRAINT:
+            reqMsgSize = sizeof(struct tisci_msg_lpm_set_device_constraint_req);
+            respMsgSize = sizeof(struct tisci_msg_lpm_set_device_constraint_resp);
+            break;
+        case TISCI_MSG_LPM_SET_LATENCY_CONSTRAINT:
+            reqMsgSize = sizeof(struct tisci_msg_lpm_set_latency_constraint_req);
+            respMsgSize = sizeof(struct tisci_msg_lpm_set_latency_constraint_resp);
+            break;
+        case TISCI_MSG_LPM_GET_DEVICE_CONSTRAINT:
+            reqMsgSize = sizeof(struct tisci_msg_lpm_get_device_constraint_req);
+            respMsgSize = sizeof(struct tisci_msg_lpm_get_device_constraint_resp);
+            break;
+        case TISCI_MSG_LPM_GET_LATENCY_CONSTRAINT:
+            reqMsgSize = sizeof(struct tisci_msg_lpm_get_latency_constraint_req);
+            respMsgSize = sizeof(struct tisci_msg_lpm_get_latency_constraint_resp);
+            break;
+        case TISCI_MSG_LPM_GET_NEXT_SYS_MODE:
+            reqMsgSize = sizeof(struct tisci_msg_lpm_get_next_sys_mode_req);
+            respMsgSize = sizeof(struct tisci_msg_lpm_get_next_sys_mode_resp);
+            break;
+        case TISCI_MSG_LPM_GET_NEXT_HOST_STATE:
+            reqMsgSize = sizeof(struct tisci_msg_lpm_get_next_host_state_req);
+            respMsgSize = sizeof(struct tisci_msg_lpm_get_next_host_state_resp);
+            break;
         case TISCI_MSG_SET_IO_ISOLATION:
             reqMsgSize = sizeof(struct tisci_msg_set_io_isolation_req );
             respMsgSize = sizeof(struct tisci_msg_set_io_isolation_resp);
             Sciserver_printf("case: TISCI_MSG_SET_IO_ISOLATION\n");
             break;
-#endif
-        case TISCI_MSG_DM_VERSION:
-            reqMsgSize = sizeof(struct tisci_msg_dm_version_req);
-            respMsgSize = sizeof(struct tisci_msg_dm_version_resp);
-            Sciserver_printf("This is security message and forwarding to TIFS with message type: 0x%x\n", hdr->type);
+        case TISCI_MSG_LPM_ABORT:
+            reqMsgSize = sizeof(struct tisci_msg_lpm_abort_req);
+            respMsgSize = sizeof(struct tisci_msg_lpm_abort_resp);
             break;
+#elif defined(CONFIG_LPM_MIN)
+        case TISCI_MSG_PREPARE_SLEEP:
+            reqMsgSize = sizeof(struct tisci_msg_prepare_sleep_req);
+            respMsgSize = sizeof(struct tisci_msg_prepare_sleep_resp);
+            Sciserver_printf("case: TISCI_MSG_PREPARE_SLEEP\n");
+            break;
+        case TISCI_MSG_LPM_WAKE_REASON:
+            reqMsgSize = (int32_t) sizeof(struct tisci_msg_lpm_wake_reason_req);
+            respMsgSize = (int32_t) sizeof(struct tisci_msg_lpm_wake_reason_resp);
+            break;
+#endif
         default:
             /* Forward the full message size */
             reqMsgSize = SCISERVER_HW_QUEUE_SIZE;
@@ -720,7 +772,6 @@ static int32_t Sciserver_UserProcessMsg(uint32_t *msg_recv,
     }
 
     *pRespMsgSize = respMsgSize;
-
     if(ret == CSL_PASS)
     {
         Sciserver_printf("Exiting Sciserver_UserProcessMsg function with status - PASS\n");

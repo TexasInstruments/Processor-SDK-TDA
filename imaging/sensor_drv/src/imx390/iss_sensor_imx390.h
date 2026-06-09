@@ -148,7 +148,7 @@ static int32_t IMX390_Probe(uint32_t chId, void *pSensorHdl);
 static int32_t IMX390_Config(uint32_t chId, void *pSensorHdl, uint32_t sensor_features_requested);
 static int32_t IMX390_StreamOn(uint32_t chId, void *pSensorHdl);
 static int32_t IMX390_StreamOff(uint32_t chId, void *pSensorHdl);
-static int32_t IMX390_PowerOn(uint32_t chMask, void *pSensorHdl);
+static int32_t IMX390_PowerOn(uint32_t chId, void *pSensorHdl);
 static int32_t IMX390_PowerOff(uint32_t chId, void *pSensorHdl);
 static int32_t IMX390_GetExpParams(uint32_t chId, void *pSensorHdl, IssSensor_ExposureParams *pExpPrms);
 static int32_t IMX390_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_ExposureParams *pExpPrms);
@@ -164,7 +164,7 @@ static int32_t IMX390_GetWBPrgFxn(uint32_t chId, void *pSensorHdl, IssAwbDynamic
 static int32_t IMX390_WriteReg(uint8_t    i2cInstId,
                              uint8_t       i2cAddr,
                              uint16_t         regAddr,
-                             uint8_t          regValue,
+                             uint8_t          regVal,
                              uint32_t      numRegs);
 
 static int32_t IMX390_ReadReg(uint8_t      i2cInstId,

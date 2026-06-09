@@ -27,6 +27,7 @@ const files_r5f = {
         "DebugP_safertos.c",
         "DebugP_shmLogReader_safertos.c",
         "SemaphoreP_safertos.c",
+        "StartuphooksP_safertos.c",
         "TaskP_safertos.c",
         "EventP_safertos.c",
         // picked from safertos "kernel"
@@ -39,6 +40,7 @@ const files_r5f = {
         "semaphore.c",
         "mutex.c",
         "streambuffer.c",
+        "weakStubs.c",
         // picked from safertos "portable"
         "portable.c",
         "mpuARM.c",
@@ -51,6 +53,8 @@ const files_r5f = {
         "apiStreamBufferWrapper.c",
         "apiWrapper.c",
         "apiEventGroupsWrapper.c",
+        // picked from safertos "queue_registry"
+        "queue_register.c",
     ]
 };
 
@@ -64,6 +68,7 @@ const includes_r5f = {
         "r5f/kernel/include_api",
         "r5f/kernel/include_prv",
         "r5f/config",
+        "r5f/queue_registry",
     ],
 };
 
@@ -80,7 +85,7 @@ const asmfiles_r5f = {
         "MpuP_armv7r_asm.S",
         "PmuP_armv7r_asm.S",
         "boot_armv7r_asm.S",
-        // Picked from DPL safertos        
+        // Picked from DPL safertos
         "HwiP_armv7r_vectors_safertos_asm.S",
         "HwiP_armv7r_handlers_safertos_asm.S",
         "CacheP_armv7r_asm.S",
@@ -89,10 +94,7 @@ const asmfiles_r5f = {
     ],
 };
 
-const asmextnfiles_r5f = {
-    common: [
-    ],
-};
+
 
 const asmextnfiles_c75 = {
     common: [
@@ -104,7 +106,7 @@ const filedirs_r5f = {
     common: [
         // picked from nortos DPL
         "../nortos/dpl/r5",
-        "../nortos/dpl/common", 
+        "../nortos/dpl/common",
         // picked from safertos DPL
         "dpl/r5",
         "dpl/common",
@@ -114,7 +116,9 @@ const filedirs_r5f = {
         "r5f/portable/199_TI_CR5",
         "r5f/portable/199_TI_CR5/024_Clang",
         // picked from safertos "api"
-        "r5f/api/PrivWrapperStd"
+        "r5f/api/PrivWrapperStd",
+        // picked from safertos "queue_registry"
+        "r5f/queue_registry"
     ],
 };
 
@@ -128,7 +132,6 @@ const files_c75x = {
         "Exception.c",
         "csl_clec.c",
         "HwiP_c75.c",
-        "HwiP_safertos_c7x.c",
         "MmuP_c75.c",
         "Startup.c",
         // picked from nortos DPL common
@@ -146,7 +149,9 @@ const files_c75x = {
         // picked from safertos DPL
         "ClockP_safertos.c",
         "ClockP_safertos_c75.c",
+        "HwiP_safertos_c7x.c",
         "SemaphoreP_safertos.c",
+        "StartuphooksP_safertos.c",
         "HeapP_safertos.c",
         "DebugP_safertos.c",
         "DebugP_shmLogReader_safertos.c",
@@ -162,6 +167,7 @@ const files_c75x = {
         "semaphore.c",
         "mutex.c",
         "streambuffer.c",
+        "weakStubs.c",
         // picked from safertos "portable"
         "portable.c",
     ]
@@ -170,6 +176,7 @@ const files_c75x = {
 const includes_c75x = {
     common: [
         "../nortos/dpl/c75",
+        "../nortos/dpl/c75/soc/j722s",
         "dpl/c75",
         "c75/api/230_C7x",
         "c75/api/NoWrapper",
@@ -185,7 +192,10 @@ const cflags_c75x = {
     common: [
         "-DHwi_bootToNonSecure__D=true",
         "-DException_vectors__D",
-        "--symdebug:dwarf"
+        "--advice:performance=none ",
+    ],
+    remove: [
+        "--symdebug:none",
     ]
 };
 
@@ -195,6 +205,7 @@ const asmfiles_c75x = {
         "Clobber_asm.S",
         "Exception_asm.S",
         "Hwi_asm.S",
+        "Hwi_switch_asm.S",
         "Mmu_asm.S",
         "csl_c7xecr.S",
     ],
@@ -258,7 +269,6 @@ function getComponentBuildProperty(buildOption) {
         build_property.files = files_r5f;
         build_property.includes = includes_r5f;
         build_property.asmfiles = asmfiles_r5f;
-        build_property.asmextnfiles = asmextnfiles_r5f
         build_property.filedirs = filedirs_r5f;
         build_property.cflags = cflags_r5f;
         build_property.defines = defines_r5_safertos;

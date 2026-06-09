@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2021, Texas Instruments Incorporated
+ * Copyright (c) 2013-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,13 +42,17 @@
 
 #include <drivers/hw_include/csl_types.h>
 #include "HwiP_c75.h"
+#include <drivers/hw_include/cslr_soc.h>
+#include <kernel/nortos/dpl/c75/csl_clec.h>
+#include <c75_clec_base_address.h>
 
 /* Object__sizingError */
 typedef char Hwi_Object__sizingError[(sizeof(Hwi_Object) > sizeof(HwiC7x_Struct)) ? -1 : 1];
 
 extern void Hwi_dispatchAlways(void);
-extern void Hwi_switchAndRunFunc(void (*func)());
-extern uint32_t xPortInIsrContext(void);
+extern void Hwi_switchAndRunFunc(void (*func)(void));
+extern void Hwi_refreshNLC(void);
+static CSL_CLEC_EVTRegs* Hwip_getClecBaseAddr(void);
 
 
 extern char Hwi_vectorsBase[];
@@ -60,13 +64,16 @@ extern  char _stack[0x10001];
  */
 #define HWI_ECSP_SIZE (0x10000)
 
+#define  HWIP_USE_DEFAULT_PRIORITY   (~((uint8_t)0))
+#define DPL_C7X_CONFIGNUM_HWI      (64U)
+
 #if Hwi_bootToNonSecure__D
-extern void Hwi_switchToNS();
+extern void Hwi_switchToNS(void);
 #endif
 
 extern const Hwi_Params Hwi_Object__PARAMS__C;
 
-void Hwi_secureStart()
+void Hwi_secureStart(void)
 {
 #if Hwi_bootToNonSecure__D
     /* Initialize the vector table pointer, ESTP */
@@ -155,35 +162,38 @@ int Hwi_Instance_init(Hwi_Object *hwi, int intNum,
                       Hwi_FuncPtr fxn, const Hwi_Params *params)
 {
     int status;
+    int retVal = 0;
 
     /* there are 64 "interrupt" events in C7x */
     if (intNum < 0 || intNum > 63) {
-        return (1);
+        retVal = 1;
     }
 
-    if (Hwi_Module_state.dispatchTable[intNum] != NULL) {
-        return (1);
+    if ((retVal == 0) && (Hwi_Module_state.dispatchTable[intNum] != NULL)) {
+        retVal = 1;
     }
 
-    Hwi_Module_state.dispatchTable[intNum] = hwi;
+    if (retVal == 0)
+    {
+        Hwi_Module_state.dispatchTable[intNum] = hwi;
 
 // There is no vector table on C7x.  Instead, all interrupts vector to
 // ESTP + 0x800, where a dispatcher needs to look at AHPEE for interrupt
 // number in service and call the configured ISR.
 //    Hwi_plug(intNum, Hwi_dispatchAlways);
 
-    Hwi_reconfig(hwi, fxn, params);
-    hwi->intNum = intNum;
+        Hwi_reconfig(hwi, fxn, params);
+        hwi->intNum = intNum;
 
-    hwi->irp = 0;
+        hwi->irp = 0;
 
-    status = Hwi_postInit(hwi);
+        status = Hwi_postInit(hwi);
 
-    if (status != 0) {
-        return (3 + status);
+        if (status != 0) {
+            retVal = (3 + status);
+        }
     }
-
-    return (0);
+    return (retVal);
 }
 
 /*
@@ -213,18 +223,19 @@ int Hwi_postInit (Hwi_Object *hwi)
  */
 void Hwi_Instance_finalize(uint32_t intNum, int status)
 {
-
-    if (status == 1) {  /* failed early in Hwi_Instance_init() */
-        return;
+    if (status != 1) {  /* failed early in Hwi_Instance_init() */
+        HwiP_disableInt(intNum);
+        Hwi_Module_state.dispatchTable[intNum] = NULL;
     }
 
-    HwiP_disableInt(intNum);
-    Hwi_Module_state.dispatchTable[intNum] = NULL;
+}
 
-    if (status == 2) {  /* failed mid-way into Hwi_Instance_init() */
-        return;
-    }
-
+/*
+ *  ======== Hwi_unPluggedInterrupt ========
+ *  Here on interrupt unPlugged by Hwi_delete().
+ */
+void Hwi_unPluggedInterrupt(void) {
+    while(true != 0){;}
 }
 
 /*
@@ -236,18 +247,17 @@ void Hwi_eventMap(int vectId, int eventId)
 {
     unsigned int mask;          /* Interrupt mask value */
 
-    if (vectId < 0 || vectId > 63) {
-        return;
+    if (vectId >= 0 && vectId <= 63)
+    {
+        mask = Hwi_disable();
+
+        /* Program CLEC to map external eventId to internal interrupt (event) */
+
+        /* clear any residual interrupt */
+        __set_indexed(__EFCLR, 0, 1UL << (uint32_t)vectId);
+
+        Hwi_restore(mask);
     }
-
-    mask = Hwi_disable();
-
-    /* Program CLEC to map external eventId to internal interrupt (event) */
-
-    /* clear any residual interrupt */
-    __set_indexed(__EFCLR, 0, 1L << vectId);
-
-    Hwi_restore(mask);
 }
 
 /*
@@ -255,13 +265,15 @@ void Hwi_eventMap(int vectId, int eventId)
  */
 int Hwi_getEventId(unsigned int vectId)
 {
+    int retVal = 0;
+
     if (vectId > 63) {
-        return -1;
+        retVal = -1;
     }
 
     /* TODO */
 
-    return 0;
+    return retVal;
 }
 
 /*
@@ -323,11 +335,55 @@ void Hwi_setPriority(unsigned int intNum, unsigned int priority)
 {
     DebugP_assert(priority >= 1U && priority <= 7U);
 
-    if (Hwi_getCXM() != Hwi_TSR_CXM_SecureSupervisor) {
-        return;
+    if (Hwi_getCXM() == Hwi_TSR_CXM_SecureSupervisor)
+    {
+        __set_indexed(__EPRI, intNum, priority << 5);
     }
+}
 
-    __set_indexed(__EPRI, intNum, priority << 5);
+
+void HwiP_post(uint32_t intrNum)
+{
+
+    __set_indexed(__EFSET, 0, 1UL << intrNum);
+
+    return;
+
+    /* Please note that in future,for targets which do not support Hwi_Post,
+       add #ifdefs appropriately to return osal_UNSUPPORTED */
+}
+
+uint32_t HwiP_disableInt(uint32_t intNum)
+{
+    unsigned long mask = 1UL << intNum;
+
+    /* Hwi_disableIER() returns old EER */
+    return ((Hwi_disableIER(mask) & mask) != 0L);
+}
+
+void HwiP_enableInt(uint32_t intNum)
+{
+    unsigned long mask = 1UL << intNum;
+
+    Hwi_enableIER(mask);
+
+    return;
+}
+
+
+void HwiP_restoreInt(uint32_t intNum, uint32_t key)
+{
+    if (key != 0U) {
+        HwiP_enableInt(intNum);
+    }
+    else {
+        HwiP_disableInt(intNum);
+    }
+}
+
+void HwiP_clearInt(uint32_t intNum)
+{
+    __set_indexed(__EFCLR, 0, 1UL << intNum);
 }
 
 /*
@@ -344,52 +400,51 @@ void Hwi_reconfig(Hwi_Object *hwi, Hwi_FuncPtr fxn, const Hwi_Params *params)
         }
     }
 
-    if (intNum == Hwi_NUM_INTERRUPTS) {
-        return;
-    }
+    if (intNum != Hwi_NUM_INTERRUPTS)
+    {
+        HwiP_disableInt(intNum);
 
+        hwi->fxn = fxn;
+        hwi->arg = params->arg;
 
-    HwiP_disableInt(intNum);
+        if (params->priority == -1) {
+            hwi->priority = Hwi_DEFAULT_INT_PRIORITY;
+        }
+        else {
+            hwi->priority = params->priority;
+        }
 
-    hwi->fxn = fxn;
-    hwi->arg = params->arg;
+        switch (params->maskSetting) {
+            case Hwi_MaskingOption_NONE:
+                hwi->disableMask = 0;
+                hwi->restoreMask = 0;
+                break;
+            case Hwi_MaskingOption_ALL:
+                hwi->disableMask = 0xFFFFFFFFFFFFFFFFUL;
+                hwi->restoreMask = 0xFFFFFFFFFFFFFFFFUL;
+                break;
+            case Hwi_MaskingOption_SELF:
+                hwi->disableMask = 1UL << intNum;
+                hwi->restoreMask = 1UL << intNum;
+                break;
+            case Hwi_MaskingOption_BITMASK:
+                hwi->disableMask = params->disableMask;
+                hwi->restoreMask = params->restoreMask;
+                break;
+            default:
+                break;
+        }
 
-    if (params->priority == -1) {
-        hwi->priority = Hwi_DEFAULT_INT_PRIORITY;
-    }
-    else {
-        hwi->priority = params->priority;
-    }
+        if (params->eventId != -1) {
+            Hwi_eventMap(intNum, params->eventId);
+        }
 
-    switch (params->maskSetting) {
-        case Hwi_MaskingOption_NONE:
-            hwi->disableMask = 0;
-            hwi->restoreMask = 0;
-            break;
-        case Hwi_MaskingOption_ALL:
-            hwi->disableMask = 0xFFFFFFFFFFFFFFFFUL;
-            hwi->restoreMask = 0xFFFFFFFFFFFFFFFFUL;
-            break;
-        default:
-        case Hwi_MaskingOption_SELF:
-            hwi->disableMask = 1L << intNum;
-            hwi->restoreMask = 1L << intNum;
-            break;
-        case Hwi_MaskingOption_BITMASK:
-            hwi->disableMask = params->disableMask;
-            hwi->restoreMask = params->restoreMask;
-            break;
-    }
+        /* keep intEvents[] current for ROV */
+        Hwi_Module_state.intEvents[intNum] = Hwi_getEventId(intNum);
 
-    if (params->eventId != -1) {
-        Hwi_eventMap(intNum, params->eventId);
-    }
-
-    /* keep intEvents[] current for ROV */
-    Hwi_Module_state.intEvents[intNum] = Hwi_getEventId(intNum);
-
-    if (params->enableInt) {
-        HwiP_enableInt(intNum);
+        if (params->enableInt) {
+            HwiP_enableInt(intNum);
+        }
     }
 }
 
@@ -398,7 +453,7 @@ void Hwi_reconfig(Hwi_Object *hwi, Hwi_FuncPtr fxn, const Hwi_Params *params)
  *  Indicate that we are leaving the boot stack and
  *  are about to switch to a task stack.
  */
-void Hwi_switchFromBootStack()
+void Hwi_switchFromBootStack(void)
 {
     Hwi_Module_state.taskSP = 0;
 }
@@ -406,7 +461,7 @@ void Hwi_switchFromBootStack()
 /*
  *  ======== Hwi_getIsrStackAddress ========
  */
-char *Hwi_getIsrStackAddress()
+char *Hwi_getIsrStackAddress(void)
 {
     extern uint8_t __TI_STACK_SIZE;
     uint64_t isrStack;
@@ -415,7 +470,7 @@ char *Hwi_getIsrStackAddress()
     isrStack += (uint64_t)_symval(&__TI_STACK_SIZE);
     isrStack -= 0x1;
 
-    isrStack &= ~0x7;   /* align to long word */
+    isrStack &= ~((uint64_t)(0x7));   /* align to long word */
 
     return ((char *)isrStack);
 }
@@ -430,6 +485,7 @@ bool Hwi_getStackInfo(Hwi_StackInfo *stkInfo, bool computeStackDepth)
 
     char *isrSP;
     bool stackOverflow;
+    uintptr_t stackAddr;
 
     /*
      * Copy the stack base address and size.
@@ -440,7 +496,9 @@ bool Hwi_getStackInfo(Hwi_StackInfo *stkInfo, bool computeStackDepth)
      */
     stkInfo->hwiStackSize = (size_t)_symval(&__TI_STACK_SIZE) -
                             (HWI_ECSP_SIZE + 0x2000);
-    stkInfo->hwiStackBase = _stack + HWI_ECSP_SIZE + 0x2000;
+    stackAddr = (uintptr_t)_stack;
+    stackAddr += (uintptr_t)(HWI_ECSP_SIZE + 0x2000);
+    stkInfo->hwiStackBase = (char *)stackAddr;
 
     isrSP = stkInfo->hwiStackBase;
 
@@ -451,7 +509,8 @@ bool Hwi_getStackInfo(Hwi_StackInfo *stkInfo, bool computeStackDepth)
         /* Compute stack depth */
         do {
         } while(*isrSP++ == (char)0xbe);
-        stkInfo->hwiStackPeak = stkInfo->hwiStackSize - (size_t)(--isrSP - (char *)stkInfo->hwiStackBase);
+        isrSP--;
+        stkInfo->hwiStackPeak = stkInfo->hwiStackSize - (size_t)(isrSP - (char *)stkInfo->hwiStackBase);
     }
     else {
         stkInfo->hwiStackPeak = 0;
@@ -487,6 +546,22 @@ void Hwi_dispatchCore(int intNum)
     Hwi_FuncPtr fxn;
     unsigned int arg;
 
+     /* Enable Branch Prediction if not already enabled
+      * BP is disabled in RTOS Idle Hook as a pre-requisite to enter IDLE mode
+      * and is enabled after exiting it.
+      * If there is a async interrupt while in IDLE mode, BP will remain disabled */
+    if (0x0 != __BPCR) {
+
+    __BPCR = 0x0;
+
+    }
+
+    /* Errata i2399: C7x NLC module does not clear its internal "reload pending"
+     * state when an interrupt is taken.  Issue NLCINIT here (as part of context
+     * saving) to clear that state before any task-context work is done, so that
+     * a subsequent task switch cannot corrupt ILCNT in the interrupted task. */
+    Hwi_refreshNLC();
+
     /* save away intNum in module state because it might be saved on stack */
     Hwi_Module_state.intNum = intNum;
 
@@ -495,41 +570,47 @@ void Hwi_dispatchCore(int intNum)
      * within to eliminate memory fetch nops
      */
     hwi = Hwi_Module_state.dispatchTable[intNum];
-    fxn = hwi->fxn;
-    arg = hwi->arg;
 
-    if (Hwi_dispatcherIrpTrackingSupport) {
-        uint64_t *contextStack;
-        unsigned int ncnt;
+    if(hwi != NULL)
+    {
+        fxn = hwi->fxn;
+        arg = hwi->arg;
 
-        /*
-         * There is no IRP register on C7x.  The interrupt return pointer
-         * is stored on the "Context Stack" at offset 0.  The context stack
-         * is pointed to by:
-         *     - TCSP if interrupt occurred while CPU in "Thread Mode"
-         *     - ECSP[n] if interrupt occurred while in "Event Handler Mode"
-         *       where n is the interrupt nesting count minus one (i.e., first
-         *       nested interrupt uses ECSP[0] since the original non-nested
-         *       interrupt was saved on TCSP)
-         * If ncnt (ECSP nesting count, bits 15-13) is 0 then TCSP must be the
-         * one because ncnt would be > 0 if an interrupt's context had already
-         * been stored on it.
-         */
-        ncnt = (__ECSP_S & 0xe000) >> 13;
-        if (ncnt) {
-            contextStack = (uint64_t *)(((uint64_t)__ECSP_S) +
-                                      ((ncnt - 1) * 0x2000));
+        if (Hwi_dispatcherIrpTrackingSupport) {
+            uint64_t *contextStack;
+            unsigned int ncnt;
+
+            /*
+            * There is no IRP register on C7x.  The interrupt return pointer
+            * is stored on the "Context Stack" at offset 0.  The context stack
+            * is pointed to by:
+            *     - TCSP if interrupt occurred while CPU in "Thread Mode"
+            *     - ECSP[n] if interrupt occurred while in "Event Handler Mode"
+            *       where n is the interrupt nesting count minus one (i.e., first
+            *       nested interrupt uses ECSP[0] since the original non-nested
+            *       interrupt was saved on TCSP)
+            * If ncnt (ECSP nesting count, bits 15-13) is 0 then TCSP must be the
+            * one because ncnt would be > 0 if an interrupt's context had already
+            * been stored on it.
+            */
+            ncnt = ((uint64_t)__ECSP_S & 0xe000U) >> 13U;
+            if (ncnt != 0U) {
+                contextStack = (uint64_t *)(((uint64_t)__ECSP_S) +
+                                        ((ncnt - 1) * 0x2000));
+            }
+            else  {
+                contextStack = (uint64_t *)__TCSP;
+            }
+
+            hwi->irp = contextStack[0];
         }
-        else  {
-            contextStack = (uint64_t *)__TCSP;
-        }
 
-        hwi->irp = contextStack[0];
+        if ( fxn != NULL)
+        {
+            (fxn)(arg);
+        }
     }
 
-    if ( fxn != NULL)
-        (fxn)(arg);
-    
     Hwi_setCOP(0xff);
 
 }
@@ -544,7 +625,7 @@ int Hwi_construct(HwiC7x_Struct *objp, int intNum, Hwi_FuncPtr hwiFxn, const Hwi
 
     /* module-specific initialization */
     iStat = Hwi_Instance_init((void *)objp, intNum, hwiFxn, paramsPtr);
-    
+
     return iStat;
 }
 
@@ -568,27 +649,142 @@ void Hwi_Params_init( Hwi_Params *prms )
     }
 }
 
-uint32_t HwiP_inISR(void)
-{
-    uint32_t stat = 0U;
-
-    if (xPortInIsrContext() != 0)
-    {
-        stat =  1U;
-    }
-    return stat;
-}
-
 void HwiP_init(void)
 {
     return;
 }
 
-void HwiP_enable()
+void HwiP_enable(void)
 {
-
+    return;
 }
 
+int32_t HwiP_setArgs(HwiP_Object *handle, void *args)
+{
+    HwiP_Struct *obj = (HwiP_Struct *)handle;
+    int32_t expVal;
+
+    if (obj->intNum < DPL_C7X_CONFIGNUM_HWI)
+    {
+        expVal=1;
+    }
+    else
+    {
+        expVal=0;
+    }
+    DebugP_assertNoLog(expVal);
+
+    Hwi_Module_state.dispatchTable[obj->intNum]->arg = (unsigned int)args;
+
+    return SystemP_SUCCESS;
+}
+
+void HwiP_Params_init(HwiP_Params *params)
+{
+    params->intNum = 0;
+    params->callback = NULL;
+    params->args = NULL;
+    params->eventId = 0;
+    params->priority = (uint8_t)HWIP_USE_DEFAULT_PRIORITY;
+    params->isFIQ = 0;
+    params->isPulse = 1;
+}
+
+int32_t HwiP_configClec(uint16_t eventId, uint32_t intNum, uint8_t isPulse)
+{
+    int32_t status = SystemP_SUCCESS;
+    uint32_t level;
+
+    if(eventId != HWIP_INVALID_EVENT_ID)
+    {
+        CSL_ClecEventConfig   cfgClec;
+#if (CSL_C7X256V_CLEC_MAIN_CNT == 1U)
+        CSL_CLEC_EVTRegs     *clecBaseAddr = (CSL_CLEC_EVTRegs*)CSL_C7X256V0_CLEC_BASE;
+#elif (CSL_C7X256V_CLEC_MAIN_CNT > 1U)
+        CSL_CLEC_EVTRegs     *clecBaseAddr = Hwip_getClecBaseAddr();
+        if (clecBaseAddr == (CSL_CLEC_EVTRegs*) NULL)
+        {
+            status = SystemP_FAILURE;
+        }
+        if (SystemP_SUCCESS == status)
+        {
+#endif
+            /* Configure CLEC */
+            cfgClec.secureClaimEnable = FALSE;
+            cfgClec.evtSendEnable     = TRUE;
+            cfgClec.rtMap             = CSL_CLEC_RTMAP_CPU_ALL;
+            cfgClec.extEvtNum         = 0;
+            cfgClec.c7xEvtNum         = intNum;
+            CSL_clecClearEvent(clecBaseAddr, eventId);
+            if (isPulse==1U)
+            {
+                level=0U;
+            }
+            else
+            {
+                level=1U;
+            }
+            CSL_clecConfigEventLevel(clecBaseAddr, eventId, level); /* configure interrupt as pulse/level */
+            status = CSL_clecConfigEvent(clecBaseAddr, eventId, &cfgClec);
+#if (CSL_C7X256V_CLEC_MAIN_CNT > 1U)
+        }
+#endif
+    }
+
+    return status;
+}
+
+/* The C7x CLEC should be initialized to allow config/re config.
+ * This function configures all inputs to given level.
+ */
+void HwiP_configClecAccessCtrl(void)
+{
+    CSL_ClecEventConfig cfgClec;
+    CSL_CLEC_EVTRegs   *clecBaseAddr = Hwip_getClecBaseAddr();
+    uint32_t            i, maxInputs = 511U;
+
+    cfgClec.secureClaimEnable = FALSE;
+    cfgClec.evtSendEnable     = FALSE;
+    cfgClec.rtMap             = CSL_CLEC_RTMAP_DISABLE;
+    cfgClec.extEvtNum         = 0U;
+    cfgClec.c7xEvtNum         = 0U;
+    for(i = 1U; i < maxInputs; i++)
+    {
+        CSL_clecConfigEvent(clecBaseAddr, i, &cfgClec);
+    }
+}
+
+/*
+ * Returns the C7x clec base address for the current C7x cluster
+*/
+static CSL_CLEC_EVTRegs* Hwip_getClecBaseAddr(void)
+{
+    CSL_CLEC_EVTRegs     *clecBaseAddr = (CSL_CLEC_EVTRegs*) NULL;
+
+#if (CSL_C7X256V_CLEC_MAIN_CNT == 1U)
+    clecBaseAddr = (CSL_CLEC_EVTRegs*)CSL_C75_CPU_CLUSTER_C75_1_BASE_ADDR;
+#elif (CSL_C7X256V_CLEC_MAIN_CNT == 2U)
+    uint32_t clusterId;
+
+    clusterId=CSL_clecGetC7xClusterId();
+
+    if (clusterId == CSL_C75_CPU_CLUSTER_NUM_C75_1)
+    {
+        clecBaseAddr = (CSL_CLEC_EVTRegs*)CSL_C75_CPU_CLUSTER_C75_1_BASE_ADDR;
+    }
+    else if (clusterId == CSL_C75_CPU_CLUSTER_NUM_C75_2)
+    {
+        clecBaseAddr = (CSL_CLEC_EVTRegs*)CSL_C75_CPU_CLUSTER_C75_2_BASE_ADDR;
+    }
+    else
+    {
+        clecBaseAddr = (CSL_CLEC_EVTRegs*) NULL;
+    }
+#else
+#error "Invalid CLEC Count"
+#endif
+    return clecBaseAddr;
+}
 
 /* bootToNonSecure */
 #pragma DATA_SECTION(Hwi_bootToNonSecure, ".const:Hwi_bootToNonSecure");
@@ -688,7 +884,7 @@ struct Hwi_Module_State Hwi_Module_state = {
         (char)(-0x0 - 1),  /* [62] */
         (char)(-0x0 - 1),  /* [63] */
     },  /* intEvents */
-    (unsigned long)0x4003UL,  /* ierMask */
+    (unsigned long)0x0003UL,  /* ierMask */
     (int)0x0,  /* intNum */
     ((char*)NULL),  /* taskSP */
     ((char*)NULL),  /* isrStack */
@@ -760,5 +956,3 @@ struct Hwi_Module_State Hwi_Module_state = {
         0,  /* [63] */
     },  /* dispatchTable */
 };
-
-

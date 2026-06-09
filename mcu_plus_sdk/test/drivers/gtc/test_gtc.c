@@ -74,14 +74,11 @@ static void test_gtc_count(void *args);
 
 void test_main(void *args)
 {
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
     UNITY_BEGIN();
 
     RUN_TEST(test_gtc_count,  171, NULL);
 
     UNITY_END();
-    Drivers_close();
 
     return;
 }
@@ -110,8 +107,12 @@ static void test_gtc_count(void *args)
     retVal = GTC_init();
     TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
 
+#if defined(SOC_AM62LX)
+    retVal = SOC_moduleGetClockFrequency(AM62LX_DEV_WKUP_GTC0, AM62LX_DEV_WKUP_GTC0_GTC_CLK, &clkRate);
+#else
     retVal = SOC_moduleGetClockFrequency(TISCI_DEV_WKUP_GTC0, TISCI_DEV_WKUP_GTC0_GTC_CLK, &clkRate);
-    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
+#endif
+   TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, retVal);
 
     gtccount1 = GTC_getCount64();
     ClockP_sleep(1);

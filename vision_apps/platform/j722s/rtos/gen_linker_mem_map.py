@@ -219,6 +219,13 @@ mcu2_0_ddr_local_heap_size  = 32*MB;
 mcu2_0_ddr_viss_heap_addr  = mcu2_0_ddr_local_heap_addr + mcu2_0_ddr_local_heap_size;
 mcu2_0_ddr_viss_heap_size  = 4*MB;
 
+# Hardcoding this value to align the start address with region size
+ddr_intercore_eth_desc_addr = 0xB8000000;
+ddr_intercore_eth_desc_size = 2*MB;
+
+ddr_intercore_eth_data_addr = ddr_intercore_eth_desc_addr + ddr_intercore_eth_desc_size;
+ddr_intercore_eth_data_size = 14*MB;
+
 # Shared memory for DMA Buf FD carveout
 ddr_shared_mem_addr     = 0xC0000000; # This will be the virtual address used for R5F's / C7X's
 ddr_shared_mem_size     = 512*MB;
@@ -434,6 +441,13 @@ ddr_shared_mem_high.setNoMap(False);
 ddr_shared_mem_high.setOriginTag(False);
 ddr_shared_mem_high.splitOrigin(True)
 
+# This region is for ethernet firmware, multi-core, multi-cast feature
+intercore_eth_desc_mem = MemSection("INTERCORE_ETH_DESC_MEM", "", ddr_intercore_eth_desc_addr, ddr_intercore_eth_desc_size, "Inter-core ethernet shared desc queues. MUST be non-cached or cache-coherent");
+intercore_eth_desc_mem.setDtsName("vision_apps_main_r5fss0_core0_shared_memory_queue_region", "vision-apps-r5f-virtual-eth-queues");
+
+intercore_eth_data_mem = MemSection("INTERCORE_ETH_DATA_MEM", "", ddr_intercore_eth_data_addr, ddr_intercore_eth_data_size, "Inter-core ethernet shared data buffers. MUST be non-cached or cache-coherent");
+intercore_eth_data_mem.setDtsName("vision_apps_main_r5fss0_core0_shared_memory_bufpool_region", "vision-apps-r5f-virtual-eth-buffers");
+
 #
 # Create CPU specific memory maps using memory sections created above
 #
@@ -470,6 +484,8 @@ mcu2_0_mmap.addMemSection( ipc_vring_mem      );
 mcu2_0_mmap.addMemSection( mcu2_0_ddr_local_heap  );
 mcu2_0_mmap.addMemSection( mcu2_0_ddr_viss_config_heap  );
 mcu2_0_mmap.addMemSection( ddr_shared_mem     );
+mcu2_0_mmap.addMemSection( intercore_eth_desc_mem );
+mcu2_0_mmap.addMemSection( intercore_eth_data_mem );
 mcu2_0_mmap.checkOverlap();
 
 c7x_1_mmap = MemoryMap("c7x_1");
@@ -586,6 +602,8 @@ html_mmap.addMemSection( app_fileio_mem        );
 html_mmap.addMemSection( ipc_vring_mem      );
 html_mmap.addMemSection( ddr_shared_mem     );
 html_mmap.addMemSection( tiovx_log_rt_mem );
+html_mmap.addMemSection( intercore_eth_desc_mem );
+html_mmap.addMemSection( intercore_eth_data_mem );
 #html_mmap.addMemSection( ddr_shared_mem_phys     );
 html_mmap.checkOverlap();
 
@@ -640,6 +658,8 @@ c_header_mmap.addMemSection( app_fileio_mem        );
 c_header_mmap.addMemSection( ipc_vring_mem      );
 c_header_mmap.addMemSection( ddr_shared_mem     );
 c_header_mmap.addMemSection( ddr_shared_mem_high     );
+c_header_mmap.addMemSection( intercore_eth_desc_mem  );
+c_header_mmap.addMemSection( intercore_eth_data_mem  );
 c_header_mmap.checkOverlap();
 
 dts_mmap = MemoryMap("Memory Map for Linux kernel dts/dtsi file");
@@ -656,6 +676,8 @@ dts_mmap.addMemSection( ipc_vring_mem      );
 dts_mmap.addMemSection( vision_apps_core_heaps_lo );
 dts_mmap.addMemSection( c7x_ddr_heaps_hi );
 dts_mmap.addMemSection( ddr_shared_mem_high );
+dts_mmap.addMemSection( intercore_eth_desc_mem );
+dts_mmap.addMemSection( intercore_eth_data_mem );
 dts_mmap.checkOverlap();
 
 #

@@ -107,6 +107,33 @@ typedef struct {
 
 } ImgObj;
 
+/** \brief Image Object Structure
+ *
+ *  Encapsulates a queueable image pool used by a module.
+ */
+typedef struct
+{
+    /*! Object array per queue slot.
+     *
+     *  Each entry contains NUM_CH vx_image objects.
+     *  Used for replicated node execution and graph parameter queuing.
+     */
+    vx_object_array arr[APP_MODULES_MAX_BUFQ_DEPTH];
+
+    /*! Cached image per queue slot (channel 0).
+     *
+     *  Obtained via vxGetObjectArrayItem(arr[q], 0).
+     */
+    vx_image img[APP_MODULES_MAX_BUFQ_DEPTH];
+
+    /*! Image width in pixels */
+    vx_int32 width;
+
+    /*! Image height in pixels */
+    vx_int32 height;
+
+} ImgObjQueued;
+
 /** \brief Scaler Module Data Structure
  *
  * Contains the data objects required to use tivxVpacMscScaleNode
@@ -154,6 +181,15 @@ typedef struct {
 
     /*! Color format used by scaler node; supported values of \ref VX_DF_IMAGE_U8 and \ref VX_DF_IMAGE_NV12 */
    vx_int32 color_format;
+
+    /*! Scaler image output structure array */
+   ImgObjQueued output_q[APP_MODULES_MAX_SCALER_OUTPUTS];
+       
+    /*! Scaler node graph parameter index */
+   vx_int32 graph_parameter_idxs[APP_MODULES_MAX_SCALER_OUTPUTS];
+
+    /*! Scaler module buffers queue depth */
+   vx_uint32 bufq_depth;
 
 } ScalerObj;
 
@@ -256,6 +292,58 @@ vx_status readScalerInput(char* file_name, vx_object_array img_arr, vx_int32 rea
  *
  */
 vx_status writeScalerOutput(char* file_name, vx_object_array img_arr);
+
+/** \brief Scaler module init helper function
+ *
+ * This Scaler init helper function will create all the data objects required to create the
+ * Scaler node
+ *
+ * \param [in]  context     OpenVX context which must be created using \ref vxCreateContext
+ * \param [out] scalerObj   Scaler Module object which gets populated with Scaler node data
+ *                          objects
+ * \param [in]  objName     String of the name of this object
+ * \param [in]  num_ch      Number of Scaler channels
+ * \param [in]  num_outputs Number of Scaler outputs
+ * \param [in]  bufq_depth  Scaler output buffer queue depth
+ *
+ */
+vx_status app_init_scaler_queued(vx_context context,
+                                ScalerObj *scalerObj,
+                                char *objName,
+                                vx_int32 num_ch,
+                                vx_int32 num_outputs,
+                                vx_uint32 bufq_depth);
+
+/** \brief Scaler module deinit helper function
+ *
+ * This Scaler deinit helper function will release all the data objects created during the
+ * \ref app_init_scaler_queued call
+ *
+ * \param [in,out] obj    Scaler Module object which contains scaler node data objects which
+ *                        are released in this function
+ *
+ */
+void app_deinit_scaler_queued(ScalerObj *obj);
+
+/** \brief Scaler module create helper function
+ *
+ * This scaler create helper function will create the node using all the data objects created
+ * during the \ref app_init_scaler_queued call.
+ *
+ * \param [in]     context         OpenVX context which must be created using
+ *                                \ref vxCreateContext
+ * \param [in]     graph           OpenVX graph that has been created using \ref vxCreateGraph
+ *                                and where the scaler node is created
+ * \param [in,out] scalerObj       Scaler Module object which contains scaler node and write
+ *                                node which are created in this function
+ * \param [in]     input_img_arr   Input object array to Scaler node. Must be created
+ *                                separately using \ref vxCreateObjectArray
+ *
+ */
+vx_status app_create_graph_scaler_queued(vx_context context,
+                                        vx_graph graph,
+                                        ScalerObj *scalerObj,
+                                        vx_object_array input_img_arr);
 
 /* @} */
 

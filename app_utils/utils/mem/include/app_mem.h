@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017-2025 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -74,7 +74,8 @@
 #include <drivers/udma.h>
 #include <drivers/udma/udma_priv.h>
 #endif
-#else
+#elif defined(MCU_SDK)
+#elif defined(PDK)
 #include <ti/drv/udma/udma.h>
 #endif
 #endif
@@ -210,7 +211,10 @@ typedef struct {
 
     app_mem_heap_prm_t heap_info[APP_MEM_HEAP_MAX]; /**< heap init parameters */
     #if defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
+    /* JIRA: ADASVISION-7146- Temporarily disabled, to be enabled once UDMA utils is up*/
+    #if !defined(SOC_TDA54)
     Udma_VirtToPhyFxn           virtToPhyFxn;
+    #endif
     app_mem_shared_target_fxn   shared2TargetFxn;
     app_mem_target_shared_fxn   target2SharedFxn;
     #endif
@@ -218,7 +222,7 @@ typedef struct {
     /**< The CSL RAT base address.  Different across main domain and MCU domain */
     CSL_ratRegs *pRatRegs;
     #endif
-    #if defined(A72) || defined(A53) || defined(PC)
+    #if defined(A72) || defined(A53) || defined(A720)|| defined(PC)
     uint64_t base;                   /**< heap memory base address */
     uint32_t size;                   /**< heap size in bytes */
     #endif
@@ -360,7 +364,7 @@ int32_t appMemDeInit(void);
  * \brief Alloc memory from specific heap
  *
  * \param heap_id [in] See APP_MEM_HEAP_*
- * 
+ *
  * \param size    [in] Size in bytes to allocate
  * \param align   [in] Minimum alignment requested
  *
@@ -372,7 +376,7 @@ void    *appMemAlloc(uint32_t heap_id, uint32_t size, uint32_t align);
  * \brief Check is specified memory region is enabled
  *
  * \param heap_id [in] See APP_MEM_HEAP_*
- * 
+ *
  *
  * \return true if region is enabled, false otherwise
  */
@@ -382,7 +386,7 @@ bool appMemRegionQuery(uint32_t heap_id);
  * \brief Reset scratch memory
  *
  * \param heap_id [in] See APP_MEM_HEAP_*
- * 
+ *
  *
  * \return 0 on success else failure
  */
@@ -392,7 +396,7 @@ int32_t appMemResetScratchHeap(uint32_t heap_id);
  * \brief Free memory that was previously allocated
  *
  * \param heap_id [in] See APP_MEM_HEAP_*
- * 
+ *
  * \param ptr     [in] pointer to allocated memory
  * \param size    [in] size of allocated memory
  *
@@ -455,7 +459,7 @@ uint64_t appMemGetVirt2PhyBufPtr(uint64_t virtPtr, uint32_t heap_id);
  * \brief Return heap statistics and information
  *
  * \param heap_id [in] See APP_MEM_HEAP_*
- * 
+ *
  * \param stats   [in] Heap statistics and information
  *
  * \return 0 on success else failure
@@ -583,4 +587,3 @@ int32_t appMemSetFdPath(char *path, uint32_t size);
 #endif
 
 #endif
-

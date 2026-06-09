@@ -106,7 +106,7 @@ include $(ALGBASE_PATH)/makerules/common.mk
 INCLUDE_PATHS+= -I .
 INCLUDE_PATHS+= -I ../inc
 INCLUDE_PATHS+= -I ../common/inc
-INCLUDE_PATHS+= -I ../utils/perfsim
+INCLUDE_PATHS+= -I $(ALGBASE_PATH)/ti_dl/utils/perfsim
 
 CFLAGS += $(INCLUDE_PATHS)
 

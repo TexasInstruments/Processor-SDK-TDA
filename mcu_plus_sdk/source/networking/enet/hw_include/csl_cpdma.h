@@ -6,7 +6,7 @@
  *  declarations for the CPDMA submodule of EMAC(CPSW).
  *  \par
  *  ============================================================================
- *  @n   (C) Copyright 2020, Texas Instruments, Inc.
+ *  @n   (C) Copyright 2024, Texas Instruments, Inc.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -105,7 +105,7 @@ extern "C" {
  *
  * ============================================================================
  */
-#if defined (SOC_AM273X) || defined (SOC_AWR294X) || defined(SOC_AM263X)
+#if defined (SOC_AM273X) || defined (SOC_AWR294X) || defined(SOC_AM263X) || defined (SOC_AM263PX)
 
 #include <cpdma/csl_cpdma.h>
 

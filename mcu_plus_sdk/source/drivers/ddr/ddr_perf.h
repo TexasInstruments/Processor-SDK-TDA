@@ -55,9 +55,7 @@ extern "C" {
 #endif
 
 #if defined (DRV_VERSION_DDR_V1)
-#if defined (SOC_J722S)
-#include <drivers/ddr/v1/soc/j722s/ddr_soc.h>
-#endif
+#include <drivers/ddr/v1/soc/ddr_soc.h>
 #endif
 
 /* ========================================================================== */

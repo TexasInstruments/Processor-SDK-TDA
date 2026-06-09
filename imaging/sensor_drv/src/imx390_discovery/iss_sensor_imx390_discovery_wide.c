@@ -77,21 +77,21 @@ static IssSensor_CreateParams  imx390DISCOVERYCreatePrms = {
 
 static IssSensorFxns           im390SensorFxns = {
     IMX390_Probe_Wide,
-    IMX390_Config,
-    IMX390_StreamOn,
-    IMX390_StreamOff,
-    IMX390_PowerOn,
-    IMX390_PowerOff,
-    IMX390_GetExpParams,
-    IMX390_SetAeParams,
-    IMX390_GetDccParams,
-    IMX390_InitAewbConfig,
-    IMX390_GetIspConfig,
-    IMX390_ReadWriteReg,
-    IMX390_GetExpPrgFxn,
-    IMX390_deinit,
-    IMX390_GetWBPrgFxn,
-    IMX390_SetAwbParams    
+    IMX390_Disco_Config,
+    IMX390_Disco_StreamOn,
+    IMX390_Disco_StreamOff,
+    IMX390_Disco_PowerOn,
+    IMX390_Disco_PowerOff,
+    IMX390_Disco_GetExpParams,
+    IMX390_Disco_SetAeParams,
+    IMX390_Disco_GetDccParams,
+    IMX390_Disco_InitAewbConfig,
+    IMX390_Disco_GetIspConfig,
+    IMX390_Disco_ReadWriteReg,
+    IMX390_Disco_GetExpPrgFxn,
+    IMX390_Disco_Deinit,
+    IMX390_Disco_GetWBPrgFxn,
+    IMX390_Disco_SetAwbParams
 };
 
 static IssSensorIntfParams     imx390SensorIntfPrms = {
@@ -135,7 +135,9 @@ static int32_t IMX390_Probe_Wide(uint32_t chId, void *pSensorHdl)
     int32_t status = -1;
     uint32_t i2cInstId;
     uint8_t sensorI2cAddr;
+#ifndef SKIP_EEPROM
     uint8_t eepromI2cAddr;
+#endif
     uint16_t chipIdRegAddr = IMX390_CHIP_ID_REG_ADDR;
     uint8_t chipIdRegValueRead = 0xAB;
     /* MISRA.CAST.VOID_PTR_TO_OBJ_PTR.2012 - must be waived */
@@ -149,10 +151,10 @@ static int32_t IMX390_Probe_Wide(uint32_t chId, void *pSensorHdl)
     i2cInstId = pCreatePrms->i2cInstId;
     sensorI2cAddr = pCreatePrms->i2cAddrSensor[chId];
     
-    status = IMX390_PowerOn(chId, pSensorHdl);
+    status = IMX390_Disco_PowerOn(chId, pSensorHdl);
     if(status != 0)
     {
-        appLogPrintf("%s:%d - IMX390_PowerOn returned status: %d\n", __func__, __LINE__, status);
+        appLogPrintf("%s:%d - IMX390_Disco_PowerOn returned status: %d\n", __func__, __LINE__, status);
     }
 
     //Camera Type
@@ -163,7 +165,7 @@ static int32_t IMX390_Probe_Wide(uint32_t chId, void *pSensorHdl)
     /*Read chip ID to detect if the sensor can be detected*/
     while( (chipIdRegValueRead != (uint16_t)IMX390_CHIP_ID_REG_VAL) && (count < max_retries))
     {
-        status = IMX390_ReadReg((uint8_t)i2cInstId, sensorI2cAddr, chipIdRegAddr, &chipIdRegValueRead, 1U);
+        status = IMX390_Disco_ReadReg((uint8_t)i2cInstId, sensorI2cAddr, chipIdRegAddr, &chipIdRegValueRead, 1U);
         if(status == 0 )
         {
             if(chipIdRegValueRead == (uint16_t)IMX390_CHIP_ID_REG_VAL)

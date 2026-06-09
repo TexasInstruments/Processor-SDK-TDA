@@ -36,7 +36,7 @@
  *
  *  This module contains APIs to program and use the I2C based EEPROM module
  *  on the board like AT24CM01.
- *  See \ref BOARD_EEPROM_PAGE for more details.
+ *  See \ref BOARD_EEPROM_MODULE for more details.
  *
  *  @{
  */

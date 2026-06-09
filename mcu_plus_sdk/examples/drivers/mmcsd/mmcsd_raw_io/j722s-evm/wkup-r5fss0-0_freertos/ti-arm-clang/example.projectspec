@@ -19,7 +19,7 @@
         "
         connection="TIXDS110_Connection.xml"
         toolChain="TICLANG"
-        cgtVersion="3.2.0"
+        cgtVersion="4.0.4"
         device="Cortex R.J722S"
         deviceCore="WKUP_Cortex_R5_0_0"
         ignoreDefaultDeviceSettings="true"
@@ -45,6 +45,7 @@
             -Wno-gnu-variable-sized-type-not-at-end
             -Wno-unused-function
             -DSOC_J722S
+            -DENABLE_SCICLIENT_DIRECT
         "
         linkerBuildOptions="
             -i${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciserver/lib

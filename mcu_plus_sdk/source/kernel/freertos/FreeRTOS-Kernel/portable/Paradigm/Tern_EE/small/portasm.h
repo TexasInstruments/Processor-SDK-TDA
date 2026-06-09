@@ -1,6 +1,8 @@
 /*
- * FreeRTOS Kernel V10.4.3
- * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel V11.1.0
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,7 +24,6 @@
  * https://www.FreeRTOS.org
  * https://github.com/FreeRTOS
  *
- * 1 tab == 4 spaces!
  */
 
 #ifndef PORT_ASM_H
@@ -46,27 +47,26 @@ void portEND_SWITCHING_ISR( void );
  */
 void portFIRST_CONTEXT( void );
 
-#define portEND_SWITCHING_ISR()											\
-							asm { mov	bx, [pxCurrentTCB]			}   \
-                            asm { mov	word ptr [bx], sp			}	\
-							asm { call  far ptr vTaskSwitchContext	}	\
-							asm { mov	bx, [pxCurrentTCB]			}	\
-							asm { mov	sp, [bx]					}
+#define portEND_SWITCHING_ISR()                                         \
+                            asm { mov   bx, [pxCurrentTCB]          }   \
+                            asm { mov   word ptr [bx], sp           }   \
+                            asm { call  far ptr vTaskSwitchContext  }   \
+                            asm { mov   bx, [pxCurrentTCB]          }   \
+                            asm { mov   sp, [bx]                    }
 
-#define portFIRST_CONTEXT()											\
-							asm { mov	bx, [pxCurrentTCB]			}	\
-							asm { mov	sp, [bx]					}	\
-							asm { pop	bp							}	\
-							asm { pop	di							}	\
-							asm { pop	si							}	\
-   							asm { pop	ds							}	\
-   							asm { pop	es							}	\
-							asm { pop	dx							}	\
-							asm { pop	cx							}	\
-							asm { pop	bx							}	\
-							asm { pop	ax							}	\
-							asm { iret								}
+#define portFIRST_CONTEXT()                                         \
+                            asm { mov   bx, [pxCurrentTCB]          }   \
+                            asm { mov   sp, [bx]                    }   \
+                            asm { pop   bp                          }   \
+                            asm { pop   di                          }   \
+                            asm { pop   si                          }   \
+                            asm { pop   ds                          }   \
+                            asm { pop   es                          }   \
+                            asm { pop   dx                          }   \
+                            asm { pop   cx                          }   \
+                            asm { pop   bx                          }   \
+                            asm { pop   ax                          }   \
+                            asm { iret                              }
 
 
 #endif
-

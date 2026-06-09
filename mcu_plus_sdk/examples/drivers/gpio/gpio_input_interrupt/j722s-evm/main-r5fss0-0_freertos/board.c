@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -44,6 +44,8 @@
 #define MAIN_GPIO0_INDEX         (CSLR_MAIN_GPIOMUX_INTROUTER0_IN_GPIO0_GPIO_15)
 /* Destination Index */
 #define MAIN_R5_HSOT_IRQ_INDEX   (CSLR_R5FSS0_CORE0_INTR_MAIN_GPIOMUX_INTROUTER0_OUTP_16)
+/* GPIO input interrupt pin number */
+#define BOARD_BUTTON_GPIO_SWITCH_NUM    ("MAIN_GPIO0_XX")
 
 static void Sciclient_gpioIrqSet(void);
 static void Sciclient_gpioIrqRelease(void);
@@ -61,6 +63,16 @@ void Board_gpioDeinit(void)
 uint32_t Board_getGpioCoreIntrNum(void)
 {
     return (MAIN_R5_HSOT_IRQ_INDEX);
+}
+
+uint32_t Board_getGpioButtonIntrNum(void)
+{
+    return Board_getGpioCoreIntrNum();
+}
+
+char* Board_getGpioButtonSwitchNum(void)
+{
+    return (BOARD_BUTTON_GPIO_SWITCH_NUM);
 }
 
 static void Sciclient_gpioIrqSet(void)

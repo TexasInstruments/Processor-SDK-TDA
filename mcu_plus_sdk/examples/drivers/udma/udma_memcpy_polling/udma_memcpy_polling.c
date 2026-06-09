@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -82,9 +82,6 @@ void *udma_memcpy_polling_main(void *args)
     uint8_t        *trpdMem = &gUdmaTestTrpdMem[0U];
     uint64_t        trpdMemPhy = (uint64_t) Udma_defaultVirtToPhyFxn(trpdMem, 0U, NULL);
 
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
     chHandle = gConfigUdma0BlkCopyChHandle[0];  /* Has to be done after driver open */
     DebugP_log("[UDMA] Memcpy application started ...\r\n");
 
@@ -118,12 +115,10 @@ void *udma_memcpy_polling_main(void *args)
     App_udmaCompareBuf(srcBuf, destBuf, length);
 
     /* Channel disable */
-    retVal = Udma_chDisablePolling(chHandle, UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
+    retVal = Udma_chDisable(chHandle, UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
     DebugP_assert(UDMA_SOK == retVal);
 
     DebugP_log("All tests have passed!!\r\n");
-    Board_driversClose();
-    Drivers_close();
 
     return NULL;
 }

@@ -85,7 +85,7 @@ vx_status tivxAddKernelDLPreProc(vx_context context);
 vx_status tivxAddKernelDLColorBlend(vx_context context);
 vx_status tivxAddKernelDLDrawBox(vx_context context);
 vx_status tivxAddKernelDLColorConvert(vx_context context);
-#if defined(SOC_J784S4)
+#if defined(SOC_J784S4) || defined(SOC_TDA54)
 vx_status tivxAddKernelDLPreProc4DArmv8(vx_context context);
 #endif
 
@@ -104,7 +104,7 @@ vx_status tivxRemoveKernelDLPreProc(vx_context context);
 vx_status tivxRemoveKernelDLColorBlend(vx_context context);
 vx_status tivxRemoveKernelDLDrawBox(vx_context context);
 vx_status tivxRemoveKernelDLColorConvert(vx_context context);
-#if defined(SOC_J784S4)
+#if defined(SOC_J784S4) || defined(SOC_TDA54)
 vx_status tivxRemoveKernelDLPreProc4DArmv8(vx_context context);
 #endif
 
@@ -121,7 +121,7 @@ static Tivx_Host_Kernel_List  gTivx_host_kernel_list[] = {
     {&tivxAddKernelImgHist, &tivxRemoveKernelImgHist},
     {&tivxAddKernelSFM, &tivxRemoveKernelSFM},
     {&tivxAddKernelDLPreProc, &tivxRemoveKernelDLPreProc},
-#if defined(SOC_J784S4)
+#if defined(SOC_J784S4) || defined(SOC_TDA54)
     {&tivxAddKernelDLPreProc4DArmv8, &tivxRemoveKernelDLPreProc4DArmv8},
 #endif
     {&tivxAddKernelDLColorBlend, &tivxRemoveKernelDLColorBlend},
@@ -163,7 +163,7 @@ void tivxImgProcLoadKernels(vx_context context)
         /* These three lines only work on PC emulation mode ...
          * this will need to be updated when moving to target */
 
-        #if !defined (SOC_J722S)
+        #if !defined (SOC_J722S) && !defined (SOC_TDA54)
         tivxSetSelfCpuId(TIVX_CPU_ID_DSP1);
         tivxRegisterImgProcTargetC66Kernels();
         #endif
@@ -173,7 +173,7 @@ void tivxImgProcLoadKernels(vx_context context)
         tivxRegisterImgProcTargetC66Kernels();
         #endif
 
-        #if !defined (SOC_J722S)
+        #if !defined (SOC_J722S) && !defined (SOC_TDA54)
         tivxSetSelfCpuId(TIVX_CPU_ID_DSP_C7_1);
         tivxRegisterImgProcTargetC71Kernels();
         #endif
@@ -200,7 +200,7 @@ void tivxImgProcUnLoadKernels(vx_context context)
         #ifdef x86_64
         /* These three lines only work on PC emulation mode ...
          * this will need to be updated when moving to target */
-        #if !defined (SOC_J722S)
+        #if !defined (SOC_J722S) && !defined (SOC_TDA54)
         tivxUnRegisterImgProcTargetC66Kernels();
         tivxUnRegisterImgProcTargetC71Kernels();
         #endif

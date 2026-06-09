@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2022 Texas Instruments Incorporated
+ *  Copyright (C) 2022-24 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,6 +30,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <stdint.h>
 #include <math.h>
 #include <drivers/hw_include/hw_types.h>
@@ -40,9 +44,12 @@
 #include <drivers/epwm.h>
 #include "ti_drivers_config.h"
 #include "ti_drivers_open_close.h"
-
 #include "epwm_drv_aux.h"
 #include "epwm_dc.h"
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 /* EPWM functional clock */
 /* Functional clock is the same for all EPWMs */
@@ -72,16 +79,17 @@
 #define APP_EPWM_DB_RED_COUNT           ( 250 )     /* 1 usec @ 250 MHz, 250/250e6*1e6=1 */
 #define APP_EPWM_DB_FED_COUNT           ( 250 )     /* 1 usec @ 250 MHz, 250/250e6*1e6=1 */
 
-/* Sinusoid parameters */   
+/* Sinusoid parameters */
 #define SIN_FREQ                        ( 50.0 )    /* sinusoid frequency */
 #define SIN_AMP                         ( 0.9 )     /* sinusoid amplitude */
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
 
 /* Global variables and objects */
 static HwiP_Object       gEpwm0HwiObject;
 static SemaphoreP_Object gEpwmSyncSemObject;
-
-/* EPWM ISR */
-static void AppEpwm_epwmIntrISR(void *handle);
 
 /* EPWM base addresses */
 uint32_t gEpwm0BaseAddr;
@@ -113,13 +121,22 @@ volatile uint32_t gEpwmIsrCnt = 0;  /* EPWM ISR count */
 /* Debug */
 uint32_t gLoopCnt = 0;              /* main loop count */
 
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
+/* EPWM ISR */
+static void AppEpwm_epwmIntrISR(void *handle);
+
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
+
 void epwm_duty_cycle_sync_main(void *args)
 {
     int32_t         status;
     HwiP_Params     hwiPrms;
     EPwmCfgPrms_t   epwmCfgPrms;
-   
-    Drivers_open();
 
     DebugP_log("EPWM Duty Cycle Sync Test Started ...\r\n");
     DebugP_log("Please refer to the EXAMPLES_DRIVERS_EPWM_DUTY_CYCLE_SYNC example \
@@ -143,6 +160,7 @@ user guide for the test setup to probe the EPWM signals.\r\n");
     /* Register & enable EPWM0 interrupt */
     HwiP_Params_init(&hwiPrms);
     hwiPrms.intNum      = CONFIG_EPWM0_INTR;
+    hwiPrms.eventId = CONFIG_EPWM0_EVENT_ID;
     hwiPrms.callback    = &AppEpwm_epwmIntrISR;
     hwiPrms.args        = 0;
     hwiPrms.isPulse     = CONFIG_EPWM0_INTR_IS_PULSE;
@@ -179,7 +197,7 @@ user guide for the test setup to probe the EPWM signals.\r\n");
     epwmCfgPrms.intSel = EPWM_ET_INTR_EVT_CNT_EQ_ZRO;
     epwmCfgPrms.intPrd = EPWM_ET_INTR_PERIOD_FIRST_EVT;
     hEpwm0 = epwmInit(&epwmCfgPrms, &gEpwm0Obj);
-    DebugP_assert(hEpwm0 != NULL);   
+    DebugP_assert(hEpwm0 != NULL);
 
     /* Configure EPWM1 */
     epwmCfgPrms.epwmId = EPWM_ID_1;
@@ -209,7 +227,7 @@ user guide for the test setup to probe the EPWM signals.\r\n");
     epwmCfgPrms.dbCfg.fallingEdgeDelay = APP_EPWM_DB_FED_COUNT;
     epwmCfgPrms.cfgEt = FALSE;
     hEpwm1 = epwmInit(&epwmCfgPrms, &gEpwm1Obj);
-    DebugP_assert(hEpwm1 != NULL);   
+    DebugP_assert(hEpwm1 != NULL);
 
     /* Configure EPWM2 */
     epwmCfgPrms.epwmId = EPWM_ID_2;
@@ -239,15 +257,15 @@ user guide for the test setup to probe the EPWM signals.\r\n");
     epwmCfgPrms.dbCfg.fallingEdgeDelay = APP_EPWM_DB_FED_COUNT;
     epwmCfgPrms.cfgEt = FALSE;
     hEpwm2 = epwmInit(&epwmCfgPrms, &gEpwm2Obj);
-    DebugP_assert(hEpwm2 != NULL);   
-    
+    DebugP_assert(hEpwm2 != NULL);
+
     /* Wait to force SW sync.
        Delay unnecessary, included so unsync'd EPWM signals can be observed at startup. */
     while (gEpwmIsrCnt < SET_SWSYNC_THR)
         ;
 
     /* Force SW sync for EPWM0.
-       Other PWMs will be sync'd through chain. 
+       Other PWMs will be sync'd through chain.
        SW sync simulates EPWM0SYNCI. */
     EPWM_tbTriggerSwSync(gEpwm0BaseAddr);
 
@@ -276,7 +294,6 @@ user guide for the test setup to probe the EPWM signals.\r\n");
     DebugP_log("EPWM Duty Cycle Sync Test Passed!!\r\n");
     DebugP_log("All tests have passed!!\r\n");
 
-    Drivers_close();
 }
 
 /* EPWM ISR */
@@ -289,7 +306,7 @@ static void AppEpwm_epwmIntrISR(void *args)
     GPIO_pinWriteHigh(CONFIG_GPIO0_BASE_ADDR, CONFIG_GPIO0_PIN);
     /* debug, increment ISR count */
     gEpwmIsrCnt++;
-    
+
     status = EPWM_etIntrStatus(gEpwm0BaseAddr);
     if (status & EPWM_ETFLG_INT_MASK)
     {
@@ -299,7 +316,7 @@ static void AppEpwm_epwmIntrISR(void *args)
                 Compute next sinusoid values:
                     A*sin(2*pi*fo*n/fs)
                     A*sin(2*pi*fo*n/fs + 2*pi/3)
-                    A*sin(2*pi*fo*n/fs - 2*pi/3)                
+                    A*sin(2*pi*fo*n/fs - 2*pi/3)
             */
             sinVal0 = gSinAmp*sinf(2*M_PI*gSinFreq*gSampCnt/APP_EPWM_OUTPUT_FREQ);
             sinVal1 = gSinAmp*sinf(2*M_PI*gSinFreq*gSampCnt/APP_EPWM_OUTPUT_FREQ + 2*M_PI/3);

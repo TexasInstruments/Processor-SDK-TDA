@@ -52,7 +52,10 @@
             -Wno-unused-but-set-variable
             -fdata-sections
             -ffunction-sections
+            -O3
+            -march=armv8-a
             -DSOC_AM62AX
+            -DA53_CORE
         "
         linkerBuildOptions="
             -L${MCU_PLUS_SDK_PATH}/source/kernel/freertos/lib

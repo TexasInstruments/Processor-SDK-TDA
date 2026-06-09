@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024 Texas Instruments Incorporated
+ *  Copyright (C) 2024-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,12 +30,20 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <stdlib.h>
 #include <kernel/dpl/DebugP.h>
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
 #include "SafeRTOS_API.h"
 #include "taskAPI.h"
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 #define configASSERT(x)                        DebugP_assert( (uint32_t)((x) != 0))
 
@@ -61,6 +69,7 @@ void safertos_main(void *args)
 
     dpl_demo_main(NULL);
 
+    /* Delete the calling task with NULL argument. */
     xTaskDelete(NULL);
 }
 
@@ -96,7 +105,7 @@ int main()
 #endif
     };
 
-    xStatus = xTaskCreate(&xTaskPParams, NULL); 
+    xStatus = xTaskCreate(&xTaskPParams, NULL);
     configASSERT(pdPASS == xStatus);
 
     /* Start the scheduler to start the tasks executing. */

@@ -1,5 +1,5 @@
  /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,9 +30,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * Auto generated file - DO NOT MODIFY
- */
 
 #include <stdlib.h>
 #include <string.h>
@@ -48,11 +45,11 @@
 #include <kernel/dpl/DebugP.h>
 #include <kernel/dpl/CacheP.h>
 
-#define BOOTLOADER_UNIFLASH_MAX_FILE_SIZE (0x800000) /* This has to match the size of DDR section in linker.cmd */
+#define BOOTLOADER_UNIFLASH_MAX_FILE_SIZE (0x400000) /* This can be a maximum of half the size of DDR section in linker.cmd */
 uint8_t gUniflashFileBuf[BOOTLOADER_UNIFLASH_MAX_FILE_SIZE] __attribute__((aligned(128), section(".bss.filebuf")));
 
 #define BOOTLOADER_UNIFLASH_VERIFY_BUF_MAX_SIZE (32*1024)
-uint8_t gUniflashVerifyBuf[BOOTLOADER_UNIFLASH_VERIFY_BUF_MAX_SIZE] __attribute__((aligned(128), section(".bss")));
+uint8_t gUniflashVerifyBuf[BOOTLOADER_UNIFLASH_VERIFY_BUF_MAX_SIZE] __attribute__((aligned(128), section(".bss.filebuf")));
 
 
 
@@ -78,12 +75,12 @@ int main()
 	 Bootloader_socWaitForFWBoot();
     status = Bootloader_socOpenFirewalls();
     System_init();
-
+    Board_init();
     Drivers_open();
 
     status = Board_driversOpen();
     DebugP_assert(status == SystemP_SUCCESS);
-	
+
 
     while(!done)
     {
@@ -128,6 +125,7 @@ int main()
     }
 
     Drivers_close();
+    Board_deinit();
     System_deinit();
 
     return 0;

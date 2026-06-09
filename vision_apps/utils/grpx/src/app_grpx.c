@@ -63,7 +63,9 @@
 #include "app_grpx_priv.h"
 #include <TI/video_io_display.h>
 
+#ifndef VDK
 #define ENABLE_GRPX
+#endif
 
 app_grpx_obj_t g_app_grpx_obj;
 
@@ -342,6 +344,7 @@ int32_t appGrpxDeInit()
 
 void appGrpxDrawDefault(Draw2D_Handle *draw2d_obj, Draw2D_BufInfo *draw2d_buf_info, uint32_t update_type)
 {
+    #ifdef ENABLE_GRPX
     uint16_t width, height, startx, starty;
     uint16_t borderx, bordery;
     uint16_t logoy;
@@ -378,10 +381,12 @@ void appGrpxDrawDefault(Draw2D_Handle *draw2d_obj, Draw2D_BufInfo *draw2d_buf_in
 
         appGrpxShowDdrLoad(startx, starty);
     }
+    #endif
 }
 
 void appGrpxInitParamsInit(app_grpx_init_prms_t *prm, vx_context context)
 {
+    #ifdef ENABLE_GRPX
     memset(prm, 0, sizeof(app_grpx_init_prms_t));
     prm->width = 1920;
     prm->height = 1080;
@@ -391,6 +396,7 @@ void appGrpxInitParamsInit(app_grpx_init_prms_t *prm, vx_context context)
     prm->update_interval = 500;
     prm->draw_callback = appGrpxDrawDefault;
     prm->openvx_context = context;
+    #endif
 }
 
 

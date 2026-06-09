@@ -64,7 +64,15 @@ const char* HTML_TEMPLATE = R"raw(
                 </div>
                 <div class="property-row">
                     <label>name</label>
-                    <div class="property-value path-value" id="node_name"></div>
+                    <div class="property-value-container">
+                        <div class="property-value path-value" id="node_name"></div>
+                        <div class="copy-button" onclick="copyNodeName()" title="Special Copy">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="properties-section" id="inputs">
@@ -307,8 +315,14 @@ const char* HTML_TEMPLATE = R"raw(
             box-sizing: border-box;
         }
         
-        .property-value {
+        .property-value-container {
             width: 70%;
+            display: flex;
+            align-items: center;
+        }
+        
+        .property-value {
+            flex-grow: 1;
             word-break: break-all;
             padding: 2px 5px;
             background-color: #f5f5f5;
@@ -320,6 +334,30 @@ const char* HTML_TEMPLATE = R"raw(
             white-space: nowrap;
             position: relative;
             box-sizing: border-box;
+        }
+        
+        .copy-button {
+            margin-left: 5px;
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .copy-button:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .copy-button svg {
+            width: 16px;
+            height: 16px;
+            stroke: #888888;
+        }
+        
+        .copy-button:hover svg {
+            stroke: #444444;
         }
         
         /* For WebKit browsers (Chrome, Safari) */
@@ -368,6 +406,44 @@ const char* HTML_TEMPLATE = R"raw(
             mainSvg.style.transformOrigin = 'center center';
         }
         
+        function copyNodeName() {
+            const nodeName = document.getElementById('node_name').textContent;
+            if (!nodeName) return;
+            
+            // Create a temporary textarea to copy the text
+            const textarea = document.createElement('textarea');
+            textarea.value = nodeName.trim().replace(/\//g, '_');
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    // Show a temporary success message
+                    const message = document.createElement('div');
+                    message.textContent = 'Copied to clipboard!';
+                    message.style.position = 'fixed';
+                    message.style.top = '10px';
+                    message.style.right = '10px';
+                    message.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                    message.style.color = 'white';
+                    message.style.padding = '8px 12px';
+                    message.style.borderRadius = '4px';
+                    message.style.zIndex = '1000';
+                    document.body.appendChild(message);
+                    
+                    // Remove the message after 2 seconds
+                    setTimeout(() => {
+                        document.body.removeChild(message);
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('Failed to copy node name: ', err);
+            }
+            
+            document.body.removeChild(textarea);
+        }
+        
         function downloadSVG() {
             const mainSvg = document.getElementById("mainSvg").querySelector('svg');
             if (!mainSvg) {
@@ -408,7 +484,7 @@ const char* HTML_TEMPLATE = R"raw(
             const nodeInfo = splitNodeContentTrim.shift().split(/\s+/).filter(word => word !== '');
             document.getElementById('node_layer_num').textContent = nodeInfo[1].replace(/\D/g, '');
             document.getElementById('node_type').textContent = nodeInfo[2];
-            document.getElementById('node_name').textContent = nodeInfo[3];
+            document.getElementById('node_name').textContent = nodeInfo[3].trim().replace(/^['"]|['"]$/g, '');
 
             // Clear previous inputs
             const inputsDiv = document.getElementById('inputs');
@@ -478,7 +554,7 @@ const char* HTML_TEMPLATE = R"raw(
 
                         labelElement.textContent = inputNode.get("layer");
 
-                        valueElement.textContent = inputNode.get("name");
+                        valueElement.textContent = inputNode.get("name").trim().replace(/^['"]|['"]$/g, '');
                         valueElement.setAttribute("nodeId", value[i]);
                         valueElement.style.cursor = 'pointer';
                         newInputDiv.querySelector(".property-value").addEventListener('click', function(event) {

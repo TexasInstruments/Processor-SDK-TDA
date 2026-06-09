@@ -85,7 +85,8 @@ namespace TIDL_Strings
    std::string multiCoreString(int32_t type);
    std::string getDimensionString (int32_t dim);
    std::string activationTypeString(int32_t type);
-   std::string eltwiseTypeString(uint32_t type);
+   std::string logicalOpTypeString(uint32_t type);
+   std::string eltwiseOpTypeString(uint32_t type);
    std::string argOpTypeString(uint32_t type);
    std::string dimString(int32_t dim);
    std::string pitchDimIndexString(int32_t dim);
@@ -106,5 +107,6 @@ namespace TIDL_Strings
    std::string optimiseExtMemString(int32_t type);
    std::string gridSampleModeString(int32_t type);
    std::string gridSamplePadModeString(int32_t type);
+   std::string rnnDirectionString(int32_t direction);
 }
 #endif

@@ -30,6 +30,7 @@ const libdirs_freertos_wkup_r5f = {
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciclient_direct/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/self_reset/lib",
         "${MCU_PLUS_SDK_PATH}/test/unity/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib",
     ],
 };
 
@@ -52,6 +53,7 @@ const libs_freertos_wkup_r5f = {
         "rm_pm_hal.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "self_reset.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "unity.am62px.r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
     ],
 };
 
@@ -83,6 +85,7 @@ const templates_freertos_wkup_r5f =
             abortStackSize: 0x0100,
             undefinedStackSize: 0x0100,
             dmStubstacksize: 0x0400,
+            globalScratchBuf: "true",
         },
     },
     {

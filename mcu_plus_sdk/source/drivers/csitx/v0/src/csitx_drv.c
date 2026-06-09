@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2020-2022
+ *  Copyright (c) Texas Instruments Incorporated 2020-2025
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,7 @@
 /* ========================================================================== */
 /*                             Include Files                                  */
 /* ========================================================================== */
+
 #include <drivers/csitx/v0/include/csitx_drvPriv.h>
 #include <drivers/csitx/v0/include/csitx_drvUdma.h>
 #include <kernel/dpl/ClockP.h>
@@ -48,6 +49,7 @@
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
+
 /** \brief CSITX capture driver ID used at the time of FVID2 create. */
 #define CSITX_STREAM_ID_INVALID              ((uint32_t)0xFFFFU)
 
@@ -97,6 +99,7 @@ dataTypeInfo gdtInfo[] =
     {0x36, 8U, CSITX_BITS_PER_PIXEL_8_BITS},
     {0x37, 8U, CSITX_BITS_PER_PIXEL_8_BITS},
 };
+
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
@@ -112,6 +115,7 @@ dataTypeInfo gdtInfo[] =
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
+
 CsitxDrv_CommonObj gCsitxCommonObj;
 
 #if (CSITX_DRV_ENABLE_DEBUG == 1U)
@@ -123,6 +127,7 @@ uint32_t gTxTrOutCnt = 0U;
 /* ========================================================================== */
 /*                  Internal/Private Function Declarations                   */
 /* ========================================================================== */
+
 static int32_t CsitxDrv_setInstCfgParams(CsitxDrv_InstObj *instObj,
                                          Csitx_CreateParams *createParams);
 
@@ -157,6 +162,7 @@ static uint32_t CsitxDrv_getSizeInWords(uint32_t sizeInBits,
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */
+
 Fdrv_Handle CsitxDrv_create(uint32_t drvId,
                             uint32_t instId,
                             void *createArgs,
@@ -909,6 +915,7 @@ int32_t CsitxDrv_dequeue(Fdrv_Handle handle,
 /* ========================================================================== */
 /*                       Static Function Definitions                          */
 /* ========================================================================== */
+
 static int32_t CsitxDrv_setInstCfgParams(CsitxDrv_InstObj *instObj,
                                          Csitx_CreateParams *createParams)
 {
@@ -1129,7 +1136,7 @@ static int32_t CsitxDrv_setCslCfgParams(CsitxDrv_CommonObj *txObj,
                 }
                 else
                 {
-                    ClockP_sleep(1U);
+                    ClockP_usleep(1000U);
                     currTimeout++;
                 }
             }
@@ -1269,7 +1276,7 @@ static int32_t CsitxDrv_setCslCfgParams(CsitxDrv_CommonObj *txObj,
                 }
                 else
                 {
-                    ClockP_sleep(1U);
+                    ClockP_usleep(1000U);
                     currTimeout++;
                 }
             }

@@ -107,6 +107,8 @@ typedef c7x::make_vector<int32_t,VEC_NELEM(ulong)>::type int_longlen_vec;
  */
 template<uint32_t S> struct SIMD_SHIFT_FROM_WIDTH {};
 
+template<> struct SIMD_SHIFT_FROM_WIDTH<128>
+{ static const uint32_t _value = 7; };
 template<> struct SIMD_SHIFT_FROM_WIDTH<64>
 { static const uint32_t _value = 6; };
 template<> struct SIMD_SHIFT_FROM_WIDTH<32>

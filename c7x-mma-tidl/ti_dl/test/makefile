@@ -48,11 +48,11 @@ else
   ifdef SystemRoot
     TARGET_COMBOS += PC:WINDOWS:x64:1:$(PROFILE):CL
   else
-    ifeq ($(BUILD_WITH_CUDA), 1)
-      TARGET_COMBOS += PC:LINUX:x86_64:1:$(PROFILE):NVCC_LINUX
+    ifeq ($(BUILD_WITH_CUDA),yes)
+      TARGET_COMBOS += PC:LINUX:x86_64:1:$(PROFILE):NVCPP_LINUX
     else
-      ifeq ($(BUILD_WITH_OPENACC), 1)
-        TARGET_COMBOS += PC:LINUX:x86_64:1:$(PROFILE):NVCC_LINUX
+      ifeq ($(BUILD_WITH_OPENACC),yes)
+        TARGET_COMBOS += PC:LINUX:x86_64:1:$(PROFILE):NVCPP_LINUX
       else
         TARGET_COMBOS += PC:LINUX:x86_64:1:$(PROFILE):GCC_LINUX
       endif

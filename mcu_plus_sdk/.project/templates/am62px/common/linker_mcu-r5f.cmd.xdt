@@ -47,6 +47,8 @@
         abortStackSize = options.abortStackSize;
     if(options && options.undefinedStackSize)
         undefinedStackSize = options.undefinedStackSize;
+    if(options && options.useDdr)
+        useDdr = options.useDdr;
 
 
     codeDataSize = 0x80000;
@@ -63,7 +65,7 @@
         addrBase = 0x79100000;
         addrBaseDdr = 0x9BA00000;
         addrBaseFlash = 0x60100000;
-        useDdr = true;
+        useDdr = false;
         usetcma = true;
     } else {
         addrBase = 0x79100000;
@@ -187,9 +189,8 @@ SECTIONS
 
     % if(args.isInstrumentation) {
     GROUP {
-        __llvm_prf_cnts: {} align(8)
-        RUN_START(__start___llvm_prf_cnts)
-        RUN_END(__stop___llvm_prf_cnts)
+        __llvm_prf_cnts
+        __llvm_prf_bits
     } > MSRAM
 
     % }

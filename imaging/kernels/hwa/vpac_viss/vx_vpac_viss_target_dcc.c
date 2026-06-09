@@ -363,117 +363,146 @@ vx_status tivxVpacVissApplyAEWBParams(tivxVpacVissObj *vissObj,
 
     wbCfg = &vsCfg->wbCfg;
 
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    The parameter is expected to be pre-validated from a software layer above imaging.
+    Therefore, this failure case is out of scope for the imaging test framework.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
+    if((NULL == aewb_result) || (NULL == vissObj))
+    {
+        VX_PRINT(VX_ZONE_ERROR, "NULL params passed in tivxVpacVissApplyAEWBParams\n");
+        status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
+    }
+    /* LDRA_JUSTIFY_END */
+    
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    The parameter is expected to be pre-validated from a software layer above imaging.
+    Therefore, this failure case is out of scope for the imaging test framework.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
+    if((vx_status)VX_SUCCESS == status)
+    /* LDRA_JUSTIFY_END */
+    {
 #if defined(VPAC3L)
-    tivxVpacVissDccMapPcidParams(vissObj);
-    
-    if(1u == vissObj->use_dcc)
-    {
-        tivxVpacVissDccMapH3aParams(vissObj, aewb_result);
-    }
+        tivxVpacVissDccMapPcidParams(vissObj);
+        
+        if(1u == vissObj->use_dcc)
+        {
+            tivxVpacVissDccMapH3aParams(vissObj, aewb_result);
+        }
 #endif
-    
-    /* apply AWB gains in RAWFE when NSF4 is bypassed */
-    if ((1u == vissObj->bypass_nsf4) && (1u == aewb_result->awb_valid))
-    {
-        wbCfg->gain[0U] = aewb_result->wb_gains[0U];
-        wbCfg->gain[1U] = aewb_result->wb_gains[1U];
-        wbCfg->gain[2U] = aewb_result->wb_gains[2U];
-        wbCfg->gain[3U] = aewb_result->wb_gains[3U];
-    }
-
-    /* Set even if wbCfg is not updated so that driver updates in
-     * case of multi-instance */
-    vissObj->vissCfgRef.wbCfg = wbCfg;
-
-    /* Setting config flag to 1,
-     * assumes caller protects this flag */
-    vissObj->isConfigUpdated = 1U;
-
-    if((1u == vissObj->use_dcc) &&
-       ((1u == aewb_result->awb_valid) || (1u == aewb_result->ae_valid)))
-    {
-        /* LDRA_JUSTIFY_START
-        <metric start> branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        There is no test configuration in the current suite which can reach this portion.
-        Effect on this unit: If the control reaches here, the code base is not expected to have any effect as
-        the statement is only to update the DCC input parameters for the valid case, and no update is required otherwise.
-        <justification end> */
-        if (1u == aewb_result->awb_valid)
-        /* LDRA_JUSTIFY_END */
+        
+        /* apply AWB gains in RAWFE when NSF4 is bypassed */
+        if ((1u == vissObj->bypass_nsf4) && (1u == aewb_result->awb_valid))
         {
-            dcc_in_prms->color_temparature = aewb_result->color_temperature;
+            wbCfg->gain[0U] = aewb_result->wb_gains[0U];
+            wbCfg->gain[1U] = aewb_result->wb_gains[1U];
+            wbCfg->gain[2U] = aewb_result->wb_gains[2U];
+            wbCfg->gain[3U] = aewb_result->wb_gains[3U];
         }
 
-        /* LDRA_JUSTIFY_START
-        <metric start> branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        There is no test configuration in the current suite which can reach this portion.
-        Effect on this unit: If the control reaches here, the code base is not expected to have any effect as
-        the statement is only to update the DCC input parameters for the valid case, and no update is required otherwise.
-        <justification end> */
-        if (1u == aewb_result->ae_valid)
-        /* LDRA_JUSTIFY_END */
+        /* Set even if wbCfg is not updated so that driver updates in
+        * case of multi-instance */
+        vissObj->vissCfgRef.wbCfg = wbCfg;
+
+        /* Setting config flag to 1,
+        * assumes caller protects this flag */
+        vissObj->isConfigUpdated = 1U;
+
+        if((1u == vissObj->use_dcc) &&
+        ((1u == aewb_result->awb_valid) || (1u == aewb_result->ae_valid)))
         {
-            dcc_in_prms->analog_gain = aewb_result->analog_gain;
-            dcc_in_prms->exposure_time = aewb_result->exposure_time;
-        }
-
-        /* Apply DCC Output to VISS Driver config */
-        tivxVpacVissDccMapDpcParams(vissObj, aewb_result);
-
-        /* Apply DCC Output and update CCM and Gamma*/
-        for(fcp_index=0; fcp_index < TIVX_VPAC_VISS_FCP_NUM_INSTANCES; fcp_index++)
-        {
-            tivxVpacVissDccMapCCMParams(vissObj, aewb_result, fcp_index);
-            tivxVpacVissDccMapGammaParams(vissObj, aewb_result, fcp_index);
-        }
-
-        /* Update WB Gains in NSF4 if it is enabled */
-        if (0u == vissObj->bypass_nsf4)
-        {
-            tivxVpacVissDccMapNsf4Params(vissObj, aewb_result);
-        }
-
-        for(fcp_index=0; fcp_index < TIVX_VPAC_VISS_FCP_NUM_INSTANCES; fcp_index++)
-        {
-            tivxVpacVissDccMapYeeParams(vissObj, aewb_result, fcp_index);
-        }
-
-        /* Update BLC Offset */
-        tivxVpacVissDccMapBlc(vissObj, aewb_result);
-
-        /*
-         * TODO: H3A LUT Update.
-         */
-    }
-    else
-    {
-        /* In case of multi-instance, these need to be updated in
-         * driver (required until there is better ctx restore mechanism)*/
-        for(fcp_index=0; fcp_index < TIVX_VPAC_VISS_FCP_NUM_INSTANCES; fcp_index++)
-        {
-            vissObj->vissCfgRef.fcpCfg[fcp_index].ccm = &vissObj->vissCfg.fcpCfg[fcp_index].ccmCfg;
-        }
-
-        if (0u == vissObj->bypass_nsf4)
-        {
-            if(1u == aewb_result->awb_valid)
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            There is no test configuration in the current suite which can reach this portion.
+            Effect on this unit: If the control reaches here, the code base is not expected to have any effect as
+            the statement is only to update the DCC input parameters for the valid case, and no update is required otherwise.
+            <justification end> */
+            if (1u == aewb_result->awb_valid)
+            /* LDRA_JUSTIFY_END */
             {
-                int32_t i;
-                for (i = 0; i < 4; i ++)
-                {
-                    vissObj->vissCfg.nsf4Cfg.gains[i] = aewb_result->wb_gains[i];
-                }
+                dcc_in_prms->color_temparature = aewb_result->color_temperature;
             }
 
-            vissObj->vissCfgRef.nsf4Cfg = &vissObj->vissCfg.nsf4Cfg;
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            There is no test configuration in the current suite which can reach this portion.
+            Effect on this unit: If the control reaches here, the code base is not expected to have any effect as
+            the statement is only to update the DCC input parameters for the valid case, and no update is required otherwise.
+            <justification end> */
+            if (1u == aewb_result->ae_valid)
+            /* LDRA_JUSTIFY_END */
+            {
+                dcc_in_prms->analog_gain = aewb_result->analog_gain;
+                dcc_in_prms->exposure_time = aewb_result->exposure_time;
+            }
+
+            /* Apply DCC Output to VISS Driver config */
+            tivxVpacVissDccMapDpcParams(vissObj, aewb_result);
+
+            /* Apply DCC Output and update CCM and Gamma*/
+            for(fcp_index=0; fcp_index < TIVX_VPAC_VISS_FCP_NUM_INSTANCES; fcp_index++)
+            {
+                tivxVpacVissDccMapCCMParams(vissObj, aewb_result, fcp_index);
+                tivxVpacVissDccMapGammaParams(vissObj, aewb_result, fcp_index);
+            }
+
+            /* Update WB Gains in NSF4 if it is enabled */
+            if (0u == vissObj->bypass_nsf4)
+            {
+                tivxVpacVissDccMapNsf4Params(vissObj, aewb_result);
+            }
+
+            for(fcp_index=0; fcp_index < TIVX_VPAC_VISS_FCP_NUM_INSTANCES; fcp_index++)
+            {
+                tivxVpacVissDccMapYeeParams(vissObj, aewb_result, fcp_index);
+            }
+
+            /* Update BLC Offset */
+            tivxVpacVissDccMapBlc(vissObj, aewb_result);
+
+            /*
+            * TODO: H3A LUT Update.
+            */
         }
-        vissObj->vissCfgRef.lPwlCfg = &vissObj->vissCfg.pwlCfg1;
-        vissObj->vissCfgRef.sPwlCfg = &vissObj->vissCfg.pwlCfg2;
-        vissObj->vissCfgRef.vsPwlCfg = &vissObj->vissCfg.pwlCfg3;
+        else
+        {
+            /* In case of multi-instance, these need to be updated in
+            * driver (required until there is better ctx restore mechanism)*/
+            for(fcp_index=0; fcp_index < TIVX_VPAC_VISS_FCP_NUM_INSTANCES; fcp_index++)
+            {
+                vissObj->vissCfgRef.fcpCfg[fcp_index].ccm = &vissObj->vissCfg.fcpCfg[fcp_index].ccmCfg;
+            }
+
+            if (0u == vissObj->bypass_nsf4)
+            {
+                if(1u == aewb_result->awb_valid)
+                {
+                    int32_t i;
+                    for (i = 0; i < 4; i ++)
+                    {
+                        vissObj->vissCfg.nsf4Cfg.gains[i] = aewb_result->wb_gains[i];
+                    }
+                }
+
+                vissObj->vissCfgRef.nsf4Cfg = &vissObj->vissCfg.nsf4Cfg;
+            }
+            vissObj->vissCfgRef.lPwlCfg = &vissObj->vissCfg.pwlCfg1;
+            vissObj->vissCfgRef.sPwlCfg = &vissObj->vissCfg.pwlCfg2;
+            vissObj->vissCfgRef.vsPwlCfg = &vissObj->vissCfg.pwlCfg3;
+        }
     }
 
     return (status);
@@ -1063,7 +1092,10 @@ static void tivxVpacVissDccMapCCMParams(tivxVpacVissObj *vissObj,
         ccmCfg->weights[0][0] = 256;
         ccmCfg->weights[1][1] = 256;
         ccmCfg->weights[2][2] = 256;
-        vissObj->vissCfgRef.fcpCfg[fcp_index].ccm = ccmCfg;
+        if((0U == fcp_index) || (1U == fcp_index))
+        {
+            vissObj->vissCfgRef.fcpCfg[fcp_index].ccm = ccmCfg;
+        }
 
         /* Setting config flag to 1,
          * assumes caller protects this flag */
@@ -1244,6 +1276,12 @@ static void tivxVpacVissDccMapFlexCFAParams(tivxVpacVissObj *vissObj, uint32_t f
 #if defined(VPAC3) || defined(VPAC3L) 
     viss_cfai3_dcc_ext    * dcc_cfai3_ext = NULL;
 #endif
+    vx_status status = (vx_status)VX_SUCCESS;
+
+    if((0U != fcp_index) && (1U != fcp_index))
+    {
+        status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
+    }
 
 /* LDRA_JUSTIFY_START
 <metric start> branch <metric end>
@@ -1253,7 +1291,7 @@ The parameters are pre-validated by the caller before the control reaches here.
 Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application.
 This behaviour is part of the application design. An error print statement can be added in a future release if required.
 <justification end> */
-    if (NULL != vissObj)
+    if ((NULL != vissObj) && ((vx_status)VX_SUCCESS == status))
 /* LDRA_JUSTIFY_END */
     {
         cfaCfg = &vissObj->vissCfg.fcpCfg[fcp_index].cfaCfg;
@@ -1298,7 +1336,7 @@ This behaviour is part of the application design. An error print statement can b
 #endif
     }
 
-    if (NULL != dcc_cfa_cfg)
+    if ((NULL != dcc_cfa_cfg) && ((vx_status)VX_SUCCESS == status))
     {
         memcpy((void *)cfaCfg->coeff, (const void *)dcc_cfa_cfg->FirCoefs, FCP_MAX_CFA_COEFF * sizeof(cfaCfg->coeff[0]));
 
@@ -1545,9 +1583,10 @@ This behaviour is part of the application design. An error print statement can b
 #if defined(VPAC3L)
             viss_lsc_ext_dcc_cfg_t *dcc_ext_cfg = &vissObj->dcc_out_prms.vissLscExtCfg;
 #endif
-            int32_t len = (int32_t)dcc_cfg->lsc_params.lut_size_in_bytes;
 
-            lscCfg->numTblEntry  = (uint32_t)(len / 4);
+            uint32_t len = dcc_cfg->lsc_params.lut_size_in_bytes;
+
+            lscCfg->numTblEntry  = len / 4U;
             lscCfg->enable       = dcc_cfg->lsc_params.enable;
             lscCfg->gainFmt      = dcc_cfg->lsc_params.gain_mode_format;
             lscCfg->horzDsFactor = dcc_cfg->lsc_params.gain_mode_m;
@@ -1573,7 +1612,7 @@ This behaviour is part of the application design. An error print statement can b
                 VX_PRINT(VX_ZONE_ERROR, "LSC table length is %d entries, which is greater than RFE_LSC_TBL_SIZE (%d entries)!!!\n", lscCfg->numTblEntry, RFE_LSC_TBL_SIZE);
             }
             /* LDRA_JUSTIFY_END */
-            memcpy((void *)lscCfg->tableAddr, (const void *)dcc_cfg->lsc_table, (uint32_t)len);
+            memcpy((void *)lscCfg->tableAddr, (const void *)dcc_cfg->lsc_table, len);
         }
 
         vissObj->vissCfgRef.lscCfg = lscCfg;

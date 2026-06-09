@@ -174,6 +174,48 @@ extern "C" {
 #define APP_IPC_CPU_INVALID (0xFFu)
 #endif
 
+#if defined (SOC_TDA54)
+/** \brief CPU ID */
+#define APP_IPC_CPU_MPU1_0     ( 0u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_MCU0_M55   ( 1u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_MCU1_M55   ( 2u)
+// /** \brief CPU ID */
+#define APP_IPC_CPU_MCU2_M55   ( 3u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_MCU3_M55   ( 4u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_MCU4_M55   ( 5u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_RMCU0_0    ( 6u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_RMCU0_1    ( 7u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_RMCU1_0    ( 8u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_RMCU1_1    ( 9u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_RMCU2_0    (10u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_RMCU2_1    (11u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_C7x_1      (12u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_C7x_2      (13u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_C7x_3      (14u)
+/** \brief CPU ID */
+#define APP_IPC_CPU_C7x_4      (15u)
+/** \brief Max CPU ID */
+#define APP_IPC_CPU_MAX        (16u)
+/** \brief Invalid CPU ID */
+#define APP_IPC_CPU_INVALID    (0xFFu)
+#ifndef QNX
+#define IPC_MAX_PROCS          (16u)    /**< Maximum Processors */
+#endif
+#endif
+
 #if defined (SOC_J742S2)
 /** \brief CPU ID */
 #define APP_IPC_CPU_MPU1_0  ( 0u)
@@ -213,7 +255,7 @@ extern "C" {
 /** \brief CPU ID */
 #define APP_IPC_CPU_C7x_1   ( 2u)
 /** \brief Max CPU ID */
-#if defined (QNX_MPU)
+#ifdef QNX
 /*  QNX Vring Allocation Logic is different from PDK Logic , This is based on all core id's Hence APP_IPC_CPU_MAX is 8.
     AUTOSAR will run on mcu2 core hence it is considered for Vring Allocation even though our application does not need mcu2_0 core.
     QNX and Linux Application uses 3 cores(mcpu, mcu1 and c7x) for IPC communication, Hence IPC_MAX_PROCS is kept to 3
@@ -228,8 +270,8 @@ extern "C" {
 
 /** \brief Invalid CPU ID */
 #define APP_IPC_CPU_INVALID (0xFFu)
-#if defined(MCU_PLUS_SDK)
-#define    IPC_MAX_PROCS        (3U)    /**< Maximum Processors */
+#ifndef QNX
+#define IPC_MAX_PROCS       (3U)    /**< Maximum Processors */
 #endif
 #endif
 
@@ -250,8 +292,8 @@ extern "C" {
 #define APP_IPC_CPU_MAX     ( 6u)
 /** \brief Invalid CPU ID */
 #define APP_IPC_CPU_INVALID (0xFFu)
-#if defined(MCU_PLUS_SDK)
-#define    IPC_MAX_PROCS        (6U)    /**< Maximum Processors */
+#ifndef QNX
+#define IPC_MAX_PROCS       (6U)    /**< Maximum Processors */
 #endif
 #endif
 
@@ -290,9 +332,15 @@ extern "C" {
 /** \brief RPMsg Port used for RPMsg proto echo test */
 #define APP_IPC_RPMSG_PROTO_ECHO_TEST_RPMSG_PORT_ID  (12u)
 
-#if defined (SOC_AM62A)
-#define APP_IPC_RPMESSAGE_RPMSG_RX_NUM_BUF   (256U)
-#endif
+/** \brief Returned by \ref appGetHostOSType if MPU is running RTOS */
+#define APP_HOST_TYPE_RTOS (0U)
+
+/** \brief Returned by \ref appGetHostOSType if MPU is running LINUX */
+#define APP_HOST_TYPE_LINUX (1U)
+
+/** \brief Returned by \ref appGetHostOSType if MPU is running QNX */
+#define APP_HOST_TYPE_QNX (2U)
+
 /* @} */
 
 /**
@@ -303,7 +351,6 @@ extern "C" {
  *
  */
 typedef void (*app_ipc_notify_handler_f)(uint32_t src_cpu_id, uint32_t payload);
-
 
 /**
  * \brief IPC initialization parameters
@@ -363,6 +410,15 @@ int32_t appIpcDeInit(void);
  * \return 0 on success, else failure
  */
 int32_t appIpcRegisterNotifyHandler(app_ipc_notify_handler_f handler);
+
+#if defined (PC)
+/**
+ * \brief Get the notify message callback
+ *
+ * \return function pointer of notify message callback if registerd, else NULL
+ */
+app_ipc_notify_handler_f appIpcGetNotifyHandler(void);
+#endif /* #if defined (PC) */
 
 /**
  * \brief Send a notify message to a given CPU
@@ -472,10 +528,31 @@ uint32_t appIpcGetAppCpuId(char *name);
 const char *appIpcGetCpuName(uint32_t app_cpu_id);
 
 /**
+ * \brief Get Host OS type on A-cores
+ *
+ * \return \ref APP_HOST_TYPE_RTOS, \ref APP_HOST_TYPE_LINUX, or \ref APP_HOST_TYPE_QNX.
+ */
+uint32_t appGetHostOSType(void);
+
+/**
  * \brief Start echo test
  *
  */
 int32_t appIpcEchoTestStart(void);
+
+/**
+ * \brief Get vring index for communication between two processors
+ *
+ * Calculates the vring (virtual ring buffer) index used for IPC communication
+ * between a local and remote processor.
+ *
+ * \param numProc  [in] Total number of processors in the system
+ * \param selfId   [in] Local processor ID
+ * \param remoteId [in] Remote processor ID
+ *
+ * \return Vring index for the given processor pair
+ */
+uint32_t appIpcGetVringIndex(uint32_t numProc, uint32_t selfId, uint32_t remoteId);
 
 #if defined (SOC_AM62A)
 /**
@@ -492,4 +569,3 @@ uint32_t appIpcShutDownReceived(void);
 /* @} */
 
 #endif /* APP_IPC_H_ */
-

@@ -42,6 +42,7 @@ extern "C"
 
 #if defined (DRV_VERSION_OSPI_V0)
 #include <drivers/ospi/v0/ospi.h>
+#include <drivers/ospi/v0/vtm.h>
 #endif
 
 #ifdef __cplusplus

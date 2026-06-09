@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2025 Texas Instruments Incorporated
+ *  Copyright (C) 2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -150,23 +150,17 @@ static int32_t Dss_dctrlDrvSetLineNumCbParamsIoctl(
                             const Dss_DctrlLineNumCbParams *lineNumCbParams);
 static void Dss_dctrlFuncCbFxn(const uint32_t *event,
                                uint32_t numEvents,
-                               uint32_t instId,
                                void *arg);
 static void Dss_dctrlErrCbFxn(const uint32_t *event,
                               uint32_t numEvents,
-                              uint32_t instId,
                               void *arg);
 static void Dss_dctrlSafetyErrCbFxn(const uint32_t *event,
                                     uint32_t numEvents,
-                                    uint32_t instId,
                                     void *arg);
 static int32_t Dss_dctrlConnectNodes(uint32_t inputNode, uint32_t outNode);
 static int32_t Dss_dctrlDrvSetOldiParamsIoctl(
                             Dss_DctrlDrvInstObj *instObj,
                             const Dss_DctrlOldiParams *oldiParams);
-static int32_t Dss_dctrlSetDsiParamsIoctl(Dss_DctrlDrvInstObj *instObj,
-                                          const Dss_DctrlDsiParams *dsiPrms);
-static uint32_t Dss_dctrlDrvIsOutputDSI(uint32_t vpId);
 static void Dss_dctrlVpSetGoBit(uint32_t vpId);
 static void Dss_dctrlVpReset(uint32_t vpId);
 static void Dss_dctrlVpEnable(uint32_t vpId, uint32_t enable);
@@ -258,19 +252,7 @@ int32_t Dss_dctrlDrvInit(const Dss_DctrlDrvInitParams *drvInitParams)
             /* Register functional events */
             Dss_getEnabledVpFuncEvents(&enabledEvents[0U], &numEvents);
             numHandle = pObj->instObj->numRegEvtHandle;
-
-            /* Need to register events for the DSS instance based on VP id's*/
-            if(vpId <= CSL_DSS_VP_ID_2)
-            {
-                /* VP id 1,2 correspond to DSS0*/
-                evtMgrId = Dss_getEvtMgrFuncIntrId();
-            }
-            else
-            {
-                /* VP id 3,4 correspond to DSS1*/
-                evtMgrId = Dss1_getEvtMgrFuncIntrId();
-            }
-
+            evtMgrId = Dss_getEvtMgrFuncIntrId();
             pObj->instObj->evtGroupHandle[pObj->instObj->numRegEvtHandle] =
                             Dss_evtMgrRegister(
                                 evtMgrId,
@@ -279,7 +261,6 @@ int32_t Dss_dctrlDrvInit(const Dss_DctrlDrvInitParams *drvInitParams)
                                 numEvents,
                                 Dss_dctrlFuncCbFxn,
                                 (void *)&gDss_DctrlEvtMgrClientInfo[numHandle]);
-            GT_assert(DssTrace, (NULL != pObj->instObj->evtGroupHandle[pObj->instObj->numRegEvtHandle]));
             pObj->instObj->numRegEvtHandle++;
 
             /* Register error events */
@@ -293,13 +274,8 @@ int32_t Dss_dctrlDrvInit(const Dss_DctrlDrvInitParams *drvInitParams)
                                 numEvents,
                                 Dss_dctrlErrCbFxn,
                                 (void *)&gDss_DctrlEvtMgrClientInfo[numHandle]);
-            GT_assert(DssTrace, (NULL != pObj->instObj->evtGroupHandle[pObj->instObj->numRegEvtHandle]));
             pObj->instObj->numRegEvtHandle++;
         }
-    }
-    if (TRUE == drvInitParams->dsiInitParams.isAvailable)
-    {
-        Dss_dctrlDrvInitDSI();
     }
 
     if(FVID2_SOK == retVal)
@@ -823,11 +799,6 @@ static int32_t Dss_dctrlDrvControl(Fdrv_Handle handle,
                     instObj,
                     (const Dss_DctrlOldiParams*) cmdArgs);
                 break;
-            case IOCTL_DSS_DCTRL_SET_DSI_PARAMS:
-                retVal = Dss_dctrlSetDsiParamsIoctl(
-                    instObj,
-                    (const Dss_DctrlDsiParams*) cmdArgs);
-                break;
             default:
                 GT_0trace(DssTrace,
                           GT_ERR,
@@ -981,7 +952,6 @@ static int32_t Dss_dctrlDrvSetVpParamsIoctl(
     const CSL_DssVpLcdSignalPolarityCfg *lcdPolarityCfg;
     const CSL_DssVpLcdTdmCfg *lcdTdmCfg;
     const Dss_DctrlSyncOpCfg *syncOpCfg;
-    const CSL_DssVpGammaCfg *gammaCfg;
     Dss_DctrlVpParams *pVpParams;
     Dss_DctrlDrvInfo *pDrvInfo;
 
@@ -1016,18 +986,6 @@ static int32_t Dss_dctrlDrvSetVpParamsIoctl(
             }
         }
     }
-    if(FVID2_SOK == retVal)
-    {
-        Dss_DctrlDrvCommonObj *pObj;
-
-        pObj = &gDss_DctrlDrvCommonObj;
-        if ((TRUE  == Dss_dctrlDrvIsOutputDSI(vpId)) &&
-            (FALSE == pObj->drvInitParams.dsiInitParams.isAvailable))
-        {
-            retVal = FVID2_EINVALID_PARAMS;
-            GT_0trace(DssTrace, GT_ERR, "DSI is not supported!!\r\n");
-        }
-    }
 
     if(FVID2_SOK == retVal)
     {
@@ -1036,7 +994,6 @@ static int32_t Dss_dctrlDrvSetVpParamsIoctl(
         lcdPolarityCfg = &vpParams->lcdPolarityCfg;
         lcdTdmCfg = &vpParams->lcdTdmCfg;
         syncOpCfg = &vpParams->syncOpCfg;
-        gammaCfg = &vpParams->gammaCfg;
         pVpParams = &gDss_DctrlDrvInfo.vpParams[vpId];
 
         pVpParams->syncOpCfg.enabled = syncOpCfg->enabled;
@@ -1098,25 +1055,12 @@ static int32_t Dss_dctrlDrvSetVpParamsIoctl(
 
         if(FVID2_SOK != retVal)
         {
-            GT_assert(DssTrace, FALSE);
-        }
-
-        if (TRUE == gammaCfg->gammaEnable)
-        {
-            CSL_dssVpEnableTvGamma(vpRegs, gammaCfg);
+            GT_assert(DssTrace, (bool)FALSE);
         }
 
         if(lcdOpTimingCfg->mInfo.height > 5U)
         {
             CSL_dssVpSetLcdLineNum(vpRegs, lcdOpTimingCfg->mInfo.height - 5U);
-        }
-
-        if ((FVID2_SOK == retVal) &&
-            (TRUE == Dss_dctrlDrvIsOutputDSI(vpId)))
-        {
-            retVal = Dss_dctrlDrvEnableVideoDSI(pDrvInfo, &lcdOpTimingCfg->mInfo,
-                lcdPolarityCfg->hsPolarity, lcdPolarityCfg->vsPolarity,
-                gDss_DctrlDrvCommonObj.drvInitParams.dsiInitParams.isConnectedTo);
         }
 
         Dss_dctrlVpEnable(vpId, TRUE);
@@ -1131,32 +1075,6 @@ static int32_t Dss_dctrlDrvSetVpParamsIoctl(
     (void) SemaphoreP_post(&instObj->lockSem);
 
     return retVal;
-}
-
-static uint32_t Dss_dctrlDrvIsOutputDSI(uint32_t vpId)
-{
-    int32_t retVal;
-    uint32_t i;
-    uint32_t nodeId, vpFound = FALSE;
-    Fvid2_GraphEdgeInfo *currEdge;
-
-    retVal = Dss_convModuletoNode(&nodeId, vpId, DSS_DCTRL_NODE_TYPE_VP);
-    GT_assert(DssTrace,
-            ((DSS_DCTRL_NODE_INVALID != nodeId) ||
-             (FVID2_SOK == retVal)));
-
-    for(i = 0U; i < gDss_DctrlDrvGraphObj.dctrlEdgeList.numEdges; i++)
-    {
-        currEdge = &gDss_DctrlDrvGraphObj.dctrlEdgeList.list[i];
-        if((DSS_DCTRL_NODE_DSI == currEdge->endNode) &&
-                (nodeId == currEdge->startNode))
-        {
-            vpFound = TRUE;
-            break;
-        }
-    }
-
-    return vpFound;
 }
 
 static int32_t Dss_dctrlDrvSetOverlayParamsIoctl(
@@ -1256,21 +1174,13 @@ static int32_t Dss_dctrlDrvSetLayerParamsIoctl(
         GT_assert(DssTrace, (NULL != overlayRegs));
 
         /* Call CSL APIs */
-        /* Any DSS UL instance can have max to two pipe inputs for an overlay.*/
-        for(i=0U; i<CSL_DSS_OVERLAY_LAYER_MAX; i++)
+        for(i=0U; i<CSL_DSS_VID_PIPE_ID_MAX; i++)
         {
             if(CSL_DSS_OVERLAY_LAYER_INVALID != layerParams->pipeLayerNum[i])
             {
                 layerCfg.layerEnable = TRUE;
                 layerCfg.layerNum = i;
-                /* The following is valid only for DSS0, i.e first instance for DSS */
                 layerCfg.inputPipe = layerParams->pipeLayerNum[i];
-                if ((layerCfg.inputPipe == CSL_DSS_VID_PIPE_ID_VID2) || (layerCfg.inputPipe == CSL_DSS_VID_PIPE_ID_VIDL2))
-                {
-                    /* For DSS1, the pipes VID2/VIDL2 are a SW construct, in HW a dss instance has only 2 pipes i.e VID1/VIDL1
-                     * Since the pipe value here in overlay layer configuration, will be written to register, we need to convert it appropriately. */
-                    layerCfg.inputPipe = layerCfg.inputPipe - 2U;
-                }
                 CSL_dssOverlaySetLayerConfig(
                                     overlayRegs,
                                     (const CSL_DssOverlayLayerCfg *) &layerCfg);
@@ -1490,17 +1400,7 @@ static int32_t Dss_dctrlDrvSetVpSafetyChkParamsIoctl(
                                    DSS_EVENT_GROUP_TYPE_VP);
         GT_assert(DssTrace, (DSS_EVENT_GROUP_INVALID != eventGroup));
         numHandle = pObj->instObj->numRegEvtHandle;
-        /* Need to register events for the DSS instance based on VP id's*/
-        if(vpId <= CSL_DSS_VP_ID_2)
-        {
-            /* VP id 1,2 correspond to DSS0*/
-            evtMgrId = Dss_getEvtMgrSafetyIntrId();
-        }
-        else
-        {
-            /* VP id 3,4 correspond to DSS1*/
-            evtMgrId = Dss1_getEvtMgrSafetyIntrId();
-        }
+        evtMgrId = Dss_getEvtMgrSafetyIntrId();
         safetyEvt = Dss_dctrlGetVpSafetyEvtId(regionId);
         GT_assert(DssTrace, (DSS_VP_EVENT_INVALID != safetyEvt));
         pObj->instObj->evtGroupHandle[pObj->instObj->numRegEvtHandle] =
@@ -1511,7 +1411,6 @@ static int32_t Dss_dctrlDrvSetVpSafetyChkParamsIoctl(
                                 1U,
                                 Dss_dctrlSafetyErrCbFxn,
                                 (void *)&gDss_DctrlEvtMgrClientInfo[numHandle]);
-        GT_assert(DssTrace, (NULL != pObj->instObj->evtGroupHandle[pObj->instObj->numRegEvtHandle]));
         pObj->instObj->numRegEvtHandle++;
 
         /* Call CSL APIs */
@@ -1624,35 +1523,18 @@ static int32_t Dss_dctrlDrvSetGlobalDssParamsIoctl(
 
     /* Get common registers */
     socInfo = Dss_getSocInfo();
+    commRegs = socInfo->commRegs[CSL_DSS_COMM_REG_ID_0];
+    GT_assert(DssTrace, (NULL != commRegs));
 
     /* Assign input parameters */
     globalMflagCfg = &globalDssParams->globalMflagCfg;
     cbaCfg = &globalDssParams->cbaCfg;
 
     /* Call CSL APIs */
-    if(socInfo->dss0Enabled == TRUE)
+    if(FVID2_SOK == retVal)
     {
-        commRegs = socInfo->commRegs[CSL_DSS_COMM_REG_ID_0];
-        GT_assert(DssTrace, (NULL != commRegs));
-
-        if(FVID2_SOK == retVal)
-        {
-            CSL_dssSetGlobalMflagConfig(commRegs, globalMflagCfg);
-            CSL_dssSetCbaConfig(commRegs, cbaCfg);
-        }
-
-    }
-
-    if(socInfo->dss1Enabled == TRUE)
-    {
-        commRegs = socInfo->commRegs[CSL_DSS_COMM_REG_ID_2];
-        GT_assert(DssTrace, (NULL != commRegs));
-
-        if(FVID2_SOK == retVal)
-        {
-            CSL_dssSetGlobalMflagConfig(commRegs, globalMflagCfg);
-            CSL_dssSetCbaConfig(commRegs, cbaCfg);
-        }
+        CSL_dssSetGlobalMflagConfig(commRegs, globalMflagCfg);
+        CSL_dssSetCbaConfig(commRegs, cbaCfg);
     }
 
     if(FVID2_SOK != retVal)
@@ -1892,7 +1774,6 @@ static int32_t Dss_dctrlDrvSetLineNumCbParamsIoctl(
 
 static void Dss_dctrlFuncCbFxn(const uint32_t *event,
                                uint32_t numEvents,
-                               uint32_t instId,
                                void *arg)
 {
     uint32_t  i, j, currEvent, vpId = 0U, activePipeNum;
@@ -1903,15 +1784,6 @@ static void Dss_dctrlFuncCbFxn(const uint32_t *event,
 
     uint32_t eventGroup = pClientObj->eventGroup;
     Dss_convEventGrouptoModule(eventGroup, &vpId);
-
-    if(instId == DSS1_EVT_MGR_INST_ID_FUNC)
-    {
-        /*  VP ID 3,4 in SW correspond to the two VPs for second DSS instance i.e DSS1,
-         *  Here using Instance id we know whether the event has occured for DSS0 or DSS1.
-         *  The event is same for both DSS0/1, therfore conversion to module will return VP id
-         *  as 1 or 2 only, we need to convert it back appropriately to match SW construct for DSS1 */
-        vpId = vpId + 2U;
-    }
     GT_assert(DssTrace, (CSL_DSS_MODULE_INVALID != vpId));
 
     for(i=0U; i<numEvents; i++)
@@ -1999,7 +1871,7 @@ static void Dss_dctrlFuncCbFxn(const uint32_t *event,
         }
         else
         {
-            GT_assert(DssTrace, FALSE);
+            GT_assert(DssTrace, (bool)FALSE);
         }
     }
 
@@ -2008,7 +1880,6 @@ static void Dss_dctrlFuncCbFxn(const uint32_t *event,
 
 static void Dss_dctrlErrCbFxn(const uint32_t *event,
                               uint32_t numEvents,
-                              uint32_t instId,
                               void *arg)
 {
     uint32_t  i, currEvent, vpId = 0U;
@@ -2018,14 +1889,6 @@ static void Dss_dctrlErrCbFxn(const uint32_t *event,
 
     pErrorCnt = &gDss_DctrlDrvInfo.errorCnt;
     Dss_convEventGrouptoModule(eventGroup, &vpId);
-    if(instId == DSS1_EVT_MGR_INST_ID_FUNC)
-    {
-        /*  VP ID 3,4 in SW correspond to the two VPs for second DSS instance i.e DSS1,
-         *  Here using Instance id we know whether the event has occured for DSS0 or DSS1.
-         *  The event is same for both DSS0/1, therfore conversion to module will return VP id
-         *  as 1 or 2 only, we need to convert it back appropriately to match SW construct for DSS1 */
-        vpId = vpId + 2U;
-    }
     GT_assert(DssTrace, (CSL_DSS_MODULE_INVALID != vpId));
 
     for(i=0U; i<numEvents; i++)
@@ -2043,7 +1906,7 @@ static void Dss_dctrlErrCbFxn(const uint32_t *event,
         }
         else
         {
-            GT_assert(DssTrace, FALSE);
+            GT_assert(DssTrace, (bool)FALSE);
         }
     }
 
@@ -2052,7 +1915,6 @@ static void Dss_dctrlErrCbFxn(const uint32_t *event,
 
 static void Dss_dctrlSafetyErrCbFxn(const uint32_t *event,
                                     uint32_t numEvents,
-                                    uint32_t instId,
                                     void *arg)
 {
     uint32_t  i, currEvent, vpId = 0U, regionId;
@@ -2065,14 +1927,6 @@ static void Dss_dctrlSafetyErrCbFxn(const uint32_t *event,
 
     pErrorCnt = &gDss_DctrlDrvInfo.errorCnt;
     Dss_convEventGrouptoModule(eventGroup, &vpId);
-    if(instId == DSS1_EVT_MGR_INST_ID_FUNC)
-    {
-        /*  VP ID 3,4 in SW correspond to the two VPs for second DSS instance i.e DSS1,
-         *  Here using Instance id we know whether the event has occured for DSS0 or DSS1.
-         *  The event is same for both DSS0/1, therfore conversion to module will return VP id
-         *  as 1 or 2 only, we need to convert it back appropriately to match SW construct for DSS1 */
-        vpId = vpId + 2U;
-    }
     GT_assert(DssTrace, (CSL_DSS_MODULE_INVALID != vpId));
 
     /* Get video port registers */
@@ -2090,12 +1944,8 @@ static void Dss_dctrlSafetyErrCbFxn(const uint32_t *event,
             pErrorCnt->vpSafetyViolation[regionId][vpId]++;
             pSafetyChkParams = &gDss_DctrlDrvInfo.safetyChkParams[regionId][vpId];
             pSafetyChkParams->safetyCbData.regionId = regionId;
-            if(CSL_DSS_SAFETY_CHK_DATA_INTEGRITY ==
-                pSafetyChkParams->regionSafetyChkCfg.safetyChkCfg.safetyChkMode)
-            {
-                pSafetyChkParams->safetyCbData.capturedSign =
+            pSafetyChkParams->safetyCbData.capturedSign =
                                     CSL_dssVpGetSafetySign(vpRegs, regionId);
-            }
 
             if(NULL != pSafetyChkParams->safetyErrCbFxn)
             {
@@ -2106,7 +1956,7 @@ static void Dss_dctrlSafetyErrCbFxn(const uint32_t *event,
         }
         else
         {
-            GT_assert(DssTrace, FALSE);
+            GT_assert(DssTrace, (bool)FALSE);
         }
     }
 
@@ -2184,7 +2034,6 @@ static void Dss_dctrlVpEnable(uint32_t vpId, uint32_t enable)
     const Dss_DctrlVpParams *vpParams;
     uint32_t syncVpId;
     uint32_t vpMask;
-    uint32_t dssCommonRegionId;
     uint32_t i;
 
     socInfo = Dss_getSocInfo();
@@ -2195,18 +2044,7 @@ static void Dss_dctrlVpEnable(uint32_t vpId, uint32_t enable)
 
     /* Get DSS common_m / common_0 registers */
     /* XXX if common_0/m is not enabled in rmInfo? */
-    if(vpId  <= CSL_DSS_VP_ID_2)
-    {
-        /* VP1,2 correspond to DSS0*/
-        dssCommonRegionId = CSL_DSS_COMM_REG_ID_0;
-    }
-    else
-    {
-        /* VP3,4 correspond to DSS1*/
-        dssCommonRegionId = CSL_DSS_COMM_REG_ID_2;
-    }
-
-    commRegs = socInfo->commRegs[dssCommonRegionId];
+    commRegs = socInfo->commRegs[0U];
     GT_assert(DssTrace, (NULL != commRegs));
 
     vpParams = &gDss_DctrlDrvInfo.vpParams[vpId];
@@ -2215,11 +2053,11 @@ static void Dss_dctrlVpEnable(uint32_t vpId, uint32_t enable)
     {
         if(TRUE == vpParams->syncOpCfg.isPrimary)
         {
-            vpMask = (uint32_t)(1U << vpId);
+            vpMask = ((uint32_t)1U << vpId);
             for(i = 0U; i < vpParams->syncOpCfg.numSyncVpIds; i++)
             {
                 syncVpId = vpParams->syncOpCfg.syncVpIds[i];
-                vpMask |= (uint32_t)(1U << syncVpId);
+                vpMask |= ((uint32_t)1U << syncVpId);
             }
 
             CSL_dssGlobalVpEnable(commRegs, vpMask, enable);
@@ -2270,51 +2108,4 @@ static void Dss_dctrlVpEnable(uint32_t vpId, uint32_t enable)
             gDss_DctrlDrvInfo.vpState[vpId] = DSS_DCTRL_VP_IDLE;
         }
     }
-}
-
-static int32_t Dss_dctrlSetDsiParamsIoctl(Dss_DctrlDrvInstObj *instObj,
-                                          const Dss_DctrlDsiParams *dsiPrms)
-{
-    int32_t retVal = FVID2_SOK;
-
-    /* Check for NULL pointers */
-    GT_assert(DssTrace, (NULL != instObj));
-
-    /* Check for wrong inputs */
-    if(NULL == dsiPrms)
-    {
-        GT_0trace(DssTrace, GT_ERR, "Invalid argument!!\r\n");
-        retVal = FVID2_EBADARGS;
-    }
-
-    /* Take the instance semaphore */
-    (void) SemaphoreP_pend(&instObj->lockSem, SystemP_WAIT_FOREVER);
-
-    if(FVID2_SOK == retVal)
-    {
-        if (FALSE ==
-                gDss_DctrlDrvCommonObj.drvInitParams.dsiInitParams.isAvailable)
-        {
-            GT_0trace(DssTrace,
-                      GT_ERR,
-                      "DSI Output is not supported \r\n");
-            retVal = FVID2_EBADARGS;
-        }
-        else
-        {
-            retVal = Dss_dctrlDrvSetDSIParams(&gDss_DctrlDrvInfo, dsiPrms);
-        }
-    }
-
-    if(FVID2_SOK != retVal)
-    {
-        GT_0trace(DssTrace,
-                  GT_ERR,
-                  "Set DSI Params IOCTL failed\r\n");
-    }
-
-    /* Post the instance semaphore */
-    (void) SemaphoreP_post(&instObj->lockSem);
-
-    return retVal;
 }

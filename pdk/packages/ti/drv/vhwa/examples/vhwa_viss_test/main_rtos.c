@@ -271,7 +271,7 @@ static void VissApp_mainTaskFunc(void *a0, void *a1)
     bool done = UFALSE;
     int32_t testIdx;
     #if defined (LDRA_COVERAGE)
-    static const int32_t gApprovedPositiveTestCases [] = {92,7,6,5,4,3,2,1,91,82,89,88,87,86,90,84,83,81,79,85,0,93,124,139,140,151,250,118,117} ;
+    static const int32_t gApprovedPositiveTestCases [] = {92,7,6,5,4,3,2,1,91,82,89,88,87,86,90,84,83,81,79,85,0,93,112,124,126,139,140,151,250,118,117} ;
     static const int32_t gApprovedNegativeTestCases [] = {236,237,238,239,240,243,244,245,246,247,224,225,226,229,230,231,232,233,234,235,214,215,216,217,219,221,202,206,207,208,209,210,211,199,200,201,191,192,193,194,195,161,162,164,165,166,167,168,169,170,171,172,173,174,175,176,178,179,180,181,182,183,184,150,152,153,154,155,156,143,144,134,130,131,125,113,249,198,119,120,129,103,104,106,251,252,253,254,255,256,257,258,259,260,261,262,263,264,265,266,203,218,-1};
     uint32_t i = 0,j =0, PositiveTestcasesMax = 0; 
     PositiveTestcasesMax = sizeof(gApprovedPositiveTestCases)/sizeof(gApprovedPositiveTestCases[0]);

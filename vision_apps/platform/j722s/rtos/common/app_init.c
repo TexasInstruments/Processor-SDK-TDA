@@ -100,6 +100,10 @@
 #include <utils/sciclient/include/app_sciclient.h>
 #endif
 
+#ifdef ENABLE_ETHFW
+#include <utils/ethfw/include/app_ethfw.h>
+#endif
+
 /* TIOVX header files */
 #include <TI/tivx.h>
 
@@ -375,7 +379,7 @@ int32_t appInit()
         ipc_init_prm.enable_tiovx_ipc_announce = 0;
     }
     ipc_init_prm.num_cpus = 0;
-    #ifdef ENABLE_IPC_MPU1_0
+    #ifdef ENABLE_IPC_MPU1
     ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_MPU1_0;
     ipc_init_prm.num_cpus++;
     log_init_prm.log_rd_cpu_enable[APP_IPC_CPU_MPU1_0] = 1;
@@ -677,6 +681,20 @@ int32_t appInit()
     APP_ASSERT_SUCCESS(status);
     #endif
 
+    #ifdef ENABLE_ETHFW
+    status = appEthFwInit();
+    APP_ASSERT_SUCCESS(status);
+
+    status = appEthFwRemoteServerInit();
+    APP_ASSERT_SUCCESS(status);
+
+    /* Late Announce is required for communicating with Linux*/
+	status = appEthFwLateAnnounce();
+	APP_ASSERT_SUCCESS(status);
+
+    appLogWaitMsecs(50); /* Temporary workaround for ETHFW-1629 */
+    #endif
+
     appLogPrintf("APP: Init ... Done !!!\n");
 
     return status;
@@ -717,6 +735,9 @@ void appDeInit()
     #ifdef ENABLE_FVID2
     appFvid2DeInit();
     #endif
+	#ifdef ENABLE_ETHFW
+	appEthFwDeInit();
+	#endif
     #ifdef ENABLE_IPC
     appPerfStatsDeInit();
     appRtosTestUnRegister();

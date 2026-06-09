@@ -1,5 +1,5 @@
  /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,15 +30,12 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * Auto generated file - DO NOT MODIFY
- */
-
 #include <stdlib.h>
 #include <string.h>
 #include "ti_drivers_config.h"
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
+#include <board/flash.h>
 #include <drivers/soc.h>
 #include <drivers/pinmux.h>
 #include <drivers/device_manager/sciclient.h>
@@ -48,11 +45,11 @@
 #include <kernel/dpl/DebugP.h>
 #include <kernel/dpl/CacheP.h>
 
-#define BOOTLOADER_UNIFLASH_MAX_FILE_SIZE (0x800000) /* This has to match the size of DDR section in linker.cmd */
+#define BOOTLOADER_UNIFLASH_MAX_FILE_SIZE (0x2000000) /* This has to match the size of DDR section in linker.cmd */
 uint8_t gUniflashFileBuf[BOOTLOADER_UNIFLASH_MAX_FILE_SIZE] __attribute__((aligned(128), section(".bss.filebuf")));
 
-#define BOOTLOADER_UNIFLASH_VERIFY_BUF_MAX_SIZE (32*1024)
-uint8_t gUniflashVerifyBuf[BOOTLOADER_UNIFLASH_VERIFY_BUF_MAX_SIZE] __attribute__((aligned(128), section(".bss")));
+#define BOOTLOADER_UNIFLASH_VERIFY_BUF_MAX_SIZE (0x2000000)
+uint8_t gUniflashVerifyBuf[BOOTLOADER_UNIFLASH_VERIFY_BUF_MAX_SIZE] __attribute__((aligned(128), section(".bss.filebuf")));
 
 
 CacheP_Config gCacheConfig = {
@@ -78,7 +75,7 @@ int main()
     Bootloader_UniflashResponseHeader respHeader;
 
     System_init();
-
+    Board_init();
     Drivers_open();
 
     status = Board_driversOpen();
@@ -87,7 +84,7 @@ int main()
     while(!done)
     {
         /* Xmodem Receive */
-        status = Bootloader_xmodemReceive(CONFIG_UART0, gUniflashFileBuf, BOOTLOADER_UNIFLASH_MAX_FILE_SIZE, &fileSize);
+        status = Bootloader_xmodemReceive(CONFIG_UART0, gUniflashFileBuf - sizeof(Bootloader_UniflashResponseHeader), BOOTLOADER_UNIFLASH_MAX_FILE_SIZE, &fileSize);
 
         /*
          * The `fileSize` wouldn't be the actual filesize, but (actual filesize + size of the header + padding bytes) added by xmodem.
@@ -110,13 +107,13 @@ int main()
         {
             Bootloader_UniflashFileHeader fileHeader;
 
-	        memcpy(&fileHeader, gUniflashFileBuf, sizeof(Bootloader_UniflashFileHeader));
+	        memcpy(&fileHeader, gUniflashFileBuf - sizeof(Bootloader_UniflashResponseHeader), sizeof(Bootloader_UniflashFileHeader));
 
             uniflashConfig.flashIndex = Flash_getFlashInterfaceIndex(fileHeader.flashType);
-            uniflashConfig.buf = gUniflashFileBuf;
+            uniflashConfig.buf = gUniflashFileBuf - sizeof(Bootloader_UniflashResponseHeader);
             uniflashConfig.bufSize = 0; /* Actual fileSize will be parsed from the header */
             uniflashConfig.verifyBuf = gUniflashVerifyBuf;
-            uniflashConfig.verifyBufSize = BOOTLOADER_UNIFLASH_VERIFY_BUF_MAX_SIZE;
+            uniflashConfig.verifyBufSize = 0;
 
             /* Process the flash commands and return a response */
             Bootloader_uniflashProcessFlashCommands(&uniflashConfig, &respHeader);
@@ -126,6 +123,7 @@ int main()
     }
 
     Drivers_close();
+    Board_deinit();
     System_deinit();
 
     return 0;

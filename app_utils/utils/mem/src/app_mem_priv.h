@@ -64,6 +64,7 @@
 #define APP_MEM_PRIV_H_
 
 #include <stdint.h>
+#include <stdio.h>
 
 
 #define APP_MEM_SERVICE_NAME "com.ti.mem"

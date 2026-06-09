@@ -44,7 +44,7 @@ volatile uint32_t   gWatchdogInt = 0;
 void   watchdogCallback(void *arg);
 /*
  * This example uses the WDT module in non reset mode to generate NMI Interrupt.
- * 
+ *
  * The Watchdog interrupt is configured as a non-maskable interrupt and the user-defined
  * callback function is registered. ESM module is configured with ESM Group 2 number and
  * ESM NMI number to generate a non-maskable interrupt to the CPU.
@@ -64,31 +64,24 @@ void watchdogCallback(void *arg)
 
 void watchdog_interrupt_main(void *args)
 {
-
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
-#if defined(SOC_AM64X) || defined(SOC_AM243X) || defined(SOC_AM62AX)
     HwiP_Params             hwiPrms;
     int32_t                 status = SystemP_SUCCESS;
     static HwiP_Object       gRtiHwiObject;
     /* Register interrupt */
     HwiP_Params_init(&hwiPrms);
     hwiPrms.intNum      = CONFIG_WDT0_INTR;
+    hwiPrms.eventId     = CONFIG_WDT0_EVENT_ID;
     hwiPrms.callback    = &watchdogCallback;
+    hwiPrms.isPulse     = 1U;
     status              = HwiP_construct(&gRtiHwiObject, &hwiPrms);
     DebugP_assert(status == SystemP_SUCCESS);
-#endif
 
     DebugP_log("Watchdog interrupt Mode Test Started ...\r\n");
 
     while (gWatchdogInt == 0);
-  
+
     DebugP_log("Watchdog Driver NMI received\r\n");
-    
+
     DebugP_log("All tests have passed!!\r\n");
-    
-    Board_driversClose();
-    Drivers_close();
 
 }

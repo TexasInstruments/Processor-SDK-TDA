@@ -4,7 +4,7 @@ include $(PRELUDE)
 
 TARGET      := vx_app_tidl_vl
 
-CSOURCES    := main.c 
+CSOURCES    := main.c
 CSOURCES    += app_pre_proc_module.c
 CSOURCES    += app_tidl_module.c
 CSOURCES    += app_pose_viz_module.c

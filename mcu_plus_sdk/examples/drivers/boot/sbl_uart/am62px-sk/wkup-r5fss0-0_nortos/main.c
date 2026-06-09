@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -52,7 +52,7 @@
 #define BOOTLOADER_END_OF_FILES_TRANSFER_WORD_LENGTH  (4) /* bytes */
 #define BOOTLOADER_APP_IMAGE_LOADED                   (1)
 
-#define BOOTLOADER_APPIMAGE_MAX_FILE_SIZE (0x40000000) /* Max size of the file that xmodem can receive */
+#define BOOTLOADER_APPIMAGE_MAX_FILE_SIZE (0x2000000) /* Max size of the file that xmodem can receive */
 uint8_t gAppImageBuf[BOOTLOADER_APPIMAGE_MAX_FILE_SIZE] __attribute__((aligned(128), section(".bss.filebuf")));
 
 uint8_t gEndOfFilesTransferWord[BOOTLOADER_END_OF_FILES_TRANSFER_WORD_LENGTH] = {0x45,0x4F,0x46,0x54}; /* Contain Magic word Indicating End Of File Transfer(EOFT) */
@@ -141,6 +141,10 @@ int32_t App_runCpus(void)
                 (cpuId != CSL_CORE_ID_MCU_R5FSS0_0))
                 {
                     status = Bootloader_runCpu(bootHandle, &bootCpuInfo[cpuId]);
+                    if(status == SystemP_FAILURE)
+                    {
+                        Bootloader_powerOffCpu(bootHandle, &bootCpuInfo[cpuId]);
+                    }
                 }
         }
     }
@@ -155,11 +159,12 @@ int main()
     bool    bEndOfTransfer = false;
 
     Bootloader_socWaitForFWBoot();
-    status = Bootloader_socOpenFirewalls();
-
-    DebugP_assertNoLog(status == SystemP_SUCCESS);
 
     System_init();
+    status = Bootloader_socOpenFirewalls();
+    DebugP_assertNoLog(status == SystemP_SUCCESS);
+
+    Board_init();
     Drivers_open();
 
     status = Board_driversOpen();
@@ -226,6 +231,7 @@ int main()
     Bootloader_JumpSelfCpu();
 
     Drivers_close();
+    Board_deinit();
     System_deinit();
 
     return 0;

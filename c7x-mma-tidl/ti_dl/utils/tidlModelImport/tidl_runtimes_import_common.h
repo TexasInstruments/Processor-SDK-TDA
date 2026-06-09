@@ -148,7 +148,7 @@ public:
   m_reserved_ctrl_2(0),
   m_nc_temp_info_dir("/tmp"),
   m_temp_buffer_dir("/dev/shm"),
-  m_enable_tfr_optimization(0),
+  m_enable_tfr_optimization(-1),
   m_enable_shape_folding(0),
   m_optimize_batchnorm_higherdims(0),
   m_softmax_16bit_scale_update(0)

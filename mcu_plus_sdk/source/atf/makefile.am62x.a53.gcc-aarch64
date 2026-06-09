@@ -1,0 +1,29 @@
+export MCU_PLUS_SDK_PATH?=$(abspath ../..)
+include $(MCU_PLUS_SDK_PATH)/imports.mak
+
+DEVICE:=am62x
+PROFILE?=release
+ATF_LIB_DIR:=lib/soc/$(DEVICE)
+
+all: $(ATF_LIB_DIR)
+ifneq ($(OS),Windows_NT)
+	$(MAKE) -f makefile.am62x.a53_atf.gcc-aarch64 ATF_JUMP_ADDR=0x80080000 ATF_CORE=a53ss0-0
+	$(MAKE) -f makefile.am62x.a53_atf.gcc-aarch64 ATF_JUMP_ADDR=0x8E000000 ATF_CORE=a53ss0-1
+	$(MAKE) -f makefile.am62x.a53_atf.gcc-aarch64 ATF_JUMP_ADDR=0x86080000 ATF_CORE=a53ss1-0
+	$(MAKE) -f makefile.am62x.a53_atf.gcc-aarch64 ATF_JUMP_ADDR=0x88100000 ATF_CORE=a53ss1-1
+endif
+clean:
+ifneq ($(OS),Windows_NT)
+	$(MAKE) -f makefile.am62x.a53_atf.gcc-aarch64 ATF_CORE=a53ss0-0 clean
+	$(MAKE) -f makefile.am62x.a53_atf.gcc-aarch64 ATF_CORE=a53ss0-1 clean
+	$(MAKE) -f makefile.am62x.a53_atf.gcc-aarch64 ATF_CORE=a53ss1-0 clean
+	$(MAKE) -f makefile.am62x.a53_atf.gcc-aarch64 ATF_CORE=a53ss1-1 clean
+endif
+scrub:
+ifneq ($(OS),Windows_NT)
+	$(MAKE) -f makefile.am62x.a53_atf.gcc-aarch64 scrub
+	$(RMDIR)  $(ATF_LIB_DIR)
+endif
+
+$(ATF_LIB_DIR) :
+	$(MKDIR) $@

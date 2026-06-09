@@ -1,7 +1,7 @@
 /*
  * DMSC firmware
  *
- * Copyright (C) 2017-2024, Texas Instruments Incorporated
+ * Copyright (C) 2017-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1744,16 +1744,41 @@ static u32 clk_adpllm_hsdiv_set_freq(struct clk *clkp,
 		/* FIXME: Add extra notify to parent */
 
 		if (pll_clk != NULL) {
+			/*
+			 * First try setting the exact target_hz frequency
+			 * without using the min and max range. We do this
+			 * because some times even when the target frequency
+			 * is achievable, the calculations will result
+			 * in choosing a value other than the target from the
+			 * range provided.
+			 */
 			struct adpllm_program_data data = {
 				.pll_clk	= pll_clk,
 				.clkout_clk	= clkp,
 				.target_hz	= target_hz,
-				.min_hz		= min_hz,
-				.max_hz		= max_hz,
+				.min_hz		= target_hz,
+				.max_hz		= target_hz,
 				.query		= query,
 				.changed	= changed,
 			};
 			ret = clk_adpllm_internal_set_freq(&data);
+
+			/*
+			 * If the previous step failed in setting the exact
+			 * target_hz, use the min and max range provided.
+			 */
+			if (ret == 0U) {
+				struct adpllm_program_data retry_data = {
+					.pll_clk	= pll_clk,
+					.clkout_clk	= clkp,
+					.target_hz	= target_hz,
+					.min_hz		= min_hz,
+					.max_hz		= max_hz,
+					.query		= query,
+					.changed	= changed,
+				};
+				ret = clk_adpllm_internal_set_freq(&retry_data);
+			}
 		}
 	} else {
 		/*

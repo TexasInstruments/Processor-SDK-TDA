@@ -126,6 +126,23 @@ typedef struct {
     /*! Name of VISS module */
     vx_char obj_name[APP_MODULES_MAX_OBJ_NAME_SIZE];
 
+    /*! Object array of H3A stats objects, used as node parameter of VISS node.
+     *  One object array per buffer queue depth.
+     */
+    vx_object_array h3a_stats_arr_q[APP_MODULES_MAX_BUFQ_DEPTH];
+
+    /*! H3A stats object for each buffer queue depth.
+     *  These are items retrieved from h3a_stats_arr[q].
+     */
+    vx_user_data_object h3a_stats_q[APP_MODULES_MAX_BUFQ_DEPTH];
+
+    /*! VISS node graph parameter index */
+    vx_int32 graph_parameter_index;
+
+    /*! VISS module output buffer queue depth */
+    vx_uint32 bufq_depth;
+
+
 }VISSObj;
 
 /** \brief VISS module init helper function
@@ -195,6 +212,58 @@ vx_status app_create_graph_viss_write_output(vx_graph graph, VISSObj *vissObj);
  *
  */
 vx_status app_send_cmd_viss_write_node(VISSObj *vissObj, vx_uint32 start_frame, vx_uint32 num_frames, vx_uint32 num_skip);
+
+/** \brief VISS module init helper function
+ *
+ * This VISS init helper function will create all the data objects required to create the
+ * VISS node
+ *
+ * \param [in]  context    OpenVX context which must be created using \ref vxCreateContext
+ * \param [out] vissObj    VISS Module object which gets populated with VISS node data objects
+ * \param [in]  sensorObj  Sensor Module object used to initialize VISS data object
+ *                         parameters; must be initialized prior to passing to this function
+ * \param [in]  objName    String of the name of this object
+ * \param [in]  num_cameras_enabled  Number of cameras enabled
+ * \param [in]  bufq_depth           VISS output buffer queue depth
+ *
+ */
+vx_status app_init_viss_queued(vx_context context,
+                              VISSObj *vissObj,
+                              SensorObj *sensorObj,
+                              char *objName,
+                              uint32_t num_cameras_enabled,
+                              vx_uint32 bufq_depth);
+
+/** \brief VISS module deinit helper function
+ *
+ * This VISS deinit helper function will release all the data objects created during the
+ * \ref app_init_viss_queued call
+ *
+ * \param [in,out] vissObj    VISS Module object which contains VISS node data objects which
+ *                            are released in this function
+ *
+ */
+void app_deinit_viss_queued(VISSObj *vissObj);
+
+/** \brief VISS module create helper function for RGB frames
+ *
+ * This VISS create helper function will create the node using all the data objects created
+ * during the \ref app_init_viss_queued call.
+ *
+ * \param [in]     graph           OpenVX graph that has been created using
+ *                                \ref vxCreateGraph and where the VISS node is created
+ * \param [in,out] vissObj         VISS Module object which contains VISS node and write
+ *                                nodes which are created in this function
+ * \param [in]     raw_image_arr   Raw image input object array to VISS node. Must be
+ *                                created separately, typically passed from capture node
+ * \param [in]     target          The name of the target (ASCII string) on which the node
+ *                                executes.
+ *
+ */
+vx_status app_create_graph_viss_queued(vx_graph graph,
+                                      VISSObj *vissObj,
+                                      vx_object_array raw_image_arr,
+                                      const char *target);
 
 /* @} */
 

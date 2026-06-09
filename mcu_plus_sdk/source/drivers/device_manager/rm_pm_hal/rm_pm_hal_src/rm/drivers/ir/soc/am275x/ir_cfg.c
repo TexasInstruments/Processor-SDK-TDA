@@ -3,7 +3,7 @@
  *
  * Interrupt router driver instance data definition
  *
- * Data version: 241217_073541
+ * Data version: 251105_135430
  *
  * Copyright (C) 2024-2025, Texas Instruments Incorporated
  * All rights reserved.

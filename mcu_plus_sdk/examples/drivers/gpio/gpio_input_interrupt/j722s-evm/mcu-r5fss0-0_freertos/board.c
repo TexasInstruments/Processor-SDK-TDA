@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -37,13 +37,15 @@
 #include "ti_drivers_config.h"
 
 /* Source ID */
-#define MCU_GPIO0_DEVICE_ID     (TISCI_DEV_MCU_GPIO0)
+#define MCU_GPIO0_DEVICE_ID             (TISCI_DEV_MCU_GPIO0)
 /* Destination ID */
-#define MCU_R5_CORE_DEVICE_ID   (TISCI_DEV_MCU_R5FSS0_CORE0)
+#define MCU_R5_CORE_DEVICE_ID           (TISCI_DEV_MCU_R5FSS0_CORE0)
 /* Source Index */
-#define MCU_GPIO0_INDEX         (CSLR_WKUP_MCU_GPIOMUX_INTROUTER0_IN_MCU_GPIO0_GPIO_4)
+#define MCU_GPIO0_INDEX                 (CSLR_WKUP_MCU_GPIOMUX_INTROUTER0_IN_MCU_GPIO0_GPIO_4)
 /* Destination Index */
-#define MCU_R5_HSOT_IRQ_INDEX   (CSLR_MCU_R5FSS0_CORE0_CPU0_INTR_WKUP_MCU_GPIOMUX_INTROUTER0_OUTP_4)
+#define MCU_R5_HSOT_IRQ_INDEX           (CSLR_MCU_R5FSS0_CORE0_CPU0_INTR_WKUP_MCU_GPIOMUX_INTROUTER0_OUTP_4)
+/* GPIO input interrupt pin number */
+#define BOARD_BUTTON_GPIO_SWITCH_NUM    ("MCU_GPIO0_XX")
 
 static void Sciclient_gpioIrqSet(void);
 static void Sciclient_gpioIrqRelease(void);
@@ -61,6 +63,16 @@ void Board_gpioDeinit(void)
 uint32_t Board_getGpioCoreIntrNum(void)
 {
     return (MCU_R5_HSOT_IRQ_INDEX);
+}
+
+uint32_t Board_getGpioButtonIntrNum(void)
+{
+    return Board_getGpioCoreIntrNum();
+}
+
+char* Board_getGpioButtonSwitchNum(void)
+{
+    return (BOARD_BUTTON_GPIO_SWITCH_NUM);
 }
 
 static void Sciclient_gpioIrqSet(void)

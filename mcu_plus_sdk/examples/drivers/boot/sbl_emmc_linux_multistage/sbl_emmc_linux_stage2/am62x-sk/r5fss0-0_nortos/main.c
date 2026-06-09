@@ -37,7 +37,6 @@
 #include "ti_board_open_close.h"
 #include <drivers/device_manager/sciclient.h>
 #include <drivers/bootloader.h>
-#include <kernel/dpl/CacheP.h>
 
 
 /* This start address and length depends upon the linker memory for second stage SBL.
@@ -48,12 +47,10 @@
 #define BOOTLOADER_SECOND_STAGE_RESERVED_MEMORY_START       0xA0340000
 #define BOOTLOADER_SECOND_STAGE_RESERVED_MEMORY_LENGTH      0x200000
 
-CacheP_Config gCacheConfig = {};
-
 /* This buffer needs to be defined for eMMC boot in case of HS device for
    image authentication
    The size of the buffer should be large enough to accomodate the appimage */
-uint8_t gAppimage[0x800000] __attribute__ ((section (".app"), aligned (4096)));
+uint8_t gAppimage[0x1900000] __attribute__ ((section (".bss.app"), aligned (4096)));
 
 /*  In this sample bootloader, we load appimages for RTOS/Baremetal and Linux at different offset
     i.e the appimage for Linux (for A53) and RTOS/Baremetal (for R5, M4) is flashed at different offset in eMMC
@@ -125,7 +122,7 @@ int32_t App_loadLinuxImages(Bootloader_Handle bootHandle, Bootloader_BootImageIn
 
     if(bootHandle != NULL)
     {
-		status = Bootloader_parseAndLoadLinuxAppImage(bootHandle, bootImageInfo);
+		status = Bootloader_parseMultiCoreAppImage(bootHandle, bootImageInfo);
 
 		if(status == SystemP_SUCCESS)
 		{
@@ -168,6 +165,9 @@ int main()
     System_init();
     Bootloader_profileAddProfilePoint("System_init");
 
+    Board_init();
+    Bootloader_profileAddProfilePoint("Board_init");
+
     Drivers_open();
     Bootloader_profileAddProfilePoint("Drivers_open");
 
@@ -180,6 +180,8 @@ int main()
 
     if(SystemP_SUCCESS == status)
     {
+        Bootloader_openDma();
+
         Bootloader_BootImageInfo bootImageInfo;
 		Bootloader_Params bootParams;
         Bootloader_Handle bootHandle;
@@ -251,6 +253,7 @@ int main()
 			UART_flushTxFifo(gUartHandle[CONFIG_UART0]);
 		}
 
+        Drivers_mmcsdClose();
         status = SOC_moduleClockEnable(TISCI_DEV_MMCSD0, 0);
 
 		if(SystemP_SUCCESS == status)
@@ -266,6 +269,8 @@ int main()
 		}
 
         Bootloader_close(bootHandle);
+
+        Bootloader_closeDma();
     }
 
     if(status != SystemP_SUCCESS )
@@ -275,10 +280,12 @@ int main()
 
     /* Call DPL deinit to close the tick timer and disable interrupts before jumping to DM*/
     Dpl_deinit();
+    MMCSD_deinit();
 
     Bootloader_JumpSelfCpu();
 
     Drivers_close();
+    Board_deinit();
     System_deinit();
 
     return 0;

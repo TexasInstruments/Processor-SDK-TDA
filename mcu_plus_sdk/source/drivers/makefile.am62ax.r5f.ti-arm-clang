@@ -16,6 +16,7 @@ ConfigName:=$(PROFILE)
 LIBNAME:=drivers.am62ax.r5f.ti-arm-clang.$(PROFILE).lib
 
 FILES_common := \
+    csl_dru.c \
     csl_emif.c \
     csl_sec_proxy.c \
     csl_bcdma.c \
@@ -28,6 +29,8 @@ FILES_common := \
     gtc.c \
     gtc_soc.c \
     i2c_v0.c \
+    i2c_v0_lld.c \
+    i2c_soc.c \
     ipc_notify_v0.c \
     ipc_notify_v0_cfg.c \
     ipc_rpmsg.c \
@@ -37,7 +40,17 @@ FILES_common := \
     mcspi_dma.c \
     mcspi_dma_udma.c \
     pinmux.c \
+    ospi_v0.c \
+    ospi_dma.c \
+    ospi_dma_udma.c \
+    ospi_nor_flash.c \
+    ospi_phy.c \
+    ospi_phy_tuning.c \
+    pmu.c \
+    rtc.c \
+    rtc_soc.c \
     sciclient.c \
+    sciclient_lpm.c \
     sciclient_pm.c \
     sciclient_rm.c \
     sciclient_rm_irq.c \
@@ -45,7 +58,6 @@ FILES_common := \
     sciclient_firewall.c \
     sciclient_irq_rm.c \
     sciclient_fmwSecureProxyMap.c \
-    sciclient_boardcfg.c \
     sciclient_soc_priv.c \
     soc.c \
     uart_v0.c \
@@ -62,18 +74,22 @@ FILES_common := \
     udma_rmcfg.c \
     udma_soc.c \
     utils.c \
+    vtm.c \
 
 FILES_PATH_common = \
     bootloader \
     bootloader/soc/am62ax \
     ddr/v1 \
-    ddr/v1/cdn_drv/ \
-    ddr/v1/cdn_drv/include \
-    ddr/v1/cdn_drv/include/AM62Ax \
-    ddr/v1/cdn_drv/include/common \
-    ddr/v1/cdn_drv/src \
+    ddr/cdn_drv/ \
+    ddr/cdn_drv/common/include \
+    ddr/cdn_drv/v1/include \
+    ddr/cdn_drv/common \
+    ddr/cdn_drv/v1 \
+    ddr \
     ddr/v1/soc/am62ax \
+    ecap/v0 \
     epwm/v0 \
+    eqep/v0 \
     fvid2/v0 \
     gpio/v0 \
     gtc/v0 \
@@ -81,6 +97,8 @@ FILES_PATH_common = \
     hw_include/dru/v2/ \
     hw_include/ringacc/V0/priv/ \
     i2c/v0 \
+    i2c/v0/lld \
+    i2c/v0/soc/am62ax \
     ipc_notify/v0 \
     ipc_notify/v0/soc/am62ax \
     ipc_rpmsg/ \
@@ -92,12 +110,21 @@ FILES_PATH_common = \
     mcspi/v0/dma \
     mcspi/v0/dma/udma \
     mmcsd \
-    mmcsd/v1 \
+    mmcsd/v0 \
+    mmcsd/soc \
+    mmcsd/soc/am62ax \
     ospi \
     ospi/v0 \
     ospi/v0/dma \
     ospi/v0/dma/udma \
+    ospi/v0/ospi_tuning/ospi_tuning_algo/algo_v1 \
+    pmu \
+    qos \
+    qos/v0 \
     pinmux/am62ax \
+    rtc \
+    rtc/v0 \
+    rtc/v0/soc/am62ax \
     sciclient \
     sciclient/soc/am62ax \
     soc/am62ax \
@@ -105,11 +132,19 @@ FILES_PATH_common = \
     uart/v0 \
     uart/v0/dma \
     uart/v0/dma/udma \
-    udma \
-    udma/hw_include \
-    udma/soc \
-    udma/soc/am62ax \
+    udma/v0 \
+    udma/v0/hw_include \
+    udma/v0/soc \
+    udma/v0/soc/am62ax \
+    soc/am62ax \
     utils \
+    csirx/v0/hw_include \
+    csirx/v0/soc/am62ax \
+    csirx/v0/src \
+    csirx/v0 \
+    csirx/v0/include \
+    watchdog/v1 \
+    watchdog/v1/soc/am62ax \
 
 INCLUDES_common := \
     -I${CG_TOOL_ROOT}/include/c \
@@ -118,6 +153,8 @@ INCLUDES_common := \
 DEFINES_common := \
     -DSOC_AM62AX \
     -DMCU_R5 \
+    -DENABLE_PHY_TUNING_SOC_BUILD \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mcpu=cortex-r5 \

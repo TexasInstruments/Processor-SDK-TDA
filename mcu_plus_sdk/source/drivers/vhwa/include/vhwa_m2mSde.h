@@ -375,7 +375,7 @@ static inline void Vhwa_M2mSdeCreateArgsInit(Vhwa_M2mSdeCreateArgs *createArgs);
  *
  *  \return FVID2_SOK if successful, else suitable error code
  */
-int32_t Vhwa_m2mSdeInit(Vhwa_M2mSdeInitParams *pInitPrms);
+int32_t Vhwa_m2mSdeInit(Vhwa_M2mSdeInitParams *initPrms);
 
 /**
  *  \brief SDE de-initialization function.
@@ -396,7 +396,7 @@ void Vhwa_m2mSdeDeInit(void);
  *
  *  \return FVID2_SOK if successful, else suitable error code
  */
-int32_t Vhwa_m2mSdeAllocSl2(const Vhwa_M2mSdeSl2AllocPrms *sl2allocPrms);
+int32_t Vhwa_m2mSdeAllocSl2(const Vhwa_M2mSdeSl2AllocPrms *sl2AllocPrms);
 
 /**
  *  \brief Function to free allocated SL2.

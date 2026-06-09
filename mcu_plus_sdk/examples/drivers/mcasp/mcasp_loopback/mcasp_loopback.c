@@ -64,11 +64,8 @@ extern uint8_t gRxLoopjobBuf0[];
 void mcasp_loopback_main(void *args)
 {
     int32_t             status = SystemP_SUCCESS;
-    uint32_t            i, j, k;
+    uint32_t            i=0, j=0, k=0;
     MCASP_Handle mcaspHandle;
-
-    Drivers_open();
-    Board_driversOpen();
 
     DebugP_log("[MCASP] Loopback example started. Testing %d bytes ...\r\n",
                                     (APP_MCASP_MSG_COUNT * APP_MCASP_MSGSIZE));
@@ -86,14 +83,14 @@ void mcasp_loopback_main(void *args)
     CacheP_wb(gMcaspTxBuffer, APP_MCASP_MSG_COUNT * APP_MCASP_MSGSIZE, CacheP_TYPE_ALL);
     CacheP_wb(gMcaspRxBuffer, APP_MCASP_MSG_COUNT * APP_MCASP_MSGSIZE, CacheP_TYPE_ALL);
 
-    for (i = 0; i < 256; i++)
+    for (i = 0; i < APP_MCASP_MSGSIZE; i++)
     {
         gTxLoopjobBuf0[i] = 0xa5;
         gRxLoopjobBuf0[i] = 0;
     }
 
-    CacheP_wb(gTxLoopjobBuf0, 256, CacheP_TYPE_ALL);
-    CacheP_wb(gRxLoopjobBuf0, 256, CacheP_TYPE_ALL);
+    CacheP_wb(gTxLoopjobBuf0, APP_MCASP_MSGSIZE, CacheP_TYPE_ALL);
+    CacheP_wb(gRxLoopjobBuf0, APP_MCASP_MSGSIZE, CacheP_TYPE_ALL);
 
     mcaspHandle = MCASP_getHandle(CONFIG_MCASP0);
 
@@ -124,6 +121,9 @@ void mcasp_loopback_main(void *args)
     {
         /* wait for transfer completion. */
     }
+
+    MCASP_stopTransferRx(mcaspHandle);
+    MCASP_stopTransferTx(mcaspHandle);
 
     /* withdraw the buffers submitted to driver. */
     if(SystemP_SUCCESS == status)
@@ -166,9 +166,6 @@ void mcasp_loopback_main(void *args)
         DebugP_log("Data mismatch for %d bytes!!\r\n", k);
     }
 
-    Board_driversClose();
-    Drivers_close();
-
     return;
 }
 
@@ -178,8 +175,8 @@ void mcasp_loopback_txcb (MCASP_Handle handle,
     if (gMcaspTestCntTx < APP_MCASP_TEST_COUNT)
     {
         gMcaspTestCntTx++;
+        MCASP_submitTx(handle, transaction);
     }
-    MCASP_submitTx(handle, transaction);
 }
 
 void mcasp_loopback_rxcb (MCASP_Handle handle,
@@ -189,10 +186,5 @@ void mcasp_loopback_rxcb (MCASP_Handle handle,
     {
         gMcaspTestCntRx++;
         MCASP_submitRx(handle, transaction);
-    }
-    else
-    {
-        MCASP_stopTransferRx(handle);
-        MCASP_stopTransferTx(handle);
     }
 }

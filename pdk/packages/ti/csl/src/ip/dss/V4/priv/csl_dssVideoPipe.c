@@ -105,9 +105,6 @@ static void CSL_dssVidPipeSetOutputRes(CSL_dss_pipeRegs *pipeRegs,
                                        uint32_t width,
                                        uint32_t height);
 
-static void CSL_dssVidPipeSetClutConfig(CSL_dss_pipeRegs *pipeRegs,
-                                        const uint32_t *clutData);
-
 static void CSL_dssVidPipeNibbleEnable(CSL_dss_pipeRegs *pipeRegs,
                                        uint32_t nibbleEnable);
 
@@ -829,6 +826,18 @@ void CSL_dssVidPipeSetCropConfig(CSL_dss_pipeRegs *pipeRegs,
     CSL_REG32_WR(&pipeRegs->ATTRIBUTES, regVal);
 }
 
+void CSL_dssVidPipeSetClutConfig(
+                            CSL_dss_pipeRegs *pipeRegs,
+                            const uint32_t *clutData)
+{
+    uint32_t index;
+
+    for(index = 0U ; index < CSL_DSS_NUM_LUT_ENTRIES; index++)
+    {
+        CSL_REG32_WR(&pipeRegs->CLUT_0, clutData[index]);
+    }
+}
+
 /* ========================================================================== */
 /*                       Static Function Definitions                          */
 /* ========================================================================== */
@@ -891,18 +900,6 @@ static void CSL_dssVidPipeSetOutputRes(CSL_dss_pipeRegs *pipeRegs,
              DSS_VID1_SIZE_SIZEY,
              height - 1U);
     CSL_REG32_WR(&pipeRegs->SIZE, regVal);
-}
-
-static void CSL_dssVidPipeSetClutConfig(
-                            CSL_dss_pipeRegs *pipeRegs,
-                            const uint32_t *clutData)
-{
-    uint32_t index;
-
-    for(index = 0U ; index < CSL_DSS_NUM_LUT_ENTRIES; index++)
-    {
-        CSL_REG32_WR(&pipeRegs->CLUT_0, clutData[index]);
-    }
 }
 
 static void CSL_dssVidPipeNibbleEnable(CSL_dss_pipeRegs *pipeRegs,
@@ -1046,6 +1043,19 @@ static int32_t CSL_dssVidPipeGetRowInc(const CSL_dss_pipeRegs *pipeRegs,
                 retVal = CSL_EBADARGS;
             }
         }
+        else if (FVID2_DF_BITMAP8 == dataFormat)
+        {
+            pitchY = pipeCfg->inFmt.pitch[FVID2_RGB_ADDR_IDX];
+            if (pitchY < width)
+            {
+                retVal = CSL_EBADARGS;
+            }
+            else
+            {
+                *rowInc = (pitchY - width) + 1U;
+                *rowIncUV = 0U;
+            }
+        }
         else
         {
             retVal = CSL_EBADARGS;
@@ -1094,6 +1104,11 @@ static int32_t CSL_dssVidPipeUpdateFieldMergeVal(
     {
         *fieldMergedP1 = pipeCfg->inFmt.fieldMerged[FVID2_YUV_SP_Y_ADDR_IDX];
         *fieldMergedP2 = pipeCfg->inFmt.fieldMerged[FVID2_YUV_SP_CBCR_ADDR_IDX];
+    }
+    else if (FVID2_DF_BITMAP8 == dataFormat)
+    {
+        *fieldMergedP1 = pipeCfg->inFmt.fieldMerged[FVID2_RGB_ADDR_IDX];
+        *fieldMergedP2 = 0U;
     }
     else
     {

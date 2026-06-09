@@ -110,4 +110,13 @@ SECTIONS
     .svcStack   : {. = . + __SVC_STACK_SIZE;} align(4)      > DDR_MCU2_0  (HIGH)
     RUN_START(__SVC_STACK_START)
     RUN_END(__SVC_STACK_END)
+
+    enet_dma_mem (NOLOAD) : {
+        *(*ENET_DMA_DESC_MEMPOOL)
+        *(*ENET_DMA_RING_MEMPOOL)
+        *(*ENET_DMA_PKT_MEMPOOL)
+    }  > DDR_MCU2_0
+
+    intercore_eth_desc_mem (NOLOAD) : {} palign(128) > INTERCORE_ETH_DESC_MEM
+    intercore_eth_data_mem (NOLOAD) : {} palign(128) > INTERCORE_ETH_DATA_MEM
 }

@@ -156,9 +156,6 @@ IssSensors_Handle ar0233SensorHandle = {
  */
 IssCapture_CmplxIoLaneCfg           ar0233Csi2CmplxIoLaneCfg;
 
-extern IssSensors_Handle * gIssSensorTable[ISS_SENSORS_MAX_SUPPORTED_SENSOR];
-
-
 int32_t IssSensor_AR0233_Init(void)
 {
     int32_t status;
@@ -748,7 +745,12 @@ static int32_t AR0233_WriteReg(uint8_t    i2cInstId,
     }
     else
     {
+        #if defined(MCU_PLUS_SDK)
+        transaction.targetAddress = i2cAddr;
+        #else
         transaction.slaveAddress = i2cAddr;
+        #endif
+
         transaction.writeBuf     = rawRegVal;
         transaction.writeCount   = 4;
         transaction.readBuf      = NULL;

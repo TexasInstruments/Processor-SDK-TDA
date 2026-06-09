@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -55,20 +55,35 @@ static HeapP_Object gMyHeapObj;
 
 /* user defined ISR and semaphore to signal from ISR to main thread */
 static SemaphoreP_Object gMyISRDoneSem;
-
+#if defined (__aarch64__)
+static SemaphoreP_Object gMyISRDoneSgiSem;
+#endif
 static void myISR(void *arg)
 {
     SemaphoreP_post(&gMyISRDoneSem);
 }
 
+#if defined (__aarch64__)
+static void DplDemo_sgiISR(void *arg)
+{
+    SemaphoreP_post(&gMyISRDoneSgiSem);
+}
+#endif
+
 void dpl_demo_main(void *args)
 {
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
-
+    #if defined(SOC_J722S) && defined(OS_SAFERTOS)
+        /* Open drivers to open the UART driver for Console */
+        Drivers_open();
+        /* Open board drivers */
+        Board_driversOpen();
+    #endif
     /* eample usage of Hwi and Sempahore APIs */
     {
+    #if defined (AMP_FREERTOS_A53)
+        DebugP_log("DPL Demo Example started on a53_core%d  \n\r", Armv8_getCoreId());
+    #endif
+
         HwiP_Params hwiParams;
         HwiP_Object hwiObj;
         int32_t status;
@@ -93,7 +108,32 @@ void dpl_demo_main(void *args)
         HwiP_destruct(&hwiObj);
         SemaphoreP_destruct(&gMyISRDoneSem);
     }
+    /* example usage of SGI Interrupts for A53 */
+#if defined (__aarch64__)
+    {
+        HwiP_Params hwiParams;
+        HwiP_Object hwiObj;
+        int32_t status;
+        SemaphoreP_constructBinary(&gMyISRDoneSgiSem, 0);
+        HwiP_Params_init(&hwiParams);
+        hwiParams.intNum = 5;
+        hwiParams.eventId = HWIP_INVALID_EVENT_ID;
+        hwiParams.callback = DplDemo_sgiISR;
+        HwiP_construct(&hwiObj, &hwiParams);
 
+        DebugP_log("[DPL] Hwi(sgi) post ...\r\n");
+
+        HwiP_post(hwiParams.intNum);
+
+        status = SemaphoreP_pend(&gMyISRDoneSgiSem, SystemP_WAIT_FOREVER);
+        DebugP_assert(status==SystemP_SUCCESS);
+
+        DebugP_log("[DPL] Hwi(sgi) post ... DONE !!!\r\n");
+
+        HwiP_destruct(&hwiObj);
+        SemaphoreP_destruct(&gMyISRDoneSgiSem);
+    }
+#endif
     /* example usage of Clock and time measurement APIs */
     {
         uint32_t cycleCount, sleepTimeInMs = 100;
@@ -162,10 +202,11 @@ void dpl_demo_main(void *args)
 
         HeapP_destruct(&gMyHeapObj);
     }
-
+#if defined (AMP_FREERTOS_A53)
+    DebugP_log("All tests have passed on a53_core%d !!\r\n", Armv8_getCoreId());
+#else
     DebugP_log("All tests have passed!!\r\n");
+#endif
 
-    Board_driversClose();
-    Drivers_close();
 }
 

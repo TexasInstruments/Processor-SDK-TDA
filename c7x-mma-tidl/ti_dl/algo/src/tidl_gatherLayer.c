@@ -99,8 +99,6 @@ int32_t TIDL_gatherLayerProcessNew(TIDL_NetworkCommonParams *commonParams,
 
   int32_t status = TIDL_SUCCESS;
 
-  sTIDL_sysMemHandle_t *sysMems = commonParams->tidlCommonParams->sysMems;
-
 #ifdef HOST_EMULATION
   uint32_t flowCtrl = commonParams->createParams->flowCtrl; //  L3
   if (((uint32_t)flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY)
@@ -144,9 +142,12 @@ int32_t TIDL_gatherLayerProcessNew(TIDL_NetworkCommonParams *commonParams,
   else
 #endif
   {
-    status = TIDL_gatherLayerDspProcessNew(commonParams, algLayer, tidlLayer, inPtrs, outPtrs, sysMems);
-    /* This layer does not use standard WL flow, so need to handle layer level cache writeback explicitly in this layer */
-    TIDL_L1DCacheWbInv();
+    status = TIDL_deviceUtilsCommonProcess(commonParams,
+                                           algLayer,
+                                           tidlLayer,
+                                           inPtrs,
+                                           outPtrs,
+                                           layerIdx);
   }
   return status;
 }
@@ -166,13 +167,7 @@ int32_t TIDL_gatherLayerAllocNew(const TIDL_LayerSpecificParams *layerSpecificPa
   else
 #endif
   {
-    int32_t handleSize = 0;
-
-    handleSize = 0;
-
-    memorySize[TIDL_LAYER_MEMORY_SCRATCH] += 0;
-    memorySize[TIDL_LAYER_MEMORY_PERSISTENT] += handleSize;
-    memorySize[TIDL_LAYER_MEMORY_OUTPUT] += 0;
+    status = TIDL_deviceUtilsCommonAlloc(layerSpecificParams, commonParams, layerIdx, memorySize);
   }
 
   return status;
@@ -202,29 +197,13 @@ int32_t TIDL_gatherLayerInitNew(const TIDL_LayerSpecificParams *layerSpecificPar
   else
 #endif
   {
-    int32_t handleSize = 0;
-    void *handle;
-    int32_t currOffset = 0;
-    sTIDL_Layer_t *tidlLayer = &commonParams->createParams->net->TIDLLayers[layerIdx];
-
-    handleSize = 0;
-
-    TIDL_AllocatePtr((intptr_t)memory[TIDL_LAYER_MEMORY_PERSISTENT],
-                     &currOffset,
-                     handleSize,
-                     TIDL_ALIGNMENT_SIZE,
-                     &handle);
-
-    algLayer->workloadHandle = handle;
-
-    status = TIDL_gatherLayerKernelInitNew(commonParams->createParams,
-                                           algLayer,
-                                           tidlLayer,
-                                           handle);
-
-    memorySize[TIDL_LAYER_MEMORY_SCRATCH] += 0;
-    memorySize[TIDL_LAYER_MEMORY_PERSISTENT] += handleSize;
-    memorySize[TIDL_LAYER_MEMORY_OUTPUT] += 0;
+    status = TIDL_deviceUtilsCommonInit(layerSpecificParams,
+                                        commonParams,
+                                        algLayer,
+                                        layerIdx,
+                                        memory,
+                                        memorySize,
+                                        outPtr);
   }
 
   return status;

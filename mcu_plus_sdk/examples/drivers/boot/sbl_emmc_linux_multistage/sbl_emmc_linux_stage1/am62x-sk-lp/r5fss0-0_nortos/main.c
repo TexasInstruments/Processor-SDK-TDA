@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
 #include "ti_board_open_close.h"
 #include <drivers/device_manager/sciclient.h>
 #include <drivers/bootloader.h>
+#include <drivers/rtc.h>
 
 /*  In this sample bootloader, we load appimages for RTOS/Baremetal and Linux at different offset
     i.e the appimage for Linux (for A53) and RTOS/Baremetal (for R5, M4) is flashed at different offset in eMMC
@@ -53,7 +54,7 @@
 /* This buffer needs to be defined for eMMC boot in case of HS device for
    image authentication
    The size of the buffer should be large enough to accomodate the appimage */
-uint8_t gAppimage[0x800000] __attribute__ ((section (".app"), aligned (4096)));
+uint8_t gAppimage[0x800000] __attribute__ ((section (".bss.app"), aligned (4096)));
 
 /* call this API to stop the booting process and spin, do that you can connect
  * debugger, load symbols and then make the 'loop' variable as 0 to continue execution
@@ -119,7 +120,7 @@ int32_t App_loadLinuxImages(Bootloader_Handle bootHandle, Bootloader_BootImageIn
 
     if(bootHandle != NULL)
     {
-		status = Bootloader_parseAndLoadLinuxAppImage(bootHandle, bootImageInfo);
+		status = Bootloader_parseMultiCoreAppImage(bootHandle, bootImageInfo);
 
 		if(status == SystemP_SUCCESS)
 		{
@@ -164,11 +165,17 @@ int main()
     Bootloader_profileReset();
 
     Bootloader_socWaitForFWBoot();
-    //Bootloader_socOpenFirewalls();
 
+    RTC_erratumi2327Init();
 
     System_init();
     Bootloader_profileAddProfilePoint("System_init");
+
+    status = Bootloader_socOpenFirewalls();
+    DebugP_assert(status == SystemP_SUCCESS);
+
+    Board_init();
+    Bootloader_profileAddProfilePoint("Board_init");
 
     Drivers_open();
     Bootloader_profileAddProfilePoint("Drivers_open");
@@ -182,6 +189,33 @@ int main()
 
     if(SystemP_SUCCESS == status)
     {
+        /*
+         * Wait for completion of Positive PBIST tests
+         * that are started in System_init()
+         */
+        status = SDL_PBIST_completeAllTests();
+        DebugP_assert(status == SDL_PASS);
+        Bootloader_profileAddProfilePoint("PBIST Positive Tests");
+
+        /* Turn On PSC devices before initializing Negative tests */
+        status = SDL_PBIST_handlePSCdevices(true);
+        DebugP_assert(status == SDL_PASS);
+
+        /* Start Negative PBIST tests of all selected instances */
+        status = SDL_PBIST_startAllTests(false);
+        DebugP_assert(status == SDL_PASS);
+
+        /* Wait for completion of all Negative PBIST tests */
+        status = SDL_PBIST_completeAllTests();
+        DebugP_assert(status == SDL_PASS);
+        Bootloader_profileAddProfilePoint("PBIST Negative Tests");
+
+        /* Turn Off PSC devices after completion of Negative tests */
+        status = SDL_PBIST_handlePSCdevices(false);
+        DebugP_assert(status == SDL_PASS);
+
+        Bootloader_openDma();
+
         Bootloader_BootImageInfo bootImageInfo;
 		Bootloader_Params bootParams;
         Bootloader_Handle bootHandle;
@@ -236,6 +270,8 @@ int main()
 		}
 
         Bootloader_close(bootHandle);
+
+        Bootloader_closeDma();
     }
 
     if(status != SystemP_SUCCESS )
@@ -244,11 +280,14 @@ int main()
     }
 
     /* Call DPL deinit to close the tick timer and disable interrupts before jumping to Stage2*/
+    Drivers_mmcsdClose();
+    MMCSD_deinit();
     Dpl_deinit();
 
-    Bootloader_JumpSelfCpu();
+    Bootloader_socCpuResetReleaseSelf();
 
     Drivers_close();
+    Board_deinit();
     System_deinit();
 
     return 0;

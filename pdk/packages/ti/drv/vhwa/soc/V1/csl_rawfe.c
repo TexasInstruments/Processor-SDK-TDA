@@ -724,6 +724,9 @@ int32_t CSL_rfeSetLscConfig(CSL_rawfe_cfgRegs *rfeRegs,
             }
 
             regVal = CSL_REG32_RD(&rfeRegs->LSC_CFG);
+            #if defined (VHWA_VPAC_IP_REV_VPAC3L)
+            CSL_FINS(regVal, RAWFE_CFG_LSC_CFG_CHN_MODE, (uint32_t)cfg->chn_mode);
+            #endif
             CSL_FINS(regVal, RAWFE_CFG_LSC_CFG_GAIN_FORMAT, (uint32_t)cfg->gainFmt);
             CSL_FINS(regVal, RAWFE_CFG_LSC_CFG_MODE_M, (uint32_t)cfg->horzDsFactor);
             CSL_FINS(regVal, RAWFE_CFG_LSC_CFG_MODE_N, (uint32_t)cfg->vertDsFactor);
@@ -848,7 +851,17 @@ int32_t CSL_rfeSetDpcOtfConfig(CSL_rawfe_cfgRegs *rfeRegs,
             }
 #endif
             /* Enable DPC OTF */
-            CSL_REG32_FINS(&rfeRegs->OTFDPC_EN, RAWFE_CFG_OTFDPC_EN_EN, 1U);
+            #if defined (VHWA_VPAC_IP_REV_VPAC3L)
+                regAddr = &rfeRegs->OTFDPC_EN;
+                regVal = CSL_REG32_RD(regAddr);
+                CSL_FINS(regVal, RAWFE_CFG_OTFDPC_EN_EN, 1U);
+                CSL_FINS(regVal, RAWFE_CFG_OTFDPC_EN_STATS_CFG, 1U);
+                CSL_FINS(regVal, RAWFE_CFG_OTFDPC_EN_LUT_MAP, cfg->lut_map);
+                CSL_REG32_WR(regAddr, regVal);
+            #else
+                CSL_REG32_FINS(&rfeRegs->OTFDPC_EN, RAWFE_CFG_OTFDPC_EN_EN, 1U);
+            #endif
+
         }
         else
         {

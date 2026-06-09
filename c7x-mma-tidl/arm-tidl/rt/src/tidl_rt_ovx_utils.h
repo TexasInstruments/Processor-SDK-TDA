@@ -77,6 +77,7 @@ extern "C" {
 #define TIDL_MAX_INTERMEDIATE_TENSOR (16)
 #define TIDLRT_MAX_HANDLES (32)
 
+
 typedef struct _AppObj
 {
 

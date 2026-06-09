@@ -624,6 +624,7 @@ sbool device_clk_set_ssc(struct device *dev, dev_clk_idx_t clk_idx, u32 modfreq_
 	struct clk *parent = NULL;
 	sbool done = SFALSE;
 	sbool ssc_set = SFALSE;
+	sbool search_complete = SFALSE;
 	dev_clk_idx_t clk_idx_val = clk_idx;
 
 	/* Validate clock index on device */
@@ -651,26 +652,28 @@ sbool device_clk_set_ssc(struct device *dev, dev_clk_idx_t clk_idx, u32 modfreq_
 	if (!done) {
 		if ((clock_data->type == DEV_CLK_TABLE_TYPE_PARENT) ||
 		    (clock_data->type == DEV_CLK_TABLE_TYPE_MUX)) {
-			while (ssc_set != STRUE) {
+			while ((ssc_set != STRUE) && (search_complete != STRUE)) {
 				/* Walk up to find parent PLL with SSC capability */
 				parent_clk = clk_get_parent(parent);
 				if (parent_clk == NULL) {
-					break;
-				}
-				parent = clk_lookup(parent_clk->clk);
-				if (parent == NULL) {
-					break;
-				}
-				/* Call internal clock layer to set SSC on hardware */
-				ssc_set = (clk_set_ssc(parent, modfreq_hz, mod_depth,
-						       spread_type, enable) == 0U) ? STRUE : SFALSE;
-				if (ssc_set) {
-					if (enable) {
-						pm_trace(TRACE_PM_ACTION_CLOCK_ENABLE_SSC,
-							 clk_id(parent));
+					search_complete = STRUE;
+				} else {
+					parent = clk_lookup(parent_clk->clk);
+					if (parent == NULL) {
+						search_complete = STRUE;
 					} else {
-						pm_trace(TRACE_PM_ACTION_CLOCK_DISABLE_SSC,
-							 clk_id(parent));
+						/* Call internal clock layer to set SSC on hardware */
+						ssc_set = (clk_set_ssc(parent, modfreq_hz, mod_depth,
+								       spread_type, enable) == 0U) ? STRUE : SFALSE;
+						if (ssc_set) {
+							if (enable) {
+								pm_trace(TRACE_PM_ACTION_CLOCK_ENABLE_SSC,
+									 clk_id(parent));
+							} else {
+								pm_trace(TRACE_PM_ACTION_CLOCK_DISABLE_SSC,
+									 clk_id(parent));
+							}
+						}
 					}
 				}
 			}
@@ -687,6 +690,7 @@ sbool device_clk_get_ssc(struct device *dev, dev_clk_idx_t clk_idx, struct ssc_d
 	struct clk *parent = NULL;
 	sbool ssc_found = SFALSE;
 	sbool done = SFALSE;
+	sbool search_complete = SFALSE;
 	dev_clk_idx_t clk_idx_val = clk_idx;
 
 	if (!done) {
@@ -708,17 +712,19 @@ sbool device_clk_get_ssc(struct device *dev, dev_clk_idx_t clk_idx, struct ssc_d
 	if (!done) {
 		if ((clock_data->type == DEV_CLK_TABLE_TYPE_PARENT) ||
 		    (clock_data->type == DEV_CLK_TABLE_TYPE_MUX)) {
-			while (ssc_found != STRUE) {
+			while ((ssc_found != STRUE) && (search_complete != STRUE)) {
 				/* Find the parent */
 				parent_clk = clk_get_parent(parent);
 				if (parent_clk == NULL) {
-					break;
+					search_complete = STRUE;
+				} else {
+					parent = clk_lookup(parent_clk->clk);
+					if (parent == NULL) {
+						search_complete = STRUE;
+					} else {
+						ssc_found = (clk_get_ssc(parent, ssc_datap) == 0U) ? STRUE : SFALSE;
+					}
 				}
-				parent = clk_lookup(parent_clk->clk);
-				if (parent == NULL) {
-					break;
-				}
-				ssc_found = (clk_get_ssc(parent, ssc_datap) == 0U) ? STRUE : SFALSE;
 			}
 		}
 	}

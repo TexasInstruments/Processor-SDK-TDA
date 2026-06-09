@@ -19,7 +19,7 @@
         "
         connection="TIXDS110_Connection.xml"
         toolChain="TICLANG"
-        cgtVersion="3.2.0"
+        cgtVersion="4.0.1"
         device="Cortex R.AM62Ax"
         deviceCore="MCUSS_Cortex_R5_0_0"
         ignoreDefaultDeviceSettings="true"
@@ -45,6 +45,8 @@
             -Wno-gnu-variable-sized-type-not-at-end
             -Wno-unused-function
             -DSOC_AM62AX
+            -DENABLE_MCU_ONLY_LPM
+            -DREMOTE_CORE
         "
         linkerBuildOptions="
             -i${MCU_PLUS_SDK_PATH}/source/kernel/freertos/lib

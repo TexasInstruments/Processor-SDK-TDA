@@ -4,7 +4,7 @@ let device = "j722s";
 
 const files = {
     common: [
-        "ipc_rpmsg_echo_linux.c",
+        "ipc_rpmsg_echo.c",
         "main.c",
     ],
 };
@@ -153,6 +153,18 @@ const defines_wkup_r5 = {
     ],
 }
 
+const defines_mcu = {
+    common:[
+        "REMOTE_CORE",
+    ]
+}
+
+const defines_c75 = {
+    common:[
+        "REMOTE_CORE",
+    ]
+};
+
 const syscfgfile = "../example.syscfg";
 
 const readmeDoxygenPageTag = "EXAMPLES_DRIVERS_IPC_RPMESSAGE_LINUX_ECHO";
@@ -210,7 +222,7 @@ const templates_freertos_main_r5f =
 const templates_freertos_c75ss0 =
 [
     {
-        input: ".project/templates/j722s/common/linker_c75ss0.cmd.xdt",
+        input: ".project/templates/j722s/common/linker_c75ss.cmd.xdt",
         output: "linker.cmd",
     },
     {
@@ -226,7 +238,7 @@ const templates_freertos_c75ss0 =
 const templates_freertos_c75ss1 =
 [
     {
-        input: ".project/templates/j722s/common/linker_c75ss1.cmd.xdt",
+        input: ".project/templates/j722s/common/linker_c75ss.cmd.xdt",
         output: "linker.cmd",
     },
     {
@@ -241,6 +253,20 @@ const templates_freertos_c75ss1 =
 
 const templates_freertos_wkup_r5f =
 [
+    {
+        input: ".project/templates/j722s/common/linker_wkup-r5f.cmd.xdt",
+        output: "linker.cmd",
+        options: {
+            heapSize: 0x8000,
+            stackSize: 0x4000,
+            irqStackSize: 0x1000,
+            svcStackSize: 0x0100,
+            fiqStackSize: 0x0100,
+            abortStackSize: 0x0100,
+            undefinedStackSize: 0x0100,
+            dmStubstacksize: 0x0400,
+        },
+    },
     {
         input: ".project/templates/j722s/freertos/main_freertos_wkup.c.xdt",
         output: "../main.c",
@@ -290,6 +316,7 @@ function getComponentBuildProperty(buildOption) {
         build_property.libdirs = libdirs_freertos_mcu_r5f;
         build_property.libs = libs_freertos_mcu_r5f;
         build_property.templates = templates_freertos_mcu_r5f;
+        build_property.defines = defines_mcu;
     }
     else if(buildOption.cpu.match(/wkup-r5f*/))
     {
@@ -304,18 +331,21 @@ function getComponentBuildProperty(buildOption) {
         build_property.libdirs = libdirs_freertos_main_r5f;
         build_property.libs = libs_freertos_main_r5f;
         build_property.templates = templates_freertos_main_r5f;
+        build_property.defines = defines_mcu;
     }
     else if(buildOption.cpu.match(/c75ss0-0*/)) {
         build_property.includes = includes_freertos_c75ss0;
         build_property.libdirs = libdirs_freertos_c75ss0;
         build_property.libs = libs_freertos_c75ss0;
         build_property.templates = templates_freertos_c75ss0;
+        build_property.defines = defines_c75;
     }
     else if(buildOption.cpu.match(/c75ss1-0*/)) {
         build_property.includes = includes_freertos_c75ss1;
         build_property.libdirs = libdirs_freertos_c75ss1;
         build_property.libs = libs_freertos_c75ss1;
         build_property.templates = templates_freertos_c75ss1;
+        build_property.defines = defines_c75;
     }
 
     return build_property;

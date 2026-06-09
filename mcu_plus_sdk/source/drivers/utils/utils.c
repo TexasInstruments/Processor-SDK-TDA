@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021-2023 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -34,11 +34,15 @@
 /* This is needed for memset/memcpy */
 #include <string.h>
 
+#define UTILS_IS_ALIGNED(addr, size) (((uintptr_t)(addr) & ((size) - 1U)) == 0U)
+
 #define PTR_COPY_SRC_ALIGNMENT   sizeof(uintptr_t)
 
 void Utils_memcpyWord(uint8_t *source, uint8_t *destination, uint32_t length)
 {
-    if(((uintptr_t)source % PTR_COPY_SRC_ALIGNMENT) == ((uintptr_t)destination % PTR_COPY_SRC_ALIGNMENT))
+#if !defined(__aarch64__)
+    if((((uintptr_t)source % PTR_COPY_SRC_ALIGNMENT) == ((uintptr_t)destination % PTR_COPY_SRC_ALIGNMENT)) ||
+       ((length % PTR_COPY_SRC_ALIGNMENT) != 0U))
     {
         uint8_t *temp8Src = source;
         uint8_t *temp8Dst = destination;
@@ -47,13 +51,20 @@ void Utils_memcpyWord(uint8_t *source, uint8_t *destination, uint32_t length)
         uint32_t remainingBytes = length, i;
 
         /* Check for Byte alignment of source address */
-        if(((uintptr_t)source % PTR_COPY_SRC_ALIGNMENT) != 0)
+        if(((uintptr_t)source % PTR_COPY_SRC_ALIGNMENT) != 0U)
         {
             uint32_t initResidualBytes = PTR_COPY_SRC_ALIGNMENT - (((uintptr_t)source) % PTR_COPY_SRC_ALIGNMENT);
+
+             /* Safety check to avoid copy more bytes than requested for alignment */
+            if(length < initResidualBytes)
+            {
+                initResidualBytes  = length;
+            }
+
             i = initResidualBytes;
 
             /* Do 8-bit pointer copy for initial unaligned bytes*/
-            while(i != 0)
+            while(i != 0U)
             {
                 *temp8Dst = *temp8Src;
                 temp8Src++;
@@ -68,9 +79,9 @@ void Utils_memcpyWord(uint8_t *source, uint8_t *destination, uint32_t length)
 
         /* Do pointer copy for aligned bytes */
         uint32_t unalignedBytes = remainingBytes % PTR_COPY_SRC_ALIGNMENT;
-        i = (remainingBytes - unalignedBytes) / 4 ;
+        i = (remainingBytes - unalignedBytes) / PTR_COPY_SRC_ALIGNMENT ;
 
-        while(i != 0)
+        while(i != 0U)
         {
             *tempDst = *tempSrc;
             tempSrc++;
@@ -79,12 +90,12 @@ void Utils_memcpyWord(uint8_t *source, uint8_t *destination, uint32_t length)
         }
 
         /* Do 8-bit pointer copy for unaligned bytes if any */
-        if(unalignedBytes > 0)
+        if(unalignedBytes > 0U)
         {
             temp8Dst = (uint8_t *)tempDst;
             temp8Src = (uint8_t *)tempSrc;
             i = unalignedBytes;
-            while(i != 0)
+            while(i != 0U)
             {
                 *temp8Dst = *temp8Src;
                 temp8Src++;
@@ -97,6 +108,20 @@ void Utils_memcpyWord(uint8_t *source, uint8_t *destination, uint32_t length)
     {
         memcpy(destination, source, length);
     }
+#else
+
+    uint32_t i = length;
+    uint8_t *temp8Src = source;
+    uint8_t *temp8Dst = destination;
+
+    while(i != 0U)
+    {
+        *temp8Dst = *temp8Src;
+        temp8Src++;
+        temp8Dst++;
+        i--;
+    }
+#endif
 }
 
 void Utils_dataAndInstructionBarrier(void)
@@ -110,4 +135,81 @@ void Utils_dataAndInstructionBarrier(void)
     _mfence();
     _mfence();
     #endif
+    #if defined(__C7504__) || defined(__C7524__)
+    __memory_fence(__MFENCE_COLOR0);
+    #endif
+}
+
+void Utils_memcopySourceUnalingned(void *destination, const volatile void *source,
+                                   uint32_t size)
+{
+    uint8_t *dest = (uint8_t *)destination;
+    const volatile uint8_t *src = (const volatile uint8_t *)source;
+    const uint8_t wordSize = sizeof(uintptr_t);
+    uint32_t length = size;
+
+    /* Copy unaligned bytes. */
+    while ((length != 0U) && !UTILS_IS_ALIGNED(src, wordSize))
+    {
+        *dest = *src;
+        dest++;
+        src++;
+        length--;
+    }
+
+    /* Copy arch based aligned bit chunks. */
+    while (length >= wordSize)
+    {
+        *(uintptr_t *)dest = *(const volatile uintptr_t *)src;
+        src += wordSize;
+        dest += wordSize;
+        length -= wordSize;
+    }
+
+    /* Copy the leftover bytes. */
+    while (length != 0U)
+    {
+        *dest = *src;
+        dest++;
+        src++;
+        length--;
+    }
+
+}
+
+void Utils_memcopyDestinationUnalingned(void *destination, const volatile void *source,
+                                        uint32_t size)
+{
+    uint8_t *dest = (uint8_t *)destination;
+    const volatile uint8_t *src = (const volatile uint8_t *)source;
+    const uint8_t wordSize = sizeof(uintptr_t);
+    uint32_t length = size;
+
+    /* Copy unaligned bytes. */
+    while ((length != 0U) && !UTILS_IS_ALIGNED(dest, wordSize))
+    {
+        *dest = *src;
+        dest++;
+        src++;
+        length--;
+    }
+
+    /* Copy arch based aligned bit chunks. */
+    while (length >= wordSize)
+    {
+        *(uintptr_t *)dest = *(const volatile uintptr_t *)src;
+        src += wordSize;
+        dest += wordSize;
+        length -= wordSize;
+    }
+
+    /* Copy the leftover bytes. */
+    while (length != 0U)
+    {
+        *dest = *src;
+        dest++;
+        src++;
+        length--;
+    }
+
 }

@@ -165,7 +165,7 @@ static int32_t OX03F10_Probe(uint32_t chId, void *pSensorHdl);
 static int32_t OX03F10_Config(uint32_t chId, void *pSensorHdl, uint32_t sensor_features_requested);
 static int32_t OX03F10_StreamOn(uint32_t chId, void *pSensorHdl);
 static int32_t OX03F10_StreamOff(uint32_t chId, void *pSensorHdl);
-static int32_t OX03F10_PowerOn(uint32_t chMask, void *pSensorHdl);
+static int32_t OX03F10_PowerOn(uint32_t chId, void *pSensorHdl);
 static int32_t OX03F10_PowerOff(uint32_t chId, void *pSensorHdl);
 static int32_t OX03F10_GetExpParams(uint32_t chId, void *pSensorHdl, IssSensor_ExposureParams *pExpPrms);
 static int32_t OX03F10_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_ExposureParams *pExpPrms);

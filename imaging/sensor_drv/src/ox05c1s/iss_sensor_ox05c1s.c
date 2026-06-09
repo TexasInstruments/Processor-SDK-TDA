@@ -63,9 +63,7 @@
 #include "ox05c1s_serdes_config.h"
 
 static IssSensor_CreateParams  ox05c1sCreatePrms = {
-
-    //TODO: must define this macro in "iss_sensors.h" for integrating the new sensor driver
-    SENSOR_X5C_UB971_OV,             /* sensor name */
+    SENSOR_X5C_UB971_OV,                /* sensor name */
     0x6,                                /* i2cInstId: DON'T CARE */
     I2C_ADDR_SENSOR,                    /* i2cAddrSensor */
     I2C_ADDR_SER,                       /* i2cAddrSer */
@@ -74,21 +72,30 @@ static IssSensor_CreateParams  ox05c1sCreatePrms = {
             OX05C1S_OUT_WIDTH,          /* width */
             OX05C1S_OUT_HEIGHT,         /* height */
             1,                          /* num_exposures */
-            vx_false_e,                 /* line_interleaved */
+            (vx_bool)vx_false_e,        /* line_interleaved */
             {                           /* tivx_raw_image_format_t */
-                {TIVX_RAW_IMAGE_16_BIT, 9},    /*dataFormat and MSB */
+                {(uint32_t)TIVX_RAW_IMAGE_16_BIT, 9},    /*dataFormat and MSB [0] */
+                {(uint32_t)TIVX_RAW_IMAGE_16_BIT, 9},    /*dataFormat and MSB [0] */
+                {(uint32_t)TIVX_RAW_IMAGE_16_BIT, 9},    /*dataFormat and MSB [0] */
             },
-            OX05C1S_META_HEIGHT_BEFORE,  /* meta_height_before */
+            OX05C1S_META_HEIGHT_BEFORE, /* meta_height_before */
             OX05C1S_META_HEIGHT_AFTER,  /* meta_height_after */
         },
-        ISS_SENSOR_OX05C1S_FEATURES,    /* features */
-        ALGORITHMS_ISS_AEWB_MODE_AEWB,  /* aewbMode */
+        (uint32_t)ISS_SENSOR_OX05C1S_FEATURES,    /* features */
+        (uint32_t)ALGORITHMS_ISS_AEWB_MODE_AEWB,  /* aewbMode */
         30,                             /* fps: DON'T CARE */
         4,                              /* numDataLanes */
         {1, 2, 3, 4},                   /* dataLanesMap */
         {0, 0, 0, 0},                   /* dataLanesPolarity */
         CSIRX_LANE_BAND_SPEED_1350_TO_1500_MBPS, /* csi_laneBandSpeed */
     },
+#if defined(B7_IMPLEMENTATION)
+    {   /* moduleInfo */
+        IMAGE_SERDES_FPD_LINK_4,        /* fpdLink */
+        OX05C1S_SEN_I2C_ADDR,           /* senI2cAddr */
+        OX05C1S_SER_I2C_ADDR,           /* serI2cAddr */
+    },
+#endif
     1,                                  /* numChan */
     5,                                  /* dccId   */
 };
@@ -129,23 +136,26 @@ IssSensors_Handle ox05c1sSensorHandle = {
 /*
  * \brief DCC Parameters of OX05C1S
  */
-extern IssSensors_Handle *gIssSensorTable[ISS_SENSORS_MAX_SUPPORTED_SENSOR];
 static uint16_t redGain_prev[ISS_SENSORS_MAX_CHANNEL];
 static uint16_t greenGain_prev[ISS_SENSORS_MAX_CHANNEL];
 static uint16_t blueGain_prev[ISS_SENSORS_MAX_CHANNEL];
 
-int32_t IssSensor_OX05C1S_Init()
+int32_t IssSensor_OX05C1S_Init(void)
 {
     int32_t status;
     int32_t chId;
     status = IssSensor_Register(&ox05c1sSensorHandle);
+
     if(0 != status)
     {
         appLogPrintf("IssSensor_OX05C1S_Init failed \n");
     }
-	for(chId=0;chId<ISS_SENSORS_MAX_CHANNEL;chId++)
+
+	for(chId = 0; chId < (int32_t)ISS_SENSORS_MAX_CHANNEL; chId++)
 	{
-        redGain_prev[chId] = greenGain_prev[chId] = blueGain_prev[chId] = 512;
+        redGain_prev[chId] = 512;
+        greenGain_prev[chId] = 512;
+        blueGain_prev[chId] = 512;
     }
 
     return status;
@@ -168,6 +178,7 @@ static int32_t OX05C1S_Probe(uint32_t chId, void *pSensorHdl)
 
 static int32_t OX05C1S_Sensor_RegConfig(uint32_t i2cInstId, uint8_t sensorI2cAddr, I2cParams *sensorCfg, uint16_t sensor_cfg_script_len)
 {
+    (void)i2cInstId;
     int32_t status = 0;
     uint16_t regAddr;
     uint8_t regValue;
@@ -178,27 +189,28 @@ static int32_t OX05C1S_Sensor_RegConfig(uint32_t i2cInstId, uint8_t sensorI2cAdd
     {
         regCnt = 0;
         regAddr  = sensorCfg[regCnt].nRegAddr;
-        regValue = sensorCfg[regCnt].nRegValue;
-        delayMilliSec = sensorCfg[regCnt].nDelay;
+        regValue = (uint8_t)sensorCfg[regCnt].nRegValue;
+        delayMilliSec = (uint16_t)sensorCfg[regCnt].nDelay;
 
         appLogPrintf(" Configuring OX05C1S imager 0x%.2x... Please wait till it finishes \n", sensorI2cAddr);
         while(regCnt<sensor_cfg_script_len)
         {
-            status |= OX05C1S_WriteReg(sensorI2cAddr, regAddr, regValue, 1u);
-            if (0 != status)
+            int32_t write_status = OX05C1S_WriteReg(sensorI2cAddr, regAddr, regValue, 1u);
+            if (0 != write_status)
             {
                 appLogPrintf("\nOX05C1S: Sensor Reg Write Failed for regAddr 0x%.2x\n", regAddr);
+                status = write_status;
             }
 
-            if(delayMilliSec > 0)
+            if(delayMilliSec > 0U)
             {
                appLogWaitMsecs(delayMilliSec);
             }
 
             regCnt++;
             regAddr  = sensorCfg[regCnt].nRegAddr;
-            regValue = sensorCfg[regCnt].nRegValue;
-            delayMilliSec = sensorCfg[regCnt].nDelay;
+            regValue = (uint8_t)sensorCfg[regCnt].nRegValue;
+            delayMilliSec = (uint16_t)sensorCfg[regCnt].nDelay;
         }
         /* Wait 100ms after the init is done */
         appLogWaitMsecs(100);
@@ -207,60 +219,6 @@ static int32_t OX05C1S_Sensor_RegConfig(uint32_t i2cInstId, uint8_t sensorI2cAdd
     {
         appLogPrintf(" OX05C1S config script is NULL \n");
     }
-    return status;
-}
-
-static int32_t OX05C1S_VerifyRegConfig(uint32_t i2cInstId, uint8_t sensorI2cAddr, I2cParams *sensorCfg, uint16_t sensor_cfg_script_len)
-{
-    int32_t status = 0;
-    uint16_t regAddr;
-    uint8_t regValue;
-    uint8_t readValue;
-    uint32_t regCnt;
-    uint32_t mismatchCount = 0;
-
-    if(NULL != sensorCfg)
-    {
-        appLogPrintf(" Verifying OX05C1S imager 0x%.2x register configuration... \n", sensorI2cAddr);
-
-        for(regCnt = 0; regCnt < sensor_cfg_script_len; regCnt++)
-        {
-            regAddr = sensorCfg[regCnt].nRegAddr;
-            regValue = sensorCfg[regCnt].nRegValue;
-
-            status = OX05C1S_ReadReg(sensorI2cAddr, regAddr, &readValue, 1u);
-            if (0 != status)
-            {
-                appLogPrintf("OX05C1S: Failed to read register 0x%.4x\n", regAddr);
-            }
-            else
-            {
-                if(readValue != regValue)
-                {
-                    appLogPrintf("OX05C1S: Register mismatch at 0x%.4x - Expected: 0x%.2x, Read: 0x%.2x\n",
-                           regAddr, regValue, readValue);
-                    mismatchCount++;
-                }
-            }
-        }
-
-        if(mismatchCount == 0)
-        {
-            appLogPrintf(" OX05C1S register verification completed successfully - all %d registers match\n", sensor_cfg_script_len);
-        }
-        else
-        {
-            appLogPrintf(" OX05C1S register verification completed with %d mismatches out of %d registers\n",
-                   mismatchCount, sensor_cfg_script_len);
-            status = -1;
-        }
-    }
-    else
-    {
-        appLogPrintf(" OX05C1S config script is NULL \n");
-        status = -1;
-    }
-
     return status;
 }
 
@@ -273,47 +231,31 @@ static int32_t OX05C1S_Config(uint32_t chId, void *pSensorHdl, uint32_t sensor_f
     IssSensors_Handle * pSenHandle = (IssSensors_Handle*)pSensorHdl;
     IssSensor_CreateParams * pCreatePrms;
 
-    uint8_t regVal = 0x00;
-
-    assert(NULL != pSenHandle);
     pCreatePrms = pSenHandle->createPrms;
-    assert(NULL != pCreatePrms);
 
-    if(sensor_features_requested != (sensor_features_requested & ISS_SENSOR_OX05C1S_FEATURES))
+    if(sensor_features_requested != (sensor_features_requested & (uint32_t)ISS_SENSOR_OX05C1S_FEATURES))
     {
         appLogPrintf("OX05C1S_Config : Error. feature set 0x%x is not supported \n", sensor_features_requested);
-        return -1;
-    }
-
-    ox05c1sFeaturesEnabled = sensor_features_requested;
-    i2cInstId = pCreatePrms->i2cInstId;
-
-    /* Configure serializer */
-    status = ub953_cfgScript(i2cInstId, pCreatePrms->i2cAddrSer[chId], SerCfg_OX05C1S);
-    if(0 != status)
-    {
-        appLogPrintf("OX05C1S_Config Error : UB953 config failed for camera # %d \n", chId);
+        status = -1;
     }
     else
     {
-        OX05C1S_ReadReg(pCreatePrms->i2cAddrSensor[0], 0x300A, &regVal, 1);
-        appLogPrintf("\n\n\n DEBUG X5B Addr: 0x%02x, regAddr: 0x300A = 0x%02x \n", pCreatePrms->i2cAddrSensor[0], regVal);
+        ox05c1sFeaturesEnabled = sensor_features_requested;
+        i2cInstId = pCreatePrms->i2cInstId;
 
-
-
-        sensor_cfg_script_len = sizeof(ox05c1sConfig_rggb) / sizeof(ox05c1sConfig_rggb[0]);
-        status = OX05C1S_Sensor_RegConfig(i2cInstId, pCreatePrms->i2cAddrSensor[chId], ox05c1sConfig_rggb, sensor_cfg_script_len);
+        /* Configure serializer */
+        status = ub953_cfgScript((uint8_t)i2cInstId, pCreatePrms->i2cAddrSer[chId], SerCfg_OX05C1S);
         if(0 != status)
         {
-            appLogPrintf("OX05C1S_Config Error : OX05C1S_Sensor_RegConfig returned status = %d \n", status);
+            appLogPrintf("OX05C1S_Config Error : UB953 config failed for camera # %d \n", chId);
         }
         else
         {
-            /* Verify the configuration was written correctly */
-            status = OX05C1S_VerifyRegConfig(i2cInstId, pCreatePrms->i2cAddrSensor[chId], ox05c1sConfig_rggb, sensor_cfg_script_len);
+            sensor_cfg_script_len = sizeof(ox05c1sConfig) / sizeof(ox05c1sConfig[0]);
+            status = OX05C1S_Sensor_RegConfig(i2cInstId, pCreatePrms->i2cAddrSensor[chId], ox05c1sConfig, sensor_cfg_script_len);
             if(0 != status)
             {
-                appLogPrintf("OX05C1S_Config Error : OX05C1S_VerifyRegConfig failed for camera # %d \n", chId);
+                appLogPrintf("OX05C1S_Config Error : OX05C1S_Sensor_RegConfig returned status = %d \n", status);
             }
         }
     }
@@ -327,29 +269,24 @@ static int32_t OX05C1S_StreamOn(uint32_t chId, void *pSensorHdl)
 
     IssSensors_Handle * pSenHandle = (IssSensors_Handle*)pSensorHdl;
     IssSensor_CreateParams * pCreatePrms;
-    uint32_t i2cInstId;
     uint8_t sensorI2cAddr;
-    uint8_t regVal;
 
-    assert(NULL != pSenHandle);
     pCreatePrms = pSenHandle->createPrms;
-    assert(NULL != pCreatePrms);
-
-    i2cInstId = pCreatePrms->i2cInstId;
     sensorI2cAddr = pCreatePrms->i2cAddrSensor[chId];
 
-    /* Stream on */
-    status |= OX05C1S_WriteReg(sensorI2cAddr, 0x0100, 0x01, 1u);
-#if 0
-    status |= OX05C1S_WriteReg(sensorI2cAddr, 0x0100, 0x00, 1u);
-#endif
-    appLogWaitMsecs(10);
+    /* OX05C1S Stream on, 0x0100 = 0x01 */
+    status = OX05C1S_WriteReg(sensorI2cAddr, 0x0100, 0x01, 1u);
+    if (0 != status)
+    {
+        status = status;
+    }
+    else
+    {
+        appLogWaitMsecs(10);
 
-    OX05C1S_ReadReg(sensorI2cAddr, 0x0100, &regVal, 1u);
-    appLogPrintf("\n\n StreasmOn Value after [0x0100] = 0x%02x\n", regVal);
-
-    /* Enable deserializer CSI-TX output */
-    status |= enableUB960Streaming(chId);
+        /* Enable deserializer CSI-TX output */
+        status = enableUB960Streaming(chId);
+    }
     return (status);
 }
 
@@ -359,22 +296,24 @@ static int32_t OX05C1S_StreamOff(uint32_t chId, void *pSensorHdl)
 
     IssSensors_Handle * pSenHandle = (IssSensors_Handle*)pSensorHdl;
     IssSensor_CreateParams * pCreatePrms;
-    uint32_t i2cInstId;
     uint8_t sensorI2cAddr;
 
-    assert(NULL != pSenHandle);
     pCreatePrms = pSenHandle->createPrms;
-    assert(NULL != pCreatePrms);
-
-    i2cInstId = pCreatePrms->i2cInstId;
     sensorI2cAddr = pCreatePrms->i2cAddrSensor[chId];
 
-    /* Stream off */
-    status |= OX05C1S_WriteReg(sensorI2cAddr, 0x0100, 0x00, 1u);
-    appLogWaitMsecs(10);
+    /* OX05C1S Stream off, 0x0100 = 0x00 */
+    status = OX05C1S_WriteReg(sensorI2cAddr, 0x0100, 0x00, 1u);
+    if (0 != status)
+    {
+        status = status;
+    }
+    else
+    {
+        appLogWaitMsecs(10);
 
-    /* Disable deserializer CSI-TX output */
-    status |= disableUB960Streaming(chId);
+        /* Disable deserializer CSI-TX output */
+        status = disableUB960Streaming(chId);
+    }
     return status;
 }
 
@@ -382,22 +321,18 @@ static int32_t OX05C1S_PowerOn(uint32_t chId, void *pSensorHdl)
 {
     int32_t status = 0;
 
-    uint8_t serI2Caddr_7bit = OX05C1S_SER_I2C_ADDR >> 1;
-    uint8_t senI2cAddr_7bit = OX05C1S_SEN_I2C_ADDR >> 1;
+    uint8_t serI2Caddr_7bit = (uint8_t)(OX05C1S_SER_I2C_ADDR >> 1);
+    uint8_t senI2cAddr_7bit = (uint8_t)(OX05C1S_SEN_I2C_ADDR >> 1);
 
     IssSensors_Handle *pSenHandle = (IssSensors_Handle*)pSensorHdl;
-    assert(pSenHandle != NULL);
     IssSensor_CreateParams *pCreatePrms = pSenHandle->createPrms;
-    assert(pCreatePrms != NULL);
 
-    uint32_t i2cInstId = pCreatePrms->i2cInstId;
-
-#if 1
+#if !defined(B7_IMPLEMENTATION)
     /* Configure deserializer to FPD4 mode */
-    for (int i = 0; i < 2; i++)
+    for (int8_t i = 0; i < 2; i++)
     {
         status = IssSensor_cfgDesScript(ub9702_971_DesCfg_Common, i);
-        if(status!=0)
+        if(status != 0)
         {
             appLogPrintf("Error : IssSensor_cfgDesScript returned %d while configuring DES %d \n", status, i);
         }
@@ -405,7 +340,6 @@ static int32_t OX05C1S_PowerOn(uint32_t chId, void *pSensorHdl)
 #endif
 
     /* Set serializer alias address */
-    //Gang_TODO: is this refactored?
     status = UB960_SetAlias(chId, 0, serI2Caddr_7bit, pCreatePrms->i2cAddrSer[chId]);
     if(0 != status)
     {
@@ -414,7 +348,6 @@ static int32_t OX05C1S_PowerOn(uint32_t chId, void *pSensorHdl)
     }
 
     /* Set sensor alias address */
-    //Gang_TODO: is this refactored?
     status = UB960_SetAlias(chId, 1, senI2cAddr_7bit, pCreatePrms->i2cAddrSensor[chId]);
     if(0 != status)
     {
@@ -429,6 +362,8 @@ static int32_t OX05C1S_PowerOn(uint32_t chId, void *pSensorHdl)
 
 static int32_t OX05C1S_PowerOff(uint32_t chId, void *pSensorHdl)
 {
+    (void)chId;
+    (void)pSensorHdl;
     int32_t status = 0;
 
     return (status);
@@ -436,41 +371,196 @@ static int32_t OX05C1S_PowerOff(uint32_t chId, void *pSensorHdl)
 
 static int32_t OX05C1S_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_ExposureParams *pExpPrms)
 {
-    int32_t status = 0;
+    int32_t status = -1;
+
+    /* HTS = reg{0x380C, 0x380D} = 0x04c8 = 1224 */
+    /* PLL2_SA1_CLK = clock_in_in_megahertz (check excel (90 MHz for current settings))*/
+
+    /* frame_length = reg{0x380E, 0x380F} = 0x04cc = 1228 */
+    /* row_period = HTS / PLL2_SA1_CLK = 1224 / 90 = 13.6 */
 
     /* TODO: Set exposure in terms of row time */
-
-    /* TODO: Set analog gain */
+        /* AE_MAX = frame_length - (30*row_period) = 1228 - (30 * 13.6) = 820 */
+        /* AE_MIN = 7 * row_period */
     
-    /* TODO: Set digital gain */
+    IssSensors_Handle * pSenHandle = (IssSensors_Handle*)pSensorHdl;
+    IssSensor_CreateParams * pCreatePrms;
+    uint8_t sensorI2cAddr;
 
+#if defined(ENABLE_DIGITAL_GAIN)
+    uint16_t regAddr;
+    uint8_t regVal;
+
+    uint32_t digGain = 0;
+#endif
+
+    uint16_t expTime;
+    uint8_t intVal = 0U;
+    uint8_t decVal = 0U;
+
+    pCreatePrms = pSenHandle->createPrms;
+    sensorI2cAddr = pCreatePrms->i2cAddrSensor[chId];
+    
+    /* set exposure in terms of row time
+    *  row_time = HTS/SCLK = 2025/90MHz = 0.02025 ms */
+    expTime = (uint16_t)((pExpPrms->exposureTime[ISS_SENSOR_EXPOSURE_LONG] * 90U) / 1224U);
+    // printf("exposure time (in row time) = %d\n", expTime);
+    (void)OX05C1S_WriteReg(sensorI2cAddr, AEC_HCG_CTRL_01, (uint8_t)(((uint32_t)expTime >> 8) & 0xFFU), 1U);
+    (void)OX05C1S_WriteReg(sensorI2cAddr, AEC_HCG_CTRL_02, (uint8_t)((uint32_t)expTime & 0xFFU), 1U);
+
+    /* set analog gain */
+    /*
+        ANALOG_GAIN_MIN = 1x
+        ANALOG_GAIN_MAX = 15.5x 
+
+        Analog Gain Range       Gain Step       Active Bits
+        1.0000  - 1.9375    |   0.0625      |   0001.xxxx
+        2.000   - 3.875     |   0.125       |   001x.xxx0
+        4.00    - 7.75      |   0.25        |   01xx.xx00
+        8.0     - 15.5      |   0.5         |   1xxx.x000
+    */
+    intVal = (uint8_t)((pExpPrms->analogGain[ISS_SENSOR_EXPOSURE_LONG] >> 10U) & 0xFFU); /* gain / 1024*/
+    if(intVal <= 1U)
+    {
+        /* Equivalent to (uint8_t)(((gain % 1024) / 64) + 0.5)*/
+        decVal = (uint8_t)(((pExpPrms->analogGain[ISS_SENSOR_EXPOSURE_LONG] & 1023U) + 32U) >> 6);
+    }
+    else if (intVal <= 3U) /* intVal range: 2 - 3 */
+    {
+        /* Equivalent to (uint8_t)(((gain % 1024) / 128) + 0.5)*/
+        decVal = (uint8_t)(((pExpPrms->analogGain[ISS_SENSOR_EXPOSURE_LONG] & 1023U) + 64U) >> 6);
+        decVal = (uint8_t)((uint32_t)decVal & 0x1EU);
+    }
+    else if (intVal <= 7U) /* intVal range: 4 - 7 */
+    {
+        /* Equivalent to (uint8_t)(((gain % 1024) / 256) + 0.5)*/
+        decVal = (uint8_t)(((pExpPrms->analogGain[ISS_SENSOR_EXPOSURE_LONG] & 1023U) + 128U) >> 6);
+        decVal = (uint8_t)((uint32_t)decVal & 0x1CU);
+    }
+    else if (intVal <= 15U) /* intVal range: 8 - 15 */
+    {
+        /* Equivalent to (uint8_t)(((gain % 1024) / 512) + 0.5)*/
+        decVal = (uint8_t)(((pExpPrms->analogGain[ISS_SENSOR_EXPOSURE_LONG] & 1023U) + 256U) >> 6);
+        decVal = (uint8_t)((uint32_t)decVal & 0x18U);
+    }
+    else
+    {
+#if !defined(ENABLE_DIGITAL_GAIN)
+        appLogPrintf("Invalid analog gain: %d\n", pExpPrms->analogGain[ISS_SENSOR_EXPOSURE_LONG]);
+#endif
+    }
+
+    if(decVal > 0xFU)
+    {
+        /* round */
+        decVal = 0;
+        if(intVal < 15U)
+        {
+            intVal = intVal + 1U;
+        }
+        else
+        {
+            intVal = 15U;
+        }
+    }
+
+#if defined(ENABLE_DIGITAL_GAIN)
+    if(intVal > 0xF)
+    {
+        /* (analog_gain - 16127) + 1024
+        *  15.5x gain (15872) to 16127 rounds down to 15.5, so use 16128
+        *  and above as surpllus value for digital gain. Add 1024 for base
+        *  1x value of digital gain. */
+        digGain = pExpPrms->analogGain[ISS_SENSOR_EXPOSURE_LONG] - 15103;
+
+        if(digGain > 0){
+            /* set digital gain */
+
+            /* Write integer to AEC_HCG_CTRL_0A[3:0] */
+            regAddr = AEC_HCG_CTRL_0A;
+            regVal = (digGain >> 10);
+            OX05C1S_WriteReg(sensorI2cAddr, regAddr, regVal, 1U);
+            
+            /* Write decimal to AEC_HCG_CTRL_0B[7:0] */
+            regAddr = AEC_HCG_CTRL_0B;
+            regVal = ((digGain >> 2) & 0xFF);
+            OX05C1S_WriteReg(sensorI2cAddr, regAddr, regVal, 1U);
+            
+            /* Write decimal to AEC_HCG_CTRL_0C[7:6] */
+            regAddr = AEC_HCG_CTRL_0C;
+            regVal = (digGain & 0x03) << 6;
+            OX05C1S_WriteReg(sensorI2cAddr, regAddr, regVal, 1U);
+        }    
+
+        /* set analog gain to max (15.5) */
+        intVal = 0x0F;
+        decVal = 0x08;
+    }
+    else
+    {
+        /* set digital gain to base 1x gain */
+        regAddr = AEC_HCG_CTRL_0A;
+        regVal = 0x01;
+        OX05C1S_WriteReg(sensorI2cAddr, regAddr, regVal, 1U);
+        
+        regAddr = AEC_HCG_CTRL_0B;
+        regVal = 0x00;
+        OX05C1S_WriteReg(sensorI2cAddr, regAddr, regVal, 1U);
+        
+        regAddr = AEC_HCG_CTRL_0C;
+        regVal = 0x00;
+        OX05C1S_WriteReg(sensorI2cAddr, regAddr, regVal, 1U);
+    }
+#endif
+
+    /* Write integer value (4 bits) to AEC_HCG_CTRL_08[3:0] */
+    (void)OX05C1S_WriteReg(sensorI2cAddr, AEC_HCG_CTRL_08, intVal, 1U);
+
+    /* Write decimal value (4 bits) to AEC_HCG_CTRL_09[7:4] */
+    (void)OX05C1S_WriteReg(sensorI2cAddr, AEC_HCG_CTRL_09, (decVal << 4), 1U);
+
+    status = 0;
     return (status);
 }
 
 static int32_t OX05C1S_GetDccParams(uint32_t chId, void *pSensorHdl, IssSensor_DccParams *pDccPrms)
 {
+    (void)chId;
+    (void)pSensorHdl;
+    (void)pDccPrms;
     int32_t status = 0;
+
     return (status);
 }
 
 static int32_t OX05C1S_GetExpParams(uint32_t chId, void *pSensorHdl, IssSensor_ExposureParams *pExpPrms)
 {
+    (void)chId;
+    (void)pSensorHdl;
+    (void)pExpPrms;
     int32_t status = 0;
+
     return (status);
 }
 
 static void OX05C1S_InitAewbConfig(uint32_t chId, void *pSensorHdl)
 {
+    (void)chId;
+    (void)pSensorHdl;
     return;
 }
 
 static void OX05C1S_GetIspConfig(uint32_t chId, void *pSensorHdl)
 {
+    (void)chId;
+    (void)pSensorHdl;
     return;
 }
 
 static void OX05C1S_deinit(uint32_t chId, void *pSensorHdl)
 {
+    (void)chId;
+    (void)pSensorHdl;
     return;
 }
 
@@ -482,14 +572,12 @@ static int32_t OX05C1S_ReadWriteReg(uint32_t chId, void *pSensorHdl, uint32_t re
     IssSensors_Handle * pSenHandle = (IssSensors_Handle*)pSensorHdl;
     IssSensor_CreateParams * pCreatePrms;
 
-    assert(NULL != pSenHandle);
     pCreatePrms = pSenHandle->createPrms;
-    assert(NULL != pReg);
 
     if (1u == readWriteFlag)
     {
         /* write */
-        regValue = pReg->nRegValue;
+        regValue = (uint8_t)pReg->nRegValue;
         status = OX05C1S_WriteReg(pCreatePrms->i2cAddrSensor[chId], pReg->nRegAddr, regValue, 1u);
     }
     else
@@ -517,14 +605,15 @@ static int32_t OX05C1S_ReadReg(uint8_t i2cAddr,
     if(NULL == sensorI2cHandle)
     {
         appLogPrintf("Sensor I2C Handle is NULL \n");
-        return -1;
+        status = -1;
     }
-
-    // 16-bit address is used by most ADAS sensors from OVT/Sony/Onsemi
-    status = Board_i2c16BitRegRd(sensorI2cHandle, i2cAddr, regAddr, regVal, numRegs, sensorI2cByteOrder, SENSOR_I2C_TIMEOUT);
-    if(0 != status)
+    else
     {
-        appLogPrintf("Error : I2C Timeout while reading from OX05C1S register 0x%x \n", regAddr);
+        status = Board_i2c16BitRegRd(sensorI2cHandle, i2cAddr, regAddr, regVal, (uint8_t)numRegs, sensorI2cByteOrder, SENSOR_I2C_TIMEOUT);
+        if(0 != status)
+        {
+            appLogPrintf("Error : I2C Timeout while reading from OX05C1S register 0x%x \n", regAddr);
+        }
     }
 
     return (status);
@@ -536,6 +625,7 @@ static int32_t OX05C1S_WriteReg(uint8_t i2cAddr,
                                 uint32_t numRegs)
 {
     int32_t  status = -1;
+    uint8_t  regValue;
     I2C_Handle sensorI2cHandle = NULL;
     static uint8_t sensorI2cByteOrder = 255U;
 
@@ -543,14 +633,16 @@ static int32_t OX05C1S_WriteReg(uint8_t i2cAddr,
     if(NULL == sensorI2cHandle)
     {
         appLogPrintf("Sensor I2C Handle is NULL \n");
-        return -1;
+        status = -1;
     }
-
-    // 16-bit address is used by most ADAS sensors from OVT/Sony/Onsemi
-    status = Board_i2c16BitRegWr(sensorI2cHandle, i2cAddr, regAddr, &regVal, numRegs, sensorI2cByteOrder, SENSOR_I2C_TIMEOUT);
-    if(0 != status)
+    else
     {
-        appLogPrintf("Error : I2C Timeout while writing 0x%x to OX05C1S register 0x%x \n", regVal, regAddr);
+        regValue = regVal;
+        status = Board_i2c16BitRegWr(sensorI2cHandle, i2cAddr, regAddr, &regValue, (uint8_t)numRegs, sensorI2cByteOrder, SENSOR_I2C_TIMEOUT);
+        if(0 != status)
+        {
+            appLogPrintf("Error : I2C Timeout while writing 0x%x to OX05C1S register 0x%x \n", regVal, regAddr);
+        }
     }
 
     return (status);
@@ -558,25 +650,44 @@ static int32_t OX05C1S_WriteReg(uint8_t i2cAddr,
 
 static int32_t OX05C1S_GetExpPrgFxn(uint32_t chId, void *pSensorHdl, IssAeDynamicParams *p_ae_dynPrms)
 {
+    (void)chId;
+    (void)pSensorHdl;
     int32_t status = 0;
     uint8_t count = 0;
 
-    p_ae_dynPrms->targetBrightnessRange.min = 45;
-    p_ae_dynPrms->targetBrightnessRange.max = 55;
-    p_ae_dynPrms->targetBrightness = 50;
-    p_ae_dynPrms->threshold = 5;
-    p_ae_dynPrms->exposureTimeStepSize = 1;
-    p_ae_dynPrms->enableBlc = 0;
+#if defined(ENABLE_DIGITAL_GAIN)
+    /* 8x digital gain (using analog DCC 1x gain 1024) */
+    uint16_t digitalGainMax = (uint16_t)(DIGITAL_GAIN_SURPLUS * 1024U);
 
-    /* 16.666ms */
-    p_ae_dynPrms->exposureTimeRange[count].min = 16666;
-    p_ae_dynPrms->exposureTimeRange[count].max = 16666;
+    if(digitalGainMax > 15872U) {
+        /* set to max x3f digital gain 15.5x */
+        digitalGainMax = 15872U;
+    }
+#endif
 
-    /* sensor gain: 1x gain (1024) */
+    p_ae_dynPrms->targetBrightnessRange.min = 100;
+    p_ae_dynPrms->targetBrightnessRange.max = 110;
+    p_ae_dynPrms->targetBrightness = 105;
+    p_ae_dynPrms->threshold = DEFAULT_TARGET_THRESHOLD;
+    p_ae_dynPrms->exposureTimeStepSize = DEFAULT_EXPOSURE_TIME;
+    p_ae_dynPrms->enableBlc = DEFAULT_ENABLE_BLC;
+
+    /* 11.0 * 1000 ns = 11000 ns = 11.0 ms */
+    p_ae_dynPrms->exposureTimeRange[count].min = 96;
+
+    /* 32.5 * 1000 ns = 32500 ns = 32.5 ms */
+    p_ae_dynPrms->exposureTimeRange[count].max = 11864;
+
+    /* 1x gain (1024) */
     p_ae_dynPrms->analogGainRange[count].min = 1024;
-    p_ae_dynPrms->analogGainRange[count].max = 1024;
 
-    /* digital 1x gain (256) */
+#if defined(ENABLE_DIGITAL_GAIN)
+    /* 15.5x Analog Gain + Digital Gain */
+    p_ae_dynPrms->analogGainRange[count].max = 15872 + digitalGainMax;
+#else
+    /* 15.5x Analog Gain (15.5 x 1024 = 15872) */
+    p_ae_dynPrms->analogGainRange[count].max = 15872;
+#endif
     p_ae_dynPrms->digitalGainRange[count].min = 256;    /* not used */
     p_ae_dynPrms->digitalGainRange[count].max = 256;    /* not used */
     count++;
@@ -585,8 +696,11 @@ static int32_t OX05C1S_GetExpPrgFxn(uint32_t chId, void *pSensorHdl, IssAeDynami
     return (status);
 }
 
+
 static int32_t OX05C1S_GetWBPrgFxn(uint32_t chId, void *pSensorHdl, IssAwbDynamicParams *p_awb_dynPrms)
 {
+    (void)chId;
+    (void)pSensorHdl;
     int32_t  status = 0;
 
     p_awb_dynPrms->redGainRange.min = 512;
@@ -607,8 +721,90 @@ static int32_t OX05C1S_GetWBPrgFxn(uint32_t chId, void *pSensorHdl, IssAwbDynami
 static int32_t OX05C1S_SetAwbParams(void *pSensorHdl, uint32_t chId, IssSensor_WhiteBalanceParams *pWbPrms)
 {
     int32_t status = 0;
+    uint16_t regVal, decVal;
+    uint8_t intVal;
 
-    /* TODO */
+    IssSensors_Handle * pSenHandle = (IssSensors_Handle*)pSensorHdl;
+    IssSensor_CreateParams * pCreatePrms;
+
+    pCreatePrms = pSenHandle->createPrms;
+
+    if(redGain_prev[chId] != pWbPrms->rGain[0])
+    {
+        redGain_prev[chId] = (uint16_t)pWbPrms->rGain[0];
+
+        intVal = (uint8_t)(pWbPrms->rGain[ISS_SENSOR_EXPOSURE_LONG] / 512U);
+        decVal = (uint16_t)(((pWbPrms->rGain[ISS_SENSOR_EXPOSURE_LONG] % 512U) * 2U));
+
+        regVal = (uint16_t)((((uint32_t)intVal & 0x1FU) << 2) | (((uint32_t)decVal >> 8) & 0x3U));
+        int32_t write_status = OX05C1S_WriteReg(pCreatePrms->i2cAddrSensor[chId], AWB_GAIN_HCG_6, (uint8_t)regVal, 1u);
+        if (0 != write_status)
+        {
+            status = write_status;
+        }
+
+        regVal = (uint16_t)((uint32_t)decVal & 0xFFU);
+        write_status = OX05C1S_WriteReg(pCreatePrms->i2cAddrSensor[chId], AWB_GAIN_HCG_7, (uint8_t)regVal, 1u);
+        if (0 != write_status)
+        {
+            status = write_status;
+        }
+    }
+
+    if(greenGain_prev[chId] != pWbPrms->gGain[0])
+    {
+        greenGain_prev[chId] = (uint16_t)pWbPrms->gGain[0];
+        /* HCG */
+        intVal = (uint8_t)(pWbPrms->gGain[ISS_SENSOR_EXPOSURE_LONG] / 512U);
+        decVal = (uint16_t)(((pWbPrms->gGain[ISS_SENSOR_EXPOSURE_LONG] % 512U) * 2U));
+
+        regVal = (uint16_t)((((uint32_t)intVal & 0x1FU) << 2) | (((uint32_t)decVal >> 8) & 0x3U));
+        int32_t write_status = OX05C1S_WriteReg(pCreatePrms->i2cAddrSensor[chId], AWB_GAIN_HCG_2, (uint8_t)regVal, 1u);
+        if (0 != write_status)
+        {
+            status = write_status;
+        }
+        write_status = OX05C1S_WriteReg(pCreatePrms->i2cAddrSensor[chId], AWB_GAIN_HCG_4, (uint8_t)regVal, 1u);
+        if (0 != write_status)
+        {
+            status = write_status;
+        }
+
+        regVal = (uint16_t)((uint32_t)decVal & 0xFFU);
+        write_status = OX05C1S_WriteReg(pCreatePrms->i2cAddrSensor[chId], AWB_GAIN_HCG_3, (uint8_t)regVal, 1u);
+        if (0 != write_status)
+        {
+            status = write_status;
+        }
+        write_status = OX05C1S_WriteReg(pCreatePrms->i2cAddrSensor[chId], AWB_GAIN_HCG_5, (uint8_t)regVal, 1u);
+        if (0 != write_status)
+        {
+            status = write_status;
+        }
+    }
+
+    if(blueGain_prev[chId] != pWbPrms->bGain[0])
+    {
+        blueGain_prev[chId] = (uint16_t)pWbPrms->bGain[0];
+
+        intVal = (uint8_t)(pWbPrms->bGain[ISS_SENSOR_EXPOSURE_LONG] / 512U);
+        decVal = (uint16_t)(((pWbPrms->bGain[ISS_SENSOR_EXPOSURE_LONG] % 512U) * 2U));
+
+        regVal = (uint16_t)((((uint32_t)intVal & 0x1FU) << 2) | (((uint32_t)decVal >> 8) & 0x3U));
+        int32_t write_status = OX05C1S_WriteReg(pCreatePrms->i2cAddrSensor[chId], AWB_GAIN_HCG_0, (uint8_t)regVal, 1u);
+        if (0 != write_status)
+        {
+            status = write_status;
+        }
+
+        regVal = (uint16_t)((uint32_t)decVal & 0xFFU);
+        write_status = OX05C1S_WriteReg(pCreatePrms->i2cAddrSensor[chId], AWB_GAIN_HCG_1, (uint8_t)regVal, 1u);
+        if (0 != write_status)
+        {
+            status = write_status;
+        }
+    }
+
 
     return (status);
 }
@@ -617,7 +813,7 @@ static void OX05C1S_print_frame_count(void *pSensorHdl)
 {
 
     uint8_t     regVal = 0x00;
-    uint32_t    frameCount = 0;
+    uint32_t    frameCount = 0U;
 
     IssSensors_Handle *pSenHandle = (IssSensors_Handle *)pSensorHdl;
     IssSensor_CreateParams *pCreatePrms;
@@ -636,7 +832,7 @@ static void OX05C1S_print_frame_count(void *pSensorHdl)
     appLogPrintf("\n\n");
     for(uint8_t i = 0; i<(sizeof(fCntAddrArr)/sizeof(fCntAddrArr[0])); i++)
     {
-        OX05C1S_ReadReg(pCreatePrms->i2cAddrSensor[0], fCntAddrArr[i], &regVal, 1);
+        (void)OX05C1S_ReadReg(pCreatePrms->i2cAddrSensor[0], fCntAddrArr[i], &regVal, 1);
         appLogPrintf("%s: %s [0x%02x] = 0x%02x \n", __func__, SENSOR_X5C_UB971_OV, fCntAddrArr[i], regVal);
 
         frameCount = (frameCount << 8) | regVal;

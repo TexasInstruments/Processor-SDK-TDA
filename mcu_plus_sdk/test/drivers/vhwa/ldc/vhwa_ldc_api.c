@@ -127,7 +127,7 @@ void AppLdcMain(void *args)
 
     status = LdcApp_init();
 
-    //GTC_enable();
+    GTC_enable();
 
     if (FVID2_SOK == status)
     {
@@ -186,7 +186,7 @@ int32_t AppLdc_Init(Udma_DrvHandle udmaDrvHndl)
     return (status);
 }
 
-int32_t AppLdcFrameComplCb(Fvid2_Handle handle, void *appData)
+int32_t AppLdc_frameComplCb(Fvid2_Handle handle, void *appData)
 {
     AppLdc_TestObject *tObj = (AppLdc_TestObject *)appData;
 
@@ -198,7 +198,7 @@ int32_t AppLdcFrameComplCb(Fvid2_Handle handle, void *appData)
     return FVID2_SOK;
 }
 
-void AppLdcErrorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData)
+void AppLdc_errorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData)
 {
     uint32_t errId;
     AppLdc_TestObject *tObj = (AppLdc_TestObject *)appData;
@@ -228,7 +228,7 @@ void AppLdcErrorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData)
     }
 }
 
-void AppLdcWdtimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData)
+void AppLdc_wdtimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData)
 {
     AppLdc_TestObject *tObj = (AppLdc_TestObject *)appData;
     if (NULL != tObj)
@@ -260,12 +260,7 @@ int32_t AppLdc_Create(LdcApp_TestParams *tObj, uint32_t hidx)
             appObj->createArgs.enablePsa = FALSE;
         }
 
-        if(tObj->isPerformanceTest)
-        {
-            //appObj->createArgs.getTimeStamp = GTC_getCount64;
-        }
-
-        appObj->cbPrms.cbFxn   = AppLdcFrameComplCb;
+        appObj->cbPrms.cbFxn   = AppLdc_frameComplCb;
         appObj->cbPrms.appData = appObj;
 
         appObj->handle = Fvid2_create(FVID2_VHWA_M2M_LDC_DRV_ID,
@@ -412,7 +407,7 @@ int32_t AppLdc_SetParams(LdcApp_TestParams *tObj, uint32_t hidx)
             VHWA_LDC_IFR_OUTOFBOUND | VHWA_LDC_INT_SZOVF |
             VHWA_LDC_SL2_WR_ERR | VHWA_LDC_VBUSM_RD_ERR;
 
-        errPrms.cbFxn = AppLdcErrorCb;
+        errPrms.cbFxn = AppLdc_errorCb;
 
         errPrms.appData = appObj;
 
@@ -423,7 +418,7 @@ int32_t AppLdc_SetParams(LdcApp_TestParams *tObj, uint32_t hidx)
     if (FVID2_SOK == status)
     {
         wdTimererrEvtPrms.WdTimererrEvents = VHWA_LDC_WDTIMER_ERR;
-        wdTimererrEvtPrms.cbFxn = AppLdcWdtimerErrorCb;
+        wdTimererrEvtPrms.cbFxn = AppLdc_wdtimerErrorCb;
         wdTimererrEvtPrms.appData = appObj;
         status = Fvid2_control(appObj->handle,
             VHWA_M2M_IOCTL_LDC_REGISTER_WDTIMER_ERR_CB, &wdTimererrEvtPrms, NULL);
@@ -857,7 +852,7 @@ int32_t AppLdc_WaitForComplRequest(LdcApp_TestParams *tObj, uint32_t hIdx)
     inFrmList = &appObj->inFrmList;
     outFrmList = &appObj->outFrmList;
 
-    if((0u == appObj->errStat) && (0u == appObj->wdTimerErrStatus))
+    if(0u == appObj->errStat)
     {
         status = Fvid2_getProcessedRequest(appObj->handle,
             inFrmList, outFrmList, 0);
@@ -915,6 +910,8 @@ static void AppLdc_Test(LdcApp_TestParams *tObj)
     uint32_t           rCnt;
     uint32_t           inFrameSize;
     uint32_t           outFrameSize;
+    uint64_t                timeCount;
+    uint64_t                perf;
 
     status = AppLdc_Create(tObj, 0U);
     if (FVID2_SOK != status)
@@ -938,6 +935,11 @@ static void AppLdc_Test(LdcApp_TestParams *tObj)
         /* Move Buffer Index */
         gLdcTestSrcBufFreeIdx += inFrameSize;
         gLdcTestDstBufFreeIdx += outFrameSize;
+    }
+
+    if(tObj->isPerformanceTest)
+    {
+        timeCount = ClockP_getTimeUsec();
     }
 
     for (rCnt = 0u; (rCnt < tObj->repeatCnt) && (FVID2_SOK == status); rCnt ++)
@@ -970,7 +972,23 @@ static void AppLdc_Test(LdcApp_TestParams *tObj)
             DebugP_log (" Completed RepeatCnt %d\n", rCnt);
         }
     }
+    if(tObj->isPerformanceTest)
+    {
+        timeCount = ClockP_getTimeUsec() - timeCount;
+        DebugP_log ("Performance:\n\t FrameCount: %d: Time in uSec: %d\n",
+                    tObj->repeatCnt, timeCount);
 
+        perf = (uint64_t)tObj->testCfg[0]->inWidth
+                *(uint64_t)tObj->testCfg[0]->inHeight
+                *(uint64_t)tObj->repeatCnt;
+
+        DebugP_log("Width %d\n",(uint64_t)tObj->testCfg[0]->inWidth);
+        DebugP_log("Height %d\n",(uint64_t)tObj->testCfg[0]->inHeight);
+
+        DebugP_log ("\t MPix/s: %d.%d\n",
+            (uint32_t)(perf/timeCount),
+                (uint32_t)(((perf*(uint64_t)100)/timeCount)%100));
+    }
     AppLdc_Delete(tObj, 0U);
 }
 
@@ -997,7 +1015,7 @@ static int32_t LdcApp_init(void)
         if(UDMA_SOK != status)
         {
             DebugP_log("[Error] UDMA prms init failed!!\n");
-            status = FVID2_EFAIL;
+            status = UDMA_EFAIL;
         }
         udmaInitPrms.instId = UDMA_INST_ID_0;
         udmaInitPrms.enableUtc = UTRUE;
@@ -1005,7 +1023,7 @@ static int32_t LdcApp_init(void)
         if(UDMA_SOK != status)
         {
             DebugP_log("[Error] UDMA init failed!!\n");
-            status = FVID2_EFAIL;
+            status = UDMA_EFAIL;
         }
     }
 
@@ -1016,12 +1034,10 @@ static int32_t LdcApp_init(void)
 
 static void LdcApp_deInit(void)
 {
-    //int32_t         status;
     Udma_DrvHandle  drvHandle = &gLdcAppUdmaDrvObj;
 
     Vhwa_m2mLdcDeInit();
 
-    //status = Udma_deinit(drvHandle);
     Udma_deinit(drvHandle);
 
     Fvid2_deInit(NULL);

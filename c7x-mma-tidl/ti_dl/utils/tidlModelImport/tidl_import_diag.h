@@ -343,6 +343,15 @@ extern TIDL_ImportDiagnostics gDiags;
 diags.emplace_back(TIDL_ModelDiagnostic::DK_NotSupported, TIDL_ModelDiagnostic::DK_Magenta, "%s UNSUPPORTED: " Message " -- [%s, %d]", __MODULE__,  ##__VA_ARGS__, __FILE__, __LINE__);\
 }
 
+#define TIDL_LOG_UNSUPPORTED_AT(diags, index, Message, ...) {\
+    TIDL_ModelDiagnostic newDiag(TIDL_ModelDiagnostic::DK_NotSupported, TIDL_ModelDiagnostic::DK_Magenta, "%s UNSUPPORTED: " Message " -- [%s, %d]", __MODULE__, ##__VA_ARGS__, __FILE__, __LINE__); \
+    if (index >= 0 && index < diags.size()) {\
+        diags[index] = newDiag;\
+    } else { \
+        diags.emplace_back(newDiag); \
+    } \
+  }
+
 /* push log reports to a DiagList_t variable: */
 /* Macro for supported layers/inputs/parameters */
 #define TIDL_LOG_SUPPORTED(diags, Message, ...) {\

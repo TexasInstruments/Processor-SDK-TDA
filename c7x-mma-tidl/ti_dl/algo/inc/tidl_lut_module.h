@@ -63,13 +63,18 @@
 #ifndef LUT_MODULE_H_
 #define LUT_MODULE_H_ 1
 
-#include "c7x.h"
+#include <c7x.h>
+#include <cmath>
 #include "tidl_types.h"
 #include "tidl_alg_int.h"
 #include "tidl_commonUtils.h"
 #include "tidl_mathlib_utils.h"
-#include <cmath>
 #include "tidl_layerNorm.h"
+
+#if defined(__C7604__)
+#include "bfloat16.h"
+#endif
+
 #define TABLE_SIZE_8BIT 256
 #define TABLE_SIZE_16BIT 65536
 
@@ -97,7 +102,7 @@ const c7x::uchar_vec TIDL_vperm_data_dp_interweave = (const c7x::uchar_vec)(0, 1
 
 #define TIDL_LOGIT_CLIP_MIN (0.000009999999747378752f)
 
-#if defined (__C7524__)
+#if defined (__C7524__) || defined (__C7604__)
 static inline void TIDL_ILUTInit(int8_t * restrict pData)
 {
   for(int32_t i = 0; i < TABLE_SIZE_8BIT; i++)
@@ -463,6 +468,245 @@ int32_t TIDL_tanh_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_
 }
 
 template <class Tin, class Tout>
+int32_t TIDL_softplus_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
+{
+  int32_t status = TIDL_SUCCESS;
+  float32_tidl inValF, outValF, expOut;
+  const Tin * inData = NULL;
+  inData = (const Tin *) dataIn;
+  Tout * outData = (Tout *) dataOut;
+  inValF = ((float32_tidl)*inData - (float32_tidl)Zx) * (1.0f/Sx);
+
+  
+  expOut = (float32_tidl)exp_taylor(inValF);
+  outValF = (float32_tidl)MATHLIB_ln(expOut + 1.0f);
+
+  int32_t outMin = 0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = 0;
+  outMax = std::numeric_limits<Tout>::max();
+  #ifdef BUILD_WITH_OPENACC_DEPRECATED
+    int32_t outValInt = (int32_t)((outValF * Sy) + (float32_tidl)Zy);
+  #else
+    int32_t outValInt = __float_to_int((outValF * Sy) + (float32_tidl)Zy);
+  #endif
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+  /* LDRA_JUSTIFY_END */
+  *outData   = (Tout)outValInt;
+  return status;
+}
+
+template <class Tin, class Tout>
+int32_t TIDL_softsign_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
+{
+  int32_t status = TIDL_SUCCESS;
+  float32_tidl inValF, outValF, absInValF;
+  const Tin * inData = NULL;
+  inData = (const Tin *) dataIn;
+  Tout * outData = (Tout *) dataOut;
+  inValF = ((float32_tidl)*inData - (float32_tidl)Zx) * (1.0f/Sx);
+  absInValF = (inValF < 0.0f) ? (-1.0f * inValF) : inValF;
+
+  outValF = (float32_tidl)(inValF / (absInValF + 1.0f));
+  int32_t outMin = 0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = 0;
+  outMax = std::numeric_limits<Tout>::max();
+  #ifdef BUILD_WITH_OPENACC_DEPRECATED
+    int32_t outValInt = (int32_t)((outValF * Sy) + (float32_tidl)Zy);
+  #else
+    int32_t outValInt = __float_to_int((outValF * Sy) + (float32_tidl)Zy);
+  #endif
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+  /* LDRA_JUSTIFY_END */
+  *outData   = (Tout)outValInt;
+  return status;
+}
+
+template <class Tin, class Tout>
+int32_t TIDL_ceil_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
+{
+  int32_t status = TIDL_SUCCESS;
+  float32_tidl inValF, outValF;
+  const Tin * inData = NULL;
+  inData = (const Tin *) dataIn;
+  Tout * outData = (Tout *) dataOut;
+  inValF = ((float32_tidl)*inData - (float32_tidl)Zx) * (1.0f/Sx);
+  if (inValF == (int32_t)inValF) {
+    outValF = inValF;  // Already an integer
+  } else if (inValF > 0) {
+      outValF = (int32_t)inValF + 1;  // Round up for positive
+  } else {
+      outValF = (int32_t)inValF;  // Truncation gives ceiling for negative
+  }
+
+  float32_tidl float_zy = (float32_tidl)Zy;
+  float64_tidl double_out = (float64_tidl)outValF*Sy;
+  int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+  
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
+  *outData   = (Tout)outValInt;
+  return status;
+}
+
+template <class Tin, class Tout>
+int32_t TIDL_celu_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
+{
+  int32_t status = TIDL_SUCCESS;
+  float32_tidl inValF, outValF, outValF1, outValF2;
+  const Tin * inData = NULL;
+  inData = (const Tin *) dataIn;
+  Tout * outData = (Tout *) dataOut;
+  inValF = ((float32_tidl)*inData - (float32_tidl)Zx) * (1.0f/Sx);
+  
+  outValF1 = inValF < 0.0f ? 0.0f : inValF;
+  outValF2 = inValF < 0.0f ? param1*(std::exp(inValF/param1)-1) : 0.0f;
+  outValF = outValF1 + outValF2;
+
+  float32_tidl float_zy = (float32_tidl)Zy;
+  float64_tidl double_out = (float64_tidl)outValF*Sy;
+  int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
+  *outData   = (Tout)outValInt;
+  return status;
+}
+
+template <class Tin, class Tout>
+int32_t TIDL_selu_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
+{
+  int32_t status = TIDL_SUCCESS;
+  float32_tidl inValF, outValF;
+  const Tin * inData = NULL;
+  inData = (const Tin *) dataIn;
+  Tout * outData = (Tout *) dataOut;
+  inValF = ((float32_tidl)*inData - (float32_tidl)Zx) * (1.0f/Sx);
+  
+  outValF = inValF <= 0.0 ? param2 * (param1 * std::exp(inValF) - param1) : (param2 * inValF);
+
+  float32_tidl float_zy = (float32_tidl)Zy;
+  float64_tidl double_out = (float64_tidl)outValF*Sy;
+  int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
+  *outData   = (Tout)outValInt;
+  return status;
+}
+
+template <class Tin, class Tout>
+int32_t TIDL_round_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
+{
+  int32_t status = TIDL_SUCCESS;
+  float32_tidl inValF, outValF;
+  const Tin * inData = NULL;
+  inData = (const Tin *) dataIn;
+  Tout * outData = (Tout *) dataOut;
+  inValF = ((float32_tidl)*inData - (float32_tidl)Zx) * (1.0f/Sx);
+
+  int32_t integerPart = (int32_t)(std::abs(inValF));
+  float32_tidl fractionalPart = std::abs(inValF) - (float32_tidl)integerPart;
+  if (fractionalPart < 0.5f)
+  {
+    // Round down
+    outValF = (float32_tidl)integerPart;
+  } 
+  else if (fractionalPart > 0.5f) 
+  {
+    // Round up
+    outValF = (float32_tidl)integerPart + 1.0f;
+  } 
+  else 
+  {
+    // Exactly half - round to nearest even
+    if (integerPart % 2 == 0) {
+        // Even number, round down
+        outValF = (float32_tidl)integerPart;
+    } else {
+        // Odd number, round up to make it even
+        outValF = (float32_tidl)integerPart + 1.0f;
+    }
+  }
+  outValF = inValF < 0.0 ? (float32_tidl)outValF * (-1.0f) : (float32_tidl)outValF;
+  float32_tidl float_zy = (float32_tidl)Zy;
+  float64_tidl double_out = (float64_tidl)outValF*Sy;
+  int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
+  *outData   = (Tout)outValInt;
+  return status;
+}
+
+template <class Tin, class Tout>
+int32_t TIDL_sign_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
+{
+  int32_t status = TIDL_SUCCESS;
+  float32_tidl inValF, outValF;
+  const Tin * inData = NULL;
+  inData = (const Tin *) dataIn;
+  Tout * outData = (Tout *) dataOut;
+  inValF = ((float32_tidl)*inData - (float32_tidl)Zx) * (1.0f/Sx);
+
+  if(inValF != 0.0)
+  {
+    outValF = inValF > 0.0 ? 1.0 : -1.0;
+  }
+  else
+  {
+    outValF = 0.0;
+  }
+
+  int32_t outMin = 0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = 0;
+  outMax = std::numeric_limits<Tout>::max();
+  int32_t outValInt = float_to_int_c7x((outValF*Sy)+(float32_tidl)Zy);
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+  /* LDRA_JUSTIFY_END */
+  *outData   = (Tout)outValInt;
+  return status;
+}
+
+
+template <class Tin, class Tout>
 int32_t TIDL_sinh_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
 {
   int32_t status = TIDL_SUCCESS;
@@ -582,10 +826,23 @@ int32_t TIDL_hardSigmoid_nonLut(const void* dataIn, void* dataOut, int32_t Zx, f
   float32_tidl float_zy = (float32_tidl)Zy;
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+  /* LDRA_JUSTIFY_END */
   *outData   = (Tout)outValInt;
   return status;
 }
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template <class Tin, class Tout>
 int32_t TIDL_asin_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
 {
@@ -607,11 +864,21 @@ int32_t TIDL_asin_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_
   float32_tidl float_zy = (float32_tidl)Zy;
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData = (Tout)outValInt;
 
   return status;
 }
+#endif
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template <class Tin, class Tout>
 int32_t TIDL_acos_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
 {
@@ -626,10 +893,19 @@ int32_t TIDL_acos_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_
   outValF = MATHLIB_acos(inValF);
 
   int32_t outValInt = float_to_int_c7x((outValF*Sy)+(float32_tidl)Zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData = (Tout)outValInt;
 
   return status;
 }
+#endif
 
 template <class Tin, class Tout>
 int32_t TIDL_atan_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
@@ -645,11 +921,25 @@ int32_t TIDL_atan_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_
   outValF = MATHLIB_atan(inValF);
 
   int32_t outValInt = float_to_int_c7x((outValF*Sy)+(float32_tidl)Zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+  /* LDRA_JUSTIFY_END */
+
   *outData = (Tout)outValInt;
 
   return status;
 }
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template <class Tin, class Tout>
 int32_t TIDL_asinh_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
 {
@@ -671,10 +961,19 @@ int32_t TIDL_asinh_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32
   float32_tidl float_zy = (float32_tidl)Zy;
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData = (Tout)outValInt;
 
   return status;
 }
+#endif
 
 template <class Tin, class Tout>
 int32_t TIDL_hardswish_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
@@ -703,6 +1002,14 @@ int32_t TIDL_hardswish_nonLut(const void* dataIn, void* dataOut, int32_t Zx, flo
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   //Modified from round to float_to_int_c7x to match with CI flow
   int32_t outValInt = (int32_t)float_to_int_c7x((float32_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData   = (Tout)outValInt;
   return status;
 }
@@ -749,6 +1056,7 @@ int32_t TIDL_swish_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32
   return status;
 }
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template <class Tin, class Tout>
 int32_t TIDL_mish_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
 {
@@ -769,10 +1077,20 @@ int32_t TIDL_mish_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_
   float32_tidl float_zy = (float32_tidl)Zy;
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData   = (Tout)outValInt;
   return status;
 }
+#endif
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template <class Tin, class Tout>
 int32_t TIDL_log_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
 {
@@ -793,9 +1111,18 @@ int32_t TIDL_log_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_t
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   //Modified from round to float_to_int_c7x to match with CI flow
   int32_t outValInt = (int32_t)float_to_int_c7x((float32_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData   = (Tout)outValInt;
   return status;
 }
+#endif
 
 template <class Tin, class Tout>
 int32_t TIDL_abs_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
@@ -814,6 +1141,18 @@ int32_t TIDL_abs_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_t
   float32_tidl float_zy = (float32_tidl)Zy;
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+  /* LDRA_JUSTIFY_END */
   *outData   = (Tout)outValInt;
   return status;
 }
@@ -836,10 +1175,19 @@ int32_t TIDL_floor_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32
   float32_tidl float_zy = (float32_tidl)Zy;
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData   = (Tout)outValInt;
   return status;
 }
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template <class Tin, class Tout>
 int32_t TIDL_exp_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
 {
@@ -860,9 +1208,18 @@ int32_t TIDL_exp_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_t
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   //Modified from round to float_to_int_c7x to match with CI flow
   int32_t outValInt = (int32_t)float_to_int_c7x((float32_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData   = (Tout)outValInt;
   return status;
 }
+#endif
 
 template <class Tin, class Tout>
 int32_t TIDL_sin_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
@@ -884,6 +1241,18 @@ int32_t TIDL_sin_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_t
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   //Modified from round to float_to_int_c7x to match with CI flow
   int32_t outValInt = (int32_t)float_to_int_c7x((float32_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+  /* LDRA_JUSTIFY_END */
   *outData   = (Tout)outValInt;
   return status;
 }
@@ -903,10 +1272,23 @@ int32_t TIDL_cos_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_t
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   //Modified from round to float_to_int_c7x to match with CI flow
   int32_t outValInt = (int32_t)float_to_int_c7x((float32_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+  /* LDRA_JUSTIFY_END */
   *outData   = (Tout)outValInt;
   return status;
 }
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template <class Tin, class Tout>
 int32_t TIDL_tan_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
 {
@@ -922,9 +1304,18 @@ int32_t TIDL_tan_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_t
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   //Modified from round to float_to_int_c7x to match with CI flow
   int32_t outValInt = (int32_t)float_to_int_c7x((float32_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData   = (Tout)outValInt;
   return status;
 }
+#endif
 
 template <class Tin, class Tout>
 int32_t TIDL_erf_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
@@ -941,6 +1332,14 @@ int32_t TIDL_erf_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_t
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   //Modified from round to float_to_int_c7x to match with CI flow
   int32_t outValInt = (int32_t)float_to_int_c7x((float32_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData   = (Tout)outValInt;
   return status;
 }
@@ -965,10 +1364,24 @@ int32_t TIDL_sqrt_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   //Modified from round to float_to_int_c7x to match with CI flow
   int32_t outValInt = (int32_t)float_to_int_c7x((float32_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+  /* LDRA_JUSTIFY_END */
+
   *outData   = (Tout)outValInt;
   return status;
 }
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template <class Tin, class Tout>
 int32_t TIDL_pow_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
 {
@@ -988,9 +1401,18 @@ int32_t TIDL_pow_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_t
   float32_tidl float_zy = (float32_tidl)Zy;
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData   = (Tout)outValInt;
   return status;
 }
+#endif
 
 template <class Tin, class Tout>
 int32_t TIDL_neg_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
@@ -1007,10 +1429,23 @@ int32_t TIDL_neg_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_t
   float32_tidl float_zy = (float32_tidl)Zy;
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+  /* LDRA_JUSTIFY_END */
   *outData   = (Tout)outValInt;
   return status;
 }
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template <class Tin, class Tout>
 int32_t TIDL_logit_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
 {
@@ -1041,10 +1476,20 @@ int32_t TIDL_logit_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32
   float64_tidl double_out = (float64_tidl)outValF*Sy;
 
   int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData   = (Tout)outValInt;
   return status;
 }
+#endif
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template <class Tin, class Tout>
 int32_t TIDL_reciprocal_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
 {
@@ -1074,10 +1519,20 @@ int32_t TIDL_reciprocal_nonLut(const void* dataIn, void* dataOut, int32_t Zx, fl
   float32_tidl float_zy = (float32_tidl)Zy;
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData   = (Tout)outValInt;
   return status;
 }
+#endif
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template <class Tin, class Tout>
 int32_t TIDL_silu_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
 {
@@ -1104,9 +1559,18 @@ int32_t TIDL_silu_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_
   float32_tidl float_zy = (float32_tidl)Zy;
   float64_tidl double_out = (float64_tidl)outValF*Sy;
   int32_t outValInt = (int32_t)round((float64_tidl)double_out + float_zy);
+
+  int32_t outMin = (int32_t)0;
+  outMin = std::numeric_limits<Tout>::lowest();
+  int32_t outMax = (int32_t)0;
+  outMax = std::numeric_limits<Tout>::max();
+  outValInt = (outValInt > outMax)? outMax : outValInt;
+  outValInt = (outValInt < outMin)? outMin : outValInt;
+
   *outData   = (Tout)outValInt;
   return status;
 }
+#endif
 
 template int32_t TIDL_gelu_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_gelu_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1153,6 +1617,7 @@ template int32_t TIDL_hardSigmoid_nonLut<int16_t, int16_t>(const void* dataIn, v
 template int32_t TIDL_hardSigmoid_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_hardSigmoid_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template int32_t TIDL_asin_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_asin_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_asin_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1161,7 +1626,9 @@ template int32_t TIDL_asin_nonLut<int16_t, uint16_t>(const void* dataIn, void* d
 template int32_t TIDL_asin_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_asin_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_asin_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+#endif
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template int32_t TIDL_asinh_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_asinh_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_asinh_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1170,6 +1637,7 @@ template int32_t TIDL_asinh_nonLut<int16_t, uint16_t>(const void* dataIn, void* 
 template int32_t TIDL_asinh_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_asinh_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_asinh_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+#endif
 
 template int32_t TIDL_hardswish_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_hardswish_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1189,6 +1657,7 @@ template int32_t TIDL_swish_nonLut<int16_t, int16_t>(const void* dataIn, void* d
 template int32_t TIDL_swish_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_swish_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template int32_t TIDL_mish_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_mish_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_mish_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1197,7 +1666,9 @@ template int32_t TIDL_mish_nonLut<int16_t, uint16_t>(const void* dataIn, void* d
 template int32_t TIDL_mish_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_mish_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_mish_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+#endif
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template int32_t TIDL_log_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_log_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_log_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1206,7 +1677,9 @@ template int32_t TIDL_log_nonLut<int16_t, uint16_t>(const void* dataIn, void* da
 template int32_t TIDL_log_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_log_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_log_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+#endif
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template int32_t TIDL_pow_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_pow_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_pow_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1215,6 +1688,7 @@ template int32_t TIDL_pow_nonLut<int16_t, uint16_t>(const void* dataIn, void* da
 template int32_t TIDL_pow_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_pow_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_pow_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+#endif
 
 template int32_t TIDL_sin_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_sin_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1225,6 +1699,7 @@ template int32_t TIDL_sin_nonLut<int16_t, int16_t>(const void* dataIn, void* dat
 template int32_t TIDL_sin_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_sin_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template int32_t TIDL_exp_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_exp_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_exp_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1233,6 +1708,7 @@ template int32_t TIDL_exp_nonLut<int16_t, uint16_t>(const void* dataIn, void* da
 template int32_t TIDL_exp_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_exp_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_exp_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+#endif
 
 template int32_t TIDL_floor_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_floor_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1270,6 +1746,7 @@ template int32_t TIDL_sqrt_nonLut<int16_t, int16_t>(const void* dataIn, void* da
 template int32_t TIDL_sqrt_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_sqrt_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template int32_t TIDL_acos_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_acos_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_acos_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1278,6 +1755,7 @@ template int32_t TIDL_acos_nonLut<int16_t, uint16_t>(const void* dataIn, void* d
 template int32_t TIDL_acos_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_acos_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_acos_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+#endif
 
 template int32_t TIDL_atan_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_atan_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1315,6 +1793,7 @@ template int32_t TIDL_cosh_nonLut<int16_t, int16_t>(const void* dataIn, void* da
 template int32_t TIDL_cosh_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_cosh_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template int32_t TIDL_tan_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_tan_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_tan_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1323,6 +1802,7 @@ template int32_t TIDL_tan_nonLut<int16_t, uint16_t>(const void* dataIn, void* da
 template int32_t TIDL_tan_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_tan_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_tan_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+#endif
 
 template int32_t TIDL_neg_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_neg_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1333,6 +1813,7 @@ template int32_t TIDL_neg_nonLut<int16_t, int16_t>(const void* dataIn, void* dat
 template int32_t TIDL_neg_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_neg_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template int32_t TIDL_logit_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_logit_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_logit_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1341,7 +1822,9 @@ template int32_t TIDL_logit_nonLut<int16_t, uint16_t>(const void* dataIn, void* 
 template int32_t TIDL_logit_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_logit_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_logit_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+#endif
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template int32_t TIDL_reciprocal_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_reciprocal_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_reciprocal_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1350,7 +1833,9 @@ template int32_t TIDL_reciprocal_nonLut<int16_t, uint16_t>(const void* dataIn, v
 template int32_t TIDL_reciprocal_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_reciprocal_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_reciprocal_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+#endif
 
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
 template int32_t TIDL_silu_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_silu_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_silu_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
@@ -1359,6 +1844,70 @@ template int32_t TIDL_silu_nonLut<int16_t, uint16_t>(const void* dataIn, void* d
 template int32_t TIDL_silu_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_silu_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_silu_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+#endif
+
+template int32_t TIDL_softplus_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softplus_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softplus_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softplus_nonLut<uint8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softplus_nonLut<int16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softplus_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softplus_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softplus_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+template int32_t TIDL_softsign_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softsign_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softsign_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softsign_nonLut<uint8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softsign_nonLut<int16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softsign_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softsign_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_softsign_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+template int32_t TIDL_ceil_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_ceil_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_ceil_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_ceil_nonLut<uint8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_ceil_nonLut<int16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_ceil_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_ceil_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_ceil_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+template int32_t TIDL_celu_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_celu_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_celu_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_celu_nonLut<uint8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_celu_nonLut<int16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_celu_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_celu_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_celu_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+template int32_t TIDL_selu_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_selu_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_selu_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_selu_nonLut<uint8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_selu_nonLut<int16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_selu_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_selu_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_selu_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+template int32_t TIDL_round_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_round_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_round_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_round_nonLut<uint8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_round_nonLut<int16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_round_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_round_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_round_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+template int32_t TIDL_sign_nonLut<int8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_sign_nonLut<int8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_sign_nonLut<uint8_t, uint8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_sign_nonLut<uint8_t, int8_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_sign_nonLut<int16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_sign_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_sign_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_sign_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 
 #endif /* LUT_MODULE_H_ */
 

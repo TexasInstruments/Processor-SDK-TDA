@@ -41,6 +41,7 @@ FILES_common := \
     DebugP_shmLogReader_freertos.c \
     TaskP_freertos.c \
     EventP_freertos.c \
+    MailboxP_freertos.c \
     event_groups.c \
     tasks.c \
     timers.c \
@@ -74,14 +75,14 @@ FILES_PATH_common = \
     ../nortos/dpl/common \
     dpl/common \
     dpl/a53 \
-    FreeRTOS-Kernel-smp/ \
-    FreeRTOS-Kernel-smp/portable/MemMang \
+    FreeRTOS-Kernel/ \
+    FreeRTOS-Kernel/portable/MemMang \
     FreeRTOS-POSIX/FreeRTOS-Plus-POSIX/source/ \
     portable_smp/GCC/ARM_CA53 \
 
 INCLUDES_common := \
     -I${MCU_PLUS_SDK_PATH}/source \
-    -IFreeRTOS-Kernel-smp/include \
+    -IFreeRTOS-Kernel/include \
     -Iportable_smp/GCC/ARM_CA53 \
     -Iconfig/am62ax/a53-smp \
     -IFreeRTOS-POSIX/include \
@@ -92,6 +93,8 @@ INCLUDES_common := \
 DEFINES_common := \
     -DSOC_AM62AX \
     -DSMP_FREERTOS \
+    -DSMP_QUADCORE_FREERTOS \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mcpu=cortex-a53+fp+simd \

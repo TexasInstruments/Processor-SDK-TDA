@@ -108,13 +108,13 @@ static uint32_t gConfigCount = 0;
 #define TIDL_CFG_MAX_LINE_SIZE (3000)
 
 #if (HOST_EMULATION)
-#if defined (__C7100__) || defined (__C7120__)
+#if defined (__C7100__) || defined (__C7120__) 
 #include <c7x.h>
 #endif /* __C7100__ */
 #define _TSC_read() //
 #include <time.h>
 #else
-#if defined (__C7100__) || defined (__C7120__)
+#if defined (__C7100__) || defined (__C7120__) 
 #include <c7x.h>
 #endif /* __C7100__ */
 #define _TSC_read() __TSC;
@@ -483,6 +483,7 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
     printIOTensorInfo(&gIOParams);
     firstOutWrite  = 1;
 
+#if (!BUILD_WITH_STATIC_ARRAYS)
     if(strlen((char *)params->traceDumpBaseName) == 0)
     {
 #if defined(_A72_BUILD) || defined(HOST_EMULATION)
@@ -505,6 +506,7 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
       addPlatSuffix((char *)params->traceDumpBaseName);
     }
 
+#endif
     if ((params->postProcType == 4) && (totalInsts > 1))
     {
       params->postProcType = 3;
@@ -536,6 +538,7 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
     params->writeBinsAsHeader = 0;
     localOffset = tidl_getStaticOffset(tidl_tb_net);
     prms.netPtr = (sTIDL_Network_t *)(tidl_tb_net + localOffset);
+    prms.ioBufDescPtr = &gIOParams;
         //tidl_tb_printf(0,"NetPtr Assigned\n");
 #else
     tidlModelSize = tidl_getFileSize(params->netBinFile);
@@ -601,8 +604,10 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
     prms.maxPreEmptDelay               = params->maxPreEmptDelay;
 #if (!BUILD_WITH_STATIC_ARRAYS)
     prms.net_capacity				      = tidlModelSize;
-#endif
     prms.io_capacity				      = tidlIOSize;
+#else
+    prms.io_capacity				      = sizeof(sTIDL_IOBufDesc_t) ; 
+#endif
     prms.targetPriority           = params->targetPriority;
     prms.coreNum                  = params->coreNum;
     prms.coreStartIdx             = params->coreStartIdx;
@@ -970,13 +975,14 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
               break;
             }
           }
-
+#ifndef SOC_TDA54
           if(prms.stats != NULL)
           {
             tidl_tb_printf(0, "\n# NETWORK_EXECUTION_TIME = %8.2f (in ms, c7x @1GHz) with DDR_BANDWIDTH (Read + Write) = %8.2f, %8.2f, %8.2f (in Mega Bytes/frame)",
               total_time/params->numItrPerf, read_bytes_total/params->numItrPerf, write_bytes_total/params->numItrPerf,
               (read_bytes_total+write_bytes_total)/params->numItrPerf);
           }
+#endif
 
           if(status == IALG_EOK)
           {

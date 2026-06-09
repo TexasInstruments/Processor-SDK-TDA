@@ -1072,10 +1072,10 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
       }
       /*L3 scratch memory allocation*/
       /*Each element is trated as int, so total bytes = maxConfPlaneSize*4, andone bit for each byte. SO total bytes  = maxConfPlaneSize*4/8*/
-      algDetLyrParams->pred = (long long *)TIDL_getMemoryChunkFromSysmem(sysMems, (uint32_t)(maxConfPlaneSize + 63) >> (uint32_t)1, 128U, TIDL_SYSMEM_L3_SCRATCH, IALG_SCRATCH);
+      algDetLyrParams->pred = (int64_t *)TIDL_getMemoryChunkFromSysmem(sysMems, (uint32_t)(maxConfPlaneSize + 63) >> (uint32_t)1, 128U, TIDL_SYSMEM_L3_SCRATCH, IALG_SCRATCH);
       if (algDetLyrParams->pred == NULL)
       {
-        algDetLyrParams->pred = (long long *)TIDL_getMemoryChunkFromSysmem(sysMems, (uint32_t)(maxConfPlaneSize + 63) >> (uint32_t)1, 128U, TIDL_SYSMEM_DDR_SCRATCH, IALG_SCRATCH);
+        algDetLyrParams->pred = (int64_t *)TIDL_getMemoryChunkFromSysmem(sysMems, (uint32_t)(maxConfPlaneSize + 63) >> (uint32_t)1, 128U, TIDL_SYSMEM_DDR_SCRATCH, IALG_SCRATCH);
         if (algDetLyrParams->pred == NULL)
         {
           tidl_printf(0, "Not enough memory to allocate mmaHandleArgsMem for pred\n");
@@ -1240,47 +1240,20 @@ void TIDL_topKAllClassesSelection(const sTIDL_DetectOutputParams_t *params, cons
           }
         }
       }
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_START
-  <metric start> statement branch <metric end>
-  <justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this code.
-  <justification end> */
-#endif
       if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_MINSCORE)
       {
         minScore = (int16_t)scoreTh - 1;
       }
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_END */
-#endif
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_START
-  <metric start> branch <metric end>
-  <justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this code.
-  <justification end> */
-#endif
       if (minScore >= scoreTh)
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_END */
-#endif
       {
         curClsScore = &algDetLyrParams->topMScoreSorted[algDetLyrParams->countMListAcc[clsMin]];
         curClsScore[minScoreIdx] = 0xFFFF;
       }
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_START
-  <metric start> statement branch <metric end>
-  <justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this code.
-  <justification end> */
-#endif
       else
       {
         /*Control should  not have come here. As all the scores greater than or equal to scoreTh reaches here*/
         tidl_printf(0, "minScore is not higher than threshold = %f, %f \n", minScore, scoreTh);
       }
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_END */
-#endif
     }
     for (cls = 0; cls < params->numClasses; cls++)
     {
@@ -1314,26 +1287,11 @@ void TIDL_sparseLocDataFetchiX(sTIDL_DetectOutputParams_t *params, sTIDL_ALgDete
     func_ptr = TIDL_sparseLocDataFetch<int8_t>;
     func_ptr(params, algDetLyrParams, anchorBox, curClass, countK);
   }
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_START
-  <metric start> branch <metric end>
-  <justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this code.
-  <justification end> */
-#endif
   else if (algDetLyrParams->elementType == TIDL_SignedShort)
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_END */
-#endif
   {
     func_ptr = TIDL_sparseLocDataFetch<int16_t>;
     func_ptr(params, algDetLyrParams, anchorBox, curClass, countK);
   }
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_START
-  <metric start> statement branch <metric end>
-  <justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this code.
-  <justification end> */
-#endif
   else
   {
     #ifdef HOST_EMULATION
@@ -1342,9 +1300,6 @@ void TIDL_sparseLocDataFetchiX(sTIDL_DetectOutputParams_t *params, sTIDL_ALgDete
     #endif
     /* do nothing*/
   }
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_END */
-#endif
 }
 
 /**
@@ -1756,34 +1711,16 @@ void TIDL_objOuputPreperationiX(sTIDL_DetectOutputParams_t *params, sTIDL_ALgDet
     func_ptr1 = TIDL_objOuputPreperation<int8_t>;
     func_ptr1(params, algDetLyrParams, priorData, objData, keepKCnt, numDet, cls);
   }
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_START
-  <metric start> branch <metric end>
-  <justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this code.
-  <justification end> */
-#endif
   else if (algDetLyrParams->elementType == TIDL_SignedShort)
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_END */
-#endif
   {
     func_ptr1 = TIDL_objOuputPreperation<int16_t>;
     func_ptr1(params, algDetLyrParams, priorData, objData, keepKCnt, numDet, cls);
   }
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_START
-  <metric start> statement branch <metric end>
-  <justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this code.
-  <justification end> */
-#endif
   else
   {
     func_ptr1 = TIDL_objOuputPreperation<float32_tidl>;
     func_ptr1(params, algDetLyrParams, priorData, objData, keepKCnt, numDet, cls);
   }
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_END */
-#endif
 }
 
 /**

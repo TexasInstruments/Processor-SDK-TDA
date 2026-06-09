@@ -45,6 +45,7 @@ const libdirs_freertos_wkup_r5f = {
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/rm_pm_hal/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciclient_direct/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/self_reset/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib",
     ],
 };
 
@@ -75,6 +76,7 @@ const libs_freertos_dm_r5f = {
         "sciserver.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "self_reset.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "rm_pm_hal.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
     ],
 };
 
@@ -83,6 +85,12 @@ const lnkfiles = {
         "linker.cmd",
     ]
 };
+
+const defines_dm_r5f = {
+    common:[
+        "ENABLE_SCICLIENT_DIRECT",
+    ]
+}
 
 const syscfgfile = "../example.syscfg";
 
@@ -181,6 +189,7 @@ function getComponentBuildProperty(buildOption) {
         build_property.libdirs = libdirs_freertos_wkup_r5f;
         build_property.libs = libs_freertos_dm_r5f;
         build_property.templates = templates_freertos_wkup_r5f;
+        build_property.defines = defines_dm_r5f;
     }
 
     return build_property;

@@ -141,8 +141,9 @@ int FF_FS_Add( const char * pcPath,
             if( xUseIndex >= ( BaseType_t ) 0 )
             {
                 iReturn = pdTRUE;
-                strncpy( file_systems.xSystems[ xUseIndex ].pcPath, pcPath, sizeof( file_systems.xSystems[ xUseIndex ].pcPath ) );
-                file_systems.xSystems[ xUseIndex ].xPathlen = uxPathLength;
+                strncpy( file_systems.xSystems[ xUseIndex ].pcPath, pcPath, sizeof( file_systems.xSystems[ xUseIndex ].pcPath ) - 1 );
+                file_systems.xSystems[ xUseIndex ].pcPath[ sizeof( file_systems.xSystems[ xUseIndex ].pcPath ) - 1 ] = 0;
+                file_systems.xSystems[ xUseIndex ].xPathlen = ( BaseType_t ) uxPathLength;
                 file_systems.xSystems[ xUseIndex ].pxManager = pxDisk->pxIOManager;
             }
         }

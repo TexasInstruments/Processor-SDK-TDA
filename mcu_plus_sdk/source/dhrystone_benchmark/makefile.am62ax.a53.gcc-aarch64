@@ -23,14 +23,17 @@ FILES_PATH_common = \
 
 INCLUDES_common := \
     -I${MCU_PLUS_SDK_PATH}/source \
+    -I${MCU_PLUS_SDK_PATH}/source/kernel/freertos/FreeRTOS-Kernel/include \
+    -I${MCU_PLUS_SDK_PATH}/source/kernel/freertos/portable/GCC/ARM_CA53 \
+    -I${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am62ax/a53 \
     -I${MCU_PLUS_SDK_PATH}/source/kernel/freertos/FreeRTOS-POSIX/include \
     -I${MCU_PLUS_SDK_PATH}/source/kernel/freertos/FreeRTOS-POSIX/include/private \
     -I${MCU_PLUS_SDK_PATH}/source/kernel/freertos/FreeRTOS-POSIX/FreeRTOS-Plus-POSIX/include \
     -I${MCU_PLUS_SDK_PATH}/source/kernel/freertos/FreeRTOS-POSIX/FreeRTOS-Plus-POSIX/include/portable \
-    -I${MCU_PLUS_SDK_PATH}/source/kernel/freertos/FreeRTOS-POSIX/include/FreeRTOS_POSIX \
 
 DEFINES_common := \
     -DSOC_AM62AX \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mcpu=cortex-a53+fp+simd \
@@ -47,6 +50,9 @@ CFLAGS_common := \
     -Wno-unused-but-set-variable \
     -fdata-sections \
     -ffunction-sections \
+    -O3 \
+    -march=armv8-a \
+    -Wno-unused-variable \
 
 CFLAGS_debug := \
     -D_DEBUG_=1 \

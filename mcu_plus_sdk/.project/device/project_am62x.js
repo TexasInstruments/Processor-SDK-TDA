@@ -9,13 +9,35 @@ const component_file_list = [
     "source/drivers/device_manager/sciclient_direct/.project/project.js",
     "source/drivers/device_manager/sciclient_direct/sbl/.project/project.js",
     "source/drivers/device_manager/sciserver/.project/project.js",
+    "source/dhrystone_benchmark/.project/project.js",
     "source/fs/freertos_fat/.project/project.js",
     "source/kernel/freertos/.project/project.js",
     "source/kernel/nortos/.project/project.js",
+    "source/networking/enet/.project/project_cpsw.js",
+    "source/networking/enet/.project/project_cpsw_lwipif_freertos.js",
+    "source/networking/lwip/.project/project_contrib_freertos.js",
+    "source/networking/lwip/.project/project_stack_freertos.js",
+    "source/networking/mbedtls_library/.project/project.js",
+    "source/networking/tsn/.project/project_tsn_combase.js",
+    "source/networking/tsn/.project/project_tsn_gptp.js",
+    "source/networking/tsn/.project/project_tsn_unibase.js",
+    "source/networking/tsn/.project/project_tsn_uniconf.js",
+
     "source/sdl/.project/project.js",
     "source/sdl/sdl_sbl/.project/project.js",
+    "source/safety_checkers/.project/project.js",
     "test/unity/.project/project.js",
-    ".internal/docs/api_guide/doxy_samples/.project/project.js",
+    "test/kernel/smp_tests/disable_multiple_priorities/configs/.project/project.js",
+    "test/kernel/smp_tests/disable_preemption/configs/.project/project.js",
+    "test/kernel/smp_tests/interrupt_wait_critical/configs/.project/project.js",
+    "test/kernel/smp_tests/only_one_task_enter_critical/configs/.project/project.js",
+    "test/kernel/smp_tests/only_one_task_enter_suspendall/configs/.project/project.js",
+    "test/kernel/smp_tests/schedule_affinity/configs/.project/project.js",
+    "test/kernel/smp_tests/schedule_equal_priority/configs/.project/project.js",
+    "test/kernel/smp_tests/schedule_highest_priority/configs/.project/project.js",
+    "test/kernel/smp_tests/suspend_scheduler/configs/.project/project.js",
+    "test/kernel/smp_tests/task_delete/configs/.project/project.js",
+    "docs_src/docs/api_guide/doxy_samples/.project/project.js",
 ];
 
 // List of components where makefile is not generated.
@@ -23,6 +45,7 @@ const component_file_list_with_makefile = [
     "source/drivers/device_manager/dm_stub/.project/project.js",
     "source/drivers/device_manager/rm_pm_hal/.project/project.js",
     "source/drivers/device_manager/rm_pm_hal/sbl/.project/project.js",
+    "source/atf/.project/project.js",
 ];
 
 const device_defines = {
@@ -32,8 +55,21 @@ const device_defines = {
 };
 
 const example_file_list = [
+    "examples/benchmarks/coremark_pro_benchmark/cjpeg-rose7-preset/.project/project.js",
+    "examples/benchmarks/coremark_pro_benchmark/core/.project/project.js",
+    "examples/benchmarks/coremark_pro_benchmark/linear_alg-mid-100x100-sp/.project/project.js",
+    "examples/benchmarks/coremark_pro_benchmark/loops-all-mid-10k-sp/.project/project.js",
+    "examples/benchmarks/coremark_pro_benchmark/nnet_test/.project/project.js",
+    "examples/benchmarks/coremark_pro_benchmark/parser-125k/.project/project.js",
+    "examples/benchmarks/coremark_pro_benchmark/radix2-big-64k/.project/project.js",
+    "examples/benchmarks/coremark_pro_benchmark/sha-test/.project/project.js",
+    "examples/benchmarks/coremark_pro_benchmark/zip-test/.project/project.js",
+    "examples/benchmarks/dhrystone_benchmark/.project/project.js",
+    "examples/benchmarks/interrupt_latency_benchmark/.project/project.js",
     "examples/drivers/boot/sbl_emmc_linux_multistage/sbl_emmc_linux_stage1/.project/project.js",
     "examples/drivers/boot/sbl_emmc_linux_multistage/sbl_emmc_linux_stage2/.project/project.js",
+    "examples/drivers/boot/sbl_emmc_multistage/sbl_emmc_stage1/.project/project.js",
+    "examples/drivers/boot/sbl_emmc_multistage/sbl_emmc_stage2/.project/project.js",
     "examples/drivers/boot/sbl_gpmc_nand_linux_multistage/sbl_gpmc_nand_linux_stage1/.project/project.js",
     "examples/drivers/boot/sbl_gpmc_nand_linux_multistage/sbl_gpmc_nand_linux_stage2/.project/project.js",
     "examples/drivers/boot/sbl_null/.project/project.js",
@@ -41,15 +77,28 @@ const example_file_list = [
     "examples/drivers/boot/sbl_ospi_linux_multistage/sbl_ospi_linux_stage2/.project/project.js",
     "examples/drivers/boot/sbl_ospi_nand_linux_multistage/sbl_ospi_nand_linux_stage1/.project/project.js",
     "examples/drivers/boot/sbl_ospi_nand_linux_multistage/sbl_ospi_nand_linux_stage2/.project/project.js",
-    // "examples/drivers/boot/sbl_sd/.project/project.js",
+    "examples/drivers/boot/sbl_ospi_nand_multistage/sbl_ospi_nand_stage1/.project/project.js",
+    "examples/drivers/boot/sbl_ospi_nand_multistage/sbl_ospi_nand_stage2/.project/project.js",
+    "examples/drivers/boot/sbl_ospi_multistage/sbl_ospi_stage1/.project/project.js",
+    "examples/drivers/boot/sbl_ospi_multistage/sbl_ospi_stage2/.project/project.js",
+    "examples/drivers/boot/sbl_sd/.project/project.js",
     "examples/drivers/boot/sbl_uart/.project/project.js",
     "examples/drivers/boot/sbl_uart_linux/.project/project.js",
     "examples/drivers/boot/sbl_uart_uniflash_multistage/sbl_uart_uniflash_stage1/.project/project.js",
     "examples/drivers/boot/sbl_uart_uniflash_multistage/sbl_uart_uniflash_stage2/.project/project.js",
     "examples/drivers/ddr/ddr_ecc_test_main_esm/.project/project.js",
     "examples/drivers/ddr/ddr_ecc_test_mcu_esm/.project/project.js",
+    "examples/drivers/ddr/ddr_perf/.project/project.js",
     "examples/drivers/dss/dss_colorbar_test/.project/project.js",
     "examples/drivers/dss/dss_display_test/.project/project.js",
+    "examples/drivers/dss/dss_safety_test/.project/project.js",
+    "examples/drivers/ecap/ecap_apwm_mode/.project/project.js",
+    "examples/drivers/ecap/ecap_epwm_loopback/.project/project.js",
+    "examples/drivers/epwm/epwm_duty_cycle/.project/project.js",
+    "examples/drivers/epwm/epwm_duty_cycle_sync/.project/project.js",
+    "examples/drivers/eqep/eqep_capture/.project/project.js",
+    "examples/drivers/eqep/eqep_frequency_measurement/.project/project.js",
+    "examples/drivers/eqep/eqep_position_speed/.project/project.js",
     "examples/drivers/gpio/gpio_led_blink/.project/project.js",
     "examples/drivers/gpio/gpio_input_interrupt/.project/project.js",
     "examples/drivers/gpmc/gpmc_flash_io/.project/project.js",
@@ -62,15 +111,26 @@ const example_file_list = [
     "examples/drivers/ipc/ipc_rpmsg_echo_qnx/.project/project.js",
     "examples/drivers/mcan/mcan_loopback_polling/.project/project.js",
     "examples/drivers/mcan/mcan_loopback_interrupt/.project/project.js",
+    "examples/drivers/mcasp/mcasp_loopback/.project/project.js",
+    "examples/drivers/mcasp/mcasp_playback_codec_aic31/.project/project.js",
+    "examples/drivers/mcasp/mcasp_loopback_ext_hclk/.project/project.js",
     "examples/drivers/mcspi/mcspi_loopback/.project/project.js",
+    "examples/drivers/mcspi/mcspi_loopback_dma/.project/project.js",
     "examples/drivers/mcspi/mcspi_performance_8bit/.project/project.js",
     "examples/drivers/mcspi/mcspi_performance_32bit/.project/project.js",
     "examples/drivers/mmcsd/mmcsd_raw_io/.project/project.js",
+    "examples/drivers/mmcsd/mmcsd_file_io/.project/project.js",
     "examples/drivers/ospi/ospi_flash_io/.project/project.js",
+    "examples/drivers/ospi/ospi_flash_diag/.project/project.js",
+    "examples/drivers/pmu/pmu_multievent/.project/project.js",
+    "examples/drivers/rtc/rtc_led_blink/.project/project.js",
     "examples/drivers/safety/mcu_bist_result/.project/project.js",
     "examples/drivers/safety/reset_isolation/.project/project.js",
     "examples/drivers/sciclient/sciclient_get_version/.project/project.js",
+    "examples/drivers/spinlock/spinlock_example/.project/project.js",
     "examples/drivers/uart/uart_echo/.project/project.js",
+    "examples/drivers/uart/uart_echo_dma/.project/project.js",
+    "examples/drivers/uart/uart_echo_dma_multi_instance/.project/project.js",
     "examples/drivers/uart/uart_echo_callback/.project/project.js",
     "examples/drivers/uart/uart_echo_low_latency_interrupt/.project/project.js",
     "examples/drivers/uart/uart_echo_low_latency_polling/.project/project.js",
@@ -78,51 +138,124 @@ const example_file_list = [
     "examples/drivers/udma/udma_memcpy_interrupt/.project/project.js",
     "examples/drivers/udma/udma_chaining/.project/project_am62x.js",
     "examples/drivers/udma/udma_sw_trigger/.project/project_am62x.js",
+    "examples/drivers/watchdog/watchdog_interrupt/.project/project.js",
     "examples/empty/.project/project_freertos.js",
     "examples/empty/.project/project_nortos.js",
     "examples/hello_world/.project/project.js",
     "examples/hello_world_cpp/.project/project.js",
     "examples/kernel/dpl/dpl_demo/.project/project.js",
+    "examples/kernel/freertos/memcpy_benchmark/.project/project.js",
     "examples/kernel/freertos/posix_demo/.project/project.js",
     "examples/kernel/freertos/task_switch/.project/project.js",
+    "examples/kernel/freertos/dhrystone_benchmark/.project/project.js",
+    "examples/kernel/freertos/smp_task_switch/.project/project.js",
+    "examples/lpm/lpm_mcu_mcan_wakeup/.project/project.js",
+    "examples/lpm/lpm_mcu_dmtimer_wakeup/.project/project.js",
+    "examples/lpm/lpm_mcu_uart_wakeup/.project/project.js",
     "examples/otp/ext_otp/.project/project.js",
+    "examples/otp/runtime_keyrev/.project/project.js",
+    "examples/safety/safety_app/.project/project.js",
+    "examples/security/fwl_exception_log/.project/project.js",
+    "examples/security/fwl_exception_trigger/.project/project.js",
+    "source/networking/enet/core/examples/enet_loopback/enet_cpsw_loopback/loopback_phy_end/.project/project.js",
+    "source/networking/enet/core/examples/enet_loopback/enet_cpsw_loopback/loopback_mac_end/.project/project.js",
+    "source/networking/enet/core/examples/lwip/enet_lwip_cpsw/.project/project.js",
+    "source/networking/enet/core/examples/lwip/cpsw_lwip_https/.project/project.js",
+    "source/networking/enet/core/examples/lwip/enet_cpsw_tcpclient/.project/project.js",
+    "source/networking/enet/core/examples/lwip/enet_cpsw_socket/.project/project.js",
+    "source/networking/enet/core/examples/lwip/enet_cpsw_tcpserver/.project/project.js",
+    "source/networking/enet/core/examples/lwip/enet_cpsw_udp_igmp/.project/project.js",
+    "source/networking/enet/core/examples/lwip/enet_cpsw_udpclient/.project/project.js",
+    "source/networking/enet/core/examples/enet_layer2_cpsw/.project/project.js",
+    "source/networking/enet/core/examples/enet_layer2_cpsw_switch/.project/project.js",
+    "source/networking/enet/core/examples/enet_cpsw_est/.project/project.js",
+    "source/networking/enet/core/examples/tsn/gptp_cpsw_app/.project/project.js",
+    "source/networking/enet/core/examples/tsn/gptp_lwip_cpsw/.project/project.js",
+    "source/networking/enet/core/test/enet_cpsw_iet/loopback_phy_end/.project/project.js",
 
     // Driver/Kernel tests
+    "test/board/flash/.project/project.js",
+    "test/drivers/boot/sbl_emmc_linux_multistage_falcon_mode/sbl_emmc_linux_stage1/.project/project.js",
+    "test/drivers/boot/sbl_emmc_linux_multistage_falcon_mode/sbl_emmc_linux_stage2/.project/project.js",
+    "test/drivers/boot/sbl_ospi_linux_multistage_ddr_ecc/sbl_ospi_linux_stage1/.project/project.js",
+    "test/drivers/boot/sbl_ospi_linux_multistage_ddr_ecc/sbl_ospi_linux_stage2/.project/project.js",
+    "test/drivers/boot/sbl_ospi_nand_linux_multistage_ddr_ecc/sbl_ospi_nand_linux_stage1/.project/project.js",
+    "test/drivers/boot/sbl_ospi_nand_linux_multistage_ddr_ecc/sbl_ospi_nand_linux_stage2/.project/project.js",
+    "test/drivers/boot/sbl_test_ddr_copy/.project/project.js",
+    "test/drivers/boot/sbl_uart_custom_boardconfig/.project/project.js",
+    "test/drivers/device_manager/sciclient_direct/.project/project.js",
+    "test/drivers/device_manager/sciclient_tisci_msg/.project/project.js",
+    "test/drivers/device_manager/dm_trace_config/.project/project.js",
+    "test/drivers/dss/dss_dpi_interface/.project/project.js",
+    "test/drivers/dss/dss_oldi_interface/.project/project.js",
+    "test/drivers/ecap/.project/project.js",
+    "test/drivers/epwm/.project/project.js",
     "test/drivers/gpio/.project/project.js",
+    "test/drivers/gpmc/.project/project.js",
+    "test/drivers/gtc/.project/project.js",
     "test/drivers/i2c/.project/project.js",
-    "test/drivers/sciclient/.project/project.js",
+    "test/drivers/rtc/.project/project.js",
+    "test/drivers/sciclient/sciclient_get_version/.project/project.js",
+    "test/drivers/sciclient/sciclient_interrupt_mode/.project/project.js",
     "test/drivers/ipc_notify/.project/project.js",
     "test/drivers/ipc_rpmsg/.project/project.js",
-    "test/drivers/mmcsd/.project/project.js",
+    "test/drivers/mcasp/mcasp_auxclk_sel/.project/project.js",
+    "test/drivers/mcasp/mcasp_start_stop_test/.project/project.js",
+    "test/drivers/mcasp/mcasp_multiinst_loopback/.project/project.js",
+    "test/drivers/mcspi/mcspi/.project/project.js",
+    "test/drivers/mmcsd/test_mmcsd_raw_io/.project/project.js",
+    "test/drivers/ospi/.project/project.js",
+    "test/drivers/pinmux_coverage/.project/project.js",
+    "test/drivers/soc_coverage/.project/project.js",
     "test/drivers/uart/.project/project.js",
     "test/kernel/dpl/.project/project.js",
     "test/kernel/freertos/.project/project.js",
+    "test/kernel/freertos_smp/.project/project.js",
+    "test/kernel/test_smp_kernel/.project/project.js",
+    "test/kernel/smp_tests/disable_multiple_priorities/.project/project.js",
+    "test/kernel/smp_tests/disable_preemption/.project/project.js",
+    "test/kernel/smp_tests/interrupt_wait_critical/.project/project.js",
+    "test/kernel/smp_tests/only_one_task_enter_critical/.project/project.js",
+    "test/kernel/smp_tests/only_one_task_enter_suspendall/.project/project.js",
+    "test/kernel/smp_tests/schedule_affinity/.project/project.js",
+    "test/kernel/smp_tests/schedule_equal_priority/.project/project.js",
+    "test/kernel/smp_tests/schedule_highest_priority/.project/project.js",
+    "test/kernel/smp_tests/suspend_scheduler/.project/project.js",
+    "test/kernel/smp_tests/task_delete/.project/project.js",
 
     // SDL Examples and Tests
     "examples/sdl/dcc/dcc_modes/.project/project.js",
     "examples/sdl/ecc/.project/project.js",
+    "examples/sdl/ecc_r5f_cache/.project/project.js",
+    "examples/sdl/ecc_sec/.project/project.js",
+    "examples/sdl/ecc_tcm/.project/project.js",
     "examples/sdl/esm/mcu_esm0/.project/project.js",
     "examples/sdl/mcrc/mcrc_full_cpu/.project/project.js",
+    "examples/sdl/mcrc/mcrc_auto/.project/project.js",
+    "examples/sdl/mcrc/mcrc_semi_cpu/.project/project.js",
     "examples/sdl/mtog/mtog_example/.project/project.js",
     "examples/sdl/pbist/pbist_mpu/.project/project.js",
     "examples/sdl/pok/pok_mcu/.project/project.js",
+    "examples/sdl/rom_checksum/.project/project.js",
     "examples/sdl/rti/UC1/.project/project.js",
     "examples/sdl/rti/UC2/.project/project.js",
     "examples/sdl/rti/UC3/.project/project.js",
     "examples/sdl/rti/UC4/.project/project.js",
     "examples/sdl/stog/.project/project.js",
     "examples/sdl/stog_r5f/.project/project.js",
+    "examples/sdl/vtm/vtm_reset/.project/project.js",
     "examples/sdl/vtm/vtm_uc/.project/project.js",
-    "examples/security/fwl_exception_log/.project/project.js",
-    "examples/security/fwl_exception_trigger/.project/project.js",
     "test/sdl/dcc/dcc_unit_test/.project/project.js",
     "test/sdl/dcc/dcc_func_test/.project/project.js",
     "test/sdl/ecc/ecc_sdl_funcTest/.project/project.js",
+    "test/sdl/ecc/ecc_sdl_unitTest/.project/project.js",
     "test/sdl/esm/esm_func_test/.project/project.js",
     "test/sdl/esm/esm_unit_test/.project/project.js",
     "test/sdl/lbist/.project/project.js",
     "test/sdl/mcrc/mcrcFuncTest/.project/project.js",
     "test/sdl/mcrc/mcrcUt/.project/project.js",
+    "test/sdl/mcrc/mcrcAutomodeTest/.project/project.js",
+  	"test/sdl/mcrc/mcrcSemimodeTest/.project/project.js",
     "test/sdl/mtog/mtog_functest/.project/project.js",
     "test/sdl/mtog/mtog_unit_test/.project/project.js",
     "test/sdl/pbist/ip_pbist_test/.project/project.js",
@@ -133,10 +266,18 @@ const example_file_list = [
     "test/sdl/stog/stog_func_test_r5f_1/.project/project.js",
     "test/sdl/stog/stog_func_test_r5f_2/.project/project.js",
     "test/sdl/stog/stog_unit_test/.project/project.js",
+    "test/sdl/rom_checksum/functional_test/.project/project.js",
+    "test/sdl/rom_checksum/unit_test/.project/project.js",
     "test/sdl/rti/rtiUt/.project/project.js",
     "test/sdl/rti/rtiFuncTest/.project/project.js",
     "test/sdl/vtm/vtm_func_test/.project/project.js",
     "test/sdl/vtm/vtm_unit_test/.project/project.js",
+
+    // Safety checkers Examples
+    "source/safety_checkers/examples/pm_checkers_app/.project/project.js",
+    "source/safety_checkers/examples/pm_checkers_warm_reset/.project/project.js",
+	"source/safety_checkers/examples/rm_checkers_app/.project/project.js",
+    "source/safety_checkers/examples/tifs_checkers_app/.project/project.js",
 ];
 
 function getIsDMR5Supported()
@@ -173,7 +314,14 @@ function getExampleList() {
 }
 
 function getSysCfgDevice(board) {
-    return "AM62x";
+    if (board == "am62x-sip-sk")
+    {
+        return "AM62SIP";
+    }
+    else
+    {
+        return "AM62x";
+    }
 }
 
 function getProjectSpecDevice(board) {
@@ -185,7 +333,19 @@ function getSysCfgCpu(cpu) {
 }
 
 function getSysCfgPkg(board) {
-    return "ALW";
+    if (board == "am62x-sk-lp")
+    {
+        return "AMC";
+    }
+    else if (board == "am62x-sip-sk")
+    {
+        return "AMK";
+    }
+    else
+    {
+        return "ALW";
+    }
+
 }
 
 function getSysCfgPart(board) {
@@ -193,7 +353,10 @@ function getSysCfgPart(board) {
 }
 
 function getDevToolTirex(board) {
-    return "AM62x_SK_EVM";
+    return [
+        "SK-AM62B",
+        "SK-AM62B-P1",
+    ];
 }
 
 function getProperty() {
@@ -219,6 +382,13 @@ function getProductNameProjectSpec() {
     return "MCU_PLUS_SDK_AM62X";
 }
 
+function getTirexId() {
+    return "com.ti.MCU_PLUS_SDK_AM62X";
+}
+function getSdkOpn() {
+    return "MCU-PLUS-SDK-AM62X";
+}
+
 function getFlashAddr() {
     return 0x60000000;
 }
@@ -237,6 +407,8 @@ module.exports = {
     getProperty,
     getLinuxFwName,
     getProductNameProjectSpec,
+    getTirexId,
     getFlashAddr,
+    getSdkOpn,
     getIsDMR5Supported,
 };

@@ -89,7 +89,7 @@ extern "C" {
  *                    configurations.
  *  \return           None
  */
-void CSL_nfSetConfig(CSL_vpac_nfRegs *nfRegs, const Nf_Config *config);
+void CSL_nfSetConfig(CSL_vpac_nfRegs *nfRegs, const Nf_Config *cfg);
 
 /**
  *  \brief Sets the tables for NF (Both Bilateral and generic filter)
@@ -100,7 +100,7 @@ void CSL_nfSetConfig(CSL_vpac_nfRegs *nfRegs, const Nf_Config *config);
  *  \return           Returns 0 on success else returns error value
  */
 int32_t CSL_nfSetWgtTableConfig(CSL_vpac_nfRegs *nfRegs,
-                                            const Nf_WgtTableConfig *config);
+                                            const Nf_WgtTableConfig *cfg);
 
 /**
  *  \brief Update the NF configuration for Luma and Chroma component. This
@@ -112,7 +112,7 @@ int32_t CSL_nfSetWgtTableConfig(CSL_vpac_nfRegs *nfRegs,
  *                    configurations.
  *  \return           None
  */
-void CSL_nfUpdateConfig(CSL_vpac_nfRegs *nfRegs, const Nf_Config *config);
+void CSL_nfUpdateConfig(CSL_vpac_nfRegs *nfRegs, const Nf_Config *cfg);
 
 
 #ifdef __cplusplus

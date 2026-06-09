@@ -65,9 +65,9 @@
 const vector<TidlConstraint> tidlConstraintExpand = 
 {
     TIDL_CSTR(
-        "Number of non-singleton variable input dimensions in Sum/Add/Mul/Sub/Div/Max must be less than <= 6",
-        "Number of non-singleton variable input dimensions in Sum/Add/Mul/Sub/Div/Max must be less than <= 6",
-        "Number of non-singleton variable input dimensions in Add/Mul/Sub/Div must be less than <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;

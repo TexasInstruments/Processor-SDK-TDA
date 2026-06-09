@@ -64,8 +64,8 @@
 
 const vector<TidlConstraint> tidlConstraintEltwise = {
     TIDL_CSTR(
-        "Only 2 inputs are supported in Add/Mul/Sub/Div/Max/Min layers",
-        "Only 2 inputs are supported in Add/Mul/Sub/Div/Max/Min layers",
+        "Only 2 inputs are supported in Add/Mul/Sub/Div/Max/Min/Sum/Mod layers",
+        "Only 2 inputs are supported in Add/Mul/Sub/Div/Max/Min/Sum/Mod layers",
         "Only 2 inputs are supported in Add/Mul/Sub/Div layers",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
@@ -75,11 +75,11 @@ const vector<TidlConstraint> tidlConstraintEltwise = {
             }
             return true;
         }
-    ),        
+    ),
     TIDL_CSTR(
-        "Number of non-singleton variable input dimensions in Sum/Add/Mul/Sub/Div/Max must be less than <= 6",
-        "Number of non-singleton variable input dimensions in Sum/Add/Mul/Sub/Div/Max must be less than <= 6",
-        "Number of non-singleton variable input dimensions in Add/Mul/Sub/Div must be less than <= 6",
+        "Number of non-singleton variable input dimensions in Add/Mul/Sub/Div/Max/Min/Sum/Mod must be <= 6",
+        "Number of non-singleton variable input dimensions in Add/Mul/Sub/Div/Max/Min/Sum/Mod must be <= 6",
+        "Number of non-singleton variable input dimensions in Add/Mul/Sub/Div must be <= 6",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
@@ -96,6 +96,19 @@ const vector<TidlConstraint> tidlConstraintEltwise = {
                     }
                 }
             }
+            return true;
+        }
+    ),
+    TIDL_CSTR(
+        "Mod is not supported as an individual operator",
+        "Mod is not supported as an individual operator",
+        "",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            if(layer->layerParams.eltWiseParams.eltWiseType == TIDL_EltWiseMod)
+            {
+                return false;
+            }
+
             return true;
         }
     ),
@@ -120,73 +133,65 @@ const vector<TidlConstraint> tidlConstraintEltwise = {
         }
     ), 
     TIDL_CSTR(
-        "The variable inputs in Add/Mul/Div/Sub/Max/Min layer must of be same dimensions or broadcast-able",
-        "The variable inputs in Add/Mul/Div/Sub/Max/Min layer must of be same dimensions or broadcast-able",
+        "The variable inputs in Add/Mul/Div/Sub/Max/Min/Sum/Mod layer must of be same dimensions or broadcast-able",
+        "The variable inputs in Add/Mul/Div/Sub/Max/Min/Sum/Mod layer must of be same dimensions or broadcast-able",
         "The variable inputs in Add/Mul/Div/Sub layer must of be same dimensions or broadcast-able",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
 
             if(md.varTensorIndices.size() == 2) //2 variable inputs
             {
-                auto oper = layer->layerParams.eltWiseParams.eltWiseType;
-                if ((oper == TIDL_EltWiseSum) || (oper == TIDL_EltWiseProduct) || (oper == TIDL_EltWiseDiv) || (oper == TIDL_EltWiseSub) || (oper == TIDL_EltWiseMax) || (oper == TIDL_EltWiseMin))
+                bool isEltwise = true;
+                if (md.varTensorsDims[0].size() == md.varTensorsDims[1].size()) /* must be same dimensions */
                 {
-                    bool isEltwise = true;
-                    if (md.varTensorsDims[0].size() == md.varTensorsDims[1].size()) /* must be same dimensions */
+                    int32_t heightDim = md.varTensorsDims[0].size() - 2;
+                    int32_t widthDim = md.varTensorsDims[0].size() - 1;
+
+                    for (int32_t idx = 0; idx < md.varTensorsDims[0].size(); idx++)
                     {
-                        int32_t heightDim = md.varTensorsDims[0].size() - 2;
-                        int32_t widthDim = md.varTensorsDims[0].size() - 1;
-
-                        for (int32_t idx = 0; idx < md.varTensorsDims[0].size(); idx++)
+                        if (md.varTensorsDims[0][idx] != md.varTensorsDims[1][idx])
                         {
-                            if (md.varTensorsDims[0][idx] != md.varTensorsDims[1][idx])
+                            /*
+                            special case for allowing NCHW x NC11
+                            only possible mismatch is height & width both are mismatching and both are 1
+                            */
+                            /*Identify which tensor needs to be broadcasted*/
+                            int32_t broadCastTensorIdx = -1;
+                            if(md.varTensorsDims[0][idx] == 1)
                             {
-                                /*
-                                special case for allowing NCHW x NC11
-                                only possible mismatch is height & width both are mismatching and both are 1
-                                */
-                                /*Identify which tensor needs to be broadcasted*/
-                                int32_t broadCastTensorIdx = -1;
-                                if(md.varTensorsDims[0][idx] == 1)
-                                {
-                                    broadCastTensorIdx = 0;
-                                }
-                                else if(md.varTensorsDims[1][idx] == 1)
-                                {
-                                    broadCastTensorIdx = 1;
-                                }
-                                else
-                                {
-                                /*In this case tensor dimensions are genuinely mismatching*/
-                                    broadCastTensorIdx = -1;
-                                }
+                                broadCastTensorIdx = 0;
+                            }
+                            else if(md.varTensorsDims[1][idx] == 1)
+                            {
+                                broadCastTensorIdx = 1;
+                            }
+                            else
+                            {
+                            /*In this case tensor dimensions are genuinely mismatching*/
+                                broadCastTensorIdx = -1;
+                            }
 
-                                /*Firmware specific check to control allowlisting for broadcast mul (Available in Firmware > 09_02_06_00)*/
-                                if(strcmp("09_02_06_00",(char*)gParams.c7xFirmwareVersion) == 0)
-                                {
-                                    isEltwise = false;
-                                    break;
-                                }
+                            /*Firmware specific check to control allowlisting for broadcast mul (Available in Firmware > 09_02_06_00)*/
+                            if(strcmp("09_02_06_00",(char*)gParams.c7xFirmwareVersion) == 0)
+                            {
+                                isEltwise = false;
+                                break;
+                            }
 
-                                if( broadCastTensorIdx != -1)
+                            if( broadCastTensorIdx != -1)
+                            {
+                                /*Only broadcast on height & width is allowed with a strict format of NxCx1x1 for the tensor being broadcasted:*/
+                                if ((idx == heightDim )||(idx == widthDim))
                                 {
-                                    /*Only broadcast on height & width is allowed with a strict format of NxCx1x1 for the tensor being broadcasted:*/
-                                    if ((idx == heightDim )||(idx == widthDim))
+                                    if(md.varTensorsDims[broadCastTensorIdx][heightDim] == md.varTensorsDims[broadCastTensorIdx][widthDim] == 1)
                                     {
-                                        if(md.varTensorsDims[broadCastTensorIdx][heightDim] == md.varTensorsDims[broadCastTensorIdx][widthDim] == 1)
-                                        {
-                                            isEltwise = true;
-                                            break;
-                                        }
-                                        else
-                                        {
-                                            isEltwise = false;
-                                            break;
-                                        }
+                                        isEltwise = true;
+                                        break;
                                     }
                                     else
                                     {
                                         isEltwise = false;
+                                        break;
                                     }
                                 }
                                 else
@@ -194,26 +199,30 @@ const vector<TidlConstraint> tidlConstraintEltwise = {
                                     isEltwise = false;
                                 }
                             }
+                            else
+                            {
+                                isEltwise = false;
+                            }
                         }
                     }
-                    /* Not same number of dimensions */
-                    else
-                    {
-                        isEltwise = false;
-                    }
+                }
+                /* Not same number of dimensions */
+                else
+                {
+                    isEltwise = false;
+                }
 
-                    if (!isEltwise)
-                    {
-                        return true;
-                    }
+                if (!isEltwise)
+                {
+                    return true;
                 }
             }
             return true;
         }
     ),
     TIDL_CSTR(
-        "Eltwise operator(Add/Mul/Div/Sub/Max/Min layer) is supported only with operands of similar dimensions or broadcast supported patterns of both inputs",
-        "Eltwise operator(Add/Mul/Div/Sub/Max/Min layer) is supported only with operands of similar dimensions or broadcast supported patterns of both inputs",
+        "Eltwise operator(Add/Mul/Div/Sub/Max/Min/Sum/Mod layer) is supported only with operands of similar dimensions or broadcast supported patterns of both inputs",
+        "Eltwise operator(Add/Mul/Div/Sub/Max/Min/Sum/Mod layer) is supported only with operands of similar dimensions or broadcast supported patterns of both inputs",
         "Eltwise operator(Add/Mul/Div/Sub layer) is supported only with operands of similar dimensions or broadcast supported patterns of both inputs",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
@@ -252,184 +261,180 @@ const vector<TidlConstraint> tidlConstraintEltwise = {
                        )
                     )
                     {
-                        auto oper = layer->layerParams.eltWiseParams.eltWiseType;
-                        if (oper == TIDL_EltWiseProduct || oper == TIDL_EltWiseSum || oper == TIDL_EltWiseMax || oper == TIDL_EltWiseDiv || oper == TIDL_EltWiseSub || oper == TIDL_EltWiseMin)
+                        bool isEltwise = false;
+                        if (md.constTensorsDims.size() == 1 && md.varTensorIndices.size() == 1) //eltwise mul between a variable tensor and constant tensor
                         {
-                            bool isEltwise = false;
-                            if (md.constTensorsDims.size() == 1 && md.varTensorIndices.size() == 1) //eltwise mul between a variable tensor and constant tensor
-                            {
-                                int32_t varTensorNumDims    = md.varTensorsDims[0].size();
-                                int32_t constTensorNumDims  = md.constTensorsDims[0].size();
+                            int32_t varTensorNumDims    = md.varTensorsDims[0].size();
+                            int32_t constTensorNumDims  = md.constTensorsDims[0].size();
 
-                                /* Dimension matching to create a pattern */
-                                /**
-                                 * Store the status of comparison of dims in this array
-                                 * If same and non-singular       => 4
-                                 * If same and singular           => 3
-                                 * not same and one is singular   => 2
-                                 * not same and none is singular  => 1
-                                */
-                                int32_t dimMatchStatus[TIDL_DIM_MAX];
-                                /* Start dim indices from the last i.e., width */
-                                int32_t vIdx = varTensorNumDims-1, cIdx = constTensorNumDims-1;
-                                for (int32_t idx = TIDL_DIM_WIDTH; idx >= 0; idx--)
+                            /* Dimension matching to create a pattern */
+                            /**
+                             * Store the status of comparison of dims in this array
+                             * If same and non-singular       => 4
+                             * If same and singular           => 3
+                             * not same and one is singular   => 2
+                             * not same and none is singular  => 1
+                            */
+                            int32_t dimMatchStatus[TIDL_DIM_MAX];
+                            /* Start dim indices from the last i.e., width */
+                            int32_t vIdx = varTensorNumDims-1, cIdx = constTensorNumDims-1;
+                            for (int32_t idx = TIDL_DIM_WIDTH; idx >= 0; idx--)
+                            {
+                                /* reset comaprison status */
+                                dimMatchStatus[idx] = 0;
+                                /* check if tensor dim exists */
+                                if ((vIdx >= 0) && (cIdx >= 0))
                                 {
-                                    /* reset comaprison status */
-                                    dimMatchStatus[idx] = 0;
-                                    /* check if tensor dim exists */
-                                    if ((vIdx >= 0) && (cIdx >= 0))
+                                    /* both same */
+                                    if (md.varTensorsDims[0][vIdx] == md.constTensorsDims[0][cIdx])
                                     {
-                                        /* both same */
-                                        if (md.varTensorsDims[0][vIdx] == md.constTensorsDims[0][cIdx])
-                                        {
-                                        /* same and singular */
-                                            if (md.varTensorsDims[0][vIdx] == 1)
-                                            {
-                                                dimMatchStatus[idx] = 3;
-                                            }
-                                            /* same and not singular */
-                                            else
-                                            {
-                                                dimMatchStatus[idx] = 4;
-                                            }
-                                        }
-                                        /* not same */
-                                        else
-                                        {
-                                            /* not same and one of them is singular */
-                                            if ((md.varTensorsDims[0][vIdx] == 1) || (md.constTensorsDims[0][cIdx] == 1))
-                                            {
-                                                dimMatchStatus[idx] = 2;
-                                            }
-                                            /* not same and none is singular */
-                                            else
-                                            {
-                                                dimMatchStatus[idx] = 1;
-                                            }
-                                        }
-                                        vIdx--; cIdx--;
-                                    }
-                                    /* var tensor dim exists, const does not
-                                        this makes certain the corresponding const dim is 1
-                                    */
-                                    else if ((vIdx >= 0) and (cIdx < 0))
-                                    {
-                                        /* singluar and same */
+                                    /* same and singular */
                                         if (md.varTensorsDims[0][vIdx] == 1)
                                         {
                                             dimMatchStatus[idx] = 3;
                                         }
-                                        /* one is singular and not same */
+                                        /* same and not singular */
                                         else
                                         {
-                                            dimMatchStatus[idx] = 2;
+                                            dimMatchStatus[idx] = 4;
                                         }
-                                        vIdx--;
                                     }
-                                    else if ((vIdx < 0) and (cIdx >= 0))
-                                    {
-                                        /* singluar and same */
-                                        if (md.constTensorsDims[0][cIdx] == 1)
-                                        {
-                                            dimMatchStatus[idx] = 3;
-                                        }
-                                        /* one is singular and not same */
-                                        else
-                                        {
-                                            dimMatchStatus[idx] = 2;
-                                        }
-                                        cIdx--;
-                                    }
-                                    /* must be 1 */
+                                    /* not same */
                                     else
                                     {
-                                        /* same and singular */
+                                        /* not same and one of them is singular */
+                                        if ((md.varTensorsDims[0][vIdx] == 1) || (md.constTensorsDims[0][cIdx] == 1))
+                                        {
+                                            dimMatchStatus[idx] = 2;
+                                        }
+                                        /* not same and none is singular */
+                                        else
+                                        {
+                                            dimMatchStatus[idx] = 1;
+                                        }
+                                    }
+                                    vIdx--; cIdx--;
+                                }
+                                /* var tensor dim exists, const does not
+                                    this makes certain the corresponding const dim is 1
+                                */
+                                else if ((vIdx >= 0) and (cIdx < 0))
+                                {
+                                    /* singluar and same */
+                                    if (md.varTensorsDims[0][vIdx] == 1)
+                                    {
                                         dimMatchStatus[idx] = 3;
                                     }
-                                }
-
-
-                                int32_t matchConsolidatedResult = 0;
-                                for(int32_t idx = 0; idx < TIDL_DIM_MAX; idx++)
-                                {
-                                    matchConsolidatedResult = matchConsolidatedResult*10 + dimMatchStatus[idx];
-                                }
-                                /**
-                                * Supported special patterns
-                                * 1x1x1x1x1xW   &   1x1x1x1xHxW    ===> 333324
-                                * 1x1x1x1x1xW   &   1x1x1xCxHxW    ===> 333224
-                                * 1x1x1x1x1xW   &   1x1xD2xCxHxW   ===> 332224
-                                *
-                                * 1x1x1x1xHxW   &   1x1x1xCxHxW    ===> 333244
-                                * 1x1x1x1xHxW   &   1x1xD2xCxHxW   ===> 332244
-                                *
-                                * 1x1x1xCxHxW   &   1x1xD2xCxHxW   ===> 332444
-                                *
-                                * 1x1xD2x1xHxW  &   1x1xD2xCxHxW   ===> 334244
-                                *
-                                * 1x1x1x1xHxW   &   1x1x1x1xHx1    ===> 333342
-                                * 1x1x1xCx1xW   &   1x1x1xCxHxW    ===> 333424
-                                * 1x1xD2xCxHxW  &   1x1xD2xCx1xW   ===> 334424
-                                */
-                                /**
-                                 * TODO: conflict if batch is there with last 2 patterns
-                                 * for e.g. -> 3X3X224 && 4x3x3x224
-                                */
-
-                                std::vector<int32_t> suuportedDimCmp{333324, 333224, 332224, 333234,
-                                                                    333244, 332244,
-                                                                    332444,
-                                                                    334244,
-                                                                    333342,
-                                                                    332344, /* Ex: 2x1xHxW & 1x1xHxW */
-                                                                    332324,  /* Ex: 2x1xHxW & W */
-                                                                    333424,
-                                                                    334424
-                                                                    };
-
-                                for (const int32_t& j: suuportedDimCmp)
-                                {
-                                    if (j == matchConsolidatedResult)
+                                    /* one is singular and not same */
+                                    else
                                     {
-                                        isEltwise = true;
-                                        break;
+                                        dimMatchStatus[idx] = 2;
+                                    }
+                                    vIdx--;
+                                }
+                                else if ((vIdx < 0) and (cIdx >= 0))
+                                {
+                                    /* singluar and same */
+                                    if (md.constTensorsDims[0][cIdx] == 1)
+                                    {
+                                        dimMatchStatus[idx] = 3;
+                                    }
+                                    /* one is singular and not same */
+                                    else
+                                    {
+                                        dimMatchStatus[idx] = 2;
+                                    }
+                                    cIdx--;
+                                }
+                                /* must be 1 */
+                                else
+                                {
+                                    /* same and singular */
+                                    dimMatchStatus[idx] = 3;
+                                }
+                            }
+
+
+                            int32_t matchConsolidatedResult = 0;
+                            for(int32_t idx = 0; idx < TIDL_DIM_MAX; idx++)
+                            {
+                                matchConsolidatedResult = matchConsolidatedResult*10 + dimMatchStatus[idx];
+                            }
+                            /**
+                            * Supported special patterns
+                            * 1x1x1x1x1xW   &   1x1x1x1xHxW    ===> 333324
+                            * 1x1x1x1x1xW   &   1x1x1xCxHxW    ===> 333224
+                            * 1x1x1x1x1xW   &   1x1xD2xCxHxW   ===> 332224
+                            *
+                            * 1x1x1x1xHxW   &   1x1x1xCxHxW    ===> 333244
+                            * 1x1x1x1xHxW   &   1x1xD2xCxHxW   ===> 332244
+                            *
+                            * 1x1x1xCxHxW   &   1x1xD2xCxHxW   ===> 332444
+                            *
+                            * 1x1xD2x1xHxW  &   1x1xD2xCxHxW   ===> 334244
+                            *
+                            * 1x1x1x1xHxW   &   1x1x1x1xHx1    ===> 333342
+                            * 1x1x1xCx1xW   &   1x1x1xCxHxW    ===> 333424
+                            * 1x1xD2xCxHxW  &   1x1xD2xCx1xW   ===> 334424
+                            */
+                            /**
+                             * TODO: conflict if batch is there with last 2 patterns
+                             * for e.g. -> 3X3X224 && 4x3x3x224
+                            */
+
+                            std::vector<int32_t> suuportedDimCmp{333324, 333224, 332224, 333234,
+                                                                333244, 332244,
+                                                                332444,
+                                                                334244,
+                                                                333342,
+                                                                332344, /* Ex: 2x1xHxW & 1x1xHxW */
+                                                                332324,  /* Ex: 2x1xHxW & W */
+                                                                333424,
+                                                                334424
+                                                                };
+
+                            for (const int32_t& j: suuportedDimCmp)
+                            {
+                                if (j == matchConsolidatedResult)
+                                {
+                                    isEltwise = true;
+                                    break;
+                                }
+                                else
+                                {
+
+                                }
+                            }
+
+                            /* Similar dimension are by default supported
+                            to check if similar dimension it is sufficient to check
+                            if all elements in match status are only 3 or 4
+                            */
+                            if (!isEltwise) /* Check only if earlier broadcast checks fail*/
+                            {
+                                int32_t isAllDimSame = 0;
+                                for (int32_t idx = 0; idx < TIDL_DIM_MAX; idx++)
+                                {
+                                    if ((dimMatchStatus[idx] == 3) || (dimMatchStatus[idx] == 4))
+                                    {
+                                        isAllDimSame += 0;  /* Added 0 when a 3 or 4 is found*/
                                     }
                                     else
                                     {
-
+                                        isAllDimSame += 1; /* Becomes non zero whenever something else is encountered*/
                                     }
                                 }
 
-                                /* Similar dimension are by default supported
-                                to check if similar dimension it is sufficient to check
-                                if all elements in match status are only 3 or 4
-                                */
-                                if (!isEltwise) /* Check only if earlier broadcast checks fail*/
+                                if (isAllDimSame == 0)
                                 {
-                                    int32_t isAllDimSame = 0;
-                                    for (int32_t idx = 0; idx < TIDL_DIM_MAX; idx++)
-                                    {
-                                        if ((dimMatchStatus[idx] == 3) || (dimMatchStatus[idx] == 4))
-                                        {
-                                            isAllDimSame += 0;  /* Added 0 when a 3 or 4 is found*/
-                                        }
-                                        else
-                                        {
-                                            isAllDimSame += 1; /* Becomes non zero whenever something else is encountered*/
-                                        }
-                                    }
-
-                                    if (isAllDimSame == 0)
-                                    {
-                                        isEltwise = true;
-                                    }
+                                    isEltwise = true;
                                 }
                             }
+                        }
 
-                            if(!isEltwise)
-                            {
-                                return true;
-                            }
+                        if(!isEltwise)
+                        {
+                            return true;
                         }
                     }
                 }
@@ -499,6 +504,22 @@ const vector<TidlConstraint> tidlConstraintEltwise = {
                     }
                 }
             }
+            return true;
+        }
+    ),
+    TIDL_CSTR(
+        "Only fmod = 1 is supported in Mod layer",
+        "Only fmod = 1 is supported in Mod layer",
+        "",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            if(layer->layerParams.eltWiseParams.eltWiseType == TIDL_EltWiseMod)
+            {
+                if(layer->layerParams.eltWiseParams.fmodValue != 1)
+                {
+                    return false;
+                }
+            }
+
             return true;
         }
     ),

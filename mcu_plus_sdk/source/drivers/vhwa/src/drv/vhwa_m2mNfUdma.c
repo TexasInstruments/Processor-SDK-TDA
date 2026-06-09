@@ -87,7 +87,7 @@ static void Vhwa_nfSetupPacketInfo(uint8_t *pTrPdMem, uint32_t flowId,
  **/
 static void Vhwa_nfSetupTxTr(const Vhwa_M2mNfInstObj *instObj,
                                Vhwa_M2mNfHandleObj *hObj,
-                               uint8_t *pTr,
+                               uint8_t *pTrPdMem,
                                uint32_t compCnt);
 
 /**
@@ -102,7 +102,7 @@ static void Vhwa_nfSetupTxTr(const Vhwa_M2mNfInstObj *instObj,
  **/
 static void Vhwa_nfSetupRxTr(const Vhwa_M2mNfInstObj *instObj,
                                Vhwa_M2mNfHandleObj *hObj,
-                               uint8_t *pTr,
+                               uint8_t *pTrPdMem,
                                uint32_t compCnt);
 
 /* ========================================================================== */

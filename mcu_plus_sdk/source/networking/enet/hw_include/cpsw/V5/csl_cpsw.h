@@ -7,7 +7,7 @@
  *  Contains the different control command and status query functions definations
  *
  *  ============================================================================
- *  @n   (C) Copyright 2014, Texas Instruments, Inc.
+ *  @n   (C) Copyright 2024, Texas Instruments, Inc.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -195,6 +195,12 @@ typedef struct {
 
     /**  Enhanced Scheduled Traffic enable (EST) */
     Uint32      estEnable;
+
+    /**  Intersperced Express Traffic enable (IET) */
+    Uint32      ietEnable;
+
+    /** Cut Thru Switching Enable */
+    Uint32      cutThruEnable;
 } CSL_CPSW_CONTROL;
 
 /** @brief  CPSW_THRU_RATE register
@@ -260,6 +266,12 @@ typedef struct {
       *  1 - Port 0 receive checksum is enabled
       */
     Uint32      p0RxChksumEn;
+
+    /** Port 0 Transmit (port 0 egress) Checksum Enable
+      *  0 - Port 0 receive checksum is disabled
+      *  1 - Port 0 receive checksum is enabled
+      */
+    Uint32      p0TxChksumEn;
 
 } CSL_CPSW_CPPI_P0_CONTROL;
 
@@ -1048,6 +1060,9 @@ typedef struct {
     /** EST Port Enable */
     Uint32      estPortEnable;
 
+    /** IET Port Enable */
+    Uint32      ietPortEnable;
+
     /**  Eneregy Efficient Etherent (EEE) Transmit LPI clockstop enable
          for EMAC port only
          1: The GMII or RGMII transmit clock is stopped in the EEE
@@ -1356,175 +1371,10 @@ typedef struct {
 
 } CSL_CPSW_ALE_POLICER_ENTRY;
 
-/** @brief
- *
- *  Holds the EMAC statistics.
- *
- *  The statistics structure is the used to retrieve the current count
- *  of various packet events in the system. These values represent the
- *  delta values from the last time the statistics were read.
- */
-typedef struct {
-    /** Good Frames Received                      */
-    Uint32      RxGoodFrames;
-
-    /** Good Broadcast Frames Received            */
-    Uint32      RxBCastFrames;
-
-    /** Good Multicast Frames Received            */
-    Uint32      RxMCastFrames;
-
-    /** PauseRx Frames Received                   */
-    Uint32      RxPauseFrames;
-
-    /** Frames Received with CRC Errors           */
-    Uint32      RxCRCErrors;
-
-    /** Frames Received with Alignment/Code Errors*/
-    Uint32      RxAlignCodeErrors;
-
-    /** Oversized Frames Received                 */
-    Uint32      RxOversized;
-
-    /** Jabber Frames Received                    */
-    Uint32      RxJabber;
-
-    /** Undersized Frames Received                */
-    Uint32      RxUndersized;
-
-    /** Rx Frame Fragments Received               */
-    Uint32      RxFragments;
-
-    /** Rx frames dropped by the ALE              */
-    Uint32      RxAleDrop;
-
-    /** Rx overrun frames dropped by the ALE      */
-    Uint32      RxAleOverrunDrop;
-
-    /** Total Received Bytes in Good Frames       */
-    Uint32      RxOctets;
-
-    /** Good Frames Sent                          */
-    Uint32      TxGoodFrames;
-
-    /** Good Broadcast Frames Sent                */
-    Uint32      TxBCastFrames;
-
-    /** Good Multicast Frames Sent                */
-    Uint32      TxMCastFrames;
-
-    /** PauseTx Frames Sent                       */
-    Uint32      TxPauseFrames;
-
-    /** Frames Where Transmission was Deferred    */
-    Uint32      TxDeferred;
-
-    /** Total Frames Sent With Collision          */
-    Uint32      TxCollision;
-
-    /** Frames Sent with Exactly One Collision    */
-    Uint32      TxSingleColl;
-
-    /** Frames Sent with Multiple Colisions       */
-    Uint32      TxMultiColl;
-
-    /** Tx Frames Lost Due to Excessive Collisions*/
-    Uint32      TxExcessiveColl;
-
-    /** Tx Frames Lost Due to a Late Collision    */
-    Uint32      TxLateColl;
-
-    /** Rx inter-packet gap errors (10G only)     */
-    Uint32      RxIpgError;
-
-    /** Tx Frames Lost Due to Carrier Sense Loss  */
-    Uint32      TxCarrierSLoss;
-
-    /** Total Transmitted Bytes in Good Frames    */
-    Uint32      TxOctets;
-
-    /** Total Tx&Rx with Octet Size of 64         */
-    Uint32      Frame64;
-
-    /** Total Tx&Rx with Octet Size of 65 to 127  */
-    Uint32      Frame65t127;
-
-    /** Total Tx&Rx with Octet Size of 128 to 255 */
-    Uint32      Frame128t255;
-
-    /** Total Tx&Rx with Octet Size of 256 to 511 */
-    Uint32      Frame256t511;
-
-    /** Total Tx&Rx with Octet Size of 512 to 1023*/
-    Uint32      Frame512t1023;
-
-    /** Total Tx&Rx with Octet Size of >=1024     */
-    Uint32      Frame1024tUp;
-
-    /** Sum of all Octets Tx or Rx on the Network */
-    Uint32      NetOctets;
-
-    /** Total Rx bottom of FIFO dropped frames    */
-    Uint32      RxDropBottom;
-
-    /** Total dropped frames due to portmask      */
-    Uint32      PortmaskFrop;
-
-    /** Total Rx top of FIFO dropped frames       */
-    Uint32      RxDropTop;
-
-    /** Total dropped frames due to ALE Rate Limiting */
-    Uint32      AleRateLimitDrop;
-
-    /** Total dropped frames due to ALE VID Ingress   */
-    Uint32      AleVidDrop;
-
-    /** Total dropped frames due to DA=SA             */
-    Uint32      AleAddrEqDrop;
-
-    /** Unused Statistics registers                   */
-    Uint32      Resv1[3];
-
-    /** Total ALE Unknown Unicast frames              */
-    Uint32      AleUnKnUni;
-
-    /** Total ALE Unknown Unicast byte count          */
-    Uint32      AleUnKnUniBytes;
-
-    /** Total ALE Unknown Multicast frames            */
-    Uint32      AleUnKnMulti;
-
-    /** Total ALE Unknown Multicast byte count        */
-    Uint32      AleUnKnMultiBytes;
-
-    /** Total ALE Unknown Broadcast frames            */
-    Uint32      AleUnKnBCast;
-
-    /** Total ALE Unknown Broadcast byte count        */
-    Uint32      AleUnKnBCastBytes;
-
-    /** Total ALE Policer Match frames                */
-    Uint32      AlePolMatch;
-
-    /** Unused Statistics registers                   */
-    Uint32      Resv2[46];
-
-    /** Total Tx Memory Protect CRC Error */
-    Uint32      TxMemProtectErr;
-
-    /** Tx Priority [0-7] Packet Count */
-    Uint32      TxPriPktCnt[8];
-
-    /** Tx Priority [0-7] Byte Count */
-    Uint32      TxPriByteCnt[8];
-
-    /** Tx Priority [0-7] Drop packet Count */
-    Uint32      TxPriDropPktCnt[8];
-
-    /** Tx Priority [0-7] Drop byte Count */
-    Uint32      TxPriDropByteCnt[8];
-
-} CSL_CPSW_STATS;
+union CSL_CPSW_STATS {
+    CSL_Xge_cpswP0StatsRegs p0_stats;
+    CSL_Xge_cpswPnStatsRegs pn_stats;
+};
 
 typedef enum {
     CSL_ALE_POLICER_CONTROL_POLICING_MATCH_MODE_NOMATCH_GREEN,
@@ -1759,6 +1609,83 @@ typedef struct {
     Uint32 estOneBuf;
 } CSL_CPSW_EST_CONFIG;
 
+/** @brief
+ *
+ *  Holds the Enet_Pn_IET_Control register contents
+ */
+typedef struct {
+    /** Mac Prempt Queue.
+     *  Indicates which transmit FIFO queues are sent to the prempt MAC.
+     *  Bit 0 indicates queue zero, bit 1 queue 1 and so on.  Packets will
+     *  be sent to the prempt MAC only when pn_mac_penable is set, and when
+     *  mac_verified (from Enet_Pn_IET_Status) or pn_mac_disableverify is set,
+     *  and when pn_iet_port_en is set.
+     */
+    Uint32 macPremptQueue;
+
+    /** Mac Fragment Size.
+     *  An integer in the range 0:7 indicating, as a multiple of 64,
+     *  the minimum additional length for nonfinal mPackets
+     *  0 = 64
+     *  1 = 128
+     *  …
+     *  7 = 512
+     */
+    Uint32 macAddFragSize;
+
+    /** Mac Link Fail.
+     *  Link Fail Indicatior to reset the verifly state machine.
+     *  This bit is reset high.  Verify and response frames will
+     *  be sent/allowed when this bit is cleared.
+     */
+    Uint32 macLinkFail;
+
+    /** Mac Disable Verify.
+     *  Disables verification on the port when set.  If this bit is set
+     *  then packets will be sent to the prempt MAC when mac_penable is set
+     *  (This is a forced mode with no IET verification).
+     */
+    Uint32 macDisableVerify;
+
+    /** Mac Hold.
+     *  Hold Premptable traffic on the port.
+     */
+    Uint32 macHold;
+
+    /** Mac Premption Enable.
+     *  Port Premption Enable. This takes effect only when pn_iet_port_en is set.
+     */
+    Uint32 macPremptEnable;
+} CSL_CPSW_IET_CONFIG;
+
+/** @brief
+ *
+ *  Holds the Enet_Pn_IET_Status register contents
+ */
+typedef struct {
+    /** Mac Verified.
+     *  Indication that verification was successful.
+     */
+    Uint8 macVerified;
+
+    /** Mac Verification Failed.
+     * Indication that verification was unsuccessful.
+     */
+    Uint8 macVerifyFail;
+
+    /** Mac Received Respond Packet with Errors.
+     *  Set when a respond packet with errors is received.
+     *  Cleared when pn_mac_penable is cleared to zero.
+     */
+    Uint8 macRxRespondErr;
+
+    /** Mac Received Verify Packet with Errors.
+     *  Set when a verify packet with errors is received.
+     *  Cleared when pn_mac_penable is cleared to zero.
+     */
+    Uint8 macRxVerifyErr;
+} CSL_CPSW_IET_STATUS;
+
 /**
 @}
 */
@@ -1920,6 +1847,141 @@ void CSL_CPSW_setVlanType (CSL_Xge_cpswRegs *hCpswRegs,Uint32 vlanType);
  */
 void CSL_CPSW_disableVlanAware (CSL_Xge_cpswRegs *hCpswRegs);
 
+/** ============================================================================
+ *   @n@b CSL_CPSW_enableCutThru
+ *
+ *   @b Description
+ *   @n This function configures the CPSW control register to enable cut-thru
+ *      switching.
+ *
+ *   @b Arguments
+ *   @n None
+ *
+ *   <b> Return Value </b>
+ *	 @n	 None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n XGE_CPSW_CONTROL_REG_CUT_THRU_ENABLE=1
+ *
+ *   @b Example
+ *   @verbatim
+
+        CSL_CPSW_enableCutThru ();
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_enableCutThru (CSL_Xge_cpswRegs *hCpswRegs);
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_disableCutThru
+ *
+ *   @b Description
+ *   @n This function configures the CPSW control register to disable cut-thru
+ *      switching.
+ *
+ *   @b Arguments
+ *   @n None
+ *
+ *   <b> Return Value </b>
+ *	 @n	 None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n XGE_CPSW_CONTROL_REG_CUT_THRU_ENABLE=0
+ *
+ *   @b Example
+ *   @verbatim
+
+        CSL_CPSW_disableCutThru ();
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_disableCutThru (CSL_Xge_cpswRegs *hCpswRegs);
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_setCpswFrequency
+ *
+ *   @b Description
+ *   @n This function configures the CPSW frequency used for enabling auto speed
+ *      register for cut-thru switching.
+ *
+ *   @b Arguments
+ *   @verbatim
+        pCpswFrequency      CPSW_FREQUENCY that needs to be set.
+ *	 @endverbatim
+ *
+ *   <b> Return Value </b>
+ *	 @n	 None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n XGE_CPSW_FREQUENCY_REG
+ *
+ *   @b Example
+ *   @verbatim
+
+        CSL_CPSW_setCpswFrequency ();
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_setCpswFrequency (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      pCpswFrequency
+);
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_getCpswFrequency
+ *
+ *   @b Description
+ *   @n This function gets the RX Cut thru priority
+ *
+ *   @b Arguments
+     @verbatim
+        pCpswFrequency   CPSW frequency
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Reads
+ *   @n XGE_CPSW_FREQUENCY_REG
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      pCpswFrequency;
+
+        pCpswFrequency = CSL_CPSW_getCpswFrequency ();
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_getCpswFrequency (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32*                     pCpswFrequency
+);
 
 /** ============================================================================
  *   @n@b CSL_CPSW_isPort0Enabled
@@ -2627,6 +2689,7 @@ void CSL_CPSW_disableSoftIdle (CSL_Xge_cpswRegs *hCpswRegs);
  *      XGE_CPSW_P0_CONTROL_REG_DSCP_IPV6_EN,
  *
  *      XGE_CPSW_PN_CONTROL_REG_EST_PORT_EN,
+ *      XGE_CPSW_PN_CONTROL_REG_IET_PORT_EN,
  *      XGE_CPSW_PN_CONTROL_REG_DSCP_IPV4_EN,
  *      XGE_CPSW_PN_CONTROL_REG_DSCP_IPV6_EN,
  *      XGE_CPSW_PN_CONTROL_REG_TX_LPI_CLKSTOP_EN,
@@ -2680,6 +2743,7 @@ void CSL_CPSW_getPortControlReg (CSL_Xge_cpswRegs *hCpswRegs,
  *      XGE_CPSW_P0_CONTROL_REG_DSCP_IPV6_EN,
  *
  *      XGE_CPSW_PN_CONTROL_REG_EST_PORT_EN,
+ *      XGE_CPSW_PN_CONTROL_REG_IET_PORT_EN,
  *      XGE_CPSW_PN_CONTROL_REG_DSCP_IPV4_EN,
  *      XGE_CPSW_PN_CONTROL_REG_DSCP_IPV6_EN,
  *      XGE_CPSW_PN_CONTROL_REG_TX_LPI_CLKSTOP_EN,
@@ -3628,6 +3692,345 @@ void CSL_CPSW_getPortRxDscpMap (CSL_Xge_cpswRegs *hCpswRegs,
 void CSL_CPSW_setPortRxDscpMap (CSL_Xge_cpswRegs *hCpswRegs,
     Uint32                      portNum,
     Uint32*                     pRxDscpPriMap
+);
+
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_setPortRxCutThruPri
+ *
+ *   @b Description
+ *   @n This function sets up the RX Cut thru priority
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the RX Cut thru priority
+                            must be set.
+        pPortRxCutThruPri   RX Cut thru priority
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n XGE_CPSW_PN_CUT_THRU_REG_RX_PRI_CUT_THRU_EN
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortRxCutThruPri;
+
+        portNum           = 1;
+        pPortRxCutThruPri = 1;
+
+        CSL_CPSW_setPortRxCutThruPri (portNum, pPortRxCutThruPri);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_setPortRxCutThruPri (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    Uint32                      pPortRxCutThruPri
+);
+
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_getPortRxCutThruPri
+ *
+ *   @b Description
+ *   @n This function gets the RX Cut thru priority
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the RX Cut thru priority
+                            must be retrieved.
+        pPortRxCutThruPri   RX Cut thru priority
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Reads
+ *   @n XGE_CPSW_PN_CUT_THRU_REG_RX_PRI_CUT_THRU_EN
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortRxCutThruPri;
+
+        portNum           = 1;
+
+        pPortRxCutThruPri = CSL_CPSW_getPortRxCutThruPri (portNum);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_getPortRxCutThruPri (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    Uint32*                     pPortRxCutThruPri
+);
+
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_setPortTxCutThruPri
+ *
+ *   @b Description
+ *   @n This function sets up the TX Cut thru priority
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the TX Cut thru priority
+                            must be set.
+        pPortTxCutThruPri   TX Cut thru priority
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n XGE_CPSW_PN_CUT_THRU_REG_TX_PRI_CUT_THRU_EN
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortRxCutThruPri;
+
+        portNum           = 1;
+        pPortTxCutThruPri = 1;
+
+        CSL_CPSW_setPortTxCutThruPri (portNum, pPortTxCutThruPri);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_setPortTxCutThruPri (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    Uint32                      pPortTxCutThruPri
+);
+
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_getPortTxCutThruPri
+ *
+ *   @b Description
+ *   @n This function gets the TX Cut thru priority
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the TX Cut thru priority
+                            must be retrieved.
+        pPortRxCutThruPri   TX Cut thru priority
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Reads
+ *   @n XGE_CPSW_PN_CUT_THRU_REG_TX_PRI_CUT_THRU_EN
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortTxCutThruPri;
+
+        portNum           = 1;
+
+        pPortTxCutThruPri = CSL_CPSW_getPortTxCutThruPri (portNum);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_getPortTxCutThruPri (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    Uint32*                     pPortTxCutThruPri
+);
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_setPortSpeedReg
+ *
+ *   @b Description
+ *   @n This function sets up the port speed
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the speed
+                            must be set.
+        pPortSpeed          Port Speed
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n XGE_CPSW_PN_SPEED_REG
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortSpeed;
+
+        portNum           = 1;
+        pPortSpeed        = 1;
+
+        CSL_CPSW_setPortSpeedReg (portNum, pPortSpeed);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_setPortSpeedReg (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    Uint32                      pPortSpeed
+);
+
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_getPortSpeedReg
+ *
+ *   @b Description
+ *   @n This function gets the port speed
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the port speed
+                            must be retrieved.
+        pPortSpeed          Port Speed
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Reads
+ *   @n XGE_CPSW_PN_SPEED_REG
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortSpeed;
+
+        portNum           = 1;
+
+        pPortSpeed = CSL_CPSW_getPortSpeedReg (portNum);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_getPortSpeedReg (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    Uint32*                     pPortSpeed
+);
+
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_setPortSpeedAutoEnable
+ *
+ *   @b Description
+ *   @n This function sets up the port's speed for auto enable
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the speed
+                            must be auto enabled.
+        pPortSpeedAutoEn    Port Speed
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n XGE_CPSW_PN_SPEED_REG_AUTO_ENABLE
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortSpeedAutoEn;
+
+        portNum           = 1;
+        pPortSpeedAutoEn  = 1;
+
+        CSL_CPSW_setPortSpeedAutoEnable (portNum, pPortSpeedAutoEn);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_setPortSpeedAutoEnable (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    bool                        pPortSpeedAutoEn
+);
+
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_getPortSpeedAutoEnable
+ *
+ *   @b Description
+ *   @n This function gets the auto enable speed status of the port
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the auto enable status
+                            must be retrieved.
+        pPortSpeed          Port Speed
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Reads
+ *   @n XGE_CPSW_PN_SPEED_REG_AUTO_ENABLE
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortSpeedAutoEn;
+
+        portNum           = 1;
+
+        pPortSpeedAutoEn = CSL_CPSW_getPortSpeedAutoEnable (portNum);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_getPortSpeedAutoEnable (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    bool*                       pPortSpeedAutoEn
 );
 
 
@@ -4977,6 +5380,238 @@ void CSL_CPSW_readEstFetchCmd(CSL_Xge_cpswRegs    *hCpswRegs,
                               Uint32              *fetchCount,
                               Uint8               *fetchAllow);
 
+/** ============================================================================
+ *   @n@b CSL_CPSW_getPortIetControlReg
+ *
+ *   @b Description
+ *   @n This function retrieves the contents of IET control register
+ *      corresponding to the CPSW port number specified per user configuration.
+ *
+ *   @b Arguments
+     @verbatim
+        portNum                 CPSW port number for which the registers must be
+                                read.
+        pIetConfig              CSL_CPSW_IET_CONFIG containing settings for
+                                port's IET control register.
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Reads
+ *   @n CSL_XGE_CPSW_PN_IET_CONTROL_REG_MAC_PREMPT
+        CSL_XGE_CPSW_PN_IET_CONTROL_REG_MAC_ADDFRAGSIZE
+        CSL_XGE_CPSW_PN_IET_CONTROL_REG_MAC_LINKFAIL
+        CSL_XGE_CPSW_PN_IET_CONTROL_REG_MAC_DISABLEVERIFY
+        CSL_XGE_CPSW_PN_IET_CONTROL_REG_MAC_HOLD
+        CSL_XGE_CPSW_PN_IET_CONTROL_REG_MAC_PENABLE
+ *   @b Example
+ *   @verbatim
+ *      Uint32              portNum;
+        CSL_CPSW_IET_CONFIG ietConfig;
+
+        portNum = 1;
+
+        CSL_CPSW_getPortIetControlReg(portNum, &ietConfig);
+
+     @endverbatim
+ */
+void CSL_CPSW_getPortIetControlReg(CSL_Xge_cpswRegs    *hCpswRegs,
+                                   Uint32              portNum,
+                                   CSL_CPSW_IET_CONFIG *pIetConfig);
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_setPortIetControlReg
+ *
+ *   @b Description
+ *   @n This function sets up the contents of IET control register corresponding
+ *      to the CPSW port number specified per user configuration.
+ *
+ *   @b Arguments
+     @verbatim
+        portNum                 CPSW port number for which the registers must be
+                                configured.
+        pEstConfig              CSL_CPSW_IET_CONFIG containing settings for
+                                port's IET control register.
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n CSL_XGE_CPSW_PN_IET_CONTROL_REG_MAC_PREMPT
+        CSL_XGE_CPSW_PN_IET_CONTROL_REG_MAC_ADDFRAGSIZE
+        CSL_XGE_CPSW_PN_IET_CONTROL_REG_MAC_LINKFAIL
+        CSL_XGE_CPSW_PN_IET_CONTROL_REG_MAC_DISABLEVERIFY
+        CSL_XGE_CPSW_PN_IET_CONTROL_REG_MAC_HOLD
+        CSL_XGE_CPSW_PN_IET_CONTROL_REG_MAC_PENABLE
+ *   @b Example
+ *   @verbatim
+ *      Uint32              portNum;
+        CSL_CPSW_IET_CONFIG ietConfig;
+
+        portNum = 1;
+
+        ietConfig.macPremptQueue = 1;
+        ietConfig.macPremptEnable = 1;
+        ...
+
+        CSL_CPSW_setPortIetControlReg(portNum, &ietConfig);
+
+     @endverbatim
+ */
+void CSL_CPSW_setPortIetControlReg(CSL_Xge_cpswRegs    *hCpswRegs,
+                                   Uint32              portNum,
+                                   CSL_CPSW_IET_CONFIG *pIetConfig);
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_getPortIetVerifyTimeout
+ *
+ *   @b Description
+ *   @n This function reads the contents of IET Verify timeout register corresponding
+ *      to the CPSW port number specified per user configuration.
+ *
+ *   @b Arguments
+     @verbatim
+        portNum                 CPSW port number for which the registers must be
+                                configured.
+        pIetVerifyTimeout       Number of wireside clocks contained in the verify timeout
+                                counter.
+
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Reads
+ *   @n CSL_XGE_CPSW_PN_IET_VERIFY_REG_MAC_VERIFY_CNT
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32              portNum;
+        Uint32              ietVerifyTimeout;
+
+        portNum = 1;
+
+        CSL_CPSW_getPortIetVerifyTimeout(portNum, &ietVerifyTimeout);
+
+     @endverbatim
+ */
+void CSL_CPSW_getPortIetVerifyTimeout(CSL_Xge_cpswRegs    *hCpswRegs,
+                                      Uint32              portNum,
+                                      Uint32              *pIetVerifyTimeout);
+
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_setPortIetVerifyTimeout
+ *
+ *   @b Description
+ *   @n This function sets the contents of IET Verify timeout register corresponding
+ *      to the CPSW port number specified per user configuration.
+ *
+ *   @b Arguments
+     @verbatim
+        portNum                 CPSW port number for which the registers must be
+                                configured.
+        pIetVerifyTimeout       Number of wireside clocks contained in the verify timeout
+                                counter.
+
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n CSL_XGE_CPSW_PN_IET_VERIFY_REG_MAC_VERIFY_CNT
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32              portNum;
+        Uint32              ietVerifyTimeout;
+
+        portNum = 1;
+
+        ietVerifyTimeout = 0x1312d0;
+
+        CSL_CPSW_setPortIetVerifyTimeout(portNum, ietVerifyTimeout);
+
+     @endverbatim
+ */
+void CSL_CPSW_setPortIetVerifyTimeout(CSL_Xge_cpswRegs    *hCpswRegs,
+                                      Uint32              portNum,
+                                      Uint32              ietVerifyTimeout);
+
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_PortIetStatus
+ *
+ *   @b Description
+ *   @n This function retrieves the contents of the IET status register corresponding
+ *      to the CPSW port number specified per user configuration.
+ *
+ *   @b Arguments
+     @verbatim
+        portNum                 CPSW port number for which the registers must be
+                                configured.
+        pIetStatus              CSL_CPSW_IET_STATUS containing settings for
+                                port's IET status register.
+
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Reads
+ *   @n CSL_XGE_CPSW_PN_IET_STATUS_REG_MAC_VERIFIED
+ *      CSL_XGE_CPSW_PN_IET_STATUS_REG_MAC_VERIFY_FAIL
+ *      CSL_XGE_CPSW_PN_IET_STATUS_REG_MAC_RESPOND_ERR
+ *      CSL_XGE_CPSW_PN_IET_STATUS_REG_MAC_VERIFY_ERR
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32               portNum;
+        CSL_CPSW_IET_STATUS  ietStatus;
+
+        portNum = 1;
+
+        CSL_CPSW_PortIetStatus(portNum, &ietStatus);
+
+     @endverbatim
+ */
+void CSL_CPSW_PortIetStatus(CSL_Xge_cpswRegs     *hCpswRegs,
+                            Uint32               portNum,
+                            CSL_CPSW_IET_STATUS  *pIetStatus);
+
 
 /********************************************************************************
 *************************  Statistics (STATS) Submodule *************************
@@ -5004,7 +5639,7 @@ void CSL_CPSW_readEstFetchCmd(CSL_Xge_cpswRegs    *hCpswRegs,
  *
  *   @b Arguments
      @verbatim
-        pCpswStats              Array of CSL_CPSW_STATS structure that needs to be filled
+        pCpswStats              Union of CSL_CPSW_STATS structure that needs to be filled
                                 with the stats read from the hardware. This function expects
                                 that the array passed to it is big enough to hold the stats
                                 for all stat blocks, i.e., size of array passed to this
@@ -5127,13 +5762,12 @@ void CSL_CPSW_readEstFetchCmd(CSL_Xge_cpswRegs    *hCpswRegs,
  * =============================================================================
  */
 void CSL_CPSW_getStats (CSL_Xge_cpswRegs *hCpswRegs,
-    CSL_CPSW_STATS*         pCpswStats
+    union CSL_CPSW_STATS*         pCpswStats
 );
-
 
 void CSL_CPSW_getPortStats (CSL_Xge_cpswRegs *hCpswRegs,
     Uint32                  portNum,
-    CSL_CPSW_STATS*         pCpswStats
+    union CSL_CPSW_STATS*         pCpswStats
 );
 
 
@@ -5172,7 +5806,7 @@ void CSL_CPSW_getPortStats (CSL_Xge_cpswRegs *hCpswRegs,
  *
  *   @b Arguments
      @verbatim
-        pCpswStats              Array of CSL_CPSW_STATS structure that needs to be filled
+        pCpswStats              Union of CSL_CPSW_STATS structure that needs to be filled
                                 with the stats read from the hardware. This function expects
                                 that the array passed to it is big enough to hold the stats
                                 for both stat blocks, i.e., size of array passed to this
@@ -5246,13 +5880,13 @@ void CSL_CPSW_getPortStats (CSL_Xge_cpswRegs *hCpswRegs,
  * =============================================================================
  */
 void CSL_CPSW_getRawStats (CSL_Xge_cpswRegs *hCpswRegs,
-    CSL_CPSW_STATS*         pCpswStats
+    union CSL_CPSW_STATS*         pCpswStats
 );
 
 
 void CSL_CPSW_getPortRawStats (CSL_Xge_cpswRegs *hCpswRegs,
     Uint32                  portNum,
-    CSL_CPSW_STATS*         pCpswStats
+    union CSL_CPSW_STATS*         pCpswStats
 );
 
 

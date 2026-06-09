@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -60,22 +60,20 @@
  *
  */
 
-#include "app_remote_service_priv.h"
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <errno.h>
 
-
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/eventfd.h>
-#include <ti_rpmsg_char.h>
-#include <utils/ipc/src/app_ipc_linux_priv.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+
+#include "app_remote_service_linux_priv.h"
 
 /* #define APP_REMOTE_SERVICE_DEBUG */
 

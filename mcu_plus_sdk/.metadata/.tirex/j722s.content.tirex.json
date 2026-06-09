@@ -7,11 +7,44 @@
         "resourceSubClass": [
             "example.general"
         ],
+        "description": "A SBL EMMC HLOS example. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "name": "sbl_emmc_hlos",
+        "location": "../../examples/drivers/boot/sbl_emmc_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "boot",
+            "sbl_emmc_hlos",
+            "wkup-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
         "description": "A Sbl Null Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
         "name": "sbl_null",
         "location": "../../examples/drivers/boot/sbl_null/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -40,343 +73,11 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "A SBL SD example. CPU is WKUP-R5FSS0-0 running NORTOS.",
-        "name": "sbl_sd",
-        "location": "../../examples/drivers/boot/sbl_sd/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "boot",
-            "sbl_sd",
-            "wkup-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A SBL EMMC example. CPU is WKUP-R5FSS0-0 running NORTOS.",
-        "name": "sbl_emmc",
-        "location": "../../examples/drivers/boot/sbl_emmc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "boot",
-            "sbl_emmc",
-            "wkup-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A SBL EMMC HLOS example. CPU is WKUP-R5FSS0-0 running NORTOS.",
-        "name": "sbl_emmc_hlos",
-        "location": "../../examples/drivers/boot/sbl_emmc_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "boot",
-            "sbl_emmc_hlos",
-            "wkup-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.gettingstarted"
-        ],
-        "description": "Capture testapp  CPU is MAIN-R5FSS0-0 running FREERTOS.",
-        "name": "csirx_capture_testapp",
-        "location": "../../examples/drivers/csirx/csirx_capture_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "csirx",
-            "csirx_capture_testapp",
-            "main-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.gettingstarted"
-        ],
-        "description": "Recovery Testapp  CPU is MAIN-R5FSS0-0 running FREERTOS.",
-        "name": "csirx_recovery_testapp",
-        "location": "../../examples/drivers/csirx/csirx_recovery_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "csirx",
-            "csirx_recovery_testapp",
-            "main-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.gettingstarted"
-        ],
-        "description": "CSITX transmit testapp  CPU is MAIN-R5FSS0-0 running FREERTOS.",
-        "name": "csitx_transmit_testapp",
-        "location": "../../examples/drivers/csitx/csitx_transmit_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "csitx",
-            "csitx_transmit_test",
-            "main-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.gettingstarted"
-        ],
-        "description": "Capture loopback testapp  CPU is MAIN-R5FSS0-0 running FREERTOS.",
-        "name": "csirxtx_loopback_testapp",
-        "location": "../../examples/drivers/csirx/csirxtx_loopback_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "csirx",
-            "csirxtx_loopback_test",
-            "main-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.gettingstarted"
-        ],
-        "description": "CSIRX safety checkers app CPU is MAIN-R5FSS0-0 running FREERTOS.",
-        "name": "SafetyCheckersApp_csirx",
-        "location": "../../source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "..",
-            "source",
-            "safety_checkers",
-            "examples",
-            "csirx_checkers_app",
-            "main-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A SBL SD HLOS example. CPU is WKUP-R5FSS0-0 running NORTOS.",
-        "name": "sbl_sd_hlos",
-        "location": "../../examples/drivers/boot/sbl_sd_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "boot",
-            "sbl_sd_hlos",
-            "wkup-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Sbl Ospi Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
-        "name": "sbl_ospi",
-        "location": "../../examples/drivers/boot/sbl_ospi/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "boot",
-            "sbl_ospi",
-            "wkup-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
         "description": "Customised OSPI SBL example with optimizations for Early CAN Response. CPU is WKUP-R5FSS0-0 running NORTOS.",
         "name": "sbl_ospi_early_can",
         "location": "../../examples/drivers/boot/sbl_ospi_early_can/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -405,11 +106,11 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "A Sbl Xip Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
-        "name": "sbl_xip",
-        "location": "../../examples/drivers/boot/sbl_xip/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "description": "A Sbl Ospi Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "name": "sbl_ospi",
+        "location": "../../examples/drivers/boot/sbl_ospi/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -420,7 +121,40 @@
         "subCategories": [
             "drivers",
             "boot",
-            "sbl_xip",
+            "sbl_ospi",
+            "wkup-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A SBL SD example. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "name": "sbl_sd",
+        "location": "../../examples/drivers/boot/sbl_sd/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "boot",
+            "sbl_sd",
             "wkup-r5fss0-0_nortos"
         ],
         "mainCategories": [
@@ -442,7 +176,7 @@
         "name": "sbl_ospi_nand",
         "location": "../../examples/drivers/boot/sbl_ospi_nand/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -471,44 +205,11 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "A Sbl Ospi Nand Hlos Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
-        "name": "sbl_ospi_nand_hlos",
-        "location": "../../examples/drivers/boot/sbl_ospi_nand_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "boot",
-            "sbl_ospi_nand_hlos",
-            "wkup-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
         "description": "A Sbl Ospi Hlos Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
         "name": "sbl_ospi_hlos",
         "location": "../../examples/drivers/boot/sbl_ospi_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -537,44 +238,11 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "A Sbl Ospi Hlos Fc Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
-        "name": "sbl_ospi_hlos_fc",
-        "location": "../../examples/drivers/boot/sbl_ospi_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "boot",
-            "sbl_ospi_hlos_fc",
-            "wkup-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A SBL SD HLOS example. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "description": "A SBL SD HLOS FC example. CPU is WKUP-R5FSS0-0 running NORTOS.",
         "name": "sbl_sd_hlos_fc",
         "location": "../../examples/drivers/boot/sbl_sd_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -603,11 +271,176 @@
         "resourceSubClass": [
             "example.general"
         ],
+        "description": "A Sbl Ospi Hlos Fc Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "name": "sbl_ospi_hlos_fc",
+        "location": "../../examples/drivers/boot/sbl_ospi_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "boot",
+            "sbl_ospi_hlos_fc",
+            "wkup-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Sbl Ospi Nand Hlos Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "name": "sbl_ospi_nand_hlos",
+        "location": "../../examples/drivers/boot/sbl_ospi_nand_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "boot",
+            "sbl_ospi_nand_hlos",
+            "wkup-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A SBL EMMC example. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "name": "sbl_emmc",
+        "location": "../../examples/drivers/boot/sbl_emmc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "boot",
+            "sbl_emmc",
+            "wkup-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A SBL SD HLOS example. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "name": "sbl_sd_hlos",
+        "location": "../../examples/drivers/boot/sbl_sd_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "boot",
+            "sbl_sd_hlos",
+            "wkup-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Sbl Uart Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "name": "sbl_uart",
+        "location": "../../examples/drivers/boot/sbl_uart/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "boot",
+            "sbl_uart",
+            "wkup-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
         "description": "A Sbl Uart Uniflash Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
         "name": "sbl_uart_uniflash",
         "location": "../../examples/drivers/boot/sbl_uart_uniflash/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -640,7 +473,7 @@
         "name": "sbl_uart_uniflash_nand",
         "location": "../../examples/drivers/boot/sbl_uart_uniflash_nand/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -669,11 +502,11 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "A Sbl Uart Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
-        "name": "sbl_uart",
-        "location": "../../examples/drivers/boot/sbl_uart/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "description": "A Sbl Xip Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "name": "sbl_xip",
+        "location": "../../examples/drivers/boot/sbl_xip/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -684,74 +517,8 @@
         "subCategories": [
             "drivers",
             "boot",
-            "sbl_uart",
+            "sbl_xip",
             "wkup-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "An SBL example to check if non-booted cores are properly switched off. CPU is WKUP-R5FSS0-0 running NORTOS.",
-        "name": "sbl_non_booted_core_test",
-        "location": "../../examples/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "boot",
-            "sbl_non_booted_core_test",
-            "wkup-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Ospi Flash Io Example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
-        "name": "ospi_flash_io",
-        "location": "../../examples/drivers/ospi/ospi_flash_io/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "ospi",
-            "ospi_flash_io",
-            "wkup-r5fss0-0_freertos"
         ],
         "mainCategories": [
             [
@@ -768,11 +535,11 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
-        "description": "OSPI Flash XIP test CPU is WKUP-R5FSS0-0 running FREERTOS.",
-        "name": "ospi_flash_xip_test",
-        "location": "../../examples/drivers/ospi/ospi_flash_xip_test/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "description": "Capture testapp  CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "name": "csirx_capture_testapp",
+        "location": "../../examples/drivers/csirx/csirx_capture_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -782,42 +549,141 @@
         ],
         "subCategories": [
             "drivers",
-            "ospi",
-            "ospi_flash_xip_test",
-            "wkup-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.gettingstarted"
-        ],
-        "description": "OSPI Flash XIP test CPU is MAIN-R5FSS0-0 running FREERTOS.",
-        "name": "ospi_flash_xip_test",
-        "location": "../../examples/drivers/ospi/ospi_flash_xip_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "ospi",
-            "ospi_flash_xip_test",
+            "csirx",
+            "csirx_capture_testapp",
             "main-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
+        "description": "Recovery Testapp  CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "name": "csirx_recovery_testapp",
+        "location": "../../examples/drivers/csirx/csirx_recovery_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "csirx",
+            "csirx_recovery_testapp",
+            "main-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
+        "description": "Capture loopback testapp  CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "name": "csirxtx_loopback_testapp",
+        "location": "../../examples/drivers/csirx/csirxtx_loopback_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "csirx",
+            "csirxtx_loopback_test",
+            "main-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
+        "description": "CSITX transmit testapp  CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "name": "csitx_transmit_testapp",
+        "location": "../../examples/drivers/csitx/csitx_transmit_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "csitx",
+            "csitx_transmit_test",
+            "main-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
+        "description": "DDR Performance Measurement Example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
+        "name": "ddr_perf_app",
+        "location": "../../examples/drivers/ddr/ddr_perf/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "ddr",
+            "ddr_perf",
+            "wkup-r5fss0-0_freertos"
         ],
         "mainCategories": [
             [
@@ -838,7 +704,7 @@
         "name": "dss_display_test",
         "location": "../../examples/drivers/dss/dss_display_test/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -871,7 +737,7 @@
         "name": "dss_display_test",
         "location": "../../examples/drivers/dss/dss_display_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -904,7 +770,7 @@
         "name": "dss_safety_test",
         "location": "../../examples/drivers/dss/dss_safety_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -937,7 +803,7 @@
         "name": "gpio_input_interrupt",
         "location": "../../examples/drivers/gpio/gpio_input_interrupt/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -970,7 +836,7 @@
         "name": "gpio_input_interrupt",
         "location": "../../examples/drivers/gpio/gpio_input_interrupt/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1003,7 +869,7 @@
         "name": "gpio_led_blink",
         "location": "../../examples/drivers/gpio/gpio_led_blink/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -1036,7 +902,7 @@
         "name": "gpio_led_blink",
         "location": "../../examples/drivers/gpio/gpio_led_blink/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1069,7 +935,7 @@
         "name": "gpio_led_blink",
         "location": "../../examples/drivers/gpio/gpio_led_blink/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -1102,7 +968,7 @@
         "name": "gpio_led_blink",
         "location": "../../examples/drivers/gpio/gpio_led_blink/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1135,7 +1001,7 @@
         "name": "gpio_led_blink",
         "location": "../../examples/drivers/gpio/gpio_led_blink/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -1168,7 +1034,7 @@
         "name": "gpio_led_blink",
         "location": "../../examples/drivers/gpio/gpio_led_blink/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1201,7 +1067,7 @@
         "name": "i2c_led_blink",
         "location": "../../examples/drivers/i2c/i2c_led_blink/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -1234,7 +1100,7 @@
         "name": "i2c_led_blink",
         "location": "../../examples/drivers/i2c/i2c_led_blink/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1267,7 +1133,7 @@
         "name": "i2c_led_blink",
         "location": "../../examples/drivers/i2c/i2c_led_blink/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1300,7 +1166,7 @@
         "name": "i2c_led_blink",
         "location": "../../examples/drivers/i2c/i2c_led_blink/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1333,7 +1199,7 @@
         "name": "i2c_led_blink",
         "location": "../../examples/drivers/i2c/i2c_led_blink/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1366,7 +1232,7 @@
         "name": "i2c_read",
         "location": "../../examples/drivers/i2c/i2c_read/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -1399,7 +1265,7 @@
         "name": "i2c_read",
         "location": "../../examples/drivers/i2c/i2c_read/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1432,7 +1298,7 @@
         "name": "i2c_read",
         "location": "../../examples/drivers/i2c/i2c_read/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1465,7 +1331,7 @@
         "name": "i2c_temperature",
         "location": "../../examples/drivers/i2c/i2c_temperature/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -1498,7 +1364,7 @@
         "name": "i2c_temperature",
         "location": "../../examples/drivers/i2c/i2c_temperature/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1531,7 +1397,7 @@
         "name": "i2c_temperature",
         "location": "../../examples/drivers/i2c/i2c_temperature/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1564,7 +1430,7 @@
         "name": "ipc_notify_echo",
         "location": "../../examples/drivers/ipc/ipc_notify_echo/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1597,7 +1463,7 @@
         "name": "ipc_notify_echo",
         "location": "../../examples/drivers/ipc/ipc_notify_echo/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1630,7 +1496,7 @@
         "name": "ipc_notify_echo",
         "location": "../../examples/drivers/ipc/ipc_notify_echo/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1663,7 +1529,7 @@
         "name": "ipc_notify_echo",
         "location": "../../examples/drivers/ipc/ipc_notify_echo/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1696,7 +1562,7 @@
         "name": "ipc_notify_echo",
         "location": "../../examples/drivers/ipc/ipc_notify_echo/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1729,7 +1595,7 @@
         "name": "ipc_rpmsg_echo",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1762,7 +1628,7 @@
         "name": "ipc_rpmsg_echo",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1795,7 +1661,7 @@
         "name": "ipc_rpmsg_echo",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1828,7 +1694,7 @@
         "name": "ipc_rpmsg_echo",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1861,7 +1727,7 @@
         "name": "ipc_rpmsg_echo",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1894,7 +1760,7 @@
         "name": "ipc_rpmsg_echo_linux",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo_linux/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1927,7 +1793,7 @@
         "name": "ipc_rpmsg_echo_linux",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo_linux/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1960,7 +1826,7 @@
         "name": "ipc_rpmsg_echo_linux",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo_linux/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -1993,7 +1859,7 @@
         "name": "ipc_rpmsg_echo_linux",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo_linux/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2026,7 +1892,7 @@
         "name": "ipc_rpmsg_echo_linux",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo_linux/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2059,7 +1925,7 @@
         "name": "ipc_rpmsg_echo_qnx",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo_qnx/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2092,7 +1958,7 @@
         "name": "ipc_rpmsg_echo_qnx",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo_qnx/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2125,7 +1991,7 @@
         "name": "ipc_rpmsg_echo_qnx",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo_qnx/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2158,7 +2024,7 @@
         "name": "ipc_rpmsg_echo_qnx",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo_qnx/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2191,7 +2057,7 @@
         "name": "ipc_rpmsg_echo_qnx",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo_qnx/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2221,10 +2087,10 @@
             "example.general"
         ],
         "description": "Application to measure CAN response time. CPU is WKUP-R5FSS0-0 running FREERTOS.",
-        "name": "can_response_app",
-        "location": "../../examples/drivers/mcan/can_response_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "name": "mcan_response_app",
+        "location": "../../examples/drivers/mcan/mcan_response_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2235,140 +2101,8 @@
         "subCategories": [
             "drivers",
             "mcan",
-            "can_response_app",
+            "mcan_response_app",
             "wkup-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Mcan Loopback Polling Example. CPU is MCU-R5FSS0-0 running FREERTOS.",
-        "name": "mcan_loopback_polling",
-        "location": "../../examples/drivers/mcan/mcan_loopback_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "mcan",
-            "mcan_loopback_polling",
-            "mcu-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Mcan Loopback Polling Example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
-        "name": "mcan_loopback_polling",
-        "location": "../../examples/drivers/mcan/mcan_loopback_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "mcan",
-            "mcan_loopback_polling",
-            "wkup-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Mcan Loopback Polling Example. CPU is MAIN-R5FSS0-0 running FREERTOS.",
-        "name": "mcan_loopback_polling",
-        "location": "../../examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "mcan",
-            "mcan_loopback_polling",
-            "main-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Mcan Loopback Polling Example. CPU is MAIN-R5FSS0-0 running NORTOS.",
-        "name": "mcan_loopback_polling",
-        "location": "../../examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "mcan",
-            "mcan_loopback_polling",
-            "main-r5fss0-0_nortos"
         ],
         "mainCategories": [
             [
@@ -2389,7 +2123,7 @@
         "name": "mcan_loopback_interrupt",
         "location": "../../examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2422,7 +2156,7 @@
         "name": "mcan_loopback_interrupt",
         "location": "../../examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2455,7 +2189,7 @@
         "name": "mcan_loopback_interrupt",
         "location": "../../examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2488,7 +2222,7 @@
         "name": "mcan_loopback_interrupt",
         "location": "../../examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -2517,11 +2251,143 @@
         "resourceSubClass": [
             "example.general"
         ],
+        "description": "A Mcan Loopback Polling Example. CPU is MCU-R5FSS0-0 running FREERTOS.",
+        "name": "mcan_loopback_polling",
+        "location": "../../examples/drivers/mcan/mcan_loopback_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "mcan",
+            "mcan_loopback_polling",
+            "mcu-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Mcan Loopback Polling Example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
+        "name": "mcan_loopback_polling",
+        "location": "../../examples/drivers/mcan/mcan_loopback_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "mcan",
+            "mcan_loopback_polling",
+            "wkup-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Mcan Loopback Polling Example. CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "name": "mcan_loopback_polling",
+        "location": "../../examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "mcan",
+            "mcan_loopback_polling",
+            "main-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Mcan Loopback Polling Example. CPU is MAIN-R5FSS0-0 running NORTOS.",
+        "name": "mcan_loopback_polling",
+        "location": "../../examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "mcan",
+            "mcan_loopback_polling",
+            "main-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
         "description": "A Mcspi Loopback Example. CPU is MAIN-R5FSS0-0 running FREERTOS.",
         "name": "mcspi_loopback",
         "location": "../../examples/drivers/mcspi/mcspi_loopback/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2554,7 +2420,7 @@
         "name": "mcspi_tx_dma",
         "location": "../../examples/drivers/mcspi/mcspi_tx_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2581,145 +2447,13 @@
             "example"
         ],
         "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Mmcsd Raw Io Example. CPU is MCU-R5FSS0-0 running FREERTOS.",
-        "name": "mmcsd_raw_io",
-        "location": "../../examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "mmcsd",
-            "mmcsd_raw_io",
-            "mcu-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Mmcsd Raw Io Example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
-        "name": "mmcsd_raw_io",
-        "location": "../../examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "mmcsd",
-            "mmcsd_raw_io",
-            "wkup-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Mmcsd Raw Io Example. CPU is MAIN-R5FSS0-0 running NORTOS.",
-        "name": "mmcsd_raw_io",
-        "location": "../../examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "mmcsd",
-            "mmcsd_raw_io",
-            "main-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Mmcsd Raw Io Example. CPU is MAIN-R5FSS0-0 running FREERTOS.",
-        "name": "mmcsd_raw_io",
-        "location": "../../examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "mmcsd",
-            "mmcsd_raw_io",
-            "main-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
             "example.gettingstarted"
         ],
         "description": "An Example to read from SD card in file format.  CPU is WKUP-R5FSS0-0 running NORTOS.",
         "name": "mmcsd_file_io",
         "location": "../../examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -2752,7 +2486,7 @@
         "name": "mmcsd_file_io",
         "location": "../../examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -2785,7 +2519,7 @@
         "name": "mmcsd_file_io",
         "location": "../../examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -2814,11 +2548,11 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "A Sciclient Get Version Example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
-        "name": "sciclient_get_version",
-        "location": "../../examples/drivers/sciclient/sciclient_get_version/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "description": "A Mmcsd Raw Io Example. CPU is MCU-R5FSS0-0 running FREERTOS.",
+        "name": "mmcsd_raw_io",
+        "location": "../../examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2828,8 +2562,41 @@
         ],
         "subCategories": [
             "drivers",
-            "sciclient",
-            "sciclient_get_version",
+            "mmcsd",
+            "mmcsd_raw_io",
+            "mcu-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Mmcsd Raw Io Example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
+        "name": "mmcsd_raw_io",
+        "location": "../../examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "mmcsd",
+            "mmcsd_raw_io",
             "wkup-r5fss0-0_freertos"
         ],
         "mainCategories": [
@@ -2847,11 +2614,44 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "DM Unit Test example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
-        "name": "dm_unit_testapp",
-        "location": "../../examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "description": "A Mmcsd Raw Io Example. CPU is MAIN-R5FSS0-0 running NORTOS.",
+        "name": "mmcsd_raw_io",
+        "location": "../../examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "mmcsd",
+            "mmcsd_raw_io",
+            "main-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Mmcsd Raw Io Example. CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "name": "mmcsd_raw_io",
+        "location": "../../examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2861,8 +2661,41 @@
         ],
         "subCategories": [
             "drivers",
-            "sciclient",
-            "dm_unit_testapp",
+            "mmcsd",
+            "mmcsd_raw_io",
+            "main-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Ospi Flash Io Example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
+        "name": "ospi_flash_io",
+        "location": "../../examples/drivers/ospi/ospi_flash_io/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "ospi",
+            "ospi_flash_io",
             "wkup-r5fss0-0_freertos"
         ],
         "mainCategories": [
@@ -2884,7 +2717,7 @@
         "name": "sciclient_ccs_init",
         "location": "../../examples/drivers/sciclient/sciclient_ccs_init/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -2913,11 +2746,44 @@
         "resourceSubClass": [
             "example.general"
         ],
+        "description": "A Sciclient Get Version Example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
+        "name": "sciclient_get_version",
+        "location": "../../examples/drivers/sciclient/sciclient_get_version/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "sciclient",
+            "sciclient_get_version",
+            "wkup-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
         "description": "Sciclient Unit Test example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
         "name": "sciclient_unit_test",
         "location": "../../examples/drivers/sciclient/sciclient_unit_test/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2950,7 +2816,7 @@
         "name": "sciclient_unit_test",
         "location": "../../examples/drivers/sciclient/sciclient_unit_test/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -2983,7 +2849,7 @@
         "name": "sciclient_unit_test",
         "location": "../../examples/drivers/sciclient/sciclient_unit_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3016,7 +2882,7 @@
         "name": "sciclient_unit_test",
         "location": "../../examples/drivers/sciclient/sciclient_unit_test/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3049,7 +2915,7 @@
         "name": "sciclient_unit_test",
         "location": "../../examples/drivers/sciclient/sciclient_unit_test/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3079,10 +2945,10 @@
             "example.general"
         ],
         "description": "Spinlock app to demonstrate functionality by acquiring and releasing different locks. CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "spinlock_test",
-        "location": "../../examples/drivers/spinlock/spinlock_test/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "name": "spinlock_demo",
+        "location": "../../examples/drivers/spinlock/spinlock_demo/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -3093,7 +2959,7 @@
         "subCategories": [
             "drivers",
             "spinlock",
-            "spinlock_test",
+            "spinlock_demo",
             "mcu-r5fss0-0_nortos"
         ],
         "mainCategories": [
@@ -3112,10 +2978,10 @@
             "example.general"
         ],
         "description": "Spinlock app to demonstrate functionality by acquiring and releasing different locks. CPU is WKUP-R5FSS0-0 running NORTOS.",
-        "name": "spinlock_test",
-        "location": "../../examples/drivers/spinlock/spinlock_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "name": "spinlock_demo",
+        "location": "../../examples/drivers/spinlock/spinlock_demo/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -3126,7 +2992,7 @@
         "subCategories": [
             "drivers",
             "spinlock",
-            "spinlock_test",
+            "spinlock_demo",
             "wkup-r5fss0-0_nortos"
         ],
         "mainCategories": [
@@ -3145,10 +3011,10 @@
             "example.general"
         ],
         "description": "Spinlock app to demonstrate functionality by acquiring and releasing different locks. CPU is MAIN-R5FSS0-0 running NORTOS.",
-        "name": "spinlock_test",
-        "location": "../../examples/drivers/spinlock/spinlock_test/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "name": "spinlock_demo",
+        "location": "../../examples/drivers/spinlock/spinlock_demo/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -3159,7 +3025,7 @@
         "subCategories": [
             "drivers",
             "spinlock",
-            "spinlock_test",
+            "spinlock_demo",
             "main-r5fss0-0_nortos"
         ],
         "mainCategories": [
@@ -3178,10 +3044,10 @@
             "example.general"
         ],
         "description": "Spinlock app to demonstrate functionality by acquiring and releasing different locks. CPU is C75SS0-0 running FREERTOS.",
-        "name": "spinlock_test",
-        "location": "../../examples/drivers/spinlock/spinlock_test/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
+        "name": "spinlock_demo",
+        "location": "../../examples/drivers/spinlock/spinlock_demo/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3192,7 +3058,7 @@
         "subCategories": [
             "drivers",
             "spinlock",
-            "spinlock_test",
+            "spinlock_demo",
             "c75ss0-0_freertos"
         ],
         "mainCategories": [
@@ -3211,10 +3077,10 @@
             "example.general"
         ],
         "description": "Spinlock app to demonstrate functionality by acquiring and releasing different locks. CPU is C75SS1-0 running FREERTOS.",
-        "name": "spinlock_test",
-        "location": "../../examples/drivers/spinlock/spinlock_test/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
+        "name": "spinlock_demo",
+        "location": "../../examples/drivers/spinlock/spinlock_demo/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3225,7 +3091,7 @@
         "subCategories": [
             "drivers",
             "spinlock",
-            "spinlock_test",
+            "spinlock_demo",
             "c75ss1-0_freertos"
         ],
         "mainCategories": [
@@ -3247,7 +3113,7 @@
         "name": "uart_echo",
         "location": "../../examples/drivers/uart/uart_echo/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -3280,7 +3146,7 @@
         "name": "uart_echo",
         "location": "../../examples/drivers/uart/uart_echo/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -3313,7 +3179,7 @@
         "name": "uart_echo",
         "location": "../../examples/drivers/uart/uart_echo/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -3346,7 +3212,7 @@
         "name": "uart_echo",
         "location": "../../examples/drivers/uart/uart_echo/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3379,7 +3245,7 @@
         "name": "uart_echo",
         "location": "../../examples/drivers/uart/uart_echo/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3412,7 +3278,7 @@
         "name": "uart_echo",
         "location": "../../examples/drivers/uart/uart_echo/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3445,7 +3311,7 @@
         "name": "uart_echo",
         "location": "../../examples/drivers/uart/uart_echo/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3478,7 +3344,7 @@
         "name": "uart_echo",
         "location": "../../examples/drivers/uart/uart_echo/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3511,7 +3377,7 @@
         "name": "uart_echo_callback",
         "location": "../../examples/drivers/uart/uart_echo_callback/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -3544,7 +3410,7 @@
         "name": "uart_echo_callback",
         "location": "../../examples/drivers/uart/uart_echo_callback/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -3577,7 +3443,7 @@
         "name": "uart_echo_callback",
         "location": "../../examples/drivers/uart/uart_echo_callback/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -3610,7 +3476,7 @@
         "name": "uart_echo_callback",
         "location": "../../examples/drivers/uart/uart_echo_callback/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3643,7 +3509,7 @@
         "name": "uart_echo_callback",
         "location": "../../examples/drivers/uart/uart_echo_callback/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3676,7 +3542,7 @@
         "name": "uart_echo_callback",
         "location": "../../examples/drivers/uart/uart_echo_callback/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3709,7 +3575,7 @@
         "name": "uart_echo_callback",
         "location": "../../examples/drivers/uart/uart_echo_callback/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3742,7 +3608,7 @@
         "name": "uart_echo_callback",
         "location": "../../examples/drivers/uart/uart_echo_callback/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3771,11 +3637,44 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
+        "description": "A simple UART DMA echo Example.  CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "name": "uart_echo_dma",
+        "location": "../../examples/drivers/uart/uart_echo_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "uart",
+            "uart_echo_dma",
+            "main-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
         "description": "A simple UART echo Example.  CPU is MCU-R5FSS0-0 running NORTOS.",
         "name": "uart_echo_low_latency_interrupt",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -3808,7 +3707,7 @@
         "name": "uart_echo_low_latency_interrupt",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -3841,7 +3740,7 @@
         "name": "uart_echo_low_latency_interrupt",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -3874,7 +3773,7 @@
         "name": "uart_echo_low_latency_interrupt",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3907,7 +3806,7 @@
         "name": "uart_echo_low_latency_interrupt",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3940,7 +3839,7 @@
         "name": "uart_echo_low_latency_interrupt",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -3973,7 +3872,7 @@
         "name": "uart_echo_low_latency_interrupt",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4006,7 +3905,7 @@
         "name": "uart_echo_low_latency_interrupt",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4039,7 +3938,7 @@
         "name": "uart_echo_low_latency_polling",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -4072,7 +3971,7 @@
         "name": "uart_echo_low_latency_polling",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -4105,7 +4004,7 @@
         "name": "uart_echo_low_latency_polling",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -4138,7 +4037,7 @@
         "name": "uart_echo_low_latency_polling",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4171,7 +4070,7 @@
         "name": "uart_echo_low_latency_polling",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4204,7 +4103,7 @@
         "name": "uart_echo_low_latency_polling",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4237,7 +4136,7 @@
         "name": "uart_echo_low_latency_polling",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4270,7 +4169,7 @@
         "name": "uart_echo_low_latency_polling",
         "location": "../../examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4297,145 +4196,13 @@
             "example"
         ],
         "resourceSubClass": [
-            "example.gettingstarted"
-        ],
-        "description": "A simple UART DMA echo Example.  CPU is MAIN-R5FSS0-0 running FREERTOS.",
-        "name": "uart_echo_dma",
-        "location": "../../examples/drivers/uart/uart_echo_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "uart",
-            "uart_echo_dma",
-            "main-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
             "example.general"
         ],
-        "description": "A Udma Memcpy Polling Example. CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "udma_memcpy_polling",
-        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "description": "A Udma Chaining Example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
+        "name": "udma_chaining",
+        "location": "../../examples/drivers/udma/udma_chaining/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "udma",
-            "udma_memcpy_polling",
-            "mcu-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Udma Memcpy Polling Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
-        "name": "udma_memcpy_polling",
-        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "udma",
-            "udma_memcpy_polling",
-            "wkup-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Udma Memcpy Polling Example. CPU is MAIN-R5FSS0-0 running NORTOS.",
-        "name": "udma_memcpy_polling",
-        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "udma",
-            "udma_memcpy_polling",
-            "main-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Udma Memcpy Polling Example. CPU is MCU-R5FSS0-0 running FREERTOS.",
-        "name": "udma_memcpy_polling",
-        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4446,40 +4213,7 @@
         "subCategories": [
             "drivers",
             "udma",
-            "udma_memcpy_polling",
-            "mcu-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Udma Memcpy Polling Example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
-        "name": "udma_memcpy_polling",
-        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "udma",
-            "udma_memcpy_polling",
+            "udma_chaining",
             "wkup-r5fss0-0_freertos"
         ],
         "mainCategories": [
@@ -4497,44 +4231,11 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "A Udma Memcpy Polling Example. CPU is MAIN-R5FSS0-0 running FREERTOS.",
-        "name": "udma_memcpy_polling",
-        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "description": "A Udma Memcpy Dru Interrupt Example. CPU is C75SS0-0 running FREERTOS.",
+        "name": "udma_memcpy_dru_interrupt",
+        "location": "../../examples/drivers/udma/udma_memcpy_dru_interrupt/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "udma",
-            "udma_memcpy_polling",
-            "main-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "A Udma Memcpy Polling Example. CPU is C75SS0-0 running FREERTOS.",
-        "name": "udma_memcpy_polling",
-        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4545,7 +4246,7 @@
         "subCategories": [
             "drivers",
             "udma",
-            "udma_memcpy_polling",
+            "udma_memcpy_dru_interrupt",
             "c75ss0-0_freertos"
         ],
         "mainCategories": [
@@ -4563,11 +4264,11 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "A Udma Memcpy Polling Example. CPU is C75SS1-0 running FREERTOS.",
-        "name": "udma_memcpy_polling",
-        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
+        "description": "A Udma Memcpy Dru Interrupt Example. CPU is C75SS1-0 running FREERTOS.",
+        "name": "udma_memcpy_dru_interrupt",
+        "location": "../../examples/drivers/udma/udma_memcpy_dru_interrupt/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4578,7 +4279,7 @@
         "subCategories": [
             "drivers",
             "udma",
-            "udma_memcpy_polling",
+            "udma_memcpy_dru_interrupt",
             "c75ss1-0_freertos"
         ],
         "mainCategories": [
@@ -4600,7 +4301,7 @@
         "name": "udma_memcpy_interrupt",
         "location": "../../examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -4633,7 +4334,7 @@
         "name": "udma_memcpy_interrupt",
         "location": "../../examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -4666,7 +4367,7 @@
         "name": "udma_memcpy_interrupt",
         "location": "../../examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -4699,7 +4400,7 @@
         "name": "udma_memcpy_interrupt",
         "location": "../../examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4732,7 +4433,7 @@
         "name": "udma_memcpy_interrupt",
         "location": "../../examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4765,7 +4466,7 @@
         "name": "udma_memcpy_interrupt",
         "location": "../../examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4798,7 +4499,7 @@
         "name": "udma_memcpy_interrupt",
         "location": "../../examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4831,7 +4532,7 @@
         "name": "udma_memcpy_interrupt",
         "location": "../../examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4860,11 +4561,110 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "A Udma Chaining Example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
-        "name": "udma_chaining",
-        "location": "../../examples/drivers/udma/udma_chaining/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "description": "A Udma Memcpy Polling Example. CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "udma_memcpy_polling",
+        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "udma",
+            "udma_memcpy_polling",
+            "mcu-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Udma Memcpy Polling Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "name": "udma_memcpy_polling",
+        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "udma",
+            "udma_memcpy_polling",
+            "wkup-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Udma Memcpy Polling Example. CPU is MAIN-R5FSS0-0 running NORTOS.",
+        "name": "udma_memcpy_polling",
+        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "udma",
+            "udma_memcpy_polling",
+            "main-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Udma Memcpy Polling Example. CPU is MCU-R5FSS0-0 running FREERTOS.",
+        "name": "udma_memcpy_polling",
+        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4875,7 +4675,40 @@
         "subCategories": [
             "drivers",
             "udma",
-            "udma_chaining",
+            "udma_memcpy_polling",
+            "mcu-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Udma Memcpy Polling Example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
+        "name": "udma_memcpy_polling",
+        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "drivers",
+            "udma",
+            "udma_memcpy_polling",
             "wkup-r5fss0-0_freertos"
         ],
         "mainCategories": [
@@ -4893,11 +4726,11 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "A Udma Init Example. CPU is MAIN-R5FSS0-0 running FREERTOS.",
-        "name": "udma_init",
-        "location": "../../examples/drivers/udma/udma_init/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "description": "A Udma Memcpy Polling Example. CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "name": "udma_memcpy_polling",
+        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4908,8 +4741,74 @@
         "subCategories": [
             "drivers",
             "udma",
-            "udma_init",
+            "udma_memcpy_polling",
             "main-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Udma Memcpy Polling Example. CPU is C75SS0-0 running FREERTOS.",
+        "name": "udma_memcpy_polling",
+        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ccs"
+        ],
+        "subCategories": [
+            "drivers",
+            "udma",
+            "udma_memcpy_polling",
+            "c75ss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Udma Memcpy Polling Example. CPU is C75SS1-0 running FREERTOS.",
+        "name": "udma_memcpy_polling",
+        "location": "../../examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ccs"
+        ],
+        "subCategories": [
+            "drivers",
+            "udma",
+            "udma_memcpy_polling",
+            "c75ss1-0_freertos"
         ],
         "mainCategories": [
             [
@@ -4930,7 +4829,7 @@
         "name": "empty",
         "location": "../../examples/empty/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4961,7 +4860,7 @@
         "name": "empty",
         "location": "../../examples/empty/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -4992,7 +4891,7 @@
         "name": "empty",
         "location": "../../examples/empty/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5023,7 +4922,7 @@
         "name": "empty",
         "location": "../../examples/empty/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5054,7 +4953,7 @@
         "name": "empty",
         "location": "../../examples/empty/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -5085,7 +4984,7 @@
         "name": "empty",
         "location": "../../examples/empty/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -5110,112 +5009,13 @@
             "example"
         ],
         "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "An R5 Core test. Performs Core R5 read/write, configuration tests CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "core_r5_test",
-        "location": "../../examples/kernel/dpl/core_r5/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "kernel",
-            "dpl",
-            "core_r5",
-            "mcu-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "An R5 Core test. Performs Core R5 read/write, configuration tests CPU is WKUP-R5FSS0-0 running NORTOS.",
-        "name": "core_r5_test",
-        "location": "../../examples/kernel/dpl/core_r5/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "kernel",
-            "dpl",
-            "core_r5",
-            "wkup-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "An R5 Core test. Performs Core R5 read/write, configuration tests CPU is MAIN-R5FSS0-0 running NORTOS.",
-        "name": "core_r5_test",
-        "location": "../../examples/kernel/dpl/core_r5/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "kernel",
-            "dpl",
-            "core_r5",
-            "main-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
             "example.gettingstarted"
         ],
         "description": "A simple \"Hello, World\" Example.  CPU is MCU-R5FSS0-0 running NORTOS.",
         "name": "hello_world",
         "location": "../../examples/hello_world/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -5246,7 +5046,7 @@
         "name": "hello_world",
         "location": "../../examples/hello_world/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -5277,7 +5077,7 @@
         "name": "hello_world",
         "location": "../../examples/hello_world/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -5308,7 +5108,7 @@
         "name": "hello_world",
         "location": "../../examples/hello_world/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5339,7 +5139,7 @@
         "name": "hello_world",
         "location": "../../examples/hello_world/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5370,7 +5170,7 @@
         "name": "hello_world",
         "location": "../../examples/hello_world/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5401,7 +5201,7 @@
         "name": "hello_world",
         "location": "../../examples/hello_world/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5432,7 +5232,7 @@
         "name": "hello_world",
         "location": "../../examples/hello_world/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5459,11 +5259,11 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
-        "description": "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is MCU-R5FSS0-0 running NORTOS.",
+        "description": "An Example for the demonstration of Driver Porting Layer (DPL) API calls. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is MCU-R5FSS0-0 running NORTOS.",
         "name": "dpl_demo",
         "location": "../../examples/kernel/dpl/dpl_demo/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -5492,11 +5292,11 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
-        "description": "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "description": "An Example for the demonstration of Driver Porting Layer (DPL) API calls. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is WKUP-R5FSS0-0 running NORTOS.",
         "name": "dpl_demo",
         "location": "../../examples/kernel/dpl/dpl_demo/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -5525,11 +5325,11 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
-        "description": "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is MAIN-R5FSS0-0 running NORTOS.",
+        "description": "An Example for the demonstration of Driver Porting Layer (DPL) API calls. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is MAIN-R5FSS0-0 running NORTOS.",
         "name": "dpl_demo",
         "location": "../../examples/kernel/dpl/dpl_demo/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -5558,11 +5358,11 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
-        "description": "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is MCU-R5FSS0-0 running FREERTOS.",
+        "description": "An Example for the demonstration of Driver Porting Layer (DPL) API calls. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is MCU-R5FSS0-0 running FREERTOS.",
         "name": "dpl_demo",
         "location": "../../examples/kernel/dpl/dpl_demo/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5591,11 +5391,11 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
-        "description": "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is WKUP-R5FSS0-0 running FREERTOS.",
+        "description": "An Example for the demonstration of Driver Porting Layer (DPL) API calls. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is WKUP-R5FSS0-0 running FREERTOS.",
         "name": "dpl_demo",
         "location": "../../examples/kernel/dpl/dpl_demo/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5624,11 +5424,11 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
-        "description": "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "description": "An Example for the demonstration of Driver Porting Layer (DPL) API calls. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is MAIN-R5FSS0-0 running FREERTOS.",
         "name": "dpl_demo",
         "location": "../../examples/kernel/dpl/dpl_demo/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5657,11 +5457,11 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
-        "description": "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is C75SS0-0 running FREERTOS.",
+        "description": "An Example for the demonstration of Driver Porting Layer (DPL) API calls. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is C75SS0-0 running FREERTOS.",
         "name": "dpl_demo",
         "location": "../../examples/kernel/dpl/dpl_demo/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5690,11 +5490,11 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
-        "description": "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is C75SS1-0 running FREERTOS.",
+        "description": "An Example for the demonstration of Driver Porting Layer (DPL) API calls. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is C75SS1-0 running FREERTOS.",
         "name": "dpl_demo",
         "location": "../../examples/kernel/dpl/dpl_demo/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5723,11 +5523,11 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
-        "description": "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is MCU-R5FSS0-0 running SAFERTOS.",
+        "description": "An Example for the demonstration of Driver Porting Layer (DPL) API calls. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is MCU-R5FSS0-0 running SAFERTOS.",
         "name": "dpl_demo",
         "location": "../../examples/kernel/dpl/dpl_demo/j722s-evm/mcu-r5fss0-0_safertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "safertos"
@@ -5756,11 +5556,11 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
-        "description": "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is WKUP-R5FSS0-0 running SAFERTOS.",
+        "description": "An Example for the demonstration of Driver Porting Layer (DPL) API calls. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is WKUP-R5FSS0-0 running SAFERTOS.",
         "name": "dpl_demo",
         "location": "../../examples/kernel/dpl/dpl_demo/j722s-evm/wkup-r5fss0-0_safertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "safertos"
@@ -5789,11 +5589,11 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
-        "description": "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is MAIN-R5FSS0-0 running SAFERTOS.",
+        "description": "An Example for the demonstration of Driver Porting Layer (DPL) API calls. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is MAIN-R5FSS0-0 running SAFERTOS.",
         "name": "dpl_demo",
         "location": "../../examples/kernel/dpl/dpl_demo/j722s-evm/main-r5fss0-0_safertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "safertos"
@@ -5826,7 +5626,7 @@
         "name": "task_switch",
         "location": "../../examples/kernel/freertos/task_switch/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5859,7 +5659,7 @@
         "name": "task_switch",
         "location": "../../examples/kernel/freertos/task_switch/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5892,7 +5692,7 @@
         "name": "task_switch",
         "location": "../../examples/kernel/freertos/task_switch/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5925,7 +5725,7 @@
         "name": "task_switch",
         "location": "../../examples/kernel/freertos/task_switch/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5958,7 +5758,7 @@
         "name": "task_switch",
         "location": "../../examples/kernel/freertos/task_switch/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -5991,7 +5791,7 @@
         "name": "task_switch",
         "location": "../../examples/kernel/safertos/task_switch/j722s-evm/wkup-r5fss0-0_safertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "safertos"
@@ -6024,7 +5824,7 @@
         "name": "task_switch",
         "location": "../../examples/kernel/safertos/task_switch/j722s-evm/mcu-r5fss0-0_safertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "safertos"
@@ -6057,7 +5857,7 @@
         "name": "task_switch",
         "location": "../../examples/kernel/safertos/task_switch/j722s-evm/main-r5fss0-0_safertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "safertos"
@@ -6090,7 +5890,7 @@
         "name": "task_switch",
         "location": "../../examples/kernel/safertos/task_switch/j722s-evm/c75ss0-0_safertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "safertos"
@@ -6123,7 +5923,7 @@
         "name": "task_switch",
         "location": "../../examples/kernel/safertos/task_switch/j722s-evm/c75ss1-0_safertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "safertos"
@@ -6156,7 +5956,7 @@
         "name": "SafetyApp",
         "location": "../../examples/safety/safety_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -6182,46 +5982,13 @@
             "example"
         ],
         "resourceSubClass": [
-            "example.gettingstarted"
-        ],
-        "description": "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters. CPU is WKUP-R5FSS0-0 running FREERTOS.",
-        "name": "ddr_perf_app",
-        "location": "../../examples/drivers/ddr/ddr_perf/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "freertos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "drivers",
-            "ddr",
-            "ddr_perf",
-            "wkup-r5fss0-0_freertos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
             "example.general"
         ],
         "description": "This example verifies DCC in various modes of operation CPU is MCU-R5FSS0-0 running NORTOS.",
         "name": "dcc",
         "location": "../../examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -6250,11 +6017,11 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "This example verifies VTM operation CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "vtm_app",
-        "location": "../../examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "description": "This example verifies ECC inject operations in single and double bits CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "ecc_app",
+        "location": "../../examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -6264,8 +6031,7 @@
         ],
         "subCategories": [
             "sdl",
-            "vtm",
-            "vtm_uc",
+            "ecc",
             "mcu-r5fss0-0_nortos"
         ],
         "mainCategories": [
@@ -6283,11 +6049,11 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "This example demonstrates error injecting usecase of Timeout Gasket (TOG) CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "tog_app",
-        "location": "../../examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "description": "This example demonstrates the ESM operation CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "mcu_esm0",
+        "location": "../../examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -6297,7 +6063,238 @@
         ],
         "subCategories": [
             "sdl",
-            "stog",
+            "esm",
+            "mcu_esm0",
+            "mcu-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "This example verifies CRC in auto CPU mode of operation CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "mcrc_auto",
+        "location": "../../examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "sdl",
+            "mcrc",
+            "mcrc_auto",
+            "mcu-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "This example verifies CRC in full CPU mode of operation CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "mcrc_full_cpu",
+        "location": "../../examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "sdl",
+            "mcrc",
+            "mcrc_full_cpu",
+            "mcu-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "This example verifies CRC in semi CPU mode of operation CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "mcrc_semi_cpu",
+        "location": "../../examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "sdl",
+            "mcrc",
+            "mcrc_semi_cpu",
+            "mcu-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "This example verifies MTOG operation CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "mtog_app",
+        "location": "../../examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "sdl",
+            "mtog",
+            "mtog_example",
+            "mcu-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "This example demonstrates the pbist operation CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "pbist_mpu_example",
+        "location": "../../examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "sdl",
+            "pbist",
+            "pbist_mpu",
+            "mcu-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "This example verifies POK operation CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "pok_app",
+        "location": "../../examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "sdl",
+            "pok",
+            "pok_mcu",
+            "mcu-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "This example performes ROM CHECKSUM CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "rom_checksum_example",
+        "location": "../../examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "sdl",
+            "rom_checksum",
             "mcu-r5fss0-0_nortos"
         ],
         "mainCategories": [
@@ -6319,7 +6316,7 @@
         "name": "rti_app_uc1",
         "location": "../../examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -6352,7 +6349,7 @@
         "name": "rti_app_uc2",
         "location": "../../examples/sdl/rti/UC2/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -6385,7 +6382,7 @@
         "name": "rti_app_uc3",
         "location": "../../examples/sdl/rti/UC3/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -6418,7 +6415,7 @@
         "name": "rti_app_uc4",
         "location": "../../examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -6447,11 +6444,11 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "This example verifies POK operation CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "pok_app",
-        "location": "../../examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "description": "This example demonstrates error injecting usecase of Timeout Gasket (TOG) CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "tog_app",
+        "location": "../../examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -6461,8 +6458,7 @@
         ],
         "subCategories": [
             "sdl",
-            "pok",
-            "pok_mcu",
+            "stog",
             "mcu-r5fss0-0_nortos"
         ],
         "mainCategories": [
@@ -6480,11 +6476,11 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "This example demonstrates the pbist operation CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "pbist_mpu_example",
-        "location": "../../examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "description": "This example verifies VTM operation CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "vtm_app",
+        "location": "../../examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -6494,8 +6490,8 @@
         ],
         "subCategories": [
             "sdl",
-            "pbist",
-            "pbist_mpu",
+            "vtm",
+            "vtm_uc",
             "mcu-r5fss0-0_nortos"
         ],
         "mainCategories": [
@@ -6513,23 +6509,23 @@
         "resourceSubClass": [
             "example.general"
         ],
-        "description": "This example demonstrates the ESM operation CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "mcu_esm0",
-        "location": "../../examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "description": "DM Unit Test example. CPU is WKUP-R5FSS0-0 running FREERTOS.",
+        "name": "dm_unit_testapp",
+        "location": "../../examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
-            "nortos"
+            "freertos"
         ],
         "compiler": [
             "ticlang"
         ],
         "subCategories": [
-            "sdl",
-            "esm",
-            "mcu_esm0",
-            "mcu-r5fss0-0_nortos"
+            "drivers",
+            "sciclient",
+            "dm_unit_testapp",
+            "wkup-r5fss0-0_freertos"
         ],
         "mainCategories": [
             [
@@ -6544,188 +6540,27 @@
             "example"
         ],
         "resourceSubClass": [
-            "example.general"
+            "example.gettingstarted"
         ],
-        "description": "This example verifies MTOG operation CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "mtog_app",
-        "location": "../../examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "description": "CSIRX safety checkers app CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "name": "SafetyCheckersApp_csirx",
+        "location": "../../source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
-            "nortos"
+            "freertos"
         ],
         "compiler": [
             "ticlang"
         ],
         "subCategories": [
-            "sdl",
-            "mtog",
-            "mtog_example",
-            "mcu-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "This example verifies CRC in full CPU mode of operation CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "mcrc_full_cpu",
-        "location": "../../examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "sdl",
-            "mcrc",
-            "mcrc_full_cpu",
-            "mcu-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "This example verifies CRC in auto CPU mode of operation CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "mcrc_auto",
-        "location": "../../examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "sdl",
-            "mcrc",
-            "mcrc_auto",
-            "mcu-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "This example verifies CRC in semi CPU mode of operation CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "mcrc_semi_cpu",
-        "location": "../../examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "sdl",
-            "mcrc",
-            "mcrc_semi_cpu",
-            "mcu-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "This example verifies ECC inject operations in single and double bits CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "ecc_app",
-        "location": "../../examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "sdl",
-            "ecc",
-            "mcu-r5fss0-0_nortos"
-        ],
-        "mainCategories": [
-            [
-                "Examples",
-                "Development Tools"
-            ]
-        ]
-    },
-    {
-        "resourceType": "project.ccs",
-        "resourceClass": [
-            "example"
-        ],
-        "resourceSubClass": [
-            "example.general"
-        ],
-        "description": "This example performes ROM CHECKSUM CPU is MCU-R5FSS0-0 running NORTOS.",
-        "name": "rom_checksum_example",
-        "location": "../../examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
-        "devtools": [
-            "J722S_EVM"
-        ],
-        "kernel": [
-            "nortos"
-        ],
-        "compiler": [
-            "ticlang"
-        ],
-        "subCategories": [
-            "sdl",
-            "rom_checksum",
-            "mcu-r5fss0-0_nortos"
+            "..",
+            "source",
+            "safety_checkers",
+            "examples",
+            "csirx_checkers_app",
+            "main-r5fss0-0_freertos"
         ],
         "mainCategories": [
             [
@@ -6746,7 +6581,7 @@
         "name": "SafetyCheckersApp_pm",
         "location": "../../source/safety_checkers/examples/pm_checkers_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -6781,7 +6616,7 @@
         "name": "SafetyCheckersApp_pm",
         "location": "../../source/safety_checkers/examples/pm_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -6816,7 +6651,7 @@
         "name": "SafetyCheckersApp_pm",
         "location": "../../source/safety_checkers/examples/pm_checkers_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -6851,7 +6686,7 @@
         "name": "SafetyCheckersApp_pmWarmReset",
         "location": "../../source/safety_checkers/examples/pm_checkers_warm_reset/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -6886,7 +6721,7 @@
         "name": "SafetyCheckersApp_pmWarmReset",
         "location": "../../source/safety_checkers/examples/pm_checkers_warm_reset/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -6921,7 +6756,7 @@
         "name": "SafetyCheckersApp_pmWarmReset",
         "location": "../../source/safety_checkers/examples/pm_checkers_warm_reset/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -6956,7 +6791,7 @@
         "name": "SafetyCheckersApp_rm",
         "location": "../../source/safety_checkers/examples/rm_checkers_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -6991,7 +6826,7 @@
         "name": "SafetyCheckersApp_rm",
         "location": "../../source/safety_checkers/examples/rm_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -7026,7 +6861,7 @@
         "name": "SafetyCheckersApp_rm",
         "location": "../../source/safety_checkers/examples/rm_checkers_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -7061,7 +6896,7 @@
         "name": "SafetyCheckersApp_tifsCheckers",
         "location": "../../source/safety_checkers/examples/tifs_checkers_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -7096,7 +6931,7 @@
         "name": "SafetyCheckersApp_tifsCheckers",
         "location": "../../source/safety_checkers/examples/tifs_checkers_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -7131,7 +6966,7 @@
         "name": "SafetyCheckersApp_tifsCheckers",
         "location": "../../source/safety_checkers/examples/tifs_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -7166,7 +7001,7 @@
         "name": "dm_power_analysis_app",
         "location": "../../source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -7201,7 +7036,7 @@
         "name": "dm_power_analysis_app",
         "location": "../../source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -7236,7 +7071,7 @@
         "name": "dm_power_analysis_app",
         "location": "../../source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -7271,7 +7106,7 @@
         "name": "dm_power_analysis_app",
         "location": "../../source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -7306,7 +7141,7 @@
         "name": "dm_power_analysis_app",
         "location": "../../source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -7337,11 +7172,194 @@
         "resourceSubClass": [
             "example.general"
         ],
+        "description": "An SBL example to check if non-booted cores are properly switched off. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "name": "sbl_non_booted_core_test",
+        "location": "../../test/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "..",
+            "test",
+            "drivers",
+            "boot",
+            "sbl_non_booted_core_test",
+            "wkup-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
+        "description": "Capture Unit test  CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "name": "csirx_ut",
+        "location": "../../test/drivers/csirx/csirx_ut/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "..",
+            "test",
+            "drivers",
+            "csirx",
+            "csirx_ut",
+            "main-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Enet Cpsw Loopback Mac End Example. CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "name": "enet_cpsw_loopback_mac_end",
+        "location": "../../source/networking/enet/core/examples/enet_loopback/enet_cpsw_loopback/loopback_mac_end/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "..",
+            "source",
+            "networking",
+            "enet",
+            "core",
+            "examples",
+            "enet_loopback",
+            "enet_cpsw_loopback",
+            "loopback_mac_end",
+            "main-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Ethfw Server Example. CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "name": "ethfw_server",
+        "location": "../../source/networking/ethfw/apps/app_remoteswitchcfg_server/j722s/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "..",
+            "source",
+            "networking",
+            "ethfw",
+            "apps",
+            "app_remoteswitchcfg_server",
+            "j722s",
+            "main-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Ethfw Client Example. CPU is MCU-R5FSS0-0 running FREERTOS.",
+        "name": "ethfw_client",
+        "location": "../../source/networking/ethfw/apps/app_remoteswitchcfg_client/j722s/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "..",
+            "source",
+            "networking",
+            "ethfw",
+            "apps",
+            "app_remoteswitchcfg_client",
+            "j722s",
+            "mcu-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
         "description": "A IPC Notify echo example System project.",
         "name": "ipc_notify_echo",
         "location": "../../examples/drivers/ipc/ipc_notify_echo/j722s-evm/system_freertos_nortos/system.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -7371,7 +7389,7 @@
         "name": "ipc_rpmsg_echo",
         "location": "../../examples/drivers/ipc/ipc_rpmsg_echo/j722s-evm/system_freertos_nortos/system.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -7401,7 +7419,7 @@
         "name": "empty",
         "location": "../../examples/empty/j722s-evm/system_freertos/system.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "freertos"
@@ -7429,7 +7447,7 @@
         "name": "empty",
         "location": "../../examples/empty/j722s-evm/system_nortos/system.projectspec",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "kernel": [
             "nortos"
@@ -7453,7 +7471,7 @@
         "name": "User Guide",
         "location": "../../docs/api_guide_j722s/index.html",
         "devtools": [
-            "J722S_EVM"
+            "J722SXH01EVM"
         ],
         "mainCategories": [
             [

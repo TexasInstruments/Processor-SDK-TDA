@@ -95,8 +95,9 @@
 #define VHWA_FC_TEST_IN_BUF_OFFSET     (8*1024*1024)
 
 /* Output Offset between two test cases, used mainly for zebu/qt,
- * so that buffers can be saved in one shot */
-#define VHWA_FC_TEST_OUT_BUF_OFFSET    (16*1024*1024)
+ * so that buffers can be saved in one shot.
+ * Set to 80MB to accommodate 10 MSC outputs @ 8MB each for multi-handle scenarios */
+#define VHWA_FC_TEST_OUT_BUF_OFFSET    (80*1024*1024)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */

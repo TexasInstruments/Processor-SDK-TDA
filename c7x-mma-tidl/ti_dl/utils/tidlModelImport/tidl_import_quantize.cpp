@@ -103,7 +103,8 @@ static std::unordered_set<int> quantizationPassThroughLayers = {
   TIDL_SliceLayer,
   TIDL_TopKLayer,
   TIDL_PoolingLayer,
-  TIDL_ResizeLayer
+  TIDL_ResizeLayer,
+  TIDL_TileLayer
 }; 
 static std::unordered_map<int, bool> quantizationPassThroughMap = {};
 static std::map<int32_t, pair<float32_tidl, float32_tidl>> floatRangeMap = {};
@@ -114,7 +115,8 @@ static std::unordered_map<int32_t, pair<float32_tidl, float32_tidl>> activationP
   {TIDL_ELU,    {-4.0f, FLT_MAX}},
   {TIDL_GELU,  {-5.0f, FLT_MAX}}, // GeLU@-5.0 = -1.43325786e-06
   {TIDL_Asin,  {-1.0f, 1.0f}},
-  {TIDL_HardSwish, {-3.0f, FLT_MAX}}
+  {TIDL_HardSwish, {-3.0f, FLT_MAX}},
+  {TIDL_Sign,  {-0.1f, 0.1f}}
 };
 
 //Mapping table that maps the Activation Type string with the TIDL integer list
@@ -152,7 +154,14 @@ static const uint8_t importActTypeMapping[TIDL_TOTAL_NONLINEAR_ACT_OPS][TIDL_MAX
   {"tan"        },          // 29
   {"logit"      },          // 30
   {"reciprocal" },          // 31
-  {"swish"  },              // 32
+  {"silu"  },               // 32
+  {"swish"  },              // 33
+  {"softplus"  },           // 34
+  {"softsign"  },           // 35
+  {"ceil"  },               // 36
+  {"celu"  },               // 37
+  {"selu"  },               // 38
+  {"round"  },              // 39
 };
 
 float32_tidl TIDL_clamp(float32_tidl value, float32_tidl minVal, float32_tidl maxVal)
@@ -224,6 +233,18 @@ std::string layerTypeString(int32_t type)
       { TIDL_GridSampleLayer, "TIDL_GridSampleLayer"},
       { TIDL_DeformableConvLayer, "TIDL_DeformableConvLayer"},
       { TIDL_TopKLayer, "TIDL_TopKLayer"},
+      { TIDL_TileLayer, "TIDL_TileLayer"},
+      { TIDL_LogicalOpLayer, "TIDL_LogicalOpLayer"},
+      { TIDL_LSTMLayer, "TIDL_LSTMLayer"},
+      { TIDL_GRULayer, "TIDL_GRULayer"},
+      { TIDL_RNNLayer, "TIDL_RNNLayer"},
+      { TIDL_SoftPlusLayer, "TIDL_SoftPlusLayer" },
+      { TIDL_SoftSignLayer, "TIDL_SoftSignLayer" },
+      { TIDL_CeilLayer, "TIDL_CeilLayer" },
+      { TIDL_CeluLayer, "TIDL_CeluLayer" },
+      { TIDL_SeluLayer, "TIDL_SeluLayer" },
+      { TIDL_RoundLayer, "TIDL_RoundLayer" },
+      { TIDL_SignLayer, "TIDL_SignLayer" },
       { TIDL_UnsupportedLayer, "TIDL_UnsupportedLayer" },
    };
    return find(type, layerTypeNames);
@@ -264,7 +285,14 @@ std::string actTypeShort(int32_t type)
                               { TIDL_Tan,"Tan"}, \
                               { TIDL_Logit, "Logit" }, \
                               { TIDL_Reciprocal, "Reciprocal" }, \
-                              { TIDL_SiLU , "SiLU" }
+                              { TIDL_SiLU , "SiLU" }, \
+                              { TIDL_SoftPlus , "Softplus" }, \
+                              { TIDL_SoftSign , "Softsign" }, \
+                              { TIDL_Ceil , "Ceil" }, \
+                              { TIDL_Celu , "Celu" }, \
+                              { TIDL_Selu , "Selu" }, \
+                              { TIDL_Round , "Round" }, \
+                              { TIDL_Sign , "Sign" }
                            };
    return find(type, actTypeNames);
 }
@@ -461,6 +489,13 @@ void TIDL_prepareLUTForActivations_wrapper(sTIDL_OrgNetwork_t * orgTIDLNetStruct
       else if(lutGenParams.actType == TIDL_Swish)
       {
         lutGenParams.alpha = (double)pTIDL_LayerPC->actParams.alpha;
+      }
+      else if(lutGenParams.actType == TIDL_Celu){
+        lutGenParams.alpha = (double)pTIDL_LayerPC->layerParams.batchNormParams.inDataQ;     
+      }
+      else if(lutGenParams.actType == TIDL_Selu){
+        lutGenParams.alpha = (double)pTIDL_LayerPC->layerParams.batchNormParams.inDataQ;
+        lutGenParams.beta  = (double)pTIDL_LayerPC->layerParams.batchNormParams.weightsQ;  
       }
       //Avoid allocating for the following operators since there is no separate kernel implementation
       if((lutGenParams.actType != TIDL_NoAct) && (lutGenParams.actType != TIDL_RelU) && (lutGenParams.actType != TIDL_PRelU) && (lutGenParams.actType != TIDL_RelU6) && 
@@ -1450,6 +1485,10 @@ bool TIDL_asymRangeToScale(float32_tidl *bufferScale, TzeroPoint *zeroPoint, flo
 
   if(zeroOutBuf == false)
   {
+    float32_tidl quantizedTypeMax = 0.0, quantizedTypeMin = 0.0;
+    float32_tidl zpSatMax = 0.0, zpSatMin = 0.0;
+    float32_tidl zpOffset = 0.0;
+
     if(TIDL_ASYMMETRIC_TENSOR == tensorType)
     {
       if(quantizedElemType == TIDL_SignedChar)
@@ -1460,6 +1499,10 @@ bool TIDL_asymRangeToScale(float32_tidl *bufferScale, TzeroPoint *zeroPoint, flo
         floatZP = floatZP > std::numeric_limits<int8_t>::max() ? std::numeric_limits<int8_t>::max() : floatZP;
         floatZP = floatZP < std::numeric_limits<int8_t>::min() ? std::numeric_limits<int8_t>::min() : floatZP;
         *zeroPoint = (int8_t) floatZP; 
+
+        quantizedTypeMax = 127, quantizedTypeMin = -128;
+        zpSatMax = std::numeric_limits<int8_t>::max(), zpSatMin = std::numeric_limits<int8_t>::min();
+        zpOffset = 127.0;
       }
       else if(quantizedElemType == TIDL_SignedShort)
       {
@@ -1469,6 +1512,10 @@ bool TIDL_asymRangeToScale(float32_tidl *bufferScale, TzeroPoint *zeroPoint, flo
         floatZP = floatZP > std::numeric_limits<int16_t>::max() ? std::numeric_limits<int16_t>::max() : floatZP;
         floatZP = floatZP < std::numeric_limits<int16_t>::min() ? std::numeric_limits<int16_t>::min() : floatZP;
         *zeroPoint = (int16_t) floatZP;
+
+        quantizedTypeMax = 32767.0, quantizedTypeMin = -32768.0;
+        zpSatMax = std::numeric_limits<int16_t>::max(), zpSatMin = std::numeric_limits<int16_t>::min();
+        zpOffset = 32767.0;
       }
       else if(quantizedElemType == TIDL_UnsignedChar)
       {
@@ -1478,6 +1525,10 @@ bool TIDL_asymRangeToScale(float32_tidl *bufferScale, TzeroPoint *zeroPoint, flo
         floatZP = floatZP > std::numeric_limits<uint8_t>::max() ? std::numeric_limits<uint8_t>::max() : floatZP;
         floatZP = floatZP < std::numeric_limits<uint8_t>::min() ? std::numeric_limits<uint8_t>::min() : floatZP;
         *zeroPoint = (uint8_t) floatZP;
+
+        quantizedTypeMax = 255.0, quantizedTypeMin = 0.0;
+        zpSatMax = std::numeric_limits<uint8_t>::max(), zpSatMin = std::numeric_limits<uint8_t>::min();
+        zpOffset = 255.0;
       }
       else if(quantizedElemType == TIDL_UnsignedShort)
       {
@@ -1487,6 +1538,15 @@ bool TIDL_asymRangeToScale(float32_tidl *bufferScale, TzeroPoint *zeroPoint, flo
         floatZP = floatZP > std::numeric_limits<uint16_t>::max() ? std::numeric_limits<uint16_t>::max() : floatZP;
         floatZP = floatZP < std::numeric_limits<uint16_t>::min() ? std::numeric_limits<uint16_t>::min() : floatZP;
         *zeroPoint = (uint16_t) floatZP;
+
+        quantizedTypeMax = 65535.0, quantizedTypeMin = 0.0;
+        zpSatMax = std::numeric_limits<uint16_t>::max(), zpSatMin = std::numeric_limits<uint16_t>::min();
+        zpOffset = 65535.0;
+      }
+      else if (quantizedElemType == TIDL_SinglePrecFloat)
+      {
+        *bufferScale = 1.0;
+        *zeroPoint = 0;
       }
     }
     else
@@ -1496,21 +1556,52 @@ bool TIDL_asymRangeToScale(float32_tidl *bufferScale, TzeroPoint *zeroPoint, flo
       {
         *bufferScale = 127.0/absRange;
         *zeroPoint = 0;
+
+        quantizedTypeMax = 127, quantizedTypeMin = -128;
       }
       else if(quantizedElemType == TIDL_SignedShort)
       {
         *bufferScale = SYMMETRIC_16BIT_SIGNED_MAX/absRange;
         *zeroPoint = 0;
+
+        quantizedTypeMax = 32767.0, quantizedTypeMin = -32768.0;
       }
       else if(quantizedElemType == TIDL_UnsignedChar)
       {
         *bufferScale = 255.0/absRange;
         *zeroPoint = 0;
+
+        quantizedTypeMax = 255.0, quantizedTypeMin = 0.0;
       }
       else if(quantizedElemType == TIDL_UnsignedShort)
       {
         *bufferScale = SYMMETRIC_16BIT_UNSIGNED_MAX/absRange;
         *zeroPoint = 0;
+
+        quantizedTypeMax = 65535.0, quantizedTypeMin = 0.0;
+      }
+    }
+
+    if(*bufferScale < 1.0 && max <= quantizedTypeMax && min >= quantizedTypeMin){
+      *bufferScale = 1.0;
+      if(TIDL_ASYMMETRIC_TENSOR == tensorType){
+        floatZP = round((zpOffset - (*(bufferScale) * max)));
+        /*Saturate zero point to respective datatype container*/
+        floatZP = floatZP > zpSatMax ? zpSatMax : floatZP;
+        floatZP = floatZP < zpSatMin ? zpSatMin : floatZP;
+         /* Cast to appropriate type based on quantizedElemType */
+        if(quantizedElemType == TIDL_SignedChar){
+          *zeroPoint = (int8_t) floatZP;
+        }
+        else if(quantizedElemType == TIDL_SignedShort){
+          *zeroPoint = (int16_t) floatZP;
+        }
+        else if(quantizedElemType == TIDL_UnsignedChar){
+          *zeroPoint = (uint8_t) floatZP;
+        }
+        else if(quantizedElemType == TIDL_UnsignedShort){  
+          *zeroPoint = (uint16_t) floatZP;
+        }
       }
     }
   }
@@ -2468,6 +2559,13 @@ This is as good as not applying any additional scale on input and directly apply
       TIDL_asymRangeToScale(&(net->TIDLPCLayers[i].outData[0].tensorScale), &(net->TIDLPCLayers[i].outData[0].tensorZeroPoint), net->TIDLPCLayers[i].outData[0].minTensorValue, net->TIDLPCLayers[i].outData[0].maxTensorValue, TIDL_SYMMETRIC_TENSOR, net->TIDLPCLayers[i].outData[0].elementType);
     }
   }
+  else if ((net->TIDLPCLayers[i].layerType == TIDL_EltWiseLayer) &&
+           (net->TIDLPCLayers[i].layerParams.eltWiseParams.eltWiseType == TIDL_EltWiseMod))
+  {
+    TIDL_asymRangeToScale(&(net->TIDLPCLayers[i].outData[0].tensorScale), &(net->TIDLPCLayers[i].outData[0].tensorZeroPoint), net->TIDLPCLayers[i].outData[0].minTensorValue,
+                          net->TIDLPCLayers[i].outData[0].maxTensorValue, TIDL_SYMMETRIC_TENSOR, net->TIDLPCLayers[i].outData[0].elementType);
+    net->TIDLPCLayers[i].outData[0].roundBits = 0;
+  }
   else if (! ((net->TIDLPCLayers[i].layerType == TIDL_DataLayer) && (net->TIDLPCLayers[i].numOutBufs > 0)) )
   {
     /* tensorScale for input data layer is already set, and if tried to write here, all scales are overwritten with first scale since inData[0].dataId = 0
@@ -3134,7 +3232,7 @@ int32_t TIDL_updateParamsRange(sTIDL_OrgNetwork_t   * pOrgTIDLNetStructure,
             *(pOrgTIDLNetStructure->TIDLPCLayers[i].quantParams[j].scalePtr) = 1;
           }
         }
-
+        if( extQuantPrms != 1)
         {
           pOrgTIDLNetStructure->TIDLPCLayers[i].quantParams[j].max = max;
           pOrgTIDLNetStructure->TIDLPCLayers[i].quantParams[j].min = min;
@@ -4662,7 +4760,7 @@ int32_t TIDL_asymUpdateScalesAndShifts(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure
       float32_tidl outTensorScale;
       int32_t outZeroPoint = 0;
       sTIDL_LayerPC_t * currLayer = &pOrgTIDLNetStructure->TIDLPCLayers[layerIdx];
-      if(currLayer->actParams.actType == TIDL_Sin || currLayer->actParams.actType == TIDL_Cos || currLayer->actParams.actType == TIDL_Tanh) {
+      if(currLayer->actParams.actType == TIDL_Sin || currLayer->actParams.actType == TIDL_Cos || currLayer->actParams.actType == TIDL_Tanh || currLayer->actParams.actType == TIDL_Sign) {
         outData->minTensorValue = std::max(outData->minTensorValue, -1.0f);
         outData->maxTensorValue = std::min(outData->maxTensorValue, 1.0f);
       }
@@ -4686,6 +4784,17 @@ int32_t TIDL_asymUpdateScalesAndShifts(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure
         outData->tensorScale     = outTensorScale;
         outData->tensorZeroPoint = outZeroPoint;
       }
+      if(currLayer->actParams.actType == TIDL_Round || currLayer->actParams.actType == TIDL_Ceil || currLayer->actParams.actType == TIDL_Floor)
+      {
+        /* Check if output min/max are in range of (dtype_min, dtype_max), if in range set scaleValue to 1*/
+        float32_tidl clipMin = TIDL_clamp(outData->minTensorValue, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].minPSAT, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].maxPSAT);
+        float32_tidl clipMax = TIDL_clamp(outData->maxTensorValue, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].minPSAT, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].maxPSAT);
+        if (clipMin == outData->minTensorValue && clipMax == outData->maxTensorValue)
+        {
+          outData->tensorScale = 1;
+          outData->tensorZeroPoint = 0;
+        }
+      }
       TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, outData->dataId);
     }
     else if(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_LayerNormLayer)
@@ -4703,12 +4812,19 @@ int32_t TIDL_asymUpdateScalesAndShifts(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure
       TIDL_asymRangeToScale(&outData->tensorScale, &outData->tensorZeroPoint, outData->minTensorValue, outData->maxTensorValue, TIDL_SYMMETRIC_TENSOR, outData->elementType, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].quantizeConstraint);
       TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, outData->dataId);
     }
+    else if (pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_DataConvertLayer && 
+             pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerParams.dataConvertParams.type == TIDL_DC_TYPE_OUTPUT)
+    {
+      TIDL_asymRangeToScale(&outData->tensorScale, &outData->tensorZeroPoint, outData->minTensorValue, outData->maxTensorValue, outData->tensorType, outData->elementType, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].quantizeConstraint);
+      TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, outData->dataId);
+    }
     else if(quantizationPassThroughLayers.find(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType) != quantizationPassThroughLayers.end())
     {
       sTIDL_LayerPC_t * currLayer = &pOrgTIDLNetStructure->TIDLPCLayers[layerIdx];
       if(currLayer->layerType == TIDL_DataConvertLayer && currLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_INPUT) {
         const sTIDL_DataParams_t * inData = TIDL_getOutData(pOrgTIDLNetStructure, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].inData[0].dataId);
-        if(gParams.numParamBits == tidl_getElementSizeInBits(inData->elementType)) {
+        if(gParams.numParamBits == tidl_getElementSizeInBits(inData->elementType) && 
+           inData->tensorScale != 0 && inData->tensorScale != FLT_MIN) {
           outData->elementType = inData->elementType;
           outData->tensorScale = inData->tensorScale;
           outData->tensorZeroPoint = inData->tensorZeroPoint;
@@ -6054,6 +6170,10 @@ void TIDL_setDefaultWeightElementBits(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure,
             currLayer->weightsElementSizeInBits = TIDL_increaseWeightPrecision(currLayer, currLayer->weightsElementSizeInBits);
           }
         }
+        else if(currLayer->layerType == TIDL_GatherLayer)
+        {
+          currLayer->weightsElementSizeInBits = 32;
+        }
       }
     }
   }
@@ -6072,15 +6192,39 @@ bool TIDL_canPropagateAsym(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure, sTIDL_Layer
   return quantizationPassThroughMap[currLayer->outData[0].dataId] = canPropagate;
 }
 
+bool TIDL_isExecutionTIDLRT (int32_t modelType)
+{
+  bool isTIDLRT = false;
+  if ( (modelType == TIDL_IMPORT_MODEL_FORMAT_CAFFE) ||
+       (modelType == TIDL_IMPORT_MODEL_FORMAT_ONNX)  ||
+       (modelType == TIDL_IMPORT_MODEL_FORMAT_TFLITE) ||
+       (modelType == TIDL_IMPORT_MODEL_FORMAT_TENSORFLOW))
+  {
+    isTIDLRT = true;
+  }
+  return isTIDLRT;
+}
+
 /*Asymmetric utility functions:*/
 bool TIDL_doesLayerSupportAsymTensors(sTIDL_LayerPC_t * currLayer, sTIDL_OrgNetwork_t *pOrgTIDLNetStructure)
 {
   /*This function checks if the given layerType supports asymmetric tensors*/
   bool isAsymSupported = false;
 
+  /*Disabling asymmetric flow for j721e/tda4vm*/
+  if((gParams.deviceName & (~TIDL_OTF_FLAG_BIT)) == TIDL_TDA4VM)
+  {
+    isAsymSupported = false;
+    return isAsymSupported;
+  }
+
   int32_t inElemSize = tidl_getElementSizeInBits(currLayer->inData[0].elementType);
   int32_t outElemSize = tidl_getElementSizeInBits(currLayer->outData[0].elementType);
-  int32_t isMixedPrecision = inElemSize != outElemSize ? 1 : 0;
+  int32_t isMixedPrecision = 0;
+  if (currLayer->inData[0].elementType != TIDL_SinglePrecFloat && currLayer->outData[0].elementType != TIDL_SinglePrecFloat)
+  {
+    isMixedPrecision = inElemSize != outElemSize ? 1 : 0;
+  }
   if(currLayer->layerType == TIDL_ConvolutionLayer && (currLayer->weightsElementSizeInBits == 8U || (TIDL_isSupportedInFirmwareVersion((const char*)gParams.c7xFirmwareVersion,"11_00_08_00") && currLayer->weightsElementSizeInBits == 16U)))
   {
     if (isMixedPrecision && currLayer->layerParams.convParams.numGroups > 1)
@@ -6166,6 +6310,18 @@ bool TIDL_doesLayerSupportAsymTensors(sTIDL_LayerPC_t * currLayer, sTIDL_OrgNetw
     {
       isAsymSupported = true;
     }
+  }
+  else if (currLayer->layerType == TIDL_DataConvertLayer && 
+           currLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_OUTPUT &&
+           currLayer->outData[0].elementType != TIDL_SinglePrecFloat &&
+           currLayer->inData[0].elementType != currLayer->outData[0].elementType &&
+           TIDL_isExecutionTIDLRT (gParams.modelType) == false)
+  {
+    isAsymSupported = true;
+  }
+  else if (currLayer->layerType == TIDL_DataLayer && currLayer->numInBufs > 0)
+  {
+    isAsymSupported = true;
   }
   else if(quantizationPassThroughLayers.find(currLayer->layerType) != quantizationPassThroughLayers.end() && pOrgTIDLNetStructure != NULL && TIDL_isSupportedInFirmwareVersion((const char*)gParams.c7xFirmwareVersion,"10_01_04_00"))
   {
@@ -6282,7 +6438,7 @@ int32_t TIDL_asymUpdateNetworkWithConstraints(sTIDL_OrgNetwork_t * pOrgTIDLNetSt
     outDataId = currLayer->outData[0].dataId;
     outBufIdx = TIDL_isLayerNetworkOutput(pOrgTIDLNetStructure, outDataId);
     isAsymSupported = TIDL_doesLayerSupportAsymTensors(currLayer, pOrgTIDLNetStructure);
-    if(isAsymSupported && (outBufIdx == -1) && (gParams.quantizationStyle == TIDL_QuantStyleAsymNP2)) /*Update for tfl pre-quant*/
+    if(isAsymSupported && (gParams.quantizationStyle == TIDL_QuantStyleAsymNP2)) /*Update for tfl pre-quant*/
     {
       /*Update to a signed dataType*/
         if(currLayer->layerType == TIDL_ConvolutionLayer && currLayer->layerParams.convParams.enableBias == 0)
@@ -6351,9 +6507,13 @@ int32_t TIDL_asymUpdateNetworkWithConstraints(sTIDL_OrgNetwork_t * pOrgTIDLNetSt
 
         if(areConsumersAsym)
         {
-          currLayer->outData[0].elementType = TIDL_convertElementTypeToSigned(currLayer->outData[0].elementType);
+          if (!(currLayer->layerType == TIDL_DataConvertLayer && 
+              currLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_OUTPUT))
+          {
+            currLayer->outData[0].elementType = TIDL_convertElementTypeToSigned(currLayer->outData[0].elementType);
+            TIDL_updateDataBufferInNet(pOrgTIDLNetStructure, layerIdx);
+          }
           currLayer->outData[0].tensorType  = TIDL_ASYMMETRIC_TENSOR;
-          TIDL_updateDataBufferInNet(pOrgTIDLNetStructure, layerIdx);
         }
         else
         {

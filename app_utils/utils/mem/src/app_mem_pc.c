@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017-2025 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -73,6 +73,10 @@
 
 #include <utils/mem/include/app_mem.h>
 #include <utils/mem/include/app_mem_limits.h>
+
+#if defined(SOC_FAMILY_TDA5)
+#include <Ipc_Notify_Hal_Hostemu.h>
+#endif /* #if defined(SOC_FAMILY_TDA5) */
 
 /* #define APP_MEM_DEBUG */
 
@@ -300,10 +304,10 @@ static int32_t appMemAddTupleToList(uint64_t dmaBufFd, uint32_t size, uint64_t *
                     dmaBufFd,
                     0u);
 
-        if (vPtr == NULL)
+        if (vPtr == MAP_FAILED)
         {
             printf("MEM: ERROR: Failed to translate dmaBufFd %ld to "
-                   "virtPtr!!!\n", dmaBufFd);
+                   "virtPtr!!! errno=%d (%s)\n", dmaBufFd, errno, strerror(errno));
             status = -1;
         }
     }
@@ -354,7 +358,11 @@ static int32_t appMemAddTupleToList(uint64_t dmaBufFd, uint32_t size, uint64_t *
         printf("MEM: ERROR: memory alloc of size = %d bytes, failed with status = %d !!!\n",
                size, status);
 
-        if (vPtr != NULL)
+        if (vPtr == MAP_FAILED)
+        {
+            vPtr = NULL;
+        }
+        else
         {
             munmap(vPtr, size);
         }
@@ -618,6 +626,9 @@ void *appMemAlloc(uint32_t block, uint32_t size, uint32_t align)
     int32_t         buf_fd = -1;
     uint64_t        phys_addr = 0;
     int32_t         status = 0;
+    char            name[MAX_SHM_BUFF_NAME_LEN];
+
+    name[0] = '\0';
 
     /* Enter critical section */
     pthread_mutex_lock(&(obj->list_mutex));
@@ -636,7 +647,6 @@ void *appMemAlloc(uint32_t block, uint32_t size, uint32_t align)
 
     if (status == 0)
     {
-        char    name[MAX_SHM_BUFF_NAME_LEN];
         int32_t oflag = O_RDWR | O_CREAT | O_EXCL;
         mode_t  mode = S_IRUSR | S_IWUSR;
 
@@ -681,6 +691,46 @@ void *appMemAlloc(uint32_t block, uint32_t size, uint32_t align)
         if (status < 0)
         {
             printf("MEM: ERROR: Alloc failed (ftruncate)\n");
+            close(buf_fd);
+            buf_fd = -1;
+            if (fd_path[0] == 0)
+            {
+                shm_unlink(name);
+            }
+            else
+            {
+                unlink(name);
+            }
+        }
+    }
+
+    if (status == 0)
+    {
+        /* Touch one byte per page to force physical page allocation on
+         * /dev/shm.  ftruncate creates a sparse file: mmap()
+         * succeeds but accessing an unallocated page causes SIGBUS when
+         * the filesystem is full.  Writing to each page boundary here
+         * converts that deferred SIGBUS into a clean write error. */
+        static const char zero = 0;
+        uint32_t page_off;
+        for (page_off = 0U; page_off < size && status == 0; page_off += (uint32_t)sysconf(_SC_PAGE_SIZE))
+        {
+            if (lseek(buf_fd, (off_t)page_off, SEEK_SET) < 0 ||
+                write(buf_fd, &zero, 1) != 1)
+            {
+                printf("MEM: ERROR: Alloc failed writing page at offset %u\n", page_off);
+                close(buf_fd);
+                buf_fd = -1;
+                if (fd_path[0] == 0)
+                {
+                    shm_unlink(name);
+                }
+                else
+                {
+                    unlink(name);
+                }
+                status = -1;
+            }
         }
     }
 
@@ -761,6 +811,12 @@ int32_t appMemResetScratchHeap(uint32_t heap_id)
 
 uint64_t appMemShared2TargetPtr(uint64_t shared_ptr)
 {
+#if defined (SOC_FAMILY_TDA5)
+    if (IpcNotify_Hal_VdkGetVdkWrapperObj() != NULL)
+    {
+        shared_ptr = IpcNotify_Hal_VdkGetHostPtr(shared_ptr);
+    }
+#endif /* #if defined (SOC_FAMILY_TDA5) */
     return shared_ptr;
 }
 
@@ -788,3 +844,18 @@ int32_t appMemSetFdPath(char *path, uint32_t size)
     return status;
 }
 #endif
+
+void *appMemMap(void *phys_addr, uint32_t size)
+{
+    return phys_addr;
+}
+
+void appMemCacheInv(void *ptr, uint32_t size)
+{
+    return;
+}
+
+void  appMemCacheWbInv(void *ptr, uint32_t size)
+{
+    return;
+}

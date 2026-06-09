@@ -178,14 +178,29 @@ int32_t Network_open(Network_SockObj *pObj, uint32_t port)
         }
     }
 
-    ifr.ifr_addr.sa_family = AF_INET;
-    (void)strncpy(ifr.ifr_name, "eth0", IFNAMSIZ-1);
-    fd = (int32_t)socket(AF_INET, (int32_t)SOCK_DGRAM, 0);
-    (void)ioctl(fd, SIOCGIFADDR, &ifr);
+    (ifr.ifr_addr).sa_family = AF_INET;
+    (void)strncpy(ifr.ifr_name, "eth0", (IFNAMSIZ - 1));
 
-    (void)close(fd);
-    pSockAddrIn = (struct sockaddr_in *)(void *)&ifr.ifr_addr;
-    appLogPrintf(" NETWORK: Opened at IP Addr = %s, socket port=%d!!!\n", inet_ntoa(pSockAddrIn->sin_addr), port);
+    fd = (int32_t)socket(AF_INET, (int32_t)SOCK_DGRAM, 0);
+    if (fd >= 0)
+    {
+        if (ioctl(fd, SIOCGIFADDR, &ifr) == 0)
+        {
+            pSockAddrIn = (struct sockaddr_in *)(void *)&(ifr.ifr_addr);
+            appLogPrintf(" NETWORK: Opened at IP Addr = %s, socket port=%d!!!\n", inet_ntoa(pSockAddrIn->sin_addr), port);
+        }
+        else
+        {
+            appLogPrintf(" NETWORK ERROR: ioctl SIOCGIFADDR failed!!!\n");
+        }
+
+        (void)close(fd);
+    }
+    else
+    {
+        appLogPrintf(" NETWORK ERROR: Failed to create socket!!!\n");
+    }
+
     return status;
 }
 
@@ -230,7 +245,7 @@ int32_t Network_waitConnect(Network_SockObj *pObj, uint32_t timeout)
     across all supported platforms. The violations exist within the macro implementation and do not affect code correctness.
     <justification end> */
     FD_ZERO(&master_set);
-    FD_SET(pObj->sockFd, &master_set);
+    FD_SET((pObj->sockFd), (&master_set));
     /* LDRA_JUSTIFY_END */
 
     timeout1.tv_sec  = (time_t)timeout;
@@ -259,7 +274,7 @@ int32_t Network_waitConnect(Network_SockObj *pObj, uint32_t timeout)
         Effect on this unit: The macro has been tested extensively and functions correctly across all supported platforms.
         The violations exist within the macro implementation and do not affect code correctness.
         <justification end> */
-        if (FD_ISSET(pObj->sockFd, &master_set))
+        if (FD_ISSET((pObj->sockFd), (&master_set)))
         /* LDRA_JUSTIFY_END */
         {
             pObj->connectedSockFd = accept(pObj->sockFd, NULL, NULL);

@@ -43,6 +43,10 @@ extern "C" {
 
 #include <stdint.h>
 
+#if defined(__C7504__) || defined(__C7524__)
+#include <c7x.h>
+#endif
+
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
@@ -60,6 +64,29 @@ void Utils_memcpyWord(uint8_t *source, uint8_t *destination, uint32_t length);
  * Assembly code for data and instruction barrier
  */
 void Utils_dataAndInstructionBarrier(void);
+
+/**
+ * \brief This function copy data from the source to destination using
+ *  uintptr_t pointer for the unaligned source
+ *
+ * \param destination Destination address
+ * \param source Source address
+ * \param size Length of data to be copied
+ *
+ */
+void Utils_memcopySourceUnalingned(void *destination, const volatile void *source,
+                                   uint32_t size);
+/**
+ * \brief This function copy data from the source to destination using
+ *  uintptr_t pointer for the unaligned destination
+ *
+ * \param destination Destination address
+ * \param source Source address
+ * \param size Length of data to be copied
+ *
+ */
+void Utils_memcopyDestinationUnalingned(void *destination, const volatile void *source,
+                                        uint32_t size);
 
 #ifdef __cplusplus
 }

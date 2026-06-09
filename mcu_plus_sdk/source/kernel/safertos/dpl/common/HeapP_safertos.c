@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -31,27 +31,59 @@
  */
 
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <stdlib.h>
 #include <kernel/dpl/DebugP.h>
 #include <kernel/nortos/dpl/common/HeapP_internal.h>
 #include <SafeRTOS.h>
 #include <task.h>
 
-void   HeapP_construct( HeapP_Object *heap, void *heapAddr, size_t heapSize )
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
+
+void HeapP_construct( HeapP_Object *heap, void *heapAddr, size_t heapSize )
 {
     DebugP_assert( sizeof(StaticHeap_t) < sizeof(HeapP_Object) );
 
     vHeapCreateStatic((StaticHeap_t*)heap, heapAddr, heapSize);
 }
 
-void   HeapP_destruct(HeapP_Object *heap)
+void HeapP_destruct(HeapP_Object *heap)
 {
     vTaskSuspendScheduler();
     vHeapDelete((StaticHeap_t*)heap);
     xTaskResumeScheduler();
 }
 
-void  *HeapP_alloc( HeapP_Object *heap, size_t allocSize )
+void *HeapP_alloc( HeapP_Object *heap, size_t allocSize )
 {
     void *ptr;
 
@@ -62,7 +94,7 @@ void  *HeapP_alloc( HeapP_Object *heap, size_t allocSize )
     return ptr;
 }
 
-void   HeapP_free( HeapP_Object *heap, void * ptr )
+void HeapP_free( HeapP_Object *heap, void * ptr )
 {
     vTaskSuspendScheduler();
     vHeapFree((StaticHeap_t*)heap, ptr);
@@ -79,7 +111,7 @@ size_t HeapP_getMinimumEverFreeHeapSize( HeapP_Object *heap )
     return xHeapGetMinimumEverFreeHeapSize((StaticHeap_t*)heap);
 }
 
-void   HeapP_getHeapStats( HeapP_Object *heap, HeapP_MemStats * pHeapStats )
+void HeapP_getHeapStats( HeapP_Object *heap, HeapP_MemStats * pHeapStats )
 {
     vTaskSuspendScheduler();
     vHeapGetHeapStats((StaticHeap_t*)heap, pHeapStats);

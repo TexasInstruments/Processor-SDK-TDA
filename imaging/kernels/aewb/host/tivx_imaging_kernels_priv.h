@@ -87,6 +87,13 @@ void tivxRegisterImagingKernels(void);
  */
 void tivxUnRegisterImagingKernels(void);
 
+void tivxAddTargetKernelAewb(void);
+
+void tivxRemoveTargetKernelAewb(void);
+
+vx_status tivxAddKernelAewb(vx_context context);
+
+vx_status tivxRemoveKernelAewb(vx_context context);
 
 #ifdef __cplusplus
 }

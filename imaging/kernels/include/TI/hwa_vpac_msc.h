@@ -852,6 +852,7 @@ void tivx_vpac_msc_input_params_init(tivx_vpac_msc_input_params_t *prms);
  */
 void tivx_vpac_msc_output_params_init(tivx_vpac_msc_output_params_t *prms);
 
+#if !defined(VPAC3L)
 /*!
  * \brief Function to initialize MSC safety mechanism parameters with default values
  *
@@ -861,7 +862,7 @@ void tivx_vpac_msc_output_params_init(tivx_vpac_msc_output_params_t *prms);
  */
 
 void tivx_vpac_msc_safety_mech_prms_init(tivx_vpac_msc_safety_mechanism_params_t *prms);
-
+#endif
 #ifdef __cplusplus
 }
 #endif

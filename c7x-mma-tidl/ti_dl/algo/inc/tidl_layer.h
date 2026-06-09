@@ -107,6 +107,12 @@
 #include "tidl_gridsample.h"
 #include "tidl_deformConv.h"
 #include "tidl_topK.h"
+#include "tidl_tile.h"
+#include "tidl_logicalOpLayer.h"
+#include "tidl_rmsNorm.h"
+#include "tidl_lstm.h"
+#include "tidl_gru.h"
+#include "tidl_rnn.h"
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */

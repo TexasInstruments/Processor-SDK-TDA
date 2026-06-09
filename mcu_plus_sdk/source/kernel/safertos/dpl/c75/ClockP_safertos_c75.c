@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,8 +30,40 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <kernel/safertos/dpl/common/ClockP_safertos_priv.h>
 #include <kernel/dpl/TimerP.h>
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
 void ClockP_timerClearOverflowInt(uint32_t timerBaseAddr)
 {
@@ -49,13 +81,13 @@ void ClockP_init(void)
     HwiP_Params timerHwiParams;
 
     /* These MUST not be 0 */
-    DebugP_assert( gClockConfig.timerInputPreScaler != 0);
-    DebugP_assert( gClockConfig.timerInputClkHz != 0);
-    DebugP_assert( gClockConfig.usecPerTick != 0);
-    DebugP_assert( gClockConfig.timerBaseAddr != 0);
+    DebugP_assert( gClockConfig.timerInputPreScaler != 0U);
+    DebugP_assert( gClockConfig.timerInputClkHz != 0U);
+    DebugP_assert( gClockConfig.usecPerTick != 0U);
+    DebugP_assert( gClockConfig.timerBaseAddr != 0U);
 
     /* init internal data structure */
-    gClockCtrl.ticks = 0;
+    gClockCtrl.ticks = 0U;
     gClockCtrl.usecPerTick = gClockConfig.usecPerTick;
     gClockCtrl.timerBaseAddr = gClockConfig.timerBaseAddr;
 
@@ -64,8 +96,8 @@ void ClockP_init(void)
     timerParams.inputPreScaler    = gClockConfig.timerInputPreScaler;
     timerParams.inputClkHz        = gClockConfig.timerInputClkHz;
     timerParams.periodInUsec      = gClockConfig.usecPerTick;
-    timerParams.oneshotMode       = 0;
-    timerParams.enableOverflowInt = 1;
+    timerParams.oneshotMode       = 0U;
+    timerParams.enableOverflowInt = 1U;
     TimerP_setup(gClockCtrl.timerBaseAddr, &timerParams);
 
     /* Get timer reload count, we will use this later to compute current time in usecs */
@@ -76,7 +108,7 @@ void ClockP_init(void)
     timerHwiParams.intNum = gClockConfig.timerHwiIntNum;
     timerHwiParams.eventId = gClockConfig.eventId;
     timerHwiParams.callback = ClockP_timerTickIsr;
-    timerHwiParams.isPulse = 1;
+    timerHwiParams.isPulse = 1U;
     HwiP_construct(&gClockCtrl.timerHwiObj, &timerHwiParams);
 
 }
@@ -87,6 +119,11 @@ void ClockP_init(void)
 void vApplicationSetupTickInterruptHook( portUInt32Type ulTimerClockHz,
                                          portUInt32Type ulTickRateHz )
 {
-    /* start the tick timer */  
+    /* start the tick timer */
     TimerP_start(gClockCtrl.timerBaseAddr);
+
+#if ( configINCLUDE_RUNTIMESTATS == 1 )
+    #include "runtimestats.h"
+    vInitialiseRunTimeStatistics();
+#endif /* ( configINCLUDE_RUNTIMESTATS == 1 ) */
 }

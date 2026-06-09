@@ -1245,7 +1245,6 @@ vx_status tivxAddKernelVpacLdc(vx_context context)
                         (vx_enum)VX_TYPE_IMAGE,
                         (vx_enum)VX_PARAMETER_STATE_OPTIONAL
             );
-            param_idx++;
         }
         if (status == (vx_status)VX_SUCCESS)
         {
@@ -1486,7 +1485,6 @@ vx_status tivxAddKernelVpacLdc2(vx_context context)
                         (vx_enum)VX_TYPE_IMAGE,
                         (vx_enum)VX_PARAMETER_STATE_OPTIONAL
             );
-            param_idx++;
         }
         if (status == (vx_status)VX_SUCCESS)
         {
@@ -1612,6 +1610,7 @@ void tivx_vpac_ldc_params_init(tivx_vpac_ldc_params_t *prms)
     }
 }
 
+#if !defined(VPAC3L)
 void tivx_vpac_ldc_safety_mech_prms_init(tivx_vpac_ldc_safety_mechanism_params_t *prms)
 {
     if (NULL != prms)
@@ -1621,5 +1620,6 @@ void tivx_vpac_ldc_safety_mech_prms_init(tivx_vpac_ldc_safety_mechanism_params_t
         prms->enable_readback_config_registers = (uint32_t)vx_false_e;
     }
 }
+#endif
 
 #endif

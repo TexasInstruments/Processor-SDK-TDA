@@ -65,14 +65,39 @@
 const vector<TidlConstraint> tidlConstraintConcat =
 {
     TIDL_CSTR(
-        "Only supported across the width, height or channel axis",
-        "Only supported for axis values of -3, -2 & -1",
-        "Only supported across the width, height or channel axis",
+        "Number of non-singleton variable input dimensions must be <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            ostringstream oss;
+            for (auto &varDims : layer->allowlistingMetaData.varTensorsDims)
+            {
+                int32_t numDims = tidlGetNonSingletonNumDims(varDims);
+                if(numDims > 6)
+                {
+                    oss << "Maximum number of input dimension supported is 6, found " << numDims << " input dimensions";
+                    logs = oss.str();
+                    return false;
+                }
+            }
+            return true;
+        }
+    ),
+    TIDL_CSTR(
+        "",
+        "",
+        "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             int32_t axis = layer->layerParams.concatParams.axis;
-            if (axis > TIDL_DIM_WIDTH || axis < TIDL_DIM_NUMCH)
+            ostringstream oss;
+            if (layer->optimized == 1)
             {
-                return false;
+                if (axis > TIDL_DIM_WIDTH || axis < TIDL_DIM_NUMCH)
+                {
+                    oss << "Concat is only supported across width, height and channel axis";
+                    logs = oss.str();
+                    return false;
+                }
             }
 
             return true;
@@ -100,25 +125,6 @@ const vector<TidlConstraint> tidlConstraintConcat =
                 return false;
             }
 
-            return true;
-        }
-    ),
-    TIDL_CSTR(
-        "Number of non-singleton variable input dimensions must be less than <= 6",
-        "Number of non-singleton variable input dimensions must be less than <= 6",
-        "Number of non-singleton variable input dimensions must be less than <= 6",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            ostringstream oss;
-            for (auto &varDims : layer->allowlistingMetaData.varTensorsDims)
-            {
-                int32_t numDims = tidlGetNonSingletonNumDims(varDims);
-                if(numDims > 6)
-                {
-                    oss << "Maximum number of input dimension supported is 6, found " << numDims << " input dimensions";
-                    logs = oss.str();
-                    return false;
-                }
-            }
             return true;
         }
     ),

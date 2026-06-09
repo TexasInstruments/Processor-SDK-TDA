@@ -84,7 +84,8 @@
 #include <kernel/nortos/dpl/c75/csl_clec.h>
 
 #if defined(SAFERTOS)
-extern void xTaskStartSchedulerKrnl( void );
+extern void System_lateInit(void);
+extern signed long long xTaskStartSchedulerKrnl( void );
 #else
 extern void vTaskStartScheduler( void );
 #endif
@@ -175,9 +176,14 @@ static void appC7xClecInitDru(void)
  * - AND stack assigned for task context is "size - 8KB"
  *       - 8KB chunk for the stack area is used for interrupt handling in this task context
  */
-static uint8_t gTskStackMain[64*1024]
+#define APP_C7X_2_TASK_STACK        (64U * 1024U)
+static uint8_t gTskStackMain[APP_C7X_2_TASK_STACK]
 __attribute__ ((section(".bss:taskStackSection")))
-__attribute__ ((aligned(8192)))
+#if defined(SAFERTOS)
+__attribute__ ((aligned(APP_C7X_2_TASK_STACK)));
+#else
+__attribute__ ((aligned(8192)));
+#endif
     ;
 
 int main(void)
@@ -189,6 +195,10 @@ int main(void)
 
     System_init();
     Board_init();
+
+    #if defined(SAFERTOS)
+    System_lateInit();
+    #endif
 
     appC7xClecInitDru();
 

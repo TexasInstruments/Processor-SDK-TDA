@@ -49,6 +49,11 @@ extern sTIDL_IOBufDesc_t  gIOParams;
   #define L3_MEM_SIZE  (1024 * 1024)
   #define L3_TOTAL_MEMORY_SIZE  (1 * 1024 * 1024)
   #define L2_TOTAL_MEMORY_SIZE  (256 * 1024)
+#elif defined (SOC_TDA54)
+  #define L2_MEM_SIZE  (3072*1024+  EXTRA_MEM_FOR_ALIGN)
+  #define L3_MEM_SIZE  (24576 * 1024)
+  #define L3_TOTAL_MEMORY_SIZE  (24 * 1024 * 1024)
+  #define L2_TOTAL_MEMORY_SIZE  (3 * 1024 * 1024)
 #else
   #define L2_MEM_SIZE  (448*1024+  EXTRA_MEM_FOR_ALIGN)
   #define L3_MEM_SIZE  (7968 * 1024)

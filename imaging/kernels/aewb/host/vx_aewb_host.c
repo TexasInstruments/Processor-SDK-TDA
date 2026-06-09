@@ -76,9 +76,6 @@ static vx_status VX_CALLBACK tivxAddKernelAewbValidate(vx_node node,
 static vx_status VX_CALLBACK tivxAddKernelAewbInitialize(vx_node node,
             const vx_reference parameters[ ],
             vx_uint32 num_params);
-vx_status tivxAddKernelAewb(vx_context context);
-vx_status tivxRemoveKernelAewb(vx_context context);
-
 static vx_status VX_CALLBACK tivxAddKernelAewbValidate(vx_node node,
             const vx_reference parameters[ ],
             vx_uint32 num,

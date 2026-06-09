@@ -313,6 +313,22 @@
                 <td class="tg-6sgx">VISS configuration memory. MUST be write through cache policy.</td>
             </tr>
             <tr>
+                <td class="tg-kftd">INTERCORE_ETH_DESC_MEM</td>
+                <td class="tg-kftd">0xB8000000</td>
+                <td class="tg-kftd">0xB81FFFFF</td>
+                <td class="tg-kftd"> 2.00 MB</td>
+                <td class="tg-kftd"></td>
+                <td class="tg-kftd">Inter-core ethernet shared desc queues. MUST be non-cached or cache-coherent</td>
+            </tr>
+            <tr>
+                <td class="tg-6sgx">INTERCORE_ETH_DATA_MEM</td>
+                <td class="tg-6sgx">0xB8200000</td>
+                <td class="tg-6sgx">0xB8FFFFFF</td>
+                <td class="tg-6sgx">14.00 MB</td>
+                <td class="tg-6sgx"></td>
+                <td class="tg-6sgx">Inter-core ethernet shared data buffers. MUST be non-cached or cache-coherent</td>
+            </tr>
+            <tr>
                 <td class="tg-kftd">DDR_SHARED_MEM</td>
                 <td class="tg-kftd">0xC0000000</td>
                 <td class="tg-kftd">0xDFFFFFFF</td>

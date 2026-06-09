@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-26 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,6 +30,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <stdlib.h>
 #include <kernel/dpl/DebugP.h>
 #include <kernel/dpl/ClockP.h>
@@ -41,32 +45,77 @@
 #include "task.h"
 #include <drivers/device_manager/sciserver/sciserver_init.h>
 
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
 #define TASK_PRI_MAIN_THREAD  (configMAX_PRIORITIES-4)
 
-
 #define TASK_SIZE (16384U/sizeof(configSTACK_DEPTH_TYPE))
+
+/* Stack size allocated for the sciserver task */
+#define SCISERVER_TASK_STACK_SIZE                   (2U*1024U)
+
+/* Stack memory alignment requirement for the sciserver task */
+#define SCISERVER_TASK_STACK_ALIGNMENT              (32)
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
+void uart_echo_callback(void *args);
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
 
 StackType_t gMainTaskStack[TASK_SIZE] __attribute__((aligned(32)));
 StaticTask_t gMainTaskObj;
 TaskHandle_t gMainTask;
 
-void uart_echo_callback(void *args);
+/* Stack buffers for user high and low priority tasks */
+uint8_t __attribute__((aligned(SCISERVER_TASK_STACK_ALIGNMENT))) gUserHiTaskStack[SCISERVER_TASK_STACK_SIZE];
+uint8_t __attribute__((aligned(SCISERVER_TASK_STACK_ALIGNMENT))) gUserLoTaskStack[SCISERVER_TASK_STACK_SIZE];
+
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
 void main_thread(void *args)
 {
-    /* Open UART for sysfw logs */
-    Drivers_uartOpen();
+    int32_t status;
 
-    sciServer_init();
+    /* Configure sciserver task parameters */
+    Sciserver_TirtosCfgPrms_t sciserverCfg = {0};
+    sciserverCfg.hiTaskStack    =   gUserHiTaskStack;
+    sciserverCfg.loTaskStack    =   gUserLoTaskStack;
+    sciserverCfg.taskStackSize  =   SCISERVER_TASK_STACK_SIZE;
 
-    /* Close UART as Drivers_open() inside uart_echo_callback() opens the UART again */
-    Drivers_uartClose();
+    /* Open drivers, including UART for SysFW logs */
+    Drivers_open();
+
+    /* Open flash and board drivers */
+    status = Board_driversOpen();
+    DebugP_assert(status==SystemP_SUCCESS);
+
+    sciServer_init(&sciserverCfg);
 
     uart_echo_callback(NULL);
 
+    /* Close board and flash drivers */
+    Board_driversClose();
+    /* Close drivers */
+    Drivers_close();
+
+    /* Delete the calling task with NULL argument. */
     vTaskDelete(NULL);
 }
-
 
 int main()
 {
@@ -74,22 +123,24 @@ int main()
     System_init();
     Board_init();
 
-    gMainTask = xTaskCreateStatic( main_thread,   /* Pointer to the function that implements the task. */
-                                  "main_thread", /* Text name for the task.  This is to facilitate debugging only. */
-                                  TASK_SIZE,  /* Stack depth in units of StackType_t typically uint32_t on 32b CPUs */
-                                  NULL,            /* We are not using the task parameter. */
-                                  TASK_PRI_MAIN_THREAD,   /* task priority, 0 is lowest priority, configMAX_PRIORITIES-1 is highest */
-                                  gMainTaskStack,  /* pointer to stack base */
-                                  &gMainTaskObj ); /* pointer to statically allocated task object memory */
+    gMainTask = xTaskCreateStatic( main_thread,             /* Pointer to the function that implements the task. */
+                                   "main_thread",           /* Text name for the task.  This is to facilitate debugging only. */
+                                   TASK_SIZE,               /* Stack depth in units of StackType_t typically uint32_t on 32b CPUs */
+                                   NULL,                    /* We are not using the task parameter. */
+                                   TASK_PRI_MAIN_THREAD,    /* task priority, 0 is lowest priority, configMAX_PRIORITIES-1 is highest */
+                                   gMainTaskStack,          /* pointer to stack base */
+                                   &gMainTaskObj );         /* pointer to statically allocated task object memory */
     configASSERT(gMainTask != NULL);
 
     /* Start the scheduler to start the tasks executing. */
     vTaskStartScheduler();
 
-    /* The following line should never be reached because vTaskStartScheduler()
-    will only return if there was not enough FreeRTOS heap memory available to
-    create the Idle and (if configured) Timer tasks.  Heap management, and
-    techniques for trapping heap exhaustion, are described in the book text. */
+    /*
+     * The following line should never be reached because vTaskStartScheduler()
+     * will only return if there was not enough FreeRTOS heap memory available to
+     * create the Idle and (if configured) Timer tasks.  Heap management, and
+     * techniques for trapping heap exhaustion, are described in the book text.
+     */
     DebugP_assertNoLog(0);
 
     return 0;

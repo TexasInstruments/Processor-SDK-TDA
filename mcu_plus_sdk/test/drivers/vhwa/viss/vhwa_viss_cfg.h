@@ -7103,7 +7103,7 @@ AppViss_TestParams gAppVissTestPrms[] =
         3,                          /* Repeate Count */
         TRUE,                       /* Is Performance */
         {&gAppVissTestConfig[8]},     /* Test Config */
-        TRUE,
+        FALSE,
         FALSE,
         FALSE
     },
@@ -7113,7 +7113,7 @@ AppViss_TestParams gAppVissTestPrms[] =
         3,                          /* Repeate Count */
         TRUE,                       /* Is Performance */
         {&gAppVissTestConfig[9]},   /* Test Config */
-        TRUE,
+        FALSE,
         FALSE,
         FALSE
     },
@@ -7123,7 +7123,7 @@ AppViss_TestParams gAppVissTestPrms[] =
         3,                          /* Repeate Count */
         TRUE,                       /* Is Performance */
         {&gAppVissTestConfig[10]},   /* Test Config */
-        TRUE,
+        FALSE,
         FALSE,
         FALSE
     },
@@ -7133,7 +7133,7 @@ AppViss_TestParams gAppVissTestPrms[] =
         3,                          /* Repeate Count */
         TRUE,                       /* Is Performance */
         {&gAppVissTestConfig[11]},   /* Test Config */
-        TRUE,
+        FALSE,
         FALSE,
         FALSE
     },
@@ -7153,7 +7153,7 @@ AppViss_TestParams gAppVissTestPrms[] =
         3,                          /* Repeate Count */
         TRUE,                       /* Is Performance */
         {&gAppVissTestConfig[13]},   /* Test Config */
-        TRUE,
+        FALSE,
         FALSE,
         FALSE
     },

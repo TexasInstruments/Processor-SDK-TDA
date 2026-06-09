@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2025 Texas Instruments Incorporated
+ *  Copyright (C) 2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -149,7 +149,6 @@ static int32_t Dss_dispDrvApplyRtParams(Dss_DispDrvInstObj *instObj,
                                         const Dss_DispRtParams *rtParams);
 static void Dss_dispSafetyErrCbFxn(const uint32_t *event,
                                    uint32_t numEvents,
-                                   uint32_t instId,
                                    void *arg);
 static uint32_t Dss_dispIsFarFromVsync(const Dss_DispDrvInstObj *instObj);
 
@@ -954,7 +953,7 @@ static void Dss_dispDrvClientCb(void *arg0)
                 else
                 {
                     /* This can't happen as currQCnt can't be zero!! */
-                    GT_assert(DssTrace, FALSE);
+                    GT_assert(DssTrace, (bool)FALSE);
                 }
             }
         }
@@ -1158,7 +1157,7 @@ static void Dss_dispDrvClientCb(void *arg0)
     else
     {
         /* Should never execute this */
-        GT_assert(DssTrace, FALSE);
+        GT_assert(DssTrace, (bool)FALSE);
     }
 }
 
@@ -1444,29 +1443,19 @@ static int32_t Dss_dispDrvSetDssParamsIoctl(Dss_DispDrvInstObj *instObj,
                     pipeRegs,
                     (const CSL_DssVidPipeAlphaCfg *)(&dispParams->alphaCfg));
 
-
-        if (pipeInfo->pipeId <= CSL_DSS_VID_PIPE_ID_VIDL1)
-        {
-            /* For DSS0 */
-            layerNum = CSL_dssOverlayGetEnabledPipeLayerNum(overlayRegs,
-                                                            pipeInfo->pipeId);
-        }
-        else
-        {
-            /* For DSS1, the pipes VID2/VIDL2 are a SW construct, in HW a dss instance has only 2 pipes i.e VID1/VIDL1
-             * Since, while writing to register, we converted them to VID1,VIDL1 value, while retrieving overlay layer
-             * based on pipe id, we need to convert pipe id appropriately for overlay layer configuration in HW */
-            layerNum = CSL_dssOverlayGetEnabledPipeLayerNum(overlayRegs,
-                                                            pipeInfo->pipeId - 2U);
-        }
-
+        layerNum = CSL_dssOverlayGetEnabledPipeLayerNum(overlayRegs,
+                                                        pipeInfo->pipeId);
         GT_assert(DssTrace, (layerNum < CSL_DSS_OVERLAY_LAYER_MAX));
         overlayPosCfg.layerPos.startX = dispParams->layerPos.startX;
         overlayPosCfg.layerPos.startY = dispParams->layerPos.startY;
-        CSL_dssOverlaySetPipePosConfig(
-                    overlayRegs,
-                    (const CSL_DssOverlayPipePosCfg *)(&overlayPosCfg),
-                    layerNum);
+
+        if (layerNum < CSL_DSS_OVERLAY_LAYER_MAX)
+        {
+            CSL_dssOverlaySetPipePosConfig(
+                        overlayRegs,
+                        (const CSL_DssOverlayPipePosCfg *)(&overlayPosCfg),
+                        layerNum);
+        }
         pipeInfo->startX = dispParams->layerPos.startX;
         pipeInfo->startY = dispParams->layerPos.startY;
     }
@@ -1608,19 +1597,7 @@ static int32_t Dss_dispDrvSetPipeSafetyParamsIoctl(
         GT_assert(DssTrace, (DSS_EVENT_GROUP_INVALID != eventGroup));
         safetyEvt = DSS_PIPE_EVENT_SAFETY_VIOLATION;
         numHandle = instObj->numRegEvtHandle;
-
-        /* Register for events for DSS instance based on Pipe ID*/
-        if(instObj->drvInstId <= CSL_DSS_VID_PIPE_ID_VIDL1)
-        {
-            /* Pipe 1, L1 correspond to DSS0 */
-            evtMgrId = Dss_getEvtMgrSafetyIntrId();
-        }
-        else
-        {
-            /* Pipe 2, L2 correspond to DSS1 */
-            evtMgrId = Dss1_getEvtMgrSafetyIntrId();
-        }
-
+        evtMgrId = Dss_getEvtMgrSafetyIntrId();
         instObj->evtGroupHandle[instObj->numRegEvtHandle] =
                             Dss_evtMgrRegister(
                                 evtMgrId,
@@ -1629,7 +1606,6 @@ static int32_t Dss_dispDrvSetPipeSafetyParamsIoctl(
                                 1U,
                                 Dss_dispSafetyErrCbFxn,
                                 (void *)&gDss_DispEvtMgrClientInfo[(instObj->drvInstId*DSS_DISP_INST_EVT_MGR_MAX_CLIENTS) + numHandle]);
-        GT_assert(DssTrace, (NULL != instObj->evtGroupHandle[instObj->numRegEvtHandle]));
         instObj->numRegEvtHandle++;
 
         /* Call CSL APIs */
@@ -2096,27 +2072,19 @@ static int32_t Dss_dispDrvApplyRtParams(Dss_DispDrvInstObj *instObj,
         /* Get overlay registers */
         overlayRegs = socInfo->overlayRegs[pipeInfo->overlayId];
         GT_assert(DssTrace, (NULL != overlayRegs));
-        if (pipeInfo->pipeId <= CSL_DSS_VID_PIPE_ID_VIDL1)
-        {
-            /* For DSS0*/
-            layerNum = CSL_dssOverlayGetEnabledPipeLayerNum(overlayRegs,
-                                                            pipeInfo->pipeId);
-        }
-        else
-        {
-            /* For DSS1, the pipes VID2/VIDL2 are a SW construct, in HW a dss instance has only 2 pipes i.e VID1/VIDL1
-             * Since, while writing to register, we converted them to VID1,VIDL1 value, while retrieving overlay layer
-             * based on pipe id, we need to convert pipe id appropriately for overlay layer configuration in HW */
-            layerNum = CSL_dssOverlayGetEnabledPipeLayerNum(overlayRegs,
-                                                            pipeInfo->pipeId - 2U);
-        }
+        layerNum = CSL_dssOverlayGetEnabledPipeLayerNum(overlayRegs,
+                                                        pipeInfo->pipeId);
         GT_assert(DssTrace, (layerNum < CSL_DSS_OVERLAY_LAYER_MAX));
         overlayPosCfg.layerPos.startX = rtParams->posCfg->startX;
         overlayPosCfg.layerPos.startY = rtParams->posCfg->startY;
-        CSL_dssOverlaySetPipePosConfig(
-                            overlayRegs,
-                            (const CSL_DssOverlayPipePosCfg *)(&overlayPosCfg),
-                            layerNum);
+
+        if (layerNum < CSL_DSS_OVERLAY_LAYER_MAX)
+        { 
+            CSL_dssOverlaySetPipePosConfig(
+                                overlayRegs,
+                                (const CSL_DssOverlayPipePosCfg *)(&overlayPosCfg),
+                                layerNum);
+        }
         pipeInfo->startX = rtParams->posCfg->startX;
         pipeInfo->startY = rtParams->posCfg->startY;
     }
@@ -2125,7 +2093,6 @@ static int32_t Dss_dispDrvApplyRtParams(Dss_DispDrvInstObj *instObj,
 
 static void Dss_dispSafetyErrCbFxn(const uint32_t *event,
                                    uint32_t numEvents,
-                                   uint32_t instId,
                                    void *arg)
 {
     uint32_t  i, currEvent, pipeId = 0U;
@@ -2137,14 +2104,6 @@ static void Dss_dispSafetyErrCbFxn(const uint32_t *event,
 
     /* Get pipe id */
     Dss_convEventGrouptoModule(eventGroup, &pipeId);
-    if(instId == DSS1_EVT_MGR_INST_ID_FUNC)
-    {
-        /*  Pipe ID 2,L2 in SW correspond to the two Pipes for second DSS instance i.e DSS1,
-         *  Here using Instance id we know whether the event has occured for DSS0 or DSS1.
-         *  The event is same for both DSS0/1, therfore conversion to module will return Pipe id
-         *  as 1 or L1 only, we need to convert it back appropriately to match SW construct for DSS1 */
-        pipeId = pipeId + 2U;
-    }
     GT_assert(DssTrace, (CSL_DSS_MODULE_INVALID != pipeId));
     instObj = Dss_dispDrvGetInstObj(pipeId);
     /* Instobj cannot be NULL */
@@ -2160,12 +2119,9 @@ static void Dss_dispSafetyErrCbFxn(const uint32_t *event,
         if(DSS_PIPE_EVENT_SAFETY_VIOLATION == currEvent)
         {
             instObj->currStatus.safetyViolationCount++;
-            if(CSL_DSS_SAFETY_CHK_DATA_INTEGRITY ==
-                            instObj->safetyChkParams.safetyChkCfg.safetyChkMode)
-            {
-                instObj->safetyChkParams.capturedSign =
+            instObj->safetyChkParams.capturedSign =
                                         CSL_dssVidPipeGetSafetySign(pipeRegs);
-            }
+
             if(NULL != instObj->safetyChkParams.safetyErrCbFxn)
             {
                 instObj->safetyChkParams.safetyErrCbFxn(pipeId,
@@ -2175,7 +2131,7 @@ static void Dss_dispSafetyErrCbFxn(const uint32_t *event,
         }
         else
         {
-            GT_assert(DssTrace, FALSE);
+            GT_assert(DssTrace, (bool)FALSE);
         }
     }
 

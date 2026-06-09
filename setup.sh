@@ -4,7 +4,7 @@ set -e
 #############################################################
 ########################[ Variables ]########################
 
-CICD_TAG="CICD.PSDK.ANALYTICS.12.00.00.00"
+CICD_TAG="CICD.PSDK.ANALYTICS.12.00.00.01"
 REPO_URL="https://github.com/TexasInstruments/ProcessorSDK"
 RELEASE_ARTIFACTS_URL="$REPO_URL/releases/download/$CICD_TAG"
 

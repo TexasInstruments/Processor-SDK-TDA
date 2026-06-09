@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2023 Texas Instruments Incorporated
+ * Copyright (c) 2023-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -70,15 +70,24 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#if defined(MCU_PLUS_SDK)
+#include <include/per/cpsw.h>
+#include <enet.h>
+#include <enet_apputils.h>
+#include <ethfw_al.h>
+#elif defined(PDK)
 /* PDK Driver Header files */
 #include <ipc/ipc.h>
 #include <udma/udma.h>
 #include <enet/include/per/cpsw.h>
 #include <enet/enet.h>
 #include <enet/examples/utils/include/enet_apputils.h>
+#endif
 
 /* EthFw header files */
 #include <utils/board/include/ethfw_board_utils.h>
+#include <utils/ethfw_abstract/ethfw_osal.h>
+#include <utils/ethfw_abstract/ethfw_ipc.h>
 #if defined(ETHFW_DEMO_SUPPORT)
 #include <utils/intervlan/include/eth_hwintervlan.h>
 #include <utils/intervlan/include/eth_swintervlan.h>
@@ -95,7 +104,11 @@
 
 #if defined(ETHFW_GPTP_SUPPORT)
 /* Timesync header files */
+#if defined(MCU_PLUS_SDK)
+#include <tsn_buildconf/sitara_buildconf.h>
+#elif defined(PDK)
 #include <tsn_buildconf/jacinto_buildconf.h>
+#endif
 #include <tsn_combase/tilld/cb_lld_ethernet.h>
 #include <tsn_gptp/gptpconf/gptpgcfg.h>
 #include <tsn_gptp/gptpconf/xl4-extmod-xl4gptp.h>
@@ -131,17 +144,30 @@
 #include "netif/ethernet.h"
 #include "netif/bridgeif.h"
 
+#if defined(PDK)
 #include <ti/drv/enet/lwipif/inc/default_netif.h>
 #include <ti/drv/enet/lwipif/inc/lwip2lwipif.h>
+#elif defined(MCU_PLUS_SDK)
+#include <lwip2lwipif.h>
+#endif
 
 #include <utils/ethfw_callbacks/include/ethfw_callbacks_lwipif.h>
 
 #if defined(ETHAPP_ENABLE_INTERCORE_ETH)
+#if defined(MCU_PLUS_SDK)
+#include <lwip2enet_ic.h>
+#include <lwip2lwipif_ic.h>
+#elif defined(PDK)
 #include <ti/drv/enet/lwipific/inc/netif_ic.h>
 #include <ti/drv/enet/lwipific/inc/lwip2enet_ic.h>
 #include <ti/drv/enet/lwipific/inc/lwip2lwipif_ic.h>
 #endif
+#endif
 
+#if (MCU_PLUS_SDK)
+#include "ti_enet_lwipif.h"
+#include "ti_enet_config.h"
+#endif
 #endif
 
 /* ========================================================================== */
@@ -177,7 +203,7 @@ typedef struct
 
 #if defined(ETHFW_GPTP_SUPPORT)
     /* Semaphore used to indicate when host port MAC address has been allocated */
-    SemaphoreP_Handle hHostMacAllocSem;
+    app_rtos_semaphore_handle_t hHostMacAllocSem;
 #endif
 
     /* Enet instance id */

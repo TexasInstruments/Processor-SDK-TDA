@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Texas Instruments Incorporated
+ * Copyright (C) 2023-25 Texas Instruments Incorporated
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@
  *  \file   GTC.c
  *
  *  \brief  Low lever APIs performing hardware register writes and reads for
- *         GTC version 0.
+ *          Global Timebase Counter (GTC) version 0.
  *
  *   This file contains the hardware register write/read APIs for GTC.
  */

@@ -52,20 +52,6 @@ SECTIONS
     .bss.app(NOLOAD) : {} > APPIMAGE
 }
 
-/*
-NOTE: Below memory is reserved for DMSC usage
- - During Boot till security handoff is complete
-   0x701E0000 - 0x701FFFFF (128KB)
- - After "Security Handoff" is complete (i.e at run time)
-   0x701FC000 - 0x701FFFFF (16KB)
-
- Security handoff is complete when this message is sent to the DMSC,
-   TISCI_MSG_SEC_HANDOVER
-
- This should be sent once all cores are loaded and all application
- specific firewall calls are setup.
-*/
-
 MEMORY
 {
     /* R5F_VECS : ORIGIN = 0x00000000 , LENGTH = 0x00000040
@@ -74,5 +60,5 @@ MEMORY
     HSM_RAM_VECS: ORIGIN = 0x43C00000 , LENGTH = 0x100
     HSM_RAM  : ORIGIN = 0x43C00100 , LENGTH = 0x3c800 - 0x100
     /* This section is used by the SBL to temporarily load the appimage for authentication */
-    APPIMAGE  : ORIGIN = 0x82000000 , LENGTH = 0x800000
+    APPIMAGE  : ORIGIN = 0x84000000 , LENGTH = 0x800000
 }

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2024 Texas Instruments Incorporated
+ * Copyright (c) 2024-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -65,16 +65,11 @@
 
 #include <stdint.h>
 
-#define APP_HOST_TYPE_RTOS (0U)
-#define APP_HOST_TYPE_LINUX (1U)
-#define APP_HOST_TYPE_QNX (2U)
-
 int32_t appInit(void);
 void    appDeInit(void);
 void    appRun(void);
 void   *appGetIpcResourceTable(void);
 uint32_t appGetDdrSharedHeapSize(void);
-uint32_t appGetHostOSType(void);
 uint64_t appUdmaVirtToPhyAddrConversion(const void *virtAddr,
                                       uint32_t chNum,
                                       void *appData);

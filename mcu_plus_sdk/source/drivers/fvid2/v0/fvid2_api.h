@@ -44,11 +44,9 @@
  *
  *  \brief FVID2 API
  *
- *  FVID2 API is an interface which is used to create, control and use different
- *  video drivers. FVID2 API is used not only for on-chip
- *  peripherals drivers like capture, display but also for external off-chip
- *  video device peripherals like video decoders, video encoders and
- *  video sensors.
+ *  FVID2 API is used not only for on-chip peripherals drivers like capture,
+ *  display but also for external off-chip video device peripherals like video
+ *  decoders, video encoders and video sensors.
  *
  *  All video drivers and external video peripherals implement the FVID2
  *  API.
@@ -159,7 +157,6 @@
  *  application specific data like application object info and so on.
  *
  */
-
 
 #ifndef FVID2_API_H_
 #define FVID2_API_H_
@@ -321,7 +318,7 @@ typedef void (*Fvid2_PrintFxn)(const char *format, ...);
 /** \brief Decide the streamid based on channel number.  */
 #define FVID2_STREAM_ID_ANY             (0xFFFFFFFFU)
 
-/**@} */
+/** @} */
 
 /*
  * =========== Command codes for Submit call =============
@@ -334,7 +331,7 @@ typedef void (*Fvid2_PrintFxn)(const char *format, ...);
 /**
  *  \addtogroup BSP_DRV_IOCTL_FVID2 FVID2 IOCTLs
  *
- *  These are FVID2 IOCTLs that can be called by the application.
+ * These are FVID2 IOCTLs that can be called by the application.
  *  @{
  */
 
@@ -392,7 +389,7 @@ typedef void (*Fvid2_PrintFxn)(const char *format, ...);
  */
 #define FVID2_REGISTER_TIMESTAMP_FXN    ((uint32_t) FVID2_CTRL_BASE + 7U)
 
-/**@} */
+/** @} */
 
 /*
  *  Driver ID Base.

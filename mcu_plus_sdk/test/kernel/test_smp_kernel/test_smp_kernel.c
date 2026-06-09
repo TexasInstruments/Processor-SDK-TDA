@@ -62,9 +62,11 @@
 
 #define EQUAL_PRIORITY              1
 #define THREAD_DELAY                1
-
+#if defined(SMP_QUADCORE_FREERTOS)
+#define THREAD_NUM                  configNUMBER_OF_CORES
+#else
 #define THREAD_NUM                  configNUM_CORES
-
+#endif
 #define LOOP_COUNT                  2000
 
 struct thread_info {
@@ -166,9 +168,12 @@ static void *thread_entry(void *arg)
 
 static void *inc_global_cnt(void *args)
 {
+    int ret;
     for (int i = 0; i < LOOP_COUNT; i++)
     {
-        sem_wait(&g_semaphore);
+        do {
+            ret = sem_trywait(&g_semaphore);
+        }while(ret != 0);
 
 		global_cnt++;
 		global_cnt--;
@@ -362,9 +367,6 @@ void tearDown(void)
 
 void test_smp_kernel_main(void *args)
 {
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-
     /* Sleep a bit to guarantee both cores enter an idle task
      * from which the remaining tests can be run correctly */
     ClockP_sleep(1U);

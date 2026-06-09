@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2021, Texas Instruments Incorporated
+ * Copyright (c) 2016-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,15 +44,19 @@
 #include "CycleCounterP_c75.h"
 
 
-/*
- *  ======== TimestampProvider_get32 ========
- */
-uint32_t CycleCounterP_getCount32()
+uint64_t CycleCounterP_getCount64(void)
 {
-    return (uint32_t)__TSC;
+    uint64_t count = __TSC;
+    return count;
 }
 
-void CycleCounterP_reset()
+uint32_t CycleCounterP_getCount32(void)
+{
+    uint32_t count = CycleCounterP_getCount64();
+	return count;
+}
+
+void CycleCounterP_reset(void)
 {
     /* TSC already started by firmware, nothing to do here */
     return;
@@ -67,7 +71,7 @@ void CycleCounterP_reset()
                          asm(" NOP "); \
                          asm(" NOP "); \
                          asm(" NOP "); \
-                     } while (0)
+                     } while (0 != 0)
 
 #define NOP50        do {      \
                          NOP5; \
@@ -80,7 +84,7 @@ void CycleCounterP_reset()
                          NOP5; \
                          NOP5; \
                          NOP5; \
-                     } while(0)
+                     } while(0 != 0)
 
 #define NOP500     do {         \
                          NOP50; \
@@ -93,12 +97,12 @@ void CycleCounterP_reset()
                          NOP50; \
                          NOP50; \
                          NOP50; \
-                     } while(0)
+                     } while(0 != 0)
 
 #define NOP1000   do {           \
                         NOP500;  \
                         NOP500;  \
-                  } while(0)
+                  } while(0 != 0)
 
 uint64_t gTscDeltaCalib = 0;
 

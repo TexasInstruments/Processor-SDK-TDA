@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017-2024 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -74,7 +74,7 @@
 #include <TI/tivx_img_proc.h>
 #include <TI/tivx_fileio.h>
 
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
 #include <edgeai_tiovx_nodes.h>
 #include <edgeai_tiovx_target_kernels.h>
 #endif

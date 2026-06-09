@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Texas Instruments Incorporated - http://www.ti.com/
+ *  Copyright (C) Texas Instruments Incorporated 2024
  *
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -50,7 +50,7 @@ extern "C"
 
 #if defined(SOC_AM273X) || defined(SOC_AWR294X)
 #include <ale/V4/cslr_ale.h>
-#elif defined(SOC_AM263X)|| defined(SOC_AM243X) || defined (SOC_AM64X)
+#elif defined(SOC_AM263X)|| defined(SOC_AM243X) || defined (SOC_AM64X) || defined (SOC_AM263PX) || defined(SOC_AM62AX) || defined(SOC_AM62DX) || defined(SOC_AM62PX) || defined(SOC_AM62X) || defined(SOC_AM275X) || defined(SOC_AM62LX) || defined (SOC_J722S)
 #include <ale/V5/cslr_ale.h>
 #else
 #error "SOC not supported"

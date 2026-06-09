@@ -68,10 +68,15 @@
 #include <utils/rtos/include/app_rtos.h>
 #include <HwiP.h>
 
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
 #include <ipc/ipc.h>
 #include <osal.h>
-#else
+#elif defined(MCU_SDK)
+#include <Ipc_Notify.h>
+#include <RPMessage.h>
+#include <ClockP.h>
+#include <utils/ipc/include/mcu_sdk_ipc.h>
+#elif defined(MCU_PLUS_SDK)
 #include <ipc_rpmsg.h>
 #include <ipc_notify.h>
 #include <CacheP.h>
@@ -81,28 +86,16 @@
 #if defined(THREADX)
 #include <tx_port.h>
 #endif
-
-#if !defined (SOC_AM62A)
-/* Number of a buffers in a VRING, i.e depth of VRING queue */
-#define IPC_RPMESSAGE_NUM_VRING_BUF       (256U)
-#endif
-/* Max size of a buffer in a VRING */
-#define IPC_RPMESSAGE_MAX_VRING_BUF_SIZE  (512U)
-/* Size of each VRING is
- *     2 x number of buffers x size of each buffer
- */
-#define IPC_RPMESSAGE_VRING_SIZE          (2U * IPC_RPMESSAGE_NUM_VRING_BUF * IPC_RPMESSAGE_MAX_VRING_BUF_SIZE)
 #endif
 
 /* #define APP_IPC_DEBUG */
 
 #define APP_IPC_MAX_TASK_NAME       (12u)
-
 #define IPC_RPMESSAGE_OBJ_SIZE      (256u)
 #define IPC_RPMESSAGE_MSG_SIZE      (496U + 32U)
 #define IPC_RPMESSAGE_BUF_SIZE(n)   ((IPC_RPMESSAGE_MSG_SIZE*(n))+IPC_RPMESSAGE_OBJ_SIZE)
 
-#if !defined (MCU_PLUS_SDK)
+#if defined(PDK)
 #define IPC_VRING_OBJ_SIZE          (256u)
 #define APP_IPC_VQ_OBJ_MEM_SIZE     (IPC_MAX_PROCS*IPC_VRING_OBJ_SIZE)
 static uint8_t g_app_vq_obj_mem[APP_IPC_VQ_OBJ_MEM_SIZE] __attribute__ ((aligned(1024)));
@@ -115,90 +108,100 @@ static uint8_t g_app_rpmessage_ctrl_params_buf[APP_IPC_RPMESSAGE_CTRL_PARAMS_BUF
 #define APP_IPC_RPMESSAGE_RPMSG_TX_BUF_SIZE  IPC_RPMESSAGE_BUF_SIZE(APP_IPC_RPMESSAGE_RPMSG_TX_NUM_BUF)
 static uint8_t g_app_rpmessage_rpmsg_tx_buf[APP_IPC_CPU_MAX][APP_IPC_RPMESSAGE_RPMSG_TX_BUF_SIZE] __attribute__ ((aligned(1024)));
 
-#if !defined(SOC_AM62A)
 #define APP_IPC_RPMESSAGE_RPMSG_RX_NUM_BUF   (256u)
-#endif
 #define APP_IPC_RPMESSAGE_RPMSG_RX_BUF_SIZE  IPC_RPMESSAGE_BUF_SIZE(APP_IPC_RPMESSAGE_RPMSG_RX_NUM_BUF)
 static uint8_t g_app_rpmessage_rpmsg_rx_buf[APP_IPC_RPMESSAGE_RPMSG_RX_BUF_SIZE] __attribute__ ((aligned(1024)));
-#else
-#if !defined (SOC_AM62A)
-static uint32_t getVringIndexPDK(uint32_t numProc, uint32_t selfId, uint32_t remoteId);
-#endif
 #endif
 
 /* IMPORTANT NOTE: For C7x,
  * - stack size and stack ptr MUST be 8KB aligned
  * - AND min stack size MUST be 16KB
  * - AND stack assigned for task context is "size - 8KB"
- *       - 8KB chunk for the stack area is used for interrupt handling in this task context
+ * - 8KB chunk for the stack area is used for interrupt handling in this task context
  */
-#if defined(R5F)
-#define APP_IPC_RPMESSAGE_RX_TASK_STACK_SIZE   (4u*1024u)
-#else
+
+#if defined(R5F) || defined(R52P) || defined(M55)
+#define APP_IPC_RPMESSAGE_RX_TASK_STACK_SIZE     (4u*1024u)
+#define APP_IPC_RPMESSAGE_CTRL_TASK_STACK_SIZE   (4u*1024u)
+
+#elif defined (C7X_FAMILY)
+
 #if defined (SOC_AM62A)
-#define APP_IPC_RPMESSAGE_RX_TASK_STACK_SIZE   (64u*1024u)
-#define APP_LPM_SUSPEND_TASK_STACK_SIZE        (64u*1024u)
+#define APP_IPC_RPMESSAGE_RX_TASK_STACK_SIZE     (64u*1024u)
+#define APP_IPC_RPMESSAGE_CTRL_TASK_STACK_SIZE   (64u*1024u)
+#define APP_LPM_SUSPEND_TASK_STACK_SIZE          (64u*1024u)
 #else
-#define APP_IPC_RPMESSAGE_RX_TASK_STACK_SIZE   (32u*1024u)
+#define APP_IPC_RPMESSAGE_RX_TASK_STACK_SIZE     (32u*1024u)
+#define APP_IPC_RPMESSAGE_CTRL_TASK_STACK_SIZE   (32u*1024u)
 #endif
+
+#else
+#define APP_IPC_RPMESSAGE_RX_TASK_STACK_SIZE     (32u*1024u)
+#define APP_IPC_RPMESSAGE_CTRL_TASK_STACK_SIZE   (32u*1024u)
 #endif
 
 #if defined(THREADX)
 #define APP_IPC_RPMESSAGE_RX_TASK_PRI          (TX_MAX_PRIORITIES-11)
 #else
 #define APP_IPC_RPMESSAGE_RX_TASK_PRI          (10u)
+#endif
+
 #if defined (SOC_AM62A)
 #define APP_LPM_SUSPEND_TASK_PRI               (10U)
 #endif
+
+#if defined(R5F) || defined(R52P) || defined(M55)
+
+#if defined(SAFERTOS)
+#define APP_IPC_RPMESSAGE_RX_TASK_ALIGNMENT      APP_IPC_RPMESSAGE_RX_TASK_STACK_SIZE
+#define APP_IPC_RPMESSAGE_CTRL_TASK_ALIGNMENT    APP_IPC_RPMESSAGE_CTRL_TASK_STACK_SIZE
+#else
+#define APP_IPC_RPMESSAGE_RX_TASK_ALIGNMENT      (8192u)
+#define APP_IPC_RPMESSAGE_CTRL_TASK_ALIGNMENT    (8192u)
 #endif
 
-#if defined(R5F) && defined(SAFERTOS)
-#define APP_IPC_RPMESSAGE_RX_TASK_ALIGNMENT    APP_IPC_RPMESSAGE_RX_TASK_STACK_SIZE
-#else
-#define APP_IPC_RPMESSAGE_RX_TASK_ALIGNMENT    (8192u)
+#elif defined (C7X_FAMILY)
 #if defined (SOC_AM62A)
-#define APP_LPM_SUSPEND_TASK_ALIGNMENT         (8192u)
+#define APP_LPM_SUSPEND_TASK_ALIGNMENT           (8192u)
 #endif
+#define APP_IPC_RPMESSAGE_RX_TASK_ALIGNMENT      (8192u)
+#define APP_IPC_RPMESSAGE_CTRL_TASK_ALIGNMENT    (8192u)
+
+#else
+#define APP_IPC_RPMESSAGE_RX_TASK_ALIGNMENT      (8192u)
+#define APP_IPC_RPMESSAGE_CTRL_TASK_ALIGNMENT    (8192u)
 #endif
+
+#define APP_IPC_HW_SPIN_LOCK_MAX        (256u)
+#if defined(MCU_PLUS_SDK)
+#define APP_IPC_HW_SPIN_LOCK_MMR_BASE   ((uint32_t)0x2A000000u)
+#elif defined(MCU_SDK)
+#define APP_IPC_HW_SPIN_LOCK_MMR_BASE   ((uint32_t)0x30020000u)
+#elif defined(PDK)
+#define APP_IPC_HW_SPIN_LOCK_MMR_BASE   ((uint32_t)0x30E00000u)
+#endif
+#define APP_IPC_HW_SPIN_LOCK_OFFSET(x)  ((uint32_t)0x800u + ((uint32_t)4u*(uint32_t)(x)))
+
+static uintptr_t key;
 
 static uint8_t g_app_rpmessage_rx_task_stack[APP_IPC_RPMESSAGE_RX_TASK_STACK_SIZE]
 __attribute__ ((section(".bss:taskStackSection")))
 __attribute__ ((aligned(APP_IPC_RPMESSAGE_RX_TASK_ALIGNMENT)))
     ;
 
-#if (defined (SOC_AM62A) && !(defined (R5F))) 
+#if (defined (SOC_AM62A) && !(defined (R5F)))
 static uint8_t g_app_lpm_suspend_task_stack[APP_LPM_SUSPEND_TASK_STACK_SIZE]
 __attribute__ ((section(".bss:taskStackSection")))
 __attribute__ ((aligned(APP_LPM_SUSPEND_TASK_ALIGNMENT)))
     ;
 #endif
 
-/* IMPORTANT NOTE: For C7x,
- * - stack size and stack ptr MUST be 8KB aligned
- * - AND min stack size MUST be 16KB
- * - AND stack assigned for task context is "size - 8KB"
- *       - 8KB chunk for the stack area is used for interrupt handling in this task context
- */
-#if defined(R5F)
-#define APP_IPC_RPMESSAGE_CTRL_TASK_STACK_SIZE   (4u*1024u)
-#else
-#if defined (SOC_AM62A)
-#define APP_IPC_RPMESSAGE_CTRL_TASK_STACK_SIZE   (64u * 1024u)
-#else
-#define APP_IPC_RPMESSAGE_CTRL_TASK_STACK_SIZE   (32u * 1024u)
-#endif
-#endif
-
-#if defined(R5F) && defined(SAFERTOS)
-#define APP_IPC_RPMESSAGE_CTRL_TASK_ALIGNMENT    APP_IPC_RPMESSAGE_CTRL_TASK_STACK_SIZE
-#else
-#define APP_IPC_RPMESSAGE_CTRL_TASK_ALIGNMENT    (8192u)
-#endif
-
+#if defined(PDK)
 static uint8_t g_app_rpmessage_ctrl_task_stack[APP_IPC_RPMESSAGE_CTRL_TASK_STACK_SIZE]
 __attribute__ ((section(".bss:taskStackSection")))
 __attribute__ ((aligned(APP_IPC_RPMESSAGE_CTRL_TASK_ALIGNMENT)))
     ;
+#endif /* #if defined(PDK) */
 
 typedef struct {
 
@@ -207,13 +210,13 @@ typedef struct {
     app_ipc_notify_handler_f ipc_notify_handler;
     app_rtos_task_handle_t task_handle;
 
-#if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
     RPMessage_Handle rpmsg_tx_handle[APP_IPC_CPU_MAX];
     RPMessage_Handle rpmsg_rx_handle;
-#else
+    #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
     RPMessage_Object rpmsg_tx_handle[APP_IPC_CPU_MAX];
     RPMessage_Object rpmsg_rx_handle;
-#endif
+    #endif
 
     uint32_t task_stack_size;
     uint8_t *task_stack;
@@ -223,6 +226,7 @@ typedef struct {
 } app_ipc_obj_t;
 
 static app_ipc_obj_t g_app_ipc_obj;
+
 #if defined (SOC_AM62A)
 app_rtos_task_handle_t lpm_task_handle;
 static app_rtos_semaphore_handle_t g_lpm_suspend_sem;
@@ -325,6 +329,53 @@ static uint32_t g_ipc_to_app_cpu_id[IPC_MAX_PROCS] =
 };
 #endif
 
+#if defined (SOC_TDA54)
+#define APP_MCUSDK_IPC_CPU_INVALID (0xFFFFFFFFU)
+static uint32_t g_app_to_ipc_cpu_id[APP_IPC_CPU_MAX] =
+{
+    CORE_ID_A720_0,
+    CORE_ID_MCU0,
+    CORE_ID_MCU1,
+    CORE_ID_MCU2,
+    CORE_ID_MCU3,
+    CORE_ID_MCU4,
+    CORE_ID_RMCU0_0,
+    CORE_ID_RMCU0_1,
+    CORE_ID_RMCU1_0,
+    CORE_ID_RMCU1_1,
+    CORE_ID_RMCU2_0,
+    CORE_ID_RMCU2_1,
+    CORE_ID_DSP0,
+    CORE_ID_DSP1,
+    CORE_ID_DSP2,
+    CORE_ID_DSP3,
+};
+
+static uint32_t g_ipc_to_app_cpu_id[CORE_ID_MAX] =
+{
+    APP_MCUSDK_IPC_CPU_INVALID,
+    APP_IPC_CPU_MCU0_M55,
+    APP_IPC_CPU_MCU1_M55,
+    APP_IPC_CPU_MCU2_M55,
+    APP_IPC_CPU_MCU3_M55,
+    APP_IPC_CPU_MCU4_M55,
+    APP_IPC_CPU_C7x_1,
+    APP_IPC_CPU_C7x_2,
+    APP_IPC_CPU_C7x_3,
+    APP_IPC_CPU_C7x_4,
+    APP_IPC_CPU_MPU1_0,
+    APP_MCUSDK_IPC_CPU_INVALID,
+    APP_MCUSDK_IPC_CPU_INVALID,
+    APP_MCUSDK_IPC_CPU_INVALID,
+    APP_IPC_CPU_RMCU0_0,
+    APP_IPC_CPU_RMCU0_1,
+    APP_IPC_CPU_RMCU1_0,
+    APP_IPC_CPU_RMCU1_1,
+    APP_IPC_CPU_RMCU2_0,
+    APP_IPC_CPU_RMCU2_1
+};
+#endif
+
 #if defined (SOC_J742S2)
 static uint32_t g_app_to_ipc_cpu_id[APP_IPC_CPU_MAX] =
 {
@@ -361,28 +412,13 @@ static uint32_t g_ipc_to_app_cpu_id[IPC_MAX_PROCS] =
 #endif
 
 #if defined (SOC_AM62A)
-#if !defined (MCU_PLUS_SDK)
-static uint32_t g_app_to_ipc_cpu_id[APP_IPC_CPU_MAX] =
-{
-    IPC_MPU1_0,
-    IPC_MCU1_0,
-    IPC_C7X_1
-};
-
-static uint32_t g_ipc_to_app_cpu_id[IPC_MAX_PROCS] =
-{
-    APP_IPC_CPU_MPU1_0,
-    APP_IPC_CPU_MCU1_0,
-    APP_IPC_CPU_C7x_1
-};
-#else
 #define APP_MCUSDK_IPC_CPU_INVALID (0xFFFFFFFFU)
 static uint32_t g_app_to_ipc_cpu_id[APP_IPC_CPU_MAX] =
 {
     CSL_CORE_ID_A53SS0_0,
     CSL_CORE_ID_R5FSS0_0,
     CSL_CORE_ID_C75SS0_0,
-#if defined(QNX_MPU)
+#ifdef QNX
     CSL_CORE_ID_MCU_R5FSS0_0,
     APP_MCUSDK_IPC_CPU_INVALID,
     APP_MCUSDK_IPC_CPU_INVALID,
@@ -402,7 +438,6 @@ static uint32_t g_ipc_to_app_cpu_id[CSL_CORE_ID_MAX] =
     APP_MCUSDK_IPC_CPU_INVALID,
     APP_IPC_CPU_C7x_1
 };
-#endif
 #endif
 
 #if defined (SOC_J722S)
@@ -437,7 +472,7 @@ static uint32_t g_ipc_to_app_cpu_id[CSL_CORE_ID_MAX] =
   volatile uint8_t gbShutdown;
   volatile uint8_t gbShutdownRemotecoreID;
   volatile uint8_t gbSuspended;
-  volatile uint8_t gbSuspendRemotecoreID; 
+  volatile uint8_t gbSuspendRemotecoreID;
   static uint32_t gVring_id[APP_IPC_CPU_MAX][APP_IPC_CPU_MAX];
 #endif
 
@@ -448,15 +483,15 @@ void appIpcRpmboxCallback(uint16_t remoteCoreId, uint16_t clientId, uint32_t msg
 #if !(defined (R5F))
 static int32_t appLpmCreateSuspendTask(void);
 static void appLpmSuspendTaskMain(void *arg0, void *arg1);
-#endif 
+#endif
 #endif
 
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
 static void appIpcRpmsgRxHandler(RPMessage_Handle rpmsg_handle,
                         void *arg, void *data,
                         uint16_t len, uint32_t src_cpu_id,
                         uint16_t src_endpt, uint16_t dst_endpt);
-#else
+#elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
 static void appIpcRpmsgRxHandler(RPMessage_Object* rpmsg_handle,
                         void *arg, void *data,
                         uint16_t len, uint32_t src_cpu_id,
@@ -464,12 +499,12 @@ static void appIpcRpmsgRxHandler(RPMessage_Object* rpmsg_handle,
 #endif
 static void appIpcRpmsgRxTaskMain(void *arg0, void *arg1);
 
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
 static void appIpcRpmsgRxHandler(RPMessage_Handle rpmsg_handle,
                         void *arg, void *data,
                         uint16_t len, uint32_t src_cpu_id,
                         uint16_t src_endpt, uint16_t dst_endpt)
-#else
+#elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
 static void appIpcRpmsgRxHandler(RPMessage_Object* rpmsg_handle,
                         void *arg, void *data,
                         uint16_t len, uint32_t src_cpu_id,
@@ -536,7 +571,7 @@ static void appLpmSuspendTaskMain(void *arg0, void *arg1)
     appRtosSemaphoreParamsInit(&semParams);
     semParams.mode = APP_RTOS_SEMAPHORE_MODE_BINARY;
     semParams.initValue = 0U;
-    
+
     g_lpm_suspend_sem = appRtosSemaphoreCreate(semParams);
     if (g_lpm_suspend_sem == NULL)
     {
@@ -562,11 +597,11 @@ static void appIpcRpmsgRxTaskMain(void *arg0, void *arg1)
 {
     app_ipc_obj_t *obj = &g_app_ipc_obj;
     uint32_t reply_endpt;
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
     uint32_t  src_cpu_id;
     bool done = (bool)0;
     uint16_t len;
-#else
+#elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
     uint32_t done = 0;
     uint16_t len, src_cpu_id;
 #endif
@@ -581,7 +616,7 @@ static void appIpcRpmsgRxTaskMain(void *arg0, void *arg1)
     while(!(bool)done)
 /* LDRA_JUSTIFY_END */
     {
-    #if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
         len = 0;
         status = RPMessage_recv(obj->rpmsg_rx_handle,
                         &obj->rpmsg_rx_msg_buf,
@@ -616,7 +651,7 @@ static void appIpcRpmsgRxTaskMain(void *arg0, void *arg1)
                         (uint16_t)obj->prm.tiovx_rpmsg_port_id);
         }
 /* LDRA_JUSTIFY_END */
-	#else
+	#elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
         len = (uint16_t)sizeof(obj->rpmsg_rx_msg_buf);
         status = RPMessage_recv(&obj->rpmsg_rx_handle,
                             &obj->rpmsg_rx_msg_buf,
@@ -631,6 +666,10 @@ static void appIpcRpmsgRxTaskMain(void *arg0, void *arg1)
           break;
         }
         #endif
+/* LDRA_JUSTIFY_START
+<metric start> branch <metric end>
+<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR019
+<justification end> */
         if(status == SystemP_SUCCESS)
         {
             appIpcRpmsgRxHandler(&obj->rpmsg_rx_handle,
@@ -641,6 +680,8 @@ static void appIpcRpmsgRxTaskMain(void *arg0, void *arg1)
                         (uint16_t)reply_endpt,
                         (uint16_t)obj->prm.tiovx_rpmsg_port_id);
         }
+/* LDRA_JUSTIFY_END */
+
 	#endif
     }
 
@@ -677,7 +718,7 @@ static int32_t appLpmCreateSuspendTask(void)
 {
     app_rtos_task_params_t rtos_task_prms;
     int32_t status =0;
-    
+
     appRtosTaskParamsInit(&rtos_task_prms);
 
     rtos_task_prms.stacksize = APP_LPM_SUSPEND_TASK_STACK_SIZE;
@@ -740,7 +781,7 @@ static int32_t appIpcCreateRpmsgRxTask(app_ipc_obj_t *obj)
 <justification end> */
 static void appIpcDeleteRpmsgRxTask(app_ipc_obj_t *obj)
 {
-#if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
     uint32_t sleep_time = 16U;
 
     RPMessage_unblock(obj->rpmsg_rx_handle);
@@ -756,9 +797,9 @@ static void appIpcDeleteRpmsgRxTask(app_ipc_obj_t *obj)
             break;
         }
     }
-#else
+    #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
     RPMessage_unblock(&obj->rpmsg_rx_handle);
-#endif
+    #endif
 
     (void)appRtosTaskDelete(&obj->task_handle);
 }
@@ -784,18 +825,17 @@ void appIpcInitPrmSetDefault(app_ipc_init_prm_t *prm)
     prm->enable_tiovx_ipc_announce = 1;
 }
 
-#if defined (MCU_PLUS_SDK)
-#if defined (SOC_AM62A)
-void sortEnabledCoreIdsAscending(uint32_t *arr, int size) 
+#if defined(SOC_AM62A)
+void sortEnabledCoreIdsAscending(uint32_t *arr, int size)
 {
     uint8_t outerCoreId, innerCoreId;
     if((arr != NULL) && (size > 1))
     {
-        for(outerCoreId = 0; outerCoreId < size-1; outerCoreId++) 
+        for(outerCoreId = 0; outerCoreId < size-1; outerCoreId++)
         {
-            for(innerCoreId = 0; innerCoreId < size-outerCoreId-1; innerCoreId++) 
+            for(innerCoreId = 0; innerCoreId < size-outerCoreId-1; innerCoreId++)
             {
-                if(arr[innerCoreId] > arr[innerCoreId+1]) 
+                if(arr[innerCoreId] > arr[innerCoreId+1])
                 {
                     uint32_t tempCoreId = arr[innerCoreId];
                     arr[innerCoreId] = arr[innerCoreId+1];
@@ -842,40 +882,6 @@ void vringAllocateForCores(uint32_t enabled_Cores[], uint32_t numCores)
         }
     }
 }
-#else
-static uint32_t getVringIndexPDK(uint32_t numProc, uint32_t selfId, uint32_t remoteId)
-{
-    uint32_t cnt = 0, a , b, i;
-    uint32_t res = 0;
-
-    if(remoteId > selfId){
-        a = selfId;
-        b = remoteId;
-    }
-    else{
-        a = remoteId;
-        b = selfId;
-    }
-
-    for(i = 0; i < a; i++)
-    {
-        cnt += (numProc - i - 1u);
-    }
-
-    cnt += (b - a - 1u);
-    cnt *= 4u;
-
-    if(remoteId > selfId) {
-        res = (cnt / 2u);
-    }
-    else
-    {
-        res = ((cnt / 2u) + 1u);
-    }
-
-    return res;
-}
-#endif
 #endif
 
 int32_t appIpcInit(app_ipc_init_prm_t *prm)
@@ -888,14 +894,14 @@ int32_t appIpcInit(app_ipc_init_prm_t *prm)
 
     obj->prm = *prm;
 
-#if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
     for(cpu_id=0; cpu_id<APP_IPC_CPU_MAX; cpu_id++)
     {
         obj->rpmsg_tx_handle[cpu_id] = NULL;
     }
     obj->task_handle = NULL;
     obj->rpmsg_rx_handle = NULL;
-#endif
+    #endif
 
     obj->ipc_notify_handler = NULL;
     obj->task_stack = g_app_rpmessage_rx_task_stack;
@@ -932,7 +938,7 @@ int32_t appIpcInit(app_ipc_init_prm_t *prm)
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_IPC_RTOS_UM06
 <justification end> */
-#if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
     if(APP_IPC_VQ_OBJ_MEM_SIZE < (Ipc_getVqObjMemoryRequiredPerCore()*IPC_MAX_PROCS) )
     {
         appLogPrintf("IPC: ERROR: APP_IPC_VQ_OBJ_MEM_SIZE is less than Ipc_getVqObjMemoryRequiredPerCore()*IPC_MAX_PROCS (%d < %d) !!!\n",
@@ -941,7 +947,8 @@ int32_t appIpcInit(app_ipc_init_prm_t *prm)
             );
         status = -1;
     }
-#endif
+    #endif
+
 /* LDRA_JUSTIFY_END */
 
 /* LDRA_JUSTIFY_START
@@ -966,7 +973,7 @@ int32_t appIpcInit(app_ipc_init_prm_t *prm)
         }
     }
 
-#if !defined (MCU_PLUS_SDK)
+    #if defined(PDK)
 /* LDRA_JUSTIFY_START
 <metric start> branch <metric end>
 <justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR007
@@ -1173,8 +1180,13 @@ s<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR008
 
         /* NOTE: RPMessage_setCallback is not yet implemented */
     }
-#else
+/* LDRA_JUSTIFY_START
+<metric start> branch <metric end>
+<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR020
+<justification end> */
+    #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
     if(status==0)
+/* LDRA_JUSTIFY_END */
     {
         IpcNotify_Params notifyParams;
         uint32_t ipc_num_proc = 0;
@@ -1203,17 +1215,31 @@ s<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR008
 
         notifyParams.numCores = ipc_num_proc;
 
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_IPC_RTOS_UM28
+<justification end> */
         if (prm->ipc_resource_tbl != NULL)
         {
+            #if defined (MCU_PLUS_SDK)
             notifyParams.linuxCoreId = CSL_CORE_ID_A53SS0_0;
+            #elif defined (MCU_SDK)
+            notifyParams.linuxCoreId = CORE_ID_A720_0;
+            #endif
         }
+/* LDRA_JUSTIFY_END */
 
         /* initialize the IPC Notify module */
         status = IpcNotify_init(&notifyParams);
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_IPC_RTOS_UM22
+<justification end> */
         if(status != SystemP_SUCCESS)
         {
             appLogPrintf("IPC: ERROR: IpcNotify_init failed !!!\n");
         }
+/* LDRA_JUSTIFY_END */
         #if (defined(SOC_AM62A) && defined(__C7504__))
         status = IpcNotify_registerClient(IPC_NOTIFY_CLIENT_ID_RP_MBOX, &appIpcRpmboxCallback, NULL);
         if(status != SystemP_SUCCESS)
@@ -1222,16 +1248,25 @@ s<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR008
         }
         #endif
     }
+/* LDRA_JUSTIFY_START
+<metric start> branch <metric end>
+<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR021
+<justification end> */
     if(status == SystemP_SUCCESS)
     {
+/* LDRA_JUSTIFY_END */
         RPMessage_Params rpmsgParams;
         uint32_t src_cpu_id, dst_cpu_id, vringId;
+        #if defined(MCU_SDK)
+        uint32_t rxTxMap[CORE_ID_MAX][CORE_ID_MAX];
+        #elif defined(MCU_PLUS_SDK)
         uint32_t rxTxMap[CSL_CORE_ID_MAX][CSL_CORE_ID_MAX];
+        #endif
         uint32_t self_core_id = g_app_to_ipc_cpu_id[prm->self_cpu_id];
 
         /* initialize parameters to default */
         RPMessage_Params_init(&rpmsgParams);
-#if defined (SOC_AM62A)
+        #if defined (SOC_AM62A)
         uint32_t enabled_Cores[prm->num_cpus];
         uint8_t coreIndex;
         for(coreIndex = 0U; coreIndex < prm->num_cpus; coreIndex++)
@@ -1240,7 +1275,7 @@ s<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR008
         }
 
         vringAllocateForCores(enabled_Cores, prm->num_cpus);
-#endif
+        #endif
         /* VRING mapping from source core to destination core, '-1' means NO VRING */
         /* for each name, construct a N x N object mapping SRC CPU to DST CPU VRING ID,
         Assign VRING IDs to each SRC/DST pair, skip assignment when SRC == DST */
@@ -1253,19 +1288,34 @@ s<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR008
                 uint32_t dst_core_id = g_app_to_ipc_cpu_id[prm->enabled_cpu_id_list[dst_cpu_id]];
                 if(src_core_id != dst_core_id)  /* NO VRING for a CPU to itself */
                 {
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_IPC_RTOS_UM23
+<justification end> */
                     if (prm->ipc_resource_tbl != NULL)
+/* LDRA_JUSTIFY_END */
                     {
                         rxTxMap[src_core_id][dst_core_id] = vringId;
                         vringId++;
                     }
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_IPC_RTOS_UM23
+<justification end> */
                     else
                     {
-#if defined (SOC_AM62A)
+                        #if defined(MCU_SDK)
+                        rxTxMap[src_core_id][dst_core_id] = vringId;
+                        vringId++;
+                        #elif defined (MCU_PLUS_SDK)
+                        #if defined (SOC_AM62A)
                         rxTxMap[src_core_id][dst_core_id] = gVring_id[src_core_id][dst_core_id];
-#else
-                        rxTxMap[src_core_id][dst_core_id] = getVringIndexPDK(APP_IPC_CPU_MAX, src_core_id, dst_core_id);
-#endif
+                        #else
+                        rxTxMap[src_core_id][dst_core_id] = appIpcGetVringIndex(APP_IPC_CPU_MAX, src_core_id, dst_core_id);
+                        #endif
+                        #endif
                     }
+/* LDRA_JUSTIFY_END */
                 }
             }
         }
@@ -1296,29 +1346,57 @@ s<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR008
         rpmsgParams.vringNumBuf = IPC_RPMESSAGE_NUM_VRING_BUF;
         rpmsgParams.vringMsgSize = IPC_RPMESSAGE_MAX_VRING_BUF_SIZE;
 
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_IPC_RTOS_UM24
+<justification end> */
         if (prm->ipc_resource_tbl != NULL)
+/* LDRA_JUSTIFY_END */
         {
             rpmsgParams.linuxResourceTable = prm->ipc_resource_tbl;
+            #if defined (MCU_PLUS_SDK)
             rpmsgParams.linuxCoreId = CSL_CORE_ID_A53SS0_0;
+            #elif defined (MCU_SDK)
+            rpmsgParams.linuxCoreId = CORE_ID_A720_0;
+            #endif
         }
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_IPC_RTOS_UM24
+<justification end> */
         else
         {
             /* Note: this is needed with QNX */
+            #if defined (MCU_PLUS_SDK)
             rpmsgParams.vringAllocationPDK = 1u;
-            #if defined(SOC_AM62A)
             rpmsgParams.vringAllocationQNX = 1u;
             #endif
         }
+/* LDRA_JUSTIFY_END */
 
         /* initialize the IPC RP Message module */
         status = RPMessage_init(&rpmsgParams);
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_IPC_RTOS_UM25
+<justification end> */
         if(status != SystemP_SUCCESS)
         {
             appLogPrintf("IPC: ERROR: RPMessage_init failed !!!\n");
         }
+/* LDRA_JUSTIFY_END */
     }
+/* LDRA_JUSTIFY_START
+<metric start> branch <metric end>
+<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR022
+<justification end> */
     if(status == SystemP_SUCCESS)
+/* LDRA_JUSTIFY_END */
     {
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_IPC_RTOS_UM29
+<justification end> */
         if (prm->ipc_resource_tbl != NULL)
         {
             appLogPrintf("IPC: Waiting for HLOS to be ready ... !!!\n");
@@ -1326,8 +1404,14 @@ s<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR008
             status = RPMessage_waitForLinuxReady(SystemP_WAIT_FOREVER);
             appLogPrintf("IPC: HLOS is ready !!!\n");
         }
+/* LDRA_JUSTIFY_END */
     }
+/* LDRA_JUSTIFY_START
+<metric start> branch <metric end>
+<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR023
+<justification end> */
     if(status == SystemP_SUCCESS)
+/* LDRA_JUSTIFY_END */
     {
         RPMessage_CreateParams rpmsg_createTx_prms;
 
@@ -1339,15 +1423,25 @@ s<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR008
                 rpmsg_createTx_prms.localEndPt = (uint16_t)cpu_id;
 
                 status = RPMessage_construct(&obj->rpmsg_tx_handle[cpu_id], &rpmsg_createTx_prms);
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_IPC_RTOS_UM26
+<justification end> */
                 if(status != SystemP_SUCCESS)
                 {
                     appLogPrintf("IPC: ERROR: Unable to create rpmessage tx handle for cpu %d !!!\n", cpu_id);
                     break;
                 }
+/* LDRA_JUSTIFY_END */
             }
         }
     }
+/* LDRA_JUSTIFY_START
+<metric start> branch <metric end>
+<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR024
+<justification end> */
     if(status==0)
+/* LDRA_JUSTIFY_END */
     {
         RPMessage_CreateParams rpmsg_createRx_prms;
 
@@ -1356,10 +1450,15 @@ s<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR008
 
         status = RPMessage_construct(&obj->rpmsg_rx_handle, &rpmsg_createRx_prms);
 
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_IPC_RTOS_UM27
+<justification end> */
         if(SystemP_SUCCESS !=status)
         {
             appLogPrintf("IPC: ERROR: Unable to create rpmessage rx handle !!!\n");
         }
+/* LDRA_JUSTIFY_END */
 
         /* NOTE: RPMessage_setCallback is not yet implemented */
     }
@@ -1369,11 +1468,13 @@ s<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR008
     (prm->enable_tiovx_ipc_announce == 1u)) /* TIOVX-1913- LDRA Uncovered Branch Id: APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR016 */
     {
         /* use "rpmsg-proto" or "rpmsg_chrdev" depending on protocol selected in user space on Linux A72 */
-#if !defined (MCU_PLUS_SDK)
+        #if defined(PDK)
         status = RPMessage_announce(RPMESSAGE_ALL, prm->tiovx_rpmsg_port_id, "rpmsg_chrdev");
-#else
+        #elif defined(MCU_PLUS_SDK)
         status = RPMessage_announce(CSL_CORE_ID_A53SS0_0, (uint16_t)prm->tiovx_rpmsg_port_id, "rpmsg_chrdev");
-#endif
+        #elif defined(MCU_SDK)
+        status = RPMessage_announce(CORE_ID_A720_0, (uint16_t)prm->tiovx_rpmsg_port_id, "rpmsg_chrdev");
+        #endif
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_IPC_RTOS_UM15
@@ -1402,7 +1503,7 @@ s<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR008
         {
             appLogPrintf("IPC: ERROR: appIpcCreateRpmsgRxTask failed !!!\n");
         }
-        #if (defined (SOC_AM62A) && !(defined (R5F))) 
+        #if (defined (SOC_AM62A) && !(defined (R5F)))
         status = appLpmCreateSuspendTask();
         if(status!=0)
         {
@@ -1431,7 +1532,7 @@ int32_t appIpcDeInit(void)
 
     appIpcDeleteRpmsgRxTask(obj);
 
-#if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
     int32_t temp_status = 0;
 
     for(cpu_id=0; cpu_id<APP_IPC_CPU_MAX; cpu_id++)
@@ -1465,16 +1566,17 @@ int32_t appIpcDeInit(void)
         appLogPrintf("Ipc_deinit: Failed to de Initialize IPC module\n");
         status = temp_status;
     }
-#else
-    for(cpu_id=0; cpu_id<APP_IPC_CPU_MAX; cpu_id++)
+    #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
+      for(cpu_id=0; cpu_id<APP_IPC_CPU_MAX; cpu_id++)
     {
         RPMessage_destruct(&obj->rpmsg_tx_handle[cpu_id]);
+
     }
     RPMessage_destruct(&obj->rpmsg_rx_handle);
 
     IpcNotify_deInit();
     RPMessage_deInit();
-#endif
+    #endif
 
     appLogPrintf("IPC: Deinit ... Done !!!\n");
 
@@ -1496,15 +1598,15 @@ int32_t appIpcSendNotifyPort(uint32_t dest_cpu_id, uint32_t payload, uint32_t po
     int32_t status = -1;
     app_ipc_obj_t *obj = &g_app_ipc_obj;
 
-#if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
     if( (dest_cpu_id<APP_IPC_CPU_MAX) && (obj->rpmsg_tx_handle[dest_cpu_id] != NULL))
-#else
+    #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
     if( (dest_cpu_id<APP_IPC_CPU_MAX) && (&obj->rpmsg_tx_handle[dest_cpu_id] != NULL))
-#endif
+    #endif
     {
         uint32_t ipc_cpu_id = g_app_to_ipc_cpu_id[dest_cpu_id];
 
-#if !defined(MCU_PLUS_SDK)
+        #if defined(PDK)
         #ifdef APP_IPC_DEBUG
         appLogPrintf("IPC: TX: %s (port %d) -> %s (port %d) msg = 0x%08x\n",
             Ipc_mpGetSelfName(),
@@ -1536,15 +1638,15 @@ int32_t appIpcSendNotifyPort(uint32_t dest_cpu_id, uint32_t payload, uint32_t po
                 payload);
         }
 /* LDRA_JUSTIFY_END */
-#else
-#ifdef APP_IPC_DEBUG
+        #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
+        #ifdef APP_IPC_DEBUG
         appLogPrintf("IPC: TX: %s (port %d) -> %s (port %d) msg = 0x%08x\n",
             Ipc_mpGetSelfName(),
             obj->prm.tiovx_rpmsg_port_id,
             Ipc_mpGetName(ipc_cpu_id),
             port_id,
             payload);
-#endif
+        #endif
 
         status = RPMessage_send(
                     &payload,
@@ -1563,7 +1665,7 @@ int32_t appIpcSendNotifyPort(uint32_t dest_cpu_id, uint32_t payload, uint32_t po
                 port_id,
                 payload);
         }
-#endif
+        #endif
     }
     return status;
 }
@@ -1573,9 +1675,9 @@ int32_t appIpcSendNotify(uint32_t dest_cpu_id, uint32_t payload)
     int32_t status = -1;
     app_ipc_obj_t *obj = &g_app_ipc_obj;
 
-    #if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
     if( (dest_cpu_id<APP_IPC_CPU_MAX) && (obj->rpmsg_tx_handle[dest_cpu_id] != NULL))
-    #else
+    #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
     if(dest_cpu_id<APP_IPC_CPU_MAX)
     #endif
     {
@@ -1676,16 +1778,6 @@ void appIpcGetTiovxLogRtSharedMemInfo(void **shm_base, uint32_t *shm_size)
     }
 }
 
-#define APP_IPC_HW_SPIN_LOCK_MAX        (256u)
-#if defined(SOC_AM62A) || defined(SOC_J722S)
-#define APP_IPC_HW_SPIN_LOCK_MMR_BASE   ((uint32_t)0x2A000000u)
-#else
-#define APP_IPC_HW_SPIN_LOCK_MMR_BASE   ((uint32_t)0x30E00000u)
-#endif
-#define APP_IPC_HW_SPIN_LOCK_OFFSET(x)  ((uint32_t)0x800u + ((uint32_t)4u*(uint32_t)(x)))
-
-static uintptr_t key;
-
 int32_t appIpcHwLockAcquire(uint32_t hw_lock_id, uint32_t timeout)
 {
     int32_t status = -1;
@@ -1739,19 +1831,19 @@ int32_t appIpcHwLockRelease(uint32_t hw_lock_id)
 
 uint32_t appIpcGetIpcCpuId(uint32_t app_cpu_id)
 {
-#if !defined (MCU_PLUS_SDK)
+    #if defined(PDK)
     uint32_t ipc_cpu_id = IPC_MP_INVALID_ID;
     if(app_cpu_id < APP_IPC_CPU_MAX)
     {
         ipc_cpu_id = g_app_to_ipc_cpu_id[app_cpu_id];
     }
-#else
+    #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
     uint32_t ipc_cpu_id = APP_MCUSDK_IPC_CPU_INVALID;
     if(app_cpu_id < APP_IPC_CPU_MAX)
     {
         ipc_cpu_id = g_app_to_ipc_cpu_id[app_cpu_id];
     }
-#endif
+    #endif
     return ipc_cpu_id;
 }
 
@@ -1761,11 +1853,7 @@ uint32_t appIpcGetAppCpuId(char *name)
     uint32_t ipc_cpu_id;
     uint32_t app_cpu_id = APP_IPC_CPU_INVALID;
 
-#if !defined(MCU_PLUS_SDK)
     ipc_cpu_id = Ipc_mpGetId(name);
-#else
-    ipc_cpu_id = SOC_getCoreId(name);
-#endif
 
     if(ipc_cpu_id < IPC_MAX_PROCS)
     {
@@ -1779,11 +1867,7 @@ const char *appIpcGetCpuName(uint32_t app_cpu_id)
     const char *name = "invalid";
     if(app_cpu_id < APP_IPC_CPU_MAX)
     {
-#if !defined(MCU_PLUS_SDK)
         name = Ipc_mpGetName(g_app_to_ipc_cpu_id[app_cpu_id]);
-#else
-        name = SOC_getCoreName((uint16_t)g_app_to_ipc_cpu_id[app_cpu_id]);
-#endif
     }
     return name;
 }
@@ -1795,13 +1879,13 @@ void appIpcRpmboxCallback(uint16_t remoteCoreId, uint16_t clientId, uint32_t msg
   if (clientId == IPC_NOTIFY_CLIENT_ID_RP_MBOX)
   {
     if (msgValue == (uint32_t)IPC_NOTIFY_RP_MBOX_SHUTDOWN) /* Shutdown request from the remotecore */
-    {   
+    {
         gbShutdown = 1u;
         gbShutdownRemotecoreID = remoteCoreId;
         RPMessage_unblock(&obj->rpmsg_rx_handle);
     }
     else if (msgValue == (uint32_t)IPC_NOTIFY_RP_MBOX_SUSPEND_SYSTEM) /* Suspend request received from linux during LPM suspend */
-    {   
+    {
         gbSuspended = 1u;
         gbSuspendRemotecoreID = remoteCoreId;
         appRtosSemaphorePost(g_lpm_suspend_sem);

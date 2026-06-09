@@ -456,6 +456,11 @@ static int32_t IMX728_RunSensorConfigScript(uint32_t i2cInstId, uint8_t sensorI2
         regValue = (uint8_t)sensorCfg[regCnt].nRegValue;
         delayMilliSec = (uint16_t)sensorCfg[regCnt].nDelay;
 
+#if defined(SOC_AM62A)
+        /* Increase current delay by 1ms */
+        delayMilliSec = delayMilliSec + 1U;
+#endif
+
         appLogPrintf(" Configuring IMX728 imager 0x%x.. Please wait till it finishes \n", sensorI2cAddr);
         while(regCnt<sensor_cfg_script_len)
         {
@@ -479,6 +484,10 @@ static int32_t IMX728_RunSensorConfigScript(uint32_t i2cInstId, uint8_t sensorI2
             regAddr  = sensorCfg[regCnt].nRegAddr;
             regValue = (uint8_t)sensorCfg[regCnt].nRegValue;
             delayMilliSec = (uint16_t)sensorCfg[regCnt].nDelay;
+#if defined(SOC_AM62A)
+            /* Increase current delay by 1ms */
+            delayMilliSec = delayMilliSec + 1U;
+#endif
         }
         /*Wait 100ms after the init is done*/
         appLogWaitMsecs(100);
@@ -757,10 +766,7 @@ static int32_t IMX728_StreamOn(uint32_t chId, void *pSensorHdl)
             {
                 appLogWaitMsecs(10);
 
-                if (status == 0)
-                {
-                    status = enableUB960Streaming(chId);
-                }
+                status = enableUB960Streaming(chId);
             }
         }
     }

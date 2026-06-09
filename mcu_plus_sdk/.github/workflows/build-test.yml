@@ -1,0 +1,113 @@
+name: Build Test
+
+env:
+  PR_NUMBER: ${{ github.event.number }}
+  
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the $default-branch branch
+  push:
+    branches: [ "k3_next", "k3_next_stage", "k3_main" ]
+  pull_request:
+    branches: [ "k3_next", "k3_next_stage", "k3_main" ]
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+# This workflow contains a build jobs for all the SOCs in the repo
+jobs:
+
+   #AM62 build 
+  build_am62x:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+        with:
+          # Relative path under $GITHUB_WORKSPACE to place the repository
+          path: 'pr_checkout'
+
+      # Runs a single command using the runners shell
+      - name: build_test
+        run: |
+          cp ./pr_checkout/.github/workflows/build-test.sh .
+          chmod +x ./build-test.sh
+          ./build-test.sh --device=am62x
+
+
+  #AM62A build 
+  build_am62ax:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: 'pr_checkout'
+
+      - name: build_test
+        run: |
+          cp ./pr_checkout/.github/workflows/build-test.sh .
+          chmod +x ./build-test.sh
+          ./build-test.sh --device=am62ax
+          
+  #AM62P build 
+  build_am62px:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: 'pr_checkout'
+
+      - name: build_test
+        run: |
+          cp ./pr_checkout/.github/workflows/build-test.sh .
+          chmod +x ./build-test.sh
+          ./build-test.sh --device=am62px
+          
+  #AM62D build 
+  build_am62dx:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: 'pr_checkout'
+
+      - name: build_test
+        run: |
+          cp ./pr_checkout/.github/workflows/build-test.sh .
+          chmod +x ./build-test.sh
+          ./build-test.sh --device=am62dx
+          
+  #AM275 build 
+  build_am275x:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: 'pr_checkout'
+
+      - name: build_test
+        run: |
+          cp ./pr_checkout/.github/workflows/build-test.sh .
+          chmod +x ./build-test.sh
+          ./build-test.sh --device=am275x
+         
+  #AM62L build 
+  build_am62lx:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: 'pr_checkout'
+
+      - name: build_test
+        run: |
+          cp ./pr_checkout/.github/workflows/build-test.sh .
+          chmod +x ./build-test.sh
+          ./build-test.sh --device=am62lx

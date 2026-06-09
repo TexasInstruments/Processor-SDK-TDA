@@ -7,7 +7,7 @@
  *  Contains the different control command and status query functions definations
  *
  *  ============================================================================
- *  @n   (C) Copyright 2009-2013, Texas Instruments, Inc.
+ *  @n   (C) Copyright 2024, Texas Instruments, Inc.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -2845,7 +2845,7 @@ Uint32 CSL_CPGMAC_SL_getRxMaxLen
      @endverbatim
  * =============================================================================
  */
-Uint32 CSL_CPGMAC_SL_setRxMaxLen
+void CSL_CPGMAC_SL_setRxMaxLen
 (CSL_Xge_cpswRegs *hCpswRegs,
     Uint32                  portNum,
     Uint32                  rxMaxLen

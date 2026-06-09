@@ -1,0 +1,82 @@
+%%{
+    let module = system.modules["/networking/enet_icss/enet_icss"];
+%%}
+% let instance = module.$instances[0];
+% let instances = module.$instances;
+% let enetutilsScript = system.getScript("./../../common/enet_cpsw_utils");
+
+static const Mdio_Cfg enetAppIcssgMdioCfg =
+{
+    .mode               = `instance.mdioMode`,
+    .mdioBusFreqHz      = `instance.mdioBusFreqHz`,
+    .phyStatePollFreqHz = `enetutilsScript.getPhyStatePollFreqHz(instance.mdioBusFreqHz, instance.mdioIPGRatio)`,
+    .pollEnMask         = `enetutilsScript.getArraytoBitMask(instance.mdioPollEnMask)`,
+    .c45EnMask          = `enetutilsScript.getArraytoBitMask(instance.mdioC45EnMask)`,
+    .isMaster           = `instance.mdioIsMaster`,
+    .disableStateMachineOnInit = `instance.mdioDisableStateMachineOnInit`,
+};
+
+static const IcssgTimeSync_Cfg enetAppIcssgTimesyncCfg =
+{
+    .enable            = `instance.timesyncEnable`,
+    .clkType           = `instance.timesyncClkType`,
+    .syncOut_start_WC  = `instance.timesyncSyncOut_start_WC`,
+    .syncOut_pwidth_WC = `instance.timesyncSyncOut_pwidth_WC`
+};
+
+typedef struct EnetAppInstInfo_LinkCfg
+{
+    Enet_Type enetType;
+    uint32_t instId;
+    EnetMacPort_LinkCfg linkCfgPort;
+} EnetAppInstInfo_LinkCfg;
+
+static const EnetAppInstInfo_LinkCfg enetAppMacPortLinkCfg[] =
+{
+% for (let i in instances) {
+%   let inst = instances[i];
+%   let matchInstId = module.getInstId(inst);
+    {
+        .enetType = `matchInstId.enetType`,
+        .instId = `matchInstId.instId`,
+        .linkCfgPort =
+        {
+            `instance.macportLinkSpeed`,
+            `instance.macportLinkDuplexity`,
+        },
+    },
+% }
+};
+
+static void EnetApp_initMdioConfig(Mdio_Cfg *pMdioCfg)
+{
+    *pMdioCfg = enetAppIcssgMdioCfg;
+}
+
+static void EnetApp_initTimesyncConfig(IcssgTimeSync_Cfg *pTimesyncCfg)
+{
+    *pTimesyncCfg = enetAppIcssgTimesyncCfg;
+}
+
+static void EnetApp_getIcssgInitCfg(Enet_Type enetType,
+                                    uint32_t instId,
+                                    Icssg_Cfg *pIcssgCfg)
+{
+    const uint32_t enetIndex = EnetApp_getEnetIdx(enetType, instId);
+    EnetApp_initTimesyncConfig(&pIcssgCfg->timeSyncCfg);
+    EnetApp_initMdioConfig(&pIcssgCfg->mdioCfg);
+    EnetApp_macMode2MacMii(gInstInfo[enetIndex].rgmiiEn ? RGMII : MII, &pIcssgCfg->mii);
+}
+
+void EnetApp_getMacPortLinkCfg(Enet_Type enetType, uint32_t instId, EnetMacPort_LinkCfg *pMacPortLinkCfg, const Enet_MacPort portIdx)
+{
+    for (uint32_t i = 0; i <  ENET_ARRAYSIZE(enetAppMacPortLinkCfg); i++)
+    {
+        if ((enetAppMacPortLinkCfg[i].enetType == enetType) && (enetAppMacPortLinkCfg[i].instId == instId))
+        {
+            *pMacPortLinkCfg = enetAppMacPortLinkCfg[i].linkCfgPort;
+            return;
+        }
+    }
+    EnetAppUtils_assert(false);
+}

@@ -3,9 +3,9 @@
  *
  * Static IA IRQ Maps for AM62AX device
  *
- * Data version: 240627_084252
+ * Data version: 250904_120008
  *
- * Copyright (C) 2022-2024, Texas Instruments Incorporated
+ * Copyright (C) 2022-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,7 @@
 #ifndef AM62AX_IA_PE_CONF_H
 #define AM62AX_IA_PE_CONF_H
 
-/** Count of IA init list (11 entries) */
-#define IA_SOC_PE_INIT_NUM (0x0BU)
+/** Count of IA init list (12 entries) */
+#define IA_SOC_PE_INIT_NUM (0x0CU)
 
 #endif /* AM62AX_IA_PE_CONF_H */

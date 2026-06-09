@@ -129,10 +129,9 @@ int32_t appDccUpdatefromFS(char* sensor_name, uint8_t wdr_mode,
                         vx_context context);
 
 int32_t appSplitVpacDcc(uint8_t *dcc_buf_in, uint32_t prmSize,
-                        uint8_t ** dcc_buf_viss, uint32_t *dcc_buf_viss_num_bytes,
-                        uint8_t ** dcc_buf_aewb, uint32_t *dcc_buf_aewb_num_bytes,
-                        uint8_t ** dcc_buf_ldc, uint32_t 
-                        *dcc_buf_ldc_num_bytes);
+                        uint8_t **dcc_buf_viss, uint32_t *viss_bytes,
+                        uint8_t **dcc_buf_aewb, uint32_t *aewb_bytes,
+                        uint8_t **dcc_buf_ldc,  uint32_t *ldc_bytes);
 
 int32_t appUpdateVpacDcc(uint8_t *dcc_buf, uint32_t prmSize, vx_context context, 
                         vx_node viss_node, uint32_t viss_node_index,

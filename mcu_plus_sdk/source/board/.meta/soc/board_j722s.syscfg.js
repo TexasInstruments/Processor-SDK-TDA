@@ -2,6 +2,9 @@
 let common = system.getScript("/common");
 
 const driverVer = {
+    "ethphy": {
+        version: "j722s",
+    },
     "flash": {
         version: "v0",
     },
@@ -11,6 +14,7 @@ const driverVer = {
 };
 
 const topModules_mcu_r5 = [
+    "/board/ethphy_cpsw_icssg/ethphy_cpsw_icssg",
     "/board/led/led",
 ];
 const topModules_wkup_r5 = [
@@ -18,6 +22,7 @@ const topModules_wkup_r5 = [
     "/board/led/led",
 ];
 const topModules_main_r5 = [
+    "/board/ethphy_cpsw_icssg/ethphy_cpsw_icssg",
     "/board/led/led",
 ];
 

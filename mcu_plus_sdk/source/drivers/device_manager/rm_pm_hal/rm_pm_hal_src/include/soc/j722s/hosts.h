@@ -66,8 +66,8 @@
 #define HOST_ID_C7X_0_0 (20U)
 /** C7X_1_0(Non Secure): C7x_1 context 0 on MAIN domain */
 #define HOST_ID_C7X_1_0 (22U)
-/** GPU_0(Non Secure): GPU context 0 on MAIN domain */
-#define HOST_ID_GPU_0 (31U)
+/** A53_5(Non Secure): Cortex A53 context 5 on MAIN domain */
+#define HOST_ID_A53_5 (31U)
 /** GPU_1(Non Secure): GPU context 1 on MAIN domain */
 #define HOST_ID_GPU_1 (32U)
 /** DM2TIFS(Secure): DM to TIFS communication */

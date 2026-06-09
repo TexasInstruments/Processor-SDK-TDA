@@ -70,10 +70,8 @@ TARGET_PLATFORM ?= TI_DEVICE
 TARGET_BUILD    ?= release
 # Supported C64T, C64P, C64, C66, C674, C67, C67P, m4
 TARGET_CPU      ?= C71
-# Supported values: 1 and 0)
-BUILD_WITH_CUDA ?= 0
-# Supported values: 1 and 0)
-BUILD_WITH_OPENACC ?= 0
+# Supported values: yes and no)
+BUILD_WITH_CUDA ?= no
 # currently required to be set to yes
 BUILD_CONFORMANCE_TEST ?=yes
 # Enable GCOV tool for code coverage
@@ -90,8 +88,13 @@ ENABLE_SDK_11_0_COMPATIBILITY    ?= 0
 # Enable compatibility to build on 11.1 SDK
 ENABLE_SDK_11_1_COMPATIBILITY    ?= 0
 
-CGT_C7X_VERSION := 5.0.0.LTS
-MMALIB_VERSION  := 11_02_00_06
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+  CGT_C7X_VERSION := 6.1.0.STS
+  MMALIB_VERSION  := 11_02_01_04
+else
+  CGT_C7X_VERSION := 5.0.0.LTS
+  MMALIB_VERSION  := 11_02_00_06
+endif
 
 PSDK_TOOLS_PATH     ?= $(HOME)/ti
 
@@ -105,6 +108,11 @@ PDK_INSTALL_PATH    ?=$(PSDK_INSTALL_PATH)/pdk/packages
 BUILD_WITH_OPENCV    ?= 0
 endif
 MCU_PLUS_SDK_PATH   ?=$(PSDK_INSTALL_PATH)/mcu_plus_sdk
+
+# Define MCU_SDK_PATH for TDA54 (separate from MCU_PLUS_SDK_PATH)
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+MCU_SDK_PATH := $(PSDK_INSTALL_PATH)/mcu_sdk
+endif
 
 OS_VERSION := $(shell cat /etc/os-release | grep VERSION_ID= | sed -e "s|VERSION_ID=\"||" | sed -e "s|\"||")
 
@@ -208,13 +216,26 @@ C7X_VERSION ?= C7524
 MPU_CPU=A53
 RTOS_SDK ?= mcu_plus_sdk
 C7x_HOSTEMU_COMPILER_STRING:=-MMA2_256
+else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+C7X_TARGET ?= C7604
+C7X_VERSION ?= C7604
+MPU_CPU=A720
+RTOS_SDK ?= mcu_sdk
+C7x_HOSTEMU_COMPILER_STRING:=-MMA3_1024
 endif
 
 
 ifeq ($(RTOS_SDK),mcu_plus_sdk)
-DMA_UTILS_PATH      ?=$(MCU_PLUS_SDK_PATH)/source/drivers/dmautils
-PDK_INSTALL_PATH    = .
+  DMA_UTILS_PATH      ?=$(MCU_PLUS_SDK_PATH)/source/drivers/dmautils
+  PDK_INSTALL_PATH    = .
+  MCU_SDK_PATH        = .
+else ifeq ($(RTOS_SDK),mcu_sdk)
+  DMA_UTILS_PATH      ?=$(PSDK_INSTALL_PATH)/dmautils
+  PDK_INSTALL_PATH    = .
+  MCU_PLUS_SDK_PATH   = .
 else
-DMA_UTILS_PATH      ?=$(PDK_INSTALL_PATH)/ti/drv/udma/dmautils
-MCU_PLUS_SDK_PATH   = .
+  # PDK
+  DMA_UTILS_PATH      ?=$(PDK_INSTALL_PATH)/ti/drv/udma/dmautils
+  MCU_PLUS_SDK_PATH   = .
+  MCU_SDK_PATH        = .
 endif

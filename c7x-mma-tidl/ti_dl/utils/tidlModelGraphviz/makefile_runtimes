@@ -12,9 +12,9 @@ OUTFILE= ./out/tidl_graphVisualiser_runtimes.out
 ##############################################################
 TIDL_IMPORT_TOOL := 1
 TARGET_PLATFORM = PC
-BUILD_WITH_CUDA := 0
-override BUILD_WITH_CUDA=0
-override BUILD_WITH_OPENACC=0
+BUILD_WITH_CUDA := no
+override BUILD_WITH_CUDA=no
+override BUILD_WITH_OPENACC=no
 
 include $(ALGBASE_PATH)/makerules/rules.mk
 
@@ -51,6 +51,8 @@ else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J722S j722s))
     CFLAGS += -DSOC_J722S
 else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a))
     CFLAGS += -DSOC_AM62A
+else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+    CFLAGS += -DSOC_TDA54
 endif
 
 ##############################################################

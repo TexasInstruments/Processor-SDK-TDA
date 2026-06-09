@@ -8,13 +8,15 @@
         ipc_instance = ipc_module.$static;
     }
     let cpuName = system.getScript('/common').getSelfSysCfgCoreName();
+    let common = system.getScript("/common");
 %%}
 % if(cpuName.match(/a53/)) {
-
-    /* Initialize Debug module from Core0 only */
+    % if (common.isSmpSupported()) {
+        % if(cpuName.match(/a53ss0-0/)) {
     if(0 == Armv8_getCoreId())
     {
-
+        % }
+    % }
 % }
     /* Debug log init */
 % if(instance.enableLogZoneError) {
@@ -49,5 +51,9 @@
 % }
 
 % if(cpuName.match(/a53/)) {
+    % if (common.isSmpSupported()) {
+        % if(cpuName.match(/a53ss0-0/)) {
     }
+        % }
+    % }
 % }

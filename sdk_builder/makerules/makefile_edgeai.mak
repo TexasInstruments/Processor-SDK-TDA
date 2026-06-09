@@ -119,7 +119,7 @@ ifeq ($(BUILD_QNX_MPU), yes)
 	VISION_APPS_LIBS_PATH=$(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(MPU_CPU)/QNX/$(LINUX_APP_PROFILE)/ \
 	EDGEAI_LIBS_PATH=$(EDGEAI_QNX_STAGING)/usr/lib \
 	cmake -DCMAKE_MAKE_PROGRAM=make -DCMAKE_OUTPUT_DIR=$(EDGEAI_KERNELS_PATH)/QNX \
-	-DCMAKE_LIBRARY_PATH=$(PSDK_QNX_PATH)/stage/aarch64le/ \
+	-DCMAKE_LIBRARY_PATH=$(QNX_STAGE_PATH)/aarch64le/ \
 	-DCMAKE_TOOLCHAIN_FILE=../../cmake/cross_compile_aarch64.cmake ../../; \
 	$(MAKE) install DESTDIR=$(EDGEAI_QNX_STAGING)
 endif
@@ -175,9 +175,9 @@ ifeq ($(BUILD_QNX_MPU), yes)
 	EDGEAI_INCLUDE_PATH=$(EDGEAI_QNX_STAGING)/usr/include/ \
 	VISION_APPS_LIBS_PATH=$(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(MPU_CPU)/QNX/$(LINUX_APP_PROFILE)/ \
 	EDGEAI_LIBS_PATH=$(EDGEAI_QNX_STAGING)/usr/lib \
-	QNX_LIB_PATH=$(PSDK_PATH)/psdkqa/qnxfs/tilib \
+	QNX_LIB_PATH=$(QNX_FS_PATH)/tilib \
 	cmake -DCMAKE_MAKE_PROGRAM=make -DCMAKE_OUTPUT_DIR=$(EDGEAI_TIOVX_APPS_PATH)/QNX \
-	-DCMAKE_LIBRARY_PATH=$(PSDK_QNX_PATH)/stage/aarch64le/ \
+	-DCMAKE_LIBRARY_PATH=$(QNX_STAGE_PATH)/aarch64le/ \
 	-DCMAKE_TOOLCHAIN_FILE=../../cmake/cross_compile_aarch64.cmake ../../; \
 	$(MAKE) install DESTDIR=$(EDGEAI_QNX_STAGING)
 endif
@@ -201,7 +201,7 @@ endif
 yaml_cpp:
 ifeq ($(BUILD_QNX_MPU), yes)
 ifeq ($(TISDK_IMAGE), edgeai)
-	if [ ! -d $(YAML_CPP_PATH) ]; then cd $(PSDK_PATH)/edgeai/; git clone https://github.com/jbeder/yaml-cpp.git -b 0.8.0 --single-branch --depth 1; fi
+	if [ ! -d $(YAML_CPP_PATH) ]; then cd $(PSDK_PATH)/edgeai/; git clone https://github.com/jbeder/yaml-cpp.git -b yaml-cpp-0.9.0 --single-branch --depth 1; fi
 	@echo "----------------------------------"
 	@echo "Building YAMP CPP for QNX"
 	@echo "----------------------------------"

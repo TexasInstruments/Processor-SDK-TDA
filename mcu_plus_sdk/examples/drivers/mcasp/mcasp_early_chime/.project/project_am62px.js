@@ -4,6 +4,7 @@ let device = "am62px";
 
 const files = {
 	common: [
+        "ipc_rpmsg_echo.c",
         "sbl_ospi_linux_stage2.c",
 		"mcasp_early_chime.c",
 		"main.c",
@@ -18,6 +19,7 @@ const filedirs = {
 		"..",       /* core_os_combo base */
 		"../../..", /* Example base */
         "../../../../../boot/common/soc/am62px/",
+        "../../../../../ipc/ipc_rpmsg_echo_linux/",
 	],
 };
 
@@ -30,6 +32,7 @@ const libdirs_freertos_wkup_r5f = {
         "${MCU_PLUS_SDK_PATH}/source/drivers/lib",
         "${MCU_PLUS_SDK_PATH}/source/board/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciserver/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib",
     ],
 };
 
@@ -50,6 +53,7 @@ const libs_freertos_wkup_r5f = {
         "sciclient_direct.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "rm_pm_hal.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "self_reset.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
     ],
 };
 
@@ -62,6 +66,7 @@ const lnkfiles = {
 const defines_dm_r5f = {
     common:[
         "ENABLE_SCICLIENT_DIRECT",
+        "R5F_CORE",
     ]
 }
 
@@ -83,8 +88,18 @@ const templates_freertos_wkup_r5f =
             abortStackSize: 0x0100,
             undefinedStackSize: 0x0100,
             dmStubstacksize: 0x0400,
+            dmWithBootloader: "true"
         },
     },
+    {
+        input: ".project/templates/am62px/freertos/main_freertos_dm.c.xdt",
+        output: "../main.c",
+        options: {
+            entryFunction: "mcasp_chime",
+            dmWithBootloader: "true",
+            dmWithIPC: "true",
+        },
+    }
 ];
 
 const buildOptionCombos = [
@@ -98,7 +113,9 @@ function getComponentProperty() {
     property.type = "executable";
     property.name = "mcasp_early_chime";
     property.isInternal = false;
+    property.isLinuxInSystem = true;
     property.isLinuxFwGen = true;
+    property.ipcVringRTOS = true;
     property.tirexResourceSubClass = [ "example.gettingstarted" ];
     property.description = "This example plays a chime on boot"
     property.buildOptionCombos = buildOptionCombos;

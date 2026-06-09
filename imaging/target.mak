@@ -29,11 +29,9 @@ SYSLDIRS :=
 SYSDEFS  :=
 
 ifeq ($(TARGET_PLATFORM),PC)
-    SYSDEFS +=
     SYSIDIRS += $(GCC_WINDOWS_ROOT)/include
     SYSLDIRS += $(GCC_WINDOWS_ROOT)/lib
 else
-    SYSDEFS +=
     ifeq ($(TARGET_FAMILY),ARM)
         ifeq ($(TARGET_CPU),A15)
             ifeq ($(TARGET_OS),QNX)
@@ -64,6 +62,7 @@ else
         else
             SYSIDIRS += $(CGT6X_ROOT)/include
             SYSLDIRS += $(CGT6X_ROOT)/lib
+            SYSDEFS  += C6X_FAMILY
         endif
     else ifeq ($(TARGET_FAMILY),EVE)
         SYSIDIRS += $(ARP32CGT_ROOT)/include
@@ -79,8 +78,13 @@ else
             SYSIDIRS += $(MCU_PLUS_SDK_PATH)/source
             SYSIDIRS += $(MCU_PLUS_SDK_PATH)/source/drivers
             SYSIDIRS += $(MCU_PLUS_SDK_PATH)/source/kernel/dpl
-            SYSDEFS  += MCU_PLUS_SDK
         endif
     endif
-
 endif
+
+ifeq ($(RTOS_SDK),mcu_plus_sdk)
+    SYSDEFS  += MCU_PLUS_SDK
+else ifeq ($(RTOS_SDK),pdk)
+    SYSDEFS  += PDK
+endif
+

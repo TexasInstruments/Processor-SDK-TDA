@@ -90,6 +90,7 @@ const libs_freertos_wkup_r5f = {
         "rm_pm_hal.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "sciserver.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "self_reset.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
     ]
 };
 
@@ -97,6 +98,7 @@ const defines = {
     common:[
         "ENABLE_SCICLIENT_DIRECT",
         "R5F_CORE",
+        "CONFIG_MULTI_ENDPOINT"
     ]
 }
 
@@ -105,7 +107,11 @@ const lnkfiles = {
         "linker.cmd",
     ]
 };
-
+const config_defines = {
+    common: [
+        "CONFIG_MULTI_ENDPOINT",
+    ]
+};
 const syscfgfile = "../example.syscfg";
 
 const readmeDoxygenPageTag = "EXAMPLES_DRIVERS_IPC_RPMESSAGE_QNX_ECHO";
@@ -123,7 +129,16 @@ const templates_freertos_wkup_r5f =
             fiqStackSize: 0x0100,
             abortStackSize: 0x0100,
             undefinedStackSize: 0x0100,
+            dmWithBootloader: "true",
         },
+    },
+    {
+        input: ".project/templates/am62px/freertos/main_freertos_dm.c.xdt",
+        output: "../main.c",
+        options: {
+            entryFunction: "ipc_rpmsg_echo_main_qnx",
+            dmWithBootloader: "true",
+        }
     },
 ];
 
@@ -157,7 +172,6 @@ function getComponentProperty() {
     property.isInternal = false;
     property.buildOptionCombos = buildOptionCombos;
     property.ipcVringRTOS = true;
-    property.dmWithBootloader = true;
 
     return property;
 }
@@ -178,6 +192,7 @@ function getComponentBuildProperty(buildOption) {
         build_property.libdirs = libdirs_freertos;
         build_property.libs = libs_freertos_mcu_r5f;
         build_property.templates = templates_freertos_mcu_r5f;
+        build_property.defines = config_defines;
     }
     else if(buildOption.cpu.match(/wkup-r5f*/))
     {

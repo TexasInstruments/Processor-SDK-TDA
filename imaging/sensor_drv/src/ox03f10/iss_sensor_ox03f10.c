@@ -89,6 +89,13 @@ static IssSensor_CreateParams  ox03f10CreatePrms = {
         {0, 0, 0, 0},                   /* dataLanesPolarity */
         CSIRX_LANE_BAND_SPEED_1350_TO_1500_MBPS, /* csi_laneBandSpeed */
     },
+#if defined(B7_IMPLEMENTATION)
+    {   /* moduleInfo */
+        IMAGE_SERDES_FPD_LINK_3,        /* fpdLink */
+        OX03F10_SEN_I2C_ADDR,           /* senI2cAddr */
+        OX03F10_SER_I2C_ADDR,           /* serI2cAddr */
+    },
+#endif
     12,                                 /* numChan */
     3,                                  /* dccId */
 };
@@ -128,7 +135,6 @@ IssSensors_Handle ox03f10SensorHandle = {
 /*
  * \brief DCC Parameters of OX03F10
  */
-extern IssSensors_Handle *gIssSensorTable[ISS_SENSORS_MAX_SUPPORTED_SENSOR];
 static uint16_t redGain_prev[ISS_SENSORS_MAX_CHANNEL];
 static uint16_t greenGain_prev[ISS_SENSORS_MAX_CHANNEL];
 static uint16_t blueGain_prev[ISS_SENSORS_MAX_CHANNEL];
@@ -164,7 +170,6 @@ static int32_t OX03F10_Probe(uint32_t chId, void *pSensorHdl)
     /* MISRA.CAST.VOID_PTR_TO_OBJ_PTR.2012 - must be waived */
     IssSensors_Handle * pSenHandle = (IssSensors_Handle*)pSensorHdl;
     IssSensor_CreateParams * pCreatePrms;
-    uint32_t i2cInstId;
     uint16_t regAddr;
     uint8_t sensorI2cAddr, regVal, regValExp;
 
@@ -423,13 +428,16 @@ static int32_t OX03F10_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_Ex
     IssSensor_CreateParams * pCreatePrms;
     uint8_t sensorI2cAddr;
 
+#if defined(ENABLE_DIGITAL_GAIN)
     uint16_t regAddr;
     uint8_t regVal;
 
-    uint16_t expTime;
-    uint8_t intVal = 0;
-    uint8_t decVal = 0;
     uint32_t digGain = 0;
+#endif
+
+    uint16_t expTime;
+    uint8_t intVal = 0U;
+    uint8_t decVal = 0U;
 
     pCreatePrms = pSenHandle->createPrms;
 
@@ -449,7 +457,7 @@ static int32_t OX03F10_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_Ex
         4.00    - 7.75      |   0.25        |   01xx.xx00
         8.0     - 15.5      |   0.5         |   1xxx.x000
     */
-    intVal = (uint8_t)(pExpPrms->analogGain[ISS_SENSOR_EXPOSURE_LONG] >> 10); /* gain / 1024*/
+    intVal = (uint8_t)((pExpPrms->analogGain[ISS_SENSOR_EXPOSURE_LONG] >> 10U) & 0xFFU); /* gain / 1024*/
     if(intVal <= 1U)
     {
         /* Equivalent to (uint8_t)(((gain % 1024) / 64) + 0.5)*/
@@ -483,8 +491,15 @@ static int32_t OX03F10_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_Ex
     if(decVal > 0xFU)
     {
         /* round */
-        decVal = 0;
-        intVal++;
+        decVal = 0U;
+        if(intVal < 15U)
+        {
+            intVal = intVal + 1U;
+        }
+        else
+        {
+            intVal = 15U;
+        }
     }
 
 #if defined(ENABLE_DIGITAL_GAIN)

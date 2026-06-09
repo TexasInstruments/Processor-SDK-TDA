@@ -1,6 +1,6 @@
 /*
 *
-* Copyright (c) 2018-2025 Texas Instruments Incorporated
+* Copyright (c) 2018-2026 Texas Instruments Incorporated
 *
 * All rights reserved not granted herein.
 *
@@ -311,6 +311,7 @@ VX_API_ENTRY vx_status vxSetGraphScheduleConfig(
     )
 {
     vx_status status = (vx_status)VX_SUCCESS;
+    uint32_t param_idx;
 
     if (ownIsValidSpecificReference(vxCastRefFromGraph(graph), (vx_enum)VX_TYPE_GRAPH) == (vx_bool)vx_true_e)
     {
@@ -354,25 +355,37 @@ VX_API_ENTRY vx_status vxSetGraphScheduleConfig(
                         }
                         else
                         {
-                            graph->parameters[i].queue_enable = (vx_bool)vx_true_e;
-                            graph->parameters[i].num_buf = graph_parameters_queue_params_list[i].refs_list_size;
-                            graph->parameters[i].type = graph_parameters_queue_params_list[i].refs_list[0]->type;
+                            param_idx = graph_parameters_queue_params_list[i].graph_parameter_index;
 
-                            status = ownGraphPipelineValidateRefsList(graph_parameters_queue_params_list[i]);
-
-                            if ((vx_status)VX_SUCCESS == status)
+                            /* check if this graph parameter index has already been configured */
+                            if (graph->parameters[param_idx].queue_enable == (vx_bool)vx_true_e)
                             {
-                                uint32_t buf_id;
-
-                                for(buf_id=0; buf_id<graph->parameters[i].num_buf; buf_id++)
-                                {
-                                    graph->parameters[i].refs_list[buf_id] = graph_parameters_queue_params_list[i].refs_list[buf_id];
-                                }
+                                VX_PRINT(VX_ZONE_ERROR, "Duplicate graph_parameter_index %d at array index %d\n",
+                                    param_idx, i);
+                                status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
                             }
                             else
                             {
-                                VX_PRINT(VX_ZONE_ERROR,
-                                    "Graph parameter refs list at index %d contains inconsistent meta data. Please ensure that all buffers in list contain the same meta data\n", i);
+                                graph->parameters[param_idx].queue_enable = (vx_bool)vx_true_e;
+                                graph->parameters[param_idx].num_buf = graph_parameters_queue_params_list[i].refs_list_size;
+                                graph->parameters[param_idx].type = graph_parameters_queue_params_list[i].refs_list[0]->type;
+
+                                status = ownGraphPipelineValidateRefsList(graph_parameters_queue_params_list[i]);
+
+                                if ((vx_status)VX_SUCCESS == status)
+                                {
+                                    uint32_t buf_id;
+
+                                    for(buf_id=0; buf_id<graph->parameters[param_idx].num_buf; buf_id++)
+                                    {
+                                        graph->parameters[param_idx].refs_list[buf_id] = graph_parameters_queue_params_list[i].refs_list[buf_id];
+                                    }
+                                }
+                                else
+                                {
+                                    VX_PRINT(VX_ZONE_ERROR,
+                                        "Graph parameter refs list at index %d contains inconsistent meta data. Please ensure that all buffers in list contain the same meta data\n", param_idx);
+                                }
                             }
                         }
                     }
@@ -422,7 +435,12 @@ VX_API_ENTRY vx_status VX_API_CALL vxAddReferencesToGraphParameterList(
                 {
                     /* locally create queue params list consisting of the new to be added ref and 1st ref of the existing graph params list */
                     vx_reference reference_list[2] = {graph->parameters[graph_parameter_index].refs_list[0], new_references[i]};
-                    vx_graph_parameter_queue_params_t graph_parameters_queue_params_list[1] = {{.graph_parameter_index = graph_parameter_index, .refs_list = reference_list, .refs_list_size = 2}};
+                    vx_graph_parameter_queue_params_t graph_parameters_queue_params_list[1];
+
+                    graph_parameters_queue_params_list[0].graph_parameter_index = graph_parameter_index;
+                    graph_parameters_queue_params_list[0].refs_list = reference_list;
+                    graph_parameters_queue_params_list[0].refs_list_size = 2;
+
                     status = ownGraphPipelineValidateRefsList(graph_parameters_queue_params_list[0]);
                     
                     /* if check succeeds, new_references[i] is added to the graph parameter list */ 

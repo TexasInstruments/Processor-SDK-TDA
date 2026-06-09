@@ -62,7 +62,7 @@ CFLAGS_LOCAL_COMMON += $(PDK_CFLAGS) $(ENET_CFLAGS) \
 PACKAGE_SRCS_COMMON = makefile
 PACKAGE_SRCS_COMMON += ncapp_main.c tsninit.c gptp_init.c netconf_init.c
 PACKAGE_SRCS_COMMON += debug_log.c common.h debug_log.h tsninit.h tsnapp_porting.h
-PACKAGE_SRCS_COMMON += lwipinit.c lwipcfg.h
+PACKAGE_SRCS_COMMON += lwipinit.c lwipcfg.h netconf_client
 
 # Core/SoC/platform specific source files and CFLAGS
 # Example:

@@ -1,5 +1,5 @@
 /*
- * Data version: 241217_073541
+ * Data version: 251105_135430
  *
  * Copyright (C) 2021-2025, Texas Instruments Incorporated
  * All rights reserved.
@@ -37,9 +37,11 @@
 #include <config.h>
 #include <types/short_types.h>
 
-#define TISCI_MSG_FLAG_FW_CAP_MAX (0x01U)
+#define TISCI_MSG_FLAG_FW_CAP_MAX (0x03U)
 const u64 soc_fw_caps[TISCI_MSG_FLAG_FW_CAP_MAX] = {
 	TISCI_MSG_FLAG_FW_CAP_GENERIC_CAP,
+	TISCI_MSG_FLAG_FW_CAP_DM,
+	TISCI_MSG_FLAG_FW_CAP_LPM_PARTIAL_IO_ON,
 };
 
 #endif /* SOC_AM275X_CAPABILITIES_H */

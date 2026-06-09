@@ -560,7 +560,7 @@ static vx_status check_histogram(vx_distribution histogram,
     CT_EXPAND(nextmacro(testArgName "/safety_mechanism=ConfigRegValidate", __VA_ARGS__, 3)), \
     CT_EXPAND(nextmacro(testArgName "/safety_mechanism=all", __VA_ARGS__, 4))
 
-#if !defined (x86_64)
+#if !defined (x86_64) && !defined(SOC_J722S)
 #define PARAMETERS \
     CT_GENERATE_PARAMETERS("real", ADD_DISPMIN, ADD_DISPMAX, ADD_MEDIAN, ADD_TEXTURE, ADD_OUTPUT_HISTOGRAM, ADD_VX_BORDERS_REQUIRE_UNDEFINED_ONLY, ADD_SIZE_NONE, ADD_SAFETY_MECHANISM, ARG, convolve_read_image, "left_rect.bmp", "right_rect.bmp")
 #else
@@ -595,7 +595,7 @@ TEST_WITH_ARG(tivxHwaDmpacSde, testGraphProcessing, Arg,
     CT_Image srcR = NULL;
     vx_border_t border = arg_->border;
 
-    #if !defined (x86_64)
+    #if !defined (x86_64) && !defined(SOC_J722S)
     tivx_dmpac_sde_safety_mechanism_params_t safety_mechanism_params;
     #endif
     vx_user_data_object safety_mechanism_obj = NULL;
@@ -653,13 +653,13 @@ TEST_WITH_ARG(tivxHwaDmpacSde, testGraphProcessing, Arg,
 
         VX_CALL(vxSetNodeAttribute(node, VX_NODE_BORDER, &border, sizeof(border)));
 
-        #if !defined (x86_64)
+        #if !defined (x86_64) && !defined(SOC_J722S)
         tivx_dmpac_sde_safety_mech_prms_init(&safety_mechanism_params);
         #endif
         
         VX_CALL(vxVerifyGraph(graph));
         
-        #if !defined (x86_64)
+        #if !defined (x86_64) && !defined(SOC_J722S)
         if (0U != arg_->enable_safety_mechanism)
         {
             switch (arg_->enable_safety_mechanism)
@@ -695,7 +695,7 @@ TEST_WITH_ARG(tivxHwaDmpacSde, testGraphProcessing, Arg,
         #endif
 
         VX_CALL(vxProcessGraph(graph));
-        #if !defined (x86_64)
+        #if !defined (x86_64) && !defined(SOC_J722S)
         if(1U == arg_->enable_safety_mechanism)
         {
             /* safety_mechanism=reconfigReinitMMR */

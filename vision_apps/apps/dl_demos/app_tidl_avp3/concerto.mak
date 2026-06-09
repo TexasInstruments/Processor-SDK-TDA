@@ -31,12 +31,6 @@ TARGETTYPE  := exe
 
 CSOURCES    += main_linux_arm.c
 
-ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72))
-ifeq ($(CTOOLS_BUILD_ENABLED), yes)
-CSOURCES    += avp_cpt_ddr_bw.c
-endif
-endif
-
 include $(VISION_APPS_PATH)/apps/concerto_mpu_inc.mak
 
 IDIRS       += $(VISION_APPS_KERNELS_IDIRS)

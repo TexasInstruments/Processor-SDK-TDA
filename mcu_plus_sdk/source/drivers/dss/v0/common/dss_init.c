@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2025 Texas Instruments Incorporated
+ *  Copyright (C) 2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -139,10 +139,6 @@ int32_t Dss_init(const Dss_InitParams *initParams)
         }
 
         dctrlInitParams.dsiInitParams.isAvailable = FALSE;
-#if defined(SOC_J722S)
-        dctrlInitParams.dsiInitParams.isAvailable = initParams->socParams.dsiInitParams.isAvailable;
-	    dctrlInitParams.dsiInitParams.isConnectedTo = initParams->socParams.dsiInitParams.isConnectedTo;
-#endif
 
         retVal = Dss_dctrlDrvInit(&dctrlInitParams);
     }

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -108,9 +108,12 @@ void ping_main(void *args)
     uint64_t curTime;
     uint32_t count; /* loop `count` times */
 
+    DebugP_log("Ping CoreID = %d \r\n",Armv8_getCoreId());
     DebugP_log("\r\n");
     DebugP_log("[FreeRTOS] ping task ... start !!!\r\n");
-    { /* switch between ping and pong tasks using semaphores */
+
+    {
+        /* switch between ping and pong tasks using semaphores */
         count = NUM_TASK_SWITCHES;
         curTime = ClockP_getTimeUsec();
         while(count--)
@@ -125,7 +128,8 @@ void ping_main(void *args)
         DebugP_log("number of task switches = %" PRId32 " \r\n", (uint32_t)NUM_TASK_SWITCHES*2);
         DebugP_log("time per task switch (semaphore give/take) = %" PRId32 " ns\r\n", (uint32_t)(curTime*1000/(NUM_TASK_SWITCHES*2)));
     }
-    { /* switch between ping and pong tasks using direct-to-task notifications */
+    {
+        /* switch between ping and pong tasks using direct-to-task notifications */
         count = NUM_TASK_SWITCHES;
         curTime = ClockP_getTimeUsec();
         while(count--)
@@ -140,7 +144,11 @@ void ping_main(void *args)
         DebugP_log("number of task switches = %" PRId32 " \r\n", (uint32_t)NUM_TASK_SWITCHES*2);
         DebugP_log("time per task switch (direct-to-task notification give/take) = %" PRId32 " ns\r\n", (uint32_t)(curTime*1000/(NUM_TASK_SWITCHES*2)));
     }
-    { /* switch from ping task to ISR to pong task and back to ping task using semaphores, here there is a task switch */
+
+    DebugP_log("Ping ISR CoreID = %d \r\n",Armv8_getCoreId());
+
+    {
+        /* switch from ping task to ISR to pong task and back to ping task using semaphores, here there is a task switch */
         HwiP_Params hwiParams;
 
         HwiP_Params_init(&hwiParams);
@@ -172,6 +180,7 @@ void ping_main(void *args)
     DebugP_log("\r\n");
     DebugP_log("[FreeRTOS] ping task ... done !!!\r\n");
     DebugP_log("\r\n");
+    DebugP_log("Ping End CoreID = %d \r\n",Armv8_getCoreId());
     DebugP_log("All tests have passed!!\r\n");
 
     /* One MUST not return out of a FreeRTOS task instead one MUST call vTaskDelete */
@@ -181,8 +190,10 @@ void ping_main(void *args)
 void pong_main(void *args)
 {
     uint32_t count; /* loop `count` times */
-
     count = NUM_TASK_SWITCHES;
+
+    DebugP_log("Pong CoreID = %d \r\n",Armv8_getCoreId());
+
     while(count--)
     {
         xSemaphoreTake( gPongSem, portMAX_DELAY); /* wait for ping to signal */
@@ -194,6 +205,9 @@ void pong_main(void *args)
         ulTaskNotifyTake( pdTRUE, portMAX_DELAY); /* wait for ping to signal */
         xTaskNotifyGive( gPingTask); /* wake up ping task */
     }
+
+    DebugP_log("Pong ISR CoreID = %d \r\n",Armv8_getCoreId());
+
     {
         HwiP_Params hwiParams;
 
@@ -210,16 +224,15 @@ void pong_main(void *args)
         }
         HwiP_destruct(&gPongHwiObj);
     }
+
+    DebugP_log("Pong End CoreID = %d \r\n",Armv8_getCoreId());
+
     /* One MUST not return out of a FreeRTOS task instead one MUST call vTaskDelete */
     vTaskDelete(NULL);
 }
 
 void smp_task_switch_main(void *args)
 {
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
-
     /* first create the semaphores */
     gPingSem = xSemaphoreCreateBinaryStatic(&gPingSemObj);
     configASSERT(gPingSem != NULL);
@@ -230,35 +243,24 @@ void smp_task_switch_main(void *args)
     vQueueAddToRegistry(gPongSem, "Pong Sem"); /* This makes the semaphore visible in ROV within CCS IDE */
 
     /* then create the tasks, order of task creation does not matter for this example */
-    gPongTask = xTaskCreateStatic( pong_main,      /* Pointer to the function that implements the task. */
+    gPongTask = xTaskCreateStaticAffinitySet( pong_main,      /* Pointer to the function that implements the task. */
                                   "pong",          /* Text name for the task.  This is to facilitate debugging only. */
                                   PONG_TASK_SIZE,  /* Stack depth in units of StackType_t typically uint32_t on 32b CPUs */
                                   NULL,            /* We are not using the task parameter. */
                                   PONG_TASK_PRI,   /* task priority, 0 is lowest priority, configMAX_PRIORITIES-1 is highest */
                                   gPongTaskStack,  /* pointer to stack base */
-                                  &gPongTaskObj ); /* pointer to statically allocated task object memory */
+                                  &gPongTaskObj,   /* pointer to statically allocated task object memory */
+                                  2);              /* A bitwise value that indicates the cores on which the task can run(Core 1).Can be set to 4(core2) or 8(core3) */
     configASSERT(gPongTask != NULL);
 
-    /* Set Core affinity so "pong_main" task runs on Core 1 */
-    /* Core affinity needs to be set as the interrupt used is an PPI (core specific) */
-    /* So the Interrupt construct and post needs to be done from the same core */
-    vTaskCoreAffinitySet(gPongTask, 2);
-
-    gPingTask = xTaskCreateStatic( ping_main,      /* Pointer to the function that implements the task. */
+    gPingTask = xTaskCreateStaticAffinitySet( ping_main,      /* Pointer to the function that implements the task. */
                                   "ping",          /* Text name for the task.  This is to facilitate debugging only. */
                                   PING_TASK_SIZE,  /* Stack depth in units of StackType_t typically uint32_t on 32b CPUs */
                                   NULL,            /* We are not using the task parameter. */
                                   PING_TASK_PRI,   /* task priority, 0 is lowest priority, configMAX_PRIORITIES-1 is highest */
                                   gPingTaskStack,  /* pointer to stack base */
-                                  &gPingTaskObj ); /* pointer to statically allocated task object memory */
+                                  &gPingTaskObj,   /* pointer to statically allocated task object memory */
+                                  1);              /* A bitwise value that indicates the cores on which the task can run(Core 0) */
     configASSERT(gPingTask != NULL);
-
-    /* Set Core affinity so "ping_main" task runs on Core 0 */
-    /* Core affinity needs to be set as the interrupt used is an PPI (core specific) */
-    /* So the Interrupt construct and post needs to be done from the same core */
-    vTaskCoreAffinitySet(gPingTask, 1);
-
-    Board_driversClose();
     /* Dont close drivers to keep the UART driver open for console */
-    /* Drivers_close(); */
 }

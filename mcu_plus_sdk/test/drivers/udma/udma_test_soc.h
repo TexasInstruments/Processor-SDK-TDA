@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024 Texas Instruments Incorporated
+ *  Copyright (C) 2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -34,6 +34,14 @@
 #include "soc/j722s/udma_test_soc.h"
 #endif
 
-#if defined(SOC_AM64X)
-#include "soc/am64x/udma_test_soc.h"
+#if defined(SOC_AM62AX)
+#include "soc/am62ax/udma_test_soc.h"
+#endif
+
+#if defined(SOC_AM62DX)
+#include "soc/am62dx/udma_test_soc.h"
+#endif
+
+#if defined(SOC_AM62PX)
+#include "soc/am62px/udma_test_soc.h"
 #endif

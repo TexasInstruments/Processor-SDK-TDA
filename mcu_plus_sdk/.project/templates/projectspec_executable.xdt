@@ -1,11 +1,15 @@
 %%{
+    function replaceSpecialCharInBoardName(boardName) {
+        // replace "/" in boardName with "_"
+        return boardName.replace(/\//g, "_");
+    }
     let profile_list = ["debug", "release"];
 
     products = "";
     if("syscfgfile" in args.project) {
         products+=`sysconfig;`
     }
-    products+=`com.ti.${args.utils.getProductNameProjectSpec(args.project.device)}`
+    products+=`${args.utils.getTirexId(args.project.device)}`
     productName = args.utils.getProductNameProjectSpec(args.project.device);
     if(args.project.projecspecFileAction)  // should be renamed to projectspecFileAction
     {
@@ -35,7 +39,7 @@
     <project
         % obj = args.project
         title="`args.utils.getTitleProjectSpec(args.project.name)`"
-        name = "`obj.name`_`obj.board`_`obj.cpu`_`obj.os`_`obj.cgt`"
+        name = "`obj.name`_`replaceSpecialCharInBoardName(obj.board)`_`obj.cpu`_`obj.os`_`obj.cgt`"
         products="`products`"
         configurations="
         % for (profile of profile_list) {
@@ -45,10 +49,10 @@
         connection="TIXDS110_Connection.xml"
         toolChain="`args.utils.getToolChainProjectSpec(obj.cgt)`"
         % if ((args.project.cgt == 'gcc-aarch64') || (args.project.cgt == 'gcc-armv7')) {
-        toolVersion="`args.utils.getToolChainVersionProjectSpec(obj.cgt)`"
+        toolVersion="`args.utils.getToolChainVersionProjectSpec(obj.cgt, obj.device)`"
         % }
         % else {
-        cgtVersion="`args.utils.getToolChainVersionProjectSpec(obj.cgt)`"
+        cgtVersion="`args.utils.getToolChainVersionProjectSpec(obj.cgt, obj.device)`"
         % }
         device="`args.utils.getDeviceIdProjectSpec(obj.device, obj.cpu, obj.board)`"
         deviceCore="`args.utils.getProjectSpecCpu(obj.device, obj.cpu)`"
@@ -83,7 +87,7 @@
         % for (prop in obj) {
             % if ( obj.hasOwnProperty(prop) && Array.isArray(obj[prop]) && prop == 'common') {
                 % for(let val of obj[prop]) {
-            -D`val`
+            -D`val.replace(/\"/g, '&quot;')`
                 % }
             % }
         % }
@@ -264,6 +268,11 @@
         % }
         <pathVariable name="`args.sdkName`" path="${COM_TI_`productName`_INSTALL_DIR}" scope="project" />
         % filelist = args.utils.getFileListProjectSpec(args.project.files, args.project.filedirs, args.project.dirPath)
+        % for (file of filelist) {
+        <file path="`file`" openOnCreation="false" excludeFromBuild="false" action="`defaultAction`">
+        </file>
+        % }
+        % filelist = args.utils.getFileListProjectSpec(args.project.incfiles, args.project.filedirs, args.project.dirPath)
         % for (file of filelist) {
         <file path="`file`" openOnCreation="false" excludeFromBuild="false" action="`defaultAction`">
         </file>

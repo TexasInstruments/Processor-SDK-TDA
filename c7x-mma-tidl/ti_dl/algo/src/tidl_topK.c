@@ -76,25 +76,10 @@
 
 #ifdef HOST_EMULATION
 /* Function Prototypes */
-template<class Tin, class Tout> bool tidl_compareTwoValues(Tin A, Tout B, int32_t largest);
-template<class Tin, class Tout>
-    int32_t TIDL_findTopK(const Tin *pIn, Tout *pOut, int32_t *indPtr, int32_t K, int32_t N, int32_t largest, int32_t inPitch, int32_t outPitch);
-template<class Tin, class Tout>
-    int32_t TIDL_refTopK(const Tin *pIn, Tout *pOut, const sTIDL_DataParams_t *inDataParams, const sTIDL_Layer_t *tidlLayer);
-
-template<class Tin, class Tout> bool tidl_compareTwoValues(Tin A, Tout B, int32_t largest)
-{
-  bool ret_val = 0;
-  if (largest == 1)
-  {
-    ret_val = (A >= B);
-  }
-  else
-  {
-    ret_val = (A <= B);
-  }
-  return ret_val;
-}
+template <class Tin, class Tout>
+int32_t TIDL_findTopK(const Tin* pIn, Tout* pOut, int32_t* indPtr, int32_t K, int32_t N, int32_t largest, int32_t inPitch, int32_t outPitch);
+template <class Tin, class Tout>
+int32_t TIDL_refTopK(const Tin* pIn, Tout* pOut, const sTIDL_DataParams_t* inDataParams, const sTIDL_Layer_t * tidlLayer);
 
 template<class Tin, class Tout>
     int32_t TIDL_findTopK(
@@ -158,10 +143,10 @@ template<class Tin, class Tout>
   int32_t status = IALG_EOK;
   const Tin *inPtr = pIn;
   Tout *outPtr = pOut;
+  Tout *outPtrTemp = pOut;
   int32_t *indPtr = NULL;
   int32_t dim[TIDL_PITCH_MAX], icnt[TIDL_DIM_MAX], indicesPitch = 0;
-  int32_t i1 = 0, i2 = 0, i3 = 0, i4 = 0, i5 = 0, i6 = 0, outOffset2 = 0, inPitch = 0, outPitch = 0, outOffset1 = 0;
-  // int32_t i1 = 0, i2 = 0, i3 = 0, i4 = 0, i5 = 0, i6 = 0, outOffset = 0, inPitch = 0, outPitch = 0;
+  int32_t i1 = 0, i2 = 0, i3 = 0, i4 = 0, i5 = 0, i6 = 0, outOffset = 0, inPitch = 0, outPitch = 0;
   Tout valueLimit = 0;
   const sTIDL_TopKParams_t *topKParams = &tidlLayer->layerParams.topKParams;
 
@@ -246,24 +231,19 @@ template<class Tin, class Tout>
 
   int32_t axisForIncrement = topKParams->incrementAxis;
 
-#ifdef TIDL_COVERAGE_DEAD_CODE_NO_TEST
   if (axisForIncrement != topKParams->axis)
   {
-#endif
     indicesPitch = tidlLayer->outData.pitch[axisForIncrement] * inDataParams->dimValues[axisForIncrement];
-#ifdef TIDL_COVERAGE_DEAD_CODE_NO_TEST
   }
   else
   {
     /* Used for topKParams->axis <= TIDL_DIM_NUMCH*/
     indicesPitch = tidlLayer->outData.pitch[axisForIncrement] * topKParams->K;
   }
-#endif
-
-  int32_t *indicesPtr = (int32_t *)(pOut + indicesPitch);
-
   for (i1 = 0; i1 < icnt[TIDL_DIM_BATCH]; i1++)
   {
+    outPtrTemp = pOut + i1 * (tidlLayer->outData.pitch[TIDL_ROI_PITCH]);
+    int32_t* indicesPtr = (int32_t*)(outPtrTemp + indicesPitch);
     for (i2 = 0; i2 < icnt[TIDL_DIM_DIM1]; i2++)
     {
       for (i3 = 0; i3 < icnt[TIDL_DIM_DIM2]; i3++)
@@ -276,13 +256,13 @@ template<class Tin, class Tout>
             {
               inPtr = pIn + ((i1 * dim[TIDL_ROI_PITCH]) + (i2 * dim[TIDL_DIM1_PITCH]) + (i3 * dim[TIDL_DIM2_PITCH]) +
                              (i4 * dim[TIDL_CHANNEL_PITCH]) + (i5 * dim[TIDL_LINE_PITCH]) + i6);
-              outOffset1 = (i1 * tidlLayer->outData.pitch[TIDL_ROI_PITCH]) + (i2 * tidlLayer->outData.pitch[TIDL_DIM1_PITCH]) + (i3 * tidlLayer->outData.pitch[TIDL_DIM2_PITCH]);
-              outOffset2 = (i4 * tidlLayer->outData.pitch[TIDL_CHANNEL_PITCH]) + (i5 * tidlLayer->outData.pitch[TIDL_LINE_PITCH]) + i6;
+              outOffset = (i2 * tidlLayer->outData.pitch[TIDL_DIM1_PITCH]) + (i3 * tidlLayer->outData.pitch[TIDL_DIM2_PITCH])
+                        + (i4 * tidlLayer->outData.pitch[TIDL_CHANNEL_PITCH]) + (i5 * tidlLayer->outData.pitch[TIDL_LINE_PITCH]) + i6;
 
-              outPtr = pOut + outOffset1 + outOffset2;
-              indPtr = ((int32_t *)((Tin *)indicesPtr + outOffset1)) + outOffset2;
-
-              status = TIDL_findTopK(inPtr, outPtr, indPtr, topKParams->K, inDataParams->dimValues[topKParams->axis], topKParams->largest, inPitch, outPitch);
+              outPtr = outPtrTemp + outOffset;
+              indPtr = indicesPtr + outOffset;        
+             
+              status = TIDL_findTopK (inPtr, outPtr, indPtr, topKParams->K, inDataParams->dimValues[topKParams->axis], topKParams->largest, inPitch, outPitch);                            
             }
           }
         }

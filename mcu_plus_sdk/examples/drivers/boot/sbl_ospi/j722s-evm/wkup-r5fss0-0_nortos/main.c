@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-26 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,16 +30,20 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <stdlib.h>
-#include "ti_drivers_config.h"
-#include "ti_drivers_open_close.h"
+#include "ti_board_config.h"
 #include "ti_board_open_close.h"
+#include "ti_drivers_open_close.h"
 #include <drivers/device_manager/sciclient.h>
 #include <drivers/bootloader.h>
-#include <drivers/pinmux.h>
-#include <drivers/gtc.h>
 
-void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle);
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 #define BOOTLOADER_APP_IMAGE_LOADED     (0x1U)
 #define BOOTLOADER_OSPI_ADDR            (0x60000000U)
@@ -47,112 +51,119 @@ void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle);
 #define BOOTLOADER_HSM_HEADER           (0x30)
 #define BOOTLOADER_HSM_IMG_NOT_FOUND    ((int32_t)(-2))
 
-uint8_t socCpuCores[CSL_CORE_ID_MAX] = {0};
+/* ========================================================================== */
+/*                         Structures and Enums                               */
+/* ========================================================================== */
 
-Bootloader_Handle bootHandle;
+/* None */
+
+/* ========================================================================== */
+/*                 Internal Function Declarations                             */
+/* ========================================================================== */
+
+void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle);
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
+uint8_t socCpuCores[CSL_CORE_ID_MAX] = {0};
 Bootloader_CpuInfo bootCpuInfo[CSL_CORE_ID_MAX];
 
-/* This buffer needs to be defined for OSPI nand boot in case of HS device for
-   image authentication
-   The size of the buffer should be large enough to accomodate the appimage */
-uint8_t gAppimage[0x4000000] __attribute__ ((section (".bss.filebuf"), aligned (128)));
+/*
+ * This buffer needs to be defined for OSPI NOR boot in case of HS device for
+ * image authentication.
+ * The size of the buffer should be large enough to accomodate the appimage.
+ */
+uint8_t gAppImage[0x4000000U] __attribute__ ((section (".bss.app"), aligned (128U)));
 
-/* call this API to stop the booting process and spin, do that you can connect
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
+
+/*
+ * Call this API to stop the booting process and spin, so that you can connect a
  * debugger, load symbols and then make the 'loop' variable as 0 to continue execution
  * with debugger connected.
  */
 void loop_forever()
 {
-    volatile uint32_t loop = 1;
+    volatile uint32_t loop = 1U;
     while(loop)
         ;
 }
 
-int32_t App_loadImages(void)
+int32_t App_loadImages(Bootloader_Handle bootHandle, Bootloader_BootImageInfo *bootImageInfo)
 {
-	int32_t status = SystemP_FAILURE;
-
-    Bootloader_BootImageInfo bootImageInfo;
-    Bootloader_Params bootParams;
-    Bootloader_Config *bootConfig;
-
-    Bootloader_Params_init(&bootParams);
-    Bootloader_BootImageInfo_init(&bootImageInfo);
-    bootHandle = Bootloader_open(CONFIG_BOOTLOADER_FLASH_SBL, &bootParams);
-
-    /* scratch pointer is required for image authentication */
-    ((Bootloader_Config *)bootHandle)->scratchMemPtr = gAppimage;
+    int32_t status = SystemP_FAILURE;
 
     if(bootHandle != NULL)
     {
-        bootConfig = (Bootloader_Config *)bootHandle;
-        bootConfig->coresPresentMap = 0;
-        status = Bootloader_parseMultiCoreAppImage(&bootHandle, &bootImageInfo);
+        status = Bootloader_parseMultiCoreAppImage(bootHandle, bootImageInfo);
 
-        /* Load CPUs */
         if (!Bootloader_socIsMCUResetIsoEnabled())
         {
-            if((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_MCU_R5FSS0_0)))
+            if ((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_MCU_R5FSS0_0)))
             {
-                bootImageInfo.cpuInfo[CSL_CORE_ID_MCU_R5FSS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_MCU_R5FSS0_0);
-                status = Bootloader_loadCpu(bootHandle, &(bootImageInfo.cpuInfo[CSL_CORE_ID_MCU_R5FSS0_0]));
+                bootImageInfo->cpuInfo[CSL_CORE_ID_MCU_R5FSS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_MCU_R5FSS0_0);
+                status = Bootloader_loadCpu(bootHandle, &(bootImageInfo->cpuInfo[CSL_CORE_ID_MCU_R5FSS0_0]));
                 Bootloader_profileAddCore(CSL_CORE_ID_MCU_R5FSS0_0);
                 socCpuCores[CSL_CORE_ID_MCU_R5FSS0_0] = BOOTLOADER_APP_IMAGE_LOADED;
-                bootCpuInfo[CSL_CORE_ID_MCU_R5FSS0_0] = bootImageInfo.cpuInfo[CSL_CORE_ID_MCU_R5FSS0_0];
+                bootCpuInfo[CSL_CORE_ID_MCU_R5FSS0_0] = bootImageInfo->cpuInfo[CSL_CORE_ID_MCU_R5FSS0_0];
             }
         }
-        if((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_WKUP_R5FSS0_0)))
+        if((status == SystemP_SUCCESS) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_WKUP_R5FSS0_0)))
         {
-            bootImageInfo.cpuInfo[CSL_CORE_ID_WKUP_R5FSS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_WKUP_R5FSS0_0);
-            status = Bootloader_loadSelfCpu(bootHandle, &(bootImageInfo.cpuInfo[CSL_CORE_ID_WKUP_R5FSS0_0]));
+            bootImageInfo->cpuInfo[CSL_CORE_ID_WKUP_R5FSS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_WKUP_R5FSS0_0);
             Bootloader_profileAddCore(CSL_CORE_ID_WKUP_R5FSS0_0);
+            status = Bootloader_loadSelfCpu(bootHandle, &(bootImageInfo->cpuInfo[CSL_CORE_ID_WKUP_R5FSS0_0]));
         }
-        if((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_MAIN_R5FSS0_0)))
+        if ((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_MAIN_R5FSS0_0)))
         {
-            bootImageInfo.cpuInfo[CSL_CORE_ID_MAIN_R5FSS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_MAIN_R5FSS0_0);
-            status = Bootloader_loadCpu(bootHandle, &(bootImageInfo.cpuInfo[CSL_CORE_ID_MAIN_R5FSS0_0]));
+            bootImageInfo->cpuInfo[CSL_CORE_ID_MAIN_R5FSS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_MAIN_R5FSS0_0);
+            status = Bootloader_loadCpu(bootHandle, &(bootImageInfo->cpuInfo[CSL_CORE_ID_MAIN_R5FSS0_0]));
             Bootloader_profileAddCore(CSL_CORE_ID_MAIN_R5FSS0_0);
             socCpuCores[CSL_CORE_ID_MAIN_R5FSS0_0] = BOOTLOADER_APP_IMAGE_LOADED;
-            bootCpuInfo[CSL_CORE_ID_MAIN_R5FSS0_0] = bootImageInfo.cpuInfo[CSL_CORE_ID_MAIN_R5FSS0_0];
+            bootCpuInfo[CSL_CORE_ID_MAIN_R5FSS0_0] = bootImageInfo->cpuInfo[CSL_CORE_ID_MAIN_R5FSS0_0];
         }
-        if((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_C75SS0_0)))
+        if ((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_C75SS0_0)))
         {
-            bootImageInfo.cpuInfo[CSL_CORE_ID_C75SS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_C75SS0_0);
-            status = Bootloader_loadCpu(bootHandle, &(bootImageInfo.cpuInfo[CSL_CORE_ID_C75SS0_0]));
+            bootImageInfo->cpuInfo[CSL_CORE_ID_C75SS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_C75SS0_0);
+            status = Bootloader_loadCpu(bootHandle, &(bootImageInfo->cpuInfo[CSL_CORE_ID_C75SS0_0]));
             Bootloader_profileAddCore(CSL_CORE_ID_C75SS0_0);
             socCpuCores[CSL_CORE_ID_C75SS0_0] = BOOTLOADER_APP_IMAGE_LOADED;
-            bootCpuInfo[CSL_CORE_ID_C75SS0_0] = bootImageInfo.cpuInfo[CSL_CORE_ID_C75SS0_0];
+            bootCpuInfo[CSL_CORE_ID_C75SS0_0] = bootImageInfo->cpuInfo[CSL_CORE_ID_C75SS0_0];
         }
-        if((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_C75SS1_0)))
+        if ((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_C75SS1_0)))
         {
-            bootImageInfo.cpuInfo[CSL_CORE_ID_C75SS1_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_C75SS1_0);
-            status = Bootloader_loadCpu(bootHandle, &(bootImageInfo.cpuInfo[CSL_CORE_ID_C75SS1_0]));
+            bootImageInfo->cpuInfo[CSL_CORE_ID_C75SS1_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_C75SS1_0);
+            status = Bootloader_loadCpu(bootHandle, &(bootImageInfo->cpuInfo[CSL_CORE_ID_C75SS1_0]));
             Bootloader_profileAddCore(CSL_CORE_ID_C75SS1_0);
             socCpuCores[CSL_CORE_ID_C75SS1_0] = BOOTLOADER_APP_IMAGE_LOADED;
-            bootCpuInfo[CSL_CORE_ID_C75SS1_0] = bootImageInfo.cpuInfo[CSL_CORE_ID_C75SS1_0];
+            bootCpuInfo[CSL_CORE_ID_C75SS1_0] = bootImageInfo->cpuInfo[CSL_CORE_ID_C75SS1_0];
         }
-        if((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_A53SS0_0)))
-		{
-			bootImageInfo.cpuInfo[CSL_CORE_ID_A53SS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_A53SS0_0);
-            Bootloader_profileAddCore(CSL_CORE_ID_A53SS0_0);
-			status = Bootloader_loadCpu(bootHandle, &(bootImageInfo.cpuInfo[CSL_CORE_ID_A53SS0_0]));
-            socCpuCores[CSL_CORE_ID_A53SS0_0] = BOOTLOADER_APP_IMAGE_LOADED;
-            bootCpuInfo[CSL_CORE_ID_A53SS0_0] = bootImageInfo.cpuInfo[CSL_CORE_ID_A53SS0_0];
-		}
-        if((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_A53SS1_0)))
+        if ((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_A53SS0_0)))
         {
-            bootImageInfo.cpuInfo[CSL_CORE_ID_A53SS1_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_A53SS1_0);
+            bootImageInfo->cpuInfo[CSL_CORE_ID_A53SS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_A53SS0_0);
+			status = Bootloader_loadCpu(bootHandle, &(bootImageInfo->cpuInfo[CSL_CORE_ID_A53SS0_0]));
+            Bootloader_profileAddCore(CSL_CORE_ID_A53SS0_0);
+            socCpuCores[CSL_CORE_ID_A53SS0_0] = BOOTLOADER_APP_IMAGE_LOADED;
+            bootCpuInfo[CSL_CORE_ID_A53SS0_0] = bootImageInfo->cpuInfo[CSL_CORE_ID_A53SS0_0];
+        }
+        if ((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootHandle, CSL_CORE_ID_A53SS1_0)))
+        {
+            bootImageInfo->cpuInfo[CSL_CORE_ID_A53SS1_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_A53SS1_0);
+            status = Bootloader_loadCpu(bootHandle, &(bootImageInfo->cpuInfo[CSL_CORE_ID_A53SS1_0]));
             Bootloader_profileAddCore(CSL_CORE_ID_A53SS1_0);
-            status = Bootloader_loadCpu(bootHandle, &(bootImageInfo.cpuInfo[CSL_CORE_ID_A53SS1_0]));
             socCpuCores[CSL_CORE_ID_A53SS1_0] = BOOTLOADER_APP_IMAGE_LOADED;
-            bootCpuInfo[CSL_CORE_ID_A53SS1_0] = bootImageInfo.cpuInfo[CSL_CORE_ID_A53SS1_0];
+            bootCpuInfo[CSL_CORE_ID_A53SS1_0] = bootImageInfo->cpuInfo[CSL_CORE_ID_A53SS1_0];
         }
     }
 
     return status;
 }
 
-int32_t App_runCpus(void)
+int32_t App_runCpus(Bootloader_Handle bootHandle)
 {
     int32_t status = SystemP_SUCCESS;
     uint8_t cpuId;
@@ -161,6 +172,9 @@ int32_t App_runCpus(void)
     {
         if(socCpuCores[cpuId] == BOOTLOADER_APP_IMAGE_LOADED)
         {
+            /* Do not restart MCU_R5FSS0_0 when MCU reset isolation is enabled,
+             * as it is already running (boot core). Start all other CPUs normally.
+             */
             if (((cpuId == CSL_CORE_ID_MCU_R5FSS0_0) && !Bootloader_socIsMCUResetIsoEnabled()) ||
                 (cpuId != CSL_CORE_ID_MCU_R5FSS0_0))
                 {
@@ -168,7 +182,6 @@ int32_t App_runCpus(void)
                 }
         }
     }
-    Bootloader_close(bootHandle);
     return status;
 }
 
@@ -176,9 +189,8 @@ int32_t App_ospiCopyHsmImage(uint8_t** dstAddr, uint32_t srcOffsetAddr)
 {
     int32_t retVal = CSL_PASS;
 
-    /* In case of OSPI NOR, Pointer to OSPI NOR can be directly passed to
-       Sciclient_procBootAuthAndStart() API */
-    /* Check if HSM binary is present or not */
+    /* In case of OSPI NOR, Pointer to OSPI NOR can be directly passed to Sciclient_procBootAuthAndStart() API
+       Check if HSM binary is present or not */
     uint8_t* ptr = (uint8_t *) *dstAddr;
     if (*ptr != BOOTLOADER_HSM_HEADER)
     {
@@ -193,6 +205,7 @@ int32_t App_loadAndAuthHsmBinary(void)
     /* Define sbl scratch memory as HSM address */
     uint8_t *sblScratchMem = ((uint8_t *)(BOOTLOADER_OSPI_ADDR + BOOTLOADER_OSPI_OFFSET_HSM));
     struct tisci_msg_proc_auth_boot_req authReq;
+    struct tisci_msg_proc_auth_boot_resp response = {0};
     struct tisci_msg_proc_get_status_resp cpuStatus;
     uint32_t hsmCoreProcId = SCICLIENT_PROC_ID_HSM_M4FSS0_CORE0;
 
@@ -240,7 +253,7 @@ int32_t App_loadAndAuthHsmBinary(void)
         authReq.certificate_address_lo = (uint32_t) sblScratchMem;
         /* Request TIFS to authenticate and load the HSM image */
         DebugP_log("Calling Sciclient_procBootAuthAndStart ... \r\n");
-        status = Sciclient_procBootAuthAndStart(&authReq, SCICLIENT_SERVICE_WAIT_FOREVER);
+        status = Sciclient_procBootAuthAndStart(&authReq, &response, SCICLIENT_SERVICE_WAIT_FOREVER);
         if (status != SystemP_SUCCESS)
         {
             DebugP_logError("Sciclient_procBootAuthAndStart...FAILED \r\n");
@@ -273,18 +286,19 @@ int main()
     Bootloader_profileReset();
 
     Bootloader_socWaitForFWBoot();
-    status = Bootloader_socOpenFirewalls();
-
-    DebugP_assertNoLog(status == SystemP_SUCCESS);
-
 
     System_init();
     Bootloader_profileAddProfilePoint("System_init");
 
+    status = Bootloader_socOpenFirewalls();
+    DebugP_assertNoLog(status == SystemP_SUCCESS);
+
+    Board_init();
+    Bootloader_profileAddProfilePoint("Board_init");
+
     Drivers_open();
     Bootloader_profileAddProfilePoint("Drivers_open");
-
-    flashFixUpOspiBoot(gOspiHandle[CONFIG_OSPI_SBL], gFlashHandle[CONFIG_FLASH_APPIMAGE]);
+    flashFixUpOspiBoot(gOspiHandle[CONFIG_OSPI_SBL], gFlashHandle[CONFIG_FLASH_SBL]);
 
     status = Board_driversOpen();
     DebugP_assert(status == SystemP_SUCCESS);
@@ -292,10 +306,9 @@ int main()
 
     if(SystemP_SUCCESS == status)
     {
-
+    
         DebugP_log("Booting HSM core ... \r\n");
-        status = App_loadAndAuthHsmBinary();
-        if(SystemP_SUCCESS == status)
+        if(SystemP_SUCCESS == App_loadAndAuthHsmBinary())
         {
             DebugP_log("HSM Core booted successfully \r\n");
         }
@@ -303,41 +316,60 @@ int main()
         {
             DebugP_log("Failed to boot HSM core !! \r\n");
         }
+        Bootloader_BootImageInfo bootImageInfoDM;
+        Bootloader_Params bootParamsDM;
+        Bootloader_Handle bootHandleDM;
 
-        status = App_loadImages();
-        Bootloader_profileAddProfilePoint("App_loadImages");
+        Bootloader_Params_init(&bootParamsDM);  
 
-        Bootloader_profileUpdateAppimageSize(Bootloader_getMulticoreImageSize(bootHandle));
+        Bootloader_BootImageInfo_init(&bootImageInfoDM);
+
+        bootHandleDM = Bootloader_open(CONFIG_BOOTLOADER_FLASH_SBL, &bootParamsDM);
+
+        if(bootHandleDM != NULL)
+        {
+            ((Bootloader_Config *)bootHandleDM)->scratchMemPtr = gAppImage;
+            status = App_loadImages(bootHandleDM, &bootImageInfoDM);
+            Bootloader_profileAddProfilePoint("App_loadImages");
+        }
+        
+
+        Bootloader_profileUpdateAppimageSize(Bootloader_getMulticoreImageSize(bootHandleDM));
         Bootloader_profileUpdateMediaAndClk(BOOTLOADER_MEDIA_FLASH, OSPI_getInputClk(gOspiHandle[CONFIG_OSPI_SBL]));
 
-		if(SystemP_SUCCESS == status)
-		{
-			/* Print SBL log as Linux prints log to the same UART port */
-			Bootloader_profilePrintProfileLog();
+        if(SystemP_SUCCESS == status)
+        {
+            /* Print SBL log as Linux prints log to the same UART port */
+            Bootloader_profilePrintProfileLog();
 			DebugP_log("Image loading done, switching to application ...\r\n");
-			DebugP_log("Starting RTOS/Baremetal applications\r\n");
-			UART_flushTxFifo(gUartHandle[CONFIG_UART_SBL]);
+			DebugP_log("Starting linux and RTOS/Baremetal applications\r\n");
+            UART_flushTxFifo(gUartHandle[CONFIG_UART_SBL]);
 
-            status = App_runCpus();
-		}
+            status = App_runCpus(bootHandleDM);
+            Bootloader_close(bootHandleDM);
+        }
+
     }
 
     if(status != SystemP_SUCCESS )
     {
-        DebugP_log("Some tests have failed!!\r\n");
-        DebugP_assert(0);
+        DebugP_logError("Some tests have failed!!\r\n");
     }
-    else
-    {
-        Board_driversClose();
-        Drivers_close();
 
-        /* Call DPL deinit to close the tick timer and disable interrupts before jumping to Stage2*/
-        Dpl_deinit();
-        System_deinit();
+    Board_driversClose();
+    Drivers_close();
 
-        Bootloader_JumpSelfCpu();
-    }
+    /* Call DPL deinit to close the tick timer and disable interrupts before jumping to Stage2 */
+    Dpl_deinit();
+
+    Bootloader_socWriteSBLBootMagicNum();
+
+    Board_deinit();
+
+    Bootloader_JumpSelfCpu();
+
+    /* Jump to CPU above it to prevent DDR clock disable in it. */
+    System_deinit();
 
     return 0;
 }
@@ -348,8 +380,6 @@ void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle)
      *  In Fast XSPI mode, reintialization is not required unless
      *  user configures it or PHY configuration failed
      */
-    if(SystemP_SUCCESS != OSPI_skipProgramming(oHandle))
-    {
         OSPI_setProtocol(oHandle, OSPI_FLASH_PROTOCOL(8,8,8,1));
         OSPI_enableDDR(oHandle);
         OSPI_setDualOpCodeMode(oHandle);
@@ -357,6 +387,5 @@ void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle)
         OSPI_enableSDR(oHandle);
         OSPI_clearDualOpCodeMode(oHandle);
         OSPI_setProtocol(oHandle, OSPI_FLASH_PROTOCOL(1,1,1,0));
-    }
 
 }

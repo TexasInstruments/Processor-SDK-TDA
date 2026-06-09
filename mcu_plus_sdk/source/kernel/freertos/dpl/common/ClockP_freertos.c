@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -52,7 +52,7 @@ void ClockP_timerTickIsr(void *args)
     void vPortTimerTickHandler(void);
 
     /* increment the systick counter */
-    gClockCtrl.ticks++;
+    gClockCtrl.ticks = gClockCtrl.ticks + 1U;
 
     vPortTimerTickHandler();
 
@@ -134,7 +134,16 @@ uint64_t ClockP_ticksToUsec(uint32_t ticks)
 
 uint32_t ClockP_getTicks(void)
 {
-    return ((uint32_t)xTaskGetTickCount());
+    uint32_t ticks;
+    if (HwiP_inISR() != 0U)
+    {
+        ticks = (uint32_t)xTaskGetTickCountFromISR();
+    }
+    else
+    {
+        ticks = (uint32_t)xTaskGetTickCount();
+    }
+    return (ticks);
 }
 
 uint32_t ClockP_getTimeout(ClockP_Object *handle)
@@ -226,21 +235,32 @@ void ClockP_sleep(uint32_t sec)
 
 void ClockP_usleep(uint64_t usec)
 {
-    uint64_t curTime, endTime;
-    uint32_t ticksToSleep;
-
-    curTime = ClockP_getTimeUsec();
-    endTime = curTime + usec;
-
-    if (usec >= gClockCtrl.usecPerTick) {
-        ticksToSleep = (uint32_t)usec / gClockCtrl.usecPerTick;
+    /* Handle larger delays using tick-based sleep */
+    if (usec >= gClockCtrl.usecPerTick)
+    {
+        uint32_t ticksToSleep = (uint32_t)usec / gClockCtrl.usecPerTick;
         ClockP_sleepTicks(ticksToSleep);
     }
     else
     {
-        curTime = ClockP_getTimeUsec();
-        while (curTime < endTime) {
+        /* For short delays, use busy-wait loop */
+        uint64_t startTime = ClockP_getTimeUsec();
+        uint64_t curTime = 0U, elapsedTime = 0U;
+
+        while (elapsedTime < usec)
+        {
             curTime = ClockP_getTimeUsec();
+
+            /* Calculate elapsed time, handling potential wrap-around */
+            if (curTime >= startTime)
+            {
+                elapsedTime = curTime - startTime;
+            }
+            else
+            {
+                /* Handle wrap-around case using usecPerTick as the wrap value */
+                elapsedTime = (gClockCtrl.usecPerTick - startTime) + curTime;
+            }
         }
     }
 }
@@ -251,9 +271,9 @@ void ClockP_usleep(uint64_t usec)
 uint64_t ClockP_getTimeUsec(void)
 {
     uint64_t ts = 0U;
-    uint32_t timerCount;
-    uint64_t ticks1;
-    uint64_t ticks2;
+    volatile uint32_t timerCount;
+    volatile uint64_t ticks1;
+    volatile uint64_t ticks2;
 
     do {
         ticks1 = gClockCtrl.ticks;
@@ -281,7 +301,7 @@ static void ClockP_sleepTicks(uint32_t ticks)
 /*
  *  De-initialize the clock module.
  */
-void ClockP_deinit()
+void ClockP_deinit(void)
 {
     /* Stop the tick timer and clear any pending interrupts */
     TimerP_stop(gClockCtrl.timerBaseAddr);

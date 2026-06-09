@@ -135,6 +135,16 @@ typedef struct {
   /*! Network structure checksum */
   vx_uint8 network_checksum[TIVX_TIDL_J7_CHECKSUM_SIZE];
 
+  /*! TIDL output tensors (tensor x queue-depth) */
+  vx_tensor output_tensor_q[APP_MODULES_MAX_TENSORS][APP_MODULES_MAX_BUFQ_DEPTH];
+  vx_object_array output_tensor_arr_q[APP_MODULES_MAX_TENSORS][APP_MODULES_MAX_BUFQ_DEPTH];
+
+  /*! TIDL graph parameter index (per tensor) */
+  vx_int32 graph_parameter_idxs[APP_MODULES_MAX_TENSORS];
+
+  /*! Buffer queue depth used by this instance (must be <= APP_MODULES_MAX_BUFQ_DEPTH) */
+  vx_uint32 bufq_depth;
+
 } TIDLObj;
 
 /** \brief TIDL module init helper function
@@ -189,6 +199,47 @@ vx_status app_create_graph_tidl(vx_context context, vx_graph graph, TIDLObj *tid
  *
  */
 vx_status writeTIDLOutput(char *file_name, TIDLObj *tidlObj);
+
+/** \brief TIDL module init helper function
+ *
+ * This TIDL init helper function will create all the data objects required to create the TIDL
+ * node.
+ *
+ * \param [in]  context      OpenVX context which must be created using \ref vxCreateContext
+ * \param [out] tidlObj      TIDL Module object which gets populated with TIDL node data objects
+ * \param [in]  objName      String of the name of this object
+ * \param [in]  num_cameras  Number of cameras used by TIDL
+ * \param [in]  bufq_depth   Buffer queue depth (must be <= APP_MODULES_MAX_BUFQ_DEPTH)
+ *
+ */
+vx_status app_init_tidl_queued(vx_context context, TIDLObj *tidlObj, char *objName, vx_int32 num_cameras, vx_uint32 bufq_depth);
+
+/** \brief TIDL module deinit helper function
+ *
+ * This TIDL deinit helper function will release all the data objects created during the
+ * \ref app_init_tidl_queued call.
+ *
+ * \param [in,out] tidlObj      TIDL Module object which contains TIDL node data objects which are released in this function
+ * \param [in]     bufq_depth   Buffer queue depth used for allocations in init
+ *
+ */
+void app_deinit_tidl_queued(TIDLObj *tidlObj, vx_uint32 bufq_depth);
+
+/** \brief TIDL module create helper function
+ *
+ * This TIDL create helper function will create the node using all the data objects created during the
+ * \ref app_init_tidl_queued call.
+ *
+ * \param [in]     context           OpenVX context which must be created using \ref vxCreateContext
+ * \param [in]     graph             OpenVX graph that has been created using \ref vxCreateGraph and where the TIDL node is created
+ * \param [in,out] tidlObj           TIDL Module object which contains TIDL node which is created in this function
+ * \param [in,out] input_tensor_arr  Input tensors to TIDL node; must be created separately outside the TIDL module
+ *
+ * \note input_tensor_arr size must match tidlObj->num_input_tensors (and any queueing/replication policy used by the pipeline).
+ *
+ */
+vx_status app_create_graph_tidl_queued(vx_context context, vx_graph graph, TIDLObj *tidlObj, vx_object_array input_tensor_arr[]);
+
 
 /* @} */
 

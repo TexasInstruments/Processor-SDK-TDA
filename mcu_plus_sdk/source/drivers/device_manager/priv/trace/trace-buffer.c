@@ -53,8 +53,6 @@
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
-/* Maximum number of bytes to cleanup at initialization */
-#define TRACE_LOG_MAX_NUM_CLEAN_BYTES   (100U)
 /* Log Buffer Size */
 #define TRACE_LOG_BUF_SIZE              (20U * 1024U)
 
@@ -68,7 +66,7 @@
 /*                            Global Variables                                */
 /* ========================================================================== */
 
-uint8_t tracelog_rmpm[TRACE_LOG_BUF_SIZE];
+uint8_t tracelog_rmpm[TRACE_LOG_BUF_SIZE] __attribute__((section(".dm_rmpm_trace_buf"), aligned(4)));
 
 static uint8_t *logbuf_pos;
 
@@ -78,9 +76,10 @@ static uint8_t *logbuf_pos;
 
 int32_t trace_print_buffer_string(const uint8_t *str)
 {
-    int32_t i = 0, ret = CSL_PASS;
+    uint32_t i = 0U;
+    int32_t ret = CSL_PASS;
 
-    for (i = 0; i < TRACE_PRINT_MAX_LENGTH; i++) {
+    for (i = 0U; i < TRACE_PRINT_MAX_LENGTH; i++) {
         if (str[i] != 0U) {
             ret = trace_print_buffer(str[i]);
         }
@@ -95,17 +94,8 @@ int32_t trace_print_buffer_string(const uint8_t *str)
 
 static void trace_internal_print_buffer_init(void)
 {
-    uint8_t *pos;
-    uint32_t index;
-
+    memset(tracelog_rmpm, 0, TRACE_LOG_BUF_SIZE);
     logbuf_pos = &tracelog_rmpm[0];
-
-    pos = logbuf_pos;
-
-    for (index = 0U; index < TRACE_LOG_MAX_NUM_CLEAN_BYTES; index++) {
-        *pos = 0U;
-        pos++;
-    }
 }
 
 /**

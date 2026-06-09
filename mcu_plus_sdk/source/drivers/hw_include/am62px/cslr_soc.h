@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020 Texas Instruments Incorporated
+ *  Copyright (C) 2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -50,6 +50,7 @@ extern "C"
 #include <drivers/hw_include/am62px/cslr_soc_ctrl_mmr.h>
 #include <drivers/hw_include/am62px/cslr_wkup_r5fss0_baseaddress.h>
 #include <drivers/hw_include/am62px/csl_psilcfg_thread_map.h>
+#include <drivers/hw_include/am62px/csl_soc_firewalls.h>
 #include <drivers/hw_include/am62px/csl_soc_psc.h>
 
 #ifdef __cplusplus

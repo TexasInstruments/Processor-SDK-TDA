@@ -35,6 +35,10 @@ SECTIONS
     .text:   {} palign(8) > M4F_IRAM     /* This is where code resides */
 
     .bss:    {} palign(8) > M4F_DRAM     /* This is where uninitialized globals go */
+    % if((args.project.ipcVringRTOS === true) || (args.project.isLinuxInSystem === true)){
+    /* This is allocated for IPC */
+    .bss.ipcctrl: {} palign(8) > M4F_DDR
+    % }
     RUN_START(__BSS_START)
     RUN_END(__BSS_END)
 
@@ -58,6 +62,12 @@ SECTIONS
     /* this is used only when IPC RPMessage is enabled, else this is not used */
     .bss.ipc_vring_mem   (NOLOAD) : {} > DDR_IPC_VRING_RTOS
     % }
+    % if(args.isInstrumentation) {
+    GROUP {
+        __llvm_prf_cnts
+        __llvm_prf_bits
+    } > M4F_DRAM
+    % }
 }
 
 MEMORY
@@ -65,6 +75,9 @@ MEMORY
     M4F_VECS : ORIGIN = 0x00000000 , LENGTH = 0x00000200
     M4F_IRAM : ORIGIN = 0x00000200 , LENGTH = 0x0002FE00
     M4F_DRAM : ORIGIN = 0x00030000 , LENGTH = 0x00010000
+    % if((args.project.ipcVringRTOS === true) || (args.project.isLinuxInSystem === true)){
+    M4F_DDR  : ORIGIN = 0x9D9F0000 , LENGTH = 0x00010000
+    % }
 
     % if(args.project.isLinuxInSystem === true) {
     /* when using multi-core application's i.e more than one R5F/M4F active, make sure

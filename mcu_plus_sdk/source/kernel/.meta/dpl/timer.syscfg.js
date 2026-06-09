@@ -54,7 +54,7 @@ function getInterfaceName(inst) {
 }
 
 function validate(instance, report) {
-    common.validate.checkNumberRange(instance, report, "usecPerTick", 1, 1000000, "dec");
+    common.validate.checkNumberRange(instance, report, "usecPerTick", 1, 10000000, "dec");
     common.validate.checkNumberRange(instance, report, "timerInputClkHz", 32000, 1000000000, "dec");
     common.validate.checkValidCName(instance, report, "timerCallback");
     common.validate.checkNumberRange(instance, report, "intrPriority", 0, hwi.getHwiMaxPriority(), "dec");

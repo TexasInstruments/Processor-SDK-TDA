@@ -162,10 +162,15 @@ int32_t TIDL_conv2dPersistentMemAllocateAndComputeSize(void   *basePtr,
   {
     biasParamSize += (conv2dparams->numOutChannels * ((int32_t)( ((int32_t)(sizeof(int32_t))))));
   }
+  #if defined (__C7120__) || defined (__C7604__)
   if(TIDL_isBiasHighPrecision(commonParams->net->deviceName) == TRUE)
   {
     biasParamSize += 2*(conv2dparams->numOutChannels * ((int32_t)( ((int32_t)(sizeof(int8_t))))));
   }
+  #endif
+  #if defined (__C7504__) || defined (__C7524__)
+  biasParamSize += 2*(conv2dparams->numOutChannels * ((int32_t)( ((int32_t)(sizeof(int8_t))))));
+  #endif
   /*********************************************************************************************/
 
   TIDL_AllocatePtr((intptr_t)temp_basePtr,

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -64,13 +64,7 @@
 /*                             Include Files                                  */
 /* ========================================================================== */
 
-#if !defined(MCU_PLUS_SDK)
-#include <ti/board/board.h>
-#include <utils/misc/include/app_misc.h>
-#include <ti/board/src/am62a_evm/include/board_pinmux.h>
-#else
 #include <drivers/hw_include/tistdtypes.h>
-#endif
 #include <utils/misc/include/app_misc.h>
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */

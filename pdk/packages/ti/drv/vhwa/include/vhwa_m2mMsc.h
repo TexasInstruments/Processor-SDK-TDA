@@ -418,7 +418,7 @@ static inline void Vhwa_m2mMscInitParamsInit(
  *
  *  \return         None
  */
-static inline void Vhwa_m2mMscParamsInit(Vhwa_M2mMscParams *mscCfg);
+static inline void Vhwa_m2mMscParamsInit(Vhwa_M2mMscParams *mscPrms);
 
 /**
  *  \brief Function to initialize the MSC create params to default
@@ -440,7 +440,7 @@ static inline void Vhwa_M2mMscCreatePrmsInit(Vhwa_M2mMscCreatePrms *createArgs);
  *
  *  \return FVID2_SOK if successful, else suitable error code
  */
-int32_t Vhwa_m2mMscInit(const Vhwa_M2mMscInitParams *initPrms);
+int32_t Vhwa_m2mMscInit(const Vhwa_M2mMscInitParams *pInitPrms);
 
 /**
  *  \brief MSC de-initialization function.
@@ -460,7 +460,7 @@ int32_t Vhwa_m2mMscDeInit(void);
  *
  *  \return FVID2_SOK if successful, else suitable error code
  */
-int32_t Vhwa_m2mMscAllocSl2(const Vhwa_M2mMscSl2AllocPrms *sl2allocPrms);
+int32_t Vhwa_m2mMscAllocSl2(const Vhwa_M2mMscSl2AllocPrms *sl2AllocPrms);
 
 /**
  *  \brief Function to free allocated SL2.

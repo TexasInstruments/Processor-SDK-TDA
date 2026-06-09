@@ -6,6 +6,9 @@
 --heap_size=32768
 -e_vectors_sbl  /* for SBL make sure to set entry point to _vectors_sbl */
 
+/* ATCM base address */
+gAtcmBaseAddr = 0x78000000;
+
 __IRQ_STACK_SIZE = 4096;
 __FIQ_STACK_SIZE = 256;
 __SVC_STACK_SIZE = 256;

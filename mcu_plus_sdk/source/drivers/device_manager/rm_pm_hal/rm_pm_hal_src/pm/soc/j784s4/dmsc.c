@@ -131,7 +131,7 @@ static s32 j784s4_sys_reset_handler(domgrp_t domain)
 			trace_val |= TRACE_PM_ACTION_SYSRESET_ERR_VAL_DEINIT_FAIL;
 		}
 
-		if (ret != SUCCESS) {
+		if (ret == SUCCESS) {
 			/* PSC0: Disable MAIN2WKUPMCU bridge */
 			dev = device_lookup(J784S4_DEV_MAIN2WKUPMCU_VD);
 			soc_device_disable(dev, SFALSE);

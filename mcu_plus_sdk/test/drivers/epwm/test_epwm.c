@@ -137,10 +137,8 @@ uint32_t gEpwmBaseAddr;
 
 void test_main(void *args)
 {
-    UNITY_BEGIN();
 
-    /* Open drivers */
-    Drivers_open();
+    UNITY_BEGIN();
 
     /* Address translate */
     gEpwmBaseAddr = (uint32_t)AddrTranslateP_getLocalAddr(CONFIG_EPWM0_BASE_ADDR);
@@ -155,9 +153,6 @@ void test_main(void *args)
     RUN_TEST(test_epwm_countercomparecfg_api, 352, NULL);
 
     UNITY_END();
-
-    /* Close drivers */
-    Drivers_close();
 
     return;
 }
@@ -189,6 +184,7 @@ static void test_epwm_max_freq_min_duty(void *args)
     /* Register & enable interrupt */
     HwiP_Params_init(&hwiPrms);
     hwiPrms.intNum      = CONFIG_EPWM0_INTR;
+    hwiPrms.eventId     = CONFIG_EPWM0_EVENT_ID;
     hwiPrms.callback    = &App_epwmIntrISR;
     hwiPrms.isPulse     = CONFIG_EPWM0_INTR_IS_PULSE;
     status              = HwiP_construct(&gEpwmHwiObject, &hwiPrms);
@@ -226,6 +222,7 @@ static void test_epwm_min_freq_max_duty(void *args)
     /* Register & enable interrupt */
     HwiP_Params_init(&hwiPrms);
     hwiPrms.intNum      = CONFIG_EPWM0_INTR;
+    hwiPrms.eventId     = CONFIG_EPWM0_EVENT_ID;
     hwiPrms.callback    = &App_epwmIntrISR;
     hwiPrms.isPulse     = CONFIG_EPWM0_INTR_IS_PULSE;
     status              = HwiP_construct(&gEpwmHwiObject, &hwiPrms);
@@ -263,6 +260,7 @@ static void test_epwm_chopper(void *args)
     /* Register & enable interrupt */
     HwiP_Params_init(&hwiPrms);
     hwiPrms.intNum      = CONFIG_EPWM0_INTR;
+    hwiPrms.eventId     = CONFIG_EPWM0_EVENT_ID;
     hwiPrms.callback    = &App_epwmIntrISR;
     hwiPrms.isPulse     = CONFIG_EPWM0_INTR_IS_PULSE;
     status              = HwiP_construct(&gEpwmHwiObject, &hwiPrms);
@@ -300,6 +298,7 @@ static void test_epwm_deadband(void *args)
     /* Register & enable interrupt */
     HwiP_Params_init(&hwiPrms);
     hwiPrms.intNum      = CONFIG_EPWM0_INTR;
+    hwiPrms.eventId     = CONFIG_EPWM0_EVENT_ID;
     hwiPrms.callback    = &App_epwmIntrISR;
     hwiPrms.isPulse     = CONFIG_EPWM0_INTR_IS_PULSE;
     status              = HwiP_construct(&gEpwmHwiObject, &hwiPrms);
@@ -355,7 +354,7 @@ static void test_epwm_tbclkcfg_api(void *args)
     return;
 }
 
-/* Testcase 6 - Test EPWM_tbPwmFreqCfg for various combinations of inputs */ 
+/* Testcase 6 - Test EPWM_tbPwmFreqCfg for various combinations of inputs */
 static void test_epwm_tbfreqcfg_api(void *args)
 {
     uint32_t regval = 0U;
@@ -364,7 +363,7 @@ static void test_epwm_tbfreqcfg_api(void *args)
     uint32_t tbprdval = 0U;
 
     /* Check for up down count mode */
-    EPWM_tbPwmFreqCfg(gEpwmBaseAddr, APP_EPWM_TB_FREQ, APP_EPWM_OUTPUT_FREQ, 
+    EPWM_tbPwmFreqCfg(gEpwmBaseAddr, APP_EPWM_TB_FREQ, APP_EPWM_OUTPUT_FREQ,
                       EPWM_TB_COUNTER_DIR_UP_DOWN, EPWM_SHADOW_REG_CTRL_ENABLE);
     regval = HW_RD_REG16(gEpwmBaseAddr + PWMSS_EPWM_TBCTL);
     prdld = HW_GET_FIELD(regval, PWMSS_EPWM_TBCTL_PRDLD);
@@ -376,7 +375,7 @@ static void test_epwm_tbfreqcfg_api(void *args)
     TEST_ASSERT_EQUAL_UINT32((APP_EPWM_TB_FREQ/APP_EPWM_OUTPUT_FREQ)/2U, tbprdval);
 
     /* Check for up count mode */
-    EPWM_tbPwmFreqCfg(gEpwmBaseAddr, APP_EPWM_TB_FREQ, APP_EPWM_OUTPUT_FREQ, 
+    EPWM_tbPwmFreqCfg(gEpwmBaseAddr, APP_EPWM_TB_FREQ, APP_EPWM_OUTPUT_FREQ,
                       EPWM_TB_COUNTER_DIR_UP, EPWM_SHADOW_REG_CTRL_DISABLE);
     regval = HW_RD_REG16(gEpwmBaseAddr + PWMSS_EPWM_TBCTL);
     prdld = HW_GET_FIELD(regval, PWMSS_EPWM_TBCTL_PRDLD);
@@ -401,8 +400,8 @@ static void test_epwm_countercomparecfg_api(void *args)
     uint32_t loadmode = 0U;
     uint32_t cmpval3 = 0U;
 
-    status = EPWM_counterComparatorCfg(gEpwmBaseAddr, EPWM_CC_CMP_A, cmpval, 
-                                       EPWM_SHADOW_REG_CTRL_ENABLE, 
+    status = EPWM_counterComparatorCfg(gEpwmBaseAddr, EPWM_CC_CMP_A, cmpval,
+                                       EPWM_SHADOW_REG_CTRL_ENABLE,
                                        EPWM_CC_CMP_LOAD_MODE_CNT_EQ_ZERO, FALSE);
     regval = HW_RD_REG16(gEpwmBaseAddr + PWMSS_EPWM_CMPA);
     cmpval3 = HW_GET_FIELD(regval, PWMSS_EPWM_CMPA);
@@ -414,8 +413,8 @@ static void test_epwm_countercomparecfg_api(void *args)
     TEST_ASSERT_EQUAL_UINT32(EPWM_CC_CMP_LOAD_MODE_CNT_EQ_ZERO, loadmode);
     TEST_ASSERT_EQUAL_UINT32(EPWM_SHADOW_REG_CTRL_ENABLE, shdwmode);
 
-    status = EPWM_counterComparatorCfg(gEpwmBaseAddr, EPWM_CC_CMP_A, cmpval2, 
-                                       EPWM_SHADOW_REG_CTRL_DISABLE, 
+    status = EPWM_counterComparatorCfg(gEpwmBaseAddr, EPWM_CC_CMP_A, cmpval2,
+                                       EPWM_SHADOW_REG_CTRL_DISABLE,
                                        EPWM_CC_CMP_LOAD_MODE_CNT_EQ_PRD, FALSE);
     regval = HW_RD_REG16(gEpwmBaseAddr + PWMSS_EPWM_CMPA);
     cmpval3 = HW_GET_FIELD(regval, PWMSS_EPWM_CMPA);
@@ -427,8 +426,8 @@ static void test_epwm_countercomparecfg_api(void *args)
     TEST_ASSERT_EQUAL_UINT32(EPWM_CC_CMP_LOAD_MODE_CNT_EQ_ZERO, loadmode);
     TEST_ASSERT_EQUAL_UINT32(EPWM_SHADOW_REG_CTRL_ENABLE, shdwmode);
 
-    status = EPWM_counterComparatorCfg(gEpwmBaseAddr, EPWM_CC_CMP_B, cmpval, 
-                                       EPWM_SHADOW_REG_CTRL_ENABLE, 
+    status = EPWM_counterComparatorCfg(gEpwmBaseAddr, EPWM_CC_CMP_B, cmpval,
+                                       EPWM_SHADOW_REG_CTRL_ENABLE,
                                        EPWM_CC_CMP_LOAD_MODE_CNT_EQ_ZERO_OR_PRD, FALSE);
     regval = HW_RD_REG16(gEpwmBaseAddr + PWMSS_EPWM_CMPB);
     cmpval3 = HW_GET_FIELD(regval, PWMSS_EPWM_CMPB);
@@ -440,8 +439,8 @@ static void test_epwm_countercomparecfg_api(void *args)
     TEST_ASSERT_EQUAL_UINT32(EPWM_CC_CMP_LOAD_MODE_CNT_EQ_ZERO_OR_PRD, loadmode);
     TEST_ASSERT_EQUAL_UINT32(EPWM_SHADOW_REG_CTRL_ENABLE, shdwmode);
 
-    status = EPWM_counterComparatorCfg(gEpwmBaseAddr, EPWM_CC_CMP_B, cmpval2, 
-                                       EPWM_SHADOW_REG_CTRL_ENABLE, 
+    status = EPWM_counterComparatorCfg(gEpwmBaseAddr, EPWM_CC_CMP_B, cmpval2,
+                                       EPWM_SHADOW_REG_CTRL_ENABLE,
                                        EPWM_CC_CMP_LOAD_MODE_CNT_EQ_ZERO_OR_PRD, TRUE);
     regval = HW_RD_REG16(gEpwmBaseAddr + PWMSS_EPWM_CMPB);
     cmpval3 = HW_GET_FIELD(regval, PWMSS_EPWM_CMPB);

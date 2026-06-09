@@ -45,7 +45,7 @@
 #include <ti/csl/soc.h>
 #include <soc/vhwa_soc.h>
 #include <include/vhwa_common.h>
-#include <soc/V0/vhwa_vpac_priv.h>
+#include <soc/vhwa_vpac_priv.h>
 
 
 /* ========================================================================== */

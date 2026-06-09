@@ -5,8 +5,8 @@ include $(PRELUDE)
 TARGET      := vx_app_tidl_seg
 TARGETTYPE  := exe
 
-CSOURCES    := main.c 
-CSOURCES    += app_pre_proc_module.c 
+CSOURCES    := main.c
+CSOURCES    += app_pre_proc_module.c
 CSOURCES    += app_post_proc_module.c
 
 ifeq ($(HOST_COMPILER),GCC_LINUX)

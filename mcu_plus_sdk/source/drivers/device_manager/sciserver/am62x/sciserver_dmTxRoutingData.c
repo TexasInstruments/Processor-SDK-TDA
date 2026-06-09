@@ -59,11 +59,11 @@ const struct sproxy_host_tx_thread_data sproxy_route_data[AM62X_SEC_PROXY_TX_CON
 		.sproxy_ntfy_conf_id	= AM62X_DMASS0_SEC_PROXY_0_TX_DM_NONSEC_A53_3_RESPONSE_TX_THR065_CONF008,
 	},
 	/*
-	 * Secure Host A53_4[13]
+	 * Secure Host A53_4[14]
 	 */
 	[HOST_ID_A53_4] =	{
-		.sproxy_resp_conf_id	= AM62X_DMASS0_SEC_PROXY_0_RX_A53_4_RESPONSE_THR020_CONF013,
-		.sproxy_ntfy_conf_id	= AM62X_DMASS0_SEC_PROXY_0_RX_A53_4_RESPONSE_THR020_CONF013,
+		.sproxy_resp_conf_id	= AM62X_DMASS0_SEC_PROXY_0_TX_DM_NONSEC_A53_4_RESPONSE_TX_THR062_CONF011,
+		.sproxy_ntfy_conf_id	= AM62X_DMASS0_SEC_PROXY_0_TX_DM_NONSEC_A53_4_RESPONSE_TX_THR062_CONF011,
 	},
 	/*
 	 * Secure Host DM2TIFS[250]

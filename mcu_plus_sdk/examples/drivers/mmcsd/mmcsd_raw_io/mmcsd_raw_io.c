@@ -36,9 +36,19 @@
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
 
-#define APP_MMCSD_START_BLK (0x800000U) /* @1.5GB */
+/*
+ * This macro defines the block offset at which MMCSD R/W is tested. It is
+ * equivalent to the raw offset of 4GB assuming the block size of 512B.
+ * Additionally, for eMMC, the offset lies in the UDA partition.
+ */
+#define APP_MMCSD_START_BLK (0x800000U)
+#if defined(SOC_AM275X)
+#define APP_MMCSD_DATA_SIZE (0x1000)
+#elif defined(SOC_J722S)
+#define APP_MMCSD_DATA_SIZE (0x1000)
+#else
 #define APP_MMCSD_DATA_SIZE (0x400000)
-
+#endif
 uint8_t gMmcsdTxBuf[APP_MMCSD_DATA_SIZE] __attribute__((aligned(128U)));
 uint8_t gMmcsdRxBuf[APP_MMCSD_DATA_SIZE] __attribute__((aligned(128U)));
 
@@ -47,10 +57,6 @@ void mmcsd_raw_io_main(void *args)
 {
     int32_t status = SystemP_SUCCESS;
     uint64_t curTime;
-
-    Drivers_open();
-    status = Board_driversOpen();
-    DebugP_assert(status == SystemP_SUCCESS);
 
     uint32_t blockSize = MMCSD_getBlockSize(gMmcsdHandle[CONFIG_MMCSD0]);
     uint32_t numBlocks = APP_MMCSD_DATA_SIZE / blockSize;
@@ -91,8 +97,6 @@ void mmcsd_raw_io_main(void *args)
 
     MMCSD_deinit();
 
-    Board_driversClose();
-    Drivers_close();
 }
 
 void mmcsd_raw_io_fill_buffers(void)

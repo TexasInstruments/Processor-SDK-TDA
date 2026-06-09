@@ -82,6 +82,7 @@ std::vector<std::vector<int>> TIDL_createOutputAdjacencyList(GraphProto&   onnxG
 std::vector<int> TIDL_getPostProcInputIds(GraphProto& onnxGraph, std::vector<std::string> odPostProcIndataNames);
 bool TIDL_checkIsSubgraphOd(GraphProto& onnxGraph);
 bool TIDL_checkIsSubgraphNoOps(GraphProto& onnxGraph, std::vector<int32_t> nodeGroup);
-int32_t TIDL_checkLayerInputDimExist(GraphProto& onnGraph, int32_t layerIdx);
+std::vector<int> getIsolatedNoOpNodes(GraphProto& onnxGraph,std::vector<int32_t> nodes,std::vector<std::vector<int>> inputAdjacencyList,std::vector<std::vector<int>> outputAdjacencyList);
+int32_t TIDL_checkLayerInputOutputDimsExist(GraphProto& onnGraph, int32_t layerIdx);
 int32_t TIDL_checkOnnxTensorIsScalar (GraphProto& onnxGraph, int32_t nodeId);
 #endif  /* TIDL_TFLTE_RT_IMPORT_H */

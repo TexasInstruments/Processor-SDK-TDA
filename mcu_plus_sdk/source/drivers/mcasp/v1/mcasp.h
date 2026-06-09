@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -63,13 +63,30 @@
 #include <drivers/hw_include/cslr_mcasp.h>
 #include <drivers/hw_include/csl_types.h>
 #include <drivers/udma.h>
+#include <drivers/mcasp/v1/mcasp_drv_configs/mcasp_drv_config.h>
 
 #if defined (SOC_AM62AX)
 #include <drivers/mcasp/v1/soc/am62ax/mcasp_soc.h>
 #endif
 
+#if defined (SOC_AM62DX)
+#include <drivers/mcasp/v1/soc/am62dx/mcasp_soc.h>
+#endif
+
+#if defined (SOC_AM62LX)
+#include <drivers/mcasp/v1/soc/am62lx/mcasp_soc.h>
+#endif
+
 #if defined (SOC_AM62PX)
 #include <drivers/mcasp/v1/soc/am62px/mcasp_soc.h>
+#endif
+
+#if defined (SOC_AM62X)
+#include <drivers/mcasp/v1/soc/am62x/mcasp_soc.h>
+#endif
+
+#if defined (SOC_AM275X)
+#include <drivers/mcasp/v1/soc/am275x/mcasp_soc.h>
 #endif
 
 #ifdef __cplusplus
@@ -271,6 +288,13 @@ typedef void *MCASP_Handle;
  *  guide to view the sample data format.
  */
 #define MCASP_AUDBUFF_FORMAT_MULTISER_MULTISLOT_SEMI_INTERLEAVED_2     (3U)
+/**
+ *  \brief This is used for transfer of data with  multiple serializers and
+ *  also multiple slots enabled.please note that niether serializer data nor
+ *  slot data is interleaved in this format. Refer to the user guide to view
+ *  the sample data format.
+ */
+#define MCASP_AUDBUFF_FORMAT_MULTISER_MULTISLOT_NON_INTERLEAVED     (4U)
 /** @} */
 
 /**
@@ -313,8 +337,8 @@ typedef void *MCASP_Handle;
 #define MCASP_RECEIVE_STATE_EXIT                   (8U)
 /** @} */
 
-#define MCASP_DIR_OUT   0
-#define MCASP_DIR_IN    1
+#define MCASP_DIR_OUT   (uint32_t) 0
+#define MCASP_DIR_IN    (uint32_t) 1
 
 #define MCASP_TRPD_INVALID_PTR                      (0xFFFFFFFF)
 
@@ -466,10 +490,10 @@ typedef struct MCASP_DMAChConfig_s
     /**< UDMA TX Ring memory pointers */
     void            *rxRingMem;
     /**< UDMA RX Ring memory pointers */
-    uint32_t        ringMemSize;
-    /**< Size of Ring Memory */
-    uint32_t        ringElemCnt;
-    /**< Ring Element Count */
+    void            *txCbParams;
+    /**< UDMA TX callback params */
+    void            *rxCbParams;
+    /**< UDMA RX callback params */
     uint32_t        rxEvtNum;
     /**< UDMA Event number used for Rx */
     uint32_t        txEvtNum;
@@ -477,12 +501,6 @@ typedef struct MCASP_DMAChConfig_s
     uint32_t        isOpen;
     /**< Flag to indicate whether the DMA instance is opened already */
 }MCASP_DmaChConfig;
-
-typedef struct
-{
-    uint8_t *pTrpdMem;
-    uint8_t inUse;
-} MCASP_DmaTrpdMemAlloc;
 
 /**
  *  \brief MCASP Parameters
@@ -535,39 +553,10 @@ typedef struct
     /**< DMA channel config */
 
     void *mcaspDmaDrvObj;
-    /**< DMA Handle */
+    /**< BCDMA Handle */
 
-    uint8_t *cyclicBuffTx;
-    /**< Cyclic Tx buffer pointer */
-    uint32_t cyclicBuffSizeTx;
-    /**< Tx cyclic buffer size */
-    uint32_t cyclicBuffCntTx;
-    /**< Tx cyclic buffer count */
-
-    uint8_t *cyclicBuffRx;
-    /**< Cyclic Rx buffer pointer */
-    uint32_t cyclicBuffSizeRx;
-    /**< Rx cyclic buffer size */
-    uint32_t cyclicBuffCntRx;
-    /**< Rx cyclic buffer count */
-
-    Udma_ChHandle *cyclicTxFeedDMAHandle;
-    /**< Channel hande to feed in data to cyclic Tx buffer */
-    Udma_ChHandle *cyclicRxFeedDMAHandle;
-    /**< Channel hande to get out data from cyclic Rx buffer */
-
-    Udma_EventHandle bcdmaTxCqEvtHandle;
-    /**< Completion queue event handle for feeding data to cyclic Tx buffer */
-    Udma_EventHandle bcdmaRxCqEvtHandle;
-    /**< Completion queue event handle for getting data from cyclic Rx buffer */
-
-    Udma_DrvHandle bcdmaDrvHandle;
-    /**< Drive handle for BCDMA */
-
-    MCASP_DmaTrpdMemAlloc *trpdMemAllocTx;
-    /**< Trpds for feeding in data to the cyclic Tx buffer */
-    MCASP_DmaTrpdMemAlloc *trpdMemAllocRx;
-    /**< Trpds for getting out data from the cyclic Rx buffer */
+    uint8_t skipDriverOpen;
+    /**< Flag to indicate if driver open should be skipped */
 } MCASP_OpenParams;
 
 /**
@@ -577,7 +566,7 @@ typedef struct
 {
     uint32_t intrNum;
     /**< Receive interrupt number */
-    uint32_t evntNum;
+    uint16_t evntNum;
     /**< Receive event number (Used for C7x only) */
     uint8_t intrPriority;
     /**< Interrupt priority */
@@ -623,6 +612,28 @@ typedef struct
      *   If disabled minimum of 2 buffers need to be submitted before start and atleast one buffer should be queued before each ISR call. */
 } MCASP_TransferObj;
 
+typedef struct
+{
+    uint8_t initDone;
+    /**< Flag to indicate if the ICNT is initialized */
+    uint32_t txnByteCnt;
+    /**< Byte count for the TR */
+    uint16_t icnt0;
+    /**< ICNT0 value for the TR */
+    uint16_t icnt1;
+    /**< ICNT1 value for the TR */
+    uint16_t icnt2;
+    /**< ICNT2 value for the TR */
+    uint16_t icnt3;
+    /**< ICNT3 value for the TR */
+    int32_t  dim1;
+    /**< Signed dimension for loop level 1 */
+    int32_t  dim2;
+    /**< Signed dimension for loop level 2 */
+    int32_t  dim3;
+    /**< Signed dimension for loop level 3 */
+} MCASP_DmaIcnt;
+
 /**
  *  \brief MCASP driver object
  */
@@ -640,7 +651,9 @@ typedef struct
     uint32_t transferMode;
     /**< Polling, Blocking or Callback mode. */
     void *mcaspDmaHandle;
-    /**< DMA Handle */
+    /**< BCDMA Handle */
+    void *mcaspPktDmaHandle;
+    /**< PKTDMA Handle */
 
     MCASP_DmaChConfig *dmaChCfg;
     /**< DMA Channel configuration */
@@ -678,56 +691,24 @@ typedef struct
     QueueP_Handle completedQueueHandleRx;
     /**< Queue handle used for storing completed Rx transactions */
 
-    uint8_t *cyclicBuffTx;
-    /**< Cyclic Tx buffer pointer */
-    uint32_t cyclicBuffSizeTx;
-    /**< Tx cyclic buffer size */
-    uint32_t cyclicBuffCntTx;
-    /**< Tx cyclic buffer count */
+    uint32_t lastPlayed;
+    /**< Last played ring element index */
+    uint32_t lastFilled;
+    /**< Last filled ring element index int TX */
+    uint32_t lastReceived;
+    /**< Last received ring element index */
+    uint32_t lastRecQueued;
+    /**< Last receive txn queued index */
 
-    uint8_t *cyclicBuffRx;
-    /**< Cyclic Rx buffer pointer */
-    uint32_t cyclicBuffSizeRx;
-    /**< Rx cyclic buffer size */
-    uint32_t cyclicBuffCntRx;
-    /**< Rx cyclic buffer count */
+    uint8_t txFifoEnable;
+    /**< Flag to indicate Tx fifo enable */
+    uint8_t rxFifoEnable;
+    /**< Flag to indicate Rx fifo enable */
 
-    MCASP_Transaction *currTransTx;
-    /**< Current Tx transaction */
-    MCASP_Transaction *currTransRx;
-    /**< Current Rx transaction */
-
-    uint32_t currTxTransRemCnt;
-    /**< Remaining Tx transaction count */
-    uint32_t currRxTransRemCnt;
-    /**< Remaining Rx transaction count */
-
-    Udma_ChHandle cyclicTxFeedDMAHandle;
-    /**< Channel hande to feed in data to cyclic Tx buffer */
-    Udma_ChHandle cyclicRxFeedDMAHandle;
-    /**< Channel hande to get out data from cyclic Rx buffer */
-
-    uint8_t txTrCompletionIdx;
-    /**< Tx cyclic buffer index to which transaction is completion */
-    uint8_t rxTrCompletionIdx;
-    /**< Rx cyclic buffer index to which transaction is completion */
-
-    Udma_EventHandle bcdmaTxCyclicEvtHandle;
-    /**< Completion queue event handle for feeding data to cyclic Tx buffer */
-    Udma_EventHandle bcdmaRxCyclicEvtHandle;
-
-    Udma_DrvHandle bcdmaDrvHandle;
-    /**< Drive handle for BCDMA */
-
-    MCASP_DmaTrpdMemAlloc *trpdMemAllocTx;
-    /**< Trpds for feeding in data to the cyclic Tx buffer */
-    MCASP_DmaTrpdMemAlloc *trpdMemAllocRx;
-    /**< Trpds for getting out data from the cyclic Rx buffer */
-
-    uint8_t isRxCyclicEventReg;
-    /**< Flag to mark if RX cyclic event is registered */
-    uint8_t isTxCyclicEventReg;
-    /**< Flag to mark if TX cyclic event is registered */
+    MCASP_DmaIcnt txDmaIcnt;
+    /**< DMA Icnt values for Tx */
+    MCASP_DmaIcnt rxDmaIcnt;
+    /**< DMA Icnt values for Rx */
 } MCASP_Object;
 
 /** \brief MCASP instance attributes - used during init time */
@@ -742,6 +723,8 @@ typedef struct
     /**< Peripheral base address */
     uintptr_t dataBaseAddr;
     /**< Peripheral data port base address */
+    uint8_t isSynchronous;
+    /**< Tx and Rx is operating in synchronous mode */
     uint16_t numOfSerializers;
     /**< Number of serializers */
     uint16_t serStatus[16];
@@ -756,6 +739,10 @@ typedef struct
     /**< slot size for transmission */
     uint32_t rxSlotSize;
     /**< slot size for reception */
+    uint8_t txFifoWaterLevel;
+    /**< FIFO waterlevel for TX */
+    uint8_t rxFifoWaterLevel;
+    /**< FIFO waterlevel for RX */
 } MCASP_Attrs;
 
 typedef struct
@@ -912,6 +899,8 @@ int32_t MCASP_startTransferRx(MCASP_Handle handle);
  *
  * \return  Success/Failure for configuration
  *
+ *  Caution: This API is blocking. Hence cannot be called from ISR context!!
+ *
  */
 int32_t MCASP_stopTransferTx(MCASP_Handle handle);
 
@@ -922,8 +911,39 @@ int32_t MCASP_stopTransferTx(MCASP_Handle handle);
  *
  * \return  Success/Failure for configuration
  *
+ *  Caution: This API is blocking. Hence cannot be called from ISR context!!
+ *
  */
 int32_t MCASP_stopTransferRx(MCASP_Handle handle);
+
+/**
+ * \brief Function to set the Tx transaction count
+ *
+ * \param handle MCASP_Handle
+ * \param txnCount Tx transaction count
+ *
+ * \return  Success/Failure for configuration
+ *
+ * Caution: This API should be called before \ref MCASP_startTransferTx.
+ *          User needs to ensure the transaction count is matching with the
+ *          loopjob size.
+*/
+int32_t MCASP_setTxTxnCount(MCASP_Handle handle, uint32_t txnCount);
+
+
+/**
+ * \brief Function to set the Rx transaction count
+ *
+ * \param handle MCASP_Handle
+ * \param txnCount Rx transaction count
+ *
+ * \return  Success/Failure for configuration
+ *
+ * Caution: This API should be called before \ref MCASP_startTransferRx.
+ *          User needs to ensure the transaction count is matching with the
+ *          loopjob size.
+*/
+int32_t MCASP_setRxTxnCount(MCASP_Handle handle, uint32_t txnCount);
 
 /* ========================================================================== */
 /*                       Static Function Definitions */

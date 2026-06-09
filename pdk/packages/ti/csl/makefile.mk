@@ -108,6 +108,7 @@ endif
 -include src/ip/mcspi/src_files_mcspi.mk
 -include src/ip/mmc/src_files_mmc.mk
 -include src/ip/mmu/src_files_mmu.mk
+-include src/ip/msmc/src_files_msmc.mk
 -include src/ip/navss/src_files_navss.mk
 -include src/ip/ocmc/src_files_ocmc.mk
 -include src/ip/ospi/src_files_ospi.mk

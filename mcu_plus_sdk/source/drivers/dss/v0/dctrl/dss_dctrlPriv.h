@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2025 Texas Instruments Incorporated
+ *  Copyright (C) 2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -209,15 +209,6 @@ int32_t Dss_dctrlDrvCreateEdgeList(Dss_DctrlDrvGraphObj *graphObj,
                                    const Dss_DctrlPathInfo *pathInfo);
 
 void Dss_dctrlDrvFreeEdgeList(Dss_DctrlDrvGraphObj *graphObj);
-
-void Dss_dctrlDrvInitDSI(void);
-
-int32_t Dss_dctrlDrvSetDSIParams(Dss_DctrlDrvInfo *drvInfo,
-                                    const Dss_DctrlDsiParams *dsPrms);
-
-int32_t Dss_dctrlDrvEnableVideoDSI(Dss_DctrlDrvInfo *drvInfo,
-                                    const Fvid2_ModeInfo *mInfo, uint32_t hsyncPolarity,
-                                    uint32_t vsyncPolarity, uint32_t isConnectedTo);
 
 /* ========================================================================== */
 /*                       Static Function Definitions                          */

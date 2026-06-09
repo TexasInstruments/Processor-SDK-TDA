@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019 Texas Instruments Incorporated
+ * Copyright (c) 2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -83,10 +83,9 @@
 #define IPC_RPMESSAGE_MSG_SIZE      (496u + 32u)
 #define IPC_RPMESSAGE_BUF_SIZE(n)   (IPC_RPMESSAGE_MSG_SIZE*(n)+IPC_RPMESSAGE_OBJ_SIZE)
 
-#if !defined(SOC_AM62A)
 #define APP_IPC_RPMESSAGE_RPMSG_RX_NUM_BUF   (256u)
-#endif
 #define APP_IPC_RPMESSAGE_RPMSG_RX_BUF_SIZE  IPC_RPMESSAGE_BUF_SIZE(APP_IPC_RPMESSAGE_RPMSG_RX_NUM_BUF)
+
 static uint8_t g_app_rpmessage_rpmsg_rx_buf[APP_IPC_RPMESSAGE_RPMSG_RX_BUF_SIZE] __attribute__ ((aligned(1024)));
 
 /* IMPORTANT NOTE: For C7x,
@@ -101,9 +100,9 @@ static uint8_t g_app_rpmessage_rpmsg_rx_buf[APP_IPC_RPMESSAGE_RPMSG_RX_BUF_SIZE]
 /* HW Spinlock */
 #define APP_IPC_HW_SPIN_LOCK_MAX        (256u)
 #define APP_IPC_HW_SPIN_LOCK_MMR_SIZE   32768
-#if defined(SOC_AM62A) || defined(SOC_J722S)
+#if defined(MCU_PLUS_SDK)
 #define APP_IPC_HW_SPIN_LOCK_MMR_BASE   ((uint32_t)0x2A000000u)
-#else
+#elif defined(PDK)
 #define APP_IPC_HW_SPIN_LOCK_MMR_BASE   ((uint32_t)0x30E00000u)
 #endif
 #define APP_IPC_HW_SPIN_LOCK_OFFSET(x)  ((uint32_t)0x800u + (uint32_t)4u*(uint32_t)(x))

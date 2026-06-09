@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2020
+ *  Copyright (c) Texas Instruments Incorporated 2020-25
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -41,21 +41,25 @@
 /* ========================================================================== */
 /*                             Include Files                                  */
 /* ========================================================================== */
+
 #include <drivers/csitx/v0/include/csitx_drvPriv.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
+
 /* None */
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
 
+/* None */
 
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
+
 /**
  * \brief   Call-back for Info and status interrupts
  *
@@ -71,11 +75,13 @@ static void CsitxDrv_eventHandler(CSITX_PrivateData* pD,
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
+
 extern CsitxDrv_CommonObj gCsitxCommonObj;
 
 /* ========================================================================== */
 /*                  Internal/Private Function Declarations                   */
 /* ========================================================================== */
+
 static int32_t CsitxDrv_coreInit(CsitxDrv_InstObj *instObj);
 static int32_t CsitxDrv_chInit(CsitxDrv_InstObj *instObj);
 int32_t CsitxDrv_init(CsitxDrv_CommonObj *txObj);
@@ -83,6 +89,7 @@ int32_t CsitxDrv_init(CsitxDrv_CommonObj *txObj);
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */
+
 int32_t Csitx_init(const Csitx_InitParams *initParams)
 {
     int32_t retVal = FVID2_SOK;
@@ -302,6 +309,7 @@ void Csitx_instStatusInit(Csitx_InstStatus *captStatus)
 /* ========================================================================== */
 /*                       Static Function Definitions                          */
 /* ========================================================================== */
+
 static int32_t CsitxDrv_chInit(CsitxDrv_InstObj *instObj)
 {
     int32_t retVal = FVID2_SOK;

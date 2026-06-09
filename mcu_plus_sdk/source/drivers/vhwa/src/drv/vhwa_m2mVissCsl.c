@@ -58,14 +58,7 @@
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
-#if defined(VHWA_VPAC_IP_REV_VPAC3)
-int32_t Vhwa_m2mVissSetFcp2Config(Vhwa_M2mVissInstObj *instObj,
-        Vhwa_M2mVissHandleObj *hObj, const Fcp_Control *ctrl);
-#endif
-#if defined VHWA_VPAC_IP_REV_VPAC3 || defined VHWA_VPAC_IP_REV_VPAC3L
-void Vhwa_m2mVissCacInit(Vhwa_M2mVissInstObj *instObj,
-		    const Vhwa_M2mVissHandleObj *hObj);
-#endif
+
 #if defined (VHWA_VPAC_IP_REV_VPAC3L)
 static int32_t getIrDelayParams(Vhwa_M2mVissParams *vsPrms, uint32_t *irDelay, CSL_nsf4vRegs *nsf4Regs);
 #endif
@@ -2169,7 +2162,6 @@ void Vhwa_m2mVissSetHtsCfg(const Vhwa_M2mVissInstObj *instObj,
                 htsCfg->pipeline    = instObj->pipeline;
         }
         htsCfg->enableStream  = (uint32_t)UFALSE;
-        htsCfg->enableHop     = (uint32_t)UFALSE;
 
         /* Configure WDTimer from user settings stored in handle object */
         /* Enable if WDTIMER_ERR event is registered */
@@ -3014,7 +3006,7 @@ int32_t Vhwa_memVissSetVissSizeAndPath(Vhwa_M2mVissInstObj *instObj,
             if ((uint32_t)UTRUE == vsPrms->enableCac)
             {
                 CSL_vissTopCacEnable(regAddrs->topRegs, UTRUE);
-                if ((FVID2_SOK == status) && (true == enableBufObj))
+                if (true == enableBufObj)
                 {
 					hObj->bufferObjHolder[BUFF_ID_TOP_REGS].isModified =
 							true;
@@ -3182,7 +3174,7 @@ int32_t Vhwa_memVissSetVissSizeAndPath(Vhwa_M2mVissInstObj *instObj,
 				Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
 				However, due to the stated rationale, this is not tested.
                 <justification end> */
-                if ((FVID2_SOK == status) && (true == enableBufObj))
+                if (true == enableBufObj)
                 /* LDRA_JUSTIFY_END */
                 {
                         hObj->bufferObjHolder[BUFF_ID_TOP_REGS].isModified =
@@ -3267,7 +3259,7 @@ int32_t Vhwa_memVissSetVissSizeAndPath(Vhwa_M2mVissInstObj *instObj,
 				Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
 				However, due to the stated rationale, this is not tested.
                 <justification end> */
-                if ((FVID2_SOK == status) && (true == enableBufObj))
+                if (true == enableBufObj)
                 /* LDRA_JUSTIFY_END */
                 {
 					hObj->bufferObjHolder[BUFF_ID_TOP_REGS].isModified =
@@ -3291,7 +3283,7 @@ int32_t Vhwa_memVissSetVissSizeAndPath(Vhwa_M2mVissInstObj *instObj,
             if ((uint32_t)UTRUE == vsPrms->enableNsf4)
             {
                 CSL_vissTopNsf4Enable(regAddrs->topRegs, UTRUE);
-                if ((FVID2_SOK == status) && (true == enableBufObj))
+                if (true == enableBufObj)
                 {
 					hObj->bufferObjHolder[BUFF_ID_TOP_REGS].isModified =
 							true;
@@ -3327,7 +3319,7 @@ int32_t Vhwa_memVissSetVissSizeAndPath(Vhwa_M2mVissInstObj *instObj,
 				Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
 				However, due to the stated rationale, this is not tested.
                 <justification end> */
-                if ((FVID2_SOK == status) && (true == enableBufObj))
+                if (true == enableBufObj)
                 /* LDRA_JUSTIFY_END */
                 {
 					hObj->bufferObjHolder[BUFF_ID_TOP_REGS].isModified =
@@ -7476,7 +7468,7 @@ int32_t Vhwa_m2mVissProcessAppBuf(Vhwa_M2mVissInstObj *instObj,
     return status;
 }
 
-
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 void Vhwa_m2mVissInitReadbackBuffObject(const Vhwa_M2mVissInstObj *instObj,
         Vhwa_M2mVissHandleObj *hObj,
         const Vhwa_M2mVissConfigBuffobj *bufferObjHolder)
@@ -8545,3 +8537,4 @@ uint32_t Vhwa_m2mVissCalcNumOfTrsForReadback(const Vhwa_M2mVissHandleObj *hObj)
 	}
 	return cnt;
 }
+#endif

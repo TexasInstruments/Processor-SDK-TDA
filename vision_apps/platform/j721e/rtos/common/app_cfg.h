@@ -66,27 +66,15 @@
 #include <stdint.h>
 
 #define ENABLE_TIOVX
-#define ENABLE_IPC
 #define ENABLE_PRINTF_REDIRECT
 
-#define ENABLE_IPC_MPU1_0
-//#define ENABLE_IPC_MCU1_0
-//#define ENABLE_IPC_MCU1_1
-#define ENABLE_IPC_MCU2_0
-#define ENABLE_IPC_MCU2_1
-#define ENABLE_IPC_MCU3_0
-#define ENABLE_IPC_MCU3_1
-#define ENABLE_IPC_C6x_1
-#define ENABLE_IPC_C6x_2
-#define ENABLE_IPC_C7x_1
+#define ENABLE_IPC
+#define ENABLE_IPC_ECHO_TEST
 
 #define ENABLE_UDMA
 #define ENABLE_UDMA_COPY
 #define ENABLE_SCICLIENT
 
-#define ENABLE_IPC_ECHO_TEST
-
 #define APP_ASSERT_SUCCESS(x)  { if((x)!=0) while(1); }
-
 
 #endif /* APP_CFG_H_ */

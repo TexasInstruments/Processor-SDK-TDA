@@ -78,6 +78,8 @@ extern "C" {
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
+#define MCSPI_MAX_TIMEOUT_VALUE       (1000000000U)
+
 /** \brief A handle that is returned from a #MCSPI_open() call */
 typedef void *MCSPI_Handle;
 
@@ -335,6 +337,9 @@ typedef void *MCSPI_Handle;
 /** \brief 32 SPI bus clock delays */
 #define MCSPI_INITDLY_32                (CSL_MCSPI_MODULCTRL_INITDLY_32CLKDLY)
 /** @} */
+/** \brief McSPI error macro's*/
+#define MCSPI_ERROR_TX_UNDERFLOW    (0x00000001U)
+#define MCSPI_ERROR_RX_OVERFLOW     (0x00000002U)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -401,8 +406,8 @@ typedef struct
  *  \brief  The definition of a callback function used by the SPI driver
  *  when used in #MCSPI_TRANSFER_MODE_CALLBACK
  *
- *  \param MCSPI_Handle          MCSPI_Handle
- *  \param MCSPI_Transaction*    Pointer to a #MCSPI_Transaction
+ *  \param handle          MCSPI_Handle
+ *  \param transaction*    Pointer to a #MCSPI_Transaction
  */
 typedef void (*MCSPI_CallbackFxn) (MCSPI_Handle handle,
                                    MCSPI_Transaction *transaction);
@@ -499,6 +504,9 @@ typedef struct
      */
     uint32_t                intrNum;
     /**< Peripheral interrupt number */
+    uint16_t                eventId;
+    /**< Module interrupt event ID */
+
     uint32_t                operMode;
     /**< Driver operating mode */
     uint8_t                 intrPriority;
@@ -592,6 +600,8 @@ typedef struct
     /**< Peripheral base address - CPU view */
     MCSPI_ChObject          chObj[MCSPI_MAX_NUM_CHANNELS];
     /**< Channel object */
+    uint32_t                errorFlag;
+    /**< Variable to store different McSPI errors */
 
     /*
      * State variables
@@ -655,7 +665,7 @@ void MCSPI_deinit(void);
  *
  *  \pre    MCSPI controller has been initialized using #MCSPI_init()
  *
- *  \param  index       Index of config to use in the *MCSPI_Config* array
+ *  \param  mcspiConfigIndex Index of config to use in the *MCSPI_Config* array
  *  \param  openPrms    Pointer to open parameters. If NULL is passed, then
  *                      default values will be used
  *
@@ -666,7 +676,7 @@ void MCSPI_deinit(void);
  *  \sa     #MCSPI_close()
  *  \sa     #MCSPI_OpenParams_init
  */
-MCSPI_Handle MCSPI_open(uint32_t index, const MCSPI_OpenParams *openPrms);
+MCSPI_Handle MCSPI_open(uint32_t mcspiConfigIndex, const MCSPI_OpenParams *openPrms);
 
 /**
  *  \brief  Function to close a MCSPI peripheral specified by the MCSPI handle

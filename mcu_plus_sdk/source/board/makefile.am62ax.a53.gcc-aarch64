@@ -16,13 +16,20 @@ ConfigName:=$(PROFILE)
 LIBNAME:=board.am62ax.a53.gcc-aarch64.$(PROFILE).lib
 
 FILES_common := \
+    flash.c \
+    flash_nand_ospi.c \
+    flash_nor_ospi.c \
+    eeprom.c \
+    eeprom_at24c512c.c \
     led.c \
     led_gpio.c \
     led_tpic2810.c \
     led_ioexp.c \
     ioexp_tca6424.c \
+    nor_spi_sfdp.c \
 
 FILES_PATH_common = \
+    control \
     flash \
     flash/ospi \
     flash/sfdp \
@@ -30,12 +37,18 @@ FILES_PATH_common = \
     null \
     led \
     eeprom \
+    ethphy/enet/rtos_drivers/src \
+    ethphy/enet/rtos_drivers/include \
+    utils \
 
 INCLUDES_common := \
     -I${MCU_PLUS_SDK_PATH}/source \
+    -I${MCU_PLUS_SDK_PATH}/source/board/ethphy/enet/rtos_drivers/include \
+    -I${MCU_PLUS_SDK_PATH}/source/board/ethphy/port \
 
 DEFINES_common := \
     -DSOC_AM62AX \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mcpu=cortex-a53+fp+simd \
@@ -52,6 +65,8 @@ CFLAGS_common := \
     -Wno-unused-but-set-variable \
     -fdata-sections \
     -ffunction-sections \
+    -Wno-unused-function \
+    -Wno-uninitialized \
 
 CFLAGS_debug := \
     -D_DEBUG_=1 \

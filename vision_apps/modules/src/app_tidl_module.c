@@ -69,6 +69,7 @@ static vx_status setCreateParams(vx_context context, TIDLObj *tidlObj);
 static vx_status setInArgs(vx_context context, vx_user_data_object inArgs);
 static vx_status setOutArgs(vx_context context, vx_user_data_object outArgs);
 static void createOutputTensors(vx_context context, vx_user_data_object config, vx_tensor output_tensors[]);
+static vx_status createOutputTensorsQ(vx_context context, vx_user_data_object config, vx_tensor output_tensors[]);
 static void initParam(vx_reference params[], uint32_t _max_params);
 static void addParam(vx_reference params[], vx_reference obj);
 #ifdef COMPUTE_CHECKSUM
@@ -406,6 +407,500 @@ vx_status writeTIDLOutput(char *file_name, TIDLObj *tidlObj)
   return(status);
 }
 
+vx_status app_init_tidl_queued(vx_context context, TIDLObj *tidlObj, char *objName, vx_int32 num_cameras, vx_uint32 bufq_depth)
+{
+    vx_status status = VX_SUCCESS;
+    vx_uint32 num_input_tensors = 0U;
+    vx_uint32 num_output_tensors = 0U;
+    vx_tensor output_tensors[APP_MODULES_MAX_TENSORS] = {NULL};
+    vx_uint32 capacity = 0U;
+    vx_uint32 i = 0U;
+    vx_uint32 q = 0U;
+
+    if ((context == NULL) || (tidlObj == NULL) || (objName == NULL) || (num_cameras <= 0))
+    {
+        printf("Invalid argument passed to app_init_tidl_queued!\n");
+        status = VX_FAILURE;
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = vxGetStatus((vx_reference)context);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        tidlObj->kernel = NULL;
+        tidlObj->config = NULL;
+        tidlObj->network = NULL;
+        tidlObj->createParams = NULL;
+        tidlObj->in_args_arr = NULL;
+        tidlObj->out_args_arr = NULL;
+        tidlObj->num_input_tensors = 0U;
+        tidlObj->num_output_tensors = 0U;
+
+        if (bufq_depth == 0U)
+        {
+            bufq_depth = 1U;
+        }
+
+        if (bufq_depth > (vx_uint32)APP_MODULES_MAX_BUFQ_DEPTH)
+        {
+            bufq_depth = (vx_uint32)APP_MODULES_MAX_BUFQ_DEPTH;
+        }
+
+        for (i = 0U; i < (vx_uint32)APP_MODULES_MAX_TENSORS; i++)
+        {
+            for (q = 0U; q < (vx_uint32)APP_MODULES_MAX_BUFQ_DEPTH; q++)
+            {
+                tidlObj->output_tensor_q[i][q] = NULL;
+            }
+        }
+
+        for (i = 0U; i < (vx_uint32)APP_MODULES_MAX_TENSORS; i++)
+        {
+            for (q = 0U; q < (vx_uint32)APP_MODULES_MAX_BUFQ_DEPTH; q++)
+            {
+                tidlObj->output_tensor_arr_q[i][q] = NULL;
+            }
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        tidlObj->config = readConfig(context,
+                                     &tidlObj->config_file_path[0],
+                                     &num_input_tensors,
+                                     &num_output_tensors,
+                                     &tidlObj->config_checksum[0]);
+        status = vxGetStatus((vx_reference)tidlObj->config);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        tidlObj->num_input_tensors = num_input_tensors;
+        tidlObj->num_output_tensors = num_output_tensors;
+
+        tidlObj->network = readNetwork(context,
+                                       &tidlObj->network_file_path[0],
+                                       &tidlObj->network_checksum[0]);
+        status = vxGetStatus((vx_reference)tidlObj->network);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = updateChecksums(tidlObj->config,
+                                 &tidlObj->config_checksum[0],
+                                 &tidlObj->network_checksum[0]);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        capacity = (vx_uint32)sizeof(TIDL_CreateParams);
+        tidlObj->createParams = vxCreateUserDataObject(context, "TIDL_CreateParams", capacity, NULL);
+        status = vxGetStatus((vx_reference)tidlObj->createParams);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = setCreateParams(context, tidlObj);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        vx_user_data_object inArgs = NULL;
+
+        capacity = (vx_uint32)sizeof(TIDL_InArgs);
+        inArgs = vxCreateUserDataObject(context, "TIDL_InArgs", capacity, NULL);
+        status = vxGetStatus((vx_reference)inArgs);
+
+        if (status == VX_SUCCESS)
+        {
+            tidlObj->in_args_arr = vxCreateObjectArray(context, (vx_reference)inArgs, (vx_uint32)num_cameras);
+            status = vxGetStatus((vx_reference)tidlObj->in_args_arr);
+        }
+
+        vxReleaseUserDataObject(&inArgs);
+
+        if (status == VX_SUCCESS)
+        {
+            vxSetReferenceName((vx_reference)tidlObj->in_args_arr, "tidl_node_in_args_arr");
+        }
+
+        if (status == VX_SUCCESS)
+        {
+            for (i = 0U; i < (vx_uint32)num_cameras; i++)
+            {
+                vx_user_data_object inArgsItem = NULL;
+
+                inArgsItem = (vx_user_data_object)vxGetObjectArrayItem(tidlObj->in_args_arr, i);
+                status = vxGetStatus((vx_reference)inArgsItem);
+
+                if (status == VX_SUCCESS)
+                {
+                    status = setInArgs(context, inArgsItem);
+                }
+
+                if (inArgsItem != NULL)
+                {
+                    vxReleaseUserDataObject(&inArgsItem);
+                }
+
+                if (status != VX_SUCCESS)
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        vx_user_data_object outArgs = NULL;
+
+        capacity = (vx_uint32)sizeof(TIDL_outArgs);
+        outArgs = vxCreateUserDataObject(context, "TIDL_outArgs", capacity, NULL);
+        status = vxGetStatus((vx_reference)outArgs);
+
+        if (status == VX_SUCCESS)
+        {
+            tidlObj->out_args_arr = vxCreateObjectArray(context, (vx_reference)outArgs, (vx_uint32)num_cameras);
+            status = vxGetStatus((vx_reference)tidlObj->out_args_arr);
+        }
+
+        vxReleaseUserDataObject(&outArgs);
+
+        if (status == VX_SUCCESS)
+        {
+            vxSetReferenceName((vx_reference)tidlObj->out_args_arr, "tidl_node_out_args_arr");
+        }
+
+        if (status == VX_SUCCESS)
+        {
+            for (i = 0U; i < (vx_uint32)num_cameras; i++)
+            {
+                vx_user_data_object outArgsItem = NULL;
+
+                outArgsItem = (vx_user_data_object)vxGetObjectArrayItem(tidlObj->out_args_arr, i);
+                status = vxGetStatus((vx_reference)outArgsItem);
+
+                if (status == VX_SUCCESS)
+                {
+                    status = setOutArgs(context, outArgsItem);
+                }
+
+                if (outArgsItem != NULL)
+                {
+                    vxReleaseUserDataObject(&outArgsItem);
+                }
+
+                if (status != VX_SUCCESS)
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = createOutputTensorsQ(context, tidlObj->config, output_tensors);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        for (i = 0U; i < tidlObj->num_output_tensors; i++)
+        {
+            for (q = 0U; q < bufq_depth; q++)
+            {
+                vx_char name[VX_MAX_REFERENCE_NAME];
+                vx_tensor ch0 = NULL;
+
+                tidlObj->output_tensor_arr_q[i][q] =
+                    vxCreateObjectArray(context, (vx_reference)output_tensors[i], (vx_uint32)num_cameras);
+                status = vxGetStatus((vx_reference)tidlObj->output_tensor_arr_q[i][q]);
+
+                if (status == VX_SUCCESS)
+                {
+                    snprintf(name, VX_MAX_REFERENCE_NAME, "tidl_node_output_tensor_arr_%u_q%u", i, q);
+                    vxSetReferenceName((vx_reference)tidlObj->output_tensor_arr_q[i][q], name);
+
+                    ch0 = (vx_tensor)vxGetObjectArrayItem(tidlObj->output_tensor_arr_q[i][q], 0U);
+                    status = vxGetStatus((vx_reference)ch0);
+                }
+
+                if (status == VX_SUCCESS)
+                {
+                    tidlObj->output_tensor_q[i][q] = ch0;
+                    snprintf(name, VX_MAX_REFERENCE_NAME, "tidl_node_output_tensor_ch0_%u_q%u", i, q);
+                    vxSetReferenceName((vx_reference)ch0, name);
+                }
+
+                if (status != VX_SUCCESS)
+                {
+                    break;
+                }
+            }
+
+            if (output_tensors[i] != NULL)
+            {
+                vxReleaseTensor(&output_tensors[i]);
+            }
+
+            if (status != VX_SUCCESS)
+            {
+                break;
+            }
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        tidlObj->kernel = tivxAddKernelTIDL(context,
+                                            tidlObj->num_input_tensors,
+                                            tidlObj->num_output_tensors);
+        status = vxGetStatus((vx_reference)tidlObj->kernel);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        snprintf(tidlObj->objName, APP_MODULES_MAX_OBJ_NAME_SIZE, "%s", objName);
+    }
+
+    if (status != VX_SUCCESS)
+    {
+        for (i = 0U; i < (vx_uint32)APP_MODULES_MAX_TENSORS; i++)
+        {
+            if (output_tensors[i] != NULL)
+            {
+                vxReleaseTensor(&output_tensors[i]);
+            }
+        }
+    }
+
+    return status;
+}
+
+void app_deinit_tidl_queued(TIDLObj *tidlObj, vx_uint32 bufq_depth)
+{
+    vx_uint32 i = 0U;
+    vx_uint32 q = 0U;
+
+    if (tidlObj == NULL)
+    {
+        return;
+    }
+
+    if (bufq_depth == 0U)
+    {
+        bufq_depth = 1U;
+    }
+
+    if (bufq_depth > (vx_uint32)APP_MODULES_MAX_BUFQ_DEPTH)
+    {
+        bufq_depth = (vx_uint32)APP_MODULES_MAX_BUFQ_DEPTH;
+    }
+
+    for (i = 0U; i < tidlObj->num_output_tensors; i++)
+    {
+        for (q = 0U; q < bufq_depth; q++)
+        {
+            if (tidlObj->output_tensor_q[i][q] != NULL)
+            {
+                vxReleaseTensor(&tidlObj->output_tensor_q[i][q]);
+            }
+        }
+    }
+
+    if (tidlObj->config != NULL)
+    {
+        vxReleaseUserDataObject(&tidlObj->config);
+    }
+
+    if (tidlObj->network != NULL)
+    {
+        vxReleaseUserDataObject(&tidlObj->network);
+    }
+
+    if (tidlObj->createParams != NULL)
+    {
+        vxReleaseUserDataObject(&tidlObj->createParams);
+    }
+
+    if (tidlObj->in_args_arr != NULL)
+    {
+        vxReleaseObjectArray(&tidlObj->in_args_arr);
+    }
+
+    if (tidlObj->out_args_arr != NULL)
+    {
+        vxReleaseObjectArray(&tidlObj->out_args_arr);
+    }
+
+    for (i = 0U; i < tidlObj->num_output_tensors; i++)
+    {
+        for (q = 0U; q < bufq_depth; q++)
+        {
+            if (tidlObj->output_tensor_arr_q[i][q] != NULL)
+            {
+                vxReleaseObjectArray(&tidlObj->output_tensor_arr_q[i][q]);
+            }
+        }
+    }
+}
+
+vx_status app_create_graph_tidl_queued(vx_context context, vx_graph graph, TIDLObj *tidlObj,
+                                       vx_object_array input_tensor_arr[])
+{
+    vx_status status = VX_SUCCESS;
+    vx_reference params[APP_MODULES_MAX_PARAMS];
+    vx_tensor input_tensor[APP_MODULES_MAX_TENSORS] = {NULL};
+    vx_tensor output_tensor[APP_MODULES_MAX_TENSORS] = {NULL};
+    vx_user_data_object inArgs = NULL;
+    vx_user_data_object outArgs = NULL;
+    vx_uint32 i = 0U;
+
+    (void)context;
+
+    tidlObj->node = NULL;
+
+    initParam(params, APP_MODULES_MAX_PARAMS);
+
+    addParam(params, (vx_reference)tidlObj->config);
+    addParam(params, (vx_reference)tidlObj->network);
+    addParam(params, (vx_reference)tidlObj->createParams);
+
+    if (status == VX_SUCCESS)
+    {
+        inArgs = (vx_user_data_object)vxGetObjectArrayItem(tidlObj->in_args_arr, 0U);
+        status = vxGetStatus((vx_reference)inArgs);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        addParam(params, (vx_reference)inArgs);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        outArgs = (vx_user_data_object)vxGetObjectArrayItem(tidlObj->out_args_arr, 0U);
+        status = vxGetStatus((vx_reference)outArgs);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        addParam(params, (vx_reference)outArgs);
+        addParam(params, NULL);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        for (i = 0U; i < tidlObj->num_input_tensors; i++)
+        {
+            input_tensor[i] = (vx_tensor)vxGetObjectArrayItem((vx_object_array)input_tensor_arr[i], 0U);
+            status = vxGetStatus((vx_reference)input_tensor[i]);
+
+            if (status != VX_SUCCESS)
+            {
+                break;
+            }
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        for (i = 0U; i < tidlObj->num_output_tensors; i++)
+        {
+            output_tensor[i] = (vx_tensor)vxGetObjectArrayItem((vx_object_array)tidlObj->output_tensor_arr_q[i][0U], 0U);
+            status = vxGetStatus((vx_reference)output_tensor[i]);
+
+            if (status != VX_SUCCESS)
+            {
+                break;
+            }
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        tidlObj->node = tivxTIDLNode(graph, tidlObj->kernel, params, input_tensor, output_tensor);
+        status = vxGetStatus((vx_reference)tidlObj->node);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        vx_bool replicate[16] = {vx_false_e};
+
+        vxSetReferenceName((vx_reference)tidlObj->node, "tidl_node");
+        vxSetNodeTarget(tidlObj->node, VX_TARGET_STRING, TIVX_TARGET_DSP_C7_1);
+
+#if defined(SOC_J784S4)
+        if (tidlObj->core_id == 1U)
+        {
+            vxSetNodeTarget(tidlObj->node, VX_TARGET_STRING, TIVX_TARGET_DSP_C7_2);
+        }
+        else if (tidlObj->core_id == 2U)
+        {
+            vxSetNodeTarget(tidlObj->node, VX_TARGET_STRING, TIVX_TARGET_DSP_C7_3);
+        }
+        else if (tidlObj->core_id == 3U)
+        {
+            vxSetNodeTarget(tidlObj->node, VX_TARGET_STRING, TIVX_TARGET_DSP_C7_4);
+        }
+#endif
+
+        replicate[TIVX_KERNEL_TIDL_IN_CONFIG_IDX] = vx_false_e;
+        replicate[TIVX_KERNEL_TIDL_IN_NETWORK_IDX] = vx_false_e;
+        replicate[TIVX_KERNEL_TIDL_IN_CREATE_PARAMS_IDX] = vx_false_e;
+        replicate[TIVX_KERNEL_TIDL_IN_IN_ARGS_IDX] = vx_true_e;
+        replicate[TIVX_KERNEL_TIDL_IN_OUT_ARGS_IDX] = vx_true_e;
+        replicate[TIVX_KERNEL_TIDL_IN_TRACE_DATA_IDX] = vx_false_e;
+
+        for (i = 0U; i < tidlObj->num_input_tensors; i++)
+        {
+            replicate[TIVX_KERNEL_TIDL_NUM_BASE_PARAMETERS + i] = vx_true_e;
+        }
+
+        for (i = 0U; i < tidlObj->num_output_tensors; i++)
+        {
+            replicate[TIVX_KERNEL_TIDL_NUM_BASE_PARAMETERS + tidlObj->num_input_tensors + i] = vx_true_e;
+        }
+
+        status = vxReplicateNode(graph,
+                                 tidlObj->node,
+                                 replicate,
+                                 TIVX_KERNEL_TIDL_NUM_BASE_PARAMETERS + tidlObj->num_input_tensors + tidlObj->num_output_tensors);
+    }
+
+    if (inArgs != NULL)
+    {
+        vxReleaseUserDataObject(&inArgs);
+    }
+
+    if (outArgs != NULL)
+    {
+        vxReleaseUserDataObject(&outArgs);
+    }
+
+    for (i = 0U; i < tidlObj->num_input_tensors; i++)
+    {
+        if (input_tensor[i] != NULL)
+        {
+            vxReleaseTensor(&input_tensor[i]);
+        }
+    }
+
+    for (i = 0U; i < tidlObj->num_output_tensors; i++)
+    {
+        if (output_tensor[i] != NULL)
+        {
+            vxReleaseTensor(&output_tensor[i]);
+        }
+    }
+
+    return status;
+}
+
 static vx_user_data_object readConfig(vx_context context, vx_char *config_file,  vx_uint32 *num_input_tensors, vx_uint32 *num_output_tensors, vx_uint8 *check_sum)
 {
     vx_status status = VX_SUCCESS;
@@ -720,6 +1215,110 @@ static void createOutputTensors(vx_context context, vx_user_data_object config, 
   return;
 }
 
+static vx_status createOutputTensorsQ(vx_context context, vx_user_data_object config, vx_tensor output_tensors[])
+{
+    vx_status status = VX_SUCCESS;
+    vx_size output_sizes[APP_MODULES_MAX_TENSOR_DIMS] = {0U};
+    vx_map_id map_id_config = 0U;
+    vx_uint32 id = 0U;
+    tivxTIDLJ7Params *tidlParams = NULL;
+    sTIDL_IOBufDesc_t *ioBufDesc = NULL;
+    vx_bool is_mapped = (vx_bool)vx_false_e;
+
+    if ((context == NULL) || (config == NULL) || (output_tensors == NULL))
+    {
+        printf("Invalid argument passed to createOutputTensors!\n");
+        status = VX_FAILURE;
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = vxGetStatus((vx_reference)context);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = vxGetStatus((vx_reference)config);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = vxMapUserDataObject(config,
+                                     0U,
+                                     sizeof(tivxTIDLJ7Params),
+                                     &map_id_config,
+                                     (void **)&tidlParams,
+                                     VX_READ_ONLY,
+                                     VX_MEMORY_TYPE_HOST,
+                                     0U);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        if (tidlParams != NULL)
+        {
+            is_mapped = (vx_bool)vx_true_e;
+            ioBufDesc = (sTIDL_IOBufDesc_t *)&tidlParams->ioBufDesc;
+        }
+        else
+        {
+            printf("Unable to map config object!\n");
+            status = VX_FAILURE;
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        for (id = 0U; id < ioBufDesc->numOutputBuf; id++)
+        {
+            vx_char name[VX_MAX_REFERENCE_NAME];
+            vx_enum data_type;
+
+            snprintf(name, VX_MAX_REFERENCE_NAME, "tidl_node_output_tensors_%u", id);
+
+            output_sizes[0] = ioBufDesc->outWidth[id] + ioBufDesc->outPadL[id] + ioBufDesc->outPadR[id];
+            output_sizes[1] = ioBufDesc->outHeight[id] + ioBufDesc->outPadT[id] + ioBufDesc->outPadB[id];
+            output_sizes[2] = ioBufDesc->outNumChannels[id];
+
+            data_type = get_vx_tensor_datatype(ioBufDesc->outElementType[id]);
+            output_tensors[id] = vxCreateTensor(context, 3U, output_sizes, data_type, 0U);
+            status = vxGetStatus((vx_reference)output_tensors[id]);
+
+            if (status == VX_SUCCESS)
+            {
+                vxSetReferenceName((vx_reference)output_tensors[id], name);
+            }
+            else
+            {
+                printf("Unable to create output tensor %u!\n", id);
+                break;
+            }
+        }
+    }
+
+    if (is_mapped == (vx_bool)vx_true_e)
+    {
+        vx_status unmap_status = vxUnmapUserDataObject(config, map_id_config);
+
+        if ((status == VX_SUCCESS) && (unmap_status != VX_SUCCESS))
+        {
+            status = unmap_status;
+        }
+    }
+
+    if (status != VX_SUCCESS)
+    {
+        for (id = 0U; id < APP_MODULES_MAX_TENSORS; id++)
+        {
+            if (output_tensors[id] != NULL)
+            {
+                vxReleaseTensor(&output_tensors[id]);
+            }
+        }
+    }
+
+    return status;
+}
 
 static void initParam(vx_reference params[], uint32_t _max_params)
 {

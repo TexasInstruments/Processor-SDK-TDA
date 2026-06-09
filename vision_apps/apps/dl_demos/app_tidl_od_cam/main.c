@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2020-2024 Texas Instruments Incorporated
+ * Copyright (c) 2020-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -80,9 +80,25 @@
 #include "app_draw_detections_module.h"
 #include "app_img_mosaic_module.h"
 #include "app_display_module.h"
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
 #include "app_post_proc_module.h"
+#endif
+#if defined(SOC_AM62A) && defined(QNX)
 #include <screen/screen.h>
+#endif
+
+#if defined(SOC_AM62A) && defined(LINUX)
+/*AM62A: Linux to use DRM/KMS for displaying frames on A53 with zero-copy*/
+#include <utils/drm_wrapper/include/drm_wrapper.h>
+#include <xf86drm.h>
+#include <xf86drmMode.h>
+#include <unistd.h>
+#define  DRM_FORMAT_NV12                0x3231564E
+#endif
+
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
+#include <time.h>
+#include <semaphore.h>
 #endif
 
 #define APP_BUFFER_Q_DEPTH   (4)
@@ -104,7 +120,7 @@ typedef struct {
     ScalerObj         scalerObj;
     PreProcObj        preProcObj;
     TIDLObj           tidlObj;
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
     DrawDetectionsObj drawDetectionsObj;
 #else
     PostProcObj       postProcObj;
@@ -141,10 +157,37 @@ typedef struct {
     int32_t dequeueCnt;
 
     int32_t write_file;
+
 #if defined(SOC_AM62A) && defined(QNX)
+    /* QNX-specific display task variables */
     tivx_task screen_task;
     uint32_t stop_screen_task;
     uint32_t stop_screen_task_done;
+#endif
+
+#if defined(SOC_AM62A) && defined(LINUX)
+    /* Linux-specific DRM variables */
+    void *drm_handle;
+    tivx_task drm_task;
+    uint32_t stop_drm_task;
+    uint32_t stop_drm_task_done;
+#endif
+
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
+    /* Common synchronization variables for AM62A Linux and QNX to eliminate screen tearing.
+     * Both platforms use graph parameters and semaphores for synchronized buffer access. */
+    sem_t disp_frame_ready_sem;  /* Graph task → Display task: frame ready */
+    sem_t disp_frame_done_sem;   /* Display task → Graph task: copy done   */
+#endif
+
+#if defined(SOC_AM62A) && defined(LINUX)
+    /* Linux: Pointer to TIOVX-completed frame the DRM task should blit from */
+    vx_image drm_frame;
+#endif
+
+#if defined(SOC_AM62A) && defined(QNX)
+    /* QNX: Pointer to TIOVX-completed frame the screen task should copy from */
+    vx_image screen_frame;
 #endif
 
 } AppObj;
@@ -163,13 +206,356 @@ static void app_default_param_set(AppObj *obj);
 static void app_update_param_set(AppObj *obj);
 static void add_graph_parameter_by_node_index(vx_graph graph, vx_node node, vx_uint32 node_parameter_index);
 static void app_pipeline_params_defaults(AppObj *obj);
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
 #ifndef x86_64
 static void app_draw_graphics(Draw2D_Handle *handle, Draw2D_BufInfo *draw2dBufInfo, uint32_t update_type);
 #endif
 #endif
 
 static vx_status app_run_graph_for_one_frame_pipeline(AppObj *obj, vx_int32 frame_id);
+
+#if defined(SOC_AM62A) && defined(LINUX)
+/**
+ * \brief Copy a smaller NV12 image into the center of a larger NV12 canvas
+ *
+ * The canvas is pre-filled with black (Y=0, UV=128). This function copies
+ * the source image into the center, creating a letterboxed output.
+ */
+static void app_drm_letterbox_nv12(vx_image canvas, vx_image src,
+                                    vx_uint32 canvas_w, vx_uint32 canvas_h,
+                                    vx_uint32 src_w, vx_uint32 src_h)
+{
+    vx_rectangle_t rect;
+    vx_imagepatch_addressing_t src_addr, dst_addr;
+    vx_map_id src_map, dst_map;
+    void *src_ptr = NULL, *dst_ptr = NULL;
+    vx_uint32 offset_x, offset_y;
+    vx_uint32 row;
+
+    offset_x = (canvas_w - src_w) / 2;
+    offset_y = (canvas_h - src_h) / 2;
+
+    /* Ensure offsets are even (NV12 chroma subsampling requirement) */
+    offset_x &= ~1u;
+    offset_y &= ~1u;
+
+    /* Copy Y plane */
+    rect.start_x = 0; rect.start_y = 0;
+    rect.end_x = src_w; rect.end_y = src_h;
+    vxMapImagePatch(src, &rect, 0, &src_map, &src_addr, &src_ptr,
+                    VX_READ_ONLY, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+
+    rect.end_x = canvas_w; rect.end_y = canvas_h;
+    vxMapImagePatch(canvas, &rect, 0, &dst_map, &dst_addr, &dst_ptr,
+                    VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+
+    if (src_ptr != NULL && dst_ptr != NULL)
+    {
+        for (row = 0; row < src_h; row++)
+        {
+            uint8_t *s = (uint8_t *)src_ptr + row * src_addr.stride_y;
+            uint8_t *d = (uint8_t *)dst_ptr + (offset_y + row) * dst_addr.stride_y + offset_x;
+            memcpy(d, s, src_w);
+        }
+    }
+
+    vxUnmapImagePatch(src, src_map);
+    vxUnmapImagePatch(canvas, dst_map);
+
+    /* Copy UV plane */
+    rect.start_x = 0; rect.start_y = 0;
+    rect.end_x = src_w; rect.end_y = src_h;
+    vxMapImagePatch(src, &rect, 1, &src_map, &src_addr, &src_ptr,
+                    VX_READ_ONLY, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+
+    rect.end_x = canvas_w; rect.end_y = canvas_h;
+    vxMapImagePatch(canvas, &rect, 1, &dst_map, &dst_addr, &dst_ptr,
+                    VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+
+    if (src_ptr != NULL && dst_ptr != NULL)
+    {
+        vx_uint32 uv_src_h = src_h / 2;
+        vx_uint32 uv_offset_y = offset_y / 2;
+
+        for (row = 0; row < uv_src_h; row++)
+        {
+            uint8_t *s = (uint8_t *)src_ptr + row * src_addr.stride_y;
+            uint8_t *d = (uint8_t *)dst_ptr + (uv_offset_y + row) * dst_addr.stride_y + offset_x;
+            memcpy(d, s, src_w);
+        }
+    }
+
+    vxUnmapImagePatch(src, src_map);
+    vxUnmapImagePatch(canvas, dst_map);
+}
+
+/**
+ * \brief Fill an NV12 image with black (Y=0, UV=128)
+ */
+static void app_drm_clear_nv12(vx_image image, vx_uint32 w, vx_uint32 h)
+{
+    vx_rectangle_t rect;
+    vx_imagepatch_addressing_t addr;
+    vx_map_id map;
+    void *ptr = NULL;
+    vx_uint32 row;
+
+    rect.start_x = 0; rect.start_y = 0;
+    rect.end_x = w; rect.end_y = h;
+
+    /* Y plane: fill with 0 (black) */
+    vxMapImagePatch(image, &rect, 0, &map, &addr, &ptr,
+                    VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+    if (ptr != NULL)
+    {
+        for (row = 0; row < h; row++)
+        {
+            memset((uint8_t *)ptr + row * addr.stride_y, 0, w);
+        }
+    }
+    vxUnmapImagePatch(image, map);
+
+    /* UV plane: fill with 128 (neutral chroma) */
+    vxMapImagePatch(image, &rect, 1, &map, &addr, &ptr,
+                    VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+    if (ptr != NULL)
+    {
+        for (row = 0; row < h / 2; row++)
+        {
+            memset((uint8_t *)ptr + row * addr.stride_y, 128, w);
+        }
+    }
+    vxUnmapImagePatch(image, map);
+}
+
+/**
+ * \brief Linux DRM display task function
+ *
+ * Implements synchronized display using DRM/KMS similar to app_single_cam.
+ * Uses double-buffered canvases and semaphore-based synchronization with
+ * the graph task to eliminate screen tearing.
+ */
+int32_t app_run_drm_display(AppObj *obj)
+{
+    int32_t status = 0;
+    app_drm_wrapper_cfg_t drm_cfg;
+    app_drm_wrapper_handle_t *drm_handle = NULL;
+    vx_uint32 width, height;
+    vx_df_image df;
+    uint32_t drm_pix_format;
+    uint32_t buf_idx = 0;
+    vx_image canvas[2] = {NULL, NULL};
+    uint32_t canvas_w, canvas_h;
+    int needs_letterbox = 0;
+    uint32_t disp_w = 1920;
+    uint32_t disp_h = 1080;
+    uint32_t i;
+    vx_image display_image;
+
+    /* Query mosaic output image properties */
+    display_image = obj->imgMosaicObj.output_image[0];
+    vxQueryImage(display_image, VX_IMAGE_WIDTH, &width, sizeof(vx_uint32));
+    vxQueryImage(display_image, VX_IMAGE_HEIGHT, &height, sizeof(vx_uint32));
+    vxQueryImage(display_image, VX_IMAGE_FORMAT, &df, sizeof(vx_df_image));
+
+    printf("[DRM] DEBUG: display_image dimensions = %u x %u, format = 0x%x\n", width, height, df);
+
+    /* Map TIOVX format to DRM format */
+    if (VX_DF_IMAGE_NV12 == df)
+    {
+        drm_pix_format = DRM_FORMAT_NV12;
+    }
+    else
+    {
+        printf("[DRM] Unsupported pixel format 0x%x, defaulting to NV12\n", df);
+        drm_pix_format = DRM_FORMAT_NV12;
+    }
+
+    /* Query actual display resolution from DRM CRTC */
+    {
+        int tmp_fd;
+        drmModeCrtcPtr crtc;
+
+        appDrmWrapperInitCfg(&drm_cfg);
+
+        tmp_fd = drmOpen("tidss", NULL);
+        if (tmp_fd >= 0)
+        {
+            crtc = drmModeGetCrtc(tmp_fd, drm_cfg.crtc_id);
+            if (crtc != NULL && crtc->mode_valid)
+            {
+                disp_w = crtc->mode.hdisplay;
+                disp_h = crtc->mode.vdisplay;
+                drmModeFreeCrtc(crtc);
+            }
+            close(tmp_fd);
+        }
+
+        printf("[DRM] Display resolution: %ux%u, Image resolution: %ux%u\n",
+               disp_w, disp_h, width, height);
+    }
+
+    needs_letterbox = (width < disp_w || height < disp_h);
+    canvas_w = needs_letterbox ? disp_w : width;
+    canvas_h = needs_letterbox ? disp_h : height;
+
+    if (needs_letterbox)
+    {
+        printf("[DRM] Letterbox mode: %ux%u centered in %ux%u\n",
+               width, height, canvas_w, canvas_h);
+    }
+
+    /* Allocate two canvases for double buffering */
+    for (i = 0; i < 2u; i++)
+    {
+        canvas[i] = vxCreateImage(obj->context, canvas_w, canvas_h,
+                                  VX_DF_IMAGE_NV12);
+        if (canvas[i] == NULL)
+        {
+            printf("[DRM] Failed to create canvas[%u]\n", i);
+            goto cleanup_canvas;
+        }
+        app_drm_clear_nv12(canvas[i], canvas_w, canvas_h);
+        printf("[DRM] DEBUG: letterboxing canvas[%u] (%u x %u) with image (%u x %u)\n", i, canvas_w, canvas_h, width, height);
+        app_drm_letterbox_nv12(canvas[i], display_image,
+                               canvas_w, canvas_h, width, height);
+    }
+
+    /* Initialize DRM wrapper */
+    drm_cfg.width      = canvas_w;
+    drm_cfg.height     = canvas_h;
+    drm_cfg.pix_format = drm_pix_format;
+    drm_cfg.bufq_depth = 2;
+
+    drm_handle = appDrmWrapperCreate(&drm_cfg);
+    if (drm_handle == NULL)
+    {
+        printf("[DRM] Failed to create DRM wrapper\n");
+        goto cleanup_canvas;
+    }
+
+    obj->drm_handle = (void *)drm_handle;
+
+    /* Register both canvases */
+    for (i = 0; i < 2u; i++)
+    {
+        status = appDrmWrapperRegisterBuffer(drm_handle, canvas[i], i);
+        if (status < 0)
+        {
+            printf("[DRM] Failed to register canvas[%u]\n", i);
+            appDrmWrapperDelete(drm_handle);
+            obj->drm_handle = NULL;
+            goto cleanup_canvas;
+        }
+    }
+
+    printf("[DRM] DRM display initialized: %ux%u, double-buffered\n",
+           canvas_w, canvas_h);
+
+    /* Main display loop - synchronized with TIOVX pipeline */
+    buf_idx = 0;
+    while (1)
+    {
+        vx_image src_frame;
+        struct timespec ts;
+
+        /* Wait for graph task to provide completed buffer */
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += 1;
+
+        if (sem_timedwait(&obj->disp_frame_ready_sem, &ts) != 0)
+        {
+            if (obj->stop_drm_task == 1) { break; }
+            continue;
+        }
+
+        src_frame = obj->drm_frame;
+
+        /* Ensure back canvas is no longer being scanned out */
+            appDrmWrapperWaitFlipDone(drm_handle);
+
+        /* Blit completed frame into the safe back buffer */
+        app_drm_letterbox_nv12(canvas[buf_idx], src_frame,
+                               canvas_w, canvas_h, width, height);
+
+        /* Signal graph task: blit done, buffer may be re-enqueued */
+        sem_post(&obj->disp_frame_done_sem);
+
+        status = appDrmWrapperRender(drm_handle, buf_idx);
+        if (status < 0)
+        {
+           printf("[DRM] Render failed\n");
+           break;
+        }
+
+        buf_idx = (buf_idx + 1u) % 2u;
+
+        if (obj->stop_drm_task == 1)
+        {
+            break;
+        }
+    }
+
+    /* Unblock the graph task if it is blocked */
+    sem_post(&obj->disp_frame_done_sem);
+
+cleanup_canvas:
+    for (i = 0; i < 2u; i++)
+    {
+        if (canvas[i] != NULL)
+        {
+            vxReleaseImage(&canvas[i]);
+            canvas[i] = NULL;
+        }
+    }
+
+    return status;
+}
+
+static void app_run_drm_task(void *app_var)
+{
+    AppObj *obj = (AppObj *)app_var;
+
+    app_run_drm_display(obj);
+
+    obj->stop_drm_task_done = 1;
+}
+
+static int32_t app_drm_task_create(AppObj *obj)
+{
+    tivx_task_create_params_t params;
+    int32_t status;
+
+    tivxTaskSetDefaultCreateParams(&params);
+    params.task_main = app_run_drm_task;
+    params.app_var = obj;
+
+    obj->stop_drm_task_done = 0;
+    obj->stop_drm_task = 0;
+    obj->drm_handle = NULL;
+
+    status = tivxTaskCreate(&obj->drm_task, &params);
+
+    return status;
+}
+
+static void app_run_drm_task_delete(AppObj *obj)
+{
+    while (obj->stop_drm_task_done == 0)
+    {
+        tivxTaskWaitMsecs(100);
+    }
+
+    /* Clean up DRM resources */
+    if (obj->drm_handle != NULL)
+    {
+        appDrmWrapperDelete((app_drm_wrapper_handle_t *)obj->drm_handle);
+        obj->drm_handle = NULL;
+    }
+
+    tivxTaskDelete(&obj->drm_task);
+}
+#endif
 
 #if defined(SOC_AM62A) && defined(QNX)
 int32_t app_run_screen(AppObj *obj)
@@ -192,149 +578,200 @@ int32_t app_run_screen(AppObj *obj)
     /* connect to screen */
     err = screen_create_context(&screen_ctx, SCREEN_APPLICATION_CONTEXT);
     if(err != 0) {
-        printf("Failed to create screen context\n");
+        printf("[QNX Screen] Failed to create screen context\n");
+        return err;
     }
 
     /* create a window */
     err = screen_create_window(&screen_win, screen_ctx);
     if(err != 0) {
-        printf("Failed to create screen window\n");
+        printf("[QNX Screen] Failed to create screen window\n");
+        return err;
     }
 
     err = screen_set_window_property_iv(screen_win, SCREEN_PROPERTY_USAGE, &usage);
     if(err != 0) {
-        printf("Failed to set usage property\n");
+        printf("[QNX Screen] Failed to set usage property\n");
+        return err;
     }
     err = screen_set_window_property_iv(screen_win, SCREEN_PROPERTY_FORMAT, &screenFormat);
     if(err != 0) {
-        printf("Failed to set format prpoerty\n");
+        printf("[QNX Screen] Failed to set format property\n");
+        return err;
     }
 
     /* create screen buffers */
     int nbuffers = 2;
     err = screen_create_window_buffers(screen_win, nbuffers);
     if(err != 0) {
-        printf("Failed to create window buffer\n");
+        printf("[QNX Screen] Failed to create window buffer\n");
+        return err;
     }
 
+    printf("[QNX Screen] Display initialized\n");
+
     while(1) {
+        vx_image source_image;
+        struct timespec ts;
+
+        /* SYNCHRONIZED ACCESS: Wait for graph task to provide completed buffer */
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += 1;  /* 1-second timeout */
+
+        /* Wait for signal from graph task: "frame ready" */
+        if (sem_timedwait(&obj->disp_frame_ready_sem, &ts) != 0)
+        {
+            /* Timeout - check if we should exit */
+            if(obj->stop_screen_task == 1) {
+                break;
+            }
+            continue;  /* Try again */
+        }
+
+        /* Graph task has provided a completed buffer */
+        source_image = obj->screen_frame;
+
+        /* Get screen buffer properties */
         int buffer_size[2];
         err = screen_get_window_property_iv(screen_win, SCREEN_PROPERTY_BUFFER_SIZE, buffer_size);
         if(err != 0) {
-            printf("Failed to get window buffer size\n");
+            printf("[QNX Screen] Failed to get window buffer size\n");
+            break;
         }
 
         screen_buffer_t screen_buf[2];
         err = screen_get_window_property_pv(screen_win, SCREEN_PROPERTY_RENDER_BUFFERS, (void **)&screen_buf);
         if(err != 0) {
-            printf("Failed to get window buffer\n");
+            printf("[QNX Screen] Failed to get window buffer\n");
+            break;
         }
 
         /* obtain pointers to the buffers */
         void *ptr1 = NULL;
         err = screen_get_buffer_property_pv(screen_buf[0], SCREEN_PROPERTY_POINTER, (void **)&ptr1);
         if(err != 0) {
-            printf("Failed to get buffer pointer\n");
+            printf("[QNX Screen] Failed to get buffer pointer\n");
+            break;
         }
 
         int buf_stride1 = 0;
         err = screen_get_buffer_property_iv(screen_buf[0], SCREEN_PROPERTY_STRIDE, &buf_stride1);
         if(err != 0) {
-           printf("Failed to get buffer stride1\n");
+           printf("[QNX Screen] Failed to get buffer stride\n");
+           break;
         }
 
-        /* copy frames from OVX buffer to screen buffer*/
-        vx_image display_image = (vx_image)vxGetObjectArrayItem((vx_object_array)obj->postProcObj.output_arr[0], 0);
-        vxQueryImage(display_image, VX_IMAGE_WIDTH, &width, sizeof(vx_uint32));
-        vxQueryImage(display_image, VX_IMAGE_HEIGHT, &height, sizeof(vx_uint32));
-        vxQueryImage(display_image, VX_IMAGE_FORMAT, &df, sizeof(vx_df_image));
+        /* Query source image properties */
+        vxQueryImage(source_image, VX_IMAGE_WIDTH, &width, sizeof(vx_uint32));
+        vxQueryImage(source_image, VX_IMAGE_HEIGHT, &height, sizeof(vx_uint32));
+        vxQueryImage(source_image, VX_IMAGE_FORMAT, &df, sizeof(vx_df_image));
 
-        if(VX_DF_IMAGE_NV12 == df) {
+        if(VX_DF_IMAGE_NV12 == df)
+        {
             num_bytes_per_4pixels = 4;
-        } else if(TIVX_DF_IMAGE_NV12_P12 == df) {
+        }
+        else if(TIVX_DF_IMAGE_NV12_P12 == df)
+        {
             num_bytes_per_4pixels = 6;
-        } else {
+        }
+        else
+        {
             num_bytes_per_4pixels = 8;
         }
+
         rect.start_x = 0;
         rect.start_y = 0;
         rect.end_x = width;
         rect.end_y = height;
 
-        if (0 == strcmp(obj->sensorObj.sensor_name, SENSOR_OV2312_UB953_LI)) {
+        if (0 == strcmp(obj->sensorObj.sensor_name, SENSOR_OV2312_UB953_LI))
+        {
             /*OV2312 raw frame has 1600 width, moving the frame to middle of 1920 width display*/
             ptr1 += (1920-1600)/2;
             rect.end_x = 1600;
             memset(ptr1, 0x00000000, buffer_size[0]*buffer_size[1]);
         }
 
-        vxMapImagePatch(display_image,
+        /* Copy Y plane from TIOVX buffer to screen buffer */
+        vxMapImagePatch(source_image,
             &rect,
-            0,
+            0,  /* Plane 0 = Y */
             &map_id1,
             &image_addr,
             &data_ptr1,
-            VX_WRITE_ONLY,
+            VX_READ_ONLY,
             VX_MEMORY_TYPE_HOST,
             VX_NOGAP_X
             );
 
-        if(!data_ptr1) {
-            printf("data_ptr1 is NULL \n");
-            return -1;
+        if(!data_ptr1)
+        {
+            printf("[QNX Screen] data_ptr1 is NULL\n");
+            break;
         }
 
         imgaddr_width  = image_addr.dim_x;
         imgaddr_height = image_addr.dim_y;
         imgaddr_stride = image_addr.stride_y;
 
-        for(i=0;i<height;i++)
+        for(i=0; i<height; i++)
         {
             memcpy(ptr1, data_ptr1, imgaddr_width*num_bytes_per_4pixels/4);
             data_ptr1 += imgaddr_stride;
-            ptr1 += (buf_stride1);
+            ptr1 += buf_stride1;
         }
-        vxUnmapImagePatch(display_image, map_id1);
+        vxUnmapImagePatch(source_image, map_id1);
 
-        if(VX_DF_IMAGE_NV12 == df || TIVX_DF_IMAGE_NV12_P12 == df) {
-            vxMapImagePatch(display_image,
+        /* Copy UV plane if NV12 format */
+        if(VX_DF_IMAGE_NV12 == df || TIVX_DF_IMAGE_NV12_P12 == df)
+        {
+            vxMapImagePatch(source_image,
                 &rect,
-                1,
+                1,  /* Plane 1 = UV */
                 &map_id2,
                 &image_addr,
                 &data_ptr2,
-                VX_WRITE_ONLY,
+                VX_READ_ONLY,
                 VX_MEMORY_TYPE_HOST,
                 VX_NOGAP_X
                 );
 
-            if(!data_ptr2) {
-                printf("data_ptr2 is NULL \n");
-                return -1;
+            if(!data_ptr2)
+            {
+                printf("[QNX Screen] data_ptr2 is NULL\n");
+                break;
             }
 
             imgaddr_width  = image_addr.dim_x;
             imgaddr_height = image_addr.dim_y;
             imgaddr_stride = image_addr.stride_y;
 
-            for(i=0;i<imgaddr_height/2;i++)
+            for(i=0; i<imgaddr_height/2; i++)
             {
                 memcpy(ptr1, data_ptr2, imgaddr_width*num_bytes_per_4pixels/4);
                 data_ptr2 += imgaddr_stride;
                 ptr1 += buf_stride1;
             }
-            vxUnmapImagePatch(display_image, map_id2);
+            vxUnmapImagePatch(source_image, map_id2);
         }
 
+        /* Signal graph task: copy done, buffer can be re-enqueued */
+        sem_post(&obj->disp_frame_done_sem);
+
+        /* Post frame to display */
         err = screen_post_window(screen_win, screen_buf[0], 0, NULL, 0);
         if(err != 0) {
-            printf("Failed to post window\n");
+            printf("[QNX Screen] Failed to post window\n");
+            break;
         }
 
         if(obj->stop_screen_task == 1) {
             break;
         }
     }
+
+    /* Unblock the graph task if it is blocked on disp_frame_done_sem during exit */
+    sem_post(&obj->disp_frame_done_sem);
 
     return err;
 }
@@ -507,6 +944,9 @@ static vx_status app_run_graph_interactive(AppObj *obj)
 #if defined(SOC_AM62A) && defined(QNX)
                     obj->stop_screen_task = 1;
 #endif
+#if defined(SOC_AM62A) && defined(LINUX)
+                    obj->stop_drm_task = 1;
+#endif
                     done = 1;
                     break;
             }
@@ -514,6 +954,9 @@ static vx_status app_run_graph_interactive(AppObj *obj)
         app_run_task_delete(obj);
 #if defined(SOC_AM62A) && defined(QNX)
         app_run_screen_task_delete(obj);
+#endif
+#if defined(SOC_AM62A) && defined(LINUX)
+        app_run_drm_task_delete(obj);
 #endif
     }
     return status;
@@ -651,7 +1094,7 @@ static void app_parse_cfg_file(AppObj *obj, vx_char *cfg_file_name)
                     }
                 }
             }
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
             else
             if(strcmp(token, "viz_th")==0)
             {
@@ -901,7 +1344,7 @@ vx_status app_tidl_od_cam_main(vx_int32 argc, vx_char* argv[])
 static vx_status app_init(AppObj *obj)
 {
     vx_status status = VX_SUCCESS;
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
     app_grpx_init_prms_t grpx_prms;
 #endif
     /* Create OpenVx Context */
@@ -913,7 +1356,7 @@ static vx_status app_init(AppObj *obj)
         tivxHwaLoadKernels(obj->context);
         tivxVideoIOLoadKernels(obj->context);
         tivxImagingLoadKernels(obj->context);
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
         tivxEdgeaiImgProcLoadKernels(obj->context);
 #else
         tivxImgProcLoadKernels(obj->context);
@@ -940,14 +1383,14 @@ static vx_status app_init(AppObj *obj)
     app_init_ldc(obj->context, &obj->ldcObj, &obj->sensorObj, "ldc_obj", obj->sensorObj.num_cameras_enabled);
     APP_PRINTF("LDC init done!\n");
 
-#if defined(SOC_AM62A) && defined(QNX)
-    obj->scalerObj.output[0].width  = obj->ldcObj.table_width / 2;
-    obj->scalerObj.output[0].height = obj->ldcObj.table_height / 2;
+#if (defined(SOC_AM62A) && (defined(QNX) || defined(LINUX)))
+    /* This acts as an image pad for the post_proc module*/
+    obj->scalerObj.output[0].width  = obj->ldcObj.table_width;
+    obj->scalerObj.output[0].height = obj->ldcObj.table_height;
 
-    /*For Object Detection, TIDL expects input image of resolution 1024x512
-      Resizing 1920x1080 to 1024*512 */
-    obj->scalerObj.output[1].width  = obj->ldcObj.table_width / 1.875;
-    obj->scalerObj.output[1].height = obj->ldcObj.table_height / 2.109;
+    /*For Object Detection, TIDL expects input image of resolution 416x416*/
+    obj->scalerObj.output[1].width  = 416;
+    obj->scalerObj.output[1].height = 416;
 #endif
 
     printf("Scaler output1 width   = %d\n", obj->scalerObj.output[0].width);
@@ -979,7 +1422,7 @@ static vx_status app_init(AppObj *obj)
     app_init_pre_proc(obj->context, &obj->preProcObj, "pre_proc_obj");
     APP_PRINTF("Pre Proc Init Done! \n");
 
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
     /* Update ioBufDesc in draw detections object */
     app_update_draw_detections(&obj->drawDetectionsObj, obj->tidlObj.config);
     APP_PRINTF("Draw detections Update Done! \n");
@@ -997,10 +1440,10 @@ static vx_status app_init(AppObj *obj)
     app_init_img_mosaic(obj->context, &obj->imgMosaicObj, "img_mosaic_obj", APP_BUFFER_Q_DEPTH);
     APP_PRINTF("Img Mosaic init done!\n");
 
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
     app_init_display(obj->context, &obj->displayObj, "display_obj");
     APP_PRINTF("Display init done!\n");
 
-#if !(defined(SOC_AM62A) && defined(QNX))
     #ifndef x86_64
     if(obj->displayObj.display_option == 1)
     {
@@ -1014,11 +1457,34 @@ static vx_status app_init(AppObj *obj)
     appPerfPointSetName(&obj->total_perf , "TOTAL");
     appPerfPointSetName(&obj->fileio_perf, "FILEIO");
 
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
+    /* Initialize synchronization semaphores for both Linux and QNX */
+    sem_init(&obj->disp_frame_ready_sem, 0, 0);
+    sem_init(&obj->disp_frame_done_sem,  0, 0);
+#endif
+
+#if defined(SOC_AM62A) && defined(LINUX)
+    obj->drm_handle = NULL;
+    obj->drm_frame = NULL;
+    obj->stop_drm_task = 0;
+    obj->stop_drm_task_done = 0;
+#endif
+
+#if defined(SOC_AM62A) && defined(QNX)
+    obj->screen_frame = NULL;
+#endif
+
     return status;
 }
 
 static void app_deinit(AppObj *obj)
 {
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
+    /* Cleanup synchronization semaphores for both Linux and QNX */
+    sem_destroy(&obj->disp_frame_ready_sem);
+    sem_destroy(&obj->disp_frame_done_sem);
+#endif
+
     app_deinit_sensor(&obj->sensorObj);
     APP_PRINTF("Sensor deinit done!\n");
 
@@ -1043,8 +1509,8 @@ static void app_deinit(AppObj *obj)
     app_deinit_tidl(&obj->tidlObj);
     APP_PRINTF("TIDL deinit done!\n");
 
-#if defined(SOC_AM62A) && defined(QNX)
-    app_deinit_post_proc(&obj->postProcObj, APP_BUFFER_Q_DEPTH);
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
+    app_deinit_post_proc(obj->context, &obj->postProcObj, APP_BUFFER_Q_DEPTH);
     APP_PRINTF("Post proc deinit done!\n");
 #else
     app_deinit_draw_detections(&obj->drawDetectionsObj);
@@ -1053,7 +1519,7 @@ static void app_deinit(AppObj *obj)
 
     app_deinit_img_mosaic(&obj->imgMosaicObj, APP_BUFFER_Q_DEPTH);
     APP_PRINTF("Img Mosaic deinit done!\n");
-
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
     app_deinit_display(&obj->displayObj);
     APP_PRINTF("Display deinit done!\n");
 
@@ -1063,12 +1529,12 @@ static void app_deinit(AppObj *obj)
         appGrpxDeInit();
     }
     #endif
-
+#endif
     tivxTIDLUnLoadKernels(obj->context);
     tivxHwaUnLoadKernels(obj->context);
     tivxVideoIOUnLoadKernels(obj->context);
     tivxImagingUnLoadKernels(obj->context);
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
     tivxEdgeaiImgProcUnLoadKernels(obj->context);
 #else
     tivxImgProcUnLoadKernels(obj->context);
@@ -1103,7 +1569,7 @@ static void app_delete_graph(AppObj *obj)
     app_delete_tidl(&obj->tidlObj);
     APP_PRINTF("TIDL delete done!\n");
 
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
     app_delete_post_proc(&obj->postProcObj);
     APP_PRINTF("Post Proc delete done!\n");
 #else
@@ -1113,10 +1579,10 @@ static void app_delete_graph(AppObj *obj)
 
     app_delete_img_mosaic(&obj->imgMosaicObj);
     APP_PRINTF("Img Mosaic delete done!\n");
-
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
     app_delete_display(&obj->displayObj);
     APP_PRINTF("Display delete done!\n");
-
+#endif
     vxReleaseGraph(&obj->graph);
     APP_PRINTF("Graph delete done!\n");
 }
@@ -1164,7 +1630,7 @@ static vx_status app_create_graph(AppObj *obj)
 
     if(status == VX_SUCCESS)
     {
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
         app_create_graph_pre_proc(obj->graph, &obj->preProcObj, obj->scalerObj.output[0].arr);
 #else
         app_create_graph_pre_proc(obj->graph, &obj->preProcObj, obj->scalerObj.output[1].arr);
@@ -1180,8 +1646,10 @@ static vx_status app_create_graph(AppObj *obj)
 
     if(status == VX_SUCCESS)
     {
-#if defined(SOC_AM62A) && defined(QNX)
-        status = app_create_graph_post_proc(obj->graph, &obj->postProcObj, obj->tidlObj.out_args_arr, obj->tidlObj.output_tensor_arr[0], obj->ldcObj.output_arr);
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
+    /*obj->scalerObj.output[0].arr gives the required image pad and obj->tidlObj.output_tensor_arr[0] acts as the required tensor
+      pad for the post_proc module*/
+        status = app_create_graph_post_proc(obj->graph, &obj->postProcObj, obj->tidlObj.out_args_arr, obj->tidlObj.output_tensor_arr[0], obj->scalerObj.output[0].arr);
         APP_PRINTF("Post proc graph done!\n");
 #else
         app_create_graph_draw_detections(obj->graph, &obj->drawDetectionsObj, obj->tidlObj.output_tensor_arr[0], obj->scalerObj.output[1].arr);
@@ -1190,7 +1658,7 @@ static vx_status app_create_graph(AppObj *obj)
     }
 
     vx_int32 idx = 0;
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
     obj->imgMosaicObj.input_arr[idx++] = obj->drawDetectionsObj.output_image_arr;
 #else
     obj->imgMosaicObj.input_arr[idx++] = obj->scalerObj.output[0].arr;
@@ -1205,7 +1673,7 @@ static vx_status app_create_graph(AppObj *obj)
 
     if(status == VX_SUCCESS)
     {
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
         status = app_create_graph_display(obj->graph, &obj->displayObj, obj->imgMosaicObj.output_image[0]);
         APP_PRINTF("Display graph done!\n");
 #endif
@@ -1221,32 +1689,74 @@ static vx_status app_create_graph(AppObj *obj)
         graph_parameters_queue_params_list[graph_parameter_index].refs_list = (vx_reference*)&obj->captureObj.raw_image_arr[0];
         graph_parameter_index++;
 
-        vxSetGraphScheduleConfig(obj->graph,
-                VX_GRAPH_SCHEDULE_MODE_QUEUE_AUTO,
-                graph_parameter_index,
-                graph_parameters_queue_params_list);
-
-        tivxSetGraphPipelineDepth(obj->graph, APP_PIPELINE_DEPTH);
-
-        tivxSetNodeParameterNumBufByIndex(obj->vissObj.node, 6, APP_BUFFER_Q_DEPTH);
-        tivxSetNodeParameterNumBufByIndex(obj->vissObj.node, 9, APP_BUFFER_Q_DEPTH);
-        tivxSetNodeParameterNumBufByIndex(obj->aewbObj.node, 4, APP_BUFFER_Q_DEPTH);
-
-        tivxSetNodeParameterNumBufByIndex(obj->ldcObj.node, 7, APP_BUFFER_Q_DEPTH);
-
-        /*This output is accessed slightly later in the pipeline by mosaic node so queue depth is larger */
-        tivxSetNodeParameterNumBufByIndex(obj->scalerObj.node, 1, 6);
-        tivxSetNodeParameterNumBufByIndex(obj->scalerObj.node, 2, 6);
-
-        tivxSetNodeParameterNumBufByIndex(obj->preProcObj.node, 2, APP_BUFFER_Q_DEPTH);
-
-        tivxSetNodeParameterNumBufByIndex(obj->tidlObj.node, 7, APP_BUFFER_Q_DEPTH);
-
-#if !(defined(SOC_AM62A) && defined(QNX))
-        tivxSetNodeParameterNumBufByIndex(obj->drawDetectionsObj.node, 3, APP_BUFFER_Q_DEPTH);
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
+        /* For AM62A (Linux and QNX): Expose postProc output (parameter index 2) as graph parameter
+         * to enable synchronized access for display and eliminate screen tearing */
+        add_graph_parameter_by_node_index(obj->graph, obj->postProcObj.node, 2);
+        obj->postProcObj.graph_parameter_index = graph_parameter_index;
+        graph_parameters_queue_params_list[graph_parameter_index].graph_parameter_index = graph_parameter_index;
+        graph_parameters_queue_params_list[graph_parameter_index].refs_list_size = APP_BUFFER_Q_DEPTH;
+        graph_parameters_queue_params_list[graph_parameter_index].refs_list = (vx_reference*)&obj->postProcObj.results[0];
+        graph_parameter_index++;
 #endif
 
-        tivxSetNodeParameterNumBufByIndex(obj->imgMosaicObj.node, 1, APP_BUFFER_Q_DEPTH);
+        if(status == VX_SUCCESS)
+        {
+            status = vxSetGraphScheduleConfig(obj->graph,
+                                VX_GRAPH_SCHEDULE_MODE_QUEUE_AUTO,
+                                graph_parameter_index,
+                                graph_parameters_queue_params_list);
+        }
+        if(status == VX_SUCCESS)
+        {
+            status = tivxSetGraphPipelineDepth(obj->graph, APP_PIPELINE_DEPTH);
+        }
+        if(status == VX_SUCCESS)
+        {
+            status = tivxSetNodeParameterNumBufByIndex(obj->vissObj.node, 6, APP_BUFFER_Q_DEPTH);
+        }
+        if(status == VX_SUCCESS)
+        {
+            status = tivxSetNodeParameterNumBufByIndex(obj->vissObj.node, 9, APP_BUFFER_Q_DEPTH);
+        }
+        if(status == VX_SUCCESS)
+        {
+            status = tivxSetNodeParameterNumBufByIndex(obj->aewbObj.node, 4, APP_BUFFER_Q_DEPTH);
+        }
+        if(status == VX_SUCCESS)
+        {
+            status = tivxSetNodeParameterNumBufByIndex(obj->ldcObj.node, 7, APP_BUFFER_Q_DEPTH);
+        }
+
+        /*This output is accessed slightly later in the pipeline by mosaic node so queue depth is larger */
+        if(status == VX_SUCCESS)
+        {
+            status = tivxSetNodeParameterNumBufByIndex(obj->scalerObj.node, 1, 6);
+        }
+        if(status == VX_SUCCESS)
+        {
+            status = tivxSetNodeParameterNumBufByIndex(obj->scalerObj.node, 2, 6);
+        }
+        if(status == VX_SUCCESS)
+        {
+            status = tivxSetNodeParameterNumBufByIndex(obj->preProcObj.node, 2, APP_BUFFER_Q_DEPTH);
+        }
+        if(status == VX_SUCCESS)
+        {
+            status = tivxSetNodeParameterNumBufByIndex(obj->tidlObj.node, 7, APP_BUFFER_Q_DEPTH);
+        }
+
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
+        if(status == VX_SUCCESS)
+        {
+            status = tivxSetNodeParameterNumBufByIndex(obj->drawDetectionsObj.node, 3, APP_BUFFER_Q_DEPTH);
+        }
+#endif
+
+        if(status == VX_SUCCESS)
+        {
+            status = tivxSetNodeParameterNumBufByIndex(obj->imgMosaicObj.node, 1, APP_BUFFER_Q_DEPTH);
+        }
 
         APP_PRINTF("Pipeline params setup done!\n");
     }
@@ -1299,14 +1809,26 @@ static vx_status app_run_graph_for_one_frame_pipeline(AppObj *obj, vx_int32 fram
     vx_status status = VX_SUCCESS;
 
     appPerfPointBegin(&obj->total_perf);
+
     CaptureObj *captureObj = &obj->captureObj;
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
+    PostProcObj *postProcObj = &obj->postProcObj;
+#endif
 
     if(obj->pipeline <= 0)
     {
-        /* Enqueue outpus */
+        /* Enqueue outputs */
         /* Enqueue inputs during pipeup dont execute */
-        vxGraphParameterEnqueueReadyRef(obj->graph, captureObj->graph_parameter_index, (vx_reference*)&captureObj->raw_image_arr[obj->enqueueCnt], 1);
-
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
+        if(status == VX_SUCCESS)
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, postProcObj->graph_parameter_index, (vx_reference*)&postProcObj->results[obj->enqueueCnt], 1);
+        }
+#endif
+        if(status == VX_SUCCESS)
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, captureObj->graph_parameter_index, (vx_reference*)&captureObj->raw_image_arr[obj->enqueueCnt], 1);
+        }
         obj->enqueueCnt++;
         obj->enqueueCnt   = (obj->enqueueCnt  >= APP_BUFFER_Q_DEPTH)? 0 : obj->enqueueCnt;
         obj->pipeline++;
@@ -1319,11 +1841,59 @@ static vx_status app_run_graph_for_one_frame_pipeline(AppObj *obj, vx_int32 fram
         uint32_t num_refs;
 
         /* Dequeue input */
-        vxGraphParameterDequeueDoneRef(obj->graph, captureObj->graph_parameter_index, (vx_reference*)&capture_input_image, 1, &num_refs);
+        if(status == VX_SUCCESS)
+        {
+            status = vxGraphParameterDequeueDoneRef(obj->graph, captureObj->graph_parameter_index, (vx_reference*)&capture_input_image, 1, &num_refs);
+        }
+
+#if defined(SOC_AM62A) && defined(QNX)
+        /* Dequeue postProc output (display frame) - for QNX this is vx_image */
+        vx_image postproc_out_frame;
+        if(status == VX_SUCCESS)
+        {
+            status = vxGraphParameterDequeueDoneRef(obj->graph, postProcObj->graph_parameter_index, (vx_reference*)&postproc_out_frame, 1, &num_refs);
+        }
+
+        /* Hand the completed frame to the display task and wait until it
+         * has finished copying before we re-enqueue the buffer. */
+        if(status == VX_SUCCESS)
+        {
+            obj->screen_frame = postproc_out_frame;
+            sem_post(&obj->disp_frame_ready_sem);
+            sem_wait(&obj->disp_frame_done_sem);
+        }
+#elif defined(SOC_AM62A) && defined(LINUX)
+        /* Dequeue postProc output (display frame) - for Linux this is vx_image */
+        vx_image postproc_out_frame;
+        if(status == VX_SUCCESS)
+        {
+            status = vxGraphParameterDequeueDoneRef(obj->graph, postProcObj->graph_parameter_index, (vx_reference*)&postproc_out_frame, 1, &num_refs);
+        }
+
+        /* Hand the completed frame to the DRM display task and wait until it
+         * has finished copying before we re-enqueue the buffer. */
+        if(status == VX_SUCCESS)
+        {
+            obj->drm_frame = postproc_out_frame;
+            sem_post(&obj->disp_frame_ready_sem);
+            sem_wait(&obj->disp_frame_done_sem);
+        }
+#endif
+
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
+        /* Re-enqueue postProc output buffer only after display task has finished
+         * reading it (sem_wait above returned). */
+        if(status == VX_SUCCESS)
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, postProcObj->graph_parameter_index, (vx_reference*)&postproc_out_frame, 1);
+        }
+#endif
 
         /* Enqueue input - start execution */
-        vxGraphParameterEnqueueReadyRef(obj->graph, captureObj->graph_parameter_index, (vx_reference*)&capture_input_image, 1);
-
+        if(status == VX_SUCCESS)
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, captureObj->graph_parameter_index, (vx_reference*)&capture_input_image, 1);
+        }
         obj->enqueueCnt++;
         obj->dequeueCnt++;
 
@@ -1360,6 +1930,14 @@ static vx_status app_run_graph(AppObj *obj)
     if(status!=0)
     {
         printf("ERROR: Unable to create screen task\n");
+    }
+#endif
+
+#if defined(SOC_AM62A) && defined(LINUX)
+    status = app_drm_task_create(obj);
+    if(status!=0)
+    {
+        printf("ERROR: Unable to create DRM task\n");
     }
 #endif
 
@@ -1402,8 +1980,18 @@ static vx_status app_run_graph(AppObj *obj)
 
     obj->stop_task = 1;
 
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
+    /* Ensure the display task is not left blocking on disp_frame_done_sem
+     * after the graph loop exits (e.g. on 'x' keypress). */
+    sem_post(&obj->disp_frame_done_sem);
+#endif
+
 #if defined(SOC_AM62A) && defined(QNX)
     obj->stop_screen_task = 1;
+#endif
+
+#if defined(SOC_AM62A) && defined(LINUX)
+    obj->stop_drm_task = 1;
 #endif
 
     status = appStopImageSensor(obj->sensorObj.sensor_name, ch_mask);
@@ -1447,7 +2035,7 @@ static void set_scaler_defaults(ScalerObj *scalerObj)
     scalerObj->color_format = VX_DF_IMAGE_NV12;
 }
 
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
 static void set_pre_proc_defaults(PreProcObj *preProcObj)
 {
     vx_int32 i;
@@ -1476,7 +2064,7 @@ static void app_default_param_set(AppObj *obj)
 
     set_scaler_defaults(&obj->scalerObj);
 
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
     set_pre_proc_defaults(&obj->preProcObj);
 #endif
     set_display_defaults(&obj->displayObj);
@@ -1489,7 +2077,7 @@ static void app_default_param_set(AppObj *obj)
     obj->num_frames_to_run = 1000000000;
 }
 
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
 static vx_int32 calc_grid_size(vx_uint32 ch)
 {
     if(0==ch)
@@ -1619,7 +2207,7 @@ static void app_update_param_set(AppObj *obj)
 {
     obj->sensorObj.sensor_index = 0; /* App works only for IMX390 2MP cameras */
 
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
     update_draw_detections_defaults(obj, &obj->drawDetectionsObj);
     update_img_mosaic_defaults(&obj->imgMosaicObj, obj->scalerObj.output[1].width, obj->scalerObj.output[1].height, obj->sensorObj.num_cameras_enabled);
 #else
@@ -1638,7 +2226,7 @@ static void add_graph_parameter_by_node_index(vx_graph graph, vx_node node, vx_u
     vxReleaseParameter(&parameter);
 }
 
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
 #ifndef x86_64
 static void app_draw_graphics(Draw2D_Handle *handle, Draw2D_BufInfo *draw2dBufInfo, uint32_t update_type)
 {

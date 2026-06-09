@@ -2,6 +2,12 @@
 let common = system.getScript("/common");
 
 const driverVer = {
+    "ecap": {
+        version: "v0",
+    },
+    "epwm": {
+        version: "v0",
+    },
     "gpio":{
         version:"v0",
     },
@@ -18,6 +24,9 @@ const driverVer = {
         version: "v1",
     },
     "mcspi": {
+        version: "v0",
+    },
+    "mcu_bist": {
         version: "v0",
     },
     "sciclient": {
@@ -38,6 +47,12 @@ const driverVer = {
     "ospi": {
         version: "v0",
     },
+    "qos": {
+        version: "v0",
+    },
+    "rtc": {
+        version: "v0",
+    },
     "uart": {
         version: "v0",
     },
@@ -53,12 +68,16 @@ const driverVer = {
     "dss": {
         version: "v0",
     },
+    "watchdog": {
+        version: "v1",
+    },
 };
 
 const topModules_wkup = [
     "/drivers/bootloader/bootloader",
     "/drivers/ddr/ddr",
     "/drivers/dss/dss",
+    "/drivers/epwm/epwm",
     "/drivers/gpio/gpio",
     "/drivers/gtc/gtc",
     "/drivers/i2c/i2c",
@@ -66,19 +85,28 @@ const topModules_wkup = [
     "/drivers/mcan/mcan",
     "/drivers/mcasp/mcasp",
     "/drivers/mcspi/mcspi",
+    "/drivers/mcu_bist/mcu_bist",
     "/drivers/mmcsd/mmcsd",
     "/drivers/ospi/ospi",
+    "/drivers/qos/qos",
+    "/drivers/rtc/rtc",
     "/drivers/uart/uart",
     "/drivers/udma/udma",
+    "/drivers/watchdog/watchdog",
 ];
 
 const topModules_mcu = [
+    "/drivers/ecap/ecap",
+    "/drivers/epwm/epwm",
     "/drivers/gpio/gpio",
     "/drivers/i2c/i2c",
     "/drivers/ipc/ipc",
     "/drivers/mcan/mcan",
     "/drivers/mcspi/mcspi",
+    "/drivers/mmcsd/mmcsd",
+    "/drivers/rtc/rtc",
     "/drivers/uart/uart",
+    "/drivers/udma/udma",
 ];
 
 function getCpuID() {

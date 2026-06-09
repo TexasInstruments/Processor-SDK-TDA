@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-24 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -49,7 +49,6 @@
 #include "ti_drivers_open_close.h"
 #include "ti_drivers_config.h"
 #include "ti_board_open_close.h"
-#include <drivers/device_manager/sciclient.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -90,12 +89,6 @@ static int32_t DispApp_runTest(Dss_Object *appObj);
 void dss_colorbar_test_main(void *args)
 {
     int32_t retVal = FVID2_SOK;
-    int32_t status = SystemP_SUCCESS;
-
-    Drivers_open();
-
-    status = Board_driversOpen();
-    DebugP_assert(SystemP_SUCCESS == status);
 
     DispApp_init(&gDssObjects[CONFIG_DSS0]);
 
@@ -113,9 +106,6 @@ void dss_colorbar_test_main(void *args)
     {
         DebugP_log("DSS colorbar test Failed!!\r\n");
     }
-
-    Board_driversClose();
-    Drivers_close();
 
     return;
 }
@@ -195,7 +185,7 @@ static int32_t DispApp_runTest(Dss_Object *appObj)
     DebugP_log("Display in progress ... DO NOT HALT !!!\r\n");
 
     /* 5 seconds sleep */
-    ClockP_usleep(10000000U);
+    ClockP_sleep(5U);
 
     if(FVID2_SOK == retVal)
     {
@@ -211,19 +201,16 @@ static void DispApp_initDssParams(Dss_Object *appObj)
     Dss_DctrlVpParams *vpParams;
     Dss_DctrlAdvVpParams *advVpParams;
     Dss_DctrlOverlayParams *overlayParams;
-    Dss_DctrlOverlayLayerParams *layerParams;
     Dss_DctrlGlobalDssParams *globalDssParams;
 
     vpParams = &appObj->vpParams;
     overlayParams = &appObj->overlayParams;
-    layerParams = &appObj->layerParams;
     advVpParams = &appObj->advVpParams;
     globalDssParams= &appObj->globalDssParams;
 
     Dss_dctrlVpParamsInit(vpParams);
     Dss_dctrlAdvVpParamsInit(advVpParams);
     Dss_dctrlOverlayParamsInit(overlayParams);
-    Dss_dctrlOverlayLayerParamsInit(layerParams);
     Dss_dctrlGlobalDssParamsInit(globalDssParams);
 
 
@@ -258,11 +245,6 @@ static void DispApp_initDssParams(Dss_Object *appObj)
     overlayParams->overlayCfg.colorKeyEnable =  gDssOverlayParams.overlayCfg.colorKeyEnable;
     overlayParams->overlayCfg.colorKeySel =  gDssOverlayParams.overlayCfg.colorKeySel;
     overlayParams->overlayCfg.backGroundColor =  gDssOverlayParams.overlayCfg.backGroundColor;
-
-    /* Configure Overlay Layer params */
-    layerParams->overlayId = gDssOverlayLayerParams.overlayId;
-    memcpy((void*)layerParams->pipeLayerNum, (void* )gDssOverlayLayerParams.pipeLayerNum, \
-    sizeof(gDssOverlayLayerParams.pipeLayerNum));
 
 }
 
@@ -341,14 +323,17 @@ static int32_t DispApp_configDctrl(Dss_Object *appObj)
         DebugP_log("Dctrl Set VP Params IOCTL Failed!!!\r\n");
     }
 
-    retVal = Fvid2_control(
-        appObj->dctrlHandle,
-        IOCTL_DSS_DCTRL_SET_OLDI_PARAMS,
-        oldiParams,
-        NULL);
-    if(retVal != FVID2_SOK)
+    if (appObj->oldiParams != NULL)
     {
-        DebugP_log("DCTRL Set OLDI Params IOCTL Failed!!!\r\n");
+        retVal = Fvid2_control(
+            appObj->dctrlHandle,
+            IOCTL_DSS_DCTRL_SET_OLDI_PARAMS,
+            oldiParams,
+            NULL);
+        if(retVal != FVID2_SOK)
+        {
+            DebugP_log("DCTRL Set OLDI Params IOCTL Failed!!!\r\n");
+        }
     }
 
     retVal = Fvid2_control(

@@ -32,6 +32,9 @@ const mpu_armv711      = mpu_armv7.addInstance();
 const mpu_armv712      = mpu_armv7.addInstance();
 const mpu_armv713      = mpu_armv7.addInstance();
 const mpu_armv714      = mpu_armv7.addInstance();
+const mpu_armv715      = mpu_armv7.addInstance();
+const enet_cpsw        = scripting.addModule("/networking/enet_cpsw/enet_cpsw", {}, false);
+const enet_cpsw1       = enet_cpsw.addInstance();
 const dm_power_config  = scripting.addModule("/pdm_utils/tools/dm_power_config_tool/dm_power_config", {}, false);
 const dm_power_config1 = dm_power_config.addInstance();
 
@@ -141,6 +144,14 @@ mpu_armv714.tex          = 7;
 mpu_armv714.isBufferable = false;
 mpu_armv714.isCacheable  = true;
 
+mpu_armv715.baseAddr   = 0xB8000000;
+mpu_armv715.size       = 24;
+mpu_armv715.allowExecute = false;
+mpu_armv715.$name      = "INTERCORE_REGION";
+mpu_armv715.attributes = "NonCached";
+
+
+
 dm_power_config1.$name                           = "PowerConfig0";
 dm_power_config1.MAIN_R5FSS_1                    = 0;
 dm_power_config1.MCU_R5FSS_0                     = 0;
@@ -152,11 +163,74 @@ dm_power_config1.CSI_TX_ESC_CLK                  = 0;
 dm_power_config1.CSI_TX_MAIN_CLK                 = 0;
 dm_power_config1.MAIN_CSI_RX                     = ["TISCI_DEV_CSI_RX_IF0","TISCI_DEV_CSI_RX_IF1","TISCI_DEV_DPHY_RX0","TISCI_DEV_DPHY_RX1"];
 
+enet_cpsw1.$name                               = "CONFIG_ENET_CPSW0";
+enet_cpsw1.IsEthFw                             = true;
+enet_cpsw1.macAddrConfig                       = "Manual Entry";
+enet_cpsw1.LargePoolPktCount                   = 64;
+enet_cpsw1.PktInfoOnlyEnable                   = true;
+enet_cpsw1.macAddrList                         = "70:ff:76:1d:ec:f2,70:ff:76:1d:ec:e3,70:ff:76:1d:ec:e4";
+enet_cpsw1.cpswVlanAwareMode                   = true;
+enet_cpsw1.vlanId_hostPort                     = 0x1;
+enet_cpsw1.vlanId_macPort1                     = 0x3;
+enet_cpsw1.vlanId_macPort2                     = 0x3;
+enet_cpsw1.hostportRxMtu                       = 1522;
+enet_cpsw1.RGMII1.$assign                      = "RGMII1";
+enet_cpsw1.txDmaChannel.create(2);
+enet_cpsw1.txDmaChannel[0].$name               = "ENET_DMA_TX_CH0";
+enet_cpsw1.txDmaChannel[1].$name               = "ENET_DMA_TX_CH_PTP";
+enet_cpsw1.rxDmaChannel.create(3);
+enet_cpsw1.rxDmaChannel[0].$name               = "ENET_DMA_RX_CH0";
+enet_cpsw1.rxDmaChannel[0].PacketsCount        = 16;
+enet_cpsw1.rxDmaChannel[0].useGlobalEvt        = true;
+enet_cpsw1.rxDmaChannel[1].$name               = "ENET_DMA_RX_CH1";
+enet_cpsw1.rxDmaChannel[1].macAddrCount        = 0;
+enet_cpsw1.rxDmaChannel[1].useDefaultFlow      = false;
+enet_cpsw1.rxDmaChannel[1].PacketsCount        = 16;
+enet_cpsw1.rxDmaChannel[1].useGlobalEvt        = true;
+enet_cpsw1.rxDmaChannel[2].$name               = "ENET_DMA_RX_CH_PTP";
+enet_cpsw1.rxDmaChannel[2].useDefaultFlow      = false;
+enet_cpsw1.rxDmaChannel[2].PacketsCount        = 16;
+enet_cpsw1.rxDmaChannel[2].useGlobalEvt        = true;
+enet_cpsw1.rxDmaChannel[2].macAddrCount        = 0;
+enet_cpsw1.netifInstance.create(1);
+enet_cpsw1.netifInstance[0].$name              = "NETIF_INST_ID0";
+enet_cpsw1.netifInstance[0].enableProxyArp     = true;
+enet_cpsw1.netifInstance[0].proxyArpRxDmaChNum = ["1"];
+enet_cpsw1.DisableMacPort2                     = true;
+
+const ethphy_cpsw_icssg  = scripting.addModule("/board/ethphy_cpsw_icssg/ethphy_cpsw_icssg", {}, false);
+const ethphy_cpsw_icssg1 = ethphy_cpsw_icssg.addInstance({}, false);
+ethphy_cpsw_icssg1.$name     = "CONFIG_ENET_ETHPHY1";
+
+
+
+const udma       = scripting.addModule("/drivers/udma/udma", {}, false);
+const udma1      = udma.addInstance();
+
+const udma2        = udma.addInstance({}, false);
+enet_cpsw1.udmaDrv = udma2;
+
 /**
  * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
  * version of the tool will not impact the pinmux you originally saw.  These lines can be completely deleted in order to
  * re-solve from scratch.
  */
+enet_cpsw1.MDIO.$suggestSolution          = "MDIO0";
+enet_cpsw1.MDIO.MDC.$suggestSolution      = "MDIO0_MDC";
+enet_cpsw1.MDIO.MDIO.$suggestSolution     = "MDIO0_MDIO";
+enet_cpsw1.RGMII1.RD0.$suggestSolution    = "RGMII1_RD0";
+enet_cpsw1.RGMII1.RD1.$suggestSolution    = "RGMII1_RD1";
+enet_cpsw1.RGMII1.RD2.$suggestSolution    = "RGMII1_RD2";
+enet_cpsw1.RGMII1.RD3.$suggestSolution    = "RGMII1_RD3";
+enet_cpsw1.RGMII1.RX_CTL.$suggestSolution = "RGMII1_RX_CTL";
+enet_cpsw1.RGMII1.RXC.$suggestSolution    = "RGMII1_RXC";
+enet_cpsw1.RGMII1.TD0.$suggestSolution    = "RGMII1_TD0";
+enet_cpsw1.RGMII1.TD1.$suggestSolution    = "RGMII1_TD1";
+enet_cpsw1.RGMII1.TD2.$suggestSolution    = "RGMII1_TD2";
+enet_cpsw1.RGMII1.TD3.$suggestSolution    = "RGMII1_TD3";
+enet_cpsw1.RGMII1.TX_CTL.$suggestSolution = "RGMII1_TX_CTL";
+enet_cpsw1.RGMII1.TXC.$suggestSolution    = "RGMII1_TXC";
+
 dss1.DSS.$suggestSolution           = "DSS0";
 dss1.DSS.DATA0.$suggestSolution     = "VOUT0_DATA0";
 dss1.DSS.DATA1.$suggestSolution     = "VOUT0_DATA1";

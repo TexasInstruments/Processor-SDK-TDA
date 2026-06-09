@@ -12,43 +12,60 @@ INCLUDE_PATHS+= -I $(DSP_TOOLS)/host_emulation/include/$(C7X_VERSION)$(C7x_HOSTE
 # library search dirs are always platform specific
 LDIRS += $(DSP_TOOLS)/host_emulation
 
-ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a J722S j722s))
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a J722S j722s TDA54 tda54))
 DEFS += DMA_UTILS_STANDALONE
 endif
 
-
-ifeq ($(RTOS_SDK),mcu_plus_sdk)
+# SDK library paths (IDIRS are in concerto_common.mak)
+ifeq ($(RTOS_SDK),$(filter $(RTOS_SDK), mcu_sdk mcu_plus_sdk))
     LDIRS += $(DMA_UTILS_PATH)/lib
+endif
+ifeq ($(RTOS_SDK),mcu_sdk)
+    # Add MCU_SDK library path for system libraries
+    ifeq ($(TARGET_BUILD),debug)
+        LDIRS += $(MCU_SDK_PATH)/build/tda54/lib/Debug
+    else
+        LDIRS += $(MCU_SDK_PATH)/build/tda54/lib/Release
+    endif
+endif
+
+ifeq ($(RTOS_SDK),$(filter $(RTOS_SDK), mcu_plus_sdk mcu_sdk))
     ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a))
         DMA_LIBS += dmautils.am62ax.c75x.ti-c7x-hostemu.$(TARGET_BUILD).lib
     else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J722S j722s))
         DMA_LIBS += dmautils.j722s.c75ssx-0.ti-c7x-hostemu.$(TARGET_BUILD).lib
-    endif    
+    else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+        DMA_LIBS += dmautils.tda54.c76x.ti-c7x-hostemu.$(TARGET_BUILD).lib
+        DMA_LIBS += libdrivers-ti_sdk_cfg_default_hostemu_gcc-linux.a
+        DMA_LIBS += libhal-ti_sdk_cfg_default_hostemu_gcc-linux.a
+        DMA_LIBS += libti_sdk_cfg_default_hostemu_gcc-linux.a
+    endif
 else
     LDIRS += $(PDK_PATH)/ti/csl/lib/$(SOC)/c7x-hostemu/$(TARGET_BUILD)
     LDIRS += $(PDK_PATH)/ti/drv/udma/lib/$(SOC)_hostemu/c7x-hostemu/$(TARGET_BUILD)
-    ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a J722S j722s))
+    ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a J722S j722s TDA54 tda54))
     else
         LDIRS += $(PDK_PATH)/ti/osal/lib/nonos/$(SOC)/c7x-hostemu/$(TARGET_BUILD)
         LDIRS += $(PDK_PATH)/ti/drv/sciclient/lib/$(SOC)_hostemu/c7x-hostemu/$(TARGET_BUILD)
-
+        ifndef DMA_UTILS_STANDALONE
         DMA_LIBS += ti.osal.lib
         DMA_LIBS += udma.lib
         DMA_LIBS += sciclient.lib
+        endif
     endif
 
     # External libraries: The order in which they are defined is important
     DMA_LIBS  += dmautils.lib
     DMA_LIBS += ti.csl.lib
-    ifeq ($(ENABLE_SDK_9_2_COMPATIBILITY), 1)    
+    ifeq ($(ENABLE_SDK_9_2_COMPATIBILITY), 1)
     else
       DMA_LIBS += ti.csl.init.lib
-    endif 
+    endif
 endif
 
 LDIRS += $(MMALIB_PATH)/lib/$(C7X_VERSION)/$(TARGET_BUILD)
 
-# path to tidl_algo and tidl_priv_algo
+# path to tidl_algo and tidl_priv
 ifeq ($(TIDL_BUILD_PATHS), LEGACY)
 LDIRS += $(TIDL_PATH)/ti_dl/lib/PC/dsp/algo/$(TARGET_BUILD)
 else
@@ -58,8 +75,9 @@ endif
 ADDITIONAL_STATIC_LIBS += $(DMA_LIBS)
 # internal libraries
 STATIC_LIBS += tidl_algo
-STATIC_LIBS += tidl_obj_algo
-STATIC_LIBS += tidl_priv_algo
+STATIC_LIBS += tidl_ref
+STATIC_LIBS += tidl_kernels
+STATIC_LIBS += tidl_priv
 
 # Custom Library
 ifeq ($(TIDL_TEST_CUSTOM_LAYER), 1)
@@ -123,7 +141,7 @@ override CC := g++-$(TIDL_GCC_VERSION)
 
 endif
 
-ifneq ($(BUILD_WITH_OPENACC) ,1)
+ifneq ($(BUILD_WITH_OPENACC),yes)
 CFLAGS += -Wno-unused-variable \
 	      -Wno-maybe-uninitialized \
  	      -Wno-parentheses \

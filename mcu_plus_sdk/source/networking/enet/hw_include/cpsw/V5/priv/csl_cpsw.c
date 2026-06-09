@@ -8,7 +8,7 @@
  *
  *  \par
  *  ============================================================================
- *  @n   (C) Copyright 2019, Texas Instruments, Inc.
+ *  @n   (C) Copyright 2024, Texas Instruments, Inc.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -55,7 +55,7 @@
 #include <cslr_xge_cpsw.h>
 #include <csl_cpswitch.h>
 
-#if defined (SOC_AM273X) || defined (SOC_AWR294X) || defined(SOC_AM263X)
+#if defined (SOC_AM273X) || defined (SOC_AWR294X) || defined(SOC_AM263X) || defined (SOC_AM263PX)
 #define CSL_NUM_ALE_VLAN_MASK_MUX1_ENTRIES		(3U)
 #else
 #define CSL_NUM_ALE_VLAN_MASK_MUX1_ENTRIES		(7U)
@@ -65,6 +65,9 @@
 #define CPSW_EST_FETCH_COUNT_MASK                       (0x003FFF00U)
 #define CPSW_EST_FETCH_ALLOW_SHIFT                      (0U)
 #define CPSW_EST_FETCH_ALLOW_MASK                       (0x000000FFU)
+
+#define CSL_CPSW_GET_HOSTPORT_STAT_START_ADDRESS(x)     (&(x->P0_STATS.RXGOODFRAMES))
+#define CSL_CPSW_GET_MACPORT_STAT_START_ADDRESS(x, y)   (&(x->PN_STATS[y].RXGOODFRAMES))
 
 /********************************************************************************
 ************************* Ethernet Switch (CPSW) Submodule **********************
@@ -241,6 +244,164 @@ void CSL_CPSW_disableVlanAware (CSL_Xge_cpswRegs *hCpswRegs)
 
     return;
 }
+
+#if ENET_CFG_IS_ON(CPSW_CUTTHRU)
+/** ============================================================================
+ *   @n@b CSL_CPSW_enableCutThru
+ *
+ *   @b Description
+ *   @n This function configures the CPSW control register to enable cut-thru
+ *      switching.
+ *
+ *   @b Arguments
+ *   @n None
+ *
+ *   <b> Return Value </b>
+ *	 @n	 None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n XGE_CPSW_CONTROL_REG_CUT_THRU_ENABLE=1
+ *
+ *   @b Example
+ *   @verbatim
+
+        CSL_CPSW_enableCutThru ();
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_enableCutThru (CSL_Xge_cpswRegs *hCpswRegs)
+{
+    CSL_CPSW_CONTROL controlReg;
+
+    CSL_CPSW_getCpswControlReg(hCpswRegs, &controlReg);
+    controlReg.cutThruEnable = TRUE;
+    CSL_CPSW_setCpswControlReg(hCpswRegs, &controlReg);
+}
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_disableCutThru
+ *
+ *   @b Description
+ *   @n This function configures the CPSW control register to disable cut-thru
+ *      switching.
+ *
+ *   @b Arguments
+ *   @n None
+ *
+ *   <b> Return Value </b>
+ *	 @n	 None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n XGE_CPSW_CONTROL_REG_CUT_THRU_ENABLE=0
+ *
+ *   @b Example
+ *   @verbatim
+
+        CSL_CPSW_disableCutThru ();
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_disableCutThru (CSL_Xge_cpswRegs *hCpswRegs)
+{
+    CSL_CPSW_CONTROL controlReg;
+
+    CSL_CPSW_getCpswControlReg(hCpswRegs, &controlReg);
+    controlReg.cutThruEnable = FALSE;
+    CSL_CPSW_setCpswControlReg(hCpswRegs, &controlReg);
+}
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_setCpswFrequency
+ *
+ *   @b Description
+ *   @n This function configures the CPSW frequency used for enabling auto speed
+ *      register for cut-thru switching.
+ *
+ *   @b Arguments
+ *   @verbatim
+        pCpswFrequency      CPSW_FREQUENCY that needs to be set.
+ *	 @endverbatim
+ *
+ *   <b> Return Value </b>
+ *	 @n	 None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n XGE_CPSW_FREQUENCY_REG
+ *
+ *   @b Example
+ *   @verbatim
+
+        CSL_CPSW_setCpswFrequency ();
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_setCpswFrequency (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      pCpswFrequency
+)
+{
+    CSL_FINS(hCpswRegs->FREQUENCY, XGE_CPSW_FREQUENCY_REG, pCpswFrequency);
+}
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_getCpswFrequency
+ *
+ *   @b Description
+ *   @n This function gets the RX Cut thru priority
+ *
+ *   @b Arguments
+     @verbatim
+        pCpswFrequency   CPSW frequency
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Reads
+ *   @n XGE_CPSW_FREQUENCY_REG
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      pCpswFrequency;
+
+        pCpswFrequency = CSL_CPSW_getCpswFrequency ();
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_getCpswFrequency (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32*                     pCpswFrequency
+)
+{
+    *pCpswFrequency = CSL_FEXT(hCpswRegs->FREQUENCY, XGE_CPSW_FREQUENCY_REG);
+}
+#endif
 
 /** ============================================================================
  *   @n@b CSL_CPSW_isPort0Enabled
@@ -699,6 +860,12 @@ void CSL_CPSW_getCpswControlReg (CSL_Xge_cpswRegs *hCpswRegs,
     pControlRegInfo->p0RxPassCrcErr =   CSL_FEXT (hCpswRegs->CONTROL_REG, XGE_CPSW_CONTROL_REG_P0_RX_PASS_CRC_ERR);
     pControlRegInfo->eeeEnable      =   CSL_FEXT (hCpswRegs->CONTROL_REG, XGE_CPSW_CONTROL_REG_EEE_ENABLE);
     pControlRegInfo->estEnable      =   CSL_FEXT (hCpswRegs->CONTROL_REG, XGE_CPSW_CONTROL_REG_EST_ENABLE);
+#if ENET_CFG_IS_ON(CPSW_IET_INCL)
+    pControlRegInfo->ietEnable      =   CSL_FEXT (hCpswRegs->CONTROL_REG, XGE_CPSW_CONTROL_REG_IET_ENABLE);
+#endif
+#if ENET_CFG_IS_ON(CPSW_CUTTHRU)
+    pControlRegInfo->cutThruEnable  =   CSL_FEXT (hCpswRegs->CONTROL_REG, XGE_CPSW_CONTROL_REG_CUT_THRU_ENABLE);
+#endif
 
     return;
 }
@@ -768,6 +935,12 @@ void CSL_CPSW_setCpswControlReg (CSL_Xge_cpswRegs *hCpswRegs,
     CSL_FINS (hCpswRegs->CONTROL_REG, XGE_CPSW_CONTROL_REG_P0_RX_PASS_CRC_ERR, pControlRegInfo->p0RxPassCrcErr);
     CSL_FINS (hCpswRegs->CONTROL_REG, XGE_CPSW_CONTROL_REG_EEE_ENABLE, pControlRegInfo->eeeEnable);
     CSL_FINS (hCpswRegs->CONTROL_REG, XGE_CPSW_CONTROL_REG_EST_ENABLE, pControlRegInfo->estEnable);
+#if ENET_CFG_IS_ON(CPSW_IET_INCL)
+    CSL_FINS (hCpswRegs->CONTROL_REG, XGE_CPSW_CONTROL_REG_IET_ENABLE, pControlRegInfo->ietEnable);
+#endif
+#if ENET_CFG_IS_ON(CPSW_CUTTHRU)
+    CSL_FINS (hCpswRegs->CONTROL_REG, XGE_CPSW_CONTROL_REG_CUT_THRU_ENABLE, pControlRegInfo->cutThruEnable);
+#endif
 
     return;
 }
@@ -1142,16 +1315,22 @@ void CSL_CPSW_getPortControlReg (CSL_Xge_cpswRegs *hCpswRegs,
 {
     if (portNum == 0)
     {
-        pControlInfo->dscpIpv4Enable     =   CSL_FEXT (hCpswRegs->P0_CONTROL_REG, XGE_CPSW_P0_CONTROL_REG_DSCP_IPV4_EN);
-        pControlInfo->dscpIpv6Enable     =   CSL_FEXT (hCpswRegs->P0_CONTROL_REG, XGE_CPSW_P0_CONTROL_REG_DSCP_IPV6_EN);
+        pControlInfo->dscpIpv4Enable      =   CSL_FEXT (hCpswRegs->P0_CONTROL_REG, XGE_CPSW_P0_CONTROL_REG_DSCP_IPV4_EN);
+        pControlInfo->dscpIpv6Enable      =   CSL_FEXT (hCpswRegs->P0_CONTROL_REG, XGE_CPSW_P0_CONTROL_REG_DSCP_IPV6_EN);
 
     } else
     {
-
         pControlInfo->estPortEnable      =   CSL_FEXT (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_EST_PORT_EN);
+#if ENET_CFG_IS_ON(CPSW_IET_INCL)
+        pControlInfo->ietPortEnable      =   CSL_FEXT (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_IET_PORT_EN);
+#endif
         pControlInfo->dscpIpv4Enable     =   CSL_FEXT (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_DSCP_IPV4_EN);
         pControlInfo->dscpIpv6Enable     =   CSL_FEXT (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_DSCP_IPV6_EN);
         pControlInfo->txLpiClkstopEnable =   CSL_FEXT (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_TX_LPI_CLKSTOP_EN);
+        pControlInfo->estPortEnable       =   CSL_FEXT (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_EST_PORT_EN);
+        pControlInfo->dscpIpv4Enable      =   CSL_FEXT (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_DSCP_IPV4_EN);
+        pControlInfo->dscpIpv6Enable      =   CSL_FEXT (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_DSCP_IPV6_EN);
+        pControlInfo->txLpiClkstopEnable  =   CSL_FEXT (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_TX_LPI_CLKSTOP_EN);
     }
 
     return;
@@ -1223,6 +1402,9 @@ void CSL_CPSW_setPortControlReg (CSL_Xge_cpswRegs *hCpswRegs,
     {
 
         CSL_FINS (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_EST_PORT_EN, pControlInfo->estPortEnable);
+#if ENET_CFG_IS_ON(CPSW_IET_INCL)
+        CSL_FINS (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_IET_PORT_EN, pControlInfo->ietPortEnable);
+#endif
         CSL_FINS (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_DSCP_IPV4_EN, pControlInfo->dscpIpv4Enable);
         CSL_FINS (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_DSCP_IPV6_EN, pControlInfo->dscpIpv6Enable);
         CSL_FINS (hCpswRegs->ENETPORT[portNum-1].PN_CONTROL_REG, XGE_CPSW_PN_CONTROL_REG_TX_LPI_CLKSTOP_EN, pControlInfo->txLpiClkstopEnable);
@@ -2406,6 +2588,296 @@ void CSL_CPSW_setPortRxDscpMap (CSL_Xge_cpswRegs *hCpswRegs,
     return;
 }
 
+#if ENET_CFG_IS_ON(CPSW_CUTTHRU)
+/** ============================================================================
+ *   @n@b CSL_CPSW_setPortRxCutThruPri
+ *
+ *   @b Description
+ *   @n This function sets up the RX Cut thru priority. This register is used to
+ *      set the remapped recieve packet priority from 0..7
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the RX Cut thru priority
+                            must be set.
+        pPortRxCutThruPri   RX Cut thru priority
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n XGE_CPSW_PN_CUT_THRU_REG_RX_PRI_CUT_THRU_EN
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortRxCutThruPri;
+
+        portNum           = 1;
+        pPortRxCutThruPri = 1;
+
+        CSL_CPSW_setPortRxCutThruPri (portNum, pPortRxCutThruPri);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_setPortRxCutThruPri (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    Uint32                      pPortRxCutThruPri
+)
+{
+    CSL_FINS(hCpswRegs->ENETPORT[portNum].PN_CUT_THRU_REG, XGE_CPSW_PN_CUT_THRU_REG_RX_PRI_CUT_THRU_EN, pPortRxCutThruPri);
+}
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_getPortRxCutThruPri
+ *
+ *   @b Description
+ *   @n This function gets the RX Cut thru priority.This register is used to
+ *      get the remapped recieve packet priority i.e., 0..7
+ *      0x01 = Priority 0
+ *      0x02 = Priority 1
+ *      0x04 = Priority 2 an so on
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the RX Cut thru priority
+                            must be retrieved.
+        pPortRxCutThruPri   RX Cut thru priority
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Reads
+ *   @n XGE_CPSW_PN_CUT_THRU_REG_RX_PRI_CUT_THRU_EN
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortRxCutThruPri;
+
+        portNum           = 1;
+
+        pPortRxCutThruPri = CSL_CPSW_getPortRxCutThruPri (portNum);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_getPortRxCutThruPri (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    Uint32*                     pPortRxCutThruPri
+)
+{
+    *pPortRxCutThruPri = CSL_FEXT(hCpswRegs->ENETPORT[portNum].PN_CUT_THRU_REG, XGE_CPSW_PN_CUT_THRU_REG_RX_PRI_CUT_THRU_EN);
+}
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_setPortTxCutThruPri
+ *
+ *   @b Description
+ *   @n This function sets up the TX Cut thru priority. This register is used to
+ *      set the remapped transmit packet priority i.e., 0..7
+ *      0x01 = Priority 0
+ *      0x02 = Priority 1
+ *      0x04 = Priority 2 an so on
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the TX Cut thru priority
+                            must be set.
+        pPortTxCutThruPri   TX Cut thru priority
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n XGE_CPSW_PN_CUT_THRU_REG_TX_PRI_CUT_THRU_EN
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortRxCutThruPri;
+
+        portNum           = 1;
+        pPortTxCutThruPri = 1;
+
+        CSL_CPSW_setPortTxCutThruPri (portNum, pPortTxCutThruPri);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_setPortTxCutThruPri (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    Uint32                      pPortTxCutThruPri
+)
+{
+    CSL_FINS(hCpswRegs->ENETPORT[portNum].PN_CUT_THRU_REG, XGE_CPSW_PN_CUT_THRU_REG_TX_PRI_CUT_THRU_EN, pPortTxCutThruPri);
+}
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_getPortTxCutThruPri
+ *
+ *   @b Description
+ *   @n This function gets the TX Cut thru priority. This register is used to
+ *      get the remapped transmit packet priority i.e., 0..7
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the TX Cut thru priority
+                            must be retrieved.
+        pPortRxCutThruPri   TX Cut thru priority
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Reads
+ *   @n XGE_CPSW_PN_CUT_THRU_REG_TX_PRI_CUT_THRU_EN
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortTxCutThruPri;
+
+        portNum           = 1;
+
+        pPortTxCutThruPri = CSL_CPSW_getPortTxCutThruPri (portNum);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_getPortTxCutThruPri (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    Uint32*                     pPortTxCutThruPri
+)
+{
+    if ((portNum >= 0) && (portNum < CSL_ARRAYSIZE(hCpswRegs->ENETPORT)))
+    {
+        *pPortTxCutThruPri = CSL_FEXT(hCpswRegs->ENETPORT[portNum].PN_CUT_THRU_REG, XGE_CPSW_PN_CUT_THRU_REG_TX_PRI_CUT_THRU_EN);
+    }
+}
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_setPortSpeedAutoEnable
+ *
+ *   @b Description
+ *   @n This function sets up the port's speed for auto enablement. Setting this value
+ *      will ensure that port speed is automatically detected by the hardware. Cut-thru
+ *      operations doesn't work if the port speed is diabled.
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the speed
+                            must be auto enabled.
+        pPortSpeedAutoEn    Port Speed
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Writes
+ *   @n XGE_CPSW_PN_SPEED_REG_AUTO_ENABLE
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortSpeedAutoEn;
+
+        portNum           = 1;
+        pPortSpeedAutoEn  = 1;
+
+        CSL_CPSW_setPortSpeedAutoEnable (portNum, pPortSpeedAutoEn);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_setPortSpeedAutoEnable (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    bool                        pPortSpeedAutoEn
+)
+{
+    if ((portNum >= 0) && (portNum < CSL_ARRAYSIZE(hCpswRegs->ENETPORT)))
+    {
+        CSL_FINS(hCpswRegs->ENETPORT[portNum].PN_SPEED, XGE_CPSW_PN_SPEED_REG_AUTO_ENABLE, pPortSpeedAutoEn);
+    }
+}
+
+/** ============================================================================
+ *   @n@b CSL_CPSW_getPortSpeedAutoEnable
+ *
+ *   @b Description
+ *   @n This function gets the auto enable speed status of the port
+ *
+ *   @b Arguments
+     @verbatim
+        portNum             CPSW port number for which the auto enable status
+                            must be retrieved.
+        pPortSpeed          Port Speed
+ *   @endverbatim
+ *
+ *   <b> Return Value </b>
+ *   @n  None
+ *
+ *   <b> Pre Condition </b>
+ *   @n  None
+ *
+ *   <b> Post Condition </b>
+ *   @n  None
+ *
+ *   @b Reads
+ *   @n XGE_CPSW_PN_SPEED_REG_AUTO_ENABLE
+ *
+ *   @b Example
+ *   @verbatim
+ *      Uint32      portNum, pPortSpeedAutoEn;
+
+        portNum           = 1;
+
+        pPortSpeedAutoEn = CSL_CPSW_getPortSpeedAutoEnable (portNum);
+
+     @endverbatim
+ * =============================================================================
+ */
+void CSL_CPSW_getPortSpeedAutoEnable (CSL_Xge_cpswRegs *hCpswRegs,
+    Uint32                      portNum,
+    bool*                       pPortSpeedAutoEn
+)
+{
+    if ((portNum >= 0) && (portNum < CSL_ARRAYSIZE(hCpswRegs->ENETPORT)))
+    {
+        *pPortSpeedAutoEn = CSL_FEXT(hCpswRegs->ENETPORT[portNum].PN_SPEED, XGE_CPSW_PN_SPEED_REG_AUTO_ENABLE);
+    }
+}
+#endif
+
 /** ============================================================================
  *   @n@b CSL_CPSW_getEEEGlobConfig
  *
@@ -2849,9 +3321,12 @@ void CSL_CPSW_setPortVlanReg (CSL_Xge_cpswRegs *hCpswRegs,
     }
     else
     {
-        CSL_FINS (hCpswRegs->ENETPORT[portNum-1].PN_PORT_VLAN_REG, XGE_CPSW_PN_PORT_VLAN_REG_PORT_VID, portVID);
-        CSL_FINS (hCpswRegs->ENETPORT[portNum-1].PN_PORT_VLAN_REG, XGE_CPSW_PN_PORT_VLAN_REG_PORT_CFI, portCFI);
-        CSL_FINS (hCpswRegs->ENETPORT[portNum-1].PN_PORT_VLAN_REG, XGE_CPSW_PN_PORT_VLAN_REG_PORT_PRI, portPRI);
+        if (portNum < CSL_ARRAYSIZE(hCpswRegs->ENETPORT))
+        {
+            CSL_FINS (hCpswRegs->ENETPORT[portNum-1].PN_PORT_VLAN_REG, XGE_CPSW_PN_PORT_VLAN_REG_PORT_VID, portVID);
+            CSL_FINS (hCpswRegs->ENETPORT[portNum-1].PN_PORT_VLAN_REG, XGE_CPSW_PN_PORT_VLAN_REG_PORT_CFI, portCFI);
+            CSL_FINS (hCpswRegs->ENETPORT[portNum-1].PN_PORT_VLAN_REG, XGE_CPSW_PN_PORT_VLAN_REG_PORT_PRI, portPRI);
+        }
     }
 
     return;
@@ -4005,6 +4480,99 @@ void CSL_CPSW_readEstFetchCmd(CSL_Xge_cpswRegs    *hCpswRegs,
     }
 }
 
+#if ENET_CFG_IS_ON(CPSW_IET_INCL)
+void CSL_CPSW_getPortIetControlReg(CSL_Xge_cpswRegs    *hCpswRegs,
+                                   Uint32              portNum,
+                                   CSL_CPSW_IET_CONFIG *pIetConfig)
+{
+    if ((portNum >= 1) &&  (portNum <= CSL_ARRAYSIZE(hCpswRegs->ENETPORT)))
+    {
+        pIetConfig->macPremptQueue = CSL_FEXT(hCpswRegs->ENETPORT[portNum-1].PN_IET_CONTROL_REG,
+                                              XGE_CPSW_PN_IET_CONTROL_REG_MAC_PREMPT);
+
+        pIetConfig->macAddFragSize = CSL_FEXT(hCpswRegs->ENETPORT[portNum-1].PN_IET_CONTROL_REG,
+                                              XGE_CPSW_PN_IET_CONTROL_REG_MAC_ADDFRAGSIZE);
+
+        pIetConfig->macLinkFail = CSL_FEXT(hCpswRegs->ENETPORT[portNum-1].PN_IET_CONTROL_REG,
+                                           XGE_CPSW_PN_IET_CONTROL_REG_MAC_LINKFAIL);
+
+        pIetConfig->macDisableVerify = CSL_FEXT(hCpswRegs->ENETPORT[portNum-1].PN_IET_CONTROL_REG,
+                                                XGE_CPSW_PN_IET_CONTROL_REG_MAC_DISABLEVERIFY);
+
+        pIetConfig->macHold = CSL_FEXT(hCpswRegs->ENETPORT[portNum-1].PN_IET_CONTROL_REG,
+                                       XGE_CPSW_PN_IET_CONTROL_REG_MAC_HOLD);
+
+        pIetConfig->macPremptEnable = CSL_FEXT(hCpswRegs->ENETPORT[portNum-1].PN_IET_CONTROL_REG,
+                                               XGE_CPSW_PN_IET_CONTROL_REG_MAC_PENABLE);
+    }
+}
+
+void CSL_CPSW_setPortIetControlReg(CSL_Xge_cpswRegs    *hCpswRegs,
+                                   Uint32              portNum,
+                                   CSL_CPSW_IET_CONFIG *pIetConfig)
+{
+    if ((portNum >= 1) &&  (portNum <= CSL_ARRAYSIZE(hCpswRegs->ENETPORT)))
+    {
+        CSL_FINS(hCpswRegs->ENETPORT[portNum-1].PN_IET_CONTROL_REG,
+                 XGE_CPSW_PN_IET_CONTROL_REG_MAC_PREMPT, pIetConfig->macPremptQueue);
+
+        CSL_FINS(hCpswRegs->ENETPORT[portNum-1].PN_IET_CONTROL_REG,
+                 XGE_CPSW_PN_IET_CONTROL_REG_MAC_ADDFRAGSIZE, pIetConfig->macAddFragSize);
+
+        CSL_FINS(hCpswRegs->ENETPORT[portNum-1].PN_IET_CONTROL_REG,
+                 XGE_CPSW_PN_IET_CONTROL_REG_MAC_LINKFAIL, pIetConfig->macLinkFail);
+
+        CSL_FINS(hCpswRegs->ENETPORT[portNum-1].PN_IET_CONTROL_REG,
+                 XGE_CPSW_PN_IET_CONTROL_REG_MAC_DISABLEVERIFY, pIetConfig->macDisableVerify);
+
+        CSL_FINS(hCpswRegs->ENETPORT[portNum-1].PN_IET_CONTROL_REG,
+                 XGE_CPSW_PN_IET_CONTROL_REG_MAC_HOLD, pIetConfig->macHold);
+
+        CSL_FINS(hCpswRegs->ENETPORT[portNum-1].PN_IET_CONTROL_REG,
+                 XGE_CPSW_PN_IET_CONTROL_REG_MAC_PENABLE, pIetConfig->macPremptEnable);
+    }
+}
+
+void CSL_CPSW_getPortIetVerifyTimeout(CSL_Xge_cpswRegs    *hCpswRegs,
+                                      Uint32              portNum,
+                                      Uint32              *pIetVerifyTimeout)
+{
+    if ((portNum >= 1) &&  (portNum <= CSL_ARRAYSIZE(hCpswRegs->ENETPORT)))
+    {
+        *pIetVerifyTimeout = CSL_FEXT(hCpswRegs->ENETPORT[portNum-1].PN_IET_VERIFY_REG,
+                                      XGE_CPSW_PN_IET_VERIFY_REG_MAC_VERIFY_CNT);
+    }
+
+}
+
+void CSL_CPSW_setPortIetVerifyTimeout(CSL_Xge_cpswRegs    *hCpswRegs,
+                                      Uint32              portNum,
+                                      Uint32              ietVerifyTimeout)
+{
+    if ((portNum >= 1) &&  (portNum <= CSL_ARRAYSIZE(hCpswRegs->ENETPORT)))
+    {
+        CSL_FINS(hCpswRegs->ENETPORT[portNum-1].PN_IET_VERIFY_REG,
+                 XGE_CPSW_PN_IET_VERIFY_REG_MAC_VERIFY_CNT, ietVerifyTimeout);
+    }
+}
+
+void CSL_CPSW_PortIetStatus(CSL_Xge_cpswRegs     *hCpswRegs,
+                            Uint32               portNum,
+                            CSL_CPSW_IET_STATUS  *pIetStatus)
+{
+    if ((portNum >= 1) &&  (portNum <= CSL_ARRAYSIZE(hCpswRegs->ENETPORT)))
+    {
+        pIetStatus->macVerified = CSL_FEXT(hCpswRegs->ENETPORT[portNum-1].PN_IET_STATUS_REG,
+                                           XGE_CPSW_PN_IET_STATUS_REG_MAC_VERIFIED);
+        pIetStatus->macVerifyFail = CSL_FEXT(hCpswRegs->ENETPORT[portNum-1].PN_IET_STATUS_REG,
+                                             XGE_CPSW_PN_IET_STATUS_REG_MAC_VERIFY_FAIL);
+        pIetStatus->macRxRespondErr = CSL_FEXT(hCpswRegs->ENETPORT[portNum-1].PN_IET_STATUS_REG,
+                                               XGE_CPSW_PN_IET_STATUS_REG_MAC_RESPOND_ERR);
+        pIetStatus->macRxVerifyErr = CSL_FEXT(hCpswRegs->ENETPORT[portNum-1].PN_IET_STATUS_REG,
+                                              XGE_CPSW_PN_IET_STATUS_REG_MAC_VERIFY_ERR);
+    }
+}
+#endif
 
 /********************************************************************************
 *************************  Statistics (STATS) Submodule *************************
@@ -4032,7 +4600,7 @@ void CSL_CPSW_readEstFetchCmd(CSL_Xge_cpswRegs    *hCpswRegs,
  *
  *   @b Arguments
      @verbatim
-        pCpswStats              Array of CSL_CPSW_STATS structure that needs to be filled
+        pCpswStats              Union of CSL_CPSW_STATS structure that needs to be filled
                                 with the stats read from the hardware. This function expects
                                 that the array passed to it is big enough to hold the stats
                                 for all stat blocks, i.e., size of array passed to this
@@ -4148,14 +4716,17 @@ void CSL_CPSW_readEstFetchCmd(CSL_Xge_cpswRegs    *hCpswRegs,
  *
  *   @b Example
  *   @verbatim
- *      CSL_CPSW_STATS     stats [9];
+ *      union CSL_CPSW_STATS {
+            CSL_CPSW_P0_STATS p0_stats;
+            CSL_CPSW_PN_STATS pn_stats;
+        };
 
         CSL_CPSW_getStats (stats);
 	 @endverbatim
  * =============================================================================
  */
 void CSL_CPSW_getStats (CSL_Xge_cpswRegs *hCpswRegs,
-    CSL_CPSW_STATS*         pCpswStats
+                        union CSL_CPSW_STATS* pCpswStats
 )
 {
     Uint32                      numStats, numBlocks;
@@ -4165,15 +4736,26 @@ void CSL_CPSW_getStats (CSL_Xge_cpswRegs *hCpswRegs,
 
     pStatAddr   =   (Uint32 *)(pCpswStats);
 
-    /* Read the entire stats block for both the
-     * Host and the MAC ports and reset the stats
-     * block when done.
+    /* Read the entire CPSW HW stats block for the Host port, save it in pCpswStats reg and
+     * reset the stats block when done.
      */
-    for (numBlocks = 0; numBlocks < sizeof(hCpswRegs->STATS)/sizeof(hCpswRegs->STATS[0]);
+    pRegAddr    =	CSL_CPSW_GET_HOSTPORT_STAT_START_ADDRESS(hCpswRegs);
+    for (numStats = 0; numStats < sizeof(pCpswStats->p0_stats)/sizeof(Uint32); numStats++)
+    {
+        statval         =   *pRegAddr;
+        *pRegAddr++     =   statval;
+        statval         +=  *pStatAddr;
+        *pStatAddr++    =   statval;
+    }
+
+    /* Read the entire CPSW HW stats block for the MAC ports,  save it in pCpswStats reg and
+     * reset the stats block when done.
+     */
+    for (numBlocks = 0; numBlocks < sizeof(pCpswStats->pn_stats)/sizeof(hCpswRegs->PN_STATS[0]);
          numBlocks++)
     {
-	  pRegAddr    =	&hCpswRegs->STATS[numBlocks].RXGOODFRAMES;
-        for (numStats = 0; numStats < sizeof(CSL_CPSW_STATS)/sizeof(Uint32); numStats++)
+	    pRegAddr    =	CSL_CPSW_GET_MACPORT_STAT_START_ADDRESS(hCpswRegs, numBlocks);
+        for (numStats = 0; numStats < sizeof(pCpswStats->pn_stats)/sizeof(Uint32); numStats++)
         {
             statval         =   *pRegAddr;
             *pRegAddr++     =   statval;
@@ -4187,7 +4769,7 @@ void CSL_CPSW_getStats (CSL_Xge_cpswRegs *hCpswRegs,
 
 void CSL_CPSW_getPortStats (CSL_Xge_cpswRegs *hCpswRegs,
     Uint32                  portNum,
-    CSL_CPSW_STATS*         pCpswStats
+    union CSL_CPSW_STATS*   pCpswStats
 )
 {
     Uint32                      numStats;
@@ -4197,17 +4779,24 @@ void CSL_CPSW_getPortStats (CSL_Xge_cpswRegs *hCpswRegs,
 
     pStatAddr   =   (Uint32 *)(pCpswStats);
 
-    /* Read the entire stats block for both the
-     * Host and the MAC ports and reset the stats
-     * block when done.
+    if(portNum == 0)
+    {
+        pRegAddr    =	CSL_CPSW_GET_HOSTPORT_STAT_START_ADDRESS(hCpswRegs);
+    }
+    else
+    {
+        pRegAddr    =	CSL_CPSW_GET_MACPORT_STAT_START_ADDRESS(hCpswRegs, portNum - 1);
+    }
+
+    /* Read the entire CPSW HW stats block for the Host/Mac port, save it in pCpswStats reg and
+     * reset the stats block when done.
      */
-	pRegAddr    =	&hCpswRegs->STATS[portNum].RXGOODFRAMES;
-	for (numStats = 0; numStats < sizeof(CSL_CPSW_STATS)/sizeof(Uint32); numStats++)
-	{
-		statval         =   *pRegAddr;
-		*pRegAddr++     =   statval;
-		*pStatAddr++    =   statval;
-	}
+    for (numStats = 0; numStats < sizeof(union CSL_CPSW_STATS)/sizeof(Uint32); numStats++)
+    {
+    	statval         =   *pRegAddr;
+    	*pRegAddr++     =   statval;
+    	*pStatAddr++    =   statval;
+    }
 
     return;
 }
@@ -4247,7 +4836,7 @@ void CSL_CPSW_getPortStats (CSL_Xge_cpswRegs *hCpswRegs,
  *
  *   @b Arguments
      @verbatim
-        pCpswStats              Array of CSL_CPSW_STATS structure that needs to be filled
+        pCpswStats              Union of CSL_CPSW_STATS structure that needs to be filled
                                 with the stats read from the hardware. This function expects
                                 that the array passed to it is big enough to hold the stats
                                 for both stat blocks, i.e., size of array passed to this
@@ -4321,7 +4910,7 @@ void CSL_CPSW_getPortStats (CSL_Xge_cpswRegs *hCpswRegs,
  * =============================================================================
  */
 void CSL_CPSW_getRawStats (CSL_Xge_cpswRegs *hCpswRegs,
-    CSL_CPSW_STATS*         pCpswStats
+                           union CSL_CPSW_STATS* pCpswStats
 )
 {
     Uint32                      numStats, numBlocks;
@@ -4330,13 +4919,22 @@ void CSL_CPSW_getRawStats (CSL_Xge_cpswRegs *hCpswRegs,
 
     pStatAddr   =   (Uint32 *)(pCpswStats);
 
-    /* Read the entire stats block for both the
-     * Host and the MAC ports
+    /* Read the entire CPSW HW stats block for the Hostport, save it in pCpswStats reg and
+     * reset the stats block when done.
      */
-    for (numBlocks = 0; numBlocks < sizeof(hCpswRegs->STATS)/sizeof(hCpswRegs->STATS[0]); numBlocks++)
+    pRegAddr    =	CSL_CPSW_GET_HOSTPORT_STAT_START_ADDRESS(hCpswRegs);
+    for (numStats = 0; numStats < sizeof(union CSL_CPSW_STATS)/sizeof(Uint32); numStats++)
     {
-        pRegAddr    =	&hCpswRegs->STATS[numBlocks].RXGOODFRAMES;
-        for (numStats = 0; numStats < sizeof(CSL_CPSW_STATS)/sizeof(Uint32); numStats++)
+        *pStatAddr++    =   *pRegAddr++;
+    }
+
+    /* Read the entire CPSW HW stats block for the Macport, save it in pCpswStats reg and
+     * reset the stats block when done.
+     */
+    for (numBlocks = 0; numBlocks < sizeof(hCpswRegs->PN_STATS)/sizeof(hCpswRegs->PN_STATS[0]); numBlocks++)
+    {
+        pRegAddr    =	CSL_CPSW_GET_MACPORT_STAT_START_ADDRESS(hCpswRegs, numBlocks);
+        for (numStats = 0; numStats < sizeof(union CSL_CPSW_STATS)/sizeof(Uint32); numStats++)
         {
             *pStatAddr++    =   *pRegAddr++;
         }
@@ -4347,7 +4945,7 @@ void CSL_CPSW_getRawStats (CSL_Xge_cpswRegs *hCpswRegs,
 
 void CSL_CPSW_getPortRawStats (CSL_Xge_cpswRegs *hCpswRegs,
     Uint32                  portNum,
-    CSL_CPSW_STATS*         pCpswStats
+    union CSL_CPSW_STATS*         pCpswStats
 )
 {
     Uint32                      numStats;
@@ -4356,11 +4954,19 @@ void CSL_CPSW_getPortRawStats (CSL_Xge_cpswRegs *hCpswRegs,
 
     pStatAddr   =   (Uint32 *)(pCpswStats);
 
-    /* Read the entire stats block for both the
-     * Host and the MAC ports
+    if(portNum == 0)
+    {
+        pRegAddr    =	CSL_CPSW_GET_HOSTPORT_STAT_START_ADDRESS(hCpswRegs);
+    }
+    else
+    {
+        pRegAddr    =	CSL_CPSW_GET_MACPORT_STAT_START_ADDRESS(hCpswRegs, portNum - 1);
+    }
+
+    /* Read the entire CPSW HW stats block for the Host/Mac port, save it in pCpswStats reg and
+     * reset the stats block when done.
      */
-	pRegAddr    =	&hCpswRegs->STATS[portNum].RXGOODFRAMES;
-	for (numStats = 0; numStats < sizeof(CSL_CPSW_STATS)/sizeof(Uint32); numStats++)
+    for (numStats = 0; numStats < sizeof(union CSL_CPSW_STATS)/sizeof(Uint32); numStats++)
 	{
 		*pStatAddr++    =   *pRegAddr++;
 	}
@@ -9441,10 +10047,16 @@ void  CSL_CPSW_setTxMaxLenPerPriority(CSL_Xge_cpswRegs *hCpswRegs,
 void  CSL_CPSW_getCppiP0Control(CSL_Xge_cpswRegs *hCpswRegs,
                                 CSL_CPSW_CPPI_P0_CONTROL *pCppiP0ControlCfg)
 {
-
+#if ENET_CFG_IS_ON(CPSW_CSUM_OFFLOAD_SUPPORT)
     pCppiP0ControlCfg->p0RxChksumEn =
     CSL_FEXT(hCpswRegs->P0_CONTROL_REG,XGE_CPSW_P0_CONTROL_REG_RX_CHECKSUM_EN);
-
+#if ((ENET_SOC_CFG_XGE_CPSW_ID_VER_REG_MAJOR_VER >= 1) && \
+     (ENET_SOC_CFG_XGE_CPSW_ID_VER_REG_MINOR_VER >= 3) && \
+     (ENET_SOC_CFG_XGE_CPSW_ID_VER_REG_RTL_VER >= 2))
+    pCppiP0ControlCfg->p0TxChksumEn =
+    CSL_FEXT(hCpswRegs->P0_CONTROL_REG,XGE_CPSW_P0_CONTROL_REG_TX_CHECKSUM_EN);
+#endif
+#endif
     pCppiP0ControlCfg->p0DscpIpv4En =
     CSL_FEXT(hCpswRegs->P0_CONTROL_REG,XGE_CPSW_P0_CONTROL_REG_DSCP_IPV4_EN);
 
@@ -9486,9 +10098,16 @@ void  CSL_CPSW_getCppiP0Control(CSL_Xge_cpswRegs *hCpswRegs,
 void  CSL_CPSW_setCppiP0Control(CSL_Xge_cpswRegs *hCpswRegs,
                                 CSL_CPSW_CPPI_P0_CONTROL *pCppiP0ControlCfg)
 {
+#if ENET_CFG_IS_ON(CPSW_CSUM_OFFLOAD_SUPPORT)
     CSL_FINS(hCpswRegs->P0_CONTROL_REG,XGE_CPSW_P0_CONTROL_REG_RX_CHECKSUM_EN,
              pCppiP0ControlCfg->p0RxChksumEn);
-
+#if ((ENET_SOC_CFG_XGE_CPSW_ID_VER_REG_MAJOR_VER >= 1) && \
+     (ENET_SOC_CFG_XGE_CPSW_ID_VER_REG_MINOR_VER >= 3) && \
+     (ENET_SOC_CFG_XGE_CPSW_ID_VER_REG_RTL_VER >= 2))
+    CSL_FINS(hCpswRegs->P0_CONTROL_REG,XGE_CPSW_P0_CONTROL_REG_TX_CHECKSUM_EN,
+             pCppiP0ControlCfg->p0TxChksumEn);
+#endif
+#endif
     CSL_FINS(hCpswRegs->P0_CONTROL_REG,XGE_CPSW_P0_CONTROL_REG_DSCP_IPV4_EN,
              pCppiP0ControlCfg->p0DscpIpv4En);
 

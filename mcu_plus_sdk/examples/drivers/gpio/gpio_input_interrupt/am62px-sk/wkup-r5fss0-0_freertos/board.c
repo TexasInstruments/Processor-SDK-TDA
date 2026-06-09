@@ -41,8 +41,7 @@
  */
 #define BOARD_BUTTON_GPIO_INTR_NUM      (CSLR_WKUP_R5FSS0_CORE0_INTR_WKUP_MCU_GPIOMUX_INTROUTER0_OUTP_2)
 
-/* For AM62A- TBD after bring up */
-#define BOARD_BUTTON_GPIO_SWITCH_NUM    (4)
+#define BOARD_BUTTON_GPIO_SWITCH_NUM    ("MCU_GPIO0_15")
 
 /** \brief bank interrupt source index base */
 #define SRC_IDX_BASE_MCU_GPIO_BANK_0   (CSLR_WKUP_MCU_GPIOMUX_INTROUTER0_IN_MCU_GPIO0_GPIO_BANK_0)
@@ -71,7 +70,7 @@ uint32_t Board_getGpioButtonIntrNum(void)
     return (BOARD_BUTTON_GPIO_INTR_NUM);
 }
 
-uint32_t Board_getGpioButtonSwitchNum(void)
+char* Board_getGpioButtonSwitchNum(void)
 {
     return (BOARD_BUTTON_GPIO_SWITCH_NUM);
 }

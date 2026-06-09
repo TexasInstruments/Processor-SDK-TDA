@@ -12,6 +12,7 @@ const files_r5f = {
         "DebugP_log.c",
         "TimerP.c",
         "HwiP_armv7r_vim.c",
+        "HwiP_armv7r_exception_handlers_nortos.c",
         "MpuP_armv7r.c",
         "CacheP_armv7r.c",
         "CpuId_armv7r.c",
@@ -20,6 +21,7 @@ const files_r5f = {
         "AddrTranslateP.c",
         "PmuP_armv7r.c",
         "QueueP_nortos.c",
+        "StartuphooksP_nortos.c",
         // picked from freertos DPL
         "ClockP_freertos.c",
         "ClockP_freertos_r5.c",
@@ -30,6 +32,7 @@ const files_r5f = {
         "DebugP_shmLogReader_freertos.c",
         "TaskP_freertos.c",
         "EventP_freertos.c",
+        "MailboxP_freertos.c",
         // picked from freertos "kernel"
         "event_groups.c",
         "tasks.c",
@@ -77,6 +80,7 @@ const asmfiles_r5f = {
         // picked from nortos DPL
         "boot_armv7r_asm.S",
         "HwiP_armv7r_asm.S",
+        "HwiP_armv7r_exception_handlers_nortos_asm.S",
         "MpuP_armv7r_asm.S",
         "CacheP_armv7r_asm.S",
         "CpuId_armv7r_asm.S",
@@ -115,7 +119,6 @@ const files_c75x = {
         "CycleCounterP_c75.c",
         "Exception.c",
         "HwiP_c75.c",
-        "HwiP_freertos_c7x.c",
         "IntrinsicsSupport.c",
         "MmuP_c75.c",
         "Startup.c",
@@ -132,9 +135,11 @@ const files_c75x = {
         "printf.c",
         "HeapP_internal.c",
         "QueueP_nortos.c",
+        "StartuphooksP_nortos.c",
         // picked from freertos DPL
         "ClockP_freertos.c",
         "ClockP_freertos_c75.c",
+        "HwiP_freertos_c7x.c",
         //"freertos_mmu.c",  //defined in sysconfig hence not required
         "SemaphoreP_freertos.c",
         "HeapP_freertos.c",
@@ -142,6 +147,7 @@ const files_c75x = {
         "DebugP_shmLogReader_freertos.c",
         "TaskP_freertos.c",
         "EventP_freertos.c",
+        "MailboxP_freertos.c",
         // picked from freertos "kernel"
         "event_groups.c",
         "tasks.c",
@@ -170,6 +176,7 @@ const files_c75x = {
 const includes_c75x = {
     common: [
         "../nortos/dpl/c75",
+        "../nortos/dpl/c75/soc/j722s",
         "FreeRTOS-Kernel/include",
         "portable/TI_CGT/DSP_C75X",
         "config/j722s/c75x",

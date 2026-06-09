@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2020-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -60,7 +60,6 @@
 #include <drivers/hw_include/csl_types.h>
 #include <drivers/device_manager/sciserver.h>
 #include <drivers/device_manager/sciserver_tirtos.h>
-
 #include <lib/strncpy.h>
 
 #include <sciserver_hwiData.h>
@@ -83,18 +82,10 @@
 /*                 Internal Function Declarations                             */
 /* ========================================================================== */
 
-#if !defined(MCU_PLUS_SDK)
-void Sciserver_tirtosUserMsgHwiFxn(uintptr_t arg);
-#else
 void Sciserver_tirtosUserMsgHwiFxn(void* arg);
-#endif
 void Sciserver_tirtosUnRegisterIntr(void);
 void Sciserver_tirtosDeinit(void);
-#if !defined(MCU_PLUS_SDK)
-void Sciserver_tirtosUserMsgTask(void* arg0, void* arg1);
-#else
 void Sciserver_tirtosUserMsgTask(void* arg0);
-#endif
 
 static int32_t Sciserver_tirtosInitHwis(void);
 static int32_t Sciserver_tirtosInitSemaphores(void);
@@ -103,17 +94,6 @@ static int32_t Sciserver_tirtosInitUserTasks(Sciserver_TirtosCfgPrms_t *pPrms);
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
-#if !defined(MCU_PLUS_SDK)
-HwiP_Handle gSciserverHwiHandles[SCISERVER_HWI_NUM];
-
-SemaphoreP_Params gSciserverUserSemParams[SCISERVER_SEMAPHORE_MAX_CNT];
-SemaphoreP_Handle gSciserverUserSemHandles[SCISERVER_SEMAPHORE_MAX_CNT];
-SemaphoreP_Params gSciserverSyncParam;
-SemaphoreP_Handle gSciserverSyncHandle;
-
-TaskP_Handle gSciserverUserTaskHandles[SCISERVER_TASK_MAX_CNT];
-TaskP_Params gSciserverUserTaskParams[SCISERVER_TASK_MAX_CNT];
-#else
 HwiP_Object gSciserverHwiObjects[SCISERVER_HWI_NUM];
 HwiP_Object* gSciserverHwiHandles[SCISERVER_HWI_NUM];
 
@@ -126,7 +106,6 @@ SemaphoreP_Object* gSciserverSyncHandle;
 TaskP_Object gSciserverUserTaskObjects[SCISERVER_TASK_MAX_CNT];
 TaskP_Object* gSciserverUserTaskHandles[SCISERVER_TASK_MAX_CNT];
 TaskP_Params gSciserverUserTaskParams[SCISERVER_TASK_MAX_CNT];
-#endif
 
 #if defined (ENABLE_DM_TRACE)
 extern uint32_t gStoreLog;
@@ -143,7 +122,7 @@ int32_t Sciserver_tirtosInit(Sciserver_TirtosCfgPrms_t *pAppPrms)
 
     if (pAppPrms == NULL)
     {
-        ret = SystemP_FAILURE;
+        ret = CSL_EBADARGS;
     }
 
     /* Initialize the Init Parameters for the Sciserver */
@@ -172,6 +151,13 @@ int32_t Sciserver_tirtosInit(Sciserver_TirtosCfgPrms_t *pAppPrms)
         ret = Sciserver_tirtosInitUserTasks(pAppPrms);
     }
 
+#if defined(CONFIG_DM2TIFS_INTERRUPT_MODE)
+    /* Update the sciclient to interrupt mode */
+    if (ret == CSL_PASS) {
+        ret = Sciclient_updateOperModeToInterrupt();
+    }
+#endif
+
     /* hwi initialization */
     if (ret == CSL_PASS) {
         ret = Sciserver_tirtosInitHwis();
@@ -190,54 +176,29 @@ int32_t Sciserver_tirtosInit(Sciserver_TirtosCfgPrms_t *pAppPrms)
     return ret;
 }
 
-#if !defined(MCU_PLUS_SDK)
-void Sciserver_tirtosUserMsgHwiFxn(uintptr_t arg)
-#else
 void Sciserver_tirtosUserMsgHwiFxn(void* arg)
-#endif
 {
     Sciserver_hwiData *uhd = (Sciserver_hwiData *)   arg;
     int32_t ret = CSL_PASS;
     bool soft_error = false;
-#if !defined(MCU_PLUS_SDK)
-    Osal_DisableInterrupt(0, (int32_t) uhd->irq_num);
-#else
     HwiP_disableInt( (uint32_t) uhd->irq_num);
-#endif
     ret = Sciserver_interruptHandler(uhd, &soft_error);
 
     if ((ret != CSL_PASS) && (soft_error == true))
     {
-#if !defined(MCU_PLUS_SDK)
-        Osal_EnableInterrupt(0, (int32_t) uhd->irq_num);
-#else
         HwiP_enableInt( (uint32_t) uhd->irq_num);
-#endif
     }
     else
     {
         (void) SemaphoreP_post(gSciserverUserSemHandles[uhd->semaphore_id]);
     }
 
-#if !defined(MCU_PLUS_SDK)
-        Osal_ClearInterrupt(0, (int32_t) uhd->irq_num);
-#else
         HwiP_clearInt( (uint32_t) uhd->irq_num);
-#endif
 
     if ((ret != CSL_PASS) && (soft_error != true)) {
         /* At this point secure proxy is broken so halt */
-#if !defined(MCU_PLUS_SDK)
-        OS_stop();
-#else
-#if defined(OS_FREERTOS)
-        extern void vTaskEndScheduler(void);
-        vTaskEndScheduler();
-#elif defined(OS_SAFERTOS)
-        extern void vTaskSuspendScheduler(void);
-        vTaskSuspendScheduler();
-#endif
-#endif
+        extern void TaskP_endScheduler( void );
+        TaskP_endScheduler();
     }
 }
 
@@ -248,11 +209,7 @@ void Sciserver_tirtosDisableIntr(void)
     for (i = 0U; i < SCISERVER_ARRAY_SIZE(sciserver_hwi_list); i++) {
         if (gSciserverHwiHandles[i] != NULL)
         {
-#if !defined(MCU_PLUS_SDK)
-            Osal_DisableInterrupt(0, sciserver_hwi_list[i].irq_num);
-#else
             HwiP_disableInt(sciserver_hwi_list[i].irq_num);
-#endif
         }
     }
 }
@@ -264,11 +221,7 @@ void Sciserver_tirtosEnableIntr(void)
     for (i = 0U; i < SCISERVER_ARRAY_SIZE(sciserver_hwi_list); i++) {
         if (gSciserverHwiHandles[i] != NULL)
         {
-#if !defined(MCU_PLUS_SDK)
-            Osal_EnableInterrupt(0, sciserver_hwi_list[i].irq_num);
-#else
             HwiP_enableInt(sciserver_hwi_list[i].irq_num);
-#endif
         }
     }
 }
@@ -281,12 +234,7 @@ void Sciserver_tirtosUnRegisterIntr(void)
     for (i = 0U; i < SCISERVER_ARRAY_SIZE(sciserver_hwi_list); i++) {
         if (gSciserverHwiHandles[i] != NULL)
         {
-#if !defined(MCU_PLUS_SDK)
-            Osal_DeleteInterrupt(gSciserverHwiHandles[i],
-                                 sciserver_hwi_list[i].irq_num);
-#else
             (void) HwiP_destruct(gSciserverHwiHandles[i]);
-#endif
             gSciserverHwiHandles[i] = NULL_PTR;
         }
     }
@@ -297,44 +245,26 @@ void Sciserver_tirtosDeinit(void)
     uint32_t i = 0U;
 
     for (i = 0U; i < (uint32_t) SCISERVER_SEMAPHORE_MAX_CNT; i++) {
-#if !defined(MCU_PLUS_SDK)
-        SemaphoreP_delete(gSciserverUserSemHandles[i]);
-#else
         SemaphoreP_destruct(gSciserverUserSemHandles[i]);
-#endif
     }
     Sciserver_deinit();
     Sciserver_tirtosUnRegisterIntr();
 }
 
-#if !defined (MCU_PLUS_SDK)
-void Sciserver_tirtosUserMsgTask(void *arg0, void* arg1)
-#else
 void Sciserver_tirtosUserMsgTask(void* arg0)
-#endif
 {
     Sciserver_printf("Entering Sciserver_tirtosUserMsgTask function\n");
     int32_t ret;
     volatile bool loopForever = true;
     Sciserver_taskData *utd = (Sciserver_taskData *) arg0;
 
-#if !defined (MCU_PLUS_SDK)
-    /* To suppress unused variable warning */
-    (void)arg1;
-#endif
-
     /* Set the pending State first */
     utd->state->state = SCISERVER_TASK_PENDING;
 
     while(loopForever)
     {
-#if !defined (MCU_PLUS_SDK)
-        SemaphoreP_pend(gSciserverUserSemHandles[utd->semaphore_id],
-                        SemaphoreP_WAIT_FOREVER);
-#else
         SemaphoreP_pend(gSciserverUserSemHandles[utd->semaphore_id],
                         SystemP_WAIT_FOREVER);
-#endif
         SemaphoreP_pend(gSciserverSyncHandle, SCICLIENT_SERVICE_WAIT_FOREVER);
 
         ret = Sciserver_processtask (utd);
@@ -345,33 +275,18 @@ void Sciserver_tirtosUserMsgTask(void* arg0)
         {
             Sciserver_printf("ERROR:: Sciserver_tirtosUserMsgTask: Error processing task\n");
             /* Failed to process message and failed to send nak response */
-#if !defined(MCU_PLUS_SDK)
-            OS_stop();
-#else
-#if defined(OS_FREERTOS)
-            extern void vTaskEndScheduler(void);
-            vTaskEndScheduler();
-#elif defined(OS_SAFERTOS)
-            extern void vTaskSuspendScheduler(void);
-            vTaskSuspendScheduler();
-#endif
-#endif
+            extern void TaskP_endScheduler( void );
+            TaskP_endScheduler();
         }
         else
         {
             Sciserver_printf("Sciserver_tirtosUserMsgTask: processing task Successful\n");
             /*
-             * This is a bit of a hack... using the task ID to pick the offset
-             * for the gloabl interrupt data array. This is functional but can
-             * be cleaned up.
+             * Using the task ID to pick the offset
+             * for the global interrupt data array
              */
-#if !defined(MCU_PLUS_SDK)
-        Osal_EnableInterrupt(0, sciserver_hwi_list[2U * utd->task_id +
-                utd->state->current_buffer_idx].irq_num);
-#else
         HwiP_enableInt(sciserver_hwi_list[(2U * (uint32_t) utd->task_id) +
                 utd->state->current_buffer_idx].irq_num);
-#endif
         }
     }
     Sciserver_printf("Exiting Sciserver_tirtosUserMsgTask function\n");
@@ -387,15 +302,6 @@ static int32_t Sciserver_tirtosInitSemaphores(void)
     uint32_t i = 0U;
 
     for (i = 0U; i < (uint32_t) SCISERVER_SEMAPHORE_MAX_CNT; i++) {
-#if !defined(MCU_PLUS_SDK)
-        SemaphoreP_Params_init(&gSciserverUserSemParams[i]);
-        gSciserverUserSemHandles[i] = SemaphoreP_create(0U, &gSciserverUserSemParams[i]);
-
-        if (gSciserverUserSemHandles[i] == NULL) {
-            ret = CSL_EFAIL;
-            break;
-        }
-#else
         gSciserverUserSemHandles[i] = &gSciserverUserSemObjects[i];
         if (SemaphoreP_constructCounting(gSciserverUserSemHandles[i], 0u, 0xFF) != SystemP_SUCCESS)
         {
@@ -403,25 +309,15 @@ static int32_t Sciserver_tirtosInitSemaphores(void)
             ret = CSL_EFAIL;
             break;
         }
-#endif
     }
 
     if (ret == CSL_PASS) {
-#if !defined(MCU_PLUS_SDK)
-        SemaphoreP_Params_init(&gSciserverSyncParam);
-        gSciserverSyncHandle = SemaphoreP_create(1U, &gSciserverSyncParam);
-
-        if (gSciserverSyncHandle == NULL) {
-            ret = CSL_EFAIL;
-        }
-#else
         gSciserverSyncHandle = &gSciserverSyncObject;
         if (SemaphoreP_constructCounting(gSciserverSyncHandle, 1u, 0xFF) != SystemP_SUCCESS)
         {
             gSciserverSyncHandle = NULL;
             ret = CSL_EFAIL;
         }
-#endif
     }
 
     return ret;
@@ -433,23 +329,6 @@ static int32_t Sciserver_tirtosInitHwis(void)
     int32_t ret = CSL_PASS;
 
     for (i = 0U; i < SCISERVER_ARRAY_SIZE(sciserver_hwi_list); i++) {
-#if !defined(MCU_PLUS_SDK)
-        OsalRegisterIntrParams_t    intrPrms;
-        Osal_RegisterInterrupt_initParams(&intrPrms);
-        intrPrms.corepacConfig.arg  = (uintptr_t) &sciserver_hwi_list[i];
-        intrPrms.corepacConfig.isrRoutine = &Sciserver_tirtosUserMsgHwiFxn;
-        intrPrms.corepacConfig.enableIntr = FALSE;
-        intrPrms.corepacConfig.corepacEventNum  = 0;
-        intrPrms.corepacConfig.intVecNum = (int32_t)
-            sciserver_hwi_list[i].irq_num;
-        /* Register interrupts */
-        ret = Osal_RegisterInterrupt(&intrPrms,
-                                     &gSciserverHwiHandles[i]);
-        if(OSAL_INT_SUCCESS != ret) {
-            gSciserverHwiHandles[i] = NULL_PTR;
-            break;
-        }
-#else
         HwiP_Params                hwiInputParams;
         HwiP_Params_init(&hwiInputParams);
 
@@ -466,13 +345,12 @@ static int32_t Sciserver_tirtosInitHwis(void)
             gSciserverHwiHandles[i] = NULL_PTR;
             break;
         }
-#endif
     }
 
     return ret;
 }
 
-static int32_t Sciserver_tirtosInitUserTasks(Sciserver_TirtosCfgPrms_t *pPrms)
+static int32_t Sciserver_tirtosInitUserTasks(Sciserver_TirtosCfgPrms_t *sciserverCfg)
 {
     uint32_t i = 0U;
     int32_t ret = CSL_PASS;
@@ -480,22 +358,23 @@ static int32_t Sciserver_tirtosInitUserTasks(Sciserver_TirtosCfgPrms_t *pPrms)
     for (i = 0U; i < SCISERVER_ARRAY_SIZE(gSciserverTaskList); i++)
     {
         TaskP_Params_init (&gSciserverUserTaskParams[i]);
-#if !defined(MCU_PLUS_SDK)
-        gSciserverUserTaskParams[i].priority = pPrms->taskPriority[i];
-        gSciserverUserTaskParams[i].stack = gSciserverTaskList[i].stack;
-        gSciserverUserTaskParams[i].stacksize = SCISERVER_TASK_STACK_SIZE;
-        gSciserverUserTaskParams[i].arg0 = (void *) &gSciserverTaskList[i];
-        gSciserverUserTaskHandles[i] =
-            TaskP_create((void *)Sciserver_tirtosUserMsgTask, &gSciserverUserTaskParams[i]);
-        if(NULL == gSciserverUserTaskHandles[i])
+
+        if (gSciserverTaskList[i].task_id == (int32_t)SCISERVER_TASK_USER_HI)
+        {
+            gSciserverUserTaskParams[i].stack = sciserverCfg->hiTaskStack;
+        }
+        else if (gSciserverTaskList[i].task_id == (int32_t)SCISERVER_TASK_USER_LO)
+        {
+            gSciserverUserTaskParams[i].stack = sciserverCfg->loTaskStack;
+        }
+        else
         {
             ret = CSL_EFAIL;
             break;
         }
-#else
-        gSciserverUserTaskParams[i].priority = pPrms->taskPriority[i];
-        gSciserverUserTaskParams[i].stack = gSciserverTaskList[i].stack;
-        gSciserverUserTaskParams[i].stackSize = SCISERVER_TASK_STACK_SIZE;
+
+        gSciserverUserTaskParams[i].priority = sciserverCfg->taskPriority[i];
+        gSciserverUserTaskParams[i].stackSize = sciserverCfg->taskStackSize;
         gSciserverUserTaskParams[i].taskMain = Sciserver_tirtosUserMsgTask; /* Pointer to the function that implements the task. */
         gSciserverUserTaskParams[i].args = (void *) &gSciserverTaskList[i];
         gSciserverUserTaskHandles[i] = &gSciserverUserTaskObjects[i];
@@ -506,7 +385,6 @@ static int32_t Sciserver_tirtosInitUserTasks(Sciserver_TirtosCfgPrms_t *pPrms)
             ret = CSL_EFAIL;
             break;
         }
-#endif
     }
 
     return ret;

@@ -136,6 +136,21 @@
 #include "tidl_constraint_log.h"
 #include "tidl_constraint_swish.h"
 #include "tidl_constraint_instanceNormalization.h"
+#include "tidl_constraint_tile.h"
+#include "tidl_constraint_logicalOpLayer.h"
+#include "tidl_constraint_rmsNormalization.h"
+#include "tidl_constraint_softplus.h"
+#include "tidl_constraint_softsign.h"
+#include "tidl_constraint_ceil.h"
+#include "tidl_constraint_celu.h"
+#include "tidl_constraint_selu.h"
+#include "tidl_constraint_round.h"
+#include "tidl_constraint_sign.h"
+#include "tidl_constraint_groupnorm.h"
+#include "tidl_constraint_lstm.h"
+#include "tidl_constraint_gru.h"
+#include "tidl_constraint_rnn.h"
+
 
 /// @brief Contains the constraints and other metadata of TIDL layers
 struct TidlConstraintTableEntry {
@@ -231,7 +246,21 @@ static const map<int32_t, TidlConstraintTableEntry> tidlConstraintTable =
     JTE( TIDL_HardSwishLayer           , tidlConstraintHardSwish),
     JTE( TIDL_MishLayer                , tidlConstraintMish),
     JTE( TIDL_LogLayer                 , tidlConstraintLog),
-    JTE( TIDL_Swish                    , tidlConstraintSwish),
+    JTE( TIDL_SwishLayer               , tidlConstraintSwish),
+    JTE( TIDL_TileLayer                , tidlConstraintTile),
+    JTE( TIDL_LogicalOpLayer           , tidlConstraintLogicalOpLayer),
+    JTE( TIDL_RMSNormalizationLayer    , tidlConstraintRMSNormalization),
+    JTE( TIDL_SoftPlusLayer            , tidlConstraintSoftPlus),
+    JTE( TIDL_SoftSignLayer            , tidlConstraintSoftSign),
+    JTE( TIDL_CeilLayer                , tidlConstraintCeil),
+    JTE( TIDL_CeluLayer                , tidlConstraintCelu),
+    JTE( TIDL_SeluLayer                , tidlConstraintSelu),
+    JTE( TIDL_RoundLayer               , tidlConstraintRound),
+    JTE( TIDL_SignLayer                , tidlConstraintSign),
+    JTE( TIDL_GroupNormLayer           , tidlConstraintGroupNorm),
+    JTE( TIDL_LSTMLayer                , tidlConstraintLSTM),
+    JTE( TIDL_GRULayer                 , tidlConstraintGRU),
+    JTE( TIDL_RNNLayer                 , tidlConstraintRNN),
 };
 
 #endif /*TIDL_CONSTRAINT_TABLE_H_ */

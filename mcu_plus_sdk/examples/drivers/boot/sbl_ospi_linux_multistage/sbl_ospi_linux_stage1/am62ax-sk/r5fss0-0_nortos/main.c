@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -56,14 +56,12 @@
  * Linux appimage (for A53) flash at offset 0x1200000 of flash
  */
 
-void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle);
-
 /*
  * This buffer needs to be defined for OSPI nand boot in case of HS device for
  * image authentication.
  * The size of the buffer should be large enough to accomodate the appimage
  */
-uint8_t gAppimage[0x800000] __attribute__ ((section (".app"), aligned (128)));
+uint8_t gAppimage[0x800000] __attribute__ ((section (".bss.app"), aligned (128)));
 
 /*
  * Call this API to stop the booting process and spin, do that you can connect
@@ -152,80 +150,72 @@ void MCAN_PowerClock_deinit()
     MCAN_Module_clockDisable();
 }
 
-int32_t App_loadImages(Bootloader_Handle bootHandle, Bootloader_BootImageInfo *bootImageInfo)
+void App_loadImages(Bootloader_LoadImageParams *bootLoadParams)
 {
 	int32_t status = SystemP_FAILURE;
+    Bootloader_Config *bootConfig;
 
-    if(bootHandle != NULL)
+    if(bootLoadParams->bootHandle != NULL)
     {
-        status = Bootloader_parseMultiCoreAppImage(bootHandle, bootImageInfo);
-
-        /* Load CPUs */
-        if(status == SystemP_SUCCESS)
+        bootConfig = (Bootloader_Config *)bootLoadParams->bootHandle;
+        bootConfig->coresPresentMap = 0;
+        status = Bootloader_parseMultiCoreAppImage(bootLoadParams->bootHandle, &bootLoadParams->bootImageInfo);
+            /* Load CPUs */
+        if((status == SystemP_SUCCESS) && Bootloader_isCorePresent(bootLoadParams->bootHandle, CSL_CORE_ID_MCU_R5FSS0_0))
         {
-            bootImageInfo->cpuInfo[CSL_CORE_ID_MCU_R5FSS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_MCU_R5FSS0_0);
-            Bootloader_profileAddCore(CSL_CORE_ID_MCU_R5FSS0_0);
-            status = Bootloader_loadCpu(bootHandle, &(bootImageInfo->cpuInfo[CSL_CORE_ID_MCU_R5FSS0_0]));
+            if (!Bootloader_socIsMCUResetIsoEnabled())
+            {
+                (&bootLoadParams->bootImageInfo)->cpuInfo[CSL_CORE_ID_MCU_R5FSS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_MCU_R5FSS0_0);
+                Bootloader_profileAddCore(CSL_CORE_ID_MCU_R5FSS0_0);
+                status = Bootloader_loadCpu(bootLoadParams->bootHandle, &((&bootLoadParams->bootImageInfo)->cpuInfo[CSL_CORE_ID_MCU_R5FSS0_0]));
+                if(status == SystemP_SUCCESS)
+                {
+                    Bootloader_profileAddProfilePoint("MCU R5 Image Load");
+                    bootLoadParams->coreId = CSL_CORE_ID_MCU_R5FSS0_0;
+                    bootLoadParams->loadStatus = BOOTLOADER_IMAGE_LOADED;
+                }
+                else
+                {
+                    Bootloader_powerOffCpu(bootLoadParams->bootHandle, &((&bootLoadParams->bootImageInfo)->cpuInfo[CSL_CORE_ID_MCU_R5FSS0_0]));
+                }
+            }
+            return;
         }
-    }
 
-    return status;
-}
-
-int32_t App_loadSelfcoreImage(Bootloader_Handle bootHandle, Bootloader_BootImageInfo *bootImageInfo)
-{
-	int32_t status = SystemP_FAILURE;
-
-    if(bootHandle != NULL)
-    {
-        status = Bootloader_parseMultiCoreAppImage(bootHandle, bootImageInfo);
-
-        if(status == SystemP_SUCCESS)
+        if((SystemP_SUCCESS == status) && (TRUE == Bootloader_isCorePresent(bootLoadParams->bootHandle, CSL_CORE_ID_R5FSS0_0)))
         {
-            bootImageInfo->cpuInfo[CSL_CORE_ID_R5FSS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_R5FSS0_0);
+            (&bootLoadParams->bootImageInfo)->cpuInfo[CSL_CORE_ID_R5FSS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_R5FSS0_0);
             Bootloader_profileAddCore(CSL_CORE_ID_R5FSS0_0);
-            status = Bootloader_loadSelfCpu(bootHandle, &(bootImageInfo->cpuInfo[CSL_CORE_ID_R5FSS0_0]));
+            status = Bootloader_loadSelfCpu(bootLoadParams->bootHandle, &((&bootLoadParams->bootImageInfo)->cpuInfo[CSL_CORE_ID_R5FSS0_0]));
+            if(status == SystemP_SUCCESS)
+            {
+                Bootloader_profileAddProfilePoint("DM R5 Image Load");
+                bootLoadParams->coreId = CSL_CORE_ID_R5FSS0_0;
+                bootLoadParams->loadStatus = BOOTLOADER_IMAGE_LOADED;
+            }
+            return;
         }
+
     }
-
-    return status;
 }
 
-int32_t App_loadLinuxImages(Bootloader_Handle bootHandle, Bootloader_BootImageInfo *bootImageInfo)
+void App_runCpus(Bootloader_LoadImageParams *bootLoadParams)
 {
-	int32_t status = SystemP_FAILURE;
+    int32_t status = SystemP_FAILURE;
+    int8_t coreId = bootLoadParams->coreId;
 
-    if(bootHandle != NULL)
+    if(coreId != CSL_CORE_ID_R5FSS0_0)
     {
-		status = Bootloader_parseAndLoadLinuxAppImage(bootHandle, bootImageInfo);
-
-		if(status == SystemP_SUCCESS)
-		{
-			bootImageInfo->cpuInfo[CSL_CORE_ID_A53SS0_0].clkHz = Bootloader_socCpuGetClkDefault(CSL_CORE_ID_A53SS0_0);
-            Bootloader_profileAddCore(CSL_CORE_ID_A53SS0_0);
-			status = Bootloader_loadCpu(bootHandle, &(bootImageInfo->cpuInfo[CSL_CORE_ID_A53SS0_0]));
-		}
-	}
-
-	return status;
-}
-
-int32_t App_runCpus(Bootloader_Handle bootHandle, Bootloader_BootImageInfo *bootImageInfo)
-{
-	int32_t status = SystemP_FAILURE;
-
-	status = Bootloader_runCpu(bootHandle, &(bootImageInfo->cpuInfo[CSL_CORE_ID_MCU_R5FSS0_0]));
-
-	return status;
-}
-
-int32_t App_runLinuxCpu(Bootloader_Handle bootHandle, Bootloader_BootImageInfo *bootImageInfo)
-{
-	int32_t status = SystemP_FAILURE;
-
-	status = Bootloader_runCpu(bootHandle, &(bootImageInfo->cpuInfo[CSL_CORE_ID_A53SS0_0]));
-
-	return status;
+        if(bootLoadParams->loadStatus == BOOTLOADER_IMAGE_LOADED)
+        {
+            status = Bootloader_runCpu(bootLoadParams->bootHandle, &((&bootLoadParams->bootImageInfo)->cpuInfo[coreId]));\
+            if(status == SystemP_FAILURE)
+            {
+                Bootloader_powerOffCpu(bootLoadParams->bootHandle, &((&bootLoadParams->bootImageInfo)->cpuInfo[coreId]));
+            }
+        }
+        Bootloader_close(bootLoadParams->bootHandle);
+    }
 }
 
 int main()
@@ -235,19 +225,22 @@ int main()
     Bootloader_profileReset();
 
     Bootloader_socWaitForFWBoot();
-    status = Bootloader_socOpenFirewalls();
-
-    DebugP_assertNoLog(status == SystemP_SUCCESS);
 
     System_init();
     Bootloader_profileAddProfilePoint("System_init");
+
+    status = Bootloader_socOpenFirewalls();
+    DebugP_assertNoLog(status == SystemP_SUCCESS);
+
+
+    Board_init();
+    Bootloader_profileAddProfilePoint("Board_init");
+
     MCAN_PowerClock_init();
     Bootloader_profileAddProfilePoint("MCAN_PowerClock_init");
 
     Drivers_open();
     Bootloader_profileAddProfilePoint("Drivers_open");
-
-    flashFixUpOspiBoot(gOspiHandle[CONFIG_OSPI0], gFlashHandle[CONFIG_FLASH0]);
 
     status = Board_driversOpen();
     DebugP_assert(status == SystemP_SUCCESS);
@@ -256,64 +249,51 @@ int main()
 
     if(SystemP_SUCCESS == status)
     {
-        Bootloader_BootImageInfo bootImageInfo;
-		Bootloader_Params bootParams;
-        Bootloader_Handle bootHandle;
+        Bootloader_openDma();
 
-        Bootloader_BootImageInfo bootImageInfoDM;
-		Bootloader_Params bootParamsDM;
-        Bootloader_Handle bootHandleDM;
+        Bootloader_LoadImageParams bootArray[CONFIG_BOOTLOADER_NUM_INSTANCES] = {0};
+        uint32_t imageSize = 0;
 
-        Bootloader_Params_init(&bootParams);
-        Bootloader_Params_init(&bootParamsDM);
-
-		Bootloader_BootImageInfo_init(&bootImageInfo);
-        Bootloader_BootImageInfo_init(&bootImageInfoDM);
-
-        bootHandle = Bootloader_open(CONFIG_BOOTLOADER_FLASH_MCU, &bootParams);
-        bootHandleDM = Bootloader_open(CONFIG_BOOTLOADER_FLASH_SBL, &bootParamsDM);
-
-        if(bootHandle != NULL)
+        for(uint8_t inst = 0; inst < CONFIG_BOOTLOADER_NUM_INSTANCES; inst++)
         {
-            ((Bootloader_Config *)bootHandle)->scratchMemPtr = gAppimage;
-			status = App_loadImages(bootHandle, &bootImageInfo);
-            Bootloader_profileAddProfilePoint("App_loadImages");
-        }
-
-        if(SystemP_SUCCESS == status)
-		{
-			DebugP_log("Image loading done, switching to application ...\r\n");
-			DebugP_log("Starting MCU-r5f and 2nd stage bootloader\r\n");
-			UART_flushTxFifo(gUartHandle[CONFIG_UART0]);
-		}
-
-        if(SystemP_SUCCESS == status)
-		{
-			status = App_runCpus(bootHandle, &bootImageInfo);
-		}
-
-        if(SystemP_SUCCESS == status)
-		{
-            if(bootHandleDM != NULL)
+            Bootloader_Params_init(&bootArray[inst].bootParams);
+            Bootloader_BootImageInfo_init(&bootArray[inst].bootImageInfo);
+            bootArray[inst].bootHandle = Bootloader_open(inst, &bootArray[inst].bootParams);
+            bootArray[inst].loadStatus = BOOTLOADER_IMAGE_NOT_LOADED;
+            if(bootArray[inst].bootHandle != NULL)
             {
-                ((Bootloader_Config *)bootHandleDM)->scratchMemPtr = gAppimage;
-                status = App_loadSelfcoreImage(bootHandleDM, &bootImageInfoDM);
-                Bootloader_profileAddProfilePoint("App_loadSelfcoreImage");
+               ((Bootloader_Config *)bootArray[inst].bootHandle)->scratchMemPtr = gAppimage;
+		    	App_loadImages(&bootArray[inst]);
             }
+            imageSize += Bootloader_getMulticoreImageSize(bootArray[inst].bootHandle);
         }
-        Bootloader_profilePrintProfileLog();
 
-        Bootloader_profileUpdateAppimageSize(Bootloader_getMulticoreImageSize(bootHandleDM) + Bootloader_getMulticoreImageSize(bootHandle));
+        Bootloader_profileUpdateAppimageSize(imageSize);
         Bootloader_profileUpdateMediaAndClk(BOOTLOADER_MEDIA_FLASH, OSPI_getInputClk(gOspiHandle[CONFIG_OSPI0]));
 
+        Bootloader_profilePrintProfileLog();
+        DebugP_log("Image loading done, switching to application ...\r\n");
+		DebugP_log("Starting MCU-r5f and 2nd stage bootloader\r\n");
+		UART_flushTxFifo(gUartHandle[CONFIG_UART0]);
 
+        if(bootArray[CONFIG_BOOTLOADER_FLASH_DM].loadStatus == BOOTLOADER_IMAGE_LOADED)
+        {
+            for(uint8_t inst = 0; inst < CONFIG_BOOTLOADER_NUM_INSTANCES; inst++)
+            {
+		        App_runCpus(&bootArray[inst]);
+            }
+        }
+        else
+        {
+            status = SystemP_FAILURE;
+        }
 
-        Bootloader_close(bootHandle);
+        Bootloader_closeDma();
     }
 
     if(status != SystemP_SUCCESS )
     {
-        DebugP_log("Some tests have failed!!\r\n");
+        DebugP_log("DM image not loaded\r\n");
     }
 
     /* Call DPL deinit to close the tick timer and disable interrupts before jumping to Stage2*/
@@ -322,28 +302,10 @@ int main()
     Bootloader_JumpSelfCpu();
 
     Drivers_close();
+    Board_deinit();
     System_deinit();
 
     MCAN_PowerClock_deinit();
 
     return 0;
-}
-
-void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle)
-{
-    /*
-     *  In Fast XSPI mode, reintialization is not required unless
-     *  user configures it or PHY configuration failed
-     */
-    if(SystemP_SUCCESS != OSPI_skipProgramming(oHandle))
-    {
-        OSPI_setProtocol(oHandle, OSPI_FLASH_PROTOCOL(8,8,8,1));
-        OSPI_enableDDR(oHandle);
-        OSPI_setDualOpCodeMode(oHandle);
-        Flash_reset(fHandle);
-        OSPI_enableSDR(oHandle);
-        OSPI_clearDualOpCodeMode(oHandle);
-        OSPI_setProtocol(oHandle, OSPI_FLASH_PROTOCOL(1,1,1,0));
-    }
-
 }

@@ -4,31 +4,27 @@
 
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL =
 # Various Example Projectspec Build Targets
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_null_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_sd_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_emmc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_emmc_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += csirx_capture_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += csirx_recovery_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += csitx_transmit_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += csirxtx_loopback_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_sd_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_ospi_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_null_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_ospi_early_can_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_xip_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_ospi_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_sd_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_ospi_nand_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_ospi_nand_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_ospi_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_ospi_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_sd_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_ospi_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_ospi_nand_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_emmc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_sd_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_uart_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_uart_uniflash_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_uart_uniflash_nand_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_uart_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ospi_flash_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ospi_flash_xip_test_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ospi_flash_xip_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_xip_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += csirx_capture_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += csirx_recovery_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += csirxtx_loopback_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += csitx_transmit_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ddr_perf_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += dss_display_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += dss_display_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += dss_safety_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
@@ -61,37 +57,37 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ipc_rpmsg_echo_qnx_j722s-evm_mcu-r5
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ipc_rpmsg_echo_qnx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ipc_rpmsg_echo_qnx_j722s-evm_c75ss0-0_freertos_ti-c7000_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ipc_rpmsg_echo_qnx_j722s-evm_c75ss1-0_freertos_ti-c7000_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += can_response_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcan_loopback_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcan_loopback_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcan_loopback_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcan_loopback_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcan_response_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcan_loopback_interrupt_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcan_loopback_interrupt_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcan_loopback_interrupt_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcan_loopback_interrupt_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcan_loopback_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcan_loopback_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcan_loopback_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcan_loopback_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcspi_loopback_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcspi_tx_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mmcsd_file_io_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mmcsd_file_io_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mmcsd_file_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mmcsd_raw_io_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mmcsd_raw_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mmcsd_raw_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mmcsd_raw_io_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mmcsd_file_io_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mmcsd_file_io_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mmcsd_file_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sciclient_get_version_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ospi_flash_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sciclient_ccs_init_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sciclient_get_version_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sciclient_unit_test_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sciclient_unit_test_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sciclient_unit_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sciclient_unit_test_j722s-evm_c75ss0-0_freertos_ti-c7000_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sciclient_unit_test_j722s-evm_c75ss1-0_freertos_ti-c7000_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += spinlock_test_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += spinlock_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += spinlock_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += spinlock_test_j722s-evm_c75ss0-0_freertos_ti-c7000_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += spinlock_test_j722s-evm_c75ss1-0_freertos_ti-c7000_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += spinlock_demo_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += spinlock_demo_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += spinlock_demo_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += spinlock_demo_j722s-evm_c75ss0-0_freertos_ti-c7000_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += spinlock_demo_j722s-evm_c75ss1-0_freertos_ti-c7000_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
@@ -108,6 +104,7 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_callback_j722s-evm_wkup-r
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_callback_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_callback_j722s-evm_c75ss0-0_freertos_ti-c7000_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_callback_j722s-evm_c75ss1-0_freertos_ti-c7000_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_low_latency_interrupt_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_low_latency_interrupt_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_low_latency_interrupt_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
@@ -124,15 +121,9 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_low_latency_polling_j722s
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_low_latency_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_low_latency_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_low_latency_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += uart_echo_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_chaining_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_dru_interrupt_j722s-evm_c75ss0-0_freertos_ti-c7000_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_dru_interrupt_j722s-evm_c75ss1-0_freertos_ti-c7000_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_interrupt_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_interrupt_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_interrupt_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
@@ -141,11 +132,14 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_interrupt_j722s-evm_wku
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_interrupt_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_interrupt_j722s-evm_c75ss0-0_freertos_ti-c7000_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_interrupt_j722s-evm_c75ss1-0_freertos_ti-c7000_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_chaining_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_init_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += core_r5_test_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += core_r5_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += core_r5_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += udma_memcpy_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += hello_world_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += hello_world_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += hello_world_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
@@ -168,25 +162,24 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += task_switch_j722s-evm_main-r5fss0-0
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += task_switch_j722s-evm_c75ss0-0_freertos_ti-c7000_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += task_switch_j722s-evm_c75ss1-0_freertos_ti-c7000_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += SafetyApp_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ddr_perf_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += dcc_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += rti_app_uc1_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += rti_app_uc2_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += rti_app_uc3_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += rti_app_uc4_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sdl_lbist_test_app_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sdl_lbist_test_app_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += SafetyCheckersApp_pm_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += SafetyCheckersApp_pm_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += SafetyCheckersApp_pm_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build
@@ -204,6 +197,11 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += dm_power_analysis_app_j722s-evm_mcu
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += dm_power_analysis_app_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += dm_power_analysis_app_j722s-evm_c75ss0-0_freertos_ti-c7000_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += csirx_ut_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += enet_cpsw_loopback_mac_end_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ethfw_server_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ethfw_client_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build
 # Various System Example Projectspec Build Targets
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ipc_notify_echo_j722s-evm_system_freertos_nortos_build
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL += ipc_rpmsg_echo_j722s-evm_system_freertos_nortos_build
@@ -226,59 +224,44 @@ all: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_ALL)
 
 all-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_PRIVATE_ALL)
 
- sbl_null_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/boot/sbl_null/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- sbl_sd_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/boot/sbl_sd/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- sbl_emmc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/boot/sbl_emmc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
  sbl_emmc_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/boot/sbl_emmc_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- csirx_capture_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/csirx/csirx_capture_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
- csirx_recovery_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/csirx/csirx_recovery_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
- csitx_transmit_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/csitx/csitx_transmit_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
- csirxtx_loopback_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/csirx/csirxtx_loopback_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
- SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
- sbl_sd_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/boot/sbl_sd_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- sbl_ospi_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/boot/sbl_ospi/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ sbl_null_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/boot/sbl_null/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
  sbl_ospi_early_can_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/boot/sbl_ospi_early_can/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- sbl_xip_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/boot/sbl_xip/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ sbl_ospi_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/boot/sbl_ospi/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ sbl_sd_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/boot/sbl_sd/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
  sbl_ospi_nand_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/boot/sbl_ospi_nand/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- sbl_ospi_nand_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/boot/sbl_ospi_nand_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
  sbl_ospi_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/boot/sbl_ospi_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ sbl_sd_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/boot/sbl_sd_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
  sbl_ospi_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/boot/sbl_ospi_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- sbl_sd_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/boot/sbl_sd_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ sbl_ospi_nand_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/boot/sbl_ospi_nand_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ sbl_emmc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/boot/sbl_emmc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ sbl_sd_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/boot/sbl_sd_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ sbl_uart_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/boot/sbl_uart/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
  sbl_uart_uniflash_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/boot/sbl_uart_uniflash/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
@@ -286,20 +269,23 @@ all-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_PRIVATE_ALL)
  sbl_uart_uniflash_nand_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/boot/sbl_uart_uniflash_nand/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- sbl_uart_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/boot/sbl_uart/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ sbl_xip_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/boot/sbl_xip/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ csirx_capture_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/csirx/csirx_capture_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
- ospi_flash_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/ospi/ospi_flash_io/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+ csirx_recovery_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/csirx/csirx_recovery_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
- ospi_flash_xip_test_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/ospi/ospi_flash_xip_test/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+ csirxtx_loopback_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/csirx/csirxtx_loopback_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
- ospi_flash_xip_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/ospi/ospi_flash_xip_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+ csitx_transmit_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/csitx/csitx_transmit_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+
+ ddr_perf_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/ddr/ddr_perf/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
  dss_display_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/dss/dss_display_test/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
@@ -397,20 +383,8 @@ all-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_PRIVATE_ALL)
  ipc_rpmsg_echo_qnx_j722s-evm_c75ss1-0_freertos_ti-c7000_build:
 	$(MAKE) -C examples/drivers/ipc/ipc_rpmsg_echo_qnx/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec all
 
- can_response_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/mcan/can_response_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
- mcan_loopback_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
- mcan_loopback_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
- mcan_loopback_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
- mcan_loopback_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ mcan_response_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/mcan/mcan_response_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
  mcan_loopback_interrupt_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
@@ -424,11 +398,32 @@ all-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_PRIVATE_ALL)
  mcan_loopback_interrupt_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
+ mcan_loopback_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+
+ mcan_loopback_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+
+ mcan_loopback_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+
+ mcan_loopback_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
  mcspi_loopback_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/mcspi/mcspi_loopback/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
  mcspi_tx_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/mcspi/mcspi_tx_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+
+ mmcsd_file_io_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ mmcsd_file_io_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ mmcsd_file_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
  mmcsd_raw_io_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
@@ -442,23 +437,14 @@ all-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_PRIVATE_ALL)
  mmcsd_raw_io_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
- mmcsd_file_io_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- mmcsd_file_io_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- mmcsd_file_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- sciclient_get_version_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/sciclient/sciclient_get_version/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
- dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+ ospi_flash_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/ospi/ospi_flash_io/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
  sciclient_ccs_init_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/sciclient/sciclient_ccs_init/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ sciclient_get_version_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/sciclient/sciclient_get_version/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
  sciclient_unit_test_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/sciclient/sciclient_unit_test/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
@@ -475,20 +461,20 @@ all-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_PRIVATE_ALL)
  sciclient_unit_test_j722s-evm_c75ss1-0_freertos_ti-c7000_build:
 	$(MAKE) -C examples/drivers/sciclient/sciclient_unit_test/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec all
 
- spinlock_test_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ spinlock_demo_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- spinlock_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ spinlock_demo_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- spinlock_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ spinlock_demo_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- spinlock_test_j722s-evm_c75ss0-0_freertos_ti-c7000_build:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec all
+ spinlock_demo_j722s-evm_c75ss0-0_freertos_ti-c7000_build:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec all
 
- spinlock_test_j722s-evm_c75ss1-0_freertos_ti-c7000_build:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec all
+ spinlock_demo_j722s-evm_c75ss1-0_freertos_ti-c7000_build:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec all
 
  uart_echo_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/uart/uart_echo/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
@@ -538,6 +524,9 @@ all-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_PRIVATE_ALL)
  uart_echo_callback_j722s-evm_c75ss1-0_freertos_ti-c7000_build:
 	$(MAKE) -C examples/drivers/uart/uart_echo_callback/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec all
 
+ uart_echo_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/uart/uart_echo_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+
  uart_echo_low_latency_interrupt_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
@@ -586,32 +575,14 @@ all-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_PRIVATE_ALL)
  uart_echo_low_latency_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_build:
 	$(MAKE) -C examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec all
 
- uart_echo_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/uart/uart_echo_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+ udma_chaining_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/udma/udma_chaining/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
- udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ udma_memcpy_dru_interrupt_j722s-evm_c75ss0-0_freertos_ti-c7000_build:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_dru_interrupt/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec all
 
- udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- udma_memcpy_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
- udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
- udma_memcpy_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
- udma_memcpy_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_build:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec all
-
- udma_memcpy_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_build:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec all
+ udma_memcpy_dru_interrupt_j722s-evm_c75ss1-0_freertos_ti-c7000_build:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_dru_interrupt/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec all
 
  udma_memcpy_interrupt_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
@@ -637,20 +608,29 @@ all-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_PRIVATE_ALL)
  udma_memcpy_interrupt_j722s-evm_c75ss1-0_freertos_ti-c7000_build:
 	$(MAKE) -C examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec all
 
- udma_chaining_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/udma/udma_chaining/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+ udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- udma_init_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/udma/udma_init/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+ udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- core_r5_test_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/kernel/dpl/core_r5/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ udma_memcpy_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- core_r5_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/kernel/dpl/core_r5/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
- core_r5_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/kernel/dpl/core_r5/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+
+ udma_memcpy_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+
+ udma_memcpy_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_build:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec all
+
+ udma_memcpy_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_build:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec all
 
  hello_world_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/hello_world/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
@@ -742,17 +722,35 @@ all-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_PRIVATE_ALL)
  SafetyApp_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build:
 	$(MAKE) -C examples/safety/safety_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
- ddr_perf_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C examples/drivers/ddr/ddr_perf/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
-
  dcc_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
  rti_app_uc1_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
@@ -766,38 +764,17 @@ all-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_PRIVATE_ALL)
  rti_app_uc4_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
 	$(MAKE) -C examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
 
- mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+ dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
- mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- sdl_lbist_test_app_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_build:
-	$(MAKE) -C test/sdl/lbist/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
-
- sdl_lbist_test_app_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
-	$(MAKE) -C test/sdl/lbist/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+ SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
 
  SafetyCheckersApp_pm_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build:
 	$(MAKE) -C source/safety_checkers/examples/pm_checkers_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
@@ -850,6 +827,21 @@ all-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_PRIVATE_ALL)
  dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000_build:
 	$(MAKE) -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec all
 
+ sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_build:
+	$(MAKE) -C test/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec all
+
+ csirx_ut_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C test/drivers/csirx/csirx_ut/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+
+ enet_cpsw_loopback_mac_end_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C source/networking/enet/core/examples/enet_loopback/enet_cpsw_loopback/loopback_mac_end/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+
+ ethfw_server_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C source/networking/ethfw/apps/app_remoteswitchcfg_server/j722s/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+
+ ethfw_client_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_build:
+	$(MAKE) -C source/networking/ethfw/apps/app_remoteswitchcfg_client/j722s/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec all
+
  ipc_notify_echo_j722s-evm_system_freertos_nortos_build:
 	$(MAKE) -C examples/drivers/ipc/ipc_notify_echo/j722s-evm/system_freertos_nortos -f makefile_projectspec all
 
@@ -866,31 +858,27 @@ all-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_BUILD_PRIVATE_ALL)
 
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL =
 # Various Example Projectspec Clean Targets
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_null_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_sd_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_emmc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_emmc_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += csirx_capture_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += csirx_recovery_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += csitx_transmit_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += csirxtx_loopback_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_sd_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_ospi_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_null_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_ospi_early_can_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_xip_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_ospi_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_sd_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_ospi_nand_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_ospi_nand_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_ospi_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_ospi_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_sd_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_ospi_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_ospi_nand_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_emmc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_sd_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_uart_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_uart_uniflash_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_uart_uniflash_nand_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_uart_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ospi_flash_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ospi_flash_xip_test_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ospi_flash_xip_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_xip_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += csirx_capture_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += csirx_recovery_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += csirxtx_loopback_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += csitx_transmit_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ddr_perf_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += dss_display_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += dss_display_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += dss_safety_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
@@ -923,37 +911,37 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ipc_rpmsg_echo_qnx_j722s-evm_mcu-r5
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ipc_rpmsg_echo_qnx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ipc_rpmsg_echo_qnx_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ipc_rpmsg_echo_qnx_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += can_response_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcan_loopback_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcan_loopback_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcan_loopback_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcan_loopback_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcan_response_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcan_loopback_interrupt_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcan_loopback_interrupt_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcan_loopback_interrupt_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcan_loopback_interrupt_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcan_loopback_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcan_loopback_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcan_loopback_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcan_loopback_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcspi_loopback_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcspi_tx_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mmcsd_file_io_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mmcsd_file_io_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mmcsd_file_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mmcsd_raw_io_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mmcsd_raw_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mmcsd_raw_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mmcsd_raw_io_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mmcsd_file_io_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mmcsd_file_io_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mmcsd_file_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sciclient_get_version_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ospi_flash_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sciclient_ccs_init_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sciclient_get_version_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sciclient_unit_test_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sciclient_unit_test_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sciclient_unit_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sciclient_unit_test_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sciclient_unit_test_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += spinlock_test_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += spinlock_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += spinlock_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += spinlock_test_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += spinlock_test_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += spinlock_demo_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += spinlock_demo_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += spinlock_demo_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += spinlock_demo_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += spinlock_demo_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
@@ -970,6 +958,7 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_callback_j722s-evm_wkup-r
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_callback_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_callback_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_callback_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_low_latency_interrupt_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_low_latency_interrupt_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_low_latency_interrupt_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
@@ -986,15 +975,9 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_low_latency_polling_j722s
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_low_latency_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_low_latency_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_low_latency_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += uart_echo_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_chaining_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_dru_interrupt_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_dru_interrupt_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_interrupt_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_interrupt_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_interrupt_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
@@ -1003,11 +986,14 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_interrupt_j722s-evm_wku
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_interrupt_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_interrupt_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_interrupt_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_chaining_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_init_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += core_r5_test_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += core_r5_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += core_r5_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += udma_memcpy_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += hello_world_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += hello_world_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += hello_world_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
@@ -1030,25 +1016,24 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += task_switch_j722s-evm_main-r5fss0-0
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += task_switch_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += task_switch_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += SafetyApp_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ddr_perf_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += dcc_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += rti_app_uc1_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += rti_app_uc2_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += rti_app_uc3_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += rti_app_uc4_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sdl_lbist_test_app_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sdl_lbist_test_app_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += SafetyCheckersApp_pm_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += SafetyCheckersApp_pm_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += SafetyCheckersApp_pm_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
@@ -1066,6 +1051,11 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += dm_power_analysis_app_j722s-evm_mcu
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += dm_power_analysis_app_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += dm_power_analysis_app_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += csirx_ut_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += enet_cpsw_loopback_mac_end_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ethfw_server_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ethfw_client_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean
 # Various System Example Projectspec Clean Targets
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ipc_notify_echo_j722s-evm_system_freertos_nortos_clean
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL += ipc_rpmsg_echo_j722s-evm_system_freertos_nortos_clean
@@ -1088,59 +1078,44 @@ clean: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_ALL)
 
 clean-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_PRIVATE_ALL)
 
- sbl_null_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/boot/sbl_null/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- sbl_sd_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/boot/sbl_sd/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- sbl_emmc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/boot/sbl_emmc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
  sbl_emmc_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/boot/sbl_emmc_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- csirx_capture_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/csirx/csirx_capture_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
- csirx_recovery_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/csirx/csirx_recovery_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
- csitx_transmit_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/csitx/csitx_transmit_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
- csirxtx_loopback_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/csirx/csirxtx_loopback_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
- SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
- sbl_sd_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/boot/sbl_sd_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- sbl_ospi_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/boot/sbl_ospi/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ sbl_null_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/boot/sbl_null/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
  sbl_ospi_early_can_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/boot/sbl_ospi_early_can/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- sbl_xip_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/boot/sbl_xip/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ sbl_ospi_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/boot/sbl_ospi/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ sbl_sd_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/boot/sbl_sd/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
  sbl_ospi_nand_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/boot/sbl_ospi_nand/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- sbl_ospi_nand_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/boot/sbl_ospi_nand_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
  sbl_ospi_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/boot/sbl_ospi_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ sbl_sd_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/boot/sbl_sd_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
  sbl_ospi_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/boot/sbl_ospi_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- sbl_sd_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/boot/sbl_sd_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ sbl_ospi_nand_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/boot/sbl_ospi_nand_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ sbl_emmc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/boot/sbl_emmc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ sbl_sd_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/boot/sbl_sd_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ sbl_uart_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/boot/sbl_uart/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
  sbl_uart_uniflash_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/boot/sbl_uart_uniflash/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
@@ -1148,20 +1123,23 @@ clean-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_PRIVATE_ALL)
  sbl_uart_uniflash_nand_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/boot/sbl_uart_uniflash_nand/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- sbl_uart_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/boot/sbl_uart/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ sbl_xip_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/boot/sbl_xip/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ csirx_capture_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/csirx/csirx_capture_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
- ospi_flash_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/ospi/ospi_flash_io/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+ csirx_recovery_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/csirx/csirx_recovery_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
- ospi_flash_xip_test_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/ospi/ospi_flash_xip_test/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+ csirxtx_loopback_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/csirx/csirxtx_loopback_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
- ospi_flash_xip_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/ospi/ospi_flash_xip_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+ csitx_transmit_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/csitx/csitx_transmit_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+
+ ddr_perf_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/ddr/ddr_perf/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
  dss_display_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/dss/dss_display_test/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
@@ -1259,20 +1237,8 @@ clean-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_PRIVATE_ALL)
  ipc_rpmsg_echo_qnx_j722s-evm_c75ss1-0_freertos_ti-c7000_clean:
 	$(MAKE) -C examples/drivers/ipc/ipc_rpmsg_echo_qnx/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec clean
 
- can_response_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/mcan/can_response_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
- mcan_loopback_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
- mcan_loopback_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
- mcan_loopback_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
- mcan_loopback_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ mcan_response_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/mcan/mcan_response_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
  mcan_loopback_interrupt_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
@@ -1286,11 +1252,32 @@ clean-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_PRIVATE_ALL)
  mcan_loopback_interrupt_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
+ mcan_loopback_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+
+ mcan_loopback_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+
+ mcan_loopback_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+
+ mcan_loopback_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
  mcspi_loopback_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/mcspi/mcspi_loopback/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
  mcspi_tx_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/mcspi/mcspi_tx_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+
+ mmcsd_file_io_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ mmcsd_file_io_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ mmcsd_file_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
  mmcsd_raw_io_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
@@ -1304,23 +1291,14 @@ clean-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_PRIVATE_ALL)
  mmcsd_raw_io_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
- mmcsd_file_io_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- mmcsd_file_io_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- mmcsd_file_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- sciclient_get_version_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/sciclient/sciclient_get_version/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
- dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+ ospi_flash_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/ospi/ospi_flash_io/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
  sciclient_ccs_init_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/sciclient/sciclient_ccs_init/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ sciclient_get_version_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/sciclient/sciclient_get_version/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
  sciclient_unit_test_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/sciclient/sciclient_unit_test/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
@@ -1337,20 +1315,20 @@ clean-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_PRIVATE_ALL)
  sciclient_unit_test_j722s-evm_c75ss1-0_freertos_ti-c7000_clean:
 	$(MAKE) -C examples/drivers/sciclient/sciclient_unit_test/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec clean
 
- spinlock_test_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ spinlock_demo_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- spinlock_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ spinlock_demo_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- spinlock_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ spinlock_demo_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- spinlock_test_j722s-evm_c75ss0-0_freertos_ti-c7000_clean:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec clean
+ spinlock_demo_j722s-evm_c75ss0-0_freertos_ti-c7000_clean:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec clean
 
- spinlock_test_j722s-evm_c75ss1-0_freertos_ti-c7000_clean:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec clean
+ spinlock_demo_j722s-evm_c75ss1-0_freertos_ti-c7000_clean:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec clean
 
  uart_echo_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/uart/uart_echo/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
@@ -1400,6 +1378,9 @@ clean-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_PRIVATE_ALL)
  uart_echo_callback_j722s-evm_c75ss1-0_freertos_ti-c7000_clean:
 	$(MAKE) -C examples/drivers/uart/uart_echo_callback/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec clean
 
+ uart_echo_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/uart/uart_echo_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+
  uart_echo_low_latency_interrupt_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
@@ -1448,32 +1429,14 @@ clean-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_PRIVATE_ALL)
  uart_echo_low_latency_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_clean:
 	$(MAKE) -C examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec clean
 
- uart_echo_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/uart/uart_echo_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+ udma_chaining_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/udma/udma_chaining/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
- udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ udma_memcpy_dru_interrupt_j722s-evm_c75ss0-0_freertos_ti-c7000_clean:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_dru_interrupt/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec clean
 
- udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- udma_memcpy_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
- udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
- udma_memcpy_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
- udma_memcpy_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_clean:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec clean
-
- udma_memcpy_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_clean:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec clean
+ udma_memcpy_dru_interrupt_j722s-evm_c75ss1-0_freertos_ti-c7000_clean:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_dru_interrupt/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec clean
 
  udma_memcpy_interrupt_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
@@ -1499,20 +1462,29 @@ clean-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_PRIVATE_ALL)
  udma_memcpy_interrupt_j722s-evm_c75ss1-0_freertos_ti-c7000_clean:
 	$(MAKE) -C examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec clean
 
- udma_chaining_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/udma/udma_chaining/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+ udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- udma_init_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/udma/udma_init/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+ udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- core_r5_test_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/kernel/dpl/core_r5/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ udma_memcpy_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- core_r5_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/kernel/dpl/core_r5/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
- core_r5_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/kernel/dpl/core_r5/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+
+ udma_memcpy_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+
+ udma_memcpy_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_clean:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec clean
+
+ udma_memcpy_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_clean:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec clean
 
  hello_world_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/hello_world/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
@@ -1604,17 +1576,35 @@ clean-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_PRIVATE_ALL)
  SafetyApp_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean:
 	$(MAKE) -C examples/safety/safety_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
- ddr_perf_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C examples/drivers/ddr/ddr_perf/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
-
  dcc_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
  rti_app_uc1_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
@@ -1628,38 +1618,17 @@ clean-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_PRIVATE_ALL)
  rti_app_uc4_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
 
- mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+ dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
- mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- sdl_lbist_test_app_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C test/sdl/lbist/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
-
- sdl_lbist_test_app_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
-	$(MAKE) -C test/sdl/lbist/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+ SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
 
  SafetyCheckersApp_pm_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean:
 	$(MAKE) -C source/safety_checkers/examples/pm_checkers_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
@@ -1712,6 +1681,21 @@ clean-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_PRIVATE_ALL)
  dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000_clean:
 	$(MAKE) -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec clean
 
+ sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C test/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec clean
+
+ csirx_ut_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C test/drivers/csirx/csirx_ut/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+
+ enet_cpsw_loopback_mac_end_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C source/networking/enet/core/examples/enet_loopback/enet_cpsw_loopback/loopback_mac_end/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+
+ ethfw_server_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C source/networking/ethfw/apps/app_remoteswitchcfg_server/j722s/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+
+ ethfw_client_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C source/networking/ethfw/apps/app_remoteswitchcfg_client/j722s/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec clean
+
  ipc_notify_echo_j722s-evm_system_freertos_nortos_clean:
 	$(MAKE) -C examples/drivers/ipc/ipc_notify_echo/j722s-evm/system_freertos_nortos -f makefile_projectspec clean
 
@@ -1728,31 +1712,27 @@ clean-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_CLEAN_PRIVATE_ALL)
 
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL =
 # Various Example Projectspec Export Targets
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_null_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_sd_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_emmc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_emmc_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += csirx_capture_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += csirx_recovery_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += csitx_transmit_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += csirxtx_loopback_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_sd_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_ospi_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_null_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_ospi_early_can_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_xip_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_ospi_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_sd_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_ospi_nand_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_ospi_nand_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_ospi_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_ospi_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_sd_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_ospi_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_ospi_nand_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_emmc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_sd_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_uart_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_uart_uniflash_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_uart_uniflash_nand_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_uart_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ospi_flash_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ospi_flash_xip_test_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ospi_flash_xip_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_xip_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += csirx_capture_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += csirx_recovery_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += csirxtx_loopback_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += csitx_transmit_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ddr_perf_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += dss_display_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += dss_display_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += dss_safety_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
@@ -1785,37 +1765,37 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ipc_rpmsg_echo_qnx_j722s-evm_mcu-r
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ipc_rpmsg_echo_qnx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ipc_rpmsg_echo_qnx_j722s-evm_c75ss0-0_freertos_ti-c7000_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ipc_rpmsg_echo_qnx_j722s-evm_c75ss1-0_freertos_ti-c7000_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += can_response_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcan_loopback_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcan_loopback_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcan_loopback_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcan_loopback_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcan_response_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcan_loopback_interrupt_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcan_loopback_interrupt_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcan_loopback_interrupt_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcan_loopback_interrupt_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcan_loopback_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcan_loopback_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcan_loopback_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcan_loopback_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcspi_loopback_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcspi_tx_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mmcsd_file_io_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mmcsd_file_io_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mmcsd_file_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mmcsd_raw_io_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mmcsd_raw_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mmcsd_raw_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mmcsd_raw_io_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mmcsd_file_io_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mmcsd_file_io_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mmcsd_file_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sciclient_get_version_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ospi_flash_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sciclient_ccs_init_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sciclient_get_version_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sciclient_unit_test_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sciclient_unit_test_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sciclient_unit_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sciclient_unit_test_j722s-evm_c75ss0-0_freertos_ti-c7000_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sciclient_unit_test_j722s-evm_c75ss1-0_freertos_ti-c7000_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += spinlock_test_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += spinlock_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += spinlock_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += spinlock_test_j722s-evm_c75ss0-0_freertos_ti-c7000_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += spinlock_test_j722s-evm_c75ss1-0_freertos_ti-c7000_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += spinlock_demo_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += spinlock_demo_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += spinlock_demo_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += spinlock_demo_j722s-evm_c75ss0-0_freertos_ti-c7000_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += spinlock_demo_j722s-evm_c75ss1-0_freertos_ti-c7000_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
@@ -1832,6 +1812,7 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_callback_j722s-evm_wkup-
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_callback_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_callback_j722s-evm_c75ss0-0_freertos_ti-c7000_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_callback_j722s-evm_c75ss1-0_freertos_ti-c7000_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_low_latency_interrupt_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_low_latency_interrupt_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_low_latency_interrupt_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
@@ -1848,15 +1829,9 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_low_latency_polling_j722
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_low_latency_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_low_latency_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_low_latency_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += uart_echo_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_chaining_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_dru_interrupt_j722s-evm_c75ss0-0_freertos_ti-c7000_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_dru_interrupt_j722s-evm_c75ss1-0_freertos_ti-c7000_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_interrupt_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_interrupt_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_interrupt_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
@@ -1865,11 +1840,14 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_interrupt_j722s-evm_wk
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_interrupt_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_interrupt_j722s-evm_c75ss0-0_freertos_ti-c7000_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_interrupt_j722s-evm_c75ss1-0_freertos_ti-c7000_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_chaining_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_init_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += core_r5_test_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += core_r5_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += core_r5_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += udma_memcpy_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += hello_world_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += hello_world_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += hello_world_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
@@ -1892,25 +1870,24 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += task_switch_j722s-evm_main-r5fss0-
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += task_switch_j722s-evm_c75ss0-0_freertos_ti-c7000_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += task_switch_j722s-evm_c75ss1-0_freertos_ti-c7000_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += SafetyApp_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ddr_perf_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += dcc_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += rti_app_uc1_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += rti_app_uc2_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += rti_app_uc3_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += rti_app_uc4_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sdl_lbist_test_app_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export
-BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sdl_lbist_test_app_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += SafetyCheckersApp_pm_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += SafetyCheckersApp_pm_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += SafetyCheckersApp_pm_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export
@@ -1928,6 +1905,11 @@ BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += dm_power_analysis_app_j722s-evm_mc
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += dm_power_analysis_app_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += dm_power_analysis_app_j722s-evm_c75ss0-0_freertos_ti-c7000_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += csirx_ut_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += enet_cpsw_loopback_mac_end_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ethfw_server_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export
+BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ethfw_client_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export
 # Various System Example Projectspec Export Targets
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ipc_notify_echo_j722s-evm_system_freertos_nortos_export
 BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL += ipc_rpmsg_echo_j722s-evm_system_freertos_nortos_export
@@ -1950,59 +1932,44 @@ export: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_ALL)
 
 export-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_PRIVATE_ALL)
 
- sbl_null_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/boot/sbl_null/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- sbl_sd_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/boot/sbl_sd/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- sbl_emmc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/boot/sbl_emmc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
  sbl_emmc_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/boot/sbl_emmc_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- csirx_capture_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/csirx/csirx_capture_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
- csirx_recovery_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/csirx/csirx_recovery_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
- csitx_transmit_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/csitx/csitx_transmit_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
- csirxtx_loopback_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/csirx/csirxtx_loopback_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
- SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
- sbl_sd_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/boot/sbl_sd_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- sbl_ospi_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/boot/sbl_ospi/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ sbl_null_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/boot/sbl_null/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
  sbl_ospi_early_can_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/boot/sbl_ospi_early_can/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- sbl_xip_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/boot/sbl_xip/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ sbl_ospi_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/boot/sbl_ospi/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ sbl_sd_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/boot/sbl_sd/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
  sbl_ospi_nand_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/boot/sbl_ospi_nand/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- sbl_ospi_nand_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/boot/sbl_ospi_nand_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
  sbl_ospi_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/boot/sbl_ospi_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ sbl_sd_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/boot/sbl_sd_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
  sbl_ospi_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/boot/sbl_ospi_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- sbl_sd_hlos_fc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/boot/sbl_sd_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ sbl_ospi_nand_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/boot/sbl_ospi_nand_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ sbl_emmc_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/boot/sbl_emmc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ sbl_sd_hlos_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/boot/sbl_sd_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ sbl_uart_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/boot/sbl_uart/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
  sbl_uart_uniflash_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/boot/sbl_uart_uniflash/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
@@ -2010,20 +1977,23 @@ export-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_PRIVATE_ALL)
  sbl_uart_uniflash_nand_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/boot/sbl_uart_uniflash_nand/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- sbl_uart_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/boot/sbl_uart/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ sbl_xip_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/boot/sbl_xip/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ csirx_capture_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/csirx/csirx_capture_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
- ospi_flash_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/ospi/ospi_flash_io/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+ csirx_recovery_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/csirx/csirx_recovery_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
- ospi_flash_xip_test_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/ospi/ospi_flash_xip_test/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+ csirxtx_loopback_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/csirx/csirxtx_loopback_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
- ospi_flash_xip_test_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/ospi/ospi_flash_xip_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+ csitx_transmit_testapp_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/csitx/csitx_transmit_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+
+ ddr_perf_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/ddr/ddr_perf/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
  dss_display_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/dss/dss_display_test/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
@@ -2121,20 +2091,8 @@ export-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_PRIVATE_ALL)
  ipc_rpmsg_echo_qnx_j722s-evm_c75ss1-0_freertos_ti-c7000_export:
 	$(MAKE) -C examples/drivers/ipc/ipc_rpmsg_echo_qnx/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec export
 
- can_response_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/mcan/can_response_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
- mcan_loopback_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
- mcan_loopback_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
- mcan_loopback_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
- mcan_loopback_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ mcan_response_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/mcan/mcan_response_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
  mcan_loopback_interrupt_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
@@ -2148,11 +2106,32 @@ export-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_PRIVATE_ALL)
  mcan_loopback_interrupt_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
+ mcan_loopback_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+
+ mcan_loopback_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+
+ mcan_loopback_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+
+ mcan_loopback_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
  mcspi_loopback_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/mcspi/mcspi_loopback/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
  mcspi_tx_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/mcspi/mcspi_tx_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+
+ mmcsd_file_io_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ mmcsd_file_io_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ mmcsd_file_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
  mmcsd_raw_io_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
@@ -2166,23 +2145,14 @@ export-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_PRIVATE_ALL)
  mmcsd_raw_io_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
- mmcsd_file_io_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- mmcsd_file_io_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- mmcsd_file_io_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- sciclient_get_version_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/sciclient/sciclient_get_version/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
- dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+ ospi_flash_io_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/ospi/ospi_flash_io/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
  sciclient_ccs_init_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/sciclient/sciclient_ccs_init/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ sciclient_get_version_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/sciclient/sciclient_get_version/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
  sciclient_unit_test_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/sciclient/sciclient_unit_test/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
@@ -2199,20 +2169,20 @@ export-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_PRIVATE_ALL)
  sciclient_unit_test_j722s-evm_c75ss1-0_freertos_ti-c7000_export:
 	$(MAKE) -C examples/drivers/sciclient/sciclient_unit_test/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec export
 
- spinlock_test_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ spinlock_demo_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- spinlock_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ spinlock_demo_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- spinlock_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ spinlock_demo_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- spinlock_test_j722s-evm_c75ss0-0_freertos_ti-c7000_export:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec export
+ spinlock_demo_j722s-evm_c75ss0-0_freertos_ti-c7000_export:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec export
 
- spinlock_test_j722s-evm_c75ss1-0_freertos_ti-c7000_export:
-	$(MAKE) -C examples/drivers/spinlock/spinlock_test/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec export
+ spinlock_demo_j722s-evm_c75ss1-0_freertos_ti-c7000_export:
+	$(MAKE) -C examples/drivers/spinlock/spinlock_demo/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec export
 
  uart_echo_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/uart/uart_echo/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
@@ -2262,6 +2232,9 @@ export-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_PRIVATE_ALL)
  uart_echo_callback_j722s-evm_c75ss1-0_freertos_ti-c7000_export:
 	$(MAKE) -C examples/drivers/uart/uart_echo_callback/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec export
 
+ uart_echo_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/uart/uart_echo_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+
  uart_echo_low_latency_interrupt_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
@@ -2310,32 +2283,14 @@ export-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_PRIVATE_ALL)
  uart_echo_low_latency_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_export:
 	$(MAKE) -C examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec export
 
- uart_echo_dma_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/uart/uart_echo_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+ udma_chaining_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/udma/udma_chaining/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
- udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ udma_memcpy_dru_interrupt_j722s-evm_c75ss0-0_freertos_ti-c7000_export:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_dru_interrupt/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec export
 
- udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- udma_memcpy_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
- udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
- udma_memcpy_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
- udma_memcpy_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_export:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec export
-
- udma_memcpy_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_export:
-	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec export
+ udma_memcpy_dru_interrupt_j722s-evm_c75ss1-0_freertos_ti-c7000_export:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_dru_interrupt/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec export
 
  udma_memcpy_interrupt_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
@@ -2361,20 +2316,29 @@ export-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_PRIVATE_ALL)
  udma_memcpy_interrupt_j722s-evm_c75ss1-0_freertos_ti-c7000_export:
 	$(MAKE) -C examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec export
 
- udma_chaining_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/udma/udma_chaining/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+ udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- udma_init_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/udma/udma_init/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+ udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- core_r5_test_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/kernel/dpl/core_r5/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ udma_memcpy_polling_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- core_r5_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/kernel/dpl/core_r5/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ udma_memcpy_polling_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
- core_r5_test_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/kernel/dpl/core_r5/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ udma_memcpy_polling_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+
+ udma_memcpy_polling_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+
+ udma_memcpy_polling_j722s-evm_c75ss0-0_freertos_ti-c7000_export:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec export
+
+ udma_memcpy_polling_j722s-evm_c75ss1-0_freertos_ti-c7000_export:
+	$(MAKE) -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec export
 
  hello_world_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/hello_world/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
@@ -2466,17 +2430,35 @@ export-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_PRIVATE_ALL)
  SafetyApp_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export:
 	$(MAKE) -C examples/safety/safety_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
- ddr_perf_app_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C examples/drivers/ddr/ddr_perf/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
-
  dcc_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
  rti_app_uc1_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
@@ -2490,38 +2472,17 @@ export-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_PRIVATE_ALL)
  rti_app_uc4_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
 	$(MAKE) -C examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
 
- mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+ dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
- mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- sdl_lbist_test_app_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_export:
-	$(MAKE) -C test/sdl/lbist/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
-
- sdl_lbist_test_app_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
-	$(MAKE) -C test/sdl/lbist/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+ SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
 
  SafetyCheckersApp_pm_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export:
 	$(MAKE) -C source/safety_checkers/examples/pm_checkers_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
@@ -2574,6 +2535,21 @@ export-private: $(BUILD_COMBO_EXAMPLE_PROJECTSPEC_EXPORT_PRIVATE_ALL)
  dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000_export:
 	$(MAKE) -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec export
 
+ sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_export:
+	$(MAKE) -C test/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec export
+
+ csirx_ut_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C test/drivers/csirx/csirx_ut/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+
+ enet_cpsw_loopback_mac_end_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C source/networking/enet/core/examples/enet_loopback/enet_cpsw_loopback/loopback_mac_end/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+
+ ethfw_server_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C source/networking/ethfw/apps/app_remoteswitchcfg_server/j722s/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+
+ ethfw_client_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_export:
+	$(MAKE) -C source/networking/ethfw/apps/app_remoteswitchcfg_client/j722s/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec export
+
  ipc_notify_echo_j722s-evm_system_freertos_nortos_export:
 	$(MAKE) -C examples/drivers/ipc/ipc_notify_echo/j722s-evm/system_freertos_nortos -f makefile_projectspec export
 
@@ -2606,31 +2582,27 @@ help:
 	@echo  .
 	@echo  Example ProjectSpec build targets,
 	@echo  ==================================
-	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_null/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_sd/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_emmc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_emmc_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/csirx/csirx_capture_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/csirx/csirx_recovery_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/csitx/csitx_transmit_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/csirx/csirxtx_loopback_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_sd_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_ospi/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_null/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_ospi_early_can/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_xip/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_ospi/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_sd/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_ospi_nand/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_ospi_nand_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_ospi_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_ospi_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_sd_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_ospi_hlos_fc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_ospi_nand_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_emmc/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_sd_hlos/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_uart/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_uart_uniflash/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_uart_uniflash_nand/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_uart/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/ospi/ospi_flash_io/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/ospi/ospi_flash_xip_test/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/ospi/ospi_flash_xip_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/boot/sbl_xip/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/csirx/csirx_capture_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/csirx/csirx_recovery_testapp/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/csirx/csirxtx_loopback_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/csitx/csitx_transmit_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/ddr/ddr_perf/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/dss/dss_display_test/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/dss/dss_display_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/dss/dss_safety_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
@@ -2663,37 +2635,37 @@ help:
 	@echo  $(MAKE) -s -C examples/drivers/ipc/ipc_rpmsg_echo_qnx/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/ipc/ipc_rpmsg_echo_qnx/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/ipc/ipc_rpmsg_echo_qnx/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/mcan/can_response_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/mcan/mcan_response_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/mcan/mcan_loopback_interrupt/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/mcan/mcan_loopback_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/mcspi/mcspi_loopback/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/mcspi/mcspi_tx_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/mmcsd/mmcsd_raw_io/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/mmcsd/mmcsd_file_io/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/sciclient/sciclient_get_version/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/ospi/ospi_flash_io/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/sciclient/sciclient_ccs_init/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/sciclient/sciclient_get_version/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/sciclient/sciclient_unit_test/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/sciclient/sciclient_unit_test/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/sciclient/sciclient_unit_test/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/sciclient/sciclient_unit_test/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/sciclient/sciclient_unit_test/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/spinlock/spinlock_test/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/spinlock/spinlock_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/spinlock/spinlock_test/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/spinlock/spinlock_test/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/spinlock/spinlock_test/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/spinlock/spinlock_demo/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/spinlock/spinlock_demo/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/spinlock/spinlock_demo/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/spinlock/spinlock_demo/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/spinlock/spinlock_demo/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
@@ -2710,6 +2682,7 @@ help:
 	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo_callback/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo_callback/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo_callback/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo_low_latency_interrupt/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
@@ -2726,15 +2699,9 @@ help:
 	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo_low_latency_polling/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/uart/uart_echo_dma/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/udma/udma_chaining/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_dru_interrupt/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_dru_interrupt/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
@@ -2743,11 +2710,14 @@ help:
 	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_interrupt/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/udma/udma_chaining/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/udma/udma_init/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/kernel/dpl/core_r5/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/kernel/dpl/core_r5/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/kernel/dpl/core_r5/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/udma/udma_memcpy_polling/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/hello_world/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/hello_world/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/hello_world/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
@@ -2778,25 +2748,24 @@ help:
 	@echo  $(MAKE) -s -C examples/kernel/safertos/task_switch/j722s-evm/c75ss0-0_safertos/ti-c7000 -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/kernel/safertos/task_switch/j722s-evm/c75ss1-0_safertos/ti-c7000 -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/safety/safety_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/drivers/ddr/ddr_perf/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/sdl/rti/UC2/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/sdl/rti/UC3/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C test/sdl/lbist/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
-	@echo  $(MAKE) -s -C test/sdl/lbist/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C source/safety_checkers/examples/pm_checkers_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C source/safety_checkers/examples/pm_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C source/safety_checkers/examples/pm_checkers_app/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
@@ -2814,6 +2783,11 @@ help:
 	@echo  $(MAKE) -s -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
 	@echo  $(MAKE) -s -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C test/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C test/drivers/csirx/csirx_ut/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C source/networking/enet/core/examples/enet_loopback/enet_cpsw_loopback/loopback_mac_end/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C source/networking/ethfw/apps/app_remoteswitchcfg_server/j722s/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
+	@echo  $(MAKE) -s -C source/networking/ethfw/apps/app_remoteswitchcfg_client/j722s/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile_projectspec [export all clean]
 	@echo  .
 	@echo  System Example ProjectSpec build targets,
 	@echo  =========================================

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -31,21 +31,23 @@
  */
 #include <stdint.h>
 #include <string.h>
+#include "kernel/dpl/StartuphooksP.h"
 
 extern uint32_t __BSS_START;
 extern uint32_t __BSS_END;
 
 int32_t _system_pre_init(void);
 
-int _system_pre_init()
+int _system_pre_init(void)
 {
     uint32_t bss_size = ((uintptr_t)&__BSS_END - (uintptr_t)&__BSS_START);
     memset((void*)&__BSS_START, 0x00, bss_size);
+    extended_system_pre_init();
     return 1;
 }
 
 #if !defined (__clang__)
-void __TI_auto_init()
+void __TI_auto_init(void)
 {
 }
 #endif

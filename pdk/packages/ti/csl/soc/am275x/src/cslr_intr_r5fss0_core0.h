@@ -2,7 +2,7 @@
 *
 * R5FSS0_CORE0 INTERRUPT MAP. header file
 *
-* Copyright (C) 2015-2024 Texas Instruments Incorporated.
+* Copyright (C) 2015-2025 Texas Instruments Incorporated.
 *  Redistribution and use in source and binary forms, with or without
 *  modification, are permitted provided that the following conditions
 *  are met:
@@ -49,6 +49,7 @@ extern "C"
 #define CSLR_R5FSS0_CORE0_INTR_CTRL_MMR0_IPC_SET16_IPC_SET_IPCFG_0                                 (0U)
 #define CSLR_R5FSS0_CORE0_INTR_SMS0_AESEIP38T_0_AES_SINTREQUEST_P_0                                (1U)
 #define CSLR_R5FSS0_CORE0_INTR_SMS0_AESEIP38T_0_AES_SINTREQUEST_S_0                                (2U)
+#define CSLR_R5FSS0_CORE0_INTR_EPWM0_EPWM_ETINT_0                                                  (3U)
 #define CSLR_R5FSS0_CORE0_INTR_R5FSS0_CORE0_EXP_INTR_0                                             (4U)
 #define CSLR_R5FSS0_CORE0_INTR_R5FSS0_COMMON0_COMMRX_LEVEL_0_0                                     (5U)
 #define CSLR_R5FSS0_CORE0_INTR_R5FSS0_COMMON0_COMMTX_LEVEL_0_0                                     (6U)

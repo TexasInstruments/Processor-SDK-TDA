@@ -4,7 +4,7 @@ let device = "am62ax";
 
 const files = {
     common: [
-        "ipc_rpmsg_echo_linux.c",
+        "ipc_rpmsg_echo.c",
         "main.c",
     ],
 };
@@ -52,6 +52,7 @@ const libdirs_freertos_dm_r5f = {
         "${MCU_PLUS_SDK_PATH}/source/drivers/lib",
         "${MCU_PLUS_SDK_PATH}/source/board/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciserver/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib",
     ],
 };
 
@@ -106,6 +107,7 @@ const libs_freertos_dm_r5f = {
         "drivers.am62ax.dm-r5f.ti-arm-clang.${ConfigName}.lib",
         "board.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
         "sciserver.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
     ],
 };
 
@@ -119,6 +121,25 @@ const libs_freertos_c75 = {
 const lnkfiles = {
     common: [
         "linker.cmd",
+    ]
+};
+
+const defines_mcu = {
+    common:[
+        "ENABLE_MCU_ONLY_LPM",
+        "REMOTE_CORE",
+    ]
+}
+
+const defines_dm_r5f = {
+    common:[
+        "ENABLE_SCICLIENT_DIRECT",
+    ]
+};
+
+const defines_c75 = {
+    common:[
+        "REMOTE_CORE",
     ]
 };
 
@@ -152,6 +173,7 @@ const templates_freertos_mcu_r5f =
         output: "../main.c",
         options: {
             entryFunction: "ipc_rpmsg_echo_main",
+            skipDriversClose: "true",
         },
     }
 ];
@@ -202,6 +224,7 @@ const templates_freertos_dm_r5f =
         output: "../main.c",
         options: {
             entryFunction: "ipc_rpmsg_echo_main",
+            skipDriversClose: "true",
         },
     }
 ];
@@ -217,7 +240,8 @@ const templates_freertos_c75 =
         output: "../main.c",
         options: {
             entryFunction: "ipc_rpmsg_echo_main",
-            stackSize: 64*1024,
+            stackSize: 16*1024,
+            skipDriversClose: "true",
         },
     }
 ];
@@ -234,6 +258,7 @@ function getComponentProperty() {
     property.dirPath = path.resolve(__dirname, "..");
     property.type = "executable";
     property.name = "ipc_rpmsg_echo_linux";
+    property.linuxAppName = "ipc_rpmsg_echo";
     property.isInternal = false;
     property.isLinuxInSystem = true;
     property.isLinuxFwGen = true;
@@ -260,11 +285,13 @@ function getComponentBuildProperty(buildOption) {
             build_property.libdirs = libdirs_freertos_mcu_r5f;
             build_property.libs = libs_freertos_r5f;
             build_property.templates = templates_freertos_mcu_r5f;
+            build_property.defines = defines_mcu;
         }
         else
         {
             build_property.libs = libs_nortos_r5f;
             build_property.templates = templates_nortos_mcu_r5f;
+            build_property.defines = defines_mcu;
         }
     }
     else if(buildOption.cpu.match(/r5f*/)) {
@@ -274,11 +301,13 @@ function getComponentBuildProperty(buildOption) {
             build_property.libdirs = libdirs_freertos_dm_r5f;
             build_property.libs = libs_freertos_dm_r5f;
             build_property.templates = templates_freertos_dm_r5f;
+            build_property.defines = defines_dm_r5f;
         }
         else
         {
             build_property.libs = libs_nortos_dm_r5f;
             build_property.templates = templates_nortos_dm_r5f;
+            build_property.defines = defines_dm_r5f;
         }
     }
     else if(buildOption.cpu.match(/c75*/))
@@ -287,6 +316,7 @@ function getComponentBuildProperty(buildOption) {
         build_property.libdirs = libdirs_freertos_c75;
         build_property.libs = libs_freertos_c75;
         build_property.templates = templates_freertos_c75;
+        build_property.defines = defines_c75;
     }
 
     return build_property;

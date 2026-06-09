@@ -523,9 +523,27 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 		.outp	= 0x0163U,
 	},
 	/*
-	 * For: MCU_0_R5_0 notify: MCU_R5FSS0_CORE0/intr_64
+	 * For: A72_8 notify: COMPUTE_CLUSTER0_CLEC/soc_events_in_718,
+	 * COMPUTE_CLUSTER0_GIC500SS/spi_718
 	 */
 	[56] = {
+		.id	= J784S4_DEV_NAVSS0_INTR_0,
+		.inp	= 0xFEU,
+		.outp	= 0x00AEU,
+	},
+	/*
+	 * For: A72_8 response: COMPUTE_CLUSTER0_CLEC/soc_events_in_719,
+	 * COMPUTE_CLUSTER0_GIC500SS/spi_719
+	 */
+	[57] = {
+		.id	= J784S4_DEV_NAVSS0_INTR_0,
+		.inp	= 0xFFU,
+		.outp	= 0x00AFU,
+	},
+	/*
+	 * For: MCU_0_R5_0 notify: MCU_R5FSS0_CORE0/intr_64
+	 */
+	[58] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x00U,
 		.outp	= 0x0000U,
@@ -533,7 +551,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: MCU_0_R5_0 response: MCU_R5FSS0_CORE0/intr_65
 	 */
-	[57] = {
+	[59] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x01U,
 		.outp	= 0x0001U,
@@ -541,7 +559,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: MCU_0_R5_1 notify: MCU_R5FSS0_CORE0/intr_66
 	 */
-	[58] = {
+	[60] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x02U,
 		.outp	= 0x0002U,
@@ -549,7 +567,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: MCU_0_R5_1 response: MCU_R5FSS0_CORE0/intr_67
 	 */
-	[59] = {
+	[61] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x03U,
 		.outp	= 0x0003U,
@@ -557,7 +575,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: MCU_0_R5_2 notify: MCU_R5FSS0_CORE1/intr_64
 	 */
-	[60] = {
+	[62] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x04U,
 		.outp	= 0x0020U,
@@ -565,7 +583,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: MCU_0_R5_2 response: MCU_R5FSS0_CORE1/intr_65
 	 */
-	[61] = {
+	[63] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x05U,
 		.outp	= 0x0021U,
@@ -573,7 +591,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: MCU_0_R5_3 notify: MCU_R5FSS0_CORE1/intr_66
 	 */
-	[62] = {
+	[64] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x06U,
 		.outp	= 0x0022U,
@@ -581,7 +599,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: MCU_0_R5_3 response: MCU_R5FSS0_CORE1/intr_67
 	 */
-	[63] = {
+	[65] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x07U,
 		.outp	= 0x0023U,
@@ -589,7 +607,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: DM err_event: MCU_R5FSS0_CORE0/intr_69
 	 */
-	[64] = {
+	[66] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x10U,
 		.outp	= 0x0005U,
@@ -597,7 +615,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: DM nonsec_high_priority_rx: MCU_R5FSS0_CORE0/intr_70
 	 */
-	[65] = {
+	[67] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x11U,
 		.outp	= 0x0006U,
@@ -605,7 +623,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: DM nonsec_high_priority_rx: MCU_R5FSS0_CORE0/intr_71
 	 */
-	[66] = {
+	[68] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x12U,
 		.outp	= 0x0007U,
@@ -613,7 +631,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: DM nonsec_low_priority_rx: MCU_R5FSS0_CORE0/intr_72
 	 */
-	[67] = {
+	[69] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x13U,
 		.outp	= 0x0008U,
@@ -621,7 +639,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: DM nonsec_low_priority_rx: MCU_R5FSS0_CORE0/intr_73
 	 */
-	[68] = {
+	[70] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x14U,
 		.outp	= 0x0009U,
@@ -629,7 +647,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: DM nonsec_notify_resp_rx: MCU_R5FSS0_CORE0/intr_74
 	 */
-	[69] = {
+	[71] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x15U,
 		.outp	= 0x000AU,
@@ -637,7 +655,7 @@ const struct ir_init ir_soc_pe_init_list[IR_SOC_PE_INIT_NUM] = {
 	/*
 	 * For: DM nonsec_notify_resp_rx: MCU_R5FSS0_CORE0/intr_75
 	 */
-	[70] = {
+	[72] = {
 		.id	= J784S4_DEV_MCU_NAVSS0_INTR_ROUTER_0,
 		.inp	= 0x16U,
 		.outp	= 0x000BU,

@@ -78,9 +78,9 @@ const vector<TidlConstraint> tidlConstraintPooling = {
         }
     ),
     TIDL_CSTR(
-        "Number of non-singleton variable input dimensions must be less than <= 4",
-        "Number of non-singleton variable input dimensions must be less than <= 4",
-        "Number of non-singleton variable input dimensions must be less than <= 4",
+        "Number of non-singleton variable input dimensions must be <= 4",
+        "Number of non-singleton variable input dimensions must be <= 4",
+        "Number of non-singleton variable input dimensions must be <= 4",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
             if(gParams.modelType != TIDL_IMPORT_MODEL_FORMAT_ONNX)
@@ -97,9 +97,9 @@ const vector<TidlConstraint> tidlConstraintPooling = {
         }
     ),
     TIDL_CSTR(
-        "GlobalAveragePool cannot support plane sizes > 1024. You can use the convert_large_global_avg_pooling_to_matmul rule in tidl-onnx-model-optimizer.",
-        "GlobalAveragePool cannot support plane sizes > 1024. You can use the convert_large_global_avg_pooling_to_matmul rule in tidl-onnx-model-optimizer.",
-        "GlobalAveragePool cannot support plane sizes > 1024. You can use the convert_large_global_avg_pooling_to_matmul rule in tidl-onnx-model-optimizer.",
+        "GlobalAveragePool does not support plane size > 1024",
+        "GlobalAveragePool does not support plane size > 1024",
+        "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
             const sTIDL_PoolingParams_t& params = layer->layerParams.poolParams;
@@ -139,7 +139,7 @@ const vector<TidlConstraint> tidlConstraintPooling = {
     TIDL_CSTR(
         "Only 1D and 2D GlobalAveragePool is supported",
         "Only 1D and 2D GlobalAveragePool is supported",
-        "Only 1D and 2D GlobalAveragePool is supported",
+        "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             // In tidl_optimizeGlobalAveragePoolingLayers function inside TIDL_optimizeNet
             // only 1D pooling and 2D pooling (default) is supported. The case for more dimensions

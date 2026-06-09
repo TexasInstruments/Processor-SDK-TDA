@@ -3,7 +3,7 @@
  *
  * Secure Proxy driver for Message Transfer
  *
- * Copyright (C) 2021-2024, Texas Instruments Incorporated
+ * Copyright (C) 2021-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -112,11 +112,9 @@ static s32 trans_message(u32 target_base, u32 rt_base, sbool is_rx, u8 thread_id
 
 		for (i = 0; i < (len / 4U); i++) {
 			if (is_rx) {
-				*raw = readl(start_addr);
-				raw = raw + 1;
+				raw[i] = readl(start_addr);
 			} else {
-				writel(*raw, start_addr);
-				raw = raw + 1;
+				writel(raw[i], start_addr);
 			}
 			start_addr += 4u;
 		}

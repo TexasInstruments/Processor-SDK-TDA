@@ -34,8 +34,8 @@
 /*                             Include Files                                  */
 /* ========================================================================== */
 
-#include "st_adc.h"
-#include "st_adcTestCases.h"
+#include "test_adc.h"
+#include "test_adc_testCases.h"
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
 
@@ -57,13 +57,13 @@
 
 /* Internal functions */
 void adcRunTestcase(void *args);
-void st_adcTCResultInit(void);
+void test_adc_tcResultInit(void);
 
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
 
-static st_ADCTestcaseParams_t *gTestParams;
+static test_adc_testcaseParams_t *gTestParams;
 
 /* ========================================================================== */
 /*                          Function Definitions                              */
@@ -73,14 +73,10 @@ void test_main(void *args)
 {
     int32_t  testcaseIdx;
 
-    /* Open drivers */
-    Drivers_open();
-    Board_driversOpen();
-
     UNITY_BEGIN();
 
     /* Initialization for tests */
-    st_adcTCResultInit();
+    test_adc_tcResultInit();
 
     /* Run all tests */
     for(testcaseIdx = 0; testcaseIdx < ADC_NUM_TESTCASES; testcaseIdx++)
@@ -90,10 +86,6 @@ void test_main(void *args)
     }
 
     UNITY_END();
-
-    /* Close drivers */
-    Board_driversClose();
-    Drivers_close();
 
     return;
 }
@@ -114,24 +106,20 @@ void adcRunTestcase(void *args)
 
     if(gTestParams->adcConfigParams.testMode == ADC_TEST_MODE_CPU)
     {
-        st_adcCpuMode_main(gTestParams);
-    }
-    else if(gTestParams->adcConfigParams.testMode == ADC_TEST_MODE_DMA)
-    {
-        st_adcDmaMode_main(gTestParams);
+        test_adc_cpuMode_main(gTestParams);
     }
     else
     {
-        st_adcPollingMode_main(gTestParams);
+        test_adc_pollingMode_main(gTestParams);
     }
 
     TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, gTestParams->testResult);
 }
 
-void st_adcTCResultInit(void)
+void test_adc_tcResultInit(void)
 {
     uint32_t loopCnt;
-    st_ADCTestcaseParams_t * testParams;
+    test_adc_testcaseParams_t * testParams;
 
     for(loopCnt = 0 ; loopCnt < ADC_NUM_TESTCASES; loopCnt++)
     {

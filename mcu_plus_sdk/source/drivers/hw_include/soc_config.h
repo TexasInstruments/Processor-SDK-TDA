@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020 Texas Instruments Incorporated
+ *  Copyright (C) 2020-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -66,13 +66,26 @@ extern "C"
 #include <drivers/hw_include/am62ax/soc_config.h>
 #endif
 
+#if defined (SOC_AM62DX)
+#include <drivers/hw_include/am62dx/soc_config.h>
+#endif
+
 #if defined (SOC_AM62PX)
 #include <drivers/hw_include/am62px/soc_config.h>
+#endif
+
+#if defined (SOC_AM275X)
+#include <drivers/hw_include/am275x/soc_config.h>
 #endif
 
 #if defined (SOC_J722S)
 #include <drivers/hw_include/j722s/soc_config.h>
 #endif
+
+#if defined (SOC_AM62LX)
+#include <drivers/hw_include/am62lx/soc_config.h>
+#endif
+
 
 #ifdef __cplusplus
 }

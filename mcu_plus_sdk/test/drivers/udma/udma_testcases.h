@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2018-2025 Texas Instruments Incorporated
+ *  Copyright (c) 2025-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -92,7 +92,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -129,7 +129,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -166,7 +166,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_TRIGGER_GLOBAL0},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -203,7 +203,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_TRIGGER_GLOBAL0_INTR},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -240,7 +240,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MCU_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_EVENTSIZE_ICNT1},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -277,7 +277,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MCU_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_EVENTSIZE_ICNT2},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -314,7 +314,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MCU_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_EVENTSIZE_ICNT3},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -339,7 +339,7 @@ static UdmaTestParams gUdmaTestCases[] =
     {
         .enableTest = TEST_ENABLE,
         .tcId       = 3516U,
-        .tcName     = UDMA_TEST_MAIN_BC_TCNAME_PREFIX "Blockcpy MSMC to MSMC in interrupt mode",
+        .tcName     = UDMA_TEST_MAIN_BC_TCNAME_PREFIX "Blockcpy INTERNAL(OCRAM) to INTERNAL(OCRAM) in interrupt mode",
         .disableInfo= NULL,
         .printEnable= PRINT_ENABLE,
         .prfEnable  = PRF_DISABLE,
@@ -351,7 +351,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -366,8 +366,8 @@ static UdmaTestParams gUdmaTestCases[] =
         .ddim       = {
                         {0U, 0U, 0U}
                       },
-        .heapIdSrc  = {UTILS_MEM_HEAP_ID_MSMC},
-        .heapIdDest = {UTILS_MEM_HEAP_ID_MSMC},
+        .heapIdSrc  = {UTILS_MEM_HEAP_ID_INTERNAL},
+        .heapIdDest = {UTILS_MEM_HEAP_ID_INTERNAL},
         .srcBufSize = {UDMA_TEST_DEF_ICNT0},
         .destBufSize= {UDMA_TEST_DEF_DICNT0},
         .runFlag    = (UDMA_TEST_RF_MAIN_BC),
@@ -389,7 +389,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MCU_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -427,7 +427,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {UDMA_TEST_PERF_QDEPTH},
         .icnt       = {
@@ -452,7 +452,7 @@ static UdmaTestParams gUdmaTestCases[] =
     {
         .enableTest = TEST_ENABLE,
         .tcId       = 3486U,
-        .tcName     = UDMA_TEST_MAIN_BC_TCNAME_PREFIX "2D Blockcpy MSMC circular 1KB to DDR 1MB performance test",
+        .tcName     = UDMA_TEST_MAIN_BC_TCNAME_PREFIX "2D Blockcpy INTERNAL(OCRAM) circular 1KB to DDR 1MB performance test",
         .disableInfo= NULL,
         .printEnable= PRINT_ENABLE,
         .prfEnable  = PRF_ENABLE,
@@ -464,7 +464,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {UDMA_TEST_DEF_QDEPTH},
         .icnt       = {
@@ -479,7 +479,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .ddim       = {
                         {1*KB, 1*KB, 0U}
                       },
-        .heapIdSrc  = {UTILS_MEM_HEAP_ID_MSMC},
+        .heapIdSrc  = {UTILS_MEM_HEAP_ID_INTERNAL},
         .heapIdDest = {UTILS_MEM_HEAP_ID_DDR},
         .srcBufSize = {1*KB},
         .destBufSize= {1*MB},
@@ -489,7 +489,7 @@ static UdmaTestParams gUdmaTestCases[] =
     {
         .enableTest = TEST_ENABLE,
         .tcId       = 3487U,
-        .tcName     = UDMA_TEST_MAIN_BC_TCNAME_PREFIX "2D Blockcpy DDR 1MB to MSMC circular 1KB performance test",
+        .tcName     = UDMA_TEST_MAIN_BC_TCNAME_PREFIX "2D Blockcpy DDR 1MB to INTERNAL(OCRAM) circular 1KB performance test",
         .disableInfo= NULL,
         .printEnable= PRINT_ENABLE,
         .prfEnable  = PRF_ENABLE,
@@ -501,7 +501,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {UDMA_TEST_DEF_QDEPTH},
         .icnt       = {
@@ -517,7 +517,7 @@ static UdmaTestParams gUdmaTestCases[] =
                         {0U, 0U, 0U}
                       },
         .heapIdSrc  = {UTILS_MEM_HEAP_ID_DDR},
-        .heapIdDest = {UTILS_MEM_HEAP_ID_MSMC},
+        .heapIdDest = {UTILS_MEM_HEAP_ID_INTERNAL},
         .srcBufSize = {1*MB},
         .destBufSize= {1*KB},
         .runFlag    = (UDMA_TEST_RF_MAIN_BC),
@@ -526,7 +526,7 @@ static UdmaTestParams gUdmaTestCases[] =
     {
         .enableTest = TEST_ENABLE,
         .tcId       = 3488U,
-        .tcName     = UDMA_TEST_MAIN_BC_TCNAME_PREFIX "2D Blockcpy MSMC circular 1KB to MSMC circular 1KB performance test",
+        .tcName     = UDMA_TEST_MAIN_BC_TCNAME_PREFIX "2D Blockcpy INTERNAL(OCRAM) circular 1KB to INTERNAL(OCRAM) circular 1KB performance test",
         .disableInfo= NULL,
         .printEnable= PRINT_ENABLE,
         .prfEnable  = PRF_ENABLE,
@@ -538,7 +538,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {UDMA_TEST_DEF_QDEPTH},
         .icnt       = {
@@ -553,8 +553,8 @@ static UdmaTestParams gUdmaTestCases[] =
         .ddim       = {
                         {0U, 0U, 0U}
                       },
-        .heapIdSrc  = {UTILS_MEM_HEAP_ID_MSMC},
-        .heapIdDest = {UTILS_MEM_HEAP_ID_MSMC},
+        .heapIdSrc  = {UTILS_MEM_HEAP_ID_INTERNAL},
+        .heapIdDest = {UTILS_MEM_HEAP_ID_INTERNAL},
         .srcBufSize = {1*KB},
         .destBufSize= {1*KB},
         .runFlag    = (UDMA_TEST_RF_MAIN_BC),
@@ -576,7 +576,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MCU_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {UDMA_TEST_DEF_QDEPTH},
         .icnt       = {
@@ -614,7 +614,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc, &udmaTestBlkcpyTc, &udmaTestBlkcpyTc, &udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE, PACING_NONE, PACING_NONE, PACING_NONE},
         .numCh      = {1U, 1U, 1U, 1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC, UDMA_TEST_INST_ID_MAIN_BC, UDMA_TEST_INST_ID_MAIN_BC, UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC, UDMA_TEST_INST_ID_BCDMA_BC, UDMA_TEST_INST_ID_BCDMA_BC, UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF, UDMA_TEST_CH_PRMID_INTR_DEF, UDMA_TEST_CH_PRMID_INTR_DEF, UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {UDMA_TEST_PERF_QDEPTH, UDMA_TEST_PERF_QDEPTH, UDMA_TEST_PERF_QDEPTH, UDMA_TEST_PERF_QDEPTH},
         .icnt       = {
@@ -651,7 +651,7 @@ static UdmaTestParams gUdmaTestCases[] =
     {
         .enableTest = TEST_ENABLE,
         .tcId       = 3496U,
-        .tcName     = UDMA_TEST_MAIN_BC_TCNAME_PREFIX "Blockcpy MSMC to MSMC 1KBx1K (1MB) circular from multiple tasks",
+        .tcName     = UDMA_TEST_MAIN_BC_TCNAME_PREFIX "Blockcpy INTERNAL(OCRAM) to INTERNAL(OCRAM) 1KBx1K (1MB) circular from multiple tasks",
         .disableInfo= NULL,
         .printEnable= PRINT_DISABLE,
         .prfEnable  = PRF_ENABLE,
@@ -663,7 +663,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc, &udmaTestBlkcpyTc, &udmaTestBlkcpyTc, &udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE, PACING_NONE, PACING_NONE, PACING_NONE},
         .numCh      = {1U, 1U, 1U, 1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC, UDMA_TEST_INST_ID_MAIN_BC, UDMA_TEST_INST_ID_MAIN_BC, UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC, UDMA_TEST_INST_ID_BCDMA_BC, UDMA_TEST_INST_ID_BCDMA_BC, UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF, UDMA_TEST_CH_PRMID_INTR_DEF, UDMA_TEST_CH_PRMID_INTR_DEF, UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {UDMA_TEST_PERF_QDEPTH, UDMA_TEST_PERF_QDEPTH, UDMA_TEST_PERF_QDEPTH, UDMA_TEST_PERF_QDEPTH},
         .icnt       = {
@@ -690,8 +690,8 @@ static UdmaTestParams gUdmaTestCases[] =
                         {0U, 0U, 0U},
                         {0U, 0U, 0U},
                       },
-        .heapIdSrc  = {UTILS_MEM_HEAP_ID_MSMC, UTILS_MEM_HEAP_ID_MSMC, UTILS_MEM_HEAP_ID_MSMC, UTILS_MEM_HEAP_ID_MSMC},
-        .heapIdDest = {UTILS_MEM_HEAP_ID_MSMC, UTILS_MEM_HEAP_ID_MSMC, UTILS_MEM_HEAP_ID_MSMC, UTILS_MEM_HEAP_ID_MSMC},
+        .heapIdSrc  = {UTILS_MEM_HEAP_ID_INTERNAL, UTILS_MEM_HEAP_ID_INTERNAL, UTILS_MEM_HEAP_ID_INTERNAL, UTILS_MEM_HEAP_ID_INTERNAL},
+        .heapIdDest = {UTILS_MEM_HEAP_ID_INTERNAL, UTILS_MEM_HEAP_ID_INTERNAL, UTILS_MEM_HEAP_ID_INTERNAL, UTILS_MEM_HEAP_ID_INTERNAL},
         .srcBufSize = {1*KB, 1*KB, 1*KB, 1*KB},
         .destBufSize= {1*KB, 1*KB, 1*KB, 1*KB},
         .runFlag    = (UDMA_TEST_RF_MAIN_BC_MT),
@@ -700,7 +700,7 @@ static UdmaTestParams gUdmaTestCases[] =
     {
         .enableTest = TEST_ENABLE,
         .tcId       = 3498U,
-        .tcName     = UDMA_TEST_MAIN_BC_TCNAME_PREFIX "2D Blockcpy DDR 4MB to MSMC circular 4KB at 20ms pacing for 10 seconds",
+        .tcName     = UDMA_TEST_MAIN_BC_TCNAME_PREFIX "2D Blockcpy DDR 4MB to INTERNAL(OCRAM) circular 4KB at 20ms pacing for 10 seconds",
         .disableInfo= NULL,
         .printEnable= PRINT_ENABLE,
         .prfEnable  = PRF_ENABLE,
@@ -712,7 +712,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {DEF_PACING},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {UDMA_TEST_DEF_QDEPTH},
         .icnt       = {
@@ -728,13 +728,13 @@ static UdmaTestParams gUdmaTestCases[] =
                         {0U, 0U, 0U}
                       },
         .heapIdSrc  = {UTILS_MEM_HEAP_ID_DDR},
-        .heapIdDest = {UTILS_MEM_HEAP_ID_MSMC},
+        .heapIdDest = {UTILS_MEM_HEAP_ID_INTERNAL},
         .srcBufSize = {4U*MB},
         .destBufSize= {4U*KB},
         .runFlag    = (UDMA_TEST_RF_MAIN_BC_PACING),
         .ringPrmId  = UDMA_TEST_RING_PRMID_INVALID,
     },
-#ifdef UDMA_UTC_ID_MSMC_DRU0
+#ifdef UDMA_UTC_ID_INTERNAL_DRU0
     {
         .enableTest = TEST_ENABLE,
         .tcId       = 3499U,
@@ -750,7 +750,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DRU_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -787,7 +787,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DRU_INTR_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -824,7 +824,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DRU_INTR_DEF},
         .qdepth     = {UDMA_TEST_PERF_QDEPTH},
         .icnt       = {
@@ -849,7 +849,7 @@ static UdmaTestParams gUdmaTestCases[] =
     {
         .enableTest = TEST_ENABLE,
         .tcId       = 3502U,
-        .tcName     = "DRU Indirect 2D Blockcpy MSMC circular 1KB to DDR 1MB performance test",
+        .tcName     = "DRU Indirect 2D Blockcpy INTERNAL(OCRAM) circular 1KB to DDR 1MB performance test",
         .disableInfo= NULL,
         .printEnable= PRINT_ENABLE,
         .prfEnable  = PRF_ENABLE,
@@ -861,7 +861,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DRU_INTR_DEF},
         .qdepth     = {UDMA_TEST_DEF_QDEPTH},
         .icnt       = {
@@ -876,7 +876,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .ddim       = {
                         {1*KB, 1*KB, 0U}
                       },
-        .heapIdSrc  = {UTILS_MEM_HEAP_ID_MSMC},
+        .heapIdSrc  = {UTILS_MEM_HEAP_ID_INTERNAL},
         .heapIdDest = {UTILS_MEM_HEAP_ID_DDR},
         .srcBufSize = {1*KB},
         .destBufSize= {1*MB},
@@ -886,7 +886,7 @@ static UdmaTestParams gUdmaTestCases[] =
     {
         .enableTest = TEST_ENABLE,
         .tcId       = 3503U,
-        .tcName     = "DRU Indirect 2D Blockcpy DDR 1MB to MSMC circular 1KB performance test",
+        .tcName     = "DRU Indirect 2D Blockcpy DDR 1MB to INTERNAL(OCRAM) circular 1KB performance test",
         .disableInfo= NULL,
         .printEnable= PRINT_ENABLE,
         .prfEnable  = PRF_ENABLE,
@@ -898,7 +898,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DRU_INTR_DEF},
         .qdepth     = {UDMA_TEST_DEF_QDEPTH},
         .icnt       = {
@@ -914,7 +914,7 @@ static UdmaTestParams gUdmaTestCases[] =
                         {0U, 0U, 0U}
                       },
         .heapIdSrc  = {UTILS_MEM_HEAP_ID_DDR},
-        .heapIdDest = {UTILS_MEM_HEAP_ID_MSMC},
+        .heapIdDest = {UTILS_MEM_HEAP_ID_INTERNAL},
         .srcBufSize = {1*MB},
         .destBufSize= {1*KB},
         .runFlag    = (UDMA_TEST_RF_DRU),
@@ -923,7 +923,7 @@ static UdmaTestParams gUdmaTestCases[] =
     {
         .enableTest = TEST_ENABLE,
         .tcId       = 3504U,
-        .tcName     = "DRU Indirect 2D Blockcpy MSMC circular 1KB to MSMC circular 1KB performance test",
+        .tcName     = "DRU Indirect 2D Blockcpy INTERNAL(OCRAM) circular 1KB to INTERNAL(OCRAM) circular 1KB performance test",
         .disableInfo= NULL,
         .printEnable= PRINT_ENABLE,
         .prfEnable  = PRF_ENABLE,
@@ -935,7 +935,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DRU_INTR_DEF},
         .qdepth     = {UDMA_TEST_DEF_QDEPTH},
         .icnt       = {
@@ -950,8 +950,8 @@ static UdmaTestParams gUdmaTestCases[] =
         .ddim       = {
                         {0U, 0U, 0U}
                       },
-        .heapIdSrc  = {UTILS_MEM_HEAP_ID_MSMC},
-        .heapIdDest = {UTILS_MEM_HEAP_ID_MSMC},
+        .heapIdSrc  = {UTILS_MEM_HEAP_ID_INTERNAL},
+        .heapIdDest = {UTILS_MEM_HEAP_ID_INTERNAL},
         .srcBufSize = {1*KB},
         .destBufSize= {1*KB},
         .runFlag    = (UDMA_TEST_RF_DRU),
@@ -972,7 +972,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc, &udmaTestBlkcpyTc, &udmaTestBlkcpyTc, &udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE, PACING_NONE, PACING_NONE, PACING_NONE},
         .numCh      = {1U, 1U, 1U, 1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC, UDMA_TEST_INST_ID_MAIN_BC, UDMA_TEST_INST_ID_MAIN_BC, UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC, UDMA_TEST_INST_ID_BCDMA_BC, UDMA_TEST_INST_ID_BCDMA_BC, UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DRU_INTR_DEF, UDMA_TEST_CH_PRMID_DRU_INTR_DEF, UDMA_TEST_CH_PRMID_DRU_INTR_DEF, UDMA_TEST_CH_PRMID_DRU_INTR_DEF},
         .qdepth     = {UDMA_TEST_PERF_QDEPTH, UDMA_TEST_PERF_QDEPTH, UDMA_TEST_PERF_QDEPTH, UDMA_TEST_PERF_QDEPTH},
         .icnt       = {
@@ -1009,7 +1009,7 @@ static UdmaTestParams gUdmaTestCases[] =
     {
         .enableTest = TEST_ENABLE,
         .tcId       = 3506U,
-        .tcName     = "DRU Indirect Blockcpy MSMC to MSMC 1KBx1K (1MB) circular from multiple tasks",
+        .tcName     = "DRU Indirect Blockcpy INTERNAL(OCRAM) to INTERNAL(OCRAM) 1KBx1K (1MB) circular from multiple tasks",
         .disableInfo= NULL,
         .printEnable= PRINT_DISABLE,
         .prfEnable  = PRF_ENABLE,
@@ -1021,7 +1021,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc, &udmaTestBlkcpyTc, &udmaTestBlkcpyTc, &udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE, PACING_NONE, PACING_NONE, PACING_NONE},
         .numCh      = {1U, 1U, 1U, 1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC, UDMA_TEST_INST_ID_MAIN_BC, UDMA_TEST_INST_ID_MAIN_BC, UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC, UDMA_TEST_INST_ID_BCDMA_BC, UDMA_TEST_INST_ID_BCDMA_BC, UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DRU_INTR_DEF, UDMA_TEST_CH_PRMID_DRU_INTR_DEF, UDMA_TEST_CH_PRMID_DRU_INTR_DEF, UDMA_TEST_CH_PRMID_DRU_INTR_DEF},
         .qdepth     = {UDMA_TEST_PERF_QDEPTH, UDMA_TEST_PERF_QDEPTH, UDMA_TEST_PERF_QDEPTH, UDMA_TEST_PERF_QDEPTH},
         .icnt       = {
@@ -1048,14 +1048,14 @@ static UdmaTestParams gUdmaTestCases[] =
                         {0U, 0U, 0U},
                         {0U, 0U, 0U},
                       },
-        .heapIdSrc  = {UTILS_MEM_HEAP_ID_MSMC, UTILS_MEM_HEAP_ID_MSMC, UTILS_MEM_HEAP_ID_MSMC, UTILS_MEM_HEAP_ID_MSMC},
-        .heapIdDest = {UTILS_MEM_HEAP_ID_MSMC, UTILS_MEM_HEAP_ID_MSMC, UTILS_MEM_HEAP_ID_MSMC, UTILS_MEM_HEAP_ID_MSMC},
+        .heapIdSrc  = {UTILS_MEM_HEAP_ID_INTERNAL, UTILS_MEM_HEAP_ID_INTERNAL, UTILS_MEM_HEAP_ID_INTERNAL, UTILS_MEM_HEAP_ID_INTERNAL},
+        .heapIdDest = {UTILS_MEM_HEAP_ID_INTERNAL, UTILS_MEM_HEAP_ID_INTERNAL, UTILS_MEM_HEAP_ID_INTERNAL, UTILS_MEM_HEAP_ID_INTERNAL},
         .srcBufSize = {1*KB, 1*KB, 1*KB, 1*KB},
         .destBufSize= {1*KB, 1*KB, 1*KB, 1*KB},
         .runFlag    = (UDMA_TEST_RF_DRU_MT),
         .ringPrmId  = UDMA_TEST_RING_PRMID_INVALID,
     },
-//Enable after adding testcase in Qmetry
+/* Enable after adding testcase in Qmetry */
 #if 0
     {
         .enableTest = TEST_ENABLE,
@@ -1072,7 +1072,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DRU_EVENTSIZE_ICNT1},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1109,7 +1109,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DRU_EVENTSIZE_ICNT2},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1146,7 +1146,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DRU_EVENTSIZE_ICNT3},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1243,7 +1243,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .ringPrmId  = UDMA_TEST_RING_PRMID_INVALID,
     },
 #endif /* #if 0 */
-#endif  /* #if defined (UDMA_UTC_ID_MSMC_DRU0) */
+#endif  /* #if defined (UDMA_UTC_ID_INTERNAL_DRU0) */
     {
         .enableTest = TEST_ENABLE,
         .tcId       = 3508U,
@@ -1260,7 +1260,7 @@ static UdmaTestParams gUdmaTestCases[] =
         /* All other below parameters not used in this testcase except ring params */
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_DEFAULT_UDMA_INST},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1298,7 +1298,7 @@ static UdmaTestParams gUdmaTestCases[] =
         /* All other below parameters not used in this testcase except ring params */
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_DEFAULT_UDMA_INST},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1336,7 +1336,7 @@ static UdmaTestParams gUdmaTestCases[] =
         /* All other below parameters not used in this testcase except ring params */
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_DEFAULT_UDMA_INST},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1374,7 +1374,7 @@ static UdmaTestParams gUdmaTestCases[] =
         /* All other below parameters not used in this testcase except ring params */
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_DEFAULT_UDMA_INST},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1412,7 +1412,7 @@ static UdmaTestParams gUdmaTestCases[] =
         /* All other below parameters not used in this testcase except ring params */
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_DEFAULT_UDMA_INST},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1450,7 +1450,7 @@ static UdmaTestParams gUdmaTestCases[] =
         /* All other below parameters not used in this testcase except ring params */
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_DEFAULT_UDMA_INST},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1532,7 +1532,7 @@ static UdmaTestParams gUdmaTestCases[] =
         /* All other below parameters not used in this testcase except ring params */
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_FLOW},
+        .instId     = {UDMA_TEST_INST_ID_PKTDMA},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1556,44 +1556,6 @@ static UdmaTestParams gUdmaTestCases[] =
     },
     {
         .enableTest = TEST_ENABLE,
-        .tcId       = 3513U,
-        .tcName     = "PSIL and PDMA macro verification testcase",
-        .disableInfo= NULL,
-        .printEnable= PRINT_ENABLE,
-        .prfEnable  = PRF_DISABLE,
-        .tcType     = (UDMA_TCT_SANITY | UDMA_TCT_FUNCTIONAL),
-        .dcEnable   = DATA_CHECK_ENABLE,
-        .loopCnt    = USE_DEF_LP_CNT,
-        .numTasks   = 1U,
-        .testType   = {UDMA_TT_MISC},
-        .testFxnPtr = {&udmaTestPsilMacroTc},
-        /* All other below parameters not used in this testcase */
-        .pacingTime = {PACING_NONE},
-        .numCh      = {1U},
-        .instId     = {UDMA_TEST_DEFAULT_UDMA_INST},
-        .chPrmId    = {UDMA_TEST_CH_PRMID_DEF},
-        .qdepth     = {USE_DEF_QDEPTH},
-        .icnt       = {
-                        {UDMA_TEST_DEF_ICNT0, 1U, 1U, 1U}
-                      },
-        .dicnt      = {
-                        {UDMA_TEST_DEF_DICNT0, 1U, 1U, 1U}
-                      },
-        .dim        = {
-                        {0U, 0U, 0U}
-                      },
-        .ddim       = {
-                        {0U, 0U, 0U}
-                      },
-        .heapIdSrc  = {DEF_HEAP_ID},
-        .heapIdDest = {DEF_HEAP_ID},
-        .srcBufSize = {UDMA_TEST_DEF_ICNT0},
-        .destBufSize= {UDMA_TEST_DEF_DICNT0},
-        .runFlag    = (UDMA_TEST_RF_SOC_ALL | UDMA_TEST_RF_CORE_ALL | UDMA_TEST_RF_CFG_DEF),
-        .ringPrmId  = UDMA_TEST_RING_PRMID_INVALID,
-    },
-    {
-        .enableTest = TEST_ENABLE,
         .tcId       = 3515U,
         .tcName     = "TR make utility testcase",
         .disableInfo= NULL,
@@ -1608,7 +1570,7 @@ static UdmaTestParams gUdmaTestCases[] =
         /* All other below parameters not used in this testcase */
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_DEFAULT_UDMA_INST},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1646,7 +1608,7 @@ static UdmaTestParams gUdmaTestCases[] =
         /* All other below parameters not used in this testcase */
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_DEFAULT_UDMA_INST},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1683,7 +1645,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyPauseResumeTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1720,7 +1682,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBugTcPDK_4654},
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_DEFAULT_UDMA_INST},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1757,7 +1719,7 @@ static UdmaTestParams gUdmaTestCases[] =
         .testFxnPtr = {&udmaTestBlkcpyChainingTc},
         .pacingTime = {PACING_NONE},
         .numCh      = {2U},
-        .instId     = {UDMA_TEST_INST_ID_MAIN_BC, UDMA_TEST_INST_ID_MAIN_BC},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC, UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_INTR_DEF, UDMA_TEST_CH_PRMID_INTR_DEF},
         .qdepth     = {USE_DEF_QDEPTH, USE_DEF_QDEPTH},
         .icnt       = {
@@ -1799,7 +1761,7 @@ static UdmaTestParams gUdmaTestCases[] =
         /* All other below parameters not used in this testcase */
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_DEFAULT_UDMA_INST},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1837,7 +1799,7 @@ static UdmaTestParams gUdmaTestCases[] =
         /* All other below parameters not used in this testcase */
         .pacingTime = {PACING_NONE},
         .numCh      = {1U},
-        .instId     = {UDMA_TEST_DEFAULT_UDMA_INST},
+        .instId     = {UDMA_TEST_INST_ID_BCDMA_BC},
         .chPrmId    = {UDMA_TEST_CH_PRMID_DEF},
         .qdepth     = {USE_DEF_QDEPTH},
         .icnt       = {
@@ -1859,6 +1821,44 @@ static UdmaTestParams gUdmaTestCases[] =
         .runFlag    = (UDMA_TEST_RF_SOC_ALL | UDMA_TEST_RF_CORE_ALL | UDMA_TEST_RF_CFG_DEF | UDMA_TEST_RF_CFG_DYN),
         .ringPrmId  = UDMA_TEST_RING_PRMID_EVENT_POLLED,
     },
+    {
+      .enableTest = TEST_ENABLE,
+      .tcId       = 9100U,
+      .tcName     = "Flow attach and detach testcase",
+      .disableInfo= NULL,
+      .printEnable= PRINT_ENABLE,
+      .prfEnable  = PRF_DISABLE,
+      .tcType     = (UDMA_TCT_SANITY | UDMA_TCT_FUNCTIONAL),
+      .dcEnable   = DATA_CHECK_ENABLE,
+      .loopCnt    = 5U,
+      .numTasks   = 1U,
+      .testType   = {UDMA_TT_MISC},
+      .testFxnPtr = {&udmaTestFlowAttachTc},
+      /* All other below parameters not used in this testcase except ring params */
+      .pacingTime = {PACING_NONE},
+      .numCh      = {1U},
+      .instId     = {UDMA_TEST_INST_ID_PKTDMA},
+      .chPrmId    = {UDMA_TEST_CH_PRMID_DEF},
+      .qdepth     = {USE_DEF_QDEPTH},
+      .icnt       = {
+                      {UDMA_TEST_DEF_ICNT0, 1U, 1U, 1U}
+                    },
+      .dicnt      = {
+                      {UDMA_TEST_DEF_DICNT0, 1U, 1U, 1U}
+                    },
+      .dim        = {
+                      {0U, 0U, 0U}
+                    },
+      .ddim       = {
+                      {0U, 0U, 0U}
+                    },
+      .heapIdSrc  = {DEF_HEAP_ID},
+      .heapIdDest = {DEF_HEAP_ID},
+      .srcBufSize = {UDMA_TEST_DEF_ICNT0},
+      .destBufSize= {UDMA_TEST_DEF_DICNT0},
+      .runFlag    = (UDMA_TEST_RF_FLOW | UDMA_TEST_RF_CFG_DYN),
+      .ringPrmId  = UDMA_TEST_RING_PRMID_EVENT_NONE,
+  },
 };
 
 #ifdef __cplusplus

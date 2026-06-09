@@ -1141,14 +1141,46 @@ uint32_t UARTIntIdentityGet(uint32_t baseAddr)
 {
     uint32_t lcrRegValue = 0U;
     uint32_t retVal      = 0U;
+    uint32_t iirValue    = 0U;
+
+    /* Read IIR BEFORE mode switching for Errata i2310 */
+    iirValue = HW_RD_REG32(baseAddr + UART_IIR);
 
     /* Switching to Register Operational Mode of operation. */
     lcrRegValue = UARTRegConfigModeEnable(baseAddr, UART_REG_OPERATIONAL_MODE);
 
-    retVal = HW_RD_REG32(baseAddr + UART_IIR) & UART_IIR_IT_TYPE_MASK;
+    retVal = iirValue & UART_IIR_IT_TYPE_MASK;
 
     /* Restoring the value of LCR. */
     HW_WR_REG32(baseAddr + UART_LCR, lcrRegValue);
+
+    /* Errata i2310: Handle spurious RX timeout interrupt */
+    /* Apply workaround AFTER LCR restoration to avoid register conflicts */
+    if ((iirValue & UART_IIR_IT_TYPE_MASK) ==
+        (UART_IIR_IT_TYPE_IT_TYPE_VALUE_6 << UART_IIR_IT_TYPE_SHIFT))
+    {
+        uint32_t efr2_val, timeout_h, timeout_l;
+
+        /* Save current register state */
+        efr2_val = HW_RD_REG32(baseAddr + UART_EFR2);
+        timeout_h = HW_RD_REG32(baseAddr + UART_TIMEOUTH);
+        timeout_l = HW_RD_REG32(baseAddr + UART_TIMEOUTL);
+
+        /* Step 1: Set timeout to maximum */
+        HW_WR_REG32(baseAddr + UART_TIMEOUTH, 0xFFU);
+        HW_WR_REG32(baseAddr + UART_TIMEOUTL, 0xFFU);
+
+        /* Step 2: Enable periodic timeout mode */
+        HW_WR_FIELD32(baseAddr + UART_EFR2, UART_EFR2_TIMEOUT_BEHAVE, 1U);
+
+        /* Step 3: Clear interrupt by reading IIR */
+        HW_RD_REG32(baseAddr + UART_IIR);
+
+        /* Step 4: Restore original settings */
+        HW_WR_REG32(baseAddr + UART_EFR2, efr2_val);
+        HW_WR_REG32(baseAddr + UART_TIMEOUTH, timeout_h);
+        HW_WR_REG32(baseAddr + UART_TIMEOUTL, timeout_l);
+    }
 
     return retVal;
 }

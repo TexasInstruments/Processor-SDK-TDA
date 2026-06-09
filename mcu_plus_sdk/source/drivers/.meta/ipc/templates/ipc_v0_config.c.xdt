@@ -33,8 +33,14 @@ void IpcNotify_getConfig(IpcNotify_InterruptConfig **interruptConfig, uint32_t *
 #include <drivers/ipc_rpmsg.h>
 
     % if ( enabledRPMessageCpus.length > 0) {
+        % if (((socName == "am62ax" ) || (socName == "am62dx" ))  && (instance.vringAllocationPDK == true)) {
+/* Number of CPUs that are enabled for IPC RPMessage */
+#define IPC_RPMESSAGE_NUM_CORES           (CSL_CORE_ID_MAX)
+         % }
+        % else {
 /* Number of CPUs that are enabled for IPC RPMessage */
 #define IPC_RPMESSAGE_NUM_CORES           (`enabledRPMessageCpus.length+1`U)
+        % }
 /* Number of VRINGs for the numner of CPUs that are enabled for IPC */
 #define IPC_RPMESSAGE_NUM_VRINGS          (IPC_RPMESSAGE_NUM_CORES*(IPC_RPMESSAGE_NUM_CORES-1))
 /* Number of a buffers in a VRING, i.e depth of VRING queue */
@@ -72,7 +78,7 @@ uint8_t gRPMessageVringMem[IPC_RPMESSAGE_NUM_VRINGS][IPC_RPMESSAGE_VRING_SIZE] _
 /* Buffer used for trace, address and size of this buffer is put in the resource table so that Linux can read it */
 extern char gDebugMemLog[];
 
-        % if (socName == "am62ax" || socName == "am62px" || socName == "j722s") {
+        % if (socName == "am62ax" || socName == "am62px" || socName == "j722s" || socName == "am62dx") {
 const RPMessage_ResourceTable gRPMessage_linuxResourceTable __attribute__ ((section (".resource_table"), aligned (1024))) =
         % }
         % else {

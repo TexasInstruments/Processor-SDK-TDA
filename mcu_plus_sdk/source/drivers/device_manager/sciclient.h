@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020, Texas Instruments Incorporated
+ * Copyright (c) 2018-2024, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -154,17 +154,15 @@
  *  \ingroup DRV_SCICLIENT_MODULE
  *  \defgroup SCICLIENT_HAL System Controller Interface (SCI) Client HAL
  *
- *  The SCIClient has two major functions:
- *  - Interact with DMSC ROM and load the DMSC Firmware.
- *  - Pass on service requests from higher level software to the DMSC firmware
- *    and forward the response from DMSC firmware to the higher level software.
+ * Major function of Sciclient is to pass on service requests from higher
+ * level software to the DMSC/TIFS/DM firmware and forward the response from
+ * firmware to the higher level software.
  *
- * The #Sciclient_loadFirmware API is used to cater to the first requirement
- * and the #Sciclient_service is used to cater to the second. The SCIClient
- * library requires initialization of the a handle which is used by the
- * subsequent API calls. This handle is initialized by the #Sciclient_init
- * function. Once the application/higher level software is being torn down or
- * exiting the #Sciclient_deinit can be used to de-initialize this handle.
+ * The SCIClient library requires initialization of the a handle which is
+ * used by the subsequent API calls. This handle is initialized by the
+ * #Sciclient_init function. Once the application/higher level software is
+ * being torn down or exiting the #Sciclient_deinit can be used to
+ * de-initialize this handle.
  *
  * The SCIClient can operate in the following combinations:
  *
@@ -288,6 +286,8 @@ typedef uint8_t devgrp_t;
 #define SCICLIENT_COMMON_X509_HEADER_ADDR (0x43c4f1e0)
 #elif defined(SOC_J722S)
 #define SCICLIENT_COMMON_X509_HEADER_ADDR (0x43c7f1e0)
+#elif defined(SOC_AM275X)
+#define SCICLIENT_COMMON_X509_HEADER_ADDR (0x720ff1e0)
 #else
 #define SCICLIENT_COMMON_X509_HEADER_ADDR (0x41cffb00)
 #endif
@@ -300,6 +300,10 @@ typedef uint8_t devgrp_t;
  * Derived from the above definitions
  */
 #define MAX_NUM_DEVGRPS (8U)
+
+#if defined (SOC_AM62DX)
+#define SOC_AM62AX
+#endif
 
 #include <drivers/hw_include/cslr_soc.h>
 #include <drivers/sciclient/include/tisci/tisci_protocol.h>
@@ -329,6 +333,17 @@ typedef uint8_t devgrp_t;
 #include <drivers/sciclient/include/tisci/lpm/tisci_lpm.h>
 #include <drivers/sciclient/include/am62ax/sciclient_fmwMsgParams.h>
 #endif
+#if defined (SOC_AM275X)
+#include <drivers/sciclient/include/tisci/am275x/tisci_resasg_types.h>
+#include <drivers/sciclient/include/tisci/am275x/tisci_hosts.h>
+#include <drivers/sciclient/include/tisci/am275x/tisci_sec_proxy.h>
+#include <drivers/sciclient/include/tisci/am275x/tisci_boardcfg_constraints.h>
+#include <drivers/sciclient/include/tisci/am275x/tisci_devices.h>
+#include <drivers/sciclient/include/tisci/am275x/tisci_clocks.h>
+#include <drivers/sciclient/include/tisci/am275x/tisci_hosts.h>
+#include <drivers/sciclient/include/tisci/lpm/tisci_lpm.h>
+#include <drivers/sciclient/include/am275x/sciclient_fmwMsgParams.h>
+#endif
 #if defined (SOC_AM62PX)
 #include <drivers/sciclient/include/tisci/am62px/tisci_resasg_types.h>
 #include <drivers/sciclient/include/tisci/am62px/tisci_hosts.h>
@@ -351,6 +366,17 @@ typedef uint8_t devgrp_t;
 #include <drivers/sciclient/include/tisci/j722s/tisci_hosts.h>
 #include <drivers/sciclient/include/tisci/lpm/tisci_lpm.h>
 #include <drivers/sciclient/include/j722s/sciclient_fmwMsgParams.h>
+#endif
+#if defined (SOC_AM62LX)
+#include <drivers/sciclient/include/tisci/am62lx/tisci_resasg_types.h>
+#include <drivers/sciclient/include/tisci/am62lx/tisci_hosts.h>
+#include <drivers/sciclient/include/tisci/am62lx/tisci_sec_proxy.h>
+#include <drivers/sciclient/include/tisci/am62lx/tisci_boardcfg_constraints.h>
+#include <drivers/sciclient/include/tisci/am62lx/tisci_devices.h>
+#include <drivers/sciclient/include/tisci/am62lx/tisci_clocks.h>
+#include <drivers/sciclient/include/tisci/am62lx/tisci_hosts.h>
+#include <drivers/sciclient/include/tisci/lpm/tisci_lpm.h>
+#include <drivers/sciclient/include/am62lx/sciclient_fmwMsgParams.h>
 #endif
 
 #include <drivers/sciclient/include/tisci/security/tisci_sec_macros.h>
@@ -383,6 +409,9 @@ typedef uint8_t devgrp_t;
 #include <drivers/sciclient/include/sciclient_dkek.h>
 #include <drivers/sciclient/include/sciclient_procboot.h>
 #include <drivers/sciclient/include/sciclient_boardcfg.h>
+#if defined (SOC_AM62DX)
+#undef SOC_AM62AX
+#endif
 
 #include <stdint.h>
 #ifdef __cplusplus
@@ -427,6 +456,16 @@ extern "C" {
 /** Fault tolerant Fail */
 #define SCICLIENT_FT_FAIL (0x5A5AU)
 
+/** \brief Total size of FS stub binary and certificate */
+#define LPM_FS_STUB_SIZE                                    (0x8000U)
+/** \brief Size of LPM meta data that is not used */
+#define LPM_META_DATA_RSVD_SIZE                             (0xFF0U)
+/** \brief Size of LPM context save buffer */
+#define LPM_FS_CTXT_SIZE                                    (0x80000U)
+/** \brief Size of LPM data that is not used */
+#define LPM_DATA_RSVD_SIZE                                  (0x17000U)
+
+/* @} */
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -525,6 +564,40 @@ typedef struct
     /**< [OUT] Size in bytes for default board config for PM */
 } Sciclient_DefaultBoardCfgInfo_t;
 
+/**
+ *  \brief Parameters for LPM Meta Data structure.
+ */
+typedef struct
+{
+    uint64_t dmEntryPoint;
+    /**< Variable to save the address of DM entry point */
+    uint64_t fsCtxtAddr;
+    /**< Variable to save the address of FS context start */
+    uint8_t rsvd[LPM_META_DATA_RSVD_SIZE];
+    /**< Meta data reserved section */
+} DM_LPMMetaData_t;
+
+/**
+ *  \brief Input parameters for LPM Data initialization function.
+ */
+typedef struct
+{
+    uint8_t fsStub[LPM_FS_STUB_SIZE];
+    /**< Buffer to store FS stub section */
+    DM_LPMMetaData_t metaData;
+    /**< LPM Meta data buffer */
+    uint8_t fsCtxt[LPM_FS_CTXT_SIZE];
+    /**< Buffer to store FS context data */
+    uint8_t rsvd[LPM_DATA_RSVD_SIZE];
+    /**< LPM data reserved section */
+} DM_LPMData_t;
+
+/**
+ *  \brief Function pointers for LPM suspend and resume
+ */
+typedef int32_t (*LPMSuspendHook) (void);
+typedef int32_t (*LPMResumeHook) (void);
+
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
@@ -535,19 +608,6 @@ typedef struct
  *
  */
 int32_t Sciclient_direct_init(void);
-
-/**
- *  \brief  Loads the DMSC firmware. This is typically called by SBL. Load
- *          firmware does not require calling the #Sciclient_init function.
- *
- *  Requirement: DOX_REQ_TAG(PDK-2137), DOX_REQ_TAG(PDK-2138)
- *
- *  \param pSciclient_firmware     [IN]  Pointer to signed SYSFW binary
- *
- *  \return CSL_PASS on success, else failure
- *
- */
-int32_t Sciclient_loadFirmware(const uint32_t *pSciclient_firmware);
 
 /**
  *  \brief  This API is called once for registering interrupts and creating
@@ -606,6 +666,33 @@ int32_t Sciclient_init(const Sciclient_ConfigPrms_t *pCfgPrms);
  */
 int32_t Sciclient_service(const Sciclient_ReqPrm_t *pReqPrm,
                           Sciclient_RespPrm_t      *pRespPrm);
+
+#if defined(ENABLE_SCICLIENT_INTERRUPT_MODE)
+/**
+ *  \brief  This API allows to update the sciclient operating mode to interrupt
+ *          mode.
+ *  \return CSL_PASS on success, else failure
+ */
+int32_t Sciclient_updateOperModeToInterrupt(void);
+
+/**
+ *  \brief  This API allows to disable all the sciclient interrupts for interrupt
+ *          operating mode.
+ */
+void Sciclient_disableIntr(void);
+
+/**
+ *  \brief  This API allows to enable the all the sciclient interrupts for interrupt
+ *          operating mode.
+ */
+void Sciclient_enableIntr(void);
+#endif
+
+/**
+ *  \brief  This API allows to update the sciclient operating mode to polling
+ *          mode.
+ */
+void Sciclient_updateOperModeToPolled(void);
 
 #ifdef QNX_OS
 /**
@@ -759,6 +846,15 @@ int32_t Sciclient_boardCfgParseHeader (
  */
 int32_t Sciclient_getVersionCheck(uint32_t doLog);
 
+/**
+ *  \brief   API to send a get version command to DM and optionally log the results to console
+ *
+ *  \param doLog [in] 0: No logging to console, 1: log version results to console
+ *
+ *  \return SystemP_SUCCESS on success, else failure
+ */
+int32_t Sciclient_direct_getDMVersion(uint32_t doLog);
+
 /**<
  *  \brief   API to get the TISCI Device ID of the core on which driver is currently running.
  *
@@ -773,6 +869,51 @@ uint32_t Sciclient_getSelfDevIdCore(void);
  *
  */
 int32_t Sciclient_waitForBootNotification(void);
+
+/**
+ *  \brief   API to initialise Low power mode data required by DM
+ *
+ *  \param pLPMData Pointer to starting address of LPM data section
+ *
+ */
+void Sciclient_initDeviceManagerLPMData(DM_LPMData_t *pLPMData);
+
+/**
+ *  \brief   API to get address where LPM context has to be saved
+ *
+ *  \param pCtxtAddr Pointer to context address parameter
+ *
+ *  \return SystemP_SUCCESS on success, else failure
+ */
+int32_t Sciclient_getLPMCtxtSaveAddr(uint64_t *pCtxtAddr);
+
+/**
+ *  \brief   API to copy FS stub from load address in DDR to DM local memory
+ *
+ *  \return SystemP_SUCCESS on success, else failure
+ */
+int32_t Sciclient_copyLPMFSStubToLocalMem(void);
+
+/**
+ * \brief Register lpm suspend and resume hooks for DM R5 apllication
+ *
+ * \return None
+ */
+void Sciclient_initLPMSusResHook(LPMSuspendHook suspend_hook, LPMResumeHook resume_hook);
+
+/**
+ * \brief API to suspend the application that is running along with DM
+ *
+ * \return SystemP_SUCCESS on success, else failure
+ */
+int32_t Sciclient_suspendLPMApplication(void);
+
+/**
+ * \brief API to resume the application that is running along with DM
+ *
+ * \return SystemP_SUCCESS on success, else failure
+ */
+int32_t Sciclient_resumeLPMApplication(void);
 
 /* ========================================================================== */
 /*                       Static Function Definitions                          */

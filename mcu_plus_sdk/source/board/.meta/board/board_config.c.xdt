@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- * Auto generated file 
+ * Auto generated file
  */
 #include "ti_board_config.h"
 
@@ -43,34 +43,41 @@
 `system.getTemplate(subTemplate.board_config)()`
     % }
 % }
-
 % let cpuName = system.getScript('/common').getSelfSysCfgCoreName();
+% let common = system.getScript("/common");
 void Board_init(void)
 {
 % if(cpuName.match(/a53/)) {
-
+    % if (common.isSmpSupported()) {
+        % if(cpuName.match(/a53ss0-0/)) {
     if(0 == Armv8_getCoreId())
     {
-
+        % }
+    % }
 % }
 % for(let subTemplate of args) {
-    % if (subTemplate.driver_init) {
+    % if (subTemplate.board_init) {
 `system.getTemplate(subTemplate.board_init)()`
     % }
 % }
 % if(cpuName.match(/a53/)) {
-
+    % if (common.isSmpSupported()) {
+        % if(cpuName.match(/a53ss0-0/)) {
     }
+        % }
+    % }
 % }
 }
 
 void Board_deinit(void)
 {
 % if(cpuName.match(/a53/)) {
-
+    % if (common.isSmpSupported()) {
+        % if(cpuName.match(/a53ss0-0/)) {
     if(0 == Armv8_getCoreId())
     {
-
+        % }
+    % }
 % }
 % for(let subTemplate of args) {
     % if (subTemplate.board_deinit) {
@@ -78,7 +85,10 @@ void Board_deinit(void)
     % }
 % }
 % if(cpuName.match(/a53/)) {
-
+    % if (common.isSmpSupported()) {
+        % if(cpuName.match(/a53ss0-0/)) {
     }
+        % }
+    % }
 % }
 }

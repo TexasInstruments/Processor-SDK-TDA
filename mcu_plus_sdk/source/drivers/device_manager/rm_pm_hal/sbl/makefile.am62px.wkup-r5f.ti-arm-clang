@@ -83,7 +83,6 @@ CFLAGS_common := \
     -Wall \
     -Werror \
     -g \
-    -Wno-gnu-variable-sized-type-not-at-end \
     -Wno-ignored-attributes \
     -Wno-unused-const-variable \
     -Wno-unused-variable \

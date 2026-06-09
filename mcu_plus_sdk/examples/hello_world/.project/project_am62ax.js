@@ -29,13 +29,14 @@ const libdirs_nortos = {
 
 const libdirs_freertos = {
 	common: [
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/rm_pm_hal/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciclient_direct/lib",
+		"${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciserver/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/self_reset/lib",
 		"${MCU_PLUS_SDK_PATH}/source/kernel/freertos/lib",
 		"${MCU_PLUS_SDK_PATH}/source/drivers/lib",
 		"${MCU_PLUS_SDK_PATH}/source/board/lib",
-		"${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciserver/lib",
 	],
 };
 
@@ -66,7 +67,7 @@ const includes_freertos_a53 = {
 
 const includes_a53_smp = {
     common: [
-        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/FreeRTOS-Kernel-smp/include",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/FreeRTOS-Kernel/include",
         "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/portable_smp/GCC/ARM_CA53",
         "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am62ax/a53-smp",
         "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/FreeRTOS-POSIX/include",
@@ -119,6 +120,7 @@ const libs_freertos_dm_r5f = {
 		"drivers.am62ax.dm-r5f.ti-arm-clang.${ConfigName}.lib",
 		"board.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
 		"sciserver.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
 	],
 };
 
@@ -170,8 +172,15 @@ const defines_a53_smp = {
     common: [
         "OS_FREERTOS",
         "SMP_FREERTOS",
+        "SMP_QUADCORE_FREERTOS",
     ],
 };
+
+const defines_dm_r5f = {
+    common:[
+        "ENABLE_SCICLIENT_DIRECT",
+    ]
+}
 
 const syscfgfile = "../example.syscfg";
 
@@ -313,7 +322,7 @@ const templates_freertos_c75 =
         output: "../main.c",
         options: {
             entryFunction: "hello_world_main",
-            stackSize: 64*1024,
+            stackSize: 16*1024,
         },
     }
 ];
@@ -374,11 +383,13 @@ function getComponentBuildProperty(buildOption) {
             build_property.libdirs = libdirs_freertos;
             build_property.libs = libs_freertos_dm_r5f;
             build_property.templates = templates_freertos_dm_r5f;
+            build_property.defines = defines_dm_r5f;
         }
         else
         {
             build_property.libs = libs_nortos_dm_r5f;
             build_property.templates = templates_nortos_dm_r5f;
+            build_property.defines = defines_dm_r5f;
         }
     }
     else if(buildOption.cpu.match(/c75*/)) {

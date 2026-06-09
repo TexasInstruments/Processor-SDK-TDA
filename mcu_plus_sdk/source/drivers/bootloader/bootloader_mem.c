@@ -32,9 +32,12 @@
 
 #include <drivers/bootloader.h>
 #include <drivers/bootloader/bootloader_mem.h>
+#include <drivers/bootloader/bootloader_dma.h>
+
 /* For memcpy */
 #include <string.h>
 #include <kernel/dpl/CacheP.h>
+#include <drivers/utils/utils.h>
 
 static int32_t Mem_imgOpen(void *args, Bootloader_Params *params);
 static int32_t Mem_imgRead(void *dst, uint32_t len, void *args);
@@ -48,6 +51,7 @@ Bootloader_Fxns gBootloaderMemFxns = {
     .imgOffsetFxn = Mem_imgGetCurOffset,
     .imgSeekFxn   = Mem_imgSeek,
     .imgCloseFxn  = Mem_imgClose,
+    .imgCustomFxn = NULL,
 };
 
 static int32_t Mem_imgOpen(void *args, Bootloader_Params *params)
@@ -64,8 +68,16 @@ static int32_t Mem_imgOpen(void *args, Bootloader_Params *params)
 static int32_t Mem_imgRead(void *dst, uint32_t len, void *args)
 {
     Bootloader_MemArgs *memArgs = (Bootloader_MemArgs *)args;
-    memcpy(dst, (void *)(memArgs->appImageBaseAddr + memArgs->curOffset), len);
-    CacheP_wbInv(dst, len, CacheP_TYPE_ALL);
+
+    if((memArgs->enableDmaTransfer == TRUE) && (memArgs->isDmaOpen == TRUE))
+    {
+        Bootloader_dmaCopy((BootloaderDma_UdmaArgs*) memArgs->bootloaderDmaUdmaArgs, dst, (void *)(memArgs->appImageBaseAddr + memArgs->curOffset), len);
+    }
+    else
+    {
+        Utils_memcpyWord((void *)(memArgs->appImageBaseAddr + memArgs->curOffset), dst, len);
+        CacheP_wbInv(dst, len, CacheP_TYPE_ALL);
+    }
     memArgs->curOffset += len;
     return SystemP_SUCCESS;
 }

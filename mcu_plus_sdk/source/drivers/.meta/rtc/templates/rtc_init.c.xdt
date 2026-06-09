@@ -1,0 +1,17 @@
+    RTC_init();
+    %%{
+    let common = system.getScript("/common");
+    let soc = system.getScript(`/drivers/soc/drivers_${common.getSocName()}`);
+    let driverVer = soc.getDriverVer("rtc");
+    let module = system.modules['/drivers/rtc/rtc'];
+
+    %%}
+    % for(let i = 0; i < module.$instances.length; i++) {
+    % let instance = module.$instances[i];
+    % let config = module.getInstanceConfig(instance);
+
+    /* Set RTC clock source */
+    SOC_controlModuleUnlockMMR(`config.lockUnlockDomain`, `config.lockUnlockPartition`);
+    *(volatile uint32_t*)AddrTranslateP_getLocalAddr(`config.$name`_CLOCK_SRC_MUX_ADDR) = `config.$name`_CLOCK_SRC_`config.clkSource`;
+    SOC_controlModuleLockMMR(`config.lockUnlockDomain`, `config.lockUnlockPartition`);
+    % }

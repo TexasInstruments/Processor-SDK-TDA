@@ -56,7 +56,7 @@ const readmeDoxygenPageTag = "EXAMPLES_DRIVERS_SBL_UART";
 const buildOptionCombos = [
     { device: device, cpu: "r5fss0-0", cgt: "ti-arm-clang", board: "am62x-sk", os: "nortos"},
     { device: device, cpu: "r5fss0-0", cgt: "ti-arm-clang", board: "am62x-sk-lp", os: "nortos"},
-
+    { device: device, cpu: "r5fss0-0", cgt: "ti-arm-clang", board: "am62x-sip-sk", os: "nortos"},
 ];
 
 function getComponentProperty() {
@@ -68,6 +68,7 @@ function getComponentProperty() {
     property.isInternal = false;
     property.isBootLoader = true;
     property.buildOptionCombos = buildOptionCombos;
+    property.testBoardcfg = "false";
 
     return property;
 }

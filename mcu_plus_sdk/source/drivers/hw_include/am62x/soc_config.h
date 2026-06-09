@@ -1,6 +1,6 @@
 
 /*
- *  Copyright (C) 2020 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -40,9 +40,13 @@ extern "C"
 #endif
 
 /* IP versions */
+#define IP_VERSION_ECAP_V0
+#define IP_VERSION_EPWM_V0
+#define IP_VERSION_EQEP_V0
 #define IP_VERSION_GPIO_V0
 #define IP_VERSION_I2C_V0
 #define IP_VERSION_MCAN_V0
+#define IP_VERSION_MCASP_V0
 #define IP_VERSION_INTAGGR_V0
 #define IP_VERSION_MCSPI_V0
 #define IP_VERSION_INTR_ROUTER_V0
@@ -52,33 +56,48 @@ extern "C"
 #define IP_VERSION_GPMC_V0
 #define IP_VERSION_ELM_V0
 #define IP_VERSION_UART_V0
+#define IP_VERSION_RTC_V1
 #define IP_VERSION_GTC_V0
 #define IP_VERSION_BCDMA_V0
 #define IP_VERSION_LCDMA_RINGACC_V0
 #define IP_VERSION_PKTDMA_V0
 #define IP_VERSION_DSS_V3
 #define DDR_16BIT
-
+#define IP_VERSION_WATCHDOG_V1
+#define IP_VERSION_SPINLOCK_V0
 
 /* Driver versions */
+#define DRV_VERSION_ECAP_V0
+#define DRV_VERSION_EPWM_V0
+#define DRV_VERSION_EQEP_V0
 #define DRV_VERSION_GPIO_V0
 #define DRV_VERSION_DDR_V0
 #define DRV_VERSION_I2C_V0
 #define DRV_VERSION_MCAN_V0
+#define DRV_VERSION_MCASP_V1
 #define DRV_VERSION_SERIAL_FLASH_V0 /* OSPI NOR/NAND */
 #define DRV_VERSION_PARALLEL_FLASH_V0 /* GPMC NAND */
-#define DRV_VERSION_MMCSD_V1
+#define DRV_VERSION_MMCSD_V0
 #define DRV_VERSION_OSPI_V0
+#define DRV_VERSION_QOS_V0
+#define DRV_VERSION_RTC_V0
 #define DRV_VERSION_UART_V0
+#define DRV_VERSION_UDMA_V0
 #define DRV_VERSION_MCSPI_V0
 #define DRV_VERSION_GPMC_V0
 #define DRV_VERSION_ELM_V0
 #define DRV_VERSION_GTC_V0
 #define DRV_VERSION_FVID2_V0
 #define DRV_VERSION_DSS_V0
+#define DRV_VERSION_WATCHDOG_V1
+#define DRV_VERSION_SPINLOCK_V0
 
 /* Driver DMA integration */
 #define DMA_VERSION_MCSPI_UDMA
+
+/* Driver bootloader format */
+#define DRV_BOOTLOADER_FORMAT_RPRC
+
 
 
 #ifdef __cplusplus

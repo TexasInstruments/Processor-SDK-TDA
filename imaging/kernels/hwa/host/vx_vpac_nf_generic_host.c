@@ -396,20 +396,31 @@ static vx_status VX_CALLBACK tivxAddKernelVpacNfGenericInitialize(vx_node node,
             }
             /* LDRA_JUSTIFY_END */
         }
-
-        prms.in_img[0U] = (vx_image)parameters[TIVX_KERNEL_VPAC_NF_GENERIC_INPUT_IDX];
-        prms.out_img[0U] = (vx_image)parameters[TIVX_KERNEL_VPAC_NF_GENERIC_OUTPUT_IDX];
-
-        prms.num_input_images = 1;
-        prms.num_output_images = 1;
-
-        prms.top_pad = 2;
-        prms.bot_pad = 2;
-        prms.left_pad = 2;
-        prms.right_pad = 2;
-        prms.border_mode = border.mode;
-
-        status = tivxKernelConfigValidRect(&prms);
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start> 
+        Rationale: The component level negative test framework and test applications cannot reach this portion.
+        This failure case is out of scope for the imaging test framework.
+        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if ((vx_status)VX_SUCCESS == status)
+        /* LDRA_JUSTIFY_END */
+        {
+            prms.in_img[0U] = (vx_image)parameters[TIVX_KERNEL_VPAC_NF_GENERIC_INPUT_IDX];
+            prms.out_img[0U] = (vx_image)parameters[TIVX_KERNEL_VPAC_NF_GENERIC_OUTPUT_IDX];
+            
+            prms.num_input_images = 1;
+            prms.num_output_images = 1;
+            
+            prms.top_pad = 2;
+            prms.bot_pad = 2;
+            prms.left_pad = 2;
+            prms.right_pad = 2;
+            prms.border_mode = border.mode;
+            
+            status = tivxKernelConfigValidRect(&prms);
+        }
     }
 
     return status;
@@ -519,7 +530,6 @@ vx_status tivxAddKernelVpacNfGeneric(vx_context context)
                         (vx_enum)VX_TYPE_IMAGE,
                         (vx_enum)VX_PARAMETER_STATE_REQUIRED
             );
-            param_idx++;
         }
         if (status == (vx_status)VX_SUCCESS)
         {

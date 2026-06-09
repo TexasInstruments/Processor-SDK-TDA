@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -40,37 +40,63 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include <drivers/device_manager/sciserver/sciserver_init.h>
-#include <drivers/bootloader.h>
 
 #define TASK_PRI_MAIN_THREAD  (configMAX_PRIORITIES-1)
+#define TASK_PRI_BOOT_THREAD  (configMAX_PRIORITIES-1)
 
 
-#define TASK_SIZE (16384U/sizeof(configSTACK_DEPTH_TYPE))
+#define TASK_SIZE (32768U/sizeof(configSTACK_DEPTH_TYPE))
+#define TASK_BOOTLOADER_SIZE    (8192U)
+
+/* Stack size allocated for the sciserver task */
+#define SCISERVER_TASK_STACK_SIZE                   (2U*1024U)
+
+/* Stack memory alignment requirement for the sciserver task */
+#define SCISERVER_TASK_STACK_ALIGNMENT              (32)
 
 StackType_t gMainTaskStack[TASK_SIZE] __attribute__((aligned(32)));
 StaticTask_t gMainTaskObj;
 TaskHandle_t gMainTask;
+DM_LPMData_t gDMLPMData __attribute__((section(".lpm_data"), aligned(4)));
+
+StackType_t gBootTaskStack[TASK_BOOTLOADER_SIZE] __attribute__((aligned(32)));
+StaticTask_t gBootTaskObj;
+TaskHandle_t gBootTask;
+
+/* Stack buffers for user high and low priority tasks */
+uint8_t __attribute__((aligned(SCISERVER_TASK_STACK_ALIGNMENT))) gUserHiTaskStack[SCISERVER_TASK_STACK_SIZE];
+uint8_t __attribute__((aligned(SCISERVER_TASK_STACK_ALIGNMENT))) gUserLoTaskStack[SCISERVER_TASK_STACK_SIZE];
 
 void dss_display_test_main(void *args);
 void sbl_stage2_main(void *args);
 
 void main_thread(void *args)
 {
-    /* Open UART for sysfw logs */
-    Drivers_uartOpen();
+    int32_t status = SystemP_SUCCESS;
 
-    sciServer_init();
+    /* Configure sciserver task parameters */
+    Sciserver_TirtosCfgPrms_t sciserverCfg = {0};
+    sciserverCfg.hiTaskStack    =   gUserHiTaskStack;
+    sciserverCfg.loTaskStack    =   gUserLoTaskStack;
+    sciserverCfg.taskStackSize  =   SCISERVER_TASK_STACK_SIZE;
 
-    Bootloader_profileAddProfilePoint("SciserverInit");
+    /* Open drivers */
+    Drivers_open();
+    /* Open flash and board drivers */
+    status = Board_driversOpen();
+    DebugP_assert(status==SystemP_SUCCESS);
 
-    if (Bootloader_socIsSBLBoot())
-    {
-        sbl_stage2_main(NULL);
-    }
+    /* Init LPM specific data */
+    Sciclient_initDeviceManagerLPMData(&gDMLPMData);
 
-    Drivers_uartClose();
+    sciServer_init(&sciserverCfg);
 
     dss_display_test_main(NULL);
+
+    /* Close board and flash drivers */
+    Board_driversClose();
+    /* Close drivers */
+    Drivers_close();
 
     vTaskDelete(NULL);
 }
@@ -78,9 +104,10 @@ void main_thread(void *args)
 
 int main()
 {
-    /* init SOC specific modules */
     Bootloader_profileReset();
 
+
+    /* init SOC specific modules */
     System_init();
     Bootloader_profileAddProfilePoint("System_init");
     Board_init();
@@ -94,6 +121,17 @@ int main()
                                   gMainTaskStack,  /* pointer to stack base */
                                   &gMainTaskObj ); /* pointer to statically allocated task object memory */
     configASSERT(gMainTask != NULL);
+
+    gBootTask = xTaskCreateStatic( sbl_stage2_main,   /* Pointer to the function that implements the task. */
+                                  "boot_thread", /* Text name for the task.  This is to facilitate debugging only. */
+                                  TASK_SIZE,  /* Stack depth in units of StackType_t typically uint32_t on 32b CPUs */
+                                  NULL,            /* We are not using the task parameter. */
+                                  TASK_PRI_BOOT_THREAD,   /* task priority, 0 is lowest priority, configMAX_PRIORITIES-1 is highest */
+                                  gBootTaskStack,  /* pointer to stack base */
+                                  &gBootTaskObj ); /* pointer to statically allocated task object memory */
+    configASSERT(gBootTask != NULL);
+
+    Bootloader_profileAddProfilePoint("FreeRtosTask Create");
 
     /* Start the scheduler to start the tasks executing. */
     vTaskStartScheduler();

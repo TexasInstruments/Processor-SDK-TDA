@@ -164,7 +164,6 @@ IssSensors_Handle imx390SensorHandle = {
  * \brief DCC Parameters of IMX390
  */
 //IssCapture_CmplxIoLaneCfg           imx390Csi2CmplxIoLaneCfg;
-extern IssSensors_Handle * gIssSensorTable[ISS_SENSORS_MAX_SUPPORTED_SENSOR];
 static uint16_t sp1hGainRegValueOld[ISS_SENSORS_MAX_CHANNEL];
 static uint16_t redGain_prev[ISS_SENSORS_MAX_CHANNEL];
 static uint16_t greenGain_prev[ISS_SENSORS_MAX_CHANNEL];
@@ -278,6 +277,11 @@ static int32_t IMX390_Sensor_RegConfig(uint32_t i2cInstId, uint8_t sensorI2cAddr
         regValue = (uint8_t)sensorCfg[regCnt].nRegValue;
         delayMilliSec = (uint16_t)sensorCfg[regCnt].nDelay;
 
+#if defined(SOC_AM62A)
+        /* Increase current delay by 1ms */
+        delayMilliSec = delayMilliSec + 1U;
+#endif
+
         appLogPrintf(" Configuring IMX390 imager 0x%x.. Please wait till it finishes \n", sensorI2cAddr);
         while(regCnt<sensor_cfg_script_len)
         {
@@ -290,7 +294,7 @@ static int32_t IMX390_Sensor_RegConfig(uint32_t i2cInstId, uint8_t sensorI2cAddr
 
             if (0 != status)
             {
-                appLogPrintf(" \n \n IMX390: Sensor Reg Write Failed for regAddr 0x%x \n \n", regAddr);
+                appLogPrintf(" \n IMX390: Sensor Reg Write Failed for regAddr 0x%x \n", regAddr);
             }
 
             if(delayMilliSec > 0U)
@@ -302,6 +306,10 @@ static int32_t IMX390_Sensor_RegConfig(uint32_t i2cInstId, uint8_t sensorI2cAddr
             regAddr  = sensorCfg[regCnt].nRegAddr;
             regValue = (uint8_t)sensorCfg[regCnt].nRegValue;
             delayMilliSec = (uint16_t)sensorCfg[regCnt].nDelay;
+#if defined(SOC_AM62A)
+            /* Increase current delay by 1ms */
+            delayMilliSec = delayMilliSec + 1U;
+#endif
         }
         /*Wait 100ms after the init is done*/
         appLogWaitMsecs(100);

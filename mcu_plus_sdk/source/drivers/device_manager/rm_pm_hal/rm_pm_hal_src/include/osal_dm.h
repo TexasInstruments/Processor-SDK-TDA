@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2024, Texas Instruments Incorporated
+ * Copyright (C) 2021-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -78,17 +78,17 @@ u32 osal_resume_dm(void);
 s32 osal_dm_copy_fs_stub_from_ddr_to_local_mem(void);
 
 /**
- * \brief Start OS tick timer
+ * \brief Suspend the DM application
  *
- * \return None
+ * \return SystemP_SUCCESS if success, else error
  */
-void OS_StartTickTimer(void);
+s32 osal_suspend_dm_application(void);
 
 /**
- * \brief Stops OS tick timer
+ * \brief Suspend the DM application
  *
- * \return None
+ * \return SystemP_SUCCESS if success, else error
  */
-void OS_StopTickTimer(void);
+s32 osal_resume_dm_application(void);
 
 #endif /* OSAL_DM_H */

@@ -35,7 +35,7 @@
  *  \ingroup CSL_DSS
  *  \defgroup CSL_DSSCOMMON DSS Common Hardware Layer
  *
- *  This is hardware include layer for DSS common region.
+ * This is hardware include layer for DSS common region.
  *
  *  @{
  */

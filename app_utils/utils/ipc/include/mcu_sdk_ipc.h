@@ -63,19 +63,72 @@
 #ifndef MCU_SDK_IPC_H_
 #define MCU_SDK_IPC_H_
 
+#if defined(MCU_PLUS_SDK)
 #include <drivers/ipc_notify.h>
 #include <drivers/soc.h>
+#elif defined(MCU_SDK)
+#include <Ipc_Notify.h>
+#include <RPMessage.h>
+#include <device.h>
+#if defined(PC)
+#include <Ipc_Notify_Hostemu.h>
+#endif
+#endif
+
+/* macros */
+#if defined(MCU_PLUS_SDK) || defined(MCU_SDK)
+/* Number of a buffers in a VRING, i.e depth of VRING queue */
+#define IPC_RPMESSAGE_NUM_VRING_BUF       (256U)
+
+/* Max size of a buffer in a VRING */
+#define IPC_RPMESSAGE_MAX_VRING_BUF_SIZE  (512U)
+
+/* Size of each VRING is
+ *     2 x number of buffers x size of each buffer
+ */
+#define IPC_RPMESSAGE_VRING_SIZE          (2U * IPC_RPMESSAGE_NUM_VRING_BUF * IPC_RPMESSAGE_MAX_VRING_BUF_SIZE)
+#endif
+
+/* typedefs */
+#if defined(PC)
+/**
+ * \brief Retrieve current CPU ID
+ *
+ * \return valid core ID on success, else -1
+ */
+typedef int16_t (*app_vdk_get_cpu_id_f)(void);
+#endif /* #if defined(PC) */
 
 /* functions */
+#if defined(MCU_PLUS_SDK)
 #define Ipc_mpGetSelfName()     SOC_getCoreName(IpcNotify_getSelfCoreId())
 #define Ipc_mpGetName(name)     SOC_getCoreName(name)
+#define Ipc_mpGetId(name)       SOC_getCoreId(name)
+#elif defined(MCU_SDK)
+#define Ipc_mpGetSelfName()  Device_GetCoreName(IpcNotify_getSelfCoreId())
 
-/* #defines */
-#if defined (SOC_AM62A)
-/* Number of a buffers in a VRING, i.e depth of VRING queue */
-#define IPC_RPMESSAGE_NUM_VRING_BUF         (256U)
+#if defined(PC)
+/**
+ * \brief Register function that returns current CPU ID
+ *
+ * \param app_vdk_get_cpu_id [in] Pointer to function that returns current CPU ID
+ */
+void appIpcVdkRegisterGetCpuId(app_vdk_get_cpu_id_f app_vdk_get_cpu_id);
+
+/**
+ * \brief Register function that returns current CPU ID
+ *
+ * \param app_vdk_get_cpu_id [in] Pointer to function that returns current CPU ID
+ */
+void appRemoteServiceVdkRegisterGetCpuId(app_vdk_get_cpu_id_f app_vdk_get_cpu_id);
+#endif /* #if defined(PC) */
+
+#define Ipc_mpGetName(name)  Device_GetCoreName(name)
+#define Ipc_mpGetId(name)    Device_GetCoreId((const char *)name)
 #endif
-#define IPC_SOK                             SystemP_SUCCESS 
-#define RPMESSAGE_LOCAL_ENDPT               (15U)
+/* #defines */
+#define IPC_SOK                             SystemP_SUCCESS
+/* Update LOCAL ENDPT to a number more than APP_IPC_CPU_MAX to avoid conflicts */
+#define RPMESSAGE_LOCAL_ENDPT               (30U)
 
 #endif

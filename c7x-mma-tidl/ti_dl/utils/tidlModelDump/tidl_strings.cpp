@@ -140,6 +140,12 @@ std::string layerTypeString(int32_t type)
       { TIDL_GridSampleLayer, "TIDL_GridSampleLayer"},
       { TIDL_DeformableConvLayer, "TIDL_DeformableConvLayer"},
       { TIDL_TopKLayer, "TIDL_TopKLayer"},
+      { TIDL_TileLayer, "TIDL_TileLayer"},
+      { TIDL_LogicalOpLayer, "TIDL_LogicalOpLayer"},
+      { TIDL_RMSNormalizationLayer, "RMSNormalization"},
+      { TIDL_LSTMLayer, "TIDL_LSTMLayer"},
+      { TIDL_GRULayer, "TIDL_GRULayer"},
+      { TIDL_RNNLayer, "TIDL_RNNLayer"},
       { TIDL_UnsupportedLayer, "TIDL_UnsupportedLayer" },
    };
    return find(type, layerTypeNames);
@@ -193,8 +199,14 @@ std::string layerTypeShort(int32_t type)
       { TIDL_TransposeLayer,        "Transpose" },
       { TIDL_LayerNormLayer,        "LayerNorm" },
       { TIDL_GridSampleLayer,       "GridSample" }, 
-      { TIDL_TopKLayer,              "TopK"},
-      { TIDL_DeformableConvLayer,    "DeformConv" },
+      { TIDL_TopKLayer,             "TopK"},
+      { TIDL_DeformableConvLayer,   "DeformConv" },
+      { TIDL_TileLayer,             "Tile" },
+      { TIDL_LogicalOpLayer,        "LogicalOperator"},
+      { TIDL_RMSNormalizationLayer, "RMSNormalization" },
+      { TIDL_LSTMLayer,             "LSTM" },
+      { TIDL_GRULayer,              "GRU" },
+      { TIDL_RNNLayer,              "RNN" },
       { TIDL_UnsupportedLayer,      "Unsupported" },
    };
    return find(type, layerTypeNames);
@@ -237,7 +249,14 @@ std::string actTypeShort(int32_t type)
                               { TIDL_Logit, "Logit" }, \
                               { TIDL_Reciprocal, "Reciprocal" }, \
                               { TIDL_SiLU , "SiLU" }, \
-                              { TIDL_Swish , "Swish" }
+                              { TIDL_Swish , "Swish" }, \
+                              { TIDL_SoftPlus , "SoftPlus" }, \
+                              { TIDL_SoftSign , "SoftSign" }, \
+                              { TIDL_Ceil , "Ceil" }, \
+                              { TIDL_Celu , "Celu" }, \
+                              { TIDL_Selu , "Selu" }, \
+                              { TIDL_Round , "Round" }, \
+                              { TIDL_Sign , "Sign" }
                            };
    return find(type, actTypeNames);
 }
@@ -387,7 +406,14 @@ std::string activationTypeString(int32_t type)
       { TIDL_Logit, "TIDL_Logit" },
       { TIDL_Reciprocal, "TIDL_Reciprocal"},
       { TIDL_SiLU, "TIDL_SiLU"},
-      { TIDL_Swish, "TIDL_Swish"}
+      { TIDL_Swish, "TIDL_Swish"},
+      { TIDL_SoftPlus, "TIDL_SoftPlus"},
+      { TIDL_SoftSign, "TIDL_SoftSign"},
+      { TIDL_Ceil, "TIDL_Ceil"},
+      { TIDL_Celu, "TIDL_Celu"},
+      { TIDL_Selu, "TIDL_Selu"},
+      { TIDL_Round, "TIDL_Round"},
+      { TIDL_Sign, "TIDL_Sign"}
    };
    return find(type, activationTypeNames);
 }
@@ -463,20 +489,44 @@ std::string elementTypeString(uint32_t type)
       { TIDL_SinglePrecFloat, "TIDL_SinglePrecFloat" },
       { TIDL_UnsignedDoubleWord, "TIDL_UnsignedDoubleWord"},
       { TIDL_SignedDoubleWord, "TIDL_SignedDoubleWord"},
+      { TIDL_Bool,         "TIDL_Bool"},
    };
    return find(type, elementTypeNames);
 }
 
-std::string eltwiseTypeString(uint32_t type)
+std::string eltwiseOpTypeString(uint32_t type)
 {
-   stringmap eltwiseTypeNames = 
+   stringmap eltwiseOpTypeNames =
    {
-     { TIDL_EltWiseProduct, "TIDL_EltWiseProduct" },
-     { TIDL_EltWiseSum, "TIDL_EltWiseSum" },
-     { TIDL_EltWiseMax, "TIDL_EltWiseMax" },
-     { TIDL_EltWiseMin, "TIDL_EltWiseMin" },
+     { TIDL_EltWiseProduct, "Mul" },
+     { TIDL_EltWiseSum,     "Add" },
+     { TIDL_EltWiseMax,     "Max" },
+     { TIDL_EltWiseSub,     "Sub" },
+     { TIDL_EltWiseDiv,     "Div" },
+     { TIDL_EltWiseMin,     "Min" },
+     { TIDL_EltWiseMod,     "Mod" },
    };
-   return find(type, eltwiseTypeNames);
+   return find(type, eltwiseOpTypeNames);
+}
+
+std::string logicalOpTypeString(uint32_t type)
+{
+   stringmap logicalOpTypeNames = 
+   {
+     { TIDL_And, "And" },
+     { TIDL_Or, "Or" },
+     { TIDL_Xor, "Xor" },
+     { TIDL_Equal, "Equal"},
+     { TIDL_Greater, "Greater"},
+     { TIDL_GreaterOrEqual, "GreaterOrEqual"},
+     { TIDL_Less, "Less"},
+     { TIDL_LessOrEqual, "LessOrEqual"},
+     { TIDL_Not, "TIDL_Not"},
+     { TIDL_IsInf, "IsInf"},
+     { TIDL_IsNaN, "IsNan"},
+     { TIDL_Where, "Where"},
+   };
+   return find(type, logicalOpTypeNames);
 }
 
 std::string argOpTypeString(uint32_t type)
@@ -663,6 +713,18 @@ std::string gridSamplePadModeString(int32_t type)
      { TIDL_ReflectionPad, "TIDL_gridSamplePadModeReflection"},
    };
    return find(type, gridSamplePadModeNames);
+}
+
+std::string rnnDirectionString(int32_t direction)
+{
+   stringmap rnnDirectionNames =
+   {
+     { TIDL_RNNForward,       "TIDL_RNNForward"},
+     { TIDL_RNNReverse,       "TIDL_RNNReverse"},
+     { TIDL_RNNBidirectional, "TIDL_RNNBidirectional"},
+   };
+
+   return find(direction, rnnDirectionNames);
 }
 
 } // namespace TIDL_Strings

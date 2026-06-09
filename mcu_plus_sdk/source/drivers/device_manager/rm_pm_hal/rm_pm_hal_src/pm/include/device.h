@@ -58,7 +58,6 @@
  * clock.
  */
 #define DEV_CLK_FLAG_DISABLE            BIT(0)
-#define DEV_CLK_FLAG_ALLOW_SSC          BIT(1)
 #define DEV_CLK_FLAG_ALLOW_FREQ_CHANGE  BIT(2)
 #define DEV_CLK_FLAG_INPUT_TERM         BIT(3)
 

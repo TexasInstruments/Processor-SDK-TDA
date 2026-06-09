@@ -8,6 +8,7 @@
 -e _c_int00_secure
 
 #define DDR0_ALLOCATED_START  0xA4000000
+#define L2SRAM_ALLOCATED_BASE 0x7E200000
 
 #define C7X_ALLOCATED_START DDR0_ALLOCATED_START
 
@@ -19,7 +20,7 @@
 
 MEMORY
 {
-    L2SRAM (RWX):  org = 0x7E200000,                len = 0x200000
+    L2SRAM (RWX):  org = L2SRAM_ALLOCATED_BASE,     len = 0x200000           /*  2MB L2SRAM */
     DDR0_RESERVED: org = 0x80000000,                len = 0x19800000         /*  Reserved for A53 OS */
     C7X_IPC_D:     org = C7X_ALLOCATED_START,       len = 0x00100000         /*  1MB DDR */
     C7X_BOOT_D:    org = C7X_BOOT_BASE,             len = 0x400              /*  1024B DDR */
@@ -28,7 +29,7 @@ MEMORY
     C7X_DDR_SPACE: org = C7X_DDR_SPACE_BASE+0x1000, len = 0x00BF0000-0x1000  /*  11.9MB - 4KB DDR  */
     LOG_SHM_MEM             : ORIGIN = 0xA7000000, LENGTH = 0x40000
     /* Shared memory for RTOS NORTOS IPC */
-    RTOS_NORTOS_IPC_SHM_MEM: org = 0xA5000000, len = 0x1C00000  /* 8MB DDR */
+    RTOS_NORTOS_IPC_SHM_MEM: org = 0xA5000000, len = 0x1000000  /* 16MB DDR */
 }
 
 SECTIONS

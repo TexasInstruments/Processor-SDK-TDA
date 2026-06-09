@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -119,19 +119,27 @@ MpuP_setRegionAsm:
         mcr     p15, #0, r3, c6, c1, #4  // set protection attributes
         bx      LR
 
-/* FUNCTION DEF: uint32_t MpuP_armR5GetNumRegions() */
-        .global MpuP_armR5GetNumRegions
-MpuP_armR5GetNumRegions:
+/* FUNCTION DEF: uint32_t MpuP_GetNumRegions() */
+        .global MpuP_GetNumRegions
+        .type MpuP_GetNumRegions,%function
+        .section ".text","ax",%progbits
+        .arm
+        .align 2
+MpuP_GetNumRegions:
         MRC     p15, #0, r0, c0, c0, #4         // Read MPUIR (MPU Type Register)
         LSR     r0, r0, #8                      // Shift and
         AND     r0, r0, #0xFF                   //   mask to get DRegion
         BX      lr
 
 /* FUNCTION DEF:
-*       void MpuP_armR5EnableRegion( uint32_t regionNum, uint32_t enable );
+*       void MpuP_EnableRegion( uint32_t regionNum, uint32_t enable );
 */
-        .global MpuP_armR5EnableRegion
-MpuP_armR5EnableRegion:
+        .global MpuP_EnableRegion
+        .type MpuP_EnableRegion,%function
+        .section ".text","ax",%progbits
+        .arm
+        .align 2
+MpuP_EnableRegion:
         AND     r0, r0, #0xF
         MCR     p15, #0, r0, c6, c2, #0         // Write RGNR (MPU Region Number Register)
         MRC     p15, #0, r2, c6, c1, #2         // Read Data MPU Region Size and Enable Register
@@ -148,10 +156,14 @@ armR5MpuEnableRegion_00:
         BX      lr
 
 /* FUNCTION DEF:
-*   int32_t MpuP_armR5VerifyEnableRegion( uint32_t regionNum, uint32_t enable );
+*   int32_t MpuP_VerifyEnableRegion( uint32_t regionNum, uint32_t enable );
 */
-        .global MpuP_armR5VerifyEnableRegion
-MpuP_armR5VerifyEnableRegion:
+        .global MpuP_VerifyEnableRegion
+        .type MpuP_VerifyEnableRegion,%function
+        .section ".text","ax",%progbits
+        .arm
+        .align 2
+MpuP_VerifyEnableRegion:
         MRC     p15, #0, r2, c6, c2, #0         // Read RGNR (MPU Region Number Register)
         AND     r2, r2, #0xF                    // get the Region number
 
@@ -172,11 +184,15 @@ armR5MpuVerifyRegion_done:
         BX      lr
 
 /* FUNCTION DEF:
-*   int32_t MpuP_armR5VerifyCfgRegion( uint32_t regionNum, uint32_t baseAddrRegVal, uint32_t sizeRegVal, uint32_t accessCtrlRegVal )
+*   int32_t MpuP_VerifyCfgRegion( uint32_t regionNum, uint32_t baseAddrRegVal, uint32_t sizeRegVal, uint32_t accessCtrlRegVal )
 */
 
-        .global MpuP_armR5VerifyCfgRegion
-MpuP_armR5VerifyCfgRegion:
+        .global MpuP_VerifyCfgRegion
+        .type MpuP_VerifyCfgRegion,%function
+        .section ".text","ax",%progbits
+        .arm
+        .align 2
+MpuP_VerifyCfgRegion:
         PUSH    {r4}
         MRC     p15, #0, r4, c6, c2, #0         // Read RGNR (MPU Region Number Register)
         AND     r4, r4, #0xF
@@ -215,6 +231,5 @@ armR5MpuVerifyCfgRegion_done:
        ISB
        POP     {r4}
        BX      lr
-
 	.end
 

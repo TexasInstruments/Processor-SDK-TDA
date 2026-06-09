@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -45,7 +45,7 @@
  * number of times the keys are pressed and exits.
  */
 
-uint32_t            gGpioBaseAddr = GPIO_PIN_INTERRUPT_TEST_BASE_ADDR;
+uint32_t            gGpioBaseAddr = GPIO_PUSH_BUTTON_BASE_ADDR;
 HwiP_Object         gGpioHwiObject;
 volatile uint32_t   gGpioIntrDone = 0;
 
@@ -53,41 +53,45 @@ static void GPIO_bankIsrFxn(void *args);
 
 extern void Board_gpioInit(void);
 extern void Board_gpioDeinit(void);
-extern uint32_t Board_getGpioCoreIntrNum(void);
+extern uint32_t Board_getGpioButtonIntrNum(void);
+#if defined(__C7504__) || defined(__C7524__)
+extern uint32_t Board_getGpioButtonEventId(void);
+#endif
+extern char* Board_getGpioButtonSwitchNum(void);
 
 void gpio_input_interrupt_main(void *args)
 {
     int32_t         retVal;
     uint32_t        pinNum, intrNum;
-    uint32_t        bankNum;
+    uint16_t        eventId = HWIP_INVALID_EVENT_ID;
+    uint32_t        bankNum, waitCount = 5;
     HwiP_Params     hwiPrms;
 
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
     Board_gpioInit();
 
-    DebugP_log("GPIO Interrupt Test Started ...\r\n");
+    DebugP_log("GPIO Input Interrupt Test Started ...\r\n");
     DebugP_log("GPIO Interrupt Configured for Rising Edge ...\r\n");
 
-    pinNum          = GPIO_PIN_INTERRUPT_TEST_PIN;
-    intrNum         = Board_getGpioCoreIntrNum();
+    pinNum          = GPIO_PUSH_BUTTON_PIN;
+    intrNum         = Board_getGpioButtonIntrNum();
     bankNum         = GPIO_GET_BANK_INDEX(pinNum);
+
+    #if defined(__C7504__) || defined(__C7524__)
+    eventId         = Board_getGpioButtonEventId();
+    #endif
 
     /* Address translate */
     gGpioBaseAddr = (uint32_t) AddrTranslateP_getLocalAddr(gGpioBaseAddr);
 
     /* Setup GPIO for interrupt generation */
-    GPIO_setDirMode(gGpioBaseAddr, pinNum, GPIO_PIN_INTERRUPT_TEST_DIR);
-    GPIO_setTrigType(gGpioBaseAddr, pinNum, GPIO_PIN_INTERRUPT_TEST_TRIG_TYPE);
+    GPIO_setDirMode(gGpioBaseAddr, pinNum, GPIO_PUSH_BUTTON_DIR);
+    GPIO_setTrigType(gGpioBaseAddr, pinNum, GPIO_PUSH_BUTTON_TRIG_TYPE);
     GPIO_bankIntrEnable(gGpioBaseAddr, bankNum);
-
-    /* Ensure GPIO PIN is low initially */
-    GPIO_pinWriteLow(gGpioBaseAddr, pinNum);
 
     /* Register pin interrupt */
     HwiP_Params_init(&hwiPrms);
     hwiPrms.intNum   = intrNum;
+    hwiPrms.eventId   = eventId;
     hwiPrms.isPulse = 1;
     hwiPrms.callback = &GPIO_bankIsrFxn;
     hwiPrms.args     = (void *) pinNum;
@@ -95,29 +99,34 @@ void gpio_input_interrupt_main(void *args)
     retVal = HwiP_construct(&gGpioHwiObject, &hwiPrms);
     DebugP_assert(retVal == SystemP_SUCCESS );
 
-    /* Now trigger an interrupt by writing HIGH to the GPIO pin */
-    GPIO_pinWriteHigh(gGpioBaseAddr, pinNum);
+#if defined (SOC_AM62DX) || defined (SOC_AM275X)
+    DebugP_log("Press pushbutton %s to trigger a GPIO interrupt\r\n",Board_getGpioButtonSwitchNum());
+#else
+    DebugP_log("Connect the %s pin on EVM to ground and release to trigger GPIO interrupt ...\r\n", Board_getGpioButtonSwitchNum());
+#endif
+
+    while(gGpioIntrDone < waitCount)
+    {
+        /* Keep printing the current GPIO value */
+        DebugP_log("Key is pressed %d times\r\n", gGpioIntrDone);
+        ClockP_sleep(1);
+    }
+    DebugP_log("Key is pressed %d times\r\n", gGpioIntrDone);
 
     /* Unregister interrupt */
     GPIO_bankIntrDisable(gGpioBaseAddr, bankNum);
     GPIO_setTrigType(gGpioBaseAddr, pinNum, GPIO_TRIG_TYPE_NONE);
     GPIO_clearIntrStatus(gGpioBaseAddr, pinNum);
     HwiP_destruct(&gGpioHwiObject);
-
-    if (1U == gGpioIntrDone)
-    {
-        DebugP_log("GPIO Interrupt Test Passed!!\r\n");
-        DebugP_log("All tests have passed!!\r\n");
-    }
-    else
-    {
-        DebugP_log("Unable to get the Interrupt !!\r\n");
-        DebugP_log("Some tests have failed!!\r\n");
-    }
+#if defined(AMP_FREERTOS_A53)
+    DebugP_log("GPIO Input Interrupt Test Passed on a53_core%d !!\r\n", Armv8_getCoreId());
+    DebugP_log("All tests have passed on a53_core%d !!\r\n", Armv8_getCoreId());
+#else
+    DebugP_log("GPIO Input Interrupt Test Passed!!\r\n");
+    DebugP_log("All tests have passed!!\r\n");
+#endif
 
     Board_gpioDeinit();
-    Board_driversClose();
-    Drivers_close();
 }
 
 static void GPIO_bankIsrFxn(void *args)

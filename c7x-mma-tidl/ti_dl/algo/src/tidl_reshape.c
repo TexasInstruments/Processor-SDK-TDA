@@ -210,39 +210,7 @@ template<typename Tin>
       }
     }
     TIDL_L1DandL2CacheWbInv();
-  }
-  else if (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY)
-  {
-    tidl_printf(2, "ForceInPlace Constraint for Reshape Failed, Copying Data!\n");
-    sTIDL_Layer_t* layer = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[0]];
-    sTIDL_DataParams_t *inDataParams   = &layer->outData;
-    int32_t cpSize = inDataParams->dimValues[TIDL_DIM_HEIGHT]*inDataParams->dimValues[TIDL_DIM_WIDTH];
-    int32_t channels = inDataParams->dimValues[TIDL_DIM_NUMCH];
-    if (layer->layerType == TIDL_DataConvertLayer)
-    {
-      sTIDL_dataConvertParams_t *params = &layer->layerParams.dataConvertParams;
-      if ((((uint32_t)params->layout == TIDL_LT_NCHW) && ((uint32_t)params->outLayout == TIDL_LT_NHWC)))
-      {
-        cpSize = layer->outData.dimValues[TIDL_DIM_NUMCH] * layer->outData.dimValues[TIDL_DIM_WIDTH];
-        channels = layer->outData.dimValues[TIDL_DIM_HEIGHT];
-      }
-    }
-    int32_t elementSize     = TIDL_getDatElementSize(inDataParams->elementType);
-    int32_t channelPitch = inDataParams->pitch[TIDL_CHANNEL_PITCH];
-    void *in = src;
-    void *out = dst;
-
-    for (int32_t i = 0; i < inDataParams->dimValues[TIDL_DIM_BATCH] * inDataParams->dimValues[TIDL_DIM_DIM1] * inDataParams->dimValues[TIDL_DIM_DIM2]; i++)
-    {
-      for (int32_t j = 0; j < channels; j++)
-      {
-        (void)memcpy((void*)((uint8_t*)out), (void*)((uint8_t*)in), elementSize*cpSize);
-        in   = (uint8_t*)in +  (channelPitch * elementSize);
-        out  = (uint8_t*)out + (cpSize * elementSize);
-      }
-    }
-    TIDL_L1DandL2CacheWbInv();
-  }
+  }/*With NC, in ref flow memcopy is removed from here, because inptr (not the scratch ptr which is passed in here but the original one) and outptr are same*/
   else
   {
     /* do nothing */

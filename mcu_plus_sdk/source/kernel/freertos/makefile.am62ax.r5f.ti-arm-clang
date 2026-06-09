@@ -24,6 +24,7 @@ FILES_common := \
     DebugP_memTraceLogWriter.c \
     DebugP_log.c \
     TimerP.c \
+    HwiP_armv7r_exception_handlers_nortos.c \
     HwiP_armv7r_vim.c \
     MpuP_armv7r.c \
     CacheP_armv7r.c \
@@ -42,12 +43,13 @@ FILES_common := \
     DebugP_shmLogReader_freertos.c \
     TaskP_freertos.c \
     EventP_freertos.c \
+    MailboxP_freertos.c \
     event_groups.c \
     tasks.c \
     timers.c \
     queue.c \
     list.c \
-    heap_4.c \
+    heap_3.c \
     FreeRTOS_POSIX_clock.c \
     FreeRTOS_POSIX_mqueue.c \
     FreeRTOS_POSIX_pthread_barrier.c \
@@ -64,6 +66,7 @@ FILES_common := \
 ASMFILES_common := \
     boot_armv7r_asm.S \
     HwiP_armv7r_asm.S \
+    HwiP_armv7r_exception_handlers_nortos_asm.S \
     MpuP_armv7r_asm.S \
     CacheP_armv7r_asm.S \
     CpuId_armv7r_asm.S \
@@ -94,6 +97,7 @@ INCLUDES_common := \
 
 DEFINES_common := \
     -DSOC_AM62AX \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mcpu=cortex-r5 \

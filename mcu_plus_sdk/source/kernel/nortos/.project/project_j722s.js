@@ -10,12 +10,14 @@ const files_r5f = {
         "DebugP_log.c",
         "DebugP_nortos.c",
         "SemaphoreP_nortos.c",
+        "StartuphooksP_nortos.c",
         "ClockP_nortos.c",
         "ClockP_nortos_r5.c",
         "EventP_nortos.c",
         "HeapP_nortos.c",
         "TimerP.c",
         "TaskP_nortos.c",
+        "HwiP_armv7r_exception_handlers_nortos.c",
         "HwiP_armv7r_vim.c",
         "HwiP_armv7r_handlers_nortos.c",
         "MpuP_armv7r.c",
@@ -43,6 +45,7 @@ const cflags_r5f = {
 
 const asmfiles_r5f = {
     common: [
+        "HwiP_armv7r_exception_handlers_nortos_asm.S",
         "HwiP_armv7r_handlers_nortos_asm.S",
         "HwiP_armv7r_vectors_nortos_asm.S",
         "HwiP_armv7r_vectors_nortos_sbl_asm.S",

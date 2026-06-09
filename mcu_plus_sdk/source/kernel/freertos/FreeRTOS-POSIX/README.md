@@ -5,8 +5,10 @@ The Portable Operating System Interface (POSIX) is a family of standards specifi
 
 This repository only contains source code. For demo applications, please visit https://github.com/FreeRTOS/FreeRTOS-Labs. 
 
-## To consume FreeRTOS+POSIX 
-It is recommended to use this repository as a submodule. Please refer to [Git Tools — Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules). 
+## Usage in MCU+ SDK
 
-## Notes
-This project is undergoing optimizations or refactorization to improve memory usage, modularity, documentation, demo usability, or test coverage. 
+This fork of FreeRTOS+POSIX repository is consumed by MCU+ SDK as a submodule.
+It is used for building the FreeRTOS Kernel Libraries for different cores (R5,
+M4, A53, C66). This enables one to use POSIX APIs in the application using the
+FreeRTOS Kernel. Please refer [MCU+ SDK Git Repository](https://github.com/TexasInstruments/mcupsdk-core)
+for documentation and instructions to setup the build.

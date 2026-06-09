@@ -92,6 +92,10 @@ MEMORY
     DDR_MCU2_0_LOCAL_HEAP    ( RWIX ) : ORIGIN = 0xB5800000 , LENGTH = 0x02000000
     /* VISS configuration memory. MUST be write through cache policy. [ size  4.00 MB ] */
     DDR_MCU2_0_VISS_CONFIG_HEAP ( RWIX ) : ORIGIN = 0xB7800000 , LENGTH = 0x00400000
+    /* Inter-core ethernet shared desc queues. MUST be non-cached or cache-coherent [ size  2.00 MB ] */
+    INTERCORE_ETH_DESC_MEM            : ORIGIN = 0xB8000000 , LENGTH = 0x00200000
+    /* Inter-core ethernet shared data buffers. MUST be non-cached or cache-coherent [ size 14.00 MB ] */
+    INTERCORE_ETH_DATA_MEM            : ORIGIN = 0xB8200000 , LENGTH = 0x00E00000
     /* Memory for shared memory buffers in DDR [ size 512.00 MB ] */
     DDR_SHARED_MEM                    : ORIGIN = 0xC0000000 , LENGTH = 0x20000000
 }

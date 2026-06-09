@@ -948,7 +948,7 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
     if (!strcmp("advanced_options:inference_mode", option_name.c_str()))
     {
         std::stringstream(option_value) >> options->m_inference_mode;
-#if defined (SOC_J784S4) || defined (SOC_J722S) || defined(SOC_J742S2)
+#if defined (SOC_J784S4) || defined (SOC_J722S) || defined(SOC_J742S2) || defined(SOC_TDA54)
         std::vector<int> valid_inference_modes{0, 1, 2};
 #else
         std::vector<int> valid_inference_modes{0};
@@ -969,7 +969,7 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
     if (!strcmp("advanced_options:num_cores", option_name.c_str()))
     {
         std::stringstream(option_value) >> options->m_num_cores;
-#if defined (SOC_J784S4)
+#if defined (SOC_J784S4) || defined(SOC_TDA54)
         std::vector<int> valid_num_cores{1,2,3,4};
 #elif defined (SOC_J722S) || defined(SOC_J742S2)
         std::vector<int> valid_num_cores{1,2};
@@ -1067,6 +1067,12 @@ void TIDL_derivedInterfaceOptions(TIDL_osrtOptions * options)
     if((options->m_tidl_calibration_flags & TIDL_CalibNoOutlier) == 0)
     {
       options->m_tidl_calibration_flags = options->m_bias_calibration * TIDL_CalibOptionBiasCalibration;
+    }
+    if((options->m_tidl_calibration_flags & TIDL_CalibNoOutlier) != 0) {
+      if(options->m_enable_tfr_optimization == -1)
+      {
+        options->m_enable_tfr_optimization = 1; // enable the tfr optimization by default for AsymNP2 and NoOutlier mode
+      }
     }
   }
   if(options->m_tidl_calibration_flags == 9) //user defined accuracy level
@@ -1360,7 +1366,7 @@ void TIDL_setDefaultOptions(TIDL_osrtOptions * osrt_options)
   osrt_options->m_nc_temp_info_dir                             = "/tmp";
   osrt_options->m_temp_buffer_dir                              = "/dev/shm";
   osrt_options->m_enable_custom_layers                         = 0;
-  osrt_options->m_enable_tfr_optimization                      = 0;
+  osrt_options->m_enable_tfr_optimization                      = -1;
   osrt_options->m_enable_shape_folding                         = 0;
   osrt_options->m_optimize_batchnorm_higherdims                = 0;
   osrt_options->m_softmax_16bit_scale_update                   = 0;

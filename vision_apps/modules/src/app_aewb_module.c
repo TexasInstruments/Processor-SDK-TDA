@@ -329,6 +329,8 @@ vx_status app_create_graph_aewb(vx_graph graph, AEWBObj *aewbObj, vx_object_arra
 
 #if defined(SOC_AM62A)
     vxSetNodeTarget(aewbObj->node, VX_TARGET_STRING, TIVX_TARGET_MCU1_0);
+#elif defined(SOC_TDA54)
+    vxSetNodeTarget(aewbObj->node, VX_TARGET_STRING, TIVX_TARGET_MCU2);
 #else
     vxSetNodeTarget(aewbObj->node, VX_TARGET_STRING, TIVX_TARGET_MCU2_0);
 #endif
@@ -339,3 +341,315 @@ vx_status app_create_graph_aewb(vx_graph graph, AEWBObj *aewbObj, vx_object_arra
 
     return status;
 }
+
+
+static vx_status create_aewb_output_q(vx_context context,
+                                     AEWBObj *aewbObj,
+                                     SensorObj *sensorObj,
+                                     uint32_t num_cameras_enabled)
+{
+    vx_status status = VX_SUCCESS;
+    vx_int32 q = 0;
+
+    vx_user_data_object aewb_output = NULL;
+
+    (void)sensorObj;
+
+    aewb_output = vxCreateUserDataObject(context,
+                                        "tivx_ae_awb_params_t",
+                                        sizeof(tivx_ae_awb_params_t),
+                                        NULL);
+
+    status = vxGetStatus((vx_reference)aewb_output);
+
+    if (status != VX_SUCCESS)
+    {
+        printf("[AEWB_MODULE] Unable to create AEWB output object!\n");
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        static char name[APP_MODULES_MAX_OBJ_NAME_SIZE];
+
+        for (q = 0; q < aewbObj->bufq_depth; q++)
+        {
+            aewbObj->aewb_output_arr_q[q] =
+                vxCreateObjectArray(context,
+                                    (vx_reference)aewb_output,
+                                    num_cameras_enabled);
+
+            status = vxGetStatus((vx_reference)aewbObj->aewb_output_arr_q[q]);
+
+            if (status == VX_SUCCESS)
+            {
+                snprintf(name, sizeof(name), "aewb_output_arr_q%d", q);
+                vxSetReferenceName((vx_reference)aewbObj->aewb_output_arr_q[q], name);
+
+                aewbObj->aewb_output[q] =
+                    (vx_user_data_object)vxGetObjectArrayItem(
+                        (vx_object_array)aewbObj->aewb_output_arr_q[q],
+                        0);
+
+                status = vxGetStatus((vx_reference)aewbObj->aewb_output[q]);
+            }
+
+            if (status == VX_SUCCESS)
+            {
+                snprintf(name, sizeof(name), "aewb_output_q%d", q);
+                vxSetReferenceName((vx_reference)aewbObj->aewb_output[q], name);
+            }
+
+            if (status != VX_SUCCESS)
+            {
+                printf("[AEWB_MODULE] Unable to create AEWB output object array at depth %d\n", q);
+                break;
+            }
+        }
+    }
+
+    if (aewb_output != NULL)
+    {
+        (void)vxReleaseUserDataObject(&aewb_output);
+    }
+
+    return status;
+}
+
+vx_status app_init_aewb_queued(vx_context context,
+                              AEWBObj *aewbObj,
+                              SensorObj *sensorObj,
+                              uint32_t starting_channel,
+                              uint32_t num_cameras_enabled,
+                              vx_uint32 bufq_depth)
+{
+    vx_status status = VX_SUCCESS;
+
+    if (aewbObj == NULL)
+    {
+        status = VX_FAILURE;
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        if (sensorObj == NULL)
+        {
+            status = VX_FAILURE;
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        if (bufq_depth > APP_MODULES_MAX_BUFQ_DEPTH)
+        {
+            printf("[AEWB_MODULE] Warning: bufq_depth %u exceeds maximum %u, limiting\n",
+                   (uint32_t)bufq_depth, (uint32_t)APP_MODULES_MAX_BUFQ_DEPTH);
+
+            bufq_depth = APP_MODULES_MAX_BUFQ_DEPTH;
+        }
+
+        aewbObj->bufq_depth = (vx_int32)bufq_depth;
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = configure_dcc(context, aewbObj, sensorObj);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = configure_aewb(context,
+                                aewbObj,
+                                sensorObj,
+                                starting_channel,
+                                num_cameras_enabled);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = create_histogram(context, aewbObj, sensorObj, num_cameras_enabled);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = create_aewb_output_q(context,
+                                    aewbObj,
+                                    sensorObj,
+                                    num_cameras_enabled);
+    }
+
+    return status;
+}
+
+
+void app_deinit_aewb_queued(AEWBObj *aewbObj)
+{
+    vx_int32 q;
+    vx_int32 bufq_depth;
+
+    if (aewbObj == NULL)
+    {
+        return;
+    }
+
+    bufq_depth = aewbObj->bufq_depth;
+
+    if (bufq_depth > APP_MODULES_MAX_BUFQ_DEPTH)
+    {
+        bufq_depth = APP_MODULES_MAX_BUFQ_DEPTH;
+    }
+
+    if (aewbObj->histogram_arr != NULL)
+    {
+        (void)vxReleaseObjectArray(&aewbObj->histogram_arr);
+    }
+
+    if (aewbObj->config_arr != NULL)
+    {
+        (void)vxReleaseObjectArray(&aewbObj->config_arr);
+    }
+
+    for (q = 0; q < bufq_depth; q++)
+    {
+        if (aewbObj->aewb_output_arr_q[q] != NULL)
+        {
+            (void)vxReleaseObjectArray(&aewbObj->aewb_output_arr_q[q]);
+        }
+
+        if (aewbObj->aewb_output[q] != NULL)
+        {
+            (void)vxReleaseUserDataObject(&aewbObj->aewb_output[q]);
+        }
+
+        if (aewbObj->h3a_stats[q] != NULL)
+        {
+            (void)vxReleaseUserDataObject(&aewbObj->h3a_stats[q]);
+        }
+    }
+
+    if (aewbObj->dcc_config != NULL)
+    {
+        (void)vxReleaseUserDataObject(&aewbObj->dcc_config);
+    }
+}
+
+vx_status app_create_graph_aewb_queued(vx_graph graph,
+                                      AEWBObj *aewbObj,
+                                      vx_object_array h3a_stats_arr[],
+                                      const char *target_string)
+{
+    vx_status status = VX_SUCCESS;
+
+    vx_user_data_object aewb_output = NULL;
+    vx_user_data_object config = NULL;
+    vx_distribution histogram = NULL;
+
+    static char name[APP_MODULES_MAX_OBJ_NAME_SIZE];
+    vx_int32 q = 0;
+    vx_int32 bufq_depth = aewbObj->bufq_depth;
+
+    if (bufq_depth > APP_MODULES_MAX_BUFQ_DEPTH)
+    {
+        printf("[AEWB_MODULE] Warning: bufq_depth %d exceeds maximum %d, limiting\n",
+               bufq_depth, APP_MODULES_MAX_BUFQ_DEPTH);
+        bufq_depth = APP_MODULES_MAX_BUFQ_DEPTH;
+    }
+
+    aewb_output =
+        (vx_user_data_object)vxGetObjectArrayItem(aewbObj->aewb_output_arr_q[0], 0);
+
+    status = vxGetStatus((vx_reference)aewb_output);
+
+    if (status == VX_SUCCESS)
+    {
+        for (q = 0; q < bufq_depth; q++)
+        {
+            aewbObj->h3a_stats[q] =
+                (vx_user_data_object)vxGetObjectArrayItem(h3a_stats_arr[q], 0);
+
+            status = vxGetStatus((vx_reference)aewbObj->h3a_stats[q]);
+
+            if (status == VX_SUCCESS)
+            {
+                snprintf(name, sizeof(name), "viss_h3a_stats_q%d", q);
+                vxSetReferenceName((vx_reference)aewbObj->h3a_stats[q], name);
+            }
+
+            if (status != VX_SUCCESS)
+            {
+                break;
+            }
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        config = (vx_user_data_object)vxGetObjectArrayItem(aewbObj->config_arr, 0);
+        status = vxGetStatus((vx_reference)config);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        histogram = (vx_distribution)vxGetObjectArrayItem(aewbObj->histogram_arr, 0);
+        status = vxGetStatus((vx_reference)histogram);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        aewbObj->node = tivxAewbNode(graph,
+                                    config,
+                                    histogram,
+                                    aewbObj->h3a_stats[0],
+                                    NULL,
+                                    aewb_output,
+                                    aewbObj->dcc_config);
+
+        status = vxGetStatus((vx_reference)aewbObj->node);
+
+        if (status != VX_SUCCESS)
+        {
+            printf("[AEWB_MODULE] Unable to create AEWB node!\n");
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        vxSetReferenceName((vx_reference)aewbObj->node, "aewb_node");
+
+        status = vxSetNodeTarget(aewbObj->node,
+                                 VX_TARGET_STRING,
+                                 target_string);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        vx_bool replicate[] =
+        {
+            vx_true_e,
+            vx_true_e,
+            vx_true_e,
+            vx_false_e,
+            vx_true_e,
+            vx_false_e
+        };
+
+        status = vxReplicateNode(graph, aewbObj->node, replicate, 6);
+    }
+
+    if (aewb_output != NULL)
+    {
+        vxReleaseUserDataObject(&aewb_output);
+    }
+
+    if (config != NULL)
+    {
+        vxReleaseUserDataObject(&config);
+    }
+
+    if (histogram != NULL)
+    {
+        vxReleaseDistribution(&histogram);
+    }
+
+    return status;
+}
+

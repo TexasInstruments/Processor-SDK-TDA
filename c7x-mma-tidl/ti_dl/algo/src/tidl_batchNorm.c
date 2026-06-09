@@ -202,7 +202,7 @@ static int32_t TIDL_batchNormInitLUTParams(const TIDL_NetworkCommonParams *commo
   }
 
   algLayer->layerParams.batchNormParams.lutParams.nonLinearActMethod = tidlLayer->actParams.lutParams.nonLinearActMethod;
-  #if defined (__C7100__) || defined (__C7120__) || defined (__C7524__)
+  #if defined (__C7100__) || defined (__C7120__) || defined (__C7524__) || defined (__C7604__)
   if((algLayer->layerParams.batchNormParams.lutParams.nonLinearActMethod == (int32_t)TIDL_HW_LUT_8B) || 
      (algLayer->layerParams.batchNormParams.lutParams.nonLinearActMethod == (int32_t)TIDL_HW_ILUT_8B) ||
      (algLayer->layerParams.batchNormParams.lutParams.nonLinearActMethod == (int32_t)TIDL_HW_INTERPOLATED_LUT_16B))

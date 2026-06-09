@@ -84,7 +84,7 @@ const Sciclient_MapStruct_t gSciclientMap[SCICLIENT_CONTEXT_MAX_NUM] =
         TISCI_SEC_PROXY_MAIN_0_R5_0_READ_RESPONSE_THREAD_ID,
 
         /** Notification Interrupt Number */
-        0
+        CSLR_WKUP_R5FSS0_CORE0_INTR_DMASS0_INTAGGR_0_INTAGGR_VINTR_PEND_40
 
     },
 
@@ -102,7 +102,7 @@ const Sciclient_MapStruct_t gSciclientMap[SCICLIENT_CONTEXT_MAX_NUM] =
         TISCI_SEC_PROXY_MAIN_0_R5_1_READ_RESPONSE_THREAD_ID,
 
         /** Notification Interrupt Number */
-        0
+        CSLR_WKUP_R5FSS0_CORE0_INTR_DMASS0_INTAGGR_0_INTAGGR_VINTR_PEND_41
 
     },
     {
@@ -227,7 +227,7 @@ const Sciclient_MapStruct_t gSciclientMap[SCICLIENT_CONTEXT_MAX_NUM] =
         TISCI_SEC_PROXY_MCU_0_R5_0_READ_RESPONSE_THREAD_ID,
 
         /** Notification Interrupt Number */
-        0
+        CSLR_MCU_R5FSS0_CORE0_CPU0_INTR_DMASS0_INTAGGR_0_INTAGGR_VINTR_PEND_183
 
     },
 
@@ -263,7 +263,24 @@ const Sciclient_MapStruct_t gSciclientMap[SCICLIENT_CONTEXT_MAX_NUM] =
         TISCI_SEC_PROXY_C7X_0_0_READ_RESPONSE_THREAD_ID,
 
         /** Notification Interrupt Number.**/
-        0U
+        CSLR_C7X256V0_CLEC_GIC_SPI_DMASS0_INTAGGR_0_INTAGGR_VINTR_PEND_5
+
+    },
+    {
+        /** Context **/
+        SCICLIENT_SECURE_CONTEXT,
+
+        /** DM to TIFS host id */
+        TISCI_HOST_ID_DM2TIFS,
+
+        /** Thread ID of the low priority thread(write) allowed for the CPU */
+        TISCI_SEC_PROXY_DM2TIFS_WRITE_LOW_PRIORITY_THREAD_ID,
+
+        /** Thread ID of the response thread(read) available for the CPU */
+        TISCI_SEC_PROXY_DM2TIFS_READ_RESPONSE_THREAD_ID,
+
+        /** Notification Interrupt Number.**/
+        CSLR_WKUP_R5FSS0_CORE0_INTR_DMASS0_INTAGGR_0_INTAGGR_VINTR_PEND_79
 
     }
 };

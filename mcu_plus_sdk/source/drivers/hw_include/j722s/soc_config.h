@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -58,7 +58,7 @@ extern "C"
 #define IP_VERSION_DMPAC_V1
 #define IP_VERSION_RINGACC_V0
 #define IP_VERSION_DSS_V3
-#define IP_VERSION_CSIRX_V1
+#define IP_VERSION_CSIRX_V0
 #define IP_VERSION_DRU_V2
 #define IP_VERSION_CSITX_V0
 #define IP_VERSION_SPINLOCK_V0
@@ -73,16 +73,20 @@ extern "C"
 #define DRV_VERSION_SERIAL_FLASH_V0 /* OSPI NOR/NAND */
 #define DRV_VERSION_OSPI_V0
 #define DRV_VERSION_UART_V0
+#define DRV_VERSION_UDMA_V0
 #define DRV_VERSION_GTC_V0
 #define DRV_VERSION_FVID2_V0
-#define DRV_VERSION_DSS_V0
-#define DRV_VERSION_CSIRX_V1
+#define DRV_VERSION_DSS_V1
+#define DRV_VERSION_CSIRX_V0
 #define DRV_VERSION_CSITX_V0
 #define DRV_VERSION_SPINLOCK_V0
 #define DRV_VERSION_QOS_V0
 
 /* Driver DMA integration */
 #define DMA_VERSION_MCSPI_UDMA
+
+/* Driver bootloader format */
+#define DRV_BOOTLOADER_FORMAT_RPRC
 
 #ifdef __cplusplus
 }

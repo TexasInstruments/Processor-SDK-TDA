@@ -55,6 +55,18 @@
 #if defined (SOC_AM62AX)
 #include <drivers/mcasp/v1/soc/am62ax/mcasp_soc.h>
 #endif
+#if defined (SOC_AM62X)
+#include <drivers/mcasp/v1/soc/am62x/mcasp_soc.h>
+#endif
+
+/* ========================================================================== */
+/*                             Macro Definitions                              */
+/* ========================================================================== */
+
+#define UDMA_DMA_MAX_L0_XFER_SIZE           (65536U)
+#define UDMA_DMA_XFER_SIZE                  (64512U)
+
+#define WORD_BYTE_COUNT                     (4U)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -78,8 +90,13 @@ static void MCASP_rx_isr(void *args);
 static int32_t MCASP_programInstance(MCASP_Config *config, uint32_t transferMode);
 static int32_t MCASP_bitClearGblCtl(const MCASP_Handle handle, uint32_t bitMask);
 static int32_t MCASP_bitSetGblCtl(const MCASP_Handle handle, uint32_t bitMask);
-static int32_t MCASP_validateTransaction (MCASP_Transaction *txn);
+static int32_t MCASP_validateTransaction (MCASP_Handle handle, MCASP_Transaction *txn, uint8_t isTx);
 static int32_t MCASP_getBufferOffset(MCASP_TransferObj *xfrObj, uint8_t serIdx, uint32_t* pOffset);
+
+#ifdef ENABLE_MCASP_FAULT_INJECTION
+void Test_Mcasp_FaultInjectStubHandler(uint32_t side, uint32_t *statusReg);
+#endif
+
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -219,6 +236,24 @@ MCASP_Handle MCASP_open(uint32_t index, const MCASP_OpenParams *openParams)
 
         obj->dmaChCfg = openParams->dmaChCfg;
 
+        if(attrs->hwCfg.tx.fifoCfg.fifoCtl & 0x10000)
+        {
+            obj->txFifoEnable = 1;
+        }
+        else
+        {
+            obj->txFifoEnable = 0;
+        }
+
+        if(attrs->hwCfg.rx.fifoCfg.fifoCtl & 0x10000)
+        {
+            obj->rxFifoEnable = 1;
+        }
+        else
+        {
+            obj->rxFifoEnable = 0;
+        }
+
         /* Register interrupt */
         if(obj->transferMode != MCASP_TRANSFER_MODE_POLLING)
         {
@@ -237,7 +272,7 @@ MCASP_Handle MCASP_open(uint32_t index, const MCASP_OpenParams *openParams)
                 status += HwiP_construct(&obj->hwiObjTx, &hwiPrms);
             }
 
-            if(attrs->intCfgTx.intrNum != UINT32_MAX)
+            if(attrs->intCfgRx.intrNum != UINT32_MAX)
             {
                 /* Receive section */
                 HwiP_Params_init(&hwiPrms);
@@ -255,26 +290,6 @@ MCASP_Handle MCASP_open(uint32_t index, const MCASP_OpenParams *openParams)
         if(obj->transferMode == MCASP_TRANSFER_MODE_DMA)
         {
             obj->mcaspDmaHandle = openParams->mcaspDmaDrvObj;
-
-            obj->cyclicBuffTx = openParams->cyclicBuffTx;
-            obj->cyclicBuffSizeTx = openParams->cyclicBuffSizeTx;
-            obj->cyclicBuffCntTx = openParams->cyclicBuffCntTx;
-
-            obj->cyclicBuffRx = openParams->cyclicBuffRx;
-            obj->cyclicBuffSizeRx = openParams->cyclicBuffSizeRx;
-            obj->cyclicBuffCntRx = openParams->cyclicBuffCntRx;
-
-            obj->cyclicTxFeedDMAHandle = openParams->cyclicTxFeedDMAHandle;
-            obj->cyclicRxFeedDMAHandle = openParams->cyclicRxFeedDMAHandle;
-
-            obj->bcdmaTxCyclicEvtHandle = openParams->bcdmaTxCqEvtHandle;
-            obj->bcdmaRxCyclicEvtHandle = openParams->bcdmaRxCqEvtHandle;
-
-            obj->bcdmaDrvHandle = openParams->bcdmaDrvHandle;
-
-            obj->trpdMemAllocTx = openParams->trpdMemAllocTx;
-            obj->trpdMemAllocRx = openParams->trpdMemAllocRx;
-
             MCASP_openDma(config, obj->dmaChCfg);
         }
 
@@ -461,7 +476,7 @@ static int32_t MCASP_programInstance(MCASP_Config *config, uint32_t transferMode
     CSL_REG32_WR(&pReg->XSTAT, attrs->hwCfg.tx.stat);
 
     /* Configure REVTCTL and XEVTCTL */
-    CSL_REG32_WR(&pReg->REVTCTL, attrs->hwCfg.tx.evtCtl);
+    CSL_REG32_WR(&pReg->REVTCTL, attrs->hwCfg.rx.evtCtl);
     CSL_REG32_WR(&pReg->XEVTCTL, attrs->hwCfg.tx.evtCtl);
 
     /* clear the clk fail bit in status reg*/
@@ -473,12 +488,22 @@ static int32_t MCASP_programInstance(MCASP_Config *config, uint32_t transferMode
     return status;
 }
 
-static int32_t MCASP_validateTransaction (MCASP_Transaction *txn)
+static int32_t MCASP_validateTransaction (MCASP_Handle handle, MCASP_Transaction *txn, uint8_t isTx)
 {
     int32_t status = SystemP_SUCCESS;
-    if ((txn->buf == NULL) || (txn->count == 0))
+
+    if ((NULL == handle) || (txn->buf == NULL) || (txn->count == 0))
     {
         status = SystemP_FAILURE;
+    }
+    if(status  == SystemP_SUCCESS)
+    {
+        MCASP_Object *object = ((MCASP_Config *)handle)->object;
+
+        if(object->transferMode == MCASP_TRANSFER_MODE_DMA)
+        {
+            status = MCASP_prepareDmaIcnts(handle, (uint64_t)(txn->count*WORD_BYTE_COUNT), isTx);
+        }
     }
     return status;
 }
@@ -492,7 +517,7 @@ int32_t MCASP_submitTx(MCASP_Handle handle, MCASP_Transaction *txn)
     }
     if (SystemP_SUCCESS == status)
     {
-        status = MCASP_validateTransaction(txn);
+        status = MCASP_validateTransaction(handle, txn, 1U);
     }
     if (SystemP_SUCCESS == status)
     {
@@ -511,7 +536,7 @@ int32_t MCASP_submitRx(MCASP_Handle handle, MCASP_Transaction *txn)
     }
     if (SystemP_SUCCESS == status)
     {
-        status = MCASP_validateTransaction(txn);
+        status = MCASP_validateTransaction(handle, txn, 0U);
     }
     if (SystemP_SUCCESS == status)
     {
@@ -625,6 +650,20 @@ int32_t MCASP_startTransferTx(MCASP_Handle handle)
     {
         object->isTxStarted = 1;
 
+        /* Initialize the global control register */
+        /* Start high speed clocks Tx first */
+        status += MCASP_bitSetGblCtl(handle, (uint32_t) 0x200U);
+        /* Start serial Tx clocks next */
+        status += MCASP_bitSetGblCtl(handle, (uint32_t) 0x100U);
+
+        /* Configure pin direction register */
+        if(attrs->hwCfg.gbl.pdir & 0xFFFF)
+        {
+            uint32_t regVal = CSL_REG32_RD(&pReg->PDIR);
+            regVal = regVal | attrs->hwCfg.gbl.pdir;
+            CSL_REG32_WR(&pReg->PDIR, regVal);
+        }
+
         if(object->transferMode == MCASP_TRANSFER_MODE_DMA)
         {
             /* Disable DMA requests generation */
@@ -656,7 +695,7 @@ int32_t MCASP_startTransferTx(MCASP_Handle handle)
             {
                 object->XmtObj.transaction = txn;
                 object->XmtObj.count = 0;
-                object->XmtObj.frameCount = object->XmtObj.transaction->count /
+                object->XmtObj.frameCount = (uint8_t)(object->XmtObj.transaction->count) /
                                 (object->XmtObj.slotCount * object->XmtObj.serCount);
                 object->XmtObj.frameIndex = 0;
                 object->XmtObj.slotIndex = 0;
@@ -674,8 +713,10 @@ int32_t MCASP_startTransferTx(MCASP_Handle handle)
         /* Clear the transmitter status logic */
         CSL_REG32_WR(&pReg->XSTAT, (uint32_t)0x1FFU);
 
-        CSL_REG32_FINS(&pReg->WFIFOCTL, MCASP_WFIFOCTL_WENA, 1);
-
+        if(attrs->hwCfg.tx.fifoCfg.fifoCtl & 0x10000)
+        {
+            CSL_REG32_FINS(&pReg->WFIFOCTL, MCASP_WFIFOCTL_WENA, 1);
+        }
         if(MCASP_TRANSFER_MODE_DMA == object->transferMode)
         {
             /* Enable DMA requests generation */
@@ -684,6 +725,8 @@ int32_t MCASP_startTransferTx(MCASP_Handle handle)
         }
 
         /* Flush transmitters buffers to an empty state */
+        status += MCASP_bitSetGblCtl(handle, CSL_MCASP_GBLCTL_XSRCLR_MASK);
+
         status += MCASP_bitSetGblCtl(handle, CSL_MCASP_GBLCTL_XSRCLR_MASK);
     }
     if (SystemP_SUCCESS == status)
@@ -746,10 +789,33 @@ int32_t MCASP_startTransferRx(MCASP_Handle handle)
     {
         object->isRxStarted = 1;
 
+        /* Initialize the global control register */
+        /* start high speed clocks first */
+        status += MCASP_bitSetGblCtl(handle, (uint32_t) 0x002U);
+        /* start serial clocks next */
+        status += MCASP_bitSetGblCtl(handle, (uint32_t) 0x001U);
+
+        if(attrs->isSynchronous)
+        {
+            /* Initialize the global control register */
+            /* start high speed clocks first */
+            status += MCASP_bitSetGblCtl(handle, (uint32_t) 0x200U);
+            /* start serial clocks next */
+            status += MCASP_bitSetGblCtl(handle, (uint32_t) 0x100U);
+
+            /* Configure pin direction register */
+            if(attrs->hwCfg.gbl.pdir & 0xFFFF)
+            {
+                uint32_t regVal = CSL_REG32_RD(&pReg->PDIR);
+                regVal = regVal | attrs->hwCfg.gbl.pdir;
+                CSL_REG32_WR(&pReg->PDIR, regVal);
+            }
+        }
+
         if(MCASP_TRANSFER_MODE_DMA == object->transferMode)
         {
             /* Disable DMA requests generation */
-                CSL_REG32_FINS(&pReg->REVTCTL, MCASP_REVTCTL_RDATDMA,
+            CSL_REG32_FINS(&pReg->REVTCTL, MCASP_REVTCTL_RDATDMA,
                     CSL_MCASP_REVTCTL_RDATDMA_RSV);
             status = MCASP_enableDmaRx((MCASP_Config *)handle);
 
@@ -777,7 +843,7 @@ int32_t MCASP_startTransferRx(MCASP_Handle handle)
             {
                 object->RcvObj.transaction = txn;
                 object->RcvObj.count = 0;
-                object->RcvObj.frameCount = object->RcvObj.transaction->count /
+                object->RcvObj.frameCount = (uint8_t)(object->RcvObj.transaction->count) /
                                 (object->RcvObj.slotCount * object->RcvObj.serCount);
                 object->RcvObj.frameIndex = 0;
                 object->RcvObj.slotIndex = 0;
@@ -794,7 +860,10 @@ int32_t MCASP_startTransferRx(MCASP_Handle handle)
             /* Clear the receivers status logic */
             CSL_REG32_WR(&pReg->RSTAT, (uint32_t)0x1FFU);
 
-            CSL_REG32_FINS(&pReg->RFIFOCTL, MCASP_RFIFOCTL_RENA, 1);
+            if(attrs->hwCfg.rx.fifoCfg.fifoCtl & 0x10000)
+            {
+                CSL_REG32_FINS(&pReg->RFIFOCTL, MCASP_RFIFOCTL_RENA, 1);
+            }
 
             if(MCASP_TRANSFER_MODE_DMA == object->transferMode)
             {
@@ -842,6 +911,7 @@ int32_t MCASP_stopTransferTx(MCASP_Handle handle)
     const MCASP_Attrs *attrs = NULL;
     const CSL_McaspRegs *pReg = NULL;
     MCASP_Object *object = NULL;
+    uint32_t regVal = 0;
 
     if (NULL == handle)
     {
@@ -863,6 +933,29 @@ int32_t MCASP_stopTransferTx(MCASP_Handle handle)
     if (SystemP_SUCCESS == status)
     {
         object->isTxStarted = 0;
+
+        /* Disable the data ready event transmit interrupt */
+        CSL_REG32_FINS(&pReg->XINTCTL, MCASP_XINTCTL_XDATA,
+            CSL_MCASP_XINTCTL_XDATA_DISABLE);
+
+        if(attrs->isSynchronous && object->isRxStarted)
+        {
+            status += MCASP_bitSetGblCtl(handle, (uint32_t) (CSL_MCASP_XGBLCTL_XCLKRST_MASK |
+                        CSL_MCASP_XGBLCTL_XHCLKRST_MASK | CSL_MCASP_XGBLCTL_XFRST_MASK));
+        }
+        else
+        {
+            CSL_REG32_WR(&pReg->XGBLCTL, 0x0);
+        }
+
+        CSL_REG32_WR(&pReg->XSTAT, 0xFFFFFFFF);
+
+        /* Disable Tx FIFO if enabled */
+        if((CSL_REG32_RD(&pReg->WFIFOCTL) & CSL_MCASP_WFIFOCTL_WENA_MASK))
+        {
+            CSL_REG32_FINS(&pReg->WFIFOCTL, MCASP_WFIFOCTL_WENA, CSL_MCASP_WFIFOCTL_WENA_EN_1_0X0);
+        }
+
         if(object->transferMode == MCASP_TRANSFER_MODE_DMA)
         {
             /* Disable DMA requests generation */
@@ -876,6 +969,15 @@ int32_t MCASP_stopTransferTx(MCASP_Handle handle)
             CSL_REG32_FINS(&pReg->XINTCTL, MCASP_XINTCTL_XDATA,
                 CSL_MCASP_XINTCTL_XDATA_DISABLE);
         }
+
+        /* Reset PDIR register */
+        {
+            regVal = CSL_REG32_RD(&pReg->PDIR);
+
+            regVal = regVal & 0xFFFF0000;
+
+            CSL_REG32_WR(&pReg->PDIR, regVal);
+        }
     }
     return status;
 }
@@ -886,6 +988,7 @@ int32_t MCASP_stopTransferRx(MCASP_Handle handle)
     const MCASP_Attrs *attrs = NULL;
     const CSL_McaspRegs *pReg = NULL;
     MCASP_Object *object = NULL;
+    uint32_t regVal = 0u;
 
     if (NULL == handle)
     {
@@ -907,6 +1010,29 @@ int32_t MCASP_stopTransferRx(MCASP_Handle handle)
     if (SystemP_SUCCESS == status)
     {
         object->isRxStarted = 0;
+        {
+            CSL_REG32_FINS(&pReg->RINTCTL, MCASP_RINTCTL_RDATA,
+                CSL_MCASP_RINTCTL_RDATA_DISABLE);
+
+            if(attrs->isSynchronous && !object->isTxStarted)
+            {
+                regVal = CSL_REG32_RD(&pReg->PDIR);
+                regVal = regVal & 0xFFFF0000;
+
+                CSL_REG32_WR(&pReg->PDIR, regVal);
+
+                CSL_REG32_WR(&pReg->XGBLCTL, 0);
+            }
+
+            CSL_REG32_WR(&pReg->RGBLCTL, 0);
+
+            CSL_REG32_WR(&pReg->RSTAT, 0xFFFFFFFF);
+
+            if((CSL_REG32_RD(&pReg->RFIFOCTL) & CSL_MCASP_RFIFOCTL_RENA_MASK))
+            {
+                CSL_REG32_FINS(&pReg->RFIFOCTL, MCASP_RFIFOCTL_RENA, CSL_MCASP_RFIFOCTL_RENA_EN_1_0X0);
+            }
+        }
         if(object->transferMode == MCASP_TRANSFER_MODE_DMA)
         {
             /* Disable DMA requests generation */
@@ -1075,6 +1201,12 @@ static void MCASP_tx_isr(void *args)
 
     /* Check if there is a transmitter buffer empty event */
     regVal = CSL_REG32_RD(&pReg->XSTAT);
+
+#ifdef ENABLE_MCASP_FAULT_INJECTION
+    /* Inject fault by calling the stub handler */
+    Test_Mcasp_FaultInjectStubHandler(0, &regVal); /* 0 = TX side */
+#endif
+
     if ((CSL_MCASP_XSTAT_XDATA_MASK == (regVal & CSL_MCASP_XSTAT_XDATA_MASK)))
     {
         /* Check if CPU transfer is through the DATA port */
@@ -1137,7 +1269,7 @@ static void MCASP_tx_isr(void *args)
                             }
                             xfrObj->transaction = newTxn;
                             xfrObj->count = 0;
-                            xfrObj->frameCount = newTxn->count / (xfrObj->slotCount * xfrObj->serCount);
+                            xfrObj->frameCount = (uint8_t)(newTxn->count) / (xfrObj->slotCount * xfrObj->serCount);
                             xfrObj->frameIndex = 0;
                             xfrObj->slotIndex = 0;
                         }
@@ -1185,6 +1317,12 @@ static void MCASP_rx_isr(void *args)
 
     /* Check if there is a receiver buffer full event */
     regVal = CSL_REG32_RD(&pReg->RSTAT);
+
+#ifdef ENABLE_MCASP_FAULT_INJECTION
+    /* Inject fault by calling the stub handler */
+    Test_Mcasp_FaultInjectStubHandler(1, &regVal); /* 1 = RX side */
+#endif
+
     if ((CSL_MCASP_RSTAT_RDATA_MASK == (regVal & CSL_MCASP_RSTAT_RDATA_MASK)))
     {
         /* Check if CPU transfer is through the DATA port */
@@ -1246,7 +1384,7 @@ static void MCASP_rx_isr(void *args)
                             }
                             xfrObj->transaction = newTxn;
                             xfrObj->count = 0;
-                            xfrObj->frameCount = newTxn->count / (xfrObj->slotCount * xfrObj->serCount);
+                            xfrObj->frameCount = (uint8_t)(newTxn->count) / (xfrObj->slotCount * xfrObj->serCount);
                             xfrObj->frameIndex = 0;
                             xfrObj->slotIndex = 0;
                         }
@@ -1279,4 +1417,48 @@ static void MCASP_rx_isr(void *args)
             /* TODO: Rx Start of frame and odd/even slot processing */
         }
     }
+}
+
+int32_t MCASP_setTxTxnCount(MCASP_Handle handle, uint32_t txnCount)
+{
+    int32_t status = SystemP_SUCCESS;
+    MCASP_Object *object = NULL;
+
+    if ((NULL == handle) || (0U == txnCount))
+    {
+        status = SystemP_FAILURE;
+    }
+
+    if(status == SystemP_SUCCESS)
+    {
+        object = ((MCASP_Config *)handle)->object;
+
+        object->txDmaIcnt.initDone = MCASP_TXN_COUNT_OVERRIDE;
+
+        status = MCASP_prepareDmaIcnts(handle, (uint64_t)((uint64_t)txnCount*(uint64_t)4U), 1U);
+    }
+
+    return status;
+}
+
+int32_t MCASP_setRxTxnCount(MCASP_Handle handle, uint32_t txnCount)
+{
+    int32_t status = SystemP_SUCCESS;
+    MCASP_Object *object = NULL;
+
+    if ((NULL == handle) || (0U == txnCount))
+    {
+        status = SystemP_FAILURE;
+    }
+
+    if(status == SystemP_SUCCESS)
+    {
+        object = ((MCASP_Config *)handle)->object;
+
+        object->rxDmaIcnt.initDone = MCASP_TXN_COUNT_OVERRIDE;
+
+        status = MCASP_prepareDmaIcnts(handle, (uint64_t)((uint64_t)txnCount*(uint64_t)4U), 0U);
+    }
+
+    return status;
 }

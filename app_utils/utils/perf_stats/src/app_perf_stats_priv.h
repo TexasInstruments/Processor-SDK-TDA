@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -72,6 +72,8 @@
 #define APP_PERF_STATS_GET_DDR_STATS_CORE       (APP_IPC_CPU_MCU1_0)
 #elif defined(SOC_J722S)
 #define APP_PERF_STATS_GET_DDR_STATS_CORE       (APP_IPC_CPU_MCU2_0)
+#elif defined(SOC_TDA54)
+#define APP_PERF_STATS_GET_DDR_STATS_CORE       (APP_IPC_CPU_MCU2_M55)
 #else
 #define APP_PERF_STATS_GET_DDR_STATS_CORE       (APP_IPC_CPU_MCU2_1)
 #endif

@@ -1,6 +1,8 @@
 /*
- * FreeRTOS Kernel V10.4.3
- * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel V11.1.0
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,7 +24,6 @@
  * https://www.FreeRTOS.org
  * https://github.com/FreeRTOS
  *
- * 1 tab == 4 spaces!
  */
 
 typedef void TCB_t;
@@ -43,34 +44,32 @@ void portSWITCH_CONTEXT( void );
  */
 void portFIRST_CONTEXT( void );
 
-#define portSWITCH_CONTEXT()										 \
-						asm { mov	ax, seg pxCurrentTCB		} \
-							asm { mov	ds, ax						}  \
-							asm { les	bx, pxCurrentTCB			}	/* Save the stack pointer into the TCB. */    \
-							asm { mov	es:0x2[ bx ], ss			}   \
-							asm { mov	es:[ bx ], sp				}   \
-							asm { call  far ptr vTaskSwitchContext	}	/* Perform the switch. */   \
-							asm { mov	ax, seg pxCurrentTCB		}	/* Restore the stack pointer from the TCB. */  \
-							asm { mov	ds, ax						}   \
-							asm { les	bx, dword ptr pxCurrentTCB	}   \
-							asm { mov	ss, es:[ bx + 2 ]			}      \
-							asm { mov	sp, es:[ bx ]				}
+#define portSWITCH_CONTEXT()                                         \
+                        asm { mov   ax, seg pxCurrentTCB        } \
+                            asm { mov   ds, ax                      }  \
+                            asm { les   bx, pxCurrentTCB            }   /* Save the stack pointer into the TCB. */    \
+                            asm { mov   es:0x2[ bx ], ss            }   \
+                            asm { mov   es:[ bx ], sp               }   \
+                            asm { call  far ptr vTaskSwitchContext  }   /* Perform the switch. */   \
+                            asm { mov   ax, seg pxCurrentTCB        }   /* Restore the stack pointer from the TCB. */  \
+                            asm { mov   ds, ax                      }   \
+                            asm { les   bx, dword ptr pxCurrentTCB  }   \
+                            asm { mov   ss, es:[ bx + 2 ]           }      \
+                            asm { mov   sp, es:[ bx ]               }
 
-#define portFIRST_CONTEXT()												\
-							asm { mov	ax, seg pxCurrentTCB		}	\
-							asm { mov	ds, ax						}	\
-							asm { les	bx, dword ptr pxCurrentTCB	}	\
-							asm { mov	ss, es:[ bx + 2 ]			}	\
-							asm { mov	sp, es:[ bx ]				}	\
-							asm { pop	bp							}	\
-							asm { pop	di							}	\
-							asm { pop	si							}	\
-							asm { pop	ds							}	\
-							asm { pop	es							}	\
-							asm { pop	dx							}	\
-							asm { pop	cx							}	\
-							asm { pop	bx							}	\
-							asm { pop	ax							}	\
-							asm { iret								}
-
-
+#define portFIRST_CONTEXT()                                             \
+                            asm { mov   ax, seg pxCurrentTCB        }   \
+                            asm { mov   ds, ax                      }   \
+                            asm { les   bx, dword ptr pxCurrentTCB  }   \
+                            asm { mov   ss, es:[ bx + 2 ]           }   \
+                            asm { mov   sp, es:[ bx ]               }   \
+                            asm { pop   bp                          }   \
+                            asm { pop   di                          }   \
+                            asm { pop   si                          }   \
+                            asm { pop   ds                          }   \
+                            asm { pop   es                          }   \
+                            asm { pop   dx                          }   \
+                            asm { pop   cx                          }   \
+                            asm { pop   bx                          }   \
+                            asm { pop   ax                          }   \
+                            asm { iret                              }

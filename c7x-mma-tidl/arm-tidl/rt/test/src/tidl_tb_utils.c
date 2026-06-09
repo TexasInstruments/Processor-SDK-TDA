@@ -83,7 +83,7 @@
 #include "platform_common.h"
 #include "tidl_tb_utils.h"
 
-#if !defined(SOC_AM62A) || !defined(SOC_J722S)
+#if !defined(SOC_AM62A) && !defined (SOC_J722S) && !defined (SOC_TDA54)
 #if (!HOST_EMULATION) && !defined(_A72_BUILD)
 #include <ti/csl/arch/c7x/cslr_C7X_CPU.h>
 #endif
@@ -306,6 +306,7 @@ void tidl_printStatus(int32_t status)
 
 #ifndef _A72_BUILD
 struct Udma_DrvObj  udmaDrvObj;
+#ifndef DMA_UTILS_STANDALONE
 #if defined(SOC_J721E) || defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2)
 int32_t tidl_sciclientDmscGetVersion(char *version_str, uint32_t version_str_size)
 {
@@ -364,6 +365,7 @@ struct tisci_msg_version_req req = {0};
 
     return (retVal);
 }
+#endif
 #endif
 #endif
 
@@ -535,7 +537,7 @@ void * tidl_tb_udma_init( void)
 
 int32_t tidltb_getDatElementSize(int32_t elementType)
 {
-  if ((elementType == TIDL_SignedChar) || (elementType == TIDL_UnsignedChar))
+  if ((elementType == TIDL_SignedChar) || (elementType == TIDL_UnsignedChar) || (elementType == TIDL_Bool)) 
   {
     return 1;
   }
@@ -893,6 +895,10 @@ void tidl_tb_dataConvert(void *src, void *dst, int32_t src_offset, int32_t dst_o
                     {
                       data = ((uint64_t*)src)[in_idx];
                     }
+                    else if(in_type == TIDL_Bool)
+                    {
+                      data = ((bool*)src)[in_idx];
+                    }
                     else
                     {
                       TIDLTB_ASSERT_MSG(0);
@@ -933,6 +939,10 @@ void tidl_tb_dataConvert(void *src, void *dst, int32_t src_offset, int32_t dst_o
                     else if(out_type ==  TIDL_UnsignedDoubleWord)
                     {
                       ((uint64_t*)dst)[out_idx] = (uint64_t)tidl_tb_sat(data, -2147483648.0, 2147483647);
+                    }
+                    else if(out_type ==  TIDL_Bool)
+                    {
+                      ((bool*)dst)[out_idx] = (bool)tidl_tb_sat(data, 0.0, 1.0); 
                     }
                     else
                     {
@@ -1974,7 +1984,7 @@ void tidl_genSetStaticInput(sTIDL_IOBufDesc_t * ioPrms, IVISION_BufDesc   *BufDe
   for(i = 0; i < ioPrms->numInputBuf; i++)
   {
     elementSizeBytes  = tidltb_getDatElementSize(ioPrms->inElementType[i]);
-    inBufSize = ioPrms->inChannelPitch[i] * ioPrms->inNumChannels[i] * elementSizeBytes;
+    inBufSize = ioPrms->inChannelPitch[i] * ioPrms->inNumChannels[i] * ioPrms->inDIM2[i] * ioPrms->inDIM1[i] * ioPrms->inNumBatches[i] * elementSizeBytes;
     totalSize += inBufSize;
   }
 #if (!BUILD_WITH_STATIC_ARRAYS)
@@ -1990,7 +2000,7 @@ void tidl_genSetStaticInput(sTIDL_IOBufDesc_t * ioPrms, IVISION_BufDesc   *BufDe
     {
       void * ivPtr = BufDescList[i].bufPlanes[0].buf;//Ivision Pointer is set at this point
       elementSizeBytes  = tidltb_getDatElementSize(ioPrms->inElementType[i]);
-      tensorSize = ioPrms->inChannelPitch[i] * ioPrms->inNumChannels[i] * elementSizeBytes;
+      tensorSize = ioPrms->inChannelPitch[i] * ioPrms->inNumChannels[i] * ioPrms->inDIM2[i] * ioPrms->inDIM1[i] * ioPrms->inNumBatches[i] * elementSizeBytes;
       memcpy(inPtr + tensorOffset, ivPtr, tensorSize);
       tensorOffset += tensorSize;
     }
@@ -2012,7 +2022,7 @@ void tidl_genSetStaticInput(sTIDL_IOBufDesc_t * ioPrms, IVISION_BufDesc   *BufDe
   {
     int32_t localOffset = tidl_getStaticOffset(tidl_tb_pIn_tensor); //To jump to a particular n/w's data.
     elementSizeBytes  = tidltb_getDatElementSize(ioPrms->inElementType[i]);
-    tensorSize = ioPrms->inChannelPitch[i] * ioPrms->inNumChannels[i] * elementSizeBytes;
+    tensorSize = ioPrms->inChannelPitch[i] * ioPrms->inNumChannels[i] * ioPrms->inDIM2[i] * ioPrms->inDIM1[i] * ioPrms->inNumBatches[i] * elementSizeBytes;
     BufDescList[i].bufPlanes[0].buf = (void *)(tidl_tb_pIn_tensor + tensorOffset + localOffset);
     tensorOffset += tensorSize;
 
@@ -2041,9 +2051,9 @@ int32_t tidl_tb_utils_printf(const char * format, va_list args)
   return status;
 }
 
-int tidl_tb_printf(int traceLevel, const char *format, ...)
+int32_t tidl_tb_printf(int8_t traceLevel, const char *format, ...)
 {
-  int status = 0;
+  int32_t status = 0;
 
   if(traceLevel <= gParams.debugTraceLevel)
   {
@@ -2090,11 +2100,13 @@ void tidl_tb_progressBar(float progress)
   uint32_t TIDL_TEST_getCoreNum(void)
   {
     uint32_t corePacNum = 0;
+    #if 0
     uint64_t dnum;
     /* Get the bits from bit 7 to bit 15, which represents the core pac number */
     dnum = __DNUM;
     /* Enums are common across devices, subtract enum for C7x_1 since TIDL array indexing starts from C7x_1, CSL has support for other cores so C7x_1 may not be enum 0 */
     corePacNum = CSL_REG64_FEXT(&dnum, C7X_CPU_DNUM_COREPACNUM) - CSL_C7X_CPU_COREPACK_NUM_C7X1;
+    #endif
     return corePacNum ;
   }
 #else

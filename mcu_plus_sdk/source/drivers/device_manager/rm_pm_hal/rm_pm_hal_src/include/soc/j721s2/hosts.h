@@ -68,8 +68,8 @@
 #define HOST_ID_C7X_1_0 (22U)
 /** C7X_1_1(Non Secure): C7x_1 context 1 on Main island */
 #define HOST_ID_C7X_1_1 (23U)
-/** GPU_0(Non Secure): BXS context 0 on Main island */
-#define HOST_ID_GPU_0 (30U)
+/** A72_5(Non Secure): Cortex A72 context 5 on Main island */
+#define HOST_ID_A72_5 (30U)
 /** MAIN_0_R5_0(Non Secure): Cortex R5_0 context 0 on Main island */
 #define HOST_ID_MAIN_0_R5_0 (35U)
 /** MAIN_0_R5_1(Secure): Cortex R5_0 context 1 on Main island */

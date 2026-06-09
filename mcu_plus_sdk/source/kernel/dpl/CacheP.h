@@ -39,7 +39,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <kernel/dpl/SystemP.h>
-#if !defined(SOC_AM62AX) && !defined(SOC_J722S)
+#if (!defined(SOC_AM62AX)) && (!defined(SOC_AM62DX)) && (!defined(SOC_AM275X)) && (!defined(SOC_J722S))
 #if defined(_TMS320C6X)
 #include <kernel/dpl/CacheP_c6x.h>
 #endif
@@ -189,89 +189,6 @@ void CacheP_wbInv(void *addr, uint32_t size, uint32_t type);
  *
  */
 void CacheP_init(void);
-
-/**
- * \brief Invalidates all in data cache.
- *
- */
- void CacheP_invL1dAll();
-
- /**
- * \brief Invalidates all in instruction cache.
- *
- */
- void CacheP_invL1pAll();
-
-/**
- *  \brief Get the instruction cache line size
- *  This function is used to get the instruction cache line size for MCU.
- *  Implementation of this API/code is use-case specific.
- *
- *  \return the instruction cache line size in bytes
- */
-uint32_t CacheP_armR5GetIcacheLineSize( void );
-
-/**
- *  \brief Invalidate an instruction cache line by MVA
- *  This function is used to invalidate an instruction cache Line by MVA.
- *
- *  \param address  [IN]    Modified virtual address
- *
- */
-void CacheP_armR5InvalidateIcacheMva( uint32_t address );
-
-/**
- *  \brief Invalidate a data cache line by set and way
- *
- *  This function is used to invalidate a data cache line by set and way.
- *
- *  \param set      [IN]    Indicates the cache set to invalidate
- *  \param way      [IN]    Indicates the cache way to invalidate
- *
- */
-void CacheP_armR5InvalidateDcacheSetWay( uint32_t set, uint32_t way );
-
-
-/**
- *  \brief Clean a data cache line by set and way
- *
- *  This function is used to clean a data cache line by set and way.
- *
- *  \param set      [IN]    Indicates the cache set to clean
- *  \param way      [IN]    Indicates the cache way to clean
- *
- */
-void CacheP_armR5CleanDcacheSetWay( uint32_t set, uint32_t way );
-
-/**
- *  \brief Clean and invalidate a data cache line by set and way
- *
- *  This function is used to clean and invalidate a data cache line by set and
- *  way.
- *
- *  \param set      [IN]    Indicates the cache set to clean and invalidate
- *  \param way      [IN]    Indicates the cache way to clean and invalidate
- *
- */
-void CacheP_armR5CleanInvalidateDcacheSetWay( uint32_t set, uint32_t way );
-
-/**
- *  \brief Disable ECC (parity) checking on cache rams
- *
- *  This function is used to disable ECC (parity) checking on cache rams.
- *
- *
- */
-void CacheP_armR5DisableEcc( void );
-
-/**
- *  \brief Enable AXI slave access to cache RAM
- *
- *  This function is used to enable AXI slave access to cache RAM.
- *
- *
- */
-void CacheP_armR5EnableAxiAccess( void );
 
 /** @} */
 

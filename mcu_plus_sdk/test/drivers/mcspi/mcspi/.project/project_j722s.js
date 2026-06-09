@@ -53,6 +53,12 @@ const lnkfiles = {
     ]
 };
 
+const defines_r5f = {
+    common: [
+        "R5F_CORE"
+    ],
+};
+
 const syscfgfile = "../example.syscfg";
 
 const templates_freertos_main_r5f =
@@ -104,6 +110,10 @@ function getComponentBuildProperty(buildOption) {
     build_property.filedirs = filedirs;
     build_property.lnkfiles = lnkfiles;
     build_property.syscfgfile = syscfgfile;
+    if(buildOption.cpu.match(/r5f/)) {
+        build_property.defines = defines_r5f;
+    }
+
     build_property.includes = includes_freertos_main_r5f;
     build_property.libdirs = libdirs_freertos_main_r5f;
     build_property.libs = libs_freertos_main_r5f;

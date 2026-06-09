@@ -3,7 +3,7 @@
  *
  * Cortex-M3 (CM3) firmware for power management
  *
- * Copyright (C) 2020-2023, Texas Instruments Incorporated
+ * Copyright (C) 2020-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -98,12 +98,6 @@ s32 set_clock_handler(u32 *msg_recv)
 	}
 
 	if (ret == SUCCESS) {
-		if ((flags & TISCI_MSG_FLAG_CLOCK_ALLOW_SSC) != 0UL) {
-			device_clk_set_ssc(dev, clkidx, STRUE);
-		} else {
-			device_clk_set_ssc(dev, clkidx, SFALSE);
-		}
-
 		if ((flags & TISCI_MSG_FLAG_CLOCK_ALLOW_FREQ_CHANGE) != 0UL) {
 			device_clk_set_freq_change(dev, clkidx, STRUE);
 		} else {
@@ -165,6 +159,9 @@ s32 get_clock_handler(u32 *msg_recv)
 	if (ret == SUCCESS) {
 		u8 prog;
 		u8 state;
+#ifdef CONFIG_PM_CLK_SSC
+		struct ssc_data current_ssc = { 0U };
+#endif
 
 		prog = (u8) (device_clk_get_sw_gated(dev, clkidx) ?
 			     TISCI_MSG_VALUE_CLOCK_SW_STATE_UNREQ :
@@ -174,14 +171,6 @@ s32 get_clock_handler(u32 *msg_recv)
 			      TISCI_MSG_VALUE_CLOCK_HW_STATE_READY :
 			      TISCI_MSG_VALUE_CLOCK_HW_STATE_NOT_READY);
 
-		if (device_clk_get_ssc(dev, clkidx)) {
-			resp->hdr.flags |= TISCI_MSG_FLAG_CLOCK_ALLOW_SSC;
-		}
-
-		if (device_clk_get_hw_ssc(dev, clkidx)) {
-			resp->hdr.flags |= TISCI_MSG_FLAG_CLOCK_SSC_ACTIVE;
-		}
-
 		if (device_clk_get_freq_change(dev, clkidx)) {
 			resp->hdr.flags |= TISCI_MSG_FLAG_CLOCK_ALLOW_FREQ_CHANGE;
 		}
@@ -189,6 +178,12 @@ s32 get_clock_handler(u32 *msg_recv)
 		if (device_clk_get_input_term(dev, clkidx)) {
 			resp->hdr.flags |= TISCI_MSG_FLAG_CLOCK_INPUT_TERM;
 		}
+
+#ifdef CONFIG_PM_CLK_SSC
+		if (device_clk_get_ssc(dev, clkidx, &current_ssc) && (current_ssc.enable != 0U)) {
+			resp->hdr.flags |= TISCI_MSG_FLAG_CLOCK_SSC_ACTIVE;
+		}
+#endif
 
 		resp->programmed_state  = prog;
 		resp->current_state     = state;
@@ -386,6 +381,11 @@ s32 set_freq_handler(u32 *msg_recv)
 	}
 
 	if (ret == SUCCESS) {
+#ifdef CONFIG_PM_CLK_SSC
+		struct ssc_data saved_ssc_data = { 0U };
+		sbool ssc_was_enabled = SFALSE;
+#endif
+
 		if (max_freq_hz > (u64) ULONG_MAX) {
 			max_freq_hz = ULONG_MAX;
 		}
@@ -394,10 +394,31 @@ s32 set_freq_handler(u32 *msg_recv)
 			target_freq_hz = ULONG_MAX;
 		}
 
+#ifdef CONFIG_PM_CLK_SSC
+		/* Save current SSC state if enabled */
+		if (device_clk_get_ssc(dev, clkidx, &saved_ssc_data) && (saved_ssc_data.enable != 0U)) {
+			ssc_was_enabled = STRUE;
+			/* Disable SSC before frequency change */
+			device_clk_set_ssc(dev, clkidx, saved_ssc_data.modfreq_hz,
+					   saved_ssc_data.mod_depth,
+					   saved_ssc_data.spread_type, SFALSE);
+		}
+#endif
+
+		/* Change the frequency */
 		if (!device_clk_set_freq(dev, clkidx, (u32) min_freq_hz,
 					 (u32) target_freq_hz, (u32) max_freq_hz)) {
 			ret = -EINVAL;
 		}
+
+#ifdef CONFIG_PM_CLK_SSC
+		/* Re-enable SSC if it was previously enabled */
+		if ((ret == SUCCESS) && ssc_was_enabled) {
+			device_clk_set_ssc(dev, clkidx, saved_ssc_data.modfreq_hz,
+					   saved_ssc_data.mod_depth,
+					   saved_ssc_data.spread_type, STRUE);
+		}
+#endif
 	}
 
 	mmr_lock_all();
@@ -517,3 +538,103 @@ s32 get_freq_handler(u32 *msg_recv)
 
 	return ret;
 }
+
+#ifdef CONFIG_PM_CLK_SSC
+s32 set_ssc_handler(u32 *msg_recv)
+{
+	struct tisci_msg_set_clock_ssc_req *req =
+		(struct tisci_msg_set_clock_ssc_req *) msg_recv;
+	struct tisci_msg_set_clock_ssc_resp *resp =
+		(struct tisci_msg_set_clock_ssc_resp *) msg_recv;
+	struct device *dev = NULL;
+	struct dev_clk *dev_clkp;
+	u32 id = req->device;
+	dev_clk_idx_t clkidx = (dev_clk_idx_t) req->clk;
+	u32 modfreq_hz = req->modfreq_hz;
+	u32 mod_depth = req->mod_depth;
+	u8 spread_type = req->spread_type;
+	sbool enable = (req->enable != 0U) ? STRUE : SFALSE;
+	s32 ret = SUCCESS;
+
+	mmr_unlock_all();
+
+	pm_trace(TRACE_PM_ACTION_MSG_RECEIVED, TISCI_MSG_SET_CLOCK_SSC);
+	pm_trace(TRACE_PM_ACTION_MSG_PARAM_DEV_CLK_ID,
+		 id | ((u32) clkidx << TRACE_PM_MSG_CLK_ID_SHIFT));
+	pm_trace(TRACE_PM_ACTION_MSG_PARAM_VAL, modfreq_hz);
+	pm_trace(TRACE_PM_ACTION_MSG_PARAM_VAL, mod_depth);
+	pm_trace(TRACE_PM_ACTION_MSG_PARAM_VAL, spread_type);
+	pm_trace(TRACE_PM_ACTION_MSG_PARAM_VAL, (enable == STRUE) ? 1U : 0U);
+
+	resp->hdr.flags = 0U;
+
+	ret = device_prepare_exclusive(req->hdr.host, id, NULL, &dev);
+	if (ret == SUCCESS) {
+		/* Check if "clk_idx" is available on the device */
+		dev_clkp = get_dev_clk(dev, clkidx);
+		if (dev_clkp == NULL) {
+			ret = -EFAIL;
+		}
+	}
+
+	if (ret == SUCCESS) {
+		/* Forward SSC request to device clock layer. */
+		if (!device_clk_set_ssc(dev, clkidx, modfreq_hz,
+					mod_depth, spread_type, enable)) {
+			ret = -EINVAL;
+		}
+	}
+
+	mmr_lock_all();
+
+	return ret;
+}
+
+s32 get_ssc_handler(u32 *msg_recv)
+{
+	struct tisci_msg_get_clock_ssc_req *req =
+		(struct tisci_msg_get_clock_ssc_req *) msg_recv;
+	struct tisci_msg_get_clock_ssc_resp *resp =
+		(struct tisci_msg_get_clock_ssc_resp *) msg_recv;
+	struct device *dev = NULL;
+	struct dev_clk *dev_clkp;
+	struct ssc_data data = { 0U };
+	u32 id = req->device;
+	dev_clk_idx_t clkidx = (dev_clk_idx_t) req->clk;
+	s32 ret = SUCCESS;
+
+	mmr_unlock_all();
+
+	pm_trace(TRACE_PM_ACTION_MSG_RECEIVED, TISCI_MSG_GET_CLOCK_SSC);
+	pm_trace(TRACE_PM_ACTION_MSG_PARAM_DEV_CLK_ID,
+		 id | ((u32) clkidx << TRACE_PM_MSG_CLK_ID_SHIFT));
+
+	resp->hdr.flags = 0U;
+
+	ret = device_prepare_nonexclusive(req->hdr.host, id, NULL, &dev);
+	if (ret == SUCCESS) {
+		/* Check if "clk_idx" is available on the device */
+		dev_clkp = get_dev_clk(dev, clkidx);
+		if (dev_clkp == NULL) {
+			ret = -EFAIL;
+		}
+	}
+
+	if (ret == SUCCESS) {
+		if (!device_clk_get_ssc(dev, clkidx, &data)) {
+			ret = -EINVAL;
+		}
+	}
+
+	if (ret == SUCCESS) {
+		resp->mod_depth = data.mod_depth;
+		resp->modfreq_hz = data.modfreq_hz;
+		resp->spread_type = data.spread_type;
+		resp->enable = data.enable;
+	}
+
+	mmr_lock_all();
+
+	return ret;
+}
+#endif

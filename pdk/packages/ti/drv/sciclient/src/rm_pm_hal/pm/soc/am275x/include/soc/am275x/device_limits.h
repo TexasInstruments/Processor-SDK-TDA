@@ -1,5 +1,5 @@
 /*
- * Data version: 250905_121741
+ * Data version: 251105_135430
  *
  * Copyright (C) 2017-2025, Texas Instruments Incorporated
  * All rights reserved.
@@ -36,9 +36,9 @@
 
 
 #define PM_DEVGRP_RANGE_ID_MAX AM275X_PM_DEVGRP_RANGE_ID_MAX
-#define SOC_DEVICES_DATA_ARR_RANGE_ID_MAX 340
+#define SOC_DEVICES_DATA_ARR_RANGE_ID_MAX 341
 
-#define SOC_DEVICES_RANGE_ID_MAX 340U
+#define SOC_DEVICES_RANGE_ID_MAX 341U
 
 #define SOC_MULTIPLE_DOMAINS_RANGE_ID_MAX 0
 

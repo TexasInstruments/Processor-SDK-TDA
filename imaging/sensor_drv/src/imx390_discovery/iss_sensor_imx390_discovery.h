@@ -130,29 +130,29 @@ struct {
  *******************************************************************************
  */
 
-int32_t IMX390_Config(uint32_t chId, void *pSensorHdl, uint32_t sensor_features_requested);
-int32_t IMX390_StreamOn(uint32_t chId, void *pSensorHdl);
-int32_t IMX390_StreamOff(uint32_t chId, void *pSensorHdl);
-int32_t IMX390_PowerOn(uint32_t chMask, void *pSensorHdl);
-int32_t IMX390_PowerOff(uint32_t chId, void *pSensorHdl);
-int32_t IMX390_GetExpParams(uint32_t chId, void *pSensorHdl, IssSensor_ExposureParams *pExpPrms);
-int32_t IMX390_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_ExposureParams *pExpPrms);
-int32_t IMX390_GetDccParams(uint32_t chId, void *pSensorHdl, IssSensor_DccParams *pDccPrms);
-void IMX390_InitAewbConfig(uint32_t chId, void *pSensorHdl);
-void IMX390_GetIspConfig (uint32_t chId, void *pSensorHdl);
-void IMX390_deinit (uint32_t chId, void *pSensorHdl);
-int32_t IMX390_ReadWriteReg (uint32_t chId, void *pSensorHdl, uint32_t readWriteFlag, I2cParams *pReg);
-int32_t IMX390_GetExpPrgFxn(uint32_t chId, void *pSensorHdl, IssAeDynamicParams *p_ae_dynPrms);
-int32_t IMX390_SetAwbParams(void *pSensorHdl, uint32_t chId, IssSensor_WhiteBalanceParams *pWbPrms);
-int32_t IMX390_GetWBPrgFxn(uint32_t chId, void *pSensorHdl, IssAwbDynamicParams *p_awb_dynPrms);
+int32_t IMX390_Disco_Config(uint32_t chId, void *pSensorHdl, uint32_t sensor_features_requested);
+int32_t IMX390_Disco_StreamOn(uint32_t chId, void *pSensorHdl);
+int32_t IMX390_Disco_StreamOff(uint32_t chId, void *pSensorHdl);
+int32_t IMX390_Disco_PowerOn(uint32_t chId, void *pSensorHdl);
+int32_t IMX390_Disco_PowerOff(uint32_t chId, void *pSensorHdl);
+int32_t IMX390_Disco_GetExpParams(uint32_t chId, void *pSensorHdl, IssSensor_ExposureParams *pExpPrms);
+int32_t IMX390_Disco_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_ExposureParams *pExpPrms);
+int32_t IMX390_Disco_GetDccParams(uint32_t chId, void *pSensorHdl, IssSensor_DccParams *pDccPrms);
+void IMX390_Disco_InitAewbConfig(uint32_t chId, void *pSensorHdl);
+void IMX390_Disco_GetIspConfig (uint32_t chId, void *pSensorHdl);
+void IMX390_Disco_Deinit (uint32_t chId, void *pSensorHdl);
+int32_t IMX390_Disco_ReadWriteReg (uint32_t chId, void *pSensorHdl, uint32_t readWriteFlag, I2cParams *pReg);
+int32_t IMX390_Disco_GetExpPrgFxn(uint32_t chId, void *pSensorHdl, IssAeDynamicParams *p_ae_dynPrms);
+int32_t IMX390_Disco_SetAwbParams(void *pSensorHdl, uint32_t chId, IssSensor_WhiteBalanceParams *pWbPrms);
+int32_t IMX390_Disco_GetWBPrgFxn(uint32_t chId, void *pSensorHdl, IssAwbDynamicParams *p_awb_dynPrms);
 
-int32_t IMX390_WriteReg(uint8_t    i2cInstId,
+int32_t IMX390_Disco_WriteReg(uint8_t    i2cInstId,
                                uint8_t    i2cAddr,
                                uint16_t   regAddr,
-                               uint8_t    regValue,
+                               uint8_t    regVal,
                                uint32_t   numRegs);
 
-int32_t IMX390_ReadReg(uint8_t      i2cInstId,
+int32_t IMX390_Disco_ReadReg(uint8_t      i2cInstId,
                               uint8_t      i2cAddr,
                               uint16_t     regAddr,
                               uint8_t      *regVal,

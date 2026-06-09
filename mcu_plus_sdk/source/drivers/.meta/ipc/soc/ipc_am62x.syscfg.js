@@ -16,6 +16,10 @@ let config = [
         name: "a53ss0_0",
         displayName: "A53SS0 Core 0",
     },
+    {
+        name: "a53ss0_1",
+        displayName: "A53SS0 Core 1",
+    },
 ];
 
 function getConfigurables() {
@@ -39,7 +43,7 @@ function getConfigurables() {
         {
             name: "enableLinuxIpc",
             displayName: "Linux A53 IPC RP Message",
-            description: `Enable IPC with Linux. Only IPC RP Message supported`,
+            longDescription: `Enable IPC communication with Linux. Only the RP Message protocol. This option generates the required resource table for interaction with Linux.`,
             default: true,
         }
     );
@@ -59,6 +63,8 @@ function getSelfIpcCoreName()
             return "r5fss0_0";
         case "a53ss0-0":
             return "a53ss0_0";
+        case "a53ss0-1":
+            return "a53ss0_1";
     }
 }
 
@@ -72,6 +78,8 @@ function getSysCfgCoreName(ipcCoreName)
             return "r5fss0-0";
         case "a53ss0_0":
             return "a53ss0-0";
+        case "a53ss0_1":
+            return "a53ss0-1";
     }
 }
 
@@ -85,6 +93,8 @@ function getIPCCoreID(ipcCoreName)
             return 1;
         case "a53ss0_0":
             return 2;
+        case "a53ss0_1":
+            return 3;
     }
 }
 

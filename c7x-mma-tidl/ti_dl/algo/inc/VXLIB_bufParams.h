@@ -66,7 +66,7 @@
 #include <stdint.h>
 #endif
 
-#if defined (__C7100__) || defined (__C7120__) || defined (__C7504__) || defined (__C7524__)
+#if defined (__C7100__) || defined (__C7120__) || defined (__C7504__) || defined (__C7524__) || defined (__C7604__)
 #if !defined(_HOST_BUILD)
  #include <c7x.h>
  #define RESTRICT restrict
@@ -104,6 +104,7 @@
     #define VXLIB_FLOAT16  9U
     #define VXLIB_FLOAT32  10U
     #define VXLIB_FLOAT64  11U
+    #define VXLIB_BFLOAT16 12U
 
 /*! \brief The enumeration of multidimensional buffer types. */
 typedef enum _VXLIB_dimension_e {
@@ -183,6 +184,7 @@ typedef enum{
 	VXLIB_INT16_SIZE = 2,
 	VXLIB_UINT16_SIZE = 2,
 	VXLIB_FLOAT16_SIZE = 2,
+	VXLIB_BFLOAT16_SIZE = 2,
 	VXLIB_UINT24_SIZE = 3,
 	VXLIB_INT32_SIZE = 4,
 	VXLIB_UINT32_SIZE = 4,
@@ -195,7 +197,8 @@ typedef enum{
 /*! \brief Lookup table that maps size of the datatype to that of the provided datatype*/
 static const int32_t VXLIB_size_list[] = {
 					VXLIB_INT8_SIZE, VXLIB_INT16_SIZE, VXLIB_INT32_SIZE, VXLIB_INT64_SIZE, VXLIB_UINT8_SIZE, VXLIB_UINT16_SIZE,
-					VXLIB_UINT24_SIZE, VXLIB_UINT32_SIZE, VXLIB_UINT64_SIZE, VXLIB_FLOAT16_SIZE, VXLIB_FLOAT32_SIZE, VXLIB_FLOAT64_SIZE
+					VXLIB_UINT24_SIZE, VXLIB_UINT32_SIZE, VXLIB_UINT64_SIZE, VXLIB_FLOAT16_SIZE, VXLIB_FLOAT32_SIZE, VXLIB_FLOAT64_SIZE,
+					VXLIB_BFLOAT16_SIZE
 					};
 
 

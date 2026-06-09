@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2020, Texas Instruments Incorporated
+ * Copyright (c) 2017-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,7 @@
 #include <string.h>
 #include <kernel/dpl/SystemP.h>
 #include <kernel/dpl/DebugP.h>
+#include <kernel/dpl/CacheP.h>
 #include <drivers/sciclient/csl_sec_proxy.h>
 #include <drivers/sciclient/sciclient_romMessages.h>
 #include <drivers/sciclient/soc/sciclient_soc_priv.h>
@@ -59,13 +60,15 @@
 #elif defined(SOC_AM62PX)
 #define SCICLIENT_COMMON_X509_HEADER_ADDR               (0x43c4f1e0)
 #define SCICLIENT_SCECURE_PROXY_MESSAGE_SIZE            64U
+#elif defined(SOC_AM275X)
+#define SCICLIENT_COMMON_X509_HEADER_ADDR               (0x720ff1e0)
+#define SCICLIENT_SCECURE_PROXY_MESSAGE_SIZE            64U
 #elif defined(SOC_J722S)
 #define SCICLIENT_COMMON_X509_HEADER_ADDR               (0x43c7f1e0)
 #define SCICLIENT_SCECURE_PROXY_MESSAGE_SIZE            64U
 #endif
 
 #if defined(CONFIG_LPM_DM)
-#define FS_STUB_SIZE                                    (0x8000U)
 #define R5F_TCMB_ADDR                                   (0x41010000)
 #endif
 
@@ -88,11 +91,25 @@ CSL_SecProxyCfg gSciclientRomSecProxyCfg =
     0                                          // maxMsgSize
 };
 
+#if defined(CONFIG_LPM_DM)
+
 void _vectors(void);
 uint8_t _freertosresetvectors[0x40];
 
-#if defined(CONFIG_LPM_DM)
-volatile uint8_t gFSstub[FS_STUB_SIZE] __attribute__((section(".fs_stub"), aligned(4)));
+/** \brief Variable to store the LPM context save address required by TISCI APIs */
+static uint64_t *gpLPMCtxt = NULL;
+
+/** \brief Variable to store the LPM FS stub load address required for IO only plus DDR resume */
+static uint64_t *gpLPMFSStub = NULL;
+
+/** \brief Variable to get the entry point of device manager for use in LPM */
+extern uint64_t _self_reset_start;
+
+/**
+ * Variables to save the application's LPM suspend and resume hooks
+ */
+LPMSuspendHook gLPMSuspendHook;
+LPMResumeHook gLPMResumeHook;
 #endif
 
 /* ========================================================================== */
@@ -139,10 +156,8 @@ int32_t Sciclient_direct_init(void)
     int32_t ret = SystemP_SUCCESS;
     Sciclient_ConfigPrms_t clientPrms;
 
-    memcpy((void *)_freertosresetvectors, (void *)_vectors , 0x40);
-
 #if defined(CONFIG_LPM_DM)
-    memcpy((void *)R5F_TCMB_ADDR, (void *)gFSstub, FS_STUB_SIZE);
+    memcpy((void *)_freertosresetvectors, (void *)_vectors , 0x40);
 #endif
 
     ret = Sciclient_configPrmsInit(&clientPrms);
@@ -199,12 +214,11 @@ int32_t Sciclient_getVersionCheck(uint32_t doLog)
         if(doLog != 0U)
         {
             DebugP_log("\r\n");
-            DebugP_log("DMSC Firmware Version %s\r\n",
-                                (char *) response.str);
-            DebugP_log("DMSC Firmware revision 0x%x\r\n", response.version);
-            DebugP_log("DMSC ABI revision %d.%d\r\n", response.abi_major,
-                                response.abi_minor);
-            DebugP_log("\r\n");
+            DebugP_log("SYSFW ABI: %d.%d (firmware rev 0x%04x '%s')\r\n",
+                       response.abi_major,
+                       response.abi_minor,
+                       response.version,
+                       (char*)response.str);
         }
     }
     else
@@ -216,6 +230,65 @@ int32_t Sciclient_getVersionCheck(uint32_t doLog)
             DebugP_logError("[ERROR] Sciclient get version failed !!!\r\n");
         }
     }
+
+    return status;
+}
+
+int32_t Sciclient_direct_getDMVersion(uint32_t doLog)
+{
+    int32_t status;
+    struct tisci_msg_dm_version_req req = {0};
+    const Sciclient_ReqPrm_t      reqPrm =
+    {
+        TISCI_MSG_DM_VERSION,
+        TISCI_MSG_FLAG_AOP,
+        (const uint8_t *) &req,
+        sizeof(req),
+        SystemP_WAIT_FOREVER,
+        SCISERVER_NO_FORWARD_MSG
+    };
+
+    struct tisci_msg_dm_version_resp response;
+    /* Explicitly initialize the value to something other than correct value
+     * so that we would know the getDMVersion failed at least from the prints.
+     */
+    response.version = 0xFFFFU;
+    response.sub_version = 0xFFU;
+    response.patch_version = 0xFFU;
+    response.abi_major = 0xFFU;
+    response.abi_minor = 0xFFU;
+    Sciclient_RespPrm_t           respPrm =
+    {
+        0,
+        (uint8_t *) &response,
+        sizeof (response)
+    };
+
+    status = Sciclient_service(&reqPrm, &respPrm);
+    if ((SystemP_SUCCESS == status) && (respPrm.flags == TISCI_MSG_FLAG_ACK))
+    {
+        if(doLog != 0U)
+        {
+            DebugP_log("\r\n");
+            DebugP_log("DM ABI: %d.%d (firmware rev 0x%04x '%s--%s' patch_ver: %u)\r\n",
+                       response.abi_major,
+                       response.abi_minor,
+                       response.version,
+                       response.sciserver_version,
+                       response.rm_pm_hal_version,
+                       response.patch_version);
+        }
+    }
+    else
+    {
+        status = SystemP_FAILURE;
+        if(doLog != 0U)
+        {
+            DebugP_log("\r\n");
+            DebugP_logError("[ERROR] Sciclient get DM version failed !!!\r\n");
+        }
+    }
+
     return status;
 }
 
@@ -264,6 +337,117 @@ int32_t Sciclient_waitForBootNotification(void)
     return status;
 }
 
+
+#ifdef CONFIG_LPM_DM
+void Sciclient_initDeviceManagerLPMData(DM_LPMData_t *pLPMData)
+{
+    /* Update the addresses required for lpm */
+    gpLPMCtxt = (uint64_t *) (&(pLPMData->fsCtxt));
+    gpLPMFSStub = (uint64_t *) (&(pLPMData->fsStub));
+
+    /* Update the LPM meta data section */
+    pLPMData->metaData.dmEntryPoint = (uint64_t) (&_self_reset_start);
+    pLPMData->metaData.fsCtxtAddr = (uint64_t) &(pLPMData->fsCtxt);
+
+    /* Copy the FS stub to R5 local memory */
+    memcpy((void *)R5F_TCMB_ADDR, (void *)(pLPMData->fsStub), LPM_FS_STUB_SIZE);
+}
+
+int32_t Sciclient_getLPMCtxtSaveAddr(uint64_t *pCtxtAddr)
+{
+    int32_t ret = SystemP_SUCCESS;
+
+    /* If the section is not allocated by application, return failure */
+    if (gpLPMCtxt != NULL)
+    {
+        *pCtxtAddr = (uint64_t) gpLPMCtxt;
+    }
+    else
+    {
+        ret = SystemP_FAILURE;
+    }
+
+    return ret;
+}
+
+int32_t Sciclient_copyLPMFSStubToLocalMem(void)
+{
+    int32_t ret = SystemP_SUCCESS;
+
+    /* If the section is not allocated by application, return failure */
+    if (gpLPMFSStub != NULL)
+    {
+        /* Copy the FS stub to R5 local memory */
+        memcpy((void *)R5F_TCMB_ADDR, (const void *)(gpLPMFSStub), LPM_FS_STUB_SIZE);
+
+        /* Invalidate the cache */
+        CacheP_wbInvAll(CacheP_TYPE_ALL);
+    }
+    else
+    {
+        ret = SystemP_FAILURE;
+    }
+
+    return ret;
+}
+
+void Sciclient_initLPMSusResHook(LPMSuspendHook suspendHook, LPMResumeHook resumeHook)
+{
+    gLPMSuspendHook = suspendHook;
+    gLPMResumeHook = resumeHook;
+}
+
+int32_t Sciclient_suspendLPMApplication(void)
+{
+    int32_t ret = SystemP_SUCCESS;
+
+    if(gLPMSuspendHook != NULL)
+    {
+        ret = gLPMSuspendHook();
+    }
+
+    return ret;
+}
+
+int32_t Sciclient_resumeLPMApplication(void)
+{
+    int32_t ret = SystemP_SUCCESS;
+
+    if(gLPMResumeHook != NULL)
+    {
+        ret = gLPMResumeHook();
+    }
+
+    return ret;
+}
+
+#else
+void Sciclient_initDeviceManagerLPMData(DM_LPMData_t *pLPMData __attribute__((unused)))
+{
+    return;
+}
+
+int32_t Sciclient_getLPMCtxtSaveAddr(uint64_t *pCtxtAddr __attribute__((unused)))
+{
+    return SystemP_SUCCESS;
+}
+
+int32_t Sciclient_copyLPMFSStubToLocalMem(void)
+{
+    return SystemP_SUCCESS;
+}
+
+int32_t Sciclient_suspendLPMApplication(void)
+{
+    return SystemP_SUCCESS;
+}
+
+int32_t Sciclient_resumeLPMApplication(void)
+{
+    return SystemP_SUCCESS;
+}
+#endif
+
 /* -------------------------------------------------------------------------- */
 /*                 Internal Function Definitions                              */
 /* -------------------------------------------------------------------------- */
@@ -293,4 +477,3 @@ static inline uint32_t Sciclient_secProxyReadThread32(uint32_t thread, uint8_t i
         ((uintptr_t) (0x4U) * (uintptr_t) idx));
     return ret;
 }
-

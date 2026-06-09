@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2025-26 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -104,13 +104,19 @@ extern "C" {
 #define SCICLIENT_CONTEXT_C7X_NONSEC_0                  (10U)
 /** C7x(Non Secure): C7x_1 context 0*/
 #define SCICLIENT_CONTEXT_C7X_NONSEC_1                  (11U)
-/** GPU_0(Non Secure): GPU context 0 */
-#define SCICLIENT_CONTEXT_GPU_NONSEC_0                  (12U)
+/** A53_5(Non Secure): A53 context 5 */
+#define SCICLIENT_CONTEXT_A53_NONSEC_5                  (12U)
 /** GPU_1(Non Secure): GPU context 1 */
 #define SCICLIENT_CONTEXT_GPU_NONSEC_1                  (13U)
+/** DM2TIFS(Secure): DM to TIFS Message forwarding.
+ *  Note: Although this context uses a secure thread, it can only forward
+ *  messages from non-secure hosts to TIFS. If the forwarded message is
+ *  marked as secure queue only then TIFS will reject the message.
+ */
+#define SCICLIENT_CONTEXT_DM2TIFS                       (14U)
 
 /** Total number of possible contexts for application. */
-#define SCICLIENT_CONTEXT_MAX_NUM                       (14U)
+#define SCICLIENT_CONTEXT_MAX_NUM                       (15U)
 /** @} */
 
 /**
@@ -259,8 +265,18 @@ extern "C" {
  *  @{
  *  Boot Device CPU IDs.
  */
-#define SCICLIENT_DEV_MCU_R5FSS0_CORE0  (TISCI_DEV_WKUP_R5FSS0_CORE0)
-#define SCICLIENT_DEV_MCU_R5FSS0_CORE1  (TISCI_DEV_WKUP_R5FSS0_CORE0)
+#define SCICLIENT_DEV_MCU_R5FSS0_CORE0  (TISCI_DEV_MCU_R5FSS0_CORE0)
+#define SCICLIENT_DEV_MCU_R5FSS0_CORE1  (TISCI_DEV_MCU_R5FSS0_CORE0)
+/** @} */
+
+/**
+ *  \anchor Sciclient_WkupR5fIds
+ *  \name WKUP Pulsar IDs
+ *  @{
+ *  WKUP Device CPU IDs.
+ */
+#define SCICLIENT_DEV_WKUP_R5FSS0_CORE0  (TISCI_DEV_WKUP_R5FSS0_CORE0)
+#define SCICLIENT_DEV_WKUP_R5FSS0_CORE1  (TISCI_DEV_WKUP_R5FSS0_CORE0)
 /** @} */
 
 /**
@@ -269,9 +285,9 @@ extern "C" {
  *  @{
  *  Boot Device Processor IDs.
  */
-#define SCICLIENT_DEV_MCU_R5FSS0_CORE0_PROCID  \
+#define SCICLIENT_DEV_WKUP_R5FSS0_CORE0_PROCID  \
     (SCICLIENT_PROC_ID_WKUP_R5FSS0_CORE0)
-#define SCICLIENT_DEV_MCU_R5FSS0_CORE1_PROCID  \
+#define SCICLIENT_DEV_WKUP_R5FSS0_CORE1_PROCID  \
     (SCICLIENT_PROC_ID_WKUP_R5FSS0_CORE0)
 /** @} */
 

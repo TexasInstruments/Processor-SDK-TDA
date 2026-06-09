@@ -9,7 +9,7 @@
  *
  *  \par
  *  ============================================================================
- *  @n   (C) Copyright 2019, Texas Instruments, Inc.
+ *  @n   (C) Copyright 2024, Texas Instruments, Inc.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -58,7 +58,7 @@ extern "C"
 #include <ti/csl/src/ip/serdes_sb/V1/csl_serdes3_usb.h>
 #elif defined(SOC_J721E)
 #include <serdes_cd/V0/csl_serdes3_usb.h>
-#elif defined(SOC_J7200) || defined(SOC_AM64X) || defined(SOC_AM243X) || defined (SOC_AM62X)
+#elif defined(SOC_J7200) || defined (SOC_J722S) || defined(SOC_AM64X) || defined(SOC_AM243X) || defined (SOC_AM62X) || defined(SOC_AM62AX) || defined(SOC_AM62PX) || defined(SOC_AM275X) || defined(SOC_AM62DX) || defined(SOC_AM62LX)
 #include <serdes_cd/V1/csl_serdes3_usb.h>
 #elif defined(SOC_J74202) || defined(SOC_J721S2)
 #include <serdes_cd/V2/csl_serdes3_usb.h>

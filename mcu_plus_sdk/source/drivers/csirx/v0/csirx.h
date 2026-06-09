@@ -1,5 +1,6 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (c) Texas Instruments Incorporated 2018-2025
+ *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,1786 +31,648 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CSIRX_V0_H_
-#define CSIRX_V0_H_
+/**
+ *  \defgroup DRV_CSIRX_MODULE CSIRX Driver
+ *
+ *  @{
+ *
+ * The CSI2 RX module provides the logic to for handling
+ * CSI2 protocol based camera sensor or sensor data stream for capture.
+ * This is CSIRX FVID2 driver documentation.
+ */
+
+/**
+ *  \ingroup DRV_CSIRX_MODULE
+ *  \defgroup CSIRX_TOP_LEVEL CSIRX Driver Header
+ *            This is CSI2 Rx's top level include for applications.
+ *
+ *  @{
+ */
+
+/**
+ *  \file csirx.h
+ *
+ *  \brief CSIRX Driver API/interface file.
+ *
+ *  Requirement: NA
+ */
+
+#ifndef CSIRX_H_
+#define CSIRX_H_
+
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
+#include <drivers/hw_include/csl_csirx.h>
+#include <drivers/fvid2.h>
+#include <drivers/csirx/v0/soc/csirx_soc.h>
+#include <drivers/csirx/v0/include/csirx_cfg.h>
+#include <drivers/csirx/v0/include/csirx_event.h>
+#include <drivers/udma.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
-#include <stdbool.h>
-#include <kernel/dpl/SystemP.h>
-#include <kernel/dpl/HwiP.h>
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
+/** \brief CSIRX capture driver ID used at the time of FVID2 create. */
+#define CSIRX_CAPT_DRV_ID               (FVID2_CSIRX_DRV_BASE + 0x00000000U)
+
+/* Capture IOCTL's */
+/**
+ *  \brief Get capture status IOCTL.
+ *
+ *  This IOCTL can be used to get the capture status like number of frames
+ *  queued/dequeued.
+ *  Note: These counters will be reset either at the time of driver create or
+ *  while starting the capture operation. See respective counter comments for
+ *  details.
+ *
+ *  \param cmdArgs       [OUT] Csirx_InstStatus *
+ *  \param cmdArgsStatus [OUT] NULL
+ *
+ *  \return FVID2_SOK on success, else failure
+ *
+ */
+#define IOCTL_CSIRX_GET_INST_STATUS     (FVID2_CSIRX_DRV_IOCTL_BASE + 0x0000U)
 
 /**
- *  \addtogroup DRV_CSIRX_DPHY_MODULE
+ *  \brief Print capture debug logs.
+ *
+ *  This IOCTL can be used to print the capture debug logs if enabled through
+ *  CSIRX_DRV_ENABLE_DEBUG.
+ *  Note: These logs will be reset at the time of driver create.
+ *
+ *  \param cmdArgs       [OUT] NULL
+ *  \param cmdArgsStatus [OUT] NULL
+ *
+ *  \return FVID2_SOK on success, else failure
+ *
+ */
+#define IOCTL_CSIRX_PRINT_DEBUG_LOGS    (FVID2_CSIRX_DRV_IOCTL_BASE + 0x0100U)
+
+/**
+ *  \brief Set CSIRX D-PHY Configuration Parameters.
+ *
+ *  This IOCTL can be used to set CSIRX D-PHY configuration parameters.
+ *
+ *  \param cmdArgs       [IN]  Csirx_DPhyCfg *
+ *  \param cmdArgsStatus [OUT] NULL
+ *
+ *  \return FVID2_SOK on success, else failure
+ *
+ */
+#define IOCTL_CSIRX_SET_DPHY_CONFIG     (FVID2_CSIRX_DRV_IOCTL_BASE + 0x0200U)
+
+/**
+ *  \brief Register CSIRX events.
+ *
+ *  This IOCTL can be used to set enable/register CSIRX events.
+ *  Note: This IOCTL should be called after calling Fvid2_create() for
+ *        particular instance.
+ *
+ *  \param cmdArgs       [IN]  Fdrv_Handle
+ *  \param cmdArgs       [IN]  CsirxDrv_EventPrms *
+ *  \param cmdArgsStatus [OUT] NULL
+ *
+ *  \return FVID2_SOK on success, else failure
+ *
+ */
+#define IOCTL_CSIRX_REGISTER_EVENT     (FVID2_CSIRX_DRV_IOCTL_BASE + 0x0300U)
+
+/**
+ *  \brief Un-register CSIRX events.
+ *
+ *  This IOCTL can be used to set disable/un-register CSIRX events.
+ *  Note: This IOCTL should be called after calling Fvid2_delete() for
+ *        particular instance.
+ *
+ *  \param cmdArgs       [IN]  Fdrv_Handle
+ *  \param cmdArgs       [IN]  eventGroup
+ *  \param cmdArgsStatus [OUT] NULL
+ *
+ *  \return FVID2_SOK on success, else failure
+ *
+ */
+#define IOCTL_CSIRX_UNREGISTER_EVENT   (FVID2_CSIRX_DRV_IOCTL_BASE + 0x0400U)
+
+/**
+ *  \brief Get number of channels created for a given driver instance.
+ *
+ *  This IOCTL can be used to get number of channels created for given instance.
+ *  Note: This IOCTL should be called after calling Fvid2_create() for
+ *        particular instance.
+ *
+ *  \param cmdArgs       [IN]  Fdrv_Handle
+ *  \param cmdArgs       [IN]  (uint32_t *)Pointer to variable where number of
+ *                             channels created for given instance has to stored
+ *  \param cmdArgsStatus [OUT] NULL
+ *
+ *  \return FVID2_SOK on success, else failure
+ *
+ */
+#define IOCTL_CSIRX_GET_INST_CH_NUM    (FVID2_CSIRX_DRV_IOCTL_BASE + 0x0500U)
+
+/**
+ *  \brief Start a channel for capture. This will start up PSIL thread, UDMA channel.
+ *
+ *  This IOCTL can be used to start/enable capture channel.
+ *  Note: This IOCTL should be called after calling 'Fvid2_create()' and before
+ *        'Fvid2_delete()' for particular instance.
+ *
+ *  \param cmdArgs       [IN]  Fdrv_Handle
+ *  \param cmdArgs       [IN]  channel ID
+ *  \param cmdArgsStatus [OUT] NULL
+ *
+ *  \return FVID2_SOK on success, else failure
+ *
+ */
+#define IOCTL_CSIRX_CH_START           (FVID2_CSIRX_DRV_IOCTL_BASE + 0x0600U)
+
+/**
+ *  \brief Stop a channel for capture. This will stop a PSIL thread, UDMA channel.
+ *
+ *  This IOCTL can be used to stop/disable capture channel.
+ *  Note: This IOCTL should be called after calling 'Fvid2_create()' and before
+ *        'Fvid2_delete()' for particular instance.
+ *
+ *  \param cmdArgs       [IN]  Fdrv_Handle
+ *  \param cmdArgs       [IN]  channel ID
+ *  \param cmdArgsStatus [OUT] NULL
+ *
+ *  \return FVID2_SOK on success, else failure
+ *
+ */
+#define IOCTL_CSIRX_CH_STOP            (FVID2_CSIRX_DRV_IOCTL_BASE + 0x0700U)
+/**@} */
+
+/**
+ *  \anchor CSIRX_ChType
+ *  \name   CSIRX Channel Type
+ *  \brief  Id for CSIRX Channel/Stream type.
  *
  *  @{
  */
-
-
-/** @} */
+/** \brief Stream type: capture mode, frames will captured to
+  *        internal memory or DDR */
+#define CSIRX_CH_TYPE_CAPT                        ((uint32_t) 0x0U)
+/** \brief Stream type: OTF mode,
+  *        frames will be forwarded to Video Port/VISS */
+#define CSIRX_CH_TYPE_OTF                         ((uint32_t) 0x1U)
+/** \brief Stream type: Loopback mode,
+  *        frames will be forwarded to CSI Tx trans PADs */
+#define CSIRX_CH_TYPE_LPBK                        ((uint32_t) 0x2U)
+/**@} */
 
 /**
- *  \addtogroup DRV_CSIRX_COMPLEXIO_MODULE
+ *  \anchor CSIRX_StreamID
+ *  \name   CSIRX Stram ID
+ *  \brief  Id for CSIRX Stream
  *
  *  @{
  */
+/** \brief Stream type: capture mode, frames will captured to
+  *        internal memory or DDR */
+#define CSIRX_CAPT_STREAM_ID                       ((uint32_t) 0x0U)
+/** \brief Stream type: Loopback mode,
+  *        frames will be forwarded to CSI Tx trans PADs */
+#define CSIRX_LPBK_STREAM_ID                       ((uint32_t) 0x1U)
+/** \brief Stream type: OTF mode,
+  *        frames will be forwarded to Video Port/VISS */
+#define CSIRX_OTF_STREAM0_ID                       ((uint32_t) 0x2U)
+/** \brief Stream type: OTF mode,
+  *        frames will be forwarded to Video Port/VISS */
+#define CSIRX_OTF_STREAM1_ID                       ((uint32_t) 0x3U)
 
-/** \brief Max possible data lanes */
-#define CSIRX_DATA_LANES_MAX    (4U)
+/**@} */
+/** \brief Buffer memory alignment with cache line size. */
+#define CSIRX_BUF_ALIGNMENT                       (UDMA_CACHELINE_ALIGNMENT)
 
-/**
- *  \anchor CSIRX_COMPLEXIO_POWER_COMMAND
- *  \name Complex IO power commands
- *  @{
- */
-
-/*! \brief Power off ComplexIO */
-#define CSIRX_COMPLEXIO_POWER_COMMAND_OFF (0U)
-
-/*! \brief Power on ComplexIO */
-#define CSIRX_COMPLEXIO_POWER_COMMAND_ON  (1U)
-
-/*! \brief Put ComplexIO in ULP (Ultra Low Power) state */
-#define CSIRX_COMPLEXIO_POWER_COMMAND_ULP (2U)
-
-/** @} */
-
-/**
- *  \anchor CSIRX_COMPLEXIO_POWER_STATUS
- *  \name Complex IO power status
- *  @{
- */
-
-/*! \brief Complex IO power status OFF */
-#define CSIRX_COMPLEXIO_POWER_STATUS_OFF (0U)
-
-/*! \brief Complex IO power status ON */
-#define CSIRX_COMPLEXIO_POWER_STATUS_ON  (1U)
-
-/*! \brief Complex IO power status ULP (Ultra Low Power) */
-#define CSIRX_COMPLEXIO_POWER_STATUS_ULP (2U)
-
-/** @} */
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
 
 /**
- *  \anchor CSIRX_LANE_POLARITY
- *  \name Lane polarity
- *  @{
+ *  \brief Structure containing Channels configurations.
  */
-
-/*! \brief Lane polarity +/- */
-#define CSIRX_LANE_POLARITY_PLUS_MINUS  (0U)
-
-/*! \brief Lane polarity -/+ */
-#define CSIRX_LANE_POLARITY_MINUS_PLUS  (1U)
-
-/** @} */
-
-/**
- *  \anchor CSIRX_LANE_POSITION
- *  \name Lane position
- *  @{
- */
-
-/*! \brief Lane not used */
-#define CSIRX_LANE_POSITION_LANE_NOT_USED  (0U)
-
-/*! \brief Physical lane position #1 */
-#define CSIRX_LANE_POSITION_1              (1U)
-
-/*! \brief Physical lane position #2 */
-#define CSIRX_LANE_POSITION_2              (2U)
-
-/*! \brief Physical lane position #3 */
-#define CSIRX_LANE_POSITION_3              (3U)
-
-/*! \brief Physical lane position #4 */
-#define CSIRX_LANE_POSITION_4              (4U)
-
-/*! \brief Physical lane position #5 */
-#define CSIRX_LANE_POSITION_5              (5U)
-
-/** @} */
-
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_COMMON_MODULE
- *
- *  @{
- */
-
-/*! \brief Special value of \ref CSIRX_CommonConfig::stopStateFsmTimeoutInNanoSecs
-       for setting maximum timeout, this is also the CSIRX IP reset state. */
-#define CSIRX_STOP_STATE_FSM_TIMEOUT_MAX  (200000U)
-
-/**
- *  \anchor CSIRX_ENDIANNESS
- *  \name Data endianess
- *  @{
- */
-
-/*! \brief All little endian except legacy YUV422 8b and YUV420, which are
- *         big endian. */
-#define CSIRX_ENDIANNESS_NATIVE_MIPI_CSI2 (0U)
-
-/*! \brief All little endian */
-#define CSIRX_ENDIANNESS_LITTLE_ENDIAN    (1U)
-
-/*! \brief Endianness max for error checking purposes */
-#define CSIRX_ENDIANNESS_MAX              (1U)
-
-/** @}*/
-
-/**
- *  \anchor CSIRX_BURST_SIZE
- *  \name Burst size defines
- *  @{
- */
-
-/*! \brief Burst size 1x64 OCP writes */
-#define CSIRX_BURST_SIZE_1X64   (0U)
-
-/*! \brief Burst size 2x64 OCP writes */
-#define CSIRX_BURST_SIZE_2X64   (1U)
-
-/*! \brief Burst size 4x64 OCP writes */
-#define CSIRX_BURST_SIZE_4X64   (2U)
-
-/*! \brief Burst size 8x64 OCP writes */
-#define CSIRX_BURST_SIZE_8X64   (3U)
-
-/*! \brief Burst size max */
-#define CSIRX_BURST_SIZE_MAX    (3U)
-
-/** @} */
-
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_CONTEXT_MODULE
- *
- *  @{
- */
-
-/** \brief Max possible CSIRX contexts */
-#define CSIRX_CONTEXTS_MAX                (8U)
-
-/*! \brief Ping-pong addresses and line offset alignment. Can be used for
-       aligning ping-pong buffers and enforcing line offset alignment in bytes */
-#define CSIRX_PING_PONG_ADDRESS_LINEOFFSET_ALIGNMENT_IN_BYTES (32U)
-
-/*! \brief Special value for contiguous storage. */
-#define CSIRX_LINEOFFSET_CONTIGUOUS_STORAGE  (0U)
-
-/*! \brief Special value of \ref CSIRX_ContextConfig::numFramesToAcquire
-       for setting infinite frames, this is also the CSIRX IP reset state. */
-#define CSIRX_NUM_FRAMES_TO_ACQUIRE_INFINITE (0U)
-
-/**
- *  \anchor CSIRX_PINGPONG_STATUS
- *  \name Ping or Pong done status
- *  @{
- */
-
-/** \brief Ping is done */
-#define CSIRX_CONTEXT_PINGPONG_STATUS_PING_DONE     (0U)
-/** \brief Pong is done */
-#define CSIRX_CONTEXT_PINGPONG_STATUS_PONG_DONE     (1U)
-
-/** @} */
-
-/**
- *  \anchor CSIRX_PING_PONG_SWITCHING_MODE
- *  \name Ping pong switching mode
- *  @{
- */
-
-/** \brief Switch ping pong address on end of frame */
-#define CSIRX_PING_PONG_FRAME_SWITCHING  (0U)
-
-/** \brief Switch ping pong address on end of line */
-#define CSIRX_PING_PONG_LINE_SWITCHING   (1U)
-
-/** @} */
-
-/**
- *  \anchor CSIRX_TRANSCODE_FORMAT
- *  \name Transcode format
- *  @{
- */
-
-/*! \brief Transcoding disabled. */
-#define CSIRX_TRANSCODE_FORMAT_NO_TRANSCODE     (0U)
-
-/*! \brief Compress input RAW10 using A-law. Output is regular RAW8. */
-#define CSIRX_TRANSCODE_FORMAT_IN_RAW10_ALAW_OUT_RAW8 (3U)
-
-/*! \brief Regular RAW8 input and regular RAW8 output */
-#define CSIRX_TRANSCODE_FORMAT_IN_RAW8_OUT_RAW8 (4U)
-
-/*! \brief Input uncompressed RAW10, output RAW10 + EXP16 */
-#define CSIRX_TRANSCODE_FORMAT_IN_RAW10_OUT_RAW10_EXP16 (5U)
-
-/*! \brief Input uncompressed RAW10, output regular packed RAW10 */
-#define CSIRX_TRANSCODE_FORMAT_IN_RAW10_OUT_RAW10_PACKED (6U)
-
-/*! \brief Input uncompressed RAW12, output RAW12 + EXP16 */
-#define CSIRX_TRANSCODE_FORMAT_IN_RAW12_OUT_RAW12_EXP16 (7U)
-
-/*! \brief Input uncompressed RAW12, output regular packed RAW12 */
-#define CSIRX_TRANSCODE_FORMAT_IN_RAW12_OUT_RAW12_PACKED (8U)
-
-/*! \brief Input uncompressed RAW14, output uncompressed RAW14 */
-#define CSIRX_TRANSCODE_FORMAT_IN_RAW14_OUT_RAW14 (9U)
-
-/** @} */
-
-/**
- *  \anchor CSIRX_DATA_FORMAT
- *  \name Data format
- *  @{
- */
-
-/*! \brief Others except NULL and BLANKING */
-#define CSIRX_FORMAT_OTHERS_EXCEPT_NULL_AND_BLANKING        (0x000U)
-
-/*! \brief Embedded 8-bit non image (for example JPEG) as per MIPI spec */
-#define CSIRX_FORMAT_EMBEDDED_8_BIT_NON_IMAGE               (0x012U)
-
-/*! \brief YUV420 8-bit as per MIPI spec */
-#define CSIRX_FORMAT_YUV420_8_BIT                           (0x018U)
-
-/*! \brief YUV420 10-bit as per MIPI spec */
-#define CSIRX_FORMAT_YUV420_10_BIT                          (0x019U)
-
-/*! \brief YUV420 8-bit legacy as per MIPI spec */
-#define CSIRX_FORMAT_YUV420_8_BIT_LEGACY                    (0x01AU)
-
-/*! \brief YUV420 8-bit CSPS (Chroma Shifted Pixel Sampling) as per MIPI spec */
-#define CSIRX_FORMAT_YUV420_8_BIT_CSPS                      (0x01CU)
-
-/*! \brief YUV420 10-bit CSPS (Chroma Shifted Pixel Sampling)  as per MIPI spec */
-#define CSIRX_FORMAT_YUV420_10_BIT_CSPS                     (0x01DU)
-
-/*! \brief YUV422 8-bit as per MIPI spec */
-#define CSIRX_FORMAT_YUV422_8_BIT                           (0x01EU)
-
-/*! \brief YUV422 10-bit as per MIPI spec */
-#define CSIRX_FORMAT_YUV422_10_BIT                          (0x01FU)
-
-/*! \brief RGB565 as per MIPI spec */
-#define CSIRX_FORMAT_RGB565                                 (0x022U)
-
-/*! \brief RGB888 as per MIPI spec */
-#define CSIRX_FORMAT_RGB888                                 (0x024U)
-
-/*! \brief RAW6 as per MIPI spec */
-#define CSIRX_FORMAT_RAW6                                   (0x028U)
-
-/*! \brief RAW7 as per MIPI spec */
-#define CSIRX_FORMAT_RAW7                                   (0x029U)
-
-/*! \brief RAW8 as per MIPI spec */
-#define CSIRX_FORMAT_RAW8                                   (0x02AU)
-
-/*! \brief RAW19 as per MIPI spec */
-#define CSIRX_FORMAT_RAW10                                  (0x02BU)
-
-/*! \brief RAW12 as per MIPI spec */
-#define CSIRX_FORMAT_RAW12                                  (0x02CU)
-
-/*! \brief RAW14 as per MIPI spec */
-#define CSIRX_FORMAT_RAW14                                  (0x02DU)
-
-/*! \brief RGB666 EXP32_24: EXP32 = Data expansion to 32 bits,
-       padding with \ref CSIRX_ContextConfig::alpha. Most significant
-       8-bits of output 32-bit will be equal to the least significant 8-bits of
-       \ref CSIRX_ContextConfig::alpha */
-#define CSIRX_FORMAT_RGB666_EXP32_24                        (0x033U)
-
-/*! \brief User Defined 8-bit data type 1 */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_1         (0x040U)
-
-/*! \brief User Defined 8-bit data type 2 */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_2         (0x041U)
-
-/*! \brief User Defined 8-bit data type 3 */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_3         (0x042U)
-
-/*! \brief User Defined 8-bit data type 4 */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_4         (0x043U)
-
-/*! \brief User Defined 8-bit data type 5 */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_5         (0x044U)
-
-/*! \brief User Defined 8-bit data type 6 */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_6         (0x045U)
-
-/*! \brief User Defined 8-bit data type 7 */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_7         (0x046U)
-
-/*! \brief User Defined 8-bit data type 8 */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_8         (0x047U)
-
-/*! \brief RAW6 with data expansion to 8-bits, padding with zeros */
-#define CSIRX_FORMAT_RAW6_EXP8                              (0x068U)
-
-/*! \brief RAW7 with data expansion to 8-bits, padding with zeros */
-#define CSIRX_FORMAT_RAW7_EXP8                              (0x069U)
-
-/*! \brief User Defined 8-bit data type 1 with data expansion to 8-bits,
-       padding with zeros */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_1_EXP8    (0x080U)
-
-/*! \brief User Defined 8-bit data type 2 with data expansion to 8-bits,
-       padding with zeros */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_2_EXP8    (0x081U)
-
-/*! \brief User Defined 8-bit data type 3 with data expansion to 8-bits,
-       padding with zeros */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_3_EXP8    (0x082U)
-
-/*! \brief User Defined 8-bit data type 4 with data expansion to 8-bits,
-       padding with zeros */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_4_EXP8    (0x083U)
-
-/*! \brief User Defined 8-bit data type 5 with data expansion to 8-bits,
-       padding with zeros */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_5_EXP8    (0x084U)
-
-/*! \brief User Defined 8-bit data type 6 with data expansion to 8-bits,
-       padding with zeros */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_6_EXP8    (0x085U)
-
-/*! \brief User Defined 8-bit data type 7 with data expansion to 8-bits,
-       padding with zeros */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_7_EXP8    (0x086U)
-
-/*! \brief User Defined 8-bit data type 8 with data expansion to 8-bits,
-       padding with zeros */
-#define CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_8_EXP8    (0x087U)
-
-/*! \brief RGB444 with data expansion to 16-bits. Most significant
-       4-bits of 16-bit output will be equal to the least significant 4-bits of
-       \ref CSIRX_ContextConfig::alpha */
-#define CSIRX_FORMAT_RGB444_EXP16                           (0x0A0U)
-
-/*! \brief RGB555 with data expansion to 16-bits. Most significant 1-bit of
-       16-bit output will be equal to the least significant 1-bit of
-       \ref CSIRX_ContextConfig::alpha */
-#define CSIRX_FORMAT_RGB555_EXP16                           (0x0A1U)
-
-/*! \brief RAW10 with data expansion to 16-bits. Most significant
-       6-bits of 16-bit output will be equal to the least significant 6-bits of
-       \ref CSIRX_ContextConfig::alpha */
-#define CSIRX_FORMAT_RAW10_EXP16                            (0x0ABU)
-
-/*! \brief RAW12 with data expansion to 16-bits. Most significant
-       4-bits of 16-bit output will be equal to the least significant 4-bits of
-       \ref CSIRX_ContextConfig::alpha */
-#define CSIRX_FORMAT_RAW12_EXP16                            (0x0ACU)
-
-/*! \brief RAW14 with data expansion to 16-bits. Most significant
-       2-bits of 16-bit output will be equal to the least significant 2-bits of
-       \ref CSIRX_ContextConfig::alpha */
-#define CSIRX_FORMAT_RAW14_EXP16                            (0x0ADU)
-
-/*! \brief RGB666 with data expansion to 32-bits. Most significant
-       14-bits of 32-bit output will be equal to the least significant 14-bits of
-       \ref CSIRX_ContextConfig::alpha */
-#define CSIRX_FORMAT_RGB666_EXP32                           (0x0E3U)
-
-/*! \brief RGB888 with data expansion to 32-bits. Most significant
-       8-bits of 32-bit output will be equal to the least significant 8-bits of
-       \ref CSIRX_ContextConfig::alpha */
-#define CSIRX_FORMAT_RGB888_EXP32                           (0x0E4U)
-
-/** @} */
-
-/**
- *  \anchor CSIRX_USER_DEFINED_FORMAT
- *  \name User defined data format
- *  @{
- */
-
-/*! \brief RAW6 */
-#define CSIRX_USER_DEFINED_FORMAT_RAW6  (0U)
-
-/*! \brief RAW8 */
-#define CSIRX_USER_DEFINED_FORMAT_RAW7  (1U)
-
-/*! \brief RAW8, not valid if \ref CSIRX_ContextConfig::format is any of
-       the defines CSIRX_FORMAT_USER_DEFINED_8_BIT_DATA_TYPE_x_EXP8 (x=1..8)
-       in \ref CSIRX_DATA_FORMAT */
-#define CSIRX_USER_DEFINED_FORMAT_RAW8  (2U)
-
-/** @} */
-
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_INSTANCE_MODULE
- *
- *  @{
- */
-
-/*! \brief Interrupt number ID to indicate, this interrupt line is not connected in this CPU */
-#define CSIRX_INTERRUPT_NOT_CONNECTED_ID        (0xFFFFU)
-
-/**
- *  \anchor CSIRX_FIFODEPTH
- *  \name FIFO depth
- *  @{
- */
-
-/*! \brief FIFO depth is 8 times 68-bits */
-#define CSIRX_FIFODEPTH_8X68   (2U)
-
-/*! \brief FIFO depth is 16 times 68-bits */
-#define CSIRX_FIFODEPTH_16X68  (3U)
-
-/*! \brief FIFO depth is 32 times 68-bits */
-#define CSIRX_FIFODEPTH_32X68  (4U)
-
-/*! \brief FIFO depth is 64 times 68-bits */
-#define CSIRX_FIFODEPTH_64X68  (5U)
-
-/*! \brief FIFO depth is 128 times 68-bits */
-#define CSIRX_FIFODEPTH_128X68 (6U)
-
-/*! \brief FIFO depth is 256 times 68-bits */
-#define CSIRX_FIFODEPTH_256X68 (7U)
-
-/** @} */
-
-/** \brief CSIRX driver handle */
-typedef struct CSIRX_Config_s      *CSIRX_Handle;
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_COMMON_MODULE
- *
- *  @{
- */
-
-/*! \brief Common (across contexts) interrupts.
-
-       This represents both status and configuration
-       (enable/disable) structures. The description of the fields is in terms of
-       status. For configuration they should be interpreted as "true if you want
-       to enable the detection of this condition, false otherwise".
-
-       For interrupt status, the interrupts can be cleared by issuing
-       \ref CSIRX_commonClearAllIntr API
-  */
-struct CSIRX_CommonIntr_s;
-
-/**
- * \brief Common interrupt callback
- *
- * The driver clear the pending interrupts internally so callback need not clear it
- *
- * \param handle [in] CSIRX driver handle
- * \param arg [in] User supplied argument
- * \param irq [in] Interrupt status, see \ref CSIRX_CommonIntr
- */
-typedef void (*CSIRX_CommonCallback)(CSIRX_Handle handle, void *arg, struct CSIRX_CommonIntr_s *irq);
-
-/**
- * \brief Generic Interrupt callback
- *
- * \param handle [in] CSIRX driver handle
- * \param arg [in] User supplied argument
- */
-typedef void (*CSIRX_Callback)(CSIRX_Handle handle, void *arg);
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_CONTEXT_MODULE
- *
- *  @{
- */
-
-/**
- * \brief Context interrupt callback
- *
- * \param handle [in] CSIRX driver handle
- * \param arg [in] User supplied argument
- * \param contextId [in] Context ID which generated this interrupt
- */
-typedef void (*CSIRX_ContextCallback)(CSIRX_Handle handle, void *arg, uint8_t contextId);
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_DPHY_MODULE
- *
- *  @{
- */
-
-/** \brief DPHY configuration */
-typedef struct CSIRX_DphyConfig_s
+typedef struct
 {
-    /** \brief DDR clock speed in Hz */
-    uint32_t ddrClockInHz;
-
-    /** \brief Set to true if wanting to enable clock missing detector */
-    bool     isClockMissingDetectionEnabled;
-
-    /** \brief Trigger escape codes */
-    uint8_t  triggerEscapeCode[4];
-} CSIRX_DphyConfig;
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_COMPLEXIO_MODULE
- *
- *  @{
- */
-
-/*! \brief Lane configuration */
-typedef struct CSIRX_ComplexioLaneConfig_s
-{
-    /*! \brief polarity, one of \ref CSIRX_LANE_POLARITY */
-    uint8_t polarity;
-
-    /*! \brief position, one of \ref CSIRX_LANE_POSITION */
-    uint8_t position;
-} CSIRX_ComplexioLaneConfig;
-
-/*! \brief Complex IO per lane interrupt
-
-    This represents both status and configuration
-    structures. The description of the fields is in terms of status. For
-    configuration they should be interpreted as "true if you want to enable
-    the detection of this condition, false otherwise".
- */
-typedef struct CSIRX_ComplexioLaneIntr_s
-{
-    /*! \brief true if lane transitioned to ULPM (Ultra Low Power Mode), else
-           false */
-    bool isStateTransitionToULPM;
-
-    /*! \brief true if control error happened, else false */
-    bool isControlError;
-
-    /*! \brief true if escape entry error happened, else false */
-    bool isEscapeEntryError;
-
-    /*! \brief true if Start of Transmission (SOT) Synchronization error
-           happened, else false */
-    bool isStartOfTransmissionSyncError;
-
-    /*! \brief true if Start of Transmission (SOT) error happened, else false */
-    bool isStartOfTransmissionError;
-} CSIRX_ComplexioLaneIntr;
-
-/*! \brief Complex IO all (logical) lanes interrupts.
-
-    This represents both status
-    and configuration (enable/disable) structures. The description of the
-    fields is in terms of status. For configuration they should be interpreted
-    as "true if you want to enable the detection of this condition, false
-    otherwise". For status, the interrupts can be cleared by issuing
-    \ref CSIRX_complexioClearAllIntr API
-  */
-typedef struct CSIRX_ComplexioLanesIntr_s
-{
-    /*! \brief true if all lanes transitioned to ULPM (Ultra Low Power Mode) */
-    bool isAllLanesEnterULPM;
-
-    /*! \brief true if at least one of the active lanes has exit
-           ULPM (Ultra Low Power Mode) */
-    bool isAllLanesExitULPM;
-
-    /*! \brief data lanes interrupt configuration */
-    CSIRX_ComplexioLaneIntr dataLane[CSIRX_DATA_LANES_MAX];
-
-    /*! \brief clock lane interrupt configuration */
-    CSIRX_ComplexioLaneIntr clockLane;
-} CSIRX_ComplexioLanesIntr;
-
-/*! \brief All lanes configuration */
-typedef struct CSIRX_ComplexioLanesConfig_s
-{
-    /*! \brief data lanes configuration */
-    CSIRX_ComplexioLaneConfig dataLane[CSIRX_DATA_LANES_MAX];
-
-    /*! \brief clock lanes configuration */
-    CSIRX_ComplexioLaneConfig clockLane;
-} CSIRX_ComplexioLanesConfig;
-
-/*! \brief Complex IO configuration */
-typedef struct CSIRX_ComplexioConfig
-{
-    /*! \brief lanes configuration */
-    CSIRX_ComplexioLanesConfig lanesConfig;
-
-    /*! \brief enable/disable lanes interrupts */
-    CSIRX_ComplexioLanesIntr   enableIntr;
-
-    /*! \brief If true, automatically switches between ULP and ON states based on
-           ULPM signals from complex IO */
-    bool isPowerAuto;
-} CSIRX_ComplexioConfig;
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_COMMON_MODULE
- *
- *  @{
- */
-
-/*! \brief Common (across contexts) interrupts.
-
-       This represents both status and configuration
-       (enable/disable) structures. The description of the fields is in terms of
-       status. For configuration they should be interpreted as "true if you want
-       to enable the detection of this condition, false otherwise".
-
-       For interrupt status, the interrupts can be cleared by issuing
-       \ref CSIRX_commonClearAllIntr API
-  */
-typedef struct CSIRX_CommonIntr_s
-{
-    /*! \brief reserved, keep this as 0 */
-    bool isOcpError;
-
-    /*! \brief true if short packet was received other than the MIPI sync events: \n
-           Frame Start Code (0x0) \n
-           Frame End   Code (0x1) \n
-           Line  Start Code (0x2) \n
-           Line  End   Code (0x3) \n
-           Sync codes 0x4 to 0x7 are reserved by MIPI. Therefore, data type between
-           0x8 and x0F only will be applicable to this. */
-    bool isGenericShortPacketReceive;
-
-    /*! \brief if true, ECC has been used to do the correction of
-           1-bit error (short packet only). Influenced by
-           \ref CSIRX_CommonConfig::isHeaderErrorCheckEnabled. */
-    bool isOneBitShortPacketErrorCorrect;
-
-    /*! \brief if true, more than 1-bit error that cannot be ECC corrected and was
-           detected in the short packet or long packet header. Influenced by
-           \ref CSIRX_CommonConfig::isHeaderErrorCheckEnabled. */
-    bool isMoreThanOneBitShortPacketErrorCannotCorrect;
-
-    /*! \brief if true, one or more of complex IO errors defined
-           in \ref CSIRX_ComplexioLanesIntr happened. They can be queried using
-           \ref CSIRX_complexioGetPendingIntr API. */
-    bool isComplexioError;
-
-    /*! \brief if true, it indicates data input rate is higher than the data
-           output rate resulting in the receive FIFO overflowing. In case of an
-           overflow, the module properly finishes the burst that has been started
-           and doesn't issue any new OCP transactions on the master port.
-           A reset of the module is required
-           to restart correctly */
-    bool isFifoOverflow;
-
-    /*! \brief if any of the context entries is true, one or more of context interrupts
-           defined in \ref CSIRX_ContextIntr happened for the respective context.
-           The IRQs for a specific context can be queried using
-           \ref CSIRX_contextGetPendingIntr API and they can be cleared using
-           \ref CSIRX_contextClearAllIntr API  */
-    bool isContextIntr[CSIRX_CONTEXTS_MAX];
-} CSIRX_CommonIntr;
-
-/**
- * \brief Callbacks and callback arguments for various common interrupt event
- *
- * Context specific callback be registered using \ref CSIRX_ContextConfig
- */
-typedef struct CSIRX_CommonIntrCallbacks_s
-{
-    /*!  \brief Combined End of Line call back function definition.
+    uint32_t chId;
+    /**< Channel ID.
+     *   It should be unique and start with '0' and continue without any gaps.
+     *   It should be less than 'CSIRX_NUM_CH'. */
+    uint32_t chType;
+    /**< Channel type
+     *   See \ref CSIRX_ChType for details. */
+    uint32_t vcNum;
+    /**< Specify the virtual channel number to be used.
+     *   Valid rage 0 - 3 when v2p0 support is disabled and
+     *   0 - 15 when v2p0 support is enabled */
+    uint32_t inCsiDataType;
+    /**< Data Type as per \ref FVID2_CSI2DF */
+    Fvid2_Format outFmt;
+    /**< Specify the characteristics of streams that has to be received.
+     *   Output format described using FVID2 frame format #Fvid2_Format
+     *      Valid member of this structure are
+     *      <b>width</b>:<br>
+     *      Input width, in pixels.
+     *      WARNING - Sufficient buffer should be allocated to
+     *      accommodate max line length.<br>
      *
-     *    This is called when
-     *    one or more context whose \ref CSIRX_ContextConfig::isEndOfLinePulseEnabled
-     *    is true(enabled) triggers the end of line pulse
-     */
-    CSIRX_Callback combinedEndOfLineCallback;
-
-    /*! \brief Argument for CSIRX_CommonIntrCallbacks::combinedEndOfLineCallback */
-    void *combinedEndOfLineCallbackArgs;
-
-    /*!
-     *  \brief  Combined End of Frame call back function definition.
+     *      <b>height</b>:<br>
+     *      Expected number of lines, 0x0 for unknown
+     *      WARNING - Sufficient buffer should be allocated to
+     *      accommodate max lines.<br>
      *
-     *          This is called when
-     *          one or more context whose \ref CSIRX_ContextConfig::isEndOfFramePulseEnabled
-     *          is true(enaled) triggers the end of frame pulse
-     */
-    CSIRX_Callback combinedEndOfFrameCallback;
-
-    /*! \brief Argument for CSIRX_CommonIntrCallbacks::combinedEndOfFrameCallback */
-    void *combinedEndOfFrameCallbackArgs;
-
-   /*!
-    *  \brief  Common interrupt call back function definition.
-    *
-    *          This is called when any of the
-    *          conditions in \ref CSIRX_CommonIntr are enabled and they happen.
-    *          This API only provides the common interrupt status, the one associated with
-    *          the physical interrupt line. User in their supplied call back function can do
-    *          further parsing of common interrupt status to then query for example the
-    *          complex IO and context interrupt using the following APIs: \n
-    *          \ref CSIRX_complexioGetPendingIntr, \ref CSIRX_contextGetPendingIntr \n
-    *          User must also clear the above ones using:
-    *          \ref CSIRX_complexioClearAllIntr, \ref CSIRX_contextClearAllIntr \n
-    *          Note the Isr inside the driver has responsibility of clearing all
-    *          of the common interrupts. However, separate public APIs to query
-    *          (\ref CSIRX_commonGetPendingIntr) and clear (\ref CSIRX_commonClearAllIntr)
-    *          common interrupts are provided when user gives this call back function
-    *          to be NULL, indicating a desire to poll the common interrupt.
-    */
-    CSIRX_CommonCallback commonCallback;
-
-    /*! \brief Argument for CSIRX_CommonIntrCallbacks::commonCallback */
-    void *commonCallbackArgs;
-
-    /*!
-     *  \brief  Start of Frame (SOF) Interrupt 0 call back function definition.
+     *      <b>pitch</b>:<br>
+     *      Pitch in bytes between two lines.<br>
      *
-     *          This is
-     *          called when the context for which SOF Interrupt 0 is to be generated gets a
-     *          SOF packet. Note this is independent of the
-     *          \ref CSIRX_ContextIntr::isFrameStartCodeDetect configuration.
-     */
-    CSIRX_ContextCallback startOfFrameIntr0Callback;
-
-    /*! \brief Argument for CSIRX_CommonIntrCallbacks::startOfFrameIntr0Callback */
-    void *startOfFrameIntr0CallbackArgs;
-
-    /*!
-     *  \brief  Start of Frame (SOF) Interrupt 1 call back function definition.
+     *      <b>dataFormat</b>:<br>
+     *      Output Data format, valid options are:<br>
+     *      FVID2_DF_YUV422I_UYVY<br>
+     *      FVID2_DF_YUV422I_YUYV<br>
+     *      FVID2_DF_YUV422I_YVYU<br>
+     *      FVID2_DF_YUV422I_VYUY<br>
      *
-     *          This is
-     *          called when the context for which SOF Interrupt 1 is to be generated gets a
-     *          SOF packet. Note this is independent of the
-     *          \ref CSIRX_ContextIntr::isFrameStartCodeDetect configuration.
+     *      <b>ccsFormat</b>:<br>
+     *      Valid values are :''
+     *      FVID2_CCSF_BITS12_PACKED<br>
+     *      FVID2_CCSF_BITS12_UNPACKED16<br>
+     *      This valid only when inCsiDataType is 'FVID2_CSI2_DF_RAW12' and
+     *      when chType is CSIRX_CH_TYPE_CAPT.
+     *      It should be 'FVID2_CCSF_BITS12_UNPACKED16' for all
+     *      other data types.
+     *
+     *      <b>Unused Parameters</b>:<br>
+     *      .bpp    - unused parameter for CSI2RX<br>
+     *      For OTF mode, following parameters are not used:
+     *      .bpp, .pitch<br>
+     *      For loop-back mode, only .dataFormat is used. Rest of the
+     *      parameters are unused.<br> */
+    Udma_ChRxPrms rxChParams;
+    /**< UDMA Rx channel configuration parameters */
+    uint8_t ringOrderId;
+    /**<  Ring bus order ID value to be programmed into the orderid field of
+     *    the ring's RING_ORDERID register. */
+} Csirx_ChCfg;
+
+/**
+ *  \brief Structure containing csirx module initialization arguments
+ */
+typedef struct
+{
+    uint32_t enableCsiv2p0Support;
+    /**< Enable support for CSI2 v2p0 protocol
+     *   TRUE: Enables support for CSI2 v2p0 protocol
+     *   FALSE: Disables support for CSI2 v2p0 protocol
+     *   In v2p0, support extended for VC, up to 16 virtual channels [4-bits]
+     *   and RAW16/20.
+     *   Default is up to 4 virtual channels [3-bits] as per CSI2RX v1p3.
      */
-    CSIRX_ContextCallback startOfFrameIntr1Callback;
-
-    /*! \brief Argument for CSIRX_CommonIntrCallbacks::startOfFrameIntr1Callback */
-    void *startOfFrameIntr1CallbackArgs;
-
-} CSIRX_CommonIntrCallbacks;
-
-/**
- * \brief Common to all context configuration
- */
-typedef struct CSIRX_CommonConfig_s {
-
-    /*! \brief If true, when \ref CSIRX_commonDisable  is issued,
-           the interface stops after full frames are received in all active
-           contexts */
-    bool isSoftStoppingOnInterfaceDisable;
-
-    /*! \brief If true, enables the Error Correction Code check for the
-           received header (short and long packets for all virtual channel ids).
-           Influences \ref CSIRX_CommonIntr::isOneBitShortPacketErrorCorrect
-           and \ref CSIRX_CommonIntr::isMoreThanOneBitShortPacketErrorCannotCorrect */
-    bool isHeaderErrorCheckEnabled;
-
-    /*! \brief If true, enables sign extension of RAW10/12/14 for all contexts
-           whose \ref CSIRX_ContextConfig::format is among those with EXP16
-           output */
-    bool isSignExtensionEnabled;
-
-    /*! \brief If false, then burst size is determined by \ref CSIRX_CommonConfig::burstSize,
-           otherwise (if true), the burst size is 16x64 OCP writes */
-    bool isBurstSizeExpand;
-
-    /*! \brief If true, writes are non posted */
-    bool isNonPostedWrites;
-
-    /*! \brief If true, automatic OCP clock gatingbased on OCP activity is enabled.
-           If false, OCP clock is free running */
-    bool isOcpAutoIdle;
-
-    /*! \brief stop state FSM timeout in Nano seconds. The maximum timeout possible
-           is equal to 1/CSIRX_INTERCONNECT_CLOCK_HZ * 8191 * 16 * 4 seconds.
-           e.g for CSIRX_INTERCONNECT_CLOCK_HZ = 200 MHz, max timeout is 2.621 ms
-           For setting the maximum timeout possible, a special
-           define \ref CSIRX_STOP_STATE_FSM_TIMEOUT_MAX is provided. This is
-           also the CSIRX IP reset default */
-    uint32_t stopStateFsmTimeoutInNanoSecs;
-
-    /*! \brief Sets the DMA burst size on the interconnect to one of
-           \ref CSIRX_BURST_SIZE. Only effective if \ref isBurstSizeExpand is
-           false */
-    uint8_t burstSize;
-
-    /*! \brief One of \ref CSIRX_ENDIANNESS. */
-    uint8_t endianness;
-
-    /*! \brief Context Id for generation of SOF Interrupt 0 */
-    uint8_t startOfFrameIntr0ContextId;
-
-    /*! \brief Context Id for generation of SOF Interrupt 1 */
-    uint8_t startOfFrameIntr1ContextId;
-
-    /*! \brief Context Id for generation of EOF Interrupt 0 */
-    uint8_t endOfFrameIntr0ContextId;
-
-    /*! \brief Context Id for generation of EOF Interrupt 1 */
-    uint8_t endOfFrameIntr1ContextId;
-
-    /*! \brief Common interrupt to enable or disable */
-    CSIRX_CommonIntr enableIntr;
-
-    /*! \brief Common interrupt callbacks */
-    CSIRX_CommonIntrCallbacks intrCallbacks;
-
-} CSIRX_CommonConfig;
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_CONTEXT_MODULE
- *
- *  @{
- */
-
-/*! \brief ping-pong related configuration for each context. Note specified ping
-       and pong addresses can be identical which will effectively disable double
-       buffering. */
-typedef struct CSIRX_ContextPingPongConfig_s
-{
-    /*! \brief ping address in which the frame/line data is received,
-           must have 5 LSBs 0. User must provision for sufficient size to cover
-           multiple lines/frames depending on configuration */
-    uint32_t pingAddress;
-
-    /*! \brief pong address in which the frame/line data is received,
-           must have 5 LSBs 0. User must provision for sufficient size to cover
-           multiple lines/frames depending on configuration */
-    uint32_t pongAddress;
-
-    /*! \brief line offset as defined in the TRM (CSI2_CTX_DAT_OFST::OFST). Special value
-           \ref CSIRX_LINEOFFSET_CONTIGUOUS_STORAGE for contiguous storage, otherwise
-           line offset sets the destination offset between the first pixel of
-           the previous line and the first pixel of the current line. Units in
-           bytes. This is a 17-bit signed number (line offset
-           can be negative) and must must have 5 LSBs as 0 */
-    int32_t  lineOffset;
-
-    /*! \brief ping-pong switching mode, one of \ref CSIRX_PING_PONG_SWITCHING_MODE.
-           If line based, ping-pong switch happens every
-           \ref CSIRX_ContextPingPongConfig::numLinesForLineBasedPingPongSwitching lines.
-           If frame based,ping-pong switch happens every
-           \ref CSIRX_ContextPingPongConfig::numFramesForFrameBasedPingPongSwitching */
-    uint8_t  pingPongSwitchMode;
-
-    /*! \brief number of frames for frame based ping-pong switching. Typically
-           used in interlaced mode (=2). For progressive mode is set to 1 */
-    uint8_t  numFramesForFrameBasedPingPongSwitching;
-
-    /*! \brief number of lines for line based ping-pong switching. Typically used
-           in radar for multi-chirp (when chirp is a line) processing */
-    uint16_t numLinesForLineBasedPingPongSwitching;
-} CSIRX_ContextPingPongConfig;
-
-/*! \brief Cropping configuration */
-typedef struct CSIRX_ContextCropConfig_s
-{
-
-    /*! \brief 13-bit field that indicates pixels to output per line when
-           value is between 1 and 8191. Pixels
-           \ref horizontalSkip - (image width provided by sensor) are
-           output when this value is 0. */
-    uint16_t horizontalCount;
-
-    /*! \brief Pixels to skip horizontally between 0 and 8191. */
-    uint16_t horizontalSkip;
-
-    /*! \brief 13-bit field that indicates lines to output per frame when
-           value is between 1 and 8191. Pixels
-           \ref verticalSkip - (image height provided by sensor) are
-           output when this value is 0. */
-    uint16_t verticalCount;
-
-    /*! \brief Pixels to skip vertically between 0 and 8191. */
-    uint16_t verticalSkip;
-} CSIRX_ContextCropConfig;
-
-/*! \brief Transcoding configuration */
-typedef struct CSIRX_ContextTranscodeConfig_s
-{
-    /*! \brief Transcoding format, one of \ref CSIRX_TRANSCODE_FORMAT */
-    uint8_t transcodeFormat;
-
-    /*! \brief If true, horizontal down scaling by 2 is enabled, else disabled */
-    bool    isHorizontalDownscalingBy2Enabled;
-
-    /*! \brief Cropping configuration */
-    CSIRX_ContextCropConfig crop;
-} CSIRX_ContextTranscodeConfig;
-
-/*! \brief Context interrupts.
-
-       This represents both status and configuration
-       (enable/disable) structures. The description of the fields is in terms of
-       status. For configuration they should be interpreted as "true if you want
-       to enable the detection of this condition, false otherwise". For interrupt status ,
-       the interrupts can be cleared by issuing \ref CSIRX_contextClearAllIntr API */
-typedef struct CSIRX_ContextIntr_s {
-
-    /*! \brief If true, indicates number of lines specified
-           in \ref CSIRX_ContextConfig::numLinesForIntr were received. The interrupt
-           repeatability within the frame is decided based on
-           \ref CSIRX_ContextConfig::isGenerateIntrEveryNumLinesForIntr configuration.
+    uint32_t numDataLanes;
+    /**< Number of data to be used for receiving data */
+    uint32_t dataLanesMap[CSIRX_CAPT_DATA_LANES_MAX];
+    /**< physiCsirx mapping of logiCsirx data lanes
+     *   dlMap[0U]: physiCsirx mapping of logiCsirx data lane 0
+     *   dlMap[1U]: physiCsirx mapping of logiCsirx data lane 1
+     *   dlMap[2U]: physiCsirx mapping of logiCsirx data lane 2
+     *   dlMap[3U]: physiCsirx mapping of logiCsirx data lane 3
      */
-    bool isNumLines;
-
-    /*! \brief If true, indicates \ref CSIRX_ContextConfig::numFramesToAcquire
-           frames have been acquired. */
-    bool isFramesToAcquire;
-
-    /*! \brief If true, long packet payoad check-sum mismatched. Influenced by
-           \ref CSIRX_ContextConfig::isPayloadChecksumEnable */
-    bool isPayloadChecksumMismatch;
-
-    /*! \brief If true, triggers when Line Start sync Code is detected */
-    bool isLineStartCodeDetect;
-
-    /*! \brief If true, triggers when Line End sync Code is detected */
-    bool isLineEndCodeDetect;
-
-    /*! \brief If true, triggers when Frame Start sync Code is detected */
-    bool isFrameStartCodeDetect;
-
-    /*! \brief If true, triggers when Frame End sync Code is detected */
-    bool isFrameEndCodeDetect;
-
-    /*! \brief If true, 1-bit error was detected and corrected in long packet.
-           Influenced by \ref CSIRX_CommonConfig::isHeaderErrorCheckEnabled */
-    bool isLongPacketOneBitErrorCorrect;
-
-} CSIRX_ContextIntr;
-
-/*! \brief Context configuration */
-typedef struct CSIRX_ContextConfig_s {
-
-    /*! \brief Virtual channel Id as per MIPI spec */
-    uint8_t  virtualChannelId;
-
-    /*! \brief Data format, one of \ref CSIRX_DATA_FORMAT */
-    uint16_t format;
-
-    /*! \brief  Selects the pixel format of USER_DEFINED in \ref CSIRX_DATA_FORMAT
-           configuration. One of \ref CSIRX_USER_DEFINED_FORMAT */
-    uint8_t  userDefinedMapping;
-
-    /*! \brief number of frames to acquire. Special value
-           \ref CSIRX_NUM_FRAMES_TO_ACQUIRE_INFINITE for infinite frames */
-    uint16_t numFramesToAcquire;
-
-    /*! \brief see description of \ref CSIRX_ContextIntr::isNumLines */
-    uint16_t numLinesForIntr;
-
-    /*! \brief controls the padding for *_EXP16, *_EXP32 and *_EXP32_24 data formats
-           of the \ref format field */
-    uint16_t alpha;
-
-    /*! \brief If true, enables byte swapping of payload data when it is multiples
-           of 16-bits. Byte swapping is performed before pixel reconstruction.
-           It doesn't affect short packets, long packet header or footers or CRC
-           calculation. */
-    bool isByteSwapEnabled;
-
-    /*! \brief If true, data is received as per \ref format and the long packet
-           code transmitted in the MIPI stream is ignored. If disabled, data is
-           received as per \ref format and the long packet code transmitted in
-           the MIPI stream is used. */
-    bool isGenericEnabled;
-
-    /*! \brief if enabled, end of frame pulse is generated at the end of the frame.
-           This controls the combined End of Frame interrupt. */
-    bool isEndOfFramePulseEnabled;
-
-    /*! \brief if enabled, end of line pulse is generated at the end of the line.
-           This controls the combined End of Line IRQ and the context End of Line
-           interrupt. */
-    bool isEndOfLinePulseEnabled;
-
-    /*! \brief If true, enables checksum checking of long packet payload.
-           Influenced by \ref CSIRX_ContextIntr::isPayloadChecksumMismatch */
-    bool isPayloadChecksumEnable;
-
-    /*! \brief see description of CSIRX_ContextIntr::isNumLines */
-    bool isGenerateIntrEveryNumLinesForIntr;
-
-    /*! \brief Transcode configuration */
-    CSIRX_ContextTranscodeConfig transcodeConfig;
-
-    /*! \brief ping-pong configuration */
-    CSIRX_ContextPingPongConfig pingPongConfig;
-
-    /*! \brief Context interrupts to enable/disable */
-    CSIRX_ContextIntr enableIntr;
-
-   /*!
-     *  \brief  Context End of Line interrupt call back function definition - NOT SUPPORTED AS OF NOW
-    *
-    *          This is called
-    *          when the context's end of line is received and the last memory write
-    *          of the received line has landed in memory.
-    *          NOTE: this is generated independent
-    *          of the \ref CSIRX_ContextIntr::isLineEndCodeDetect configuration.
-    *          This is only relevant when
-    *          \ref CSIRX_ContextPingPongConfig::pingPongSwitchMode
-    *          is \ref CSIRX_PING_PONG_LINE_SWITCHING
-    */
-    CSIRX_ContextCallback eolCallback;
-
-    /*! \brief Arguments for CSIRX_ContextConfig::eolCallback */
-    void *eolCallbackArgs;
-
-} CSIRX_ContextConfig;
-
-/** @} */
+    uint32_t enableErrbypass;
+    /**< Enable Error Bypass mode. Data will forwarded to stream for further
+     *   even after data id, CRC, ECC errors.
+     *   TRUE: Enables error bypass mode.
+     *   FALSE: Disables error bypass mode.
+     */
+    uint32_t numPixelsStrm0;
+    /**< Number of pixels to output per clock cycle from the stream0.
+     *   This is stream specific configuration and this is specific to "stream0"
+     *   i.e. it is common across all the channels going to DDR/Memory and
+     *   all the opened driver instances for given CSI-RX port/instance.
+     *
+     *   The width of the pixel interface (32 bits) and the bits per pixel for
+     *   the selected datatype will determine how many pixels can be output in
+     *   a single cycle.
+     *
+     *   For example:
+     *   Case 1: 2 channels - each RAW12 (bpp = 12 bits) capture,
+     *           valid values are 0 (1 pixel per clock) & 1 (2 pixels per clock).
+     *           12 bits x 2 pixels per clock  = 24 bits which is less
+     *           than pixel interface bus width (32 bits)
+     *   Case 2: 2 channels- one RAW12 (bpp = 12 bits) channel &
+     *                       one RGB888 (bpp = 24 bits) channel capture,
+     *           valid values are 0 i.e. 1 pixel per clock (lowest of the two).
+     *           RAW12: 12 bits x 2 pixels per clock  = 24 bits which is less
+     *           than pixel interface bus width (32 bits)
+     *           RGB888: 24 bits x 1 pixel per clock  = 24 bits which is less
+     *           than pixel interface bus width (32 bits)
+     *           Lowest of the two i.e. 1 pixel per clock is selected in this
+     *           case to ensure proper operation of the module.
+     *
+     *   Valid values are 0, 1, 2.
+     *   Default will be 1 pixel per clock (value of '00').
+     *   00 -> 1 pixel per clock
+     *   01 -> 2 pixels per clock
+     *   10 -> 4 pixels per clock
+     */
+    uint32_t enableStrm[CSIRX_NUM_STREAM_MAX];
+    /**< Enable/Disable stream interfaces for this CSIRX instance.
+     * set enableStrm[stream_id] to 1 to enable the stream. 0 to disable the stream.
+     * stream_id could be CSIRX_CAPT_STREAM_ID/CSIRX_LPBK_STRAM_ID/
+     *                    CSIRX_OTF_STREAM0_ID/CSIRX_OTF_STREAM1_ID
+     * By default, all streams are disabled. Application needs to choose which
+     * streams needs to be enabled*/
+} Csirx_InstCfg;
 
 /**
- *  \addtogroup DRV_CSIRX_INSTANCE_MODULE
- *
- *  @{
+ *  \brief Capture driver create arguments, used when calling Fvid2_create().
+ *         Structure containing Streams configurations.
  */
-
-/*! \brief CSIRX Instance information */
-typedef struct CSIRX_Info_s {
-
-    /*! \brief 4-bit Major Revision ID + 4-bit minor revision ID*/
-    uint8_t revisionId;
-
-    /*! \brief Output FIFO depth, one of \ref CSIRX_FIFODEPTH */
-    uint8_t fifoDepth;
-
-    /*! \brief Number of contexts */
-    uint8_t numContexts;
-
-} CSIRX_Info;
-
-/** \brief Context specific state information, not to be used by end users */
-typedef struct  {
-
-    /** \brief Current programmed ping address */
-    uint32_t pingAddress;
-
-    /** \brief Current programmed pong address */
-    uint32_t pongAddress;
-
-} CSIRX_ContextObject;
-
-/*! \brief CSIRX Instance Object. Used internally, not to be used by end users */
-typedef struct CSIRX_Object_s {
-
-    /** \brief 0: instance is not opened, 1: instance is open */
-    bool isOpen;
-
-    /** \brief Context specific state information */
-    CSIRX_ContextObject context[CSIRX_CONTEXTS_MAX];
-
-    /** \brief NOT to used by end users */
-    uint32_t startOfFrameIntr0ContextId;
-
-    /** \brief NOT to used by end users */
-    uint32_t startOfFrameIntr1ContextId;
-
-    /** \brief NOT to used by end users */
-    uint32_t endOfFrameIntr0ContextId;
-
-    /** \brief NOT to used by end users */
-    uint32_t endOfFrameIntr1ContextId;
-
-    /** \brief NOT to used by end users */
-    CSIRX_CommonIntrCallbacks intrCallbacks;
-
-    /** \brief NOT to used by end users */
-    HwiP_Object commonIntrObj;
-
-    /** \brief NOT to used by end users */
-    HwiP_Object combinedEndOfLineIntrObj;
-
-    /** \brief NOT to used by end users */
-    HwiP_Object combinedEndOfFrameIntrObj;
-
-    /** \brief NOT to used by end users */
-    HwiP_Object startOfFrameIntr0IntrObj;
-
-    /** \brief NOT to used by end users */
-    HwiP_Object startOfFrameIntr1IntrObj;
-
-} CSIRX_Object;
-
-/*! \brief CSIRX HW Attributes. Generated when using sysconfig */
-typedef struct CSIRX_HwAttrs_s {
-    /*! \brief CSIRX IP registers */
-    uint32_t csirxRegs;
-
-    /*! \brief Additional CSIRX control registers, located in SOC top level CTRL regs */
-    uint32_t rcssCtrlRegs;
-
-    /*! \brief HW instance ID, 0: CSI2A, 1: CSI2B as so on */
-    uint32_t hwInstId;
-
-    /*! \brief CSI interface control clock in Hz. In AM723x, this is 96000000 Hz */
-    uint32_t ctrlClockHz;
-
-    /*! \brief CSI interconnect control clock in Hz. In AM723x, this is 200000000 Hz */
-    uint32_t interconnectClockHz;
-
-    /*! \brief CPU Interrupt number, if interrupt not connected, set to CSIRX_INTERRUPT_NOT_CONNECTED_ID */
-    uint16_t commonIntNum;
-
-    /*! \brief CPU Interrupt number, if interrupt not connected, set to CSIRX_INTERRUPT_NOT_CONNECTED_ID */
-    uint16_t combinedEndOfLineIntNum;
-
-    /*! \brief CPU Interrupt number, if interrupt not connected, set to CSIRX_INTERRUPT_NOT_CONNECTED_ID */
-    uint16_t combinedEndOfFrameIntNum;
-
-    /*! \brief CPU Interrupt number, if interrupt not connected, set to CSIRX_INTERRUPT_NOT_CONNECTED_ID */
-    uint16_t startOfFrameIntr0IntNum;
-
-    /*! \brief CPU Interrupt number, if interrupt not connected, set to CSIRX_INTERRUPT_NOT_CONNECTED_ID */
-    uint16_t startOfFrameIntr1IntNum;
-
-    /*! \brief CPU Interrupt number, if interrupt not connected, set to CSIRX_INTERRUPT_NOT_CONNECTED_ID */
-    uint16_t contextEndOfLineIntNum[CSIRX_CONTEXTS_MAX];
-
-} CSIRX_HwAttrs;
-
-/*! \brief CSIRX Instance Config Object */
-typedef struct CSIRX_Config_s {
-
-    /*! \brief Instance Object */
-    CSIRX_Object         *object;
-
-    /*! \brief Instance HW Attributes */
-    CSIRX_HwAttrs  const *hwAttrs;
-} CSIRX_Config;
-
-
-/** \brief Array of CSIRX instance enabled via SysConfig */
-extern CSIRX_Config gCsirxConfig[];
-
-/** \brief Number of CSIRX instances enabled via SysConfig */
-extern uint32_t gCsirxConfigNum;
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_INSTANCE_MODULE
- *
- *  @{
- */
-
-/**
- * \brief Initialize CSIRX driver.
- *
- * This does not touch the HW itself, it only initialized internal data structures.
- * Called by SysConfig as part of System_init()
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_init();
-
-/**
- * \brief De-Initialize CSIRX driver.
- *
- * This does not touch the HW itself, it only de-initialized internal data structures.
- * Called by SysConfig as part of System_deinit()
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_deinit();
-
-/**
- * \brief Open CSIRX driver.
- *
- * \param instanceId [in] CSIRX config to open. This acts as a index into \ref gCsirxConfig[]
- *
- * \return Handle to CSIRX driver for given instance. NULL in case of failure
- */
-CSIRX_Handle CSIRX_open(uint32_t instanceId);
-
-/**
- * \brief Get CSIRX instance info
- *
- * \param handle [in] CSIRX driver handle
- * \param info [out] Instance information
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_getInfo(CSIRX_Handle handle, CSIRX_Info *info);
-
-/**
- * \brief Reset CSIRX instance
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_reset(CSIRX_Handle handle);
-
-/**
- * \brief Close CSIRX instance
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_close(CSIRX_Handle handle);
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_DPHY_MODULE
- *
- *  @{
- */
-
-/**
- * \brief Sets default values for configuration
- *
- * \param config [in] configuration
- */
-void CSIRX_DphyConfig_init(CSIRX_DphyConfig *config);
-
-/**
- * \brief Configure DPHY
- *
- * \param handle [in] CSIRX driver handle
- * \param config [in] DPHY configuration
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_dphySetConfig(CSIRX_Handle handle, CSIRX_DphyConfig *config);
-
-/**
- * \brief Check if DPHY control clock reset is done
- *
- * \param handle [in] CSIRX driver handle
- * \param isDone [out] true: reset is done, false: reset is not done
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_dphyIsControlClockResetDone(CSIRX_Handle handle, bool *isDone);
-
-/**
- * \brief Check if DPHY byte clock reset is done
- *
- * \param handle [in] CSIRX driver handle
- * \param isDone [out] true: reset is done, false: reset is not done
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_dphyIsByteClockResetDone(CSIRX_Handle handle, bool *isDone);
-
-/**
- * \brief Check if DPHY clock missing detector error
- *
- * This API is only
- * meaningful if \ref CSIRX_DphyConfig::isClockMissingDetectionEnabled was
- * configured to true i.e clock missing detector was enabled.
- *
- * \param handle [in] CSIRX driver handle
- * \param isError [out] true: error is detected, false: no error
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_dphyIsClockMissingDetectorError(CSIRX_Handle handle, bool *isError);
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_COMPLEXIO_MODULE
- *
- *  @{
- */
-
-/**
- * \brief Sets default values for configuration
- *
- * \param config [in] configuration
- */
-void CSIRX_ComplexioConfig_init(CSIRX_ComplexioConfig *config);
-
-/**
- * \brief Configure Complex IO
- *
- * \param handle [in] CSIRX driver handle
- * \param config [in] Complex IO configuration
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_complexioSetConfig(CSIRX_Handle handle, CSIRX_ComplexioConfig *config);
-
-/**
- * \brief Celar all pending complex IO interrupts
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_complexioClearAllIntr(CSIRX_Handle handle);
-
-/**
- * \brief Get all pending complex IO interrupts
- *
- * \param handle [in] CSIRX driver handle
- * \param intrStatus [out] Interrupt status
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_complexioGetPendingIntr(CSIRX_Handle handle, CSIRX_ComplexioLanesIntr *intrStatus);
-
-/**
- * \brief Query about ComplexIO power status.
- *
- * \sa CSIRX_complexioPowerOn, CSIRX_complexioPowerOff, CSIRX_complexioUltraLowPower
- *
- * \param handle [in] CSIRX driver handle
- * \param powerStatus [out] One of \ref CSIRX_COMPLEXIO_POWER_STATUS
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_complexioGetPowerStatus(CSIRX_Handle handle, uint8_t *powerStatus);
-
-/**
- * \brief  Set Complex IO power command
- *
- * \param handle [in] CSIRX driver handle
- * \param powerCommand [out] one of \ref CSIRX_COMPLEXIO_POWER_COMMAND
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_complexioSetPowerCommand(CSIRX_Handle handle, uint8_t powerCommand);
-
-/**
- * \brief Deaasert complex IO reset
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_complexioDeassertReset(CSIRX_Handle handle);
-
-/**
- * \brief Assert Force Rx Mode on complex IO
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_complexioAssertForceRxModeOn(CSIRX_Handle handle);
-
-/**
- * \brief De-assert Force Rx Mode on complex IO
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_complexioDeassertForceRxModeOn(CSIRX_Handle handle);
-
-/**
- * \brief Check if complex IO reset is done
- *
- * \param handle [in] CSIRX driver handle
- * \param isDone [out] true: reset is done, false: reset is not done
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_complexioIsResetDone(CSIRX_Handle handle, bool *isDone);
-
-/**
- * \brief Check if force RX mode on is deasserted
- *
- * \param handle [in] CSIRX driver handle
- * \param isDeasserted [out] true: deassert is done, false: deassert is not done
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_complexioIsDeassertForceRxModeOn(CSIRX_Handle handle, bool *isDeasserted);
-
-/**
- * \brief Power ON complex IO
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-static inline int32_t CSIRX_complexioPowerOn(CSIRX_Handle handle)
+typedef struct
 {
-    return CSIRX_complexioSetPowerCommand(handle, CSIRX_COMPLEXIO_POWER_COMMAND_ON);
+    uint32_t        numCh;
+    /**< Number of channels to be configured/processed
+     *   It should be less that 'CSIRX_NUM_CH'. */
+    Csirx_ChCfg     chCfg[CSIRX_NUM_CH];
+    /**< Configuration for channels to be processed */
+    Csirx_InstCfg   instCfg;
+    /**< CSI Rx module configuration.
+      *  See \ref Csirx_InstCfg for details */
+    uint64_t        frameDropBuf;
+    /**< Address of Frame Drop buffer,
+      *  used when application has not queued any buffers
+      *  If set to NULL (0), then driver will hold
+      *  the last buffer for frame repeat */
+    uint32_t        frameDropBufLen;
+    /**< Frame Drop buffer length in bytes,
+      *  used when application has not queued any buffers */
+    uint32_t enableChDq;
+    /**< Enable/Disable De-queue of frames per channel,
+      *  0: Disabled
+      *  1:Enabled
+      *  When disabled, 'Fvid2_dequeue()' call will de-queue frames for all
+      *  channels configured for given instance.
+      *  When enabled, 'Fvid2_dequeue()' call will de-queue frames for given
+      *  channel ID provided through 'streamId' parameter. */
+} Csirx_CreateParams;
+
+/**
+ *  \brief Capture driver create arguments, used when calling Fvid2_create().
+ *         Structure containing Streams configurations.
+ */
+typedef struct
+{
+    Udma_DrvHandle  drvHandle;
+    /**< UDMA Driver handle */
+} Csirx_InitParams;
+
+/**
+ *  \brief Capture driver create status. Returned after calling Fvid2_create().
+ */
+typedef struct
+{
+    int32_t retVal;
+    /**< Create status, FVID2_SOK on success, else failure. */
+} Csirx_CreateStatus;
+
+/**
+ *  \brief Capture status structure used to get the current status.
+ */
+typedef struct
+{
+    uint32_t queueCount[CSIRX_NUM_CH];
+    /**< Counter to keep track of how many requests are queued to the
+     *   driver.
+     *   Note: This counter will be reset at the time of driver init. */
+    uint32_t dequeueCount[CSIRX_NUM_CH];
+    /**< Counter to keep track of how many requests are dequeued from the
+     *   driver.
+     *   Note: This counter will be reset at the time of driver init. */
+    uint32_t dropCount[CSIRX_NUM_CH];
+    /**< Counter to keep track of how many frames are dropped from the
+     *   driver when no buffers are queued by the application.
+     *   Note: This counter will be reset at the time of driver init. */
+    uint32_t errorFrameCount[CSIRX_NUM_CH];
+    /**< Counter to keep track number of error or incomplete frames
+     *   from the driver.
+     *   Note: This counter will be reset at the time of driver init. */
+    uint32_t overflowCount;
+    /**< Counter to keep track of the occurrence of overflow error.
+     *   Note: This counter will be reset at the time of driver create and
+     *   during driver start. */
+    uint32_t spuriousUdmaIntrCount;
+    /**< Counter to keep track of the occurrences of spurious UDMA interrupts.
+     *   Note: This counter will be reset at the time of driver create and
+     *   during driver start. */
+    uint32_t frontFIFOOvflCount;
+    /**< Counter to keep track of the occurrences of Front FIFO Overflow.
+     *   Note: This counter will be reset at the time of driver create and
+     *   during driver start. */
+    uint32_t crcCount;
+    /**< Counter to keep track of the occurrences of CRC errors.
+     *   Note: This counter will be reset at the time of driver create and
+     *   during driver start. */
+    uint32_t eccCount;
+    /**< Counter to keep track of the occurrences of un-corrected ECC errors.
+     *   Note: This counter will be reset at the time of driver create and
+     *   during driver start. */
+    uint32_t correctedEccCount;
+    /**< Counter to keep track of the occurrences of corrected ECC errors.
+     *   Note: This counter will be reset at the time of driver create and
+     *   during driver start. */
+    uint32_t dataIdErrorCount;
+    /**< Counter to keep track of the occurrences of Data ID errors.
+     *   Note: This counter will be reset at the time of driver create and
+     *   during driver start. */
+    uint32_t invalidAccessCount;
+    /**< Counter to keep track of the occurrences of Invalid accesses.
+     *   Note: This counter will be reset at the time of driver create and
+     *   during driver start. */
+    uint32_t invalidSpCount;
+    /**< Counter to keep track of the occurrences of reception of
+     *   invalid short packet.
+     *   Note: This counter will be reset at the time of driver create and
+     *   during driver start. */
+    uint32_t strmFIFOOvflCount[CSIRX_NUM_STREAM_MAX];
+    /**< Counter to keep track of the occurrences of Front FIFO Overflow.
+     *   Note: This counter will be reset at the time of driver create and
+     *   during driver start. */
+    uint32_t deSkewEntryCount;
+    /**< Counter to keep track of the occurrences of De-skew calibration event */
+} Csirx_InstStatus;
+
+/* ========================================================================== */
+/*                  Internal/Private Function Declarations                    */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+/**
+ *  \brief CSIRX Driver Init function.
+ *
+ *  \param initParams       [IN] Pointer to #Csirx_InitParams structure.
+ *
+ *  \return status CSIRX Initialization status. 'FVID2_SOK' is successful.
+ */
+int32_t Csirx_init(const Csirx_InitParams *initParams);
+
+/**
+ *  \brief CSIRX Driver de-Init function.
+ *
+ *  \return status CSIRX Initialization status. 'FVID2_SOK' is successful.
+ */
+int32_t Csirx_deInit(void);
+/* ========================================================================== */
+/*      Internal Function Declarations (Needed for other static inlines)      */
+/* ========================================================================== */
+
+/**
+ *  \brief Csirx_InitParams structure init function.
+ *
+ *  \param initPrms         [IN] Pointer to #Csirx_InitParams structure.
+ *
+ */
+static inline void Csirx_initParamsInit(Csirx_InitParams *initPrms);
+
+/**
+ *  \brief Csirx_CreateParams structure init function.
+ *
+ *  \param createPrms   [IN] Pointer to #Csirx_CreateParams structure.
+ *
+ */
+static inline void Csirx_createParamsInit(Csirx_CreateParams *createPrms);
+
+/**
+ *  \brief Csirx_ChCfg structure init function.
+ *
+ *  \param chCfg            [IN] Pointer to #Csirx_ChCfg structure.
+ *
+ */
+static inline void Csirx_chCfgInit(Csirx_ChCfg *chCfg);
+
+/**
+ *  \brief Csirx_InstCfg structure init function.
+ *
+ *  \param instCfg          [IN] Pointer to #Csirx_InstCfg structure.
+ *
+ */
+static inline void Csirx_instCfgInit(Csirx_InstCfg *instCfg);
+
+/**
+ *  \brief Csirx_InstStatus structure init function.
+ *
+ *  \param status           [IN] Pointer to #Csirx_InstStatus structure.
+ *
+ */
+static inline void Csirx_instStatusInit(Csirx_InstStatus *status);
+
+/* ========================================================================== */
+/*                       Static Function Definitions                          */
+/* ========================================================================== */
+
+static inline void Csirx_initParamsInit(Csirx_InitParams *initPrms)
+{
+    initPrms->drvHandle = NULL;
 }
 
-/**
- * \brief Power OFF complex IO
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-static inline int32_t CSIRX_complexioPowerOff(CSIRX_Handle handle)
+static inline void Csirx_createParamsInit(Csirx_CreateParams *createPrms)
 {
-    return CSIRX_complexioSetPowerCommand(handle, CSIRX_COMPLEXIO_POWER_COMMAND_OFF);
+    uint32_t loopCnt;
+
+    if (NULL != createPrms)
+    {
+        createPrms->numCh = 0U;
+        for (loopCnt = 0U ; loopCnt < CSIRX_NUM_CH ; loopCnt++)
+        {
+            Csirx_chCfgInit(&createPrms->chCfg[loopCnt]);
+        }
+        Csirx_instCfgInit(&createPrms->instCfg);
+        createPrms->frameDropBufLen = 0U;
+        createPrms->frameDropBuf    = 0U;
+        createPrms->enableChDq      = 0U;
+    }
 }
 
-/**
- * \brief Put complex IO in ULP (Ultra Low Power) state
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-static inline int32_t CSIRX_complexioUltraLowPower(CSIRX_Handle handle)
+static inline void Csirx_chCfgInit(Csirx_ChCfg *chCfgPrms)
 {
-    return CSIRX_complexioSetPowerCommand(handle, CSIRX_COMPLEXIO_POWER_COMMAND_ULP);
+    chCfgPrms->chId = CSIRX_CH_ID_DEFAULT;
+    chCfgPrms->chType = CSIRX_CH_TYPE_CAPT;
+    chCfgPrms->vcNum = CSIRX_VC_NUM_DEFAULT;
+    chCfgPrms->inCsiDataType = CSIRX_IN_DT_DEFAULT;
+    Fvid2Format_init(&chCfgPrms->outFmt);
+    chCfgPrms->outFmt.width = 0U;
+    chCfgPrms->outFmt.height = 0U;
+    Fvid2Utils_memset(&chCfgPrms->outFmt.pitch[0U],
+           0x0,
+           sizeof (chCfgPrms->outFmt.pitch));
+
+    /* Initialization of UDMA channel params */
+    UdmaChRxPrms_init(&chCfgPrms->rxChParams, UDMA_CH_TYPE_RX_TR);
+    /* Make CSI2RX DMA channels as highest priority,
+       it is assumed that order 8-15 is mapped as RT at system level */
+    chCfgPrms->rxChParams.busPriority = 0U;
+    chCfgPrms->rxChParams.busQos      = 0U;
+    chCfgPrms->rxChParams.busOrderId  = 8U;
+    chCfgPrms->rxChParams.dmaPriority =
+                                TISCI_MSG_VALUE_RM_UDMAP_CH_SCHED_PRIOR_HIGH;
 }
 
+static inline void Csirx_instCfgInit(Csirx_InstCfg *modCfgPrms)
+{
+    uint32_t loopCnt;
 
-/** @} */
+    modCfgPrms->enableCsiv2p0Support = (uint32_t)TRUE;
+    modCfgPrms->numDataLanes         = CSIRX_CAPT_DATA_LANES_MAX;
+    modCfgPrms->enableErrbypass      = (uint32_t)TRUE;
+    modCfgPrms->numPixelsStrm0       = (uint32_t)0U;
+    for(loopCnt = 0U ; loopCnt < CSIRX_CAPT_DATA_LANES_MAX ; loopCnt++)
+    {
+        modCfgPrms->dataLanesMap[loopCnt] = (loopCnt + 1U);
+    }
+    for(loopCnt = 0U ; loopCnt < CSIRX_NUM_STREAM ; loopCnt++)
+    {
+        modCfgPrms->enableStrm[loopCnt] = 0;
+    }
+}
 
-/**
- *  \addtogroup DRV_CSIRX_COMMON_MODULE
- *
- *  @{
- */
+static inline void Csirx_instStatusInit(Csirx_InstStatus *captStatus)
+{
+    uint32_t loopCnt, strmIdx;
 
-/**
- * \brief Sets default values for configuration
- *
- * \param config [in] configuration
- */
-void CSIRX_CommonConfig_init(CSIRX_CommonConfig *config);
-
-/**
- * \brief Configure common to all context settings
- *
- * \param handle [in] CSIRX driver handle
- * \param config [in] Common to all context configuration
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_commonSetConfig(CSIRX_Handle handle, CSIRX_CommonConfig *config);
-
-/**
- * \brief Clear all pending common to all context interrupts
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_commonClearAllIntr(CSIRX_Handle handle);
-
-/**
- * \brief Get all pending common to all context interrupts
- *
- * \param handle [in] CSIRX driver handle
- * \param intrStatus [out] Interrupt status
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_commonGetPendingIntr(CSIRX_Handle handle, CSIRX_CommonIntr *intrStatus);
-
-/**
- * \brief Get generic short packet header
- *
- * \param handle [in] CSIRX driver handle
- * \param shortPacket [out] Generic short packet header
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_commonGetGenericShortPacket(CSIRX_Handle handle, uint32_t *shortPacket);
-
-/**
- * \brief Enable CSIRX interface
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_commonEnable(CSIRX_Handle handle);
-
-/**
- * \brief Disable CSIRX interface
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_commonDisable(CSIRX_Handle handle);
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_CONTEXT_MODULE
- *
- *  @{
- */
-
-
-/**
- * \brief Sets default values for configuration
- *
- * \param config [in] configuration
- */
-void CSIRX_ContextConfig_init(CSIRX_ContextConfig *config);
-
-
-/**
- * \brief Configure context
- *
- * \param handle [in] CSIRX driver handle
- * \param contextId [in] Context ID
- * \param config [in] Context configuration
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_contextSetConfig(CSIRX_Handle handle, uint8_t contextId, CSIRX_ContextConfig *config);
-
-/**
- * \brief Set context ping and pong address
- *
- * \param handle [in] CSIRX driver handle
- * \param contextId [in] Context ID
- * \param pingAddress [in] ping address, MUST have 5 LSBs as zero
- * \param pongAddress [in] pong address, MUST have 5 LSBs as zero
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_contextSetPingPongAddress(CSIRX_Handle handle, uint8_t contextId, uint32_t pingAddress, uint32_t pongAddress);
-
-/**
- * \brief Set context line offset
- *
- * \param handle [in] CSIRX driver handle
- * \param contextId [in] Context ID
- * \param lineOffset [in] See \ref CSIRX_ContextPingPongConfig::lineOffset , units of bytes
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_contextSetLineOffset(CSIRX_Handle handle, uint8_t contextId, int32_t lineOffset);
-
-
-/**
- * \brief Enable context
- *
- * \param handle [in] CSIRX driver handle
- * \param contextId [in] Context ID
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_contextEnable(CSIRX_Handle handle, uint8_t contextId);
-
-/**
- * \brief Disable context
- *
- * \param handle [in] CSIRX driver handle
- * \param contextId [in] Context ID
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_contextDisable(CSIRX_Handle handle, uint8_t contextId);
-
-/**
- * \brief Clear all pending context interrupts
- *
- * \param handle [in] CSIRX driver handle
- * \param contextId [in] Context ID
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_contextClearAllIntr(CSIRX_Handle handle, uint8_t contextId);
-
-/**
- * \brief Get all pending context interrupts
- *
- * \param handle [in] CSIRX driver handle
- * \param contextId [in] Context ID
- * \param intrStatus [out] Interrupt status
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_contextGetPendingIntr(CSIRX_Handle handle, uint8_t contextId, CSIRX_ContextIntr *intrStatus);
-
-/**
- * \brief Get current frame number as decoded from within CSIRX long packet
- *
- * \param handle [in] CSIRX driver handle
- * \param contextId [in] Context ID
- * \param frameNumber [out] Frame number
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_contextGetFrameNumber(CSIRX_Handle handle, uint8_t contextId, uint16_t *frameNumber);
-
-/**
- * \brief Get current completed receive address
- *
- * \param handle [in] CSIRX driver handle
- * \param contextId [in] Context ID
- * \param bufAddress [out] Received frame address
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_contextGetRecvAddress(CSIRX_Handle handle, uint8_t contextId, uint32_t *bufAddress);
-
-/**
- * \brief Get status if ping or pong buffer write is done
- *
- * \param handle [in] CSIRX driver handle
- * \param contextId [in] Context ID
- * \param pingPongStatus [out] One of \ref CSIRX_PINGPONG_STATUS
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_contextGetPingPongStatus(CSIRX_Handle handle, uint8_t contextId, uint8_t *pingPongStatus);
-
-/** @} */
-
-/**
- *  \addtogroup DRV_CSIRX_DEBUG_MODULE
- *
- *  @{
- */
-
-/**
- * \brief Set short packet header
- *
- * \param handle [in] CSIRX driver handle
- * \param shortPacket [in] short packet header
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_debugModeSetShortPacket(CSIRX_Handle handle, uint32_t shortPacket);
-
-/**
- * \brief Set long packet header
- *
- * \param handle [in] CSIRX driver handle
- * \param longPacketHeader [in] Long packet header
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_debugModeSetLongPacketHeader(CSIRX_Handle handle, uint32_t longPacketHeader);
-
-/**
- * \brief Set long packet payload
- *
- * \param handle [in] CSIRX driver handle
- * \param payload [in] long packet payload
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_debugModeSetLongPacketPayload(CSIRX_Handle handle, uint32_t payload);
-
-/**
- * \brief Enable debug mode
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_debugModeEnable(CSIRX_Handle handle);
-
-/**
- * \brief Disable debug mode
- *
- * \param handle [in] CSIRX driver handle
- *
- * \return SystemP_SUCCESS on success, else failure
- */
-int32_t CSIRX_debugModeDisable(CSIRX_Handle handle);
-
-/**
- * \brief Generate frames in debug mode
- *
- * \ref CSIRX_debugModeEnable needs to be called before this API
- *
- * \param handle [in] CSIRX driver handle
- * \param txFormat [in] see \ref CSIRX_DATA_FORMAT
- * \param virtualChannelId [in] 0..3
- * \param numOfFrames [in] Number of frames of debug data to generate
- * \param numLinesPerFrame [in] Lines per frame
- * \param numBytesPerLine [in] Bytes per line
- */
-void CSIRX_debugModeGenerateFrames(CSIRX_Handle handle,
-                                  uint16_t txFormat,
-                                  uint8_t virtualChannelId,
-                                  uint32_t numOfFrames,
-                                  uint32_t numLinesPerFrame,
-                                  uint32_t numBytesPerLine);
-
-/** @} */
+    captStatus->overflowCount         = 0U;
+    captStatus->spuriousUdmaIntrCount = 0U;
+    captStatus->spuriousUdmaIntrCount = 0U;
+    captStatus->frontFIFOOvflCount    = 0U;
+    captStatus->crcCount              = 0U;
+    captStatus->eccCount              = 0U;
+    captStatus->correctedEccCount     = 0U;
+    captStatus->dataIdErrorCount      = 0U;
+    captStatus->invalidAccessCount    = 0U;
+    captStatus->invalidSpCount        = 0U;
+    captStatus->deSkewEntryCount      = 0U;
+    for (strmIdx = 0U ; strmIdx < CSIRX_NUM_STREAM ; strmIdx++)
+    {
+        captStatus->strmFIFOOvflCount[strmIdx]= 0U;
+    }
+    for(loopCnt = 0U ; loopCnt < CSIRX_NUM_CH ; loopCnt++)
+    {
+        captStatus->queueCount[loopCnt]      = 0U;
+        captStatus->dequeueCount[loopCnt]    = 0U;
+        captStatus->dropCount[loopCnt]       = 0U;
+        captStatus->errorFrameCount[loopCnt] = 0U;
+    }
+}
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
-
-/**
- *  \defgroup DRV_CSIRX_MODULE APIs for CSIRX
- *  \ingroup DRV_MODULE
- *
- *  The CSI driver is divided into below sub module APIs.
- *  See also \ref DRIVERS_CSIRX_PAGE for more details.
- */
-
-/**
- *  \defgroup DRV_CSIRX_DPHY_MODULE CSIRX Dphy APIs
- *  \ingroup DRV_CSIRX_MODULE
- *
- *  APIs related to CSIRX D-Phy programming
- */
-
-/**
- *  \defgroup DRV_CSIRX_COMPLEXIO_MODULE CSIRX Complex IO APIs
- *  \ingroup DRV_CSIRX_MODULE
- *
- *  APIs related to CSIRX complex IO lanes
- */
-
-/**
- *  \defgroup DRV_CSIRX_COMMON_MODULE CSIRX Common APIs
- *  \ingroup DRV_CSIRX_MODULE
- *
- *  APIs common across contexts
- */
-
-/**
- *  \defgroup DRV_CSIRX_CONTEXT_MODULE CSIRX Context APIs
- *  \ingroup DRV_CSIRX_MODULE
- *
- *  APIs specific to a context
- */
-
-/**
- *  \defgroup DRV_CSIRX_DEBUG_MODULE CSIRX Debug APIs
- *  \ingroup DRV_CSIRX_MODULE
- *
- *  APIs related to CSIRX debug features. Typically not used by applications.
- */
-
-/**
- *  \defgroup DRV_CSIRX_INSTANCE_MODULE CSIRX Instance APIs
- *  \ingroup DRV_CSIRX_MODULE
- *
- *  APIs to open/close top level CSIRX instance's
- */
+#endif /* #ifndef CSIRX_H_ */
+/**@} */

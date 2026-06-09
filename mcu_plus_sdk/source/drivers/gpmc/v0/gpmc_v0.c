@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-24 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -616,7 +616,7 @@ int32_t GPMC_nandWriteData(GPMC_Handle handle, GPMC_Transaction *trans)
 
                 if(status == SystemP_SUCCESS)
                 {
-                    while(byteCount)
+                    while(CSL_REG32_FEXT(attrs->gpmcBaseAddr + CSL_GPMC_PREFETCH_STATUS, GPMC_PREFETCH_STATUS_COUNTVALUE))
                     {
                         /* Wait until FIFO is empty or full 64 bytes FIFO is available to fill. */
                         while (GPMC_interuptStatusGet(attrs->gpmcBaseAddr, GPMC_FIFOEVENT_STATUS) == 0);
@@ -632,7 +632,6 @@ int32_t GPMC_nandWriteData(GPMC_Handle handle, GPMC_Transaction *trans)
                         for(uint32_t i =0; i< threshold/4;i++)
                         {
                             *(volatile uint32_t*)attrs->chipSelBaseAddr = *bufPtr++;
-                            byteCount -=4;
                         }
 
                         /* Clear FIFO event interupt status . */
@@ -1647,6 +1646,16 @@ static int32_t GPMC_prefetchPostWriteConfigEnable(GPMC_Handle handle, uint8_t mo
             CSL_GPMC_PREFETCH_CONFIG1_ACCESSMODE_WRITEPOSTING);
         }
 
+        if(attrs->optimisedAccess == CSL_GPMC_PREFETCH_CONFIG1_ENABLEOPTIMIZEDACCESS_OPTENABLED)
+        {
+            CSL_REG32_FINS(attrs->gpmcBaseAddr + CSL_GPMC_PREFETCH_CONFIG1, GPMC_PREFETCH_CONFIG1_CYCLEOPTIMIZATION, \
+            attrs->cycleOptimisation);
+
+            CSL_REG32_FINS(attrs->gpmcBaseAddr + CSL_GPMC_PREFETCH_CONFIG1, GPMC_PREFETCH_CONFIG1_ENABLEOPTIMIZEDACCESS, \
+            attrs->optimisedAccess);
+        }
+
+
         /*Set transfer count*/
         CSL_REG32_FINS(attrs->gpmcBaseAddr + CSL_GPMC_PREFETCH_CONFIG2, GPMC_PREFETCH_CONFIG2_TRANSFERCOUNT, \
         transferCount);
@@ -1685,6 +1694,9 @@ static int32_t GPMC_prefetchPostWriteConfigDisable(GPMC_Handle handle)
         /* Disable DMA sync bit. */
         CSL_REG32_FINS(attrs->gpmcBaseAddr + CSL_GPMC_PREFETCH_CONFIG1, GPMC_PREFETCH_CONFIG1_DMAMODE, \
                 CSL_GPMC_PREFETCH_CONFIG1_DMAMODE_RESETVAL);
+
+        CSL_REG32_FINS(attrs->gpmcBaseAddr + CSL_GPMC_PREFETCH_CONFIG1, GPMC_PREFETCH_CONFIG1_ENABLEOPTIMIZEDACCESS, \
+        CSL_GPMC_PREFETCH_CONFIG1_ENABLEOPTIMIZEDACCESS_OPTDISABLED);
 
     }
     else

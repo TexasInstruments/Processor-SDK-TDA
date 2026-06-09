@@ -62,8 +62,8 @@
 #ifndef OX03F10_SERDES_H
 #define OX03F10_SERDES_H
 
-#define OX03F10_SEN_I2C_ADDR 0x6CU   /* 8-bit address; 7-bit address is 0x36 */
-#define OX03F10_SER_I2C_ADDR 0x30U   /* 8-bit address; 7-bit address is 0x18 */
+#define OX03F10_SEN_I2C_ADDR (0x6CU)   /* 8-bit address; 7-bit address is 0x36 */
+#define OX03F10_SER_I2C_ADDR (0x30U)   /* 8-bit address; 7-bit address is 0x18 */
 
 I2cParams ub953SerCfg_OX03F10[] = {
     {0x01, 0x07, 0x20}, /* Reset serializer */

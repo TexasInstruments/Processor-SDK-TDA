@@ -16,29 +16,87 @@ ConfigName:=$(PROFILE)
 LIBNAME:=board.am62px.r5f.ti-arm-clang.$(PROFILE).lib
 
 FILES_common := \
+    dp83tc812.c \
+    dp83tg720.c \
+    dp83869.c \
+    dp83867.c \
+    dp83822.c \
+    dp83826.c \
+    eeprom.c \
+    eeprom_at24c512c.c \
     flash.c \
     flash_nor_ospi.c \
+    generic_phy.c \
     led.c \
     led_gpio.c \
     led_tpic2810.c \
     led_ioexp.c \
+    i2c_bridge_sii9022a.c \
     ioexp_tca6424.c \
     nor_spi_sfdp.c \
+    panel.c \
+    panel_i2c.c \
+    pmic.c \
+    pmic_adc.c \
+    pmic_core.c \
+    pmic_esm.c \
+    pmic_fsm.c \
+    pmic_gpio.c \
+    pmic_gpio_tps6522x.c \
+    pmic_gpio_lp8764x.c \
+    pmic_gpio_tps6594x.c \
+    pmic_io.c \
+    pmic_irq_status.c \
+    pmic_irq_tps6522x.c \
+    pmic_irq_lp8764x.c \
+    pmic_irq_tps6594x.c \
+    pmic_i2c.c \
+    pmic_power.c \
+    pmic_power_tps6522x.c \
+    pmic_power_lp8764x.c \
+    pmic_power_tps6594x.c \
+    pmic_wdg.c \
+    phy_common_priv.c \
 
 FILES_PATH_common = \
+    eeprom \
     flash \
     flash/ospi \
     flash/sfdp \
     ioexp \
     null \
     led \
+    panel \
+    panel/i2c \
+    pmic \
+    pmic/pmic_lld/src \
+    pmic/pmic_lld/src/cfg/lp8764x \
+    pmic/pmic_lld/src/cfg/tps6522x \
+    pmic/pmic_lld/src/cfg/tps6594x \
+    ethphy/enet/rtos_drivers/src \
+    ethphy/enet/rtos_drivers/include \
 
 INCLUDES_common := \
     -I${CG_TOOL_ROOT}/include/c \
     -I${MCU_PLUS_SDK_PATH}/source \
+    -Ipmic \
+    -Ipmic/pmic_lld \
+    -Ipmic/pmic_lld/include \
+    -Ipmic/pmic_lld/include/cfg/lp8764x \
+    -Ipmic/pmic_lld/include/cfg/tps6522x \
+    -Ipmic/pmic_lld/include/cfg/tps6594x \
+    -Ipmic/pmic_lld/src \
+    -Ipmic/pmic_lld/src/cfg/lp8764x \
+    -Ipmic/pmic_lld/src/cfg/tps6522x \
+    -Ipmic/pmic_lld/src/cfg/tps6594x \
+    -Iethphy/enet/rtos_drivers/include \
+    -Iethphy/port \
 
 DEFINES_common := \
     -DSOC_AM62PX \
+    -DMCU_SDK_BUILD \
+    -DPHY_CFG_TRACE_LEVEL=3 \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mcpu=cortex-r5 \

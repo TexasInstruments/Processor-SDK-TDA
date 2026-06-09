@@ -551,9 +551,12 @@ int32_t Vhwa_m2mMscStartCh(const Vhwa_M2mMscInstObj *instObj,
     /* LDRA_JUSTIFY_END */
     for (cnt = 0U; cnt < VHWA_M2M_MSC_MAX_INST; cnt ++)
     {
-        for (cnt2 = 0U; (cnt2 < VHWA_M2M_MSC_MAX_IN_CHANNEL) &&
-                        (UDMA_SOK == retVal); cnt2 ++)
+        for (cnt2 = 0U; cnt2 < VHWA_M2M_MSC_MAX_IN_CHANNEL; cnt2 ++)
         {
+            if(UDMA_SOK != retVal)
+            {
+                break;
+            }
             chHandle = comObj->inChHandle[cnt][cnt2];
             /* UDMA Channel enable */
             retVal = Udma_chEnable(chHandle);
@@ -569,15 +572,17 @@ int32_t Vhwa_m2mMscStartCh(const Vhwa_M2mMscInstObj *instObj,
             {
                 GT_1trace(VhwaMscTrace, GT_ERR,
                     "UDMA channel enable failed for input%d !!\n", cnt);
-                break;
             }
             /* LDRA_JUSTIFY_END */
-
         }
     }
 
-    for (cnt = 0U; (cnt < MSC_MAX_OUTPUT) && (UDMA_SOK == retVal); cnt ++)
+    for (cnt = 0U; cnt < MSC_MAX_OUTPUT; cnt ++)
     {
+        if(UDMA_SOK != retVal)
+        {
+            break;
+        }
         chHandle = comObj->outChHandle[cnt];
         /* UDMA Channel enable */
         retVal = Udma_chEnable(chHandle);
@@ -593,7 +598,6 @@ int32_t Vhwa_m2mMscStartCh(const Vhwa_M2mMscInstObj *instObj,
         {
             GT_1trace(VhwaMscTrace, GT_ERR,
                 "UDMA channel enable failed for output%d !!\n", cnt);
-            break;
         }
         /* LDRA_JUSTIFY_END */
 
@@ -644,22 +648,39 @@ int32_t Vhwa_m2mMscStopCh(const Vhwa_M2mMscCommonObj *comObj)
 
     for (cnt = 0U; cnt < VHWA_M2M_MSC_MAX_INST; cnt ++)
     {
-        for (cnt2 = 0U; (cnt2 < VHWA_M2M_MSC_MAX_IN_CHANNEL) &&
-                        (UDMA_SOK == retVal); cnt2 ++)
+        for (cnt2 = 0U; cnt2 < VHWA_M2M_MSC_MAX_IN_CHANNEL; cnt2 ++)
         {
+            if(UDMA_SOK != retVal)
+            {
+                break;
+            }
             chHandle = comObj->inChHandle[cnt][cnt2];
             /* UDMA Channel disable */
             retVal = Udma_chDisable(chHandle,
                                     UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
+            if(UDMA_SOK != retVal)
+            {
+                GT_1trace(VhwaMscTrace, GT_ERR,
+                    "UDMA channel disable failed for input%d !!\n", cnt);
+            }
         }
     }
 
-    for (cnt = 0U; (cnt < MSC_MAX_OUTPUT) && (UDMA_SOK == retVal); cnt ++)
+    for (cnt = 0U; cnt < MSC_MAX_OUTPUT; cnt ++)
     {
+        if(UDMA_SOK != retVal)
+        {
+            break;
+        }
         chHandle = comObj->outChHandle[cnt];
         /* UDMA Channel disable */
         retVal = Udma_chDisable(chHandle,
                                 UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
+        if(UDMA_SOK != retVal)
+        {
+            GT_1trace(VhwaMscTrace, GT_ERR,
+                "UDMA channel disable failed for output%d !!\n", cnt);
+        }
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -763,8 +784,12 @@ int32_t Vhwa_mscM2mSubmitRing(const Vhwa_M2mMscInstObj *instObj,
             }
         }
 
-        for (cnt = 0U; (cnt < MSC_MAX_OUTPUT) && (UDMA_SOK == retVal); cnt ++)
+        for (cnt = 0U; cnt < MSC_MAX_OUTPUT; cnt ++)
         {
+            if(UDMA_SOK != retVal)
+            {
+                break;
+            }
             if (((UTRUE == hObj->outChPrms[cnt].buffEnable) &&
                 (UFALSE == hObj->fcStatus.isFlexConnect)) ||
                 ((UTRUE == hObj->fcStatus.isFlexConnect) &&

@@ -150,12 +150,12 @@ int32_t appCsi2TxInit(void)
 {
     int32_t fstatus = FVID2_SOK;
 
-    uint32_t regVal = 0U, unlocked = 0U;
     Csitx_InitParams initPrmsCsitx;
 
     appLogPrintf("CSI2TX: Init ... !!!\n");
 
     #if !defined (SOC_J722S)
+    uint32_t regVal = 0U, unlocked = 0U;
 
     SET_DEVICE_STATE_ON(TISCI_DEV_CSI_PSILSS0);
 
@@ -227,7 +227,6 @@ int32_t appCsi2TxInit(void)
     }
 
     #else
-    uint64_t clkFreq = 0U;
     SET_CLOCK_FREQ (TISCI_DEV_CSI_TX_IF0, TISCI_DEV_CSI_TX_IF0_ESC_CLK_CLK, (int32_t)CSITX_ESC_CLK_FREQ_HZ);
     SET_CLOCK_FREQ (TISCI_DEV_CSI_TX_IF0, TISCI_DEV_CSI_TX_IF0_MAIN_CLK_CLK, (int32_t)CSITX_MAIN_CLK_HZ);
     #endif /* if !defined(SOC_J722S) */

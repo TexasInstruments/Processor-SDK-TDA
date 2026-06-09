@@ -90,7 +90,7 @@
  * @param max : to store the max value
  */
 template <class Tsrc, class TminMax>
-void TIDL_TensorMinMaxStats(const Tsrc * ptr, const sTIDL_DataParams_t * dataPrms, TminMax *min, TminMax * max, sTIDL_Layer_t *layer = NULL)
+void TIDL_TensorMinMaxStats(const Tsrc * ptr, const sTIDL_DataParams_t * dataPrms, TminMax *min, TminMax * max, sTIDL_Layer_t *layer, sTIDL_DataParams_t *inDataPrms)
 {
   int32_t padOffset = dataPrms->padW + (dataPrms->padH*dataPrms->pitch[TIDL_LINE_PITCH]);
   int32_t i0, i1, i2, i3, i4, i5;
@@ -99,26 +99,9 @@ void TIDL_TensorMinMaxStats(const Tsrc * ptr, const sTIDL_DataParams_t * dataPrm
   {
     int32_t dimValues[TIDL_DIM_MAX] = {1,1,1,1,1,1};
     for(int32_t i = 0; i < TIDL_DIM_MAX; i++) {
-      dimValues[i] = dataPrms->dimValues[i];
+      dimValues[i] = inDataPrms->dimValues[i];
     }
-    int32_t incrementAxis = layer->layerParams.topKParams.incrementAxis;
-    int32_t topKScaleFactor = 2;
-    int32_t elementSize = TIDL_getDatElementSize(dataPrms->elementType);
-
-    if (elementSize == 1)
-    {
-      topKScaleFactor = 5;
-    }
-    else if (elementSize == 2)
-    {
-      topKScaleFactor = 3;
-    }
-    else if (elementSize == 4)
-    {
-      topKScaleFactor = 2;
-    }
-
-    dimValues[incrementAxis] /= topKScaleFactor;
+    dimValues[layer->layerParams.topKParams.axis] = layer->layerParams.topKParams.K;
 
     for (i0 = 0; i0 < dimValues[TIDL_DIM_BATCH]; i0++)
     {
@@ -480,7 +463,8 @@ static int32_t TIDL_UpdateTensorRangeStats(TIDL_Handle intAlgHandle, int32_t lay
   int32_t numBins = (int32_t)TIDL_NUM_ACTIVATION_HISTOGRAM_BINS;
   int32_t * histogramPtr = NULL;
   sTIDL_DataParams_t dataBuffParamOrig = net->TIDLLayers[layerIdx].outData;
-
+  /* inDataPrms is utilized in the case of argmax and topK, so we always consider the first input */
+  sTIDL_DataParams_t *inDataPrms = TIDL_getDataParams(net, net->TIDLLayers[layerIdx].inData[0]);
   /* Update the dim and pitch values as expected by NHWC format and layer change it back to original */
   if ( net->TIDLLayers[layerIdx].layerType == TIDL_DataConvertLayer )
   {
@@ -542,7 +526,7 @@ static int32_t TIDL_UpdateTensorRangeStats(TIDL_Handle intAlgHandle, int32_t lay
 
     if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_SignedChar)
     {
-      TIDL_TensorMinMaxStats((int8_t*)ptr, &net->TIDLLayers[layerIdx].outData, (int32_t *)&minTemp, (int32_t *)&maxTemp, &net->TIDLLayers[layerIdx]);
+      TIDL_TensorMinMaxStats((int8_t*)ptr, &net->TIDLLayers[layerIdx].outData, (int32_t *)&minTemp, (int32_t *)&maxTemp, &net->TIDLLayers[layerIdx], inDataPrms);
 
       if ( histogramPtr != NULL )
       {
@@ -564,7 +548,7 @@ static int32_t TIDL_UpdateTensorRangeStats(TIDL_Handle intAlgHandle, int32_t lay
     }
     else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_UnsignedChar)
     {
-      TIDL_TensorMinMaxStats((uint8_t*)ptr, &net->TIDLLayers[layerIdx].outData, (int32_t *)&minTemp, (int32_t *)&maxTemp, &net->TIDLLayers[layerIdx]);
+      TIDL_TensorMinMaxStats((uint8_t*)ptr, &net->TIDLLayers[layerIdx].outData, (int32_t *)&minTemp, (int32_t *)&maxTemp, &net->TIDLLayers[layerIdx], inDataPrms);
 
       if ( histogramPtr != NULL )
       {
@@ -586,7 +570,7 @@ static int32_t TIDL_UpdateTensorRangeStats(TIDL_Handle intAlgHandle, int32_t lay
     }
     else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_SignedShort)
     {
-      TIDL_TensorMinMaxStats((int16_t*)ptr, &net->TIDLLayers[layerIdx].outData, (int32_t *)&minTemp, (int32_t *)&maxTemp, &net->TIDLLayers[layerIdx]);
+      TIDL_TensorMinMaxStats((int16_t*)ptr, &net->TIDLLayers[layerIdx].outData, (int32_t *)&minTemp, (int32_t *)&maxTemp, &net->TIDLLayers[layerIdx], inDataPrms);
 
       if ( histogramPtr != NULL )
       {
@@ -608,7 +592,7 @@ static int32_t TIDL_UpdateTensorRangeStats(TIDL_Handle intAlgHandle, int32_t lay
     }
     else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_UnsignedShort)
     {
-      TIDL_TensorMinMaxStats((uint16_t*)ptr, &net->TIDLLayers[layerIdx].outData, (int32_t *)&minTemp, (int32_t *)&maxTemp, &net->TIDLLayers[layerIdx]);
+      TIDL_TensorMinMaxStats((uint16_t*)ptr, &net->TIDLLayers[layerIdx].outData, (int32_t *)&minTemp, (int32_t *)&maxTemp, &net->TIDLLayers[layerIdx], inDataPrms);
 
       if ( histogramPtr != NULL )
       {
@@ -628,6 +612,11 @@ static int32_t TIDL_UpdateTensorRangeStats(TIDL_Handle intAlgHandle, int32_t lay
 
       }
     }
+    else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_Bool)
+    {
+      minTemp = 0;
+      maxTemp = 1;
+    }
     else
     {
       status = TIDL_ERR_FAILURE;
@@ -637,7 +626,7 @@ static int32_t TIDL_UpdateTensorRangeStats(TIDL_Handle intAlgHandle, int32_t lay
   }
   else
   {
-    TIDL_TensorMinMaxStats((float32_tidl *)ptr, &net->TIDLLayers[layerIdx].outData, (float32_tidl *)&min, (float32_tidl *)&max, &net->TIDLLayers[layerIdx]);
+    TIDL_TensorMinMaxStats((float32_tidl *)ptr, &net->TIDLLayers[layerIdx].outData, (float32_tidl *)&min, (float32_tidl *)&max, &net->TIDLLayers[layerIdx], inDataPrms);
     net->TIDLLayers[layerIdx].outData.tensorScale = 1.0;
 
 #if 0
@@ -759,9 +748,8 @@ static int32_t TIDL_UpdateTensorRangeStats(TIDL_Handle intAlgHandle, int32_t lay
     /* For ArgOp layer max is decided based on number of input channels*/
     if ( net->TIDLLayers[layerIdx].layerType == TIDL_ArgOpLayer )
     {
-      sTIDL_DataParams_t * indata = TIDL_getDataParams(net, net->TIDLLayers[layerIdx].inData[0]);
       net->TIDLLayers[layerIdx].outData.minTensorValue = 0.0;
-      net->TIDLLayers[layerIdx].outData.maxTensorValue = (indata->dimValues[TIDL_DIM_NUMCH] -1);
+      net->TIDLLayers[layerIdx].outData.maxTensorValue = (inDataPrms->dimValues[TIDL_DIM_NUMCH] -1);
     }
 
   }
@@ -836,6 +824,16 @@ static int32_t TIDL_UpdateTensorPerChannelMeanStats(TIDL_Handle intAlgHandle,
       status = TIDL_TensorPerChannelMeanStats(net,
                                              layerIdx,
                                              (uint16_t*)ptr,
+                                             &net->TIDLLayers[layerIdx].outData,
+                                             intAlgHandle->refScratchBuf,
+                                             intAlgHandle->refScratchBufSize,
+                                             (int32_t)intAlgHandle->procCallCounter);
+    }
+    else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_Bool)
+    {
+      status = TIDL_TensorPerChannelMeanStats(net,
+                                             layerIdx,
+                                             (bool*)ptr,
                                              &net->TIDLLayers[layerIdx].outData,
                                              intAlgHandle->refScratchBuf,
                                              intAlgHandle->refScratchBufSize,

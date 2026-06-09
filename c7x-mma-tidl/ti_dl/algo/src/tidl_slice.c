@@ -128,7 +128,6 @@ int32_t TIDL_sliceProcessNew(TIDL_NetworkCommonParams *commonParams,
     
     if (commonParams->gcHelperHandle == NULL)
     {
-      #if defined TIDL_COVERAGE_DEAD_CODE
       if(params->axis == TIDL_DIM_DIM1)
       {
         inPtrOffset       += (slicePoint*inDim1Pitch);
@@ -138,7 +137,6 @@ int32_t TIDL_sliceProcessNew(TIDL_NetworkCommonParams *commonParams,
         inPtrOffset       += (slicePoint*inDim2Pitch);
       }
       else 
-      #endif
       if(params->axis == TIDL_DIM_NUMCH)
       {
         inPtrOffset       += (slicePoint*inChPitch);

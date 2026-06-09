@@ -634,6 +634,7 @@ void tivx_ae_awb_params_init(tivx_ae_awb_params_t *prms);
  */
 void tivx_h3a_aew_config_init(tivx_h3a_aew_config *prms);
 
+#if !defined(VPAC3L)
 /*!
  * \brief Function to initialize VISS safety mechanism parameters with default values
  *
@@ -643,6 +644,26 @@ void tivx_h3a_aew_config_init(tivx_h3a_aew_config *prms);
  */
 void tivx_vpac_viss_safety_mech_prms_init(
     tivx_vpac_viss_safety_mechanism_params_t *prms);
+
+#endif
+
+/*! \brief [Graph] Creates a VPAC_VISS Node.
+ * \ingroup group_vision_function_vpac_viss
+ */
+VX_API_ENTRY vx_node VX_API_CALL tivxVpacVissNode(vx_graph  graph,
+                                      vx_user_data_object   configuration,
+                                      vx_user_data_object   ae_awb_result,
+                                      vx_user_data_object   dcc_buf,
+                                      tivx_raw_image        raw,
+                                      vx_image              output0,
+                                      vx_image              output1,
+                                      vx_image              output2,
+                                      vx_image              output3,
+                                      vx_image              output4,
+                                      vx_user_data_object   h3a_output,
+                                      vx_distribution       histogram0,
+                                      vx_distribution       histogram1,
+                                      vx_distribution       raw_histogram);
 
 #ifdef __cplusplus
 }

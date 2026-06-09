@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2018-2024 Texas Instruments Incorporated
+ * Copyright (c) 2018-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -130,7 +130,7 @@ int32_t appGrpxDrawCpuLoad(app_grpx_obj_t *obj,
                           );
                 break;
             #endif
-            #if defined(SOC_J784S4)
+            #if defined(SOC_J784S4) || defined(SOC_TDA54)
             case APP_IPC_CPU_C7x_2:
                 snprintf(string1, APP_GRPX_STRING_MAX,
                           "%3s",
@@ -206,6 +206,118 @@ int32_t appGrpxDrawCpuLoad(app_grpx_obj_t *obj,
                           );
                 break;
             #endif
+            #if defined(SOC_TDA54)
+            case APP_IPC_CPU_MCU0_M55:
+                snprintf(string1, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "M55"
+                          );
+                snprintf(string2, APP_GRPX_STRING_MAX,
+                          "%1s",
+                          "0"
+                          );
+                break;
+            case APP_IPC_CPU_MCU1_M55:
+                snprintf(string1, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "M55"
+                          );
+                snprintf(string2, APP_GRPX_STRING_MAX,
+                          "%1s",
+                          "1"
+                          );
+                break;
+            case APP_IPC_CPU_MCU2_M55:
+                snprintf(string1, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "M55"
+                          );
+                snprintf(string2, APP_GRPX_STRING_MAX,
+                          "%1s",
+                          "2"
+                          );
+                break;
+            case APP_IPC_CPU_MCU3_M55:
+                snprintf(string1, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "M55"
+                          );
+                snprintf(string2, APP_GRPX_STRING_MAX,
+                          "%1s",
+                          "3"
+                          );
+                break;
+            case APP_IPC_CPU_MCU4_M55:
+                snprintf(string1, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "M55"
+                          );
+                snprintf(string2, APP_GRPX_STRING_MAX,
+                          "%1s",
+                          "4"
+                          );
+                break;
+            case APP_IPC_CPU_RMCU0_0:
+                snprintf(string1, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "R52"
+                          );
+                snprintf(string2, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "0-0"
+                          );
+                break;
+            case APP_IPC_CPU_RMCU0_1:
+                snprintf(string1, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "R52"
+                          );
+                snprintf(string2, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "0-1"
+                          );
+                break;
+            case APP_IPC_CPU_RMCU1_0:
+                snprintf(string1, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "R52"
+                          );
+                snprintf(string2, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "1-0"
+                          );
+                break;
+            case APP_IPC_CPU_RMCU1_1:
+                snprintf(string1, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "R52"
+                          );
+                snprintf(string2, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "1-1"
+                          );
+                break;
+            case APP_IPC_CPU_RMCU2_0:
+                snprintf(string1, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "R52"
+                          );
+                snprintf(string2, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "2-0"
+                          );
+                break;
+            case APP_IPC_CPU_RMCU2_1:
+                snprintf(string1, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "R52"
+                          );
+                snprintf(string2, APP_GRPX_STRING_MAX,
+                          "%3s",
+                          "2-1"
+                          );
+                break;
+            #else
             #if !defined(SOC_AM62A)
             case APP_IPC_CPU_MCU2_0:
                 snprintf(string1, APP_GRPX_STRING_MAX,
@@ -293,6 +405,7 @@ int32_t appGrpxDrawCpuLoad(app_grpx_obj_t *obj,
                           "1-1"
                           );
                 break;
+            #endif
             #endif
             default:
                 snprintf(string1, APP_GRPX_STRING_MAX,

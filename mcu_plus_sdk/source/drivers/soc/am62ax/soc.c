@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2022-2023 Texas Instruments Incorporated
+ *  Copyright (C) 2022-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -51,6 +51,13 @@
 /* PSC (Power Sleep Controller) Domain enable */
 #define PSC_MODSTATE_ENABLE         (0x3U)
 
+static inline void SOC_executeWfi(void)
+{
+#if defined(__ARM_ARCH_7R__)
+    __asm__ __volatile__ ("wfi"   "\n\t": : : "memory");
+#endif
+}
+
 int32_t SOC_moduleClockEnable(uint32_t moduleId, uint32_t enable)
 {
     int32_t status = SystemP_SUCCESS;
@@ -70,7 +77,7 @@ int32_t SOC_moduleClockEnable(uint32_t moduleId, uint32_t enable)
                                         SystemP_WAIT_FOREVER);
     if(status == SystemP_SUCCESS)
     {
-        if(moduleState == TISCI_MSG_VALUE_DEVICE_HW_STATE_OFF && (enable == 1))
+        if((moduleState == TISCI_MSG_VALUE_DEVICE_HW_STATE_OFF) && (enable == 1))
         {
             /* enable the module */
             status = Sciclient_pmSetModuleState(moduleId,
@@ -85,14 +92,145 @@ int32_t SOC_moduleClockEnable(uint32_t moduleId, uint32_t enable)
                                                 SystemP_WAIT_FOREVER);
             }
         }
-        else
-        if(moduleState == TISCI_MSG_VALUE_DEVICE_HW_STATE_ON && (enable == 0))
+        else if((moduleState == TISCI_MSG_VALUE_DEVICE_HW_STATE_ON) && (enable == 0))
         {
             /* disable the module */
             status = Sciclient_pmSetModuleState(moduleId,
                                                 TISCI_MSG_VALUE_DEVICE_SW_STATE_AUTO_OFF,
                                                 (TISCI_MSG_FLAG_AOP),
                                                 SystemP_WAIT_FOREVER);
+        }
+        else
+        {
+            status = SystemP_SUCCESS;
+        }
+    }
+    return status;
+}
+
+int32_t SOC_moduleSetClockFrequencyWithParent(uint32_t moduleId, uint32_t clkId, uint32_t clkParent, uint64_t clkRate)
+{
+    int32_t status = SystemP_SUCCESS;
+    uint64_t respClkRate = 0;
+    uint32_t numParents = 0U;
+    uint32_t moduleClockParentChanged = 0U;
+    uint32_t clockStatus = 0U;
+    uint32_t origParent = 0U;
+    uint32_t foundParent = 0U;
+
+    /* Check if the clock is enabled or not */
+    status = Sciclient_pmModuleGetClkStatus(moduleId,
+                                            clkId,
+                                            &clockStatus,
+                                            SystemP_WAIT_FOREVER);
+    if (status == SystemP_SUCCESS)
+    {
+        /* Get the number of parents for the clock */
+        status = Sciclient_pmGetModuleClkNumParent(moduleId,
+                                                   clkId,
+                                                   &numParents,
+                                                   SystemP_WAIT_FOREVER);
+    }
+    if (status == SystemP_SUCCESS)
+    {
+        if(numParents > 1U)
+        {
+            /* save the original parent to restore later */
+            status = Sciclient_pmGetModuleClkParent(moduleId,
+                                                    clkId,
+                                                    &origParent,
+                                                    SystemP_WAIT_FOREVER);
+        }
+    }
+    if (status == SystemP_SUCCESS)
+    {
+        /* Disable the clock before changing the frequency */
+        status = Sciclient_pmModuleClkRequest(moduleId,
+                                              clkId,
+                                              TISCI_MSG_VALUE_CLOCK_SW_STATE_UNREQ,
+                                              0U,
+                                              SystemP_WAIT_FOREVER);
+    }
+    if (status == SystemP_SUCCESS)
+    {
+        /* Check if given parent is valid */
+        if (clkParent > (clkId + numParents))
+        {
+            status = SystemP_FAILURE;
+        }
+    }
+    if (status == SystemP_SUCCESS)
+    {
+        /* Check if a parent change is needed, if yes set to new parent */
+        if (clkParent != origParent)
+        {
+            status = Sciclient_pmSetModuleClkParent(moduleId,
+                                                        clkId,
+                                                        clkParent,
+                                                        SystemP_WAIT_FOREVER);
+            if (status == SystemP_SUCCESS)
+            {
+                moduleClockParentChanged = 1U;
+            }
+        }
+    }
+    if (status == SystemP_SUCCESS)
+    {
+        /* Check if the clock can be set to desired freq at this parent */
+        status = Sciclient_pmQueryModuleClkFreq(moduleId,
+                                                clkId,
+                                                clkRate,
+                                                &respClkRate,
+                                                SystemP_WAIT_FOREVER);
+    }
+    if (status == SystemP_SUCCESS)
+    {
+        if(respClkRate == clkRate)
+        {
+            /* yes, found a parent at which this frequency can be set */
+            foundParent = 1U;
+        }
+    }
+    if (status == SystemP_SUCCESS)
+    {
+        if(foundParent == 1U)
+        {
+            /* Set the clock at the desired frequency at the currently selected parent */
+            status = Sciclient_pmSetModuleClkFreq(moduleId,
+                                                  clkId,
+                                                  clkRate,
+                                                  TISCI_MSG_FLAG_CLOCK_ALLOW_FREQ_CHANGE,
+                                                  SystemP_WAIT_FOREVER);
+        }
+        else
+        {
+            /* no parent found to set the desired frequency */
+            status = SystemP_FAILURE;
+        }
+
+    }
+    if (status == SystemP_SUCCESS)
+    {
+        if (clockStatus == (uint32_t) TISCI_MSG_VALUE_CLOCK_HW_STATE_NOT_READY)
+        {
+            /* Restore the clock again to original state */
+            status = Sciclient_pmModuleClkRequest(moduleId,
+                                                  clkId,
+                                                  clockStatus,
+                                                  0U,
+                                                  SystemP_WAIT_FOREVER);
+        }
+    }
+    if (status != SystemP_SUCCESS)
+    {
+        if (moduleClockParentChanged == 1U)
+        {
+            /* No parent found or some error, restore the parent to original value */
+            Sciclient_pmSetModuleClkParent(moduleId,
+                                           clkId,
+                                           origParent,
+                                           SystemP_WAIT_FOREVER);
+            /* let the failure status be returned, so not checking status for this API call */
         }
     }
     return status;
@@ -179,7 +317,7 @@ int32_t SOC_moduleSetClockFrequency(uint32_t moduleId, uint32_t clkId, uint64_t 
                     foundParent = 1U;
                 }
             }
-            if(foundParent)
+            if(foundParent != 0U)
             {
                 break; /* found a parent to set clock frequency, rebak form the loop */
             }
@@ -205,7 +343,7 @@ int32_t SOC_moduleSetClockFrequency(uint32_t moduleId, uint32_t clkId, uint64_t 
     }
     if (status == SystemP_SUCCESS)
     {
-        if (clockStatus == TISCI_MSG_VALUE_CLOCK_SW_STATE_UNREQ)
+        if (clockStatus == TISCI_MSG_VALUE_CLOCK_HW_STATE_NOT_READY)
         {
             /* Restore the clock again to original state */
             status = Sciclient_pmModuleClkRequest(moduleId,
@@ -233,7 +371,7 @@ int32_t SOC_moduleSetClockFrequency(uint32_t moduleId, uint32_t clkId, uint64_t 
 
 const char *SOC_getCoreName(uint16_t coreId)
 {
-    static char *coreIdNames[CSL_CORE_ID_MAX+1] = {
+    static const char *coreIdNames[CSL_CORE_ID_MAX+1] = {
         "mcu-r5f0-0",
         "r5f0-0",
         "a530-0",
@@ -259,39 +397,45 @@ const char *SOC_getCoreName(uint16_t coreId)
 
 uint32_t SOC_getCoreId(const char * coreName)
 {
+    uint32_t coreId = CSL_CORE_ID_INVALID;
+
     if (strcmp("mcu-r5f0-0", coreName) == 0)
     {
-        return CSL_CORE_ID_MCU_R5FSS0_0;
+        coreId = CSL_CORE_ID_MCU_R5FSS0_0;
     }
     else if (strcmp("r5f0-0", coreName) == 0)
     {
-        return CSL_CORE_ID_R5FSS0_0;
+        coreId = CSL_CORE_ID_R5FSS0_0;
     }
     else if (strcmp("a530-0", coreName) == 0)
     {
-        return CSL_CORE_ID_A53SS0_0;
+        coreId = CSL_CORE_ID_A53SS0_0;
     }
     else if (strcmp("a530-1", coreName) == 0)
     {
-        return CSL_CORE_ID_A53SS0_1;
+        coreId = CSL_CORE_ID_A53SS0_1;
     }
     else if (strcmp("a531-0", coreName) == 0)
     {
-        return CSL_CORE_ID_A53SS1_0;
+        coreId = CSL_CORE_ID_A53SS1_0;
     }
     else if (strcmp("a531-1", coreName) == 0)
     {
-        return CSL_CORE_ID_A53SS1_1;
+        coreId = CSL_CORE_ID_A53SS1_1;
     }
     else if (strcmp("hsm-m4f0-0", coreName) == 0)
     {
-        return CSL_CORE_ID_HSM_M4FSS0_0;
+        coreId = CSL_CORE_ID_HSM_M4FSS0_0;
     }
     else if (strcmp("c75ss0", coreName) == 0)
     {
-        return CSL_CORE_ID_C75SS0_0;
+        coreId = CSL_CORE_ID_C75SS0_0;
     }
-    return CSL_CORE_ID_INVALID;
+    else
+    {
+        coreId = CSL_CORE_ID_INVALID;
+    }
+    return coreId;
 }
 
 uint64_t SOC_getSelfCpuClk(void)
@@ -315,16 +459,16 @@ void SOC_controlModuleLockMMR(uint32_t domainId, uint32_t partition)
     {
         /* in AM62Ax, main dowmin MMRs are left unlocked since when working with linux kernel, linux kernel assumes MMRs are unlocked */
         baseAddr = (uint32_t) AddrTranslateP_getLocalAddr(CSL_CTRL_MMR0_CFG0_BASE);
-        kickAddr = (volatile uint32_t *) (baseAddr + CSL_MAIN_CTRL_MMR_LOCKn_KICK0_OFFSET(partition));
+        kickAddr = (volatile uint32_t *) ((uint32_t)baseAddr + ((uint32_t)CSL_MAIN_CTRL_MMR_LOCKn_KICK0_OFFSET(partition)));
         CSL_REG32_WR(kickAddr, KICK_LOCK_VAL);      /* KICK 0 */
         kickAddr++;
         CSL_REG32_WR(kickAddr, KICK_LOCK_VAL);      /* KICK 1 */
     }
 
-    if(SOC_DOMAIN_ID_MCU == domainId || SOC_DOMAIN_ID_WKUP == domainId)
+    if((SOC_DOMAIN_ID_MCU == domainId) || (SOC_DOMAIN_ID_WKUP == domainId))
     {
         baseAddr = (uint32_t) AddrTranslateP_getLocalAddr(CSL_MCU_CTRL_MMR0_CFG0_BASE);
-        kickAddr = (volatile uint32_t *) (baseAddr + CSL_MCU_CTRL_MMR_LOCKn_KICK0_OFFSET(partition));
+        kickAddr = (volatile uint32_t *) ((uint32_t)baseAddr + ((uint32_t)CSL_MCU_CTRL_MMR_LOCKn_KICK0_OFFSET(partition)));
         CSL_REG32_WR(kickAddr, KICK_LOCK_VAL);      /* KICK 0 */
         kickAddr++;
         CSL_REG32_WR(kickAddr, KICK_LOCK_VAL);      /* KICK 1 */
@@ -333,7 +477,7 @@ void SOC_controlModuleLockMMR(uint32_t domainId, uint32_t partition)
     if(SOC_DOMAIN_ID_WKUP == domainId)
     {
         baseAddr = (uint32_t) AddrTranslateP_getLocalAddr(CSL_WKUP_CTRL_MMR0_CFG0_BASE);
-        kickAddr = (volatile uint32_t *) (baseAddr + CSL_MCU_CTRL_MMR_LOCKn_KICK0_OFFSET(partition));
+        kickAddr = (volatile uint32_t *) (baseAddr + (CSL_MCU_CTRL_MMR_LOCKn_KICK0_OFFSET(partition)));
         CSL_REG32_WR(kickAddr, KICK_LOCK_VAL);      /* KICK 0 */
         kickAddr++;
         CSL_REG32_WR(kickAddr, KICK_LOCK_VAL);      /* KICK 1 */
@@ -351,7 +495,7 @@ void SOC_controlModuleUnlockMMR(uint32_t domainId, uint32_t partition)
     if(SOC_DOMAIN_ID_MAIN == domainId)
     {
         baseAddr = (uint32_t) AddrTranslateP_getLocalAddr(CSL_CTRL_MMR0_CFG0_BASE);
-        kickAddr = (volatile uint32_t *) (baseAddr + CSL_MAIN_CTRL_MMR_LOCKn_KICK0_OFFSET(partition));
+        kickAddr = (volatile uint32_t *) ((uint32_t)baseAddr + ((uint32_t)CSL_MAIN_CTRL_MMR_LOCKn_KICK0_OFFSET(partition)));
         CSL_REG32_WR(kickAddr, KICK0_UNLOCK_VAL);   /* KICK 0 */
         kickAddr++;
         CSL_REG32_WR(kickAddr, KICK1_UNLOCK_VAL);   /* KICK 1 */
@@ -360,7 +504,7 @@ void SOC_controlModuleUnlockMMR(uint32_t domainId, uint32_t partition)
     if(SOC_DOMAIN_ID_MCU == domainId)
     {
         baseAddr = (uint32_t) AddrTranslateP_getLocalAddr(CSL_MCU_CTRL_MMR0_CFG0_BASE);
-        kickAddr = (volatile uint32_t *) (baseAddr + CSL_MCU_CTRL_MMR_LOCKn_KICK0_OFFSET(partition));
+        kickAddr = (volatile uint32_t *) ((uint32_t)baseAddr + ((uint32_t)CSL_MCU_CTRL_MMR_LOCKn_KICK0_OFFSET(partition)));
         CSL_REG32_WR(kickAddr, KICK0_UNLOCK_VAL);   /* KICK 0 */
         kickAddr++;
         CSL_REG32_WR(kickAddr, KICK1_UNLOCK_VAL);   /* KICK 1 */
@@ -369,7 +513,7 @@ void SOC_controlModuleUnlockMMR(uint32_t domainId, uint32_t partition)
     if(SOC_DOMAIN_ID_WKUP == domainId)
     {
         baseAddr = (uint32_t) AddrTranslateP_getLocalAddr(CSL_WKUP_CTRL_MMR0_CFG0_BASE);
-        kickAddr = (volatile uint32_t *) (baseAddr + CSL_MCU_CTRL_MMR_LOCKn_KICK0_OFFSET(partition));
+        kickAddr = (volatile uint32_t *) (baseAddr + (CSL_MCU_CTRL_MMR_LOCKn_KICK0_OFFSET(partition)));
         CSL_REG32_WR(kickAddr, KICK0_UNLOCK_VAL);   /* KICK 0 */
         kickAddr++;
         CSL_REG32_WR(kickAddr, KICK1_UNLOCK_VAL);   /* KICK 1 */
@@ -390,16 +534,16 @@ void SOC_setEpwmTbClk(uint32_t epwmInstance, uint32_t enable)
         if(TRUE == enable)
         {
             /* Enable Time base clock in CTRL MMR */
-            CSL_REG32_WR(CSL_CTRL_MMR0_CFG0_BASE + CSL_MAIN_CTRL_MMR_CFG0_EPWM_TB_CLKEN,
-                ((CSL_REG32_RD(CSL_CTRL_MMR0_CFG0_BASE +
-                  CSL_MAIN_CTRL_MMR_CFG0_EPWM_TB_CLKEN) & 0x1FF) | (1 << epwmInstance)));
+            CSL_REG32_WR((volatile uint32_t *)(CSL_CTRL_MMR0_CFG0_BASE + CSL_MAIN_CTRL_MMR_CFG0_EPWM_TB_CLKEN),
+                ((CSL_REG32_RD((volatile uint32_t *)(CSL_CTRL_MMR0_CFG0_BASE +
+                  CSL_MAIN_CTRL_MMR_CFG0_EPWM_TB_CLKEN)) & (uint32_t)0x1FFU) | ((uint32_t)1U << epwmInstance)));
         }
         else
         {
             /* Disable Time base clock in CTRL MMR */
-            CSL_REG32_WR(CSL_CTRL_MMR0_CFG0_BASE + CSL_MAIN_CTRL_MMR_CFG0_EPWM_TB_CLKEN,
-                ((CSL_REG32_RD(CSL_CTRL_MMR0_CFG0_BASE +
-                  CSL_MAIN_CTRL_MMR_CFG0_EPWM_TB_CLKEN) & 0x1FF) & ~(1 << epwmInstance)));
+            CSL_REG32_WR((volatile uint32_t *)(CSL_CTRL_MMR0_CFG0_BASE + CSL_MAIN_CTRL_MMR_CFG0_EPWM_TB_CLKEN),
+                ((CSL_REG32_RD((volatile uint32_t *)(CSL_CTRL_MMR0_CFG0_BASE +
+                  CSL_MAIN_CTRL_MMR_CFG0_EPWM_TB_CLKEN)) & (uint32_t)0x1FFU) & ~((uint32_t)1U << epwmInstance)));
         }
 
         /* CTRL_MMR0 registers are not locked again */
@@ -485,9 +629,7 @@ void SOC_generateSwWarmResetMainDomain(void)
     SOC_controlModuleLockMMR(SOC_DOMAIN_ID_MAIN, rstPartition);
 
     /* execute wfi */
-#if defined(__ARM_ARCH_7R__)
-    __asm__ __volatile__ ("wfi"   "\n\t": : : "memory");
-#endif
+    SOC_executeWfi();
 }
 
 void SOC_generateSwPORResetMainDomain(void)
@@ -507,9 +649,7 @@ void SOC_generateSwPORResetMainDomain(void)
     SOC_controlModuleLockMMR(SOC_DOMAIN_ID_MAIN, rstPartition);
 
     /* execute wfi */
-#if defined(__ARM_ARCH_7R__)
-    __asm__ __volatile__ ("wfi"   "\n\t": : : "memory");
-#endif
+    SOC_executeWfi();
 }
 
 uint32_t SOC_getWarmResetCauseMainDomain(void)
@@ -701,7 +841,7 @@ int32_t SOC_setPSCState(uint32_t instNum, uint32_t domainNum, uint32_t moduleNum
         {
             if (pscState == PSC_MODSTATE_ENABLE)
             {
-                CSL_FINS( pscRegs->PDCTL[domainNum], PSC_PDCTL_NEXT, 1);
+                CSL_FINS( pscRegs->PDCTL[domainNum], PSC_PDCTL_NEXT, 1U);
             }
 
             /* Enable the clock for the module */
@@ -710,13 +850,12 @@ int32_t SOC_setPSCState(uint32_t instNum, uint32_t domainNum, uint32_t moduleNum
             /* Start the state transition */
             uint32_t pwrDmnGrp = domainNum >> 5U;
             uint32_t pwrDmnNumInGrp = domainNum & 0x1FU;
-            CSL_REG32_WR (baseAddr + CSL_PSC_PTCMD(pwrDmnGrp), 1 << pwrDmnNumInGrp);
-
+            CSL_REG32_WR (((uint32_t)baseAddr + CSL_PSC_PTCMD(pwrDmnGrp)), ((uint32_t)1U << pwrDmnNumInGrp));
             do {
                 pdTransStatus = CSL_FEXTR( baseAddr + CSL_PSC_PTSTAT(pwrDmnGrp), \
                                 pwrDmnNumInGrp, pwrDmnNumInGrp );
                 loopCnt++;
-            } while (pdTransStatus && (loopCnt < PSC_TIMEOUT));
+            } while ((pdTransStatus != 0U) && (loopCnt < PSC_TIMEOUT));
 
             if (pdTransStatus == 0)
             {
@@ -819,6 +958,11 @@ void SOC_setMCUResetIsolationDone(uint32_t value)
         CSL_REG32_FINS (baseAddr + CSL_MCU_CTRL_MMR_CFG0_RST_CTRL, \
             MCU_CTRL_MMR_CFG0_RST_CTRL_MCU_RESET_ISO_DONE_Z, 0);
     }
+    else
+    {
+        /* Intentionally add to resolve static failure */
+        (void)0;
+    }
 
     SOC_controlModuleLockMMR(SOC_DOMAIN_ID_MCU, 6);
 }
@@ -831,10 +975,79 @@ void SOC_waitMainDomainReset(void)
     baseAddr = (uint32_t) AddrTranslateP_getLocalAddr(CSL_MCU_CTRL_MMR0_CFG0_BASE);
 
     while (CSL_REG32_FEXT (baseAddr + CSL_MCU_CTRL_MMR_CFG0_RST_STAT, \
-                MCU_CTRL_MMR_CFG0_RST_STAT_MAIN_RESETSTATZ) != 0);
+                MCU_CTRL_MMR_CFG0_RST_STAT_MAIN_RESETSTATZ) != 0)
+    {
+
+    }
 
     while (CSL_REG32_FEXT (baseAddr + CSL_MCU_CTRL_MMR_CFG0_RST_STAT, \
-                MCU_CTRL_MMR_CFG0_RST_STAT_MAIN_RESETSTATZ) != 1);
+                MCU_CTRL_MMR_CFG0_RST_STAT_MAIN_RESETSTATZ) != 1)
+    {
+
+    }
 
     SOC_controlModuleLockMMR(SOC_DOMAIN_ID_MCU, 6);
+}
+
+void SOC_setFSSCtrlFlashBootSize(void)
+{
+    uint32_t baseAddr;
+
+    SOC_controlModuleUnlockMMR(SOC_DOMAIN_ID_MAIN, 1U);
+
+    baseAddr = (uint32_t) AddrTranslateP_getLocalAddr(CSL_CTRL_MMR0_CFG0_BASE);
+
+    /* Selects the size of the boot block to be used for the OSPI flash
+     * interface. Default value is 1'b0 - S0_BOOT_SIZE_64MB for the MMR
+     * register. Set 1'b1 - S0_BOOT_SIZE_128MB to update the value.
+     */
+    if(CSL_REG32_FEXT(baseAddr + CSL_MAIN_CTRL_MMR_CFG0_FSS_CTRL, \
+                      MAIN_CTRL_MMR_CFG0_FSS_CTRL_S0_BOOT_SIZE) != 1U)
+    {
+        CSL_REG32_FINS(baseAddr + CSL_MAIN_CTRL_MMR_CFG0_FSS_CTRL, \
+                       MAIN_CTRL_MMR_CFG0_FSS_CTRL_S0_BOOT_SIZE, 1U);
+    }
+
+    SOC_controlModuleLockMMR(SOC_DOMAIN_ID_MAIN, 1U);
+}
+
+uint64_t Soc_getPhyAddr(uint64_t virtAddr)
+{
+    return virtAddr;
+}
+
+/* Fast mode drive strength fix
+ * Cause: Some devices have all drive strengths hardcoded to the nominal value
+ * Solution: Update the drive strength registers on boot to the right values for fast drive strength
+ * Note: Only fast mode is supported and fixed
+ */
+void SOC_fixFastDriveStrength(void){
+    uint32_t base, val, reg;
+
+    SOC_controlModuleUnlockMMR(SOC_DOMAIN_ID_MCU, 1);
+    base = (uint32_t) AddrTranslateP_getLocalAddr(CSL_MCU_CTRL_MMR0_CFG0_BASE);
+
+    /* H Drive strength: add 2 to default value (cap at max) */
+    val = (CSL_REG32_RD(base + SOC_H_IO_DRVSTRNGTH0) & SOC_IO_DRVSTRNGTH_MASK);
+    val += 2U;
+    if (val > SOC_IO_DRVSTRNGTH_MAX)
+    {
+        val = SOC_IO_DRVSTRNGTH_MAX;
+    }
+
+    reg = CSL_REG32_RD(base + SOC_H_IO_DRVSTRNGTH1);
+    CSL_REG32_WR(base + SOC_H_IO_DRVSTRNGTH1, (reg & ~SOC_IO_DRVSTRNGTH_MASK) | val);
+
+    /* V Drive strength: add 2 to default value (cap at max) */
+    val = (CSL_REG32_RD(base + SOC_V_IO_DRVSTRNGTH0) & SOC_IO_DRVSTRNGTH_MASK);
+    val += 2U;
+    if (val > SOC_IO_DRVSTRNGTH_MAX)
+    {
+        val = SOC_IO_DRVSTRNGTH_MAX;
+    }
+
+    reg = CSL_REG32_RD(base + SOC_V_IO_DRVSTRNGTH1);
+    CSL_REG32_WR(base + SOC_V_IO_DRVSTRNGTH1, (reg & ~SOC_IO_DRVSTRNGTH_MASK) | val);
+
+    SOC_controlModuleLockMMR(SOC_DOMAIN_ID_MCU, 1);
 }

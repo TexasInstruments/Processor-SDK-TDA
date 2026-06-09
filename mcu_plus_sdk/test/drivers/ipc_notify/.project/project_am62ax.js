@@ -45,6 +45,7 @@ const libdirs_freertos_dm_r5f = {
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/rm_pm_hal/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciclient_direct/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/self_reset/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib",
     ],
 };
 
@@ -98,6 +99,7 @@ const libs_freertos_dm_r5f = {
         "sciserver.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
         "self_reset.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
         "rm_pm_hal.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
     ],
 };
 
@@ -192,11 +194,16 @@ const templates_freertos_c75 =
         output: "../main.c",
         options: {
             entryFunction: "test_main",
-            stackSize: 64*1024,
+            stackSize: 16*1024,
         },
     }
 ];
 
+const defines_dm_r5f = {
+    common:[
+        "ENABLE_SCICLIENT_DIRECT",
+    ]
+}
 
 const buildOptionCombos = [
     { device: device, cpu: "r5fss0-0",     cgt: "ti-arm-clang", board: "am62ax-sk", os: "freertos", isPartOfSystemProject: true},
@@ -231,6 +238,7 @@ function getComponentProperty() {
     property.isLinuxInSystem = true;
     property.buildOptionCombos = buildOptionCombos;
     property.isLogSHM = true;
+    property.isLDRAEnable = false;
 
     return property;
 }
@@ -257,6 +265,7 @@ function getComponentBuildProperty(buildOption) {
         build_property.libdirs = libdirs_freertos_dm_r5f;
         build_property.libs = libs_freertos_dm_r5f;
         build_property.templates = templates_freertos_dm_r5f;
+        build_property.defines = defines_dm_r5f;
     }
     else if(buildOption.cpu.match(/a53*/)) {
         build_property.libs = libs_nortos_a53;

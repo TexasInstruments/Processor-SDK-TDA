@@ -436,7 +436,7 @@ typedef struct
  *                          #Vhwa_M2mNfInitPrms. This parameter should not be 0.
  *  \return                 Returns 0 on success else returns error value
  */
-int32_t Vhwa_m2mNfInit(Vhwa_M2mNfInitPrms *nfInitPrms);
+int32_t Vhwa_m2mNfInit(Vhwa_M2mNfInitPrms *initPrms);
 
 /**
  *  \brief DeInitializes NF Init Parameters
@@ -452,7 +452,7 @@ void Vhwa_m2mNfDeInit(void);
  *
  *  \return FVID2_SOK if successful, else suitable error code
  */
-int32_t Vhwa_m2mNfAllocSl2(const Vhwa_M2mNfSl2AllocPrms *sl2allocPrms);
+int32_t Vhwa_m2mNfAllocSl2(const Vhwa_M2mNfSl2AllocPrms *sl2AllocPrms);
 
 /**
  *  \brief Function to free allocated SL2.
@@ -480,7 +480,7 @@ int32_t Vhwa_m2mNfGetSl2Info(Vhwa_M2mNfSl2Info *sl2Info);
  *  \param ldcCfg   Pointer to structure of type Vhwa_M2mNfInitPrms
  *  \return         None
  */
-static inline void Vhwa_m2mNfInitPrmsInit(Vhwa_M2mNfInitPrms *ldcCfg);
+static inline void Vhwa_m2mNfInitPrmsInit(Vhwa_M2mNfInitPrms *initPrms);
 
 /**
  *  \brief This function should be used to initialize variable of type

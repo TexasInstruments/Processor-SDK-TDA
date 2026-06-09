@@ -493,7 +493,7 @@ static inline void Vhwa_m2mDofCreateArgsInit(Vhwa_M2mDofCreateArgs *createArgs);
  *
  *  \return FVID2_SOK if successful, else suitable error code
  */
-int32_t Vhwa_m2mDofInit(Vhwa_M2mDofInitParams *pInitPrms);
+int32_t Vhwa_m2mDofInit(Vhwa_M2mDofInitParams *initPrms);
 
 /**
  *  \brief DOF de-initialization function.
@@ -514,7 +514,7 @@ void Vhwa_m2mDofDeInit(void);
  *
  *  \return FVID2_SOK if successful, else suitable error code
  */
-int32_t Vhwa_m2mDofAllocSl2(const Vhwa_M2mDofSl2AllocPrms *sl2allocPrms);
+int32_t Vhwa_m2mDofAllocSl2(const Vhwa_M2mDofSl2AllocPrms *sl2AllocPrms);
 
 /**
  *  \brief Function to free allocated SL2.

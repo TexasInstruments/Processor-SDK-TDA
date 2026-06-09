@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Texas Instruments Incorporated
+ * Copyright (c) 2018-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -83,9 +83,9 @@ int32_t Sciclient_pmSetModuleState(uint32_t moduleId,
     int32_t retVal = SystemP_SUCCESS;
 
     struct tisci_msg_set_device_req request;
-    Sciclient_ReqPrm_t reqParam;
+    Sciclient_ReqPrm_t reqParam = {0};
 
-    Sciclient_RespPrm_t respParam;
+    Sciclient_RespPrm_t respParam = {0};
 
     request.id       = (uint32_t) moduleId;
     request.reserved = (uint32_t) 0;
@@ -98,19 +98,11 @@ int32_t Sciclient_pmSetModuleState(uint32_t moduleId,
     reqParam.timeout        = (uint32_t) timeout;
 
     respParam.flags           = (uint32_t) 0;   /* Populated by the API */
-    respParam.pRespPayload    = (uint8_t *) 0;
+    respParam.pRespPayload    = (uint8_t *) NULL;
     respParam.respPayloadSize = (uint32_t) 0;
 
 
-    if (((reqFlag & TISCI_MSG_FLAG_AOP) != TISCI_MSG_FLAG_AOP)&&
-        (reqFlag != 0U))
-    {
-        retVal = SystemP_FAILURE;
-    }
-    if(retVal == SystemP_SUCCESS)
-    {
-        retVal = Sciclient_service(&reqParam, &respParam);
-    }
+    retVal = Sciclient_service(&reqParam, &respParam);
     if((retVal != SystemP_SUCCESS) ||
         ((reqFlag != 0U) &&
         ((respParam.flags & TISCI_MSG_FLAG_ACK) != TISCI_MSG_FLAG_ACK)))
@@ -128,11 +120,11 @@ int32_t Sciclient_pmGetModuleState(uint32_t  moduleId,
 {
     int32_t retVal = SystemP_SUCCESS;
 
-    struct tisci_msg_get_device_req request;
-    struct tisci_msg_get_device_resp response = {{0}};
-    Sciclient_ReqPrm_t reqParam;
+    struct tisci_msg_get_device_req request = {0};
+    struct tisci_msg_get_device_resp response = {0};
+    Sciclient_ReqPrm_t reqParam = {0};
 
-    Sciclient_RespPrm_t respParam;
+    Sciclient_RespPrm_t respParam = {0};
 
     request.id = (uint32_t) moduleId;
 
@@ -166,26 +158,59 @@ int32_t Sciclient_pmSetModuleRst(uint32_t moduleId,
                                  uint32_t timeout)
 {
     int32_t retVal = SystemP_SUCCESS;
-    struct tisci_msg_set_device_resets_req request;
+    struct tisci_msg_set_device_resets_req request = {0};
     request.id     = (uint32_t) moduleId;
     request.resets = (uint32_t) resetBit;
 
-    Sciclient_ReqPrm_t reqParam;
+    Sciclient_ReqPrm_t reqParam = {0};
     reqParam.messageType    = (uint16_t) TISCI_MSG_SET_DEVICE_RESETS;
     reqParam.flags          = (uint32_t) TISCI_MSG_FLAG_AOP;
     reqParam.pReqPayload    = (const uint8_t *) &request;
     reqParam.reqPayloadSize = (uint32_t) sizeof (request);
     reqParam.timeout        = (uint32_t) timeout;
 
-    Sciclient_RespPrm_t respParam;
+    Sciclient_RespPrm_t respParam = {0};
     respParam.flags           = (uint32_t) 0;   /* Populated by the API */
-    respParam.pRespPayload    = (uint8_t *) 0;
+    respParam.pRespPayload    = (uint8_t *) NULL;
     respParam.respPayloadSize = (uint32_t) 0;
 
     retVal = Sciclient_service(&reqParam, &respParam);
 
     if((retVal != SystemP_SUCCESS) ||
         ((respParam.flags & TISCI_MSG_FLAG_ACK) != TISCI_MSG_FLAG_ACK))
+    {
+        retVal = SystemP_FAILURE;
+    }
+    return retVal;
+}
+
+int32_t Sciclient_pmSetModuleRst_flags(uint32_t moduleId,
+                                 uint32_t resetBit,
+                                 uint32_t reqFlag,
+                                 uint32_t timeout)
+{
+    int32_t retVal = SystemP_SUCCESS;
+    struct tisci_msg_set_device_resets_req request;
+    request.id     = (uint32_t) moduleId;
+    request.resets = (uint32_t) resetBit;
+
+    Sciclient_ReqPrm_t reqParam = {0};
+    reqParam.messageType    = (uint16_t) TISCI_MSG_SET_DEVICE_RESETS;
+    reqParam.flags          = (uint32_t) reqFlag;
+    reqParam.pReqPayload    = (const uint8_t *) &request;
+    reqParam.reqPayloadSize = (uint32_t) sizeof (request);
+    reqParam.timeout        = (uint32_t) timeout;
+
+    Sciclient_RespPrm_t respParam = {0};
+    respParam.flags           = (uint32_t) 0;   /* Populated by the API */
+    respParam.pRespPayload    = (uint8_t *) NULL;
+    respParam.respPayloadSize = (uint32_t) 0;
+
+    retVal = Sciclient_service(&reqParam, &respParam);
+
+    if((retVal != SystemP_SUCCESS) ||
+        ((reqFlag != 0U) &&
+        ((respParam.flags & TISCI_MSG_FLAG_ACK) != TISCI_MSG_FLAG_ACK)))
     {
         retVal = SystemP_FAILURE;
     }
@@ -199,7 +224,7 @@ int32_t Sciclient_pmModuleClkRequest(uint32_t moduleId,
                                      uint32_t timeout)
 {
     int32_t retVal = SystemP_SUCCESS;
-    struct tisci_msg_set_clock_req request ;
+    struct tisci_msg_set_clock_req request = {0};
     request.device = (uint32_t) moduleId;
 
     if(clockId > (uint32_t)(255U))
@@ -213,16 +238,16 @@ int32_t Sciclient_pmModuleClkRequest(uint32_t moduleId,
     }
     request.state  = (uint8_t) state;
 
-    Sciclient_ReqPrm_t reqParam ;
+    Sciclient_ReqPrm_t reqParam = {0};
     reqParam.messageType    = (uint16_t) TISCI_MSG_SET_CLOCK;
     reqParam.flags          = (uint32_t) TISCI_MSG_FLAG_AOP | additionalFlag;
     reqParam.pReqPayload    = (const uint8_t *) &request;
     reqParam.reqPayloadSize = (uint32_t) sizeof (request);
     reqParam.timeout        = (uint32_t) timeout;
 
-    Sciclient_RespPrm_t respParam ;
+    Sciclient_RespPrm_t respParam = {0};
     respParam.flags           = (uint32_t) 0;   /* Populated by the API */
-    respParam.pRespPayload    = (uint8_t *) 0;
+    respParam.pRespPayload    = (uint8_t *) NULL;
     respParam.respPayloadSize = (uint32_t) 0;
 
     retVal = Sciclient_service(&reqParam, &respParam);
@@ -241,7 +266,7 @@ int32_t Sciclient_pmModuleGetClkStatus(uint32_t  moduleId,
 {
     int32_t retVal = SystemP_SUCCESS;
 
-    struct tisci_msg_get_clock_req request ;
+    struct tisci_msg_get_clock_req request = {0};
     request.device = (uint32_t) moduleId;
 
     /* If clockId is larger than 8-bit max, we use clk32 to specify the
@@ -256,15 +281,15 @@ int32_t Sciclient_pmModuleGetClkStatus(uint32_t  moduleId,
         request.clk    = (uint8_t) clockId;
     }
 
-    struct tisci_msg_get_clock_resp response = {{0}};
-    Sciclient_ReqPrm_t reqParam ;
+    struct tisci_msg_get_clock_resp response = {0};
+    Sciclient_ReqPrm_t reqParam = {0};
     reqParam.messageType    = (uint16_t) TISCI_MSG_GET_CLOCK;
     reqParam.flags          = (uint32_t) TISCI_MSG_FLAG_AOP;
     reqParam.pReqPayload    = (const uint8_t *) &request;
     reqParam.reqPayloadSize = (uint32_t) sizeof (request);
     reqParam.timeout        = (uint32_t) timeout;
 
-    Sciclient_RespPrm_t respParam ;
+    Sciclient_RespPrm_t respParam = {0};
     respParam.flags           = (uint32_t) 0;   /* Populated by the API */
     respParam.pRespPayload    = (uint8_t *) &response;
     respParam.respPayloadSize = (uint32_t) sizeof (response);
@@ -289,7 +314,7 @@ int32_t Sciclient_pmSetModuleClkParent(uint32_t moduleId,
 {
     int32_t retVal = SystemP_SUCCESS;
 
-    struct tisci_msg_set_clock_parent_req request ;
+    struct tisci_msg_set_clock_parent_req request = {0};
     request.device = (uint32_t) moduleId;
 
     /* If clockId is larger than 8-bit max, we use clk32 to specify the
@@ -316,16 +341,16 @@ int32_t Sciclient_pmSetModuleClkParent(uint32_t moduleId,
         request.parent = (uint8_t) parent;
     }
 
-    Sciclient_ReqPrm_t reqParam ;
+    Sciclient_ReqPrm_t reqParam = {0};
     reqParam.messageType    = (uint16_t) TISCI_MSG_SET_CLOCK_PARENT;
     reqParam.flags          = (uint32_t) TISCI_MSG_FLAG_AOP;
     reqParam.pReqPayload    = (const uint8_t *) &request;
     reqParam.reqPayloadSize = (uint32_t) sizeof (request);
     reqParam.timeout        = (uint32_t) timeout;
 
-    Sciclient_RespPrm_t respParam ;
+    Sciclient_RespPrm_t respParam = {0};
     respParam.flags           = (uint32_t) 0;   /* Populated by the API */
-    respParam.pRespPayload    = (uint8_t *) 0;
+    respParam.pRespPayload    = (uint8_t *) NULL;
     respParam.respPayloadSize = (uint32_t) 0;
 
 
@@ -345,7 +370,7 @@ int32_t Sciclient_pmGetModuleClkParent(uint32_t  moduleId,
 {
     int32_t retVal = SystemP_SUCCESS;
 
-    struct tisci_msg_get_clock_parent_req request;
+    struct tisci_msg_get_clock_parent_req request = {0};
     request.device = (uint32_t) moduleId;
 
     /* If clockId is larger than 8-bit max, we use clk32 to specify the
@@ -360,15 +385,15 @@ int32_t Sciclient_pmGetModuleClkParent(uint32_t  moduleId,
         request.clk    = (uint8_t) clockId;
     }
 
-    struct tisci_msg_get_clock_parent_resp response = {{0}};
-    Sciclient_ReqPrm_t reqParam;
+    struct tisci_msg_get_clock_parent_resp response = {0};
+    Sciclient_ReqPrm_t reqParam = {0};
     reqParam.messageType    = (uint16_t) TISCI_MSG_GET_CLOCK_PARENT;
     reqParam.flags          = (uint32_t) TISCI_MSG_FLAG_AOP;
     reqParam.pReqPayload    = (const uint8_t *) &request;
     reqParam.reqPayloadSize = (uint32_t) sizeof (request);
     reqParam.timeout        = (uint32_t) timeout;
 
-    Sciclient_RespPrm_t respParam;
+    Sciclient_RespPrm_t respParam = {0};
     respParam.flags           = (uint32_t) 0;   /* Populated by the API */
     respParam.pRespPayload    = (uint8_t *) &response;
     respParam.respPayloadSize = (uint32_t) sizeof (response);
@@ -394,7 +419,7 @@ int32_t Sciclient_pmGetModuleClkNumParent(uint32_t  moduleId,
 {
     int32_t retVal = SystemP_SUCCESS;
 
-    struct tisci_msg_get_num_clock_parents_req request = {{0}};
+    struct tisci_msg_get_num_clock_parents_req request = {0};
     request.device = (uint32_t) moduleId;
 
     /* If clockId is larger than 8-bit max, we use clk32 to specify the
@@ -409,15 +434,15 @@ int32_t Sciclient_pmGetModuleClkNumParent(uint32_t  moduleId,
         request.clk    = (uint8_t) clockId;
     }
 
-    struct tisci_msg_get_num_clock_parents_resp response = {{0}};
-    Sciclient_ReqPrm_t reqParam ;
+    struct tisci_msg_get_num_clock_parents_resp response = {0};
+    Sciclient_ReqPrm_t reqParam = {0};
     reqParam.messageType    = (uint16_t) TISCI_MSG_GET_NUM_CLOCK_PARENTS;
     reqParam.flags          = (uint32_t) TISCI_MSG_FLAG_AOP;
     reqParam.pReqPayload    = (const uint8_t *) &request;
     reqParam.reqPayloadSize = (uint32_t) sizeof (request);
     reqParam.timeout        = (uint32_t) timeout;
 
-    Sciclient_RespPrm_t respParam ;
+    Sciclient_RespPrm_t respParam = {0};
     respParam.flags           = (uint32_t) 0;   /* Populated by the API */
     respParam.pRespPayload    = (uint8_t *) &response;
     respParam.respPayloadSize = (uint32_t) sizeof (response);
@@ -443,7 +468,7 @@ int32_t Sciclient_pmSetModuleClkFreq(uint32_t moduleId,
 {
     int32_t retVal = SystemP_SUCCESS;
 
-    struct tisci_msg_set_freq_req request ;
+    struct tisci_msg_set_freq_req request = {0};
     request.device         = (uint32_t) moduleId;
     request.min_freq_hz    = (uint64_t) freqHz;
     request.target_freq_hz = (uint64_t) freqHz;
@@ -467,16 +492,16 @@ int32_t Sciclient_pmSetModuleClkFreq(uint32_t moduleId,
         request.clk    = (uint8_t) clockId;
     }
 
-    Sciclient_ReqPrm_t reqParam ;
+    Sciclient_ReqPrm_t reqParam = {0};
     reqParam.messageType    = (uint16_t) TISCI_MSG_SET_FREQ;
     reqParam.flags          = (uint32_t)(TISCI_MSG_FLAG_AOP | additionalFlag);
     reqParam.pReqPayload    = (const uint8_t *) &request;
     reqParam.reqPayloadSize = (uint32_t) sizeof (request);
     reqParam.timeout        = (uint32_t) timeout;
 
-    Sciclient_RespPrm_t respParam ;
+    Sciclient_RespPrm_t respParam = {0};
     respParam.flags           = (uint32_t) 0;   /* Populated by the API */
-    respParam.pRespPayload    = (uint8_t *) 0;
+    respParam.pRespPayload    = (uint8_t *) NULL;
     respParam.respPayloadSize = (uint32_t) 0;
 
     retVal = Sciclient_service(&reqParam, &respParam);
@@ -496,13 +521,17 @@ int32_t Sciclient_pmQueryModuleClkFreq(uint32_t moduleId,
 {
     int32_t retVal = SystemP_SUCCESS;
 
-    struct tisci_msg_query_freq_req request ;
+    struct tisci_msg_query_freq_req request = {0};
     request.device         = (uint32_t) moduleId;
     request.min_freq_hz    = (uint64_t) reqFreqHz;
     request.target_freq_hz = (uint64_t) reqFreqHz;
     request.max_freq_hz    = (uint64_t) reqFreqHz;
-    request.min_freq_hz = (uint64_t)(reqFreqHz-(reqFreqHz%10U));
-    request.max_freq_hz = (uint64_t)(request.min_freq_hz + 10UL);
+    /* This is required in cases of fractional clocks with a recurring decimal */
+    if((reqFreqHz%10U) != 0U)
+    {
+        request.min_freq_hz = (uint64_t)(reqFreqHz-(reqFreqHz%10U));
+        request.max_freq_hz = (uint64_t)(request.min_freq_hz + 10UL);
+    }
 
     /* If clockId is larger than 8-bit max, we use clk32 to specify the
      * extended clock id for the device */
@@ -516,15 +545,15 @@ int32_t Sciclient_pmQueryModuleClkFreq(uint32_t moduleId,
         request.clk    = (uint8_t) clockId;
     }
 
-    struct tisci_msg_query_freq_resp response = {{0}};
-    Sciclient_ReqPrm_t reqParam ;
+    struct tisci_msg_query_freq_resp response = {0};
+    Sciclient_ReqPrm_t reqParam = {0};
     reqParam.messageType    = (uint16_t) TISCI_MSG_QUERY_FREQ;
     reqParam.flags          = (uint32_t) TISCI_MSG_FLAG_AOP;
     reqParam.pReqPayload    = (const uint8_t *) &request;
     reqParam.reqPayloadSize = (uint32_t) sizeof (request);
     reqParam.timeout        = (uint32_t) timeout;
 
-    Sciclient_RespPrm_t respParam ;
+    Sciclient_RespPrm_t respParam = {0};
     respParam.flags           = (uint32_t) 0;   /* Populated by the API */
     respParam.pRespPayload    = (uint8_t *) &response;
     respParam.respPayloadSize = (uint32_t) sizeof (response);
@@ -550,7 +579,7 @@ int32_t Sciclient_pmGetModuleClkFreq(uint32_t  moduleId,
 {
     int32_t retVal = SystemP_SUCCESS;
 
-    struct tisci_msg_get_freq_req request ;
+    struct tisci_msg_get_freq_req request = {0};
     request.device = (uint32_t) moduleId;
 
     /* If clockId is larger than 8-bit max, we use clk32 to specify the
@@ -565,15 +594,15 @@ int32_t Sciclient_pmGetModuleClkFreq(uint32_t  moduleId,
         request.clk    = (uint8_t) clockId;
     }
 
-    struct tisci_msg_get_freq_resp response = {{0}};
-    Sciclient_ReqPrm_t reqParam ;
+    struct tisci_msg_get_freq_resp response = {0};
+    Sciclient_ReqPrm_t reqParam = {0};
     reqParam.messageType    = (uint16_t) TISCI_MSG_GET_FREQ;
     reqParam.flags          = (uint32_t) TISCI_MSG_FLAG_AOP;
     reqParam.pReqPayload    = (const uint8_t *) &request;
     reqParam.reqPayloadSize = (uint32_t) sizeof (request);
     reqParam.timeout        = (uint32_t) timeout;
 
-    Sciclient_RespPrm_t respParam ;
+    Sciclient_RespPrm_t respParam = {0};
     respParam.flags           = (uint32_t) 0;   /* Populated by the API */
     respParam.pRespPayload    = (uint8_t *) &response;
     respParam.respPayloadSize = (uint32_t) sizeof (response);
@@ -591,22 +620,36 @@ int32_t Sciclient_pmGetModuleClkFreq(uint32_t  moduleId,
     return retVal;
 }
 
-int32_t Sciclient_pmEnableWdt(uint32_t timeout)
+int32_t Sciclient_pmSetModuleClkSSC(uint32_t moduleId,
+                                   uint32_t clockId,
+                                   uint32_t modFreqHz,
+                                   uint32_t modDepth,
+                                   uint8_t spreadType,
+                                   uint8_t enable,
+                                   uint32_t additionalFlag,
+                                   uint32_t timeout)
 {
     int32_t retVal = SystemP_SUCCESS;
-    Sciclient_ReqPrm_t reqParam ;
-    struct tisci_msg_enable_wdt_req request = {0};
-    struct tisci_msg_enable_wdt_resp response = {0};
-    reqParam.messageType    = (uint16_t) TISCI_MSG_ENABLE_WDT;
-    reqParam.flags          = (uint32_t) TISCI_MSG_FLAG_AOP;
+
+    struct tisci_msg_set_clock_ssc_req request = {0};
+    request.device      = (uint32_t) moduleId;
+    request.clk         = (uint32_t) clockId;
+    request.modfreq_hz  = (uint32_t) modFreqHz;
+    request.mod_depth   = (uint32_t) modDepth;
+    request.spread_type = (uint8_t)  spreadType;
+    request.enable      = (uint8_t)  enable;
+
+    Sciclient_ReqPrm_t reqParam = {0};
+    reqParam.messageType    = (uint16_t) TISCI_MSG_SET_CLOCK_SSC;
+    reqParam.flags          = (uint32_t)(TISCI_MSG_FLAG_AOP | additionalFlag);
     reqParam.pReqPayload    = (const uint8_t *) &request;
-    reqParam.reqPayloadSize = (uint32_t) sizeof(request);
+    reqParam.reqPayloadSize = (uint32_t) sizeof (request);
     reqParam.timeout        = (uint32_t) timeout;
 
-    Sciclient_RespPrm_t respParam ;
+    Sciclient_RespPrm_t respParam = {0};
     respParam.flags           = (uint32_t) 0;   /* Populated by the API */
-    respParam.pRespPayload    = (uint8_t *) &response;
-    respParam.respPayloadSize = (uint32_t) sizeof(response);
+    respParam.pRespPayload    = (uint8_t *) NULL;
+    respParam.respPayloadSize = (uint32_t) 0;
 
     retVal = Sciclient_service(&reqParam, &respParam);
     if((retVal != SystemP_SUCCESS) ||
@@ -614,53 +657,33 @@ int32_t Sciclient_pmEnableWdt(uint32_t timeout)
     {
         retVal = SystemP_FAILURE;
     }
+
     return retVal;
 }
 
-int32_t Sciclient_pmDisableWakeup(uint32_t timeout)
+int32_t Sciclient_pmGetModuleClkSSC(uint32_t  moduleId,
+                                   uint32_t  clockId,
+                                   uint32_t *modFreqHz,
+                                   uint32_t *modDepth,
+                                   uint8_t *spreadType,
+                                   uint8_t  *enable,
+                                   uint32_t  timeout)
 {
     int32_t retVal = SystemP_SUCCESS;
 
-    Sciclient_ReqPrm_t reqParam;
-    struct tisci_msg_wake_reset_req request = {0};
-    struct tisci_msg_wake_reset_resp response = {0};
-    reqParam.messageType    = (uint16_t) TISCI_MSG_WAKE_RESET;
+    struct tisci_msg_get_clock_ssc_req request = {0};
+    request.device = (uint32_t) moduleId;
+    request.clk    = (uint32_t) clockId;
+
+    struct tisci_msg_get_clock_ssc_resp response = {0};
+    Sciclient_ReqPrm_t reqParam = {0};
+    reqParam.messageType    = (uint16_t) TISCI_MSG_GET_CLOCK_SSC;
     reqParam.flags          = (uint32_t) TISCI_MSG_FLAG_AOP;
     reqParam.pReqPayload    = (const uint8_t *) &request;
-    reqParam.reqPayloadSize = (uint32_t) sizeof(request);
+    reqParam.reqPayloadSize = (uint32_t) sizeof (request);
     reqParam.timeout        = (uint32_t) timeout;
 
-    Sciclient_RespPrm_t respParam;
-    respParam.flags           = (uint32_t) 0;   /* Populated by the API */
-    respParam.pRespPayload    = (uint8_t *) &response;
-    respParam.respPayloadSize = (uint32_t) sizeof(response);
-
-    retVal = Sciclient_service(&reqParam, &respParam);
-    if((retVal != SystemP_SUCCESS) ||
-        ((respParam.flags & TISCI_MSG_FLAG_ACK) != TISCI_MSG_FLAG_ACK))
-    {
-        retVal = SystemP_FAILURE;
-    }
-    return retVal;
-}
-
-int32_t Sciclient_pmGetWakeupReason(uint8_t   mode[32],
-                                    uint8_t   reason[32],
-                                    uint32_t *time_ms,
-                                    uint32_t  timeout)
-{
-    int32_t retVal = SystemP_SUCCESS;
-
-    struct tisci_msg_wake_reason_resp response = {{0}};
-    struct tisci_msg_wake_reason_req request = {0};
-    Sciclient_ReqPrm_t reqParam ;
-    reqParam.messageType    = (uint16_t) TISCI_MSG_WAKE_REASON;
-    reqParam.flags          = (uint32_t) TISCI_MSG_FLAG_AOP;
-    reqParam.pReqPayload    = (const uint8_t *) &request;
-    reqParam.reqPayloadSize = (uint32_t) sizeof(request);
-    reqParam.timeout        = (uint32_t) timeout;
-
-    Sciclient_RespPrm_t respParam ;
+    Sciclient_RespPrm_t respParam = {0};
     respParam.flags           = (uint32_t) 0;   /* Populated by the API */
     respParam.pRespPayload    = (uint8_t *) &response;
     respParam.respPayloadSize = (uint32_t) sizeof (response);
@@ -673,37 +696,10 @@ int32_t Sciclient_pmGetWakeupReason(uint8_t   mode[32],
     }
     if (retVal == SystemP_SUCCESS)
     {
-        (void) memcpy((void *)mode, (void *)response.mode, sizeof (response.mode));
-        (void) memcpy((void *)reason, (void *)response.reason, sizeof (response.reason));
-        *time_ms = (uint32_t)(uintptr_t)time_ms;
-    }
-    return retVal;
-}
-
-int32_t Sciclient_pmDevicePowerOff(uint32_t timeout)
-{
-    int32_t retVal = SystemP_SUCCESS;
-
-    Sciclient_ReqPrm_t reqParam;
-    struct tisci_msg_goodbye_req request = {0};
-    struct tisci_msg_goodbye_resp response = {0};
-    reqParam.messageType    = (uint16_t) TISCI_MSG_GOODBYE;
-    reqParam.flags          = (uint32_t) TISCI_MSG_FLAG_AOP;
-    reqParam.pReqPayload    = (const uint8_t *) &request;
-    reqParam.reqPayloadSize = (uint32_t) sizeof(request);
-    reqParam.timeout        = (uint32_t) timeout;
-
-    Sciclient_RespPrm_t respParam ;
-    respParam.flags           = (uint32_t) 0;   /* Populated by the API */
-    respParam.pRespPayload    = (uint8_t *) &response;
-    respParam.respPayloadSize = (uint32_t) sizeof(response);
-
-
-    retVal = Sciclient_service(&reqParam, &respParam);
-    if((retVal != SystemP_SUCCESS) ||
-        ((respParam.flags & TISCI_MSG_FLAG_ACK) != TISCI_MSG_FLAG_ACK))
-    {
-        retVal = SystemP_FAILURE;
+        *modFreqHz  = (uint32_t) response.modfreq_hz;
+        *modDepth   = (uint32_t) response.mod_depth;
+        *spreadType = (uint8_t) response.spread_type;
+        *enable      = (uint8_t) response.enable;
     }
     return retVal;
 }
@@ -712,8 +708,8 @@ int32_t Sciclient_pmDeviceReset(uint32_t timeout)
 {
     int32_t retVal = SystemP_SUCCESS;
 
-    Sciclient_ReqPrm_t reqParam ;
-    struct tisci_msg_sys_reset_req request = {{0}};
+    Sciclient_ReqPrm_t reqParam = {0};
+    struct tisci_msg_sys_reset_req request = {0};
     struct tisci_msg_sys_reset_resp response = {0};
     reqParam.messageType    = (uint16_t) TISCI_MSG_SYS_RESET;
     reqParam.flags          = (uint32_t) TISCI_MSG_FLAG_AOP;
@@ -721,7 +717,7 @@ int32_t Sciclient_pmDeviceReset(uint32_t timeout)
     reqParam.reqPayloadSize = (uint32_t) sizeof(request);
     reqParam.timeout        = (uint32_t) timeout;
 
-    Sciclient_RespPrm_t respParam ;
+    Sciclient_RespPrm_t respParam = {0};
     respParam.flags           = (uint32_t) 0;   /* Populated by the API */
     respParam.pRespPayload    = (uint8_t *) &response;
     respParam.respPayloadSize = (uint32_t) sizeof(response);
@@ -735,43 +731,6 @@ int32_t Sciclient_pmDeviceReset(uint32_t timeout)
     return retVal;
 }
 
-int32_t Sciclient_pmIsModuleValid(uint32_t modId)
-{
-   int32_t retVal = SystemP_SUCCESS;
-   return retVal;
-}
-
-int32_t Sciclient_pmSetModuleRst_flags(uint32_t moduleId,
-                                 uint32_t resetBit,
-                                 uint32_t reqFlag,
-                                 uint32_t timeout)
-{
-    int32_t retVal = SystemP_SUCCESS;
-    struct tisci_msg_set_device_resets_req request;
-    request.id     = (uint32_t) moduleId;
-    request.resets = (uint32_t) resetBit;
-
-    Sciclient_ReqPrm_t reqParam;
-    reqParam.messageType    = (uint16_t) TISCI_MSG_SET_DEVICE_RESETS;
-    reqParam.flags          = (uint32_t) reqFlag;
-    reqParam.pReqPayload    = (const uint8_t *) &request;
-    reqParam.reqPayloadSize = (uint32_t) sizeof (request);
-    reqParam.timeout        = (uint32_t) timeout;
-
-    Sciclient_RespPrm_t respParam;
-    respParam.flags           = (uint32_t) 0;   /* Populated by the API */
-    respParam.pRespPayload    = (uint8_t *) 0;
-    respParam.respPayloadSize = (uint32_t) 0;
-
-    retVal = Sciclient_service(&reqParam, &respParam);
-
-    if((retVal != SystemP_SUCCESS) ||
-        ((reqFlag != 0U) && ((respParam.flags & TISCI_MSG_FLAG_ACK) != TISCI_MSG_FLAG_ACK)))
-    {
-        retVal = SystemP_FAILURE;
-    }
-    return retVal;
-}
 
 /* -------------------------------------------------------------------------- */
 /*                 Internal Function Definitions                              */

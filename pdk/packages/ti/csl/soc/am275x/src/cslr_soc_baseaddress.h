@@ -2,7 +2,7 @@
 *
 * SOC BASEADDRESS. header file
 *
-* Copyright (C) 2015-2024 Texas Instruments Incorporated.
+* Copyright (C) 2015-2025 Texas Instruments Incorporated.
 *  Redistribution and use in source and binary forms, with or without
 *  modification, are permitted provided that the following conditions
 *  are met:
@@ -528,8 +528,8 @@ extern "C"
 #define CSL_WKUP_ECC_AGGR1_ECC_AGGR_SIZE                                                           (0x400UL)
 #define CSL_WKUP_PSRAMECC_8K0_REGS_BASE                                                            (0x2b608000UL)
 #define CSL_WKUP_PSRAMECC_8K0_REGS_SIZE                                                            (0x400UL)
-#define CSL_WKUP_PSRAM2KX32E0_REGS_BASE                                                            (0x2b609000UL)
-#define CSL_WKUP_PSRAM2KX32E0_REGS_SIZE                                                            (0x400UL)
+#define CSL_WKUP_PSRAMECC_RET0_REGS_BASE                                                           (0x2b609000UL)
+#define CSL_WKUP_PSRAMECC_RET0_REGS_SIZE                                                           (0x400UL)
 #define CSL_C7X256V0_BASE                                                                          (0x30240000UL)
 #define CSL_C7X256V0_SIZE                                                                          (0x10000UL)
 #define CSL_C7X256V1_BASE                                                                          (0x30250000UL)
@@ -610,8 +610,8 @@ extern "C"
 #define CSL_WKUP_ROM0_SIZE                                                                         (0x40000UL)
 #define CSL_WKUP_PSRAMECC_8K0_RAM_BASE                                                             (0x41880000UL)
 #define CSL_WKUP_PSRAMECC_8K0_RAM_SIZE                                                             (0x8000UL)
-#define CSL_WKUP_PSRAM2KX32E0_RAM_BASE                                                             (0x41888000UL)
-#define CSL_WKUP_PSRAM2KX32E0_RAM_SIZE                                                             (0x2000UL)
+#define CSL_WKUP_PSRAMECC_RET0_RAM_BASE                                                            (0x41888000UL)
+#define CSL_WKUP_PSRAMECC_RET0_RAM_SIZE                                                            (0x2000UL)
 #define CSL_STM0_STIMULUS_BASE                                                                     (0x42000000UL)
 #define CSL_STM0_STIMULUS_SIZE                                                                     (0x1000000UL)
 #define CSL_WKUP_CTRL_MMR0_CFG0_BASE                                                               (0x43000000UL)
@@ -638,8 +638,6 @@ extern "C"
 #define CSL_SMS0_HSM_SRAM0_1_SIZE                                                                  (0x10000UL)
 #define CSL_SMS0_HSM_SRAM1_BASE                                                                    (0x43c30000UL)
 #define CSL_SMS0_HSM_SRAM1_SIZE                                                                    (0x10000UL)
-#define CSL_MSRAM_1MB0_RAM_BASE                                                                    (0x43c40000UL)
-#define CSL_MSRAM_1MB0_RAM_SIZE                                                                    (0x40000UL)
 #define CSL_SMS0_TIFS_SRAM0_BASE                                                                   (0x44040000UL)
 #define CSL_SMS0_TIFS_SRAM0_SIZE                                                                   (0x20000UL)
 #define CSL_SMS0_TIFS_SRAM1_0_BASE                                                                 (0x44060000UL)
@@ -864,6 +862,8 @@ extern "C"
 #define CSL_FSS0_DAT_REG1_SIZE                                                                     (0x8000000UL)
 #define CSL_FSS1_DAT_REG1_BASE                                                                     (0x68000000UL)
 #define CSL_FSS1_DAT_REG1_SIZE                                                                     (0x8000000UL)
+#define CSL_MSRAM_1MB0_RAM_BASE                                                                    (0x72000000UL)
+#define CSL_MSRAM_1MB0_RAM_SIZE                                                                    (0x100000UL)
 #define CSL_MSRAM_1MB1_RAM_BASE                                                                    (0x72100000UL)
 #define CSL_MSRAM_1MB1_RAM_SIZE                                                                    (0x100000UL)
 #define CSL_MSRAM_1MB2_RAM_BASE                                                                    (0x72200000UL)
@@ -1639,8 +1639,8 @@ extern "C"
 #define CSL_PBIST_WKUP_CNT                                                                         (1U)
 #define CSL_PLL_WKUP_CNT                                                                           (1U)
 #define CSL_PSC_WKUP_CNT                                                                           (1U)
-#define CSL_PSRAM2KX32E_WKUP_CNT                                                                   (1U)
 #define CSL_PSRAMECC_8K_WKUP_CNT                                                                   (1U)
+#define CSL_PSRAMECC_RET_WKUP_CNT                                                                  (1U)
 #define CSL_R5FSS_WKUP_CNT                                                                         (1U)
 #define CSL_R5FSS_COMMON0_WKUP_CNT                                                                 (1U)
 #define CSL_R5FSS_CORE0_WKUP_CNT                                                                   (1U)

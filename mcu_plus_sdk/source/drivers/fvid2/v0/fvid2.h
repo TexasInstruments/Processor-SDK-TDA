@@ -31,7 +31,6 @@
  */
 
 /**
-
  *  \defgroup DRV_FVID2_MODULE APIs for FVID2
  *  \ingroup DRV_MODULE
  *
@@ -67,6 +66,8 @@
 extern "C" {
 #endif
 
+extern volatile bool gFvid2AssertEnable;
+
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
@@ -74,9 +75,15 @@ extern "C" {
 #define Fvid2_Assert(expr)  {                      \
                              if(expr)             \
                              {                    \
-                                while(1);         \
+                               if(gFvid2AssertEnable)             \
+                               {                    \
+                                  while((bool)1)         \
+                                  {                 \
+                                     /* do nothing */  \
+                                  }                   \
+                               }                    \
                              }                    \
-                           }
+                            }
 
 /* ========================================================================== */
 /*                          Function Declarations                             */
@@ -95,4 +102,3 @@ extern "C" {
 #endif
 
 #endif  /* #ifndef FVID2_H_ */
-

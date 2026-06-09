@@ -1,7 +1,7 @@
 /*
  * DMSC firmware
  *
- * Copyright (C) 2018-2024, Texas Instruments Incorporated
+ * Copyright (C) 2018-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,7 @@
 #include <lib/trace.h>
 #include <delay.h>
 #include <osal/osal_clock_user.h>
+#include <tisci/pm/tisci_pm_clock.h>
 
 #define PLL_16FFT_PID   (idx)                   ((0x1000UL * (idx)) + 0x00UL)
 #define PLL_16FFT_CFG(idx)                      ((0x1000UL * (idx)) + 0x08UL)
@@ -94,7 +95,22 @@
 #define PLL_16FFT_DIV_CTRL_REF_DIV_MASK         (0x3fUL << 0UL)
 
 #define PLL_16FFT_SS_CTRL(idx)                  ((0x1000UL * (idx)) + 0x40UL)
+#define PLL_16FFT_SS_CTRL_DOWNSPREAD_EN         BIT(4)
+#define PLL_16FFT_SS_CTRL_BYPASS_EN             BIT(31)
+
 #define PLL_16FFT_SS_SPREAD(idx)                ((0x1000UL * (idx)) + 0x44UL)
+#define PLL_16FFT_SS_SPREAD_SPREAD_SHIFT        0UL
+#define PLL_16FFT_SS_SPREAD_SPREAD_MASK         (0x1fUL << 0UL)
+#define PLL_16FFT_SS_SPREAD_MOD_DIV_SHIFT       16UL
+#define PLL_16FFT_SS_SPREAD_MOD_DIV_MASK        (0xfUL << 16UL)
+
+#define PLL_16FFT_SS_MOD_DEPTH_DIV              10U
+#define PLL_16FFT_SS_MOD_DEPTH_MIN              10U
+#define PLL_16FFT_SS_MOD_DEPTH_MAX              310U
+#define PLL_16FFT_SS_MOD_DIV_FACTOR             128U
+#define PLL_16FFT_SS_MOD_DIV_FACTOR_HALF        64U
+#define PLL_16FFT_SS_MOD_FREQ_MIN_HZ            32000U
+#define PLL_16FFT_SS_MOD_FREQ_MAX_DIV           200U
 
 #define PLL_16FFT_CAL_CTRL(idx)                 ((0x1000UL * (idx)) + 0x60UL)
 #define PLL_16FFT_CAL_CTRL_CAL_EN               BIT(31)
@@ -1350,12 +1366,251 @@ static s32 clk_pll_16fft_init(struct clk *clock_ptr)
 	return ret;
 }
 
+#ifdef CONFIG_PM_CLK_SSC
+static s32 clk_pll_16fft_internal_disable_ssc(const struct clk_data_pll_16fft *pll)
+{
+	u32 ss_ctrl;
+	s32 ret = SUCCESS;
+
+	/* Read the PLL's SS control register */
+	ss_ctrl = readl(pll->base + (u32) PLL_16FFT_SS_CTRL(pll->idx));
+
+	/* Set the SS BYPASS enable bit if it is not already set */
+	if ((ss_ctrl & PLL_16FFT_SS_CTRL_BYPASS_EN) == 0U) {
+		ss_ctrl |= PLL_16FFT_SS_CTRL_BYPASS_EN;
+		/* Write the PLL's SS control register */
+		ret = pm_writel_verified(ss_ctrl, pll->base + (u32) PLL_16FFT_SS_CTRL(pll->idx));
+		if (ret != SUCCESS) {
+			ret = -EFAIL;
+		}
+	}
+
+	return ret;
+}
+
+static s32 clk_pll_16fft_internal_enable_ssc(const struct clk_data_pll_16fft	*pll,
+					     u32				parent_freq_hz,
+					     u32				modfreq_hz,
+					     u32				mod_depth,
+					     u8					spread_type)
+{
+	u32 ctrl;
+	u32 ss_ctrl;
+	u32 ss_spread;
+	u32 mod_div;
+	u32 spread;
+	s32 ret = SUCCESS;
+	sbool lock = SFALSE;
+
+	/*
+	 * The PLL needs to be locked before SSC can be enabled.
+	 * Check if the PLL is locked. If not, return failure
+	 */
+	lock = clk_pll_16fft_check_lock(pll);
+	if (lock == SFALSE) {
+		ret = -EFAIL;
+	}
+
+	if (ret == SUCCESS) {
+		/* Read the PLL's control register */
+		ctrl = readl(pll->base + (u32) PLL_16FFT_CTRL(pll->idx));
+
+		/*
+		* The PLL needs to be in fractional mode, i.e DAC and DSM bits
+		* must be set before SSC can be enabled.
+		* Check if these bits are set. If not, return failure
+		*/
+		if ((ctrl & PLL_16FFT_CTRL_DAC_EN) == 0U) {
+			ret = -EFAIL;
+		}
+		if ((ctrl & PLL_16FFT_CTRL_DSM_EN) == 0U) {
+			ret = -EFAIL;
+		}
+	}
+
+	if (ret == SUCCESS) {
+		/* Read the PLL's SS control register */
+		ss_ctrl = readl(pll->base + (u32) PLL_16FFT_SS_CTRL(pll->idx));
+
+		/* Unset the SS BYPASS enable bit if it is not already unset */
+		if ((ss_ctrl & PLL_16FFT_SS_CTRL_BYPASS_EN) != 0U) {
+			ss_ctrl &= ~PLL_16FFT_SS_CTRL_BYPASS_EN;
+		}
+
+		/* Set the SS DOWNSPREAD enable bit if the spread_type is down or unset it if it is center */
+		if (spread_type == TISCI_MSG_VALUE_CLOCK_SSC_SPREAD_DOWN) {
+			ss_ctrl |= PLL_16FFT_SS_CTRL_DOWNSPREAD_EN;
+		} else if (spread_type == TISCI_MSG_VALUE_CLOCK_SSC_SPREAD_CENTER) {
+			ss_ctrl &= ~PLL_16FFT_SS_CTRL_DOWNSPREAD_EN;
+		} else {
+			ret = -EINVAL;
+		}
+
+		if (ret == SUCCESS) {
+			/* Write the PLL's SS spread register */
+			ret = pm_writel_verified(ss_ctrl, pll->base + (u32) PLL_16FFT_SS_CTRL(pll->idx));
+			if (ret != SUCCESS) {
+				ret = -EFAIL;
+			}
+		}
+	}
+
+	if (ret == SUCCESS) {
+		/* Read the PLL's SS spread register */
+		ss_spread = readl(pll->base + (u32) PLL_16FFT_SS_SPREAD(pll->idx));
+
+		/* if modfreq_hz is valid */
+		if ((modfreq_hz >= PLL_16FFT_SS_MOD_FREQ_MIN_HZ) &&
+		    (modfreq_hz <= (parent_freq_hz / PLL_16FFT_SS_MOD_FREQ_MAX_DIV))) {
+			/* Calculate the modulation frequency divider value */
+			mod_div = (parent_freq_hz +
+				   (PLL_16FFT_SS_MOD_DIV_FACTOR_HALF * modfreq_hz)) /
+				  (PLL_16FFT_SS_MOD_DIV_FACTOR * modfreq_hz);
+			ss_spread &= ~PLL_16FFT_SS_SPREAD_MOD_DIV_MASK;
+			ss_spread |= mod_div << PLL_16FFT_SS_SPREAD_MOD_DIV_SHIFT;
+		} else {
+			ret = -EINVAL;
+		}
+
+		/* if spread is valid */
+		if ((mod_depth >= PLL_16FFT_SS_MOD_DEPTH_MIN) &&
+		    (mod_depth <= PLL_16FFT_SS_MOD_DEPTH_MAX)) {
+			/* Calculate the spread modulation depth value */
+			spread = mod_depth / PLL_16FFT_SS_MOD_DEPTH_DIV;
+			ss_spread &= ~PLL_16FFT_SS_SPREAD_SPREAD_MASK;
+			ss_spread |= spread << PLL_16FFT_SS_SPREAD_SPREAD_SHIFT;
+		} else {
+			ret = -EINVAL;
+		}
+
+		if (ret == SUCCESS) {
+			/* Write the PLL's SS spread register */
+			ret = pm_writel_verified(ss_spread, pll->base + (u32) PLL_16FFT_SS_SPREAD(pll->idx));
+			if (ret != SUCCESS) {
+				ret = -EFAIL;
+			}
+		}
+	}
+
+	/* If enable failed, disable SSC to clean up */
+	if (ret != SUCCESS) {
+		s32 disable_ret;
+		disable_ret = clk_pll_16fft_internal_disable_ssc(pll);
+		/* Only overwrite ret if it's not a validation error */
+		if ((disable_ret != SUCCESS) && (ret != -EINVAL)) {
+			ret = disable_ret;
+		}
+	}
+
+	return ret;
+}
+
+static s32 clk_pll_16fft_set_ssc(struct clk	*clock_ptr,
+				 u32		modfreq_hz,
+				 u32		mod_depth,
+				 u8		spread_type,
+				 sbool		enable)
+{
+	const struct clk_data *clock_data;
+	const struct clk_data_pll *data_pll;
+	const struct clk_data_pll_16fft *pll;
+	u32 parent_freq_hz;
+	s32 ret;
+
+	clock_data = clk_get_data(clock_ptr);
+	data_pll = container_of(clock_data->data, const struct clk_data_pll,
+				data);
+	pll = container_of(data_pll, const struct clk_data_pll_16fft,
+			   data_pll);
+
+	if (enable) {
+		parent_freq_hz = clk_get_parent_freq(clock_ptr);
+		ret = clk_pll_16fft_internal_enable_ssc(pll, parent_freq_hz, modfreq_hz,
+							mod_depth, spread_type);
+	} else {
+		ret = clk_pll_16fft_internal_disable_ssc(pll);
+	}
+
+	return ret;
+}
+
+static void clk_pll_16fft_internal_get_ssc(const struct clk_data_pll_16fft	*pll,
+					   u32					parent_freq_hz,
+					   struct ssc_data			*ssc_datap)
+{
+	u32 ctrl;
+	u32 ss_ctrl;
+	u32 ss_spread;
+	u32 mod_div;
+	u32 spread;
+	u32 spread_type;
+
+	/* Read the PLL's control register */
+	ctrl = readl(pll->base + (u32) PLL_16FFT_CTRL(pll->idx));
+
+	/*
+	 * Check if the DAC and DSM enable bits are set.
+	 * If not, return SSC as disabled.
+	 */
+	if ((ctrl & PLL_16FFT_CTRL_DAC_EN) == 0U) {
+		ssc_datap->enable = 0U;
+	}
+	if ((ctrl & PLL_16FFT_CTRL_DSM_EN) == 0U) {
+		ssc_datap->enable = 0U;
+	}
+
+	/* Read the PLL's SS control register */
+	ss_ctrl = readl(pll->base + (u32) PLL_16FFT_SS_CTRL(pll->idx));
+
+	/* Check if the SS BYPASS enable bit is unset */
+	ssc_datap->enable = ((ss_ctrl & PLL_16FFT_SS_CTRL_BYPASS_EN) == 0U) ? 1U : 0U;
+
+	/* Get the spread type */
+	spread_type = ss_ctrl & PLL_16FFT_SS_CTRL_DOWNSPREAD_EN;
+	ssc_datap->spread_type = (spread_type == 0U) ? TISCI_MSG_VALUE_CLOCK_SSC_SPREAD_CENTER : TISCI_MSG_VALUE_CLOCK_SSC_SPREAD_DOWN;
+
+	/* Read the PLL's SS spread register */
+	ss_spread = readl(pll->base + (u32) PLL_16FFT_SS_SPREAD(pll->idx));
+
+	/* Get the modulation frequency */
+	mod_div = (ss_spread & PLL_16FFT_SS_SPREAD_MOD_DIV_MASK) >>
+		  PLL_16FFT_SS_SPREAD_MOD_DIV_SHIFT;
+	ssc_datap->modfreq_hz = (parent_freq_hz /
+				 (PLL_16FFT_SS_MOD_DIV_FACTOR * mod_div));
+
+	/* Get the modulation depth */
+	spread = ss_spread & PLL_16FFT_SS_SPREAD_SPREAD_MASK;
+	ssc_datap->mod_depth = spread * PLL_16FFT_SS_MOD_DEPTH_DIV;
+}
+
+static void clk_pll_16fft_get_ssc(struct clk *clock_ptr, struct ssc_data *ssc_datap)
+{
+	const struct clk_data *clock_data;
+	const struct clk_data_pll *data_pll;
+	const struct clk_data_pll_16fft *pll;
+	u32 parent_freq_hz;
+
+	clock_data = clk_get_data(clock_ptr);
+	data_pll = container_of(clock_data->data, const struct clk_data_pll,
+				data);
+	pll = container_of(data_pll, const struct clk_data_pll_16fft,
+			   data_pll);
+	parent_freq_hz = clk_get_parent_freq(clock_ptr);
+
+	clk_pll_16fft_internal_get_ssc(pll, parent_freq_hz, ssc_datap);
+}
+#endif
+
 const struct clk_drv clk_drv_pll_16fft = {
 	.init		= clk_pll_16fft_init,
 	.get_freq	= clk_pll_16fft_get_freq,
 	.set_freq	= clk_pll_16fft_set_freq,
 	.get_state	= clk_pll_16fft_get_state,
 	.set_state	= clk_pll_16fft_set_state,
+#ifdef CONFIG_PM_CLK_SSC
+	.set_ssc	= clk_pll_16fft_set_ssc,
+	.get_ssc	= clk_pll_16fft_get_ssc,
+#endif
 };
 
 /*

@@ -38,7 +38,13 @@ menu "Low Power Mode support"
 
 choice
     prompt "Select Low Power Mode support minimal or full"
-    default LPM_DM
+    default NO_LPM
+
+config NO_LPM
+	bool "Disables all DM Low Power Mode support"
+	depends on LIBRARY_BUILD_DM
+	help
+	 Disables features in the DM to support low power modes.
 
 config LPM_DM
 	bool "Enable DM Low Power Mode support"

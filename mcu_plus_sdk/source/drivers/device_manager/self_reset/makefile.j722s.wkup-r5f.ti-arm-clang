@@ -32,6 +32,7 @@ INCLUDES_common := \
 DEFINES_common := \
     -DSOC_J722S \
     -DMCU_PLUS_SDK \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -DBUILD_WKUP_R5 \
@@ -67,6 +68,7 @@ ARFLAGS_common := \
 
 FILES := $(FILES_common) $(FILES_$(PROFILE))
 ASMFILES := $(ASMFILES_common) $(ASMFILES_$(PROFILE))
+ASMEXTNFILES := $(ASMEXTNFILES_common) $(ASMEXTNFILES_$(PROFILE))
 FILES_PATH := $(FILES_PATH_common) $(FILES_PATH_$(PROFILE))
 CFLAGS := $(CFLAGS_common) $(CFLAGS_$(PROFILE))
 ASMFLAGS := $(CFLAGS_common) $(CFLAGS_$(PROFILE))
@@ -81,11 +83,13 @@ LIBDIR := lib
 OBJDIR := obj/j722s/ti-arm-clang/$(PROFILE)/wkup-r5f/self_reset/
 OBJS := $(FILES:%.c=%.obj)
 OBJS += $(ASMFILES:%.S=%.obj)
+OBJS += $(ASMEXTNFILES:%.asm=%.obj)
 DEPS := $(FILES:%.c=%.d)
 
 vpath %.obj $(OBJDIR)
 vpath %.c $(FILES_PATH)
 vpath %.S $(FILES_PATH)
+vpath %.asm $(FILES_PATH)
 
 $(OBJDIR)/%.obj %.obj: %.c
 	@echo  Compiling: $(LIBNAME): $<
@@ -94,6 +98,10 @@ $(OBJDIR)/%.obj %.obj: %.c
 $(OBJDIR)/%.obj %.obj: %.S
 	@echo  Compiling: $(LIBNAME): $<
 	$(CC) -c $(ASMFLAGS) -o $(OBJDIR)/$@ $<
+
+$(OBJDIR)/%.obj %.obj: %.asm
+	@echo  Compiling: $(LIBNAME): $<
+	$(CC) -c $(CFLAGS) -o $(OBJDIR)/$@ $<
 
 all: $(LIBDIR)/$(LIBNAME)
 

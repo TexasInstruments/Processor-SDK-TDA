@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017-2024 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -65,12 +65,12 @@
 #define APP_PRE_PROC_MAX_TENSORS (8)
 
 #include "app_common.h"
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
 #include "tiadalg_interface.h"
 #endif
 #include "itidl_ti.h"
 
-#if !(defined(SOC_AM62A) && defined(QNX))
+#if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
 typedef struct {
     vx_node  node;
 

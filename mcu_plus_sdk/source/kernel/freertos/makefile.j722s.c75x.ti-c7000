@@ -22,7 +22,6 @@ FILES_common := \
     CycleCounterP_c75.c \
     Exception.c \
     HwiP_c75.c \
-    HwiP_freertos_c7x.c \
     IntrinsicsSupport.c \
     MmuP_c75.c \
     Startup.c \
@@ -38,14 +37,17 @@ FILES_common := \
     printf.c \
     HeapP_internal.c \
     QueueP_nortos.c \
+    StartuphooksP_nortos.c \
     ClockP_freertos.c \
     ClockP_freertos_c75.c \
+    HwiP_freertos_c7x.c \
     SemaphoreP_freertos.c \
     HeapP_freertos.c \
     DebugP_freertos.c \
     DebugP_shmLogReader_freertos.c \
     TaskP_freertos.c \
     EventP_freertos.c \
+    MailboxP_freertos.c \
     event_groups.c \
     tasks.c \
     timers.c \
@@ -91,6 +93,7 @@ INCLUDES_common := \
     -I${CG_TOOL_ROOT}/include \
     -I${MCU_PLUS_SDK_PATH}/source \
     -I../nortos/dpl/c75 \
+    -I../nortos/dpl/c75/soc/j722s \
     -IFreeRTOS-Kernel/include \
     -Iportable/TI_CGT/DSP_C75X \
     -Iconfig/j722s/c75x \
@@ -119,6 +122,7 @@ CFLAGS_common := \
     --diag_suppress=770 \
     --diag_suppress=69 \
     --diag_suppress=70 \
+    -DBUILD_C7X \
     --advice:performance=none \
     -DHwi_bootToNonSecure__D=true \
     -DException_vectors__D \

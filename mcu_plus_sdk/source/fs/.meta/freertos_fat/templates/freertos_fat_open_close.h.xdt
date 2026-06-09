@@ -11,6 +11,10 @@
 
 /* FF Disks */
 extern FF_Disk_t gFFDisks[CONFIG_FF_NUM_INSTANCES];
+/* FreeRTOS+FAT MMCSD Configs */
+extern FF_MMCSD_Config gFFMmcsdConfig[CONFIG_FF_NUM_INSTANCES];
+/* FreeRTOS+FAT partitions */
+extern FF_MMCSD_PartitionId gFFPartitionIds[CONFIG_FF_NUM_INSTANCES];
 % let sdPartitionCount = 0;
 % let emmcPartitionCount = 0;
 /* Readable Macros for partition indexes */
@@ -24,7 +28,7 @@ extern FF_Disk_t gFFDisks[CONFIG_FF_NUM_INSTANCES];
 #define FF_PARTITION_SD`sdPartitionCount` (`i`U)
     % sdPartitionCount += 1;
     % }
-% }	
+% }
 
 void Drivers_ffOpen(void);
 void Drivers_ffClose(void);

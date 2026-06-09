@@ -1,15 +1,23 @@
 %%{
     let component_target_list_string = [];
+    let component_target_external_list_string = [];
     let component_target_private_list_string = [];
     let component_target_prebuilt_list_string = [];
     let component_target_clean_list_string = [];
     let component_target_scrub_list_string = [];
+    let component_target_external_clean_list_string = [];
+    let component_target_external_scrub_list_string = [];
     let component_target_prebuilt_clean_list_string = [];
     let component_target_prebuilt_scrub_list_string = [];
 	let component_target_clean_private_list_string = [];
 	let component_target_scrub_private_list_string = [];
     for (component of args.component_list) {
-        if(component.isSkipTopLevelBuild) {
+        if(component.isExternalLibrary) {
+            component_target_external_list_string +=` \$(BUILD_COMBO_${component.name})`
+            component_target_external_clean_list_string +=` \$(BUILD_COMBO_CLEAN_${component.name})`
+            component_target_external_scrub_list_string +=` \$(BUILD_COMBO_SCRUB_${component.name})`
+        }
+        else if(component.isSkipTopLevelBuild) {
             component_target_private_list_string +=` \$(BUILD_COMBO_${component.name})`
             component_target_clean_private_list_string +=` \$(BUILD_COMBO_CLEAN_${component.name})`
             component_target_scrub_private_list_string +=` \$(BUILD_COMBO_SCRUB_${component.name})`
@@ -32,16 +40,19 @@
 
 all:
 	$(MAKE) -f makefile.`device` libs
+	$(MAKE) -f makefile.`device` libs-external
 	$(MAKE) -f makefile.`device` sbl
 	$(MAKE) -f makefile.`device` examples
 
-clean: libs-clean sbl-clean examples-clean
-scrub: libs-scrub sbl-scrub examples-scrub
+clean: libs-clean libs-external-clean sbl-clean examples-clean
+scrub: libs-scrub libs-external-scrub sbl-scrub examples-scrub
+% if (device == "j722s") {
 
 all-private: libs-private
 	$(MAKE) -f makefile.`device` examples-private
 
 scrub-private: libs-private-scrub examples-scrub-private
+%}
 
 help:
 	@echo  Notes,
@@ -55,8 +66,7 @@ help:
 	@echo  $(MAKE) -s -f makefile.`device` all
 	@echo  $(MAKE) -s -f makefile.`device` clean  # delete's tmp files for current profile
 	@echo  $(MAKE) -s -f makefile.`device` scrub  # delete's all tmp files and folders for all profiles
-	@echo  .component_target_clean_private_list_string
-	@echo  .component_target_scrub_private_list_string
+	@echo  .
 	@echo  $(MAKE) -s -f makefile.`device` libs
 	@echo  $(MAKE) -s -f makefile.`device` libs-clean # delete's tmp files for current profile
 	@echo  $(MAKE) -s -f makefile.`device` libs-scrub # delete's all tmp files and folders for all profiles
@@ -98,6 +108,9 @@ BUILD_COMBO_`component.name` =`component.buildTarget`
 # Combine all Components
 BUILD_COMBO_ALL =`component_target_list_string`
 
+# Combine all External Components
+BUILD_COMBO_EXTERNAL_ALL =`component_target_external_list_string`
+
 # Combine all Pre-built Components
 BUILD_COMBO_PREBUILT_ALL =`component_target_prebuilt_list_string`
 
@@ -105,6 +118,8 @@ BUILD_COMBO_PREBUILT_ALL =`component_target_prebuilt_list_string`
 BUILD_COMBO_PRIVATE_ALL =`component_target_private_list_string`
 
 libs: $(BUILD_COMBO_ALL)
+
+libs-external: $(BUILD_COMBO_EXTERNAL_ALL)
 
 libs-prebuilt: $(BUILD_COMBO_PREBUILT_ALL)
 
@@ -124,6 +139,9 @@ BUILD_COMBO_CLEAN_`component.name` =`component.buildTargetClean`
 # Combine all Components Clean
 BUILD_COMBO_CLEAN_ALL =`component_target_clean_list_string`
 
+# Combine all External Components Clean
+BUILD_COMBO_EXTERNAL_CLEAN_ALL =`component_target_external_clean_list_string`
+
 # Combine all Pre-built Components Clean
 BUILD_COMBO_PREBUILT_CLEAN_ALL =`component_target_prebuilt_clean_list_string`
 
@@ -131,6 +149,8 @@ BUILD_COMBO_PREBUILT_CLEAN_ALL =`component_target_prebuilt_clean_list_string`
 BUILD_COMBO_PRIVATE_CLEAN_ALL =`component_target_clean_private_list_string`
 
 libs-clean: $(BUILD_COMBO_CLEAN_ALL)
+
+libs-external-clean: $(BUILD_COMBO_EXTERNAL_CLEAN_ALL)
 
 libs-prebuilt-clean: $(BUILD_COMBO_PREBUILT_CLEAN_ALL)
 
@@ -150,6 +170,9 @@ BUILD_COMBO_SCRUB_`component.name` =`component.buildTargetScrub`
 # Combine all Components Scrub Targets
 BUILD_COMBO_SCRUB_ALL =`component_target_scrub_list_string`
 
+# Combine all External Components Scrub Targets
+BUILD_COMBO_EXTERNAL_SCRUB_ALL =`component_target_external_scrub_list_string`
+
 # Combine all Pre-built Components Scrub Targets
 BUILD_COMBO_PREBUILT_SCRUB_ALL =`component_target_prebuilt_scrub_list_string`
 
@@ -157,6 +180,8 @@ BUILD_COMBO_PREBUILT_SCRUB_ALL =`component_target_prebuilt_scrub_list_string`
 BUILD_COMBO_PRIVATE_SCRUB_ALL =`component_target_scrub_private_list_string`
 
 libs-scrub: $(BUILD_COMBO_SCRUB_ALL)
+
+libs-external-scrub: $(BUILD_COMBO_EXTERNAL_SCRUB_ALL)
 
 libs-prebuilt-scrub: $(BUILD_COMBO_PREBUILT_SCRUB_ALL)
 
@@ -195,10 +220,24 @@ BUILD_COMBO_EXAMPLE_PRIVATE_ALL +=`example.buildTarget`
 BUILD_COMBO_EXAMPLE_PRIVATE_ALL +=`example.buildTarget`
 %   }
 % }
+% if (args.device == "j722s") {
+DM_APP_PATH = `args.dm_app_path`
+
+dm_app:
+	$(MAKE) -C $(DM_APP_PATH) -f makefile all
+
+examples: dm_app
+	$(MAKE) -f makefile.`device` $(BUILD_COMBO_EXAMPLE_ALL)
+
+examples-private: dm_app
+	$(MAKE) -f makefile.`device` $(BUILD_COMBO_EXAMPLE_PRIVATE_ALL)
+% }
+% else {
 
 examples: $(BUILD_COMBO_EXAMPLE_ALL)
 
 examples-private: $(BUILD_COMBO_EXAMPLE_PRIVATE_ALL)
+% }
 
 % for (example of args.example_list) {
 `example.buildTarget`:
@@ -351,7 +390,6 @@ host-emu-clean:
 host-emu-scrub:
 	$(MAKE) -C source/drivers/dmautils -f makefile.am62ax.c75x.ti-c7x-hostemu scrub
 %}
-
 % if (device == "j722s") {
 host-emu:
 	$(MAKE) -C source/drivers/dmautils -f makefile.j722s.c75ssx-0.ti-c7x-hostemu all
@@ -363,8 +401,29 @@ host-emu-scrub:
 	$(MAKE) -C source/drivers/dmautils -f makefile.j722s.c75ssx-0.ti-c7x-hostemu scrub
 %}
 
+% var count = 0
+% for (example of args.example_list) {
+%   if(example.isSDL ) {
+%       count = count + 1 
+%   }
+% }
+% if (count > 0) {
+BUILD_COMBO_SDL_ALL =
+# Various Example Targets
+% for (example of args.example_list) {
+%   if(example.isSDL ) {
+BUILD_COMBO_SDL_ALL +=`example.buildTarget`
+%   }
+% }
+
+sdl-unit-tests: $(BUILD_COMBO_SDL_ALL)
+
+.PHONY: $(BUILD_COMBO_SDL_ALL)
+.PHONY: sdl-unit-tests
+% }
 .PHONY: all clean scrub help
 .PHONY: libs libs-clean libs-scrub
+.PHONY: libs-external libs-external-clean libs-external-scrub
 .PHONY: libs-private
 .PHONY: libs-prebuilt libs-prebuilt-clean libs-prebuilt-scrub
 .PHONY: examples examples-clean examples-scrub

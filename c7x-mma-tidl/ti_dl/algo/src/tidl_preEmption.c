@@ -536,6 +536,10 @@ int32_t TIDL_checkIfPreEmptionEnabled(const TIDL_CreateParams * createParams)
   #ifdef DEBUG_PREEMPTION_HOST_EMULATION
   isPreEmptionEnable = 1;
   #endif
+  
+  #ifdef __C7604__
+  isPreEmptionEnable = 0; //Giving Loki error when enabling preeemption
+  #endif
 
   return isPreEmptionEnable;
 }

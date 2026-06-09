@@ -71,7 +71,7 @@
 #ifndef ITIDL_COMMON_UTILS_H
 #define ITIDL_COMMON_UTILS_H
 
-#if defined(__C7100__) || defined(__C7120__) || defined(__C7504__) || defined(__C7524__)
+#if defined(__C7100__) || defined(__C7120__) || defined(__C7504__) || defined(__C7524__) || defined (__C7604__)
 #if !defined(_HOST_BUILD)
 #include <c7x.h>
 #define RESTRICT restrict
@@ -94,13 +94,17 @@
 #define TIDL_INTERNAL_POOLING_WEIGHT_Q_U16 ((uint32_t)12)
 #define TIDL_INTERNAL_INDATA_Q ((uint32_t)7)
 
-#if defined(HOST_EMULATION)
-#define ENABLE_PROFILE (0)
+#if !defined(HOST_EMULATION) || defined(SOC_TDA54)
+#define ENABLE_PROFILE  (1)
 #else
-#define ENABLE_PROFILE (1)
+#define ENABLE_PROFILE  (0)
 #endif
 
 #define TIDL_MAX_CORENUM (TIDL_MAX_NUM_CORES) /* IMP: Should be in synch and same as TIDL_TB_MAX_CORENUM*/
+
+/*To get Numcores based on Start Core Idx */
+#define GET_NUMCORES_FOR_STARTCOREIDX(NUMCORES, STARTCOREIDX) ((NUMCORES) + (STARTCOREIDX))
+#define GET_RELATIVE_COREIDX(COREID, STARTCOREIDX) ((COREID) - (STARTCOREIDX))
 
 /* To enable / disable compression related functions.
  * 0 --> Functions are disabled.
@@ -235,6 +239,15 @@ void TIDL_conv2dBiasSplitWithFixedBiasB(Tsrc *srcPtr,
                                         int32_t biasBMax,
                                         int32_t inFeatSign);
 
+template<typename Tscale>
+float32_tidl TIDL_getMMAv2_ScaleShiftAndError(
+    float32_tidl scaleRatio,
+    Tscale *scale,
+    uint8_t *shift,
+    int32_t weightBits,
+    float32_tidl maxScaleMMAv2,
+    bool skipCheck);
+
 int32_t TIDL_prePareMemcpyTr(void *trMem);
 int32_t TIDL_memcpy2D(
     const void *dstPtr,
@@ -336,7 +349,7 @@ static inline void TIDL_updateprofileData(uint64_t *ptr, uint32_t idx, uint64_t 
 #endif
 }
 
-void tidl_printf(int32_t traceLevel, const char *format, ...);
+void tidl_printf(int8_t traceLevel, const char *format, ...);
 
 int32_t tidl_writeTraceParamBuf(sTIDL_Network_t *net,
                                 sTIDL_AlgLayer_t *algLayer,

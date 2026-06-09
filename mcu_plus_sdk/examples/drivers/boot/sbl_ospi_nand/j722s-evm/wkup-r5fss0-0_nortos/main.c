@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -41,7 +41,12 @@
 
 void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle);
 
-#define BOOTLOADER_APP_IMAGE_LOADED                         0x1U
+#define BOOTLOADER_APP_IMAGE_LOADED     (0x1U)
+#define BOOTLOADER_HSM_IMG_LOAD_ADDR    (0x79100000U)
+#define BOOTLOADER_OSPI_OFFSET_HSM      (0x80000U)
+#define BOOTLOADER_HSM_HEADER           (0x30U)
+#define BOOTLOADER_HSM_IMG_NOT_FOUND    ((int32_t)(-2))
+#define BOOTLOADER_HSM_BIN_SIZE         (192*1024U)        /* 192KB */
 
 uint8_t socCpuCores[CSL_CORE_ID_MAX] = {0};
 
@@ -83,7 +88,7 @@ int32_t App_loadImages(void)
     {
         bootConfig = (Bootloader_Config *)bootHandle;
         bootConfig->coresPresentMap = 0;
-        status = Bootloader_parseMultiCoreAppImage(&bootHandle, &bootImageInfo);
+        status = Bootloader_parseMultiCoreAppImage(bootHandle, &bootImageInfo);
 
         /* Load CPUs */
         if (!Bootloader_socIsMCUResetIsoEnabled())
@@ -168,6 +173,107 @@ int32_t App_runCpus(void)
     return status;
 }
 
+int32_t App_ospiCopyHsmImage(uint8_t* ptr, uint32_t srcOffsetAddr)
+{
+    int32_t retVal = SystemP_SUCCESS;
+
+    /* In case of OSPI NAND, read HSM binary from flash memory */
+    retVal = Flash_read(gFlashHandle[CONFIG_FLASH_APPIMAGE], srcOffsetAddr, ptr, BOOTLOADER_HSM_BIN_SIZE);
+    CacheP_wb((void *)ptr, BOOTLOADER_HSM_BIN_SIZE, CacheP_TYPE_ALLD);
+    if (retVal != SystemP_SUCCESS)
+    {
+        DebugP_log("\nFlash_read() FAILED\r\n");
+    }
+    else
+    {
+        if (*ptr != BOOTLOADER_HSM_HEADER)
+        {
+            retVal = BOOTLOADER_HSM_IMG_NOT_FOUND;
+        }
+    }
+    return retVal;
+}
+
+int32_t App_loadAndAuthHsmBinary(void)
+{
+    int32_t status = SystemP_SUCCESS;
+    /* Define sbl scratch memory as HSM address */
+    uint8_t *sblScratchMem = ((uint8_t *)(BOOTLOADER_HSM_IMG_LOAD_ADDR));
+    struct tisci_msg_proc_auth_boot_req authReq;
+    struct tisci_msg_proc_auth_boot_resp response = {0};
+    struct tisci_msg_proc_get_status_resp cpuStatus;
+    uint32_t hsmCoreProcId = SCICLIENT_PROC_ID_HSM_M4FSS0_CORE0;
+
+    status = App_ospiCopyHsmImage(sblScratchMem, BOOTLOADER_OSPI_OFFSET_HSM);
+
+    if(status != SystemP_SUCCESS)
+    {
+        if (status == BOOTLOADER_HSM_IMG_NOT_FOUND)
+        {
+            DebugP_log("\n HSM Binary is not present.. \r\n");
+            DebugP_log("\n Continuing with normal boot.. \r\n");
+        }
+        else
+        {
+            DebugP_logError("\nFailed to copy hsm binary.. \r\n");
+        }
+    }
+    else
+    {
+        /* Get Processor state */
+        DebugP_log("Calling Sciclient_procBootGetProcessorState, ProcId 0x%x... \r\n", hsmCoreProcId);
+        status = Sciclient_procBootGetProcessorState(hsmCoreProcId, &cpuStatus, SCICLIENT_SERVICE_WAIT_FOREVER);
+        if (status != SystemP_SUCCESS)
+        {
+            DebugP_logError("Sciclient_procBootGetProcessorState...FAILED \r\n");
+        }
+
+        /* Request for processor */
+        DebugP_log("Calling Sciclient_procBootRequestProcessor, ProcId 0x%x... \r\n", hsmCoreProcId);
+        status = Sciclient_procBootRequestProcessor(hsmCoreProcId, SCICLIENT_SERVICE_WAIT_FOREVER);
+        if (status != SystemP_SUCCESS)
+        {
+            DebugP_logError("Sciclient_procBootRequestProcessor, ProcId 0x%x...FAILED \r\n", hsmCoreProcId);
+        }
+
+        /* Setting HALT for Processor */
+        DebugP_log("Setting HALT for ProcId 0x%x... \r\n", hsmCoreProcId);
+        status =  Sciclient_procBootSetSequenceCtrl(hsmCoreProcId, TISCI_MSG_VAL_PROC_BOOT_CTRL_FLAG_HSM_M4_RESET, 0, TISCI_MSG_FLAG_AOP, SCICLIENT_SERVICE_WAIT_FOREVER);
+        if (status != SystemP_SUCCESS)
+        {
+            DebugP_logError("Sciclient_procBootSetSequenceCtrl...FAILED \r\n");
+        }
+
+        authReq.certificate_address_hi = 0;
+        authReq.certificate_address_lo = (uint32_t)sblScratchMem;
+        /* Request TIFS to authenticate and load the HSM image */
+        DebugP_log("Calling Sciclient_procBootAuthAndStart ... \r\n");
+        status = Sciclient_procBootAuthAndStart(&authReq, &response, SCICLIENT_SERVICE_WAIT_FOREVER);
+        if (status != SystemP_SUCCESS)
+        {
+            DebugP_logError("Sciclient_procBootAuthAndStart...FAILED \r\n");
+        }
+
+        /* Clearing HALT for Processor */
+        DebugP_log("Clearing HALT for ProcId 0x%x... \r\n", hsmCoreProcId);
+        status =  Sciclient_procBootSetSequenceCtrl(hsmCoreProcId, 0, TISCI_MSG_VAL_PROC_BOOT_CTRL_FLAG_HSM_M4_RESET, TISCI_MSG_FLAG_AOP, SCICLIENT_SERVICE_WAIT_FOREVER);
+        if (status != SystemP_SUCCESS)
+        {
+            DebugP_logError("Sciclient_procBootSetSequenceCtrl...FAILED \r\n");
+        }
+
+        /* Release Processor */
+        DebugP_log("Calling Sciclient_procBootReleaseProcessor, ProcId 0x%x... \r\n", hsmCoreProcId);
+        status = Sciclient_procBootReleaseProcessor(hsmCoreProcId, TISCI_MSG_FLAG_AOP, SCICLIENT_SERVICE_WAIT_FOREVER);
+        if (status != SystemP_SUCCESS)
+        {
+            DebugP_logError("Sciclient_procBootReleaseProcessor, ProcId 0x%x...FAILED \r\n", hsmCoreProcId);
+        }
+    }
+
+    return status;
+}
+
 int main()
 {
     int32_t status;
@@ -183,6 +289,9 @@ int main()
     System_init();
     Bootloader_profileAddProfilePoint("System_init");
 
+    Board_init();
+    Bootloader_profileAddProfilePoint("Board_init");
+
     Drivers_open();
     Bootloader_profileAddProfilePoint("Drivers_open");
 
@@ -194,6 +303,16 @@ int main()
 
     if(SystemP_SUCCESS == status)
     {
+        DebugP_log("Booting HSM core ... \r\n");
+        status = App_loadAndAuthHsmBinary();
+        if(SystemP_SUCCESS == status)
+        {
+            DebugP_log("HSM Core booted successfully \r\n");
+        }
+        else
+        {
+            DebugP_log("Failed to boot HSM core !! \r\n");
+        }
         status = App_loadImages();
         Bootloader_profileAddProfilePoint("App_loadImages");
 
@@ -223,8 +342,10 @@ int main()
 
         /* Call DPL deinit to close the tick timer and disable interrupts before jumping to Stage2*/
         Dpl_deinit();
-        System_deinit();
+
+        Board_deinit();
         Bootloader_JumpSelfCpu();
+        System_deinit();
     }
 
     return 0;
@@ -236,8 +357,7 @@ void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle)
      *  In Fast XSPI mode, reintialization is not required unless
      *  user configures it or PHY configuration failed
      */
-    if(SystemP_SUCCESS != OSPI_skipProgramming(oHandle))
-    {
+
         OSPI_setProtocol(oHandle, OSPI_FLASH_PROTOCOL(8,8,8,1));
         OSPI_enableDDR(oHandle);
         OSPI_setDualOpCodeMode(oHandle);
@@ -245,6 +365,5 @@ void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle)
         OSPI_enableSDR(oHandle);
         OSPI_clearDualOpCodeMode(oHandle);
         OSPI_setProtocol(oHandle, OSPI_FLASH_PROTOCOL(1,1,1,0));
-    }
 
 }

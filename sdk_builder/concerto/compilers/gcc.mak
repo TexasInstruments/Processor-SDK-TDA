@@ -150,6 +150,8 @@ else ifneq ($(filter $(TARGET_CPU),A53 A53F),)
 $(_MODULE)_COPT += -mcpu=cortex-a53
 else ifneq ($(filter $(TARGET_CPU),A72 A72F),)
 $(_MODULE)_COPT += -mcpu=cortex-a72
+else ifneq ($(filter $(TARGET_CPU),A720),)
+$(_MODULE)_COPT += -mcpu=cortex-a720
 endif
 
 ifeq ($(BUILD_IGNORE_LIB_ORDER),yes)

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020 Texas Instruments Incorporated
+ *  Copyright (C) 2020-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -43,11 +43,6 @@ extern "C"
 #if defined (IP_VERSION_ADC_V0)
 #include <drivers/adc/v0/hw_adc.h>
 #include <drivers/adc/v0/cslr_adcss.h>
-#endif
-
-#if defined (IP_VERSION_ADC_V1)
-#include <drivers/adc/v1/cslr_adc.h>
-#include <drivers/adc/v1/cslr_adc_result.h>
 #endif
 
 #ifdef __cplusplus

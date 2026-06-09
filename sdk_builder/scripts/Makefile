@@ -1,6 +1,7 @@
 # PDK path is always relative to the .repo directory
 export PDK_INSTALL_PATH=$(realpath ../../pdk/packages)
 export MCU_PLUS_SDK_INSTALL_PATH=$(realpath ../../mcu_plus_sdk)
+export MCU_SDK_INSTALL_PATH=$(realpath ../../mcu_sdk)
 
 # Set UTILS_INSTALL_DIR to cygwin /bin directory so that env.mk doesn't fail
 # trying to get XDCTOOLS path for shell expansion before it exists
@@ -9,6 +10,8 @@ export UTILS_INSTALL_DIR=/bin
 # Include PDK Rules.make to define various versions of components needed
 ifeq ($(SOC),$(filter $(SOC), j722s am62a))
 -include $(MCU_PLUS_SDK_INSTALL_PATH)/imports.mak
+else ifeq ($(SOC),tda54)
+-include $(MCU_SDK_INSTALL_PATH)/imports.mk
 else
 -include $(PDK_INSTALL_PATH)/ti/build/Rules.make
 endif

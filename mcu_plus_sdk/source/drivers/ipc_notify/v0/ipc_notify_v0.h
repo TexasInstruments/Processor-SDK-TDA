@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -74,9 +74,9 @@ typedef struct IpcNotify_MailboxConfig_s
 
 #if defined (SOC_AM62X)
 #define IPC_NOTIFY_MAILBOX_MAX_INSTANCES (1U)
-#elif defined (SOC_AM62AX)|| defined (SOC_AM62PX)
+#elif defined (SOC_AM62AX) || defined (SOC_AM62DX) || defined (SOC_AM62PX)
 #define IPC_NOTIFY_MAILBOX_MAX_INSTANCES (4U)
-#elif defined (SOC_J722S)
+#elif defined (SOC_AM275X) || defined (SOC_J722S)
 #define IPC_NOTIFY_MAILBOX_MAX_INSTANCES (8U)
 #endif
 

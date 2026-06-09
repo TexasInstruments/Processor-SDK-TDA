@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@
     .type   _vectors,%function
     .section    .vectors, "ax", %progbits
 
-/* Entry point needs to be nambed as _vectors. This is because _self_reset_start 
+/* Entry point needs to be nambed as _vectors. This is because _self_reset_start
  * Copies "_vectors" into 0x0000000 for WKUP R5 core.
  */
 _vectors:

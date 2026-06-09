@@ -27,38 +27,35 @@ INCLUDES_common := \
 
 DEFINES_common := \
     -DSOC_AM62AX \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mv7504 \
-    --abi=eabi \
     -q \
     -mo \
     -pden \
     -pds=238 \
     -pds=880 \
     -pds1110 \
-    --endian=little \
     --disable_inlining \
     -ea.se71 \
     --emit_warnings_as_errors \
     --diag_suppress=770 \
     --diag_suppress=69 \
     --diag_suppress=70 \
+    -DBUILD_C7X \
+    -DBUILD_C7X_1 \
 
 CFLAGS_debug := \
     -Dxdc_target_name__=C71 \
     -D_DEBUG_=1 \
     --opt_level=0 \
     --symdebug:dwarf \
-    -DBUILD_C7X_1 \
-    -DBUILD_C7X \
 
 CFLAGS_release := \
     -Dxdc_target_name__=C71 \
     --opt_level=3 \
     --symdebug:none \
-    -DBUILD_C7X_1 \
-    -DBUILD_C7X \
 
 ARFLAGS_common := \
     rq \

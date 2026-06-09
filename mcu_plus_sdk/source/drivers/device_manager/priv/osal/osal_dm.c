@@ -1,5 +1,6 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ * Copyright (c) 2021-2024, Texas Instruments Incorporated
+ * All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -42,9 +43,9 @@
 #include <types/short_types.h>
 #include <kernel/dpl/TaskP.h>
 #include <osal_dm.h>
-#include <drivers/soc.h>
 #include <drivers/device_manager/sciserver_tirtos.h>
 #include <kernel/nortos/dpl/r5/HwiP_armv7r_vim.h>
+#include <kernel/dpl/ClockP.h>
 
 #ifndef MCU_PLUS_SDK
 extern void CSL_armR5StartupIntrEnableVic( uint32_t enable );
@@ -58,8 +59,8 @@ extern void CSL_armR5StartupIntrEnableVic( uint32_t enable );
 void osal_dm_disable_interrupt(void)
 {
         Sciserver_tirtosDisableIntr();
+        Sciclient_disableIntr();
 }
-
 
 /**
  * \brief Enable interrupts used by DM firmware
@@ -68,7 +69,7 @@ void osal_dm_disable_interrupt(void)
  */
 void osal_dm_enable_interrupt(void)
 {
-        Sciserver_tirtosEnableIntr();
+        Sciclient_enableIntr();
 }
 
 /**
@@ -79,7 +80,7 @@ void osal_dm_enable_interrupt(void)
 void osal_suspend_dm(void)
 {
         TaskP_disable();
-        OS_StopTickTimer();
+        ClockP_deinit();
         #if defined MCU_PLUS_SDK
             HwiP_disableVIC();
         #else
@@ -106,7 +107,22 @@ u32 osal_resume_dm(void)
         #else
             CSL_armR5StartupIntrEnableVic(1);      /* Enable VIC mode */
         #endif
-        OS_StartTickTimer();
+        ClockP_init();
         TaskP_restore(0);
         return 0;
+}
+
+s32 osal_dm_copy_fs_stub_from_ddr_to_local_mem(void)
+{
+    return (Sciclient_copyLPMFSStubToLocalMem());
+}
+
+s32 osal_suspend_dm_application(void)
+{
+    return (Sciclient_suspendLPMApplication());
+}
+
+s32 osal_resume_dm_application(void)
+{
+    return (Sciclient_resumeLPMApplication());
 }

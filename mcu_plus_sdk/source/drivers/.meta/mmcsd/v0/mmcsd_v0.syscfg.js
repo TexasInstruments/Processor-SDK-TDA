@@ -38,9 +38,6 @@ function getOperatingMode(inst) {
             case "HS400":
                 return "MMCSD_SUPPORT_MMC_DS | MMCSD_SUPPORT_MMC_HS400";
                 break;
-            case "HS400_ES":
-                return "MMCSD_SUPPORT_MMC_DS | MMCSD_SUPPORT_MMC_HS400_ES";
-                break;
         }
     }else if(inst.cardType == "SD")
     {
@@ -50,20 +47,139 @@ function getOperatingMode(inst) {
                 return "MMCSD_SUPPORT_SD_DS | MMCSD_SUPPORT_SD_HS";
                 break;
         }
+    }else if(inst.cardType == "NO_DEVICE")
+    {
+        switch(inst.modeSelectEMMC)
+        {
+            default:
+                return "MMCSD_SUPPORT_MMC_DS | MMCSD_SUPPORT_MMC_HS_SDR";
+                break;
+        }
     }
 
 }
 
 function pinmuxRequirements(instance) {
+    const configArr = getConfigArr();
 	let interfaceName = getInterfaceName(instance);
+    let phyType = configArr.find(config => config.name === "MMC0").phyType;
 
 	let resources = [];
     let pinResource = {};
 
+    if (phyType === "MMCSD_PHY_TYPE_SW_PHY")
+    {
+        if (interfaceName == "MMC")
+        {
+            pinResource = pinmux.getPinRequirements(interfaceName, "MMC_CLK", "MMC0 CLK Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "nopull");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "MMC_CMD", "MMC0 CMD Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "nopull");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "MMC_DAT0", "MMC0 DAT0 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "nopull");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "MMC_DAT1", "MMC0 DAT1 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "MMC_DAT2", "MMC0 DAT2 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "MMC_DAT3", "MMC0 DAT3 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "MMC_DAT4", "MMC0 DAT4 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "MMC_DAT5", "MMC0 DAT5 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "MMC_DAT6", "MMC0 DAT6 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "MMC_DAT7", "MMC0 DAT7 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+        }
+
+        if (interfaceName == "MMC0")
+        {
+            pinResource = pinmux.getPinRequirements(interfaceName, "CLK", "MMC0 CLK Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "nopull");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "CMD", "MMC0 CMD Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "nopull");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "DAT0", "MMC0 DAT0 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "nopull");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "DAT1", "MMC0 DAT1 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "DAT2", "MMC0 DAT2 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "DAT3", "MMC0 DAT3 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "DAT4", "MMC0 DAT4 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "DAT5", "MMC0 DAT5 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "DAT6", "MMC0 DAT6 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+
+            pinResource = pinmux.getPinRequirements(interfaceName, "DAT7", "MMC0 DAT7 Pin");
+            pinmux.setConfigurableDefault(pinResource, "rx", true);
+            pinmux.setConfigurableDefault(pinResource, "pu_pd", "pu");
+            resources.push(pinResource);
+        }
+    }
+
     if(interfaceName == "MMC1")
     {
     	pinResource = pinmux.getPinRequirements(interfaceName, "CLK", "MMC1 CLK Pin");
-    	pinmux.setConfigurableDefault( pinResource, "rx", false );
+    	pinmux.setConfigurableDefault( pinResource, "rx", true );
         pinmux.setConfigurableDefault( pinResource, "pu_pd", "nopull" );
     	resources.push( pinResource);
 
@@ -79,14 +195,22 @@ function pinmuxRequirements(instance) {
 
     	pinResource = pinmux.getPinRequirements(interfaceName, "DAT1", "MMC1 DAT1 Pin");
     	pinmux.setConfigurableDefault( pinResource, "rx", true );
+        pinmux.setConfigurableDefault( pinResource, "pu_pd", "nopull" );
     	resources.push( pinResource);
 
     	pinResource = pinmux.getPinRequirements(interfaceName, "DAT2", "MMC1 DAT2 Pin");
     	pinmux.setConfigurableDefault( pinResource, "rx", true );
+        pinmux.setConfigurableDefault( pinResource, "pu_pd", "nopull" );
     	resources.push( pinResource);
 
     	pinResource = pinmux.getPinRequirements(interfaceName, "DAT3", "MMC1 DAT3 Pin");
     	pinmux.setConfigurableDefault( pinResource, "rx", true );
+        pinmux.setConfigurableDefault( pinResource, "pu_pd", "nopull" );
+    	resources.push( pinResource);
+
+    	pinResource = pinmux.getPinRequirements(interfaceName, "SDCD", "MMC1 SDCD Pin");
+    	pinmux.setConfigurableDefault( pinResource, "rx", true );
+        pinmux.setConfigurableDefault( pinResource, "pu_pd", "nopull" );
     	resources.push( pinResource);
     }
 
@@ -101,10 +225,23 @@ function pinmuxRequirements(instance) {
 }
 
 function getPeripheralPinNames(inst) {
+    const configArr = getConfigArr();
+    let phyType = configArr.find(config => config.name === "MMC0").phyType;
 
 	if(getInterfaceName(inst) == "MMC1") {
-		return ["CLK", "CMD", "DAT0", "DAT1", "DAT2", "DAT3"];
+		return ["CLK", "CMD", "DAT0", "DAT1", "DAT2", "DAT3", "SDCD"];
 	}
+
+    if (phyType === "MMCSD_PHY_TYPE_SW_PHY")
+    {
+        if(getInterfaceName(inst) == "MMC0") {
+            return ["CLK", "CMD", "DAT0", "DAT1", "DAT2", "DAT3", "DAT4", "DAT5", "DAT6", "DAT7"];
+        }
+
+        if(getInterfaceName(inst) == "MMC") {
+            return ["MMC_CLK", "MMC_CMD", "MMC_DAT0", "MMC_DAT1", "MMC_DAT2", "MMC_DAT3", "MMC_DAT4", "MMC_DAT5", "MMC_DAT6", "MMC_DAT7"];
+        }
+    }
 
     return [ ];
 }
@@ -210,8 +347,8 @@ function getConfigurables()
     config.push(
         {
             name: "moduleSelect",
-            displayName: "Select MMCSD Module",
-            description: "The MMC0 is usually connected to the eMMC device and MMC1 is usually connected to the SD card slot",
+            displayName: "MMCSD Module",
+            longDescription: "Select the MMC port to which the card is connected to in the schematics. As per the device datasheet, the MMC0 port is compliant to the eMMC cards while the MMC1/2 ports are compliant to the SD/SDIO devices. Only MMC0/1 ports and eMMC/SD cards are supported. On TI EVMs, the eMMC card is connected to the MMC0 port and the SD card is connected to the MMC1 port.",
             default: "MMC0",
             options: [
                 { name: "MMC0" },
@@ -220,14 +357,16 @@ function getConfigurables()
             onChange: function (inst, ui) {
                 if(inst.moduleSelect == "MMC0") {
                     inst.cardType = "EMMC";
-                    inst.phyType = "HW_PHY";
                     ui.modeSelectEMMC.hidden = false;
                     ui.modeSelectSD.hidden = true;
+                    ui.ControllerdriveStrength.hidden = false;
+                    ui.EMMCdriveStrength.hidden = false;
                 } else {
                     inst.cardType = "SD";
-                    inst.phyType = "SW_PHY";
                     ui.modeSelectSD.hidden = false;
                     ui.modeSelectEMMC.hidden = true;
+                    ui.ControllerdriveStrength.hidden = true;
+                    ui.EMMCdriveStrength.hidden = true;
                 }
             },
         },
@@ -247,22 +386,40 @@ function getConfigurables()
             options: soc.getOperatingModesSD(),
             hidden: true,
         },
-		{
-			name: "inputClkFreq",
-			displayName: "Input Clock Frequency (Hz)",
-			default: soc.getDefaultConfig().inputClkFreq,
-		},
-		{
-			name: "cardType",
-			displayName: "Card Type",
-			default: "EMMC",
+        {
+            name: "inputClkFreq",
+            displayName: "Input Clock Frequency (Hz)",
+            description: "Set the input clock frequency based on the selected speed mode.",
+            default: soc.getDefaultConfig().inputClkFreq,
+        },
+        {
+            name: "EMMCdriveStrength",
+            displayName: "EMMC Drive Strength",
+            description: "Set the drive strength of the EMMC device.",
+            default: soc.getDefaultDriveStrengthEMMC().name,
+            options: soc.getDriveStrengthEMMC(),
+            hidden: false,
+        },
+        {
+            name: "ControllerdriveStrength",
+            displayName: "EMMC Controller Drive Strength",
+            description: "Set the drive strength of the host controller.",
+            default: soc.getDefaultDriveStrengthController().name,
+            options: soc.getDriveStrengthController(),
+            hidden: false,
+        },
+        {
+            name: "cardType",
+            displayName: "Card Type",
+            description: "Select the card type. Select NO_DEVICE for the driver to assume no card is connected to the selected MMCSD module.",
+            default: "EMMC",
             options: [
                 { name: "EMMC" },
                 { name: "SD" },
                 { name: "NO_DEVICE" },
             ],
-		},
-		{
+        },
+        {
             name: "intrEnable",
             displayName: "Interrupt Mode Enable",
             description: "NOT tested, DO NOT USE",
@@ -272,20 +429,10 @@ function getConfigurables()
         {
             name: "dmaEnable",
             displayName: "DMA Enable",
+            description: "Check the box if the DMA is to be enabled. The DMA here is the MMCSD module's integrated DMA.",
             default: true,
             hidden: true,
         },
-        {
-			name: "phyType",
-			displayName: "PHY Type",
-			options: [
-                { name: "HW_PHY" },
-                { name: "SW_PHY" },
-                { name: "NO_PHY" },
-            ],
-			default: "HW_PHY",
-			hidden: false,
-		},
     )
 
     if(common.isDMWithBootSupported())
@@ -293,7 +440,30 @@ function getConfigurables()
         config.push(common.getDMWithBootConfig());
     }
 
-    config.push(common.getSkipDeinitFromSblConfig());
+    if(system.deviceData.device === "AM275x"){
+        config = config.filter((ele) => ele.name !== "moduleSelect")
+        config.push(
+            {
+                name: "moduleSelect",
+                displayName: "Select MMCSD Module",
+                default: "MMC",
+                options: [
+                    { name: "MMC" },
+                ],
+                onChange: function (inst, ui) {
+                    if(inst.moduleSelect == "MMC") {
+                        inst.cardType = "EMMC";
+                        ui.modeSelectEMMC.hidden = false;
+                        ui.modeSelectSD.hidden = true;
+                    } else {
+                        inst.cardType = "SD";
+                        ui.modeSelectSD.hidden = false;
+                        ui.modeSelectEMMC.hidden = true;
+                    }
+                },
+            },
+        )
+    }
 
     return config;
 }

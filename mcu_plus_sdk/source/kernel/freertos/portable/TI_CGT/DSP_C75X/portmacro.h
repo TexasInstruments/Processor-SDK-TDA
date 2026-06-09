@@ -1,5 +1,5 @@
 /*
- * FreeRTOS Kernel V10.4.1
+ * FreeRTOS Kernel V11.1.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -25,7 +25,7 @@
  * 1 tab == 4 spaces!
  */
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -107,11 +107,13 @@
     extern void vPortYeildFromISR( uint32_t x );
     extern void vPortYield(void);
     extern void vPortYieldAsyncFromISR( void );
+    extern void Hwi_refreshNLC( void );
     #define portYIELD_FROM_ISR( x )    vPortYeildFromISR( x )
     #define portEND_SWITCHING_ISR( x ) vPortYeildFromISR( x )
     #define portYIELD()                vPortYield();
     void vPortAssertIfInISR();
     #define portASSERT_IF_IN_ISR()    vPortAssertIfInISR()
+    #define vPortRefreshNLC()         Hwi_refreshNLC()
 
 
 /* Critical section control */
@@ -167,6 +169,9 @@
     uint32_t uiPortGetRunTimeCounterValue();
     #define portGET_RUN_TIME_COUNTER_VALUE()        uiPortGetRunTimeCounterValue()
 
+    #ifndef portINLINE
+        #define portINLINE   __inline
+    #endif
 
     #ifdef __cplusplus
         } /* extern C */

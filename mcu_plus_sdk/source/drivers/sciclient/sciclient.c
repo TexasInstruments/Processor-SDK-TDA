@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2020, Texas Instruments Incorporated
+ * Copyright (c) 2017-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- *    Neither the name of Texas Instruments Incorporated nor the names of
+ * *  Neither the name of Texas Instruments Incorporated nor the names of
  *    its contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
@@ -41,14 +41,21 @@
 /* ========================================================================== */
 
 #include <drivers/sciclient/sciclient_priv.h>
-#include <kernel/dpl/HwiP.h>
+#include <kernel/dpl/ClockP.h>
 #include <kernel/dpl/SystemP.h>
 #include <kernel/dpl/AddrTranslateP.h>
 #include <stdbool.h>
 #include <string.h> /*For memcpy*/
+#if defined(AMP_FREERTOS_A53)
+#include <kernel/nortos/dpl/a53/SpinlockP_armv8.h>
+#endif
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
+
+/* Secure Header size in words */
+#define SCICLIENT_SECURE_HEADER_SIZE_IN_WORDS (sizeof (struct tisci_sec_header) \
+                                               / sizeof (uint32_t))
 
 /*Header size in words*/
 #define SCICLIENT_HEADER_SIZE_IN_WORDS (sizeof (struct tisci_header) \
@@ -84,7 +91,8 @@ static inline uint32_t Sciclient_secProxyThreadStatusReg(uint32_t thread);
  *
  *  \return  word      Value read back.
  */
-static inline uint32_t Sciclient_secProxyReadThread32(uint32_t thread, uint8_t idx);
+static inline uint32_t Sciclient_secProxyReadThread32(uint32_t thread,
+                                                      uint8_t idx);
 
 /**
  *  \brief   Read the current thread count.
@@ -118,11 +126,12 @@ static int32_t Sciclient_secProxyWaitThread(uint32_t thread, uint32_t timeout);
 /**
  *  \brief   API to send the message to the thread.
  *
- *  \param   thread         Index of the thread.
- *  \param   pSecHeader     Pointer to the security header extension.
- *  \param   pHeader        Pointer to the header structure.
- *  \param   pPayload       Pointer to the payload structure.
- *  \param   payloadSize    Size of the payload.
+ *  \param   thread                 Index of the thread.
+ *  \param   pSecHeader             Pointer to the security header extension.
+ *  \param   pHeader                Pointer to the header structure.
+ *  \param   pPayload               Pointer to the payload structure.
+ *  \param   payloadSize            Size of the payload.
+ *  \param   secHeaderSizeWords     Size of secure header in words.
  *
  *  \return  None
  */
@@ -130,37 +139,42 @@ static void Sciclient_sendMessage(uint32_t        thread,
                                   const uint8_t  *pSecHeader,
                                   const uint8_t  *pHeader,
                                   const uint8_t  *pPayload,
-                                  uint32_t        payloadSize);
+                                  uint32_t        payloadSize,
+                                  uint8_t         secHeaderSizeWords);
 
 /**
  *  \brief   API to wait for message from the thread.
  *
- *  \param   rxThread          Index of the response thread.
- *  \param   timeout           Timeout value to wait until
- *  \param   initialCount      Thread count before sending message
- *  \param   localSeqId        Sequence Id of the message just sent
+ *  \param   rxThread               Index of the response thread.
+ *  \param   timeout                Timeout value to wait until
+ *  \param   initialCount           Thread count before sending message
+ *  \param   localSeqId             Sequence Id of the message just sent
+ *  \param   secHeaderSizeWords     Size of secure header in words.
  *
- *  \return  status            Status of the wait (Timeout or Pass)
+ *  \return  status     Status of the wait (Timeout or Pass)
  */
 
 static int32_t Sciclient_waitForMessage(uint32_t rxThread,
                                          uint32_t timeout,
                                          uint32_t initialCount,
-                                         uint8_t localSeqId);
+                                         uint8_t localSeqId,
+                                         uint8_t secHeaderSizeWords);
 
 /**
  *  \brief   API to receive the message from the thread.
  *
- *  \param   rxThread          Index of the response thread.
- *  \param   pLocalRespPayload Pointer to the response payload.
- *  \param   rxPayloadSize     Size of the response payload.
+ *  \param   rxThread               Index of the response thread.
+ *  \param   pLocalRespPayload      Pointer to the response payload.
+ *  \param   rxPayloadSize          Size of the response payload.
+ *  \param   secHeaderSizeWords     Size of secure header in words.
  *
  *  \return  None
  */
 
 static void Sciclient_recvMessage(uint32_t rxThread,
                                   uint8_t *pLocalRespPayload,
-                                  uint32_t rxPayloadSize);
+                                  uint32_t rxPayloadSize,
+                                  uint8_t  secHeaderSizeWords);
 /**
  *  \brief   API to flush/remove all outstanding messages on a thread .
  *
@@ -169,6 +183,37 @@ static void Sciclient_recvMessage(uint32_t rxThread,
  *  \return None
  */
 static void Sciclient_secProxyFlush(uint32_t thread);
+
+#if defined(ENABLE_SCICLIENT_INTERRUPT_MODE)
+/**
+ *  \brief   Interrupt Service Routine for secure proxy response notification
+ *
+ *  \param   arg    Context ID (not used currently)
+ *
+ *  \return  None
+ */
+static void Sciclient_ISR(uintptr_t arg);
+
+/**
+ *  \brief   Setup response interrupt for a given context
+ *
+ *  \param   contextId       Context ID to use for determining interrupt number
+ *  \param   handlerIndex    Handler index in respIntr array
+ *                           (SCICLIENT_NON_SEC_RESP_INTR_HANDLER or
+ *                           SCICLIENT_SEC_RESP_INTR_HANDLER)
+ *
+ *  \return  status    SystemP_SUCCESS on success, else failure
+ */
+static int32_t Sciclient_setupRespIntr(uint32_t contextId,
+                                       uint8_t handlerIndex);
+
+/**
+ *  \brief   Unregister interrupts and cleanup semaphores
+ *
+ *  \return  None
+ */
+static void Sciclient_unregisterIntr(void);
+#endif
 
 /* ========================================================================== */
 /*                            Extern Functions                                */
@@ -188,14 +233,37 @@ extern CSL_SecProxyCfg gSciclientSecProxyCfg;
 /* ========================================================================== */
 /**
  *   \brief Handle used by #Sciclient_service function
+ *          coreId is initialized to CSL_CORE_ID_INVALID to indicate
+ *          uninitialized state.
  */
-static Sciclient_ServiceHandle_t gSciclientHandle = {0};
+static Sciclient_ServiceHandle_t Sciclient_handle = {
+    .coreId = CSL_CORE_ID_INVALID
+};
+
+#if defined(ENABLE_SCICLIENT_INTERRUPT_MODE)
+/**
+ *   \brief Static storage for semaphore objects used in interrupt mode.
+ *          These are pointed to by Sciclient_handle.semHandles[]
+ */
+static SemaphoreP_Object Sciclient_semObjects[SCICLIENT_MAX_QUEUE_SIZE];
 
 /**
- *   \brief Size of secure header.This is initialized when the context is
- *          SECURE.
+ *   \brief Static storage for HWI objects for response interrupts.
+ *          These are pointed to by Sciclient_handle.respIntr[]
  */
-static uint8_t gSecHeaderSizeWords = 0;
+static HwiP_Object Sciclient_respIntrObj[SCICLIENT_MAX_RESP_INTR_HANDLER];
+#endif
+
+/**
+ *   \brief Semaphore to serialize concurrent Sciclient_service() calls.
+ *          Binary semaphore initialized to 1 (available).
+ */
+static SemaphoreP_Object Sciclient_writeLockSem;
+
+/**
+ *   \brief Flag to track if write lock semaphore has been initialized.
+ */
+static uint8_t Sciclient_writeLockSemInited = 0U;
 
 /* ========================================================================== */
 /*                          Function Definitions                              */
@@ -204,51 +272,292 @@ static uint8_t gSecHeaderSizeWords = 0;
 int32_t Sciclient_init(uint32_t coreId)
 {
     int32_t   status = SystemP_SUCCESS;
+    
+    /* Check if Sciclient is already initialized */
+    if (Sciclient_handle.coreId != CSL_CORE_ID_INVALID)
+    {
+        DebugP_logInfo("Sciclient is already initialized\r\n");
+    }
+    else
+    {
+        /* Initialize write lock semaphore */
+        if (Sciclient_writeLockSemInited == 0U)
+        {
+            if (SemaphoreP_constructBinary(&Sciclient_writeLockSem, 1U) ==
+                SystemP_SUCCESS)
+            {
+                Sciclient_writeLockSemInited = 1U;
+            }
+            else
+            {
+                status = SystemP_FAILURE;
+            }
+        }
 
-    /* convert system address to CPU local address */
-    gSciclientSecProxyCfg.pSecProxyRegs
-        = (CSL_sec_proxyRegs*)AddrTranslateP_getLocalAddr( (uint64_t)gSciclientSecProxyCfg.pSecProxyRegs);
-    gSciclientSecProxyCfg.pSecProxyScfgRegs
-        = (CSL_sec_proxy_scfgRegs*)AddrTranslateP_getLocalAddr( (uint64_t)gSciclientSecProxyCfg.pSecProxyScfgRegs);
-    gSciclientSecProxyCfg.pSecProxyRtRegs
-        = (CSL_sec_proxy_rtRegs*)AddrTranslateP_getLocalAddr( (uint64_t)gSciclientSecProxyCfg.pSecProxyRtRegs);
-    gSciclientSecProxyCfg.proxyTargetAddr
-        = (uint64_t)AddrTranslateP_getLocalAddr( (uint64_t)gSciclientSecProxyCfg.proxyTargetAddr);
+        if ((status == SystemP_SUCCESS) && (coreId < CSL_CORE_ID_MAX))
+        {
+            /* convert system address to CPU local address */
+            gSciclientSecProxyCfg.pSecProxyRegs =
+                (CSL_sec_proxyRegs*)AddrTranslateP_getLocalAddr(
+                    (uint64_t)gSciclientSecProxyCfg.pSecProxyRegs);
+            gSciclientSecProxyCfg.pSecProxyScfgRegs =
+                (CSL_sec_proxy_scfgRegs*)AddrTranslateP_getLocalAddr(
+                    (uint64_t)gSciclientSecProxyCfg.pSecProxyScfgRegs);
+            gSciclientSecProxyCfg.pSecProxyRtRegs =
+                (CSL_sec_proxy_rtRegs*)AddrTranslateP_getLocalAddr(
+                    (uint64_t)gSciclientSecProxyCfg.pSecProxyRtRegs);
+            gSciclientSecProxyCfg.proxyTargetAddr =
+                (uint64_t)AddrTranslateP_getLocalAddr(
+                    (uint64_t)gSciclientSecProxyCfg.proxyTargetAddr);
 
-    gSciclientHandle.currSeqId = 0;
-    gSciclientHandle.coreId = coreId;
-    gSciclientHandle.devIdCore = Sciclient_getDevId(coreId);
-    gSciclientHandle.secureContextId = Sciclient_getContext(SCICLIENT_SECURE_CONTEXT, coreId);
-    gSciclientHandle.nonSecureContextId = Sciclient_getContext(SCICLIENT_NON_SECURE_CONTEXT, coreId);
-    gSciclientHandle.maxMsgSizeBytes = CSL_secProxyGetMaxMsgSize(&gSciclientSecProxyCfg) -
-                                CSL_SEC_PROXY_RSVD_MSG_BYTES;
+            Sciclient_handle.currSeqId = 0;
+            Sciclient_handle.coreId = coreId;
+            Sciclient_handle.devIdCore = Sciclient_getDevId(coreId);
+            Sciclient_handle.secureContextId =
+                Sciclient_getContext(SCICLIENT_SECURE_CONTEXT, coreId);
+            Sciclient_handle.nonSecureContextId =
+                Sciclient_getContext(SCICLIENT_NON_SECURE_CONTEXT, coreId);
+            Sciclient_handle.maxMsgSizeBytes =
+                CSL_secProxyGetMaxMsgSize(&gSciclientSecProxyCfg) -
+                CSL_SEC_PROXY_RSVD_MSG_BYTES;
 
-    return status;
+            /* Initialize operation mode to polling */
+            Sciclient_handle.opModeFlag = SCICLIENT_SERVICE_OPERATION_MODE_POLLED;
+
+#ifdef ENABLE_SCICLIENT_INTERRUPT_MODE
+            status = Sciclient_updateOperModeToInterrupt();
+#endif
+        }
+        else
+        {
+            status = SystemP_FAILURE;
+        }
+    }
+    return(status);
 }
 
 int32_t Sciclient_deinit(void)
 {
     int32_t   status = SystemP_SUCCESS;
-    return status;
+
+    /* Destruct write lock semaphore */
+    if (Sciclient_writeLockSemInited == 1U)
+    {
+        SemaphoreP_destruct(&Sciclient_writeLockSem);
+        Sciclient_writeLockSemInited = 0U;
+    }
+
+    if (Sciclient_handle.coreId == CSL_CORE_ID_INVALID)
+    {
+        status = SystemP_FAILURE;
+    }
+    else
+    {
+#if defined(ENABLE_SCICLIENT_INTERRUPT_MODE)
+        /* Unregister interrupt if it was configured */
+        if (Sciclient_handle.opModeFlag ==
+            SCICLIENT_SERVICE_OPERATION_MODE_INTERRUPT)
+        {
+            Sciclient_unregisterIntr();
+        }
+#endif
+
+        Sciclient_handle.currSeqId = 0;
+        Sciclient_handle.coreId = CSL_CORE_ID_INVALID;
+        Sciclient_handle.devIdCore = 0xFFFFU;
+        Sciclient_handle.secureContextId = 0xFFFFU;
+        Sciclient_handle.nonSecureContextId = 0xFFFFU;
+        Sciclient_handle.maxMsgSizeBytes = 0;
+    }
+
+    return(status);
+}
+
+#if defined(ENABLE_SCICLIENT_INTERRUPT_MODE)
+int32_t Sciclient_updateOperModeToInterrupt(void)
+{
+    DebugP_log("\r\nSciclient: Attempting to initialize in interrupt mode\r\n");
+    int32_t status = SystemP_SUCCESS;
+    uint32_t nonSecureContextId = Sciclient_handle.nonSecureContextId;
+    uint32_t secureContextId = Sciclient_handle.secureContextId;
+    uint32_t i, j;
+
+    /* Check if sciclient is initialized */
+    if (Sciclient_handle.coreId == CSL_CORE_ID_INVALID)
+    {
+        status = SystemP_FAILURE;
+    }
+    else if (Sciclient_handle.opModeFlag !=
+             SCICLIENT_SERVICE_OPERATION_MODE_INTERRUPT)
+    {
+        /* Set operation mode flag */
+        Sciclient_handle.opModeFlag =
+            SCICLIENT_SERVICE_OPERATION_MODE_INTERRUPT;
+
+        /* Create semaphores using static storage */
+        for (i = 0U; i < SCICLIENT_MAX_QUEUE_SIZE; i++)
+        {
+            Sciclient_handle.semStatus[i] = 0;
+            Sciclient_handle.semHandles[i] = &Sciclient_semObjects[i];
+            status = SemaphoreP_constructBinary(
+                Sciclient_handle.semHandles[i], 0U);
+            if (status != SystemP_SUCCESS)
+            {
+                /* Cleanup on failure and reset to polling mode */
+                for (j = 0U; j < i; j++)
+                {
+                    SemaphoreP_destruct(Sciclient_handle.semHandles[j]);
+                    Sciclient_handle.semHandles[j] = NULL;
+                }
+                /* Clear the failed handle pointer as well */
+                Sciclient_handle.semHandles[i] = NULL;
+                Sciclient_handle.opModeFlag =
+                    SCICLIENT_SERVICE_OPERATION_MODE_POLLED;
+                DebugP_logError("Sciclient: Semaphore creation failed, falling back to polling mode\r\n");
+                break;
+            }
+        }
+
+        if (status == SystemP_SUCCESS)
+        {
+            /* Setup response interrupt for non-secure context */
+            status = Sciclient_setupRespIntr(nonSecureContextId,
+                (uint8_t)SCICLIENT_NON_SEC_RESP_INTR_HANDLER);
+
+            /* Setup interrupt for secure context (if different) */
+            if ((status == SystemP_SUCCESS) &&
+                (secureContextId != nonSecureContextId))
+            {
+                status = Sciclient_setupRespIntr(secureContextId,
+                    (uint8_t)SCICLIENT_SEC_RESP_INTR_HANDLER);
+            }
+
+            /* Verify at least one handler was registered */
+            if ((status == SystemP_SUCCESS) &&
+                (Sciclient_handle.respIntr[
+                    SCICLIENT_NON_SEC_RESP_INTR_HANDLER] == NULL) &&
+                (Sciclient_handle.respIntr[
+                    SCICLIENT_SEC_RESP_INTR_HANDLER] == NULL))
+            {
+                status = SystemP_FAILURE;
+            }
+
+            /* Cleanup on error and fallback to polling mode */
+            if (status != SystemP_SUCCESS)
+            {
+                /* Cleanup semaphores and interrupt handlers */
+                Sciclient_unregisterIntr();
+                Sciclient_handle.opModeFlag =
+                    SCICLIENT_SERVICE_OPERATION_MODE_POLLED;
+                DebugP_logError("Sciclient: Interrupt setup failed, falling back to polling mode\r\n");
+            }
+        }
+    }
+    else
+    {
+        /* Already in interrupt mode - verify non-secure handler
+         * is configured (always registered when interrupt enabled) */
+        if (Sciclient_handle.respIntr[
+            SCICLIENT_NON_SEC_RESP_INTR_HANDLER] == NULL)
+        {
+            /* Invalid state - cleanup and fallback to polling mode */
+            Sciclient_unregisterIntr();
+            Sciclient_handle.opModeFlag =
+                SCICLIENT_SERVICE_OPERATION_MODE_POLLED;
+            DebugP_logError("Sciclient: Invalid interrupt state, falling back to polling mode\r\n");
+            status = SystemP_FAILURE;
+        }
+    }
+
+    return(status);
+}
+
+void Sciclient_disableIntr(void)
+{
+    if (Sciclient_handle.opModeFlag ==
+        SCICLIENT_SERVICE_OPERATION_MODE_INTERRUPT)
+    {
+        /* Disable non-secure context interrupt if registered */
+        if (Sciclient_handle.respIntr[
+            SCICLIENT_NON_SEC_RESP_INTR_HANDLER] != NULL)
+        {
+            (void) HwiP_disableInt(
+                gSciclientMap[Sciclient_handle.nonSecureContextId]
+                    .respIntrNum);
+        }
+
+        /* Disable secure context interrupt if registered */
+        if (Sciclient_handle.respIntr[
+            SCICLIENT_SEC_RESP_INTR_HANDLER] != NULL)
+        {
+            (void) HwiP_disableInt(
+                gSciclientMap[Sciclient_handle.secureContextId]
+                    .respIntrNum);
+        }
+    }
+}
+
+void Sciclient_enableIntr(void)
+{
+    if (Sciclient_handle.opModeFlag ==
+        SCICLIENT_SERVICE_OPERATION_MODE_INTERRUPT)
+    {
+        /* Enable non-secure context interrupt if registered */
+        if (Sciclient_handle.respIntr[
+            SCICLIENT_NON_SEC_RESP_INTR_HANDLER] != NULL)
+        {
+            HwiP_enableInt(
+                gSciclientMap[Sciclient_handle.nonSecureContextId]
+                    .respIntrNum);
+        }
+
+        /* Enable secure context interrupt if registered */
+        if (Sciclient_handle.respIntr[
+            SCICLIENT_SEC_RESP_INTR_HANDLER] != NULL)
+        {
+            HwiP_enableInt(
+                gSciclientMap[Sciclient_handle.secureContextId]
+                    .respIntrNum);
+        }
+    }
+}
+#endif
+
+void Sciclient_updateOperModeToPolled(void)
+{
+    /* Check if sciclient is initialized */
+    if (Sciclient_handle.coreId != CSL_CORE_ID_INVALID)
+    {
+#if defined(ENABLE_SCICLIENT_INTERRUPT_MODE)
+        if (Sciclient_handle.opModeFlag ==
+            SCICLIENT_SERVICE_OPERATION_MODE_INTERRUPT)
+        {
+            Sciclient_unregisterIntr();
+        }
+#endif
+        Sciclient_handle.opModeFlag =
+            SCICLIENT_SERVICE_OPERATION_MODE_POLLED;
+    }
 }
 
 int32_t Sciclient_abiCheck(void)
 {
     int32_t status = SystemP_SUCCESS;
     /* Send getRevision message for ABI Revision Check */
-    struct tisci_msg_version_req request;
+    struct tisci_msg_version_req request = {0};
     const Sciclient_ReqPrm_t      reqPrm =
     {
         TISCI_MSG_VERSION,
         TISCI_MSG_FLAG_AOP,
-        (uint8_t *) &request,
+        (const uint8_t *) &request,
         sizeof (request),
         SystemP_WAIT_FOREVER
     };
 
     struct tisci_msg_version_resp response;
-    /* Explicitly initialize the value to something other than SCICLIENT_FIRMWARE_ABI_MAJOR
-     * so that the function doesn't accidentally pass.
+    /* Explicitly initialize the value to something other than
+     * SCICLIENT_FIRMWARE_ABI_MAJOR so that the function doesn't
+     * accidentally pass.
      */
     response.abi_major = 0xFFU;
 
@@ -267,10 +576,10 @@ int32_t Sciclient_abiCheck(void)
         status = SystemP_FAILURE;
     }
 
-    return status;
+    return(status);
 }
 
-int32_t Sciclient_getVersionCheck(bool doLog)
+int32_t Sciclient_getVersionCheck(uint32_t doLog)
 {
     int32_t status;
     struct tisci_msg_version_req req = {0};
@@ -284,8 +593,9 @@ int32_t Sciclient_getVersionCheck(bool doLog)
     };
 
     struct tisci_msg_version_resp response;
-    /* Explicitly initialize the value to something other than SCICLIENT_FIRMWARE_ABI_MAJOR
-     * so that we would know the getVersion failed at least from the prints.
+    /* Explicitly initialize the value to something other than
+     * SCICLIENT_FIRMWARE_ABI_MAJOR so that we would know the
+     * getVersion failed at least from the prints.
      */
     response.version = 0xFFFFU;
     response.abi_major = 0xFFU;
@@ -300,27 +610,84 @@ int32_t Sciclient_getVersionCheck(bool doLog)
     status = Sciclient_service(&reqPrm, &respPrm);
     if ( (SystemP_SUCCESS == status) && (respPrm.flags == TISCI_MSG_FLAG_ACK))
     {
-        if(doLog)
+        if(doLog != 0U)
         {
             DebugP_log("\r\n");
-            DebugP_log("SYSFW Version %s\r\n",
-                                (char *) response.str);
-            DebugP_log("SYSFW revision 0x%x\r\n", response.version);
-            DebugP_log("SYSFW ABI revision %d.%d\r\n", response.abi_major,
-                                response.abi_minor);
-            DebugP_log("\r\n");
+            DebugP_log("SYSFW ABI: %d.%d (firmware rev 0x%04x '%s')\r\n",
+                       response.abi_major,
+                       response.abi_minor,
+                       response.version,
+                       (char*)response.str);
         }
     }
     else
     {
         status = SystemP_FAILURE;
-        if(doLog)
+        if(doLog != 0U)
         {
             DebugP_log("\r\n");
             DebugP_logError("[ERROR] Sciclient get version failed !!!\r\n");
         }
     }
-    return status;
+
+    return(status);
+}
+
+int32_t Sciclient_getDMVersion(uint32_t doLog)
+{
+    int32_t status;
+    struct tisci_msg_dm_version_req req = {0};
+    const Sciclient_ReqPrm_t      reqPrm =
+    {
+        TISCI_MSG_DM_VERSION,
+        TISCI_MSG_FLAG_AOP,
+        (const uint8_t *) &req,
+        sizeof(req),
+        SystemP_WAIT_FOREVER
+    };
+
+    struct tisci_msg_dm_version_resp response;
+    /* Explicitly initialize the value to something other than correct value
+     * so that we would know the getDMVersion failed at least from the prints.
+     */
+    response.version = 0xFFFFU;
+    response.sub_version = 0xFFU;
+    response.patch_version = 0xFFU;
+    response.abi_major = 0xFFU;
+    response.abi_minor = 0xFFU;
+    Sciclient_RespPrm_t           respPrm =
+    {
+        0,
+        (uint8_t *) &response,
+        sizeof (response)
+    };
+
+    status = Sciclient_service(&reqPrm, &respPrm);
+    if ((SystemP_SUCCESS == status) && (respPrm.flags == TISCI_MSG_FLAG_ACK))
+    {
+        if(doLog != 0U)
+        {
+            DebugP_log("\r\n");
+            DebugP_log("DM ABI: %d.%d (firmware rev 0x%04x '%s--%s' patch_ver: %u)\r\n",
+                       response.abi_major,
+                       response.abi_minor,
+                       response.version,
+                       response.sciserver_version,
+                       response.rm_pm_hal_version,
+                       response.patch_version);
+        }
+    }
+    else
+    {
+        status = SystemP_FAILURE;
+        if(doLog != 0U)
+        {
+            DebugP_log("\r\n");
+            DebugP_logError("[ERROR] Sciclient get DM version failed !!!\r\n");
+        }
+    }
+
+    return(status);
 }
 
 int32_t Sciclient_triggerSecHandover(void)
@@ -355,31 +722,42 @@ int32_t Sciclient_triggerSecHandover(void)
     }
 
 
-    return status;
+    return(status);
 }
 
-/* HWI_disable instead of semaphores for MCAL polling based. define in separate files*/
+/*
+ * HWI_disable instead of semaphores for MCAL polling based.
+ * Define in separate files.
+ */
 int32_t Sciclient_service(const Sciclient_ReqPrm_t *pReqPrm,
                           Sciclient_RespPrm_t      *pRespPrm)
 {
     int32_t   status        = SystemP_SUCCESS;
     uint32_t  contextId     = SCICLIENT_CONTEXT_MAX_NUM;
     uint32_t  initialCount  = 0U;
-    uint8_t   localSeqId    = gSciclientHandle.currSeqId;
+    uint8_t   localSeqId    = Sciclient_handle.currSeqId;
     /* size of request payload in bytes  */
     uint32_t  txPayloadSize = 0U;
     /* size of response payload in bytes */
     uint32_t  rxPayloadSize = 0U;
     uint8_t  *pLocalRespPayload = NULL;
-    uint32_t  txThread;
-    uint32_t  rxThread;
+    uint32_t  txThread = 0U;
+    uint32_t  rxThread = 0U;
     uintptr_t key;
     uint8_t  *pSecHeader = NULL;
     struct tisci_header *header;
     struct tisci_sec_header secHeader;
+    uint32_t  lockAcquired  = 0U;
+    uint8_t   secHeaderSizeWords = 0U;
 
+    /* Check if sciclient is initialized */
+    if (Sciclient_handle.coreId == CSL_CORE_ID_INVALID)
+    {
+        status = SystemP_FAILURE;
+    }
     /* Run all error checks */
-    if((pReqPrm == NULL) || (pRespPrm == NULL) || (pReqPrm->pReqPayload == NULL))
+    else if ((pReqPrm == NULL) || (pRespPrm == NULL) ||
+             (pReqPrm->pReqPayload == NULL))
     {
         status = SystemP_FAILURE;
     }
@@ -390,32 +768,34 @@ int32_t Sciclient_service(const Sciclient_ReqPrm_t *pReqPrm,
         {
             txThread = gSciclientMap[contextId].reqLowPrioThreadId;
             rxThread = gSciclientMap[contextId].respThreadId;
-            if(gSciclientMap[contextId].context == SCICLIENT_SECURE_CONTEXT)
-            {
-                gSecHeaderSizeWords = sizeof(struct tisci_sec_header)/sizeof(uint32_t);
-            }
-            else
-            {
-                gSecHeaderSizeWords = 0;
-            }
-            gSciclientHandle.maxMsgSizeBytes = CSL_secProxyGetMaxMsgSize(&gSciclientSecProxyCfg) -
-                                        CSL_SEC_PROXY_RSVD_MSG_BYTES;
 
+            /* Setup secure context headers if this is a secure context */
             if(gSciclientMap[contextId].context == SCICLIENT_SECURE_CONTEXT)
             {
+                secHeaderSizeWords = SCICLIENT_SECURE_HEADER_SIZE_IN_WORDS;
                 secHeader.integ_check = (uint16_t)0;
                 secHeader.rsvd = (uint16_t)0;
                 pSecHeader = (uint8_t * )(&secHeader);
             }
+            else
+            {
+                secHeaderSizeWords = 0U;
+            }
+
+            Sciclient_handle.maxMsgSizeBytes =
+                CSL_secProxyGetMaxMsgSize(&gSciclientSecProxyCfg) -
+                CSL_SEC_PROXY_RSVD_MSG_BYTES;
             if (pReqPrm->reqPayloadSize > 0U)
             {
-                txPayloadSize = pReqPrm->reqPayloadSize - sizeof(struct tisci_header);
+                txPayloadSize = pReqPrm->reqPayloadSize - 
+                                sizeof(struct tisci_header);
             }
             else
             {
                 txPayloadSize = 0U;
             }
-            if (txPayloadSize > (gSciclientHandle.maxMsgSizeBytes - sizeof(struct tisci_header)))
+            if (txPayloadSize > (Sciclient_handle.maxMsgSizeBytes -
+                                 sizeof(struct tisci_header)))
             {
                 status = SystemP_FAILURE;
             }
@@ -425,13 +805,15 @@ int32_t Sciclient_service(const Sciclient_ReqPrm_t *pReqPrm,
             }
             if (pRespPrm->respPayloadSize > 0U)
             {
-                rxPayloadSize = pRespPrm->respPayloadSize - sizeof(struct tisci_header);
+                rxPayloadSize = pRespPrm->respPayloadSize -
+                                sizeof(struct tisci_header);
             }
             else
             {
                 rxPayloadSize = 0U;
             }
-            if (rxPayloadSize > (gSciclientHandle.maxMsgSizeBytes - sizeof(struct tisci_header)))
+            if (rxPayloadSize > (Sciclient_handle.maxMsgSizeBytes -
+                                 sizeof(struct tisci_header)))
             {
                 status = SystemP_FAILURE;
             }
@@ -441,7 +823,8 @@ int32_t Sciclient_service(const Sciclient_ReqPrm_t *pReqPrm,
             }
             else
             {
-                pLocalRespPayload = (uint8_t *)(pRespPrm->pRespPayload + sizeof(struct tisci_header));
+                pLocalRespPayload = (uint8_t *)(pRespPrm->pRespPayload + 
+                                                sizeof(struct tisci_header));
             }
         }
         else
@@ -449,38 +832,48 @@ int32_t Sciclient_service(const Sciclient_ReqPrm_t *pReqPrm,
             status = SystemP_FAILURE;
         }
     }
+#if defined(AMP_FREERTOS_A53)
+    while (SpinlockP_swLock(&gSwSpinLockBuff[SW_SPIN_LOCK_1]) ==
+           SW_SPINLOCK_IN_USE)
+    {
+
+    };
+#endif
+
+    /* Acquire write lock semaphore */
+    if (status == SystemP_SUCCESS)
+    {
+        status = SemaphoreP_pend(&Sciclient_writeLockSem, pReqPrm->timeout);
+        if (status == SystemP_SUCCESS)
+        {
+            lockAcquired = 1U;
+        }
+    }
 
     /* CRITICAL Section */
     key = HwiP_disable();
 
+    /* Continue with interrupts disabled for message operations */
     if (SystemP_SUCCESS == status)
     {
-        uint8_t * pFlags;
-        uint32_t numBytes;
-
         /* Construct header */
 
-        /* This is done to remove stray messages(due to timeout) in a thread
-         * in case of "polling". */
-        Sciclient_secProxyFlush(rxThread);
+        /* Flush stray messages from previous timeouts (polling mode only).
+         * In interrupt mode, the ISR handles stale messages automatically. */
+        if (Sciclient_handle.opModeFlag ==
+            SCICLIENT_SERVICE_OPERATION_MODE_POLLED)
+        {
+            Sciclient_secProxyFlush(rxThread);
+        }
 
         header = (struct tisci_header*)pReqPrm->pReqPayload;
         header->type = pReqPrm->messageType;
         header->host = (uint8_t) gSciclientMap[contextId].hostId;
         header->seq = localSeqId;
-        pFlags = (uint8_t*)&pReqPrm->flags;
-        /* This is done in such a fashion for CPUs which do not honor a non word aligned
-         * write.
-         */
-        for (numBytes = 0; numBytes < sizeof(pReqPrm->flags); numBytes++)
-        {
-            uint8_t *pDestFlags = ((uint8_t*)&header->flags) + numBytes;
-            *pDestFlags = *pFlags;
-            pFlags++;
-        }
+        header->flags = pReqPrm->flags;
 
-        gSciclientHandle.currSeqId = (gSciclientHandle.currSeqId + 1U) %
-                                    SCICLIENT_MAX_QUEUE_SIZE;
+        Sciclient_handle.currSeqId = (Sciclient_handle.currSeqId + 1U) %
+                                     SCICLIENT_MAX_QUEUE_SIZE;
 
         /* Verify thread status before reading/writing */
         status = Sciclient_secProxyVerifyThread(txThread);
@@ -493,27 +886,77 @@ int32_t Sciclient_service(const Sciclient_ReqPrm_t *pReqPrm,
     {
         /* Send Message */
         initialCount = Sciclient_secProxyReadThreadCount(rxThread);
-        Sciclient_sendMessage(txThread, pSecHeader ,(uint8_t *) header,
-                              (pReqPrm->pReqPayload + sizeof(struct tisci_header)),
-                              txPayloadSize);
+        Sciclient_sendMessage(txThread, pSecHeader,
+                              (uint8_t *) header,
+                              &((uint8_t *)(pReqPrm->pReqPayload))
+                              [sizeof(struct tisci_header)],
+                              txPayloadSize, secHeaderSizeWords);
 
         /* Verify thread status before reading/writing */
         status = Sciclient_secProxyVerifyThread(rxThread);
     }
-    /* Wait for response: Polling based waiting */
+
+    /* Release write lock now that message is sent */
+    /* This allows other threads to send messages while we wait for response */
+    if (lockAcquired == 1U)
+    {
+        SemaphoreP_post(&Sciclient_writeLockSem);
+    }
+
+    /* Wait for response: Interrupt or Polling based waiting */
     if ((status == SystemP_SUCCESS) &&
         ((pReqPrm->flags & TISCI_MSG_FLAG_MASK) != 0U))
     {
-        status = Sciclient_waitForMessage(rxThread, pReqPrm->timeout, initialCount, localSeqId);
+        if (Sciclient_handle.opModeFlag ==
+            SCICLIENT_SERVICE_OPERATION_MODE_INTERRUPT)
+        {
+            /* Interrupt mode: Wait on semaphore for seqId */
+            /* Mark semaphore as waiting */
+            Sciclient_handle.semStatus[localSeqId] = 0;
+
+            /* Restore interrupts before blocking on semaphore */
+            HwiP_restore(key);
+
+            /* Wait on semaphore for this specific sequence ID */
+            status = SemaphoreP_pend(Sciclient_handle.semHandles[localSeqId],
+                                     pReqPrm->timeout);
+
+            /* Record semaphore status */
+            Sciclient_handle.semStatus[localSeqId] = status;
+
+            /* Disable interrupts again */
+            key = HwiP_disable();
+        }
+        else
+        {
+            /* Polling mode */
+            status = Sciclient_waitForMessage(rxThread, pReqPrm->timeout,
+                                              initialCount, localSeqId,
+                                              secHeaderSizeWords);
+        }
     }
     if(status == SystemP_SUCCESS)
     {
-        pRespPrm->flags = Sciclient_secProxyReadThread32(rxThread, 1U+gSecHeaderSizeWords);
-        Sciclient_recvMessage(rxThread, pLocalRespPayload, rxPayloadSize);
+        pRespPrm->flags = Sciclient_secProxyReadThread32(rxThread,
+                                            1U + secHeaderSizeWords);
+        Sciclient_recvMessage(rxThread, pLocalRespPayload, rxPayloadSize,
+                              secHeaderSizeWords);
     }
-    HwiP_restore(key);
 
-    return status;
+    /* Re-enable interrupt (disabled by ISR) */
+    if ((Sciclient_handle.opModeFlag ==
+            SCICLIENT_SERVICE_OPERATION_MODE_INTERRUPT) &&
+        (contextId < SCICLIENT_CONTEXT_MAX_NUM))
+    {
+        HwiP_clearInt(gSciclientMap[contextId].respIntrNum);
+        HwiP_enableInt(gSciclientMap[contextId].respIntrNum);
+    }
+
+    HwiP_restore(key);
+#if defined(AMP_FREERTOS_A53)
+    SpinlockP_swUnlock(&gSwSpinLockBuff[SW_SPIN_LOCK_1]);
+#endif
+    return(status);
 }
 
 int32_t Sciclient_loadFirmware(const uint32_t *pSciclient_firmware)
@@ -523,7 +966,8 @@ int32_t Sciclient_loadFirmware(const uint32_t *pSciclient_firmware)
     uint32_t rxThread = SCICLIENT_ROM_R5_RX_NORMAL_THREAD;
     Sciclient_RomFirmwareLoadHdr_t header      = {0};
     Sciclient_RomFirmwareLoadPayload_t payload = {0};
-    uint32_t secHeaderSizeWords = sizeof(struct tisci_sec_header)/sizeof(uint32_t);
+    uint32_t secHeaderSizeWords = sizeof(struct tisci_sec_header) /
+                                  sizeof(uint32_t);
 
     volatile Sciclient_RomFirmwareLoadHdr_t *pLocalRespHdr =
         (Sciclient_RomFirmwareLoadHdr_t *)CSL_secProxyGetDataAddr
@@ -551,13 +995,14 @@ int32_t Sciclient_loadFirmware(const uint32_t *pSciclient_firmware)
         status = Sciclient_secProxyVerifyThread(txThread);
         if (SystemP_SUCCESS == status)
         {
-            status = Sciclient_secProxyWaitThread(txThread, SystemP_WAIT_FOREVER);
+            status = Sciclient_secProxyWaitThread(txThread,
+                                                  SystemP_WAIT_FOREVER);
         }
         if (SystemP_SUCCESS == status)
         {
             /* Writing header and payload */
-            Sciclient_sendMessage(txThread,NULL, (uint8_t *) &header,
-                                  (uint8_t *)&payload, payloadSize);
+            Sciclient_sendMessage(txThread, NULL, (uint8_t *) &header,
+                                  (uint8_t *)&payload, payloadSize, 0U);
 
             /* CHECKING FOR FIRMWARE LOAD ACK */
             /* Verify thread status before reading/writing */
@@ -578,16 +1023,18 @@ int32_t Sciclient_loadFirmware(const uint32_t *pSciclient_firmware)
             {
                 status = SystemP_FAILURE;
             }
-            /* Reading from the last register of rxThread. This flushes the thread*/
+            /* Reading from the last register of rxThread.
+             * This flushes the thread.
+             */
             (void) Sciclient_secProxyReadThread32(rxThread,
-                            (uint8_t)((gSciclientHandle.maxMsgSizeBytes/4U)-1U));
+                (uint8_t)((Sciclient_handle.maxMsgSizeBytes / 4U) - 1U));
         }
 
-        /* CHECKING FOR TISCI_MSG_BOOT_NOTIFICATION from SYSFW*/
-        pLocalRespHdr =
-        (Sciclient_RomFirmwareLoadHdr_t *)(CSL_secProxyGetDataAddr(
-                                            &gSciclientSecProxyCfg, rxThread, 0U)
-                                            + ((uintptr_t) secHeaderSizeWords * (uintptr_t) 4U));
+        /* CHECKING FOR TISCI_MSG_BOOT_NOTIFICATION from SYSFW */
+        pLocalRespHdr = (Sciclient_RomFirmwareLoadHdr_t *)
+                        (CSL_secProxyGetDataAddr(
+                         &gSciclientSecProxyCfg, rxThread, 0U) +
+                         ((uintptr_t)secHeaderSizeWords * (uintptr_t)4U));
         if (status == SystemP_SUCCESS)
         {
             status = Sciclient_secProxyVerifyThread(rxThread);
@@ -606,9 +1053,9 @@ int32_t Sciclient_loadFirmware(const uint32_t *pSciclient_firmware)
             {
                 status = SystemP_FAILURE;
             }
-            /* Reading from the last register of rxThread*/
+            /* Reading from the last register of rxThread */
             (void) Sciclient_secProxyReadThread32(rxThread,
-                            (uint8_t)((gSciclientHandle.maxMsgSizeBytes/4U)-1U));
+                (uint8_t)((Sciclient_handle.maxMsgSizeBytes / 4U) - 1U));
         }
     }
     else
@@ -616,15 +1063,16 @@ int32_t Sciclient_loadFirmware(const uint32_t *pSciclient_firmware)
         status = SystemP_FAILURE;
     }
 
-    return status;
+    return(status);
 }
 
 int32_t Sciclient_waitForBootNotification(void)
 {
     int32_t status = SystemP_FAILURE;
     uint32_t rxThread = SCICLIENT_ROM_R5_RX_NORMAL_THREAD;
-    uint32_t secHeaderSizeWords = sizeof(struct tisci_sec_header)/sizeof(uint32_t);
-    volatile Sciclient_RomFirmwareLoadHdr_t *pLocalRespHdr;
+    uint32_t secHeaderSizeWords = sizeof(struct tisci_sec_header) /
+                                  sizeof(uint32_t);
+    volatile Sciclient_RomFirmwareLoadHdr_t *pLocalRespHdr = NULL;
     uint32_t maxMsgSizeBytes;
 
     status = Sciclient_secProxyVerifyThread(rxThread);
@@ -637,9 +1085,10 @@ int32_t Sciclient_waitForBootNotification(void)
         maxMsgSizeBytes = CSL_secProxyGetMaxMsgSize(&gSciclientSecProxyCfg) -
                                         CSL_SEC_PROXY_RSVD_MSG_BYTES;
 
-        pLocalRespHdr = (Sciclient_RomFirmwareLoadHdr_t *)(CSL_secProxyGetDataAddr(
-                                            &gSciclientSecProxyCfg, rxThread, 0U)
-                                            + ((uintptr_t) secHeaderSizeWords * (uintptr_t) 4U));
+        pLocalRespHdr = (Sciclient_RomFirmwareLoadHdr_t *)
+                        (CSL_secProxyGetDataAddr(&gSciclientSecProxyCfg,
+                                                 rxThread, 0U) +
+                        ((uintptr_t)secHeaderSizeWords * (uintptr_t)4U));
 
         /* Check the message type and flag of the response */
         if (pLocalRespHdr->type ==
@@ -651,48 +1100,63 @@ int32_t Sciclient_waitForBootNotification(void)
         {
             status = SystemP_FAILURE;
         }
-        /* Reading from the last register of rxThread*/
+        /* Reading from the last register of rxThread */
         (void) Sciclient_secProxyReadThread32(rxThread,
-                        (uint8_t)((maxMsgSizeBytes/4U)-1U));
+            (uint8_t)((maxMsgSizeBytes / 4U) - 1U));
     }
     else
     {
         status = SystemP_FAILURE;
     }
 
-    return status;
+    return(status);
 }
 
 uint32_t Sciclient_getCurrentContext(uint16_t messageType)
 {
     uint32_t retVal = SCICLIENT_CONTEXT_MAX_NUM;
 
-    if((TISCI_MSG_BOOT_NOTIFICATION == messageType) ||
-       (TISCI_MSG_SEC_HANDOVER == messageType) ||
-       (TISCI_MSG_BOARD_CONFIG == messageType) ||
-       (TISCI_MSG_BOARD_CONFIG_RM == messageType) ||
-       (TISCI_MSG_BOARD_CONFIG_SECURITY == messageType) ||
-       (TISCI_MSG_KEY_WRITER == messageType) ||
-       (TISCI_MSG_READ_OTP_MMR == messageType) ||
-       (TISCI_MSG_WRITE_OTP_ROW == messageType) ||
-       (TISCI_MSG_READ_SWREV == messageType) ||
-       (TISCI_MSG_WRITE_SWREV == messageType) ||
-       (TISCI_MSG_BOARD_CONFIG_PM == messageType))
-    {
-        retVal = gSciclientHandle.secureContextId;
-    }
-    else
-    {
-        /* For all other message type use non-secure context */
-        retVal = gSciclientHandle.nonSecureContextId;
+    switch (messageType) {
+        case TISCI_MSG_BOOT_NOTIFICATION:
+        case TISCI_MSG_SEC_HANDOVER:
+        case TISCI_MSG_BOARD_CONFIG:
+        case TISCI_MSG_BOARD_CONFIG_SECURITY:
+        case TISCI_MSG_SA2UL_SET_DKEK:
+        case TISCI_MSG_SA2UL_GET_DKEK:
+        case TISCI_MSG_SA2UL_RELEASE_DKEK:
+        case TISCI_MSG_SA2UL_SET_DSMEK:
+        case TISCI_MSG_SA2UL_GET_DSMEK:
+        case TISCI_MSG_SA2UL_RELEASE_DSMEK:
+        case TISCI_MSG_OPEN_DEBUG_FWLS:
+        case TISCI_MSG_READ_OTP_MMR:
+        case TISCI_MSG_WRITE_OTP_ROW:
+        case TISCI_MSG_LOCK_OTP_ROW:
+        case TISCI_MSG_GET_OTP_ROW_LOCK_STATUS:
+        case TISCI_MSG_SOFT_LOCK_OTP_WRITE_GLOBAL:
+        case TISCI_MSG_READ_SWREV:
+        case TISCI_MSG_WRITE_SWREV:
+        case TISCI_MSG_READ_KEYCNT_KEYREV:
+        case TISCI_MSG_WRITE_KEYREV:
+        case TISCI_MSG_KEY_WRITER:
+        case TISCI_MSG_ENTER_SLEEP:
+        case TISCI_MSG_DISABLE_JTAG_UNLOCK:
+        case TISCI_MSG_DISABLE_JTAG_UNLOCK_CHECK:
+        case TISCI_MSG_KEYRING_IMPORT:
+            retVal = Sciclient_handle.secureContextId;
+            break;
+
+        default:
+            /* For all other message type use non-secure context */
+            retVal = Sciclient_handle.nonSecureContextId;
+            break;
     }
 
-    return retVal;
+    return(retVal);
 }
 
 uint32_t Sciclient_getSelfDevIdCore(void)
 {
-    return gSciclientHandle.devIdCore;
+    return(Sciclient_handle.devIdCore);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -710,70 +1174,79 @@ static void Sciclient_sendMessage(uint32_t        thread,
                                   const uint8_t  *pSecHeader,
                                   const uint8_t  *pHeader,
                                   const uint8_t  *pPayload,
-                                  uint32_t        payloadSize)
+                                  uint32_t        payloadSize,
+                                  uint8_t         secHeaderSizeWords)
 {
     uint32_t        i   = 0U;
-    const uint8_t *msg = pSecHeader;
     uint32_t numWords   = 0U;
     uint32_t test = 0U;
-    uintptr_t threadAddr = CSL_secProxyGetDataAddr(&gSciclientSecProxyCfg, thread, 0U);
+    uint32_t offset = 0U;
+    uintptr_t threadAddr = CSL_secProxyGetDataAddr(&gSciclientSecProxyCfg,
+                                                   thread, 0U);
 
     if(pSecHeader != NULL)
     {
         /* Write secure header */
-        for (i = 0U; i < gSecHeaderSizeWords; i++)
+        for (i = 0U; i < secHeaderSizeWords; i++)
         {
             /*Change this when unaligned access is supported*/
-            (void) memcpy((void *)&test, (const void *)msg, 4);
+            (void) memcpy((void *)&test, (const void *)&pSecHeader[offset], 4);
             CSL_REG32_WR(threadAddr, test);
-            msg += 4;
+            offset += 4U;
             threadAddr+=sizeof(uint32_t);
         }
     }
     /* Write header */
-    msg = pHeader;
+    offset = 0U;
     for (i = 0U; i < SCICLIENT_HEADER_SIZE_IN_WORDS; i++)
     {
         /*Change this when unaligned access is supported*/
-        (void) memcpy((void *)&test, (const void *)msg, 4);
+        (void) memcpy((void *)&test, (const void *)&pHeader[offset], 4);
         CSL_REG32_WR(threadAddr, test);
-        msg += 4;
+        offset += 4U;
         threadAddr+=sizeof(uint32_t);
     }
     /* Writing payload */
     if (payloadSize > 0U)
     {
         numWords   = (payloadSize+3U)/4U;
-        msg = pPayload;
+        offset = 0U;
         for (; i < (SCICLIENT_HEADER_SIZE_IN_WORDS + numWords); i++)
         {
             /*Change this when unaligned access is supported*/
-            (void) memcpy((void *)&test, (const void *)msg, 4);
+            (void) memcpy((void *)&test, (const void *)&pPayload[offset], 4);
             CSL_REG32_WR(threadAddr, test);
-            msg += 4;
+            offset += 4U;
             threadAddr+=sizeof(uint32_t);
         }
     }
     /* Write to the last register of the TX thread */
-    if ((((uint32_t) gSecHeaderSizeWords*4U)+(SCICLIENT_HEADER_SIZE_IN_WORDS*4U)+payloadSize) <=
-        (gSciclientHandle.maxMsgSizeBytes - 4U))
+    if ((((uint32_t)secHeaderSizeWords * 4U) +
+         (SCICLIENT_HEADER_SIZE_IN_WORDS * 4U) + payloadSize) <=
+        (Sciclient_handle.maxMsgSizeBytes - 4U))
     {
-        threadAddr = CSL_secProxyGetDataAddr(&gSciclientSecProxyCfg, thread, 0U) +
-        ((uintptr_t) gSciclientHandle.maxMsgSizeBytes  - (uintptr_t) 4U) ;
-        CSL_REG32_WR(threadAddr,0U);
+        threadAddr = CSL_secProxyGetDataAddr(&gSciclientSecProxyCfg,
+                                             thread, 0U) +
+                     ((uintptr_t)Sciclient_handle.maxMsgSizeBytes - 
+                      (uintptr_t)4U);
+        CSL_REG32_WR(threadAddr, 0U);
     }
 }
 
-static int32_t Sciclient_waitForMessage(uint32_t rxThread, uint32_t timeout, uint32_t initialCount, uint8_t localSeqId)
+static int32_t Sciclient_waitForMessage(uint32_t rxThread,
+                                         uint32_t timeout,
+                                         uint32_t initialCount,
+                                         uint8_t localSeqId,
+                                         uint8_t secHeaderSizeWords)
 {
     volatile struct tisci_header *pLocalRespHdr;
     uint32_t timeToWait = timeout;
     int32_t status = SystemP_SUCCESS;
 
-    pLocalRespHdr =
-        (struct tisci_header *)(CSL_secProxyGetDataAddr(
-                                        &gSciclientSecProxyCfg, rxThread, 0U)
-                                + ((uintptr_t) gSecHeaderSizeWords * (uintptr_t) 4U));
+    pLocalRespHdr = (struct tisci_header *)
+                    (CSL_secProxyGetDataAddr(&gSciclientSecProxyCfg,
+                                             rxThread, 0U) +
+                     ((uintptr_t)secHeaderSizeWords * (uintptr_t)4U));
 
     /* Check if some message is received*/
     while (((CSL_REG32_RD(Sciclient_secProxyThreadStatusReg(rxThread)) &
@@ -785,7 +1258,7 @@ static int32_t Sciclient_waitForMessage(uint32_t rxThread, uint32_t timeout, uin
         }
         else
         {
-            status = SystemP_FAILURE;
+            status = SystemP_TIMEOUT;
             break;
         }
     }
@@ -794,11 +1267,12 @@ static int32_t Sciclient_waitForMessage(uint32_t rxThread, uint32_t timeout, uin
         /* Check the seqId of response*/
         status = SystemP_TIMEOUT;
         timeToWait =  timeout;
-        while(true)
+        while((bool) true)
         {
-            uint32_t numCurrentMsgs = (CSL_REG32_RD(Sciclient_secProxyThreadStatusReg(rxThread)) &
-                    CSL_SEC_PROXY_RT_THREAD_STATUS_CUR_CNT_MASK) - initialCount;
-            if (pLocalRespHdr->seq == (uint32_t)localSeqId)
+            uint32_t numCurrentMsgs = 
+                (CSL_REG32_RD(Sciclient_secProxyThreadStatusReg(rxThread)) &
+                 CSL_SEC_PROXY_RT_THREAD_STATUS_CUR_CNT_MASK) - initialCount;
+            if (pLocalRespHdr->seq == localSeqId)
             {
                 status = SystemP_SUCCESS;
                 break;
@@ -806,7 +1280,7 @@ static int32_t Sciclient_waitForMessage(uint32_t rxThread, uint32_t timeout, uin
             if (numCurrentMsgs > 1U)
             {
                 (void) Sciclient_secProxyReadThread32(rxThread,
-                                            (uint8_t)((gSciclientHandle.maxMsgSizeBytes/4U) - 1U));
+                    (uint8_t)((Sciclient_handle.maxMsgSizeBytes / 4U) - 1U));
             }
             if (timeToWait != 0U)
             {
@@ -820,10 +1294,13 @@ static int32_t Sciclient_waitForMessage(uint32_t rxThread, uint32_t timeout, uin
         }
     }
 
-    return status;
+    return(status);
 }
 
-static void Sciclient_recvMessage(uint32_t rxThread, uint8_t *pLocalRespPayload, uint32_t rxPayloadSize)
+static void Sciclient_recvMessage(uint32_t rxThread,
+                                  uint8_t *pLocalRespPayload,
+                                  uint32_t rxPayloadSize,
+                                  uint8_t secHeaderSizeWords)
 {
     uint32_t numWords, i;
     uint8_t  trailBytes = 0U;
@@ -834,10 +1311,10 @@ static void Sciclient_recvMessage(uint32_t rxThread, uint8_t *pLocalRespPayload,
     /* We do not need to read the header*/
     for (i = 0; i < numWords; i++)
     {
-        uint32_t tempWord = Sciclient_secProxyReadThread32(
-            rxThread,
-            ((uint8_t) i +
-                SCICLIENT_HEADER_SIZE_IN_WORDS+gSecHeaderSizeWords));
+        uint32_t tempWord = Sciclient_secProxyReadThread32(rxThread,
+                                ((uint8_t) i +
+                                 SCICLIENT_HEADER_SIZE_IN_WORDS +
+                                 secHeaderSizeWords));
         uint8_t * tempWordPtr = (uint8_t*) & tempWord;
         uint32_t j = 0U;
         for (j = 0U; j < 4U; j++)
@@ -848,10 +1325,10 @@ static void Sciclient_recvMessage(uint32_t rxThread, uint8_t *pLocalRespPayload,
     }
     if (trailBytes > 0U)
     {
-        uint32_t tempWord = Sciclient_secProxyReadThread32(
-                rxThread,
-                ((uint8_t)i +
-                    SCICLIENT_HEADER_SIZE_IN_WORDS+gSecHeaderSizeWords));
+        uint32_t tempWord = Sciclient_secProxyReadThread32(rxThread,
+                                ((uint8_t)i +
+                                 SCICLIENT_HEADER_SIZE_IN_WORDS +
+                                 secHeaderSizeWords));
         uint8_t * pTempWord = (uint8_t*) &tempWord;
         uint32_t bytes;
         for (bytes = 0U; bytes < trailBytes; bytes++)
@@ -862,34 +1339,36 @@ static void Sciclient_recvMessage(uint32_t rxThread, uint8_t *pLocalRespPayload,
         }
     }
     /* Read the last register of the rxThread */
-    if ((((uint32_t) gSecHeaderSizeWords*4U) +
-        (SCICLIENT_HEADER_SIZE_IN_WORDS*4U) +
-        rxPayloadSize) <=
-        (gSciclientHandle.maxMsgSizeBytes - 4U))
+    if ((((uint32_t) secHeaderSizeWords*4U) +
+         (SCICLIENT_HEADER_SIZE_IN_WORDS*4U) +
+          rxPayloadSize) <=
+        (Sciclient_handle.maxMsgSizeBytes - 4U))
     {
         (void) Sciclient_secProxyReadThread32(rxThread,
-                        (uint8_t)((gSciclientHandle.maxMsgSizeBytes/4U) - 1U));
+            (uint8_t)((Sciclient_handle.maxMsgSizeBytes / 4U) - 1U));
     }
 }
 
 static inline uint32_t Sciclient_secProxyThreadStatusReg(uint32_t thread)
 {
-    return ((uint32_t)(uintptr_t)(gSciclientSecProxyCfg.pSecProxyRtRegs) +
-        CSL_SEC_PROXY_RT_THREAD_STATUS(thread));
+    return(((uint32_t)(uintptr_t)(gSciclientSecProxyCfg.pSecProxyRtRegs) +
+            CSL_SEC_PROXY_RT_THREAD_STATUS(thread)));
 }
 
-static inline uint32_t Sciclient_secProxyReadThread32(uint32_t thread, uint8_t idx)
+static inline uint32_t Sciclient_secProxyReadThread32(uint32_t thread,
+                                                      uint8_t idx)
 {
     uint32_t ret;
-    ret = CSL_REG32_RD(CSL_secProxyGetDataAddr(&gSciclientSecProxyCfg,thread,0U) +
-        ((uintptr_t) (0x4U) * (uintptr_t) idx));
-    return ret;
+    ret = CSL_REG32_RD(CSL_secProxyGetDataAddr(&gSciclientSecProxyCfg,
+                                               thread, 0U) +
+                       ((uintptr_t)(0x4U) * (uintptr_t)idx));
+    return(ret);
 }
 
 static inline uint32_t Sciclient_secProxyReadThreadCount(uint32_t thread)
 {
-    return (CSL_REG32_RD(Sciclient_secProxyThreadStatusReg(thread)) &
-        CSL_SEC_PROXY_RT_THREAD_STATUS_CUR_CNT_MASK);
+    return((CSL_REG32_RD(Sciclient_secProxyThreadStatusReg(thread)) &
+            CSL_SEC_PROXY_RT_THREAD_STATUS_CUR_CNT_MASK));
 }
 
 static int32_t Sciclient_secProxyVerifyThread(uint32_t thread)
@@ -901,12 +1380,12 @@ static int32_t Sciclient_secProxyVerifyThread(uint32_t thread)
     {
         status = SystemP_FAILURE;
     }
-    return status;
+    return(status);
 }
 
 static int32_t Sciclient_secProxyWaitThread(uint32_t thread, uint32_t timeout)
 {
-    int32_t  status     = SystemP_FAILURE;
+    int32_t  status     = SystemP_TIMEOUT;
     uint32_t timeToWait = timeout;
     /* Checks the thread count is > 0 */
     while (timeToWait > 0U)
@@ -919,7 +1398,7 @@ static int32_t Sciclient_secProxyWaitThread(uint32_t thread, uint32_t timeout)
         }
         timeToWait--;
     }
-    return status;
+    return(status);
 }
 
 static void Sciclient_secProxyFlush(uint32_t thread)
@@ -929,8 +1408,184 @@ static void Sciclient_secProxyFlush(uint32_t thread)
     {
         /* Reading from the last register of rxThread*/
         (void) Sciclient_secProxyReadThread32(thread,
-                        (uint8_t)((gSciclientHandle.maxMsgSizeBytes/4U)-1U));
+                        (uint8_t)((Sciclient_handle.maxMsgSizeBytes/4U)-1U));
     }
 
-    return ;
+    return;
 }
+
+#if defined(ENABLE_SCICLIENT_INTERRUPT_MODE)
+static void Sciclient_ISR(uintptr_t arg)
+{
+    uint32_t contextId = (uint32_t)arg;
+    uint8_t secHeaderSizeWords = 0U;
+    uint8_t seqId;
+    volatile struct tisci_header *pLocalRespHdr;
+    uint32_t rxThread;
+
+    if (contextId < SCICLIENT_CONTEXT_MAX_NUM)
+    {
+        rxThread = gSciclientMap[contextId].respThreadId;
+
+        /* Determine secure header size */
+        if (gSciclientMap[contextId].context == SCICLIENT_SECURE_CONTEXT)
+        {
+            secHeaderSizeWords = SCICLIENT_SECURE_HEADER_SIZE_IN_WORDS;
+        }
+        else
+        {
+            secHeaderSizeWords = 0U;
+        }
+
+        /* Read the response header to get sequence ID */
+        pLocalRespHdr = (volatile struct tisci_header *)(
+            CSL_secProxyGetDataAddr(&gSciclientSecProxyCfg, rxThread, 0U) +
+            ((uintptr_t)secHeaderSizeWords * (uintptr_t)4U));
+
+        seqId = pLocalRespHdr->seq;
+
+        /*
+         * Valid response: seqId is in range, not already processed, and has
+         * a waiting thread. Disable interrupt and signal the waiting thread.
+         * Message is NOT consumed here - Sciclient_service will consume it,
+         * then clear and re-enable the interrupt.
+         */
+        if ((seqId < SCICLIENT_MAX_QUEUE_SIZE) &&
+            (Sciclient_handle.semStatus[seqId] == 0) &&
+            (Sciclient_handle.semHandles[seqId] != NULL))
+        {
+            HwiP_disableInt(gSciclientMap[contextId].respIntrNum);
+            SemaphoreP_post(Sciclient_handle.semHandles[seqId]);
+        }
+        else
+        {
+            /*
+             * Invalid response: seqId out of range, already processed, or no
+             * waiting thread. Must flush (consume) message here since no
+             * Sciclient_service call will handle it. Full interrupt cycle:
+             * disable -> flush -> clear -> enable.
+             */
+            HwiP_disableInt(gSciclientMap[contextId].respIntrNum);
+            Sciclient_secProxyFlush(rxThread);
+
+            if (seqId < SCICLIENT_MAX_QUEUE_SIZE)
+            {
+                Sciclient_handle.semStatus[seqId] = 0;
+            }
+
+            HwiP_clearInt(gSciclientMap[contextId].respIntrNum);
+            HwiP_enableInt(gSciclientMap[contextId].respIntrNum);
+        }
+    }
+}
+
+static int32_t Sciclient_setupRespIntr(uint32_t contextId,
+                                       uint8_t handlerIndex)
+{
+    int32_t status = SystemP_SUCCESS;
+    HwiP_Params hwiParams;
+
+    /* Validate parameters */
+    if (contextId >= SCICLIENT_CONTEXT_MAX_NUM)
+    {
+        status = SystemP_FAILURE;
+    }
+    else if (handlerIndex >=
+        (uint8_t)SCICLIENT_MAX_RESP_INTR_HANDLER)
+    {
+        status = SystemP_FAILURE;
+    }
+    else
+    {
+        /* Only setup interrupt if configured for this context */
+        if (gSciclientMap[contextId].respIntrNum != 0U)
+        {
+            /* Check if handler is already registered (idempotent) */
+            if (Sciclient_handle.respIntr[handlerIndex] ==
+                &Sciclient_respIntrObj[handlerIndex])
+            {
+                /* Already registered, set success status */
+                status = SystemP_SUCCESS;
+            }
+            else
+            {
+                /* Configure HWI parameters */
+                HwiP_Params_init(&hwiParams);
+                hwiParams.intNum =
+                    gSciclientMap[contextId].respIntrNum;
+                hwiParams.callback =
+                    (HwiP_FxnCallback) &Sciclient_ISR;
+                hwiParams.args = (void*) contextId;
+
+                /* Clear any pending interrupts */
+                HwiP_clearInt(hwiParams.intNum);
+
+                /* Flush stale messages before enabling interrupt */
+                Sciclient_secProxyFlush(
+                    gSciclientMap[contextId].respThreadId);
+
+                /* Register interrupt to specific handler slot */
+                Sciclient_handle.respIntr[handlerIndex] =
+                    &Sciclient_respIntrObj[handlerIndex];
+                status = HwiP_construct(
+                    Sciclient_handle.respIntr[handlerIndex],
+                    &hwiParams);
+
+                if (status == SystemP_SUCCESS)
+                {
+                    /* Enable the interrupt */
+                    HwiP_enableInt(hwiParams.intNum);
+                }
+                else
+                {
+                    /* Failed to construct HWI, clear pointer */
+                    Sciclient_handle.respIntr[handlerIndex] = NULL;
+                }
+            }
+        }
+    }
+
+    return(status);
+}
+
+static void Sciclient_unregisterIntr(void)
+{
+    uint32_t i;
+
+    /* Disable interrupts first */
+    Sciclient_disableIntr();
+
+    /* Unregister non-secure context interrupt */
+    if (Sciclient_handle.respIntr[
+        SCICLIENT_NON_SEC_RESP_INTR_HANDLER] != NULL)
+    {
+        HwiP_destruct(
+            Sciclient_handle.respIntr[
+                SCICLIENT_NON_SEC_RESP_INTR_HANDLER]);
+        Sciclient_handle.respIntr[
+            SCICLIENT_NON_SEC_RESP_INTR_HANDLER] = NULL;
+    }
+
+    /* Unregister secure context interrupt */
+    if (Sciclient_handle.respIntr[
+        SCICLIENT_SEC_RESP_INTR_HANDLER] != NULL)
+    {
+        HwiP_destruct(
+            Sciclient_handle.respIntr[
+                SCICLIENT_SEC_RESP_INTR_HANDLER]);
+        Sciclient_handle.respIntr[
+            SCICLIENT_SEC_RESP_INTR_HANDLER] = NULL;
+    }
+
+    /* Destruct all semaphores first */
+    for (i = 0U; i < SCICLIENT_MAX_QUEUE_SIZE; i++)
+    {
+        if (Sciclient_handle.semHandles[i] != NULL)
+        {
+            SemaphoreP_destruct(Sciclient_handle.semHandles[i]);
+            Sciclient_handle.semHandles[i] = NULL;
+        }
+        Sciclient_handle.semStatus[i] = 0;
+    }
+}
+#endif

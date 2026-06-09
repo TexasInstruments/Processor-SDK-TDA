@@ -96,26 +96,8 @@ int32_t TIDL_forceInnerProductRef(
   inDataParams = &pNet->TIDLLayers[tidlLayer->inData[0]].outData;
   numOutNodes = (uint16_t)tidlLayer->outData.dimValues[TIDL_DIM_WIDTH];
   numInNodes = (uint16_t)inDataParams->dimValues[TIDL_DIM_WIDTH];
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this line.
-<justification end> */
-#endif
   forceRef = (TIDL_referencFlow(createParamsPtr) == 0) ? 1 : 0;
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_END */
-#endif
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_START
-<metric start> branch <metric end>
-<justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this line.
-<justification end> */
-#endif
   if (forceRef == 1)
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_END */
-#endif
   {
     if (((createParamsPtr->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == 0U) &&
         ((createParamsPtr->reservedCtrl & TIDL_REF_CODE_FOR_IP) == 0U))
@@ -206,16 +188,7 @@ int32_t TIDL_innerProductAllocNew(const TIDL_LayerSpecificParams *layerSpecificP
   {
     status = TIDL_deviceCommonRefAlloc(layerSpecificParams, commonParams, layerIdx, memorySize);
 /* Have addtional space for bias during forced reference for inner product */
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_START
-<metric start> branch <metric end>
-<justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this line.
-<justification end> */
-#endif
     if (forceRef == 1)
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_END */
-#endif
     {
       memorySize[TIDL_LAYER_MEMORY_PERSISTENT] += (tranformSize + biasParamSize + TIDL_ALIGNMENT_SIZE);
     }
@@ -418,6 +391,7 @@ int32_t TIDL_innerProductInitNew(const TIDL_LayerSpecificParams *layerSpecificPa
       {
         if (innerProductParams->isBias != 0)
         {
+          #if defined (__C7120__) || defined (__C7604__)
           if (TIDL_isBiasHighPrecision(commonParams->net->deviceName) == TRUE)
           {
             TIDL_AM_conv2dBiasSplit((int16_t*)orgBiasPtr, (int32_t*)biasPtr, &innerProductParams->biasB, scaleSize, inScaleFactor, TIDL_SAT_LO_INT16, TIDL_SAT_HI_INT16,0xFF, TIDL_getDatElementSign(inDataParams->elementType));
@@ -427,6 +401,14 @@ int32_t TIDL_innerProductInitNew(const TIDL_LayerSpecificParams *layerSpecificPa
             TIDL_conv2dBiasSplit((int16_t *)orgBiasPtr, (int16_t *)biasPtr, &innerProductParams->biasB,
                                  scaleSize, inScaleFactor, TIDL_SAT_LO_INT16, TIDL_SAT_HI_INT16, 0xFF, TIDL_getDatElementSign(inDataParams->elementType));
           }
+          #endif
+          #if defined (__C7504__) || defined (__C7524__)
+          TIDL_AM_conv2dBiasSplit((int16_t*)orgBiasPtr, (int32_t*)biasPtr, &innerProductParams->biasB, scaleSize, inScaleFactor, TIDL_SAT_LO_INT16, TIDL_SAT_HI_INT16,0xFF, TIDL_getDatElementSign(inDataParams->elementType));
+          #endif
+          #ifdef __C7100__
+          TIDL_conv2dBiasSplit((int16_t *)orgBiasPtr, (int16_t *)biasPtr, &innerProductParams->biasB,
+                                 scaleSize, inScaleFactor, TIDL_SAT_LO_INT16, TIDL_SAT_HI_INT16, 0xFF, TIDL_getDatElementSign(inDataParams->elementType));
+          #endif
         }
 
         if ((((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == 0U) &&
@@ -449,6 +431,7 @@ int32_t TIDL_innerProductInitNew(const TIDL_LayerSpecificParams *layerSpecificPa
       {
         if (innerProductParams->isBias != 0)
         {
+          #if defined (__C7120__) || defined (__C7604__)
           if ((TIDL_isBiasHighPrecision(commonParams->net->deviceName) == TRUE))
           {
             TIDL_AM_conv2dBiasSplit((int16_t*)orgBiasPtr, (int64_t*)biasPtr, &innerProductParams->biasB, scaleSize, inScaleFactor, TIDL_SAT_LO_INT32, TIDL_SAT_HI_INT32, 0xFFFF, TIDL_getDatElementSign(inDataParams->elementType));
@@ -458,6 +441,14 @@ int32_t TIDL_innerProductInitNew(const TIDL_LayerSpecificParams *layerSpecificPa
             TIDL_conv2dBiasSplit((int16_t*)orgBiasPtr, (int16_t*)biasPtr,  &innerProductParams->biasB,
             scaleSize, inScaleFactor, TIDL_SAT_LO_INT32, TIDL_SAT_HI_INT32,0xFFFF,TIDL_getDatElementSign(inDataParams->elementType));
           }
+          #endif
+          #if defined (__C7504__) || defined (__C7524__)
+          TIDL_AM_conv2dBiasSplit((int16_t*)orgBiasPtr, (int64_t*)biasPtr, &innerProductParams->biasB, scaleSize, inScaleFactor, TIDL_SAT_LO_INT32, TIDL_SAT_HI_INT32, 0xFFFF, TIDL_getDatElementSign(inDataParams->elementType));
+          #endif
+          #ifdef __C7100__
+          TIDL_conv2dBiasSplit((int16_t*)orgBiasPtr, (int16_t*)biasPtr,  &innerProductParams->biasB,
+            scaleSize, inScaleFactor, TIDL_SAT_LO_INT32, TIDL_SAT_HI_INT32,0xFFFF,TIDL_getDatElementSign(inDataParams->elementType));
+          #endif
         }
 
         if ((((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == 0U) &&
@@ -644,32 +635,14 @@ int32_t TIDL_innerProductProcessNew(TIDL_NetworkCommonParams *commonParams,
     {
       buffParams.inBElementType = TIDL_SignedChar;
     }
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_START
-<metric start> branch <metric end>
-<justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this line.
-<justification end> */
-#endif
     else if (tidlLayer->weightsElementSizeInBits <= 16)
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_END */
-#endif
     {
       buffParams.inBElementType = TIDL_SignedShort;
     }
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this line.
-<justification end> */
-#endif
     else // if (tidlLayer->weightsElementSizeInBits == 32)
     {
       buffParams.inBElementType = TIDL_SinglePrecFloat;
     }
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_END */
-#endif
   }
 
   buffParams.scratchSize = algLayer->layerParams.innerProductParams.accMemSize;

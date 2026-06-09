@@ -4,6 +4,7 @@
     let config = module.getInstanceConfig(instance);
     let lockUnLockArgs = module.getInstanceConfig(instance);
     let cpuName = system.getScript('/common').getSelfSysCfgCoreName();
+    let common = system.getScript("/common");
 %%}
 % if (! config.disableClkSourceConfig) {
     /* set timer clock source */
@@ -12,15 +13,20 @@
     SOC_controlModuleLockMMR(`config.lockUnlockDomain`, `config.lockUnlockPartition`);
 % }
 % if(cpuName.match(/a53/)) {
-    /* Initialize Clock from Core0 only */
+    % if (common.isSmpSupported()) {
+        % if(cpuName.match(/a53ss0-0/)) {
     if(0 == Armv8_getCoreId())
     {
-
+        % }
+    % }
 % }
     /* initialize Clock */
     ClockP_init();
 
 % if(cpuName.match(/a53/)) {
-
+    % if (common.isSmpSupported()) {
+        % if(cpuName.match(/a53ss0-0/)) {
     }
+        % }
+    % }
 % }

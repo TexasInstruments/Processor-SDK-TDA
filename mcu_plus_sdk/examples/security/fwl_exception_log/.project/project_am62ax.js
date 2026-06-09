@@ -28,6 +28,7 @@ const libdirs_freertos = {
 		"${MCU_PLUS_SDK_PATH}/source/drivers/lib",
 		"${MCU_PLUS_SDK_PATH}/source/board/lib",
 		"${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciserver/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib",
 	],
 };
 
@@ -48,6 +49,7 @@ const libs_freertos_dm_r5f = {
 		"drivers.am62ax.dm-r5f.ti-arm-clang.${ConfigName}.lib",
 		"board.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
 		"sciserver.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
 	],
 };
 
@@ -56,6 +58,12 @@ const lnkfiles = {
 		"linker.cmd",
 	]
 };
+
+const defines_dm_r5f = {
+    common:[
+        "ENABLE_SCICLIENT_DIRECT",
+    ]
+}
 
 const syscfgfile = "../example.syscfg";
 
@@ -115,6 +123,7 @@ function getComponentBuildProperty(buildOption) {
     build_property.readmeDoxygenPageTag = readmeDoxygenPageTag;
 
     if(buildOption.cpu.match(/r5f*/)) {
+        build_property.defines = defines_dm_r5f;
         if(buildOption.os.match(/freertos*/) )
         {
             build_property.includes = includes_freertos_r5f;

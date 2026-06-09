@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -33,10 +33,41 @@
 #ifndef BOOTLOADER_SOC_J722S_H_
 #define BOOTLOADER_SOC_J722S_H_
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <drivers/hw_include/cslr_soc.h>
+#include <drivers/udma.h>
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 #define BOOTLOADER_SBL_BOOT_MAGIC_NUM_OCM_RAM_ADDR (0x43c40100)
 #define BOOTLOADER_SBL_BOOT_MAGIC_NUM              (0x4c425342) /* BSBL in ascii */
+
+#define FREERTOS_SMP_RPRC_CORE_ID           (100U)
+#define FREERTOS_SMP_NO_OF_CORES            (0U)
+#define FREERTOS_SMP_BOOT_CORE              (CSL_CORE_ID_A53SS0_0)
+#define FREERTOS_SMP_CSL_CORE_ID_MAX        (FREERTOS_SMP_NO_OF_CORES + CSL_CORE_ID_A53SS0_0)
+
+/* DMA channel type configured by bootloader layer */
+#define BOOTLOADER_DMA_CHANNEL_TYPE         UDMA_CH_TYPE_TR_BLK_COPY_HC
+
+/**
+ * \brief Function pointer to jump a self core to specific code location in J722S SOC
+ *
+ * This function pointer is used to assign the jump address for self core after all the other cores are
+ * initialised. Since the self core is already up, we jump the self core to load adresss as present in the
+ * appimage.
+ *
+ */
+typedef void __attribute__((__noreturn__)) (*Bootloader_SelfCoreJump)(void);
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
 
 /**
  * \brief Data structure containing information about a core specific to the J722S SOC
@@ -55,15 +86,9 @@ typedef struct
 
 } Bootloader_CoreBootInfo;
 
-/**
- * \brief Function pointer to jump a self core to specific code location in J722S SOC
- *
- * This function pointer is used to assign the jump address for self core after all the other cores are
- * initialised. Since the self core is already up, we jump the self core to load adresss as present in the
- * appimage.
- *
- */
-typedef void __attribute__((__noreturn__)) (*Bootloader_SelfCoreJump)(void);
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
 
 /**
  * \brief Request for a particular CPU in the J722S SOC
@@ -153,14 +178,14 @@ int32_t  Bootloader_socCpuResetRelease(uint32_t cpuId, uintptr_t entryPoint);
  *
  * \return SystemP_SUCCESS on success, else failure
  */
-int32_t  Bootloader_socCpuResetReleaseSelf();
+int32_t  Bootloader_socCpuResetReleaseSelf(void);
 
 /**
  * \brief Jump the self cpu to specified load address.
  *
  * \return No return
  */
-void __attribute__((__noreturn__)) Bootloader_socSelfCPUjump();
+void __attribute__((__noreturn__)) Bootloader_socSelfCPUjump(void);
 
 /**
  * \brief Set entry point for self CPU in the J722S SOC from reset
@@ -196,6 +221,15 @@ uint32_t Bootloader_socTranslateSectionAddr(uint32_t cslCoreId, uint32_t addr);
  * \return CSL core ID of a CPU
  */
 uint32_t Bootloader_socRprcToCslCoreId(uint32_t rprcCoreId);
+
+/**
+ * \brief Check whether the smp is enabled or not for the soc
+ *
+ * \param rprcCoreId [in] The RPRC ID of the core
+ *
+ * \return true if smp is enabled otherwise false
+ */
+bool Bootloader_socIsSmpEnable(uint32_t rprcCoreId);
 
 /**
  * \brief Get the list of self cpus in the SOC.
@@ -283,19 +317,29 @@ uint32_t Bootloader_socIsAuthRequired(void);
  *
  * \return TRUE (1U) if MCU R5   is reset isolated, else return 0.
  */
-uint32_t Bootloader_socIsMCUResetIsoEnabled();
+uint32_t Bootloader_socIsMCUResetIsoEnabled(void);
 
 /**
  * \brief Write magic number to mention it is SBL bootflow
  *
  * \return No return
  */
-void Bootloader_socWriteSBLBootMagicNum();
+void Bootloader_socWriteSBLBootMagicNum(void);
 
 /**
  * \brief Check if magic number is written to detect SBL/SPL bootflow
  *
  * \return TRUE (1U) if SBL bootflow, else return 0.
  */
-uint32_t Bootloader_socIsSBLBoot();
+uint32_t Bootloader_socIsSBLBoot(void);
+
+/**
+ * \brief Power off a core
+ *
+ * \param cpuId [in] The CSL ID of the core
+ *
+ * \return No return
+ */
+void Bootloader_socCpuPowerOff(uint32_t cpuId);
+
 #endif /* BOOTLOADER_SOC_J722S_H_ */

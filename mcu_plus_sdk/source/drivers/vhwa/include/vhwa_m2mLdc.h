@@ -401,7 +401,7 @@ typedef struct
  *                          This parameter should not be 0.
  *  \return                 Returns 0 on success else returns error value
  */
-int32_t Vhwa_m2mLdcInit(Vhwa_M2mLdcInitParams *ldcInitPrms);
+int32_t Vhwa_m2mLdcInit(Vhwa_M2mLdcInitParams *initPrms);
 
 /**
  *  \brief DeInitializes LDC Init Parameters
@@ -417,7 +417,7 @@ void Vhwa_m2mLdcDeInit(void);
  *
  *  \return FVID2_SOK if successful, else suitable error code
  */
-int32_t Vhwa_m2mLdcAllocSl2(const Vhwa_M2mLdcSl2AllocPrms *sl2allocPrms);
+int32_t Vhwa_m2mLdcAllocSl2(const Vhwa_M2mLdcSl2AllocPrms *sl2AllocPrms);
 
 /**
  *  \brief Function to free allocated SL2.
@@ -447,7 +447,7 @@ int32_t Vhwa_m2mLdcGetSl2Info(Vhwa_M2mLdcSl2Info *sl2Info);
  *  \param ldcCfg   A pointer of type Vhwa_M2mLdcInitParams
  *  \return         None
  */
-static inline void Vhwa_m2mLdcInitParamsInit(Vhwa_M2mLdcInitParams *ldcCfg);
+static inline void Vhwa_m2mLdcInitParamsInit(Vhwa_M2mLdcInitParams *initPrms);
 
 /**
  *  Vhwa_M2mLdcCreateArgsInit

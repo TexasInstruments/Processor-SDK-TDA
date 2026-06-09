@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Khronos Group Inc.
+ * Copyright (c) 2012-2026 The Khronos Group Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,16 +42,17 @@ static vx_node vxCreateNodeByStructure(vx_graph graph,
     vx_status status = (vx_status)VX_SUCCESS;
     vx_node node = NULL;
     vx_uint32 release_kernel = 0;
+    vx_kernel local_kernel = kernel;
     vx_context context = vxGetContext(vxCastRefFromGraph(graph));
 
-    if(kernel==NULL)
+    if(local_kernel==NULL)
     {
-        kernel = vxGetKernelByEnum(context, kernelenum);
+        local_kernel = vxGetKernelByEnum(context, kernelenum);
         release_kernel = 1;
     }
-    if (kernel != NULL)
+    if (local_kernel != NULL)
     {
-        node = vxCreateGenericNode(graph, kernel);
+        node = vxCreateGenericNode(graph, local_kernel);
         if (vxGetStatus(vxCastRefFromNode(node)) == (vx_status)VX_SUCCESS)
         {
             vx_uint32 p = 0;
@@ -74,7 +75,7 @@ static vx_node vxCreateNodeByStructure(vx_graph graph,
         }
         if (release_kernel != 0U)
         {
-            (void)vxReleaseKernel(&kernel);
+            (void)vxReleaseKernel(&local_kernel);
         }
     }
     else

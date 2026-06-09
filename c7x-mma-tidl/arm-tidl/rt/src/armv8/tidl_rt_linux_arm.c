@@ -93,8 +93,13 @@ int32_t TIDLRT_getDdrStats(uint64_t *read_bytes, uint64_t *write_bytes)
                 APP_PERF_STATS_CMD_GET_DDR_COUNTERS,
                 &ddr_stats, (uint32_t)(sizeof(app_perf_stats_ddr_stats_t)),
                 0);
-        #elif defined(SOC_J721E) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J722S)
+        #elif defined(SOC_J721E) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J722S) 
             status = appRemoteServiceRun(APP_IPC_CPU_MCU2_0, APP_PERF_STATS_SERVICE_NAME,
+                APP_PERF_STATS_CMD_GET_DDR_COUNTERS,
+                &ddr_stats, (uint32_t)(sizeof(app_perf_stats_ddr_stats_t)),
+                0);
+        #elif defined(SOC_TDA54) // TODO: Currently, everything is running on MCU0_M55 , need to change in future  
+            status = appRemoteServiceRun(APP_IPC_CPU_MCU0_M55, APP_PERF_STATS_SERVICE_NAME,
                 APP_PERF_STATS_CMD_GET_DDR_COUNTERS,
                 &ddr_stats, (uint32_t)(sizeof(app_perf_stats_ddr_stats_t)),
                 0);

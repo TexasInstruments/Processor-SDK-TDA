@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Texas Instruments Incorporated
+ * Copyright (C) 2024-25 Texas Instruments Incorporated
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,7 +53,6 @@
 #define CSL_SPINLOCK_LOCK_REG_TAKEN_FREE                        (0x00000000U)
 #define CSL_SPINLOCK_LOCK_REG_TAKEN_BUSY                        (0x00000001U)
 #define CSL_SPINLOCK_SYSCONFIG_SOFTRESET_DORESET                (0x00000001U)
-#define CSL_SPINLOCK_SYSCONFIG_SOFTRESET_RESETDONE              (0x00000001U)
 
 /* ========================================================================== */
 /*                         Structures and Enums                               */

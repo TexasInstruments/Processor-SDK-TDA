@@ -71,8 +71,7 @@
 #include "tivx_video_io_display_m2m_priv.h"
 
 #include <TI/tivx_queue.h>
-#include <fvid2/fvid2.h>
-#include <dss/dss.h>
+#include <dss.h>
 #include <tivx_obj_desc_priv.h>
 #include <vx_reference.h>
 

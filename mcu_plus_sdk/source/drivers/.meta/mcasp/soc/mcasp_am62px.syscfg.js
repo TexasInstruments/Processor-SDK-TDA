@@ -1,4 +1,5 @@
 let common = system.getScript("/common");
+let pinmux = system.getScript("/drivers/pinmux/pinmux");
 
 let mcasp_input_clk_freq = 48000000;
 
@@ -79,6 +80,10 @@ let mcasp_ext_rxhclk_src = [
     { name: 1, displayName: "HFOSC0_CLKOUT"},
     { name: 2, displayName: "AUDIO_EXT_REFCLK0"},
     { name: 3, displayName: "AUDIO_EXT_REFCLK1"},
+    { name: 5, displayName: "ATCLK0"},
+    { name: 6, displayName: "ATCLK1"},
+    { name: 7, displayName: "ATCLK2"},
+    { name: 8, displayName: "ATCLK3"},
     { name: 16, displayName: "Invalid Clock"},
 ];
 
@@ -87,6 +92,10 @@ let mcasp_ext_txhclk_src = [
     { name: 1, displayName: "HFOSC0_CLKOUT"},
     { name: 2, displayName: "AUDIO_EXT_REFCLK0"},
     { name: 3, displayName: "AUDIO_EXT_REFCLK1"},
+    { name: 5, displayName: "ATCLK0"},
+    { name: 6, displayName: "ATCLK1"},
+    { name: 7, displayName: "ATCLK2"},
+    { name: 8, displayName: "ATCLK3"},
     { name: 16, displayName: "Invalid Clock"},
 ];
 
@@ -143,6 +152,17 @@ function getPinmuxReq(txHclkSourceMux, rxHclkSourceMux)
     return systemResources;
 }
 
+function getSystemPinmux(systemResources)
+{
+    let systemPinmux = {
+        name: "SYSTEM",
+        displayName: "System",
+        interfaceName: "SYSTEM",
+        resources: systemResources
+    };
+
+    return systemPinmux;
+}
 
 exports = {
     getConfigArr,
@@ -151,4 +171,5 @@ exports = {
     getExtTxHclkSrc,
     getExtClkPins,
     getPinmuxReq,
+    getSystemPinmux,
 };

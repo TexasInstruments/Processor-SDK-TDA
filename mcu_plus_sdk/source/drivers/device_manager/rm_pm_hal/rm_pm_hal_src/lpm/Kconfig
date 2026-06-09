@@ -36,11 +36,28 @@
 
 menu "Low Power Mode support"
 
+choice
+    prompt "Select Low Power Mode support minimal or full"
+    default NO_LPM
+
+config NO_LPM
+	bool "Disables all DM Low Power Mode support"
+	depends on LIBRARY_BUILD_DM
+	help
+	 Disables features in the DM to support low power modes.
+
 config LPM_DM
 	bool "Enable DM Low Power Mode support"
 	depends on LIBRARY_BUILD_DM
 	help
 	 Enable required features in the DM to support low power modes.
+
+config LPM_MIN
+    bool "Enable minimal Low Power Mode support"
+    depends on LIBRARY_BUILD_DM
+    help
+     Enable support in the DM for IO retention low power mode.
+endchoice
 
 config LPM_INCLUDE_OSAL
 	bool "Enable OSAL support for LPM"

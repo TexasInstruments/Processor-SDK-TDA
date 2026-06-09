@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-26 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,8 +30,13 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <stdlib.h>
 #include "ti_drivers_config.h"
+#include "ti_board_config.h"
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
 #include <drivers/device_manager/sciclient.h>
@@ -39,22 +44,47 @@
 #include <drivers/pinmux.h>
 #include <drivers/gtc.h>
 
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                         Structures and Enums                               */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                 Internal Function Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
 /* In this sample bootloader, we do SOC initializations and put all the cores in WFI. */
 
 /* This buffer needs to be defined for OSPI nand boot in case of HS device for
    image authentication
    The size of the buffer should be large enough to accomodate the appimage */
-uint8_t gAppimage[0x4000000] __attribute__ ((section (".app"), aligned (128)));
+uint8_t gAppimage[0x4000000] __attribute__ ((section (".bss.app"), aligned (128)));
 
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
-
-/* call this API to stop the booting process and spin, do that you can connect
+/*
+ * Call this API to stop the booting process and spin, so that you can connect
  * debugger, load symbols and then make the 'loop' variable as 0 to continue execution
  * with debugger connected.
  */
 void loop_forever()
 {
-    volatile uint32_t loop = 1;
+    volatile uint32_t loop = 1U;
     while(loop)
         ;
 }
@@ -65,7 +95,7 @@ int32_t App_loadSelfcoreImage(Bootloader_Handle bootHandle, Bootloader_BootImage
 
     if(bootHandle != NULL)
     {
-        status = Bootloader_parseMultiCoreAppImage(&bootHandle, bootImageInfo);
+        status = Bootloader_parseMultiCoreAppImage(bootHandle, bootImageInfo);
 
         if(status == SystemP_SUCCESS)
         {
@@ -80,35 +110,6 @@ int32_t App_loadSelfcoreImage(Bootloader_Handle bootHandle, Bootloader_BootImage
     return status;
 }
 
-int32_t App_boardDriversOpen()
-{
-    int32_t status = SystemP_SUCCESS;
-
-    gFlashHandle[CONFIG_FLASH_SBL] = Flash_open(CONFIG_FLASH_SBL, &gFlashParams[CONFIG_FLASH_SBL]);
-    if(NULL == gFlashHandle[CONFIG_FLASH_SBL])
-    {
-        DebugP_logError("FLASH open failed for instance %d !!!\r\n", CONFIG_FLASH_SBL);
-        status = SystemP_FAILURE;
-    }
-
-    return status;
-}
-
-void App_driversOpen()
-{
-    gOspiHandle[CONFIG_OSPI_SBL] = OSPI_open(CONFIG_OSPI_SBL, &gOspiParams[CONFIG_OSPI_SBL]);
-    if(NULL == gOspiHandle[CONFIG_OSPI_SBL])
-    {
-        DebugP_logError("OSPI open failed for instance %d !!!\r\n", CONFIG_OSPI_SBL);
-    }
-
-    gUartHandle[CONFIG_UART_SBL] = UART_open(CONFIG_UART_SBL, &gUartParams[CONFIG_UART_SBL]);
-    if(NULL == gUartHandle[CONFIG_UART_SBL])
-    {
-        DebugP_logError("UART open failed for instance %d !!!\r\n", CONFIG_UART_SBL);
-    }
-}
-
 int main()
 {
     int32_t status;
@@ -116,13 +117,14 @@ int main()
     Bootloader_profileReset();
 
     Bootloader_socWaitForFWBoot();
-    status = Bootloader_socOpenFirewalls();
-
-    DebugP_assertNoLog(status == SystemP_SUCCESS);
-
 
     System_init();
     Bootloader_profileAddProfilePoint("System_init");
+
+    status = Bootloader_socOpenFirewalls();
+    DebugP_assertNoLog(status == SystemP_SUCCESS);
+
+    Board_init();
 
     Drivers_open();
     Bootloader_profileAddProfilePoint("Drivers_open");
@@ -134,7 +136,7 @@ int main()
     DebugP_assert(status == SystemP_SUCCESS);
     Bootloader_profileAddProfilePoint("Board_driversOpen");
 
-    status = Sciclient_getVersionCheck(1);
+    status = Sciclient_getVersionCheck(1U);
     Bootloader_profileAddProfilePoint("Sciclient Get Version");
 
     if(SystemP_SUCCESS == status)
@@ -215,18 +217,23 @@ int main()
 
     if(status != SystemP_SUCCESS )
     {
-        DebugP_log("Some tests have failed!!\r\n");
+        DebugP_logError("Some tests have failed!!\r\n");
     }
 
     Board_driversClose();
+    DebugP_logInfo("\r\n Jumping to the core entry next \r\n");
 
     Drivers_close();
 
-    /* Call DPL deinit to close the tick timer and disable interrupts before jumping to DM*/
+    /* Call DPL deinit to close the tick timer and disable interrupts before jumping to DM. */
     Dpl_deinit();
-    System_deinit();
+
+    Board_deinit();
 
     Bootloader_JumpSelfCpu();
+
+    /* Jumping to CPU before this System de-init because even DDR clock is disabled in it, which clears the application entry point location in DDR. */
+    System_deinit();
 
     return 0;
 }

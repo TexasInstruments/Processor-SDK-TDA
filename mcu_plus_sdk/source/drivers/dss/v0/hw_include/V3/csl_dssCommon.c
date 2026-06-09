@@ -113,7 +113,7 @@ void CSL_dssEnableDispcIntr(CSL_dss_commRegs *commRegs,
 
     /* To disable interrupt, write to IRQENABLE_CLR. To enable write to
      * IRQENABLE_SET */
-    if(FALSE == intrEnable)
+    if((uint32_t)FALSE == intrEnable)
     {
         regVal = CSL_REG32_RD(&commRegs->DISPC_IRQENABLE_CLR);
         regVal |= intrMask;
@@ -140,19 +140,7 @@ void CSL_dssEnablePipeIntr(CSL_dss_commRegs *commRegs,
         regVal = CSL_dssMakeIntrEnableVal(regVal, intrMask, intrEnable);
         CSL_REG32_WR(&commRegs->VID_IRQENABLE_0, regVal);
     }
-    else if(CSL_DSS_VID_PIPE_ID_VIDL1 == vidPipeId)
-    {
-        regVal = CSL_REG32_RD(&commRegs->VID_IRQENABLE_1);
-        regVal = CSL_dssMakeIntrEnableVal(regVal, intrMask, intrEnable);
-        CSL_REG32_WR(&commRegs->VID_IRQENABLE_1, regVal);
-    }
-    else if(CSL_DSS_VID_PIPE_ID_VID2 == vidPipeId)
-    {
-        regVal = CSL_REG32_RD(&commRegs->VID_IRQENABLE_0);
-        regVal = CSL_dssMakeIntrEnableVal(regVal, intrMask, intrEnable);
-        CSL_REG32_WR(&commRegs->VID_IRQENABLE_0, regVal);
-    }
-    else /* CSL_DSS_VID_PIPE_ID_VIDL2 == vidPipeId */
+    else /* CSL_DSS_VID_PIPE_ID_VIDL1 == vidPipeId */
     {
         regVal = CSL_REG32_RD(&commRegs->VID_IRQENABLE_1);
         regVal = CSL_dssMakeIntrEnableVal(regVal, intrMask, intrEnable);
@@ -173,19 +161,7 @@ void CSL_dssEnableVpIntr(CSL_dss_commRegs *commRegs,
         regVal = CSL_dssMakeIntrEnableVal(regVal, intrMask, intrEnable);
         CSL_REG32_WR(&commRegs->VP_IRQENABLE_0, regVal);
     }
-    else if (CSL_DSS_VP_ID_2 == portId)
-    {
-        regVal = CSL_REG32_RD(&commRegs->VP_IRQENABLE_1);
-        regVal = CSL_dssMakeIntrEnableVal(regVal, intrMask, intrEnable);
-        CSL_REG32_WR(&commRegs->VP_IRQENABLE_1, regVal);
-    }
-    else if (CSL_DSS_VP_ID_3 == portId)
-    {
-        regVal = CSL_REG32_RD(&commRegs->VP_IRQENABLE_0);
-        regVal = CSL_dssMakeIntrEnableVal(regVal, intrMask, intrEnable);
-        CSL_REG32_WR(&commRegs->VP_IRQENABLE_0, regVal);
-    }
-    else /* CSL_DSS_VP_ID_4 == portId */
+    else /* CSL_DSS_VP_ID_2 == portId */
     {
         regVal = CSL_REG32_RD(&commRegs->VP_IRQENABLE_1);
         regVal = CSL_dssMakeIntrEnableVal(regVal, intrMask, intrEnable);
@@ -215,19 +191,7 @@ void CSL_dssClearPipeIntr(CSL_dss_commRegs *commRegs,
         regVal |= intrMask;
         CSL_REG32_WR(&commRegs->VID_IRQSTATUS_0, regVal);
     }
-    else if (CSL_DSS_VID_PIPE_ID_VIDL1 == vidPipeId)
-    {
-        regVal = CSL_REG32_RD(&commRegs->VID_IRQSTATUS_1);
-        regVal |= intrMask;
-        CSL_REG32_WR(&commRegs->VID_IRQSTATUS_1, regVal);
-    }
-    else if(CSL_DSS_VID_PIPE_ID_VID2 == vidPipeId)
-    {
-        regVal = CSL_REG32_RD(&commRegs->VID_IRQSTATUS_0);
-        regVal |= intrMask;
-        CSL_REG32_WR(&commRegs->VID_IRQSTATUS_0, regVal);
-    }
-    else /* CSL_DSS_VID_PIPE_ID_VIDL2 == vidPipeId */
+    else /* CSL_DSS_VID_PIPE_ID_VIDL1 == vidPipeId */
     {
         regVal = CSL_REG32_RD(&commRegs->VID_IRQSTATUS_1);
         regVal |= intrMask;
@@ -247,19 +211,7 @@ void CSL_dssClearVpIntr(CSL_dss_commRegs *commRegs,
         regVal |= intrMask;
         CSL_REG32_WR(&commRegs->VP_IRQSTATUS_0, regVal);
     }
-    else if(CSL_DSS_VP_ID_2 == portId)
-    {
-        regVal = CSL_REG32_RD(&commRegs->VP_IRQSTATUS_1);
-        regVal |= intrMask;
-        CSL_REG32_WR(&commRegs->VP_IRQSTATUS_1, regVal);
-    }
-    else if(CSL_DSS_VP_ID_3 == portId)
-    {
-        regVal = CSL_REG32_RD(&commRegs->VP_IRQSTATUS_0);
-        regVal |= intrMask;
-        CSL_REG32_WR(&commRegs->VP_IRQSTATUS_0, regVal);
-    }
-    else /* CSL_DSS_VP_ID_4 == portId */
+    else /* CSL_DSS_VP_ID_2 == portId */
     {
         regVal = CSL_REG32_RD(&commRegs->VP_IRQSTATUS_1);
         regVal |= intrMask;
@@ -282,15 +234,7 @@ uint32_t CSL_dssGetPipeIntrStatus(const CSL_dss_commRegs *commRegs,
     {
         intrStatus = CSL_REG32_RD(&commRegs->VID_IRQSTATUS_0);
     }
-    else if(CSL_DSS_VID_PIPE_ID_VIDL1 == vidPipeId)
-    {
-        intrStatus = CSL_REG32_RD(&commRegs->VID_IRQSTATUS_1);
-    }
-    else if(CSL_DSS_VID_PIPE_ID_VID2 == vidPipeId)
-    {
-        intrStatus = CSL_REG32_RD(&commRegs->VID_IRQSTATUS_0);
-    }
-    else /* CSL_DSS_VID_PIPE_ID_VIDL2 == vidPipeId */
+    else /* CSL_DSS_VID_PIPE_ID_VIDL1 == vidPipeId */
     {
         intrStatus = CSL_REG32_RD(&commRegs->VID_IRQSTATUS_1);
     }
@@ -305,15 +249,7 @@ uint32_t CSL_dssGetVpIntrStatus(const CSL_dss_commRegs *commRegs,
     {
         intrStatus = CSL_REG32_RD(&commRegs->VP_IRQSTATUS_0);
     }
-    else if(CSL_DSS_VP_ID_2 == portId)
-    {
-        intrStatus = CSL_REG32_RD(&commRegs->VP_IRQSTATUS_1);
-    }
-    else if(CSL_DSS_VP_ID_3 == portId)
-    {
-        intrStatus = CSL_REG32_RD(&commRegs->VP_IRQSTATUS_0);
-    }
-    else /* CSL_DSS_VP_ID_4 == portId */
+    else /* CSL_DSS_VP_ID_2 == portId */
     {
         intrStatus = CSL_REG32_RD(&commRegs->VP_IRQSTATUS_1);
     }
@@ -340,7 +276,7 @@ void CSL_dssGlobalVpEnable(CSL_dss_commRegs *commRegs,
 {
     uint32_t regVal, enableVal, val;
 
-    if(TRUE == enable)
+    if((uint32_t)TRUE == enable)
     {
         val = CSL_DSS_COMMON_DISPC_GLOBAL_OUTPUT_ENABLE_VP_ENABLE_VAL_ENABLE;
     }
@@ -360,14 +296,6 @@ void CSL_dssGlobalVpEnable(CSL_dss_commRegs *commRegs,
     {
         CSL_FINSR(enableVal, CSL_DSS_VP_ID_2, CSL_DSS_VP_ID_2, val);
     }
-    if(CSL_DSS_VP_ID_3_MASK == (CSL_DSS_VP_ID_3_MASK & portIdMask))
-    {
-        CSL_FINSR(enableVal, CSL_DSS_VP_ID_3, CSL_DSS_VP_ID_3, val);
-    }
-    if(CSL_DSS_VP_ID_4_MASK == (CSL_DSS_VP_ID_4_MASK & portIdMask))
-    {
-        CSL_FINSR(enableVal, CSL_DSS_VP_ID_4, CSL_DSS_VP_ID_4, val);
-    }
 
     CSL_FINS(regVal,
              DSS_COMMON_DISPC_GLOBAL_OUTPUT_ENABLE_VP_ENABLE,
@@ -385,19 +313,11 @@ void CSL_dssGlobalVpGoBitEnable(CSL_dss_commRegs *commRegs,
 
     if(CSL_DSS_VP_ID_1_MASK == (CSL_DSS_VP_ID_1_MASK & portIdMask))
     {
-        CSL_FINSR(enableVal, CSL_DSS_VP_ID_1, CSL_DSS_VP_ID_1, 0x1);
+        CSL_FINSR(enableVal, CSL_DSS_VP_ID_1, CSL_DSS_VP_ID_1, 0x1U);
     }
     if(CSL_DSS_VP_ID_2_MASK == (CSL_DSS_VP_ID_2_MASK & portIdMask))
     {
-        CSL_FINSR(enableVal, CSL_DSS_VP_ID_2, CSL_DSS_VP_ID_2, 0x1);
-    }
-    if(CSL_DSS_VP_ID_3_MASK == (CSL_DSS_VP_ID_3_MASK & portIdMask))
-    {
-        CSL_FINSR(enableVal, CSL_DSS_VP_ID_3, CSL_DSS_VP_ID_3, 0x1);
-    }
-    if(CSL_DSS_VP_ID_4_MASK == (CSL_DSS_VP_ID_4_MASK & portIdMask))
-    {
-        CSL_FINSR(enableVal, CSL_DSS_VP_ID_4, CSL_DSS_VP_ID_4, 0x1);
+        CSL_FINSR(enableVal, CSL_DSS_VP_ID_2, CSL_DSS_VP_ID_2, 0x1U);
     }
 
     CSL_FINS(regVal,
@@ -430,7 +350,7 @@ static uint32_t CSL_dssMakeIntrEnableVal(uint32_t regVal,
                                          uint32_t intrEnable)
 {
     uint32_t tempVal = regVal;
-    if(TRUE == intrEnable)
+    if((uint32_t)TRUE == intrEnable)
     {
         tempVal |= intrMask;
     }

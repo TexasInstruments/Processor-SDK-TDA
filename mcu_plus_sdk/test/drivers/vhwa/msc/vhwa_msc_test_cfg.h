@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) Texas Instruments Incorporated 2024
+*  Copyright (c) Texas Instruments Incorporated 2023-24
 *
 *  Redistribution and use in source and binary forms, with or without
 *  modification, are permitted provided that the following conditions
@@ -731,7 +731,7 @@
             FVID2_CCSF_BITS8_PACKED,
         },
     },
-/* 5 Instance 0 TestCase 1-in 5-out 1920x1080 12bit packed input and 12bit packed output  */
+     /* 5 Instance 0 TestCase 1-in 5-out 1920x1080 12bit packed input and 12bit packed output  */
     {
         UFALSE /*loopBack*/,
         VPAC_MSC_INST_ID_0,

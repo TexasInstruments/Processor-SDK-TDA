@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -68,9 +68,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <utils/console_io/include/app_log.h>
-#include <utils/ipc/include/app_ipc.h>
 #include <utils/remote_service/include/app_remote_service.h>
-
+#include <utils/ipc/include/app_ipc.h>
 
 #define APP_REMOTE_SERVICE_NAME_MAX      ( 64u)
 #define IPC_RPMESSAGE_MSG_SIZE           (496U + 32U)

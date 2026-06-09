@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021-2023 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -60,6 +60,7 @@
 #include <kernel/dpl/SemaphoreP.h>
 #include <drivers/hw_include/csl_types.h>
 #include <drivers/hw_include/cslr_ospi.h>
+#include "ospi_tuning/ospi_tuning_algo/algo_v1/ospi_phy_tuning.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -183,6 +184,18 @@ typedef void *OSPI_Handle;
 /** @} */
 
 /**
+*  \anchor OSPI_ReadModes
+*  \name Read Mode
+*
+*  Read Mode
+*
+*  @{
+*/
+#define OSPI_READ_MODE_DAC    (0U)
+#define OSPI_READ_MODE_INDAC  (1U)
+/** @} */
+
+/**
 *  \anchor OSPI_ChipSelect
 *  \name Chip Selects
 *
@@ -194,7 +207,6 @@ typedef void *OSPI_Handle;
 #define OSPI_CS1  (1U)
 #define OSPI_CS2  (2U)
 #define OSPI_CS3  (3U)
-
 #define OSPI_CHIP_SELECT(x)   ((~((1U) << (x))) & 0xFU)
 /** @} */
 
@@ -220,6 +232,41 @@ typedef void *OSPI_Handle;
  */
 #define OSPI_NOR_DMA_COPY_LOWER_LIMIT     (1024U)
 #define OSPI_NAND_DMA_COPY_LOWER_LIMIT     (256U)
+/** @} */
+
+/**
+ *  \anchor OSPI_PHY_Control_Mode
+ *  \name OSPI PHY Control Mode
+ *
+ *  Controls the bypass mode of the master and slave DLLs.
+ *  If this bit is set, the bypass mode is intended to be used only for debug.
+ *  0h = Master operational mode
+ *  DLL works in normal mode of operation where the slave delay line
+ *  settings are used as fractional delay of the master delay line encoder
+ *  reading of the number of delays in one cycle.
+ *  1h = Bypass mode
+ *  Master DLL is disabled with only 1 delay element in its delay line.
+ *  The slave delay lines decode delays in absolute delay elements
+ *  rather than as fractional delays.
+ *
+ *  @{
+ */
+#define OSPI_FLASH_CFG_PHY_MASTER_CONTROL_REG_PHY_MASTER_MODE           (0U)
+#define OSPI_FLASH_CFG_PHY_MASTER_CONTROL_REG_PHY_BYPASS_MODE           (1U)
+/** @} */
+
+
+/**
+ *  \anchor OSPI_PHY_DLL_Lock
+ *  \name OSPI PHY DLL Lock
+ *
+ * Determines if the master delay line locks on a full cycle or half cycle
+ * of delay. This bit need not be written by software. Force DLL lock mode with this setting.
+ *
+ *  @{
+ */
+#define OSPI_PHY_DLL_FULL_CYCLE_LOCK                   ((uint16_t) 0U)
+#define OSPI_PHY_DLL_HALF_CYCLE_LOCK                   ((uint16_t) 1U)
 /** @} */
 
 /* ========================================================================== */
@@ -298,6 +345,70 @@ typedef struct
 } OSPI_AddrRegion;
 
 /**
+ *  \brief OSPI PHY Tuning Window Parameters
+ *
+ *  These are input window parameters for OSPI PHY tuning algorithm. This data is usually SOC
+ *  specific and is filled by SysConfig.
+ *
+ */
+typedef struct
+{
+    int32_t txDllLowWindowStart;
+    /**< Tx Dll window lower value to search RxDLL low and high. This corresponds to the bottom left point serach.*/
+    int32_t txDllLowWindowEnd;
+    /**< Tx Dll window higher value to search RxDLL low and high. This corresponds to the bottom left point search. */
+    int32_t txDllHighWindowStart;
+    /**< Tx Dll window lower value to search RxDLL low and high. This corresponds to the top right point search.*/
+    int32_t txDllHighWindowEnd;
+    /**< Tx Dll window higher value to search RxDLL low and high. This corresponds to the top right point search. */
+    int32_t rxLowSearchStart;
+    /**< Rx Dll lower value for Rx Dll low search. The value of Rx dll will lie in this window bottom left point search. */
+    int32_t rxLowSearchEnd;
+    /**< Rx Dll higher value for Rx Dll low search. The value of Rx dll will lie in this window bottom left point search. */
+    int32_t rxHighSearchStart;
+    /**< Rx Dll lower value for Rx Dll high search. The value of Rx dll will lie in this window top right point search. */
+    int32_t rxHighSearchEnd;
+    /**< Rx Dll higher value for Rx Dll high search. The value of Rx dll will lie in this window for top right point search. */
+    int32_t txLowSearchStart;
+    /**< Tx Dll lower value for Tx Dll low search. The value of Tx dll will lie in this window. */
+    int32_t txLowSearchEnd;
+    /**< Tx Dll higher value for Tx Dll low search. The value of Tx dll will lie in this window. */
+    int32_t txHighSearchStart;
+    /**< Tx Dll lower value for Tx Dll high search. The value of Tx dll will lie in this window. */
+    int32_t txHighSearchEnd;
+    /**< Tx Dll higher value for Tx Dll high search. The value of Tx dll will lie in this window. */
+    int32_t txDLLSearchOffset;
+    /**< Tx Dll step increase for backup Rx Dll low and high search. */
+    uint32_t rxTxDLLSearchStep;
+    /**< Rx Dll and Tx DLL step increase for Rx Dll and Tx Dll low and high search. */
+    uint32_t rdDelayMin;
+    /**< Minimum value of Read delay for Read Delay Capture Register for tuning search. */
+    uint32_t rdDelayMax;
+    /**< Maximum value of Read delay for Read Delay Capture Register for tuning search. */
+} OSPI_PhyTuneWindowParams;
+
+/**
+ *  \brief OSPI PHY Configuration
+ *
+ *  Global structure to provide input to OSPI PHY tuining algorithm with either default or
+ *  fast boot tuning paramters. It maintains the essential PHY configurations parameters.
+ *  This data is usually SOC specific and is filled by SysConfig.
+ *
+ */
+typedef struct
+{
+    uint32_t phyControlMode;
+    /**< Controls the bypass mode of the master and slave DLLs. */
+    uint32_t dllLockMode;
+    /**< Determines if the master delay line locks on a full cycle or half cycle of delay. */
+    OSPI_PhyTuneWindowParams tuningWindowParams;
+    /**< OSPI Non-DQS Tuning Algorithm Parameters */
+    OSPI_phyParams phyParams;
+    /**< OSPI DQS Tuning Algorithm Parameters */
+
+} OSPI_PhyConfiguration;
+
+/**
  *  \brief OSPI Parameters
  *
  *  OSPI Parameters are used to with the #OSPI_open() call. Default values for
@@ -325,6 +436,10 @@ typedef struct
     /**< Peripheral base address */
     uint32_t                dataBaseAddr;
     /**< Base address of the OSPI flash */
+    uint32_t                moduleId;
+    /**< OSPI Module Id */
+    uint32_t                clkId;
+    /**< OSPI Clock Id */
     uint32_t                inputClkFreq;
     /**< Module input clock frequency */
 
@@ -341,7 +456,7 @@ typedef struct
     /**< Enable DMA mode */
     uint32_t                phyEnable;
     /**< Enable PHY mode */
-    uint32_t                ospiSkipProg;
+    uint32_t                phySkipTuning;
     /**< Reinitialize OSPI */
     uint32_t                dacEnable;
     /**< Enable DAC mode */
@@ -353,15 +468,21 @@ typedef struct
     /**< Ospi Chip select number */
     uint32_t                decChipSelect;
     /**< Decoder Chip select number */
+    uint32_t                readMode;
+    /**< Select read mode DAC/INDAC*/
     uint32_t                baudRateDiv;
     /**< Baud-rate divisor to derive DQS and other output clks */
     uint32_t                phaseDelayElement;
     /**< Number of delay elements to be inserted between phase detect flip-flops */
+    uint8_t                 validateOtp;
+    /**< Validate OSPI Tuning Point */
     const OSPI_AddrRegion *dmaRestrictedRegions;
     /**< Pointer to array of OSPI_AddrRegion data structures filled by SysConfig. The
     array should be terminated by a { 0xFFFFFFFFU, 0U } entry. It is used while
     using DMA copy to check if the destination address is a region not accessible to DMA
     and switch to CPU copy */
+    OSPI_PhyConfiguration  phyConfiguration;
+    /**< OSPI PHY configuration params */
 
 } OSPI_Attrs;
 
@@ -393,6 +514,10 @@ typedef struct
     /**< Read data capture delays needed */
     uint32_t phyRdDataCapDelay;
     /**< Read data capture delays needed when phy is enabled*/
+    uint32_t phyCfgVal;
+    /**< Read phy tuning dll values needed when phy is enabled at the previous stage*/
+    uint32_t phyDummyCycles;
+    /**< Read dummy cycle values needed when phy is enabled at the previous stage*/
     uint32_t numAddrBytes;
     /**< Number of bytes used to represent address to be sent to flash.
     This is the actual number of bytes used. The code to be programmed to
@@ -414,10 +539,19 @@ typedef struct
     /**< Interrupt object */
     uint32_t                phyEnableSuccess;
     /**< This has to be set from the flash driver if the PHY tuning completed successfully */
-
+    uint32_t                rdDummyValPhyMode;
+    /**< Read dummy cycle update value for OSPI read in Phy mode */
     OSPI_Transaction *currTrans;
     /**< Pointer to current transaction struct */
     void* ospiDmaHandle;
+    /**< Size of the device connected to the OSPI controller */
+    uint32_t deviceSize;
+    /**< Size of a page in bytes for the OSPI flash memory device */
+    uint32_t pageSize;
+    /**< Temporary buffer for odd-byte alignment in 8D-8D-8D protocol mode.
+         Max typical flash page size is 512 bytes. Caller must hold lockObj when
+         using readIndirect/writeIndirect to ensure thread-safe access to this buffer */
+    uint8_t tempBuf[512U] __attribute__((aligned(32)));
 } OSPI_Object;
 
 typedef struct
@@ -719,10 +853,11 @@ int32_t OSPI_enableDdrRdCmds(OSPI_Handle handle);
  *
  *  \param  handle             An #OSPI_Handle returned from an #OSPI_open()
  *  \param  rdDataCapDelay     Number of read data capture cycles to be programmed
+ *  \param  updatePhyRdDelay   Set to TRUE to update bookkeeping of PHY Read Data Capture
  *
  *  \return #SystemP_SUCCESS if read data capture cycles successfully set, else error on failure
  */
-int32_t OSPI_setRdDataCaptureDelay(OSPI_Handle handle, uint32_t rdDataCapDelay);
+int32_t OSPI_setRdDataCaptureDelay(OSPI_Handle handle, uint32_t rdDataCapDelay, uint32_t updatePhyRdDelay);
 
 /**
  *  \brief  This function set the number of bytes used to send address while reading or writing to flash memory
@@ -741,11 +876,12 @@ void OSPI_setNumAddrBytes(OSPI_Handle handle, uint32_t numAddrBytes);
  *  \pre    OSPI controller has been opened using #OSPI_open()
  *
  *  \param  handle           An #OSPI_Handle returned from an #OSPI_open()
+ *  \param  deviceSize       Size of the connected device in bytes
  *  \param  pageSize         Page size of the flash in bytes
  *  \param  blkSize          Block size of the flash in bytes
  *
  */
-void OSPI_setDeviceSize(OSPI_Handle handle, uint32_t pageSize, uint32_t blkSize);
+void OSPI_setDeviceSize(OSPI_Handle handle, uint32_t deviceSize, uint32_t pageSize, uint32_t blkSize);
 
 /**
  *  \brief  This function sets appropriate dummy cycles to be used while sending STIG commands to flash
@@ -768,6 +904,18 @@ void OSPI_setCmdDummyCycles(OSPI_Handle handle, uint32_t cmdDummyCycles);
  *
  */
 void OSPI_setReadDummyCycles(OSPI_Handle handle, uint32_t dummyCycles);
+
+/**
+ *  \brief  This function sets value by which read dummy cycles need to be updated for OSPI read in Phy Mode
+ *
+ *
+ *  \pre    OSPI controller has been opened using #OSPI_open()
+ *
+ *  \param  handle  An #OSPI_Handle returned from an #OSPI_open()
+ *  \param  rdDummyValPhyMode Value by which read dummy cycles need to be updated
+ *
+ */
+void OSPI_setRdDummyValPhyMode(OSPI_Handle handle, uint32_t rdDummyValPhyMode);
 
 /**
  *  \brief  This function sets the phyEnableSuccess field in \ref OSPI_Object. Has to be called from flash driver
@@ -984,7 +1132,7 @@ int32_t OSPI_phyTuneSDR(OSPI_Handle handle, uint32_t flashOffset);
  *
  *  \return #SystemP_SUCCESS on success, #SystemP_FAILURE otherwise
  */
-int32_t OSPI_phyTuneGrapher(OSPI_Handle handle, uint32_t flashOffset, uint8_t arrays[4][128][128]);
+int32_t OSPI_phyTuneGrapher(OSPI_Handle handle, uint32_t flashOffset, uint8_t arrays[5][128][128]);
 
 /**
  *  \brief  This function returns the address to the attack vector buf required for tuning the PHY
@@ -1005,6 +1153,29 @@ void OSPI_phyGetTuningData(uint32_t *tuningData, uint32_t *tuningDataSize);
  *  \return #SystemP_SUCCESS on success, #SystemP_FAILURE otherwise
  */
 int32_t OSPI_phyReadAttackVector(OSPI_Handle handle, uint32_t offset);
+
+/**
+ *  \brief  This function reads OSPI PHY values if the previous stage
+ *          has already configured it
+ *
+ *  \param  handle     An #OSPI_Handle returned from an #OSPI_open()
+ */
+void OSPI_phyReadTunedVal(OSPI_Handle handle);
+
+/**
+ *  \brief  This function writes OSPI PHY DLL values if the previous stage
+ *          has already configured it
+ *
+ *  \param  handle     An #OSPI_Handle returned from an #OSPI_open()
+ */
+void OSPI_phyWriteTunedVal(OSPI_Handle handle);
+
+/**
+ *  \brief  This function resyncs the DLL values
+ *
+ *  \param  handle     An #OSPI_Handle returned from an #OSPI_open()
+ */
+void OSPI_phyResyncDLL(OSPI_Handle handle);
 
 /**
  *  \brief  This function enables the PHY
@@ -1155,13 +1326,101 @@ int32_t OSPI_norFlashErase(OSPI_Handle handle, uint32_t address);
 /** @} */
 
 /**
- *  \brief  This function checks if OSPI programming should be skipped
+ *  \brief  This function checks if OSPI tuning should be skipped based
+ *          on user input and if phy bit is set
  *
  *  \param  handle     An #OSPI_Handle returned from an #OSPI_open()
  *
  *  \return #SystemP_SUCCESS on success, #SystemP_FAILURE otherwise
  */
-int32_t OSPI_skipProgramming(OSPI_Handle handle);
+int32_t OSPI_skipTuning(OSPI_Handle handle);
+
+/**
+ *  \brief  This function checks if OSPI validate tuning point option is enabled
+ *
+ *  \pre    OSPI controller has been opened using #OSPI_open()
+ *
+ *  \param  handle  An #OSPI_Handle returned from an #OSPI_open()
+ *
+ *  \return 1 if validate OTP is enabled, 0 otherwise
+ */
+uint32_t OSPI_isOtpValidateEnable(OSPI_Handle handle);
+
+/**
+ * \brief Validates a specific tuning point by performing a read operation
+ *        from the flash memory
+ *
+ * This function validates the current PHY tuning settings by reading data from
+ * the specified flash offset and verifying the read operation is successful.
+ * It's used during PHY enabled reads, to validate the tuning point.
+ *
+ * \param handle       OSPI driver handle
+ * \param flashOffset  Offset in flash memory to read from for validation
+ *
+ * \return SystemP_SUCCESS on success, #SystemP_FAILURE otherwise
+ */
+int32_t OSPI_phyValidateTuningPoint(OSPI_Handle handle, uint32_t flashOffset);
+
+/**
+ *  \brief Sets the operating frequency for the OSPI peripheral
+ *
+ *  This function configures the OSPI controller to operate at the specified
+ *  frequency based on the input clock frequency provided.
+ *
+ *  \param  handle       OSPI driver handle
+ *  \param  inputClkFreq Input clock frequency in Hz
+ *
+ *  \return SystemP_SUCCESS on success, error code on failure
+ */
+int32_t OSPI_setFrequency(OSPI_Handle handle, uint64_t inputClkFreq);
+
+/**
+ *  \brief Sets timing delays for the OSPI interface based on input clock frequency
+ *
+ *  This function configures the appropriate timing delays for the OSPI interface
+ *  to ensure reliable communication with external memory devices. The delays are
+ *  calculated based on the provided input clock frequency.
+ *
+ *  \param handle        OSPI handle to the peripheral instance
+ *  \param inputClkFreq  Input clock frequency in Hz
+ *
+ */
+void OSPI_setDelays(OSPI_Handle handle, uint32_t inputClkFreq);
+
+/**
+ *  \brief Sets the baud rate divider for OSPI communication
+ *
+ *  This function configures the baud rate divider to control the OSPI clock frequency.
+ *  The actual OSPI clock frequency is determined by dividing the input clock frequency
+ *  by the specified baud rate divider.
+ *
+ *  \param handle       OSPI handle
+ *  \param baudRateDiv  Baud rate divider value
+ */
+void OSPI_setBaudRateDiv(OSPI_Handle handle, uint32_t baudRateDiv);
+
+/**
+ *  \brief  This function resets DDR bit in INSTR_RD register for RD commands
+ *
+ *  \pre    OSPI controller has been opened using #OSPI_open()
+ *
+ *  \param  handle  An #OSPI_Handle returned from an #OSPI_open()
+ *
+ *  \return #SystemP_SUCCESS if SDR successfully enabled, else error on failure
+ */
+int32_t OSPI_disableDdrRdCmds(OSPI_Handle handle);
+
+/**
+ *  \brief Resets the OSPI controller to operate in 1S-1S-1S mode
+ *
+ *  This function reverts the OSPI controller configuration from advanced modes
+ *  (such as 8D-8D-8D DDR mode) back to the basic single-lane mode (1S-1S-1S).
+ *  It unsets all registers that were configured for high-performance modes,
+ *  allowing the controller to operate in the standard SPI mode.
+ *
+ *  \param handle  OSPI driver handle
+ */
+void OSPI_set1sProtocol(OSPI_Handle handle);
 
 /** @} */
 

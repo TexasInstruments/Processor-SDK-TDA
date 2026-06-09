@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2017-2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -49,7 +49,7 @@
  *
  * Host IDs for AM62PX device
  *
- * Data version: 230922_165936
+ * Data version: 250904_170808
  *
  */
 #ifndef TISCI_HOSTS_H

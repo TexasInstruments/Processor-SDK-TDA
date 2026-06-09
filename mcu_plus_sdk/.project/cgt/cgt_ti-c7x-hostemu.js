@@ -11,7 +11,7 @@ const cgt_common = {
 
     includes: {
         common: [
-            /*"${CGT_TI_C7000_PATH}/host_emulation/include/C7504",*/
+            "${CGT_TI_C7000_PATH}/host_emulation/include/C7504",
             "${CGT_TI_C7000_PATH}/host_emulation/include/C7524-MMA2_256",
             "${MCU_PLUS_SDK_PATH}/source"
         ],

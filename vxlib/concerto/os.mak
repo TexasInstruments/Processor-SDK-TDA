@@ -43,7 +43,7 @@ ifeq ($(HOST_OS),$(filter $(HOST_OS),Windows_NT LINUX))
     ifneq ($(TARGET_CPU),)
         ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU),C64T C64P C64 C66 C674 C67 C67P))
             HOST_COMPILER?=CGT6X
-        else ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU),C71 C7100 C7120 C7504 C7524))
+        else ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU),C71 C7100 C7120 C7504 C7524 C7604))
             HOST_COMPILER?=CGT7X
         else ifeq ($(TARGET_CPU),EVE)
             HOST_COMPILER?=ARP32
@@ -63,7 +63,7 @@ else
     PATH_CONV=$(1)
     PATH_SEP=/
     PATH_SEPD=/
-    ifeq ($(TARGET_SCPU),C71 C7100 C7120 C7504 C7524)
+    ifeq ($(TARGET_SCPU),C71 C7100 C7120 C7504 C7524 C7604)
         HOST_COMPILER?=GPP
     else
         HOST_COMPILER?=GCC

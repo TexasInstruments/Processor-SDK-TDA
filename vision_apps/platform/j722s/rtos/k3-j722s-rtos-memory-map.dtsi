@@ -71,6 +71,16 @@
 		reg = <0x00 0xb5000000 0x00 0x02c00000>;
 		no-map;
 	};
+	vision_apps_main_r5fss0_core0_shared_memory_queue_region: vision-apps-r5f-virtual-eth-queues@b8000000 {
+		compatible = "shared-dma-pool";
+		reg = <0x00 0xb8000000 0x00 0x00200000>;
+		no-map;
+	};
+	vision_apps_main_r5fss0_core0_shared_memory_bufpool_region: vision-apps-r5f-virtual-eth-buffers@b8200000 {
+		compatible = "shared-dma-pool";
+		reg = <0x00 0xb8200000 0x00 0x00e00000>;
+		no-map;
+	};
 	c7x_ddr_heaps_hi: c7x-ddr-heaps-hi@880000000 {
 		compatible = "shared-dma-pool";
 		reg = <0x08 0x80000000 0x00 0x20000000>;

@@ -58,6 +58,11 @@
 #include <drivers/sciclient/soc/am62ax/sciclient_irq_rm.h>
 #endif
 
+#if defined (SOC_AM62DX)
+#include <drivers/sciclient/soc/am62dx/sciclient_soc_priv.h>
+#include <drivers/sciclient/soc/am62dx/sciclient_irq_rm.h>
+#endif
+
 #if defined (SOC_AM62PX)
 #include <drivers/sciclient/soc/am62px/sciclient_soc_priv.h>
 #include <drivers/sciclient/soc/am62px/sciclient_irq_rm.h>
@@ -68,6 +73,16 @@
 #include <drivers/sciclient/soc/j722s/sciclient_irq_rm.h>
 #endif
 
+#if defined (SOC_AM275X)
+#include <drivers/sciclient/soc/am275x/sciclient_soc_priv.h>
+#include <drivers/sciclient/soc/am275x/sciclient_irq_rm.h>
+#endif
+
+#if defined (SOC_AM62LX)
+#include <drivers/sciclient/soc/am62lx/sciclient_soc_priv.h>
+#include <drivers/sciclient/soc/am62lx/sciclient_irq_rm.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -76,7 +91,7 @@ extern "C" {
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
-/* None */
+#define SCICLIENT_DEV_ID_MAX	0xFFFFU
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */

@@ -59,8 +59,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#ifndef _OV2312_SERDES_H_
-#define _OV2312_SERDES_H_
+#ifndef OV2312_SERDES_H
+#define OV2312_SERDES_H
 
 /**
 7-bit Alias addresses for sensor and serializer
@@ -86,6 +86,6 @@ I2cParams ub953SerCfg_D3OV2312[OV2312_D3_SER_CFG_SIZE] = {
     {0xFFFF, 0x00, 0x0} //End of script
 };
 
-#endif /* _OV2312_SERDES_H_ */
+#endif /* OV2312_SERDES_H */
 
 

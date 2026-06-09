@@ -1,5 +1,5 @@
 
-ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), x86_64 C66 A72 A53 R5F C71 C7120 C7504 C7524))
+ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), x86_64 C66 A72 A53 A720 M55 R5F R52P C71 C7120 C7504 C7524 C7604))
 
 	include $(PRELUDE)
 	TARGET      := vx_target_kernels_source_sink
@@ -15,6 +15,7 @@ ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), x86_64 C66 A72 A53 R5F C71 C7120 C7
 
 	ifeq ($(RTOS_SDK), mcu_plus_sdk)
 		IDIRS   += $(APP_UTILS_PATH)/utils/rtos/src
+		IDIRS   += $(MCU_PLUS_SDK_PATH)/source
 	else
 		IDIRS   += $(PDK_PATH)/packages/ti/osal/soc
 	endif

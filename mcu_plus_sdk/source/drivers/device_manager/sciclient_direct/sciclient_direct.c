@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Texas Instruments Incorporated
+ * Copyright (c) 2023-2026 Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -113,6 +113,8 @@
 #define SCICLIENT_DIRECT_EXTBOOT_BOARDCFG_RM_INDEX               (3U)
 #define SCICLIENT_DIRECT_EXTBOOT_BOARDCFG_NUM_DESCS              (4U)
 
+#define SCICLIENT_DIRECT_NUM_BITS_IN_WORD                        (32U)
+
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
@@ -196,7 +198,11 @@ static int32_t boardcfg_RmAdjustReq(uint32_t *msg, uint16_t adjSize);
 static int32_t Sciclient_pmSetMsgProxy(uint32_t *msg_recv, uint32_t reqFlags,
                                       uint8_t procId);
 static int32_t Sciclient_pmSetCpuResetMsgProxy(uint32_t *msg_recv, uint8_t procId);
+static int32_t Sciclient_processDMVersionMessage(void *tx_msg);
 static int32_t tisci_msg_board_config_rm_handler(uint32_t *msg_recv);
+#ifdef CONFIG_LPM_DM
+static int32_t lpm_UpdateCtxtAddr(uint32_t *msg);
+#endif
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -233,7 +239,7 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
 
     if ((pReqPrm == NULL) || (pRespPrm == NULL))
     {
-        ret = SystemP_FAILURE;
+        ret = CSL_EBADARGS;
     }
 
     /*
@@ -247,7 +253,6 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
         Sciclient_printf("Request message type = 0x%X\n", msgType);
         ret = Sciclient_serviceGetThreadIds (pReqPrm, &contextId, &txThread,
                                          &rxThread);
-
         if(CSL_PASS != ret)
         {
             Sciclient_printf("ERROR:: Sciclient_service: Failed to get thread IDs\n");
@@ -255,10 +260,15 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
     }
     if (CSL_PASS == ret)
     {
+        gSciclientHandle.currSeqId = (gSciclientHandle.currSeqId + 1U) %
+                                        SCICLIENT_MAX_QUEUE_SIZE;
+        if (gSciclientHandle.currSeqId == 0U)
+        {
+            gSciclientHandle.currSeqId++;
+        }
         ret = Sciclient_servicePrepareHeader(pReqPrm, &localSeqId,
                  contextId, &hdr);
-
-        if (CSL_PASS != ret)
+        if(CSL_PASS != ret)
         {
             Sciclient_printf("ERROR:: Sciclient_service: Failed to prepare header\n");
         }
@@ -272,53 +282,52 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
             case TISCI_MSG_SET_CLOCK_PARENT:
             case TISCI_MSG_GET_CLOCK_PARENT:
             case TISCI_MSG_GET_NUM_CLOCK_PARENTS:
+            case TISCI_MSG_SET_CLOCK_SSC:
+            case TISCI_MSG_GET_CLOCK_SSC:
             case TISCI_MSG_SET_FREQ:
             case TISCI_MSG_QUERY_FREQ:
             case TISCI_MSG_GET_FREQ:
             case TISCI_MSG_SET_DEVICE:
             case TISCI_MSG_GET_DEVICE:
+            case TISCI_MSG_GET_DEVICE_MULTIPLE:
             case TISCI_MSG_SET_DEVICE_RESETS:
             case TISCI_MSG_SYS_RESET:
-                memcpy(message, pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
+                memcpy((void *)message, (const void*)pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
                 Sciclient_printf("This request is releated to Power Management and will be processed by DM core\n");
                 ret = Sciclient_ProcessPmMessage(pReqPrm->flags, message);
-
                 if(CSL_PASS != ret)
                 {
                     Sciclient_printf("ERROR:: Sciclient_service: DM failed to process PM message\n");
                 }
-
                 if (pRespPrm->pRespPayload != NULL)
                 {
-                    memcpy(pRespPrm->pRespPayload, message, pRespPrm->respPayloadSize);
+                    memcpy((void *)pRespPrm->pRespPayload, (const void *)message, pRespPrm->respPayloadSize);
                 }
                 hdr = (struct tisci_header *) &message;
                 pRespPrm->flags = hdr->flags;
                 break;
-            /* RM messages processed solely by RM within DM on WKUP_R5 */
+            /* RM messages processed solely by RM within DM on MCU R5F */
             case TISCI_MSG_RM_GET_RESOURCE_RANGE:
             case TISCI_MSG_RM_UDMAP_FLOW_CFG:
             case TISCI_MSG_RM_UDMAP_FLOW_SIZE_THRESH_CFG:
             case TISCI_MSG_RM_UDMAP_FLOW_DELEGATE:
             case TISCI_MSG_RM_UDMAP_GCFG_CFG:
-                memcpy(message, pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
+                memcpy((void *)message, (const void *)pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
                 Sciclient_printf("RM messages processed solely by RM within DM on MCU R5F\n");
                 ret = Sciclient_ProcessRmMessage(message);
-
                 if(CSL_PASS != ret)
                 {
                     Sciclient_printf("ERROR:: Sciclient_service: DM failed to process RM message\n");
                 }
-
                 if (pRespPrm->pRespPayload != NULL)
                 {
-                    memcpy(pRespPrm->pRespPayload, message, pRespPrm->respPayloadSize);
+                    memcpy((void *)pRespPrm->pRespPayload, (const void *)message, pRespPrm->respPayloadSize);
                 }
                 hdr = (struct tisci_header *) &message;
                 pRespPrm->flags = hdr->flags;
                 break;
             /*
-             * RM messages processed by RM within DM on WKUP_R5 and Secure
+             * RM messages processed by RM within DM on MCU R5F and Secure
              * RM within TIFS on M3
              */
             case TISCI_MSG_RM_IRQ_SET:
@@ -328,20 +337,18 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
             case TISCI_MSG_RM_UDMAP_TX_CH_CFG:
             case TISCI_MSG_RM_UDMAP_RX_CH_CFG:
             case TISCI_MSG_RM_PROXY_CFG:
-                memcpy(message, pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
+                memcpy((void *)message, (const void *)pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
                 Sciclient_printf("This request is releated to Resource Management.");
                 Sciclient_printf("Therefore Request will be processed by DM first ");
                 Sciclient_printf("and then TIFS will process Secure RM\n");
                 ret = Sciclient_ProcessRmMessage(message);
-
                 if(CSL_PASS != ret)
                 {
                     Sciclient_printf("ERROR:: Sciclient_service: DM failed to process RM message on MCU R5F\n");
                 }
-
                 if (pRespPrm->pRespPayload != NULL)
                 {
-                    memcpy(pRespPrm->pRespPayload, message, pRespPrm->respPayloadSize);
+                    memcpy((void *)pRespPrm->pRespPayload, (const void *)message, pRespPrm->respPayloadSize);
                 }
                 hdr = (struct tisci_header *) &message;
                 pRespPrm->flags = hdr->flags;
@@ -355,7 +362,6 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
                      */
                     *fwdStatus = SCISERVER_FORWARD_MSG;
                     ret = Sciclient_serviceSecureProxy(pReqPrm, pRespPrm);
-
                     if(CSL_PASS != ret)
                     {
                         Sciclient_printf("ERROR:: Sciclient_service: TIFS failed to process RM message on M core\n");
@@ -369,14 +375,14 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
                 /* If RM boardcfg has a certificate, find the length */
                 adjSize = boardcfgRmFindCertSize((uint32_t *)pReqPrm->pReqPayload);
                 Sciclient_printf("TISCI_MSG_BOARD_CONFIG_RM : RM boardcfg sent to TIFS before local processing\n");
-                /* Send to TIFS */
-                ret = Sciclient_serviceSecureProxy(pReqPrm, pRespPrm);
 
+                /* Send to TIFS */
+               *fwdStatus = SCISERVER_FORWARD_MSG;
+                ret = Sciclient_serviceSecureProxy(pReqPrm, pRespPrm);
                 if(CSL_PASS != ret)
                 {
                     Sciclient_printf("ERROR:: Sciclient_service: TIFS failed to process RM boardcfg\n");
                 }
-
                 if ((ret == CSL_PASS) &&
                         ((pRespPrm->flags & TISCI_MSG_FLAG_ACK) == TISCI_MSG_FLAG_ACK))
                 {
@@ -392,7 +398,6 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
                      * to be advanced.
                      */
                     ret = boardcfg_RmAdjustReq((uint32_t *)pReqPrm->pReqPayload, adjSize);
-
                     if(CSL_PASS != ret)
                     {
                         Sciclient_printf("ERROR:: Sciclient_service: Failed to adjust RM boardcfg by RM ");
@@ -403,157 +408,211 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
                         ((pRespPrm->flags & TISCI_MSG_FLAG_ACK) == TISCI_MSG_FLAG_ACK))
                 {
 
-                    memcpy(message, pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
+                    memcpy((void *)message, (const void *)pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
                     Sciclient_printf("TISCI_MSG_BOARD_CONFIG_RM : RM boardcfg sending to RM processed by DM ");
                     Sciclient_printf("for local processing\n");
                     ret = Sciclient_ProcessRmMessage(message);
-
                     if(CSL_PASS != ret)
                     {
                         Sciclient_printf("ERROR:: Sciclient_service: Failed to process RM boardcfg by RM ");
                         Sciclient_printf("processed by DM for local processing\n");
                     }
-
                     if (pRespPrm->pRespPayload != NULL)
                     {
-                        memcpy(pRespPrm->pRespPayload, message, pRespPrm->respPayloadSize);
+                        memcpy((void *)pRespPrm->pRespPayload, (const void *)message, pRespPrm->respPayloadSize);
                     }
                     hdr = (struct tisci_header *) &message;
                     pRespPrm->flags = hdr->flags;
-                }
-                else
-                {
-                    ret = CSL_EFAIL;
                 }
                 break;
 
 #ifdef CONFIG_LPM_DM    /* Low power mode handling */
             case TISCI_MSG_PREPARE_SLEEP:
-                memcpy(message, pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
-                Sciclient_printf("TISCI_MSG_PREPARE_SLEEP :\n");
-                /* Processing prepare sleep message locally */
-                ret = Sciclient_ProcessPmMessage(pReqPrm->flags,message);
+                /* Update the context save address if required */
+                ret = lpm_UpdateCtxtAddr((uint32_t *)pReqPrm->pReqPayload);
 
-                if(CSL_PASS != ret)
+                if (ret == CSL_PASS)
                 {
-                    Sciclient_printf("ERROR:: Sciclient_service: DM failed to process PM prepare sleep message\n");
+                    /* Sending to TIFS for further processing */
+                    *fwdStatus = SCISERVER_FORWARD_MSG;
+                    ret = Sciclient_serviceSecureProxy(pReqPrm, pRespPrm);
                 }
-
-                if (pRespPrm->pRespPayload != NULL)
-                {
-                    memcpy(pRespPrm->pRespPayload, message, pRespPrm->respPayloadSize);
-                }
-                hdr = (struct tisci_header *) &message;
-                pRespPrm->flags = hdr->flags;
 
                 if ((ret == CSL_PASS) &&
                         ((pRespPrm->flags & TISCI_MSG_FLAG_ACK) == TISCI_MSG_FLAG_ACK))
                 {
-                /* Sending to TIFS for further processing */
-                *fwdStatus = SCISERVER_FORWARD_MSG;
-                Sciclient_printf("TISCI_MSG_PREPARE_SLEEP : Sending prepare sleep message to TIFS\n");
-                ret = Sciclient_serviceSecureProxy(pReqPrm, pRespPrm);
+                    /* Copy the message for local processing */
+                    memcpy((void *)message, (const void *)pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
+                    Sciclient_printf("TISCI_MSG_PREPARE_SLEEP :\n");
 
-                if(CSL_PASS != ret)
-                {
-                    Sciclient_printf("ERROR:: Sciclient_service: TIFS failed to process prepare sleep message\n");
-                }
+                    /* Processing prepare sleep message locally */
+                    ret = Sciclient_ProcessPmMessage(pReqPrm->flags,message);
+                    if(CSL_PASS != ret)
+                    {
+                        Sciclient_printf("ERROR:: Sciclient_service: DM failed to process PM prepare sleep message\n");
+                    }
+                    if (pRespPrm->pRespPayload != NULL)
+                    {
+                        memcpy((void *)pRespPrm->pRespPayload, (const void *)message, pRespPrm->respPayloadSize);
+                    }
+
+                    hdr = (struct tisci_header *) &message;
+                    pRespPrm->flags = hdr->flags;
                 }
                 else
                 {
-                    /* local processing of prepare sleep failed, send NACK to power master */
-                    ret = CSL_EFAIL;
+                    /* In case of failure, update the ACK flag in response payload (if valid) */
+                    if (pRespPrm->pRespPayload != NULL)
+                    {
+                        hdr = (struct tisci_header *) pRespPrm->pRespPayload;
+                        hdr->flags &= (~TISCI_MSG_FLAG_ACK);
+                    }
+
+                    /* For failure, the response ACK flag will be cleared
+                     * If AOP flag is set, this needs to be cleared to indicate NACK
+                     * If AOP flag is not set, this needs to be cleared as the response is not required
+                     */
+                    pRespPrm->flags &= (~TISCI_MSG_FLAG_ACK);
+                    ret = CSL_PASS;
+                }
+                break;
+            case TISCI_MSG_LPM_ABORT:
+                /* Sending to TIFS for further processing */
+                *fwdStatus = SCISERVER_FORWARD_MSG;
+                ret = Sciclient_serviceSecureProxy(pReqPrm, pRespPrm);
+
+                if ((ret == CSL_PASS) &&
+                    ((pRespPrm->flags & TISCI_MSG_FLAG_ACK) == TISCI_MSG_FLAG_ACK))
+                {
+                    /* Copy the message for local processing */
+                    memcpy((void *)message, (const void *)pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
+
+                    /* Processing message locally */
+                    ret = Sciclient_ProcessPmMessage(pReqPrm->flags,message);
+                    if (pRespPrm->pRespPayload != NULL)
+                    {
+                        memcpy((void *)pRespPrm->pRespPayload, (const void *)message, pRespPrm->respPayloadSize);
+                    }
+
+                    hdr = (struct tisci_header *) &message;
+                    pRespPrm->flags = hdr->flags;
                 }
                 break;
             case TISCI_MSG_ENTER_SLEEP:
             case TISCI_MSG_LPM_WAKE_REASON:
+            case TISCI_MSG_LPM_SET_DEVICE_CONSTRAINT:
+            case TISCI_MSG_LPM_GET_DEVICE_CONSTRAINT:
+            case TISCI_MSG_LPM_SET_LATENCY_CONSTRAINT:
+            case TISCI_MSG_LPM_GET_LATENCY_CONSTRAINT:
+            case TISCI_MSG_LPM_GET_NEXT_SYS_MODE:
+            case TISCI_MSG_LPM_GET_NEXT_HOST_STATE:
             case TISCI_MSG_SET_IO_ISOLATION:
-                memcpy(message, pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
+                memcpy((void *)message, (const void *)pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
                 /* Processing enter sleep message locally */
                 ret = Sciclient_ProcessPmMessage(pReqPrm->flags,message);
                 if (pRespPrm->pRespPayload != NULL)
                 {
-                    memcpy(pRespPrm->pRespPayload, message, pRespPrm->respPayloadSize);
+                    memcpy((void *)pRespPrm->pRespPayload, (const void *)message, pRespPrm->respPayloadSize);
                 }
+                hdr = (struct tisci_header *) &message;
+                pRespPrm->flags = hdr->flags;
+                break;
+#elif defined(CONFIG_LPM_MIN)
+            case TISCI_MSG_PREPARE_SLEEP:
+            case TISCI_MSG_LPM_WAKE_REASON:
+                /* Copy the message for local processing */
+                memcpy((void *)message, (const void *)pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
+
+                /* Processing prepare sleep message locally */
+                ret = Sciclient_ProcessPmMessage(pReqPrm->flags,message);
+                if (pRespPrm->pRespPayload != NULL)
+                {
+                    memcpy((void *)pRespPrm->pRespPayload, (const void *)message, pRespPrm->respPayloadSize);
+                }
+
                 hdr = (struct tisci_header *) &message;
                 pRespPrm->flags = hdr->flags;
                 break;
 #endif
             case TISCI_MSG_QUERY_FW_CAPS:
-                memcpy(message, pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
+                memcpy((void *)message, (const void *)pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
                 Sciclient_printf("Firmware Query is processed internally by DM driver\n");
                 /* Processing enter sleep message locally */
-                ret = Sciclient_query_fw_caps_handler(pReqPrm->flags,message);
-
+                Sciclient_query_fw_caps_handler(pReqPrm->flags,message);
                 if(CSL_PASS != ret)
                 {
                     Sciclient_printf("ERROR:: Sciclient_service: Failed to process Firmware Query\n");
                 }
-
                 if (pRespPrm->pRespPayload != NULL)
                 {
-                    memcpy(pRespPrm->pRespPayload, message, pRespPrm->respPayloadSize);
+                    memcpy((void *)pRespPrm->pRespPayload, (const void *)message, pRespPrm->respPayloadSize);
                 }
                 hdr = (struct tisci_header *) &message;
                 pRespPrm->flags = hdr->flags;
 
                 break;
             case TISCI_MSG_DM_VERSION:
-                memcpy(message, pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
+                memcpy((void *)message, (const void *)pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
                 Sciclient_printf("TISCI_MSG_DM_VERSION :\n");
                 ret = Sciclient_processDMVersionMessage(message);
-
                 if(CSL_PASS != ret)
                 {
                     Sciclient_printf("ERROR:: Sciclient_service: Failed to process TISCI_MSG_DM_VERSION\n");
                 }
-
                 if (pRespPrm->pRespPayload != NULL)
                 {
-                    memcpy(pRespPrm->pRespPayload, message, pRespPrm->respPayloadSize);
+                    memcpy((void *)pRespPrm->pRespPayload, (const void *)message, pRespPrm->respPayloadSize);
                 }
                 hdr = (struct tisci_header *) &message;
                 pRespPrm->flags = hdr->flags;
-                break;
-
-            case TISCI_MSG_KEY_WRITER:
-            case TISCI_MSG_WRITE_OTP_ROW:
-            case TISCI_MSG_READ_OTP_MMR:
-                ret = Sciclient_serviceSecureProxy(pReqPrm, pRespPrm);
-
-                if(CSL_PASS != ret)
-                {
-                    Sciclient_printf("ERROR:: Sciclient_service: TIFS failed to process OTP message\n");
-                }
                 break;
             /* RM messages processed by Secure RM within TIFS on M3 */
             case TISCI_MSG_RM_PSIL_PAIR:
             case TISCI_MSG_RM_PSIL_UNPAIR:
             case TISCI_MSG_RM_PSIL_READ:
             case TISCI_MSG_RM_PSIL_WRITE:
-            {
                 /*
-                 * These RM messages and all baseport and security messages are
-                 * entirely processed on DMSC. When called on WKUP_R5 directly,
-                 * these are treated as native calls to DMSC. If these requests
-                 * are made from other CPUs, the sciserver will take care of
+                 * These RM messages are entirely processed on DMSC.
+                 * When called on mcu1_0 directly, these are treated
+                 * as native calls to DMSC. If these requests are made 
+                 * from other CPUs, the sciserver will take care of
                  * setting the forward status prior to calling this function.
                  */
                 *fwdStatus = SCISERVER_FORWARD_MSG;
                 Sciclient_printf("RM messages processed by Secure RM within TIFS \n");
                 ret = Sciclient_serviceSecureProxy(pReqPrm, pRespPrm);
-
                 if(CSL_PASS != ret)
                 {
                     Sciclient_printf("ERROR:: Sciclient_service: Failed to process RM message ");
                     Sciclient_printf("processed by Secure RM within TIFS\n");
                 }
                 break;
-            }
+            case TISCI_MSG_WRITE_OTP_ROW:
+            case TISCI_MSG_READ_OTP_MMR:
+            case TISCI_MSG_LOCK_OTP_ROW:
+            case TISCI_MSG_SOFT_LOCK_OTP_WRITE_GLOBAL:
+            case TISCI_MSG_GET_OTP_ROW_LOCK_STATUS:
+            case TISCI_MSG_READ_SWREV:
+            case TISCI_MSG_WRITE_SWREV:
+            case TISCI_MSG_READ_KEYCNT_KEYREV:
+            case TISCI_MSG_WRITE_KEYREV:
+            case TISCI_MSG_KEY_WRITER:
+            case TISCI_MSG_SA2UL_SET_DKEK :
+            case TISCI_MSG_SA2UL_GET_DKEK :
+            case TISCI_MSG_SA2UL_RELEASE_DKEK :
+            case TISCI_MSG_SA2UL_SET_DSMEK :
+            case TISCI_MSG_SA2UL_GET_DSMEK :
+            case TISCI_MSG_SA2UL_RELEASE_DSMEK :
+            case TISCI_MSG_OPEN_DEBUG_FWLS :
+            case TISCI_MSG_DISABLE_JTAG_UNLOCK :
+            case TISCI_MSG_DISABLE_JTAG_UNLOCK_CHECK :
+            case TISCI_MSG_KEYRING_IMPORT :
+            case TISCI_MSG_BOARD_CONFIG:
+            case TISCI_MSG_BOARD_CONFIG_SECURITY:
             default:
             {
                 /*
-                 * All baseport and security messages are entirely processed on
+                 * All baseport, security and other system messages are entirely processed on
                  * DMSC. When called on WKUP_R5 directly, these are treated as
                  * native calls to DMSC. If these requests are made from other
                  * CPUs, the sciserver will take care of setting the forward
@@ -564,15 +623,13 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
                 uint32_t bkupMode;
                 bkupMode = gSciclientHandle.isSecureMode;
                 gSciclientHandle.isSecureMode = 1U;
-                Sciclient_printf("This is either baseport or security message and forwarded to TIFS\n");
+                Sciclient_printf("Handling baseport, security or other message and forwarded to TIFS\n");
                 ret = Sciclient_serviceSecureProxy(pReqPrm, pRespPrm);
-
                 if(CSL_PASS != ret)
                 {
-                    Sciclient_printf("ERROR:: Sciclient_service: Failed to process baseport or ");
-                    Sciclient_printf("security message forwarded to TIFS\n");
+                    Sciclient_printf("ERROR:: Sciclient_service: Failed to process baseport, ");
+                    Sciclient_printf("security or other system message forwarded to TIFS\n");
                 }
-
                 gSciclientHandle.isSecureMode = bkupMode;
                 break;
             }
@@ -585,7 +642,6 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
      * application.
      */
     *fwdStatus = SCISERVER_NO_FORWARD_MSG;
-
     if(CSL_PASS == ret)
     {
         Sciclient_printf("Exiting Sciclient_service function with Status - PASS\n");
@@ -637,7 +693,7 @@ static int32_t Sciclient_pmSetMsgProxy(uint32_t *msg_recv, uint32_t reqFlags, ui
 {
     int32_t ret = CSL_PASS;
     /* Special device handling when performing the LPSC config for
-     * WKUP_R5.
+     * MCU R5.
      */
     struct tisci_msg_set_device_req *req =
         (struct tisci_msg_set_device_req *) msg_recv;
@@ -669,7 +725,7 @@ static int32_t Sciclient_pmSetCpuResetMsgProxy(uint32_t *msg_recv, uint8_t procI
 {
     int32_t ret = CSL_PASS;
     /* Special device handling when performing targeted CPU resets
-     * for WKUP_R5.
+     * for MCU R5.
      */
     struct tisci_msg_set_device_resets_req *req =
         (struct tisci_msg_set_device_resets_req *) msg_recv;
@@ -696,7 +752,7 @@ static int32_t Sciclient_pmSetCpuResetMsgProxy(uint32_t *msg_recv, uint8_t procI
     }
     return ret;
 }
-int32_t Sciclient_query_fw_caps_handler(const uint32_t reqFlags __attribute__((unused)), void *tx_msg)
+void Sciclient_query_fw_caps_handler(const uint32_t reqFlags __attribute__((unused)), void *tx_msg)
 {
     int32_t ret = CSL_PASS;
     uint32_t flags = ((struct tisci_header *) tx_msg)->flags;
@@ -709,6 +765,39 @@ int32_t Sciclient_query_fw_caps_handler(const uint32_t reqFlags __attribute__((u
         } else {
             Sciclient_TisciMsgSetNakResp((struct tisci_header *) tx_msg);
         }
+    }
+}
+
+static int32_t Sciclient_processDMVersionMessage(void *tx_msg)
+{
+    int32_t ret = CSL_PASS;
+
+    if (tx_msg != NULL)
+    {
+        struct tisci_msg_dm_version_resp *resp_prms = ((struct tisci_msg_dm_version_resp *)(tx_msg));
+
+        resp_prms->version = RMPMHAL_MAJORVERSION;
+        resp_prms->sub_version = RMPMHAL_SUBVERSION;
+        resp_prms->patch_version = RMPMHAL_PATCHVERSION;
+        resp_prms->abi_major = RMPMHAL_ABIMAJOR;
+        resp_prms->abi_minor = RMPMHAL_ABIMINOR;
+
+        /* Fill in the version strings with zeros to ensure they don't have garbage */
+        memset(resp_prms->rm_pm_hal_version, 0, sizeof(resp_prms->rm_pm_hal_version));
+        memset(resp_prms->sciserver_version, 0, sizeof(resp_prms->sciserver_version));
+
+        /* Fill in the version strings */
+        strncpy(resp_prms->rm_pm_hal_version, RMPMHAL_DMVERSION, sizeof(resp_prms->rm_pm_hal_version) - 1U);
+        strncpy(resp_prms->sciserver_version, SCISERVER_DMVERSION, sizeof(resp_prms->sciserver_version) - 1U);
+
+        if ((((struct tisci_header *) tx_msg)->flags & TISCI_MSG_FLAG_AOP) != 0U)
+        {
+            Sciclient_TisciMsgSetAckResp((struct tisci_header *)tx_msg);
+        }
+    }
+    else
+    {
+        ret = CSL_EBADARGS;
     }
 
     return ret;
@@ -727,7 +816,7 @@ int32_t Sciclient_ProcessPmMessage(const uint32_t reqFlags, void *tx_msg)
             Sciclient_printf("case: TISCI_MSG_BOARD_CONFIG_PM\n");
             ret = board_config_pm_handler((uint32_t*)tx_msg); break;
         case TISCI_MSG_SET_CLOCK               :
-            {
+             {
                 struct tisci_msg_set_clock_req *req =(struct tisci_msg_set_clock_req *) tx_msg;
                 Sciclient_printf("TISCI_MSG_SET_CLOCK : Requested Device id = %u Clock ID = %u State = %d \n",
                                  req->device,req->clk, req->state);
@@ -767,6 +856,12 @@ int32_t Sciclient_ProcessPmMessage(const uint32_t reqFlags, void *tx_msg)
                 Sciclient_printf("TISCI_MSG_GET_NUM_CLOCK_PARENTS : Total Number of parents = %u \n", resp->num_parents);
                 break;
             }
+#ifdef CONFIG_PM_CLK_SSC
+        case TISCI_MSG_SET_CLOCK_SSC           :
+            ret = set_ssc_handler((uint32_t*)tx_msg); break;
+        case TISCI_MSG_GET_CLOCK_SSC           :
+            ret = get_ssc_handler((uint32_t*)tx_msg); break;
+#endif
         case TISCI_MSG_SET_FREQ                :
             {
                 struct tisci_msg_set_freq_req *req = (struct tisci_msg_set_freq_req *) tx_msg;
@@ -803,20 +898,20 @@ int32_t Sciclient_ProcessPmMessage(const uint32_t reqFlags, void *tx_msg)
                 uint32_t id = req->id;
                 switch (id)
                 {
-                    case SCICLIENT_DEV_MCU_R5FSS0_CORE0:
+                    case SCICLIENT_DEV_WKUP_R5FSS0_CORE0:
                     Sciclient_printf("This request is related to MCU R5f CORE0 Power Management.");
                     Sciclient_printf("Therefore, it will be forwarded to TIFS\n");
                         ret = Sciclient_pmSetMsgProxy((uint32_t*)tx_msg,
                                 reqFlags,
-                                SCICLIENT_DEV_MCU_R5FSS0_CORE0_PROCID);
+                                SCICLIENT_DEV_WKUP_R5FSS0_CORE0_PROCID);
                     break;
-#if ! (defined(SOC_AM62X) || defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_J722S))
-                    case SCICLIENT_DEV_MCU_R5FSS0_CORE1:
+#if ! (defined(SOC_AM62X) || defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_J722S))
+                    case SCICLIENT_DEV_WKUP_R5FSS0_CORE1:
                     Sciclient_printf("This request is related to MCU R5f CORE1 Power Management.");
                     Sciclient_printf("Therefore, it will be forwarded to TIFS\n");
                         ret = Sciclient_pmSetMsgProxy((uint32_t*)tx_msg,
                                 reqFlags,
-                                SCICLIENT_DEV_MCU_R5FSS0_CORE1_PROCID);
+                                SCICLIENT_DEV_WKUP_R5FSS0_CORE1_PROCID);
                     break;
 #endif
                     default:
@@ -834,6 +929,10 @@ int32_t Sciclient_ProcessPmMessage(const uint32_t reqFlags, void *tx_msg)
                 Sciclient_printf("TISCI_MSG_GET_DEVICE : Current Device state = %d \n", resp->current_state);
                 break;
             }
+#ifdef CONFIG_GET_DEVICE_MULTIPLE
+        case TISCI_MSG_GET_DEVICE_MULTIPLE         :
+            ret = get_device_multiple_handler((uint32_t*)tx_msg); break;
+#endif
         case TISCI_MSG_SET_DEVICE_RESETS       :
             {
                 struct tisci_msg_set_device_resets_req *req =
@@ -842,18 +941,18 @@ int32_t Sciclient_ProcessPmMessage(const uint32_t reqFlags, void *tx_msg)
                 uint32_t id = req->id;
                 switch (id)
                 {
-                    case SCICLIENT_DEV_MCU_R5FSS0_CORE0:
+                    case SCICLIENT_DEV_WKUP_R5FSS0_CORE0:
                     Sciclient_printf("This request is related to MCU R5f CORE0 Power Management.");
                     Sciclient_printf("Therefore, it will be forwarded to TIFS\n");
                         ret = Sciclient_pmSetCpuResetMsgProxy((uint32_t*)tx_msg,
-                                SCICLIENT_DEV_MCU_R5FSS0_CORE0_PROCID);
+                                SCICLIENT_DEV_WKUP_R5FSS0_CORE0_PROCID);
                     break;
-#if ! (defined(SOC_AM62X) || defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_J722S))
-                    case SCICLIENT_DEV_MCU_R5FSS0_CORE1:
+#if ! (defined(SOC_AM62X) || defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_J722S))
+                    case SCICLIENT_DEV_WKUP_R5FSS0_CORE1:
                     Sciclient_printf("This request is related to MCU R5f CORE1 Power Management.");
                     Sciclient_printf("Therefore, it will be forwarded to TIFS\n");
                         ret = Sciclient_pmSetCpuResetMsgProxy((uint32_t*)tx_msg,
-                                SCICLIENT_DEV_MCU_R5FSS0_CORE1_PROCID);
+                                SCICLIENT_DEV_WKUP_R5FSS0_CORE1_PROCID);
                     break;
 #endif
                     default:
@@ -881,6 +980,25 @@ int32_t Sciclient_ProcessPmMessage(const uint32_t reqFlags, void *tx_msg)
         case TISCI_MSG_SET_IO_ISOLATION          :
             Sciclient_printf("TISCI_MSG_SET_IO_ISOLATION : Set IO isolation\n");
             ret = dm_set_io_isolation_handler((uint32_t*)tx_msg); break;
+        case TISCI_MSG_LPM_SET_DEVICE_CONSTRAINT:
+            ret = dm_lpm_set_device_constraint((uint32_t*)tx_msg); break;
+        case TISCI_MSG_LPM_SET_LATENCY_CONSTRAINT:
+            ret = dm_lpm_set_latency_constraint((uint32_t*)tx_msg); break;
+        case TISCI_MSG_LPM_GET_DEVICE_CONSTRAINT:
+            ret = dm_lpm_get_device_constraint((uint32_t*)tx_msg); break;
+        case TISCI_MSG_LPM_GET_LATENCY_CONSTRAINT:
+            ret = dm_lpm_get_latency_constraint((uint32_t*)tx_msg); break;
+        case TISCI_MSG_LPM_GET_NEXT_SYS_MODE:
+            ret = dm_lpm_get_next_sys_mode((uint32_t*)tx_msg); break;
+        case TISCI_MSG_LPM_GET_NEXT_HOST_STATE:
+            ret = dm_lpm_get_next_host_state((uint32_t*)tx_msg); break;
+        case TISCI_MSG_LPM_ABORT:
+            ret = dm_lpm_abort((uint32_t*)tx_msg); break;
+#elif defined(CONFIG_LPM_MIN)
+        case TISCI_MSG_PREPARE_SLEEP             :
+            ret = dm_prepare_sleep_handler((uint32_t*)tx_msg); break;
+        case TISCI_MSG_LPM_WAKE_REASON               :
+            ret = dm_lpm_wake_reason_handler((uint32_t*)tx_msg); break;
 #endif
         default:
             ret = CSL_EFAIL; msg_inval = 1U;
@@ -921,7 +1039,7 @@ __attribute__((optnone)) static uint16_t boardcfgRmFindCertSize(uint32_t *msg_re
     uint16_t cert_len = 0U;
     uint8_t *cert_len_ptr = (uint8_t *)&cert_len;
     uint8_t *x509_cert_ptr;
-    uint16_t ret = 0;
+    uint16_t ret = 0U;
 
     struct tisci_msg_board_config_rm_req *req =
         (struct tisci_msg_board_config_rm_req *) msg_recv;
@@ -936,8 +1054,8 @@ __attribute__((optnone)) static uint16_t boardcfgRmFindCertSize(uint32_t *msg_re
 
         if (cert_len == 0x82U)
         {
-            *cert_len_ptr = *(x509_cert_ptr + 3);
-            *(cert_len_ptr + 1) = *(x509_cert_ptr + 2);
+            *cert_len_ptr = *(x509_cert_ptr + 3U);
+            *(cert_len_ptr + 1) = *(x509_cert_ptr + 2U);
 
             /* add current offset from start of x509 cert */
             cert_len += 3U;
@@ -991,26 +1109,18 @@ static int32_t boardcfg_RmAdjustReq(uint32_t *msg, uint16_t adjSize)
     /* If there was no certificate to begin with, do not adjust anything */
     if (adjSize != 0U)
     {
-
-#if !defined(MCU_PLUS_SDK)
-    /* Invalidate the cache */
-    CacheP_Inv((const void*) req->tisci_boardcfg_rmp_low,
-            req->tisci_boardcfg_rm_size);
-#else
-    CacheP_inv((void*)req->tisci_boardcfg_rmp_low,
-            req->tisci_boardcfg_rm_size, CacheP_TYPE_ALL);
-#endif
-    /*
-     * See if there is still a certificate that needs to be compensated for (in
-     * case TIFS did not process this upon multiple requests for RM board cfg).
-     *
-     * If there is no certificate, then we adjust the size of the RM boardcfg
-     * request. If there is a certificate, it should match the size we retrieved
-     * earlier. Advance the base pointer. If the size does not match, then this
-     * is an error.
-     */
-    newSize = boardcfgRmFindCertSize(msg);
-
+        CacheP_inv((void*)req->tisci_boardcfg_rmp_low,
+                req->tisci_boardcfg_rm_size, CacheP_TYPE_ALL);
+        /*
+        * See if there is still a certificate that needs to be compensated for (in
+        * case TIFS did not process this upon multiple requests for RM board cfg).
+        *
+        * If there is no certificate, then we adjust the size of the RM boardcfg
+        * request. If there is a certificate, it should match the size we retrieved
+        * earlier. Advance the base pointer. If the size does not match, then this
+        * is an error.
+        */
+        newSize = boardcfgRmFindCertSize(msg);
         if (newSize == 0U)
         {
             req->tisci_boardcfg_rm_size -= adjSize;
@@ -1050,6 +1160,39 @@ static int32_t tisci_msg_board_config_rm_handler(uint32_t *msg_recv)
 
     return r;
 }
+
+#ifdef CONFIG_LPM_DM
+static int32_t lpm_UpdateCtxtAddr(uint32_t *msg)
+{
+    int32_t r = CSL_PASS;
+    struct tisci_msg_prepare_sleep_req *req =
+        (struct tisci_msg_prepare_sleep_req *) msg;
+
+    uint64_t fsCtxtAddr = 0UL;
+
+    /*
+     * For partial IO mode, neither FS stub nor FS context section allocation
+     * is required, do not adjust anything.
+     *
+     * For other low power modes, this API should return CSL_PASS if required LPM
+     * sections are allocated by application.
+     */
+    if (req->mode != TISCI_MSG_VALUE_SLEEP_MODE_PARTIAL_IO) {
+        r = Sciclient_getLPMCtxtSaveAddr(&fsCtxtAddr);
+    }
+
+    /*
+     * For DM managed modes, update the context address value with address allocated by
+     * DM application.
+     */
+    if ((r == CSL_PASS) && (req->mode == TISCI_MSG_VALUE_SLEEP_MODE_DM_MANAGED)) {
+        req->ctx_lo = (uint32_t) fsCtxtAddr;
+        req->ctx_hi = (uint32_t) (fsCtxtAddr >> SCICLIENT_DIRECT_NUM_BITS_IN_WORD);
+    }
+
+    return r;
+}
+#endif
 
 int32_t Sciclient_ProcessRmMessage(void *tx_msg)
 {
@@ -1149,55 +1292,6 @@ int32_t Sciclient_ProcessRmMessage(void *tx_msg)
     return r;
 }
 
-int32_t Sciclient_processDMVersionMessage(void *tx_msg)
-{
-    int32_t ret = CSL_PASS;
-
-    if (tx_msg == NULL)
-    {
-        ret = CSL_EBADARGS;
-    }
-
-    if (ret == CSL_PASS)
-    {
-        struct tisci_msg_dm_version_resp *resp_prms = ((struct tisci_msg_dm_version_resp *)(tx_msg));
-        const char rm_pm_hal_version[] = RMPMHAL_SCMVERSION;
-        const char sciserver_version[] = SCISERVER_DMVERSION;
-        resp_prms->version = RMPMHAL_MAJORVERSION;
-        resp_prms->sub_version = RMPMHAL_SUBVERSION;
-        resp_prms->patch_version = RMPMHAL_PATCHVERSION;
-        resp_prms->abi_major = RMPMHAL_ABIMAJOR;
-        resp_prms->abi_minor = RMPMHAL_ABIMINOR;
-        memset(resp_prms->rm_pm_hal_version, 0, 12UL);
-        memset(resp_prms->sciserver_version, 0, 26UL);
-
-        memcpy(resp_prms->rm_pm_hal_version, rm_pm_hal_version, (((strlen(rm_pm_hal_version)+1UL)>12UL)?11UL:(strlen(rm_pm_hal_version)+1UL)));
-        resp_prms->rm_pm_hal_version[11] = '\0';
-        if (strcmp(resp_prms->rm_pm_hal_version, rm_pm_hal_version) != 0) {
-            ret = CSL_EFAIL;
-        }
-
-        if (ret == CSL_PASS)
-        {
-            memcpy(resp_prms->sciserver_version, sciserver_version, (((strlen(sciserver_version)+1UL)>26UL)?25UL:(strlen(sciserver_version)+1UL)));
-            resp_prms->sciserver_version[25] = '\0';
-            if (strcmp(resp_prms->sciserver_version, sciserver_version) != 0) {
-                ret = CSL_EFAIL;
-            }
-        }
-
-        if ((((struct tisci_header *) tx_msg)->flags & TISCI_MSG_FLAG_AOP) != 0U) {
-            if (ret != CSL_PASS) {
-                Sciclient_TisciMsgSetNakResp((struct tisci_header *)tx_msg);
-            } else {
-                Sciclient_TisciMsgSetAckResp((struct tisci_header *)tx_msg);
-            }
-        }
-    }
-
-    return ret;
-}
-
 int32_t Sciclient_boardCfgPrepHeader (
     uint8_t * pCommonHeader, uint8_t * pBoardCfgHeader,
     const Sciclient_BoardCfgPrms_t * pInPmPrms,
@@ -1207,7 +1301,7 @@ int32_t Sciclient_boardCfgPrepHeader (
     if ((pCommonHeader == NULL) || (pBoardCfgHeader == NULL) ||
         (pInPmPrms == NULL) || (pInRmPrms == NULL))
     {
-        ret = SystemP_FAILURE;
+        ret = CSL_EBADARGS;
     }
     /* Populate the common header which will be loaded by ROM in case of
      * combined boot image format.
@@ -1262,7 +1356,7 @@ int32_t Sciclient_boardCfgParseHeader (
             (Sciclient_DirectExtBootX509Table *) pCommonHeader;
     if ((pCommonHeader == NULL) || (pInPmPrms == NULL) || (pInRmPrms == NULL))
     {
-        ret = SystemP_FAILURE;
+        ret = CSL_EBADARGS;
     }
     /* Populate the common header which will be loaded by ROM in case of
      * combined boot image format.

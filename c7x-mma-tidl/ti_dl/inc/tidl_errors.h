@@ -149,10 +149,10 @@ extern "C" {
 #define TIDL_ERROR_GROUP_GRIDSAMPLE                        (53U)
 #define TIDL_ERROR_GROUP_TOPK                              (54U)
 #define TIDL_ERROR_GROUP_DEFORMCONV                        (55U)
-#define TIDL_ERROR_GROUP_RSVD_BIT56                        (56U)
-#define TIDL_ERROR_GROUP_RSVD_BIT57                        (57U)
-#define TIDL_ERROR_GROUP_RSVD_BIT58                        (58U)
-#define TIDL_ERROR_GROUP_RSVD_BIT59                        (59U)
+#define TIDL_ERROR_GROUP_RMSNORM                           (56U)
+#define TIDL_ERROR_GROUP_LSTM                              (57U)
+#define TIDL_ERROR_GROUP_GRU                               (58U)
+#define TIDL_ERROR_GROUP_RNN                               (59U)
 #define TIDL_ERROR_GROUP_RSVD_BIT60                        (60U)
 #define TIDL_ERROR_GROUP_RSVD_BIT61                        (61U)
 #define TIDL_ERROR_GROUP_RSVD_BIT62                        (62U)
@@ -407,11 +407,18 @@ extern "C" {
 #define TIDL_ERROR_LAYERNORM_UNSUPPORTED_AXIS              (2U)
 #define TIDL_ERROR_LAYERNORM_NOT_IMPLEMENTED               (3U)
 
+/** TIDL_ERROR_GROUP_RMSNORM          error types */
+#define TIDL_ERROR_RMSNORM_INSUFFICIENT_REF_SCRATCH        (0U)
+#define TIDL_ERROR_RMSNORM_UNSUPPORTED_AXIS                (1U)
+
 /** TIDL_ERROR_GROUP_GRIDSAMPLE       error types */
 #define TIDL_ERROR_GRIDSAMPLE_RSVD                         (0U)
 #define TIDL_ERROR_GRIDSAMPLE_UNSUPPORTED_ELEM_TYPE        (1U)
 #define TIDL_ERROR_GRIDSAMPLE_NOT_IMPLEMENTED              (2U)
 #define TIDL_ERROR_GRIDSAMPLE_KERNEL_ERROR                 (3U)
+
+/** TIDL_ERROR_GROUP_GATHERLAYER       error types */
+#define TIDL_ERROR_GATHERLAYER_NOT_IMPLEMENTED             (1U)
 
 /** TIDL_ERROR_GROUP_TOPK             error types */
 #define TIDL_ERROR_TOPK_RSVD                               (0U)
@@ -421,7 +428,19 @@ extern "C" {
 #define TIDL_ERROR_DEFORMCONV_RSVD                         (0U)
 #define TIDL_ERROR_DEFORMCONV_NOT_IMPLEMENTED              (1U)
 
-void tidl_printf(int32_t traceLevel, const char *format, ...);
+/** TIDL_ERROR_GROUP_LSTM error types */
+#define TIDL_ERROR_LSTM_RSVD                               (0U)
+#define TIDL_ERROR_LSTM_NOT_IMPLEMENTED                    (1U)
+
+/** TIDL_ERROR_GROUP_GRU error types */
+#define TIDL_ERROR_GRU_RSVD                                (0U)
+#define TIDL_ERROR_GRU_NOT_IMPLEMENTED                     (1U)
+
+/** TIDL_ERROR_GROUP_RNN error types */
+#define TIDL_ERROR_RNN_RSVD                                (0U)
+#define TIDL_ERROR_RNN_NOT_IMPLEMENTED                     (1U)
+
+void tidl_printf(int8_t traceLevel, const char *format, ...);
 
 #define TIDL_LOG_ERROR(group, type)\
 {\

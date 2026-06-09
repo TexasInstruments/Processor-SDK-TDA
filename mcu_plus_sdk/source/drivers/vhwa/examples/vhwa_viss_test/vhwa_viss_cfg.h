@@ -4493,7 +4493,7 @@ AppViss_Cfg gVissCfg[] =
         &gPwlCfg[0],        /* PWL VS */
         &gPwlCfg[0],        /* PWL S */
         &gPwlCfg[0],        /* PWL L */
-        NULL,               /* PWL LUT VS */
+        &gLutCfg[0],        /* PWL LUT VS */
         NULL,               /* PWL LUT S */
         NULL,               /* PWL LUT L */
         &gWdrCfg[0],        /* WDR1 */
@@ -17323,7 +17323,7 @@ AppViss_TestConfig gAppVissTestConfig[] =
     /* new test case */
     /* 112 , HV-MV pipeline Output RawFE Input; 1080p */
     {
-        #if defined VHWA_VPAC_IP_REV_VPAC3
+        #if defined VHWA_VPAC_IP_REV_VPAC3 || defined VHWA_VPAC_IP_REV_VPAC3L
         /* VISS Parameters */
         {
             /* Input Mode */
@@ -17363,7 +17363,11 @@ AppViss_TestConfig gAppVissTestConfig[] =
                         FVID2_DF_YUV420SP_UV, FVID2_SF_PROGRESSIVE,
                         FVID2_CCSF_BITS8_PACKED
                     },
+                    #if defined VHWA_VPAC_IP_REV_VPAC3
                     VHWA_VISS_PIPE_MV
+                    #else
+                    VHWA_VISS_PIPE_HV
+                    #endif
                 },
                 {
                     /* Output 3 Enabled */
@@ -17389,8 +17393,10 @@ AppViss_TestConfig gAppVissTestConfig[] =
             VHWA_M2M_VISS_EE_DISABLE,       /* EE Mode */
             UTRUE,                           /* Enable DPC */
             UTRUE,                           /* Enable CAC */
+            #if defined VHWA_VPAC_IP_REV_VPAC3
             UTRUE,                           /* Enable MV pipe*/
             VHWA_VISS_MV_PIPE_INPUT_GLBC,    /* MV input */
+            #endif
         },
         /* VISS config */
         &gVissCfg[43]

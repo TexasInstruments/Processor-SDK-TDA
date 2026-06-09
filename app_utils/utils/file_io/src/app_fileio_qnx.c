@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2023-2025 Texas Instruments Incorporated
+ * Copyright (c) 2023-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -67,9 +67,9 @@
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <fcntl.h>
-#include <sciclient/sciclient.h>
-#include "app_fileio_priv.h"
 #include <inttypes.h>
+
+#include "app_fileio_priv.h"
 
 #undef APP_FILEIO_DEBUG
 

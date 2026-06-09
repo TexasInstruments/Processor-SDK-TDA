@@ -3,9 +3,9 @@
  *
  * Static IA IRQ maps for Processing Entities for AM62AX device
  *
- * Data version: 240627_084252
+ * Data version: 250904_120008
  *
- * Copyright (C) 2022-2024, Texas Instruments Incorporated
+ * Copyright (C) 2022-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -92,13 +92,21 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 	},
 	[6] =  {
 		/*
+		 * For: MCU_0_R5_0 response
+		 */
+		.id		= AM62AX_DEV_DMASS0_INTAGGR_0,
+		.event_id	= 0x05FFU,
+		.vint		= 0x00B7U,
+	},
+	[7] =  {
+		/*
 		 * For: A53_4 response
 		 */
 		.id		= AM62AX_DEV_DMASS0_INTAGGR_0,
 		.event_id	= 0x0006U,
 		.vint		= 0x0004U,
 	},
-	[7] =  {
+	[8] =  {
 		/*
 		 * For: C7X_0_0 response
 		 */
@@ -106,15 +114,15 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x0007U,
 		.vint		= 0x0005U,
 	},
-	[8] =  {
+	[9] =  {
 		/*
 		 * For: DM2TIFS response
 		 */
 		.id		= AM62AX_DEV_DMASS0_INTAGGR_0,
-		.event_id	= 0x05FFU,
+		.event_id	= 0x05FEU,
 		.vint		= 0x004FU,
 	},
-	[9] =  {
+	[10] = {
 		/*
 		 * For: DM err_event
 		 */
@@ -122,7 +130,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x000CU,
 		.vint		= 0x002AU,
 	},
-	[10] = {
+	[11] = {
 		/*
 		 * For: DM nonsec_low_priority_rx
 		 */

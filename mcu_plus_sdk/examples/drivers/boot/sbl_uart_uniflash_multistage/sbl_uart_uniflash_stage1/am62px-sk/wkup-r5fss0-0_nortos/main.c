@@ -1,5 +1,5 @@
  /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -28,10 +28,6 @@
  *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
-/*
- * Auto generated file - DO NOT MODIFY
  */
 
 #include <stdlib.h>
@@ -94,11 +90,12 @@ int main()
     Bootloader_UniflashResponseHeader respHeader;
 
     Bootloader_socWaitForFWBoot();
-    status = Bootloader_socOpenFirewalls();
-
-    DebugP_assertNoLog(status == SystemP_SUCCESS);
 
     System_init();
+    status = Bootloader_socOpenFirewalls();
+    DebugP_assertNoLog(status == SystemP_SUCCESS);
+
+    Board_init();
     Drivers_open();
 
     status = Board_driversOpen();
@@ -107,7 +104,7 @@ int main()
     while(!done)
     {
         /* Xmodem Receive */
-        status = Bootloader_xmodemReceive(CONFIG_UART0, gUniflashFileBuf, BOOTLOADER_UNIFLASH_MAX_FILE_SIZE, &fileSize);
+        status = Bootloader_xmodemReceive(CONFIG_UART0, gUniflashFileBuf - sizeof(Bootloader_UniflashResponseHeader), BOOTLOADER_UNIFLASH_MAX_FILE_SIZE, &fileSize);
 
         /*
          * The `fileSize` wouldn't be the actual filesize, but (actual filesize + size of the header + padding bytes) added by xmodem.
@@ -135,7 +132,7 @@ int main()
             Bootloader_Params_init(&bootParams);
             Bootloader_BootImageInfo_init(&bootImageInfo);
 
-            bootParams.memArgsAppImageBaseAddr = (uintptr_t)(gUniflashFileBuf + sizeof(Bootloader_UniflashFileHeader));
+            bootParams.memArgsAppImageBaseAddr = (uintptr_t)(gUniflashFileBuf);
 
             bootHandle = Bootloader_open(CONFIG_BOOTLOADER_MEM, &bootParams);
 
@@ -167,6 +164,7 @@ int main()
     Bootloader_JumpSelfCpu();
 
     Drivers_close();
+    Board_deinit();
     System_deinit();
 
     return 0;

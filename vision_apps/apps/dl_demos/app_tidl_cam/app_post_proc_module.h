@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017-2024 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -65,7 +65,7 @@
 #include "app_common.h"
 #include "itidl_ti.h"
 
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
 #include "app_display_module.h"
 #endif
 
@@ -82,7 +82,7 @@ typedef struct {
     vx_uint32 num_top_results;
 
     vx_object_array output_arr[APP_MAX_BUFQ_DEPTH];
-    #if defined(SOC_AM62A) && defined(QNX)
+    #if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
     vx_kernel kernel;
     vx_image results[APP_MAX_BUFQ_DEPTH];
     #else
@@ -98,7 +98,7 @@ vx_status app_update_post_proc(vx_context context, PostProcObj *postProcObj, vx_
 vx_status app_init_post_proc(vx_context context, PostProcObj *postProcObj, char *objName, vx_int32 num_cameras, vx_int32 bufq_depth);
 void app_deinit_post_proc(PostProcObj *obj, vx_int32 bufq_depth);
 void app_delete_post_proc(PostProcObj *obj);
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
 vx_status app_create_graph_post_proc(vx_graph graph, PostProcObj *postProcObj, vx_object_array in_args_arr, vx_object_array in_tensor_arr, vx_object_array input_img_arr);
 #else
 vx_status app_create_graph_post_proc(vx_graph graph, PostProcObj *postProcObj, vx_object_array in_args_arr, vx_object_array in_tensor_arr);

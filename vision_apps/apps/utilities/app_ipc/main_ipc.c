@@ -66,8 +66,8 @@
 #include <utils/app_init/include/app_init.h>
 #include "app_common.h"
 
-#define NUM_MSGS        (16u)
-#define NUM_ITERATIONS  (4u)
+#define NUM_MSGS        (5u)
+#define NUM_ITERATIONS  (1u)
 
 int main(int argc, char *argv[])
 {

@@ -17,28 +17,32 @@ LIBNAME:=drivers.j722s.wkup-r5f.ti-arm-clang.$(PROFILE).lib
 
 FILES_common := \
     bootloader.c \
+    bootloader_dma.c \
     bootloader_flash.c \
     bootloader_mem.c \
     bootloader_mmcsd_raw.c \
+    bootloader_rprc.c \
     bootloader_soc.c \
     bootloader_xmodem.c \
     bootloader_uniflash.c \
     bootloader_profile.c \
     crc16.c \
     csl_bcdma.c \
+    csl_dru.c \
+    csl_emif.c \
     csl_intaggr.c \
     csl_lcdma_ringacc.c \
     csl_pktdma.c \
-    csl_dru.c \
     csl_sec_proxy.c \
-    csl_emif.c \
     ddr.c \
     ddr_soc.c \
     ddr_perf.c \
     gpio.c \
     gtc.c \
     gtc_soc.c \
+    i2c_soc.c \
     i2c_v0.c \
+    i2c_v0_lld.c \
     ipc_notify_v0.c \
     ipc_notify_v0_cfg.c \
     ipc_rpmsg.c \
@@ -46,27 +50,30 @@ FILES_common := \
     lpddr4_obj_if.c \
     lpddr4.c \
     lpddr4_am6x.c \
-    lpddr4_j722s_ctl_regs_rw_masks.c \
+    lpddr4_ctl_regs_rw_masks.c \
     mcan.c \
-    mcspi_v0.c \
     mcspi_dma.c \
     mcspi_dma_udma.c \
-    mmcsd_v0.c \
+    mcspi_v0.c \
     mmcsd_priv.c \
-    ospi_v0.c \
+    mmcsd_v0.c \
+    mmcsd_soc.c \
     ospi_dma.c \
     ospi_dma_udma.c \
     ospi_nor_flash.c \
     ospi_phy.c \
+    ospi_phy_tuning.c \
+    ospi_v0.c \
     pinmux.c \
     qos.c \
-    soc.c \
-    sciclient_irq_rm.c \
+    sciclient_defaultBoardcfg.c \
     sciclient_fmwSecureProxyMap.c \
+    sciclient_irq_rm.c \
+    soc.c \
     spinlock.c \
-    uart_v0.c \
     uart_dma.c \
     uart_dma_udma.c \
+    uart_v0.c \
     udma.c \
     udma_ch.c \
     udma_event.c \
@@ -74,56 +81,65 @@ FILES_common := \
     udma_ring_common.c \
     udma_ring_lcdma.c \
     udma_rm.c \
-    udma_rmcfg_common.c \
-    udma_utils.c \
     udma_rmcfg.c \
+    udma_rmcfg_common.c \
     udma_soc.c \
+    udma_utils.c \
     utils.c \
+    vtm.c \
     xmodem.c \
 
 FILES_PATH_common = \
     bootloader \
     bootloader/soc/j722s \
-    ddr/v1 \
-    ddr/v1/cdn_drv/ \
-    ddr/v1/cdn_drv/include \
-    ddr/v1/cdn_drv/include/j722s \
-    ddr/v1/cdn_drv/include/common \
-    ddr/v1/cdn_drv/src \
-    ddr/v1/soc/j722s \
     ddr \
+    ddr/cdn_drv/ \
+    ddr/cdn_drv/common \
+    ddr/cdn_drv/v1 \
+    ddr/cdn_drv/v1/common \
+    ddr/cdn_drv/v1/common/include \
+    ddr/cdn_drv/v1/include \
+    ddr/v1 \
+    ddr/v1/soc \
+    ddr/v1/soc/j722s \
     gpio/v0 \
     gtc/v0 \
     gtc/v0/soc/j722s \
+    hw_include/dru/v2 \
     i2c/v0 \
+    i2c/v0/lld \
+    i2c/v0/soc/j722s \
     ipc_notify/v0 \
     ipc_notify/v0/soc/j722s \
     ipc_rpmsg/ \
-    ospi \
-    ospi/v0 \
-    ospi/v0/dma \
-    ospi/v0/dma/udma \
     mcan/v0 \
     mcspi/v0 \
     mcspi/v0/dma \
     mcspi/v0/dma/udma \
     mmcsd \
     mmcsd/v0 \
+    mmcsd/soc \
+    mmcsd/soc/j722s \
+    ospi \
+    ospi/v0 \
+    ospi/v0/dma \
+    ospi/v0/dma/udma \
+    ospi/v0/ospi_tuning/ospi_tuning_algo/algo_v1 \
+    pinmux/j722s \
     qos \
     qos/v0 \
-    pinmux/j722s \
     sciclient \
+    sciclient/sciclient_default_boardcfg/j722s \
     sciclient/soc/j722s \
     soc/j722s \
     spinlock/v0 \
     uart/v0 \
     uart/v0/dma \
     uart/v0/dma/udma \
-    hw_include/dru/v2 \
-    udma \
-    udma/hw_include \
-    udma/soc \
-    udma/soc/j722s \
+    udma/v0 \
+    udma/v0/hw_include \
+    udma/v0/soc \
+    udma/v0/soc/j722s \
     utils \
 
 INCLUDES_common := \
@@ -134,7 +150,12 @@ DEFINES_common := \
     -DSOC_J722S \
     -DWKUP_R5 \
     -DENABLE_SCICLIENT_DIRECT \
+    -DENABLE_PHY_TUNING_SOC_BUILD \
     -DSW_VERSION=$(SW_VERSION)
+
+CFLAGS_debug := \
+    -D_DEBUG_=1 \
+    -Og \
 
 CFLAGS_common := \
     -DBUILD_WKUP_R5 \
@@ -159,9 +180,6 @@ CFLAGS_cpp_common := \
     -Wno-reserved-user-defined-literal \
     -Wno-unused-const-variable \
     -x c++ \
-
-CFLAGS_debug := \
-    -D_DEBUG_=1 \
 
 CFLAGS_release := \
     -Os \

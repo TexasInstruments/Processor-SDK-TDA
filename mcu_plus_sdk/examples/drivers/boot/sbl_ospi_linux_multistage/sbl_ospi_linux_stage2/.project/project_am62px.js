@@ -5,7 +5,6 @@ let device = "am62px";
 const files = {
     common: [
         "sbl_ospi_linux_stage2.c",
-        "dss_splash_screen.c",
         "main.c",
     ],
 };
@@ -26,10 +25,11 @@ const libdirs_freertos = {
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/rm_pm_hal/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciclient_direct/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/self_reset/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciserver/lib",
         "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/lib",
         "${MCU_PLUS_SDK_PATH}/source/board/lib",
-        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciserver/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib",
     ],
 };
 
@@ -46,10 +46,11 @@ const libs_freertos_dm_r5f = {
         "rm_pm_hal.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "sciclient_direct.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "self_reset.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
+        "sciserver.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "freertos.am62px.r5f.ti-arm-clang.${ConfigName}.lib",
         "drivers.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
         "board.am62px.r5f.ti-arm-clang.${ConfigName}.lib",
-        "sciserver.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62px.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
     ],
 };
 
@@ -67,7 +68,25 @@ const defines = {
 
 const syscfgfile = "../example.syscfg"
 
-const readmeDoxygenPageTag = "EXAMPLES_DRIVERS_SBL_OSPI_NOR_LINUX_MULTISTAGE";
+const readmeDoxygenPageTag = "EXAMPLES_DRIVERS_SBL_OSPI_LINUX_MULTISTAGE";
+
+const templates_freertos_wkup_r5f =
+[
+    {
+        input: ".project/templates/am62px/common/linker_wkup-r5f.cmd.xdt",
+        output: "linker.cmd",
+        options: {
+            dmWithBootloader: "true",
+        }
+    },
+    {
+        input: ".project/templates/am62px/freertos/main_freertos_dm.c.xdt",
+        output: "../main.c",
+        options: {
+            dmWithBootloader: "true",
+        }
+    },
+];
 
 const buildOptionCombos = [
     { device: device, cpu: "wkup-r5fss0-0", cgt: "ti-arm-clang", board: "am62px-sk", os: "freertos"},
@@ -80,6 +99,7 @@ function getComponentProperty() {
     property.type = "executable";
     property.name = "sbl_ospi_linux_stage2";
     property.isInternal = false;
+    property.isBootLoaderStage2 = true;
     property.buildOptionCombos = buildOptionCombos;
 
     return property;
@@ -92,11 +112,12 @@ function getComponentBuildProperty(buildOption) {
     build_property.filedirs = filedirs;
     build_property.lnkfiles = lnkfiles;
     build_property.syscfgfile = syscfgfile;
+    build_property.defines = defines;
     build_property.readmeDoxygenPageTag = readmeDoxygenPageTag;
     build_property.includes = includes_freertos_r5f;
-    build_property.defines = defines;
     build_property.libdirs = libdirs_freertos;
     build_property.libs = libs_freertos_dm_r5f;
+    build_property.templates = templates_freertos_wkup_r5f;
 
     return build_property;
 }

@@ -42,10 +42,20 @@ Flash_Config gFlashConfig[CONFIG_FLASH_NUM_INSTANCES] =
         % }
         .devConfig = &gFlashDevCfg_`configserial.fname`,
         .object = (void *)&gFlashObject_`configserial.fname`,
+        % if (configserial.flashType == "SERIAL_NOR") {
+        .fallBackCfg = (void *)&gFlashFallBackCfg_`configserial.fname`,
+        % if (configserial.fname == "S28HS512T") {
+        .layoutCfg = (void *)&gFlashHybridLayoutCfg_`configserial.fname`,
+        % } else {
+        .layoutCfg = NULL,
+        % }
+        % } if (configserial.flashType == "SERIAL_NAND") {
+        .fallBackCfg = NULL,
+        .layoutCfg = NULL,
+        % }
     },
     % } else if(config.flashTopology == "parallelFlash"){
     {
-
         % let instanceparallel = parallelmodule.$instances[0];
         % let configparallel = parallelmodule.getInstanceConfig(instanceparallel);
         .attrs = &gFlashAttrs_`configparallel.fname`,
@@ -54,6 +64,8 @@ Flash_Config gFlashConfig[CONFIG_FLASH_NUM_INSTANCES] =
         % }
         .devConfig = &gFlashDevCfg_`configparallel.fname`,
         .object = (void *)&gFlashObject_`configparallel.fname`,
+        .fallBackCfg = NULL,
+        .layoutCfg = NULL,
     },
     % }
 % }
@@ -73,6 +85,11 @@ Flash_Params gFlashParams[CONFIG_FLASH_NUM_INSTANCES] =
         .quirksFxn = `configserial.quirks`,
         % } else {
         .quirksFxn = NULL,
+        % }
+        % if (configserial.bootQuirks != "") {
+        .bootQuirksFxn = `configserial.bootQuirks`,
+        % } else {
+        .bootQuirksFxn = NULL,
         % }
         .custProtoFxn = `configserial.customProtoFxn`,
     },
@@ -98,15 +115,6 @@ static uint32_t gFlashAddedByBootloader[CONFIG_FLASH_NUM_INSTANCES] =
 % }
 };
 % }
-
-static uint32_t gFlashSkipDeinitFromSbl[CONFIG_FLASH_NUM_INSTANCES] =
-{
-% for(let i = 0; i < module.$instances.length; i++) {
-    % let instance = module.$instances[i];
-    % let config = module.getInstanceConfig(instance);
-    `config.skipDeinitFromSbl.toString(10).toUpperCase()`,
-% }
-};
 
 int32_t Board_flashOpen()
 {
@@ -175,7 +183,8 @@ void Board_flashClose(void)
     /* Close all instances that are open */
     for(instCnt = 0U; instCnt < CONFIG_FLASH_NUM_INSTANCES; instCnt++)
     {
-        if (!gFlashSkipDeinitFromSbl[instCnt])
+        % if (common.isDMWithBootSupported()) {
+        if(!gFlashAddedByBootloader[instCnt])
         {
             if(gFlashHandle[instCnt] != NULL)
             {
@@ -183,6 +192,14 @@ void Board_flashClose(void)
                 gFlashHandle[instCnt] = NULL;
             }
         }
+        % }
+        % else {
+            if(gFlashHandle[instCnt] != NULL)
+            {
+                Flash_close(gFlashHandle[instCnt]);
+                gFlashHandle[instCnt] = NULL;
+            }
+        % }
     }
     return;
 }

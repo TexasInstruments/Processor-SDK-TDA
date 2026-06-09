@@ -38,6 +38,7 @@ extern "C"
 {
 #endif
 
+#include <drivers/bootloader/bootloader_dma.h>
 
 /**
  * \brief Arguments to be passed to driver implementation callbacks when boot media is SOC memory
@@ -46,7 +47,9 @@ typedef struct Bootloader_MemArgs_s
 {
     uint32_t curOffset;
     uint32_t appImageBaseAddr;
-
+    uint32_t enableDmaTransfer;
+    BootloaderDma_UdmaArgs* bootloaderDmaUdmaArgs;
+    uint32_t isDmaOpen;
 } Bootloader_MemArgs;
 
 extern Bootloader_Fxns gBootloaderMemFxns;

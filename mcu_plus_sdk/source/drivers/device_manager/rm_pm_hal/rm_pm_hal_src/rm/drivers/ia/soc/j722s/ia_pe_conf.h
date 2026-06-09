@@ -38,7 +38,7 @@
 #ifndef J722S_IA_PE_CONF_H
 #define J722S_IA_PE_CONF_H
 
-/** Count of IA init list (13 entries) */
-#define IA_SOC_PE_INIT_NUM (0x0DU)
+/** Count of IA init list (14 entries) */
+#define IA_SOC_PE_INIT_NUM (0x0EU)
 
 #endif /* J722S_IA_PE_CONF_H */

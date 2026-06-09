@@ -279,7 +279,7 @@ int32_t CSL_fcpSetHistogramConfig(CSL_flexcc_cfgRegs *fcpRegs,
  *                          This parameter should not be NULL.
  *  \return                 Returns 0 on success else returns error value
  */
-int32_t CSL_fcpReadHistogram(const CSL_flexcc_histRegs *fcpRegs,
+int32_t CSL_fcpReadHistogram(const CSL_flexcc_histRegs *histRegs,
     uint32_t histData[]);
 
 /**

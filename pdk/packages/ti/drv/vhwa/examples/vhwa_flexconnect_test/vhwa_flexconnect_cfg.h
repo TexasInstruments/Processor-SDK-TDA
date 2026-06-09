@@ -856,7 +856,7 @@ AppFc_TestParams gAppFcTestPrms[] =
     {
         .testName = "TC_0017",                   /* Test Name */
         .numHandles = 2,                        /* Num Handles */
-        .repeatCnt = 3,                         /* Repeate Count */
+        .repeatCnt = 10,                         /* Repeate Count */
         .isPerformanceTest = UFALSE,             /* Is Performance */
         .isVissEnabled = UTRUE,                  /* isVissEnabled */
         .isMsc0Enabled = UFALSE,                  /* Is Msc0Enabled */

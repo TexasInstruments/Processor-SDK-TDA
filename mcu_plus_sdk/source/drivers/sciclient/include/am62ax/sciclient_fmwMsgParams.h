@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2022 Texas Instruments Incorporated
+ *  Copyright (C) 2022-26 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -29,6 +29,13 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
+ */
+
+/**
+ * \ingroup DRV_SCICLIENT_MODULE
+ * \defgroup SCICLIENT_FMW_MSG_PARAMS sciclient_fmwMsgParams.h
+ *
+ * @{
  */
 
 /**
@@ -66,12 +73,12 @@ extern "C" {
  */
 /* ABI Major revision - Major revision changes
 *       indicate backward compatibility breakage */
-#define SCICLIENT_FIRMWARE_ABI_MAJOR                     (3U)
+#define SCICLIENT_FIRMWARE_ABI_MAJOR                     (4U)
 /* ABI Minor revision - Minor revision changes
 *       indicate backward compatibility is maintained,
 *       however, new messages OR extensions to existing
 *       messages might have been adde */
-#define SCICLIENT_FIRMWARE_ABI_MINOR                     (5U)
+#define SCICLIENT_FIRMWARE_ABI_MINOR                     (0U)
 /** @} */
 
 /** C7X_1(Non Secure): C7x context 1 on Main island */
@@ -108,9 +115,15 @@ extern "C" {
 #define SCICLIENT_CONTEXT_A53_NONSEC_3                  (9U)
 /** C7x(Non Secure): C7x core*/
 #define SCICLIENT_CONTEXT_C7_NONSEC_0                   (10U)
+/** DM2TIFS(Secure): DM to TIFS Message forwarding.
+ *  Note: Although this context uses a secure thread, it can only forward
+ *  messages from non-secure hosts to TIFS. If the forwarded message is
+ *  marked as secure queue only then TIFS will reject the message.
+ */
+#define SCICLIENT_CONTEXT_DM2TIFS                       (11U)
 
 /** Total number of possible contexts for application. */
-#define SCICLIENT_CONTEXT_MAX_NUM                      (11U)
+#define SCICLIENT_CONTEXT_MAX_NUM                       (12U)
 /** @} */
 
 /**
@@ -205,13 +218,13 @@ extern "C" {
 
 
 /**
- *  \anchor Sciclient_McuR5fIds
- *  \name MCU Pulsar IDs
+ *  \anchor Sciclient_WkupR5fIds
+ *  \name WKUP Pulsar IDs
  *  @{
- *  MCU Device CPU IDs.
+ *  WKUP Device CPU IDs.
  */
-#define SCICLIENT_DEV_MCU_R5FSS0_CORE0  (TISCI_DEV_WKUP_R5FSS0_CORE0)
-#define SCICLIENT_DEV_MCU_R5FSS0_CORE1  (TISCI_DEV_WKUP_R5FSS0_CORE0)
+#define SCICLIENT_DEV_WKUP_R5FSS0_CORE0  (TISCI_DEV_WKUP_R5FSS0_CORE0)
+#define SCICLIENT_DEV_WKUP_R5FSS0_CORE1  (TISCI_DEV_WKUP_R5FSS0_CORE0)
 /** @} */
 
 /**
@@ -242,24 +255,26 @@ extern "C" {
 #define TISCI_BCDMA0_RX_DC_OES_IRQ_SRC_IDX_START     (11776U)
 #define TISCI_PKTDMA0_TX_FLOW_OES_IRQ_SRC_IDX_START  (4608U)
 #define TISCI_PKTDMA0_RX_FLOW_OES_IRQ_SRC_IDX_START  (5632U)
+#define TISCI_BCDMA1_RX_DC_OES_IRQ_SRC_IDX_START     (3584U)
+#define TISCI_BCDMA1_RX_RC_OES_IRQ_SRC_IDX_START     (4096U)
 /** @} */
 
 /**
- *  \anchor Sciclient_McuR5fProcIds
- *  \name MCU Pulsar Processor IDs
+ *  \anchor Sciclient_WkupR5fProcIds
+ *  \name WKUP Pulsar Processor IDs
  *  @{
- *  MCU Device Processor IDs.
+ *  WKUP Device Processor IDs.
  */
-#define SCICLIENT_DEV_MCU_R5FSS0_CORE0_PROCID  \
+#define SCICLIENT_DEV_WKUP_R5FSS0_CORE0_PROCID  \
     (SCICLIENT_PROC_ID_R5FSS0_CORE0)
-#define SCICLIENT_DEV_MCU_R5FSS0_CORE1_PROCID  \
+#define SCICLIENT_DEV_WKUP_R5FSS0_CORE1_PROCID  \
     (SCICLIENT_PROC_ID_R5FSS0_CORE0)
 /** @} */
 
 /** Board config Base start address */
-#define SCICLIENT_ALLOWED_BOARDCFG_BASE_START 1
+#define SCICLIENT_ALLOWED_BOARDCFG_BASE_START 1U
 /** Board config Base end address */
-#define SCICLIENT_ALLOWED_BOARDCFG_BASE_END   0xFFFFFFFF
+#define SCICLIENT_ALLOWED_BOARDCFG_BASE_END   0xFFFFFFFFU
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -272,3 +287,5 @@ extern "C" {
 #endif
 
 #endif /* #ifndef SCICLIENT_FMWMSGPARAMS_H_ */
+
+/** @} */

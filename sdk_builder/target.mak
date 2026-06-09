@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Texas Insruments, Inc.
+# Copyright (C) 2023-2026 Texas Insruments, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,14 +25,21 @@ SYSIDIRS :=
 
 SYSIDIRS += $(HOST_ROOT)
 
-ifeq ($(TARGET_PLATFORM), $(filter $(TARGET_PLATFORM), J721E J721S2 J784S4 J742S2 AM62A J722S))
-    SYSDEFS +=
+ifeq ($(TARGET_PLATFORM),PC)
+    SYSIDIRS += $(GCC_WINDOWS_ROOT)/include
+    SYSLDIRS += $(GCC_WINDOWS_ROOT)/lib
+else
     ifeq ($(TARGET_FAMILY),ARM)
-        ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53))
+        ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
             ifeq ($(TARGET_OS),QNX)
-                SYSIDIRS += $(PDK_QNX_PATH)/packages
-                SYSIDIRS += $(PDK_QNX_PATH)/packages/ti/osal
-                SYSIDIRS += $(PDK_QNX_PATH)/packages/ti/drv
+                ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53))
+                    SYSIDIRS += $(PDK_QNX_PATH)/packages
+                    SYSIDIRS += $(PDK_QNX_PATH)/packages/ti/osal
+                    SYSIDIRS += $(PDK_QNX_PATH)/packages/ti/drv
+                else ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A720))
+                    SYSIDIRS += $(PSDK_QNX_BUILD_PATH)/src/common/lld_source/source
+                    SYSIDIRS += $(PSDK_QNX_BUILD_PATH)/src/common/lld_source/source/kernel/dpl
+                endif
                 SYSIDIRS += $(GCC_QNX_ARM_ROOT)/../usr/include
                 SYSLDIRS += $(GCC_QNX_ARM_ROOT)/../usr/lib
                 SYSDEFS  += QNX_OS
@@ -46,13 +53,14 @@ ifeq ($(TARGET_PLATFORM), $(filter $(TARGET_PLATFORM), J721E J721S2 J784S4 J742S
             INSTALL_BIN := /usr/bin
             INSTALL_INC := /usr/include
         else
-            SYSIDIRS += $(TIARMCGT_LLVM_ROOT)/include
+            SYSIDIRS += $(TIARMCGT_LLVM_ROOT)/include/c
             SYSLDIRS += $(TIARMCGT_LLVM_ROOT)/lib
         endif
     else ifeq ($(TARGET_FAMILY),DSP)
         ifeq ($(TARGET_CPU),C66)
             SYSIDIRS += $(CGT6X_ROOT)/include
             SYSLDIRS += $(CGT6X_ROOT)/lib
+            SYSDEFS  += C6X_FAMILY
         else
             SYSDEFS  += C7X_FAMILY
             SYSIDIRS += $(CGT7X_ROOT)/include
@@ -65,11 +73,34 @@ ifeq ($(TARGET_PLATFORM), $(filter $(TARGET_PLATFORM), J721E J721S2 J784S4 J742S
             SYSIDIRS += $(PDK_PATH)/packages
             SYSIDIRS += $(PDK_PATH)/packages/ti/osal
             SYSIDIRS += $(PDK_PATH)/packages/ti/drv
+        else ifeq ($(RTOS_SDK),mcu_sdk)
+            SYSIDIRS += $(MCU_SDK_PATH)/source
+            SYSIDIRS += $(MCU_SDK_PATH)/source/drivers
+            SYSIDIRS += $(MCU_SDK_PATH)/source/compatibility/dpl/include
+            SYSIDIRS += $(MCU_SDK_PATH)/source/device/$(SOC)
+            SYSIDIRS += $(MCU_SDK_PATH)/source/device/$(SOC)/include/hw
+            SYSIDIRS += $(MCU_SDK_PATH)/ti_sdk_config/$(SOC)/default/Hal_Cfg
+            SYSIDIRS += $(MCU_SDK_PATH)/ti_sdk_config/$(SOC)/default/device_support/include
+            SYSIDIRS += $(MCU_SDK_PATH)/source/arch/include
+            ifeq ($(TARGET_CPU),M55)
+                SYSIDIRS += $(MCU_SDK_PATH)/source/compiler/m55-ti-arm-clang
+            else ifeq ($(TARGET_CPU),C7604)
+                SYSIDIRS += $(MCU_SDK_PATH)/source/compiler/c76-ti-c7000
+            else
+                SYSIDIRS += $(MCU_SDK_PATH)/source/compiler/r52-ti-arm-clang
+            endif
         else
             SYSIDIRS += $(MCU_PLUS_SDK_PATH)/source
             SYSIDIRS += $(MCU_PLUS_SDK_PATH)/source/drivers
             SYSIDIRS += $(MCU_PLUS_SDK_PATH)/source/kernel/dpl
-            SYSDEFS  += MCU_PLUS_SDK
         endif
     endif
+endif
+
+ifeq ($(RTOS_SDK),mcu_plus_sdk)
+    SYSDEFS  += MCU_PLUS_SDK
+else ifeq ($(RTOS_SDK),pdk)
+    SYSDEFS  += PDK
+else ifeq ($(RTOS_SDK),mcu_sdk)
+    SYSDEFS  += MCU_SDK
 endif

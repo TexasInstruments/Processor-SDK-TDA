@@ -117,72 +117,79 @@ FF_Disk_t * FF_MMCSDDiskInit( char * pcName,
 
     if( (pxDisk != NULL) && (config != NULL) )
     {
-        /* Start with every member of the structure set to zero. */
-        memset( pxDisk, '\0', sizeof( FF_Disk_t ) );
-
-        /* Set the pvTag to be MMCSD config */
-        pxDisk->pvTag = ( void * )config;
-
         MMCSD_Handle deviceHandle = MMCSD_getHandle(config->mmcsdInstance);
-        uint32_t ulSectorCount = MMCSD_getBlockCount(deviceHandle);
-
-        /* The signature is used by the disk read and disk write functions to
-         * ensure the disk being accessed is a MMCSD disk. */
-        pxDisk->ulSignature = MMCSD_SIGNATURE;
-
-        /* The number of sectors is recorded for bounds checking in the read and
-         * write functions. */
-        pxDisk->ulNumberOfSectors = ulSectorCount;
-
-        /* Create the IO manager that will be used to control the SD disk. */
-        memset( &xParameters, '\0', sizeof( xParameters ) );
-        xParameters.pucCacheMemory = NULL;
-        xParameters.ulMemorySize = MMCSD_IOMAN_CACHE_SIZE;
-        xParameters.ulSectorSize = MMCSD_SECTOR_SIZE;
-        xParameters.fnWriteBlocks = prvWriteMmcsd;
-        xParameters.fnReadBlocks = prvReadMmcsd;
-        xParameters.pxDisk = pxDisk;
-
-        /* Driver is reentrant so xBlockDeviceIsReentrant can be set to pdTRUE.
-         * In this case the semaphore is only used to protect FAT data
-         * structures. */
-        xParameters.pvSemaphore = NULL;
-        xParameters.xBlockDeviceIsReentrant = pdFALSE;
-
-        pxDisk->pxIOManager = FF_CreateIOManger( &xParameters, &xError );
-
-        if( ( pxDisk->pxIOManager != NULL ) && ( FF_isERR( xError ) == pdFALSE ) )
+        if (deviceHandle != NULL)
         {
-            /* Record that the SD disk has been initialized. */
-            pxDisk->xStatus.bIsInitialised = pdTRUE;
+            /* Start with every member of the structure set to zero. */
+            memset( pxDisk, '\0', sizeof( FF_Disk_t ) );
 
-            /* If the media is partitioned already, then mount it. If not, later use the APIs
-             * FF_MMCSDCreateAndFormatPartition() and FF_MMCSDMountPartition() to do so.
-             */
-            /* Record the partition number the FF_Disk_t structure is, then
-             * mount the partition. */
-            pxDisk->xStatus.bPartitionNumber = partitionNum;
+            /* Set the pvTag to be MMCSD config */
+            pxDisk->pvTag = ( void * )config;
 
-            /* Mount the partition. */
-            xError = FF_Mount( pxDisk, partitionNum );
-            FF_PRINTF( "FF_SDDiskInit: FF_Mount: %s\n", ( const char * ) FF_GetErrMessage( xError ) );
+            uint32_t ulSectorCount = MMCSD_getBlockCount(deviceHandle);
 
-            if( FF_isERR( xError ) == pdFALSE )
+            /* The signature is used by the disk read and disk write functions to
+             * ensure the disk being accessed is a MMCSD disk. */
+            pxDisk->ulSignature = MMCSD_SIGNATURE;
+
+            /* The number of sectors is recorded for bounds checking in the read and
+             * write functions. */
+            pxDisk->ulNumberOfSectors = ulSectorCount;
+
+            /* Create the IO manager that will be used to control the SD disk. */
+            memset( &xParameters, '\0', sizeof( xParameters ) );
+            xParameters.pucCacheMemory = NULL;
+            xParameters.ulMemorySize = MMCSD_IOMAN_CACHE_SIZE;
+            xParameters.ulSectorSize = MMCSD_SECTOR_SIZE;
+            xParameters.fnWriteBlocks = prvWriteMmcsd;
+            xParameters.fnReadBlocks = prvReadMmcsd;
+            xParameters.pxDisk = pxDisk;
+
+            /* Driver is reentrant so xBlockDeviceIsReentrant can be set to pdTRUE.
+             * In this case the semaphore is only used to protect FAT data
+             * structures. */
+            xParameters.pvSemaphore = NULL;
+            xParameters.xBlockDeviceIsReentrant = pdFALSE;
+
+            pxDisk->pxIOManager = FF_CreateIOManger( &xParameters, &xError );
+
+            if( ( pxDisk->pxIOManager != NULL ) && ( FF_isERR( xError ) == pdFALSE ) )
             {
-                /* The partition mounted successfully, add it to the virtual
-                 * file system - where it will appear as a directory off the file
-                 * system's root directory. */
-                FF_FS_Add( pcName, pxDisk );
+                /* Record that the SD disk has been initialized. */
+                pxDisk->xStatus.bIsInitialised = pdTRUE;
+
+                /* If the media is partitioned already, then mount it. If not, later use the APIs
+                 * FF_MMCSDCreateAndFormatPartition() and FF_MMCSDMountPartition() to do so.
+                 */
+                /* Record the partition number the FF_Disk_t structure is, then
+                 * mount the partition. */
+                pxDisk->xStatus.bPartitionNumber = partitionNum;
+
+                /* Mount the partition. */
+                xError = FF_Mount( pxDisk, partitionNum );
+                FF_PRINTF( "FF_SDDiskInit: FF_Mount: %s\n", ( const char * ) FF_GetErrMessage( xError ) );
+
+                if( FF_isERR( xError ) == pdFALSE )
+                {
+                    /* The partition mounted successfully, add it to the virtual
+                     * file system - where it will appear as a directory off the file
+                     * system's root directory. */
+                    FF_FS_Add( pcName, pxDisk );
+                }
+            }
+            else
+            {
+                FF_PRINTF( "FF_SDDiskInit: FF_CreateIOManger: %s\n", ( const char * ) FF_GetErrMessage( xError ) );
+
+                /* The disk structure was allocated, but the disk's IO manager could
+                 * not be allocated, so free the disk again. */
+                FF_MMCSDDiskDelete( pxDisk );
+                pxDisk = NULL;
             }
         }
         else
         {
-            FF_PRINTF( "FF_SDDiskInit: FF_CreateIOManger: %s\n", ( const char * ) FF_GetErrMessage( xError ) );
-
-            /* The disk structure was allocated, but the disk's IO manager could
-             * not be allocated, so free the disk again. */
-            FF_MMCSDDiskDelete( pxDisk );
-            pxDisk = NULL;
+            FF_PRINTF("MMCSD_Handle is NULL\n");
         }
     }
     else
@@ -366,10 +373,17 @@ static int32_t prvWriteMmcsd( uint8_t * pucSource,
         }
         else
         {
-            /* Copy the data to the MMCSD Device */
-            MMCSD_write(deviceHandle, ( uint8_t * ) pucSource, ulSectorNumber, ulSectorCount );
+            if (deviceHandle != NULL)
+            {
+                /* Copy the data to the MMCSD Device */
+                MMCSD_write(deviceHandle, ( uint8_t * ) pucSource, ulSectorNumber, ulSectorCount );
 
-            lReturn = FF_ERR_NONE;
+                lReturn = FF_ERR_NONE;
+            }
+            else
+            {
+                lReturn = FF_ERR_NULL_POINTER | FF_ERRFLAG;
+            }
         }
     }
     else
@@ -415,10 +429,17 @@ static int32_t prvReadMmcsd( uint8_t * pucDestination,
         }
         else
         {
-            /* Copy the data from the SD card */
-            MMCSD_read(deviceHandle, ( uint8_t * ) pucDestination, ulSectorNumber, ulSectorCount);
+            if (deviceHandle != NULL)
+            {
+                /* Copy the data from the SD card */
+                MMCSD_read(deviceHandle, ( uint8_t * ) pucDestination, ulSectorNumber, ulSectorCount);
 
-            lReturn = FF_ERR_NONE;
+                lReturn = FF_ERR_NONE;
+            }
+            else
+            {
+                lReturn = FF_ERR_NULL_POINTER | FF_ERRFLAG;
+            }
         }
     }
     else

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2018 Texas Instruments Incorporated
+ * Copyright (c) 2018-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -63,13 +63,14 @@
 #ifndef APP_GLOBAL_TIMER_PRIV_H_
 #define APP_GLOBAL_TIMER_PRIV_H_
 
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
 #include <ti/csl/soc.h>
 #include <ti/csl/hw_types.h>
 #include <ti/csl/csl_rat.h>
-#else
+#elif defined(MCU_PLUS_SDK)
 #include <drivers/hw_include/hw_types.h>
+#elif defined(MCU_SDK)
+#include <include/hw/hw_types.h>
 #endif
 
 #endif
-

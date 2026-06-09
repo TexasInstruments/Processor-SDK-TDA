@@ -149,6 +149,7 @@ typedef struct
     /* Timestamp for the most recent frame processed. */
     uint64_t                timestamp;
 
+#if !defined(VPAC3L)
     /* Physical address for register readback memory */
     uint64_t                           readback_mem_ptr_phys;
 
@@ -163,6 +164,7 @@ typedef struct
 
     /* Size of the configuration register memory */
     uint32_t                           config_reg_mem_size;
+#endif
 } tivxVpacMscScaleObj;
 
 struct tivxVpacMscScaleInstObj_t
@@ -180,10 +182,10 @@ struct tivxVpacMscScaleInstObj_t
  *      Function Prototypes
  *********************************/
 
-void tivxVpacMscScaleSetScParams(Msc_ScConfig *sc_cfg,
+void tivxVpacMscMultiScaleSetScParams(Msc_ScConfig *sc_cfg,
     const tivx_obj_desc_image_t *in_img_desc,
     const tivx_obj_desc_image_t *out_img_desc, uint32_t do_line_skip);
-void tivxVpacMscScaleSetFmt(Fvid2_Format *fmt,
+void tivxVpacMscMultiScaleSetFmt(Fvid2_Format *fmt,
     const tivx_obj_desc_image_t *img_desc, uint32_t do_line_skip);
 void tivxVpacMscScaleCopyOutPrmsToScCfg(Msc_ScConfig *sc_cfg,
     const tivx_vpac_msc_output_params_t *out_prms);

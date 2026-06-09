@@ -81,7 +81,10 @@
 #include "tidl_commonUtils.h"
 #include "tidl_innerProduct_mma.h"
 #include "tidl_forceNegativeTest.h"
-#include "ref/tidl_alg_utils_ref.h"
+#include "tidl_alg_utils_ref.h"
+#if defined TIDL_DYNAMIC_SHAPE
+#include "tidl_shapeInference.h"
+#endif
 
 #include "gc.h"
 #include "gc_helper.h"
@@ -516,6 +519,13 @@ void TIDL_resetSysmem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX])
 
   return;
 }
+
+void TIDL_reset_OneMem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX], int32_t i)
+{
+  sysMems[i].offset = 0;
+  return;
+}
+
 #if defined TIDL_COVERAGE_DEAD_CODE
 /**
 ----------------------------------------------------------------------------
@@ -683,7 +693,7 @@ void *TIDL_getDataBuff(IVISION_BufDesc *bufDesc[], uint32_t numBufs,
                                          (((((int32_t)(*ivisionBufPlane)[0].frameROI.topLeft.y) * (int32_t)(*ivisionBufPlane)[0].width)) +
                                           ((int32_t)(*ivisionBufPlane)[0].frameROI.topLeft.x))));
       retVal = ptr;
-      if (((uint32_t)pitch[TIDL_LINE_PITCH] != (*ivisionBufPlane)[0].width))
+      if (((uint32_t)pitch[TIDL_LINE_PITCH] > (*ivisionBufPlane)[0].width))
       {
         retVal = NULL;
       }
@@ -697,22 +707,20 @@ void *TIDL_getDataBuff(IVISION_BufDesc *bufDesc[], uint32_t numBufs,
 /**
 ----------------------------------------------------------------------------
 @ingroup    TIDL_IVISION_SUPPORT
-@fn         TIDL_getLayerTypeForOutDataID
-@brief      Function to Check whether current data buffer is Input to
-current algorithm instance
+@fn         TIDL_getLayerIDForOutDataID
+@brief      Function to give the layer with specified outData ID
 
 @param      pTIDLNetStructure : Base pointer for net
 @param      dataId            : Current data buffer ID
 @remarks    None
-@return     Address of the Data Params Structure Base - If Successful
-NULL - If Faile - Requested dataID Not found
+@return     Layer ID of the layer in sTIDL_Network_t
 ----------------------------------------------------------------------------
 */
-int32_t TIDL_getLayerTypeForOutDataID(const sTIDL_Network_t *pTIDLNetStructure,
-                                      int32_t dataId)
+int32_t TIDL_getLayerIDForOutDataID(const sTIDL_Network_t *pTIDLNetStructure,
+                                    int32_t dataId)
 {
   int32_t i, j;
-  int32_t layerType = TIDL_UnsupportedLayer;
+  int32_t index = -1;
   if (pTIDLNetStructure->numLayers < TIDL_NUM_MAX_LAYERS)
   {
     for (i = 0; i < pTIDLNetStructure->numLayers; i++)
@@ -721,11 +729,11 @@ int32_t TIDL_getLayerTypeForOutDataID(const sTIDL_Network_t *pTIDLNetStructure,
       {
         if (pTIDLNetStructure->TIDLLayers[i].outData.dataId == dataId)
         {
-          layerType = pTIDLNetStructure->TIDLLayers[i].layerType;
+          index = i;
           break;
         }
       }
-      if (layerType != TIDL_UnsupportedLayer)
+      if (index != -1)
       {
         break;
       }
@@ -733,9 +741,9 @@ int32_t TIDL_getLayerTypeForOutDataID(const sTIDL_Network_t *pTIDLNetStructure,
   }
   else
   {
-    layerType = TIDL_UnsupportedLayer;
+    index = -1;
   }
-  return (layerType);
+  return index;
 }
 
 /**
@@ -1061,12 +1069,10 @@ void TIDL_outBuffInit(const TIDL_CreateParams *params,
                       int32_t layerIdx, int32_t *dataMemTabOffset,
                       const IALG_MemRec memRec[], void **outPtr, int32_t outDataSize)
 {
-#ifndef HOST_EMULATION
   /* LDRA_JUSTIFY_START
-   <metric start> statement branch <metric end>
-   <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
-   <justification end> */
-#endif
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
   if ((TIDL_isOutDataBuff(params->net,
                           params->net->TIDLLayers[layerIdx].outData.dataId,
                           params->currLayersGroupId) == 1)
@@ -1074,9 +1080,7 @@ void TIDL_outBuffInit(const TIDL_CreateParams *params,
       || (params->net->dataFlowInfo != NULL)
 #endif
   )
-#ifndef HOST_EMULATION
   /* LDRA_JUSTIFY_END */
-#endif
   {
     *outPtr = NULL;
   }
@@ -1745,6 +1749,77 @@ int32_t TIDL_getScaleMemSize(sTIDL_PoolingParams_t *poolParams,
 }
 #endif
 
+#if defined TIDL_DYNAMIC_SHAPE
+/**
+ * @brief This function returns resolves the output shape of a layer
+ *
+ * @param inBufs : Input buffers
+ * @param outBufs : Ouput buffers
+ * @param intAlgHandle : Algorithm Instance handle
+ * @param algLayer : Pointer to current layer algorithm specific params
+ * @param TIDLLayer : Pointer to common layer parameters
+ *
+ * @return int32_t : returns the status
+ */
+int32_t TIDL_resolveLayerOutputShape(IVISION_InBufs *inBufs,
+                                     IVISION_InBufs *outBufs,
+                                     TIDL_Handle intAlgHandle,
+                                     sTIDL_AlgLayer_t *algLayer,
+                                     sTIDL_Layer_t *TIDLLayer)
+{
+  int32_t status = IALG_EOK;
+  int32_t shapeStatus = TIDL_SHAPE_INFERENCE_OK;
+  
+  sTIDL_DataParams_t *inDataParams[TIDL_MAX_ALG_IN_BUFS];
+  int32_t numFound = 0;
+  
+  if (TIDLLayer->numInBufs > 0)
+  {
+    numFound = TIDL_getMultipleDataParams(intAlgHandle->createParams->net,
+                                          TIDLLayer->inData,
+                                          TIDLLayer->numInBufs,
+                                          inDataParams);
+    
+    if (numFound != TIDLLayer->numInBufs)
+    {
+      tidl_printf(0, "TIDL_resolveLayerOutputShape: Failed to resolve all input dataIds. Found %d out of %d\n",
+                  numFound, TIDLLayer->numInBufs);
+      status = IALG_EFAIL;
+    }
+
+    /* Perform shape inference if all inputs resolved successfully */
+    if (status == IALG_EOK)
+    {
+      /* Use new parameter-based API with NULL context for runtime */
+      shapeStatus = TIDL_inferShapeGeneric(TIDLLayer->layerType,
+                                          &TIDLLayer->layerParams,
+                                          inDataParams,
+                                          TIDLLayer->numInBufs,
+                                          &TIDLLayer->outData,
+                                          NULL);  /* NULL context for runtime */
+      
+      if (shapeStatus == TIDL_SHAPE_INFERENCE_OK)
+      {
+        TIDL_recalcDataParamsPitch(&TIDLLayer->outData);
+      }
+      else if (shapeStatus == TIDL_SHAPE_INFERENCE_ERR_UNSUPPORTED_LAYER)
+      {
+        tidl_printf(1, "TIDL_resolveLayerOutputShape: Shape inference for layer type %d is not registered\n",
+                    TIDLLayer->layerType);
+      }
+      else
+      {
+        tidl_printf(0, "TIDL_resolveLayerOutputShape: Shape inference failed with status %d for layer type %d\n",
+                    shapeStatus, TIDLLayer->layerType);
+        status = IALG_EFAIL;
+      }
+    }
+  }
+
+  return status;
+}
+#endif
+
 /**
  * @brief This function returns the input buffer pointers for the layer
  *
@@ -1929,16 +2004,7 @@ int32_t TIDL_getLayerInPtrs(
                                             relativeCoreId,
                                             intAlgHandle->createParams->traceBaseName,
                                             1);
-#ifndef HOST_EMULATION
-          /* LDRA_JUSTIFY_START
-          <metric start> branch <metric end>
-          <justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this code.
-          <justification end> */
-#endif
           if (twStatus != IALG_EOK)
-#ifndef HOST_EMULATION
-          /* LDRA_JUSTIFY_END */
-#endif
           {
             tidl_printf(0, "Trace write failed\n");
           }

@@ -16,7 +16,7 @@ ifeq ($(TARGET_CPU),$(HOST_CPU))
 	CROSS_COMPILE_LINARO?=
 else ifeq ($(TARGET_CPU),X86)
 	CROSS_COMPILE_LINARO?=
-else ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU),A72 A53))
+else ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU),A72 A53 A720))
 	CROSS_COMPILE_LINARO?=aarch64-none-linux-gnu-
 else ifeq ($(TARGET_CPU),A15)
 	CROSS_COMPILE_LINARO?=arm-linux-gnueabihf-
@@ -161,6 +161,8 @@ else ifneq ($(filter $(TARGET_CPU),A15 A15F),)
 $(_MODULE)_COPT += -mcpu=cortex-a15
 else ifneq ($(filter $(TARGET_CPU),A72 A72F),)
 $(_MODULE)_COPT += -mcpu=cortex-a72
+else ifneq ($(filter $(TARGET_CPU),A720),)
+$(_MODULE)_COPT += -mcpu=cortex-a720
 else ifneq ($(filter $(TARGET_CPU),A53 A53F),)
 $(_MODULE)_COPT += -mcpu=cortex-a53
 endif

@@ -10,8 +10,69 @@
     % let config = module.getInstanceConfig(instance);
 /* FLASH Object - initialized during Flash_open() */
 % if (config.flashType == "SERIAL_NOR") {
-Flash_NorOspiObject gFlashObject_`config.fname`;
+Flash_NorOspiObject gFlashObject_`config.fname` =
+{
+    .rdDummyValPhyMode = FLASH_NOR_UPDATE_RD_DUMMY_VALUE,
+};
+
+Flash_NorOspiFallBackCfg gFlashFallBackCfg_`config.fname` =
+{
+    .fallBackFreq   = 200000000U,
+    .ddrBaudRateDiv    = 8U,
+    .sdrBaudRateDiv    = 4U,
+    .protoCfg1s = {
+        .protocol = FLASH_CFG_PROTO_1S_1S_1S,
+        .isDtr = FALSE,
+        .cmdRd = 0x03,
+        .cmdWr = 0x02,
+        .modeClksCmd = 0,
+        .modeClksRd = 0,
+        .dummyClksCmd = 0,
+        .dummyClksRd = 0,
+        .enableType = 0xFF,
+        .enableSeq = 0xFF,
+        .dummyCfg = {
+            .isAddrReg = FALSE,
+            .cmdRegRd = 0x00,
+            .cmdRegWr = 0x00,
+            .cfgReg = 0x00,
+            .shift = 0,
+            .mask = 0x00,
+            .cfgRegBitP = 0,
+        },
+    },
+};
+
+% if (config.fname == "S28HS512T") {
+Flash_NorOspiHybridLayoutCfg gFlashHybridLayoutCfg_`config.fname` =
+{
+    .isHybridLayout = 0U,
+    .hybridLayoutType = 0U,
+};
+% }
 % } if (config.flashType == "SERIAL_NAND") {
+#define FLASH_NAND_NUM_OF_BLOCK  `Math.round(config.flashSize/config.flashBlockSize)`
+
+uint8_t Flash_NandBadBlockList[FLASH_NAND_NUM_OF_BLOCK] = {0U};
+
+/* Data to write to spare data section */
+uint32_t flashSpareAreaData[32] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                    0xFFFFFFFF, 0xFFFFFFFF };
+
+/* Data to write to spare area of bad block */
+uint32_t flashBadSpareAreaData[32] = {  0xFFFF0000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                        0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                        0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                        0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                        0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                        0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                        0xFFFFFFFF, 0xFFFFFFFF };
+
 Flash_NandOspiObject gFlashObject_`config.fname` =
 {
     % if(config.badBlockCheck == "Yes"){
@@ -19,6 +80,10 @@ Flash_NandOspiObject gFlashObject_`config.fname` =
     % } else if (config.badBlockCheck == "No"){
     .badBlockCheck = FALSE,
     % }
+    .rdDummyValPhyMode = FLASH_NAND_UPDATE_RD_DUMMY_VALUE,
+    .bbList = Flash_NandBadBlockList,
+    .spareAreaData = flashSpareAreaData,
+    .badSpareAreaData = flashBadSpareAreaData,
 };
 % }
 % }
@@ -88,10 +153,10 @@ Flash_DevConfig gFlashDevCfg_`config.fname` =
         .cmdChipErase = `config.cmdChipErase`,
     },
     .idCfg = {
-        .cmd = 0x9F, /* Constant */
-        .numBytes = 3,
-        .dummy4 = 0,
-        .dummy8 = 0,
+        .cmd = `config.cmdRdId`,
+        .numBytes = `config.idNumBytes`,
+        .dummy4 = `config.dummyId4`,
+        .dummy8 = `config.dummyId8`,
     },
     .protocolCfg = {
         .protocol = FLASH_CFG_PROTO_`config.protocol.toUpperCase()`,
@@ -163,10 +228,10 @@ Flash_DevConfig gFlashDevCfg_`config.fname` =
         .cmdBlockErase = `config.cmdBlockErase`,
     },
     .idCfg = {
-        .cmd = 0x9F, /* Constant */
-        .numBytes = 3,
-        .dummy4 = 0,
-        .dummy8 = 0,
+        .cmd = `config.cmdRdId`,
+        .numBytes = `config.idNumBytes`,
+        .dummy4 = `config.dummyId4`,
+        .dummy8 = `config.dummyId8`,
     },
     .protocolCfg = {
         .protocol = FLASH_CFG_PROTO_`config.protocol.toUpperCase()`,
@@ -219,6 +284,9 @@ Flash_DevConfig gFlashDevCfg_`config.fname` =
 % let config = module.getInstanceConfig(instance);
 % if (config.quirks != "") {
 extern int32_t `config.quirks`(Flash_Config *config);
+% }
+% if (config.bootQuirks != "") {
+extern int32_t `config.bootQuirks`(Flash_Config *config);
 % }
 % if (config.customProtoFxn != "NULL") {
 extern int32_t `config.customProtoFxn`(Flash_Config *config);

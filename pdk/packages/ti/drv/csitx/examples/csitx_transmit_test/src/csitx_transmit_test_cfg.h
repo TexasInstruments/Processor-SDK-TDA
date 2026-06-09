@@ -101,12 +101,12 @@ Limited License.
      1: Enable loopback mode, CSITX will transmit and CSIRX will receive
         frames continuously */
 #define APP_ENABLE_LOOPBACK                     (1U)
-/**< CSITX instance to be used. Valid values are: 
+/**< CSITX instance to be used. Valid values are:
       0: For CSITX instance 0
       1: For CSITX instance 1 (Only for J721S2, as J721E has only instance 0) */
 #define CSITX_INSTANCE                          (0U)
 /**< Number of channels */
-#define APP_TX_CH_NUM                           ((uint32_t)4U)
+#define APP_TX_CH_NUM                           ((uint32_t)8U)
 /**< Input Image Data format */
 #define APP_TX_IMAGE_DT                         (FVID2_CSI2_DF_RAW12)
 /**< Frame storage format. Only valid for RAW12 DT. */

@@ -101,7 +101,7 @@ static Vhwa_M2mFcHandleObj *Vhwa_m2mFcDrvAllocHdlObj(const Vhwa_M2mFcDrvInstObj 
  */
 static void Vhwa_m2mFcDrvFreeHandleObj(Vhwa_M2mFcHandleObj *hObj);
 
-static void Vhwa_m2mFcInitGraph(Vhwa_M2mFcGraphObj *newGraph);
+static void Vhwa_m2mFcInitGraph(Vhwa_M2mFcGraphObj *newGraphObj);
 
 static int32_t Vhwa_m2mFcParseGraph(const Vhwa_M2mFcDrvInstObj *instObj,
                                         Vhwa_M2mFcHandleObj *hObj,
@@ -141,8 +141,8 @@ void Vhwa_m2mFcFreeSl2(void);
  * \return  FVID2 Driver Handle.
  *
  **/
-Fdrv_Handle Vhwa_m2mFcCreate(uint32_t drvId, uint32_t drvInstId,
-                                     Ptr createPrms, Ptr createStatusArgs,
+Fdrv_Handle Vhwa_m2mFcCreate(UInt32 drvId, UInt32 drvInstId,
+                                     Ptr createArgs, Ptr createStatusArgs,
                                      const Fvid2_DrvCbParams *cbPrms);
 
 /**
@@ -153,7 +153,7 @@ Fdrv_Handle Vhwa_m2mFcCreate(uint32_t drvId, uint32_t drvInstId,
  * \return  FVID2_SOK on success, else FVID2 error code
  *
  **/
-int32_t Vhwa_m2mFcDelete(Fdrv_Handle handle, Ptr deleteArgs);
+Int32 Vhwa_m2mFcDelete(Fdrv_Handle handle, Ptr deleteArgs);
 
 /**
  * \brief   FVID2 Control Function.
@@ -163,7 +163,7 @@ int32_t Vhwa_m2mFcDelete(Fdrv_Handle handle, Ptr deleteArgs);
  * \return  FVID2_SOK on success, else FVID2 error code
  *
  **/
-int32_t Vhwa_m2mFcControl(Fdrv_Handle handle, uint32_t cmd,
+Int32 Vhwa_m2mFcControl(Fdrv_Handle handle, UInt32 cmd,
                                   Ptr cmdArgs, Ptr cmdStatusArgs);
 
 /**
@@ -174,7 +174,7 @@ int32_t Vhwa_m2mFcControl(Fdrv_Handle handle, uint32_t cmd,
  * \return  FVID2_SOK on success, else FVID2 error code
  *
  **/
-int32_t Vhwa_m2mFcProcessReq(Fdrv_Handle handle,
+Int32 Vhwa_m2mFcProcessReq(Fdrv_Handle handle,
                                      Fvid2_FrameList *inFrmList,
                                      Fvid2_FrameList *outFrmList,
                                      uint32_t timeout);
@@ -187,10 +187,10 @@ int32_t Vhwa_m2mFcProcessReq(Fdrv_Handle handle,
  * \return  FVID2_SOK on success, else FVID2 error code
  *
  **/
-int32_t Vhwa_m2mFcGetProcessReq(Fdrv_Handle handle,
-                                        Fvid2_FrameList *inProcessList,
-                                        Fvid2_FrameList *outProcessList,
-                                        uint32_t timeout);
+Int32 Vhwa_m2mFcGetProcessReq(Fdrv_Handle handle,
+                                        Fvid2_FrameList *inFrmList,
+                                        Fvid2_FrameList *outFrmList,
+                                        UInt32 timeout);
 
 static uint64_t Vhwa_getSrcNode(uint64_t startPort);
 
@@ -562,19 +562,8 @@ Fdrv_Handle Vhwa_m2mFcCreate(UInt32 drvId, UInt32 drvInstId,
                 }
             }
 
-            /* Create doneQ, Done Q is specific to handle so that
-             * FVID2_Dequeue returns correct request for that handle. */
-            /* LDRA_JUSTIFY_START
-            <metric start> branch <metric end>
-            <justification start>
-            Rationale: The component level negative test framework and test applications cannot reach this portion. This branch statement checks for errors accumulated in previous steps. Since no error is accumulated due to previously stated rationales, some branches for this branch statement cannot be reached. 
-            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application. However, due to the stated rationale, this is not tested.
-            <justification end> */
-            if (FVID2_SOK == status)
-            /* LDRA_JUSTIFY_END */
-            {
-                status = Fvid2Utils_constructQ(&hObj->doneQObj);
-            }
+			status = Fvid2Utils_constructQ(&hObj->doneQObj);
+
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
             <justification start>
@@ -1276,29 +1265,36 @@ Int32 Vhwa_m2mFcGetProcessReq(Fdrv_Handle handle,
         else /* OutQ has buffer to be returned */
         /* LDRA_JUSTIFY_END */
         {
-            /* LDRA_JUSTIFY_START
-            <metric start> branch <metric end>
-            <justification start>
-            Rationale: The component level negative test framework and test applications cannot reach this portion. The test framework does not support the configuration required to trigger this error scenario. 
-            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application. However, due to the stated rationale, this is not tested.
-            <justification end> */
-           if((UTRUE == hObj->modInfo.isVissEnabled) && (FVID2_SOK == status))
-           /* LDRA_JUSTIFY_END */
+           	if(UTRUE == hObj->modInfo.isVissEnabled)
             {
                 status = Fvid2_getProcessedRequest(hObj->modHdls.vissHandle,
                                             &hObj->frameList.vissInFrameList,
                                             &hObj->frameList.vissOutFrameList,
                                             timeout);
             }
-            if(UTRUE == hObj->modInfo.isMsc0Enabled)
+			/* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion. The test framework does not support the configuration required to trigger this error scenario. 
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application. However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if((UTRUE == hObj->modInfo.isMsc0Enabled) && (FVID2_SOK == status))
+			/* LDRA_JUSTIFY_END */
             {
                 status = Fvid2_getProcessedRequest(hObj->modHdls.msc0Handle,
                                             &hObj->frameList.msc0InFrameList,
                                             &hObj->frameList.msc0OutFrameList,
                                             timeout);
             }
-            if(UTRUE == hObj->modInfo.isMsc1Enabled)
+			/* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion. The test framework does not support the configuration required to trigger this error scenario. 
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application. However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if((UTRUE == hObj->modInfo.isMsc1Enabled) && (FVID2_SOK == status))
             {
+			/* LDRA_JUSTIFY_END */
                 status = Fvid2_getProcessedRequest(hObj->modHdls.msc1Handle,
                                             &hObj->frameList.msc1InFrameList,
                                             &hObj->frameList.msc1OutFrameList,
@@ -1381,18 +1377,8 @@ int32_t Vhwa_m2mFcAllocSl2(const Vhwa_M2mFcSl2AllocPrms *sl2AllocPrms)
             Fvid2Utils_memcpy(&instObj->sl2Prms, sl2AllocPrms,
                                 sizeof(Vhwa_M2mFcSl2AllocPrms));
 
-            /* LDRA_JUSTIFY_START
-            <metric start> branch <metric end>
-            <justification start>
-            Rationale: The component level negative test framework and test applications cannot reach this portion. This branch statement checks for errors accumulated in previous steps. Since no error is accumulated due to previously stated rationales, some branches for this branch statement cannot be reached. 
-            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application. However, due to the stated rationale, this is not tested.
-            <justification end> */
-            if(FVID2_SOK == retVal)
-            /* LDRA_JUSTIFY_END */
-            {
+			retVal = Vhwa_m2mMscAllocSl2(&sl2AllocPrms->mscSl2Prms);
 
-                retVal = Vhwa_m2mMscAllocSl2(&sl2AllocPrms->mscSl2Prms);
-            }
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
             <justification start>
@@ -1651,6 +1637,7 @@ static int32_t Vhwa_m2mFcParseGraph(const Vhwa_M2mFcDrvInstObj *instObj, Vhwa_M2
 {
     int32_t status = FVID2_SOK;
     uint32_t idx, idx2, idx3, sNodeIdx, dNodeIdx, tNodeIdx;
+    uint32_t srcNodeFound = UFALSE;
     Vhwa_M2mFcGraphObj *pGphObj = NULL;
     uint64_t desNode, srcNode;
     uint32_t  linkStatus = UFALSE;
@@ -1674,6 +1661,7 @@ static int32_t Vhwa_m2mFcParseGraph(const Vhwa_M2mFcDrvInstObj *instObj, Vhwa_M2
         /* Set the input Node information */
         sNodeIdx = 0;
         tNodeIdx = 0;
+        srcNodeFound = UFALSE;
 
         desNode = Vhwa_getDesNode(pathInfo->edgeInfo[idx].endPort);
         srcNode = Vhwa_getSrcNode(pathInfo->edgeInfo[idx].startPort);
@@ -1689,12 +1677,13 @@ static int32_t Vhwa_m2mFcParseGraph(const Vhwa_M2mFcDrvInstObj *instObj, Vhwa_M2
             if(srcNode == pGphObj->graphNodeObj[tNodeIdx].nodeId)
             {
                 sNodeIdx = tNodeIdx;
+                srcNodeFound = UTRUE;
             }
             tNodeIdx++;
         }
 
-        if((0u == sNodeIdx) &&
-           (srcNode != pGphObj->graphNodeObj[sNodeIdx].nodeId))
+        /* If source node not found, use empty slot */
+        if(UFALSE == srcNodeFound)
         {
             sNodeIdx = tNodeIdx;
         }
@@ -1900,8 +1889,12 @@ static int32_t Vhwa_m2mFcCreateHndls(Vhwa_M2mFcDrvInstObj *instObj,
     if (FVID2_SOK == status)
     /* LDRA_JUSTIFY_END */
     {
-        for (idx = 0; (idx < VHWA_FC_MAX_NODES) && (FVID2_SOK == status); idx++)
+        for (idx = 0; idx < VHWA_FC_MAX_NODES; idx++)
         {
+            if (FVID2_SOK != status)
+            {
+                break;
+            }
             if (VHWA_FC_NODE_VISS == hObj->graphObj.graphNodeObj[idx].nodeId)
             {
                 Vhwa_m2mVissUpdatePipeline(htsPipeline);
@@ -2019,10 +2012,10 @@ static int32_t Vhwa_m2mFcCreateHndls(Vhwa_M2mFcDrvInstObj *instObj,
                     hObj->msc1FcPrms.isFlexConnect = UTRUE;
                 }
             }
-          else
-          {
-            /*Do Nothing*/
-          }
+			else
+			{
+				/*Do Nothing*/
+			}
         }
     }
 
@@ -2273,14 +2266,7 @@ static int32_t Vhwa_m2mFcConfigAndStart(Vhwa_M2mFcDrvInstObj *instObj,
 
     hObj = qObj->hObj;
 
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start>
-    Rationale: The component level negative test framework and test applications cannot reach this portion. This branch statement checks for errors accumulated in previous steps. Since no error is accumulated due to previously stated rationales, some branches for this branch statement cannot be reached. 
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application. However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if((UTRUE == hObj->modInfo.isVissEnabled) && (FVID2_SOK == status))
-    /* LDRA_JUSTIFY_END */
+    if(UTRUE == hObj->modInfo.isVissEnabled)
     {
         status = Fvid2_processRequest(hObj->modHdls.vissHandle,
                                     &hObj->frameList.vissInFrameList,

@@ -64,9 +64,9 @@
 
 const vector<TidlConstraint> tidlConstraintTranspose = {
     TIDL_CSTR(
-        "Number of non-singleton variable input dimensions must be less than <= 6",
-        "Number of non-singleton variable input dimensions must be less than <= 6",
-        "Number of non-singleton variable input dimensions must be less than <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
             int32_t numDims = tidlGetNonSingletonNumDims(layer->allowlistingMetaData.varTensorsDims[0]);
@@ -139,9 +139,9 @@ const vector<TidlConstraint> tidlConstraintTranspose = {
         }
     ),
     TIDL_CSTR(
-        "Transpose: For inputs with more than 4 dimensions (>4D), permutations where the width dimension is mapped to either the first or second position (Dim 0 or Dim 1) in the output shape are not supported.Unsupported permutation patterns:[W, X, X, X, X, X] - Width dimension at position 0; [X, W, X, X, X, X] - Width dimension at position 1",
-        "Transpose: For inputs with more than 4 dimensions (>4D), permutations where the width dimension is mapped to either the first or second position (Dim 0 or Dim 1) in the output shape are not supported.Unsupported permutation patterns:[W, X, X, X, X, X] - Width dimension at position 0; [X, W, X, X, X, X] - Width dimension at position 1",
-        "Transpose: For inputs with more than 4 dimensions (>4D), permutations where the width dimension is mapped to either the first or second position (Dim 0 or Dim 1) in the output shape are not supported.Unsupported permutation patterns:[W, X, X, X, X, X] - Width dimension at position 0; [X, W, X, X, X, X] - Width dimension at position 1",
+        "For inputs with more than 4 dimensions (>4D), permutations where the width dimension is mapped to either the first or second position (Dim 0 or Dim 1) in the output shape are not supported. Unsupported permutation patterns: [W, X, X, X, X, X] - Width dimension at position 0; [X, W, X, X, X, X] - Width dimension at position 1",
+        "For inputs with more than 4 dimensions (>4D), permutations where the width dimension is mapped to either the first or second position (Dim 0 or Dim 1) in the output shape are not supported. Unsupported permutation patterns: [W, X, X, X, X, X] - Width dimension at position 0; [X, W, X, X, X, X] - Width dimension at position 1",
+        "For inputs with more than 4 dimensions (>4D), permutations where the width dimension is mapped to either the first or second position (Dim 0 or Dim 1) in the output shape are not supported. Unsupported permutation patterns: [W, X, X, X, X, X] - Width dimension at position 0; [X, W, X, X, X, X] - Width dimension at position 1",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
             int32_t shapeInferenceStatus = tidlCheckShapeInferenceforOnnx(md);

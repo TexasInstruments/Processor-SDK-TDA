@@ -284,7 +284,7 @@ int32_t CSL_rfeSetH3aConfig(CSL_rawfe_cfgRegs *rfeRegs,
  *  \return                 Returns 0 on success else returns error value
  */
 int32_t CSL_rfeSetH3aLutConfig(CSL_rawfe_cfgRegs *rfeRegs,
-    uint32_t *h3aLutAddr, const Vhwa_LutConfig *cfg);
+    uint32_t *h3aLutAddr, const Vhwa_LutConfig *lCfg);
 
 #ifdef __cplusplus
 }

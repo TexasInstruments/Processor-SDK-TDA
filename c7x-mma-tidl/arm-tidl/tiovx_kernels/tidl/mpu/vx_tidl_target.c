@@ -133,7 +133,7 @@ static const char* child_target_name[] = {
             TIVX_TARGET_DSP_C7_1_PRI_6,
             TIVX_TARGET_DSP_C7_1_PRI_7,
             TIVX_TARGET_DSP_C7_1_PRI_8,
-#if defined(SOC_J784S4) || defined(SOC_J722S)  || defined(SOC_J742S2)
+#if defined(SOC_J784S4) || defined (SOC_J722S) || defined (SOC_TDA54)  || defined(SOC_J742S2)
             TIVX_TARGET_DSP_C7_2_PRI_1,
             TIVX_TARGET_DSP_C7_2_PRI_2,
             TIVX_TARGET_DSP_C7_2_PRI_3,
@@ -179,14 +179,6 @@ static vx_object_array createObjArray(vx_context context, vx_tensor *tensors, ui
 #endif
 static vx_status copyTensorHandles(vx_tensor src, vx_tensor dst);
 
-#if defined(SOC_J721S2) ||  defined(SOC_AM62A)
-/* LDRA_JUSTIFY
-<metric start> statement branch <metric end>
-<function start> static vx_status copyTensorHandles.* <function end>
-<justification start> This function is not expected to br called for
-single core SOC
-<justification end> */
-#endif
 /* Copy data pointer of the source vx_tensor data object to destination vx_tensor object*/
 static vx_status copyTensorHandles(vx_tensor src, vx_tensor dst)
 {
@@ -224,14 +216,6 @@ static vx_object_array createObjArray(vx_context context, vx_tensor *tensors, ui
 }
 #endif
 
-#if defined(SOC_J721S2) ||  defined(SOC_AM62A)
-/* LDRA_JUSTIFY
-<metric start> statement branch <metric end>
-<function start> static vx_status tivxUpdateOutArgs.* <function end>
-<justification start> This function is not expected to br called for
-single core SOC
-<justification end> */
-#endif
 /* Updates outArgs performance profile points to report MAX latency across all cores */
 static vx_status tivxUpdateOutArgs(tivxTIDLNestedKernelObj * prms, tivx_obj_desc_t *obj_desc[])
 {
@@ -249,36 +233,60 @@ static vx_status tivxUpdateOutArgs(tivxTIDLNestedKernelObj * prms, tivx_obj_desc
     if(status == (vx_status)VX_SUCCESS)
     {
         (void)memset(outArgsBuffer, 0, sizeof(TIDL_outArgs)); /* Initialize all data values in outArgs to 0 */
-        
-        for(int i = 0; i < (int)prms->num_cores; i++)
-        {
-            if(status == (vx_status)VX_SUCCESS)
-            {
-                status = vxMapUserDataObject(prms->outArgs[i], 0, sizeof(TIDL_outArgs), &map_id_prms_out_args,
-                                                (void **)&prmsOutArgsBuffer,  (vx_enum)VX_READ_ONLY,  (vx_enum)VX_MEMORY_TYPE_HOST, 0);
-                
-            }
-            if(status == (vx_status)VX_SUCCESS)
-            {
-                if(i == 0)
-                {
-                    /* outArgs from RT application obj_desc is not populated yet, so copy over first DSP node's outArgs, and then update profile points later based on all cores */
-                    (void)memcpy(outArgsBuffer, prmsOutArgsBuffer, sizeof(TIDL_outArgs));
-                }
 
-                for(int j = 0; j < prmsOutArgsBuffer->numLayers; j++)
+        /*
+         * outArgs will be different for different cores. Most of the values
+         * in outArgs will be same across cores except the profile points.
+         * For profile points, we take max for each layer across each cores.
+         * If profile points is not enabled, we simply copy the outArgs from
+         * first core.
+         */
+        if (prms->trace_log_level <= 0U)
+        {
+            status = vxMapUserDataObject(prms->outArgs[0], 0, sizeof(TIDL_outArgs), &map_id_prms_out_args,
+                                         (void **)&prmsOutArgsBuffer,  (vx_enum)VX_READ_ONLY,  (vx_enum)VX_MEMORY_TYPE_HOST, 0);
+
+            if(status == (vx_status)VX_SUCCESS)
+            {
+                /* outArgs from RT application obj_desc is not populated yet, so copy over first DSP node's outArgs, and then update profile points later based on all cores */
+                (void)memcpy(outArgsBuffer, prmsOutArgsBuffer, sizeof(TIDL_outArgs));
+            }
+
+            (void)vxUnmapUserDataObject(prms->outArgs[0], map_id_prms_out_args);
+        }
+        else
+        {
+            for(int i = 0; i < (int)prms->num_cores; i++)
+            {
+                if(status == (vx_status)VX_SUCCESS)
                 {
-                    for(int k = 0; k < TIDL_PROFILE_MAX; k++)
-                    {
-                        /* MAX of profile points across all cores */
-                        outArgsBuffer->metaDataLayer[j].profilePoint[k] = 
-                            (outArgsBuffer->metaDataLayer[j].profilePoint[k] > prmsOutArgsBuffer->metaDataLayer[j].profilePoint[k])
-                            ?  outArgsBuffer->metaDataLayer[j].profilePoint[k] : prmsOutArgsBuffer->metaDataLayer[j].profilePoint[k];
-                    }
+                    status = vxMapUserDataObject(prms->outArgs[i], 0, sizeof(TIDL_outArgs), &map_id_prms_out_args,
+                                                 (void **)&prmsOutArgsBuffer,  (vx_enum)VX_READ_ONLY,  (vx_enum)VX_MEMORY_TYPE_HOST, 0);
                 }
-                (void)vxUnmapUserDataObject(prms->outArgs[i], map_id_prms_out_args);
+                if(status == (vx_status)VX_SUCCESS)
+                {
+                    if(i == 0)
+                    {
+                        /* outArgs from RT application obj_desc is not populated yet, so copy over first DSP node's outArgs, and then update profile points later based on all cores */
+                        (void)memcpy(outArgsBuffer, prmsOutArgsBuffer, sizeof(TIDL_outArgs));
+                    }
+
+                    for(int j = 0; j < prmsOutArgsBuffer->numLayers; j++)
+                    {
+                        for(int k = 0; k < TIDL_PROFILE_MAX; k++)
+                        {
+                            /* MAX of profile points across all cores */
+                            outArgsBuffer->metaDataLayer[j].profilePoint[k] =
+                                (outArgsBuffer->metaDataLayer[j].profilePoint[k] > prmsOutArgsBuffer->metaDataLayer[j].profilePoint[k])
+                                ?  outArgsBuffer->metaDataLayer[j].profilePoint[k] : prmsOutArgsBuffer->metaDataLayer[j].profilePoint[k];
+                        }
+                    }
+
+                    (void)vxUnmapUserDataObject(prms->outArgs[i], map_id_prms_out_args);
+                }
             }
         }
+
         (void)vxUnmapUserDataObject(outArgs, map_id_out_args);
     }
 
@@ -478,25 +486,14 @@ static vx_status VX_CALLBACK tivxKernelTIDLProcess
         status = vxProcessGraph(prms->graph);
     }
 
-    if((prms != NULL) && (prms->trace_log_level > 0U))
+    if((status == (vx_status)VX_SUCCESS) && (prms != NULL))
     {
-        if(status == (vx_status)VX_SUCCESS)
-        {
-            status = tivxUpdateOutArgs(prms, obj_desc);
-        }
+        status = tivxUpdateOutArgs(prms, obj_desc);
     }
 
     return status;
 }
 
-#if defined(SOC_J721S2) ||  defined(SOC_AM62A)
-/* LDRA_JUSTIFY
-<metric start> statement branch <metric end>
-<function start> static vx_status tivxGetDspPtrsCmd.* <function end>
-<justification start> This function is not expected to br called for
-single core SOC
-<justification end> */
-#endif
 static vx_status tivxGetDspPtrsCmd(tivxTIDLNestedKernelObj * prms, vx_user_data_object controlGetArgs, vx_user_data_object * controlSetArgs)
 {
     vx_status status = (vx_status)VX_SUCCESS;
@@ -540,14 +537,6 @@ static vx_status tivxGetDspPtrsCmd(tivxTIDLNestedKernelObj * prms, vx_user_data_
     return status;
 }
 
-#if defined(SOC_J721S2) ||  defined(SOC_AM62A)
-/* LDRA_JUSTIFY
-<metric start> statement branch <metric end>
-<function start> static vx_status tivxSetDspPtrsCmd.* <function end>
-<justification start> This function is not expected to br called for
-single core SOC
-<justification end> */
-#endif
 static vx_status tivxSetDspPtrsCmd(tivxTIDLNestedKernelObj * prms, vx_user_data_object controlSetArgs)
 {
     vx_status status = (vx_status)VX_SUCCESS;
@@ -561,14 +550,6 @@ static vx_status tivxSetDspPtrsCmd(tivxTIDLNestedKernelObj * prms, vx_user_data_
     return status;
 }
 
-#if defined(SOC_J721S2) ||  defined(SOC_AM62A)
-/* LDRA_JUSTIFY
-<metric start> statement branch <metric end>
-<function start> static vx_status tivxInitCmd.* <function end>
-<justification start> This function is not expected to br called for
-single core SOC
-<justification end> */
-#endif
 static vx_status tivxInitCmd(tivxTIDLNestedKernelObj * prms)
 {
     vx_status status = (vx_status)VX_SUCCESS;
@@ -1076,14 +1057,6 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
     return (status);
 }
 
-#if defined(SOC_J721S2) ||  defined(SOC_AM62A)
-/* LDRA_JUSTIFY
-<metric start> statement branch <metric end>
-<function start> static vx_status VX_CALLBACK tivxKernelTIDLDelete.* <function end>
-<justification start> This function is not expected to br called for
-single core SOC
-<justification end> */
-#endif
 static vx_status VX_CALLBACK tivxKernelTIDLDelete(
     tivx_target_kernel_instance kernel, tivx_obj_desc_t *obj_desc[],
     uint16_t num_params, void *priv_arg)

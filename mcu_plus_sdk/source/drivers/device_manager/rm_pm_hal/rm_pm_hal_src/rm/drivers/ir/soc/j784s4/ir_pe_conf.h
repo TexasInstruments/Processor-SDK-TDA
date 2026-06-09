@@ -38,7 +38,7 @@
 #ifndef J784S4_IR_PE_CONF_H
 #define J784S4_IR_PE_CONF_H
 
-/** Count of IR init list (71 entries) */
-#define IR_SOC_PE_INIT_NUM (0x47U)
+/** Count of IR init list (73 entries) */
+#define IR_SOC_PE_INIT_NUM (0x49U)
 
 #endif /* J784S4_IR_PE_CONF_H */

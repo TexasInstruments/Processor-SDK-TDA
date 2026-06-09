@@ -2,9 +2,9 @@ MODULE_NAME = dm_stub
 
 SRCDIR = src/rm_pm_hal_src src/rm_pm_hal_src/app/dmstub
 INCDIR = src/rm_pm_hal_src src/rm_pm_hal_src/app/dmstub
-PDK_CFLAGS =  -DBUILD_MCU1_0 -DBUILD_MCU
+DM_CFLAGS =  -DBUILD_MCU1_0 -DBUILD_MCU
 
-CFLAGS_LOCAL_COMMON = $(PDK_CFLAGS)
+CFLAGS_LOCAL_COMMON = $(DM_CFLAGS)
 CONFIG_LPM_DM_STUB=y
 CONFIG_LPM_DM_TRACE=y
 CONFIG_LPM_DM_TRACE_BUFFER=y
@@ -98,8 +98,8 @@ _bottom_actions= \
 	$(call _pop_all) \
 	$(eval _MODULE :=)
 
-PDK_INSTALL_PATH :=
-objtree := $(PDK_INSTALL_PATH)
+DM_STUB_PATH :=
+objtree := $(DM_STUB_PATH)
 srctree := $(objtree)
 srcroot := $(srctree)
 DEFINES := $(CFLAGS_LOCAL_COMMON)
@@ -109,9 +109,6 @@ $(call _recurse_inc,)
 
 CFLAGS_LOCAL_COMMON += $(cppflags-y)
 CFLAGS_LOCAL_COMMON += -I$(srctree)/include
-CFLAGS_LOCAL_COMMON += -I$(PDK_INSTALL_PATH)/ti/drv/sciclient/soc/$(SCICLIENT_SOCVER)
-CFLAGS_LOCAL_COMMON += -I$(PDK_INSTALL_PATH)/ti/drv/sciclient/src/priv
-
 
 # for all obj-y entries .o extensions are changed to .c
 SRCS_COMMON = $(foreach f, $(obj-y), $(subst .o,.c,$(f)))

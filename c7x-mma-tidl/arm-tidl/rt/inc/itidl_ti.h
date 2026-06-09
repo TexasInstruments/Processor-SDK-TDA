@@ -111,6 +111,10 @@ extern "C" {
 #define TIDL_MAX_PRIORITY_LEVEL    ((uint32_t) 8)
 #define TIDL_MAX_OBJECTS_PER_LEVEL ((int32_t) 16)
 
+#if defined (SOC_TDA54)
+  #define TIDL_MAX_NUM_CORES      (4U)
+#endif
+
 #if defined (SOC_J784S4) || defined (SOC_J742S2)
   #define TIDL_MAX_NUM_CORES      (4U)
 #endif
@@ -192,7 +196,13 @@ typedef void (*TIDL_Unlock_t) (int32_t val);
 #define TIDL_GridSampleLayer           ((int32_t) 43)
 #define TIDL_TopKLayer                 ((int32_t) 44)
 #define TIDL_DeformableConvLayer       ((int32_t) 45)
-#define TIDL_UnsupportedLayer          ((int32_t) 46)
+#define TIDL_TileLayer                 ((int32_t) 46)
+#define TIDL_LogicalOpLayer            ((int32_t) 47)
+#define TIDL_RMSNormalizationLayer     ((int32_t) 48)
+#define TIDL_LSTMLayer                 ((int32_t) 49)
+#define TIDL_GRULayer                  ((int32_t) 50)
+#define TIDL_RNNLayer                  ((int32_t) 51)
+#define TIDL_UnsupportedLayer          ((int32_t) 52)
 /* @} */
 
 /**
@@ -446,7 +456,14 @@ typedef void (*TIDL_Unlock_t) (int32_t val);
 #define TIDL_Reciprocal            ((int32_t) 31)
 #define TIDL_SiLU                  ((int32_t) 32)
 #define TIDL_Swish                 ((int32_t) 33)
-#define TIDL_TOTAL_NONLINEAR_ACT_OPS   (((int32_t) TIDL_Swish) + 1U)
+#define TIDL_SoftPlus              ((int32_t) 34)
+#define TIDL_SoftSign              ((int32_t) 35)
+#define TIDL_Ceil                  ((int32_t) 36)
+#define TIDL_Celu                  ((int32_t) 37)
+#define TIDL_Selu                  ((int32_t) 38)
+#define TIDL_Round                 ((int32_t) 39)
+#define TIDL_Sign                  ((int32_t) 40)
+#define TIDL_TOTAL_NONLINEAR_ACT_OPS   (((int32_t) TIDL_Sign) + 1U)
 /* @} */
 
 /**
@@ -479,7 +496,33 @@ typedef enum {
 #define TIDL_EltWiseSub            ((int32_t) 3)
 #define TIDL_EltWiseDiv            ((int32_t) 4)
 #define TIDL_EltWiseMin            ((int32_t) 5)
+#define TIDL_EltWiseMod            ((int32_t) 6)
 /* @} */
+
+
+/**
+ *  \anchor eTIDL_LogicalOperatorType
+ *  \name   TIDL Logical operator Type
+ *
+ *  This group defines the different types of logical layer operators supported by TIDL library
+ *
+ *  @{
+ */
+#define TIDL_And               ((int32_t) 0)
+#define TIDL_Or                ((int32_t) 1)
+#define TIDL_Xor               ((int32_t) 2)
+#define TIDL_Equal             ((int32_t) 3)
+#define TIDL_Greater           ((int32_t) 4)
+#define TIDL_GreaterOrEqual    ((int32_t) 5)
+#define TIDL_Less              ((int32_t) 6)
+#define TIDL_LessOrEqual       ((int32_t) 7)
+#define TIDL_Not               ((int32_t) 8)
+#define TIDL_IsInf             ((int32_t) 9)
+#define TIDL_IsNaN             ((int32_t) 10)
+#define TIDL_Where             ((int32_t) 11)
+
+/* @} */
+
 
 /**
  *  \anchor eTIDL_ArgOpType
@@ -610,9 +653,17 @@ typedef enum {
 #define TIDL_PROFILE_CONTEXT_CROSSCORE_COPY     ((int32_t) 7)
 #define TIDL_PROFILE_DDR_BW_READ                ((int32_t) 8)
 #define TIDL_PROFILE_DDR_BW_WRITE               ((int32_t) 9)
-#define TIDL_PROFILE_MAX                        ((int32_t) 10)
+#define TIDL_PROFILE_SHAPE_INFER                ((int32_t) 10)
+#define TIDL_PROFILE_MAX                        ((int32_t) 11)
 
 /* @} */
+
+/**
+ * Max number of activations used in RNN layers
+ */
+#define TIDL_LSTM_MAX_ACTIVATIONS  (6U)
+#define TIDL_GRU_MAX_ACTIVATIONS   (4U)
+#define TIDL_RNN_MAX_ACTIVATIONS   (2U)
 
 /**
  @struct  sBuffer_t
@@ -706,6 +757,8 @@ typedef struct {
   int32_t pitch[TIDL_DIM_MAX-1U];
   /** Values of dimensions as defined by \ref eTIDL_DataDimIndex*/
   int32_t dimValues[TIDL_DIM_MAX];
+  /** Bitmask of which dimValues[] entries can change at runtime */
+  uint8_t dynDimMask;
 }sTIDL_DataParams_t;
 
 
@@ -729,6 +782,14 @@ typedef struct {
   float32_tidl   epsilon;
   int32_t isInstanceNorm;
 }sTIDL_LayerNormParams_t;
+
+typedef struct {
+  /**  Axis to perform rmsNormalization on */
+  int32_t   axis;
+  /** Epsilon value for numerical stability of division */
+  float32_tidl   epsilon;
+  int32_t stashType;
+}sTIDL_RMSNormParams_t;
 
 /**
  @struct  sTIDL_GatherLayerParams_t
@@ -1699,7 +1760,16 @@ typedef struct {
   int32_t   derivedScales;
   /** Offset to derived bias values*/
   int32_t   derivedShifts;
+  /** Attribute for Mod operation */
+  int32_t fmodValue;
 }sTIDL_EltWiseParams_t;
+
+typedef struct {
+  int32_t operatorType;
+  int32_t detect_negative;
+  int32_t detect_positive;
+}
+sTIDL_LogicalOpLayerParams_t;
 
 /**
  @struct  sTIDL_SoftMaxParams_t
@@ -1848,6 +1918,123 @@ typedef struct {
 }sTIDL_TopKParams_t;
 
 /**
+ @struct  sTIDL_TileParams_t
+ @brief   This structure define the parameters of Tile layer in TIDL
+*/
+typedef struct {
+  int32_t repeats[TIDL_DIM_MAX];
+}sTIDL_TileParams_t;
+
+typedef enum
+{
+  TIDL_RNNForward = 0,
+  TIDL_RNNReverse,
+  TIDL_RNNBidirectional,
+  TIDL_RNNUnsupported
+} eTIDL_RNNDirection;
+
+/**
+ @struct  sTIDL_LSTMParams_t
+ @brief   This structure define the parameters of LSTM layer in TIDL
+*/
+typedef struct {
+  /** Offset to the bias for the gates (B) */
+  int32_t bias;
+  /** Offset to tensor (of shape [batch_size]) specifying lengths of sequences in a batch */
+  int32_t sequence_lens;
+  /* Flag to check whether initial_h input is present or not */
+  int8_t isInitialHPresent;
+  /* Flag to check whether initial_c input is present or not */
+  int8_t isInitialCPresent;
+  /* Flag to check whether peepholes input is present or not */
+  int8_t isPeepholesPresent;
+  /** alpha value used by activations */
+  float32_tidl activation_alpha[TIDL_LSTM_MAX_ACTIVATIONS];
+  /** beta value used by activations */
+  float32_tidl activation_beta[TIDL_LSTM_MAX_ACTIVATIONS];
+  /** activation functions */
+  int32_t activations[TIDL_LSTM_MAX_ACTIVATIONS];
+  /** Cell clip threshold: [-threshold, +threshold] will be applied to input of activations */
+  float32_tidl clip;
+  /** Whether clip is given in the network or not */
+  int8_t isClipSet;
+  /** direction of RNN: forward (default), reverse, or bidirectional @ref eTIDL_RNNDirection */
+  int32_t direction;
+  /** Number of neurons in the hidden layer */
+  int32_t hidden_size;
+  /* Whether to couple the input and forget gate */
+  int32_t input_forget;
+  /** Shape format of inputs X, initial_h, initial_c and outputs */
+  int32_t layout;
+  /** Indicates on which axis the output buffer size has increased*/
+  int32_t incrementAxis;
+}sTIDL_LSTMParams_t;
+
+/**
+ @struct  sTIDL_GRUParams_t
+ @brief   This structure define the parameters of GRU layer in TIDL
+*/
+typedef struct {
+  /** Offset to the bias for the gates (B) */
+  int32_t bias;
+  /** Offset to tensor (of shape [batch_size]) specifying lengths of sequences in a batch */
+  int32_t sequence_lens;
+  /* Flag to check whether initial_h input is present or not */
+  int8_t isInitialHPresent;
+  /** alpha value used by activations */
+  float32_tidl activation_alpha[TIDL_GRU_MAX_ACTIVATIONS];
+  /** beta value used by activations */
+  float32_tidl activation_beta[TIDL_GRU_MAX_ACTIVATIONS];
+  /** activation functions */
+  int32_t activations[TIDL_GRU_MAX_ACTIVATIONS];
+  /** Cell clip threshold: [-threshold, +threshold] will be applied to input of activations */
+  float32_tidl clip;
+  /** Whether clip is given in the network or not */
+  int8_t isClipSet;
+  /** direction of RNN: forward (default), reverse, or bidirectional @ref eTIDL_RNNDirection */
+  int32_t direction;
+  /** Number of neurons in the hidden layer */
+  int32_t hidden_size;
+  /** Shape format of inputs X, initial_h and outputs */
+  int32_t layout;
+  /** Whether to apply the linear transformation before multiplying by the output of the reset gate */
+  int32_t linear_before_reset;
+  /** Indicates on which axis the output buffer size has increased*/
+  int32_t incrementAxis;
+}sTIDL_GRUParams_t;
+
+/**
+ @struct  sTIDL_RNNParams_t
+ @brief   This structure define the parameters of RNN layer in TIDL
+*/
+typedef struct {
+  /** Offset to the bias for the gates (B) */
+  int32_t bias;
+  /** Offset to tensor (of shape [batch_size]) specifying lengths of sequences in a batch */
+  int32_t sequence_lens;
+  /* Flag to check whether initial_h input is present or not */
+  int8_t isInitialHPresent;
+  /** alpha value used by activations */
+  float32_tidl activation_alpha[TIDL_RNN_MAX_ACTIVATIONS];
+  /** beta value used by activations */
+  float32_tidl activation_beta[TIDL_RNN_MAX_ACTIVATIONS];
+  /** activation functions */
+  int32_t activations[TIDL_RNN_MAX_ACTIVATIONS];
+  /** Cell clip threshold: [-threshold, +threshold] will be applied to input of activations */
+  float32_tidl clip;
+  /** Whether clip is given in the network or not */
+  int8_t isClipSet;
+  /** direction of RNN: forward (default), reverse, or bidirectional @ref eTIDL_RNNDirection */
+  int32_t direction;
+  /** Number of neurons in the hidden layer */
+  int32_t hidden_size;
+  /** Shape format of inputs X, initial_h and outputs */
+  int32_t layout;
+  /** Indicates on which axis the output buffer size has increased*/
+  int32_t incrementAxis;
+}sTIDL_RNNParams_t;
+
+/**
  @struct  sTIDL_LayerParams_t
  @brief   This union define the layer specific parameters of all the
           supported layers in TIDL
@@ -1881,9 +2068,15 @@ typedef union {
   sTIDL_TransposeParams_t                transposeParams;
   sTIDL_GatherLayerParams_t              gatherParams;
   sTIDL_LayerNormParams_t                layerNormParams;
+  sTIDL_RMSNormParams_t                  rmsNormParams;
   sTIDL_GridSampleParams_t               gridSampleParams;
   sTIDL_DeformConvParams_t               deformConvParams;
   sTIDL_TopKParams_t                     topKParams;
+  sTIDL_TileParams_t                     tileParams;
+  sTIDL_LogicalOpLayerParams_t           logicalOpLayerParams;
+  sTIDL_LSTMParams_t                     lstmParams;
+  sTIDL_GRUParams_t                      gruParams;
+  sTIDL_RNNParams_t                      rnnParams;
 }sTIDL_LayerParams_t;
 /*RESET_MISRA("18.4")  -> Reset rule 18.4 */
 
@@ -1947,15 +2140,15 @@ typedef struct {
 #define TIDL_NET_TOTAL_BUF     ((uint32_t) 4)
 /* @} */
 
-#define TIDL_TOOLS_VERSION "11_02_04_00"
-#define C7X_FIRMWARE_VERSION "11_02_04_00"
+#define TIDL_TOOLS_VERSION "11_02_12_00"
+#define C7X_FIRMWARE_VERSION "11_02_12_00"
 
 /* Based on last Updated Date */
 #define TIDL_NET_VERSION_FW_11_00_00_00  (0x20250429)
-#define TIDL_NET_VERSION_FW_11_02_04_00  (0x20251208)
+#define TIDL_NET_VERSION_FW_11_02_12_00  (0x20260423)
 
 // This denotes current active firmware version
-#define TIDL_NET_VERSION_FW_ACTIVE  (TIDL_NET_VERSION_FW_11_02_04_00)
+#define TIDL_NET_VERSION_FW_ACTIVE  (TIDL_NET_VERSION_FW_11_02_12_00)
 
 // This denotes passive for firmware version
 #define TIDL_NET_VERSION_FW_PASSIVE_CODE (TIDL_NET_VERSION_FW_ACTIVE < TIDL_NET_VERSION_FW_11_00_00_00)
@@ -2427,6 +2620,13 @@ typedef struct
   /** if enable layer level traces are generated in that particular process call */
   int32_t enableLayerPerfTraces;
 
+  /** Dimension values for each input tensor, used for dynamic shape inference.
+   *  Only valid when input data layer is dynamic i.e layer->dynDimMask != 0
+   *  inDimValues[i][TIDL_DIM_BATCH..TIDL_DIM_WIDTH] gives the actual runtime
+   *  dims for the i-th input buffer. Unused entries should be set to 0.
+   */
+  int32_t inDimValues[TIDL_MAX_ALG_IN_BUFS][TIDL_DIM_MAX];
+
 } TIDL_InArgs;
 
 /**
@@ -2442,6 +2642,10 @@ typedef struct {
   int32_t totalOps;
   int32_t actualOps;
   int32_t layerExecId;
+#if defined (SOC_TDA54)
+  float ddrBandwidthRead;
+  float ddrBandwidthWrite;
+#endif
   uint64_t profilePoint[TIDL_PROFILE_MAX];
 }TIDL_LayerMetaData;
 
@@ -2470,6 +2674,14 @@ typedef struct
 
   /** Number of network layers  */
   int32_t numLayers ;
+
+  /** Inferred dimension values for each output tensor after dynamic shape inference.
+   *  outDimValues[i][TIDL_DIM_BATCH..TIDL_DIM_WIDTH] gives the inferred runtime
+   *  dims for the i-th output buffer. Caller should read these after
+   *  TIDL_process() returns only if the output data layer is dynamic in nature
+   *  i.e layer->dynDimMask != 0
+   */
+  int32_t outDimValues[TIDL_MAX_ALG_OUT_BUFS][TIDL_DIM_MAX];
 
 } TIDL_outArgs;
 

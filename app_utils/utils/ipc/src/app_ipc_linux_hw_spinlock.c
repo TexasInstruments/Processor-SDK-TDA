@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -61,14 +61,15 @@
  */
 
 #include <stdint.h>
-#include <utils/ipc/include/app_ipc.h>
 #include <utils/ipc/src/app_ipc_linux_priv.h>
 
 #define APP_IPC_HW_SPIN_LOCK_MAX        (256u)
 #define APP_IPC_HW_SPIN_LOCK_OFFSET(x)  ((uint64_t)0x800UL + ((uint64_t)4UL*(uint32_t)(x)))
-#if defined(SOC_AM62A) || defined(SOC_J722S)
+#if defined(MCU_PLUS_SDK)
 #define APP_IPC_HW_SPIN_LOCK_MMR_BASE   ((uint32_t)0x2A000000u)
-#else
+#elif defined(MCU_SDK)
+#define APP_IPC_HW_SPIN_LOCK_MMR_BASE   ((uint32_t)0x30020000u)
+#elif defined(PDK)
 #define APP_IPC_HW_SPIN_LOCK_MMR_BASE   ((uint32_t)0x30E00000u)
 #endif
 #define APP_IPC_HW_SPIN_LOCK_MMR_SIZE   (APP_IPC_HW_SPIN_LOCK_OFFSET(APP_IPC_HW_SPIN_LOCK_MAX))
@@ -137,5 +138,3 @@ int32_t appIpcHwLockRelease(uint32_t hw_lock_id)
 
     return status;
 }
-
-

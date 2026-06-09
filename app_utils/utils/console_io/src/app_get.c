@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -65,10 +65,10 @@
 #include <stdarg.h>
 #include <string.h>
 #if defined(SYSBIOS) || defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
 #include <uart/UART.h>
 #include <uart/UART_stdio.h>
-#else
+#elif defined(MCU_PLUS_SDK)
 #include <DebugP.h>
 #endif
 #endif
@@ -82,9 +82,9 @@ char appGetChar()
     {
         buf[0]=0;
 
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
         UART_gets(buf, 8u);
-#else
+#elif defined(MCU_PLUS_SDK)
         DebugP_log(buf, 8u);
 #endif
 

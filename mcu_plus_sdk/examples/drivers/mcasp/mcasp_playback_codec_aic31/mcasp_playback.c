@@ -50,15 +50,19 @@
 #define APP_MCASP_AUDIO_BUFF_COUNT  (4U)
 #define APP_MCASP_AUDIO_BUFF_SIZE   (2048U)
 
-#if defined (SOC_AM62AX)
-/* AM62Ax CODEC I2C address */
+#if defined (SOC_AM62AX) || (SOC_AM62X) || (SOC_AM62DX) || (SOC_AM275X) || (SOC_AM62LX)
+/* AM62Ax/AM62x CODEC I2C address */
 #define APP_MCASP_CODEC_ADDR    (0x1BU)
-
-/* I2C address for IO expander */
-#define IO_EXP_ADDR             (0x22U)
 
 /* Codec reset pin for I/O expander */
 #define IO_EXP_CODEC_RESET_PIN  (0x8U)
+#endif
+
+/* I2C address for IO expander */
+#if defined (SOC_AM62AX) || (SOC_AM62X) || (SOC_AM62DX)|| (SOC_AM275X)
+#define IO_EXP_ADDR             (0x22U)
+#elif defined (SOC_AM62LX)
+#define IO_EXP_ADDR             (0x23U)
 #endif
 
 /***************************** Codec Register address *************************/
@@ -111,8 +115,6 @@ void mcasp_playback_main(void *args)
     MCASP_Handle    mcaspHandle;
     char            valueChar;
 
-    Drivers_open();
-    Board_driversOpen();
     mcasp_aic31_codec_config();
 
     DebugP_log("[MCASP] Audio playback example started.\r\n");
@@ -156,8 +158,6 @@ void mcasp_playback_main(void *args)
 
     DebugP_log("Exiting demo\r\n");
 
-    Board_driversClose();
-    Drivers_close();
 }
 
 static void I2C_writeReg(I2C_Handle handle, uint8_t devAddr, uint8_t reg,
@@ -169,7 +169,7 @@ static void I2C_writeReg(I2C_Handle handle, uint8_t devAddr, uint8_t reg,
     I2C_Transaction_init(&i2cTransaction);
     i2cTransaction.writeBuf   = txBuffer;
     i2cTransaction.writeCount = 2;
-    i2cTransaction.slaveAddress = devAddr;
+    i2cTransaction.targetAddress = devAddr;
     txBuffer[0] = reg;
     txBuffer[1] = val;
     I2C_transfer(handle, &i2cTransaction);
@@ -226,8 +226,11 @@ static void mcasp_aic31_codec_config(void)
     /* Select Page0 */
     I2C_writeReg(i2cHandle, deviceAddress, AIC31_PAGE_SEL_REG, 0U);
 
+    /* Select codec to be in master mode for FS and BCLK */
+    I2C_writeReg(i2cHandle, deviceAddress, 8, (1 << 6) | (1 << 7));
+
     /* I2S interface */
-    I2C_writeReg(i2cHandle, deviceAddress, AIC31_INTERFACE_REG, (0x0U << 6U));
+    I2C_writeReg(i2cHandle, deviceAddress, AIC31_INTERFACE_REG, (0x0U << 6U) | (3 << 4));
 
     /* Configure data path */
     /* Left DAC datapath plays left and Right path datapath plays right */

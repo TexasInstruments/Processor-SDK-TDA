@@ -1,8 +1,9 @@
 /**
  * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
  * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
- * @cliArgs --device "AM62x" --package "ALW" --part "Default" --context "r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
- * @versions {"tool":"1.12.1+2446"}
+ * @cliArgs --device "AM62x" --part "Default" --package "ALW" --context "r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
+ * @v2CliArgs --device "AM625" --package "FCBGA (ALW)" --variant "AM6254-G" --context "r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
+ * @versions {"tool":"1.22.0+3893"}
  */
 
 /**
@@ -27,11 +28,17 @@ const mpu_armv78 = mpu_armv7.addInstance();
 ipc.enableLinuxIpc     = false;
 ipc.m4fss0_0           = "notify";
 ipc.vringAllocationPDK = false;
+ipc.a53ss0_0           = "notify";
+ipc.a53ss0_1           = "notify";
 
 clock.instance = "TIMER1";
 
-debug_log.enableUartLog = true;
-debug_log.uartLog.$name = "CONFIG_UART0";
+debug_log.enableUartLog                 = true;
+debug_log.uartTrace                     = true;
+debug_log.uartLog.$name                 = "CONFIG_UART0";
+debug_log.uartLog.WKUP_UART.$assign     = "WKUP_USART0";
+debug_log.uartLog.WKUP_UART.RXD.$assign = "WKUP_UART0_RXD";
+debug_log.uartLog.WKUP_UART.TXD.$assign = "WKUP_UART0_TXD";
 
 mpu_armv71.allowExecute = false;
 mpu_armv71.size         = 31;
@@ -68,12 +75,3 @@ mpu_armv77.$name      = "TCMA";
 mpu_armv78.baseAddr = 0x43C00000;
 mpu_armv78.size     = 18;
 mpu_armv78.$name    = "HSM_RAM";
-
-/**
- * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
- * version of the tool will not impact the pinmux you originally saw.  These lines can be completely deleted in order to
- * re-solve from scratch.
- */
-debug_log.uartLog.WKUP_UART.$suggestSolution     = "WKUP_USART0";
-debug_log.uartLog.WKUP_UART.RXD.$suggestSolution = "ball.B4";
-debug_log.uartLog.WKUP_UART.TXD.$suggestSolution = "ball.C5";

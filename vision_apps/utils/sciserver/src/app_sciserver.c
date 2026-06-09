@@ -105,7 +105,7 @@ extern     void vTaskDelete( void* xTaskToDelete );
 
 #endif
 
-#if defined(SOC_AM62A)
+#if defined(SOC_AM62A) || defined(SOC_J722S)
 /* Stack size allocated for the sciserver task */
 #define SCISERVER_TASK_STACK_SIZE                   (2U*1024U)
 
@@ -216,7 +216,7 @@ void appSciserverInit(void* arg0, void* arg1)
 
     serverParams.taskPriority[SCISERVER_TASK_USER_LO] = SETUP_SCISERVER_TASK_PRI_LOW;
     serverParams.taskPriority[SCISERVER_TASK_USER_HI] = SETUP_SCISERVER_TASK_PRI_HIGH;
-    #if defined(SOC_AM62A)
+    #if defined(SOC_AM62A) || defined(SOC_J722S)
     serverParams.hiTaskStack    =   gUserHiTaskStack;
     serverParams.loTaskStack    =   gUserLoTaskStack;
     serverParams.taskStackSize  =   SCISERVER_TASK_STACK_SIZE;

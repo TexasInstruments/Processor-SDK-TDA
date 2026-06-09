@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2023 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -34,13 +34,15 @@
 #include <kernel/dpl/DebugP.h>
 #include "ti_drivers_config.h"
 #include "ti_board_config.h"
+#include "ti_drivers_open_close.h"
+#include "ti_board_open_close.h"
 #include "FreeRTOS.h"
 #include "task.h"
 
 #define MAIN_TASK_PRI  (configMAX_PRIORITIES-1)
 
-#define MAIN_TASK_SIZE (65536U/sizeof(configSTACK_DEPTH_TYPE))
-StackType_t gMainTaskStack[MAIN_TASK_SIZE] __attribute__((aligned(32)));
+#define MAIN_TASK_SIZE (16384U/sizeof(configSTACK_DEPTH_TYPE))
+StackType_t gMainTaskStack[MAIN_TASK_SIZE] __attribute__((aligned(16*1024)));
 
 StaticTask_t gMainTaskObj;
 TaskHandle_t gMainTask;
@@ -49,7 +51,18 @@ void ipc_rpmsg_echo_main(void *args);
 
 void freertos_main(void *args)
 {
+    int32_t status = SystemP_SUCCESS;
+
+    /* Open drivers */
+    Drivers_open();
+    /* Open flash and board drivers */
+    status = Board_driversOpen();
+    DebugP_assert(status==SystemP_SUCCESS);
+
     ipc_rpmsg_echo_main(NULL);
+
+    /* Close board and flash drivers */
+    Board_driversClose();
 
     vTaskDelete(NULL);
 }

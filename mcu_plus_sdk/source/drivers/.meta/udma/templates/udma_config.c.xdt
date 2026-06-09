@@ -1,9 +1,15 @@
 %%{
     let module = system.modules['/drivers/udma/udma'];
+    let cpuName = system.getScript('/common').getSelfSysCfgCoreName();
+    let socName = system.getScript("/common").getSocName();
 %%}
 /*
  * UDMA
  */
+% if(socName == "am275x" && (cpuName == "c75ss0-0" ||cpuName == "c75ss1-0")) {
+
+% }
+
 /* UDMA driver instance object */
 Udma_DrvObject          gUdmaDrvObj[CONFIG_UDMA_NUM_INSTANCES];
 /* UDMA driver instance init params */
@@ -14,6 +20,11 @@ static Udma_InitPrms    gUdmaInitPrms[CONFIG_UDMA_NUM_INSTANCES] =
     % let config = module.getInstanceConfig(instance);
     {
         .instId             = UDMA_INST_ID_`config.name`,
+        % if (config.name.includes("DRU")) {
+        .enableUtc          = TRUE,
+        % } else {
+        .enableUtc          = FALSE,
+        % }
         .skipGlobalEventReg = `config.skipGlobalEventReg.toString(10).toUpperCase()`,
         .virtToPhyFxn       = `config.virtToPhyFxn`,
         .phyToVirtFxn       = `config.phyToVirtFxn`,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Texas Instruments Incorporated
+ * Copyright (c) 2021-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -83,19 +83,19 @@ __attribute__((aligned(128))) =
             .size = sizeof(struct tisci_boardcfg_secproxy),
         },
         /* Memory allocation for messages scaling factor. In current design,
-         * only value of “1” is supported. For future design, a value of “2”
-         * would double all memory allocations and credits, “3” would triple,
+         * only value of "1" is supported. For future design, a value of "2"
+         * would double all memory allocations and credits, "3" would triple,
          * and so on.
          */
         .scaling_factor = 0x1,
         /* Memory allocation for messages profile number. In current design,
-         * only a value of “1” is supported. “0” is always invalid due to
+         * only a value of "1" is supported. "0" is always invalid due to
          * fault tolerance.
          */
         .scaling_profile = 0x1,
         /* Do not configure main nav secure proxy. This removes all MSMC memory
          * demands from System Firmware but limits MPU channels to one set of
-         * secure and one set of insecure. In current design, supports only “0”.
+         * secure and one set of insecure. In current design, supports only "0".
          */
         .disable_main_nav_secure_proxy = 0,
     },
@@ -120,22 +120,22 @@ __attribute__((aligned(128))) =
             .magic = TISCI_BOARDCFG_DBG_CFG_MAGIC_NUM,
             .size = sizeof(struct tisci_boardcfg_dbg_cfg),
         },
-        /* This enables the trace for SYSFW logging. Should be used only for
-         * debug. Profiling should not be done with this enabled.
-         */
-        #ifdef SYSFW_TRACE_ENABLE
+
         .trace_dst_enables = (TISCI_BOARDCFG_TRACE_DST_UART0 |
                               TISCI_BOARDCFG_TRACE_DST_ITM |
                               TISCI_BOARDCFG_TRACE_DST_MEM),
+#ifdef SYSFW_TRACE_ENABLE
+        /* This enables the trace for SYSFW logging. Should be used only for
+        * debug. Profiling should not be done with this enabled.
+        */
         .trace_src_enables = (TISCI_BOARDCFG_TRACE_SRC_PM |
                               TISCI_BOARDCFG_TRACE_SRC_RM |
                               TISCI_BOARDCFG_TRACE_SRC_SEC |
                               TISCI_BOARDCFG_TRACE_SRC_BASE |
                               TISCI_BOARDCFG_TRACE_SRC_USER |
                               TISCI_BOARDCFG_TRACE_SRC_SUPR)
-        #else
-        .trace_dst_enables = 0,
-        .trace_src_enables = 0,
-        #endif
-    }
+#else
+        .trace_src_enables = TISCI_BOARDCFG_TRACE_SRC_USER,
+#endif
+	},
 };

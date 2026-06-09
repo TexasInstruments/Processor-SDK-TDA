@@ -91,8 +91,8 @@ static map<string, pair<pair<string,string>,pair<string,string>>> TIDL_onnxCompa
     {"1.14.0+10000005",  {{"10_00_00_05", "10_01_00_00"},
                           {"10_00_00_05", "10_01_00_00"}}
     },
-    {"1.15.0",           {{"10_01_00_01", "11_02_10_00"},
-                          {"10_01_00_01", "11_02_10_00"}}
+    {"1.15.0",           {{"10_01_00_01", "11_02_16_00"},
+                          {"10_01_00_01", "11_02_16_00"}}
     },
 };
 int32_t TIDL_getOutputShape(void * ioBufDescVPtr, int8_t onnxName[], std::vector<int64_t> &shape);

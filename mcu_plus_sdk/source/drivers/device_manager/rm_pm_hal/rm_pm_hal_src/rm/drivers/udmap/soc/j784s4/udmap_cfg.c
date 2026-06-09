@@ -91,7 +91,7 @@ static const struct udmap_ch_type rx_ch_types_NAVSS0_BCDMA_0[1] = {
 		.flow_utype = 0U,
 		.oes_offset = 0U,
 		.err_oes_offset = 0U,
-		.type = DMSS_BCDMA_RX_CHAN,
+		.type = DMSS_BCDMA_RX_HCCHAN,
 		.utype = RESASG_UTYPE(J784S4_DEV_NAVSS0_BCDMA_0, RESASG_SUBTYPE_BCDMA_SPLIT_TR_RX_CHAN),
 	},
 };
@@ -105,7 +105,7 @@ static const struct udmap_ch_type tx_ch_types_NAVSS0_BCDMA_0[1] = {
 		.flow_utype = 0U,
 		.oes_offset = 0U,
 		.err_oes_offset = 0U,
-		.type = DMSS_BCDMA_TX_CHAN,
+		.type = DMSS_BCDMA_TX_HCCHAN,
 		.utype = RESASG_UTYPE(J784S4_DEV_NAVSS0_BCDMA_0, RESASG_SUBTYPE_BCDMA_SPLIT_TR_TX_CHAN),
 	},
 };

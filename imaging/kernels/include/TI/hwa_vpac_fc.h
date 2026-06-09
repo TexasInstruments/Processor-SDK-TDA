@@ -263,7 +263,7 @@ typedef struct {
  *      Function Prototypes
  *********************************/
 
-void tivx_vpac_fc_params_init(tivx_vpac_fc_viss_msc_params_t *prms);
+void tivx_vpac_fc_params_init(tivx_vpac_fc_viss_msc_params_t *tivxFcParams);
 
 /*!
  * \brief Function to register HWA Kernels on the vpac_fc Target

@@ -1,0 +1,5 @@
+[
+    "source/device/tda54/include/hw",
+    "test/driverlib/uart/v0/test_uart.c",
+    "source/device/tda54/ti_sdk_config/default"
+]

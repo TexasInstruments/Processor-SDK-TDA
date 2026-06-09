@@ -5915,7 +5915,7 @@ static const struct clk_data_div_reg clk_data_k3_pll_ctrl_wrap_main_0_chip_div24
 };
 static const struct clk_parent clk_k3_pll_ctrl_wrap_wkup_0_parents[2] = {
 	{
-		CLK_J721E_WKUP_FREF_CLKSEL_OUT0,
+		CLK_J721E_GLUELOGIC_HFOSC0_CLKOUT,
 		1,
 	},
 	{
@@ -8478,24 +8478,6 @@ static const struct clk_data_from_dev clk_data_wiz16b8m4ct_main_0_ref_out_clk = 
 	.dev		= J721E_DEV_SERDES_10G0,
 	.clk_idx	= J721E_DEV_SERDES_10G0_REF_OUT_CLK,
 };
-static const struct clk_parent clk_wkup_FREF_clksel_parents[2] = {
-	{
-		CLK_J721E_GLUELOGIC_HFOSC0_CLKOUT,
-		1,
-	},
-	{
-		CLK_J721E_J7_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_12P5M_CLK,
-		1,
-	},
-};
-static const struct clk_data_mux_reg clk_data_wkup_FREF_clksel_out0 = {
-	.data_mux		= {
-		.parents	= clk_wkup_FREF_clksel_parents,
-		.n		= ARRAY_SIZE(clk_wkup_FREF_clksel_parents),
-	},
-	.reg			= 0x43000000 + 32848,
-	.bit			= 8,
-};
 static const struct clk_parent clk_wkup_i2c0_mcupll_bypass_clksel_parents[2] = {
 	{
 		CLK_J721E_HSDIV4_16FFT_MCU_1_HSDIVOUT3_CLK,
@@ -8615,25 +8597,14 @@ static const struct clk_data_mux_reg clk_data_wkupusart_clk_sel_out0 = {
 	.bit			= 0,
 };
 
-const struct clk_data soc_clock_data[771] = {
+const struct clk_data soc_clock_data[770] = {
 	[CLK_J721E_GLUELOGIC_HFOSC0_CLKOUT] =					  {
 		.drv	= &clk_drv_soc_hfosc0,
 		.flags	= 0,
 	},
-	[CLK_J721E_J7_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_12P5M_CLK] =		  {
-		.drv		= &clk_drv_fixed,
-		.flags		= 0,
-		.range_idx	= J721E_FREQ_RANGE_J7_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_12P5M_CLK,
-	},
-	[CLK_J721E_WKUP_FREF_CLKSEL_OUT0] =					  {
-		.drv	= &clk_drv_mux_reg.drv,
-		.flags	= 0,
-		.data	= &clk_data_wkup_FREF_clksel_out0.data_mux.data,
-		.type	= CLK_TYPE_MUX,
-	},
 	[CLK_J721E_PLLFRAC2_SSMOD_16FFT_MCU_0_FOUTVCOP_CLK] =			  {
 		.parent		=						  {
-			CLK_J721E_WKUP_FREF_CLKSEL_OUT0,
+			CLK_J721E_GLUELOGIC_HFOSC0_CLKOUT,
 			1,
 		},
 		.drv		= &clk_drv_pll_16fft,
@@ -8885,6 +8856,11 @@ const struct clk_data soc_clock_data[771] = {
 		.data		= &clk_data_i3c_mcu_1_i3c_scl_do.data,
 		.freq_idx	= J721E_FREQ_VALUE_I3C_MCU_1_I3C_SCL_DO,
 	},
+	[CLK_J721E_J7_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_12P5M_CLK] =		  {
+		.drv		= &clk_drv_fixed,
+		.flags		= 0,
+		.range_idx	= J721E_FREQ_RANGE_J7_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_12P5M_CLK,
+	},
 	[CLK_J721E_J7_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_32K_CLK] =			  {
 		.drv		= &clk_drv_fixed,
 		.flags		= 0,
@@ -8934,7 +8910,7 @@ const struct clk_data soc_clock_data[771] = {
 	},
 	[CLK_J721E_PLLFRAC2_SSMOD_16FFT_MCU_1_FOUTVCOP_CLK] =			  {
 		.parent		=						  {
-			CLK_J721E_WKUP_FREF_CLKSEL_OUT0,
+			CLK_J721E_GLUELOGIC_HFOSC0_CLKOUT,
 			1,
 		},
 		.drv		= &clk_drv_pll_16fft,
@@ -8944,7 +8920,7 @@ const struct clk_data soc_clock_data[771] = {
 	},
 	[CLK_J721E_PLLFRAC2_SSMOD_16FFT_MCU_2_FOUTVCOP_CLK] =			  {
 		.parent		=						  {
-			CLK_J721E_WKUP_FREF_CLKSEL_OUT0,
+			CLK_J721E_GLUELOGIC_HFOSC0_CLKOUT,
 			1,
 		},
 		.drv		= &clk_drv_pll_16fft,
@@ -13676,5 +13652,5 @@ const struct clk_data soc_clock_data[771] = {
 	},
 };
 
-struct clk soc_clocks[771];
+struct clk soc_clocks[770];
 const size_t soc_clock_count = ARRAY_SIZE(soc_clock_data);

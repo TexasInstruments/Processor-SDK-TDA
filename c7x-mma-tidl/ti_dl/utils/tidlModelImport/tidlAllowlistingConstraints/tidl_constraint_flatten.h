@@ -65,18 +65,6 @@
 const vector<TidlConstraint> tidlConstraintFlatten =
 {
     TIDL_CSTR(
-        "",
-        "",
-        "",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            if(gParams.numFeatureBits == 16)
-            {
-                TIDL_GLOBAL_REPORT_WARNING("Flatten with 16 bit is not optimal");
-            }
-            return true;
-        }
-    ),
-    TIDL_CSTR(
         "Number of non-singleton variable input dimensions must be <= " + to_string(TIDL_DIM_MAX),
         "Number of non-singleton variable input dimensions must be <= " + to_string(TIDL_DIM_MAX),
         "Number of non-singleton variable input dimensions must be <= " + to_string(TIDL_DIM_MAX),

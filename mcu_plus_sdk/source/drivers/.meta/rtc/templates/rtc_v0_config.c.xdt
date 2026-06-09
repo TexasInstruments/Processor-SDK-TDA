@@ -1,0 +1,85 @@
+%%{
+    let common = system.getScript("/common");
+    let module = system.modules['/drivers/rtc/rtc'];
+%%}
+/*
+ * RTC
+ */
+
+/* RTC Driver handles */
+RTC_Handle gRTCHandle[RTC_NUM_INSTANCES];
+
+/* RTC Driver Parameters */
+RTC_Params gRTCParams[RTC_NUM_INSTANCES] =
+{
+% for(let i = 0; i < module.$instances.length; i++) {
+    % let instance = module.$instances[i];
+    % let config = module.getInstanceConfig(instance);
+    {
+        .isfreezemode = `config.isFreezeMode`,
+        .onOffCallback = `config.on_offCallback`,
+        .offOnCallback = `config.off_onCallback`,
+    },
+% }
+};
+
+/* RTC Callback */
+% for(let i = 0; i < module.$instances.length; i++) {
+    % let instance = module.$instances[i];
+    % let config = module.getInstanceConfig(instance);
+
+    % if(config.enableIntr) {
+        % if(config.ON_OFF_CallbackFxn != "NULL") {
+void `config.ON_OFF_CallbackFxn`(RTC_Handle handle);
+        % }
+        % else {}
+        % if(config.OFF_ON_CallbackFxn != "NULL") {
+void `config.OFF_ON_CallbackFxn`(RTC_Handle handle);
+        % }
+        % else {}
+    % }
+    % else {}
+% }
+
+/* RTC attributes */
+static RTC_HwAttrs gRTCHwAttrs[RTC_NUM_INSTANCES] =
+{
+% for(let i = 0; i < module.$instances.length; i++) {
+    % let instance = module.$instances[i];
+    % let config = module.getInstanceConfig(instance);
+    {
+        .baseAddr = `config.baseAddr`,
+        .intNum = `config.intrNum`,
+        .eventId = `config.eventId`,
+        .inputClk = `config.timerInputClkHz`,
+        .enableIntr = `config.enableIntr`,
+        .intrPriority = `config.intrPriority`,
+    },
+% }
+};
+/* RTC objects */
+static RTC_Object gRTCObjects[RTC_NUM_INSTANCES] =
+{
+% for(let i = 0; i < module.$instances.length; i++) {
+    % let instance = module.$instances[i];
+    % let config = module.getInstanceConfig(instance);
+    {
+        /* Callback Assignment */
+        .On_OffCallbackFunction = `config.ON_OFF_CallbackFxn`,
+        .Off_OnCallbackFunction = `config.OFF_ON_CallbackFxn`,
+    },
+% }
+};
+/* RTC Config */
+RTC_Config gRTCConfig[RTC_NUM_INSTANCES] =
+{
+% for(let i = 0; i < module.$instances.length; i++) {
+    % let instance = module.$instances[i];
+    {
+        .object = &gRTCObjects[`instance.$name.toUpperCase()`],
+        .hwAttrs = &gRTCHwAttrs[`instance.$name.toUpperCase()`]
+    },
+% }
+};
+
+uint32_t gRTCConfigNum = RTC_NUM_INSTANCES;

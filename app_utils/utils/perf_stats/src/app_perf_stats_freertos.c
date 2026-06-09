@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -62,19 +62,24 @@
 
 #include <stdio.h>
 #include <string.h>
+
 #include <utils/console_io/include/app_log.h>
 #include <utils/timer/include/app_timer.h>
 #include <utils/remote_service/include/app_remote_service.h>
 #include <utils/mem/include/app_mem.h>
 #include <utils/rtos/include/app_rtos.h>
+
+#if defined(R5F) || defined(M55)
+#include <utils/ipc/include/app_ipc.h>
+#endif
 #include <HwiP.h>
 #include "app_perf_stats_priv.h"
 #include <inttypes.h>
 
 #if defined(FREERTOS)
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
 #include <LoadP.h>
-#else
+#elif defined(MCU_PLUS_SDK)
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -86,6 +91,8 @@
 #define APP_PERF_DDR_MHZ                (2133u)  /* DDR clock speed in MHZ */
 #elif defined(SOC_AM62A)
 #define APP_PERF_DDR_MHZ                (1866u)  /* DDR clock speed in MHZ */
+#elif defined(SOC_TDA54)
+#define APP_PERF_DDR_MHZ                (4266u)  /* DDR clock speed in MHZ */
 #endif
 
 #define APP_PERF_DDR_BUS_WIDTH          (  32u)  /* in units of bits */
@@ -101,7 +108,7 @@
 #define APP_PERF_NUM_DDR_INSTANCES      (1u)
 #elif defined (SOC_J721S2) || defined (SOC_J742S2)
 #define APP_PERF_NUM_DDR_INSTANCES      (2u)
-#elif defined (SOC_J784S4)
+#elif defined (SOC_J784S4) || defined (SOC_TDA54)
 #define APP_PERF_NUM_DDR_INSTANCES      (4u)
 #endif
 
@@ -204,7 +211,7 @@ void appPerfStatsResetLoadCalcAll(app_perf_stats_obj_t *obj)
 void appPerfStatsTaskLoadUpdate(app_rtos_task_handle_t task, app_perf_stats_load_t *load)
 {
 
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
     #if defined(FREERTOS)
     LoadP_Stats rtos_load_stat;
 
@@ -213,7 +220,7 @@ void appPerfStatsTaskLoadUpdate(app_rtos_task_handle_t task, app_perf_stats_load
     load->total_time = rtos_load_stat.totalTime;
     load->thread_time = rtos_load_stat.threadTime;
     #endif
-#else
+#elif defined(MCU_PLUS_SDK)
     #if defined(FREERTOS)
     TaskP_Load rtos_load_stat;
 
@@ -279,7 +286,7 @@ void appPerfStatsGetTaskStackWatermarksAll(app_perf_stats_obj_t *obj, app_perf_s
     {
         strncpy(cpu_stats->task_stats[i].task_name, obj->task_name[j], APP_PERF_STATS_TASK_NAME_MAX -1U);
         cpu_stats->task_stats[i].task_name[APP_PERF_STATS_TASK_NAME_MAX-1]=0;
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
         cpu_stats->task_stats[i].task_load = TaskP_getTaskStackHighWatermark((TaskP_Handle)obj->task_handle[j]);
 #else
         /* MCU+ does not yet support this */
@@ -306,7 +313,7 @@ void appPerfStatsGetMemStatsAll(app_perf_stats_obj_t *obj, app_perf_stats_mem_st
 
 }
 
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
 extern uint32_t  gOsalSemAllocCnt, gOsalSemPeak;
 extern uint32_t  gOsalMutexAllocCnt, gOsalMutexPeak;
 extern uint32_t  gOsalQueueAllocCnt, gOsalQueuePeak;
@@ -318,7 +325,7 @@ extern uint32_t  gOsalClockAllocCnt, gOsalClockPeak;
 extern uint32_t  gOsalHwiAllocCnt, gOsalHwiPeak;
 extern uint32_t  gOsalTimerAllocCnt, gOsalTimerPeak;
 
-#else
+#elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
 uint32_t  gOsalSemAllocCnt, gOsalSemPeak;
 uint32_t  gOsalMutexAllocCnt, gOsalMutexPeak;
 uint32_t  gOsalQueueAllocCnt, gOsalQueuePeak;
@@ -377,11 +384,13 @@ int32_t appPerfStatsHandler(char *service_name, uint32_t cmd, void *prm, uint32_
             break;
         case APP_PERF_STATS_CMD_RESET_LOAD_CALC:
             #if defined(FREERTOS)
-            #if !defined(MCU_PLUS_SDK)
+
+            #if defined(PDK)
             LoadP_reset();
-            #else
+            #elif defined(MCU_PLUS_SDK)
             TaskP_loadResetAll();
             #endif
+
             #endif
             appPerfStatsResetLoadCalcAll(obj);
             break;
@@ -418,12 +427,12 @@ int32_t appPerfStatsHandler(char *service_name, uint32_t cmd, void *prm, uint32_
                 appPerfStatsLock(obj);
                 /* interrupts disabled since update happens in ISR */
                 cookie = HwiP_disable();
-                
+
                 *ddr_load = obj->ddrLoad.ddr_stats;
-                
+
                 HwiP_restore(cookie);
 
-                appPerfStatsUnLock(obj); 
+                appPerfStatsUnLock(obj);
             }
             break;
         case APP_PERF_STATS_CMD_GET_HWA_LOAD:
@@ -448,11 +457,13 @@ int32_t appPerfStatsHandler(char *service_name, uint32_t cmd, void *prm, uint32_
 
                 #if defined(FREERTOS)
                 /* Multiplying by 100 to show decimal points when printing */
-                #if !defined(MCU_PLUS_SDK)
+
+                #if defined(PDK)
                 cpu_load->cpu_load = 100 * LoadP_getCPULoad();
-                #else
+                #elif defined(MCU_PLUS_SDK)
                 cpu_load->cpu_load = TaskP_loadGetTotalCpuLoad();
                 #endif
+
                 #endif
 
                 cpu_load->hwi_load = 0U;
@@ -599,11 +610,13 @@ int32_t appPerfStatsInit()
         if(status==0)
         {
             #if defined(FREERTOS)
-            #if !defined(MCU_PLUS_SDK)
+
+            #if defined(PDK)
             LoadP_reset();
-            #else
+            #elif defined(MCU_PLUS_SDK)
             TaskP_loadResetAll();
             #endif
+
             #endif
             appPerfStatsResetLoadCalcAll(obj);
             appPerfStatsResetHwaLoadCalcAll();
@@ -988,18 +1001,15 @@ void appPerfStatsResetDdrLoadCalcAll()
     appPerfStatsUnLock(obj);
 }
 
-#ifdef R5F
-
-#include <utils/ipc/include/app_ipc.h>
-
+#if defined(R5F) || defined(M55)
 /* This function is called when configUSE_IDLE_HOOK is 1 in FreeRTOSConfig.h */
 void vApplicationIdleHook( void )
 {
-#if (configLOAD_UPDATE_IN_IDLE==1)
-    void vApplicationLoadHook();
+    #if (configLOAD_UPDATE_IN_IDLE==1)
+        void vApplicationLoadHook();
 
-    vApplicationLoadHook();
-#endif
+        vApplicationLoadHook();
+    #endif
 
     if(1U == g_perf_stats_load_update_enable)
     {
@@ -1013,7 +1023,6 @@ void vApplicationIdleHook( void )
             appPerfStatsDddrStatsUpdate();
         }
     }
-
     asm ( " WFI " );
 }
 #endif

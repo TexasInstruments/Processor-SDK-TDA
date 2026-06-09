@@ -42,11 +42,11 @@
 /* ========================================================================== */
 /*                             Include Files                                  */
 /* ========================================================================== */
+#include <include/vhwa_common.h>
 #include <drivers/hw_include/soc_config.h>
 #include <soc/vhwa_dmpac_priv.h> 
 #include <drivers/hw_include/cslr_soc.h>
 #include <soc/vhwa_soc.h>
-#include <include/vhwa_common.h>
 
 
 /* ========================================================================== */

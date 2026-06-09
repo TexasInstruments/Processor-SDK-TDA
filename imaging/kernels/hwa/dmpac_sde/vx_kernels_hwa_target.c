@@ -61,12 +61,9 @@
  */
 
 #include <TI/tivx.h>
+#include <TI/hwa_dmpac_sde.h>
 #include "tivx_kernels_target_utils.h"
 #include "tivx_hwa_dmpac_sde_priv.h"
-
-/* Function prototypes */
-void tivxRegisterHwaTargetDmpacSdeKernels(void);
-void tivxUnRegisterHwaTargetDmpacSdeKernels(void);
 
 static Tivx_Target_Kernel_List  gTivx_target_kernel_list[] = {
     {&tivxAddTargetKernelDmpacSde, &tivxRemoveTargetKernelDmpacSde},

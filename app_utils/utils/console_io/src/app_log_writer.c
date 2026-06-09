@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -66,10 +66,17 @@
 #include <string.h>
 
 #if defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
 #include "DebugP.h"
 #endif
 #endif
+
+/** \brief Flag to sync CPU to make sure their init is done before moving ahead */
+#define APP_LOG_CPU_SYNC_STATE_INVALID            (0u)
+#define APP_LOG_CPU_SYNC_STATE_INIT_DONE          (1u)
+#define APP_LOG_CPU_SYNC_STATE_TEST_INIT_DONE     (2u)
+#define APP_LOG_CPU_SYNC_STATE_CONFIRM_INIT_DONE  (3u)
+#define APP_LOG_CPU_SYNC_STATE_RUN                (4u)
 
 static app_log_wr_obj_t g_app_log_wr_obj;
 
@@ -83,7 +90,7 @@ int32_t  appLogWrInit(app_log_init_prm_t *prm)
 
     appLogWrCreateLock(obj);
 
-    if(prm->self_cpu_index >= APP_LOG_MAX_CPUS)
+    if(prm->self_cpu_index > APP_LOG_MAX_CPUS)
     {
         status = -1;
     }
@@ -115,7 +122,7 @@ int32_t  appLogWrInit(app_log_init_prm_t *prm)
     }
 
     #if defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
-    #if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
     DebugP_registerExcptnLogFxn(appLogPrintf);
     #endif
     #endif
@@ -269,7 +276,7 @@ void appLogPrintf(const char *format, ...)
                     format, va_args_ptr);
         va_end(va_args_ptr);
 
-        #if defined(A72) || defined (A53)
+        #if defined(A72) || defined (A53) || defined (A720)
         {
             #if defined(SYSBIOS) || defined(FREERTOS) || defined(SAFERTOS) || defined(THREADX)
             void appLogDeviceWrite(char *string, uint32_t max_size);
@@ -285,13 +292,6 @@ void appLogPrintf(const char *format, ...)
     }
     appLogWrUnLock(obj, cookie);
 }
-
-/** \brief Flag to sync CPU to make sure their init is done before moving ahead */
-#define APP_LOG_CPU_SYNC_STATE_INVALID            (0u)
-#define APP_LOG_CPU_SYNC_STATE_INIT_DONE          (1u)
-#define APP_LOG_CPU_SYNC_STATE_TEST_INIT_DONE     (2u)
-#define APP_LOG_CPU_SYNC_STATE_CONFIRM_INIT_DONE  (3u)
-#define APP_LOG_CPU_SYNC_STATE_RUN                (4u)
 
 void appLogSetCpuSyncState(uint32_t cpu_id, uint32_t state)
 {
@@ -401,4 +401,3 @@ void appLogCpuSyncInit(uint32_t master_cpu_id, uint32_t self_cpu_id,
         appLogCpuSyncWithMaster(self_cpu_id);
     }
 }
-

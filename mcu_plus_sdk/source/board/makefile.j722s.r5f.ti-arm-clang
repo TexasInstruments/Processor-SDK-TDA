@@ -29,6 +29,15 @@ FILES_common := \
     ioexp_tca6424.c \
     ioexp_tca6416.c \
     nor_spi_sfdp.c \
+    phy_common_priv.c \
+    dp83tc812.c \
+    dp83tg720.c \
+    dp83869.c \
+    dp83867.c \
+    dp83822.c \
+    dp83826.c \
+    generic_phy.c \
+    eeprom_at24c512c.c \
 
 FILES_PATH_common = \
     control \
@@ -40,10 +49,14 @@ FILES_PATH_common = \
     ioexp \
     null \
     led \
+    ethphy/enet/rtos_drivers/src \
+    ethphy/enet/rtos_drivers/include \
 
 INCLUDES_common := \
     -I${CG_TOOL_ROOT}/include/c \
     -I${MCU_PLUS_SDK_PATH}/source \
+    -I${MCU_PLUS_SDK_PATH}/source/board/ethphy/enet/rtos_drivers/include \
+    -I${MCU_PLUS_SDK_PATH}/source/board/ethphy/port \
 
 DEFINES_common := \
     -DSOC_J722S \

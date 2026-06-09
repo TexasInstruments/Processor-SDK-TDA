@@ -2,7 +2,6 @@ let common = system.getScript("/common");
 
 let mmu_armv8_module = {
     displayName: "MMU ARMv8",
-    maxInstances: 16,
 	templates: {
         "/kernel/dpl/dpl_config.c.xdt": {
 			dpl_config: "/kernel/dpl/mmu_armv8.c.xdt",
@@ -15,21 +14,21 @@ let mmu_armv8_module = {
 		{
 			name: "vAddr",
             displayName: "Region Start Virtual Address (hex)",
-            description: "MUST be <= 48 bits and MUST be region size aligned",
+            longDescription: "Starting Virtual Address of the Region. MUST be <= 48 bits and MUST be region size aligned",
             default: 0x0,
             displayFormat: "hex",
         },
 		{
 			name: "pAddr",
             displayName: "Region Start Physical Address (hex)",
-            description: "MUST be <= 48 bits and MUST be region size aligned",
+            longDescription: "Starting Physical Address of the Region. MUST be <= 48 bits and MUST be region size aligned",
             default: 0x0,
             displayFormat: "hex",
         },
 		{
 			name: "size",
 			displayName: "Region Size (bytes)",
-            description: "MUST be 4KB aligned",
+            description: "Size of Region. MUST be 4KB aligned",
 			default: 0x0,
 			displayFormat: "hex",
 		},

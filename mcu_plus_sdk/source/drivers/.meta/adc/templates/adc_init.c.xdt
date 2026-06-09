@@ -1,13 +1,20 @@
 %%{
     let module = system.modules['/drivers/adc/adc'];
     let common   = system.getScript("/common");
+    let soc = system.getScript(`/drivers/soc/drivers_${common.getSocName()}`);
 %%}
-    /* ADC */
+
+
     {
-        /* Enable ADC Reference */
-% for(let i = 0; i < module.$instances.length; i++) {
-    % let instance = module.$instances[i];
-    % let config = module.getInstanceConfig(instance);
-        SOC_enableAdcReference(`config.name.slice(3)`);
-% }
+        /* ADC */
+    %for(let i = 0; i < module.$instances.length; i++) {
+        % let instance = module.$instances[i];
+        % let config = module.getInstanceConfig(instance);
+        % if (["am62lx"].includes(common.getSocName())) {
+        /* Set ADC clock source */
+        SCMI_Handle handle = SCMI_getHandle(SCMI_getInitDriverIndex());
+        int32_t status = SCMI_clockParentSet(handle,`config.clockIds[0]`,`config.clkSelParentValue`);
+        DebugP_assertNoLog(status == SystemP_SUCCESS);
+        % }
+    % }
     }

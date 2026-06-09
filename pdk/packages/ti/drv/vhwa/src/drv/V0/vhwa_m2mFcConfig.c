@@ -339,10 +339,12 @@ int32_t Vhwa_m2mFcDrvConfigVissSch(Vhwa_M2mFcHandleObj *hObj,
     uint32_t consId;
 
     /* Check for outnode node, config sch based on next node */
-    for (idx = 0;
-            (idx < (node->outputNodeSet.numNodes)) && (FVID2_SOK == status);
-            idx++)
+    for (idx = 0; idx < (node->outputNodeSet.numNodes); idx++)
     {
+        if (FVID2_SOK != status)
+        {
+            break;
+        }
         if ((VHWA_FC_NODE_MSC0 == node->outputNodeSet.node[idx]->nodeId) ||
             (VHWA_FC_NODE_MSC1 == node->outputNodeSet.node[idx]->nodeId))
         {      
@@ -654,10 +656,12 @@ int32_t Vhwa_m2mFcDrvConfigMscSch(Vhwa_M2mFcHandleObj *hObj,
                 pFcPrms->inDmaEnable[idx] = UTRUE;
             }
         }
-        for (idx = 0;
-                (idx < (node->outputNodeSet.numNodes)) && (FVID2_SOK == status);
-                idx++)
+        for (idx = 0; idx < (node->outputNodeSet.numNodes); idx++)
         {
+            if (FVID2_SOK != status)
+            {
+                break;
+            }
             if ((VHWA_FC_NODE_MSC0 == node->outputNodeSet.node[idx]->nodeId) ||
                 (VHWA_FC_NODE_MSC1 == node->outputNodeSet.node[idx]->nodeId))
             {

@@ -105,14 +105,30 @@ extern uint8_t tidl_OdOutputNames[TIDL_MAX_TF_SSD_LAYERS][TIDL_STRING_SIZE];
 extern sTIDL_runtimesImportState_t runtimes_import_state;
 
 /**
- * Map indicating the necessary inputs for each TIDL layer
+ * Map indicating the optional inputs for an onnx operator
  * We expect shape for all the inputs of an ONNX node, we can relax this constraint if the
- * ONNX node doesn't have shape for an input that TIDL doesn't use
+ * ONNX node doesn't have shape for an optional input
 */
-static const std::unordered_map<std::string, vector<int32_t>> TIDLNodeNecessaryInputs = 
+static const std::unordered_map<std::string, vector<int32_t>> ONNXNodeOptionalInputs =
 {
-  {"Resize",{0,2}}, /* Resize needs input tensor and scales input*/
+  {"Resize", {1, 2, 3}},
+  {"LSTM",   {3, 4, 5, 6, 7}},
+  {"GRU",    {3, 4, 5}},
+  {"RNN",    {3, 4, 5}},
 };
+
+/**
+ * Map indicating the optional outputs for an onnx operator
+ * We expect shape for all the outputs of an ONNX node, we can relax this constraint if the
+ * ONNX node doesn't have shape for an optional output
+ */
+static const std::unordered_map<std::string, vector<int32_t>> ONNXNodeOptionalOutputs =
+{
+  {"LSTM", {0, 1, 2}},
+  {"GRU",  {0, 1}},
+  {"RNN",  {0, 1}},
+};
+
 /*
   Set of operators which can be individally supported,
   maybe unconditionally or with some conditions imposed
@@ -203,6 +219,32 @@ static const std::unordered_set<std::string> individualSupportedOnnxOps (
     "ReduceSum",
     "Expand",
     "Swish",
+    "Tile",
+    "And",
+    "Or",
+    "Xor",
+    "Equal",
+    "Greater",
+    "GreaterOrEqual",
+    "Less",
+    "LessOrEqual",
+    "Not",
+    "IsInf",
+    "IsNaN",
+    "Where",
+    "RMSNormalization",
+    "Softplus",
+    "Softsign",
+    "Ceil",
+    "Celu",
+    "Selu",
+    "Round",
+    "Sign",
+    "Mod",
+    "GroupNormalization",
+    "LSTM",
+    "GRU",
+    "RNN"
   }
 );
 
@@ -234,6 +276,64 @@ bool TIDL_checkIsSubgraphOd(GraphProto& onnxGraph)
     }
   }
   return false;
+}
+
+/**
+ * Identifies isolated no-op nodes in an ONNX graph.
+ * A node is considered isolated if:
+ * 1. It's a recognized no-op operation (e.g., Identity, Cast with no effect, etc.)
+ * 2. All its input connections come from outside the current subgraph
+ * 3. All its output connections go to outside the current subgraph
+ *
+ * Isolated no-op nodes are typically safe to remove during graph optimization as they
+ * don't affect the computation but add unnecessary overhead.
+ *
+ * @param onnxGraph Reference to the ONNX graph protobuf
+ * @param nodes List of node indices to analyze (representing a subgraph)
+ * @param inputAdjacencyList Input adjacency list for all nodes (maps node to its inputs)
+ * @param outputAdjacencyList Output adjacency list for all nodes (maps node to its outputs)
+ * @return Vector of node indices that are isolated no-ops in the subgraph
+ 
+ */
+
+std::vector<int> getIsolatedNoOpNodes(GraphProto& onnxGraph,std::vector<int32_t> nodes,std::vector<std::vector<int>> inputAdjacencyList,std::vector<std::vector<int>> outputAdjacencyList)
+{
+  std::vector<int> result;
+  std::unordered_set<int32_t> nodeSet(nodes.begin(), nodes.end()); // O(1) lookup
+  
+  for (auto i : nodes)
+  {
+      bool isInputFromSameSubgraph = false;
+      bool isOutputFromSameSubgraph = false;
+      
+      if (onnxNoOps.find(onnxGraph.node(i).op_type()) != onnxNoOps.end())
+      {
+          std::vector<int> inputs = inputAdjacencyList[i];
+          std::vector<int> outputs = outputAdjacencyList[i];
+          for (auto input : inputs)
+          {
+              if (nodeSet.find(input) != nodeSet.end())
+              {
+                  isInputFromSameSubgraph = true;
+                  break;
+              }
+          }
+          for (auto output : outputs)
+          {
+            if (nodeSet.find(output) != nodeSet.end())
+            {
+              isOutputFromSameSubgraph = true;
+            }
+          }
+          
+          if ((isInputFromSameSubgraph || isOutputFromSameSubgraph) == false)
+          {
+              result.push_back(i);
+          }
+      }
+  }
+  
+  return result;
 }
 
 /** This function checks if current subgraph only no ops */
@@ -289,7 +389,7 @@ static int32_t TIDL_onnxRtIndividualOpSupport(GraphProto&   onnxGraph, int32_t n
 static int32_t TIDL_onnxRtMapNode(GraphProto&   onnxGraph, int32_t nodeIdx, sTIDL_LayerPC_t &layer)
 {
   int32_t status = 0;
-
+  bool isModelShapeInfered = true;
   /* Populating layer name here, it will be used in allowlisting check */
   if(onnxGraph.node(nodeIdx).name() != "")
   {
@@ -301,7 +401,7 @@ static int32_t TIDL_onnxRtMapNode(GraphProto&   onnxGraph, int32_t nodeIdx, sTID
   }
 
   /*** TODO : Add layer mapping using table as in tfliteImport ***/
-  layer = TidlParseOnnx(onnxGraph, nodeIdx, layer).layer;
+  layer = TidlParseOnnx(onnxGraph, nodeIdx, layer, isModelShapeInfered).layer;
   status = tidlCheckAllowlistingConstraints(layer); 
   return status;
 }
@@ -318,26 +418,51 @@ int32_t TIDL_checkLayerInputDimConstraints(GraphProto& onnGraph, int32_t layerId
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
 
-int32_t TIDL_checkifTIDLNodeNeedsThisInput (std::string node, int32_t inputIdx)
+int32_t TIDL_checkRequiredInput (std::string node, int32_t inputIdx)
 {
   /* if some specific inputs are defined for this node then check for inputIdx in that list */
-  if (TIDLNodeNecessaryInputs.find(node) != TIDLNodeNecessaryInputs.end())
+  if (ONNXNodeOptionalInputs.find(node) != ONNXNodeOptionalInputs.end())
   {
-    vector<int32_t> inputList = TIDLNodeNecessaryInputs.at(node);
+    vector<int32_t> inputList = ONNXNodeOptionalInputs.at(node);
 
     if (std::find(inputList.begin(), inputList.end(), inputIdx) != inputList.end())
     {
       /**
-       * Found a necessary input for this node
-      */
-      return 1;
+       * inputIdx is optional input
+       */
+      return 0;
     }
     else
     {
-      return 0;
+      return 1;
     }
   }
+
   /* if not defined then all inputs are necessary */
+  return 1;
+}
+
+int32_t TIDL_checkRequiredOutput (std::string node, int32_t outputIdx)
+{
+  /* if some specific outputs are defined for this node then check for outputIdx in that list */
+  if (ONNXNodeOptionalOutputs.find(node) != ONNXNodeOptionalOutputs.end())
+  {
+    vector<int32_t> outputList = ONNXNodeOptionalOutputs.at(node);
+
+    if (std::find(outputList.begin(), outputList.end(), outputIdx) != outputList.end())
+    {
+      /**
+       * outputIdx is optional ouput
+       */
+      return 0;
+    }
+    else
+    {
+      return 1;
+    }
+  }
+
+  /* if not defined then all outputs are necessary */
   return 1;
 }
 
@@ -367,8 +492,8 @@ int32_t TIDL_checkOnnxTensorIsScalar (GraphProto& onnxGraph, int32_t nodeId)
   return isScalar;
 }
 
-/* For a layer, TIDL does not support if input has more no shape information of input */
-int32_t TIDL_checkLayerInputDimExist(GraphProto& onnGraph, int32_t layerIdx)
+/* For a layer, TIDL does not support if node does not have shape information of input/output */
+int32_t TIDL_checkLayerInputOutputDimsExist(GraphProto& onnGraph, int32_t layerIdx)
 {
   sTIDL_LayerPC_t tidlLayer;
   TIDL_onnxSaveAllowlistingMetaData(onnGraph, layerIdx, tidlLayer);
@@ -393,7 +518,7 @@ int32_t TIDL_checkLayerInputDimExist(GraphProto& onnGraph, int32_t layerIdx)
     if(shapeFound == 0)
     {
       /* shape not found, check if this input is necessary for processing */
-      if(TIDL_checkifTIDLNodeNeedsThisInput (onnGraph.node(layerIdx).op_type(), md.varTensorIndices[i]) == 1)
+      if(TIDL_checkRequiredInput (onnGraph.node(layerIdx).op_type(), md.varTensorIndices[i]) == 1)
       {
         break;
       }
@@ -424,7 +549,16 @@ int32_t TIDL_checkLayerInputDimExist(GraphProto& onnGraph, int32_t layerIdx)
       }
       if(shapeFound == 0)
       {
-        break;
+        /* shape not found, check if this output is necessary for processing */
+        if(TIDL_checkRequiredOutput(onnGraph.node(layerIdx).op_type(), i) == 1)
+        {
+          break;
+        }
+        else
+        {
+          /* not necessary - ignore this output */
+          shapeFound = 1;
+        }
       }
     }
   }
@@ -583,9 +717,9 @@ int32_t TIDL_onnxAllowlistNode(GraphProto&   onnxGraph, int32_t i, TIDL_osrtOpti
     return 0;
   }
 
-  if(TIDL_checkLayerInputDimExist(onnxGraph, i) == -1) //if layer input is non-existent, not supported
+  if(TIDL_checkLayerInputOutputDimsExist(onnxGraph, i) == -1) //if layer input is non-existent, not supported
   {
-    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Layer %d - op type %s, Unknown input dimension, not supported by TIDL", i, onnxGraph.node(i).op_type().c_str());
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Layer %d - op type %s, Unknown input/output dimension, not supported by TIDL", i, onnxGraph.node(i).op_type().c_str());
     if (osrtDebugPrintLevel)
     {
       gDiags.reportLastModeDiag();
@@ -952,6 +1086,7 @@ int32_t TIDL_onnxRtImportInit(GraphProto& onnxGraph, onnxRtParams_t *onnxRtParam
 int32_t TIDL_onnxRtImportAndLinkNode(GraphProto&   onnxGraph, int32_t nodeIdx, int32_t debugLevel)
 {
   int32_t status = 0;
+  bool isModelShapeInfered = true;
   // Get new layerIndex, dataIndex
   int32_t layerIndex = runtimes_import_state.layerIndex++;
   sTIDL_LayerPC_t& layer = orgTIDLNetStructure.TIDLPCLayers[layerIndex];
@@ -974,7 +1109,7 @@ int32_t TIDL_onnxRtImportAndLinkNode(GraphProto&   onnxGraph, int32_t nodeIdx, i
   }
 
   /* Parse the node */
-  layer = TidlParseOnnx(onnxGraph, nodeIdx, layer).layer;
+  layer = TidlParseOnnx(onnxGraph, nodeIdx, layer, isModelShapeInfered).layer;
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_onnxLayerFillTensorNames(&orgTIDLNetStructure, nodeIdx, layerIndex, onnxGraph), "");
   tidl_onnxLayerUpdateConsumerCount(&orgTIDLNetStructure, nodeIdx, layerIndex, onnxGraph);
   tidl_linkInputTensors(&orgTIDLNetStructure, layerIndex);

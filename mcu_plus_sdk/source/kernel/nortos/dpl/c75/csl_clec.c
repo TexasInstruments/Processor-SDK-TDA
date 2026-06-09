@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2017-2021 Texas Instruments Incorporated.
+ *  Copyright (C) 2017-2026 Texas Instruments Incorporated.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -90,11 +90,11 @@ int32_t CSL_clecConfigEventLevel(CSL_CLEC_EVTRegs *pRegs,
         regVal = CSL_REG32_RD(&pRegs->CFG[evtNum].MRR);
         if(is_level==0)
         {
-            regVal &= ~(1<<24);
+            regVal &= ~(1U<<24U);
         }
         else
         {
-            regVal |= (1<<24);
+            regVal |= (1U<<24U);
         }
         CSL_REG32_WR(&pRegs->CFG[evtNum].MRR, regVal);
     }
@@ -146,12 +146,12 @@ int32_t CSL_clecClearEvent(CSL_CLEC_EVTRegs *pRegs, uint32_t evtNum)
 
 uint32_t CSL_clecGetC7xClusterId(void)
 {
-    uint8_t clusterNum;
+    uint32_t clusterNum;
     uint64_t dnum;
     /* Get the bits from bit 7 to bit 15, which represents the core pac number */
     dnum = __DNUM;
 
-    clusterNum = CSL_REG64_FEXT(&dnum, C75_CPU_DNUM_CLUSTER);
+    clusterNum = (uint32_t) CSL_REG64_FEXT(&dnum, C75_CPU_DNUM_CLUSTER);
 
     return clusterNum;
 }

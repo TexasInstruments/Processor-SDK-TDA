@@ -67,6 +67,10 @@
 #include "tidl_rt_profile.h"
 #include "tidl_rt_ovx_debug_utils.h" //Added this header file to include TIDLRT_LogMetaData prototype
 
+#if defined (SOC_TDA54)
+  #define TDA5_C7X_FREQ_MHZ      (1500U)
+#endif
+
 static sTIDLProfilePrintInfo_t gCyclesProfilePrintInfo[] =
 {
   {"Layer"                      ,  -1},
@@ -79,7 +83,8 @@ static sTIDLProfilePrintInfo_t gCyclesProfilePrintInfo[] =
   {"RestoreCycles"              ,  TIDL_PROFILE_RESTORE},
   {"Multic7xContextCopyCycles"  ,  TIDL_PROFILE_CONTEXT_CROSSCORE_COPY},
   {"DDRBWReadInBytes"           ,  TIDL_PROFILE_DDR_BW_READ},
-  {"DDRBWWriteInBytes"          ,  TIDL_PROFILE_DDR_BW_WRITE}
+  {"DDRBWWriteInBytes"          ,  TIDL_PROFILE_DDR_BW_WRITE},
+  {"ShapeInferCycles"           ,  TIDL_PROFILE_SHAPE_INFER}
 };
 
 uint64_t TIDLRT_ReadProfileData(const TIDL_LayerMetaData *pMetaData, int32_t profileIdx, int32_t layerNum);
@@ -110,6 +115,10 @@ void TIDLRT_LogMetaData(const TIDL_outArgs *outArgsPtr, char* baseName)
   int32_t numProfilePoints, i, j;
   uint64_t profileVal;
   uint64_t sumOfLayerCycles = 0;
+#if defined (SOC_TDA54) 
+  double ddrBandwidthRead = 0;
+  double ddrBandwidthWrite = 0;
+#endif
 
   FILE *fp = NULL;
   /*Add error handling:*/
@@ -177,11 +186,30 @@ void TIDLRT_LogMetaData(const TIDL_outArgs *outArgsPtr, char* baseName)
     sumOfLayerCycles += 
     TIDLRT_ReadProfileData(outArgsPtr->metaDataLayer, 
         TIDL_PROFILE_LAYER, i) ;
+  #if defined (SOC_TDA54)      
+    ddrBandwidthRead  += outArgsPtr->metaDataLayer[i].ddrBandwidthRead;
+    ddrBandwidthWrite += outArgsPtr->metaDataLayer[i].ddrBandwidthWrite;
+  #endif
   }
+
   printf(" Sum of Layer Cycles %lu \n", sumOfLayerCycles);
+
+#if defined (SOC_TDA54)
+  printf("\n# NETWORK_EXECUTION_TIME = %8.2f (in ms, c7x @1.5GHz)\n", (sumOfLayerCycles/(TDA5_C7X_FREQ_MHZ * 1000.0)));
+  printf("DDR BW (in Mega Bytes/frame) : Read %lf \n", ddrBandwidthRead);
+  printf("DDR BW (in Mega Bytes/frame) : Write %lf \n", ddrBandwidthWrite);
+  printf("DDR BW (in Mega Bytes/frame) : Total %lf \n", ddrBandwidthRead + ddrBandwidthWrite);
+#endif
+
   if (fp != NULL)
   {
     (void)fprintf(fp, " Sum of Layer Cycles %lu \n", sumOfLayerCycles);
+#if defined (SOC_TDA54)
+    (void)fprintf(fp, "\n# NETWORK_EXECUTION_TIME = %8.2f (in ms, c7x @1.5GHz)", (sumOfLayerCycles/(TDA5_C7X_FREQ_MHZ * 1000.0)));
+    (void)fprintf(fp, "DDR BW (in Mega Bytes/frame) : Read %lf \n", ddrBandwidthRead);
+    (void)fprintf(fp, "DDR BW (in Mega Bytes/frame) : Write %lf \n", ddrBandwidthWrite);
+    (void)fprintf(fp, "DDR BW (in Mega Bytes/frame) : Total %lf \n", ddrBandwidthRead + ddrBandwidthWrite);
+#endif
     (void)fclose(fp);
   }
 

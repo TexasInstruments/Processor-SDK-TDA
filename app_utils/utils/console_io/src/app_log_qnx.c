@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -67,7 +67,7 @@
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <fcntl.h>
-#include <sciclient/sciclient.h>
+
 #if _POSIX_C_SOURCE >= 199309L
 #include <time.h>   /* for nanosleep */
 int nanosleep(const struct timespec *req, struct timespec *rem);

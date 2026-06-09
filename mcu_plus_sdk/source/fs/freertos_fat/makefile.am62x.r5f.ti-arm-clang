@@ -45,6 +45,7 @@ INCLUDES_common := \
 
 DEFINES_common := \
     -DSOC_AM62X \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mcpu=cortex-r5 \
@@ -60,6 +61,14 @@ CFLAGS_common := \
     -Wno-uninitialized \
     -Wno-unused-but-set-variable \
 
+CFLAGS_debug := \
+    -D_DEBUG_=1 \
+    -Oz \
+
+CFLAGS_release := \
+    -Os \
+    -Oz \
+
 CFLAGS_cpp_common := \
     -Wno-c99-designator \
     -Wno-extern-c-compat \
@@ -71,12 +80,6 @@ CFLAGS_cpp_common := \
     -Wno-reserved-user-defined-literal \
     -Wno-unused-const-variable \
     -x c++ \
-
-CFLAGS_debug := \
-    -D_DEBUG_=1 \
-
-CFLAGS_release := \
-    -Os \
 
 ARFLAGS_common := \
     rc \

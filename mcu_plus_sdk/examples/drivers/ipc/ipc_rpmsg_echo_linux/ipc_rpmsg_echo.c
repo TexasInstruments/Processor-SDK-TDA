@@ -1,0 +1,755 @@
+/*
+ *  Copyright (C) 2021-2024 Texas Instruments Incorporated
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *    Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ *    Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the
+ *    distribution.
+ *
+ *    Neither the name of Texas Instruments Incorporated nor the names of
+ *    its contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+#include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
+#include <kernel/dpl/ClockP.h>
+#include <kernel/dpl/DebugP.h>
+#include <kernel/dpl/SemaphoreP.h>
+#include <kernel/dpl/TaskP.h>
+#include <drivers/ipc_notify.h>
+#include <drivers/ipc_rpmsg.h>
+#include <drivers/soc.h>
+#include "ti_drivers_open_close.h"
+#include "ti_drivers_config.h"
+#include "ti_board_open_close.h"
+#include "../ipc_fw_version.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#if defined (ENABLE_DM_TRACE)
+#include <drivers/device_manager/sciclient_direct/sciclient_trace_internal.h>
+#endif
+
+#if defined (ENABLE_DM_TRACE)
+/*
+ * Low priority for DM trace task - must be least than all the tasks to print trace logs.
+ * This is perferred because whenever DM receives a service request
+ * that request should be excuted first.
+ */
+#define IPC_SETUP_DM_TRACE_TASK_PRI      (1)
+#define TRACETASK_SIZE (16384U/sizeof(configSTACK_DEPTH_TYPE))
+#endif
+
+#if defined (ENABLE_DM_TRACE)
+/* Prints the logs stored in tracelog_dm buffer when DM is waiting for message request */
+static void Ipc_dmTrace(void* a0);
+#endif
+
+#if defined (ENABLE_DM_TRACE)
+extern char tracelog_dm[];
+extern uint32_t gDMTraceBufIndex;
+extern uint32_t gDMTraceBufCount;
+StackType_t gTrace_TaskStack[TRACETASK_SIZE] __attribute__((aligned(32)));
+StaticTask_t gTrace_TaskObj;
+TaskHandle_t gTrace_Task;
+#endif
+
+/* This example shows message exchange bewteen Linux and RTOS/NORTOS cores.
+ * This example also does message exchange between the RTOS/NORTOS cores themselves
+ *
+ * The Linux core initiates IPC with other core's by sending it a message.
+ * The other cores echo the same message to the Linux core.
+ *
+ * At the same time all RTOS/NORTOS cores, also send messages to each others
+ * and reply back to each other. i.e all CPUs send and recevive messages from each other
+ *
+ * This example can very well have been NORTOS based, however for convinience
+ * of creating two tasks to talk to two clients on linux side, we use FreeRTOS
+ * for the same.
+ */
+
+/*
+ * Remote core service end point
+ *
+ * pick any unique value on that core between 0..RPMESSAGE_MAX_LOCAL_ENDPT-1
+ * the value need not be unique across cores
+ *
+ * The service names MUST match what linux is expecting
+ */
+/* This is used to run the echo test with linux kernel */
+#define IPC_RPMESSAGE_SERVICE_PING        "rpmsg-client-sample"
+#define IPC_RPMESSAGE_ENDPT_PING          (13U)
+
+/* This is used to run the echo test with user space kernel */
+#define IPC_RPMESSAGE_SERVICE_CHRDEV      "rpmsg_chrdev"
+#define IPC_RPMESSAGE_ENDPT_CHRDEV_PING   (14U)
+
+/* Use by this to receive ACK messages that it sends to other RTOS cores */
+#define IPC_RPMESSAGE_RNDPT_ACK_REPLY     (11U)
+
+/* Maximum size that message can have in this example
+ * RPMsg maximum size is 512 bytes in linux including the header of 16 bytes.
+ * Message payload size without the header is 512 - 16 = 496
+ */
+#define IPC_RPMESSAGE_MAX_MSG_SIZE        (496u)
+
+/*
+ * Number of RP Message ping "servers" we will start,
+ * - one for ping messages for linux kernel "sample ping" client
+ * - and another for ping messages from linux "user space" client using "rpmsg char"
+ */
+#define IPC_RPMESSAGE_NUM_RECV_TASKS         (2u)
+
+/* RPMessage object used to recvice messages */
+RPMessage_Object gIpcRecvMsgObject[IPC_RPMESSAGE_NUM_RECV_TASKS];
+
+/* RPMessage object used to send messages to other non-Linux remote cores */
+RPMessage_Object gIpcAckReplyMsgObject;
+
+/* Task priority, stack, stack size and task objects, these MUST be global's */
+#define IPC_RPMESSAGE_TASK_PRI         (8U)
+#define LPM_MCU_SUSPEND_TASK_PRI       (8U)
+
+#if defined DYNAMIC_ANALYSIS
+#define DYNAMIC_ANALYSIS_MSG_COUNT 10
+#endif
+
+#if defined (SOC_AM62AX) || defined (SOC_AM62DX) || defined (SOC_J722S)
+#define IPC_RPMESSAGE_TASK_STACK_SIZE  (64*1024U)
+#define LPM_MCU_SUSPEND_TASK_STACK_SIZE   (64*1024U)
+#else
+#define IPC_RPMESSAGE_TASK_STACK_SIZE  (8*1024U)
+#define LPM_MCU_SUSPEND_TASK_STACK_SIZE   (1024U)
+#endif
+
+#if defined(BUILD_C7X)
+#define STACK_ALIGNMENT     (0x2000U)
+#else
+#define STACK_ALIGNMENT     (32)
+#endif
+uint8_t gIpcTaskStack[IPC_RPMESSAGE_NUM_RECV_TASKS][IPC_RPMESSAGE_TASK_STACK_SIZE] __attribute__((aligned(STACK_ALIGNMENT)));
+TaskP_Object gIpcTask[IPC_RPMESSAGE_NUM_RECV_TASKS];
+
+uint8_t gLpmSuspendTaskStack[LPM_MCU_SUSPEND_TASK_STACK_SIZE] __attribute__((aligned(STACK_ALIGNMENT)));
+TaskP_Object gLpmSuspendTask;
+
+/* number of iterations of message exchange to do */
+uint32_t gMsgEchoCount = 100000u;
+/* non-Linux cores that exchange messages among each other */
+#if defined (SOC_AM64X)
+uint32_t gRemoteCoreId[] = {
+    CSL_CORE_ID_R5FSS0_0,
+    CSL_CORE_ID_R5FSS0_1,
+    CSL_CORE_ID_R5FSS1_0,
+    CSL_CORE_ID_R5FSS1_1,
+    CSL_CORE_ID_M4FSS0_0,
+    CSL_CORE_ID_MAX /* this value indicates the end of the array */
+};
+static uint8_t gIpcInitiatorCoreID = CSL_CORE_ID_R5FSS0_0;
+#endif
+
+#if defined (SOC_AM62X)
+uint32_t gRemoteCoreId[] = {
+    CSL_CORE_ID_M4FSS0_0,
+    CSL_CORE_ID_R5FSS0_0,
+    CSL_CORE_ID_MAX /* this value indicates the end of the array */
+};
+uint8_t gMcuCoreID = CSL_CORE_ID_M4FSS0_0;
+static uint8_t gIpcInitiatorCoreID = CSL_CORE_ID_R5FSS0_0;
+#endif
+
+#if defined (SOC_AM62AX)
+uint32_t gRemoteCoreId[] = {
+    CSL_CORE_ID_MCU_R5FSS0_0,
+    CSL_CORE_ID_R5FSS0_0,
+    CSL_CORE_ID_C75SS0_0,
+    CSL_CORE_ID_MAX /* this value indicates the end of the array */
+};
+uint8_t gMcuCoreID = CSL_CORE_ID_MCU_R5FSS0_0;
+static uint8_t gIpcInitiatorCoreID = CSL_CORE_ID_R5FSS0_0;
+#endif
+
+#if defined (SOC_AM62DX)
+uint32_t gRemoteCoreId[] = {
+    CSL_CORE_ID_MCU_R5FSS0_0,
+    CSL_CORE_ID_R5FSS0_0,
+    CSL_CORE_ID_C75SS0_0,
+    CSL_CORE_ID_MAX /* this value indicates the end of the array */
+};
+uint8_t gMcuCoreID = CSL_CORE_ID_MCU_R5FSS0_0;
+static uint8_t gIpcInitiatorCoreID = CSL_CORE_ID_R5FSS0_0;
+#endif
+
+#if defined (SOC_AM62PX)
+uint32_t gRemoteCoreId[] = {
+    CSL_CORE_ID_MCU_R5FSS0_0,
+    CSL_CORE_ID_WKUP_R5FSS0_0,
+    CSL_CORE_ID_MAX /* this value indicates the end of the array */
+};
+uint8_t gMcuCoreID = CSL_CORE_ID_MCU_R5FSS0_0;
+static uint8_t gIpcInitiatorCoreID = CSL_CORE_ID_WKUP_R5FSS0_0;
+#endif
+
+#if defined(SOC_J722S)
+uint32_t gRemoteCoreId[] = {
+    CSL_CORE_ID_MCU_R5FSS0_0,
+    CSL_CORE_ID_WKUP_R5FSS0_0,
+    CSL_CORE_ID_MAIN_R5FSS0_0,
+    CSL_CORE_ID_C75SS0_0,
+    CSL_CORE_ID_C75SS1_0,
+    CSL_CORE_ID_MAX /* this value indicates the end of the array */
+};
+uint8_t gMcuCoreID = CSL_CORE_ID_MCU_R5FSS0_0;
+static uint8_t gIpcInitiatorCoreID = CSL_CORE_ID_WKUP_R5FSS0_0;
+#endif
+volatile uint8_t gbShutdown = 0u;
+volatile uint8_t gbShutdownRemotecoreID = 0u;
+volatile uint8_t gIpcAckReplyMsgObjectPending = 0u;
+volatile uint8_t gbSuspended = 0u;
+volatile uint8_t gbSuspendRemotecoreID = 0u;
+volatile uint32_t gNumBytesRead = 0;
+volatile uint8_t gRecvTaskExitCounter = 0;
+
+SemaphoreP_Object gLpmResumeSem;
+SemaphoreP_Object gLpmSuspendSem;
+
+/**
+ * \brief Wait For Interrupt - puts CPU into low power state until interrupt
+ *
+ * This inline function executes the ARM WFI instruction to put the CPU core
+ * into a low-power state. The CPU will remain in this state until an interrupt
+ * or exception occurs.
+ */
+static inline void IPCApp_putCPUInWFI(void)
+{
+#if (__ARM_ARCH_PROFILE == 'R') ||  (__ARM_ARCH_PROFILE == 'M')
+    /* For ARM R and M cores*/
+    __asm__ __volatile__ ("wfi"   "\n\t": : : "memory");
+#endif
+#if defined(BUILD_C7X)
+    asm("    IDLE");
+#endif
+}
+
+void ipc_recv_task_main(void *args)
+{
+    int32_t status;
+    char recvMsg[IPC_RPMESSAGE_MAX_MSG_SIZE+1]; /* +1 for NULL char in worst case */
+    uint16_t recvMsgSize, remoteCoreId;
+    uint32_t remoteCoreEndPt;
+#if defined DYNAMIC_ANALYSIS
+    uint32_t cnt = 0;
+#endif
+    RPMessage_Object *pRpmsgObj = (RPMessage_Object *)args;
+
+    DebugP_log("[IPC RPMSG ECHO] Remote Core waiting for messages at end point %d ... !!!\r\n",
+        RPMessage_getLocalEndPt(pRpmsgObj)
+        );
+
+    /* wait for messages forever in a loop */
+#if defined DYNAMIC_ANALYSIS
+    while(cnt < DYNAMIC_ANALYSIS_MSG_COUNT)
+#else
+    while(1)
+#endif
+    {
+        /* set 'recvMsgSize' to size of recv buffer,
+        * after return `recvMsgSize` contains actual size of valid data in recv buffer
+        */
+        #if defined DYNAMIC_ANALYSIS
+        cnt++;
+        #endif
+        recvMsgSize = IPC_RPMESSAGE_MAX_MSG_SIZE;
+        status = RPMessage_recv(pRpmsgObj,
+            recvMsg, &recvMsgSize,
+            &remoteCoreId, &remoteCoreEndPt,
+            SystemP_WAIT_FOREVER);
+
+        if (gbShutdown == 1u)
+        {
+            break;
+        }
+
+        if (gbSuspended == 1u)
+        {
+            continue;
+        }
+
+        DebugP_assert(status==SystemP_SUCCESS);
+
+        /* echo the same message string as reply */
+        #if 0 /* not logging this so that this does not add to the latency of message exchange */
+        recvMsg[recvMsgSize] = 0; /* add a NULL char at the end of message */
+        DebugP_log("%s\r\n", recvMsg);
+        #endif
+
+        /* send ack to sender CPU at the sender end point */
+        status = RPMessage_send(
+            recvMsg, recvMsgSize,
+            remoteCoreId, remoteCoreEndPt,
+            RPMessage_getLocalEndPt(pRpmsgObj),
+            SystemP_WAIT_FOREVER);
+        DebugP_assert(status==SystemP_SUCCESS);
+    }
+
+    gRecvTaskExitCounter++;
+    if (gRecvTaskExitCounter >= IPC_RPMESSAGE_NUM_RECV_TASKS)
+    {
+        /* Follow the sequence for graceful shutdown for the last recv task */
+        DebugP_log("[IPC RPMSG ECHO] Closing all drivers and going to WFI ... !!!\r\n");
+
+        /* Close the drivers */
+        Drivers_close();
+
+        /* deinit system */
+        System_deinit();
+
+        if (gbShutdownRemotecoreID)
+        {
+            /* ACK the shutdown message */
+            IpcNotify_sendMsg(gbShutdownRemotecoreID, IPC_NOTIFY_CLIENT_ID_RP_MBOX, IPC_NOTIFY_RP_MBOX_SHUTDOWN_ACK, 1u);
+        }
+
+        IPCApp_putCPUInWFI();
+    }
+    vTaskDelete(NULL);
+}
+
+void ipc_rpmsg_send_messages()
+{
+    RPMessage_CreateParams createParams;
+    uint32_t msg, i, numRemoteCores;
+    uint64_t curTime;
+    char msgBuf[IPC_RPMESSAGE_MAX_MSG_SIZE];
+    int32_t status;
+    uint16_t remoteCoreId, msgSize;
+    uint32_t remoteCoreEndPt;
+
+    RPMessage_CreateParams_init(&createParams);
+    createParams.localEndPt = IPC_RPMESSAGE_RNDPT_ACK_REPLY;
+    status = RPMessage_construct(&gIpcAckReplyMsgObject, &createParams);
+    DebugP_assert(status==SystemP_SUCCESS);
+
+    numRemoteCores = 0;
+    for(i=0; gRemoteCoreId[i]!=CSL_CORE_ID_MAX; i++)
+    {
+        if(gRemoteCoreId[i] != IpcNotify_getSelfCoreId()) /* dont count self */
+        {
+            numRemoteCores++;
+        }
+    }
+
+    DebugP_log("[IPC RPMSG ECHO] Message exchange started with RTOS cores !!!\r\n");
+
+    curTime = ClockP_getTimeUsec();
+
+    for(msg=0; msg<gMsgEchoCount; msg++)
+    {
+        snprintf(msgBuf, IPC_RPMESSAGE_MAX_MSG_SIZE-1, "%d", msg);
+        msgBuf[IPC_RPMESSAGE_MAX_MSG_SIZE-1] = 0;
+        msgSize = strlen(msgBuf) + 1; /* count the terminating char as well */
+
+        /* send the same messages to all cores */
+        for(i=0; gRemoteCoreId[i]!=CSL_CORE_ID_MAX; i++ )
+        {
+            if(gRemoteCoreId[i] != IpcNotify_getSelfCoreId()) /* dont send message to self */
+            {
+                status = RPMessage_send(
+                    msgBuf, msgSize,
+                    gRemoteCoreId[i], IPC_RPMESSAGE_ENDPT_CHRDEV_PING,
+                    RPMessage_getLocalEndPt(&gIpcAckReplyMsgObject),
+                    SystemP_WAIT_FOREVER);
+                DebugP_assert(status==SystemP_SUCCESS);
+            }
+        }
+        /* wait for response from all cores */
+        for(i=0; gRemoteCoreId[i]!=CSL_CORE_ID_MAX; i++ )
+        {
+            if(gRemoteCoreId[i] != IpcNotify_getSelfCoreId()) /* dont send message to self */
+            {
+                /* set 'msgSize' to size of recv buffer,
+                * after return `msgSize` contains actual size of valid data in recv buffer
+                */
+                msgSize = sizeof(msgBuf);
+
+                gIpcAckReplyMsgObjectPending = 1;
+                status = RPMessage_recv(&gIpcAckReplyMsgObject,
+                    msgBuf, &msgSize,
+                    &remoteCoreId, &remoteCoreEndPt,
+                    SystemP_WAIT_FOREVER);
+                if (gbShutdown == 1u)
+                {
+                    break;
+                }
+                DebugP_assert(status==SystemP_SUCCESS);
+                gIpcAckReplyMsgObjectPending = 0;
+
+            }
+        }
+        if (gbShutdown == 1u)
+        {
+            break;
+        }
+    }
+    gIpcAckReplyMsgObjectPending = 0;
+
+    curTime = ClockP_getTimeUsec() - curTime;
+
+    DebugP_log("[IPC RPMSG ECHO] All echoed messages received by main core from %d remote cores !!!\r\n", numRemoteCores);
+    DebugP_log("[IPC RPMSG ECHO] Messages sent to each core = %d \r\n", gMsgEchoCount);
+    DebugP_log("[IPC RPMSG ECHO] Number of remote cores = %d \r\n", numRemoteCores);
+    DebugP_log("[IPC RPMSG ECHO] Total execution time = %" PRId64 " usecs\r\n", curTime);
+    DebugP_log("[IPC RPMSG ECHO] One way message latency = %" PRId32 " nsec\r\n",
+        (uint32_t)(curTime*1000u/(gMsgEchoCount*numRemoteCores*2)));
+
+    RPMessage_destruct(&gIpcAckReplyMsgObject);
+}
+
+void ipc_rpmsg_create_recv_tasks()
+{
+    int32_t status;
+    RPMessage_CreateParams createParams;
+    TaskP_Params taskParams;
+
+    RPMessage_CreateParams_init(&createParams);
+    createParams.localEndPt = IPC_RPMESSAGE_ENDPT_PING;
+    status = RPMessage_construct(&gIpcRecvMsgObject[0], &createParams);
+    DebugP_assert(status==SystemP_SUCCESS);
+
+    RPMessage_CreateParams_init(&createParams);
+    createParams.localEndPt = IPC_RPMESSAGE_ENDPT_CHRDEV_PING;
+    status = RPMessage_construct(&gIpcRecvMsgObject[1], &createParams);
+    DebugP_assert(status==SystemP_SUCCESS);
+
+    /* We need to "announce" to Linux client else Linux does not know a service exists on this CPU
+     * This is not mandatory to do for RTOS clients
+     */
+    status = RPMessage_announce(CSL_CORE_ID_A53SS0_0, IPC_RPMESSAGE_ENDPT_PING, IPC_RPMESSAGE_SERVICE_PING);
+    DebugP_assert(status==SystemP_SUCCESS);
+
+    status = RPMessage_announce(CSL_CORE_ID_A53SS0_0, IPC_RPMESSAGE_ENDPT_CHRDEV_PING, IPC_RPMESSAGE_SERVICE_CHRDEV);
+    DebugP_assert(status==SystemP_SUCCESS);
+
+    /* Create the tasks which will handle the ping service */
+    TaskP_Params_init(&taskParams);
+    taskParams.name = "RPMESSAGE_PING";
+    taskParams.stackSize = IPC_RPMESSAGE_TASK_STACK_SIZE;
+    taskParams.stack = gIpcTaskStack[0];
+    taskParams.priority = IPC_RPMESSAGE_TASK_PRI;
+    /* we use the same task function for echo but pass the appropiate rpmsg handle to it, to echo messages */
+    taskParams.args = &gIpcRecvMsgObject[0];
+    taskParams.taskMain = ipc_recv_task_main;
+
+    status = TaskP_construct(&gIpcTask[0], &taskParams);
+    DebugP_assert(status == SystemP_SUCCESS);
+
+    TaskP_Params_init(&taskParams);
+    taskParams.name = "RPMESSAGE_CHAR_PING";
+    taskParams.stackSize = IPC_RPMESSAGE_TASK_STACK_SIZE;
+    taskParams.stack = gIpcTaskStack[1];
+    taskParams.priority = IPC_RPMESSAGE_TASK_PRI;
+    /* we use the same task function for echo but pass the appropiate rpmsg handle to it, to echo messages */
+    taskParams.args = &gIpcRecvMsgObject[1];
+    taskParams.taskMain = ipc_recv_task_main;
+
+    status = TaskP_construct(&gIpcTask[1], &taskParams);
+    DebugP_assert(status == SystemP_SUCCESS);
+}
+
+static void trigger_shutdown()
+{
+    gbShutdown = 1u;
+    RPMessage_unblock(&gIpcRecvMsgObject[0]);
+    RPMessage_unblock(&gIpcRecvMsgObject[1]);
+
+    if (gIpcAckReplyMsgObjectPending == 1u)
+        RPMessage_unblock(&gIpcAckReplyMsgObject);
+}
+
+void ipc_rp_mbox_callback(uint16_t remoteCoreId, uint16_t clientId, uint32_t msgValue, void *args)
+{
+    if (clientId == IPC_NOTIFY_CLIENT_ID_RP_MBOX)
+    {
+        if (msgValue == IPC_NOTIFY_RP_MBOX_SHUTDOWN) /* Shutdown request from the remoteproc */
+        {
+            gbShutdownRemotecoreID = remoteCoreId;
+            trigger_shutdown();
+        }
+        else if (msgValue == IPC_NOTIFY_RP_MBOX_SUSPEND_SYSTEM) /* Suspend request received from linux during LPM suspend */
+        {
+            gbSuspendRemotecoreID = remoteCoreId;
+            SemaphoreP_post(&gLpmSuspendSem);
+        }
+        else if (msgValue == IPC_NOTIFY_RP_MBOX_ECHO_REQUEST) /* This message is received after resuming from the MCU only LPM. */
+        {
+            gbSuspended = 0u;
+
+            if (gNumBytesRead != 0u)
+            {
+                /* post this only for MCU UART Wakeup */
+                SemaphoreP_post(&gLpmResumeSem);
+            }
+            DebugP_shmLogWriterResume();
+
+            IpcNotify_sendMsg(remoteCoreId, IPC_NOTIFY_CLIENT_ID_RP_MBOX, IPC_NOTIFY_RP_MBOX_ECHO_REPLY, 1u);
+        }
+    }
+}
+
+#if defined(REMOTE_CORE)
+
+#if defined(ENABLE_MCU_ONLY_LPM)
+static void lpm_mcu_wait_for_uart()
+{
+    UART_Transaction trans;
+    uint8_t uartData;
+    int32_t status;
+
+    UART_Transaction_init(&trans);
+
+    /* Read 1 byte */
+    trans.buf   = &uartData;
+    trans.count = 1U;
+
+    DebugP_memLogWriterPause();
+
+    /*
+     * Flush any stale data in RX FIFO before waiting for keypress.
+     * This ensures only fresh keypresses (after LPM suspend request) trigger wake,
+     * not any old data that was in the FIFO from before the suspend.
+     */
+    {
+        uint8_t staleData;
+        uint32_t baseAddr = UART_getBaseAddr(gUartHandle[CONFIG_UART0]);
+
+        /* Drain all bytes currently in RX FIFO */
+        while (UART_getChar(baseAddr, &staleData) != FALSE)
+        {
+            /* Discard stale byte */
+        }
+    }
+
+    gNumBytesRead = 0u;
+
+    /* Wait for any key to be pressed */
+    status = UART_read(gUartHandle[CONFIG_UART0], &trans);
+    DebugP_assert(status == SystemP_SUCCESS);
+
+    while (gNumBytesRead == 0u && gbSuspended == 1u)
+    {
+        IPCApp_putCPUInWFI();
+    }
+
+    if (gNumBytesRead != 0)
+    {
+        DebugP_log("[IPC RPMSG ECHO] Key pressed. Notifying DM to wakeup main domain\r\n");
+        SOC_triggerMcuLpmWakeup();
+        /* Wait for resuming the main domain */
+        SemaphoreP_pend(&gLpmResumeSem, SystemP_WAIT_FOREVER);
+
+        DebugP_log("[IPC RPMSG ECHO] Main domain resumed due to MCU UART \r\n");
+    }
+    else if (gbSuspended == 0u)
+    {
+        UART_readCancel(gUartHandle[CONFIG_UART0], &trans);
+        DebugP_log("[IPC RPMSG ECHO] Main domain resumed from a different wakeup source \r\n");
+    }
+
+    DebugP_memLogWriterResume();
+}
+
+void uart_echo_read_callback(UART_Handle handle, UART_Transaction *trans)
+{
+    if (UART_TRANSFER_STATUS_SUCCESS == trans->status)
+    {
+        gNumBytesRead = trans->count;
+    }
+}
+#endif
+
+void lpm_mcu_suspend_task(void* args)
+{
+    int32_t status;
+
+    status = SemaphoreP_constructBinary(&gLpmSuspendSem, 0);
+    DebugP_assert(SystemP_SUCCESS == status);
+#if defined(ENABLE_MCU_ONLY_LPM)
+    status = SemaphoreP_constructBinary(&gLpmResumeSem, 0);
+    DebugP_assert(SystemP_SUCCESS == status);
+#endif
+
+    while (1)
+    {
+        uint8_t nextHostState;
+
+        /* Wait for suspend from linux */
+        SemaphoreP_pend(&gLpmSuspendSem, SystemP_WAIT_FOREVER);
+
+#if !defined (SOC_J722S)
+        status = Sciclient_lpmGetNextHostState(SystemP_WAIT_FOREVER, &nextHostState);
+        if (status != SystemP_SUCCESS)
+        {
+            DebugP_log("[IPC RPMSG ECHO] Failed to get next system state. Canceling suspend.\r\n");
+            IpcNotify_sendMsg(gbSuspendRemotecoreID, IPC_NOTIFY_CLIENT_ID_RP_MBOX, IPC_NOTIFY_RP_MBOX_SUSPEND_CANCEL, 1u);
+            continue;
+        }
+#else
+        nextHostState = TISCI_MSG_VALUE_HOST_STATE_OFF;
+#endif
+        DebugP_log("[IPC RPMSG ECHO] Next MCU mode is %d\r\n", nextHostState);
+
+        switch (nextHostState)
+        {
+            case TISCI_MSG_VALUE_HOST_STATE_OFF:
+                IpcNotify_sendMsg(gbSuspendRemotecoreID, IPC_NOTIFY_CLIENT_ID_RP_MBOX, IPC_NOTIFY_RP_MBOX_SUSPEND_ACK, 1u);
+                break;
+#if defined(ENABLE_MCU_ONLY_LPM)
+            case TISCI_MSG_VALUE_HOST_STATE_ON:
+                gbSuspended = 1u;
+
+                /* Print before sending ACK, otherwise IO isolation is enabled while printing */
+                DebugP_log("[IPC RPMSG ECHO] Suspend request to MCU-only mode received \r\n");
+                DebugP_log("[IPC RPMSG ECHO] Press a single key on this terminal to resume the kernel from MCU only mode \r\n");
+
+                IpcNotify_sendMsg(gbSuspendRemotecoreID, IPC_NOTIFY_CLIENT_ID_RP_MBOX, IPC_NOTIFY_RP_MBOX_SUSPEND_AUTO, 1u);
+                lpm_mcu_wait_for_uart();
+                gbSuspended = 0u;
+                break;
+#endif
+            case TISCI_MSG_VALUE_HOST_STATE_INVALID:
+            default:
+                IpcNotify_sendMsg(gbSuspendRemotecoreID, IPC_NOTIFY_CLIENT_ID_RP_MBOX, IPC_NOTIFY_RP_MBOX_SUSPEND_CANCEL, 1u);
+                break;
+        }
+
+        if (gbShutdown == 1u)
+        {
+            break;
+        }
+    }
+    SemaphoreP_destruct(&gLpmSuspendSem);
+#if defined(ENABLE_MCU_ONLY_LPM)
+    SemaphoreP_destruct(&gLpmResumeSem);
+#endif
+    vTaskDelete(NULL);
+}
+
+void lpm_create_suspend_task()
+{
+    int32_t status;
+    TaskP_Params taskParams;
+
+    /* Create the tasks which will handle the ping service */
+    TaskP_Params_init(&taskParams);
+    taskParams.name = "LPM_MCU_SUSPEND";
+    taskParams.stackSize = LPM_MCU_SUSPEND_TASK_STACK_SIZE;
+    taskParams.stack = gLpmSuspendTaskStack;
+    taskParams.priority = LPM_MCU_SUSPEND_TASK_PRI;
+    taskParams.taskMain = lpm_mcu_suspend_task;
+
+    status = TaskP_construct(&gLpmSuspendTask, &taskParams);
+    DebugP_assert(status == SystemP_SUCCESS);
+}
+#endif
+
+
+void ipc_rpmsg_echo_main(void *args)
+{
+    int32_t status;
+
+    DebugP_log("[IPC RPMSG ECHO] Version: %s (%s %s):  \r\n", IPC_FW_VERSION, __DATE__, __TIME__);
+
+    /* This API MUST be called by applications when its ready to talk to Linux */
+    status = RPMessage_waitForLinuxReady(SystemP_WAIT_FOREVER);
+    DebugP_assert(status==SystemP_SUCCESS);
+
+    /* Register a callback for the RP_MBOX messages from the Linux remoteproc driver*/
+    IpcNotify_registerClient(IPC_NOTIFY_CLIENT_ID_RP_MBOX, &ipc_rp_mbox_callback, NULL);
+
+#if defined(REMOTE_CORE)
+    /* Create task to enable graceful lpm suspend support for remotecore   */
+    lpm_create_suspend_task();
+#endif
+
+    /* create message receive tasks, these tasks always run and never exit */
+    ipc_rpmsg_create_recv_tasks();
+
+    /* wait for all non-Linux cores to be ready, this ensure that when we send messages below
+     * they wont be lost due to rpmsg end point not created at remote core
+     */
+    IpcNotify_syncAll(SystemP_WAIT_FOREVER);
+
+    /* Due to below "if" condition only one non-Linux core sends messages to all other non-Linux Cores
+     * This is done mainly to show deterministic latency measurement
+     */
+    if( IpcNotify_getSelfCoreId() == gIpcInitiatorCoreID )
+    {
+        ipc_rpmsg_send_messages();
+    }
+    /* exit from this task, vTaskDelete() is called outside this function, so simply return */
+
+#if defined (ENABLE_DM_TRACE)
+    gTrace_Task = xTaskCreateStatic( Ipc_dmTrace,                  /* Pointer to the function that implements the task. */
+                                   "Ipc_dmTrace",                  /* Text name for the task.  This is to facilitate debugging only. */
+                                   TRACETASK_SIZE,                 /* Stack depth in units of StackType_t typically uint32_t on 32b CPUs */
+                                   NULL,                           /* We are not using the task parameter. */
+                                   IPC_SETUP_DM_TRACE_TASK_PRI,    /* task priority, 0 is lowest priority, configMAX_PRIORITIES-1 is highest */
+                                   gTrace_TaskStack,               /* pointer to stack base */
+                                   &gTrace_TaskObj );
+#endif
+
+    Board_driversClose();
+    /* We dont close drivers since threads are running in background */
+    Drivers_close();
+}
+
+#if defined (ENABLE_DM_TRACE)
+static void Ipc_dmTrace(void* a0)
+{
+    Drivers_open();
+    Board_driversOpen();
+    uint32_t index;
+    uint32_t count = 0;
+    DebugP_log("--- Start of DM trace ----\n");
+
+    /* Loop through tracelog_dm buffer to print the DM trace logs */
+    for (index = 0; index <= DM_TRACE_LOG_BUF_SIZE; index++)
+    {
+        /* Here we check if we have reached the end of the buffer
+         * and reset index to start while incrementing count
+         * so that we can print all the logs without missing */
+        if(DM_TRACE_LOG_BUF_SIZE == index)
+        {
+            index = 0;
+            count++;
+        }
+        /* Wait till gDMTraceBufIndex or gDMTraceBufCount is updated */
+        while(index == gDMTraceBufIndex && count == gDMTraceBufCount)
+        {
+            ClockP_usleep(1);
+        }
+        DebugP_log("%c", tracelog_dm[index]);
+    }
+
+    return;
+}
+#endif

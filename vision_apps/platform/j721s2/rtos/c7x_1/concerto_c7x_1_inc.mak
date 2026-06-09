@@ -56,14 +56,30 @@ TIDL_LIBS += common_C7120
 TIDL_LIBS += mmalib_C7120
 TIDL_LIBS += mmalib_cn_C7120
 TIDL_LIBS += tidl_algo
+ifeq ($(ENABLE_NEW_TIDL_STRUCTURE),yes)
+TIDL_LIBS += tidl_priv
+TIDL_LIBS += tidl_kernels
+TIDL_LIBS += tidl_ref
+else
 TIDL_LIBS += tidl_priv_algo
 TIDL_LIBS += tidl_obj_algo
+endif
 TIDL_LIBS += tidl_custom
 
 SYS_STATIC_LIBS += $(TIDL_LIBS)
 
 ADDITIONAL_STATIC_LIBS += dmautils.ae71
+ADDITIONAL_STATIC_LIBS += libtiadalg_fisheye_transformation.a
+ADDITIONAL_STATIC_LIBS += libtiadalg_image_preprocessing.a
+ADDITIONAL_STATIC_LIBS += libtiadalg_dof_plane_seperation.a
+ADDITIONAL_STATIC_LIBS += libtiadalg_select_top_feature.a
+ADDITIONAL_STATIC_LIBS += libtiadalg_sparse_upsampling.a
+ADDITIONAL_STATIC_LIBS += libtiadalg_visual_localization.a
+ADDITIONAL_STATIC_LIBS += libtiadalg_solve_pnp.a
+ADDITIONAL_STATIC_LIBS += libtiadalg_image_color_blending.a
+ADDITIONAL_STATIC_LIBS += libtiadalg_image_recursive_nms.a
 ADDITIONAL_STATIC_LIBS += libtiadalg_structure_from_motion.a
+
 
 include $($(_MODULE)_SDIR)/../concerto_c7x_inc.mak
 

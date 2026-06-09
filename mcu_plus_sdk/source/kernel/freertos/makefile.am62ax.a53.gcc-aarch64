@@ -41,6 +41,7 @@ FILES_common := \
     DebugP_shmLogReader_freertos.c \
     TaskP_freertos.c \
     EventP_freertos.c \
+    MailboxP_freertos.c \
     event_groups.c \
     tasks.c \
     timers.c \
@@ -92,6 +93,7 @@ INCLUDES_common := \
 
 DEFINES_common := \
     -DSOC_AM62AX \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mcpu=cortex-a53+fp+simd \

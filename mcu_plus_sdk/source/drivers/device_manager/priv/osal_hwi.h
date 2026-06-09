@@ -59,14 +59,14 @@ static inline u32 osal_hwip_disable(void)
 /**
  * \brief Restore interrupts to a previous state held in key.
  *
- * \param key Value returned from hwip_enable or hwip_disable.
+ * \param keyVal Value returned from hwip_enable or hwip_disable.
  *
  * This call is used to restore interrupts to the state previous to a call
  * to hwip_enable or hwip_disable when the returned key value is passed.
  */
-static inline void osal_hwip_restore(u32 key)
+static inline void osal_hwip_restore(u32 keyVal)
 {
-        return HwiP_restore(key);
+        return HwiP_restore(keyVal);
 }
 
 #endif /* OSAL_HWI_H */

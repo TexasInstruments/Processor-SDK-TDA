@@ -64,12 +64,24 @@ extern "C"
 #include <drivers/pinmux/am62ax/pinmux.h>
 #endif
 
+#if defined (SOC_AM62DX)
+#include <drivers/pinmux/am62dx/pinmux.h>
+#endif
+
 #if defined (SOC_AM62PX)
 #include <drivers/pinmux/am62px/pinmux.h>
 #endif
 
 #if defined (SOC_J722S)
 #include <drivers/pinmux/j722s/pinmux.h>
+#endif
+
+#if defined (SOC_AM275X)
+#include <drivers/pinmux/am275x/pinmux.h>
+#endif
+
+#if defined (SOC_AM62LX)
+#include <drivers/pinmux/am62lx/pinmux.h>
 #endif
 
 #ifdef __cplusplus

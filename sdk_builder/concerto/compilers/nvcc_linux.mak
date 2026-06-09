@@ -174,7 +174,7 @@ $(_MODULE)_LIBRARIES:= $(foreach ldir,$($(_MODULE)_LDIRS),-L$(ldir)) \
 					   $(foreach lib,$(SHARED_LIBS),-l$(lib)) \
 					   $(foreach lib,$(SYS_SHARED_LIBS),-l$(lib)) \
 					   $(foreach lib,$(PLATFORM_LIBS),-l$(lib)) \
-					   -lcudart -lcublas -lstdc++ -lm
+					   -lcudart_static -lcublas -lstdc++ -lm -ldl -lpthread -lrt
 
 $(_MODULE)_LIBRARIES_SO:= $(foreach ldir,$($(_MODULE)_LDIRS),-L$(ldir)) \
 					   $(foreach lib,$(STATIC_LIBS),-l$(lib)) \
@@ -183,7 +183,7 @@ $(_MODULE)_LIBRARIES_SO:= $(foreach ldir,$($(_MODULE)_LDIRS),-L$(ldir)) \
 					   $(foreach lib,$(SHARED_LIBS),-l$(lib)) \
 					   $(foreach lib,$(SYS_SHARED_LIBS),-l$(lib)) \
 					   $(foreach lib,$(PLATFORM_LIBS),-l$(lib)) \
-					   -lcudart -lcublas -lstdc++ -lm
+					   -lcudart_static -lcublas -lstdc++ -lm -ldl -lpthread -lrt
 
 $(_MODULE)_AFLAGS   := $($(_MODULE)_INCLUDES)
 ifeq ($(HOST_OS),DARWIN)
@@ -218,7 +218,7 @@ $(_MODULE)_LINK_DSO   := $(LD) -shared $($(_MODULE)_LDFLAGS) -all_load $($(_MODU
 $(_MODULE)_LINK_EXE   := $(LD) -rdynamic $($(_MODULE)_CPLDFLAGS) $($(_MODULE)_OBJS) $($(_MODULE)_LIBRARIES) -o $($(_MODULE)_BIN)
 else
 $(_MODULE)_LINK_DSO   := $(NVCC) -ccbin $(LD) -shared  $($(_MODULE)_OBJS) $($(_MODULE)_LIBRARIES_SO) -lm -o $($(_MODULE)_BIN).$($(_MODULE)_VERSION)
-$(_MODULE)_LINK_EXE   := $(NVCC) -ccbin $(LD) $($(_MODULE)_OBJS) $($(_MODULE)_LIBRARIES_SO) -o $($(_MODULE)_BIN)
+$(_MODULE)_LINK_EXE   := $(NVCC) -ccbin $(LD) $($(_MODULE)_OBJS) $($(_MODULE)_LIBRARIES_SO) -Xlinker --unresolved-symbols=ignore-in-shared-libs -o $($(_MODULE)_BIN)
 endif
 
 ###################################################

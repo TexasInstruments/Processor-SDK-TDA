@@ -1,7 +1,15 @@
 export MCU_PLUS_SDK_PATH?=$(abspath ../../..)
 include $(MCU_PLUS_SDK_PATH)/imports.mak
-include board/$(BOARD)/config.mak
 include $(MCU_PLUS_SDK_PATH)/devconfig/devconfig.mak
+
+ifeq ($(DEVICE),$(filter $(DEVICE), am62x am62ax am62px))
+BOARD?=$(DEVICE)-sk
+endif
+ifeq ($(DEVICE),$(filter $(DEVICE), am62dx am275x))
+BOARD?=$(DEVICE)-evm
+endif
+
+include board/$(BOARD)/config.mak
 
 LD=$(CGT_GCC_AARCH64_PATH)/bin/aarch64-none-elf-ld
 
@@ -53,14 +61,23 @@ ifeq ($(DEVICE_TYPE),HS)
 # Sign the appimage using appimage signing script
 ifeq ($(ENC_ENABLED),no)
 	@echo Boot image signing: Encryption is disabled.
-	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(HSM_APPIMAGE) --authtype 2 --key $(APP_SIGNING_KEY) --output $(HSM_APPIMAGE_HS)
+    #
+    #   Authentication type 0 with load address 0x84000000
+    #
+	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(HSM_APPIMAGE) --authtype 0 --loadaddr 84000000 --key $(APP_SIGNING_KEY) --output $(HSM_APPIMAGE_HS) --keyversion $(VERSION)
 else
 	@echo Boot image signing: Encryption is enabled.
-	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(HSM_APPIMAGE) --authtype 2 --key $(APP_SIGNING_KEY) --enc y --enckey $(APP_ENCRYPTION_KEY) --output $(HSM_APPIMAGE_HS)
+    #
+    #   Authentication type 0 with load address 0x84000000
+    #
+	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(HSM_APPIMAGE) --authtype 0 --loadaddr 84000000 --key $(APP_SIGNING_KEY) --enc y --enckey $(APP_ENCRYPTION_KEY) --output $(HSM_APPIMAGE_HS) --keyversion $(VERSION)
 	$(RM) $(HSM_APPIMAGE)-enc
 endif
 else
-	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(HSM_APPIMAGE) --authtype 2 --key $(APP_SIGNING_KEY) --output $(HSM_APPIMAGE_HS_FS)
+    #
+    #   Authentication type 0 with load address 0x84000000
+    #
+	$(PYTHON) $(APP_IMAGE_SIGN_CMD) --bin $(HSM_APPIMAGE) --authtype 0 --loadaddr 84000000 --key $(APP_SIGNING_KEY) --output $(HSM_APPIMAGE_HS_FS) --keyversion $(VERSION)
 endif
 
 	$(RM) $(BOOTIMAGE_TEMP_OUT_FILE)
@@ -68,7 +85,7 @@ endif
 
 $(HSM_RPRC): $(HSM_ELF)
 	@echo Creating ATF RPRC image
-	$(OUTRPRC_CMD) $(HSM_ELF) $(SW_VERSION) >> $(BOOTIMAGE_TEMP_OUT_FILE)
+	$(OUTRPRC_CMD) $(HSM_ELF) $(SW_VERSION)>> $(BOOTIMAGE_TEMP_OUT_FILE)
 	$(COPY) $(HSM_RPRC_NAME) $(HSM_RPRC) >> $(BOOTIMAGE_TEMP_OUT_FILE)
 	$(RM)	$(HSM_RPRC_NAME)
 

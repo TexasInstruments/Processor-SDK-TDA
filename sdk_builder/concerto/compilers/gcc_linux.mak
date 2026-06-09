@@ -39,15 +39,7 @@ ifeq ($(filter $(TARGET_OS),LINUX CYGWIN DARWIN NO_OS SYSBIOS),)
 $(error TARGET_OS $(TARGET_OS) is not supported by this compiler)
 endif
 
-# Set the default gcc based on the version of Ubuntu
-OS_VERSION := $(shell cat /etc/os-release | grep VERSION_ID= | sed -e "s|VERSION_ID=\"||" | sed -e "s|\"||")
-ifeq ($(OS_VERSION),18.04)
-	CONCERTO_GCC_VERSION?=5
-else ifeq  ($(OS_VERSION),22.04)
-	CONCERTO_GCC_VERSION?=11
-else ifeq  ($(OS_VERSION),24.04)
-	CONCERTO_GCC_VERSION?=13
-endif
+CONCERTO_GCC_VERSION ?= $(shell gcc -dumpversion | cut -d. -f1)
 
 ifneq ($(GCC_LINUX_ROOT),)
 CC = $(GCC_LINUX_ROOT)/bin/gcc-$(CONCERTO_GCC_VERSION)
@@ -198,7 +190,7 @@ endif
 $(_MODULE)_LDFLAGS  += $($(_MODULE)_LOPT)
 $(_MODULE)_CPLDFLAGS := $(foreach ldf,$($(_MODULE)_LDFLAGS),-Wl,$(ldf)) $($(_MODULE)_COPT)
 $(_MODULE)_CFLAGS   := -c $($(_MODULE)_INCLUDES) $($(_MODULE)_DEFINES) $($(_MODULE)_COPT) $(CFLAGS)
-$(_MODULE)_CPPFLAGS := $(CPPFLAGS)
+$(_MODULE)_CPPFLAGS := -c $($(_MODULE)_INCLUDES) $($(_MODULE)_DEFINES) $($(_MODULE)_COPT) $(CFLAGS) $(CPPFLAGS)
 
 ifneq ($(LINUX_SYSROOT),)
 $(_MODULE)_LDFLAGS   += --sysroot=$(LINUX_SYSROOT)
@@ -258,7 +250,7 @@ $(ODIR)/%.o: $(SDIR)/%.c $($(_MODULE)_DEP_HEADERS)
 
 $(ODIR)/%.o: $(SDIR)/%.cpp $($(_MODULE)_DEP_HEADERS)
 	@echo [GCC] Compiling C++ $$(notdir $$<)
-	$(Q)$(CP) $($(_MODULE)_CFLAGS) $($(_MODULE)_CPPFLAGS) $(call $(_MODULE)_GCC_DEPS,$$*) $$< -o $$@ $(LOGGING)
+	$(Q)$(CP) $($(_MODULE)_CPPFLAGS) $(call $(_MODULE)_GCC_DEPS,$$*) $$< -o $$@ $(LOGGING)
 
 $(ODIR)/%.o: $(SDIR)/%.S
 	@echo [GCC] Assembling $$(notdir $$<)
@@ -274,7 +266,7 @@ $(ODIR)/%.o: $(SDIR)/%.c $($(_MODULE)_DEP_HEADERS)
 
 $(ODIR)/%.o: $(SDIR)/%.cpp $($(_MODULE)_DEP_HEADERS)
 	@echo [GCC] Compiling C++ $$(notdir $$<)
-	$(Q)$(CP) $($(_MODULE)_CFLAGS) $($(_MODULE)_CPPFLAGS) -MMD -MF $(ODIR)/$$*.dep -MT '$(ODIR)/$$*.o' $$< -o $$@ $(LOGGING)
+	$(Q)$(CP) $($(_MODULE)_CPPFLAGS) -MMD -MF $(ODIR)/$$*.dep -MT '$(ODIR)/$$*.o' $$< -o $$@ $(LOGGING)
 
 $(ODIR)/%.o: $(SDIR)/%.S
 	@echo [GCC] Assembling $$(notdir $$<)

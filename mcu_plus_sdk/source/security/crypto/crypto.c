@@ -43,7 +43,12 @@
 #include <stdlib.h>
 #include <kernel/dpl/SystemP.h>
 #include <security/crypto.h>
+#if defined(CRYPTO_SA3UL)
+#include <security/crypto/sa3ul/sa3ul.h>
+#else
 #include <security/crypto/sa2ul/sa2ul.h>
+#endif
+
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -93,7 +98,13 @@ void Crypto_deinit(void)
 Crypto_Handle Crypto_open(Crypto_Context *ctx)
 {
     int32_t status = SystemP_SUCCESS;
+
+#if defined(CRYPTO_SA3UL)
+    SA3UL_Params prms;
+#else
     SA2UL_Params prms;
+#endif
+
     Crypto_Handle    handle = NULL;
 
     if((NULL == ctx))
@@ -102,7 +113,12 @@ Crypto_Handle Crypto_open(Crypto_Context *ctx)
     }
     else
     {
+        #if defined(CRYPTO_SA3UL)
+        ctx->drvHandle = SA3UL_open(0,&prms);
+        #else
         ctx->drvHandle = SA2UL_open(0,&prms);
+        #endif
+
 
         if(ctx->drvHandle == NULL)
         {
@@ -122,7 +138,11 @@ int32_t Crypto_close(Crypto_Handle handle)
 
     if(NULL != ctx)
     {
+#if defined(CRYPTO_SA3UL)
+        SA3UL_close(ctx->drvHandle);
+#else
         SA2UL_close(ctx->drvHandle);
+#endif
         memset(ctx, 0, sizeof(Crypto_Context));
     }
     return (0);
@@ -145,6 +165,19 @@ int32_t Crypto_hmacSha(Crypto_Params *params)
     {
         switch(params->authMode)
         {
+#if defined(CRYPTO_SA3UL)
+            case SA3UL_HASH_ALG_SHA1:
+                maxKeyLengthInBytes  = CRYPTO_HMAC_SHA1_KEYLEN_BYTES;
+                break;
+
+            case SA3UL_HASH_ALG_SHA2_256:
+                maxKeyLengthInBytes  = CRYPTO_HMAC_SHA256_KEYLEN_BYTES;
+                break;
+
+            case SA3UL_HASH_ALG_SHA2_512:
+                maxKeyLengthInBytes  = CRYPTO_HMAC_SHA512_KEYLEN_BYTES;
+                break;
+#else
             case SA2UL_HASH_ALG_SHA1:
                 maxKeyLengthInBytes  = CRYPTO_HMAC_SHA1_KEYLEN_BYTES;
                 break;
@@ -156,7 +189,7 @@ int32_t Crypto_hmacSha(Crypto_Params *params)
             case SA2UL_HASH_ALG_SHA2_512:
                 maxKeyLengthInBytes  = CRYPTO_HMAC_SHA512_KEYLEN_BYTES;
                 break;
-
+#endif
             default:
                 status = SystemP_FAILURE;
                 break;

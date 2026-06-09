@@ -395,16 +395,16 @@ static void TIDL_setMultiCoreCoeffOffset(sTIDL_Layer_t *tidlLayer, sTIDL_AlgLaye
     {
       if ((convParams->numGroups == 1) && ((convParams->numInChannels / convParams->numGroups) != 1)) /*Row-Flow non-grouped uses all input channels so we do not accumulate*/
       {
-        numInChannelsSplit = getNumInChforCore(startCoreIdx, i, numCores, convParams->numInChannels, convParams->numGroups, tidlLayer->layerType);
-        numGroupSplit = getDimSplitForCore(startCoreIdx, i, numCores, convParams->numGroups);
+        numInChannelsSplit = getNumInChforCore(GET_RELATIVE_COREIDX(i, startCoreIdx), numCores, convParams->numInChannels, convParams->numGroups, tidlLayer->layerType);
+        numGroupSplit = getDimSplitForCore(GET_RELATIVE_COREIDX(i, startCoreIdx), numCores, convParams->numGroups);
       }
       else
       {
-        numInChannelsSplit += getNumInChforCore(startCoreIdx, i, numCores, convParams->numInChannels, convParams->numGroups, tidlLayer->layerType);
-        numGroupSplit += getDimSplitForCore(startCoreIdx, i, numCores, convParams->numGroups);
+        numInChannelsSplit += getNumInChforCore(GET_RELATIVE_COREIDX(i, startCoreIdx), numCores, convParams->numInChannels, convParams->numGroups, tidlLayer->layerType);
+        numGroupSplit += getDimSplitForCore(GET_RELATIVE_COREIDX(i, startCoreIdx), numCores, convParams->numGroups);
       }
 
-      numOutChannelsSplit += getNumOutChforCore(startCoreIdx, i, numCores, convParams->numOutChannels, convParams->numGroups, tidlLayer->layerType);
+      numOutChannelsSplit += getNumOutChforCore(GET_RELATIVE_COREIDX(i, startCoreIdx), numCores, convParams->numOutChannels, convParams->numGroups, tidlLayer->layerType);
     }
 
     algLayer->layerParams.convParams.coeffMultiCoreExtraOffset = numInChannelsSplit * (numOutChannelsSplit / numGroupSplit) * convParams->kernelH * convParams->kernelW * weightSize;
@@ -864,6 +864,10 @@ int32_t TIDL_alloc(const IALG_Params *params,
                                           NULL,
                                           NULL,
                                           NULL);
+            if (layerId == (int32_t)NOT_VALID)
+            {
+              status = IALG_EFAIL;
+            }
           }
           if (layerId == (int32_t)NOT_VALID)
           {
@@ -893,13 +897,7 @@ int32_t TIDL_alloc(const IALG_Params *params,
           layerSpecificParams.isMixedPrecEnabled = 1U;
 
           (void)memset(memorySize, 0, sizeof(memorySize));
-#ifndef HOST_EMULATION
-          if (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_CONST_GCHELPERHANDLE_NULL)
-          {
-            /* Forcing gcHelperHandle == NULL case */
-            commonParams.gcHelperHandle = NULL;
-          }
-#endif
+
           status = TIDL_layerAllocNew(&layerSpecificParams,
                                       &commonParams,
                                       layerId,
@@ -1355,19 +1353,6 @@ int32_t TIDL_init(IALG_Handle handle,
 
   uint8_t *memory[TIDL_LAYER_MEMORY_MAX] = {0};
   int32_t memorySize[TIDL_LAYER_MEMORY_MAX] = {0};
-#ifdef HOST_EMULATION
-  int32_t inHeightOrig[TIDL_NUM_IN_BUFS] = {0};
-  int32_t inChOrig[TIDL_NUM_IN_BUFS] = {0};
-  int32_t grpOrig[TIDL_NUM_IN_BUFS] = {0};
-  int32_t inChPitchOrig[TIDL_NUM_IN_BUFS] = {0};
-  int32_t inRoiPitchOrig[TIDL_NUM_IN_BUFS] = {0};
-  int32_t inBatchOrig[TIDL_NUM_IN_BUFS] = {0};
-  int32_t outHeightOrig[TIDL_NUM_OUT_BUFS] = {0};
-  int32_t outChOrig[TIDL_NUM_OUT_BUFS] = {0};
-  int32_t outChPitchOrig[TIDL_NUM_OUT_BUFS] = {0};
-  int32_t outRoiPitchOrig[TIDL_NUM_OUT_BUFS] = {0};
-  int32_t outBatchOrig[TIDL_NUM_OUT_BUFS] = {0};
-#endif
   sWorkloadSuperGroup_t *wlSuperGrp = NULL;
 
   status = TIDL_initDebugTraceParams(createParams->traceLogLevel, createParams->traceWriteLevel, createParams->TIDLVprintf, createParams->TIDLWriteBinToFile,
@@ -1844,6 +1829,7 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
     tidlCommonParams.sysMems = &algHandle->sysMems[0];
     tidlCommonParams.sysScratchPtr = &algHandle->sysScratchPtr;
     tidlCommonParams.zeroVector1k = algHandle->zeroVector1k;
+    tidlCommonParams.coreId = relativeCoreId;
     tidlCommonParams.forceNegativeTest = createParams->forceNegativeTest;
 
     commonParams.createParams = createParams;
@@ -2132,16 +2118,26 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
         }
 
         TIDL_setMultiCoreCoeffOffset(&(createParams->net->TIDLLayers[layerId]), algLayer, createParams->coreStartIdx, createParams->coreId, createParams->net->numCores);
-
+        WorkloadRefExec_RefExecParams wlRefParams;
 #ifdef HOST_EMULATION
         /* TODO: Remove once workload migration is completed */
         if (((gcHelperHandle != NULL) && ((((uint32_t)createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY))) ||
             (createParams->net->TIDLLayers[layerId].layerType == TIDL_ConvolutionLayer && (createParams->net->TIDLLayers[layerId].multiCoreMode & TIDL_MULTI_CORE_CHANNEL) == TIDL_MULTI_CORE_CHANNEL))
         {
           sWorkloadUnit_t *pWLUnit = getWLUnitPtr(gcHelperHandle, currAlgLayer);
-          TIDL_privSetTensorDimensions(algHandle->createParams, algHandle->alglayerParams, algLayer, pWLUnit, inHeightOrig, inChOrig, grpOrig, inChPitchOrig, inRoiPitchOrig, inBatchOrig, outHeightOrig, outChOrig, outChPitchOrig, outRoiPitchOrig, outBatchOrig);
+          TIDL_privSetTensorDimensions(algHandle->createParams, algHandle->alglayerParams, algLayer, pWLUnit,
+                                      wlRefParams.origInHeight, wlRefParams.origInCh, &wlRefParams.origGrp, wlRefParams.origInChPitch, wlRefParams.origInRoiPitch, wlRefParams.origInBatch,
+                                      &wlRefParams.origOutHeight, &wlRefParams.origOutCh, &wlRefParams.origOutChPitch, &wlRefParams.origOutRoiPitch, &wlRefParams.origOutBatch);
         }
 #endif
+        if ((gcHelperHandle != NULL) &&
+            (createParams->net->TIDLLayers[layerId].layerType == TIDL_TransposeLayer && (createParams->net->TIDLLayers[layerId].multiCoreMode & TIDL_MULTI_CORE_BATCH) == TIDL_MULTI_CORE_BATCH))
+        {/* Batch dimension in Transpose Layer for multicore batch split will be set here, because the original batch dimension in layer property is coming as total batch of this layer.*/
+          sWorkloadUnit_t *pWLUnit = getWLUnitPtr(gcHelperHandle, currAlgLayer);
+          TIDL_privSetTensorDimensions(algHandle->createParams, algHandle->alglayerParams, algLayer, pWLUnit,
+                                      wlRefParams.origInHeight, wlRefParams.origInCh, &wlRefParams.origGrp, wlRefParams.origInChPitch, wlRefParams.origInRoiPitch, wlRefParams.origInBatch,
+                                      &wlRefParams.origOutHeight, &wlRefParams.origOutCh, &wlRefParams.origOutChPitch, &wlRefParams.origOutRoiPitch, &wlRefParams.origOutBatch);
+        }
         if ((createParams->forceNegativeTest == TIDL_SAFETY_FLAG_DEVICE_UTILS_FORCE_WL_NULL) || (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_CONV2D_DEVICE_FORCE_LAYERSPECIFICPARAMS_WL_NULL))
         {
           layerSpecificParams.workloadUnit = NULL;
@@ -2160,7 +2156,8 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
         if (((gcHelperHandle != NULL) && ((((uint32_t)createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY))) ||
             (createParams->net->TIDLLayers[layerId].layerType == TIDL_ConvolutionLayer && (createParams->net->TIDLLayers[layerId].multiCoreMode & TIDL_MULTI_CORE_CHANNEL) == TIDL_MULTI_CORE_CHANNEL))
         {
-          TIDL_privRestoreTensorDimensions(algHandle->createParams, algLayer, inHeightOrig, inChOrig, grpOrig, inChPitchOrig, inRoiPitchOrig, inBatchOrig, outHeightOrig, outChOrig, outChPitchOrig, outRoiPitchOrig, outBatchOrig);
+          TIDL_privRestoreTensorDimensions(algHandle->createParams, algLayer, wlRefParams.origInHeight, wlRefParams.origInCh, &wlRefParams.origGrp, wlRefParams.origInChPitch, wlRefParams.origInRoiPitch, wlRefParams.origInBatch,
+                                          &wlRefParams.origOutHeight, &wlRefParams.origOutCh, &wlRefParams.origOutChPitch, &wlRefParams.origOutRoiPitch, &wlRefParams.origOutBatch);
         }
 #endif
 
@@ -2230,9 +2227,13 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
           TIDL_LOG_ERROR(TIDL_ERROR_GROUP_COMMON, TIDL_ERROR_COMMON_EXCEED_DATA_MEMTAB_REQUEST);
           status = IALG_EFAIL;
         }
-
+#if defined (SOC_TDA54)
         algLayer->metaData.totalOps = 0;
         algLayer->metaData.actualOps = 0;
+        algLayer->metaData.ddrBandwidthRead = 0;
+        algLayer->metaData.ddrBandwidthWrite = 0;
+#endif
+
         for (int32_t k = 0; k < TIDL_PROFILE_MAX; k++)
         {
           algLayer->metaData.profilePoint[k] = 0;
@@ -2703,7 +2704,8 @@ static sTIDLProfilePrintInfo_t gProfilePrintInfo[] =
         {"%15s,", "%15llu,", "RestoreCycles", &gLayerMetaData.profilePoint[TIDL_PROFILE_RESTORE]},
         {"%15s,", "%15llu,", "Multic7xContextCopyCycles", &gLayerMetaData.profilePoint[TIDL_PROFILE_CONTEXT_CROSSCORE_COPY]},
         {"%15s,", "%15llu,", "DDRBWReadInBytes", &gLayerMetaData.profilePoint[TIDL_PROFILE_DDR_BW_READ]},
-        {"%15s,", "%15llu,", "DDRBWWriteInBytes", &gLayerMetaData.profilePoint[TIDL_PROFILE_DDR_BW_WRITE]}};
+        {"%15s,", "%15llu,", "DDRBWWriteInBytes", &gLayerMetaData.profilePoint[TIDL_PROFILE_DDR_BW_WRITE]},
+        {"%15s,", "%15llu,", "ShapeInferCycles", &gLayerMetaData.profilePoint[TIDL_PROFILE_SHAPE_INFER]}};
 
 void TIDL_printProfileData(
     int32_t numLayers,
@@ -2891,6 +2893,7 @@ int32_t TIDL_process(IVISION_Handle Handle,
   // WorkloadUnitExec_RefParams  wlRefParams;
   uint64_t tStart, tEnd;
   uint64_t tStartNetwork, tEndNetwork;
+  uint64_t tStartShapeInfer, tEndShapeInfer;
   uint64_t read_bytes_end, write_bytes_end;
   int32_t isLayerLevelPreemptionAllowed = 0;
 #if TIDL_DEVICE_MULTICORE
@@ -2999,17 +3002,53 @@ int32_t TIDL_process(IVISION_Handle Handle,
             /* Forcefully making numLayers as -1 to coverage negative case */
             intAlgHandle->createParams->net->numLayers = -1;
           }
-          int32_t layerType = TIDL_getLayerTypeForOutDataID(intAlgHandle->createParams->net, inBufs->bufDesc[i]->bufferId);
-          if (layerType == TIDL_UnsupportedLayer)
+
+          int32_t id = TIDL_getLayerIDForOutDataID(intAlgHandle->createParams->net, inBufs->bufDesc[i]->bufferId);
+          if (id == -1)
           {
             status = IALG_EFAIL;
             break;
           }
-#if defined TIDL_COVERAGE_DEAD_CODE
-          sTIDL_DataParams_t *inDataParams;
-          if (layerType != TIDL_DataLayer)
+
+#if defined TIDL_DYNAMIC_SHAPE
+           /*
+           * If input data layer is dynamic in shape, parse the shape from
+           * tidlInArgs
+           */
+          sTIDL_Layer_t *layer = &intAlgHandle->createParams->net->TIDLLayers[id];
+
+          if (layer->layerType == TIDL_DataLayer && 0U != layer->outData.dynDimMask)
           {
-            inDataParams = TIDL_getDataParams(intAlgHandle->createParams->net, inBufs->bufDesc[i]->bufferId);
+            layer->outData.dimValues[TIDL_DIM_BATCH] = tidlInArgs->inDimValues[i][TIDL_DIM_BATCH];
+            layer->outData.dimValues[TIDL_DIM_DIM1] = tidlInArgs->inDimValues[i][TIDL_DIM_DIM1];
+            layer->outData.dimValues[TIDL_DIM_DIM2] = tidlInArgs->inDimValues[i][TIDL_DIM_DIM2];
+            layer->outData.dimValues[TIDL_DIM_NUMCH] = tidlInArgs->inDimValues[i][TIDL_DIM_NUMCH];
+            layer->outData.dimValues[TIDL_DIM_HEIGHT] = tidlInArgs->inDimValues[i][TIDL_DIM_HEIGHT];
+            layer->outData.dimValues[TIDL_DIM_WIDTH] = tidlInArgs->inDimValues[i][TIDL_DIM_WIDTH];
+
+            /*
+             * TODO: The above logic might not be correct for pitch calculation
+             * since NC might explicitly set different pitch especially for 
+             * channel. This needs to be handled.
+             */
+            layer->outData.pitch[TIDL_LINE_PITCH] = layer->outData.dimValues[TIDL_DIM_WIDTH] + layer->outData.padW;
+            int32_t isPadW = (layer->outData.padW != 0) ? 1 : 0;
+            layer->outData.pitch[TIDL_CHANNEL_PITCH] = (layer->outData.dimValues[TIDL_DIM_HEIGHT] + (2 * layer->outData.padH) + isPadW) * layer->outData.pitch[TIDL_LINE_PITCH];
+            layer->outData.pitch[TIDL_DIM2_PITCH] = (layer->outData.dimValues[TIDL_DIM_NUMCH] * layer->outData.pitch[TIDL_CHANNEL_PITCH]);
+            layer->outData.pitch[TIDL_DIM1_PITCH]= (layer->outData.dimValues[TIDL_DIM_DIM2] * layer->outData.pitch[TIDL_DIM2_PITCH]);
+            layer->outData.pitch[TIDL_ROI_PITCH]= (layer->outData.dimValues[TIDL_DIM_DIM1] * layer->outData.pitch[TIDL_DIM1_PITCH]);
+            
+            /*
+             * TODO: Handle case where data layer is connected to dataconvert
+             * layer with NHWC format.
+             */
+          }
+#endif
+
+#if defined TIDL_COVERAGE_DEAD_CODE
+          if (intAlgHandle->createParams->net->TIDLLayers[id].layerType != TIDL_DataLayer)
+          {
+            sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(intAlgHandle->createParams->net, inBufs->bufDesc[i]->bufferId);
             inDataParams->tensorScale = tidlInArgs->scale[i];
           }
 #endif
@@ -3064,7 +3103,11 @@ int32_t TIDL_process(IVISION_Handle Handle,
               tidlOutArgs->metaDataLayer[layer].profilePoint[numProfile] = 0;
             }
             tidlOutArgs->metaDataLayer[layer].layerExecId = NOT_VALID;
-          }
+  #if defined(SOC_TDA54)
+          tidlOutArgs->metaDataLayer[layer].ddrBandwidthRead = 0;
+          tidlOutArgs->metaDataLayer[layer].ddrBandwidthWrite = 0;
+#endif
+        }
         }
 #if TIDL_DEVICE_MULTICORE
         TIDL_controlSetArgs *args = (TIDL_controlSetArgs *)(&intAlgHandle->controlArgs);
@@ -3206,8 +3249,10 @@ int32_t TIDL_process(IVISION_Handle Handle,
             intAlgHandle->createParams->flowCtrl = TIDL_FLOW_CTRL_REF_ONLY;
           }
 #endif
+          
           int32_t isRestoreHeightsRequired = 0;
-          if (tidlLayer->layerType != TIDL_ConstDataLayer)
+
+          if(tidlLayer->layerType != TIDL_ConstDataLayer)
           {
             /* TIDL_LDRA_TAG_CONSTDATA_PRIOR_CHECK_001 */
             /* Reset DMA resources and scratch memory resources for every iteration */
@@ -3218,65 +3263,97 @@ int32_t TIDL_process(IVISION_Handle Handle,
             int32_t isRefExecFlowEnabled = WorkloadRefExec_enableRefExecFlow(intAlgHandle->createParams->flowCtrl, tidlLayer, algLayer);
             WorkloadRefExec_RefExecParams wlRefParams;
 
-            /* Back up for original numBatches of inLayer of currLayer - will be used to write traces for Data layer */
-            int32_t orgNumBatches[TIDL_NUM_IN_BUFS] = {0};
-            for (int32_t inBufIdx = 0; inBufIdx < tidlLayer->numInBufs; inBufIdx++)
-            {
-              sTIDL_Layer_t *inTidlLayer = &intAlgHandle->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[inBufIdx]];
-              orgNumBatches[inBufIdx] = inTidlLayer->outData.dimValues[TIDL_DIM_BATCH];
-            }
+            /* Handle dynamic shapes */
+            TIDL_getTscTime(&tStartShapeInfer);
 
-            if (isRefExecFlowEnabled == 1)
+#if defined TIDL_DYNAMIC_SHAPE
+            if (0U != tidlLayer->outData.dynDimMask)
             {
-              TIDL_privSetTensorDimensions(intAlgHandle->createParams, intAlgHandle->alglayerParams, algLayer, workloadUnit,
-                                           wlRefParams.origInHeight, wlRefParams.origInCh, &wlRefParams.origGrp, wlRefParams.origInChPitch, wlRefParams.origInRoiPitch, wlRefParams.origInBatch,
-                                           &wlRefParams.origOutHeight, &wlRefParams.origOutCh, &wlRefParams.origOutChPitch, &wlRefParams.origOutRoiPitch, &wlRefParams.origOutBatch);
-              isRestoreHeightsRequired = 1;
+              status = TIDL_resolveLayerOutputShape(inBufs,
+                                                    outBufs,
+                                                    intAlgHandle,
+                                                    algLayer,
+                                                    tidlLayer);
+              tidl_printf(1, "Core %d Shape Inference for Layer # - %4d, outShape = [%d,%d,%d,%d,%d,%d] \n",
+                    relativeCoreId,
+                    layerId,
+                    tidlLayer->outData.dimValues[TIDL_DIM_BATCH],
+                    tidlLayer->outData.dimValues[TIDL_DIM_DIM1],
+                    tidlLayer->outData.dimValues[TIDL_DIM_DIM2],
+                    tidlLayer->outData.dimValues[TIDL_DIM_NUMCH],
+                    tidlLayer->outData.dimValues[TIDL_DIM_HEIGHT],
+                    tidlLayer->outData.dimValues[TIDL_DIM_WIDTH]);
             }
+#endif
 
-            status = TIDL_getLayerInPtrs(inBufs, outBufs, intAlgHandle, algLayer, tidlLayer, inPtrs, layerId,
-                                         orgNumBatches);
+            TIDL_getTscTime(&tEndShapeInfer);
 
-          #ifdef HOST_EMULATION
-          #if LAYER_TO_RUN != NOT_VALID
-          for (int i=0; i < tidlLayer->numInBufs; i++)
-          {
-            FILE *fp = NULL;
-            switch (i)
+            TIDL_updateprofileData(intAlgHandle->alglayerParams[currAlgLayer].metaData.profilePoint, TIDL_PROFILE_SHAPE_INFER, tStartShapeInfer, tEndShapeInfer);
+
+#if defined TIDL_DYNAMIC_SHAPE
+            if (status == IALG_EOK)
+#endif
             {
-              case 0:
-                fp = fopen(LAYER_TO_RUN_INPUT_0, "r");
-                break;
-              case 1:
-                fp = fopen(LAYER_TO_RUN_INPUT_1, "r");
-                break;
-              case 2:
-                fp = fopen(LAYER_TO_RUN_INPUT_2, "r");
-                break;
-              default:
-                break;
-            }
-            if (fp != NULL)
-            {
-              switch (i)
+              /* Back up for original numBatches of inLayer of currLayer - will be used to write traces for Data layer */
+              int32_t orgNumBatches[TIDL_NUM_IN_BUFS] = {0};
+              for (int32_t inBufIdx = 0; inBufIdx < tidlLayer->numInBufs; inBufIdx++)
               {
-                case 0:
-                  fread(inPtrs[i], LAYER_TO_RUN_SIZE_0, 1, fp);
-                  break;
-                case 1:
-                  fread(inPtrs[i], LAYER_TO_RUN_SIZE_1, 1, fp);
-                  break;
-                case 2:
-                  fread(inPtrs[i], LAYER_TO_RUN_SIZE_2, 1, fp);
-                  break;
-                default:
-                  break;
+                sTIDL_Layer_t *inTidlLayer = &intAlgHandle->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[inBufIdx]];
+                orgNumBatches[inBufIdx] = inTidlLayer->outData.dimValues[TIDL_DIM_BATCH];
               }
-              fclose(fp);
-            }
+
+              if (isRefExecFlowEnabled == 1)
+              {
+                TIDL_privSetTensorDimensions(intAlgHandle->createParams, intAlgHandle->alglayerParams, algLayer, workloadUnit,
+                                            wlRefParams.origInHeight, wlRefParams.origInCh, &wlRefParams.origGrp, wlRefParams.origInChPitch, wlRefParams.origInRoiPitch, wlRefParams.origInBatch,
+                                            &wlRefParams.origOutHeight, &wlRefParams.origOutCh, &wlRefParams.origOutChPitch, &wlRefParams.origOutRoiPitch, &wlRefParams.origOutBatch);
+                isRestoreHeightsRequired = 1;
+              }
+
+              status = TIDL_getLayerInPtrs(inBufs, outBufs, intAlgHandle, algLayer, tidlLayer, inPtrs, layerId,
+                                          orgNumBatches);
+
+              #ifdef HOST_EMULATION
+              #if LAYER_TO_RUN != NOT_VALID
+              for (int i=0; i < tidlLayer->numInBufs; i++)
+              {
+                FILE *fp = NULL;
+                switch (i)
+                {
+                  case 0:
+                    fp = fopen(LAYER_TO_RUN_INPUT_0, "r");
+                    break;
+                  case 1:
+                    fp = fopen(LAYER_TO_RUN_INPUT_1, "r");
+                    break;
+                  case 2:
+                    fp = fopen(LAYER_TO_RUN_INPUT_2, "r");
+                    break;
+                  default:
+                    break;
+                }
+                if (fp != NULL)
+                {
+                  switch (i)
+                  {
+                    case 0:
+                      fread(inPtrs[i], LAYER_TO_RUN_SIZE_0, 1, fp);
+                      break;
+                    case 1:
+                      fread(inPtrs[i], LAYER_TO_RUN_SIZE_1, 1, fp);
+                      break;
+                    case 2:
+                      fread(inPtrs[i], LAYER_TO_RUN_SIZE_2, 1, fp);
+                      break;
+                    default:
+                      break;
+                  }
+                  fclose(fp);
+                }
+              }
+              #endif
+              #endif
           }
-          #endif
-          #endif
 
           if(status == IALG_EOK)
           {
@@ -3442,13 +3519,18 @@ int32_t TIDL_process(IVISION_Handle Handle,
                                     read_bytes_end, write_bytes_end);
                                   
           /* Update tidlOutArgs with algLayer metaData*/
-          if (tidlInArgs->enableLayerPerfTraces == 1)
+          if (tidlInArgs->enableLayerPerfTraces == 1 && algLayer->gcHelperHandle != NULL) /*for stats collection run we do not need to populate
+                                                                                         performance data if we are running without network compiler*/
           {
             /* Put this inside while loop since some layers may execute on single core in low latency mode
               Corresponding algLayer will be present only if layer executes on current core */
             tidlOutArgs->metaDataLayer[algLayer->execLayerNum].actualOps = algLayer->metaData.actualOps;
             tidlOutArgs->metaDataLayer[algLayer->execLayerNum].layerExecId = layerId;
             tidlOutArgs->metaDataLayer[algLayer->execLayerNum].totalOps = algLayer->metaData.totalOps;
+#ifdef SOC_TDA54
+          tidlOutArgs->metaDataLayer[algLayer->execLayerNum].ddrBandwidthRead  += workloadUnit->ddrBandwidthRead;
+          tidlOutArgs->metaDataLayer[algLayer->execLayerNum].ddrBandwidthWrite += workloadUnit->ddrBandwidthWrite;
+#endif
 
             /* Set layerExec Id = -1 for Data Layers */
             if (intAlgHandle->createParams->net->TIDLLayers[layerId].layerType == TIDL_ConstDataLayer) /*nned to set for Const Data Layer as WL is created for Const Data Layer*/
@@ -3544,6 +3626,12 @@ int32_t TIDL_process(IVISION_Handle Handle,
         sTIDL_DataParams_t *dataParams;
         dataParams = TIDL_getDataParams(intAlgHandle->createParams->net, outBufs->bufDesc[i]->bufferId);
         tidlOutArgs->scale[i] = dataParams->tensorScale;
+        tidlOutArgs->outDimValues[i][TIDL_DIM_BATCH] = dataParams->dimValues[TIDL_DIM_BATCH];
+        tidlOutArgs->outDimValues[i][TIDL_DIM_DIM1] = dataParams->dimValues[TIDL_DIM_DIM1];
+        tidlOutArgs->outDimValues[i][TIDL_DIM_DIM2] = dataParams->dimValues[TIDL_DIM_DIM2];
+        tidlOutArgs->outDimValues[i][TIDL_DIM_NUMCH] = dataParams->dimValues[TIDL_DIM_NUMCH];
+        tidlOutArgs->outDimValues[i][TIDL_DIM_HEIGHT] = dataParams->dimValues[TIDL_DIM_HEIGHT];
+        tidlOutArgs->outDimValues[i][TIDL_DIM_WIDTH] = dataParams->dimValues[TIDL_DIM_WIDTH];
       }
       tidlOutArgs->numOutBufs = (int32_t)outBufs->numBufs;
       tidlOutArgs->numLayers = intAlgHandle->createParams->net->numLayers;
@@ -3745,6 +3833,27 @@ void TIDL_deactivate(IALG_Handle handle)
 
     TIDL_L1DandL2CacheWbInv();
 
+// Unmap the accPtr scratch area from the GPU.
+#if BUILD_WITH_OPENACC // Scratch buffer has issues to be resolved
+    if (algHandle->algState == (uint8_t)ALG_ACTIVE)
+    {
+      uint8_t *scratch_buffer_base = (uint8_t *)algHandle->memRec[ALG_REF_SCRATCH_BUFF_MEMREC].base;
+      uint32_t scratch_buffer_size = (uint32_t)algHandle->memRec[ALG_REF_SCRATCH_BUFF_MEMREC].size;
+      OPENACC(exit data delete(scratch_buffer_base[:scratch_buffer_size]))
+    }
+#endif // Scratch buffer
+
+// Unmap the coefficients area from GPU.
+// ALG_PERSIST_DDR_NET_MEMREC = 14
+#ifdef BUILD_WITH_OPENACC
+    if (algHandle->algState == (uint8_t)ALG_ACTIVE)
+    {
+      uint8_t *coeff_buffer_base = (uint8_t *)algHandle->memRec[ALG_PERSIST_DDR_NET_MEMREC].base;
+      uint32_t coeff_buffer_size = (uint32_t)algHandle->memRec[ALG_PERSIST_DDR_NET_MEMREC].size;
+      OPENACC(exit data delete(coeff_buffer_base[:coeff_buffer_size]))
+    }
+#endif
+
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
     <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
@@ -3785,27 +3894,6 @@ void TIDL_deactivate(IALG_Handle handle)
         (void)DmaUtilsAutoInc3d_deinit(intAlgHandle->dmaUtilsContext);
       }
     }
-
-// Unmap the accPtr scratch area from the GPU.
-#if BUILD_WITH_OPENACC // Scratch buffer has issues to be resolved
-    if (algHandle->algState == (uint8_t)ALG_ACTIVE)
-    {
-      uint8_t *scratch_buffer_base = (uint8_t *)algHandle->memRec[ALG_REF_SCRATCH_BUFF_MEMREC].base;
-      uint32_t scratch_buffer_size = (uint32_t)algHandle->memRec[ALG_REF_SCRATCH_BUFF_MEMREC].size;
-      OPENACC(exit data delete(scratch_buffer_base[:scratch_buffer_size]))
-    }
-#endif // Scratch buffer
-
-// Unmap the coefficients area from GPU.
-// ALG_PERSIST_DDR_NET_MEMREC = 14
-#ifdef BUILD_WITH_OPENACC
-    if (algHandle->algState == (uint8_t)ALG_ACTIVE)
-    {
-      uint8_t *coeff_buffer_base = (uint8_t *)algHandle->memRec[ALG_PERSIST_DDR_NET_MEMREC].base;
-      uint32_t coeff_buffer_size = (uint32_t)algHandle->memRec[ALG_PERSIST_DDR_NET_MEMREC].size;
-      OPENACC(exit data delete(coeff_buffer_base[:coeff_buffer_size]))
-    }
-#endif
 
     algHandle->algState = (uint8_t)ALG_NOT_ACTIVE;
   }

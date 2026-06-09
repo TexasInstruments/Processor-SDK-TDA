@@ -31,4 +31,5 @@
 #
 
 obj-y += mmr_lock.o
+obj-y += pm_boardcfg_validate.o
 

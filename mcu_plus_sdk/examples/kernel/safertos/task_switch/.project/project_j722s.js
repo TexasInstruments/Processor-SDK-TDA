@@ -94,6 +94,7 @@ const includes_safertos_r5f = {
         "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/r5f/api/PrivWrapperStd",
         "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/r5f/portable/199_TI_CR5",
         "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/r5f/portable/199_TI_CR5/024_Clang",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/r5f/queue_registry",
         "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/r5f/config",
     ],
 };
@@ -105,6 +106,7 @@ const includes_safertos_c75 = {
         "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/c75/api/NoWrapper",
         "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/c75/portable/230_C7x",
         "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/c75/portable/230_C7x/005_TI_CGT",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/c75/queue_registry",
         "${MCU_PLUS_SDK_PATH}/source/kernel/safertos/c75/config",
     ],
 };
@@ -229,7 +231,7 @@ const templates_safertos_wkup_r5f =
 const templates_safertos_c75ss0 =
 [
     {
-        input: ".project/templates/j722s/common/linker_c75ss0_safertos.cmd.xdt",
+        input: ".project/templates/j722s/common/linker_c75ss_safertos.cmd.xdt",
         output: "linker.cmd",
         options: {
             heapSize: 0x8000,
@@ -254,7 +256,7 @@ const templates_safertos_c75ss0 =
 const templates_safertos_c75ss1 =
 [
     {
-        input: ".project/templates/j722s/common/linker_c75ss1_safertos.cmd.xdt",
+        input: ".project/templates/j722s/common/linker_c75ss_safertos.cmd.xdt",
         output: "linker.cmd",
         options: {
             heapSize: 0x8000,

@@ -21,6 +21,15 @@ ifeq ($(TARGET_OS), $(filter $(TARGET_OS), LINUX QNX))
 ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53))
 include $(VISION_APPS_PATH)/apps/concerto_mpu_inc.mak
 CSOURCES    += main_linux_arm.c
+
+# AM62A Linux: Link drm_wrapper for DRM/KMS display with zero-copy
+ifeq ($(TARGET_PLATFORM)$(TARGET_OS), AM62ALINUX)
+STATIC_LIBS += app_utils_drm_wrapper
+SYS_SHARED_LIBS += drm
+IDIRS += $(LINUX_FS_PATH)/usr/include/libdrm/
+IDIRS += $(LINUX_FS_PATH)/usr/include/drm/
+endif
+
 endif
 endif
 
@@ -28,7 +37,7 @@ IDIRS += $(IMAGING_IDIRS)
 IDIRS += $(VISION_APPS_KERNELS_IDIRS)
 IDIRS += $(VISION_APPS_MODULES_IDIRS)
 ifeq ($(SOC),$(filter $(SOC), am62a))
-ifeq ($(TARGET_OS),$(filter $(TARGET_OS), QNX))
+ifeq ($(TARGET_OS),$(filter $(TARGET_OS), QNX LINUX))
 IDIRS += $(EDGEAI_KERNELS_PATH)/include
 IDIRS += $(TIOVX_PATH)/source/include
 endif

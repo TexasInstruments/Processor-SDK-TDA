@@ -90,6 +90,7 @@ const char *TIDL_nodeElemTypeColors[] =
   "#00fa04",    //"TIDL_SinglePrecFloat",
   "#bb00fa",    //"TIDL_UnsignedDoubleWord",
   "#bb00fa",    //"TIDL_SignedDoubleWord",
+  "#3235d3ff",    //"TIDL_Bool"
 };
 
 const char *TIDL_graphBgColors[] =
@@ -140,6 +141,12 @@ const char *TIDL_graphBgColors[] =
   "#4B1616",    //"GridSample" ,
   "#4B1616",    //"TopK" ,
   "#008a63",    //"DeformableConv",
+  "#660066",    //"Tile",
+  "#8a7be4ff",  //"LogicalOpLayer"
+  "#4B1616",    //"RMSNormalizationLayer" ,
+  "#00008b",    //"LSTM",
+  "#00008b",    //"GRU",
+  "#00008b",    //"RNN",
   "#A84060",    //"UnSuported" ,
   "#A84060",    //"PriorBox" ,
   "#A84060",    //"Permute" ,
@@ -561,6 +568,11 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
         layerTypeName = TIDL_Strings::argOpTypeString(pTIDLNetStructure->TIDLLayers[i].layerParams.argOpParams.argOpType);    
       }
 
+      if(pTIDLNetStructure->TIDLLayers[i].layerType == TIDL_LogicalOpLayer)
+      {
+        layerTypeName = TIDL_Strings::logicalOpTypeString(pTIDLNetStructure->TIDLLayers[i].layerParams.logicalOpLayerParams.operatorType);    
+      }
+
       /*Update SVG to reflect activation instead of batchnorm when necessary:*/
       if(pTIDLNetStructure->TIDLLayers[i].layerType == TIDL_BatchNormLayer)
       {
@@ -568,6 +580,12 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
         {
           layerTypeName = TIDL_Strings::actTypeShort(pTIDLNetStructure->TIDLLayers[i].actParams.actType);
         }
+      }
+
+      /*Update SVG to reflect operator name instead of EltWise */
+      if(pTIDLNetStructure->TIDLLayers[i].layerType == TIDL_EltWiseLayer)
+      {
+        layerTypeName = TIDL_Strings::eltwiseOpTypeString(pTIDLNetStructure->TIDLLayers[i].layerParams.eltWiseParams.eltWiseType);
       }
 
       std::string info = tidl_NodeInfo(pTIDLNetStructure, perSimInfo, i);

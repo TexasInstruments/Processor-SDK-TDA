@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2022 Texas Instruments Incorporated
+ *  Copyright (C) 2022-24 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -33,9 +33,29 @@
 #ifndef _EPWM_DRV_AUX_H_
 #define _EPWM_DRV_AUX_H_
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <stdint.h>
 #include <drivers/hw_include/hw_types.h>
 #include <drivers/epwm.h>
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
 
 /* Write EPWM CMPA */
 static inline void writeCmpA(
@@ -43,14 +63,14 @@ static inline void writeCmpA(
     uint32_t cmpVal
 )
 {
-    HW_WR_FIELD16((baseAddr + PWMSS_EPWM_CMPA), PWMSS_EPWM_CMPA, 
+    HW_WR_FIELD16((baseAddr + PWMSS_EPWM_CMPA), PWMSS_EPWM_CMPA,
         (uint16_t)cmpVal);
 }
 
 /* Write TBCTL HSPDIV & CLKDIV */
 static inline void writeTbClkDiv(
     uint32_t baseAddr,
-    uint32_t hspClkDiv, 
+    uint32_t hspClkDiv,
     uint32_t clkDiv
 )
 {
@@ -68,7 +88,7 @@ void tbPwmFreqCfg(
     uint32_t tbClk,
     uint32_t pwmFreq,
     uint32_t counterDir,
-    uint32_t enableShadowWrite, 
+    uint32_t enableShadowWrite,
     uint32_t *pPeriodCount
 );
 

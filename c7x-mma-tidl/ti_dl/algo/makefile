@@ -19,24 +19,14 @@ DSP_COMMON_DIR= ../../common
 
 ##############################################################
 
-SUBDIRS = ./inc
-SUBDIRS+= ./src
-##############################################################
-#Including the reference .h file folder
-##############################################################
-INCLUDE_PATHS+= -I ./inc/ref
-##############################################################
+SUBDIRS = ./src
 
-########################################################################
-#Reference source files will be compiled only in HOST_EMULATION mode
-########################################################################
-ifeq ($(TARGET_PLATFORM), PC)
-SUBDIRS+= ./src/ref
-CFILES+= $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/ref/*.c))
-HFILES = $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/ref/*.h))
-endif
-########################################################################
+CFILES =
+HFILES =
+CPPFILES =
 
+##############################################################
+INCLUDE_PATHS+= -I ../tidl_ref/include
 ##############################################################
 #Including the stats collection .h file folder
 ##############################################################
@@ -47,15 +37,27 @@ INCLUDE_PATHS+= -I ./inc/stats
 #Stats collection source files will be compiled only in HOST_EMULATION mode
 ########################################################################
 ifeq ($(TARGET_PLATFORM), PC)
-SUBDIRS+= ./src/stats
-CFILES+= $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/stats/*.c))
-HFILES = $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/stats/*.h))
+SUBDIRS += ./src/stats
 endif
 ########################################################################
 
-CFILES= $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/*.c))
-HFILES = $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/*.h))
-CPPFILES = $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/*.cpp))
+CFILES += $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/*.c))
+HFILES += $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/*.h))
+CPPFILES += $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/*.cpp))
+
+########################################################################
+# Exclude specific source files when TIDL_EXCLUDE_UNSUPPORTED_KERNELS=1
+########################################################################
+ifeq ($(TIDL_EXCLUDE_UNSUPPORTED_KERNELS),1)
+CFILES := $(filter-out \
+    ./src/tidl_logicalOpLayer.c \
+    ./src/tidl_lstm.c \
+    ./src/tidl_rmsNorm.c \
+    ./src/tidl_tile.c \
+    ,$(CFILES))
+CFLAGS += -DTIDL_EXCLUDE_UNSUPPORTED_KERNELS
+endif
+########################################################################
 
 ########################################################################
 #Common files is getting executed in Target and other modules
@@ -63,19 +65,10 @@ CPPFILES = $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/*.cpp))
 INCLUDE_PATHS+= -I ../common/inc
 HFILES += ../common/inc/tidl_common_utils_infer_import.h
 CFILES += ../common/src/tidl_common_utils_infer_import.c
-
-########################################################################
-#Reference file is getting executed in Target for the following layers
-########################################################################
-HFILES += ./inc/ref/tidl_innerProduct_ref.h
-CFILES += ./src/ref/tidl_innerProduct_ref.c
-
-HFILES += ./inc/ref/tidl_resize_ref.h
-CFILES += ./src/ref/tidl_resize_ref.c
-
-HFILES += ./inc/ref/tidl_softmax_ref.h
-CFILES += ./src/ref/tidl_softmax_ref.c
-########################################################################
+ifdef TIDL_DYNAMIC_SHAPE
+HFILES += ../common/inc/tidl_shapeInference.h
+CFILES += ../common/src/tidl_shapeInference.c
+endif
 
 ########################################################################
 #Stats Collection file is getting executed in Target for the following layers
@@ -83,6 +76,7 @@ CFILES += ./src/ref/tidl_softmax_ref.c
 HFILES += ./inc/tidl_traceUtils.h
 CFILES += ./src/tidl_traceUtils.c
 ########################################################################
+CFILES+= $(ALGBASE_PATH)/ti_dl/utils/perfsim/gc_helper.c
 
 CMD_FILE= tidl_alg.cmd
 
@@ -129,21 +123,26 @@ endif
 include $(ALGBASE_PATH)/makerules/rules.mk
 include $(ALGBASE_PATH)/makerules/common.mk
 #used inside makerules, but okay to define it afterwards
-ifeq ($(BUILD_WITH_OPENACC), 1)
-	CC = nvc++ -c -fast -acc -Minfo=accel -gpu=ccall -tp=px
-endif
 INCLUDE_PATHS+= -I .
 INCLUDE_PATHS+= -I ./inc
 INCLUDE_PATHS+= -I ./inc/dummy
 INCLUDE_PATHS+= -I ../inc
 INCLUDE_PATHS+= -I $(DSP_COMMON_DIR)
-ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a J722S j722s))
-INCLUDE_PATHS+= -I ./src/tidsp/mmalib_dummy
+INCLUDE_PATHS+= -I ../../tidl_ref/include
+INCLUDE_PATHS+= -I ../../tidl-kernels/include
+INCLUDE_PATHS+= -I ../../tidl-kernels/source
+INCLUDE_PATHS+= -I ../../tidl_priv/include
+INCLUDE_PATHS+= -I ../../tidl_priv/source/tidsp
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a J722S j722s TDA54 tda54))
+INCLUDE_PATHS+= -I ../../tidl_priv/source
 endif
-INCLUDE_PATHS+= -I ../utils/perfsim
-INCLUDE_PATHS+= -I src/tidsp/inc
-INCLUDE_PATHS+= -I src/tidsp/c7x_test
-INCLUDE_PATHS+= -I src/tidsp/inc_priv
+INCLUDE_PATHS+= -I $(ALGBASE_PATH)/ti_dl/utils/perfsim
+
+# For HOST_EMULATION (PC) builds: tidl_shapeInference.c includes ti_dl.h
+# and tidl_import_config.h under #ifdef HOST_EMULATION.
+ifeq ($(TARGET_PLATFORM), PC)
+INCLUDE_PATHS+= -I ../utils/tidlModelImport
+endif
 
 #mv7100 should be in rules.mk
 CFLAGS += $(INCLUDE_PATHS)

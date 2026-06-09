@@ -934,6 +934,25 @@ extern void CSL_PSC_startStateTransition( CSL_PscRegs *pPscRegs, uint32_t pwrDmn
 extern uint32_t CSL_PSC_isStateTransitionDone( const CSL_PscRegs *pPscRegs, uint32_t pwrDmnNum );
 
 /**
+ *  \brief Callback invoked when a register readback check fails.
+ *
+ *  This function is called if the actual value read from a register does not
+ *  match the expected value. By default, this implementation does nothing.
+ *
+ *  It is declared as a weak function so that the application can override it
+ *  with a custom implementation. To override, define a function with the same
+ *  name in your application code. The custom function will then be called
+ *  whenever a register mismatch occurs.
+ *
+ *  \param expVal   Expected register value.
+ *  \param readVal  Actual value read from the register.
+ *
+ *  \return None
+ */
+
+void CSL_PSC_readbackErr(uint32_t expVal, uint32_t readVal) __attribute__((weak));
+
+/**
 @}
 */
 

@@ -270,7 +270,9 @@ static void vhwaM2mLdcIsr(uintptr_t args)
     uint32_t            wdTimer_errStat;
     Vhwa_M2mLdcInstObj *instObj = NULL;
     Vhwa_M2mLdcHandleObj            *hObj = NULL;
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     VhwaVpacLdcSocReadBack *goldenRegVal = NULL;
+#endif
 
     GT_assert(VhwaLdcTrace, (NULL != (Vhwa_M2mLdcInstObj *)args));
 
@@ -290,7 +292,7 @@ static void vhwaM2mLdcIsr(uintptr_t args)
     {
         hObj = instObj->actQObj->hObj;
     }
-
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
     <justification start>
@@ -304,7 +306,7 @@ static void vhwaM2mLdcIsr(uintptr_t args)
     {
         goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
     }
-
+#endif
     vhwaM2mLdcGetIntrStat(instObj, &errStat, &wdTimer_errStat, &frmDoneStat);
 
     /* LDRA_JUSTIFY_START
@@ -338,7 +340,7 @@ static void vhwaM2mLdcIsr(uintptr_t args)
     }
     /* LDRA_JUSTIFY_END */
 
-    #if defined VHWA_VPAC_IP_REV_VPAC3 || defined VHWA_VPAC_IP_REV_VPAC3L
+    #if defined VHWA_VPAC_IP_REV_VPAC3
         /* In one-shot mode, mask LDC_EN from golden CTRL since hardware will clear it
         * In continuous mode, keep LDC_EN set in golden for validation */
         /* LDRA_JUSTIFY_START
@@ -368,7 +370,7 @@ static void vhwaM2mLdcIsr(uintptr_t args)
                 goldenRegVal->ldcRegs.CTRL = regVal;
             }
         }
-    #else
+    #elif !defined(VHWA_VPAC_IP_REV_VPAC3L)
             if (NULL != goldenRegVal)
             {    
                 /* Always auto-cleared in VPAC1 since it doesn't support continuous mode */

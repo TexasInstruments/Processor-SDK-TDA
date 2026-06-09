@@ -116,7 +116,9 @@ void tivxTIDLLoadKernels(vx_context context)
             tivxRegisterTIDLTargetKernels();
             tivxSetSelfCpuId((vx_enum)TIVX_CPU_ID_MPU_0);
             #endif
+            #if defined(SOC_J784S4) || defined(SOC_J722S)  || defined(SOC_J742S2)
             tivxRegisterTIDLTargetKernelsMpu();
+            #endif
         }
         gIsTIDLKernelsLoad++;
     }
@@ -138,8 +140,9 @@ void tivxTIDLUnLoadKernels(vx_context context)
             * this will need to be updated when moving to target */
             tivxUnRegisterTIDLTargetKernels();
             #endif
-
+            #if defined(SOC_J784S4) || defined(SOC_J722S)  || defined(SOC_J742S2)
             tivxUnRegisterTIDLTargetKernelsMpu();
+            #endif
         }
     }
     return;

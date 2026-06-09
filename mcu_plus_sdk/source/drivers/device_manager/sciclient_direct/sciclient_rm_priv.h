@@ -59,7 +59,7 @@ extern "C" {
 /* ========================================================================== */
 
 /* NULL device */
-#define SCICLIENT_RM_DEV_NONE 255U
+#define SCICLIENT_RM_DEV_NONE 0xFFFFU
 
 #define SCICLIENT_RM_IA_GENERIC_EVT_RESETVAL 0xFFFFU
 

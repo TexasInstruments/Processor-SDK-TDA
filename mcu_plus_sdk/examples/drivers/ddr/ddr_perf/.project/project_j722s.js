@@ -91,7 +91,7 @@ function getComponentProperty() {
     property.name = "ddr_perf_app";
     property.isInternal = false;
     property.tirexResourceSubClass = [ "example.gettingstarted" ];
-    property.description = "A \"Hello, World\" Example. This example shows configuration and usage of CPU+OS for MPU, cache, interrupts, heaps, semaphores, timers and cycle counters."
+    property.description = "DDR Performance Measurement Example."
     property.buildOptionCombos = buildOptionCombos;
 
     return property;

@@ -445,7 +445,7 @@ int32_t Vhwa_m2mNfSetConfigInHW(const Vhwa_M2mNfInstObj *instObj,
 
 int32_t Vhwa_m2mNfSetFrameSize(Vhwa_M2mNfInstObj *instObj,
                                const Vhwa_M2mNfQueueObj *qObj,
-                               uint32_t intCnt);
+                               uint32_t itrCnt);
 
 int32_t Vhwa_m2mNfSubmitRequest(Vhwa_M2mNfInstObj *instObj,
                                 Vhwa_M2mNfQueueObj *qObj,
@@ -456,7 +456,7 @@ Vhwa_M2mNfHandleObj *Vhwa_m2mNfGetHandleObj(uint32_t cnt);
 int32_t Vhwa_m2mNfConfigRegReadback(const Vhwa_M2mNfHandleObj *hObj,
                                     const Vhwa_M2mNfInstObj *instObj);
 
-int32_t vhwaM2mNfUpdateConfigRegGroup(VhwaVpacNfSocReadBack *RegVal,
+int32_t vhwaM2mNfUpdateConfigRegGroup(VhwaVpacNfSocReadBack *reg_buf_ptr,
                                         const Vhwa_M2mNfInstObj *instObj,
                                         const Vhwa_M2mNfHandleObj *hObj);
 

@@ -1,5 +1,5 @@
-/********************************************************************
- * Copyright (C) 2003-2019 Texas Instruments Incorporated.
+/*
+ *  Copyright (C) Texas Instruments Incorporated 2024
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -65,11 +65,11 @@ extern "C"
 
 #include <xge/V2/cslr_xge_cpsw.h>
 
-#elif defined(SOC_AM65XX) || defined(SOC_J721E) || defined (SOC_J74202) || defined (SOC_J721S2) || defined (SOC_J7200) || defined(SOC_AM64X) || defined(SOC_AM243X) || defined (SOC_AM62X) || defined(SOC_AM273X) || defined (SOC_AWR294X)
+#elif defined(SOC_AM65XX) || defined(SOC_J721E) || defined (SOC_J74202) || defined (SOC_J721S2) || defined (SOC_J7200) || defined(SOC_AM64X) || defined(SOC_AM243X) || defined (SOC_AM62X) || defined(SOC_AM273X) || defined (SOC_AWR294X) || defined(SOC_AM62AX) || defined(SOC_AM62PX) || defined(SOC_AM62DX) || defined(SOC_AM275X) || defined(SOC_AM62LX) || defined (SOC_J722S)
 
 #include <xge/V4/cslr_xge_cpsw.h>
 
-#elif defined(SOC_AM263X)
+#elif defined(SOC_AM263X) || defined (SOC_AM263PX)
 
 #include <xge/V6/cslr_xge_cpsw.h>
 

@@ -78,7 +78,7 @@ function elf2rprc(elfFile, sw_version, rprcFile, bigEnd=false)
         fileHdr[write4](elf.header.entry, 4);  // entry point
         fileHdr[write4](reserved,         8);  // reserved
         fileHdr[write4](ranges.length,   12);  // segment count
-        fileHdr[write4](sw_version,      16);  // version
+        fileHdr[write4](sw_version,         16);  // version
         fs.writeSync(fdo, fileHdr, 0, fileHdrSize);
 
         // Write the range Header and range Content for each range

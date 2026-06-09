@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="ASCII"?>
+<com.synopsys.vp.base.vpcfg.core:Configuration xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:com.synopsys.vp.base.vpcfg.core="com.synopsys.vp.base.vpcfg.core.model" simDir="" simExe="" simArgs="--cwr_wait --snps_vp_profile" simulationStartupScript="" unevaledParamFileVDKC="" unevaledParamFilePCT="" description="This VP Configuration boots TI TDA54 QNX BSP (Board Support Package). This constitutes of U-Boot tiU25.01 and QNX SDP 8.0. This configuration works with R8.1.0 TDA5_System FixedVDK release" vpScript="${lib:SNPS_ARMSP_SCRIPTS_LIBRARY}/armsp/vpx_shared/vpscript.py" clearVPScriptInterp="false" comment="gen_tool_VDK-C" simulationScriptReferences="STARTUP_9c8ed29d-1bc6-4f0f-bc3e-23e1d2844987&#xA;BEGIN_OF_SIMULATION_a067d63e-03b0-43ad-a76d-efafa55682dc&#xA;BEGIN_OF_SIMULATION_bf80b3ed-d5e4-48a3-920d-ce5396df303e&#xA;BEGIN_OF_SIMULATION_ef1ac1d1-23ec-4c0a-a732-d9c92daf89a1&#xA;">
+  <environmentVariables name="FASTSIM_FASTRAM" defaultValue="0"/>
+  <environmentVariables name="IMG_GPU_LIB_PATH" defaultValue="$(vpconfigDir)/../shared/devices/gpu_72.3.408.1039.so"/>
+  <environmentVariables name="BOOTFS" defaultValue="$(PSDK_QNX_OUT)/bootfs"/>
+  <environmentVariables name="ROOTFS" defaultValue="$(PSDK_QNX_OUT)/rootfs_freertos"/>
+  <environmentVariables name="QNX_RPROC_BOOT" defaultValue="1"/>
+  <environmentVariables name="BOOTMODE" defaultValue="RAM"/>
+  <environmentVariables name="PC_EMULATION" defaultValue="$(PSDK_QNX_OUT)"/>
+  <environmentVariables name="PSDK_QNX_OUT" defaultValue="<TDA54_VDK_WORSPACE_PATH>/out_qnx"/>
+  <debugInfo traceSimOutput="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.CpuHostExt.#SCML_PROPERTIES#BACKEND_LIBRARY" value="$(PSDK_QNX_OUT)/libtivision_apps.so"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.CpuHostExt.#SCML_PROPERTIES#CPUID_BITMASK" value="0x6"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.CpuHostExt.#SCML_PROPERTIES#SYMBOL_FILE" value="$(ROOTFS)/tda54-dsp0-fw"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.DM.DM_MSRAM.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(BOOTFS)/u-boot-m55-spl.bin,,,image,} "/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.DM.M55_SS.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(BOOTFS)/u-boot-m55-spl,,,symbols,} "/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Designware_IP.VIRTIO_GPU.virtio_gpu.#SCML_PROPERTIES#capabilities" value="3d"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Designware_IP.VIRTIO_GPU.virtio_gpu.#SCML_PROPERTIES#screen0" value="1024x768"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.GTC.GTC_0.#SCML_PROPERTIES#GTC_DEFAULT_ENABLE" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.GTC.GTC_1.#SCML_PROPERTIES#GTC_DEFAULT_ENABLE" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.UART.DW_UART_PHY_0.#SCML_PROPERTIES#EN_UART_TX_LOG_TO_FILE" value="logs.txt"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.UART.DW_UART_PHY_0.#SCML_PROPERTIES#TerminalAutoOpen" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.R52P_SS.R52P_SS_0.CLUSTER_0.#EXTRA_PROPERTIES#/sws/variant" value="IMP_R52"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.R52P_SS.R52P_SS_1.CLUSTER_0.#EXTRA_PROPERTIES#/sws/variant" value="IMP_R52"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.R52P_SS.R52P_SS_2.CLUSTER_0.#EXTRA_PROPERTIES#/sws/variant" value="IMP_R52"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Security.ROT.M55_SS.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{../../software/bootcode_M55/vs/stdout/bootcode.axf,,,image+symbols,} "/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Analytics_cluster.AnalyticsWrap_0.C7xV_CorePac.C7xV_Core.C7x_SS.#SCML_PROPERTIES#/ImageInfo/initial_image" value="{$(ROOTFS)/tda54-dsp0-fw,,,image+symbols,} "/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Analytics_cluster.AnalyticsWrap_0.C7xV_CorePac.C7xV_Core.C7x_SS.#SCML_PROPERTIES#/misc/instructions_per_quantum" value="1"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Analytics_cluster.RTI_Timer.RTI_Timer_C7X_0.#SCML_PROPERTIES#PRIV_CHECK_BYPASS" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(BOOTFS)/bl31.elf,,,symbols,} {$(BOOTFS)/u-boot-spl,,,symbols,} {$(BOOTFS)/u-boot,,,symbols,} "/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DDR_0.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(BOOTFS)/tispl.bin,0x00080000,,image,} {$(BOOTFS)/u-boot.img,0x01000000,,image,} {$(BOOTFS)/qnx-ifs,0x02000000,,image,} "/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.CLUSTER_0.#EXTRA_PROPERTIES#/initialize/cpu0/RVBARADDR" value="0x23d80000"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.CLUSTER_0.#EXTRA_PROPERTIES#/initialize/cpu1/RVBARADDR" value="0x23d80000"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.CLUSTER_0.#EXTRA_PROPERTIES#/initialize/cpu2/RVBARADDR" value="0x23d80000"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.CLUSTER_0.#EXTRA_PROPERTIES#/initialize/cpu3/RVBARADDR" value="0x23d80000"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.CLUSTER_0.#EXTRA_PROPERTIES#/initialize/cpu4/RVBARADDR" value="0x23d80000"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.CLUSTER_0.#EXTRA_PROPERTIES#/initialize/cpu5/RVBARADDR" value="0x23d80000"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.CLUSTER_0.#EXTRA_PROPERTIES#/initialize/cpu6/RVBARADDR" value="0x23d80000"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.CLUSTER_0.#EXTRA_PROPERTIES#/initialize/cpu7/RVBARADDR" value="0x23d80000"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.CLUSTER_0.#EXTRA_PROPERTIES#/sws/variant" value="OCX_A720AE"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DSS.DISPC_0.#SCML_PROPERTIES#FRAME_PROCESSING_TIME_IN_US" value="500000"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Peripherals.IMG_GPU_DXS8_256.#EXTRA_PROPERTIES#runtime_disabled" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Multimedia_drivers.M55_SS_0.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(ROOTFS)/tda54-mcu0-fw,,,image+symbols,} "/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Multimedia_drivers.M55_SS_1.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(ROOTFS)/tda54-mcu1-fw,,,image+symbols,} "/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.VIRTIO_ETHERNET.#EXTRA_PROPERTIES#/config/enabled" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.VIRTIO_ETHERNET.#EXTRA_PROPERTIES#/config/hostbridge_userNetPorts" value="8022=22"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.VIRTIO_ETHERNET.#EXTRA_PROPERTIES#/config/hostbridge_userNetworking" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.VIRTIO_ETHERNET.#EXTRA_PROPERTIES#/config/transport" value="legacy"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.VP9D.#EXTRA_PROPERTIES#/config/root_path" value="$(vpconfigDir)"/>
+  <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD4_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/DWSLL/Param_CardCapacity_ReducedConfig" value="_16G"/>
+  <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD4_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/DWSLL/Param_SD_SWITCH_ACMD_WIDE_WIDTH_MSB_ORDER" value="3"/>
+  <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD4_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(PSDK_QNX_OUT)/psdk-qnx-emmc.dat,,,image,} "/>
+  <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD8_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/DWSLL/Param_CardCapacity_ReducedConfig" value="_16G"/>
+  <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD8_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(PSDK_QNX_OUT)/psdk-qnx-emmc.dat,,,image,} "/>
+  <monitorSets name="Default" path="${vpconfigDir}/Default.monitors" chartDisplayScript="">
+    <startTrigger type="TIME" value="0"/>
+  </monitorSets>
+  <simProbesThreads name="t2" script="${vpconfigDir}/scripts/board-support/mini_dm.py" args="" enabled="true"/>
+  <simProbesThreads name="t1" script="${vpconfigDir}/scripts/board-support/qnx_rproc_boot_all.py" args="'/TDA5_System/TDA5_SoC/MCU_Domain/Periphs/UART/DW_UART_PHY_0'"/>
+  <simulationScripts script="${vpconfigDir}/scripts/optional/common_config.py" id="STARTUP_9c8ed29d-1bc6-4f0f-bc3e-23e1d2844987"/>
+  <simulationScripts script="${vpconfigDir}/scripts/optional/restrict_simulation_speed.py" id="BEGIN_OF_SIMULATION_a067d63e-03b0-43ad-a76d-efafa55682dc"/>
+  <simulationScripts script="${vpconfigDir}/scripts/board-support/reload_images_on_reset.py" id="BEGIN_OF_SIMULATION_ef1ac1d1-23ec-4c0a-a732-d9c92daf89a1"/>
+</com.synopsys.vp.base.vpcfg.core:Configuration>

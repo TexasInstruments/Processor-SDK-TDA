@@ -98,7 +98,7 @@ const vector<TidlConstraint> tidlConstraintDepthToSpace =
     TIDL_CSTR(
         "Only mode supported are DCR(depth-column-row order) and CRD(column-row-depth order)",
         "Only mode supported are DCR(depth-column-row order) and CRD(column-row-depth order)",
-        "Only mode supported are DCR(depth-column-row order) and CRD(column-row-depth order)",
+        "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
 
             if( layer->layerPCParams.depthToSpaceParams.mode == TIDL_D2S_UnsupportedMode )

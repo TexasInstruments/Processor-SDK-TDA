@@ -47,6 +47,9 @@ const utils = {
     getProjectSpecDevice: (device) => {
         return require(`./device/project_${device}`).getProjectSpecDevice(device);
     },
+    getSdkOpn: (device) => {
+        return require(`./device/project_${device}`).getSdkOpn();
+    },
     getProjectSpecCpu: (device, cpu) => {
         return require(`./device/project_${device}`).getProjectSpecCpu(cpu);
     },
@@ -106,6 +109,15 @@ const utils = {
                             filelist.push(filedir + '/' + file);
                             foundFile = true;
                         }
+                        if(filedir.includes('$(MCU_PLUS_SDK_PATH)')) {
+                            let checkPath = path.normalize(filedir + '/' + file);
+                            let checkPath1 = checkPath.replace('$(MCU_PLUS_SDK_PATH)', path.resolve(__dirname, '..'));
+                            if (fs.existsSync(checkPath1) == true) {
+                                let relPath = path.relative(projectabspath, checkPath1);
+                                filelist.push(relPath);
+                                foundFile = true;
+                            }
+                        }
                     }
                     if(foundFile == false) {
                         console.log(`ERROR : Couldn't find ${file} in given source directories for ${projectabspath} ...`)
@@ -149,6 +161,13 @@ const utils = {
 
         return require(`./device/project_${device}`).getProductNameProjectSpec();
     },
+
+    getTirexId: (device) => {
+        if(common.isDevelopmentMode())
+            return "com.ti.MCU_PLUS_SDK_AMXXX"
+
+        return require(`./device/project_${device}`).getTirexId();
+    },
     /* default action for files in project spec, i.e copy or link */
     getDefaultActionProjectSpec: () => {
 
@@ -157,12 +176,16 @@ const utils = {
 
         return "copy";
     },
-    getToolChainVersionProjectSpec: (cgt) => {
+    getToolChainVersionProjectSpec: (cgt, device) => {
         let toolchainVersion = ''
 
         switch(cgt) {
             case 'ti-arm-clang':
-                toolchainVersion = '3.2.0'
+                if(device == "j722s"){
+                    toolchainVersion = '4.0.4'
+                } else {
+                    toolchainVersion = '4.0.1'
+                }
                 break;
             case 'gcc-aarch64':
                 toolchainVersion = '9.2'
@@ -182,15 +205,19 @@ const utils = {
     },
 
     getSysCfgVersionProjectSpec: () => {
-        return "1.20.0";
+        return "1.26.2";
     },
 
     getCCSVersionProjectSpec: () => {
-        return "1250";
+        return "2031";
     },
 
-    getTiClangVersionProjectSpec: () => {
-        return "3.2.0";
+    getTiClangVersionProjectSpec: (device) => {
+        if(device == "j722s"){
+            return "4.0.4";
+        } else {
+            return "4.0.1";
+        }
     },
 
     getGCCAarch64NoneVersionProjectSpec: () => {
@@ -248,6 +275,7 @@ function genProjectSpecExample(device) {
                 relPath: common.path.relative(project.dirPath, "."),
                 project: project,
                 utils: utils,
+                common: common,
                 cgtOptions: require(`./cgt/cgt_${project.cgt}`).getCgtOptions(buildOption.cpu),
                 linuxFwName: require(`./device/project_${device}`).getLinuxFwName(buildOption.cpu),
                 syscfg: {

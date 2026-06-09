@@ -96,7 +96,7 @@ int32_t Bootloader_xmodemReceive(uint32_t uartDrvIndex, uint8_t *dstBuf, uint32_
 
 	if(gUartHandle != NULL)
 	{
-		rxBytes = xmodemReceive(dstBuf, maxBufSize);
+		rxBytes = xmodemReceive(dstBuf, (int32_t)maxBufSize);
 
 		if(rxBytes > (int32_t)0)
 		{
@@ -125,7 +125,7 @@ int32_t Bootloader_xmodemTransmit(uint32_t uartDrvIndex, uint8_t *src, uint32_t 
 
 	if(gUartHandle != NULL)
 	{
-		txBytes = xmodemTransmit(src, len);
+		txBytes = xmodemTransmit(src, (int32_t)len);
 
 		if(txBytes > (int32_t)0)
 		{

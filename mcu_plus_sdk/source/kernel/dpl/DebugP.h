@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -37,8 +37,16 @@
 extern "C" {
 #endif
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <stdint.h>
 #include <stdbool.h>
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 /**
  * \defgroup KERNEL_DPL_DEBUG APIs for Debug log's and assert's
@@ -108,15 +116,6 @@ extern "C" {
 #define CARRIAGE_RETURN_ASCII        (13U)
 
 /**
- *  DebugP Log Function registration return types
- *
- *  DEBUGP_PRINTFXN_REGISTER_SUCCESS is returned on succesful registration of log API.
- *  DEBUGP_PRINTFXN_ALREADY_REGISTERD is returned, if an API is already registered.
- */
-#define DEBUGP_LOGFXN_REGISTER_SUCCESS   (0)
-#define DEBUGP_LOGFXN_ALREADY_REGISTERD  (-1)
-
-/**
  * \brief Data structure describing log in shared memory
  */
 typedef struct {
@@ -128,9 +127,6 @@ typedef struct {
     uint8_t  buffer[DebugP_SHM_LOG_SIZE];
 
 } DebugP_ShmLog;
-
-/* Function pointer to be used for logging exception state registers */
-typedef void (*DebugP_exptnLogFxn)(const char *format, ...);
 
 /**
  * \name Compile time log and assert enable, disable
@@ -286,6 +282,10 @@ void _DebugP_logZone(uint32_t logZone, char *format, ...);
 #define DebugP_logInfo(format, ...)
 #endif
 
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
 /**
  * \brief Enable log zones
  *
@@ -319,6 +319,18 @@ void DebugP_logZoneRestore(uint32_t logZoneMask);
  *                        this is used to add a core name prefix string to each log line, see \ref CSL_CoreID
  */
 void DebugP_shmLogWriterInit(DebugP_ShmLog *shmLog, uint16_t selfCoreId);
+
+/**
+ * \brief Pauses shared memory log writer for this core
+ *
+ */
+void DebugP_shmLogWriterPause(void);
+
+/**
+ * \brief Resumes shared memory log writer for this core
+ *
+ */
+void DebugP_shmLogWriterResume(void);
 
 /**
  * \brief Write a character to shared memory log
@@ -375,6 +387,18 @@ void DebugP_shmLogRead(void);
 void DebugP_memLogWriterInit(uint16_t selfCoreId);
 
 /**
+ * \brief Pauses memory trace log for this core
+ *
+ */
+void DebugP_memLogWriterPause(void);
+
+/**
+ * \brief Resumes memory trace log for this core
+ *
+ */
+void DebugP_memLogWriterResume(void);
+
+/**
  * \brief Write a character to trace buffer.
  *
  * Used when IPC with Linux is enabled
@@ -429,35 +453,6 @@ int32_t DebugP_scanf(char *format, ...);
  * \return SystemP_FAILURE on failure
  */
 int32_t DebugP_readLine(char *lineBuf, uint32_t bufSize);
-
-/**
- *  \brief  Debug log function registration
- *
- *  Application needs to call this API to register its print API for exception dump.
- *
- *  \param  fxn    [in] Function to be used by DebugP to do exception time logging.
- *
- */
-int32_t DebugP_registerExceptionLogFxn(DebugP_exptnLogFxn fxn);
-
-/**
- *  @brief  DebugP Exception state log function.
- *          It takes a pair of values to be printed during exception dump.
- * 
- *  @param  format "printf" format string
- *  @param  arg1 first parameter to format string
- *  @param  arg2 second parameter to format string
- *
- */
-void DebugP_exceptionLog(const char * format, uint32_t arg1, uint32_t arg2);
-
-/**
- *  \brief  Debug log function deregistration
- *
- *  Application needs to call this API to de-register its print API.
- *
- */
-void DebugP_deRegisterExceptionLogFxn();
 
 /** @} */
 

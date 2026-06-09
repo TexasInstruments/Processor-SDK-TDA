@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2024 Texas Instruments Incorporated
+ * Copyright (c) 2024-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -73,6 +73,7 @@ typedef struct {
     tivxOCPostProcParams params;
     tivxOCPostProcOutput post_proc_out;
 
+    sTIDL_IOBufDesc_t ioBufDesc;
     vx_uint32 num_input_tensors;
     vx_uint32 num_output_tensors;
 
@@ -89,7 +90,7 @@ typedef struct {
 
 vx_status app_update_post_proc(vx_context context, PostProcObj *postProcObj, vx_user_data_object config);
 vx_status app_init_post_proc(vx_context context, PostProcObj *postProcObj, char *objName, vx_int32 num_cameras, vx_int32 bufq_depth);
-void app_deinit_post_proc(PostProcObj *obj, vx_int32 bufq_depth);
+void app_deinit_post_proc(vx_context context, PostProcObj *obj, vx_int32 bufq_depth);
 void app_delete_post_proc(PostProcObj *obj);
 vx_status app_create_graph_post_proc(vx_graph graph, PostProcObj *postProcObj, vx_object_array in_args_arr, vx_object_array in_tensor_arr, vx_object_array input_img_arr);
 vx_status writePostProcOutput(char* file_name, PostProcObj *postProcObj);

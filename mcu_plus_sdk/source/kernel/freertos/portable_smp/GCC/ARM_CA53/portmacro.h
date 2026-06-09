@@ -1,5 +1,5 @@
 /*
- * FreeRTOS Kernel V10.4.3
+ * FreeRTOS Kernel V11.1.0
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -93,33 +93,48 @@ extern uint64_t ullPortYieldRequired[];
  * Critical section control
  *----------------------------------------------------------*/
 
-extern void vTaskEnterCritical( void );
-extern void vTaskExitCritical( void );
+#define portGET_CORE_ID()                   Armv8_getCoreId()
+#define portRESTORE_INTERRUPTS( ulState )   HwiP_restore ( ulState )
+#define portCHECK_IF_IN_ISR()               HwiP_inISR()
+#define portASSERT_IF_IN_ISR()              configASSERT( portCHECK_IF_IN_ISR() == 0 )
 
 #define portDISABLE_INTERRUPTS()                HwiP_disable()
 #define portENABLE_INTERRUPTS()		            HwiP_enable()
+
+#define portSET_INTERRUPT_MASK()                HwiP_disable()
+#define portCLEAR_INTERRUPT_MASK( ulState)      HwiP_restore ( ulState )
+
+extern void vTaskEnterCritical( void );
+extern void vTaskExitCritical( void );
+extern UBaseType_t vTaskEnterCriticalFromISR( void );
+extern void vTaskExitCriticalFromISR( UBaseType_t uxSavedInterruptStatus );
 #define portENTER_CRITICAL()		            vTaskEnterCritical();
 #define portEXIT_CRITICAL()			            vTaskExitCritical();
-#define portSET_INTERRUPT_MASK_FROM_ISR()		({                                      \
-                                                    uint64_t x =  HwiP_disable();       \
-                                                    vTaskEnterCritical();               \
-                                                    x;                                  \
-                                                })
+#define portENTER_CRITICAL_FROM_ISR()       vTaskEnterCriticalFromISR()
+#define portEXIT_CRITICAL_FROM_ISR( x )     vTaskExitCriticalFromISR( x )
 
-#define portCLEAR_INTERRUPT_MASK_FROM_ISR(x)	({                                 \
-                                                    vTaskExitCritical();            \
-                                                    HwiP_restore(x);                \
-                                                })
-
+extern uint32_t ulSetInterruptMaskFromISR( void ) ;
+extern void vClearInterruptMaskFromISR( uint32_t ulMask ) ;
+#define portSET_INTERRUPT_MASK_FROM_ISR()         ulSetInterruptMaskFromISR()
+#define portCLEAR_INTERRUPT_MASK_FROM_ISR( x )    vClearInterruptMaskFromISR(x);
 /* Task function macros as described on the FreeRTOS.org WEB site.  These are
 not required for this port but included in case common demo code that uses these
 macros is used. */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )	void vFunction( void *pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )	void vFunction( void *pvParameters )
 
-/* Any task that uses the floating point unit MUST call vPortTaskUsesFPU()
-before any floating point instructions are executed. */
-void vPortTaskUsesFPU( void );
+/* If configUSE_TASK_FPU_SUPPORT is set to 1 (or left undefined) then tasks are
+ * created without an FPU context and must call vPortTaskUsesFPU() to give
+ * themselves an FPU context before using any FPU instructions. If
+ * configUSE_TASK_FPU_SUPPORT is set to 2 then all tasks will have an FPU context
+ * by default. */
+#if ( configUSE_TASK_FPU_SUPPORT != 2 )
+    void vPortTaskUsesFPU( void );
+#else
+    /* Each task has an FPU context already, so define this function away to
+     * nothing to prevent it from being called accidentally. */
+    #define vPortTaskUsesFPU()
+#endif /* configUSE_TASK_FPU_SUPPORT */
 #define portTASK_USES_FLOATING_POINT() vPortTaskUsesFPU()
 
 /* Architecture specific optimisations. */
@@ -141,11 +156,6 @@ void vPortTaskUsesFPU( void );
 #define portINLINE __inline
 #define portMEMORY_BARRIER() __asm volatile( "" ::: "memory" )
 
-/* port for SMP */
-#define portGET_CORE_ID()                   Armv8_getCoreId()
-#define portRESTORE_INTERRUPTS( ulState )   HwiP_restore ( ulState )
-#define portCHECK_IF_IN_ISR()               HwiP_inISR()
-
 /*-----------------------------------------------------------
  * Critical section locks
  *----------------------------------------------------------*/
@@ -154,7 +164,12 @@ void vPortTaskUsesFPU( void );
 #define TASK_LOCK  (1u)
 
 #define portRTOS_LOCK_COUNT 2
+#if defined(SMP_QUADCORE_FREERTOS)
+#define portMAX_CORE_COUNT 4
+#else
 #define portMAX_CORE_COUNT 2
+#endif
+
 
 uint64_t Get_64(volatile uint64_t* x);
 void Set_64(volatile uint64_t* x, uint64_t value);

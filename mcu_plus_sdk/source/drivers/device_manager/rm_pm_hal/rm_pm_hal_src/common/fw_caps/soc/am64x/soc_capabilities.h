@@ -1,7 +1,7 @@
 /*
  * Data version: 230209_212853
  *
- * Copyright (C) 2021-2024, Texas Instruments Incorporated
+ * Copyright (C) 2021-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,9 +37,10 @@
 #include <config.h>
 #include <types/short_types.h>
 
-#define TISCI_MSG_FLAG_FW_CAP_MAX (0x01U)
+#define TISCI_MSG_FLAG_FW_CAP_MAX (0x02U)
 const u64 soc_fw_caps[TISCI_MSG_FLAG_FW_CAP_MAX] = {
 	TISCI_MSG_FLAG_FW_CAP_GENERIC_CAP,
+	TISCI_MSG_FLAG_FW_CAP_GET_DEVICE_MULTIPLE,
 };
 
 #endif /* SOC_AM64X_CAPABILITIES_H */

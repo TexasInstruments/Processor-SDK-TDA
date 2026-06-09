@@ -140,12 +140,18 @@ private:
    void dumpGridSampleParams(const sTIDL_Layer_t *pLayer);
    void dumpDeformConvParams(const sTIDL_Layer_t *pLayer);
    void dumpTopKParams(const sTIDL_Layer_t *pLayer);
+   void dumpTileParams(const sTIDL_Layer_t *pLayer);
+   void dumpLogicalOpLayerParams(const sTIDL_Layer_t *pLayer);
+   void dumpRMSNormalizationParams(const sTIDL_Layer_t *pLayer);
    void dumpDetectionOutputLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpShuffleChannelLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpResizeLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpRoiPoolingLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpDepthToSpaceLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpPadLayerParams(const sTIDL_Layer_t *pLayer);
+   void dumpLSTMParams(const sTIDL_Layer_t *pLayer);
+   void dumpGRUParams(const sTIDL_Layer_t *pLayer);
+   void dumpRNNParams(const sTIDL_Layer_t *pLayer);
    void dumpOdOutputReformatLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpOdPostProcessingLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpCustomLayerParams(const sTIDL_Layer_t *pLayer);

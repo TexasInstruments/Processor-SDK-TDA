@@ -141,8 +141,6 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("DequantizeLinear")> ()
   }
   layer.layerPCParams.dequantParams.scale = tScale;
   layer.layerPCParams.dequantParams.zeroPoint = tZeroPoint;
-  layer.outData[0].tensorScale = 1/tScale;
-  layer.outData[0].tensorZeroPoint = tZeroPoint;
 
   sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
   layer.numInBufs = md.numVarInputs;

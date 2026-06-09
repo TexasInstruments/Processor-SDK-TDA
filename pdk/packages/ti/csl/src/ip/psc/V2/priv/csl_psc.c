@@ -53,6 +53,7 @@ uint8_t CSL_PSC_getVoltageControl(const CSL_PscRegs *pPscRegs)
 void CSL_PSC_setModuleNextState( CSL_PscRegs *pPscRegs, uint32_t moduleNum, CSL_PSC_MODSTATE state )
 {
     CSL_FINS( pPscRegs->MDCTL[moduleNum], PSC_MDCTL_NEXT, state );
+    RB_CHECK_FIELD32_VAL(pPscRegs->MDCTL[moduleNum], PSC_MDCTL_NEXT, state, CSL_PSC_readbackErr);
     return;
 }
 
@@ -64,6 +65,7 @@ CSL_PSC_MODSTATE CSL_PSC_getModuleNextState( const CSL_PscRegs *pPscRegs, uint32
 void CSL_PSC_setModuleLocalReset( CSL_PscRegs *pPscRegs, uint32_t moduleNum, CSL_PSC_MDLRST resetState )
 {
     CSL_FINS( pPscRegs->MDCTL[moduleNum], PSC_MDCTL_LRST, resetState );
+    RB_CHECK_FIELD32_VAL(pPscRegs->MDCTL[moduleNum], PSC_MDCTL_LRST, resetState, CSL_PSC_readbackErr);
     return;
 }
 
@@ -75,12 +77,14 @@ CSL_PSC_MDLRST CSL_PSC_getModuleLocalReset( const CSL_PscRegs *pPscRegs, uint32_
 void CSL_PSC_enableModuleResetIsolation( CSL_PscRegs *pPscRegs, uint32_t moduleNum )
 {
     CSL_FINST( pPscRegs->MDCTL[moduleNum], PSC_MDCTL_RSTISO, ENABLE );
+    RB_CHECK_FIELD32_T(pPscRegs->MDCTL[moduleNum], PSC_MDCTL_RSTISO, ENABLE, CSL_PSC_readbackErr);
     return;
 }
 
 void CSL_PSC_disableModuleResetIsolation( CSL_PscRegs *pPscRegs, uint32_t moduleNum )
 {
     CSL_FINST( pPscRegs->MDCTL[moduleNum], PSC_MDCTL_RSTISO, DISABLE );
+    RB_CHECK_FIELD32_T(pPscRegs->MDCTL[moduleNum], PSC_MDCTL_RSTISO, DISABLE, CSL_PSC_readbackErr);
     return;
 }
 
@@ -122,12 +126,14 @@ bool CSL_PSC_isModuleClockOn( const CSL_PscRegs *pPscRegs, uint32_t moduleNum )
 void CSL_PSC_enablePowerDomain( CSL_PscRegs *pPscRegs, uint32_t pwrDmnNum )
 {
     CSL_FINST( pPscRegs->PDCTL[pwrDmnNum], PSC_PDCTL_NEXT, ON );
+    RB_CHECK_FIELD32_T(pPscRegs->PDCTL[pwrDmnNum], PSC_PDCTL_NEXT, ON, CSL_PSC_readbackErr);
     return;
 }
 
 void CSL_PSC_disablePowerDomain( CSL_PscRegs *pPscRegs, uint32_t pwrDmnNum )
 {
     CSL_FINST( pPscRegs->PDCTL[pwrDmnNum], PSC_PDCTL_NEXT, OFF );
+    RB_CHECK_FIELD32_T(pPscRegs->PDCTL[pwrDmnNum], PSC_PDCTL_NEXT, OFF, CSL_PSC_readbackErr);
     return;
 }
 
@@ -141,6 +147,9 @@ void CSL_PSC_startStateTransition( CSL_PscRegs *pPscRegs, uint32_t pwrDmnNum )
     uint32_t  pwrDmnGrp      = pwrDmnNum >> 5U;
     uint32_t  pwrDmnNumInGrp = pwrDmnNum & 0x1FU;
     pPscRegs->PTCMD[pwrDmnGrp] = (1 << pwrDmnNumInGrp);
+    /* This is a pseudo-command register with no actual storage. Reads return 0.
+     * According J784S4_Registers_Public_20250808.xlsx */
+    RB_CHECK_REG32(&pPscRegs->PTCMD[pwrDmnGrp], (uint32_t)0U, RB_MASK_ALL_BITS_32, CSL_PSC_readbackErr);
     return;
 }
 
@@ -152,4 +161,9 @@ uint32_t CSL_PSC_isStateTransitionDone( const CSL_PscRegs *pPscRegs, uint32_t pw
     uint32_t  pwrDmnNumInGrp = pwrDmnNum & 0x1FU;
     pdTransStatus = CSL_FEXTR( pPscRegs->PTSTAT[pwrDmnGrp], pwrDmnNumInGrp, pwrDmnNumInGrp );
     return pdTransStatus ? (uint32_t)0U : (uint32_t)1U;
+}
+
+__attribute__((weak)) void CSL_PSC_readbackErr(uint32_t expVal, uint32_t readVal)
+{
+    // this is a default empty function       
 }

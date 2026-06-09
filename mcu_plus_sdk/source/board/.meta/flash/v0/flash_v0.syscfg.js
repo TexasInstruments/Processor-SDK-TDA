@@ -12,6 +12,31 @@ function getInstanceConfig(moduleInstance) {
     };
 };
 
+function getFlashType(moduleInstance) {
+    if(moduleInstance.flashTopology == "serialFlash") {
+        let serialModule = system.modules[`/board/flash/serialFlash/serialflash`];
+        let serialInstance = serialModule.$instances[0];
+        let serialInstanceConfig = serialModule.getInstanceConfig(serialInstance);
+        if(serialInstanceConfig.flashType == "SERIAL_NOR") {
+            return "FLASH_TYPE_SERIAL_NOR";
+        }
+        else {
+            return "FLASH_TYPE_SERIAL_NAND";
+        }
+    }
+    else if(moduleInstance.flashTopology == "parallelFlash") {
+        let parallelModule = system.modules[`/board/flash/parallelFlash/parallelflash`];
+        let parallelInstance = parallelModule.$instances[0];
+        let parallelInstanceConfig = parallelModule.getInstanceConfig(parallelInstance);
+        if(parallelInstanceConfig.flashType == "PARALLEL_NOR") {
+            return "FLASH_TYPE_PARALLEL_NOR";
+        }
+        else {
+            return "FLASH_TYPE_PARALLEL_NAND";
+        }
+    }
+}
+
 let flash_module = {
     displayName: "FLASH",
 
@@ -26,6 +51,10 @@ let flash_module = {
         },
         "/board/board/board_config.h.xdt": {
             board_config: "/board/flash/templates/flash.h.xdt",
+        },
+        "/board/board/board_config.c.xdt": {
+            board_init: "/board/flash/templates/flash_init.c.xdt",
+            board_deinit: "/board/flash/templates/flash_deinit.c.xdt",
         },
 
     },
@@ -43,6 +72,7 @@ let flash_module = {
     },
     moduleInstances: moduleInstances,
     getInstanceConfig,
+    getFlashType,
 };
 
 function getConfigurables()
@@ -85,8 +115,6 @@ function getConfigurables()
     {
         config.push(common.getDMWithBootConfig());
     }
-
-    config.push(common.getSkipDeinitFromSblConfig());
 
     return config;
 }

@@ -477,7 +477,7 @@ u32 clk_set_ssc(struct clk *clkp, u32 modfreq_hz, u32 mod_depth, u8 spread_type,
 	} else {
 		/* Success: Call hardware-specific driver to set SSC parameters */
 		ret = (clk_data_p->drv->set_ssc(clkp, modfreq_hz, mod_depth,
-						spread_type, enable) == 0U) ? 0U : 1U;
+						spread_type, enable) == 0) ? 0U : 1U;
 	}
 
 	return ret;

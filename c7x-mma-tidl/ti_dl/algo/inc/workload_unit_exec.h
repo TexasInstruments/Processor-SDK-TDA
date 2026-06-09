@@ -296,6 +296,8 @@ typedef struct
   void                            *dmaUtilsContext;
   /* Pointer to DMA channel allocator context*/
   void                            *dmaChannelAllocContext;
+  /* Relative Core Id*/
+  uint32_t                        coreId;
   /* Force a negative test case */
   int32_t                          forceNegativeTest;
 }WorkloadUnitExec_CommonParams;

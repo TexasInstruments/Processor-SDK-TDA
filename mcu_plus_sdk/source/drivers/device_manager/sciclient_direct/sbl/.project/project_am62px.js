@@ -12,7 +12,6 @@ const files_r5f = {
         "sciclient_rm_irq.c",
         "sciclient_boardcfg.c",
         "sciclient_procboot.c",
-        "sciclient_rom.c",
         "sciclient_secureProxyCfg.c",
         "sciclient_secureproxy.c",
         "uart_print.c",
@@ -65,6 +64,7 @@ const cflags = {
     common: [],
     remove: [
         "-Wno-unused-function",
+        "-Wno-gnu-variable-sized-type-not-at-end",
     ],
     release: [
         "-Oz",

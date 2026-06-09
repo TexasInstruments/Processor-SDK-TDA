@@ -39,7 +39,7 @@ __IRQ_STACK_SIZE = 4096;
  * - In both NORTOS and FreeRTOS nesting is disabled for FIQ
  */
 __FIQ_STACK_SIZE = 256;
-__SVC_STACK_SIZE = 256; /* This is the size of stack when R5 is in SVC mode */
+__SVC_STACK_SIZE = 4096; /* This is the size of stack when R5 is in SVC mode */
 __ABORT_STACK_SIZE = 256;  /* This is the size of stack when R5 is in ABORT mode */
 __UNDEFINED_STACK_SIZE = 256;  /* This is the size of stack when R5 is in UNDEF mode */
 __DM_STUB_STACK_SIZE = 1024; /* This is required for Device manager */
@@ -115,20 +115,6 @@ SECTIONS
     } > R5F_TCMB
 
 }
-
-/*
-NOTE: Below memory is reserved for DMSC usage
- - During Boot till security handoff is complete
-   0x701E0000 - 0x701FFFFF (128KB)
- - After "Security Handoff" is complete (i.e at run time)
-   0x701F4000 - 0x701FFFFF (48KB)
-
- Security handoff is complete when this message is sent to the DMSC,
-   TISCI_MSG_SEC_HANDOVER
-
- This should be sent once all cores are loaded and all application
- specific firewall calls are setup.
-*/
 
 MEMORY
 {

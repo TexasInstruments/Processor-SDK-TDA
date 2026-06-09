@@ -65,7 +65,26 @@ function getConfigurables()
                     displayName: "Output"
                 },
             ],
-            description: "GPIO PIN direction",
+            description: "Direction of GPIO Pin. Can be either input or output",
+            onChange: function(inst, ui) {
+                if(inst.pinDir == "OUTPUT"){
+                    ui.defaultValue.hidden = false;
+                }
+                else {
+                    ui.defaultValue.hidden = true;
+                }
+            }
+        },
+        {
+            name: "defaultValue",
+            displayName: "Default Value",
+            default: "0",
+            options: [
+                { name: "0" },
+                { name: "1" },
+            ],
+            description: "Default value of GPIO OUT register",
+            hidden: true,
         },
         {
             name: "trigType",
@@ -89,7 +108,7 @@ function getConfigurables()
                     displayName: "Rising and Falling",
                 },
             ],
-            description: "GPIO PIN Trigger Type",
+            description: "GPIO Trigger type for interrupt generation",
         },
     )
 
@@ -98,7 +117,7 @@ function getConfigurables()
         let mcu_config = common.getUseMcuDomainPeripheralsConfig();
         if(common.getSocName().match(/am62x/) || common.getSocName().match(/am62ax/)|| common.getSocName().match(/am62px/) || common.getSocName().match(/j722s/))
         {
-            /* Enable main GPIO access for AM62x and AM62Ax */
+            /* Enable main GPIO access for AM62x, AM62Ax, AM62Px an J722S */
             mcu_config.readOnly = false;
         }
         config.push(mcu_config);
@@ -113,6 +132,11 @@ let gpio_module = {
     templates: {
         "/drivers/system/system_config.h.xdt": {
             driver_config: "/drivers/gpio/templates/gpio.h.xdt",
+            moduleName: gpio_module_name,
+        },
+        "/drivers/system/system_config.c.xdt": {
+            driver_config: "/drivers/gpio/templates/gpio_config.c.xdt",
+            driver_init: "/drivers/gpio/templates/gpio_init.c.xdt",
             moduleName: gpio_module_name,
         },
         "/drivers/pinmux/pinmux_config.c.xdt": {

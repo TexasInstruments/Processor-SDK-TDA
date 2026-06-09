@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021-22 Texas Instruments Incorporated
+ *  Copyright (C) 2021-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -43,28 +43,52 @@
  * If data is matched, test result is passed otherwise failed.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <kernel/dpl/CacheP.h>
 #include <kernel/dpl/DebugP.h>
 #include "ti_drivers_config.h"
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
 
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
 #define APP_MCSPI_MSGSIZE                   (128U)
 #define APP_MCSPI_TRANSFER_LOOPCOUNT        (10U)
 
+/* ========================================================================== */
+/*                         Structures and Enums                               */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                 Internal Function Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
 uint8_t gMcspiTxBuffer[APP_MCSPI_MSGSIZE] __attribute__((aligned(CacheP_CACHELINE_ALIGNMENT)));
 
-void *mcspi_tx_dma_main(void *args)
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
+
+void mcspi_tx_dma_main(void *args)
 {
     int32_t             status = SystemP_SUCCESS;
     uint32_t            i, j;
     int32_t             transferOK;
     MCSPI_Transaction   spiTransaction;
     uint64_t            startTimeInUSec, elapsedTimeInUsecs;
-    
-
-    Drivers_open();
-    Board_driversOpen();
 
     DebugP_log("[MCSPI] Loopback example DMA mode started ...\r\n");
 
@@ -115,8 +139,5 @@ void *mcspi_tx_dma_main(void *args)
         DebugP_log("Some tests have failed!!\r\n");
     }
 
-    Board_driversClose();
-    Drivers_close();
-
-    return NULL;
+    return;
 }

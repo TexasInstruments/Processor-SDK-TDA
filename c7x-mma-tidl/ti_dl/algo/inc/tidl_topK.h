@@ -74,7 +74,24 @@
 #include "tidl_alg_int.h"
 #include "tidl_device_utils.h"
 #include "tidl_alg_utils.h"
-    
+
+template <class Tin, class Tout>
+bool tidl_compareTwoValues (Tin A, Tout B, int32_t largest);
+
+template <class Tin, class Tout>
+bool tidl_compareTwoValues (Tin A, Tout B, int32_t largest)
+{
+  bool ret_val = 0;
+  if (largest == 1)
+  {
+    ret_val = (A > B);
+  }
+  else
+  {
+    ret_val = (A < B);
+  }
+  return ret_val;
+}
 
 int32_t TIDL_topKProcess(TIDL_NetworkCommonParams *commonParams,
                                           sTIDL_AlgLayer_t     * algLayer,

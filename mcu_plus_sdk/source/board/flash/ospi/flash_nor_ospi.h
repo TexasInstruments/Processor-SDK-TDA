@@ -52,12 +52,35 @@ typedef struct {
     uint8_t currEraseType;
     uint32_t currentProtocol;
     uint32_t cmdAddrCustom;
+    uint8_t rdDummyValPhyMode;
 
 } Flash_NorOspiObject;
 
+typedef struct {
+    /* Fallback frequency in case of communication failure */
+    uint32_t fallBackFreq;
+    /* Baud rate divisor for DDR (Double Data Rate) mode */
+    uint32_t ddrBaudRateDiv;
+    /* Baud rate divisor for SDR (Single Data Rate) mode */
+    uint32_t sdrBaudRateDiv;
+    /* Protocol configuration for 1S (single) mode */
+    FlashCfg_ProtoEnConfig protoCfg1s;
+}Flash_NorOspiFallBackCfg;
+
+typedef struct {
+    /* Flag indicating whether the flash has a hybrid memory layout */
+    uint32_t isHybridLayout;
+    /*
+     * Type of hybrid layout when isHybridLayout is true
+     * Bottom Hybrid Layout = 0U
+     * Top Hybrid Layout = 1U
+     * Split Hybrid Layout = 2U
+     */
+    uint32_t hybridLayoutType;
+}Flash_NorOspiHybridLayoutCfg;
+
 /* Flash specific externs */
 extern Flash_Fxns gFlashNorOspiFxns;
-
 
 #ifdef __cplusplus
 }

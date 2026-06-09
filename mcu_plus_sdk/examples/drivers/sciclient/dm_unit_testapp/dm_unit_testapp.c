@@ -42,18 +42,9 @@
 /*                             Include Files                                  */
 /* ========================================================================== */
 
-#include "ti_drivers_open_close.h"
-#include "ti_board_open_close.h"
 #include <dm_ut_testparser.h>
 
 void dm_unit_testapp_main(void *args)
 {
-    /* Open drivers to open UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
-
     DMApp_parser();
-
-    Board_driversClose();
-    Drivers_close();
 }

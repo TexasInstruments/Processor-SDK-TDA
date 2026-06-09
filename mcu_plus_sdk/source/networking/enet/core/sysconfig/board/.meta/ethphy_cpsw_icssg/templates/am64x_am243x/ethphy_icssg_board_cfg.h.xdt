@@ -1,0 +1,58 @@
+%%{
+	let module = system.modules["/networking/enet_icss/enet_icss"];
+%%}
+
+%%{
+let customBoard = false;
+for (let inst of module.$instances) {
+    if(inst.customBoardEnable) {
+    customBoard = true;
+    break;
+    }
+}
+%%}
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
+#include <enet_board.h>
+
+/* ========================================================================== */
+/*                                 Macros                                     */
+/* ========================================================================== */
+/*!
+ * \brief Define indicating application has enabled custom board configuration.
+ *
+ * Custom boards are board not supported by MCU+SDK out of the box
+ */
+#define ENETBOARD_SYSCFG_CUSTOM_BOARD         (`Number(customBoard)`)
+
+
+/*!
+ * \brief AM64X Common Processor Board (CPB) id.
+ */
+#define ENETBOARD_CPB_ID                      (ENETPHY_BIT(0U))
+
+/*!
+ * \brief AM64X Industrial Dev. Kit (IDK) board id.
+ */
+#define ENETBOARD_IDK_ID                      (ENETPHY_BIT(1U))
+
+/*!
+ * \brief AM64X MII board id.
+ */
+#define ENETBOARD_MII_ID                      (ENETPHY_BIT(2U))
+
+/*!
+ * \brief AM64XX EVM base configuration.
+ *
+ * All available PHYs are available to fully utilize CPSW_2G and ICSSG
+ * capabilities.
+ */
+#define ENETBOARD_AM64X_AM243X_EVM            (ENETBOARD_CPB_ID | \
+                                               ENETBOARD_IDK_ID )
+
+/*
+ * Get ethernet board id
+ */
+uint32_t EnetBoard_getId(void);

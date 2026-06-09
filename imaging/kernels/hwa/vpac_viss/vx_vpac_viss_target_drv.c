@@ -110,7 +110,9 @@ static vx_status tivxVpacVissSetCacConfig(tivxVpacVissObj *vissObj,
 vx_status tivxVpacVissSetConfigInDrv(tivxVpacVissObj *vissObj)
 {
     vx_status status;
+#if defined(VPAC3) || defined(VPAC3L)
     tivx_vpac_viss_params_t   *vissPrms = NULL;
+#endif
 
     status = tivxVpacVissSetRfeConfig(vissObj, &vissObj->vissCfgRef);
 
@@ -999,381 +1001,392 @@ static vx_status tivxVpacVissSetFcpConfig(tivxVpacVissObj *vissObj,
     uint8_t EE_on_Y8 = 0U;
     uint8_t outID = 0U;
 
+    if(0U == fcpInstance)
+    {
+        ioctl_set_config = IOCTL_FCP_SET_CONFIG;
+    }
     #if defined(VPAC3)
-    if(fcpInstance == 1U)
+    else if(1U == fcpInstance)
     {
         ioctl_set_config = IOCTL_FCP2_SET_CONFIG;
     }
     #endif
+    else
+    {
+        status = (int32_t)VX_ERROR_INVALID_PARAMETERS;
+    }
     vissDrvPrms = &vissObj->vissPrms;
 
-    if (NULL != vissCfgRef->fcpCfg[fcpInstance].cfaLut16to12Cfg)
+    if(FVID2_SOK == status)
     {
-        fcpCtrl.module = FCP_MODULE_COMPANDING;
-        fcpCtrl.inComp = vissCfgRef->fcpCfg[fcpInstance].cfaLut16to12Cfg;
-        status = Fvid2_control(vissObj->handle, ioctl_set_config,
-            (void *)&fcpCtrl, NULL);
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start>
-Rationale: The component level negative test framework and test applications cannot reach this portion.
-This failure case is out of scope for the imaging test framework.
-Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-However, due to the stated rationale, this is not tested.
-<justification end> */ 
-        if (FVID2_SOK != status)
+        if (NULL != vissCfgRef->fcpCfg[fcpInstance].cfaLut16to12Cfg)
         {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to set COMP Config !!!\n");
-        }
-
-/* LDRA_JUSTIFY_END */
-        vissCfgRef->fcpCfg[fcpInstance].cfaLut16to12Cfg = NULL;
-    }
-
-    if (NULL != vissCfgRef->fcpCfg[fcpInstance].cfaCfg)
-    {
-        fcpCtrl.module          = FCP_MODULE_CFA;
-        fcpCtrl.cfa             = vissCfgRef->fcpCfg[fcpInstance].cfaCfg;
-        status = Fvid2_control(vissObj->handle, ioctl_set_config,
-            (void *)&fcpCtrl, NULL);
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start>
-Rationale: The component level negative test framework and test applications cannot reach this portion.
-This failure case is out of scope for the imaging test framework.
-Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-However, due to the stated rationale, this is not tested.
-<justification end> */ 
-        if (FVID2_SOK != status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to set CFA Config !!!\n");
-        }
-
-/* LDRA_JUSTIFY_END */
-        vissCfgRef->fcpCfg[fcpInstance].cfaCfg = NULL;
-    }
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start> 
-    Rationale: The test framework and test apps cannot reach this portion.
-    The test framework does not support the configuration required to trigger this error scenario.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if (NULL != vissCfgRef->fcpCfg[fcpInstance].ccm)
-    /* LDRA_JUSTIFY_END */
-    {
-
-        fcpCtrl.module      = FCP_MODULE_CCM;
-        fcpCtrl.ccm         = vissCfgRef->fcpCfg[fcpInstance].ccm;
-        status = Fvid2_control(vissObj->handle, ioctl_set_config,
-            (void *)&fcpCtrl, NULL);
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */ 
-        if (FVID2_SOK != status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to set CCM Config !!!\n");
-        }
-        /* LDRA_JUSTIFY_END */
-        vissCfgRef->fcpCfg[fcpInstance].ccm = NULL;
-    }
-
-    if (NULL != vissCfgRef->fcpCfg[fcpInstance].gamma)
-    {
-        fcpCtrl.module = FCP_MODULE_GAMMA;
-        fcpCtrl.gamma  = vissCfgRef->fcpCfg[fcpInstance].gamma;
-        status = Fvid2_control(vissObj->handle, ioctl_set_config,
-            (void *)&fcpCtrl, NULL);
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */ 
-        if (FVID2_SOK != status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to set Gamma Config !!!\n");
-        }
-
-        /* LDRA_JUSTIFY_END */
-        vissCfgRef->fcpCfg[fcpInstance].gamma = NULL;
-    }
-
-    if (NULL != vissCfgRef->fcpCfg[fcpInstance].rgb2Hsv)
-    {
-        fcpCtrl.module          = FCP_MODULE_RGB2HSV;
-        fcpCtrl.rgb2Hsv         = vissCfgRef->fcpCfg[fcpInstance].rgb2Hsv;
-        status = Fvid2_control(vissObj->handle, ioctl_set_config,
-            (void *)&fcpCtrl, NULL);
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */ 
-        if (FVID2_SOK != status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to set RGB2HSV Config !!!\n");
-        }
-
-        /* LDRA_JUSTIFY_END */
-        vissCfgRef->fcpCfg[fcpInstance].rgb2Hsv = NULL;
-    }
-
-    if (NULL != vissCfgRef->fcpCfg[fcpInstance].rgb2yuv)
-    {
-        fcpCtrl.module          = FCP_MODULE_RGB2YUV;
-        fcpCtrl.rgb2Yuv         = vissCfgRef->fcpCfg[fcpInstance].rgb2yuv;
-        status = Fvid2_control(vissObj->handle, ioctl_set_config,
-            (void *)&fcpCtrl, NULL);
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */ 
-        if (FVID2_SOK != status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to set RGB2YUV Config !!!\n");
-        }
-
-        /* LDRA_JUSTIFY_END */
-        vissCfgRef->fcpCfg[fcpInstance].rgb2yuv = NULL;
-    }
-
-    if (NULL != vissCfgRef->fcpCfg[fcpInstance].yuvSatLutCfg)
-    {
-        fcpCtrl.module                  = FCP_MODULE_YUV_SAT_LUT;
-        fcpCtrl.yuvSatLut               = vissCfgRef->fcpCfg[fcpInstance].yuvSatLutCfg;
-        status = Fvid2_control(vissObj->handle, ioctl_set_config,
-            (void *)&fcpCtrl, NULL);
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */ 
-        if (FVID2_SOK != status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to set YUV_LUT Config !!!\n");
-        }
-
-        /* LDRA_JUSTIFY_END */
-        vissCfgRef->fcpCfg[fcpInstance].yuvSatLutCfg = NULL;
-    }
-
-    if (NULL != vissCfgRef->fcpCfg[fcpInstance].histCfg)
-    {
-        fcpCtrl.module                  = FCP_MODULE_HISTOGRAM;
-        fcpCtrl.hist                    = vissCfgRef->fcpCfg[fcpInstance].histCfg;
-        status = Fvid2_control(vissObj->handle, ioctl_set_config,
-            (void *)&fcpCtrl, NULL);
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */ 
-        if (FVID2_SOK != status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to set Histogram Config !!!\n");
-        }
-
-        /* LDRA_JUSTIFY_END */
-        vissCfgRef->fcpCfg[fcpInstance].histCfg = NULL;
-    }
-    #if defined(VPAC3L)
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start>
-    Rationale: The component level negative test framework and test applications cannot reach this portion.
-    This failure case is out of scope for the imaging test framework.
-    Effect on this unit: If the control reaches here, our code base is expected to perform platform-specific instance configuration.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    #endif
-    if(fcpInstance == 0U)
-    #if defined(VPAC3L)
-    /* LDRA_JUSTIFY_END */
-    #endif
-    {
-        EE_on_Y12 = VHWA_M2M_VISS_EE_ON_FCP0_LUMA12;
-        EE_on_Y8 = VHWA_M2M_VISS_EE_ON_FCP0_LUMA8;
-    }
-    #ifdef VPAC3
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start>
-    Rationale: The test framework and test apps cannot reach the error portion.
-    fcpInstance is pre-validated before calling tivxVpacVissSetFcpConfig() and can only have a value of 0 or 1. This failure case is out of scope for the imaging test framework.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    else if(fcpInstance == 1U)
-    /* LDRA_JUSTIFY_END */
-    {
-        EE_on_Y12 = VHWA_M2M_VISS_EE_ON_FCP1_LUMA12;
-        EE_on_Y8 = VHWA_M2M_VISS_EE_ON_FCP1_LUMA8;
-    }
+            fcpCtrl.module = FCP_MODULE_COMPANDING;
+            fcpCtrl.inComp = vissCfgRef->fcpCfg[fcpInstance].cfaLut16to12Cfg;
+            status = Fvid2_control(vissObj->handle, ioctl_set_config,
+                (void *)&fcpCtrl, NULL);
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
     <justification start>
-    Rationale: The test framework and test apps cannot reach the error portion.
-    fcpInstance is pre-validated before calling tivxVpacVissSetFcpConfig() and can only have a value of 0 or 1. This failure case is out of scope for the imaging test framework.
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    This failure case is out of scope for the imaging test framework.
     Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
     However, due to the stated rationale, this is not tested.
     <justification end> */ 
-    else
-    {
-        VX_PRINT(VX_ZONE_ERROR, "Invalid FCP Instance !!!\n");
-        status = (int32_t)VX_ERROR_INVALID_PARAMETERS;
-    }
-    /* LDRA_JUSTIFY_END */
-    if(vissDrvPrms->outPrms[2].vPipeline == fcpInstance)
-    {
-        outID = 2;
-    }
-    #else
-    if ( (FVID2_DF_YUV422I_UYVY == vissDrvPrms->outPrms[VHWA_M2M_VISS_OUT_YUV422_12B_IDX].fmt.dataFormat) ||
-                 (FVID2_DF_YUV422I_YUYV == vissDrvPrms->outPrms[VHWA_M2M_VISS_OUT_YUV422_12B_IDX].fmt.dataFormat) )
-    {
-        outID = VHWA_M2M_VISS_OUT_YUV422_12B_IDX;
-    }
-    if ( (FVID2_DF_YUV422I_UYVY == vissDrvPrms->outPrms[VHWA_M2M_VISS_OUT_YUV422_8B_IDX].fmt.dataFormat) ||
-                 (FVID2_DF_YUV422I_YUYV == vissDrvPrms->outPrms[VHWA_M2M_VISS_OUT_YUV422_8B_IDX].fmt.dataFormat) )
-    {
-        outID = VHWA_M2M_VISS_OUT_YUV422_8B_IDX;
-    }
-    #endif
-
-    if (((0U != (EE_on_Y12 & vissDrvPrms->edgeEnhancerMode)) ||
-         (0U != (EE_on_Y8 & vissDrvPrms->edgeEnhancerMode))) &&
-        (NULL != vissCfgRef->fcpCfg[fcpInstance].eeCfg))
-    {
-        if (0U != (EE_on_Y12 & vissDrvPrms->edgeEnhancerMode))
-        {
-            vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassY12 = UFALSE;
-            vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassC12 = UTRUE;
-            vissCfgRef->fcpCfg[fcpInstance].eeCfg->eeForY12OrY8 = 0u;
-
-            if ( (FVID2_DF_YUV422I_UYVY == vissDrvPrms->outPrms[outID].fmt.dataFormat) ||
-                 (FVID2_DF_YUV422I_YUYV == vissDrvPrms->outPrms[outID].fmt.dataFormat) )
-                {
-                    vissCfgRef->fcpCfg[fcpInstance].eeCfg->alignY12withChroma = UTRUE;
-                    vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassC12 = UFALSE;
-                }
-        }
-        else
-        {
-            vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassY12 = UTRUE;
-        }
-
-        if (0U != (EE_on_Y8 & vissDrvPrms->edgeEnhancerMode))
-        {
-            vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassY8 = UFALSE;
-            vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassC8 = UTRUE;
-            vissCfgRef->fcpCfg[fcpInstance].eeCfg->eeForY12OrY8 = 1u;
-            vissCfgRef->fcpCfg[fcpInstance].eeCfg->leftShift = 2u;
-            vissCfgRef->fcpCfg[fcpInstance].eeCfg->rightShift = 2u;
-
-            if ( (FVID2_DF_YUV422I_UYVY == vissDrvPrms->outPrms[outID].fmt.dataFormat) ||
-                 (FVID2_DF_YUV422I_YUYV == vissDrvPrms->outPrms[outID].fmt.dataFormat) )
+            if (FVID2_SOK != status)
             {
-                vissCfgRef->fcpCfg[fcpInstance].eeCfg->alignY8withChroma = UTRUE;
-                vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassC8 = UFALSE;
+                VX_PRINT(VX_ZONE_ERROR, "Failed to set COMP Config !!!\n");
             }
+
+    /* LDRA_JUSTIFY_END */
+            vissCfgRef->fcpCfg[fcpInstance].cfaLut16to12Cfg = NULL;
         }
+
+        if (NULL != vissCfgRef->fcpCfg[fcpInstance].cfaCfg)
+        {
+            fcpCtrl.module          = FCP_MODULE_CFA;
+            fcpCtrl.cfa             = vissCfgRef->fcpCfg[fcpInstance].cfaCfg;
+            status = Fvid2_control(vissObj->handle, ioctl_set_config,
+                (void *)&fcpCtrl, NULL);
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    This failure case is out of scope for the imaging test framework.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */ 
+            if (FVID2_SOK != status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to set CFA Config !!!\n");
+            }
+
+    /* LDRA_JUSTIFY_END */
+            vissCfgRef->fcpCfg[fcpInstance].cfaCfg = NULL;
+        }
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start> 
+        Rationale: The test framework and test apps cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
+        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if (NULL != vissCfgRef->fcpCfg[fcpInstance].ccm)
+        /* LDRA_JUSTIFY_END */
+        {
+
+            fcpCtrl.module      = FCP_MODULE_CCM;
+            fcpCtrl.ccm         = vissCfgRef->fcpCfg[fcpInstance].ccm;
+            status = Fvid2_control(vissObj->handle, ioctl_set_config,
+                (void *)&fcpCtrl, NULL);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */ 
+            if (FVID2_SOK != status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to set CCM Config !!!\n");
+            }
+            /* LDRA_JUSTIFY_END */
+            vissCfgRef->fcpCfg[fcpInstance].ccm = NULL;
+        }
+
+        if (NULL != vissCfgRef->fcpCfg[fcpInstance].gamma)
+        {
+            fcpCtrl.module = FCP_MODULE_GAMMA;
+            fcpCtrl.gamma  = vissCfgRef->fcpCfg[fcpInstance].gamma;
+            status = Fvid2_control(vissObj->handle, ioctl_set_config,
+                (void *)&fcpCtrl, NULL);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */ 
+            if (FVID2_SOK != status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to set Gamma Config !!!\n");
+            }
+
+            /* LDRA_JUSTIFY_END */
+            vissCfgRef->fcpCfg[fcpInstance].gamma = NULL;
+        }
+
+        if (NULL != vissCfgRef->fcpCfg[fcpInstance].rgb2Hsv)
+        {
+            fcpCtrl.module          = FCP_MODULE_RGB2HSV;
+            fcpCtrl.rgb2Hsv         = vissCfgRef->fcpCfg[fcpInstance].rgb2Hsv;
+            status = Fvid2_control(vissObj->handle, ioctl_set_config,
+                (void *)&fcpCtrl, NULL);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */ 
+            if (FVID2_SOK != status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to set RGB2HSV Config !!!\n");
+            }
+
+            /* LDRA_JUSTIFY_END */
+            vissCfgRef->fcpCfg[fcpInstance].rgb2Hsv = NULL;
+        }
+
+        if (NULL != vissCfgRef->fcpCfg[fcpInstance].rgb2yuv)
+        {
+            fcpCtrl.module          = FCP_MODULE_RGB2YUV;
+            fcpCtrl.rgb2Yuv         = vissCfgRef->fcpCfg[fcpInstance].rgb2yuv;
+            status = Fvid2_control(vissObj->handle, ioctl_set_config,
+                (void *)&fcpCtrl, NULL);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */ 
+            if (FVID2_SOK != status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to set RGB2YUV Config !!!\n");
+            }
+
+            /* LDRA_JUSTIFY_END */
+            vissCfgRef->fcpCfg[fcpInstance].rgb2yuv = NULL;
+        }
+
+        if (NULL != vissCfgRef->fcpCfg[fcpInstance].yuvSatLutCfg)
+        {
+            fcpCtrl.module                  = FCP_MODULE_YUV_SAT_LUT;
+            fcpCtrl.yuvSatLut               = vissCfgRef->fcpCfg[fcpInstance].yuvSatLutCfg;
+            status = Fvid2_control(vissObj->handle, ioctl_set_config,
+                (void *)&fcpCtrl, NULL);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */ 
+            if (FVID2_SOK != status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to set YUV_LUT Config !!!\n");
+            }
+
+            /* LDRA_JUSTIFY_END */
+            vissCfgRef->fcpCfg[fcpInstance].yuvSatLutCfg = NULL;
+        }
+
+        if (NULL != vissCfgRef->fcpCfg[fcpInstance].histCfg)
+        {
+            fcpCtrl.module                  = FCP_MODULE_HISTOGRAM;
+            fcpCtrl.hist                    = vissCfgRef->fcpCfg[fcpInstance].histCfg;
+            status = Fvid2_control(vissObj->handle, ioctl_set_config,
+                (void *)&fcpCtrl, NULL);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */ 
+            if (FVID2_SOK != status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to set Histogram Config !!!\n");
+            }
+
+            /* LDRA_JUSTIFY_END */
+            vissCfgRef->fcpCfg[fcpInstance].histCfg = NULL;
+        }
+        #if defined(VPAC3L)
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach this portion.
+        This failure case is out of scope for the imaging test framework.
+        Effect on this unit: If the control reaches here, our code base is expected to perform platform-specific instance configuration.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        #endif
+        if(fcpInstance == 0U)
+        #if defined(VPAC3L)
+        /* LDRA_JUSTIFY_END */
+        #endif
+        {
+            EE_on_Y12 = VHWA_M2M_VISS_EE_ON_FCP0_LUMA12;
+            EE_on_Y8 = VHWA_M2M_VISS_EE_ON_FCP0_LUMA8;
+        }
+        #ifdef VPAC3
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The test framework and test apps cannot reach the error portion.
+        fcpInstance is pre-validated before calling tivxVpacVissSetFcpConfig() and can only have a value of 0 or 1. This failure case is out of scope for the imaging test framework.
+        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        else if(fcpInstance == 1U)
+        /* LDRA_JUSTIFY_END */
+        {
+            EE_on_Y12 = VHWA_M2M_VISS_EE_ON_FCP1_LUMA12;
+            EE_on_Y8 = VHWA_M2M_VISS_EE_ON_FCP1_LUMA8;
+        }
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The test framework and test apps cannot reach the error portion.
+        fcpInstance is pre-validated before calling tivxVpacVissSetFcpConfig() and can only have a value of 0 or 1. This failure case is out of scope for the imaging test framework.
+        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */ 
         else
         {
-            vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassY8 = UTRUE;
+            VX_PRINT(VX_ZONE_ERROR, "Invalid FCP Instance !!!\n");
+            status = (int32_t)VX_ERROR_INVALID_PARAMETERS;
         }
-
-        fcpCtrl.module              = FCP_MODULE_EE;
-        fcpCtrl.eeCfg               = vissCfgRef->fcpCfg[fcpInstance].eeCfg;
-        status = Fvid2_control(vissObj->handle, ioctl_set_config,
-            (void *)&fcpCtrl, NULL);
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start>
-Rationale: The component level negative test framework and test applications cannot reach this portion.
-This failure case is out of scope for the imaging test framework.
-Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-However, due to the stated rationale, this is not tested.
-<justification end> */ 
-        if (FVID2_SOK != status)
+        /* LDRA_JUSTIFY_END */
+        if(vissDrvPrms->outPrms[2].vPipeline == fcpInstance)
         {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to set YEE Config !!!\n");
+            outID = 2;
         }
-
-/* LDRA_JUSTIFY_END */
-        vissCfgRef->fcpCfg[fcpInstance].eeCfg = NULL;
-    }
-
-    #if defined(VPAC3) || defined(VPAC3L)
-
-    if (NULL != vissCfgRef->fcpCfg[fcpInstance].comLutCfg)
-    {
-        fcpCtrl.module          = FCP_MODULE_CFA_COMPANDING;
-        fcpCtrl.cLutComp             = vissCfgRef->fcpCfg[fcpInstance].comLutCfg;
-        status = Fvid2_control(vissObj->handle, ioctl_set_config,
-            (void *)&fcpCtrl, NULL);
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start>
-Rationale: The component level negative test framework and test applications cannot reach this portion.
-This failure case is out of scope for the imaging test framework.
-Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-However, due to the stated rationale, this is not tested.
-<justification end> */ 
-        if (FVID2_SOK != status)
+        #else
+        if ( (FVID2_DF_YUV422I_UYVY == vissDrvPrms->outPrms[VHWA_M2M_VISS_OUT_YUV422_12B_IDX].fmt.dataFormat) ||
+                    (FVID2_DF_YUV422I_YUYV == vissDrvPrms->outPrms[VHWA_M2M_VISS_OUT_YUV422_12B_IDX].fmt.dataFormat) )
         {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to set FCP_MODULE_CFA_COMPANDING Config !!!\n");
+            outID = VHWA_M2M_VISS_OUT_YUV422_12B_IDX;
         }
-
-/* LDRA_JUSTIFY_END */
-        vissCfgRef->fcpCfg[fcpInstance].comLutCfg = NULL;
-    }
-
-    if (NULL != vissCfgRef->fcpCfg[fcpInstance].decomLutCfg)
-    {
-        fcpCtrl.module          = FCP_MODULE_DECOMPANDING;
-        fcpCtrl.dLutComp             = vissCfgRef->fcpCfg[fcpInstance].decomLutCfg;
-        status = Fvid2_control(vissObj->handle, ioctl_set_config,
-            (void *)&fcpCtrl, NULL);
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start>
-Rationale: The component level negative test framework and test applications cannot reach this portion.
-This failure case is out of scope for the imaging test framework.
-Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-However, due to the stated rationale, this is not tested.
-<justification end> */ 
-        if (FVID2_SOK != status)
+        if ( (FVID2_DF_YUV422I_UYVY == vissDrvPrms->outPrms[VHWA_M2M_VISS_OUT_YUV422_8B_IDX].fmt.dataFormat) ||
+                    (FVID2_DF_YUV422I_YUYV == vissDrvPrms->outPrms[VHWA_M2M_VISS_OUT_YUV422_8B_IDX].fmt.dataFormat) )
         {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to set FCP_MODULE_DECOMPANDING Config !!!\n");
+            outID = VHWA_M2M_VISS_OUT_YUV422_8B_IDX;
+        }
+        #endif
+
+        if (((0U != (EE_on_Y12 & vissDrvPrms->edgeEnhancerMode)) ||
+            (0U != (EE_on_Y8 & vissDrvPrms->edgeEnhancerMode))) &&
+            (NULL != vissCfgRef->fcpCfg[fcpInstance].eeCfg))
+        {
+            if (0U != (EE_on_Y12 & vissDrvPrms->edgeEnhancerMode))
+            {
+                vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassY12 = UFALSE;
+                vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassC12 = UTRUE;
+                vissCfgRef->fcpCfg[fcpInstance].eeCfg->eeForY12OrY8 = 0u;
+
+                if ( (FVID2_DF_YUV422I_UYVY == vissDrvPrms->outPrms[outID].fmt.dataFormat) ||
+                    (FVID2_DF_YUV422I_YUYV == vissDrvPrms->outPrms[outID].fmt.dataFormat) )
+                    {
+                        vissCfgRef->fcpCfg[fcpInstance].eeCfg->alignY12withChroma = UTRUE;
+                        vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassC12 = UFALSE;
+                    }
+            }
+            else
+            {
+                vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassY12 = UTRUE;
+            }
+
+            if (0U != (EE_on_Y8 & vissDrvPrms->edgeEnhancerMode))
+            {
+                vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassY8 = UFALSE;
+                vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassC8 = UTRUE;
+                vissCfgRef->fcpCfg[fcpInstance].eeCfg->eeForY12OrY8 = 1u;
+                vissCfgRef->fcpCfg[fcpInstance].eeCfg->leftShift = 2u;
+                vissCfgRef->fcpCfg[fcpInstance].eeCfg->rightShift = 2u;
+
+                if ( (FVID2_DF_YUV422I_UYVY == vissDrvPrms->outPrms[outID].fmt.dataFormat) ||
+                    (FVID2_DF_YUV422I_YUYV == vissDrvPrms->outPrms[outID].fmt.dataFormat) )
+                {
+                    vissCfgRef->fcpCfg[fcpInstance].eeCfg->alignY8withChroma = UTRUE;
+                    vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassC8 = UFALSE;
+                }
+            }
+            else
+            {
+                vissCfgRef->fcpCfg[fcpInstance].eeCfg->bypassY8 = UTRUE;
+            }
+
+            fcpCtrl.module              = FCP_MODULE_EE;
+            fcpCtrl.eeCfg               = vissCfgRef->fcpCfg[fcpInstance].eeCfg;
+            status = Fvid2_control(vissObj->handle, ioctl_set_config,
+                (void *)&fcpCtrl, NULL);
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    This failure case is out of scope for the imaging test framework.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */ 
+            if (FVID2_SOK != status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to set YEE Config !!!\n");
+            }
+
+    /* LDRA_JUSTIFY_END */
+            vissCfgRef->fcpCfg[fcpInstance].eeCfg = NULL;
         }
 
-/* LDRA_JUSTIFY_END */
-        vissCfgRef->fcpCfg[fcpInstance].decomLutCfg = NULL;
+        #if defined(VPAC3) || defined(VPAC3L)
 
+        if (NULL != vissCfgRef->fcpCfg[fcpInstance].comLutCfg)
+        {
+            fcpCtrl.module          = FCP_MODULE_CFA_COMPANDING;
+            fcpCtrl.cLutComp             = vissCfgRef->fcpCfg[fcpInstance].comLutCfg;
+            status = Fvid2_control(vissObj->handle, ioctl_set_config,
+                (void *)&fcpCtrl, NULL);
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    This failure case is out of scope for the imaging test framework.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */ 
+            if (FVID2_SOK != status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to set FCP_MODULE_CFA_COMPANDING Config !!!\n");
+            }
+
+    /* LDRA_JUSTIFY_END */
+            vissCfgRef->fcpCfg[fcpInstance].comLutCfg = NULL;
+        }
+
+        if (NULL != vissCfgRef->fcpCfg[fcpInstance].decomLutCfg)
+        {
+            fcpCtrl.module          = FCP_MODULE_DECOMPANDING;
+            fcpCtrl.dLutComp             = vissCfgRef->fcpCfg[fcpInstance].decomLutCfg;
+            status = Fvid2_control(vissObj->handle, ioctl_set_config,
+                (void *)&fcpCtrl, NULL);
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    This failure case is out of scope for the imaging test framework.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */ 
+            if (FVID2_SOK != status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to set FCP_MODULE_DECOMPANDING Config !!!\n");
+            }
+
+    /* LDRA_JUSTIFY_END */
+            vissCfgRef->fcpCfg[fcpInstance].decomLutCfg = NULL;
+
+        }
+        #endif
     }
-    #endif
 
     return (status);
 }

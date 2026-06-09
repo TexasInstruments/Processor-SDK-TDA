@@ -1,0 +1,97 @@
+export MCU_PLUS_SDK_PATH?=$(abspath ../..)
+include $(MCU_PLUS_SDK_PATH)/imports.mak
+include $(MCU_PLUS_SDK_PATH)/devconfig/devconfig.mak
+
+CG_TOOL_ROOT=$(CGT_GCC_AARCH64_PATH)
+
+ifeq ($(OS), Windows_NT)
+	PYTHON=python
+else
+	PYTHON=python3
+endif
+
+CROSS_COMPILE:=$(CGT_GCC_AARCH64_PATH)/bin/aarch64-none-elf-
+
+TARGET_BOARD:=am62l
+TARGET_BOARD_BL1:=am62l
+
+DEVICE:=am62lx
+
+PROFILE?=release
+BL1_PROFILE?=release
+ConfigName:=$(PROFILE)
+
+ATF_SOURCE_PATH:=$(MCU_PLUS_SDK_PATH)/source/atf/trusted-firmware-a
+BL1_BUILD_PATH:=$(ATF_SOURCE_PATH)/build/k3/$(TARGET_BOARD_BL1)/$(BL1_PROFILE)
+BL1_BIN_NAME:=bl1.bin
+
+BL1_LOAD_ADDRESS=0x70800000
+
+BOOTLOADER_STAGE_1_IMAGE_PATH:=$(MCU_PLUS_SDK_PATH)/source/atf/lib/soc/$(DEVICE)
+BOOTLOADER_STAGE_1_IMAGE:=tiboot3.bin
+
+BOOTIMAGE_CERT_GEN_CMD=$(PYTHON) $(MCU_PLUS_SDK_PATH)/tools/boot/signing/rom_image_gen.py
+
+SBL_PREBUILT_PATH=$(MCU_PLUS_SDK_PATH)/tools/boot/sbl_prebuilt/am62lx-evm
+
+ifeq ($(DEVICE_TYPE),HS)
+BOOTIMAGE_CERT_KEY=$(APP_SIGNING_KEY)
+else
+BOOTIMAGE_CERT_KEY=$(ROM_DEGENERATE_KEY)
+endif
+
+SYSFW_PATH=$(MCU_PLUS_SDK_PATH)/source/drivers/scp/firmware/$(DEVICE)
+SYSFW_LOAD_ADDR=0x40000
+BOARDCFG_BLOB=$(MCU_PLUS_SDK_PATH)/source/drivers/scp/firmware/$(DEVICE)/boardcfg/boardcfg_blob.bin
+BOARDCFG_LOAD_ADDR=0x6C000
+
+DUAL_STAGE_BOOT=yes
+
+DEBUG=0
+ATF_LOG_LEVEL:=0
+ATF_JUMP_ADDR?=0x82000000
+ATF_CORE?=a53ss0-0
+ATF_SRC_DIR:=$(ATF_SOURCE_PATH)/build/k3/am62l/$(PROFILE)
+ATF_DST_DIR:=$(MCU_PLUS_SDK_PATH)/source/atf/lib/soc/$(DEVICE)
+ATF_IMAGE:=bl31
+ATF_IMAGE_BIN:=$(ATF_IMAGE).bin
+ATF_IMAGE_A53_CORE_BIN:=$(ATF_IMAGE).$(ATF_CORE).$(PROFILE).bin
+
+ifeq ($(PROFILE),debug)
+    DEBUG=1
+endif
+
+all:
+	@echo Building Bootloader Stage 1 : BL1 binary
+	$(MAKE) -C $(ATF_SOURCE_PATH) CROSS_COMPILE=$(CROSS_COMPILE) PLAT=k3 TARGET_BOARD=$(TARGET_BOARD_BL1) ENABLE_LTO=1 am62l_bl1
+	@echo Building Trusted Firmware-A in $(PROFILE) mode
+	$(MAKE) -C $(ATF_SOURCE_PATH) CROSS_COMPILE=$(CROSS_COMPILE) PLAT=k3 TARGET_BOARD=$(TARGET_BOARD) DEBUG=$(DEBUG) bl31
+ifeq ($(DEVICE_TYPE),HS)
+ifeq ($(ENC_SBL_ENABLED),yes)
+	$(BOOTIMAGE_CERT_GEN_CMD) --swrv 1 --sbl-enc --enc-key $(APP_ENCRYPTION_KEY) --sbl-bin $(BL1_BUILD_PATH)/$(BL1_BIN_NAME) --sysfw-bin $(SYSFW_PATH)/ti-fs-firmware-$(DEVICE)-hs-enc.bin --sysfw-inner-cert $(SYSFW_PATH)/ti-fs-firmware-$(DEVICE)-hs-cert.bin --boardcfg-blob $(BOARDCFG_BLOB) --sbl-loadaddr $(BL1_LOAD_ADDRESS) --sysfw-loadaddr $(SYSFW_LOAD_ADDR) --bcfg-loadaddr $(BOARDCFG_LOAD_ADDR) --key $(BOOTIMAGE_CERT_KEY) --rom-image $(BOOTLOADER_STAGE_1_IMAGE_PATH)/$(BOOTLOADER_STAGE_1_IMAGE) --dual-stage-boot $(DUAL_STAGE_BOOT)
+else
+	$(BOOTIMAGE_CERT_GEN_CMD) --swrv 1 --sbl-bin $(BL1_BUILD_PATH)/$(BL1_BIN_NAME) --sysfw-bin $(SYSFW_PATH)/ti-fs-firmware-$(DEVICE)-hs-enc.bin --sysfw-inner-cert $(SYSFW_PATH)/ti-fs-firmware-$(DEVICE)-hs-cert.bin --boardcfg-blob $(BOARDCFG_BLOB) --sbl-loadaddr $(BL1_LOAD_ADDRESS) --sysfw-loadaddr $(SYSFW_LOAD_ADDR) --bcfg-loadaddr $(BOARDCFG_LOAD_ADDR) --key $(BOOTIMAGE_CERT_KEY) --rom-image $(BOOTLOADER_STAGE_1_IMAGE_PATH)/$(BOOTLOADER_STAGE_1_IMAGE) --dual-stage-boot $(DUAL_STAGE_BOOT)
+endif
+else
+	$(BOOTIMAGE_CERT_GEN_CMD) --swrv 1 --sbl-bin $(BL1_BUILD_PATH)/$(BL1_BIN_NAME) --sysfw-bin $(SYSFW_PATH)/ti-fs-firmware-$(DEVICE)-hs-enc.bin --sysfw-inner-cert $(SYSFW_PATH)/ti-fs-firmware-$(DEVICE)-hs-cert.bin --boardcfg-blob $(BOARDCFG_BLOB) --sbl-loadaddr $(BL1_LOAD_ADDRESS) --sysfw-loadaddr $(SYSFW_LOAD_ADDR) --bcfg-loadaddr $(BOARDCFG_LOAD_ADDR) --key $(BOOTIMAGE_CERT_KEY) --rom-image $(BOOTLOADER_STAGE_1_IMAGE_PATH)/$(BOOTLOADER_STAGE_1_IMAGE) --dual-stage-boot $(DUAL_STAGE_BOOT)
+endif
+	@echo  Bootloader stage 1 Image: $(BOOTLOADER_STAGE_1_IMAGE_PATH)/$(BOOTLOADER_STAGE_1_IMAGE) Done !!!
+	@echo Copying ATF to $(ATF_DST_DIR)
+	$(COPY) -f $(ATF_SRC_DIR)/$(ATF_IMAGE_BIN) $(ATF_DST_DIR)/$(ATF_IMAGE_A53_CORE_BIN)
+	@echo Copying $(BOOTLOADER_STAGE_1_IMAGE) to $(SBL_PREBUILT_PATH)
+	$(MKDIR) $(SBL_PREBUILT_PATH)/
+	$(COPY) $(BOOTLOADER_STAGE_1_IMAGE_PATH)/$(BOOTLOADER_STAGE_1_IMAGE) $(SBL_PREBUILT_PATH)/
+
+clean:
+	@echo Cleaning Bootloader Stage 1: BL1 binary
+	$(MAKE) -C $(ATF_SOURCE_PATH) CROSS_COMPILE=$(CROSS_COMPILE) clean BUILD_PLAT=build/k3/$(TARGET_BOARD_BL1)/$(BL1_PROFILE)/bl1
+	@echo Cleaning Trusted Firmware-A build
+	$(MAKE) -C $(ATF_SOURCE_PATH) CROSS_COMPILE=$(CROSS_COMPILE) clean BUILD_PLAT=build/k3/$(TARGET_BOARD)/$(PROFILE)/bl31
+	$(RM)  $(ATF_DST_DIR)/$(ATF_IMAGE_A53_CORE_BIN)
+	@echo Cleaning Bootloader Stage 1 Image : tiboot3.bin
+	$(RM) $(BOOTLOADER_STAGE_1_IMAGE_PATH)/$(BOOTLOADER_STAGE_1_IMAGE)
+
+scrub:
+	@echo Scrubbing BL1 and Trusted Firmware-A build
+	$(MAKE) -C $(ATF_SOURCE_PATH) CROSS_COMPILE=$(CROSS_COMPILE) clean BUILD_PLAT=build
+	$(RM) $(ATF_DST_DIR)/*.bin

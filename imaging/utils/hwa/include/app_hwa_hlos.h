@@ -63,7 +63,6 @@
 #ifndef APP_HWA_LINUX_H_
 #define APP_HWA_LINUX_H_
 
-#include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
 #include <utils/console_io/include/app_log.h>

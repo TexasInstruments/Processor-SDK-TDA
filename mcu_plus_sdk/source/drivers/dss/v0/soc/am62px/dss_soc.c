@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -77,7 +77,7 @@ static const Dss_DctrlNodeIdInfo gDss_DctrlNodeIdInfo[] = {
     {DSS_DCTRL_NODE_VP1,      CSL_DSS_VP_ID_1,           DSS_DCTRL_NODE_TYPE_VP},
     {DSS_DCTRL_NODE_VP2,      CSL_DSS_VP_ID_2,           DSS_DCTRL_NODE_TYPE_VP},
     {DSS_DCTRL_NODE_OLDI,     CSL_DSS_MODULE_INVALID,    DSS_DCTRL_NODE_TYPE_OUTPUT}, /* Virtual Node */
-    {DSS_DCTRL_NODE_DPI1,     CSL_DSS_MODULE_INVALID,    DSS_DCTRL_NODE_TYPE_OUTPUT}  /* Virtual Node */
+    {DSS_DCTRL_NODE_DPI,     CSL_DSS_MODULE_INVALID,    DSS_DCTRL_NODE_TYPE_OUTPUT}  /* Virtual Node */
 };
 
 static const Dss_CommRegInfo gDss_commRegInfo[] = {
@@ -190,7 +190,7 @@ int32_t Dss_convNodetoModule(uint32_t nodeId,
     *moduleId = CSL_DSS_MODULE_INVALID;
 
     for(i=0U;
-        i<sizeof (gDss_DctrlNodeIdInfo) / sizeof (gDss_DctrlNodeIdInfo[0U]);
+        i<(sizeof (gDss_DctrlNodeIdInfo) / sizeof (gDss_DctrlNodeIdInfo[0U]));
         i++)
     {
         if(nodeId == gDss_DctrlNodeIdInfo[i].nodeId)
@@ -213,7 +213,7 @@ int32_t Dss_convModuletoNode(uint32_t *nodeId,
     *nodeId = DSS_DCTRL_NODE_INVALID;
 
     for(i=0U;
-        i<sizeof (gDss_DctrlNodeIdInfo) / sizeof (gDss_DctrlNodeIdInfo[0U]);
+        i<(sizeof (gDss_DctrlNodeIdInfo) / sizeof (gDss_DctrlNodeIdInfo[0U]));
         i++)
     {
         if((moduleId == gDss_DctrlNodeIdInfo[i].moduleId) &&
@@ -235,7 +235,7 @@ void Dss_convEventGrouptoModule(uint32_t eventGroup,
     *moduleId = CSL_DSS_MODULE_INVALID;
 
     for(i=0U;
-        i<sizeof (gDss_EventGroupInfo) / sizeof (gDss_EventGroupInfo[0U]);
+        i<(sizeof (gDss_EventGroupInfo) / sizeof (gDss_EventGroupInfo[0U]));
         i++)
     {
         if(eventGroup == gDss_EventGroupInfo[i].eventGroup)
@@ -254,7 +254,7 @@ void Dss_convModuletoEventGroup(uint32_t *eventGroup,
     *eventGroup = DSS_EVENT_GROUP_INVALID;
 
     for(i=0U;
-        i<sizeof (gDss_EventGroupInfo) / sizeof (gDss_EventGroupInfo[0U]);
+        i<(sizeof (gDss_EventGroupInfo) / sizeof (gDss_EventGroupInfo[0U]));
         i++)
     {
         if((moduleId == gDss_EventGroupInfo[i].moduleId) &&
@@ -271,7 +271,7 @@ uint32_t Dss_getVpConnId(uint32_t overlayId)
     uint32_t vpId = CSL_DSS_MODULE_INVALID, i;
 
     for(i=0U;
-        i<sizeof(gDss_OverlayConnInfo)/sizeof(gDss_OverlayConnInfo[0U]);
+        i<(sizeof(gDss_OverlayConnInfo)/sizeof(gDss_OverlayConnInfo[0U]));
         i++)
     {
         if(overlayId == gDss_OverlayConnInfo[i].overlayId)
@@ -302,83 +302,87 @@ int32_t Dss_enableL1Event(Dss_EvtMgrInfo *evtMgrInfo,
     commRegs = socInfo->commRegs[dssCommonRegionId];
     GT_assert(DssTrace, (NULL != commRegs));
 
-    if(DSS_EVENT_GROUP_VP1 == eventGroup)
+    if((evtMgrInfo != NULL) && (commRegs != NULL))
     {
-        /* Clear the status of interrupt */
-        regVal = CSL_REG32_RD(&commRegs->VP_IRQSTATUS_0);
-        regVal |= eventGroup;
-        CSL_REG32_WR(&commRegs->VP_IRQSTATUS_0, regVal);
+        if(DSS_EVENT_GROUP_VP1 == eventGroup)
+        {
+            /* Clear the status of interrupt */
+            regVal = CSL_REG32_RD(&commRegs->VP_IRQSTATUS_0);
+            regVal |= eventGroup;
+            CSL_REG32_WR(&commRegs->VP_IRQSTATUS_0, regVal);
 
-        /* Enable the interrupts at the VP1 level */
-        regVal = CSL_REG32_RD(&commRegs->VP_IRQENABLE_0);
-        regVal |= event;
-        CSL_REG32_WR(&commRegs->VP_IRQENABLE_0, regVal);
+            /* Enable the interrupts at the VP1 level */
+            regVal = CSL_REG32_RD(&commRegs->VP_IRQENABLE_0);
+            regVal |= event;
+            CSL_REG32_WR(&commRegs->VP_IRQENABLE_0, regVal);
 
-        /* Store the register address in evtMgrInfo instance */
-        evtMgrInfo->l1EnableReg[eventCnt] = &commRegs->VP_IRQENABLE_0;
-        evtMgrInfo->l1StatusReg[eventCnt] = &commRegs->VP_IRQSTATUS_0;
-        evtMgrInfo->l1Mask[eventCnt] = event;
-        evtMgrInfo->allEvents[eventCnt] = event;
+            /* Store the register address in evtMgrInfo instance */
+            evtMgrInfo->l1EnableReg[eventCnt] = &commRegs->VP_IRQENABLE_0;
+            evtMgrInfo->l1StatusReg[eventCnt] = &commRegs->VP_IRQSTATUS_0;
+            evtMgrInfo->l1Mask[eventCnt] = event;
+            evtMgrInfo->allEvents[eventCnt] = event;
+        }
+        else if(DSS_EVENT_GROUP_VP2 == eventGroup)
+        {
+            /* Clear the status of interrupt */
+            regVal = CSL_REG32_RD(&commRegs->VP_IRQSTATUS_1);
+            regVal |= eventGroup;
+            CSL_REG32_WR(&commRegs->VP_IRQSTATUS_1, regVal);
+
+            /* Enable the interrupts at the VP2 level */
+            regVal = CSL_REG32_RD(&commRegs->VP_IRQENABLE_1);
+            regVal |= event;
+            CSL_REG32_WR(&commRegs->VP_IRQENABLE_1, regVal);
+
+            /* Store the register address in evtMgrInfo instance */
+            evtMgrInfo->l1EnableReg[eventCnt] = &commRegs->VP_IRQENABLE_1;
+            evtMgrInfo->l1StatusReg[eventCnt] = &commRegs->VP_IRQSTATUS_1;
+            evtMgrInfo->l1Mask[eventCnt] = event;
+            evtMgrInfo->allEvents[eventCnt] = event;
+        }
+        else if(DSS_EVENT_GROUP_VID1 == eventGroup)
+        {
+            /* Clear the status of interrupt */
+            regVal = CSL_REG32_RD(&commRegs->VID_IRQSTATUS_0);
+            regVal |= eventGroup;
+            CSL_REG32_WR(&commRegs->VID_IRQSTATUS_0, regVal);
+
+            /* Enable the interrupts at the VID1 Pipe level */
+            regVal = CSL_REG32_RD(&commRegs->VID_IRQENABLE_0);
+            regVal |= event;
+            CSL_REG32_WR(&commRegs->VID_IRQENABLE_0, regVal);
+
+            /* Store the register address in evtMgrInfo instance */
+            evtMgrInfo->l1EnableReg[eventCnt] = &commRegs->VID_IRQENABLE_0;
+            evtMgrInfo->l1StatusReg[eventCnt] = &commRegs->VID_IRQSTATUS_0;
+            evtMgrInfo->l1Mask[eventCnt] = event;
+            evtMgrInfo->allEvents[eventCnt] = event;
+        }
+        else if(DSS_EVENT_GROUP_VIDL1 == eventGroup)
+        {
+            /* Clear the status of interrupt */
+            regVal = CSL_REG32_RD(&commRegs->VID_IRQSTATUS_1);
+            regVal |= eventGroup;
+            CSL_REG32_WR(&commRegs->VID_IRQSTATUS_1, regVal);
+
+            /* Enable the interrupts at the VIDL1 Pipe level */
+            regVal = CSL_REG32_RD(&commRegs->VID_IRQENABLE_1);
+            regVal |= event;
+            CSL_REG32_WR(&commRegs->VID_IRQENABLE_1, regVal);
+
+            /* Store the register address in evtMgrInfo instance */
+            evtMgrInfo->l1EnableReg[eventCnt] = &commRegs->VID_IRQENABLE_1;
+            evtMgrInfo->l1StatusReg[eventCnt] = &commRegs->VID_IRQSTATUS_1;
+            evtMgrInfo->l1Mask[eventCnt] = event;
+            evtMgrInfo->allEvents[eventCnt] = event;
+        }
+        else
+        {
+            GT_assert(DssTrace, (bool)FALSE);
+            retVal = FVID2_EBADARGS;
+        }
     }
-    else if(DSS_EVENT_GROUP_VP2 == eventGroup)
-    {
-        /* Clear the status of interrupt */
-        regVal = CSL_REG32_RD(&commRegs->VP_IRQSTATUS_1);
-        regVal |= eventGroup;
-        CSL_REG32_WR(&commRegs->VP_IRQSTATUS_1, regVal);
 
-        /* Enable the interrupts at the VP2 level */
-        regVal = CSL_REG32_RD(&commRegs->VP_IRQENABLE_1);
-        regVal |= event;
-        CSL_REG32_WR(&commRegs->VP_IRQENABLE_1, regVal);
-
-        /* Store the register address in evtMgrInfo instance */
-        evtMgrInfo->l1EnableReg[eventCnt] = &commRegs->VP_IRQENABLE_1;
-        evtMgrInfo->l1StatusReg[eventCnt] = &commRegs->VP_IRQSTATUS_1;
-        evtMgrInfo->l1Mask[eventCnt] = event;
-        evtMgrInfo->allEvents[eventCnt] = event;
-    }
-    else if(DSS_EVENT_GROUP_VID1 == eventGroup)
-    {
-        /* Clear the status of interrupt */
-        regVal = CSL_REG32_RD(&commRegs->VID_IRQSTATUS_0);
-        regVal |= eventGroup;
-        CSL_REG32_WR(&commRegs->VID_IRQSTATUS_0, regVal);
-
-        /* Enable the interrupts at the VID1 Pipe level */
-        regVal = CSL_REG32_RD(&commRegs->VID_IRQENABLE_0);
-        regVal |= event;
-        CSL_REG32_WR(&commRegs->VID_IRQENABLE_0, regVal);
-
-        /* Store the register address in evtMgrInfo instance */
-        evtMgrInfo->l1EnableReg[eventCnt] = &commRegs->VID_IRQENABLE_0;
-        evtMgrInfo->l1StatusReg[eventCnt] = &commRegs->VID_IRQSTATUS_0;
-        evtMgrInfo->l1Mask[eventCnt] = event;
-        evtMgrInfo->allEvents[eventCnt] = event;
-    }
-    else if(DSS_EVENT_GROUP_VIDL1 == eventGroup)
-    {
-        /* Clear the status of interrupt */
-        regVal = CSL_REG32_RD(&commRegs->VID_IRQSTATUS_1);
-        regVal |= eventGroup;
-        CSL_REG32_WR(&commRegs->VID_IRQSTATUS_1, regVal);
-
-        /* Enable the interrupts at the VIDL1 Pipe level */
-        regVal = CSL_REG32_RD(&commRegs->VID_IRQENABLE_1);
-        regVal |= event;
-        CSL_REG32_WR(&commRegs->VID_IRQENABLE_1, regVal);
-
-        /* Store the register address in evtMgrInfo instance */
-        evtMgrInfo->l1EnableReg[eventCnt] = &commRegs->VID_IRQENABLE_1;
-        evtMgrInfo->l1StatusReg[eventCnt] = &commRegs->VID_IRQSTATUS_1;
-        evtMgrInfo->l1Mask[eventCnt] = event;
-        evtMgrInfo->allEvents[eventCnt] = event;
-    }
-    else
-    {
-        GT_assert(DssTrace, FALSE);
-        retVal = FVID2_EBADARGS;
-    }
 
     return retVal;
 }
@@ -506,8 +510,8 @@ uint32_t Dss_dctrlGetVpSafetyRegionId(uint32_t evtId)
     uint32_t regionId = CSL_DSS_VP_SAFETY_REGION_INVALID;
 
     for(i=0U;
-        i<sizeof (gDss_VpSafetyRegionIdInfo) /
-           sizeof (gDss_VpSafetyRegionIdInfo[0U]);
+        i<(sizeof (gDss_VpSafetyRegionIdInfo) /
+           sizeof (gDss_VpSafetyRegionIdInfo[0U]));
         i++)
     {
         if(evtId == gDss_VpSafetyRegionIdInfo[i].regionErrEvt)
@@ -538,8 +542,8 @@ uint32_t Dss_dctrlGetVpSafetyEvtId(uint32_t regionId)
     uint32_t evtId = DSS_VP_EVENT_INVALID;
 
     for(i=0U;
-        i<sizeof (gDss_VpSafetyRegionIdInfo) /
-           sizeof (gDss_VpSafetyRegionIdInfo[0U]);
+        i<(sizeof (gDss_VpSafetyRegionIdInfo) /
+           sizeof (gDss_VpSafetyRegionIdInfo[0U]));
         i++)
     {
         if(regionId == gDss_VpSafetyRegionIdInfo[i].regionId)
@@ -552,7 +556,7 @@ uint32_t Dss_dctrlGetVpSafetyEvtId(uint32_t regionId)
     return (evtId);
 }
 
-void Dss_setOLDITxPowerDown(uint32_t oldiLinkMode, uint32_t powerState)
+void Dss_setOLDITxPowerDown(uint32_t oldiLinkMode, bool powerState)
 {
     uint32_t regVal;
 
@@ -567,38 +571,39 @@ void Dss_setOLDITxPowerDown(uint32_t oldiLinkMode, uint32_t powerState)
             case CSL_DSS_VP_OLDI_MAP_TYPE_B:
             case CSL_DSS_VP_OLDI_MAP_TYPE_C:
                 /* Power Down both OLDI 1 TX */
-                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI1, powerState);
-                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI0, !powerState);
+                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI1, 1U);
+                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI0, 0U);
+                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_BG, 0U);
                 break;
             /* Dual Link Mode */
             case CSL_DSS_VP_OLDI_MAP_TYPE_D:
             case CSL_DSS_VP_OLDI_MAP_TYPE_E:
             case CSL_DSS_VP_OLDI_MAP_TYPE_F:
                 /* No Power down for both OLDI TX */
-                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI1, !powerState);
-                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI0, !powerState);
-                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_BG, !powerState);
+                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI1, 0U);
+                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI0, 0U);
+                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_BG, 0U);
                 break;
             default:
                 /* Power down both OLDI TX */
-                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI1, !powerState);
-                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI0, !powerState);
-                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_BG, !powerState);
+                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI1, 1U);
+                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI0, 1U);
+                CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_BG, 1U);
                 break;
         }
     }
     else
     {
         /* Power down both OLDI TX */
-        CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI1, !powerState);
-        CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI0, !powerState);
-        CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_BG, !powerState);
+        CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI1, 1U);
+        CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_OLDI0, 1U);
+        CSL_FINS(regVal, MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL_PD_BG, 1U);
     }
 
     CSL_REG32_WR(CSL_CTRL_MMR0_CFG0_BASE + CSL_MAIN_CTRL_MMR_CFG0_OLDI_PD_CTRL, regVal);
 }
 
-void Dss_setDssSoftReset()
+void Dss_setDssSoftReset(void)
 {
     const Dss_SocInfo *socInfo;
     CSL_dss_commRegs *commRegs;

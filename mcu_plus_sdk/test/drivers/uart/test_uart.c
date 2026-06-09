@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -88,9 +88,6 @@ void test_main(void *args)
 {
     UART_TestParams      testParams;
 
-    Drivers_open();
-    Board_driversOpen();
-
     UNITY_BEGIN();
 
     test_uart_set_params(&testParams, 1111);
@@ -112,8 +109,6 @@ void test_main(void *args)
 
     UNITY_END();
 
-    Board_driversClose();
-    Drivers_close();
 }
 
 static void uart_echo_read_full_test(void *args)
@@ -383,13 +378,31 @@ static void test_uart_set_params(UART_TestParams *testParams, uint32_t tcId)
     #if defined(SOC_AM263X)
     params->intrNum = CSLR_R5FSS0_CORE0_INTR_UART0_IRQ;
     #endif
+    #if defined(SOC_AM275X)
+    params->intrNum = CSLR_R5FSS0_CORE0_INTR_UART0_USART_IRQ_0;
+    #endif
     #if defined(SOC_AM62X)
+    #if defined(A53_FREERTOS)
+    params->intrNum = CSLR_GICSS0_COMMON_0_SPI_UART1_USART_IRQ_0;
+    #else
     params->intrNum = CSLR_MCU_M4FSS0_CORE0_NVIC_MCU_UART0_USART_IRQ_0 + 16;
     #endif
+    #endif
+
     #if (defined(SOC_AM62AX) || defined(SOC_AM62PX))
     params->intrNum = CSLR_MCU_R5FSS0_CORE0_CPU0_INTR_MCU_UART0_USART_IRQ_0;
     #endif
-    #if defined (SOC_J722S)
+
+    #if defined(SOC_AM62DX)
+    #if defined(__aarch64__)
+    params->intrNum = CSLR_GICSS0_COMMON_0_SPI_MCU_UART0_USART_IRQ_0;
+    #elif defined(__C7504__)
+    params->intrNum = 30;
+    params->eventId = 178 + 256;
+    #else
+    params->intrNum = CSLR_MCU_R5FSS0_CORE0_CPU0_INTR_UART0_USART_IRQ_0;
+    #endif
+    #elif defined (SOC_J722S)
     #if defined (BUILD_WKUP_R5)
     params->intrNum = CSLR_WKUP_R5FSS0_CORE0_INTR_WKUP_UART0_USART_IRQ_0;
     #elif defined (BUILD_MCU_R5)
@@ -404,6 +417,11 @@ static void test_uart_set_params(UART_TestParams *testParams, uint32_t tcId)
     params->intrNum = 28;   /* Any inerrupt number is fine, as long as it does not clash with others. */
     #endif
     #endif
+
+    #if defined(SOC_AM62LX)
+    params->intrNum = CSLR_GICSS0_SPI_UART1_USART_IRQ_0;
+    #endif
+
     switch (tcId)
     {
         case 1111:

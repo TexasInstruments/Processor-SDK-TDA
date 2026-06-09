@@ -1,6 +1,10 @@
 
 --stack_size=16384
 --heap_size=32768
+
+/* ATCM base address */
+gAtcmBaseAddr = 0x78000000;
+
 -e_vectors_sbl  /* for SBL make sure to set entry point to _vectors_sbl */
 
 __IRQ_STACK_SIZE = 4096;
@@ -51,9 +55,9 @@ SECTIONS
 
 MEMORY
 {
-    /* R5F_VECS : ORIGIN = 0x00000000 , LENGTH = 0x00000040
-    R5F_TCMA : ORIGIN = 0x00000040 , LENGTH = 0x00007FC0
-    R5F_TCMB0: ORIGIN = 0x41010000 , LENGTH = 0x00008000 */
+    /* HSM RAM SMS0_HSM_SRAM0_0 is used to accomodate for .stack space in Debug build */
+    HSM_RAM  : ORIGIN = 0x0043C00000, LENGTH = 0x20000
+
     OCM_RAM_VECS: ORIGIN = 0x43C40000 , LENGTH = 0x100
     OCM_RAM  : ORIGIN = 0x43C40100 , LENGTH = 0x3E000 - 0x100
 

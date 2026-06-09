@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -42,31 +42,82 @@
 #include <drivers/device_manager/sciserver/sciserver_init.h>
 
 #define TASK_PRI_MAIN_THREAD  (configMAX_PRIORITIES-1)
+#define TASK_PRI_BOOT_THREAD  (configMAX_PRIORITIES-1)
+#define TASK_PRI_IPC_THREAD   (configMAX_PRIORITIES-1)
 
 
 #define TASK_SIZE (16384U/sizeof(configSTACK_DEPTH_TYPE))
+#define TASK_BOOTLOADER_SIZE    (8192U)
+
+/* Stack size allocated for the sciserver task */
+#define SCISERVER_TASK_STACK_SIZE                   (2U*1024U)
+
+/* Stack memory alignment requirement for the sciserver task */
+#define SCISERVER_TASK_STACK_ALIGNMENT              (32)
 
 StackType_t gMainTaskStack[TASK_SIZE] __attribute__((aligned(32)));
 StaticTask_t gMainTaskObj;
 TaskHandle_t gMainTask;
+DM_LPMData_t gDMLPMData __attribute__((section(".lpm_data"), aligned(4)));
 
-#define TASK_PRI_CHIME_THREAD  (configMAX_PRIORITIES-1)
+StackType_t gBootTaskStack[TASK_BOOTLOADER_SIZE] __attribute__((aligned(32)));
+StaticTask_t gBootTaskObj;
+TaskHandle_t gBootTask;
 
-StackType_t gChimeTaskStack[TASK_SIZE] __attribute__((aligned(32)));
-StaticTask_t gChimeTaskObj;
-TaskHandle_t gChimeTask;
+StackType_t gIPCTaskStack[TASK_SIZE] __attribute__((aligned(32)));
+StaticTask_t gIPCTaskObj;
+TaskHandle_t gIPCTask;
+
+/* Stack buffers for user high and low priority tasks */
+uint8_t __attribute__((aligned(SCISERVER_TASK_STACK_ALIGNMENT))) gUserHiTaskStack[SCISERVER_TASK_STACK_SIZE];
+uint8_t __attribute__((aligned(SCISERVER_TASK_STACK_ALIGNMENT))) gUserLoTaskStack[SCISERVER_TASK_STACK_SIZE];
 
 void mcasp_chime(void *args);
 void sbl_stage2_main(void *args);
+void ipc_rpmsg_echo_main(void *args);
+void ipc_rpmsg_thread(void *args)
+{
+    ipc_rpmsg_echo_main(NULL);
+
+    vTaskDelete(NULL);
+}
 
 void main_thread(void *args)
 {
-    sciServer_init();
+    int32_t status = SystemP_SUCCESS;
 
-    if (Bootloader_socIsSBLBoot())
-    {
-        sbl_stage2_main(NULL);
-    }
+    /* Configure sciserver task parameters */
+    Sciserver_TirtosCfgPrms_t sciserverCfg = {0};
+    sciserverCfg.hiTaskStack    =   gUserHiTaskStack;
+    sciserverCfg.loTaskStack    =   gUserLoTaskStack;
+    sciserverCfg.taskStackSize  =   SCISERVER_TASK_STACK_SIZE;
+
+    /* Open drivers */
+    Drivers_open();
+    /* Open flash and board drivers */
+    status = Board_driversOpen();
+    DebugP_assert(status==SystemP_SUCCESS);
+
+    /* Init LPM specific data */
+    Sciclient_initDeviceManagerLPMData(&gDMLPMData);
+
+    sciServer_init(&sciserverCfg);
+
+    mcasp_chime(NULL);
+
+    gIPCTask = xTaskCreateStatic( ipc_rpmsg_thread,   /* Pointer to the function that implements the task. */
+                                  "ipc_rpmsg_thread", /* Text name for the task.  This is to facilitate debugging only. */
+                                  TASK_SIZE,  /* Stack depth in units of StackType_t typically uint32_t on 32b CPUs */
+                                  NULL,            /* We are not using the task parameter. */
+                                  TASK_PRI_IPC_THREAD,   /* task priority, 0 is lowest priority, configMAX_PRIORITIES-1 is highest */
+                                  gIPCTaskStack,  /* pointer to stack base */
+                                  &gIPCTaskObj ); /* pointer to statically allocated task object memory */
+    configASSERT(gIPCTask != NULL);
+
+    /* Close board and flash drivers */
+    Board_driversClose();
+    /* Close drivers */
+    Drivers_close();
 
     vTaskDelete(NULL);
 }
@@ -74,20 +125,14 @@ void main_thread(void *args)
 
 int main()
 {
-    /* init SOC specific modules */
     Bootloader_profileReset();
 
-    System_init();
-    Board_init();
 
-    gChimeTask = xTaskCreateStatic( mcasp_chime,   /* Pointer to the function that implements the task. */
-                                  "mcasp_chime", /* Text name for the task.  This is to facilitate debugging only. */
-                                  TASK_SIZE,  /* Stack depth in units of StackType_t typically uint32_t on 32b CPUs */
-                                  NULL,            /* We are not using the task parameter. */
-                                  TASK_PRI_CHIME_THREAD,   /* task priority, 0 is lowest priority, configMAX_PRIORITIES-1 is highest */
-                                  gChimeTaskStack,  /* pointer to stack base */
-                                  &gChimeTaskObj ); /* pointer to statically allocated task object memory */
-    configASSERT(gChimeTask != NULL);
+    /* init SOC specific modules */
+    System_init();
+    Bootloader_profileAddProfilePoint("System_init");
+    Board_init();
+    Bootloader_profileAddProfilePoint("Board_init");
 
     gMainTask = xTaskCreateStatic( main_thread,   /* Pointer to the function that implements the task. */
                                   "main_thread", /* Text name for the task.  This is to facilitate debugging only. */
@@ -97,6 +142,17 @@ int main()
                                   gMainTaskStack,  /* pointer to stack base */
                                   &gMainTaskObj ); /* pointer to statically allocated task object memory */
     configASSERT(gMainTask != NULL);
+
+    gBootTask = xTaskCreateStatic( sbl_stage2_main,   /* Pointer to the function that implements the task. */
+                                  "boot_thread", /* Text name for the task.  This is to facilitate debugging only. */
+                                  TASK_SIZE,  /* Stack depth in units of StackType_t typically uint32_t on 32b CPUs */
+                                  NULL,            /* We are not using the task parameter. */
+                                  TASK_PRI_BOOT_THREAD,   /* task priority, 0 is lowest priority, configMAX_PRIORITIES-1 is highest */
+                                  gBootTaskStack,  /* pointer to stack base */
+                                  &gBootTaskObj ); /* pointer to statically allocated task object memory */
+    configASSERT(gBootTask != NULL);
+
+    Bootloader_profileAddProfilePoint("FreeRtosTask Create");
 
     /* Start the scheduler to start the tasks executing. */
     vTaskStartScheduler();

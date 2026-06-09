@@ -75,7 +75,7 @@
  *
  **/
 static void vhwaM2mDofSetupPacketInfo(Vhwa_M2mDofChParams *chPrms,
-                                      uint32_t complRin);
+                                      uint32_t complRingNum);
 
 /**
  * \brief   Local Function to initialize transfer recoder for Current frame

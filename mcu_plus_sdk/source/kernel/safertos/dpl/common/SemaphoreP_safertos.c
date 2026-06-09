@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,6 +30,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <string.h>
 #include <kernel/dpl/HwiP.h>
 #include <kernel/dpl/ClockP.h>
@@ -39,13 +43,37 @@
 #include <semaphoreAPI.h>
 #include <mutexAPI.h>
 
-portBaseType xPortInIsrContext( void );
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
 
 typedef struct SemaphoreP_Struct_ {
     uint64_t         semObj[(safertosapiQUEUE_OVERHEAD_BYTES/sizeof(uint64_t) + 1)];
     xSemaphoreHandle semHndl;
     uint32_t         isRecursiveMutex;
 } SemaphoreP_Struct;
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
+portBaseType xPortInIsrContext( void );
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
 int32_t SemaphoreP_constructBinary(SemaphoreP_Object *obj, uint32_t initCount)
 {
@@ -64,8 +92,7 @@ int32_t SemaphoreP_constructBinary(SemaphoreP_Object *obj, uint32_t initCount)
     }
     else
     {
-        /* Not supported in SafeRTOS */
-        //vQueueAddToRegistry(pSemaphore->semHndl, "Binary Sem (DPL)");
+        /* vQueueAddToRegistry(pSemaphore->semHndl, "Binary Sem (DPL)") is not supported in SafeRTOS */
 
         if(initCount == 0)
         {
@@ -104,8 +131,7 @@ int32_t SemaphoreP_constructCounting(SemaphoreP_Object *obj, uint32_t initCount,
     }
     else
     {
-        /* Not supported in SafeRTOS */
-        //vQueueAddToRegistry(pSemaphore->semHndl, "Counting Sem (DPL)");
+        /* vQueueAddToRegistry(pSemaphore->semHndl, "Counting Sem (DPL)") is not supported in SafeRTOS */
         status = SystemP_SUCCESS;
     }
 
@@ -129,8 +155,7 @@ int32_t SemaphoreP_constructMutex(SemaphoreP_Object *obj)
     }
     else
     {
-        /* Not supported in SafeRTOS */
-        //vQueueAddToRegistry(pSemaphore->semHndl, "Mutex (DPL)");
+        /* vQueueAddToRegistry(pSemaphore->semHndl, "Mutex (DPL)") is not supported in SafeRTOS */
         status = SystemP_SUCCESS;
     }
 
@@ -164,7 +189,7 @@ int32_t SemaphoreP_pend(SemaphoreP_Object *obj, uint32_t timeout)
     {
         if( HwiP_inISR() )
         {
-            /* timeout is ignored when in ISR mode */
+            /* Timeout is ignored when in ISR mode */
             isSemTaken = xSemaphoreTakeFromISR(pSemaphore->semHndl);
             safertosapiYIELD_FROM_ISR();
         }

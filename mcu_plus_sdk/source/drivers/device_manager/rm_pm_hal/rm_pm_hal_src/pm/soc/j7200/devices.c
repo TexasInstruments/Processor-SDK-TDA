@@ -9176,12 +9176,12 @@ const struct devgroup soc_devgroups[J7200_PM_DEVGRP_RANGE_ID_MAX] = {
 	[PM_DEVGRP_00] =   {
 		.dev_clk_data	= MCU_WAKEUP_dev_clk_data,
 		.dev_clk	= MCU_WAKEUP_dev_clk,
-		.clk_idx	= 8U,
+		.clk_idx	= 6U,
 	},
 	[PM_DEVGRP_01] =   {
 		.dev_clk_data	= MAIN_dev_clk_data,
 		.dev_clk	= MAIN_dev_clk,
-		.clk_idx	= 86U,
+		.clk_idx	= 85U,
 	},
 	[PM_DEVGRP_DMSC] = {
 		.dev_clk_data	= DMSC_INTERNAL_dev_clk_data,

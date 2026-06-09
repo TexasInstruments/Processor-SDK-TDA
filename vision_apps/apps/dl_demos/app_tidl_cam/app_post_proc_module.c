@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017-2024 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -61,7 +61,7 @@
  */
 
 #include "app_post_proc_module.h"
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
 #include "tivx_dl_post_proc_host.h"
 extern const char imgnet_labels[1001][256];
 tivxDLPostProcParams *local_postproc_config = NULL;
@@ -71,7 +71,7 @@ vx_status app_init_post_proc(vx_context context, PostProcObj *postProcObj, char 
 {
     vx_status status = VX_SUCCESS;
 
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
     uint32_t i = 0;
     local_postproc_config = tivxMemAlloc(sizeof(tivxDLPostProcParams), TIVX_MEM_EXTERNAL);
     if(local_postproc_config == NULL) {
@@ -123,7 +123,7 @@ vx_status app_init_post_proc(vx_context context, PostProcObj *postProcObj, char 
     {
         if(status == VX_SUCCESS)
         {
-            #if defined(SOC_AM62A) && defined(QNX)
+            #if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
             postProcObj->output_arr[q] = vxCreateObjectArray(context, (vx_reference)output_img, num_cameras);
             #else
             postProcObj->output_arr[q] = vxCreateObjectArray(context, (vx_reference)output, num_cameras);
@@ -132,7 +132,7 @@ vx_status app_init_post_proc(vx_context context, PostProcObj *postProcObj, char 
             if(status == VX_SUCCESS)
             {
                 /* Keep the first entry of each object-array as its required later to enqueue/dequeue references */
-                #if defined(SOC_AM62A) && defined(QNX)
+                #if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
                 postProcObj->results[q] = (vx_image) vxGetObjectArrayItem((vx_object_array)postProcObj->output_arr[q], 0);
                 #else
                 postProcObj->results[q] = (vx_user_data_object) vxGetObjectArrayItem((vx_object_array)postProcObj->output_arr[q], 0);
@@ -144,7 +144,7 @@ vx_status app_init_post_proc(vx_context context, PostProcObj *postProcObj, char 
             printf("Unable to create output object array at depth %d\n", q);
         }
     }
-    #if defined(SOC_AM62A) && defined(QNX)
+    #if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
     vxReleaseImage(&output_img);
     #else
     vxReleaseUserDataObject(&output);
@@ -169,7 +169,7 @@ vx_status app_update_post_proc(vx_context context, PostProcObj *postProcObj, vx_
     postProcObj->num_input_tensors = ioBufDesc->numInputBuf;
     postProcObj->num_output_tensors = ioBufDesc->numOutputBuf;
 
-    #if defined(SOC_AM62A) && defined(QNX)
+    #if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
     postProcObj->kernel = tivxAddKernelDLPostProc(context, postProcObj->num_input_tensors);
     status = vxGetStatus((vx_reference)postProcObj->kernel);
     #endif
@@ -186,13 +186,13 @@ void app_deinit_post_proc(PostProcObj *postProcObj, vx_int32 bufq_depth)
     for(q = 0; q < bufq_depth; q++)
     {
       vxReleaseObjectArray(&postProcObj->output_arr[q]);
-      #if defined(SOC_AM62A) && defined(QNX)
+      #if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
       vxReleaseImage(&postProcObj->results[q]);
       #else
       vxReleaseUserDataObject(&postProcObj->results[q]);
       #endif
     }
-    #if defined(SOC_AM62A) && defined(QNX)
+    #if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
     if(local_postproc_config)
     {
        if (local_postproc_config->oc_prms.classnames)
@@ -212,7 +212,7 @@ void app_delete_post_proc(PostProcObj *postProcObj)
     }
 }
 
-#if defined(SOC_AM62A) && defined(QNX)
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
 vx_status app_create_graph_post_proc(vx_graph graph, PostProcObj *postProcObj, vx_object_array out_args_arr, vx_object_array out_tensor_arr, vx_object_array input_img_arr)
 {
     vx_status status = VX_SUCCESS;

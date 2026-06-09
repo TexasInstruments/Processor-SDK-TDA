@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2020 Texas Instruments Incorporated
+ * Copyright (c) 2020-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -80,6 +80,15 @@
 #include "app_test.h"
 #include "app_post_proc_module.h"
 
+#if defined(SOC_AM62A) && defined(QNX)
+#include <screen/screen.h>
+#endif
+
+#if defined(SOC_AM62A) && defined(LINUX)
+#include <utils/drm_wrapper/include/drm_wrapper.h>
+#define DRM_FORMAT_NV12 0x3231564E
+#endif
+
 /* #define WRITE_INTERMEDIATE_OUTPUTS */
 
 #ifndef x86_64
@@ -88,6 +97,11 @@
 
 #define APP_BUFFER_Q_DEPTH   (2)
 #define APP_PIPELINE_DEPTH   (6)
+
+#if defined(SOC_AM62A) && defined(QNX)
+screen_context_t screen_ctx = NULL;
+screen_window_t screen_win = NULL;
+#endif
 
 typedef struct {
     vx_object_array arr[APP_MAX_BUFQ_DEPTH];
@@ -140,6 +154,20 @@ typedef struct {
     int32_t enqueueCnt;
     int32_t dequeueCnt;
 
+#if defined(SOC_AM62A) && defined(QNX)
+    tivx_task screen_task;
+    uint32_t stop_screen_task;
+    uint32_t stop_screen_task_done;
+    vx_image screen_frame;
+#endif
+
+#if defined(SOC_AM62A) && defined(LINUX)
+    tivx_task drm_task;
+    uint32_t stop_drm_task;
+    uint32_t stop_drm_task_done;
+    void *drm_handle;
+#endif
+
 } AppObj;
 
 AppObj gAppObj;
@@ -157,8 +185,10 @@ static void app_update_param_set(AppObj *obj);
 static vx_status add_graph_parameter_by_node_index(vx_graph graph, vx_node node, vx_uint32 node_parameter_index);
 static void app_pipeline_params_defaults(AppObj *obj);
 static void app_find_object_array_index(vx_object_array object_array[], vx_reference ref, vx_int32 array_size, vx_int32 *array_idx);
+#if !defined(SOC_AM62A)
 #ifndef x86_64
 static void app_draw_graphics(Draw2D_Handle *handle, Draw2D_BufInfo *draw2dBufInfo, uint32_t update_type);
+#endif
 #endif
 #ifdef APP_ENABLE_PIPELINE_FLOW
 static vx_status app_run_graph_for_one_frame_pipeline(AppObj *obj, vx_int32 frame_id);
@@ -168,6 +198,357 @@ static vx_status app_run_graph_for_one_frame_sequential(AppObj *obj, vx_int32 fr
 
 static char img_labels[TIVX_DL_POST_PROC_MAX_NUM_CLASSNAMES][TIVX_DL_POST_PROC_MAX_SIZE_CLASSNAME] = {""};
 static int32_t label_offset3[TIVX_DL_POST_PROC_MAX_NUM_CLASSNAMES] = {0};
+
+#if defined(SOC_AM62A) && defined(QNX)
+int32_t app_run_screen(AppObj *obj)
+{
+    int32_t err = 0;
+    int usage = SCREEN_USAGE_READ | SCREEN_USAGE_WRITE;
+    int screenFormat = SCREEN_FORMAT_NV12;
+    screen_context_t screen_ctx = NULL;
+    screen_window_t screen_win = NULL;
+    vx_uint32 width, height;
+    vx_df_image df;
+    vx_imagepatch_addressing_t image_addr;
+    vx_rectangle_t rect;
+    vx_map_id map_id1, map_id2;
+    void *data_ptr1 = NULL, *data_ptr2 = NULL;
+    vx_uint32 imgaddr_stride;
+    uint32_t i;
+
+    /* connect to screen */
+    err = screen_create_context(&screen_ctx, SCREEN_APPLICATION_CONTEXT);
+    if(err != 0) {
+        printf("Failed to create screen context\n");
+    }
+
+    /* create a window */
+    err = screen_create_window(&screen_win, screen_ctx);
+    if(err != 0) {
+        printf("Failed to create screen window\n");
+    }
+
+    err = screen_set_window_property_iv(screen_win, SCREEN_PROPERTY_USAGE, &usage);
+    if(err != 0) {
+        printf("Failed to set usage property\n");
+    }
+    err = screen_set_window_property_iv(screen_win, SCREEN_PROPERTY_FORMAT, &screenFormat);
+    if(err != 0) {
+        printf("Failed to set format prpoerty\n");
+    }
+
+    /* create screen buffers */
+    int nbuffers = 2;
+    err = screen_create_window_buffers(screen_win, nbuffers);
+    if(err != 0) {
+        printf("Failed to create window buffer\n");
+    }
+
+    while(1) {
+        int buffer_size[2];
+        err = screen_get_window_property_iv(screen_win, SCREEN_PROPERTY_BUFFER_SIZE, buffer_size);
+        if(err != 0) {
+            printf("Failed to get window buffer size\n");
+        }
+
+        screen_buffer_t screen_buf[2];
+        err = screen_get_window_property_pv(screen_win, SCREEN_PROPERTY_RENDER_BUFFERS, (void **)&screen_buf);
+        if(err != 0) {
+            printf("Failed to get window buffer\n");
+        }
+
+        /* obtain pointers to the buffers */
+        void *ptr1 = NULL;
+        err = screen_get_buffer_property_pv(screen_buf[0], SCREEN_PROPERTY_POINTER, (void **)&ptr1);
+        if(err != 0) {
+            printf("Failed to get buffer pointer\n");
+        }
+
+        int buf_stride1 = 0;
+        err = screen_get_buffer_property_iv(screen_buf[0], SCREEN_PROPERTY_STRIDE, &buf_stride1);
+        if(err != 0) {
+           printf("Failed to get buffer stride1\n");
+        }
+
+        /* copy frames from OVX buffer to screen buffer*/
+        vx_image display_image = (vx_image)vxGetObjectArrayItem((vx_object_array)obj->postProcObj.output_image_arr, 0);
+        vxQueryImage(display_image, VX_IMAGE_WIDTH, &width, sizeof(vx_uint32));
+        vxQueryImage(display_image, VX_IMAGE_HEIGHT, &height, sizeof(vx_uint32));
+        vxQueryImage(display_image, VX_IMAGE_FORMAT, &df, sizeof(vx_df_image));
+
+        /* Calculate center offset for display */
+        vx_uint32 display_width = 1920;
+        vx_uint32 display_height = 1080;
+        vx_uint32 offset_x = (display_width - width) / 2;
+        vx_uint32 offset_y = (display_height - height) / 2;
+
+        /* Ensure offsets are even (required for NV12 chroma subsampling) */
+        offset_x &= ~1u;
+        offset_y &= ~1u;
+
+        /* Clear Y plane to black (0x00) */
+        void *clear_ptr = ptr1;
+        for(i = 0; i < display_height; i++)
+        {
+            memset(clear_ptr, 0x00, display_width);
+            clear_ptr = (void *)((uint8_t *)clear_ptr + buf_stride1);
+        }
+
+        /* Clear UV plane to neutral chroma (128) - UV plane starts after Y plane */
+        void *uv_base = (void *)((uint8_t *)ptr1 + (display_height * buf_stride1));
+        void *uv_clear_ptr = uv_base;
+        for(i = 0; i < display_height / 2; i++)
+        {
+            memset(uv_clear_ptr, 128, display_width);
+            uv_clear_ptr = (void *)((uint8_t *)uv_clear_ptr + buf_stride1);
+        }
+
+        rect.start_x = 0;
+        rect.start_y = 0;
+        rect.end_x = width;
+        rect.end_y = height;
+
+        /* Y Plane: Copy centered */
+        vxMapImagePatch(display_image,
+            &rect,
+            0,
+            &map_id1,
+            &image_addr,
+            &data_ptr1,
+            VX_READ_ONLY,
+            VX_MEMORY_TYPE_HOST,
+            VX_NOGAP_X
+            );
+
+        if(!data_ptr1) {
+            printf("data_ptr1 is NULL \n");
+            return -1;
+        }
+
+        imgaddr_stride = image_addr.stride_y;
+
+        /* Position ptr1 at center of Y plane */
+        void *y_ptr = (void *)((uint8_t *)ptr1 + (offset_y * buf_stride1) + offset_x);
+
+        for(i = 0; i < height; i++)
+        {
+            memcpy(y_ptr, data_ptr1, width);
+            data_ptr1 += imgaddr_stride;
+            y_ptr = (void *)((uint8_t *)y_ptr + buf_stride1);
+        }
+        vxUnmapImagePatch(display_image, map_id1);
+
+        /* UV Plane: Copy centered */
+        if(VX_DF_IMAGE_NV12 == df || TIVX_DF_IMAGE_NV12_P12 == df) {
+            vxMapImagePatch(display_image,
+                &rect,
+                1,
+                &map_id2,
+                &image_addr,
+                &data_ptr2,
+                VX_READ_ONLY,
+                VX_MEMORY_TYPE_HOST,
+                VX_NOGAP_X
+                );
+
+            if(!data_ptr2) {
+                printf("data_ptr2 is NULL \n");
+                return -1;
+            }
+
+            imgaddr_stride = image_addr.stride_y;
+
+            /* Position at center of UV plane: UV base + offset_y/2 rows + offset_x horizontal offset */
+            void *uv_ptr = (void *)((uint8_t *)uv_base + ((offset_y / 2) * buf_stride1) + offset_x);
+
+            for(i = 0; i < height / 2; i++)
+            {
+                memcpy(uv_ptr, data_ptr2, width);
+                data_ptr2 += imgaddr_stride;
+                uv_ptr = (void *)((uint8_t *)uv_ptr + buf_stride1);
+            }
+            vxUnmapImagePatch(display_image, map_id2);
+        }
+
+        err = screen_post_window(screen_win, screen_buf[0], 0, NULL, 0);
+        if(err != 0) {
+            printf("Failed to post window\n");
+        }
+
+        if(obj->stop_screen_task == 1) {
+            break;
+        }
+    }
+
+    return err;
+}
+
+static void app_run_screen_task(void *app_var)
+{
+    AppObj *obj = (AppObj *)app_var;
+
+    app_run_screen(obj);
+
+    obj->stop_screen_task_done = 1;
+}
+
+static int32_t app_screen_task_create(AppObj *obj)
+{
+    tivx_task_create_params_t params;
+    int32_t status;
+
+    tivxTaskSetDefaultCreateParams(&params);
+    params.task_main = app_run_screen_task;
+    params.app_var = obj;
+
+    obj->stop_screen_task_done = 0;
+    obj->stop_screen_task = 0;
+    status = tivxTaskCreate(&obj->screen_task, &params);
+
+    return status;
+}
+
+static void app_run_screen_task_delete(AppObj *obj)
+{
+    while(obj->stop_screen_task_done==0)
+    {
+         tivxTaskWaitMsecs(100);
+    }
+
+    screen_destroy_window(screen_win);
+    screen_destroy_context(screen_ctx);
+    tivxTaskDelete(&obj->screen_task);
+}
+#endif
+
+#if defined(SOC_AM62A) && defined(LINUX)
+int32_t app_run_drm_display(AppObj *obj)
+{
+    int32_t status = 0;
+    app_drm_wrapper_cfg_t drm_cfg;
+    app_drm_wrapper_handle_t *drm_handle = NULL;
+    vx_uint32 width, height;
+    vx_df_image df;
+    uint32_t drm_pix_format;
+
+    /* Query display image properties */
+    vx_image display_image = obj->imgMosaicObj.output_image[0];
+    vxQueryImage(display_image, VX_IMAGE_WIDTH, &width, sizeof(vx_uint32));
+    vxQueryImage(display_image, VX_IMAGE_HEIGHT, &height, sizeof(vx_uint32));
+    vxQueryImage(display_image, VX_IMAGE_FORMAT, &df, sizeof(vx_df_image));
+
+    /* Map TIOVX format to DRM format */
+    if (VX_DF_IMAGE_NV12 == df)
+    {
+        drm_pix_format = DRM_FORMAT_NV12;
+    }
+    else if (TIVX_DF_IMAGE_NV12_P12 == df)
+    {
+        /* NV12 P12 not directly supported, fallback to NV12 */
+        drm_pix_format = DRM_FORMAT_NV12;
+    }
+    else
+    {
+        printf("[DRM] Unsupported pixel format 0x%x, defaulting to NV12\n", df);
+        drm_pix_format = DRM_FORMAT_NV12;
+    }
+
+    /* Initialize DRM wrapper configuration */
+    appDrmWrapperInitCfg(&drm_cfg);
+    drm_cfg.width = width;
+    drm_cfg.height = height;
+    drm_cfg.pix_format = drm_pix_format;
+    drm_cfg.bufq_depth = 1;
+
+    /* Create DRM wrapper handle */
+    drm_handle = appDrmWrapperCreate(&drm_cfg);
+    if (drm_handle == NULL)
+    {
+        printf("[DRM] Failed to create DRM wrapper\n");
+        return -1;
+    }
+
+    /* Store handle in AppObj for cleanup */
+    obj->drm_handle = (void *)drm_handle;
+
+    /* Register the display image buffer */
+    status = appDrmWrapperRegisterBuffer(drm_handle, display_image, 0);
+    if (status < 0)
+    {
+        printf("[DRM] Failed to register buffer\n");
+        appDrmWrapperDelete(drm_handle);
+        obj->drm_handle = NULL;
+        return -1;
+    }
+
+    printf("[DRM] DRM display initialized: %ux%u\n", width, height);
+
+    /* Main display loop */
+    while (1)
+    {
+        /* Render the current buffer (zero-copy via DMA-BUF) */
+        status = appDrmWrapperRender(drm_handle, 0);
+        if (status < 0)
+        {
+            printf("[DRM] Render failed\n");
+            break;
+        }
+
+        /* Check for stop signal */
+        if (obj->stop_drm_task == 1)
+        {
+            break;
+        }
+    }
+
+    return status;
+}
+
+static void app_run_drm_task(void *app_var)
+{
+    AppObj *obj = (AppObj *)app_var;
+
+    app_run_drm_display(obj);
+
+    obj->stop_drm_task_done = 1;
+}
+
+static int32_t app_drm_task_create(AppObj *obj)
+{
+    tivx_task_create_params_t params;
+    int32_t status;
+
+    tivxTaskSetDefaultCreateParams(&params);
+    params.task_main = app_run_drm_task;
+    params.app_var = obj;
+
+    obj->stop_drm_task_done = 0;
+    obj->stop_drm_task = 0;
+    obj->drm_handle = NULL;
+
+    status = tivxTaskCreate(&obj->drm_task, &params);
+
+    return status;
+}
+
+static void app_run_drm_task_delete(AppObj *obj)
+{
+    while (obj->stop_drm_task_done == 0)
+    {
+        tivxTaskWaitMsecs(100);
+    }
+
+    /* Clean up DRM resources */
+    if (obj->drm_handle != NULL)
+    {
+        appDrmWrapperDelete((app_drm_wrapper_handle_t *)obj->drm_handle);
+        obj->drm_handle = NULL;
+    }
+
+    tivxTaskDelete(&obj->drm_task);
+}
+#endif
+
 
 static void app_show_usage(vx_int32 argc, vx_char* argv[])
 {
@@ -285,6 +666,12 @@ static vx_status app_run_graph_interactive(AppObj *obj)
                     break;
                 case 'x':
                     obj->stop_task = 1;
+#if defined(SOC_AM62A) && defined(QNX)
+                    obj->stop_screen_task = 1;
+#endif
+#if defined(SOC_AM62A) && defined(LINUX)
+                    obj->stop_drm_task = 1;
+#endif
                     done = 1;
                     break;
             }
@@ -299,6 +686,12 @@ static vx_status app_run_graph_interactive(AppObj *obj)
         {
           app_run_task_delete(obj);
         }
+#if defined(SOC_AM62A) && defined(QNX)
+        app_run_screen_task_delete(obj);
+#endif
+#if defined(SOC_AM62A) && defined(LINUX)
+        app_run_drm_task_delete(obj);
+#endif
     }
     return status;
 }
@@ -467,6 +860,7 @@ static void app_parse_cfg_file(AppObj *obj, vx_char *cfg_file_name)
                     obj->postProcObj.params.od_prms.viz_th = atof(token);
                 }
             }
+#if !defined(SOC_AM62A)
             else
             if(strcmp(token, "en_out_img_write")==0)
             {
@@ -476,6 +870,7 @@ static void app_parse_cfg_file(AppObj *obj, vx_char *cfg_file_name)
                     obj->en_out_img_write = atoi(token);
                 }
             }
+#endif
             else
             if(strcmp(token, "display_option")==0)
             {
@@ -659,6 +1054,7 @@ vx_status app_tidl_od_main(vx_int32 argc, vx_char* argv[])
 /*
  * Utility API used to add a graph parameter from a node, node parameter index
  */
+#if defined(APP_ENABLE_PIPELINE_FLOW)
 static vx_status add_graph_parameter_by_node_index(vx_graph graph, vx_node node, vx_uint32 node_parameter_index)
 {
     vx_parameter parameter = vxGetParameterByIndex(node, node_parameter_index);
@@ -670,12 +1066,14 @@ static vx_status add_graph_parameter_by_node_index(vx_graph graph, vx_node node,
     }
     return status;
 }
+#endif
 
 static vx_status app_init(AppObj *obj)
 {
     vx_status status = VX_SUCCESS;
+#if !defined(SOC_AM62A)
     app_grpx_init_prms_t grpx_prms;
-
+#endif
     /* Create OpenVx Context */
     obj->context = vxCreateContext();
     status = vxGetStatus((vx_reference)obj->context);
@@ -683,9 +1081,10 @@ static vx_status app_init(AppObj *obj)
     {
         tivxHwaLoadKernels(obj->context);
         tivxVideoIOLoadKernels(obj->context);
+#if !defined(SOC_AM62A)
         tivxImgProcLoadKernels(obj->context);
+#endif
         tivxEdgeaiImgProcLoadKernels(obj->context);
-    
         tivxTIDLLoadKernels(obj->context);
     }
 
@@ -752,6 +1151,7 @@ static vx_status app_init(AppObj *obj)
         status = app_init_img_mosaic(obj->context, &obj->imgMosaicObj, "sw_mosaic_obj", APP_BUFFER_Q_DEPTH);
         APP_PRINTF("Img Mosaic Init Done! \n");
     }
+#if !defined(SOC_AM62A)
     if(status == VX_SUCCESS)
     {
         status = app_init_display(obj->context, &obj->displayObj, "display_obj");
@@ -759,7 +1159,6 @@ static vx_status app_init(AppObj *obj)
     }
     appPerfPointSetName(&obj->total_perf , "TOTAL");
     appPerfPointSetName(&obj->fileio_perf, "FILEIO");
-
     #ifndef x86_64
     if((obj->displayObj.display_option == 1) && (status == VX_SUCCESS))
     {
@@ -768,7 +1167,10 @@ static vx_status app_init(AppObj *obj)
         appGrpxInit(&grpx_prms);
     }
     #endif
-
+#endif
+#if defined(SOC_AM62A) && defined(QNX)
+    obj->screen_frame = NULL;
+#endif
     return status;
 }
 
@@ -797,10 +1199,9 @@ static void app_deinit(AppObj *obj)
 
     app_deinit_img_mosaic(&obj->imgMosaicObj, APP_BUFFER_Q_DEPTH);
     APP_PRINTF("Mosaic deinit Done! \n");
-
+#if !defined(SOC_AM62A)
     app_deinit_display(&obj->displayObj);
     APP_PRINTF("Display deinit Done! \n");
-
     #ifndef x86_64
     if(obj->displayObj.display_option == 1)
     {
@@ -808,13 +1209,13 @@ static void app_deinit(AppObj *obj)
         APP_PRINTF("Graphics deinit Done! \n");
     }
     #endif
-
+#endif
     tivxTIDLUnLoadKernels(obj->context);
     APP_PRINTF("TIDL unload Done! \n");
-
+#if !defined(SOC_AM62A)
     tivxImgProcUnLoadKernels(obj->context);
     APP_PRINTF("ImgProc unload Done! \n");
-
+#endif
     tivxEdgeaiImgProcUnLoadKernels(obj->context);
     APP_PRINTF("EdgeAI ImgProc unload Done! \n");
 
@@ -839,17 +1240,19 @@ static void app_delete_graph(AppObj *obj)
     app_delete_post_proc(&obj->postProcObj);
 
     app_delete_img_mosaic(&obj->imgMosaicObj);
-
+#if !defined(SOC_AM62A)
     app_delete_display(&obj->displayObj);
-
+#endif
     vxReleaseGraph(&obj->graph);
 }
 
 static vx_status app_create_graph(AppObj *obj)
 {
     vx_status status = VX_SUCCESS;
+    #ifdef APP_ENABLE_PIPELINE_FLOW
     vx_graph_parameter_queue_params_t graph_parameters_queue_params_list[2];
     vx_int32 graph_parameter_index;
+    #endif
 
     obj->graph = vxCreateGraph(obj->context);
     status = vxGetStatus((vx_reference)obj->graph);
@@ -881,10 +1284,12 @@ static vx_status app_create_graph(AppObj *obj)
     obj->imgMosaicObj.num_inputs = idx;
 
     app_create_graph_img_mosaic(obj->graph, &obj->imgMosaicObj, NULL);
+#if !defined(SOC_AM62A)
     if(status == VX_SUCCESS)
     {
         status = app_create_graph_display(obj->graph, &obj->displayObj, obj->imgMosaicObj.output_image[0]);
     }
+#endif
 
 #ifdef APP_ENABLE_PIPELINE_FLOW
     /* Scalar Node - input is in Index 0 */
@@ -998,7 +1403,9 @@ static vx_status app_run_graph_for_one_frame_sequential(AppObj *obj, vx_int32 fr
 
     vx_char input_file_name[APP_MAX_FILE_PATH];
 
+    #ifdef WRITE_INTERMEDIATE_OUTPUTS
     ScalerObj *scalerObj = &obj->scalerObj;
+    #endif
 
     snprintf(input_file_name, APP_MAX_FILE_PATH, "%s/%010d.yuv", obj->input_file_path, frame_id);
 
@@ -1075,26 +1482,29 @@ static vx_status app_run_graph_for_one_frame_sequential(AppObj *obj, vx_int32 fr
 static vx_status app_run_graph_for_one_frame_pipeline(AppObj *obj, vx_int32 frame_id)
 {
     vx_status status = VX_SUCCESS;
+#if !defined(SOC_AM62A)
     vx_uint32 actual_checksum = 0;
-
+#endif
     vx_char input_file_name[APP_MAX_FILE_PATH];
     vx_int32 obj_array_idx = -1;
 
     ScalerObj    *scalerObj    = &obj->scalerObj;
+#if !defined(SOC_AM62A)
     ImgMosaicObj *imgMosaicObj = &obj->imgMosaicObj;
-
+#endif
     snprintf(input_file_name, APP_MAX_FILE_PATH, "%s/%010d.yuv", obj->input_file_path, frame_id);
 
     appPerfPointBegin(&obj->total_perf);
 
     if(obj->pipeline < 0)
     {
+#if !defined(SOC_AM62A)
         /* Enqueue outpus */
         if(((obj->en_out_img_write == 1) || (obj->test_mode == 1)) && (status == VX_SUCCESS))
         {
             status = vxGraphParameterEnqueueReadyRef(obj->graph, imgMosaicObj->graph_parameter_index, (vx_reference*)&imgMosaicObj->output_image[obj->enqueueCnt], 1);
         }
-
+#endif
         appPerfPointBegin(&obj->fileio_perf);
         /* Read input */
         if(status == VX_SUCCESS)
@@ -1119,7 +1529,9 @@ static vx_status app_run_graph_for_one_frame_pipeline(AppObj *obj, vx_int32 fram
     if(obj->pipeline >= 0)
     {
         vx_image scaler_input_image;
+#if !defined(SOC_AM62A)
         vx_image mosaic_output_image;
+#endif
         uint32_t num_refs;
 
         /* Dequeue input */
@@ -1127,6 +1539,7 @@ static vx_status app_run_graph_for_one_frame_pipeline(AppObj *obj, vx_int32 fram
         {
             status = vxGraphParameterDequeueDoneRef(obj->graph, scalerObj->graph_parameter_index, (vx_reference*)&scaler_input_image, 1, &num_refs);
         }
+#if !defined(SOC_AM62A)
         if((obj->en_out_img_write == 1) || (obj->test_mode == 1))
         {
             vx_char output_file_name[APP_MAX_FILE_PATH];
@@ -1165,7 +1578,7 @@ static vx_status app_run_graph_for_one_frame_pipeline(AppObj *obj, vx_int32 fram
                 status = vxGraphParameterEnqueueReadyRef(obj->graph, imgMosaicObj->graph_parameter_index, (vx_reference*)&mosaic_output_image, 1);
             }
         }
-
+#endif
         appPerfPointBegin(&obj->fileio_perf);
 
         if(status == VX_SUCCESS)
@@ -1212,6 +1625,20 @@ static vx_status app_run_graph(AppObj *obj)
 
 #ifdef APP_ENABLE_PIPELINE_FLOW
     app_pipeline_params_defaults(obj);
+#endif
+#if defined(SOC_AM62A) && defined(QNX)
+    status = app_screen_task_create(obj);
+    if(status!=0)
+    {
+        printf("ERROR: Unable to create screen task\n");
+    }
+#endif
+#if defined(SOC_AM62A) && defined(LINUX)
+    status = app_drm_task_create(obj);
+    if(status!=0)
+    {
+        printf("ERROR: Unable to create DRM display task\n");
+    }
 #endif
     for(x = 0; x < obj->num_iterations; x++)
     {
@@ -1260,6 +1687,14 @@ static vx_status app_run_graph(AppObj *obj)
 #endif
 
     obj->stop_task = 1;
+
+#if defined(SOC_AM62A) && defined(QNX)
+    obj->stop_screen_task = 1;
+#endif
+
+#if defined(SOC_AM62A) && defined(LINUX)
+    obj->stop_drm_task = 1;
+#endif
 
     return status;
 }
@@ -1317,7 +1752,7 @@ static void set_post_proc_defaults_od(PostProcObj *postProcObj){
 
     postProcObj->params.od_prms.classnames = img_labels;
 
-    postProcObj->params.od_prms.viz_th = 0.6;
+    postProcObj->params.od_prms.viz_th = 0.4;
 }
 
 static void update_post_proc_params_od(AppObj *obj, PostProcObj *postProcObj)
@@ -1369,6 +1804,7 @@ static void app_update_param_set(AppObj *obj)
     }
 }
 
+#if defined(APP_ENABLE_PIPELINE_FLOW)
 static void app_find_object_array_index(vx_object_array object_array[], vx_reference ref, vx_int32 array_size, vx_int32 *array_idx)
 {
     vx_int32 i;
@@ -1386,6 +1822,9 @@ static void app_find_object_array_index(vx_object_array object_array[], vx_refer
         vxReleaseImage(&img_ref);
     }
 }
+#endif
+
+#if !defined(SOC_AM62A)
 #ifndef x86_64
 static void app_draw_graphics(Draw2D_Handle *handle, Draw2D_BufInfo *draw2dBufInfo, uint32_t update_type)
 {
@@ -1401,4 +1840,5 @@ static void app_draw_graphics(Draw2D_Handle *handle, Draw2D_BufInfo *draw2dBufIn
 
   return;
 }
+#endif
 #endif

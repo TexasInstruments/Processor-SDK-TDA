@@ -5,7 +5,7 @@ let device = "am62x";
 
 const files = {
     common: [
-        "ipc_rpmsg_echo_linux.c",
+        "ipc_rpmsg_echo.c",
         "main.c",
     ],
 };
@@ -93,6 +93,13 @@ const lnkfiles = {
     ]
 };
 
+const defines_mcu = {
+    common:[
+        "ENABLE_MCU_ONLY_LPM",
+        "REMOTE_CORE",
+    ]
+}
+
 const syscfgfile = "../example.syscfg";
 
 const readmeDoxygenPageTag = "EXAMPLES_DRIVERS_IPC_RPMESSAGE_LINUX_ECHO";
@@ -108,6 +115,7 @@ const templates_freertos_m4f =
         output: "../main.c",
         options: {
             entryFunction: "ipc_rpmsg_echo_main",
+            skipDriversClose: "true",
         },
     }
 ];
@@ -123,6 +131,7 @@ const templates_freertos_r5f =
         output: "../main.c",
         options: {
             entryFunction: "ipc_rpmsg_echo_main",
+            skipDriversClose: "true",
         },
     }
 ];
@@ -130,8 +139,10 @@ const templates_freertos_r5f =
 const buildOptionCombos = [
     { device: device, cpu: "m4fss0-0", cgt: "ti-arm-clang", board: "am62x-sk", os: "freertos"},
     { device: device, cpu: "m4fss0-0", cgt: "ti-arm-clang", board: "am62x-sk-lp", os: "freertos"},
+    { device: device, cpu: "m4fss0-0", cgt: "ti-arm-clang", board: "am62x-sip-sk", os: "freertos"},
     { device: device, cpu: "r5fss0-0", cgt: "ti-arm-clang", board: "am62x-sk", os: "freertos"},
     { device: device, cpu: "r5fss0-0", cgt: "ti-arm-clang", board: "am62x-sk-lp", os: "freertos"},
+    { device: device, cpu: "r5fss0-0", cgt: "ti-arm-clang", board: "am62x-sip-sk", os: "freertos"},
 ];
 
 function getComponentProperty() {
@@ -140,6 +151,7 @@ function getComponentProperty() {
     property.dirPath = path.resolve(__dirname, "..");
     property.type = "executable";
     property.name = "ipc_rpmsg_echo_linux";
+    property.linuxAppName = "ipc_rpmsg_echo";
     property.isInternal = false;
     property.isLinuxInSystem = true;
     property.isLinuxFwGen = true;
@@ -165,6 +177,7 @@ function getComponentBuildProperty(buildOption) {
             build_property.libs = libs_freertos_m4f;
             build_property.templates = templates_freertos_m4f;
             build_property.filedirs = filedirs_m4f;
+            build_property.defines = defines_mcu;
         }
     }
     if(buildOption.cpu.match(/r5f*/)) {

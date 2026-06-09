@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -62,7 +62,7 @@
 
 #if defined(FREERTOS)
 #include <FreeRTOS.h>
-#elif (defined (SAFERTOS)) && !defined(MCU_PLUS_SDK)
+#elif defined(SAFERTOS) && defined(PDK)
 #include <SafeRTOSConfig.h>
 #include <SafeRTOS_config.h>
 #endif
@@ -71,7 +71,7 @@
 
 int32_t appUtilsPrintCpuHz(void)
 {
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK) || defined(MCU_SDK)
     appLogPrintf("### CPU Frequency = %d Hz\n",
                 configCPU_CLOCK_HZ);
 #endif

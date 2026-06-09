@@ -904,6 +904,15 @@ static void EnetRm_initTxObj(EnetRm_TxChObj *txObj,
     txObj->txPSILThreadIdOffset     = txChPeerId;
     txObj->txResTbl.numCores = rmCfg->resPartInfo.numCores;
 
+    /* Initialize all TX resources to prevent uninitialized access */
+    if (isAbsTxChAllocated)
+    {
+        for (i = 0U; i < resTableSize; i++)
+        {
+            EnetRm_initResourceNode(&txObj->txRes[i], i);
+        }
+    }
+
     allocResCnt = 0U;
     for (i = 0U; i < rmCfg->resPartInfo.numCores; i++)
     {

@@ -30,11 +30,42 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <kernel/dpl/DebugP.h>
 #include <kernel/dpl/ClockP.h>
 #include <kernel/dpl/HwiP.h>
 #include <kernel/dpl/TimerP.h>
-#include <stdio.h>
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
+void DebugP_logChar(char a);
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
+volatile uint32_t gDebugLogZone = DebugP_LOG_ZONE_ALWAYS_ON;
+
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
 /* This is needed in r5f since assert can be called before MPU init */
 #if defined(__ARM_ARCH_7R__)
@@ -42,10 +73,6 @@
 #else
 #define BOOT_SECTION
 #endif
-
-void DebugP_logChar(char a);
-
-volatile uint32_t gDebugLogZone = DebugP_LOG_ZONE_ALWAYS_ON;
 
 uint32_t DebugP_logZoneEnable(uint32_t logZoneMask)
 {
@@ -93,6 +120,7 @@ void _DebugP_assert(int32_t expression, const char *file, const char *function, 
     if(expression == 0)
     {
         volatile uint32_t assert_loop = 1;
+#if DebugP_LOG_ENABLED
         uint64_t curTime = ClockP_getTimeUsec();
 
         DebugP_log("ASSERT: %d.%ds: %s:%s:%d: %s failed !!!\r\n",
@@ -101,11 +129,12 @@ void _DebugP_assert(int32_t expression, const char *file, const char *function, 
             file, function, line,
             expressionString
             );
-
-        (void) HwiP_disable();
+#endif
+        
         while(assert_loop != 0U)
         {
             /* loop forver */
+            ClockP_usleep(5000U);
         }
     }
 }
@@ -129,41 +158,3 @@ void DebugP_logChar(char a)
     DebugP_log("%c", a);
 }
 
-static DebugP_exptnLogFxn Osal_exptnLogFxn;
-
-/*
- *  ======== DebugP_registerExceptionLogFxn ========
- */
-int32_t DebugP_registerExceptionLogFxn(DebugP_exptnLogFxn fxn)
-{
-    int32_t retval;
-    if (NULL==Osal_exptnLogFxn)
-    {
-        Osal_exptnLogFxn=fxn;
-        retval = DEBUGP_LOGFXN_REGISTER_SUCCESS;
-    }
-    else
-    {
-        retval = DEBUGP_LOGFXN_ALREADY_REGISTERD;
-    }
-    return retval;
-}
-
-/*
- *  ======== DebugP_exceptionLog ========
- */
-void DebugP_exceptionLog(const char * format, uint32_t arg1, uint32_t arg2)
-{
-    if (NULL!=Osal_exptnLogFxn)
-    {
-        Osal_exptnLogFxn(format, arg1, arg2);
-    }
-}
-
-/*
- *  ======== DebugP_deRegisterExceptionLogFxn ========
- */
-void DebugP_deRegisterExceptionLogFxn()
-{
-    Osal_exptnLogFxn=NULL;
-}

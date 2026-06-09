@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024 Texas Instruments Incorporated
+ *  Copyright (C) 2024-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,14 +30,43 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <kernel/dpl/HwiP.h>
 #include <kernel/safertos/dpl/r5/HwiP_safertos_r5.h>
 #include <drivers/hw_include/csl_types.h>
 
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
 extern void vIrqHandler( void );
 extern void HwiP_fiq_handler( void );
+uint32_t HwiP_getCPSR(void);
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
 
 static volatile uint32_t gdummy;
+
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
 static void Utils_dataAndInstructionBarrier(void)
 {
@@ -274,8 +303,6 @@ void HWI_SECTION HwiP_init(void)
      */
     /* HwiP_enable(); */
 }
-
-uint32_t HwiP_getCPSR(void);
 
 uint32_t HWI_SECTION HwiP_inISR(void)
 {

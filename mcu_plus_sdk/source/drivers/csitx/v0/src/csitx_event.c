@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2020-2022
+ *  Copyright (c) Texas Instruments Incorporated 2020-2025
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 /* ========================================================================== */
 /*                             Include Files                                  */
 /* ========================================================================== */
+
 #include <drivers/csitx/v0/include/csitx_drvPriv.h>
 #include <kernel/dpl/ClockP.h>
 
@@ -58,6 +59,7 @@
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
+
 /**
  *  \brief Enable the event in event group
  *
@@ -92,6 +94,7 @@ static int32_t CsitxDrv_resetModule(CsitxDrv_InstObj *instObj);
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */
+
 void Csitx_eventPrmsInit(Csitx_EventPrms *eventPrms)
 {
     if (eventPrms != NULL)

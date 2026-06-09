@@ -16,13 +16,6 @@ ConfigName:=$(PROFILE)
 
 LIBNAME:=dm_stub.am62x.r5f.ti-arm-clang.$(PROFILE).lib
 
-#FileName := ../rm_pm_hal/rm_pm_hal_src/app/dmstub/entry.S
-#Variable := $(shell sed 's/;/\/\//g' ../rm_pm_hal/rm_pm_hal_src/app/dmstub/entry.S > entry)
-#Variable1 := $(shell sed 's/.retainrefs/ /g' entry > temp_entry)
-#Variable2 := $(shell sed 's/.retain/ /g' temp_entry > ../rm_pm_hal/rm_pm_hal_src/app/dmstub/entry.S)
-#Variable3 := $(shell rm temp_entry entry)
-
-#Variable := $(shell sed -i 's/s32 dm_stub_entry(void)/s32 __attribute__((noinline)) dm_stub_entry(void)/g' ../rm_pm_hal/rm_pm_hal_src/lpm/main.c)
 FILTER_FILES_ONLY = $(filter-out $(CFLAGS_LOCAL),$(CFLAGS_LOCAL_COMMON))
 CFLAGS_LOCAL_COMMONN = $(subst -I/,-I../rm_pm_hal/rm_pm_hal_src/, $(FILTER_FILES_ONLY))
 CFGG = $(subst -I../rm_pm_hal/rm_pm_hal_src/,-I, $(CFLAGS_LOCAL_COMMONN))
@@ -59,7 +52,6 @@ CFLAGS_common := \
     -Wall \
     -Werror \
     -g \
-    -Wno-gnu-variable-sized-type-not-at-end \
 
 CFLAGS_cpp_common := \
     -Wno-c99-designator \

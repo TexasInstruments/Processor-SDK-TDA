@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Texas Instruments Incorporated
+ * Copyright (c) 2022-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -232,7 +232,8 @@ __attribute__(( aligned(128), section(".boardcfg_data") )) =
 		},
 		.auth_resource_owner = 0,
 		.enable_saul_psil_global_config_writes = 0x5A,
-		.rsvd = {0, 0},
+        .safety_host_present = 0,
+        .safety_host = 0
 	},
 
 	/* Secure JTAG Unlock Configuration */
@@ -241,8 +242,8 @@ __attribute__(( aligned(128), section(".boardcfg_data") )) =
             .magic = TISCI_BOARDCFG_SEC_DBG_CTRL_MAGIC_NUM,
             .size = sizeof(struct tisci_boardcfg_secure_debug_config),
 		},
-		.allow_jtag_unlock = 0x5A,
-		.allow_wildcard_unlock = 0x5A,
+		.allow_jtag_unlock = 0x0,
+		.allow_wildcard_unlock = 0x0,
 		.min_cert_rev = 0x0,
 		.jtag_unlock_hosts = {0, 0, 0, 0},
 	},

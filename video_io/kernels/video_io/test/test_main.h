@@ -60,30 +60,23 @@
  *
  */
 
-#if defined(J721E) || defined(J721S2) || defined(J784S4) || defined(J742S2) || defined(J722S) || defined(PC) || defined(AM62A)
 #if defined(BUILD_CT_TIOVX_VIDEO_IO)
 
-/* Display, Display M2M, and CSITX tests - Not applicable for AM62A */
-#if defined(J721E) || defined(J721S2) || defined(J784S4) || defined(J742S2) || defined(J722S)
 #if defined(BUILD_CT_TIOVX_VIDEO_IO_DISPLAY_TESTS)
 TESTCASE(tivxVideoIODisplay)
 #endif
+
 #if defined(BUILD_DISPLAY_M2M)
 TESTCASE(tivxVideoIODisplayM2M)
 #endif
+
 #if defined(BUILD_CSITX)
 TESTCASE(tivxVideoIOCsitxCsirx)
 #endif
-#endif
 
-/* Capture tests - Enabled for AM62A (Linux ADAS & QNX) */
-#if defined(J721E) || defined(J721S2) || defined(J784S4) || defined(J742S2) || defined(J722S) || defined(AM62A)
 #if defined(BUILD_CT_TIOVX_VIDEO_IO_CAPTURE_TESTS)
 TESTCASE(tivxVideoIOCapture)
 TESTCASE(tivxVideoIOCaptureSplitMode)
-#endif
-#endif
-
 #endif
 
 #endif

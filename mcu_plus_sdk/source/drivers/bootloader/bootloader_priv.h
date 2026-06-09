@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -40,18 +40,18 @@ extern "C"
 
 
 /* Magic number and tokens for RPRC format */
-#define BOOTLOADER_RPRC_MAGIC_NUMBER   0x43525052
-#define BOOTLOADER_RPRC_RESOURCE       0
-#define BOOTLOADER_RPRC_BOOTADDR       5
+#define BOOTLOADER_RPRC_MAGIC_NUMBER   0x43525052U
+#define BOOTLOADER_RPRC_RESOURCE       0U
+#define BOOTLOADER_RPRC_BOOTADDR       5U
 
-#define BOOTLOADER_MAX_INPUT_FILES 10
-#define BOOTLOADER_META_HDR_MAGIC_STR 0x5254534D /* MSTR in ascii */
-#define BOOTLOADER_META_HDR_MAGIC_END 0x444E454D /* MEND in ascii */
+#define BOOTLOADER_MAX_INPUT_FILES 10U
+#define BOOTLOADER_META_HDR_MAGIC_STR 0x5254534DU /* MSTR in ascii */
+#define BOOTLOADER_META_HDR_MAGIC_END 0x444E454DU /* MEND in ascii */
 
-#define BOOTLOADER_MAX_ADDR_REGIONS 2
+#define BOOTLOADER_MAX_ADDR_REGIONS 3U
 
 /* Maximum number of reserved memory sections across all SOCs */
-#define BOOTLOADER_MAX_RESERVED_SECTIONS 2
+#define BOOTLOADER_MAX_RESERVED_SECTIONS 2U
 
 #define BOOTLOADER_DEVICE_ID 55U
 

@@ -123,7 +123,7 @@ using namespace c7x;
 #define TIDL_ALIGN_CLIP(VAL, ALIGN) (((VAL)/(ALIGN)) * (ALIGN) )
 
 
-#if defined( __C7504__ ) || defined (__C7524__)
+#if defined( __C7504__ ) || defined (__C7524__) || defined (__C7604__)
   #define MMA_SIZE_8_BIT_POWER_2 (5)
 #else
   #define MMA_SIZE_8_BIT_POWER_2 (6)
@@ -729,7 +729,7 @@ typedef struct {
   /*--------------------------------------------*/
   /*temprorary buffer for breaking the software pipelined loop. Allocated in L3*/
   // buffer dependent on feature map resolution
-  long long  * pred;
+  int64_t  * pred;
   void       * featMaxMinVal;
   /*-------------------------------------------*/
   /*Needed in valid point score caluclation API dependent on M when executing from DDR flow*/
@@ -1245,6 +1245,7 @@ void * TIDL_getMemoryChunkFromSysmem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MA
   uint32_t size, uint32_t alignment, uint32_t space, uint32_t attribute);
 
 void TIDL_resetSysmem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX]);
+void TIDL_reset_OneMem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX], int32_t i);
 
 
 /* If it is inter Buff Allocate buffer or Initilize it NULL */
@@ -1476,7 +1477,6 @@ static inline float32_tidl exp_taylor_sigmoid(float32_tidl x)
 static inline float32_tidl exp_taylor(float32_tidl x)
 {
   float32_tidl twoPwF, ePwX;
-
   float32_tidl ln2      = 0.693147180559945f;
   float32_tidl oneByLn2 = 1.44269504090f;
   float32_tidl oneBy6   = 0.1666667f;
@@ -1498,27 +1498,40 @@ static inline float32_tidl exp_taylor(float32_tidl x)
   /*pre left shift of 16 is done to generate the result multiple of (1<<16). Later it is divided
     by (1<<16) to get accurate result.
    */
-  __vpred vp =  __cmp_gt_pred(yI, 0);
-
   int32_t tempShiftL = __shift_left((1 << 16), yI);
   int32_t tempShiftR = __shift_right((1 << 16), -yI);
-  tempShiftL = __select(vp, tempShiftL, tempShiftR);
+
+  if(yI > 0)
+  {
+    tempShiftL = tempShiftL;
+  }
+  else
+  {
+    tempShiftL = tempShiftR;
+  }
 
   ePwX = twoPwF * (float32_tidl)(tempShiftL);
 
   ePwX = ePwX * oneBy65356;
 
-  vp   =  __cmp_gt_pred((int32_t)-16, yI);
-  ePwX = __select(vp, (float32_tidl)0.0f, ePwX);
+  if((int32_t)-16 > yI)
+  {
+    ePwX=0.0f;
+  }
+  
 
   /*Natural C code has 46 in place of 14. this is done to avoid long8 processing for tempShiftL/R
     hopefully clipping the large value should not affect the algorithm accuracy
   */
-  vp   =  __cmp_gt_pred(yI, (int32_t)14);
-  ePwX = __select(vp, (float32_tidl)FLT_MAX, ePwX);
+
+  if(yI > (int32_t)14)
+  {
+    ePwX = FLT_MAX;
+  }
 
   return ePwX;
 }
+
 static inline float_vec exp_taylor_f16(float_vec x)
 {
   float_vec twoPwF, ePwX = 0.0f;

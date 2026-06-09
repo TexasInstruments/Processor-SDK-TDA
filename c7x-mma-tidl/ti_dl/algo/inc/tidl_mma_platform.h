@@ -116,7 +116,7 @@
 	#undef LEGACY
 #endif
 
-#if defined(__C7120__) || defined(__C7504__) || defined (__C7524__)
+#if defined(__C7120__) || defined(__C7504__) || defined (__C7524__) || defined (__C7604__)
 	#define MMA_BIAS
 #else
 	#undef MMA_BIAS

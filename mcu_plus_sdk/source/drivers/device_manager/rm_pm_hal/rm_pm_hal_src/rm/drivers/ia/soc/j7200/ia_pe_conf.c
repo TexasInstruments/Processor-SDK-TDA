@@ -188,13 +188,29 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 	},
 	[18] = {
 		/*
+		 * For: A72_5 notify
+		 */
+		.id		= J7200_DEV_NAVSS0_UDMASS_INTA_0,
+		.event_id	= 0x11FFU,
+		.vint		= 0x00FFU,
+	},
+	[19] = {
+		/*
+		 * For: A72_5 response
+		 */
+		.id		= J7200_DEV_NAVSS0_UDMASS_INTA_0,
+		.event_id	= 0x11FEU,
+		.vint		= 0x00FEU,
+	},
+	[20] = {
+		/*
 		 * For: MCU_0_R5_0 notify
 		 */
 		.id		= J7200_DEV_MCU_NAVSS0_UDMASS_INTA_0,
 		.event_id	= 0x4000U,
 		.vint		= 0x0000U,
 	},
-	[19] = {
+	[21] = {
 		/*
 		 * For: MCU_0_R5_0 response
 		 */
@@ -202,7 +218,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x4001U,
 		.vint		= 0x0001U,
 	},
-	[20] = {
+	[22] = {
 		/*
 		 * For: MCU_0_R5_1 notify
 		 */
@@ -210,7 +226,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x4002U,
 		.vint		= 0x0002U,
 	},
-	[21] = {
+	[23] = {
 		/*
 		 * For: MCU_0_R5_1 response
 		 */
@@ -218,7 +234,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x4003U,
 		.vint		= 0x0003U,
 	},
-	[22] = {
+	[24] = {
 		/*
 		 * For: MCU_0_R5_2 notify
 		 */
@@ -226,7 +242,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x4004U,
 		.vint		= 0x0004U,
 	},
-	[23] = {
+	[25] = {
 		/*
 		 * For: MCU_0_R5_2 response
 		 */
@@ -234,7 +250,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x4005U,
 		.vint		= 0x0005U,
 	},
-	[24] = {
+	[26] = {
 		/*
 		 * For: MCU_0_R5_3 notify
 		 */
@@ -242,7 +258,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x4006U,
 		.vint		= 0x0006U,
 	},
-	[25] = {
+	[27] = {
 		/*
 		 * For: MCU_0_R5_3 response
 		 */
@@ -250,7 +266,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x4007U,
 		.vint		= 0x0007U,
 	},
-	[26] = {
+	[28] = {
 		/*
 		 * For: DM err_event
 		 */
@@ -258,7 +274,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x4008U,
 		.vint		= 0x0008U,
 	},
-	[27] = {
+	[29] = {
 		/*
 		 * For: DM nonsec_high_priority_rx
 		 */
@@ -266,7 +282,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x4009U,
 		.vint		= 0x0009U,
 	},
-	[28] = {
+	[30] = {
 		/*
 		 * For: DM nonsec_high_priority_rx
 		 */
@@ -274,7 +290,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x400AU,
 		.vint		= 0x000AU,
 	},
-	[29] = {
+	[31] = {
 		/*
 		 * For: DM nonsec_low_priority_rx
 		 */
@@ -282,7 +298,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x400BU,
 		.vint		= 0x000BU,
 	},
-	[30] = {
+	[32] = {
 		/*
 		 * For: DM nonsec_low_priority_rx
 		 */
@@ -290,7 +306,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x400CU,
 		.vint		= 0x000CU,
 	},
-	[31] = {
+	[33] = {
 		/*
 		 * For: DM nonsec_notify_resp_rx
 		 */
@@ -298,7 +314,7 @@ const struct ia_init ia_soc_pe_init_list[IA_SOC_PE_INIT_NUM] = {
 		.event_id	= 0x400DU,
 		.vint		= 0x000DU,
 	},
-	[32] = {
+	[34] = {
 		/*
 		 * For: DM nonsec_notify_resp_rx
 		 */

@@ -16,7 +16,7 @@ ifeq ($(TARGET_CPU),$(HOST_CPU))
   $(error $(TARGET_CPU) same as $(HOST_CPU) not supported for QNX)
 else ifeq ($(TARGET_CPU),X86)
   $(error $(TARGET_CPU) not supported for QNX)
-else ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU),A72 A53))
+else ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU),A72 A53 A720))
   CROSS_COMPILE_QNX:=$(QNX_CROSS_COMPILER_TOOL)
 else ifeq ($(TARGET_CPU),A15)
   CROSS_COMPILE_QNX:=ntoarmv7-
@@ -90,7 +90,7 @@ $(_MODULE)_COPT += -Wall
 $(_MODULE)_COPT += -Vgcc_ntoaarch64le
 
 ifeq ($(TARGET_BUILD),debug)
-$(_MODULE)_COPT += -ggdb -ggdb3 -gdwarf-2 -D_DEBUG_=1
+$(_MODULE)_COPT += -ggdb -ggdb3 -gdwarf-2 -D_DEBUG_=1 -g -O0
 else ifneq ($(filter $(TARGET_BUILD),release production),)
 $(_MODULE)_COPT += -O3 -DNDEBUG
 endif
@@ -159,14 +159,14 @@ endef
 
 define $(_MODULE)_COMPILE_TOOLS
 $(ODIR)/%.o: $(SDIR)/%.c $($(_MODULE)_DEP_HEADERS)
-	@echo [GCC] Compiling C99 $$(notdir $$<)
+	@echo [QNX GCC] Compiling C99 $$(notdir $$<)
 	$(Q)$(CC) $($(_MODULE)_CFLAGS) $(call $(_MODULE)_GCC_DEPS,$$*) -Wc,-MF,$(ODIR)/$$*.dep $$< -o $$@ $(LOGGING)
 
 $(ODIR)/%.o: $(SDIR)/%.cpp $($(_MODULE)_DEP_HEADERS)
-	@echo [GCC] Compiling C++ $$(notdir $$<)
+	@echo [QNX GCC] Compiling C++ $$(notdir $$<)
 	$(Q)$(CP) $($(_MODULE)_CFLAGS) $($(_MODULE)_CPPFLAGS) $(call $(_MODULE)_GCC_DEPS,$$*) -Wc,-MF,$(ODIR)/$$*.dep $$< -o $$@ $(LOGGING)
 
 $(ODIR)/%.o: $(SDIR)/%.S
-	@echo [GCC] Assembling $$(notdir $$<)
+	@echo [QNX GCC] Assembling $$(notdir $$<)
 	$(Q)$(AS) $($(_MODULE)_AFLAGS) $(call $(_MODULE)_ASM_DEPS,$$*) -Wc,-MD,$(ODIR)/$$*.dep $$< -o $$@ $(LOGGING)
 endef

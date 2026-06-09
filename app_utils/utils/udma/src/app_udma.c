@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019 - 2026 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -95,7 +95,7 @@ extern struct Udma_ChObj  *gUdmaChObj;
 #else
 #if defined(MCU_PLUS_SDK)
 static Udma_DrvObject gAppUdmaDrvObj;
-#else
+#elif defined(PDK) || defined(MCU_SDK)
 static struct Udma_DrvObj gAppUdmaDrvObj;
 #endif
 #endif
@@ -113,7 +113,7 @@ static Udma_DrvObjectInt gAppUdmaDrvObjCsirxCsitx;
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
 /* appUdmaOsalMutexLock/Unlock are kept empty so that locks are not taken
  * when UDMA driver calls these functions via callback.
  *
@@ -173,21 +173,35 @@ int32_t appUdmaInit(const app_udma_init_prms_t *prms)
     Udma_InitPrms   udmaInitPrms;
 
     appLogPrintf("UDMA: Init ... !!!\n");
+
 #if defined(SOC_AM62A) && defined(QNX) && defined(edgeai)
     udmaInstId = UDMA_INST_ID_CSI_BCDMA_0;
 #else
 #if defined(MCU_PLUS_SDK)
     udmaInstId = UDMA_INST_ID_0;
-#else
+#elif defined(PDK) || defined(MCU_SDK)
     udmaInstId = UDMA_INST_ID_MAIN_0;
 #endif
 #endif
+
     UdmaInitPrms_init(udmaInstId, &udmaInitPrms);
-#if !defined(MCU_PLUS_SDK) || defined(QNX)
+
+#if defined(PDK) || defined(QNX)
     udmaInitPrms.printFxn = (Udma_PrintFxn)appLogPrintf;
 #endif
 
-    #if defined(SOC_AM62A) || defined(SOC_J722S)
+#if defined(MCU_SDK)
+    /* MCU_SDK standalone UDMA - simpler init */
+    if (NULL != prms->virtToPhyFxn)
+    {
+        udmaInitPrms.virtToPhyFxn = prms->virtToPhyFxn;
+    }
+    else
+    {
+        udmaInitPrms.virtToPhyFxn = appUdmaDefaultVirtToPhyAddrConversion;
+    }
+#elif defined(MCU_PLUS_SDK)
+
     #if defined(SOC_AM62A) && defined(QNX) && defined(edgeai)
     /*Set virtToPhy and PhytoVirt to support QNX*/
     udmaInitPrms.virtToPhyFxn = &Udma_qnxVirtToPhyFxn;
@@ -202,7 +216,9 @@ int32_t appUdmaInit(const app_udma_init_prms_t *prms)
         udmaInitPrms.virtToPhyFxn = appUdmaDefaultVirtToPhyAddrConversion;
     }
     #endif
-    #else
+
+#elif defined(PDK)
+
     udmaInitPrms.skipGlobalEventReg = UFALSE;
     #if defined(C7X_FAMILY)
     udmaInitPrms.osalPrms.lockMutex = appUdmaOsalMutexLock;
@@ -216,16 +232,22 @@ int32_t appUdmaInit(const app_udma_init_prms_t *prms)
         udmaInitPrms.virtToPhyFxn = appUdmaDefaultVirtToPhyAddrConversion;
     }
     #endif
-    #endif
 
-    #if defined(SOC_AM62A) && defined(QNX) && defined(edgeai)
+#endif
+
+#if defined(SOC_AM62A) && defined(QNX) && defined(edgeai)
     Udma_DrvHandle drvHandle = gUdmaDrvObj;
     if (drvHandle != NULL)
     {
        retVal = Udma_init(drvHandle, &udmaInitPrms);
     }
-    #else
-    #if defined(MCU_PLUS_SDK)
+
+#else
+
+    #if defined(MCU_SDK)
+    /* MCU_SDK standalone UDMA doesn't have enableUtc field */
+    udmaInitPrms.instId = udmaInstId;
+    #elif defined(MCU_PLUS_SDK)
     #if !defined(C7X_FAMILY)
     udmaInitPrms.instId = UDMA_INST_ID_2;
     udmaInitPrms.enableUtc = UFALSE;
@@ -234,8 +256,10 @@ int32_t appUdmaInit(const app_udma_init_prms_t *prms)
     udmaInitPrms.enableUtc = UTRUE;
     #endif
     #endif
+
     retVal = Udma_init(&gAppUdmaDrvObj, &udmaInitPrms);
-    #endif
+
+#endif
 
     if(retVal!=0)
     {
@@ -275,7 +299,6 @@ void *appUdmaGetObj(void)
 }
 
 #if defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined (SOC_J722S) || (defined(SOC_AM62A) && defined(adas))
-
 int32_t appUdmaCsirxCsitxInit(void)
 {
     int32_t         retVal = 0;
@@ -284,13 +307,15 @@ int32_t appUdmaCsirxCsitxInit(void)
 
     appLogPrintf("UDMA: Init for CSITX/CSIRX ... !!!\n");
 
-    #if defined(SOC_J722S) || defined(SOC_AM62A)
+    #if defined(MCU_PLUS_SDK)
     udmaInstId = UDMA_INST_ID_BCDMA_1;
-    #else
+    #elif defined(PDK)
     udmaInstId = UDMA_INST_ID_BCDMA_0;
     #endif
+
     UdmaInitPrms_init(udmaInstId, &udmaInitPrms);
-    #if !defined(MCU_PLUS_SDK) || defined(QNX)
+
+    #if defined(PDK) || defined(QNX)
     udmaInitPrms.printFxn = (Udma_PrintFxn)appLogPrintf;
     #endif
 
@@ -317,7 +342,6 @@ int32_t appUdmaCsirxCsitxDeInit(void)
 
     return (retVal);
 }
-
 #endif
 
 void *appUdmaCsirxCsitxGetObj(void)

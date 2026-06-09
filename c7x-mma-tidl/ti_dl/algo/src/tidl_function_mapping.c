@@ -121,20 +121,23 @@ static const TIDL_CoreFunctionMap gTIDLCoreFunctionMapping[] =
   {/*TIDL_GridSampleLayer        */ TIDL_gridsampleAlloc, TIDL_gridsampleInit, TIDL_gridsampleProcess},
   {/*TIDL_TopKLayer             */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_topKProcess},
   {/*TIDL_DeformConvLayer        */ TIDL_deformConvAlloc, TIDL_deformConvInit, TIDL_deformConvProcess},
+#ifdef TIDL_EXCLUDE_UNSUPPORTED_KERNELS
+  {/*TIDL_TileLayer             */ NULL, NULL, NULL},
+  {/*TIDL_LogicalOpLayer        */ NULL, NULL, NULL},
+  {/*TIDL_RMSNormalizationLayer */ NULL, NULL, NULL},
+  {/*TIDL_LSTMLayer             */ NULL, NULL, NULL}, 
+  {/*TIDL_GRULayer              */ NULL, NULL, NULL},
+  {/*TIDL_RNNLayer              */ NULL, NULL, NULL},
+#else
+  {/*TIDL_TileLayer             */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_tileProcessNew},
+  {/*TIDL_LogicalOpLayer        */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_logicalOpLayerProcessNew},
+  {/*TIDL_RMSNormalizationLayer */ TIDL_rmsNormAlloc, TIDL_rmsNormInit, TIDL_rmsNormProcess},
+  {/*TIDL_LSTMLayer             */ TIDL_lstmAlloc, TIDL_lstmInit, TIDL_lstmProcess},
+  {/*TIDL_GRULayer              */ TIDL_gruAlloc, TIDL_gruInit, TIDL_gruProcess},
+  {/*TIDL_RNNLayer              */ TIDL_rnnAlloc, TIDL_rnnInit, TIDL_rnnProcess},
+#endif
   {/*TIDL_UnsupportedLayer      */ NULL, NULL, NULL},
 };
-
-int32_t TIDL_doesLayerFollowStandardWLFlow(const sTIDL_Layer_t * layer)
-{
-  int32_t layerFollowsStandaradWLFlow = 1;
-
-  if ( layer->layerType == TIDL_GatherLayer) /*TODO: Add more layers to this list which has custom dataflow and do not consume workload information provided by GC*/
-  {
-    layerFollowsStandaradWLFlow = 0;
-  }
-
-  return layerFollowsStandaradWLFlow;
-}
 
 int32_t TIDL_isLayerMigrated(const sTIDL_Layer_t * layer)
 {

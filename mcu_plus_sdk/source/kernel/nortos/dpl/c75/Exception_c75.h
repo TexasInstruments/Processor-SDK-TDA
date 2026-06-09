@@ -278,12 +278,15 @@ extern const bool Exception_useInternalBuffer;
 /* enablePrint */
 extern const bool Exception_enablePrint;
 
-/* Configuration structure for Exception Exception_Hooks */
-typedef struct Exception_Hooks {
-    Exception_FuncPtr exceptionHook;    /* Hook called when an exception occurs */
-    Exception_FuncPtr internalHook;     /* Hook called for internal exceptions */
-    Exception_FuncPtr returnHook;       /* Hook called when returning from exception */
-} Exception_Hooks;
+/* exceptionHook */
+extern const Exception_FuncPtr Exception_exceptionHook;
+
+/* internalHook */
+extern const Exception_FuncPtr Exception_internalHook;
+
+/* returnHook */
+extern const Exception_FuncPtr Exception_returnHook;
+
 
 /*
  * ======== FUNCTION DECLARATIONS ========
@@ -301,9 +304,6 @@ void Exception_clearLastStatus( void);
 
 /* setReturnPtr */
 Exception_FuncPtr Exception_setReturnPtr( Exception_FuncPtr ptr);
-
-/* Register Hooks */
-void Exception_registerHooks( const Exception_Hooks *hooks );
 
 /* dispatch */
 void Exception_dispatch( void);

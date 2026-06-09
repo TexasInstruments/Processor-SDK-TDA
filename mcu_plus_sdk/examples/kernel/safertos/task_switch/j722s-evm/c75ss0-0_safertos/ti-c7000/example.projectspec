@@ -36,6 +36,7 @@
             -I${MCU_PLUS_SDK_PATH}/source/kernel/safertos/c75/api/NoWrapper
             -I${MCU_PLUS_SDK_PATH}/source/kernel/safertos/c75/portable/230_C7x
             -I${MCU_PLUS_SDK_PATH}/source/kernel/safertos/c75/portable/230_C7x/005_TI_CGT
+            -I${MCU_PLUS_SDK_PATH}/source/kernel/safertos/c75/queue_registry
             -I${MCU_PLUS_SDK_PATH}/source/kernel/safertos/c75/config
             -DBUILD_C75X_1
             -mv7524
@@ -53,6 +54,7 @@
             --diag_suppress=770
             --diag_suppress=69
             --diag_suppress=70
+            -DBUILD_C7X
             --advice:performance=none
             -DSOC_J722S
             -DOS_SAFERTOS

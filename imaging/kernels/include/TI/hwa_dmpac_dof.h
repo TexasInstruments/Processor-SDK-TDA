@@ -600,6 +600,7 @@ void tivx_dmpac_dof_sof_params_init(tivx_dmpac_dof_sof_params_t *prms);
 void tivx_dmpac_dof_hts_bw_limit_prms_init(
                                     tivx_dmpac_dof_hts_bw_limit_params_t *prms);
 
+#if !defined(SOC_J722S)
 /*!
     * \brief Function to initialize DOF safety mechanism parameters with default value
     *
@@ -609,7 +610,7 @@ void tivx_dmpac_dof_hts_bw_limit_prms_init(
  */
 void tivx_dmpac_dof_safety_mech_prms_init(
     tivx_dmpac_dof_safety_mechanism_params_t *prms);
-
+#endif
 #ifdef __cplusplus
 }
 #endif

@@ -1,7 +1,7 @@
 /*
- * Data version: 240826_164236
+ * Data version: 250904_170808
  *
- * Copyright (C) 2017-2025, Texas Instruments Incorporated
+ * Copyright (C) 2017-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -195,17 +195,17 @@ enum {
 	PLL_ENTRY_DDR_24MHZ_1600MHZ_F24BIT,
 	PLL_ENTRY_DDR_25MHZ_1600MHZ,
 	PLL_ENTRY_DDR_26MHZ_1600MHZ_F24BIT,
-	PLL_ENTRY_DDR_24MHZ_1866_5MHZ_F24BIT,
-	PLL_ENTRY_DDR_25MHZ_1866_5MHZ_F24BIT,
-	PLL_ENTRY_DDR_26MHZ_1866_5MHZ_F24BIT,
+	PLL_ENTRY_DDR_24MHZ_1866MHZ_F24BIT,
+	PLL_ENTRY_DDR_25MHZ_1866MHZ_F24BIT,
+	PLL_ENTRY_DDR_26MHZ_1866MHZ_F24BIT,
 	PLL_ENTRY_SMS_24MHZ_2400MHZ,
 	PLL_ENTRY_SMS_25MHZ_2400MHZ,
 	PLL_ENTRY_SMS_26MHZ_2400MHZ_F24BIT,
 	PLL_ENTRY_DSS0_24MHZ_2100MHZ_F24BIT,
-	PLL_ENTRY_DSS0_25MHZ_2100MHZ,
+	PLL_ENTRY_DSS0_25MHZ_2100MHZ_F24BIT,
 	PLL_ENTRY_DSS0_26MHZ_2100MHZ_F24BIT,
 	PLL_ENTRY_DSS1_24MHZ_1800MHZ,
-	PLL_ENTRY_DSS1_25MHZ_1800MHZ,
+	PLL_ENTRY_DSS1_25MHZ_1800MHZ_F24BIT,
 	PLL_ENTRY_DSS1_26MHZ_1800MHZ_F24BIT,
 };
 
@@ -235,17 +235,17 @@ const struct clk_range soc_clock_ranges[AM62PX_FREQ_RANGE_ID_MAX] = {
 const struct clk_default soc_clock_freq_defaults[10] = {
 	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_0_DEFAULT,	1000000000UL, 1000000000UL, 1000000000UL),
 	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_1_DEFAULT,	960000000UL,  960000000UL,  960000000UL),
-	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_12_DEFAULT, 1866500000UL, 1866500000UL, 1866500000UL),
+	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_12_DEFAULT, 1866000000UL, 1866000000UL, 1866000001UL),
 	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_15_DEFAULT, 2400000000UL, 2400000000UL, 2400000000UL),
-	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_16_DEFAULT, 2100000000UL, 2100000000UL, 2100000000UL),
-	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_17_DEFAULT, 1800000000UL, 1800000000UL, 1800000000UL),
+	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_16_DEFAULT, 2100000000UL, 2100000000UL, 2100000001UL),
+	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_17_DEFAULT, 1800000000UL, 1800000000UL, 1800000001UL),
 	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_6_DEFAULT,	2160000000UL, 2160000000UL, 2160000000UL),
 	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MAIN_8_DEFAULT,	2500000000UL, 2500000000UL, 2500000000UL),
 	CLK_DEFAULT(FREQ_PLLFRACF2_SSMOD_16FFT_MCU_0_DEFAULT,	1200000000UL, 1200000000UL, 1200000000UL),
 };
 
 const struct pll_table_entry soc_pll_table[30] = {
-	[PLL_ENTRY_MCU_24MHZ_1200MHZ] =		 {
+	[PLL_ENTRY_MCU_24MHZ_1200MHZ] =		{
 		.freq_min_hz	= 1200000000U,
 		.freq_max_hz	= 1200000000U,
 		.plld		= 1U,
@@ -253,7 +253,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 0U,
 		.clkod		= 2U,
 	},
-	[PLL_ENTRY_MCU_25MHZ_1200MHZ] =		 {
+	[PLL_ENTRY_MCU_25MHZ_1200MHZ] =		{
 		.freq_min_hz	= 1200000000U,
 		.freq_max_hz	= 1200000000U,
 		.plld		= 1U,
@@ -261,7 +261,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 0U,
 		.clkod		= 2U,
 	},
-	[PLL_ENTRY_MCU_26MHZ_1200MHZ_F24BIT] =	 {
+	[PLL_ENTRY_MCU_26MHZ_1200MHZ_F24BIT] =	{
 		.freq_min_hz	= 1200000000U,
 		.freq_max_hz	= 1200000001U,
 		.plld		= 1U,
@@ -269,7 +269,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 5162221U,
 		.clkod		= 2U,
 	},
-	[PLL_ENTRY_MAIN_24MHZ_1000MHZ_F24BIT] =	 {
+	[PLL_ENTRY_MAIN_24MHZ_1000MHZ_F24BIT] = {
 		.freq_min_hz	= 1000000000U,
 		.freq_max_hz	= 1000000000U,
 		.plld		= 1U,
@@ -277,7 +277,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 5592406U,
 		.clkod		= 2U,
 	},
-	[PLL_ENTRY_MAIN_25MHZ_1000MHZ] =	 {
+	[PLL_ENTRY_MAIN_25MHZ_1000MHZ] =	{
 		.freq_min_hz	= 1000000000U,
 		.freq_max_hz	= 1000000000U,
 		.plld		= 1U,
@@ -285,7 +285,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 0U,
 		.clkod		= 2U,
 	},
-	[PLL_ENTRY_MAIN_26MHZ_1000MHZ_F24BIT] =	 {
+	[PLL_ENTRY_MAIN_26MHZ_1000MHZ_F24BIT] = {
 		.freq_min_hz	= 1000000000U,
 		.freq_max_hz	= 1000000000U,
 		.plld		= 1U,
@@ -293,7 +293,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 15486661U,
 		.clkod		= 2U,
 	},
-	[PLL_ENTRY_PER0_24MHZ_960MHZ] =		 {
+	[PLL_ENTRY_PER0_24MHZ_960MHZ] =		{
 		.freq_min_hz	= 960000000U,
 		.freq_max_hz	= 960000000U,
 		.plld		= 1U,
@@ -301,7 +301,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 0U,
 		.clkod		= 2U,
 	},
-	[PLL_ENTRY_PER0_25MHZ_960MHZ_F24BIT] =	 {
+	[PLL_ENTRY_PER0_25MHZ_960MHZ_F24BIT] =	{
 		.freq_min_hz	= 960000000U,
 		.freq_max_hz	= 960000000U,
 		.plld		= 1U,
@@ -309,7 +309,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 13421773U,
 		.clkod		= 2U,
 	},
-	[PLL_ENTRY_PER0_26MHZ_960MHZ_F24BIT] =	 {
+	[PLL_ENTRY_PER0_26MHZ_960MHZ_F24BIT] =	{
 		.freq_min_hz	= 960000000U,
 		.freq_max_hz	= 960000000U,
 		.plld		= 1U,
@@ -317,7 +317,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 14196106U,
 		.clkod		= 2U,
 	},
-	[PLL_ENTRY_GPU_24MHZ_2160MHZ] =		 {
+	[PLL_ENTRY_GPU_24MHZ_2160MHZ] =		{
 		.freq_min_hz	= 2160000000U,
 		.freq_max_hz	= 2160000000U,
 		.plld		= 1U,
@@ -325,7 +325,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 0U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_GPU_25MHZ_2160MHZ_F24BIT] =	 {
+	[PLL_ENTRY_GPU_25MHZ_2160MHZ_F24BIT] =	{
 		.freq_min_hz	= 2160000000U,
 		.freq_max_hz	= 2160000000U,
 		.plld		= 1U,
@@ -333,7 +333,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 6710887U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_GPU_26MHZ_2160MHZ_F24BIT] =	 {
+	[PLL_ENTRY_GPU_26MHZ_2160MHZ_F24BIT] =	{
 		.freq_min_hz	= 2160000000U,
 		.freq_max_hz	= 2160000001U,
 		.plld		= 1U,
@@ -341,7 +341,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 1290556U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_ARM0_24MHZ_2500MHZ_F24BIT] =	 {
+	[PLL_ENTRY_ARM0_24MHZ_2500MHZ_F24BIT] = {
 		.freq_min_hz	= 2500000000U,
 		.freq_max_hz	= 2500000000U,
 		.plld		= 1U,
@@ -349,7 +349,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 2796203U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_ARM0_25MHZ_2500MHZ] =	 {
+	[PLL_ENTRY_ARM0_25MHZ_2500MHZ] =	{
 		.freq_min_hz	= 2500000000U,
 		.freq_max_hz	= 2500000000U,
 		.plld		= 1U,
@@ -357,7 +357,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 0U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_ARM0_26MHZ_2500MHZ_F24BIT] =	 {
+	[PLL_ENTRY_ARM0_26MHZ_2500MHZ_F24BIT] = {
 		.freq_min_hz	= 2500000000U,
 		.freq_max_hz	= 2500000001U,
 		.plld		= 1U,
@@ -365,7 +365,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 2581111U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DDR_24MHZ_1600MHZ_F24BIT] =	 {
+	[PLL_ENTRY_DDR_24MHZ_1600MHZ_F24BIT] =	{
 		.freq_min_hz	= 1600000000U,
 		.freq_max_hz	= 1600000000U,
 		.plld		= 1U,
@@ -373,7 +373,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 11184811U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DDR_25MHZ_1600MHZ] =		 {
+	[PLL_ENTRY_DDR_25MHZ_1600MHZ] =		{
 		.freq_min_hz	= 1600000000U,
 		.freq_max_hz	= 1600000000U,
 		.plld		= 1U,
@@ -381,7 +381,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 0U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DDR_26MHZ_1600MHZ_F24BIT] =	 {
+	[PLL_ENTRY_DDR_26MHZ_1600MHZ_F24BIT] =	{
 		.freq_min_hz	= 1600000000U,
 		.freq_max_hz	= 1600000000U,
 		.plld		= 1U,
@@ -389,31 +389,31 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 9033886U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DDR_24MHZ_1866_5MHZ_F24BIT] = {
-		.freq_min_hz	= 1866500000U,
-		.freq_max_hz	= 1866500000U,
+	[PLL_ENTRY_DDR_24MHZ_1866MHZ_F24BIT] =	{
+		.freq_min_hz	= 1866000000U,
+		.freq_max_hz	= 1866000000U,
 		.plld		= 1U,
 		.pllm		= 77U,
-		.pllfm		= 12932438U,
+		.pllfm		= 12582912U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DDR_25MHZ_1866_5MHZ_F24BIT] = {
-		.freq_min_hz	= 1866500000U,
-		.freq_max_hz	= 1866500000U,
+	[PLL_ENTRY_DDR_25MHZ_1866MHZ_F24BIT] =	{
+		.freq_min_hz	= 1866000000U,
+		.freq_max_hz	= 1866000001U,
 		.plld		= 1U,
 		.pllm		= 74U,
-		.pllfm		= 11072963U,
+		.pllfm		= 10737419U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DDR_26MHZ_1866_5MHZ_F24BIT] = {
-		.freq_min_hz	= 1866500000U,
-		.freq_max_hz	= 1866500000U,
+	[PLL_ENTRY_DDR_26MHZ_1866MHZ_F24BIT] =	{
+		.freq_min_hz	= 1866000000U,
+		.freq_max_hz	= 1866000000U,
 		.plld		= 1U,
 		.pllm		= 71U,
-		.pllfm		= 13228190U,
+		.pllfm		= 12905551U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_SMS_24MHZ_2400MHZ] =		 {
+	[PLL_ENTRY_SMS_24MHZ_2400MHZ] =		{
 		.freq_min_hz	= 2400000000U,
 		.freq_max_hz	= 2400000000U,
 		.plld		= 1U,
@@ -421,7 +421,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 0U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_SMS_25MHZ_2400MHZ] =		 {
+	[PLL_ENTRY_SMS_25MHZ_2400MHZ] =		{
 		.freq_min_hz	= 2400000000U,
 		.freq_max_hz	= 2400000000U,
 		.plld		= 1U,
@@ -429,7 +429,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 0U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_SMS_26MHZ_2400MHZ_F24BIT] =	 {
+	[PLL_ENTRY_SMS_26MHZ_2400MHZ_F24BIT] =	{
 		.freq_min_hz	= 2400000000U,
 		.freq_max_hz	= 2400000001U,
 		.plld		= 1U,
@@ -437,7 +437,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 5162221U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DSS0_24MHZ_2100MHZ_F24BIT] =	 {
+	[PLL_ENTRY_DSS0_24MHZ_2100MHZ_F24BIT] = {
 		.freq_min_hz	= 2100000000U,
 		.freq_max_hz	= 2100000000U,
 		.plld		= 1U,
@@ -445,15 +445,15 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 8388608U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DSS0_25MHZ_2100MHZ] =	 {
+	[PLL_ENTRY_DSS0_25MHZ_2100MHZ_F24BIT] = {
 		.freq_min_hz	= 2100000000U,
-		.freq_max_hz	= 2100000000U,
+		.freq_max_hz	= 2100000001U,
 		.plld		= 1U,
 		.pllm		= 84U,
-		.pllfm		= 0U,
+		.pllfm		= 1U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DSS0_26MHZ_2100MHZ_F24BIT] =	 {
+	[PLL_ENTRY_DSS0_26MHZ_2100MHZ_F24BIT] = {
 		.freq_min_hz	= 2100000000U,
 		.freq_max_hz	= 2100000000U,
 		.plld		= 1U,
@@ -461,7 +461,7 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 12905551U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DSS1_24MHZ_1800MHZ] =	 {
+	[PLL_ENTRY_DSS1_24MHZ_1800MHZ] =	{
 		.freq_min_hz	= 1800000000U,
 		.freq_max_hz	= 1800000000U,
 		.plld		= 1U,
@@ -469,15 +469,15 @@ const struct pll_table_entry soc_pll_table[30] = {
 		.pllfm		= 0U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DSS1_25MHZ_1800MHZ] =	 {
+	[PLL_ENTRY_DSS1_25MHZ_1800MHZ_F24BIT] = {
 		.freq_min_hz	= 1800000000U,
-		.freq_max_hz	= 1800000000U,
+		.freq_max_hz	= 1800000001U,
 		.plld		= 1U,
 		.pllm		= 72U,
-		.pllfm		= 0U,
+		.pllfm		= 1U,
 		.clkod		= 1U,
 	},
-	[PLL_ENTRY_DSS1_26MHZ_1800MHZ_F24BIT] =	 {
+	[PLL_ENTRY_DSS1_26MHZ_1800MHZ_F24BIT] = {
 		.freq_min_hz	= 1800000000U,
 		.freq_max_hz	= 1800000001U,
 		.plld		= 1U,
@@ -503,9 +503,9 @@ static const u8 pllfracf2_ssmod_16fft_main_12_entries[7] = {
 	PLL_ENTRY_DDR_24MHZ_1600MHZ_F24BIT,
 	PLL_ENTRY_DDR_25MHZ_1600MHZ,
 	PLL_ENTRY_DDR_26MHZ_1600MHZ_F24BIT,
-	PLL_ENTRY_DDR_24MHZ_1866_5MHZ_F24BIT,
-	PLL_ENTRY_DDR_25MHZ_1866_5MHZ_F24BIT,
-	PLL_ENTRY_DDR_26MHZ_1866_5MHZ_F24BIT,
+	PLL_ENTRY_DDR_24MHZ_1866MHZ_F24BIT,
+	PLL_ENTRY_DDR_25MHZ_1866MHZ_F24BIT,
+	PLL_ENTRY_DDR_26MHZ_1866MHZ_F24BIT,
 	PLL_TABLE_LAST,
 };
 static const u8 pllfracf2_ssmod_16fft_main_15_entries[4] = {
@@ -516,13 +516,13 @@ static const u8 pllfracf2_ssmod_16fft_main_15_entries[4] = {
 };
 static const u8 pllfracf2_ssmod_16fft_main_16_entries[4] = {
 	PLL_ENTRY_DSS0_24MHZ_2100MHZ_F24BIT,
-	PLL_ENTRY_DSS0_25MHZ_2100MHZ,
+	PLL_ENTRY_DSS0_25MHZ_2100MHZ_F24BIT,
 	PLL_ENTRY_DSS0_26MHZ_2100MHZ_F24BIT,
 	PLL_TABLE_LAST,
 };
 static const u8 pllfracf2_ssmod_16fft_main_17_entries[4] = {
 	PLL_ENTRY_DSS1_24MHZ_1800MHZ,
-	PLL_ENTRY_DSS1_25MHZ_1800MHZ,
+	PLL_ENTRY_DSS1_25MHZ_1800MHZ_F24BIT,
 	PLL_ENTRY_DSS1_26MHZ_1800MHZ_F24BIT,
 	PLL_TABLE_LAST,
 };
@@ -4052,7 +4052,7 @@ const struct clk_data soc_clock_data[274] = {
 		.drv		= &clk_drv_pll_16fft,
 		.freq_idx	= AM62PX_FREQ_VALUE_PLLFRACF2_SSMOD_16FFT_MAIN_16,
 		.data		= &clk_data_pllfracf2_ssmod_16fft_main_16.data_pll.data,
-		.flags		= 0,
+		.flags		= CLK_DATA_FLAG_ALLOW_SSC_CHANGE,
 	},
 	[CLK_AM62PX_PLLFRACF2_SSMOD_16FFT_MAIN_17_FOUTVCOP_CLK] =				{
 		.parent		=								{
@@ -4062,7 +4062,7 @@ const struct clk_data soc_clock_data[274] = {
 		.drv		= &clk_drv_pll_16fft,
 		.freq_idx	= AM62PX_FREQ_VALUE_PLLFRACF2_SSMOD_16FFT_MAIN_17,
 		.data		= &clk_data_pllfracf2_ssmod_16fft_main_17.data_pll.data,
-		.flags		= 0,
+		.flags		= CLK_DATA_FLAG_ALLOW_SSC_CHANGE,
 	},
 	[CLK_AM62PX_PLLFRACF2_SSMOD_16FFT_MAIN_18_FOUTVCOP_CLK] =				{
 		.parent		=								{
@@ -4072,7 +4072,7 @@ const struct clk_data soc_clock_data[274] = {
 		.drv		= &clk_drv_pll_16fft,
 		.freq_idx	= AM62PX_FREQ_VALUE_PLLFRACF2_SSMOD_16FFT_MAIN_18,
 		.data		= &clk_data_pllfracf2_ssmod_16fft_main_18.data_pll.data,
-		.flags		= 0,
+		.flags		= CLK_DATA_FLAG_ALLOW_SSC_CHANGE,
 	},
 	[CLK_AM62PX_PLLFRACF2_SSMOD_16FFT_MAIN_2_FOUTVCOP_CLK] =				{
 		.parent		=								{

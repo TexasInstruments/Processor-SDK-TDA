@@ -6,6 +6,8 @@
  */
 #include <drivers/bootloader.h>
 
+extern Bootloader_MemArgs gMemBootloaderArgs;
+
 /* BOOTLOADER Instance Macros */
 % for(let i = 0; i < module.$instances.length; i++) {
     % let instance = module.$instances[i];

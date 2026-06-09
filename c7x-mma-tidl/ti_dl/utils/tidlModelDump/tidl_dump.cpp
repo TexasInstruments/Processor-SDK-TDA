@@ -258,7 +258,25 @@ void TIDL_dump::dumpLayer(int layerNum)
     case TIDL_TopKLayer:
        dumpTopKParams (layer);
        break;
-     case TIDL_UnsupportedLayer:
+    case TIDL_TileLayer:
+      dumpTileParams (layer);
+      break;
+    case TIDL_LogicalOpLayer:
+      dumpLogicalOpLayerParams (layer);
+      break;
+    case TIDL_RMSNormalizationLayer:
+      dumpRMSNormalizationParams (layer);
+      break;
+    case TIDL_LSTMLayer:
+      dumpLSTMParams(layer);
+      break;
+    case TIDL_GRULayer:
+      dumpGRUParams(layer);
+      break;
+    case TIDL_RNNLayer:
+      dumpRNNParams(layer);
+      break;
+    case TIDL_UnsupportedLayer:
        break;
    }
    dumpActParams(&layer->actParams);
@@ -407,7 +425,7 @@ void TIDL_dump::dumpEltWiseLayerParams(const sTIDL_Layer_t *pLayer)
   const sTIDL_EltWiseParams_t *pEW = &pLayer->layerParams.eltWiseParams;
   os << format("numChannels=%d eltWiseType=%s numInData=%d\n",
          pEW->numChannels,
-	 eltwiseTypeString(pEW->eltWiseType).c_str(),
+	 eltwiseOpTypeString(pEW->eltWiseType).c_str(),
 	 pEW->numInData);
 
   if (pEW->numInData)
@@ -426,6 +444,15 @@ void TIDL_dump::dumpEltWiseLayerParams(const sTIDL_Layer_t *pLayer)
   os << format("outDataQ=%d\n", pEW->outDataQ);
   os << format("biasQ=%d ", pEW->biasQ);
   os << format("bias:0x%x\n", pEW->bias);
+}
+
+void TIDL_dump::dumpLogicalOpLayerParams(const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_LogicalOpLayerParams_t *pLL = &pLayer->layerParams.logicalOpLayerParams;
+  os << format("logicalOpLayerType=%s\n",
+	 logicalOpTypeString(pLL->operatorType).c_str()
+	 );
+
 }
 
 void TIDL_dump::dumpInnerProductLayerParams(const sTIDL_Layer_t *pLayer)
@@ -550,6 +577,24 @@ void TIDL_dump::dumpTopKParams (const sTIDL_Layer_t *pLayer)
   os << format("\n");  
 }
 
+void TIDL_dump::dumpTileParams (const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_TileParams_t *pTile = &pLayer->layerParams.tileParams;
+  os << format("repeats=");
+  for (int i = 0; i < TIDL_DIM_MAX; ++i)
+  {
+     os << format("%d", pTile->repeats[i]);
+     if (i != (TIDL_DIM_MAX - 1)) os << format(",");
+  }
+  os << format("\n");  
+}
+
+void TIDL_dump::dumpRMSNormalizationParams (const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_RMSNormParams_t *pRMSNorm = &pLayer->layerParams.rmsNormParams;
+  os << format("axis=%d, epsilon=%f, stash_type=%d\n", pRMSNorm->axis, pRMSNorm->epsilon, pRMSNorm->stashType);
+}
+
 void TIDL_dump::dumpTransposeParams(const sTIDL_Layer_t *pLayer)
 {
   const sTIDL_TransposeParams_t *pTranspose = &pLayer->layerParams.transposeParams;
@@ -655,6 +700,101 @@ void TIDL_dump::dumpPadLayerParams(const sTIDL_Layer_t *pLayer)
        pPad->padConstValue, padTypeString(pPad->padType).c_str());
   os << format("perChannelPadConstTensorOffset=0x%x\n",
        pPad->perChannelPadConstTensorOffset);
+}
+
+void TIDL_dump::dumpLSTMParams(const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_LSTMParams_t *pLSTM = &pLayer->layerParams.lstmParams;
+  int32_t num_directions = 1;
+  if(pLSTM->direction == TIDL_RNNBidirectional)
+  {
+    num_directions = 2;
+  }
+  os << format("activations=");
+  for(int32_t dirIdx = 0; dirIdx < num_directions; dirIdx++)
+  {
+    os << format("%s,", actTypeShort(pLSTM->activations[dirIdx * 3 + 0]).c_str());
+    os << format("%s,", actTypeShort(pLSTM->activations[dirIdx * 3 + 1]).c_str());
+    if(dirIdx < num_directions - 1)
+    {
+      os << format("%s,", actTypeShort(pLSTM->activations[dirIdx * 3 + 2]).c_str());
+    }
+    else
+    {
+      os << format("%s\n", actTypeShort(pLSTM->activations[dirIdx * 3 + 2]).c_str());
+    }
+  }
+
+  if(pLSTM->isClipSet == 1)
+  {
+    os << format("clip=%f\n", pLSTM->clip);
+  }
+  os << format("direction=%s\n", rnnDirectionString(pLSTM->direction).c_str());
+  os << format("hidden_size=%d\n", pLSTM->hidden_size);
+  os << format("input_forget=%d\n", pLSTM->input_forget);
+  os << format("layout=%d\n", pLSTM->layout);
+}
+
+void TIDL_dump::dumpGRUParams(const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_GRUParams_t *pGRU = &pLayer->layerParams.gruParams;
+  int32_t num_directions = 1;
+  if(pGRU->direction == TIDL_RNNBidirectional)
+  {
+    num_directions = 2;
+  }
+  os << format("activations=");
+  for(int32_t dirIdx = 0; dirIdx < num_directions; dirIdx++)
+  {
+    os << format("%s,", actTypeShort(pGRU->activations[dirIdx * 2 + 0]).c_str());
+    if(dirIdx < num_directions - 1)
+    {
+      os << format("%s,", actTypeShort(pGRU->activations[dirIdx * 2 + 1]).c_str());
+    }
+    else
+    {
+      os << format("%s\n", actTypeShort(pGRU->activations[dirIdx * 2 + 1]).c_str());
+    }
+  }
+
+  if(pGRU->isClipSet == 1)
+  {
+    os << format("clip=%f\n", pGRU->clip);
+  }
+  os << format("direction=%s\n", rnnDirectionString(pGRU->direction).c_str());
+  os << format("hidden_size=%d\n", pGRU->hidden_size);
+  os << format("layout=%d\n", pGRU->layout);
+  os << format("linear_before_reset=%d\n", pGRU->linear_before_reset);
+}
+
+void TIDL_dump::dumpRNNParams(const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_RNNParams_t *pRNN = &pLayer->layerParams.rnnParams;
+  int32_t num_directions = 1;
+  if(pRNN->direction == TIDL_RNNBidirectional)
+  {
+    num_directions = 2;
+  }
+  os << format("activations=");
+  for(int32_t dirIdx = 0; dirIdx < num_directions; dirIdx++)
+  {
+    if(dirIdx < num_directions - 1)
+    {
+      os << format("%s,", actTypeShort(pRNN->activations[dirIdx]).c_str());
+    }
+    else
+    {
+      os << format("%s\n", actTypeShort(pRNN->activations[dirIdx]).c_str());
+    }
+  }
+
+  if(pRNN->isClipSet == 1)
+  {
+    os << format("clip=%f\n", pRNN->clip);
+  }
+  os << format("direction=%s\n", rnnDirectionString(pRNN->direction).c_str());
+  os << format("hidden_size=%d\n", pRNN->hidden_size);
+  os << format("layout=%d\n", pRNN->layout);
 }
 
 void TIDL_dump::dumpOdOutputReformatLayerParams(const sTIDL_Layer_t *pLayer)

@@ -3,7 +3,7 @@
  *
  * Cortex-M3 (CM3) firmware for power management
  *
- * Copyright (C) 2015-2024, Texas Instruments Incorporated
+ * Copyright (C) 2015-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,10 +64,11 @@
 /** Indicate hardware state of the clock is that it is running. */
 #define TISCI_MSG_VALUE_CLOCK_HW_STATE_READY        1
 
-/** Allow this clock to be modified via spread spectrum clocking.
- *  \note: The SSC feature is currently not supported in System Firmware.
- */
-#define TISCI_MSG_FLAG_CLOCK_ALLOW_SSC                BIT(8)
+/** Indicate that the spread spectrum clocking as down spread */
+#define TISCI_MSG_VALUE_CLOCK_SSC_SPREAD_DOWN       3U
+
+/** Indicate that the spread spectrum clocking as center spread */
+#define TISCI_MSG_VALUE_CLOCK_SSC_SPREAD_CENTER     1U
 
 /**
  * Allow this clock's frequency to be changed while it is running
@@ -81,9 +82,7 @@
  */
 #define TISCI_MSG_FLAG_CLOCK_INPUT_TERM               BIT(10)
 
-/** Indicate that SSC is active for this clock.
- *  \note: The SSC feature is currently not supported in System Firmware.
- */
+/** Indicate that SSC is active for this clock. */
 #define TISCI_MSG_FLAG_CLOCK_SSC_ACTIVE               BIT(11)
 
 /**
@@ -93,8 +92,7 @@
  * the IP.
  *
  * Certain flags can be set in the message header for device clocks:
- * TISCI_MSG_FLAG_CLOCK_ALLOW_SSC, TISCI_MSG_FLAG_CLOCK_ALLOW_FREQ_CHANGE,
- * TISCI_MSG_FLAG_CLOCK_INPUT_TERM.
+ * TISCI_MSG_FLAG_CLOCK_ALLOW_FREQ_CHANGE, TISCI_MSG_FLAG_CLOCK_INPUT_TERM.
  *
  * \param hdr TISCI header
  *
@@ -544,4 +542,110 @@ struct tisci_msg_get_freq_resp {
 	u64			freq_hz;
 } __attribute__((__packed__));
 
-#endif /* TISCI_PM_TISCI_CLOCK_H */
+/**
+ * \brief Set the spread spectrum clocking for a clock.
+ *
+ * Set the SSC for a clock with desired modulation frequency, spread
+ * type and modulation depth, all within their allowable range. SSC can only
+ * be enabled on clocks that have SSC support in the hardware. This message
+ * will fail if SSC is not supported by the hardware.
+ *
+ * \param hdr TISCI header
+ *
+ * \param device
+ * The device ID that the clock is connected to.
+ *
+ * \param clk
+ * Each device has its own set of clock inputs. This indexes which clock
+ * input to modify.
+ *
+ * \param modfreq_hz
+ * The desired modulation frequency in Hz. The modulation period is the time
+ * required to cycle the clock nominal frequency from an initial value through
+ * all the different values along the modulation profile and back to the
+ * initial value. The modulation frequency is the inverse of the period. The
+ * minimum allowable frequency is 32 kHz and maximum is fREFCLK / 200. For
+ * example, if the fREFCLK is 25 MHz, the maximum allowable modulation
+ * frequency would be 125 kHz.
+ *
+ * \param mod_depth
+ * The target modulation depth in "permyriad". The modulation depth refers to
+ * the maximum variation in frequency as a percentage of the clock center
+ * frequency. The minimum modulation depth is 0.1% and the maximum is 3.1%.
+ * Modulation depth can be adjusted in 0.1% increments.
+ *
+ * \param spread_type
+ * The target spread type. Both center and down spread are supported.
+ *
+ * \param enable
+ * Enable or disable SSC.
+ */
+struct tisci_msg_set_clock_ssc_req {
+	struct tisci_header	hdr;
+	u32			device;
+	u32			clk;
+	u32			modfreq_hz;
+	u32			mod_depth;
+	u8			spread_type;
+	u8			enable;
+} __attribute__((__packed__));
+
+/**
+ * \brief Empty response for TISCI_MSG_SET_CLOCK_SSC
+ *
+ * Although this message is essentially empty and contains only a header
+ * a full data structure is created for consistency in implementation.
+ *
+ * \param hdr TISCI header to provide ACK/NAK flags to the host.
+ */
+struct tisci_msg_set_clock_ssc_resp {
+	struct tisci_header hdr;
+} __attribute__((__packed__));
+
+/**
+ * \brief Get the current SSC settings of a device's clock
+ *
+ * This message will only succeed if the clock is currently enabled, otherwise
+ * it returns nack.
+ *
+ * \param hdr TISCI header
+ *
+ * \param device
+ * The device ID that the clock is connected to.
+ *
+ * \param clk
+ * Each device has its own set of clock inputs. This indexes which clock
+ * input to query.
+ */
+struct tisci_msg_get_clock_ssc_req {
+	struct tisci_header	hdr;
+	u32			device;
+	u32			clk;
+} __attribute__((__packed__));
+
+/**
+ * \brief Result of get SSC request
+ *
+ * \param hdr TISCI header
+ *
+ * \param modfreq_hz
+ * The current modulation frequency in Hz.
+ *
+ * \param mod_depth
+ * The current modulation depth in "permyriad".
+ *
+ * \param spread_type
+ * The current spread type.
+ *
+ * \param enable
+ * The current enable state.
+ */
+struct tisci_msg_get_clock_ssc_resp {
+	struct tisci_header	hdr;
+	u32			modfreq_hz;
+	u32			mod_depth;
+	u8			spread_type;
+	u8			enable;
+} __attribute__((__packed__));
+
+#endif  /* TISCI_PM_TISCI_CLOCK_H */

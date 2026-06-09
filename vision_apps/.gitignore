@@ -4,6 +4,7 @@ lib/
 out/
 test_out/
 *.egg-info
+*.bak
 *.pyc
 __pycache__
 platform/*/rtos/*/generated

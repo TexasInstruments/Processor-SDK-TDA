@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -41,6 +41,10 @@
  *  IO expansion board.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <kernel/dpl/DebugP.h>
 #include <kernel/dpl/AddrTranslateP.h>
 #include <kernel/dpl/SemaphoreP.h>
@@ -51,6 +55,10 @@
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
 #include "eqep_pattern_gen.h"
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 /* EQEP Interrupt Sources */
 #define EQEP_INT_ALL                        (EQEP_INT_GLOBAL            | \
@@ -85,6 +93,10 @@
  * Setting variance to 4 as we capture 4 edges per cycle. */
 #define EQEP_POS_CNT_VARIANCE               (4U)
 
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
 /* Global variables and objects */
 static HwiP_Object           gEqepHwiObject;
 /* Variable to hold base address of EQEP/GPIO that is used */
@@ -97,6 +109,16 @@ volatile uint32_t            gEqepIsrCnt = 0U;
 /* Pos Count capture at different events. */
 uint32_t                     gEqepPosCnt[EQEP_EVENT_CNT];
 
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
 /* Static Function declarations */
 static void App_eqepIntrISR(void *arg);
 static void App_eqepInitQuadratureWave(void);
@@ -108,14 +130,14 @@ static void App_eqepTestAntiClockwiseDirection(void);
 static void App_eqepTestFrequency(void);
 static uint32_t App_eqepCalculateFrequencyUnitTimeout(void);
 
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
+
 void eqep_capture_main(void *args)
 {
     int32_t              status;
     HwiP_Params          hwiPrms;
-
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
 
     DebugP_log("EQEP Capture application started...\r\n");
     DebugP_log("Please refer EXAMPLES_DRIVERS_EQEP_CAPTURE example user \
@@ -126,6 +148,7 @@ guide for the test setup details.\r\n");
     /* Register & enable interrupt */
     HwiP_Params_init(&hwiPrms);
     hwiPrms.intNum      = CONFIG_EQEP0_INTR;
+    hwiPrms.eventId     = CONFIG_EQEP0_EVENT_ID;
     hwiPrms.callback    = &App_eqepIntrISR;
     hwiPrms.isPulse     = CONFIG_EQEP0_INTR_IS_PULSE;
     status              = HwiP_construct(&gEqepHwiObject, &hwiPrms);
@@ -165,8 +188,6 @@ With index event in between, Captures 4 edges per cycle\r\n");
 
     DebugP_log("All tests have passed.\r\n");
 
-    Board_driversClose();
-    Drivers_close();
 }
 
 static void App_eqepIntrISR(void *arg)

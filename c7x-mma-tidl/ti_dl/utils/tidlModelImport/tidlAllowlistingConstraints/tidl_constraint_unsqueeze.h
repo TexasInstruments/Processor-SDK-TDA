@@ -64,8 +64,8 @@
 
 const vector<TidlConstraint> tidlConstraintUnsqueeze = {
     TIDL_CSTR(
-        "Output dimensions after unsqueeze must be less than <= 6",
-        "Output dimensions after unsqueeze must be less than <= 6",
+        "Output dimensions after unsqueeze must be <= 6",
+        "Output dimensions after unsqueeze must be <= 6",
         "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;

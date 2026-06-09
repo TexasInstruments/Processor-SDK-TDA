@@ -40,19 +40,12 @@ static uint32_t gOspiAddedByBootloader[CONFIG_OSPI_NUM_INSTANCES] =
 };
 % }
 
-static uint32_t gOspiSkipDeinitFromSbl[CONFIG_OSPI_NUM_INSTANCES] =
-{
-% for(let i = 0; i < module.$instances.length; i++) {
-    % let instance = module.$instances[i];
-    % let config = module.getInstanceConfig(instance);
-    `config.skipDeinitFromSbl.toString(10).toUpperCase()`,
-% }
-};
-
 void Drivers_ospiOpen(void)
 {
     uint32_t instCnt;
     int32_t  status = SystemP_SUCCESS;
+
+    SOC_setFSSCtrlFlashBootSize();
 
     for(instCnt = 0U; instCnt < CONFIG_OSPI_NUM_INSTANCES; instCnt++)
     {
@@ -100,7 +93,8 @@ void Drivers_ospiClose(void)
     /* Close all instances that are open */
     for(instCnt = 0U; instCnt < CONFIG_OSPI_NUM_INSTANCES; instCnt++)
     {
-        if (!gOspiSkipDeinitFromSbl[instCnt])
+        % if (common.isDMWithBootSupported()) {
+        if(!gOspiAddedByBootloader[instCnt])
         {
             if(gOspiHandle[instCnt] != NULL)
             {
@@ -108,6 +102,14 @@ void Drivers_ospiClose(void)
                 gOspiHandle[instCnt] = NULL;
             }
         }
+        % }
+        % else {
+            if(gOspiHandle[instCnt] != NULL)
+            {
+                OSPI_close(gOspiHandle[instCnt]);
+                gOspiHandle[instCnt] = NULL;
+            }
+        % }
     }
 
     return;

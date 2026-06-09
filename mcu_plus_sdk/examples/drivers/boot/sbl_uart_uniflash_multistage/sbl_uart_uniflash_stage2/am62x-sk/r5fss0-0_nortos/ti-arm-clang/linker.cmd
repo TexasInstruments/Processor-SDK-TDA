@@ -55,19 +55,7 @@ SECTIONS
     .bss.filebuf (NOLOAD) : {} > DDR1
 }
 
-/*
-NOTE: Below memory is reserved for DMSC usage
- - During Boot till security handoff is complete
-   0x701E0000 - 0x701FFFFF (128KB)
- - After "Security Handoff" is complete (i.e at run time)
-   0x701FC000 - 0x701FFFFF (16KB)
 
- Security handoff is complete when this message is sent to the DMSC,
-   TISCI_MSG_SEC_HANDOVER
-
- This should be sent once all cores are loaded and all application
- specific firewall calls are setup.
-*/
 
 MEMORY
 {
@@ -80,6 +68,6 @@ MEMORY
     /* HSM_RAM_VECS : ORIGIN = 0x43C00000 , LENGTH = 0x100
     HSM_RAM      : ORIGIN = 0x43C00100 , LENGTH = 0x3c800 - 0x100 */
 
-    DDR1         : ORIGIN = 0x80000000 , LENGTH = 0x800000
+    DDR1         : ORIGIN = 0x84000000 , LENGTH = 0x4000000
     DDR2         : ORIGIN = 0x9DB00000 , LENGTH = 0x200000
 }

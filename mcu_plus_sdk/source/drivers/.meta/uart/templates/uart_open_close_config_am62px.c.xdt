@@ -165,11 +165,37 @@ void Drivers_uartClose(void)
     /* Close all instances that are open */
     for(instCnt = 0U; instCnt < CONFIG_UART_NUM_INSTANCES; instCnt++)
     {
-        if(gUartHandle[instCnt] != NULL)
+        % if (common.isDMWithBootSupported()) {
+        if(!gUartAddedByBootloader[instCnt])
         {
-            UART_close(gUartHandle[instCnt]);
-            gUartHandle[instCnt] = NULL;
+            if(gUartHandle[instCnt] != NULL)
+            {
+                UART_Config        *config;
+                config = (UART_Config *)gUartHandle[instCnt];
+
+                if(config->traceInstance != TRUE)
+                {
+                    UART_close(gUartHandle[instCnt]);
+                    gUartHandle[instCnt] = NULL;
+                }
+
+            }
         }
+        % }
+        % else {
+            if(gUartHandle[instCnt] != NULL)
+            {
+                UART_Config        *config;
+                config = (UART_Config *)gUartHandle[instCnt];
+
+                if(config->traceInstance != TRUE)
+                {
+                    UART_close(gUartHandle[instCnt]);
+                    gUartHandle[instCnt] = NULL;
+                }
+
+            }
+        % }
     }
 
     return;

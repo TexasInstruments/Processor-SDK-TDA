@@ -61,12 +61,9 @@
  */
 
 #include <TI/tivx.h>
+#include <TI/hwa_vpac_ldc.h>
 #include "tivx_kernels_target_utils.h"
 #include "tivx_hwa_vpac_ldc_priv.h"
-
-/* Function prototypes */
-void tivxRegisterHwaTargetVpacLdcKernels(void);
-void tivxUnRegisterHwaTargetVpacLdcKernels(void);
 
 static Tivx_Target_Kernel_List  gTivx_target_kernel_list[] = {
     {tivxAddTargetKernelVpacLdc, tivxRemoveTargetKernelVpacLdc},

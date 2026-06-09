@@ -121,6 +121,9 @@ extern "C" {
 #define CSL_DRU_OWNER_DIRECT_TR         ((uint64_t) 0x0000U)
 /** \brief UDMA-C TR - TR will be received through PSIL */
 #define CSL_DRU_OWNER_UDMAC_TR          ((uint64_t) 0x0001U)
+
+/**< Maximum number of DRU CAUSE registers */
+#define CSL_DRU_NUM_CAUSE               (32U)
 /* @} */
 
 /**
@@ -518,6 +521,16 @@ int32_t CSL_druChSetGlobalTrigger1(CSL_DRU_t *pRegs, uint32_t chId);
 int32_t CSL_druGetQueueStatus(const CSL_DRU_t *pRegs,
                               uint32_t queueId,
                               CSL_DruQueueStatus *status);
+
+/**
+ *  \brief   This API returns the DRU CAUSE registers.
+ *
+ *  \param   pRegs       [IN] DRU register base.
+ *  \param   druCause    [OUT] Pointer to DRU CAUSE structure to be filled.
+ *
+ *  \return \ref CSL_ErrType_t
+ */
+int32_t CSL_druGetCauseRegs(const CSL_DRU_t *pRegs, CSL_DRU_CAUSE *druCause);
 
 /* ========================================================================== */
 /*                       Static Function Definitions                          */

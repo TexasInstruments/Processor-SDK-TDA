@@ -72,24 +72,12 @@ static void test_led_on_off(void *args);
 
 void test_main(void *args)
 {
-    int32_t status = SystemP_SUCCESS;
 
     UNITY_BEGIN();
-
-    /* Open I2C and other drivers */
-    Drivers_open();
-
-    /* Open drivers */
-    status = Board_driversOpen();
-    TEST_ASSERT_EQUAL_INT32(SystemP_SUCCESS, status);
 
     RUN_TEST(test_led_on_off, 315, NULL);
 
     UNITY_END();
-
-    /* Close I2C and other drivers */
-    Board_driversClose();
-    Drivers_close();
 
     return;
 }

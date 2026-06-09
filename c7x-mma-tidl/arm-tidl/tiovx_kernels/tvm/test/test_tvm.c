@@ -93,7 +93,7 @@
 #define TEST_TVM_OUT_TENSOR1_ELEMENTS (1*480*14*14)
 #define TEST_TVM_OUT_TENSOR2_ELEMENTS (1*480*1*1)
 
-#if defined(SOC_AM62A) || defined(SOC_J722S)
+#if defined(SOC_AM62A) || defined (SOC_J722S) || defined (SOC_TDA54)
 #define TVM_SMALL_TEST "%s/tivx/tvm_models/am62a/ovx_tvm_test_small.out"
 #define TVM_LARGE_TEST "%s/tivx/tvm_models/am62a/ovx_tvm_test_large.out"
 #else

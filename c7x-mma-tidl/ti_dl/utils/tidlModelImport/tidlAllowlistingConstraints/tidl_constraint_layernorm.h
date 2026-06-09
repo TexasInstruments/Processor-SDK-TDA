@@ -65,9 +65,9 @@
 const vector<TidlConstraint> tidlConstraintLayerNorm = 
 {
     TIDL_CSTR(
-        "Number of non-singleton variable input dimensions must be less than <= 6",
-        "Number of non-singleton variable input dimensions must be less than <= 6",
-        "Number of non-singleton variable input dimensions must be less than <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
+        "Number of non-singleton variable input dimensions must be <= 6",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
             int32_t numDims = tidlGetNonSingletonNumDims(layer->allowlistingMetaData.varTensorsDims[0]);
@@ -87,7 +87,7 @@ const vector<TidlConstraint> tidlConstraintLayerNorm =
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
             int32_t axis = layer->layerParams.layerNormParams.axis;
-            if(axis != TIDL_DIM_WIDTH)
+            if(axis != TIDL_DIM_WIDTH && layer->layerParams.layerNormParams.isInstanceNorm == 0)
             {
                 oss << "Only supported across the width axis";
                 logs = oss.str();
@@ -102,32 +102,33 @@ const vector<TidlConstraint> tidlConstraintLayerNorm =
         "Dimension of scale and bias vector can either be [1, N] or [N]",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
-            
-            for(int i = 0; i <layer->allowlistingMetaData.constTensorsDims.size(); i++)
+            if(layer->layerParams.layerNormParams.isInstanceNorm == 0)
             {
-                int32_t numDims = tidlGetNonSingletonNumDims(layer->allowlistingMetaData.constTensorsDims[i]);
-                
-                //non singleton dimension in const tensor should be along width axis
-                for(int j = 0; j < (numDims-1); j++)
+                for(int i = 0; i <layer->allowlistingMetaData.constTensorsDims.size(); i++)
                 {
-                    if(layer->allowlistingMetaData.constTensorsDims[i][j] != 1)
+                    int32_t numDims = tidlGetNonSingletonNumDims(layer->allowlistingMetaData.constTensorsDims[i]);
+                    
+                    //non singleton dimension in const tensor should be along width axis
+                    for(int j = 0; j < (numDims-1); j++)
                     {
-                        stringstream ss;
-                        ss  <<"Unsupported shape for scale and bias, Expected a singleton dimension along all axes except the width axis, Recieved shape [";
-                        for (int k = 0; k < numDims; ++k)
+                        if(layer->allowlistingMetaData.constTensorsDims[i][j] != 1)
                         {
-                            ss << layer->allowlistingMetaData.constTensorsDims[i][k];
-                            if (k != (numDims -1)){
-                                ss << ", ";
+                            stringstream ss;
+                            ss  <<"Unsupported shape for scale and bias, Expected a singleton dimension along all axes except the width axis, Recieved shape [";
+                            for (int k = 0; k < numDims; ++k)
+                            {
+                                ss << layer->allowlistingMetaData.constTensorsDims[i][k];
+                                if (k != (numDims -1)){
+                                    ss << ", ";
+                                }
                             }
+                            ss << "]";
+                            logs = ss.str();
+                            return false;
                         }
-                        ss << "]";
-                        logs = ss.str();
-                        return false;
-                    }
 
+                    }
                 }
-                
             }
             return true;
         }

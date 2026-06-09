@@ -56,8 +56,14 @@ TIDL_LIBS += common_C7120
 TIDL_LIBS += mmalib_C7120
 TIDL_LIBS += mmalib_cn_C7120
 TIDL_LIBS += tidl_algo
+ifeq ($(ENABLE_NEW_TIDL_STRUCTURE),yes)
+TIDL_LIBS += tidl_priv
+TIDL_LIBS += tidl_kernels
+TIDL_LIBS += tidl_ref
+else
 TIDL_LIBS += tidl_priv_algo
 TIDL_LIBS += tidl_obj_algo
+endif
 TIDL_LIBS += tidl_custom
 
 SYS_STATIC_LIBS += $(TIDL_LIBS)

@@ -12,7 +12,7 @@
  * This is also the heap used by pvPortMalloc in FreeRTOS
  */
 --heap_size=32768
--e_vectors  /* This is the entry of the application, _vector MUST be plabed starting address 0x0 */
+-e_vectors  /* This is the entry of the application, _vector MUST be placed starting address 0x0 */
 
 /* This is the size of stack when R5 is in IRQ mode
  * In NORTOS,
@@ -105,5 +105,5 @@ MEMORY
     R5F_TCMB0 : ORIGIN = 0x41010000 , LENGTH = 0x00004000
 
     DDR_CODE_DATA                 : ORIGIN = 0xA2200000, LENGTH = 0xE00000   /* Code/Data            */
-    DDR_IPC_VRING_RTOS            : ORIGIN = 0xA5000000, LENGTH = 0x1C00000   /* IPC VRING for RTOS/NoRTOS */
+    DDR_IPC_VRING_RTOS            : ORIGIN = 0xA5000000, LENGTH = 0x1000000   /* IPC VRING for RTOS/NoRTOS */
 }

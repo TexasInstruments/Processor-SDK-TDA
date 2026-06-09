@@ -94,7 +94,7 @@
 
 #include <dcc_viss_ub9xx_raw_test_pattern.h>
 
-#define _ENABLE_2A_
+#define ENABLE_2A
 
 #include <dcc_ldc_imx390.h>
 #include <dcc_ldc_imx390_wdr.h>
@@ -881,9 +881,9 @@ int32_t appIssGetResizeParams(uint16_t in_width, uint16_t in_height, uint16_t tg
     /*X and Y dimensions will be scaled by same factor to maintain aspect ratio*/
     rsz_ratio = (rsz_ratio_x < rsz_ratio_y) ? rsz_ratio_x : rsz_ratio_y;
     tmp = (in_width*rsz_ratio)/1024U;
-    *out_width = (uint16_t)((tmp>>3U)<<3U);/*Align to 8x*/
+    *out_width = (uint16_t)((tmp & 0xFFF8U) & 0xFFFFU); /*Align to 8x*/
     tmp = (in_height*rsz_ratio)/1024U;
-    *out_height = (uint16_t)((tmp>>3U)<<3U);/*Align to 8x*/
+    *out_height = (uint16_t)((tmp & 0xFFF8U) & 0xFFFFU); /*Align to 8x*/
 
     return 0;
 }
@@ -1176,8 +1176,18 @@ int32_t appSplitVpacDcc(uint8_t *dcc_buf_in, uint32_t prmSize,
 
                     if (0 == status)
                     {
+                        uint64_t next_offset = (uint64_t)offset + (uint64_t)sz;
+
                         pluginBuf = &pluginBuf[sz];
-                        offset += sz;
+
+                        if(next_offset > UINT32_MAX)
+                        {
+                            offset = UINT32_MAX;
+                        }
+                        else
+                        {
+                            offset = (uint32_t)next_offset;
+                        }
                     }
                 }
             }

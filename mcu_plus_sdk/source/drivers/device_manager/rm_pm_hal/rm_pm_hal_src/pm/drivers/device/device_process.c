@@ -3,7 +3,7 @@
  *
  * Cortex-M3 (CM3) firmware for power management
  *
- * Copyright (C) 2020-2024, Texas Instruments Incorporated
+ * Copyright (C) 2020-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,16 @@
 #include <soc/host_idx_mapping.h>
 #include <pm.h>
 #include <psc.h>
+#include <string.h>
+
+/* Maximum valid hardware state value */
+#define MAX_HW_STATE_VALUE           (2U)
+
+/* Number of devices that fit in one 32-bit word (32 bits / 2 bits per device) */
+#define DEVICES_PER_WORD             (16U)
+
+/* Number of bits used to encode each device state */
+#define BITS_PER_DEVICE              (2U)
 
 s32 set_device_handler(u32 *msg_recv)
 {
@@ -320,3 +330,73 @@ s32 device_drop_powerup_ref_handler(u32 *msg_recv)
 
 	return ret;
 }
+
+#ifdef CONFIG_GET_DEVICE_MULTIPLE
+s32 get_device_multiple_handler(u32 *msg_recv)
+{
+	struct tisci_msg_get_device_multiple_req *req =
+		(struct tisci_msg_get_device_multiple_req *) msg_recv;
+	struct tisci_msg_get_device_multiple_resp *resp =
+		(struct tisci_msg_get_device_multiple_resp *) msg_recv;
+	s32 ret = SUCCESS;
+	u16 total_devices = soc_device_count;
+	u16 start_device_id = req->start_device_id;
+	u16 end_device_id;
+	u16 dev_id;
+	u32 bitmap_idx;
+	u32 hw_state;
+	u32 word_idx;
+	u32 bit_pos;
+
+	pm_trace(TRACE_PM_ACTION_MSG_RECEIVED, TISCI_MSG_GET_DEVICE_MULTIPLE);
+	pm_trace(TRACE_PM_ACTION_MSG_PARAM_DEV_CLK_ID, start_device_id);
+
+	resp->hdr.flags = 0U;
+
+	mmr_unlock_all();
+
+	(void) memset(resp->device_state_bitmap, 0, sizeof(resp->device_state_bitmap));
+
+	if (start_device_id >= total_devices) {
+		resp->count = 0U;
+		resp->remaining = 0U;
+		pm_trace(TRACE_PM_ACTION_BAD_DEVICE, start_device_id);
+		ret = -EFAIL;
+	}
+
+	if (ret == SUCCESS) {
+		end_device_id = (u16) (start_device_id + TISCI_MSG_MAX_DEVICE_IDS_MULTIPLE - 1U);
+		if (end_device_id >= total_devices) {
+			end_device_id = (u16) (total_devices - 1U);
+			resp->remaining = 0U;
+		} else {
+			resp->remaining = (u16) (total_devices - end_device_id - 1U);
+		}
+
+		resp->count = (u16) (end_device_id - start_device_id + 1U);
+
+		bitmap_idx = 0U;
+		for (dev_id = start_device_id; dev_id <= end_device_id; dev_id++) {
+			const struct dev_data *data = soc_device_data_arr[dev_id];
+
+			if (data == NULL) {
+				hw_state = 0U;
+			} else {
+				hw_state = device_get_state(&soc_devices[dev_id]);
+				if (hw_state > MAX_HW_STATE_VALUE) {
+					hw_state = 3U;
+				}
+			}
+
+			word_idx = bitmap_idx / DEVICES_PER_WORD;
+			bit_pos = (bitmap_idx % DEVICES_PER_WORD) * BITS_PER_DEVICE;
+			resp->device_state_bitmap[word_idx] |= (hw_state << bit_pos);
+			bitmap_idx++;
+		}
+	}
+
+	mmr_lock_all();
+
+	return ret;
+}
+#endif /* CONFIG_GET_DEVICE_MULTIPLE */

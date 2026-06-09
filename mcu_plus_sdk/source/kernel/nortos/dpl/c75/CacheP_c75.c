@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2021, Texas Instruments Incorporated
+ * Copyright (c) 2015-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,7 +45,11 @@
 void CacheP_Module_startup(void)
 {
     CacheP_enable(CacheP_TYPE_L1D);
+#if (defined (SOC_AM62DX) || defined (SOC_AM275X))
+    CacheP_enableWT(CacheP_TYPE_L1D);
+#else 
     CacheP_enableWB(CacheP_TYPE_L1D);
+#endif    
 }
 
 /*
@@ -55,7 +59,7 @@ void CacheP_Module_startup(void)
 void CacheP_enable(uint32_t type)
 {
     /* Enable L1D cache */
-    if (type & CacheP_TYPE_L1D)
+    if ((type & CacheP_TYPE_L1D) != 0U)
     {
         uint64_t L1D_cfg = CacheP_getL1DCFG();
         L1D_cfg |= 1U;
@@ -71,7 +75,7 @@ void CacheP_enable(uint32_t type)
 void CacheP_disable(uint32_t type)
 {
     /* Disable L1D cache */
-    if (type & CacheP_TYPE_L1D)
+    if ((type & CacheP_TYPE_L1D) != 0U)
     {
         uint64_t L1D_cfg = CacheP_getL1DCFG();
         L1D_cfg &= ~((uint64_t) 1);
@@ -87,7 +91,7 @@ void CacheP_disable(uint32_t type)
 void CacheP_enableWB(uint32_t type)
 {
      /* Enable writeback */
-    if (type & CacheP_TYPE_L1D)
+    if ((type & CacheP_TYPE_L1D) != 0U)
     {
         uint64_t L1D_cfg = CacheP_getL1DCFG();
         L1D_cfg |= 0x10U;
@@ -103,7 +107,7 @@ void CacheP_enableWB(uint32_t type)
 void CacheP_enableWT(uint32_t type)
 {
     /* Disabling the Writeback enable write through */
-    if (type & CacheP_TYPE_L1D)
+    if ((type & CacheP_TYPE_L1D) != 0U)
     {
         uint64_t L1D_cfg = CacheP_getL1DCFG();
         L1D_cfg &= ~((uint64_t) 0x10U);
@@ -132,7 +136,7 @@ void CacheP_getSize(CacheP_Size *size)
 */
 void CacheP_wbAll(uint32_t type)
 {
-    if (type & CacheP_TYPE_L1D)
+    if ((type & CacheP_TYPE_L1D) != 0U)
     {
         // Performs a global write back of L1D cache
         CacheP_setL1DWB(1);
@@ -140,7 +144,7 @@ void CacheP_wbAll(uint32_t type)
 
 }
 
-void Cache_wbInvL1dAll()
+void Cache_wbInvL1dAll(void)
 {
     CacheP_setL1DWBINV(1);
 }
@@ -152,7 +156,7 @@ void Cache_wbInvL1dAll()
  */
 void CacheP_wbInvAll(uint32_t type)
 {
-    if (type & CacheP_TYPE_L1D)
+    if ((type & CacheP_TYPE_L1D) != 0U)
     {
         CacheP_setL1DWBINV(1);
     }
@@ -162,7 +166,7 @@ void CacheP_wbInvAll(uint32_t type)
  *  ======== Cache_invAll ========
  *  Performs a global invalidate of L1D cache. This does not trigger writeback.
  */
-void CacheP_invL1dAll()
+void CacheP_invL1dAll(void)
 {
     CacheP_setL1DINV(1);
 }
@@ -251,7 +255,7 @@ void CacheP_wbInv(void * blockPtr, uint32_t byteCnt, uint32_t type)
  *  ======== CacheP_wait ========
  *  Wait for the cache operation to complete.
  */
-void CacheP_wait()
+void CacheP_wait(void)
 {
     __SE0ADV(char);
     /*

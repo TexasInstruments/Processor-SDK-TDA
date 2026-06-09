@@ -26,11 +26,9 @@ FILES_common := \
     sciclient_rm_irq.c \
     sciclient_boardcfg.c \
     sciclient_procboot.c \
-    sciclient_rom.c \
     sciclient_secureProxyCfg.c \
     sciclient_secureproxy.c \
     uart_print.c \
-    Osal_wrapper.c \
 
 FILES_PATH_common = \
     . \
@@ -49,13 +47,6 @@ INCLUDES_common := \
     -I../rm_pm_hal/rm_pm_hal_src/rm/include \
     -I../rm_pm_hal/rm_pm_hal_src/include/soc/am62x \
     -I../rm_pm_hal/rm_pm_hal_src/include/lib/ \
-    -I../../../kernel/freertos/FreeRTOS-Kernel/include \
-    -I../../../kernel/freertos/config/am62x/r5f \
-    -I../../../kernel/freertos/portable/TI_ARM_CLANG/ARM_CR5F \
-    -I../../../kernel/freertos/FreeRTOS-POSIX/include \
-    -I../../../kernel/freertos/FreeRTOS-POSIX/include/private \
-    -I../../../kernel/freertos/FreeRTOS-POSIX/FreeRTOS-Plus-POSIX/include \
-    -I../../../kernel/freertos/FreeRTOS-POSIX/FreeRTOS-Plus-POSIX/include/portable \
 
 DEFINES_common := \
     -DSOC_AM62X \
@@ -71,6 +62,8 @@ DEFINES_common := \
     -DCONFIG_CLOCK \
     -DCONFIG_CLK_PLL_16FFT \
     -DCONFIG_CLK_PLL_16FFT_FRACF_CALIBRATION \
+    -DCONFIG_PM_CLK_SSC \
+    -DCONFIG_GET_DEVICE_MULTIPLE \
     -DCONFIG_DM_BUILD \
     -DCONFIG_RM \
     -DCONFIG_RM_IRQ \
@@ -80,14 +73,13 @@ DEFINES_common := \
     -DCONFIG_INTERRUPT_AGGREGATOR_UNMAPPED_EVENTS \
     -DCONFIG_RM_RA_NAV_RING \
     -DCONFIG_RM_UDMAP \
-    -DCONFIG_UDMAP_CHANNEL_BURST_SIZE \
-    -DCONFIG_UDMAP_TX_CHANNEL_TEARDOWN_TYPE \
     -DCONFIG_UDMAP_BCDMA \
     -DCONFIG_UDMAP_PKTDMA \
     -DCONFIG_TRACE \
     -DCONFIG_TRACE_BUFFER \
     -DCONFIG_TRACE_UART \
     -DCONFIG_DEVICE_TYPE_GP \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mcpu=cortex-r5 \
@@ -97,7 +89,6 @@ CFLAGS_common := \
     -Wall \
     -Werror \
     -g \
-    -Wno-gnu-variable-sized-type-not-at-end \
 
 CFLAGS_cpp_common := \
     -Wno-c99-designator \

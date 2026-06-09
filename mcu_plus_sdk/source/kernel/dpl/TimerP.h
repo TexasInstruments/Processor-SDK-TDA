@@ -81,7 +81,7 @@ typedef struct TimerP_Params_ {
                             * \note When value is 0, \ref periodInNsec is used instead
                             * \note When both \ref periodInUsec and \ref periodInNsec are non-zero, \ref periodInNsec is used
                             */
-    uint32_t periodInNsec; /**< Timer period in units of nsecs, internally \ref TimerP_Params.inputClkHz
+    uint64_t periodInNsec; /**< Timer period in units of nsecs, internally \ref TimerP_Params.inputClkHz
                             * and TimerP_Params.inputPreScaler is used to compute the value to be put inside the timer HW register
                             *
                             * \note When value is 0, \ref periodInUsec is used instead

@@ -44,7 +44,7 @@ __UNDEFINED_STACK_SIZE = 0x0100;  /* This is the size of stack when R5 is in UND
 SECTIONS
 {
     /* This has the R5F entry point and vector table, this MUST be at 0x0 */
-    .vectors            : {} palign(8)  > DDR
+    .vectors            : {} palign(8) > DDR
     .bootCode           : align = 8, load = R5F_TCMB, run = R5F_TCMA
     .startupCode        : align = 8, load = R5F_TCMB, run = R5F_TCMA
     .startupData        : align = 8, load = R5F_TCMB, run = R5F_TCMA, type = NOINIT
@@ -125,10 +125,10 @@ MEMORY
     R5F_TCMB       (RWIX)      : ORIGIN = 0x41010040 LENGTH = 0x00007FC0
 
     /* DDR for DM R5F code/data [ size 29 MiB ] */
-    DDR       : ORIGIN = 0xA0200000 LENGTH = 0xE00000
+    DDR       : ORIGIN = 0xA0200000, LENGTH = 0xE00000
 
     DDR_IPC_VRING_LINUX           : ORIGIN = 0xA0000000, LENGTH = 0x100000   /* IPC VRING with Linux */
     DDR_IPC_RESOURCE_TABLE_LINUX  : ORIGIN = 0xA0100000, LENGTH = 0x400      /* For resource table   */
     DDR_IPC_TRACE_LINUX           : ORIGIN = 0xA0100400, LENGTH = 0xFFC00    /* IPC trace buffer     */
-    DDR_IPC_VRING_RTOS            : ORIGIN = 0xA5000000, LENGTH = 0x1C00000   /* IPC VRING for RTOS/NoRTOS */
+    DDR_IPC_VRING_RTOS            : ORIGIN = 0xA5000000, LENGTH = 0x1000000   /* IPC VRING for RTOS/NoRTOS */
 }

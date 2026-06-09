@@ -63,6 +63,11 @@ ifeq ($(shell uname), Linux)
 	MAKE = make
 endif
 
+ALGBASE_PATH      ?= $(abspath ./)
+PSDK_INSTALL_PATH ?= $(abspath ../../)
+PSDK_BUILDER_PATH ?= $(PSDK_INSTALL_PATH)/sdk_builder
+include $(ALGBASE_PATH)/config.mk
+
 all: rt tfl_delegate onnxrt_ep tidlrt_ep
 
 rt:
@@ -126,26 +131,76 @@ tidlrt_ep_scrub:
 	@echo ======== Scrubbing TIDL RT EP  =================
 	rm -rf ./tidlrt_ep/out ./tidlrt_ep/lib
 
-tidl_tiovx_kernels:
+tidl_tiovx_arm_kernels:
 	@echo .
-	@echo ======== MAKING TIDL TIOVX KERNELS =================
+	@echo ======== MAKING TIDL TIOVX ARM KERNELS =================
 	$(MAKE) -C ./tiovx_kernels -f makefile all
 
-tidl_tiovx_kernels_clean:
+tidl_tiovx_arm_kernels_clean:
 	@echo .
-	@echo ======== CLEANING TIDL TIOVX KERNELS =================
+	@echo ======== CLEANING TIDL TIOVX ARM KERNELS =================
 	$(MAKE) -C ./tiovx_kernels -f makefile clean
 
-tidl_tiovx_kernels_scrub:
+tidl_tiovx_arm_kernels_scrub:
 	@echo .
-	@echo ======== SCRUBBING TIDL TIOVX KERNELS  =================
+	@echo ======== SCRUBBING TIDL TIOVX ARM KERNELS  =================
 	rm -rf ./tiovx_kernels/out ./tiovx_kernels/lib
 
+tidl_tiovx_arm_kernels_install:
+ifndef TIDL_PATH
+	$(error TIDL_PATH is not defined. Please set TIDL_PATH before running install)
+else
+	@echo "Installing TIDL TIOVX ARM KERNELS to $(TIDL_PATH)..."
+	@if [ -d "$(TIDL_PATH)" ]; then \
+		mkdir -p $(TIDL_PATH)/arm-tidl/tiovx_kernels/lib/; \
+		mkdir -p $(TIDL_PATH)/arm-tidl/tiovx_kernels/out/; \
+		mkdir -p $(TIDL_PATH)/arm-tidl/tiovx_kernels/include/; \
+		mkdir -p $(TIDL_PATH)/arm-tidl/tiovx_kernels/tidl/include/; \
+		cp -rfL ./tiovx_kernels/lib/* $(TIDL_PATH)/arm-tidl/tiovx_kernels/lib/ 2>/dev/null || :; \
+		cp -rfL ./tiovx_kernels/out/* $(TIDL_PATH)/arm-tidl/tiovx_kernels/out/ 2>/dev/null || :; \
+		cp -rfL ./tiovx_kernels/include/* $(TIDL_PATH)/arm-tidl/tiovx_kernels/include/ 2>/dev/null || :; \
+		cp -rfL ./tiovx_kernels/tidl/include/* $(TIDL_PATH)/arm-tidl/tiovx_kernels/tidl/include/ 2>/dev/null || :; \
+		echo "TIDL TIOVX ARM KERNELS installation complete"; \
+	else \
+		echo "Error: TIDL_PATH '$(TIDL_PATH)' does not exist. Please provide a valid directory path."; \
+		exit 1; \
+	fi
+endif
 
-scrub: rt_scrub tfl_delegate_scrub onnxrt_ep_scrub tidlrt_ep_scrub tidl_tiovx_kernels_scrub
+install: tidl_tiovx_arm_kernels_install
+ifndef TIDL_PATH
+	$(error TIDL_PATH is not defined. Please set TIDL_PATH before running install)
+else
+	@echo "Installing to $(TIDL_PATH)..."
+	@if [ -d "$(TIDL_PATH)" ]; then \
+		mkdir -p $(TIDL_PATH)/arm-tidl/rt/inc/; \
+		mkdir -p $(TIDL_PATH)/arm-tidl/rt/lib/; \
+		mkdir -p $(TIDL_PATH)/arm-tidl/rt/out/; \
+		cp -rfL ./rt/inc/* $(TIDL_PATH)/arm-tidl/rt/inc/ 2>/dev/null || :; \
+		cp -rfL ./rt/lib/* $(TIDL_PATH)/arm-tidl/rt/lib/ 2>/dev/null || :; \
+		cp -rfL ./rt/out/* $(TIDL_PATH)/arm-tidl/rt/out/ 2>/dev/null || :; \
+		mkdir -p $(TIDL_PATH)/arm-tidl/onnxrt_ep/lib/; \
+		mkdir -p $(TIDL_PATH)/arm-tidl/onnxrt_ep/out/; \
+		mkdir -p $(TIDL_PATH)/arm-tidl/tidlrt_ep/lib/; \
+		mkdir -p $(TIDL_PATH)/arm-tidl/tidlrt_ep/out/; \
+		mkdir -p $(TIDL_PATH)/arm-tidl/tfl_delegate/lib/; \
+		mkdir -p $(TIDL_PATH)/arm-tidl/tfl_delegate/out/; \
+		cp -rfL ./onnxrt_ep/lib/* $(TIDL_PATH)/arm-tidl/onnxrt_ep/lib/ 2>/dev/null || :; \
+		cp -rfL ./onnxrt_ep/out/* $(TIDL_PATH)/arm-tidl/onnxrt_ep/out/ 2>/dev/null || :; \
+		cp -rfL ./tidlrt_ep/lib/* $(TIDL_PATH)/arm-tidl/tidlrt_ep/lib/ 2>/dev/null || :; \
+		cp -rfL ./tidlrt_ep/out/* $(TIDL_PATH)/arm-tidl/tidlrt_ep/out/ 2>/dev/null || :; \
+		cp -rfL ./tfl_delegate/lib/* $(TIDL_PATH)/arm-tidl/tfl_delegate/lib/ 2>/dev/null || :; \
+		cp -rfL ./tfl_delegate/out/* $(TIDL_PATH)/arm-tidl/tfl_delegate/out/ 2>/dev/null || :; \
+		echo "Installation complete"; \
+	else \
+		echo "Error: TIDL_PATH '$(TIDL_PATH)' does not exist. Please provide a valid directory path."; \
+		exit 1; \
+	fi
+endif
 
+scrub: rt_scrub tfl_delegate_scrub onnxrt_ep_scrub tidlrt_ep_scrub tidl_tiovx_arm_kernels_scrub
 
 .IGNORE: clean
-clean: rt_clean tfl_delegate_clean onnxrt_ep_clean tidlrt_ep_clean tidl_tiovx_kernels_clean
+clean: rt_clean tfl_delegate_clean onnxrt_ep_clean tidlrt_ep_clean tidl_tiovx_arm_kernels_clean
 
-.PHONY: rt tfl_delegate onnxrt_ep tidlrt_ep tidl_tiovx_kernels rt_clean tfl_delegate_clean onnxrt_ep_clean tidlrt_ep_clean tidl_tiovx_kernels_clean
+.PHONY: rt tfl_delegate onnxrt_ep tidlrt_ep tidl_tiovx_arm_kernels rt_clean tfl_delegate_clean onnxrt_ep_clean tidlrt_ep_clean tidl_tiovx_arm_kernels_clean tidl_tiovx_arm_kernels_install install

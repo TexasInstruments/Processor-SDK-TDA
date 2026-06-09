@@ -17,7 +17,6 @@ sTIDL_IOBufDesc_t  gIOParams;
 
 int32_t tidlMain(int32_t argc, char **argv);
 int32_t tidlNegativeCase(int32_t argc, char **argv);
-int32_t TIDL_c7x_test(int32_t l1_mem_size, int32_t l2_mem_size, int32_t l3_mem_size, int32_t l4_mem_size, void* l1_mem, void* l2_mem, void* l3_mem, void* l4_mem);
 
 int32_t debug_printf(const char *format, ...)
 {
@@ -69,13 +68,7 @@ int main(int argc, char **argv)
 	else
 #endif
 	{
-
-#ifdef TIDL_KERNEL_TEST
-  	TIDL_c7x_test(L1_MEM_SIZE, L2_MEM_SIZE, L3_MEM_SIZE, L4_MEM_SIZE, L1Scratch, L2Scratch, L3Scratch, L4Scratch);
-  	return 0;
-#endif
-		
-	  tidlMain(argc, argv);
+		  tidlMain(argc, argv);
 	}
 
 	free(L1Scratch);

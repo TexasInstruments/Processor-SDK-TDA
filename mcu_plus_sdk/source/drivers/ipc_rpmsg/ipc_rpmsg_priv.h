@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -53,11 +53,15 @@ extern "C" {
  * is the theortical max limit on outstanding recv messages.
  */
 
-#if defined (SOC_AM62AX) || defined(SOC_J722S)
+#if defined (SOC_AM62AX) || defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62PX) || defined (SOC_AM62DX) || defined(SOC_J722S)
 #define RPMESSAGE_MAX_LOCAL_MSG_OBJ     (256U)
 #else
 #define RPMESSAGE_MAX_LOCAL_MSG_OBJ     (16U)
 #endif
+
+/* Status flag to freeQ availability*/
+#define FREE_QUEUE_AVAILABLE 		(1U)
+#define FREE_QUEUE_NOT_AVAILABLE 	(0U)
 
 /*
  * End Point used to communicate control messages.
@@ -284,6 +288,7 @@ typedef struct
     const RPMessage_ResourceTable *linuxResourceTable; /* resource table used with linux */
     uint16_t linuxCoreId; /* Core ID of core running linux */
     uint8_t vringAllocationPDK; /** Vring allocation follows PDK or not*/
+    uint8_t vringAllocationQNX; /** Enable flag if remote core is QNX*/
 } IpcRpmsg_Ctrl;
 
 /* global varaible that holds the state of this module, this is the only global within this module */
@@ -311,7 +316,7 @@ uint8_t *RPMessage_vringGetRxBufAddr(uint16_t remoteCoreId, uint16_t vringBufId)
 void     RPMessage_vringPutEmptyRxBuf(uint16_t remoteCoreId, uint16_t vringBufId);
 /* functions for VRING initialization and other utility functions */
 uint32_t RPMessage_vringGetSize(uint32_t numBuf, uint16_t msgSize, uint32_t align);
-void     RPMessage_vringReset(uint16_t remoteCoreId, uint16_t isTx, const RPMessage_Params *params);
+int32_t     RPMessage_vringReset(uint16_t remoteCoreId, uint16_t isTx, const RPMessage_Params *params);
 void     RPMessage_vringResetLinux(uint16_t remoteCoreId, uint16_t isTx, const RPMessage_ResourceTable *rscTable);
 
 void RPMessage_vringResetInternal(RPMessage_Vring *vringObj, uint32_t numBuf, uint16_t msgSize, uintptr_t vringBaseAddr, uint32_t offset_desc, uint32_t offset_avail, uint32_t offset_used, uint32_t offset_buf, uint32_t isTx);

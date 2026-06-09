@@ -520,13 +520,13 @@ static int app_init(AppObj *obj)
     if (obj->display_option == 1)
 #endif
     {
-        obj->disp_image = vxCreateImage(obj->context, DISPLAY_WIDTH, DISPLAY_HEIGHT, VX_DF_IMAGE_RGB);
+        obj->disp_image = vxCreateImage(obj->context, DISPLAY_WIDTH, DISPLAY_HEIGHT, VX_DF_IMAGE_RGBX);
         APP_ASSERT_VALID_REF(obj->disp_image)
 
         obj->image_addr.dim_x = DISPLAY_WIDTH;
         obj->image_addr.dim_y = DISPLAY_HEIGHT;
-        obj->image_addr.stride_x = 3; /* RGB */
-        obj->image_addr.stride_y = DISPLAY_WIDTH * 3;
+        obj->image_addr.stride_x = 4; /* RGBX */
+        obj->image_addr.stride_y = DISPLAY_WIDTH * 4;
         obj->image_addr.scale_x = VX_SCALE_UNITY;
         obj->image_addr.scale_y = VX_SCALE_UNITY;
         obj->image_addr.step_x = 1;
@@ -558,13 +558,13 @@ static int app_init(AppObj *obj)
     {
         if ((vx_true_e == tivxIsTargetEnabled(TIVX_TARGET_DISPLAY2)) && (obj->display_option == 1))
         {
-            obj->disp_image2 = vxCreateImage(obj->context, DISPLAY_WIDTH, DISPLAY_HEIGHT, VX_DF_IMAGE_RGB);
+            obj->disp_image2 = vxCreateImage(obj->context, DISPLAY_WIDTH, DISPLAY_HEIGHT, VX_DF_IMAGE_RGBX);
             APP_ASSERT_VALID_REF(obj->disp_image2)
 
             obj->image_addr2.dim_x = DISPLAY_WIDTH;
             obj->image_addr2.dim_y = DISPLAY_HEIGHT;
-            obj->image_addr2.stride_x = 3; /* RGB */
-            obj->image_addr2.stride_y = DISPLAY_WIDTH * 3;
+            obj->image_addr2.stride_x = 4; /* RGB */
+            obj->image_addr2.stride_y = DISPLAY_WIDTH * 4;
             obj->image_addr2.scale_x = VX_SCALE_UNITY;
             obj->image_addr2.scale_y = VX_SCALE_UNITY;
             obj->image_addr2.step_x = 1;
@@ -610,7 +610,7 @@ static int app_init(AppObj *obj)
         status = -1;
     }
 
-    obj->pDisplayBuf888 = tivxMemAlloc(DISPLAY_WIDTH * DISPLAY_HEIGHT * 3, TIVX_MEM_EXTERNAL);
+    obj->pDisplayBuf888 = tivxMemAlloc(DISPLAY_WIDTH * DISPLAY_HEIGHT * 4, TIVX_MEM_EXTERNAL);
     if(obj->pDisplayBuf888 == NULL) {
         printf("app_tidl: ERROR: Unable to allocate memory for displayBuf888, size = %d\n", DISPLAY_WIDTH * DISPLAY_HEIGHT * 3);
         status = -1;
@@ -698,7 +698,7 @@ static void app_deinit(AppObj *obj)
     tivxMemFree(obj->pInPlanes, MAX_IMG_WIDTH * MAX_IMG_HEIGHT * 3, TIVX_MEM_EXTERNAL);
     tivxMemFree(obj->pOutPlanes, MAX_IMG_WIDTH * MAX_IMG_HEIGHT * 3, TIVX_MEM_EXTERNAL);
 
-    tivxMemFree(obj->pDisplayBuf888, DISPLAY_WIDTH * DISPLAY_HEIGHT * 3, TIVX_MEM_EXTERNAL);
+    tivxMemFree(obj->pDisplayBuf888, DISPLAY_WIDTH * DISPLAY_HEIGHT * 4, TIVX_MEM_EXTERNAL);
     tivxMemFree(obj->pDisplayBuf565 , DISPLAY_WIDTH * DISPLAY_HEIGHT * sizeof(uint16_t), TIVX_MEM_EXTERNAL);
 
 
@@ -2833,7 +2833,7 @@ static void displayOutput(AppObj *obj, vx_user_data_object config, vx_tensor *ou
         obj->pDisplayBuf888[j + 1] = ((RGB_565_val >> 5) & 0x3F) << 2;
         obj->pDisplayBuf888[j + 2] = ((RGB_565_val >> 11) & 0x1F) << 3;
 
-        j  += 3;
+        j  += 4;
       }
 
       if((obj->img_width <= (DISPLAY_WIDTH/2)) && (obj->img_height <= (DISPLAY_HEIGHT - 200)))
@@ -2844,7 +2844,7 @@ static void displayOutput(AppObj *obj, vx_user_data_object config, vx_tensor *ou
 
          for(i = 0; i < obj->img_height; i++)
          {
-            uint8_t *pOut = &obj->pDisplayBuf888[((imgOffset + startY + i) * DISPLAY_WIDTH * 3) + (startX * 3)];
+            uint8_t *pOut = &obj->pDisplayBuf888[((imgOffset + startY + i) * DISPLAY_WIDTH * 4) + (startX * 4)];
             uint8_t *pIn  = obj->data_ptr + (i * obj->img_stride);
 
             for(j = 0; j < obj->img_width; j++)
@@ -2852,6 +2852,7 @@ static void displayOutput(AppObj *obj, vx_user_data_object config, vx_tensor *ou
               *pOut++ = *pIn++;
               *pOut++ = *pIn++;
               *pOut++ = *pIn++;
+              pOut++;
             }
          }
       }
@@ -2859,7 +2860,7 @@ static void displayOutput(AppObj *obj, vx_user_data_object config, vx_tensor *ou
 
     if (obj->display_option == 0)
     {
-        tivx_utils_bmp_write(output_file, obj->pDisplayBuf888, DISPLAY_WIDTH, DISPLAY_HEIGHT, (DISPLAY_WIDTH * 3), obj->df_image);
+        tivx_utils_bmp_write(output_file, obj->pDisplayBuf888, DISPLAY_WIDTH, DISPLAY_HEIGHT, (DISPLAY_WIDTH * 4), VX_DF_IMAGE_RGBX);
     }
 
     /* Release the bmp buffer created in readInput() */

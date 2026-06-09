@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024 Texas Instruments Incorporated
+ *  Copyright (C) 2024-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,15 +30,43 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <kernel/safertos/dpl/common/ClockP_safertos_priv.h>
 #include <kernel/dpl/TimerP.h>
 #include "SafeRTOSConfigs.h"
 
-void vIrqHandler( void );
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
-/* Converts a time in milliseconds to a time in ticks.  This macro can be
- * overridden by a macro of the same name defined in FreeRTOSConfig.h in case the
- * definition here is not suitable for your application. */
+/* None */
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
+
+void vIrqHandler( void );
 
 void ClockP_timerClearOverflowInt(uint32_t timerBaseAddr)
 {
@@ -102,6 +130,6 @@ void ClockP_init(void)
 void vApplicationSetupTickInterruptHook( portUInt32Type ulTimerClockHz,
                                          portUInt32Type ulTickRateHz )
 {
-    /* start the tick timer */  
+    /* Start the tick timer */
     TimerP_start(gClockCtrl.timerBaseAddr);
 }

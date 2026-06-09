@@ -37,6 +37,14 @@
 #include <drivers/uart.h>
 #include <kernel/dpl/CacheP.h>
 
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+/* None*/
+
+
 /* Static Function Declarations */
 static int32_t UART_udmaOpen(UART_Handle uartHandle, void* uartDmaArgs);
 static int32_t UART_udmaInitTxCh(UART_Handle uartHandle, UartDma_UdmaArgs *udmaArgs);
@@ -50,6 +58,10 @@ static int32_t UART_udmaDisableChannel(UART_Handle handle,
                                        uint32_t isChannelTx);
 static void UART_udmaHpdInit(Udma_ChHandle chHandle,
                               uint8_t       *pHpdMem,
+                              const void    *destBuf,
+                              uint32_t      length);
+static void UART_udmaTrInit(Udma_ChHandle chHandle,
+                              uint8_t       *pTrpdMem,
                               const void    *destBuf,
                               uint32_t      length);
 static int32_t UART_udmaConfigPdmaTx(UART_Object *obj,
@@ -130,6 +142,7 @@ static int32_t UART_udmaInitRxCh(UART_Handle uartHandle, UartDma_UdmaArgs *udmaA
 
     /* Config RX channel */
     UdmaChRxPrms_init(&rxPrms, chType);
+    rxPrms.configDefaultFlow = FALSE;
     retVal = Udma_chConfigRx(rxChHandle, &rxPrms);
     DebugP_assert(UDMA_SOK == retVal);
 
@@ -263,12 +276,13 @@ static int32_t UART_udmaConfigPdmaTx(UART_Object *obj,
     UART_DmaConfig     *dmaConfig;
     UartDma_UdmaArgs   *udmaArgs;
     UART_DmaHandle dmaHandle;
+    UART_Params        *prms;
 
     dmaHandle = obj->uartDmaHandle;
     dmaConfig = (UART_DmaConfig *)dmaHandle;
     udmaArgs = (UartDma_UdmaArgs *)dmaConfig->uartDmaArgs;
     txChHandle  = udmaArgs->txChHandle;
-
+    prms = &obj->prms;
     /* Config PDMA channel */
     UdmaChPdmaPrms_init(&pdmaPrms);
     pdmaPrms.elemSize = UDMA_PDMA_ES_8BITS;
@@ -283,12 +297,24 @@ static int32_t UART_udmaConfigPdmaTx(UART_Object *obj,
     retVal = Udma_chEnable(txChHandle);
     DebugP_assert(UDMA_SOK == retVal);
 
-    /* Update host packet descriptor, length should be always in terms of total number of bytes */
-    UART_udmaHpdInit(txChHandle, (uint8_t *) udmaArgs->txHpdMem, obj->writeBuf, transaction->count);
+if((prms->dmaMode) != UART_DMA_MODE_PKTDMA)
+{
+    /* Update TR packet descriptor, length should be always in terms of total number of bytes */
+    UART_udmaTrInit(txChHandle, (uint8_t *) udmaArgs->txTrpdMem, obj->writeBuf, transaction->count);
 
     retVal = Udma_ringQueueRaw(
                  Udma_chGetFqRingHandle(txChHandle),
+                 (uint64_t) Udma_defaultVirtToPhyFxn(udmaArgs->txTrpdMem, 0U, NULL));
+}
+else
+{
+    /* Update host packet descriptor, length should be always in terms of total number of bytes */
+    UART_udmaHpdInit(txChHandle, (uint8_t *) udmaArgs->txHpdMem, obj->writeBuf, transaction->count);
+    retVal = Udma_ringQueueRaw(
+                 Udma_chGetFqRingHandle(txChHandle),
                  (uint64_t) Udma_defaultVirtToPhyFxn(udmaArgs->txHpdMem, 0U, NULL));
+}
+
     DebugP_assert(UDMA_SOK == retVal);
 
     return (retVal);
@@ -303,11 +329,13 @@ static int32_t UART_udmaConfigPdmaRx(UART_Object *obj,
     UART_DmaConfig     *dmaConfig;
     UartDma_UdmaArgs   *udmaArgs;
     UART_DmaHandle      dmaHandle;
+    UART_Params        *prms;
 
     dmaHandle = obj->uartDmaHandle;
     dmaConfig = (UART_DmaConfig *)dmaHandle;
     udmaArgs = (UartDma_UdmaArgs *)dmaConfig->uartDmaArgs;
     rxChHandle  = udmaArgs->rxChHandle;
+    prms = &obj->prms;
 
     /* Config PDMA channel */
     UdmaChPdmaPrms_init(&pdmaPrms);
@@ -323,13 +351,24 @@ static int32_t UART_udmaConfigPdmaRx(UART_Object *obj,
     retVal = Udma_chEnable(rxChHandle);
     DebugP_assert(UDMA_SOK == retVal);
 
+if((prms->dmaMode) != UART_DMA_MODE_PKTDMA)
+{
+    /* Update TR packet descriptor, length should be always in terms of total number of bytes */
+    UART_udmaTrInit(rxChHandle, (uint8_t *) udmaArgs->rxTrpdMem, obj->readBuf, transaction->count);
+
+    retVal = Udma_ringQueueRaw(
+                 Udma_chGetFqRingHandle(rxChHandle),
+                 (uint64_t) Udma_defaultVirtToPhyFxn(udmaArgs->rxTrpdMem, 0U, NULL));
+}
+else
+{
     /* Update host packet descriptor, length should be always in terms of total number of bytes */
     UART_udmaHpdInit(rxChHandle, (uint8_t *) udmaArgs->rxHpdMem, obj->readBuf, transaction->count);
-
-    /* Submit HPD to channel */
     retVal = Udma_ringQueueRaw(
                  Udma_chGetFqRingHandle(rxChHandle),
                  (uint64_t) Udma_defaultVirtToPhyFxn(udmaArgs->rxHpdMem, 0U, NULL));
+}
+
     DebugP_assert(UDMA_SOK == retVal);
 
     return (retVal);
@@ -373,14 +412,50 @@ static void UART_udmaHpdInit(Udma_ChHandle chHandle,
     return;
 }
 
+static void UART_udmaTrInit(Udma_ChHandle chHandle,
+                              uint8_t       *trpdMem,
+                              const void    *destBuf,
+                              uint32_t      length)
+{
+    CSL_UdmapTR3  *pTr = NULL;
+    uint32_t        cqRingNum = Udma_chGetCqRingNum(chHandle);
+
+    /* Make TRPD with TR3 TR type */
+    UdmaUtils_makeTrpd(trpdMem, UDMA_TR_TYPE_3, 1U, cqRingNum);
+
+    /* Setup TR */
+    pTr = UdmaUtils_getTrpdTr3Pointer(trpdMem, 0U);
+    pTr->flags = CSL_FMK(UDMAP_TR_FLAGS_TYPE, CSL_UDMAP_TR_FLAGS_TYPE_4D_DATA_MOVE);
+    pTr->flags |= CSL_FMK(UDMAP_TR_FLAGS_EOP, 1U);
+    pTr->icnt0    = length;
+    pTr->icnt1    = 1U;
+    pTr->icnt2    = 1U;
+    pTr->icnt3    = 1U;
+    pTr->dim1     = pTr->icnt0;
+    pTr->dim2     = (pTr->icnt0 * pTr->icnt1);
+    pTr->dim3     = (pTr->icnt0 * pTr->icnt1 * pTr->icnt2);
+    pTr->addr     = (uint64_t) Udma_defaultVirtToPhyFxn(destBuf, 0U, NULL);
+    /* Perform cache writeback */
+    CacheP_wb(trpdMem, UDMA_GET_TRPD_TR3_SIZE(1U), CacheP_TYPE_ALLD);
+
+    return;
+
+}
+
 static int32_t UART_udmaDeInitCh(Udma_ChHandle chHandle,
                                   Udma_EventHandle eventHandle)
 {
     int32_t status = UDMA_SOK;
+    uint8_t chanEnStatus;
 
-    /* Disable Channel */
-    status = Udma_chDisable(chHandle, UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
+    status = Udma_chGetChanEnStatus(chHandle, &chanEnStatus);
     DebugP_assert(UDMA_SOK == status);
+    if(chanEnStatus == 1U)
+    {
+        /* Disable Channel */
+        status = Udma_chDisable(chHandle, UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
+        DebugP_assert(UDMA_SOK == status);
+    }
 
     /* UnRegister Event */
     status = Udma_eventUnRegister(eventHandle);
@@ -416,6 +491,7 @@ static int32_t UART_udmaDisableChannel(UART_Handle handle,
     UART_DmaConfig *dmaConfig;
     UartDma_UdmaArgs *udmaArgs;
     Udma_ChHandle chHandle;
+    uint8_t chanEnStatus;
 
     config = (UART_Config *) handle;
     dmaHandle = config->object->uartDmaHandle;
@@ -432,8 +508,14 @@ static int32_t UART_udmaDisableChannel(UART_Handle handle,
         chHandle = udmaArgs->rxChHandle;
     }
 
-    status = Udma_chDisable(chHandle, UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
+    status = Udma_chGetChanEnStatus(chHandle, &chanEnStatus);
     DebugP_assert(UDMA_SOK == status);
+    if(chanEnStatus == 1U)
+    {
+        /* Disable Channel */
+        status = Udma_chDisable(chHandle, UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
+        DebugP_assert(UDMA_SOK == status);
+    }
 
     /* Flush any pending request from the free queue */
     while(1)
@@ -458,12 +540,14 @@ static void UART_udmaIsrTx(Udma_EventHandle eventHandle,
     int32_t             retVal;
     uint64_t            pDesc;
     CSL_UdmapCppi5HMPD *pHpd;
+    CSL_UdmapCppi5TRPD *pTrpd;
     UART_Config       *config;
     UART_Object       *obj;
     Udma_ChHandle      txChHandle;
     UART_DmaConfig     *dmaConfig;
     UartDma_UdmaArgs   *udmaArgs;
     UART_DmaHandle      dmaHandle;
+    UART_Params        *prms;
 
     /* Check parameters */
     if(NULL != args)
@@ -476,21 +560,41 @@ static void UART_udmaIsrTx(Udma_EventHandle eventHandle,
         dmaConfig = (UART_DmaConfig *)dmaHandle;
         udmaArgs = (UartDma_UdmaArgs *)dmaConfig->uartDmaArgs;
         txChHandle  = udmaArgs->txChHandle;
+        prms     = &obj->prms;
 
         if (eventType == UDMA_EVENT_TYPE_DMA_COMPLETION)
         {
-            CacheP_inv(udmaArgs->txHpdMem, udmaArgs->hpdMemSize, CacheP_TYPE_ALLD);
-            retVal = Udma_ringDequeueRaw(Udma_chGetCqRingHandle(txChHandle), &pDesc);
-            if ((retVal == UDMA_SOK) && (pDesc != 0UL))
+            if((prms->dmaMode) != UART_DMA_MODE_PKTDMA)
             {
-                pHpd = (CSL_UdmapCppi5HMPD *)(uintptr_t)pDesc;
-                obj->writeTrans->status = UART_TRANSFER_STATUS_SUCCESS;
-                /* Get Byte count transmitted */
-                obj->writeTrans->count = (pHpd->descInfo & CSL_UDMAP_CPPI5_PD_DESCINFO_PKTLEN_MASK) >> CSL_UDMAP_CPPI5_PD_DESCINFO_PKTLEN_SHIFT;
+                CacheP_inv(udmaArgs->txTrpdMem, udmaArgs->trpdMemSize, CacheP_TYPE_ALLD);
+                retVal = Udma_ringDequeueRaw(Udma_chGetCqRingHandle(txChHandle), &pDesc);
+                if ((retVal == UDMA_SOK) && (pDesc != 0UL))
+                {
+                    pTrpd = (CSL_UdmapCppi5TRPD *)(uintptr_t)pDesc;
+                    obj->writeTrans->status = UART_TRANSFER_STATUS_SUCCESS;
+                    /* Get Byte count transmitted */
+                    obj->writeTrans->count = (pTrpd->descInfo & CSL_UDMAP_CPPI5_TRPD_PKTINFO_PKTID_MASK) >> CSL_UDMAP_CPPI5_TRPD_PKTINFO_PKTID_SHIFT;
+                }
+                else
+                {
+                    obj->writeTrans->status = UART_TRANSFER_STATUS_ERROR_OTH;
+                }
             }
             else
             {
-                obj->writeTrans->status = UART_TRANSFER_STATUS_ERROR_OTH;
+                CacheP_inv(udmaArgs->txHpdMem, udmaArgs->hpdMemSize, CacheP_TYPE_ALLD);
+                retVal = Udma_ringDequeueRaw(Udma_chGetCqRingHandle(txChHandle), &pDesc);
+                if ((retVal == UDMA_SOK) && (pDesc != 0UL))
+                {
+                    pHpd = (CSL_UdmapCppi5HMPD *)(uintptr_t)pDesc;
+                    obj->writeTrans->status = UART_TRANSFER_STATUS_SUCCESS;
+                    /* Get Byte count transmitted */
+                    obj->writeTrans->count = (pHpd->descInfo & CSL_UDMAP_CPPI5_PD_DESCINFO_PKTLEN_MASK) >> CSL_UDMAP_CPPI5_PD_DESCINFO_PKTLEN_SHIFT;
+                }
+                else
+                {
+                    obj->writeTrans->status = UART_TRANSFER_STATUS_ERROR_OTH;
+                }
             }
 
             /*
@@ -523,13 +627,14 @@ static void UART_udmaIsrRx(Udma_EventHandle eventHandle,
     int32_t             retVal;
     uint64_t            pDesc;
     CSL_UdmapCppi5HMPD *pHpd;
+    CSL_UdmapCppi5TRPD *pTrpd;
     UART_Config       *config;
     UART_Object       *obj;
     Udma_ChHandle      rxChHandle;
     UART_DmaConfig     *dmaConfig;
     UartDma_UdmaArgs   *udmaArgs;
     UART_DmaHandle      dmaHandle;
-
+    UART_Params        *prms;
     /* Check parameters */
     if(NULL != args)
     {
@@ -541,21 +646,41 @@ static void UART_udmaIsrRx(Udma_EventHandle eventHandle,
         dmaConfig = (UART_DmaConfig *)dmaHandle;
         udmaArgs = (UartDma_UdmaArgs *)dmaConfig->uartDmaArgs;
         rxChHandle  = udmaArgs->rxChHandle;
-
+        prms     = &obj->prms;
+        
         if (eventType == UDMA_EVENT_TYPE_DMA_COMPLETION)
         {
-            CacheP_inv(udmaArgs->rxHpdMem, udmaArgs->hpdMemSize, CacheP_TYPE_ALLD);
-            retVal = Udma_ringDequeueRaw(Udma_chGetCqRingHandle(rxChHandle), &pDesc);
-            if ((retVal == UDMA_SOK) && (pDesc != 0UL))
+            if((prms->dmaMode) != UART_DMA_MODE_PKTDMA)
             {
-                pHpd = (CSL_UdmapCppi5HMPD *)(uintptr_t)pDesc;
-                /* Get Byte count received */
-                obj->readTrans->count = (pHpd->descInfo & CSL_UDMAP_CPPI5_PD_DESCINFO_PKTLEN_MASK) >> CSL_UDMAP_CPPI5_PD_DESCINFO_PKTLEN_SHIFT;
-                obj->readTrans->status = UART_TRANSFER_STATUS_SUCCESS;
+                CacheP_inv(udmaArgs->rxTrpdMem, udmaArgs->trpdMemSize, CacheP_TYPE_ALLD);
+                retVal = Udma_ringDequeueRaw(Udma_chGetCqRingHandle(rxChHandle), &pDesc);
+                if ((retVal == UDMA_SOK) && (pDesc != 0UL))
+                {
+                    pTrpd = (CSL_UdmapCppi5TRPD *)(uintptr_t)pDesc;
+                    /* Get Byte count received */
+                    obj->readTrans->count = (pTrpd->descInfo & CSL_UDMAP_CPPI5_TRPD_PKTINFO_PKTID_MASK) >> CSL_UDMAP_CPPI5_TRPD_PKTINFO_PKTID_SHIFT;
+                    obj->readTrans->status = UART_TRANSFER_STATUS_SUCCESS;
+                }
+                else
+                {
+                    obj->readTrans->status = UART_TRANSFER_STATUS_ERROR_OTH;
+                }
             }
             else
             {
-                obj->readTrans->status = UART_TRANSFER_STATUS_ERROR_OTH;
+                CacheP_inv(udmaArgs->rxHpdMem, udmaArgs->hpdMemSize, CacheP_TYPE_ALLD);
+                retVal = Udma_ringDequeueRaw(Udma_chGetCqRingHandle(rxChHandle), &pDesc);
+                if ((retVal == UDMA_SOK) && (pDesc != 0UL))
+                {
+                    pHpd = (CSL_UdmapCppi5HMPD *)(uintptr_t)pDesc;
+                    /* Get Byte count received */
+                    obj->readTrans->count = (pHpd->descInfo & CSL_UDMAP_CPPI5_PD_DESCINFO_PKTLEN_MASK) >> CSL_UDMAP_CPPI5_PD_DESCINFO_PKTLEN_SHIFT;
+                    obj->readTrans->status = UART_TRANSFER_STATUS_SUCCESS;
+                }
+                else
+                {
+                    obj->readTrans->status = UART_TRANSFER_STATUS_ERROR_OTH;
+                }
             }
 
             /*

@@ -1,6 +1,8 @@
 ;/*
-; * FreeRTOS Kernel V10.4.3
-; * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+; * FreeRTOS Kernel V11.1.0
+; * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+; *
+; * SPDX-License-Identifier: MIT
 ; *
 ; * Permission is hereby granted, free of charge, to any person obtaining a copy of
 ; * this software and associated documentation files (the "Software"), to deal in
@@ -22,32 +24,26 @@
 ; * https://www.FreeRTOS.org
 ; * https://github.com/FreeRTOS
 ; *
-; * 1 tab == 4 spaces!
 ; */
 
-	.if $DEFINED( __LARGE_DATA_MODEL__ )
-		.define "pushm.a", pushm_x
-		.define "popm.a", popm_x
-		.define "push.a", push_x
-		.define "pop.a", pop_x
-		.define "mov.a", mov_x
-	.else
-		.define "pushm.w", pushm_x
-		.define "popm.w", popm_x
-		.define "push.w", push_x
-		.define "pop.w", pop_x
-		.define "mov.w", mov_x
-	.endif
+    .if $DEFINED( __LARGE_DATA_MODEL__ )
+        .define "pushm.a", pushm_x
+        .define "popm.a", popm_x
+        .define "push.a", push_x
+        .define "pop.a", pop_x
+        .define "mov.a", mov_x
+    .else
+        .define "pushm.w", pushm_x
+        .define "popm.w", popm_x
+        .define "push.w", push_x
+        .define "pop.w", pop_x
+        .define "mov.w", mov_x
+    .endif
 
-	.if $DEFINED( __LARGE_CODE_MODEL__ )
-		.define "calla", call_x
-		.define "reta", ret_x
-	.else
-		.define "call", call_x
-		.define "ret", ret_x
-	.endif
-
-
-
-
-
+    .if $DEFINED( __LARGE_CODE_MODEL__ )
+        .define "calla", call_x
+        .define "reta", ret_x
+    .else
+        .define "call", call_x
+        .define "ret", ret_x
+    .endif

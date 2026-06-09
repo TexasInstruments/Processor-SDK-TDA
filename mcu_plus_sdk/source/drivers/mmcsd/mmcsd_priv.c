@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-26 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -36,12 +36,18 @@
  *  \brief MMCSD private source file.
  *
  */
-#include <stdio.h> /* For snprintf */
+#include <kernel/nortos/dpl/common/printf.h> /* For snprintf */
 #include <kernel/dpl/SystemP.h>
 #include "mmcsd_priv.h"
 #include <string.h> /* For memcpy */
 
 static char* gMonths[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+#ifdef ENABLE_MMCSD_FAULT_INJECTION
+
+/* Stub handler in test file to handle fault injection */
+void TestMmcsd_faultInjectStubHandler(uint32_t numArgs, ...);
+#endif
 
 int32_t MMCSD_parseCIDEmmc(MMCSD_EmmcDeviceData *data, uint32_t resp[4])
 {
@@ -71,6 +77,9 @@ int32_t MMCSD_parseCIDEmmc(MMCSD_EmmcDeviceData *data, uint32_t resp[4])
         uint16_t monthCode = MMCSD_GET_BITFIELD(tempResp[0], 12, 15);
         uint16_t yearCode  = MMCSD_GET_BITFIELD(tempResp[0], 8, 11);
 
+#ifdef ENABLE_MMCSD_FAULT_INJECTION
+	TestMmcsd_faultInjectStubHandler(1, &monthCode);
+#endif
         if((monthCode < 1U) || (monthCode > 12U))
         {
             monthCode = 1U;
@@ -79,7 +88,9 @@ int32_t MMCSD_parseCIDEmmc(MMCSD_EmmcDeviceData *data, uint32_t resp[4])
         {
             /* monthCode in limits, [1, 12] */
         }
-
+#ifdef ENABLE_MMCSD_FAULT_INJECTION
+	TestMmcsd_faultInjectStubHandler(1, &yearCode);
+#endif
         if(yearCode <= 12)
         {
             yearCode += 2013;
@@ -118,6 +129,7 @@ int32_t MMCSD_parseCSDEmmc(MMCSD_EmmcDeviceData *data, uint32_t resp[4])
 
         data->transferSpeed = MMCSD_GET_BITFIELD(tempResp[3], 0, 7);
         data->specVersion = MMCSD_GET_BITFIELD(tempResp[3], 26, 29);
+        data->impDsr = MMCSD_GET_BITFIELD(tempResp[2],12,12);
     }
     else
     {
@@ -133,7 +145,6 @@ int32_t MMCSD_parseECSDEmmc(MMCSD_EmmcDeviceData *data, uint8_t ecsdData[512])
 
     if((data != NULL) && (ecsdData != NULL))
     {
-        data->driveStrength = (uint8_t)(ecsdData[185] >> 4);
         data->blockCount = (((uint32_t)(ecsdData[215])) << 24) +
                            (((uint32_t)(ecsdData[214])) << 16) +
                            (((uint32_t)(ecsdData[213])) << 8) +
@@ -143,6 +154,14 @@ int32_t MMCSD_parseECSDEmmc(MMCSD_EmmcDeviceData *data, uint8_t ecsdData[512])
 
         /* Manufacturing year corrections */
         uint32_t sdRev = (uint32_t)ecsdData[192];
+#ifdef ENABLE_MMCSD_FAULT_INJECTION
+        uint16_t retVal;
+        TestMmcsd_faultInjectStubHandler(1, &retVal);
+        if (retVal <= 4)
+        {
+            sdRev = (uint32_t)retVal;
+        }
+#endif
         if(sdRev <= 4)
         {
             uint16_t year = (data->manuDate[3]-'0')*1000 +
@@ -228,6 +247,9 @@ int32_t MMCSD_parseCSDSd(MMCSD_SdDeviceData *data, uint32_t resp[4])
 
         uint32_t csdVersion = MMCSD_GET_BITFIELD(tempResp[3], 30, 31);
 
+#ifdef ENABLE_MMCSD_FAULT_INJECTION
+	TestMmcsd_faultInjectStubHandler(1, (uint16_t *)&csdVersion);
+#endif
         if(csdVersion == 0)
         {
             /* CSD Ver 1.0 Standard Capacity */

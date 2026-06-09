@@ -152,18 +152,39 @@ static int32_t getIntAttr(const onnx::NodeProto& node, char * name, int32_t * va
   int32_t i = getAttrIdx(node, name);
   if(i != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
   {
+    std::string nodeName;
+    int64_t value;
+
+    // Get attribute
     if (node.attribute(i).ints_size() > idx)
     {
-      *valuePtr = node.attribute(i).ints(idx);
+      value = (int64_t)node.attribute(i).ints(idx);
     }
     else if (idx == 0)
     {
-      *valuePtr = node.attribute(i).i();
+      value = (int64_t)node.attribute(i).i();
     }
     else
     {
       return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
     }
+
+    // Get node name
+    nodeName = (!node.name().empty()) ? node.name() : node.output(0);
+
+    // Restrict value if beyond INT32 range to avoid overflow
+    if (value > INT32_MAX)
+    {
+      value = (int32_t)INT32_MAX;
+      TIDL_GLOBAL_REPORT_WARNING("Value of '%s' in %s is more than INT32_MAX. Restricting value to INT32_MAX", name, nodeName.c_str());
+    }
+    else if (value < INT32_MIN)
+    {
+      value = (int32_t)INT32_MIN;
+      TIDL_GLOBAL_REPORT_WARNING("Value of '%s' in %s is less than INT32_MIN. Restricting value to INT32_MIN", name, nodeName.c_str());
+    }
+
+    *valuePtr = (int32_t)value;
     return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
   }
   return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;

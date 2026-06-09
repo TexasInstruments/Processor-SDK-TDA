@@ -15,9 +15,12 @@
 #   for your environment
 #
 #
-NUM_PROCS=$(cat /proc/cpuinfo | grep processor | wc -l)
-THIS_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-source ${THIS_SCRIPT_DIR}/board_env.sh
+PSDK_PATH="$(readlink -f "$(dirname "$BASH_SOURCE")/../..")"
+PSDK_BUILDER_PATH="${PSDK_PATH}/sdk_builder"
+NUM_PROCS=$(nproc)
+
+source "${PSDK_BUILDER_PATH}/scripts/board_env.sh"
+
 if [ $? -ne 0 ]
 then
     exit 1
@@ -31,10 +34,12 @@ then
 fi
 
 PSDK_LINUX_BOOTFS=boot-${TISDK_IMAGE}-${TI_DEV_BOARD}.tar.gz
-ATF_TAG=00f1ec6b8740ccd403e641131e294aabacf2a48b
-OPTEE_TAG=12d7c4ee4642d2d761e39fbcf21a06fb77141dea
+ATF_TAG=e0c4d3903b382bf34f552af53e6d955fae5283ab
+OPTEE_TAG=a9690ae39995af36a31b7a4f446f27ea0787e3a4
+
 
 : ${PSDK_TOOLS_PATH:=${HOME}/ti}
+: ${MCU_SDK_PATH:=${PSDK_PATH}/mcu_sdk}
 
 skip_sudo=0
 skip_linux=0
@@ -166,6 +171,7 @@ then
     then
 
         arr+=("mono-runtime")           # for building sbl bootimage (uses Win32 executable on linux)
+        arr+=("device-tree-compiler")   # for sbl_appimage to build base-board.dtb
         arr+=("cmake")                  # for building all edgeai repos
         arr+=("ninja-build" "pkgconf")  # for building edgeai-gst-plugins repo
         arr+=("graphviz")               # for 'dot' tool when running PyTIOVX tool on PC, and tivxExportGraphToDot() in PC emulation
@@ -187,7 +193,7 @@ then
         # If we are needing to support PC emulation mode
         if [ $pc_emulation -eq 1 ]
         then
-            if [ ${SOC} = "j721e" ] || [ ${SOC} = "j721s2" ] || [ ${SOC} = "j784s4" ] || [ ${SOC} = "j742s2" ] || [ ${SOC} = "j722s" ]
+            if [ ${SOC} = "j721e" ] || [ ${SOC} = "j721s2" ] || [ ${SOC} = "j784s4" ] || [ ${SOC} = "j742s2" ] || [ ${SOC} = "j722s" ] || [ ${SOC} = "tda54" ]
             then
                 echo "${SOC}: [dof] Creating/Updating system link to libDOF.so ..."
                 sudo ln -sf $PWD/vhwa_c_models/dmpac/lib/PC/x86_64/LINUX/release/libDOF.so /usr/lib/x86_64-linux-gnu/libDOF.so
@@ -197,7 +203,8 @@ then
             if [ ${SOC} = "j721e" ]
             then
                 sudo ln -sf $PWD/vhwa_c_models/vpac1/lib/PC/x86_64/LINUX/release/libglbce.so /usr/lib/x86_64-linux-gnu/libApicalSIM.so.1
-            elif [ ${SOC} = "j721s2" ] || [ ${SOC} = "j784s4" ] || [ ${SOC} = "j742s2" ]
+            # Temporary: Using VPAC3 c models for TDA54, should be VPAC4 once the models are up
+            elif [ ${SOC} = "j721s2" ] || [ ${SOC} = "j784s4" ] || [ ${SOC} = "j742s2" ] || [ ${SOC} = "tda54" ]
             then
                 sudo ln -sf $PWD/vhwa_c_models/vpac3/lib/PC/x86_64/LINUX/release/libglbce.so /usr/lib/x86_64-linux-gnu/libApicalSIM.so.1
             else
@@ -324,7 +331,7 @@ then
         mkdir -p ${PSDK_TOOLS_PATH}
     fi
 
-    # Install TI ARM LLVM tools for building on R cores
+    # Install TI ARM LLVM tools for building on R/M55 cores
     echo "[ti-cgt-armllvm_${CGT_ARMLLVM_VERSION}] Checking ..."
     if [ -d ${PSDK_TOOLS_PATH}/ti-cgt-armllvm_${CGT_ARMLLVM_VERSION} ]; then
         echo "${PSDK_TOOLS_PATH}/ti-cgt-armllvm_${CGT_ARMLLVM_VERSION} found!"
@@ -352,18 +359,39 @@ then
     fi
 
     # Install TI CGT tools for building on C7x DSP cores
-    if [ ${SOC} = "j721e" ] || [ ${SOC} = "j721s2" ] || [ ${SOC} = "j784s4" ] || [ ${SOC} = "j742s2" ] || [ ${SOC} = "am62a" ] || [ ${SOC} = "j722s" ]
+    if [ ${SOC} = "j721e" ] || [ ${SOC} = "j721s2" ] || [ ${SOC} = "j784s4" ] || [ ${SOC} = "j742s2" ] || [ ${SOC} = "am62a" ] || [ ${SOC} = "j722s" ] || [ ${SOC} = "tda54" ]
     then
         echo "[ti-cgt-c7000_${CGT_C7X_VERSION}] Checking ..."
-        if [ -d ${PSDK_TOOLS_PATH}/ti-cgt-c7000_${CGT_C7X_VERSION} ]; then
-            echo "${PSDK_TOOLS_PATH}/ti-cgt-c7000_${CGT_C7X_VERSION} found!"
-        else
-            wget --tries=5 https://dr-download.ti.com/software-development/ide-configuration-compiler-or-debugger/MD-707zYe3Rik/${CGT_C7X_VERSION}/ti_cgt_c7000_${CGT_C7X_VERSION}_linux-x64_installer.bin -P ${PSDK_TOOLS_PATH} --no-check-certificate
-            chmod +x ${PSDK_TOOLS_PATH}/ti_cgt_c7000_${CGT_C7X_VERSION}_linux-x64_installer.bin
-            ${PSDK_TOOLS_PATH}/ti_cgt_c7000_${CGT_C7X_VERSION}_linux-x64_installer.bin --mode unattended --prefix ${PSDK_TOOLS_PATH}
-            rm ${PSDK_TOOLS_PATH}/ti_cgt_c7000_${CGT_C7X_VERSION}_linux-x64_installer.bin
+        if [ ! -d ${PSDK_TOOLS_PATH}/ti-cgt-c7000_${CGT_C7X_VERSION} ]
+        then
+            if [ "${SOC}" == "tda54" ]; then
+                if [ ! -f ${PWD}/ti-cgt-c7000_${CGT_C7X_VERSION}.zip ]
+                then
+                    wget http://bangsdowebsvr01.india.ti.com/PROCESSOR_SDK_RTOS_AUTOMOTIVE/swdownloads/mcu_sdk/tda54/ti-cgt-c7000_${CGT_C7X_VERSION}.zip
+                fi
+                unzip -q ti-cgt-c7000_${CGT_C7X_VERSION}.zip -d ${PSDK_TOOLS_PATH}
+                rm -f ti-cgt-c7000_${CGT_C7X_VERSION}.zip
+            else
+                wget https://dr-download.ti.com/software-development/ide-configuration-compiler-or-debugger/MD-707zYe3Rik/${CGT_C7X_VERSION}/ti_cgt_c7000_${CGT_C7X_VERSION}_linux-x64_installer.bin -P ${PSDK_TOOLS_PATH} --no-check-certificate
+                chmod +x ${PSDK_TOOLS_PATH}/ti_cgt_c7000_${CGT_C7X_VERSION}_linux-x64_installer.bin
+                ${PSDK_TOOLS_PATH}/ti_cgt_c7000_${CGT_C7X_VERSION}_linux-x64_installer.bin --mode unattended --prefix ${PSDK_TOOLS_PATH}
+                rm ${PSDK_TOOLS_PATH}/ti_cgt_c7000_${CGT_C7X_VERSION}_linux-x64_installer.bin
+            fi
         fi
         echo "[ti-cgt-c7000_${CGT_C7X_VERSION}] Done"
+    fi
+
+    # Download RISC-V compiler for NPAC on TDA54
+    if [ "${SOC}" == "tda54" ]; then
+        echo "[riscv-none-elf-gcc-14.2.0-1] Checking ..."
+        if [ ! -d ${PSDK_TOOLS_PATH}/xpack-riscv-none-elf-gcc-14.2.0-1 ]; then
+            if [ ! -f ${PWD}/xpack-riscv-none-elf-gcc-14.2.0-1-linux-x64.tar.gz ]; then
+                wget -c -t 0 https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v14.2.0-1/xpack-riscv-none-elf-gcc-14.2.0-1-linux-x64.tar.gz
+            fi
+            tar -xzf xpack-riscv-none-elf-gcc-14.2.0-1-linux-x64.tar.gz -C ${PSDK_TOOLS_PATH}
+            rm xpack-riscv-none-elf-gcc-14.2.0-1-linux-x64.tar.gz
+        fi
+        echo "[riscv-none-elf-gcc-14.2.0-1] Done"
     fi
 
     # Install sysconfig tool for MCU+SDK build
@@ -653,7 +681,31 @@ pip3 install pycryptodomex --user  # for building ATF, OPTEE (built for qnx sbl)
 pip3 install meson --user          # for building edegai-gst-plugins
 pip3 install jsonschema --user     # for building linux uboot with PSDK Linux top-level makefile using the "make uboot" rule (HS and enabling MCU1_0)
 pip3 install yamllint --user
+if [ ${SOC} = 'tda54' ] && [ ! -z "${MCU_SDK_PATH}" ]
+then
+    if [ -f "${MCU_SDK_PATH}/requirements.txt" ]
+    then
+        echo "Installing MCU SDK Python dependencies from ${MCU_SDK_PATH}/requirements.txt"
+        pip3 install -r ${MCU_SDK_PATH}/requirements.txt
+    else
+        echo "Skipping MCU SDK Python dependencies (requirements.txt not found)"
+    fi
+fi
 echo "[pip] Installing dependant python packages ... Done"
+
+if [ ${SOC} = 'tda54' ] && [ ! -z "${MCU_SDK_PATH}" ]
+then
+    echo "Installing dependant mcu_sdk packages ..."
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+    \. "$HOME/.nvm/nvm.sh"
+    nvm install 24
+    node -v
+    npm -v
+    cd ${MCU_SDK_PATH}
+    npm install
+    cd -
+    echo "Installing dependant mcu_sdk packages ... Done"
+fi
 
 # check if there is a err_packages
 if [ -z "$err_packages" ]; then

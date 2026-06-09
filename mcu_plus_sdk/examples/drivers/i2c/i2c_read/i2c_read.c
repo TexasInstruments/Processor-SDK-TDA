@@ -32,6 +32,7 @@
 
 #include <drivers/i2c.h>
 #include <kernel/dpl/DebugP.h>
+#include <drivers/pinmux.h>
 #include "ti_drivers_config.h"
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
@@ -45,15 +46,12 @@ void i2c_read_main(void *arg0)
 {
     uint16_t        sample;
     int32_t         status;
-    uint32_t        i2cReadSlaveAddr;
+    uint32_t        i2cReadtargetAddr;
     uint8_t         rxBuffer[I2C_READ_LEN];
     I2C_Handle      i2cHandle;
     I2C_Transaction i2cTransaction;
 
-    Drivers_open();
-    Board_driversOpen();
-
-    i2cReadSlaveAddr     = Board_i2cGetEepromDeviceAddr();
+    i2cReadtargetAddr     = Board_i2cGetEepromDeviceAddr();
     i2cHandle = gI2cHandle[CONFIG_I2C0];
 
     DebugP_log("[I2C] Read data ... !!!\r\n");
@@ -64,7 +62,7 @@ void i2c_read_main(void *arg0)
     /* Override with required transaction parameters */
     i2cTransaction.readBuf      = rxBuffer;
     i2cTransaction.readCount    = I2C_READ_LEN;
-    i2cTransaction.slaveAddress = i2cReadSlaveAddr;
+    i2cTransaction.targetAddress = i2cReadtargetAddr;
 
     /* Read 20 samples and log them */
     for(sample = 0; sample < 20; sample++)
@@ -76,7 +74,7 @@ void i2c_read_main(void *arg0)
         }
         else
         {
-            i2c_read_error_handler(sample, status);
+            i2c_read_error_handler(sample, i2cTransaction.status);
         }
     }
 
@@ -89,9 +87,6 @@ void i2c_read_main(void *arg0)
     {
         DebugP_log("Some tests have failed!!\r\n");
     }
-
-    Board_driversClose();
-    Drivers_close();
 
     return;
 }

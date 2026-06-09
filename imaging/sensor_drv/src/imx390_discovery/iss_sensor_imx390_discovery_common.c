@@ -37,7 +37,6 @@
  */
 //IssCapture_CmplxIoLaneCfg           imx390Csi2CmplxIoLaneCfg;
 
-extern IssSensors_Handle * gIssSensorTable[ISS_SENSORS_MAX_SUPPORTED_SENSOR];
 static uint16_t sp1hGainRegValueOld[ISS_SENSORS_MAX_CHANNEL];
 static uint16_t redGain_prev[ISS_SENSORS_MAX_CHANNEL];
 static uint16_t greenGain_prev[ISS_SENSORS_MAX_CHANNEL];
@@ -80,21 +79,21 @@ IssSensorConfig     imx390DiscoverySensorCfgWdr60fps = {
 
 IssSensorFxns           imx390DiscoSensorFxns = {
     NULL,
-    IMX390_Config,
-    IMX390_StreamOn,
-    IMX390_StreamOff,
-    IMX390_PowerOn,
-    IMX390_PowerOff,
-    IMX390_GetExpParams,
-    IMX390_SetAeParams,
-    IMX390_GetDccParams,
-    IMX390_InitAewbConfig,
-    IMX390_GetIspConfig,
-    IMX390_ReadWriteReg,
-    IMX390_GetExpPrgFxn,
-    IMX390_deinit,
-    IMX390_GetWBPrgFxn,
-    IMX390_SetAwbParams   
+    IMX390_Disco_Config,
+    IMX390_Disco_StreamOn,
+    IMX390_Disco_StreamOff,
+    IMX390_Disco_PowerOn,
+    IMX390_Disco_PowerOff,
+    IMX390_Disco_GetExpParams,
+    IMX390_Disco_SetAeParams,
+    IMX390_Disco_GetDccParams,
+    IMX390_Disco_InitAewbConfig,
+    IMX390_Disco_GetIspConfig,
+    IMX390_Disco_ReadWriteReg,
+    IMX390_Disco_GetExpPrgFxn,
+    IMX390_Disco_Deinit,
+    IMX390_Disco_GetWBPrgFxn,
+    IMX390_Disco_SetAwbParams
 };
 
 /*******************************************************************************
@@ -120,7 +119,7 @@ static int32_t IMX390_Sensor_RegConfig(uint32_t i2cInstId, uint8_t sensorI2cAddr
         while(regCnt<sensor_cfg_script_len)
         {
             {
-                int32_t temp_status = IMX390_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, regAddr, regValue, 1u);
+                int32_t temp_status = IMX390_Disco_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, regAddr, regValue, 1u);
                 if(temp_status != 0) {
                     status = temp_status;
                 }
@@ -153,7 +152,7 @@ static int32_t IMX390_Sensor_RegConfig(uint32_t i2cInstId, uint8_t sensorI2cAddr
 }
 
 static uint32_t imx390FeaturesEnabled;
-int32_t IMX390_Config(uint32_t chId, void *pSensorHdl, uint32_t sensor_features_requested)
+int32_t IMX390_Disco_Config(uint32_t chId, void *pSensorHdl, uint32_t sensor_features_requested)
 {
     int32_t status = 0;
     uint32_t i2cInstId;
@@ -201,13 +200,13 @@ int32_t IMX390_Config(uint32_t chId, void *pSensorHdl, uint32_t sensor_features_
         //status = UB960_SetSensorAlias(chId, sensorI2Caddr >> 1, pCreatePrms->i2cAddrSer[chId]);
         if(0 != status)
         {
-            appLogPrintf("IMX390_Config Error : UB960_SetSensorAlias for chId %d returned %d \n", chId, status);
+            appLogPrintf("IMX390_Disco_Config Error : UB960_SetSensorAlias for chId %d returned %d \n", chId, status);
         }else
         {
             status = ub953_cfgScript((uint8_t)i2cInstId, pCreatePrms->i2cAddrSer[chId], serCfg);
             if(0 != status)
             {
-                appLogPrintf("IMX390_Config Error : UB953 config failed for camera # %d \n", chId);
+                appLogPrintf("IMX390_Disco_Config Error : UB953 config failed for camera # %d \n", chId);
             }else
             {
                 status = IMX390_Sensor_RegConfig(i2cInstId, pCreatePrms->i2cAddrSensor[chId], sensorCfg, sensor_cfg_script_len);
@@ -216,13 +215,13 @@ int32_t IMX390_Config(uint32_t chId, void *pSensorHdl, uint32_t sensor_features_
     }
     else
     {
-        appLogPrintf("IMX390_Config : Error. feature set 0x%x is not supported \n", sensor_features_requested);
+        appLogPrintf("IMX390_Disco_Config : Error. feature set 0x%x is not supported \n", sensor_features_requested);
         status = -1;
     }
     return (status);
 }
 
-int32_t IMX390_StreamOn(uint32_t chId, void *pSensorHdl)
+int32_t IMX390_Disco_StreamOn(uint32_t chId, void *pSensorHdl)
 {
     int32_t status = 0;
 
@@ -241,8 +240,8 @@ int32_t IMX390_StreamOn(uint32_t chId, void *pSensorHdl)
         {
             if(pSenHandle->sensorIntfPrms->numCamerasStreaming >= 3U)
             {
-                appLogPrintf("IMX390_StreamOn Error : %d cameras streaming already \n", pSenHandle->sensorIntfPrms->numCamerasStreaming);
-                appLogPrintf("IMX390_StreamOn Error : 60fps mode can support upto 3 cameras because of UB960 b/w limitation \n");
+                appLogPrintf("IMX390_Disco_StreamOn Error : %d cameras streaming already \n", pSenHandle->sensorIntfPrms->numCamerasStreaming);
+                appLogPrintf("IMX390_Disco_StreamOn Error : 60fps mode can support upto 3 cameras because of UB960 b/w limitation \n");
                 status = -1;
             }
             else
@@ -251,7 +250,7 @@ int32_t IMX390_StreamOn(uint32_t chId, void *pSensorHdl)
                 sensorI2cAddr = pCreatePrms->i2cAddrSensor[chId];
 
                 {
-                    int32_t temp_status = IMX390_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, 0x0, 0x0, 1u);/*ACTIVE*/
+                    int32_t temp_status = IMX390_Disco_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, 0x0, 0x0, 1u);/*ACTIVE*/
                     if(temp_status != 0) {
                         status = temp_status;
                     }
@@ -271,7 +270,7 @@ int32_t IMX390_StreamOn(uint32_t chId, void *pSensorHdl)
             sensorI2cAddr = pCreatePrms->i2cAddrSensor[chId];
 
             {
-                int32_t temp_status = IMX390_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, 0x0, 0x0, 1u);/*ACTIVE*/
+                int32_t temp_status = IMX390_Disco_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, 0x0, 0x0, 1u);/*ACTIVE*/
                 if(temp_status != 0) {
                     status = temp_status;
                 }
@@ -293,7 +292,7 @@ int32_t IMX390_StreamOn(uint32_t chId, void *pSensorHdl)
     return (status);
 }
 
-int32_t IMX390_StreamOff(uint32_t chId, void *pSensorHdl)
+int32_t IMX390_Disco_StreamOff(uint32_t chId, void *pSensorHdl)
 {
     int32_t status = 0;
     /* MISRA.CAST.VOID_PTR_TO_OBJ_PTR.2012 - must be waived */
@@ -308,7 +307,7 @@ int32_t IMX390_StreamOff(uint32_t chId, void *pSensorHdl)
     sensorI2cAddr = pCreatePrms->i2cAddrSensor[chId];
 
     {
-        int32_t temp_status = IMX390_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, 0x0, 0x1, 1u);/*STANDBY*/
+        int32_t temp_status = IMX390_Disco_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, 0x0, 0x1, 1u);/*STANDBY*/
         if(temp_status != 0) {
             status = temp_status;
         }
@@ -323,7 +322,7 @@ int32_t IMX390_StreamOff(uint32_t chId, void *pSensorHdl)
     return status;
 }
 
-int32_t IMX390_PowerOn(uint32_t chId, void *pSensorHdl)
+int32_t IMX390_Disco_PowerOn(uint32_t chId, void *pSensorHdl)
 {
     int32_t status = 0;
 
@@ -331,7 +330,6 @@ int32_t IMX390_PowerOn(uint32_t chId, void *pSensorHdl)
     uint32_t i2cInstId;
     uint8_t sensorI2cAddr;
     uint8_t pcalI2cAddr;
-    I2cParams *serCfg = NULL;
     /* MISRA.CAST.VOID_PTR_TO_OBJ_PTR.2012 - must be waived */
     IssSensors_Handle * pSenHandle = (IssSensors_Handle*)pSensorHdl;
 
@@ -340,7 +338,7 @@ int32_t IMX390_PowerOn(uint32_t chId, void *pSensorHdl)
     greenGain_prev[chId] = 512;
     blueGain_prev[chId] = 512;
 
-    appLogPrintf("IMX390_PowerOn : chId = 0x%x \n", chId);
+    appLogPrintf("IMX390_Disco_PowerOn : chId = 0x%x \n", chId);
 
     pCreatePrms = pSenHandle->createPrms;
 
@@ -373,7 +371,7 @@ int32_t IMX390_PowerOn(uint32_t chId, void *pSensorHdl)
             status = ub953_cfgScript((uint8_t)i2cInstId, pCreatePrms->i2cAddrSer[chId], ub953SerCfg_D3IMX390_DISCOVERY);
             if (status != 0)
             {
-                appLogPrintf("IMX390_PowerOn : UB953 config failed for camera # %d \n", chId);
+                appLogPrintf("IMX390_Disco_PowerOn : UB953 config failed for camera # %d \n", chId);
             }
         }
         else
@@ -389,7 +387,7 @@ int32_t IMX390_PowerOn(uint32_t chId, void *pSensorHdl)
     return status;
 }
 
-int32_t IMX390_PowerOff(uint32_t chId, void *pSensorHdl)
+int32_t IMX390_Disco_PowerOff(uint32_t chId, void *pSensorHdl)
 {
     (void)chId;
     (void)pSensorHdl;
@@ -397,7 +395,7 @@ int32_t IMX390_PowerOff(uint32_t chId, void *pSensorHdl)
 }
 
 static uint16_t sp1hGainRegValueOld[ISS_SENSORS_MAX_CHANNEL];
-int32_t IMX390_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_ExposureParams *pExpPrms)
+int32_t IMX390_Disco_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_ExposureParams *pExpPrms)
 {
     uint16_t regAddr;
     uint16_t cnt;
@@ -432,7 +430,7 @@ int32_t IMX390_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_ExposurePa
 
         regAddr = 0x0008;
         regValue = 1;
-        status = IMX390_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, regAddr, regValue, 1u);
+        status = IMX390_Disco_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, regAddr, regValue, 1u);
         if(status != 0)
         {
             appLogPrintf("Error writing 0x%x to IMX390 register 0x%x \n", regValue, regAddr);
@@ -440,7 +438,7 @@ int32_t IMX390_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_ExposurePa
 
         regAddr = IMX390_SP1H_ANALOG_GAIN_CONTROL_REG_ADDR;
         regValue = (uint8_t)(sp1h_again & 0xFFU);
-        status = IMX390_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, regAddr, regValue, 1u);
+        status = IMX390_Disco_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, regAddr, regValue, 1u);
         if(status != 0)
         {
             appLogPrintf("Error writing 0x%x to IMX390 register 0x%x \n", regValue, regAddr);
@@ -448,7 +446,7 @@ int32_t IMX390_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_ExposurePa
 
         regAddr = IMX390_SP1H_ANALOG_GAIN_CONTROL_REG_ADDR_HIGH;
         regValue = (uint8_t)(sp1h_again >> 8);
-        status = IMX390_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, regAddr, regValue, 1u);
+        status = IMX390_Disco_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, regAddr, regValue, 1u);
         if(status != 0)
         {
             appLogPrintf("Error writing 0x%x to IMX390 register 0x%x \n", regValue, regAddr);
@@ -456,7 +454,7 @@ int32_t IMX390_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_ExposurePa
 
         regAddr = 0x0008;
         regValue = 0;
-        status = IMX390_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, regAddr, regValue, 1u);
+        status = IMX390_Disco_WriteReg((uint8_t)i2cInstId, sensorI2cAddr, regAddr, regValue, 1u);
         if(status != 0)
         {
             appLogPrintf("Error writing 0x%x to IMX390 register 0x%x \n", regValue, regAddr);
@@ -472,7 +470,7 @@ int32_t IMX390_SetAeParams(void *pSensorHdl, uint32_t chId, IssSensor_ExposurePa
     return (status);
 }
 
-int32_t IMX390_GetDccParams(uint32_t chId, void *pSensorHdl, IssSensor_DccParams *pDccPrms)
+int32_t IMX390_Disco_GetDccParams(uint32_t chId, void *pSensorHdl, IssSensor_DccParams *pDccPrms)
 {
     (void)chId;
     (void)pSensorHdl;
@@ -481,7 +479,7 @@ int32_t IMX390_GetDccParams(uint32_t chId, void *pSensorHdl, IssSensor_DccParams
     return (status);
 }
 
-int32_t IMX390_GetExpParams(uint32_t chId, void *pSensorHdl, IssSensor_ExposureParams *pExpPrms)
+int32_t IMX390_Disco_GetExpParams(uint32_t chId, void *pSensorHdl, IssSensor_ExposureParams *pExpPrms)
 {
     (void)chId;
     (void)pSensorHdl;
@@ -492,28 +490,28 @@ int32_t IMX390_GetExpParams(uint32_t chId, void *pSensorHdl, IssSensor_ExposureP
     return (status);
 }
 
-void IMX390_InitAewbConfig(uint32_t chId, void *pSensorHdl)
+void IMX390_Disco_InitAewbConfig(uint32_t chId, void *pSensorHdl)
 {
     (void)chId;
     (void)pSensorHdl;
     return;
 }
 
-void IMX390_GetIspConfig (uint32_t chId, void *pSensorHdl)
+void IMX390_Disco_GetIspConfig (uint32_t chId, void *pSensorHdl)
 {
     (void)chId;
     (void)pSensorHdl;
     return;
 }
 
-void IMX390_deinit (uint32_t chId, void *pSensorHdl)
+void IMX390_Disco_Deinit (uint32_t chId, void *pSensorHdl)
 {
     (void)chId;
     (void)pSensorHdl;
     return;
 }
 
-int32_t IMX390_ReadWriteReg (uint32_t chId, void *pSensorHdl, uint32_t readWriteFlag, I2cParams *pReg)
+int32_t IMX390_Disco_ReadWriteReg (uint32_t chId, void *pSensorHdl, uint32_t readWriteFlag, I2cParams *pReg)
 {
     int32_t status = 0;
 
@@ -528,13 +526,13 @@ int32_t IMX390_ReadWriteReg (uint32_t chId, void *pSensorHdl, uint32_t readWrite
     {
         /*write*/
         regValue = (uint8_t)pReg->nRegValue;
-        status = IMX390_WriteReg((uint8_t)pCreatePrms->i2cInstId,
+        status = IMX390_Disco_WriteReg((uint8_t)pCreatePrms->i2cInstId,
             pCreatePrms->i2cAddrSensor[chId], pReg->nRegAddr, regValue, 1u);
     }
     else
     {
         /*read*/
-        status = IMX390_ReadReg((uint8_t)pCreatePrms->i2cInstId,
+        status = IMX390_Disco_ReadReg((uint8_t)pCreatePrms->i2cInstId,
             pCreatePrms->i2cAddrSensor[chId], pReg->nRegAddr, &regValue, 1u);
 
         if (0 == status)
@@ -545,7 +543,7 @@ int32_t IMX390_ReadWriteReg (uint32_t chId, void *pSensorHdl, uint32_t readWrite
     return (status);
 }
 
-int32_t IMX390_ReadReg(uint8_t     i2cInstId,
+int32_t IMX390_Disco_ReadReg(uint8_t     i2cInstId,
                             uint8_t         i2cAddr,
                             uint16_t        regAddr,
                             uint8_t         *regVal,
@@ -571,11 +569,11 @@ int32_t IMX390_ReadReg(uint8_t     i2cInstId,
     return (status);
 }
 
-int32_t IMX390_WriteReg(uint8_t    i2cInstId,
-                             uint8_t       i2cAddr,
-                             uint16_t         regAddr,
-                             uint8_t          regVal,
-                             uint32_t      numRegs)
+int32_t IMX390_Disco_WriteReg(uint8_t    i2cInstId,
+                               uint8_t    i2cAddr,
+                               uint16_t   regAddr,
+                               uint8_t    regVal,
+                               uint32_t   numRegs)
 {
     (void)i2cInstId;
     int32_t  status = -1;
@@ -600,7 +598,7 @@ int32_t IMX390_WriteReg(uint8_t    i2cInstId,
     return (status);
 }
 
-int32_t IMX390_GetExpPrgFxn(uint32_t chId, void *pSensorHdl, IssAeDynamicParams *p_ae_dynPrms)
+int32_t IMX390_Disco_GetExpPrgFxn(uint32_t chId, void *pSensorHdl, IssAeDynamicParams *p_ae_dynPrms)
 {
     (void)chId;
     (void)pSensorHdl;
@@ -626,7 +624,7 @@ int32_t IMX390_GetExpPrgFxn(uint32_t chId, void *pSensorHdl, IssAeDynamicParams 
     return (status);
 }
 
-int32_t IMX390_GetWBPrgFxn(uint32_t chId, void *pSensorHdl, IssAwbDynamicParams *p_awb_dynPrms)
+int32_t IMX390_Disco_GetWBPrgFxn(uint32_t chId, void *pSensorHdl, IssAwbDynamicParams *p_awb_dynPrms)
 {
     (void)chId;
     (void)pSensorHdl;
@@ -643,11 +641,12 @@ int32_t IMX390_GetWBPrgFxn(uint32_t chId, void *pSensorHdl, IssAwbDynamicParams 
 
     p_awb_dynPrms->sensor_pre_gain = 0;
 
-    appLogPrintf("IMX390_GetWBPrgFxn: sensor_pre_gain = %d \n", p_awb_dynPrms->sensor_pre_gain);
+    appLogPrintf("IMX390_Disco_GetWBPrgFxn: sensor_pre_gain = %d \n", p_awb_dynPrms->sensor_pre_gain);
     return (status);
 }
 
-int32_t IMX390_SetAwbParams(void *pSensorHdl, uint32_t chId, IssSensor_WhiteBalanceParams *pWbPrms)
+/* PENDING - METRICS.E.Number_of_paths_PATH - Warning - Number of paths PATH: IMX390_Disco_SetAwbParams 424.99993>400 */
+int32_t IMX390_Disco_SetAwbParams(void *pSensorHdl, uint32_t chId, IssSensor_WhiteBalanceParams *pWbPrms)
 {
     int32_t status = 0;
     uint16_t regAddr;
@@ -664,7 +663,7 @@ int32_t IMX390_SetAwbParams(void *pSensorHdl, uint32_t chId, IssSensor_WhiteBala
         regAddr = IMX390_RED_GAIN_REG_L;
         regValue = (uint16_t)((pWbPrms->rGain[0]>>IMX390_ISP_GAIN_OFFSET) & 0xffU);/*Sensor gain is Q8, ISP gain is Q10*/
         {
-            int32_t temp_status = IMX390_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
+            int32_t temp_status = IMX390_Disco_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
             if(temp_status != 0) {
                 status = temp_status;
             }
@@ -672,7 +671,7 @@ int32_t IMX390_SetAwbParams(void *pSensorHdl, uint32_t chId, IssSensor_WhiteBala
         regAddr = IMX390_RED_GAIN_REG_H;
         regValue = (uint16_t)((pWbPrms->rGain[0]>>IMX390_ISP_GAIN_OFFSET) >> 8);/*Sensor gain is Q8, ISP gain is Q10*/
         {
-            int32_t temp_status = IMX390_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
+            int32_t temp_status = IMX390_Disco_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
             if(temp_status != 0) {
                 status = temp_status;
             }
@@ -685,14 +684,14 @@ int32_t IMX390_SetAwbParams(void *pSensorHdl, uint32_t chId, IssSensor_WhiteBala
         regAddr = IMX390_GREEN1_GAIN_REG_L;
         regValue = (uint16_t)((pWbPrms->gGain[0]>>IMX390_ISP_GAIN_OFFSET) & 0xffU);/*Sensor gain is Q8, ISP gain is Q10*/
         {
-            int32_t temp_status = IMX390_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
+            int32_t temp_status = IMX390_Disco_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
             if(temp_status != 0) {
                 status = temp_status;
             }
         }
         regAddr = IMX390_GREEN2_GAIN_REG_L;
         {
-            int32_t temp_status = IMX390_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
+            int32_t temp_status = IMX390_Disco_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
             if(temp_status != 0) {
                 status = temp_status;
             }
@@ -701,14 +700,14 @@ int32_t IMX390_SetAwbParams(void *pSensorHdl, uint32_t chId, IssSensor_WhiteBala
         regAddr = IMX390_GREEN1_GAIN_REG_H;
         regValue = (uint16_t)((pWbPrms->gGain[0]>>IMX390_ISP_GAIN_OFFSET) >> 8);/*Sensor gain is Q8, ISP gain is Q10*/
         {
-            int32_t temp_status = IMX390_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
+            int32_t temp_status = IMX390_Disco_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
             if(temp_status != 0) {
                 status = temp_status;
             }
         }
         regAddr = IMX390_GREEN2_GAIN_REG_H;
         {
-            int32_t temp_status = IMX390_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
+            int32_t temp_status = IMX390_Disco_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
             if(temp_status != 0) {
                 status = temp_status;
             }
@@ -721,7 +720,7 @@ int32_t IMX390_SetAwbParams(void *pSensorHdl, uint32_t chId, IssSensor_WhiteBala
         regAddr = IMX390_BLUE_GAIN_REG_L;
         regValue = (uint16_t)((pWbPrms->bGain[0]>>IMX390_ISP_GAIN_OFFSET) & 0xffU);/*Sensor gain is Q8, ISP gain is Q10*/
         {
-            int32_t temp_status = IMX390_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
+            int32_t temp_status = IMX390_Disco_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
             if(temp_status != 0) {
                 status = temp_status;
             }
@@ -729,7 +728,7 @@ int32_t IMX390_SetAwbParams(void *pSensorHdl, uint32_t chId, IssSensor_WhiteBala
         regAddr = IMX390_BLUE_GAIN_REG_H;
         regValue = (uint16_t)((pWbPrms->bGain[0]>>IMX390_ISP_GAIN_OFFSET) >> 8);/*Sensor gain is Q8, ISP gain is Q10*/
         {
-            int32_t temp_status = IMX390_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
+            int32_t temp_status = IMX390_Disco_WriteReg((uint8_t)pCreatePrms->i2cInstId, pCreatePrms->i2cAddrSensor[chId], regAddr, (uint8_t)regValue, 1u);
             if(temp_status != 0) {
                 status = temp_status;
             }

@@ -1,4 +1,4 @@
-ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), A72 A53))
+ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), A72 A53 A720))
 
 include $(PRELUDE)
 

@@ -11,6 +11,7 @@ CSOURCES    := $(call all-c-files)
 IDIRS+=$(VISION_APPS_PATH)/platform/$(SOC)/linux
 IDIRS+=$(VISION_APPS_PATH)/platform/$(SOC)/rtos
 IDIRS+=$(VISION_APPS_PATH)/platform/$(SOC)/rtos/common
+IDIRS+=$(VISION_APPS_PATH)/platform/common
 
 include $(FINALE)
 

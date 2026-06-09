@@ -3,21 +3,18 @@
     let soc = system.getScript(`/drivers/soc/drivers_${common.getSocName()}`);
     let driverVer = soc.getDriverVer("mcasp");
     let module = system.modules['/drivers/mcasp/mcasp'];
+    let mcaspBcdmaInstances = [];
+    for(let i=0; i < module.$instances.length; i++) {
+        let instance = module.$instances[i];
+        if(instance.transferMode == "DMA") {
+            mcaspBcdmaInstances.push(module.getInstanceConfig(instance).bcDmaDriver);
+        }
+    }
 %%}
 
 /*
  * MCASP
  */
-% for(let i = 0; i < module.$instances.length; i++) {
-    % let instance = module.$instances[i];
-    % if(instance.transferMode == "DMA") {
-#define MCASP`i`_CYCLIC_BUFF_SIZE_TX    `instance.txCyclicBufSize`U
-#define MCASP`i`_CYCLIC_BUFF_COUNT_TX   `instance.txCyclicBufCnt`U
-#define MCASP`i`_CYCLIC_BUFF_SIZE_RX    `instance.rxCyclicBufSize`U
-#define MCASP`i`_CYCLIC_BUFF_COUNT_RX   `instance.rxCyclicBufCnt`U
-    % }
-% }
-
 
 % for(let i = 0; i < module.$instances.length; i++) {
     % let instance = module.$instances[i];
@@ -31,12 +28,20 @@ void `config.txCallbackFxn`(MCASP_Handle handle, MCASP_Transaction *transaction)
 void `config.rxCallbackFxn`(MCASP_Handle handle, MCASP_Transaction *transaction);
     % }
     % if(config.enableMcaspTx == true && config.txLoopjobEnable == true) {
+% if(config.externTxLoopjob != true) {
 /* MCASP transmit loopjob buffer */
 uint8_t `config.txLoopjobBuf`[`config.txLoopjobBufLength`] __attribute__((aligned(256))) = {0};
+% } else {
+extern `config.txLoopjobBufExtern`;
+% }
     % }
     % if(config.enableMcaspRx == true && config.rxLoopjobEnable == true) {
+% if(config.externRxLoopjob != true) {
 /* MCASP receive loopjob buffer */
 uint8_t `config.rxLoopjobBuf`[`config.rxLoopjobBufLength`] __attribute__((aligned(256))) = {0};
+% } else {
+extern `config.rxLoopjobBufExtern`;
+% }
     % }
 % }
 
@@ -67,73 +72,22 @@ Udma_EventObject gBcdmaTxCqEventObj;
 Udma_EventObject gBcdmaRxCqEventObj;
 
 /* Number of ring entries */
-#define UDMA_RING_ENTRIES          (1U)
+#define UDMA_RING_ENTRIES_TX             (MCASP_TX_DMA_RING_ELEM_CNT)
+#define UDMA_RING_ENTRIES_RX             (MCASP_RX_DMA_RING_ELEM_CNT)
 /* Size (in bytes) of each ring entry (Size of pointer - 64-bit) */
-#define UDMA_RING_ENTRY_SIZE       (sizeof(uint64_t))
+#define MCASP_UDMA_RING_ENTRY_SIZE       (sizeof(uint64_t))
 
-/* Total ring memory */
-#define UDMA_RING_MEM_SIZE         (UDMA_RING_ENTRIES * UDMA_RING_ENTRY_SIZE)
+#define MCASP_RING_MEM_SIZE_TX           (MCASP_UDMA_RING_ENTRY_SIZE*UDMA_RING_ENTRIES_TX)
+#define MCASP_RING_MEM_SIZE_RX           (MCASP_UDMA_RING_ENTRY_SIZE*UDMA_RING_ENTRIES_RX)
 
-/* UDMA TR15 packet descriptor memory size for one TR */
-#define UDMA_TR15_TRPD_SIZE         (UDMA_GET_TRPD_TR15_SIZE(1U))
+#if defined (MCASP_TX_EVENT_TYPE_L2G)
+#define MCASP_UDMA_TR15_TRPD_SIZE_TX        (UDMA_GET_TRPD_TR15_SIZE(MCASP_TX_DMA_TR_COUNT))
+#else
+#define MCASP_UDMA_TR3_TRPD_SIZE_TX         (UDMA_GET_TRPD_TR3_SIZE(MCASP_TX_DMA_TR_COUNT))
+#endif
+
+#define MCASP_UDMA_TR3_TRPD_SIZE_RX         (UDMA_GET_TRPD_TR3_SIZE(MCASP_RX_DMA_TR_COUNT))
         % break;
-    % }
-% }
-
-% for(let i = 0; i < module.$instances.length; i++) {
-    % let instance = module.$instances[i];
-    % if(instance.transferMode == "DMA") {
-#define MCASP`i`_TX_TRPD_SIZE (UDMA_GET_TRPD_TR15_SIZE(`instance.txCyclicBufCnt`U))
-#define MCASP`i`_RX_TRPD_SIZE (UDMA_GET_TRPD_TR15_SIZE(`instance.rxCyclicBufCnt`U))
-    % }
-% }
-
-% for(let i = 0; i < module.$instances.length; i++) {
-    % let instance = module.$instances[i];
-    % if(instance.transferMode == "DMA") {
-uint8_t gMcasp`i`_TxCyclicBuff[MCASP`i`_CYCLIC_BUFF_COUNT_TX][MCASP`i`_CYCLIC_BUFF_SIZE_TX] \
-                                        __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
-uint8_t gMcasp`i`_RxCyclicBuff[MCASP`i`_CYCLIC_BUFF_COUNT_RX][MCASP`i`_CYCLIC_BUFF_SIZE_RX] \
-                                        __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
-
-/* TRPDs used for feeding in data to the Cyclic buffer */
-uint8_t gMcasp`i`_TrpdMemTx[MCASP`i`_CYCLIC_BUFF_COUNT_TX][UDMA_TR15_TRPD_SIZE];
-uint8_t gMcasp`i`_TrpdMemRx[MCASP`i`_CYCLIC_BUFF_COUNT_RX][UDMA_TR15_TRPD_SIZE];
-
-    % }
-% }
-
-% for(let i = 0; i < module.$instances.length; i++) {
-    % let instance = module.$instances[i];
-    % if(instance.transferMode == "DMA") {
-MCASP_DmaTrpdMemAlloc gMcasp`i`_TrpdMemAllocTx[MCASP`i`_CYCLIC_BUFF_COUNT_TX + 1] =
-{
-    % for(let j = 0; j < instance.txCyclicBufCnt; j++) {
-    {
-        .pTrpdMem = &gMcasp`i`_TrpdMemTx[`j`][0],
-        .inUse = 0,
-    },
-    % }
-    {
-        .pTrpdMem = (uint8_t *)MCASP_TRPD_INVALID_PTR,
-        .inUse = 0,
-    },
-};
-
-MCASP_DmaTrpdMemAlloc gMcasp`i`_TrpdMemAllocRx[MCASP`i`_CYCLIC_BUFF_COUNT_RX + 1] =
-{
-    % for(let j = 0; j < instance.rxCyclicBufCnt; j++) {
-    {
-        .pTrpdMem = &gMcasp`i`_TrpdMemRx[`j`][0],
-        .inUse = 0,
-    },
-    % }
-    {
-        .pTrpdMem = (uint8_t *)MCASP_TRPD_INVALID_PTR,
-        .inUse = 0,
-    },
-};
-
     % }
 % }
 
@@ -147,11 +101,19 @@ Udma_EventObject    gMcasp`i`_UdmaCqEventObjTx;
 Udma_ChObject       gMcasp`i`UdmaRxChObj;
 Udma_EventObject    gMcasp`i`_UdmaCqEventObjRx;
 
-static uint8_t gMcasp`i`UdmaTxTrpdMem[MCASP`i`_TX_TRPD_SIZE] __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
-static uint8_t gMcasp`i`UdmaRxTrpdMem[MCASP`i`_RX_TRPD_SIZE] __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
+#if defined (MCASP_TX_EVENT_TYPE_L2G)
+uint8_t gMcasp`i`UdmaTxTrpdMem[MCASP_UDMA_TR15_TRPD_SIZE_TX*MCASP_TX_DMA_RING_ELEM_CNT] __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
+#else
+uint8_t gMcasp`i`UdmaTxTrpdMem[MCASP_UDMA_TR3_TRPD_SIZE_TX*MCASP_TX_DMA_RING_ELEM_CNT] __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
+#endif
 
-static uint8_t gMcasp`i`TxFqRingMem[UDMA_ALIGN_SIZE(UDMA_RING_MEM_SIZE)] __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
-static uint8_t gMcasp`i`RxFqRingMem[UDMA_ALIGN_SIZE(UDMA_RING_MEM_SIZE)] __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
+uint8_t gMcasp`i`UdmaRxTrpdMem[MCASP_UDMA_TR3_TRPD_SIZE_RX*MCASP_RX_DMA_RING_ELEM_CNT] __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
+
+static uint8_t gMcasp`i`TxFqRingMem[UDMA_ALIGN_SIZE(MCASP_RING_MEM_SIZE_TX)] __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
+static uint8_t gMcasp`i`RxFqRingMem[UDMA_ALIGN_SIZE(MCASP_RING_MEM_SIZE_RX)] __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
+
+static MCASP_Transaction *gMcasp`i`TxCbParam[MCASP_TX_DMA_TR_COUNT];
+static MCASP_Transaction *gMcasp`i`RxCbParam[MCASP_RX_DMA_TR_COUNT];
 
 MCASP_DmaChConfig gMcasp`i`_DmaChCfg[] =
 {
@@ -164,8 +126,8 @@ MCASP_DmaChConfig gMcasp`i`_DmaChCfg[] =
         .rxTrpdMem          = gMcasp`i`UdmaRxTrpdMem,
         .txRingMem          = gMcasp`i`TxFqRingMem,
         .rxRingMem          = gMcasp`i`RxFqRingMem,
-        .ringMemSize        = UDMA_RING_MEM_SIZE,
-        .ringElemCnt        = UDMA_RING_ENTRIES,
+        .txCbParams         = gMcasp`i`TxCbParam,
+        .rxCbParams         = gMcasp`i`RxCbParam,
         .rxEvtNum           = `config.udmaPdmaChannels[0].rxCh`,
         .txEvtNum           = `config.udmaPdmaChannels[0].txCh`,
     }
@@ -213,45 +175,292 @@ MCASP_OpenParams gMcaspOpenParams[CONFIG_MCASP_NUM_INSTANCES] =
         .txLoopjobEnable = `config.txLoopjobEnable`,
         % if(config.enableMcaspTx == true && config.txLoopjobEnable == true) {
         .txLoopjobBuf = (uint8_t *) `instance.txLoopjobBuf`,
-        .txLoopjobBufLength = `instance.txLoopjobBufLength / (instance.TxSlotSize / 8)`,
+        .txLoopjobBufLength = `instance.txLoopjobBufLength / 4`,
         .rxLoopjobEnable = `config.rxLoopjobEnable`,
         % }
         % if(config.enableMcaspRx == true && config.rxLoopjobEnable == true) {
         .rxLoopjobBuf = (uint8_t *) `instance.rxLoopjobBuf`,
-        .rxLoopjobBufLength = `instance.rxLoopjobBufLength / (instance.RxSlotSize / 8)`,
+        .rxLoopjobBufLength = `instance.rxLoopjobBufLength / 4`,
         % }
         % if(config.transferMode == "DMA") {
-        .bcdmaTxCqEvtHandle = &gBcdmaTxCqEventObj,
-        .bcdmaRxCqEvtHandle = &gBcdmaRxCqEventObj,
-        .bcdmaDrvHandle = &gUdmaDrvObj[0],
-
-        .cyclicBuffTx = (uint8_t *)gMcasp`i`_TxCyclicBuff,
-        .cyclicBuffRx = (uint8_t *)gMcasp`i`_RxCyclicBuff,
-
-        .cyclicBuffSizeTx = MCASP`i`_CYCLIC_BUFF_SIZE_TX,
-        .cyclicBuffCntTx = MCASP`i`_CYCLIC_BUFF_COUNT_TX,
-
-        .cyclicBuffSizeRx = MCASP`i`_CYCLIC_BUFF_SIZE_RX,
-        .cyclicBuffCntRx = MCASP`i`_CYCLIC_BUFF_COUNT_RX,
-
-        .cyclicTxFeedDMAHandle = &gConfigUdma0BlkCopyChHandle[0],
-        .cyclicRxFeedDMAHandle = &gConfigUdma0BlkCopyChHandle[1],
-
-        .trpdMemAllocTx = gMcasp`i`_TrpdMemAllocTx,
-        .trpdMemAllocRx = gMcasp`i`_TrpdMemAllocRx,
-
         .dmaChCfg = &gMcasp`i`_DmaChCfg[0],
-        .mcaspDmaDrvObj = &gUdmaDrvObj[0],
+        .mcaspDmaDrvObj = &gUdmaDrvObj[`mcaspBcdmaInstances[i].$name`],
+
+        % }
+        % if(config.skipDriverOpen == true) {
+        .skipDriverOpen = 1,
+        % } else {
+        .skipDriverOpen = 0,
         % }
     },
     %}
 };
 
+%%{
+    let clocking = system.getScript("/drivers/mcasp/v1/mcasp_clocking/mcasp_clocking.js");
+%%}
 
+#define MCASP_AUXCLK_CLK_MUX        (0U)
+#define MCASP_AUXCLK_CLK_SOURCE_MUX (1U)
+
+typedef struct Mcasp_AuxClkConfig_s
+{
+    uint32_t tisciClock;
+    uint32_t tisciDevice;
+    uint32_t type;
+    uint8_t isConfigurable;
+    uint32_t option;
+    uint64_t freq;
+} Mcasp_AuxClkConfig;
+
+Mcasp_AuxClkConfig gMcaspAuxClkConfig[] = {
+% for(let i = 0; i < module.$instances.length; i++) {
+    % let instance = module.$instances[i];
+
+    % let auxClkCfg = clocking.getTisciClockCfgList(instance, clocking.getConfigTree());
+    % for (let j = 0; j < auxClkCfg.length; j++) {
+    {
+        .tisciDevice = `auxClkCfg[j].tisciDevice`,
+        .tisciClock = `auxClkCfg[j].tisciClock`,
+        % if(auxClkCfg[j].type == "clk_mux") {
+        .type = MCASP_AUXCLK_CLK_MUX,
+        % } else if (auxClkCfg[j].type == "clk_source_mux") {
+        .type = MCASP_AUXCLK_CLK_SOURCE_MUX,
+        % }
+        % if(auxClkCfg[j].isConfigurable) {
+        .isConfigurable = 1U,
+        % } else {
+        .isConfigurable = 0U,
+        % }
+        % if (auxClkCfg[j].type == "clk_source_mux") {
+        .freq = `auxClkCfg[j].freq`,
+        % }
+        % if(common.isSciClientSupported() ==  true) {
+        .option = `auxClkCfg[j].option`,
+        % } else {
+        .option = `auxClkCfg[j].name`,
+        % }
+    },
+    % }
+% }
+};
+
+% if(common.isSciClientSupported() ==  true) {
+int32_t Drivers_mcaspAuxClkCfg()
+{
+    int32_t status = 0;
+    uint32_t iter = 0;
+    uint32_t numParents;
+    uint32_t origParent;
+    uint64_t respClkRate;
+    uint8_t clkParentChanged = 0U;
+
+    for(iter = 0; iter < sizeof(gMcaspAuxClkConfig)/sizeof(Mcasp_AuxClkConfig); iter++)
+    {
+        clkParentChanged= 0U;
+
+        /* Get number of parent clock */
+        status = Sciclient_pmGetModuleClkNumParent(gMcaspAuxClkConfig[iter].tisciDevice,
+                                    gMcaspAuxClkConfig[iter].tisciClock, &numParents,
+                                    SystemP_WAIT_FOREVER);
+        if(status == SystemP_FAILURE)
+        {
+            break;
+        }
+
+        /* Save original parent to restore later */
+        status = Sciclient_pmGetModuleClkParent(gMcaspAuxClkConfig[iter].tisciDevice,
+                                    gMcaspAuxClkConfig[iter].tisciClock,
+                                    &origParent,
+                                    SystemP_WAIT_FOREVER);
+        if(status == SystemP_FAILURE)
+        {
+            break;
+        }
+
+        /* Check if number of option to set is valid and set clock mux */
+        if((numParents > 0) && (numParents >= gMcaspAuxClkConfig[iter].option))
+        {
+            status = Sciclient_pmSetModuleClkParent(gMcaspAuxClkConfig[iter].tisciDevice,
+                                    gMcaspAuxClkConfig[iter].tisciClock,
+                                    gMcaspAuxClkConfig[iter].option,
+                                    SystemP_WAIT_FOREVER);
+            if(status == SystemP_FAILURE)
+            {
+                break;
+            }
+            else
+            {
+                clkParentChanged = 1U;
+            }
+        }
+        else
+        {
+            DebugP_log("Invalid option %d \r\n",gMcaspAuxClkConfig[iter].option);
+            status = SystemP_FAILURE;
+            break;
+        }
+
+        if((gMcaspAuxClkConfig[iter].type == MCASP_AUXCLK_CLK_SOURCE_MUX) && (gMcaspAuxClkConfig[iter].isConfigurable == 1))
+        {
+            /* Check if the clock can be set to desired freq at this parent */
+            status = Sciclient_pmQueryModuleClkFreq(gMcaspAuxClkConfig[iter].tisciDevice,
+                                    gMcaspAuxClkConfig[iter].tisciClock,
+                                    gMcaspAuxClkConfig[iter].freq,
+                                    &respClkRate, SystemP_WAIT_FOREVER);
+            if(status == SystemP_SUCCESS)
+            {
+                if(respClkRate != gMcaspAuxClkConfig[iter].freq)
+                {
+                    status = SystemP_FAILURE;
+                    break;
+                }
+                else
+                {
+                    /* Disable the clock before changing the frequency */
+                    status = Sciclient_pmModuleClkRequest(gMcaspAuxClkConfig[iter].tisciDevice,
+                                              gMcaspAuxClkConfig[iter].tisciClock,
+                                              TISCI_MSG_VALUE_CLOCK_SW_STATE_UNREQ,
+                                              0U,
+                                              SystemP_WAIT_FOREVER);
+                    if(status != SystemP_SUCCESS)
+                    {
+                        break;
+                    }
+
+                    /* Set clock freq */
+                    status = Sciclient_pmSetModuleClkFreq(gMcaspAuxClkConfig[iter].tisciDevice,
+                                        gMcaspAuxClkConfig[iter].tisciClock,
+                                        gMcaspAuxClkConfig[iter].freq,
+                                        TISCI_MSG_FLAG_CLOCK_ALLOW_FREQ_CHANGE,
+                                        SystemP_WAIT_FOREVER);
+                    if(status != SystemP_SUCCESS)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if(status != SystemP_SUCCESS)
+    {
+        if(clkParentChanged == 1U)
+        {
+            /* Restore original parent */
+            status += Sciclient_pmSetModuleClkParent(gMcaspAuxClkConfig[iter].tisciDevice,
+                                gMcaspAuxClkConfig[iter].tisciClock,
+                                origParent,
+                                SystemP_WAIT_FOREVER);
+        }
+    }
+
+    return status;
+}
+
+% }
+
+% if(common.isSCMIClientSupported() == true) {
+int32_t Drivers_mcaspAuxClkCfg()
+{
+    int32_t status = 0;
+    uint32_t iter = 0;
+    uint32_t numParents;
+    uint32_t origParent;
+    uint64_t setClkFreq;
+    uint8_t clkParentChanged = 0U;
+    uint32_t possibleParents[SCMI_CLK_POSSIBLE_PARENTS_MASK];
+
+    SCMI_Handle handle = SCMI_getHandle(SCMI_getInitDriverIndex());
+
+    for(iter = 0; iter < sizeof(gMcaspAuxClkConfig)/sizeof(Mcasp_AuxClkConfig); iter++)
+    {
+        clkParentChanged= 0U;
+
+        /* Get number of parent clock */
+        status = SCMI_clockGetPossibleParents(handle,
+                                                gMcaspAuxClkConfig[iter].tisciClock,
+                                                &numParents,
+                                                possibleParents);
+        if(status == SystemP_FAILURE)
+        {
+            break;
+        }
+
+        /* Save original parent to restore later */
+        status = SCMI_clockParentGet(handle,
+                                    gMcaspAuxClkConfig[iter].tisciClock,
+                                    &origParent);
+        if(status == SystemP_FAILURE)
+        {
+            break;
+        }
+
+        /* Check if number of option to set is valid and set clock mux */
+        if((numParents > 0) && (numParents >= gMcaspAuxClkConfig[iter].option))
+        {
+            status = SCMI_clockParentSet(handle, gMcaspAuxClkConfig[iter].tisciClock,
+                                    gMcaspAuxClkConfig[iter].option);
+
+            if(status == SystemP_FAILURE)
+            {
+                break;
+            }
+            else
+            {
+                clkParentChanged = 1U;
+            }
+        }
+        else
+        {
+            DebugP_log("Invalid option %d \r\n",gMcaspAuxClkConfig[iter].option);
+            status = SystemP_FAILURE;
+            break;
+        }
+
+        if((gMcaspAuxClkConfig[iter].type == MCASP_AUXCLK_CLK_SOURCE_MUX) && (gMcaspAuxClkConfig[iter].isConfigurable == 1))
+        {
+            status = SCMI_clockRateSet(handle, gMcaspAuxClkConfig[iter].tisciClock,
+                                        gMcaspAuxClkConfig[iter].freq);
+
+            if(status == SystemP_SUCCESS)
+            {
+
+                status = SCMI_clockRateGet(handle, gMcaspAuxClkConfig[iter].tisciClock,
+                                                &setClkFreq);
+
+                if(status == SystemP_SUCCESS)
+                {
+                    if(setClkFreq != gMcaspAuxClkConfig[iter].freq)
+                    {
+                        status = SystemP_FAILURE;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if(status != SystemP_SUCCESS)
+    {
+        if(clkParentChanged == 1U)
+        {
+            status += SCMI_clockParentSet(handle, gMcaspAuxClkConfig[iter].tisciClock,
+                                    origParent);
+        }
+    }
+
+    return status;
+}
+% }
 void Drivers_mcaspOpen(void)
 {
     uint32_t instCnt;
     int32_t  status = SystemP_SUCCESS;
+
+    /* Config AuxClks for MCASP */
+    status = Drivers_mcaspAuxClkCfg();
+    DebugP_assert(SystemP_SUCCESS == status);
 
     for(instCnt = 0U; instCnt < CONFIG_MCASP_NUM_INSTANCES; instCnt++)
     {
@@ -261,12 +470,15 @@ void Drivers_mcaspOpen(void)
     /* Open all instances */
     for(instCnt = 0U; instCnt < CONFIG_MCASP_NUM_INSTANCES; instCnt++)
     {
-        gMcaspHandle[instCnt] = MCASP_open(instCnt, &gMcaspOpenParams[instCnt]);
-        if(NULL == gMcaspHandle[instCnt])
+        if(!gMcaspOpenParams[instCnt].skipDriverOpen)
         {
-            DebugP_logError("MCASP open failed for instance %d !!!\r\n", instCnt);
-            status = SystemP_FAILURE;
-            break;
+            gMcaspHandle[instCnt] = MCASP_open(instCnt, &gMcaspOpenParams[instCnt]);
+            if(NULL == gMcaspHandle[instCnt])
+            {
+                DebugP_logError("MCASP open failed for instance %d !!!\r\n", instCnt);
+                status = SystemP_FAILURE;
+                break;
+            }
         }
     }
 
@@ -281,7 +493,6 @@ void Drivers_mcaspOpen(void)
 void Drivers_mcaspClose(void)
 {
     uint32_t instCnt;
-    int32_t status;
 
     /* Close all instances that are open */
     for(instCnt = 0U; instCnt < CONFIG_MCASP_NUM_INSTANCES; instCnt++)
@@ -289,30 +500,6 @@ void Drivers_mcaspClose(void)
         if(gMcaspHandle[instCnt] != NULL)
         {
             MCASP_close(gMcaspHandle[instCnt]);
-        }
-    }
-
-    /* BCDMA for feeding in and out the cyclic buffer is shared across instances.\
-       So deregister the event once */
-    for(instCnt = 0U; instCnt < CONFIG_MCASP_NUM_INSTANCES; instCnt++)
-    {
-        if(gMcaspHandle[instCnt] != NULL)
-        {
-            MCASP_Object *obj = ((MCASP_Config *)gMcaspHandle[instCnt])->object;
-
-            if(obj->isTxCyclicEventReg)
-            {
-                status = Udma_eventUnRegister(obj->bcdmaTxCyclicEvtHandle);
-                DebugP_assert(SystemP_SUCCESS == status);
-            }
-
-            if(obj->isRxCyclicEventReg)
-            {
-                status = Udma_eventUnRegister(obj->bcdmaRxCyclicEvtHandle);
-                DebugP_assert(SystemP_SUCCESS == status);
-            }
-
-            break;
         }
     }
 
@@ -326,3 +513,4 @@ void Drivers_mcaspClose(void)
 
     return;
 }
+

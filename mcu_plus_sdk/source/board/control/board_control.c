@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023-2025 Texas Instruments Incorporated
+ *  Copyright (C) 2023-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -45,14 +45,14 @@
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
+#define BOARD_CSI_IOEXP_ADDR                (0x23)
+#define BOARD_CSI_IOEXP_PIN_NUM             (0x0)
+#define I2C_TRANSACTION_TIMEOUT             (2000U)
+#define BOARD_DSI2DP_IOEXP_ADDR             (0x20U)
+#define BOARD_DSI2DP_IOEXP_PIN_NUM          (0x1U)
 #define BOARD_HDMI_IOEXP_ADDR               (0x20U)
 #define BOARD_HDMI_IOEXP_PIN_IND            (0x4U)
 #define BOARD_HDMI_LS_OE_IND                (0x5U)
-#define BOARD_CSI_IOEXP_ADDR                (0x23U)
-#define BOARD_CSI_IOEXP_PIN_NUM             (0x0U)
-#define BOARD_CSI01_MUX_SEL_2               (0x6U)
-#define BOARD_DSI2DP_IOEXP_ADDR             (0x20U)
-#define BOARD_DSI2DP_IOEXP_PIN_NUM          (0x1U)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -181,10 +181,34 @@ uint8_t gI2cDsiBridgeCfg1080p[][2] = {
 };
 
 static TCA6416_Config gTCA6416BrdCtrlConfig;
-static TCA6424_Config gTCA6424BrdCtrlCfg;
+static TCA6424_Config gTCA6424CsiCfg;
+
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */
+
+int32_t Board_enableCSII2c(uint32_t i2cInstance)
+{
+    int32_t status = SystemP_SUCCESS;
+    TCA6424_Params tca6424Params;
+
+    TCA6424_Params_init(&tca6424Params);
+    tca6424Params.i2cInstance = i2cInstance;
+    tca6424Params.i2cAddress = BOARD_CSI_IOEXP_ADDR;
+
+    status = TCA6424_open(&gTCA6424CsiCfg, &tca6424Params);
+    if(status == SystemP_SUCCESS)
+    {
+        status += TCA6424_config(&gTCA6424CsiCfg,
+                     BOARD_CSI_IOEXP_PIN_NUM,
+                     TCA6424_MODE_OUTPUT);
+        status += TCA6424_setOutput(&gTCA6424CsiCfg,
+                        BOARD_CSI_IOEXP_PIN_NUM,
+                        TCA6424_OUT_STATE_LOW);
+    }
+
+    return status;
+}
 
 static int32_t Board_enableDSI2EDPBridge(uint32_t i2cInstance)
 {
@@ -250,50 +274,6 @@ static int32_t Board_enableHdmi(BOARD_HdmiCfg_t *hdmiCfg)
     }
 
     return status;
-}
-
-
-int32_t Board_enableCSII2c(uint32_t i2cInstance)
-{
-
-	int32_t status = SystemP_SUCCESS;
-	TCA6424_Params tca6424Params;
-
-	TCA6424_Params_init(&tca6424Params);
-	tca6424Params.i2cInstance = i2cInstance;
-	tca6424Params.i2cAddress = BOARD_CSI_IOEXP_ADDR;
-
-	status = TCA6424_open(&gTCA6424BrdCtrlCfg, &tca6424Params);
-	if(status == SystemP_SUCCESS)
-	{
-        /* 
-         * For J7AEN, Configure P00 TRC_MUX_SEL to be output and 
-         * set value to '0' for User Expansion 
-         */
-		status += TCA6424_config(&gTCA6424BrdCtrlCfg,
-					 BOARD_CSI_IOEXP_PIN_NUM,
-					 TCA6424_MODE_OUTPUT);
-		status += TCA6424_setOutput(&gTCA6424BrdCtrlCfg,
-					    BOARD_CSI_IOEXP_PIN_NUM,
-					    TCA6424_OUT_STATE_LOW);
-
-        /*
-         * For J7AEN, Configure P06 CSI01_MUX_SEL_2 to be output
-         * and set value to '0' to establish connection between
-         * CSI Instance 0 and 1 to CSI2_A Expansion Connector in
-         * channel 0 of TCA9543APWR Switch 1.
-         */
-		status += TCA6424_config(&gTCA6424BrdCtrlCfg,
-                    BOARD_CSI01_MUX_SEL_2,
-                    TCA6424_MODE_OUTPUT);
-		status += TCA6424_setOutput(&gTCA6424BrdCtrlCfg,
-                    BOARD_CSI01_MUX_SEL_2,
-                    TCA6424_OUT_STATE_LOW);
-
-        TCA6424_close(&gTCA6424BrdCtrlCfg);
-	}
-
-	return status;
 }
 
 /**
@@ -428,7 +408,7 @@ static int32_t Board_configHdmi(BOARD_HdmiCfg_t *hdmiCfg)
 
         /* Override with required transaction parameters */
         i2cTransaction.writeCount   = 2U;
-        i2cTransaction.slaveAddress = BOARD_CTRL_HDMI_I2C_ADDR;
+        i2cTransaction.targetAddress = BOARD_CTRL_HDMI_I2C_ADDR;
 
         for(index = 0; index < hdmiCfgSize; index++)
         {
@@ -445,9 +425,8 @@ static int32_t Board_configHdmi(BOARD_HdmiCfg_t *hdmiCfg)
     return (status);
 }
 
-
 void Board_fpdUb960GetI2CAddr(uint8_t *i2cAddr,
-                             uint32_t csiInst)
+                              uint32_t csiInst)
 {
     if (csiInst == 0)
     {
@@ -481,11 +460,11 @@ void Board_fpdUb9702GetI2CAddr(uint8_t *i2cAddr,
 }
 
 int32_t Board_i2c8BitRegWr(void *handle,
-                                uint32_t slaveAddr,
-                                uint8_t regAddr,
-                                uint8_t *regData,
-                                uint8_t numOfBytes,
-                                uint32_t i2cTimeout)
+                           uint32_t slaveAddr,
+                           uint8_t regAddr,
+                           uint8_t *regData,
+                           uint8_t numOfBytes,
+                           uint32_t i2cTimeout)
 {
     uint8_t tx[5];
     uint8_t *txPtr = NULL;
@@ -498,11 +477,12 @@ int32_t Board_i2c8BitRegWr(void *handle,
     /* Initializes the I2C transaction structure with default values */
     I2C_Transaction_init(&transaction);
 
-    transaction.slaveAddress = slaveAddr;
+    transaction.targetAddress = slaveAddr;
     transaction.writeBuf     = &tx[0];
     transaction.writeCount   = 2;
     transaction.readBuf      = NULL;
     transaction.readCount    = 0;
+    transaction.timeout      = i2cTimeout;
 
     tx[0] = regAddr;
     txPtr = &tx[1];
@@ -516,15 +496,16 @@ int32_t Board_i2c8BitRegWr(void *handle,
     }
 
     status = I2C_transfer(i2cHandle, &transaction);
+
     return status;
 }
 
 int32_t Board_i2c8BitRegRd(void *handle,
-                                uint32_t slaveAddr,
-                                uint8_t regAddr,
-                                uint8_t *regData,
-                                uint8_t numOfBytes,
-                                uint32_t i2cTimeout)
+                           uint32_t slaveAddr,
+                           uint8_t regAddr,
+                           uint8_t *regData,
+                           uint8_t numOfBytes,
+                           uint32_t i2cTimeout)
 {
     uint8_t tx[5];
     int32_t status=0;
@@ -536,23 +517,25 @@ int32_t Board_i2c8BitRegRd(void *handle,
     /* Initializes the I2C transaction structure with default values */
     I2C_Transaction_init(&transaction);
 
-    transaction.slaveAddress = slaveAddr;
+    transaction.targetAddress = slaveAddr;
     transaction.writeBuf     = &tx[0];
     transaction.writeCount   = 1;
     transaction.readBuf      = &tx[1];
     transaction.readCount    = 1;
+    transaction.timeout      = i2cTimeout;
 
     tx[0] = regAddr;
 
     status = I2C_transfer(i2cHandle, &transaction);
     *regData     = tx[1];
+
     return status;
 }
 
 int32_t Board_i2c8BitRegWrSingle(void *handle,
-                                uint32_t slaveAddr,
-                                uint8_t *regData,
-                                uint32_t i2cTimeout)
+                                 uint32_t slaveAddr,
+                                 uint8_t *regData,
+                                 uint32_t i2cTimeout)
 {
     uint8_t tx[5];
     int32_t status=0;
@@ -564,22 +547,24 @@ int32_t Board_i2c8BitRegWrSingle(void *handle,
     /* Initializes the I2C transaction structure with default values */
     I2C_Transaction_init(&transaction);
 
-    transaction.slaveAddress = slaveAddr;
+    transaction.targetAddress = slaveAddr;
     transaction.writeBuf     = &tx[0];
     transaction.writeCount   = 1;
     transaction.readBuf      = NULL;
     transaction.readCount    = 0;
+    transaction.timeout      = i2cTimeout;
 
     tx[0] = *regData;
 
     status = I2C_transfer(i2cHandle, &transaction);
+
     return status;
 }
 
 int32_t Board_i2c8BitRegRdSingle(void *handle,
-                                uint32_t slaveAddr,
-                                uint8_t *regData,
-                                uint32_t i2cTimeout)
+                                 uint32_t slaveAddr,
+                                 uint8_t *regData,
+                                 uint32_t i2cTimeout)
 {
     uint8_t tx[5];
     int32_t status=0;
@@ -591,24 +576,26 @@ int32_t Board_i2c8BitRegRdSingle(void *handle,
     /* Initializes the I2C transaction structure with default values */
     I2C_Transaction_init(&transaction);
 
-    transaction.slaveAddress = slaveAddr;
+    transaction.targetAddress = slaveAddr;
     transaction.writeBuf     = NULL;
     transaction.writeCount   = 0;
     transaction.readBuf      = &tx[0];
     transaction.readCount    = 1;
+    transaction.timeout      = i2cTimeout;
 
     status = I2C_transfer(i2cHandle, &transaction);
     *regData = tx[0];
+
     return status;
 }
 
 int32_t Board_i2c16BitRegWr(void *handle,
-                                 uint32_t slaveAddr,
-                                 uint16_t regAddr,
-                                 uint8_t *regData,
-                                 uint8_t numOfBytes,
-                                 uint8_t byteOrdSel,
-                                 uint32_t i2cTimeout)
+                            uint32_t slaveAddr,
+                            uint16_t regAddr,
+                            uint8_t *regData,
+                            uint8_t numOfBytes,
+                            uint8_t byteOrdSel,
+                            uint32_t i2cTimeout)
 {
     uint8_t tx[6];
     uint8_t *txPtr = NULL;
@@ -616,37 +603,37 @@ int32_t Board_i2c16BitRegWr(void *handle,
 
     I2C_Transaction transaction;
 
+    I2C_Handle i2cHandle = (I2C_Handle)handle;
 
-        I2C_Handle i2cHandle = (I2C_Handle)handle;
+    /* Initializes the I2C transaction structure with default values */
+    I2C_Transaction_init(&transaction);
 
-        /* Initializes the I2C transaction structure with default values */
-        I2C_Transaction_init(&transaction);
+    transaction.targetAddress = slaveAddr;
+    transaction.writeBuf     = &tx[0];
+    transaction.writeCount   = (numOfBytes + 2);
+    transaction.readBuf      = NULL;
+    transaction.readCount    = 0;
+    transaction.timeout      = i2cTimeout;
 
-        transaction.slaveAddress = slaveAddr;
-        transaction.writeBuf     = &tx[0];
-        transaction.writeCount   = (numOfBytes + 2);
-        transaction.readBuf      = NULL;
-        transaction.readCount    = 0;
+    /* 16-bit regAddr data to be sent */
+    {
+        tx[0] = (uint8_t)((regAddr & 0xFF00) >> 8);
+        tx[1] = (uint8_t)(regAddr & 0x00FF);
+    }
 
-        /* 16-bit regAddr data to be sent */
-        {
-            tx[0] = (uint8_t)((regAddr & 0xFF00) >> 8);
-            tx[1] = (uint8_t)(regAddr & 0x00FF);
-        }
+    txPtr = &tx[2];
+    /* regData to be sent */
+    while(numOfBytes)
+    {
+        *txPtr = *regData;
+        txPtr++;
+        regData++;
+        numOfBytes--;
+    }
 
-        txPtr = &tx[2];
-        /* regData to be sent */
-        while(numOfBytes)
-        {
-            *txPtr = *regData;
-            txPtr++;
-            regData++;
-            numOfBytes--;
-        }
+    status =   I2C_transfer(i2cHandle, &transaction);
 
-      status =   I2C_transfer(i2cHandle, &transaction);
-      return status;
-
+    return status;
 }
 
 int32_t Board_i2c16BitRegRd(void   *handle,
@@ -666,7 +653,7 @@ int32_t Board_i2c16BitRegRd(void   *handle,
     /* Initializes the I2C transaction structure with default values */
     I2C_Transaction_init(&transaction);
 
-    transaction.slaveAddress = slaveAddr;
+    transaction.targetAddress = slaveAddr;
     transaction.writeBuf     = &tx[0];
     transaction.writeCount   = 2;
     transaction.readBuf      = NULL;
@@ -690,23 +677,23 @@ int32_t Board_i2c16BitRegRd(void   *handle,
     {
         DebugP_log("Failing while transmitting the rd reg addr with error code - %d\n", ret);
         ret = -1;
-        return ret;
     }
 
-    transaction.writeBuf     = NULL;
-    transaction.writeCount   = 0;
-    transaction.readBuf      = regData;
-    transaction.readCount    = numOfBytes;
-
-    ret = I2C_transfer(i2cHandle, &transaction);
-    if(ret != I2C_STS_SUCCESS)
+    if (ret == I2C_STS_SUCCESS)
     {
-        DebugP_log("Failing while reading the register data by returning - %d\n", ret);
-        ret = -1;
-        return ret;
-    }
+        transaction.writeBuf     = NULL;
+        transaction.writeCount   = 0;
+        transaction.readBuf      = regData;
+        transaction.readCount    = numOfBytes;
 
-    return 0;
+        ret = I2C_transfer(i2cHandle, &transaction);
+        if(ret != I2C_STS_SUCCESS)
+        {
+            DebugP_log("Failing while reading the register data by returning - %d\n", ret);
+            ret = -1;
+        }
+    }
+    return ret;
 }
 
 void Board_DSIBridgeErrorRegRead(I2C_Handle i2cHandle)
@@ -760,4 +747,3 @@ int32_t Board_control(uint32_t cmd, void *arg)
 
     return (status);
 }
-

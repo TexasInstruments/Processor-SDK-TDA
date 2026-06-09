@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2023 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -63,12 +63,12 @@ extern "C"
 
 #define configUSE_PREEMPTION					(1)
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION	(0)
-#define configNUM_CORES                         (2)
+#define configNUMBER_OF_CORES                   (4)
 #define configRUN_MULTIPLE_PRIORITIES           (1)
 #define configUSE_CORE_AFFINITY                 (1)
 #define configUSE_TICKLESS_IDLE                 (0)
 #define configUSE_IDLE_HOOK                     (1)  /* when 1, make sure to implement void vApplicationIdleHook(void) as the hook function */
-#define configUSE_MINIMAL_IDLE_HOOK             (1)  /* when 1, make sure to implement void vApplicationMinimalIdleHook(void) as the hook function */
+#define configUSE_PASSIVE_IDLE_HOOK             (1)  /* when 1, make sure to implement void vApplicationPassiveIdleHook(void) as the hook function */
 #define configUSE_MALLOC_FAILED_HOOK            (0)
 #define configUSE_DAEMON_TASK_STARTUP_HOOK      (0)
 #define configUSE_TICK_HOOK                     (0)
@@ -114,11 +114,15 @@ extern "C"
                                                      *
                                                      * void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer,
                                                      *      StackType_t **ppxTimerTaskStackBuffer,
-                                                     *      uint32_t *pulTimerTaskStackSize );
+                                                     *      configSTACK_DEPTH_TYPE *pulTimerTaskStackSize );
                                                      *
                                                      * void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
                                                      *      StackType_t **ppxIdleTaskStackBuffer,
-                                                     *      uint32_t *pulIdleTaskStackSize );
+                                                     *      configSTACK_DEPTH_TYPE *pulIdleTaskStackSize );
+                                                     * void vApplicationGetPassiveIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer,
+                                                     *      StackType_t ** ppxIdleTaskStackBuffer,
+                                                     *      configSTACK_DEPTH_TYPE * puxIdleTaskStackSize,
+                                                     *      BaseType_t xPassiveIdleTaskIndex )
                                                      */
 #define configSUPPORT_DYNAMIC_ALLOCATION        (1)
 #define configTOTAL_HEAP_SIZE                   (0xF80000) /* not used when heap_3.c is the selected heap */
@@ -173,6 +177,10 @@ uint32_t uiPortGetRunTimeCounterValue();
 #define INCLUDE_vSemaphoreDelete        (1)
 #define INCLUDE_xTimerPendFunctionCall  (1)
 #define INCLUDE_xTaskGetIdleTaskHandle  (1)
+#define INCLUDE_xSemaphoreGetMutexHolder (1)
+
+/* FPU support mode: 1 = manual (call vPortTaskUsesFPU), 2 = automatic (all tasks) */
+#define configUSE_TASK_FPU_SUPPORT              (2)
 
 #ifdef __cplusplus
 }

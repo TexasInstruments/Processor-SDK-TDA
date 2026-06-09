@@ -29,6 +29,10 @@ LINUX_FS_STAGE_PATH?=/tmp/tivision_apps_targetfs_stage
 #	  tispl.bin and u-boot.img files.
 LINUX_BOOTFS_STAGE_PATH?=/tmp/tivision_apps_bootfs_stage
 
+ifeq ($(VDK), yes)
+PSDK_MOUNT_POINT?=$(PSDK_PATH)/out/mnt
+endif
+
 linux_fs_stage:
 ifeq ($(YOCTO_STAGE),)
 	@rm -rf $(LINUX_FS_STAGE_PATH)
@@ -399,15 +403,30 @@ yocto_build:
 	$(YOCTO_VARS) $(MAKE) imaging
 	$(YOCTO_VARS) $(MAKE) video_io
 	$(YOCTO_VARS) $(MAKE) tiovx
+
+ifeq ($(ENABLE_NEW_TIDL_STRUCTURE),yes)
+	$(YOCTO_VARS) $(MAKE) -C $(PSDK_PATH)/tidl_j7/arm-tidl tidl_tiovx_arm_kernels TARGET_BUILD=release
+else
 	$(YOCTO_VARS) $(MAKE) tidl_tiovx_kernels
+endif
+
+ifneq ($(SOC_FAMILY), $(filter $(SOC_FAMILY), SOC_FAMILY_TDA5))
 	$(YOCTO_VARS) $(MAKE) ptk
+endif
 	$(YOCTO_VARS) $(MAKE) -C $(VISION_APPS_PATH) tivision_apps
+
+ifeq ($(SOC),tda54)
+	$(YOCTO_VARS) $(MAKE) -C $(VISION_APPS_PATH) vx_app_arm_remote_log vx_app_arm_ipc vx_app_conformance_core \
+												 vx_app_conformance_hwa vx_app_arm_mem vx_app_conformance_tidl
+else
 	$(YOCTO_VARS) $(MAKE) -C $(VISION_APPS_PATH) vx_app_conformance \
 		vx_app_conformance_core vx_app_conformance_hwa vx_app_conformance_tidl \
 		vx_app_arm_remote_log vx_app_arm_ipc vx_app_arm_mem \
 		vx_app_arm_fd_exchange_consumer vx_app_arm_fd_exchange_producer \
 		vx_app_c7x_kernel vx_app_heap_stats vx_app_load_test vx_app_viss \
 		vx_app_conformance_video_io
+endif
+
 ifeq ($(SOC),am62a)
 	$(YOCTO_VARS) $(MAKE) -C $(VISION_APPS_PATH) vx_app_drm_test
 endif
@@ -500,6 +519,11 @@ linux_fs_install_sd_test_data:
 
 linux_fs_install_nfs_test_data:
 	$(call INSTALL_TEST_DATA,$(LINUX_FS_PATH),opt/vision_apps)
+
+ifeq ($(VDK), yes)
+linux_fs_install_vdk_test_data:
+	$(call INSTALL_TEST_DATA_VDK,$(PSDK_MOUNT_POINT),opt/vision_apps)
+endif
 
 linux_fs_install_tar: linux_fs_install_nfs linux_fs_install_nfs_test_data
 	# Creating bootfs tar - zipping with gzip (-z option in tar)

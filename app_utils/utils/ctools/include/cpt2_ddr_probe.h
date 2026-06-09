@@ -47,15 +47,7 @@ extern "C" {
 #define APP_DEBUG_CTOOLS 0
 #endif
 
-#if defined(SOC_J721E)
-  #include "utils/ctools/include/soc/j721e/device.h"
-#elif defined(SOC_J721S2)
-  #include "utils/ctools/include/soc/j721s2/device.h"
-#elif defined(SOC_J742S2)
-  #include "utils/ctools/include/soc/j742s2/device.h"
-#elif defined(SOC_J784S4)
-  #include "utils/ctools/include/soc/j784s4/device.h"
-#endif
+#include "device.h"
 
 /* Start of the CPT probe
 */

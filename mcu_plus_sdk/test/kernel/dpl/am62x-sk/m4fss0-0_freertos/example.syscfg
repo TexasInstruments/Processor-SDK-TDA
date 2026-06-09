@@ -1,8 +1,9 @@
 /**
  * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
  * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
- * @cliArgs --device "AM62x" --package "ALW" --part "Default" --context "m4fss0-0" --product "MCU_PLUS_SDK@07.03.01"
- * @versions {"tool":"1.12.1+2446"}
+ * @cliArgs --device "AM62x" --part "Default" --package "ALW" --context "m4fss0-0" --product "MCU_PLUS_SDK@07.03.01"
+ * @v2CliArgs --device "AM625" --package "FCBGA (ALW)" --variant "AM6254-G" --context "m4fss0-0" --product "MCU_PLUS_SDK@07.03.01"
+ * @versions {"tool":"1.21.0+3721"}
  */
 
 /**
@@ -53,5 +54,5 @@ mpu_armv72.size  = 18;
  * re-solve from scratch.
  */
 debug_log.uartLog.MCU_UART.$suggestSolution     = "MCU_USART0";
-debug_log.uartLog.MCU_UART.RXD.$suggestSolution = "ball.B5";
-debug_log.uartLog.MCU_UART.TXD.$suggestSolution = "ball.A5";
+debug_log.uartLog.MCU_UART.RXD.$suggestSolution = "MCU_UART0_RXD";
+debug_log.uartLog.MCU_UART.TXD.$suggestSolution = "MCU_UART0_TXD";

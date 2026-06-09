@@ -1,5 +1,5 @@
  /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-26 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,13 +30,14 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * Auto generated file - DO NOT MODIFY
- */
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
 
 #include <stdlib.h>
 #include <string.h>
 #include "ti_drivers_config.h"
+#include "ti_board_config.h"
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
 #include <drivers/soc.h>
@@ -48,22 +49,45 @@
 #include <kernel/dpl/DebugP.h>
 #include <kernel/dpl/CacheP.h>
 
-#define BOOTLOADER_UNIFLASH_MAX_FILE_SIZE (0x800000) /* This has to match the size of DDR section in linker.cmd */
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+/* This can be a maximum of half the size of DDR section in linker.cmd */
+#define BOOTLOADER_UNIFLASH_MAX_FILE_SIZE (0x400000)
+
+/* ========================================================================== */
+/*                         Structures and Enums                               */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                 Internal Function Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
 uint8_t gUniflashFileBuf[BOOTLOADER_UNIFLASH_MAX_FILE_SIZE] __attribute__((aligned(128), section(".bss.filebuf")));
 
-#define BOOTLOADER_UNIFLASH_VERIFY_BUF_MAX_SIZE (32*1024)
-uint8_t gUniflashVerifyBuf[BOOTLOADER_UNIFLASH_VERIFY_BUF_MAX_SIZE] __attribute__((aligned(128), section(".bss")));
+uint8_t gUniflashVerifyBuf[BOOTLOADER_UNIFLASH_MAX_FILE_SIZE] __attribute__((aligned(128), section(".bss.filebuf")));
 
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
-
-
-/* call this API to stop the booting process and spin, do that you can connect
+/*
+ * Call this API to stop the booting process and spin, so that you can connect
  * debugger, load symbols and then make the 'loop' variable as 0 to continue execution
  * with debugger connected.
  */
 void loop_forever()
 {
-    volatile uint32_t loop = 1;
+    volatile uint32_t loop = 1U;
     while(loop)
         ;
 }
@@ -75,15 +99,19 @@ int main()
     uint32_t fileSize;
     Bootloader_UniflashConfig uniflashConfig;
     Bootloader_UniflashResponseHeader respHeader;
-	 Bootloader_socWaitForFWBoot();
-    status = Bootloader_socOpenFirewalls();
+
+    Bootloader_socWaitForFWBoot();
+
     System_init();
+    status = Bootloader_socOpenFirewalls();
+    DebugP_assertNoLog(status == SystemP_SUCCESS);
+
+    Board_init();
 
     Drivers_open();
 
     status = Board_driversOpen();
     DebugP_assert(status == SystemP_SUCCESS);
-	
 
     while(!done)
     {
@@ -109,16 +137,16 @@ int main()
 
         if(status == SystemP_SUCCESS)
         {
-			
+
             Bootloader_UniflashFileHeader fileHeader;
 
-	        memcpy(&fileHeader, gUniflashFileBuf, sizeof(Bootloader_UniflashFileHeader));
+            memcpy(&fileHeader, gUniflashFileBuf, sizeof(Bootloader_UniflashFileHeader));
 
             uniflashConfig.flashIndex = Flash_getFlashInterfaceIndex(fileHeader.flashType);
             uniflashConfig.buf = gUniflashFileBuf;
             uniflashConfig.bufSize = 0; /* Actual fileSize will be parsed from the header */
             uniflashConfig.verifyBuf = gUniflashVerifyBuf;
-            uniflashConfig.verifyBufSize = BOOTLOADER_UNIFLASH_VERIFY_BUF_MAX_SIZE;
+            uniflashConfig.verifyBufSize = BOOTLOADER_UNIFLASH_MAX_FILE_SIZE;
 
             /* Process the flash commands and return a response */
             Bootloader_uniflashProcessFlashCommands(&uniflashConfig, &respHeader);
@@ -128,6 +156,7 @@ int main()
     }
 
     Drivers_close();
+    Board_deinit();
     System_deinit();
 
     return 0;

@@ -2,36 +2,40 @@ export MCU_PLUS_SDK_PATH?=$(abspath ../../..)
 include $(MCU_PLUS_SDK_PATH)/imports.mak
 
 #Processor SDK linux install path
-PSDK_LINUX_PATH=$(TOOLS_PATH)/ti-processor-sdk-linux-edgeai-am62axx-evm-09_00_00_02
+PSDK_LINUX_PATH=$(TOOLS_PATH)/ti-processor-sdk-linux-edgeai-am62a-evm-11.02.09.03
 
 #Path for prebuit images in Processor SDK linux
-PSDK_LINUX_PREBUILT_IMAGES=$(PSDK_LINUX_PATH)/board-support/prebuilt-images
+PSDK_LINUX_PREBUILT_IMAGES?=$(PSDK_LINUX_PATH)/board-support/prebuilt-images/am62a-evm
 
-FASTBOOT_LINUX?=0
+FALCON_MODE?=0
 
 #Input linux binaries
 ATF_BIN_NAME=bl31.bin
 OPTEE_BIN_NAME=bl32.bin
 SPL_BIN_NAME=u-boot-spl.bin-am62axx-evm
 
-ifeq ($(FASTBOOT_LINUX), 1)
+ifeq ($(FALCON_MODE), 1)
 #Load Kernel directly
 KERN_BIN_NAME=Image
 FDT_BIN_NAME=k3-am62a7-sk.dtb
 endif
 
 #Linux image load address
-ATF_LOAD_ADDR=0x9e780000
+ATF_LOAD_ADDR=0x80000000
 OPTEE_LOAD_ADDR=0x9e800000
 SPL_LOAD_ADDR=0x80080000
 
-ifeq ($(FASTBOOT_LINUX), 1)
-KERN_LOAD_ADDR=0x80080000
-FDT_LOAD_ADDR=0x82000000
+ifeq ($(FALCON_MODE), 1)
+KERN_LOAD_ADDR=0x82000000
+FDT_LOAD_ADDR=0x88000000
 endif
 
 #Output appimage name
-LINUX_BOOTIMAGE_NAME=linux.appimage
+ifeq ($(FALCON_MODE), 1)
+LINUX_BOOTIMAGE_NAME?=linux.falcon.appimage
+else
+LINUX_BOOTIMAGE_NAME?=linux.appimage
+endif
 
 #a53ss0-0 core Id for app image
 BOOTIMAGE_CORE_ID_a53ss0-0 = 0

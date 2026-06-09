@@ -85,10 +85,16 @@ TESTCASE(tivxHwaVpacFc)
 TESTCASE(tivxHwaVpacFcNegative)
 #endif
 #endif
-#ifndef SOC_AM62A
-#ifndef SOC_J722S
+#if defined(SOC_AM62A)
+#if defined(adas)
+#if !defined(PC)
 TESTCASE(tivxHwaVpacAewb)
 #endif
+#endif
+#else
+TESTCASE(tivxHwaVpacAewb)
+#endif
+#ifndef SOC_AM62A
 TESTCASE(tivxHwaDmpacDof)
 TESTCASE(tivxHwaDmpacDofNegativeCov)
 TESTCASE(tivxHwaDmpacDofTarg)

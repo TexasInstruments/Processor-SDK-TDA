@@ -79,7 +79,7 @@
 #include <float.h>
 
 /* As LDRA is treating "not" as MACRO, modifing code of line from "not" to "!" without effecting the functionality */
-#if !defined(SOC_AM62A) && !defined(SOC_J722S)
+#if !defined(SOC_AM62A) && !defined(SOC_J722S) && !defined (SOC_TDA54)
 #if !defined(HOST_EMULATION)
 #include <ti/csl/arch/c7x/cslr_C7X_CPU.h>
 #endif
@@ -156,17 +156,6 @@ void TIDL_c7xCleaninvalidateL1DCache(void)
 #endif
   return;
 }
-/* LDRA_JUSTIFY
-<metric start> statement branch <metric end>
-<function start> void TIDL_c7xInvalidateL1DCache.* <function end>
-<justification start> FUTURE_USE : This function is present to support future testing scenarios and it is retained for robustness.
-<justification end> */
-void TIDL_c7xInvalidateL1DCache() /*API to invalidate L1D cache*/
-{
-#if ((TIDL_DEVICE_CACHE_COHERENT == 0) && (TIDL_DEVICE_L2_WRITETHROUGH == 1))
-  TIDL_c7xSetL1DINV(1);
-#endif
-}
 
 __asm__ __volatile__("TIDL_c7xSetL2WBINV: \n"
                      "    MVC	.S1	A4,		ECR387  ; \n"
@@ -178,16 +167,16 @@ __asm__ __volatile__("TIDL_c7xGetL2WBINV: \n"
 #define TIDL_UMC_L2WBINV_WBINV_SHIFT (0ULL)
 #define TIDL_UMC_L2WBINV_WBINV_RESETVAL (0x00000000ULL)
 #define TIDL_UMC_L2WBINV_WBINV_MAX (0x00000001ULL)
+#if ((TIDL_DEVICE_CACHE_COHERENT == 0) && (TIDL_DEVICE_L2_WRITETHROUGH == 0))
 void TIDL_c7xCleaninvalidateL2Cache(void)
 {
-#if ((TIDL_DEVICE_CACHE_COHERENT == 0) && (TIDL_DEVICE_L2_WRITETHROUGH == 0))
   volatile uint64_t wbinv;
   wbinv = TIDL_c7xGetL2WBINV() & ~TIDL_UMC_L2WBINV_WBINV_MASK;
   wbinv |= (0x1U << TIDL_UMC_L2WBINV_WBINV_SHIFT) & TIDL_UMC_L2WBINV_WBINV_MASK;
   TIDL_c7xSetL2WBINV(wbinv);
-#endif
   return;
 }
+#endif
 #endif
 #endif
 
@@ -225,7 +214,7 @@ void tidlPerfStatsDdrStatsReadCounters(uint32_t *val0, uint32_t *val1, uint32_t 
   *val3 = 0;
   if (tidl_getTraceLogLevel() >= 2)
   {
-#ifndef HOST_EMULATION
+#if !defined(HOST_EMULATION) && !defined(SOC_TDA54)
     static volatile uint32_t *cnt0[APP_PERF_NUM_DDR_INSTANCES];
     static volatile uint32_t *cnt1[APP_PERF_NUM_DDR_INSTANCES];
     static volatile uint32_t *cnt2[APP_PERF_NUM_DDR_INSTANCES];
@@ -334,6 +323,138 @@ void tidlPerfStatsDdrStatsReadCounters(uint32_t *val0, uint32_t *val1, uint32_t 
 #endif //HOST_EMULATION
   }
   return;
+}
+
+/**
+ * @brief Template function for MMAv2 scale/shift approximation with runtime type detection
+ * 
+ * This template function computes optimal fixed-point scale and shift parameters to approximate
+ * a floating-point scale ratio using the formula: scaleRatio ≈ scale / 2^shift
+ * 
+ * 
+ * Algorithm:
+ * - Performs exhaustive search over all possible scale values [1, maxScaleValue]
+ * - For each scale value, computes optimal shift: shift = round(log2(scale/scaleRatio))
+ * - Evaluates approximation error: error = |scaleRatio - (scale/2^shift)|
+ * - Returns scale/shift pair with minimum error
+ * 
+ * @tparam Tscale Template parameter for scale type. Supported types:
+ *                - uint8_t:  scale range [1, 255]
+ *                - int8_t:   scale range [1, 127]
+ *                - uint16_t: scale range [1, 65535]
+ *                - int16_t:  scale range [1, 32767]
+ * 
+ * @param[in]  scaleRatio     Target floating-point ratio to approximate
+ * @param[out] scale          Pointer to store optimal scale value [1, maxScaleValue]
+ * @param[out] shift          Pointer to store optimal shift value [0, maxShiftBits]
+ * @param[in]  weightBits     Number of weight bits (affects maxShiftBits: 40 for ≤8 bits, 64 for >8 bits)
+ * @param[in]  maxScaleMMAv2  Maximum scale for MMAv2 (currently unused, reserved for future use)
+ * @param[in]  skipCheck      If true, skip scale values where scaleRatio > approximation
+ *                            (avoids weight scale expansion in quantization)
+ * 
+ * @return Minimum approximation error achieved: |scaleRatio - (scale/2^shift)|
+ * 
+ */
+template<typename Tscale>
+float32_tidl TIDL_getMMAv2_ScaleShiftAndError(
+    float32_tidl scaleRatio,
+    Tscale *scale,
+    uint8_t *shift,
+    int32_t weightBits,
+    float32_tidl maxScaleMMAv2,
+    bool skipCheck)
+{
+    int32_t shiftBits;
+    float32_tidl curError = 0;
+    float32_tidl approxScale = 0;
+    float32_tidl minError = FLT_MAX;
+    int32_t bestShiftBits = 0;
+    int32_t bestFixedScale = 1;
+    int32_t maxShiftBits = (weightBits > 8) ? 64 : 40;
+    int32_t skipCount = 0;
+    
+    /* Determine scale limits based on type using typeid (runtime check) */
+    int32_t maxScaleValue = 255; /* Default initialization for MISRA C compliance */
+    const char *scaleTypeName;
+    
+    if (typeid(Tscale) == typeid(uint8_t))
+    {
+        maxScaleValue = 255;
+        scaleTypeName = "UINT8";
+    }
+    else if (typeid(Tscale) == typeid(int8_t))
+    {
+        maxScaleValue = 127;
+        scaleTypeName = "INT8";
+    }
+    else if (typeid(Tscale) == typeid(uint16_t))
+    {
+        maxScaleValue = 65535;
+        scaleTypeName = "UINT16";
+    }
+    else if (typeid(Tscale) == typeid(int16_t))
+    {
+        maxScaleValue = 32767;
+        scaleTypeName = "INT16";
+    }
+    else
+    {
+        /* Default to uint8 for unknown types */
+        maxScaleValue = 255;
+        scaleTypeName = "UNKNOWN";
+    }
+    
+    /* Exhaustive search through all possible scale values */
+    for(int32_t scaleIter = 1; scaleIter <= maxScaleValue; scaleIter++)
+    {
+        /* Calculate optimal shift for this scale value */
+        shiftBits = (int32_t)round(log(((float64_tidl)scaleIter)/scaleRatio)/log((float64_tidl)2));
+        
+        /* Clamp shift to valid range */
+        if(shiftBits > maxShiftBits)
+        {
+          shiftBits = maxShiftBits;
+        }
+        if(shiftBits < 0)
+        {
+          shiftBits = 0;
+        }
+        
+        /* Compute approximation */
+        approxScale = (float32_tidl)(((float32_tidl)scaleIter)/(pow(2,shiftBits)));
+        
+        /* Skip check: avoid values that would expand weight scales */
+        if(scaleRatio > approxScale && skipCheck==true)
+        {
+            skipCount++;
+            continue;
+        }
+        
+        /* Calculate error */
+        curError = fabsf(scaleRatio - approxScale);
+        
+        /* Track minimum error */
+        if(curError < minError)
+        {
+            minError = curError;
+            bestShiftBits = shiftBits;
+            bestFixedScale = scaleIter;
+        }
+    }
+    
+    /* Handle edge case: all values skipped */
+    if(skipCount == maxScaleValue)
+    {
+        bestShiftBits = maxShiftBits;
+        bestFixedScale = maxScaleValue;
+        minError = fabsf(scaleRatio - ((float32_tidl)bestFixedScale/(pow(2,bestShiftBits))));
+        tidl_printf(0, "Warning: Could not find optimal %s scale approximation for ratio %f, using approx scale %f\n",
+                    scaleTypeName, scaleRatio, ((float32_tidl)bestFixedScale/(pow(2,bestShiftBits))));
+    }
+    
+    *shift = bestShiftBits;
+    *scale = (Tscale)bestFixedScale;
+    return minError;
 }
 
 int32_t tidl_getWriteLevel(void)
@@ -728,7 +849,10 @@ template<class Tdst, class Tsrc> void TIDL_conv2dBiasSplit(Tsrc *srcPtr, Tdst *d
 
       temp = biasAMax + 1;
       biasAMin = -1 * temp;
-
+      /* LDRA_JUSTIFY_START
+      <metric start> statement branch <metric end>
+      <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      <justification end> */
       if ((biasBMax == 0xFF) && (satHigh == TIDL_SAT_HI_INT32))
       {
         /* Not the cleanest way to handle but to avoid function signature
@@ -738,6 +862,7 @@ template<class Tdst, class Tsrc> void TIDL_conv2dBiasSplit(Tsrc *srcPtr, Tdst *d
         biasAMin = std::numeric_limits<int16_t>::lowest();
         biasAMax = std::numeric_limits<int16_t>::max();
       }
+      /* LDRA_JUSTIFY_END */
 
       for (int32_t idx = 0; idx < dataSize; idx++)
       {
@@ -1039,7 +1164,13 @@ template void TIDL_conv2dBiasSplit<int32_t, int32_t>(int32_t *srcPtr, int32_t *d
 template void TIDL_AM_conv2dBiasSplit<int32_t, int16_t>(int16_t *srcPtr, int32_t *dstPtr, int32_t *biasB, int32_t dataSize, float32_tidl inScaleFactor, int32_t satLow, int32_t satHigh, int32_t biasBMax, int32_t inFeatSign);
 template void TIDL_AM_conv2dBiasSplit<int64_t, int16_t>(int16_t *, int64_t *, int32_t *, int32_t, float32_tidl, int32_t, int32_t, int32_t, int32_t);
 
-void tidl_printf(int32_t traceLevel, const char *format, ...)
+// Explicit template instantiations for TIDL_getMMAv2_ScaleShiftAndError
+template float32_tidl TIDL_getMMAv2_ScaleShiftAndError<int8_t>(float32_tidl, int8_t*, uint8_t*, int32_t, float32_tidl, bool);
+template float32_tidl TIDL_getMMAv2_ScaleShiftAndError<uint8_t>(float32_tidl, uint8_t*, uint8_t*, int32_t, float32_tidl, bool);
+template float32_tidl TIDL_getMMAv2_ScaleShiftAndError<int16_t>(float32_tidl, int16_t*, uint8_t*, int32_t, float32_tidl, bool);
+template float32_tidl TIDL_getMMAv2_ScaleShiftAndError<uint16_t>(float32_tidl, uint16_t*, uint8_t*, int32_t, float32_tidl, bool);
+
+void tidl_printf(int8_t traceLevel, const char *format, ...)
 {
   va_list args;
 
@@ -2711,7 +2842,7 @@ int32_t TIDL_checkPixelInPadRegion(int32_t spatialOffsetY,
 uint32_t TIDL_getCoreNum(void)
 {
   uint32_t corePacNum = 0;
-#if defined(SOC_J784S4) || defined(SOC_J742S2) // To check if the same field exist in J722S to extract the core number and if so use MULTICORE_MACRO
+#if defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_TDA54) // To check if the same field exist in J722S to extract the core number and if so use MULTICORE_MACRO
 #if !defined(HOST_EMULATION) && (TIDL_MAX_CORENUM > 1)
 #include <c7x.h>
   uint64_t dnum;

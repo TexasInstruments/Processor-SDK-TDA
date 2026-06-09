@@ -38,7 +38,7 @@
 #ifndef J784S4_IA_PE_CONF_H
 #define J784S4_IA_PE_CONF_H
 
-/** Count of IA init list (71 entries) */
-#define IA_SOC_PE_INIT_NUM (0x47U)
+/** Count of IA init list (73 entries) */
+#define IA_SOC_PE_INIT_NUM (0x49U)
 
 #endif /* J784S4_IA_PE_CONF_H */

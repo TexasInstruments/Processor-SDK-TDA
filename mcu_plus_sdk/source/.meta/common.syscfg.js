@@ -18,30 +18,57 @@ function getSelfSysCfgCoreName() {
         case "awr294x":
             return "r5fss0-0";
         case "am62x":
+            if (system.context == "a53ss1-0")
+                return system.context;
+            else if (system.context == "a53ss1-1")
+                return system.context;
+            else
             return "m4fss0-0";
         case "am62ax":
             if (system.context == "c75ss0-0")
                 return "c75ss0-0";
             else
                 return "mcu-r5fss0-0";
+        case "am62dx":
+            return system.context;
         case "am62px":
-                return system.context;
+            return system.context;
+        case "am275x":
+            return system.context;
         case "j722s":
-                return system.context;
+            return system.context;
+        case "am62lx":
+            return system.context;
     }
 };
 
 function isDMWithBootSupported() {
     switch(getSocName()) {
         case "am62px":
+        case "am275x":
                 if (getSelfSysCfgCoreName().includes("wkup-r5f"))
                     return true;
                 else
                     return false;
+        case "am62dx":
+            if (getSelfSysCfgCoreName()=="r5fss0-0")
+                return true;
+            else
+                return false;
         default:
             return false;
     }
 };
+
+function isPSCISupported()
+{
+    switch(getSocName()) {
+        case "am62lx":
+            return true;
+        default:
+            return false;
+    }
+}
 
 function isSciClientSupported() {
     switch(getSocName()) {
@@ -53,8 +80,47 @@ function isSciClientSupported() {
             return true;
         case "am62ax":
             return true;
+        case "am62dx":
+            return true;
         case "am62px":
             return true;
+        case "am275x":
+            return true;
+        case "j722s":
+            return true;
+        case "am62lx":
+            return false;
+        default:
+            return false;
+    }
+};
+
+function isSCMIClientSupported()
+{
+    switch(getSocName()) {
+        case "am62lx":
+            return true;
+        default:
+            return false;
+    }
+}
+
+function isSafeRTOSSupported() {
+    switch(getSocName()) {
+        case "am243x":
+            return false;
+        case "am64x":
+            return false;
+        case "am62x":
+            return false;
+        case "am62ax":
+            return true;
+        case "am62dx":
+            return false;
+        case "am62px":
+            return false;
+        case "am275x":
+            return false;
         case "j722s":
             return true;
         default:
@@ -73,14 +139,20 @@ function getSocName() {
         return "am273x";
     if((system.deviceData.device == "AWR294X") || (system.deviceData.device == "AWR294XLOP"))
         return "awr294x";
-    if(system.deviceData.device == "AM62x")
+    if(system.deviceData.device == "AM62x" || system.deviceData.device == "AM62SIP")
         return "am62x";
     if(system.deviceData.device == "AM62Ax")
         return "am62ax";
+    if(system.deviceData.device == "AM62Dx")
+        return "am62dx";
     if(system.deviceData.device == "AM62Px")
         return "am62px";
+    if(system.deviceData.device == "AM275x")
+        return "am275x";
     if(system.deviceData.device == "J722S_TDA4VEN_TDA4AEN_AM67")
         return "j722s";
+    if(system.deviceData.device == "AM62Lx")
+        return "am62lx";
 };
 
 function getDeviceName() {
@@ -98,12 +170,20 @@ function getDeviceName() {
         return "awr294x-evm";
     if(system.deviceData.device == "AM62x")
         return "am62x-sk";
+    if(system.deviceData.device == "AM62SIP")
+        return "am62x-sk-sip";
     if(system.deviceData.device == "AM62Ax")
         return "am62ax-sk";
+    if(system.deviceData.device == "AM62Dx")
+        return "am62dx-evm";
     if(system.deviceData.device == "AM62Px")
         return "am62px-sk";
-    if(system.deviceData.device == "J722S")
+    if(system.deviceData.device == "AM275x")
+        return "am275x-evm";
+    if(system.deviceData.device == "J722S_TDA4VEN_TDA4AEN_AM67")
         return "j722s-evm";
+    if(system.deviceData.device == "AM62Lx")
+        return "am62lx-evm";
 };
 
 function isCName(id) {
@@ -235,7 +315,7 @@ function getUseMcuDomainPeripheralsConfig()
         config.readOnly = true;
     }
 
-    if (getSocName().includes("am62a") || getSocName().includes("am62x")|| getSocName().includes("am62p") || getSocName().includes("j722s"))
+    if (getSocName().includes("am62a") || getSocName().includes("am62x")|| getSocName().includes("am62p") || getSocName().includes("am62d") || getSocName().includes("j722s"))
     {
         // Allow main domain peripheral access to MCU domain for AM62A and AM62X.
         config.readOnly = false;
@@ -246,20 +326,11 @@ function getUseMcuDomainPeripheralsConfig()
 function getDMWithBootConfig()
 {
     let config = {
-            name: "addedByBootloader",
-            displayName: "Instance added by bootloader",
-            default: false,
-        }
-    return config;
-}
-
-function getSkipDeinitFromSblConfig()
-{
-    let config = {
-            name: "skipDeinitFromSbl",
-            displayName: "Skip De-Init from SBL",
-            default: false,
-        }
+        name: "addedByBootloader",
+        displayName: "Instance Added By Bootloader",
+        longDescription: "Check the box if the instance is to be used in the bootloader. If checked, the instance is not opened and closed in the automatically generated open and close functions like the Drivers_uartOpen and Drivers_uartClose functions for the UART. It is the responsibility of the bootloader to manually open and close the instance.",
+        default: false,
+    }
     return config;
 }
 
@@ -273,6 +344,8 @@ function isMcuDomainSupported()
         case "am62x":
             return true;
         case "am62ax":
+            return true;
+        case "am62dx":
             return true;
         case "am62px":
             return true;
@@ -299,7 +372,7 @@ function getUseWakeupDomainPeripheralsConfig()
         }
     }
 
-    if(getSocName().match(/am62x/) || getSocName().match(/am62ax/) || getSocName().match(/am62px/) || getSocName().match(/j722s/) )
+    if(getSocName().match(/am62x/) || getSocName().match(/am62ax/) || getSocName().match(/am62dx/) || getSocName().match(/am62px/) || getSocName().match(/j722s/))
     {
         if(getSelfSysCfgCoreName().includes("r5f"))
         {
@@ -326,7 +399,11 @@ function isWakeupDomainSupported()
             return true;
         case "am62ax":
             return true;
+        case "am62dx":
+            return true;
         case "am62px":
+            return true;
+        case "am275x":
             return true;
         case "j722s":
             return true;
@@ -406,10 +483,71 @@ function typeMatches(type, nameArray)
     return (false);
 }
 
+function getDriverOpenOrder()
+{
+    return [
+        "watchdog",
+        "uart", /* UART to opened first for logging */
+        "mcu_bist", /* MCU BIST to be started before DDR init and OSPI tuning so that it can run in parallel to these in the background */
+        "ddr",
+        "qos",
+        "ospi",
+    ];
+}
+
+/* Check which device support FreeRTOS-SMP */
+function isSmpSupported()
+{
+    switch(getSocName()) {
+        case "am62x":
+            return true;
+        case "am62ax":
+            return true;
+        case "am62dx":
+            return true;
+        case "am62lx":
+            return false;
+        case "am62px":
+            return false;
+        case "am275x":
+            return false;
+        case "j722s":
+            return false;
+        default:
+            return false;
+    }
+}
+
+/* Check which device support FreeRTOS-AMP */
+function isAmpSupported()
+{
+    switch(getSocName()) {
+        case "am62x":
+            return true;
+        case "am62ax":
+            return false;
+        case "am62dx":
+            return true;
+        case "am62lx":
+            return true;
+        case "am62px":
+            return false;
+        case "am275x":
+            return false;
+        case "j722s":
+            return false;
+        default:
+            return false;
+    }
+}
+
 exports = {
     getSelfSysCfgCoreName,
     isDMWithBootSupported,
+    isPSCISupported,
     isSciClientSupported,
+    isSCMIClientSupported,
+    isSafeRTOSSupported,
     getSocName,
     getDeviceName,
     camelSentence,
@@ -420,11 +558,13 @@ exports = {
     isMcuDomainSupported,
     getUseWakeupDomainPeripheralsConfig,
     getDMWithBootConfig,
-    getSkipDeinitFromSblConfig,
     isWakeupDomainSupported,
     findDuplicates,
     stringOrEmpty,
     typeMatches,
+    getDriverOpenOrder,
+    isSmpSupported,
+    isAmpSupported,
 
     validate: {
         checkSameInstanceName : function (instance, report) {

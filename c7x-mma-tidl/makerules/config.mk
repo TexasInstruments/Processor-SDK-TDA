@@ -94,9 +94,14 @@ DEVELOPER_BUILD ?= 0
 #TARGET_PLATFORM ?= PC
 TARGET_PLATFORM ?= TI_DEVICE
 
-BUILD_WITH_OPENACC     ?= 0
-BUILD_WITH_CUDA        ?= 0
+
+BUILD_WITH_OPENACC     ?= no
+BUILD_WITH_CUDA        ?= no
 TIDL_BUILD_FOR_LOKI    ?= 0
+
+# Exclude unsupported source files from build by default
+# Set to 0 to include them: make TIDL_EXCLUDE_UNSUPPORTED_KERNELS=0
+TIDL_EXCLUDE_UNSUPPORTED_KERNELS ?= 1
 TIDL_HOST_CCS          ?= 0
 TIDL_BIOS_BUILD        ?= 1
 BUILD_LIDAR_PREPROC    ?= 0
@@ -113,8 +118,14 @@ ENABLE_SDK_11_0_COMPATIBILITY    ?= 0
 # Enable compatibility to build on 11.1 SDK
 ENABLE_SDK_11_1_COMPATIBILITY    ?= 0
 
-CGT_C7X_VERSION := 5.0.0.LTS
-MMALIB_VERSION  := 11_02_00_06
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+  CGT_C7X_VERSION := 6.1.0.STS
+  MMALIB_VERSION  := 11_02_01_04
+else
+  CGT_C7X_VERSION := 5.0.0.LTS
+  MMALIB_VERSION  := 11_02_00_06
+endif
+
 
 ifdef SystemRoot
 PSDK_TOOLS_PATH     ?= "C:/ti"
@@ -130,6 +141,7 @@ MMALIB_PATH         ?=$(PSDK_INSTALL_PATH)\mmalib_$(MMALIB_VERSION)
 PDK_INSTALL_PATH    ?=$(PSDK_INSTALL_PATH)\pdk\packages
 CONCERTO_ROOT       ?=$(PSDK_BUILDER_PATH)\concerto
 MCU_PLUS_SDK_PATH   ?=$(PSDK_INSTALL_PATH)\mcu_plus_sdk
+MCU_SDK_PATH        ?=$(PSDK_INSTALL_PATH)\mcu_sdk
 TIOVX_PATH          ?=$(PSDK_INSTALL_PATH)\tiovx
 VISION_APPS_PATH    ?=$(PSDK_INSTALL_PATH)\vision_apps
 
@@ -193,8 +205,10 @@ MMALIB_PATH         ?="$(PSDK_INSTALL_PATH)/mmalib_$(MMALIB_VERSION)"
 PDK_INSTALL_PATH    ?="$(PSDK_INSTALL_PATH)/pdk/packages"
 CONCERTO_ROOT       ?=$(PSDK_BUILDER_PATH)/concerto
 MCU_PLUS_SDK_PATH   ?=$(PSDK_INSTALL_PATH)/mcu_plus_sdk
+MCU_SDK_PATH        ?=$(PSDK_INSTALL_PATH)/mcu_sdk
 TIOVX_PATH          ?=$(PSDK_INSTALL_PATH)/tiovx
 VISION_APPS_PATH    ?=$(PSDK_INSTALL_PATH)/vision_apps
+
 LINUX_FS_PATH       ?=$(PSDK_INSTALL_PATH)/targetfs
 TVM_HOME            ?=$(PSDK_INSTALL_PATH)/targetfs/usr/include/tvm
 TF_REPO_PATH        ?=$(PSDK_INSTALL_PATH)/targetfs/usr/include/tensorflow
@@ -211,8 +225,6 @@ TIDL_GRAPHVIZ_PATH  ?="/usr"
 # Location of the CUDA Toolkit
 CUDA_PATH ?= /usr/local/cuda
 endif
-
-
 
 SHOW_COMMANDS       ?= 0
 
@@ -244,14 +256,22 @@ else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J722S j722s))
     TARGET_C7X_VERSION ?= C7524
     SI_VER = 7524
     C7x_HOSTEMU_COMPILER_STRING:=-MMA2_256
+else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+    TARGET_C7X_VERSION ?= C7604
+    SI_VER = 7604
+    C7x_HOSTEMU_COMPILER_STRING:=-MMA3_1024
 endif
 
-ifeq ($(RTOS_SDK),mcu_plus_sdk)
-DMA_UTILS_PATH      ?=$(MCU_PLUS_SDK_PATH)/source/drivers/dmautils
-PDK_INSTALL_PATH    = .
+ifeq ($(RTOS_SDK),mcu_sdk)
+  DMA_UTILS_PATH      ?=$(PSDK_INSTALL_PATH)/dmautils
+  PDK_INSTALL_PATH    = .
+else ifeq ($(RTOS_SDK),mcu_plus_sdk)
+  DMA_UTILS_PATH      ?=$(MCU_PLUS_SDK_PATH)/source/drivers/dmautils
+  PDK_INSTALL_PATH    = .
 else
-DMA_UTILS_PATH      ?=$(PDK_INSTALL_PATH)/ti/drv/udma/dmautils
-MCU_PLUS_SDK_PATH   = .
+  DMA_UTILS_PATH      ?=$(PDK_INSTALL_PATH)/ti/drv/udma/dmautils
+  MCU_PLUS_SDK_PATH   = .
+  MCU_SDK_PATH        = .
 endif
 
 #Temporary flag to use older library paths

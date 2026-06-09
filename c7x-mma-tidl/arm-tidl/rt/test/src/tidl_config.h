@@ -128,7 +128,7 @@ typedef struct
 extern tidl_net_config gParams;
 extern sTokenMapping gsTokenMap_tidl_net[MAX_ITEMS_TO_PARSE];
 #define MAX_SEG_CLASS_IDX (64)
-int tidl_tb_printf(int traceLevel, const char *format, ...);
+int32_t tidl_tb_printf(int8_t traceLevel, const char *format, ...);
 void tidl_tb_progressBar(float progress);
 /* DMA (or block processing) + intrinsic code --> traget flow*/
 #define TIDL_FLOW_CTRL_DEFAULT  (0x00000000)

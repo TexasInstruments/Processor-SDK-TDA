@@ -56,6 +56,7 @@ extern void Hwi_restore(uint32_t key);
 
 extern void Hwi_dispatchAlways(void);
 extern void Hwi_switchAndRunFunc(void (*func)(void));
+extern void Hwi_refreshNLC(void);
 
 
 extern  char _stack[0x10001];
@@ -524,6 +525,12 @@ void Hwi_Params_init( Hwi_Params *prms )
  */
 void Hwi_dispatchCore(uint32_t intNum)
 {
+    /* Errata i2399: C7x NLC module does not clear its internal "reload pending"
+     * state when an interrupt is taken.  Issue NLCINIT here (as part of context
+     * saving) to clear that state before any task-context work is done, so that
+     * a subsequent task switch cannot corrupt ILCNT in the interrupted task. */
+    Hwi_refreshNLC();
+
      /* Enable Branch Prediction if not already enabled
       * BP is disabled in RTOS Idle Hook as a pre-requisite to enter IDLE mode
       * and is enabled after exiting it.

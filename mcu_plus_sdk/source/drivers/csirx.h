@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -38,14 +38,14 @@ extern "C"
 {
 #endif
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <drivers/hw_include/soc_config.h>
 
 #if defined (DRV_VERSION_CSIRX_V0)
 #include <drivers/csirx/v0/csirx.h>
-#endif
-
-#if defined (DRV_VERSION_CSIRX_V1)
-#include <drivers/csirx/v1/csirx.h>
 #endif
 
 #ifdef __cplusplus

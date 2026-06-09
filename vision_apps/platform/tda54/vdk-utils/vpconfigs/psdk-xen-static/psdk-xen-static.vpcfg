@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="ASCII"?>
+<com.synopsys.vp.base.vpcfg.core:Configuration xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:com.synopsys.vp.base.vpcfg.core="com.synopsys.vp.base.vpcfg.core.model" description="empty configuration" comment="gen_tool_VPX">
+  <debugInfo/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.UART.DW_UART_PHY_1.#SCML_PROPERTIES#EN_UART_TX_LOG_TO_FILE" value="logs1.txt"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.UART.DW_UART_PHY_1.#SCML_PROPERTIES#TerminalAutoOpen" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DDR_0.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(PSDK_OUT)/tispl.bin,0x00080000,,image,} {$(PSDK_OUT)/u-boot.img,0x01000000,,image,} {$(PSDK_OUT)/Image,0x02000000,,image,} {$(PSDK_OUT)/k3-tda54-vdk-xen-dom0-static.dtbo,0x07000000,,image,} {$(PSDK_OUT)/k3-tda54-vdk.dtb,0x08000000,,image,} {$(PSDK_OUT)/xen,0x09000000,,image,} {$(PSDK_OUT)/Image,0x0a000000,,image,} {$(PSDK_OUT)/k3-tda54-vdk-xen-dom1-passthrough.dtb,0x0e000000,,image,} {$(PSDK_OUT)/rootfs.cpio.xz,0x0f000000,,image,} "/>
+  <parentConfigurations>psdk-linux/psdk-linux</parentConfigurations>
+</com.synopsys.vp.base.vpcfg.core:Configuration>

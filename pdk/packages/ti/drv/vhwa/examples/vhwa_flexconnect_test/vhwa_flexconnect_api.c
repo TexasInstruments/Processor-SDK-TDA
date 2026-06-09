@@ -564,8 +564,8 @@ static int32_t AppFc_VissAllocBuffers(AppViss_TestConfig *tConfig, uint32_t hidx
                     case FVID2_CCSF_BITS8_PACKED:
                     case FVID2_CCSF_BITS8_UNPACKED16:
                     case FVID2_CCSF_BITS16_PACKED:
-                        chromaOffset = outFmt->pitch[0] * outFmt->height;
-                        frameEnd = ((outFmt->pitch[0] * outFmt->height) * 3) / 2;
+                        chromaOffset = 0u;
+                        frameEnd = outFmt->pitch[0] * outFmt->height;
                         break;
                     default:
                         Vhwa_print(
@@ -585,7 +585,7 @@ static int32_t AppFc_VissAllocBuffers(AppViss_TestConfig *tConfig, uint32_t hidx
                     case FVID2_CCSF_BITS8_UNPACKED16:
                     case FVID2_CCSF_BITS16_PACKED:
                         chromaOffset = 0u;
-                        frameEnd = outFmt->pitch[0] * outFmt->height / 2u;
+                        frameEnd = outFmt->pitch[0] * outFmt->height;
                         break;
                     default:
                         Vhwa_print(

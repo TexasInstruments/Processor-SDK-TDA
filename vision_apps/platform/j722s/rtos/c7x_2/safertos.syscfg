@@ -125,26 +125,26 @@ mmu_armv86.attribute         = "MAIR0";
  * Region start: 0x7E200000
  * Region end: 0x7E3FFFFF
  * Read and write for both privileged and user modes.
- * Attribute is MAIR0.
+ * Attribute is MAIR7.
  */
 mmu_armv87.$name             = "L2RAM_C7x_2_MAIN";
 mmu_armv87.vAddr             = 0x7E200000;
 mmu_armv87.pAddr             = 0x7E200000;
 mmu_armv87.size              = 0x200000;
-mmu_armv87.attribute         = "MAIR0";
+mmu_armv87.attribute         = "MAIR7";
 
 /**
  * C7X_2 L2 AUX
  * Region start: 0x7F800000
  * Region end: 0x7F83FFFF
  * Read and write for both privileged and user modes.
- * Attribute is MAIR0.
+ * Attribute is MAIR7.
  */
 mmu_armv88.$name             = "L2RAM_C7x_2_AUX";
 mmu_armv88.vAddr             = 0x7F800000;
 mmu_armv88.pAddr             = 0x7F800000;
 mmu_armv88.size              = 0x40000;
-mmu_armv88.attribute         = "MAIR0";
+mmu_armv88.attribute         = "MAIR7";
 
 /**
  * DDR_C7x_2_DTS

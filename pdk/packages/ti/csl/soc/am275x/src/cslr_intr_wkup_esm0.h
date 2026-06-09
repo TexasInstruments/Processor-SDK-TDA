@@ -2,7 +2,7 @@
 *
 * WKUP_ESM0 INTERRUPT MAP. header file
 *
-* Copyright (C) 2015-2024 Texas Instruments Incorporated.
+* Copyright (C) 2015-2025 Texas Instruments Incorporated.
 *  Redistribution and use in source and binary forms, with or without
 *  modification, are permitted provided that the following conditions
 *  are met:
@@ -68,8 +68,8 @@ extern "C"
 #define CSLR_WKUP_ESM0_ESM_LVL_EVENT_WKUP_ECC_AGGR1_UNCORR_LEVEL_0                                 (39U)
 #define CSLR_WKUP_ESM0_ESM_LVL_EVENT_WKUP_PSRAMECC_8K0_ECC_CORR_LEVEL_0                            (42U)
 #define CSLR_WKUP_ESM0_ESM_LVL_EVENT_WKUP_PSRAMECC_8K0_ECC_UNCORR_LEVEL_0                          (43U)
-#define CSLR_WKUP_ESM0_ESM_LVL_EVENT_WKUP_PSRAM2KX32E0_ECC_CORR_LEVEL_0                            (44U)
-#define CSLR_WKUP_ESM0_ESM_LVL_EVENT_WKUP_PSRAM2KX32E0_ECC_UNCORR_LEVEL_0                          (45U)
+#define CSLR_WKUP_ESM0_ESM_LVL_EVENT_WKUP_PSRAMECC_RET0_ECC_CORR_LEVEL_0                           (44U)
+#define CSLR_WKUP_ESM0_ESM_LVL_EVENT_WKUP_PSRAMECC_RET0_ECC_UNCORR_LEVEL_0                         (45U)
 #define CSLR_WKUP_ESM0_ESM_LVL_EVENT_PLLFRACF2_SSMOD0_LOCKLOSS_IPCFG_0                             (54U)
 #define CSLR_WKUP_ESM0_ESM_LVL_EVENT_PLLFRACF2_SSMOD1_LOCKLOSS_IPCFG_0                             (55U)
 #define CSLR_WKUP_ESM0_ESM_LVL_EVENT_PLLFRACF2_SSMOD2_LOCKLOSS_IPCFG_0                             (56U)

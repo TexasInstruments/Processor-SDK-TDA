@@ -553,7 +553,7 @@ s32 set_ssc_handler(u32 *msg_recv)
 	u32 modfreq_hz = req->modfreq_hz;
 	u32 mod_depth = req->mod_depth;
 	u8 spread_type = req->spread_type;
-	sbool enable = (sbool) req->enable;
+	sbool enable = (req->enable != 0U) ? STRUE : SFALSE;
 	s32 ret = SUCCESS;
 
 	mmr_unlock_all();
@@ -564,7 +564,7 @@ s32 set_ssc_handler(u32 *msg_recv)
 	pm_trace(TRACE_PM_ACTION_MSG_PARAM_VAL, modfreq_hz);
 	pm_trace(TRACE_PM_ACTION_MSG_PARAM_VAL, mod_depth);
 	pm_trace(TRACE_PM_ACTION_MSG_PARAM_VAL, spread_type);
-	pm_trace(TRACE_PM_ACTION_MSG_PARAM_VAL, enable);
+	pm_trace(TRACE_PM_ACTION_MSG_PARAM_VAL, (enable == STRUE) ? 1U : 0U);
 
 	resp->hdr.flags = 0U;
 

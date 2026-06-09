@@ -1,6 +1,4 @@
 DEFS+=SOC_J722S
-DEFS+=BUILD_C75X
-DEFS+=BUILD_C75X_2
 
 CSOURCES += generated/ti_board_config.c
 CSOURCES += generated/ti_board_open_close.c
@@ -14,12 +12,13 @@ LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE).cmd
 LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map_$(RTOS_TYPE).cmd
 
 ifeq ($(RTOS),SAFERTOS)
-	IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_c7x}/source_code_and_projects/SafeRTOS/api/$(SAFERTOS_ISA_EXT_c7x)
-	IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_c7x}/source_code_and_projects/SafeRTOS/api/NoWrapper
-	IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_c7x}/source_code_and_projects/SafeRTOS/config
-	IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_c7x}/source_code_and_projects/SafeRTOS/kernel/include_api
-	IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_c7x}/source_code_and_projects/SafeRTOS/portable/$(SAFERTOS_ISA_EXT_c7x)
-	IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_c7x}/source_code_and_projects/SafeRTOS/portable/$(SAFERTOS_ISA_EXT_c7x)/$(SAFERTOS_COMPILER_EXT_c7x)
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/c75/api/$(SAFERTOS_ISA_EXT_c7x)
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/c75/api/NoWrapper
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/c75/config
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/c75/kernel/include_api
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/c75/kernel/include_prv
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/c75/portable/$(SAFERTOS_ISA_EXT_c7x)
+	IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/c75/portable/$(SAFERTOS_ISA_EXT_c7x)/$(SAFERTOS_COMPILER_EXT_c7x)
 endif
 
 IDIRS+=$(VISION_APPS_PATH)/platform/$(SOC)/rtos/c7x_2/generated
@@ -38,6 +37,23 @@ STATIC_LIBS += vx_target_kernels_srv_c66
 ifeq ($(RTOS), $(filter $(RTOS), FREERTOS SAFERTOS))
 	STATIC_LIBS += app_rtos
 endif
+
+TIDL_LIBS =
+TIDL_LIBS += common_C7524
+TIDL_LIBS += mmalib_C7524
+TIDL_LIBS += mmalib_cn_C7524
+TIDL_LIBS += tidl_algo
+ifeq ($(ENABLE_NEW_TIDL_STRUCTURE),yes)
+TIDL_LIBS += tidl_priv
+TIDL_LIBS += tidl_kernels
+TIDL_LIBS += tidl_ref
+else
+TIDL_LIBS += tidl_priv_algo
+TIDL_LIBS += tidl_obj_algo
+endif
+TIDL_LIBS += tidl_custom
+
+SYS_STATIC_LIBS += $(TIDL_LIBS)
 
 ADDITIONAL_STATIC_LIBS += dmautils.j722s.c75ss1-0.ti-c7000.${TARGET_BUILD}.lib
 ADDITIONAL_STATIC_LIBS += drivers.j722s.c75ss1-0.ti-c7000.${TARGET_BUILD}.lib

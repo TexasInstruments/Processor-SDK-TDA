@@ -25,6 +25,7 @@
  */
 
 #ifndef FF_DEFAULTCONFIG_H
+#define FF_DEFAULTCONFIG_H
 
 /* The error numbers defined in this file will be moved to the core FreeRTOS
  * code in future versions of FreeRTOS - at which time the following header file
@@ -122,7 +123,7 @@
  * - UTF-8  (ffconfigUNICODE_UTF8_SUPPORT = 1)
  * - UTF-16 (ffconfigUNICODE_UTF16_SUPPORT = 1)
  */
-#if ( ffconfigUNICODE_UTF16_SUPPORT == 0 )
+#if !defined( ffconfigUNICODE_UTF16_SUPPORT )
 
 /* Only used when ffconfigLFN_SUPPORT is set to 1.
  *
@@ -436,7 +437,8 @@
 /* Sets the maximum length for file names, including the path.
  * Note that the value of this define is directly related to the maximum stack
  * use of the +FAT library. In some API's, a character buffer of size
- * 'ffconfigMAX_FILENAME' will be declared on stack. */
+ * 'ffconfigMAX_FILENAME' will be declared on stack. As such, this value should
+ * include space for the null byte. */
     #define ffconfigMAX_FILENAME    129
 #endif
 
@@ -465,10 +467,11 @@
 #endif
 
 #ifndef ffconfigFAT_USES_STAT
-    /* When enabled, the library keeps statistics about the use of cache
-	 * buffers.  This can be useful while configuring or optimising the
-	 * cache size. */
-	#define ffconfigFAT_USES_STAT     0
+
+/* When enabled, the library keeps statistics about the use of cache
+ * buffers.  This can be useful while configuring or optimising the
+ * cache size. */
+    #define ffconfigFAT_USES_STAT    0
 #endif
 
 #ifndef ffconfigUSE_NOTIFY
@@ -505,8 +508,17 @@
 #endif
 
 #ifndef FF_NOSTRCASECMP
-	/* When zero, the function 'strcasecmp()' will be dfined. */
-	#define FF_NOSTRCASECMP    0
+    /* When zero, the function 'strcasecmp()' will be dfined. */
+    #define FF_NOSTRCASECMP    0
 #endif
+
+/* Allow backword compatibility if desired */
+#ifndef ffconfigENABLE_BACKWARD_COMPATIBILITY
+    #define ffconfigENABLE_BACKWARD_COMPATIBILITY    1
+#endif
+
+#if ffconfigENABLE_BACKWARD_COMPATIBILITY == 1
+    #define FF_CreateIOManger    FF_CreateIOManager
+#endif /* ffconfigENABLE_BACKWARD_COMPATIBILITY */
 
 #endif /* ifndef FF_DEFAULTCONFIG_H */

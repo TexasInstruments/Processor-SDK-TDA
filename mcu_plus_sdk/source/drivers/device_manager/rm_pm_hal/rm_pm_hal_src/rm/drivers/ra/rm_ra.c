@@ -1477,7 +1477,9 @@ s32 rm_ra_validate_ring_index(u16 nav_id, u8 udma_chan_type, u8 host, u16 index)
 		ring_type = RA_STANDARD_RING;
 		break;
 	case DMSS_BCDMA_TX_CHAN:
+	case DMSS_BCDMA_TX_HCCHAN:
 	case DMSS_BCDMA_RX_CHAN:
+	case DMSS_BCDMA_RX_HCCHAN:
 	case DMSS_BCDMA_BLOCK_COPY_HCCHAN:
 	case DMSS_BCDMA_BLOCK_COPY_CHAN:
 	case DMSS_PKTDMA_TX_CHAN:

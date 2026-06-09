@@ -1,5 +1,5 @@
 /*
- * FreeRTOS Kernel <DEVELOPMENT BRANCH>
+ * FreeRTOS Kernel V11.1.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
@@ -26,7 +26,7 @@
  *
  */
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -77,12 +77,22 @@
 this value. */
 #define portNO_CRITICAL_NESTING			( ( size_t ) 0 )
 
-/* Tasks are not created with a floating point context, but can be given a
-floating point context after they have been created.  A variable is stored as
-part of the tasks context that holds portNO_FLOATING_POINT_CONTEXT if the task
-does not have an FPU context, or any other value if the task does have an FPU
-context. */
+/* In configUSE_TASK_FPU_SUPPORT Mode 1 (or undefined), tasks are not created
+with a floating point context, but can be given a floating point context after
+they have been created by calling vPortTaskUsesFPU(). In Mode 2, tasks are
+created with a floating point context by default.
+A flag is stored on each task's stack indicating whether the task has an FPU
+context. The flag holds portNO_FLOATING_POINT_CONTEXT (0) if the task does not
+have an FPU context, or pdTRUE (1) if it does. The context switch assembly
+checks this flag to determine whether to save/restore FPU registers. */
 #define portNO_FLOATING_POINT_CONTEXT	( ( StackType_t ) 0 )
+
+#if ( configUSE_TASK_FPU_SUPPORT == 2 )
+	/* The space on the stack required to hold the FPU registers.
+	 * There are 32 128-bit registers. Only needed when pre-allocating
+	 * FPU context for all tasks. */
+	#define portFPU_REGISTER_WORDS     ( 32 * 2 )
+#endif
 
 /* Constants required to setup the initial task context. */
 #define portSP_EL0						( ( StackType_t ) 0x00 )
@@ -118,6 +128,16 @@ uint64_t ullPortInterruptNesting = 0;
 
 /* flag to control tick ISR handling, this is made true just before schedular start */
 uint64_t ullPortSchedularRunning = pdFALSE;
+
+static inline void portDSB(void)
+{
+	__asm__ __volatile__ (" dsb sy"   "\n\t": : : "memory");
+}
+
+static inline void portISB(void)
+{
+	__asm__ __volatile__ (" isb sy"   "\n\t": : : "memory");
+}
 
 /*
  * See header file for description.
@@ -198,17 +218,38 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
 	pxTopOfStack--;
 
 	*pxTopOfStack = ( StackType_t ) pxCode; /* Exception return address. */
-	pxTopOfStack--;
 
-	/* The task will start with a critical nesting count of 0 as interrupts are
-	enabled. */
-	*pxTopOfStack = portNO_CRITICAL_NESTING;
-	pxTopOfStack--;
+	#if ( configUSE_TASK_FPU_SUPPORT == 2 )
+	{
+		/* The task will start with a floating point context. Leave space for the
+		FPU registers. */
+		pxTopOfStack -= portFPU_REGISTER_WORDS;
 
-	/* The task will start without a floating point context.  A task that uses
-	the floating point hardware must call vPortTaskUsesFPU() before executing
-	any floating point instructions. */
-	*pxTopOfStack = portNO_FLOATING_POINT_CONTEXT;
+		pxTopOfStack--;
+
+		/* Store critical nesting count to maintain consistent stack layout
+		 * between Mode 1 and Mode 2. */
+		*pxTopOfStack = portNO_CRITICAL_NESTING;
+
+		pxTopOfStack--;
+		*pxTopOfStack = pdTRUE;  /* FPU context is enabled. */
+		ullPortTaskHasFPUContext = pdTRUE;
+	}
+	#else /* configUSE_TASK_FPU_SUPPORT != 2 */
+	{
+		pxTopOfStack--;
+
+		/* The task will start with a critical nesting count of 0 as interrupts are
+		enabled. */
+		*pxTopOfStack = portNO_CRITICAL_NESTING;
+		pxTopOfStack--;
+
+		/* The task will start without a floating point context.  A task that uses
+		the floating point hardware must call vPortTaskUsesFPU() before executing
+		any floating point instructions. */
+		*pxTopOfStack = portNO_FLOATING_POINT_CONTEXT;
+	}
+	#endif /* configUSE_TASK_FPU_SUPPORT */
 
 	return pxTopOfStack;
 }
@@ -248,12 +289,18 @@ void vPortEndScheduler( void )
 void vPortEnterCritical( void )
 {
 	/* Mask interrupts */
+    portDSB();
+    portISB();
 	portDISABLE_INTERRUPTS();
+    portDSB();
+    portISB();
 
 	/* Now interrupts are disabled ullCriticalNesting can be accessed
 	directly.  Increment ullCriticalNesting to keep a count of how many times
 	portENTER_CRITICAL() has been called. */
 	ullCriticalNesting++;
+    portDSB();
+    portISB();
 
 	/* This is not the interrupt safe version of the enter critical function so
 	assert() if it is being called from an interrupt context.  Only API
@@ -272,13 +319,19 @@ void vPortExitCritical( void )
 	{
 		/* Decrement the nesting count as the critical section is being
 		exited. */
+        portDSB();
+        portISB();
 		ullCriticalNesting--;
+        portDSB();
+        portISB();
 
 		/* If the nesting level has reached zero then all interrupt
 		must be re-enabled. */
 		if( ullCriticalNesting == portNO_CRITICAL_NESTING )
 		{
 			portENABLE_INTERRUPTS();
+            portDSB();
+            portISB();
 		}
 	}
 }
@@ -287,13 +340,19 @@ void vPortTimerTickHandler()
 {
     if( ullPortSchedularRunning == pdTRUE )
     {
-        /* Increment the RTOS tick. */
-        if( xTaskIncrementTick() != pdFALSE )
+        portDISABLE_INTERRUPTS();
         {
-            ullPortYieldRequired = pdTRUE;
+            /* Increment the RTOS tick. */
+            if( xTaskIncrementTick() != pdFALSE )
+            {
+                ullPortYieldRequired = pdTRUE;
+            }
         }
+        portENABLE_INTERRUPTS();
     }
 }
+
+#if ( configUSE_TASK_FPU_SUPPORT != 2 )
 
 void vPortTaskUsesFPU( void )
 {
@@ -304,6 +363,8 @@ void vPortTaskUsesFPU( void )
 	/* Consider initialising the FPSR here - but probably not necessary in
 	AArch64. */
 }
+
+#endif /* configUSE_TASK_FPU_SUPPORT */
 
 /* configCHECK_FOR_STACK_OVERFLOW is set to 1, so the application must provide an
  * implementation of vApplicationStackOverflowHook()
@@ -321,9 +382,9 @@ static StackType_t uxIdleTaskStack[ configMINIMAL_STACK_SIZE ];
  * implementation of vApplicationGetIdleTaskMemory() to provide the memory that is
  * used by the Idle task.
  */
-void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
-                                    StackType_t **ppxIdleTaskStackBuffer,
-                                    uint32_t *pulIdleTaskStackSize )
+void vApplicationGetIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer,
+                                    StackType_t ** ppxIdleTaskStackBuffer,
+                                    configSTACK_DEPTH_TYPE * pulIdleTaskStackSize )
 {
     /* Pass out a pointer to the StaticTask_t structure in which the Idle task’s
      * state will be stored.
@@ -346,9 +407,9 @@ static StackType_t uxTimerTaskStack[ configTIMER_TASK_STACK_DEPTH ];
  * application must provide an implementation of vApplicationGetTimerTaskMemory()
  * to provide the memory that is used by the Timer service task.
  */
-void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer,
-                                     StackType_t **ppxTimerTaskStackBuffer,
-                                     uint32_t *pulTimerTaskStackSize )
+void vApplicationGetTimerTaskMemory( StaticTask_t ** ppxTimerTaskTCBBuffer,
+                                     StackType_t ** ppxTimerTaskStackBuffer,
+                                     configSTACK_DEPTH_TYPE * pulTimerTaskStackSize )
 {
     /* Pass out a pointer to the StaticTask_t structure in which the Timer
      * task’s state will be stored.

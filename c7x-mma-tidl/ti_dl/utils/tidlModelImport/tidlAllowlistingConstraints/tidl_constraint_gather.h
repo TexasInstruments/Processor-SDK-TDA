@@ -85,9 +85,9 @@ const vector<TidlConstraint> tidlConstraintGather = {
         }
     ),
     TIDL_CSTR(
-        "Number of output dimensions must be less than <= 6",
-        "Number of output dimensions must be less than <= 6",
-        "Number of output dimensions must be less than <= 6",
+        "Number of output dimensions must be <= 6",
+        "Number of output dimensions must be <= 6",
+        "Number of output dimensions must be <= 6",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
             int32_t numDims = layer->allowlistingMetaData.outputTensorDims[0].size();

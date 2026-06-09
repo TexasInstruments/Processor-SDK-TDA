@@ -50,11 +50,12 @@
 
 #define VHWA_LDC_TIRTOS_CFG                                                    \
 {                                                                              \
+    /* 0, 2MP NV12 8p to 8p, with block size aligned */                        \
     {                                                                          \
         "TC_LDC_FUNC_000",      /* Test Name */                                \
         1u,                     /* Num Handles */                              \
         4u,                     /* Repeat Cnt */                               \
-        TRUE,                  /* Is Performance Test */                      \
+        TRUE,                  /* Is Performance Test */                       \
         /* Test Configuration */                                               \
         {                                                                      \
             &gAppLdcTestCfg[0U]                                                \

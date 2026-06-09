@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2022
+ *  Copyright (c) Texas Instruments Incorporated 2022-25
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -304,7 +304,7 @@ int32_t CsirxApp_sensorConfig(CsiLoopback_RxInstObj* appInstObj)
     uint32_t *ub953I2cAddr, portNum = 0U;
     uint32_t *sensorI2cAddr;
     uint8_t i2cswitchreg;
-    
+
     Board_enableCSII2c(BOARD_CSI_I2C_MUX_INSTANCE);
     i2cswitchreg = 0x03;
     gI2cHandle = I2C_getHandle(BOARD_CSI_I2C_SWITCH_INSTANCE);
@@ -387,7 +387,7 @@ int32_t CsirxApp_sensorConfig(CsiLoopback_RxInstObj* appInstObj)
                      cnt ++)
                 {
                     regAddr8 = gUb953SensorCfg[cnt][0] & 0xFF;
-                    if(0x07 == regAddr8) 
+                    if(0x07 == regAddr8)
                     {
                         if(D3IMX390_CM_MODULE == appInstObj->cameraSensor)
                         {
@@ -439,8 +439,8 @@ int32_t CsirxApp_sensorConfig(CsiLoopback_RxInstObj* appInstObj)
                    {
                        App_wait(timeOut);
                    }
-                }    
-             }        
+                }
+             }
              else
              {
                  break;
@@ -462,7 +462,7 @@ int32_t CsirxApp_sensorConfig(CsiLoopback_RxInstObj* appInstObj)
                   {
                       regAddr = gSensorCfg[cnt][0];
                       regVal = gSensorCfg[cnt][1];
-     
+
                       status = Board_i2c16BitRegWr(gI2cHandle,
                                                    i2cAddr,
                                                    regAddr,
@@ -502,7 +502,7 @@ int32_t CsirxApp_sensorConfig(CsiLoopback_RxInstObj* appInstObj)
                                            &regVal,
                                            1,
                                            APP_I2C_TRANSACTION_TIMEOUT);
-        
+
                if (0 != status)
                {
                    GT_1trace(AppTrace, GT_INFO,
@@ -519,10 +519,10 @@ int32_t CsirxApp_sensorConfig(CsiLoopback_RxInstObj* appInstObj)
                 GT_1trace(AppTrace, GT_INFO,
                           APP_NAME ": Sensor Configuration Failed for CSIRX instance %d!!!\r\n",appInstObj->instId);
          }
-    }    
-     
+    }
+
     return (retVal);
-}    
-   
+}
+
 
 

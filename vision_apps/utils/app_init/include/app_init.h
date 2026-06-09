@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2021 Texas Instruments Incorporated
+ * Copyright (c) 2021-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -99,6 +99,28 @@ int32_t appInit();
  * \return 0 on success else failure
  */
 int32_t appDeInit();
+
+/**
+ * \brief Initialize the following modules for VDK wrapper.
+ *  - IPC
+ *  - TIVX kernels
+ *
+ *  \return 0 on success else failure
+ */
+int32_t appVdkInit();
+
+/**
+ * \brief De-initializes the modules initialized by appVdkInit() function.
+ *
+ * \return 0 on success else failure
+ */
+int32_t appVdkDeInit();
+
+/**
+ * \brief Registers any target kernels that will be ran on VDK.
+ *
+ */
+void appVdkRegisterKernels();
 
 #ifdef __cplusplus
 }

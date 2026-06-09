@@ -200,6 +200,7 @@ typedef struct
  *                      should be unique - two or more drivers can't have the
  *                      same driver name.
  *
+ *  \return             Returns 0 on success else returns error value.
  */
 int32_t Fvid2_registerDriver(const Fvid2_DrvOps *drvOps);
 
@@ -212,6 +213,7 @@ int32_t Fvid2_registerDriver(const Fvid2_DrvOps *drvOps);
  *  \param drvOps       Driver function table pointer containing driver
  *                      function pointers and driver name.
  *
+ *  \return             Returns 0 on success else returns error value.
  */
 int32_t Fvid2_unRegisterDriver(const Fvid2_DrvOps *drvOps);
 
@@ -257,7 +259,6 @@ int32_t Fvid2_checkDqFrameList(const Fvid2_FrameList   *frameList,
  *  \param dest         Pointer to destination frame list.
  *  \param src          Pointer to source frame list.
  *
- *  \return             Returns 0 on success else returns error value.
  */
 void Fvid2_copyFrameList(Fvid2_FrameList *dest, Fvid2_FrameList *src);
 
@@ -271,7 +272,6 @@ void Fvid2_copyFrameList(Fvid2_FrameList *dest, Fvid2_FrameList *src);
  *  \param dest         Pointer to destination frame list.
  *  \param src          Pointer to source frame list.
  *
- *  \return             Returns 0 on success else returns error value.
  */
 void Fvid2_duplicateFrameList(Fvid2_FrameList       *dest,
                               const Fvid2_FrameList *src);

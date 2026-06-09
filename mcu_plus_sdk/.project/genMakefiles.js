@@ -3,7 +3,7 @@ const path = require(`path`);
 const fs = require(`fs`);
 const _ = require('lodash');
 
-function genMakefileDeviceTop(component_file_list, example_file_list, device) {
+function genMakefileDeviceTop(component_file_list, example_file_list, device, isInternal) {
     let component_make_list = [];
     let example_make_list = [];
     let example_make_projectspec_list = [];
@@ -11,6 +11,9 @@ function genMakefileDeviceTop(component_file_list, example_file_list, device) {
     let system_example_make_projectspec_list = [];
 
     let genFolder = ".";
+    if(isInternal == true) {
+        genFolder = "./test"
+    }
 
     for(component of component_file_list) {
         let component_make = [];
@@ -29,6 +32,10 @@ function genMakefileDeviceTop(component_file_list, example_file_list, device) {
         component_make.name = property.name;
         component_make.tag = tag;
         component_make.relpath = common.path.relative(path.normalize(__dirname + `/../${genFolder}`), property.dirPath);
+        if(property.isExternalLibrary === true)
+        {
+            component_make.isExternalLibrary = true;
+        }
         if(property.isSkipTopLevelBuild === true)
         {
             component_make.isSkipTopLevelBuild = true;
@@ -45,7 +52,9 @@ function genMakefileDeviceTop(component_file_list, example_file_list, device) {
         component_make.buildTarget = buildTarget;
         component_make.buildTargetClean = buildTargetClean;
         component_make.buildTargetScrub = buildTargetScrub;
-        component_make_list.push(component_make);
+        if(property.isInternal == isInternal) {
+            component_make_list.push(component_make);
+        }
     }
 
     for(example of example_file_list) {
@@ -74,6 +83,11 @@ function genMakefileDeviceTop(component_file_list, example_file_list, device) {
                 example_make.isBootLoader = true;
             }
 
+            if(property.isInternal === true && property.isSDL === true )
+            {
+                example_make.isSDL = true;
+            }
+
             buildTarget =` ${property.name}_${buildOption.board}_${buildOption.cpu}_${buildOption.os}_${buildOption.cgt}`;
             buildTargetClean =` ${property.name}_${buildOption.board}_${buildOption.cpu}_${buildOption.os}_${buildOption.cgt}_clean`;
             buildTargetScrub =` ${property.name}_${buildOption.board}_${buildOption.cpu}_${buildOption.os}_${buildOption.cgt}_scrub`;
@@ -81,19 +95,21 @@ function genMakefileDeviceTop(component_file_list, example_file_list, device) {
             example_make.buildTarget = buildTarget;
             example_make.buildTargetClean = buildTargetClean;
             example_make.buildTargetScrub = buildTargetScrub;
-            let isPartOfSystemProject = false;
-            if(buildOption.isPartOfSystemProject && buildOption.isPartOfSystemProject === true)
-            {
-                isPartOfSystemProject = true;
-            }
-            if(isPartOfSystemProject === false)
-            {
-                example_make_list.push(example_make);
-                if(property.skipProjectSpec) {
-                    /* no need to output project spec make commands */
+            if(property.isInternal == isInternal) {
+                let isPartOfSystemProject = false;
+                if(buildOption.isPartOfSystemProject && buildOption.isPartOfSystemProject === true)
+                {
+                    isPartOfSystemProject = true;
                 }
-                else {
-                    example_make_projectspec_list.push(example_make);
+                if(isPartOfSystemProject === false)
+                {
+                    example_make_list.push(example_make);
+                    if(property.skipProjectSpec) {
+                        /* no need to output project spec make commands */
+                    }
+                    else {
+                        example_make_projectspec_list.push(example_make);
+                    }
                 }
             }
         }
@@ -129,16 +145,20 @@ function genMakefileDeviceTop(component_file_list, example_file_list, device) {
                 system_example_make.isSkipTopLevelBuild = true;
             }
 
-            system_example_make_list.push(system_example_make);
+            if(property.isInternal == isInternal) {
+                system_example_make_list.push(system_example_make);
 
-            if( project.skipProjectSpec && project.skipProjectSpec === true)
-            {
-                /* skip project spec */
+                if( project.skipProjectSpec && project.skipProjectSpec === true)
+                {
+                    /* skip project spec */
+                }
+                else
+                {
+                    system_example_make_projectspec_list.push(system_example_make);
+                }
             }
-            else
-            {
-                system_example_make_projectspec_list.push(system_example_make);
-            }
+
+
         }
 
     }
@@ -149,6 +169,11 @@ function genMakefileDeviceTop(component_file_list, example_file_list, device) {
         system_example_list: system_example_make_list,
         device: device,
     };
+
+    if (device == "j722s") {
+        const dmAppAbsPath = path.normalize(__dirname + `/../examples/drivers/sciclient/sciclient_get_version/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang`);
+        args.dm_app_path = common.path.relative(path.normalize(__dirname + `/../${genFolder}`), dmAppAbsPath);
+    }
 
     common.convertTemplateToFile(
         `.project/templates/makefile_device_top.xdt`,
@@ -250,6 +275,7 @@ function genMakefileExample(example_file_list, device) {
                 sdkPath: "MCU_PLUS_SDK_PATH",
                 relPath: common.path.relative(project.dirPath, "."),
                 project: project,
+                common: common,
                 cgtOptions: require(`./cgt/cgt_${project.cgt}`).getCgtOptions(buildOption.cpu),
                 syscfg: {
                     device: require(`./device/project_${device}.js`).getSysCfgDevice(buildOption.board),
@@ -269,7 +295,7 @@ function genMakefileExample(example_file_list, device) {
                     args);
             } else
             {
-                if(`${device}` == "j722s" && example.match(/sbl*/))
+                if(`${device}` == "j722s" && example.match(/sbl/) && !example.match(/stage2/))
                 {
                     common.convertTemplateToFile(
                         `.project/templates/${device}/sbl/makefile_${project.type}.xdt`,
@@ -390,7 +416,8 @@ function genMakefilesDevice(device) {
         component_file_list_top = component_file_list_top.concat(component_file_list_with_makefile);
     }
 
-    genMakefileDeviceTop(component_file_list_top, example_file_list, device);    /* External libs/examples */
+    genMakefileDeviceTop(component_file_list_top, example_file_list, device, false);    /* External libs/examples */
+    genMakefileDeviceTop(component_file_list_top, example_file_list, device, true);     /* Internal libs/examples */
     genMakefileLibrary(component_file_list, device);
     genMakefileExample(example_file_list, device);
     genMakefileProjectSpec(example_file_list, device);

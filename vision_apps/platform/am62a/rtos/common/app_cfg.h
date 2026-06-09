@@ -70,19 +70,12 @@
 #define ENABLE_PRINTF_REDIRECT
 //#define ENABLE_UART
 
-#define ENABLE_IPC_MPU1_0
-#define ENABLE_IPC_MCU1_0
-#define ENABLE_IPC_C7x_1
-
-#if defined(QNX_MPU)
-#define ENABLE_IPC_MCU2_0
-#endif
+#define ENABLE_IPC
+#define ENABLE_IPC_ECHO_TEST
 
 #define ENABLE_UDMA
 #define ENABLE_UDMA_COPY
 #define ENABLE_SCICLIENT
-
-#define ENABLE_IPC_ECHO_TEST
 
 #define APP_LOG_MEM_SIZE                   (0x00040000u)
 #define TIOVX_OBJ_DESC_SHARED_MEM_SIZE     (0x00FC0000u)

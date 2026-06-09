@@ -462,35 +462,46 @@ void clk_put(struct clk *clkp)
 	}
 }
 
-void clk_ssc_allow(struct clk *clkp)
+#ifdef CONFIG_PM_CLK_SSC
+u32 clk_set_ssc(struct clk *clkp, u32 modfreq_hz, u32 mod_depth, u8 spread_type, sbool enable)
 {
-	if (--clkp->ssc_block_count == 0U) {
-		const struct clk_parent *p;
-		p = clk_get_parent(clkp);
-		if (p != NULL) {
-			struct clk *clkp_parent;
-			clkp_parent = clk_lookup((clk_idx_t) p->clk);
-			if (clkp_parent != NULL) {
-				clk_ssc_allow(clkp_parent);
-			}
-		}
+	const struct clk_data *clk_data_p = clk_get_data(clkp);
+	u32 ret;
+
+	if ((clkp->flags & CLK_FLAG_INITIALIZED) == 0U) {
+		ret = 1U;       /* Fail: Clock not initialized */
+	} else if ((clk_data_p->flags & CLK_DATA_FLAG_ALLOW_SSC_CHANGE) == 0U) {
+		ret = 1U;       /* Fail: Hardware does not support SSC on this clock */
+	} else if (clk_data_p->drv->set_ssc == NULL) {
+		ret = 1U;       /* Fail: No driver support for SSC */
+	} else {
+		/* Success: Call hardware-specific driver to set SSC parameters */
+		ret = (clk_data_p->drv->set_ssc(clkp, modfreq_hz, mod_depth,
+						spread_type, enable) == 0) ? 0U : 1U;
 	}
+
+	return ret;
 }
 
-void clk_ssc_block(struct clk *clkp)
+u32 clk_get_ssc(struct clk *clkp, struct ssc_data *ssc_datap)
 {
-	if (0U == clkp->ssc_block_count++) {
-		const struct clk_parent *p;
-		p = clk_get_parent(clkp);
-		if (p != NULL) {
-			struct clk *clkp_parent;
-			clkp_parent = clk_lookup((clk_idx_t) p->clk);
-			if (clkp_parent != NULL) {
-				clk_ssc_block(clkp_parent);
-			}
-		}
+	const struct clk_data *clk_data_p = clk_get_data(clkp);
+	u32 ret = 0U;
+
+	if ((clkp->flags & CLK_FLAG_INITIALIZED) == 0U) {
+		ret = 1U;       /* Fail: Clock not initialized */
+	} else if ((clk_data_p->flags & CLK_DATA_FLAG_ALLOW_SSC_CHANGE) == 0U) {
+		ret = 1U;       /* Fail: Hardware does not support SSC on this clock */
+	} else if (clk_data_p->drv->get_ssc == NULL) {
+		ret = 1U;       /* Fail: No driver support for SSC */
+	} else {
+		/* Success: Call hardware-specific driver to get SSC parameters */
+		clk_data_p->drv->get_ssc(clkp, ssc_datap);
 	}
+
+	return ret;
 }
+#endif
 
 void clk_freq_change_allow(struct clk *clkp)
 {

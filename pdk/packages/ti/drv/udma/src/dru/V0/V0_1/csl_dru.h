@@ -121,6 +121,9 @@ extern "C" {
 #define CSL_DRU_OWNER_DIRECT_TR         ((uint64_t) 0x0000U)
 /** \brief UDMA-C TR - TR will be received through PSIL */
 #define CSL_DRU_OWNER_UDMAC_TR          ((uint64_t) 0x0001U)
+
+/**< Maximum number of DRU CAUSE registers */
+#define CSL_DRU_NUM_CAUSE               (2U)
 /* @} */
 
 /**

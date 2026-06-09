@@ -3,7 +3,7 @@
  *
  * Cortex-M3 (CM3) firmware for power management
  *
- * Copyright (C) 2024, Texas Instruments Incorporated
+ * Copyright (C) 2024-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,7 +48,7 @@
  * HF Oscillator 0
  * 19.2, 20, 24, 25, 26, 27MHz
  */
-static u32 clk_soc_hfosc0_get_freq(struct clk *clk UNUSED)
+static u32 clk_soc_hfosc0_get_freq(struct clk *clk_ptr UNUSED)
 {
 	const u32 freq_table[] = {
 		FREQ_MHZ(19.2),
@@ -69,7 +69,7 @@ static u32 clk_soc_hfosc0_get_freq(struct clk *clk UNUSED)
 	return ret;
 }
 
-static u32 clk_soc_hfosc0_get_state(struct clk *clk UNUSED)
+static u32 clk_soc_hfosc0_get_state(struct clk *clk_ptr UNUSED)
 {
 	return CLK_HW_STATE_ENABLED;
 }

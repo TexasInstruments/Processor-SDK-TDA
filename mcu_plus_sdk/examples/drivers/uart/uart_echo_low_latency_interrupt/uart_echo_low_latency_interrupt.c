@@ -123,9 +123,6 @@ void uart_echo_low_latency_interrupt(void *args)
     const char              *printExitStr = "\r\nAll tests have passed!!\r\n";
     uint32_t                 numCharsRead, i, charRecvdCnt;
 
-    Drivers_open();
-    Board_driversOpen();
-
     DebugP_log("[UART] Echo Low Latency interrupt mode example started ...\r\n");
 
     /* Init App Prms */
@@ -189,8 +186,6 @@ void uart_echo_low_latency_interrupt(void *args)
     DebugP_log("All tests have passed!!\r\n");
 
     App_uartDeInit(appPrms);
-    Board_driversClose();
-    Drivers_close();
 
     return;
 }
@@ -228,89 +223,87 @@ static void App_uartUserISR(void *arg)
     UART_AppPrms  *appPrms     = (UART_AppPrms *) arg;
     uint32_t       intrType;
 
-    do
-    {
-        intrType = UART_getIntrIdentityStatus(appPrms->baseAddr);
-        /* Check RX FIFO threshold is set */
-        if((intrType & UART_INTID_RX_THRES_REACH) == UART_INTID_RX_THRES_REACH)
-        {
-            uint32_t       readSuccess;
-            uint8_t       *readBuf, readChar;
+    intrType = UART_getIntrIdentityStatus(appPrms->baseAddr);
 
-            /* Read all data from RX FIFO */
-            readBuf = (uint8_t *)appPrms->readBuf + appPrms->readCount;
-            while(1)
+    /* Check RX FIFO threshold is set */
+    if((intrType & UART_INTID_RX_THRES_REACH) == UART_INTID_RX_THRES_REACH)
+    {
+        uint32_t       readSuccess;
+        uint8_t       *readBuf, readChar;
+
+        /* Read all data from RX FIFO */
+        readBuf = (uint8_t *)appPrms->readBuf + appPrms->readCount;
+        while(1)
+        {
+            readSuccess = UART_getChar(appPrms->baseAddr, &readChar);
+            if(readSuccess == TRUE)
             {
-                readSuccess = UART_getChar(appPrms->baseAddr, &readChar);
-                if(readSuccess == TRUE)
+                if(appPrms->readCount >= APP_UART_BUFSIZE)
                 {
-                    if(appPrms->readCount >= APP_UART_BUFSIZE)
-                    {
-                        /* Rx buffer overflow */
-                        appPrms->rxOverflow = TRUE;
-                    }
-                    else
-                    {
-                        /* Store data in buffer */
-                        *readBuf = readChar;
-                        readBuf++;
-                        appPrms->readCount++;
-                    }
+                    /* Rx buffer overflow */
+                    appPrms->rxOverflow = TRUE;
                 }
                 else
                 {
-                    break;      /* No data left in FIFO */
-                }
-            }
-
-            if(appPrms->rxOverflow == TRUE)
-            {
-                /* Stop processing further data */
-                UART_intrDisable(appPrms->baseAddr, UART_INTR_RHR_CTI);
-            }
-        }
-        /* Check TX FIFO threshold is set */
-        if((intrType & UART_INTID_TX_THRES_REACH) == UART_INTID_TX_THRES_REACH)
-        {
-            uint32_t       numBytesToTransfer;
-            const uint8_t *writeBuf;
-
-            if(appPrms->writeSizeRemaining > 0U)
-            {
-                numBytesToTransfer = appPrms->writeSizeRemaining;
-                if(numBytesToTransfer > appPrms->txTrigLvl)
-                {
-                    /* Write only threshold level of data */
-                    numBytesToTransfer = appPrms->txTrigLvl;
-                }
-                appPrms->writeSizeRemaining -= numBytesToTransfer;
-
-                /* Send characters upto FIFO threshold level or until done */
-                writeBuf = appPrms->writeBuf + appPrms->writeCount;
-                while(numBytesToTransfer != 0U)
-                {
-                    UART_putChar(appPrms->baseAddr, *writeBuf);
-                    writeBuf++;
-                    numBytesToTransfer--;
-                    appPrms->writeCount++;
-                }
-
-                if(appPrms->writeSizeRemaining == 0U)
-                {
-                    /* Write complete  - disable TX interrupts */
-                    appPrms->txDataSent = TRUE;
-                    UART_intrDisable(appPrms->baseAddr, UART_INTR_THR);
-                    UART_intr2Enable(appPrms->baseAddr, UART_INTR2_TX_EMPTY);
+                    /* Store data in buffer */
+                    *readBuf = readChar;
+                    readBuf++;
+                    appPrms->readCount++;
                 }
             }
             else
             {
-                /* Disable interrupt */
-                UART_intrDisable(appPrms->baseAddr, UART_INTR_THR);
+                break;      /* No data left in FIFO */
             }
         }
-    }while(((intrType & UART_INTID_RX_THRES_REACH) == UART_INTID_RX_THRES_REACH) ||
-           ((intrType & UART_INTID_TX_THRES_REACH) == UART_INTID_TX_THRES_REACH));
+
+        if(appPrms->rxOverflow == TRUE)
+        {
+            /* Stop processing further data */
+            UART_intrDisable(appPrms->baseAddr, UART_INTR_RHR_CTI);
+        }
+    }
+
+    /* Check TX FIFO threshold is set */
+    if((intrType & UART_INTID_TX_THRES_REACH) == UART_INTID_TX_THRES_REACH)
+    {
+        uint32_t       numBytesToTransfer;
+        const uint8_t *writeBuf;
+
+        if(appPrms->writeSizeRemaining > 0U)
+        {
+            numBytesToTransfer = appPrms->writeSizeRemaining;
+            if(numBytesToTransfer > appPrms->txTrigLvl)
+            {
+                /* Write only threshold level of data */
+                numBytesToTransfer = appPrms->txTrigLvl;
+            }
+            appPrms->writeSizeRemaining -= numBytesToTransfer;
+
+            /* Send characters upto FIFO threshold level or until done */
+            writeBuf = appPrms->writeBuf + appPrms->writeCount;
+            while(numBytesToTransfer != 0U)
+            {
+                UART_putChar(appPrms->baseAddr, *writeBuf);
+                writeBuf++;
+                numBytesToTransfer--;
+                appPrms->writeCount++;
+            }
+
+            if(appPrms->writeSizeRemaining == 0U)
+            {
+                /* Write complete  - disable TX interrupts */
+                appPrms->txDataSent = TRUE;
+                UART_intrDisable(appPrms->baseAddr, UART_INTR_THR);
+                UART_intr2Enable(appPrms->baseAddr, UART_INTR2_TX_EMPTY);
+            }
+        }
+        else
+        {
+            /* Disable interrupt */
+            UART_intrDisable(appPrms->baseAddr, UART_INTR_THR);
+        }
+    }
 
     /* Check if TX FIFO is empty */
     if(appPrms->txDataSent == TRUE)
@@ -353,12 +346,14 @@ static void App_uartInit(UART_AppPrms *appPrms)
     /* Register interrupt */
     HwiP_Params_init(&hwiPrms);
     hwiPrms.intNum      = gUartParams[CONFIG_UART_CONSOLE].intrNum;
-    #if (defined (BUILD_C75X_1) || defined (BUILD_C75X_2))
-    hwiPrms.eventId      = gUartParams[CONFIG_UART_CONSOLE].eventId;
-    #endif
+    hwiPrms.eventId     = gUartParams[CONFIG_UART_CONSOLE].eventId;
     hwiPrms.priority    = gUartParams[CONFIG_UART_CONSOLE].intrPriority;
+    hwiPrms.eventId      = gUartParams[CONFIG_UART_CONSOLE].eventId;
     hwiPrms.callback    = &App_uartUserISR;
     hwiPrms.args        = (void *) appPrms;
+    #if defined(__C7504__) || defined(__C7524__)
+    hwiPrms.isPulse     = 0U;
+    #endif
     status              = HwiP_construct(&appPrms->hwiObject, &hwiPrms);
     DebugP_assert(status == SystemP_SUCCESS);
 

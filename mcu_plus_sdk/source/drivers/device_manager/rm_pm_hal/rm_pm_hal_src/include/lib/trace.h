@@ -3,7 +3,7 @@
  *
  * Debug Trace layer APIs
  *
- * Copyright (C) 2018-2024, Texas Instruments Incorporated
+ * Copyright (C) 2018-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #include <lib/trace_protocol.h>
 
-#define TRACE_PRINT_MAX_LENGTH                           255
+#define TRACE_PRINT_MAX_LENGTH                           255U
 #define TRACE_NUM_BUFFER_CONVERSION_SIZE                 ((sizeof(u32) * 8U) + 1U)
 
 #define TRACE_LEVEL_ERR                                  0U
@@ -208,6 +208,9 @@ s32 trace_init(void);
 #define pm_trace(action, val) trace_debug(TRACE_DEBUG_CHANNEL_PM, \
 					  ((((u32) action) << TRACE_DEBUG_ACTION_SHIFT)	\
 					   | (val)))
+#define lpm_trace(action, val) trace_debug(TRACE_DEBUG_CHANNEL_LPM, \
+					   ((((u32) action) << TRACE_DEBUG_ACTION_SHIFT) \
+					    | (val)))
 
 #define bp_trace_sub(action, sub_action, val) trace_debug(TRACE_DEBUG_CHANNEL_BP, \
 							  ((((u32) action) << TRACE_DEBUG_ACTION_SHIFT)	\
@@ -248,6 +251,7 @@ s32 trace_init(void);
 #define sec_trace(action, val) trace_debug(action, val)
 #define rm_trace(action, val) trace_debug(action, val)
 #define pm_trace(action, val) trace_debug(action, val)
+#define lpm_trace(action, val) trace_debug(action, val)
 
 #define bp_trace_sub(action, sub_action, val) trace_debug(action + sub_action, val)
 #define bp_trace_core_sub(action, sub_action, val) trace_debug(action + sub_action, val)

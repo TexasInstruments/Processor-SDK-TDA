@@ -138,6 +138,10 @@ ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J722S j722s))
     DEFINE_FLAGS := J722S_PLATFORM
 endif
 
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+    DEFINE_FLAGS := TDA54_PLATFORM
+endif
+
 #if platform is vme
 ifeq ($(TARGET_SOC),vme)
     DEFINE_FLAGS := VME_PLATFORM
@@ -188,11 +192,11 @@ ifdef SystemRoot
     LDDEBUG := /DEBUG
   endif
 
-  ifeq ($(BUILD_WITH_OPENACC) ,1)
+  ifeq ($(BUILD_WITH_OPENACC),yes)
     COMPILER_FLAGS += /DBUILD_WITH_OPENACC
   endif
 
-  ifeq ($(BUILD_WITH_CUDA) ,1)
+  ifeq ($(BUILD_WITH_CUDA),yes)
   ARFLAGS := /nologo /MACHINE:x64 /ignore:4099
   else
   ARFLAGS := /nologo /MACHINE:x64 /ignore:4099
@@ -203,7 +207,7 @@ ifdef SystemRoot
   endif
 else
   #Linux Host Emulation
-ifeq ($(BUILD_WITH_OPENACC), 1)
+ifeq ($(BUILD_WITH_OPENACC),yes)
   CC=nvc++ -c -fast -acc -gpu=ccall -tp=px
 else
   CC=g++-$(TIDL_GCC_VERSION) -c
@@ -219,18 +223,18 @@ endif
   ifeq ($(CODE_COVERAGE_ENABLED_FOR_TIDL), yes)
   COMPILER_FLAGS += -DLDRA_COVERAGE_ENABLED
   endif
-  
+
   #Scalable API Support for PC-Linux
   COMPILER_FLAGS += -D__C7X_UNSTABLE_API
 
-  ifeq ($(BUILD_WITH_OPENACC) ,1)
+  ifeq ($(BUILD_WITH_OPENACC),yes)
     COMPILER_FLAGS += /DBUILD_WITH_OPENACC
   endif
 
   #Top Level C7100/C7120/C7504 Define:
   COMPILER_FLAGS += -D__$(TARGET_C7X_VERSION)__
 
-  ifeq (1,$(filter 1,$(BUILD_WITH_OPENACC) $(BUILD_WITH_CUDA)))
+  ifeq (yes,$(or $(BUILD_WITH_OPENACC),$(BUILD_WITH_CUDA)))
     ifeq ($(TARGET_BUILD), debug)
       COMPILER_FLAGS += -std=c++14  -DHOST_EMULATION -w -D_HOST_BUILD -DGCC_BUILD
       GCC_DEBUG_CFLAGS :=-g
@@ -254,7 +258,7 @@ endif
     endif
   endif
 
-ifeq ($(BUILD_WITH_OPENACC), 1)
+ifeq ($(BUILD_WITH_OPENACC),yes)
   LD=nvc++ -fast -acc -gpu=ccall -tp=px
 else
   LD=g++-$(TIDL_GCC_VERSION)
@@ -384,10 +388,8 @@ else
 	CFLAGS += -I $(TIARM_TOOLS)\include
   endif
 
-
   CFLAGS += --diag_suppress=496 --diag_suppress=1311 --diag_suppress=1111
   CFLAGS += --advice:performance=none
-  
 endif
 
 ifeq ($(GCOV_ENABLED), 1)
@@ -437,7 +439,7 @@ CFILES:= $(CFILESK) $(CFILESC) $(CFILESASM) $(CFILESCPP) $(CFILESCC) $(CFILESCU)
 OFILES:= $(CFILESC:%.c=%.obj)
 OFILES+= $(CFILESCPP:%.cpp=%.obj)
 OFILES+= $(CFILESCC:%.cc=%.obj)
-OFILES+= $(CFILESCU:%.cu=%.obj) #
+OFILES+= $(CFILESCU:%.cu=%.obj)
 ifneq ($(TARGET_PLATFORM) , PC)
 OFILES+= $(CFILESASM:%.asm=%.obj)
 endif
@@ -554,13 +556,13 @@ endif
 ifeq ($(TARGET_PLATFORM) , PC)
 	$(Q)echo compiling $<
 ifdef SystemRoot
-ifeq ($(BUILD_WITH_CUDA), 1)
+ifeq ($(BUILD_WITH_CUDA),yes)
 	$(Q)$(CUDA_PATH)/bin/nvcc -I $(CUDNN_PATH)/include $(INCLUDE_PATHS) -D BUILD_WITH_CUDA -o $@ -c $<
 else
 	$(Q)$(CC) $(CFLAGS) $< /Fo$@ /Fd$(BUILDDIR)$*.pdb
 endif
 else
-ifeq ($(BUILD_WITH_CUDA), 1)
+ifeq ($(BUILD_WITH_CUDA),yes)
 	$(Q)$(CUDA_PATH)/bin/nvcc -ccbin  $(CC) $(CFLAGS) $(GENCODE_FLAGS) -Xcompiler -fPIC -o $@ -c $<
 else
 	$(Q)$(CC) $(CFLAGS) $(GCC_DEBUG_CFLAGS) -fPIC  $< -o $@
@@ -672,7 +674,7 @@ ifdef SystemRoot
 	$(Q)$(AR) @ar_cmd.txt
 	$(Q)$(RM_CMD) ar_cmd.txt
 else
-	@$(AR) $(ARFLAGS) $(OUTFILE) $(KOFILES) $(OFILES) $(ARFILES)
+	$(Q)@$(AR) $(ARFLAGS) $(OUTFILE) $(KOFILES) $(OFILES) $(ARFILES)
 endif
 endif
 $(LIBDIR):
@@ -722,7 +724,7 @@ ALL_LIBS1 += $(filter %.lib"",$(PC_LDFLAGS))
 ALL_LIBS1 += $(filter %.a86",$(PC_LDFLAGS))
 
 ALL_LIBS  = $(subst .lib,.lib,$(ALL_LIBS1))
-ifeq ($(BUILD_WITH_CUDA), 1)
+ifeq ($(BUILD_WITH_CUDA),yes)
 ALL_LIBS+= "$(CUDA_PATH)\lib\x64\cudart.lib"
 ALL_LIBS+= "$(CUDA_PATH)\lib\x64\cublas.lib"
 ALL_LIBS+= "$(CUDNN_PATH)\lib\x64\cudnn.lib"
@@ -733,14 +735,14 @@ outfile: $(OUTDIR) $(KOFILES) $(OFILES) $(LDFILES)
 ifeq ($(TARGET_PLATFORM) , PC)
 ifdef SystemRoot
 	$(Q)if exist $(OUTFILE).exe del $(OUTFILE).exe
-ifeq ($(BUILD_WITH_CUDA), 1)
+ifeq ($(BUILD_WITH_CUDA),yes)
 	$(Q)$(CUDA_PATH)/bin/nvcc  -o $(OUTFILE) $(KOFILES) $(OFILES) $(LDFILES) $(ALL_LIBS) "User32.lib"
 else
 	$(Q)$(LD) /stack:16000000 $(ALL_LIBS) $(LDDEBUG) $(ARFLAGS) /OUT:$(OUTFILE).exe $(KOFILES) $(OFILES) $(LDFILES)
 endif
 else
 	$(Q)$(RM_CMD) $(OUTFILE)
-ifeq ($(BUILD_WITH_CUDA), 1)
+ifeq ($(BUILD_WITH_CUDA),yes)
 	$(Q)$(CUDA_PATH)/bin/nvcc -ccbin $(LD) -o $(OUTFILE) $(KOFILES) $(OFILES) $(LDFILES) $(LDFLAGS)  -m64
 else
 	$(Q)$(LD) -o $(OUTFILE) $(KOFILES) $(OFILES) $(LDFILES) $(LDFLAGS)

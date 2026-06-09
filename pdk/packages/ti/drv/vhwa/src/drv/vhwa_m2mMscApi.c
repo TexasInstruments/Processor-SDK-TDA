@@ -305,7 +305,7 @@ static int32_t Vhwa_m2mMscCheckCreatePrms(uint32_t drvId, uint32_t drvInstId);
  * \return  FVID2 Driver Handle.
  *
  **/
-static Fdrv_Handle Vhwa_m2mMscCreate(uint32_t drvId, uint32_t drvInstId,
+static Fdrv_Handle Vhwa_m2mMscCreate(uint32_t drvId, uint32_t vpacDrvInstId,
                                      Ptr createPrms, Ptr createStatusArgs,
                                      const Fvid2_DrvCbParams *cbPrms);
 
@@ -352,14 +352,15 @@ static int32_t Vhwa_m2mMscProcessReq(Fdrv_Handle handle,
  *
  **/
 static int32_t Vhwa_m2mMscGetProcessReq(Fdrv_Handle handle,
-                                        Fvid2_FrameList *inProcessList,
-                                        Fvid2_FrameList *outProcessList,
+                                        Fvid2_FrameList *inFrmList,
+                                        Fvid2_FrameList *outFrmList,
                                         uint32_t timeout);
 
 
 static void Vhwa_mscUpdateYuv422iCslPrms(Vhwa_M2mMscHandleObj *hObj,
                                          CSL_MscConfig *cslMscCfg);
 
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
                                          /**
  * \brief   Reconfigure MSC Reg registers as needed for the current handle/queue.
  *
@@ -410,6 +411,7 @@ static int32_t vhwaM2mMscUpdateStatusRegGroup(Vhwa_M2mMscHandleObj *hObj);
  * @return Returns 0 on success, or a negative error code on failure.
  */
 int32_t vhwaM2mMscSetDefaultGoldenRegMemValues(const Vhwa_M2mMscHandleObj *hObj, const Vhwa_M2mMscCommonObj *comObj);
+#endif
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -1038,7 +1040,9 @@ static int32_t Vhwa_m2mMscControl(Fdrv_Handle handle, uint32_t cmd, Ptr cmdArgs,
     Vhwa_M2mMscCommonObj   *comObj = NULL;
     Vhwa_HtsLimiter        *htsLimit = NULL;
     Msc_WdTimerErrEventParams *wdTimerEePrms = NULL;
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     uint32_t                cookie;
+#endif
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -1506,7 +1510,7 @@ static int32_t Vhwa_m2mMscControl(Fdrv_Handle handle, uint32_t cmd, Ptr cmdArgs,
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
             case VHWA_M2M_IOCTL_MSC_ENABLE_RECONFIG_REINIT_REG:
             {
                 /* LDRA_JUSTIFY_START
@@ -1842,6 +1846,7 @@ static int32_t Vhwa_m2mMscControl(Fdrv_Handle handle, uint32_t cmd, Ptr cmdArgs,
                 /* LDRA_JUSTIFY_END */
                 break;
             }
+#endif
             /* Default Case */
             /* LDRA_JUSTIFY_START
             <metric start>statement branch <metric end>
@@ -2114,9 +2119,12 @@ static int32_t Vhwa_m2mMscProcessReq(Fdrv_Handle handle,
             hObj->numPendReq = (hObj->numPendReq + 1U);
         }
 
-        for (cnt = 0U; (cnt < MSC_MAX_OUTPUT) && (FVID2_SOK == retVal);
-                cnt ++)
+        for (cnt = 0U; cnt < MSC_MAX_OUTPUT; cnt ++)
         {
+            if (FVID2_SOK != retVal)
+            {
+                break;
+            }
             if (0U != (hObj->scalarUsed & ((uint32_t)1U << cnt)))
             {
                 semStatus = VhwaAl_SemaphoreP_pend(comObj->scLockSem[cnt],
@@ -2154,7 +2162,6 @@ static int32_t Vhwa_m2mMscProcessReq(Fdrv_Handle handle,
                     {
                         retVal = FVID2_EFAIL;
                     }
-                    break;
                 }
                 /* LDRA_JUSTIFY_END */
             }
@@ -2274,6 +2281,7 @@ static int32_t Vhwa_m2mMscProcessReq(Fdrv_Handle handle,
                     comObj->socInfo.vpacIntdRegs, qObj->hObj);
             }
 
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
             /* Invoke the reconfig-Reg if enableReconfigReinitReg enabled for the current handle */
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
@@ -2294,6 +2302,7 @@ static int32_t Vhwa_m2mMscProcessReq(Fdrv_Handle handle,
             {
                 retVal = vhwaM2mMscUpdateStatusRegGroup(hObj);
             }
+#endif
 
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
@@ -2528,12 +2537,18 @@ int32_t Vhwa_m2mMscAllocSl2(const Vhwa_M2mMscSl2AllocPrms *sl2AllocPrms)
         /* LDRA_JUSTIFY_END */
 
     }
-    for (cnt = 0; (cnt < VHWA_M2M_MSC_MAX_INST) && (FVID2_SOK == retVal);
-            cnt++)
+    for (cnt = 0; cnt < VHWA_M2M_MSC_MAX_INST; cnt++)
     {
-        for (cnt1 = 0; (cnt1 < channelCnt) && (FVID2_SOK == retVal);
-            cnt1++)
+        if (FVID2_SOK != retVal)
         {
+            break;
+        }
+        for (cnt1 = 0; cnt1 < channelCnt; cnt1++)
+        {
+            if (FVID2_SOK != retVal)
+            {
+                break;
+            }
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
             <justification start>
@@ -2548,11 +2563,14 @@ int32_t Vhwa_m2mMscAllocSl2(const Vhwa_M2mMscSl2AllocPrms *sl2AllocPrms)
                 retVal = FVID2_EBADARGS;
             }
             /* LDRA_JUSTIFY_END */
-
         }
     }
-    for (cnt = 0; (cnt < MSC_MAX_OUTPUT) && (FVID2_SOK == retVal); cnt++)
+    for (cnt = 0; cnt < MSC_MAX_OUTPUT; cnt++)
     {
+        if (FVID2_SOK != retVal)
+        {
+            break;
+        }
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
         <justification start>
@@ -2567,7 +2585,6 @@ int32_t Vhwa_m2mMscAllocSl2(const Vhwa_M2mMscSl2AllocPrms *sl2AllocPrms)
             retVal = FVID2_EBADARGS;
         }
         /* LDRA_JUSTIFY_END */
-
     }
     /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
@@ -2744,8 +2761,12 @@ static int32_t Vhwa_mscInit(const Vhwa_M2mMscInitParams *pInitPrms)
     /* Check for Null pointer */
     GT_assert(VhwaMscTrace, (NULL != pInitPrms));
 
-    for (cnt = 0; (cnt < VHWA_M2M_MSC_MAX_INST) && (retVal == FVID2_SOK); cnt++)
+    for (cnt = 0; cnt < VHWA_M2M_MSC_MAX_INST; cnt++)
     {
+        if (FVID2_SOK != retVal)
+        {
+            break;
+        }
         /* Initialize the semaphore parameters and create semaphore pool */
         #if defined(MCU_PLUS_SDK)
         /* LDRA_JUSTIFY_START
@@ -2791,8 +2812,12 @@ static int32_t Vhwa_mscInit(const Vhwa_M2mMscInitParams *pInitPrms)
         }
     }
 
-    for (cnt = 0; (cnt < MSC_MAX_OUTPUT) && (retVal == FVID2_SOK); cnt++)
+    for (cnt = 0; cnt < MSC_MAX_OUTPUT; cnt++)
     {
+        if (FVID2_SOK != retVal)
+        {
+            break;
+        }
         /* Initialize the semaphore parameters and create semaphore pool */
         #if defined(MCU_PLUS_SDK)
         /* LDRA_JUSTIFY_START
@@ -2852,8 +2877,12 @@ static int32_t Vhwa_mscInit(const Vhwa_M2mMscInitParams *pInitPrms)
         retVal  = Vhwa_m2mMscUdmaChInit(&gM2mMscCommonObj);
     }
 
-    for (cnt = 0; (cnt < VHWA_M2M_MSC_MAX_INST) && (FVID2_SOK == retVal); cnt++)
+    for (cnt = 0; cnt < VHWA_M2M_MSC_MAX_INST; cnt++)
     {
+        if (FVID2_SOK != retVal)
+        {
+            break;
+        }
         instObj = &gM2mMscInstObj[cnt];
 
         retVal = Vhwa_mscCreateQueue(instObj);
@@ -2878,9 +2907,13 @@ static int32_t Vhwa_mscInit(const Vhwa_M2mMscInitParams *pInitPrms)
         /* Enable the MSC Module */
         CSL_mscEnable(socInfo->mscRegs);
 
-        for (cnt = 0; (cnt < VHWA_M2M_MSC_MAX_INST) && (retVal == FVID2_SOK);
-                        cnt++)
+        for (cnt = 0; cnt < VHWA_M2M_MSC_MAX_INST; cnt++)
         {
+            if (FVID2_SOK != retVal)
+            {
+                break;
+            }
+
             instObj = &gM2mMscInstObj[cnt];
 
             /* Register interrupt */
@@ -2921,8 +2954,12 @@ static int32_t Vhwa_mscDeInit(void)
     /* Stop UDMA channels */
     retVal = Vhwa_m2mMscStopCh(&gM2mMscCommonObj);
 
-    for (cnt = 0; (cnt < VHWA_M2M_MSC_MAX_INST) && (FVID2_SOK == retVal); cnt++)
+    for (cnt = 0; cnt < VHWA_M2M_MSC_MAX_INST; cnt++)
     {
+        if (FVID2_SOK != retVal)
+        {
+            break;
+        }
         /* Check if any handle is open */
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
@@ -2992,6 +3029,7 @@ static int32_t Vhwa_mscDeInit(void)
     return (retVal);
 }
 
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 int32_t Vhwa_m2mMscReInit(void)
 {
     int32_t                status = FVID2_SOK;
@@ -3058,9 +3096,13 @@ int32_t Vhwa_m2mMscReInit(void)
             CSL_mscEnable(gM2mMscCommonObj.socInfo.mscRegs);
         }
 
-        for (cnt = 0; (cnt < VHWA_M2M_MSC_MAX_INST) && (status == FVID2_SOK);
-                        cnt++)
+        for (cnt = 0; cnt < VHWA_M2M_MSC_MAX_INST; cnt++)
         {
+            if (FVID2_SOK != status)
+            {
+                break;
+            }
+            
             instObj = &gM2mMscInstObj[cnt];
 
             /* Register interrupt */
@@ -3128,7 +3170,7 @@ int32_t Vhwa_m2mMscReInit(void)
 
     return (status);
 }
-
+#endif
 static Vhwa_M2mMscHandleObj *Vhwa_mscAllocHdlObj(const Vhwa_M2mMscInstObj *instObj,
                                                 uint32_t instId)
 {
@@ -3364,13 +3406,21 @@ static int32_t Vhwa_mscSetParams(const Vhwa_M2mMscInstObj *instObj,
         /* Initialize LSE configuration based on the MSC Config */
         Vhwa_mscSetLseCfg(hObj, &hObj->mscPrms);
 
-        for (cnt = 0u; (cnt < hObj->numIter) && (FVID2_SOK == retVal); cnt++)
+        for (cnt = 0u; cnt < hObj->numIter; cnt++)
         {
+            if (FVID2_SOK != retVal)
+            {
+                break;
+            }
             /* Verify HTS Configuration */
             retVal = CSL_htsCheckThreadConfig(&hObj->htsCfg[cnt]);
         }
-        for (cnt = 0u; (cnt < hObj->numIter) && (FVID2_SOK == retVal); cnt++)
+        for (cnt = 0u; cnt < hObj->numIter; cnt++)
         {
+            if (FVID2_SOK != retVal)
+            {
+                break;
+            }
             /* Verify LSE Configuration */
             retVal = CSL_lseCheckConfig(&hObj->lseCfg[cnt]);
         }
@@ -3968,16 +4018,7 @@ static void Vhwa_mscSetLseCfg(Vhwa_M2mMscHandleObj *hObj,
 
         comObj = &gM2mMscCommonObj;
         inIdx = hObj->instId;
-
-        if (VPAC_MSC_INST_ID_0 == hObj->instId)
-        {
-            lseThrId = CSL_LSE_THREAD_ID_0;
-        }
-        else
-        {
-            lseThrId = CSL_LSE_THREAD_ID_1;
-        }
-
+        lseThrId = hObj->instId;
 
         /* For MSC, number of input and output channels are 1 */
         lseCfg->numInCh = 1U;
@@ -4238,6 +4279,7 @@ static void Vhwa_mscSetHtsCfg(const Vhwa_M2mMscInstObj *instObj,
     CSL_HtsSchConfig      *htsCfg = NULL;
     Vhwa_M2mMscCommonObj  *comObj = NULL;
     uint32_t               cnt, itrCnt, chCnt;
+    int32_t               status = FVID2_SOK;
 
     /* Check for Null pointer */
     GT_assert(VhwaMscTrace, (NULL != hObj));
@@ -4270,6 +4312,7 @@ static void Vhwa_mscSetHtsCfg(const Vhwa_M2mMscInstObj *instObj,
         else
         {
             /* Invalid MSC instance Execution will not reach this block */
+            status = FVID2_EINVALID_PARAMS;
         }
         /* LDRA_JUSTIFY_END */
 
@@ -4284,7 +4327,6 @@ static void Vhwa_mscSetHtsCfg(const Vhwa_M2mMscInstObj *instObj,
 
 
         htsCfg->enableStream = (uint32_t)UFALSE;
-        htsCfg->enableHop = (uint32_t)UFALSE;
         htsCfg->enableWdTimer = UFALSE;
         htsCfg->isWdTimer128KMode = (uint32_t)UFALSE;
 
@@ -4294,160 +4336,163 @@ static void Vhwa_mscSetHtsCfg(const Vhwa_M2mMscInstObj *instObj,
         htsCfg->dmaProdCfg[0U].bypass = (uint32_t)UTRUE;
         htsCfg->dmaProdCfg[1U].bypass = (uint32_t)UTRUE;
 
-        for (chCnt = 0; chCnt < hObj->numInChUsed; chCnt++)
+        if(FVID2_SOK == status)
         {
-             /* LDRA_JUSTIFY_START
-            <metric start>  branch <metric end>
-            <justification start>
-            Rationale: The component level negative test framework and test applications cannot reach this portion.
-            The test framework does not support the configuration required to trigger this error scenario.
-            Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application.
-            This behaviour is part of the application design. However, due to the stated rationale, this is not tested.
-            <justification end> */
-            if(UTRUE == hObj->inChPrms[chCnt].buffEnable)
-            /* LDRA_JUSTIFY_END */
-
+            for (chCnt = 0; chCnt < hObj->numInChUsed; chCnt++)
             {
-                htsCfg->consCfg[chCnt].enable = (uint32_t)UTRUE;
-                htsCfg->consCfg[chCnt].prodId = CSL_HTS_PROD_IDX_UDMA;
-
-                /* Clear reset flag for DMA producer for HWA */
-                htsCfg->dmaProdCfg[chCnt].bypass = (uint32_t)UFALSE;
-
-                htsCfg->dmaProdCfg[chCnt].enable = (uint32_t)UTRUE;
-                htsCfg->dmaProdCfg[chCnt].dmaChNum =
-                        Udma_chGetNum(comObj->inChHandle[hObj->instId][chCnt]);
-
-                htsCfg->dmaProdCfg[chCnt].pipeline = htsCfg->pipeline;
-                htsCfg->dmaProdCfg[chCnt].consId = CSL_HTS_CONS_IDX_UDMA;
-
-                /* LDRA_JUSTIFY_START
-                <metric start> branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications CAN reach this portion.
-                No existing test case can reach this portion. A test case will be added to cover this gap in a future release.
-                Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application.
-                This behaviour is part of the application design. However, due to the stated rationale, this is not tested.
-                <justification end> */
-                if (MSC_TAP_SEL_5TAPS == mscPrms->mscCfg.tapSel)
-                /* LDRA_JUSTIFY_END */
-                {
-                    /* Configuration for 5 TAP filter */
-                    htsCfg->dmaProdCfg[chCnt].threshold = 5U;
-                    htsCfg->dmaProdCfg[chCnt].cntPreLoad = 2U;
-                    htsCfg->dmaProdCfg[chCnt].cntPostLoad = 2U;
-                }
-                /* LDRA_JUSTIFY_START
-                <metric start> statement branch <metric end>
-                <justification start>
-                Rationale: The component level negative test framework and test applications CAN reach this portion.
-                No existing test case can reach this portion. A test case will be added to cover this gap in a future release.
-                Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application.
-                This behaviour is part of the application design. However, due to the stated rationale, this is not tested.
-                <justification end> */
-                else if (MSC_TAP_SEL_4TAPS == mscPrms->mscCfg.tapSel)
-                {
-                    /* Configuration for 4 TAP filter, applicable for vertical
-                       Scaling only */
-                    htsCfg->dmaProdCfg[chCnt].threshold = 4U;
-                    htsCfg->dmaProdCfg[chCnt].cntPreLoad = 1U;
-                    htsCfg->dmaProdCfg[chCnt].cntPostLoad = 2U;
-                }
-                else
-                {
-                    /* Configuration for 3 TAP filter, applicable for vertical
-                       Scaling only */
-                    htsCfg->dmaProdCfg[chCnt].threshold = 3U;
-                    htsCfg->dmaProdCfg[chCnt].cntPreLoad = 0U;
-                    htsCfg->dmaProdCfg[chCnt].cntPostLoad = 2U;
-                }
-                /* LDRA_JUSTIFY_END */
-                htsCfg->dmaProdCfg[chCnt].enableHop = (uint32_t)UTRUE;
-
-                /* Use Calculated height */
                 /* LDRA_JUSTIFY_START
                 <metric start>  branch <metric end>
                 <justification start>
-                Rationale: The test framework and test apps cannot access this portion.
-                The isDualChannel value is hardcoded to 1 in gMsc_SocInfo, and it can never be 0.
-                Effect on this unit: None, as control can never reach this condition.
+                Rationale: The component level negative test framework and test applications cannot reach this portion.
+                The test framework does not support the configuration required to trigger this error scenario.
+                Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application.
+                This behaviour is part of the application design. However, due to the stated rationale, this is not tested.
                 <justification end> */
-                if ((1U == gM2mMscCommonObj.socInfo.isDualChannel) && (1U == mscPrms->isEnableSimulProcessing))
+                if(UTRUE == hObj->inChPrms[chCnt].buffEnable)
                 /* LDRA_JUSTIFY_END */
+
                 {
-                    htsCfg->dmaProdCfg[chCnt].numHop =
-                                                hObj->inChPrms[chCnt].height;
+                    htsCfg->consCfg[chCnt].enable = (uint32_t)UTRUE;
+                    htsCfg->consCfg[chCnt].prodId = CSL_HTS_PROD_IDX_UDMA;
+
+                    /* Clear reset flag for DMA producer for HWA */
+                    htsCfg->dmaProdCfg[chCnt].bypass = (uint32_t)UFALSE;
+
+                    htsCfg->dmaProdCfg[chCnt].enable = (uint32_t)UTRUE;
+                    htsCfg->dmaProdCfg[chCnt].dmaChNum =
+                            Udma_chGetNum(comObj->inChHandle[hObj->instId][chCnt]);
+
+                    htsCfg->dmaProdCfg[chCnt].pipeline = htsCfg->pipeline;
+                    htsCfg->dmaProdCfg[chCnt].consId = CSL_HTS_CONS_IDX_UDMA;
+
                     /* LDRA_JUSTIFY_START
                     <metric start> branch <metric end>
                     <justification start>
-                    Rationale: The component level negative test framework and test applications cannot reach this portion. The test framework does not support the configuration required to trigger this error scenario.
-                    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application. However, due to the stated rationale, this is not tested.
+                    Rationale: The component level negative test framework and test applications CAN reach this portion.
+                    No existing test case can reach this portion. A test case will be added to cover this gap in a future release.
+                    Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application.
+                    This behaviour is part of the application design. However, due to the stated rationale, this is not tested.
                     <justification end> */
-                    if(UTRUE ==  htsCfg->enableHop)
+                    if (MSC_TAP_SEL_5TAPS == mscPrms->mscCfg.tapSel)
                     /* LDRA_JUSTIFY_END */
                     {
-                        htsCfg->numHop = hObj->inChPrms[chCnt].height;
+                        /* Configuration for 5 TAP filter */
+                        htsCfg->dmaProdCfg[chCnt].threshold = 5U;
+                        htsCfg->dmaProdCfg[chCnt].cntPreLoad = 2U;
+                        htsCfg->dmaProdCfg[chCnt].cntPostLoad = 2U;
                     }
-                }
-                else
-                {
-                    htsCfg->dmaProdCfg[chCnt].numHop =
-                                                hObj->cslMscCfg[itrCnt].inHeight;
                     /* LDRA_JUSTIFY_START
-                    <metric start> branch <metric end>
+                    <metric start> statement branch <metric end>
                     <justification start>
-                    Rationale: The component level negative test framework and test applications cannot reach this portion. The test framework does not support the configuration required to trigger this error scenario.
-                    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application. However, due to the stated rationale, this is not tested.
+                    Rationale: The component level negative test framework and test applications CAN reach this portion.
+                    No existing test case can reach this portion. A test case will be added to cover this gap in a future release.
+                    Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application.
+                    This behaviour is part of the application design. However, due to the stated rationale, this is not tested.
                     <justification end> */
-                    if(UTRUE ==  htsCfg->enableHop)
+                    else if (MSC_TAP_SEL_4TAPS == mscPrms->mscCfg.tapSel)
+                    {
+                        /* Configuration for 4 TAP filter, applicable for vertical
+                        Scaling only */
+                        htsCfg->dmaProdCfg[chCnt].threshold = 4U;
+                        htsCfg->dmaProdCfg[chCnt].cntPreLoad = 1U;
+                        htsCfg->dmaProdCfg[chCnt].cntPostLoad = 2U;
+                    }
+                    else
+                    {
+                        /* Configuration for 3 TAP filter, applicable for vertical
+                        Scaling only */
+                        htsCfg->dmaProdCfg[chCnt].threshold = 3U;
+                        htsCfg->dmaProdCfg[chCnt].cntPreLoad = 0U;
+                        htsCfg->dmaProdCfg[chCnt].cntPostLoad = 2U;
+                    }
+                    /* LDRA_JUSTIFY_END */
+                    htsCfg->dmaProdCfg[chCnt].enableHop = (uint32_t)UTRUE;
+
+                    /* Use Calculated height */
+                    /* LDRA_JUSTIFY_START
+                    <metric start>  branch <metric end>
+                    <justification start>
+                    Rationale: The test framework and test apps cannot access this portion.
+                    The isDualChannel value is hardcoded to 1 in gMsc_SocInfo, and it can never be 0.
+                    Effect on this unit: None, as control can never reach this condition.
+                    <justification end> */
+                    if ((1U == gM2mMscCommonObj.socInfo.isDualChannel) && (1U == mscPrms->isEnableSimulProcessing))
                     /* LDRA_JUSTIFY_END */
                     {
-                        htsCfg->numHop = hObj->cslMscCfg[itrCnt].inHeight;
+                        htsCfg->dmaProdCfg[chCnt].numHop =
+                                                    hObj->inChPrms[chCnt].height;
+                        /* LDRA_JUSTIFY_START
+                        <metric start> branch <metric end>
+                        <justification start>
+                        Rationale: The component level negative test framework and test applications cannot reach this portion. The test framework does not support the configuration required to trigger this error scenario.
+                        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application. However, due to the stated rationale, this is not tested.
+                        <justification end> */
+                        if(UTRUE ==  htsCfg->enableHop)
+                        /* LDRA_JUSTIFY_END */
+                        {
+                            htsCfg->numHop = hObj->inChPrms[chCnt].height;
+                        }
                     }
-                }
-                /* LDRA_JUSTIFY_START
-                <metric start>  statement branch <metric end>
-                <justification start> Rationale: The test framework and test applications cannot access this portion.
-                The enableLineSkip feature skips lines in the input to improve performance, but this comes at the cost of output quality, so it is disabled by default.
-                Effect on this unit: If the control reaches here, the code base is expected to set countDec value accordingly.
-                However, due to the stated rationale, this is not tested.
-                <justification end> */
-                if(UTRUE == mscPrms->enableLineSkip)
-                {
-                    htsCfg->dmaProdCfg[chCnt].countDec = 2U;
-                }
-                /* LDRA_JUSTIFY_END */
-                else
-                {
-                    htsCfg->dmaProdCfg[chCnt].countDec = 1U;
-                }
+                    else
+                    {
+                        htsCfg->dmaProdCfg[chCnt].numHop =
+                                                    hObj->cslMscCfg[itrCnt].inHeight;
+                        /* LDRA_JUSTIFY_START
+                        <metric start> branch <metric end>
+                        <justification start>
+                        Rationale: The component level negative test framework and test applications cannot reach this portion. The test framework does not support the configuration required to trigger this error scenario.
+                        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application. However, due to the stated rationale, this is not tested.
+                        <justification end> */
+                        if(UTRUE ==  htsCfg->enableHop)
+                        /* LDRA_JUSTIFY_END */
+                        {
+                            htsCfg->numHop = hObj->cslMscCfg[itrCnt].inHeight;
+                        }
+                    }
+                    /* LDRA_JUSTIFY_START
+                    <metric start>  statement branch <metric end>
+                    <justification start> Rationale: The test framework and test applications cannot access this portion.
+                    The enableLineSkip feature skips lines in the input to improve performance, but this comes at the cost of output quality, so it is disabled by default.
+                    Effect on this unit: If the control reaches here, the code base is expected to set countDec value accordingly.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
+                    if(UTRUE == mscPrms->enableLineSkip)
+                    {
+                        htsCfg->dmaProdCfg[chCnt].countDec = 2U;
+                    }
+                    /* LDRA_JUSTIFY_END */
+                    else
+                    {
+                        htsCfg->dmaProdCfg[chCnt].countDec = 1U;
+                    }
 
-                htsCfg->dmaProdCfg[chCnt].depth =
-                                    comObj->sl2Prms.inSl2BuffDepth[hObj->instId][0];
+                    htsCfg->dmaProdCfg[chCnt].depth =
+                                        comObj->sl2Prms.inSl2BuffDepth[hObj->instId][0];
 
-                /* Keep DMA producer stream enable UFALSE as in case of OTF DMA
-                   will be diabled producer */
-                htsCfg->dmaProdCfg[chCnt].enableStream = (uint32_t)UFALSE;
+                    /* Keep DMA producer stream enable UFALSE as in case of OTF DMA
+                    will be diabled producer */
+                    htsCfg->dmaProdCfg[chCnt].enableStream = (uint32_t)UFALSE;
 
-                /* LDRA_JUSTIFY_START
-                <metric start>  branch <metric end>
-                <justification start> Rationale: The test framework and test apps cannot access this portion.
-                The isDualChannel value is hardcoded to 1 in gMsc_SocInfo, and it can never be 0.
-                Effect on this unit: None, as control can never reach this condition.
-                <justification end> */
-                if((1u == chCnt) &&
-                    (hObj->inChPrms[1].height == (hObj->inChPrms[0].height/2u)) &&
-                    ((1U == gM2mMscCommonObj.socInfo.isDualChannel) && (1U == mscPrms->isEnableSimulProcessing)))
-                /* LDRA_JUSTIFY_END */
-                {
-                    htsCfg->dmaProdCfg[chCnt].paCfg.enable = (uint32_t)UTRUE;
-                    htsCfg->dmaProdCfg[chCnt].paCfg.enableBufCtrl = 0U;
+                    /* LDRA_JUSTIFY_START
+                    <metric start>  branch <metric end>
+                    <justification start> Rationale: The test framework and test apps cannot access this portion.
+                    The isDualChannel value is hardcoded to 1 in gMsc_SocInfo, and it can never be 0.
+                    Effect on this unit: None, as control can never reach this condition.
+                    <justification end> */
+                    if((1u == chCnt) &&
+                        (hObj->inChPrms[1].height == (hObj->inChPrms[0].height/2u)) &&
+                        ((1U == gM2mMscCommonObj.socInfo.isDualChannel) && (1U == mscPrms->isEnableSimulProcessing)))
+                    /* LDRA_JUSTIFY_END */
+                    {
+                        htsCfg->dmaProdCfg[chCnt].paCfg.enable = (uint32_t)UTRUE;
+                        htsCfg->dmaProdCfg[chCnt].paCfg.enableBufCtrl = 0U;
 
-                    htsCfg->dmaProdCfg[chCnt].paCfg.psMaxCnt = 2u;
-                    htsCfg->dmaProdCfg[chCnt].paCfg.csMaxCnt =
-                                            htsCfg->dmaProdCfg[chCnt].threshold;
-                    htsCfg->dmaProdCfg[chCnt].paCfg.enableDecCtrl = 1U;
-                    htsCfg->dmaProdCfg[chCnt].paCfg.countDec = 1U;
+                        htsCfg->dmaProdCfg[chCnt].paCfg.psMaxCnt = 2u;
+                        htsCfg->dmaProdCfg[chCnt].paCfg.csMaxCnt =
+                                                htsCfg->dmaProdCfg[chCnt].threshold;
+                        htsCfg->dmaProdCfg[chCnt].paCfg.enableDecCtrl = 1U;
+                        htsCfg->dmaProdCfg[chCnt].paCfg.countDec = 1U;
+                    }
                 }
             }
         }
@@ -4493,7 +4538,7 @@ static void Vhwa_mscUpdateYuv422iCslPrms(Vhwa_M2mMscHandleObj *hObj,
 
     mscPrms = &hObj->mscPrms;
 
-    for (cnt = 0; cnt < MSC_MAX_OUTPUT; )
+    for (cnt = 0; cnt < MSC_MAX_OUTPUT; cnt += 2u)
     {
         if((UTRUE == mscPrms->mscCfg.scCfg[cnt].enable) &&
            ((FVID2_DF_YUV422I_YUYV == mscPrms->outFmt[cnt].dataFormat) ||
@@ -4525,7 +4570,6 @@ static void Vhwa_mscUpdateYuv422iCslPrms(Vhwa_M2mMscHandleObj *hObj,
             cslMscCfg->mscCfg.scCfg[cnt].isInterleaveFormat = UTRUE;
         }
         /* LDRA_JUSTIFY_END */
-        cnt = cnt + 2u;
     }
 
 }
@@ -5123,6 +5167,7 @@ int32_t Vhwa_m2mMscSubmitRequest(Vhwa_M2mMscInstObj *instObj,
         Rationale: The component level negative test framework and test applications cannot reach this portion. The test framework does not support the configuration required to trigger this error scenario.
         Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application. However, due to the stated rationale, this is not tested.
         <justification end> */
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
         if (((uint32_t)UTRUE == hObj->enableConfigRegValidate) && (goldenRegVal != NULL))
         /* LDRA_JUSTIFY_END */
         {
@@ -5140,6 +5185,7 @@ int32_t Vhwa_m2mMscSubmitRequest(Vhwa_M2mMscInstObj *instObj,
             }
             /* LDRA_JUSTIFY_END */
         }
+#endif
         /* Start Channels in HTS */
         if (FVID2_SOK == retVal)
         {
@@ -5404,6 +5450,7 @@ void Vhwa_m2mDisableFcMscHtsIntr(void)
                         instObj->fcPipeline);
 }
 
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 static int32_t Vhwa_m2mMscReconfigReinitReg(const Vhwa_M2mMscInstObj *instObj,
                                             Vhwa_M2mMscCommonObj *comObj,
                                             const Vhwa_M2mMscQueueObj *qObj)
@@ -5679,7 +5726,7 @@ static int32_t vhwaM2mMscUpdateStatusRegGroup(Vhwa_M2mMscHandleObj *hObj)
             Rationale: The component level negative test framework and test applications cannot reach this portion. The test framework does not support the configuration required to trigger this error scenario.
             Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application. However, due to the stated rationale, this is not tested.
             <justification end> */
-            if((FVID2_SOK == status) && (hObj->numIter > 1U))
+            if(hObj->numIter > 1U)
             /* LDRA_JUSTIFY_END */
             {
                 cfgIdx = (hObj->numIter - 1U);
@@ -6876,6 +6923,7 @@ int32_t vhwaM2mMscUpdateConfigRegGroup(VhwaVpacMscSocReadBack *RegVal, const Vhw
 
     return status;
 }
+#endif
 int32_t Vhwa_m2mMscGetSl2Info(Vhwa_M2mMscSl2Info *sl2Info)
 {
     int32_t retVal = FVID2_SOK;

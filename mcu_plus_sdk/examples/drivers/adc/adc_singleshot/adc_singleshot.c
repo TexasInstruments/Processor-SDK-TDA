@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (c) 2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,15 +30,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <kernel/dpl/DebugP.h>
-#include <kernel/dpl/SemaphoreP.h>
-#include <kernel/dpl/HwiP.h>
-#include <kernel/dpl/ClockP.h>
-#include <drivers/adc.h>
-#include "ti_drivers_config.h"
-#include "ti_drivers_open_close.h"
-#include "ti_board_open_close.h"
-
 /*
  * This example shows ADC conversion for all available input channels.
  *
@@ -57,15 +48,40 @@
  * to get the required functionality.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
+#include <kernel/dpl/DebugP.h>
+#include <kernel/dpl/SemaphoreP.h>
+#include <kernel/dpl/HwiP.h>
+#include <kernel/dpl/ClockP.h>
+#include <drivers/adc.h>
+#include "ti_drivers_config.h"
+#include "ti_drivers_open_close.h"
+#include "ti_board_open_close.h"
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
 /* Reference voltage for ADC - should be given in mV */
 #define APP_ADC_REF_VOLTAGE         (1800U)
 
 /* Number of channels being converted */
-#define APP_ADC_NUM_CH              (8U)
+#define APP_ADC_NUM_CH              ADC_MAX_NUM_CHN
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
 
 /* Global variables and objects */
 static HwiP_Object gAdcHwiObject;
 static SemaphoreP_Object gAdcSyncSemObject;
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
 
 /* Function prototypes */
 static void App_adcISR(void *handle);
@@ -75,16 +91,16 @@ static void App_adcStart(uint32_t baseAddr);
 static void App_adcStop(uint32_t baseAddr);
 static void App_adcDeInit(uint32_t baseAddr);
 
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
+
 void adc_singleshot_main(void *args)
 {
     uint32_t baseAddr = CONFIG_ADC0_BASE_ADDR;
     HwiP_Params hwiPrms;
     uint32_t loopcnt, fifoData, fifoWordCnt, stepID, voltageLvl;
     int32_t status;
-
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
 
     DebugP_log("ADC Single Shot Test Started ...\r\n");
 
@@ -108,13 +124,13 @@ void adc_singleshot_main(void *args)
     SemaphoreP_pend(&gAdcSyncSemObject, SystemP_WAIT_FOREVER);
 
     /* Get FIFO data */
-    fifoWordCnt = ADCGetFIFOWordCount(baseAddr, ADC_FIFO_NUM_0);
+    fifoWordCnt = ADC_getFIFOWordCount(baseAddr, ADC_FIFO_NUM_0);
     DebugP_log("Number of Samples in FIFO : %d\r\n", fifoWordCnt);
     DebugP_log("Step ID     Voltage Level\r\n");
     DebugP_log("-------     -------------\r\n");
     for (loopcnt = 0U; loopcnt < fifoWordCnt; loopcnt++)
     {
-        fifoData = ADCGetFIFOData(baseAddr, ADC_FIFO_NUM_0);
+        fifoData = ADC_getFIFOData(baseAddr, ADC_FIFO_NUM_0);
         stepID   = ((fifoData & ADC_FIFODATA_ADCCHNLID_MASK) >>
                     ADC_FIFODATA_ADCCHNLID_SHIFT);
         fifoData = ((fifoData & ADC_FIFODATA_ADCDATA_MASK) >>
@@ -133,9 +149,6 @@ void adc_singleshot_main(void *args)
 
     DebugP_log("ADC Single Shot Test Completed!!\r\n");
     DebugP_log("All tests have passed!!\r\n");
-
-    Board_driversClose();
-    Drivers_close();
 }
 
 void App_adcISR(void *handle)
@@ -144,14 +157,14 @@ void App_adcISR(void *handle)
     uint32_t baseAddr = CONFIG_ADC0_BASE_ADDR;
 
     /* Get interrupt status and clear */
-    status = ADCGetIntrStatus(baseAddr);
-    ADCClearIntrStatus(baseAddr, status);
+    status = ADC_getIntrStatus(baseAddr);
+    ADC_clearIntrStatus(baseAddr, status);
 
     /* Process ISR */
     SemaphoreP_post(&gAdcSyncSemObject);
 
     /* Set EOI to generate next interrupt if any */
-    ADCWriteEOI(baseAddr);
+    ADC_writeEOI(baseAddr);
 }
 
 void App_adcConfig(uint32_t baseAddr)
@@ -161,7 +174,7 @@ void App_adcConfig(uint32_t baseAddr)
     adcStepConfig_t adcConfig;
 
     /* Enable interrupts */
-    ADCEnableIntr(baseAddr, (ADC_INTR_SRC_END_OF_SEQUENCE |
+    ADC_enableIntr(baseAddr, (ADC_INTR_SRC_END_OF_SEQUENCE |
                              ADC_INTR_SRC_FIFO0_THRESHOLD |
                              ADC_INTR_SRC_FIFO0_OVERRUN |
                              ADC_INTR_SRC_FIFO0_UNDERFLOW |
@@ -186,35 +199,35 @@ void App_adcConfig(uint32_t baseAddr)
     {
         adcConfig.channel = ADC_CHANNEL_1 + chCnt;
         adcStep = ADC_STEP_1 + chCnt;   /* Step -> Channel one to one mapped */
-        configStatus = ADCSetStepParams(baseAddr, adcStep, &adcConfig);
+        configStatus = ADC_setStepParams(baseAddr, adcStep, &adcConfig);
         DebugP_assert(SystemP_SUCCESS == configStatus);
     }
 
-    ADCStepIdTagEnable(baseAddr, TRUE);
-    configStatus = ADCSetCPUFIFOThresholdLevel(baseAddr, ADC_FIFO_NUM_0, 40U);
+    ADC_stepIdTagEnable(baseAddr, TRUE);
+    configStatus = ADC_setCPUFIFOThresholdLevel(baseAddr, ADC_FIFO_NUM_0, 40U);
     DebugP_assert(SystemP_SUCCESS == configStatus);
 
     /* Step enable */
     for(chCnt = 0U; chCnt < APP_ADC_NUM_CH; chCnt++)
     {
         adcStep = ADC_STEP_1 + chCnt;   /* Step -> Channel one to one mapped */
-        ADCStepEnable(baseAddr, adcStep, TRUE);
+        ADC_stepEnable(baseAddr, adcStep, TRUE);
     }
 }
 
 static void App_adcInit(uint32_t baseAddr)
 {
     /* Clear All interrupt status */
-    ADCClearIntrStatus(baseAddr, ADC_INTR_STATUS_ALL);
+    ADC_clearIntrStatus(baseAddr, ADC_INTR_STATUS_ALL);
 
     /* Power up AFE */
-    ADCPowerUp(baseAddr, TRUE);
+    ADC_powerUp(baseAddr, TRUE);
 
     /* Wait for 4us at least */
     ClockP_usleep(5U);
 
     /* Do the internal calibration */
-    ADCInit(baseAddr, FALSE, 0U, 0U);
+    ADC_init(baseAddr, FALSE, 0U, 0U);
 }
 
 static void App_adcStart(uint32_t baseAddr)
@@ -222,14 +235,14 @@ static void App_adcStart(uint32_t baseAddr)
     adcSequencerStatus_t status;
 
     /* Check if FSM is idle */
-    ADCGetSequencerStatus(baseAddr, &status);
+    ADC_getSequencerStatus(baseAddr, &status);
     while ((ADC_ADCSTAT_FSM_BUSY_IDLE != status.fsmBusy) &&
            ADC_ADCSTAT_STEP_ID_IDLE != status.stepId)
     {
-        ADCGetSequencerStatus(baseAddr, &status);
+        ADC_getSequencerStatus(baseAddr, &status);
     }
     /* Start ADC conversion */
-    ADCStart(baseAddr, TRUE);
+    ADC_start(baseAddr, TRUE);
 }
 
 static void App_adcStop(uint32_t baseAddr)
@@ -241,30 +254,30 @@ static void App_adcStop(uint32_t baseAddr)
     for(chCnt = 0U; chCnt < APP_ADC_NUM_CH; chCnt++)
     {
         adcStep = ADC_STEP_1 + chCnt;   /* Step -> Channel one to one mapped */
-        ADCStepEnable(baseAddr, adcStep, FALSE);
+        ADC_stepEnable(baseAddr, adcStep, FALSE);
     }
 
     /* Wait for FSM to go IDLE */
-    ADCGetSequencerStatus(baseAddr, &status);
+    ADC_getSequencerStatus(baseAddr, &status);
     while((ADC_ADCSTAT_FSM_BUSY_IDLE != status.fsmBusy) &&
            ADC_ADCSTAT_STEP_ID_IDLE  != status.stepId)
     {
-        ADCGetSequencerStatus(baseAddr, &status);
+        ADC_getSequencerStatus(baseAddr, &status);
     }
 
     /* Stop ADC */
-    ADCStart(baseAddr, FALSE);
+    ADC_start(baseAddr, FALSE);
 
     /* Wait for FSM to go IDLE */
-    ADCGetSequencerStatus(baseAddr, &status);
+    ADC_getSequencerStatus(baseAddr, &status);
     while ((ADC_ADCSTAT_FSM_BUSY_IDLE != status.fsmBusy) &&
             ADC_ADCSTAT_STEP_ID_IDLE  != status.stepId)
     {
-        ADCGetSequencerStatus(baseAddr, &status);
+        ADC_getSequencerStatus(baseAddr, &status);
     }
 }
 
 static void App_adcDeInit(uint32_t baseAddr)
 {
-    ADCPowerUp(baseAddr, FALSE);
+    ADC_powerUp(baseAddr, FALSE);
 }

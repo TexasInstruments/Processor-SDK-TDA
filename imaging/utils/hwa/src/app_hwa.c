@@ -151,13 +151,6 @@
 #define APP_UTILS_VHWA_LDC_MAX_BLOCK_HEIGHT    (80)
 #endif
 
-#if defined(ENABLE_DOF) && defined(ENABLE_SDE)
-/* MISRA-C 2012 compliance: Explicit function declarations */
-#if defined(SOC_J721E) || defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2)
-extern vx_status appDmpacFirewallDisableAll(uint8_t dmpacInstId);
-#endif
-#endif
-
 #if defined(MCU_PLUS_SDK)
 static Udma_DrvObjectInt gAppUdmaDrvObj;
 #endif
@@ -554,9 +547,7 @@ int32_t appVhwaVpacInit(uint32_t vpacInst)
     int32_t  status = FVID2_SOK;
     #if defined(MCU_PLUS_SDK)
     uint32_t       instId;
-    uint32_t       instIdBcdma;
     Udma_InitPrms  udmaInitPrms;
-    Udma_InitPrms  udmaInitPrmsBcdma;
     Udma_DrvHandle drvHandle = &gAppUdmaDrvObj;
     Udma_DrvHandle drvHandleBcdma = appUdmaGetObj();
     #endif
@@ -1079,9 +1070,6 @@ int32_t appVhwaVpacInit(uint32_t vpacInst)
     /* LDRA_JUSTIFY_END */
     {
         Vhwa_M2mFcInitPrms          fcInitPrms;
-        #if defined(MCU_PLUS_SDK)
-        bool gConfigThroughUDMA = false;
-        #endif
 
         #if defined(APP_DEBUG_VHWA)
         appLogPrintf("VHWA: FC Init ... !!!\n");
@@ -1175,7 +1163,7 @@ int32_t appVhwaVpacDeInit(void)
  */
 static int32_t appVhwaEnableVpacFirewall(uint32_t vpacInstId)
 {
-    int32_t status = VX_SUCCESS;
+    int32_t status = (int32_t)VX_SUCCESS;
 
 #if defined(ENABLE_LDC)
     if ((int32_t)VX_SUCCESS == status)
@@ -1199,7 +1187,7 @@ static int32_t appVhwaEnableVpacFirewall(uint32_t vpacInstId)
         else
         {
             status = appVpacFirewallEnable(
-                vpacInstId,
+                (uint8_t)vpacInstId,
                 VPAC_FWL_REGION_LDC,
                 sl2Info.sl2Addr,
                 sl2Info.sl2Size,
@@ -1237,7 +1225,7 @@ static int32_t appVhwaEnableVpacFirewall(uint32_t vpacInstId)
         else
         {
             status = appVpacFirewallEnable(
-                vpacInstId,
+                (uint8_t)vpacInstId,
                 VPAC_FWL_REGION_MSC,
                 sl2Info.sl2Addr,
                 sl2Info.sl2Size,
@@ -1275,7 +1263,7 @@ static int32_t appVhwaEnableVpacFirewall(uint32_t vpacInstId)
         else
         {
             status = appVpacFirewallEnable(
-                vpacInstId,
+                (uint8_t)vpacInstId,
                 VPAC_FWL_REGION_NF,
                 sl2Info.sl2Addr,
                 sl2Info.sl2Size,
@@ -1313,7 +1301,7 @@ static int32_t appVhwaEnableVpacFirewall(uint32_t vpacInstId)
         else
         {
             status = appVpacFirewallEnable(
-                vpacInstId,
+                (uint8_t)vpacInstId,
                 VPAC_FWL_REGION_VISS,
                 sl2Info.sl2Addr,
                 sl2Info.sl2Size,
@@ -1338,7 +1326,7 @@ static int32_t appVhwaEnableVpacFirewall(uint32_t vpacInstId)
  */
 static int32_t appVhwaEnableDmpacFirewall(void)
 {
-    int32_t status = VX_SUCCESS;
+    int32_t status = (int32_t)VX_SUCCESS;
 
 #if defined(ENABLE_DOF)
     if ((int32_t)VX_SUCCESS == status)
@@ -1492,12 +1480,12 @@ static int32_t appVhwaEnableDmpacFirewall(void)
  */
 static int32_t appVhwaDisableVpacFirewall(uint32_t vpacInstId)
 {
-    int32_t status = VX_SUCCESS;
+    int32_t status = (int32_t)VX_SUCCESS;
 
 #if defined(ENABLE_LDC)
     if ((int32_t)VX_SUCCESS == status)
     {
-        status = appVpacFirewallDisable(vpacInstId, VPAC_FWL_REGION_LDC);
+        status = (int32_t)appVpacFirewallDisable((uint8_t)vpacInstId, VPAC_FWL_REGION_LDC);
         if ((vx_status)VX_SUCCESS != status)
         {
             VX_PRINT(VX_ZONE_ERROR, "Failed to disable VPAC%d SL2 firewall for LDC\n", vpacInstId);
@@ -1507,7 +1495,7 @@ static int32_t appVhwaDisableVpacFirewall(uint32_t vpacInstId)
 #if defined(ENABLE_MSC)
     if ((int32_t)VX_SUCCESS == status)
     {
-        status = appVpacFirewallDisable(vpacInstId, VPAC_FWL_REGION_MSC);
+        status = (int32_t)appVpacFirewallDisable((uint8_t)vpacInstId, VPAC_FWL_REGION_MSC);
         if ((vx_status)VX_SUCCESS != status)
         {
             VX_PRINT(VX_ZONE_ERROR, "Failed to disable VPAC%d SL2 firewall for MSC\n", vpacInstId);
@@ -1517,7 +1505,7 @@ static int32_t appVhwaDisableVpacFirewall(uint32_t vpacInstId)
 #if defined(ENABLE_NF)
     if ((int32_t)VX_SUCCESS == status)
     {
-        status = appVpacFirewallDisable(vpacInstId, VPAC_FWL_REGION_NF);
+        status = (int32_t)appVpacFirewallDisable((uint8_t)vpacInstId, VPAC_FWL_REGION_NF);
         if ((vx_status)VX_SUCCESS != status)
         {
             VX_PRINT(VX_ZONE_ERROR, "Failed to disable VPAC%d SL2 firewall for NF\n", vpacInstId);
@@ -1527,7 +1515,7 @@ static int32_t appVhwaDisableVpacFirewall(uint32_t vpacInstId)
 #if defined(ENABLE_VISS)
     if ((int32_t)VX_SUCCESS == status)
     {
-        status = appVpacFirewallDisable(vpacInstId, VPAC_FWL_REGION_VISS);
+        status = (int32_t)appVpacFirewallDisable((uint8_t)vpacInstId, VPAC_FWL_REGION_VISS);
         if ((vx_status)VX_SUCCESS != status)
         {
             VX_PRINT(VX_ZONE_ERROR, "VPAC%d VISS SL2 Firewall disable failed\n", vpacInstId);
@@ -1544,7 +1532,7 @@ static int32_t appVhwaDisableVpacFirewall(uint32_t vpacInstId)
  */
 static int32_t appVhwaDisableDmpacFirewall(void)
 {
-    int32_t status = VX_SUCCESS;
+    int32_t status = (int32_t)VX_SUCCESS;
     uint8_t dmpacInstId = (uint8_t)VHWA_M2M_DOF_DRV_INST_ID;
 
 #if defined(ENABLE_DOF)
@@ -1588,12 +1576,12 @@ static int32_t appVhwaDisableDmpacFirewall(void)
  */
 static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
 {
-    int32_t status = VX_SUCCESS;
+    int32_t status = (int32_t)VX_SUCCESS;
 
     VX_PRINT(VX_ZONE_INFO, "[LBIST] Restoring VPAC%d firewall state\n", vpacInstId);
 
 #if defined(ENABLE_LDC)
-    if (((int32_t)VX_SUCCESS == status) && (0u != appVpacFirewallShouldEnable(vpacInstId, VPAC_FWL_REGION_LDC)))
+    if (((int32_t)VX_SUCCESS == status) && (0u != appVpacFirewallShouldEnable((uint8_t)vpacInstId, VPAC_FWL_REGION_LDC)))
     {
         Vhwa_M2mLdcSl2Info sl2Info = {0};
         int32_t ret = Vhwa_m2mLdcGetSl2Info(&sl2Info);
@@ -1602,7 +1590,7 @@ static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
             ((sl2Info.sl2Addr & 0x3FFFu) == 0u) &&
             ((sl2Info.sl2Size & 0x3FFFu) == 0u))
         {
-            status = (int32_t)appVpacFirewallEnable(vpacInstId, VPAC_FWL_REGION_LDC,
+            status = (int32_t)appVpacFirewallEnable((uint8_t)vpacInstId, VPAC_FWL_REGION_LDC,
                 sl2Info.sl2Addr, sl2Info.sl2Size, TISCI_PRIV_ID_LDC,
                 TISCI_PRIV_ID_MAIN_0_R5_0, 0);
 
@@ -1615,7 +1603,7 @@ static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
 #endif
 
 #if defined(ENABLE_MSC)
-    if (((int32_t)VX_SUCCESS == status) && (0u != appVpacFirewallShouldEnable(vpacInstId, VPAC_FWL_REGION_MSC)))
+    if (((int32_t)VX_SUCCESS == status) && (0u != appVpacFirewallShouldEnable((uint8_t)vpacInstId, VPAC_FWL_REGION_MSC)))
     {
         Vhwa_M2mMscSl2Info sl2Info = {0};
         int32_t ret = Vhwa_m2mMscGetSl2Info(&sl2Info);
@@ -1624,7 +1612,7 @@ static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
             ((sl2Info.sl2Addr & 0x3FFFu) == 0u) &&
             ((sl2Info.sl2Size & 0x3FFFu) == 0u))
         {
-            status = (int32_t)appVpacFirewallEnable(vpacInstId, VPAC_FWL_REGION_MSC,
+            status = (int32_t)appVpacFirewallEnable((uint8_t)vpacInstId, VPAC_FWL_REGION_MSC,
                 sl2Info.sl2Addr, sl2Info.sl2Size, TISCI_PRIV_ID_MSC,
                 TISCI_PRIV_ID_MAIN_0_R5_0, 0);
 
@@ -1637,7 +1625,7 @@ static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
 #endif
 
 #if defined(ENABLE_NF)
-    if (((int32_t)VX_SUCCESS == status) && (0u != appVpacFirewallShouldEnable(vpacInstId, VPAC_FWL_REGION_NF)))
+    if (((int32_t)VX_SUCCESS == status) && (0u != appVpacFirewallShouldEnable((uint8_t)vpacInstId, VPAC_FWL_REGION_NF)))
     {
         Vhwa_M2mNfSl2Info sl2Info = {0};
         int32_t ret = Vhwa_m2mNfGetSl2Info(&sl2Info);
@@ -1646,7 +1634,7 @@ static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
             ((sl2Info.sl2Addr & 0x3FFFu) == 0u) &&
             ((sl2Info.sl2Size & 0x3FFFu) == 0u))
         {
-            status = (int32_t)appVpacFirewallEnable(vpacInstId, VPAC_FWL_REGION_NF,
+            status = (int32_t)appVpacFirewallEnable((uint8_t)vpacInstId, VPAC_FWL_REGION_NF,
                 sl2Info.sl2Addr, sl2Info.sl2Size, TISCI_PRIV_ID_NF,
                 TISCI_PRIV_ID_MAIN_0_R5_0, 0);
 
@@ -1659,7 +1647,7 @@ static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
 #endif
 
 #if defined(ENABLE_VISS)
-    if (((int32_t)VX_SUCCESS == status) && (0u != appVpacFirewallShouldEnable(vpacInstId, VPAC_FWL_REGION_VISS)))
+    if (((int32_t)VX_SUCCESS == status) && (0u != appVpacFirewallShouldEnable((uint8_t)vpacInstId, VPAC_FWL_REGION_VISS)))
     {
         Vhwa_M2mVissSl2Info sl2Info = {0};
         int32_t ret = Vhwa_m2mVissGetSl2Info(&sl2Info);
@@ -1668,7 +1656,7 @@ static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
             ((sl2Info.sl2Addr & 0x3FFFu) == 0u) &&
             ((sl2Info.sl2Size & 0x3FFFu) == 0u))
         {
-            status = (int32_t)appVpacFirewallEnable(vpacInstId, VPAC_FWL_REGION_VISS,
+            status = (int32_t)appVpacFirewallEnable((uint8_t)vpacInstId, VPAC_FWL_REGION_VISS,
                 sl2Info.sl2Addr, sl2Info.sl2Size, TISCI_PRIV_ID_VISS,
                 TISCI_PRIV_ID_MAIN_0_R5_0, 0);
 
@@ -1690,7 +1678,7 @@ static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
  */
 static int32_t appVhwaEnableDmpacFirewallAfterLbist(void)
 {
-    int32_t status = VX_SUCCESS;
+    int32_t status = (int32_t)VX_SUCCESS;
     uint8_t dmpacInstId = (uint8_t)VHWA_M2M_DOF_DRV_INST_ID;
 
     VX_PRINT(VX_ZONE_INFO, "[LBIST] Restoring DMPAC firewall state\n");
@@ -1717,7 +1705,7 @@ static int32_t appVhwaEnableDmpacFirewallAfterLbist(void)
                 VX_PRINT(VX_ZONE_INFO, "[LBIST] Restored DMPAC DOF MAIN firewall\n");
 
                 /* Restore DOF REFERENCE region if it was enabled */
-                if (appDmpacFirewallShouldEnable(dmpacInstId, DMPAC_FWL_REGION_DOF_REFERENCE))
+                if (appDmpacFirewallShouldEnable(dmpacInstId, DMPAC_FWL_REGION_DOF_REFERENCE) != 0U)
                 {
                     status = (int32_t)appDmpacFirewallEnable(dmpacInstId, DMPAC_FWL_REGION_DOF_REFERENCE,
                         sl2Info.refRegionSl2Addr, sl2Info.refRegionSl2Size,
@@ -1772,12 +1760,15 @@ Effect on this unit: The function is expected to handle VPAC-specific remote ser
 static int32_t appVhwaVpacHandler(char *service_name, uint32_t cmd, void *prm, uint32_t prm_size, uint32_t flags)
 {
     int32_t  status = -1;
-    uint32_t fwlIdx = 0u;
 
     (void)service_name;
     (void)prm;
     (void)prm_size;
     (void)flags;
+
+#if defined(ENABLE_VISS) && defined(ENABLE_LDC) && defined(ENABLE_MSC) && defined(ENABLE_NF)
+    uint32_t fwlIdx = 0u;
+#endif
 
     if (0 != APP_DEBUG_SCICLIENT)
     {
@@ -1800,7 +1791,7 @@ static int32_t appVhwaVpacHandler(char *service_name, uint32_t cmd, void *prm, u
                 if ((sizeof(uint32_t) == prm_size) && (NULL != prm))
                 {
                     uint32_t prmValue;
-                    (void)memcpy(&prmValue, prm, sizeof(uint32_t));
+                    (void)memcpy(&prmValue, (const uint32_t*)prm, sizeof(uint32_t));
                     if ((0u == prmValue) || (1u == prmValue))
                     {
                         vpacInstId = prmValue;
@@ -1828,7 +1819,7 @@ static int32_t appVhwaVpacHandler(char *service_name, uint32_t cmd, void *prm, u
                 if ((sizeof(uint32_t) == prm_size) && (NULL != prm))
                 {
                     uint32_t prmValue;
-                    (void)memcpy(&prmValue, prm, sizeof(uint32_t));
+                    (void)memcpy(&prmValue, (const uint32_t*)prm, sizeof(uint32_t));
                     if ((0u == prmValue) || (1u == prmValue))
                     {
                         vpacInstId = prmValue;
@@ -1850,7 +1841,7 @@ static int32_t appVhwaVpacHandler(char *service_name, uint32_t cmd, void *prm, u
                 if ((NULL != prm) && (sizeof(uint32_t) == prm_size))
                 {
                     uint32_t cmdPrms;
-                    (void)memcpy(&cmdPrms, prm, sizeof(uint32_t));
+                    (void)memcpy(&cmdPrms, (const uint32_t*)prm, sizeof(uint32_t));
                     uint32_t ctrlCmd;
 
                     switch (cmdPrms)
@@ -1858,12 +1849,12 @@ static int32_t appVhwaVpacHandler(char *service_name, uint32_t cmd, void *prm, u
                         case APP_VHWA_VPAC0_INST:
                             ctrlCmd = VHWA_M2M_IOCTL_LBIST_VPAC0_ACQUIRE_LOCK;
                             fwlIdx = 0u;
-                            status = 0u;
+                            status = 0;
                             break;
                         case APP_VHWA_VPAC1_INST:
                             ctrlCmd = VHWA_M2M_IOCTL_LBIST_VPAC1_ACQUIRE_LOCK;
                             fwlIdx = 1u;
-                            status = 0u;
+                            status = 0;
                             break;
                         default:
                             VX_PRINT(VX_ZONE_ERROR, "[appVhwaVpacHandler] ERROR: Incorrect VPAC Instance \n");
@@ -1899,7 +1890,7 @@ static int32_t appVhwaVpacHandler(char *service_name, uint32_t cmd, void *prm, u
                 }
                 if (0 == status)
                 {
-                    status = appVpacFirewallDisableAll(fwlIdx);
+                    status = (int32_t)appVpacFirewallDisableAll((uint8_t)fwlIdx);
                 }
                 break;
             /* Release VPAC lock */
@@ -1907,7 +1898,7 @@ static int32_t appVhwaVpacHandler(char *service_name, uint32_t cmd, void *prm, u
                 if ((NULL != prm) && (sizeof(uint32_t) == prm_size))
                 {
                     uint32_t cmdPrms;
-                    (void)memcpy(&cmdPrms, prm, sizeof(uint32_t));
+                    (void)memcpy(&cmdPrms, (const uint32_t*)prm, sizeof(uint32_t));
                     uint32_t ctrlCmd;
 
                     switch (cmdPrms)
@@ -2013,7 +2004,7 @@ static int32_t appVhwaHandler(char *service_name, uint32_t cmd, void *prm, uint3
                 if (sizeof(Vhwa_M2mSdeSl2AllocPrms) == prm_size)
                 {
                     Vhwa_M2mSdeSl2AllocPrms cmdPrms;
-                    (void)memcpy(&cmdPrms, prm, sizeof(Vhwa_M2mSdeSl2AllocPrms));
+                    (void)memcpy(&cmdPrms, (const Vhwa_M2mSdeSl2AllocPrms*)prm, sizeof(Vhwa_M2mSdeSl2AllocPrms));
                     status = Vhwa_m2mSdeAllocSl2(&cmdPrms);
                 } else
                 {
@@ -2034,7 +2025,7 @@ static int32_t appVhwaHandler(char *service_name, uint32_t cmd, void *prm, uint3
                 if (sizeof(Vhwa_M2mDofSl2AllocPrms) == prm_size)
                 {
                     Vhwa_M2mDofSl2AllocPrms cmdPrms;
-                    (void)memcpy(&cmdPrms, prm, sizeof(Vhwa_M2mDofSl2AllocPrms));
+                    (void)memcpy(&cmdPrms, (const Vhwa_M2mDofSl2AllocPrms*)prm, sizeof(Vhwa_M2mDofSl2AllocPrms));
                     status = Vhwa_m2mDofAllocSl2(&cmdPrms);
                 } else
                 {
@@ -2469,7 +2460,7 @@ static int32_t vhwaPowerOnModules(uint32_t instId)
 {
     int32_t status = FVID2_EFAIL;
 
-    if(APP_VHWA_VPAC0_INST == instId)
+    if((uint32_t)APP_VHWA_VPAC0_INST == instId)
     {
         status = Sciclient_pmSetModuleState(TISCI_DEV_VPAC0, TISCI_MSG_VALUE_DEVICE_SW_STATE_ON, TISCI_MSG_FLAG_AOP, SCICLIENT_SERVICE_WAIT_FOREVER);
         if (FVID2_SOK != status)
@@ -2478,7 +2469,7 @@ static int32_t vhwaPowerOnModules(uint32_t instId)
         }
     }
     #if defined(SOC_J784S4) || defined(SOC_J742S2)
-    else if(APP_VHWA_VPAC1_INST == instId)
+    else if((uint32_t)APP_VHWA_VPAC1_INST == instId)
     {
         status = Sciclient_pmSetModuleState(TISCI_DEV_VPAC1, TISCI_MSG_VALUE_DEVICE_SW_STATE_ON, TISCI_MSG_FLAG_AOP, SCICLIENT_SERVICE_WAIT_FOREVER);
         if (FVID2_SOK != status)

@@ -60,13 +60,13 @@ volatile uint32_t    gMcaspTestCntTx[CONFIG_MCASP_NUM_INSTANCES] = {0};
 void mcasp_loopback_main(void *args)
 {
     int32_t             status = SystemP_SUCCESS;
-    uint32_t            i, j, k, l;
+    uint32_t            i = 0, j = 0, k = 0, l = 0;
     MCASP_Handle mcaspHandle;
     volatile uint32_t   transferComplete = 0;
-
+#if (!(SOC_AM62AX) && !(SOC_AM62X) && !(SOC_AM62DX) && !(SOC_AM275X))
     Drivers_open();
     Board_driversOpen();
-
+#endif
     DebugP_log("[MCASP] Multi instance Loopback example started.\r\n");
 
     /* Memfill buffers */
@@ -82,6 +82,9 @@ void mcasp_loopback_main(void *args)
             }
         }
     }
+
+    CacheP_wb(gMcaspTxBuffer, sizeof(gMcaspTxBuffer), CacheP_TYPE_ALLD);
+    CacheP_wb(gMcaspRxBuffer, sizeof(gMcaspRxBuffer), CacheP_TYPE_ALLD);
 
     for (i = CONFIG_MCASP0; i < CONFIG_MCASP_NUM_INSTANCES; i++)
     {
@@ -126,6 +129,13 @@ void mcasp_loopback_main(void *args)
         }
     }
 
+    for (i = CONFIG_MCASP0; i < CONFIG_MCASP_NUM_INSTANCES; i++)
+    {
+        mcaspHandle = MCASP_getHandle(i);
+        MCASP_stopTransferRx(mcaspHandle);
+        MCASP_stopTransferTx(mcaspHandle);
+    }
+
     /* withdraw the buffers submitted to driver. */
     if(SystemP_SUCCESS == status)
     {
@@ -141,6 +151,8 @@ void mcasp_loopback_main(void *args)
             }while (transaction != NULL);
         }
     }
+
+    CacheP_inv(gMcaspRxBuffer, sizeof(gMcaspRxBuffer), CacheP_TYPE_ALLD);
 
     if(SystemP_SUCCESS == status)
     {
@@ -171,10 +183,10 @@ void mcasp_loopback_main(void *args)
     {
         DebugP_log("Data mismatch for %d bytes!!\r\n", l);
     }
-
+#if (!(SOC_AM62AX) && !(SOC_AM62X) && !(SOC_AM62DX) && !(SOC_AM275X))
     Board_driversClose();
     Drivers_close();
-
+#endif
     return;
 }
 
@@ -187,10 +199,6 @@ void mcasp_loopback_txcb (MCASP_Handle handle,
         *testCntTx = *testCntTx + 1;
         MCASP_submitTx(handle, transaction);
     }
-    else
-    {
-        MCASP_stopTransferTx(handle);
-    }
 }
 
 void mcasp_loopback_rxcb (MCASP_Handle handle,
@@ -201,9 +209,5 @@ void mcasp_loopback_rxcb (MCASP_Handle handle,
     {
         *testCntRx = *testCntRx + 1;
         MCASP_submitRx(handle, transaction);
-    }
-    else
-    {
-        MCASP_stopTransferRx(handle);
     }
 }

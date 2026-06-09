@@ -29,6 +29,8 @@ const libdirs_nortos = {
         "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/self_reset/lib",
         "${MCU_PLUS_SDK_PATH}/source/drivers/vhwa/lib",
         "${MCU_PLUS_SDK_PATH}/test/unity/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib",
+        "${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciserver/lib",
     ],
 };
 
@@ -42,6 +44,8 @@ const libs_nortos_r5f = {
         "self_reset.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
         "vhwa.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
         "unity.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
+        "sciserver.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
     ],
 };
 const lnkfiles = {
@@ -55,6 +59,12 @@ const cflags = {
         "-Wno-missing-braces",
     ],
 };
+
+const defines_dm_r5f = {
+    common:[
+        "ENABLE_SCICLIENT_DIRECT",
+    ]
+}
 
 const syscfgfile = "../example.syscfg";
 
@@ -116,6 +126,7 @@ function getComponentBuildProperty(buildOption) {
         build_property.libs = libs_nortos_r5f;
         build_property.templates = templates_nortos_dm_r5f;
         build_property.cflags = cflags;
+        build_property.defines = defines_dm_r5f;
     }
     return build_property;
 }

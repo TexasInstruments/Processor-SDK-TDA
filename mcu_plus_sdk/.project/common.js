@@ -31,8 +31,16 @@ function concatArrayPropertiesInObject(obj1, obj2, arr_prop, swap) {
                      */
                     obj1[arr_prop][prop] = obj2[arr_prop][prop].concat(obj1[arr_prop][prop]);
                 }
+                if (obj1[arr_prop]["remove"])
+                {
+                    obj1[arr_prop][prop]= obj1[arr_prop][prop].filter((element) => !obj1[arr_prop]["remove"].includes(element));
+                }
             }
         }
+    }
+    if (obj1[arr_prop]["remove"])
+    {
+        delete obj1[arr_prop]["remove"];
     }
 }
 
@@ -40,6 +48,7 @@ function mergeCgtOptions(project, commonCgtOptions) {
     project = _.cloneDeep(project);
 
     concatArrayPropertiesInObject(project, commonCgtOptions, "cflags", false);
+    concatArrayPropertiesInObject(project, commonCgtOptions, "coverage", false);
     concatArrayPropertiesInObject(project, commonCgtOptions, "arflags", false);
     concatArrayPropertiesInObject(project, commonCgtOptions, "includes", false);
     concatArrayPropertiesInObject(project, commonCgtOptions, "defines", false);
@@ -184,6 +193,14 @@ function setInstrumentationMode(mode)
     genInstrumentationMode = mode;
 }
 
+function getImageFormat(device)
+{
+    if (device == "am275x")
+        return "mcelf";
+    else
+        return "rprc";
+}
+
 module.exports = {
     genBuildfiles,
     isDevelopmentMode,
@@ -200,4 +217,5 @@ module.exports = {
     deleteFile,
     getDefaultProjectDescription,
     getDefaultSystemProjectDescription,
+    getImageFormat,
 };

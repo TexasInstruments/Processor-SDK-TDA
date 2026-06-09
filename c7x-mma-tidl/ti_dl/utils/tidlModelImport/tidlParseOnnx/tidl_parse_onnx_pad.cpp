@@ -92,43 +92,46 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Pad")> ()
   }
 
   int32_t padModeStatus = getStringAttr(node, "mode", padMode, 0);
-
-  /* set default pad mode */
   if (padModeStatus == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
   {
+    // Default pad mode
     strcpy(padMode, "constant");
   }
 
-  if ((strcmp(padMode, "constant") == 0))
-  {
-    // Default value for constant padding
-    constant_value = 0;
-  }
-  else
+  // Only constant pad mode is supported
+  if ((strcmp(padMode, "constant") != 0))
   {
     layer.layerParams.padLayerParams.padType = TIDL_PadModeUnsupported;
   }
-
-  /* Pad v1 & v2 can have value in Attributes */
-  atrIdx = getFloatAttr(node, "value", &constant_value, 0);
-  if(atrIdx != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
-  {
-    layer.layerParams.padLayerParams.padConstValue = (int32_t)constant_value;
-  }
   else
   {
-    /* In other cases pad value can be in 3rd input */
-    if (node.input_size() > 2)
+    constant_value = 0;
+    /* Pad v1 & v2 can have value in Attributes */
+    atrIdx = getFloatAttr(node, "value", &constant_value, 0);
+    if(atrIdx != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
     {
-      atrIdx = copyFloatConst(graph, index, 2, buf, INPUT_NOT_REQUIRED);
-      if (atrIdx != TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+      layer.layerParams.padLayerParams.padConstValue = (int32_t)constant_value;
+    }
+    else
+    {
+      /* In other cases pad value can be in 3rd input */
+      if (node.input_size() > 2)
       {
-        float32_tidl *padPtr = (float32_tidl *)buf.ptr;
-        constant_value = padPtr[0];
-        layer.layerParams.padLayerParams.padConstValue = (int32_t)padPtr[0];
-        free(buf.ptr);
-        buf.bufSize = 0;
-        buf.ptr = NULL;
+        atrIdx = copyFloatConst(graph, index, 2, buf, INPUT_NOT_REQUIRED);
+        if (atrIdx != TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+        {
+          float32_tidl *padPtr = (float32_tidl *)buf.ptr;
+          constant_value = padPtr[0];
+          layer.layerParams.padLayerParams.padConstValue = (int32_t)padPtr[0];
+          free(buf.ptr);
+          buf.bufSize = 0;
+          buf.ptr = NULL;
+        }
+        /* If still not found, set default value as 0 */
+        else
+        {
+          layer.layerParams.padLayerParams.padConstValue = 0;
+        }
       }
       /* If still not found, set default value as 0 */
       else
@@ -136,171 +139,165 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Pad")> ()
         layer.layerParams.padLayerParams.padConstValue = 0;
       }
     }
-    /* If still not found, set default value as 0 */
+
+    /* Only zero pad is supported */
+    if(constant_value != 0)
+    {
+      layer.layerParams.padLayerParams.padType = TIDL_PadModeUnsupported;
+    }
     else
     {
-      layer.layerParams.padLayerParams.padConstValue = 0;
-    }
-  }
-
-  /* Only zero pad is supported */
-  if(constant_value != 0)
-  {
-    layer.layerParams.padLayerParams.padType = TIDL_PadModeUnsupported;
-  }
-  else
-  {
-    layer.layerParams.padLayerParams.padType = TIDL_PadZero;
-  }
-
-  /* Axes can be input in v18 */
-  axes_status = copyFloatConst(graph, index, 3, axes, INPUT_NOT_REQUIRED);
-  int64_t *axesPtr = (int64_t *)axes.ptr; /* The axesPtr points to the pointer in the axes buffer.*/
-
-  /* If the optional input axes is populated.*/
-  if(axes_status != TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
-  {
-    /** Iterating through the axes buffer.
-     * Ignore repetition as described as undefined behavior in onnx
-    */
-    for(int j = 0; j < axes.bufSize; j++)
-    {
-      /* Adjust to TIDL dimensions */
-      if(axesPtr[j] >= 0)
-      {
-        /*+ve Axis*/
-        axesPtr[j] += (TIDL_DIM_MAX - numDims);
-      }
-      else
-      {
-        /*-ve Axis*/
-        axesPtr[j] += TIDL_DIM_MAX;
-      }
-
-      /* If axes are not height or width, do not support */
-      if ((axesPtr[j] != TIDL_DIM_HEIGHT) && (axesPtr[j] != TIDL_DIM_WIDTH))
-      {
-        layer.layerParams.padLayerParams.padType = TIDL_PadNonWidthHeight;
-      }
-    }
-  }
-
-  /**
-   * Pad can be in attribute
-   * in v1 named as padding
-   * in v2 named as pads
-  */
-  atrIdx = getAttrIdx(node, "pads");
-  if (atrIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
-  {
-    atrIdx = getAttrIdx(node, "paddings");
-  }
-  /* If found in attribute */
-  if (atrIdx != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
-  {
-    tot_axis = node.attribute(atrIdx).ints_size() >> 1;
-    padValStore = (int32_t *)my_malloc(tot_axis * 2 * sizeof(int32_t));
-
-    for (j = 0; j < tot_axis*2; j++)
-    {
-      getIntAttr(node, "pads", &padValStore[j], j);
+      layer.layerParams.padLayerParams.padType = TIDL_PadZero;
     }
 
-    if(tot_axis > 2) /* more than width and height */
+    /* Axes can be input in v18 */
+    axes_status = copyFloatConst(graph, index, 3, axes, INPUT_NOT_REQUIRED);
+    int64_t *axesPtr = (int64_t *)axes.ptr; /* The axesPtr points to the pointer in the axes buffer.*/
+
+    /* If the optional input axes is populated.*/
+    if(axes_status != TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
     {
-      for (j = 0; j < (tot_axis-2); j++)
+      /** Iterating through the axes buffer.
+       * Ignore repetition as described as undefined behavior in onnx
+      */
+      for(int j = 0; j < axes.bufSize; j++)
       {
-        /* Cannot be non-zero in these dimensions */
-        if(( padValStore[j] != 0 ) || ( padValStore[tot_axis + j] != 0 ))
+        /* Adjust to TIDL dimensions */
+        if(axesPtr[j] >= 0)
+        {
+          /*+ve Axis*/
+          axesPtr[j] += (TIDL_DIM_MAX - numDims);
+        }
+        else
+        {
+          /*-ve Axis*/
+          axesPtr[j] += TIDL_DIM_MAX;
+        }
+
+        /* If axes are not height or width, do not support */
+        if ((axesPtr[j] != TIDL_DIM_HEIGHT) && (axesPtr[j] != TIDL_DIM_WIDTH))
         {
           layer.layerParams.padLayerParams.padType = TIDL_PadNonWidthHeight;
         }
       }
     }
 
-    padT = (tot_axis >= 2)    ?  padValStore[tot_axis   - 2] : 0;
-    padB = (tot_axis*2 >= 2)  ?  padValStore[tot_axis*2 - 2] : 0;
-    padL = (tot_axis >= 1)    ?  padValStore[tot_axis   - 1] : 0;
-    padR = (tot_axis*2 >= 1)  ?  padValStore[tot_axis*2 - 1] : 0;
-    my_free(padValStore);
-  }
-  /* Pad value can be in 2nd input */
-  else
-  {
-    status = copyFloatConst(graph, index, 1, buf, INPUT_REQUIRED);
-    if(status != 0)
+    /**
+     * Pad can be in attribute
+     * in v1 named as padding
+     * in v2 named as pads
+    */
+    atrIdx = getAttrIdx(node, "pads");
+    if (atrIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
     {
-      TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to find pad input intializer tensor");
-      return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      atrIdx = getAttrIdx(node, "paddings");
     }
-    int64_t *padPtr = (int64_t *)buf.ptr;
-    tot_axis = buf.bufSize >> 1;
+    /* If found in attribute */
+    if (atrIdx != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+    {
+      tot_axis = node.attribute(atrIdx).ints_size() >> 1;
+      padValStore = (int32_t *)my_malloc(tot_axis * 2 * sizeof(int32_t));
 
-    /* Axes is present */
-    if(axes_status != TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
-    {
-      if (tot_axis != axes.bufSize) /*The size of the axes tensor must be half the pad input size if axes exists*/
+      for (j = 0; j < tot_axis*2; j++)
       {
-        TIDL_LOG_ERROR(gDiags.gDiagList, "Pad layer input tensor axes and pads dimensions are not matching");
-        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+        getIntAttr(node, "pads", &padValStore[j], j);
       }
-      else
-      {
-        for (int j = 0; j < tot_axis; j++)
-        {
-          if (axesPtr[j] == TIDL_DIM_WIDTH)
-          {
-            padL = padPtr[j];
-            padR = padPtr[tot_axis+j];
-          }
-          else if (axesPtr[j] == TIDL_DIM_HEIGHT)
-          {
-            padT = padPtr[j];
-            padB = padPtr[tot_axis+j];
-          }
-          else
-          {
-            layer.layerParams.padLayerParams.padType = TIDL_PadNonWidthHeight;
-          }
-        }
-      }
-    }
-    /* Axes is not given */
-    else
-    {
-      if(tot_axis > 2) /*more than width and height*/
+
+      if(tot_axis > 2) /* more than width and height */
       {
         for (j = 0; j < (tot_axis-2); j++)
         {
           /* Cannot be non-zero in these dimensions */
-          if(( padPtr[j] != 0 ) || ( padPtr[tot_axis + j] != 0 ))
+          if(( padValStore[j] != 0 ) || ( padValStore[tot_axis + j] != 0 ))
           {
             layer.layerParams.padLayerParams.padType = TIDL_PadNonWidthHeight;
           }
         }
       }
 
-      padT = (tot_axis >= 2)    ? padPtr[tot_axis   - 2] : 0;
-      padB = (tot_axis*2 >= 2)  ? padPtr[tot_axis*2 - 2] : 0;
-      padL = (tot_axis >= 1)    ? padPtr[tot_axis   - 1] : 0;
-      padR = (tot_axis*2 >= 1)  ? padPtr[tot_axis*2 - 1] : 0;
+      padT = (tot_axis >= 2)    ?  padValStore[tot_axis   - 2] : 0;
+      padB = (tot_axis*2 >= 2)  ?  padValStore[tot_axis*2 - 2] : 0;
+      padL = (tot_axis >= 1)    ?  padValStore[tot_axis   - 1] : 0;
+      padR = (tot_axis*2 >= 1)  ?  padValStore[tot_axis*2 - 1] : 0;
+      my_free(padValStore);
     }
-    my_free(buf.ptr);
+    /* Pad value can be in 2nd input */
+    else
+    {
+      status = copyFloatConst(graph, index, 1, buf, INPUT_REQUIRED);
+      if(status != 0)
+      {
+        TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to find pad input intializer tensor");
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      }
+      int64_t *padPtr = (int64_t *)buf.ptr;
+      tot_axis = buf.bufSize >> 1;
+
+      /* Axes is present */
+      if(axes_status != TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+      {
+        if (tot_axis != axes.bufSize) /*The size of the axes tensor must be half the pad input size if axes exists*/
+        {
+          TIDL_LOG_ERROR(gDiags.gDiagList, "Pad layer input tensor axes and pads dimensions are not matching");
+          return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+        }
+        else
+        {
+          for (int j = 0; j < tot_axis; j++)
+          {
+            if (axesPtr[j] == TIDL_DIM_WIDTH)
+            {
+              padL = padPtr[j];
+              padR = padPtr[tot_axis+j];
+            }
+            else if (axesPtr[j] == TIDL_DIM_HEIGHT)
+            {
+              padT = padPtr[j];
+              padB = padPtr[tot_axis+j];
+            }
+            else
+            {
+              layer.layerParams.padLayerParams.padType = TIDL_PadNonWidthHeight;
+            }
+          }
+        }
+      }
+      /* Axes is not given */
+      else
+      {
+        if(tot_axis > 2) /*more than width and height*/
+        {
+          for (j = 0; j < (tot_axis-2); j++)
+          {
+            /* Cannot be non-zero in these dimensions */
+            if(( padPtr[j] != 0 ) || ( padPtr[tot_axis + j] != 0 ))
+            {
+              layer.layerParams.padLayerParams.padType = TIDL_PadNonWidthHeight;
+            }
+          }
+        }
+
+        padT = (tot_axis >= 2)    ? padPtr[tot_axis   - 2] : 0;
+        padB = (tot_axis*2 >= 2)  ? padPtr[tot_axis*2 - 2] : 0;
+        padL = (tot_axis >= 1)    ? padPtr[tot_axis   - 1] : 0;
+        padR = (tot_axis*2 >= 1)  ? padPtr[tot_axis*2 - 1] : 0;
+      }
+      my_free(buf.ptr);
+    }
+
+    /* if axis was being used, free axis ptr */
+    if (axes_status != TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+    {
+      my_free(axes.ptr);
+      axes.bufSize = 0;
+      axes.ptr = NULL;
+    }
+
+    layer.layerParams.padLayerParams.padT = padT;
+    layer.layerParams.padLayerParams.padB = padB;
+    layer.layerParams.padLayerParams.padL = padL;
+    layer.layerParams.padLayerParams.padR = padR;
   }
-
-
-  /* if axis was being used, free axis ptr */
-  if (axes_status != TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
-  {
-    my_free(axes.ptr);
-    axes.bufSize = 0;
-    axes.ptr = NULL;
-  }
-
-  layer.layerParams.padLayerParams.padT = padT;
-  layer.layerParams.padLayerParams.padB = padB;
-  layer.layerParams.padLayerParams.padL = padL;
-  layer.layerParams.padLayerParams.padR = padR;
   return 0;
 }
 

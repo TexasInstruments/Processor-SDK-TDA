@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -32,7 +32,12 @@
 
 #include <drivers/ipc_rpmsg/ipc_rpmsg_priv.h>
 
+#if ((__ARM_ARCH == 7) && (__ARM_ARCH_PROFILE == 'M')) /* M4F */
+IpcRpmsg_Ctrl gIpcRpmsgCtrl __attribute__ ((section (".bss.ipcctrl"), aligned (8)));
+#else
 IpcRpmsg_Ctrl gIpcRpmsgCtrl;
+#endif
+volatile uint32_t gFreeQueueStatus = FREE_QUEUE_AVAILABLE;
 
 RPMessage_LocalMsg *RPMessage_allocEndPtMsg(uint32_t remoteCoreId)
 {
@@ -128,6 +133,7 @@ void RPMessage_recvHandler(uint16_t remoteCoreId)
     pMsg = RPMessage_allocEndPtMsg(remoteCoreId);
     if(pMsg!=NULL)
     {
+        gFreeQueueStatus = FREE_QUEUE_AVAILABLE;
         status = RPMessage_vringGetFullRxBuf(remoteCoreId, &vringBufId);
         if(status == SystemP_SUCCESS)
         {
@@ -150,7 +156,7 @@ void RPMessage_recvHandler(uint16_t remoteCoreId)
                             &vringBufAddr[sizeof(RPMessage_Header)],
                             header->dataLen,
                             remoteCoreId,
-                            header->srcEndPt
+                            (uint16_t)header->srcEndPt
                             );
                         status = SystemP_SUCCESS;
 
@@ -192,6 +198,11 @@ void RPMessage_recvHandler(uint16_t remoteCoreId)
             RPMessage_freeEndPtMsg(remoteCoreId, pMsg);
         }
     }
+    else
+    {
+        /* Queue is not free. Don't check for it's availablity again with in the same loop*/
+        gFreeQueueStatus = FREE_QUEUE_NOT_AVAILABLE;
+    }
 }
 
 void RPMessage_notifyCallback(uint16_t remoteCoreId, uint16_t localClientId, uint32_t msgValue, void *args)
@@ -223,6 +234,10 @@ void RPMessage_notifyCallback(uint16_t remoteCoreId, uint16_t localClientId, uin
             while((RPMessage_vringIsFullRxBuf(remoteCoreId) != 0U))
             {
                 RPMessage_recvHandler(remoteCoreId);
+                if(gFreeQueueStatus == FREE_QUEUE_NOT_AVAILABLE)
+                {
+                    break;
+                }
             }
         }
         else
@@ -260,7 +275,7 @@ int32_t RPMessage_send( void*    data,
 
             if(dataLength > (vringBufLen - sizeof(RPMessage_Header)) )
             {
-                /* Message length is defined as uint16 in RPMessage_Header. So 
+                /* Message length is defined as uint16 in RPMessage_Header. So
                  * there will be no precision loss here.
                  */
                 dataLength = (uint16_t)(vringBufLen - sizeof(RPMessage_Header));
@@ -277,7 +292,7 @@ int32_t RPMessage_send( void*    data,
 
             memcpy((void *)&vringBufAddr[sizeof(RPMessage_Header)], (const void *)data, (size_t)dataLength);
 
-            RPMessage_vringPutFullTxBuf(remoteCoreId, vringBufId, dataLength + sizeof(RPMessage_Header));
+            RPMessage_vringPutFullTxBuf(remoteCoreId, vringBufId, (dataLength + (uint16_t)sizeof(RPMessage_Header)));
         }
         else
         {
@@ -382,8 +397,8 @@ int32_t RPMessage_construct(RPMessage_Object *handle, const RPMessage_CreatePara
     RPMessage_Struct *obj = (RPMessage_Struct *)handle;
     int32_t status = SystemP_FAILURE;
 
-    DebugP_assert(sizeof(RPMessage_Object) >= sizeof(RPMessage_Struct));
-
+    uintptr_t oldIntState;
+    
     if((createParams->localEndPt < RPMESSAGE_MAX_LOCAL_ENDPT)
         && (gIpcRpmsgCtrl.localEndPtObj[createParams->localEndPt] == NULL))
     {
@@ -396,7 +411,11 @@ int32_t RPMessage_construct(RPMessage_Object *handle, const RPMessage_CreatePara
         RPMessage_queueReset(&obj->endPtQ);
         SemaphoreP_constructBinary(&obj->newEndPtMsgSem, 0);
 
+        oldIntState = HwiP_disable();
+
         gIpcRpmsgCtrl.localEndPtObj[createParams->localEndPt] = obj;
+
+        HwiP_restore(oldIntState);
 
         status = SystemP_SUCCESS;
     }
@@ -406,12 +425,16 @@ int32_t RPMessage_construct(RPMessage_Object *handle, const RPMessage_CreatePara
 void RPMessage_destruct(RPMessage_Object *handle)
 {
     RPMessage_Struct *obj = (RPMessage_Struct *)handle;
+    uintptr_t oldIntState;
 
     if((obj->localEndPt < RPMESSAGE_MAX_LOCAL_ENDPT) &&
         (gIpcRpmsgCtrl.localEndPtObj[obj->localEndPt] != NULL))
     {
+        oldIntState = HwiP_disable();
+
         gIpcRpmsgCtrl.localEndPtObj[obj->localEndPt] = NULL;
 
+        HwiP_restore(oldIntState);
         obj->localEndPt = RPMESSAGE_MAX_LOCAL_ENDPT;
         obj->recvCallback = NULL;
         obj->recvCallbackArgs = NULL;
@@ -453,6 +476,7 @@ int32_t  RPMessage_coreInit(uint16_t remoteCoreId, const RPMessage_Params *param
     int32_t status = SystemP_SUCCESS;
     RPMessage_Core *coreObj = &gIpcRpmsgCtrl.coreObj[remoteCoreId];
     uint16_t elemId;
+    uintptr_t oldIntState;
 
     SemaphoreP_constructBinary(&coreObj->newEmptyVringBufSem, 0);
     coreObj->freeQAllocPending = 0;
@@ -465,12 +489,17 @@ int32_t  RPMessage_coreInit(uint16_t remoteCoreId, const RPMessage_Params *param
     if((gIpcRpmsgCtrl.isCoreEnable[remoteCoreId] != 0U) && (RPMessage_isLinuxCore(remoteCoreId) == 0U))
     {
         /* reset RX ring */
-        RPMessage_vringReset(remoteCoreId, 0, params);
-        /* reset TX ring */
-        RPMessage_vringReset(remoteCoreId, 1, params);
-
+        status = RPMessage_vringReset(remoteCoreId, 0, params);
+        
+        if(status == SystemP_SUCCESS)
+        {
+            /* reset TX ring */
+            status = RPMessage_vringReset(remoteCoreId, 1, params);
+        }
+        oldIntState = HwiP_disable();
         /* mark core data structure as initialized, now we can handle interrupts */
         gIpcRpmsgCtrl.isCoreInitialized[remoteCoreId] = 1;
+        HwiP_restore(oldIntState);
     }
     return status;
 }
@@ -478,23 +507,15 @@ int32_t  RPMessage_coreInit(uint16_t remoteCoreId, const RPMessage_Params *param
 void RPMessage_coreDeInit(uint16_t remoteCoreId)
 {
     RPMessage_Core *coreObj = &gIpcRpmsgCtrl.coreObj[remoteCoreId];
+    uintptr_t oldIntState;
 
     SemaphoreP_destruct(&coreObj->newEmptyVringBufSem);
+
+    oldIntState = HwiP_disable();
     coreObj->freeQAllocPending = 0;
+    HwiP_restore(oldIntState);
+
     RPMessage_queueReset(&coreObj->freeQ);
-}
-
-void RPMessage_forceRecvMsgHandlers(void)
-{
-    uint16_t coreId;
-
-    for(coreId=0; coreId<CSL_CORE_ID_MAX; coreId++)
-    {
-        RPMessage_notifyCallback(coreId,
-            IPC_NOTIFY_CLIENT_ID_RPMSG,
-            RPMESSAGE_MSG_VRING_NEW_FULL,
-            NULL);
-    }
 }
 
 void RPMessage_controlEndPtHandler(RPMessage_Object *obj, void *arg,
@@ -512,7 +533,7 @@ void RPMessage_controlEndPtHandler(RPMessage_Object *obj, void *arg,
             gIpcRpmsgCtrl.controlEndPtCallback(
                 gIpcRpmsgCtrl.controlEndPtCallbackArgs,
                 remoteCoreId,
-                pMsg->remoteEndPt,
+                (uint16_t)pMsg->remoteEndPt,
                 pMsg->name
                 );
         }
@@ -549,7 +570,7 @@ int32_t  RPMessage_announce(uint16_t remoteCoreId, uint16_t localEndPt, const ch
 
     status = RPMessage_send(
                 &msg,
-                sizeof(RPMessage_AnnounceMsg),
+                (uint16_t)sizeof(RPMessage_AnnounceMsg),
                 remoteCoreId,
                 RPMESSAGE_CTRL_ENDPOINT_ID, /* control end point on remote side */
                 RPMESSAGE_CTRL_ENDPOINT_ID, /* reply or local end point, set also to control end point */
@@ -644,15 +665,18 @@ int32_t  RPMessage_init(const RPMessage_Params *params)
 {
     int32_t status = SystemP_SUCCESS;
     uint16_t coreId, localEndPtId;
+    uintptr_t oldIntState;
 
-    /* As the core id is limited and the structure is not a shared with linux 
+    /* As the core id is limited and the structure is not a shared with linux
      * so it is safe to change the type of selfCoreId to u16 . */
+    oldIntState = HwiP_disable();
     gIpcRpmsgCtrl.selfCoreId = (uint16_t)IpcNotify_getSelfCoreId();
     gIpcRpmsgCtrl.controlEndPtCallback = NULL;
     gIpcRpmsgCtrl.controlEndPtCallbackArgs = NULL;
     gIpcRpmsgCtrl.linuxResourceTable = params->linuxResourceTable;
     gIpcRpmsgCtrl.linuxCoreId = params->linuxCoreId;
     gIpcRpmsgCtrl.vringAllocationPDK = params->vringAllocationPDK;
+    gIpcRpmsgCtrl.vringAllocationQNX = params->vringAllocationQNX;
     for(localEndPtId = 0; localEndPtId < RPMESSAGE_MAX_LOCAL_ENDPT; localEndPtId++)
     {
         gIpcRpmsgCtrl.localEndPtObj[localEndPtId] = NULL;
@@ -685,6 +709,7 @@ int32_t  RPMessage_init(const RPMessage_Params *params)
         }
 
     }
+    HwiP_restore(oldIntState);
     for(coreId=0; coreId<CSL_CORE_ID_MAX; coreId++)
     {
         status += RPMessage_coreInit(coreId, params);

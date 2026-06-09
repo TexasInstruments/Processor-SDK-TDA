@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2018 Texas Instruments Incorporated
+ * Copyright (c) 2018-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -69,6 +69,7 @@
 
 #define DDR_HEAP_MEM_SIZE               (DDR_MCU2_1_LOCAL_HEAP_SIZE)
 #define ENABLE_FVID2
+#define ENABLE_AEWB_KERNELS
 
 #if ((defined(ECU_SRV) || defined(ECU_FC)))                     // Disabling DMPAC for SRV and FC demos
     #undef ENABLE_VHWA_DMPAC
@@ -77,6 +78,5 @@
 #else                                                           // Enabling DMPAC for all non ECU demos
     #define ENABLE_VHWA_DMPAC
 #endif
-
 
 #endif /* APP_CFG_MCU2_1_H_ */

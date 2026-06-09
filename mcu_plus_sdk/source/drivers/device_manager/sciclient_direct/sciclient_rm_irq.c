@@ -1162,7 +1162,7 @@ static int32_t Sciclient_rmPsPush(const struct Sciclient_rmIrqNode *n,
 {
     int32_t r = CSL_PASS;
 
-    if ((gPstack.psp < SCICLIENT_PS_MAX_DEPTH) && (n != NULL)) {
+    if ((gPstack.psp < (uint16_t)SCICLIENT_PS_MAX_DEPTH) && (n != NULL)) {
         gPstack.ps[gPstack.psp].p_n = n;
         gPstack.ps[gPstack.psp].if_idx = if_idx;
         gPstack.psp++;
@@ -2494,7 +2494,7 @@ static struct Sciclient_rmIaInst *Sciclient_rmIaGetInst(uint16_t  id)
     struct Sciclient_rmIaInst *inst = NULL;
     uint16_t i;
 
-    for (i = 0; i < SCICLIENT_RM_IA_NUM_INST; i++) {
+    for (i = 0; i < (uint16_t)SCICLIENT_RM_IA_NUM_INST; i++) {
         if (id == gRmIaInstances[i].dev_id) {
             inst = &gRmIaInstances[i];
             break;
@@ -2733,7 +2733,7 @@ static struct Sciclient_rmIrInst *Sciclient_rmIrGetInst(uint16_t    id)
     struct Sciclient_rmIrInst *inst = NULL;
     uint16_t i;
 
-    for (i = 0; i < SCICLIENT_RM_IR_NUM_INST; i++) {
+    for (i = 0; i < (uint16_t)SCICLIENT_RM_IR_NUM_INST; i++) {
         if (id == gRmIrInstances[i].dev_id) {
             inst = &gRmIrInstances[i];
             break;

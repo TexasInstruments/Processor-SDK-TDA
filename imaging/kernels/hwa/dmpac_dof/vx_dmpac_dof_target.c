@@ -149,6 +149,7 @@ typedef struct
     /* Timestamp for the most recent frame processed. */
     uint64_t                            timestamp;
 
+#if !defined(VPAC3L)
     /* Physical address for register readback memory */
     uint64_t                           readback_mem_ptr_phys;
 
@@ -163,7 +164,7 @@ typedef struct
 
     /* Size of the configuration register memory */
     uint32_t                           config_reg_mem_size;
-
+#endif
 } tivxDmpacDofObj;
 
 
@@ -193,7 +194,7 @@ static vx_status VX_CALLBACK tivxDmpacDofControl(
 
 static tivxDmpacDofObj *tivxDmpacDofAllocObject(tivxDmpacDofInstObj *instObj);
 static void tivxDmpacDofFreeObject(tivxDmpacDofInstObj *instObj,
-                                                tivxDmpacDofObj *dof_obj);
+                                                tivxDmpacDofObj *dofObj);
 
 static void tivxDmpacDofSetFmt(Fvid2_Format *fmt,
     const tivx_obj_desc_image_t *img_desc);
@@ -226,6 +227,7 @@ static vx_status tivxDmpacDofMapTivxToVhwaErrEvents(uint32_t tivx_err_events,
 int32_t tivxDmpacDofFrameComplCb(Fvid2_Handle handle, void *appData);
 void tivxDmpacDofErrorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData);
 static void tivxDmpacDofWdTimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData);
+#if !defined(SOC_J722S)
 int32_t tivxDmpacDofConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms);
 
 static vx_status tivxEnableDmpacDofSafetyMechanisms(
@@ -235,6 +237,7 @@ static vx_status tivxEnableDmpacDofSafetyMechanisms(
 static vx_status tivxDmpacDofAllocReadbackBuffers(tivxDmpacDofObj *dofObj);
 
 static void tivxDmpacDofFreeReadbackBuffers(tivxDmpacDofObj *dofObj);
+#endif
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
@@ -436,6 +439,9 @@ static vx_status VX_CALLBACK tivxDmpacDofProcess(
     tivx_obj_desc_image_t    *img_current_desc[TIVX_PYRAMID_MAX_LEVEL_OBJECTS];
     tivx_obj_desc_image_t    *img_reference_desc[TIVX_PYRAMID_MAX_LEVEL_OBJECTS];
     tivx_obj_desc_t          *out_base_desc = NULL;
+    #if !defined(SOC_J722S)
+    vx_status                     validate_reg_status = (vx_status)VX_SUCCESS;
+    #endif
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -880,17 +886,17 @@ static vx_status VX_CALLBACK tivxDmpacDofProcess(
                     status = (vx_status)VX_ERROR_TIMEOUT;
                 }
                 /* LDRA_JUSTIFY_END */
-
+#if !defined(SOC_J722S)
                 /* Call the control command for statusReg/configReg validate */
                 {
-                    status = Fvid2_control(dofObj->handle, VHWA_M2M_IOCTL_DOF_VALIDATE_REG, NULL, NULL);
-                    if (FVID2_SOK != status)
+                    fvid2_status = Fvid2_control(dofObj->handle, VHWA_M2M_IOCTL_DOF_VALIDATE_REG, NULL, NULL);
+                    if (FVID2_SOK != fvid2_status)
                     {
-                        VX_PRINT(VX_ZONE_ERROR, "Register validation failed (Fvid2_control returned %d)\n", status);
-                        status = (vx_status)VX_FAILURE;
+                        VX_PRINT(VX_ZONE_ERROR, "Register validation failed (Fvid2_control returned %d)\n", fvid2_status);
+                        validate_reg_status = (vx_status)VX_FAILURE;
                     }
                 }
-
+#endif
             }
         }
 
@@ -929,9 +935,11 @@ static vx_status VX_CALLBACK tivxDmpacDofProcess(
                         (int32_t)flow_vector_out_desc->mem_ptr[0].mem_heap_region);
 
                 dofObj->outFlowVecHistory[dofObj->outFlowVecWrIdx] = ptr;
-                dofObj->outFlowVecWrIdx = (int32_t)((uint32_t)dofObj->outFlowVecWrIdx + 1U);
+                uint32_t outFlowVecWrIdx_temp = (uint32_t)dofObj->outFlowVecWrIdx + 1U;
+                dofObj->outFlowVecWrIdx = (int32_t)outFlowVecWrIdx_temp;
 
-                dofObj->outFlowVecWrIdx = (int32_t)((uint32_t)dofObj->outFlowVecWrIdx % (uint32_t)TIVX_DMPAC_DOF_FLOW_VEC_QSIZE);
+                uint32_t outFlowVecWrIdx_mod = (uint32_t)dofObj->outFlowVecWrIdx % (uint32_t)TIVX_DMPAC_DOF_FLOW_VEC_QSIZE;
+                dofObj->outFlowVecWrIdx = (int32_t)outFlowVecWrIdx_mod;
             }
             /* LDRA_JUSTIFY_END */
             /* Get Histogram */
@@ -964,29 +972,35 @@ static vx_status VX_CALLBACK tivxDmpacDofProcess(
                                 (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_AND_WRITE));
             }
 
-        }
-        if(1U == dofObj->isFirstFrame)
-        {
-            /* This was the first iteration, so the Temporal predictor was
-                turned off, Enable the Temporal predictor if configured */
-            dofObj->isFirstFrame = 0u;
+            if(1U == dofObj->isFirstFrame)
+            {
+                /* This was the first iteration, so the Temporal predictor was
+                    turned off, Enable the Temporal predictor if configured */
+                dofObj->isFirstFrame = 0u;
 
-            config_desc = (tivx_obj_desc_user_data_object_t *)
-                obj_desc[TIVX_KERNEL_DMPAC_DOF_CONFIGURATION_IDX];
+                config_desc = (tivx_obj_desc_user_data_object_t *)
+                    obj_desc[TIVX_KERNEL_DMPAC_DOF_CONFIGURATION_IDX];
 
-            target_ptr = tivxMemShared2TargetPtr(&config_desc->mem_ptr);
+                target_ptr = tivxMemShared2TargetPtr(&config_desc->mem_ptr);
 
-            tivxCheckStatus(&status, tivxMemBufferMap(target_ptr, config_desc->mem_size,
-                (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_ONLY));
+                tivxCheckStatus(&status, tivxMemBufferMap(target_ptr, config_desc->mem_size,
+                    (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_ONLY));
 
-            dofAppPrms = (tivx_dmpac_dof_params_t *)target_ptr;
-            status = tivxDmpacDofUpdateCfgPrms(dofObj, dofAppPrms, flow_vector_out_desc->format);
+                dofAppPrms = (tivx_dmpac_dof_params_t *)target_ptr;
+                status = tivxDmpacDofUpdateCfgPrms(dofObj, dofAppPrms, flow_vector_out_desc->format);
 
-            tivxCheckStatus(&status, tivxMemBufferUnmap(target_ptr, config_desc->mem_size,
-                (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_ONLY));
+                tivxCheckStatus(&status, tivxMemBufferUnmap(target_ptr, config_desc->mem_size,
+                    (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_ONLY));
+            }
         }
     }
 
+    #if !defined(SOC_J722S)
+    if(((vx_status)VX_SUCCESS != status) || ((vx_status)VX_SUCCESS != validate_reg_status))
+    {
+        status = (vx_status)VX_FAILURE;
+    }
+    #endif
     return (status);
 }
 
@@ -1603,9 +1617,10 @@ static vx_status VX_CALLBACK tivxDmpacDofDelete(
                 dofObj->inter_buff2 = (uint64_t)NULL;
             }
 
+#if !defined(SOC_J722S)
             /* Free the readback and golden register buffers */
             tivxDmpacDofFreeReadbackBuffers(dofObj);
-
+#endif
             tivxDmpacDofFreeObject(&gTivxDmpacDofInstObj, dofObj);
         }
     }
@@ -1744,6 +1759,7 @@ static vx_status VX_CALLBACK tivxDmpacDofControl(
                 break;
             }
 #endif
+#if !defined(SOC_J722S)
             case TIVX_DMPAC_DOF_CMD_ENABLE_DMPAC_SAFETY_MECHANISM:
             {
                 status = tivxEnableDmpacDofSafetyMechanisms(dofObj,
@@ -1763,6 +1779,7 @@ static vx_status VX_CALLBACK tivxDmpacDofControl(
                 /* LDRA_JUSTIFY_END */
                 break;
             }
+#endif
             default:
             {
                 VX_PRINT(VX_ZONE_ERROR, "Invalid Input\n");
@@ -2100,8 +2117,6 @@ static void tivxDmpacDofSetCfgPrms(Vhwa_M2mDofPrms *dofPrms,
                         (uint32_t)img_current_desc[0u]->imagepatch_addr[0].dim_x * 2u;
             }
         }
-
-        fmt = &dofPrms->inOutImgFmt[pyr_cnt][DOF_INPUT_CURRENT_IMG];
 
         dofPrms->focoPrms.shiftM1 = 0u;
         dofPrms->focoPrms.dir = 0u;
@@ -2825,6 +2840,7 @@ static vx_status tivxDmpacDofSetHtsBwLimit(tivxDmpacDofObj *dof_obj,
     return (status);
 }
 
+#if !defined(SOC_J722S)
 static vx_status tivxEnableDmpacDofSafetyMechanisms(
     tivxDmpacDofObj *dofObj,
     const tivx_obj_desc_user_data_object_t *usr_data_obj)
@@ -3096,7 +3112,7 @@ static vx_status tivxEnableDmpacDofSafetyMechanisms(
 
     return status;
 }
-
+#endif
 static vx_status tivxDmpacDofEnableErrorEventsCmd(tivxDmpacDofObj *dof_obj,
                     tivx_obj_desc_user_data_object_t *usr_data_obj)
 {
@@ -3226,6 +3242,7 @@ static vx_status tivxDmpacDofEnableErrorEventsCmd(tivxDmpacDofObj *dof_obj,
     return status;
 }
 
+#if !defined(SOC_J722S)
 static vx_status tivxDmpacDofAllocReadbackBuffers(tivxDmpacDofObj *dofObj)
 {
     vx_status status = (vx_status)VX_SUCCESS;
@@ -3460,7 +3477,7 @@ static void tivxDmpacDofFreeReadbackBuffers(tivxDmpacDofObj *dofObj)
         /* LDRA_JUSTIFY_END */
     }
 }
-
+#endif
 /* ========================================================================== */
 /*                              Driver Callbacks                              */
 /* ========================================================================== */
@@ -3524,6 +3541,7 @@ static void tivxDmpacDofWdTimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrE
 
 /* LDRA_JUSTIFY_END */
 
+#if !defined(SOC_J722S)
 /* Callback for config register and golden register memory comparison */
 int32_t tivxDmpacDofConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms)
 {
@@ -3603,7 +3621,7 @@ int32_t tivxDmpacDofConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPr
 
     return status;
 }
-
+#endif
 BUILD_ASSERT(((VHWA_DOF_RD_ERR == TIVX_DMPAC_DOF_RD_ERR)? 1U : 0U));
 BUILD_ASSERT(((VHWA_DOF_WR_ERR == TIVX_DMPAC_DOF_WR_ERR)? 1U : 0U));
 BUILD_ASSERT(((VHWA_DOF_MP0_RD_STATUS_ERR == TIVX_DMPAC_DOF_MP0_RD_STATUS_ERR)? 1U : 0U));

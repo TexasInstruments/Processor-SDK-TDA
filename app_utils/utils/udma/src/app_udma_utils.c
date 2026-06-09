@@ -79,10 +79,10 @@
 #if defined(C7X_FAMILY)
 #include <c7x.h>
 
-#ifdef MCU_PLUS_SDK
+#if defined(MCU_PLUS_SDK)
 #include <drivers/hw_include/csl_clec.h>
 #include <drivers/hw_include/cslr_soc.h>
-#else
+#elif defined(PDK)
 #include <ti/csl/arch/csl_arch.h>
 #include <ti/csl/arch/c7x/cslr_C7X_CPU.h>
 #endif
@@ -169,7 +169,7 @@ typedef struct
     /**< DMA TDCQ event handle */
     Udma_EventHandle        tr_event_handle;
     /**< DMA TR event handle */
-#else
+#elif defined(PDK)
     struct Udma_ChObj       drv_ch_obj;
     /**< DMA driver channel object */
     struct Udma_EventObj    cq_event_obj;
@@ -688,7 +688,9 @@ int32_t appUdmaCopyNDInit(
 
         if (0U == ch_obj->create_prms.use_ring)
         {
-            Udma_chDruSubmitTr(ch_obj->drv_ch_handle, (CSL_UdmapTR *)((uint8_t *)ch_obj->trpd_mem + sizeof(CSL_UdmapTR15)));
+#if defined(PDK) || (defined(MCU_PLUS_SDK) && defined(BUILD_C7X))
+        Udma_chDruSubmitTr(ch_obj->drv_ch_handle, (CSL_UdmapTR *)((uint8_t *)ch_obj->trpd_mem + sizeof(CSL_UdmapTR15)));
+#endif
         }
         else
         {
@@ -1002,7 +1004,7 @@ static int32_t appUdmaCreateCh(app_udma_ch_obj_t *ch_obj)
         UdmaChPrms_init(&chPrms, chType);
         chPrms.utcId = UDMA_UTC_ID_MSMC_DRU0;
 
-        #if (defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J722)) && defined(C7X_FAMILY)
+        #if (defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J722S)) && defined(C7X_FAMILY)
         appUdmaGetUtcInfo( &chPrms.utcId, NULL);
         ch_obj->create_prms.use_ring = 0U;
         #endif
@@ -1363,7 +1365,7 @@ static void appUdmaEventTdCb(
     uint32_t eventType,
     void *appData)
 {
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
     int32_t             retVal;
     CSL_UdmapTdResponse tdResp;
     app_udma_ch_obj_t     *ch_obj = (app_udma_ch_obj_t *) appData;
@@ -1630,16 +1632,14 @@ static void appUdmaTrpdSetND(
 static void appUdmaCacheWb(const void *addr, int32_t size)
 {
     uint32_t    isCacheCoherent = Udma_isCacheCoherent();
-/** \brief Minmum number of bytes that will be used for alignment, MUST >= max CPU cache line size */
-#define APP_MEM_ALIGN_MIN_BYTES     (128u)
 
     if(isCacheCoherent != UTRUE)
     {
-        #if !defined(MCU_PLUS_SDK)
+        #if defined(PDK)
             CacheP_wb((void*)addr, APP_MEM_ALIGN32(size, APP_MEM_ALIGN_MIN_BYTES));
-        #else
+        #elif defined(MCU_PLUS_SDK)
             CacheP_wb((void*)addr, APP_MEM_ALIGN32(size, APP_MEM_ALIGN_MIN_BYTES), CacheP_TYPE_L1D);
-#endif
+        #endif
     }
 
     return;
@@ -1651,12 +1651,11 @@ static void appUdmaCacheInv(const void * addr, int32_t size)
 
     if(isCacheCoherent != UTRUE)
     {
-        #if !defined(MCU_PLUS_SDK)
+        #if defined(PDK)
             CacheP_Inv((void*)addr,APP_MEM_ALIGN32(size, APP_MEM_ALIGN_MIN_BYTES));
-        #else
+        #elif defined(MCU_PLUS_SDK)
             CacheP_inv((void*)addr, APP_MEM_ALIGN32(size, APP_MEM_ALIGN_MIN_BYTES), CacheP_TYPE_L1D);
         #endif
-
     }
 
     return;
@@ -1684,4 +1683,3 @@ void appUdmaCopyNDPrmsPrint(app_udma_copy_nd_prms_t *prm, char *name)
     appLogPrintf(" ddim3     = %d\n", prm->ddim3);
     appLogPrintf(" \n");
 }
-

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -42,10 +42,7 @@ extern "C"
 
 #if defined (DRV_VERSION_ADC_V0)
 #include <drivers/adc/v0/adc.h>
-#endif
-
-#if defined (DRV_VERSION_ADC_V1)
-#include <drivers/adc/v1/adc.h>
+#include <drivers/adc/v0/soc/adc_soc.h>
 #endif
 
 #ifdef __cplusplus

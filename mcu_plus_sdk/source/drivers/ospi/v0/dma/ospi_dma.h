@@ -120,7 +120,7 @@ typedef struct OSPI_DmaConfig_s
 	OSPI_DmaFxns *fxns;
 	/* Registered callbacks for a particular DMA driver. This will be set by Sysconfig depending on the DMA driver selected*/
 	void *ospiDmaArgs;
-	/* Arguments specific to a DMA driver. This will be typecasted to the specific DMA driver args struct 
+	/* Arguments specific to a DMA driver. This will be typecasted to the specific DMA driver args struct
 	 * when used by the appropriate callback. This struct will be defined in the specific DMA driver header file.
 	 * Allocation of this struct will be done statically using Sysconfig code generation in the example code
 	 */
@@ -134,7 +134,7 @@ typedef struct OSPI_DmaConfig_s
  *
  * \param index [in] Index of the DMA Config selected for this particular OSPI driver instance
  *
- * \return Handle to the OSPI DMA Config Object 
+ * \return Handle to the OSPI DMA Config Object
  */
 OSPI_DmaHandle OSPI_dmaOpen(int32_t index);
 

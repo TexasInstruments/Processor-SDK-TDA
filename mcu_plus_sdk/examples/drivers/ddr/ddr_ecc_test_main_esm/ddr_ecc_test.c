@@ -33,7 +33,6 @@
 #include <stdio.h>
 #include <drivers/hw_include/cslr_soc.h>
 #include <drivers/ddr.h>
-#include <drivers/ddr/v0/cslr_emif.h>
 #include <kernel/dpl/CacheP.h>
 #include <kernel/dpl/DebugP.h>
 #include <kernel/dpl/SemaphoreP.h>
@@ -69,7 +68,7 @@ dual bit ECC errors
 #define DDR_EMIF_ECC_DATA_SIZE_PER_BLOCK  0x20
 #endif
 
-#if defined (SOC_AM62AX)
+#if defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_AM62DX)
 #define ESM0_DDR1BECC_INDEX     (174U)
 #define ESM0_DDR2BECC_INDEX     (175U)
 
@@ -137,7 +136,7 @@ static SDL_ESM_config ESM_Example_esmInitConfig_MainESM0 =
 };
 #endif
 
-#if defined (SOC_AM62AX)
+#if defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_AM62DX)
 /* Initialization structure for Main ESM instance */
 static SDL_ESM_config ESM_Example_esmInitConfig_MainESM0 =
 {
@@ -432,10 +431,6 @@ void ddr_ecc_test_main (void *args)
 {
     int32_t status;
 
-    /* Open drivers to open the UART driver for console */
-    Drivers_open ();
-    Board_driversOpen ();
-
     gSecTestPass = FALSE;
     gDedTestPass = FALSE;
 
@@ -464,6 +459,4 @@ void ddr_ecc_test_main (void *args)
         DebugP_logError ("Some tests have failed\r\n");
     }
 
-    Board_driversClose ();
-    Drivers_close ();
 }

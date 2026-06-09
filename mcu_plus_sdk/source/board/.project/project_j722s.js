@@ -18,6 +18,15 @@ const files_r5f={
         "ioexp_tca6424.c",
         "ioexp_tca6416.c",
         "nor_spi_sfdp.c",
+        "phy_common_priv.c",
+        "dp83tc812.c",
+		"dp83tg720.c",
+		"dp83869.c",
+		"dp83867.c",
+		"dp83822.c",
+		"dp83826.c",
+        "generic_phy.c",
+        "eeprom_at24c512c.c",
     ],
 };
 
@@ -43,8 +52,17 @@ const filedirs = {
         "ioexp",
         "null",
         "led",
+        "ethphy/enet/rtos_drivers/src",
+        "ethphy/enet/rtos_drivers/include",
     ],
 };
+
+const includes = {
+    common: [
+        "${MCU_PLUS_SDK_PATH}/source/board/ethphy/enet/rtos_drivers/include",
+        "${MCU_PLUS_SDK_PATH}/source/board/ethphy/port",
+    ],
+}
 
 const buildOptionCombos = [
     { device: device, cpu: "r5f", cgt: "ti-arm-clang"},
@@ -67,6 +85,7 @@ function getComponentBuildProperty(buildOption) {
     let build_property = {};
 
     build_property.filedirs = filedirs;
+    build_property.includes = includes;
     if(buildOption.cpu.match(/r5f*/))
     {
         build_property.files = files_r5f;

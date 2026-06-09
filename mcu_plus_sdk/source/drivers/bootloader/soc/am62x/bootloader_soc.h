@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2023 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -34,6 +34,25 @@
 #define BOOTLOADER_SOC_AM62X_H_
 
 #include <drivers/hw_include/cslr_soc.h>
+#include <drivers/udma.h>
+
+#include <drivers/sciclient/include/tisci/am62x/tisci_hosts.h>
+
+/* Self reset config */
+
+extern  int32_t sproxy_send_msg_r5_to_tifs_fw(void *msg, size_t len);
+
+/** \brief Host ID requesting self reset of WKUP R5FSS0 Core0 */
+#define WKUP_R5_HOST_ID              TISCI_HOST_ID_MAIN_0_R5_1
+#define SELF_RESET_BOOT_ADDRESS_LOW  CSL_WKUP_R5FSS0_CORE0_BTCM_BASE
+
+#define FREERTOS_SMP_RPRC_CORE_ID           (100U)
+#define FREERTOS_SMP_NO_OF_CORES            (4U)
+#define FREERTOS_SMP_BOOT_CORE              (CSL_CORE_ID_A53SS0_0)
+#define FREERTOS_SMP_CSL_CORE_ID_MAX        (FREERTOS_SMP_NO_OF_CORES + CSL_CORE_ID_A53SS0_0)
+
+/* DMA channel type configured by bootloader layer */
+#define BOOTLOADER_DMA_CHANNEL_TYPE         UDMA_CH_TYPE_TR_BLK_COPY
 
 /**
  * \brief Data structure containing information about a core specific to the AM62x SOC
@@ -148,14 +167,12 @@ int32_t  Bootloader_socCpuResetRelease(uint32_t cpuId, uintptr_t entryPoint);
 /**
  * \brief Release self CPU in the AM62x SOC from reset
  *
- * \return SystemP_SUCCESS on success, else failure
  */
 int32_t  Bootloader_socCpuResetReleaseSelf();
 
 /**
  * \brief Jump the self cpu to specified load address.
  *
- * \return No return
  */
 void __attribute__((__noreturn__)) Bootloader_socSelfCPUjump();
 
@@ -193,6 +210,15 @@ uint32_t Bootloader_socTranslateSectionAddr(uint32_t cslCoreId, uint32_t addr);
  * \return CSL core ID of a CPU
  */
 uint32_t Bootloader_socRprcToCslCoreId(uint32_t rprcCoreId);
+
+/**
+ * \brief Check whether the smp is enabled or not for the soc
+ *
+ * \param rprcCoreId [in] The RPRC ID of the core
+ *
+ * \return true if smp is enabled otherwise false
+ */
+bool Bootloader_socIsSmpEnable(uint32_t rprcCoreId);
 
 /**
  * \brief Get the list of self cpus in the SOC.
@@ -291,4 +317,12 @@ void Bootloader_enableMCUPLL(void);
  * \return TRUE (1U) if MCU M4 is reset isolated, else return 0.
  */
 uint32_t Bootloader_socIsMCUResetIsoEnabled();
+
+/**
+ * \brief Power off a core
+ *
+ * \param cpuId [in] The CSL ID of the core
+ *
+ */
+void Bootloader_socCpuPowerOff(uint32_t cpuId);
 #endif /* BOOTLOADER_SOC_AM64X_H_ */

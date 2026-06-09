@@ -49,7 +49,7 @@
 //#include <ti/csl/csl_types.h> //TODO: Possible cause of error
 //#include <ti/osal/osal.h>   //TODO
 #include <kernel/dpl/HwiP.h>
-#include <stddef.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -220,6 +220,19 @@ typedef Fvid2Utils_Handle Fvid2Utils_QHandle;
 /*                          Function Declarations                             */
 /* ========================================================================== */
 /**
+ *  Fvid2Utils_controlAssert
+ *  \brief This function allows the user to enable or disable the assertion behavior
+ *  based on the value passed in the `enable` parameter.
+ *
+ *  \param enable           Boolean flag to enable or disable assertions.
+ *                          - `true`  -> Enable assertions.
+ *                          - `false` -> Disable assertions.
+ *
+ *  \returns                Void.
+ */
+void Fvid2Utils_controlAssert(bool enable);
+
+/**
  *  Fvid2Utils_init
  *  \brief Initializes the Util objects and create pool semaphore
  *
@@ -246,7 +259,6 @@ int32_t Fvid2Utils_deInit(void *arg);
  *  \param ch               Byte value to fill with.
  *  \param byteCount        Number of bytes to fill.
  *
- *  \return                 None.
  */
 void Fvid2Utils_memset(void *mem, uint8_t ch, size_t byteCount);
 
@@ -273,7 +285,6 @@ void *Fvid2Utils_memsetw(void *mem, uint32_t word, uint32_t wordCount);
  *  \param src              Source memory pointer.
  *  \param byteCount        Number of bytes to copy.
  *
- *  \return                 None
  */
 void Fvid2Utils_memcpy(void *dest, const void *src, size_t byteCount);
 
@@ -313,7 +324,6 @@ int32_t Fvid2Utils_constructLinkList(Fvid2UtilsLinkListObj  *llobj,
  *
  *  \param llobj pointer to object of type Fvid2UtilsLinkListObj
  *
- *  \return                 None
  */
 void Fvid2Utils_destructLinkList(Fvid2UtilsLinkListObj *llobj);
 
@@ -507,7 +517,6 @@ int32_t Fvid2Utils_constructQ(Fvid2UtilsLinkListObj *llobj);
  *
  * \param llobj pointer to object of type Fvid2UtilsLinkListObj
  *
- *  \return                 None
  */
 void Fvid2Utils_destructQ(Fvid2UtilsLinkListObj *llobj);
 

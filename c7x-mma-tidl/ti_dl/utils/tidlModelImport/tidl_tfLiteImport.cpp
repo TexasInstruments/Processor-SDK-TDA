@@ -1487,6 +1487,30 @@ int32_t TIDL_tfliteMapSoftmaxParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
   return 0;
 }
 
+int32_t TIDL_tfliteMapSoftplusParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
+  int32_t              i,
+  int32_t              layerIndex,
+  int32_t              *dataIndex,
+  const Model*         tfliteModel)
+{
+  pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].layerType = TIDL_SoftPlusLayer;
+  pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].outData[0].dataId = (*dataIndex)++;
+  pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.actType = TIDL_SoftPlus;
+  return 0;
+}
+
+int32_t TIDL_tfliteMapSoftsignParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
+  int32_t              i,
+  int32_t              layerIndex,
+  int32_t              *dataIndex,
+  const Model*         tfliteModel)
+{
+  pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].layerType = TIDL_SoftSignLayer;
+  pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].outData[0].dataId = (*dataIndex)++;
+  pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.actType = TIDL_SoftSign;
+  return 0;
+}
+
 int32_t TIDL_tfliteMapArgmaxParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
   int32_t              i,
   int32_t              layerIndex,
@@ -2258,7 +2282,9 @@ sTIDL_tfliteOpParamMap_t tidl_TfliteOpParamMapTable[] =
   { "QUANTIZE",                        TIDL_tfliteMapQuantizeParams }, // TIDL_DataConvertLayer ,
   { "DEQUANTIZE",                      TIDL_tfliteMapDeQuantizeParams }, // TIDL_DataConvertLayer ,
   { "CAST",                            TIDL_tfliteMapCastParams }, // TIDL_tfliteMapCastParams ,
-  { "SPACE_TO_DEPTH",                  TIDL_tfliteMapSpaceToDepthParams } // Reshape->Transpose->Reshape comination
+  { "SPACE_TO_DEPTH",                  TIDL_tfliteMapSpaceToDepthParams }, // Reshape->Transpose->Reshape comination
+  { "SOFTPLUS",                        TIDL_tfliteMapSoftplusParams },      //  TIDL_SoftMaxLayer ,
+  { "SOFTSIGN",                        TIDL_tfliteMapSoftsignParams },      //  TIDL_SoftMaxLayer ,
 };
 
 

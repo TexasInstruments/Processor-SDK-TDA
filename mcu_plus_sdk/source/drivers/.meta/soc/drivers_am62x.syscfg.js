@@ -2,6 +2,18 @@
 let common = system.getScript("/common");
 
 const driverVer = {
+    "dss": {
+        version: "v0",
+    },
+    "ecap": {
+        version: "v0",
+    },
+    "epwm": {
+        version: "v0",
+    },
+    "eqep": {
+        version: "v0",
+    },
     "gpio":{
         version:"v0",
     },
@@ -13,6 +25,9 @@ const driverVer = {
     },
     "mcan": {
         version: "v0",
+    },
+    "mcasp": {
+        version: "v1",
     },
     "mcu_bist": {
         version: "v0",
@@ -30,7 +45,7 @@ const driverVer = {
         version: "v0",
     },
     "mmcsd": {
-        version: "v1",
+        version: "v0",
     },
     "ddr": {
         version: "v0",
@@ -41,17 +56,23 @@ const driverVer = {
     "ospi": {
         version: "v0",
     },
+    "qos": {
+        version: "v0",
+    },
     "uart": {
         version: "v0",
     },
     "mcspi": {
         version: "v0",
     },
+    "rtc": {
+        version: "v0",
+    },
     "udma": {
         version: "v0",
     },
-    "dss": {
-        version: "v0",
+    "watchdog": {
+        version: "v1",
     },
 };
 
@@ -60,7 +81,6 @@ const topModules_wkup = [
     "/drivers/gpio/gpio",
     "/drivers/bootloader/bootloader",
     "/drivers/ddr/ddr",
-    "/drivers/dss/dss",
     "/drivers/mmcsd/mmcsd",
     "/drivers/gtc/gtc",
     "/drivers/gpmc/gpmc",
@@ -70,16 +90,40 @@ const topModules_wkup = [
     "/drivers/ipc/ipc",
     "/drivers/udma/udma",
     "/drivers/mcspi/mcspi",
+    "/drivers/rtc/rtc",
     "/drivers/mcan/mcan",
+    "/drivers/qos/qos",
+    "/drivers/watchdog/watchdog",
 ];
 
 const topModules_mcu = [
+    "/drivers/epwm/epwm",
     "/drivers/gpio/gpio",
     "/drivers/i2c/i2c",
     "/drivers/ipc/ipc",
     "/drivers/mcan/mcan",
     "/drivers/uart/uart",
     "/drivers/mcspi/mcspi",
+];
+
+const topModules_a53 = [
+    "/drivers/dss/dss",
+    "/drivers/ecap/ecap",
+    "/drivers/epwm/epwm",
+    "/drivers/eqep/eqep",
+    "/drivers/gpio/gpio",
+    "/drivers/gpmc/gpmc",
+    "/drivers/i2c/i2c",
+    "/drivers/ipc/ipc",
+    "/drivers/mcan/mcan",
+    "/drivers/mcasp/mcasp",
+    "/drivers/mcspi/mcspi",
+    "/drivers/mmcsd/mmcsd",
+    "/drivers/rtc/rtc",
+    "/drivers/ospi/ospi",
+    "/drivers/uart/uart",
+    "/drivers/udma/udma",
+    "/drivers/watchdog/watchdog",
 ];
 
 function getCpuID() {
@@ -106,6 +150,10 @@ exports = {
         if(common.getSelfSysCfgCoreName().includes("r5f")) {
             topModules = topModules_wkup;
         }
+        if(common.getSelfSysCfgCoreName().includes("a53")) {
+            topModules = topModules_a53;
+        }
+
         return topModules;
     },
     getDriverVer: function(driverName) {

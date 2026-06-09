@@ -61,12 +61,9 @@
  */
 
 #include <TI/tivx.h>
+#include <TI/hwa_dmpac_dof.h>
 #include "tivx_kernels_target_utils.h"
 #include "tivx_hwa_arm_priv.h"
-
-/* Function prototypes */
-void tivxRegisterHwaTargetArmKernels(void);
-void tivxUnRegisterHwaTargetArmKernels(void);
 
 static Tivx_Target_Kernel_List  gTivx_target_kernel_list[] = {
     #ifdef BUILD_DMPAC_DOF

@@ -473,6 +473,244 @@ static vx_status create_viss_outputs_ir(vx_context context, VISSObj *vissObj, Se
     return status;
 }
 
+static vx_status create_viss_outputs_q(vx_context context,
+                                       VISSObj *vissObj,
+                                       SensorObj *sensorObj,
+                                       uint32_t num_cameras_enabled)
+{
+    vx_status status = VX_SUCCESS;
+
+    vx_int32 q = 0;
+    vx_int32 bufq_depth = vissObj->bufq_depth;
+
+    vx_uint32 img_height = 0;
+    vx_uint32 img_width = 0;
+
+    vx_user_data_object h3a_stats = NULL;
+    vx_image output_img = NULL;
+
+    if (bufq_depth > APP_MODULES_MAX_BUFQ_DEPTH)
+    {
+        bufq_depth = APP_MODULES_MAX_BUFQ_DEPTH;
+    }
+
+    h3a_stats = vxCreateUserDataObject(context,
+                                       "tivx_h3a_data_t",
+                                       sizeof(tivx_h3a_data_t),
+                                       NULL);
+
+    status = vxGetStatus((vx_reference)h3a_stats);
+
+    if (status != VX_SUCCESS)
+    {
+        printf("[VISS-MODULE] Unable to create h3a stats object!\n");
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        for (q = 0; q < bufq_depth; q++)
+        {
+            vissObj->h3a_stats_arr_q[q] =
+                vxCreateObjectArray(context,
+                                    (vx_reference)h3a_stats,
+                                    num_cameras_enabled);
+
+            status = vxGetStatus((vx_reference)vissObj->h3a_stats_arr_q[q]);
+
+            if (status == VX_SUCCESS)
+            {
+                vissObj->h3a_stats_q[q] =
+                    (vx_user_data_object)vxGetObjectArrayItem(
+                        (vx_object_array)vissObj->h3a_stats_arr_q[q],
+                        0);
+
+                status = vxGetStatus((vx_reference)vissObj->h3a_stats_q[q]);
+            }
+
+            if (status != VX_SUCCESS)
+            {
+                printf("[VISS-MODULE] Unable to create h3a stats object array!\n");
+                break;
+            }
+        }
+    }
+
+    if (h3a_stats != NULL)
+    {
+        (void)vxReleaseUserDataObject(&h3a_stats);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        img_width  = sensorObj->sensorParams.sensorInfo.raw_params.width;
+        img_height = sensorObj->sensorParams.sensorInfo.raw_params.height;
+
+        output_img = vxCreateImage(context,
+                                  img_width,
+                                  img_height,
+                                  VX_DF_IMAGE_NV12);
+
+        status = vxGetStatus((vx_reference)output_img);
+
+        if (status != VX_SUCCESS)
+        {
+            printf("[VISS-MODULE] Unable to create VISS output image!\n");
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        vissObj->output_arr =
+            vxCreateObjectArray(context,
+                                (vx_reference)output_img,
+                                num_cameras_enabled);
+
+        status = vxGetStatus((vx_reference)vissObj->output_arr);
+
+        if (status != VX_SUCCESS)
+        {
+            printf("[VISS-MODULE] Unable to create VISS output image array!\n");
+        }
+
+        if (status == VX_SUCCESS)
+        {
+            vxSetReferenceName((vx_reference)vissObj->output_arr,
+                               "viss_node_output_arr");
+        }
+    }
+
+    if (output_img != NULL)
+    {
+        (void)vxReleaseImage(&output_img);
+    }
+
+    return status;
+}
+
+static vx_status create_viss_outputs_ir_q(vx_context context,
+                                          VISSObj *vissObj,
+                                          SensorObj *sensorObj,
+                                           uint32_t num_cameras_enabled)
+{
+    vx_status status = VX_SUCCESS;
+
+    vx_uint32 img_height = 0;
+    vx_uint32 img_width = 0;
+    vx_int32 q = 0;
+    vx_int32 bufq_depth = vissObj->bufq_depth;
+
+    vx_user_data_object h3a_stats = NULL;
+    vx_image output_img = NULL;
+
+    if (bufq_depth > APP_MODULES_MAX_BUFQ_DEPTH)
+    {
+        bufq_depth = APP_MODULES_MAX_BUFQ_DEPTH;
+    }
+
+    h3a_stats = vxCreateUserDataObject(context,
+                                       "tivx_h3a_data_t",
+                                       sizeof(tivx_h3a_data_t),
+                                       NULL);
+
+    status = vxGetStatus((vx_reference)h3a_stats);
+
+    if (status != VX_SUCCESS)
+    {
+        printf("[VISS-IR-MODULE] Unable to create h3a stats object!\n");
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        static char name[128];
+
+        for (q = 0; q < bufq_depth; q++)
+        {
+            vissObj->h3a_stats_arr_q[q] =
+                vxCreateObjectArray(context,
+                                    (vx_reference)h3a_stats,
+                                    num_cameras_enabled);
+
+            status = vxGetStatus((vx_reference)vissObj->h3a_stats_arr_q[q]);
+
+            if (status == VX_SUCCESS)
+            {
+                snprintf(name, sizeof(name), "viss_h3a_stats_arr_q%d", q);
+                vxSetReferenceName((vx_reference)vissObj->h3a_stats_arr_q[q], name);
+
+                vissObj->h3a_stats_q[q] =
+                    (vx_user_data_object)vxGetObjectArrayItem(
+                        (vx_object_array)vissObj->h3a_stats_arr_q[q],
+                        0);
+
+                status = vxGetStatus((vx_reference)vissObj->h3a_stats_q[q]);
+            }
+
+            if (status == VX_SUCCESS)
+            {
+                snprintf(name, sizeof(name), "viss_h3a_stats_q%d_cam0", q);
+                vxSetReferenceName((vx_reference)vissObj->h3a_stats_q[q], name);
+            }
+
+            if (status != VX_SUCCESS)
+            {
+                printf("[VISS-IR-MODULE] Unable to create h3a stats object array!\n");
+                break;
+            }
+        }
+    }
+
+    if (h3a_stats != NULL)
+    {
+        (void)vxReleaseUserDataObject(&h3a_stats);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        img_width  = sensorObj->sensorParams.sensorInfo.raw_params.width;
+        img_height = sensorObj->sensorParams.sensorInfo.raw_params.height;
+
+        output_img = vxCreateImage(context,
+                                  img_width,
+                                  img_height,
+                                  VX_DF_IMAGE_U8);
+
+        status = vxGetStatus((vx_reference)output_img);
+
+        if (status != VX_SUCCESS)
+        {
+            printf("[VISS-IR-MODULE] Unable to create VISS output image!\n");
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        vissObj->output_arr =
+            vxCreateObjectArray(context,
+                                (vx_reference)output_img,
+                                num_cameras_enabled);
+
+        status = vxGetStatus((vx_reference)vissObj->output_arr);
+
+        if (status != VX_SUCCESS)
+        {
+            printf("[VISS-IR-MODULE] Unable to create VISS output image array!\n");
+        }
+
+        if (status == VX_SUCCESS)
+        {
+            vxSetReferenceName((vx_reference)vissObj->output_arr,
+                               "viss_node_output_arr");
+        }
+    }
+
+    if (output_img != NULL)
+    {
+        (void)vxReleaseImage(&output_img);
+    }
+
+    return status;
+}
+
 vx_status app_init_viss(vx_context context, VISSObj *vissObj, SensorObj *sensorObj,  char *objName, uint32_t num_cameras_enabled)
 {
     vx_status status = VX_SUCCESS;
@@ -693,4 +931,265 @@ vx_status app_send_cmd_viss_write_node(VISSObj *vissObj, vx_uint32 start_frame, 
         APP_PRINTF("VISS H3A Write node send command success!\n");
     }
     return (status);
+}
+
+vx_status app_init_viss_queued(vx_context context,
+                              VISSObj *vissObj,
+                              SensorObj *sensorObj,
+                              char *objName,
+                              uint32_t num_cameras_enabled,
+                              vx_uint32 bufq_depth)
+{
+    vx_status status = VX_SUCCESS;
+    vx_bool is_ov2312 = vx_false_e;
+    vx_bool is_viss_obj = vx_false_e;
+    vx_bool is_viss_obj1 = vx_false_e;
+
+    if (vissObj == NULL)
+    {
+        status = VX_FAILURE;
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        if (sensorObj == NULL)
+        {
+            status = VX_FAILURE;
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        if (objName == NULL)
+        {
+            status = VX_FAILURE;
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        if (bufq_depth > APP_MODULES_MAX_BUFQ_DEPTH)
+        {
+            printf("[VISS-MODULE] Warning: bufq_depth %u exceeds maximum %u, limiting\n",
+                   (uint32_t)bufq_depth, (uint32_t)APP_MODULES_MAX_BUFQ_DEPTH);
+            bufq_depth = APP_MODULES_MAX_BUFQ_DEPTH;
+        }
+
+        vissObj->bufq_depth = (vx_int32)bufq_depth;
+
+        if (strcmp(sensorObj->sensor_name, "OV2312-UB953_LI") == 0)
+        {
+            is_ov2312 = vx_true_e;
+        }
+
+        if (strcmp(objName, "viss_obj") == 0)
+        {
+            is_viss_obj = vx_true_e;
+        }
+
+        if (strcmp(objName, "viss_obj1") == 0)
+        {
+            is_viss_obj1 = vx_true_e;
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        if (is_ov2312 == vx_true_e)
+        {
+            if (is_viss_obj == vx_true_e)
+            {
+                status = configure_viss_params(context, vissObj, sensorObj);
+            }
+            else if (is_viss_obj1 == vx_true_e)
+            {
+                status = configure_viss_params_ir(context, vissObj, sensorObj);
+            }
+            else
+            {
+                status = configure_viss_params(context, vissObj, sensorObj);
+            }
+        }
+        else
+        {
+            status = configure_viss_params(context, vissObj, sensorObj);
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = configure_dcc_params(context, vissObj, sensorObj);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        if (is_ov2312 == vx_true_e)
+        {
+            if (is_viss_obj == vx_true_e)
+            {
+                status = create_viss_outputs_q(context,
+                                               vissObj,
+                                               sensorObj,
+                                               num_cameras_enabled);
+            }
+            else if (is_viss_obj1 == vx_true_e)
+            {
+                status = create_viss_outputs_ir_q(context,
+                                                  vissObj,
+                                                  sensorObj,
+                                                  num_cameras_enabled);
+            }
+            else
+            {
+                status = create_viss_outputs_q(context,
+                                               vissObj,
+                                               sensorObj,
+                                               num_cameras_enabled);
+            }
+        }
+        else
+        {
+            status = create_viss_outputs_q(context,
+                                           vissObj,
+                                           sensorObj,
+                                           num_cameras_enabled);
+        }
+    }
+
+    return status;
+}
+
+void app_deinit_viss_queued(VISSObj *vissObj)
+{
+    vx_int32 q = 0;
+
+    vx_int32 bufq_depth = vissObj->bufq_depth;
+
+    if (bufq_depth > APP_MODULES_MAX_BUFQ_DEPTH)
+    {
+        printf("[VISS-MODULE] Warning: bufq_depth %u exceeds maximum %u, limiting\n",
+                (uint32_t)bufq_depth, (uint32_t)APP_MODULES_MAX_BUFQ_DEPTH);
+        bufq_depth = APP_MODULES_MAX_BUFQ_DEPTH;
+    }
+
+    if (vissObj == NULL)
+    {
+        return;
+    }
+
+    if (vissObj->config != NULL)
+    {
+        (void)vxReleaseUserDataObject(&vissObj->config);
+    }
+
+    if (vissObj->output_arr != NULL)
+    {
+        (void)vxReleaseObjectArray(&vissObj->output_arr);
+    }
+
+    for (q = 0; q < bufq_depth; q++)
+    {
+        if (vissObj->h3a_stats_arr_q[q] != NULL)
+        {
+            (void)vxReleaseObjectArray(&vissObj->h3a_stats_arr_q[q]);
+        }
+
+        if (vissObj->h3a_stats_q[q] != NULL)
+        {
+            (void)vxReleaseUserDataObject(&vissObj->h3a_stats_q[q]);
+        }
+    }
+
+    if (vissObj->dcc_config != NULL)
+    {
+        (void)vxReleaseUserDataObject(&vissObj->dcc_config);
+    }
+}
+
+
+vx_status app_create_graph_viss_queued(vx_graph graph,
+                                      VISSObj *vissObj,
+                                      vx_object_array raw_image_arr,
+                                      const char *target)
+{
+    vx_status status = VX_SUCCESS;
+
+    tivx_raw_image raw_image = NULL;
+    vx_user_data_object h3a_stats = NULL;
+    vx_image output_img = NULL;
+
+    raw_image = (tivx_raw_image)vxGetObjectArrayItem(raw_image_arr, 0);
+    status = vxGetStatus((vx_reference)raw_image);
+
+    if (status == VX_SUCCESS)
+    {
+        h3a_stats = (vx_user_data_object)vxGetObjectArrayItem(vissObj->h3a_stats_arr_q[0], 0);
+        status = vxGetStatus((vx_reference)h3a_stats);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        output_img = (vx_image)vxGetObjectArrayItem(vissObj->output_arr, 0);
+        status = vxGetStatus((vx_reference)output_img);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        vissObj->node = tivxVpacVissNode(graph,
+                                        vissObj->config,
+                                        NULL,
+                                        vissObj->dcc_config,
+                                        raw_image, NULL, NULL,
+                                        output_img, NULL, NULL,
+                                        h3a_stats, NULL, NULL, NULL);
+
+        status = vxGetStatus((vx_reference)vissObj->node);
+
+        if (status != VX_SUCCESS)
+        {
+            printf("[VISS-MODULE] Unable to create VISS Node!\n");
+        }
+    }
+
+    if (raw_image != NULL)
+    {
+        (void)tivxReleaseRawImage(&raw_image);
+    }
+
+    if (output_img != NULL)
+    {
+        (void)vxReleaseImage(&output_img);
+    }
+
+    if (h3a_stats != NULL)
+    {
+        (void)vxReleaseUserDataObject(&h3a_stats);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        vxSetReferenceName((vx_reference)vissObj->node, "viss_node");
+
+        status = vxSetNodeTarget(vissObj->node,
+                                 VX_TARGET_STRING,
+                                 target);
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        vx_bool replicate[] =
+        {
+            vx_false_e, vx_false_e, vx_false_e,
+            vx_true_e,
+            vx_false_e, vx_false_e,
+            vx_true_e,
+            vx_false_e, vx_false_e,
+            vx_true_e,
+            vx_false_e, vx_false_e, vx_false_e
+        };
+
+        status = vxReplicateNode(graph, vissObj->node, replicate, 13);
+    }
+
+    return status;
 }

@@ -37,15 +37,37 @@
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
 
+class IPrintMessage
+{
+    virtual void print() = 0;
+protected:
+    char* msg;
+public:
+    void Print()
+    {
+        print();
+    }
+};
+
+class HelloWorld : public IPrintMessage
+{
+    void print() 
+    { 
+        DebugP_log(msg);
+    }
+
+public:
+    HelloWorld()
+    {
+        static char hello[] = "Hello World!\r\n";
+        msg = hello;
+    }; 
+};
+
+HelloWorld obj; 
+
 void hello_world_main(void *args)
 {
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
-
-    DebugP_log("Hello World!\r\n");
-
-    Board_driversClose();
-    Drivers_close();
+    obj.Print();
 }
 

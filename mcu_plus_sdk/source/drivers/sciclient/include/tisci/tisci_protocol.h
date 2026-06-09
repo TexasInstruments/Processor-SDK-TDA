@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2017-2025 Texas Instruments Incorporated
+ *  Copyright (C) 2017-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -77,6 +77,9 @@ extern "C"
 /** Indicate that this message is marked secure */
 #define TISCI_MSG_FLAG_SEC    TISCI_BIT(2)
 
+/** Indicates that this request should not be forwarded to DM */
+#define TISCI_MSG_FLAG_REQ_NOTFWD2DM    TISCI_BIT(3)
+
 /**
  * Response flag for a message that indicates success. If this flag is NOT
  * set then that is to be interpreted as a NAK.
@@ -149,6 +152,8 @@ struct tisci_sec_header {
 #define TISCI_MSG_SET_CLOCK_PARENT              (0x0102U)
 #define TISCI_MSG_GET_CLOCK_PARENT              (0x0103U)
 #define TISCI_MSG_GET_NUM_CLOCK_PARENTS         (0x0104U)
+#define TISCI_MSG_SET_CLOCK_SSC                 (0x010aU)
+#define TISCI_MSG_GET_CLOCK_SSC                 (0x010bU)
 #define TISCI_MSG_SET_FREQ                      (0x010cU)
 #define TISCI_MSG_QUERY_FREQ                    (0x010dU)
 #define TISCI_MSG_GET_FREQ                      (0x010eU)
@@ -157,6 +162,7 @@ struct tisci_sec_header {
 #define TISCI_MSG_GET_DEVICE                    (0x0201U)
 #define TISCI_MSG_SET_DEVICE_RESETS             (0x0202U)
 #define TISCI_MSG_DEVICE_DROP_POWERUP_REF       (0x0203U)
+#define TISCI_MSG_GET_DEVICE_MULTIPLE           (0x0204U)
 
 #define TISCI_MSG_PREPARE_SLEEP                 (0x0300U)
 #define TISCI_MSG_ENTER_SLEEP                   (0x0301U)
@@ -184,6 +190,8 @@ struct tisci_sec_header {
 /** Message to decrypt an lpm data blob */
 #define TISCI_MSG_LPM_DECRYPT                   (0x0310U)
 #define TISCI_MSG_LPM_ABORT                     (0x0311U)
+#define TISCI_MSG_GET_SUSPEND_INITIATOR         (0x0312U)
+#define TISCI_MSG_LPM_SAVE_ADDR                 (0x0313U)
 
 #define TISCI_MSG_FIRMWARE_LOAD                 (0x8105U)
 #define MSG_FIRMWARE_LOAD_RESULT                (0x8805U)
@@ -218,6 +226,9 @@ struct tisci_sec_header {
 #define TISCI_MSG_FWL_EXCP_NOTIFICATION         (0x900BU)
 /** Message to open debug firewalls using a certificate */
 #define TISCI_MSG_OPEN_DEBUG_FWLS               (0x900CU)
+/** Message to intialize all the firewalls for a specific dev group */
+#define TISCI_MSG_INIT_FWL_DEVGRP               (0x9046U)
+
 /**
  * Message to write partitioning data and provisioned keys to the keystore
  * memory
@@ -365,6 +376,8 @@ struct tisci_sec_header {
 /* Keywriter lite TISCI message to write keys from a buffer  */
 #define TISCI_MSG_KEY_WRITER_LITE               (0x9045U)
 
+/******************************************************/
+
 /* Processor Control APIs */
 
 /** Message to get a Processor */
@@ -385,6 +398,9 @@ struct tisci_sec_header {
 /** Message to Wait for processor status */
 #define TISCI_MSG_PROC_WAIT_STATUS      (0xC401U)
 
+/** Message to re-apply the x509 firewalls */
+#define TISCI_MSG_PROC_AUTH_APPLY_FWLS   (0xC402U)
+
 /** Message to do authenticated boot configuration of a processor */
 #define TISCI_MSG_PROC_AUTH_BOOT        (0xC120U)
 
@@ -399,6 +415,9 @@ struct tisci_sec_header {
  * and authenticated boot configuration of a processor
  */
 #define TISCI_MSG_MCELF_PROC_AUTH_BOOT_FINISH        (0xC124U)
+
+/** Message to R/W to compute cluster configuration registers */
+#define TISCI_MSG_CONFIGURE_CC_REGISTER        (0xC125U)
 
 /* RM IDs */
 

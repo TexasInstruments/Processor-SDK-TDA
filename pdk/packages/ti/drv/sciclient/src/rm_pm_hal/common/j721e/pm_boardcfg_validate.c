@@ -36,7 +36,7 @@
 
 #include <stdbool.h>
 #include <types/address_types.h>
-
+#include <boardcfg/pm_boardcfg_validate.h>
 
 bool is_suspend_initiator_valid(u8 initiator __attribute__((unused)))
 {

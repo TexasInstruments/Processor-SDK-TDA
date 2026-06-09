@@ -1,0 +1,101 @@
+
+let common = system.getScript("/common");
+
+const driverVer = {
+    "adc": {
+        version: "v0",
+    },
+    "dss": {
+        version: "v0",
+    },
+    "ecap": {
+        version: "v0",
+    },
+    "epwm": {
+        version: "v0",
+    },
+    "eqep": {
+        version: "v0",
+    },
+    "gpio":{
+        version:"v0_1",
+    },
+    "gpmc": {
+        version: "v0",
+    },
+    "gtc": {
+        version: "v0",
+    },
+    "i2c": {
+        version: "v0",
+    },
+    "mcan": {
+        version: "v0",
+    },
+    "mcasp": {
+        version: "v1",
+    },
+    "mcspi": {
+        version: "v0",
+    },
+    "mmcsd": {
+        version: "v0",
+    },
+    "ospi": {
+        version: "v0",
+    },
+    "scmi": {
+        version: "v0",
+    },
+    "psci": {
+        version: "v0",
+    },
+    "uart": {
+        version: "v0",
+    },
+    "udma": {
+        version: "v1",
+    },
+    "watchdog": {
+        version: "v1",
+    },
+};
+
+const topModules_a53 = [
+    "/drivers/adc/adc",
+    "/drivers/dss/dss",
+    "/drivers/ecap/ecap",
+    "/drivers/epwm/epwm",
+    "/drivers/eqep/eqep",
+    "/drivers/gpio/gpio",
+    //"/drivers/gpmc/gpmc",
+    "/drivers/gtc/gtc",
+    "/drivers/i2c/i2c",
+    "/drivers/mcan/mcan",
+    "/drivers/mcasp/mcasp",
+    "/drivers/mcspi/mcspi",
+    "/drivers/mmcsd/mmcsd",
+    "/drivers/ospi/ospi",
+    "/drivers/uart/uart",
+    "/drivers/udma/udma",
+    "/drivers/watchdog/watchdog",
+];
+
+function getCpuID() {
+    let corename_map = {
+        "a53ss0-0" : "CSL_CORE_ID_A53SS0_0",
+        "a53ss0-1" : "CSL_CORE_ID_A53SS0_1",
+    };
+
+    return corename_map[common.getSelfSysCfgCoreName()];
+}
+
+exports = {
+    getTopModules: function() {
+        return topModules_a53;
+    },
+    getDriverVer: function(driverName) {
+        return driverVer[driverName].version;
+    },
+    getCpuID,
+};

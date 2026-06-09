@@ -4,22 +4,11 @@
 % if (module.getClockEnableIds) {
     % for(let i = 0; i < module.$instances.length; i++) {
         % let instance = module.$instances[i];
-        % let moduleInst = module.$instances[i];
-        % if (moduleInst.skipDeinitFromSbl == true) {
-            % let moduleIds = module.getClockEnableIds(instance);
-            % if (moduleIds) {
-                % moduleIds.forEach( function(moduleId) {
-    {`moduleId`, TRUE},
-                % } );
-            % }
-        % }
-        % else {
-            % let moduleIds = module.getClockEnableIds(instance);
-            % if (moduleIds) {
-                % moduleIds.forEach( function(moduleId) {
-    {`moduleId`, FALSE},
-                % } );
-            % }
+        % let moduleIds = module.getClockEnableIds(instance);
+        % if (moduleIds) {
+            % moduleIds.forEach( function(moduleId) {
+    `moduleId`,
+            % } );
         % }
     % }
 % }

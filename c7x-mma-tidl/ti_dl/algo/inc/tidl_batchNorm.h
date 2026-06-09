@@ -219,6 +219,28 @@ int32_t TIDL_reciprocal_nonLut(const void* dataIn, void* dataOut, int32_t Zx, fl
 
 template <class Tin, class Tout>
 int32_t TIDL_silu_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+template <class Tin, class Tout>
+int32_t TIDL_softplus_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+template <class Tin, class Tout>
+int32_t TIDL_softsign_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+template <class Tin, class Tout>
+int32_t TIDL_celu_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+template <class Tin, class Tout>
+int32_t TIDL_selu_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+template <class Tin, class Tout>
+int32_t TIDL_ceil_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+template <class Tin, class Tout>
+int32_t TIDL_round_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+template <class Tin, class Tout>
+int32_t TIDL_sign_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
 /* ========================================================================== */
 /*                       Static Function Definitions                          */
 /* ========================================================================== */

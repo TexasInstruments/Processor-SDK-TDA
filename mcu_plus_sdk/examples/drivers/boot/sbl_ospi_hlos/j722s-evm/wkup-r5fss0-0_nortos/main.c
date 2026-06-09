@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -98,6 +98,7 @@ int32_t App_loadImages()
 
     Bootloader_Params_init(&bootParams);
     Bootloader_BootImageInfo_init(&bootImageInfo);
+    
     bootHandle = Bootloader_open(CONFIG_BOOTLOADER_FLASH_SBL, &bootParams);
 
     /* scratch pointer is required for image authentication */
@@ -107,7 +108,7 @@ int32_t App_loadImages()
     {
         bootConfig = (Bootloader_Config *)bootHandle;
         bootConfig->coresPresentMap = 0;
-        status = Bootloader_parseMultiCoreAppImage(&bootHandle, &bootImageInfo);
+        status = Bootloader_parseMultiCoreAppImage(bootHandle, &bootImageInfo);
 
         /* Load CPUs */
         if (!Bootloader_socIsMCUResetIsoEnabled())
@@ -215,6 +216,7 @@ int32_t App_loadAndAuthHsmBinary(void)
     /* Define sbl scratch memory as HSM address */
     uint8_t *sblScratchMem = ((uint8_t *)(BOOTLOADER_OSPI_ADDR + BOOTLOADER_OSPI_OFFSET_HSM));
     struct tisci_msg_proc_auth_boot_req authReq;
+    struct tisci_msg_proc_auth_boot_resp authResp = {0};
     struct tisci_msg_proc_get_status_resp cpuStatus;
     uint32_t hsmCoreProcId = SCICLIENT_PROC_ID_HSM_M4FSS0_CORE0;
 
@@ -262,7 +264,7 @@ int32_t App_loadAndAuthHsmBinary(void)
         authReq.certificate_address_lo = (uint32_t) sblScratchMem;
         /* Request TIFS to authenticate and load the HSM image */
         DebugP_log("Calling Sciclient_procBootAuthAndStart ... \r\n");
-        status = Sciclient_procBootAuthAndStart(&authReq, SCICLIENT_SERVICE_WAIT_FOREVER);
+        status = Sciclient_procBootAuthAndStart(&authReq, &authResp, SCICLIENT_SERVICE_WAIT_FOREVER);
         if (status != SystemP_SUCCESS)
         {
             DebugP_logError("Sciclient_procBootAuthAndStart...FAILED \r\n");
@@ -301,6 +303,9 @@ int main()
 
     System_init();
     Bootloader_profileAddProfilePoint("System_init");
+
+    Board_init();
+    Bootloader_profileAddProfilePoint("Board_init");
 
     Drivers_open();
     Bootloader_profileAddProfilePoint("Drivers_open");
@@ -352,12 +357,13 @@ int main()
     else
     {
         Board_driversClose();
-        Drivers_close();
+        Board_deinit();
         /* Call DPL deinit to close the tick timer and disable interrupts before jumping to Stage2*/
         Dpl_deinit();
-        System_deinit();
 
         Bootloader_JumpSelfCpu();
+        Drivers_close();
+        System_deinit();
     }
 
     return 0;
@@ -369,7 +375,7 @@ void flashFixUpOspiBoot(OSPI_Handle oHandle, Flash_Handle fHandle)
      *  In Fast XSPI mode, reintialization is not required unless
      *  user configures it or PHY configuration failed
      */
-    if(SystemP_SUCCESS != OSPI_skipProgramming(oHandle))
+    if(SystemP_SUCCESS != OSPI_skipTuning(oHandle))
     {
         OSPI_setProtocol(oHandle, OSPI_FLASH_PROTOCOL(8,8,8,1));
         OSPI_enableDDR(oHandle);

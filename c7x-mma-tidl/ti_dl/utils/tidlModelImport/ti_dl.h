@@ -122,6 +122,14 @@ typedef enum
   TIDL_TanLayer              ,
   TIDL_ExpandLayer           ,
   TIDL_SwishLayer            ,
+  TIDL_SoftPlusLayer         ,
+  TIDL_SoftSignLayer         ,
+  TIDL_CeilLayer             ,
+  TIDL_CeluLayer             ,
+  TIDL_SeluLayer             ,
+  TIDL_RoundLayer            ,
+  TIDL_SignLayer             ,
+  TIDL_GroupNormLayer        ,
 }eTIDL_PCLayerType;
 
 typedef enum
@@ -147,6 +155,14 @@ typedef struct {
   int32_t   terminal;
 }sTIDL_CastLayerParams_t;
 
+typedef struct {
+  /**  numGroups for number of groups of channels */
+  int32_t   numGroups;
+  /** Epsilon value for numerical stability of division */
+  float32_tidl   epsilon;
+  /** Floating-point precision used in stage one of the computation */
+  int32_t   stashType;
+}sTIDL_GroupNormLayerParams_t;
 
 typedef struct{
   int32_t size;
@@ -252,6 +268,15 @@ typedef struct {
   float   alpha;
   float   beta;
 }sTIDL_HardSigmoidParams_t;
+
+typedef struct {
+  float   alpha;
+}sTIDL_CeluParams_t;
+
+typedef struct {
+  float   alpha;
+  float   gamma;
+}sTIDL_SeluParams_t;
 
 typedef struct {
   float   alpha;
@@ -397,6 +422,43 @@ typedef struct{
   int32_t batchReshapeType;
 }sTIDL_BatchReshapePCParams_t;
 
+typedef struct{
+  /** Buffer containing recurrence weights (R) */
+  sBuffer_t recurrenceWeights;
+  /** Buffer containing tensor (of shape [batch_size]) specifying lengths of sequences in a batch */
+  sBuffer_t sequence_lens;
+  /** Buffer containing initial hidden state */
+  sBuffer_t initial_h;
+  /** Buffer containing initial cell state */
+  sBuffer_t initial_c;
+  /** Buffer containing peepholes tensor */
+  sBuffer_t peepholes;
+  /** Flag to indicate whether multiple outputs are handled by slice or not */
+  int8_t isOutputSliced;
+}sTIDL_LSTMPCParams_t;
+
+typedef struct{
+  /** Buffer containing recurrence weights (R) */
+  sBuffer_t recurrenceWeights;
+  /** Buffer containing tensor (of shape [batch_size]) specifying lengths of sequences in a batch */
+  sBuffer_t sequence_lens;
+  /** Buffer containing initial hidden state */
+  sBuffer_t initial_h;
+  /** Flag to indicate whether multiple outputs are handled by slice or not */
+  int8_t isOutputSliced;
+}sTIDL_GRUPCParams_t;
+
+typedef struct{
+  /** Buffer containing recurrence weights (R) */
+  sBuffer_t recurrenceWeights;
+  /** Buffer containing tensor (of shape [batch_size]) specifying lengths of sequences in a batch */
+  sBuffer_t sequence_lens;
+  /** Buffer containing initial hidden state */
+  sBuffer_t initial_h;
+  /** Flag to indicate whether multiple outputs are handled by slice or not */
+  int8_t isOutputSliced;
+}sTIDL_RNNPCParams_t;
+
 /**
 @struct sTIDL_allowlistingMetaData
 @brief  This structure contains layer level tensor related meta data to be used for allowlisting
@@ -467,6 +529,12 @@ typedef union {
   sTIDL_BatchReshapePCParams_t batchReshapeParams;
   sTIDL_SpaceToDepthPCParams_t spaceToDepthParams;
   sTIDL_TopKPCParams_t topKParams;
+  sTIDL_CeluParams_t     celuParams;
+  sTIDL_SeluParams_t     seluParams;
+  sTIDL_GroupNormLayerParams_t groupNormParams;
+  sTIDL_LSTMPCParams_t lstmParams;
+  sTIDL_GRUPCParams_t gruParams;
+  sTIDL_RNNPCParams_t rnnParams;
 } sTIDL_LayerPCParams_t;
 
 /**

@@ -633,9 +633,9 @@ typedef struct
 /*                           Function Declarations                            */
 /* ========================================================================== */
 
-int32_t Vhwa_m2mMscUdmaChInit(Vhwa_M2mMscCommonObj *commonObj);
+int32_t Vhwa_m2mMscUdmaChInit(Vhwa_M2mMscCommonObj *comObj);
 
-int32_t Vhwa_m2mMscUdmaChDeInit(const Vhwa_M2mMscCommonObj *commonObj);
+int32_t Vhwa_m2mMscUdmaChDeInit(const Vhwa_M2mMscCommonObj *comObj);
 
 void Vhwa_mscM2mSetTrDesc(Vhwa_M2mMscHandleObj *hObj,
                           const Vhwa_M2mMscCommonObj *comObj);
@@ -689,6 +689,7 @@ Vhwa_M2mMscHandleObj *Vhwa_m2mMscGetHandleObj(uint32_t instance, uint32_t cnt);
 
 void Vhwa_m2mDisableFcMscHtsIntr(void);
 
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 static int32_t Vhwa_m2mMscConfigRegReadback(const Vhwa_M2mMscHandleObj *hObj,
     const Vhwa_M2mMscCommonObj *comObj);
 
@@ -696,6 +697,7 @@ int32_t vhwaM2mMscUpdateConfigRegGroup(
     VhwaVpacMscSocReadBack *RegVal,
     const Vhwa_M2mMscHandleObj *hObj,
     const Vhwa_M2mMscCommonObj *comObj);
+#endif
 
 #ifdef __cplusplus
 }

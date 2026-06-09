@@ -3,9 +3,9 @@
  *
  * Ring accelerator driver instance data definition
  *
- * Data version: 240627_084252
+ * Data version: 250904_120008
  *
- * Copyright (C) 2022-2024, Texas Instruments Incorporated
+ * Copyright (C) 2022-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -194,21 +194,21 @@ static const struct rm_mmr mmr_DMASS0_RINGACC_0_RINGACC_RT = {
 	.base		= 0x49000000U,
 };
 
-static const struct rm_mmr mmr_DMASS1_BCDMA_0_GCFG = {
+static const struct rm_mmr mmr_DMASS1_BCDMA_0_BCDMA_GCFG = {
 	.fwl_id		= RM_MMR_FWL_INVALID,
 	.fwl_ch_start	= 0U,
 	.fwl_ch_end	= 0U,
 	.base		= 0x4e230000U,
 };
 
-static const struct rm_mmr mmr_DMASS1_BCDMA_0_RING_CFG = {
+static const struct rm_mmr mmr_DMASS1_BCDMA_0_BCDMA_RING = {
 	.fwl_id		= RM_MMR_FWL_INVALID,
 	.fwl_ch_start	= 0U,
 	.fwl_ch_end	= 0U,
 	.base		= 0x4e210000U,
 };
 
-static const struct rm_mmr mmr_DMASS1_BCDMA_0_RINGRT = {
+static const struct rm_mmr mmr_DMASS1_BCDMA_0_BCDMA_RINGRT = {
 	.fwl_id		= RM_MMR_FWL_INVALID,
 	.fwl_ch_start	= 0U,
 	.fwl_ch_end	= 0U,
@@ -311,9 +311,9 @@ struct ra_instance ra_inst[4] = {
 		.root_id = AM62AX_DEV_DMASS1,
 		.initialized = SFALSE,
 		.devgrp = SOC_DEVGRP_AM62AX_MAIN,
-		.gcfg = &mmr_DMASS1_BCDMA_0_GCFG,
-		.cfg = &mmr_DMASS1_BCDMA_0_RING_CFG,
-		.rt = &mmr_DMASS1_BCDMA_0_RINGRT,
+		.gcfg = &mmr_DMASS1_BCDMA_0_BCDMA_GCFG,
+		.cfg = &mmr_DMASS1_BCDMA_0_BCDMA_RING,
+		.rt = &mmr_DMASS1_BCDMA_0_BCDMA_RINGRT,
 		.mon = NULL,
 		.fifos = NULL,
 		.n_gp_rings_pre_sp_rings = 0U,

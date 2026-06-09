@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -65,7 +65,9 @@
 #define APP_PRE_PROC_MAX_TENSORS (8)
 
 #include "app_common.h"
+#if !defined(SOC_AM62A)
 #include "tiadalg_interface.h"
+#endif
 #include "itidl_ti.h"
 
 typedef struct {

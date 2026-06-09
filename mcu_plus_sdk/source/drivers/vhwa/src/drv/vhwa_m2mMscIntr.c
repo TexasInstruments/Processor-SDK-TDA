@@ -666,7 +666,9 @@ static void vhwa_m2mMscFrmDoneIsr(Vhwa_M2mMscInstObj *instObj,
     uint32_t              cnt;
     Vhwa_M2mMscHandleObj *hObj = NULL;
     Vhwa_M2mMscQueueObj  *qObj = NULL;
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     VhwaVpacMscSocReadBack *goldenRegVal = NULL;
+#endif
 
  /* LDRA_JUSTIFY_START
     <metric start>  branch <metric end>
@@ -724,7 +726,9 @@ static void vhwa_m2mMscFrmDoneIsr(Vhwa_M2mMscInstObj *instObj,
             /* LDRA_JUSTIFY_END */
 
             {
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
                 goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
+#endif
                  /* LDRA_JUSTIFY_START
                 <metric start>  branch <metric end>
                 <justification start>
@@ -854,7 +858,7 @@ static void vhwa_m2mMscFrmDoneIsr(Vhwa_M2mMscInstObj *instObj,
                         }
 
                         CSL_lseStopChannels(comObj->socInfo.lseRegs, &hObj->lseCfg[0]);
-
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
                         /* For sequential processing, the LSE config is updated in golden config registers. */
                         if ((uint32_t)UTRUE == hObj->enableConfigRegValidate)
                         {
@@ -872,7 +876,7 @@ static void vhwa_m2mMscFrmDoneIsr(Vhwa_M2mMscInstObj *instObj,
                                 CSL_lseStopChannels(&goldenRegVal->lseRegs, &hObj->lseCfg[0]);
                             }
                         }
-
+#endif
                         CSL_htsThreadStop(comObj->socInfo.htsRegs, &hObj->htsCfg[0]);
                     }
                 }

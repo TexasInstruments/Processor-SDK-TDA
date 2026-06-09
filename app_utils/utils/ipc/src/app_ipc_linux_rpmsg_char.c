@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -76,29 +76,96 @@ static uint32_t map_vision_apps_cpu_id_to_rpmsg_char_cpu_id(uint32_t cpu_id)
 {
     uint32_t rpmsg_char_id = (uint32_t)RPROC_ID_MAX;
 
+    #if defined(SOC_FAMILY_TDA5)
+    if (APP_IPC_CPU_MCU0_M55 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)M55_MAIN_0;
+    }
+    else if (APP_IPC_CPU_MCU1_M55 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)M55_MAIN_1;
+    }
+    else if (APP_IPC_CPU_MCU2_M55 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)M55_MAIN_2;
+    }
+    else if (APP_IPC_CPU_MCU3_M55 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)M55_MAIN_3;
+    }
+    else if (APP_IPC_CPU_MCU4_M55 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)M55_MAIN_4;
+    }
+    else if (APP_IPC_CPU_RMCU0_0 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)R52_MCU0_0;
+    }
+    else if (APP_IPC_CPU_RMCU0_1 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)R52_MCU0_1;
+    }
+    else if (APP_IPC_CPU_RMCU1_0 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)R52_MCU1_0;
+    }
+    else if (APP_IPC_CPU_RMCU1_1 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)R52_MCU1_1;
+    }
+    else if (APP_IPC_CPU_RMCU2_0 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)R52_MCU2_0;
+    }
+    else if (APP_IPC_CPU_RMCU2_1 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)R52_MCU2_1;
+    }
+    else if (APP_IPC_CPU_C7x_1 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)DSP_C76_0;
+    }
+    else if (APP_IPC_CPU_C7x_2 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)DSP_C76_1;
+    }
+    else if (APP_IPC_CPU_C7x_3 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)DSP_C76_2;
+    }
+    else if (APP_IPC_CPU_C7x_4 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)DSP_C76_3;
+    }
+    #elif defined(SOC_FAMILY_AM)
     if (APP_IPC_CPU_MCU1_0 == cpu_id)
     {
-        #if defined(SOC_AM62A) || defined(SOC_J722S)
         rpmsg_char_id = (uint32_t)R5F_WKUP0_0;
-        #else
-        rpmsg_char_id = (uint32_t)R5F_MCU0_0;
-        #endif
     }
     else if (APP_IPC_CPU_C7x_1 == cpu_id)
     {
         rpmsg_char_id = (uint32_t)DSP_C71_0;
     }
-    #if !defined(SOC_AM62A)
-    else if (APP_IPC_CPU_MCU2_0 == cpu_id)
+    #elif defined(SOC_FAMILY_J7)
+    if (APP_IPC_CPU_MCU1_0 == cpu_id)
     {
-        rpmsg_char_id = (uint32_t)R5F_MAIN0_0;
+        #ifdef SOC_J722S
+        rpmsg_char_id = (uint32_t)R5F_WKUP0_0;
+        #else
+        rpmsg_char_id = (uint32_t)R5F_MCU0_0;
+        #endif
     }
-    #endif
-    #if !(defined(SOC_AM62A) || defined(SOC_J722S))
+    #ifndef SOC_J722S
     else if (APP_IPC_CPU_MCU1_1 == cpu_id)
     {
         rpmsg_char_id = (uint32_t)R5F_MCU0_1;
     }
+    #endif
+    else if (APP_IPC_CPU_MCU2_0 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)R5F_MAIN0_0;
+    }
+    #ifndef SOC_J722S
     else if (APP_IPC_CPU_MCU2_1 == cpu_id)
     {
         rpmsg_char_id = (uint32_t)R5F_MAIN0_1;
@@ -121,7 +188,8 @@ static uint32_t map_vision_apps_cpu_id_to_rpmsg_char_cpu_id(uint32_t cpu_id)
         rpmsg_char_id = (uint32_t)R5F_MAIN2_1;
     }
     #endif
-    #if defined (SOC_J721E)
+    #endif
+    #ifdef SOC_J721E
     else if (APP_IPC_CPU_C6x_1 == cpu_id)
     {
         rpmsg_char_id = (uint32_t)DSP_C66_0;
@@ -129,6 +197,16 @@ static uint32_t map_vision_apps_cpu_id_to_rpmsg_char_cpu_id(uint32_t cpu_id)
     else if (APP_IPC_CPU_C6x_2 == cpu_id)
     {
         rpmsg_char_id = (uint32_t)DSP_C66_1;
+    }
+    #endif
+    else if (APP_IPC_CPU_C7x_1 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)DSP_C71_0;
+    }
+    #if defined (SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J722S) || defined(SOC_J742S2)
+    else if (APP_IPC_CPU_C7x_2 == cpu_id)
+    {
+        rpmsg_char_id = (uint32_t)DSP_C71_1;
     }
     #endif
     #if defined(SOC_J784S4) || defined(SOC_J742S2)
@@ -143,12 +221,6 @@ static uint32_t map_vision_apps_cpu_id_to_rpmsg_char_cpu_id(uint32_t cpu_id)
         rpmsg_char_id = (uint32_t)DSP_C71_3;
     }
     #endif
-    #endif
-    #if defined (SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J722S) || defined(SOC_J742S2)
-    else if (APP_IPC_CPU_C7x_2 == cpu_id)
-    {
-        rpmsg_char_id = (uint32_t)DSP_C71_1;
-    }
     #endif
     else
     {

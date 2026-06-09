@@ -70,8 +70,15 @@ int main()
     DebugP_log("\r\n");
     DebugP_log("Starting EXT OTP writer\r\n");
 
-	ext_otp_setVpp();
+    ext_otp_setVpp();
     DebugP_log("Enabled VPP\r\n");
+
+    /*
+     * Note: Add the delay needed for Vpp signal to ramp up
+     * fully before starting otp writing operation.
+     *
+     * The ramp up time of Vpp will depend on the board design.
+     */
 
     /* Program USB VID and PID */
     status = ext_otp_writeUsbVidPid(0x45a0, 0xe047);

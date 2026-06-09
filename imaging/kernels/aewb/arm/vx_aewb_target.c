@@ -133,10 +133,6 @@ static vx_status VX_CALLBACK tivxAewbControl(
        uint16_t num_params,
        void *priv_arg);
 
-/* Function prototypes for target kernel functions */
-void tivxAddTargetKernelAewb(void);
-void tivxRemoveTargetKernelAewb(void);
-
 #ifndef x86_64
 
 extern AlgItt_IssAewb2AControlParams aewbCtrlPrms[ISS_SENSORS_MAX_SUPPORTED_SENSOR];
@@ -760,7 +756,7 @@ static vx_status VX_CALLBACK tivxAewbProcess(
             The function is unused because of an un-implemented feature, this code base is not being used/enabled with the current kernel support.
             Effect on this unit: None; Unused feature, cannot be enabled, control cannot reach to this condition.
             <justification end> */
-            if ((vx_bool)vx_true_e == test_mode)
+            if ((vx_bool)vx_true_e == (vx_bool)test_mode)
             {
                 nodePrms->p_ae_params->mode = (uint16_t)ALGORITHMS_ISS_AE_DISABLED;
                 nodePrms->sensor_pre_wb_gain = 0;
@@ -798,7 +794,7 @@ static vx_status VX_CALLBACK tivxAewbProcess(
 
             if((int32_t)ALGORITHMS_ISS_AWB_AUTO == (int32_t)nodePrms->p_awb_params->mode)
             {
-                if(0U != (((uint32_t)nodePrms->frame_count + aewb_config->channel_id) % (aewb_config->awb_num_skip_frames+1U)))
+                if(0U != (((uint32_t)nodePrms->frame_count + (uint32_t)aewb_config->channel_id) % ((uint32_t)aewb_config->awb_num_skip_frames+1U)))
                 {
                     skipAWB = 1;
                     ae_awb_result_target_ptr->awb_valid = 0;
@@ -840,7 +836,7 @@ static vx_status VX_CALLBACK tivxAewbProcess(
 
             if((int32_t)ALGORITHMS_ISS_AE_AUTO == (int32_t)nodePrms->p_ae_params->mode)
             {
-                if(0U != ((nodePrms->frame_count + aewb_config->channel_id) % (aewb_config->ae_num_skip_frames+1U)))
+                if(0U != (((uint32_t)nodePrms->frame_count + (uint32_t)aewb_config->channel_id) % ((uint32_t)aewb_config->ae_num_skip_frames+1U)))
                 {
                     skipAE = 1;
                     ae_awb_result_target_ptr->ae_valid = 0;
@@ -1224,10 +1220,18 @@ static vx_status VX_CALLBACK tivxAewbProcess(
                                 vx_float64 g1 = (vx_float64)ae_awb_result_target_ptr->wb_gains[1];
                                 vx_float64 g2 = (vx_float64)ae_awb_result_target_ptr->wb_gains[2];
                                 vx_float64 g3 = (vx_float64)ae_awb_result_target_ptr->wb_gains[3];
-                                ae_awb_result_target_ptr->wb_gains[0] = (uint32_t)(int32_t)(((pow((g0 / 512.0), power)) * 512.0) + 0.5);
-                                ae_awb_result_target_ptr->wb_gains[1] = (uint32_t)(int32_t)(((pow((g1 / 512.0), power)) * 512.0) + 0.5);
-                                ae_awb_result_target_ptr->wb_gains[2] = (uint32_t)(int32_t)(((pow((g2 / 512.0), power)) * 512.0) + 0.5);
-                                ae_awb_result_target_ptr->wb_gains[3] = (uint32_t)(int32_t)(((pow((g3 / 512.0), power)) * 512.0) + 0.5);
+                                vx_float64 wb_gain0_double = ((pow((g0 / 512.0), power)) * 512.0) + 0.5;
+                                vx_float64 wb_gain1_double = ((pow((g1 / 512.0), power)) * 512.0) + 0.5;
+                                vx_float64 wb_gain2_double = ((pow((g2 / 512.0), power)) * 512.0) + 0.5;
+                                vx_float64 wb_gain3_double = ((pow((g3 / 512.0), power)) * 512.0) + 0.5;
+                                int32_t wb_gain0_signed = (int32_t)wb_gain0_double;
+                                int32_t wb_gain1_signed = (int32_t)wb_gain1_double;
+                                int32_t wb_gain2_signed = (int32_t)wb_gain2_double;
+                                int32_t wb_gain3_signed = (int32_t)wb_gain3_double;
+                                ae_awb_result_target_ptr->wb_gains[0] = (uint32_t)wb_gain0_signed;
+                                ae_awb_result_target_ptr->wb_gains[1] = (uint32_t)wb_gain1_signed;
+                                ae_awb_result_target_ptr->wb_gains[2] = (uint32_t)wb_gain2_signed;
+                                ae_awb_result_target_ptr->wb_gains[3] = (uint32_t)wb_gain3_signed;
                             }
                         }
 
@@ -1494,9 +1498,6 @@ static vx_status VX_CALLBACK tivxAewbCreate(
     tivx_obj_desc_user_data_object_t *dcc_desc;
     vx_status dcc_status = (vx_status)VX_FAILURE;
     tivxAEWBParams *nodePrms = NULL;
-    vx_bool_e ae_disabled = vx_false_e;
-    vx_bool_e awb_disabled = vx_false_e;
-
     tivx_aewb_config_t *aewb_config;
     tivx_obj_desc_user_data_object_t *configuration_desc;
     void *configuration_target_ptr;
@@ -1688,8 +1689,7 @@ static vx_status VX_CALLBACK tivxAewbCreate(
     else
     {
         VX_PRINT(VX_ZONE_WARNING, "No DCC buffer passed. Disabling 2A \n");
-        ae_disabled = vx_false_e;
-        awb_disabled = vx_false_e;
+
     }
     /* LDRA_JUSTIFY_END */
 
@@ -1719,14 +1719,9 @@ static vx_status VX_CALLBACK tivxAewbCreate(
             VX_PRINT(VX_ZONE_ERROR, "Failed to allocate AWB Param\n");
             status = (vx_status)VX_ERROR_NO_MEMORY;
         }
-        else if ((vx_bool)vx_false_e == awb_disabled)
-        /* LDRA_JUSTIFY_END */
-        {
-            nodePrms->p_awb_params->mode = (uint16_t)ALGORITHMS_ISS_AWB_DISABLED;
-        }
         else
         {
-            /* AWB parameters allocated successfully and mode is enabled */
+            nodePrms->p_awb_params->mode = (uint16_t)ALGORITHMS_ISS_AWB_DISABLED;
         }
     }
 
@@ -1756,14 +1751,9 @@ static vx_status VX_CALLBACK tivxAewbCreate(
             VX_PRINT(VX_ZONE_ERROR, "Failed to allocate AE Param\n");
             status = (vx_status)VX_ERROR_NO_MEMORY;
         }
-        else if ((vx_bool)vx_false_e == ae_disabled)
-        /* LDRA_JUSTIFY_END */
-        {
-            nodePrms->p_ae_params->mode = (uint16_t)ALGORITHMS_ISS_AE_DISABLED;
-        }
         else
         {
-            /* AE parameters allocated successfully and mode is enabled */
+            nodePrms->p_ae_params->mode = (uint16_t)ALGORITHMS_ISS_AE_DISABLED;
         }
     }
 
@@ -2011,147 +2001,6 @@ static vx_status VX_CALLBACK tivxAewbDelete(
     if((vx_status)VX_SUCCESS == status)
     /* LDRA_JUSTIFY_END */
     {
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start> 
-    Rationale: The test framework and test apps cannot reach this portion.
-    The test framework does not support the configuration required to trigger this error scenario.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if(NULL != nodePrms->dcc_input_params)
-    /* LDRA_JUSTIFY_END */
-    {
-        vx_status free_status = tivxMemFree(nodePrms->dcc_input_params, (uint32_t)sizeof(dcc_parser_input_params_t), (vx_enum)TIVX_MEM_EXTERNAL);
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */
-        if ((vx_status)VX_SUCCESS != free_status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to free dcc_input_params\n");
-        }
-        /* LDRA_JUSTIFY_END */
-    }
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start> 
-    Rationale: The test framework and test apps cannot reach this portion.
-    The test framework does not support the configuration required to trigger this error scenario.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if(NULL != nodePrms->dcc_output_params)
-    /* LDRA_JUSTIFY_END */
-    {
-        vx_status free_status = tivxMemFree(nodePrms->dcc_output_params, (uint32_t)sizeof(dcc_parser_output_params_t), (vx_enum)TIVX_MEM_EXTERNAL);
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */
-        if ((vx_status)VX_SUCCESS != free_status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to free dcc_output_params\n");
-        }
-        /* LDRA_JUSTIFY_END */
-    }
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start> 
-    Rationale: The test framework and test apps cannot reach this portion.
-    The test framework does not support the configuration required to trigger this error scenario.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if(NULL != nodePrms->awb_scratch_memory)
-    /* LDRA_JUSTIFY_END */
-    {
-        vx_status free_status = tivxMemFree(nodePrms->awb_scratch_memory, (uint32_t)(sizeof(uint8_t) * (uint32_t)AWB_SCRATCH_MEM_SIZE), (vx_enum)TIVX_MEM_EXTERNAL);
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */
-        if ((vx_status)VX_SUCCESS != free_status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to free awb_scratch_memory\n");
-        }
-        /* LDRA_JUSTIFY_END */
-    }
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start> 
-    Rationale: The test framework and test apps cannot reach this portion.
-    The test framework does not support the configuration required to trigger this error scenario.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if(NULL != nodePrms->p_h3a_merge)
-    /* LDRA_JUSTIFY_END */
-    {
-        vx_status free_status = tivxMemFree(nodePrms->p_h3a_merge, ((uint32_t)H3A_MAX_WINH)*((uint32_t)H3A_MAX_WINV)*sizeof(h3a_aewb_paxel_data_t), (vx_enum)TIVX_MEM_EXTERNAL);
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */
-        if ((vx_status)VX_SUCCESS != free_status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to free p_h3a_merge\n");
-        }
-        /* LDRA_JUSTIFY_END */
-    }
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start> 
-    Rationale: The test framework and test apps cannot reach this portion.
-    The test framework does not support the configuration required to trigger this error scenario.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if(NULL != nodePrms->p_ae_params)
-    /* LDRA_JUSTIFY_END */
-    {
-        vx_status free_status = tivxMemFree(nodePrms->p_ae_params, (uint32_t)sizeof(tiae_prm_t), (vx_enum)TIVX_MEM_EXTERNAL);
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */
-        if ((vx_status)VX_SUCCESS != free_status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to free p_ae_params\n");
-        }
-        /* LDRA_JUSTIFY_END */
-    }
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start> 
-    Rationale: The test framework and test apps cannot reach this portion.
-    The test framework does not support the configuration required to trigger this error scenario.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if(NULL != nodePrms->p_awb_params)
-    /* LDRA_JUSTIFY_END */
-    {
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
         <justification start> 
@@ -2160,10 +2009,167 @@ static vx_status VX_CALLBACK tivxAewbDelete(
         Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
         However, due to the stated rationale, this is not tested.
         <justification end> */
-        if(NULL != nodePrms->p_awb_params->sen_awb_calc_data)
+        if(NULL != nodePrms->dcc_input_params)
         /* LDRA_JUSTIFY_END */
         {
-            vx_status free_status = tivxMemFree(nodePrms->p_awb_params->sen_awb_calc_data, (uint32_t)sizeof(awb_calc_data_t), (vx_enum)TIVX_MEM_EXTERNAL);
+            vx_status free_status = tivxMemFree(nodePrms->dcc_input_params, (uint32_t)sizeof(dcc_parser_input_params_t), (vx_enum)TIVX_MEM_EXTERNAL);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if ((vx_status)VX_SUCCESS != free_status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to free dcc_input_params\n");
+            }
+            /* LDRA_JUSTIFY_END */
+        }
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start> 
+        Rationale: The test framework and test apps cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
+        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if(NULL != nodePrms->dcc_output_params)
+        /* LDRA_JUSTIFY_END */
+        {
+            vx_status free_status = tivxMemFree(nodePrms->dcc_output_params, (uint32_t)sizeof(dcc_parser_output_params_t), (vx_enum)TIVX_MEM_EXTERNAL);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if ((vx_status)VX_SUCCESS != free_status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to free dcc_output_params\n");
+            }
+            /* LDRA_JUSTIFY_END */
+        }
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start> 
+        Rationale: The test framework and test apps cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
+        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if(NULL != nodePrms->awb_scratch_memory)
+        /* LDRA_JUSTIFY_END */
+        {
+            vx_status free_status = tivxMemFree(nodePrms->awb_scratch_memory, (uint32_t)(sizeof(uint8_t) * (uint32_t)AWB_SCRATCH_MEM_SIZE), (vx_enum)TIVX_MEM_EXTERNAL);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if ((vx_status)VX_SUCCESS != free_status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to free awb_scratch_memory\n");
+            }
+            /* LDRA_JUSTIFY_END */
+        }
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start> 
+        Rationale: The test framework and test apps cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
+        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if(NULL != nodePrms->p_h3a_merge)
+        /* LDRA_JUSTIFY_END */
+        {
+            vx_status free_status = tivxMemFree(nodePrms->p_h3a_merge, ((uint32_t)H3A_MAX_WINH)*((uint32_t)H3A_MAX_WINV)*sizeof(h3a_aewb_paxel_data_t), (vx_enum)TIVX_MEM_EXTERNAL);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if ((vx_status)VX_SUCCESS != free_status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to free p_h3a_merge\n");
+            }
+            /* LDRA_JUSTIFY_END */
+        }
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start> 
+        Rationale: The test framework and test apps cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
+        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if(NULL != nodePrms->p_ae_params)
+        /* LDRA_JUSTIFY_END */
+        {
+            vx_status free_status = tivxMemFree(nodePrms->p_ae_params, (uint32_t)sizeof(tiae_prm_t), (vx_enum)TIVX_MEM_EXTERNAL);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the imaging test framework.
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if ((vx_status)VX_SUCCESS != free_status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to free p_ae_params\n");
+            }
+            /* LDRA_JUSTIFY_END */
+        }
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start> 
+        Rationale: The test framework and test apps cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
+        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if(NULL != nodePrms->p_awb_params)
+        /* LDRA_JUSTIFY_END */
+        {
+            vx_status free_status;
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start> 
+            Rationale: The test framework and test apps cannot reach this portion.
+            The test framework does not support the configuration required to trigger this error scenario.
+            Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if(NULL != nodePrms->p_awb_params->sen_awb_calc_data)
+            /* LDRA_JUSTIFY_END */
+            {
+                free_status = tivxMemFree(nodePrms->p_awb_params->sen_awb_calc_data, (uint32_t)sizeof(awb_calc_data_t), (vx_enum)TIVX_MEM_EXTERNAL);
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot reach this portion.
+                The parameters are pre-validated by the caller before the control reaches here.
+                Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
+                if ((vx_status)VX_SUCCESS != free_status)
+                {
+                    VX_PRINT(VX_ZONE_ERROR, "Failed to free sen_awb_calc_data\n");
+                }
+                /* LDRA_JUSTIFY_END */
+            }
+            free_status = tivxMemFree(nodePrms->p_awb_params, (uint32_t)sizeof(awbprm_t), (vx_enum)TIVX_MEM_EXTERNAL);
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
             <justification start>
@@ -2174,35 +2180,20 @@ static vx_status VX_CALLBACK tivxAewbDelete(
             <justification end> */
             if ((vx_status)VX_SUCCESS != free_status)
             {
-                VX_PRINT(VX_ZONE_ERROR, "Failed to free sen_awb_calc_data\n");
+                VX_PRINT(VX_ZONE_ERROR, "Failed to free p_awb_params\n");
             }
             /* LDRA_JUSTIFY_END */
         }
-        vx_status free_status = tivxMemFree(nodePrms->p_awb_params, (uint32_t)sizeof(awbprm_t), (vx_enum)TIVX_MEM_EXTERNAL);
         /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        The parameters are pre-validated by the caller before the control reaches here.
+        <metric start> branch <metric end>
+        <justification start> 
+        Rationale: The test framework and test apps cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
         Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
         However, due to the stated rationale, this is not tested.
         <justification end> */
-        if ((vx_status)VX_SUCCESS != free_status)
-        {
-            VX_PRINT(VX_ZONE_ERROR, "Failed to free p_awb_params\n");
-        }
-        /* LDRA_JUSTIFY_END */
-    }
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start> 
-    Rationale: The test framework and test apps cannot reach this portion.
-    The test framework does not support the configuration required to trigger this error scenario.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
         if(NULL != nodePrms->awb_h3a_res)
-    /* LDRA_JUSTIFY_END */
+        /* LDRA_JUSTIFY_END */
         {
             vx_status free_status = tivxMemFree(nodePrms->awb_h3a_res, ((uint32_t)H3A_MAX_WINH)*((uint32_t)H3A_MAX_WINV)*sizeof(h3a_aewb_paxel_data_t), (vx_enum)TIVX_MEM_EXTERNAL);
             /* LDRA_JUSTIFY_START
@@ -2702,7 +2693,8 @@ static vx_status AWB_TI_process(
         uint16_t paxelIndex = 0;
         h3a_aewb_paxel_data_t * h3a_paxel_data;
         awb_frame_data_t    * pFrame_data = &(p_awb_params->ti_awb_data_in.frame_data);
-        int32_t n_pax = (int32_t)((uint32_t)pFrame_data->h3a_data_x * (uint32_t)pFrame_data->h3a_data_y);
+        uint32_t n_pax_unsigned = (uint32_t)pFrame_data->h3a_data_x * (uint32_t)pFrame_data->h3a_data_y;
+        int32_t n_pax = (int32_t)n_pax_unsigned;
         uint32_t rGain_prev, bGain_prev, gGain_prev;
 
         rGain_prev = aewb_prev->wb_gains[rIndex];
@@ -2736,10 +2728,10 @@ static vx_status AWB_TI_process(
     {
         TI_AWB_stab(p_awb_params, &awb_data_out);
 
-        aewb_result->wb_gains[rIndex] = (uint32_t)(awb_data_out.gain_R << 1);
-        aewb_result->wb_gains[grIndex] = (uint32_t)(awb_data_out.gain_Gr << 1);
-        aewb_result->wb_gains[gbIndex] = (uint32_t)(awb_data_out.gain_Gb << 1);
-        aewb_result->wb_gains[bIndex] = (uint32_t)(awb_data_out.gain_B << 1);
+        aewb_result->wb_gains[rIndex] = ((uint32_t)awb_data_out.gain_R << 1U);
+        aewb_result->wb_gains[grIndex] = ((uint32_t)awb_data_out.gain_Gr << 1U);
+        aewb_result->wb_gains[gbIndex] = ((uint32_t)awb_data_out.gain_Gb << 1U);
+        aewb_result->wb_gains[bIndex] = ((uint32_t)awb_data_out.gain_B << 1U);
 
         aewb_result->wb_offsets[rIndex] = 0;
         aewb_result->wb_offsets[grIndex] = 0;

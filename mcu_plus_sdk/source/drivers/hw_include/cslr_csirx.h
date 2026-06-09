@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2020 Texas Instruments Incorporated
+ *  Copyright (C) 2020-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -42,10 +42,6 @@ extern "C"
 
 #if defined (DRV_VERSION_CSIRX_V0)
 #include <drivers/csirx/v0/cslr_csirx.h>
-#endif
-
-#if defined (DRV_VERSION_CSIRX_V1)
-#include <drivers/csirx/v1/cslr_csirx.h>
 #endif
 
 #ifdef __cplusplus

@@ -179,6 +179,7 @@
 #define TIDL_FLOAT16    ((uint32_t) 9)
 #define TIDL_FLOAT32    ((uint32_t) 10)
 #define TIDL_FLOAT64    ((uint32_t) 11)
+#define TIDL_BFLOAT16    ((uint32_t) 12)
 /* @} */
 
 

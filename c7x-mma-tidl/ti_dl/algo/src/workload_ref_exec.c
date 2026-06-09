@@ -275,7 +275,7 @@ static inline void WorkloadRefExec_getPtrsFromWorkload(const TIDL_NetworkCommonP
         {
           int32_t arrIdx;
           sMetaDataID_t pMetaDataID = {0, 0, 0, 0, 0, 0};
-          void **ptrToArrMem = &refOutPtrs[0]; // initializing with first index pointer to avoid MISRA error
+          void **ptrToArrMem = &refOutPtrs[TIDL_NUM_OUT_BUFS - 1]; // initializing with first index pointer to avoid MISRA error
           void *gcPtr;
 
           int32_t elemSize = getByteCnt(bufParams->dataType);
@@ -452,12 +452,6 @@ void WorkloadRefExec_getRefParams(WorkloadRefExec_RefExecParams *wlRefParams,
     {
       getLinkPtrs(workloadUnit, NOT_VALID, linkIdx, linkPtrList);
       sLink_t *link = linkPtrList[0];
-#ifndef HOST_EMULATION
-      /* LDRA_JUSTIFY_START
-      <metric start> statement branch <metric end>
-      <justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this line.
-      <justification end> */
-#endif
       if (link->subType == (int32_t)LINK_X_FM_CTXT_ST)
       {
         wlRefParams->ctxtStrLink = link;
@@ -481,9 +475,6 @@ void WorkloadRefExec_getRefParams(WorkloadRefExec_RefExecParams *wlRefParams,
       {
         /*do nothing*/
       }
-#ifndef HOST_EMULATION
-      /* LDRA_JUSTIFY_END */
-#endif
     }
 
     wlRefParams->outTileHeight = wlMetaData.outTileHeight;
@@ -498,12 +489,6 @@ void WorkloadRefExec_strRstrContext(TIDL_Handle algHandle,
                                     const int32_t *multiCoreCtxtLinkIndex,
                                     int32_t trigContext)
 {
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_START
-  <metric start> statement branch <metric end>
-  <justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this line.
-  <justification end> */
-#endif
   if ((wlRefParams->ctxtRstrLink != NULL) && (trigContext == TIDL_CONTEXT_RSTR))
   {
     uint8_t *contextPtr = (uint8_t *)TIDL_getPointerFromGC(&wlRefParams->ctxtRstrLink->src[0], algHandle->gcHelperHandle, &algHandle->sysScratchPtr);
@@ -537,9 +522,6 @@ void WorkloadRefExec_strRstrContext(TIDL_Handle algHandle,
                         algHandle->dmaUtilsContext,
                         algHandle->memcpyTr);
   }
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_END */
-#endif
 #if TIDL_DEVICE_MULTICORE
   sLink_t *linkPtrList[MAX_LINKS_PER_WL];
 
@@ -740,8 +722,6 @@ int32_t WorkloadRefExec_Process(TIDL_Handle algHandle,
   WorkloadRefExec_RefExecParams wlRefParams;
   int32_t isRefExecFlowEnabled = WorkloadRefExec_enableRefExecFlow(algHandle->createParams->flowCtrl, tidlLayer, algLayer);
 
-  int32_t doesLayerFollowStandardWLFlow = TIDL_doesLayerFollowStandardWLFlow(tidlLayer);
-
   (void)memcpy(refInPtrs, inPtrs, sizeof(refInPtrs[0]) * TIDL_NUM_IN_BUFS);
   (void)memcpy(refOutPtrs, outPtrs, sizeof(refOutPtrs[0]) * TIDL_NUM_OUT_BUFS);
 
@@ -750,7 +730,7 @@ int32_t WorkloadRefExec_Process(TIDL_Handle algHandle,
     WorkloadRefExec_getRefParams(&wlRefParams, algHandle->createParams, workloadUnit, tidlLayer, algLayer);
   }
 
-  if ((isRefExecFlowEnabled == 1) || (doesLayerFollowStandardWLFlow == 0))
+  if ((isRefExecFlowEnabled == 1))
   {
     /* Gets B/C pointer */
     WorkloadRefExec_getPtrs(commonParams, workloadUnit, algLayer, tidlLayer, refInPtrs, refOutPtrs);
@@ -832,6 +812,33 @@ int32_t WorkloadRefExec_Process(TIDL_Handle algHandle,
                            tStart,
                            tEnd);
   }
+#endif
+
+/*over writing Layer meta data with performance data from workload*/
+#ifdef SOC_TDA54
+  if(algHandle->gcHelperHandle != NULL)/*should not be populated during stats collection run*/
+  {
+    TIDL_updateprofileData(algHandle->alglayerParams[algHandle->currAlgLayer].metaData.profilePoint,
+                          TIDL_PROFILE_LAYER,
+                          0,
+                          workloadUnit->layerCycles);
+
+    TIDL_updateprofileData(algHandle->alglayerParams[algHandle->currAlgLayer].metaData.profilePoint,
+                          TIDL_PROFILE_KERNEL_ONLY,
+                          0,
+                          workloadUnit->kernelCycles);
+
+    TIDL_updateprofileData(algHandle->alglayerParams[algHandle->currAlgLayer].metaData.profilePoint,
+                          TIDL_PROFILE_CORE_LOOP,
+                          0,
+                          workloadUnit->coreLoopCycles);
+
+    TIDL_updateprofileData(algHandle->alglayerParams[algHandle->currAlgLayer].metaData.profilePoint,
+                          TIDL_PROFILE_DMA_PIPEUP,
+                          0,
+                          workloadUnit->dmaPipeUpCycles);
+  }
+
 #endif
 
   return status;

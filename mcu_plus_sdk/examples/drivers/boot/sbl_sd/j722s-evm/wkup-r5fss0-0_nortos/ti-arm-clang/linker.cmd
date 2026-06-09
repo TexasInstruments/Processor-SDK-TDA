@@ -1,16 +1,21 @@
-/*
- * Auto generated file - DO NOT MODIFY
- */
 
 --stack_size=16384
---heap_size=32768
+--heap_size=8192
+
+/* ATCM base address */
+gAtcmBaseAddr = 0x78000000;
+
 -e_vectors_sbl  /* for SBL make sure to set entry point to _vectors_sbl */
 
+/* This is the size of stack
+ * - In both NORTOS and FreeRTOS nesting is disabled for FIQ
+ */
 __IRQ_STACK_SIZE = 4096;
 __FIQ_STACK_SIZE = 256;
-__SVC_STACK_SIZE = 256;
-__ABORT_STACK_SIZE = 256;
-__UNDEFINED_STACK_SIZE = 256;
+__SVC_STACK_SIZE = 256;         /* This is the size of stack when R5 is in SVC mode */
+__ABORT_STACK_SIZE = 256;       /* This is the size of stack when R5 is in ABORT mode */
+__UNDEFINED_STACK_SIZE = 256;   /* This is the size of stack when R5 is in UNDEF mode */
+__DM_STUB_STACK_SIZE = 1024;    /* This is required for Device manager */
 
 SECTIONS
 {
@@ -49,15 +54,16 @@ SECTIONS
         RUN_END(__UNDEFINED_STACK_END)
     } > OCM_RAM
 
-    .bss.filebuf (NOLOAD) : {} > DDR
+    .bss.filebuf(NOLOAD) : {} > APPIMAGE
 }
 
 MEMORY
 {
-    /* R5F_VECS : ORIGIN = 0x00000000 , LENGTH = 0x00000040
-    R5F_TCMA : ORIGIN = 0x00000040 , LENGTH = 0x00007FC0
-    R5F_TCMB0: ORIGIN = 0x41010000 , LENGTH = 0x00008000 */
+    HSM_RAM: ORIGIN = 0x0043C00000, LENGTH = 0x20000
+
     OCM_RAM_VECS: ORIGIN = 0x43C40000 , LENGTH = 0x100
-    OCM_RAM  : ORIGIN = 0x43C40100 , LENGTH = 0x3ce00 - 0x100
-    DDR      : ORIGIN = 0xC2000000 , LENGTH = 0x4000000
+    OCM_RAM  : ORIGIN = 0x43C40100 , LENGTH = 0x3E000 - 0x100
+
+    /* This section is used by the SBL to temporarily load the appimage for authentication */
+    APPIMAGE  : ORIGIN = 0xC2000000 , LENGTH = 0x4000000
 }

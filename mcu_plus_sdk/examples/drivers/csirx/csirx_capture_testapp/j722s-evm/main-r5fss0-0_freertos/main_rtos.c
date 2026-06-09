@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2018-2023
+ *  Copyright (c) 2018-2025 Texas Instruments Incorporated
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,7 @@
 /* ========================================================================== */
 /*                             Include Files                                  */
 /* ========================================================================== */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <drivers/hw_include/csl_types.h>
@@ -56,9 +57,11 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include <drivers/device_manager/sciserver/sciserver_init.h>
+
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
+
 /* Test application stack size */
 #define CAPT_APP_TSK_STACK_MAIN         (10U * 1024U)
 
@@ -71,12 +74,15 @@
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
+
 extern int Csirx_captureTest(void);
 static void taskFxn(void* a0);
 void App_wait(uint32_t wait_in_ms);
+
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
+
 /* Test application stack */
 static uint8_t gCaptAppTskStackMain[CAPT_APP_TSK_STACK_MAIN];
 
@@ -86,12 +92,14 @@ TaskP_Object gCsirxAppTask;
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */
+
 int main(void)
 {
     TaskP_Params taskParams;
     /* init SOC specific modules */
     System_init();
     Board_init();
+
     /* Initialize the task params */
     TaskP_Params_init(&taskParams);
     /* Set the task priority higher than the default priority (1) */
@@ -110,31 +118,33 @@ void taskFxn(void* a0)
 {
     int32_t retVal = CSL_PASS;
 
+    Drivers_open();
 
-        retVal += Sciclient_pmSetModuleState(TISCI_DEV_CSI_RX_IF0,
-                                   TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
-                                   TISCI_MSG_FLAG_AOP,
-                                   SystemP_WAIT_FOREVER);
-        retVal += Sciclient_pmSetModuleState(TISCI_DEV_CSI_RX_IF0,
-                                   TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
-                                   TISCI_MSG_FLAG_AOP,
-                                   SystemP_WAIT_FOREVER);
-        retVal += Sciclient_pmSetModuleState(TISCI_DEV_CSI_RX_IF1,
-                                   TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
-                                   TISCI_MSG_FLAG_AOP,
-                                   SystemP_WAIT_FOREVER);
-        retVal += Sciclient_pmSetModuleState(TISCI_DEV_DPHY_RX0,
-                                   TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
-                                   TISCI_MSG_FLAG_AOP,
-                                   SystemP_WAIT_FOREVER);
-        retVal += Sciclient_pmSetModuleState(TISCI_DEV_DPHY_RX1,
-                                   TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
-                                   TISCI_MSG_FLAG_AOP,
-                                   SystemP_WAIT_FOREVER);
-        if (retVal == CSL_PASS)
-        {
-            Csirx_captureTest();
-        }
+    retVal += Sciclient_pmSetModuleState(TISCI_DEV_CSI_RX_IF0,
+                                         TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
+                                         TISCI_MSG_FLAG_AOP,
+                                         SystemP_WAIT_FOREVER);
+    retVal += Sciclient_pmSetModuleState(TISCI_DEV_CSI_RX_IF0,
+                                         TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
+                                         TISCI_MSG_FLAG_AOP,
+                                         SystemP_WAIT_FOREVER);
+    retVal += Sciclient_pmSetModuleState(TISCI_DEV_CSI_RX_IF1,
+                                         TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
+                                         TISCI_MSG_FLAG_AOP,
+                                         SystemP_WAIT_FOREVER);
+    retVal += Sciclient_pmSetModuleState(TISCI_DEV_DPHY_RX0,
+                                         TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
+                                         TISCI_MSG_FLAG_AOP,
+                                         SystemP_WAIT_FOREVER);
+    retVal += Sciclient_pmSetModuleState(TISCI_DEV_DPHY_RX1,
+                                         TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
+                                         TISCI_MSG_FLAG_AOP,
+                                         SystemP_WAIT_FOREVER);
+
+    if (retVal == CSL_PASS)
+    {
+        Csirx_captureTest();
+    }
 
     return;
 }

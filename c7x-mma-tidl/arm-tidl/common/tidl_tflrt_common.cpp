@@ -210,12 +210,15 @@ int32_t TIDL_setRtTensorParameters(TfLiteTensor * tfliteTensor, sTIDLRT_Tensor_t
       status = infer_ops->TIDLRT_setTensorDefault(rtPtrs[idx]);
       rtPtrs[idx]->layout = TIDLRT_LT_NHWC;
       rtPtrs[idx]->bufferSize = bufferSize; /* This is set only for input to handle TIDL-4466, output buffer size is kept -1 by default */
-
       strcpy((char *)rtPtrs[idx]->name, tfliteTensor->name);
       rtPtrs[idx]->scale = scale;
       rtPtrs[idx]->zeroPoint = zeroPoint;
       rtPtrs[idx]->elementType = elementType;
       rtPtrs[idx]->ptr = ptr + l * numVirtualCores * numElementsPerBatch * elementSize + k * numElementsPerBatch * elementSize; /* Ptr must be start of each batch */
+      rtPtrs[idx]->padValues[0] = ioBufDesc->inPadL[currTensorNum];
+      rtPtrs[idx]->padValues[1] = ioBufDesc->inPadR[currTensorNum];
+      rtPtrs[idx]->padValues[2] = ioBufDesc->inPadT[currTensorNum];
+      rtPtrs[idx]->padValues[3] = ioBufDesc->inPadB[currTensorNum];
       if(memType == TIDLRT_MEM_SHARED)
       {
         rtPtrs[idx]->memType = TIDLRT_MEM_SHARED;

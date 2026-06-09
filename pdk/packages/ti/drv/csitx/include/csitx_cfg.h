@@ -69,10 +69,12 @@ extern "C" {
  *
  *  @{
  */
-/** \brief Number of Channels: Maximum number of channels for configuration
- *         Application can save some memory by reducing this to actual number
- *         of channels used rather than all available channels. */
-#define CSITX_NUM_CH                             (4U)
+/** \brief Number of Channels: Maximum number of channels for configuration.
+ *         Only 8 TX Channels are allocated to R5 Core by sciclient, hence the
+ *         maximum number of channels is limited to 8. Application can save
+ *         memory by reducing this to the actual number of channels used
+ *         rather than all available channels. */
+#define CSITX_NUM_CH                             (8U)
 /** \brief Number of Pixel Interfaces: Maximum number of Pixel Interfaces for configuration */
 #define CSITX_NUM_PIXEL_IF                       (4U)
 /** \brief Channel ID: Default channel ID used for initialization */

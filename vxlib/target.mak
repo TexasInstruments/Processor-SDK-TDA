@@ -30,7 +30,7 @@ ifeq ($(TARGET_PLATFORM),PC)
         ifeq ($(TARGET_SCPU),C66)
             SYSDEFS+=TMS320C66X _TMS320C6600 _TMS320C6400_PLUS
             SYSIDIRS += $(VISION_ROOT)/ti/vxlib/src/common/c6xsim
-        else ifeq ($(TARGET_SCPU),$(filter $(TARGET_SCPU), C71 C7100 C7120 C7504 C7524))
+        else ifeq ($(TARGET_SCPU),$(filter $(TARGET_SCPU), C71 C7100 C7120 C7504 C7524 C7604))
 	        SYSDEFS+=C7X_FAMILY
 	        ifeq ($(TARGET_SCPU),$(filter $(TARGET_SCPU), C71 C7100))
 	            ifndef CGT7X_ROOT
@@ -68,6 +68,15 @@ ifeq ($(TARGET_PLATFORM),PC)
 	            SYSIDIRS += $(CGT7X_ROOT)/host_emulation/include/C7524
 	            SYSLDIRS += $(CGT7X_ROOT)/host_emulation
 	            SYS_STATIC_LIBS += C7524-MMA2_256-host-emulation
+	        else ifeq ($(TARGET_SCPU),C7604)
+	            ifndef CGT7X_ROOT
+	            $(error You must define CGT7X_ROOT!)
+	            endif
+	            SYSDEFS+=__C7604__
+	            SYSIDIRS += $(CGT7X_ROOT)/host_emulation/include
+	            SYSIDIRS += $(CGT7X_ROOT)/host_emulation/include/C7604
+	            SYSLDIRS += $(CGT7X_ROOT)/host_emulation
+	            SYS_STATIC_LIBS += C7604-MMA3_1024-host-emulation
 	        endif
         else
             $(error TARGET_SCPU=$(TARGET_SCPU) is not supported! Options=[C64P C66 C674])

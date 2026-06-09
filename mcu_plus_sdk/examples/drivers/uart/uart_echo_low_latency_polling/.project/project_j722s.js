@@ -25,6 +25,12 @@ const lnkfiles = {
     ]
 };
 
+const defines_wkup_r5 = {
+    common: [
+        "ENABLE_SCICLIENT_DIRECT",
+    ],
+}
+
 const syscfgfile = "../example.syscfg";
 
 const readmeDoxygenPageTag = "EXAMPLES_DRIVERS_UART_ECHO_LOW_LATENCY_POLLING";
@@ -198,7 +204,7 @@ const libs_freertos_c75ss1 = {
 const templates_freertos_c75ss0 =
 [
     {
-        input: ".project/templates/j722s/common/linker_c75ss0.cmd.xdt",
+        input: ".project/templates/j722s/common/linker_c75ss.cmd.xdt",
         output: "linker.cmd",
     },
     {
@@ -214,7 +220,7 @@ const templates_freertos_c75ss0 =
 const templates_freertos_c75ss1 =
 [
     {
-        input: ".project/templates/j722s/common/linker_c75ss1.cmd.xdt",
+        input: ".project/templates/j722s/common/linker_c75ss.cmd.xdt",
         output: "linker.cmd",
     },
     {
@@ -418,12 +424,14 @@ function getComponentBuildProperty(buildOption) {
             build_property.libdirs = libdirs_freertos_wkup_r5f;
             build_property.libs = libs_freertos_wkup_r5f;
             build_property.templates = templates_freertos_wkup_r5f;
+            build_property.defines = defines_wkup_r5;
         }
         else
         {
             build_property.libs = libs_nortos_wkup_r5f;
             build_property.templates = templates_nortos_wkup_r5f;
             build_property.libdirs = libdirs_wkup_nortos;
+            build_property.defines = defines_wkup_r5;
         }
     }
     else if(buildOption.cpu.match(/main-r5f*/)) {

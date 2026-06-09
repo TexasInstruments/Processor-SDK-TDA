@@ -1,5 +1,6 @@
 let path = require('path');
 
+
 let device = "am62ax";
 
 const files = {
@@ -82,6 +83,7 @@ const libs_freertos_dm_r5f = {
         "rm_pm_hal.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
         "sciserver.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
         "self_reset.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
+        "dm_stub.am62ax.r5f.ti-arm-clang.${ConfigName}.lib",
     ]
 };
 
@@ -98,6 +100,16 @@ const lnkfiles = {
     ]
 };
 
+const defines_dm_r5f = {
+    common:[
+        "ENABLE_SCICLIENT_DIRECT",
+    ]
+};
+const config_defines = {
+    common: [
+        "CONFIG_MULTI_ENDPOINT",
+    ]
+};
 const syscfgfile = "../example.syscfg";
 
 const readmeDoxygenPageTag = "EXAMPLES_DRIVERS_IPC_RPMESSAGE_QNX_ECHO";
@@ -116,6 +128,8 @@ const templates_freertos_dm_r5f =
             abortStackSize: 0x0100,
             undefinedStackSize: 0x0100,
             dmStubstacksize: 0x0400,
+            vringBaseAddr: 0xA0000000,
+            vringSize: 0x1000000,
         },
     },
     {
@@ -132,6 +146,10 @@ const templates_freertos_mcu_r5f =
     {
         input: ".project/templates/am62ax/common/linker_mcu-r5f.cmd.xdt",
         output: "linker.cmd",
+        options: {
+            vringBaseAddr: 0xA0000000,
+            vringSize: 0x1000000,
+        }
     },
     {
         input: ".project/templates/am62ax/freertos/main_freertos.c.xdt",
@@ -147,13 +165,17 @@ const templates_freertos_c75 =
     {
         input: ".project/templates/am62ax/common/linker_c75.cmd.xdt",
         output: "linker.cmd",
+        options: {
+            vringBaseAddr: 0xA0000000,
+            vringSize: 0x1000000,
+        }
     },
     {
         input: ".project/templates/am62ax/freertos/main_freertos.c.xdt",
         output: "../main.c",
         options: {
             entryFunction: "ipc_rpmsg_echo_main_qnx",
-            stackSize: 64*1024,
+            stackSize: 16*1024,
         },
     }
 ];
@@ -191,6 +213,7 @@ function getComponentBuildProperty(buildOption) {
 
     if(buildOption.cpu.match(/mcu-r5f*/))
     {
+        build_property.defines = config_defines;
         build_property.includes = includes_freertos_r5f;
         build_property.libdirs = libdirs_freertos;
         build_property.libs = libs_freertos_mcu_r5f;
@@ -202,6 +225,7 @@ function getComponentBuildProperty(buildOption) {
         build_property.libdirs = libdirs_freertos_dm_r5f;
         build_property.libs = libs_freertos_dm_r5f;
         build_property.templates = templates_freertos_dm_r5f;
+        build_property.defines = defines_dm_r5f;
     }
     else if(buildOption.cpu.match(/c75*/))
     {

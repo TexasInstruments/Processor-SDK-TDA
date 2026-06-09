@@ -7,6 +7,19 @@ function getConfigArr() {
     return system.getScript(`/drivers/mcan/soc/mcan_${common.getSocName()}`).getConfigArr();
 }
 
+function getConfig() {
+    let config = [];
+    if (common.isMcuDomainSupported())
+    {
+        if (common.getSocName().match(/j722s/))
+        {
+            config.push(common.getUseMcuDomainPeripheralsConfig());
+        }
+    }
+
+    return config;
+}
+
 function getInstanceConfig(moduleInstance) {
     let solution = moduleInstance[getInterfaceName(moduleInstance)].$solution;
     let configArr = getConfigArr();
@@ -68,6 +81,7 @@ function validate(instance, report) {
 let mcan_module_name = "/drivers/mcan/mcan";
 
 let mcan_module = {
+    config: getConfig(),
     displayName: "MCAN",
     templates: {
         "/drivers/system/system_config.c.xdt": {
@@ -183,18 +197,6 @@ let mcan_module = {
             common.validate.checkNumberRange(instance, report, "dataSynchJumpWidth", 0, 15, "dec");
         },
     },
-    config:[
-        {
-            name: "useMCUDomain",
-            displayName: "Use MCU Domain",
-            default: "false",
-            options: [
-                { name : "false", displayName: "Use MAIN"},
-                { name : "true", displayName : "Use MCU"}
-            ],
-
-        },
-    ],
 
     validate: validate,
     modules: function(instance) {

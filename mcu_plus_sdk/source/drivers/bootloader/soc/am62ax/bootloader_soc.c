@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -50,8 +50,6 @@
 #define BOOTLOADER_SYS_STATUS_DEV_TYPE_GP      (0x03U)
 #define BOOTLOADER_SYS_STATUS_DEV_TYPE_TEST    (0x05U)
 #define BOOTLOADER_SYS_STATUS_DEV_SUBTYPE_FS   (0x00000A00U)
-
-#define FSS_DATA_REGION_FIREWALL_ID     (7U)
 
 Bootloader_resMemSections gResMemSection =
 {
@@ -125,7 +123,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .tisciProcId    = SCICLIENT_PROC_ID_A53SS0_CORE_0,
         .tisciDevId     = TISCI_DEV_A53SS0_CORE_0,
         .tisciClockId   = TISCI_DEV_A53SS0_CORE_0_A53_CORE0_ARM_CLK_CLK,
-        .defaultClockHz = (uint32_t)(1250*1000000),
+        .defaultClockHz = (uint32_t)(1400*1000000),
         .coreName       = "a530-0",
     },
 
@@ -133,7 +131,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .tisciProcId    = SCICLIENT_PROC_ID_A53SS0_CORE_1,
         .tisciDevId     = TISCI_DEV_A53SS0_CORE_1,
         .tisciClockId   = TISCI_DEV_A53SS0_CORE_1_A53_CORE1_ARM_CLK_CLK,
-        .defaultClockHz = (uint32_t)(1250*1000000),
+        .defaultClockHz = (uint32_t)(1400*1000000),
         .coreName       = "a530-1",
     },
 
@@ -141,7 +139,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .tisciProcId    = SCICLIENT_PROC_ID_A53SS0_CORE_2,
         .tisciDevId     = TISCI_DEV_A53SS0_CORE_2,
         .tisciClockId   = TISCI_DEV_A53SS0_CORE_2_A53_CORE2_ARM_CLK_CLK,
-        .defaultClockHz = (uint32_t)(1250*1000000),
+        .defaultClockHz = (uint32_t)(1400*1000000),
         .coreName       = "a531-0",
     },
 
@@ -149,7 +147,7 @@ Bootloader_CoreBootInfo gCoreBootInfo[] =
         .tisciProcId    = SCICLIENT_PROC_ID_A53SS0_CORE_3,
         .tisciDevId     = TISCI_DEV_A53SS0_CORE_3,
         .tisciClockId   = TISCI_DEV_A53SS0_CORE_3_A53_CORE3_ARM_CLK_CLK,
-        .defaultClockHz = (uint32_t)(1250*1000000),
+        .defaultClockHz = (uint32_t)(1400*1000000),
         .coreName       = "a531-1",
     },
 
@@ -268,9 +266,57 @@ Bootloader_SelfCoreJump selfcoreEntry = NULL;
 extern int32_t Sciclient_triggerSecHandover(void);
 extern int32_t Sciclient_waitForBootNotification(void);
 
+static int32_t Bootloader_socOpenFirewallRegion(uint16_t fwl, uint16_t region, uint32_t control, uint64_t startAddr, uint64_t endAddr)
+{
+    int32_t status = SystemP_FAILURE;
+
+    const struct tisci_msg_fwl_set_firewall_region_req fwl_set_req =
+    {
+        .fwl_id = fwl,
+        .region = region,
+        .n_permission_regs = 3,
+        /*
+         * The firewall control register layout is
+         *  ---------------------------------------------------------------------------
+         * |  31:10   |      9     |     8      |     7:5    |      4      |   3:0     |
+         *  ---------------------------------------------------------------------------
+         * | Reserved | Cache Mode | Background |  Reserved  | Lock Config |  Enable   |
+         *  ---------------------------------------------------------------------------
+         *
+         * Enable = 0xA implies firewall is enabled. Any other value means not enabled
+         *
+         */
+        .control = control,
+        /*
+            * The firewall permission register layout is
+            *  ---------------------------------------------------------------------------
+            * |  31:24   |    23:16   |  15:12     |   11:8     |   7:4      |   3:0      |
+            *  ---------------------------------------------------------------------------
+            * | Reserved |   Priv ID  | NSUSR-DCRW | NSPRI-DCRW | SUSER-DCRW | SPRIV-DCRW |
+            *  ---------------------------------------------------------------------------
+            *
+            * PRIV_ID = 0xC3 implies all.
+            * In each of the 4 nibbles from 15:0 the 4 bits means Debug, Cache, Read, Write Access for
+            * Non-secure user, Non-secure Priv, Secure user, Secure Priv respectively. To enable all access
+            * bits for all users, we set each of these nibbles to 0b1111 = 0xF. So 15:0 becomes 0xFFFF
+            *
+            */
+        .permissions[0] = 0xC3FFFF,
+        .permissions[1] = 0xC3FFFF,
+        .permissions[2] = 0xC3FFFF,
+        .start_address  = startAddr,
+        .end_address    = endAddr,
+    };
+    struct tisci_msg_fwl_set_firewall_region_resp fwl_set_resp = { 0 };
+
+    status = Sciclient_firewallSetRegion(&fwl_set_req, &fwl_set_resp, SystemP_TIMEOUT);
+
+    return status;
+}
+
 uint32_t Bootloader_socRprcToCslCoreId(uint32_t rprcCoreId)
 {
-    uint32_t cslCoreId = CSL_CORE_ID_MAX; //todo: Change core id max for HSM and add entry in CSL
+    uint32_t cslCoreId = CSL_CORE_ID_MAX;
     uint32_t i;
 
     uint32_t rprcCoreIds[CSL_CORE_ID_MAX] =
@@ -278,16 +324,34 @@ uint32_t Bootloader_socRprcToCslCoreId(uint32_t rprcCoreId)
         5U, 4U, 0U, 1U, 2U, 3U, 6U, 7U
     };
 
-    for(i = 0U; i < CSL_CORE_ID_MAX; i++)
+    if(Bootloader_socIsSmpEnable( rprcCoreId) == true)
     {
-        if(rprcCoreId == rprcCoreIds[i])
+        cslCoreId = CSL_CORE_ID_A53SS0_0;
+    }
+    else
+    {
+        for(i = 0U; i < CSL_CORE_ID_MAX; i++)
         {
-            cslCoreId = i;
-            break;
+            if(rprcCoreId == rprcCoreIds[i])
+            {
+                cslCoreId = i;
+                break;
+            }
         }
     }
 
     return cslCoreId;
+}
+
+bool Bootloader_socIsSmpEnable(uint32_t rprcCoreId)
+{
+    bool smpEnable = false;
+    if(rprcCoreId == FREERTOS_SMP_RPRC_CORE_ID)
+    {
+        smpEnable = true;
+    }
+
+    return smpEnable;
 }
 
 uint32_t Bootloader_socGetSciclientCpuProcId(uint32_t cpuId)
@@ -362,7 +426,7 @@ void Bootloader_socGetR5fAtcmAddrAndSize(uint32_t cpuId, uint32_t *addr, uint32_
     switch(cpuId)
     {
         case CSL_CORE_ID_R5FSS0_0:
-            *addr = CSL_WKUP_R5FSS0_CORE0_ATCM_BASE;
+            *addr = CSL_WKUP_R5FSS0_ATCM_BASE;
             break;
         case CSL_CORE_ID_MCU_R5FSS0_0:
             *addr = CSL_MCU_R5FSS0_CORE0_ATCM_BASE;
@@ -381,7 +445,7 @@ void Bootloader_socGetR5fBtcmAddrAndSize(uint32_t cpuId, uint32_t *addr, uint32_
     switch(cpuId)
     {
         case CSL_CORE_ID_R5FSS0_0:
-            *addr = CSL_WKUP_R5FSS0_CORE0_BTCM_BASE;
+            *addr = CSL_WKUP_R5FSS0_BTCM_BASE;
             break;
         case CSL_CORE_ID_MCU_R5FSS0_0:
             *addr = CSL_MCU_R5FSS0_CORE0_BTCM_BASE;
@@ -410,10 +474,14 @@ void Bootloader_socInitR5FAtcmBtcm(uint32_t cpuId)
         }
         #endif
         pAddr = (volatile uint32_t *)addr;
-        for(i=0; i< sizeof(gSOC_r5fVectors)/sizeof(uint32_t); i++)
+        if(pAddr != NULL)
         {
-            pAddr[i] = gSOC_r5fVectors[i];
+            for(i=0; i< sizeof(gSOC_r5fVectors)/sizeof(uint32_t); i++)
+            {
+                pAddr[i] = gSOC_r5fVectors[i];
+            }
         }
+
     }
     Bootloader_socGetR5fBtcmAddrAndSize(cpuId, &addr, &size);
     #ifdef BOOTLOADER_SOC_BTCM_FILL
@@ -710,6 +778,15 @@ int32_t Bootloader_socCpuPowerOnResetC7x(uint32_t cpuId, uintptr_t entry_point, 
 
     sciclientCpuDevId = Bootloader_socGetSciclientCpuDevId(cpuId);
 
+    /* Turn on LPSC for C7x UMC memory. This is required to load in to C7x UMC memory */
+    status = Sciclient_pmSetModuleState(TISCI_DEV_C7X256V0_CORE0, TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
+                                                    TISCI_MSG_FLAG_AOP,
+                                                    SystemP_WAIT_FOREVER);
+    if(status != SystemP_SUCCESS)
+    {
+        DebugP_logError("UMC memory power on failed for %s\r\n", Bootloader_socGetCoreName(cpuId));
+    }
+
     status = Sciclient_pmSetModuleState(sciclientCpuDevId,
         TISCI_MSG_VALUE_DEVICE_SW_STATE_AUTO_OFF,
         TISCI_MSG_FLAG_AOP,
@@ -909,63 +986,154 @@ void __attribute__((__noreturn__)) Bootloader_socSelfCPUjump()
     selfcoreEntry();
 }
 
-int32_t Bootloader_socCpuResetReleaseSelf()
+/* Wait for interrupt */
+static inline void Bootloader_wfi(void)
+{
+    __asm__ __volatile__ ("wfi" "\n\t": : : "memory");
+}
+
+/**
+ * \brief Perform self-reset of the boot processor
+ *
+ * This function initiates a self-reset sequence for the R5FSS0_0 processor.
+ * It is used when the bootloader needs to reset itself and continue execution
+ * from a new boot vector address configured in BTCM.
+ *
+ * The function performs the following sequence:
+ * 1. Request processor control
+ * 2. Get current processor status
+ * 3. Configure processor with new boot vector and TCM settings
+ * 4. Send wait status, assert reset, and deassert reset (without waiting for responses)
+ * 5. Release processor control
+ * 6. Enter WFI to allow reset to complete
+ *
+ * \return SystemP_SUCCESS on successful configuration, SystemP_FAILURE otherwise
+ */
+int32_t Bootloader_socCpuResetReleaseSelf(void)
 {
     int32_t status = SystemP_SUCCESS;
-    uint32_t sciclientCpuProcIdCore0, sciclientCpuDevIdCore0;
+    uint32_t sciclientCpuProcIdCore0;
 
     sciclientCpuProcIdCore0 = Bootloader_socGetSciclientCpuProcId(CSL_CORE_ID_R5FSS0_0);
-    sciclientCpuDevIdCore0 = Bootloader_socGetSciclientCpuDevId(CSL_CORE_ID_R5FSS0_0);
 
-    /*
-     *   SYSFW will block until a WFI is issued, thus allowing the following commands
-     *   to be queued so this cluster may be reset by SYSFW (queue length is defined in
-     *   "source/drivers/sciclient/include/tisci/{soc}/tisci_sec_proxy.h". If these commands
-     *   were to be issued and executed prior to WFI, the cluster would enter reset and
-     *   bootloader would not be able to tell SYSFW to take itself out of reset.
-     */
-    status = Sciclient_procBootWaitProcessorState(sciclientCpuProcIdCore0,
-                    1, 1, 0, 3, 0, 0, 0, SystemP_WAIT_FOREVER);
-    if(status != SystemP_SUCCESS)
+    /* Request processor control */
+    status = Sciclient_procBootRequestProcessor((uint8_t)sciclientCpuProcIdCore0, SystemP_WAIT_FOREVER);
+    if (status == SystemP_SUCCESS)
     {
-        DebugP_logError("CPU boot wait command failed for %s\r\n", Bootloader_socGetCoreName(CSL_CORE_ID_R5FSS0_0));
-    }
+        /* Get current processor status */
+        struct tisci_msg_proc_get_status_resp proc_get_status_resp = { 0 };
 
-    if(status==SystemP_SUCCESS)
-    {
-
-        /* after this point you cannot single step in CCS */
-        if(status==SystemP_SUCCESS)
+        status = Sciclient_procBootGetProcessorState(sciclientCpuProcIdCore0, &proc_get_status_resp, SystemP_WAIT_FOREVER);
+        if (status == SystemP_SUCCESS)
         {
-            status = Sciclient_pmSetModuleRst_flags(sciclientCpuDevIdCore0, 1, 0, SystemP_WAIT_FOREVER);
+            if ((proc_get_status_resp.hdr.type != TISCI_MSG_PROC_GET_STATUS) ||
+                ((proc_get_status_resp.hdr.flags & TISCI_MSG_FLAG_ACK) != TISCI_MSG_FLAG_ACK))
+            {
+                DebugP_logError("CPU get status failed for %s\r\n", Bootloader_socGetCoreName(CSL_CORE_ID_R5FSS0_0));
+                status = SystemP_FAILURE;
+            }
         }
-
-        /* release the CPUs */
-        if(status==SystemP_SUCCESS)
+        else
         {
-            status = Sciclient_procBootReleaseProcessor(sciclientCpuProcIdCore0, 0, SystemP_WAIT_FOREVER);
-        }
-        /* release the reset for the CPUs */
-        if(status==SystemP_SUCCESS)
-        {
-            status = Sciclient_pmSetModuleRst_flags(sciclientCpuDevIdCore0, 0, 0, SystemP_WAIT_FOREVER);
-        }
-        if(status==SystemP_SUCCESS)
-        {
-            /* disable interrupts if enabled */
-            HwiP_disable();
-
-            /* flush all caches */
-            CacheP_wbInvAll(CacheP_TYPE_ALL);
-
-            /* execute wfi, now SYSFW will execute the above commands and reset core0 and core 1 */
-            __asm__ __volatile__ ("wfi" "\n\t": : : "memory");
-        }
-        if(status != SystemP_SUCCESS)
-        {
-            DebugP_logError("CPU reset sequence failed for %s\r\n", Bootloader_socGetCoreName(CSL_CORE_ID_R5FSS0_0));
+            DebugP_logError("CPU get state request failed for %s\r\n", Bootloader_socGetCoreName(CSL_CORE_ID_R5FSS0_0));
         }
     }
+    else
+    {
+        DebugP_logError("CPU request failed for %s\r\n", Bootloader_socGetCoreName(CSL_CORE_ID_R5FSS0_0));
+    }
+
+    if (status == SystemP_SUCCESS)
+    {
+        /* Configure processor with new boot vector and TCM settings */
+        struct tisci_msg_proc_set_config_req proc_set_config_req = {
+            .hdr = {
+                .type = TISCI_MSG_PROC_SET_CONFIG,
+                .seq = 0x22,
+                .flags = TISCI_MSG_FLAG_AOP,
+                .host = WKUP_R5_HOST_ID
+            },
+            .processor_id = sciclientCpuProcIdCore0,
+            .bootvector_lo = SELF_RESET_BOOT_ADDRESS_LOW,
+            .config_flags_1_set = TISCI_MSG_VAL_PROC_BOOT_CFG_FLAG_R5_ATCM_EN |
+                                  TISCI_MSG_VAL_PROC_BOOT_CFG_FLAG_R5_BTCM_EN |
+                                  TISCI_MSG_VAL_PROC_BOOT_CFG_FLAG_R5_MEM_INIT_DIS,
+            .config_flags_1_clear = TISCI_MSG_VAL_PROC_BOOT_CFG_FLAG_R5_TCM_RSTBASE
+        };
+
+        status = Sciclient_procBootSetProcessorCfg(&proc_set_config_req, SystemP_WAIT_FOREVER);
+        if (status != SystemP_SUCCESS)
+        {
+            DebugP_logError("CPU set config failed for %s\r\n", Bootloader_socGetCoreName(CSL_CORE_ID_R5FSS0_0));
+        }
+    }
+
+    if (status == SystemP_SUCCESS)
+    {
+        /*
+         * sproxy_send_msg_r5_to_tifs_fw is used instead of a wrapper function as the latter waits for a response for messages forwarded to TIFS.
+         * Here we do not want to wait for a response to ensure the reset sequence fits within the timeout window of the Sciclient_procBootWaitProcessorState
+         * No wait for response in this section
+         */
+
+        /* 1. Send TISCI_MSG_PROC_WAIT_STATUS but DO NOT wait for a response */
+        struct tisci_msg_proc_status_wait_req proc_status_wait_req = {
+            .hdr = {
+                .type = TISCI_MSG_PROC_WAIT_STATUS,
+                .seq = 0x44,
+                .flags = 0,
+                .host = WKUP_R5_HOST_ID
+            },
+            .processor_id = sciclientCpuProcIdCore0,
+            .num_wait_iterations = 255,
+            .num_match_iterations = 1,
+            .delay_per_iteration_us = 1,
+            .status_flags_1_set_any_wait = (TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFE | TISCI_MSG_VAL_PROC_BOOT_STATUS_FLAG_R5_WFI)
+        };
+        sproxy_send_msg_r5_to_tifs_fw(&proc_status_wait_req , sizeof(proc_status_wait_req));
+
+        /* 2. Send TISCI message to assert R5 local reset but DO NOT wait for a response */
+        struct tisci_msg_proc_set_control_req proc_set_assert_req = {
+            .hdr = {
+                .type = TISCI_MSG_PROC_SET_CONTROL,
+                .seq = 0x55,
+                .flags = 0,
+                .host = WKUP_R5_HOST_ID
+            },
+            .processor_id = sciclientCpuProcIdCore0,
+            .control_flags_1_set = TISCI_MSG_VAL_PROC_BOOT_CTRL_FLAG_R5_RESET
+        };
+        sproxy_send_msg_r5_to_tifs_fw(&proc_set_assert_req , sizeof(proc_set_assert_req));
+
+        /* 3. Send TISCI message to de-assert R5 local reset but DO NOT wait for a response */
+        struct tisci_msg_proc_set_control_req  proc_set_deassert_req = {
+            .hdr = {
+                .type = TISCI_MSG_PROC_SET_CONTROL,
+                .seq = 0x66,
+                .flags = 0,
+                .host = WKUP_R5_HOST_ID
+            },
+            .processor_id = sciclientCpuProcIdCore0,
+            .control_flags_1_clear = TISCI_MSG_VAL_PROC_BOOT_CTRL_FLAG_R5_RESET,
+        };
+        sproxy_send_msg_r5_to_tifs_fw(&proc_set_deassert_req , sizeof(proc_set_deassert_req));
+
+        /* Release processor control */
+        struct tisci_msg_proc_release_req proc_release_req = {
+            .hdr = {
+                .type = TISCI_MSG_PROC_RELEASE,
+                .seq = 0,
+                .flags = 0,
+                .host = WKUP_R5_HOST_ID
+            },
+            .processor_id = sciclientCpuProcIdCore0
+        };
+        sproxy_send_msg_r5_to_tifs_fw(&proc_release_req , sizeof(proc_release_req));
+
+        /* Enter WFI to allow reset sequence to complete */
+        Bootloader_wfi();
+    }
+
     return status;
 }
 
@@ -1054,36 +1222,27 @@ int32_t Bootloader_socOpenFirewalls(void)
 {
     int32_t status = SystemP_FAILURE;
 
-    /* Unlock FSS data region firewall */
-    const struct tisci_msg_fwl_set_firewall_region_req fwl_set_req =
-    {
-        .fwl_id = FSS_DATA_REGION_FIREWALL_ID,
-        .region = 0,
-        .n_permission_regs = 3,
-        .control = 0x30A, /* 0x3 - Firewall cached, background region, Unlocked. 0xA - Enable Firewall */
-        /*
-         * The firewall permission register layout is
-         *  ---------------------------------------------------------------------------
-         * |  31:24   |    23:16   |  15:12     |   11:8     |   7:4      |   3:0      |
-         *  ---------------------------------------------------------------------------
-         * | Reserved |   Priv ID  | NSUSR-DCRW | NSPRI-DCRW | SUSER-DCRW | SPRIV-DCRW |
-         *  ---------------------------------------------------------------------------
-         *
-         * PRIV_ID = 0xC3 implies all.
-         * In each of the 4 nibbles from 15:0 the 4 bits means Debug, Cache, Read, Write Access for
-         * Non-secure user, Non-secure Priv, Secure user, Secure Priv respectively. To enable all access
-         * bits for all users, we set each of these nibbles to 0b1111 = 0xF. So 15:0 becomes 0xFFFF
-         *
-         */
-        .permissions[0] = 0xC3FFFF,
-        .permissions[1] = 0xC3FFFF,
-        .permissions[2] = 0xC3FFFF,
-        .start_address  = CSL_FSS0_DAT_REG1_BASE,
-        .end_address    = 0x67FFFFFF,
-    };
-    struct tisci_msg_fwl_set_firewall_region_resp fwl_set_resp = { 0 };
+    /* Nibbles from left to right, 3 implies cached, background region, 0 implies config is unlocked, and A implies enable firewall  */
+    uint32_t fwlControl = 0x30A;
 
-    status = Sciclient_firewallSetRegion(&fwl_set_req, &fwl_set_resp, SystemP_TIMEOUT);
+    /* There are 3 firewall regions, 1 per FSS memory region. We need to open all these regions. */
+    status = Bootloader_socOpenFirewallRegion(CSL_STD_FW_FSS0_FSAS_0_DAT_REG1_ID, 0, fwlControl,
+            CSL_STD_FW_FSS0_FSAS_0_DAT_REG1_DAT_REG1_START,
+            CSL_STD_FW_FSS0_FSAS_0_DAT_REG1_DAT_REG1_END);
+
+    if(status==SystemP_SUCCESS)
+    {
+        status = Bootloader_socOpenFirewallRegion(CSL_STD_FW_FSS0_FSAS_0_DAT_REG0_ID, 1, fwlControl,
+                CSL_STD_FW_FSS0_FSAS_0_DAT_REG0_DAT_REG0_START,
+                CSL_STD_FW_FSS0_FSAS_0_DAT_REG0_DAT_REG0_END);
+    }
+
+    if(status==SystemP_SUCCESS)
+    {
+        status = Bootloader_socOpenFirewallRegion(CSL_STD_FW_FSS0_FSAS_0_DAT_REG3_ID, 2, fwlControl,
+                CSL_STD_FW_FSS0_FSAS_0_DAT_REG3_DAT_REG3_START,
+                CSL_STD_FW_FSS0_FSAS_0_DAT_REG3_DAT_REG3_END);
+    }
 
     return status;
 }
@@ -1093,12 +1252,13 @@ int32_t Bootloader_socAuthImage(uint32_t certLoadAddr)
     int32_t status = SystemP_FAILURE;
 
     struct tisci_msg_proc_auth_boot_req authReq;
+    struct tisci_msg_proc_auth_boot_resp authResp = {0};
 
     /* Request TIFS (SYSFW) to authenticate (and decrypt if mentioned in the x509 cert) the image */
     authReq.certificate_address_hi = 0U;
     authReq.certificate_address_lo = certLoadAddr;
 
-    status = Sciclient_procBootAuthAndStart(&authReq, SystemP_WAIT_FOREVER);
+    status = Sciclient_procBootAuthAndStart(&authReq, &authResp, SystemP_WAIT_FOREVER);
 
     return status;
 }
@@ -1129,4 +1289,35 @@ void Bootloader_socSetSBLMem(uint32_t startAddress, uint32_t regionlength)
 {
     gResMemSection.memSection[0].memStart = startAddress;
     gResMemSection.memSection[0].memEnd = startAddress + regionlength;
+}
+
+void Bootloader_socCpuPowerOff(uint32_t cpuId)
+{
+    uint32_t sciclientCpuDevId;
+    uint32_t status = SystemP_SUCCESS;
+
+    sciclientCpuDevId = Bootloader_socGetSciclientCpuDevId(cpuId);
+
+    switch(cpuId)
+    {
+        case CSL_CORE_ID_MCU_R5FSS0_0:
+        case CSL_CORE_ID_R5FSS0_0:
+        case CSL_CORE_ID_A53SS0_0:
+        case CSL_CORE_ID_A53SS0_1:
+        case CSL_CORE_ID_A53SS1_0:
+        case CSL_CORE_ID_A53SS1_1:
+        case CSL_CORE_ID_HSM_M4FSS0_0:
+        case CSL_CORE_ID_C75SS0_0:
+            status = Sciclient_pmSetModuleState(sciclientCpuDevId,
+                TISCI_MSG_VALUE_DEVICE_SW_STATE_AUTO_OFF,
+                TISCI_MSG_FLAG_AOP,
+                SystemP_WAIT_FOREVER);
+
+            if(status != SystemP_SUCCESS)
+            {
+                DebugP_logError("CPU power off failed for %s\r\n", Bootloader_socGetCoreName(cpuId));
+            }
+            break;
+    }
+
 }

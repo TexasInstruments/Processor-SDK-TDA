@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -38,6 +38,7 @@
 extern "C"
 {
 #endif
+
 
 #include <kernel/dpl/DebugP.h>
 
@@ -103,21 +104,21 @@ extern "C"
 #define configUSE_TIME_SLICING                  (0) /* keep as 0 to get same functionality as SysBIOS6 */
 #define configUSE_NEWLIB_REENTRANT              (0)
 #define configENABLE_BACKWARD_COMPATIBILITY     (1)
-#define configNUM_THREAD_LOCAL_STORAGE_POINTERS (4)
+#define configNUM_THREAD_LOCAL_STORAGE_POINTERS (10) /* Minimun requirement for FreeRTOS FATFS to work */
 #define configSTACK_DEPTH_TYPE                  UBaseType_t
 #define configMESSAGE_BUFFER_LENGTH_TYPE        size_t
 #define configSUPPORT_STATIC_ALLOCATION         (1) /* when = 1, need to provide below,
                                                      *
                                                      * void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer,
                                                      *      StackType_t **ppxTimerTaskStackBuffer,
-                                                     *      uint32_t *pulTimerTaskStackSize );
+                                                     *      configSTACK_DEPTH_TYPE *pulTimerTaskStackSize );
                                                      *
                                                      * void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
                                                      *      StackType_t **ppxIdleTaskStackBuffer,
-                                                     *      uint32_t *pulIdleTaskStackSize );
+                                                     *      configSTACK_DEPTH_TYPE *pulIdleTaskStackSize );
                                                      */
 #define configSUPPORT_DYNAMIC_ALLOCATION        (1)
-#define configTOTAL_HEAP_SIZE                   (4*1024) /* not used when heap_3.c is the selected heap */
+#define configTOTAL_HEAP_SIZE                   (32*1024) /* not used when heap_3.c is the selected heap */
 #define configAPPLICATION_ALLOCATED_HEAP        (0)
 
 /* run-time stats config */
@@ -169,6 +170,18 @@ uint32_t uiPortGetRunTimeCounterValue();
 #define INCLUDE_vSemaphoreDelete        (1)
 #define INCLUDE_xTimerPendFunctionCall  (1)
 #define INCLUDE_xTaskGetIdleTaskHandle  (1)
+#define INCLUDE_xSemaphoreGetMutexHolder (1)
+
+/*
+ * This is not a FreeRTOS defined config and is defined by TI to create
+ * tasks with a floating point context. In this case save/restore of
+ * R5F FPU Registers will be performed during each task switch.
+ */
+#if (configOPTIMIZE_FOR_LATENCY==0)
+#define configFLOATING_POINT_CONTEXT     (1)
+#else
+#define configFLOATING_POINT_CONTEXT     (0)
+#endif
 
 #ifdef __cplusplus
 }

@@ -53,7 +53,7 @@ SECTIONS
     GROUP {
         .text:   {} palign(8)   /* This is where code resides */
         .rodata: {} palign(8)   /* This is where const's go */
-    } > DDR_CODE_DATA
+    } > MSRAM
 
     GROUP {
         /* This is the resource table used by linux to know where the IPC "VRINGs" are located */
@@ -65,7 +65,7 @@ SECTIONS
     /* This is rest of initialized data. This can be placed in DDR if DDR is available and needed */
     GROUP {
         .data:   {} palign(8)   /* This is where initialized globals and static go */
-    } > DDR_CODE_DATA
+    } > MSRAM
 
     /* This is rest of uninitialized data. This can be placed in DDR if DDR is available and needed */
     GROUP {
@@ -74,7 +74,7 @@ SECTIONS
         RUN_END(__BSS_END)
         .sysmem: {} palign(8)   /* This is where the malloc heap goes */
         .stack:  {} palign(8)   /* This is where the main() stack goes */
-    } > DDR_CODE_DATA
+    } > MSRAM
 
     /* This is where the stacks for different R5F modes go */
     GROUP {
@@ -93,14 +93,14 @@ SECTIONS
         .undefinedstack: {. = . + __UNDEFINED_STACK_SIZE;} align(8)
         RUN_START(__UNDEFINED_STACK_START)
         RUN_END(__UNDEFINED_STACK_END)
-    } > DDR_CODE_DATA
+    } > MSRAM
 
     /* Sections needed for C++ projects */
     GROUP {
         .ARM.exidx:  {} palign(8)   /* Needed for C++ exception handling */
         .init_array: {} palign(8)   /* Contains function pointers called before main */
         .fini_array: {} palign(8)   /* Contains function pointers called after main */
-    } > DDR_CODE_DATA
+    } > MSRAM
 
 }
 

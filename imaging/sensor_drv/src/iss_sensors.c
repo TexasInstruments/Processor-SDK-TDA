@@ -138,7 +138,7 @@ uint8_t gDeserializerHubs = 0;
 
 static I2C_Handle gISS_Sensor_I2cHandle = NULL;
 static uint8_t gISS_Sensor_ByteOrder = BOARD_I2C_REG_ADDR_MSB_FIRST;
-static uint8_t num_sensors_open = 0;
+static uint8_t num_sensors_open = 0U;
 static IssSensors_Handle *g_pSenHndl[ISS_SENSORS_MAX_SUPPORTED_SENSOR];
 static uint8_t g_detectedSensors[ISS_SENSORS_MAX_SUPPORTED_SENSOR];
 I2cParams *desCfgCommon_ptr;
@@ -154,7 +154,7 @@ typedef struct
  *  Local Functions Declarations
  *******************************************************************************
  */
-static void IssSensor_getDeserializerI2cAddr(int8_t desHubInst,
+static void IssSensor_getDeserializerI2cAddr(uint8_t desHubInst,
     uint8_t *i2cBus, uint8_t *i2cAddr);
 static int32_t checkForHandle(const IssSensors_Handle* handle);
 static int32_t setup_io_expander(void);
@@ -261,9 +261,7 @@ int32_t IssSensor_Init(void)
         /*  Initialization function call of all supported sensors. Sensor
         initialization functions shall register the driver to the framework using
         IssSensor_Register(...) */
-        if (status == 0) {
-            status = IssSensor_IMX390_Init();
-        }
+        status = IssSensor_IMX390_Init();
         if (status == 0) {
             status = IssSensor_OX03F10_Init();
         }
@@ -470,7 +468,14 @@ int32_t IssSensor_PowerOn(IssSensors_Handle* handle, uint32_t chMask)
 {
     int32_t status = -1;
 
-    num_sensors_open++;
+    if(num_sensors_open < ISS_SENSORS_MAX_CHANNEL)
+    {
+        num_sensors_open = num_sensors_open + 1U;
+    }
+    else
+    {
+        num_sensors_open = ISS_SENSORS_MAX_CHANNEL;
+    }
 
     /* Check if the handle is valid or not */
     status = checkForHandle(handle);
@@ -522,7 +527,14 @@ int32_t IssSensor_PowerOff(IssSensors_Handle* handle, uint32_t chMask)
                 {
                     status = handle->sensorFxns->powerOff(chId, (void*)handle);
                 }
-                num_sensors_open--;
+                if(num_sensors_open > 0U)
+                {
+                    num_sensors_open = num_sensors_open - 1U;
+                }
+                else
+                {
+                    num_sensors_open = 0U;
+                }
             }
             chIter = chIter >> 1;
             chId++;
@@ -578,7 +590,8 @@ int32_t IssSensor_Start(IssSensors_Handle* handle, uint32_t chId)
 
         if(status == 0)
         {
-            handle->sensorIntfPrms->numCamerasStreaming = (uint8_t)(handle->sensorIntfPrms->numCamerasStreaming + numCamerasEnabled);
+            uint16_t tmpSum = (uint16_t)handle->sensorIntfPrms->numCamerasStreaming + (uint16_t)numCamerasEnabled;
+            handle->sensorIntfPrms->numCamerasStreaming = (uint8_t)tmpSum;
         }
     }
 
@@ -618,7 +631,18 @@ int32_t IssSensor_Stop(IssSensors_Handle* handle, uint32_t chId)
             {
                 status = handle->sensorFxns->streamOff(chId, (void*)handle);
             }
-            handle->sensorIntfPrms->numCamerasStreaming = (uint8_t)(handle->sensorIntfPrms->numCamerasStreaming - 1U);
+
+            uint8_t result = 0;
+            if(handle->sensorIntfPrms->numCamerasStreaming > 0U)
+            {
+                result = handle->sensorIntfPrms->numCamerasStreaming - 1U;
+            }
+            else
+            {
+                result = 0U;
+            }
+
+            handle->sensorIntfPrms->numCamerasStreaming = result;
         }
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
@@ -690,7 +714,6 @@ int32_t IssSensor_GetAeParams(IssSensors_Handle *handle, uint32_t chId, IssSenso
 int32_t IssSensor_SetAeParams(IssSensors_Handle *handle, uint32_t chId, IssSensor_ExposureParams *pExpPrms)
 {
     int32_t status = -1;
-    IssSensors_Handle * pSensorHandle = NULL;
 
     /* Check if the handle is valid or not */
     status = checkForHandle(handle);
@@ -751,7 +774,6 @@ int32_t IssSensor_GetAwbParams(IssSensors_Handle *handle, uint32_t chId, IssSens
 int32_t IssSensor_SetAwbParams(IssSensors_Handle *handle, uint32_t chId, IssSensor_WhiteBalanceParams *pWbPrms)
 {
     int32_t status = -1;
-    IssSensors_Handle * pSensorHandle = NULL;
 
     /* Check if the handle is valid or not */
     status = checkForHandle(handle);
@@ -1021,7 +1043,7 @@ int32_t IssSensor_Control(const IssSensors_Handle* handle, uint32_t cmd, uint8_t
                 if(0U == devType)
                 {
                     uint8_t  ch_num;
-                    int8_t ub960InstanceId = (int8_t)chId;
+                    uint8_t ub960InstanceId = (uint8_t)chId;
                     uint8_t  i2cSlaveAddr8;
                     IssSensor_getDeserializerI2cAddr(ub960InstanceId, &ch_num, &i2cSlaveAddr8);
                     slaveI2cAddr = i2cSlaveAddr8;
@@ -1224,12 +1246,70 @@ int32_t IssSensor_cfgDesScript(const I2cParams *script, int8_t desHubInstId)
     }
     else
     {
-        IssSensor_getDeserializerI2cAddr(desHubInstId, &desI2cBusNum,
+        IssSensor_getDeserializerI2cAddr((uint8_t)desHubInstId, &desI2cBusNum,
             &desI2cAddr);
 
-    appLogPrintf("Deserializer config start \n");
+        if(NULL != script)
+        {
+#ifdef ENABLE_DEBUG_IMAGING
+            appLogPrintf("Deserializer config start \n");
+#endif
+            cnt = 0;
+            regAddr  = script[cnt].nRegAddr;
+            regValue = (uint8_t)script[cnt].nRegValue;
+            delayMilliSec = (uint16_t)script[cnt].nDelay;
+
+            while(regAddr != 0xFFFFU)
+            {
+                status = Deserializer_WriteReg(desI2cAddr, regAddr, regValue);
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot reach this portion.
+                The test framework does not support the configuration required to trigger this error scenario.
+                Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+                    However, due to the stated rationale, this is not tested.
+                <justification end> */
+                if (0 != status)
+                {
+                    appLogPrintf(" Deserializer Error: Reg Write Failed for regAddr 0x%.2x, cnt = %d\n", regAddr, cnt);
+                    break;
+                }
+                /* LDRA_JUSTIFY_END */
+
+                if(delayMilliSec > 0U)
+                {
+                    appLogWaitMsecs(delayMilliSec);
+                }
+
+                cnt++;
+                regAddr  = script[cnt].nRegAddr;
+                regValue = (uint8_t)script[cnt].nRegValue;
+                delayMilliSec = (uint16_t)script[cnt].nDelay;
+            }
+#ifdef ENABLE_DEBUG_IMAGING
+            appLogPrintf("End of deserializer config \n");
+#endif
+        }
+    }
+    return (status);
+}
+
+int32_t ub953_cfgScript(uint8_t  i2cInstId, uint8_t  i2cAddr, const I2cParams *script)
+{
+    (void)i2cInstId;
+    int32_t status = 0;
+
+    uint16_t regAddr;
+    uint8_t  regValue;
+    uint16_t delayMilliSec;
+    uint32_t cnt;
+
     if(NULL != script)
     {
+#ifdef ENABLE_DEBUG_IMAGING
+        appLogPrintf("ub953 config start : i2cAddr = 0x%.2x \n", i2cAddr);
+#endif
         cnt = 0;
         regAddr  = script[cnt].nRegAddr;
         regValue = (uint8_t)script[cnt].nRegValue;
@@ -1237,10 +1317,10 @@ int32_t IssSensor_cfgDesScript(const I2cParams *script, int8_t desHubInstId)
 
         while(regAddr != 0xFFFFU)
         {
-            status = Deserializer_WriteReg(desI2cAddr, regAddr, regValue);
+            status = Serialzier_WriteReg(i2cAddr, regAddr, regValue);
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> 
+            <justification start>
             Rationale: The component level negative test framework and test applications cannot reach this portion.
             The test framework does not support the configuration required to trigger this error scenario.
             Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
@@ -1248,7 +1328,7 @@ int32_t IssSensor_cfgDesScript(const I2cParams *script, int8_t desHubInstId)
             <justification end> */
             if (0 != status)
             {
-                appLogPrintf(" Deserializer Error: Reg Write Failed for regAddr 0x%.2x, cnt = %d\n", regAddr, cnt);
+                appLogPrintf(" Serializer Error: Reg Write Failed for regAddr 0x%.2x\n", regAddr);
                 break;
             }
             /* LDRA_JUSTIFY_END */
@@ -1263,48 +1343,11 @@ int32_t IssSensor_cfgDesScript(const I2cParams *script, int8_t desHubInstId)
             regValue = (uint8_t)script[cnt].nRegValue;
             delayMilliSec = (uint16_t)script[cnt].nDelay;
         }
+#ifdef ENABLE_DEBUG_IMAGING
+        appLogPrintf("End of serialzier config \n");
+#endif
     }
-        appLogPrintf("End of deserializer config \n");
-    }
-    return (status);
-}
 
-int32_t ub953_cfgScript(uint8_t  i2cInstId, uint8_t  i2cAddr, const I2cParams *script)
-{
-    (void)i2cInstId;
-    uint16_t regAddr;
-    uint8_t  regValue;
-    uint16_t delayMilliSec;
-    uint32_t cnt;
-    int32_t status = 0;
-
-    appLogPrintf("ub953 config start : i2cAddr = 0x%.2x \n", i2cAddr);
-    if(NULL != script)
-    {
-        cnt = 0;
-        regAddr  = script[0].nRegAddr;
-
-        while(regAddr != 0xFFFFU)
-        {
-            regAddr  = script[cnt].nRegAddr;
-            regValue = (uint8_t)script[cnt].nRegValue;
-            delayMilliSec = (uint16_t)script[cnt].nDelay;
-            /* Convert Registers address and value into 8bit array */
-            status = Serialzier_WriteReg(i2cAddr, regAddr, regValue);
-
-            if (0 != status)
-            {
-                appLogPrintf(" UB953 Error: Reg Write Failed for regAddr 0x%.2x\n", regAddr);
-                break;
-            }
-            cnt++;
-            if(delayMilliSec > 0U)
-            {
-                appLogWaitMsecs(delayMilliSec);
-            }
-        }
-    }
-    appLogPrintf(" End of UB953 config \n");
     return (status);
 }
 
@@ -1389,7 +1432,9 @@ static int32_t IssSensor_cfgDesScriptCustom(uint8_t  desI2cAddr, I2cParams *scri
             delayMilliSec = script[cnt].nDelay;
         }
     }
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf(" End of deserializer config \n");
+#endif
     return (status);
 }
 #endif
@@ -1682,7 +1727,7 @@ int32_t disableUB960Streaming(uint32_t chId)
 int32_t UB960_SelectPort(uint32_t chId)
 {
     int32_t status = -1;
-    int8_t desHubInstId = getDeserializerInstIdFromChId(chId);
+    uint8_t desHubInstId = (uint8_t)getDeserializerInstIdFromChId(chId);
     uint8_t desI2cAddr;
     uint8_t desI2cBusNum = 0;
     uint8_t portSelReg = 0x4C;
@@ -1726,7 +1771,7 @@ int32_t UB960_SetSerAlias(uint32_t chId, uint8_t ser_alias_i2c_addr_7bit)
         {0xFFFF, 0x0, 0x0}
     };
 
-    IssSensor_getDeserializerI2cAddr(desHubInstId, &desI2cBusNum,
+    IssSensor_getDeserializerI2cAddr((uint8_t)desHubInstId, &desI2cBusNum,
         &desI2cAddr);
 
     status = Deserializer_ReadReg(desI2cAddr, portSelReg, &portSelVal);
@@ -1786,7 +1831,7 @@ int32_t UB960_SetAlias(uint32_t chId, uint8_t slot, uint8_t phy_i2c_addr_7bit, u
 
     appLogPrintf("Configuring Alias on UB960 CHID: %i, aliasing 0x%.2x to 0x%.2x\n", chId, phy_i2c_addr_7bit, alias_i2c_addr_7bit);
 
-    IssSensor_getDeserializerI2cAddr(desHubInstId, &desI2cBusNum,
+    IssSensor_getDeserializerI2cAddr((uint8_t)desHubInstId, &desI2cBusNum,
         &desI2cAddr);
 
     status = Deserializer_ReadReg(desI2cAddr, portSelReg, &portSelVal);
@@ -1836,7 +1881,7 @@ int32_t UB960_SetSensorAlias(uint32_t chId, uint8_t sensor_phy_i2c_addr_7bit, ui
     }
     else
     {
-        IssSensor_getDeserializerI2cAddr(desHubInstId, &desI2cBusNum,
+        IssSensor_getDeserializerI2cAddr((uint8_t)desHubInstId, &desI2cBusNum,
             &desI2cAddr);
 
         status = Deserializer_ReadReg(desI2cAddr, pageSelReg, &pageSelVal);
@@ -2038,10 +2083,9 @@ int32_t ImageSensor_RemoteServiceHandler(char *service_name, uint32_t cmd,
                 {
                     #if defined(B7_IMPLEMENTATION)
                     IssSensor_DeserializerInit();
-                    #else
+                    #endif
                     status = IssSensor_PowerOn(pSenHndl, channel_mask);
                 }
-#endif
             }
             break;
         case (uint32_t)IM_SENSOR_CMD_CONFIG:
@@ -2412,7 +2456,15 @@ int32_t ImageSensor_RemoteServiceHandler(char *service_name, uint32_t cmd,
                         cmd_param[channel_id] = 0xFF;
                     }
                     channel_mask = channel_mask >> 1;
-                    channel_id++;
+                    if(channel_id < (ISS_SENSORS_MAX_CHANNEL-1U))
+                    {
+                        channel_id = channel_id + 1U;
+                    }
+                    else
+                    {
+                        channel_id = (uint8_t)(ISS_SENSORS_MAX_CHANNEL-1U);
+                        appLogPrintf("IM_SENSOR_CMD_DETECT: Max channel_id reached!!\n");
+                    }
                 }
                 status = 0;
             }
@@ -2455,7 +2507,7 @@ int32_t IssSensor_DeInit(void)
  * \ingroup group_vision_function_imaging_sensordrv
  *******************************************************************************
 */
-static void IssSensor_getDeserializerI2cAddr(int8_t desHubInst,
+static void IssSensor_getDeserializerI2cAddr(uint8_t desHubInst,
     uint8_t *i2cBus, uint8_t *i2cAddr)
 {
     #if defined (MCU_PLUS_SDK)
@@ -2470,7 +2522,7 @@ static void IssSensor_getDeserializerI2cAddr(int8_t desHubInst,
     #else
     if(gFusion2Det != 0)
     {
-        Board_fpdUb9702GetI2CAddr((uint8_t)desHubInst, NULL, i2cBus, i2cAddr);
+        Board_fpdUb9702GetI2CAddr(desHubInst, NULL, i2cBus, i2cAddr);
     }
     else
     {
@@ -2626,7 +2678,7 @@ static int32_t IssSensor_detect_serializer(int8_t desHubInstId, uint16_t *camera
     uint8_t portSelCfg[] = {DES_PORT_SEL_0, DES_PORT_SEL_1,
                             DES_PORT_SEL_2, DES_PORT_SEL_3};
 
-    IssSensor_getDeserializerI2cAddr(desHubInstId, &desI2cInstId,
+    IssSensor_getDeserializerI2cAddr((uint8_t)desHubInstId, &desI2cInstId,
         &desI2cAddr);
 
     status = Deserializer_ReadReg(desI2cAddr, 0x4C, &pageSelectOrig);
@@ -3390,7 +3442,7 @@ static int32_t IssSensor_DeserializerInit_B7(void)
     for(uint8_t hubInst = 0; hubInst < gDeserializerHubs; hubInst++)
     {
         desI2cAddr = 0x00;
-        IssSensor_getDeserializerI2cAddr((int8_t)hubInst, &desI2cBusNum, &desI2cAddr);
+        IssSensor_getDeserializerI2cAddr(hubInst, &desI2cBusNum, &desI2cAddr);
 
         Deserializer_WriteReg(desI2cAddr, 0x01, 0x21); /* Soft reset and release GPIO hold */
         appLogWaitMsecs(10); /* delay 10ms */
@@ -3503,7 +3555,7 @@ static int32_t IssSensor_DeserializerInit_B7(void)
 
     for(uint8_t deshubInst = 0; deshubInst < gDeserializerHubs; deshubInst++)
     {
-        IssSensor_getDeserializerI2cAddr((int8_t)deshubInst, &desI2cBusNum, &desI2cAddr);
+        IssSensor_getDeserializerI2cAddr(deshubInst, &desI2cBusNum, &desI2cAddr);
         deserializer_setBackChannel50mbps(desI2cAddr);
         deserializer_setCsiSpeed(desI2cAddr, moduleInfo->fpdLink);
     }
@@ -3515,41 +3567,42 @@ static int32_t IssSensor_DeserializerInit_B7(void)
 
 /* Checks which cameras are connected to the specified Deserializer */
 /* Returns a 4-bit mask - 0 = Camera Not Detected, 1 = Camera Detected */
-static int32_t IssSensor_DeserializerInit()
+static int32_t IssSensor_DeserializerInit(void)
 {
     int32_t status = -1;
     uint8_t  desI2cBusNum = 0;
     uint8_t  desI2cAddr;
     tivx_mutex desCfgLock;
-    vx_bool bDet = vx_false_e; /* default to Fusion1 configuration */
+    vx_bool bDet = (vx_bool)vx_false_e; /* default to Fusion1 configuration */
 
-    tivxMutexCreate(&desCfgLock);
-    tivxMutexLock(desCfgLock);
+    (void)tivxMutexCreate(&desCfgLock);
+    (void)tivxMutexLock(desCfgLock);
 
-    IssSensor_getDeserializerI2cAddr(BOARD_CSI_INST_0, &desI2cBusNum,
+    IssSensor_getDeserializerI2cAddr((uint8_t)BOARD_CSI_INST_0, &desI2cBusNum,
         &desI2cAddr);
 
     /* Check for the Fusion2 board */
     #if defined (MCU_PLUS_SDK)
-    bDet = Board_detectBoard(BOARD_ID_FUSION2, desI2cBusNum);
+    bDet = (Board_detectBoard(BOARD_ID_FUSION2, desI2cBusNum) == BTRUE) ? (vx_bool)vx_true_e : (vx_bool)vx_false_e;
+    #if defined(SOC_AM62A)
+    /* AM62A AutoSDK for 5MP out of box support */
+    bDet = (vx_bool)vx_true_e;
+    #endif
     #else
-    bDet = Board_detectBoard(BOARD_ID_FUSION2);
+    bDet = (Board_detectBoard(BOARD_ID_FUSION2) == BTRUE) ? (vx_bool)vx_true_e : (vx_bool)vx_false_e;
     #endif
 
-    /* TODO: Remove this flag, it is only applicable for Fusion-2 */
-    bDet = vx_true_e;
-
-    if(bDet == vx_true_e)
+    if(bDet == (vx_bool)vx_true_e)
     {
         appLogPrintf("Fusion2 Board Detected, using Fusion2 configuration\n");
-        gFusion2Det = vx_true_e;
+        gFusion2Det = (vx_bool)vx_true_e;
         desCfgCommon_ptr = ub9702DesCfg_Common;
         gDeserializerHubs = 3U;
     }
     else
     {
         appLogPrintf("Fusion1 Board configuration\n");
-        gFusion2Det = vx_false_e;
+        gFusion2Det = (vx_bool)vx_false_e;
         desCfgCommon_ptr = ub960DesCfg_Common;
         gDeserializerHubs = 2U;
     }
@@ -3558,8 +3611,8 @@ static int32_t IssSensor_DeserializerInit()
     if(status!=0)
     {
         appLogPrintf(" I2C ERROR \n");
-        tivxMutexUnlock(desCfgLock);
-        tivxMutexDelete(&desCfgLock);
+        (void)tivxMutexUnlock(desCfgLock);
+        (void)tivxMutexDelete(&desCfgLock);
         return status;
     }
 
@@ -3572,9 +3625,12 @@ static int32_t IssSensor_DeserializerInit()
     }
 
     /* Deserializer non-port specific configuration */
-    for(int hubInst = 0; hubInst < gDeserializerHubs; hubInst++)
+    for(uint8_t hubInst = 0; hubInst < gDeserializerHubs; hubInst++)
     {
 #if defined(B7_IMPLEMENTATION)
+
+        Deserializer_WriteReg(desI2cAddr, 0x01, 0x02); /* hard reset */
+
         if(gFusion2Det == vx_true_e)
         {
             IssSensor_getDeserializerI2cAddr(hubInst, &desI2cBusNum, &desI2cAddr);
@@ -3584,10 +3640,10 @@ static int32_t IssSensor_DeserializerInit()
         }
         else
         {
-            status = IssSensor_cfgDesScript(desCfgCommon_ptr, hubInst);
+            status = IssSensor_cfgDesScript(desCfgCommon_ptr, (int8_t)hubInst);
         }
 #else
-        status = IssSensor_cfgDesScript(desCfgCommon_ptr, hubInst);
+        status = IssSensor_cfgDesScript(desCfgCommon_ptr, (int8_t)hubInst);
 #endif /* defined(B7_IMPLEMENTATION) */
     }
 
@@ -3602,8 +3658,8 @@ static int32_t IssSensor_DeserializerInit()
     }
 #endif /* defined(B7_IMPLEMENTATION) */
 
-    tivxMutexUnlock(desCfgLock);
-    tivxMutexDelete(&desCfgLock);
+    (void)tivxMutexUnlock(desCfgLock);
+    (void)tivxMutexDelete(&desCfgLock);
 
     return status;
 }
@@ -3621,10 +3677,10 @@ static int32_t IssSensor_DeserializerInit()
 static int32_t powerOnDeserializers(void)
 {
     int32_t status = -1;
-    uint8_t regAddr;
 
     #if defined(SOC_AM62A)
     uint8_t regVal = 0x00;
+    uint8_t regAddr = 0x00;
     /* Commented out old TCA6424 configuration - replaced with TCA6424 driver API below */
     // I2C_Handle i2c1Handle;
     // static const I2cParams tca6424Config[] = {
@@ -3706,91 +3762,135 @@ static int32_t powerOnDeserializers(void)
         .i2cAddress = IO_EXPANDER_ADDR
     };
 
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf("[TCA6424] Opening TCA6424@0x%02x on CONFIG_I2C1...\n", IO_EXPANDER_ADDR);
+#endif
     status = TCA6424_open(&TCA6424_IOexp_config, &TCA6424_IOexp_params);
     if (status != 0)
     {
         appLogPrintf("Error: TCA6424_open failed (status=%d)\n", status);
         return status;
     }
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf("[TCA6424] TCA6424_open - SUCCESS\n");
+#endif
 
     /* Configure Pin 20 (CSI_EN) as output and set HIGH */
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf("[TCA6424] Configuring Pin 20 (CSI_EN) as OUTPUT...\n");
+#endif
     status = TCA6424_config(&TCA6424_IOexp_config, 20, TCA6424_MODE_OUTPUT);
     if (status != 0)
     {
         appLogPrintf("Error: TCA6424_config Pin 20 failed (status=%d)\n", status);
+        TCA6424_close(&TCA6424_IOexp_config);
         return status;
     }
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf("[TCA6424] Pin 20 (CSI_EN) configured as OUTPUT - SUCCESS\n");
+#endif
 
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf("[TCA6424] Setting Pin 20 (CSI_EN) to HIGH...\n");
+#endif
     status = TCA6424_setOutput(&TCA6424_IOexp_config, 20, TCA6424_OUT_STATE_HIGH);
     if (status == 0)
     {
+#ifdef ENABLE_DEBUG_IMAGING
         appLogPrintf("[TCA6424] Pin 20 (CSI_EN) set HIGH - SUCCESS (Camera power enabled)\n");
+#endif
     }
     else
     {
         appLogPrintf("Error: Pin 20 (CSI_EN) set HIGH failed (status=%d)\n", status);
+        TCA6424_close(&TCA6424_IOexp_config);
         return status;
     }
 
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf("[TCA6424] Waiting 50ms for power-up...\n");
+#endif
     appLogWaitMsecs(50);  /* 50ms for power-up */
 
     /* Configure Pin 9 (CSI_RSTz) as output and set HIGH */
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf("[TCA6424] Configuring Pin 9 (CSI_RSTz) as OUTPUT...\n");
+#endif
     status = TCA6424_config(&TCA6424_IOexp_config, 9, TCA6424_MODE_OUTPUT);
     if (status != 0)
     {
         appLogPrintf("Error: TCA6424_config Pin 9 failed (status=%d)\n", status);
+        TCA6424_close(&TCA6424_IOexp_config);
         return status;
     }
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf("[TCA6424] Pin 9 (CSI_RSTz) configured as OUTPUT - SUCCESS\n");
+#endif
 
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf("[TCA6424] Setting Pin 9 (CSI_RSTz) to HIGH (releasing reset)...\n");
+#endif
     status = TCA6424_setOutput(&TCA6424_IOexp_config, 9, TCA6424_OUT_STATE_HIGH);
     if (status == 0)
     {
+#ifdef ENABLE_DEBUG_IMAGING
         appLogPrintf("[TCA6424] Pin 9 (CSI_RSTz) set HIGH - SUCCESS (Reset released)\n");
+#endif
     }
     else
     {
         appLogPrintf("Error: Pin 9 (CSI_RSTz) set HIGH failed (status=%d)\n", status);
+        TCA6424_close(&TCA6424_IOexp_config);
         return status;
     }
 
     /* Configure Pin 19 (CSI_SEL2) as output and set LOW */
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf("[TCA6424] Configuring Pin 19 (CSI_SEL2) as OUTPUT...\n");
+#endif
     status = TCA6424_config(&TCA6424_IOexp_config, 19, TCA6424_MODE_OUTPUT);
     if (status != 0)
     {
         appLogPrintf("Error: TCA6424_config Pin 19 failed (status=%d)\n", status);
+        TCA6424_close(&TCA6424_IOexp_config);
         return status;
     }
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf("[TCA6424] Pin 19 (CSI_SEL2) configured as OUTPUT - SUCCESS\n");
+#endif
 
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf("[TCA6424] Setting Pin 19 (CSI_SEL2) to LOW...\n");
+#endif
     status = TCA6424_setOutput(&TCA6424_IOexp_config, 19, TCA6424_OUT_STATE_LOW);
     if (status == 0)
     {
+#ifdef ENABLE_DEBUG_IMAGING
         appLogPrintf("[TCA6424] Pin 19 (CSI_SEL2) set LOW - SUCCESS (CSI channel selected)\n");
+#endif
     }
     else
     {
         appLogPrintf("Error: Pin 19 (CSI_SEL2) set LOW failed (status=%d)\n", status);
+        TCA6424_close(&TCA6424_IOexp_config);
         return status;
     }
 
+    /* Close handle after use */
+    TCA6424_close(&TCA6424_IOexp_config);
+#ifdef ENABLE_DEBUG_IMAGING
+    appLogPrintf("[TCA6424] Closed TCA6424@0x%02x on CONFIG_I2C1...\n", IO_EXPANDER_ADDR);
+#endif
+
     if (status == 0)
     {
+#ifdef ENABLE_DEBUG_IMAGING
         appLogPrintf("[TCA6424] ========== All pins configured successfully! ==========\n");
         appLogPrintf("[TCA6424] Summary: CSI_EN=HIGH, CSI_RSTz=HIGH, CSI_SEL2=LOW\n");
         appLogPrintf("[TCA6424] Waiting 200ms for UB9702 power-up and I2C to become ready...\n");
         appLogWaitMsecs(200);  /* Wait 200ms after reset release */
         appLogPrintf("[TCA6424] Power-up delay complete - proceeding with I2C communication\n");
+#endif
     }
     else
     {
@@ -3800,7 +3900,9 @@ static int32_t powerOnDeserializers(void)
 
     /* TCA9543A is a 2-channel I2C switch. It must be configured to channel 1 (out of channel 0 and 1) for I2C communication
         to CSI direct link and fusion board. Both are the same channel */
+#ifdef ENABLE_DEBUG_IMAGING
     appLogPrintf("AM62A Board Init: Configuring TCA9543A mux on CONFIG_I2C2\n");
+#endif
     regVal = 0x02;  /* Enable channel 1 */
     status = Board_i2c8BitRegWrSingle(
         gISS_Sensor_I2cHandle,
@@ -3814,13 +3916,15 @@ static int32_t powerOnDeserializers(void)
         return status;
     }
     else{
+#ifdef ENABLE_DEBUG_IMAGING
         appLogPrintf("\nsuccesfully configured I2C switch to channel 1.\n");
+#endif
     }
 
     #elif !defined(MCU_PLUS_SDK)
     uint8_t regVals[] = {0xFF, 0xFE};
     uint32_t tca6408SlaveAddr = TCA6408_I2C_ADDR_1;
-    regAddr = TCA6408_CONFIG_REG;
+    uint8_t regAddr = TCA6408_CONFIG_REG;
 
     for(uint8_t i = 0; i < (sizeof(regVals)/sizeof(regVals[0])); i++)
     {

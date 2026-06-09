@@ -23,6 +23,8 @@ SECTIONS
     .text:   {} palign(8) > M4F_IRAM     /* This is where code resides */
 
     .bss:    {} palign(8) > M4F_DRAM     /* This is where uninitialized globals go */
+    /* This is allocated for IPC */
+    .bss.ipcctrl: {} palign(8) > M4F_DDR
     RUN_START(__BSS_START)
     RUN_END(__BSS_END)
 
@@ -44,6 +46,7 @@ MEMORY
     M4F_VECS : ORIGIN = 0x00000000 , LENGTH = 0x00000200
     M4F_IRAM : ORIGIN = 0x00000200 , LENGTH = 0x0002FE00
     M4F_DRAM : ORIGIN = 0x00030000 , LENGTH = 0x00010000
+    M4F_DDR  : ORIGIN = 0x9D9F0000 , LENGTH = 0x00010000
 
 
     DDR_IPC_VRING_RTOS: ORIGIN = 0x9C800000, LENGTH = 0x00300000

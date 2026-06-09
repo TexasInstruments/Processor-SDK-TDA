@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -42,8 +42,8 @@ extern "C"
 #include <stdint.h>
 #include <drivers/hw_include/soc_config.h>
 
-#define BOOTLOADER_UNIFLASH_FILE_HEADER_MAGIC_NUMBER  (0x46554C42) /* BLXF */
-#define BOOTLOADER_UNIFLASH_RESP_HEADER_MAGIC_NUMBER  (0x52554C42) /* BLXR */
+#define BOOTLOADER_UNIFLASH_FILE_HEADER_MAGIC_NUMBER  (0x46554C42U) /* BLXF */
+#define BOOTLOADER_UNIFLASH_RESP_HEADER_MAGIC_NUMBER  (0x52554C42U) /* BLXR */
 
 #define BOOTLOADER_UNIFLASH_OPTYPE_FLASH             (0xF0)
 #define BOOTLOADER_UNIFLASH_OPTYPE_FLASH_VERIFY      (0xF1)
@@ -57,12 +57,12 @@ extern "C"
 #define BOOTLOADER_UNIFLASH_OPTYPE_EMMC_VERIFY       (0xF6)
 #endif
 
-#define BOOTLOADER_UNIFLASH_STATUSCODE_SUCCESS                   (0x00000000)
-#define BOOTLOADER_UNIFLASH_STATUSCODE_MAGIC_ERROR               (0x10000001)
-#define BOOTLOADER_UNIFLASH_STATUSCODE_OPTYPE_ERROR              (0x20000001)
-#define BOOTLOADER_UNIFLASH_STATUSCODE_FLASH_ERROR               (0x30000001)
-#define BOOTLOADER_UNIFLASH_STATUSCODE_FLASH_VERIFY_ERROR        (0x40000001)
-#define BOOTLOADER_UNIFLASH_STATUSCODE_FLASH_ERASE_ERROR         (0x50000001)
+#define BOOTLOADER_UNIFLASH_STATUSCODE_SUCCESS                   (0x00000000U)
+#define BOOTLOADER_UNIFLASH_STATUSCODE_MAGIC_ERROR               (0x10000001U)
+#define BOOTLOADER_UNIFLASH_STATUSCODE_OPTYPE_ERROR              (0x20000001U)
+#define BOOTLOADER_UNIFLASH_STATUSCODE_FLASH_ERROR               (0x30000001U)
+#define BOOTLOADER_UNIFLASH_STATUSCODE_FLASH_VERIFY_ERROR        (0x40000001U)
+#define BOOTLOADER_UNIFLASH_STATUSCODE_FLASH_ERASE_ERROR         (0x50000001U)
 
 typedef struct Bootloader_UniflashFileHeader_s
 {

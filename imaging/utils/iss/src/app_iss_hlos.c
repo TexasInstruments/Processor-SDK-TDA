@@ -68,9 +68,9 @@
 static uint8_t  g_cmdPrm[CMD_PARAM_SIZE];
 
 #if defined (SOC_AM62A)
-uint32_t remote_cpu_id = APP_IPC_CPU_MCU1_0;
+static uint32_t target_cpu_id = APP_IPC_CPU_MCU1_0;
 #else
-uint32_t remote_cpu_id = APP_IPC_CPU_MCU2_0;
+static uint32_t target_cpu_id = APP_IPC_CPU_MCU2_0;
 #endif
 
 
@@ -85,7 +85,7 @@ int32_t appEnumerateImageSensor(char *sensor_name_list[], uint8_t  * num_sensors
 
     (void)memset(g_cmdPrm, 0, CMD_PARAM_SIZE);
     status = appRemoteServiceRun(
-        remote_cpu_id ,
+        target_cpu_id ,
         IMAGE_SENSOR_REMOTE_SERVICE_NAME,
         (uint32_t)IM_SENSOR_CMD_ENUMERATE,
         (void*)g_cmdPrm,
@@ -146,7 +146,7 @@ int32_t appQueryImageSensor(char* sensor_name, IssSensor_CreateParams* pSensorCr
 
     appLogPrintf("ISS: Querying sensor [%s] ... !!!\n", sensor_name);
     status = appRemoteServiceRun(
-        remote_cpu_id ,
+        target_cpu_id ,
         IMAGE_SENSOR_REMOTE_SERVICE_NAME,
         (uint32_t)IM_SENSOR_CMD_QUERY,
         (void*)g_cmdPrm,
@@ -212,7 +212,7 @@ int32_t appInitImageSensor(char* sensor_name, uint32_t featuresEnabled, uint32_t
         (void)memcpy((void*)g_cmdPrm, (const void*)sensor_name, ISS_SENSORS_MAX_NAME);
         (void)memcpy((void*)&g_cmdPrm[ISS_SENSORS_MAX_NAME], (const void*)&channel_mask, sizeof(uint32_t));
         status = appRemoteServiceRun(
-            remote_cpu_id ,
+            target_cpu_id ,
             IMAGE_SENSOR_REMOTE_SERVICE_NAME,
             (uint32_t)IM_SENSOR_CMD_PWRON,
             (void*)g_cmdPrm,
@@ -237,7 +237,7 @@ int32_t appInitImageSensor(char* sensor_name, uint32_t featuresEnabled, uint32_t
             (void)memcpy((void*)&g_cmdPrm[ISS_SENSORS_MAX_NAME + sizeof(uint32_t)], (const void*)&channel_mask, sizeof(uint32_t));
 
             status = appRemoteServiceRun(
-                remote_cpu_id ,
+                target_cpu_id ,
                 IMAGE_SENSOR_REMOTE_SERVICE_NAME,
                 (uint32_t)IM_SENSOR_CMD_CONFIG,
                 (void*)g_cmdPrm,
@@ -284,7 +284,7 @@ int32_t appDetectImageSensor(uint8_t *sensor_id_list, uint8_t *num_sensors_found
     (void)memcpy((void*)g_cmdPrm, (const void*)&channel_mask, sizeof(uint32_t));
 
     status = appRemoteServiceRun(
-        remote_cpu_id ,
+        target_cpu_id ,
         IMAGE_SENSOR_REMOTE_SERVICE_NAME,
         (uint32_t)IM_SENSOR_CMD_DETECT,
         (void*)g_cmdPrm,
@@ -306,8 +306,16 @@ int32_t appDetectImageSensor(uint8_t *sensor_id_list, uint8_t *num_sensors_found
                 }
             }
             channel_mask_local = channel_mask_local >> 1;
-            chId++;
-            cmd_ptr = &g_cmdPrm[(uint32_t)sizeof(uint8_t) * ((uint32_t)chId + 1U)];
+            if (chId < 255U)
+            {
+                chId++;
+            }
+            else
+            {
+                chId = 255U;
+                appLogPrintf("%s: chId maxed out, setting to 0\n", __func__);
+            }
+            cmd_ptr = &g_cmdPrm[(uint32_t)sizeof(uint8_t) * (((uint32_t)chId) + 1U)];
         }
         *num_sensors_found = numDetectedSensors;
     }
@@ -332,7 +340,7 @@ int32_t appStartImageSensor(char* sensor_name, uint32_t channel_mask)
     (void)memcpy((void*)&g_cmdPrm[ISS_SENSORS_MAX_NAME], (const void*)&channel_mask, sizeof(uint32_t));
 
     status = appRemoteServiceRun(
-        remote_cpu_id ,
+        target_cpu_id ,
         IMAGE_SENSOR_REMOTE_SERVICE_NAME,
         (uint32_t)IM_SENSOR_CMD_STREAM_ON,
         (void*)g_cmdPrm,
@@ -381,7 +389,7 @@ int32_t appStopImageSensor(char* sensor_name, uint32_t channel_mask)
     (void)memcpy((void*)&g_cmdPrm[ISS_SENSORS_MAX_NAME], (const void*)&channel_mask, sizeof(uint32_t));
 
     status = appRemoteServiceRun(
-        remote_cpu_id ,
+        target_cpu_id ,
         IMAGE_SENSOR_REMOTE_SERVICE_NAME,
         (uint32_t)IM_SENSOR_CMD_STREAM_OFF,
         (void*)g_cmdPrm,
@@ -429,7 +437,7 @@ int32_t appDeInitImageSensor(char* sensor_name)
     (void)memcpy((void*)g_cmdPrm, (const void*)sensor_name, ISS_SENSORS_MAX_NAME);
 
     status = appRemoteServiceRun(
-        remote_cpu_id ,
+        target_cpu_id ,
         IMAGE_SENSOR_REMOTE_SERVICE_NAME,
         (uint32_t)IM_SENSOR_CMD_PWROFF,
         (void*)g_cmdPrm,

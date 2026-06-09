@@ -46,6 +46,16 @@ void Armv8_dsbSy();
 /* Get CPU core id */
 uint64_t Armv8_getCoreId();
 
+/**
+ * \brief This API route the interrupt to the specific coreid
+ *
+ * \param intNum [in] Interrupt number
+ * \param coreId [in] CoreID to which the Interrupt is routed, returned from Armv8_getCoreId()
+ *                    It can be 0/1/2/3
+ *
+ */
+void HwIP_routeGICSharedPeripheralInterrupt(uint32_t intrNum, uint8_t coreId);
+
 /* Exit execution */
 void Armv8_exit(void);
 

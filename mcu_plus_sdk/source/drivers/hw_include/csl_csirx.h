@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -49,19 +49,16 @@ extern "C"
 
 #if defined (IP_VERSION_CSIRX_V0)
 #include <drivers/csirx/v0/cslr_csirx.h>
-#endif
-
-#if defined (IP_VERSION_CSIRX_V1)
-#include <drivers/csirx/v1/hw_include/V1/cps_drv.h>
-#include <drivers/csirx/v1/hw_include/V1/csirx_ss.h>
-#include <drivers/csirx/v1/hw_include/V1/csirx_if.h>
-#include <drivers/csirx/v1/hw_include/V1/cslr_csirx.h>
-#include <drivers/csirx/v1/hw_include/V1/csirx_structs_if.h>
-#include <drivers/csirx/v1/hw_include/V1/csirx_sanity.h>
-#include <drivers/csirx/v1/hw_include/V1/cslr_csi_rx_if.h>
-#include <drivers/csirx/v1/hw_include/V1/csirx_regs_macros.h>
-#include <drivers/csirx/v1/hw_include/V1/cdn_errno.h>
-#include <drivers/csirx/v1/hw_include/V1/csirx_regs.h>
+#include <drivers/csirx/v0/hw_include/cps_drv.h>
+#include <drivers/csirx/v0/hw_include/csirx_ss.h>
+#include <drivers/csirx/v0/hw_include/csirx_if.h>
+#include <drivers/csirx/v0/hw_include/cslr_csirx.h>
+#include <drivers/csirx/v0/hw_include/csirx_structs_if.h>
+#include <drivers/csirx/v0/hw_include/csirx_sanity.h>
+#include <drivers/csirx/v0/hw_include/cslr_csi_rx_if.h>
+#include <drivers/csirx/v0/hw_include/csirx_regs_macros.h>
+#include <drivers/csirx/v0/hw_include/cdn_errno.h>
+#include <drivers/csirx/v0/hw_include/csirx_regs.h>
 #endif
 
 #ifdef __cplusplus

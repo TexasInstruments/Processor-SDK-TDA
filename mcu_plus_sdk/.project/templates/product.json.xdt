@@ -3,77 +3,49 @@
     deviceName = args.utils.getProjectSpecDevice(args.device);
     if(args.device == "am62x")
         deviceName = "AM62x"
+    deviceName = deviceName.toUpperCase();
     sysCfgVersion = args.utils.getSysCfgVersionProjectSpec();
+    sdkOpnName = args.utils.getSdkOpn(args.device)
 %%}
 {
 % if(isDevelopmentMode) {
     "name": "MCU_PLUS_SDK",
     "displayName": "MCU+ SDK",
 % } else {
-    "name": "MCU_PLUS_SDK_`deviceName`",
+    "name": "`sdkOpnName`",
+    % if ((args.device == "am62x") || (args.device == "am62ax") || (args.device == "am62px") || (args.device == "j722s")  ) {
     "displayName": "MCU+ SDK for `deviceName`",
+    % } else {
+    "displayName": "FreeRTOS SDK for `deviceName`",
+    % }
 % }
     "version": "07.03.01",
     "documentationPath": "../docs",
     "includePaths": [
         "../source",
+% if((args.device == "am62x")|| (args.device == "am62ax") || (args.device == "am62px") || (args.device == "am62dx") || (args.device == "am275x") || (args.device == "am62lx") || (args.device == "j722s") || isDevelopmentMode) {
+        "../source/networking/enet/core/sysconfig",
+% }
     ],
     "components": [
-% if((args.device == "am64x") || (args.device == "am243x")) {
-        "/kernel/dpl",
-        "/drivers/drivers",
         "/board/board",
+        "/drivers/drivers",
         "/fs/fs",
-        "/networking/networking",
-        "/industrial_comms/industrial_comms",
-        "/security/security",
-        "/usb/usb",
-        "/motor_control/motor_control",
-        "/pru_io/pru_io",
-% }
-% if(args.device == "am263x") {
         "/kernel/dpl",
-        "/drivers/drivers",
-        "/board/board",
-        "/networking/networking",
-        "/industrial_comms/industrial_comms",
-        "/xbar/xbar",
-% }
-% if((args.device == "am273x") || (args.device == "awr294x")) {
-        "/kernel/dpl",
-        "/drivers/drivers",
-        "/board/board",
+% if((args.device == "am62x") || (args.device == "am62ax") ||  (args.device == "am62px") || (args.device == "am62dx") || (args.device == "am275x") || (args.device == "am62lx") || (args.device == "j722s") || isDevelopmentMode) {
         "/networking/networking",
 % }
-% if((args.device == "am62x") || (args.device == "am62ax") || (args.device == "am62px") || (args.device == "j722s")) {
-        "/kernel/dpl",
-        "/drivers/drivers",
-        "/board/board",
-        "/fs/fs",
-%if (args.device == "j722s"){
-        "/pdm_utils/tools/dm_power_config",
+% if((args.device == "am275x") || isDevelopmentMode) {
+        "/optiflash/optiflash",
 %}
+% if((args.device == "am62ax") || (args.device == "am62dx") || isDevelopmentMode) {
+        "/security/security",
 % }
     ],
     "devices": [
-% if((args.device == "am64x") || (isDevelopmentMode)) {
-        "AM64x_beta",
-% }
-% if((args.device == "am243x") || (isDevelopmentMode)) {
-        "AM243x_ALV_beta",
-        "AM243x_ALX_beta",
-% }
-% if((args.device == "am273x") || (isDevelopmentMode)) {
-        "AM273x",
-% }
-% if((args.device == "awr294x") || (isDevelopmentMode)) {
-        "AWR294X",
-% }
-% if((args.device == "am263x") || (isDevelopmentMode)) {
-        "AM263x_beta",
-% }
 % if((args.device == "am62x") || (isDevelopmentMode)) {
         "AM62x",
+        "AM62SIP",
 % }
 % if((args.device == "am62ax") || (isDevelopmentMode)) {
         "AM62Ax",
@@ -81,64 +53,36 @@
 % if((args.device == "am62px") || (isDevelopmentMode)) {
         "AM62Px",
 % }
+% if((args.device == "am275x") || (isDevelopmentMode)) {
+        "AM275x",
+% }
 % if((args.device == "j722s") || (isDevelopmentMode)) {
         "J722S",
 % }
+% if((args.device == "am62dx") || (isDevelopmentMode)) {
+        "AM62Dx",
+% }
+% if((args.device == "am62lx") || (isDevelopmentMode)) {
+        "AM62Lx",
+% }
     ],
     "contexts": {
-% if((args.device == "am64x") || (isDevelopmentMode)) {
-        "AM64x_beta": [
-            "r5fss0-0",
-            "r5fss0-1",
-            "r5fss1-0",
-            "r5fss1-1",
-            "m4fss0-0",
-            "a53ss0-0",
-        ],
-% }
-% if((args.device == "am243x") || (isDevelopmentMode)) {
-        "AM243x_ALV_beta": [
-            "r5fss0-0",
-            "r5fss0-1",
-            "r5fss1-0",
-            "r5fss1-1",
-            "m4fss0-0",
-        ],
-        "AM243x_ALX_beta": [
-            "r5fss0-0",
-            "r5fss0-1",
-            "r5fss1-0",
-            "r5fss1-1",
-            "m4fss0-0",
-        ],
-% }
-% if((args.device == "am273x") || (isDevelopmentMode)) {
-        "AM273x": [
-            "r5fss0-0",
-            "r5fss0-1",
-            "c66ss0"
-        ],
-% }
-% if((args.device == "awr294x") || (isDevelopmentMode)) {
-        "AWR294X": [
-            "r5fss0-0",
-            "r5fss0-1",
-            "c66ss0"
-        ],
-% }
-% if((args.device == "am263x") || (isDevelopmentMode)) {
-        "AM263x_beta": [
-            "r5fss0-0",
-            "r5fss0-1",
-            "r5fss1-0",
-            "r5fss1-1",
-            "hsm0-0",
-        ],
-% }
 % if((args.device == "am62x") || (isDevelopmentMode)) {
         "AM62x": [
             "m4fss0-0",
             "r5fss0-0",
+            "a53ss0-0",
+            "a53ss0-1",
+            "a53ss1-0",
+            "a53ss1-1",
+        ],
+        "AM62SIP": [
+            "m4fss0-0",
+            "r5fss0-0",
+            "a53ss0-0",
+            "a53ss0-1",
+            "a53ss1-0",
+            "a53ss1-1",
         ],
 % }
 % if((args.device == "am62ax") || (isDevelopmentMode)) {
@@ -152,6 +96,17 @@
 % if((args.device == "am62px") || (isDevelopmentMode)) {
         "AM62Px": [
             "mcu-r5fss0-0",
+            "wkup-r5fss0-0",
+        ],
+% }
+% if((args.device == "am275x") || (isDevelopmentMode)) {
+        "AM275x": [
+            "r5fss0-0",
+            "r5fss0-1",
+            "r5fss1-0",
+            "r5fss1-1",
+            "c75ss0-0",
+            "c75ss1-0",
             "wkup-r5fss0-0",
         ],
 % }
@@ -169,6 +124,25 @@
             "hsm0-0",
         ],
 % }
+% if((args.device == "am62dx") || (isDevelopmentMode)) {
+        "AM62Dx": [
+            "mcu-r5fss0-0",
+            "r5fss0-0",
+            "c75ss0-0",
+            "a53ss0-0",
+            "a53ss0-1",
+            "a53ss1-0",
+            "a53ss1-1",
+        ],
+% }
+
+% if((args.device == "am62lx") || (isDevelopmentMode)) {
+        "AM62Lx": [
+            "a53ss0-0",
+            "a53ss0-1",
+        ],
+% }
+
     },
     "pinmuxUIOptions": {
         "group": "merged",

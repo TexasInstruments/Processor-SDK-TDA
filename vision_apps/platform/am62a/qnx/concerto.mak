@@ -10,6 +10,7 @@ CSOURCES    := $(call all-c-files)
 IDIRS+=$(VISION_APPS_PATH)/platform/$(SOC)/qnx
 IDIRS+=$(VISION_APPS_PATH)/platform/$(SOC)/rtos/common
 IDIRS+=$(VISION_APPS_PATH)/platform/$(SOC)/rtos
+IDIRS+=$(VISION_APPS_PATH)/platform/common
 
 include $(FINALE)
 

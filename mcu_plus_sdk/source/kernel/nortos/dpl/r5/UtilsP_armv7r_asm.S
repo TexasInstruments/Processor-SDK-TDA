@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -32,34 +32,38 @@
 
         .text
 
-
-/* FUNCTION DEF:   uint32_t UtilsP_armR5ReadATCMRegionRegister(void) */
-    .global UtilsP_armR5ReadATCMRegionRegister
-UtilsP_armR5ReadATCMRegionRegister:
+/* FUNCTION DEF:   uint32_t UtilsP_ReadATCMRegionRegister(void) */
+    .global UtilsP_ReadATCMRegionRegister
+    .arm
+UtilsP_ReadATCMRegionRegister:
     MRC     p15, #0, r0, c9, c1, #1        // Read ATCM Register Register
     BX      lr
 
-/* FUNCTION DEF:   uint32_t UtilsP_armR5ReadBTCMRegionRegister(void) */
-    .global UtilsP_armR5ReadBTCMRegionRegister
-UtilsP_armR5ReadBTCMRegionRegister:
+/* FUNCTION DEF:   uint32_t UtilsP_ReadBTCMRegionRegister(void) */
+    .global UtilsP_ReadBTCMRegionRegister
+    .arm
+UtilsP_ReadBTCMRegionRegister:
     MRC     p15, #0, r0, c9, c1, #0        // Read BTCM Register Register
     BX      lr
 
-/* FUNCTION DEF:   void_t UtilsP_armR5WriteATCMRegionRegister(uint32_t value) */
-    .global UtilsP_armR5WriteATCMRegionRegister
-UtilsP_armR5WriteATCMRegionRegister:
+/* FUNCTION DEF:   void_t UtilsP_WriteATCMRegionRegister(uint32_t value) */
+    .global UtilsP_WriteATCMRegionRegister
+    .arm
+UtilsP_WriteATCMRegionRegister:
     MCR     p15, #0, r0, c9, c1, #1        // Write ATCM Register Register
     BX      lr
 
-/* FUNCTION DEF:   void  UtilsP_armR5WriteBTCMRegionRegister(uint32_t value) */
-    .global UtilsP_armR5WriteBTCMRegionRegister
-UtilsP_armR5WriteBTCMRegionRegister:
+/* FUNCTION DEF:   void  UtilsP_WriteBTCMRegionRegister(uint32_t value) */
+    .global UtilsP_WriteBTCMRegionRegister
+    .arm
+UtilsP_WriteBTCMRegionRegister:
     MCR     p15, #0, r0, c9, c1, #0        // Write BTCM Register Register
     BX      lr
 
-/* FUNCTION DEF:   void UtilsP_armR5CacheEnableHardErrCache (uint32_t enable) */
-    .global UtilsP_armR5CacheEnableHardErrCache
-UtilsP_armR5CacheEnableHardErrCache:
+/* FUNCTION DEF:   void UtilsP_CacheEnableHardErrCache (uint32_t enable) */
+    .global UtilsP_CacheEnableHardErrCache
+    .arm
+UtilsP_CacheEnableHardErrCache:
     MRC     p15, #0, r1, c15, c0, #0       // Read Secondary Auxiliary Control Register
     CMP     r0, #0
     BEQ     armR5HardErrCache_disable
@@ -72,9 +76,10 @@ armR5HardErrCache_set:
     MCR     p15, #0, r1, c15, c0, #0       // Write Secondary Auxiliary Control Register
     BX      lr
 
-/* FUNCTION DEF: void UtilsP_armR5Dsb( void ) */
-    .global UtilsP_armR5Dsb
-UtilsP_armR5Dsb:
+/* FUNCTION DEF: void UtilsP_Dsb( void ) */
+    .global UtilsP_Dsb
+    .arm
+UtilsP_Dsb:
     DSB
     BX      lr
 

@@ -201,6 +201,8 @@ static vx_object_array createObjArray(vx_context context, vx_tensor *tensors, ui
 static vx_size getTensorDataType(vx_int32 tidl_type);
 static uint32_t getElementSize(uint32_t data_type);
 
+static uint32_t get_tidlrt_id(uint32_t id, char *name, sTIDLRT_Tensor_t *tensors[], uint32_t num_tensors);
+
 static vx_status map_cp_in_tidlrt_tensor_tiovx(AppObj *obj, vx_context context, vx_user_data_object config, vx_tensor *input_tensors, void *input_buffer, sTIDLRT_Tensor_t *in[]);
 static vx_status memset_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object config, vx_tensor *output_tensors, sTIDLRT_Tensor_t *out[]);
 static vx_status map_cp_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object config, vx_tensor *output_tensors, sTIDLRT_Tensor_t *out[]);
@@ -434,7 +436,10 @@ int32_t TIDLRT_setTensorDefault(sTIDLRT_Tensor_t *tensor)
     tensor->scale                   = 1.0;
     tensor->memType                 = 0;
     tensor->pitch[TIDL_ROI_PITCH] = -1;
+    tensor->pitch[TIDL_DIM1_PITCH] = -1;
+    tensor->pitch[TIDL_DIM2_PITCH] = -1;
     tensor->pitch[TIDL_CHANNEL_PITCH] = -1;
+    tensor->pitch[TIDL_LINE_PITCH] = -1;
     tensor->padValues[0] = 0;
     tensor->padValues[1] = 0;
     tensor->padValues[2] = 0;
@@ -442,10 +447,10 @@ int32_t TIDLRT_setTensorDefault(sTIDLRT_Tensor_t *tensor)
     tensor->dimValues[TIDL_DIM_WIDTH]   = -1;
     tensor->dimValues[TIDL_DIM_HEIGHT]  = -1;
     tensor->dimValues[TIDL_DIM_NUMCH]   = -1;
+    tensor->dimValues[TIDL_DIM_DIM2]   = -1;
+    tensor->dimValues[TIDL_DIM_DIM1]   = -1;
     tensor->dimValues[TIDL_DIM_BATCH]   = -1;
     tensor->bufferSize = -1;
-
-
 
     tidlrt_printf("TIDL_RT_OVX: Set default TIDLRT tensor done\n");
     return status;
@@ -1136,7 +1141,9 @@ int32_t TIDLRT_create(sTIDLRT_Params_t *prms, void **handle)
             if(tidlrt_debuglevel == 3U)
             {
                 tidlrt_printf("******** Printing stats at the end of TIDLRT_create call ****** \n");
-                (void)appPerfStatsPrintAll();
+                #ifndef SOC_TDA54
+                    (void)appPerfStatsPrintAll();
+                #endif
             }
             /* LDRA_JUSTIFY_END */
 #endif
@@ -2438,7 +2445,7 @@ static vx_status create_graph_tidl_tiovx(AppObj *obj)
                     TIVX_TARGET_DSP_C7_1_PRI_6,
                     TIVX_TARGET_DSP_C7_1_PRI_7,
                     TIVX_TARGET_DSP_C7_1_PRI_8,
-#if defined(SOC_J784S4) || defined(SOC_J722S) || defined (SOC_J742S2)
+#if defined(SOC_J784S4) || defined (SOC_J722S) || defined (SOC_TDA54) || defined (SOC_J742S2)
                     TIVX_TARGET_DSP_C7_2_PRI_1,
                     TIVX_TARGET_DSP_C7_2_PRI_2,
                     TIVX_TARGET_DSP_C7_2_PRI_3,
@@ -2469,7 +2476,7 @@ static vx_status create_graph_tidl_tiovx(AppObj *obj)
             };
 
 
-#if defined(SOC_J784S4) || defined(SOC_J722S) || defined (SOC_J742S2)
+#if defined(SOC_J784S4) || defined (SOC_J722S) || defined (SOC_TDA54) || defined (SOC_J742S2)
             const char* mpuTargets[] = {
                 TIVX_TARGET_MPU_1,
                 TIVX_TARGET_MPU_2,
@@ -2582,6 +2589,80 @@ static vx_status verify_graph_tidl_tiovx(AppObj *obj)
     return status;
 }
 
+/*
+ * tidlrt_update_inargs_dim_values - Synchronise TIDL_InArgs.inDimValues with
+ * the caller-supplied input tensor dimValues before each vxProcessGraph() call.
+ * 
+ * setInArgs() creates the TIDL_InArgs user-data-object once at init time.
+ * The caller may change the active batch/height/width on
+ * every inference call (dynamic-shape use-case).  The firmware reads
+ * inDimValues to know the actual live dimensions of each input buffer
+ * during the TIDL_Process call
+ */
+static vx_status tidlrt_update_inargs_dim_values(AppObj *obj, sTIDLRT_Tensor_t *in[])
+{
+    vx_status   status = VX_SUCCESS;
+    vx_map_id   map_id;
+    void       *inArgs_buffer = NULL;
+    vx_uint32   capacity = sizeof(TIDL_InArgs);
+
+    status = vxMapUserDataObject(obj->inArgs, 0, capacity, &map_id,
+            (void **)&inArgs_buffer, VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, 0);
+
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    vxMapUserDataObject fails if vx_user_data_object provided is NULL.
+    The vx_user_data_object provided here is obj->inArgs which is already
+    validated during setInArgs() at init time.
+    <justification end> */
+    if ((int32_t)VX_SUCCESS == status)
+    /* LDRA_JUSTIFY_END */
+    {
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        inArgs_buffer will never be null if the status above is VX_SUCCESS
+        i.e inArgs has been successfully mapped to inArgs_buffer
+        <justification end> */
+        if (inArgs_buffer != NULL)
+        /* LDRA_JUSTIFY_END */
+        {
+            TIDL_InArgs *inArgs = (TIDL_InArgs *)inArgs_buffer;
+            sTIDL_IOBufDesc_t *ioBufDesc = &obj->ioBufDesc;
+
+            for (uint32_t id = 0U; id < (uint32_t)ioBufDesc->numInputBuf; id++)
+            {
+                uint32_t tidlrt_id = get_tidlrt_id(id,
+                        (char *)ioBufDesc->inDataName[id],
+                        in,
+                        (uint32_t)ioBufDesc->numInputBuf);
+
+                for (uint32_t d = 0U; d < (uint32_t)TIDL_DIM_MAX; d++)
+                {
+                    inArgs->inDimValues[id][d] = (int32_t)in[tidlrt_id]->dimValues[d];
+                }
+            }
+        }
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        inArgs_buffer will never be null if the status above is VX_SUCCESS
+        i.e inArgs has been successfully mapped to inArgs_buffer
+        <justification end> */
+        else
+        {
+            tidlrt_printf("TIDL_RT_OVX: ERROR: tidlrt_update_inargs_dim_values: inArgs_buffer is NULL\n");
+            status = (vx_status)VX_FAILURE;
+        }
+        /* LDRA_JUSTIFY_END */
+
+        (void)vxUnmapUserDataObject(obj->inArgs, map_id);
+    }
+
+    return status;
+}
+
 static vx_status run_graph_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *out[],
 		sTIDLRT_PerfStats_t *stats)
 {
@@ -2610,6 +2691,12 @@ static vx_status run_graph_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], sTI
         }
         get_time_u64(&stats->cpIn_time_end);
         tidlrt_printf("TIDL_RT_OVX: memset_out_tensor_tidlrt_tiovx  ... Done.\n");
+
+        if(status==(int32_t)VX_SUCCESS)
+        {
+            status = tidlrt_update_inargs_dim_values(obj, in);
+        }
+        tidlrt_printf("TIDL_RT_OVX: update_inargs_dim_values  ... Done.\n");
 
         if(status==(int32_t)VX_SUCCESS)
         {
@@ -2660,6 +2747,12 @@ static vx_status run_graph_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], sTI
         {
             status = memset_out_tensor_tidlrt_tiovx(obj, obj->config, obj->output_tensors, out);
         }
+
+        if(status==(int32_t)VX_SUCCESS)
+        {
+            status = tidlrt_update_inargs_dim_values(obj, in);
+        }
+
         if(status==(int32_t)VX_SUCCESS)
         {
             status = vxProcessGraph(obj->graph);
@@ -3422,7 +3515,7 @@ static vx_status memset_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
 static vx_status map_cp_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object config, vx_tensor *output_tensors, sTIDLRT_Tensor_t *out[])
 {
     vx_status status = VX_SUCCESS;
-    uint32_t id, tidlrt_id;
+    uint32_t id, tidlrt_id, d;
     uint32_t elementSize =0;
     vx_size output_sizes[MAX_TENSOR_DIMS];
     sTIDL_IOBufDesc_t *ioBufDesc;
@@ -3559,6 +3652,18 @@ static vx_status map_cp_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
         else
         {
             tidlrt_printf("TIDL_RT_OVX: Shared Mem is used for Output Buff\n");
+        }
+
+        /*
+         * Propagate the runtime-computed output dimensions back into the
+         * caller-supplied output tensors
+         */
+        if(outArgs != NULL)
+        {
+            for (d = 0U; d < (uint32_t)TIDL_DIM_MAX; d++)
+            {
+                out[tidlrt_id]->dimValues[d] = (int32_t)outArgs->outDimValues[id][d];
+            }
         }
     }
     if(outArgs != NULL)

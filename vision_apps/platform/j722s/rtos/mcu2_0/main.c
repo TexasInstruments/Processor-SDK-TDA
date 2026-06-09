@@ -70,7 +70,9 @@
 #include <app_ipc_rsctable.h>
 #include "app_cfg_mcu2_0.h"
 #include <utils/perf_stats/include/app_perf_stats.h>
-
+#ifdef ENABLE_ETHFW
+#include <utils/ethfw/include/app_ethfw.h>
+#endif
 #include "ti_drivers_config.h"
 #include "ti_board_config.h"
 #include "ti_drivers_open_close.h"
@@ -80,7 +82,7 @@
 
 #if defined(SAFERTOS)
 extern void System_lateInit(void);
-extern void xTaskStartScheduler( void );
+extern signed long xTaskStartScheduler( void );
 #else
 extern void vTaskStartScheduler( void );
 #endif
@@ -123,9 +125,15 @@ void StartupEmulatorWaitFxn (void)
     }while (enableDebug);
 }
 
-static uint8_t gTskStackMain[8*1024]
+#define APP_MCU2_0_TASK_STACK        (16U * 1024U)
+
+static uint8_t gTskStackMain[APP_MCU2_0_TASK_STACK]
 __attribute__ ((section(".bss:taskStackSection")))
-__attribute__ ((aligned(8192)))
+#if defined(SAFERTOS)
+__attribute__ ((aligned(APP_MCU2_0_TASK_STACK)));
+#else
+__attribute__ ((aligned(8192)));
+#endif
     ;
 
 int main(void)
@@ -156,6 +164,10 @@ int main(void)
     #endif
 
     appPerfStatsInit();
+
+    #ifdef ENABLE_ETHFW
+    appEthFwEarlyInit();
+    #endif
 
     appRtosTaskParamsInit(&tskParams);
     tskParams.priority = 8u;

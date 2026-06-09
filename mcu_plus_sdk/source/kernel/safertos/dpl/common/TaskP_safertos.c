@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,15 +30,34 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <kernel/dpl/TaskP.h>
 #include <kernel/dpl/ClockP.h>
 #include <SafeRTOS_API.h>
 #include <taskAPI.h>
 #include <SafeRTOSConfigs.h>
 
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
 #define TaskP_LOAD_CPU_LOAD_SCALE   (10000U)
 #define TaskP_REGISTRY_MAX_ENTRIES  (16U)
 #define TaskP_STACK_SIZE_MIN        (128U)
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+#if ( configINCLUDE_RUNTIMESTATS == 1 )
+#include "runtimestatsAPI.h"
+
+/* RTS structs for all the tasks. */
+static xRTS xIdleTaskRTS = { 0 };
+#endif /* ( configINCLUDE_RUNTIMESTATS == 1 ) */
 
 typedef struct TaskP_Struct_ {
     xTCB taskObj;
@@ -55,6 +74,16 @@ typedef struct {
     uint64_t idleTskAccRunTime;
 } TaskP_Ctrl;
 
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
 TaskP_Ctrl gTaskP_ctrl;
 
 /* Declare the stack for the Idle task. */
@@ -67,7 +96,7 @@ portInt8Type acTimerTaskStack[ configTIMER_TASK_STACK_SIZE ] __attribute__( ( al
 portInt8Type acTimerCommandQueueBuffer[ configTIMER_CMD_QUEUE_BUFFER_SIZE ] __attribute__( ( aligned( safertosapiWORD_ALIGNMENT ) ) ) = { 0 };
 
 /* The structure passed to xTaskInitializeScheduler() to configure the kernel
- * with the application defined constants and call back functions. 
+ * with the application defined constants and call back functions.
  * This is defined as weak so that application can override this definition.
  */
 __attribute__((weak)) const xPORT_INIT_PARAMETERS xPortInit =
@@ -100,12 +129,17 @@ __attribute__((weak)) const xPORT_INIT_PARAMETERS xPortInit =
     },
 #endif
 
+#if ( configINCLUDE_RUNTIMESTATS == 1 )
+    &xIdleTaskRTS,                          /* RTS struct passed in as pvIdleTaskTLSObject */
+#else /* ( configINCLUDE_RUNTIMESTATS == 1 ) */
     NULL,                                   /* pvIdleTaskTLSObject */
-
+#endif /* ( configINCLUDE_RUNTIMESTATS == 1 ) */
+    "IdleTask",                             /* pcIdleTaskName */
     /* Timer feature initialisation parameters */
     configTIMER_TASK_PRIORITY,              /* uxTimerTaskPriority */
     configTIMER_TASK_STACK_SIZE,            /* uxTimerTaskStackSize */
     acTimerTaskStack,                       /* pcTimerTaskStackBuffer */
+    "KernelTimerTask",                      /* pcTimerTaskName */
     configTIMER_QUEUE_LENGTH,               /* uxTimerCommandQueueLength */
     configTIMER_CMD_QUEUE_BUFFER_SIZE,      /* uxTimerCommandQueueBufferSize */
     acTimerCommandQueueBuffer,              /* pcTimerCommandQueueBuffer */
@@ -113,6 +147,10 @@ __attribute__((weak)) const xPORT_INIT_PARAMETERS xPortInit =
     pdFALSE                                 /* xEnableCache */
 #endif
 };
+
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
 static void TaskP_addToRegistry(TaskP_Struct *task)
 {
@@ -166,24 +204,6 @@ static void TaskP_removeFromRegistry(TaskP_Struct *task)
     }
 }
 
-/* Not implemented in SafeRTOS */
-#if 0
-static uint32_t TaskP_calcCounterDiff(uint32_t cur, uint32_t last)
-{
-    uint32_t delta;
-
-    if(cur >= last)
-    {
-        delta = cur - last;
-    }
-    else
-    {
-        delta = ( 0xFFFFFFFF - last ) + cur;
-    }
-    return delta;
-}
-#endif
-
 void TaskP_Params_init(TaskP_Params *params)
 {
     params->name = "Task (DPL)";
@@ -192,6 +212,11 @@ void TaskP_Params_init(TaskP_Params *params)
     params->priority = (TaskP_PRIORITY_HIGHEST - TaskP_PRIORITY_LOWEST) / 2;
     params->args = NULL;
     params->taskMain = NULL;
+#if defined(BUILD_MCU)
+    params->taskPrivilege = mpuPRIVILEGED_TASK;
+#else
+    params->taskPrivilege = 0;
+#endif
 }
 
 int32_t TaskP_construct(TaskP_Object *obj, TaskP_Params *params)
@@ -224,7 +249,7 @@ int32_t TaskP_construct(TaskP_Object *obj, TaskP_Params *params)
 
     TaskP_addToRegistry(taskObj);
 
-    xTaskParameters xTaskPParams = 
+    xTaskParameters xTaskPParams =
     {
         params->taskMain,
         params->name,
@@ -234,7 +259,7 @@ int32_t TaskP_construct(TaskP_Object *obj, TaskP_Params *params)
         params->args,
         params->priority,
         NULL,
-#if defined (BUILD_MAIN_R5) || defined (BUILD_MCU_R5) || defined (BUILD_WKUP_R5)
+#if defined(BUILD_MCU)
         pdFALSE,                            /* Task does not use the FPU by default. */
         {                                   /* MPU task parameters. */
             params->taskPrivilege,          /* Check task is privileged. */
@@ -285,12 +310,12 @@ void* TaskP_getHndl(TaskP_Object *obj)
     return (void*)taskObj->taskHndl;
 }
 
-void TaskP_yield()
+void TaskP_yield(void)
 {
     safertosapiYIELD();
 }
 
-void TaskP_exit()
+void TaskP_exit(void)
 {
     xTaskDelete(NULL);
 }
@@ -298,133 +323,33 @@ void TaskP_exit()
 /* This is required for runtime load calculation, which SafeRTOS does not support. */
 void TaskP_loadGet(TaskP_Object *obj, TaskP_Load *taskLoad)
 {
-#if 0
-    TaskP_Struct *taskObj = (TaskP_Struct *)obj;
     /* Not implemented in SafeRTOS */
-    //TaskStatus_t taskStatus;
-
-    vTaskSuspendScheduler();
-
-    /* Not implemented in SafeRTOS */
-    //vTaskGetInfo(taskObj->taskHndl, &taskStatus, pdFALSE, eReady);
-
-    taskLoad->runTime = taskObj->accRunTime;
-    taskLoad->totalTime  = gTaskP_ctrl.accTotalTime;
-    taskLoad->cpuLoad = TaskP_calcCpuLoad(taskObj->accRunTime, gTaskP_ctrl.accTotalTime);
-    /* Not implemented in SafeRTOS */
-    //taskLoad->name = taskStatus.pcTaskName;
-    taskLoad->name = "Unknown";
-
-    xTaskResumeScheduler();
-#endif
 }
 
 /* This is required for runtime load calculation, which SafeRTOS does not support. */
-uint32_t TaskP_loadGetTotalCpuLoad()
+uint32_t TaskP_loadGetTotalCpuLoad(void)
 {
     uint32_t cpuLoad = 0;
-#if 0
-    /* This is need to get upto date IDLE task statistics, since the next update window could be some time away */
-    TaskP_loadUpdateAll();
-
-    vTaskSuspendScheduler();
-
-    cpuLoad = TaskP_LOAD_CPU_LOAD_SCALE - TaskP_calcCpuLoad(gTaskP_ctrl.idleTskAccRunTime, gTaskP_ctrl.accTotalTime);
-
-    xTaskResumeScheduler();
-#endif
 
     return cpuLoad;
 }
 
 /* This is required for runtime load calculation, which SafeRTOS does not support. */
-void TaskP_loadResetAll()
-{
-#if 0
-    TaskP_Struct *taskObj;
-    uint32_t i;
-
-    vTaskSuspendScheduler();
-
-    for(i=0; i<TaskP_REGISTRY_MAX_ENTRIES; i++)
-    {
-        if(gTaskP_ctrl.taskRegistry[i]!=NULL)
-        {
-            taskObj = gTaskP_ctrl.taskRegistry[i];
-
-            taskObj->accRunTime = 0;
-        }
-    }
-
-    gTaskP_ctrl.idleTskAccRunTime = 0;
-    gTaskP_ctrl.accTotalTime = 0;
-
-    xTaskResumeScheduler();
-#endif
-}
-
-/* This is required for runtime load calculation, which SafeRTOS does not support. */
-void TaskP_loadUpdateAll()
+void TaskP_loadResetAll(void)
 {
     /* Not implemented in SafeRTOS */
-#if 0
-    TaskP_Struct *taskObj;
-    TaskStatus_t taskStatus;
-    uint32_t i, delta, curTotalTime;
-    TaskHandle_t idleTskHndl;
-
-    vTaskSuspendScheduler();
-
-    for(i=0; i<TaskP_REGISTRY_MAX_ENTRIES; i++)
-    {
-        if(gTaskP_ctrl.taskRegistry[i]!=NULL)
-        {
-            taskObj = gTaskP_ctrl.taskRegistry[i];
-
-            vTaskGetInfo(taskObj->taskHndl, &taskStatus, pdFALSE, eReady);
-
-            delta = TaskP_calcCounterDiff(taskStatus.ulRunTimeCounter, taskObj->lastRunTime);
-
-            taskObj->accRunTime += delta;
-            taskObj->lastRunTime = taskStatus.ulRunTimeCounter;
-        }
-    }
-
-    idleTskHndl = xTaskGetIdleTaskHandle();
-    if(idleTskHndl != NULL)
-    {
-        vTaskGetInfo(idleTskHndl, &taskStatus, pdFALSE, eReady);
-
-        delta = TaskP_calcCounterDiff(taskStatus.ulRunTimeCounter, gTaskP_ctrl.idleTskLastRunTime);
-
-        gTaskP_ctrl.idleTskAccRunTime += delta;
-        gTaskP_ctrl.idleTskLastRunTime = taskStatus.ulRunTimeCounter;
-    }
-
-    curTotalTime = portGET_RUN_TIME_COUNTER_VALUE();
-
-    delta = TaskP_calcCounterDiff(curTotalTime, gTaskP_ctrl.lastTotalTime);
-
-    gTaskP_ctrl.accTotalTime += delta;
-    gTaskP_ctrl.lastTotalTime = curTotalTime;
-
-    xTaskResumeScheduler();
-#endif
 }
 
 /* This is required for runtime load calculation, which SafeRTOS does not support. */
-void vApplicationLoadHook()
+void TaskP_loadUpdateAll(void)
 {
-#if 0    
-    static uint64_t lastUpdateTime = 0;
-    uint64_t curUpdateTime = ClockP_getTimeUsec();
+    /* Not implemented in SafeRTOS */
+}
 
-    if( (curUpdateTime > lastUpdateTime) && (curUpdateTime - lastUpdateTime) > TaskP_LOAD_UPDATE_WINDOW_MSEC*1000u )
-    {
-        TaskP_loadUpdateAll();
-        lastUpdateTime = curUpdateTime;
-    }
-#endif
+/* This is required for runtime load calculation, which SafeRTOS does not support. */
+void vApplicationLoadHook(void)
+{
+    /* Not implemented in SafeRTOS */
 }
 
 void vApplicationErrorHook( portTaskHandleType xHandleOfTaskWithError,
@@ -436,4 +361,20 @@ void vApplicationErrorHook( portTaskHandleType xHandleOfTaskWithError,
 
     /* Will only get here if an internal kernel error occurs. */
     DebugP_assert(pdFALSE);
+}
+
+void TaskP_endScheduler(void)
+{
+    extern void vTaskSuspendScheduler(void);
+    vTaskSuspendScheduler();
+}
+uint32_t TaskP_disable(void)
+{
+    vTaskSuspendScheduler();
+    return (uint32_t)0;
+}
+void TaskP_restore(uint32_t key)
+{
+    xTaskResumeScheduler();
+    return;
 }

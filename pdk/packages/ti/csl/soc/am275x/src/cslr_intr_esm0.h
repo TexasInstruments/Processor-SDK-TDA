@@ -2,7 +2,7 @@
 *
 * ESM0 INTERRUPT MAP. header file
 *
-* Copyright (C) 2015-2024 Texas Instruments Incorporated.
+* Copyright (C) 2015-2025 Texas Instruments Incorporated.
 *  Redistribution and use in source and binary forms, with or without
 *  modification, are permitted provided that the following conditions
 *  are met:
@@ -61,8 +61,8 @@ extern "C"
 #define CSLR_ESM0_ESM_LVL_EVENT_WKUP_PSRAMECC_8K0_ECC_UNCORR_LEVEL_0                               (13U)
 #define CSLR_ESM0_ESM_LVL_EVENT_SMS0_RAT_1_EXP_INTR_0                                              (14U)
 #define CSLR_ESM0_ESM_LVL_EVENT_PDMA0_ECC_SEC_PEND_0                                               (15U)
-#define CSLR_ESM0_ESM_LVL_EVENT_WKUP_PSRAM2KX32E0_ECC_CORR_LEVEL_0                                 (16U)
-#define CSLR_ESM0_ESM_LVL_EVENT_WKUP_PSRAM2KX32E0_ECC_UNCORR_LEVEL_0                               (17U)
+#define CSLR_ESM0_ESM_LVL_EVENT_WKUP_PSRAMECC_RET0_ECC_CORR_LEVEL_0                                (16U)
+#define CSLR_ESM0_ESM_LVL_EVENT_WKUP_PSRAMECC_RET0_ECC_UNCORR_LEVEL_0                              (17U)
 #define CSLR_ESM0_ESM_LVL_EVENT_PLLFRACF2_SSMOD7_LOCKLOSS_IPCFG_0                                  (18U)
 #define CSLR_ESM0_ESM_LVL_EVENT_WKUP_ECC_AGGR0_CORR_LEVEL_0                                        (20U)
 #define CSLR_ESM0_ESM_LVL_EVENT_WKUP_ECC_AGGR0_UNCORR_LEVEL_0                                      (21U)

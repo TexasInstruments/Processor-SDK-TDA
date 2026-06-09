@@ -586,7 +586,7 @@ int32_t CsirxDrv_eventDisable(Fdrv_Handle drvHandle,
                          CSL_CSIRX_ERROR_IRQS_HEADER_ECC_IRQ_SHIFT));
                 errMask.headerCorrectedEccIrqm &= (uint8_t)
                         (~((eventType & CSIRX_EVENT_TYPE_ERR_HEADER_CORRECTED_ECC) >>
-                         CSL_CSIRX_ERROR_IRQS_INVALID_ACCESS_IRQ_SHIFT));
+                         CSL_CSIRX_ERROR_IRQS_HEADER_CORRECTED_ECC_IRQ_SHIFT));
                 errMask.dataIdIrqm             &= (uint8_t)
                         (~((eventType & CSIRX_EVENT_TYPE_ERR_DATA_ID) >>
                          CSL_CSIRX_ERROR_IRQS_DATA_ID_IRQ_SHIFT));
@@ -791,7 +791,7 @@ static void CsirxDrv_errorEventIsrFxn(uintptr_t arg)
     {
         for (strmIdx = 0U ; strmIdx < CSIRX_NUM_STREAM ; strmIdx++)
         {
-            /* Reset streams */
+            /* Reset only enabled streams */
             GT_assert(CsirxTrace,
                       (FVID2_SOK == CsirxDrv_resetStream(instObj, strmIdx)));
         }
@@ -1199,21 +1199,21 @@ static int32_t CsirxDrv_resetStream(const CsirxDrv_InstObj *instObj,
                     currTimeout++;
                 }
             }
-        }
-    }
-    /* Re-start stream */
-    if (FVID2_SOK == retVal)
-    {
-        strmCtrlParams.softRst = 0U;
-        strmCtrlParams.abrt    = 0U;
-        strmCtrlParams.stop    = 0U;
-        strmCtrlParams.start   = 1U;
-        status = CSIRX_SetStreamCtrl(&instObj->cslObj.cslCfgData,
-                                     &strmCtrlParams,
-                                     strmIdx);
-        if (CDN_EOK != status)
-        {
-            retVal = FVID2_EBADARGS;
+            /* Re-start stream */
+            if (FVID2_SOK == retVal)
+            {
+                strmCtrlParams.softRst = 0U;
+                strmCtrlParams.abrt    = 0U;
+                strmCtrlParams.stop    = 0U;
+                strmCtrlParams.start   = 1U;
+                status = CSIRX_SetStreamCtrl(&instObj->cslObj.cslCfgData,
+                                            &strmCtrlParams,
+                                            strmIdx);
+                if (CDN_EOK != status)
+                {
+                    retVal = FVID2_EBADARGS;
+                }
+            }
         }
     }
 
@@ -1249,7 +1249,8 @@ int32_t CsirxDrv_eventGroupUnRegister(Fdrv_Handle drvHandle,
         if (FVID2_SOK == retVal)
         {
             /* Disable All HW events for the given group first */
-            retVal = CsirxDrv_eventDisable(drvHandle, eventGroup, 0U);
+            retVal = CsirxDrv_eventDisable(drvHandle, eventGroup,
+                                           eventObj->eventPrms.eventMasks);
         }
         if (FVID2_SOK == retVal)
         {

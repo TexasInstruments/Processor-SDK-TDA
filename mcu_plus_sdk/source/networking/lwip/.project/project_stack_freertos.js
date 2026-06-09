@@ -1,0 +1,449 @@
+let path = require('path');
+const _ = require('lodash');
+
+const files = {
+    common: [
+        /* lwipcore_SRCS */
+        "init.c"           ,
+        "def.c"            ,
+        "dns.c"            ,
+        "inet_chksum.c"    ,
+        "ip.c"             ,
+        "mem.c"            ,
+        "memp.c"           ,
+        "netif.c"          ,
+        "pbuf.c"           ,
+        "raw.c"            ,
+        "stats.c"          ,
+        "sys.c"            ,
+        "altcp.c"          ,
+        "altcp_alloc.c"    ,
+        "altcp_tcp.c"      ,
+        "tcp.c"            ,
+        "tcp_in.c"         ,
+        "tcp_out.c"        ,
+        "timeouts.c"       ,
+        "udp.c"            ,
+
+        /* lwipcore4_SRCS */
+        "acd.c"           ,
+        "autoip.c"         ,
+        "dhcp.c"           ,
+        "etharp.c"         ,
+        "icmp.c"           ,
+        "igmp.c"           ,
+        "ip4_frag.c"       ,
+        "ip4.c"            ,
+        "ip4_addr.c"       ,
+
+        /* lwipcore6_SRCS */
+        "dhcp6.c"          ,
+        "ethip6.c"         ,
+        "icmp6.c"          ,
+        "inet6.c"          ,
+        "ip6.c"            ,
+        "ip6_addr.c"       ,
+        "ip6_frag.c"       ,
+        "mld6.c"           ,
+        "nd6.c"            ,
+
+        /* lwipapi_SRCS */
+        "api_lib.c"        ,
+        "api_msg.c"        ,
+        "err.c"            ,
+        "if_api.c"         ,
+        "netbuf.c"         ,
+        "netdb.c"          ,
+        "netifapi.c"       ,
+        "sockets.c"        ,
+        "tcpip.c"          ,
+
+        /* lwipnetif_SRCS */
+        "ethernet.c"       ,
+        "bridgeif.c"       ,
+        "bridgeif_fdb.c"   ,
+        "slipif.c"         ,
+
+        /* lwipsixlowpan_SRCS */
+        "lowpan6_common.c" ,
+        "lowpan6.c"        ,
+        "lowpan6_ble.c"    ,
+        "zepif.c"          ,
+
+        /* lwipppp_SRCS */
+        "auth.c"           ,
+        "ccp.c"            ,
+        "chap-md5.c"       ,
+        "chap_ms.c"        ,
+        "chap-new.c"       ,
+        "demand.c"         ,
+        "eap.c"            ,
+        "ecp.c"            ,
+        "eui64.c"          ,
+        "fsm.c"            ,
+        "ipcp.c"           ,
+        "ipv6cp.c"         ,
+        "lcp.c"            ,
+        "magic.c"          ,
+        "mppe.c"           ,
+        "multilink.c"      ,
+        "ppp.c"            ,
+        "pppapi.c"         ,
+        "pppcrypt.c"       ,
+        "pppoe.c"          ,
+        "pppol2tp.c"       ,
+        "pppos.c"          ,
+        "upap.c"           ,
+        "utils.c"          ,
+        "vj.c"             ,
+        "arc4.c"           ,
+        "des.c"            ,
+        "md4.c"            ,
+        "md5.c"            ,
+        "sha1.c"           ,
+
+        /* lwipsnmp_SRCS */
+        "snmp_asn1.c"                ,
+        "snmp_core.c"                ,
+        "snmp_mib2.c"                ,
+        "snmp_mib2_icmp.c"           ,
+        "snmp_mib2_interfaces.c"     ,
+        "snmp_mib2_ip.c"             ,
+        "snmp_mib2_snmp.c"           ,
+        "snmp_mib2_system.c"         ,
+        "snmp_mib2_tcp.c"            ,
+        "snmp_mib2_udp.c"            ,
+        "snmp_snmpv2_framework.c"    ,
+        "snmp_snmpv2_usm.c"          ,
+        "snmp_msg.c"                 ,
+        "snmpv3.c"                   ,
+        "snmp_netconn.c"             ,
+        "snmp_pbuf_stream.c"         ,
+        "snmp_raw.c"                 ,
+        "snmp_scalar.c"              ,
+        "snmp_table.c"               ,
+        "snmp_threadsync.c"          ,
+        "snmp_traps.c"               ,
+
+        /* lwiphttp_SRCS */
+        "altcp_proxyconnect.c"       ,
+        "fs.c"                       ,
+        "http_client.c"              ,
+        "httpd.c"                    ,
+
+        /* lwipmakefsdata_SRCS */
+        /* "makefsdata.c"      */    ,
+
+        /* lwipiperf_SRCS */
+        "lwiperf.c"                  ,
+
+        /* lwipsmtp_SRCS */
+        "smtp.c"                     ,
+
+        /* lwipsntp_SRCS */
+        "sntp.c"                     ,
+
+        /* lwipmdns_SRCS */
+        "mdns.c"                     ,
+
+        /* lwipnetbios_SRCS */
+        "netbiosns.c"                ,
+
+        /* lwiptftp_SRCS */
+        "tftp.c"                     ,
+
+        /* lwipmqtt_SRCS */
+        "mqtt.c"                     ,
+
+        /* lwipmbedtls_SRCS */
+        "altcp_tls_mbedtls_mem.c"    ,
+        "snmpv3_mbedtls.c"           ,
+
+        /* lwip FreeRTOS port */
+        "sys_arch.c",
+
+    ],
+};
+const filedirs = {
+    common: [
+       // picked from lwip apps
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/apps/smtp",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/apps/tftp",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/apps/mqtt",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/apps/tftp",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/apps/netbiosns",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/apps/mdns",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/apps/altcp_tls",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/apps/http",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/apps/http/makefsdata",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/apps/lwiperf",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/apps/snmp",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/apps/sntp",
+
+       // picked from lwip netif
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/netif",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/netif/ppp",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/netif/ppp/polarssl",
+
+       // picked from lwip core
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/core",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/core/ipv6",
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/core/ipv4",
+
+       // picked from lwip api
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/api",
+
+       // FreRTOS lwip port
+       "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-port/freertos/src",
+       "${MCU_PLUS_SDK_PATH}/source/networking/mbedtls_library/mbedtls/library",
+       "${MCU_PLUS_SDK_PATH}/source/networking/mbedtls_library/mbedtls/include",
+    ],
+};
+
+const includes = {
+    common: [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/include",
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-port/include",
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-port/freertos/include",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/FreeRTOS-Kernel/include",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/portable/TI_ARM_CLANG/ARM_CR5F",
+        "${MCU_PLUS_SDK_PATH}/source/networking/mbedtls_library/mbedtls/include",
+        "${MCU_PLUS_SDK_PATH}/source/networking/mbedtls_library/mbedtls/library",
+    ],
+};
+
+const includes_a53 = {
+    common: [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-stack/src/include",
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-port/include",
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-port/freertos/include",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/FreeRTOS-Kernel/include",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/portable/GCC/ARM_CA53",
+        "${MCU_PLUS_SDK_PATH}/source/networking/mbedtls_library/mbedtls/include",
+        "${MCU_PLUS_SDK_PATH}/source/networking/mbedtls_library/mbedtls/library",
+    ],
+};
+
+const deviceSpecificIncludes = {
+    am243x : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am243x",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am243x/r5f",
+    ],
+    am64x : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am64x",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am64x/r5f",
+    ],
+    am62ax : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am62ax",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am62ax/r5f",
+    ],
+    am62x : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am62x",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am62x/r5f",
+    ],
+    am62px : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am62px",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am62px/r5f",
+    ],
+    am62dx : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am62dx",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am62dx/r5f",
+    ],
+    am263x : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am263x",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am263x/r5f",
+    ],
+    am263px : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am263px",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am263px/r5f",
+    ],
+    am273x : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am273x",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am273x/r5f",
+    ],
+    awr294x : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/awr294x",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/awr294x/r5f",
+    ],
+    am275x : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am275x",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am275x/r5f",
+    ],
+    j722s : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/j722s",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/j722s/r5f",
+    ],
+};
+
+const deviceSpecificIncludes_a53 = {
+    am62ax : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am62ax",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am62ax/a53",
+    ],
+    am62x : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am62x",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am62x/a53",
+    ],
+    am62lx : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am62lx",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am62lx/a53",
+    ],
+    am62px : [
+        "${MCU_PLUS_SDK_PATH}/source/networking/lwip/lwip-config/am62px",
+        "${MCU_PLUS_SDK_PATH}/source/kernel/freertos/config/am62px/a53",
+    ],
+};
+
+const cflags = {
+    common: [
+        "-Wno-extra",
+        "-Wno-unused-variable",
+        "-Wvisibility",
+    ],
+    release: [
+        "-Oz",
+        "-flto",
+    ],
+};
+
+const cflags_a53 = {
+    common: [
+        "-Wno-extra",
+        "-Wno-unused-variable",
+        "-Wno-unused-function",
+    ],
+    release: [
+        "-flto",
+    ],
+};
+
+const deviceSpecific_cflags = {
+     am243x : [
+        "-mthumb",
+        "-fno-strict-aliasing",
+    ],
+    am64x : [
+        "-mthumb",
+        "-fno-strict-aliasing",
+    ],
+    am62ax : [
+        "-mthumb",
+        "-fno-strict-aliasing",
+    ],
+    am62px : [
+        "-mthumb",
+        "-fno-strict-aliasing",
+    ],
+    am62dx : [
+        "-mthumb",
+        "-fno-strict-aliasing",
+    ],
+    am263x : [
+    ],
+    am263px : [
+    ],
+    am273x : [
+        "-fno-strict-aliasing",
+    ],
+    awr294x : [
+        "-fno-strict-aliasing",
+    ],
+    am275x : [
+        "-mthumb",
+        "-fno-strict-aliasing",
+    ],
+};
+
+const deviceSpecific_cflags_a53 = {
+    am62ax : [
+        "-fno-strict-aliasing",
+    ],
+    am62x : [
+        "-fno-strict-aliasing",
+    ],
+    am62lx : [
+        "-fno-strict-aliasing",
+    ],
+    am62px : [
+        "-fno-strict-aliasing",
+    ],
+};
+
+const buildOptionCombos = [
+    { device: "am263x", cpu: "r5f", cgt: "ti-arm-clang"},
+    { device: "am263px", cpu: "r5f", cgt: "ti-arm-clang"},
+    { device: "am243x", cpu: "r5f", cgt: "ti-arm-clang"},
+    { device: "am273x", cpu: "r5f", cgt: "ti-arm-clang"},
+    { device: "am64x",  cpu: "r5f", cgt: "ti-arm-clang"},
+    { device: "awr294x", cpu: "r5f", cgt: "ti-arm-clang"},
+    { device: "am62ax",  cpu: "r5f", cgt: "ti-arm-clang"},
+    { device: "am62ax", cpu: "a53", cgt: "gcc-aarch64"},
+    { device: "am62x", cpu: "a53", cgt: "gcc-aarch64"},
+    { device: "am62lx", cpu: "a53", cgt: "gcc-aarch64"},
+    { device: "am62px",  cpu: "wkup-r5f", cgt: "ti-arm-clang"},
+	{ device: "am62px",  cpu: "mcu-r5f", cgt: "ti-arm-clang"},
+    { device: "am62dx",  cpu: "r5f", cgt: "ti-arm-clang"},
+    { device: "am275x",  cpu: "r5f", cgt: "ti-arm-clang"},
+	{ device: "j722s",  cpu: "r5f", cgt: "ti-arm-clang"},
+    { device: "j722s",  cpu: "mcu-r5f", cgt: "ti-arm-clang"},
+];
+
+function getComponentProperty(device) {
+    let property = {};
+
+    property.dirPath = path.resolve(__dirname, "..");
+    property.type = "library";
+    property.name = "lwip-freertos";
+    property.tag  = "stack_freertos";
+
+    property.isInternal = false;
+
+    deviceBuildCombos = []
+    for (buildCombo of buildOptionCombos)
+    {
+        if (buildCombo.device === device)
+        {
+            deviceBuildCombos.push(buildCombo)
+        }
+    }
+    property.buildOptionCombos = deviceBuildCombos;
+
+    return property;
+}
+
+function getComponentBuildProperty(buildOption) {
+    let build_property = {};
+
+    build_property.files = files;
+    build_property.filedirs = filedirs;
+
+    if(buildOption.cpu.match(/r5f*/)) {
+        includes.common = _.union(includes.common, deviceSpecificIncludes[device]);
+        build_property.includes = includes;
+
+        cflags.common = _.union(cflags.common, deviceSpecific_cflags[device]);
+        build_property.cflags = cflags;
+    }
+
+    if(buildOption.cpu.match(/wkup-r5f*/)) {
+        includes.common = _.union(includes.common, deviceSpecificIncludes[device]);
+        build_property.includes = includes;
+
+        cflags.common = _.union(cflags.common, deviceSpecific_cflags[device]);
+        build_property.cflags = cflags;
+    }
+
+    if(buildOption.cpu.match(/a53*/)) {
+        includes_a53.common = _.union(includes_a53.common, deviceSpecificIncludes_a53[device]);
+        build_property.includes = includes_a53;
+
+        cflags_a53.common = _.union(cflags_a53.common, deviceSpecific_cflags_a53[device]);
+        build_property.cflags = cflags_a53;
+    }
+    return build_property;
+}
+
+module.exports = {
+    getComponentProperty,
+    getComponentBuildProperty,
+};

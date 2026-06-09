@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -127,7 +127,7 @@ int32_t App_loadImages()
     {
         bootConfig = (Bootloader_Config *)bootHandle;
         bootConfig->coresPresentMap = 0;
-        status = Bootloader_parseMultiCoreAppImage(&bootHandle, &bootImageInfo);
+        status = Bootloader_parseMultiCoreAppImage(bootHandle, &bootImageInfo);
 
         /* Load CPUs */
         if (!Bootloader_socIsMCUResetIsoEnabled())
@@ -256,6 +256,7 @@ int32_t App_loadAndAuthHsmBinary(void)
     /* Define sbl scratch memory as HSM address */
     uint8_t *sblScratchMem = ((uint8_t *)(BOOTLOADER_HSM_IMG_LOAD_ADDR));
     struct tisci_msg_proc_auth_boot_req authReq;
+    struct tisci_msg_proc_auth_boot_resp authResp = {0};
     struct tisci_msg_proc_get_status_resp cpuStatus;
     uint32_t hsmCoreProcId = SCICLIENT_PROC_ID_HSM_M4FSS0_CORE0;
 
@@ -303,7 +304,7 @@ int32_t App_loadAndAuthHsmBinary(void)
         authReq.certificate_address_lo = (uint32_t) sblScratchMem;
         /* Request TIFS to authenticate and load the HSM image */
         DebugP_log("Calling Sciclient_procBootAuthAndStart ... \r\n");
-        status = Sciclient_procBootAuthAndStart(&authReq, SCICLIENT_SERVICE_WAIT_FOREVER);
+        status = Sciclient_procBootAuthAndStart(&authReq, &authResp, SCICLIENT_SERVICE_WAIT_FOREVER);
         if (status != SystemP_SUCCESS)
         {
             DebugP_logError("Sciclient_procBootAuthAndStart...FAILED \r\n");
@@ -395,14 +396,14 @@ int main()
         DebugP_assert(0);
     }
     else
-    {
+    {  
         Board_driversClose();
         Drivers_close();
         /* Call DPL deinit to close the tick timer and disable interrupts before jumping to DM*/
         Dpl_deinit();
-        System_deinit();
 
         Bootloader_JumpSelfCpu();
+        System_deinit();
     }
 
     return 0;

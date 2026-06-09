@@ -1,4 +1,4 @@
-/* Copyright (c) 2022, Texas Instruments Incorporated
+/* Copyright (C) 2023-25 Texas Instruments Incorporated - http://www.ti.com/
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,11 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
+/*
+ * This file was generated with the Jacinto7_DDRSS_RegConfigTool, Revision: J722S - v0.0.0
+ * This file was generated on Fri Nov 17 2023 13:18:41 GMT-0600 (Central Standard Time)
+*/
+
 #ifndef BOARD_DDRREGINIT_H_
 #define BOARD_DDRREGINIT_H_
 
@@ -34,11 +39,15 @@
 extern "C" {
 #endif
 
-/*
- * Copyright (C) 2023 Texas Instruments Incorporated - http://www.ti.com/
- * This file was generated with the Jacinto7_DDRSS_RegConfigTool, Revision: J722S - v0.0.0
- * This file was generated on Fri Nov 17 2023 13:18:41 GMT-0600 (Central Standard Time)
-*/
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 #define DDRSS_PLL_FHS_CNT 5
 #define DDRSS_PLL_FREQUENCY_0 25000000
@@ -48,6 +57,16 @@ extern "C" {
 #define DDRSS_CTL_REG_INIT_COUNT (435U)
 #define DDRSS_PHY_INDEP_REG_INIT_COUNT (424U)
 #define DDRSS_PHY_REG_INIT_COUNT (827U)
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Global Variables                                  */
+/* ========================================================================== */
 
 uint32_t DDRSS_ctlReg[] = {
     0x00000B00U, // DDRSS_CTL_0_VAL
@@ -3438,8 +3457,15 @@ uint16_t DDRSS_phyRegNum[] = {
     1922,
     1923,
 };
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif      /* BOARD_DDRREGINIT_H_ */

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -43,7 +43,7 @@ static Pinmux_PerCfg_t gPinMuxMainDomainCfg[] = {
 `system.getTemplate('/drivers/pinmux/pinmux_module_config.c.xdt')( subTemplate.moduleName, "main" )`
     % }
 % }
-    {PINMUX_END, PINMUX_END}
+    {PINMUX_END, 0U}
 };
 
 % if(common.isMcuDomainSupported() || common.isWakeupDomainSupported()) {
@@ -53,7 +53,7 @@ static Pinmux_PerCfg_t gPinMuxMcuDomainCfg[] = {
 `system.getTemplate('/drivers/pinmux/pinmux_module_config.c.xdt')( subTemplate.moduleName, "mcu" )`
     % }
 % }
-    {PINMUX_END, PINMUX_END}
+    {PINMUX_END, 0U}
 };
 %}
 
@@ -62,8 +62,11 @@ static Pinmux_PerCfg_t gPinMuxMcuDomainCfg[] = {
  */
 void Pinmux_init(void)
 {
+% if(["am62x", "am62ax", "am62dx", "am62px"].includes(common.getSocName())) {
+    SOC_fixFastDriveStrength();
+% }
     Pinmux_config(gPinMuxMainDomainCfg, PINMUX_DOMAIN_ID_MAIN);
-% if(common.isMcuDomainSupported()) {
+% if(common.isMcuDomainSupported()|| common.isWakeupDomainSupported()) {
     Pinmux_config(gPinMuxMcuDomainCfg, PINMUX_DOMAIN_ID_MCU);
 % }
 }

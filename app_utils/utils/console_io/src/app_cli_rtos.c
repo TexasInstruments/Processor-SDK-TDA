@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -66,7 +66,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#if !defined(MCU_PLUS_SDK)
+#if defined(PDK)
 #include <uart/UART.h>
 #include <uart/UART_stdio.h>
 #else
@@ -108,26 +108,26 @@ app_cli_obj_t g_app_cli_obj;
 
 int appCliDeviceWriteDefault(char *string, uint32_t max_size)
 {
-    #if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
     UART_puts(string, max_size);
     #else
     DebugP_log(string);
     #endif
-    
+
     return 0;
 }
 
 int appCliDeviceReadDefault(char *string, uint32_t max_size, uint32_t *string_size)
 {
-    #if !defined(MCU_PLUS_SDK)
+    #if defined(PDK)
     UART_gets(string, max_size);
     #else
     DebugP_readLine(string, max_size);
     #endif
-    
+
     string[max_size-1] = 0;
     *string_size = strlen(string);
-    
+
     return 0;
 }
 

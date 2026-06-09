@@ -575,7 +575,7 @@ void Vhwa_m2mLdcSetOutputAddress(Vhwa_M2mLdcHandleObj *hObj);
 
 int32_t Vhwa_m2mLdcPopRings(Vhwa_M2mLdcInstObj *instObj,
     Vhwa_M2mLdcHandleObj *hObj);
-uint32_t Vhwa_m2mLdcCalcHorzSizeInBytes(uint32_t width, uint32_t sfcc,
+uint32_t Vhwa_m2mLdcCalcHorzSizeInBytes(uint32_t width, uint32_t ccsf,
     uint32_t dataFmt);
 
 void Vhwa_m2mLdcUnregisterIsr(Vhwa_M2mLdcInstObj *instObj);
@@ -583,6 +583,7 @@ int32_t Vhwa_m2mLdcRegisterIsr(Vhwa_M2mLdcInstObj *instObj);
 
 Vhwa_M2mLdcHandleObj *Vhwa_m2mLdcGetHandleObj(uint32_t cnt);
 
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 /**
  * \brief Sets the default golden register memory values for the LDC (Lens Distortion Correction) module.
  *
@@ -626,7 +627,7 @@ int32_t Vhwa_m2mLdcConfigRegReadback(const Vhwa_M2mLdcHandleObj *hObj, const Vhw
  * \return          Returns FVID2_SOK on success, or a negative error code on failure.
  */
 int32_t vhwaM2mLdcUpdateConfigRegGroup(VhwaVpacLdcSocReadBack *RegVal, const Vhwa_M2mLdcInstObj *instObj, const Vhwa_M2mLdcHandleObj *hObj);
-
+#endif
 #ifdef __cplusplus
 }
 #endif

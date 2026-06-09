@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024 Texas Instruments Incorporated
+ *  Copyright (C) 2024-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -38,8 +38,15 @@ extern "C"
 {
 #endif
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
 
 #include <kernel/dpl/HwiP.h>
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 /* compile flag to enable VIC mode of operation, undef this to use non-VIC mode */
 #define HWIP_VIM_VIC_ENABLE
@@ -69,6 +76,10 @@ extern "C"
 #define ARMV7R_SVC_MODE       (0x13u)
 #define ARMV7R_SYSTEM_MODE    (0x1Fu)
 
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
 typedef struct HwiP_Ctrl_s {
 
     HwiP_FxnCallback isr[HwiP_MAX_INTERRUPTS];
@@ -79,8 +90,16 @@ typedef struct HwiP_Ctrl_s {
 
 } HwiP_Ctrl;
 
+/* ========================================================================== */
+/*                         Global Variables Declarations                      */
+/* ========================================================================== */
+
 extern HwiP_Ctrl gHwiCtrl;
 extern HwiP_Config gHwiConfig;
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
 
 /* APIs defined in HwiP_armv7r_asm.S */
 uint32_t HwiP_disableFIQ(void);
@@ -91,6 +110,9 @@ void HwiP_disableVIC(void);
 void vApplicationFiqHandlerHook(void);
 void vIrqHandler(void);
 
+/* ========================================================================== */
+/*                       Static Function Definitions                          */
+/* ========================================================================== */
 
 static inline void  HWI_SECTION HwiP_setAsFIQ(uint32_t intNum, uint32_t isFIQ)
 {
@@ -230,6 +252,11 @@ static inline void HWI_SECTION HwiP_ackFIQ(uint32_t intNum)
     *addr= intNum;
 }
 
+/* ========================================================================== */
+/*                  Internal/Private Structure Declarations                   */
+/* ========================================================================== */
+
+/* None */
 
 #ifdef __cplusplus
 }

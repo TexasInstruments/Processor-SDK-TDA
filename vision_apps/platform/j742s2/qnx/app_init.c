@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2024 Texas Instruments Incorporated
+ * Copyright (c) 2024-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -74,6 +74,7 @@
 
 #include <app_mem_map.h>
 #include <app_cfg.h>
+#include <common.h>
 
 #include <hw/inout.h>
 #include <sys/mman.h>
@@ -89,6 +90,47 @@ static uint32_t gInitCount = 0U;
 
 static int32_t appCommonInitLocal();
 static int32_t appCommonDeInitLocal();
+
+core_config_t core_config[] = {
+#ifdef ENABLE_IPC_MPU1
+    {APP_IPC_CPU_MPU1_0, false, true},
+#endif
+#ifdef ENABLE_IPC_MCU1_0
+    {APP_IPC_CPU_MCU1_0, true, true},
+#endif
+#ifdef ENABLE_IPC_MCU1_1
+    {APP_IPC_CPU_MCU1_1, true, true},
+#endif
+#ifdef ENABLE_IPC_MCU2_0
+    {APP_IPC_CPU_MCU2_0, true, true},
+#endif
+#ifdef ENABLE_IPC_MCU2_1
+    {APP_IPC_CPU_MCU2_1, true, true},
+#endif
+#ifdef ENABLE_IPC_MCU3_0
+    {APP_IPC_CPU_MCU3_0, true, true},
+#endif
+#ifdef ENABLE_IPC_MCU3_1
+    {APP_IPC_CPU_MCU3_1, true, true},
+#endif
+#ifdef ENABLE_IPC_MCU4_0
+    {APP_IPC_CPU_MCU4_0, true, true},
+#endif
+#ifdef ENABLE_IPC_MCU4_1
+    {APP_IPC_CPU_MCU4_1, true, true},
+#endif
+#ifdef ENABLE_IPC_C7x_1
+    {APP_IPC_CPU_C7x_1, true, true},
+#endif
+#ifdef ENABLE_IPC_C7x_2
+    {APP_IPC_CPU_C7x_2, true, true},
+#endif
+#ifdef ENABLE_IPC_C7x_3
+    {APP_IPC_CPU_C7x_3, true, true},
+#endif
+};
+
+uint8_t num_cpus = sizeof(core_config)/sizeof(core_config[0]);
 
 int32_t appCommonInit()
 {
@@ -181,62 +223,12 @@ static int32_t appCommonInitLocal()
         appRemoteServiceInitSetDefault(&remote_service_init_prm);
 
         #ifdef ENABLE_IPC
-        ipc_init_prm.num_cpus = 0;
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_MPU1_0;
-        ipc_init_prm.num_cpus++;
-        #ifdef ENABLE_IPC_MCU1_0
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_MCU1_0;
-        ipc_init_prm.num_cpus++;
-        #endif
-        #ifdef ENABLE_IPC_MCU1_1
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_MCU1_1;
-        ipc_init_prm.num_cpus++;
-        #endif
-        #ifdef ENABLE_IPC_MCU2_0
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_MCU2_0;
-        ipc_init_prm.num_cpus++;
-        #endif
-        #ifdef ENABLE_IPC_MCU2_1
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_MCU2_1;
-        ipc_init_prm.num_cpus++;
-        #endif
-        #ifdef ENABLE_IPC_MCU3_0
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_MCU3_0;
-        ipc_init_prm.num_cpus++;
-        #endif
-        #ifdef ENABLE_IPC_MCU3_1
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_MCU3_1;
-        ipc_init_prm.num_cpus++;
-        #endif
-        #ifdef ENABLE_IPC_MCU4_0
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_MCU4_0;
-        ipc_init_prm.num_cpus++;
-        #endif
-        #ifdef ENABLE_IPC_MCU4_1
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_MCU4_1;
-        ipc_init_prm.num_cpus++;
-        #endif
-        #ifdef ENABLE_IPC_C6x_1
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_C6x_1;
-        ipc_init_prm.num_cpus++;
-        #endif
-        #ifdef ENABLE_IPC_C6x_2
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_C6x_2;
-        ipc_init_prm.num_cpus++;
-        #endif
-        #ifdef ENABLE_IPC_C7x_1
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_C7x_1;
-        ipc_init_prm.num_cpus++;
-        #endif
-        #ifdef ENABLE_IPC_C7x_2
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_C7x_2;
-        ipc_init_prm.num_cpus++;
-        #endif
-        #ifdef ENABLE_IPC_C7x_3
-        ipc_init_prm.enabled_cpu_id_list[ipc_init_prm.num_cpus] = APP_IPC_CPU_C7x_3;
-        ipc_init_prm.num_cpus++;
-        #endif
+        for (int i = 0; i < num_cpus; i++)
+        {
+            ipc_init_prm.enabled_cpu_id_list[i] = core_config[i].cpu;
+        }
 
+        ipc_init_prm.num_cpus = num_cpus;
         ipc_init_prm.self_cpu_id = APP_IPC_CPU_MPU1_0;
 
         /* Adding so vring memory not NULL */

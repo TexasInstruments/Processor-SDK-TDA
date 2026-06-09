@@ -42,6 +42,10 @@
  *  Connect the ePWM output to eCAP input externally on the board.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <math.h>
 #include <kernel/dpl/DebugP.h>
 #include <kernel/dpl/AddrTranslateP.h>
@@ -52,6 +56,10 @@
 #include "ti_drivers_config.h"
 #include "ti_drivers_open_close.h"
 #include "ti_board_open_close.h"
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 /* ECAP Interrupt Sources */
 #define ECAP_INT_ALL                    (ECAP_CEVT1_INT  | \
@@ -89,17 +97,28 @@
 /* Capture iteration count */
 #define APP_ECAP_CAPTURE_LOOP_COUNT     (5U)
 
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
 /* Global variables and objects */
 static HwiP_Object       gEcapHwiObject;
 static SemaphoreP_Object gEcapSyncSemObject;
 /* Variable to hold base address of EPWM/ECAP that is used */
 uint32_t gEcapBaseAddr, gEpwmBaseAddr;
 
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
 /* Static Function declarations */
 static void App_ecapIntrISR(void *arg);
 static void App_epwmInit(void);
 static void App_ecapInit(void);
-static void App_ecapCompareOutput(double dutyCycle, double actualOpFreq);
+
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
 void ecap_epwm_loopback_main(void *args)
 {
@@ -109,13 +128,8 @@ void ecap_epwm_loopback_main(void *args)
     uint32_t            cap1Count, cap2Count, cap3Count, cap4Count;
     double              highTime, lowTime, dutyCycle, actualOpFreq;
 
-    /* Open drivers to open the UART driver for console */
-    Drivers_open();
-    Board_driversOpen();
-
     DebugP_log("EPWM to ECAP loopback application started...\r\n");
-    DebugP_log("Please refer EXAMPLES_DRIVERS_ECAP_EPWM_LOOPBACK example user \
-guide for the test setup details. \r\n");
+    DebugP_log("Please refer EXAMPLES_DRIVERS_ECAP_EPWM_LOOPBACK example user guide for the test setup details. \r\n");
 
     /* Address translate */
     gEcapBaseAddr = (uint32_t)AddrTranslateP_getLocalAddr(CONFIG_ECAP0_BASE_ADDR);
@@ -127,6 +141,7 @@ guide for the test setup details. \r\n");
     /* Register & enable interrupt */
     HwiP_Params_init(&hwiPrms);
     hwiPrms.intNum      = CONFIG_ECAP0_INTR;
+    hwiPrms.eventId     = CONFIG_ECAP0_EVENT_ID;
     hwiPrms.callback    = &App_ecapIntrISR;
     hwiPrms.isPulse     = CONFIG_ECAP0_INTR_IS_PULSE;
     status              = HwiP_construct(&gEcapHwiObject, &hwiPrms);
@@ -164,7 +179,7 @@ guide for the test setup details. \r\n");
                     ((double)cap2Count + (double)cap3Count);
     actualOpFreq = ((1000 * 1000) / (highTime + lowTime));
 
-    DebugP_log("Hight time is %.lf us, Low time is %.lf us\r\n",
+    DebugP_log("Height time is %.lf us, Low time is %.lf us\r\n",
     trunc(round(highTime)), trunc(round(lowTime)));
 
     DebugP_log("Expected DutyCycle %u%%, Actual DutyCycle %.lf%%\r\n",
@@ -175,10 +190,16 @@ guide for the test setup details. \r\n");
     HwiP_destruct(&gEcapHwiObject);
     SemaphoreP_destruct(&gEcapSyncSemObject);
 
-    DebugP_log("All tests have passed.\r\n");
+    if((trunc(APP_EPWM_OUTPUT_FREQ / 1000) != trunc(actualOpFreq / 1000)) || \
+        (trunc(APP_EPWM_DUTY_CYCLE) != trunc(round(dutyCycle))))
+    {
+        DebugP_log("Expected value does not match actual value : Failed!!!\r\n");
+    }
+    else
+    {
+        DebugP_log("All tests have passed.\r\n");
+    }
 
-    Board_driversClose();
-    Drivers_close();
 }
 
 static void App_ecapIntrISR(void *arg)
@@ -196,11 +217,7 @@ static void App_ecapInit(void)
     /* Disable and Clear Interrupts */
     ECAP_intrDisable(gEcapBaseAddr, ECAP_INT_ALL);
     ECAP_intrStatusClear(gEcapBaseAddr, ECAP_INT_ALL);
-    
-#if defined(SOC_AM273X)   
-    /* Capture input source select */
-    ECAP_captureInputSourceSelect(gEcapBaseAddr,ECAP_CAPTURE_INPUT_SOURCE_SELECT_0);
-#endif
+
     /* Disable CAP1-CAP4 register loads */
     ECAP_captureLoadingDisable(gEcapBaseAddr);
 

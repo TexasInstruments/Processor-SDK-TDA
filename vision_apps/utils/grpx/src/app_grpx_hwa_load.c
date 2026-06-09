@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2018-2024 Texas Instruments Incorporated
+ * Copyright (c) 2018-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -184,6 +184,8 @@ void appGrpxGetHwaLoad(app_grpx_obj_t *obj)
 
     #if defined(SOC_AM62A)
     status = appPerfStatsHwaStatsGet(APP_IPC_CPU_MCU1_0, &hwa_load);
+    #elif defined(SOC_TDA54)
+    status = appPerfStatsHwaStatsGet(APP_IPC_CPU_MCU2_M55, &hwa_load);
     #else
     status = appPerfStatsHwaStatsGet(APP_IPC_CPU_MCU2_0, &hwa_load);
     #endif

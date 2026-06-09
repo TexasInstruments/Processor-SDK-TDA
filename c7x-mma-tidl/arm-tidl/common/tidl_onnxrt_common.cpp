@@ -111,6 +111,11 @@ int32_t TIDL_ortGetType(int64_t ortType, int32_t * type, int32_t * size)
     *type =  TIDLRT_Int64;
     *size = sizeof(int64_t);
   }
+  else if(ortType == ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL)
+  {
+    *type =  TIDLRT_Bool;
+    *size = sizeof(bool);
+  }
   else
   {
     printf("ERROR : ONNX RT data type : %d not supported by TIDL\n", (int32_t)ortType);
@@ -180,6 +185,20 @@ int32_t TIDL_setRtTensorParameters(sTIDLRT_Tensor_t * allocatedPtrs, sTIDLRT_Ten
       status = infer_ops->TIDLRT_setTensorDefault(rtPtrs[idx]);
       rtPtrs[idx]->layout = TIDLRT_LT_NCHW;
       rtPtrs[idx]->bufferSize = bufferSize; /* This is set only for input to handle TIDL-4466, output buffer size is kept -1 by default */
+      if(isInput == 1)
+      {
+        for (int32_t l = 0; l < TIDL_DIM_MAX; l++)
+        {
+          rtPtrs[idx]->dimValues[l] = onnxRtParams->tensorShape[currTensorNum][l];
+        }
+        rtPtrs[idx]->padValues[0] = ioBufDesc->inPadL[currTensorNum];
+        rtPtrs[idx]->padValues[1] = ioBufDesc->inPadR[currTensorNum];
+        rtPtrs[idx]->padValues[2] = ioBufDesc->inPadT[currTensorNum];
+        rtPtrs[idx]->padValues[3] = ioBufDesc->inPadB[currTensorNum];
+
+        // Channel pitch
+        rtPtrs[idx]->pitch[TIDL_CHANNEL_PITCH] = rtPtrs[idx]->dimValues[TIDL_DIM_WIDTH] * rtPtrs[idx]->dimValues[TIDL_DIM_HEIGHT];
+      }
 
       strcpy((char *)rtPtrs[idx]->name, (char *)tensorName);
       rtPtrs[idx]->elementType = elementType;

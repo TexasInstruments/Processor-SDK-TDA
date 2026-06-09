@@ -136,11 +136,6 @@
     if(options && options.codeDataSizeFlash)
         codeDataSizeFlash = options.codeDataSizeFlash;
 %%}
-
-
---retain="*(.bootCode)";
---retain="*(.startupCode)";
---retain="*(.startupData)";
 --retain="*(.irqStack)";
 --retain="*(.fiqStack)";
 --retain="*(.abortStack)";
@@ -187,8 +182,6 @@ SECTIONS
 {
     /* This has the R5F entry point and vector table, this MUST be at 0x0 */
     .vectors:{} palign(8) > R5F_TCMA_VEC
-    .startupCode:{} palign(8) > R5F_TCMA
-    .startupData: {} palign(8) > DDR, type = NOINIT
 
     /* This has the R5F boot code until MPU is enabled,  this MUST be at a address < 0x80000000
      * i.e this cannot be placed in DDR
@@ -205,6 +198,12 @@ SECTIONS
     } > DDR
     % }
 
+    % if(args.isInstrumentation) {
+    GROUP {
+        __llvm_prf_cnts
+        __llvm_prf_bits
+    } > DDR
+    % }
     GROUP{
 
         .dm_stub_text : {
@@ -236,19 +235,17 @@ SECTIONS
             . += __DM_STUB_STACK_SIZE;
             _end_stack = .;
         }  palign(8)
-    }  load = R5F_TCMB, run = R5F_TCMA
-
-
-    .text            : {} palign(8)      > DDR
-    .const           : {} palign(8)      > DDR
-    .rodata          : {} palign(8)      > DDR
-    .cinit           : {} palign(8)      > DDR
-    .far             : {} align(4)       > DDR
-    .data            : {} palign(128)    > DDR
-    .sysmem          : {}                > DDR
-    .data_buffer     : {} palign(128)    > DDR
-    .const.devgroup  : { *(.const.devgroup*) } align(4) > DDR
-    .boardcfg_data   : {} align(4)       > DDR
+    }  > R5F_TCMA
+    .text                   : {} palign(8)      > DDR
+    .const                  : {} palign(8)      > DDR
+    .rodata                 : {} palign(8)      > DDR
+    .cinit                  : {} palign(8)      > DDR
+    .far                    : {} align(4)       > DDR
+    .data                   : {} palign(128)    > DDR
+    .sysmem                 : {}                > DDR
+    .data_buffer            : {} palign(128)    > DDR
+    .const.devgroup         : { *(.const.devgroup*) } align(4) > DDR
+    .boardcfg_data          : {} align(4)       > DDR
 
     GROUP {
         .bss:    {} palign(4)   /* This is where uninitialized globals go */
@@ -262,13 +259,6 @@ SECTIONS
 
     .stack      : {} align(4) > DDR  (HIGH)
 
-    % if(args.isInstrumentation) {
-    GROUP {
-        __llvm_prf_cnts: {} align(8)
-        RUN_START(__start___llvm_prf_cnts)
-        RUN_END(__stop___llvm_prf_cnts)
-    } > DDR
-    % }
 
     /* This is where the stacks for different R5F modes go */
     GROUP {
@@ -310,20 +300,6 @@ SECTIONS
     % }
 }
 
-/*
-NOTE: Below memory is reserved for DMSC usage
- - During Boot till security handoff is complete
-   0x701E0000 - 0x701FFFFF (128KB)
- - After "Security Handoff" is complete (i.e at run time)
-   0x701F4000 - 0x701FFFFF (48KB)
-
- Security handoff is complete when this message is sent to the DMSC,
-   TISCI_MSG_SEC_HANDOVER
-
- This should be sent once all cores are loaded and all application
- specific firewall calls are setup.
-*/
-
 MEMORY
 {
     R5F_TCMA_VEC   (RWIX)      : ORIGIN = 0x00000000 LENGTH = 0x00000040
@@ -351,7 +327,8 @@ MEMORY
      */
     FLASH     : ORIGIN = 0x`codeDataAddrFlash.toString(16).toUpperCase()` , LENGTH = 0x`codeDataSizeFlash.toString(16).toUpperCase()`
 
-    DDR       : ORIGIN = 0x9DC00000 LENGTH = 0x00B00000
+    /* DDR for DM R5F code/data [ size 11.00 MB ] */
+    DDR            (RWIX)      : ORIGIN = 0x9DC00000 LENGTH = 0x00B00000
     % if(args.project.isLinuxInSystem === true){
     DDR_0     : ORIGIN = 0x9DB00000 LENGTH = 0x1000
     % }

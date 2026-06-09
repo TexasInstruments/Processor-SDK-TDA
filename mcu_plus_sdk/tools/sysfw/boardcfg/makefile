@@ -4,20 +4,38 @@
 MCU_PLUS_SDK_PATH=$(abspath ../../../)
 include $(MCU_PLUS_SDK_PATH)/imports.mak
 include $(MCU_PLUS_SDK_PATH)/devconfig/devconfig.mak
+THIS_PATH=$(abspath .)
 
 SOC?=am64x
+SOC_RES=
 ifeq ($(SOC),$(filter $(SOC), am64x am243x))
   SOC_FOLDER=am64x_am243x
+  SOC_RES=$(SOC)
 else ifeq ($(SOC),$(filter $(SOC), am62x))
   SOC_FOLDER=am62x
+  SOC_RES=am62x
 else ifeq ($(SOC),$(filter $(SOC), am62ax))
   SOC_FOLDER=am62ax
+  SOC_RES=am62a
+else ifeq ($(SOC),$(filter $(SOC), am62dx))
+  SOC_FOLDER=am62dx
+  SOC_RES=am62d
 else ifeq ($(SOC),$(filter $(SOC), am62px))
   SOC_FOLDER=am62px
+  SOC_RES=am62p
+else ifeq ($(SOC),$(filter $(SOC), am275x))
+  SOC_FOLDER=am275x
+  SOC_RES=am275
+else ifeq ($(SOC),$(filter $(SOC), am62lx))
+  SOC_FOLDER=am62lx
+  SOC_RES=am62l
 else ifeq ($(SOC),$(filter $(SOC), j722s))
   SOC_FOLDER=j722s
+  SOC_RES=j722s
 endif
 
+K3_RESPART_REPO=$(THIS_PATH)/k3-resource-partitioning
+K3_RESPART_PRODUCT=$(K3_RESPART_REPO)/.metadata/product.json
 
 # Certificate Generation script and other commands
 ifeq ($(OS),Windows_NT)
@@ -41,11 +59,21 @@ OBJCOPY=$(CCS_PATH)/utils/tiobj2bin/tiobj2bin
 # CC
 BOARDCFG_GEN_CC?=$(CGT_TI_ARM_CLANG_PATH)/bin/tiarmclang$(EXE_EXT)
 
-# For converting tifs binary to a .h file containing the hex array
-TIFS_PATH=$(MCU_PLUS_SDK_PATH)/source/drivers/sciclient/soc/$(SOC_FOLDER)
-TIFS_BIN_NAME=tifs_signed.bin
-TIFS_HEADER_NAME=$(subst .bin,.h,$(TIFS_BIN_NAME))
-TIFS_ARRAY_NAME=tifs
+# For converting sysfw binary to a .h file containing the hex array
+
+ifeq ($(SOC),$(filter $(SOC), am62lx))
+SYSFW_PATH=$(MCU_PLUS_SDK_PATH)/source/drivers/scp/firmware/$(SOC_FOLDER)
+SYSFW_BIN_NAME=ti-fs-firmware-$(SOC_FOLDER)-hs-fs-enc.bin
+SYSFW_HEADER_NAME=$(subst .bin,.h,$(SYSFW_BIN_NAME))
+SYSFW_ARRAY_NAME=ti-fs-firmware
+COPYRIGHT_YEAR=2025
+else
+SYSFW_PATH=$(MCU_PLUS_SDK_PATH)/source/drivers/sciclient/soc/$(SOC_FOLDER)
+SYSFW_BIN_NAME=sysfw_signed.bin
+SYSFW_HEADER_NAME=$(subst .bin,.h,$(SYSFW_BIN_NAME))
+SYSFW_ARRAY_NAME=sysfw
+COPYRIGHT_YEAR=2022-2025
+endif
 
 OBJDIR=$(MCU_PLUS_SDK_PATH)/tools/sysfw/boardcfg/obj
 OBJEXT=o
@@ -60,15 +88,23 @@ BLOB_GEN=$(MCU_PLUS_SDK_PATH)/tools/sysfw/boardcfg/boardcfg_blob_creator.py
 SCICLIENT_CERT_KEY=$(APP_SIGNING_KEY)
 
 # For matching cfg files (purposely truncated to match main cfg file)
+ifeq ($(SOC),$(filter $(SOC), am62lx))
+BRD_CFG := defaultBoard
+CFG_DIR ?= $(MCU_PLUS_SDK_PATH)/source/drivers/scp/firmware/$(SOC_FOLDER)/boardcfg
+else
 BRD_CFG := sciclient_defaultBoard
-CFG_DIR := $(MCU_PLUS_SDK_PATH)/source/drivers/sciclient/sciclient_default_boardcfg/$(SOC_FOLDER)
+CFG_DIR ?= $(MCU_PLUS_SDK_PATH)/source/drivers/sciclient/sciclient_default_boardcfg/$(SOC_FOLDER)
+endif
+
 
 # These will be used to distinguish between an HS configuration and
 # .. a GP configuration in the rules below.
 ifeq ($(DEVICE_TYPE),HS)
+UNSGN_EXT := hs.bin.unsigned
 SGN_EXT := .hs.signed
 HEX_EXT := _hexhs.h
 else
+UNSGN_EXT := .bin.unsigned
 SGN_EXT := .signed
 HEX_EXT := _hex.h
 endif
@@ -93,8 +129,17 @@ endif
 ifeq ($(SOC),$(filter $(SOC), am62ax))
   CFLAGS_BOARDCFG=-DSOC_AM62AX
 endif
+ifeq ($(SOC),$(filter $(SOC), am62dx))
+  CFLAGS_BOARDCFG=-DSOC_AM62DX
+endif
 ifeq ($(SOC),$(filter $(SOC), am62px))
   CFLAGS_BOARDCFG=-DSOC_AM62PX
+endif
+ifeq ($(SOC),$(filter $(SOC), am275x))
+  CFLAGS_BOARDCFG=-DSOC_AM275X
+endif
+ifeq ($(SOC),$(filter $(SOC), am62lx))
+  CFLAGS_BOARDCFG=-DSOC_AM62LX
 endif
 ifeq ($(SOC),$(filter $(SOC), j722s))
   CFLAGS_BOARDCFG=-DSOC_J722S
@@ -121,16 +166,24 @@ HEXFILES := $(foreach file, \
 # .. generated if missing/a board configuration file has been changed
 .PHONY: sciclient_boardcfg $(HEXFILES)
 
-BCFG=$(OBJDIR)/sciclient_defaultBoardcfg_hex.bin.unsigned
-BCFG_RM=$(OBJDIR)/sciclient_defaultBoardcfg_rm_hex.bin.unsigned
-BCFG_PM=$(OBJDIR)/sciclient_defaultBoardcfg_pm_hex.bin.unsigned
-BCFG_SEC=$(OBJDIR)/sciclient_defaultBoardcfg_security_hex.bin.unsigned
+ifeq ($(SOC),$(filter $(SOC), am62lx))
+BCFG=$(OBJDIR)/defaultBoardcfg_hex$(UNSGN_EXT)
+BCFG_RM=$(OBJDIR)/defaultBoardcfg_rm_hex$(UNSGN_EXT)
+BCFG_PM=$(OBJDIR)/defaultBoardcfg_pm_hex$(UNSGN_EXT)
+BCFG_SEC=$(OBJDIR)/defaultBoardcfg_security_hex$(UNSGN_EXT)
+else
+BCFG=$(OBJDIR)/sciclient_defaultBoardcfg_hex$(UNSGN_EXT)
+BCFG_RM=$(OBJDIR)/sciclient_defaultBoardcfg_rm_hex$(UNSGN_EXT)
+BCFG_PM=$(OBJDIR)/sciclient_defaultBoardcfg_pm_hex$(UNSGN_EXT)
+BCFG_SEC=$(OBJDIR)/sciclient_defaultBoardcfg_security_hex$(UNSGN_EXT)
+endif
+
 
 ifeq ($(SOC),$(filter $(SOC), am64x am243x))
-BCFG_LINUX=$(OBJDIR)/sciclient_defaultBoardcfg_hex.bin.unsigned
-BCFG_RM_LINUX=$(OBJDIR)/sciclient_defaultBoardcfg_rm_linux_hex.bin.unsigned
-BCFG_PM_LINUX=$(OBJDIR)/sciclient_defaultBoardcfg_pm_linux_hex.bin.unsigned
-BCFG_SEC_LINUX=$(OBJDIR)/sciclient_defaultBoardcfg_security_linux_hex.bin.unsigned
+BCFG_LINUX=$(OBJDIR)/sciclient_defaultBoardcfg_hex$(UNSGN_EXT)
+BCFG_RM_LINUX=$(OBJDIR)/sciclient_defaultBoardcfg_rm_linux_hex$(UNSGN_EXT)
+BCFG_PM_LINUX=$(OBJDIR)/sciclient_defaultBoardcfg_pm_linux_hex$(UNSGN_EXT)
+BCFG_SEC_LINUX=$(OBJDIR)/sciclient_defaultBoardcfg_security_linux_hex$(UNSGN_EXT)
 endif
 
 BCFG_BLOB_FILE=$(CFG_DIR)/boardcfg_blob.bin
@@ -144,12 +197,27 @@ ifeq ($(SOC),$(filter $(SOC), am64x am243x))
 	$(PYTHON) $(BLOB_GEN) --sw-rev 1 --devgrp 0 --bcfg $(BCFG) --bcfg-rm $(BCFG_RM) --bcfg-pm $(BCFG_PM) --bcfg-sec $(BCFG_SEC) --output-file $(BCFG_BLOB_FILE)
 	$(PYTHON) $(BLOB_GEN) --sw-rev 1 --devgrp 0 --bcfg $(BCFG_LINUX) --bcfg-rm $(BCFG_RM_LINUX) --bcfg-pm $(BCFG_PM_LINUX) --bcfg-sec $(BCFG_SEC_LINUX) --output-file $(BCFG_BLOB_LINUX_FILE)
 else
+ifeq ($(SOC),$(filter $(SOC), am62lx))
+	$(PYTHON) $(BLOB_GEN) --sw-rev 1 --devgrp 0 --bcfg $(BCFG) --bcfg-sec $(BCFG_SEC) --output-file $(BCFG_BLOB_FILE)
+else
 	$(PYTHON) $(BLOB_GEN) --sw-rev 1 --devgrp 0 --bcfg $(BCFG) --bcfg-rm $(BCFG_RM) --bcfg-sec $(BCFG_SEC) --output-file $(BCFG_BLOB_FILE)
+endif
+ifeq ($(SOC),$(filter $(SOC), am62x am62ax am62dx am62px am275x j722s))
 	$(PYTHON) $(BLOB_GEN) --sw-rev 1 --devgrp 0 --bcfg-rm $(BCFG_RM) --bcfg-pm $(BCFG_PM) --output-file $(BCFG_SBLDATA_BLOB_FILE)
 endif
+endif
 
-tifs_hex_header:
-	$(PYTHON) $(BIN2C_GEN) $(TIFS_PATH)/$(TIFS_BIN_NAME) $(TIFS_PATH)/$(TIFS_HEADER_NAME) $(TIFS_ARRAY_NAME)
+sysfw_hex_header:
+	$(PYTHON) $(BIN2C_GEN) $(SYSFW_PATH)/$(SYSFW_BIN_NAME) $(SYSFW_PATH)/$(SYSFW_HEADER_NAME) $(SYSFW_ARRAY_NAME) $(COPYRIGHT_YEAR)
+
+configure:
+	$(SYSCFG_GUI_SCRIPT) --product $(K3_RESPART_PRODUCT) --output generated/ $(K3_RESPART_REPO)/out/$(SOC_RES)-evm.syscfg
+
+configure-gen:
+	$(SYSCFG_NODE) $(SYSCFG_CLI_PATH)/dist/cli.js --product $(K3_RESPART_PRODUCT) --output generated/ $(K3_RESPART_REPO)/out/$(SOC_RES)-evm.syscfg
+	$(COPY) generated/sciclient_defaultBoardcfg_rm_mcusdk.c $(CFG_DIR)/sciclient_defaultBoardcfg_rm.c
+  $(RMDIR) generated/
+
 
 define CREATE_HEX_GEN
 
@@ -166,9 +234,6 @@ $(OBJDIR)/$(1).$(OBJEXT) : $(2).c
 $(OBJDIR)/$(1).bin.unsigned : SHELL:=/bin/bash   # HERE: this is setting the shell for this step only
 $(OBJDIR)/$(1).bin.unsigned : $(OBJDIR)/$(1).$(OBJEXT)
 	@echo "Create unsigned Board Configuration binary"
-	@echo "OBJCOPY is $(OBJCOPY)"
-	$(CHMOD) a+x $(OBJCOPY)
-
 	$(OBJCOPY) $(OBJDIR)/$(notdir $(2)).$(OBJEXT) $(OBJDIR)/$(1).bin.unsigned $(CGT_TI_ARM_CLANG_PATH)/bin/tiarmofd $(CGT_TI_ARM_CLANG_PATH)/bin/tiarmhex $(CCS_PATH)/utils/tiobj2bin/mkhex4bin
 	$(PYTHON) $(VALIDATOR_SCRIPT) -b $(OBJDIR)/$(1).bin.unsigned -s $(SOC) -l $(OBJDIR)/output_$(BRD_CFG).log -i -o $(OBJDIR)/$(1)_temp.bin.unsigned -r $(VALIDATOR_JSON)
 	$(MV) $(OBJDIR)/$(1)_temp.bin.unsigned $(OBJDIR)/$(1).bin.unsigned
@@ -191,7 +256,7 @@ $(OBJDIR)/$(1).bin.signed : $(OBJDIR)/$(1).bin.unsigned
 # This rule determines the type of signature required in the previous rules.
 $(CFG_DIR)/$(1).h : $(OBJDIR)/$(1).bin$(SGN_EXT)
 	@echo "Generate include-able header file from signed Board Configuration"
-	$(PYTHON) $(BIN2C_GEN) $(OBJDIR)/$(1).bin$(SGN_EXT) $(CFG_DIR)/$(1).h $(subst default,,$(notdir $(2)))
+	$(PYTHON) $(BIN2C_GEN) $(OBJDIR)/$(1).bin$(SGN_EXT) $(CFG_DIR)/$(1).h $(subst default,,$(notdir $(2))) $(COPYRIGHT_YEAR)
 #	$(RMDIR) $(OBJDIR)/
 
 endef

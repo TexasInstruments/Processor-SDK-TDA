@@ -141,7 +141,7 @@ static inline uint32_t TIDL_isBiasHighPrecision(uint32_t deviceName)
       Only the lower 8 bits encode the actual device, the upper bits
       are reserved as control bits to enable/disable features
     */
-    #ifdef __C7120__
+    #if defined (__C7120__) || defined (__C7604__)
     if((deviceName & TIDL_OTF_FLAG_BIT) == TIDL_OTF_FLAG_BIT)
     {
         ret_val = TRUE;

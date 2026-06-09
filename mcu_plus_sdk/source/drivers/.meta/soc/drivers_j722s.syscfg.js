@@ -2,6 +2,12 @@
 let common = system.getScript("/common");
 
 const driverVer = {
+    "csitx": {
+        version: "v0",
+    },
+    "csirx": {
+        version: "v0",
+    },
     "gpio":{
         version:"v0",
     },
@@ -20,13 +26,13 @@ const driverVer = {
     "mcspi": {
         version: "v0",
     },
+    "mmcsd": {
+        version: "v0",
+    },
     "sciclient": {
         version: "v0",
     },
     "bootloader": {
-        version: "v0",
-    },
-    "mmcsd": {
         version: "v0",
     },
     "ddr": {
@@ -50,11 +56,8 @@ const driverVer = {
     "ddr": {
         version: "v1",
     },
-    "gtc": {
-        version: "v0",
-    },
     "dss": {
-        version: "v0",
+        version: "v1",
     },
 };
 

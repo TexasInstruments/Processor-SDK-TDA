@@ -1,8 +1,9 @@
 /**
  * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
  * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
- * @cliArgs --device "AM62x" --package "ALW" --part "Default" --context "r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
- * @versions {"tool":"1.16.1+2960"}
+ * @cliArgs --device "AM62x" --part "Default" --package "AMC" --context "r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
+ * @v2CliArgs --device "AM625-Q1" --package "FCBGA (AMC)" --variant "AM6254-G" --context "r5fss0-0" --product "MCU_PLUS_SDK@07.03.01"
+ * @versions {"tool":"1.22.0+3893"}
  */
 
 /**
@@ -29,6 +30,7 @@ const mpu_armv77  = mpu_armv7.addInstance();
 const mpu_armv78  = mpu_armv7.addInstance();
 const mpu_armv79  = mpu_armv7.addInstance();
 const mpu_armv710 = mpu_armv7.addInstance();
+const mpu_armv711 = mpu_armv7.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
@@ -37,15 +39,16 @@ bootloader1.EMMCAppImageOffset = "0xC00000";
 bootloader1.$name              = "CONFIG_BOOTLOADER_FLASH_DM";
 bootloader1.appImageOffset     = "0xA00000";
 
-flash1.$name                                           = "CONFIG_FLASH0";
-bootloader1.flashDriver                                = flash1;
-flash1.serialFlashDriver.$name                         = "board_flash_serialFlash_serialflash0";
-flash1.serialFlashDriver.flashType                     = "SERIAL_NAND";
-flash1.serialFlashDriver.quirks                        = "";
-flash1.serialFlashDriver.peripheralDriver.$name        = "CONFIG_OSPI0";
-flash1.serialFlashDriver.peripheralDriver.inputClkFreq = 200000000;
-flash1.serialFlashDriver.peripheralDriver.baudRateDiv  = 8;
-flash1.serialFlashDriver.peripheralDriver.dmaEnable    = true;
+flash1.$name                                          = "CONFIG_FLASH0";
+bootloader1.flashDriver                               = flash1;
+flash1.serialFlashDriver.$name                        = "board_flash_serialFlash_serialflash0";
+flash1.serialFlashDriver.flashType                    = "SERIAL_NAND";
+flash1.serialFlashDriver.protocol                     = "1s_8s_8s";
+flash1.serialFlashDriver.badBlockCheck                = "Yes";
+flash1.serialFlashDriver.peripheralDriver.$name       = "CONFIG_OSPI0";
+flash1.serialFlashDriver.peripheralDriver.baudRateDiv = 8;
+flash1.serialFlashDriver.peripheralDriver.dmaEnable   = true;
+flash1.serialFlashDriver.peripheralDriver.phyEnable   = true;
 
 bootloader2.$name     = "CONFIG_BOOTLOADER0";
 bootloader2.bootMedia = "MEM";
@@ -53,30 +56,47 @@ bootloader2.bootMedia = "MEM";
 ddr1.$name                    = "CONFIG_DDR0";
 ddr1.ddrConfigIncludeFileName = "drivers/ddr/v0/soc/am62x/board_lpddrReginit.h";
 ddr1.eccEnableFlag            = true;
-ddr1.eccEnd0                  = 0x20000;
 ddr1.eccStart1                = 0x20000;
-ddr1.eccEnd1                  = 0x40000;
 ddr1.eccStart2                = 0x40000;
-ddr1.eccEnd2                  = 0x60000;
+ddr1.eccEnd0                  = 0x1FFFF;
+ddr1.eccEnd1                  = 0x3FFFF;
+ddr1.eccEnd2                  = 0x5FFFF;
 
 const udma                                           = scripting.addModule("/drivers/udma/udma", {}, false);
 const udma1                                          = udma.addInstance({}, false);
 udma1.$name                                          = "CONFIG_UDMA0";
 flash1.serialFlashDriver.peripheralDriver.udmaDriver = udma1;
+bootloader1.udmaDriver                               = udma1;
+bootloader2.udmaDriver                               = udma1;
+
+const udma_blkcopy_channel                                   = scripting.addModule("/drivers/udma/udma_blkcopy_channel", {}, false);
+const udma_blkcopy_channel1                                  = udma_blkcopy_channel.addInstance({}, false);
+udma_blkcopy_channel1.$name                                  = "CONFIG_UDMA_BLKCOPY_CH0";
+flash1.serialFlashDriver.peripheralDriver.udmaBlkCopyChannel = udma_blkcopy_channel1;
+bootloader1.udmaBlkCopyChannel                               = udma_blkcopy_channel1;
+bootloader2.udmaBlkCopyChannel                               = udma_blkcopy_channel1;
 
 clock.instance = "TIMER1";
 
-debug_log.enableUartLog                      = true;
-debug_log.enableCssLog                       = false;
-debug_log.enableLogZoneInfo                  = true;
-debug_log.uartLog.$name                      = "CONFIG_UART0";
-debug_log.uartLog.intrEnable                 = "DISABLE";
-debug_log.uartLog.useWakeupDomainPeripherals = false;
+debug_log.enableUartLog                           = true;
+debug_log.enableCssLog                            = false;
+debug_log.enableLogZoneInfo                       = true;
+debug_log.sysfwUartTrace                          = true;
+debug_log.uartLog.$name                           = "CONFIG_UART0";
+debug_log.uartLog.intrEnable                      = "DISABLE";
+debug_log.uartLog.useWakeupDomainPeripherals      = false;
+debug_log.sysfwUartLog.$name                      = "CONFIG_UART_TRACE0";
+debug_log.sysfwUartLog.useWakeupDomainPeripherals = false;
+debug_log.sysfwUartLog.UART.$assign               = "USART1";
+debug_log.sysfwUartLog.UART.RXD.$assign           = "MCASP0_AFSR";
+debug_log.sysfwUartLog.UART.TXD.$assign           = "MCASP0_ACLKR";
+debug_log.sysfwUartLog.UART.RTSn.$assign          = "MCASP0_AXR2";
+debug_log.sysfwUartLog.UART.CTSn.$assign          = "MCASP0_AXR3";
 
 mpu_armv71.$name             = "CONFIG_MPU_REGION0";
 mpu_armv71.accessPermissions = "Supervisor RD+WR, User RD";
 mpu_armv71.allowExecute      = false;
-mpu_armv71.attributes        = "NonCached";
+mpu_armv71.attributes        = "Device";
 
 mpu_armv72.$name             = "CONFIG_MPU_REGION1";
 mpu_armv72.accessPermissions = "Supervisor RD+WR, User RD";
@@ -120,6 +140,10 @@ mpu_armv710.baseAddr     = 0x60000000;
 mpu_armv710.size         = 7;
 mpu_armv710.attributes   = "Device";
 mpu_armv710.allowExecute = false;
+
+mpu_armv711.$name    = "ATCM_SOC";
+mpu_armv711.baseAddr = 0x78000000;
+mpu_armv711.size     = 15;
 
 /**
  * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future

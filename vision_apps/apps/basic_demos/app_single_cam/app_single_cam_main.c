@@ -350,6 +350,12 @@ int32_t app_run_screen(AppObj *obj)
         }
     }
 
+    /* Unblock the graph task if it is blocked on disp_frame_done_sem during exit */
+    if(vx_true_e == obj->scaler_enable)
+    {
+        sem_post(&obj->disp_frame_done_sem);
+    }
+
     return err;
 }
 #endif

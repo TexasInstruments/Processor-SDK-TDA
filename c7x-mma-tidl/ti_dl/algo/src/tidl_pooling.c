@@ -130,16 +130,7 @@ static inline void TIDL_poolingSetPrivAlgArgs(sTIDL_AlgLayer_t *algLayer, const 
   curCoreisMiddleCore = ((coreId != coreStartIdx) && (coreId != coreEndIdx));
   curCoreisLastCore = (coreId == coreEndIdx);
 #endif
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_START
-  <metric start> branch <metric end>
-  <justification start> HOST_EMULATION : This condition check is specific to the HE build and can be fully validated exclusively within the HE build. Hence we are suppressing the branch coverage check for this code.
-  <justification end> */
-#endif
   if (algLayer->workloadUnit != NULL)
-#ifndef HOST_EMULATION
-  /* LDRA_JUSTIFY_END */
-#endif
   {
     /* If normal tile (except for normal tile with no preceeding first tile or last tile */
     if ((((algLayer->wlPadParams.tileType == NO_TILE) || (algLayer->wlPadParams.isFirstTile == 0U)) && (algLayer->wlPadParams.isLastTile == 0U))

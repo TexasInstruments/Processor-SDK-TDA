@@ -60,9 +60,9 @@ SECTIONS
         .data:   {} palign(8)   /* This is where initialized globals and static go */
     } > DDR_CODE_DATA
 
-    
+
         .data_buffer (NOLOAD) : {} >DDR1
-    
+
     /* This is rest of uninitialized data. This can be placed in DDR if DDR is available and needed */
     GROUP {
         .bss:    {} palign(8)   /* This is where uninitialized globals go */

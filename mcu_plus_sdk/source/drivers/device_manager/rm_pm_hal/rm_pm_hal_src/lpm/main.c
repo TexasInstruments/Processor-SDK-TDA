@@ -65,6 +65,8 @@ extern void lpm_populate_prepare_sleep_data(struct tisci_msg_prepare_sleep_req *
 extern void lpm_clear_all_wakeup_interrupt(void);
 extern u8 lpm_get_wkup_pin_number_padconf(u32 wkup_src);
 extern u8 lpm_get_selected_sleep_mode(void);
+extern void lpm_reset_wake_reason_params(void);
+s32 unload_magic_words_thru_wkup_mmr(void);
 
 #define TCM_SIZE            0x8000U
 #define TCMB_BASE_ADDR      0U
@@ -215,7 +217,7 @@ static s32 load_magic_words_through_mmr(void)
 	return ret;
 }
 
-static s32 unload_magic_words_thru_wkup_mmr(void)
+s32 unload_magic_words_thru_wkup_mmr(void)
 {
 	u32 timeout = TIMEOUT_10_MS;
 	s32 ret = SUCCESS;
@@ -328,7 +330,7 @@ static s32 load_magic_words_through_mmr(void)
 	return SUCCESS;
 }
 
-static s32 unload_magic_words_thru_wkup_mmr(void)
+s32 unload_magic_words_thru_wkup_mmr(void)
 {
 	return SUCCESS;
 }
@@ -358,7 +360,6 @@ static void clock_gate_legacy_peripherals(sbool enable)
 		}
 		if (timeout == 0U) {
 			lpm_seq_trace_fail(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_EN_CLK_GATE);
-			lpm_abort();
 		}
 	} else {
 		writel(WKUP_DIS_GRP_CLKSTOP_REQ, WKUP_CTRL_MMR_BASE + DM_GRP_CLKSTOP_REQ);
@@ -367,7 +368,6 @@ static void clock_gate_legacy_peripherals(sbool enable)
 		}
 		if (timeout == 0U) {
 			lpm_seq_trace_fail(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_DIS_CLK_GATE);
-			lpm_abort();
 		}
 		writel(0, WKUP_CTRL_MMR_BASE + DM_CLKSTOP_EN);
 	}
@@ -535,16 +535,6 @@ static void lpm_update_wkup_pin_and_mode(void)
 	g_wkup_params.mode = g_params.mode;
 }
 
-static int enable_main_io_isolation(void)
-{
-	return 0;
-}
-
-static int disable_main_io_isolation(void)
-{
-	return 0;
-}
-
 static void config_gpio_clk_mux(u8 clk_src)
 {
 	writel(clk_src, (MCU_CTRL_MMR_BASE + MCU_CTRL_MMR_CFG0_MCU_GPIO_CLKSEL));
@@ -558,11 +548,6 @@ static void enable_gpio_wake_up(void)
 static void disable_gpio_wake_up(void)
 {
 	writel(MCU_CTRL_MMR_CFG0_MCU_GPIO_WKUP_CTRL_DISABLE, (MCU_CTRL_MMR_BASE + MCU_CTRL_MMR_CFG0_MCU_GPIO_WKUP_CTRL));
-}
-
-static void disable_main_remain_pll(void)
-{
-	return;
 }
 
 static int enable_main_remain_pll(void)
@@ -631,10 +616,6 @@ static s32 enable_mcu_lpsc(void)
 	return ret;
 }
 
-static void enable_mcu_remain_pll(void)
-{
-}
-
 static s32 enable_dm_lpsc(void)
 {
 	s32 ret = 0;
@@ -645,10 +626,6 @@ static s32 enable_dm_lpsc(void)
 	ret = psc_raw_pd_wait(MAIN_PSC_BASE, PD_GP_CORE_CTL);
 
 	return ret;
-}
-
-static void disable_mcu_io_isolation(void)
-{
 }
 
 /* Send TISCI ROM Boot image message containing location
@@ -822,6 +799,14 @@ u8 lpm_get_selected_sleep_mode(void)
 	return g_params.mode;
 }
 
+void lpm_reset_wake_reason_params(void)
+{
+	/* Reset the wake reason parameters at the start of every lpm iteration */
+	g_wkup_params.mode          = TISCI_MSG_VALUE_SLEEP_MODE_INVALID;
+	g_wkup_params.wake_pin      = TISCI_MSG_VALUE_LPM_WAKE_PIN_INVALID;
+	g_wkup_params.wake_source   = TISCI_MSG_VALUE_LPM_WAKE_SOURCE_INVALID;
+}
+
 s32 dm_stub_entry(void)
 {
 	u32 reg;
@@ -868,8 +853,6 @@ s32 dm_stub_entry(void)
 		lpm_seq_trace(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_DDR_SR_ENTER);
 	}
 
-	lpm_seq_trace(0x77);
-
 	if (g_params.mode != TISCI_MSG_VALUE_SLEEP_MODE_IO_ONLY_PLUS_DDR) {
 		if (set_usb_reset_isolation() != 0) {
 			lpm_seq_trace_fail(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_USB_RST_ISO);
@@ -896,13 +879,6 @@ s32 dm_stub_entry(void)
 	/* Configure selected wake sources with writes to WKUP0_EN IN WKUP_CTRL */
 	config_wake_sources();
 	lpm_seq_trace(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_CONFIG_WAKE_SRC);
-
-	if (enable_main_io_isolation() != 0) {
-		lpm_seq_trace_fail(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_EN_MAIN_IO_ISO);
-		lpm_abort();
-	} else {
-		lpm_seq_trace(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_EN_MAIN_IO_ISO);
-	}
 
 	if (g_params.mode == TISCI_MSG_VALUE_SLEEP_MODE_IO_ONLY_PLUS_DDR) {
 		/* Enter IO Only plus DDR low power mode */
@@ -932,11 +908,6 @@ s32 dm_stub_entry(void)
 		enable_gpio_wake_up();
 
 		lpm_seq_trace(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_CONF_CLK_MUXES);
-
-		/* Disable remaining MAIN HSDIVs and PLLs */
-		disable_main_remain_pll();
-
-		lpm_seq_trace(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_DIS_MAIN_PLLS);
 
 		/* Set WKUP_CTRL DS_DM_RESET.mask to isolate DM from MAIN domain reset */
 		writel(DS_RESET_MASK, WKUP_CTRL_MMR_BASE + DS_DM_RESET);
@@ -1072,9 +1043,6 @@ s32 dm_stub_entry(void)
 
 	if ((g_params.mode == TISCI_MSG_VALUE_SLEEP_MODE_DEEP_SLEEP) || (g_params.mode == TISCI_MSG_VALUE_SLEEP_MODE_MCU_ONLY)) {
 		/* Disable WKUP IO Daisy Chain and IO Isolation */
-		disable_mcu_io_isolation();
-
-		lpm_seq_trace(TRACE_PM_ACTION_LPM_SEQ_DIS_MCU_IO_ISO);
 
 		/* Write 0xdee51ee5 to WKUP DS_MAGIC_WORD to indicate resume path for TIFS ROM */
 		writel(DS_MAGIC_WORD_RESUME_TIFS,
@@ -1099,14 +1067,19 @@ s32 dm_stub_entry(void)
 			lpm_seq_trace_fail(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_MAIN_DM_LPSC_EN);
 			lpm_abort();
 		} else {
+			lpm_seq_trace(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_MAIN_DM_LPSC_EN);
 		}
 
 		/* Modify WKUP_CLKSEL in WKUP_CTRL to use SMS_PLL instead of MCU PLL */
 		writel(WKUP_CLKSEL_MAIN, WKUP_CTRL_MMR_BASE + WKUP_CLKSEL);
 
-		/* Configure additional MCU PLLs and PSCs to return to pre-DeepSleep state */
-		enable_mcu_remain_pll();
-		enable_mcu_lpsc();
+		/* Configure additional MCU PSCs to return to pre-DeepSleep state */
+		if (enable_mcu_lpsc() != 0) {
+			lpm_seq_trace_fail(TRACE_PM_ACTION_LPM_SEQ_EN_MCU_LPSC);
+			lpm_abort();
+		} else {
+			lpm_seq_trace(TRACE_PM_ACTION_LPM_SEQ_EN_MCU_LPSC);
+		}
 
 		/* Poll on WKUP DS_MAGIC_WORD for 0x00d5d02e that indicates
 		 * TIFS ROM has completed and execution can continue.
@@ -1151,14 +1124,6 @@ s32 dm_stub_entry(void)
 			lpm_abort();
 		} else {
 			lpm_seq_trace(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_TISCI_CONT_RES);
-		}
-
-		/* Disable MAIN IO Daisy Chain and IO Isolation */
-		if (disable_main_io_isolation() != 0) {
-			lpm_seq_trace_fail(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_DIS_MAIN_IO_ISO);
-			lpm_abort();
-		} else {
-			lpm_seq_trace(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_DIS_MAIN_IO_ISO);
 		}
 
 		/* Configure additional MAIN PLLs and PSCs for EMIF operation */
@@ -1219,14 +1184,6 @@ s32 dm_stub_entry(void)
 
 	lpm_update_wkup_pin_and_mode();
 
-	/* Remove isolation from MCU pins */
-	if (unload_magic_words_thru_wkup_mmr() != 0) {
-		lpm_seq_trace_fail(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_UNLOAD_MAGIC_WORDS);
-		lpm_abort();
-	} else {
-		lpm_seq_trace(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_UNLOAD_MAGIC_WORDS);
-	}
-
 	clear_prepare_sleep_data();
 
 	/* Return to standard firmware in DDR */
@@ -1244,14 +1201,6 @@ s32 dm_stub_resume(void)
 	/* Update the wake up source */
 	g_wkup_params.wake_source = TISCI_MSG_VALUE_LPM_WAKE_SOURCE_CAN_IO;
 	lpm_update_wkup_pin_and_mode();
-
-	/* Clear the magic word to remove isolation */
-	if (unload_magic_words_thru_wkup_mmr() != 0) {
-		lpm_seq_trace_fail(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_UNLOAD_MAGIC_WORDS);
-		lpm_abort();
-	} else {
-		lpm_seq_trace(TRACE_PM_ACTION_LPM_SEQ_DM_STUB_UNLOAD_MAGIC_WORDS);
-	}
 
 	/* Restore MCU domain PLLs */
 	if (pll_restore(&mcu_pll) != 0) {

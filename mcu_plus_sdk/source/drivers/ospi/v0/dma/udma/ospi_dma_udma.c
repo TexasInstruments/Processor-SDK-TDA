@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021-2023 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -38,6 +38,10 @@
 static int32_t OspiDma_udmaOpen(void* ospiDmaArgs);
 static int32_t OspiDma_udmaClose(OSPI_DmaHandle handle, void* ospiDmaArgs);
 static int32_t OspiDma_udmaCopy(void* ospiDmaArgs, void* dst, void* src, uint32_t length);
+
+extern uint64_t Udma_virtToPhyFxn(const void *virtAddr,
+    Udma_DrvHandle drvHandle,
+    Udma_ChHandle chHandle); 
 
 OSPI_DmaFxns gOspiDmaUdmaFxns =
 {
@@ -153,6 +157,7 @@ static int32_t OspiDma_udmaClose(OSPI_DmaHandle handle, void* ospiDmaArgs)
 {
     int32_t status = SystemP_SUCCESS;
     int32_t udmaStatus = UDMA_SOK;
+    uint8_t chanEnStatus;
 
     OspiDma_UdmaArgs *udmaArgs = (OspiDma_UdmaArgs *)ospiDmaArgs;
 
@@ -170,9 +175,14 @@ static int32_t OspiDma_udmaClose(OSPI_DmaHandle handle, void* ospiDmaArgs)
         }
     }
 
-    /* Disable Channel */
-    udmaStatus = Udma_chDisable(chHandle, UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
+    udmaStatus = Udma_chGetChanEnStatus(chHandle, &chanEnStatus);
     DebugP_assert(UDMA_SOK == udmaStatus);
+    if(chanEnStatus == 1U)
+    {
+        /* Disable Channel */
+        status = Udma_chDisable(chHandle, UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
+        DebugP_assert(UDMA_SOK == udmaStatus);
+    }
 
     /* Close channel */
     udmaStatus = Udma_chClose(chHandle);
@@ -191,7 +201,7 @@ static int32_t OspiDma_udmaUpdateSubmitTR(void* ospiDmaArgs, void* dst, void* sr
     uint32_t trpdMemSize = udmaArgs->trpdMemSize;
     uint64_t pDesc;
     uint32_t trRespStatus;
-    uint64_t trpdMemPhy = (uint64_t) Udma_defaultVirtToPhyFxn(trpdMem, 0U, NULL);
+    uint64_t trpdMemPhy = (uint64_t) Udma_virtToPhyFxn(trpdMem, udmaArgs->drvHandle, udmaArgs->chHandle);
 
     /* Update TRPD */
     CSL_UdmapTR15  *pTr;
@@ -215,10 +225,10 @@ static int32_t OspiDma_udmaUpdateSubmitTR(void* ospiDmaArgs, void* dst, void* sr
     pTr->ddim2    = (int32_t)pTr->dicnt0 * (int32_t)pTr->dicnt1;
     pTr->ddim3    = (int32_t)pTr->dicnt0 * (int32_t)pTr->dicnt1 * (int32_t)pTr->dicnt2;
 
-    pTr->addr     = (uint64_t) Udma_defaultVirtToPhyFxn(src, 0U, NULL);
-    pTr->daddr    = (uint64_t) Udma_defaultVirtToPhyFxn(dst, 0U, NULL);
+    pTr->addr     = (uint64_t) Udma_virtToPhyFxn(src, udmaArgs->drvHandle, udmaArgs->chHandle);
+    pTr->daddr    = (uint64_t) Udma_virtToPhyFxn(dst, udmaArgs->drvHandle, udmaArgs->chHandle);
 
-    uint32_t length = pTr->icnt0 * pTr->icnt1 * pTr->icnt2 * pTr->icnt3;
+    uint32_t length = (uint32_t) (pTr->icnt0 * pTr->icnt1 * pTr->icnt2 * pTr->icnt3);
 
     /* Perform cache writeback */
     CacheP_wb(trpdMem, trpdMemSize, CacheP_TYPE_ALL);
@@ -253,7 +263,7 @@ static int32_t OspiDma_udmaCopy(void* ospiDmaArgs, void* dst, void* src, uint32_
     int32_t status = SystemP_SUCCESS;
     int32_t udmaStatus = UDMA_SOK;
     uint32_t quotient = 0U;
-    uint32_t rmainder = 0U;
+    uint32_t remainder = 0U;
     uint16_t icnt[4] = { 0U, 0U, 0U, 0U };
 
     if (length < OSPI_DMA_UDMA_MAX_L0_XFER_SIZE)
@@ -265,14 +275,13 @@ static int32_t OspiDma_udmaCopy(void* ospiDmaArgs, void* dst, void* src, uint32_
     {
         icnt[0] = (uint16_t)OSPI_DMA_UDMA_XFER_SIZE;
         quotient = length / OSPI_DMA_UDMA_XFER_SIZE;
-        rmainder = length % OSPI_DMA_UDMA_XFER_SIZE;
+        remainder = length % OSPI_DMA_UDMA_XFER_SIZE;
         icnt[1] = (uint16_t)(quotient);
     }
 
     icnt[2] = (uint16_t)1U;
     icnt[3] = (uint16_t)1U;
 
-#if defined (SOC_AM62X) || defined(SOC_AM62AX) || defined(SOC_AM62PX)
     uint16_t dummy_icnt[4] = { 32U, 1U, 1U, 1U };
 
     /*
@@ -283,18 +292,18 @@ static int32_t OspiDma_udmaCopy(void* ospiDmaArgs, void* dst, void* src, uint32_
     */
 
     udmaStatus = OspiDma_udmaUpdateSubmitTR(ospiDmaArgs, dst, src, dummy_icnt);
-#endif
-    udmaStatus = OspiDma_udmaUpdateSubmitTR(ospiDmaArgs, dst, src, icnt);
 
-    if(rmainder != 0)
+    udmaStatus += OspiDma_udmaUpdateSubmitTR(ospiDmaArgs, dst, src, icnt);
+
+    if(remainder != 0U)
     {
         /* residual data */
-        icnt[0] = (uint16_t)rmainder;
+        icnt[0] = (uint16_t)remainder;
         icnt[1] = (uint16_t)1U;
         icnt[2] = (uint16_t)1U;
         icnt[3] = (uint16_t)1U;
 
-        udmaStatus = OspiDma_udmaUpdateSubmitTR(ospiDmaArgs, ((uint8_t *)dst+(length-rmainder)), ((uint8_t *)src+(length-rmainder)), icnt);
+        udmaStatus += OspiDma_udmaUpdateSubmitTR(ospiDmaArgs, ((uint8_t *)dst+(length-remainder)), ((uint8_t *)src+(length-remainder)), icnt);
     }
 
     if(udmaStatus == UDMA_SOK)

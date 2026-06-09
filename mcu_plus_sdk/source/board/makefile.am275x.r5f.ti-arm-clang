@@ -1,0 +1,191 @@
+#
+# Auto generated makefile
+#
+
+export MCU_PLUS_SDK_PATH?=$(abspath ../..)
+include $(MCU_PLUS_SDK_PATH)/imports.mak
+
+CG_TOOL_ROOT=$(CGT_TI_ARM_CLANG_PATH)
+
+CC=$(CGT_TI_ARM_CLANG_PATH)/bin/tiarmclang
+AR=$(CGT_TI_ARM_CLANG_PATH)/bin/tiarmar
+
+PROFILE?=release
+ConfigName:=$(PROFILE)
+
+LIBNAME:=board.am275x.r5f.ti-arm-clang.$(PROFILE).lib
+
+FILES_common := \
+    cdce6214_drv.c \
+    dp83tc812.c \
+    dp83tg720.c \
+    dp83869.c \
+    dp83867.c \
+    dp83822.c \
+    dp83826.c \
+    eeprom.c \
+    eeprom_at24c512c.c \
+    flash.c \
+    flash_nand_ospi.c \
+    flash_nor_ospi.c \
+    generic_phy.c \
+    hyperRam.c \
+    hyperRam_dma.c \
+    hyperRam_dma_udma.c \
+    ioexp_tca6416.c \
+    ioexp_tca6424.c \
+    led.c \
+    led_gpio.c \
+    led_tpic2810.c \
+    led_ioexp_am275x_evm.c \
+    nor_spi_sfdp.c \
+    pmic.c \
+    pmic_adc.c \
+    pmic_core.c \
+    pmic_esm.c \
+    pmic_fsm.c \
+    pmic_gpio.c \
+    pmic_gpio_tps6522x.c \
+    pmic_gpio_lp8764x.c \
+    pmic_gpio_tps6594x.c \
+    pmic_io.c \
+    pmic_irq_status.c \
+    pmic_irq_tps6522x.c \
+    pmic_irq_lp8764x.c \
+    pmic_irq_tps6594x.c \
+    pmic_i2c.c \
+    pmic_power.c \
+    pmic_power_tps6522x.c \
+    pmic_power_lp8764x.c \
+    pmic_power_tps6594x.c \
+    pmic_wdg.c \
+    phy_common_priv.c \
+
+FILES_PATH_common = \
+    cdce6214 \
+    eeprom \
+    ethphy/enet/rtos_drivers/include \
+    ethphy/enet/rtos_drivers/src \
+    flash \
+    flash/ospi \
+    flash/sfdp \
+    hyperRam \
+    hyperRam/dma \
+    hyperRam/dma/udma \
+    ioexp \
+    led \
+    pmic \
+    pmic/pmic_lld/src \
+    pmic/pmic_lld/src/cfg/lp8764x \
+    pmic/pmic_lld/src/cfg/tps6522x \
+    pmic/pmic_lld/src/cfg/tps6594x \
+
+INCLUDES_common := \
+    -I${CG_TOOL_ROOT}/include/c \
+    -I${MCU_PLUS_SDK_PATH}/source \
+    -Ipmic \
+    -Ipmic/pmic_lld \
+    -Ipmic/pmic_lld/include \
+    -Ipmic/pmic_lld/include/cfg/lp8764x \
+    -Ipmic/pmic_lld/include/cfg/tps6522x \
+    -Ipmic/pmic_lld/include/cfg/tps6594x \
+    -Ipmic/pmic_lld/src \
+    -Ipmic/pmic_lld/src/cfg/lp8764x \
+    -Ipmic/pmic_lld/src/cfg/tps6522x \
+    -Ipmic/pmic_lld/src/cfg/tps6594x \
+    -I${MCU_PLUS_SDK_PATH}/source/board/ethphy/enet/rtos_drivers/include \
+    -I${MCU_PLUS_SDK_PATH}/source/board/ethphy/port \
+
+DEFINES_common := \
+    -DSOC_AM275X \
+    -DMCU_SDK_BUILD \
+    -DPHY_CFG_TRACE_LEVEL=3 \
+    -DSW_VERSION=$(SW_VERSION)
+
+CFLAGS_common := \
+    -mcpu=cortex-r5 \
+    -mfloat-abi=hard \
+    -mfpu=vfpv3-d16 \
+    -mthumb \
+    -Wall \
+    -Werror \
+    -g \
+    -Wno-gnu-variable-sized-type-not-at-end \
+    -Wno-unused-function \
+
+CFLAGS_cpp_common := \
+    -Wno-c99-designator \
+    -Wno-extern-c-compat \
+    -Wno-c++11-narrowing \
+    -Wno-reorder-init-list \
+    -Wno-deprecated-register \
+    -Wno-writable-strings \
+    -Wno-enum-compare \
+    -Wno-reserved-user-defined-literal \
+    -Wno-unused-const-variable \
+    -x c++ \
+
+CFLAGS_debug := \
+    -D_DEBUG_=1 \
+
+CFLAGS_release := \
+    -Os \
+
+ARFLAGS_common := \
+    rc \
+
+FILES := $(FILES_common) $(FILES_$(PROFILE))
+ASMFILES := $(ASMFILES_common) $(ASMFILES_$(PROFILE))
+FILES_PATH := $(FILES_PATH_common) $(FILES_PATH_$(PROFILE))
+CFLAGS := $(CFLAGS_common) $(CFLAGS_$(PROFILE))
+ASMFLAGS := $(CFLAGS_common) $(CFLAGS_$(PROFILE))
+ifeq ($(CPLUSPLUS_BUILD), yes)
+CFLAGS += $(CFLAGS_cpp_common)
+endif
+DEFINES := $(DEFINES_common) $(DEFINES_$(PROFILE))
+INCLUDES := $(INCLUDES_common) $(INCLUDE_$(PROFILE))
+ARFLAGS := $(ARFLAGS_common) $(ARFLAGS_$(PROFILE))
+
+LIBDIR := lib
+OBJDIR := obj/am275x/ti-arm-clang/$(PROFILE)/r5f/board/
+OBJS := $(FILES:%.c=%.obj)
+OBJS += $(ASMFILES:%.S=%.obj)
+DEPS := $(FILES:%.c=%.d)
+
+vpath %.obj $(OBJDIR)
+vpath %.c $(FILES_PATH)
+vpath %.S $(FILES_PATH)
+
+$(OBJDIR)/%.obj %.obj: %.c
+	@echo  Compiling: $(LIBNAME): $<
+	$(CC) -c $(CFLAGS) $(INCLUDES) $(DEFINES) -MMD -o $(OBJDIR)/$@ $<
+
+$(OBJDIR)/%.obj %.obj: %.S
+	@echo  Compiling: $(LIBNAME): $<
+	$(CC) -c $(ASMFLAGS) -o $(OBJDIR)/$@ $<
+
+all: $(LIBDIR)/$(LIBNAME)
+
+$(LIBDIR)/$(LIBNAME): $(OBJS) | $(LIBDIR)
+	@echo  .
+	@echo  Archiving: $(LIBNAME) to $@ ...
+	$(AR) $(ARFLAGS) $@ $(addprefix $(OBJDIR), $(OBJS))
+	@echo  Archiving: $(LIBNAME) Done !!!
+	@echo  .
+
+clean:
+	@echo  Cleaning: $(LIBNAME) ...
+	$(RMDIR) $(OBJDIR)
+	$(RM) $(LIBDIR)/$(LIBNAME)
+
+scrub:
+	@echo  Scrubing: $(LIBNAME) ...
+	-$(RMDIR) obj/
+	-$(RMDIR) lib/
+
+$(OBJS): | $(OBJDIR)
+
+$(LIBDIR) $(OBJDIR):
+	$(MKDIR) $@
+
+-include $(addprefix $(OBJDIR)/, $(DEPS))

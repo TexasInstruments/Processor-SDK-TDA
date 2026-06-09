@@ -33,10 +33,14 @@ FILES_PATH_common = \
     ioexp \
     null \
     led \
+    ethphy/enet/rtos_drivers/src \
+    ethphy/enet/rtos_drivers/include \
 
 INCLUDES_common := \
     -I${CG_TOOL_ROOT}/include \
     -I${MCU_PLUS_SDK_PATH}/source \
+    -I${MCU_PLUS_SDK_PATH}/source/board/ethphy/enet/rtos_drivers/include \
+    -I${MCU_PLUS_SDK_PATH}/source/board/ethphy/port \
 
 DEFINES_common := \
     -DSOC_J722S \
@@ -58,6 +62,7 @@ CFLAGS_common := \
     --diag_suppress=770 \
     --diag_suppress=69 \
     --diag_suppress=70 \
+    -DBUILD_C7X \
     --advice:performance=none \
 
 CFLAGS_debug := \

@@ -22,7 +22,7 @@ static UART_Attrs gUartAttrs[CONFIG_UART_NUM_INSTANCES] =
     % let name = config.name.replace('USART', 'UART');
     {
         .baseAddr           = `config.baseAddr`,
-        .inputClkFreq       = `config.inputClkFreq`U,
+        .inputClkFreq       = `config.clkFreq`U,
     },
 % }
 };
@@ -34,8 +34,13 @@ UART_Config gUartConfig[CONFIG_UART_NUM_INSTANCES] =
 % for(let i = 0; i < module.$instances.length; i++) {
     % let instance = module.$instances[i];
     {
-        &gUartAttrs[`instance.$name.toUpperCase()`],
-        &gUartObjects[`instance.$name.toUpperCase()`],
+        .attrs = &gUartAttrs[`instance.$name.toUpperCase()`],
+        .object = &gUartObjects[`instance.$name.toUpperCase()`],
+        % if (instance.uartTraceInstance == true) {
+        .traceInstance = TRUE,
+        %} else {
+        .traceInstance = FALSE,
+        %}
     },
 % }
 };
@@ -83,7 +88,7 @@ static uint8_t gUart`i`UdmaRxHpdMem[UART_UDMA_TEST_DESC_SIZE] __attribute__((ali
 
 UartDma_UdmaArgs gUartUdma`i`Args =
 {
-    .drvHandle        = &gUdmaDrvObj[0U],
+    .drvHandle        = &gUdmaDrvObj[`uartUdmaInstances[i].$name`],
     .txChHandle       = &gUart`i`UdmaTxObj,
     .rxChHandle       = &gUart`i`UdmaRxObj,
     .cqTxEvtHandle    = &gUart`i`UdmaCqTxEventObj,

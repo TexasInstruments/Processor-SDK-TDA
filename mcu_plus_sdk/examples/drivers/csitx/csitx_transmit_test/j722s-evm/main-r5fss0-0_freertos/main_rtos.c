@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2024
+ *  Copyright (c) Texas Instruments Incorporated 2024-25
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -122,7 +122,7 @@ void taskFxn(void* a0)
 {
     int32_t retVal = CSL_PASS;
     uint64_t clkFreq = 0U;
-  
+
 
     retVal += Sciclient_pmSetModuleState(CSITX_MOD,
                                TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,

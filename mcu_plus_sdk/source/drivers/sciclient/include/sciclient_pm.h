@@ -452,77 +452,68 @@ int32_t Sciclient_pmGetModuleClkFreq(uint32_t  moduleId,
                                      uint32_t  clockId,
                                      uint64_t *freqHz,
                                      uint32_t  timeout);
-/**
- *  \brief    Enables the WDT controllers within the DMSC.
- *
- *  \n<b>Message</b>:    #TISCI_MSG_ENABLE_WDT
- *  \n<b>Request</b>:    #tisci_msg_enable_wdt_req
- *  \n<b>Response</b>:   #tisci_msg_enable_wdt_resp
- *
- *  \param  timeout         Gives a sense of how long to wait for the operation.
- *                          Refer \ref SystemP_Timeout.
- *  \return SystemP_SUCCESS on success, else failure
- */
-int32_t Sciclient_pmEnableWdt(uint32_t timeout);
 
 /**
- *  \brief    This message is part of the CPU Off sequence. The sequence is:
- *  - Mask interrupts
- *  - Send wake reset message to PMMC
- *  - Wait for wake reset ACK
- *  - Abort if any interrupts are pending
- *  - Disable all interrupts
- *  - Send goodbye to PMMC
- *  - Wait for goodbye ACK
- *  - Execute WFI
+ *  \brief    Message to set the spread spectrum clocking parameters.
+ *  This allows configuration of spread spectrum clocking for a specific module clock.
+ *  Spread spectrum clocking can help reduce electromagnetic interference (EMI) by
+ *  distributing the energy of a clock signal over a wider frequency band.
  *
- *  \n<b>Message</b>:    #TISCI_MSG_WAKE_RESET
- *  \n<b>Request</b>:    #tisci_msg_wake_reset_req
- *  \n<b>Response</b>:   #tisci_msg_wake_reset_resp
+ *  \n<b>Message</b>:    #TISCI_MSG_SET_CLOCK_SSC
+ *  \n<b>Request</b>:    #tisci_msg_set_clock_ssc_req
+ *  \n<b>Response</b>:   #tisci_msg_set_clock_ssc_resp
  *
+ *  \param  moduleId        Module for which the SSC should be set.
+ *                          Refer \ref Sciclient_PmDeviceIds.
+ *  \param  clockId         Clock Id for the module.
+ *                          Refer \ref Sciclient_PmModuleClockIds.
+ *  \param  modFreqHz      Modulation frequency in Hz.
+ *  \param  modDepth       Modulation depth.
+ *  \param  spreadType     Type of spreading.
+ *  \param  enable          Flag to enable (1) or disable (0) SSC.
+ *  \param  additionalFlag  Additional flags for the request.
  *  \param  timeout         Gives a sense of how long to wait for the operation.
  *                          Refer \ref SystemP_Timeout.
  *  \return SystemP_SUCCESS on success, else failure
  */
-int32_t Sciclient_pmDisableWakeup(uint32_t timeout);
+int32_t Sciclient_pmSetModuleClkSSC(uint32_t moduleId,
+                                   uint32_t clockId,
+                                   uint32_t modFreqHz,
+                                   uint32_t modDepth,
+                                   uint8_t spreadType,
+                                   uint8_t enable,
+                                   uint32_t additionalFlag,
+                                   uint32_t timeout);
 
 /**
- *  \brief    Request wakeup reason
- *  After a wakeup, the host can request the deepest sleep/idle mode reached
- *  and the reason for the wakeup. The API also returns the time spent in idle
- *  state.
+ *  \brief    Message to get the spread spectrum clocking parameters.
+ *  This retrieves the current configuration of spread spectrum clocking for a specific
+ *  module clock. Spread spectrum clocking can help reduce electromagnetic interference
+ *  (EMI) by distributing the energy of a clock signal over a wider frequency band.
  *
- *  \n<b>Message</b>:    #TISCI_MSG_WAKE_REASON
- *  \n<b>Request</b>:    #tisci_msg_wake_reason_req
- *  \n<b>Response</b>:   #tisci_msg_wake_reason_resp
+ *  \n<b>Message</b>:    #TISCI_MSG_GET_CLOCK_SSC
+ *  \n<b>Request</b>:    #tisci_msg_get_clock_ssc_req
+ *  \n<b>Response</b>:   #tisci_msg_get_clock_ssc_resp
  *
- *  \param  mode            Deepest sleep/idle mode 0x000C reached (ASCII)
- *  \param  reason          Wakeup reason (ASCII)
- *  \param  time_ms         Time spent in idle state (ms)
- *  \param  timeout         Gives a sense of how long to wait for the operation.
- *                          Refer \ref SystemP_Timeout.
- *
- *  \return SystemP_SUCCESS on success, else failure
- */
-int32_t Sciclient_pmGetWakeupReason(uint8_t mode[32],
-                                    uint8_t reason[32],
-                                    uint32_t * time_ms,
-                                    uint32_t timeout);
-/**
- *  \brief    Some processors have a special sequence for powering off the core
- *  that provides notification to the PMMC when that sequence has completed.
- *  For processors without such a sequence, the goodbye message exists.
- *  The exact sequence involved in the goodbye message depends on the SoC.
- *
- *  \n<b>Message</b>:    #TISCI_MSG_GOODBYE
- *  \n<b>Request</b>:    #tisci_msg_goodbye_req
- *  \n<b>Response</b>:   #tisci_msg_goodbye_resp
- *
+ *  \param  moduleId        Module for which to get the SSC parameters.
+ *                          Refer \ref Sciclient_PmDeviceIds.
+ *  \param  clockId         Clock Id for the module.
+ *                          Refer \ref Sciclient_PmModuleClockIds.
+ *  \param  modFreqHz      Pointer to store the modulation frequency in Hz.
+ *  \param  modDepth       Pointer to store the modulation depth.
+ *  \param  spreadType     Pointer to store the spread type.
+ *  \param  enable          Pointer to store the enable state.
  *  \param  timeout         Gives a sense of how long to wait for the operation.
  *                          Refer \ref SystemP_Timeout.
  *  \return SystemP_SUCCESS on success, else failure
  */
-int32_t Sciclient_pmDevicePowerOff(uint32_t timeout);
+int32_t Sciclient_pmGetModuleClkSSC(uint32_t  moduleId,
+                                   uint32_t  clockId,
+                                   uint32_t *modFreqHz,
+                                   uint32_t *modDepth,
+                                   uint8_t *spreadType,
+                                   uint8_t  *enable,
+                                   uint32_t  timeout);
 
 /**
  *  \brief   Objective: Trigger a SoC level reset
@@ -540,16 +531,6 @@ int32_t Sciclient_pmDevicePowerOff(uint32_t timeout);
  *  \return SystemP_SUCCESS on success, else failure
  */
 int32_t Sciclient_pmDeviceReset(uint32_t timeout);
-
-/**
- *  \brief   This API would check if the given module Id is valid for the
- *           device.
- *
- *  \param  modId       Module Index to be checked.
- *
- *  \return SystemP_SUCCESS on success, else failure
- */
-int32_t Sciclient_pmIsModuleValid(uint32_t modId);
 
 /**
  *  \brief  Objective: Trigger a domain level reset.

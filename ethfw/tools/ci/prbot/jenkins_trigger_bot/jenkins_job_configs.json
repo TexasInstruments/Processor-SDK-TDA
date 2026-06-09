@@ -1,0 +1,29 @@
+{
+         "PROCESSOR-SDK-VISION/ethfw": [
+         {
+            "root_url" : "https://jenkins-epsw.itg.ti.com",
+            "job_name" : "ethrtos_rtos_ethfw_pr_bot",
+            "auth_uname" : "JENKINS_PROC_AUTH_UNAME",
+            "auth_key" : "JENKINS_PROC_AUTH_KEY",
+            "token" : "",
+            "params" : {
+                "TARGET_REPO": "{repo}",
+                "COMMIT_ID": "{commit_id}",
+                "PR_ID": "{pr_number}",
+                "PR_DESCRIPTION": "{pr_description}",
+                "BB_URL": "https://bitbucket.itg.ti.com",
+                "BB_PROJECT": "{project}",
+                "BB_REPO": "{repo}",
+                "TARGET_BRANCH": "master"
+            },
+			"params_template" : "{\"manifest_tag\":\"%repo_manifests%\",\"ethfw_tag\":\"%ethfw%\",\"enet_tag\":\"%enet-lld%\",\"tsn_tag\":\"%enet-tsn-stack%\",\"pdk_tag\":\"%pdk%\"}",
+			"default_tag" : {
+				    "repo_manifests" : "master",
+				    "pdk" : "master",
+				    "enet-lld" : "master",
+				    "enet-tsn-stack" : "next",
+				    "ethfw" : "master"
+				    },
+            "disabled" : false
+         }]
+}

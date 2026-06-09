@@ -104,6 +104,7 @@ static void DssApp_Run(void)
     IpFma_DssVideoPortRegs videoPort1RegsExp;
     IpFma_DssVideoPortRegs videoPort2RegsExp;
     IpFma_DssWriteBackPipeRegs writeBackPipeRegsExp;
+    IpFma_Status overallCompareStatus = IPFMA_OK;
 
     /* Common M Regs */
     IpFma_Status commonMRegsReadStatus;
@@ -189,29 +190,52 @@ static void DssApp_Run(void)
 
         /* Comparison of initially read and current register values */
         IpFma_Status commonMRegsCompareStatus = IpFma_Dss_CompareCommonMRegs(&commonMRegsExp, &commonMRegsActual);
+        overallCompareStatus |= commonMRegsCompareStatus;
         DssApp_PrintRegCompareStatus(commonMRegsCompareStatus, "COMMON M REGION");
         IpFma_Status commonSRegsCompareStatus = IpFma_Dss_CompareCommonSRegs(&commonSRegsExp, &commonSRegsActual);
         DssApp_PrintRegCompareStatus(commonSRegsCompareStatus, "COMMON S REGION");
+        overallCompareStatus |= commonSRegsCompareStatus;
         IpFma_Status video1PipeRegsCompareStatus = IpFma_Dss_CompareVideoPipeRegs(&video1PipeRegsExp, &video1PipeRegsActual);
         DssApp_PrintRegCompareStatus(video1PipeRegsCompareStatus, "VIDEO PIPE 1 REGION");
+        overallCompareStatus |= video1PipeRegsCompareStatus;
         IpFma_Status video2PipeRegsCompareStatus = IpFma_Dss_CompareVideoPipeRegs(&video2PipeRegsExp, &video2PipeRegsActual);
         DssApp_PrintRegCompareStatus(video2PipeRegsCompareStatus, "VIDEO PIPE 2 REGION");
+        overallCompareStatus |= video2PipeRegsCompareStatus;
         IpFma_Status videoPipeLayerRegsCompareStatus = IpFma_Dss_CompareVideoPipeLayerRegs(&videoPipeLayerRegsExp, &videoPipeLayerRegsActual);
         DssApp_PrintRegCompareStatus(videoPipeLayerRegsCompareStatus, "VIDEO PIPE LAYER REGION");
+        overallCompareStatus |= videoPipeLayerRegsCompareStatus;
         /*  These should fail  */
         UART_printf("\n\nThese should fail as the registers expected value has been modified on purpose!");
         IpFma_Status overlayRegsCompareStatus = IpFma_Dss_CompareOverlayRegs(&overlayRegsExp, &overlayRegsActual);
 
         DssApp_PrintRegCompareStatus(overlayRegsCompareStatus, "OVERLAY REGION");
+        if (IPFMA_OK == overlayRegsCompareStatus)
+        {
+            /* it is expected that overlayRegsCompareStatus is IPFMA_E_MISMATCH */
+            /* if it is not, update the overall */
+            overallCompareStatus = IPFMA_E_MISMATCH;
+        }
         IpFma_Status videoPort1RegsCompareStatus = IpFma_Dss_CompareVideoPortRegs(&videoPort1RegsExp, &videoPort1RegsActual);
         DssApp_PrintRegCompareStatus(videoPort1RegsCompareStatus, "VIDEO PORT 1 REGION");
+        overallCompareStatus |= videoPort1RegsCompareStatus;
         IpFma_Status videoPort2RegsCompareStatus = IpFma_Dss_CompareVideoPortRegs(&videoPort2RegsExp, &videoPort2RegsActual);
         DssApp_PrintRegCompareStatus(videoPort2RegsCompareStatus, "VIDEO PORT 2 REGION");
+        overallCompareStatus |= videoPort2RegsCompareStatus;
         IpFma_Status writeBackPipeRegsCompareStatus = IpFma_Dss_CompareWriteBackPipeRegs(&writeBackPipeRegsExp, &writeBackPipeRegsActual);
         DssApp_PrintRegCompareStatus(writeBackPipeRegsCompareStatus, "WRITE BACK PIPE REGION");
+        overallCompareStatus |= writeBackPipeRegsCompareStatus;
 
         Board_delay(DELAY_MS);
         iteration++;
+    }
+
+    if (IPFMA_OK == overallCompareStatus)
+    {
+        UART_printf("\nAll tests have passed!!\n");
+    }
+    else
+    {
+        UART_printf("\nSome tests have failed!!\n");
     }
 }
 

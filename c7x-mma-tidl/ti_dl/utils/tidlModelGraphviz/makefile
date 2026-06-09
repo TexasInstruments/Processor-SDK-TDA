@@ -6,6 +6,7 @@
 ##############################################################
 ALGBASE_PATH ?= $(abspath ../../../)
 PSDK_INSTALL_PATH ?= $(abspath ../../../../)
+override BUILD_WITH_OPENACC=no
 COMMON_DIR= ../../../common
 CFILES := tidl_graph_model.c
 CFILES += ../tidlModelDump/tidl_dump.cpp
@@ -18,9 +19,9 @@ OUTFILE= ./out/tidl_graphVisualiser.out
 ##############################################################
 TIDL_IMPORT_TOOL := 1
 TARGET_PLATFORM = PC
-BUILD_WITH_CUDA := 0
-override BUILD_WITH_CUDA=0
-override BUILD_WITH_OPENACC=0
+BUILD_WITH_CUDA := no
+override BUILD_WITH_CUDA=no
+override BUILD_WITH_OPENACC=no
 
 include $(ALGBASE_PATH)/makerules/rules.mk
 include $(ALGBASE_PATH)/makerules/common.mk

@@ -61,8 +61,8 @@
 ##############################################################
 ALGBASE_PATH ?= $(abspath ../../../)
 PSDK_INSTALL_PATH ?= $(abspath ../../../../)
-override BUILD_WITH_CUDA=0
-override BUILD_WITH_OPENACC=0
+override BUILD_WITH_CUDA=no
+override BUILD_WITH_OPENACC=no
 COMMON_DIR= ../../../common
 
 SUBDIRS= ../tfImport/proto_cc/tensorflow/core/framework
@@ -80,7 +80,7 @@ HFILES = ../tidlQuantParams/tidl_quant_params.pb.h
 HFILES += ti_dl.h
 
 TARGET_PLATFORM = PC
-BUILD_WITH_CUDA = 0
+BUILD_WITH_CUDA = no
 
 ifdef SystemRoot
 PROTOBUF_LIB_DIR?=$(TIDL_PROTOBUF_PATH)/lib/Release

@@ -113,9 +113,17 @@
  */
 #define DMSS_BCDMA_BLOCK_COPY_HCCHAN (12U)
 /**
+ * DMSS BCDMA high capacity transmit channel
+ */
+#define DMSS_BCDMA_TX_HCCHAN             (13U)
+/**
+ * DMSS BCDMA high capacity receive channel
+ */
+#define DMSS_BCDMA_RX_HCCHAN             (14U)
+/**
  * Total number of ring types
  */
-#define UDMAP_NUM_CHAN_TYPES       (13U)
+#define UDMAP_NUM_CHAN_TYPES       (15U)
 
 /**
  * \brief

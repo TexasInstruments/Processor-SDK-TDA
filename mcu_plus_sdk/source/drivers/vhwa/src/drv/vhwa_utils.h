@@ -153,7 +153,7 @@ void Vhwa_commonDeleteHwaLock(uint32_t idx);
 int32_t Vhwa_commonHwaLockAquire(uint32_t idx, uint32_t timeout);
 void Vhwa_commonHwaLockRelease(uint32_t idx);
 
-#if !defined(SOC_AM62A) /* LBIST not applicable for am62a */
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L) /* LBIST not applicable for am62a, and not enabled on J722S */
 int32_t Vhwa_m2mDofReInit(void);
 int32_t Vhwa_m2mSdeReInit(void);
 int32_t Vhwa_m2mVissReInit(void);

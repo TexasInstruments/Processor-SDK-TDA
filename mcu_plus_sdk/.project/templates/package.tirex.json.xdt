@@ -1,20 +1,53 @@
 %%{
-    productName = args.utils.getProductNameProjectSpec(args.device);
+    tirexId = args.utils.getTirexId(args.device);
     isDevelopmentMode = args.common.isDevelopmentMode();
-    deviceName = args.utils.getProjectSpecDevice(args.device);
-    if(args.device == "am273x")
-        deviceName = "AM273x"
-    if(args.device == "am62x")
-        deviceName = "AM62x"
+    deviceName = args.device.slice(0, -1).toUpperCase() + "x";
+
+    sdkName="MCU+ SDK"
+    coreList="ARM R5F, ARM M4F, ARM A53, ARM C7X"
     if(isDevelopmentMode)
+    {
         deviceName = "AMXXX";
+    }
+    else
+    {
+        if(args.device == "am62x")
+        {
+            coreList="ARM R5F, ARM M4F, ARM A53"
+        }
+        else if(args.device == "am62ax" || args.device == "am62dx")
+        {
+            coreList="ARM R5F, ARM A53, TI C7X"
+        }
+        else if(args.device == "am62px")
+        {
+            coreList="ARM R5F"
+        }
+        else if(args.device == "am62lx")
+        {
+            coreList="ARM A53"
+        }
+        else if(args.device == "am275x")
+        {
+            coreList="ARM R5F, TI C7X"
+        }
+
+        if((args.device == "am62x") || (args.device == "am62ax") || (args.device == "am62px") || (args.device == "j722s"))
+        {
+            sdkName="MCU+ SDK"
+        }
+        else 
+        {
+            sdkName="FreeRTOS SDK"
+        }
+    }
 %%}
 [
     {
         "metadataVersion": "3.01.00",
-        "id": "com.ti.`productName`",
-        "name": "MCU+ SDK for `deviceName`",
-        "rootCategory": [ "MCU+ SDK", "MCU+ SDK for `deviceName`" ],
+        "id": "`tirexId`",
+        "name": "`sdkName` for `deviceName`",
+        "rootCategory": [ "`sdkName`", "`sdkName` for `deviceName`" ],
         "version": "07.03.00.01",
         "type": "software",
         "image": "./mcu_plus_sdk.png",
@@ -23,7 +56,7 @@
         % }
         "devices": ["`deviceName`"],
         "tags": ["SDK", "Baremetal", "FreeRTOS"],
-        "description": "Welcome to MCU+ SDK for `deviceName`. This SDK contains examples, libraries and tools to develop RTOS and no-RTOS based applications for ARM R5F, ARM M4F CPUs and related peripherals.",
+        "description": "Welcome to `sdkName` for `deviceName`. This SDK contains examples, libraries and tools to develop RTOS and no-RTOS based applications for `coreList` CPUs and related peripherals.",
         "dependencies": [
             % if(((args.device == "am273x") || (args.device == "awr294x")) && (!isDevelopmentMode)) {
             { "packageId": "sysconfig", "version": "1.13.0", "require": "mandatory" },
@@ -31,11 +64,11 @@
             { "packageId": "sysconfig", "version": "`args.utils.getSysCfgVersionProjectSpec()`", "require": "mandatory" },
             % }
             % if (args.device == "am64x" || (isDevelopmentMode)) {
-            { "packageId": "ti_cgt_tiarmclang", "version": "`args.utils.getTiClangVersionProjectSpec()`", "require": "mandatory" },
+            { "packageId": "ti_cgt_tiarmclang", "version": "`args.utils.getTiClangVersionProjectSpec(args.device)`", "require": "mandatory" },
             { "packageId": "arm.gnu.aarch64-none", "version": "`args.utils.getGCCAarch64NoneVersionProjectSpec()`", "require": "mandatory" }
             % }
             % else {
-            { "packageId": "ti_cgt_tiarmclang", "version": "`args.utils.getTiClangVersionProjectSpec()`", "require": "mandatory" }
+            { "packageId": "ti_cgt_tiarmclang", "version": "`args.utils.getTiClangVersionProjectSpec(args.device)`", "require": "mandatory" }
             % }
         ]
     }

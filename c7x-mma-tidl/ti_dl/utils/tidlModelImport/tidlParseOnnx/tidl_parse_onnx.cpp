@@ -64,8 +64,8 @@
 #include "tidl_custom_import.h"
 #include "tidl_parse_onnx_jumptable.h"
 
-TidlParseOnnx::TidlParseOnnx(GraphProto& onnxGraph, int32_t index, sTIDL_LayerPC_t layerPC) :
-    graph(onnxGraph), index(index), layer(layerPC)
+TidlParseOnnx::TidlParseOnnx(GraphProto& onnxGraph, int32_t index, sTIDL_LayerPC_t layerPC, bool& isModelShapeInfered) :
+    graph(onnxGraph), index(index), layer(layerPC), isModelShapeInfered(isModelShapeInfered)
 {
   status = saveAllowlistingMetaData();
   if(status != 0)
@@ -113,7 +113,22 @@ TidlParseOnnx::TidlParseOnnx(GraphProto& onnxGraph, int32_t index, sTIDL_LayerPC
     }
     else
     {
-      layer.parseStatus = TIDL_ParsePassed;
+      if(isModelShapeInfered &&
+         checkShapeInferenceforOnnx(layer.allowlistingMetaData) == TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
+      {
+        if(isLayerIODataTypesSupported(layer) && isLayerIONumSupported(layer))
+        {
+          layer.parseStatus = TIDL_ParsePassed;
+        }
+        else
+        {
+          layer.parseStatus = TIDL_ParseFailed;
+        }
+      }
+      else
+      {
+        isModelShapeInfered = false;
+      }
     }
   }
 
@@ -124,8 +139,6 @@ TidlParseOnnx::TidlParseOnnx(GraphProto& onnxGraph, int32_t index, sTIDL_LayerPC
   }
 
 }
-
-
 
 /** Function to save layer level tensor properties metadata to be used for allowlisting
  * Saves data for sTIDL_allowlistingMetaData structure
@@ -140,16 +153,13 @@ int32_t TidlParseOnnx::saveAllowlistingMetaData()
   if (strcmp(graph.node(index).op_type().c_str(), "DequantizeLinear") == 0)
   {
     std::string name = graph.node(index).name();
-    if(name.find("/duplicated") != std::string::npos)
+    name = getOriginalNameFromDuplicateName(name);
+    for (int j = 0; j < graph.node_size(); j++)
     {
-      name = name.substr(0, name.find("/duplicated"));
-      for (int j = 0; j < graph.node_size(); j++)
+      if(strcmp(graph.node(j).name().c_str(), name.c_str()) == 0)
       {
-        if(strcmp(graph.node(j).name().c_str(), name.c_str()) == 0)
-        {
-          index = j;
-          break;
-        }
+        index = j;
+        break;
       }
     }
   }

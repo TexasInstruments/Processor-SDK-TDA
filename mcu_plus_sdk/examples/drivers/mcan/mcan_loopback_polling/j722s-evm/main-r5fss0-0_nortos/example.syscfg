@@ -22,7 +22,7 @@ const mpu_armv75 = mpu_armv7.addInstance();
  * Write custom configuration values to the imported modules.
  */
 mcan1.$name            = "CONFIG_MCAN0";
-mcan1.useMCUDomain     = "true";
+mcan1.useMcuDomainPeripherals     = true;
 mcan1.MCU_MCAN.$assign = "MCU_MCAN1";
 
 debug_log.enableUartLog                      = true;

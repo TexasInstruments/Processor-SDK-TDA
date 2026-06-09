@@ -3,7 +3,7 @@
  *
  * Handlers for Low Power Mode implementation
  *
- * Copyright (C) 2021-2025, Texas Instruments Incorporated
+ * Copyright (C) 2021-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -67,7 +67,7 @@
 
 #define LPM_SUSPEND_POWERMASTER                 BIT(0)
 #define LPM_DEVICE_DEINIT                       BIT(1)
-#define LPM_DISABLE_LPSC                        BIT(2)
+#define LPM_SUSPEND_DM_APPLICATION              BIT(2)
 #define LPM_SAVE_MAIN_PADCONFIG                 BIT(3)
 #define LPM_SUSPEND_GTC                         BIT(4)
 #define LPM_CLOCK_SUSPEND                       BIT(5)
@@ -91,6 +91,8 @@ extern void lpm_get_wake_info(struct tisci_msg_lpm_wake_reason_resp *wkup_params
 extern void lpm_populate_prepare_sleep_data(struct tisci_msg_prepare_sleep_req *p);
 extern void lpm_clear_all_wakeup_interrupt(void);
 extern u8 lpm_get_selected_sleep_mode(void);
+extern void lpm_reset_wake_reason_params(void);
+extern s32 unload_magic_words_thru_wkup_mmr(void);
 
 u32 key_status;
 volatile u32 enter_sleep_status = 0;
@@ -168,33 +170,6 @@ static s32 lpm_sleep_wait_for_tifs_wfi(void)
 	return ret;
 }
 
-static s32 lpm_sleep_disable_sec_lpsc(void)
-{
-	/* Disable security LPSCs */
-	return SUCCESS;
-}
-
-static s32 lpm_sleep_disable_misc_lpsc(void)
-{
-	/* Disable non-critical LPSCs */
-	return SUCCESS;
-}
-
-static s32 lpm_resume_enable_lpsc(void)
-{
-	/* enable LPSCs as needed for cores to resume */
-	return SUCCESS;
-}
-
-static s32 lpm_resume_disable_DM_reset_isolation(void)
-{
-	/* Clear WKUP_CTRL_DS_DM_RESET.mask to stop
-	* isolation of DM from MAIN domain
-	*/
-	writel(DS_DM_RESET_UNMASK, WKUP_CTRL_BASE + WKUP_CTRL_DS_DM_RESET);
-	return SUCCESS;
-}
-
 static s32 lpm_resume_restore_RM_context(void)
 {
 	/* Restore IR configurations */
@@ -255,9 +230,9 @@ static s32 lpm_resume_send_enter_sleep_abort_message(void)
 	/* Send abort enter sleep message */
 	s32 ret = 0;
 
-	struct tisci_msg_abort_enter_sleep_req req = {
+	struct tisci_msg_dm_abort_sleep_req req = {
 		.hdr		= {
-			.type	= TISCI_MSG_ABORT_ENTER_SLEEP,
+			.type	= TISCI_MSG_DM_ABORT_SLEEP,
 			.flags	= 0,
 			.host	= HOST_ID_DM2TIFS
 		}
@@ -496,13 +471,43 @@ static void lpm_enter_partial_io_mode(void)
 	lpm_hang_abort();
 }
 
+static void lpm_get_wake_reason_params(struct tisci_msg_lpm_wake_reason_resp *wake_params)
+{
+	u8 val = (u8) readl(WKUP_CTRL_BASE + WKUP_PIN_SRC_REG);
+
+	/* Get the wake parameters for other modes */
+	lpm_get_wake_info(wake_params);
+
+	/* If no valid mode is entered, check if partial I/O was the last entered mode */
+	if (wake_params->mode == TISCI_MSG_VALUE_SLEEP_MODE_INVALID) {
+		/* If pin number is valid, update the correct mode, source and pin */
+		if ((val >= CAN_IO_WKUP_PIN_NUM_START) && (val <= CAN_IO_WKUP_PIN_NUM_END)) {
+			wake_params->wake_pin = val;
+			wake_params->wake_source = TISCI_MSG_VALUE_LPM_WAKE_SOURCE_CAN_IO;
+			wake_params->mode = TISCI_MSG_VALUE_SLEEP_MODE_PARTIAL_IO;
+		} else if (val == TISCI_MSG_VALUE_LPM_WAKE_PIN_INVALID) {
+			/* If this is partial I/O exit but the wakeup source is unknown */
+			wake_params->wake_pin = val;
+			wake_params->wake_source = TISCI_MSG_VALUE_LPM_WAKE_SOURCE_INVALID;
+			wake_params->mode = TISCI_MSG_VALUE_SLEEP_MODE_PARTIAL_IO;
+		} else {
+			/* Empty else condition to fix MISRA.IF.NO_ELSE violation. */
+		}
+	}
+}
+
+static void lpm_reset_partial_io_wake_info(void)
+{
+	writel(WKUP_PIN_SRC_CLR, WKUP_CTRL_BASE + WKUP_PIN_SRC_REG);
+}
+
 s32 dm_prepare_sleep_handler(u32 *msg_recv)
 {
 	struct tisci_msg_prepare_sleep_req *req =
 		(struct tisci_msg_prepare_sleep_req *) msg_recv;
 
 	s32 ret = SUCCESS;
-	u8 mode;
+	u8 mode = TISCI_MSG_VALUE_SLEEP_MODE_INVALID;
 
 	pm_trace(TRACE_PM_ACTION_MSG_RECEIVED, TISCI_MSG_PREPARE_SLEEP);
 
@@ -532,27 +537,22 @@ s32 dm_prepare_sleep_handler(u32 *msg_recv)
 		}
 	}
 
-	if (ret == SUCCESS) {
-		switch (mode) {
-		case TISCI_MSG_VALUE_SLEEP_MODE_IO_ONLY_PLUS_DDR:
+	/* Reset the wake reason values */
+	lpm_reset_wake_reason_params();
+	lpm_reset_partial_io_wake_info();
+
+	switch (mode) {
+	case TISCI_MSG_VALUE_SLEEP_MODE_IO_ONLY_PLUS_DDR:
+	case TISCI_MSG_VALUE_SLEEP_MODE_DEEP_SLEEP:
+	case TISCI_MSG_VALUE_SLEEP_MODE_MCU_ONLY:
+		if (mode == TISCI_MSG_VALUE_SLEEP_MODE_IO_ONLY_PLUS_DDR) {
 			/* Return failure if the device does not support IO only plus DDR mode */
-			if (mode != DEEPEST_LOW_POWER_MODE) {
+			if ((ret == SUCCESS) && (mode != DEEPEST_LOW_POWER_MODE)) {
 				ret = -EFAIL;
 			}
-			if (ret == SUCCESS) {
-				/* Parse and store the mode info and ctx address in the prepare sleep message */
-				lpm_populate_prepare_sleep_data(req);
+		}
 
-				/*
-				 * Clearing all wakeup interrupts from VIM. Even if we are cleaning interrupts
-				 * from VIM, if the wakeup interrupt is still active it will be able to wake
-				 * the soc from LPM. This will only clear any unwanted pending wakeup interrupts
-				 */
-				lpm_clear_all_wakeup_interrupt();
-			}
-			break;
-		case TISCI_MSG_VALUE_SLEEP_MODE_DEEP_SLEEP:
-		case TISCI_MSG_VALUE_SLEEP_MODE_MCU_ONLY:
+		if (ret == SUCCESS) {
 			/* Parse and store the mode info and ctx address in the prepare sleep message */
 			lpm_populate_prepare_sleep_data(req);
 
@@ -562,29 +562,31 @@ s32 dm_prepare_sleep_handler(u32 *msg_recv)
 			 * the soc from LPM. This will only clear any unwanted pending wakeup interrupts
 			 */
 			lpm_clear_all_wakeup_interrupt();
-			break;
-		case TISCI_MSG_VALUE_SLEEP_MODE_PARTIAL_IO:
+		}
+		break;
+	case TISCI_MSG_VALUE_SLEEP_MODE_PARTIAL_IO:
+		if (ret == SUCCESS) {
 			/* Suspend DM so that in case of failure, idle hook is not executed */
 			ret = lpm_sleep_suspend_dm();
-
-			if (ret == SUCCESS) {
-				/*
-				 * Wait for tifs to reach WFI in both the failed and successful case.
-				 * but update the ret value only if it was SUCCESS previously
-				 */
-				ret = lpm_sleep_wait_for_tifs_wfi();
-			}
-
-			if (ret == SUCCESS) {
-				/* Enable CANUART IO daisy chain and enter partial io mode */
-				lpm_enter_partial_io_mode();
-			} else {
-				lpm_hang_abort();
-			}
-			break;
-		default: ret = -EFAIL;
-			break;
 		}
+
+		if (ret == SUCCESS) {
+			/*
+			 * Wait for tifs to reach WFI in both the failed and successful case.
+			 * but update the ret value only if it was SUCCESS previously
+			 */
+			ret = lpm_sleep_wait_for_tifs_wfi();
+		}
+
+		if (ret == SUCCESS) {
+			/* Enable CANUART IO daisy chain and enter partial io mode */
+			lpm_enter_partial_io_mode();
+		} else {
+			lpm_hang_abort();
+		}
+		break;
+	default: ret = -EFAIL;
+		break;
 	}
 
 	return ret;
@@ -597,7 +599,6 @@ s32 dm_enter_sleep_handler(u32 *msg_recv)
 
 	s32 ret = SUCCESS;
 	u8 mode = req->mode;
-	u32 i;
 	u32 temp_sleep_status = 0;
 
 	enter_sleep_status = 0;
@@ -631,21 +632,16 @@ s32 dm_enter_sleep_handler(u32 *msg_recv)
 	}
 
 	if (ret == SUCCESS) {
+		ret = osal_suspend_dm_application();
+		enter_sleep_status |= LPM_SUSPEND_DM_APPLICATION;
+	}
+
+	if (ret == SUCCESS) {
 		ret = devices_deinit_flags();
 		enter_sleep_status |= LPM_DEVICE_DEINIT;
 	} else {
 		devices_deinit_flags();
 		enter_sleep_status |= LPM_DEVICE_DEINIT;
-	}
-
-	if (ret == SUCCESS) {
-		ret = lpm_sleep_disable_sec_lpsc();
-		enter_sleep_status |= LPM_DISABLE_LPSC;
-	}
-
-	if (ret == SUCCESS) {
-		ret = lpm_sleep_disable_misc_lpsc();
-		enter_sleep_status |= LPM_DISABLE_LPSC;
 	}
 
 	if (ret == SUCCESS) {
@@ -673,14 +669,14 @@ s32 dm_enter_sleep_handler(u32 *msg_recv)
 		enter_sleep_status |= LPM_CLOCK_SUSPEND;
 	}
 
-	if (ret == SUCCESS) {
-		ret = lpm_sleep_suspend_dm();
-		enter_sleep_status |= LPM_SUSPEND_DM;
-	}
-
 	if ((mode == TISCI_MSG_VALUE_SLEEP_MODE_IO_ONLY_PLUS_DDR) && (ret == SUCCESS)) {
 		ret = lpm_suspend_RM_context();
 		enter_sleep_status |= LPM_RM_DEINIT;
+	}
+
+	if (ret == SUCCESS) {
+		ret = lpm_sleep_suspend_dm();
+		enter_sleep_status |= LPM_SUSPEND_DM;
 	}
 
 	if ((mode == TISCI_MSG_VALUE_SLEEP_MODE_IO_ONLY_PLUS_DDR) && (ret == SUCCESS)) {
@@ -700,31 +696,20 @@ s32 dm_enter_sleep_handler(u32 *msg_recv)
 	}
 
 	temp_sleep_status = enter_sleep_status;
-	if ((ret == SUCCESS) || ((temp_sleep_status & LPM_DISABLE_LPSC) == LPM_DISABLE_LPSC)) {
-		if (lpm_resume_enable_lpsc() != SUCCESS) {
-			lpm_hang_abort();
-		}
-	}
 
-	if (ret == SUCCESS) {
-		if (lpm_resume_disable_DM_reset_isolation() != SUCCESS) {
-			lpm_hang_abort();
-		}
-	}
-
-	if ((ret == SUCCESS) || ((temp_sleep_status & LPM_SUSPEND_GTC) == LPM_SUSPEND_GTC)) {
+	if ((temp_sleep_status & LPM_SUSPEND_GTC) == LPM_SUSPEND_GTC) {
 		if (lpm_resume_gtc() != SUCCESS) {
 			lpm_hang_abort();
 		}
 	}
 
-	if (((temp_sleep_status & LPM_SAVE_MCU_PADCONFIG) == LPM_SAVE_MCU_PADCONFIG) && (ret == SUCCESS)) {
+	if ((temp_sleep_status & LPM_SAVE_MCU_PADCONFIG) == LPM_SAVE_MCU_PADCONFIG) {
 		if (lpm_resume_restore_mcu_padconf() != SUCCESS) {
 			lpm_hang_abort();
 		}
 	}
 
-	if (((temp_sleep_status & LPM_SAVE_WKUP_PERIPH_CFG) == LPM_SAVE_WKUP_PERIPH_CFG) && (ret == SUCCESS)) {
+	if ((temp_sleep_status & LPM_SAVE_WKUP_PERIPH_CFG) == LPM_SAVE_WKUP_PERIPH_CFG) {
 		if (lpm_resume_restore_wkup_periph() != SUCCESS) {
 			lpm_hang_abort();
 		}
@@ -736,19 +721,19 @@ s32 dm_enter_sleep_handler(u32 *msg_recv)
 		}
 	}
 
-	if ((ret == SUCCESS) || ((temp_sleep_status & LPM_SUSPEND_DM) == LPM_SUSPEND_DM)) {
+	if ((temp_sleep_status & LPM_SUSPEND_DM) == LPM_SUSPEND_DM) {
 		if (lpm_resume_dm() != SUCCESS) {
 			lpm_hang_abort();
 		}
 	}
 
-	if ((ret == SUCCESS) || ((temp_sleep_status & LPM_SAVE_MMR_LOCK) == LPM_SAVE_MMR_LOCK)) {
+	if ((temp_sleep_status & LPM_SAVE_MMR_LOCK) == LPM_SAVE_MMR_LOCK) {
 		if (lpm_restore_mmr_lock() != SUCCESS) {
 			lpm_hang_abort();
 		}
 	}
 
-	if ((ret == SUCCESS) || ((temp_sleep_status & LPM_CLOCK_SUSPEND) == LPM_CLOCK_SUSPEND)) {
+	if ((temp_sleep_status & LPM_CLOCK_SUSPEND) == LPM_CLOCK_SUSPEND) {
 		if (clks_resume() != SUCCESS) {
 			lpm_hang_abort();
 		}
@@ -760,33 +745,45 @@ s32 dm_enter_sleep_handler(u32 *msg_recv)
 		}
 	}
 
-	if ((ret == SUCCESS) || ((temp_sleep_status & LPM_SUSPEND_POWERMASTER) == LPM_SUSPEND_POWERMASTER)) {
+	if ((temp_sleep_status & LPM_SUSPEND_POWERMASTER) == LPM_SUSPEND_POWERMASTER) {
 		if (lpm_resume_send_core_resume_message() != SUCCESS) {
 			lpm_hang_abort();
 		}
 	}
 
-	if ((ret == SUCCESS) || ((temp_sleep_status & LPM_DEVICE_DEINIT) == LPM_DEVICE_DEINIT)) {
+	if ((temp_sleep_status & LPM_DEVICE_DEINIT) == LPM_DEVICE_DEINIT) {
 		if (devices_init() != SUCCESS) {
 			lpm_hang_abort();
 		}
 	}
 
-	for (i = 0; i < TIMEOUT_10MS; i++) {
-		osal_delay(1);
+	if ((temp_sleep_status & LPM_SUSPEND_DM_APPLICATION) == LPM_SUSPEND_DM_APPLICATION) {
+		if (osal_resume_dm_application() != SUCCESS) {
+			lpm_hang_abort();
+		}
 	}
 
-	if ((ret == SUCCESS) || ((temp_sleep_status & LPM_SUSPEND_POWERMASTER) == LPM_SUSPEND_POWERMASTER)) {
+	if ((temp_sleep_status & LPM_SAVE_MAIN_PADCONFIG) == LPM_SAVE_MAIN_PADCONFIG) {
+		if (lpm_resume_restore_main_padconf() != SUCCESS) {
+			lpm_hang_abort();
+		}
+	}
+
+	if ((temp_sleep_status & LPM_SUSPEND_POWERMASTER) == LPM_SUSPEND_POWERMASTER) {
 		if (lpm_resume_release_reset_of_power_master() != SUCCESS) {
 			lpm_hang_abort();
 		}
 	}
 
-	if ((ret == SUCCESS) || ((temp_sleep_status & LPM_SAVE_MAIN_PADCONFIG) == LPM_SAVE_MAIN_PADCONFIG)) {
-		if (lpm_resume_restore_main_padconf() != SUCCESS) {
+	/* Remove isolation from CANUART pins */
+	if (ret == SUCCESS) {
+		if (unload_magic_words_thru_wkup_mmr() != SUCCESS) {
 			lpm_hang_abort();
 		}
 	}
+
+	/* Enable interrupts used by DM firmware */
+	osal_dm_enable_interrupt();
 
 	/* Open the mode selection lock and clear constraints */
 	lpm_clear_sleep_data();
@@ -806,8 +803,8 @@ s32 dm_lpm_wake_reason_handler(u32 *msg_recv)
 	/* Write 0 to the timestamp value as the support to get time in sleep has not been added yet */
 	resp->wake_timestamp = 0;
 
-	/* Update wakeup source, wakeup pin and last entered lpm */
-	lpm_get_wake_info(resp);
+	/* Update the wake reason params */
+	lpm_get_wake_reason_params(resp);
 
 	return ret;
 }
@@ -969,7 +966,7 @@ s32 dm_lpm_get_device_constraint(u32 *msg_recv)
 	ret = device_prepare_nonexclusive(host_id, id, &host_idx, &dev);
 	if (ret == SUCCESS) {
 		/* Get constraint value on this device put by requesting host */
-		resp->state = dev_cons[id] & (1U << host_idx);
+		resp->state = (dev_cons[id] & (1U << host_idx)) >> host_idx;
 	}
 
 	return ret;

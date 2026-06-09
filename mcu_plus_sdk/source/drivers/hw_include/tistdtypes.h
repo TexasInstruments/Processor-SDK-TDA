@@ -99,22 +99,18 @@ typedef void			*Ptr;		/* pointer to arbitrary type */
 
 #ifndef Bool
 typedef unsigned short		Bool;		/* boolean */
+#if !defined(UTRUE) && !defined(UFALSE)
+#define UTRUE		((Bool) 1)
+#define UFALSE		((Bool) 0)
+
+#endif
 #endif
 
-#if !defined(UTRUE)
-#define UTRUE    ((Bool) 1)
-#endif
+#if !defined(BTRUE) && !defined(BFALSE)
 
-#if !defined(UFALSE)
-#define UFALSE    ((Bool) 0)
-#endif
-
-#if !defined(BTRUE)
 #define BTRUE		((bool) 1)
-#endif
-
-#if !defined(BFALSE)
 #define BFALSE		((bool) 0)
+
 #endif
 
 /* Define TRUE/FALSE to go with Bool */

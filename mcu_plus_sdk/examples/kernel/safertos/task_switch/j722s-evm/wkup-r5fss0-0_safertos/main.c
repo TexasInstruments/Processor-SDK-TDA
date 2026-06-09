@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2024 Texas Instruments Incorporated
+ *  Copyright (C) 2024-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,6 +30,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <stdlib.h>
 #include <kernel/dpl/DebugP.h>
 #include "ti_drivers_open_close.h"
@@ -38,14 +42,31 @@
 #include "taskAPI.h"
 #include <drivers/device_manager/sciserver/sciserver_init.h>
 
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
 #define TASK_PRI_MAIN_THREAD  (configMAX_PRIORITIES-4)
 
 #define configASSERT(x)                        DebugP_assert( (uint32_t)((x) != 0))
 
 #define TASK_STACK_SIZE (16384U)
 
-portInt8Type gMainTaskStack[TASK_STACK_SIZE] __attribute__((aligned(TASK_STACK_SIZE)));
-xTCB gTaskTCB;
+/* Stack size allocated for the sciserver task */
+#define SCISERVER_TASK_STACK_SIZE                   (2U*1024U)
+
+/* Stack memory alignment requirement for the sciserver task */
+#define SCISERVER_TASK_STACK_ALIGNMENT              (2U*1024U)
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
 
 #if defined(OS_SAFERTOS)
 void System_lateInit(void);
@@ -53,23 +74,39 @@ void System_lateInit(void);
 
 void task_switch_main(void *args);
 
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
+portInt8Type gMainTaskStack[TASK_STACK_SIZE] __attribute__(
+                                                    (aligned(TASK_STACK_SIZE)));
+xTCB gTaskTCB;
+
+/* Stack buffers for user high and low priority tasks */
+uint8_t __attribute__((aligned(SCISERVER_TASK_STACK_ALIGNMENT))) gUserHiTaskStack[SCISERVER_TASK_STACK_SIZE];
+uint8_t __attribute__((aligned(SCISERVER_TASK_STACK_ALIGNMENT))) gUserLoTaskStack[SCISERVER_TASK_STACK_SIZE];
+
+/* ========================================================================== */
+/*                            Function Definitions                            */
+/* ========================================================================== */
+
 void main_thread(void *args)
 {
+    /* Configure sciserver task parameters */
+    Sciserver_TirtosCfgPrms_t sciserverCfg = {0};
+    sciserverCfg.hiTaskStack    =   gUserHiTaskStack;
+    sciserverCfg.loTaskStack    =   gUserLoTaskStack;
+    sciserverCfg.taskStackSize  =   SCISERVER_TASK_STACK_SIZE;
 
 #if defined(OS_SAFERTOS)
     System_lateInit();
 #endif
 
-    /* Open UART for sysfw logs */
-    Drivers_uartOpen();
-
-    sciServer_init();
-
-    /* Close UART as Drivers_open() inside task_switch_main() should open the UART again */
-    Drivers_uartClose();
+    sciServer_init(&sciserverCfg);
 
     task_switch_main(NULL);
 
+    /* Delete the calling task with NULL argument. */
     xTaskDelete(NULL);
 }
 

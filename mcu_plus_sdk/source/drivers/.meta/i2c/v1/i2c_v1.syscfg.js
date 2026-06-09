@@ -67,7 +67,7 @@ function getConfigurables()
             name: "bitRate",
             displayName: "Bit Rate",
             default: "400KHZ",
-            description: "I2C bitrate",
+            description: "Select the bitrate for I2C instance",
             options: [
                 {
                     name: "100KHZ",
@@ -98,7 +98,7 @@ function getConfigurables()
                 }
                 ui.transferMode.hidden = hideConfigs;
             },
-            description: "If enabled interrupt mode otherwise polling mode",
+            description: "Enable this option to configure in interrupt mode, default is polling mode",
         },
         {
             name: "transferMode",
@@ -122,7 +122,7 @@ function getConfigurables()
                 }
                 ui.transferCallbackFxn.hidden = hideConfigs;
             },
-            description: "This determines whether the driver operates synchronously or asynchronously",
+            longDescription: "This determines whether the driver operates synchronously or asynchronously. Select Blocking to operate in Synchronous mode or Callback to operate in Asynchronous mode",
         },
         {
             name: "transferCallbackFxn",
@@ -140,11 +140,11 @@ function getConfigurables()
                 if(inst.advanced == true) {
                     hideConfigs = false;
                 }
-                ui.ownSlaveAddr.hidden = hideConfigs;
+                ui.owntargetAddr.hidden = hideConfigs;
             },
         },
         {
-            name: "ownSlaveAddr",
+            name: "owntargetAddr",
             displayName: "Own Slave Address (0x00 - 0x7F)",
             default: 0x1C,
             hidden: true,
@@ -210,7 +210,7 @@ let i2c_module = {
 };
 
 function validate(instance, report) {
-    common.validate.checkNumberRange(instance, report, "ownSlaveAddr", 0x0, 0x7F, "hex");
+    common.validate.checkNumberRange(instance, report, "owntargetAddr", 0x0, 0x7F, "hex");
     common.validate.checkValidCName(instance, report, "transferCallbackFxn");
     if((instance.transferMode == "CALLBACK") &&
         ((instance.transferCallbackFxn == "NULL") ||

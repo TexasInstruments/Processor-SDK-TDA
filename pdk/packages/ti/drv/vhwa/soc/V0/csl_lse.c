@@ -801,9 +801,12 @@ static int32_t LseCheckCfg(const CSL_LseConfig *cfg)
         status = FVID2_EINVALID_PARAMS;
     }
 
-    for (cnt = 0U; (cnt < CSL_LSE_MAX_OUTPUT_CH) &&
-            (FVID2_SOK == status); cnt ++)
+    for (cnt = 0U; cnt < CSL_LSE_MAX_OUTPUT_CH; cnt ++)
     {
+        if (FVID2_SOK != status)
+        {
+            break;
+        }
         outCfg = &cfg->outChCfg[cnt];
 
         if ((uint32_t)UTRUE == outCfg->enable)
@@ -840,9 +843,12 @@ static int32_t LseCheckCfg(const CSL_LseConfig *cfg)
         }
     }
 
-    for (cnt = 0U; (cnt < CSL_LSE_MAX_INPUT_CH) &&
-            (FVID2_SOK == status); cnt ++)
+    for (cnt = 0U; cnt < CSL_LSE_MAX_INPUT_CH; cnt ++)
     {
+        if (FVID2_SOK != status)
+        {
+            break;
+        }
         inCfg = &cfg->inChCfg[cnt];
 
         if ((uint32_t)UTRUE == inCfg->enable)

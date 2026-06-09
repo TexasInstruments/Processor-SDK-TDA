@@ -76,7 +76,7 @@ function getComponentProperty() {
     property.isInternal = false;
     property.isBootLoader = true;
     property.buildOptionCombos = buildOptionCombos;
-    property.description = "A SBL SD HLOS example."
+    property.description = "A SBL SD HLOS FC example."
 
     return property;
 }

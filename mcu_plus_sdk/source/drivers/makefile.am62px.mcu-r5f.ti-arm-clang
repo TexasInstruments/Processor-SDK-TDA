@@ -16,11 +16,18 @@ ConfigName:=$(PROFILE)
 LIBNAME:=drivers.am62px.mcu-r5f.ti-arm-clang.$(PROFILE).lib
 
 FILES_common := \
+    csl_emif.c \
     csl_sec_proxy.c \
+    ddr.c \
+    ddr_soc.c \
+    ecap.c \
+    epwm.c \
     gpio.c \
     gtc.c \
     gtc_soc.c \
     i2c_v0.c \
+    i2c_v0_lld.c \
+    i2c_soc.c \
     ipc_notify_v0.c \
     ipc_notify_v0_cfg.c \
     ipc_rpmsg.c \
@@ -29,8 +36,15 @@ FILES_common := \
     mcspi_v0.c \
     mcspi_dma.c \
     mcspi_dma_udma.c \
+    mmcsd_v0.c \
+    mmcsd_priv.c \
+    mmcsd_soc.c \
     pinmux.c \
+    pmu.c \
+    rtc.c \
+    rtc_soc.c \
     sciclient.c \
+    sciclient_lpm.c \
     sciclient_pm.c \
     sciclient_rm.c \
     sciclient_rm_irq.c \
@@ -38,18 +52,46 @@ FILES_common := \
     sciclient_firewall.c \
     sciclient_irq_rm.c \
     sciclient_fmwSecureProxyMap.c \
-    sciclient_boardcfg.c \
     sciclient_soc_priv.c \
     soc.c \
     uart_v0.c \
     uart_dma.c \
+    uart_dma_udma.c \
+    csl_bcdma.c \
+    csl_intaggr.c \
+    csl_lcdma_ringacc.c \
+    csl_pktdma.c \
+    udma.c \
+    udma_ch.c \
+    udma_event.c \
+    udma_flow.c \
+    udma_ring_common.c \
+    udma_ring_lcdma.c \
+    udma_rm.c \
+    udma_rmcfg_common.c \
+    udma_utils.c \
+    soc.c \
+    udma_rmcfg.c \
+    udma_soc.c \
     utils.c \
 
 FILES_PATH_common = \
+    ddr \
+    ddr/cdn_drv/ \
+    ddr/cdn_drv/common \
+    ddr/cdn_drv/common/include \
+    ddr/cdn_drv/v1 \
+    ddr/cdn_drv/v1/include \
+    ddr/v1 \
+    ddr/v1/soc/am62px \
+    ecap/v0 \
+    epwm/v0 \
     gpio/v0 \
     gtc/v0 \
     gtc/v0/soc/am62px \
     i2c/v0 \
+    i2c/v0/lld \
+    i2c/v0/soc/am62px \
     ipc_notify/v0 \
     ipc_notify/v0/soc/am62px \
     ipc_rpmsg/ \
@@ -57,17 +99,26 @@ FILES_PATH_common = \
     mcspi/v0 \
     mcspi/v0/dma \
     mcspi/v0/dma/udma \
+    mmcsd \
+    mmcsd/v0 \
+    mmcsd/soc \
+    mmcsd/soc/am62px \
     pinmux/am62px \
+    pmu \
+    rtc \
+    rtc/v0 \
+    rtc/v0/soc/am62px \
     sciclient \
     sciclient/soc/am62px \
     soc/am62px \
     uart/v0 \
     uart/v0/dma \
     uart/v0/dma/udma \
-    udma \
-    udma/hw_include \
-    udma/soc \
-    udma/soc/am62px \
+    udma/v0 \
+    udma/v0/hw_include \
+    udma/v0/soc \
+    udma/v0/soc/am62px \
+    soc/am62px \
     utils \
 
 INCLUDES_common := \
@@ -77,6 +128,7 @@ INCLUDES_common := \
 DEFINES_common := \
     -DSOC_AM62PX \
     -DMCU_R5 \
+    -DSW_VERSION=$(SW_VERSION)
 
 CFLAGS_common := \
     -mcpu=cortex-r5 \

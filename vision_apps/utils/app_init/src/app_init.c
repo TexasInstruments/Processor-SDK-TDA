@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2021 Texas Instruments Incorporated
+ * Copyright (c) 2021-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -66,6 +66,8 @@
 
 #if defined(TARGET_X86_64)
 #include <sys/resource.h>
+#include <TI/tivx_ext_vdk.h>
+#include <common/tivx_platform_pc.h>
 
 int32_t appCommonInit()
 {
@@ -77,6 +79,14 @@ int32_t appCommonInit()
     {
         printf("APP: ERROR: Memory init failed !!!\n");
     }
+    else
+    {
+        if (tivxVdkIsEnabled() == 0U)
+        {
+            tivxInit();
+            tivxHostInit();
+        }
+    }
 
     return status;
 }
@@ -87,7 +97,7 @@ int32_t appCommonDeInit()
 
     return 0;
 }
-#endif // defined(TARGET_X86_64)
+#endif /* defined(TARGET_X86_64) */
 
 int32_t appInit()
 {
@@ -97,8 +107,20 @@ int32_t appInit()
 
     if (status == 0)
     {
+
+        #if defined(TARGET_X86_64)
+        if (tivxVdkIsEnabled() == 1U)
+        {
+            #ifdef VDK
+            status = appVdkInit();
+            #endif
+        }
+
+        #else
+
         tivxInit();
         tivxHostInit();
+        #endif /* #if defined(TARGET_X86_64) */
     }
 
     return status;
@@ -111,8 +133,16 @@ int32_t appDeInit()
     tivxHostDeInit();
     tivxDeInit();
 
+    #if defined(TARGET_X86_64)
+    if (tivxVdkIsEnabled() == 1U)
+    {
+        #ifdef VDK
+        appVdkDeInit();
+        #endif
+    }
+    #endif /* #if defined(TARGET_X86_64) */
+
     status = appCommonDeInit();
 
     return status;
 }
-

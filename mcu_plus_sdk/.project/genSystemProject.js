@@ -27,6 +27,7 @@ function genSystemProjectDevice(device) {
                 relPath: common.path.relative(outPath, "."),
                 project: project,
                 utils: require(`./genProjectSpec.js`).utils,
+                common: common,
                 device: require(`./device/project_${device}.js`),
             };
 

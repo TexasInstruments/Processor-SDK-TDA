@@ -17,6 +17,8 @@ LIBNAME:=drivers.am62x.r5f.ti-arm-clang.$(PROFILE).lib
 
 FILES_common := \
     i2c_v0.c \
+    i2c_v0_lld.c \
+    i2c_soc.c \
     pinmux.c \
     soc.c \
     ipc_notify_v0.c \
@@ -28,9 +30,11 @@ FILES_common := \
     sciclient_fmwSecureProxyMap.c \
     gpio.c \
     bootloader.c \
+    bootloader_dma.c \
     bootloader_flash.c \
     bootloader_mem.c \
     bootloader_mmcsd_raw.c \
+    bootloader_rprc.c \
     bootloader_soc.c \
     bootloader_xmodem.c \
     bootloader_uniflash.c \
@@ -38,19 +42,25 @@ FILES_common := \
     xmodem.c \
     csl_emif.c \
     crc16.c \
-    lpddr4_16bit_ctl_regs_rw_masks.c \
     lpddr4_obj_if.c \
     lpddr4.c \
-    lpddr4_16bit.c \
+    lpddr4_am6x.c \
+    lpddr4_ctl_regs_rw_masks.c \
     ddr.c \
     ddr_soc.c \
-    mmcsd_v1.c \
+    ddr_perf.c \
+    mmcsd_v0.c \
     mmcsd_priv.c \
+    mmcsd_soc.c \
     ospi_v0.c \
     ospi_dma.c \
     ospi_dma_udma.c \
     ospi_nor_flash.c \
     ospi_phy.c \
+    ospi_phy_tuning.c \
+    pmu.c \
+    qos.c \
+    vtm.c \
     uart_v0.c \
     uart_dma.c \
     gtc.c \
@@ -69,7 +79,10 @@ FILES_common := \
     udma_rmcfg_common.c \
     udma_utils.c \
     utils.c \
+    rtc.c \
+    rtc_soc.c \
     soc.c \
+    spinlock.c \
     udma_rmcfg.c \
     udma_soc.c \
     elm_v0.c \
@@ -80,28 +93,17 @@ FILES_common := \
     mcspi_dma.c \
     mcspi_dma_udma.c \
     mcan.c \
-    dss_evtMgr.c \
-    dss_init.c \
-    dss_dctrlApi.c \
-    dss_dctrlGraph.c \
-    dss_dispApi.c \
-    dss_dispPriv.c \
-    csl_dssCommon.c \
-    csl_dssOverlay.c \
-    csl_dssVideoPipe.c \
-    csl_dssVideoPort.c \
-    dss_soc_graph.c \
-    dss_soc.c \
-    fvid2_drvMgr.c \
-    fvid2_graph.c \
-    fvid2_utils.c \
-    fvid2_trace.c \
+    watchdog_rti.c \
+    watchdog_soc.c \
 
 FILES_PATH_common = \
     i2c/v0 \
+    i2c/v0/lld \
+    i2c/v0/soc/am62x \
     pinmux/am62x \
     mcan/v0 \
     ipc_notify/v0 \
+    epwm/v0 \
     gpio/v0 \
     mcspi/v0 \
     mcspi/v0/dma \
@@ -118,43 +120,43 @@ FILES_PATH_common = \
     bootloader \
     bootloader/soc/am62x \
     ddr/v0 \
-    ddr/v0/cdn_drv/ \
-    ddr/v0/cdn_drv/priv \
-    ddr/v0/cdn_drv/include \
-    ddr/v0/cdn_drv/include/16bit \
-    ddr/v0/cdn_drv/include/32bit \
-    ddr/v0/cdn_drv/include/common \
-    ddr/v0/cdn_drv/src \
+    ddr/cdn_drv/ \
+    ddr/cdn_drv/common/include \
+    ddr/cdn_drv/v0/include \
+    ddr/cdn_drv/common \
+    ddr/cdn_drv/v0 \
+    ddr \
     ddr/v0/soc/am62x \
     mmcsd \
-    mmcsd/v1 \
+    mmcsd/v0 \
+    mmcsd/soc \
+    mmcsd/soc/am62x \
     ospi \
     ospi/v0 \
     ospi/v0/dma \
     ospi/v0/dma/udma \
+    ospi/v0/ospi_tuning/ospi_tuning_algo/algo_v1 \
+    pmu \
+    qos \
+    qos/v0 \
     uart/v0 \
     uart/v0/dma \
-    udma \
-    udma/soc \
-    udma/hw_include \
-    udma/soc/am62x \
+    udma/v0 \
+    udma/v0/hw_include \
+    udma/v0/soc \
+    udma/v0/soc/am62x \
+    rtc \
+    rtc/v0 \
+    rtc/v0/soc/am62x \
     soc/am62x \
+    spinlock/v0 \
     elm/v0 \
     gpmc/v0 \
     gpmc/v0/dma \
     gpmc/v0/dma/udma \
     utils \
-    dss \
-    dss/v0 \
-    dss/v0/common \
-    dss/v0/dctrl \
-    dss/v0/disp \
-    dss/v0/hw_include \
-    dss/v0/hw_include/V3 \
-    dss/v0/include \
-    dss/v0/soc \
-    dss/v0/soc/am62x \
-    fvid2/v0 \
+    watchdog/v1 \
+    watchdog/v1/soc/am62x \
 
 INCLUDES_common := \
     -I${CG_TOOL_ROOT}/include/c \
@@ -165,6 +167,11 @@ DEFINES_common := \
     -DENABLE_SCICLIENT_DIRECT \
     -DFVID2_CFG_TRACE_ENABLE \
     -DFVID2_CFG_ASSERT_ENABLE \
+    -DENABLE_PHY_TUNING_SOC_BUILD \
+    -DSW_VERSION=$(SW_VERSION)
+
+CFLAGS_debug := \
+    -D_DEBUG_=1 \
 
 CFLAGS_common := \
     -mcpu=cortex-r5 \
@@ -188,9 +195,6 @@ CFLAGS_cpp_common := \
     -Wno-reserved-user-defined-literal \
     -Wno-unused-const-variable \
     -x c++ \
-
-CFLAGS_debug := \
-    -D_DEBUG_=1 \
 
 CFLAGS_release := \
     -Os \

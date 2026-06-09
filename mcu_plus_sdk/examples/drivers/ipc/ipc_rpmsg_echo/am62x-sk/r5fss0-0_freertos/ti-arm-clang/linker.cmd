@@ -1,6 +1,3 @@
---retain="*(.bootCode)";
---retain="*(.startupCode)";
---retain="*(.startupData)";
 --retain="*(.irqStack)";
 --retain="*(.fiqStack)";
 --retain="*(.abortStack)";
@@ -42,14 +39,10 @@ __ABORT_STACK_SIZE = 0x0100;  /* This is the size of stack when R5 is in ABORT m
 __UNDEFINED_STACK_SIZE = 0x0100;  /* This is the size of stack when R5 is in UNDEF mode */
 __DM_STUB_STACK_SIZE = 0x0400; /* This is required for Device manager */
 
-
 SECTIONS
 {
     /* This has the R5F entry point and vector table, this MUST be at 0x0 */
     .vectors: align = 8 > DDR
-    .bootCode           : align = 8, load = R5F_TCMB, run = R5F_TCMA
-    .startupCode: align = 8 ,load = R5F_TCMB, run = R5F_TCMA
-    .startupData        : align = 8, load = R5F_TCMB, run = R5F_TCMA, type = NOINIT
 
     /* This has the R5F boot code until MPU is enabled,  this MUST be at a address < 0x80000000
      * i.e this cannot be placed in DDR
@@ -64,17 +57,17 @@ SECTIONS
 
     /* this is used only when IPC RPMessage is enabled, else this is not used */
     .bss.ipc_vring_mem   (NOLOAD) : {} > DDR_IPC_VRING_RTOS
-    .fs_stub (NOLOAD): {} align(4)       > DDR_FS_STUB
-    .text            : {} palign(8)      > DDR
-    .const           : {} palign(8)      > DDR
-    .rodata          : {} palign(8)      > DDR
-    .cinit           : {} palign(8)      > DDR
-    .far             : {} align(4)       > DDR
-    .data            : {} palign(128)    > DDR
-    .sysmem          : {}                > DDR
-    .data_buffer     : {} palign(128)    > DDR
-    .const.devgroup  : { *(.const.devgroup*) } align(4) > DDR
-    .boardcfg_data   : {} align(4)       > DDR
+    .lpm_data (NOLOAD)      : {} align(4)       > DDR_LPM_DATA
+    .text                   : {} palign(8)      > DDR
+    .const                  : {} palign(8)      > DDR
+    .rodata                 : {} palign(8)      > DDR
+    .cinit                  : {} palign(8)      > DDR
+    .far                    : {} align(4)       > DDR
+    .data                   : {} palign(128)    > DDR
+    .sysmem                 : {}                > DDR
+    .data_buffer            : {} palign(128)    > DDR
+    .const.devgroup         : { *(.const.devgroup*) } align(4) > DDR
+    .boardcfg_data          : {} align(4)       > DDR
 
     GROUP {
         .bss.devgroup : { *(.bss.devgroup*) } align(4)
@@ -119,6 +112,9 @@ SECTIONS
 
     /* Trace buffer used during low power mode */
     .lpm_trace_buf : (NOLOAD) {} > R5F_TCMA_TRACE_BUFF
+
+    /* DM RM/PM HAL trace buffer at fixed DDR location */
+    .dm_rmpm_trace_buf : (NOLOAD) {} > DDR_DM_RMPM_TRACE
 
     /* USB or any other LLD buffer for benchmarking */
     .benchmark_buffer (NOLOAD) {} ALIGN (8) > DDR
@@ -165,10 +161,12 @@ MEMORY
     R5F_TCMB_TRACE_BUFF (RWIX) : ORIGIN = 0x41017800 LENGTH = 0x0000800
     HSM_RAM        (RWIX)      : ORIGIN = 0x43C00000 LENGTH = 0x3FF00
 
-    /* DDR for FS Stub binary [ size 32.00 KB ] */
-    DDR_FS_STUB    (RWIX)      : ORIGIN = 0x9DC00000 LENGTH = 0x00008000
-    /* DDR for DM R5F code/data [ size 10 MB + 992 KB ] */
-    DDR            (RWIX)      : ORIGIN = 0x9DC08000 LENGTH = 0x00AF8000
+    /* DDR for DM LPM data [ size 640.00 KB ] */
+    DDR_LPM_DATA    (RWIX)      : ORIGIN = 0x9DC00000 LENGTH = 0x000A0000
+    /* DDR for DM RM/PM HAL trace buffer [ size 20 KB ] */
+    DDR_DM_RMPM_TRACE (RWIX)    : ORIGIN = 0x9DCA0000 LENGTH = 0x00005000
+    /* DDR for DM R5F code/data [ size 10 MiB + 364 KB ] */
+    DDR            (RWIX)      : ORIGIN = 0x9DCA5000 LENGTH = 0x00A5B000
 
     DDR_IPC_VRING_RTOS (RWIX)  : ORIGIN = 0x9C800000, LENGTH = 0x00300000
 }

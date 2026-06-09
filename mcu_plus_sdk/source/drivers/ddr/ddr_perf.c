@@ -241,7 +241,10 @@ void DDR_perfStatsAccumulate(void)
     if(curTime > ddrLoad->lastTimestamp)
     {
         elapsedTime = curTime - ddrLoad->lastTimestamp;
-
+        if(elapsedTime==0)
+        {
+            elapsedTime = 1; /* to avoid divide by 0 */
+        }
         ddrLoad->totalTime += elapsedTime;
 
         DDR_statsReadCounters(&val0, &val1, &val2, &val3, 0);

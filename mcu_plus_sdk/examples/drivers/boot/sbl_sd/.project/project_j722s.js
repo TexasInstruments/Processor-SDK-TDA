@@ -18,7 +18,7 @@ const filedirs = {
     ],
 };
 
-const includes_r5f = {
+const includes_wkup_r5f = {
     common: [
         "${MCU_PLUS_SDK_PATH}/source/fs/freertos_fat/FreeRTOS-FAT/include",
         "${MCU_PLUS_SDK_PATH}/source/fs/freertos_fat/portable",
@@ -37,7 +37,7 @@ const libdirs_nortos = {
     ],
 };
 
-const libs_nortos_r5f = {
+const libs_nortos_wkup_r5f = {
     common: [
         "nortos.j722s.r5f.ti-arm-clang.${ConfigName}.lib",
         "drivers.j722s.wkup-r5f.ti-arm-clang.${ConfigName}.lib",
@@ -75,6 +75,7 @@ function getComponentProperty() {
     property.name = "sbl_sd";
     property.isInternal = false;
     property.isBootLoader = true;
+    property.isSblMaximgsize = "512kb";
     property.buildOptionCombos = buildOptionCombos;
     property.description = "A SBL SD example."
 
@@ -91,9 +92,9 @@ function getComponentBuildProperty(buildOption) {
     build_property.syscfgfile = syscfgfile;
     build_property.readmeDoxygenPageTag = readmeDoxygenPageTag;
 
-    if(buildOption.cpu.match(/r5f*/)) {
-        build_property.libs = libs_nortos_r5f;
-        build_property.includes = includes_r5f;
+    if(buildOption.cpu.match(/wkup-r5f/)) {
+        build_property.libs = libs_nortos_wkup_r5f;
+        build_property.includes = includes_wkup_r5f;
         build_property.defines = defines;
     }
 

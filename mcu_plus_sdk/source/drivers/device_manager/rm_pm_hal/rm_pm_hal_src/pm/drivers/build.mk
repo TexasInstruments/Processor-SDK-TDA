@@ -38,5 +38,5 @@ obj-y += device/
 obj-$(CONFIG_PSC) += psc/
 obj-y += misc/
 obj-$(CONFIG_LPM_DM) += lpm/
-
+obj-$(CONFIG_LPM_MIN) += lpm/
 endif

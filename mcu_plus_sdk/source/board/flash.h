@@ -42,11 +42,24 @@ extern "C"
 #include <kernel/dpl/SystemP.h>
 #include <drivers/hw_include/soc_config.h>
 #include <board/flash/flash_config.h>
+#include <kernel/dpl/SemaphoreP.h>
 
 #define FLASH_INVALID_VALUE (0xFFFFFFFFU)
 
 #define CONFIG_FLASH_TYPE_SERIAL            ((uint32_t)0x1)
 #define CONFIG_FLASH_TYPE_PARALLEL          ((uint32_t)0x2)
+
+/**
+ * \brief Flash type supported
+ */
+#define CONFIG_FLASH_TYPE_SERIAL_NOR               (0x00U)
+#define CONFIG_FLASH_TYPE_SERIAL_NAND              (0x01U)
+#define CONFIG_FLASH_TYPE_PARALLEL_NOR             (0x02U)
+#define CONFIG_FLASH_TYPE_PARALLEL_NAND            (0x03U)
+#define CONFIG_FLASH_TYPE_INVALID                  (0xFFU)
+
+#define FLASH_NOR_UPDATE_RD_DUMMY_VALUE     (1U)
+#define FLASH_NAND_UPDATE_RD_DUMMY_VALUE     (0U)
 
 /**
  *  \defgroup BOARD_FLASH_MODULE APIs for FLASH
@@ -65,12 +78,12 @@ extern "C"
 typedef void  *Flash_Handle;
 
 /**
- * \brief Forward declaration of \ref Flash_Config
+ * \brief Forward declaration of \ref Flash_Config_s
  */
 typedef struct Flash_Config_s Flash_Config;
 
 /**
- * \brief Forward declaration of \ref Flash_Params
+ * \brief Forward declaration of \ref Flash_Params_s
  */
 typedef struct Flash_Params_s Flash_Params;
 
@@ -230,11 +243,34 @@ typedef int32_t (*Flash_EraseSectorFxn)(Flash_Config *config, uint32_t sectorNum
  * when a new type of flash device needs to be implemented.
  *
  * \param config [in] Flash configuration for the specific flash device
- * \param sectorNum [in] Sector number to erase.
  *
  * \return SystemP_SUCCESS on success, else failure
  */
 typedef int32_t (*Flash_ResetFxn)(Flash_Config *config);
+
+/**
+ * \brief Driver implementation to enable PHY pipeline mode in Flash
+ *
+ * Typically this callback is hidden from the end application and is implemented
+ * when a new type of flash device needs to be implemented.
+ *
+ * \param config [in] Flash configuration for the specific flash device
+ *
+ * \return SystemP_SUCCESS on success, else failure
+ */
+typedef int32_t (*Flash_EnablePhyPipelineFxn)(Flash_Config *config);
+
+/**
+ * \brief Driver implementation to disable PHY pipeline mode in Flash
+ *
+ * Typically this callback is hidden from the end application and is implemented
+ * when a new type of flash device needs to be implemented.
+ *
+ * \param config [in] Flash configuration for the specific flash device
+ *
+ * \return SystemP_SUCCESS on success, else failure
+ */
+typedef int32_t (*Flash_DisablePhyPipelineFxn)(Flash_Config *config);
 
 /**
  * \brief User implementation of a custom function to handle vendor specific quirks
@@ -257,18 +293,28 @@ typedef int32_t (*Flash_quirksFxn)(Flash_Config *config);
  */
 typedef int32_t (*Flash_custProtocolFxn)(Flash_Config *config);
 
+/**
+ * \brief Driver implementation to perform phy tuning using a specific flash driver
+ *
+ * \param config [in] Flash configuration for the specific flash device
+ *
+ * \return SystemP_SUCCESS on success, else failure
+ */
+typedef int32_t (*Flash_PhyTuneFxn)(Flash_Config *config);
+
 /** @} */
 
 
 /**
  * \brief Parameters passed during Flash_open()
  */
-typedef struct Flash_Params_s {
+struct Flash_Params_s {
 
     Flash_quirksFxn quirksFxn;
+    Flash_quirksFxn bootQuirksFxn;
     Flash_custProtocolFxn custProtoFxn;
 
-} Flash_Params;
+};
 
 /**
  * \brief Driver implementation callbacks
@@ -282,6 +328,9 @@ typedef struct Flash_Fxns_s
     Flash_EraseFxn eraseFxn; /**< Flash driver implementation specific callback */
     Flash_EraseSectorFxn eraseSectorFxn; /**< Flash driver implementation specific callback */
     Flash_ResetFxn resetFxn; /**< Flash driver implementation specific callback */
+    Flash_EnablePhyPipelineFxn enablePhyPipelineFxn; /**< Flash driver implementation specific callback */
+    Flash_DisablePhyPipelineFxn disablePhyPipelineFxn; /**< Flash driver implementation specific callback */
+    Flash_PhyTuneFxn phyTuneFxn; /**< Flash driver implementation specific callback */
 
 } Flash_Fxns;
 
@@ -309,14 +358,17 @@ typedef struct Flash_Attrs_s {
 /**
  * \brief Flash driver configuration, these are filled by SysCfg based on the flash device that is selected.
  */
-typedef struct Flash_Config_s
+struct Flash_Config_s
 {
-    Flash_Attrs                *attrs;       /**< Flash device attributes */
-    Flash_Fxns                 *fxns;        /**< Flash device implementation functions */
-    Flash_DevConfig            *devConfig;  /**< Flash device specific config, like command ID for read, erase, etc */
-    void                       *object;      /**< Flash driver object, used to maintain driver implementation state */
+    Flash_Attrs                *attrs;          /**< Flash device attributes */
+    Flash_Fxns                 *fxns;           /**< Flash device implementation functions */
+    Flash_DevConfig            *devConfig;      /**< Flash device specific config, like command ID for read, erase, etc */
+    void                       *object;         /**< Flash driver object, used to maintain driver implementation state */
+    void                       *fallBackCfg;    /**< Flash fallback configs, used to configure flash in  */
+    void                       *layoutCfg;      /**< Flash fallback configs, used to configure flash layout */
+    SemaphoreP_Object          lockSem;         /**< Semaphore to protect the flash layer calls per instance. */
 
-} Flash_Config;
+};
 
 /* Flash specific includes */
 #if defined (DRV_VERSION_SERIAL_FLASH_V0)
@@ -333,7 +385,7 @@ typedef struct Flash_Config_s
 #endif
 
 /**
- * \brief Set default parameters in the \ref Flash_Params structure
+ * \brief Set default parameters in the \ref Flash_Params_s structure
  *
  * Call this API to set defaults and then override the fields as needed before calling  \ref Flash_open.
  *
@@ -488,6 +540,24 @@ int32_t Flash_eraseSector(Flash_Handle handle, uint32_t sectorNum);
 int32_t Flash_reset(Flash_Handle handle);
 
 /**
+ * \brief Enables PHY mode in flash
+ *
+ * \param handle [in] Flash driver handle from \ref Flash_open
+ *
+ * \return SystemP_SUCCESS on success, else failure
+ */
+int32_t Flash_enablePhyPipeline(Flash_Handle handle);
+
+/**
+ * \brief Disable PHY mode in flash
+ *
+ * \param handle [in] Flash driver handle from \ref Flash_open
+ *
+ * \return SystemP_SUCCESS on success, else failure
+ */
+int32_t Flash_disablePhyPipeline(Flash_Handle handle);
+
+/**
  * \brief Return flash offset to write PHY tuning data
  *
  * \param handle   [in] Flash driver handle from \ref Flash_open
@@ -513,6 +583,27 @@ Flash_Attrs *Flash_getAttrs(uint32_t instanceId);
  * \return \ref Flash_Attrs driver instance index corresponding to the flash type
  */
 uint32_t Flash_getFlashInterfaceIndex(uint32_t flashType);
+
+/**
+ * \brief This function initializes the Flash module
+ */
+void Flash_init(void);
+
+/**
+ * \brief This function de-initializes the Flash module
+ */
+void Flash_deinit(void);
+
+/**
+ * \brief This function performs PHY tuning
+ *
+ * Make sure phy is enabled before calling this
+ *
+ * \param handle [in] Flash driver handle from \ref Flash_open
+ *
+ * \return SystemP_SUCCESS on success, else failure
+ */
+int32_t Flash_phyTune(Flash_Handle handle);
 
 /** @} */
 

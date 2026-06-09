@@ -1,0 +1,609 @@
+################################################################################################
+##
+## Build file for a QNX operating system
+##
+################################################################################################
+
+[-optional]
+[+keeplinked]
+[image=0x82000000]
+[virtual=aarch64le,raw +compress] boot = {
+    #######################################################################
+    # startup options:
+    # Carveout memory for remore cores (Added by TI) -
+    #  The first remote core carveout of  0x60000000 (1536 MB) is in the lower 2GB memory range starting at address 0xA0000000 
+    #  This include remote core usage. Note shared-memory carevout is at 0xC0000000
+    #  The second shmemallocator carveout of 0x60000000 (1536 MB) is in the higher 62GB memory range starting at address 0x2080000000 
+    #  This include the second shared memory carevout
+    #######################################################################
+    startup-tda54_vdk -r0xA0000000,0x60000000,1 -r0x2080000000,0x60000000
+    PATH=/proc/boot:/sbin:/bin:/usr/bin:/usr/sbin:/usr/libexec LD_LIBRARY_PATH=/proc/boot:/lib:/usr/lib:/lib/dll:/lib/dll/pci procnto-smp-instr -v -mr
+}
+
+[+script] startup-script = {
+    SYSNAME=nto
+    TERM=qansi
+    ENV=/etc/profile
+
+    procmgr_symlink ../../proc/boot/ldqnx-64.so.2 /usr/lib/ldqnx-64.so.2
+
+    ## Needed for ksh to run the echo command below
+    pipe
+
+    display_msg " "
+    ksh -c "echo Welcome to QNX $(uname -r) on $(uname -m) !"
+    display_msg " "
+
+    slogger2
+    dumper
+    mqueue
+    random 
+
+    #######################################################################
+    ## UART drivers
+    #######################################################################
+    display_msg "start serial driver"
+    devc-ser8250-dw -e -F -b115200 -c100000000/1 0x53900000^2,333
+
+    ############################################################################################
+    ## SD memory card / eMMC driver
+    ############################################################################################
+    display_msg Starting MMC/SD memory card driver... eMMC
+    devb-sdmmc-am65x blk cache=1m sdio addr=0x4f80000,irq=312,emmc,bs=sscfg=0x8000 disk name=emmc
+
+
+    ############################################################################################
+    ## Start the main shell
+    ############################################################################################
+    reopen /dev/ser1
+    display_msg "Starting shell ..."
+    [+session] ksh /proc/boot/.console.sh &
+}
+
+
+[uid=0 gid=0]
+
+[type=link] /bin/sh=/bin/ksh
+[type=link] /tmp=/dev/shmem
+[type=link] /dev/console=/dev/ser1
+[type=link] /var/log=/tmp
+[type=link] /usr/tmp=/tmp
+
+################################################################################################
+## Serial drivers
+################################################################################################
+/sbin/devc-ser8250-dw=devc-ser8250-dw
+
+
+################################################################################################
+## NOR flash driver files
+################################################################################################
+/sbin/devf-ram=devf-ram
+
+/usr/bin/flashctl=flashctl
+
+
+################################################################################################
+## Block drivers
+################################################################################################
+/sbin/devb-ram=devb-ram
+/sbin/devb-sdmmc-am65x=devb-sdmmc-am65x
+
+################################################################################################
+## Block driver support libraries
+################################################################################################
+/lib/libcam.so=libcam.so
+
+/lib/dll/io-blk.so=io-blk.so
+/lib/dll/cam-disk.so=cam-disk.so
+/lib/dll/cam-cdrom.so=cam-cdrom.so
+/lib/dll/fs-qnx6.so=fs-qnx6.so
+/lib/dll/fs-dos.so=fs-dos.so
+
+
+################################################################################################
+## Storage script
+################################################################################################
+[perms=0744] .storage-server.sh = {
+#!/bin/ksh
+
+## Check if the /var/run directory exists
+if [ ! -d /var/run ]
+then
+    ## Check if the optional persistent storage exists
+    x=1
+    while [ $x -le 5 ]
+    do
+        if [ -b /dev/sd0t179 ]
+        then
+            ## Use the persistent storage for network service
+            mount -t qnx6 /dev/sd0t179 /tmp-mnt
+
+            if [ ! -d /tmp-mnt/var/run ]
+            then
+                mkdir -p /tmp-mnt/var/run
+                chmod 755 /tmp-mnt/var
+                chmod 755 /tmp-mnt/var/run
+            fi
+
+            if [ ! -d /tmp-mnt/var/db ]
+            then
+                mkdir -p /tmp-mnt/var/db
+                chmod 755 /tmp-mnt/var
+                chmod 755 /tmp-mnt/var/db
+            fi
+
+            if [ ! -d /tmp-mnt/etc/ssh ]
+            then
+                mkdir -p /tmp-mnt/etc/ssh
+                chmod 755 /tmp-mnt/etc
+                chmod 755 /tmp-mnt/etc/ssh
+            fi
+
+            if [ ! -d /tmp-mnt/root ]
+            then
+                mkdir -m 700 /tmp-mnt/root
+            fi
+
+            if [ ! -d /tmp-mnt/home/qnxuser ]
+            then
+                mkdir -p /tmp-mnt/home/qnxuser
+                chmod 755 /tmp-mnt/home
+                chmod 755 /tmp-mnt/home/qnxuser
+                chown qnxuser:qnxuser /tmp-mnt/home/qnxuser
+            fi
+
+            umount /tmp-mnt
+            sync
+            echo "Mounting /dev/sd0t179 on / ..."
+            mount -t qnx6 /dev/sd0t179 /
+
+            break
+        fi
+
+        x=$(( $x + 1 ))
+        sleep 1;
+    done
+fi
+
+if [ ! -d /var/run ]
+then
+    ## Use devf-ram file system for dhcpcd service
+    echo "Starting devf-ram filesystem ..."
+    devf-ram -i 9,0 -s0,16m
+    waitfor /dev/fs9p0
+
+    flashctl -p /dev/fs9p0 -e -f -n /var -m
+    mkdir -m 755 /var/run
+    mkdir -m 755 /var/db
+fi
+}
+
+
+
+################################################################################################
+## Network driver files
+################################################################################################
+/lib/dll/devs-axe.so=devs-axe.so
+/lib/dll/devs-axge.so=devs-axge.so
+/lib/dll/devs-cdce.so=devs-cdce.so
+/lib/dll/devs-smsc.so=devs-smsc.so
+/lib/dll/devs-vtnet_mmio.so=devs-vtnet_mmio.so
+
+################################################################################################
+## Network driver shared libraries
+################################################################################################
+/usr/lib/libedit.so=libedit.so
+/usr/lib/libexpat.so=libexpat.so
+/usr/lib/libfdt.so=libfdt.so
+/usr/lib/librpc.so.2=librpc.so.2
+/usr/lib/libxo.so.0=libxo.so.0
+
+/lib/libsocket.so=libsocket.so
+/lib/libjail.so=libjail.so
+
+/lib/dll/mods-phy.so=mods-phy.so
+/lib/dll/mods-pci.so=mods-pci.so
+/lib/dll/mods-usb.so=mods-usb.so
+/lib/dll/mods-fdt.so=mods-fdt.so
+/lib/dll/mods-phy_fdt.so=mods-phy_fdt.so
+
+################################################################################################
+## Network driver and support
+################################################################################################
+/sbin/dhcpcd=dhcpcd
+/sbin/dhcpcd-run-hooks=${QNX_TARGET}/sbin/dhcpcd-run-hooks
+/sbin/dhcpcd-hooks/20-resolv.conf=${QNX_TARGET}/sbin/dhcpcd-hooks/20-resolv.conf
+/sbin/ifconfig=ifconfig
+/sbin/io-sock=io-sock
+/sbin/pfctl=pfctl
+[uid=0 gid=0 perms=4755] /sbin/ping=ping
+/sbin/route=route
+/sbin/sysctl=sysctl
+
+/usr/bin/netstat=netstat
+/usr/bin/sockstat=sockstat
+/usr/bin/vmstat=vmstat
+
+/usr/sbin/arp=arp
+/usr/sbin/devctl=devctl
+/usr/sbin/devinfo=devinfo
+/usr/sbin/fs-nfs3=fs-nfs3
+/usr/sbin/if_up=if_up
+/usr/sbin/ifmcstat=ifmcstat
+/usr/sbin/ifwatchd=ifwatchd
+/usr/sbin/ip6addrctl=ip6addrctl
+/usr/sbin/ndp=ndp
+/usr/sbin/tcpdump=tcpdump
+[uid=0 gid=0 perms=4755] /usr/sbin/traceroute=traceroute
+[uid=0 gid=0 perms=4755] /usr/sbin/traceroute6=traceroute6
+
+/etc/dhcpcd.conf=${QNX_TARGET}/etc/dhcpcd.conf
+/etc/hosts=${QNX_TARGET}/etc/hosts
+/etc/netconfig=${QNX_TARGET}/etc/netconfig
+/etc/protocols=${QNX_TARGET}/etc/protocols
+/etc/services=${QNX_TARGET}/etc/services
+/etc/pf.os=${QNX_TARGET}/etc/pf.os
+
+################################################################################################
+## Remote_debug
+################################################################################################
+/sbin/devc-pty=devc-pty
+
+/usr/bin/pdebug=pdebug
+
+/usr/sbin/qconn=qconn
+
+/usr/bin/coreinfo=coreinfo
+
+################################################################################################
+## Network services (ssh and dhcpcd) support
+################################################################################################
+[uid=0 gid=0 perms=0755] /usr/sbin/sshd=sshd
+
+[search=../install/${PROCESSOR}/usr/libexec${PFS}${QNX_TARGET}/${PROCESSOR}/usr/libexec uid=0 gid=0 perms=0755] /usr/libexec/sshd-session=sshd-session
+[search=../install/${PROCESSOR}/usr/libexec${PFS}${QNX_TARGET}/${PROCESSOR}/usr/libexec uid=0 gid=0 perms=0755] /usr/libexec/ssh-pkcs11-helper=ssh-pkcs11-helper
+[search=../install/${PROCESSOR}/usr/libexec${PFS}${QNX_TARGET}/${PROCESSOR}/usr/libexec uid=0 gid=0 perms=0755] /usr/libexec/ssh-sk-helper=ssh-sk-helper
+[search=../install/${PROCESSOR}/usr/libexec${PFS}${QNX_TARGET}/${PROCESSOR}/usr/libexec uid=0 gid=0 perms=0755] /usr/libexec/sftp-server=sftp-server
+
+[uid=0 gid=0 perms=0755] /usr/bin/scp=scp
+[uid=0 gid=0 perms=0755] /usr/bin/ssh=ssh
+[uid=0 gid=0 perms=0755] /usr/bin/ssh-keygen=ssh-keygen
+
+[type=link] /etc/ssh = /dev/shmem
+/dev/shmem/sshd_config=${QNX_TARGET}/etc/ssh/sshd_config
+
+/etc/esh = {
+}
+
+[perms=0744] .ssh-server.sh={
+#!/bin/ksh
+
+## Create the ssh keys if they do not exist
+if [ ! -f /etc/ssh/ssh_host_rsa_key ]
+then
+    ssh-keygen -q -t rsa -N "" -f /etc/ssh/ssh_host_rsa_key
+fi
+
+if [ ! -f /etc/ssh/ssh_host_ecdsa_key ]
+then
+    ssh-keygen -q -t ecdsa -N "" -f /etc/ssh/ssh_host_ecdsa_key
+fi
+
+if [ ! -f /etc/ssh/ssh_host_ed25519_key ]
+then
+    ssh-keygen -q -t ed25519 -N "" -f /etc/ssh/ssh_host_ed25519_key
+fi
+
+## Start SSH daemon
+    echo "Starting SSH daemon ..."
+    /usr/sbin/sshd
+}
+
+
+################################################################################################
+## Shared libraries for security
+################################################################################################
+/lib/libqh.so=libqh.so
+/lib/libregex.so=libregex.so
+/lib/libsecpol.so=libsecpol.so
+/lib/libslog2parse.so=libslog2parse.so
+/lib/libslog2shim.so=libslog2shim.so
+/lib/libslog2.so=libslog2.so
+/lib/libtracelog.so=libtracelog.so
+
+/lib/dll/qcrypto-openssl-3.so=qcrypto-openssl-3.so
+
+/usr/lib/libcrypto.so=libcrypto.so
+/usr/lib/libncursesw.so=libncursesw.so
+/usr/lib/libqcrypto.so=libqcrypto.so
+/usr/lib/libssl.so=libssl.so
+
+################################################################################################
+## libqcrypto support
+################################################################################################
+[uid=0 gid=0 perms=0644] /etc/qcrypto.conf = {
+openssl-3     tags=*
+}
+
+################################################################################################
+## Security files
+################################################################################################
+[uid=0 gid=0 perms=4755] /bin/login=login
+[uid=0 gid=0 perms=4755] /bin/su=su
+
+[uid=0 gid=0 perms=4755] /usr/bin/passwd=passwd
+
+[uid=0 gid=0 perms=0644] /etc/passwd = {
+root:x:0:0:Superuser:/root:/bin/sh
+sshd:x:15:6:sshd:/var/chroot/sshd:/bin/false
+qnxuser:x:1000:1000:QNX User:/home/qnxuser:/bin/sh
+}
+
+## Enabled Username/Password: root/root, qnxuser/qnxuser
+[uid=0 gid=0 perms=0644] /etc/shadow = {
+root:@S@NKlWES1quMp1wmqugkUSnFEpPGn58kIs4wQOgDDNs06vimR+bbGPUKM+9P6jbFUzo3Rm+Qe5MS+17xKhwaeJEg==@Mjg5ZTJiMTM0YTRjYTE2ZGFjMDdhZTFlY2NlMDVmNmE=:1468494669:0:0
+sshd:*:1231323780:0:0
+qnxuser:@S@HZERXjgixvb3157FFeraShhvTVw+10ccUtVUVZbi0fUwpzlzBZFw5gHiFd1XHKit8D39Whe749XAY8fV4P5ANQ==@Y2ZlOTg3M2RhNTM4Y2M2ODY0OWZhODdiNDRkMmU5Nzg=:1468488235:0:0
+}
+
+[uid=0 gid=0 perms=0644] /etc/group = {
+root:x:0:root
+sshd:x:6:
+qnxuser:x:1000
+}
+
+
+################################################################################################
+## PAM configurations addon build file
+################################################################################################
+[uid=0 gid=0 type=dir dperms=0755] /
+[uid=0 gid=0 type=dir dperms=0755] /etc
+[uid=0 gid=0 type=dir dperms=0755] /etc/pam.d
+[uid=0 gid=0 type=dir dperms=0755] /home
+[uid=1000 gid=1000 type=dir dperms=0755] /home/qnxuser
+[uid=0 gid=0 type=dir dperms=0755] /lib
+[uid=0 gid=0 type=dir dperms=0700] /root
+[uid=0 gid=0 type=dir dperms=0755] /usr
+[uid=0 gid=0 type=dir dperms=0755] /usr/lib
+[uid=0 gid=0 type=dir dperms=0755] /var
+[uid=0 gid=0 type=dir dperms=0755] /var/chroot
+[uid=0 gid=0 type=dir dperms=0755] /var/chroot/sshd
+
+[uid=0 gid=0 perms=0644] /etc/pam.d/login=${QNX_TARGET}/etc/pam.d/login
+[uid=0 gid=0 perms=0644] /etc/pam.d/passwd=${QNX_TARGET}/etc/pam.d/passwd
+[uid=0 gid=0 perms=0644] /etc/pam.d/su=${QNX_TARGET}/etc/pam.d/su
+
+[uid=0 gid=0 perms=0755] /usr/lib/libpam.so=libpam.so
+[uid=0 gid=0 perms=0755] /usr/lib/pam_deny.so=pam_deny.so
+[uid=0 gid=0 perms=0755] /usr/lib/pam_echo.so=pam_echo.so
+[uid=0 gid=0 perms=0755] /usr/lib/pam_exec.so=pam_exec.so
+[uid=0 gid=0 perms=0755] /usr/lib/pam_group.so=pam_group.so
+[uid=0 gid=0 perms=0755] /usr/lib/pam_permit.so=pam_permit.so
+[uid=0 gid=0 perms=0755] /usr/lib/pam_qnx.so=pam_qnx.so
+[uid=0 gid=0 perms=0755] /usr/lib/pam_rootok.so=pam_rootok.so
+[uid=0 gid=0 perms=0755] /usr/lib/pam_secpol.so=pam_secpol.so
+[uid=0 gid=0 perms=0755] /usr/lib/pam_self.so=pam_self.so
+
+
+################################################################################################
+## General shared libraries
+################################################################################################
+ldqnx-64.so.2=ldqnx-64.so.2
+
+/lib/libc.so=libc.so
+/lib/libcatalog.so=libcatalog.so
+/lib/libdevice-publisher.so=libdevice-publisher.so
+/lib/libgcc_s.so=libgcc_s.so
+/lib/libm.so=libm.so
+[+optional] /lib/libfsnotify.so=libfsnotify.so
+
+/usr/lib/libbacktrace.so=libbacktrace.so
+/usr/lib/libc++.so=libc++.so
+/usr/lib/libiconv.so=libiconv.so
+/usr/lib/libintl.so=libintl.so
+/usr/lib/libpanelw.so=libpanelw.so
+/usr/lib/libz.so=libz.so
+/usr/lib/libcares.so.8=libcares.so.8
+/usr/lib/libcurl.so.12=libcurl.so.12
+
+################################################################################################
+## General commands
+################################################################################################
+/bin/confstr=confstr
+/bin/df=df
+/bin/hostname=hostname
+/bin/kill=kill
+/bin/ksh=ksh
+/bin/mount=mount
+/bin/on=on
+/bin/pidin=pidin
+/bin/slay=slay
+/bin/slog2info=slog2info
+/bin/slogger2=slogger2
+/bin/sync=sync
+/bin/umount=umount
+/bin/waitfor=waitfor
+/bin/vi=vi
+
+/sbin/mqueue=mqueue
+/sbin/pipe=pipe
+/sbin/shutdown=shutdown
+/sbin/fdisk=fdisk
+/sbin/mkdosfs=mkdosfs
+/sbin/mkqnx6fs=mkqnx6fs
+
+/usr/bin/getconf=getconf
+/usr/bin/hd=hd
+/usr/bin/ldd=ldd
+/usr/bin/setconf=setconf
+/usr/bin/top=top
+/usr/bin/use=use
+
+/usr/sbin/dumper=dumper
+/usr/sbin/random=random
+/usr/sbin/tracelogger=tracelogger
+
+
+################################################################################################
+## Toybox commands
+## Note: The toybox package combines many common Linux command line utilities together into
+##       a single, BSD-licensed executable. The following toybox commands are supported.
+##       Use one of the following commands to access help for a toybox command:
+##         toybox command_name --help
+##         command_name --help
+################################################################################################
+/usr/bin/toybox=toybox
+
+[type=link] /bin/cat=/usr/bin/toybox
+[type=link] /bin/chmod=/usr/bin/toybox
+[type=link] /bin/cp=/usr/bin/toybox
+[type=link] /bin/dd=/usr/bin/toybox
+[type=link] /bin/echo=/usr/bin/toybox
+[type=link] /bin/ln=/usr/bin/toybox
+[type=link] /bin/ls=/usr/bin/toybox
+[type=link] /bin/mkdir=/usr/bin/toybox
+[type=link] /bin/mv=/usr/bin/toybox
+[type=link] /bin/pwd=/usr/bin/toybox
+[type=link] /bin/rm=/usr/bin/toybox
+[type=link] /bin/sed=/usr/bin/toybox
+[type=link] /bin/uname=/usr/bin/toybox
+
+[type=link] /usr/bin/ascii=/usr/bin/toybox
+[type=link] /usr/bin/base64=/usr/bin/toybox
+[type=link] /usr/bin/basename=/usr/bin/toybox
+[type=link] /usr/bin/bc=/usr/bin/toybox
+[type=link] /usr/bin/bunzip2=/usr/bin/toybox
+[type=link] /usr/bin/bzcat=/usr/bin/toybox
+[type=link] /usr/bin/cal=/usr/bin/toybox
+[type=link] /usr/bin/chgrp=/usr/bin/toybox
+[type=link] /usr/bin/chown=/usr/bin/toybox
+[type=link] /usr/bin/cksum=/usr/bin/toybox
+[type=link] /usr/bin/clear=/usr/bin/toybox
+[type=link] /usr/bin/cmp=/usr/bin/toybox
+[type=link] /usr/bin/comm=/usr/bin/toybox
+[type=link] /usr/bin/cpio=/usr/bin/toybox
+[type=link] /usr/bin/crc32=/usr/bin/toybox
+[type=link] /usr/bin/cut=/usr/bin/toybox
+[type=link] /usr/bin/date=/usr/bin/toybox
+[type=link] /usr/bin/diff=/usr/bin/toybox
+[type=link] /usr/bin/dirname=/usr/bin/toybox
+[type=link] /usr/bin/dos2unix=/usr/bin/toybox
+[type=link] /usr/bin/du=/usr/bin/toybox
+[type=link] /usr/bin/egrep=/usr/bin/toybox
+[type=link] /usr/bin/env=/usr/bin/toybox
+[type=link] /usr/bin/expand=/usr/bin/toybox
+[type=link] /usr/bin/expr=/usr/bin/toybox
+[type=link] /usr/bin/false=/usr/bin/toybox
+[type=link] /usr/bin/fgrep=/usr/bin/toybox
+[type=link] /usr/bin/file=/usr/bin/toybox
+[type=link] /usr/bin/find=/usr/bin/toybox
+[type=link] /usr/bin/grep=/usr/bin/toybox
+[type=link] /usr/bin/groups=/usr/bin/toybox
+[type=link] /usr/bin/gunzip=/usr/bin/toybox
+[type=link] /usr/bin/gzip=/usr/bin/toybox
+[type=link] /usr/bin/head=/usr/bin/toybox
+[type=link] /usr/bin/id=/usr/bin/toybox
+[type=link] /usr/bin/install=/usr/bin/toybox
+[type=link] /usr/bin/link=/usr/bin/toybox
+[type=link] /usr/bin/logname=/usr/bin/toybox
+[type=link] /usr/bin/md5sum=/usr/bin/toybox
+[type=link] /usr/bin/mkfifo=/usr/bin/toybox
+[type=link] /usr/bin/mktemp=/usr/bin/toybox
+[type=link] /usr/bin/more=/usr/bin/toybox
+[type=link] /usr/bin/nl=/usr/bin/toybox
+[type=link] /usr/bin/nohup=/usr/bin/toybox
+[type=link] /usr/bin/od=/usr/bin/toybox
+[type=link] /usr/bin/paste=/usr/bin/toybox
+[type=link] /usr/bin/patch=/usr/bin/toybox
+[type=link] /usr/bin/printenv=/usr/bin/toybox
+[type=link] /usr/bin/printf=/usr/bin/toybox
+[type=link] /usr/bin/readlink=/usr/bin/toybox
+[type=link] /usr/bin/realpath=/usr/bin/toybox
+[type=link] /usr/bin/rmdir=/usr/bin/toybox
+[type=link] /usr/bin/seq=/usr/bin/toybox
+[type=link] /usr/bin/sha1sum=/usr/bin/toybox
+[type=link] /usr/bin/sleep=/usr/bin/toybox
+[type=link] /usr/bin/sort=/usr/bin/toybox
+[type=link] /usr/bin/split=/usr/bin/toybox
+[type=link] /usr/bin/stat=/usr/bin/toybox
+[type=link] /usr/bin/strings=/usr/bin/toybox
+[type=link] /usr/bin/tail=/usr/bin/toybox
+[type=link] /usr/bin/tar=/usr/bin/toybox
+[type=link] /usr/bin/tee=/usr/bin/toybox
+[type=link] /usr/bin/test=/usr/bin/toybox
+[type=link] /usr/bin/time=/usr/bin/toybox
+[type=link] /usr/bin/timeout=/usr/bin/toybox
+[type=link] /usr/bin/touch=/usr/bin/toybox
+[type=link] /usr/bin/true=/usr/bin/toybox
+[type=link] /usr/bin/truncate=/usr/bin/toybox
+[type=link] /usr/bin/tty=/usr/bin/toybox
+[type=link] /usr/bin/uniq=/usr/bin/toybox
+[type=link] /usr/bin/unix2dos=/usr/bin/toybox
+[type=link] /usr/bin/unlink=/usr/bin/toybox
+[type=link] /usr/bin/uudecode=/usr/bin/toybox
+[type=link] /usr/bin/uuencode=/usr/bin/toybox
+[type=link] /usr/bin/uuidgen=/usr/bin/toybox
+[type=link] /usr/bin/wc=/usr/bin/toybox
+[type=link] /usr/bin/which=/usr/bin/toybox
+[type=link] /usr/bin/whoami=/usr/bin/toybox
+[type=link] /usr/bin/xargs=/usr/bin/toybox
+[type=link] /usr/bin/xxd=/usr/bin/toybox
+[type=link] /usr/bin/yes=/usr/bin/toybox
+[type=link] /usr/bin/zcat=/usr/bin/toybox
+
+###########################################################################
+[perms=0744] .console.sh={
+echo setting env variables.
+
+export SYSNAME=nto
+export TERM=qansi
+export HOME=/
+export PATH=/proc/boot:/bin:/usr/bin:/sbin:/usr/sbin:/usr/lib:/ti_fs/tibin/:/ti_fs/vision_apps/
+export LD_LIBRARY_PATH=/proc/boot:/lib:/usr/lib:/lib/dll:/lib/dll/pci:/ti_fs/tilib/:ti_fs/vision_apps/
+
+
+echo Mounting the emmc ..
+waitfor /dev/emmc0 5
+mount -tdos -oexe=all /dev/emmc0 /ti_fs
+echo Mounting the emmc to /ti_fs done ..
+
+echo Looking for user script to run: /ti_fs/scripts/user.sh
+waitfor  /ti_fs/scripts/user.sh
+user_script=/ti_fs/scripts/user.sh
+if [ -e "$user_script" ]; then
+    echo Running user script...
+    . "$user_script"
+fi
+
+ksh -l
+}
+
+################################################################################################
+## ENV profile
+################################################################################################
+/etc/profile = {
+export HOME=/
+export SYSNAME=nto
+export TERM=qansi
+export PATH=/proc/boot:/sbin:/bin:/usr/bin:/usr/sbin:/usr/libexec:/ti_fs/tibin/:/ti_fs/vision_apps/
+export LD_LIBRARY_PATH=/proc/boot:/lib:/usr/lib:/lib/dll:/lib/dll/pci:/ti_fs/tilib/:ti_fs/vision_apps/
+}
+
+
+################################################################################################
+## Customize startup
+################################################################################################
+customize_startup.sh = {
+#!/bin/ksh
+
+if [ -e /scripts/board_startup.sh ]; then
+    echo "Starting board customize script ..."
+    ksh /scripts/board_startup.sh
+fi
+}
+
+################################################################################################
+## END OF BUILD SCRIPT
+################################################################################################
+

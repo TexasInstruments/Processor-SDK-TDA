@@ -80,7 +80,7 @@ ifeq ($(RTOS),FREERTOS)
 endif
 
 ifeq ($(RTOS),SAFERTOS)
-	CFLAGS += -DOS_SAFERTOS
+	DEFS += OS_$(RTOS)
 	ADDITIONAL_STATIC_LIBS += safertos.j722s.r5f.ti-arm-clang.${TARGET_BUILD}.lib
 endif
 

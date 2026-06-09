@@ -1,0 +1,10 @@
+[Unit]
+Description=Service to create bridge interface for TAP and Virtual Switch Interfaces
+Requires=launch_tap.service
+After=launch_tap.service
+
+[Service]
+ExecStart=/bin/sh /usr/bin/bridge_setup.sh
+
+[Install]
+WantedBy=default.target

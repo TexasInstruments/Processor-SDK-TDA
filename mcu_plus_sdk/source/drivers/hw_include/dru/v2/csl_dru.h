@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2017-2023 Texas Instruments Incorporated.
+ *  Copyright (C) 2017-2024 Texas Instruments Incorporated.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -56,7 +56,7 @@
 #include <stdint.h>
 #include <drivers/hw_include/dru/v2/cslr_dru.h>
 #include <drivers/hw_include/cslr_bcdma.h>
-#include <drivers/udma/include/csl_udmap_tr.h>
+#include <drivers/udma.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -118,7 +118,7 @@ extern "C" {
 #define CSL_DRU_OWNER_DIRECT_TR         ((uint64_t) 0x0000U)
 /** \brief UDMA-C TR - TR will be received through PSIL */
 #define CSL_DRU_OWNER_UDMAC_TR          ((uint64_t) 0x0001U)
-/** @} */
+/* @} */
 
 /**
  *  \anchor CSL_DruQueueId
@@ -137,7 +137,7 @@ extern "C" {
 #define CSL_DRU_QUEUE_ID_5              ((uint32_t) 0x0005U)
 #define CSL_DRU_QUEUE_ID_6              ((uint32_t) 0x0006U)
 #define CSL_DRU_QUEUE_ID_7              ((uint32_t) 0x0007U)
-/** @} */
+/* @} */
 
 /**
  *  \anchor CSL_DruCoreId
@@ -153,8 +153,8 @@ extern "C" {
 #define CSL_DRU_CORE_ID_2               ((uint32_t) 0x0002U)
 /* Not present in current SOC design. Only meant for future purpose */
 #define CSL_DRU_CORE_ID_3               ((uint32_t) 0x0003U)
-/** @} */
-/** @} */
+/* @} */
+/* @} */
 
 /* ========================================================================== */
 /*                         Structures and Enums                               */
@@ -267,7 +267,7 @@ typedef struct
     uint64_t                wrTotal;
     /**< [OUT] The total number of channels that are queued for writing */
 } CSL_DruQueueStatus;
-/** @} */
+/* @} */
 
 /* ========================================================================== */
 /*                          Function Declarations                             */
@@ -396,6 +396,7 @@ int32_t CSL_druChPause(const CSL_DRU_t *pRegs, uint32_t chId);
  */
 int32_t CSL_druChResume(const CSL_DRU_t *pRegs, uint32_t chId);
 
+#if defined (BUILD_C7X)
 /**
  *  \brief   This API does a direct TR submission to the specified channel and
  *  core ID.
@@ -412,6 +413,20 @@ static inline void CSL_druChSubmitTr(const CSL_DRU_t *pRegs,
                                      uint32_t chId,
                                      uint32_t coreId,
                                      const CSL_UdmapTR *tr);
+
+/**
+ *  \brief   This API does a direct TR submission to the specified channel using
+ *           Atomic submit register of DRU.
+ *  Note: No error checks are performed by this API to get maximum performance
+ *
+ *  \param   pRegs      [IN] DRU register base.
+ *  \param   chId       [IN] Channel ID - 0 to (#CSL_DRU_NUM_CH - 1).
+*   \param   vdata      [IN] Vector TR to submit.
+ */
+static inline void CSL_druChSubmitAtomicTr(CSL_DRU_t *pRegs,
+                                           uint32_t chId,
+                                           __ulong8 * vdata);
+#endif
 
 /**
  *  \brief   This API get the triggers register address for the channel.
@@ -505,6 +520,7 @@ int32_t CSL_druGetQueueStatus(const CSL_DRU_t *pRegs,
 /*                       Static Function Definitions                          */
 /* ========================================================================== */
 
+#if defined (BUILD_C7X)
 static inline void CSL_druChSubmitTr(const CSL_DRU_t *pRegs,
                                      uint32_t chId,
                                      uint32_t coreId,
@@ -528,6 +544,19 @@ static inline void CSL_druChSubmitTr(const CSL_DRU_t *pRegs,
     return;
 }
 
+static inline void CSL_druChSubmitAtomicTr(CSL_DRU_t *pRegs,
+                                           uint32_t chId,
+                                           __ulong8 * vdata)
+{
+    volatile uintptr_t     pAtomic;
+
+    pAtomic = (uintptr_t) &pRegs->CHATOMIC[chId];
+    *((__ulong8 *) pAtomic) = *vdata;
+
+    return;
+}
+#endif
+
 static inline void CSL_druChSetLocalTrigger0Raw(volatile uint64_t *pSwTrigReg)
 {
     uint64_t regVal = ((uint64_t) 1U << CSL_DRU_CHRT_SWTRIG_LOCAL_TRIGGER0_SHIFT);
@@ -549,7 +578,7 @@ static inline void CSL_druChSetGlobalTrigger1Raw(volatile uint64_t *pSwTrigReg)
     CSL_REG64_WR(pSwTrigReg, regVal);
 }
 
-/** @} */
+/* @} */
 
 #ifdef __cplusplus
 }

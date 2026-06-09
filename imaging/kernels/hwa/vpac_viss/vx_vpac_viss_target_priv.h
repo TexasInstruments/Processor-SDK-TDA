@@ -78,6 +78,10 @@
 
 #include "utils/perf_stats/include/app_perf_stats.h"
 
+extern tivx_mutex             viss_aewb_lock[VHWA_M2M_VISS_MAX_HANDLES];
+extern tivx_ae_awb_params_t   viss_aewb_results[VHWA_M2M_VISS_MAX_HANDLES];
+extern uint32_t               viss_aewb_channel[VHWA_M2M_VISS_MAX_HANDLES];
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -389,6 +393,7 @@ typedef struct
     uint32_t                            wdTimerErrStatus;
     /* Timestamp for the most recent frame processed. */
     uint64_t                            timestamp;
+#if !defined(VPAC3L)
     /* Physical address for register readback memory */
     uint64_t                            readback_mem_ptr_phys;
     /* Virtual address for register readback memory */
@@ -401,6 +406,7 @@ typedef struct
     uint32_t                            config_reg_mem_size;    
     /*! configuration buffer, if configThroughUDMA is true */
     Vhwa_M2mVissConfigAppBuff           readbackBufferInfo;
+#endif
 } tivxVpacVissObj;
 
 typedef struct

@@ -7,21 +7,40 @@ CSOURCES    := tidl_rt_x86.c
 LDIRS += $(DSP_TOOLS)/host_emulation
 LDIRS += $(MMALIB_PATH)/lib/$(C7X_VERSION)/$(TARGET_BUILD)
 
-ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a J722S j722s))
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a J722S j722s TDA54 tda54))
     DEFS += DMA_UTILS_STANDALONE
 endif
 
 DEFS += HOST_EMULATION
 
 DMA_LIBS =
+IPC_NOTIFY_LIBS =
 
-
-ifeq ($(RTOS_SDK),mcu_plus_sdk)
+ifeq ($(RTOS_SDK),$(filter $(RTOS_SDK), mcu_sdk mcu_plus_sdk))
     LDIRS += $(DMA_UTILS_PATH)/lib
+endif
+ifeq ($(RTOS_SDK),mcu_plus_sdk)
+    LDIRS += $(MCU_PLUS_SDK_PATH)/source/drivers/ipc_notify/lib/
+endif
+ifeq ($(RTOS_SDK),mcu_sdk)
+    # Add MCU_SDK library path for system libraries
+    ifeq ($(TARGET_BUILD),debug)
+        LDIRS += $(MCU_SDK_PATH)/build/tda54/lib/Debug
+    else
+        LDIRS += $(MCU_SDK_PATH)/build/tda54/lib/Release
+    endif
+endif
+
+ifeq ($(RTOS_SDK),$(filter $(RTOS_SDK), mcu_plus_sdk mcu_sdk))
     ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a))
         DMA_LIBS += dmautils.am62ax.c75x.ti-c7x-hostemu.$(TARGET_BUILD).lib
     else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J722S j722s))
         DMA_LIBS += dmautils.j722s.c75ssx-0.ti-c7x-hostemu.$(TARGET_BUILD).lib
+    else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+        DMA_LIBS += dmautils.tda54.c76x.ti-c7x-hostemu.$(TARGET_BUILD).lib
+        DMA_LIBS += libdrivers-ti_sdk_cfg_default_hostemu_gcc-linux.a
+        DMA_LIBS += libhal-ti_sdk_cfg_default_hostemu_gcc-linux.a
+        DMA_LIBS += libti_sdk_cfg_default_hostemu_gcc-linux.a
     endif
 else
     LDIRS += $(PDK_PATH)/ti/csl/lib/$(SOC)/c7x-hostemu/$(TARGET_BUILD)
@@ -30,15 +49,17 @@ else
     LDIRS += $(PDK_PATH)/ti/drv/udma/lib/$(SOC)_hostemu/c7x-hostemu/$(TARGET_BUILD)
     DMA_LIBS += dmautils.lib
     DMA_LIBS += ti.csl.lib
-    ifeq ($(ENABLE_SDK_9_2_COMPATIBILITY), 1)    
+    ifeq ($(ENABLE_SDK_9_2_COMPATIBILITY), 1)
     else
         DMA_LIBS += ti.csl.init.lib
-    endif    
+    endif
     ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a))
     else
+        ifndef DMA_UTILS_STANDALONE
         DMA_LIBS += udma.lib
         DMA_LIBS += sciclient.lib
         DMA_LIBS += ti.osal.lib
+        endif
     endif
 endif
 
@@ -48,9 +69,10 @@ else
     LDIRS += $(TIDL_PATH)/ti_dl/lib/$(TARGET_SOC)/PC/algo/$(TARGET_BUILD)
 endif
 LDIRS += $(TIOVX_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+LDIRS += $(VISION_APPS_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+LDIRS += $(APP_UTILS_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 LDIRS += $(TIDL_PATH)/arm-tidl/tiovx_kernels/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
-LDIRS += $(VISION_APPS_PATH)/lib/PC/$(TARGET_OVX_PATH)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
-LDIRS += $(APP_UTILS_PATH)/lib/PC/$(TARGET_OVX_PATH)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+LDIRS += $(TIDL_PATH)/tiovx_kernels/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 
 ifeq ($(GCOV_ENABLED), 1)
     $(_MODULE)_COPT += -fprofile-arcs
@@ -64,8 +86,9 @@ MMA_LIBS += common_x86_64
 
 TIDL_LIBS =
 TIDL_LIBS += tidl_algo
-TIDL_LIBS += tidl_obj_algo
-TIDL_LIBS += tidl_priv_algo
+TIDL_LIBS += tidl_ref
+TIDL_LIBS += tidl_kernels
+TIDL_LIBS += tidl_priv
 TIDL_LIBS += tidl_custom
 
 TIDL_LIBS += tidl_avx_kernels
@@ -88,7 +111,19 @@ VISION_APPS_UTILS_LIBS += app_utils_mem
 VISION_APPS_UTILS_LIBS += app_utils_init
 VISION_APPS_UTILS_LIBS += app_utils_file_io
 
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+    VISION_APPS_UTILS_LIBS += app_utils_init_vdk
+    VISION_APPS_UTILS_LIBS += app_utils_ipc
+    VISION_APPS_UTILS_LIBS += app_utils_remote_service
+    VISION_APPS_UTILS_LIBS += app_utils_misc
+    VISION_APPS_UTILS_LIBS += app_utils_pc_osal
+    VISION_APPS_UTILS_LIBS += app_utils_perf_stats
+    VISION_APPS_UTILS_LIBS += app_utils_console_io
+endif
+
+
 ADDITIONAL_STATIC_LIBS += $(DMA_LIBS)
+ADDITIONAL_STATIC_LIBS += $(IPC_NOTIFY_LIBS)
 
 STATIC_LIBS += $(TIDL_LIBS)
 STATIC_LIBS += $(MMA_LIBS)

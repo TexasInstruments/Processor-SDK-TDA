@@ -29,7 +29,7 @@ else
 BUILD_DEFS += SOC_J721E
 endif
 
-ifneq ($(BUILD_WITH_OPENACC) ,1)
+ifneq ($(BUILD_WITH_OPENACC) ,yes)
 CPPFLAGS  += --std=c++11 \
              -Wno-maybe-uninitialized \
              -Wno-unused-variable \

@@ -2,7 +2,7 @@
 *
 * SOC FIREWALL PROPERTIES. header file
 *
-* Copyright (C) 2015-2024 Texas Instruments Incorporated.
+* Copyright (C) 2015-2025 Texas Instruments Incorporated.
 *  Redistribution and use in source and binary forms, with or without
 *  modification, are permitted provided that the following conditions
 *  are met:
@@ -2178,14 +2178,14 @@ extern "C"
 #define CSL_STD_FW_WKUP_PSRAMECC_8K0_REGS_REGS_START                                               (0x0000002b608000U)
 #define CSL_STD_FW_WKUP_PSRAMECC_8K0_REGS_REGS_END                                                 (0x0000002b6083ffU)
 
-/* Properties of firewall at slave: WKUP_PSRAM2KX32E0_REGS */
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_REGS_ID                                                       (34U)
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_REGS_TYPE                                                     (CSL_FW_SECURITY)
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_REGS_MMR_BASE                                                 (0x00000045008800U)
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_REGS_NUM_REGIONS                                              (24U)
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_REGS_NUM_PRIV_IDS_PER_REGION                                  (3U)
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_REGS_REGS_START                                               (0x0000002b609000U)
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_REGS_REGS_END                                                 (0x0000002b6093ffU)
+/* Properties of firewall at slave: WKUP_PSRAMECC_RET0_REGS */
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_REGS_ID                                                      (34U)
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_REGS_TYPE                                                    (CSL_FW_SECURITY)
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_REGS_MMR_BASE                                                (0x00000045008800U)
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_REGS_NUM_REGIONS                                             (24U)
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_REGS_NUM_PRIV_IDS_PER_REGION                                 (3U)
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_REGS_REGS_START                                              (0x0000002b609000U)
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_REGS_REGS_END                                                (0x0000002b6093ffU)
 
 /* Properties of firewall at slave: WKUP_R5FSS0_COMMON0_EVNT_BUS_VBUSP_MMRS */
 #define CSL_STD_FW_WKUP_R5FSS0_COMMON0_EVNT_BUS_VBUSP_MMRS_ID                                      (34U)
@@ -2214,14 +2214,14 @@ extern "C"
 #define CSL_STD_FW_WKUP_PSRAMECC_8K0_RAM_RAM_START                                                 (0x00000041880000U)
 #define CSL_STD_FW_WKUP_PSRAMECC_8K0_RAM_RAM_END                                                   (0x00000041887fffU)
 
-/* Properties of firewall at slave: WKUP_PSRAM2KX32E0_RAM */
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_RAM_ID                                                        (34U)
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_RAM_TYPE                                                      (CSL_FW_SECURITY)
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_RAM_MMR_BASE                                                  (0x00000045008800U)
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_RAM_NUM_REGIONS                                               (24U)
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_RAM_NUM_PRIV_IDS_PER_REGION                                   (3U)
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_RAM_RAM_START                                                 (0x00000041888000U)
-#define CSL_STD_FW_WKUP_PSRAM2KX32E0_RAM_RAM_END                                                   (0x00000041889fffU)
+/* Properties of firewall at slave: WKUP_PSRAMECC_RET0_RAM */
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_RAM_ID                                                       (34U)
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_RAM_TYPE                                                     (CSL_FW_SECURITY)
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_RAM_MMR_BASE                                                 (0x00000045008800U)
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_RAM_NUM_REGIONS                                              (24U)
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_RAM_NUM_PRIV_IDS_PER_REGION                                  (3U)
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_RAM_RAM_START                                                (0x00000041888000U)
+#define CSL_STD_FW_WKUP_PSRAMECC_RET0_RAM_RAM_END                                                  (0x00000041889fffU)
 
 /* Properties of firewall at slave: WKUP_CTRL_MMR0_CFG0 */
 #define CSL_STD_FW_WKUP_CTRL_MMR0_CFG0_ID                                                          (34U)
@@ -3012,8 +3012,8 @@ extern "C"
 #define CSL_STD_FW_MSRAM_1MB0_RAM_MMR_BASE                                                         (0x00000045040000U)
 #define CSL_STD_FW_MSRAM_1MB0_RAM_NUM_REGIONS                                                      (8U)
 #define CSL_STD_FW_MSRAM_1MB0_RAM_NUM_PRIV_IDS_PER_REGION                                          (3U)
-#define CSL_STD_FW_MSRAM_1MB0_RAM_RAM_START                                                        (0x00000043c40000U)
-#define CSL_STD_FW_MSRAM_1MB0_RAM_RAM_END                                                          (0x00000043c7ffffU)
+#define CSL_STD_FW_MSRAM_1MB0_RAM_RAM_START                                                        (0x00000072000000U)
+#define CSL_STD_FW_MSRAM_1MB0_RAM_RAM_END                                                          (0x000000720fffffU)
 
 /* Properties of firewall at slave: MSRAM_1MB1_RAM */
 #define CSL_STD_FW_MSRAM_1MB1_RAM_ID                                                               (257U)

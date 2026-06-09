@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2020 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -83,6 +83,15 @@ extern "C" {
 /* Current context is NON-SECURE */
 #define SCICLIENT_NON_SECURE_CONTEXT        (1U)
 
+/* Have 3 response interrupt handler for DM2TIFS, secure and non-secure context. */
+typedef enum
+{
+    SCICLIENT_NON_SEC_RESP_INTR_HANDLER,
+    SCICLIENT_SEC_RESP_INTR_HANDLER,
+    SCICLIENT_DM2TIFS_RESP_INTR_HANDLER,
+    SCICLIENT_MAX_RESP_INTR_HANDLER,
+} Sciclient_ContextRespIntrHandler;
+
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
@@ -97,14 +106,14 @@ typedef struct
 
     uint32_t hostId;
     /**< CPU ID of the A53/A72/R5F/DSP */
-#if !( defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_J722S))
+#if !( defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_J722S))
     uint32_t reqHighPrioThreadId;
     /**< Thread ID of the high priority thread(write) allowed for the CPU */
 #endif
     uint32_t reqLowPrioThreadId;
     /**< Thread ID of the low priority thread(write) allowed for the CPU */
 
-#if !( defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_J722S))
+#if !( defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_J722S))
     uint32_t notificationRespThreadId;
     /**< Thread ID of the thread(write) for sending a notification to the
      *   firmware
@@ -113,7 +122,7 @@ typedef struct
     uint32_t respThreadId;
     /**< Thread ID of the response thread(read) available for the CPU */
 
-#if !( defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_J722S))
+#if !( defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62AX) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_J722S))
     uint32_t notificationThreadId;
     /**< Thread ID of the notification thread(read) available for the CPU */
 #endif
@@ -142,8 +151,8 @@ typedef struct
     /**< Sequence ID of the current request **/
     HwiP_Object*           notificationIntr;
     /**<  Interrupt for notification **/
-    HwiP_Object*           respIntr[2];
-    /**<  Interrupt for response message. Have 2 for secure and non-secure context **/
+    HwiP_Object*           respIntr[SCICLIENT_MAX_RESP_INTR_HANDLER];
+    /**<  Interrupt for response message **/
     uint32_t              opModeFlag;
     /**< Operation mode for the Sciclient Service API. Refer to
      * \ref Sciclient_ServiceOperationMode for valid values.
@@ -369,8 +378,7 @@ int32_t Sciclient_servicePrepareHeader(const Sciclient_ReqPrm_t *pReqPrm,
 
 int32_t Sciclient_ProcessRmMessage(void *tx_msg);
 int32_t Sciclient_ProcessPmMessage(const uint32_t reqFlags, void *tx_msg);
-int32_t Sciclient_processDMVersionMessage(void *tx_msg);
-int32_t Sciclient_query_fw_caps_handler(const uint32_t reqFlags, void *tx_msg);
+void Sciclient_query_fw_caps_handler(const uint32_t reqFlags, void *tx_msg);
 
 #ifdef __cplusplus
 }

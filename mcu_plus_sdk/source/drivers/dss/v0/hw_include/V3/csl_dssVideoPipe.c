@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2023
+ *  Copyright (c) Texas Instruments Incorporated 2023-24
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -322,6 +322,7 @@ static const CSL_DssVidPipeDataFmt gDssVidPipeDataFmt[] = {
     {FVID2_DF_RGBX16_4444, CSL_DSS_VID_ATTRIBUTES_FORMAT_VAL_XBGR16_4444},
     {FVID2_DF_XBGR_4444, CSL_DSS_VID_ATTRIBUTES_FORMAT_VAL_RGBX16_4444},
     {FVID2_DF_BGRX16_5551, CSL_DSS_VID_ATTRIBUTES_FORMAT_VAL_XRGB16_1555},
+    {FVID2_DF_RGBX16_5551, CSL_DSS_VID_ATTRIBUTES_FORMAT_VAL_XBGR16_1555},
     {FVID2_DF_BGRX32_8888, CSL_DSS_VID_ATTRIBUTES_FORMAT_VAL_XRGB32_8888},
     {FVID2_DF_RGBX24_8888, CSL_DSS_VID_ATTRIBUTES_FORMAT_VAL_XBGR32_8888},
     {FVID2_DF_XBGR24_8888, CSL_DSS_VID_ATTRIBUTES_FORMAT_VAL_RGBX32_8888},
@@ -351,7 +352,7 @@ int32_t CSL_dssVidPipeSetConfig(CSL_dss_pipeRegs *pipeRegs,
     uint32_t netWidthForSc = 0U, verticalTaps;
     int32_t isDataFmtRgb;
 
-    if((TRUE == pipeCfg->scEnable) &&
+    if(((uint32_t)TRUE == pipeCfg->scEnable) &&
        (CSL_DSS_VID_PIPE_TYPE_VID != pipeCfg->pipeType))
     {
         retVal = CSL_EBADARGS;
@@ -394,7 +395,7 @@ int32_t CSL_dssVidPipeSetConfig(CSL_dss_pipeRegs *pipeRegs,
            (FVID2_DF_BITMAP2 == pipeCfg->inFmt.dataFormat)||
            (FVID2_DF_BITMAP4 == pipeCfg->inFmt.dataFormat)||
            (FVID2_DF_BITMAP8 == pipeCfg->inFmt.dataFormat)||
-           (TRUE == pipeCfg->gammaEnable))
+           ((uint32_t)TRUE == pipeCfg->gammaEnable))
         {
             CSL_dssVidPipeSetClutConfig(pipeRegs, pipeCfg->clutData);
             CSL_dssVidPipeNibbleEnable(pipeRegs, pipeCfg->nibbleModeEnable);
@@ -417,7 +418,7 @@ int32_t CSL_dssVidPipeSetConfig(CSL_dss_pipeRegs *pipeRegs,
         }
 
         if ((CSL_DSS_VID_PIPE_TYPE_VID == pipeCfg->pipeType) &&
-            ((TRUE == scEnable) ||
+            (((uint32_t)TRUE == scEnable) ||
              (TRUE == Fvid2_isDataFmtYuv(pipeCfg->inFmt.dataFormat))))
         {
             if(pipeCfg->outWidth != pipeCfg->inFmt.width)
@@ -1026,13 +1027,13 @@ static int32_t CSL_dssVidPipeGetRowInc(const CSL_dss_pipeRegs *pipeRegs,
         /* For interlaced buffers we need to skip one line */
         if ((retVal == CSL_PASS) &&
             (FVID2_SF_INTERLACED == pipeCfg->inFmt.scanFormat) &&
-            (TRUE == fieldMergedP1))
+            ((uint32_t)TRUE == fieldMergedP1))
         {
             *rowInc += pitchY;
         }
         if ((retVal == CSL_PASS) &&
             (FVID2_SF_INTERLACED == pipeCfg->inFmt.scanFormat) &&
-            (TRUE == fieldMergedP2))
+            ((uint32_t)TRUE == fieldMergedP2))
         {
             *rowIncUV += pitchUV;
         }
@@ -1259,7 +1260,7 @@ static void CSL_dssVidPipeEnableFlip(CSL_dss_pipeRegs *pipeRegs,
     if(FVID2_FLIP_TYPE_H == (FVID2_FLIP_TYPE_H & flipType))
     {
         widthInBytes = CSL_dssVidPipeWidthInBytes(pipeCfg);
-        widthInBytes = widthInBytes + pipeCfg->inFmt.pitch[0] - 1;
+        widthInBytes = widthInBytes + pipeCfg->inFmt.pitch[0] - 1U;
         regVal2 = -((int32_t) widthInBytes);
         CSL_REG32_FINS(&pipeRegs->ROW_INC,
                        DSS_VID_ROW_INC_ROWINC,
@@ -1437,25 +1438,25 @@ static void CSL_dssVidPipeSetScalerCoeff(
         regVal = CSL_REG32_RD(&pipeRegs->FIR_COEF_H0[index]);
         CSL_FINS(regVal,
                  DSS_VID_FIR_COEF_H0_FIRHC0,
-                 (hCoef->firhc0[index]));
+                 ((uint32_t)hCoef->firhc0[index]));
         CSL_REG32_WR(&pipeRegs->FIR_COEF_H0[index], regVal);
 
         regVal = CSL_REG32_RD(&pipeRegs->FIR_COEF_H0_C[index]);
         CSL_FINS(regVal,
                  DSS_VID_FIR_COEF_H0_C_FIRHC0,
-                 (hChromaCoef->firhc0[index]));
+                 ((uint32_t)hChromaCoef->firhc0[index]));
         CSL_REG32_WR(&pipeRegs->FIR_COEF_H0_C[index], regVal);
 
         regVal = CSL_REG32_RD(&pipeRegs->FIR_COEF_V0[index]);
         CSL_FINS(regVal,
                  DSS_VID_FIR_COEF_V0_FIRVC0,
-                 (vCoef->firhc0[index]));
+                 ((uint32_t)vCoef->firhc0[index]));
         CSL_REG32_WR(&pipeRegs->FIR_COEF_V0[index], regVal);
 
         regVal = CSL_REG32_RD(&pipeRegs->FIR_COEF_V0_C[index]);
         CSL_FINS(regVal,
                  DSS_VID_FIR_COEF_V0_C_FIRVC0,
-                 (vChromaCoef->firhc0[index]));
+                 ((uint32_t)vChromaCoef->firhc0[index]));
         CSL_REG32_WR(&pipeRegs->FIR_COEF_V0_C[index], regVal);
     }
     for(index = 0U; index < CSL_DSS_VID_PIPE_NUM_SCALING_COEFF_12; index++)
@@ -1463,37 +1464,37 @@ static void CSL_dssVidPipeSetScalerCoeff(
         regVal = CSL_REG32_RD(&pipeRegs->FIR_COEF_H12[index]);
         CSL_FINS(regVal,
                  DSS_VID_FIR_COEF_H12_FIRHC1,
-                 (hCoef->firhc1[index]));
+                 ((uint32_t)hCoef->firhc1[index]));
         CSL_FINS(regVal,
                  DSS_VID_FIR_COEF_H12_FIRHC2,
-                 (hCoef->firhc2[index]));
+                 ((uint32_t)hCoef->firhc2[index]));
         CSL_REG32_WR(&pipeRegs->FIR_COEF_H12[index], regVal);
 
         regVal = CSL_REG32_RD(&pipeRegs->FIR_COEF_H12_C[index]);
         CSL_FINS(regVal,
                  DSS_VID_FIR_COEF_H12_C_FIRHC1,
-                 (hChromaCoef->firhc1[index]));
+                 ((uint32_t)hChromaCoef->firhc1[index]));
         CSL_FINS(regVal,
                  DSS_VID_FIR_COEF_H12_C_FIRHC2,
-                 (hChromaCoef->firhc2[index]));
+                 ((uint32_t)hChromaCoef->firhc2[index]));
         CSL_REG32_WR(&pipeRegs->FIR_COEF_H12_C[index], regVal);
 
         regVal = CSL_REG32_RD(&pipeRegs->FIR_COEF_V12[index]);
         CSL_FINS(regVal,
                  DSS_VID_FIR_COEF_V12_FIRVC1,
-                 (vCoef->firhc1[index]));
+                 ((uint32_t)vCoef->firhc1[index]));
         CSL_FINS(regVal,
                  DSS_VID_FIR_COEF_V12_FIRVC2,
-                 (vCoef->firhc2[index]));
+                 ((uint32_t)vCoef->firhc2[index]));
         CSL_REG32_WR(&pipeRegs->FIR_COEF_V12[index], regVal);
 
         regVal = CSL_REG32_RD(&pipeRegs->FIR_COEF_V12_C[index]);
         CSL_FINS(regVal,
                  DSS_VID_FIR_COEF_V12_C_FIRVC1,
-                 (vChromaCoef->firhc1[index]));
+                 ((uint32_t)vChromaCoef->firhc1[index]));
         CSL_FINS(regVal,
                  DSS_VID_FIR_COEF_V12_C_FIRVC2,
-                 (vChromaCoef->firhc2[index]));
+                 ((uint32_t)vChromaCoef->firhc2[index]));
         CSL_REG32_WR(&pipeRegs->FIR_COEF_V12_C[index], regVal);
     }
 }

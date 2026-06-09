@@ -102,6 +102,13 @@ ifeq ($(BUILD_MCU_BOARD_DEPENDENCIES),yes)
 DEFS+=BUILD_MCU_BOARD_DEPENDENCIES
 endif
 
+ifeq ($(BUILD_ENABLE_ETHFW),yes)
+DEFS+=ENABLE_ETHFW
+endif
+
+# changing timestamps of source files to avoid build errors in multiple OS builds
+$(shell touch $(VISION_APPS_PATH)/platform/$(SOC)/rtos/common/app_init.c)
+
 IDIRS+=$(VISION_APPS_PATH)/platform/$(SOC)/rtos
 
 include $(VISION_APPS_PATH)/platform/$(SOC)/rtos/concerto_r5f_inc.mak

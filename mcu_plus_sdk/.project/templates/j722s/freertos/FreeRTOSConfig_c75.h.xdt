@@ -2,7 +2,7 @@
     let cpu = args.project.cpu;
 %%}
 /*
- *  Copyright (C) 2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-25 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -37,7 +37,15 @@
 #ifndef TI_FREERTOS_CONFIG_H
 #define TI_FREERTOS_CONFIG_H
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <kernel/dpl/DebugP.h>
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
 
 /*-----------------------------------------------------------
  * Application specific definitions.
@@ -70,7 +78,7 @@
 #define configSYSTICK_CLOCK_HZ                  (0) /* NOT USED in TI ports */
 #define configTICK_RATE_HZ                      (1000)
 #define configMAX_PRIORITIES                    (32)
-#define configMINIMAL_STACK_SIZE                (1024) /* in units of configSTACK_DEPTH_TYPE, not bytes */
+#define configMINIMAL_STACK_SIZE                (2048) /* in units of configSTACK_DEPTH_TYPE, not bytes */
 #define configMAX_TASK_NAME_LEN                 (32)
 #define configUSE_TRACE_FACILITY                (1)
 #if (configOPTIMIZE_FOR_LATENCY==0)
@@ -167,5 +175,6 @@ uint32_t uiPortGetRunTimeCounterValue();
 #define INCLUDE_vSemaphoreDelete        (1)
 #define INCLUDE_xTimerPendFunctionCall  (1)
 #define INCLUDE_xTaskGetIdleTaskHandle  (1)
+#define INCLUDE_xSemaphoreGetMutexHolder (1)
 
 #endif /* TI_FREERTOS_CONFIG_H */

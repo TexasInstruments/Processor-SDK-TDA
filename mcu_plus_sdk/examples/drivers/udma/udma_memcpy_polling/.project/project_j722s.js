@@ -166,7 +166,7 @@ const libs_freertos_main_r5f = {
 const libs_freertos_mcu_r5f = {
     common: [
         "freertos.j722s.r5f.ti-arm-clang.${ConfigName}.lib",
-        "drivers.j722s.main-r5f.ti-arm-clang.${ConfigName}.lib",
+        "drivers.j722s.mcu-r5f.ti-arm-clang.${ConfigName}.lib",
         "board.j722s.r5f.ti-arm-clang.${ConfigName}.lib",
     ],
 };
@@ -204,7 +204,7 @@ const readmeDoxygenPageTag = "EXAMPLES_DRIVERS_UDMA_MEMCPY_POLLING";
 const templates_freertos_c75ss0 =
 [
     {
-        input: ".project/templates/j722s/common/linker_c75ss0.cmd.xdt",
+        input: ".project/templates/j722s/common/linker_c75ss.cmd.xdt",
         output: "linker.cmd",
     },
     {
@@ -220,7 +220,7 @@ const templates_freertos_c75ss0 =
 const templates_freertos_c75ss1 =
 [
     {
-        input: ".project/templates/j722s/common/linker_c75ss1.cmd.xdt",
+        input: ".project/templates/j722s/common/linker_c75ss.cmd.xdt",
         output: "linker.cmd",
     },
     {
@@ -428,6 +428,7 @@ function getComponentBuildProperty(buildOption) {
             build_property.libs = libs_nortos_wkup_r5f;
             build_property.templates = templates_nortos_wkup_r5f;
             build_property.libdirs = libdirs_wkup_nortos;
+            build_property.defines = defines_wkup_r5;
         }
     }
     else if(buildOption.cpu.match(/main-r5f*/)) {

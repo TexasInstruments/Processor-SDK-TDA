@@ -3,7 +3,7 @@
  *
  * Cortex-M3 (CM3) firmware for power management
  *
- * Copyright (C) 2024, Texas Instruments Incorporated
+ * Copyright (C) 2024-2025, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,7 +47,7 @@
  * LFXOSC_CTRL - Low Frequency Oscillator Control Register
  * 32.768 KHz
  */
-static u32 clk_soc_lfosc0_get_freq(struct clk *clk UNUSED)
+static u32 clk_soc_lfosc0_get_freq(struct clk *clk_ptr UNUSED)
 {
 	u32 ret = 0;
 	u32 v;
@@ -60,7 +60,7 @@ static u32 clk_soc_lfosc0_get_freq(struct clk *clk UNUSED)
 	return ret;
 }
 
-static u32 clk_soc_lfosc0_get_state(struct clk *clk UNUSED)
+static u32 clk_soc_lfosc0_get_state(struct clk *clk_ptr UNUSED)
 {
 	return CLK_HW_STATE_ENABLED;
 }

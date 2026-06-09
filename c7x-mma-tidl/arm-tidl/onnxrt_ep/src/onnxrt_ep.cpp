@@ -63,31 +63,30 @@ bool TIDL_populateOptions(std::vector<std::pair<std::string,std::string>> interf
   {
     auto key = option.first;
     auto value = option.second;
-    if (!strcmp("debug_level", key.c_str())) 
+    if (!strcmp("debug_level", key.c_str()))
     {
       std::stringstream(value) >> options->m_debug_level;
-      // TODO: any invalid values? like negative, or beyond supported range?
     }
-    if (!strcmp("priority", key.c_str())) 
+    else if (!strcmp("priority", key.c_str()))
     {
       std::stringstream(value) >> options->target_priority;
     }
-    if (!strcmp("max_pre_empt_delay", key.c_str())) 
+    else if (!strcmp("max_pre_empt_delay", key.c_str()))
     {      
       std::stringstream(value) >> options->max_pre_empt_delay;
     }
-    if (!strcmp("core_number", key.c_str())) 
+    else if (!strcmp("core_number", key.c_str()))
     {
       std::stringstream(value) >> options->core_number;
     }
-    if (!strcmp("core_start_idx", key.c_str())) 
+    else if (!strcmp("core_start_idx", key.c_str()))
     {
       std::stringstream(value) >> options->core_start_idx;
     }
-    if (!strcmp("artifacts_folder", key.c_str())) 
+    else if (!strcmp("artifacts_folder", key.c_str()))
     {
       options->m_artifacts_folder = value;
-      if(!TIDL_checkIsDir(options->m_artifacts_folder.c_str())) 
+      if(!TIDL_checkIsDir(options->m_artifacts_folder.c_str()))
       {
         delete options;
 
@@ -95,7 +94,7 @@ bool TIDL_populateOptions(std::vector<std::pair<std::string,std::string>> interf
         return false;
       }
     }
-    if (!strcmp("advanced_options:flow_ctrl", key.c_str())) 
+    else if (!strcmp("advanced_options:flow_ctrl", key.c_str()))
     {
       std::stringstream(value) >> options->m_flow_ctrl;
       if(options->m_flow_ctrl != 0 && options->m_flow_ctrl != 1 && options->m_flow_ctrl != 12)
@@ -105,7 +104,7 @@ bool TIDL_populateOptions(std::vector<std::pair<std::string,std::string>> interf
       }
     }
     #ifdef x86_64
-    if (!strcmp("advanced_options:temp_buffer_dir", key.c_str())) 
+    else if (!strcmp("advanced_options:temp_buffer_dir", key.c_str()))
     {
       options->m_temp_buffer_dir = value;
       if(!TIDL_checkIsDir(options->m_temp_buffer_dir.c_str())) 
@@ -120,14 +119,20 @@ bool TIDL_populateOptions(std::vector<std::pair<std::string,std::string>> interf
       }
     }
     #endif
+    else
+    {
+      printf("WARNING : Invalid option %s provided. Ignoring it.\n", key.c_str());
+    }
   }
-  if (options->m_artifacts_folder.empty()) 
+
+  if (options->m_artifacts_folder.empty())
   {
       delete options;
 
       printf("ERROR : artifacts_folder must be provided");
       return false;
   }
+
   if(options->target_priority < 0 || options->target_priority > 7)
   {
     delete options;
@@ -138,14 +143,19 @@ bool TIDL_populateOptions(std::vector<std::pair<std::string,std::string>> interf
 
   options->osrtDebugPrintLevel = (options->m_debug_level == 0) ? 0 : 1;
 
-  TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "artifacts_folder                                = %s \n", data_->m_artifacts_folder.c_str());
-  TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "debug_level                                     = %d \n", data_->m_debug_level);
-  TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "target_priority                                 = %d \n", data_->target_priority);
-  TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "max_pre_empt_delay                              = %f \n", data_->max_pre_empt_delay);
+  TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "artifacts_folder     = %s \n", data_->m_artifacts_folder.c_str());
+  TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "debug_level          = %d \n", data_->m_debug_level);
+  TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "target_priority      = %d \n", data_->target_priority);
+  TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "max_pre_empt_delay   = %f \n", data_->max_pre_empt_delay);
+  TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "core_number          = %d \n", data_->core_number);
+  TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "core_start_idx       = %d \n", data_->core_start_idx);
   if(data_->m_flow_ctrl != -1)
   {
-    TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "flow_ctrl                                       = %d \n", data_->m_flow_ctrl);
+    TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "flow_ctrl          = %d \n", data_->m_flow_ctrl);
   }
+  #ifdef x86_64
+  TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "temp_buffer_dir      = %s \n", data_->m_temp_buffer_dir.c_str());
+  #endif
 
   return true;
 }

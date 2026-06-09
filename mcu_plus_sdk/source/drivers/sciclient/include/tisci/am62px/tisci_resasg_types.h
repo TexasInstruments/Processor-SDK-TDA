@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2017-2023 Texas Instruments Incorporated
+ *  Copyright (C) 2023-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -49,7 +49,7 @@
  *
  * Resource Assignment Subtype definitions
  *
- * Data version: 230922_165936
+ * Data version: 250904_170808
  *
  */
 #ifndef TISCI_RESASG_TYPES_H
@@ -120,6 +120,7 @@ extern "C"
  */
 #define TISCI_RESASG_SUBTYPE_RA_ERROR_OES (0x0000U)
 #define TISCI_RESASG_SUBTYPE_RA_VIRTID (0x000AU)
+#define TISCI_RESASG_SUBTYPE_BCDMA_RING_BLOCK_COPY_HCCHAN (0x000CU)
 #define TISCI_RESASG_SUBTYPE_BCDMA_RING_BLOCK_COPY_CHAN (0x000DU)
 #define TISCI_RESASG_SUBTYPE_BCDMA_RING_SPLIT_TR_RX_CHAN (0x000EU)
 #define TISCI_RESASG_SUBTYPE_BCDMA_RING_SPLIT_TR_TX_CHAN (0x000FU)
@@ -133,13 +134,14 @@ extern "C"
 #define TISCI_RESASG_SUBTYPE_PKTDMA_RING_SAUL_RX_1_CHAN (0x0019U)
 #define TISCI_RESASG_SUBTYPE_PKTDMA_RING_SAUL_RX_2_CHAN (0x001AU)
 #define TISCI_RESASG_SUBTYPE_PKTDMA_RING_SAUL_RX_3_CHAN (0x001BU)
-#define TISCI_RESASG_SUBTYPES_RA_CNT (0x000FU)
+#define TISCI_RESASG_SUBTYPES_RA_CNT (0x0010U)
 
 /**
  * UDMAP subtypes definitions
  */
 #define TISCI_RESASG_SUBTYPE_GLOBAL_EVENT_TRIGGER (0x0002U)
 #define TISCI_RESASG_SUBTYPE_UDMAP_GLOBAL_CONFIG (0x0003U)
+#define TISCI_RESASG_SUBTYPE_BCDMA_BLOCK_COPY_HCCHAN (0x001FU)
 #define TISCI_RESASG_SUBTYPE_BCDMA_BLOCK_COPY_CHAN (0x0020U)
 #define TISCI_RESASG_SUBTYPE_BCDMA_SPLIT_TR_RX_CHAN (0x0021U)
 #define TISCI_RESASG_SUBTYPE_BCDMA_SPLIT_TR_TX_CHAN (0x0022U)
@@ -159,13 +161,13 @@ extern "C"
 #define TISCI_RESASG_SUBTYPE_PKTDMA_FLOW_SAUL_RX_2_CHAN (0x0032U)
 #define TISCI_RESASG_SUBTYPE_PKTDMA_SAUL_RX_3_CHAN (0x0033U)
 #define TISCI_RESASG_SUBTYPE_PKTDMA_FLOW_SAUL_RX_3_CHAN (0x0034U)
-#define TISCI_RESASG_SUBTYPES_UDMAP_CNT (0x0015U)
+#define TISCI_RESASG_SUBTYPES_UDMAP_CNT (0x0016U)
 
 
 /**
  * Total number of unique resource types for SoC
  */
-#define TISCI_RESASG_UTYPE_CNT 68U
+#define TISCI_RESASG_UTYPE_CNT 70U
 
 /**
  * Total number of resource entries allowed for SoC

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2024 Texas Instruments Incorporated
+ * Copyright (c) 2024-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -63,7 +63,7 @@
 #include "app_post_proc_module.h"
 #include "tivx_dl_post_proc_host.h"
 
-tivxDLPostProcParams *local_postproc_config;
+tivxDLPostProcParams *local_postproc_config = NULL;
 
 vx_status app_init_post_proc(vx_context context, PostProcObj *postProcObj, char *objName, vx_int32 bufq_depth)
 {
@@ -80,7 +80,11 @@ vx_status app_init_post_proc(vx_context context, PostProcObj *postProcObj, char 
     local_postproc_config->od_prms.ioBufDesc = &postProcObj->ioBufDesc; 
 
     local_postproc_config->task_type = TIVX_DL_POST_PROC_DETECTION_TASK_TYPE;
-    local_postproc_config->od_prms.viz_th = 0.6; 
+    #if defined(SOC_AM62A)
+    local_postproc_config->od_prms.viz_th = 0.2;
+    #else
+    local_postproc_config->od_prms.viz_th = 0.6;
+    #endif
     local_postproc_config->num_input_tensors = postProcObj->num_input_tensors;
 
 

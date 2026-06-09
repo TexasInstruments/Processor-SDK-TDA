@@ -60,7 +60,7 @@
 *
 */
 
-#if defined(J721E) || defined(J721S2) || defined(J784S4) || defined(AM62A) || defined(J722S) || defined(SOC_J742S2)
+#if defined(J721E) || defined(J721S2) || defined(J784S4) || defined(AM62A) || defined(J722S) || defined(SOC_J742S2) || defined(TDA54)
 #if defined(BUILD_CT_TIOVX_TVM)
 TESTCASE(tivxTVM)
 #endif

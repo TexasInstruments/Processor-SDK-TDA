@@ -1274,6 +1274,7 @@ int32_t RPMessage_init(RPMessage_Params *params)
 #ifndef IPC_EXCLUDE_CTRL_TASKS
     if( retVal != IPC_EFAIL)
     {
+        memset(&gRPMessageWaiterElemPool, 0, sizeof(gRPMessageWaiterElemPool));
         if((0U == params->stackSize) || (NULL == params->stackBuffer))
         {
             SystemP_printf("RPMessage_init ...Invalid params\n");

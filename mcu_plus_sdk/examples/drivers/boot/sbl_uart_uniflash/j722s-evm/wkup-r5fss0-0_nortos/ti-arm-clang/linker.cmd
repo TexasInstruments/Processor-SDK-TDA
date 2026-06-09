@@ -4,6 +4,10 @@
 
 --stack_size=16384
 --heap_size=32768
+
+/* ATCM base address */
+gAtcmBaseAddr = 0x78000000;
+
 -e_vectors  /* for SBL make sure to set entry point to _vectors_sbl */
 
 __IRQ_STACK_SIZE = 4096;
@@ -59,19 +63,7 @@ SECTIONS
     .bss.filebuf (NOLOAD) : {} > DDR1
 }
 
-/*
-NOTE: Below memory is reserved for DMSC usage
- - During Boot till security handoff is complete
-   0x701E0000 - 0x701FFFFF (128KB)
- - After "Security Handoff" is complete (i.e at run time)
-   0x701FC000 - 0x701FFFFF (16KB)
 
- Security handoff is complete when this message is sent to the DMSC,
-   TISCI_MSG_SEC_HANDOVER
-
- This should be sent once all cores are loaded and all application
- specific firewall calls are setup.
-*/
 
 MEMORY
 {

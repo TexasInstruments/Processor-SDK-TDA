@@ -831,6 +831,7 @@ void tivx_vpac_ldc_bandwidth_prms_init(
  */
 void tivx_vpac_ldc_params_init(tivx_vpac_ldc_params_t *prms);
 
+#if !defined(VPAC3L)
 /*!
  * \brief Function to initialize LDC safety mechanism parameters with default values
  *
@@ -840,7 +841,7 @@ void tivx_vpac_ldc_params_init(tivx_vpac_ldc_params_t *prms);
  */
 void tivx_vpac_ldc_safety_mech_prms_init(
     tivx_vpac_ldc_safety_mechanism_params_t *prms);
-
+#endif
 #ifdef __cplusplus
 }
 #endif

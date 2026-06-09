@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2020-2022
+ *  Copyright (c) Texas Instruments Incorporated 2020-2025
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,7 @@
 /*                             Include Files                                  */
 /* ========================================================================== */
 #include <drivers/soc.h>
-#include <drivers/csitx/v0/soc/V0/csitx_soc.h>
+#include <drivers/csitx/v0/soc/j722s/csitx_soc.h>
 
 #ifdef __cplusplus
 extern "C" {

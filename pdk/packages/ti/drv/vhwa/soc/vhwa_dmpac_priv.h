@@ -35,7 +35,7 @@
 /**
  *  \file vhwa_dmpac_priv.h
  *
- *  \brief VHWA Driver J721S2/J784S4/J742S2 SOC file containing private APIs used by 
+ *  \brief VHWA Driver J721E/J721S2/J784S4/J742S2 SOC file containing private APIs used by 
            VHWA DMPAC controller driver.
  */
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,10 +30,31 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/**
+ *  \file ClockP_safertos.c
+ *
+ *  \brief File for ClockP API definition for SafeRTOS.
+ *
+ */
+
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <string.h>
 #include "ClockP_safertos_priv.h"
 #include "SafeRTOS_API.h"
 #include "SafeRTOSConfigs.h"
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
 
 typedef struct ClockP_Struct_
 {
@@ -44,9 +65,21 @@ typedef struct ClockP_Struct_
     void *args;
 } ClockP_Struct;
 
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
 static void ClockP_sleepTicks(uint32_t ticks);
 
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
 ClockP_Control gClockCtrl;
+
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
 void ClockP_timerTickIsr(void *args)
 {
@@ -148,8 +181,7 @@ uint32_t ClockP_getTimeout(ClockP_Object *handle)
 
     if(xTimerIsTimerActive(pTimer->timerHndl))
     {
-        //TODO
-        //value = xTimerGetExpiryTime( &pTimer->timerHndl ) - xTaskGetTickCount();
+        /* Function API xTimerGetExpiryTime missing in SafeRTOS */
     }
     return value;
 }

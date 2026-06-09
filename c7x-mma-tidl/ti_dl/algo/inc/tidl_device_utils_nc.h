@@ -142,7 +142,35 @@ void TIDL_GetTensorHigherDimensions(const sTIDL_Network_t *myNet,
 sTIDL_DataParams_t * TIDL_getDataParams(sTIDL_Network_t * pTIDLNetStructure,
 int32_t dataId);
 
-void tidl_printf(int32_t traceLevel, const char *format, ...);
+#if defined TIDL_DYNAMIC_SHAPE
+/**
+----------------------------------------------------------------------------
+@ingroup    TIDL_IVISION_SUPPORT
+@fn         TIDL_getMultipleDataParams
+@brief      Optimized batch lookup function to retrieve multiple
+            sTIDL_DataParams_t* at once. Performs a single O(n) pass through
+            the layer list to find all requested dataIds, which is more
+            efficient than calling TIDL_getDataParams() multiple times.
+
+@param      pTIDLNetStructure : Network structure containing all layers
+@param      dataIds           : Array of dataIds to look up
+@param      numDataIds        : Number of dataIds in the array
+@param      dataParams        : Output array to store the found pointers
+                                (must be pre-allocated with size >= numDataIds)
+@remarks    Entries in outDataParams will be set to NULL if corresponding
+            dataId is not found. This function is optimized for multi-input
+            layers where multiple dataIds need to be resolved simultaneously.
+@return     Number of dataIds successfully found (0 to numDataIds)
+            Returns -1 if input validation fails
+----------------------------------------------------------------------------
+*/
+int32_t TIDL_getMultipleDataParams(sTIDL_Network_t *pTIDLNetStructure,
+                                    const int32_t *dataIds,
+                                    int32_t numDataIds,
+                                    sTIDL_DataParams_t **dataParams);
+#endif
+
+void tidl_printf(int8_t traceLevel, const char *format, ...);
 
 int32_t TIDL_deviceUtilsGetPrefetchLFMJoint(const sWorkloadUnit_t *workloadUnit, const sJoint_t *joint);
 
@@ -245,6 +273,15 @@ int32_t TIDL_deviceUtilsSetKernelIoBufferGridSample(const sLink_t *myLink,
                                               int32_t flowStage,
                                               TIDL_bufParams6D_t *srcAddr,
                                               TIDL_bufParams6D_t *dstAddr);
+
+int32_t TIDL_deviceUtilsSetKernelIoBufferGatherLayer(const sLink_t *slink,
+                                                    const sTIDL_Network_t *snet,
+                                                    const sGCHelperHandle *gcHelperHandle,
+                                                    const void *workloadUnit,
+                                                    int32_t layerIdx,
+                                                    int32_t flowStage,
+                                                    TIDL_bufParams6D_t *srcAddr,
+                                                    TIDL_bufParams6D_t *dstAddr);
 
 int32_t TIDL_isSecondTensorSplit(const void *workloadUnit);
 

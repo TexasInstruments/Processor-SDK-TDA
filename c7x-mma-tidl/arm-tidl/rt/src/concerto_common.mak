@@ -1,6 +1,6 @@
 TARGET      := vx_tidl_rt
 TARGETTYPE  := dsmo
-ifeq ($(BUILD_WITH_OPENACC), 1)
+ifeq ($(BUILD_WITH_OPENACC),yes)
 CFLAGS += -fPIC #-Wno-int-to-pointer-cast -Wno-stringop-truncation -Wno-format-overflow
 else
 CFLAGS += -fPIC -Wno-int-to-pointer-cast -Wno-stringop-truncation -Wno-format-overflow
@@ -14,7 +14,7 @@ CSOURCES    += ../tidl_rt_profile.c
 CPPSOURCES  += ../tidl_rt_ovx_datamove.cpp
 
 ifneq ($(TARGET_PLATFORM), PC)
-ifeq ($(TARGET_SOC), $(filter $(TARGET_SOC), J721E j721e J721S2 j721s2 J784S4 j784s4 J742S2 j742s2 AM62A am62a J722S j722s))
+ifeq ($(TARGET_SOC), $(filter $(TARGET_SOC), J721E j721e J721S2 j721s2 J784S4 j784s4 J742S2 j742s2 AM62A am62a J722S j722s TDA54 tda54))
 CSOURCES    += ../tvm_rt_ovx.c
 endif
 endif

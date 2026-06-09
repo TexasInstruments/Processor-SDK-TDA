@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2021 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -30,17 +30,44 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <kernel/dpl/DebugP.h>
 #include "SafeRTOS.h"
 #include "task.h"
 
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
 #define DEBUG_SHM_LOG_READER_TASK_PRI  (1) /* lowest priority */
 #define DEBUG_SHM_LOG_READER_TASK_STACK_SIZE (4U*1024U/sizeof(portInt8Type))
+
+/* ========================================================================== */
+/*                         Structure Declarations                             */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Declarations                             */
+/* ========================================================================== */
+
+void DebugP_shmLogReaderTaskMain(void *args);
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
 static portInt8Type       gDebugShmLogReaderTaskStack[DEBUG_SHM_LOG_READER_TASK_STACK_SIZE] __attribute__((aligned(32)));
 static portTaskHandleType gDebugShmLogReaderTaskHandle;
 static xTCB               gDebugShmLogReaderTaskObj;
 
-void DebugP_shmLogReaderTaskMain(void *args);
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
 
 void DebugP_shmLogReaderTaskCreate()
 {

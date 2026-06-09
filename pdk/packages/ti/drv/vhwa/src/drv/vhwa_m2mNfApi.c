@@ -220,7 +220,7 @@ static void Vhwa_nfSetLseCfg(const Vhwa_M2mNfInstObj *instObj,
  *
  **/
 static int32_t Vhwa_nfCheckNfCfg(Vhwa_M2mNfInstObj *instObj,
-                                 Vhwa_M2mNfConfig *nfPrms);
+                                 Vhwa_M2mNfConfig *nfCfg);
 
 /**
  * \brief   Local function to set CSL paramenter for Luma and Chroma based on
@@ -231,7 +231,7 @@ static int32_t Vhwa_nfCheckNfCfg(Vhwa_M2mNfInstObj *instObj,
  *
  **/
 static void Vhwa_nfSetCfgParams(Vhwa_M2mNfHandleObj *hObj,
-                                const Vhwa_M2mNfConfig *nfPrms);
+                                const Vhwa_M2mNfConfig *nfCfg);
 
 /**
  * \brief   Local function to set HTS Bandwidth limiter
@@ -262,8 +262,8 @@ static int32_t Vhwa_nfCheckCreatePrms(uint32_t drvId, uint32_t drvInstId);
  * \return  FVID2 Driver Handle.
  *
  **/
-Fdrv_Handle Vhwa_m2mNfCreate(uint32_t drvId, uint32_t drvInstId,
-                                     Ptr createPrms, Ptr createStatusArgs,
+Fdrv_Handle Vhwa_m2mNfCreate(UInt32 drvId, UInt32 drvInstId,
+                                     Ptr createArgs, Ptr createStatusArgs,
                                      const Fvid2_DrvCbParams *cbPrms);
 
 /**
@@ -274,7 +274,7 @@ Fdrv_Handle Vhwa_m2mNfCreate(uint32_t drvId, uint32_t drvInstId,
  * \return  FVID2_SOK on success, else FVID2 error code
  *
  **/
-int32_t Vhwa_m2mNfDelete(Fdrv_Handle handle, Ptr deleteArgs);
+Int32 Vhwa_m2mNfDelete(Fdrv_Handle handle, Ptr deleteArgs);
 
 /**
  * \brief   FVID2 Control Function.
@@ -284,7 +284,7 @@ int32_t Vhwa_m2mNfDelete(Fdrv_Handle handle, Ptr deleteArgs);
  * \return  FVID2_SOK on success, else FVID2 error code
  *
  **/
-int32_t Vhwa_m2mNfControl(Fdrv_Handle handle, uint32_t cmd,
+Int32 Vhwa_m2mNfControl(Fdrv_Handle handle, UInt32 cmd,
                                   Ptr cmdArgs, Ptr cmdStatusArgs);
 
 /**
@@ -295,7 +295,7 @@ int32_t Vhwa_m2mNfControl(Fdrv_Handle handle, uint32_t cmd,
  * \return  FVID2_SOK on success, else FVID2 error code
  *
  **/
-int32_t Vhwa_m2mNfProcessReq(Fdrv_Handle handle,
+Int32 Vhwa_m2mNfProcessReq(Fdrv_Handle handle,
                                      Fvid2_FrameList *inFrmList,
                                      Fvid2_FrameList *outFrmList,
                                      uint32_t timeout);
@@ -308,10 +308,10 @@ int32_t Vhwa_m2mNfProcessReq(Fdrv_Handle handle,
  * \return  FVID2_SOK on success, else FVID2 error code
  *
  **/
-int32_t Vhwa_m2mNfGetProcessReq(Fdrv_Handle handle,
-                                        Fvid2_FrameList *inProcessList,
-                                        Fvid2_FrameList *outProcessList,
-                                        uint32_t timeout);
+Int32 Vhwa_m2mNfGetProcessReq(Fdrv_Handle handle,
+                                        Fvid2_FrameList *inFrmList,
+                                        Fvid2_FrameList *outFrmList,
+                                        UInt32 timeout);
 
 /**
  * \brief   Reconfigure NF MMR registers as needed for the current handle/queue.
@@ -2740,13 +2740,21 @@ static int32_t Vhwa_nfSetParams(Vhwa_M2mNfInstObj *instObj,
         /* Initialize LSE configuration based on the NF Config */
         Vhwa_nfSetLseCfg(instObj, hObj);
 
-        for(cnt = 0u; (cnt < hObj->numIter) && (FVID2_SOK == retVal); cnt++)
+        for(cnt = 0u; cnt < hObj->numIter; cnt++)
         {
+            if(FVID2_SOK != retVal)
+            {
+                break;
+            }
             /* Verify HTS Configuration */
             retVal = CSL_htsCheckThreadConfig(&hObj->htsCfg[cnt]);
         }
-        for(cnt = 0u; (cnt < hObj->numIter) && (FVID2_SOK == retVal); cnt++)
+        for(cnt = 0u; cnt < hObj->numIter; cnt++)
         {
+            if(FVID2_SOK != retVal)
+            {
+                break;
+            }
             /* Verify LSE Configuration */
             retVal = CSL_lseCheckConfig(&hObj->lseCfg[cnt]);
         }

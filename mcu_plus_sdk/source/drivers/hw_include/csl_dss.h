@@ -49,12 +49,30 @@ extern "C"
 
 
 #if defined (IP_VERSION_DSS_V3)
+#if defined (DRV_VERSION_DSS_V1)
+#include <drivers/dss/v1/hw_include/V3/cslr_dss.h>
+#include <drivers/dss/v1/hw_include/V3/csl_dssTop.h>
+#include <drivers/dss/v1/hw_include/V3/csl_dssCommon.h>
+#include <drivers/dss/v1/hw_include/V3/csl_dssVideoPipe.h>
+#include <drivers/dss/v1/hw_include/V3/csl_dssOverlay.h>
+#include <drivers/dss/v1/hw_include/V3/csl_dssVideoPort.h>
+#else
 #include <drivers/dss/v0/hw_include/V3/cslr_dss.h>
 #include <drivers/dss/v0/hw_include/V3/csl_dssTop.h>
 #include <drivers/dss/v0/hw_include/V3/csl_dssCommon.h>
 #include <drivers/dss/v0/hw_include/V3/csl_dssVideoPipe.h>
 #include <drivers/dss/v0/hw_include/V3/csl_dssOverlay.h>
 #include <drivers/dss/v0/hw_include/V3/csl_dssVideoPort.h>
+#endif
+#endif
+
+#if defined (IP_VERSION_DSS_V5)
+#include <drivers/dss/v0/hw_include/V5/cslr_dss.h>
+#include <drivers/dss/v0/hw_include/V5/csl_dssTop.h>
+#include <drivers/dss/v0/hw_include/V5/csl_dssCommon.h>
+#include <drivers/dss/v0/hw_include/V5/csl_dssVideoPipe.h>
+#include <drivers/dss/v0/hw_include/V5/csl_dssOverlay.h>
+#include <drivers/dss/v0/hw_include/V5/csl_dssVideoPort.h>
 #endif
 
 #ifdef __cplusplus

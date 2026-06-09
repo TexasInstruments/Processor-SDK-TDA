@@ -33,7 +33,6 @@
 #include <drivers/gpmc/v0/dma/gpmc_dma.h>
 #include <drivers/gpmc/v0/dma/udma/gpmc_dma_udma.h>
 #include <drivers/udma.h>
-#include <drivers/udma/hw_include/csl_intaggr.h>
 #include <kernel/dpl/CacheP.h>
 #include <drivers/gpmc.h>
 
@@ -159,6 +158,7 @@ static int32_t GpmcDma_udmaClose(GPMC_DmaHandle handle, void* gpmcDmaArgs)
 {
     int32_t status = SystemP_SUCCESS;
     int32_t udmaStatus = UDMA_SOK;
+    uint8_t chanEnStatus;
 
     GpmcDma_UdmaArgs *udmaArgs = (GpmcDma_UdmaArgs *)gpmcDmaArgs;
 
@@ -176,9 +176,14 @@ static int32_t GpmcDma_udmaClose(GPMC_DmaHandle handle, void* gpmcDmaArgs)
         }
     }
 
-    /* Disable Channel */
-    udmaStatus = Udma_chDisable(chHandle, UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
-    DebugP_assert(UDMA_SOK == udmaStatus);
+    status = Udma_chGetChanEnStatus(chHandle, &chanEnStatus);
+    DebugP_assert(UDMA_SOK == status);
+    if(chanEnStatus == 1U)
+    {
+        /* Disable Channel */
+        status = Udma_chDisable(chHandle, UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
+        DebugP_assert(UDMA_SOK == status);
+    }
 
     /* Close channel */
     udmaStatus = Udma_chClose(chHandle);

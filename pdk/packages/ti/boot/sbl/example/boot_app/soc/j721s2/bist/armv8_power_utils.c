@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2025
+ *  Copyright (c) Texas Instruments Incorporated 2025-26
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -174,22 +174,22 @@ int32_t BootApp_armv8PowerPrepareForPowerUpSequence(uint8_t processorId)
 #endif
 
     /* Deassert L2FLUSHREQ - Clear Bit 8 to 0 for deasserting L2FLUSHREQ */
+    status = Sciclient_procBootSetSequenceCtrl(processorId, 0x0, 0x00000100, 0,
+                                                SCICLIENT_SERVICE_WAIT_FOREVER);
     if (status == SDL_PASS) {
-        status = Sciclient_procBootSetSequenceCtrl(processorId, 0x0, 0x00000100, 0,
-                                                   SCICLIENT_SERVICE_WAIT_FOREVER);
+        /* Deassert AINACTS  - Clear Bit 1 to 0 for deasserting AINACTS */
+        status = Sciclient_procBootSetSequenceCtrl(processorId, 0x0, 0x00000002, 0,
+                                                SCICLIENT_SERVICE_WAIT_FOREVER);
         if (status != SDL_PASS)
         {
-            UART_printf("Sciclient_procBootSetSequenceCtrl...FAILED for " \
-                        "L2FLUSHREQ deassert/clear\n");
+            UART_printf("Sciclient_procBootSetSequenceCtrl...FAILED for AINACTS " \
+                        "deassert\n");
         }
     }
-    /* Deassert AINACTS  - Clear Bit 1 to 0 for deasserting AINACTS */
-    status = Sciclient_procBootSetSequenceCtrl(processorId, 0x0, 0x00000002, 0,
-                                               SCICLIENT_SERVICE_WAIT_FOREVER);
-    if (status != SDL_PASS)
+    else
     {
-        UART_printf("Sciclient_procBootSetSequenceCtrl...FAILED for AINACTS " \
-                    "deassert\n");
+        UART_printf("Sciclient_procBootSetSequenceCtrl...FAILED for " \
+                    "L2FLUSHREQ deassert/clear\n");
     }
 
     /* Deassert ACINACTM - Clear Bit 0 to 0 for deasserting ACINACTM */

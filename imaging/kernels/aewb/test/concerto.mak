@@ -62,7 +62,11 @@ CFLAGS += -Wno-format-security
 endif
 
 ifeq ($(SOC), am62a)
+ifeq ($(TISDK_IMAGE), edgeai)
+ifneq ($(TARGET_OS), QNX)
 SKIPBUILD=1
+endif
+endif
 endif
 
 include $(FINALE)

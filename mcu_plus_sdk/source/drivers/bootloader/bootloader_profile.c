@@ -149,6 +149,7 @@ void Bootloader_profileAddCore(uint32_t coreId)
 
 void Bootloader_profilePrintProfileLog(void)
 {
+#if DebugP_LOG_ENABLED
     uint32_t cpuMHz = 0U;
     uint32_t i;
 
@@ -170,6 +171,9 @@ void Bootloader_profilePrintProfileLog(void)
         case BOOTLOADER_MEDIA_SD:
             bootMediaName = "SD Card";
             break;
+        case BOOTLOADER_MEDIA_UART:
+            bootMediaName = "Uart";
+            break;
         default:
             bootMediaName = "undefined";
             break;
@@ -180,7 +184,7 @@ void Bootloader_profilePrintProfileLog(void)
     /* If boot media clock is not given don't print that information */
     if(clk != (uint32_t)0)
     {
-        DebugP_log("[BOOTLOADER_PROFILE] Boot Media Clock : %.3f MHz \r\n", (float)clk/1000000.0);
+        DebugP_log("[BOOTLOADER_PROFILE] Boot Media Clock : %.3f MHz \r\n", (double)clk/1000000.0);
     }
     DebugP_log("[BOOTLOADER_PROFILE] Boot Image Size  : %d KB \r\n", gProfileObj.appimageSize/(uint32_t)1024);
     DebugP_log("[BOOTLOADER_PROFILE] Cores present    : \r\n");
@@ -200,4 +204,5 @@ void Bootloader_profilePrintProfileLog(void)
 
     DebugP_log("[BOOTLOADER_PROFILE] %-32s : %10uus \r\n", "SBL Total Time Taken", sblTotalTime);
     DebugP_log("\r\n");
+#endif
 }

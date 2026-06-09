@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2025 Texas Instruments Incorporated
+ *  Copyright (C) 2023-24 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -280,6 +280,7 @@ static const Disp_FrameFormatInfo frameFormatInfo[] =
     { FVID2_DF_RGBX16_4444, DISP_MAKE_RGB_INFO(4, 0, 4, 4, 4, 8, 0, 0) },
     { FVID2_DF_XBGR_4444, DISP_MAKE_RGB_INFO(4, 12, 4, 8, 4, 4, 0, 0) },
     { FVID2_DF_BGRX16_5551, DISP_MAKE_RGB_INFO(5, 10, 5, 5, 5, 0, 0, 0) },
+    { FVID2_DF_RGBX16_5551, DISP_MAKE_RGB_INFO(5, 0, 5, 5, 5, 10, 0, 0) },
 
     /* YUV */
     { FVID2_DF_YUV420SP_UV, DISP_MAKE_YUV_INFO(YUV_YCbCr, 2, 2, 2) },
@@ -888,6 +889,7 @@ static void Disp_patternFillSmpte(const Disp_FrameFormatInfo *info, void *plane,
         case FVID2_DF_RGBX16_4444:
         case FVID2_DF_XBGR_4444:
         case FVID2_DF_BGRX16_5551:
+        case FVID2_DF_RGBX16_5551:
 		    return Disp_patternFillSmpteRGB16(&info->rgb, plane,
 					                        width, height, stride);
 
@@ -1128,6 +1130,7 @@ static void Disp_patternFillTiles(const Disp_FrameFormatInfo *info, void *plane,
         case FVID2_DF_RGBX16_4444:
         case FVID2_DF_XBGR_4444:
         case FVID2_DF_BGRX16_5551:
+        case FVID2_DF_RGBX16_5551:
             return Disp_patternFillTilesRGB16(info, plane,
                                             width, height, stride);
         case FVID2_DF_BGRA64_16161616:
@@ -1191,25 +1194,38 @@ static void Disp_fillPattern(uint32_t format, Disp_PatternType pattern,
     }
 }
 
-void Disp_prepareFrameBuffer(uint32_t instCount, Dss_ConfigPipelineParams *pipelineParams, \
-                            void* frameBuffer[CONFIG_DSS_NUM_FRAMES_PER_PIPELINE])
+void Disp_prepareFrameBuffer(uint32_t instCount,
+                            uint32_t inDataFmt, \
+                            uint32_t inWidth, \
+                            uint32_t inHeight,\
+                            uint32_t pitch, \
+                            void* \
+                            frameBuffer[CONFIG_DSS_NUM_FRAMES_PER_PIPELINE])
 {
     if(instCount != 0)
     {
-        for(uint32_t frameCount = 0 ; frameCount < CONFIG_DSS_NUM_FRAMES_PER_PIPELINE; frameCount++)
+        for(uint32_t frameCount = 0 ; frameCount < \
+            CONFIG_DSS_NUM_FRAMES_PER_PIPELINE; frameCount++)
         {
-            Disp_fillPattern(pipelineParams->inDataFmt[instCount],
-                             DISP_PATTERN_TILES, frameBuffer[frameCount], pipelineParams->inWidth[instCount],
-                             pipelineParams->inHeight[instCount], pipelineParams->pitch[instCount][0]);
+            Disp_fillPattern(inDataFmt,
+                             DISP_PATTERN_TILES, \
+                             frameBuffer[frameCount], \
+                             inWidth,
+                             inHeight, \
+                             pitch);
         }
     }
     else
     {
-        for(uint32_t frameCount = 0 ; frameCount < CONFIG_DSS_NUM_FRAMES_PER_PIPELINE; frameCount++)
+        for(uint32_t frameCount = 0 ; frameCount < \
+            CONFIG_DSS_NUM_FRAMES_PER_PIPELINE; frameCount++)
         {
-            Disp_fillPattern(pipelineParams->inDataFmt[instCount],
-                             DISP_PATTERN_SMPTE, frameBuffer[frameCount], pipelineParams->inWidth[instCount],
-                             pipelineParams->inHeight[instCount], pipelineParams->pitch[instCount][0]);
+            Disp_fillPattern(inDataFmt,
+                             DISP_PATTERN_SMPTE, \
+                             frameBuffer[frameCount], \
+                             inWidth,   \
+                             inHeight, \
+                             pitch);
 
         }
     }

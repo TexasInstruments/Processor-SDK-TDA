@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2018-2023
+ *  Copyright (C) 2018-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 /* ========================================================================== */
 /*                             Include Files                                  */
 /* ========================================================================== */
+
 #include <stdio.h>
 #include <string.h>
 
@@ -58,6 +59,7 @@
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
+
 /**< Application name */
 #define APP_NAME                                  "CSIRX_CAPT_APP"
 /**< Number of CSIRX instances exist in SOC */
@@ -78,15 +80,6 @@
 #define APP_CAPT_FRAME_HEIGHT                     ((uint32_t)1100U)
 /**< Frame Attribute: Bytes per pixel */
 #define APP_CAPT_FRAME_BPP                        ((uint32_t)2U)
-
-/**< BCDMA Channel Burst Size 
- * This is only for SoCs that have CSI BCDMA Instance
- * 
- * 1U - 64 bytes burst size
- * 2U - 128 bytes burst size
- * 3U - 256 bytes burst size
- */
-#define APP_BCDMA_CHAN_BURST_SIZE                 ((uint32_t)3U)
 
 /**< I2C transaction timeout */
 #define APP_I2C_TRANSACTION_TIMEOUT               ((uint32_t)2000U)
@@ -123,12 +116,12 @@
             (APP_CAPT_FRAME_HEIGHT * APP_CAPT_FRAME_WIDTH * APP_CAPT_FRAME_BPP))
 
 /**< For Ub960 Pattern Generator, most significant byte of active line length in
- * bytes 
+ * bytes
  */
 #define APP_CAPT_FRAME_LINE_LEN_HIGH           ((APP_CAPT_FRAME_PITCH & 0xFF00)>>8)
 
 /**< For Ub960 Pattern Generator, least significant byte of active line length in
- * bytes 
+ * bytes
  */
 #define APP_CAPT_FRAME_LINE_LEN_LOW            (APP_CAPT_FRAME_PITCH & 0x00FF)
 
@@ -139,7 +132,7 @@
 #define APP_CAPT_FRAME_HEIGHT_HIGH             ((APP_CAPT_FRAME_HEIGHT & 0xFF00)>>8)
 
 /**< For Ub960 Pattern Generator, least significant byte of number of active
- * lines per frame 
+ * lines per frame
  */
 #define APP_CAPT_FRAME_HEIGHT_LOW              (APP_CAPT_FRAME_HEIGHT & 0x00FF)
 
@@ -280,7 +273,7 @@ typedef struct
 /**
  *  \brief Common application object.
  */
-typedef struct 
+typedef struct
 {
     Csirx_InitParams initPrms;
    /**< Csirx init time parameters */
@@ -293,6 +286,7 @@ typedef struct
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
+
 /**
  * \brief   This function is wrapper function used to print message on
  *          respective consoles
@@ -307,7 +301,7 @@ static void CsirxApp_consolePrintf(const char *pcString, ...);
  * \brief   This function is ISR for timer interrupt
  *
  * \param   arg             CSI RX Capture Test Object
- *                          
+ *
  *
  * \retval  none.
  */
@@ -465,10 +459,11 @@ void CsirxApp_printLoad(void);
 #endif
 
 extern void App_wait(uint32_t wait_in_ms);
-extern void Drivers_open(void);
+
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
+
 /* App common object */
 CsirxApp_CaptCommonObj gAppCommonObj;
 
@@ -485,7 +480,6 @@ SemaphoreP_Object gAppCompletionSem;
 /* I2c Handle to access deserializer */
 I2C_Handle gI2cHandle;
 bool gI2cInstOpened = FALSE;
-
 
 #if defined(FREERTOS)
 /* Capture test Task handle */
@@ -516,7 +510,7 @@ uint16_t gUb960SensorCfg[][3]={
     {0xB1, 0x06, 0x1},
     {0xB2, 0x02, 0x1},
     {0xB1, 0x07, 0x1},
-    {0xB2, 0x80, 0x1},/*D0*/
+    {0xB2, 0x80, 0x1}, /*D0*/
     {0xB1, 0x08, 0x1},
     {0xB2, APP_CAPT_FRAME_HEIGHT_HIGH, 0x1},
     {0xB1, 0x09, 0x1},
@@ -563,15 +557,15 @@ uint16_t gUb960SensorCfg[][3]={
 
     /*Select Channel 1*/
     {0x4C, 0x12, 0x1},
-    {0x58, 0x5E, 0x1},/*Enable Back channel, set to 50Mbs*/
+    {0x58, 0x5E, 0x1}, /*Enable Back channel, set to 50Mbs*/
 
     /*Select Channel 2*/
     {0x4C, 0x24, 0x1},
-    {0x58, 0x5E, 0x1},/*Enable Back channel, set to 50Mbs*/
+    {0x58, 0x5E, 0x1}, /*Enable Back channel, set to 50Mbs*/
 
     /*Select Channel 3*/
     {0x4C, 0x38, 0x1},
-    {0x58, 0x5E, 0x1},/*Enable Back channel, set to 50Mbs*/
+    {0x58, 0x5E, 0x1}, /*Enable Back channel, set to 50Mbs*/
 
     /*Select Channel 0*/
     {0x4C, 0x01, 0x1},
@@ -618,8 +612,8 @@ uint16_t gUb960SensorCfg[][3]={
     {0xB2, 0x3F, 0x1},
     {0xB1, 0x14, 0x1},
     {0xB2, 0x3F, 0x1},
-    {0x42, 0x71, 0x1},/*Unknown*/
-    {0x41, 0xF0, 0x1},/*Unknown*/
+    {0x42, 0x71, 0x1}, /*Unknown*/
+    {0x41, 0xF0, 0x1}, /*Unknown*/
     {0xB9, 0x18, 0x1},
 
     /*Select Channel 3*/
@@ -634,8 +628,8 @@ uint16_t gUb960SensorCfg[][3]={
     {0xB2, 0x3F, 0x1},
     {0xB1, 0x14, 0x1},
     {0xB2, 0x3F, 0x1},
-    {0x42, 0x71, 0x1},/*Unknown*/
-    {0x41, 0xF0, 0x1},/*Unknown*/
+    {0x42, 0x71, 0x1}, /*Unknown*/
+    {0x41, 0xF0, 0x1}, /*Unknown*/
     {0xB9, 0x18, 0x1},
 
     {0x32, 0x01, 0x1}, /*Enable TX port 0*/
@@ -726,7 +720,7 @@ uint16_t gUb953SensorCfg[][3] = {
 #elif (FUSION_BOARD_VER == 1)
     {0x06, 0x41, 0x1F},
 #else
-/* Unsupported version */
+    /* Unsupported version */
 #endif
     {0x07, 0x28, 0x1F},
     {0x0D, 0x01, 0x10},
@@ -782,6 +776,7 @@ uint32_t gSensorI2CAddrInst2[APP_CAPT_CH_MAX] =
     D3IMX390_INST2_PORT_2_SENSOR_ADDR,
     D3IMX390_INST2_PORT_3_SENSOR_ADDR
 };
+
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */
@@ -795,8 +790,6 @@ int Csirx_captureTest(void)
     CsirxApp_CaptInstObj *appInstObj[APP_CAPT_TEST_INST_NUM];
     CsirxApp_CaptCommonObj *appCommonObj;
     appCommonObj = &gAppCommonObj;
-
-    Drivers_open();
 
     /* Creating semaphore to indicate application completion of each Instance */
     SemaphoreP_constructBinary(&gAppCompletionSem,0U);
@@ -849,7 +842,7 @@ int Csirx_captureTest(void)
             }
         }
     }
-    
+
     /*  APP start */
     retVal = CsirxApp_csiTest(appCommonObj);
     if (FVID2_SOK != retVal)
@@ -940,8 +933,6 @@ static void CsirxApp_initCaptParams(CsirxApp_CaptInstObj* appInstObj)
                                                 FVID2_DF_BGRX32_8888;
         appInstObj->createPrms.chCfg[loopCnt].outFmt.ccsFormat =
                                                 APP_CAPT_IMAGE_STORAGE_FORMAT;
-        appInstObj->createPrms.chCfg[loopCnt].rxChParams.burstSize =
-                                                APP_BCDMA_CHAN_BURST_SIZE;
     }
     /* set module configuration parameters */
     appInstObj->createPrms.instCfg.enableCsiv2p0Support = (uint32_t)TRUE;
@@ -982,7 +973,7 @@ static int32_t CsirxApp_init(CsirxApp_CaptCommonObj* appCommonObj)
     Fvid2_InitPrms initPrms;
     Udma_InitPrms   udmaInitPrms;
     Udma_DrvHandle drvHandle;
-    
+
     /* set instance initialization parameters */
     /* This will be updated once UDMA init is done */
     Csirx_initParamsInit(&appCommonObj->initPrms);
@@ -1171,7 +1162,7 @@ static int32_t CsirxApp_csiTest(CsirxApp_CaptCommonObj* appCommonObj)
                                 NULL,
                                 NULL);
 #endif
- 
+
         retVal += Fvid2_control(appCommonObj->appInstObj[i].drvHandle,
                                 IOCTL_CSIRX_GET_INST_STATUS,
                                 &appCommonObj->appInstObj[i].captStatus,
@@ -1263,7 +1254,7 @@ static int32_t CsirxApp_csiTest(CsirxApp_CaptCommonObj* appCommonObj)
                   appCommonObj->appInstObj[i].errFrmNo[loopCnt],
                   appCommonObj->appInstObj[i].errFrmTs[loopCnt]);
             }
- 
+
         }
 #endif
         GT_4trace(CsirxAppTrace, GT_INFO,
@@ -1610,60 +1601,60 @@ static int32_t CsirxApp_sensorConfig(CsirxApp_CaptInstObj* appInstObj)
                      cnt ++)
                 {
                     regAddr8 = gUb953SensorCfg[cnt][0] & 0xFF;
-                    if(regAddr8 == 0x07) 
+                    if (regAddr8 == 0x07)
                     {
-                        if(appInstObj->cameraSensor == D3IMX390_CM_MODULE)
+                        if (appInstObj->cameraSensor == D3IMX390_CM_MODULE)
                         {
                             regVal = 0x28;
                             timeOut = 0x1f;
                         }
                         else if (appInstObj->cameraSensor == D3IMX390_RCM_MODULE)
                         {
-                            regVal =  0x25;
+                            regVal = 0x25;
                             timeOut = 0x80;
                         }
-                   }
-                   else if( regAddr8 == 0x0D)
-                   {
-                       if(appInstObj->cameraSensor == D3IMX390_CM_MODULE)
-                       {
-                            regVal =  0x01;
+                    }
+                    else if (regAddr8 == 0x0D)
+                    {
+                        if (appInstObj->cameraSensor == D3IMX390_CM_MODULE)
+                        {
+                            regVal = 0x01;
                             timeOut = 0x10;
-                       }
-                       else if (appInstObj->cameraSensor == D3IMX390_RCM_MODULE)
-                       {
-                            regVal =  0x03;
+                        }
+                        else if (appInstObj->cameraSensor == D3IMX390_RCM_MODULE)
+                        {
+                            regVal = 0x03;
                             timeOut = 0x10;
-                       }
-                   }
-                   else
-                   {
+                        }
+                    }
+                    else
+                    {
                         regVal = gUb953SensorCfg[cnt][1] & 0xFF;
                         timeOut = gUb953SensorCfg[cnt][2];
-                   }
-                 status =  Board_i2c8BitRegWr(gI2cHandle,
-                                              i2cAddr,
-                                              regAddr8,
-                                              &regVal,
-                                              1,
-                                              APP_I2C_TRANSACTION_TIMEOUT);
+                    }
+                    status = Board_i2c8BitRegWr(gI2cHandle,
+                                                i2cAddr,
+                                                regAddr8,
+                                                &regVal,
+                                                1,
+                                                APP_I2C_TRANSACTION_TIMEOUT);
 
-                   if (0 != status)
-                   {
-                       GT_3trace(CsirxAppTrace, GT_INFO,
-                                 APP_NAME
-                                 ": Failed to Set UB953 register %x: Value:%x for CSIRX instance %d\n",
-                                 gUb953SensorCfg[cnt][0],
-                                 gUb953SensorCfg[cnt][1],
-                 appInstObj->instId);
-                      break;
-                   }
-                   else
-                   {
-                       App_wait(timeOut);
-                   }
-                }    
-             }        
+                    if (0 != status)
+                    {
+                        GT_3trace(CsirxAppTrace, GT_INFO,
+                                  APP_NAME
+                                  ": Failed to Set UB953 register %x: Value:%x for CSIRX instance %d\n",
+                                  gUb953SensorCfg[cnt][0],
+                                  gUb953SensorCfg[cnt][1],
+                                  appInstObj->instId);
+                        break;
+                    }
+                    else
+                    {
+                        App_wait(timeOut);
+                    }
+                }
+             }
              else
              {
                  break;
@@ -1685,7 +1676,7 @@ static int32_t CsirxApp_sensorConfig(CsirxApp_CaptInstObj* appInstObj)
                   {
                       regAddr = gSensorCfg[cnt][0];
                       regVal = gSensorCfg[cnt][1];
-     
+
                       status = Board_i2c16BitRegWr(gI2cHandle,
                                                    i2cAddr,
                                                    regAddr,
@@ -1740,11 +1731,11 @@ static int32_t CsirxApp_sensorConfig(CsirxApp_CaptInstObj* appInstObj)
                 GT_1trace(CsirxAppTrace, GT_INFO,
                               APP_NAME ": Sensor Configuration done for CSIRX instance %d!!!\r\n",appInstObj->instId);
             }
-         }    
+         }
     }
     return (retVal);
-}    
-   
+}
+
 
 #if defined(FREERTOS)
 void CsirxApp_printLoad(void)

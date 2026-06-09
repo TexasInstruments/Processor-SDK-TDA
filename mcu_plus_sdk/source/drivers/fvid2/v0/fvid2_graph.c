@@ -177,27 +177,48 @@ int32_t Fvid2_graphAllocNodes(const Fvid2_GraphNodeList *nodeList,
         Fvid2_GraphNodeInfo *endNode = Fvid2_graphGetNodeInfo(
             nodeList, inputEdgeList[i].endNode);
         GT_assert(Fvid2Trace, (endNode != NULL_PTR));
-        if ((startNode->nodeId == FVID2_GRAPH_INVALID_NODE_ID) &&
-            (endNode->nodeId == FVID2_GRAPH_INVALID_NODE_ID))
+        if ((startNode != NULL_PTR) && (endNode != NULL_PTR))
         {
-            break;
+            if ((startNode->nodeId == FVID2_GRAPH_INVALID_NODE_ID) &&
+                (endNode->nodeId == FVID2_GRAPH_INVALID_NODE_ID))
+            {
+                break;
+            }
         }
 
-        /* Multiple connections from different path does not work */
-        if (FVID2_GRAPH_NODE_OUT_SINGLE == startNode->nodeOutNum)
+        if (startNode != NULL_PTR)
         {
-            uint32_t inUse = FALSE;
-            for (j = 0; j < startNode->outputNodeSet.numNodes; j++)
+            /* Multiple connections from different path does not work */
+            if (FVID2_GRAPH_NODE_OUT_SINGLE == startNode->nodeOutNum)
             {
-                if (FVID2_GRAPH_NODE_MODE_ENABLE ==
-                                        startNode->outputNodeSet.isEnabled[j])
+                uint32_t inUse = FALSE;
+                for (j = 0; j < startNode->outputNodeSet.numNodes; j++)
                 {
-                    inUse = TRUE;
-                    break;
+                    if (FVID2_GRAPH_NODE_MODE_ENABLE ==
+                        startNode->outputNodeSet.isEnabled[j])
+                    {
+                        inUse = TRUE;
+                        break;
+                    }
+                }
+                if ((FALSE == inUse) ||
+                    (FVID2_GRAPH_NODE_MODE_DISABLE == graphNodeMode))
+                {
+                    for (j = 0; j < startNode->outputNodeSet.numNodes; j++)
+                    {
+                        if (startNode->outputNodeSet.node[j] == endNode)
+                        {
+                            startNode->outputNodeSet.isEnabled[j] = graphNodeMode;
+                            break;
+                        }
+                    }
+                    if (j == startNode->outputNodeSet.numNodes)
+                    {
+                        retVal = FVID2_EFAIL;
+                    }
                 }
             }
-            if ((FALSE == inUse) ||
-                (FVID2_GRAPH_NODE_MODE_DISABLE == graphNodeMode))
+            else if (FVID2_GRAPH_NODE_OUT_MULTI == startNode->nodeOutNum)
             {
                 for (j = 0; j < startNode->outputNodeSet.numNodes; j++)
                 {
@@ -212,40 +233,43 @@ int32_t Fvid2_graphAllocNodes(const Fvid2_GraphNodeList *nodeList,
                     retVal = FVID2_EFAIL;
                 }
             }
-        }
-        else if (FVID2_GRAPH_NODE_OUT_MULTI == startNode->nodeOutNum)
-        {
-            for (j = 0; j < startNode->outputNodeSet.numNodes; j++)
+            else
             {
-                if (startNode->outputNodeSet.node[j] == endNode)
-                {
-                    startNode->outputNodeSet.isEnabled[j] = graphNodeMode;
-                    break;
-                }
+                /*Do nothing */
             }
-            if (j == startNode->outputNodeSet.numNodes)
-            {
-                retVal = FVID2_EFAIL;
-            }
-        }
-        else
-        {
-            /*Do nothing */
         }
 
-        if (FVID2_GRAPH_NODE_IN_SINGLE == endNode->nodeInNum)
+        if (endNode != NULL_PTR)
         {
-            uint32_t inUse = FALSE;
-            for (j = 0; j < endNode->inputNodeSet.numNodes; j++)
+            if (FVID2_GRAPH_NODE_IN_SINGLE == endNode->nodeInNum)
             {
-                if (FVID2_GRAPH_NODE_MODE_ENABLE == endNode->inputNodeSet.isEnabled[j])
+                uint32_t inUse = FALSE;
+                for (j = 0; j < endNode->inputNodeSet.numNodes; j++)
                 {
-                    inUse = TRUE;
-                    break;
+                    if (FVID2_GRAPH_NODE_MODE_ENABLE == endNode->inputNodeSet.isEnabled[j])
+                    {
+                        inUse = TRUE;
+                        break;
+                    }
+                }
+                if ((FALSE == inUse) ||
+                    (FVID2_GRAPH_NODE_MODE_DISABLE == graphNodeMode))
+                {
+                    for (j = 0; j < endNode->inputNodeSet.numNodes; j++)
+                    {
+                        if (endNode->inputNodeSet.node[j] == startNode)
+                        {
+                            endNode->inputNodeSet.isEnabled[j] = graphNodeMode;
+                            break;
+                        }
+                    }
+                    if (j == endNode->inputNodeSet.numNodes)
+                    {
+                        retVal = FVID2_EFAIL;
+                    }
                 }
             }
-            if ((FALSE == inUse) ||
-                (FVID2_GRAPH_NODE_MODE_DISABLE == graphNodeMode))
+            else if (FVID2_GRAPH_NODE_IN_MULTI == endNode->nodeInNum)
             {
                 for (j = 0; j < endNode->inputNodeSet.numNodes; j++)
                 {
@@ -260,25 +284,10 @@ int32_t Fvid2_graphAllocNodes(const Fvid2_GraphNodeList *nodeList,
                     retVal = FVID2_EFAIL;
                 }
             }
-        }
-        else if (FVID2_GRAPH_NODE_IN_MULTI == endNode->nodeInNum)
-        {
-            for (j = 0; j < endNode->inputNodeSet.numNodes; j++)
+            else
             {
-                if (endNode->inputNodeSet.node[j] == startNode)
-                {
-                    endNode->inputNodeSet.isEnabled[j] = graphNodeMode;
-                    break;
-                }
+                /*Do nothing */
             }
-            if (j == endNode->inputNodeSet.numNodes)
-            {
-                retVal = FVID2_EFAIL;
-            }
-        }
-        else
-        {
-            /*Do nothing */
         }
     }
 
@@ -420,16 +429,16 @@ static int32_t Fvid2_graphConnect(const Fvid2_GraphNodeList *inNodeList,
         /* End Node is output node for the start Node so update
          * information in start node*/
         index1 = nodes[startNode].outputNodeSet.numNodes;
+        GT_assert(Fvid2Trace, (index1 < FVID2_GRAPH_MAX_NUM_PATHS));
         nodes[startNode].outputNodeSet.node[index1] = &nodes[endNode];
         nodes[startNode].outputNodeSet.numNodes++;
-        GT_assert(Fvid2Trace, (index1 < FVID2_GRAPH_MAX_NUM_PATHS));
 
         /* Start Node is input node for the end Node so update
          * information in end node*/
         index2 = nodes[endNode].inputNodeSet.numNodes;
+        GT_assert(Fvid2Trace, (index2 < FVID2_GRAPH_MAX_NUM_PATHS));
         nodes[endNode].inputNodeSet.node[index2] = &nodes[startNode];
         nodes[endNode].inputNodeSet.numNodes++;
-        GT_assert(Fvid2Trace, (index2 < FVID2_GRAPH_MAX_NUM_PATHS));
 
         /* Dummy node's input is always enabled */
         if ((TRUE == nodes[endNode].isDummy) &&
