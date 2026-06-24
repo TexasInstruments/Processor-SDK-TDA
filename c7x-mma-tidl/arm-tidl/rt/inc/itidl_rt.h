@@ -201,6 +201,12 @@ float scale;
 uint32_t memType;
 /** Actual size of buffer in elements */
 int32_t bufferSize;
+/** Flag to indicate if tensor is dynamic.
+ * User has to set this flag to true if input data dynamic.
+ * TIDL will set this flag to true if output is dynamic and user can read this
+ * flag as well as dimValues to find the resolved output shape.
+ */
+uint8_t isDynamic;
 }sTIDLRT_Tensor_t;
 
 typedef struct {

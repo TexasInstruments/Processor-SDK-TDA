@@ -29,7 +29,7 @@ ifeq ($(SOC),am62a)
 else ifeq ($(SOC),tda54)
     MMALIB_PATH ?= $(PSDK_PATH)/mmalib_11_02_01_04
 else
-    MMALIB_PATH ?= $(PSDK_PATH)/mmalib_11_02_00_06
+    MMALIB_PATH ?= $(PSDK_PATH)/mmalib_11_02_00_11
 endif
 
 IVISION_PATH ?= $(PSDK_PATH)/ivision
@@ -117,17 +117,17 @@ LINUX_SD_FS_ROOT_PATH ?= /media/$(USER)/root
 LINUX_SD_FS_BOOT_PATH ?= /media/$(USER)/boot
 
 ifeq ($(SOC),j721e)
-    export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-j721e-evm-11_02_00_04
+  export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-j721e-evm-11_02_01_00
 else ifeq ($(SOC),j721s2)
-    export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-j721s2-evm-11_02_00_04
+  export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-j721s2-evm-11_02_01_00
 else ifeq ($(SOC),j784s4)
-    export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-j784s4-evm-11_02_00_04
+  export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-j784s4-evm-11_02_01_00
 else ifeq ($(SOC),j742s2)
-    export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-j742s2-evm-11_02_00_04
+  export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-j742s2-evm-11_02_01_00
 else ifeq ($(SOC),j722s)
-  export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-j722s-evm-11_02_00_07
+  export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-j722s-evm-11_02_01_00
 else ifeq ($(SOC),tda54)
-    export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-tda54-vdk-12_00_01_02
+    export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-tda54-vdk-12_00_01_03
 else ifeq ($(SOC),am62a)
     ifeq ($(TISDK_IMAGE), edgeai)
         export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-edgeai-am62a-evm-11.02.09.03

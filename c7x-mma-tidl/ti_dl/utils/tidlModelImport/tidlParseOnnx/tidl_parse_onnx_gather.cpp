@@ -69,9 +69,14 @@ using namespace onnx;
 template<> int32_t TidlParseOnnx:: parse<OnnxStr("Gather")> ()
 {
   int32_t status =0, axis, numDim;
+  TensorProto indexTensor = onnx::TensorProto::default_instance();
+  bool indexTensorFound = false;
   layer.layerType = TIDL_GatherLayer;
   layer.numInBufs = graph.node(index).input_size();
   sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
+  layer.layerParams.gatherParams.viewChannels = 1;
+  layer.layerParams.gatherParams.thresholdPadSize = 0;
+  layer.layerParams.gatherParams.thresholdPadValue = 0;
 
   /** If shape inference is not done on model, we assume the tensor is of 4 dimensions by default*/
   if (md.varTensorsDims.size() != 0)
@@ -111,16 +116,23 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Gather")> ()
       return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
     }
 
-    TensorProto indexTensor = getInitializerTensor(graph, graph.node(index).input(1), index, status);
+    if(md.constTensorIndices[0] == 1)
+    {
+      indexTensor = getInitializerTensor(graph, graph.node(index).input(1), index, status);
+      if(status == TIDL_ALLOWLISTING_LAYER_CHECK_PASSED)
+      {
+        indexTensorFound = true;
+      }
+    }
 
     // Check if index tensor has scalar value
-    if (indexTensor.dims_size() == 0)
+    if (indexTensorFound && indexTensor.dims_size() == 0)
     {
       layer.layerParams.gatherParams.isIdxScalar = 1;
     }
 
     // [Doubt] check status here
-    if (indexTensor.data_type() == TensorProto_DataType_INT64)
+    if (indexTensorFound && indexTensor.data_type() == TensorProto_DataType_INT64)
     {
       /**
        * TIDL_GatherLayer doesn't support int64 indices, hence convert them to int32
@@ -148,8 +160,38 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Gather")> ()
       layer.weights.ptr = index_dst_ptr;
     }
   }
-  layer.inData[0].numDim = md.varTensorsDims[0].size();
-  layer.inData[1].numDim = md.varTensorsDims[1].size();
+
+  int8_t dataIsVar = 0, indicesIsVar = 0;
+  for (int32_t i = 0; i < md.varTensorIndices.size(); i++)
+  {
+    if (md.varTensorIndices[i] == 0) dataIsVar = 1;
+    if (md.varTensorIndices[i] == 1) indicesIsVar = 1;
+  }
+
+  int32_t dataDimCount = 0, indicesDimCount = 0;
+
+  if(dataIsVar && indicesIsVar)
+  {
+    dataDimCount = md.varTensorsDims[0].size();
+    indicesDimCount = md.varTensorsDims[1].size();
+  }
+
+  // Data is variable and indices is constant
+  else if (dataIsVar && !indicesIsVar)
+  {
+    dataDimCount = md.varTensorsDims[0].size();
+    indicesDimCount = md.constTensorsDims[0].size();
+  }
+
+  // Data is constant and indices is variable
+  else if (!dataIsVar && indicesIsVar)
+  {
+    dataDimCount = md.constTensorsDims[0].size();
+    indicesDimCount = md.varTensorsDims[0].size();
+  }
+
+  layer.inData[0].numDim = dataDimCount;
+  layer.inData[1].numDim = indicesDimCount;
 
   return 0;
 }

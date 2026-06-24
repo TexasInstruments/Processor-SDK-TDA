@@ -65,12 +65,12 @@
 const vector<TidlConstraint> tidlConstraintReshape =
 {
     TIDL_CSTR(
-        "More than 1 variable input, variable shape is not supported",
+        "Variable shape is not supported",
         "Variable shape is not supported",
         "Variable shape is not supported",
         [](const sTIDL_LayerPC_t *layer, string &logs){
-            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
-            if (md.numVarInputs > 1)
+            const sTIDL_allowlistingMetaData& md = layer->allowlistingMetaData;
+            if (std::find(md.varTensorIndices.begin(), md.varTensorIndices.end(), 1) != md.varTensorIndices.end())
             {
                 return false;
             }
@@ -83,7 +83,25 @@ const vector<TidlConstraint> tidlConstraintReshape =
         "Number of non-singleton variable input dimensions must be <= 6",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
-            int32_t numDims = tidlGetNonSingletonNumDims(layer->allowlistingMetaData.varTensorsDims[0]);
+            const sTIDL_allowlistingMetaData& md = layer->allowlistingMetaData;
+            std::vector<int32_t> dataDims;
+            auto varIt = std::find(md.varTensorIndices.begin(), md.varTensorIndices.end(), 0);
+            if (varIt != md.varTensorIndices.end())
+            {
+                int32_t pos = std::distance(md.varTensorIndices.begin(), varIt);
+                dataDims = md.varTensorsDims[pos];
+            }
+            else
+            {
+                auto constIt = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 0);
+                if (constIt != md.constTensorIndices.end())
+                {
+                    int32_t pos = std::distance(md.constTensorIndices.begin(), constIt);
+                    dataDims = md.constTensorsDims[pos];
+                }
+            }
+
+            int32_t numDims = tidlGetNonSingletonNumDims(dataDims);
             if(numDims > 6)
             {
                 oss << "Maximum number of input dimension supported is 6, found " << numDims << " input dimensions";
@@ -132,17 +150,33 @@ const vector<TidlConstraint> tidlConstraintReshape =
         "Input volume should be equal to output volume",
         "Input volume should be equal to output volume",
         [](const sTIDL_LayerPC_t *layer, string &logs){
-            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+            const sTIDL_allowlistingMetaData& md = layer->allowlistingMetaData;
             int32_t induced = layer->layerPCParams.reshapeParams.isInduced;
             if(induced == 0)
             {
+                std::vector<int32_t> dataDims;
+                auto varIt = std::find(md.varTensorIndices.begin(), md.varTensorIndices.end(), 0);
+                if (varIt != md.varTensorIndices.end())
+                {
+                    int32_t pos = std::distance(md.varTensorIndices.begin(), varIt);
+                    dataDims = md.varTensorsDims[pos];
+                }
+                else
+                {
+                    auto constIt = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 0);
+                    if (constIt != md.constTensorIndices.end())
+                    {
+                        int32_t pos = std::distance(md.constTensorIndices.begin(), constIt);
+                        dataDims = md.constTensorsDims[pos];
+                    }
+                }
                 int32_t inputVolume = 1;
                 int32_t outputVolume = 1;
-                for(int i = 0; i < md.varTensorsDims[0].size(); i++)
+                for(int i = 0; i < (int32_t)dataDims.size(); i++)
                 {
-                    inputVolume *= md.varTensorsDims[0][i];
+                    inputVolume *= dataDims[i];
                 }
-                for(int i = 0; i < md.outputTensorDims[0].size(); i++)
+                for(int i = 0; i < (int32_t)md.outputTensorDims[0].size(); i++)
                 {
                     outputVolume *= md.outputTensorDims[0][i];
                 }

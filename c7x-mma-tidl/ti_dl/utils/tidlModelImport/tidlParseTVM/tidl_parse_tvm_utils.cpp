@@ -109,3 +109,32 @@ int32_t TidlParseTVM::convertIndicesToInt32(sBuffer_t& weights)
     return TIDL_ALLOWLISTING_LAYER_CHECK_PASSED;
 }
 
+/**
+ * @brief Check if layer's input/output buffer counts are within supported limits
+ *
+ * This function validates that the number of input and output tensors for a layer
+ * doesn't exceed TIDL's maximum supported buffer counts (TIDL_NUM_IN_BUFS and
+ * TIDL_NUM_OUT_BUFS). This check is performed in the parser before allowlisting
+ * constraints are evaluated, following the same pattern as ONNX RT flow.
+ *
+ * @param layer The layer structure containing allowlisting metadata
+ * @return true if buffer counts are supported, false otherwise
+ */
+bool TidlParseTVM::isLayerIONumSupported(sTIDL_LayerPC_t &layer)
+{
+  bool isLayerSupported = true;
+  sTIDL_allowlistingMetaData& md = layer.allowlistingMetaData;
+
+  if (md.numInputs > TIDL_NUM_IN_BUFS)
+  {
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Layer %s : Unsupported number of input tensors (> %d)", (char *)layer.name, TIDL_NUM_IN_BUFS);
+    isLayerSupported = false;
+  }
+  else if (md.numOutputs > TIDL_NUM_OUT_BUFS)
+  {
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Layer %s : Unsupported number of output tensors (> %d)", (char *)layer.name, TIDL_NUM_OUT_BUFS);
+    isLayerSupported = false;
+  }
+
+  return isLayerSupported;
+}

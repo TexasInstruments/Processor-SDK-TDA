@@ -130,7 +130,12 @@ static inline void TIDL_poolingSetPrivAlgArgs(sTIDL_AlgLayer_t *algLayer, const 
   curCoreisMiddleCore = ((coreId != coreStartIdx) && (coreId != coreEndIdx));
   curCoreisLastCore = (coreId == coreEndIdx);
 #endif
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
   if (algLayer->workloadUnit != NULL)
+  /* LDRA_JUSTIFY_END */
   {
     /* If normal tile (except for normal tile with no preceeding first tile or last tile */
     if ((((algLayer->wlPadParams.tileType == NO_TILE) || (algLayer->wlPadParams.isFirstTile == 0U)) && (algLayer->wlPadParams.isLastTile == 0U))

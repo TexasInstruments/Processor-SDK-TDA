@@ -194,6 +194,13 @@ unordered_map<string, TidlParseOnnxJTEntry> tidlParseOnnxJumpTable =
     Onnx_JTE( "LSTM",                   TIDL_LSTMLayer),
     Onnx_JTE( "GRU",                    TIDL_GRULayer),
     Onnx_JTE( "RNN",                    TIDL_RNNLayer),
+    Onnx_JTE( "GatherND",               TIDL_GatherNDLayer),
+    Onnx_JTE( "CastLike",               TIDL_CastLikeLayer),
+    Onnx_JTE( "GatherElements",         TIDL_GatherElementsLayer),
+    Onnx_JTE( "Shape",                  TIDL_ShapeLayer),
+    Onnx_JTE( "Size",                   TIDL_SizeLayer),
+    Onnx_JTE( "Attention",              TIDL_AttentionLayer),
+    Onnx_JTE( "NonZero",                TIDL_NonZeroLayer),
 };
 
 

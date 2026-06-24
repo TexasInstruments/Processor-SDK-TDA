@@ -23,101 +23,11 @@ tidl_conv2d_base.c  used for depthwise convolution.
 #include "itidl_ti.h"
 #include "tidl_cuda_mem_manager.h"
 
-/* External declaration of the global memory manager pointer */
-extern TIDL_CudaMemManager* g_cudaMemManager;
-
-// Define saturation type enum
-enum SaturationType {
-    FIXED_POINT_SAT = 0,
-    FLOAT_SAT = 1,
-    FIXED_POINT_ASYM_SAT = 2
-};
-
-typedef struct
-{
-  int  isInit;
-  void *dpIn;
-  void *dpBias;
-  void *dpCoeffs;
-  void *dpAcc;
-  void *devPtrOf;
-  void *dRoundBits;
-  void *dDerivedScales;
-  void *dDerivedShifts;
-}TIDL_cudaCV;
-static TIDL_cudaCV CUDACV[MEM_BUFF_ARRAY_LEN] = {0};
-
-
-/**
-----------------------------------------------------------------------------
-@fn         TIDL_cudaFreeConvCudaPtrs
-@brief      Function frees device pointers aswell as resets the initalisation
-flag
-
-@remarks    None
-----------------------------------------------------------------------------
-*/
-void TIDL_cudaFreeConvCudaPtrs()
-{
-  for(int i = 0; i < MEM_BUFF_ARRAY_LEN; i++)
-  {
-     if(CUDACV[i].dpIn) cudaFree (CUDACV[i].dpIn);
-     if(CUDACV[i].dpBias) cudaFree (CUDACV[i].dpBias);
-     if(CUDACV[i].dpCoeffs) cudaFree (CUDACV[i].dpCoeffs);
-     if(CUDACV[i].dpAcc) cudaFree (CUDACV[i].dpAcc);
-     if(CUDACV[i].devPtrOf) cudaFree (CUDACV[i].devPtrOf);
-     if(CUDACV[i].dRoundBits) cudaFree (CUDACV[i].dRoundBits);
-     if(CUDACV[i].dDerivedScales) cudaFree (CUDACV[i].dDerivedScales);
-     if(CUDACV[i].dDerivedShifts) cudaFree (CUDACV[i].dDerivedShifts);
-     
-    CUDACV[i].devPtrOf = 0; 
-    CUDACV[i].dpIn = 0;
-    CUDACV[i].dpBias = 0;
-    CUDACV[i].dpCoeffs = 0;
-    CUDACV[i].dpAcc = 0;
-    CUDACV[i].dRoundBits = 0;
-    CUDACV[i].dDerivedShifts = 0;
-    CUDACV[i].dDerivedScales = 0;
-    CUDACV[i].isInit = 0 ;
-  }
-  cudaDeviceSynchronize();
-}
 
 //CUDA KERNELS:
 
-template <class Tout>
-__global__ void TIDL_convFillZeroPoint(Tout *Y, int32_t bufferSize, int32_t padFillValue)
-{
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if(i < (bufferSize))
-  {
-    Y[i] = (Tout)padFillValue;
-  }
-}
-
-
-/**
-----------------------------------------------------------------------------
-@fn         TIDL_convSaturateCuda
-@brief      Cuda kernel for performing saturation (FIXED POINT)
-
-@param      X : Device pointer to a stream of floats
-@param      Y : Device pointer to a stream of input integers
-@param      N : Number of batches
-@param      C : Number of output channels
-@param      H : Output Height
-@param      W : Output Width
-@param      outChPitch : Output channel pitch
-@param      outImPitch : Output image pitch
-@param      outRoundBits : Number of rounding bits
-@param      satLow : Saturation lower limit
-@param      satHigh : Saturation upper limit
-
-@remarks    None
-----------------------------------------------------------------------------
-*/
 template <class Tacc,class Tout>
-__global__ void TIDL_convSaturateCuda(Tacc *X, Tout *Y, int N, int C, int H, int W, int outChPitch, int outImPitch, uint8_t *outRoundBits, int32_t satLow, int32_t satHigh, int32_t precisionAdjustmentShift)
+__global__ void TIDL_convSaturateCudaFixedV1(Tacc *X, Tout *Y, int N, int C, int H, int W, int outBatchPitch, int outChPitch, int outImPitch, int outRoundBits, Tacc satLow, Tacc satHigh, int mixedPrecision)
 {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int nc, cc, hc, wc, k;
@@ -132,22 +42,26 @@ __global__ void TIDL_convSaturateCuda(Tacc *X, Tout *Y, int N, int C, int H, int
     hc = k / W;
     k = k % W;
     wc = k;
-    outAcc = X[nc*(C*outChPitch)+cc*(outChPitch)+hc*(outImPitch)+wc];
-    if(outRoundBits[cc] != 0)
+    outAcc = X[ nc * (outBatchPitch) + cc * (outChPitch) + hc * (outImPitch) + wc];
+    outAcc = cuda_roundSatMMA(outAcc, outRoundBits, satLow, satHigh);
+    if(mixedPrecision == 1)
     {
-      outAcc += (1 << (outRoundBits[cc] - 1));
-      outAcc >>= outRoundBits[cc];
+      outAcc = (uint64_t)outAcc >> 8U;
     }
-    outAcc >>= precisionAdjustmentShift;
-    outAcc = outAcc < satLow ? satLow : outAcc;
-    outAcc = outAcc > satHigh ? satHigh : outAcc;
-    Y[nc*(C*outChPitch)+cc*(outChPitch)+hc*(outImPitch)+wc] = outAcc;
+    // if(outRoundBits != 0)
+    // {
+    //   outAcc += (1 << (outRoundBits - 1));
+    //   outAcc >>= outRoundBits;
+    // } 
+    // outAcc = outAcc < satLow ? satLow : outAcc;
+    // outAcc = outAcc > satHigh ? satHigh : outAcc;
+    Y[ nc * (outBatchPitch) + cc * (outChPitch) + hc * (outImPitch) + wc] = (Tacc)outAcc;
   }
 }
 
 
-template <class Tacc,class Tout, class Tin>
-__global__ void TIDL_convSaturateCudaV2(Tacc *X, Tout *Y, int N, int C, int H, int W, int outChPitch, int outImPitch, int32_t satLow, int32_t satHigh, uint8_t* pDerivedScales, uint8_t* pDerivedShifts)
+template <class Tacc,class Tout>
+__global__ void TIDL_convSaturateCudaFixedV2(Tacc *X, Tout *Y, int N, int C, int H, int W, int outBatchPitch, int outChPitch, int outImPitch, int outRoundBits, Tacc satLow, Tacc satHigh, uint8_t* dpDerivedScales, uint8_t* dpDerivedShifts)
 {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int nc, cc, hc, wc, k;
@@ -162,45 +76,43 @@ __global__ void TIDL_convSaturateCudaV2(Tacc *X, Tout *Y, int N, int C, int H, i
     hc = k / W;
     k = k % W;
     wc = k;
-    outAcc = X[nc*(C*outChPitch)+cc*(outChPitch)+hc*(outImPitch)+wc];
-    outAcc *= pDerivedScales[cc];
-    if(pDerivedShifts[cc] != 0)
-    {
-      outAcc += (1 << (pDerivedShifts[cc] - 1));
-      outAcc >>= pDerivedShifts[cc];
-    } 
-    //No overflow detection.. 
-    //if(typeid(Tin) == typeid(int8_t) || typeid(Tin) == typeid(uint8_t))
-    {
-     // outAcc = ((int64_t)outAcc & (int64_t)0xFFFFFFFFFF);
-    }
-    outAcc = outAcc < satLow ? satLow : outAcc;
-    outAcc = outAcc > satHigh ? satHigh : outAcc;
-    Y[nc*(C*outChPitch)+cc*(outChPitch)+hc*(outImPitch)+wc] = outAcc;
+    outAcc = X[ nc * (outBatchPitch) + cc * (outChPitch) + hc * (outImPitch) + wc];
+    outAcc *= dpDerivedScales[cc];
+    outAcc = cuda_roundSatMMA(outAcc, dpDerivedShifts[cc], satLow, satHigh);
+    // if(dpDerivedShifts[cc] != 0)
+    // {
+    //   outAcc += (1 << (dpDerivedShifts[cc] - 1));
+    //   outAcc >>= dpDerivedShifts[cc];
+    // } 
+    // outAcc = outAcc < satLow ? satLow : outAcc;
+    // outAcc = outAcc > satHigh ? satHigh : outAcc;
+    /*There is no overflow detection for 8-bit!*/
+    //outAcc = ((int64_t)outAcc & (int64_t)0xFFFFFFFFFFU);
+    Y[ nc * (outBatchPitch) + cc * (outChPitch) + hc * (outImPitch) + wc] = (Tacc)outAcc;
   }
 }
 
 
 template <class Tacc,class Tout>
-__global__ void TIDL_convSaturateCudaFloat(Tacc *X, Tout *Y, int N, int C, int H, int W, int outChPitch, int outImPitch, int outRoundBits, Tacc satLow, Tacc satHigh)
+__global__ void TIDL_convSaturateCudaFloat(Tacc *X, Tout *Y, int N, int C, int H, int W, int outBatchPitch, int outChPitch, int outImPitch, int outRoundBits, float satLow, float satHigh)
 {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int nc, cc, hc, wc, k;
   Tacc outAcc;
-    if(i < (N * C * H * W))
+  if(i < (N * C * H * W))
   {
     k = i;
     nc = k / (C * H * W);
-    k = k%(C * H * W);
+    k = k % (C * H * W);
     cc = k / (H * W);
     k = k % (H * W);
     hc = k / W;
     k = k % W;
     wc = k;
-    outAcc = X[nc*(C*outChPitch)+cc*(outChPitch)+hc*(outImPitch)+wc];
+    outAcc = X[ nc*(outBatchPitch) + cc * (outChPitch) + hc * (outImPitch) + wc];
     outAcc = outAcc < satLow ? satLow : outAcc;
     outAcc = outAcc > satHigh ? satHigh : outAcc;
-    Y[nc*(C*outChPitch)+cc*(outChPitch)+hc*(outImPitch)+wc] = outAcc;
+    Y[ nc * (outBatchPitch) + cc * (outChPitch) + hc * (outImPitch) + wc] = outAcc;
   }
 }
 /**
@@ -236,107 +148,435 @@ __global__ void TIDL_convSaturateCudaFloat(Tacc *X, Tout *Y, int N, int C, int H
 */
 template <class Tin, class Tw, class Tb, class Tacc>
 __global__ void TIDL_cudaConvKernel(
-  Tin     *pInChannel,
-  Tw      *pCoeffs,
-  Tb      *pBias,
-  Tacc    *accPtr,
+  Tin     * __restrict__ pInChannel,
+  Tw      * __restrict__ pCoeffs,
+  Tb      * __restrict__ pBias,
+  Tacc    * __restrict__ accPtr,
   Tacc    *min,
   Tacc    *max,
-  int32_t  numTotRoi,
-  int32_t  numGroups,
-  int32_t  numInChannels,
-  int32_t  numOutChannels,
-  int32_t  inChPitch,
-  int32_t  outChPitch,
-  int32_t  width,
-  int32_t  height,
-  int32_t  inImPitch,
-  int32_t  outImPitch,
-  int32_t  coeffsWidth,
-  int32_t  coeffsHeight,
-  int32_t  dilationWidth,
-  int32_t  dilationHeight,
-  int32_t  strideWidth,
-  int32_t  strideHeight,
-  int32_t enableBias,
-  int32_t isOTFpad,
-  int32_t leftPad,
-  int32_t topPad,
-  int32_t padVal,
-  int32_t startRowNumberInTensor,
-  int32_t inHeight,
-  int32_t inWidth
+  const int32_t  numTotRoi,
+  const int32_t  numGroups,
+  const int32_t  numInChannels,
+  const int32_t  numOutChannels,
+  const int32_t  inChPitch,
+  const int32_t  outChPitch,
+  const int32_t  width,
+  const int32_t  height,
+  const int32_t  inImPitch,
+  const int32_t  outImPitch,
+  const int32_t  coeffsWidth,
+  const int32_t  coeffsHeight,
+  const int32_t  dilationWidth,
+  const int32_t  dilationHeight,
+  const int32_t  strideWidth,
+  const int32_t  strideHeight,
+  const int32_t enableBias,
+  const int32_t isOTFpad,
+  const int32_t leftPad,
+  const int32_t topPad,
+  const int32_t padVal,
+  const int32_t startRowNumberInTensor,
+  const int32_t inHeight,
+  const int32_t inWidth
   )
 {
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
-  int32_t   i0, i2, i3, i4, i5, i6, i7, i8, k;
-  int32_t   coeffOffset, indataOffset, outdataOffset;
-  int32_t validPosXMin,validPosXMax,validPosYMin,validPosYMax;
-  int32_t spatialOffsetY, spatialOffsetX;
-  int32_t isBorderPixel;
-  validPosXMin = leftPad;
-  validPosXMax = leftPad + inWidth;
-  validPosYMin = topPad;
-  validPosYMax = topPad + inHeight;
-  Tacc      outAcc;
-  Tin       inData;
-  Tw        coefData;
-  Tb        biasData;
-  if(i <= numTotRoi*numGroups*numOutChannels*width*height)
+  const int i = blockIdx.x * blockDim.x + threadIdx.x;
+  
+  // Pre-compute total size for bounds check
+  const int32_t totalSize = numTotRoi * numGroups * numOutChannels * width * height;
+  if(i >= totalSize) return;  // Early exit for out-of-bounds threads
+
+  // Pre-compute valid region bounds (hoisted out of loops)
+  const int32_t validPosXMin = leftPad;
+  const int32_t validPosXMax = leftPad + inWidth;
+  const int32_t validPosYMin = topPad;
+  const int32_t validPosYMax = topPad + inHeight;
+
+  // Index decomposition
+  int32_t k = i;
+  const int32_t i8 = k / (numGroups * numOutChannels * width * height);  // batch
+  k = k % (numGroups * numOutChannels * width * height);
+  const int32_t i7 = k / (numOutChannels * width * height);  // group
+  k = k % (numOutChannels * width * height);
+  const int32_t i6 = k / (width * height);  // output channel
+  k = k % (width * height);
+  const int32_t i2 = k / width;  // output Y
+  const int32_t i3 = k % width;  // output X
+
+  // Pre-compute offsets (hoisted out of inner loops)
+  const int32_t indataOffset = i7 * numInChannels * inChPitch + i8 * numGroups * numInChannels * inChPitch;
+  const int32_t outdataOffset = i7 * numOutChannels * outChPitch + i8 * numGroups * numOutChannels * outChPitch;
+  
+  // Pre-compute base spatial positions (hoisted - these are constant within this thread)
+  const int32_t baseInY = i2 * strideHeight;
+  const int32_t baseInX = i3 * strideWidth;
+  
+  // Pre-compute coefficient base offset for this output channel
+  const int32_t coeffBaseOffset = i7 * numInChannels * coeffsHeight * coeffsWidth * numOutChannels
+                                + i6 * numInChannels * coeffsHeight * coeffsWidth;
+
+  // Initialize accumulator with bias
+  Tacc outAcc;
+  if(enableBias)
   {
-    k = i;
-    i8 = k / (numGroups*numOutChannels*width*height);
-    k = k % (numGroups*numOutChannels*width*height);
-    i7 = k / (numOutChannels*width*height);
-    k = k % (numOutChannels*width*height);
-    i6 = k / (width*height);
-    k = k % (width*height);
-    i2 = k / (width);
-    i3 = k % (width);
-    indataOffset = i7*numInChannels*inChPitch + i8*numGroups*numInChannels*inChPitch;
-    outdataOffset = i7*numOutChannels*outChPitch + i8*numGroups*numOutChannels*outChPitch;
-    if(enableBias)
+    outAcc = pBias[i7 * numOutChannels + i6];
+  }
+  else
+  {
+    outAcc = 0;
+  }
+
+  // Main convolution loop
+  #pragma unroll 4
+  for (int32_t i0 = 0; i0 < numInChannels; i0++)
+  {
+    const int32_t inChannelOffset = indataOffset + i0 * inChPitch;
+    const int32_t coeffChannelOffset = coeffBaseOffset + i0 * coeffsHeight * coeffsWidth;
+
+    #pragma unroll
+    for (int32_t i4 = 0; i4 < coeffsHeight; i4++)
     {
-      biasData = pBias[i7*numOutChannels + i6];
+      const int32_t spatialOffsetY = baseInY + (i4 * dilationHeight);
+      const bool validY = (spatialOffsetY >= validPosYMin) && (spatialOffsetY < validPosYMax);
+      const int32_t inYOffset = spatialOffsetY * inImPitch;
+
+      #pragma unroll
+      for (int32_t i5 = 0; i5 < coeffsWidth; i5++)
+      {
+        const int32_t spatialOffsetX = baseInX + (i5 * dilationWidth);
+        const bool validX = (spatialOffsetX >= validPosXMin) && (spatialOffsetX < validPosXMax);
+
+        Tin inData;
+        if(isOTFpad && !(validY && validX))
+        {
+          inData = (Tin)padVal;
+        }
+        else
+        {
+          inData = pInChannel[inChannelOffset + inYOffset + spatialOffsetX];
+        }
+
+        const Tw coefData = pCoeffs[coeffChannelOffset + (i4 * coeffsWidth) + i5];
+        outAcc += (Tacc)(inData * coefData);
+      }
+    }
+  }
+
+  // Write output
+  accPtr[outdataOffset + i6 * outChPitch + (i2 * outImPitch) + i3] = outAcc;
+}
+
+
+/**
+----------------------------------------------------------------------------
+@fn         TIDL_cudaConvKernel1x1
+@brief      Optimized CUDA kernel for 1x1 convolution (no filter loops needed)
+            Maintains bit-exact compatibility with reference by preserving 
+            accumulation order across input channels.
+
+@remarks    Specialized for coeffsWidth=1, coeffsHeight=1 (pointwise convolution)
+----------------------------------------------------------------------------
+*/
+template <class Tin, class Tw, class Tb, class Tacc>
+__global__ void TIDL_cudaConvKernel1x1(
+  Tin     * __restrict__ pInChannel,
+  Tw      * __restrict__ pCoeffs,
+  Tb      * __restrict__ pBias,
+  Tacc    * __restrict__ accPtr,
+  Tacc    *min,
+  Tacc    *max,
+  const int32_t  numTotRoi,
+  const int32_t  numGroups,
+  const int32_t  numInChannels,
+  const int32_t  numOutChannels,
+  const int32_t  inChPitch,
+  const int32_t  outChPitch,
+  const int32_t  width,
+  const int32_t  height,
+  const int32_t  inImPitch,
+  const int32_t  outImPitch,
+  const int32_t  strideWidth,
+  const int32_t  strideHeight,
+  const int32_t  enableBias,
+  const int32_t  isOTFpad,
+  const int32_t  leftPad,
+  const int32_t  topPad,
+  const int32_t  padVal,
+  const int32_t  inHeight,
+  const int32_t  inWidth
+  )
+{
+  const int i = blockIdx.x * blockDim.x + threadIdx.x;
+  
+  const int32_t totalSize = numTotRoi * numGroups * numOutChannels * width * height;
+  if(i >= totalSize) return;
+
+  // Pre-compute valid region bounds for OTF padding
+  const int32_t validPosXMin = leftPad;
+  const int32_t validPosXMax = leftPad + inWidth;
+  const int32_t validPosYMin = topPad;
+  const int32_t validPosYMax = topPad + inHeight;
+
+  // Index decomposition
+  int32_t k = i;
+  const int32_t i8 = k / (numGroups * numOutChannels * width * height);  // batch
+  k = k % (numGroups * numOutChannels * width * height);
+  const int32_t i7 = k / (numOutChannels * width * height);  // group
+  k = k % (numOutChannels * width * height);
+  const int32_t i6 = k / (width * height);  // output channel
+  k = k % (width * height);
+  const int32_t i2 = k / width;  // output Y
+  const int32_t i3 = k % width;  // output X
+
+  // Pre-compute offsets
+  const int32_t indataOffset = i7 * numInChannels * inChPitch + i8 * numGroups * numInChannels * inChPitch;
+  const int32_t outdataOffset = i7 * numOutChannels * outChPitch + i8 * numGroups * numOutChannels * outChPitch;
+
+  // For 1x1 conv: spatial position is simply stride-scaled output position
+  const int32_t spatialY = i2 * strideHeight;
+  const int32_t spatialX = i3 * strideWidth;
+
+  // Check if within valid region (for OTF padding)
+  const bool validPos = (spatialX >= validPosXMin) && (spatialX < validPosXMax) &&
+                        (spatialY >= validPosYMin) && (spatialY < validPosYMax);
+
+  // Coefficient base offset for this output channel (1x1 filter: 1 coeff per input channel)
+  const int32_t coeffBaseOffset = i7 * numInChannels * numOutChannels + i6 * numInChannels;
+
+  // Initialize accumulator with bias
+  Tacc outAcc;
+  if(enableBias)
+  {
+    outAcc = pBias[i7 * numOutChannels + i6];
+  }
+  else
+  {
+    outAcc = 0;
+  }
+
+  // Pre-compute input spatial offset (same for all channels in 1x1)
+  const int32_t inSpatialOffset = spatialY * inImPitch + spatialX;
+  
+  // Main convolution loop - only over input channels (no filter spatial loops)
+  #pragma unroll 8
+  for (int32_t i0 = 0; i0 < numInChannels; i0++)
+  {
+    Tin inData;
+    if(isOTFpad && !validPos)
+    {
+      inData = (Tin)padVal;
     }
     else
     {
-      biasData = 0;
+      inData = pInChannel[indataOffset + i0 * inChPitch + inSpatialOffset];
     }
 
-    outAcc = biasData; 
-    for (i0 = 0; i0 < numInChannels; i0++)
+    const Tw coefData = pCoeffs[coeffBaseOffset + i0];
+    outAcc += (Tacc)(inData * coefData);
+  }
+
+  // Write output
+  accPtr[outdataOffset + i6 * outChPitch + (i2 * outImPitch) + i3] = outAcc;
+}
+
+
+/**
+----------------------------------------------------------------------------
+@fn         TIDL_cudaConvKernel3x3
+@brief      Optimized CUDA kernel for 3x3 convolution with fully unrolled 
+            filter loops. Maintains bit-exact compatibility with reference
+            by preserving accumulation order.
+
+@remarks    Specialized for coeffsWidth=3, coeffsHeight=3
+            Uses fully unrolled loops and register caching for coefficients
+----------------------------------------------------------------------------
+*/
+template <class Tin, class Tw, class Tb, class Tacc>
+__global__ void TIDL_cudaConvKernel3x3(
+  Tin     * __restrict__ pInChannel,
+  Tw      * __restrict__ pCoeffs,
+  Tb      * __restrict__ pBias,
+  Tacc    * __restrict__ accPtr,
+  Tacc    *min,
+  Tacc    *max,
+  const int32_t  numTotRoi,
+  const int32_t  numGroups,
+  const int32_t  numInChannels,
+  const int32_t  numOutChannels,
+  const int32_t  inChPitch,
+  const int32_t  outChPitch,
+  const int32_t  width,
+  const int32_t  height,
+  const int32_t  inImPitch,
+  const int32_t  outImPitch,
+  const int32_t  dilationWidth,
+  const int32_t  dilationHeight,
+  const int32_t  strideWidth,
+  const int32_t  strideHeight,
+  const int32_t  enableBias,
+  const int32_t  isOTFpad,
+  const int32_t  leftPad,
+  const int32_t  topPad,
+  const int32_t  padVal,
+  const int32_t  inHeight,
+  const int32_t  inWidth
+  )
+{
+  const int i = blockIdx.x * blockDim.x + threadIdx.x;
+  const int32_t totalSize = numTotRoi * numGroups * numOutChannels * width * height;
+  if(i >= totalSize) return;
+
+  // Pre-compute valid region bounds
+  const int32_t validPosXMin = leftPad;
+  const int32_t validPosXMax = leftPad + inWidth;
+  const int32_t validPosYMin = topPad;
+  const int32_t validPosYMax = topPad + inHeight;
+
+  // Index decomposition
+  int32_t k = i;
+  const int32_t i8 = k / (numGroups * numOutChannels * width * height);  // batch
+  k = k % (numGroups * numOutChannels * width * height);
+  const int32_t i7 = k / (numOutChannels * width * height);  // group
+  k = k % (numOutChannels * width * height);
+  const int32_t i6 = k / (width * height);  // output channel
+  k = k % (width * height);
+  const int32_t i2 = k / width;  // output Y
+  const int32_t i3 = k % width;  // output X
+
+  // Pre-compute offsets
+  const int32_t indataOffset = i7 * numInChannels * inChPitch + i8 * numGroups * numInChannels * inChPitch;
+  const int32_t outdataOffset = i7 * numOutChannels * outChPitch + i8 * numGroups * numOutChannels * outChPitch;
+  
+  // Base spatial positions
+  const int32_t baseInY = i2 * strideHeight;
+  const int32_t baseInX = i3 * strideWidth;
+  
+  // Coefficient base offset for this output channel (3x3 = 9 coeffs per input channel)
+  const int32_t coeffBaseOffset = i7 * numInChannels * 9 * numOutChannels + i6 * numInChannels * 9;
+
+  // Initialize accumulator with bias
+  Tacc outAcc;
+  if(enableBias)
+  {
+    outAcc = pBias[i7 * numOutChannels + i6];
+  }
+  else
+  {
+    outAcc = 0;
+  }
+
+  // Pre-compute spatial offsets for 3x3 filter positions (Y direction)
+  const int32_t spatialY0 = baseInY + (0 * dilationHeight);
+  const int32_t spatialY1 = baseInY + (1 * dilationHeight);
+  const int32_t spatialY2 = baseInY + (2 * dilationHeight);
+  
+  // Pre-compute Y validity
+  const bool validY0 = (spatialY0 >= validPosYMin) && (spatialY0 < validPosYMax);
+  const bool validY1 = (spatialY1 >= validPosYMin) && (spatialY1 < validPosYMax);
+  const bool validY2 = (spatialY2 >= validPosYMin) && (spatialY2 < validPosYMax);
+  
+  // Pre-compute Y offsets
+  const int32_t inYOffset0 = spatialY0 * inImPitch;
+  const int32_t inYOffset1 = spatialY1 * inImPitch;
+  const int32_t inYOffset2 = spatialY2 * inImPitch;
+
+  // Pre-compute spatial offsets for 3x3 filter positions (X direction)
+  const int32_t spatialX0 = baseInX + (0 * dilationWidth);
+  const int32_t spatialX1 = baseInX + (1 * dilationWidth);
+  const int32_t spatialX2 = baseInX + (2 * dilationWidth);
+  
+  // Pre-compute X validity
+  const bool validX0 = (spatialX0 >= validPosXMin) && (spatialX0 < validPosXMax);
+  const bool validX1 = (spatialX1 >= validPosXMin) && (spatialX1 < validPosXMax);
+  const bool validX2 = (spatialX2 >= validPosXMin) && (spatialX2 < validPosXMax);
+
+  // Main convolution loop - preserve accumulation order for bit-matching
+  #pragma unroll 4
+  for (int32_t i0 = 0; i0 < numInChannels; i0++)
+  {
+    const int32_t inChannelOffset = indataOffset + i0 * inChPitch;
+    const int32_t coeffChannelOffset = coeffBaseOffset + i0 * 9;
+
+    // Load 9 coefficients into registers for this input channel
+    const Tw c0 = pCoeffs[coeffChannelOffset + 0];
+    const Tw c1 = pCoeffs[coeffChannelOffset + 1];
+    const Tw c2 = pCoeffs[coeffChannelOffset + 2];
+    const Tw c3 = pCoeffs[coeffChannelOffset + 3];
+    const Tw c4 = pCoeffs[coeffChannelOffset + 4];
+    const Tw c5 = pCoeffs[coeffChannelOffset + 5];
+    const Tw c6 = pCoeffs[coeffChannelOffset + 6];
+    const Tw c7 = pCoeffs[coeffChannelOffset + 7];
+    const Tw c8 = pCoeffs[coeffChannelOffset + 8];
+
+    // Row 0 (filter positions 0,1,2) - preserve accumulation order: row by row, col by col
     {
-      coeffOffset = i7*numInChannels * coeffsHeight * coeffsWidth *numOutChannels + \
-      i6* numInChannels * coeffsHeight * coeffsWidth + i0 * coeffsHeight * coeffsWidth;
-      for (i4 = 0; i4 < coeffsHeight; i4++)
-      {
-        for (i5 = 0; i5 < coeffsWidth; i5++)
-        {
-          spatialOffsetY = (i2 * strideHeight) + (i4 * dilationHeight);
-          spatialOffsetX = (i3 * strideWidth) + (i5 * dilationWidth);
-          isBorderPixel  =  (((spatialOffsetY < validPosYMin)||(spatialOffsetY >= validPosYMax))) || (((spatialOffsetX < validPosXMin)||(spatialOffsetX >= validPosXMax)));
-          if(isOTFpad & isBorderPixel)
-          {
-             inData = padVal;          
-          }
-          else
-          {
-            inData = pInChannel[indataOffset + i0* inChPitch + ((i2*strideHeight)* inImPitch) + i3*strideWidth +
-                             (i4 * inImPitch*dilationHeight) + i5*dilationWidth];
-          }
-          coefData = pCoeffs[coeffOffset + (i4 * coeffsWidth) + i5];
-          outAcc += (inData * coefData);
-        }
-      }
+      const Tin in0 = (isOTFpad && !(validY0 && validX0)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset0 + spatialX0];
+      outAcc += (Tacc)(in0 * c0);
+      const Tin in1 = (isOTFpad && !(validY0 && validX1)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset0 + spatialX1];
+      outAcc += (Tacc)(in1 * c1);
+      const Tin in2 = (isOTFpad && !(validY0 && validX2)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset0 + spatialX2];
+      outAcc += (Tacc)(in2 * c2);
     }
-    accPtr[outdataOffset + i6 * outChPitch + ((i2 ) * outImPitch) + (i3 )] = outAcc;
+    
+    // Row 1 (filter positions 3,4,5)
+    {
+      const Tin in3 = (isOTFpad && !(validY1 && validX0)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset1 + spatialX0];
+      outAcc += (Tacc)(in3 * c3);
+      const Tin in4 = (isOTFpad && !(validY1 && validX1)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset1 + spatialX1];
+      outAcc += (Tacc)(in4 * c4);
+      const Tin in5 = (isOTFpad && !(validY1 && validX2)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset1 + spatialX2];
+      outAcc += (Tacc)(in5 * c5);
+    }
+    
+    // Row 2 (filter positions 6,7,8)
+    {
+      const Tin in6 = (isOTFpad && !(validY2 && validX0)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset2 + spatialX0];
+      outAcc += (Tacc)(in6 * c6);
+      const Tin in7 = (isOTFpad && !(validY2 && validX1)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset2 + spatialX1];
+      outAcc += (Tacc)(in7 * c7);
+      const Tin in8 = (isOTFpad && !(validY2 && validX2)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset2 + spatialX2];
+      outAcc += (Tacc)(in8 * c8);
+    }
+  }
+
+  // Write output
+  accPtr[outdataOffset + i6 * outChPitch + (i2 * outImPitch) + i3] = outAcc;
+}
+
+
+void TIDL_cudaSaturationFloat(
+    sTIDL_Layer_t *tidlLayer,
+    float32_tidl *min,
+    float32_tidl *max)
+{
+  if (((tidlLayer->actParams.actType == TIDL_NoAct) && (tidlLayer->clipParams.isClipEnabled == 0)) ||
+      (tidlLayer->actParams.actType == TIDL_PRelU) ||
+      (tidlLayer->actParams.actType == TIDL_GELU) ||
+      (tidlLayer->actParams.actType == TIDL_LeakyReLU))
+  {
+    *max = FLT_MAX;
+    *min = -FLT_MAX;
+  }
+  else if (tidlLayer->actParams.actType == TIDL_RelU)
+  {
+    *max = FLT_MAX;
+    *min = 0.0;
+  }
+  else if (tidlLayer->actParams.actType == TIDL_RelU6)
+  {
+    *max = 6.0;
+    *min = 0.0;
+  }
+  else if (tidlLayer->clipParams.isClipEnabled == 1)
+  {
+    *max = tidlLayer->clipParams.clipMax;
+    *min = tidlLayer->clipParams.clipMin;
   }
 }
 
 /**
 ----------------------------------------------------------------------------
-@fn         TIDL_cudaSaturateV1
+@fn         TIDL_cudaConv2DSaturateFloat
 @brief      Function performs saturation and places the result in devPtrOf
 
 @param      devPtrOf : Device pointer to a pointer to a stream of input integers
@@ -349,27 +589,84 @@ __global__ void TIDL_cudaConvKernel(
 @param      outRoundBits : Number of rounding bits
 @param      satLow : Saturation lower limit
 @param      satHigh : Saturation upper limit
-
+@param      enablePerChannelShift : to set per channel shift
+@param      precisionAdjustmentShift : For mixed precision when output is 8 bit to match target 
+            implementation shift is adjusted. This value is expcted to be 8 when output is 8 bit
+            processing is in 16 bit
 @remarks    None
 ----------------------------------------------------------------------------
 */
-template <class Tacc, class Tout>
-int TIDL_cudaSaturateV1(Tout **devPtrOf, int N, int C, int H, int W, int outChPitch, int outImPitch, int outRoundBits, Tacc satLow, Tacc satHigh)
+int TIDL_cudaConv2DSaturateFloat(
+                                 float *accPtr,
+                                 float *outPtr,
+                                 int32_t numBatches,
+                                 int32_t numOutChannels,
+                                 int32_t height,
+                                 int32_t width,
+                                 int32_t strideHeight,
+                                 int32_t strideWidth,
+                                 int32_t outBatchPitch,
+                                 int32_t outChPitch,
+                                 int32_t outImPitch,
+                                 float padVal,
+                                 int32_t outHeight,
+                                 int32_t outWidth,
+                                 int32_t outPadOffset,
+                                 sTIDL_Layer_t *pTIDLNet
+                                )
 {
-  int sizeOstream = N * C * outChPitch;
-  if(CUDACV[CUDNNLC].isInit == 0)
+  /*Pointers:*/
+  float     *dpAcc = NULL;
+  float     *dpOut = NULL;
+ 
+  /*Initializations:*/
+  float satLow, satHigh;
+  /*Stream launch size:*/
+  int sizeOutstream = numBatches * numOutChannels * outChPitch;
+
+
+  /*Translate accPtr to GPU pointer */
+  if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accPtr, (void**)&dpAcc, sizeof(float) * sizeOutstream) != IALG_EOK)
   {
-    cudaMalloc((void**)&CUDACV[CUDNNLC].devPtrOf, sizeOstream * sizeof(Tout));
-    cudaMemset (CUDACV[CUDNNLC].devPtrOf, 0, sizeof(Tout) * sizeOstream);
-    CUDACV[CUDNNLC].isInit = 1;
+    printf("Convolve2D: Unable to find accumulator pointer\n");
   }
-  *devPtrOf = (Tout*)CUDACV[CUDNNLC].devPtrOf;
-  
-  //Float Always for this function
-  TIDL_convSaturateCudaFloat<<<((sizeOstream) / THREADS_PER_BLOCK) + 1,THREADS_PER_BLOCK>>>((Tacc*)CUDACV[CUDNNLC].dpAcc, *devPtrOf, N, C, H, W, outChPitch, outImPitch, outRoundBits, satLow, satHigh);
+
+  /*Translate outPtr to GPU pointer */
+  if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), outPtr, (void**)&dpOut, sizeof(float) * sizeOutstream) != IALG_EOK)
+  {
+    if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), outPtr, (void**)&dpOut, sizeof(float) * sizeOutstream) != IALG_EOK)
+    {
+      printf("Convolve2D: Unable to find output pointer\n");
+    }
+  }
+
+  // ---- CUDA Streams Optimization ----------------------------------------
+  cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
+
+  TIDL_convFillZeroPoint<float><<<GRID_SIZE(sizeOutstream, THREADS_PER_BLOCK), THREADS_PER_BLOCK, 0, stream>>>(
+      dpOut, sizeOutstream, (float)0);
+
+  if(pTIDLNet->outData.elementType == TIDL_SinglePrecFloat)
+  {
+    TIDL_cudaSaturationFloat(pTIDLNet, &satLow, &satHigh);
+    TIDL_convSaturateCudaFloat<float, float><<<GRID_SIZE(sizeOutstream, THREADS_PER_BLOCK), THREADS_PER_BLOCK, 0, stream>>>(
+        dpAcc, dpOut,
+        numBatches, numOutChannels, outHeight, outWidth,
+        outBatchPitch, outChPitch, outImPitch,
+        0, satLow, satHigh);
+  }
+
+  /* Async D2H – ordered after kernels on same stream */
+  checkCudaErr(cudaMemcpyAsync(outPtr, dpOut,
+                                sizeof(float) * (sizeOutstream - outPadOffset),
+                                cudaMemcpyDeviceToHost, stream));
+  checkCudaErr(cudaStreamSynchronize(stream));
+
 
   return 0;
 }
+
+
 
 /**
 ----------------------------------------------------------------------------
@@ -394,69 +691,121 @@ int TIDL_cudaSaturateV1(Tout **devPtrOf, int N, int C, int H, int W, int outChPi
 ----------------------------------------------------------------------------
 */
 template <class Tacc, class Tout>
-int TIDL_cudaSaturateFixedPoint(Tout **devPtrOf, int N, int C, int H, int W, int outChPitch, int outImPitch, uint8_t *outRoundBits, int32_t satLow, int32_t satHigh, int32_t enablePerChannelShift, int32_t precisionAdjustmentShift)
+int TIDL_cudaSaturateFixedPoint(
+                                 Tacc *accPtr,
+                                 Tout *outPtr,
+                                 int32_t numBatches,
+                                 int32_t numOutChannels,
+                                 int32_t height,
+                                 int32_t width,
+                                 int32_t strideHeight,
+                                 int32_t strideWidth,
+                                 int32_t outBatchPitch,
+                                 int32_t outChPitch,
+                                 int32_t outImPitch,
+                                 uint8_t *mmav2_Scales,
+                                 uint8_t *mmav2_Shifts,
+                                 int32_t outRoundBits, /*Required by V1 flow*/
+                                 int32_t minSat,
+                                 int32_t maxSat,
+                                 int32_t padVal,
+                                 int32_t outHeight,
+                                 int32_t outWidth,
+                                 int32_t outPadOffset,
+                                 int32_t mixedPrecision,
+                                 sTIDL_Layer_t *pTIDLNet
+                                )
 {
-  int sizeOstream = N * C * outChPitch;
-  int sizeRoundBits = N * C;
-  if(CUDACV[CUDNNLC].isInit == 0)
+  int sizeOutstream = numBatches * numOutChannels * outChPitch;
+  int sizeRoundBits = numOutChannels;
+
+  /*Initializations*/
+  Tacc *dpAcc;
+  Tout *dpOut;
+  uint8_t *dpScales;
+  uint8_t *dpShifts;
+  /*Get Accumulator, Output, Scale & Shift pointers:*/
+
+  /*Translate accPtr to GPU pointer */
+  if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accPtr, (void**)&dpAcc, sizeof(Tacc) * sizeOutstream) != IALG_EOK)
   {
-    cudaMalloc((void**)&CUDACV[CUDNNLC].devPtrOf, sizeOstream * sizeof(Tout) * 2);
-    cudaMemset (CUDACV[CUDNNLC].devPtrOf, 0, sizeof(Tout) * sizeOstream);
-    cudaMalloc((void**)&CUDACV[CUDNNLC].dRoundBits, sizeRoundBits * sizeof(uint8_t) * 2);
-    CUDACV[CUDNNLC].isInit = 1;
+    printf("Convolve2D: Unable to find accumulator pointer\n");
   }
-  if (enablePerChannelShift)
+
+  /*Translate outPtr to GPU pointer */
+  if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), outPtr, (void**)&dpOut, sizeof(Tout) * sizeOutstream) != IALG_EOK)
   {
-    checkCudaErr(cudaMemcpy (CUDACV[CUDNNLC].dRoundBits, outRoundBits, sizeof(uint8_t) * sizeRoundBits, cudaMemcpyHostToDevice));
+    if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), outPtr, (void**)&dpOut, sizeof(Tout) * sizeOutstream) != IALG_EOK)
+    {
+      printf("Convolve2D: Unable to find output pointer\n");
+    }
+  }
+
+  // ---- CUDA Streams Optimization ----------------------------------------
+  cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
+
+  /* --- stream: async H2D copy of output buffer ----------------------- */
+  checkCudaErr(cudaMemcpyAsync(dpOut, outPtr,
+                                sizeof(Tout) * (sizeOutstream - outPadOffset),
+                                cudaMemcpyHostToDevice, stream));
+
+  /* Fill zero-point (ordered after H2D on stream) */
+  TIDL_fillZeroPoint<Tout><<<GRID_SIZE(sizeOutstream, THREADS_PER_BLOCK), THREADS_PER_BLOCK, 0, stream>>>(
+      dpOut, (Tout)padVal,
+      numBatches, 1, 1, numOutChannels, outHeight, outWidth,
+      outBatchPitch, 1, 1, outChPitch, outImPitch);
+
+  if(mmav2_Scales != NULL && mmav2_Shifts != NULL)
+  {
+    /*Asymmetric/MMAv2 Flow*/
+    /*Translate scales & shift pointers:*/
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), mmav2_Scales, (void**)&dpScales, sizeof(uint8_t) * sizeRoundBits) != IALG_EOK)
+    {
+      printf("Convolve2D: Unable to find scales pointer\n");
+    }
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), mmav2_Shifts, (void**)&dpShifts, sizeof(uint8_t) * sizeRoundBits) != IALG_EOK)
+    {
+      printf("Convolve2D: Unable to find shifts pointer\n");
+    }
+
+    checkCudaErr(cudaMemcpyAsync(dpScales, mmav2_Scales,
+                                  sizeof(uint8_t) * sizeRoundBits,
+                                  cudaMemcpyHostToDevice, stream));
+
+    checkCudaErr(cudaMemcpyAsync(dpShifts, mmav2_Shifts,
+                                  sizeof(uint8_t) * sizeRoundBits,
+                                  cudaMemcpyHostToDevice, stream));
+
+
+    TIDL_convSaturateCudaFixedV2<Tacc, Tout><<<GRID_SIZE(sizeOutstream, THREADS_PER_BLOCK), THREADS_PER_BLOCK, 0, stream>>>(
+        (Tacc*)dpAcc, (Tout*)dpOut,
+        numBatches, numOutChannels, outHeight, outWidth,
+        outBatchPitch, outChPitch, outImPitch,
+        0, minSat, maxSat, dpScales, dpShifts);
   }
   else
   {
-    cudaMemset (CUDACV[CUDNNLC].dRoundBits, outRoundBits[0], sizeof(uint8_t) * sizeRoundBits);
-  }
-  *devPtrOf = (Tout*)CUDACV[CUDNNLC].devPtrOf;
-  
 
-  TIDL_convSaturateCuda<Tacc,Tout><<<((sizeOstream) / THREADS_PER_BLOCK) + 1,THREADS_PER_BLOCK>>>((Tacc*)CUDACV[CUDNNLC].dpAcc, *devPtrOf, N, C, H, W, outChPitch, outImPitch, (uint8_t *)CUDACV[CUDNNLC].dRoundBits, satLow, satHigh, precisionAdjustmentShift);
-  
-  return 0;
-}
-
-
-#if 1
-template <class Tacc, class Tout, class Tin>
-int TIDL_cudaSaturateFixedPointAsym(Tout **devPtrOf, int N, int C, int H, int W, int outChPitch, int outImPitch, int32_t satLow, int32_t satHigh, uint8_t* pDerivedScales, uint8_t* pDerivedShifts, int32_t padFillValue)
-{
-  int sizeOstream = N * C * outChPitch;
-  int sizeRoundBits = N * C;
-  if(CUDACV[CUDNNLC].isInit == 0)
-  {
-    cudaMalloc((void**)&CUDACV[CUDNNLC].devPtrOf, sizeOstream * sizeof(Tout) * 2);
-    cudaMemset (CUDACV[CUDNNLC].devPtrOf, 0, sizeof(Tout) * sizeOstream);
-    //cudaMalloc((void**)&CUDACV[CUDNNLC].dRoundBits, sizeRoundBits * sizeof(uint8_t) * 2);
-    cudaMalloc((void**)&CUDACV[CUDNNLC].dDerivedScales, sizeRoundBits * sizeof(uint8_t) * 2);
-    cudaMalloc((void**)&CUDACV[CUDNNLC].dDerivedShifts, sizeRoundBits * sizeof(uint8_t) * 2);
-    CUDACV[CUDNNLC].isInit = 1;
+    TIDL_convSaturateCudaFixedV1<Tacc, Tout><<<GRID_SIZE(sizeOutstream, THREADS_PER_BLOCK), THREADS_PER_BLOCK, 0, stream>>>(
+        (Tacc*)dpAcc, (Tout*)dpOut,
+        numBatches, numOutChannels, outHeight, outWidth,
+        outBatchPitch, outChPitch, outImPitch,
+        outRoundBits, minSat, maxSat, mixedPrecision);
   }
 
-  checkCudaErr(cudaMemcpy (CUDACV[CUDNNLC].dDerivedScales, pDerivedScales, sizeof(uint8_t) * sizeRoundBits, cudaMemcpyHostToDevice));
-  checkCudaErr(cudaMemcpy (CUDACV[CUDNNLC].dDerivedShifts, pDerivedShifts, sizeof(uint8_t) * sizeRoundBits, cudaMemcpyHostToDevice));
+  /* Async D2H – ordered after saturation kernel on stream */
+  checkCudaErr(cudaMemcpyAsync(outPtr, dpOut,
+                                sizeof(Tout) * (sizeOutstream - outPadOffset),
+                                cudaMemcpyDeviceToHost, stream));
+  checkCudaErr(cudaStreamSynchronize(stream));
 
-  *devPtrOf = (Tout*)CUDACV[CUDNNLC].devPtrOf;
-  
-  TIDL_convFillZeroPoint<Tout><<<((sizeOstream) / THREADS_PER_BLOCK) + 1,THREADS_PER_BLOCK>>>(*devPtrOf, sizeOstream, padFillValue);
-  TIDL_convSaturateCudaV2<Tacc,Tout,Tin><<<((sizeOstream) / THREADS_PER_BLOCK) + 1,THREADS_PER_BLOCK>>>((Tacc*)CUDACV[CUDNNLC].dpAcc, *devPtrOf, N, C, H, W, outChPitch, outImPitch, satLow, satHigh, (uint8_t*)CUDACV[CUDNNLC].dDerivedScales, (uint8_t*)CUDACV[CUDNNLC].dDerivedShifts);
-  //TIDL_convSaturateCuda<Tacc,Tout><<<((sizeOstream) / THREADS_PER_BLOCK) + 1,THREADS_PER_BLOCK>>>((Tacc*)CUDACV[CUDNNLC].dpAcc, *devPtrOf, N, C, H, W, outChPitch, outImPitch, (uint8_t *)CUDACV[CUDNNLC].dRoundBits, satLow, satHigh, precisionAdjustmentShift);
-  
-  return 0;
-}
-#endif
-
-template <>
-int TIDL_cudaSaturateFixedPoint<float, float>(float **devPtrOf, int N, int C, int H, int W, int outChPitch, int outImPitch, uint8_t *outRoundBits, int32_t satLow, int32_t satHigh, int32_t enablePerChannelShift, int32_t precisionAdjustmentShift)
-{
 
   return 0;
 }
+
+
+
+
 //END OF CUDA KERNELS
 
 /**
@@ -528,19 +877,30 @@ int TIDL_cudaConvolve2d(
   int32_t outWidth
   )
 {
+  // Check if memory manager is initialized
+  if (TIDL_cudaGetThreadManager() == NULL || !TIDL_cudaGetThreadManager()->isInitialized)
+  {
+    printf("ERROR: CUDA Memory Manager not initialized in TIDL_cudaConvolve2d\n");
+    return -1;
+  }
+
   long int  launchSize;
-  Tin      *dpIn;
-  Tw       *dpCoeffs;
-  Tb       *dpBias;
-  Tacc     *dpAcc;
+  Tin      *dpIn = NULL;
+  Tw       *dpCoeffs = NULL;
+  Tb       *dpBias = NULL;
+  Tacc     *dpAcc = NULL;
+
+  // Calculate buffer sizes
   int inSize = numTotRoi * numGroups * numInChannels * inChPitch;
   int inTxSize = inSize;
   int inputOffset = 0;
+
+  Tin *pInChannelOriginal = pInChannel;
   /*For OTF, the buffer is actually larger by a factor of topPad*/
   if(isOTFpad)
   {
     inSize += numTotRoi * numGroups * numInChannels * (topPad * inWidth);
-    pInChannel = pInChannel - (topPad * inImPitch + leftPad);
+    //pInChannel = pInChannel - (topPad * inImPitch + leftPad);
     inputOffset = topPad * inImPitch + leftPad;
   }
 
@@ -548,29 +908,140 @@ int TIDL_cudaConvolve2d(
   int filterSize = numOutChannels * numGroups * numInChannels * coeffsHeight * coeffsWidth;
   int biasSize = numTotRoi * numGroups * numOutChannels;
 
-  if(!CUDACV[CUDNNLC].isInit)
+    // Use memory manager to get or allocate GPU pointers
+    // Input buffer
+  if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), pInChannel, (void**)&dpIn, sizeof(Tin) * inTxSize) != IALG_EOK)
   {
-    checkCudaErr(cudaMalloc((void**)&(CUDACV[CUDNNLC].dpIn), (inSize) * sizeof(Tin) * 2));
-    checkCudaErr(cudaMalloc((void**)&(CUDACV[CUDNNLC].dpAcc), (outSize) * sizeof(Tacc) * 2));
-    cudaMemset(CUDACV[CUDNNLC].dpAcc, 0, sizeof(Tacc) * (outSize)); //Needs to be done always.. for min-max?
-    checkCudaErr(cudaMalloc((void**)&(CUDACV[CUDNNLC].dpCoeffs), (filterSize) * sizeof(Tw) * 2));
-    checkCudaErr(cudaMalloc((void**)&(CUDACV[CUDNNLC].dpBias), (((biasSize + 63)/64) * 64) * sizeof(Tb) * 2));
+      /*If it's the first layer - it is possible that the input doesn't have a GPU mirror pointer, allocate a new buffer*/
+      if( TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), pInChannel, (void**)&dpIn, sizeof(Tin) * inTxSize) != IALG_EOK)
+      {
+        /*Log Error*/
+      printf("Convolve2D: Unable to find input pointer\n");
+      }
   }
-  /*Grouped convolution handling in WL repeats layers, so forcing memcpy each frame..*/
-  checkCudaErr(cudaMemcpy(CUDACV[CUDNNLC].dpCoeffs, pCoeffs, sizeof(Tw) * filterSize, cudaMemcpyHostToDevice));
-  dpIn = (Tin*)CUDACV[CUDNNLC].dpIn;
-  dpCoeffs = (Tw*)CUDACV[CUDNNLC].dpCoeffs;
-  dpAcc = (Tacc*)CUDACV[CUDNNLC].dpAcc;
-  dpBias = (Tb*)CUDACV[CUDNNLC].dpBias;
-  checkCudaErr(cudaMemcpy((dpIn + inputOffset), (pInChannel + inputOffset), sizeof(Tin) * inTxSize, cudaMemcpyHostToDevice));
-  if(biasSize > 0)
+
+  /* ---- Coefficients buffer --------------------------------------------- */
+  /* Track whether a fresh H2D upload is needed (first-use allocation only).
+   * Once weights are resident on the GPU they are not re-uploaded across
+   * inference calls for the same layer. */
+  bool needsCopyCoeffs = false;
+  if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), pCoeffs, (void**)&dpCoeffs, sizeof(Tin) * filterSize) != IALG_EOK)
   {
-    checkCudaErr(cudaMemcpy(dpBias, pBias, sizeof(Tb) * biasSize, cudaMemcpyHostToDevice));
+    if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), pCoeffs, (void**)&dpCoeffs, filterSize * sizeof(Tw)) != IALG_EOK)
+    {
+      printf("Convolve2D: Unable to find coefficient pointer\n");
+    }
+    needsCopyCoeffs = true;
   }
+
+  // Accumulator (output) buffer
+  if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accPtr, (void**)&dpAcc, sizeof(Tacc) * outSize) != IALG_EOK)
+  {
+    printf("Convolve2D: Unable to find accumulator pointer\n");
+  }
+
+  if(enableBias && biasSize > 0)
+  {
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), pBias, (void**)&dpBias, sizeof(Tb) * biasSize) != IALG_EOK)
+    {
+      if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), pBias, (void**)&dpBias, sizeof(Tb) * biasSize) != IALG_EOK)
+      {
+        printf("Convolve2D: Unable to find bias pointer\n");
+      }
+    }
+  }
+
+  // ---- CUDA Streams Optimization ----------------------------------------
+  cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
+
+  checkCudaErr(cudaMemsetAsync(dpAcc, 0, sizeof(Tacc) * outSize, stream));
+
+  checkCudaErr(cudaMemcpyAsync(dpIn, pInChannelOriginal,
+                                sizeof(Tin) * inTxSize,
+                                cudaMemcpyHostToDevice, stream));
+
+  if(needsCopyCoeffs)
+    checkCudaErr(cudaMemcpyAsync(dpCoeffs, pCoeffs,
+                                  filterSize * sizeof(Tw),
+                                  cudaMemcpyHostToDevice, stream));
+
+  if(enableBias && biasSize > 0 && dpBias != NULL)
+    checkCudaErr(cudaMemcpyAsync(dpBias, pBias,
+                                  sizeof(Tb) * biasSize,
+                                  cudaMemcpyHostToDevice, stream));
+
+
   launchSize = numTotRoi * numGroups * numOutChannels * outWidth * outHeight;
 
-TIDL_cudaConvKernel<<<(launchSize / THREADS_PER_BLOCK) + 1,THREADS_PER_BLOCK>>>(
-                                                                          dpIn,
+  if(coeffsWidth == 1 && coeffsHeight == 1)
+  {
+    // Optimized 1x1 pointwise convolution kernel
+    TIDL_cudaConvKernel1x1<<<GRID_SIZE(launchSize, THREADS_PER_BLOCK),THREADS_PER_BLOCK, 0, stream>>>(
+                                                                          dpIn - inputOffset,
+                                                                          dpCoeffs,
+                                                                          dpBias,
+                                                                          dpAcc,
+                                                                          min,
+                                                                          max,
+                                                                          numTotRoi,
+                                                                          numGroups,
+                                                                          numInChannels,
+                                                                          numOutChannels,
+                                                                          inChPitch,
+                                                                          outChPitch,
+                                                                          outWidth,
+                                                                          outHeight,
+                                                                          inImPitch,
+                                                                          outImPitch,
+                                                                          strideWidth,
+                                                                          strideHeight,
+                                                                          enableBias,
+                                                                          isOTFpad,
+                                                                          leftPad,
+                                                                          topPad,
+                                                                          padVal,
+                                                                          inHeight,
+                                                                          inWidth
+                                                                         );
+  }
+  else if(coeffsWidth == 3 && coeffsHeight == 3)
+  {
+    // Optimized 3x3 convolution kernel with shared memory for coefficients
+    TIDL_cudaConvKernel3x3<<<GRID_SIZE(launchSize, THREADS_PER_BLOCK),THREADS_PER_BLOCK, 0, stream>>>(
+                                                                          dpIn - inputOffset,
+                                                                          dpCoeffs,
+                                                                          dpBias,
+                                                                          dpAcc,
+                                                                          min,
+                                                                          max,
+                                                                          numTotRoi,
+                                                                          numGroups,
+                                                                          numInChannels,
+                                                                          numOutChannels,
+                                                                          inChPitch,
+                                                                          outChPitch,
+                                                                          outWidth,
+                                                                          outHeight,
+                                                                          inImPitch,
+                                                                          outImPitch,
+                                                                          dilationWidth,
+                                                                          dilationHeight,
+                                                                          strideWidth,
+                                                                          strideHeight,
+                                                                          enableBias,
+                                                                          isOTFpad,
+                                                                          leftPad,
+                                                                          topPad,
+                                                                          padVal,
+                                                                          inHeight,
+                                                                          inWidth
+                                                                         );
+  }
+  else
+  {
+    // General kernel for arbitrary filter sizes (fallback)
+    TIDL_cudaConvKernel<<<GRID_SIZE(launchSize, THREADS_PER_BLOCK),THREADS_PER_BLOCK, 0, stream>>>(
+                                                                          dpIn - inputOffset,
                                                                           dpCoeffs,
                                                                           dpBias,
                                                                           dpAcc,
@@ -601,16 +1072,15 @@ TIDL_cudaConvKernel<<<(launchSize / THREADS_PER_BLOCK) + 1,THREADS_PER_BLOCK>>>(
                                                                           inHeight,
                                                                           inWidth
                                                                          );
-  checkCudaErr(cudaDeviceSynchronize());
-  checkCudaErr(cudaMemcpy(accPtr, dpAcc, sizeof(Tacc) * outSize, cudaMemcpyDeviceToHost));
-  minmax_Thrust(outSize, dpAcc, min, max);
+  }
+
+  /* --- Per-stream sync – does not stall unrelated GPU work ---------------- */
+  checkCudaErr(cudaStreamSynchronize(stream));
+  /* --- Cleanup (only when handles were created locally) ------------------- */
+
   return 0;
 }
 
-void TIDL_cudaSetInitFlag(int32_t layerIdx)
-{
-  CUDACV[layerIdx].isInit = 1;
-}
 
 //Instantiations:
 
@@ -635,58 +1105,14 @@ template int TIDL_cudaConvolve2d<signed char, short, long, long>(signed char*, s
 template int TIDL_cudaConvolve2d<unsigned short, short, long, long>(unsigned short*, short*, long*, long*, long*, long*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 template int TIDL_cudaConvolve2d<short, short, long, long>(short*, short*, long*, long*, long*, long*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 template int TIDL_cudaConvolve2d<unsigned char, short, long, long>(unsigned char*, short*, long*, long*, long*, long*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaSaturateV1<int, unsigned short>(unsigned short**, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaSaturateV1<int, short>(short**, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaSaturateV1<float, short>(short**, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaSaturateV1<float, float>(float**, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaSaturateV1<float, unsigned short>(unsigned short**, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaSaturateV1<int, unsigned char>(unsigned char**, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaSaturateV1<int, signed char>(signed char**, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaSaturateV1<long, unsigned char>(unsigned char**, int, int, int, int, int, int, int, long, long);
-template int TIDL_cudaSaturateV1<long, signed char>(signed char**, int, int, int, int, int, int, int, long, long);
-template int TIDL_cudaSaturateV1<int, float>(float**, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaSaturateV1<float, unsigned char>(unsigned char**, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaSaturateV1<float, signed char>(signed char**, int, int, int, int, int, int, int, float, float);
 
-template int TIDL_cudaSaturateFixedPoint<int, short>(short**, int, int, int, int, int, int, unsigned char *, int, int, int, int);
-template int TIDL_cudaSaturateFixedPoint<int, unsigned char>(unsigned char**, int, int, int, int, int, int, unsigned char *, int, int, int, int);
-template int TIDL_cudaSaturateFixedPoint<int, signed char>(signed char**, int, int, int, int, int, int, unsigned char *, int, int, int, int);
-template int TIDL_cudaSaturateFixedPoint<long, short>(short**, int, int, int, int, int, int, unsigned char *, int, int, int, int);
-template int TIDL_cudaSaturateFixedPoint<int, unsigned short>(unsigned short**, int, int, int, int, int, int, unsigned char *, int, int, int, int);
-template int TIDL_cudaSaturateFixedPoint<long, signed char>(signed char**, int, int, int, int, int, int, unsigned char *, int, int, int, int);
-template int TIDL_cudaSaturateFixedPoint<long, unsigned short>(unsigned short**, int, int, int, int, int, int, unsigned char *, int, int, int, int);
-template int TIDL_cudaSaturateFixedPoint<long, unsigned char>(unsigned char**, int, int, int, int, int, int, unsigned char *, int, int, int, int);
-template int TIDL_cudaSaturateFixedPoint<float, float>(float**, int, int, int, int, int, int, unsigned char *, int, int, int, int);
-template int TIDL_cudaSaturateFixedPointAsym<int, signed char, signed char>(signed char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, unsigned char, unsigned short>(unsigned char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, signed char, short>(signed char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, unsigned short, unsigned short>(unsigned short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, short, unsigned short>(short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, signed char, unsigned short>(signed char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, unsigned char, signed char>(unsigned char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, short, signed char>(short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, unsigned short, signed char>(unsigned short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, unsigned char, unsigned char>(unsigned char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<float, float, float>(float**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, signed char, unsigned char>(signed char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, short, unsigned char>(short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, unsigned short, unsigned char>(unsigned short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, signed char, short>(signed char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, unsigned char, short>(unsigned char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, unsigned short, short>(unsigned short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, short, short>(short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, signed char, unsigned short>(signed char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, unsigned char, unsigned short>(unsigned char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, short, unsigned short>(short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<int, unsigned short, unsigned short>(unsigned short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, signed char, signed char>(signed char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, unsigned char, signed char>(unsigned char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, short, signed char>(short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, unsigned short, signed char>(unsigned short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, short, unsigned char>(short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, unsigned short, unsigned char>(unsigned short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, unsigned short, short>(unsigned short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, signed char, unsigned char>(signed char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, unsigned char, unsigned char>(unsigned char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, unsigned char, short>(unsigned char**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
-template int TIDL_cudaSaturateFixedPointAsym<long, short, short>(short**, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*,int);
+
+template int TIDL_cudaSaturateFixedPoint<float, float>(float*, float*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int,int,  int, int, int, int, sTIDL_Layer_t*);
+template int TIDL_cudaSaturateFixedPoint<int, unsigned short>(int*, unsigned short*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
+template int TIDL_cudaSaturateFixedPoint<long, unsigned short>(long*, unsigned short*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
+template int TIDL_cudaSaturateFixedPoint<long, signed char>(long*, signed char*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
+template int TIDL_cudaSaturateFixedPoint<int, unsigned char>(int*, unsigned char*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
+template int TIDL_cudaSaturateFixedPoint<long, short>(long*, short*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
+template int TIDL_cudaSaturateFixedPoint<int, short>(int*, short*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
+template int TIDL_cudaSaturateFixedPoint<int, signed char>(int*, signed char*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
+template int TIDL_cudaSaturateFixedPoint<long, unsigned char>(long*, unsigned char*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);

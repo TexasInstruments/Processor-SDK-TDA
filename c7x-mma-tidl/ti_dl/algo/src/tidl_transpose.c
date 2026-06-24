@@ -128,9 +128,18 @@ int32_t TIDL_transposeProcessNew(TIDL_NetworkCommonParams *commonParams,
     {
       TIDL_transposeRefProcess<uint16_t, uint16_t>((uint16_t *)inPtrs[0], (uint16_t *)outPtrs[0], inDataParams, tidlLayer);
     }
-    else
+    else if (inDataParams->elementType == TIDL_SignedShort)
     {
       TIDL_transposeRefProcess<int16_t, int16_t>((int16_t *)inPtrs[0], (int16_t *)outPtrs[0], inDataParams, tidlLayer);
+    }
+    else if (inDataParams->elementType == TIDL_SignedWord)
+    {
+      TIDL_transposeRefProcess<int32_t, int32_t>((int32_t *)inPtrs[0], (int32_t *)outPtrs[0], inDataParams, tidlLayer);
+    }
+    else
+    {
+      tidl_printf(0,"TIDL_TransposeLayer inElementType is  not supported !!!\n ");
+      status = TIDL_ERR_FAILURE;
     }
 
     if (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)

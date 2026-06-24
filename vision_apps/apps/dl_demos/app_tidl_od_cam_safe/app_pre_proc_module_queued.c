@@ -510,6 +510,11 @@ vx_status app_init_pre_proc_queued(vx_context context,
         }
     }
 
+    /* Use inChannelPitch from TIDL IO buf desc so the preproc kernel writes
+     * each channel at the same stride the TIDL inference kernel reads with.
+     * TIDL may apply DDR alignment that makes inChannelPitch != paddedW * paddedH. */
+    local_preproc_config->channel_pitch = (vx_uint32)ioBufDesc->inChannelPitch[0];
+
     if (status == VX_SUCCESS)
     {
         preProcObj->config = vxCreateUserDataObject(context,

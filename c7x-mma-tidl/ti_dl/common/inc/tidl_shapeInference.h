@@ -89,6 +89,18 @@
 #ifndef TIDL_SHAPE_INFERENCE_H_
 #define TIDL_SHAPE_INFERENCE_H_
 
+/* Helper macro: resolves to the shape-inference function pointer on
+ * HOST_EMULATION (import tool) builds, or NULL on DSP/device builds.
+ * Used in gTIDL_ShapeInferDispatch[] for operators whose shape inference
+ * is only needed at import time and not exercised at DSP runtime due to
+ * dynamic not yet supported for those operators.
+ */
+#ifdef HOST_EMULATION
+#define TIDL_SHAPE_FN_IMPORT_ONLY(fn) (fn)
+#else
+#define TIDL_SHAPE_FN_IMPORT_ONLY(fn) NULL
+#endif
+
 #include <stdint.h>
 #include "itidl_ti.h"
 
@@ -342,6 +354,31 @@ int32_t TIDL_shapeInfer_Transpose(
     sTIDL_DataParams_t        *outDataParam,
     TIDL_ShapeContext_t       *context);
 
+
+/**
+ * @brief   NonZero shape inference.
+ *
+ *          Infers the output shape for the NonZero operator.  The output is a
+ *          2-D tensor of shape [TIDL_DIM_MAX, N], where N is the flat element
+ *          count of the input tensor (product of all input dimensions).
+ *          Because the actual number of non-zero elements is unknown at
+ *          compile time, width dimension is marked as dynamic
+ *          (dynDimMask = 0x20).
+ *
+ *          HOST_EMULATION compile-time path (context->isCompileTime != 0):
+ *            Sets conservative worst-case output dimensions:
+ *              HEIGHT = TIDL_DIM_MAX   (one row per input dimension)
+ *              WIDTH  = product of all input dimValues   (max non-zero count)
+ *
+ */
+int32_t TIDL_shapeInfer_NonZero(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context
+);
+
 /**
  * @brief   Resize shape inference.
  *
@@ -357,6 +394,23 @@ int32_t TIDL_shapeInfer_Transpose(
  *          Preconditions : nIn >= 1.
  */
 int32_t TIDL_shapeInfer_Resize(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context);
+
+/**
+ * @brief   Attention shape inference.
+ *
+ *          Computed the spatial dimensions (HEIGHT, WIDTH) of the input tensor
+ *          by the key and value input dimensions.
+
+ *          All other dimensions (BATCH, DIM1, DIM2, NUMCH) are copied from
+ *          input[0].
+ *
+ */
+int32_t TIDL_shapeInfer_Attention(
     sTIDL_LayerParams_t       *layerParams,
     sTIDL_DataParams_t        *inDataParams[],
     int32_t                    numInBufs,
@@ -405,6 +459,20 @@ int32_t TIDL_shapeInfer_GridSample(
     TIDL_ShapeContext_t       *context);
 
 /**
+ * @brief   GatherElements
+ *
+ *          Computes the output shape of a GatherElements operation:
+ *          For GatherElements operator Output shape should be equal to the indices shape
+ *          input[0] = data tensor,  input[1] = indices tensor.
+ */
+int32_t TIDL_shapeInfer_GatherElements(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context);
+
+/**
  * @brief   Gather shape inference.
  *
  *          Computes the output shape of a Gather operation along
@@ -422,6 +490,24 @@ int32_t TIDL_shapeInfer_GridSample(
  *          Preconditions : nIn >= 1; nIn >= 2 when isIdxScalar == 0.
  */
 int32_t TIDL_shapeInfer_Gather(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context);
+
+/**
+ *@brief  GatherND shape inference.
+ *
+ *        Computes the output shape of a GatherND operation:
+ *
+ *        Case 1 — Without batchDims (gatherNDParams.batchDims == 0):
+ *             output_shape = indices_shape[:-1] + data_shape[indices_shape[-1]:]
+ *
+ *        Case 1 — With batchDims (gatherNDParams.batchDims > 0):
+ *             output_shape = data_shape[:batch_dims] + indices_shape[batch_dims:-1] + data_shape[batch_dims + indices_shape[-1]:]
+ */
+int32_t TIDL_shapeInfer_GatherND(
     sTIDL_LayerParams_t       *layerParams,
     sTIDL_DataParams_t        *inDataParams[],
     int32_t                    numInBufs,
@@ -633,7 +719,7 @@ int32_t TIDL_shapeInfer_TopK(
  *            HEIGHT = num_directions
  *            WIDTH  = hidden_size
  *
- *          num_directions = 2 when lstmParams.direction == TIDL_RNNBidirectional,
+ *          num_directions = 2 when lstmParams.direction == TIDL_RecurrentBidirectional,
  *          otherwise 1.
  *
  *          Preconditions : nIn >= 1.
@@ -669,7 +755,7 @@ int32_t TIDL_shapeInfer_LSTM(
  *            HEIGHT = num_directions
  *            WIDTH  = hidden_size
  *
- *          num_directions = 2 when gruParams.direction == TIDL_RNNBidirectional,
+ *          num_directions = 2 when gruParams.direction == TIDL_RecurrentBidirectional,
  *          otherwise 1.
  *
  *          Preconditions : nIn >= 1.
@@ -705,7 +791,7 @@ int32_t TIDL_shapeInfer_GRU(
  *            HEIGHT = num_directions
  *            WIDTH  = hidden_size
  *
- *          num_directions = 2 when rnnParams.direction == TIDL_RNNBidirectional,
+ *          num_directions = 2 when rnnParams.direction == TIDL_RecurrentBidirectional,
  *          otherwise 1.
  *
  *          Preconditions : nIn >= 1.
@@ -933,6 +1019,61 @@ int32_t TIDL_shapeInfer_BatchNorm(
  *          Preconditions : nIn >= 1.
  */
 int32_t TIDL_shapeInfer_Crop(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context);
+
+/**
+ * @brief   Cast shape inference.
+ *
+ *          Cast does not change the output shape — it only changes the
+ *          element type.  This function copies all input dimension values
+ *          to the output unchanged.
+ *
+ *          The output element type is set by the compile-time wrapper
+ *          (TIDL_tfOutReshapeCastLayer) from layerPCParams.castParams.castTo
+ *          and is NOT updated here.
+ *
+ *          Preconditions : nIn >= 1.
+ */
+int32_t TIDL_shapeInfer_Cast(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context);
+
+/**
+ * @brief   Shape operator shape inference.
+ *
+ *          Computes the output shape of an ONNX/TIDL Shape operation:
+ *            All output dimensions are set to 1 except TIDL_DIM_WIDTH,
+ *            which is set to (shapeParams.end - shapeParams.start).
+ *
+ *          shapeParams.start and .end are already normalised to
+ *          TIDL-dimension indices by the importer (tidl_parse_onnx_shape.cpp).
+ *
+ *          Preconditions : layerParams != NULL.
+ */
+int32_t TIDL_shapeInfer_Shape(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context);
+
+/**
+ * @brief   Size operator shape inference.
+ *
+ *          The ONNX Size operator returns the total number of elements in
+ *          the input tensor as a scalar.  The output is always a single
+ *          element, so all output dimensions are set to 1.
+ *
+ *          Preconditions : outDataParam != NULL.
+ */
+int32_t TIDL_shapeInfer_Size(
     sTIDL_LayerParams_t       *layerParams,
     sTIDL_DataParams_t        *inDataParams[],
     int32_t                    numInBufs,

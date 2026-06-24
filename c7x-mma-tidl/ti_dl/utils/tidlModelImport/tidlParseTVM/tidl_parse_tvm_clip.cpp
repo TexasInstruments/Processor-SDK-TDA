@@ -69,16 +69,15 @@ int32_t TidlParseTVM::parse<OpNameStr("clip")>()
 {
     int32_t status = 0;
     layer.layerType = TIDL_ClipLayer;
-    layer.actParams.actType = TIDL_Clip;
+
 
     auto attrs = call->attrs.as<ClipAttrs>();
     auto a_min = attrs->a_min;
     auto a_max = attrs->a_max;
 
-    layer.layerType = TIDL_ClipLayer;
-    layer.actParams.actType = TIDL_Clip;
-    layer.actParams.clipMin = a_min;
-    layer.actParams.clipMax = a_max;
+    layer.clipParams.isClipEnabled = 1;
+    layer.clipParams.clipMin = a_min;
+    layer.clipParams.clipMax = a_max;
 
     return 0;
 }

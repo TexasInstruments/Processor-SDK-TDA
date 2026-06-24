@@ -1360,6 +1360,429 @@ TEST_WITH_ARG(tivxTIDL, testMultiTIDL, ArgMulti, PARAMETERS_MULTI)
     tivx_clr_debug_zone(VX_ZONE_INFO);
 }
 
+TEST_WITH_ARG(tivxTIDL, testTIDLReplicate, Arg, PARAMETERS)
+{
+    vx_context context = context_->vx_context_;
+    vx_graph graph = 0;
+    vx_node node = 0;
+    vx_kernel kernel = 0;
+
+    vx_user_data_object  config;
+    vx_user_data_object  network;
+    vx_user_data_object  createParams;
+    vx_user_data_object  traceData;
+
+    vx_object_array in_args_arr = 0;
+    vx_object_array out_args_arr = 0;
+    vx_object_array input_tensor_arr[1] = {0};
+    vx_object_array output_tensor_arr[1] = {0};
+
+    vx_int32 refid = 895;
+    uint32_t num_channels = 2;
+    uint32_t ch;
+
+    char filepath[MAXPATHLENGTH];
+    size_t sz;
+
+    tivx_clr_debug_zone(VX_ZONE_INFO);
+
+    ASSERT(vx_true_e == tivxIsTargetEnabled(arg_->target_string_1));
+
+    {
+        uint32_t num_input_tensors  = 0;
+        uint32_t num_output_tensors = 0;
+
+        tivxTIDLLoadKernels(context);
+        CT_RegisterForGarbageCollection(context, ct_teardown_tidl_kernels, CT_GC_OBJECT);
+
+        sz = snprintf(filepath, MAXPATHLENGTH, "%s/tivx/tidl_models/%s", ct_get_test_file_path(), arg_->config);
+        ASSERT(sz < MAXPATHLENGTH);
+
+        ASSERT_VX_OBJECT(config = readConfig(context, &filepath[0], &num_input_tensors, &num_output_tensors), (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+        ASSERT_VX_OBJECT(kernel = tivxAddKernelTIDL(context, num_input_tensors, num_output_tensors), VX_TYPE_KERNEL);
+
+        ASSERT_VX_OBJECT(graph = vxCreateGraph(context), VX_TYPE_GRAPH);
+
+        sz = snprintf(filepath, MAXPATHLENGTH, "%s/tivx/tidl_models/%s", ct_get_test_file_path(), arg_->network);
+        ASSERT(sz < MAXPATHLENGTH);
+
+        ASSERT_VX_OBJECT(network = readNetwork(context, &filepath[0]), (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+        ASSERT_VX_OBJECT(createParams = setCreateParams(context, arg_->read_raw_padded, arg_->trace_write_flag, arg_->coreId), (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+        vx_user_data_object inArgs_template = setInArgs(context);
+        ASSERT_VX_OBJECT(inArgs_template, (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+        ASSERT_VX_OBJECT(in_args_arr = vxCreateObjectArray(context, (vx_reference)inArgs_template, num_channels), VX_TYPE_OBJECT_ARRAY);
+        VX_CALL(vxReleaseUserDataObject(&inArgs_template));
+
+        vx_user_data_object outArgs_template = setOutArgs(context);
+        ASSERT_VX_OBJECT(outArgs_template, (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+        ASSERT_VX_OBJECT(out_args_arr = vxCreateObjectArray(context, (vx_reference)outArgs_template, num_channels), VX_TYPE_OBJECT_ARRAY);
+        VX_CALL(vxReleaseUserDataObject(&outArgs_template));
+
+        vx_tensor input_template = createInputTensor(context, config);
+        ASSERT_VX_OBJECT(input_template, (enum vx_type_e)VX_TYPE_TENSOR);
+        ASSERT_VX_OBJECT(input_tensor_arr[0] = vxCreateObjectArray(context, (vx_reference)input_template, num_channels), VX_TYPE_OBJECT_ARRAY);
+        VX_CALL(vxReleaseTensor(&input_template));
+
+        vx_tensor output_template = createOutputTensor(context, config);
+        ASSERT_VX_OBJECT(output_template, (enum vx_type_e)VX_TYPE_TENSOR);
+        ASSERT_VX_OBJECT(output_tensor_arr[0] = vxCreateObjectArray(context, (vx_reference)output_template, num_channels), VX_TYPE_OBJECT_ARRAY);
+        VX_CALL(vxReleaseTensor(&output_template));
+
+        /* Load input data for each channel */
+        for(ch = 0; ch < num_channels; ch++)
+        {
+            vx_tensor input_tensor = (vx_tensor)vxGetObjectArrayItem(input_tensor_arr[0], ch);
+            ASSERT_VX_OBJECT(input_tensor, (enum vx_type_e)VX_TYPE_TENSOR);
+
+            if(arg_->read_raw_padded)
+            {
+                sz = snprintf(filepath, MAXPATHLENGTH, "tivx/tidl_models/airshow_256x256.y");
+                ASSERT(sz < MAXPATHLENGTH);
+                VX_CALL(readInputRawPadded(context, config, &input_tensor, &filepath[0]));
+            }
+            else
+            {
+                sz = snprintf(filepath, MAXPATHLENGTH, "tivx/tidl_models/airshow_256x256.bmp");
+                ASSERT(sz < MAXPATHLENGTH);
+                VX_CALL(readInput(context, config, &input_tensor, &filepath[0]));
+            }
+
+            VX_CALL(vxReleaseTensor(&input_tensor));
+        }
+
+        if(arg_->trace_write_flag == 1)
+        {
+            ASSERT_VX_OBJECT(traceData = vxCreateUserDataObject(context, "TIDL_traceData", TIVX_TIDL_TRACE_DATA_SIZE, NULL ), (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+        }
+        else
+        {
+            traceData = NULL;
+        }
+
+        vx_user_data_object inArgs_0 = (vx_user_data_object)vxGetObjectArrayItem(in_args_arr, 0);
+        vx_user_data_object outArgs_0 = (vx_user_data_object)vxGetObjectArrayItem(out_args_arr, 0);
+        vx_tensor input_0 = (vx_tensor)vxGetObjectArrayItem(input_tensor_arr[0], 0);
+        vx_tensor output_0 = (vx_tensor)vxGetObjectArrayItem(output_tensor_arr[0], 0);
+
+        ASSERT_VX_OBJECT(inArgs_0, (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+        ASSERT_VX_OBJECT(outArgs_0, (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+        ASSERT_VX_OBJECT(input_0, (enum vx_type_e)VX_TYPE_TENSOR);
+        ASSERT_VX_OBJECT(output_0, (enum vx_type_e)VX_TYPE_TENSOR);
+
+        vx_reference params[] = {
+                (vx_reference)config,
+                (vx_reference)network,
+                (vx_reference)createParams,
+                (vx_reference)inArgs_0,
+                (vx_reference)outArgs_0,
+                (vx_reference)traceData
+        };
+
+        ASSERT_VX_OBJECT(node = tivxTIDLNode(graph, kernel, params, &input_0, &output_0), VX_TYPE_NODE);
+
+        VX_CALL(vxSetNodeTarget(node, VX_TARGET_STRING, arg_->target_string_1));
+
+        VX_CALL(vxReleaseUserDataObject(&inArgs_0));
+        VX_CALL(vxReleaseUserDataObject(&outArgs_0));
+        VX_CALL(vxReleaseTensor(&input_0));
+        VX_CALL(vxReleaseTensor(&output_0));
+
+        /* Configure replication */
+        vx_bool replicate[8];
+        replicate[0] = vx_false_e;  /* config - shared */
+        replicate[1] = vx_false_e;  /* network - shared */
+        replicate[2] = vx_false_e;  /* createParams - shared */
+        replicate[3] = vx_true_e;   /* inArgs - replicated */
+        replicate[4] = vx_true_e;   /* outArgs - replicated */
+        replicate[5] = vx_false_e;  /* traceData - shared */
+        replicate[6] = vx_true_e;   /* input_tensor[0] - replicated */
+        replicate[7] = vx_true_e;   /* output_tensor[0] - replicated */
+
+        VX_CALL(vxReplicateNode(graph, node, replicate, 8));
+
+        #ifdef DEBUG_TEST_TIDL
+        printf("Verifying graph ...\n");
+        #endif
+
+        VX_CALL(vxVerifyGraph(graph));
+
+        #ifdef DEBUG_TEST_TIDL
+        printf("Running graph ...\n");
+        #endif
+        VX_CALL(vxProcessGraph(graph));
+
+        #ifdef DEBUG_TEST_TIDL
+        printf("Showing output ...\n");
+        #endif
+
+        /* Validate output for each channel */
+        for(ch = 0; ch < num_channels; ch++)
+        {
+            vx_tensor output = (vx_tensor)vxGetObjectArrayItem(output_tensor_arr[0], ch);
+            ASSERT_VX_OBJECT(output, (enum vx_type_e)VX_TYPE_TENSOR);
+
+            #ifdef DEBUG_TEST_TIDL
+            printf("Channel %d: ", ch);
+            #endif
+            VX_CALL(displayOutput(config, &output, refid));
+            VX_CALL(vxReleaseTensor(&output));
+        }
+
+        VX_CALL(vxReleaseNode(&node));
+        VX_CALL(vxReleaseGraph(&graph));
+
+        ASSERT(node == 0);
+        ASSERT(graph == 0);
+
+        VX_CALL(vxReleaseUserDataObject(&config));
+        VX_CALL(vxReleaseUserDataObject(&network));
+        VX_CALL(vxReleaseUserDataObject(&createParams));
+
+        if(arg_->trace_write_flag == 1)
+        {
+           VX_CALL(vxReleaseUserDataObject(&traceData));
+        }
+
+        VX_CALL(vxReleaseObjectArray(&in_args_arr));
+        VX_CALL(vxReleaseObjectArray(&out_args_arr));
+        VX_CALL(vxReleaseObjectArray(&input_tensor_arr[0]));
+        VX_CALL(vxReleaseObjectArray(&output_tensor_arr[0]));
+
+        ASSERT(config == 0);
+        ASSERT(network == 0);
+        ASSERT(createParams == 0);
+        ASSERT(in_args_arr == 0);
+        ASSERT(out_args_arr == 0);
+        ASSERT(input_tensor_arr[0] == 0);
+        ASSERT(output_tensor_arr[0] == 0);
+
+        tivxTIDLUnLoadKernels(context);
+
+        vxRemoveKernel(kernel);
+    }
+    tivx_clr_debug_zone(VX_ZONE_INFO);
+}
+
+#if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
+TEST_WITH_ARG(tivxTIDL, testTIDLObjArrayReplicate, Arg, PARAMETERS)
+{
+    vx_context context = context_->vx_context_;
+    vx_graph graph = 0;
+    vx_node node = 0;
+
+    vx_user_data_object  config;
+    vx_user_data_object  network;
+    vx_user_data_object  createParams;
+    vx_user_data_object  traceData;
+
+    vx_object_array in_args_arr = 0;
+    vx_object_array out_args_arr = 0;
+    vx_object_array input_tensor_arr[1] = {0};
+    vx_object_array output_tensor_arr[1] = {0};
+
+    vx_int32 refid = 895;
+    uint32_t num_channels = 2;
+    uint32_t ch;
+
+    char filepath[MAXPATHLENGTH];
+    size_t sz;
+
+    tivx_clr_debug_zone(VX_ZONE_INFO);
+
+    ASSERT(vx_true_e == tivxIsTargetEnabled(arg_->target_string_1));
+
+    {
+        uint32_t num_input_tensors  = 0;
+        uint32_t num_output_tensors = 0;
+
+        tivxTIDLLoadKernels(context);
+        CT_RegisterForGarbageCollection(context, ct_teardown_tidl_kernels, CT_GC_OBJECT);
+
+        sz = snprintf(filepath, MAXPATHLENGTH, "%s/tivx/tidl_models/%s", ct_get_test_file_path(), arg_->config);
+        ASSERT(sz < MAXPATHLENGTH);
+
+        ASSERT_VX_OBJECT(config = readConfig(context, &filepath[0], &num_input_tensors, &num_output_tensors), (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+        ASSERT_VX_OBJECT(graph = vxCreateGraph(context), VX_TYPE_GRAPH);
+
+        sz = snprintf(filepath, MAXPATHLENGTH, "%s/tivx/tidl_models/%s", ct_get_test_file_path(), arg_->network);
+        ASSERT(sz < MAXPATHLENGTH);
+
+        ASSERT_VX_OBJECT(network = readNetwork(context, &filepath[0]), (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+        ASSERT_VX_OBJECT(createParams = setCreateParams(context, arg_->read_raw_padded, arg_->trace_write_flag, arg_->coreId), (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+        vx_user_data_object inArgs_template = setInArgs(context);
+        ASSERT_VX_OBJECT(inArgs_template, (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+        ASSERT_VX_OBJECT(in_args_arr = vxCreateObjectArray(context, (vx_reference)inArgs_template, num_channels), VX_TYPE_OBJECT_ARRAY);
+        VX_CALL(vxReleaseUserDataObject(&inArgs_template));
+
+        vx_user_data_object outArgs_template = setOutArgs(context);
+        ASSERT_VX_OBJECT(outArgs_template, (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+        ASSERT_VX_OBJECT(out_args_arr = vxCreateObjectArray(context, (vx_reference)outArgs_template, num_channels), VX_TYPE_OBJECT_ARRAY);
+        VX_CALL(vxReleaseUserDataObject(&outArgs_template));
+
+        vx_tensor input_template = createInputTensor(context, config);
+        ASSERT_VX_OBJECT(input_template, (enum vx_type_e)VX_TYPE_TENSOR);
+
+        vx_object_array input_single = createObjArray(context, input_template);
+        ASSERT_VX_OBJECT(input_single, VX_TYPE_OBJECT_ARRAY);
+        VX_CALL(vxReleaseTensor(&input_template));
+
+        ASSERT_VX_OBJECT(input_tensor_arr[0] = vxCreateObjectArray(context, (vx_reference)input_single, num_channels), VX_TYPE_OBJECT_ARRAY);
+        VX_CALL(vxReleaseObjectArray(&input_single));
+
+        vx_tensor output_template = createOutputTensor(context, config);
+        ASSERT_VX_OBJECT(output_template, (enum vx_type_e)VX_TYPE_TENSOR);
+
+        vx_object_array output_single = createObjArray(context, output_template);
+        ASSERT_VX_OBJECT(output_single, VX_TYPE_OBJECT_ARRAY);
+        VX_CALL(vxReleaseTensor(&output_template));
+
+        ASSERT_VX_OBJECT(output_tensor_arr[0] = vxCreateObjectArray(context, (vx_reference)output_single, num_channels), VX_TYPE_OBJECT_ARRAY);
+        VX_CALL(vxReleaseObjectArray(&output_single));
+
+        /* Load input data for each channel */
+        for(ch = 0; ch < num_channels; ch++)
+        {
+            vx_object_array channel_obj_array = (vx_object_array)vxGetObjectArrayItem(input_tensor_arr[0], ch);
+            ASSERT_VX_OBJECT(channel_obj_array, VX_TYPE_OBJECT_ARRAY);
+
+            vx_tensor input_tensor = (vx_tensor)vxGetObjectArrayItem(channel_obj_array, 0);
+            ASSERT_VX_OBJECT(input_tensor, (enum vx_type_e)VX_TYPE_TENSOR);
+
+            if(arg_->read_raw_padded)
+            {
+                sz = snprintf(filepath, MAXPATHLENGTH, "tivx/tidl_models/airshow_256x256.y");
+                ASSERT(sz < MAXPATHLENGTH);
+                VX_CALL(readInputRawPadded(context, config, &input_tensor, &filepath[0]));
+            }
+            else
+            {
+                sz = snprintf(filepath, MAXPATHLENGTH, "tivx/tidl_models/airshow_256x256.bmp");
+                ASSERT(sz < MAXPATHLENGTH);
+                VX_CALL(readInput(context, config, &input_tensor, &filepath[0]));
+            }
+
+            VX_CALL(vxReleaseTensor(&input_tensor));
+            VX_CALL(vxReleaseObjectArray(&channel_obj_array));
+        }
+
+        if(arg_->trace_write_flag == 1)
+        {
+            ASSERT_VX_OBJECT(traceData = vxCreateUserDataObject(context, "TIDL_traceData", TIVX_TIDL_TRACE_DATA_SIZE, NULL ), (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+        }
+        else
+        {
+            traceData = NULL;
+        }
+
+        vx_user_data_object inArgs_0 = (vx_user_data_object)vxGetObjectArrayItem(in_args_arr, 0);
+        vx_user_data_object outArgs_0 = (vx_user_data_object)vxGetObjectArrayItem(out_args_arr, 0);
+
+        ASSERT_VX_OBJECT(inArgs_0, (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+        ASSERT_VX_OBJECT(outArgs_0, (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+        vx_object_array input_obj_array_0 = (vx_object_array)vxGetObjectArrayItem(input_tensor_arr[0], 0);
+        vx_object_array output_obj_array_0 = (vx_object_array)vxGetObjectArrayItem(output_tensor_arr[0], 0);
+
+        ASSERT_VX_OBJECT(input_obj_array_0, VX_TYPE_OBJECT_ARRAY);
+        ASSERT_VX_OBJECT(output_obj_array_0, VX_TYPE_OBJECT_ARRAY);
+
+        ASSERT_VX_OBJECT(node = tivxTIDLNodeV2(graph, config, network, createParams,
+                                                inArgs_0, outArgs_0, traceData,
+                                                input_obj_array_0, output_obj_array_0), VX_TYPE_NODE);
+
+        VX_CALL(vxSetNodeTarget(node, VX_TARGET_STRING, arg_->target_string_1));
+
+        VX_CALL(vxReleaseUserDataObject(&inArgs_0));
+        VX_CALL(vxReleaseUserDataObject(&outArgs_0));
+        VX_CALL(vxReleaseObjectArray(&input_obj_array_0));
+        VX_CALL(vxReleaseObjectArray(&output_obj_array_0));
+
+        /* Configure replication */
+        vx_bool replicate[8];
+        replicate[0] = vx_false_e;  /* config - shared */
+        replicate[1] = vx_false_e;  /* network - shared */
+        replicate[2] = vx_false_e;  /* createParams - shared */
+        replicate[3] = vx_true_e;   /* inArgs - replicated */
+        replicate[4] = vx_true_e;   /* outArgs - replicated */
+        replicate[5] = vx_false_e;  /* traceData - shared */
+        replicate[6] = vx_true_e;   /* input_tensor_list - replicated */
+        replicate[7] = vx_true_e;   /* output_tensor_list - replicated */
+
+        VX_CALL(vxReplicateNode(graph, node, replicate, 8));
+
+        #ifdef DEBUG_TEST_TIDL
+        printf("Verifying graph ...\n");
+        #endif
+
+        VX_CALL(vxVerifyGraph(graph));
+
+        #ifdef DEBUG_TEST_TIDL
+        printf("Running graph ...\n");
+        #endif
+        VX_CALL(vxProcessGraph(graph));
+
+        #ifdef DEBUG_TEST_TIDL
+        printf("Showing output ...\n");
+        #endif
+
+        /* Validate output for each channel */
+        for(ch = 0; ch < num_channels; ch++)
+        {
+            vx_object_array channel_output_array = (vx_object_array)vxGetObjectArrayItem(output_tensor_arr[0], ch);
+            ASSERT_VX_OBJECT(channel_output_array, VX_TYPE_OBJECT_ARRAY);
+
+            vx_tensor output = (vx_tensor)vxGetObjectArrayItem(channel_output_array, 0);
+            ASSERT_VX_OBJECT(output, (enum vx_type_e)VX_TYPE_TENSOR);
+
+            #ifdef DEBUG_TEST_TIDL
+            printf("Channel %d: ", ch);
+            #endif
+            VX_CALL(displayOutput(config, &output, refid));
+            VX_CALL(vxReleaseTensor(&output));
+            VX_CALL(vxReleaseObjectArray(&channel_output_array));
+        }
+
+        VX_CALL(vxReleaseNode(&node));
+        VX_CALL(vxReleaseGraph(&graph));
+
+        ASSERT(node == 0);
+        ASSERT(graph == 0);
+
+        VX_CALL(vxReleaseUserDataObject(&config));
+        VX_CALL(vxReleaseUserDataObject(&network));
+        VX_CALL(vxReleaseUserDataObject(&createParams));
+
+        if(arg_->trace_write_flag == 1)
+        {
+           VX_CALL(vxReleaseUserDataObject(&traceData));
+        }
+
+        VX_CALL(vxReleaseObjectArray(&in_args_arr));
+        VX_CALL(vxReleaseObjectArray(&out_args_arr));
+        VX_CALL(vxReleaseObjectArray(&input_tensor_arr[0]));
+        VX_CALL(vxReleaseObjectArray(&output_tensor_arr[0]));
+
+        ASSERT(config == 0);
+        ASSERT(network == 0);
+        ASSERT(createParams == 0);
+        ASSERT(in_args_arr == 0);
+        ASSERT(out_args_arr == 0);
+        ASSERT(input_tensor_arr[0] == 0);
+        ASSERT(output_tensor_arr[0] == 0);
+
+        tivxTIDLUnLoadKernels(context);
+
+    }
+    tivx_clr_debug_zone(VX_ZONE_INFO);
+}
+#endif
+
 TEST_WITH_ARG(tivxTIDL, testTIDLPreempt, ArgPriority, PARAMETERS_PRIORITY)
 {
     vx_context context = context_->vx_context_;
@@ -1588,8 +2011,10 @@ TEST_WITH_ARG(tivxTIDL, testTIDLPreempt, ArgPriority, PARAMETERS_PRIORITY)
 
 TESTCASE_TESTS(tivxTIDL,
     testTIDL,
+    testTIDLReplicate,
     #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
     testTIDLObjArray,
+    testTIDLObjArrayReplicate,
     #endif
     #if (C7XMMA_COUNT > 1)
     testMultiTIDL,

@@ -91,11 +91,15 @@ static map<string, pair<pair<string,string>,pair<string,string>>> TIDL_onnxCompa
     {"1.14.0+10000005",  {{"10_00_00_05", "10_01_00_00"},
                           {"10_00_00_05", "10_01_00_00"}}
     },
-    {"1.15.0",           {{"10_01_00_01", "11_02_16_00"},
-                          {"10_01_00_01", "11_02_16_00"}}
+    {"1.15.0",           {{"10_01_00_01", "11_02_12_00"},
+                          {"10_01_00_01", "11_02_12_00"}}
+    },
+    {"1.23.0",           {{"11_02_14_00", "12_00_00_00"},
+                          {"11_02_14_00", "12_00_00_00"}}
     },
 };
-int32_t TIDL_getOutputShape(void * ioBufDescVPtr, int8_t onnxName[], std::vector<int64_t> &shape);
+
+int32_t TIDL_getOutputShapeAndPitch(void * ioBufDescVPtr, onnxRtParams_t * onnxRtParams, int8_t onnxName[], std::vector<int64_t> &shape, std::vector<int64_t> &pitch);
 int32_t TIDLEP_getSubGraphStats(OnnxTIDLSubGraphParams * state_subGraph, char **node_name, void **node_data);
 }
 

@@ -25,6 +25,8 @@ else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J722S j722s))
 BUILD_DEFS += SOC_J722S
 else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a))
 BUILD_DEFS += SOC_AM62A
+else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+BUILD_DEFS += SOC_TDA54
 else
 BUILD_DEFS += SOC_J721E
 endif

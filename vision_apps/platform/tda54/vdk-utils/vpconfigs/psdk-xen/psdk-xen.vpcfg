@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="ASCII"?>
 <com.synopsys.vp.base.vpcfg.core:Configuration xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:com.synopsys.vp.base.vpcfg.core="com.synopsys.vp.base.vpcfg.core.model" description="empty configuration" comment="gen_tool_VPX">
+  <environmentVariables name="LINUX_RPROC_BOOT" defaultValue="0"/>
   <debugInfo/>
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.UART.DW_UART_PHY_1.#SCML_PROPERTIES#EN_UART_TX_LOG_TO_FILE" value="logs1.txt"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.UART.DW_UART_PHY_1.#SCML_PROPERTIES#TerminalAutoOpen" value="true"/>

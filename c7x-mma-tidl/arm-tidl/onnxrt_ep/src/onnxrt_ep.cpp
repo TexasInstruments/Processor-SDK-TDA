@@ -184,9 +184,15 @@ extern "C"
 {
 
 /* Called directly from ONNX runtime : return a vector of TIDL supported node groups */
-int32_t TIDL_getSupportedNodesInfer(std::vector<std::vector<int>> &nodeGroups)
-{ 
+int32_t TIDL_getSupportedNodesInfer(std::vector<std::vector<int>> &nodeGroups, bool isOnnxSubgraph)
+{
   int32_t status = 0;
+  if (isOnnxSubgraph)
+  {
+    printf("WARNING: Graph is an ONNX subgraph (Loop/If/Scan body) -- TIDL does not support subgraph offload, delegating all nodes to CPU.\n");
+    nodeGroups = {{}};
+    return status;
+  }
   nodeGroups = TIDL_readAllowedNodesList(data_->m_artifacts_folder);
   
   int32_t numSupportedNodes = 0;
@@ -287,6 +293,15 @@ void TIDL_readOnnxRtMetaDataForInference(OnnxTIDLSubGraphParams * state_subGraph
         strcpy((char *)onnxRtParams->outDataNames[i], idx[i].c_str());
       }
     }
+    if(dict[0] == (serialNumber + ":outDataTypes"))
+    {
+      std::vector<std::string> idx = TIDL_splitStringWithDelimiter(dict[1], ",");
+      for(int i = 0; i < idx.size(); i++)
+      {
+        std::stringstream num(idx[i]);
+        num >> onnxRtParams->outputTensorElementType[i];
+      }
+    }
   }
 }
 
@@ -324,6 +339,14 @@ int32_t TIDL_createStateInferFunc(OnnxTIDLSubGraphParams * state_subGraph, const
   if(subgraphRtCreateOptions != NULL)
   {
     free(subgraphRtCreateOptions);
+  }
+
+  /* Populate outIsDynamic from ioBufDesc so dynamic outputs are known before the first invoke */
+  onnxRtParams_t * onnxRtParams = &state_subGraph->onnxRtParams;
+  sTIDL_IOBufDesc_t * ioBufDesc = (sTIDL_IOBufDesc_t *)state_subGraph->tidlRtParams.ioBufDesc;
+  for (int j = 0; j < state_subGraph->numOutputs; j++)
+  {
+    onnxRtParams->outIsDynamic[j] = (uint8_t)ioBufDesc->outIsDynamic[j];
   }
 
   return status;

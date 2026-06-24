@@ -65,14 +65,6 @@
 const vector<TidlConstraint> tidlConstraintRNN =
 {
     TIDL_CSTR(
-        "RNN is not suppported as an individual operator",
-        "RNN is not suppported as an individual operator",
-        "",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            return false;
-        }
-    ),
-    TIDL_CSTR(
         "Number of non-singleton variable input dimensions must be <= 6",
         "Number of non-singleton variable input dimensions must be <= 6",
         "",
@@ -90,18 +82,54 @@ const vector<TidlConstraint> tidlConstraintRNN =
         }
     ),
     TIDL_CSTR(
-        "B and sequence_lens input should be constant inputs",
-        "B and sequence_lens input should be constant inputs",
+        "W, R, B and sequence_lens input should be constant",
+        "W, R, B and sequence_lens input should be constant",
         "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
 
-            std::vector<int32_t> constIndices = {3, 4};
+            std::vector<int32_t> constIndices = {TIDL_RecurrentInputW, TIDL_RecurrentInputR, TIDL_RecurrentInputB, TIDL_RecurrentInputSequenceLens};
             for(int32_t constIdx : constIndices)
             {
                 if(std::find(md.varTensorIndices.begin(), md.varTensorIndices.end(), constIdx) != md.varTensorIndices.end())
                 {
                     return false;
+                }
+            }
+
+            return true;
+        }
+    ),
+    TIDL_CSTR(
+        "sequence_lens input should only have values equal to seq_length (derived from input X)",
+        "sequence_lens input should only have values equal to seq_length (derived from input X)",
+        "",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+            const sTIDL_RNNPCParams_t &rnnPCParams = layer->layerPCParams.rnnParams;
+            const sTIDL_RNNParams_t &rnnParams = layer->layerParams.rnnParams;
+
+            if(rnnPCParams.sequence_lens.ptr != NULL && rnnPCParams.sequence_lens.bufSize > 0)
+            {
+                int32_t seq_length;
+                if (rnnParams.layout == 0)
+                {
+                    /* input shape: [seq_length, batch_size, input_size] */
+                    seq_length = md.varTensorsDims[0][0];
+                }
+                else
+                {
+                    /* input shape: [batch_size, seq_length, input_size] */
+                    seq_length = md.varTensorsDims[0][1];
+                }
+
+                int32_t *sequence_lens = (int32_t *)(rnnPCParams.sequence_lens.ptr);
+                for(int32_t batchIdx = 0; batchIdx < rnnPCParams.sequence_lens.bufSize; batchIdx++)
+                {
+                    if(sequence_lens[batchIdx] != seq_length)
+                    {
+                        return false;
+                    }
                 }
             }
 
@@ -115,7 +143,7 @@ const vector<TidlConstraint> tidlConstraintRNN =
         [](const sTIDL_LayerPC_t *layer, string &logs){
             const sTIDL_RNNParams_t &rnnParams = layer->layerParams.rnnParams;
             int32_t num_directions = 1;
-            if(rnnParams.direction == TIDL_RNNBidirectional)
+            if(rnnParams.direction == TIDL_RecurrentBidirectional)
             {
                 num_directions = 2;
             }
@@ -133,28 +161,13 @@ const vector<TidlConstraint> tidlConstraintRNN =
         }
     ),
     TIDL_CSTR(
-        "Only clip > 0 is supported",
-        "Only clip > 0 is supported",
+        "clip attribute is not supported",
+        "clip attribute is not supported",
         "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             const sTIDL_RNNParams_t &rnnParams = layer->layerParams.rnnParams;
 
-            if(rnnParams.isClipSet == 1 && rnnParams.clip <= 0)
-            {
-                return false;
-            }
-
-            return true;
-        }
-    ),
-    TIDL_CSTR(
-        "Only default direction = 'forward' is supported",
-        "Only default direction = 'forward' is supported",
-        "",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            const sTIDL_RNNParams_t &rnnParams = layer->layerParams.rnnParams;
-
-            if(rnnParams.direction != TIDL_RNNForward)
+            if(rnnParams.isClipSet == 1)
             {
                 return false;
             }

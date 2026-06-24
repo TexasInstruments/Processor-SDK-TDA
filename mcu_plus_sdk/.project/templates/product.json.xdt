@@ -41,6 +41,9 @@
 % if((args.device == "am62ax") || (args.device == "am62dx") || isDevelopmentMode) {
         "/security/security",
 % }
+% if(args.device == "j722s") {
+        "/pdm_utils/tools/dm_power_config",
+% }
     ],
     "devices": [
 % if((args.device == "am62x") || (isDevelopmentMode)) {

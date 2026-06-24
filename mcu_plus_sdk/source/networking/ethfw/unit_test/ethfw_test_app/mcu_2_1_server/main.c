@@ -427,6 +427,8 @@ int main(void)
     /* Wait for debugger to attach (disabled by default) */
     EthApp_waitForDebugger();
 
+    EthFwOsal_init();
+
     gEthTestAppObj.coreId = EnetSoc_getCoreId();
 
     /* Create initialization task */

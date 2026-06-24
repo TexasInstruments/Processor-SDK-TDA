@@ -143,6 +143,7 @@ private:
    void dumpTileParams(const sTIDL_Layer_t *pLayer);
    void dumpLogicalOpLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpRMSNormalizationParams(const sTIDL_Layer_t *pLayer);
+   void dumpShapeParams(const sTIDL_Layer_t *pLayer);
    void dumpDetectionOutputLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpShuffleChannelLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpResizeLayerParams(const sTIDL_Layer_t *pLayer);
@@ -152,13 +153,27 @@ private:
    void dumpLSTMParams(const sTIDL_Layer_t *pLayer);
    void dumpGRUParams(const sTIDL_Layer_t *pLayer);
    void dumpRNNParams(const sTIDL_Layer_t *pLayer);
+   void dumpGatherNDParams(const sTIDL_Layer_t *pLayer);
    void dumpOdOutputReformatLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpOdPostProcessingLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpCustomLayerParams(const sTIDL_Layer_t *pLayer);
+   void dumpGatherElementsParams(const sTIDL_Layer_t *pLayer);
+   void dumpNonZeroParams(const sTIDL_Layer_t *pLayer);
    void dumpUnsupportedLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpActParams(const sTIDL_ActParams_t *pActParams);
+   void dumpClipParams(const sTIDL_ClipParams_t *pClipParams);
    void dumpCalibParams(const sTIDL_CalibParams_t *pCalibParams);
    void dumpPerfSimInfo(int layerNum);
+
+   // Dump per-channel weightScales and biasScales for asymmetric
+   // (layerKernelType==0) Conv/Deconv/InnerProduct layers.
+   // numWeightScaleChannels: entries in weightScales.
+   // numBiasChannels: entries in biasScales.
+   void dumpAsymQuantArrays(const sTIDL_Layer_t *pLayer,
+                            int32_t numWeightScaleChannels,
+                            int32_t numBiasChannels,
+                            int32_t weightScalesOffset,
+                            int32_t biasScalesOffset);
 
    // print multiple values using proper type
    template <typename Tw>

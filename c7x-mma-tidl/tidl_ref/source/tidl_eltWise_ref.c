@@ -79,7 +79,6 @@
 #include "tidl_eltWise_ref.h"
 #ifdef BUILD_WITH_CUDA
 #include "tidl_cuda.h"
-static int CUDA_ELTWISE_COUNTER = 0;
 #endif
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -160,12 +159,13 @@ typedef struct
   uint32_t outBatchPitch;
   int32_t eltWiseType;
   uint16_t numInData;
-  uint16_t numChannels;
-  uint16_t numDIM1;
-  uint16_t numDIM2;
+  uint32_t numChannels;
+  uint32_t numDIM1;
+  uint32_t numDIM2;
   int32_t *derivedBias;
   uint8_t *derivedScales;
   uint8_t *derivedShifts;
+  int32_t outPadOffset;
 } TIDL_EltWiseBuffParams_t;
 
 /* ========================================================================== */
@@ -481,7 +481,7 @@ static void TIDL_refEltWiseOp(const Tin *pIn,
                               int32_t callno,
                               int32_t batchno)
 {
-  #ifdef BUILD_WITH_CUDA
+  #ifdef BUILD_WITH_CUDA_ELTWISE
   TIDL_cudaEltWiseOp<Tin, Tacc>(pIn, pAcc, scale, zeropoint,
                                 eltWiseBuffParams->numDIM1, eltWiseBuffParams->numDIM2, 
                                 eltWiseBuffParams->numChannels, eltWiseBuffParams->inHeight, eltWiseBuffParams->inWidth,
@@ -489,7 +489,7 @@ static void TIDL_refEltWiseOp(const Tin *pIn,
                                 eltWiseBuffParams->inChPitch, eltWiseBuffParams->inPitch, eltWiseBuffParams->pixelPitch,
                                 eltWiseBuffParams->outDIM1Pitch, eltWiseBuffParams->outDIM2Pitch, 
                                 eltWiseBuffParams->outChPitch, eltWiseBuffParams->outPitch,
-                                callno, batchno, eltWiseBuffParams->eltWiseType, eltWiseBuffParams->outBatchPitch);
+                                callno, batchno, eltWiseBuffParams->eltWiseType, params->fmodValue, eltWiseBuffParams->outBatchPitch);
   #else
   if(eltWiseBuffParams->eltWiseType == TIDL_EltWiseSum)
   {
@@ -503,16 +503,10 @@ static void TIDL_refEltWiseOp(const Tin *pIn,
   {
     TIDL_refEltWiseMinMax(pIn, pAcc, scale, eltWiseBuffParams, callno);
   }
-  /* LDRA_JUSTIFY_START
-  <metric start> statement branch <metric end>
-  <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
-  No test case is expected to have TIDL_EltWiseMod eltWiseType.
-  <justification end> */
   else if(eltWiseBuffParams->eltWiseType == TIDL_EltWiseMod)
   {
     TIDL_refEltWiseMod(pIn, pAcc, scale, zeropoint, eltWiseBuffParams, params->fmodValue, callno);
   }
-  /* LDRA_JUSTIFY_END */
   else
   {
     tidl_printf(0, "TIDL_EltWise Type %d is  Not supported !!!\n ", eltWiseBuffParams->eltWiseType);
@@ -528,16 +522,17 @@ template<class Tacc, class Tout> static void TIDL_refEltWiseMMAv2Quantize(TIDL_H
                                                                           uint8_t mmaShift,
                                                                           int32_t biasTerm,
                                                                           const TIDL_EltWiseBuffParams_t *eltWiseBuffParams,
-                                                                          int32_t outElemType)
+                                                                          int32_t outElemType,
+                                                                          int32_t tensorZeroPoint)
 {
 
-  #ifdef BUILD_WITH_CUDA
+  #ifdef BUILD_WITH_CUDA_ELTWISE
   // call CUDA MMAV2 quantize wrapper
   TIDL_cudaEltWiseMMAv2Quantize<Tacc, Tout>(pAcc, pout, mmaScale, mmaShift, biasTerm,
                                             eltWiseBuffParams->numBatches, eltWiseBuffParams->numDIM1, eltWiseBuffParams->numDIM2,
                                             eltWiseBuffParams->numChannels, eltWiseBuffParams->inHeight, eltWiseBuffParams->inWidth,
                                             eltWiseBuffParams->outBatchPitch, eltWiseBuffParams->outDIM1Pitch, eltWiseBuffParams->outDIM2Pitch,
-                                            eltWiseBuffParams->outChPitch, eltWiseBuffParams->outPitch);
+                                            eltWiseBuffParams->outChPitch, eltWiseBuffParams->outPitch, tensorZeroPoint, eltWiseBuffParams->outPadOffset);
   #else
   uint32_t i0, i1, i2, i3, i4, i5;
   /* Accumulator which stores the product after multiplication with mmaScale has to be 64bit in both 8/16 bit
@@ -697,7 +692,7 @@ template<class Tacc, class Tout> static void TIDL_refEltWiseQuantize(TIDL_Handle
   //     copy(pout[:1+((eltWiseBuffParams->numBatches-1) * eltWiseBuffParams->outBatchPitch) + ((eltWiseBuffParams->numChannels-1) * eltWiseBuffParams->outChPitch) + ((eltWiseBuffParams->inHeight-1) * eltWiseBuffParams->outPitch) + eltWiseBuffParams->inWidth - 1]))
 
   //OPENACC(parallel loop collapse(5))
-  #ifdef BUILD_WITH_CUDA
+  #ifdef BUILD_WITH_CUDA_ELTWISE
   // call CUDA elementwise quantize wrapper
   float floatSatLow, floatSatHigh;
   TIDL_getSaturationFloat(&net->TIDLLayers[layerIdx], &floatSatLow, &floatSatHigh);
@@ -765,7 +760,7 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
                                       const sTIDL_EltWiseParams_t *params,
                                       void *inPtrs[],
                                       uint8_t *outPtr,
-                                      uint16_t numBatches,
+                                      uint32_t numBatches,
                                       TIDL_EltWiseBuffParams_t *eltWiseBuffParams)
 {
   int32_t status = TIDL_SUCCESS;
@@ -778,9 +773,10 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
   int32_t layerIdx = algLayer->layerIdx;
   uint32_t accMemSize;
   int32_t accBitDepth = TIDL_SignedWord;
-  int32_t outElementSize = TIDL_getDatElementSize(tidlLayer->outData.elementType);
+  int32_t outElementSize = TIDL_getDatElementSize(tidlLayer->outData.elementType); 
   int32_t procElemSize = TIDL_getProcessingElementSizeInBytes(tidlLayer);
   int32_t quantizationStyle = intAlgHandle->createParams->net->quantizationStyle;
+
 
   for (i = 0; i < TIDL_NUM_IN_BUFS; i++)
   {
@@ -791,7 +787,8 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
   {
     sTIDL_DataParams_t *inDataParams;
     inDataParams = &intAlgHandle->createParams->net->TIDLLayers[algLayer->inLayerIdx[i]].outData;
-    if ((inDataParams->elementType == TIDL_SignedShort) || (inDataParams->elementType == TIDL_UnsignedShort))
+    if ((inDataParams->elementType == TIDL_SignedShort) || (inDataParams->elementType == TIDL_UnsignedShort) ||
+        (eltWiseBuffParams->eltWiseType == TIDL_EltWiseMod && (inDataParams->elementType == TIDL_SignedWord || inDataParams->elementType == TIDL_UnsignedWord)))
     {
       /* TIDL_LDRA_TAG_ELTWISE_PRIOR_CHECK_001 */
       accBitDepth = TIDL_SignedDoubleWord;
@@ -803,11 +800,11 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
 
   if (accBitDepth == TIDL_SignedDoubleWord)
   {
-    accMemSize = (uint32_t)numBatches * eltWiseBuffParams->outBatchPitch * ((uint32_t)sizeof(int64_t));
+    accMemSize = numBatches * eltWiseBuffParams->outBatchPitch * ((uint32_t)sizeof(int64_t));
   }
   else // Regular situation (FP32/INT32 accumulator)
   {
-    accMemSize = (uint32_t)numBatches * eltWiseBuffParams->outBatchPitch * ((uint32_t)sizeof(int32_t));
+    accMemSize = numBatches * eltWiseBuffParams->outBatchPitch * ((uint32_t)sizeof(int32_t));
   }
 
   if (algLayer->scratchSize >= (int32_t)accMemSize)
@@ -822,17 +819,6 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
 
   if (TIDL_SUCCESS == status)
   {
-  #ifdef BUILD_WITH_CUDA
-    // Allocate CUDA accumulator memory once for all batches
-    if(accBitDepth == TIDL_SignedDoubleWord)
-    {
-      TIDL_cudaEltWiseAllocateAccumulator<int64_t>(numBatches, eltWiseBuffParams->outBatchPitch);
-    }
-    else
-    {
-      TIDL_cudaEltWiseAllocateAccumulator<int32_t>(numBatches, eltWiseBuffParams->outBatchPitch);
-    }
-  #endif
 
 //#ifndef BUILD_WITH_OPENACC // Not needed if running on GPU
     if(accBitDepth == TIDL_SignedDoubleWord)
@@ -852,11 +838,6 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
         inDataScale[j] = 1;
       }
     }
-    /* LDRA_JUSTIFY_START
-    <metric start> statement branch <metric end>
-    <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
-    No test case is expected to have TIDL_EltWiseMod eltWiseType.
-    <justification end> */
     else if (params->eltWiseType == TIDL_EltWiseMod)
     {
       for (j = 0; j < tidlLayer->numInBufs; j++)
@@ -866,7 +847,6 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
         inDataScale[j] = inDataParams->tensorScale;
       }
     }
-    /* LDRA_JUSTIFY_END */
     else
     {
       uint32_t tempRoundBits = 0U;
@@ -1113,6 +1093,17 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
                             i4,
                             j);
         }
+        else if(inDataParams->elementType == TIDL_SignedWord)
+        {
+          TIDL_refEltWiseOp((int32_t *)inPtr,
+                            (int64_t *)refAccPtrRoi,
+                            1.0,
+                            0,
+                            eltWiseBuffParams,
+                            params,
+                            i4,
+                            j);
+        }
         else if(inDataParams->elementType == TIDL_SinglePrecFloat)
         {
           TIDL_refEltWiseOp((float32_tidl *)inPtr,
@@ -1154,7 +1145,8 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
                                            mmaShift,
                                            biasTerm,
                                            eltWiseBuffParams,
-                                           tidlLayer->outData.elementType);
+                                           tidlLayer->outData.elementType,
+                                           tidlLayer->outData.tensorZeroPoint);
             }
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
@@ -1173,7 +1165,8 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
                                            mmaShift,
                                            biasTerm,
                                            eltWiseBuffParams,
-                                           tidlLayer->outData.elementType);
+                                           tidlLayer->outData.elementType,
+                                           tidlLayer->outData.tensorZeroPoint);
             }
           }
           else
@@ -1188,7 +1181,8 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
                                            mmaShift,
                                            biasTerm,
                                            eltWiseBuffParams,
-                                           tidlLayer->outData.elementType);
+                                           tidlLayer->outData.elementType,
+                                           tidlLayer->outData.tensorZeroPoint);
             }
             else if (tidlLayer->outData.elementType == TIDL_UnsignedChar)
             {
@@ -1200,7 +1194,8 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
                                            mmaShift,
                                            biasTerm,
                                            eltWiseBuffParams,
-                                           tidlLayer->outData.elementType);
+                                           tidlLayer->outData.elementType,
+                                           tidlLayer->outData.tensorZeroPoint);
             }
           }
         }
@@ -1219,7 +1214,8 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
                                        0,
                                        0,
                                        eltWiseBuffParams,
-                                       tidlLayer->outData.elementType);
+                                       tidlLayer->outData.elementType,
+                                       tidlLayer->outData.tensorZeroPoint);
         }
         /* LDRA_JUSTIFY_END */
       }
@@ -1265,6 +1261,14 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
                                     eltWiseBuffParams);
           }
           /* LDRA_JUSTIFY_END */
+          else if (tidlLayer->outData.elementType == TIDL_SignedWord)
+          {
+            TIDL_refEltWiseQuantize(intAlgHandle,
+                                    layerIdx,
+                                    (int64_t *)refAccPtr,
+                                    (int32_t *)outPtrLocal,
+                                    eltWiseBuffParams);
+          }
           /* LDRA_JUSTIFY_START
           <metric start> statement branch <metric end>
           <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
@@ -1351,12 +1355,12 @@ int32_t TIDL_eltWiseRefProcess(TIDL_NetworkCommonParams *commonParams,
    * Final broadcasting is handled in loop - not necessary to handle here
    */
 
-  uint16_t numBatches = (uint16_t)outDataParams->dimValues[TIDL_DIM_BATCH];
-  eltWiseBuffParams.numChannels = (uint16_t)outDataParams->dimValues[TIDL_DIM_NUMCH];
-  eltWiseBuffParams.numDIM1 = (uint16_t)outDataParams->dimValues[TIDL_DIM_DIM1];
+  uint32_t numBatches = (uint32_t)outDataParams->dimValues[TIDL_DIM_BATCH];
+  eltWiseBuffParams.numChannels = (uint32_t)outDataParams->dimValues[TIDL_DIM_NUMCH];
+  eltWiseBuffParams.numDIM1 = (uint32_t)outDataParams->dimValues[TIDL_DIM_DIM1];
   eltWiseBuffParams.inDIM1Pitch = (uint32_t)outDataParams->pitch[TIDL_DIM1_PITCH];
   eltWiseBuffParams.inDIM2Pitch = (uint32_t)outDataParams->pitch[TIDL_DIM2_PITCH];
-  eltWiseBuffParams.numDIM2 = (uint16_t)outDataParams->dimValues[TIDL_DIM_DIM2];
+  eltWiseBuffParams.numDIM2 = (uint32_t)outDataParams->dimValues[TIDL_DIM_DIM2];
   eltWiseBuffParams.numBatches = (uint32_t)outDataParams->dimValues[TIDL_DIM_BATCH];
   eltWiseBuffParams.inWidth = (uint32_t)outDataParams->dimValues[TIDL_DIM_WIDTH];
   eltWiseBuffParams.inHeight = (uint32_t)outDataParams->dimValues[TIDL_DIM_HEIGHT];
@@ -1370,7 +1374,12 @@ int32_t TIDL_eltWiseRefProcess(TIDL_NetworkCommonParams *commonParams,
   eltWiseBuffParams.outDIM2Pitch = (uint32_t)tidlLayer->outData.pitch[TIDL_DIM2_PITCH];
   eltWiseBuffParams.numInData = (uint16_t)tidlLayer->numInBufs;
   eltWiseBuffParams.eltWiseType = params->eltWiseType;
-
+  #if defined(BUILD_WITH_CUDA_ELTWISE)
+  /*Temporarily disabled - but ideally still needed because of offsets*/
+  eltWiseBuffParams.outPadOffset = 0;// ((tidlLayer->outData.padH) * tidlLayer->outData.pitch[TIDL_LINE_PITCH]) + (tidlLayer->outData.padW);
+  #else
+  eltWiseBuffParams.outPadOffset = 0;
+  #endif
   if (TIDL_isKernelHighPrecision(tidlLayer->layerKernelType) == (int32_t)TRUE)
   {
     uint8_t *derivedScales = (uint8_t *)get_int8_t_pointer((int8_t *)(commonParams->net), params->derivedScales);
@@ -1394,11 +1403,6 @@ int32_t TIDL_eltWiseRefProcess(TIDL_NetworkCommonParams *commonParams,
   (void)memcpy(&createParams, commonParams->createParams, sizeof(TIDL_CreateParams));
   intAlgObj.createParams = (TIDL_CreateParams *)&createParams;
 
-  #ifdef BUILD_WITH_CUDA
-  int CUDNNLC;
-  CUDNNLC = CUDA_ELTWISE_COUNTER++;
-  #endif
-
   status = TIDL_refEltWiseProcess(&intAlgObj,
                                   algLayer,
                                   tidlLayer,
@@ -1408,9 +1412,5 @@ int32_t TIDL_eltWiseRefProcess(TIDL_NetworkCommonParams *commonParams,
                                   numBatches,
                                   &eltWiseBuffParams);
 
-  #ifdef BUILD_WITH_CUDA
-  /*Mark init as completed to prevent re-allocation of buffers for subsequent frames:*/
-  TIDL_cudaSetEltwiseInitFlag(CUDNNLC);
-  #endif
   return status;
 }

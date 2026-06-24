@@ -85,6 +85,52 @@ const vector<TidlConstraint> tidlConstraintInnerProduct = {
         }
     ),
     TIDL_CSTR(
+        "Height(H) and Width(W) dimension should be 1 in NHWC data format",
+        "",
+        "Height(H) and Width(W) dimension should be 1 in NHWC data format",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            ostringstream oss;
+            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+            int32_t status = tidlCheckShapeInferenceforOnnx(md);
+            if(status !=  TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL &&
+              (gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TFLITE_RT ||
+               gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TFLITE))
+            {
+                int32_t numDims = md.varTensorsDims[0].size();
+                int32_t n = 1, c = 1, h = 1, w = 1;
+                /*
+                 * If number of dimensions are 4 then data format is changed to NCHW format
+                 * In other cases its assumed as NHWC format
+                */
+                if(numDims == 4)
+                {
+                    n = md.varTensorsDims[0][0];
+                    c = md.varTensorsDims[0][1];
+                    h = md.varTensorsDims[0][2];
+                    w = md.varTensorsDims[0][3];
+                }
+                else if(numDims == 3)
+                {
+                    n = md.varTensorsDims[0][0];
+                    h = md.varTensorsDims[0][1];
+                    w = md.varTensorsDims[0][2];
+                }
+                else if(numDims == 2)
+                {
+                    n = md.varTensorsDims[0][0];
+                    w = md.varTensorsDims[0][1];
+                }
+
+                if(h != 1 || w != 1)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    ),
+    TIDL_CSTR(
         "Filter tensor input should have atleast 2 dimensions",
         "Filter tensor input should have atleast 2 dimensions",
         "Filter tensor input should have atleast 2 dimensions",

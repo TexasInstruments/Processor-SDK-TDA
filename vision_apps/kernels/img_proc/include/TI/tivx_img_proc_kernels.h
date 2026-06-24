@@ -310,6 +310,10 @@ typedef struct {
   /* Crop values to be applied, 0-Top, 1-Bottom, 2-Right, 3-Left */
   vx_int32 crop[4];
 
+  /* Channel pitch in bytes from TIDL IO buf desc (inChannelPitch), used for
+   * 4D batch mode to match the stride TIDL kernel expects between channels */
+  vx_uint32 channel_pitch;
+
 }tivxDLPreProcArmv8Params4D;
 
 

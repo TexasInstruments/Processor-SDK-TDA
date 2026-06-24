@@ -73,7 +73,6 @@
 #include "tidl_slice_ref.h"
 #ifdef BUILD_WITH_CUDA
 #include "tidl_cuda.h"
-static int CUDA_SLICE_COUNTER = 0;
 #endif
 
 /**
@@ -118,10 +117,7 @@ template<class Tin, class Tout> void TIDL_sliceRefProcess(
     int32_t inROIPitch,
     int32_t outROIPitch)
 {
-  #ifdef BUILD_WITH_CUDA
-  int CUDNNLC;
-  CUDNNLC = CUDA_SLICE_COUNTER++;
-
+  #ifdef BUILD_WITH_CUDA_SLICE
   // call cuda slice wrapper
   TIDL_refCudaSlice(pIn,pOut,
     inPtrOffset, outPtrOffset,
@@ -129,9 +125,6 @@ template<class Tin, class Tout> void TIDL_sliceRefProcess(
     inLinePitch, outLinePitch, inChPitch, outChPitch,
     inDim1Pitch, outDim1Pitch, inDim2Pitch,
     outDim2Pitch, inROIPitch, outROIPitch);
-
-  /*Mark init as completed to prevent re-allocation of buffers for subsequent frames:*/
-  TIDL_cudaSetSliceInitFlag(CUDNNLC);
   #else
   int32_t i0, i1, i2, i3, i4, i5;
   for (i0 = 0; i0 < numROIs; i0++)

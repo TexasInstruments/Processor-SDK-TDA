@@ -65,14 +65,6 @@
 const vector<TidlConstraint> tidlConstraintGRU =
 {
     TIDL_CSTR(
-        "GRU is not suppported as an individual operator",
-        "GRU is not suppported as an individual operator",
-        "",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            return false;
-        }
-    ),
-    TIDL_CSTR(
         "Number of non-singleton variable input dimensions must be <= 6",
         "Number of non-singleton variable input dimensions must be <= 6",
         "",
@@ -90,13 +82,13 @@ const vector<TidlConstraint> tidlConstraintGRU =
         }
     ),
     TIDL_CSTR(
-        "B and sequence_lens input should be constant inputs",
-        "B and sequence_lens input should be constant inputs",
+        "W, R, B and sequence_lens input should be constant",
+        "W, R, B and sequence_lens input should be constant",
         "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
 
-            std::vector<int32_t> constIndices = {3, 4};
+            std::vector<int32_t> constIndices = {TIDL_RecurrentInputW, TIDL_RecurrentInputR, TIDL_RecurrentInputB, TIDL_RecurrentInputSequenceLens};
             for(int32_t constIdx : constIndices)
             {
                 if(std::find(md.varTensorIndices.begin(), md.varTensorIndices.end(), constIdx) != md.varTensorIndices.end())
@@ -109,23 +101,35 @@ const vector<TidlConstraint> tidlConstraintGRU =
         }
     ),
     TIDL_CSTR(
-        "Only Sigmoid and Tanh activations are supported",
-        "Only Sigmoid and Tanh activations are supported",
+        "sequence_lens input should only have values equal to seq_length (derived from input X)",
+        "sequence_lens input should only have values equal to seq_length (derived from input X)",
         "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
+            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+            const sTIDL_GRUPCParams_t &gruPCParams = layer->layerPCParams.gruParams;
             const sTIDL_GRUParams_t &gruParams = layer->layerParams.gruParams;
-            int32_t num_directions = 1;
-            if(gruParams.direction == TIDL_RNNBidirectional)
-            {
-                num_directions = 2;
-            }
-            int32_t availableActivations = 2 * num_directions;
 
-            for(int32_t activationIdx = 0; activationIdx < availableActivations; activationIdx++)
+            if(gruPCParams.sequence_lens.ptr != NULL && gruPCParams.sequence_lens.bufSize > 0)
             {
-                if(gruParams.activations[activationIdx] != TIDL_Sigmoid && gruParams.activations[activationIdx] != TIDL_Tanh)
+                int32_t seq_length;
+                if (gruParams.layout == 0)
                 {
-                    return false;
+                    /* input shape: [seq_length, batch_size, input_size] */
+                    seq_length = md.varTensorsDims[0][0];
+                }
+                else
+                {
+                    /* input shape: [batch_size, seq_length, input_size] */
+                    seq_length = md.varTensorsDims[0][1];
+                }
+
+                int32_t *sequence_lens = (int32_t *)(gruPCParams.sequence_lens.ptr);
+                for(int32_t batchIdx = 0; batchIdx < gruPCParams.sequence_lens.bufSize; batchIdx++)
+                {
+                    if(sequence_lens[batchIdx] != seq_length)
+                    {
+                        return false;
+                    }
                 }
             }
 
@@ -133,43 +137,47 @@ const vector<TidlConstraint> tidlConstraintGRU =
         }
     ),
     TIDL_CSTR(
-        "Only clip > 0 is supported",
-        "Only clip > 0 is supported",
+        "Only default activations (f=Sigmoid, g=Tanh) are supported",
+        "Only default activations (f=Sigmoid, g=Tanh) are supported",
         "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             const sTIDL_GRUParams_t &gruParams = layer->layerParams.gruParams;
-
-            if(gruParams.isClipSet == 1 && gruParams.clip <= 0)
+            int32_t num_directions = 1;
+            if(gruParams.direction == TIDL_RecurrentBidirectional)
             {
-                return false;
+                num_directions = 2;
+            }
+            int32_t availableActivations = 2 * num_directions;
+
+            for(int32_t activationIdx = 0; activationIdx < availableActivations; activationIdx++)
+            {
+                if(activationIdx % 2 == 0)
+                {
+                    if(gruParams.activations[activationIdx] != TIDL_Sigmoid)
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if(gruParams.activations[activationIdx] != TIDL_Tanh)
+                    {
+                        return false;
+                    }
+                }
             }
 
             return true;
         }
     ),
     TIDL_CSTR(
-        "Only default direction = 'forward' is supported",
-        "Only default direction = 'forward' is supported",
+        "clip attribute is not supported",
+        "clip attribute is not supported",
         "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             const sTIDL_GRUParams_t &gruParams = layer->layerParams.gruParams;
 
-            if(gruParams.direction != TIDL_RNNForward)
-            {
-                return false;
-            }
-
-            return true;
-        }
-    ),
-    TIDL_CSTR(
-        "Only default linear_before_reset = 0 is supported",
-        "Only default linear_before_reset = 0 is supported",
-        "",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            const sTIDL_GRUParams_t &gruParams = layer->layerParams.gruParams;
-
-            if(gruParams.linear_before_reset != 0)
+            if(gruParams.isClipSet == 1)
             {
                 return false;
             }

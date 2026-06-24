@@ -68,14 +68,53 @@ using namespace onnx;
 
 template<> int32_t TidlParseOnnx:: parse<OnnxStr("Cast")> ()
 {
-    int castTo;
+    int castTo, saturate;
     NodeProto node = graph.node(index);
+    layer.layerType = TIDL_CastLayer;
     int status = getIntAttr(node, "to", &castTo, 0);
     /* TODO: add conditions for which data conversion we allow */
-    
-    layer.layerType = TIDL_CastLayer;
+    layer.layerPCParams.castParams.castTo = getTIDLDataTypeFromOnnxDataType(castTo);
     layer.layerPCParams.castParams.terminal = TIDL_CastNotTerminal;
 
+    char roundMode[50];
+    status = getStringAttr(node, "round_mode", roundMode, 0);
+    if (status == TIDL_ALLOWLISTING_LAYER_CHECK_PASSED)
+    {
+      if(strcmp(roundMode, "up") == 0)
+      {
+        layer.layerPCParams.castParams.roundMode = TIDL_CastRoundUp;
+      }
+      else if(strcmp(roundMode, "nearest") == 0)
+      {
+        layer.layerPCParams.castParams.roundMode = TIDL_CastRoundNearest;
+      }
+      else if(strcmp(roundMode, "down") == 0)
+      {
+        layer.layerPCParams.castParams.roundMode = TIDL_CastRoundDown;
+      }
+      else
+      {
+        /* Default to round up if the value is not recognized */
+        layer.layerPCParams.castParams.roundMode = TIDL_CastRoundUp;
+      }
+    }
+    else
+    {
+      /* Default to round up if the attribute is not present */
+      layer.layerPCParams.castParams.roundMode = TIDL_CastRoundUp;
+    }
+
+    status = getIntAttr(node, "saturate", &saturate, 0);
+    if (status == TIDL_ALLOWLISTING_LAYER_CHECK_PASSED)
+    {
+      layer.layerPCParams.castParams.saturate = saturate;
+    }
+    else
+    {
+      /* Default to saturate if the attribute is not present */
+      layer.layerPCParams.castParams.saturate = 1;
+    }
+    
     // Check if cast is connected to graph input
     for (int i = 0; i < graph.input_size(); i++)
     {
@@ -92,11 +131,6 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Cast")> ()
         {
             layer.layerPCParams.castParams.terminal |= TIDL_CastOutputTerminal;
         }
-    }
-
-    if(layer.layerPCParams.castParams.terminal == ((int32_t)TIDL_CastOutputTerminal & (int32_t)TIDL_CastInputTerminal))
-    {
-      layer.layerPCParams.castParams.terminal = TIDL_CastNotTerminal; /*IN->Cast->OUT which is not supported*/
     }
     
     return 0;

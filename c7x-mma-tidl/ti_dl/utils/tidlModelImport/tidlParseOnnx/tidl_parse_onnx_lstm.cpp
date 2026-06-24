@@ -80,7 +80,7 @@ template<> int32_t TidlParseOnnx::parse<OnnxStr("LSTM")> ()
 
   /* Parse Attributes */
   lstmParams.isClipSet = 0;
-  lstmParams.direction = TIDL_RNNForward;
+  lstmParams.direction = TIDL_RecurrentForward;
   lstmParams.input_forget = 0;
   lstmParams.layout = 0;
 
@@ -156,24 +156,24 @@ template<> int32_t TidlParseOnnx::parse<OnnxStr("LSTM")> ()
   {
     if(strcmp(direction, "forward") == 0)
     {
-      lstmParams.direction = TIDL_RNNForward;
+      lstmParams.direction = TIDL_RecurrentForward;
     }
     else if(strcmp(direction, "reverse") == 0)
     {
-      lstmParams.direction = TIDL_RNNReverse;
+      lstmParams.direction = TIDL_RecurrentReverse;
     }
     else if(strcmp(direction, "bidirectional") == 0)
     {
-      lstmParams.direction = TIDL_RNNBidirectional;
+      lstmParams.direction = TIDL_RecurrentBidirectional;
     }
     else
     {
-      lstmParams.direction = TIDL_RNNUnsupported;
+      lstmParams.direction = TIDL_RecurrentUnsupported;
     }
   }
 
   int32_t num_directions = 1;
-  if(lstmParams.direction == TIDL_RNNBidirectional)
+  if(lstmParams.direction == TIDL_RecurrentBidirectional)
   {
     num_directions = 2;
   }
@@ -282,6 +282,11 @@ template<> int32_t TidlParseOnnx::parse<OnnxStr("LSTM")> ()
   if (graph.node(index).input_size() > 3)
   {
     status = copyFloatConst(graph, index, 3, layer.bias, INPUT_NOT_REQUIRED);
+    if(status != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+    {
+      /* Const layer will get added for this input */
+      layer.numInBufs++;
+    }
   }
 
   /* sequence_lens tensor */
@@ -325,30 +330,38 @@ template<> int32_t TidlParseOnnx::parse<OnnxStr("LSTM")> ()
 
   for(int32_t varIdx: md.varTensorIndices)
   {
-    if(varIdx == 5)
+    if(varIdx == TIDL_RecurrentInputB)
+    {
+      lstmParams.isBiasPresent = 1;
+    }
+    else if(varIdx == TIDL_RecurrentInputInitialH)
     {
       lstmParams.isInitialHPresent = 1;
     }
-    else if(varIdx == 6)
+    else if(varIdx == TIDL_RecurrentInputInitialC)
     {
       lstmParams.isInitialCPresent = 1;
     }
-    else if(varIdx == 7)
+    else if(varIdx == TIDL_RecurrentInputPeepholes)
     {
       lstmParams.isPeepholesPresent = 1;
     }
   }
   for(int32_t constIdx: md.constTensorIndices)
   {
-    if(constIdx == 5)
+    if(constIdx == TIDL_RecurrentInputB)
+    {
+      lstmParams.isBiasPresent = 1;
+    }
+    else if(constIdx == TIDL_RecurrentInputInitialH)
     {
       lstmParams.isInitialHPresent = 1;
     }
-    else if(constIdx == 6)
+    else if(constIdx == TIDL_RecurrentInputInitialC)
     {
       lstmParams.isInitialCPresent = 1;
     }
-    else if(constIdx == 7)
+    else if(constIdx == TIDL_RecurrentInputPeepholes)
     {
       lstmParams.isPeepholesPresent = 1;
     }

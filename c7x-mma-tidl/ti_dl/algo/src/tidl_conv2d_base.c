@@ -650,8 +650,8 @@ int32_t TIDL_conv2DInitNew(const TIDL_LayerSpecificParams *layerSpecificParams,
     if(TIDL_QuantStyleAsymNP2_TFL == commonParams->net->quantizationStyle)
     {
       int32_t satLow, satHigh;
-      conv2dparams->minPSAT = round((float64_tidl)commonParams->net->TIDLLayers[layerIdx].actParams.clipMin/commonParams->net->TIDLLayers[layerIdx].outData.tensorScale) + (float32_tidl)commonParams->net->TIDLLayers[layerIdx].outData.tensorZeroPoint;
-      conv2dparams->maxPSAT = round((float64_tidl)commonParams->net->TIDLLayers[layerIdx].actParams.clipMax/commonParams->net->TIDLLayers[layerIdx].outData.tensorScale) + (float32_tidl)commonParams->net->TIDLLayers[layerIdx].outData.tensorZeroPoint;
+      conv2dparams->minPSAT = round((float64_tidl)commonParams->net->TIDLLayers[layerIdx].clipParams.clipMin/commonParams->net->TIDLLayers[layerIdx].outData.tensorScale) + (float32_tidl)commonParams->net->TIDLLayers[layerIdx].outData.tensorZeroPoint;
+      conv2dparams->maxPSAT = round((float64_tidl)commonParams->net->TIDLLayers[layerIdx].clipParams.clipMax/commonParams->net->TIDLLayers[layerIdx].outData.tensorScale) + (float32_tidl)commonParams->net->TIDLLayers[layerIdx].outData.tensorZeroPoint;
       TIDL_getSaturationLimits(commonParams->net->TIDLLayers[layerIdx].outData.elementType, &satLow, &satHigh);
       /* LDRA_JUSTIFY_START
       <metric start> statement branch <metric end>

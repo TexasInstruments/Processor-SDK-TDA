@@ -184,9 +184,14 @@ int32_t TidlParseTVM::saveAllowlistingMetaData(const relay::Call call, int32_t n
   almd.varTensorsDims.clear();
   almd.constTensorsDims.clear();
   almd.outputTensorDims.clear();
+  almd.inputDataTypes.clear();
+  almd.outputDataTypes.clear();
   for (int i = 0; i < numInputs; i++)
   {
     std::vector<int32_t> dims = TIDL_relayNormalizeShape(inputs[i]);
+    auto tensorType = inputs[i]->checked_type().as<TensorTypeNode>();
+    int32_t tidlType = tensorType ? getTIDLDataTypeFromTVMDataType((int32_t)tensorType->dtype.code()) : -1;
+    almd.inputDataTypes.push_back(tidlType);
     if(inputs[i].as<ConstantNode>())
     {
       almd.constTensorIndices.push_back(i);
@@ -200,17 +205,37 @@ int32_t TidlParseTVM::saveAllowlistingMetaData(const relay::Call call, int32_t n
   }
   almd.numVarInputs = almd.varTensorIndices.size();
   almd.numConstInputs = almd.constTensorIndices.size();
-  
-  Array<Expr> outputs = { call };
-  if (numOutputs > 1 && outputs.as<TupleNode>())
+
+  if (numOutputs > 1 && call->checked_type().as<TupleTypeNode>())
   {
-    outputs = call.as<TupleNode>()->fields;
-    
+    auto tuple_type = call->checked_type().as<TupleTypeNode>();
+    for (int i = 0; i < tuple_type->fields.size(); i++)
+    {
+      if (tuple_type->fields[i].as<TensorTypeNode>())
+      {
+        Array<PrimExpr> shape = tuple_type->fields[i].as<TensorTypeNode>()->shape;
+        std::vector<int32_t> tidl_shape;
+        for (int j = 0; j < shape.size(); j++)
+        {
+          tidl_shape.push_back(shape[j].as<IntImmNode>()->value);
+        }
+        almd.outputTensorDims.emplace_back(tidl_shape);
+        almd.outputDataTypes.push_back(getTIDLDataTypeFromTVMDataType(
+          (int32_t)tuple_type->fields[i].as<TensorTypeNode>()->dtype.code()));
+      }
+      else
+      {
+        almd.outputTensorDims.emplace_back(std::vector<int32_t>());
+        almd.outputDataTypes.push_back(-1);
+      }
+    }
   }
-    
-  for (int i = 0; i < outputs.size(); i++)
-  { 
-    almd.outputTensorDims.emplace_back(TIDL_relayNormalizeShape(outputs[i]));
+  else
+  {
+    almd.outputTensorDims.emplace_back(TIDL_relayNormalizeShape(call));
+    auto outTensorType = call->checked_type().as<TensorTypeNode>();
+    almd.outputDataTypes.push_back(outTensorType ?
+      getTIDLDataTypeFromTVMDataType((int32_t)outTensorType->dtype.code()) : -1);
   }
   // if the output dims is 0 then donot offload to TIDL
   if(numOutputs==1 &&almd.outputTensorDims[0].size()==0 ) 

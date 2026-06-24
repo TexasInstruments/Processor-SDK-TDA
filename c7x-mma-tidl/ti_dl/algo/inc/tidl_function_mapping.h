@@ -76,13 +76,6 @@
 #include "itidl_ti.h"
 #include "tidl_temp.h"
 
-/* Exclude unsupported source files from build by default
-  Set to 0 to include them: #define TIDL_EXCLUDE_UNSUPPORTED_KERNELS 0 */
-
-#ifndef TIDL_EXCLUDE_UNSUPPORTED_KERNELS
-#define TIDL_EXCLUDE_UNSUPPORTED_KERNELS 1
-#endif
-
 /* ========================================================================== */
 /*                             Include Files                                  */
 /* ========================================================================== */

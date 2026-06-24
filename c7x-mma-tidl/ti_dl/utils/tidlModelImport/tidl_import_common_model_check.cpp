@@ -185,13 +185,8 @@ int32_t checkShapeInferenceforOnnx(sTIDL_allowlistingMetaData md)
       return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
     }
   }
-  for (int i=0; i<md.constTensorIndices.size();i++)
-  {
-    if (consttensordims[i].size() == 0)
-    {
-      return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
-    }
-  }
+  /* Const tensors carry their own data, so shape is always known — scalars
+   * legitimately have dims.size() == 0 (0-D tensor) and must not be flagged. */
   for (int i=0; i<outtensordims.size();i++)
   {
     if (outtensordims[i].size() == 0)
@@ -1711,10 +1706,10 @@ static void checkConcatenateLayers(const sTIDL_LayerPC_t &layerPC, DiagList_t &d
 
 static void checkClipLayers(const sTIDL_LayerPC_t &layerPC, DiagList_t &diags)
 {
-  const sTIDL_ActParams_t &actParams = layerPC.actParams;
+  const sTIDL_ClipParams_t &clipParams = layerPC.clipParams;
 
   // Not supported, except min <= 0 and max > 0
-  if(!((actParams.clipMin <= 0) && (actParams.clipMax > 0)))
+  if(!((clipParams.clipMin <= 0) && (clipParams.clipMax > 0)))
   {
     TIDL_LOG_UNSUPPORTED(diags, "TIDL_ConcatLayer: Clip must have min <= 0 and max > 0")
   }
@@ -1894,7 +1889,6 @@ static const std::unordered_set<int32_t> individualUnsupportedTIDLOps {
   TIDL_ELULayer,
   TIDL_ScaleLayer,
   TIDL_DropOutLayer,
-  TIDL_ShapeLayer,
   TIDL_ClipLayer,
   TIDL_MinimumLayer,
   TIDL_BiasLayer,
@@ -1925,6 +1919,7 @@ static const std::unordered_set<int32_t> individualUnsupportedTIDLOps {
   TIDL_SeluLayer,
   TIDL_RoundLayer,
   TIDL_SignLayer,
+  TIDL_AttentionLayer,
 };
 
 int tidlModelCheck(tidl_import_config * params, sTIDL_OrgNetwork_t * orgTIDLNetStructure)
@@ -2173,7 +2168,8 @@ void tidlModelCheckLayer(const sTIDL_LayerPC_t &layerPC, DiagList_t &diags)
         checkReshapeLayers(layerPC, diags);
       break;
     case TIDL_ShapeLayer:
-      checkFoldedLayers(layerPC, diags);
+      break;
+    case TIDL_SizeLayer:
       break;
     case TIDL_SqueezeLayer:
       checkSqueezeLayers(layerPC, diags);
@@ -2275,6 +2271,10 @@ void tidlModelCheckLayer(const sTIDL_LayerPC_t &layerPC, DiagList_t &diags)
     case TIDL_RoundLayer:
       break;
     case TIDL_SignLayer:
+      break;
+    case TIDL_GatherElementsLayer:
+      break;
+    case TIDL_AttentionLayer:
       break;
     default:
       TIDL_LOG_UNSUPPORTED(diags, "Unknown layer type: %d", layerPC.layerType);

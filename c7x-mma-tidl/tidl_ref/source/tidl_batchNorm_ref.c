@@ -80,7 +80,6 @@
 #include "tidl_forceNegativeTest.h"
 #ifdef BUILD_WITH_CUDA
 #include "tidl_cuda.h"
-static int CUDA_BATCHNORM_COUNTER = 0;
 #endif
 
 
@@ -241,7 +240,7 @@ static int32_t TIDL_refBatchNormCore(Tin  *inPtr,
     /* OPENACC(data copyin(inData[: 1 + ((numTotBatches-1)*inBatchPitch) + ((numChannels-1)*inChPitch) + ((imHeight-1)*inPitch) + (imWidth-1)], weightsPtr[:numChannels-1], biasPtr[:numChannels-1], slopePtr[:numChannels-1]) \
             copyout(refAccPtr[: numTotBatches * outBatchPitch]))
     OPENACC(parallel loop collapse(5)) */
-    #ifdef BUILD_WITH_CUDA
+    #ifdef BUILD_WITH_CUDA_BATCHNORM
     // call CUDA batchnorm wrapper
     status = TIDL_cudaBatchNorm<Tin, Tw, Tb, Tacc>(inData, weightsPtr, slopePtr, biasPtr, temp_refAccPtr,
                                        numTotBatches, numChannels, imWidth, imHeight, numDIM1, numDIM2,
@@ -360,7 +359,7 @@ static int32_t TIDL_refBatchNormCore(Tin  *inPtr,
     /* OPENACC(data copyout(outData[: 1 + ((numTotBatches-1)*outBatchPitch) + ((numChannels-1)*outChPitch) + ((imHeight-1)*outPitch) + (imWidth-1)]) \
                 copyin(refAccPtr[: numTotBatches * outBatchPitch]))
     OPENACC(parallel loop collapse(6)) */
-    #ifdef BUILD_WITH_CUDA
+    #ifdef BUILD_WITH_CUDA_BATCHNORM
     // call CUDA batchnorm saturation wrapper
     float floatSatLow, floatSatHigh;
     TIDL_getSaturationFloat(&net->TIDLLayers[layerIdx], &floatSatLow, &floatSatHigh);
@@ -455,7 +454,7 @@ static void TIDL_HighAccuracySigmoidProcess(Tin  *inPtr,
   satLow = std::numeric_limits<Tout>::lowest();
   int32_t numChannels = params->numChannels;
   Tout out = 0;
-  #ifdef BUILD_WITH_CUDA
+  #if 0
   // call CUDA wrapper for High Accuracy Sigmoid
   TIDL_cudaHighAccuracySigmoid<Tin, Tout>(inData, outData,
                                           numTotBatches, numChannels, imWidth, imHeight, inDim1, inDim2,
@@ -593,7 +592,7 @@ static int32_t TIDL_refSigmoidCore(Tin  *inPtr,
       satLow = std::numeric_limits<Tout>::lowest();
       int32_t temp_min = 0, temp_max = 0;
 
-      #ifdef BUILD_WITH_CUDA
+      #if 0
       // call CUDA sigmoid kernel
       TIDL_cudaSigmoid<Tin, Tout, Tacc>(inData, refAccPtr,
                                         numTotBatches, numChannels, imWidth, imHeight,
@@ -704,7 +703,7 @@ static int32_t TIDL_refSigmoidCore(Tin  *inPtr,
       }
       /* LDRA_JUSTIFY_END */
 
-      #ifdef BUILD_WITH_CUDA
+      #if 0
       // call CUDA saturation kernel
       TIDL_cudaSigmoidSaturation<Tacc, Tout>(refAccPtr, outData,
                                             numTotBatches, numChannels, imWidth, imHeight,
@@ -1270,7 +1269,7 @@ static int32_t TIDL_refSigmoidProcess(TIDL_Handle intAlgHandle,
 
     int32_t c = params->numChannels;
 
-    #ifdef BUILD_WITH_CUDA
+    #if 0
     // Call CUDA float sigmoid wrapper
     status = TIDL_cudaFloatSigmoid<float32_tidl, float32_tidl>(inData, outData,
                                    numTotBatches, params->numChannels, imWidth, imHeight, inDim1, inDim2,
@@ -1441,7 +1440,7 @@ static int32_t TIDL_refNonLinearLUTCore(Tin  *inPtr,
                copy(outData[:1+ ((numTotBatches-1)*outBatchPitch) + ((inDIM1-1)*outDIM1Pitch) + ((inDIM2-1)*outDIM2Pitch) + ((c-1)*outChPitch) + ((imHeight-1)*outPitch) + (imWidth-1)]))*/
   {
   //OPENACC(parallel loop collapse(6))
-  #ifdef BUILD_WITH_CUDA
+  #if 0
   // call CUDA non linear LUT kernel
   status = TIDL_cudaNonLinearLUT<Tin, Tout>(inData, outData, LUT_data_table,
                                             numTotBatches, c, imWidth, imHeight, inDIM1, inDIM2,
@@ -1618,7 +1617,7 @@ static int32_t TIDL_refNonLinearInterpolLUTCore(Tin  *inPtr,
 
   int32_t c = params->numChannels;
 
-  #ifdef BUILD_WITH_CUDA
+  #if 0
   // call CUDA non linear interpolation LUT kernel
   status = TIDL_cudaNonLinearInterpolLUT<Tin, Tout>(inData, outData, LUT_data_table,
                                                     numTotBatches, c, imWidth, imHeight, inDIM1, inDIM2,
@@ -1926,12 +1925,17 @@ static int32_t TIDL_refNonLinearNonLUTCore(TIDL_Handle intAlgHandle,
                 // OPENACC(routine(TIDL_round_nonLut))
                 status = TIDL_round_nonLut<Tin, Tout>((const void *)&inDataVal,(void *)&outDataVal, Zx, Sx, Zy, Sy, alpha, beta);
               }
+              /* LDRA_JUSTIFY_START
+              <metric start> branch <metric end>
+              <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+              Prior check occurs for other activation types.
+              <justification end> */
               else if(tidlLayer->actParams.actType == TIDL_Sign)
+              /* LDRA_JUSTIFY_END */
               {
                 // OPENACC(routine(TIDL_round_nonLut))
                 status = TIDL_sign_nonLut<Tin, Tout>((const void *)&inDataVal,(void *)&outDataVal, Zx, Sx, Zy, Sy, alpha, beta);
-              }
-                      
+              }     
               /* LDRA_JUSTIFY_START
               <metric start> statement branch <metric end>
               <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
@@ -1942,6 +1946,7 @@ static int32_t TIDL_refNonLinearNonLUTCore(TIDL_Handle intAlgHandle,
                 status = TIDL_ERR_NOT_IMPLEMENTED;
                 break;
               }
+              /* LDRA_JUSTIFY_END */
               outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = outDataVal;
             }
           }
@@ -2688,16 +2693,15 @@ static int32_t TIDL_refFloatNonLinear(TIDL_Handle intAlgHandle,
                   float32_tidl outMin = std::numeric_limits<float32_tidl>::lowest();
                   float32_tidl outMax = std::numeric_limits<float32_tidl>::max();
                   /* LDRA_JUSTIFY_START
-                  <metric start> statement branch <metric end>
-                  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
-                  <justification end> */
+                  <metric start> statement branch <metric end>
+                  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  <justification end> */
                   outValF = (outValF > outMax)? outMax : outValF;
                   /* LDRA_JUSTIFY_END */
                   /* LDRA_JUSTIFY_START
-
-                  <metric start> statement branch <metric end>
-                  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
-                  <justification end> */
+                  <metric start> statement branch <metric end>
+                  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  <justification end> */
                   outValF = (outValF < outMin)? outMin : outValF;
                   /* LDRA_JUSTIFY_END */
                 }
@@ -3045,13 +3049,9 @@ int32_t TIDL_batchNormRefProcess(TIDL_NetworkCommonParams *commonParams,
   (void)memcpy(&createParams, commonParams->createParams, sizeof(TIDL_CreateParams));
   intAlgObj.createParams = (TIDL_CreateParams *) &createParams;
 
-  #ifdef BUILD_WITH_CUDA
-  int CUDNNLC;
-  CUDNNLC = CUDA_BATCHNORM_COUNTER++;
-  #endif
 
-  if((tidlLayer->actParams.actType == TIDL_NoAct) || (tidlLayer->actParams.actType == TIDL_RelU) || (tidlLayer->actParams.actType == TIDL_PRelU) ||
-     (tidlLayer->actParams.actType == TIDL_RelU6) || (tidlLayer->actParams.actType == TIDL_Clip) ||
+  if((tidlLayer->actParams.actType == TIDL_NoAct) || (tidlLayer->actParams.actType == TIDL_RelU) || 
+     (tidlLayer->actParams.actType == TIDL_RelU6) || (tidlLayer->actParams.actType == TIDL_PRelU) ||
      (inDataParams->elementType == TIDL_SinglePrecFloat))
     {
       algLayer->layerParams.batchNormParams.lutParams.nonLinearActMethod = -1;
@@ -3146,10 +3146,6 @@ int32_t TIDL_batchNormRefProcess(TIDL_NetworkCommonParams *commonParams,
                                     &tidlLayer->outData);                             
   }
 
-  #ifdef BUILD_WITH_CUDA
-  /*Mark init as completed to prevent re-allocation of buffers for subsequent frames:*/
-  TIDL_cudaSetBatchNormInitFlag(CUDNNLC);
-  #endif
 
   TIDL_L1DandL2CacheWbInv();
 

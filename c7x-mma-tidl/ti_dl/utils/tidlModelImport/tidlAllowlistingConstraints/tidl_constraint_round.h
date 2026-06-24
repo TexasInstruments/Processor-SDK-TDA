@@ -65,14 +65,6 @@
 const vector<TidlConstraint> tidlConstraintRound =
 {
     TIDL_CSTR(
-        "Not supported as an individual operator",
-        "Not supported as an individual operator",
-        "Not supported as an individual operator",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            return false;
-        }
-    ),
-    TIDL_CSTR(
         "Number of non-singleton variable input dimensions must be <= 6",
         "Number of non-singleton variable input dimensions must be <= 6",
         "Number of non-singleton variable input dimensions must be <= 6",

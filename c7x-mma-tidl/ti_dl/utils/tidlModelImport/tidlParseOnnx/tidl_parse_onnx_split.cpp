@@ -72,6 +72,7 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Split")> ()
   int32_t axis = 0;
   int32_t splitSize, splitIdx = -1, numDim, attrIdx = -1, split_status = -1, num_out_status = -1, num_outputs = 0;
   sTIDL_SliceLayerParams_t &sliceParams = layer.layerParams.sliceParams;
+  sTIDL_SlicePCParams_t &slicePCParams  = layer.layerPCParams.sliceParams;
 
   layer.layerType = TIDL_SliceLayer;
   layer.numOutBufs = graph.node(index).output_size();
@@ -151,10 +152,7 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Split")> ()
     else if(md.numVarInputs <= 1)
     {
       /*Split input does not exist*/
-      for (j = 0; j < layer.numOutBufs; j++)
-      {
-        sliceParams.slicePoints[j] = -1;
-      }
+      slicePCParams.setSlicePoints = 1;
     }
     else
     {

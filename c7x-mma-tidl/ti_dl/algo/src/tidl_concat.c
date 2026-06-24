@@ -192,25 +192,27 @@ int32_t TIDL_concatProcessNew(TIDL_NetworkCommonParams *commonParams,
   #ifdef HOST_EMULATION
   if (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != 0U)
   {
-    status = TIDL_concatRefProcess(commonParams,
-                                   algLayer,
-                                   tidlLayer,
-                                   inPtrs,
-                                   outPtrs,
-                                   layerIdx);
+    if((commonParams->gcHelperHandle == NULL) || (algLayer->workloadUnit->isWLNOP == false)){
+      status = TIDL_concatRefProcess(commonParams,
+                                    algLayer,
+                                    tidlLayer,
+                                    inPtrs,
+                                    outPtrs,
+                                    layerIdx);
+    }
   }
   else
   #endif
   {
-    // if(flag == 1)
-    // {
-    status = TIDL_deviceUtilsCommonProcess(commonParams,
-                                  algLayer,
-                                  tidlLayer,
-                                  inPtrs,
-                                  outPtrs,
-                                  layerIdx);
-    // }
+    if(algLayer->workloadUnit->isWLNOP == false)
+    {
+      status = TIDL_deviceUtilsCommonProcess(commonParams,
+                                    algLayer,
+                                    tidlLayer,
+                                    inPtrs,
+                                    outPtrs,
+                                    layerIdx);
+    }
   }
 
   return status;

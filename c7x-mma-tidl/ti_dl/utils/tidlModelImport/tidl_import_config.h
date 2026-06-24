@@ -67,13 +67,22 @@
 #include "configparser.h"
 #include "ti_dl.h"
 #include <string>
+#include <vector>
+#include <utility>
 using namespace std;
 #define FILE_NAME_SIZE  (512)
 #define TIDL_IN_NUF_MAX_CH (256)
 //NCI, NCO, PRED_CIRC, DWS_CONV_STRIDE
 #define DEFAULT_COMPILE_CONSTRAINT_NC_FLAGS (0x1 | 0x40 | 0x200 | 0x400)
+/* Copy of NC TIDL_ENABLE_PERFLOG_TRACE flag */
+#define TIDL_ENABLE_PERFLOG_TRACE (0x5000000)
 #define ADD_DC_LAYER_AT_INPUT  (1)
 #define ADD_DC_LAYER_AT_OUTPUT (2)
+
+typedef enum{
+TIDL_OPTIMIZE_LEVEL_BASIC = 0, //This enables the regular optimization
+TIDL_OPTIMIZE_LEVEL_EXTENDED = 1  // This enables regular optimizations + shape folding.
+} TIDL_OPTIMIZATION_LEVEL;
 
 typedef struct
 {
@@ -136,12 +145,16 @@ typedef struct
     uint8_t  fileNameGrpInfo[FILE_NAME_SIZE];
     float    inQuantFactor[TIDL_MAX_ALG_IN_BUFS];
     int32_t  inElementType[TIDL_MAX_ALG_IN_BUFS];
+    /*modelInElementType stores native element types from original model for each input buffer*/
+    int32_t  modelInElementType[TIDL_MAX_ALG_IN_BUFS];
     int32_t  actMethod[TIDL_MAX_ALG_IN_BUFS];
     uint8_t  actType[TIDL_MAX_ALG_IN_BUFS*FILE_NAME_SIZE];
     int32_t  NetInElementType[TIDL_MAX_ALG_IN_BUFS];
     int32_t  rawDataInElementType[TIDL_MAX_ALG_IN_BUFS];
     int32_t  inZeroPoint[TIDL_MAX_ALG_IN_BUFS];
     int32_t  inLayout[TIDL_MAX_ALG_IN_BUFS];
+    /*modelOutElementType stores native element types from original model for each output buffer*/
+    int32_t  modelOutElementType[TIDL_MAX_ALG_OUT_BUFS];
     int32_t  outElementType[TIDL_MAX_ALG_OUT_BUFS];
     float    outTensorScale[TIDL_MAX_ALG_OUT_BUFS];
     int32_t  outZeroPoint[TIDL_MAX_ALG_OUT_BUFS];
@@ -173,7 +186,9 @@ typedef struct
     uint8_t  spatialSplitLayersNames[TIDL_NUM_MAX_LAYERS*FILE_NAME_SIZE];
     uint8_t  channelSplitLayersNames[TIDL_NUM_MAX_LAYERS*FILE_NAME_SIZE];
     uint8_t  outputFeature16bitNamesList[TIDL_NUM_MAX_LAYERS*FILE_NAME_SIZE];
+    uint8_t  mp16bitResolvedFeatureNamesList[TIDL_NUM_MAX_LAYERS*FILE_NAME_SIZE];
     uint8_t  params16bitNamesList[TIDL_NUM_MAX_LAYERS*FILE_NAME_SIZE];
+    uint8_t  nativeLayerNamesList[TIDL_NUM_MAX_LAYERS*FILE_NAME_SIZE];
     float    mixedPrecisionFactor;
     /**< Group for a given model, same network with different resolution
      * can share same mdoelGroupId to have optimization for DDR space */
@@ -203,6 +218,8 @@ typedef struct
     uint8_t ncTempInfoDir[FILE_NAME_SIZE];
     /* Enable TFR optimization*/
     int32_t  enableTFROptimization;
+    /* Flag to enable/disable optimization level*/
+    int32_t graphOptimizationLevel;
     /* Flag to enable/disable shape folding*/
     int32_t enableShapeFolding;
     /* Flag to control batchnorm higher dims fuse*/
@@ -213,6 +230,12 @@ typedef struct
     int32_t forceBatchSplitInLowLatencyMode;
     /* Flag to optimize TopK axis*/
     int32_t optimizeTopKAxis;
+    /* Copy tesnor quant spec */
+    std::vector<std::pair<std::string,std::string>> copyTensorQuantSpec;
+    /* Enable Concat No Op optimization*/
+    int32_t  enableConcatNoOp;
+    /* Enable zero-point for Output DataConvert*/
+    int32_t enableZeroPointForOutputDataConvert;
 } tidl_import_config;
 
 extern sTokenMapping gsTokenMap_tidl_import_config[MAX_ITEMS_TO_PARSE];

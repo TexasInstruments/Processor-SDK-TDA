@@ -249,8 +249,6 @@ void * TIDL_getMemoryChunkFromSysmem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MA
 */
 void TIDL_resetSysmem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX]);
 
-void TIDL_reset_OneMem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX], int32_t i);
-
 int32_t TIDL_getDatElementSign(int32_t elementType);
 
 
@@ -518,32 +516,12 @@ sTIDL_AlgLayer_t * algLayer, int32_t *paramMemTabOffset,
 int32_t *dataMemTabOffset, const IALG_MemRec *memRec,
 void ** outPtr, sTIDL_LayerBuf_t *TIDLLayersBufPtr);
 
-/**
-----------------------------------------------------------------------------
-@ingroup    TIDL_IVISION_SUPPORT
-@fn         TIDL_applyConstraintsOnGC
-@brief      Function to set input/output layer buffers baseMem to NOT_VALID
 
-@param      createParams : TIDL create parameters containing info about layers and layer group
-@param      wlSuperGroup   : Workload Super Group
-@param      gcHelperHandle   : Database from graph compiler
-@param      coreId   : CoreId
-
-@remarks    None
-@return     IALG_EOK if success
-----------------------------------------------------------------------------
- */
-int32_t TIDL_applyConstraintsOnGC(const TIDL_CreateParams * createParams,
-                        sWorkloadSuperGroup_t * wlSuperGroup,
-                        sGCHelperHandle * gcHelperHandle);
-
-#if defined TIDL_DYNAMIC_SHAPE
 int32_t TIDL_resolveLayerOutputShape(IVISION_InBufs *inBufs,
                                      IVISION_InBufs *outBufs,
                                      TIDL_Handle intAlgHandle,
                                      sTIDL_AlgLayer_t *algLayer,
                                      sTIDL_Layer_t *TIDLLayer);
-#endif
 
 int32_t TIDL_getLayerInPtrs(
   IVISION_InBufs      *inBufs,

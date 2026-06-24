@@ -107,8 +107,8 @@ int32_t TIDLRT_getDdrStats(uint64_t *read_bytes, uint64_t *write_bytes)
 
         if(status == 0)
         {
-            *read_bytes  = (uint64_t)ddr_stats.counter0_total * APP_PERF_DDR_BURST_SIZE_BYTES;
-            *write_bytes = (uint64_t)ddr_stats.counter1_total * APP_PERF_DDR_BURST_SIZE_BYTES;
+            *write_bytes = (uint64_t)ddr_stats.counter0_total * APP_PERF_DDR_BURST_SIZE_BYTES;
+            *read_bytes  = (uint64_t)ddr_stats.counter1_total * APP_PERF_DDR_BURST_SIZE_BYTES;
         }
         else
         {

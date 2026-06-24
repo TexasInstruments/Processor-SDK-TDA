@@ -81,13 +81,24 @@
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
-/* None */
+/* 0 - Actual Inp, followed by W, R, B, InitH */
+#define TIDL_GRU_MAX_NUM_INPUTS  (5U)
+/* 0 - Actual Out, 1 - out H */
+#define TIDL_GRU_MAX_NUM_OUTPUTS (2U)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
 
-/* None */
+/*
+ * Contents of destination buffer in GRU.
+ * GRU_OUT_Y - actual GRU output, GRU_OUT_H - final hidden state
+ */
+enum {
+    GRU_OUT_Y = 0,
+    GRU_OUT_H,
+    GRU_MAX_OUTPUTS
+};
 
 /* ========================================================================== */
 /*                  Internal/Private Function Declarations                    */
@@ -118,6 +129,23 @@ int32_t TIDL_gruInit(const TIDL_LayerSpecificParams *layerSpecificParams,
                      uint8_t *memory[TIDL_LAYER_MEMORY_MAX],
                      int32_t memorySize[TIDL_LAYER_MEMORY_MAX],
                      void **outPtr);
+
+
+int32_t TIDL_gruDeviceGetHandleSize(void                  *linkInitParams,
+                                     const sLink_t         *link,
+                                     const sGCHelperHandle *gcHelperHandle);
+
+int32_t TIDL_gruDeviceInit(void                                *linkHandle,
+                            void                                *linkInitParams,
+                            const WorkloadUnitExec_CommonParams *commonParams,
+                            const sLink_t                       *link,
+                            const sGCHelperHandle               *gcHelperHandle);
+
+int32_t TIDL_gruDeviceExec(void                                *linkHandle,
+                             const WorkloadUnitExec_LinkExecArgs *linkExecArgs,
+                             int32_t                              currFlowStage[],
+                             int32_t                              currIterCount);
+
 
 /* ========================================================================== */
 /*                       Static Function Definitions                          */

@@ -77,7 +77,7 @@
 #include <limits>
 #include <math.h>
 #include <float.h>
-
+#include "tidl_device_mem_properties.h"
 /* As LDRA is treating "not" as MACRO, modifing code of line from "not" to "!" without effecting the functionality */
 #if !defined(SOC_AM62A) && !defined(SOC_J722S) && !defined (SOC_TDA54)
 #if !defined(HOST_EMULATION)
@@ -377,31 +377,16 @@ float32_tidl TIDL_getMMAv2_ScaleShiftAndError(
     int32_t maxScaleValue = 255; /* Default initialization for MISRA C compliance */
     const char *scaleTypeName;
     
-    if (typeid(Tscale) == typeid(uint8_t))
-    {
-        maxScaleValue = 255;
-        scaleTypeName = "UINT8";
-    }
-    else if (typeid(Tscale) == typeid(int8_t))
+    if (typeid(Tscale) == typeid(int8_t))
     {
         maxScaleValue = 127;
         scaleTypeName = "INT8";
     }
-    else if (typeid(Tscale) == typeid(uint16_t))
-    {
-        maxScaleValue = 65535;
-        scaleTypeName = "UINT16";
-    }
-    else if (typeid(Tscale) == typeid(int16_t))
+    else 
+    /* if (typeid(Tscale) == typeid(int16_t)) */
     {
         maxScaleValue = 32767;
         scaleTypeName = "INT16";
-    }
-    else
-    {
-        /* Default to uint8 for unknown types */
-        maxScaleValue = 255;
-        scaleTypeName = "UNKNOWN";
     }
     
     /* Exhaustive search through all possible scale values */
@@ -441,8 +426,11 @@ float32_tidl TIDL_getMMAv2_ScaleShiftAndError(
             bestFixedScale = scaleIter;
         }
     }
-    
     /* Handle edge case: all values skipped */
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification end> */
     if(skipCount == maxScaleValue)
     {
         bestShiftBits = maxShiftBits;
@@ -451,7 +439,7 @@ float32_tidl TIDL_getMMAv2_ScaleShiftAndError(
         tidl_printf(0, "Warning: Could not find optimal %s scale approximation for ratio %f, using approx scale %f\n",
                     scaleTypeName, scaleRatio, ((float32_tidl)bestFixedScale/(pow(2,bestShiftBits))));
     }
-    
+    /* LDRA_JUSTIFY_END */
     *shift = bestShiftBits;
     *scale = (Tscale)bestFixedScale;
     return minError;
@@ -1118,6 +1106,9 @@ int32_t TIDL_memcpy2D(
           {
             /* LDRA_JUSTIFY_END */
             (void)DmaUtilsAutoInc3d_trigger(dmaUtilsContext, TIDL_DMA_CHANNEL_MEMCPY);
+            #ifdef PERF_MODELLING
+            DmaUtilsAutoInc3d_wait_copyWrapper(dmaUtilsContext, TIDL_DMA_CHANNEL_MEMCPY, TRUE);
+            #endif
             DmaUtilsAutoInc3d_wait(dmaUtilsContext, TIDL_DMA_CHANNEL_MEMCPY);
           }
         }
@@ -1166,9 +1157,7 @@ template void TIDL_AM_conv2dBiasSplit<int64_t, int16_t>(int16_t *, int64_t *, in
 
 // Explicit template instantiations for TIDL_getMMAv2_ScaleShiftAndError
 template float32_tidl TIDL_getMMAv2_ScaleShiftAndError<int8_t>(float32_tidl, int8_t*, uint8_t*, int32_t, float32_tidl, bool);
-template float32_tidl TIDL_getMMAv2_ScaleShiftAndError<uint8_t>(float32_tidl, uint8_t*, uint8_t*, int32_t, float32_tidl, bool);
 template float32_tidl TIDL_getMMAv2_ScaleShiftAndError<int16_t>(float32_tidl, int16_t*, uint8_t*, int32_t, float32_tidl, bool);
-template float32_tidl TIDL_getMMAv2_ScaleShiftAndError<uint16_t>(float32_tidl, uint16_t*, uint8_t*, int32_t, float32_tidl, bool);
 
 void tidl_printf(int8_t traceLevel, const char *format, ...)
 {
@@ -2608,7 +2597,7 @@ void TIDL_getSaturationFloat(
     float32_tidl *min,
     float32_tidl *max)
 {
-  if ((tidlLayer->actParams.actType == TIDL_NoAct) ||
+  if (((tidlLayer->actParams.actType == TIDL_NoAct) && (tidlLayer->clipParams.isClipEnabled == 0)) ||
       (tidlLayer->actParams.actType == TIDL_PRelU) ||
       (tidlLayer->actParams.actType == TIDL_GELU) ||
       (tidlLayer->actParams.actType == TIDL_LeakyReLU))
@@ -2626,10 +2615,10 @@ void TIDL_getSaturationFloat(
     *max = 6.0;
     *min = 0.0;
   }
-  else if (tidlLayer->actParams.actType == TIDL_Clip)
+  else if (tidlLayer->clipParams.isClipEnabled == 1)
   {
-    *max = tidlLayer->actParams.clipMax;
-    *min = tidlLayer->actParams.clipMin;
+    *max = tidlLayer->clipParams.clipMax;
+    *min = tidlLayer->clipParams.clipMin;
   }
   else
   {

@@ -80,7 +80,7 @@ template<> int32_t TidlParseOnnx::parse<OnnxStr("RNN")> ()
 
   /* Parse Attributes */
   rnnParams.isClipSet = 0;
-  rnnParams.direction = TIDL_RNNForward;
+  rnnParams.direction = TIDL_RecurrentForward;
   rnnParams.layout = 0;
 
   int32_t attrActivationAlphaIdx = getAttrIdx(node, "activation_alpha");
@@ -155,24 +155,24 @@ template<> int32_t TidlParseOnnx::parse<OnnxStr("RNN")> ()
   {
     if(strcmp(direction, "forward") == 0)
     {
-      rnnParams.direction = TIDL_RNNForward;
+      rnnParams.direction = TIDL_RecurrentForward;
     }
     else if(strcmp(direction, "reverse") == 0)
     {
-      rnnParams.direction = TIDL_RNNReverse;
+      rnnParams.direction = TIDL_RecurrentReverse;
     }
     else if(strcmp(direction, "bidirectional") == 0)
     {
-      rnnParams.direction = TIDL_RNNBidirectional;
+      rnnParams.direction = TIDL_RecurrentBidirectional;
     }
     else
     {
-      rnnParams.direction = TIDL_RNNUnsupported;
+      rnnParams.direction = TIDL_RecurrentUnsupported;
     }
   }
 
   int32_t num_directions = 1;
-  if(rnnParams.direction == TIDL_RNNBidirectional)
+  if(rnnParams.direction == TIDL_RecurrentBidirectional)
   {
     num_directions = 2;
   }
@@ -264,6 +264,11 @@ template<> int32_t TidlParseOnnx::parse<OnnxStr("RNN")> ()
   if (graph.node(index).input_size() > 3)
   {
     status = copyFloatConst(graph, index, 3, layer.bias, INPUT_NOT_REQUIRED);
+    if(status != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+    {
+      /* Const layer will get added for this input */
+      layer.numInBufs++;
+    }
   }
 
   /* sequence_lens tensor */
@@ -285,14 +290,22 @@ template<> int32_t TidlParseOnnx::parse<OnnxStr("RNN")> ()
 
   for(int32_t varIdx: md.varTensorIndices)
   {
-    if(varIdx == 5)
+    if(varIdx == TIDL_RecurrentInputB)
+    {
+      rnnParams.isBiasPresent = 1;
+    }
+    else if(varIdx == TIDL_RecurrentInputInitialH)
     {
       rnnParams.isInitialHPresent = 1;
     }
   }
   for(int32_t constIdx: md.constTensorIndices)
   {
-    if(constIdx == 5)
+    if(constIdx == TIDL_RecurrentInputB)
+    {
+      rnnParams.isBiasPresent = 1;
+    }
+    else if(constIdx == TIDL_RecurrentInputInitialH)
     {
       rnnParams.isInitialHPresent = 1;
     }

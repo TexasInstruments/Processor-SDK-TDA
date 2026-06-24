@@ -147,6 +147,13 @@ const char *TIDL_graphBgColors[] =
   "#00008b",    //"LSTM",
   "#00008b",    //"GRU",
   "#00008b",    //"RNN",
+  "#00010b",    //"GatherND",
+  "#9d0b9a",    //"Cast" ,
+  "#050935",    //"GatherElements",
+  "#7baf00",    //"Shape",
+  "#00b4d8",    //"Size",
+  "#eab676",    //"Attention"
+  "#9cc576",    //"NonZero"
   "#A84060",    //"UnSuported" ,
   "#A84060",    //"PriorBox" ,
   "#A84060",    //"Permute" ,
@@ -160,7 +167,6 @@ const char *TIDL_graphBgColors[] =
   "#A84060",    //"Pack" ,
   "#A84060",    //"Dequantize" ,
   "#A84060",    //"Quantize" ,
-  "#A84060",    //"Cast" ,
 };
 
 /**
@@ -579,6 +585,11 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
         if(pTIDLNetStructure->TIDLLayers[i].actParams.actType != TIDL_NoAct)
         {
           layerTypeName = TIDL_Strings::actTypeShort(pTIDLNetStructure->TIDLLayers[i].actParams.actType);
+        }
+        if (pTIDLNetStructure->TIDLLayers[i].actParams.actType == TIDL_NoAct &&
+            pTIDLNetStructure->TIDLLayers[i].clipParams.isClipEnabled == 1)
+        {
+          layerTypeName = "Clip";
         }
       }
 

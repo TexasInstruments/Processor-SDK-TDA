@@ -256,6 +256,8 @@ using namespace c7x;
 #define TIDL_SAT_HI_INT16              (32767)
 #define TIDL_SAT_LO_INT32              (0x80000000U)
 #define TIDL_SAT_HI_INT32              (0x7FFFFFFF)
+#define TIDL_SAT_LO_UINT32             (0)
+#define TIDL_SAT_HI_UINT32             (0xFFFFFFFF)
 
 #define TIDL_DEFAULT_L1_MEM_SIZE       (16 * 1024)
 #define TIDL_DEFAULT_L2_MEM_SIZE       (4*1024)
@@ -467,6 +469,8 @@ typedef struct {
   int32_t     scratchSize;
   int32_t     mmaPSATMin;
   int32_t     mmaPSATMax;
+  int32_t     outZeroPoint;
+  int32_t     outPadOffset;
   void *      scratchMem;
   void *      outRoundBitsPtr;
   void *      zeroPointsPtr;
@@ -1245,8 +1249,6 @@ void * TIDL_getMemoryChunkFromSysmem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MA
   uint32_t size, uint32_t alignment, uint32_t space, uint32_t attribute);
 
 void TIDL_resetSysmem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX]);
-void TIDL_reset_OneMem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX], int32_t i);
-
 
 /* If it is inter Buff Allocate buffer or Initilize it NULL */
 /* At start of process call, all the null Ptrs as to be initlized

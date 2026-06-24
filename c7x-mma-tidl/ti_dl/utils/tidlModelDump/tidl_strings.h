@@ -107,6 +107,6 @@ namespace TIDL_Strings
    std::string optimiseExtMemString(int32_t type);
    std::string gridSampleModeString(int32_t type);
    std::string gridSamplePadModeString(int32_t type);
-   std::string rnnDirectionString(int32_t direction);
+   std::string recurrentDirectionString(int32_t direction);
 }
 #endif

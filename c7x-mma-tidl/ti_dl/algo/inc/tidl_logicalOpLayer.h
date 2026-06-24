@@ -74,6 +74,12 @@
 #include "tidl_alg_int.h"
 #include "tidl_commonUtils.h"
 
+/** Number of inputs for unary logical ops: Not, IsInf, IsNaN */
+#define TIDL_LOGICALOP_UNARY_NUM_INPUTS  (1)
+/** Number of inputs for binary logical/comparison ops: And, Or, Xor, Equal, Greater, etc. */
+#define TIDL_LOGICALOP_BINARY_NUM_INPUTS (2)
+/* Note: TIDL_WHERE_NUM_INPUTS (3) is defined in tidl_where_ixX_oxX.h */
+
 int32_t TIDL_logicalOpLayerProcessNew(TIDL_NetworkCommonParams *commonParams,
                             sTIDL_AlgLayer_t         *algLayer,
                             sTIDL_Layer_t            *tidlLayer,
@@ -82,6 +88,19 @@ int32_t TIDL_logicalOpLayerProcessNew(TIDL_NetworkCommonParams *commonParams,
                             int32_t                  layerIdx);
 
 
-// TODO: Add device function and add to gWorkloadLinkParamsMapping map
+int32_t TIDL_logicalOpDeviceGetHandleSize(void                  *linkInitParams,
+                                          const sLink_t         *link,
+                                          const sGCHelperHandle *gcHelperHandle);
+
+int32_t TIDL_logicalOpDeviceInit(void                                *linkHandle,
+                                 void                                *linkInitParams,
+                                 const WorkloadUnitExec_CommonParams *commonParams,
+                                 const sLink_t                       *link,
+                                 const sGCHelperHandle               *gcHelperHandle);
+
+int32_t TIDL_logicalOpDeviceExec(void                                *linkHandle,
+                                 const WorkloadUnitExec_LinkExecArgs *linkExecArgs,
+                                 int32_t                              currFlowStage[],
+                                 int32_t                              currIterCount);
 
 #endif /* ITIDL_LOGICALOPLAYER_H*/

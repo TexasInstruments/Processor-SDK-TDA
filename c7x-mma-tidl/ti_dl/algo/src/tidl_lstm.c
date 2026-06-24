@@ -201,7 +201,7 @@ int32_t TIDL_lstmProcess(TIDL_NetworkCommonParams   * commonParams,
 {
   int32_t status = TIDL_SUCCESS;
 
-  #ifdef HOST_EMULATION
+#ifdef HOST_EMULATION
   TIDL_CreateParams createParams;
   (void)memcpy(&createParams, commonParams->createParams, sizeof(TIDL_CreateParams));
 
@@ -209,21 +209,30 @@ int32_t TIDL_lstmProcess(TIDL_NetworkCommonParams   * commonParams,
   {
     sTIDL_LSTMParams_t *params = &tidlLayer->layerParams.lstmParams;
 
-    uint8_t (*inPtr)[]        = (uint8_t (*)[])(inPtrs[0]);
-    uint8_t (*WPtr)[]         = (uint8_t (*)[])(inPtrs[1]);
-    uint8_t (*RPtr)[]         = (uint8_t (*)[])(inPtrs[2]);
+    uint8_t (*inPtr)[]        = (uint8_t (*)[])(inPtrs[TIDL_RecurrentInputX]);
+    uint8_t (*WPtr)[]         = (uint8_t (*)[])(inPtrs[TIDL_RecurrentInputW]);
+    uint8_t (*RPtr)[]         = (uint8_t (*)[])(inPtrs[TIDL_RecurrentInputR]);
+    uint8_t (*biasPtr)[]      = NULL;
     uint8_t (*initial_hPtr)[] = NULL;
     uint8_t (*initial_cPtr)[] = NULL;
     uint8_t (*peepholesPtr)[] = NULL;
 
-    sTIDL_DataParams_t *inDataParams = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[0]].outData;
-    sTIDL_DataParams_t *WParams = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[1]].outData;
-    sTIDL_DataParams_t *RParams = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[2]].outData;
+    sTIDL_DataParams_t *inDataParams    = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[TIDL_RecurrentInputX]].outData;
+    sTIDL_DataParams_t *WParams         = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[TIDL_RecurrentInputW]].outData;
+    sTIDL_DataParams_t *RParams         = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[TIDL_RecurrentInputR]].outData;
+    sTIDL_DataParams_t *biasParams      = NULL;
     sTIDL_DataParams_t *initial_hParams = NULL;
     sTIDL_DataParams_t *initial_cParams = NULL;
     sTIDL_DataParams_t *peepholesParams = NULL;
 
-    int32_t inIdx = 3;
+    int32_t inIdx = TIDL_RecurrentInputB;
+    if(params->isBiasPresent == 1)
+    {
+      biasPtr = (uint8_t (*)[])(inPtrs[inIdx]);
+      biasParams = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[inIdx]].outData;
+      inIdx++;
+    }
+
     if(params->isInitialHPresent == 1)
     {
       initial_hPtr = (uint8_t (*)[])(inPtrs[inIdx]);
@@ -247,6 +256,11 @@ int32_t TIDL_lstmProcess(TIDL_NetworkCommonParams   * commonParams,
 
     TIDL_Obj intAlgObj;
     intAlgObj.createParams = (TIDL_CreateParams *) &createParams;
+    int8_t useTaylor = 1;
+    if (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)
+    {
+      useTaylor = 0;
+    }
 
     status = TIDL_lstmRefProcess(&intAlgObj,
                                  algLayer,
@@ -255,6 +269,7 @@ int32_t TIDL_lstmProcess(TIDL_NetworkCommonParams   * commonParams,
                                  inPtr,
                                  WPtr,
                                  RPtr,
+                                 biasPtr,
                                  initial_hPtr,
                                  initial_cPtr,
                                  peepholesPtr,
@@ -262,17 +277,23 @@ int32_t TIDL_lstmProcess(TIDL_NetworkCommonParams   * commonParams,
                                  inDataParams,
                                  WParams,
                                  RParams,
+                                 biasParams,
                                  initial_hParams,
                                  initial_cParams,
                                  peepholesParams,
-                                 &tidlLayer->outData);
+                                 &tidlLayer->outData,
+                                 useTaylor);
 
   }
-  else /* if ((commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY) */
-  #endif
+  else
+#endif
   {
-    TIDL_LOG_ERROR(TIDL_ERROR_GROUP_LSTM, TIDL_ERROR_LSTM_NOT_IMPLEMENTED);
-    status = IALG_EFAIL;
+    status = TIDL_deviceUtilsCommonProcess(commonParams,
+                                   algLayer,
+                                   tidlLayer,
+                                   inPtrs,
+                                   outPtrs,
+                                   layerIdx);
   }
 
   return status;

@@ -16,6 +16,9 @@
 */
 
 #ifdef BUILD_WITH_CUDA
+#ifndef CUDA_API_PER_THREAD_DEFAULT_STREAM
+#  define CUDA_API_PER_THREAD_DEFAULT_STREAM 1
+#endif
 
 #include <cuda_runtime.h>
 #include <math.h>
@@ -25,29 +28,39 @@
 #include "tidl_cuda_mem_manager.h"
 #include "tidl_cuda.h"
 
-/**
-----------------------------------------------------------------------------
-@fn         TIDL_cudaFreeAllCudaPtrs
-@brief      Wrapper function that calls all individual CUDA free functions
-            to free device pointers and reset initialization flags
-----------------------------------------------------------------------------
-*/
-void TIDL_cudaFreeAllCudaPtrs()
+
+/* NOTE: g_cudaMemManager global has been removed for thread safety.
+ * TIDL_CudaMemManager* is now passed through function parameters.\n * Each algHandle stores its own manager in algHandle->cudaMemManager.
+ */
+
+/* Thread-local context: each thread gets its own manager pointer and layer index.
+ * Set by TIDL_cudaSetThreadManager/TIDL_cudaSetThreadLayerIdx before layer execution.
+ */
+static __thread TIDL_CudaMemManager* tls_cudaMemManager = NULL;
+static __thread int32_t tls_cudaLayerIdx = -1;
+
+void TIDL_cudaSetThreadManager(TIDL_CudaMemManager *manager)
 {
-  TIDL_cudaFreeConvCudaPtrs();
-  TIDL_cudaFreeGridSampleCudaPtrs();
-  TIDL_cudaFreeInnerProductCudaPtrs();
-  TIDL_cudaFreeBatchNormCudaPtrs();
-  TIDL_cudaFreeEltwiseCudaPtrs();
-  TIDL_cudaFreeSliceCudaPtrs();
-  TIDL_cudaFreeTransposeCudaPtrs();
+    tls_cudaMemManager = manager;
 }
 
-/* Global pointer to the CUDA Memory Manager for access from other CUDA files */
-TIDL_CudaMemManager* g_cudaMemManager = NULL;
+TIDL_CudaMemManager* TIDL_cudaGetThreadManager(void)
+{
+    return tls_cudaMemManager;
+}
 
-/* Maximum number of TIDL layer types (should be at least as large as the highest layer type value) */
-#define NUM_TIDL_LAYER_TYPES 50
+void TIDL_cudaSetThreadLayerIdx(int32_t layerIdx)
+{
+    tls_cudaLayerIdx = layerIdx;
+}
+
+int32_t TIDL_cudaGetThreadLayerIdx(void)
+{
+    return tls_cudaLayerIdx;
+}
+
+/* Layer IDs currently span 0..TIDL_UnsupportedLayer, so this must cover TIDL_UnsupportedLayer entries. */
+#define NUM_TIDL_LAYER_TYPES (TIDL_UnsupportedLayer + 1)
 
 /* Define which layer types are supported on GPU */
 static const int32_t isSupportedOnGPU[NUM_TIDL_LAYER_TYPES] = {
@@ -98,11 +111,19 @@ static const int32_t isSupportedOnGPU[NUM_TIDL_LAYER_TYPES] = {
     0,  /* TIDL_TopKLayer (44) */
     0,  /* TIDL_DeformableConvLayer (45) */
     0,  /* TIDL_TileLayer (46) */
-    0,  /* TIDL_RMSNormalizationLayer (47) */
-    0,  /* TIDL_LSTMLayer (48) */
-    0,  /* TIDL_GRULayer (49) */
-    0,  /* TIDL_RNNLayer (50) */
-    0,  /* TIDL_UnsupportedLayer (51) */
+    0,  /* TIDL_LogicalOpLayer(47)*/
+    0,  /* TIDL_RMSNormalizationLayer (48) */
+    0,  /* TIDL_LSTMLayer (49) */
+    0,  /* TIDL_GRULayer (50) */
+    0,  /* TIDL_RNNLayer (51) */
+    0,  /* TIDL_GatherNDLayer (52) */
+    0,  /* TIDL_CastLayer (53) */
+    0,  /* TIDL_GatherElementsLayer(54)*/
+    0,  /* TIDL_ShapeLayer (55) */
+    0,  /* TIDL_SizeLayer (56) */
+    0,  /* TIDL_AttentionLayer(57)*/
+    0,  /* TIDL_NonZeroLayer (58)*/
+    0,  /* TIDL_UnsupportedLayer (58) */
 };
 
 /* ============================================================================
@@ -116,8 +137,35 @@ static const int32_t isSupportedOnGPU[NUM_TIDL_LAYER_TYPES] = {
 #define TIDL_LOG_LEVEL_DEBUG    2  /**< Debug information */
 #define TIDL_LOG_LEVEL_TRACE    3  /**< Detailed trace */
 
+#define MAX_MEMORY_DUMP_SIZE 64
+
 /* Global log level - can be set externally or via environment variable */
-static int32_t g_cuda_log_level = TIDL_LOG_LEVEL_INFO;
+static int32_t g_cuda_log_level = TIDL_LOG_LEVEL_ERROR;
+
+void memory_dump(const void* ptr, int bytes)
+{
+    for(size_t i = 0; i < bytes; i++)
+    {
+        if(i % 16 == 0) printf("%04zx: ", i);
+        printf("%02x ", *((const unsigned char*)ptr + i));
+        if(((i+1) % 16 == 0) || (i + 1 == bytes)) printf("\n");
+    }
+}
+
+void compare_memory(int logLevel, const void* cpuPtr, const void* gpuPtr, int size)
+{
+    if(logLevel <= g_cuda_log_level)
+    {
+        int bytes = min(size, MAX_MEMORY_DUMP_SIZE);
+        unsigned char* hostBuf = (unsigned char*)malloc(bytes);
+        cudaMemcpy(hostBuf, gpuPtr, bytes, cudaMemcpyDeviceToHost);
+        printf("CPU (%p): \n", cpuPtr);
+        memory_dump(cpuPtr, bytes);
+        printf("GPU (%p): \n", gpuPtr);
+        memory_dump(hostBuf, bytes);
+        free(hostBuf);
+    }
+}
 
 /**
  * @brief Set the CUDA logging level
@@ -197,6 +245,15 @@ static int32_t isPointerInRange(const void *ptr, const void *base, uint32_t size
     return (ptrAddr >= baseAddr && ptrAddr < endAddr) ? 1 : 0;
 }
 
+#if 0
+static int32_t isPointerOverlapping(const void *ptr, uint32_t size, const void *base, uint32_t bufferSize)
+{
+    uintptr_t ptrAddr = (uintptr_t)ptr;
+    uintptr_t baseAddr = (uintptr_t)base;
+    return ((ptrAddr + size) <= baseAddr || (baseAddr + bufferSize) <= ptrAddr) ? 0 : 1;
+}
+#endif
+
 /**
  * @brief Get offset of pointer within base
  */
@@ -227,8 +284,26 @@ int32_t TIDL_cudaBuildLayerDependencyGraph(
     sTIDL_Layer_t *layer;
     TIDL_LayerDependency *layerDep;
 
-    int32_t dataIdToLayerMap[manager->numLayers];
-    memset(dataIdToLayerMap, -1, sizeof(int32_t) * manager->numLayers);
+    /* Find max dataId to size the map correctly (dataId values may exceed numLayers) */
+    int32_t maxDataId = 0;
+    for(int32_t layerId = 0; layerId < manager->numLayers; layerId++)
+    {
+        int32_t outId = TIDLLayers[layerId].outData.dataId;
+        if(outId > maxDataId) maxDataId = outId;
+        for(int32_t b = 0; b < TIDLLayers[layerId].numInBufs; b++)
+        {
+            int32_t inId = TIDLLayers[layerId].inData[b];
+            if(inId > maxDataId) maxDataId = inId;
+        }
+    }
+    int32_t mapSize = maxDataId + 1;
+
+    int32_t *dataIdToLayerMap = (int32_t*)malloc(mapSize * sizeof(int32_t));
+    if(dataIdToLayerMap == NULL)
+    {
+        return IALG_EFAIL;
+    }
+    memset(dataIdToLayerMap, -1, sizeof(int32_t) * mapSize);
 
     for(int32_t layerId = 0; layerId < manager->numLayers; layerId++)
     {
@@ -252,7 +327,7 @@ int32_t TIDL_cudaBuildLayerDependencyGraph(
             int32_t prevLayerId = dataIdToLayerMap[inDataId];
             if(prevLayerId < 0 || prevLayerId == layerId) continue;
             layerDep->inputBufferToLayerMap[inBufIdx] = prevLayerId;
-            tidl_printf(2, "Layer %d: Input buffer %d comes from layer %d\n", layerId, inBufIdx, prevLayerId);
+            tidl_printf(3, "Layer %d: Input buffer %d comes from layer %d\n", layerId, inBufIdx, prevLayerId);
             int duplicate = 0;
             for(int j = 0; j < layerDep->numInputLayers; j++){
                 if(layerDep->inputLayerIds[j] == prevLayerId) {
@@ -263,7 +338,7 @@ int32_t TIDL_cudaBuildLayerDependencyGraph(
             if(duplicate) continue;
 
             layerDep->inputLayerIds[layerDep->numInputLayers++] = prevLayerId;
-            tidl_printf(2, "Layer %d depends on input from layer %d\n", layerId, prevLayerId);
+            tidl_printf(3, "Layer %d depends on input from layer %d\n", layerId, prevLayerId);
             TIDL_LayerDependency *prevLayerDep = &manager->layerDependencies[prevLayerId];
 
             int already_added = 0;
@@ -277,9 +352,10 @@ int32_t TIDL_cudaBuildLayerDependencyGraph(
             if(already_added) continue;
 
             prevLayerDep->outputLayerIds[prevLayerDep->numOutputLayers++] = layerId;
-            tidl_printf(2, "Layer %d outputs to layer %d\n", prevLayerId, layerId);
+            tidl_printf(3, "Layer %d outputs to layer %d\n", prevLayerId, layerId);
         }
     }
+    free(dataIdToLayerMap);
     return IALG_EOK;
 }
 
@@ -290,17 +366,19 @@ int32_t TIDL_cudaMemManagerInit(
     int32_t numLayers,
     sTIDL_Layer_t* TIDLLayers)
 {
+    cudaFree(0);
     if (manager == NULL || memRec == NULL || numMemRecs <= 0 || numMemRecs > NUM_MEMRECS_TIDL)
     {
         tidl_printf(0, "TIDL_cudaMemManagerInit: Invalid parameters\n");
         return IALG_EFAIL;
     }
-    
+
     /* Clear manager structure */
     memset(manager, 0, sizeof(TIDL_CudaMemManager));
-    
+
     manager->numMemRecs = numMemRecs;
     manager->numLayers = numLayers;
+    manager->numMemBufs = 0;
     
     /* Initialize each memrec */
     for (int32_t i = 0; i < numMemRecs; i++)
@@ -355,11 +433,66 @@ int32_t TIDL_cudaMemManagerInit(
             manager->layerGpuSupport = NULL;
             return IALG_EFAIL;
         }
+
+        /* Allocate per-layer CUDA streams */
+        manager->layerStreams = (void**)malloc(numLayers * sizeof(void*));
+        if (manager->layerStreams == NULL)
+        {
+            tidl_printf(0, "TIDL_cudaMemManagerInit: Failed to allocate layerStreams array\n");
+            free(manager->layerDependencies);
+            free(manager->layerGpuSupport);
+            manager->layerDependencies = NULL;
+            manager->layerGpuSupport = NULL;
+            return IALG_EFAIL;
+        }
+
+        /* Initialize all layer stream pointers to NULL */
+        memset(manager->layerStreams, 0, numLayers * sizeof(void*));
+
+        /* Create one CUDA stream per layer */
+        for (int32_t i = 0; i < numLayers; i++)
+        {
+            cudaStream_t stream = NULL;
+            if (cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking) != cudaSuccess)
+            {
+                tidl_printf(0, "TIDL_cudaMemManagerInit: Failed to create stream for layer %d\n", i);
+                /* Clean up successfully-created streams */
+                for (int32_t j = 0; j < i; j++)
+                {
+                    cudaStream_t cleanupStream = (cudaStream_t)manager->layerStreams[j];
+                    if (cleanupStream != NULL)
+                    {
+                        cudaStreamDestroy(cleanupStream);
+                        manager->layerStreams[j] = NULL;
+                    }
+                }
+                free(manager->layerStreams);
+                free(manager->layerDependencies);
+                free(manager->layerGpuSupport);
+                manager->layerStreams = NULL;
+                manager->layerDependencies = NULL;
+                manager->layerGpuSupport = NULL;
+                return IALG_EFAIL;
+            }
+            manager->layerStreams[i] = (void*)stream;
+        }
+        tidl_printf(1, "Created %d per-layer CUDA streams\n", numLayers);
+
+        manager->memBufs = (TIDL_CudaMemBuffer*)malloc(NUM_BUFFERS_TIDL * sizeof(TIDL_CudaMemBuffer));
+        if(manager->memBufs == NULL)
+        {
+            tidl_printf(0, "TIDL_cudaMemManagerInit: Failed to allocate gpu memory buffers\n");
+            free(manager->layerDependencies);
+            free(manager->layerGpuSupport);
+            manager->layerDependencies = NULL;
+            manager->layerGpuSupport = NULL;
+            return IALG_EFAIL;
+        }
     }
     
     manager->isInitialized = 1;
     manager->currentLayer = -1;
-    
+
     tidl_printf(1, "CUDA Memory Manager initialized with %d memrecs and %d layers\n",
                numMemRecs, numLayers);
     
@@ -373,35 +506,35 @@ int32_t TIDL_cudaMemManagerAllocate(TIDL_CudaMemManager *manager)
         tidl_printf(0, "TIDL_cudaMemManagerAllocate: Manager not initialized\n");
         return IALG_EFAIL;
     }
-    
+
     uint64_t totalGpuMem = 0;
-    
+    cudaStream_t streamMain = (cudaStream_t)TIDL_cudaGetProcessStream(manager);
     for (int32_t i = 0; i < manager->numMemRecs; i++)
     {
         TIDL_CudaMemRecord *rec = &manager->memRecs[i];
-        
+
         if (rec->size == 0 || rec->h_base == NULL)
         {
             tidl_printf(2, "Skipping memrec %d (size=%u, base=%p)\n", i, rec->size, rec->h_base);
             continue;
         }
-        
+
         /* Allocate GPU memory */
-        CUDA_CHECK(cudaMalloc(&rec->d_base, rec->size));
+        CUDA_CHECK(cudaMallocAsync(&rec->d_base, rec->size, streamMain));
         rec->isAllocated = 1;
         totalGpuMem += rec->size;
-        
+
         /* Clear GPU memory */
         CUDA_CHECK(cudaMemset(rec->d_base, 0, rec->size));
-        
+
         tidl_printf(2, "Allocated GPU memrec[%d]: %u bytes at %p (CPU: %p)\n",
                    i, rec->size, rec->d_base, rec->h_base);
     }
-    
+
     CUDA_CHECK(cudaDeviceSynchronize());
-    
+
     tidl_printf(1, "Total GPU memory allocated: %.2f MB\n", totalGpuMem / (1024.0 * 1024.0));
-    
+
     return IALG_EOK;
 }
 
@@ -412,15 +545,34 @@ void TIDL_cudaMemManagerFree(TIDL_CudaMemManager *manager)
         return;
     }
     
-    /* Free all GPU memory */
+    manager->isInitialized = 0;
+    cudaStream_t streamMain = (cudaStream_t)TIDL_cudaGetProcessStream(manager);
+    
     for (int32_t i = 0; i < manager->numMemRecs; i++)
     {
+
         if (manager->memRecs[i].isAllocated && manager->memRecs[i].d_base != NULL)
         {
-            CUDA_CHECK_VOID(cudaFree(manager->memRecs[i].d_base));
+            CUDA_CHECK_VOID(cudaFreeAsync(manager->memRecs[i].d_base,streamMain));
             manager->memRecs[i].d_base = NULL;
             manager->memRecs[i].isAllocated = 0;
         }
+    }
+
+    for (int32_t i = 0; i < manager->numMemBufs; i++)
+    {
+        if (manager->memBufs[i].d_base != NULL)
+        {
+            CUDA_CHECK_VOID(cudaFreeAsync(manager->memBufs[i].d_base, streamMain));
+            manager->memBufs[i].d_base = NULL;
+        }
+    }
+
+    /* Free memBufs container */
+    if (manager->memBufs != NULL)
+    {
+        free(manager->memBufs);
+        manager->memBufs = NULL;
     }
     
     /* Free layer support array */
@@ -436,10 +588,61 @@ void TIDL_cudaMemManagerFree(TIDL_CudaMemManager *manager)
         free(manager->layerDependencies);
         manager->layerDependencies = NULL;
     }
-    
+
+    /* Synchronize and destroy per-layer streams */
+    if (manager->layerStreams != NULL)
+    {
+        for (int32_t i = 0; i < manager->numLayers; i++)
+        {
+            if (manager->layerStreams[i] != NULL)
+            {
+                cudaStream_t stream = (cudaStream_t)manager->layerStreams[i];
+                cudaError_t err = cudaStreamDestroy(stream);
+                if (err != cudaSuccess)
+                {
+                    tidl_printf(1, "Warning: Failed to destroy layer stream %d: %s\n", i, cudaGetErrorString(err));
+                }
+                manager->layerStreams[i] = NULL;
+            }
+        }
+        free(manager->layerStreams);
+        manager->layerStreams = NULL;
+        tidl_printf(1, "Destroyed all per-layer CUDA streams\n");
+    }
+
+     /* Synchronize and destroy the per-process stream */
+    if (manager->processStream != NULL)
+    {
+        cudaStream_t stream = (cudaStream_t)manager->processStream;
+        /* Ensure all async operations complete before destroying stream */
+        cudaError_t err = cudaStreamSynchronize(stream);
+        if (err != cudaSuccess)
+        {
+            tidl_printf(0, "Stream sync error: %s\n", cudaGetErrorString(err));
+        }
+        else
+        {
+            tidl_printf(1, "Stream synchronized successfully\n");
+        }
+
+        err = cudaStreamDestroy(stream);
+        if (err != cudaSuccess)
+        {
+            tidl_printf(0, "Stream destroy error: %s\n", cudaGetErrorString(err));
+        }
+        manager->processStream = NULL;
+        tidl_printf(1, "Destroyed per-process CUDA stream\n");
+    }
+
+    /* Ensure device is synchronized before freeing GPU memory */
+    tidl_printf(1, "Device synchronizing before GPU memory free...\n");
+    cudaError_t err = cudaDeviceSynchronize();
+    if (err != cudaSuccess)
+    {
+        tidl_printf(0, "Device sync error: %s\n", cudaGetErrorString(err));
+    }
+
     tidl_printf(1, "CUDA Memory Manager freed\n");
-    
-    manager->isInitialized = 0;
 }
 
 int32_t TIDL_cudaMemManagerCopyPersistentH2D(TIDL_CudaMemManager *manager)
@@ -451,6 +654,8 @@ int32_t TIDL_cudaMemManagerCopyPersistentH2D(TIDL_CudaMemManager *manager)
     }
     
     uint64_t totalCopied = 0;
+
+    cudaStream_t stream = (cudaStream_t)TIDL_cudaGetProcessStream(manager);
     
     /* Copy all PERSISTENT memory to GPU */
     for (int32_t i = 0; i < manager->numMemRecs; i++)
@@ -465,7 +670,7 @@ int32_t TIDL_cudaMemManagerCopyPersistentH2D(TIDL_CudaMemManager *manager)
         /* Only copy persistent data */
         if (rec->attrs == IALG_PERSIST)
         {
-            CUDA_CHECK(cudaMemcpy(rec->d_base, rec->h_base, rec->size, cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpyAsync(rec->d_base, rec->h_base, rec->size, cudaMemcpyHostToDevice, stream));
             rec->lastSyncDirection = TIDL_SYNC_H2D;
             totalCopied += rec->size;
             
@@ -480,11 +685,50 @@ int32_t TIDL_cudaMemManagerCopyPersistentH2D(TIDL_CudaMemManager *manager)
     return IALG_EOK;
 }
 
+int32_t TIDL_cudaAllocBuffer(
+    TIDL_CudaMemManager *manager,
+    const void *cpuPtr,
+    void** gpuPtr,
+    uint32_t size
+)
+{
+    if (manager == NULL || !manager->isInitialized || cpuPtr == NULL)
+    {
+        return IALG_EFAIL;
+    }
+
+    if (manager->numMemBufs >= NUM_BUFFERS_TIDL)
+    {
+        tidl_printf(0, "TIDL_cudaAllocBuffer: memBufs array full (%d/%d)\n", manager->numMemBufs, NUM_BUFFERS_TIDL);
+        return IALG_EFAIL;
+    }
+
+    /* Check if an existing buffer already covers this CPU pointer */
+    for(int32_t i = 0; i < manager->numMemBufs; i++)
+    {
+        TIDL_CudaMemBuffer *buf = &manager->memBufs[i];
+        if(buf->h_base == cpuPtr && buf->size >= size)
+        {
+            *gpuPtr = buf->d_base;
+            tidl_printf(2, "Reusing existing GPU buffer[%d]: CPU=%p, GPU=%p, size=%u\n", i, cpuPtr, buf->d_base, buf->size);
+            return IALG_EOK;
+        }
+    }
+
+    TIDL_CudaMemBuffer *buf = &manager->memBufs[manager->numMemBufs];
+    buf->h_base = (void*)cpuPtr;
+    buf->size = size;
+    CUDA_CHECK(cudaMalloc(&buf->d_base, buf->size));
+    *gpuPtr = buf->d_base;
+    manager->numMemBufs++;
+    return IALG_EOK;
+}
+
 int32_t TIDL_cudaTranslatePtrCPUtoGPU(
     const TIDL_CudaMemManager *manager,
     const void *cpuPtr,
     void **gpuPtr,
-    int32_t *memRecIdx)
+    int32_t size)
 {
     if (manager == NULL || !manager->isInitialized || cpuPtr == NULL || gpuPtr == NULL)
     {
@@ -506,18 +750,55 @@ int32_t TIDL_cudaTranslatePtrCPUtoGPU(
         {
             /* Calculate offset and return GPU pointer */
             ptrdiff_t offset = getPointerOffset(cpuPtr, rec->h_base);
-            *gpuPtr = (char*)rec->d_base + offset;
-            
-            if (memRecIdx != NULL)
+
+            if(offset + size > rec->size)
             {
-                *memRecIdx = i;
+                int32_t overflow = offset + size - rec->size;
+                tidl_printf(1, "Warning: Pointer translation in layer %d attempts transfer exceeding memrec[%d] bounds by %d bytes\n", TIDL_cudaGetThreadLayerIdx(), i, overflow);
+                break;
             }
+
+            *gpuPtr = (char*)rec->d_base + offset;
+
+            tidl_printf(2, "CPU pointer (%p) found in memrec[%d], returning gpu mirror (%p)\n", cpuPtr, i, *gpuPtr);
             
             return IALG_EOK;
         }
     }
-    
-    /* Pointer not found in any memrec */
+
+    tidl_printf(2, "CPU pointer (%p) not found in any memrec, checking gpu memory buffers\n", cpuPtr);
+
+    /* Search through all membufs */
+    for(int32_t i = 0; i < manager->numMemBufs; i++)
+    {
+        const TIDL_CudaMemBuffer *buf = &manager->memBufs[i];
+        if (buf->h_base == NULL || buf->d_base == NULL)
+        {
+            continue;
+        }
+
+        /* Check if pointer is within this membuf */
+        if (isPointerInRange(cpuPtr, buf->h_base, buf->size))
+        {
+            /* Calculate offset and return GPU pointer */
+            ptrdiff_t offset = getPointerOffset(cpuPtr, buf->h_base);
+
+            if(offset + size > buf->size)
+            {
+                int32_t overflow = offset + size - buf->size;
+                tidl_printf(1, "Warning: Pointer translation in layer %d attempts transfer exceeding membuf[%d] bounds by %d bytes\n", TIDL_cudaGetThreadLayerIdx(), i, overflow);
+                break;
+            }
+
+            *gpuPtr = (char*)buf->d_base + offset;
+            
+            tidl_printf(2, "CPU pointer (%p) found in dynamic memory, returning gpu mirror (%p)\n", cpuPtr, *gpuPtr);
+            
+            return IALG_EOK;
+        }
+    }
+
+    /* Pointer not found in any memrec or membuf*/
     return IALG_EFAIL;
 }
 
@@ -560,6 +841,27 @@ int32_t TIDL_cudaTranslatePtrGPUtoCPU(
     
     /* Pointer not found in any memrec */
     return IALG_EFAIL;
+}
+
+int32_t TIDL_cudaForceSync(
+    TIDL_CudaMemManager *manager,
+    void* dstPtr,
+    void* srcPtr,
+    size_t size
+)
+{
+    void* d_dstPtr = NULL;
+    void* d_srcPtr = NULL;
+    TIDL_cudaTranslatePtrCPUtoGPU(manager, dstPtr, (void**)&d_dstPtr, size);
+    TIDL_cudaTranslatePtrCPUtoGPU(manager, srcPtr, (void**)&d_srcPtr, size);
+
+    if(d_srcPtr == NULL) TIDL_cudaAllocBuffer(manager, srcPtr, &d_srcPtr, size);
+    CUDA_CHECK(cudaMemcpy(d_srcPtr, srcPtr, size, cudaMemcpyHostToDevice));
+
+    printf("CPU sync: Copied data from (%p) to (%p)\n", srcPtr, dstPtr);
+    printf("Matching GPU forced sync: Copied data from (%p) to (%p)\n", d_srcPtr, d_dstPtr);
+    CUDA_CHECK(cudaMemcpy(d_dstPtr, d_srcPtr, size, cudaMemcpyDeviceToDevice));
+    return IALG_EOK;
 }
 
 int32_t TIDL_cudaMemManagerSync(
@@ -617,28 +919,47 @@ int32_t TIDL_cudaMemManagerSyncBuffer(
     int32_t memRecIdx = -1;
     void *gpuPtr = NULL;
     
-    if (TIDL_cudaTranslatePtrCPUtoGPU(manager, cpuPtr, &gpuPtr, &memRecIdx) != IALG_EOK)
+    if (TIDL_cudaTranslatePtrCPUtoGPU(manager, cpuPtr, &gpuPtr, size) != IALG_EOK)
     {
-        tidl_printf(2, "TIDL_cudaMemManagerSyncBuffer: CPU pointer not found in any memrec\n");
+        tidl_printf(2, "TIDL_cudaMemManagerSyncBuffer: CPU pointer (%p) not found in any memrec or membuf\n", cpuPtr);
         return IALG_EFAIL;
     }
     
     /* Perform the sync */
     if (direction == TIDL_SYNC_H2D)
     {
+        compare_memory(2, cpuPtr, gpuPtr, size);
         CUDA_CHECK(cudaMemcpy(gpuPtr, cpuPtr, size, cudaMemcpyHostToDevice));
         manager->totalH2DTransfers++;
         manager->totalBytesH2D += size;
-        
-        tidl_printf(3, "Synced buffer H2D: %u bytes (memrec[%d])\n", size, memRecIdx);
+
+        tidl_printf(2, "Copied %d bytes of data from CPU pointer (%p) to GPU pointer (%p)\n", size, cpuPtr, gpuPtr);
+        if(memRecIdx != -1)
+        {
+            tidl_printf(2, "Synced buffer H2D: %u bytes (memrec[%d])\n", size, memRecIdx);
+        }
+        else
+        {
+            tidl_printf(2, "Synced buffer H2D: %u bytes (dynamic memory buffer)\n", size);
+        }
     }
     else if (direction == TIDL_SYNC_D2H)
     {
+        compare_memory(2, cpuPtr, gpuPtr, size);
         CUDA_CHECK(cudaMemcpy((void*)cpuPtr, gpuPtr, size, cudaMemcpyDeviceToHost));
         manager->totalD2HTransfers++;
         manager->totalBytesD2H += size;
-        
-        tidl_printf(3, "Synced buffer D2H: %u bytes (memrec[%d])\n", size, memRecIdx);
+
+        tidl_printf(2, "Copied %d bytes of data from GPU pointer (%p) to CPU pointer (%p)\n", size, gpuPtr, cpuPtr);
+
+        if(memRecIdx != -1)
+        {
+            tidl_printf(2, "Synced buffer D2H: %u bytes (memrec[%d])\n", size, memRecIdx);
+        }
+        else
+        {
+            tidl_printf(2, "Synced buffer D2H: %u bytes (dynamic memory buffer)\n", size);
+        }
     }
     
     return IALG_EOK;
@@ -663,6 +984,7 @@ int32_t TIDL_cudaMemManagerPreLayerSync(
     TIDL_CudaMemManager *manager,
     int32_t layerIdx,
     void *inPtrs[],
+    int32_t bufferIdsToSynchronize[],
     int32_t numInBufs,
     const uint32_t inDataSizes[])
 {
@@ -674,6 +996,12 @@ int32_t TIDL_cudaMemManagerPreLayerSync(
     }
     
     manager->currentLayer = layerIdx;
+
+    tidl_printf(2, "Input CPU pointers to layer %d:\n", layerIdx);
+    for(int32_t i = 0; i < numInBufs; i++)
+    {
+        tidl_printf(2, "%p\n", inPtrs[i]);
+    }
     
     /* Check if current layer is GPU-supported */
     int32_t currentLayerIsGpu = manager->layerGpuSupport[layerIdx];
@@ -682,17 +1010,19 @@ int32_t TIDL_cudaMemManagerPreLayerSync(
     if (currentLayerIsGpu)
     {
         TIDL_LayerDependency *layerDep = &manager->layerDependencies[layerIdx];
-        
-        for (int32_t inBufIdx = 0; inBufIdx < numInBufs; inBufIdx++)
+
+        for (int32_t i = 0; i < numInBufs; i++)
         {
-            int32_t sourceLayerId = layerDep->inputBufferToLayerMap[inBufIdx];            
+            int32_t inBufIdx = (bufferIdsToSynchronize != NULL) ? bufferIdsToSynchronize[i] : i;
+            int32_t sourceLayerId = layerDep->inputBufferToLayerMap[inBufIdx];
+            if (sourceLayerId < 0 || sourceLayerId >= manager->numLayers) continue;
             if (!manager->layerGpuSupport[sourceLayerId])
             {
                 /* Source layer ran on CPU, need to sync this input buffer */
-                if (inPtrs[inBufIdx] != NULL && inDataSizes[inBufIdx] > 0)
+                if (inPtrs[i] != NULL && inDataSizes[i] > 0)
                 {
                     tidl_printf(2, "Layer %d: Input buffer %d from CPU layer %d, syncing\n", layerIdx, inBufIdx, sourceLayerId);
-                    TIDL_cudaMemManagerSyncBuffer(manager, inPtrs[inBufIdx], inDataSizes[inBufIdx], TIDL_SYNC_H2D);
+                    TIDL_cudaMemManagerSyncBuffer(manager, inPtrs[i], inDataSizes[i], TIDL_SYNC_H2D);
                 }
             }
         }
@@ -713,6 +1043,12 @@ int32_t TIDL_cudaMemManagerPostLayerSync(
         manager->layerGpuSupport == NULL)
     {
         return IALG_EFAIL;
+    }
+
+    tidl_printf(2, "Output CPU pointers of layer %d:\n", layerIdx);
+    for(int32_t i = 0; i < numOutBufs; i++)
+    {
+        tidl_printf(2, "%p\n", outPtrs[i]);
     }
     
     /* Check if current layer is GPU-supported */
@@ -879,21 +1215,70 @@ int32_t TIDL_cudaMemManagerIsPointerInMemRec(
     const void *cpuPtr,
     int32_t memRecIdx)
 {
-    if (manager == NULL || !manager->isInitialized || 
+    if (manager == NULL || !manager->isInitialized ||
         memRecIdx < 0 || memRecIdx >= manager->numMemRecs ||
         cpuPtr == NULL)
     {
         return 0;
     }
-    
+
     const TIDL_CudaMemRecord *rec = &manager->memRecs[memRecIdx];
-    
+
     if (!rec->isAllocated || rec->h_base == NULL)
     {
         return 0;
     }
-    
+
     return isPointerInRange(cpuPtr, rec->h_base, rec->size);
 }
+
+void* TIDL_cudaGetLayerStream(TIDL_CudaMemManager* manager, int32_t layerIdx)
+{
+    if (manager == NULL || !manager->isInitialized)
+    {
+        tidl_printf(3, "TIDL_cudaGetLayerStream: mgr null or not init\n");
+        return NULL;
+    }
+
+    if (layerIdx < 0 || layerIdx >= manager->numLayers)
+    {
+        tidl_printf(3, "TIDL_cudaGetLayerStream: idx out of range %d vs %d\n", layerIdx, manager->numLayers);
+        return NULL;
+    }
+
+    if (manager->layerStreams == NULL)
+    {
+        tidl_printf(3, "TIDL_cudaGetLayerStream: layerStreams is NULL\n");
+        return NULL;
+    }
+
+    return manager->layerStreams[layerIdx];
+}
+
+void* TIDL_cudaGetProcessStream(TIDL_CudaMemManager* manager)
+{
+    if (manager == NULL || !manager->isInitialized)
+        return NULL;
+
+    /* Create stream once per process (lazy initialization) */
+    if (manager->processStream == NULL)
+    {
+        cudaStream_t stream = NULL;
+        if (cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking) == cudaSuccess)
+        {
+            manager->processStream = (void*)stream;
+            manager->streamsInitialized = 1;
+            tidl_printf(1, "Created per-process CUDA stream: %p\n", stream);
+        }
+        else
+        {
+            tidl_printf(0, "Failed to create per-process CUDA stream\n");
+            return NULL;
+        }
+    }
+
+    return manager->processStream;
+}
+
 
 #endif /* BUILD_WITH_CUDA */

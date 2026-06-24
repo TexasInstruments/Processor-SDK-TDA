@@ -12,6 +12,6 @@
 #define FPRINTF fprintf
 
 #define EXTRA_MEM_FOR_ALIGN (1024)
-#define L4_MEM_SIZE  (2.3*1024 * 1024 * 1024)
+#define L4_MEM_SIZE  ((size_t)3*1024*1024*1024)
 
 #endif /*__PLATFORM_DEFINES_H__*/

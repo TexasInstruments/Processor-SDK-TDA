@@ -431,14 +431,22 @@ extern "C" {
 /** TIDL_ERROR_GROUP_LSTM error types */
 #define TIDL_ERROR_LSTM_RSVD                               (0U)
 #define TIDL_ERROR_LSTM_NOT_IMPLEMENTED                    (1U)
+// #define TIDL_ERROR_LSTM_SEQ_NOT_SUPPORTED                  (2U)
+#define TIDL_ERROR_LSTM_VAR_SEQ_NOT_SUPPORTED              (2U)
+#define TIDL_ERROR_LSTM_CIP_NOT_SUPPORTED                  (3U)
 
 /** TIDL_ERROR_GROUP_GRU error types */
 #define TIDL_ERROR_GRU_RSVD                                (0U)
 #define TIDL_ERROR_GRU_NOT_IMPLEMENTED                     (1U)
+#define TIDL_ERROR_GRU_VAR_SEQ_NOT_SUPPORTED               (2U)
+#define TIDL_ERROR_GRU_CLIP_NOT_SUPPORTED                  (3U)
 
 /** TIDL_ERROR_GROUP_RNN error types */
 #define TIDL_ERROR_RNN_RSVD                                (0U)
 #define TIDL_ERROR_RNN_NOT_IMPLEMENTED                     (1U)
+#define TIDL_ERROR_RNN_SEQ_NOT_SUPPORTED                   (2U)
+#define TIDL_ERROR_RNN_VAR_SEQ_NOT_SUPPORTED               (3U)
+#define TIDL_ERROR_RNN_CLIP_NOT_SUPPORTED                  (4U)
 
 void tidl_printf(int8_t traceLevel, const char *format, ...);
 

@@ -137,5 +137,9 @@ void TIDL_UpdateScaleFactors(TIDL_Handle intAlgHandle, int32_t i, int32_t update
 
 /* None */
 
+
+int32_t TIDL_eltWiseGetPerfData(void* linkHandle,
+                                 double *perfData);
+
 #endif /* TIDL_ELTWISE_H_*/
 

@@ -1323,9 +1323,9 @@ int32_t TIDL_caffeMapSliceParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
   }
   else
   {
+    TIDLPCLayers.layerPCParams.sliceParams.setSlicePoints = 1;
     for (j = 0; j < NumSlices; j++)
     {
-      TIDLPCLayers.layerParams.sliceParams.slicePoints[j] = -1;
       TIDLPCLayers.outData[j].dataId = dataIndex++;
     }
   }
@@ -1433,7 +1433,7 @@ int32_t TIDL_caffeMapPriorBoxParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
 
 
   int32_t aspect_ratios_size = netStructure.layer(i).prior_box_param().aspect_ratio_size();
-  float  * aspect_ratios   = (float *)my_malloc((aspect_ratios_size*3)*sizeof(float));
+  float  * aspect_ratios   = (float *)my_calloc((aspect_ratios_size*3), sizeof(float));
   bool flip = netStructure.layer(i).prior_box_param().flip();
   int ptr_offset = 0;
   aspect_ratios[ptr_offset++] = 1.0;
@@ -1567,7 +1567,7 @@ int32_t TIDL_caffeMapPriorBoxParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
     variance[0] = 1.0;
   }
 
-  sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_malloc(sizeof(sTIDL_AnchorBoxParams_t));
+  sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_calloc(1, sizeof(sTIDL_AnchorBoxParams_t));
 
   // set the variance.
   anchorBox->numAnchors = num_priors;

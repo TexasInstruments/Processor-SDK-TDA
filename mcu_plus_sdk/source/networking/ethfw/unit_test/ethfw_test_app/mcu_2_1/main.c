@@ -457,6 +457,8 @@ int main(void)
     /* Wait for debugger to attach (disabled by default) */
     EthApp_waitForDebugger();
 
+    EthFwOsal_init();
+
     /* Init UDMA LLD based on NAVSS instance */
     status = CpswRemoteApp_openUdma();
     if (status != UDMA_SOK)

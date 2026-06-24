@@ -1716,6 +1716,9 @@ static vx_status app_run_graph_for_one_frame_sequential(AppObj *obj, vx_int32 fr
         snprintf(output_file_name, APP_MAX_FILE_PATH, "%s/pre_proc_output_%010d", obj->output_file_path, frame_id);
         writePreProcOutput(output_file_name, obj->preProcObj.output_tensor_arr);
 
+        snprintf(output_file_name, APP_MAX_FILE_PATH, "%s/tidl_output_%010d", obj->output_file_path, frame_id);
+        writeTIDLOutput(output_file_name, &obj->TIDLObj);
+
 
 
 #endif

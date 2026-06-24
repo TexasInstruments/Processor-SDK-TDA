@@ -1,0 +1,10 @@
+diff -uNr a/xen/arch/arm/configs/tda54_defconfig b/xen/arch/arm/configs/tda54_defconfig
+--- a/xen/arch/arm/configs/tda54_defconfig
++++ b/xen/arch/arm/configs/tda54_defconfig
+@@ -2,5 +2,5 @@
+ CONFIG_DEBUG=y
+ CONFIG_ARM_SMMU_V3=y
+ CONFIG_EARLY_UART_CHOICE_8250=y
+-CONFIG_EARLY_UART_BASE_ADDRESS=0x53900000
++CONFIG_EARLY_UART_BASE_ADDRESS=0x53904000
+ CONFIG_EARLY_UART_8250_REG_SHIFT=2

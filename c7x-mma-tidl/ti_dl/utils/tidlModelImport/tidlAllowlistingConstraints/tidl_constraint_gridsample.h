@@ -65,8 +65,8 @@
 const vector<TidlConstraint> tidlConstraintGridSample =
 {
 	TIDL_CSTR(
-		"Only nearest & bilinear mode is supported ",
-		"Only nearest & bilinear mode is supported",
+		"Only nearest and linear/bilinear mode is supported ",
+		"Only nearest and linear/bilinear mode is supported",
 		"",
 		[](const sTIDL_LayerPC_t *layer, string &logs){
 			if (layer->layerParams.gridSampleParams.mode != TIDL_ModeNearest &&

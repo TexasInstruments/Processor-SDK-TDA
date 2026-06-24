@@ -74,6 +74,9 @@
 #include <math.h>
 #include <float.h>
 #include "tidl_softmax_ref.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 // #define lutTensorScale (1.0/255.0) /* This is an intermediate variable set by user */
 #define lutTensorZP (0.0)                               /* This is an intermediate variable set by user */
@@ -169,6 +172,11 @@ template<class Tin, class Tout, class Tacc>
   dim[(int32_t)TIDL_DIM_MAX - 1 - axis] = dim_temp;
   ddim[(int32_t)TIDL_DIM_MAX - 1 - axis] = ddim_temp;
 
+  #ifdef BUILD_WITH_CUDA_SOFTMAX
+  // call cuda fixed point softmax wrapper
+  TIDL_cudaSoftmaxFixed<Tin, Tout, Tacc>(inPtr, outPtr, icnt, dim, ddim, 
+              inputTensorScale, quantScale, outputTensorScale, outputTensorZP);
+  #else
   int32_t i5, i4, i3, i2, i1, i0;
   /*Compute:*/
   /* OPENACC(data copyin(inPtr[: 1+ (icnt[5]-1) * dim[5] + (icnt[4]-1) * dim[4] + (icnt[3]-1) * dim[3] + (icnt[2]-1) * dim[2] + (icnt[1]-1) * dim[1] + (icnt[0]-1) * dim[0]]) \
@@ -272,6 +280,7 @@ template<class Tin, class Tout, class Tacc>
       }
     }
   }
+  #endif
   return 0;
 }
 
@@ -634,6 +643,10 @@ int32_t TIDL_softmaxRefProcessFloat(const sTIDL_Layer_t *tidlLayer,
   dim[(int32_t)TIDL_DIM_MAX - 1 - axis] = dim_temp;
   ddim[(int32_t)TIDL_DIM_MAX - 1 - axis] = ddim_temp;
 
+  #ifdef BUILD_WITH_CUDA_SOFTMAX
+  // call cuda float softmax wrapper
+  TIDL_cudaSoftmaxFloat(inPtr, out, icnt, dim, ddim);
+  #else
   int32_t i0, i1, i2, i3, i4, i5;
 
   /* OPENACC(data copyin(inPtr[: 1+ (icnt[5]-1) * dim[5] + (icnt[4]-1) * dim[4] + (icnt[3]-1) * dim[3] + (icnt[2]-1) * dim[2] + (icnt[1]-1) * dim[1] + (icnt[0]-1) * dim[0]]) \
@@ -689,6 +702,7 @@ int32_t TIDL_softmaxRefProcessFloat(const sTIDL_Layer_t *tidlLayer,
       }
     }
   }
+  #endif
   return IALG_EOK;
 }
 

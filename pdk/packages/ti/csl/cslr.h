@@ -309,7 +309,7 @@
                                                     ((volatile uint32_t *) (p)), \
                                                     ((uint32_t) v), \
                                                     ((uint32_t) mask), \
-                                                    ((void (*)()) errRbFunc)))
+                                                    ((void (*)(uint32_t, uint32_t)) errRbFunc)))
     
 /**
  * \brief This macro calls readback-verify API for a 32-bit register field

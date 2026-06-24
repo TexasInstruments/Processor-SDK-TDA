@@ -532,18 +532,20 @@ vx_status app_create_ldc(AppObj *obj, vx_image ldc_in_image)
             }
             if(status == VX_SUCCESS)
             {
+#ifdef x86_64
+                if(dcc_buff_size_fs > 0)
+                {
+                    memcpy(dcc_ldc_buf, obj->fs_dcc_buf_ldc, dcc_buff_size_fs);
+                }
+                status = appIssGetDCCBuffLDC(obj->sensor_name, sensor_wdr_enabled, &dcc_ldc_buf[dcc_buff_size_fs], dcc_buff_size_driver);
+#else
                 status = appIssGetDCCBuffLDC(obj->sensor_name, sensor_wdr_enabled,  dcc_ldc_buf, dcc_buff_size_driver);
+#endif
                 if(status != VX_SUCCESS)
                 {
                         printf("Couldn't get LDC DCC buffer from sensor driver \n");
                 }
 
-#ifdef x86_64
-                if(dcc_buff_size_fs > 0)
-                {
-                    memcpy(dcc_ldc_buf+dcc_buff_size_driver, obj->fs_dcc_buf_ldc, dcc_buff_size_fs);
-                }
-#endif
                 if(status == VX_SUCCESS)
                 {
                     vxUnmapUserDataObject(obj->dcc_param_ldc, dcc_ldc_buf_map_id);
@@ -643,14 +645,6 @@ vx_status app_create_ldc(AppObj *obj, vx_image ldc_in_image)
 
 vx_status app_delete_ldc(AppObj *obj)
 {
-#ifdef x86_64
-    if(NULL != obj->fs_dcc_buf_ldc)
-    {
-        APP_PRINTF("freeing fs_dcc_buf_ldc\n");
-        free(obj->fs_dcc_buf_ldc);
-    }
-#endif
-
     if(NULL != obj->dcc_param_ldc)
     {
         vxReleaseUserDataObject(&obj->dcc_param_ldc);
@@ -846,22 +840,25 @@ vx_status app_create_viss(AppObj *obj, uint32_t sensor_wdr_mode)
                     0
                 );
 
+#ifdef x86_64
+            if (dcc_buff_size_fs > 0)
+            {
+                memcpy(dcc_viss_buf, obj->fs_dcc_buf_viss, dcc_buff_size_fs);
+            }
+#endif
             if(dcc_buff_size_driver > 0)
             {
+#ifdef x86_64
+                status = appIssGetDCCBuffVISS(obj->sensor_name, sensor_wdr_enabled, &dcc_viss_buf[dcc_buff_size_fs], dcc_buff_size_driver);
+#else
                 status = appIssGetDCCBuffVISS(obj->sensor_name, sensor_wdr_enabled, dcc_viss_buf, dcc_buff_size_driver);
+#endif
                 if(status != VX_SUCCESS)
                 {
                     printf("Couldn't get VISS DCC buffer from sensor driver \n");
                 }
             }
 
-#ifdef x86_64
-
-            if(dcc_buff_size_fs> 0)
-            {
-                memcpy(dcc_viss_buf+dcc_buff_size_driver, obj->fs_dcc_buf_viss, dcc_buff_size_fs);
-            }
-#endif
             if(obj->dcc_param_viss)
             {
                 vxUnmapUserDataObject(obj->dcc_param_viss, dcc_viss_buf_map_id);
@@ -891,14 +888,6 @@ vx_status app_delete_viss(AppObj *obj)
 {
     vx_status status = VX_SUCCESS;
     uint32_t buf_id;
-
-#ifdef x86_64
-    if(NULL != obj->fs_dcc_buf_viss)
-    {
-        APP_PRINTF("freeing fs_dcc_buf_viss\n");
-        free(obj->fs_dcc_buf_viss);
-    }
-#endif
 
     if(NULL != obj->node_viss)
     {
@@ -1047,19 +1036,21 @@ vx_status app_create_aewb(AppObj *obj, uint32_t sensor_wdr_mode)
 
             if(status == VX_SUCCESS)
             {
+#ifdef x86_64
+                if(dcc_buff_size_fs> 0)
+                {
+                    memcpy(dcc_2a_buf, obj->fs_dcc_buf_2a, dcc_buff_size_fs);
+                }
+                status = appIssGetDCCBuff2A(obj->sensor_name, sensor_wdr_mode, &dcc_2a_buf[dcc_buff_size_fs], dcc_buff_size_driver);
+#else
                 status = appIssGetDCCBuff2A(obj->sensor_name, sensor_wdr_mode,  dcc_2a_buf, dcc_buff_size_driver);
+#endif
                 if(status != VX_SUCCESS)
                 {
                     printf("Couldn't get 2A DCC buffer from sensor driver \n");
                     status = VX_SUCCESS;
                 }
 
-#ifdef x86_64
-                if(dcc_buff_size_fs> 0)
-                {
-                    memcpy(dcc_2a_buf+dcc_buff_size_driver, obj->fs_dcc_buf_2a, dcc_buff_size_fs);
-                }
-#endif
             }
             vxUnmapUserDataObject(obj->dcc_param_2a, dcc_2a_buf_map_id);
         }
@@ -1110,14 +1101,6 @@ vx_status app_create_aewb(AppObj *obj, uint32_t sensor_wdr_mode)
 vx_status app_delete_aewb(AppObj *obj)
 {
     vx_status status = VX_SUCCESS;
-
-#ifdef x86_64
-    if(NULL != obj->fs_dcc_buf_2a)
-    {
-        APP_PRINTF("freeing fs_dcc_buf_2a\n");
-        free(obj->fs_dcc_buf_2a);
-    }
-#endif
 
     if(obj->ae_awb_result)
     {

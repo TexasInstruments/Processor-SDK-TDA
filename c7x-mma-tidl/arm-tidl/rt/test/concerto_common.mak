@@ -19,6 +19,9 @@ ifeq ($(RTOS_SDK),mcu_sdk)
     IDIRS += $(MCU_SDK_PATH)/source
     IDIRS += $(MCU_SDK_PATH)/source/drivers
     IDIRS += $(MCU_SDK_PATH)/source/drivers/hw_include
+    IDIRS += $(MCU_SDK_PATH)/source/device/tda54/include
+    IDIRS += $(MCU_SDK_PATH)/source/device/tda54/include/hw
+    IDIRS += $(MCU_SDK_PATH)/ti_sdk_config/tda54/default/Hal_Cfg
     IDIRS += $(DMA_UTILS_PATH)
     IDIRS += $(DMA_UTILS_PATH)/include
     IDIRS += $(DMA_UTILS_PATH)/csl
@@ -54,6 +57,7 @@ ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J784S4 j784s4))
 endif
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
     CFLAGS += -DSOC_TDA54
+    DEFS+=TIDL_PRESILICON_COMMON
 endif
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a))
     CFLAGS += -DSOC_AM62A

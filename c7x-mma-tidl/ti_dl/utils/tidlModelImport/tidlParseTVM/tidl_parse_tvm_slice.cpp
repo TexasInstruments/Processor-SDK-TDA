@@ -86,16 +86,45 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("tidl.slice")>()
     {
         if (attrs->dict.count("axes")) 
         {
-            axis = Downcast<Integer>(attrs->dict.at("axes"))->value;
+            auto axes_ref = attrs->dict.at("axes");
+            if (axes_ref.as<ArrayNode>()) {
+                auto axes_array = Downcast<Array<Integer>>(axes_ref);
+                if (axes_array.size() > 0) {
+                    axis = axes_array[0]->value;
+                }
+            } else if (axes_ref.as<IntImmNode>()) {
+                axis = Downcast<Integer>(axes_ref)->value;
+            }
         }
         if (attrs->dict.count("starts")) 
         {
-            sliceParams.slicePoints[0] = Downcast<Integer>(attrs->dict.at("starts"))->value;
-             isMultipleAxis=Downcast<Array<ObjectRef>>(attrs->dict.at("starts")).size();
+            auto starts_ref = attrs->dict.at("starts");
+            if (starts_ref.as<ArrayNode>()) {
+                auto starts_array = Downcast<Array<Integer>>(starts_ref);
+                isMultipleAxis = starts_array.size();  
+
+                if (starts_array.size() > 0) {
+                    sliceParams.slicePoints[0] = starts_array[0]->value;
+                }
+            } else if (starts_ref.as<IntImmNode>()) {
+                sliceParams.slicePoints[0] = Downcast<Integer>(starts_ref)->value;
+                isMultipleAxis = 1;
+            }
+
         }
         if (attrs->dict.count("ends")) 
         {
-            sliceParams.slicePoints[1] = Downcast<Integer>(attrs->dict.at("ends"))->value;
+            auto ends_ref = attrs->dict.at("ends");
+
+            if (ends_ref.as<ArrayNode>()) {
+                auto ends_array = Downcast<Array<Integer>>(ends_ref);
+                if (ends_array.size() > 0) {
+                    sliceParams.slicePoints[1] = ends_array[0]->value;
+                }
+                // DO NOT update isMultipleAxis here
+            } else if (ends_ref.as<IntImmNode>()) {
+                sliceParams.slicePoints[1] = Downcast<Integer>(ends_ref)->value;
+            }
         }
         
     }
@@ -150,10 +179,6 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("tidl.slice")>()
             if(endsPtr[0] == 0x7fffffffffffffff)
             {
                 sliceParams.slicePoints[1] = 0x7fffffff;
-            }
-            else if(endsPtr[0] == -1)
-            {
-                sliceParams.slicePoints[1] = -1;
             }
             else
             {

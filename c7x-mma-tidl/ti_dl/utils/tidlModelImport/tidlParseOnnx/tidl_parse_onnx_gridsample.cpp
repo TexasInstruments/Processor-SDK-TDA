@@ -87,7 +87,7 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("GridSample")> ()
 	{
 		layer.layerParams.gridSampleParams.mode = TIDL_ModeNearest;
 	}
-	else if ((strcmp((char*)mode, "bilinear") == 0))
+	else if ((strcmp((char*)mode, "bilinear") == 0) || (strcmp((char*)mode, "linear") == 0))
 	{
 		layer.layerParams.gridSampleParams.mode = TIDL_ModeBilinear;
 	}

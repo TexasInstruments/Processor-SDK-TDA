@@ -65,14 +65,6 @@
 const vector<TidlConstraint> tidlConstraintLogicalOpLayer = 
 {
     TIDL_CSTR(
-        "Not supported as an individual operator",
-        "Not supported as an individual operator",
-        "Not supported as an individual operator",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            return false;
-        }
-    ),
-    TIDL_CSTR(
         "Number of non-singleton variable input dimensions must be <= 6",
         "Number of non-singleton variable input dimensions must be <= 6",
         "Number of non-singleton variable input dimensions must be <= 6",
@@ -96,16 +88,184 @@ const vector<TidlConstraint> tidlConstraintLogicalOpLayer =
         }
     ),
      TIDL_CSTR(
-        "Input tensor cannot be a constant input",
-        "Input tensor cannot be a constant input",
-        "Input tensor cannot be a constant input",
+        "Input tensor cannot be a constant for Not, IsInf and IsNan operator",
+        "Input tensor cannot be a constant for Not, IsInf and IsNan operator",
+        "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
-            if(md.constTensorIndices.size() > 0)
+            int32_t opType = layer->layerParams.logicalOpLayerParams.operatorType;
+            if (opType == TIDL_Not || opType == TIDL_IsInf || opType == TIDL_IsNaN)
             {
-                return false;
+                if(md.constTensorIndices.size() > 0)
+                {
+                    return false;
+                }
             }
+            return true;
+        }
+    ),
+    TIDL_CSTR(
+        "Condition cannot be a constant input for Where operator",
+        "Condition cannot be a constant input for Where operator",
+        "",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            ostringstream oss;
+            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+            int32_t opType = layer->layerParams.logicalOpLayerParams.operatorType;
+            if (opType == TIDL_Where)
+            {
+                for(int32_t i = 0; i < md.constTensorIndices.size(); i++)
+                {
+                    if (md.constTensorIndices[i] != 1 && md.constTensorIndices[i] != 2)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+    ),
+    TIDL_CSTR(
+        "Only boolean inputs/outputs are supported for And, Or, Xor and Not operator",
+        "Only boolean inputs/outputs are supported for And, Or, Xor and Not operator",
+        "",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+            int32_t opType = layer->layerParams.logicalOpLayerParams.operatorType;
+            if (opType == TIDL_And || opType == TIDL_Or || opType == TIDL_Xor || opType == TIDL_Not)
+            {
+                for(int32_t i = 0; i < md.inputDataTypes.size(); i++)
+                {
+                    if (md.inputDataTypes[i] != TIDL_Bool)
+                    {
+                        return false;
+                    }
+                }
+
+                for(int32_t i = 0; i < md.outputDataTypes.size(); i++)
+                {
+                    if (md.outputDataTypes[i] != TIDL_Bool)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+    ),
+    TIDL_CSTR(
+        "Only boolean, integer (uint8, int8, uint16, int16, uint32, int32) & float32 inputs and boolean output is supported for Equal, Greater, GreaterOrEqual, Less and LessOrEqual operator",
+        "Only boolean, integer (uint8, int8, uint16, int16, uint32, int32) & float32 inputs and boolean output is supported for Equal, Greater, GreaterOrEqual, Less and LessOrEqual operator",
+        "",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            ostringstream oss;
+            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+            int32_t opType = layer->layerParams.logicalOpLayerParams.operatorType;
+            if (opType == TIDL_Equal || opType == TIDL_Greater || opType == TIDL_GreaterOrEqual ||
+                opType == TIDL_Less || opType == TIDL_LessOrEqual)
+            {
+                for(int32_t i = 0; i < md.inputDataTypes.size(); i++)
+                {
+                    int32_t inputType = md.inputDataTypes[i];
+                    if (inputType != TIDL_Bool && inputType != TIDL_UnsignedChar && inputType != TIDL_SignedChar &&
+                        inputType != TIDL_UnsignedShort && inputType != TIDL_SignedShort && inputType != TIDL_UnsignedWord &&
+                        inputType != TIDL_SignedWord && inputType != TIDL_SinglePrecFloat)
+                    {
+                        return false;
+                    }
+                }
+
+                for(int32_t i = 0; i < md.outputDataTypes.size(); i++)
+                {
+                    if (md.outputDataTypes[i] != TIDL_Bool)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+    ),
+    TIDL_CSTR(
+        "Only float32 input and boolean output is supported for IsInf and IsNan operator",
+        "Only float32 input and boolean output is supported for IsInf and IsNan operator",
+        "",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+            int32_t opType = layer->layerParams.logicalOpLayerParams.operatorType;
+            if (opType == TIDL_IsInf || opType == TIDL_IsNaN)
+            {
+                for(int32_t i = 0; i < md.inputDataTypes.size(); i++)
+                {
+                    if (md.inputDataTypes[i] != TIDL_SinglePrecFloat)
+                    {
+                        return false;
+                    }
+                }
+
+                for(int32_t i = 0; i < md.outputDataTypes.size(); i++)
+                {
+                    if (md.outputDataTypes[i] != TIDL_Bool)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+    ),
+    TIDL_CSTR(
+        "Only boolean condition input is supported for Where operator",
+        "Only boolean condition input is supported for Where operator",
+        "",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            ostringstream oss;
+            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+            int32_t opType = layer->layerParams.logicalOpLayerParams.operatorType;
+            if (opType == TIDL_Where)
+            {
+                if(md.inputDataTypes[0] != TIDL_Bool)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    ),
+    TIDL_CSTR(
+        "Only boolean, integer (uint8, int8, uint16, int16, uint32, int32) & float32 inputs (X and Y) is supported for Where operator",
+        "Only boolean, integer (uint8, int8, uint16, int16, uint32, int32) & float32 inputs (X and Y) is supported for Where operator",
+        "",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            ostringstream oss;
+            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+            int32_t opType = layer->layerParams.logicalOpLayerParams.operatorType;
+            if (opType == TIDL_Where)
+            {
+                if(md.inputDataTypes.size() > 2)
+                {
+                    int32_t xType = md.inputDataTypes[1], yType = md.inputDataTypes[2];
+                    if (xType != TIDL_Bool && xType != TIDL_UnsignedChar && xType != TIDL_SignedChar &&
+                        xType != TIDL_UnsignedShort && xType != TIDL_SignedShort && xType != TIDL_UnsignedWord &&
+                        xType != TIDL_SignedWord && xType != TIDL_SinglePrecFloat)
+                    {
+                        return false;
+                    }
+
+                    if (yType != TIDL_Bool && yType != TIDL_UnsignedChar && yType != TIDL_SignedChar &&
+                        yType != TIDL_UnsignedShort && yType != TIDL_SignedShort && yType != TIDL_UnsignedWord &&
+                        yType != TIDL_SignedWord && yType != TIDL_SinglePrecFloat)
+                    {
+                        return false;
+                    }
+                }
+            }
+
             return true;
         }
     ),

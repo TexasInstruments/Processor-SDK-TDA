@@ -14,38 +14,7 @@
 #include <type_traits>
 #include "tidl_cuda_mem_manager.h"
 /* External declaration of the global memory manager pointer */
-extern TIDL_CudaMemManager* g_cudaMemManager;
-
-// Persistent memory structure for Slice
-typedef struct {
-    int isInit;
-    void *dpInput;
-    void *dpOutput;
-} TIDL_cudaSC;
-
-static TIDL_cudaSC CUDASC[MEM_BUFF_ARRAY_LEN] = {0};
-
-// Function to free device pointers
-void TIDL_cudaFreeSliceCudaPtrs()
-{
-    for(int i = 0; i < MEM_BUFF_ARRAY_LEN; i++)
-    {
-        if(CUDASC[i].dpInput) cudaFree(CUDASC[i].dpInput);
-        if(CUDASC[i].dpOutput) cudaFree(CUDASC[i].dpOutput);
-        
-        CUDASC[i].dpInput = 0;
-        CUDASC[i].dpOutput = 0;
-        CUDASC[i].isInit = 0;
-    }
-    cudaDeviceSynchronize();
-}
-
-void TIDL_cudaSetSliceInitFlag(int32_t layerIdx)
-{
-    if(layerIdx >= 0 && layerIdx < MEM_BUFF_ARRAY_LEN) {
-        CUDASC[layerIdx].isInit = 1;
-    }
-}
+extern TIDL_CudaMemManager* TIDL_cudaGetThreadManager();
 
 template <class Tin, class Tout>
 __global__ void SliceKernel(
@@ -90,16 +59,16 @@ int TIDL_refCudaSlice(
     size_t input_size = numROIs * inROIPitch * sizeof(Tin);
     size_t output_size = numROIs * outROIPitch * sizeof(Tout);
 
-    if(!CUDASC[CUDNNLC].isInit) {
-        checkCudaErr(cudaMalloc((void**)&CUDASC[CUDNNLC].dpInput, input_size));
-        checkCudaErr(cudaMalloc((void**)&CUDASC[CUDNNLC].dpOutput, output_size));
-        CUDASC[CUDNNLC].isInit = 1;
-    }
+    Tin* d_input = NULL;
+    Tout* d_output = NULL;
 
-    Tin* d_input = (Tin*)CUDASC[CUDNNLC].dpInput;
-    Tout* d_output = (Tout*)CUDASC[CUDNNLC].dpOutput;
+    void* inPtrs[1] = {(void*)pIn};
+    uint32_t inDataSizes[1] = {(uint32_t)input_size};
+    TIDL_cudaMemManagerPreLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), inPtrs, NULL, 1, inDataSizes);
 
-    checkCudaErr(cudaMemcpy(d_input, pIn, input_size, cudaMemcpyHostToDevice));
+    // Get GPU pointers after synchronization
+    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), pIn, (void**)&d_input, input_size);
+    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), pOut,  (void**)&d_output, output_size);
     
     int total_elements = numROIs * numDim1 * numDim2 * numChs * outHeight * outWidth;
     int grid_size = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
@@ -115,8 +84,9 @@ int TIDL_refCudaSlice(
 
     checkCudaErr(cudaGetLastError());
     
-    // Copy results back to CPU
-    checkCudaErr(cudaMemcpy(pOut, d_output, output_size, cudaMemcpyDeviceToHost));
+    void* outPtrs[1] = {(void*)pOut};
+    uint32_t outDataSizes[1] = {(uint32_t)output_size};
+    TIDL_cudaMemManagerPostLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), outPtrs, 1, outDataSizes);
 
     return IALG_EOK;
 }

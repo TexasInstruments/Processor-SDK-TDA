@@ -168,5 +168,13 @@ int32_t TIDL_transposeDeviceExec(void                            *linkHandle,
                                const WorkloadUnitExec_LinkExecArgs *linkExecArgs,
                                int32_t                          currFlowStage[],
                                int32_t                          currIterCount);
+
+int32_t TIDL_transposeLayerFrameInit(void *linkHandle,
+                                     WorkloadUnitExec_LinkFrameInitParams_t *linkExecInitParams,
+                                     const sLink_t *link);
+
+int32_t TIDL_transposeGetPerfData(void* linkHandle, 
+                                 double* perfModelEstimates);
+                                    
 #endif /* ITIDL_TRANSPOSE_H*/
 

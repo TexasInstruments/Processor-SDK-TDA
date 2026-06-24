@@ -265,6 +265,27 @@ struct option *addOption(struct option *lopts, char *opt, int flag)
   return lopts;
 }
 
+int32_t parseOptimizationLevel(tidl_import_config& gParams)
+{
+  if(gParams.graphOptimizationLevel == TIDL_OPTIMIZE_LEVEL_EXTENDED)
+  {
+    if(gParams.enableShapeFolding == -1)
+    {
+      gParams.enableShapeFolding = 1;
+    }
+    // Other higher optimization flag can be added here in future
+  }
+  else
+  {
+    if(gParams.enableShapeFolding == -1)
+    {
+      gParams.enableShapeFolding = 0;
+    }
+    // Other higher optimization flag can be added here in future
+  }
+  return 0;
+}
+
 int32_t main(int32_t argc, char *argv[])
 {
   int32_t c;
@@ -432,8 +453,10 @@ int32_t main(int32_t argc, char *argv[])
 
   TIDL_IMPORT_CHECK_AND_RETURN(checkMandatoryParams(&gsTokenMap_tidl_import_config[0]), "Missing one or more mandatory parameters");
   
+  TIDL_IMPORT_CHECK_AND_RETURN(parseOptimizationLevel(gParams),"");
+  
   // Create and run import sessions
-  importState *state = (importState *) malloc(sizeof(importState));
+  importState *state = (importState *) calloc(1, sizeof(importState));
   TIDL_IMPORT_CHECK_AND_RETURN(TIDL_createImportSession(state, NULL), "Failed to create Import session");
   TIDL_IMPORT_CHECK_AND_RETURN(TIDL_runImportSession(state), "Failed to run Import session");
   free((void *)state);

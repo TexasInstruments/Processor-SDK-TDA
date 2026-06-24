@@ -209,17 +209,26 @@ int32_t TIDL_rnnProcess(TIDL_NetworkCommonParams   * commonParams,
   {
     sTIDL_RNNParams_t *params = &tidlLayer->layerParams.rnnParams;
 
-    uint8_t (*inPtr)[]        = (uint8_t (*)[])(inPtrs[0]);
-    uint8_t (*WPtr)[]         = (uint8_t (*)[])(inPtrs[1]);
-    uint8_t (*RPtr)[]         = (uint8_t (*)[])(inPtrs[2]);
+    uint8_t (*inPtr)[]        = (uint8_t (*)[])(inPtrs[TIDL_RecurrentInputX]);
+    uint8_t (*WPtr)[]         = (uint8_t (*)[])(inPtrs[TIDL_RecurrentInputW]);
+    uint8_t (*RPtr)[]         = (uint8_t (*)[])(inPtrs[TIDL_RecurrentInputR]);
+    uint8_t (*biasPtr)[]      = NULL;
     uint8_t (*initial_hPtr)[] = NULL;
 
-    sTIDL_DataParams_t *inDataParams = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[0]].outData;
-    sTIDL_DataParams_t *WParams      = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[1]].outData;
-    sTIDL_DataParams_t *RParams      = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[2]].outData;
+    sTIDL_DataParams_t *inDataParams    = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[TIDL_RecurrentInputX]].outData;
+    sTIDL_DataParams_t *WParams         = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[TIDL_RecurrentInputW]].outData;
+    sTIDL_DataParams_t *RParams         = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[TIDL_RecurrentInputR]].outData;
+    sTIDL_DataParams_t *biasParams      = NULL;
     sTIDL_DataParams_t *initial_hParams = NULL;
 
-    int32_t inIdx = 3;
+    int32_t inIdx = TIDL_RecurrentInputB;
+    if(params->isBiasPresent == 1)
+    {
+      biasPtr = (uint8_t (*)[])(inPtrs[inIdx]);
+      biasParams = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[inIdx]].outData;
+      inIdx++;
+    }
+
     if(params->isInitialHPresent == 1)
     {
       initial_hPtr = (uint8_t (*)[])(inPtrs[inIdx]);
@@ -231,6 +240,11 @@ int32_t TIDL_rnnProcess(TIDL_NetworkCommonParams   * commonParams,
 
     TIDL_Obj intAlgObj;
     intAlgObj.createParams = (TIDL_CreateParams *) &createParams;
+    int8_t useTaylor = 1;
+    if (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)
+    {
+      useTaylor = 0;
+    }
 
     status = TIDL_rnnRefProcess(&intAlgObj,
                                 algLayer,
@@ -239,20 +253,27 @@ int32_t TIDL_rnnProcess(TIDL_NetworkCommonParams   * commonParams,
                                 inPtr,
                                 WPtr,
                                 RPtr,
+                                biasPtr,
                                 initial_hPtr,
                                 outPtr,
                                 inDataParams,
                                 WParams,
                                 RParams,
+                                biasParams,
                                 initial_hParams,
-                                &tidlLayer->outData);
+                                &tidlLayer->outData,
+                                useTaylor);
 
   }
   else /* if ((commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY) */
   #endif
   {
-    TIDL_LOG_ERROR(TIDL_ERROR_GROUP_RNN, TIDL_ERROR_RNN_NOT_IMPLEMENTED);
-    status = IALG_EFAIL;
+    status = TIDL_deviceUtilsCommonProcess(commonParams,
+                                   algLayer,
+                                   tidlLayer,
+                                   inPtrs,
+                                   outPtrs,
+                                   layerIdx);
   }
 
   return status;

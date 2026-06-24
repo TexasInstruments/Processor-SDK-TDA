@@ -571,7 +571,7 @@ void TIDL_updateLocConfHeadPtrs(sTIDL_Layer_t *TIDLLayers, sTIDL_AlgLayer_t *alg
     }
     if ((params->metaArchType == (int32_t)TIDL_metaArchTIDL3DOD) || (params->metaArchType == (int32_t)TIDL_metaArchTIDLCenterPoint))
     {
-      extraHeadOffset = params->reserve0 ? (2 * params->numHeads) : 0;
+      extraHeadOffset = (params->reserve0 != 0) ? (2 * params->numHeads) : 0;
     }
     #if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
     if ((params->metaArchType == (int32_t)TIDL_metaArchTIDLCenterPoint) && (params->reserve1 != -1))
@@ -1934,9 +1934,9 @@ int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const
           objData[((numOutDataPerObject * objDstIdx) + 3)] = algDetLyrParams->topKBbox[objSrcIdx].xmin; // X
           objData[((numOutDataPerObject * objDstIdx) + 4)] = algDetLyrParams->topKBbox[objSrcIdx].ymin; // Y
           
-          objData[((numOutDataPerObject * objDstIdx) + 6)] = exp((locPtr[(((chNo * anchorStirde) + (2 * bbStride)) * chPitch) + (curY * linePitch) + curX] - zeroPointLoc) * onebyqFactLoc); // Height
+          objData[((numOutDataPerObject * objDstIdx) + 6)] = exp_taylor((locPtr[(((chNo * anchorStirde) + (2 * bbStride)) * chPitch) + (curY * linePitch) + curX] - zeroPointLoc) * onebyqFactLoc); // Height
           objData[((numOutDataPerObject * objDstIdx) + 7)] = algDetLyrParams->topKBbox[objSrcIdx].ymax; // Width
-          objData[((numOutDataPerObject * objDstIdx) + 8)] = exp((locPtr[(((chNo * anchorStirde) + (5 * bbStride)) * chPitch) + (curY * linePitch) + curX] - zeroPointLoc) * onebyqFactLoc); // Length
+          objData[((numOutDataPerObject * objDstIdx) + 8)] = exp_taylor((locPtr[(((chNo * anchorStirde) + (5 * bbStride)) * chPitch) + (curY * linePitch) + curX] - zeroPointLoc) * onebyqFactLoc); // Length
 
           // objData[((numOutDataPerObject * objDstIdx) + 9)] = algDetLyrParams->topKBbox[objSrcIdx].xmin;
           objData[((numOutDataPerObject * objDstIdx) + 10)] = (locPtr[(((chNo * anchorStirde) + (8 * bbStride)) * chPitch) + (curY * linePitch) + curX] - zeroPointLoc) * onebyqFactLoc; // Pitch

@@ -26,12 +26,21 @@ elif [ "${SOC}" = "j722s" ]; then
 elif [ "${SOC}" = "am62a" ]; then
     : "${TI_DEV_BOARD:=am62a-evm}"
     : "${TISDK_IMAGE:=edgeai}"
-elif [ "${SOC}" = "tda54" ] && [ "${VDK}" = "yes" ]; then
-    : "${TI_DEV_BOARD:=tda54-vdk}"
-    : "${TISDK_IMAGE:=adas}"
-elif [ "${SOC}" = "tda54" ] && [ "${VDK}" = "no" ]; then
-    : "${TI_DEV_BOARD:=tda54-evm}"
-    : "${TISDK_IMAGE:=adas}"
+elif [ "${SOC}" = "tda54" ]; then
+    if [ -n "${VDK}" ] && { [ "${VDK}" = "yes" ] || [ "${VDK}" = "no" ]; }
+    then
+        echo "VDK env variable set as ${VDK}"
+        if [ "${VDK}" = "yes" ]; then
+            : "${TI_DEV_BOARD:=tda54-vdk}"
+            : "${TISDK_IMAGE:=adas}"
+        else
+            : "${TI_DEV_BOARD:=tda54-evm}"
+            : "${TISDK_IMAGE:=adas}"
+        fi
+    else
+        echo "VDK env variable should be either 'yes' or 'no'"
+        exit 1
+    fi
 else
     : "${TI_DEV_BOARD:=j721e-evm}"
     # Consider adding: : "${TISDK_IMAGE:=<default>}"

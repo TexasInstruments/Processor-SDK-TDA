@@ -70,15 +70,15 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Clip")> ()
 {
   int32_t status = 0;
   layer.layerType = TIDL_ClipLayer;
-  layer.actParams.actType = TIDL_Clip;
+  layer.clipParams.isClipEnabled = 1;
   NodeProto node = graph.node(index);
   int32_t minStatus = -1, maxStatus = -1;
   int32_t numInputs = node.input_size();
   sBuffer_t buf;
 
   /* Try to fetch min and max from attributes */
-  minStatus = getFloatAttr(node, "min", &layer.actParams.clipMin, 0);
-  maxStatus = getFloatAttr(node, "max", &layer.actParams.clipMax, 0);
+  minStatus = getFloatAttr(node, "min", &layer.clipParams.clipMin, 0);
+  maxStatus = getFloatAttr(node, "max", &layer.clipParams.clipMax, 0);
 
   /* If min not found */
   if (minStatus == -1)
@@ -94,19 +94,19 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Clip")> ()
         {
           *ptr = (float32_tidl)std::numeric_limits<float>::lowest();
         }
-        layer.actParams.clipMin = *ptr;
+        layer.clipParams.clipMin = *ptr;
         my_free(ptr);
       }
       else
       {
         /* Set default value of min */
-        layer.actParams.clipMin = (float32_tidl)std::numeric_limits<float>::lowest();
+        layer.clipParams.clipMin = (float32_tidl)std::numeric_limits<float>::lowest();
       }
     }
     /* Set default value of min */
     else
     {
-      layer.actParams.clipMin = (float32_tidl)std::numeric_limits<float>::lowest();
+      layer.clipParams.clipMin = (float32_tidl)std::numeric_limits<float>::lowest();
     }
   }
   /* If max not found */
@@ -123,19 +123,19 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Clip")> ()
         {
           *ptr = (float32_tidl)std::numeric_limits<float>::max();
         }
-        layer.actParams.clipMax = *ptr;
+        layer.clipParams.clipMax = *ptr;
         my_free(ptr);
       }
       else
       {
         /* Set default value of max */
-        layer.actParams.clipMax = (float32_tidl)std::numeric_limits<float>::max();
+        layer.clipParams.clipMax = (float32_tidl)std::numeric_limits<float>::max();
       }
     }
     /* Set default value of max */
     else
     {
-      layer.actParams.clipMax = (float32_tidl)std::numeric_limits<float>::max();
+      layer.clipParams.clipMax = (float32_tidl)std::numeric_limits<float>::max();
     }
   }
 

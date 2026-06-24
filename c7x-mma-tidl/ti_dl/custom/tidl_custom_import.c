@@ -458,7 +458,7 @@ int32_t TIDL_mapCustomParams_v2(sTIDL_LayerPC_t*       layer,
         requested by adding it to the total size of the memory requested for the layer. Here paramSize
         is the memory needed for the given layer in bytes. */
         int32_t totalSize = sizeof(TIDL_CustomParams0_t) + paramSize;
-        TIDL_CustomParams0_t *custom0Params = (TIDL_CustomParams0_t *)malloc(totalSize);
+        TIDL_CustomParams0_t *custom0Params = (TIDL_CustomParams0_t *)calloc(1, totalSize);
 
         TIDL_getAttr_padding(tfGraphDef->node(nodeIndex), "padding", &padType);
 
@@ -558,7 +558,7 @@ int32_t TIDL_mapCustomParams_v2(sTIDL_LayerPC_t*       layer,
           requested by adding it to the total size of the memory requested for the layer. Here paramSize
           is the memory needed for the given layer in bytes. */
         int32_t totalSize = sizeof(TIDL_CustomParams0_t) + paramSize;
-        TIDL_CustomParams0_t *custom0Params = (TIDL_CustomParams0_t *)malloc(totalSize);
+        TIDL_CustomParams0_t *custom0Params = (TIDL_CustomParams0_t *)calloc(1, totalSize);
 
         // TIDL_getAttr_padding(onnxGraph->node(nodeIndex), "padding", &padType);
 
@@ -611,7 +611,7 @@ int32_t TIDL_mapCustomParams_v2(sTIDL_LayerPC_t*       layer,
         requested by adding it to the total size of the memory requested for the layer. Here paramSize
         is the memory needed for the given layer in bytes. */
         int32_t totalSize = sizeof(TIDL_CustomParams0_t) + paramSize;
-        TIDL_CustomParams0_t *custom0Params = (TIDL_CustomParams0_t *)malloc(totalSize);
+        TIDL_CustomParams0_t *custom0Params = (TIDL_CustomParams0_t *)calloc(1, totalSize);
 
         layer->layerType = TIDL_CustomLayer;
         custom0Params->poolingType = TIDL_MaxPooling;
@@ -673,7 +673,7 @@ int32_t TIDL_mapCustomParams_v2(sTIDL_LayerPC_t*       layer,
         requested by adding it to the total size of the memory requested for the layer. Here paramSize
         is the memory needed for the given layer in bytes. */
         int32_t totalSize = sizeof(TIDL_CustomParams0_t) + paramSize;
-        TIDL_CustomParams0_t *custom0Params = (TIDL_CustomParams0_t *)malloc(totalSize);
+        TIDL_CustomParams0_t *custom0Params = (TIDL_CustomParams0_t *)calloc(1, totalSize);
 
         custom0Params->poolingType = TIDL_MaxPooling;
 

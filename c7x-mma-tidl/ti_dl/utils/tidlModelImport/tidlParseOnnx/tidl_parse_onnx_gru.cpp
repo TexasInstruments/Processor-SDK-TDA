@@ -80,7 +80,7 @@ template<> int32_t TidlParseOnnx::parse<OnnxStr("GRU")> ()
 
   /* Parse Attributes */
   gruParams.isClipSet = 0;
-  gruParams.direction = TIDL_RNNForward;
+  gruParams.direction = TIDL_RecurrentForward;
   gruParams.layout = 0;
   gruParams.linear_before_reset = 0;
 
@@ -156,24 +156,24 @@ template<> int32_t TidlParseOnnx::parse<OnnxStr("GRU")> ()
   {
     if(strcmp(direction, "forward") == 0)
     {
-      gruParams.direction = TIDL_RNNForward;
+      gruParams.direction = TIDL_RecurrentForward;
     }
     else if(strcmp(direction, "reverse") == 0)
     {
-      gruParams.direction = TIDL_RNNReverse;
+      gruParams.direction = TIDL_RecurrentReverse;
     }
     else if(strcmp(direction, "bidirectional") == 0)
     {
-      gruParams.direction = TIDL_RNNBidirectional;
+      gruParams.direction = TIDL_RecurrentBidirectional;
     }
     else
     {
-      gruParams.direction = TIDL_RNNUnsupported;
+      gruParams.direction = TIDL_RecurrentUnsupported;
     }
   }
 
   int32_t num_directions = 1;
-  if(gruParams.direction == TIDL_RNNBidirectional)
+  if(gruParams.direction == TIDL_RecurrentBidirectional)
   {
     num_directions = 2;
   }
@@ -280,6 +280,11 @@ template<> int32_t TidlParseOnnx::parse<OnnxStr("GRU")> ()
   if (graph.node(index).input_size() > 3)
   {
     status = copyFloatConst(graph, index, 3, layer.bias, INPUT_NOT_REQUIRED);
+    if(status != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+    {
+      /* Const layer will get added for this input */
+      layer.numInBufs++;
+    }
   }
 
   /* sequence_lens tensor */
@@ -301,14 +306,22 @@ template<> int32_t TidlParseOnnx::parse<OnnxStr("GRU")> ()
 
   for(int32_t varIdx: md.varTensorIndices)
   {
-    if(varIdx == 5)
+    if(varIdx == TIDL_RecurrentInputB)
+    {
+      gruParams.isBiasPresent = 1;
+    }
+    else if(varIdx == TIDL_RecurrentInputInitialH)
     {
       gruParams.isInitialHPresent = 1;
     }
   }
   for(int32_t constIdx: md.constTensorIndices)
   {
-    if(constIdx == 5)
+    if(constIdx == TIDL_RecurrentInputB)
+    {
+      gruParams.isBiasPresent = 1;
+    }
+    else if(constIdx == TIDL_RecurrentInputInitialH)
     {
       gruParams.isInitialHPresent = 1;
     }

@@ -65,10 +65,15 @@ using namespace std;
 
 template <>
 int32_t TidlParseTVM::parse<OpNameStr("cast")>()
-{    
+{
     //cast is mapped to TIDL_IdentityLayer in old mechanism and in order to not break anything continuing same
     //To_Do a way to figure out the node is at start og the graph and end of the graph and pass that information to tidl
     layer.layerType = TIDL_CastLayer;
     layer.layerPCParams.castParams.terminal = TIDL_CastInputTerminal;
+
+    // Set default values to match ONNX parser behavior
+    layer.layerPCParams.castParams.roundMode = TIDL_CastRoundUp;  // Default round mode
+    layer.layerPCParams.castParams.saturate = 1;  // Default saturate mode (required by constraint)
+
     return 0;
 }

@@ -1,0 +1,2 @@
+1 testvecs/config/infer/public/caffe/tidl_infer_mobilenetV1.txt --flowCtrl 1 --debugTraceLevel 1
+0

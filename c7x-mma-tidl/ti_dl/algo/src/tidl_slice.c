@@ -82,13 +82,11 @@ int32_t TIDL_sliceProcessNew(TIDL_NetworkCommonParams *commonParams,
 {
   int32_t status             = IALG_EOK;
 
-  void    *inPtr = inPtrs[0];
-  uint8_t(*outPtr)[] = (uint8_t(*)[])outPtrs[0];
   #ifdef HOST_EMULATION
   if (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != TIDL_FLOW_CTRL_REF_ONLY)
   #endif
   {
-    if(inPtr != outPtr)
+    if(algLayer->workloadUnit->isWLNOP == false)
     {
       status = TIDL_deviceUtilsCommonProcess(commonParams,
                                   algLayer,
@@ -157,6 +155,8 @@ int32_t TIDL_sliceProcessNew(TIDL_NetworkCommonParams *commonParams,
 
     if(status == IALG_EOK)
     {
+      void    *inPtr = inPtrs[0];
+      uint8_t(*outPtr)[] = (uint8_t(*)[])outPtrs[0];
       targetInPtr = ((int8_t *)inPtr);
       refOutPtr   =(*outPtr);
       refInPtr    = targetInPtr;

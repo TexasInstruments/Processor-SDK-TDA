@@ -82,6 +82,7 @@ using ::google::protobuf::Message;
 #include "onnx/onnx-ml.proto3.pb.h"
 #include "tidl_onnxRtImport_EP.h"
 #include "tidl_runtimes_infer_common.h"
+#include "tidl_runtimes_import_common.h"
 #include "tidl_onnxrt_common.h"
 #include "ti_dl.h"
 #include "tidl_import_diag.h"
@@ -424,6 +425,99 @@ std::vector<std::vector<int>> optimizeGraphPartition(GraphProto& onnxGraph, std:
     }
   }
   return suportedNodeGroups;
+}
+
+/** Evict any node whose scalar (0-dim) output is consumed by a non-TIDL (CPU) node.
+ * Scalar tensors flowing between TIDL nodes (same or different subgraph) are allowed.
+ * Only when the consumer runs on CPU does the scalar cross a real boundary, since TIDL
+ * coerces 0-dim tensors to shape [1] at import time which would corrupt the CPU consumer.
+ *
+ * Runs as a fixpoint: evicting a node may expose further nodes whose consumers are now
+ * on CPU, so passes repeat until no evictions occur.
+ */
+void TIDL_removeScalarBoundaryNodes(GraphProto& onnxGraph,
+                                    std::vector<std::vector<int>>& suportedNodeGroups,
+                                    const std::vector<int>& sortedNodeIndices)
+{
+  bool anyEviction = true;
+  while (anyEviction)
+  {
+    anyEviction = false;
+
+    /* rebuild allTidlNodes at the start of each pass to reflect prior evictions */
+    std::set<int> allTidlNodes;
+    for (const auto& sg : suportedNodeGroups)
+      for (int idx : sg)
+        allTidlNodes.insert(idx);
+
+    for (auto& subgraph : suportedNodeGroups)
+    {
+      std::vector<int> toRemove;
+
+      for (int nodeIdx : subgraph)
+      {
+        for (int outIdx = 0; outIdx < onnxGraph.node(nodeIdx).output_size(); outIdx++)
+        {
+          const std::string& outputName = onnxGraph.node(nodeIdx).output(outIdx);
+
+          /* check if this output is a confirmed 0-dim scalar via shape inference */
+          bool isScalar = false;
+          for (const auto& vi : onnxGraph.value_info())
+          {
+            if (vi.name() == outputName &&
+                vi.type().has_tensor_type() &&
+                vi.type().tensor_type().has_shape() &&
+                vi.type().tensor_type().shape().dim().size() == 0)
+            {
+              isScalar = true;
+              break;
+            }
+          }
+          if (!isScalar) continue;
+
+          /* scalar output: check whether any consumer is a non-TIDL (CPU) node */
+          bool hasNonTidlConsumer = false;
+          for (int k = 0; k < onnxGraph.node_size() && !hasNonTidlConsumer; k++)
+          {
+            if (allTidlNodes.count(k)) continue; /* TIDL node – OK */
+            for (int l = 0; l < onnxGraph.node(k).input_size(); l++)
+            {
+              if (onnxGraph.node(k).input(l) == outputName)
+              {
+                hasNonTidlConsumer = true;
+                break;
+              }
+            }
+          }
+
+          if (hasNonTidlConsumer)
+          {
+            toRemove.push_back(nodeIdx);
+            allTidlNodes.erase(nodeIdx);
+            int diagIndex = std::find(sortedNodeIndices.begin(), sortedNodeIndices.end(), nodeIdx)
+                            - sortedNodeIndices.begin();
+            TIDL_LOG_UNSUPPORTED_AT(gDiags.gDiagList, diagIndex,
+              "Node (%s) - OP (%s) : Scalar (0-dim) output consumed by non-TIDL node, denying",
+              onnxGraph.node(nodeIdx).name().c_str(),
+              onnxGraph.node(nodeIdx).op_type().c_str());
+            break; /* no need to check remaining outputs of this node */
+          }
+        }
+      }
+
+      for (int idx : toRemove)
+      {
+        subgraph.erase(std::find(subgraph.begin(), subgraph.end(), idx));
+        anyEviction = true;
+      }
+    }
+  }
+
+  /* drop subgraphs emptied by evictions */
+  suportedNodeGroups.erase(
+    std::remove_if(suportedNodeGroups.begin(), suportedNodeGroups.end(),
+                   [](const std::vector<int>& sg){ return sg.empty(); }),
+    suportedNodeGroups.end());
 }
 
 /** This function takes the optimized subgraphs created by onnx runtime and forcefully divides it into chunks
@@ -1097,39 +1191,28 @@ void TIDL_generateParseTable(GraphProto &onnxGraph, std::vector<int> &sortedNode
   std::string offloadSubGraph = std::to_string(numOffloadSubGraphCreated);
   std::string unsupportedNodes = std::to_string(onnxGraph.node_size() - numSuportedNodes);
   std::vector<std::vector<std::string>> denylistData = {};
-  int i;
 
-  if(!gDiags.gDiagList.empty())
-  {
-    for(int index = 0; index < sortedNodeIndices.size(); index++)
-    {
-      i = sortedNodeIndices[index];
-      if(gDiags.gDiagList[index].getKind() == TIDL_ModelDiagnostic::DK_NotSupported ||
-        gDiags.gDiagList[index].getKind() == TIDL_ModelDiagnostic::DK_Error ||
-        gDiags.gDiagList[index].getKind() == TIDL_ModelDiagnostic::DK_NotVerified)
+  // Use common diagnostic parsing function with ONNXRT-specific node info extractor
+  TIDL_buildParseTableFromDiags(
+    gDiags.gDiagList,
+    denylistData,
+    [&](int index) -> std::pair<std::string, std::string> {
+      // Extract opType and nodeName from onnxGraph (ONNXRT has full graph context)
+      int i = sortedNodeIndices[index];
+      std::string opType = onnxGraph.node(i).op_type();
+      std::string nodeName = "";
+      if(!onnxGraph.node(i).name().empty())
       {
-        std::string nodeName = "";
-        if(!onnxGraph.node(i).name().empty())
-        {
-          nodeName = onnxGraph.node(i).name();
-        }
-        else
-        {
-          nodeName = onnxGraph.node(i).output(0);
-        }
-        std::string opType = onnxGraph.node(i).op_type();
-
-        // Parse the reason from diags string
-        std::string diag = gDiags.gDiagList[index].getString();
-        diag = diag.substr(diag.rfind(':') + 1);
-        diag = diag.substr(0,diag.find("--"));
-        diag.erase(diag.find_last_not_of(' ')+1);
-        diag.erase(0, diag.find_first_not_of(' '));
-
-        denylistData.push_back({opType,nodeName,diag});
+        nodeName = onnxGraph.node(i).name();
       }
+      else
+      {
+        nodeName = onnxGraph.node(i).output(0);
+      }
+      return {opType, nodeName};
     }
-  }
+  );
+
   TIDL_printParseTable(supportedNodes, offloadSubGraph, unsupportedNodes, denylistData);
 }
 
@@ -1229,7 +1312,11 @@ void TIDL_getGraphVisualizationInfo(GraphProto& onnxGraph, std::vector<int> &sor
       outfile << "inputAdjNodes " << visInfo[i].inputAdjNodes.size() << " ";
       if(visInfo[i].inputAdjNodes.size() == 0)
       {
-        std::string input_name = onnxGraph.node(i).input(0);
+        std::string input_name = "";
+        if (onnxGraph.node(i).input_size() > 0)
+        {
+          input_name = onnxGraph.node(i).input(0);
+        }
         outfile << input_name << " " ;
       }
       for(auto& adjNode : visInfo[i].inputAdjNodes)
@@ -1496,11 +1583,35 @@ extern "C"
 {
 
 /* Called directly from ONNX runtime : run allowlisting API and return a vector of TIDL supported node groups */
-int32_t TIDL_getSupportedNodesImport(std::string& data, std::string ortVersion, int32_t opSetVersion, std::vector<std::vector<int>> &nodeGroups)
+int32_t TIDL_getSupportedNodesImport(std::string& data, std::vector<std::vector<int>> &nodeGroups)
 {
   int32_t status = 0;
   ModelProto model_proto;
   model_proto.ParseFromString(data);
+
+  // Read graph context embedded in model metadata by the OnnxRuntime EP.
+  std::string ortVersion;
+  int32_t opSetVersion = 0;
+  for (int i = 0; i < model_proto.metadata_props_size(); i++)
+  {
+    const auto& prop = model_proto.metadata_props(i);
+    if (prop.key() == "is_subgraph" && prop.value() == "1")
+    {
+      TIDL_GLOBAL_REPORT_WARNING("Graph is an ONNX subgraph (Loop/If/Scan body) -- TIDL does not support subgraph offload, delegating all nodes to CPU.");
+      nodeGroups = {{}};
+      return status;
+    }
+    else if (prop.key() == "ortVersion")
+    {
+      ortVersion = prop.value();
+    }
+    else if (prop.key() == "opsetVersion")
+    {
+      std::stringstream ss(prop.value());
+      ss >> opSetVersion;
+    }
+  }
+
   auto onnxGraph = model_proto.graph();
 
   std::vector<int> sortedNodeIndices = sortOnnxGraphInTopologicalOrder(onnxGraph);
@@ -1794,6 +1905,10 @@ int32_t TIDL_getSupportedNodesImport(std::string& data, std::string ortVersion, 
   /* Optimize the subgraph partitions */
   std::vector<std::vector<int>> suportedNodeGroupsOptimized = optimizeGraphPartition(onnxGraph, suportedNodeGroups);
 
+  /* Evict nodes with scalar (0-dim) outputs that cross a subgraph boundary
+   * since TIDL cannot handle 0-dim output tensors */
+  TIDL_removeScalarBoundaryNodes(onnxGraph, suportedNodeGroupsOptimized, sortedNodeIndices);
+
   /* Sub-divide the subgraphs if needed*/
   int numMaxNodes;
   if (data_->osrt_options.m_num_tidl_subgraph_max_node <= 0)
@@ -1956,12 +2071,18 @@ int32_t TIDL_writeQuantizedInput(onnxRtParams_t * onnxRtParams, char * inputName
   {
     //TODO: Need to put if based on tensor element type for quantized models
     if( (onnxRtParams->inputTensorElementType[i] != ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT)  &&
+        (onnxRtParams->inputTensorElementType[i] != ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT32) &&
         (onnxRtParams->inputTensorElementType[i] != ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32)  &&
         (onnxRtParams->inputTensorElementType[i] != ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8)  &&
-        (onnxRtParams->inputTensorElementType[i] != ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64) )
+        (onnxRtParams->inputTensorElementType[i] != ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8)  &&
+        (onnxRtParams->inputTensorElementType[i] != ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT16) &&
+        (onnxRtParams->inputTensorElementType[i] != ONNX_TENSOR_ELEMENT_DATA_TYPE_INT16)  &&
+        (onnxRtParams->inputTensorElementType[i] != ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64)  &&
+        (onnxRtParams->inputTensorElementType[i] != ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT64) &&
+        (onnxRtParams->inputTensorElementType[i] != ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL))
 
     {
-      TIDL_GLOBAL_REPORT_ERROR("Input ONNX tensor element type - %d. Only FLOAT, UINT8, INT32 and INT64 inputs supported for ONNX runtime", onnxRtParams->inputTensorElementType[i]);
+      TIDL_GLOBAL_REPORT_ERROR("Input ONNX tensor element type - %d. Only FLOAT, BOOL, UINT8, INT8, INT16, UINT32, INT32, UINT64, INT64 and UINT16 inputs supported for ONNX runtime", onnxRtParams->inputTensorElementType[i]);
       return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
     }
     float* input = (float *)onnxRtParams->inputTensorData[i];
@@ -1985,7 +2106,13 @@ int32_t TIDL_writeQuantizedInput(onnxRtParams_t * onnxRtParams, char * inputName
 
     if (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8 ||
         onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64 ||
-        onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32)
+        onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT32 ||
+        onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT64 ||
+        onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32 ||
+        onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL ||
+        onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT16 ||
+        onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8 ||
+        onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT16)
     {
       scratch_mem = (float*)malloc(sizeof(float)*tensorSize);
       if (scratch_mem == NULL)
@@ -1998,6 +2125,14 @@ int32_t TIDL_writeQuantizedInput(onnxRtParams_t * onnxRtParams, char * inputName
       {
         TIDL_convertInDataToFloat (scratch_mem, ((uint8_t *)onnxRtParams->inputTensorData[i]), tensorSize);
       }
+      else if (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT32)
+      {
+        TIDL_convertInDataToFloat (scratch_mem, ((uint32_t *)onnxRtParams->inputTensorData[i]), tensorSize);
+      }
+       else if (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT64)
+      {
+        TIDL_convertInDataToFloat (scratch_mem, ((uint64_t *)onnxRtParams->inputTensorData[i]), tensorSize);
+      }
       else if (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64)
       {
         TIDL_convertInDataToFloat (scratch_mem, ((int64_t *)onnxRtParams->inputTensorData[i]), tensorSize);
@@ -2005,6 +2140,22 @@ int32_t TIDL_writeQuantizedInput(onnxRtParams_t * onnxRtParams, char * inputName
       else if (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32)
       {
         TIDL_convertInDataToFloat (scratch_mem, ((int32_t *)onnxRtParams->inputTensorData[i]), tensorSize);
+      }
+      else if (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL)
+      {
+        TIDL_convertInDataToFloat (scratch_mem, ((bool *)onnxRtParams->inputTensorData[i]), tensorSize);
+      }
+      else if (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT16)
+      {
+        TIDL_convertInDataToFloat (scratch_mem, ((int16_t *)onnxRtParams->inputTensorData[i]), tensorSize);
+      }
+      else if (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8)
+      {
+        TIDL_convertInDataToFloat (scratch_mem, ((int8_t *)onnxRtParams->inputTensorData[i]), tensorSize);
+      }
+      else if (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT16)
+      {
+        TIDL_convertInDataToFloat (scratch_mem, ((uint16_t *)onnxRtParams->inputTensorData[i]), tensorSize);
       }
 
       input = (float *)scratch_mem;
@@ -2019,8 +2170,13 @@ int32_t TIDL_writeQuantizedInput(onnxRtParams_t * onnxRtParams, char * inputName
 
     /* For pointpillars, index input is passed as it is */
     if((onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32) ||
+       (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT32) ||
+       (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT64) ||
        (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8) ||
-       (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64))
+       (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64) ||
+       (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT16) ||
+       (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8) ||
+       (onnxRtParams->inputTensorElementType[i] == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT16))
     {
       inQuantFactor[i] = 1.0;
     }
@@ -2121,6 +2277,14 @@ void TIDL_writeOnnxRtMetaDataForInference(GraphProto& onnxGraph, OnnxTIDLSubGrap
   {
     if(i > 0) onnxrtMetaData << ",";
     onnxrtMetaData << onnxGraph.output(i).name().c_str();
+  }
+  onnxrtMetaData << endl;
+
+  onnxrtMetaData << serialNumber + ":outDataTypes=";
+  for(int i = 0; i < state_subGraph->numOutputs; i++)
+  {
+    if(i > 0) onnxrtMetaData << ",";
+    onnxrtMetaData << onnxGraph.output(i).type().tensor_type().elem_type();
   }
   onnxrtMetaData << endl;
 }
@@ -2697,7 +2861,9 @@ int32_t TIDL_createStateImportFunc(OnnxTIDLSubGraphParams * state_subGraph, std:
 
   int8_t subgraphName[TIDLRT_STRING_SIZE];
   status = TIDL_updateSubGraphName (onnxGraph, state_subGraph->subGraphName_, (char*)subgraphName, serialNumber.c_str());
-  strcpy((char*)state_subGraph->subGraphName_, TIDL_replaceChar((char*)state_subGraph->subGraphName_, '/', '_', strlen((const char*)state_subGraph->subGraphName_)));
+  // TIDL_replaceChar mutates the buffer in place and returns the same pointer,
+  // so an additional strcpy(dst, dst) was an overlapping self-copy (UB).
+  TIDL_replaceChar((char*)state_subGraph->subGraphName_, '/', '_', strlen((const char*)state_subGraph->subGraphName_));
 
   int32_t currIdx = 0;
   for (int i = 0; i < onnxGraph.input_size(); i++)
@@ -2770,7 +2936,8 @@ int32_t TIDL_computeImportFunc(OnnxTIDLSubGraphParams * state_subGraph, std::str
   {
     int8_t subgraphName[TIDLRT_STRING_SIZE];
     TIDL_updateSubGraphName (onnxGraph, state_subGraph->subGraphName_, (char*)subgraphName, serialNumber.c_str());
-    strcpy((char*)state_subGraph->subGraphName_, TIDL_replaceChar((char*)state_subGraph->subGraphName_, '/', '_', strlen((const char*)state_subGraph->subGraphName_)));
+    // In-place replace; previous strcpy(dst, dst) was an overlapping self-copy (UB).
+    TIDL_replaceChar((char*)state_subGraph->subGraphName_, '/', '_', strlen((const char*)state_subGraph->subGraphName_));
 
     TIDL_IMPORT_CHECK_AND_RETURN(TIDL_onnxRtImportInit(onnxGraph, onnxRtParams, (char*)state_subGraph->subGraphName_, &data_->osrt_options, opSetVersion,
                               data_->odPostProcHeadNames, isSubgraphOd, (std::string* )state_subGraph->string_buf), "Onnx RT import failed");
@@ -2783,6 +2950,13 @@ int32_t TIDL_computeImportFunc(OnnxTIDLSubGraphParams * state_subGraph, std::str
         //Map all nodes for non OD network. For OD network, map nodes only if they are part of backbone, do not map the post proc nodes
         TIDL_IMPORT_CHECK_AND_RETURN(TIDL_onnxRtImportAndLinkNode(onnxGraph, i, data_->osrt_options.m_debug_level), "Onnx RT mapping to TIDL nodes failed");
       }
+    }
+
+    if(gParams.modelType != TIDL_IMPORT_MODEL_FORMAT_TVM_RELAY)
+    {
+      const char * artifacts_folder = const_cast<char *>(data_->osrt_options.m_temp_folder.c_str());
+      snprintf((char *)gParams.outputNetFile, FILE_NAME_SIZE, "%s/%s_tidl_net.bin", artifacts_folder, state_subGraph->subGraphName_);
+      snprintf((char *)gParams.outputParamsFile, FILE_NAME_SIZE, "%s/%s_tidl_io_", artifacts_folder, state_subGraph->subGraphName_);
     }
 
     TIDL_GLOBAL_REPORT_HEADING(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, TIDL_ModelDiagnostic::DK_Purple, "[Optimization for %s Started]" , state_subGraph->subGraphName_);
@@ -2842,25 +3016,117 @@ int32_t TIDL_computeInvokeFunc(OnnxTIDLSubGraphParams * state_subGraph)
   }
   else if((data_->osrt_options.m_num_param_bits == 32))
   {
-    /* memset onnx output buffer in floating point pass */
+    /* In 32-bit float mode the floating point invoke is skipped, so output buffers
+     * are zeroed.  Exception: if the output node in subgraph is Shape or Size with
+     * static input, fill the buffer with the correct int64 values so that downstream
+     * no-offload consumers (Gather, Mul, Concat, Reshape …) receive correct data. */
     onnxRtParams_t * onnxRtParams = &state_subGraph->onnxRtParams;
+
+    /* parse the subgraph to locate Shape/Size producers of each output tensor */
+    ModelProto subgraphModel;
+    std::string *subgraphStringBuf = reinterpret_cast<std::string *>(state_subGraph->string_buf);
+    subgraphModel.ParseFromString(*subgraphStringBuf);
+    const GraphProto& subgraph = subgraphModel.graph();
+
+    auto findVI = [&](const std::string& name) -> const TypeProto* {
+      for (int n = 0; n < subgraph.input_size(); n++)
+        if (subgraph.input(n).name() == name) return &subgraph.input(n).type();
+      for (int n = 0; n < subgraph.value_info_size(); n++)
+        if (subgraph.value_info(n).name() == name) return &subgraph.value_info(n).type();
+      for (int n = 0; n < subgraph.output_size(); n++)
+        if (subgraph.output(n).name() == name) return &subgraph.output(n).type();
+      return nullptr;
+    };
+
     for (int i = 0; i < onnxRtParams->numNetOutData; i++)
     {
-      std::vector<int64_t> nchw_shape{};
-      int32_t s = TIDL_getOutputShape(state_subGraph->tidlRtParams.ioBufDesc, onnxRtParams->outDataNames[i], nchw_shape);
-      if (s == 0)
-      {
-        uint32_t bufferSize = 1;
-        for(auto &data : nchw_shape)
-        {
-          bufferSize *= data;
-        }
+      const std::string outName((char*)onnxRtParams->outDataNames[i]);
+      bool filled = false;
 
-        int32_t elementType = 0;
-        int32_t elementSize = 0;
-        TIDL_ortGetType(onnxRtParams->outputTensorElementType[i], &elementType, &elementSize);
-        bufferSize *= elementSize;
-        memset((void *)onnxRtParams->outputTensorData[i], 0, bufferSize);
+      const NodeProto* prod = nullptr;
+      for (int n = 0; n < subgraph.node_size() && !prod; n++)
+        for (const auto& o : subgraph.node(n).output())
+          if (o == outName) { prod = &subgraph.node(n); break; }
+
+      if (prod != nullptr)
+      {
+        const bool isShape = (prod->op_type() == "Shape");
+        const bool isSize  = (prod->op_type() == "Size");
+
+        if ((isShape || isSize) && prod->input_size() > 0)
+        {
+          const TypeProto* viPtr = findVI(prod->input(0));
+          if (viPtr != nullptr)
+          {
+            const TypeProto& tp = *viPtr;
+            if (tp.has_tensor_type() && tp.tensor_type().has_shape())
+            {
+              const TensorShapeProto& tsp = tp.tensor_type().shape();
+
+              /* check all dims are known static values */
+              bool isStatic = true;
+              for (int d = 0; d < tsp.dim_size(); d++)
+              {
+                if (!tsp.dim(d).has_dim_value() || tsp.dim(d).dim_value() < 0)
+                {
+                  isStatic = false;
+                  break;
+                }
+              }
+
+              if (isStatic)
+              {
+                int64_t* outPtr = (int64_t*)onnxRtParams->outputTensorData[i];
+                if (isShape)
+                {
+                  /* respect optional start/end attributes */
+                  int32_t start = 0;
+                  int32_t end   = tsp.dim_size();
+                  for (const auto& attr : prod->attribute())
+                  {
+                    if (attr.name() == "start")
+                      start = (attr.i() < 0) ? tsp.dim_size() + (int32_t)attr.i()
+                                             : (int32_t)attr.i();
+                    else if (attr.name() == "end")
+                      end = (attr.i() < 0) ? tsp.dim_size() + (int32_t)attr.i()
+                                           : (int32_t)attr.i();
+                  }
+                  start = (start < 0) ? 0 : (start > tsp.dim_size()) ? tsp.dim_size() : start;
+                  end   = (end < start) ? start : (end > tsp.dim_size()) ? tsp.dim_size() : end;
+                  for (int d = start; d < end; d++)
+                    outPtr[d - start] = (int64_t)tsp.dim(d).dim_value();
+                }
+                else /* isSize */
+                {
+                  int64_t total = 1;
+                  for (int d = 0; d < tsp.dim_size(); d++)
+                    total *= tsp.dim(d).dim_value();
+                  outPtr[0] = total;
+                }
+                filled = true;
+              }
+            }
+          }
+        }
+      }
+
+      if (!filled)
+      {
+        std::vector<int64_t> nchw_shape{};
+        std::vector<int64_t> pitch{};
+        int32_t s = TIDL_getOutputShapeAndPitch(state_subGraph->tidlRtParams.ioBufDesc, NULL, onnxRtParams->outDataNames[i], nchw_shape, pitch);
+        (void)pitch; // Unused
+        if (s == 0)
+        {
+          uint32_t bufferSize = 1;
+          for(auto &data : nchw_shape)
+            bufferSize *= data;
+          int32_t elementType = 0;
+          int32_t elementSize = 0;
+          TIDL_ortGetType(onnxRtParams->outputTensorElementType[i], &elementType, &elementSize);
+          bufferSize *= elementSize;
+          memset((void *)onnxRtParams->outputTensorData[i], 0, bufferSize);
+        }
       }
     }
   }

@@ -76,16 +76,33 @@
       int64 -> 7
   */
   map<int,int>typesTable = {
-    {1, TIDL_SinglePrecFloat}, 
-    {2, TIDL_UnsignedChar}, 
-    {3, TIDL_SignedChar}, 
-    {4, TIDL_UnsignedShort}, 
-    {5, TIDL_SignedShort}, 
-    {6, TIDL_SignedWord}, 
-    {12, TIDL_UnsignedWord}, 
-    {7, TIDL_SignedDoubleWord}, 
+    {1, TIDL_SinglePrecFloat},
+    {2, TIDL_UnsignedChar},
+    {3, TIDL_SignedChar},
+    {4, TIDL_UnsignedShort},
+    {5, TIDL_SignedShort},
+    {6, TIDL_SignedWord},
+    {12, TIDL_UnsignedWord},
+    {7, TIDL_SignedDoubleWord},
     {13, TIDL_UnsignedDoubleWord},
     {9, TIDL_Bool},
+  };
+
+/** Structure to define output type inference rules */
+  struct OutputTypeInferenceRule
+  {
+    std::string opType;
+    int32_t inputIdx;
+    int32_t outputIdx;
+  };
+
+/** Vector to store output type inference rules
+ * For example, for TopK operator, output (values - idx 0) type is same as input (idx - 0) type. 
+ * This is used during parsing when output data type needs to be inferred for operators which don't have explicit output data type set. 
+ * In such cases, this vector is looked up to find the input index from which output data type can be inferred.
+ */
+  std::vector<OutputTypeInferenceRule> outputTypeInferenceRules = {
+    {"TopK", 0, 0},
   };
 
 
@@ -254,6 +271,41 @@ std::string TidlParseOnnx::getOriginalNameFromDuplicateName(std::string duplicat
   return originalName;
 }
 
+int32_t TidlParseOnnx::getInputDataType(GraphProto& onnxGraph, int32_t nodeIdx, int32_t inputIdx)
+{
+  if(onnxGraph.node(nodeIdx).input_size() <= inputIdx)
+    return -1;
+
+  std::string inputName = onnxGraph.node(nodeIdx).input(inputIdx);
+  inputName = getOriginalNameFromDuplicateName(inputName);
+
+  for(int j = 0; j < onnxGraph.initializer_size(); j++)
+  {
+    if(onnxGraph.initializer(j).name().compare(inputName) == 0)
+    {
+      return onnxGraph.initializer(j).data_type();
+    }
+  }
+
+  for(int j = 0; j < onnxGraph.input_size(); j++)
+  {
+    if(onnxGraph.input(j).name().compare(inputName) == 0)
+    {
+      return onnxGraph.input(j).type().tensor_type().elem_type();
+    }
+  }
+
+  for(int j = 0; j < onnxGraph.value_info_size(); j++)
+  {
+    if(onnxGraph.value_info(j).name().compare(inputName) == 0)
+    {
+      return onnxGraph.value_info(j).type().tensor_type().elem_type();
+    }
+  }
+
+  return -1;
+}
+
 vector<vector<int32_t>> TidlParseOnnx::getNodeInputOutputTypes(GraphProto& onnxGraph, int32_t idx)
 {
   vector<vector<int32_t>> dataTypes;
@@ -326,7 +378,10 @@ vector<vector<int32_t>> TidlParseOnnx::getNodeInputOutputTypes(GraphProto& onnxG
     }
     if((found == 0) && (checkShapeInferenceforOnnx(layer.allowlistingMetaData) == TIDL_IMPORT_DIAGNOSIS_RETURN_OK))
     {
-      TIDL_GLOBAL_REPORT_WARNING("DataType not found for the node %s input %s. Setting default data type as float", onnxGraph.node(idx).name().c_str(), name.c_str());
+      if (name != "")
+      {
+        TIDL_GLOBAL_REPORT_WARNING("Data type not found for input '%s' of node %s. Setting default data type as float", name.c_str(), onnxGraph.node(idx).name().c_str());
+      }
       for(auto i2 : typesTable)
       {
         if(i2.second == TIDL_SinglePrecFloat)
@@ -345,10 +400,11 @@ vector<vector<int32_t>> TidlParseOnnx::getNodeInputOutputTypes(GraphProto& onnxG
   /* element type of outputs */
   for(int i = 0; i < onnxGraph.node(idx).output_size(); i++)
   {
+    std::string outputName = onnxGraph.node(idx).output(i);
     int32_t found = 0;
     for (int j = 0; j < onnxGraph.output_size(); j++)
     {
-      if(onnxGraph.output(j).name().compare(onnxGraph.node(idx).output(i)) == 0)
+      if(onnxGraph.output(j).name().compare(outputName) == 0)
       {
         int32_t elemType = onnxGraph.output(j).type().tensor_type().elem_type();
         types.push_back(elemType);
@@ -361,7 +417,7 @@ vector<vector<int32_t>> TidlParseOnnx::getNodeInputOutputTypes(GraphProto& onnxG
     {
       for (int j = 0; j < onnxGraph.value_info_size(); j++)
       {
-        if(onnxGraph.value_info(j).name().compare(onnxGraph.node(idx).output(i)) == 0)
+        if(onnxGraph.value_info(j).name().compare(outputName) == 0)
         {
           int32_t elemType = onnxGraph.value_info(j).type().tensor_type().elem_type();
           types.push_back(elemType);
@@ -370,9 +426,31 @@ vector<vector<int32_t>> TidlParseOnnx::getNodeInputOutputTypes(GraphProto& onnxG
         }
       }
     }
+
+    if(found == 0)
+    {
+      /** If data type still not found, try to see if we can infer this from input data type */
+      for(const auto& rule : outputTypeInferenceRules)
+      {
+        if(rule.opType == onnxGraph.node(idx).op_type() && rule.outputIdx == i)
+        {
+          int32_t inputDataType = getInputDataType(onnxGraph, idx, rule.inputIdx);
+          if(inputDataType > 0)
+          {
+            types.push_back(inputDataType);
+            found = 1;
+            break;
+          }
+        }
+      }
+    }
+
     if((found == 0) && (checkShapeInferenceforOnnx(layer.allowlistingMetaData) == TIDL_IMPORT_DIAGNOSIS_RETURN_OK))
     {
-      TIDL_GLOBAL_REPORT_WARNING("DataType not found for the node %s output %s. Setting default data type as float", onnxGraph.node(idx).name().c_str(), onnxGraph.node(idx).output(i));
+      if (onnxGraph.node(idx).output(i) != "")
+      {
+        TIDL_GLOBAL_REPORT_WARNING("Data type not found for output '%s' of node %s. Setting default data type as float", onnxGraph.node(idx).output(i), onnxGraph.node(idx).name().c_str());
+      }
       for(auto i2 : typesTable)
       {
         if(i2.second == TIDL_SinglePrecFloat)
@@ -1131,12 +1209,12 @@ bool TidlParseOnnx::isLayerIODataTypesSupported(sTIDL_LayerPC_t &layer)
     else
     {
       // have the layer level checks
-      if(layer.layerType == TIDL_GatherLayer)
+      if(layer.layerType == TIDL_GatherLayer || layer.layerType == TIDL_GatherNDLayer || layer.layerType == TIDL_GatherElementsLayer)
       {
-        // If Data is a variable input, it should not be in unsupported input datatye list
+        // If Data is a variable input, it should not be int64/uint64 dataType
         if((varTensorIndices[0] == 0) &&  // This incdicateds data is a variable tensors
            (md.inputDataTypes.size() > varTensorIndices[0]) &&
-           (find(unsupportedDataTypes.begin(), unsupportedDataTypes.end(), md.inputDataTypes[varTensorIndices[0]]) != unsupportedDataTypes.end()))
+           (md.inputDataTypes[varTensorIndices[0]] == TIDL_SignedDoubleWord || md.inputDataTypes[varTensorIndices[0]] == TIDL_UnsignedDoubleWord))
         {
           TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Layer %s : Unsupported data type for input tensor %d", (char *)layer.name, varTensorIndices[0]);
           status = TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
@@ -1158,6 +1236,28 @@ bool TidlParseOnnx::isLayerIODataTypesSupported(sTIDL_LayerPC_t &layer)
             ((md.outputDataTypes.size() > 0) && (find(unsupportedDataTypes.begin(), unsupportedDataTypes.end(), md.outputDataTypes[0]) != unsupportedDataTypes.end())))
         {
           TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Layer %s : Unsupported data type for input tensor %d or output tensor 0", (char *)layer.name, varTensorIndices[0]);
+          status = TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+        }
+      }
+      else if(layer.layerType == TIDL_EltWiseLayer)
+      {
+        // int32 and int64 dataType are supported for Mod operator
+        if(layer.layerParams.eltWiseParams.eltWiseType == TIDL_EltWiseMod)
+        {
+          for(int32_t i = 0; i < md.inputDataTypes.size(); i++)
+          {
+            if(md.inputDataTypes[i] != TIDL_SignedDoubleWord && md.inputDataTypes[i] != TIDL_SignedWord)
+            {
+              TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Layer %s : Unsupported data type for input tensor %d", (char *)layer.name, varTensorIndices[i]);
+              status = TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+              break;
+            }
+          }
+        }
+        else
+        {
+          // Not supported for other eltwise operations
+          TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Layer %s : Unsupported data type for one of the input/output tensors", (char *)layer.name);
           status = TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
         }
       }

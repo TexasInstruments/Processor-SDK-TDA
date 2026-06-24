@@ -32,6 +32,12 @@ HFILES =
 ifeq ($(TARGET_PLATFORM), PC)
 CFILES += $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/*.c))
 HFILES += $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/*.h))
+ifeq ($(TIDL_ENABLE_OPERATOR_WITH_UNIMPLEMENTED_KERNELS),1)
+CFLAGS += -DTIDL_KERNEL_NOT_IMPLEMENTED
+else
+CFILES := $(filter-out %tidl_rmsNorm_ref.c,$(CFILES))
+HFILES := $(filter-out %tidl_rmsNorm_ref.h,$(HFILES))
+endif
 endif
 
 ########################################################################
@@ -39,6 +45,12 @@ endif
 ########################################################################
 ifeq ($(BUILD_WITH_CUDA),yes)
 CFILES+= $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/cuda/*.cu))
+
+# Disable FMA fusion for tidl_cudaLayerNorm.cu so that release and debug builds
+# produce bit-identical inference output (FMA fusion in release introduces
+# 1-ulp differences vs. the debug build which uses -G/no-fmad).
+# Pattern-target match works regardless of how $(BUILDDIR) is composed.
+%tidl_cudaLayerNorm.obj: CUDA_BUILD_FLAGS += -fmad=false
 endif
 
 ########################################################################
@@ -92,6 +104,9 @@ INCLUDE_PATHS+= -I $(ALGBASE_PATH)/ti_dl/inc
 INCLUDE_PATHS+= -I $(ALGBASE_PATH)/ti_dl/algo/inc
 INCLUDE_PATHS+= -I $(ALGBASE_PATH)/ti_dl/common/inc
 INCLUDE_PATHS+= -I $(ALGBASE_PATH)/ti_dl/utils/perfsim
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+INCLUDE_PATHS+= -I $(ALGBASE_PATH)/tidl-kernels/utils/floating_point/include
+endif
 
 CFLAGS += $(INCLUDE_PATHS)
 

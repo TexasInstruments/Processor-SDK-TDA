@@ -3,7 +3,8 @@
 NUM_PROCS=$(cat /proc/cpuinfo | grep processor | wc -l)
 log_file="/tmp/sdk_build_errors.log"
 time make sdk -j${NUM_PROCS} 2> >(tee ${log_file})
-if [ $? -ne 0 ]
+RESULT=$?
+if [ $RESULT -ne 0 ]
 then
     echo ""
     echo "###################################################"
@@ -17,3 +18,4 @@ then
     echo "###################################################"
     echo ""
 fi
+exit $RESULT

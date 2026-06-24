@@ -13,34 +13,6 @@
 #include "tidl_cudaUtilities.cu"
 #include <type_traits>
 #include "tidl_cuda_mem_manager.h"
-/* External declaration of the global memory manager pointer */
-extern TIDL_CudaMemManager* g_cudaMemManager;
-
-// Persistent memory structure for EltWise
-typedef struct {
-    int isInit;
-    void *dpInput[TIDL_NUM_IN_BUFS];  // Multiple inputs for EltWise operations
-    void *dpAccumulator;
-    void *dpOutput;
-} TIDL_cudaEWS;
-
-static TIDL_cudaEWS CUDAEWS[MEM_BUFF_ARRAY_LEN] = {0};
-
-// Function to allocate and initialize accumulator memory once for all batches
-template <class Tacc>
-int TIDL_cudaEltWiseAllocateAccumulator(int numBatches, int outBatchPitch)
-{
-    size_t acc_size = numBatches * outBatchPitch * sizeof(Tacc);
-    if (!CUDAEWS[CUDNNLC].isInit) {
-        // Allocate accumulator for all batches (stays constant)
-        checkCudaErr(cudaMalloc((void**)&CUDAEWS[CUDNNLC].dpAccumulator, acc_size));
-        
-        // Initialize accumulator to zero (critical for Sum operations)
-        checkCudaErr(cudaMemset(CUDAEWS[CUDNNLC].dpAccumulator, 0, acc_size));
-    }
-    
-    return IALG_EOK;
-}
 
 // EltWise Sum kernel - matches reference loop structure exactly (no branching)
 template <class Tin, class Tacc>
@@ -54,7 +26,7 @@ __global__ void EltWiseSumKernel(
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int total_elements = numDIM1 * numDIM2 * numChannels * inHeight * inWidth;
-    
+
     if (idx >= total_elements) return;
 
     // Convert linear index to 5D coordinates (dim1, dim2, channel, height, width)
@@ -86,7 +58,7 @@ __global__ void EltWiseProductKernel(
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int total_elements = numDIM1 * numDIM2 * numChannels * inHeight * inWidth;
-    
+
     if (idx >= total_elements) return;
 
     // Convert linear index to 5D coordinates (dim1, dim2, channel, height, width)
@@ -100,32 +72,88 @@ __global__ void EltWiseProductKernel(
     uint32_t inOffset = (d1 * inDIM1Pitch) + (d2 * inDIM2Pitch) + (c * inChPitch) + (h * inPitch) + (w * pixelPitch);
     uint32_t outOffset = (d1 * outDIM1Pitch) + (d2 * outDIM2Pitch) + (c * outChPitch) + (h * outPitch) + w;
 
-    if (callno == 0) 
+    if (callno == 0)
     {
         // First call - initialize accumulator
         accumulator[outOffset] = ((inData[inOffset] * scale) - zeropoint);
     } 
-    else 
+    else
     {
         // Subsequent calls - multiply
         accumulator[outOffset] *= ((inData[inOffset] * scale) - zeropoint);
     }
 }
 
+// EltWise Mod kernel - matches reference loop structure exactly
+template <class Tin, class Tacc>
+__global__ void EltWiseModKernel(
+    const Tin* __restrict__ inData,
+    Tacc* __restrict__ accumulator,
+    int32_t scale,
+    int32_t zeropoint,
+    int numDIM1, int numDIM2, int numChannels, int inHeight, int inWidth,
+    int inDIM1Pitch, int inDIM2Pitch, int inChPitch, int inPitch, int pixelPitch,
+    int outDIM1Pitch, int outDIM2Pitch, int outChPitch, int outPitch, int fModValue,
+    int callno)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int total_elements = numDIM1 * numDIM2 * numChannels * inHeight * inWidth;
+
+    if (idx >= total_elements) return;
+
+    // Convert linear index to 5D coordinates (dim1, dim2, channel, height, width)
+    int d1 = idx / (numDIM2 * numChannels * inHeight * inWidth);
+    int d2 = (idx / (numChannels * inHeight * inWidth)) % numDIM2;
+    int c = (idx / (inHeight * inWidth)) % numChannels;
+    int h = (idx / inWidth) % inHeight;
+    int w = idx % inWidth;
+
+    // Calculate offsets - exact same as reference
+    uint32_t inOffset = (d1 * inDIM1Pitch) + (d2 * inDIM2Pitch) + (c * inChPitch) + (h * inPitch) + (w * pixelPitch);
+    uint32_t outOffset = (d1 * outDIM1Pitch) + (d2 * outDIM2Pitch) + (c * outChPitch) + (h * outPitch) + w;
+
+    if (callno == 0)
+    {
+        // First call - initialize accumulator
+        accumulator[outOffset] = inData[inOffset];
+    } 
+    else
+    {
+        // Subsequent calls
+        if(fModValue == 1)
+        {
+            float inAVal = (float)((accumulator[outOffset] - zeropoint) * (1.0 / scale));
+            float inBVal = (float)((inData[inOffset] - zeropoint) * (1.0 / scale));
+            float outVal = fmod(inAVal, inBVal);
+            accumulator[outOffset] = (Tacc)(outVal * scale + zeropoint);
+        }
+        else
+        {
+            int32_t inAVal = (int32_t)accumulator[outOffset];
+            int32_t inBVal = (int32_t)inData[inOffset];
+            if(inBVal != 0)
+            {
+                int32_t outVal = ((inAVal % inBVal) + inBVal) % inBVal;
+                accumulator[outOffset] = (Tacc)(outVal);
+            }
+        }
+    }
+}
+
 // EltWise Max kernel - matches reference loop structure exactly
 template <class Tin, class Tacc>
-__global__ void EltWiseMaxKernel(
+__global__ void EltWiseMinMaxKernel(
     const Tin* __restrict__ inData,
     Tacc* __restrict__ accumulator,
     int32_t scale,
     int numDIM1, int numDIM2, int numChannels, int inHeight, int inWidth,
     int inDIM1Pitch, int inDIM2Pitch, int inChPitch, int inPitch, int pixelPitch,
     int outDIM1Pitch, int outDIM2Pitch, int outChPitch, int outPitch,
-    int callno)
+    int callno, int eltWiseType)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int total_elements = numDIM1 * numDIM2 * numChannels * inHeight * inWidth;
-    
+
     if (idx >= total_elements) return;
 
     // Convert linear index to 5D coordinates (dim1, dim2, channel, height, width)
@@ -140,23 +168,30 @@ __global__ void EltWiseMaxKernel(
     uint32_t inOffset = (d1 * inDIM1Pitch) + (d2 * inDIM2Pitch) + (c * inChPitch) + (h * inPitch) + (w * pixelPitch);
     uint32_t outOffset = (d1 * outDIM1Pitch) + (d2 * outDIM2Pitch) + (c * outChPitch) + (h * outPitch) + w;
 
-    if (callno == 0) 
+    if (callno == 0)
     {
         // First call - initialize accumulator
         accumulator[outOffset] = inData[inOffset] * scale;
-    } 
+    }
     else
     {
         // Subsequent calls - take maximum
         Tacc currentVal = accumulator[outOffset];
         Tacc newVal = inData[inOffset] * scale;
-        accumulator[outOffset] = max(currentVal, newVal);
+        if(eltWiseType == TIDL_EltWiseMin)
+        {
+            accumulator[outOffset] = min(currentVal, newVal);
+        }
+        else
+        {
+            accumulator[outOffset] = max(currentVal, newVal);
     }
+}
 }
 
 // EltWise MMAv2 Quantization kernel - matches reference loop structure exactly
 template <class Tacc, class Tout>
-__global__ void EltWiseMMAv2QuantizeKernel(
+__global__ void TIDL_CudaEltWiseMMAv2QuantizeKernel(
     const Tacc* __restrict__ accumulator,
     Tout* __restrict__ output,
     uint8_t mmaScale,
@@ -167,7 +202,7 @@ __global__ void EltWiseMMAv2QuantizeKernel(
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int total_elements = numBatches * numDIM1 * numDIM2 * numChannels * inHeight * inWidth;
-    
+
     if (idx >= total_elements) return;
 
     // Convert linear index to 6D coordinates (batch, dim1, dim2, channel, height, width)
@@ -180,12 +215,12 @@ __global__ void EltWiseMMAv2QuantizeKernel(
 
     uint32_t outOffset = (b * outBatchPitch) + (d1 * outDIM1Pitch) + (d2 * outDIM2Pitch) + (c * outChPitch) + (h * outPitch) + w;
 
-    if (!std::is_floating_point<Tout>::value) 
+    if (!std::is_floating_point<Tout>::value)
     {
         Tacc mmaAcc = accumulator[outOffset] + biasTerm;
         Tacc tempAcc = mmaAcc * mmaScale;
-        output[outOffset] = (Tout)cuda_roundSat((int64_t)tempAcc, mmaShift, (int64_t)cuda::std::numeric_limits<Tout>::lowest(), (int64_t)cuda::std::numeric_limits<Tout>::max());
-    } 
+        output[outOffset] = (Tout)cuda_roundSat(tempAcc, mmaShift, cuda::std::numeric_limits<Tout>::lowest(), cuda::std::numeric_limits<Tout>::max());
+    }
     else
     {
         // Passthrough for float
@@ -205,7 +240,7 @@ __global__ void EltWiseQuantizeKernel(
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int total_elements = numBatches * numDIM1 * numDIM2 * numChannels * inHeight * inWidth;
-    
+
     if (idx >= total_elements) return;
 
     // Convert linear index to 6D coordinates (batch, dim1, dim2, channel, height, width)
@@ -217,22 +252,22 @@ __global__ void EltWiseQuantizeKernel(
     int w = idx % inWidth;
 
     uint32_t outOffset = (b * outBatchPitch) + (d1 * outDIM1Pitch) + (d2 * outDIM2Pitch) + (c * outChPitch) + (h * outPitch) + w;
-    
+
     Tacc outAcc = accumulator[outOffset];
-    
-    if (std::is_floating_point<Tout>::value) 
+
+    if (std::is_floating_point<Tout>::value)
     {
         outAcc = cuda_floatSat(outAcc, floatSatHigh, floatSatLow);
-    } 
-    else 
+    }
+    else
     {
         outAcc = (Tacc)cuda_roundSat((int64_t)outAcc, roundBits, satLow, satHigh);
-        if (mixedPrecision == 1) 
+        if (mixedPrecision == 1)
         {
             outAcc = (int64_t)outAcc >> 8;
-        }
     }
-    
+    }
+
     output[outOffset] = outAcc;
 }
 
@@ -247,48 +282,52 @@ int TIDL_cudaEltWiseOp(
     int numDIM1, int numDIM2, int numChannels, int inHeight, int inWidth,
     int inDIM1Pitch, int inDIM2Pitch, int inChPitch, int inPitch, int pixelPitch,
     int outDIM1Pitch, int outDIM2Pitch, int outChPitch, int outPitch,
-    int callno, int batchno, int eltWiseType, int outBatchPitch)
+    int callno, int batchno, int eltWiseType, int fModValue, int outBatchPitch)
 {
     // Calculate input memory size (can vary per input due to broadcasting)
-    size_t input_size = sizeof(Tin);
-    // Only multiply by dimensions that actually contribute to memory layout
-    if (inDIM1Pitch > 0) input_size *= numDIM1;
-    if (inDIM2Pitch > 0) input_size *= numDIM2; 
-    if (inChPitch > 0) input_size *= numChannels;
-    if (inPitch > 0) input_size *= inHeight;
-    if (pixelPitch > 0) input_size *= inWidth;
+    size_t input_size = sizeof(Tin)*(1 + (numDIM1-1)*inDIM1Pitch + (numDIM2-1)*inDIM2Pitch + (numChannels-1)*inChPitch + (inHeight-1)*inPitch + (inWidth-1)*pixelPitch);
+    size_t accumulator_size = sizeof(Tacc)*(1 + (numDIM1-1)*outDIM1Pitch + (numDIM2-1)*outDIM2Pitch + (numChannels-1)*outChPitch + (inHeight-1)*outPitch + (inWidth-1));
 
-    // Batch-optimized input allocation: only allocate for first batch (batchno == 0)
-    if (batchno == 0) {
-        if (CUDAEWS[CUDNNLC].dpInput[callno] == NULL) {
-            checkCudaErr(cudaMalloc((void**)&CUDAEWS[CUDNNLC].dpInput[callno], input_size));
+    Tin* d_input = NULL;
+    Tacc* d_accumulator_roi = NULL; // accumulator pointer offset to the current batch
+
+    // Get GPU pointers after synchronization
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&d_input, input_size) != IALG_EOK)
+    {
+        /*If it's the first layer - it is possible that the input doesn't have a GPU mirror pointer, allocate a new buffer*/
+        if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), input, (void**)&d_input, input_size) != IALG_EOK)
+        {
+            /*Log Error*/
+            printf("Eltwise: Unable to find input pointer\n");
         }
     }
 
-    // Get persistent pointers
-    Tin* d_input = (Tin*)CUDAEWS[CUDNNLC].dpInput[callno];
-    Tacc* d_accumulator_base = (Tacc*)CUDAEWS[CUDNNLC].dpAccumulator;
-
-    // Calculate batch-specific accumulator pointer (matches reference logic)
-    Tacc* d_accumulator_roi;
-    if (sizeof(Tacc) == sizeof(int64_t)) {
-        // 64-bit accumulator (TIDL_SignedDoubleWord)
-        d_accumulator_roi = (Tacc*)(((int64_t*)d_accumulator_base) + (batchno * outBatchPitch));
-    } else {
-        // 32-bit accumulator (regular case)
-        d_accumulator_roi = d_accumulator_base + (batchno * outBatchPitch);
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accumulator, (void**)&d_accumulator_roi, accumulator_size) != IALG_EOK)
+    {
+        if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), accumulator, (void**)&d_accumulator_roi, accumulator_size) != IALG_EOK)
+        {
+            /*Log Error*/
+            printf("Eltwise: Unable to allocate accumulator pointer\n");
+        }
     }
 
-    // Copy input data to GPU (reusing same buffer for all batches)
-    checkCudaErr(cudaMemcpy(d_input, input, input_size, cudaMemcpyHostToDevice));
+    // ---- CUDA Streams Optimization ----------------------------------------
+    cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
 
-    // Launch appropriate kernel based on operation type
+    // Async H2D copy of full input buffer
+    checkCudaErr(cudaMemcpyAsync(d_input, input, input_size,
+                                  cudaMemcpyHostToDevice, stream));
+
+    // Zero accumulator on first input (callno == 0), ordered after H2D by stream
+    if(callno == 0)
+        checkCudaErr(cudaMemsetAsync(d_accumulator_roi, 0, accumulator_size, stream));
+
     int total_elements = numDIM1 * numDIM2 * numChannels * inHeight * inWidth;
     int grid_size = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-    
+
     if (eltWiseType == TIDL_EltWiseSum)
     {
-        EltWiseSumKernel<Tin, Tacc><<<grid_size, THREADS_PER_BLOCK>>>(
+        EltWiseSumKernel<Tin, Tacc><<<grid_size, THREADS_PER_BLOCK, 0, stream>>>(
             d_input, d_accumulator_roi, scale,
             numDIM1, numDIM2, numChannels, inHeight, inWidth,
             inDIM1Pitch, inDIM2Pitch, inChPitch, inPitch, pixelPitch,
@@ -296,26 +335,36 @@ int TIDL_cudaEltWiseOp(
     }
     else if (eltWiseType == TIDL_EltWiseProduct) 
     {
-        EltWiseProductKernel<Tin, Tacc><<<grid_size, THREADS_PER_BLOCK>>>(
+        EltWiseProductKernel<Tin, Tacc><<<grid_size, THREADS_PER_BLOCK, 0, stream>>>(
             d_input, d_accumulator_roi, scale, zeropoint,
             numDIM1, numDIM2, numChannels, inHeight, inWidth,
             inDIM1Pitch, inDIM2Pitch, inChPitch, inPitch, pixelPitch,
             outDIM1Pitch, outDIM2Pitch, outChPitch, outPitch,
             callno);
-    } 
-    else if (eltWiseType == TIDL_EltWiseMax) 
+    }
+    else if ((eltWiseType == TIDL_EltWiseMax) || (eltWiseType == TIDL_EltWiseMin)) 
     {
-        EltWiseMaxKernel<Tin, Tacc><<<grid_size, THREADS_PER_BLOCK>>>(
+        EltWiseMinMaxKernel<Tin, Tacc><<<grid_size, THREADS_PER_BLOCK, 0, stream>>>(
             d_input, d_accumulator_roi, scale,
             numDIM1, numDIM2, numChannels, inHeight, inWidth,
             inDIM1Pitch, inDIM2Pitch, inChPitch, inPitch, pixelPitch,
             outDIM1Pitch, outDIM2Pitch, outChPitch, outPitch,
+            callno, eltWiseType);
+    }
+    else if(eltWiseType == TIDL_EltWiseMod)
+    {
+        EltWiseModKernel<Tin, Tacc><<<grid_size, THREADS_PER_BLOCK, 0, stream>>>(
+            d_input, d_accumulator_roi, scale, zeropoint,
+            numDIM1, numDIM2, numChannels, inHeight, inWidth,
+            inDIM1Pitch, inDIM2Pitch, inChPitch, inPitch, pixelPitch,
+            outDIM1Pitch, outDIM2Pitch, outChPitch, outPitch, fModValue,
             callno);
     }
-
+    checkCudaErr(cudaStreamSynchronize(stream));
     checkCudaErr(cudaGetLastError());
     
-    // Results stay in GPU accumulator for quantize wrapper to use
+
+    // Results stay in GPU accumulator for the quantize wrapper to consume
     return IALG_EOK;
 }
 
@@ -328,34 +377,60 @@ int TIDL_cudaEltWiseMMAv2Quantize(
     uint8_t mmaShift,
     int32_t biasTerm,
     int numBatches, int numDIM1, int numDIM2, int numChannels, int inHeight, int inWidth,
-    int outBatchPitch, int outDIM1Pitch, int outDIM2Pitch, int outChPitch, int outPitch)
+    int outBatchPitch, int outDIM1Pitch, int outDIM2Pitch, int outChPitch, int outPitch, int tensorZeroPoint, int outPadOffset)
 {
     // Calculate output memory size
-    size_t output_size = numBatches * outBatchPitch * sizeof(Tout);
+    size_t output_size = sizeof(Tout)*(1 + (numBatches-1)*outBatchPitch + (numDIM1-1)*outDIM1Pitch + (numDIM2-1)*outDIM2Pitch + (numChannels-1)*outChPitch + (inHeight-1)*outPitch + (inWidth-1));
+    size_t accum_size = sizeof(Tacc)*(1 + (numBatches-1)*outBatchPitch + (numDIM1-1)*outDIM1Pitch + (numDIM2-1)*outDIM2Pitch + (numChannels-1)*outChPitch + (inHeight-1)*outPitch + (inWidth-1));
+    size_t outputTransferSize = sizeof(Tout)*(1 + (numBatches-1)*outBatchPitch + (numDIM1-1)*outDIM1Pitch + (numDIM2-1)*outDIM2Pitch + (numChannels-1)*outChPitch + (inHeight-1)*outPitch + (inWidth-1) - outPadOffset);
 
-    // Allocate output memory if not already initialized
-    if (!CUDAEWS[CUDNNLC].isInit) {
-        checkCudaErr(cudaMalloc((void**)&CUDAEWS[CUDNNLC].dpOutput, output_size));
-        CUDAEWS[CUDNNLC].isInit = 1;
+    Tacc* d_accumulator = NULL;
+    Tout* d_output = NULL;
+
+    if(TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accumulator, (void**)&d_accumulator, accum_size) != IALG_EOK)
+    {
+        /*Log Error*/
+        printf("Eltwise: Unable to find accumulator pointer\n");
     }
 
-    // Get persistent pointers (accumulator already allocated by TIDL_cudaEltWiseAllocateAccumulator)
-    Tacc* d_accumulator = (Tacc*)CUDAEWS[CUDNNLC].dpAccumulator;
-    Tout* d_output = (Tout*)CUDAEWS[CUDNNLC].dpOutput;
+    if(TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size) != IALG_EOK)
+    {
+        if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size) != IALG_EOK)
+        {
+            /*Log Error*/
+            printf("Eltwise: Unable to find output pointer\n");
+        }
+    }
 
     // Launch kernel
     int total_elements = numBatches * numDIM1 * numDIM2 * numChannels * inHeight * inWidth;
     int grid_size = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-    
-    EltWiseMMAv2QuantizeKernel<Tacc, Tout><<<grid_size, THREADS_PER_BLOCK>>>(
+
+    // ---- CUDA Streams Optimization ----------------------------------------
+    cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
+
+    // H2D output buffer
+    checkCudaErr(cudaMemcpyAsync(d_output, output, output_size,
+                                  cudaMemcpyHostToDevice, stream));
+
+    // Fill zero-point (ordered after H2D by stream)
+    TIDL_fillZeroPoint<Tout><<<grid_size, THREADS_PER_BLOCK, 0, stream>>>(
+        d_output, (Tout)tensorZeroPoint,
+        numBatches, numDIM1, numDIM2, numChannels, inHeight, inWidth,
+        outBatchPitch, outDIM1Pitch, outDIM2Pitch, outChPitch, outPitch);
+
+    TIDL_CudaEltWiseMMAv2QuantizeKernel<Tacc, Tout><<<grid_size, THREADS_PER_BLOCK, 0, stream>>>(
         d_accumulator, d_output, mmaScale, mmaShift, biasTerm,
         numBatches, numDIM1, numDIM2, numChannels, inHeight, inWidth,
         outBatchPitch, outDIM1Pitch, outDIM2Pitch, outChPitch, outPitch);
 
     checkCudaErr(cudaGetLastError());
-    
-    // Copy result back to CPU
-    checkCudaErr(cudaMemcpy(output, d_output, output_size, cudaMemcpyDeviceToHost));
+
+    // Async D2H (ordered after kernel by stream)
+    checkCudaErr(cudaMemcpyAsync(output, d_output, outputTransferSize,
+                                  cudaMemcpyDeviceToHost, stream));
+    checkCudaErr(cudaStreamSynchronize(stream));
+
 
     return IALG_EOK;
 }
@@ -371,23 +446,46 @@ int TIDL_cudaEltWiseQuantize(
     float floatSatLow, float floatSatHigh)
 {
     // Calculate output memory size
-    size_t output_size = numBatches * outBatchPitch * sizeof(Tout);
+    size_t output_size = sizeof(Tout)*(1 + (numBatches-1)*outBatchPitch + (numDIM1-1)*outDIM1Pitch + (numDIM2-1)*outDIM2Pitch + (numChannels-1)*outChPitch + (inHeight-1)*outPitch + (inWidth-1));
+    size_t accum_size = sizeof(Tacc)*(1 + (numBatches-1)*outBatchPitch + (numDIM1-1)*outDIM1Pitch + (numDIM2-1)*outDIM2Pitch + (numChannels-1)*outChPitch + (inHeight-1)*outPitch + (inWidth-1));
 
-    // Allocate output memory if not already initialized
-    if (!CUDAEWS[CUDNNLC].isInit) {
-        checkCudaErr(cudaMalloc((void**)&CUDAEWS[CUDNNLC].dpOutput, output_size));
-        CUDAEWS[CUDNNLC].isInit = 1;
+    Tacc* d_accumulator = NULL;
+    Tout* d_output = NULL;
+
+    if(TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accumulator, (void**)&d_accumulator, accum_size) != IALG_EOK)
+    {
+        /*Log Error*/
+        printf("Eltwise: Unable to find accumulator pointer\n");
     }
 
-    // Get persistent pointers (accumulator already allocated by TIDL_cudaEltWiseAllocateAccumulator)
-    Tacc* d_accumulator = (Tacc*)CUDAEWS[CUDNNLC].dpAccumulator;
-    Tout* d_output = (Tout*)CUDAEWS[CUDNNLC].dpOutput;
+    if(TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size) != IALG_EOK)
+    {
+        if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size) != IALG_EOK)
+        {
+            /*Log Error*/
+            printf("Eltwise: Unable to find output pointer\n");
+        }
+    }
 
     // Launch kernel
     int total_elements = numBatches * numDIM1 * numDIM2 * numChannels * inHeight * inWidth;
     int grid_size = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-    
-    EltWiseQuantizeKernel<Tacc, Tout><<<grid_size, THREADS_PER_BLOCK>>>(
+
+    // ---- CUDA Streams Optimization ----------------------------------------
+    cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
+
+    // H2D output buffer
+    checkCudaErr(cudaMemcpyAsync(d_output, output, output_size,
+                                  cudaMemcpyHostToDevice, stream));
+
+    // Fill zero-point (ordered after H2D by stream)
+    TIDL_fillZeroPoint<Tout><<<grid_size, THREADS_PER_BLOCK, 0, stream>>>(
+        d_output, (Tout)0,
+        numBatches, numDIM1, numDIM2, numChannels, inHeight, inWidth,
+        outBatchPitch, outDIM1Pitch, outDIM2Pitch, outChPitch, outPitch);
+
+    // Quantize kernel (ordered after fill by stream)
+    EltWiseQuantizeKernel<Tacc, Tout><<<grid_size, THREADS_PER_BLOCK, 0, stream>>>(
         d_accumulator, d_output,
         numBatches, numDIM1, numDIM2, numChannels, inHeight, inWidth,
         outBatchPitch, outDIM1Pitch, outDIM2Pitch, outChPitch, outPitch,
@@ -395,57 +493,34 @@ int TIDL_cudaEltWiseQuantize(
         floatSatHigh, floatSatLow);
 
     checkCudaErr(cudaGetLastError());
-    
-    // Copy result back to CPU
-    checkCudaErr(cudaMemcpy(output, d_output, output_size, cudaMemcpyDeviceToHost));
+
+    // Async D2H (ordered after kernel by stream)
+    checkCudaErr(cudaMemcpyAsync(output, d_output, output_size,
+                                  cudaMemcpyDeviceToHost, stream));
+    checkCudaErr(cudaStreamSynchronize(stream));
+
 
     return IALG_EOK;
 }
 
-// Function to set initialization flag
-void TIDL_cudaSetEltwiseInitFlag(int32_t layerIdx)
-{
-    if (layerIdx >= 0 && layerIdx < MEM_BUFF_ARRAY_LEN) {
-        CUDAEWS[layerIdx].isInit = 1;
-    }
-}
-
-// Function to free CUDA memory
-void TIDL_cudaFreeEltwiseCudaPtrs()
-{
-    for (int i = 0; i < MEM_BUFF_ARRAY_LEN; i++) {
-        for (int j = 0; j < TIDL_NUM_IN_BUFS; j++) {
-            if (CUDAEWS[i].dpInput[j]) cudaFree(CUDAEWS[i].dpInput[j]);
-            CUDAEWS[i].dpInput[j] = 0;
-        }
-        if (CUDAEWS[i].dpAccumulator) cudaFree(CUDAEWS[i].dpAccumulator);
-        if (CUDAEWS[i].dpOutput) cudaFree(CUDAEWS[i].dpOutput);
-        
-        CUDAEWS[i].dpAccumulator = 0;
-        CUDAEWS[i].dpOutput = 0;
-        CUDAEWS[i].isInit = 0;
-    }
-    cudaDeviceSynchronize();
-}
-
-template int TIDL_cudaEltWiseOp<short, long>(short const*, long*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaEltWiseOp<unsigned short, long>(unsigned short const*, long*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseOp<float, float>(float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseOp<int, long>(int const*, long*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseOp<short, long>(short const*, long*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseOp<unsigned short, long>(unsigned short const*, long*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseOp<unsigned char, int>(unsigned char const*, int*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseOp<signed char, int>(signed char const*, int*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseMMAv2Quantize<int, unsigned char>(int const*, unsigned char*, unsigned char, unsigned char, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseQuantize<long, int>(long const*, int*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
+template int TIDL_cudaEltWiseMMAv2Quantize<long, unsigned short>(long const*, unsigned short*, unsigned char, unsigned char, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseQuantize<int, signed char>(int const*, signed char*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
+template int TIDL_cudaEltWiseQuantize<float, float>(float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
 template int TIDL_cudaEltWiseQuantize<int, unsigned char>(int const*, unsigned char*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
 template int TIDL_cudaEltWiseQuantize<long, unsigned char>(long const*, unsigned char*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaEltWiseOp<unsigned char, int>(unsigned char const*, int*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaEltWiseQuantize<int, signed char>(int const*, signed char*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaEltWiseOp<signed char, int>(signed char const*, int*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaEltWiseQuantize<long, short>(long const*, short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaEltWiseQuantize<int, unsigned short>(int const*, unsigned short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaEltWiseQuantize<int, short>(int const*, short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaEltWiseMMAv2Quantize<int, unsigned char>(int const*, unsigned char*, unsigned char, unsigned char, int, int, int, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaEltWiseAllocateAccumulator<long>(int, int);
+template int TIDL_cudaEltWiseMMAv2Quantize<int, signed char>(int const*, signed char*, unsigned char, unsigned char, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 template int TIDL_cudaEltWiseQuantize<long, signed char>(long const*, signed char*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
+template int TIDL_cudaEltWiseQuantize<int, short>(int const*, short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
+template int TIDL_cudaEltWiseQuantize<int, unsigned short>(int const*, unsigned short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
 template int TIDL_cudaEltWiseQuantize<long, unsigned short>(long const*, unsigned short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaEltWiseMMAv2Quantize<long, unsigned short>(long const*, unsigned short*, unsigned char, unsigned char, int, int, int, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaEltWiseQuantize<float, float>(float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaEltWiseOp<float, float>(float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaEltWiseMMAv2Quantize<int, signed char>(int const*, signed char*, unsigned char, unsigned char, int, int, int, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaEltWiseMMAv2Quantize<long, short>(long const*, short*, unsigned char, unsigned char, int, int, int, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaEltWiseAllocateAccumulator<int>(int, int);
-template int TIDL_cudaEltWiseMMAv2Quantize<float, float>(float const*, float*, unsigned char, unsigned char, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseQuantize<long, short>(long const*, short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
+template int TIDL_cudaEltWiseMMAv2Quantize<long, short>(long const*, short*, unsigned char, unsigned char, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseMMAv2Quantize<float, float>(float const*, float*, unsigned char, unsigned char, int, int, int, int, int, int, int, int, int, int, int, int, int, int);

@@ -158,5 +158,9 @@ int32_t TIDL_conv2dProcessNew(TIDL_NetworkCommonParams *commonParams,
 
 
 
+
+int32_t TIDL_conv2dGetPerfData(void* linkHandle,
+                                 double *perfData);
+
 #endif /* TIDL_CONV2D_H_*/
 

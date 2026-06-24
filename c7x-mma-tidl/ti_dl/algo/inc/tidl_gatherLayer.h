@@ -171,5 +171,9 @@ int32_t TIDL_gatherLayerDspAlloc(const TIDL_LayerSpecificParams *layerSpecificPa
 /* ========================================================================== */
 
 /* None */
+
+int32_t TIDL_gatherLayerGetPerfData(void* linkHandle,
+                                 double *perfData);
+
 #endif /* TIDL_GATHERLAYER_H_*/
 

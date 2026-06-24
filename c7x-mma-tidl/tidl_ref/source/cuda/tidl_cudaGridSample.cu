@@ -13,21 +13,9 @@
 #include "itidl_ti.h"
 #include "tidl_cudaUtilities.cu"
 #include "tidl_cuda_mem_manager.h"
-/* External declaration of the global memory manager pointer */
-extern TIDL_CudaMemManager* g_cudaMemManager;
 
 #define TIDL_GRID_INTERNAL_SCALE_8BIT (16U)
 #define TIDL_GRID_INTERNAL_SCALE_16BIT (256U)
-
-// Persistent memory
-typedef struct {
-  int isInit;
-  void *dpInput;
-  void *dpGrid;
-  void *dpOutput;
-} TIDL_cudaGS;
-
-static TIDL_cudaGS CUDAGS[MEM_BUFF_ARRAY_LEN] = {0};
 
 // Note: CUDA numeric limits and utility functions are now defined in tidl_cudaUtilities.cu
 // and declared in tidl_cuda.h for shared use across CUDA implementations
@@ -284,21 +272,18 @@ int TIDL_cudaGridSampleFloat(
     size_t grid_size = numBatches * gridBatchPitch * sizeof(Tgrid);
     size_t output_size = numBatches * outBatchPitch * sizeof(Tout);
 
-    if(!CUDAGS[CUDNNLC].isInit) {
-        checkCudaErr(cudaMalloc((void**)&CUDAGS[CUDNNLC].dpInput, input_size));
-        checkCudaErr(cudaMalloc((void**)&CUDAGS[CUDNNLC].dpGrid, grid_size));
-        checkCudaErr(cudaMalloc((void**)&CUDAGS[CUDNNLC].dpOutput, output_size));
-        CUDAGS[CUDNNLC].isInit = 1;
-    }
+    Tin* d_input = NULL;
+    Tgrid* d_grid = NULL;
+    Tout* d_output = NULL;
 
-    // Get persistent pointers
-    Tin* d_input = (Tin*)CUDAGS[CUDNNLC].dpInput;
-    Tgrid* d_grid = (Tgrid*)CUDAGS[CUDNNLC].dpGrid;
-    Tout* d_output = (Tout*)CUDAGS[CUDNNLC].dpOutput;
+    void* inPtrs[2] = {(void*)input, (void*)grid};
+    uint32_t inDataSizes[2] = {(uint32_t)input_size, (uint32_t)grid_size};
+    TIDL_cudaMemManagerPreLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), inPtrs, NULL, 2, inDataSizes);
 
-    // Copy data to GPU
-    checkCudaErr(cudaMemcpy(d_input, input, input_size, cudaMemcpyHostToDevice));
-    checkCudaErr(cudaMemcpy(d_grid, grid, grid_size, cudaMemcpyHostToDevice));
+    // Get GPU pointers after synchronization
+    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&d_input, input_size);
+    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), grid, (void**)&d_grid, grid_size);
+    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size);
     
     // Launch kernel
     int total_elements = numBatches * numDim1 * numDim2 * outHeight * outWidth;
@@ -315,7 +300,9 @@ int TIDL_cudaGridSampleFloat(
         inTensorScale, gridTensorScale, outTensorScale);
 
     checkCudaErr(cudaGetLastError());
-    checkCudaErr(cudaMemcpy(output, d_output, output_size, cudaMemcpyDeviceToHost));
+    void* outPtrs[1] = {(void*)output};
+    uint32_t outDataSizes[1] = {(uint32_t)output_size};
+    TIDL_cudaMemManagerPostLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), outPtrs, 1, outDataSizes);
 
     return IALG_EOK;
 }
@@ -342,22 +329,18 @@ int TIDL_cudaGridSample(
     size_t grid_size = numBatches * gridBatchPitch * sizeof(Tgrid);
     size_t output_size = numBatches * outBatchPitch * sizeof(Tout);
 
-    // Persistent memory allocation
-    if(!CUDAGS[CUDNNLC].isInit) {
-        checkCudaErr(cudaMalloc((void**)&CUDAGS[CUDNNLC].dpInput, input_size));
-        checkCudaErr(cudaMalloc((void**)&CUDAGS[CUDNNLC].dpGrid, grid_size));
-        checkCudaErr(cudaMalloc((void**)&CUDAGS[CUDNNLC].dpOutput, output_size));
-        CUDAGS[CUDNNLC].isInit = 1;
-    }
+    Tin* d_input = NULL;
+    Tgrid* d_grid = NULL;
+    Tout* d_output = NULL;
 
-    // Get persistent pointers
-    Tin* d_input = (Tin*)CUDAGS[CUDNNLC].dpInput;
-    Tgrid* d_grid = (Tgrid*)CUDAGS[CUDNNLC].dpGrid;
-    Tout* d_output = (Tout*)CUDAGS[CUDNNLC].dpOutput;
+    void* inPtrs[2] = {(void*)input, (void*)grid};
+    uint32_t inDataSizes[2] = {(uint32_t)input_size, (uint32_t)grid_size};
+    TIDL_cudaMemManagerPreLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), inPtrs, NULL, 2, inDataSizes);
 
-    // Copy data to GPU (same as conv2d pattern)
-    checkCudaErr(cudaMemcpy(d_input, input, input_size, cudaMemcpyHostToDevice));
-    checkCudaErr(cudaMemcpy(d_grid, grid, grid_size, cudaMemcpyHostToDevice));
+    // Get GPU pointers after synchronization
+    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&d_input, input_size);
+    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), grid, (void**)&d_grid, grid_size);
+    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size);
     
     // Launch kernel
     int total_elements = numBatches * numDim1 * numDim2 * outHeight * outWidth;
@@ -374,36 +357,14 @@ int TIDL_cudaGridSample(
         inTensorScale, gridTensorScale, outTensorScale);
 
     checkCudaErr(cudaGetLastError());
-    // Copy result back to CPU
-    checkCudaErr(cudaMemcpy(output, d_output, output_size, cudaMemcpyDeviceToHost));
+    
+    void* outPtrs[1] = {(void*)output};
+    uint32_t outDataSizes[1] = {(uint32_t)output_size};
+    TIDL_cudaMemManagerPostLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), outPtrs, 1, outDataSizes);
     
     return IALG_EOK;
 }
 
-void TIDL_cudaSetGridsampleInitFlag(int32_t layerIdx)
-{
-    if(layerIdx >= 0 && layerIdx < MEM_BUFF_ARRAY_LEN) {
-        CUDAGS[layerIdx].isInit = 1;
-    }
-}
-
-
-// Frees device pointers as well as resets the initialization flag for GridSample CUDA operations
-void TIDL_cudaFreeGridSampleCudaPtrs()
-{
-  for(int i = 0; i < MEM_BUFF_ARRAY_LEN; i++)
-  {
-     if(CUDAGS[i].dpInput) cudaFree(CUDAGS[i].dpInput);
-     if(CUDAGS[i].dpGrid) cudaFree(CUDAGS[i].dpGrid);
-     if(CUDAGS[i].dpOutput) cudaFree(CUDAGS[i].dpOutput);
-     
-     CUDAGS[i].dpInput = 0;
-     CUDAGS[i].dpGrid = 0;
-     CUDAGS[i].dpOutput = 0;
-     CUDAGS[i].isInit = 0;
-  }
-  cudaDeviceSynchronize();
-}
 
 
 template int TIDL_cudaGridSample<unsigned char, short, unsigned int, short, unsigned char, unsigned char>(unsigned char const*, short const*, unsigned char*, int, bool, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);

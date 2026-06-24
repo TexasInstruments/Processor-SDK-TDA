@@ -825,15 +825,18 @@ void appIpcInitPrmSetDefault(app_ipc_init_prm_t *prm)
     prm->enable_tiovx_ipc_announce = 1;
 }
 
-#if defined(SOC_AM62A)
-void sortEnabledCoreIdsAscending(uint32_t *arr, int size)
+#if defined (SOC_AM62A)
+static void sortEnabledCoreIdsAscending(uint32_t *arr, uint32_t size);
+static void vringAllocateForCores(uint32_t enabled_Cores[], uint32_t numCores);
+
+static void sortEnabledCoreIdsAscending(uint32_t *arr, uint32_t size)
 {
-    uint8_t outerCoreId, innerCoreId;
+    uint32_t outerCoreId, innerCoreId;
     if((arr != NULL) && (size > 1))
     {
-        for(outerCoreId = 0; outerCoreId < size-1; outerCoreId++)
+        for(outerCoreId = 0; outerCoreId < (size - 1U); outerCoreId++)
         {
-            for(innerCoreId = 0; innerCoreId < size-outerCoreId-1; innerCoreId++)
+            for(innerCoreId = 0; innerCoreId < (size - outerCoreId - 1U); innerCoreId++)
             {
                 if(arr[innerCoreId] > arr[innerCoreId+1])
                 {
@@ -845,11 +848,11 @@ void sortEnabledCoreIdsAscending(uint32_t *arr, int size)
         }
     }
 }
-void vringAllocateForCores(uint32_t enabled_Cores[], uint32_t numCores)
+static void vringAllocateForCores(uint32_t enabled_Cores[], uint32_t numCores)
 {
     uint32_t vringIndex = 0;
     uint32_t selfCoreId, remoteCoreId;
-    uint8_t i, j;
+    uint32_t i, j;
 
     if((enabled_Cores != NULL) && (numCores > 1))
     {
@@ -1266,8 +1269,8 @@ s<justification start> APP_UTILS_BRANCH_COVERAGE_IPC_RTOS_UBR008
 
         /* initialize parameters to default */
         RPMessage_Params_init(&rpmsgParams);
-        #if defined (SOC_AM62A)
-        uint32_t enabled_Cores[prm->num_cpus];
+#if defined (SOC_AM62A)
+        uint32_t enabled_Cores[APP_IPC_CPU_MAX];
         uint8_t coreIndex;
         for(coreIndex = 0U; coreIndex < prm->num_cpus; coreIndex++)
         {

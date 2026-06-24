@@ -111,6 +111,25 @@ const vector<TidlConstraint> tidlConstraintScatterElements =
         }
     ),
     TIDL_CSTR(
+        "ScatterND does not support the 'add' reduction type in 16bit precision",
+        "ScatterND does not support the 'add' reduction type in 16bit precision",
+        "",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            int32_t axis = layer->layerParams.scatterElementsParams.axis;
+            int32_t reduction = layer->layerParams.scatterElementsParams.reduction;
+            int32_t isScatterNd = (axis == -1) ? 1 : 0;
+            if (isScatterNd && gParams.numParamBits == 16)
+            {
+                if (reduction == TIDL_ScatterElementsAdd)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    ),
+    TIDL_CSTR(
         "Updates tensor should not have more than 1 channel",
         "Updates tensor should not have more than 1 channel",
         "",
@@ -251,4 +270,70 @@ const vector<TidlConstraint> tidlConstraintScatterElements =
             return true;
         }
     ),
+    TIDL_CSTR(
+        "For ScatterND, number of non-singleton indices dimensions must be <= 4",
+        "For ScatterND, number of non-singleton indices dimensions must be <= 4",
+        "",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+            int32_t shapeInferenceStatus = tidlCheckShapeInferenceforOnnx(md);
+
+            int32_t axis = layer->layerParams.scatterElementsParams.axis;
+            int32_t isScatterNd = (axis == -1) ? 1 : 0;
+            vector<int32_t> indicesDims;
+            int32_t dataIsVar = 0, indIsVar = 0;
+
+            if (shapeInferenceStatus != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL && isScatterNd)
+            {
+
+                for (int i = 0; i < md.varTensorIndices.size(); i++)
+                {
+                    if (md.varTensorIndices[i] == 0)
+                    {
+                        dataIsVar = 1;
+                    }
+                    if (md.varTensorIndices[i] == 1)
+                    {
+                        indIsVar = 1;
+                    }
+                }
+
+                // Both data and indices are variable
+                if(dataIsVar && indIsVar)
+                {
+                    indicesDims = md.varTensorsDims[1];
+                }
+
+                // Data is variable and indices is constant
+                else if (dataIsVar && !indIsVar)
+                {
+                    indicesDims = md.constTensorsDims[0];
+                }
+
+                // Data is constant and indices is variable
+                else if (!dataIsVar && indIsVar)
+                {
+                    indicesDims = md.varTensorsDims[0];
+                }
+
+                // Both data and indices are constant
+                else
+                {
+                    indicesDims = md.constTensorsDims[1];
+                }
+
+                if (indicesDims.size() > 4)
+                {
+                    for (int i = indicesDims.size() - 5; i >= 0; i--)
+                    {
+                        if (indicesDims[i] != 1)
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+    )
 };

@@ -74,6 +74,7 @@
 static sTIDLProfilePrintInfo_t gCyclesProfilePrintInfo[] =
 {
   {"Layer"                      ,  -1},
+  {"LayerType"                  ,  -2},
   {"Layer Cycles"               ,  TIDL_PROFILE_LAYER},
   {"kernelOnlyCycles"           ,  TIDL_PROFILE_KERNEL_ONLY},
   {"coreLoopCycles"             ,  TIDL_PROFILE_CORE_LOOP},
@@ -114,7 +115,7 @@ void TIDLRT_LogMetaData(const TIDL_outArgs *outArgsPtr, char* baseName)
   char traceFileName[512] = {0};
   int32_t numProfilePoints, i, j;
   uint64_t profileVal;
-  uint64_t sumOfLayerCycles = 0;
+  unsigned long int sumOfLayerCycles = 0;
 #if defined (SOC_TDA54) 
   double ddrBandwidthRead = 0;
   double ddrBandwidthWrite = 0;
@@ -169,7 +170,9 @@ void TIDLRT_LogMetaData(const TIDL_outArgs *outArgsPtr, char* baseName)
         profileIdx value is never set to -1 in the gCyclesProfilePrintInfo table.
         All macros defined are non-negative (TIDL_PROFILE_* values).
         <justification end> */
-        profileVal = (profileIdx == -1) ? (uint64_t)(outArgsPtr->metaDataLayer[i].layerExecId) : (uint64_t)(outArgsPtr->metaDataLayer[i].profilePoint[profileIdx]);
+        profileVal = (profileIdx == -1) ? (uint64_t)(outArgsPtr->metaDataLayer[i].layerExecId) :
+                     (profileIdx == -2) ? (uint64_t)(outArgsPtr->metaDataLayer[i].layerType) :
+                     (uint64_t)(outArgsPtr->metaDataLayer[i].profilePoint[profileIdx]);
         /* LDRA_JUSTIFY_END */
         printf("%18" PRIu64 ",", profileVal);
         if (fp != NULL)

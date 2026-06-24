@@ -30,7 +30,7 @@ int32_t debug_printf(const char *format, ...)
 	return ret;
 }
 
-void * tidltb_alignMalloc(int32_t size, int32_t alignment)
+void * tidltb_alignMalloc(size_t size, int32_t alignment)
 {
   return memalign(alignment, size);
 }

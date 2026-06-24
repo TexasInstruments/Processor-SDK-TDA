@@ -122,11 +122,14 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.conv2d")>()
   Array<PrimExpr> weight_shape = weight_checked_type->shape;
 
   // Get channel and kernel dimensions from weight tensor
-  // Weight layout is typically OIHW (Out, In, Height, Width)
+  // Weight layout: 2D conv OIHW (Out, In, Height, Width), 3D conv OIDHW (Out, In, Depth, Height, Width)
+  // Always read last 2 dimensions for H, W (works for any N-D convolution)
   convParams.numOutChannels = weight_shape[0].as<IntImmNode>()->value;
   convParams.numInChannels = weight_shape[1].as<IntImmNode>()->value;
-  convParams.kernelH = weight_shape[2].as<IntImmNode>()->value;
-  convParams.kernelW = weight_shape[3].as<IntImmNode>()->value;
+
+  int32_t weight_ndim = weight_shape.size();
+  convParams.kernelH = weight_shape[weight_ndim - 2].as<IntImmNode>()->value;
+  convParams.kernelW = weight_shape[weight_ndim - 1].as<IntImmNode>()->value;
 
   // Initialize default values (matching ONNX parser)
   convParams.numGroups = 1;
@@ -139,64 +142,103 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.conv2d")>()
   convParams.enableBias = 0;
   convParams.enablePooling = 0;
 
+  // Determine if this is 3D conv by checking kernel_size first
+  int32_t attrSize = 0;
+  int32_t attr_offset = 0;  // Offset for 3D attributes (skip depth dimension)
+
+  if (param->dict.count("kernel_size"))
+  {
+    Array<PrimExpr> kshape = Downcast<Array<PrimExpr>>(param->dict.at("kernel_size"));
+    attrSize = kshape.size();
+
+    if (attrSize < 2)
+    {
+      TIDL_osrtDebugPrint(tidl_relay_debuglevel, "Conv : kernel_shape is missing height axis\n");
+      return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+    }
+
+    // For 3D conv (kernel_size has >2 elements), skip depth dimension when reading attributes
+    if (attrSize > 2)
+    {
+      attr_offset = attrSize - 2;  // Skip all dimensions except last 2 (H, W)
+
+      // For 3D convolutions, validate that input depth is 1 (pseudo-3D only)
+      // TIDL cannot iterate over depth dimension, so we only support depth=1
+      // which can be collapsed to 2D
+      if (md.varTensorsDims[0].size() > 4)
+      {
+        int32_t depthDim = md.varTensorsDims[0][2];  // Depth at index 2 for [N, C, D, H, W]
+        if (depthDim > 1)
+        {
+          TIDL_osrtDebugPrint(tidl_relay_debuglevel,
+              "Conv : Input tensor with depth dimension > 1 (depth=%d) is not supported. "
+              "TIDL convolution does not iterate over depth dimension. Only 2D and pseudo-3D (depth=1) convolutions are supported.\n",
+              depthDim);
+          return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
+      }
+
+      // Note: We trust TVM validation to ensure kernel/stride/dilation are compatible
+      // For pseudo-3D (depth=1), kernel/stride/dilation in depth dimension don't matter
+      // since there's only one element to process
+    }
+
+    // Read kernel height and width (last 2 dimensions)
+    // Size validation: ensure kshape has at least attr_offset + 2 elements
+    if (kshape.size() >= attr_offset + 2)
+    {
+      layer.layerPCParams.convParams.tensorHeight = Downcast<IntImm>(kshape[attr_offset])->value;
+      layer.layerPCParams.convParams.tensorWidth = Downcast<IntImm>(kshape[attr_offset + 1])->value;
+    }
+    else
+    {
+      // Fallback: use kernel dimensions from weight tensor
+      layer.layerPCParams.convParams.tensorHeight = convParams.kernelH;
+      layer.layerPCParams.convParams.tensorWidth = convParams.kernelW;
+    }
+  }
+  else
+  {
+    // kernel_size attribute is missing, infer attr_offset from weight dimensions
+    if (weight_ndim > 4)
+    {
+      // For 3D conv (5D weight OIDHW), attributes like strides/dilations have 3 elements [D, H, W]
+      // We need to skip the depth dimension, so attr_offset = 1
+      attr_offset = weight_ndim - 4;
+    }
+    layer.layerPCParams.convParams.tensorHeight = convParams.kernelH;
+    layer.layerPCParams.convParams.tensorWidth = convParams.kernelW;
+  }
+
   // Extract groups
   if (param->dict.count("groups"))
   {
     convParams.numGroups = Downcast<Integer>(param->dict.at("groups"))->value;
   }
 
-  // Extract dilations
+  // Extract dilations (using offset for 3D conv)
+  // Note: Size check prevents out-of-bounds access
+  // For valid models, dilations size should match kernel_size
+  // TODO: Consider adding explicit size validation for strides/dilations vs kernel_size
   if (param->dict.count("dilation"))
   {
     Array<PrimExpr> dilations = Downcast<Array<PrimExpr>>(param->dict.at("dilation"));
-    convParams.dilationH = Downcast<IntImm>(dilations[0])->value;
-    convParams.dilationW = Downcast<IntImm>(dilations[1])->value;
+    if (dilations.size() >= attr_offset + 2)
+    {
+      convParams.dilationH = Downcast<IntImm>(dilations[attr_offset])->value;
+      convParams.dilationW = Downcast<IntImm>(dilations[attr_offset + 1])->value;
+    }
   }
 
-  // Extract strides
+  // Extract strides (using offset for 3D conv)
   if (param->dict.count("strides"))
   {
     Array<PrimExpr> strides = Downcast<Array<PrimExpr>>(param->dict.at("strides"));
-    convParams.strideH = Downcast<IntImm>(strides[0])->value;
-    convParams.strideW = Downcast<IntImm>(strides[1])->value;
-  }
-
-  // Handle kernel_shape attribute validation (matching ONNX parser logic)
-  if (param->dict.count("kernel_size"))
-  {
-    Array<PrimExpr> kshape = Downcast<Array<PrimExpr>>(param->dict.at("kernel_size"));
-    int32_t attrSize = kshape.size();
-
-    if (attrSize == 2)
+    if (strides.size() >= attr_offset + 2)
     {
-      layer.layerPCParams.convParams.tensorHeight = Downcast<IntImm>(kshape[0])->value;
-      layer.layerPCParams.convParams.tensorWidth = Downcast<IntImm>(kshape[1])->value;
+      convParams.strideH = Downcast<IntImm>(strides[attr_offset])->value;
+      convParams.strideW = Downcast<IntImm>(strides[attr_offset + 1])->value;
     }
-    else if (attrSize < 2)
-    {
-      TIDL_osrtDebugPrint(tidl_relay_debuglevel, "Conv : kernel_shape is missing height axis\n");
-      return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
-    }
-    else
-    {
-      // Validate that extra dimensions are all 1
-      for (int32_t i = 2; i < attrSize; i++)
-      {
-        int32_t dim_val = Downcast<IntImm>(kshape[i])->value;
-        if (dim_val != 1)
-        {
-          TIDL_osrtDebugPrint(tidl_relay_debuglevel, "Conv : kernel_shape is only supported along width and height axis\n");
-          return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
-        }
-      }
-      layer.layerPCParams.convParams.tensorHeight = Downcast<IntImm>(kshape[0])->value;
-      layer.layerPCParams.convParams.tensorWidth = Downcast<IntImm>(kshape[1])->value;
-    }
-  }
-  else
-  {
-    layer.layerPCParams.convParams.tensorHeight = convParams.kernelH;
-    layer.layerPCParams.convParams.tensorWidth = convParams.kernelW;
   }
 
   // Handle auto_pad attribute (matching ONNX parser exactly)
@@ -335,12 +377,13 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.conv2d")>()
   // Extract and copy weights
   auto weight_data = weight.as<tvm::relay::ConstantNode>()->data;
 
-  int shape0 = weight_shape[0].as<IntImmNode>()->value;
-  int shape1 = weight_shape[1].as<IntImmNode>()->value;
-  int shape2 = weight_shape[2].as<IntImmNode>()->value;
-  int shape3 = weight_shape[3].as<IntImmNode>()->value;
+  // Calculate weight buffer size for all dimensions (2D, 3D, etc.)
+  layer.weights.bufSize = 1;
+  for (size_t i = 0; i < weight_shape.size(); i++) {
+    int dim_size = weight_shape[i].as<IntImmNode>()->value;
+    layer.weights.bufSize *= dim_size;
+  }
 
-  layer.weights.bufSize = shape0 * shape1 * shape2 * shape3;
   layer.weights.ptr = NDArrtoFloat(weight_data, layer.weights.bufSize);
 
   if (layer.weights.ptr == nullptr)
@@ -349,7 +392,7 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.conv2d")>()
     return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
   }
 
-  int num_o_chs = shape0;
+  int num_o_chs = weight_shape[0].as<IntImmNode>()->value;  // Out channels always at index 0
 
   // Apply quantization scaling if QNN parameters present
   float *weights = (float *)layer.weights.ptr;

@@ -100,7 +100,7 @@ using ::google::protobuf::io::CodedOutputStream;
 
 
 #include "tidl_import_common.h"
-#define HIGHEST_OPSET_VERSION_SUPPORTED 18
+#define HIGHEST_OPSET_VERSION_SUPPORTED 23
 int64_t onnxOpSetVersion;
 
 extern sTIDL_OrgNetwork_t      orgTIDLNetStructure;
@@ -150,6 +150,10 @@ int32_t TIDL_isInputConstInGraph(GraphProto& onnGraph, const string name)
   }
   for (i = 0; i < onnGraph.node_size(); i++)
   {
+    if (onnGraph.node(i).output_size() == 0)
+    {
+      continue;
+    }
     if ((strcmp(onnGraph.node(i).output(0).c_str(), name.c_str()) == 0) && (strcmp(onnGraph.node(i).op_type().c_str(), "Constant") == 0))
     {
       return(1);
@@ -266,6 +270,7 @@ bool TIDL_doesQuantOrDequantHaveConstTensor(GraphProto& onnGraph, const string n
   bool isConstBuf = false;
   /*Find the corresponding DQ layer via it's output name*/
   int32_t DQNodeIdx = TIDL_onnxGetNodeIdx(onnGraph, name.c_str());
+
   /*Check the buffer to be dequantized*/
   if(DQNodeIdx != -1)
   {
@@ -285,7 +290,12 @@ bool TIDL_doesQuantOrDequantHaveConstTensor(GraphProto& onnGraph, const string n
     */
     if (isConstBuf == false)
     {
-      int32_t QNodeIdx = TIDL_onnxGetNodeIdx(onnGraph, onnGraph.node(DQNodeIdx).input(0).c_str());
+      int32_t QNodeIdx = -1;
+
+      if (onnGraph.node(DQNodeIdx).input_size() > 0)
+      {
+        QNodeIdx = TIDL_onnxGetNodeIdx(onnGraph, onnGraph.node(DQNodeIdx).input(0).c_str());
+      }
 
       if (QNodeIdx != -1)
       {
@@ -294,7 +304,7 @@ bool TIDL_doesQuantOrDequantHaveConstTensor(GraphProto& onnGraph, const string n
           if(TIDL_isInputConstInGraph(onnGraph, onnGraph.node(QNodeIdx).input(0)))
           {
             isConstBuf = true;
-          }          
+          }
         }
       }
     }
@@ -544,6 +554,10 @@ TensorProto TIDL_getInitializerTensor(GraphProto& onnGraph, const string name, i
   }
   for (i = 0; i < onnGraph.node_size(); i++)
   {
+    if (onnGraph.node(i).output_size() == 0)
+    {
+      continue;
+    }
     if ((strcmp(onnGraph.node(i).output(0).c_str(), name.c_str()) == 0) && (strcmp(onnGraph.node(i).op_type().c_str(), "Constant") == 0))
     {
       auto & tensor = onnGraph.node(i).attribute(0).t();
@@ -1221,10 +1235,19 @@ int32_t TIDL_onnxSaveAllowlistingMetaData(GraphProto&   onnGraph, int32_t i, sTI
     }
     layer.allowlistingMetaData.constTensorNames.push_back(onnGraph.node(i).input(constIdx).c_str());
     std::vector<int32_t> dims;
-    for(int j = 0; j < tensor.dims_size(); j++)
+
+    if (tensor.dims_size() > 0)
     {
-      dims.push_back(tensor.dims(j));
+      for(int j = 0; j < tensor.dims_size(); j++)
+      {
+        dims.push_back(tensor.dims(j));
+      }
     }
+    else
+    {
+      dims.push_back(1);
+    }
+
     layer.allowlistingMetaData.constTensorsDims.push_back(dims);
   }
   //Populate dimensions of output tensors
@@ -1528,6 +1551,8 @@ bool TIDL_checkLNOperation(GraphProto& onnxGraph, std::vector<int>supportedNodes
   sBuffer_t powExponent;
   int32_t axis, axisIdx, inputDimSize;
   sTIDL_LayerPC_t reduceMeanLayer1, reduceMeanLayer2, powLayer;
+  int32_t numAxes = 0;
+
   /* Check 1st ReduceMean */
   node = onnxGraph.node(reduceMean1Idx);
   status = TIDL_onnxSaveAllowlistingMetaData(onnxGraph, reduceMean1Idx, reduceMeanLayer1);
@@ -1536,22 +1561,36 @@ bool TIDL_checkLNOperation(GraphProto& onnxGraph, std::vector<int>supportedNodes
     return false;
   }
   md = reduceMeanLayer1.allowlistingMetaData;
+
+  /* Parse the axes */
   axisIdx = TIDL_onnxGetAttrIdx(node, "axes");
-  TIDL_onnxGetIntAttr(node, "axes", &axis, 0);
-  if (
-    (node.attribute(axisIdx).ints_size() == 1) && // must be single axis only
-    (
-      (axis == -1) ||   // negative index
-      (axis == (md.varTensorsDims[0].size() - 1)) // positive index
-    )
-  )
+  if (axisIdx != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
   {
-    /* okay */
+    /* axes is an attribute (opset < 18) */
+    numAxes = node.attribute(axisIdx).ints_size();
+    TIDL_onnxGetIntAttr(node, "axes", &axis, 0);
   }
   else
   {
+    /* axes is an input tensor (opset >= 18) */
+    sBuffer_t axesBuf;
+    axesBuf.bufSize = 0;
+    if (md.numConstInputs >= 1)
+    {
+      status = TIDL_tfCopyFloatInitializerTensor(onnxGraph, reduceMean1Idx, md.constTensorIndices[0], axesBuf);
+    }
+    numAxes = axesBuf.bufSize;
+    if (numAxes == 1)
+    {
+      axis = ((int64_t *)axesBuf.ptr)[0];
+    }
+  }
+
+  if (numAxes != 1 || (axis != -1 && axis != (int32_t)(md.varTensorsDims[0].size() - 1)))
+  {
     isSupported = false;
   }
+
   /* Check 2nd ReduceMean */
   node = onnxGraph.node(reduceMean2Idx);
   status = TIDL_onnxSaveAllowlistingMetaData(onnxGraph, reduceMean2Idx, reduceMeanLayer2);
@@ -1560,19 +1599,32 @@ bool TIDL_checkLNOperation(GraphProto& onnxGraph, std::vector<int>supportedNodes
     return false;
   }
   md = reduceMeanLayer2.allowlistingMetaData;
+
+  /* Parse the axes */
   axisIdx = TIDL_onnxGetAttrIdx(node, "axes");
-  TIDL_onnxGetIntAttr(node, "axes", &axis, 0);
-  if (
-    (node.attribute(axisIdx).ints_size() == 1) && // must be single axis only
-    (
-      (axis == -1) ||   // negative index
-      (axis == (md.varTensorsDims[0].size() - 1)) // positive index
-    )
-  )
+  if (axisIdx != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
   {
-    /* okay */
+    /* axes is an attribute (opset < 18) */
+    numAxes = node.attribute(axisIdx).ints_size();
+    TIDL_onnxGetIntAttr(node, "axes", &axis, 0);
   }
   else
+  {
+    /* axes is an input tensor (opset >= 18) */
+    sBuffer_t axesBuf;
+    axesBuf.bufSize = 0;
+    if (md.numConstInputs >= 1)
+    {
+      status = TIDL_tfCopyFloatInitializerTensor(onnxGraph, reduceMean2Idx, md.constTensorIndices[0], axesBuf);
+    }
+    numAxes = axesBuf.bufSize;
+    if (numAxes == 1)
+    {
+      axis = ((int64_t *)axesBuf.ptr)[0];
+    }
+  }
+
+  if (numAxes != 1 || (axis != -1 && axis != (int32_t)(md.varTensorsDims[0].size() - 1)))
   {
     isSupported = false;
   }
@@ -1719,7 +1771,8 @@ bool TIDL_checkMSDAMulMatmul(GraphProto& onnxGraph, std::vector<int>supportedNod
 /* Check if Reshape - Slice x8 -Concat corresponds to Patch Merging operation
   1. The first 4 Slices connected to Reshape should be along channel axis and starts should be [0,1,0,1]
   2. The next 4 Slice connected to Concat should be along height axis and starts should be [0,0,1,1]
-  2. Slice steps = 2
+  3. Slice steps = 2
+  4. Concat on width axis
 */
 bool TIDL_checkPatchMerging(GraphProto& onnxGraph, std::vector<int>supportedNodesIndices)
 {
@@ -1779,6 +1832,12 @@ bool TIDL_checkPatchMerging(GraphProto& onnxGraph, std::vector<int>supportedNode
         int64_t startsVal = *((int64_t*)starts.ptr);
         int64_t axesVal = *((int64_t*)axes.ptr);
         int64_t stepVal = *((int64_t*)steps.ptr);
+
+        /* Normalize negative axis to positive equivalent */
+        if (axesVal < 0)
+        {
+          axesVal += numInDims;
+        }
 
         /* accumulate starts value */
         if (startsVal == 0 || startsVal == 1)
@@ -1847,6 +1906,33 @@ bool TIDL_checkPatchMerging(GraphProto& onnxGraph, std::vector<int>supportedNode
   else
   {
     isSupported = false;
+  }
+
+  /* Check Concat axis is the width (last) axis */
+  {
+    NodeProto concatNode = onnxGraph.node(concatIdx);
+    sTIDL_LayerPC_t concatLayer;
+    TIDL_onnxSaveAllowlistingMetaData(onnxGraph, concatIdx, concatLayer);
+    int32_t numConcatInDims = concatLayer.allowlistingMetaData.varTensorsDims[0].size();
+    int32_t concatAxis = 0;
+    int32_t concatAxisAttrIdx = TIDL_onnxGetAttrIdx(onnxGraph.node(concatIdx), "axis");
+    if (concatAxisAttrIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+    {
+      isSupported = false;
+    }
+    else
+    {
+      TIDL_onnxGetIntAttr(onnxGraph.node(concatIdx), "axis", &concatAxis, 0);
+      /* Normalize negative axis */
+      if (concatAxis < 0)
+      {
+        concatAxis += numConcatInDims;
+      }
+      if (concatAxis != (numConcatInDims - 1))
+      {
+        isSupported = false;
+      }
+    }
   }
 
   return isSupported;
@@ -3240,15 +3326,15 @@ int32_t TIDL_onnxMapClipBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_Laye
 {
   int32_t status = 0;
   layer.layerType = TIDL_ClipLayer;
-  layer.actParams.actType = TIDL_Clip;
+  layer.clipParams.isClipEnabled = 1;
   NodeProto node = onnGraph.node(i);
   int32_t minStatus = -1, maxStatus = -1;
   int32_t numInputs = node.input_size();
   sBuffer_t buf;
 
   /* Try to fetch min and max from attributes */
-  minStatus = TIDL_onnxGetFloatAttr(node, "min", &layer.actParams.clipMin, 0);
-  maxStatus = TIDL_onnxGetFloatAttr(node, "max", &layer.actParams.clipMax, 0);
+  minStatus = TIDL_onnxGetFloatAttr(node, "min", &layer.clipParams.clipMin, 0);
+  maxStatus = TIDL_onnxGetFloatAttr(node, "max", &layer.clipParams.clipMax, 0);
 
   /* If min not found */
   if (minStatus == -1)
@@ -3263,13 +3349,13 @@ int32_t TIDL_onnxMapClipBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_Laye
         return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
       }
       float *ptr = (float *)buf.ptr;
-      layer.actParams.clipMin = *ptr;
+      layer.clipParams.clipMin = *ptr;
       my_free(ptr);
     }
     /* Set default value of min */
     else
     {
-      layer.actParams.clipMin = (float32_tidl)std::numeric_limits<float>::lowest();
+      layer.clipParams.clipMin = (float32_tidl)std::numeric_limits<float>::lowest();
     }
   }
   /* If max not found */
@@ -3285,13 +3371,13 @@ int32_t TIDL_onnxMapClipBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_Laye
         return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
       }
       float *ptr = (float *)buf.ptr;
-      layer.actParams.clipMax = *ptr;
+      layer.clipParams.clipMax = *ptr;
       my_free(ptr);
     }
     /* Set default value of max */
     else
     {
-      layer.actParams.clipMax = (float32_tidl)std::numeric_limits<float>::max();
+      layer.clipParams.clipMax = (float32_tidl)std::numeric_limits<float>::max();
     }
   }
 
@@ -4134,6 +4220,78 @@ int32_t TIDL_onnxMapRMSNormParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
   return status;
 }
 
+int32_t TIDL_onnxMapAttentionBaseParams (GraphProto&  onnxGraph, int32_t i, sTIDL_LayerPC_t &layer)
+{
+  int32_t status = 0;
+  auto md = layer.allowlistingMetaData;
+  int32_t is_causal = 0, qk_matmul_output_mode = 0;
+  float32_tidl softcap = 0.0;
+  int32_t kv_num_heads = md.varTensorsDims[1][1], q_num_heads = md.varTensorsDims[0][1];
+  float32_tidl scale = 1.0;
+  int32_t softmax_precision = -1;
+  layer.layerType = TIDL_AttentionLayer;
+  layer.numInBufs = 3;
+  NodeProto node = onnxGraph.node(i);
+
+  TIDL_onnxGetIntAttr(node, "is_causal", &is_causal, 0);
+  TIDL_onnxGetIntAttr(node, "qk_matmul_output_mode", &qk_matmul_output_mode, 0);
+  TIDL_onnxGetFloatAttr(node, "softcap", &softcap, 0);
+  status = TIDL_onnxGetFloatAttr(node, "scale", &scale, 0);
+  if(status == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+  {
+    TIDL_GLOBAL_REPORT_WARNING("Scale attribute is not found for Attention layer, using default value of 1.0");
+  }
+
+  status = TIDL_onnxGetIntAttr(node, "softmax_precision", &softmax_precision, 0);
+  if(status == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+  {
+    TIDL_GLOBAL_REPORT_WARNING("Softmax precision attribute is not found for Attention layer, using default value of -1 which indicates default precision for softmax");
+  }
+  else
+  {
+    if(softmax_precision < -1 || softmax_precision > 32)
+    {
+      TIDL_GLOBAL_REPORT_ERROR("Softmax precision attribute value is out of range for Attention layer, it should be between -1 and 32");
+      return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+    }
+  }
+
+  status = TIDL_onnxGetIntAttr(node, "kv_num_heads", &kv_num_heads, 0);
+  if(status == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+  {
+    TIDL_GLOBAL_REPORT_WARNING("kv_num_heads attribute is not found for Attention layer, using default value of %d", md.varTensorsDims[1][1]);
+  }
+
+  status = TIDL_onnxGetIntAttr(node, "q_num_heads", &q_num_heads, 0);
+  if(status == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+  {
+    TIDL_GLOBAL_REPORT_WARNING("q_num_heads attribute is not found for Attention layer, using default value of %d", md.varTensorsDims[0][1]);
+  }
+
+  layer.layerParams.attentionParams.isCausal = is_causal;
+  layer.layerParams.attentionParams.qk_matmul_output_mode = qk_matmul_output_mode;
+  layer.layerParams.attentionParams.softcap = softcap;
+  layer.layerParams.attentionParams.scale = scale;
+  layer.layerParams.attentionParams.softmax_precision = softmax_precision;
+  layer.layerParams.attentionParams.kv_num_heads = kv_num_heads;
+  layer.layerParams.attentionParams.q_num_heads = q_num_heads;
+
+  return status;
+}
+
+int32_t TIDL_onnxMapAttentionParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
+  int32_t              i,
+  int32_t              layerIndex,
+  int32_t              *dataIndex,
+  GraphProto&            onnGraph)
+{
+  int32_t status;
+  sTIDL_LayerPC_t &TIDLPCLayers = pOrgTIDLNetStructure->TIDLPCLayers[layerIndex];
+  TIDLPCLayers.outData[0].dataId = (*dataIndex)++;
+  status = TIDL_onnxMapAttentionBaseParams(onnGraph, i, TIDLPCLayers);
+  return status;
+}
+
 int32_t TIDL_onnxMapDivParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
   int32_t              i,
   int32_t              layerIndex,
@@ -4787,9 +4945,9 @@ int32_t TIDL_onnxMapReshapeBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_L
   }
 
   /* check for variable shape input and return */
-  if (md.numVarInputs > 1)
+  if (std::find(md.varTensorIndices.begin(), md.varTensorIndices.end(), 1) != md.varTensorIndices.end())
   {
-    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Reshape layer : More than 1 variable input, variable shape is not supported");
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Reshape layer : Variable shape is not supported");
     return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
   }
 
@@ -4800,6 +4958,25 @@ int32_t TIDL_onnxMapReshapeBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_L
   {
     TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Unable to find initializer at index %d for node %s", 1, onnGraph.node(i).name().c_str());
     return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+  }
+
+  /* Load const data tensor (input[0]) into layer.bias when it is a constant initializer. */
+  {
+    auto constIt = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 0);
+    if (constIt != md.constTensorIndices.end())
+    {
+      status = TIDL_tfCopyFloatInitializerTensor(onnGraph, i, 0, layer.bias);
+      if (status != 0)
+      {
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Unable to find initializer at index %d for node %s", 0, onnGraph.node(i).name().c_str());
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      }
+    }
+    else
+    {
+      layer.bias.ptr     = NULL;
+      layer.bias.bufSize = 0;
+    }
   }
   NodeProto node = onnGraph.node(i);
 
@@ -5997,9 +6174,10 @@ sTIDL_onnxOpParamMap_t tidl_onnxOpParamMapTable[] =
   { "Sqrt",                          TIDL_onnxMapSqrtParams},
   { "Div",                           TIDL_onnxMapDivParams},
   { "LayerNormalization",            TIDL_onnxMapLayerNormParams},
-  { "RMSNormalization",            TIDL_onnxMapRMSNormParams},
+  { "RMSNormalization",              TIDL_onnxMapRMSNormParams},
   { "Softplus",                      TIDL_onnxMapSoftplusParams },
-  { "Softsign",                      TIDL_onnxMapSoftsignParams }
+  { "Softsign",                      TIDL_onnxMapSoftsignParams },
+  { "Attention",                     TIDL_onnxMapAttentionParams },
 };
 int32_t TIDL_getOnnxOpParamMapId(const char  * name)
 {
@@ -6132,7 +6310,8 @@ int32_t tidl_fuseLayerNormBetaGamma(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, i
             return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
           }
           float* pBeta = (float*) pOrgTIDLNetStructure.TIDLPCLayers[betaIdx].weights.ptr;
-          if(layerNormConsumerIdxs.size() == 1 && (eltwiseAddLayer.outConsumerCnt[0] == 1U) && pOrgTIDLNetStructure.TIDLPCLayers[layerNormConsumerIdxs[0]].layerParams.innerProductParams.constIdx == 1U && pOrgTIDLNetStructure.TIDLPCLayers[layerNormConsumerIdxs[0]].layerParams.innerProductParams.numBChannels == 1 && pOrgTIDLNetStructure.TIDLPCLayers[layerNormConsumerIdxs[0]].layerType == TIDL_InnerProductLayer)
+          /* Fusion of LayerNorm Beta Gamma with following InnerProduct layer is only allowed if there are no activations such as ReLU, Clip, etc. present between them */
+          if(layerNormConsumerIdxs.size() == 1 && (eltwiseAddLayer.outConsumerCnt[0] == 1U && eltwiseAddLayer.actParams.actType == TIDL_NoAct) && pOrgTIDLNetStructure.TIDLPCLayers[layerNormConsumerIdxs[0]].layerParams.innerProductParams.constIdx == 1U && pOrgTIDLNetStructure.TIDLPCLayers[layerNormConsumerIdxs[0]].layerParams.innerProductParams.numBChannels == 1 && pOrgTIDLNetStructure.TIDLPCLayers[layerNormConsumerIdxs[0]].layerType == TIDL_InnerProductLayer)
           {
             int32_t layerNormConsumerIdx = layerNormConsumerIdxs[0];
             sTIDL_LayerPC_t &layerNormConsumer = pOrgTIDLNetStructure.TIDLPCLayers[layerNormConsumerIdx];
@@ -6285,10 +6464,11 @@ int32_t tidl_fuseLayerNormBetaGamma(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, i
 
             /*Inherit activation properties from the final add layer:*/
             ip.actParams = eltwiseAddLayer.actParams;
+            ip.clipParams = eltwiseAddLayer.clipParams;
 
-            if(gParams.preQuantizedModel && eltwiseAddLayer.actParams.actType == TIDL_Clip)
+            if(gParams.preQuantizedModel && eltwiseAddLayer.clipParams.isClipEnabled == 1)
             {
-              ip.actParams = eltwiseAddLayer.actParams;
+              ip.clipParams = eltwiseAddLayer.clipParams;
             }
           }
           /*Remove eltwise add and eltwise mul layers (& corresponding const buffers)*/
@@ -6401,8 +6581,9 @@ int32_t tidl_FindMatMulBias (sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t 
               TIDLPCLayers1.bias.ptr = bias;
               TIDLPCLayers1.bias.bufSize = TIDLPCLayers1.layerParams.innerProductParams.numInRows * TIDLPCLayers1.layerParams.innerProductParams.numOutCols;
               TIDLPCLayers1.actParams = TIDLPCLayers2.actParams;
+              TIDLPCLayers1.clipParams = TIDLPCLayers2.clipParams;
               if((TIDLPCLayers1.actParams.actType == TIDL_RelU6) || (TIDLPCLayers1.actParams.actType == TIDL_RelU)||
-                ((TIDLPCLayers1.actParams.actType == TIDL_Clip) && (TIDLPCLayers1.actParams.clipMin >= 0)))
+                ((TIDLPCLayers1.clipParams.isClipEnabled) && (TIDLPCLayers1.clipParams.clipMin >= 0)))
               {
                 TIDLPCLayers1.outData[0].elementType = tidl_getElementType(0);
               }
@@ -6559,16 +6740,18 @@ int32_t tidl_isConstantUsedAsInData(sTIDL_LayerPC_t& layer, int32_t onnxInputIdx
      (layer.layerType == TIDL_ScatterElementsLayer) ||
      (layer.layerType == TIDL_ConcatLayer) ||
      (layer.layerType == TIDL_GatherLayer) ||
-     (layer.layerType == TIDL_TransposeLayer)
+     (layer.layerType == TIDL_TransposeLayer) ||
+     (layer.layerType == TIDL_GatherNDLayer) ||
+     (layer.layerType == TIDL_GatherElementsLayer)
   )
   {
     isConstantUsedAsInData = 1;
   }
   else if(layer.layerType == TIDL_LSTMLayer)
   {
-    /* W, R, initial_h, initial_C or peepholes */
-    if(onnxInputIdx == 1 || onnxInputIdx == 2 || onnxInputIdx == 5 ||
-       onnxInputIdx == 6 || onnxInputIdx == 7)
+    /* W, R, B, initial_h, initial_C or peepholes */
+    if(onnxInputIdx == TIDL_RecurrentInputW || onnxInputIdx == TIDL_RecurrentInputR || onnxInputIdx == TIDL_RecurrentInputB ||
+       onnxInputIdx == TIDL_RecurrentInputInitialH || onnxInputIdx == TIDL_RecurrentInputInitialC || onnxInputIdx == TIDL_RecurrentInputPeepholes)
     {
       isConstantUsedAsInData = 1;
     }
@@ -6579,14 +6762,37 @@ int32_t tidl_isConstantUsedAsInData(sTIDL_LayerPC_t& layer, int32_t onnxInputIdx
   }
   else if(layer.layerType == TIDL_GRULayer || layer.layerType == TIDL_RNNLayer)
   {
-    /* W, R or initial_h input */
-    if(onnxInputIdx == 1 || onnxInputIdx == 2 || onnxInputIdx == 5)
+    /* W, R B, or initial_h input */
+    if(onnxInputIdx == TIDL_RecurrentInputW || onnxInputIdx == TIDL_RecurrentInputR || onnxInputIdx == TIDL_RecurrentInputB ||
+       onnxInputIdx == TIDL_RecurrentInputInitialH)
     {
       isConstantUsedAsInData = 1;
     }
     else
     {
       isConstantUsedAsInData = 0;
+    }
+  }
+  else if(layer.layerType == TIDL_LogicalOpLayer)
+  {
+    int32_t opType =  layer.layerParams.logicalOpLayerParams.operatorType;
+    isConstantUsedAsInData = 0;
+    if (opType != TIDL_Not && opType != TIDL_IsInf && opType != TIDL_IsNaN)
+    {
+      if(opType == TIDL_Where)
+      {
+        if (onnxInputIdx == 1 || onnxInputIdx == 2)
+        {
+          isConstantUsedAsInData = 1; // For Where, only X and/or Y can be constant
+        }
+      }
+      else 
+      {
+        if(onnxInputIdx == 0 || onnxInputIdx == 1)
+        {
+          isConstantUsedAsInData = 1; // For other logical ops, A and/or B can be constant
+        }
+      }
     }
   }
 
@@ -6743,9 +6949,7 @@ int32_t tidl_onnxLayerUpdateConsumerCount(sTIDL_OrgNetwork_t   *pOrgTIDLNetStruc
   return 0;
 }
 
-int32_t tidl_onnxGetNewNodeToAdd(sTIDL_OrgNetwork_t   &orgTIDLNetStructure,
-  int32_t              layerIndex,
-  GraphProto&             onnxGraph)
+int32_t tidl_onnxGetNewNodeToAdd(sTIDL_OrgNetwork_t   &orgTIDLNetStructure, int32_t layerIndex, GraphProto& onnxGraph, std::set<std::string>& inputNames, char inputTensorName[][TIDL_MAX_DATA_NAME], int32_t numNetInData)
 {
   int32_t i, j, nodeIdx = -1;
 
@@ -6760,6 +6964,14 @@ int32_t tidl_onnxGetNewNodeToAdd(sTIDL_OrgNetwork_t   &orgTIDLNetStructure,
         {
           if (strcmp(onnxGraph.node(nodeIdx).op_type().c_str(), "Constant") == 0)
           {
+            nodeIdx = -1;
+          }
+        }
+        for(int32_t k = 0; k < numNetInData; k++)
+        {
+          if (strcmp((const char *)orgTIDLNetStructure.TIDLPCLayers[i].inDataNames[j], (char*)&inputTensorName[k]) == 0)
+          {
+            inputNames.insert(std::string(reinterpret_cast<const char*>(orgTIDLNetStructure.TIDLPCLayers[i].inDataNames[j])));
             nodeIdx = -1;
           }
         }
@@ -6932,6 +7144,68 @@ int32_t mapOnnxTypeToTidlOutputType(int onnx_elem_type,tidl_import_config* param
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
 
+int32_t tidl_findOnnxModelOutElementType(GraphProto &onnxGraph,char *outputName)
+{
+  int i;
+  bool found = false;
+  int32_t outputElementType = -1;
+  
+  for(i = 0; i< onnxGraph.output_size(); i++)
+  {
+    const auto& output = onnxGraph.output(i);
+    if(strcmp(outputName, output.name().c_str()) == 0)
+    {
+      if(output.has_type() && output.type().has_tensor_type())
+      {
+        int elemType = output.type().tensor_type().elem_type();
+        if (onnxToTidlTypeMap.find(elemType) != onnxToTidlTypeMap.end())
+        {
+          outputElementType = onnxToTidlTypeMap[elemType];
+        }
+        else
+        {
+          TIDL_GLOBAL_REPORT_ERROR("ERROR : ONNX RT data type : %d not supported by TIDL\n", (int32_t)elemType);
+        }
+        found = true;
+      }
+      else
+      {
+        TIDL_GLOBAL_REPORT_ERROR("Output %s - Type information is not available",outputName);
+      }
+    }
+  }
+
+  if(!found)
+  {
+    for (int i = 0; i < onnxGraph.value_info_size(); i++)
+    {
+      const auto& value_info = onnxGraph.value_info(i);
+      if(strcmp( value_info.name().c_str(), outputName) == 0)
+      {
+        if ( value_info.has_type() && value_info.type().has_tensor_type())
+        {
+          int elemType = value_info.type().tensor_type().elem_type();
+          if (onnxToTidlTypeMap.find(elemType) != onnxToTidlTypeMap.end())
+          {
+            outputElementType = onnxToTidlTypeMap[elemType];
+          }
+          else
+          {
+            TIDL_GLOBAL_REPORT_ERROR("ERROR : ONNX RT data type : %d not supported by TIDL\n", (int32_t)elemType);
+          }
+          found = true;
+        }
+        else
+        {
+          TIDL_GLOBAL_REPORT_ERROR("Output %s - Type information is not available",outputName);
+        }
+      }
+    }
+  }
+  return outputElementType;
+}
+
+
 int32_t tidl_findOnnxOutElementTypes(GraphProto &onnxGraph,char *outputName,int32_t outputIdx,tidl_import_config* params)
 {
   int i;
@@ -6979,6 +7253,101 @@ int32_t tidl_findOnnxOutElementTypes(GraphProto &onnxGraph,char *outputName,int3
   }
   return status;
 }
+
+int32_t tidl_findOnnxModelInputElementType(GraphProto& onnxGraph,char *inputName)
+{
+  int i,j,found;
+  found = 0;
+  int32_t inputElementType = -1;
+
+  auto findValueInfo =[&](const std::string &name)->const onnx::ValueInfoProto* {
+    for(int i = 0; i < onnxGraph.value_info_size(); i++){
+      if(onnxGraph.value_info(i).name() == name)
+      {
+        return &onnxGraph.value_info(i);
+      }
+    }
+    return nullptr;
+  };
+
+  for(i = 0; i < onnxGraph.input_size(); i++)
+  {
+    const auto &input = onnxGraph.input(i);
+    const std::string &name = input.name();
+    if(strcmp(inputName, name.c_str()) == 0)
+    {
+      if(input.has_type() && input.type().has_tensor_type())
+      {
+        int elemType = input.type().tensor_type().elem_type();
+        if (onnxToTidlTypeMap.find(elemType) != onnxToTidlTypeMap.end())
+        {
+          inputElementType = onnxToTidlTypeMap[elemType];
+        }
+        else
+        {
+          TIDL_GLOBAL_REPORT_ERROR("ERROR : ONNX RT data type : %d not supported by TIDL\n", (int32_t)elemType);
+        }
+        found = 1;
+      }
+      else
+      {
+        TIDL_GLOBAL_REPORT_ERROR("Input %s - Type information is not available",name.c_str());
+      }
+    }
+  }
+  if(found == 0)
+  {
+    for(i = 0; i < onnxGraph.node_size(); i++)
+    {
+      const auto &node = onnxGraph.node(i);
+      for(j = 0; j < node.input_size(); j++)
+      {
+        const std::string &name = node.input(j);
+        if(strcmp(inputName, name.c_str()) == 0)
+        {
+          const auto *info = findValueInfo(name);
+          if(info)
+          {
+            if(info->has_type() && info->type().has_tensor_type())
+            {
+              int elemType = info->type().tensor_type().elem_type();
+              if (onnxToTidlTypeMap.find(elemType) != onnxToTidlTypeMap.end())
+              {
+                inputElementType = onnxToTidlTypeMap[elemType];
+              }
+              else
+              {
+                TIDL_GLOBAL_REPORT_ERROR("ERROR : ONNX RT data type : %d not supported by TIDL\n", (int32_t)elemType);
+              }
+              found = 1;
+            }
+          }
+        }
+      }
+    }
+  }
+  if(found == 0)
+  {
+    for(i = 0; i < onnxGraph.initializer_size(); i++)
+    {
+      const auto& initializer = onnxGraph.initializer(i);
+      if(strcmp(inputName , initializer.name().c_str()) == 0)
+      {
+        int elemType = initializer.data_type();
+        if (onnxToTidlTypeMap.find(elemType) != onnxToTidlTypeMap.end())
+        {
+          inputElementType = onnxToTidlTypeMap[elemType];
+        }
+        else
+        {
+          TIDL_GLOBAL_REPORT_ERROR("ERROR : ONNX RT data type : %d not supported by TIDL\n", (int32_t)elemType);
+        }
+      }
+    }
+  }
+  return inputElementType;
+}
+
 
 int32_t mapOnnxTypeToTidlInputType(int onnx_elem_type,tidl_import_config* params,int32_t inputIdx)
 {
@@ -7430,6 +7799,28 @@ int32_t onnx_import(tidl_import_config * params, int32_t *totalData, int32_t* to
     }
   }
 
+  for(i = 0; i < numNetOutData ; i++)
+  {
+    int32_t elementType  = tidl_findOnnxModelOutElementType(onnxGraph,outDataNames[i]);
+    if(elementType == TIDL_SignedDoubleWord)
+    {
+      params->modelOutElementType[i] = TIDL_SignedWord;
+    }
+    else if ( elementType == TIDL_UnsignedDoubleWord)
+    {
+      params->modelOutElementType[i] = TIDL_UnsignedWord;
+    }
+    else if ( elementType == -1)
+    {
+      params->modelOutElementType[i] = (params->outElementType[i] == -1) ? TIDL_SinglePrecFloat : params->outElementType[i];
+    }
+    else
+    {
+      params->modelOutElementType[i] = elementType;
+    }
+  }
+
+
   /* This fixes TIDL-4015 */
   if (strcmp((char *)params->inDataNamesList, "") == 0)
   {
@@ -7452,32 +7843,10 @@ int32_t onnx_import(tidl_import_config * params, int32_t *totalData, int32_t* to
     }
   }
 
-  for (i = 0; i < numNetInData; i++)
-  {
-    orgTIDLNetStructure.TIDLPCLayers[layerIndex].numInBufs = -1;
-    orgTIDLNetStructure.TIDLPCLayers[layerIndex].numOutBufs = 1;
-    strcpy((char *)orgTIDLNetStructure.TIDLPCLayers[layerIndex].name, inDataNames[i]);
-    strcpy((char *)orgTIDLNetStructure.TIDLPCLayers[layerIndex].outDataNames[0], inDataNames[i]);
-    orgTIDLNetStructure.TIDLPCLayers[layerIndex].outConsumerCnt[0] = 1;
-    orgTIDLNetStructure.TIDLPCLayers[layerIndex].outConsumerLinked[0] = 0;
-    orgTIDLNetStructure.TIDLPCLayers[layerIndex].outData[0].dataId = dataIndex++;
-    orgTIDLNetStructure.TIDLPCLayers[layerIndex].outData[0].numDim = TIDL_DIM_MAX;
-    tidl_onnxLayerUpdateConsumerCount(&orgTIDLNetStructure, layerIndex, layerIndex, onnxGraph);
-    tidl_linkOutputTensors(&orgTIDLNetStructure, layerIndex);
-    layerIndex++;
-  }
-
-  for(i = 0; i < numNetInData ; i++)
-  {
-    if(params->inElementType[i] == -1)
-    {
-      tidl_findOnnxInputElementTypes(onnxGraph, inDataNames[i], i, params);
-    }
-  }
-
   bool isModelShapeInfered = true;
+  std::set<std::string> inputNames;
        
-  int newNode = tidl_onnxGetNewNodeToAdd(orgTIDLNetStructure, layerIndex, onnxGraph);
+  int newNode = tidl_onnxGetNewNodeToAdd(orgTIDLNetStructure, layerIndex, onnxGraph, inputNames, inDataNames, numNetInData);
   while (newNode != -1)
   {
     orgTIDLNetStructure.TIDLPCLayers[layerIndex].numInBufs = 1;
@@ -7525,8 +7894,82 @@ int32_t onnx_import(tidl_import_config * params, int32_t *totalData, int32_t* to
     tidl_linkOutputTensors(&orgTIDLNetStructure, layerIndex);
     layerIndex++;
 
-    newNode = tidl_onnxGetNewNodeToAdd(orgTIDLNetStructure, layerIndex, onnxGraph);
+    newNode = tidl_onnxGetNewNodeToAdd(orgTIDLNetStructure, layerIndex, onnxGraph, inputNames, inDataNames, numNetInData);
   }
+
+  for (i = 0; i < numNetInData; i++)
+  {
+    bool isInputLinked = false;
+    for (const auto& name : inputNames)
+    {
+      if(strcmp(inDataNames[i], name.c_str()) == 0)
+      {
+        isInputLinked = true;
+      }
+    }
+    if(isInputLinked)
+    {
+      orgTIDLNetStructure.TIDLPCLayers[layerIndex].numInBufs = -1;
+      orgTIDLNetStructure.TIDLPCLayers[layerIndex].numOutBufs = 1;
+      strcpy((char *)orgTIDLNetStructure.TIDLPCLayers[layerIndex].name, inDataNames[i]);
+      strcpy((char *)orgTIDLNetStructure.TIDLPCLayers[layerIndex].outDataNames[0], inDataNames[i]);
+      orgTIDLNetStructure.TIDLPCLayers[layerIndex].outConsumerCnt[0] = 1;
+      orgTIDLNetStructure.TIDLPCLayers[layerIndex].outConsumerLinked[0] = 0;
+      orgTIDLNetStructure.TIDLPCLayers[layerIndex].outData[0].dataId = dataIndex++;
+      orgTIDLNetStructure.TIDLPCLayers[layerIndex].outData[0].numDim = TIDL_DIM_MAX;
+      
+      tidl_onnxLayerUpdateConsumerCount(&orgTIDLNetStructure, layerIndex, layerIndex, onnxGraph);
+      tidl_linkOutputTensors(&orgTIDLNetStructure, layerIndex);
+      layerIndex++;
+    }
+  }
+
+  for(i = 0; i < numNetInData ; i++)
+  {
+    if(params->inElementType[i] == -1)
+    {
+      tidl_findOnnxInputElementTypes(onnxGraph, inDataNames[i], i, params);
+    }
+  }
+
+  for(i = 0; i < numNetInData ; i++)
+  {
+    int32_t elementType  = tidl_findOnnxModelInputElementType(onnxGraph, inDataNames[i]);
+    if(elementType == TIDL_SignedDoubleWord)
+    {
+      params->modelInElementType[i] = TIDL_SignedWord;
+    }
+    else if ( elementType == TIDL_UnsignedDoubleWord)
+    {
+      params->modelInElementType[i] = TIDL_UnsignedWord;
+    }
+    else if (elementType == -1)
+    {
+      params->modelInElementType[i] = (params->inElementType[i] == -1) ? TIDL_SinglePrecFloat : params->inElementType[i];
+    }
+    else
+    {
+      params->modelInElementType[i] = elementType;
+    } 
+  }
+
+  //update the inDataNamesList with the current inputs (update the inDataNamesList with the actual inputs present in the network)
+  char updatedList[TIDL_MAX_ALG_IN_BUFS * FILE_NAME_SIZE] = "";
+  std::istringstream ss(reinterpret_cast<const char*>(params->inDataNamesList));
+  std::string currInputName;
+  while (ss >> currInputName) {
+      // Check if the name exists in inputNames
+      if (inputNames.find(currInputName) != inputNames.end()) {
+          // Append the currInputName to the updated list
+          if (strlen(updatedList) > 0) {
+              strcat(updatedList, " "); // Add a space before appending the next currInputName
+          }
+          strcat(updatedList, currInputName.c_str());
+      }
+  }
+  strncpy(reinterpret_cast<char*>(params->inDataNamesList), updatedList, TIDL_MAX_ALG_IN_BUFS * FILE_NAME_SIZE - 1);
+  params->inDataNamesList[TIDL_MAX_ALG_IN_BUFS * FILE_NAME_SIZE - 1] = '\0'; // Ensure null termination
+
   if(!isModelShapeInfered)
   {
     TIDL_GLOBAL_REPORT_WARNING("Shape inference has not been performed on the model. Skipping data type validation checks.");

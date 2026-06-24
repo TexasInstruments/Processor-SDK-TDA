@@ -152,5 +152,9 @@ void TIDL_UpdateScaleFactors(TIDL_Handle intAlgHandle, int32_t i, int32_t update
 
 void getResizeInfo(sTIDL_ResizeInfo_t* resizeInfo, const sTIDL_AlgLayer_t* algLayer, const sTIDL_Layer_t * tidlLayer, const TIDL_CreateParams *createParams, int32_t resizeInHeight);
 
+
+int32_t TIDL_resizeGetPerfData(void* linkHandle,
+                                 double *perfData);
+
 #endif /* ITIDL_RESIZE_H */
 

@@ -167,6 +167,7 @@ unordered_map<string, TidlParseTVMJTEntry> tidlParseTVMJumpTable =
     TVM_JTE( "cos",                          TIDL_CosLayer),
     TVM_JTE( "cosh",                         TIDL_CoshLayer),
     TVM_JTE( "tan",                          TIDL_TanLayer),
+    TVM_JTE( "tidl.lstm",                    TIDL_LSTMLayer),
 };
 
 

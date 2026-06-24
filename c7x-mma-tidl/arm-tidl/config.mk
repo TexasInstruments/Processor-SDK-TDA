@@ -93,7 +93,7 @@ ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
   MMALIB_VERSION  := 11_02_01_04
 else
   CGT_C7X_VERSION := 5.0.0.LTS
-  MMALIB_VERSION  := 11_02_00_06
+  MMALIB_VERSION  := 11_02_00_11
 endif
 
 PSDK_TOOLS_PATH     ?= $(HOME)/ti

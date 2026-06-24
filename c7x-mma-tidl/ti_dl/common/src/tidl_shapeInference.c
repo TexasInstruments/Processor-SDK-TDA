@@ -94,11 +94,6 @@ int32_t TIDL_shapeInfer_PassThrough(
     (void)layerParams;
     (void)context;
 
-    if ((inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
     outDataParam->dimValues[TIDL_DIM_DIM1]   = inDataParams[0]->dimValues[TIDL_DIM_DIM1];
@@ -110,6 +105,8 @@ int32_t TIDL_shapeInfer_PassThrough(
     return TIDL_SHAPE_INFERENCE_OK;
 }
 
+// Remove this if the operator supports dynamic shape during inference
+#ifdef HOST_EMULATION
 /* -------------------------------------------------------------------------
  * EltWise (broadcast-aware)
  *
@@ -132,11 +129,6 @@ int32_t TIDL_shapeInfer_EltWise(
     (void)layerParams;
     (void)context;
 
-    if ((inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
     outDataParam->dimValues[TIDL_DIM_DIM1]   = inDataParams[0]->dimValues[TIDL_DIM_DIM1];
@@ -161,6 +153,7 @@ int32_t TIDL_shapeInfer_EltWise(
 
     return TIDL_SHAPE_INFERENCE_OK;
 }
+#endif /* HOST_EMULATION */
 
 /* -------------------------------------------------------------------------
  * Transpose
@@ -188,11 +181,6 @@ int32_t TIDL_shapeInfer_Transpose(
     int32_t        *perm;
     int32_t        i;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     perm = layerParams->transposeParams.perm;
 
@@ -228,7 +216,7 @@ int32_t TIDL_shapeInfer_Transpose(
         }
 
         if ((configParams->inferenceMode == TIDL_inferenceModeHighThroughput) ||
-            (pcLayer->isBatchGroupLayer == 1 && pcLayer->isBatchUpdated == 1))
+            (pcLayer->isBatchGroupLayer == 1))
         {
             outDataParam->dimValues[TIDL_DIM_BATCH] = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
         }
@@ -246,6 +234,59 @@ int32_t TIDL_shapeInfer_Transpose(
     return TIDL_SHAPE_INFERENCE_OK;
 }
 
+/* -------------------------------------------------------------------------
+ * NonZero
+ *
+ * Infers the output shape for the NonZero operator.
+ *
+ * The output is a 2-D tensor of shape [TIDL_DIM_MAX, N], where N is the
+ * total number of elements in the input tensor (product of all input
+ * dimensions).  The actual non-zero count is not known at compile time, so
+ * width dimension is marked as dynamic (dynDimMask = 0x20).
+ *
+ * HOST_EMULATION compile-time path:
+ *   When running under host emulation with a resolved layer context, the
+ *   output dimensions are set conservatively: HEIGHT is fixed to TIDL_DIM_MAX
+ *   (the number of input dimensions) and WIDTH is set to the flat element
+ *   count of the input tensor, representing the worst-case number of
+ *   non-zero indices.
+ * ------------------------------------------------------------------------- */
+
+int32_t TIDL_shapeInfer_NonZero(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context
+)
+{
+
+    #ifdef HOST_EMULATION
+    if ((context != NULL) && (context->isCompileTime != 0) && (context->pcLayer != NULL))
+    {
+        const sTIDL_LayerPC_t *pcLayer = (const sTIDL_LayerPC_t *)context->pcLayer;
+        outDataParam->dimValues[TIDL_DIM_BATCH]  = 1;
+        outDataParam->dimValues[TIDL_DIM_DIM1]   = 1;
+        outDataParam->dimValues[TIDL_DIM_DIM2]   = 1;
+        outDataParam->dimValues[TIDL_DIM_NUMCH]  = 1;
+        outDataParam->dimValues[TIDL_DIM_HEIGHT] = pcLayer->layerParams.nonZeroParams.numValidInputDims;
+        outDataParam->dimValues[TIDL_DIM_WIDTH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH] *
+                                                    inDataParams[0]->dimValues[TIDL_DIM_DIM1] *
+                                                    inDataParams[0]->dimValues[TIDL_DIM_DIM2] *
+                                                    inDataParams[0]->dimValues[TIDL_DIM_NUMCH] *
+                                                    inDataParams[0]->dimValues[TIDL_DIM_HEIGHT] *
+                                                    inDataParams[0]->dimValues[TIDL_DIM_WIDTH];
+    }
+    #endif /* HOST_EMULATION */
+
+    outDataParam->dynDimMask = 0x20;
+    
+    return TIDL_SHAPE_INFERENCE_OK;
+
+}
+
+// Remove this if the operator supports dynamic shape during inference
+#ifdef HOST_EMULATION
 /* -------------------------------------------------------------------------
  * Resize
  *
@@ -270,11 +311,6 @@ int32_t TIDL_shapeInfer_Resize(
 {
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (outDataParam == NULL) ||
-        (numInBufs < 1) || (inDataParams[0] == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     /* Negative ratios encode absolute output sizes — compile-time import convention only.
      * At runtime ratios are always positive */
@@ -320,10 +356,6 @@ int32_t TIDL_shapeInfer_DeformConv(
 {
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (outDataParam == NULL) || (numInBufs < 1))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     const sTIDL_DeformConvParams_t *deformConvParams = &layerParams->deformConvParams;
 
@@ -360,7 +392,7 @@ int32_t TIDL_shapeInfer_GridSample(
     (void)layerParams;
     (void)context;
 
-    if ((inDataParams == NULL) || (outDataParam == NULL) || (numInBufs < 2))
+    if (numInBufs < 2)
     {
         return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
     }
@@ -370,6 +402,34 @@ int32_t TIDL_shapeInfer_GridSample(
     outDataParam->dimValues[TIDL_DIM_DIM2]   = inDataParams[0]->dimValues[TIDL_DIM_DIM2];
     outDataParam->dimValues[TIDL_DIM_NUMCH]  = inDataParams[1]->dimValues[TIDL_DIM_NUMCH];
     outDataParam->dimValues[TIDL_DIM_HEIGHT] = inDataParams[1]->dimValues[TIDL_DIM_HEIGHT];
+    outDataParam->dimValues[TIDL_DIM_WIDTH]  = inDataParams[0]->dimValues[TIDL_DIM_WIDTH];
+
+    return TIDL_SHAPE_INFERENCE_OK;
+}
+
+/* -------------------------------------------------------------------------
+ * GatherElements
+ *
+ * Computes the output shape of a GatherElements operation:
+ * For GatherElements operator Output shape should be equal to the indices shape
+ * input[0] = data tensor,  input[1] = indices tensor.
+ * ------------------------------------------------------------------------- */
+int32_t TIDL_shapeInfer_GatherElements(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context)
+{
+    (void)layerParams;
+    (void)context;
+
+
+    outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
+    outDataParam->dimValues[TIDL_DIM_DIM1]   = inDataParams[0]->dimValues[TIDL_DIM_DIM1];
+    outDataParam->dimValues[TIDL_DIM_DIM2]   = inDataParams[0]->dimValues[TIDL_DIM_DIM2];
+    outDataParam->dimValues[TIDL_DIM_NUMCH]  = inDataParams[0]->dimValues[TIDL_DIM_NUMCH];
+    outDataParam->dimValues[TIDL_DIM_HEIGHT] = inDataParams[0]->dimValues[TIDL_DIM_HEIGHT];
     outDataParam->dimValues[TIDL_DIM_WIDTH]  = inDataParams[0]->dimValues[TIDL_DIM_WIDTH];
 
     return TIDL_SHAPE_INFERENCE_OK;
@@ -399,11 +459,6 @@ int32_t TIDL_shapeInfer_Gather(
 
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (outDataParam == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     const sTIDL_GatherLayerParams_t *gatherParams = &layerParams->gatherParams;
 
@@ -435,6 +490,218 @@ int32_t TIDL_shapeInfer_Gather(
     return TIDL_SHAPE_INFERENCE_OK;
 }
 
+#endif /* HOST_EMULATION */
+
+/* -------------------------------------------------------------------------
+ * GatherND
+ *
+ * Computes the output shape of a GatherND operation:
+ *
+ *   Case 1 — Without batchDims (gatherNDParams.batchDims == 0):
+ *   output_shape = indices_shape[:-1] + data_shape[indices_shape[-1]:]
+ *
+ *   Case 1 — With batchDims (gatherNDParams.batchDims > 0):
+ *   output_shape = data_shape[:batch_dims] + indices_shape[batch_dims:-1] + data_shape[batch_dims + indices_shape[-1]:]
+ * ------------------------------------------------------------------------- */
+int32_t TIDL_shapeInfer_GatherND(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context)
+{
+
+    (void)context;
+
+    if (inDataParams[1] == NULL)
+    {
+        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
+    }
+
+    int32_t batchDims = layerParams->gatherNDParams.batchDims;
+    int32_t indicesDimCount = layerParams->gatherNDParams.indicesDimCount;
+    int32_t dataDimCount = layerParams->gatherNDParams.dataDimCount;
+    int32_t indicesLastDim = inDataParams[1]->dimValues[TIDL_DIM_WIDTH];
+
+    // Calculate total output dimensions
+    int32_t totalOutDims = batchDims + (indicesDimCount - 1 - batchDims) + (dataDimCount - batchDims - indicesLastDim);
+    
+    // Initialize output dimensions to 1
+    for (int32_t i = 0; i < TIDL_DIM_MAX; i++)
+    {
+        outDataParam->dimValues[i] = 1;
+    }
+    
+    // Calculate starting index for output dimensions
+    int32_t outputStartIdx = TIDL_DIM_MAX - totalOutDims;
+    int32_t currentOutputIdx = outputStartIdx;
+    
+    // Step 1: Copy batch dimensions from data tensor
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start> FUTURE_USE: GatherND with batch_dims > 0 requires dynamic reshape of NonZero output which is not currently supported; this loop is retained for future support when batch_dims > 0 models become available.
+    <justification end> */
+    for (int32_t i = 0; i < batchDims && currentOutputIdx < TIDL_DIM_MAX; i++)
+    {
+        int32_t dataIdx = TIDL_DIM_MAX - dataDimCount + i;
+        outDataParam->dimValues[currentOutputIdx] = inDataParams[0]->dimValues[dataIdx];
+        currentOutputIdx++;
+    }
+    /* LDRA_JUSTIFY_END */
+    
+    // Step 2: Copy indices dimensions (excluding last dimension, starting from batch_dims)
+    for (int32_t i = batchDims; i < indicesDimCount - 1 && currentOutputIdx < TIDL_DIM_MAX; i++)
+    {
+        int32_t indicesIdx = TIDL_DIM_MAX - indicesDimCount + i;
+        outDataParam->dimValues[currentOutputIdx] = inDataParams[1]->dimValues[indicesIdx];
+        currentOutputIdx++;
+    }
+    
+    // Step 3: Copy remaining data dimensions
+    int32_t remainingDataStart = batchDims + indicesLastDim;
+    for (int32_t i = remainingDataStart; i < dataDimCount && currentOutputIdx < TIDL_DIM_MAX; i++)
+    {
+        int32_t dataIdx = TIDL_DIM_MAX - dataDimCount + i;
+        outDataParam->dimValues[currentOutputIdx] = inDataParams[0]->dimValues[dataIdx];
+        currentOutputIdx++;
+    }
+    return TIDL_SHAPE_INFERENCE_OK;
+}
+
+// Remove this if the operator supports dynamic shape during inference
+#ifdef HOST_EMULATION
+/* -------------------------------------------------------------------------
+ * Cast
+ *
+ * Cast only changes the element type of the tensor, not the shape.
+ * Output dimensions are identical to the input dimensions.
+ * The element type is set by the compile-time wrapper
+ * (TIDL_tfOutReshapeCastLayer) and is not updated here.
+ * ------------------------------------------------------------------------- */
+int32_t TIDL_shapeInfer_Cast(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context)
+{
+    (void)layerParams;
+    (void)context;
+
+
+    outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
+    outDataParam->dimValues[TIDL_DIM_DIM1]   = inDataParams[0]->dimValues[TIDL_DIM_DIM1];
+    outDataParam->dimValues[TIDL_DIM_DIM2]   = inDataParams[0]->dimValues[TIDL_DIM_DIM2];
+    outDataParam->dimValues[TIDL_DIM_NUMCH]  = inDataParams[0]->dimValues[TIDL_DIM_NUMCH];
+    outDataParam->dimValues[TIDL_DIM_HEIGHT] = inDataParams[0]->dimValues[TIDL_DIM_HEIGHT];
+    outDataParam->dimValues[TIDL_DIM_WIDTH]  = inDataParams[0]->dimValues[TIDL_DIM_WIDTH];
+
+    return TIDL_SHAPE_INFERENCE_OK;
+}
+
+/* -------------------------------------------------------------------------
+ * Attention
+ *
+ * Attention dimensions are identical to the input dimensions, 
+ * other than height and width which is decided by the input Key 
+ * and Value dimensions.
+ * The element type is set by the compile-time wrapper
+ * (TIDL_tfOutReshapeAttentionLayer) and is not updated here.
+ * ------------------------------------------------------------------------- */
+int32_t TIDL_shapeInfer_Attention(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context)
+{
+    (void)layerParams;
+    (void)context;
+
+    if (numInBufs < 3)
+    {
+        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
+    }
+
+    outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
+    outDataParam->dimValues[TIDL_DIM_DIM1]   = inDataParams[0]->dimValues[TIDL_DIM_DIM1];
+    outDataParam->dimValues[TIDL_DIM_DIM2]   = inDataParams[0]->dimValues[TIDL_DIM_DIM2];
+    outDataParam->dimValues[TIDL_DIM_NUMCH]  = inDataParams[0]->dimValues[TIDL_DIM_NUMCH];
+    outDataParam->dimValues[TIDL_DIM_HEIGHT] = inDataParams[0]->dimValues[TIDL_DIM_HEIGHT];
+    outDataParam->dimValues[TIDL_DIM_WIDTH]  = inDataParams[2]->dimValues[TIDL_DIM_WIDTH];
+
+    return TIDL_SHAPE_INFERENCE_OK;
+}
+
+#endif /* HOST_EMULATION */
+
+/* -------------------------------------------------------------------------
+ * Shape
+ *
+ * Computes the output shape of an ONNX Shape operation:
+ *   Output is a 1-D tensor of width (end - start), where start and end
+ *   are taken from shapeParams (already normalised to TIDL-dimension
+ *   indices by the importer).
+ *
+ *   All output dimensions are set to 1 except TIDL_DIM_WIDTH which holds
+ *   the count of selected input dimensions: end - start.
+ * ------------------------------------------------------------------------- */
+int32_t TIDL_shapeInfer_Shape(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context)
+{
+    int32_t i;
+
+    (void)inDataParams;
+    (void)numInBufs;
+    (void)context;
+
+
+    for (i = 0; i < (int32_t)TIDL_DIM_MAX; i++)
+    {
+        outDataParam->dimValues[i] = 1;
+    }
+    outDataParam->dimValues[TIDL_DIM_WIDTH] =
+        layerParams->shapeParams.end - layerParams->shapeParams.start;
+
+    return TIDL_SHAPE_INFERENCE_OK;
+}
+
+/* -------------------------------------------------------------------------
+ * Size
+ *
+ * Computes the output shape of an ONNX Size operation:
+ *   The output is a scalar (single element), so all output dimensions are
+ *   set to 1.
+ * ------------------------------------------------------------------------- */
+int32_t TIDL_shapeInfer_Size(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context)
+{
+    int32_t i;
+
+    (void)layerParams;
+    (void)inDataParams;
+    (void)numInBufs;
+    (void)context;
+
+
+    for (i = 0; i < (int32_t)TIDL_DIM_MAX; i++)
+    {
+        outDataParam->dimValues[i] = 1;
+    }
+
+    return TIDL_SHAPE_INFERENCE_OK;
+}
+
+// Remove this if the operator supports dynamic shape during inference
+#ifdef HOST_EMULATION
 /* -------------------------------------------------------------------------
  * Tile
  *
@@ -457,11 +724,6 @@ int32_t TIDL_shapeInfer_Tile(
 
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (outDataParam == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     for (i = 0; i < TIDL_DIM_MAX; i++)
     {
@@ -528,11 +790,6 @@ int32_t TIDL_shapeInfer_Squeeze(
 {
     (void)layerParams;
 
-    if ((inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
 #ifdef HOST_EMULATION
     /* Non-compile-time (runtime): axis mask is PC-only; output shape is
@@ -591,11 +848,6 @@ int32_t TIDL_shapeInfer_SoftMax(
 
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
     outDataParam->dimValues[TIDL_DIM_DIM1]   = inDataParams[0]->dimValues[TIDL_DIM_DIM1];
@@ -637,11 +889,6 @@ int32_t TIDL_shapeInfer_Concat(
 
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
 
     for (i = 0; i < TIDL_DIM_MAX; i++)
@@ -685,11 +932,6 @@ int32_t TIDL_shapeInfer_DepthToSpace(
 
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     blockSize = layerParams->depthToSpaceParams.blockSize;
 
@@ -726,11 +968,6 @@ int32_t TIDL_shapeInfer_Pad(
 {
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
     outDataParam->dimValues[TIDL_DIM_DIM1]   = inDataParams[0]->dimValues[TIDL_DIM_DIM1];
@@ -773,11 +1010,6 @@ int32_t TIDL_shapeInfer_ArgOp(
 {
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     /* Update numChannels so the argop kernel knows the reduction dimension size.
      * This must be kept in sync with the live input shape at runtime. */
@@ -821,11 +1053,6 @@ int32_t TIDL_shapeInfer_TopK(
     int32_t elementSizeInBits;
     int32_t increment = 1;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     for (i = 0; i < TIDL_DIM_MAX; i++)
     {
@@ -896,7 +1123,7 @@ int32_t TIDL_shapeInfer_TopK(
  *   HEIGHT = num_directions
  *   WIDTH  = hidden_size
  *
- * num_directions = 2 when lstmParams.direction == TIDL_RNNBidirectional,
+ * num_directions = 2 when lstmParams.direction == TIDL_RecurrentBidirectional,
  * otherwise 1.
  *
  * Preconditions : nIn >= 1.
@@ -912,11 +1139,6 @@ int32_t TIDL_shapeInfer_LSTM(
 
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     const sTIDL_LSTMParams_t *lstmParams = &layerParams->lstmParams;
 
@@ -934,7 +1156,7 @@ int32_t TIDL_shapeInfer_LSTM(
         batch_size = inDataParams[0]->dimValues[TIDL_DIM_NUMCH];
     }
 
-    num_directions = (lstmParams->direction == TIDL_RNNBidirectional) ? 2 : 1;
+    num_directions = (lstmParams->direction == TIDL_RecurrentBidirectional) ? 2 : 1;
     hidden_size    = lstmParams->hidden_size;
 
     /* BATCH and DIM1 are always inherited from the input. */
@@ -990,7 +1212,7 @@ int32_t TIDL_shapeInfer_LSTM(
  *   HEIGHT = num_directions
  *   WIDTH  = hidden_size
  *
- * num_directions = 2 when gruParams.direction == TIDL_RNNBidirectional,
+ * num_directions = 2 when gruParams.direction == TIDL_RecurrentBidirectional,
  * otherwise 1.
  *
  * Preconditions : nIn >= 1.
@@ -1006,11 +1228,6 @@ int32_t TIDL_shapeInfer_GRU(
 
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     const sTIDL_GRUParams_t *gruParams = &layerParams->gruParams;
 
@@ -1028,7 +1245,7 @@ int32_t TIDL_shapeInfer_GRU(
         batch_size = inDataParams[0]->dimValues[TIDL_DIM_NUMCH];
     }
 
-    num_directions = (gruParams->direction == TIDL_RNNBidirectional) ? 2 : 1;
+    num_directions = (gruParams->direction == TIDL_RecurrentBidirectional) ? 2 : 1;
     hidden_size    = gruParams->hidden_size;
 
     /* BATCH and DIM1 are always inherited from the input. */
@@ -1082,7 +1299,7 @@ int32_t TIDL_shapeInfer_GRU(
  *   HEIGHT = num_directions
  *   WIDTH  = hidden_size
  *
- * num_directions = 2 when rnnParams.direction == TIDL_RNNBidirectional,
+ * num_directions = 2 when rnnParams.direction == TIDL_RecurrentBidirectional,
  * otherwise 1.
  *
  * Preconditions : nIn >= 1.
@@ -1098,11 +1315,6 @@ int32_t TIDL_shapeInfer_RNN(
 
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     const sTIDL_RNNParams_t *rnnParams = &layerParams->rnnParams;
 
@@ -1120,7 +1332,7 @@ int32_t TIDL_shapeInfer_RNN(
         batch_size = inDataParams[0]->dimValues[TIDL_DIM_NUMCH];
     }
 
-    num_directions = (rnnParams->direction == TIDL_RNNBidirectional) ? 2 : 1;
+    num_directions = (rnnParams->direction == TIDL_RecurrentBidirectional) ? 2 : 1;
     hidden_size    = rnnParams->hidden_size;
 
     /* BATCH and DIM1 are always inherited from the input. */
@@ -1180,11 +1392,6 @@ int32_t TIDL_shapeInfer_Reduce(
     int32_t keepDims;
     int32_t axis;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
 #ifdef HOST_EMULATION
     if ((context != NULL) && (context->isCompileTime != 0))
@@ -1279,11 +1486,6 @@ int32_t TIDL_shapeInfer_InnerProduct(
 
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     sTIDL_InnerProductParams_t *innerProductParams = &layerParams->innerProductParams;
 
@@ -1396,11 +1598,6 @@ int32_t TIDL_shapeInfer_Deconv2D(
     int32_t outPadW = 0;
     const sTIDL_ConvParams_t *convParams;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     convParams = &layerParams->convParams;
 
@@ -1480,11 +1677,6 @@ int32_t TIDL_shapeInfer_Conv(
 
     (void)context;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     convParams = &layerParams->convParams;
 
@@ -1547,11 +1739,6 @@ int32_t TIDL_shapeInfer_Pooling(
     sTIDL_PoolingParams_t *poolParams;
     int32_t inH, inW;
 
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     poolParams = &layerParams->poolParams;
 
@@ -1592,6 +1779,15 @@ int32_t TIDL_shapeInfer_Pooling(
                     (numerH + poolParams->strideH - 1) / poolParams->strideH + 1;
                 outDataParam->dimValues[TIDL_DIM_WIDTH]  =
                     (numerW + poolParams->strideW - 1) / poolParams->strideW + 1;
+
+                if((outDataParam->dimValues[TIDL_DIM_HEIGHT] - 1) * poolParams->strideH >= inH + poolPCParams->originalPadT)
+                {
+                    outDataParam->dimValues[TIDL_DIM_HEIGHT] -=1;
+                }
+                if((outDataParam->dimValues[TIDL_DIM_WIDTH] - 1) * poolParams->strideW >= inW + poolPCParams->originalPadL)
+                {
+                    outDataParam->dimValues[TIDL_DIM_WIDTH] -=1;
+                }
             }
             else
             {
@@ -1611,6 +1807,15 @@ int32_t TIDL_shapeInfer_Pooling(
                     (numerH + poolParams->strideH - 1) / poolParams->strideH + 1;
                 outDataParam->dimValues[TIDL_DIM_WIDTH]  =
                     (numerW + poolParams->strideW - 1) / poolParams->strideW + 1;
+                
+                if((outDataParam->dimValues[TIDL_DIM_HEIGHT] - 1) * poolParams->strideH >= inH + poolParams->padT)
+                {
+                    outDataParam->dimValues[TIDL_DIM_HEIGHT] -=1;
+                }
+                if((outDataParam->dimValues[TIDL_DIM_WIDTH] - 1) * poolParams->strideW >= inW + poolParams->padL)
+                {
+                    outDataParam->dimValues[TIDL_DIM_WIDTH] -=1;
+                }
             }
             else
             {
@@ -1646,11 +1851,6 @@ int32_t TIDL_shapeInfer_BatchNorm(
     sTIDL_DataParams_t        *outDataParam,
     TIDL_ShapeContext_t       *context)
 {
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     /* PassThrough: output shape == input shape */
     outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
@@ -1706,11 +1906,6 @@ int32_t TIDL_shapeInfer_Crop(
     sTIDL_DataParams_t        *outDataParam,
     TIDL_ShapeContext_t       *context)
 {
-    if ((layerParams == NULL) || (inDataParams == NULL) || (numInBufs < 1) ||
-        (inDataParams[0] == NULL) || (outDataParam == NULL))
-    {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
-    }
 
     outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
     outDataParam->dimValues[TIDL_DIM_DIM1]   = inDataParams[0]->dimValues[TIDL_DIM_DIM1];
@@ -1745,6 +1940,8 @@ int32_t TIDL_shapeInfer_Crop(
     return TIDL_SHAPE_INFERENCE_OK;
 }
 
+#endif /* HOST_EMULATION */
+
 /* =========================================================================
  * Dispatch table
  * ========================================================================= */
@@ -1752,163 +1949,184 @@ const TIDL_ShapeInferEntry_t
     gTIDL_ShapeInferDispatch[TIDL_SHAPE_INFERENCE_DISPATCH_TABLE_SIZE] =
 {
      /* [0]  TIDL_DataLayer — identity */
-    { TIDL_DataLayer,              TIDL_shapeInfer_PassThrough },
+    { TIDL_DataLayer,               TIDL_shapeInfer_PassThrough },
 
     /* [1]  TIDL_ConvolutionLayer */
-    { TIDL_ConvolutionLayer,       TIDL_shapeInfer_Conv        },
+    { TIDL_ConvolutionLayer,        TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Conv) },
 
     /* [2]  TIDL_PoolingLayer */
-    { TIDL_PoolingLayer,           TIDL_shapeInfer_Pooling     },
+    { TIDL_PoolingLayer,            TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Pooling) },
 
     /* [3]  TIDL_ReLULayer — identity */
-    { TIDL_ReLULayer,              TIDL_shapeInfer_PassThrough },
+    { TIDL_ReLULayer,               TIDL_shapeInfer_PassThrough },
 
     /* [4]  TIDL_PReLULayer */
-    { TIDL_PReLULayer,             TIDL_shapeInfer_BatchNorm   },
+    { TIDL_PReLULayer,              TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_BatchNorm) },
 
     /* [5]  TIDL_EltWiseLayer — broadcast-aware max */
-    { TIDL_EltWiseLayer,           TIDL_shapeInfer_EltWise     },
+    { TIDL_EltWiseLayer,            TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_EltWise) },
 
     /* [6]  TIDL_InnerProductLayer */
-    { TIDL_InnerProductLayer,      TIDL_shapeInfer_InnerProduct },
+    { TIDL_InnerProductLayer,       TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_InnerProduct) },
 
     /* [7]  TIDL_SoftMaxLayer — identity with optional HEIGHT/WIDTH swap */
-    { TIDL_SoftMaxLayer,           TIDL_shapeInfer_SoftMax     },
+    { TIDL_SoftMaxLayer,            TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_SoftMax) },
 
     /* [8]  TIDL_BatchNormLayer */
-    { TIDL_BatchNormLayer,         TIDL_shapeInfer_BatchNorm   },
+    { TIDL_BatchNormLayer,          TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_BatchNorm) },
 
     /* [9]  TIDL_BiasLayer — identity */
-    { TIDL_BiasLayer,              TIDL_shapeInfer_PassThrough },
+    { TIDL_BiasLayer,               TIDL_shapeInfer_PassThrough },
 
     /* [10] TIDL_ScaleLayer — identity */
-    { TIDL_ScaleLayer,             TIDL_shapeInfer_PassThrough },
+    { TIDL_ScaleLayer,              TIDL_shapeInfer_PassThrough },
 
     /* [11] TIDL_Deconv2DLayer */
-    { TIDL_Deconv2DLayer,          TIDL_shapeInfer_Deconv2D    },
+    { TIDL_Deconv2DLayer,           TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Deconv2D) },
 
     /* [12] TIDL_ConcatLayer */
-    { TIDL_ConcatLayer,            TIDL_shapeInfer_Concat      },
+    { TIDL_ConcatLayer,             TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Concat) },
 
     /* [13] TIDL_SplitLayer — static (split sizes baked in at import) */
-    { TIDL_SplitLayer,             NULL                        },
+    { TIDL_SplitLayer,              NULL                        },
 
     /* [14] TIDL_SliceLayer - static (slice sizes baked in at import)*/
-    { TIDL_SliceLayer,             NULL                        },
+    { TIDL_SliceLayer,              NULL                        },
 
     /* [15] TIDL_CropLayer — 2-input: H/W from inData[1]; runtime numChannels update */
-    { TIDL_CropLayer,              TIDL_shapeInfer_Crop        },
+    { TIDL_CropLayer,               TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Crop) },
 
     /* [16] TIDL_FlattenLayer — static (output shape baked in at import) */
-    { TIDL_FlattenLayer,           NULL                        },
+    { TIDL_FlattenLayer,            NULL                        },
 
     /* [17] TIDL_DropOutLayer — identity */
-    { TIDL_DropOutLayer,           TIDL_shapeInfer_PassThrough },
+    { TIDL_DropOutLayer,            TIDL_shapeInfer_PassThrough },
 
     /* [18] TIDL_ArgOpLayer */
-    { TIDL_ArgOpLayer,             TIDL_shapeInfer_ArgOp       },
+    { TIDL_ArgOpLayer,              TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_ArgOp) },
 
     /* [19] TIDL_DetectionOutputLayer — static output shape */
-    { TIDL_DetectionOutputLayer,   NULL                        },
+    { TIDL_DetectionOutputLayer,    NULL                        },
 
     /* [20] TIDL_ShuffleChannelLayer — identity (same shape, reordered channels) */
-    { TIDL_ShuffleChannelLayer,    TIDL_shapeInfer_PassThrough },
+    { TIDL_ShuffleChannelLayer,     TIDL_shapeInfer_PassThrough },
 
     /* [21] TIDL_ResizeLayer */
-    { TIDL_ResizeLayer,            TIDL_shapeInfer_Resize      },
+    { TIDL_ResizeLayer,             TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Resize) },
 
     /* [22] TIDL_RoiPoolingLayer — static output shape */
-    { TIDL_RoiPoolingLayer,        NULL                        },
+    { TIDL_RoiPoolingLayer,         NULL                        },
 
     /* [23] TIDL_OdPostProcessingLayer — static output shape */
-    { TIDL_OdPostProcessingLayer,  NULL                        },
+    { TIDL_OdPostProcessingLayer,   NULL                        },
 
     /* [24] TIDL_DepthToSpaceLayer */
-    { TIDL_DepthToSpaceLayer,      TIDL_shapeInfer_DepthToSpace },
+    { TIDL_DepthToSpaceLayer,       TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_DepthToSpace) },
 
     /* [25] TIDL_SigmoidLayer — identity */
-    { TIDL_SigmoidLayer,           TIDL_shapeInfer_PassThrough },
+    { TIDL_SigmoidLayer,            TIDL_shapeInfer_PassThrough },
 
     /* [26] TIDL_PadLayer */
-    { TIDL_PadLayer,               TIDL_shapeInfer_Pad         },
+    { TIDL_PadLayer,                TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Pad) },
 
     /* [27] TIDL_ColorConversionLayer — identity (same spatial, may change C) */
-    { TIDL_ColorConversionLayer,   TIDL_shapeInfer_PassThrough },
+    { TIDL_ColorConversionLayer,    TIDL_shapeInfer_PassThrough },
 
     /* [28] TIDL_OdOutputReformatLayer — static output shape */
-    { TIDL_OdOutputReformatLayer,  NULL                        },
+    { TIDL_OdOutputReformatLayer,   NULL                        },
 
     /* [29] TIDL_DataConvertLayer — identity */
-    { TIDL_DataConvertLayer,       TIDL_shapeInfer_PassThrough },
+    { TIDL_DataConvertLayer,        TIDL_shapeInfer_PassThrough },
 
     /* [30] TIDL_CustomLayer — caller-defined; cannot infer generically */
-    { TIDL_CustomLayer,            NULL                        },
+    { TIDL_CustomLayer,             NULL                        },
 
     /* [31] TIDL_BatchReshapeLayer — static (output shape baked in at import) */
-    { TIDL_BatchReshapeLayer,      NULL                        },
+    { TIDL_BatchReshapeLayer,       NULL                        },
 
     /* [32] TIDL_ReduceLayer */
-    { TIDL_ReduceLayer,            TIDL_shapeInfer_Reduce      },
+    { TIDL_ReduceLayer,             TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Reduce) },
 
     /* [33] TIDL_ScatterElementsLayer — identity */
-    { TIDL_ScatterElementsLayer,   TIDL_shapeInfer_PassThrough },
+    { TIDL_ScatterElementsLayer,    TIDL_shapeInfer_PassThrough },
 
     /* [34] TIDL_SqueezeLayer — */
-    { TIDL_SqueezeLayer,           TIDL_shapeInfer_Squeeze     },
+    { TIDL_SqueezeLayer,            TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Squeeze) },
 
     /* [35] TIDL_TanhLayer — identity */
-    { TIDL_TanhLayer,              TIDL_shapeInfer_PassThrough },
+    { TIDL_TanhLayer,               TIDL_shapeInfer_PassThrough },
 
     /* [36] TIDL_HardSigmoidLayer — identity */
-    { TIDL_HardSigmoidLayer,       TIDL_shapeInfer_PassThrough },
+    { TIDL_HardSigmoidLayer,        TIDL_shapeInfer_PassThrough },
 
     /* [37] TIDL_ELULayer — identity */
-    { TIDL_ELULayer,               TIDL_shapeInfer_PassThrough },
+    { TIDL_ELULayer,                TIDL_shapeInfer_PassThrough },
 
     /* [38] TIDL_ReshapeLayer — static (output shape baked in at import) */
-    { TIDL_ReshapeLayer,           NULL                        },
+    { TIDL_ReshapeLayer,            NULL                        },
 
     /* [39] TIDL_ConstDataLayer — identity */
-    { TIDL_ConstDataLayer,         TIDL_shapeInfer_PassThrough },
+    { TIDL_ConstDataLayer,          TIDL_shapeInfer_PassThrough },
 
     /* [40] TIDL_GatherLayer */
-    { TIDL_GatherLayer,            TIDL_shapeInfer_Gather      },
+    { TIDL_GatherLayer,             TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Gather) },
 
     /* [41] TIDL_TransposeLayer — permute dimensions */
-    { TIDL_TransposeLayer,         TIDL_shapeInfer_Transpose   },
+    { TIDL_TransposeLayer,          TIDL_shapeInfer_Transpose   },
 
     /* [42] TIDL_LayerNormLayer — identity */
-    { TIDL_LayerNormLayer,         TIDL_shapeInfer_PassThrough },
+    { TIDL_LayerNormLayer,          TIDL_shapeInfer_PassThrough },
 
     /* [43] TIDL_GridSampleLayer */
-    { TIDL_GridSampleLayer,        TIDL_shapeInfer_GridSample },
+    { TIDL_GridSampleLayer,         TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_GridSample) },
 
     /* [44] TIDL_TopKLayer — copies all dims, replaces axis dim with K */
-    { TIDL_TopKLayer,              TIDL_shapeInfer_TopK        },
+    { TIDL_TopKLayer,               TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_TopK) },
 
     /* [45] TIDL_DeformableConvLayer */
-    { TIDL_DeformableConvLayer,    TIDL_shapeInfer_DeformConv  },
+    { TIDL_DeformableConvLayer,     TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_DeformConv) },
 
     /* [46] TIDL_TileLayer */
-    { TIDL_TileLayer,              TIDL_shapeInfer_Tile        },
+    { TIDL_TileLayer,               TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Tile) },
 
     /* [47] TIDL_LogicalOpLayer — broadcast-aware max (same as EltWise) */
-    { TIDL_LogicalOpLayer,         TIDL_shapeInfer_LogicalOp   },
+    { TIDL_LogicalOpLayer,          TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_LogicalOp) },
 
     /* [48] TIDL_RMSNormalizationLayer */
-    { TIDL_RMSNormalizationLayer,  TIDL_shapeInfer_PassThrough },
+    { TIDL_RMSNormalizationLayer,   TIDL_shapeInfer_PassThrough },
 
     /* [49] TIDL_LSTMLayer */
-    { TIDL_LSTMLayer,              TIDL_shapeInfer_LSTM        },
+    { TIDL_LSTMLayer,               TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_LSTM) },
 
     /* [50] TIDL_GRULayer */
-    { TIDL_GRULayer,               TIDL_shapeInfer_GRU         },
+    { TIDL_GRULayer,                TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_GRU) },
 
     /* [51] TIDL_RNNLayer */
-    { TIDL_RNNLayer,               TIDL_shapeInfer_RNN         },
+    { TIDL_RNNLayer,                TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_RNN) },
 
-    /* [52] TIDL_UnsupportedLayer */
-    { TIDL_UnsupportedLayer,       NULL                        },
+    /* [52] TIDL_GatherNDLayer */
+    { TIDL_GatherNDLayer,           TIDL_shapeInfer_GatherND    },
+
+    /* [53] TIDL_CastLayer */
+    { TIDL_CastLayer,               TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Cast) },
+
+    /* [54] TIDL_GatherElementsLayer */
+    { TIDL_GatherElementsLayer,     TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_GatherElements) },
+
+    /* [55] TIDL_ShapeLayer */
+    { TIDL_ShapeLayer,              TIDL_shapeInfer_Shape      },
+
+    /* [56] TIDL_SizeLayer */
+    { TIDL_SizeLayer,               TIDL_shapeInfer_Size       },
+
+    /* [57] TIDL_AttentionLayer */
+    { TIDL_AttentionLayer,          TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Attention) },
+
+    /* [58] TIDL_NonZeroLayer */
+    { TIDL_NonZeroLayer,            TIDL_shapeInfer_NonZero     },
+
+    /* [59] TIDL_UnsupportedLayer */
+    { TIDL_UnsupportedLayer,        NULL                        },
 };
 
 /* =========================================================================
@@ -1931,30 +2149,31 @@ int32_t TIDL_inferShapeGeneric(
     sTIDL_DataParams_t        *outDataParam,
     TIDL_ShapeContext_t       *context)
 {
-    TIDL_ShapeInferFn inferFn;
-    int32_t           ret;
+    TIDL_ShapeInferFn inferFn   = NULL;
+    int32_t           ret       = TIDL_SHAPE_INFERENCE_OK;
 
-    if ((layerParams == NULL) || (outDataParam == NULL))
+    if ((layerParams == NULL) || (outDataParam == NULL) ||
+        (inDataParams == NULL) || (numInBufs < 1) || (inDataParams[0] == NULL))
     {
-        return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
+        ret = TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
     }
 
-    /* Bounds check against the dispatch table. */
-    if ((layerType < 0) ||
-        ((uint32_t)layerType >= TIDL_SHAPE_INFERENCE_DISPATCH_TABLE_SIZE))
+    if (ret == TIDL_SHAPE_INFERENCE_OK)
     {
-        return TIDL_SHAPE_INFERENCE_ERR_UNSUPPORTED_LAYER;
+        if ((layerType >= 0) &&
+            ((uint32_t)layerType < TIDL_SHAPE_INFERENCE_DISPATCH_TABLE_SIZE))
+        {
+            inferFn = gTIDL_ShapeInferDispatch[layerType].inferFn;
+        }
+
+        if (inferFn == NULL)
+        {
+            /* Layer type out of bounds or no shape function registered. */
+            ret = TIDL_SHAPE_INFERENCE_ERR_UNSUPPORTED_LAYER;
+        }
     }
 
-    inferFn = gTIDL_ShapeInferDispatch[layerType].inferFn;
-
-    if (inferFn == NULL)
-    {
-        /* No shape function registered — static shape, nothing to do. */
-        return TIDL_SHAPE_INFERENCE_ERR_UNSUPPORTED_LAYER;
-    }
-
-    if (outDataParam->dynDimMask != 0U)
+    if (ret == TIDL_SHAPE_INFERENCE_OK && outDataParam->dynDimMask != 0U)
     {
         /* dynDimMask is set: run inferFn on a temporary copy of outDataParam
          * so that all fields (including elementType needed by e.g. TopK) are
@@ -1981,12 +2200,6 @@ int32_t TIDL_inferShapeGeneric(
             /* numDim may also be updated by inferFn */
             outDataParam->numDim = tempOut.numDim;
         }
-    }
-    else
-    {
-        /* dynDimMask == 0: all output dimensions are static.
-         * The import-time shape is already correct — skip inference. */
-        ret = TIDL_SHAPE_INFERENCE_OK;
     }
 
     return ret;

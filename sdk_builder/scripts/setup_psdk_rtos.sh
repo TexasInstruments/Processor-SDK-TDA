@@ -214,7 +214,7 @@ then
 
             if [ ${SOC} = "am62a" ] || [ ${SOC} = "j722s" ]
             then
-                echo "Installing Opencv for Imaging host emualtion mode"
+                echo "Installing Opencv for Imaging host emulation mode"
                 arr+=("libopencv-dev") # required for building conformance tests in host emulation mode.
             fi
 
@@ -451,7 +451,7 @@ then
         if [ -d protobuf-${PROTOBUF_VERSION}/src/.libs ]; then
             echo "protobuf-${PROTOBUF_VERSION}/src/.libs found!"
         else
-            echo "[Bulding protobuf-${PROTOBUF_VERSION} libs for TIDL PC emualtion mode]"
+            echo "[Building protobuf-${PROTOBUF_VERSION} libs for TIDL PC emulation mode]"
             cd protobuf-${PROTOBUF_VERSION}
             ./autogen.sh > /dev/null
             ./configure CXXFLAGS=-fPIC --enable-shared=no LDFLAGS="-static" > /dev/null
@@ -468,7 +468,7 @@ then
             wget --tries=5 https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip --no-check-certificate
             unzip ${OPENCV_VERSION}.zip > /dev/null
             rm ${OPENCV_VERSION}.zip
-            echo "[Bulding opencv-${OPENCV_VERSION} libs for TIDL PC emualtion mode]"
+            echo "[Building opencv-${OPENCV_VERSION} libs for TIDL PC emulation mode]"
             cd opencv-${OPENCV_VERSION}/cmake
             cmake -DBUILD_opencv_highgui:BOOL="1" -DBUILD_opencv_videoio:BOOL="0" -DWITH_IPP:BOOL="0" -DBUILD_WEBP:BOOL="1" -DBUILD_OPENEXR:BOOL="1" -DWITH_IPP_A:BOOL="0" -DBUILD_WITH_DYNAMIC_IPP:BOOL="0" -DBUILD_opencv_cudacodec:BOOL="0" -DBUILD_PNG:BOOL="1" -DBUILD_opencv_cudaobjdetect:BOOL="0" -DBUILD_ZLIB:BOOL="1" -DBUILD_TESTS:BOOL="0" -DWITH_CUDA:BOOL="0" -DBUILD_opencv_cudafeatures2d:BOOL="0" -DBUILD_opencv_cudaoptflow:BOOL="0" -DBUILD_opencv_cudawarping:BOOL="0" -DINSTALL_TESTS:BOOL="0" -DBUILD_TIFF:BOOL="1" -DBUILD_JPEG:BOOL="1" -DBUILD_opencv_cudaarithm:BOOL="0" -DBUILD_PERF_TESTS:BOOL="0" -DBUILD_opencv_cudalegacy:BOOL="0" -DBUILD_opencv_cudaimgproc:BOOL="0" -DBUILD_opencv_cudastereo:BOOL="0" -DBUILD_opencv_cudafilters:BOOL="0" -DBUILD_opencv_cudabgsegm:BOOL="0" -DBUILD_SHARED_LIBS:BOOL="0" -DWITH_ITT=OFF ../ &> /dev/null
             make -j${NUM_PROCS} &> .opencv_build_log
@@ -485,7 +485,7 @@ then
             wget --tries=5 https://github.com/google/flatbuffers/archive/v${FLATBUFF_VERSION}.zip --no-check-certificate
             unzip v${FLATBUFF_VERSION}.zip > /dev/null
             rm v${FLATBUFF_VERSION}.zip
-            echo "[Bulding flatbuffers-${FLATBUFF_VERSION} libs for TIDL PC emualtion mode]"
+            echo "[Building flatbuffers-${FLATBUFF_VERSION} libs for TIDL PC emulation mode]"
             cd flatbuffers-${FLATBUFF_VERSION}
             cmake -G "Unix Makefiles" -DCMAKE_POSITION_INDEPENDENT_CODE=ON  -DFLATBUFFERS_BUILD_TESTS=OFF &> /dev/null
             make -j${NUM_PROCS} &> .flatbuffer_build_log
@@ -701,10 +701,15 @@ then
     nvm install 24
     node -v
     npm -v
-    cd ${MCU_SDK_PATH}
-    npm install
-    cd -
-    echo "Installing dependant mcu_sdk packages ... Done"
+    if [ -f "${MCU_SDK_PATH}/package.json" ]
+    then
+        cd ${MCU_SDK_PATH}
+        npm install
+        cd -
+        echo "Installing dependant mcu_sdk packages ... Done"
+    else
+        echo "Skipping mcu_sdk npm install (package.json not found)"
+    fi
 fi
 
 # check if there is a err_packages

@@ -167,10 +167,6 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Slice")> ()
         {
           sliceParams.slicePoints[1] = 0x7fffffff;
         }
-        else if(endsPtr[0] == -1)
-        {
-          sliceParams.slicePoints[1] = -1;
-        }
         else
         {
           sliceParams.slicePoints[1] = endsPtr[0];

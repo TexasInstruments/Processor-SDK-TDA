@@ -143,6 +143,13 @@ void tidl_tb_progressBar(float progress);
 /* AVX Optimised kernels for refernce flow */
 #define TIDL_FLOW_CTRL_AVX_REF (0x00000020)
 
+/* Performance modelling flow */
+#define TIDL_FLOW_CTRL_PERF_MODEL (0x00000080)
+
+/* Different types of stats updation */
+#define TIDL_UPDATE_NONE                (0)
+#define TIDL_UPDATE_QUANT_STATS         (1)
+#define TIDL_UPDATE_PERF_MODEL_STATS    (2)
 
 #ifndef PREFIXED_OUTFILES
 #define PLAT_SUFFIX ""

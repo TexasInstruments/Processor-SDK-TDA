@@ -74,7 +74,6 @@
 #include "tidl_forceNegativeTest.h"
 #ifdef BUILD_WITH_CUDA
 #include "tidl_cuda.h"
-static int CUDA_GRIDSAMPLE_COUNTER = 0;
 #endif
 
 #ifdef HOST_EMULATION
@@ -148,7 +147,7 @@ template<class Tin, class Tgrid, class Tout>
 
   Tout *out = (Tout *)pOut + (tidlLayer->outData.padH * outPitch) + tidlLayer->outData.padW;
 
-  #ifdef BUILD_WITH_CUDA
+  #ifdef BUILD_WITH_CUDA_GRIDSAMPLE
   // Use CUDA wrapper with extracted parameters
   status = TIDL_cudaGridSampleFloat<Tin, Tgrid, Tout>(
     pIn, pGrid, pOut,
@@ -388,7 +387,7 @@ template<class Tin, class Tgrid, class Tacc, class TgridDeNorm, class TgridWeigh
     float32_tidl gridScale = gridParams->tensorScale;
     int32_t gridScaleFixed = (int32_t)gridScale;
 
-    #ifdef BUILD_WITH_CUDA
+    #ifdef BUILD_WITH_CUDA_GRIDSAMPLE
     // Use CUDA wrapper with extracted parameters
     status = TIDL_cudaGridSample<Tin, Tgrid, Tacc, TgridDeNorm, TgridWeight, Tout>(
       pIn, pGrid, pOut,
@@ -463,10 +462,10 @@ template<class Tin, class Tgrid, class Tacc, class TgridDeNorm, class TgridWeigh
                 {
                   /* current channel data present at four points, if indices are going out of bound then use 0
                   for 'zeros' padding mode (update this when we add support for other padding modes) */
-                  x00 = ((yint_floor >= 0) && (yint_floor < data_h) && (xint_floor >= 0) && (xint_floor < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (yint_floor * inChannelPitch) + (xint_floor * inLinePitch)] : (Tin)0;
-                  x01 = ((yint_floor >= 0) && (yint_floor < data_h) && (xint_ceil >= 0) && (xint_ceil < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (yint_floor * inChannelPitch) + (xint_ceil * inLinePitch)] : (Tin)0;
-                  x10 = ((yint_ceil >= 0) && (yint_ceil < data_h) && (xint_floor >= 0) && (xint_floor < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (yint_ceil * inChannelPitch) + (xint_floor * inLinePitch)] : (Tin)0;
-                  x11 = ((yint_ceil >= 0) && (yint_ceil < data_h) && (xint_ceil >= 0) && (xint_ceil < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (yint_ceil * inChannelPitch) + (xint_ceil * inLinePitch)] : (Tin)0;
+                  x00 = ((yint_floor >= 0) && (yint_floor < data_h) && (xint_floor >= 0) && (xint_floor < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (yint_floor * inChannelPitch) + (xint_floor * inLinePitch)] : (Tin)inDataParams->tensorZeroPoint;
+                  x01 = ((yint_floor >= 0) && (yint_floor < data_h) && (xint_ceil >= 0) && (xint_ceil < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (yint_floor * inChannelPitch) + (xint_ceil * inLinePitch)] : (Tin)inDataParams->tensorZeroPoint;
+                  x10 = ((yint_ceil >= 0) && (yint_ceil < data_h) && (xint_floor >= 0) && (xint_floor < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (yint_ceil * inChannelPitch) + (xint_floor * inLinePitch)] : (Tin)inDataParams->tensorZeroPoint;
+                  x11 = ((yint_ceil >= 0) && (yint_ceil < data_h) && (xint_ceil >= 0) && (xint_ceil < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (yint_ceil * inChannelPitch) + (xint_ceil * inLinePitch)] : (Tin)inDataParams->tensorZeroPoint;
                   /*Product in the MMA with Tacc precision*/
                   accumulatorValue = ((x00 * w00) + (x01 * w01) + (x10 * w10) + (x11 * w11));
                   /*Output is in the same scale as input, shifted by precisionBits * 2 to bring it back to outScale:*/
@@ -482,7 +481,7 @@ template<class Tin, class Tgrid, class Tacc, class TgridDeNorm, class TgridWeigh
                   xint_round = TIDL_roundSat(x_1, internalPrecisionBits, std::numeric_limits<TgridDeNorm>::lowest(), std::numeric_limits<TgridDeNorm>::max());
                   yint_round = TIDL_roundSat(y_1, internalPrecisionBits, std::numeric_limits<TgridDeNorm>::lowest(), std::numeric_limits<TgridDeNorm>::max());
                   /*Bounds check for pad to get outVal:*/
-                  out_val = ((yint_round >= 0) && (yint_round < data_h) && (xint_round >= 0) && (xint_round < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (yint_round * inChannelPitch) + (xint_round * inLinePitch)] : (Tin)0;
+                  out_val = ((yint_round >= 0) && (yint_round < data_h) && (xint_round >= 0) && (xint_round < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (yint_round * inChannelPitch) + (xint_round * inLinePitch)] : (Tin)inDataParams->tensorZeroPoint;
                   out[(i0 * outBatchPitch) + (i1 * outDim1Pitch) + (i2 * outDim2Pitch) + c + (i3 * outChannelPitch) + (i4 * outLinePitch)] = out_val;
                 }
               }
@@ -553,9 +552,6 @@ int32_t TIDL_gridsampleProcess(TIDL_NetworkCommonParams *commonParams,
 
   if ((commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY)
   {
-    #ifdef BUILD_WITH_CUDA
-    CUDNNLC = CUDA_GRIDSAMPLE_COUNTER++;
-    #endif
     if (inDataParams->elementType == TIDL_SinglePrecFloat)
     {
       status = TIDL_refGridSampleFloat<float32_tidl, float32_tidl, float32_tidl>((float32_tidl *)inPtrs[0], (float32_tidl *)inPtrs[1], (float32_tidl *)outPtrs[0], inDataParams, gridParams, tidlLayer);
@@ -581,10 +577,6 @@ int32_t TIDL_gridsampleProcess(TIDL_NetworkCommonParams *commonParams,
       TIDL_LOG_ERROR(TIDL_ERROR_GROUP_GRIDSAMPLE, TIDL_ERROR_GRIDSAMPLE_UNSUPPORTED_ELEM_TYPE);
       status = IALG_EFAIL;
     }
-    #ifdef BUILD_WITH_CUDA
-    /*Mark init as completed to prevent re-allocation of buffers for subsequent frames:*/
-    TIDL_cudaSetGridsampleInitFlag(CUDNNLC);
-    #endif
   }
   else
 #endif

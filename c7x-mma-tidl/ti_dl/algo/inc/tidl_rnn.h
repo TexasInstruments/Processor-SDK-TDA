@@ -81,13 +81,23 @@
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
-/* None */
+/* Move similar to tidl-kernels/source/tidl_eltWise_ixx_oxx/tidl_eltWise_ixX_oxX_priv.h??? */
+/* 0 - Actual Inp, followed by W, R, B, InitH */
+#define TIDL_RNN_MAX_NUM_INPUTS (5U)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
 
-/* None */
+/*
+ * Contents of destination buffer in RNN.
+ * RNN_OUT_Y - actual rnn output, RNN_OUT_H - final hidden state
+ */
+enum {
+    RNN_OUT_Y = 0,
+    RNN_OUT_H,
+    RNN_MAX_OUTPUTS
+};
 
 /* ========================================================================== */
 /*                  Internal/Private Function Declarations                    */
@@ -118,6 +128,21 @@ int32_t TIDL_rnnInit(const TIDL_LayerSpecificParams *layerSpecificParams,
                      uint8_t *memory[TIDL_LAYER_MEMORY_MAX],
                      int32_t memorySize[TIDL_LAYER_MEMORY_MAX],
                      void **outPtr);
+
+int32_t TIDL_rnnDeviceGetHandleSize(void                  *linkInitParams,
+                                     const sLink_t         *link,
+                                     const sGCHelperHandle *gcHelperHandle);
+
+int32_t TIDL_rnnDeviceInit(void                                *linkHandle,
+                            void                                *linkInitParams,
+                            const WorkloadUnitExec_CommonParams *commonParams,
+                            const sLink_t                       *link,
+                            const sGCHelperHandle               *gcHelperHandle);
+
+int32_t TIDL_rnnDeviceExec(void                                *linkHandle,
+                             const WorkloadUnitExec_LinkExecArgs *linkExecArgs,
+                             int32_t                              currFlowStage[],
+                             int32_t                              currIterCount);
 
 /* ========================================================================== */
 /*                       Static Function Definitions                          */

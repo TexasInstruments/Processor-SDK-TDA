@@ -76,9 +76,9 @@
 #include "tidl_commonUtils.h"
 #include "tidl_innerProduct_ref.h"
 
+
 #ifdef BUILD_WITH_CUDA
 #include "tidl_cuda.h"
-static int CUDA_INNER_PRODUCT_COUNTER = 0;
 #endif
 
 /* Function Prototypes */
@@ -86,7 +86,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
     int32_t TIDL_refInnerProduct(
         TIDL_Handle intAlgHandle,
         int32_t layerIdx,
-        Tacc *accPtr,
+        Tacc acc,
         Tin *inPtr,
         const TBin *inBPtr,
         Tout *outPtr,
@@ -105,7 +105,7 @@ template<class Tw, class Tb, class Tacc>
         void *refPtr,
         Tb *biasPtr,
         const Tw *weightsPtr,
-        Tacc *accPtr,
+        Tacc acc,
         int32_t outElementType,
         tidlInnerProductBuffParams_t *buffParams);
 
@@ -114,7 +114,7 @@ template<class Tw, class Tb, class Tacc>
  *
  * @param intAlgHandle : tidl algorothm handle
  * @param layerIdx :index of the current layer
- * @param accPtr : pointer to the accumulator buffer
+ * @param acc : accumulator variable
  * @param inPtr : Input pointer on which innerProduct is applied
  * @param outPtr : Output pointer after innerProduct opreation
  * @param biasPtr  : Pointer to the Bias values
@@ -129,7 +129,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
     int32_t TIDL_refInnerProduct(
         TIDL_Handle intAlgHandle,
         int32_t layerIdx,
-        Tacc *accPtr,
+        Tacc acc,
         Tin *inPtr,
         const TBin *inBPtr,
         Tout *outPtr,
@@ -272,10 +272,9 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
             inADIM2Pitch = 0;
           }
           /* LDRA_JUSTIFY_START
-            <metric start> statement branch <metric end>
-            <justification start> LDRA_JUSTIFICATION_INNERPRODUCT_PRIOR_CHECK : singleton batch in input A and non-singleton batch in input B is not supported
-            <justification end>
-          */
+          <metric start> statement branch <metric end>
+          <justification start> PRIOR_CHECK : singleton batch in input A and non-singleton batch in input B is not supported
+          <justification end> */
           if (i1 == TIDL_DIM_BATCH)
           {
             inABatchPitch = 0;
@@ -293,22 +292,9 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
 
   if (status == TIDL_SUCCESS)
   {
-    int32_t accMemSize = outDataParams->dimValues[TIDL_DIM_BATCH] * outDataParams->dimValues[TIDL_DIM_DIM1] * outDataParams->dimValues[TIDL_DIM_DIM2] *
-                         outDataParams->dimValues[TIDL_DIM_NUMCH] * numOutRows * outLinePitch * (uint32_t)sizeof(Tacc);
-
     if (biasPtr != NULL)
     {
       pBiasData = (Tb *)biasPtr;
-    }
-
-    if (buffParams->scratchSize >= accMemSize)
-    {
-      accPtr = (Tacc *)buffParams->scratchMem;
-    }
-    else
-    {
-      tidl_printf(0, "Memory for  TIDL_refInnerProduct accumulator is not sufficient exiting... %d %d \n", buffParams->scratchSize, accMemSize);
-      status = TIDL_ERR_FAILURE;
     }
   }
   if (status == TIDL_SUCCESS)
@@ -345,6 +331,47 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
     {
       inPtr = NULL;
     }
+    if (status == TIDL_SUCCESS)
+    {
+      if ((TIDL_isAsymQuantEnabledTFL(quantizationStyle) == FALSE) &&
+          (TIDL_isKernelHighPrecision(net->TIDLLayers[layerIdx].layerKernelType) == (int32_t)FALSE))
+      {
+#ifdef HOST_EMULATION
+        if (((uint32_t)intAlgHandle->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)
+        {
+          if (TIDL_getDatElementSign(net->TIDLLayers[layerIdx].outData.elementType) == 1)
+          {
+            TIDL_UpdateScaleFactors(intAlgHandle, layerIdx, 1, min, max);
+          }
+          else
+          {
+            TIDL_UpdateScaleFactors(intAlgHandle, layerIdx, 1, 0, max);
+          }
+        }
+#endif
+        roundBits = net->TIDLLayers[layerIdx].outData.roundBits;
+          mmaScale = 1;
+      }
+      else if (TIDL_isAsymQuantEnabledTFL(quantizationStyle) != FALSE)
+      {
+        roundBits = buffParams->mmaShift;
+        mmaScale = buffParams->mmaScale;
+      }
+      else
+      {
+        /*do nothing*/
+      }
+
+      int32_t isHighPrecision = TIDL_isKernelHighPrecision(net->TIDLLayers[layerIdx].layerKernelType) == (int32_t)TRUE;
+      uint8_t *mmav2_Scales = (uint8_t *)get_int8_t_pointer((int8_t *)(net), net->TIDLLayers[layerIdx].layerParams.innerProductParams.derivedScales);
+      uint8_t *mmav2_Shifts = (uint8_t *)get_int8_t_pointer((int8_t *)(net), net->TIDLLayers[layerIdx].layerParams.innerProductParams.derivedShifts);
+      int64_t tempAcc;
+#ifdef HOST_EMULATION
+      if (intAlgHandle->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_INNERPRODUCT_FORCE_ROUNDSAT_MMA_ZERO_SHIFT_BITS)
+      {
+        mmav2_Shifts[0] = 0;
+      }
+#endif
 #ifdef BUILD_WITH_OPENACC
     int32_t inAPtr_sz, inBPtr_sz, weightsPtr_sz, pBiasData_sz, accPtr_sz;
     if ((IPparams.isBias) && (IPparams.constIdx == -1))
@@ -427,30 +454,30 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
           {
             for (uint32_t outColIdx = 0; outColIdx < numOutCols; outColIdx++)
             {
-              Tacc  sum;
+              Tacc  acc;
               if((IPparams.isBias) && (IPparams.constIdx == -1))
               {
-                sum = pBiasData[(outRwIdx*numOutCols) + outColIdx];
+                acc = pBiasData[(outRwIdx*numOutCols) + outColIdx];
               }
               else if((IPparams.isBias) && (IPparams.constIdx == 0))
               {
-                sum = pBiasData[outRwIdx];
+                acc = pBiasData[outRwIdx];
               }
               else if((IPparams.isBias) && (IPparams.constIdx == 1))
               {
                 if(numBChannels > 1)
                 {
-                  sum = pBiasData[(chIdx * numOutCols) + outColIdx];
+                  acc = pBiasData[(chIdx * numOutCols) + outColIdx];
                 }
                 else
                 {
                   /*Broadcast situation*/
-                  sum = pBiasData[outColIdx];
+                  acc = pBiasData[outColIdx];
                 }
               }
               else
               {
-                sum = 0;
+                acc = 0;
               }
               if(&inPtr[inABatchPitch*batchIdx + inADIM1Pitch*dim1Idx + inADIM2Pitch*dim2Idx + (chIdx * inAChPitch)] != NULL)
               {
@@ -462,36 +489,36 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                   {
                     if(inputATranspose != 0)/* transpose needed for inputA */
                     {
-                      sum += inPtr[inABatchPitch*batchIdx + inADIM1Pitch*dim1Idx + inADIM2Pitch*dim2Idx + (chIdx * inAChPitch) + (inColIdx * inALinePitch) + outColIdx ] * inBPtr[batchIdx * inBBatchPitch + (dim1Idx * inBDIM1Pitch) + (dim2Idx * inBDIM2Pitch) + (chIdx * inBChPitch) + ((inColIdx * inBLinePitch) + outColIdx)];/* Not tested*/
+                      acc += inPtr[inABatchPitch*batchIdx + inADIM1Pitch*dim1Idx + inADIM2Pitch*dim2Idx + (chIdx * inAChPitch) + (inColIdx * inALinePitch) + outColIdx ] * inBPtr[batchIdx * inBBatchPitch + (dim1Idx * inBDIM1Pitch) + (dim2Idx * inBDIM2Pitch) + (chIdx * inBChPitch) + ((inColIdx * inBLinePitch) + outColIdx)];/* Not tested*/
                     }
                     else if (inputBTranspose != 0) /* transpose needed for inputB */
                     {
-                      sum += inPtr[inABatchPitch*batchIdx + inADIM1Pitch*dim1Idx + inADIM2Pitch*dim2Idx + (chIdx * inAChPitch) + (inALinePitch * outRwIdx) + inColIdx] * inBPtr[batchIdx * inBBatchPitch + (dim1Idx * inBDIM1Pitch) + (dim2Idx * inBDIM2Pitch) + (chIdx * inBChPitch) + (outColIdx * inBLinePitch) + inColIdx];
+                      acc += inPtr[inABatchPitch*batchIdx + inADIM1Pitch*dim1Idx + inADIM2Pitch*dim2Idx + (chIdx * inAChPitch) + (inALinePitch * outRwIdx) + inColIdx] * inBPtr[batchIdx * inBBatchPitch + (dim1Idx * inBDIM1Pitch) + (dim2Idx * inBDIM2Pitch) + (chIdx * inBChPitch) + (outColIdx * inBLinePitch) + inColIdx];
                     }
                     else/* no transpose needed */
                     {
-                      sum += inPtr[ inABatchPitch*batchIdx + inADIM1Pitch*dim1Idx + inADIM2Pitch*dim2Idx + (chIdx * inAChPitch) + (inALinePitch * outRwIdx) + inColIdx] * inBPtr[batchIdx * inBBatchPitch + (dim1Idx * inBDIM1Pitch) + (dim2Idx * inBDIM2Pitch) + (chIdx * inBChPitch) + ((inColIdx * inBLinePitch) + outColIdx)];
+                      acc += inPtr[ inABatchPitch*batchIdx + inADIM1Pitch*dim1Idx + inADIM2Pitch*dim2Idx + (chIdx * inAChPitch) + (inALinePitch * outRwIdx) + inColIdx] * inBPtr[batchIdx * inBBatchPitch + (dim1Idx * inBDIM1Pitch) + (dim2Idx * inBDIM2Pitch) + (chIdx * inBChPitch) + ((inColIdx * inBLinePitch) + outColIdx)];
                     }
                   }
                   else
                   {
                     if(inputATranspose != 0)/* transpose needed for inputA */
                     {
-                      sum += inPtr[inABatchPitch*batchIdx + inADIM1Pitch*dim1Idx + inADIM2Pitch*dim2Idx + (chIdx * inAChPitch) + (inColIdx * inALinePitch) + outColIdx ] * weightsPtr[batchIdx * inBBatchPitch + (dim1Idx * inBDIM1Pitch) + (dim2Idx * inBDIM2Pitch) + (chIdx * inBChPitch) + ((inColIdx * inBLinePitch) + outColIdx)];/* Not tested*/
+                      acc += inPtr[inABatchPitch*batchIdx + inADIM1Pitch*dim1Idx + inADIM2Pitch*dim2Idx + (chIdx * inAChPitch) + (inColIdx * inALinePitch) + outColIdx ] * weightsPtr[batchIdx * inBBatchPitch + (dim1Idx * inBDIM1Pitch) + (dim2Idx * inBDIM2Pitch) + (chIdx * inBChPitch) + ((inColIdx * inBLinePitch) + outColIdx)];/* Not tested*/
                     }
                     else if (inputBTranspose != 0) /* transpose needed for inputB */
                     {
-                      sum += inPtr[inABatchPitch*batchIdx + inADIM1Pitch*dim1Idx + inADIM2Pitch*dim2Idx + (chIdx * inAChPitch) + (inALinePitch * outRwIdx) + inColIdx] * weightsPtr[batchIdx * inBBatchPitch + (dim1Idx * inBDIM1Pitch) + (dim2Idx * inBDIM2Pitch) + (chIdx * inBChPitch) + (outColIdx * inBLinePitch) + inColIdx];
+                      acc += inPtr[inABatchPitch*batchIdx + inADIM1Pitch*dim1Idx + inADIM2Pitch*dim2Idx + (chIdx * inAChPitch) + (inALinePitch * outRwIdx) + inColIdx] * weightsPtr[batchIdx * inBBatchPitch + (dim1Idx * inBDIM1Pitch) + (dim2Idx * inBDIM2Pitch) + (chIdx * inBChPitch) + (outColIdx * inBLinePitch) + inColIdx];
                     }
                     else/* no transpose needed */
                     {
-                      sum += inPtr[inABatchPitch*batchIdx + inADIM1Pitch*dim1Idx + inADIM2Pitch*dim2Idx + (chIdx * inAChPitch) + (inALinePitch * outRwIdx) + inColIdx] * weightsPtr[batchIdx * inBBatchPitch + (dim1Idx * inBDIM1Pitch) + (dim2Idx * inBDIM2Pitch) + (chIdx * inBChPitch) + ((inColIdx * inBLinePitch) + outColIdx)];
+                      acc += inPtr[inABatchPitch*batchIdx + inADIM1Pitch*dim1Idx + inADIM2Pitch*dim2Idx + (chIdx * inAChPitch) + (inALinePitch * outRwIdx) + inColIdx] * weightsPtr[batchIdx * inBBatchPitch + (dim1Idx * inBDIM1Pitch) + (dim2Idx * inBDIM2Pitch) + (chIdx * inBChPitch) + ((inColIdx * inBLinePitch) + outColIdx)];
                     }
                   }
                 }
-                min = (sum < min) ? sum : min;
-                max = (sum > max) ? sum : max;
-                accPtr[(batchIdx*outBatchPitch) + (dim1Idx*outDIM1Pitch) + (dim2Idx*outDIM2Pitch) + (chIdx * outChPitch) + (outRwIdx * outLinePitch) + outColIdx] = sum;
+                min = (acc < min) ? acc : min;
+                max = (acc > max) ? acc : max;
+                accPtr[(batchIdx*outBatchPitch) + (dim1Idx*outDIM1Pitch) + (dim2Idx*outDIM2Pitch) + (chIdx * outChPitch) + (outRwIdx * outLinePitch) + outColIdx] = acc;
               }
             }
           }
@@ -501,16 +528,19 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
   }
   }
   #else
-  #ifdef BUILD_WITH_CUDA
-  status = TIDL_cudaInnerProduct<Tin, TBin, Tw, Tb, Tout, Tacc>(
-    inPtr, inBPtr, accPtr, pBiasData, weightsPtr,
-    batches, dim1, dim2, channels,
-    numInCols, numOutCols, numInRows, numOutRows,
-    inAChPitch, inALinePitch, inADIM1Pitch, inADIM2Pitch, inABatchPitch,
-    inBChPitch, inBLinePitch, inBDIM1Pitch, inBDIM2Pitch, inBBatchPitch,
-    outChPitch, outLinePitch, outDIM1Pitch, outDIM2Pitch, outBatchPitch,
-    inputBTranspose, IPparams.isBias, IPparams.constIdx
-  );
+  #ifdef BUILD_WITH_CUDA_INNERPRODUCT
+  float floatSatLow, floatSatHigh;
+  TIDL_getSaturationFloat(&net->TIDLLayers[layerIdx], &floatSatLow, &floatSatHigh);
+  status = TIDL_cudaInnerProductFused<Tin, TBin, Tw, Tb, Tout, Tacc>(
+      inPtr, inBPtr, outPtr, pBiasData, weightsPtr,
+      batches, dim1, dim2, channels, numBChannels, numInCols, numOutCols, numInRows, numOutRows,
+      inAChPitch, inALinePitch, inADIM1Pitch, inADIM2Pitch, inABatchPitch,
+      inBChPitch, inBLinePitch, inBDIM1Pitch, inBDIM2Pitch, inBBatchPitch,
+      outChPitch, outLinePitch, outDIM1Pitch, outDIM2Pitch, outBatchPitch,
+      inputBTranspose, IPparams.isBias, IPparams.constIdx, tidlLayer->numInBufs, tidlLayer->outData.elementType == TIDL_SinglePrecFloat, isHighPrecision,
+      floatSatLow, floatSatHigh,
+      satLow, satHigh, roundBits, mmaScale,
+      mmav2_Scales, mmav2_Shifts);
   #else
   for (uint32_t batchIdx = 0; batchIdx < (uint32_t)batches; batchIdx++)
   {
@@ -527,35 +557,36 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
               if(status == TIDL_SUCCESS){
               uint32_t inOffset = (inABatchPitch*batchIdx) + (inADIM1Pitch*dim1Idx) + (inADIM2Pitch*dim2Idx) + (chIdx * inAChPitch);
               uint32_t biasOffset = (batchIdx * inBBatchPitch) + (dim1Idx * inBDIM1Pitch) + (dim2Idx * inBDIM2Pitch) + (chIdx * inBChPitch);
-              Tacc sum = 0;
+              acc = 0;
               if ((pBiasData != NULL))
               {
                 if((IPparams.isBias != 0) && (IPparams.constIdx == -1))
                 {
-                  sum = pBiasData[(outRwIdx*numOutCols) + outColIdx];
+                  acc = pBiasData[(outRwIdx*numOutCols) + outColIdx];
                 }
                 else if((IPparams.isBias != 0) && (IPparams.constIdx == 0))
                 {
-                  sum = pBiasData[outRwIdx];
+                  acc = pBiasData[outRwIdx];
                 }
                 else if((IPparams.isBias != 0) && (IPparams.constIdx == 1))
                 {
                   if(numBChannels > 1)
                   {
-                    sum = pBiasData[(chIdx * numOutCols) + outColIdx];
+                    acc = pBiasData[(chIdx * numOutCols) + outColIdx];
                   }
                   else
                   {
                     /*Broadcast situation*/
-                    sum = pBiasData[outColIdx];
+                    acc = pBiasData[outColIdx];
                   }
                 }
                 else
                 {
-                  sum = 0;
+                  acc = 0;
                 }
               }
-              if(inPtr != NULL) {
+              if(inPtr != NULL) 
+              {
                 /* LDRA_JUSTIFY_START
                   <metric start> statement branch <metric end>
                   <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
@@ -575,7 +606,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                       biasOffset = biasOffset + outColIdx;
                       for (uint32_t inColIdx = 0; inColIdx < numInCols; inColIdx++)
                       {
-                        sum += inPtr[inOffset + (inColIdx * inALinePitch)] * inBPtr[biasOffset + ((inColIdx * inBLinePitch))]; /* Not tested*/
+                        acc += inPtr[inOffset + (inColIdx * inALinePitch)] * inBPtr[biasOffset + ((inColIdx * inBLinePitch))]; /* Not tested*/
                       }
                     }
                     else if (inputBTranspose != 0) /* transpose needed for inputB */
@@ -587,7 +618,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                       biasOffset = biasOffset + (outColIdx * inBLinePitch);
                       for (uint32_t inColIdx = 0; inColIdx < numInCols; inColIdx++)
                       {
-                        sum += inPtr[inOffset + inColIdx] * inBPtr[biasOffset + inColIdx];
+                        acc += inPtr[inOffset + inColIdx] * inBPtr[biasOffset + inColIdx];
                       }
                     }
                     else /* no transpose needed */
@@ -597,7 +628,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                       biasOffset = biasOffset + outColIdx;
                       for (uint32_t inColIdx = 0; inColIdx < numInCols; inColIdx++)
                       {
-                        sum += inPtr[inOffset + inColIdx] * inBPtr[biasOffset + (inColIdx * inBLinePitch)];
+                        acc += inPtr[inOffset + inColIdx] * inBPtr[biasOffset + (inColIdx * inBLinePitch)];
                       }
                     }
                   }
@@ -610,7 +641,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                       biasOffset = biasOffset + outColIdx;
                       for (uint32_t inColIdx = 0; inColIdx < numInCols; inColIdx++)
                       {
-                        sum += inPtr[inOffset + (inColIdx * inALinePitch)] * weightsPtr[biasOffset + (inColIdx * inBLinePitch)]; /* Not tested*/
+                        acc += inPtr[inOffset + (inColIdx * inALinePitch)] * weightsPtr[biasOffset + (inColIdx * inBLinePitch)]; /* Not tested*/
                       }
                     }
                     else if (inputBTranspose != 0) /* transpose needed for inputB */
@@ -622,7 +653,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                       biasOffset = biasOffset + (outColIdx * inBLinePitch);
                       for (uint32_t inColIdx = 0; inColIdx < numInCols; inColIdx++)
                       {
-                        sum += inPtr[inOffset + inColIdx] * weightsPtr[biasOffset + inColIdx];
+                        acc += inPtr[inOffset + inColIdx] * weightsPtr[biasOffset + inColIdx];
                       }
                     }
                     else /* no transpose needed */
@@ -631,13 +662,44 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                       biasOffset = biasOffset + outColIdx;
                       for (uint32_t inColIdx = 0; inColIdx < numInCols; inColIdx++)
                       {
-                        sum += inPtr[inOffset + inColIdx] * weightsPtr[biasOffset + (inColIdx * inBLinePitch)];
+                        acc += inPtr[inOffset + inColIdx] * weightsPtr[biasOffset + (inColIdx * inBLinePitch)];
                       }
                     }
                   }
-                  min = (sum < min) ? sum : min;
-                  max = (sum > max) ? sum : max;
-                  accPtr[(batchIdx * outBatchPitch) + (dim1Idx * outDIM1Pitch) + (dim2Idx * outDIM2Pitch) + (chIdx * outChPitch) + (outRwIdx * outLinePitch) + outColIdx] = sum;
+                  min = (acc < min) ? acc : min;
+                  max = (acc > max) ? acc : max;
+                  int32_t offset = (batchIdx * outBatchPitch) + (dim1Idx * outDIM1Pitch) + (dim2Idx * outDIM2Pitch) + (chIdx * outChPitch);
+                  int32_t outIdx = (outRwIdx * outLinePitch) + outColIdx;
+                  #ifdef HOST_EMULATION
+                  if (tidlLayer -> outData.elementType == TIDL_SinglePrecFloat)
+                  {
+                    OPENACC(routine(TIDL_floatSat))
+                    acc = TIDL_floatSat(acc, &net->TIDLLayers[layerIdx]);
+                    outPtr[offset + outIdx] = acc;
+                  }
+                  else 
+                  #endif
+                  if (isHighPrecision != 0)
+                  {
+                    OPENACC(routine(TIDL_roundSatMMA))
+
+                    int32_t i6 = outIdx % numOutCols + chIdx * numOutCols;
+                    if(numBChannels == 1)
+                    {
+                      i6 = outIdx % numOutCols;
+                    }
+                    tempAcc = (int64_t)acc * (int64_t)mmav2_Scales[i6];
+                    acc = (Tacc)TIDL_roundSatMMA(tempAcc, mmav2_Shifts[i6], satLow, satHigh);
+                    outPtr[offset + outIdx] = acc;
+                  }
+                  else
+                  {
+                    OPENACC(routine(TIDL_roundSat))
+                    tempAcc = acc * mmaScale;
+                    acc = (Tacc)TIDL_roundSat((int64_t)tempAcc, roundBits, satLow, satHigh);
+                    outPtr[offset + outIdx] = acc;
+                  }
+                  
                 }
               }
               else {
@@ -652,48 +714,6 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
     }
   }
   #endif
-#endif
-    if (status == TIDL_SUCCESS)
-    {
-      if ((TIDL_isAsymQuantEnabledTFL(quantizationStyle) == FALSE) &&
-          (TIDL_isKernelHighPrecision(net->TIDLLayers[layerIdx].layerKernelType) == (int32_t)FALSE))
-      {
-#ifdef HOST_EMULATION
-        if (((uint32_t)intAlgHandle->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)
-        {
-          if (TIDL_getDatElementSign(net->TIDLLayers[layerIdx].outData.elementType) == 1)
-          {
-            TIDL_UpdateScaleFactors(intAlgHandle, layerIdx, 1, min, max);
-          }
-          else
-          {
-            TIDL_UpdateScaleFactors(intAlgHandle, layerIdx, 1, 0, max);
-          }
-        }
-#endif
-        roundBits = net->TIDLLayers[layerIdx].outData.roundBits;
-        mmaScale = 1;
-      }
-      else if (TIDL_isAsymQuantEnabledTFL(quantizationStyle) != FALSE)
-      {
-        roundBits = buffParams->mmaShift;
-        mmaScale = buffParams->mmaScale;
-      }
-      else
-      {
-        /*do nothing*/
-      }
-
-      int32_t isHighPrecision = TIDL_isKernelHighPrecision(net->TIDLLayers[layerIdx].layerKernelType) == (int32_t)TRUE;
-      uint8_t *mmav2_Scales = (uint8_t *)get_int8_t_pointer((int8_t *)(net), net->TIDLLayers[layerIdx].layerParams.innerProductParams.derivedScales);
-      uint8_t *mmav2_Shifts = (uint8_t *)get_int8_t_pointer((int8_t *)(net), net->TIDLLayers[layerIdx].layerParams.innerProductParams.derivedShifts);
-      int64_t tempAcc;
-      uint32_t chIdx1, outIdx;
-#ifdef HOST_EMULATION
-      if (intAlgHandle->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_INNERPRODUCT_FORCE_ROUNDSAT_MMA_ZERO_SHIFT_BITS)
-      {
-        mmav2_Shifts[0] = 0;
-      }
 #endif
 
   #ifdef BUILD_WITH_OPENACC
@@ -730,12 +750,12 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
           {
             for (outIdx = 0; outIdx < (numInRows * numOutCols); outIdx++)
             {
-              Tacc  sum;
-              sum = accPtr[(batchIdx*outBatchPitch) + (dim1Idx*outDIM1Pitch) + (dim2Idx*outDIM2Pitch) + (chIdx1 * outChPitch) + outIdx];
+              Tacc  acc;
+              acc = accPtr[(batchIdx*outBatchPitch) + (dim1Idx*outDIM1Pitch) + (dim2Idx*outDIM2Pitch) + (chIdx1 * outChPitch) + outIdx];
               if (tidlLayer->outData.elementType == TIDL_SinglePrecFloat)
               {
                 OPENACC(routine(TIDL_floatSat))
-                sum = TIDL_floatSat(sum, tidlLayer);
+                acc = TIDL_floatSat(acc, &net->TIDLLayers[layerIdx]);
               }
               else if (isHighPrecision != 0)
               {
@@ -744,91 +764,24 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                 {
                   i6 = outIdx % numOutCols;
                 }
-                tempAcc = (int64_t)sum * mmav2_Scales[i6];
+                tempAcc = (int64_t)acc * mmav2_Scales[i6];
                 OPENACC(routine(TIDL_roundSatMMA))
-                sum  = (Tacc)TIDL_roundSatMMA(tempAcc, mmav2_Shifts[i6], satLow, satHigh);
+                acc  = (Tacc)TIDL_roundSatMMA(tempAcc, mmav2_Shifts[i6], satLow, satHigh);
               }
               else
               {
-                tempAcc = sum * mmaScale;
+                tempAcc = acc * mmaScale;
                 OPENACC(routine(TIDL_roundSat))
-                sum = (Tacc)TIDL_roundSat((int64_t)tempAcc, roundBits, satLow, satHigh);
+                acc = (Tacc)TIDL_roundSat((int64_t)tempAcc, roundBits, satLow, satHigh);
               }
-              outPtr[(batchIdx*outBatchPitch) + (dim1Idx*outDIM1Pitch) + (dim2Idx*outDIM2Pitch) + (chIdx1 * outChPitch) + outIdx] = sum;
+              outPtr[(batchIdx*outBatchPitch) + (dim1Idx*outDIM1Pitch) + (dim2Idx*outDIM2Pitch) + (chIdx1 * outChPitch) + outIdx] = acc;
             }
           }
         }
       }
     }
   }
-  #else
-  #ifdef BUILD_WITH_CUDA
-  status = TIDL_cudaInnerProductSaturation<Tout, Tacc>(
-    accPtr, outPtr,
-    batches, dim1, dim2, channels, numOutRows, numOutCols,
-    outChPitch, outLinePitch, outDIM1Pitch, outDIM2Pitch, outBatchPitch,
-    tidlLayer -> outData.elementType == TIDL_SinglePrecFloat, isHighPrecision,
-    roundBits, mmaScale,
-    satLow, satHigh,
-    mmav2_Scales, mmav2_Shifts
-  );
-  #else
-   for (uint32_t batchIdx1 = 0; batchIdx1 < (uint32_t)batches; batchIdx1++)
-    {
-      for (uint32_t dim1Idx = 0; dim1Idx < (uint32_t)dim1; dim1Idx++)
-      {
-        for (uint32_t dim2Idx = 0; dim2Idx < (uint32_t)dim2; dim2Idx++)
-        {
-          for (chIdx1 = 0; chIdx1 < (uint32_t)channels; chIdx1++)
-          {
-            uint32_t offset = (batchIdx1*outBatchPitch) + (dim1Idx*outDIM1Pitch) + (dim2Idx*outDIM2Pitch) + (chIdx1 * outChPitch) ;
-            Tacc sum;
-            #ifdef HOST_EMULATION
-            if (tidlLayer -> outData.elementType == TIDL_SinglePrecFloat)
-            {
-              OPENACC(routine(TIDL_floatSat))
-              for (outIdx = 0; outIdx < (numInRows * numOutCols); outIdx++)
-              {
-                  sum = accPtr[offset + outIdx];
-                  sum = TIDL_floatSat(sum, tidlLayer);
-                  outPtr[offset + outIdx] = sum;
-              }
-            }
-            else 
-            #endif
-            if (isHighPrecision != 0)
-            {
-              OPENACC(routine(TIDL_roundSatMMA))
-              for (outIdx = 0; outIdx < (numInRows * numOutCols); outIdx++)
-              {
-                  int32_t i6 = outIdx % numOutCols + chIdx1 * numOutCols;
-                  if(numBChannels == 1)
-                  {
-                    i6 = outIdx % numOutCols;
-                  }
-                  sum = accPtr[offset + outIdx];
-                  tempAcc = (int64_t)sum * (int64_t)mmav2_Scales[i6];
-                  sum = (Tacc)TIDL_roundSatMMA(tempAcc, mmav2_Shifts[i6], satLow, satHigh);
-                  outPtr[offset + outIdx] = sum;
-                }
-              }
-              else
-              {
-                OPENACC(routine(TIDL_roundSat))
-                for (outIdx = 0; outIdx < (numInRows * numOutCols); outIdx++)
-                {
-                  sum = accPtr[offset + outIdx];
-                  tempAcc = sum * mmaScale;
-                  sum = (Tacc)TIDL_roundSat((int64_t)tempAcc, roundBits, satLow, satHigh);
-                  outPtr[offset + outIdx] = sum;
-              }
-            }
-          }
-        }
-      }
-    }
-    #endif
- #endif
+  #endif
   }
   }
   return status;
@@ -842,7 +795,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
  * @param refPtr : Output pointer after innerProduct opreation
  * @param biasPtr  : Pointer to the Bias values
  * @param weightsPtr : Pointer to weights buffer
- * @param accPtr : pointer to the accumulator buffer
+ * @param acc : accumulator variable
  * @param outElementType : elementType of the output
  * @param buffParams : parameters of the innerProduct buffer
  * @return  IALG_EOK   - Successful
@@ -857,7 +810,7 @@ template<class Tw, class Tb, class Tacc>
         void *refPtr,
         Tb *biasPtr,
         const Tw *weightsPtr,
-        Tacc *accPtr,
+        Tacc acc,
         int32_t outElementType,
         tidlInnerProductBuffParams_t *buffParams)
 {
@@ -870,7 +823,7 @@ template<class Tw, class Tb, class Tacc>
     sTIDL_Layer_t *tidlLayer = &intAlgHandle->createParams->net->TIDLLayers[layerIdx];
     float32_tidl minFloat, maxFloat;
     TIDL_getSaturationFloat(tidlLayer, &minFloat, &maxFloat);
-    status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (float32_tidl *)inPtr, (float32_tidl *)inBPtr, (float32_tidl *)refPtr, biasPtr, weightsPtr, buffParams, minFloat, maxFloat);
+    status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (float32_tidl *)inPtr, (float32_tidl *)inBPtr, (float32_tidl *)refPtr, biasPtr, weightsPtr, buffParams, minFloat, maxFloat);
   }
   else
 #endif
@@ -891,7 +844,7 @@ template<class Tw, class Tb, class Tacc>
     {
       satLow = TIDL_SAT_LO_INT8;
       sathigh = TIDL_SAT_HI_INT8;
-      status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int8_t *)inPtr, (int8_t *)inBPtr, (int8_t *)refPtr,
+      status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int8_t *)inPtr, (int8_t *)inBPtr, (int8_t *)refPtr,
                                     biasPtr, weightsPtr, buffParams, satLow, sathigh);
     }
 
@@ -914,12 +867,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int8_t *)inPtr, (int8_t *)inBPtr, (int8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int8_t *)inPtr, (int8_t *)inBPtr, (int8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int8_t *)inPtr, (uint8_t *)inBPtr, (int8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int8_t *)inPtr, (uint8_t *)inBPtr, (int8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -933,12 +886,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint8_t *)inPtr, (int8_t *)inBPtr, (int8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint8_t *)inPtr, (int8_t *)inBPtr, (int8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint8_t *)inPtr, (uint8_t *)inBPtr, (int8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint8_t *)inPtr, (uint8_t *)inBPtr, (int8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -953,12 +906,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int8_t *)inPtr, (int8_t *)inBPtr, (int16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int8_t *)inPtr, (int8_t *)inBPtr, (int16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int8_t *)inPtr, (uint8_t *)inBPtr, (int16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int8_t *)inPtr, (uint8_t *)inBPtr, (int16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -972,12 +925,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint8_t *)inPtr, (int8_t *)inBPtr, (int16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint8_t *)inPtr, (int8_t *)inBPtr, (int16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint8_t *)inPtr, (uint8_t *)inBPtr, (int16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint8_t *)inPtr, (uint8_t *)inBPtr, (int16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -991,12 +944,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int16_t *)inPtr, (int16_t *)inBPtr, (int8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int16_t *)inPtr, (int16_t *)inBPtr, (int8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int16_t *)inPtr, (uint16_t *)inBPtr, (int8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int16_t *)inPtr, (uint16_t *)inBPtr, (int8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -1010,12 +963,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint16_t *)inPtr, (int16_t *)inBPtr, (int8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint16_t *)inPtr, (int16_t *)inBPtr, (int8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint16_t *)inPtr, (uint16_t *)inBPtr, (int8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint16_t *)inPtr, (uint16_t *)inBPtr, (int8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -1030,12 +983,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int16_t *)inPtr, (int16_t *)inBPtr, (int16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int16_t *)inPtr, (int16_t *)inBPtr, (int16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int16_t *)inPtr, (uint16_t *)inBPtr, (int16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int16_t *)inPtr, (uint16_t *)inBPtr, (int16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -1049,12 +1002,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint16_t *)inPtr, (int16_t *)inBPtr, (int16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint16_t *)inPtr, (int16_t *)inBPtr, (int16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint16_t *)inPtr, (uint16_t *)inBPtr, (int16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint16_t *)inPtr, (uint16_t *)inBPtr, (int16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -1093,12 +1046,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int8_t *)inPtr, (int8_t *)inBPtr, (uint8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int8_t *)inPtr, (int8_t *)inBPtr, (uint8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int8_t *)inPtr, (uint8_t *)inBPtr, (uint8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int8_t *)inPtr, (uint8_t *)inBPtr, (uint8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -1112,12 +1065,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint8_t *)inPtr, (int8_t *)inBPtr, (uint8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint8_t *)inPtr, (int8_t *)inBPtr, (uint8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint8_t *)inPtr, (uint8_t *)inBPtr, (uint8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint8_t *)inPtr, (uint8_t *)inBPtr, (uint8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -1132,12 +1085,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int8_t *)inPtr, (int8_t *)inBPtr, (uint16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int8_t *)inPtr, (int8_t *)inBPtr, (uint16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int8_t *)inPtr, (uint8_t *)inBPtr, (uint16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int8_t *)inPtr, (uint8_t *)inBPtr, (uint16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -1151,12 +1104,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint8_t *)inPtr, (int8_t *)inBPtr, (uint16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint8_t *)inPtr, (int8_t *)inBPtr, (uint16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedChar)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint8_t *)inPtr, (uint8_t *)inPtr, (uint16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint8_t *)inPtr, (uint8_t *)inPtr, (uint16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -1171,12 +1124,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int16_t *)inPtr, (int16_t *)inBPtr, (uint8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int16_t *)inPtr, (int16_t *)inBPtr, (uint8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int16_t *)inPtr, (uint16_t *)inBPtr, (uint8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int16_t *)inPtr, (uint16_t *)inBPtr, (uint8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -1190,12 +1143,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint16_t *)inPtr, (int16_t *)inBPtr, (uint8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint16_t *)inPtr, (int16_t *)inBPtr, (uint8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint16_t *)inPtr, (uint16_t *)inBPtr, (uint8_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint16_t *)inPtr, (uint16_t *)inBPtr, (uint8_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -1210,12 +1163,12 @@ template<class Tw, class Tb, class Tacc>
           /* Singed Inputs and Unsigned output is not supported */
           if (buffParams->inBElementType == TIDL_SignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int16_t *)inPtr, (int16_t *)inBPtr, (uint16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int16_t *)inPtr, (int16_t *)inBPtr, (uint16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (int16_t *)inPtr, (int16_t *)inBPtr, (uint16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (int16_t *)inPtr, (int16_t *)inBPtr, (uint16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -1229,12 +1182,12 @@ template<class Tw, class Tb, class Tacc>
         {
           if (buffParams->inBElementType == TIDL_SignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint16_t *)inPtr, (int16_t *)inBPtr, (uint16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint16_t *)inPtr, (int16_t *)inBPtr, (uint16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else if (buffParams->inBElementType == TIDL_UnsignedShort)
           {
-            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, accPtr, (uint16_t *)inPtr, (uint16_t *)inBPtr, (uint16_t *)refPtr,
+            status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (uint16_t *)inPtr, (uint16_t *)inBPtr, (uint16_t *)refPtr,
                                           biasPtr, weightsPtr, buffParams, satLow, sathigh);
           }
           else
@@ -1282,7 +1235,7 @@ int32_t TIDL_innerProductRefProcess(
   sTIDL_Network_t *net = intAlgHandle->createParams->net;
   int32_t quantizationStyle = intAlgHandle->createParams->net->quantizationStyle;
   int32_t layerIdx = algLayer->layerIdx;
-  void *accPtr = NULL;
+  int64_t accInt = 0;
   void *weightPtr = ((int8_t *)(intAlgHandle->createParams->net) + params->weights);
   void *orgBiasPtr = ((int8_t *)(intAlgHandle->createParams->net) + params->bias);
   void *biasPtr = NULL;
@@ -1331,13 +1284,10 @@ int32_t TIDL_innerProductRefProcess(
 
   if (status == IALG_EOK)
   {
-    #ifdef BUILD_WITH_CUDA
-    CUDNNLC = CUDA_INNER_PRODUCT_COUNTER++;
-    #endif
     if ((TIDL_isAsymQuantEnabledTFL(quantizationStyle) != FALSE))
     {
       int32_t *fBiasPtr = (int32_t *)algLayer->layerParams.innerProductParams.biasParamMem; // Txed bias
-      status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, (int32_t *)fBiasPtr, (int8_t *)weightPtr, (int32_t *)accPtr, tidlLayer->outData.elementType, buffParams);
+      status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, (int32_t *)fBiasPtr, (int8_t *)weightPtr, (int64_t)accInt, tidlLayer->outData.elementType, buffParams);
     }
     else
     {
@@ -1347,7 +1297,7 @@ int32_t TIDL_innerProductRefProcess(
         {
           /*Set bias ptr:*/
           int32_t *fBiasPtr = (int32_t *)get_int8_t_pointer((int8_t *)(net), net->TIDLLayers[layerIdx].layerParams.innerProductParams.derivedBias);
-          status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, (int32_t *)fBiasPtr, (int8_t *)weightPtr, (int32_t *)accPtr, tidlLayer->outData.elementType, buffParams);
+          status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, (int32_t *)fBiasPtr, (int8_t *)weightPtr, (int64_t)accInt, tidlLayer->outData.elementType, buffParams);
         }
         else
         {
@@ -1366,7 +1316,7 @@ int32_t TIDL_innerProductRefProcess(
               ((int16_t *)biasPtr)[i0] = ((int16_t *)biasPtr)[i0] * buffParams->biasB;
             }
           }
-          status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, (int16_t *)biasPtr, (int8_t *)weightPtr, (int32_t *)accPtr, tidlLayer->outData.elementType, buffParams);
+          status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, (int16_t *)biasPtr, (int8_t *)weightPtr, (int64_t)accInt, tidlLayer->outData.elementType, buffParams);
         }
       }
       else if ((tidlLayer->weightsElementSizeInBits <= 16))
@@ -1375,7 +1325,7 @@ int32_t TIDL_innerProductRefProcess(
         {
           /*Set bias ptr:*/
           int64_t *fBiasPtr = (int64_t *)get_int8_t_pointer((int8_t *)(net), net->TIDLLayers[layerIdx].layerParams.innerProductParams.derivedBias);
-          status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, (int64_t *)fBiasPtr, (int16_t *)weightPtr, (int64_t *)accPtr, tidlLayer->outData.elementType, buffParams);
+          status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, (int64_t *)fBiasPtr, (int16_t *)weightPtr, (int64_t)accInt, tidlLayer->outData.elementType, buffParams);
         }
         else
         {
@@ -1399,13 +1349,14 @@ int32_t TIDL_innerProductRefProcess(
           {
             buffParams->inBElementType = 5;
           }
-          status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, (int32_t *)biasPtr, (int16_t *)weightPtr, (int64_t *)accPtr, tidlLayer->outData.elementType, buffParams);
+          status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, (int32_t *)biasPtr, (int16_t *)weightPtr, (int64_t)accInt, tidlLayer->outData.elementType, buffParams);
         }
       }
 #ifdef HOST_EMULATION
       else if (tidlLayer->weightsElementSizeInBits == 32)
       {
-        status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, orgBiasPtrFloat, (float32_tidl *)weightPtr, (float32_tidl *)accPtr, tidlLayer->outData.elementType, buffParams);
+        float32_tidl accFloat = 0.0f;
+        status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, orgBiasPtrFloat, (float32_tidl *)weightPtr, (float32_tidl)accFloat, tidlLayer->outData.elementType, buffParams);
       }
 #endif
       else
@@ -1413,10 +1364,6 @@ int32_t TIDL_innerProductRefProcess(
         status = TIDL_ERR_INVALID_TYPE;
       }
     }
-  #ifdef BUILD_WITH_CUDA
-  /*Mark init as completed to prevent re-allocation of buffers for subsequent frames:*/
-  TIDL_cudaSetInnerProductInitFlag(CUDNNLC);
-  #endif
   }
   TIDL_L1DandL2CacheWbInv();
   return status;

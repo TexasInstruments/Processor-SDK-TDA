@@ -105,6 +105,9 @@
     #define VXLIB_FLOAT32  10U
     #define VXLIB_FLOAT64  11U
     #define VXLIB_BFLOAT16 12U
+    
+    /* Boolean Datatype */
+    #define VXLIB_BOOL     13U
 
 /*! \brief The enumeration of multidimensional buffer types. */
 typedef enum _VXLIB_dimension_e {
@@ -179,6 +182,7 @@ typedef struct
 
 /*! \brief The enumeration of size of datatypes. */
 typedef enum{
+	VXLIB_BOOL_SIZE = 1,
 	VXLIB_INT8_SIZE = 1,
 	VXLIB_UINT8_SIZE = 1,
 	VXLIB_INT16_SIZE = 2,
@@ -198,7 +202,8 @@ typedef enum{
 static const int32_t VXLIB_size_list[] = {
 					VXLIB_INT8_SIZE, VXLIB_INT16_SIZE, VXLIB_INT32_SIZE, VXLIB_INT64_SIZE, VXLIB_UINT8_SIZE, VXLIB_UINT16_SIZE,
 					VXLIB_UINT24_SIZE, VXLIB_UINT32_SIZE, VXLIB_UINT64_SIZE, VXLIB_FLOAT16_SIZE, VXLIB_FLOAT32_SIZE, VXLIB_FLOAT64_SIZE,
-					VXLIB_BFLOAT16_SIZE
+					VXLIB_BFLOAT16_SIZE,
+					VXLIB_BOOL_SIZE
 					};
 
 

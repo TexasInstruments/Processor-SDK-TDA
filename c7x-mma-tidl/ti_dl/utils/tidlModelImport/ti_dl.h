@@ -82,7 +82,6 @@ typedef enum
 {
   TIDL_PriorBoxLayer        = TIDL_UnsupportedLayer+1,
   TIDL_PermuteLayer          ,
-  TIDL_ShapeLayer            ,
   TIDL_ClipLayer             ,
   TIDL_MinimumLayer          ,
   TIDL_LeakyReluLayer        ,
@@ -99,7 +98,6 @@ typedef enum
   TIDL_DivLayer              ,
   TIDL_SubLayer              ,
   TIDL_PatchMergeLayer       ,
-  TIDL_CastLayer             ,
   TIDL_AsinLayer             ,
   TIDL_AsinhLayer            ,
   TIDL_HardSwishLayer        ,
@@ -130,6 +128,7 @@ typedef enum
   TIDL_RoundLayer            ,
   TIDL_SignLayer             ,
   TIDL_GroupNormLayer        ,
+  TIDL_CastLikeLayer         ,
 }eTIDL_PCLayerType;
 
 typedef enum
@@ -150,9 +149,21 @@ typedef enum
   TIDL_CastOutputTerminal,
 }eTIDL_CastType;
 
+typedef enum
+{
+  TIDL_CastRoundUp = 0,
+  TIDL_CastRoundNearest,
+  TIDL_CastRoundDown,
+}eTIDL_CastRoundType;
+
 typedef struct {
   /** Termincal cast node  @ref eTIDL_CastType */
   int32_t   terminal;
+  /**  @ref eTIDL_CastRoundType */
+  int32_t   roundMode; /* only applies to casting to float8e8m0 */
+  /* Indicates how conversion behaves when input value is out of range of the destination type */
+  int32_t   saturate;  /* Only valid for conversion to fp8 */
+  int32_t   castTo;
 }sTIDL_CastLayerParams_t;
 
 typedef struct {
@@ -187,6 +198,11 @@ extern const char * TIDL_LayerString[];
 #define TIDL_NUM_MAX_SUBGRAPH_NODES (864)
 #define TIDL_NUM_MAX_SUBGRAPH_NODES_QDQ (2048)
 
+typedef enum
+{
+  TIDL_RESHAPE_OPTIMIZATION = 1,
+  TIDL_RESHAPE_SHAPE_FOLD,
+}eTIDL_ReshapeIsInduced;
 
 typedef struct {
   /** Buffer containing Dim values for output tensor */
@@ -325,6 +341,12 @@ typedef struct {
   int32_t isAxisHandled;
 } sTIDL_TopKPCParams_t;
 
+typedef struct {
+  int32_t isCausal;
+  int32_t qk_matmul_output_mode;
+  float32_tidl softcap;
+} sTIDL_AttentionPCParams_t;
+
 typedef struct{
   int32_t tensorHeight;
   int32_t tensorWidth;
@@ -459,6 +481,11 @@ typedef struct{
   int8_t isOutputSliced;
 }sTIDL_RNNPCParams_t;
 
+typedef struct{
+  /** Flag to indicate whether slice points are set by parser */
+  int8_t setSlicePoints;
+}sTIDL_SlicePCParams_t;
+
 /**
 @struct sTIDL_allowlistingMetaData
 @brief  This structure contains layer level tensor related meta data to be used for allowlisting
@@ -535,6 +562,8 @@ typedef union {
   sTIDL_LSTMPCParams_t lstmParams;
   sTIDL_GRUPCParams_t gruParams;
   sTIDL_RNNPCParams_t rnnParams;
+  sTIDL_AttentionPCParams_t attentionParams;
+  sTIDL_SlicePCParams_t sliceParams;
 } sTIDL_LayerPCParams_t;
 
 /**
@@ -570,10 +599,25 @@ typedef enum
   TIDL_QuantizeConstrained    ,
 }eTIDL_QuantizeConstraint;
 
+/**
+ *  \anchor eTIDL_LayerQuantMode
+ *  \name   TIDL Layer Quant Mode
+ *
+ *  Defines the quantization mode used for a layer within the TIDL framework.
+ *  This determines whether the layer uses Post-Training Quantization (PTQ)
+ *  or the model's native data type (as defined in the model itself).
+ *
+ *  @{
+ */
+#define TIDL_LAYER_PTQ          ((int32_t) 0)
+#define TIDL_LAYER_NATIVE       ((int32_t) 1)
+/* @} */
+
 typedef struct {
     sTIDL_LayerParams_t layerParams;
     sTIDL_LayerPCParams_t layerPCParams;
     sTIDL_ActParams_t    actParams;
+    sTIDL_ClipParams_t   clipParams;
     int32_t layerType;
     int32_t layerKernelType;
     int32_t mixedPrecisionState;
@@ -623,12 +667,25 @@ typedef struct {
     int8_t  isBatchGroupLayer;
     /** Flag to indicate if layer is of batch group for batch processing and what dimension is batch dimension */
     int32_t  batchGroupDimIdx;
-    /** Flag to indicate if layer can be part of batch group for batch processing */
-    int8_t  isBatchUpdated; 
+    /** Flag to indicate whether the layer can participate in shape folding optimization */
+    int8_t  skipShapeFold;
     /* Buffer to store the LUT values*/
     sBuffer_t lutData;
     /* Flag to indicate if some other layer has been converted to this layer */
     int8_t isConverted;
+    /* Layer Quant Mode as defined by \ref eTIDL_LayerQuantMode */
+    int8_t quantMode;
+    /* Flag to indicate if layer's outDataNames are same as original network */
+    int8_t isOutDataNameOriginal[TIDL_NUM_OUT_BUFS];
+    /**
+     * Unique ID for the layer. Currently only being used to store shape-fold
+     * changes per stage.
+     * 
+     * TODO: Make this a generic UID to help identify unique layers across
+     * all optimizations. Take care of assignment for this UID for any newley
+     * added layer as well.
+     */
+    int32_t shapeFoldUId;
 }sTIDL_LayerPC_t;
 
 typedef struct {

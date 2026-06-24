@@ -86,6 +86,14 @@
 #endif
 #endif
 
+#if defined(SOC_TDA54) && !defined(HOST_EMULATION)
+#include "udma_standalone/udma.h"
+#include "hal/Dru/v0/include/Dru_Hal.h"
+#define CSL_MSMC_DRU0_CFG_BASE (0x6AC00000UL)
+/* Central DRU base address 0x6AC00000UL*/
+#define UDMA_UTC_BASE_DRU0 (CSL_MSMC_DRU0_CFG_BASE)
+Dru_Hal_InstanceType druHalInstance;
+#endif
 
 /* #define DISABLE_PREEMPTION */
 
@@ -590,7 +598,14 @@ static int32_t tivxKernelTIDLLog(const char * format, va_list va_args_ptr)
 {
     static char buf[1024];
     (void)vsnprintf(buf, 1024, format, va_args_ptr);
+    #ifdef TIVX_TIDL_TARGET_DEBUG
+    /* Added for better debugging, VX_PRINT sends all logs via ipc,
+       allowing to see logs of TIDL_VISION_FXNS called via tivxAlgiVision*
+    */
+    VX_PRINT(VX_ZONE_INFO, " %s", (char *)buf);
+    #else
     (void)printf("%s\n", (char *)buf);
+    #endif
     return 0;
 }
 
@@ -1151,6 +1166,13 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
                 );
 #ifdef x86_64
             tidlObj->createParams.udmaDrvObj = tidlX86UdmaInit((int32_t)tidlObj->createParams.coreId);
+#elif defined(SOC_TDA54)
+            Dru_Hal_InitParamsType druHalInitParams;
+            // Udma_init also uses central dru 
+            druHalInitParams.HwDruRegsPtr = (Dru_Hal_Regs *) UDMA_UTC_BASE_DRU0;
+            druHalInitParams.UserArgsPtr = NULL;
+            Dru_Hal_Init(&druHalInstance, &druHalInitParams);
+            tidlObj->createParams.udmaDrvObj = &druHalInstance;
 #else
             tidlObj->createParams.udmaDrvObj = appUdmaGetObj();
 #endif

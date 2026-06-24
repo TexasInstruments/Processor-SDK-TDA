@@ -167,7 +167,7 @@ const vector<TidlConstraint> tidlConstraintGather = {
                 }
             }
 
-            if(layer->optimized == 0)
+            if(layer->optimized == 0 && axis != TIDL_DIM_WIDTH)
             {
                 for(int32_t i = 0; (i < (axis - offset) && i < md.varTensorsDims[0].size()); i++)
                 {

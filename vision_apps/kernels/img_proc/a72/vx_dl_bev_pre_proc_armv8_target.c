@@ -178,6 +178,9 @@ typedef struct
     float    scale[MAX_TENSOR_DIMS];
     */
 
+    /* Channel pitch in bytes from TIDL inChannelPitch — used as ch_offset
+     * so preproc writes match the stride the TIDL kernel reads with */
+    uint32_t channel_pitch;
 
 }dl4DPreProcessImageParams;
 
@@ -534,6 +537,7 @@ static vx_status VX_CALLBACK tivxKernelDLPreProc4DArmv8Process
         params.output_dimensions[0]     = out_tensor_desc->dimensions[0];
         params.output_dimensions[1]     = out_tensor_desc->dimensions[1];
         params.output_dimensions[2]     = out_tensor_desc->dimensions[2];
+        params.channel_pitch            = dlParams->channel_pitch;
         params.out_tensor_target_ptr    = out_tensor_target_ptr;
         params.mean[0]                  = dlParams->mean[0];
         params.mean[1]                  = dlParams->mean[1];
@@ -674,10 +678,10 @@ void dlPreProcess_4D_NV12_image
     
     uint32_t skip_mean_scale = 0;
     uint32_t pos_x = 0, pos_y = 0, input_batch =1, batch_iteration = 0 ;
-    uint32_t ch_offset = prms->output_dimensions[0] * prms->output_dimensions[1];
-    
+    uint32_t ch_offset = prms->channel_pitch;
+
     /*BEV Modification change*/
-    uint32_t batch_offset = prms->output_dimensions[0] * prms->output_dimensions[1]* (prms->output_dimensions[2]-1); 
+    uint32_t batch_offset = prms->channel_pitch * (prms->output_dimensions[2]-1);
 
 
     if(prms->mean[0]==0 && prms->mean[1]==0 && prms->mean[2]==0 &&

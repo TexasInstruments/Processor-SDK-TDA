@@ -2836,9 +2836,9 @@ int32_t TIDL_tfliteRtLayerFillTensorNames(TfLiteContext* context, TfLiteNode* no
 
       /*if(orgTIDLNetStructure.TIDLPCLayers[layerIndex].actParams.actType == TIDL_RelU6)
       {
-          orgTIDLNetStructure.TIDLPCLayers[layerIndex].actParams.actType = TIDL_Clip;
-          orgTIDLNetStructure.TIDLPCLayers[layerIndex].actParams.clipMax = 6.0;
-          orgTIDLNetStructure.TIDLPCLayers[layerIndex].actParams.clipMin = 0;
+          orgTIDLNetStructure.TIDLPCLayers[layerIndex].clipParams.isClipEnabled = TIDL_Clip;
+          orgTIDLNetStructure.TIDLPCLayers[layerIndex].clipParams.clipMax = 6.0;
+          orgTIDLNetStructure.TIDLPCLayers[layerIndex].clipParams.clipMin = 0;
           orgTIDLNetStructure.TIDLPCLayers[layerIndex].outData[0].elementType = tidl_getElementType(0);
 
       }*/
@@ -2849,7 +2849,7 @@ int32_t TIDL_tfliteRtLayerFillTensorNames(TfLiteContext* context, TfLiteNode* no
         auto *zero_point = quantization->zero_point;
         if (scale && zero_point)
         {
-          orgTIDLNetStructure.TIDLPCLayers[layerIndex].actParams.actType = TIDL_Clip;
+          orgTIDLNetStructure.TIDLPCLayers[layerIndex].clipParams.isClipEnabled = 1;
 
           int32_t inMax = 127;
           int32_t inMin = -128;
@@ -2860,9 +2860,9 @@ int32_t TIDL_tfliteRtLayerFillTensorNames(TfLiteContext* context, TfLiteNode* no
             inMin = 0;
           }
 
-          orgTIDLNetStructure.TIDLPCLayers[layerIndex].actParams.clipMax = (inMax - zero_point->data[0]) * scale->data[0];
-          orgTIDLNetStructure.TIDLPCLayers[layerIndex].actParams.clipMin = (inMin-zero_point->data[0]) * scale->data[0];
-          if(orgTIDLNetStructure.TIDLPCLayers[layerIndex].actParams.clipMin >= 0)
+          orgTIDLNetStructure.TIDLPCLayers[layerIndex].clipParams.clipMax = (inMax - zero_point->data[0]) * scale->data[0];
+          orgTIDLNetStructure.TIDLPCLayers[layerIndex].clipParams.clipMin = (inMin-zero_point->data[0]) * scale->data[0];
+          if(orgTIDLNetStructure.TIDLPCLayers[layerIndex].clipParams.clipMin >= 0)
           {
             orgTIDLNetStructure.TIDLPCLayers[layerIndex].outData[0].elementType = tidl_getElementType(0);
           }
@@ -3164,9 +3164,13 @@ int32_t TIDL_tfliteRtImportInit(TfLiteContext* context, const TfLiteDelegatePara
                                   std::vector<std::string>outDataOd, bool isSubgraphOD)
 {
   TIDL_GLOBAL_REPORT_INFO(osrt_options->osrtDebugPrintLevel, "In TIDL_tfliteRtImportInit subgraph_id=%d", subgraph_id);
+
   // Reset all the memories to to NULL, there could be multiple subgraphs
   memset(&orgTIDLNetStructure, 0, sizeof(sTIDL_OrgNetwork_t));
   memset(&tIDLNetStructure,    0, sizeof(sTIDL_Network_t));
+  memset(inDataNames,          0, sizeof(inDataNames));
+  memset(outDataNames,         0, sizeof(outDataNames));
+
   runtimes_import_state.layerIndex = 0;
   runtimes_import_state.dataIndex  = 0;
 

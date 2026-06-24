@@ -300,11 +300,11 @@ static int32_t deleteRThandles()
     {
       FCLOSE(fp1);
     }
-    if (params->updateNetWithStats)
+    if (params->updateNetWithStats != TIDL_UPDATE_NONE)
     {
       //Need to get the Net structure which is part of TIDL object
       sTIDL_Network_t *tidlNet = (sTIDL_Network_t*) gPrivArgs;
-      tidl_writeNetWithStats(params,tidlNet);
+      tidl_writeNetWithStats(params, tidlNet);
     }
     status = TIDLRT_delete(handle);
 #ifdef TEST_MULTIPRIORITY
@@ -429,7 +429,7 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
     gWriteStaticBins = params->writeBinsAsHeader; //Set Global WriteStaticBins
     free(perConfigArgs);    
 
-    if(!(params->flowCtrl & TIDL_FLOW_CTRL_REF_STAT))
+    if(!((params->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) || (params->flowCtrl & TIDL_FLOW_CTRL_PERF_MODEL)))
     {
       if(totalInsts > 1)
       {
@@ -990,7 +990,7 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
             // Given invoke is IALG_EOK this should return IALG_EOK
             status = TIDLRT_deactivate(handle);
 #endif
-            if(!(params->flowCtrl & TIDL_FLOW_CTRL_REF_STAT))
+            if(!((params->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) || (params->flowCtrl & TIDL_FLOW_CTRL_PERF_MODEL)))
             {
               tidl_tb_printf(0, " ...");
             }
@@ -1007,7 +1007,7 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
               tidl_CompareNetOutputMem(params, &gIOParams, out);
             }
             tidl_NetOutputPostproc(params, &gIOParams, out, i);
-            if(!(params->flowCtrl & TIDL_FLOW_CTRL_REF_STAT))
+            if(!((params->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) || (params->flowCtrl & TIDL_FLOW_CTRL_PERF_MODEL)))
             {
               tidl_tb_printf(0, " ....");
             }
@@ -1018,7 +1018,7 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
             status = tidl_freeInOutTensors(&gIOParams, in, out);
             free(ins);
             free(outs);
-            if(!(params->flowCtrl & TIDL_FLOW_CTRL_REF_STAT))
+            if(!((params->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) || (params->flowCtrl & TIDL_FLOW_CTRL_PERF_MODEL)))
             {
               tidl_tb_printf(0, " .....");
             }

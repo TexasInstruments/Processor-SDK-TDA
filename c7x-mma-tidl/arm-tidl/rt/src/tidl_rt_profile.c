@@ -68,11 +68,18 @@
 @version 0.1 April 2024 : Initial Code
 
 */
-
+//#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L 
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
 #include "tidl_rt_profile.h"
+#if _POSIX_C_SOURCE >= 199309L
+#include <time.h>   /* for nanosleep */
+int nanosleep(const struct timespec *req,
+              struct timespec *rem);
+int clock_gettime (clockid_t __clock_id, struct timespec *__tp);
+#endif
 
 const sTIDLProfilePrintInfo_t gTimeProfilePrintInfo[TIDLRT_PROFILE_MAX_POINTS] =
 {
@@ -104,6 +111,7 @@ void init_rt_profile(sProfilePoints_t *profiler, int32_t traceLogLevel)
 static void get_time_u64(uint64_t *t)
 {
     struct timespec ts;
+    /*MISRA Rule 17.3: Reviewed clock_gettime is defined in time.h with _POSIX_C_SOURCE 200809L*/
     (void)clock_gettime(CLOCK_MONOTONIC, &ts);
     *t = ((uint64_t)ts.tv_sec * (uint64_t)1000000000ULL) + (uint64_t)ts.tv_nsec;
 }

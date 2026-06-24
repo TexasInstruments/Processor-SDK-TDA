@@ -83,6 +83,7 @@ using namespace std;
 #include "tidl_constraint_utils.h"
 #include "tidl_import_api.h"
 #include "tidl_import_common.h"
+#include "tidl_common_utils_infer_import.h"
 
     struct TidlConstraint
     {

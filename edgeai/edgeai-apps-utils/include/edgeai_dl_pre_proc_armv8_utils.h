@@ -120,6 +120,10 @@ typedef struct
     float    mean[3];
     float    scale[3];
 
+    /* Channel pitch in bytes from TIDL inChannelPitch — used as ch_offset
+     * so preproc writes match the stride the TIDL kernel reads with */
+    uint32_t channel_pitch;
+
 }dlPreProcessImageParams;
 
 void dlPreProcess_RGB_image

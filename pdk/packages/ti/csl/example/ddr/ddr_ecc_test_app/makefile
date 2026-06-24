@@ -2,7 +2,11 @@ include $(PDK_INSTALL_PATH)/ti/build/Rules.make
 
 BUILD_OS_TYPE=baremetal
 
-APP_NAME = csl_ddr_ecc_test_app
+ifeq ($(RB_ENABLE), TRUE)
+ APP_NAME = csl_ddr_ecc_test_app_rb_enable
+else
+ APP_NAME = csl_ddr_ecc_test_app
+endif
 
 SRCDIR = .
 INCDIR = .
@@ -14,6 +18,10 @@ INCLUDE_EXTERNAL_INTERFACES = pdk csl_arch
 # List all the components required by the application
 ifeq ($(BOARD),$(filter $(BOARD), j721s2_evm j784s4_evm))
  COMP_LIST_COMMON += $(PDK_COMMON_BAREMETAL_COMP)
+ ifeq ($(RB_ENABLE), TRUE)
+  COMP_LIST_COMMON := $(filter-out csl,$(COMP_LIST_COMMON))
+  COMP_LIST_COMMON += csl_ipfma
+ endif
 else
  COMP_LIST_COMMON += csl
  ifeq ($(CORE),$(filter $(CORE), mcu1_0))

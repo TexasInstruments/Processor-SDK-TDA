@@ -74,7 +74,6 @@
 #define TRANSPOSE_DEBUG 0
 #ifdef BUILD_WITH_CUDA
 #include "tidl_cuda.h"
-static int CUDA_TRANSPOSE_COUNTER = 0;
 #endif
 
 /**
@@ -162,7 +161,7 @@ template<class Tin, class Tout> void TIDL_transposeRefProcess(
   int32_t d2p = targetStrides[TIDL_DIM_DIM2];
   int32_t bp = targetStrides[TIDL_DIM_BATCH];
 
-  #ifdef BUILD_WITH_CUDA
+  #ifdef BUILD_WITH_CUDA_TRANSPOSE
   int32_t outBatches = inDataParams->dimValues[perm[TIDL_DIM_BATCH]];
   TIDL_cudaTranspose(
     pIn, pOut,
@@ -231,10 +230,6 @@ template<class Tin, class Tout> void TIDL_transposeRefProcess(
   #endif
   #endif
 
-  #ifdef BUILD_WITH_CUDA
-  /*Mark init as completed to prevent re-allocation of buffers for subsequent frames:*/
-  TIDL_cudaSetTransposeInitFlag(CUDNNLC);
-  #endif
   TIDL_L1DandL2CacheWbInv();
 }
 
@@ -251,4 +246,7 @@ template void TIDL_transposeRefProcess(const uint16_t *pIn, uint16_t *pOut,
                                        sTIDL_DataParams_t *inDataParams, const sTIDL_Layer_t *tidlLayer);
 
 template void TIDL_transposeRefProcess(const int16_t *pIn, int16_t *pOut,
+                                       sTIDL_DataParams_t *inDataParams, const sTIDL_Layer_t *tidlLayer);
+
+template void TIDL_transposeRefProcess(const int32_t *pIn, int32_t *pOut,
                                        sTIDL_DataParams_t *inDataParams, const sTIDL_Layer_t *tidlLayer);

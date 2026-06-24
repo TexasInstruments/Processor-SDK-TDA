@@ -90,5 +90,9 @@ int32_t TIDL_cropProcessNew(TIDL_NetworkCommonParams *commonParams,
                               int32_t                layerIdx);
 
 void TIDL_UpdateScaleFactors(TIDL_Handle intAlgHandle, int32_t i, int32_t updateStats, int64_t accMin, int64_t accMax);                            
+
+int32_t TIDL_cropGetPerfData(void* linkHandle,
+                                 double *perfData);
+
 #endif /* ITIDL_CROP_H*/
 

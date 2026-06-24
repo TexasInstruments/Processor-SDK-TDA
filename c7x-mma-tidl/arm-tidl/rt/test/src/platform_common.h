@@ -29,7 +29,7 @@ extern sTIDL_IOBufDesc_t  gIOParams;
   #define L2_TOTAL_MEMORY_SIZE  (512 * 1024)
 #elif defined(SOC_J784S4)
   #define L2_MEM_SIZE  (448*1024+  EXTRA_MEM_FOR_ALIGN)
-  #define L3_MEM_SIZE  (2994 * 1024)
+  #define L3_MEM_SIZE  (3072 * 1024)
   #define L3_TOTAL_MEMORY_SIZE  (3 * 1024 * 1024)
   #define L2_TOTAL_MEMORY_SIZE  (512 * 1024)
 #elif defined(SOC_J742S2)
@@ -50,10 +50,20 @@ extern sTIDL_IOBufDesc_t  gIOParams;
   #define L3_TOTAL_MEMORY_SIZE  (1 * 1024 * 1024)
   #define L2_TOTAL_MEMORY_SIZE  (256 * 1024)
 #elif defined (SOC_TDA54)
-  #define L2_MEM_SIZE  (3072*1024+  EXTRA_MEM_FOR_ALIGN)
-  #define L3_MEM_SIZE  (24576 * 1024)
+#if defined(TIDL_PRESILICON_COMMON) && !defined(HOST_EMULATION)
+  //TODO: remove when silicon is available
+  // presil constraints, limit to these values
+  // check vision_apps/platform/tda54/rtos/app_mem_map.h
+  #define L2_MEM_SIZE  (3 * 1024 * 1024 - 16 * 1024) // 3MB - 16KB for L1
+  #define L3_MEM_SIZE  (6 * 1024 * 1024)
+  #define L3_TOTAL_MEMORY_SIZE  (6 * 1024 * 1024)
+  #define L2_TOTAL_MEMORY_SIZE  (3 * 1024 * 1024)
+#else
+  #define L2_MEM_SIZE  (3 * 1024 * 1024 + EXTRA_MEM_FOR_ALIGN)
+  #define L3_MEM_SIZE  (24 * 1024 * 1024)
   #define L3_TOTAL_MEMORY_SIZE  (24 * 1024 * 1024)
   #define L2_TOTAL_MEMORY_SIZE  (3 * 1024 * 1024)
+#endif
 #else
   #define L2_MEM_SIZE  (448*1024+  EXTRA_MEM_FOR_ALIGN)
   #define L3_MEM_SIZE  (7968 * 1024)

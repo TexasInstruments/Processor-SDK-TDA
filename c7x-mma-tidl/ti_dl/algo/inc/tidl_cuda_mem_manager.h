@@ -42,9 +42,16 @@ typedef struct {
     int32_t  lastSyncDirection;/**< 0=none, 1=H2D, 2=D2H */
 } TIDL_CudaMemRecord;
 
+typedef struct {
+    void* d_base;              /**< Device (GPU) base pointer */
+    void* h_base;              /**< Host (CPU) base pointer (reference) */
+    uint32_t size;             /**< Size in bytes */
+}TIDL_CudaMemBuffer;
+
 
 /*Temporary duplicate - alg_int.h has this defined & it must be in sync with it:*/
 #define NUM_MEMRECS_TIDL 16U
+#define NUM_BUFFERS_TIDL 256U
 
 /**
  * @struct TIDL_LayerDependency
@@ -64,6 +71,8 @@ typedef struct {
  */
 typedef struct {
     TIDL_CudaMemRecord memRecs[NUM_MEMRECS_TIDL];  /**< GPU mirrors of all memrecs */
+    TIDL_CudaMemBuffer *memBufs;                   /**< GPU buffers for data not in memrecs */
+    int32_t            numMemBufs;                 /**< Number of memory buffers */
     int32_t            numMemRecs;                 /**< Number of memrecs */
     int32_t            isInitialized;              /**< Initialization flag */
     
@@ -80,11 +89,45 @@ typedef struct {
     
     /* Layer dependency tracking */
     TIDL_LayerDependency *layerDependencies;       /**< Array of layer dependencies */
-    
+
+    int32_t              streamsInitialized;       /**<Flag to check if cuda stream is initialized or not */
+
+    /* Per-process CUDA stream */
+    void*                processStream;          /**< Single non-blocking stream for all layers */
+
+    /* Per-layer CUDA streams */
+    void**               layerStreams;            /**< Array of per-layer CUDA streams */
+
 } TIDL_CudaMemManager;
 
-/* Global pointer to the CUDA Memory Manager for access from other CUDA files */
-extern TIDL_CudaMemManager* g_cudaMemManager;
+/* Thread-local CUDA context — replaces the old process-global g_cudaMemManager
+ * and CUDNNLC for thread safety. Each inference thread sets its own context
+ * before executing layers. Access via getter/setter functions below.
+ */
+
+/**
+ * @brief Set the per-thread CUDA memory manager (call before layer execution)
+ * @param manager Pointer to this thread's TIDL_CudaMemManager instance
+ */
+void TIDL_cudaSetThreadManager(TIDL_CudaMemManager *manager);
+
+/**
+ * @brief Get the per-thread CUDA memory manager
+ * @return Pointer to this thread's TIDL_CudaMemManager, or NULL if not set
+ */
+TIDL_CudaMemManager* TIDL_cudaGetThreadManager(void);
+
+/**
+ * @brief Set the per-thread current layer index (replaces global CUDNNLC)
+ * @param layerIdx Current layer index for this thread
+ */
+void TIDL_cudaSetThreadLayerIdx(int32_t layerIdx);
+
+/**
+ * @brief Get the per-thread current layer index
+ * @return Current layer index for this thread
+ */
+int32_t TIDL_cudaGetThreadLayerIdx(void);
 
 /**
  * @enum TIDL_MemSyncDirection
@@ -142,6 +185,22 @@ int32_t TIDL_cudaMemManagerInit(
  */
 int32_t TIDL_cudaMemManagerAllocate(TIDL_CudaMemManager *manager);
 
+
+/**
+ * @brief Allocate memory on GPU
+ * @param manager Pointer to CUDA memory manager
+ * @param cpuPtr CPU pointer
+ * @param gpuPtr Output GPU pointer
+ * @param size memory size in bytes
+ * @return IALG_EOK on success, IALG_EFAIL on failure
+ */
+int32_t TIDL_cudaAllocBuffer(
+    TIDL_CudaMemManager *manager,
+    const void *cpuPtr,
+    void** gpuPtr,
+    uint32_t size
+);
+
 /**
  * @brief Free all GPU memory
  * @param manager Pointer to CUDA memory manager
@@ -160,14 +219,14 @@ int32_t TIDL_cudaMemManagerCopyPersistentH2D(TIDL_CudaMemManager *manager);
  * @param manager Pointer to CUDA memory manager
  * @param cpuPtr CPU pointer
  * @param gpuPtr Output GPU pointer
- * @param memRecIdx Output memrec index (optional, can be NULL)
+ * @param size size in bytes of applied cudaMemcpy/cudaMemset
  * @return IALG_EOK if found, IALG_EFAIL if not found
  */
 int32_t TIDL_cudaTranslatePtrCPUtoGPU(
     const TIDL_CudaMemManager *manager,
     const void *cpuPtr,
     void **gpuPtr,
-    int32_t *memRecIdx
+    int32_t size
 );
 
 /**
@@ -183,6 +242,20 @@ int32_t TIDL_cudaTranslatePtrGPUtoCPU(
     const void *gpuPtr,
     void **cpuPtr,
     int32_t *memRecIdx
+);
+
+/**
+ * @brief Copy data from device to device corresponding to host source and destination pointers
+ * @param dstPtr CPU destination pointer
+ * @param srcPtr CPU source pointer
+ * @param size size of data transfer in bytes
+ * @return IALG_EOK on success, IALG_EFAIL otherwise
+ */
+int32_t TIDL_cudaForceSync(
+    TIDL_CudaMemManager *manager,
+    void* dstPtr,
+    void* srcPtr,
+    size_t size
 );
 
 /**
@@ -249,6 +322,7 @@ int32_t TIDL_cudaMemManagerPreLayerSync(
     TIDL_CudaMemManager *manager,
     int32_t layerIdx,
     void *inPtrs[],
+    int32_t bufferIdsToSynchronize[],
     int32_t numInBufs,
     const uint32_t inDataSizes[]
 );
@@ -305,6 +379,17 @@ int32_t TIDL_cudaMemManagerIsPointerInMemRec(
     const void *cpuPtr,
     int32_t memRecIdx
 );
+
+/**
+ * @brief Get the CUDA stream for a specific layer
+ * @param manager Pointer to CUDA memory manager
+ * @param layerIdx Layer index
+ * @return CUDA stream for the layer, or NULL if not available
+ */
+void* TIDL_cudaGetLayerStream(TIDL_CudaMemManager* manager, int32_t layerIdx);
+
+void* TIDL_cudaGetProcessStream(TIDL_CudaMemManager* manager);
+
 
 #endif /* BUILD_WITH_CUDA */
 

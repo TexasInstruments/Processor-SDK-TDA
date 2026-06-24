@@ -112,9 +112,10 @@ extern sTIDL_runtimesImportState_t runtimes_import_state;
 static const std::unordered_map<std::string, vector<int32_t>> ONNXNodeOptionalInputs =
 {
   {"Resize", {1, 2, 3}},
-  {"LSTM",   {3, 4, 5, 6, 7}},
-  {"GRU",    {3, 4, 5}},
-  {"RNN",    {3, 4, 5}},
+  {"LSTM",   {TIDL_RecurrentInputB, TIDL_RecurrentInputSequenceLens, TIDL_RecurrentInputInitialH, TIDL_RecurrentInputInitialC, TIDL_RecurrentInputPeepholes}},
+  {"GRU",    {TIDL_RecurrentInputB, TIDL_RecurrentInputSequenceLens, TIDL_RecurrentInputInitialH}},
+  {"RNN",    {TIDL_RecurrentInputB, TIDL_RecurrentInputSequenceLens, TIDL_RecurrentInputInitialH}},
+  {"CastLike", {1}},
 };
 
 /**
@@ -143,6 +144,7 @@ static const std::unordered_set<std::string> individualSupportedOnnxOps (
   {
     "Conv",
     "Cast",
+    "CastLike",
     "Relu",
     "PRelu",
     "LeakyRelu",
@@ -244,9 +246,28 @@ static const std::unordered_set<std::string> individualSupportedOnnxOps (
     "GroupNormalization",
     "LSTM",
     "GRU",
-    "RNN"
+    "RNN",
+    "GatherND",
+    "GatherElements",
+    "Shape",
+    "Size",
+    "Attention",
+    "NonZero"
   }
 );
+
+  /*  List of layer types that support dynamic shapes, allowing their output dimensions to vary
+   *  at runtime based on input data rather than being fixed during import */
+
+  static const std::unordered_set<std::string> dynamicShapeSupportedLayers(
+   {
+    "NonZero",
+    "Transpose",
+    "GatherND" ,
+    "Shape",
+    "Size"
+    }
+  );
 
 /*
   Set of operators which do not perform any operations
@@ -258,8 +279,9 @@ static const std::unordered_set<std::string> onnxNoOps (
     "Reshape",
     "Squeeze",
     "Unsqueeze",
-    "Cast",
-    "Flatten"
+    "Flatten",
+    "CastLike"
+    // Think of adding Cast too but then Unit test models will have to change
   }
 );
 
@@ -664,7 +686,7 @@ int32_t TIDL_onnxAllowlistNode(GraphProto&   onnxGraph, int32_t i, TIDL_osrtOpti
 
   if(isNodeInDenyList || isNodeInDenyListLayer || isNodeInDenyListName)
   {
-    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Node %s added to unsupported nodes as specified in deny list", onnxGraph.node(i).name().c_str());
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Node (%s) - OP (%s) : Explicitly denied via deny list", onnxGraph.node(i).name().c_str(), onnxGraph.node(i).op_type().c_str());
     if (osrtDebugPrintLevel)
     {
       gDiags.reportLastModeDiag();
@@ -680,7 +702,7 @@ int32_t TIDL_onnxAllowlistNode(GraphProto&   onnxGraph, int32_t i, TIDL_osrtOpti
       int32_t numDims = nodeInputDims.size();
       if(TIDL_checkLayerInputDimConstraints(onnxGraph, i) == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
       {
-        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Node %s - op type %s, number of input dims(%d) is not supported by TIDL, maximum dimension allowed is %d", onnxGraph.node(i).name().c_str(), onnxGraph.node(i).op_type().c_str(), numDims, TIDL_DIM_MAX);
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Node (%s) - OP (%s) : Input has %d dims, exceeds maximum of %d", onnxGraph.node(i).name().c_str(), onnxGraph.node(i).op_type().c_str(), numDims, TIDL_DIM_MAX);
         if (osrtDebugPrintLevel)
         {
           gDiags.reportLastModeDiag();
@@ -693,6 +715,16 @@ int32_t TIDL_onnxAllowlistNode(GraphProto&   onnxGraph, int32_t i, TIDL_osrtOpti
       TIDL_LOG_INFO(gDiags.gDiagList, "Not part of backbone network, will be delegated in post-processing");
       return 1;
     }
+  }
+
+  if (onnxGraph.node(i).input_size() <= 0)
+  {
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Node (%s) - OP (%s) : No inputs found", onnxGraph.node(i).name().c_str(), onnxGraph.node(i).op_type().c_str());
+    if (osrtDebugPrintLevel)
+    {
+      gDiags.reportLastModeDiag();
+    }
+    return 0;
   }
 
   std::vector<int32_t> nodeInputDims = getNodeInputShape(onnxGraph,  onnxGraph.node(i).input(0), debugLevel);
@@ -709,7 +741,7 @@ int32_t TIDL_onnxAllowlistNode(GraphProto&   onnxGraph, int32_t i, TIDL_osrtOpti
   int32_t numDims = nodeInputDims.size();
   if(TIDL_checkLayerInputDimConstraints(onnxGraph, i) == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL) //if layer input has more than accepted dimensions, not supported
   {
-    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Layer %s - op type %s, number of input dims(%d) is not supported by TIDL, maximum dimension allowed is %d", onnxGraph.node(i).name().c_str(), onnxGraph.node(i).op_type().c_str(), numDims, TIDL_DIM_MAX);
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Node (%s) - OP (%s) : Input has %d dims, exceeds maximum of %d", onnxGraph.node(i).name().c_str(), onnxGraph.node(i).op_type().c_str(), numDims, TIDL_DIM_MAX);
     if (osrtDebugPrintLevel)
     {
       gDiags.reportLastModeDiag();
@@ -717,9 +749,9 @@ int32_t TIDL_onnxAllowlistNode(GraphProto&   onnxGraph, int32_t i, TIDL_osrtOpti
     return 0;
   }
 
-  if(TIDL_checkLayerInputOutputDimsExist(onnxGraph, i) == -1) //if layer input is non-existent, not supported
+  if(TIDL_checkLayerInputOutputDimsExist(onnxGraph, i) == -1 && (std::find(dynamicShapeSupportedLayers.begin(), dynamicShapeSupportedLayers.end(), onnxGraph.node(i).op_type()) == dynamicShapeSupportedLayers.end()) ) //if layer input is non-existent, not supported
   {
-    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Layer %d - op type %s, Unknown input/output dimension, not supported by TIDL", i, onnxGraph.node(i).op_type().c_str());
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Node (%s) - OP (%s) : Input/output shape unknown", onnxGraph.node(i).name().c_str(), onnxGraph.node(i).op_type().c_str());
     if (osrtDebugPrintLevel)
     {
       gDiags.reportLastModeDiag();
@@ -879,9 +911,13 @@ int32_t TIDL_onnxRtImportInit(GraphProto& onnxGraph, onnxRtParams_t *onnxRtParam
   int32_t i;
   int32_t status, elementSize;
   TIDL_GLOBAL_REPORT_INFO(osrt_options->osrtDebugPrintLevel, "In TIDL_onnxRtImportInit subgraph_name=%s", subgraph_name);
+
   // Reset all the memories to to NULL, there could be multiple subgraphs
   memset(&orgTIDLNetStructure, 0, sizeof(sTIDL_OrgNetwork_t));
   memset(&tIDLNetStructure,    0, sizeof(sTIDL_Network_t));
+  memset(inDataNames,          0, sizeof(inDataNames));
+  memset(outDataNames,         0, sizeof(outDataNames));
+
   runtimes_import_state.layerIndex = 0;
   runtimes_import_state.dataIndex  = 0;
 
@@ -902,6 +938,7 @@ int32_t TIDL_onnxRtImportInit(GraphProto& onnxGraph, onnxRtParams_t *onnxRtParam
       TIDL_GLOBAL_REPORT_INFO(osrt_options->osrtDebugPrintLevel, "Layer %d, subgraph id %s, name=%s", layerIndex, subgraph_name, (char*)onnxRtParams->outDataNames[i]);
 
       status = TIDL_ortGetType(onnxRtParams->outputTensorElementType[i], &gParams.outElementType[i], &elementSize);
+      gParams.modelOutElementType[i] = gParams.outElementType[i];
       if(status != 0)
       {
         return status;
@@ -979,9 +1016,9 @@ int32_t TIDL_onnxRtImportInit(GraphProto& onnxGraph, onnxRtParams_t *onnxRtParam
   for (i = 0; i < onnxRtParams->numNetInData; i++)
   {
     status = TIDL_ortGetType(onnxRtParams->inputTensorElementType[i], &gParams.inElementType[i], &elementSize);
+    gParams.modelInElementType[i] = gParams.inElementType[i];
     int32_t layerIndex = TIDL_addInputDataLayer6D(i, onnxRtParams->tensorShape[i][TIDL_DIM_BATCH], onnxRtParams->tensorShape[i][TIDL_DIM_DIM1], onnxRtParams->tensorShape[i][TIDL_DIM_DIM2], onnxRtParams->tensorShape[i][TIDL_DIM_NUMCH], onnxRtParams->tensorShape[i][TIDL_DIM_HEIGHT], onnxRtParams->tensorShape[i][TIDL_DIM_WIDTH],
                                                      (char*)onnxRtParams->inDataNames[i]);
-    TIDL_ortUpdateType(&gParams.inElementType[i]);
     TIDL_updateNamesList ((char*)gParams.inDataNamesList, i, (char *)onnxRtParams->inDataNames[i]);
     if(status != 0)
     {
@@ -999,7 +1036,8 @@ int32_t TIDL_onnxRtImportInit(GraphProto& onnxGraph, onnxRtParams_t *onnxRtParam
       if (gParams.inElementType[i] == TIDL_UnsignedWord ||
           gParams.inElementType[i] == TIDL_SignedWord ||
           gParams.inElementType[i] == TIDL_UnsignedDoubleWord ||
-          gParams.inElementType[i] == TIDL_SignedDoubleWord)
+          gParams.inElementType[i] == TIDL_SignedDoubleWord ||
+          gParams.inElementType[i] == TIDL_Bool)
       {
         inputDCAdded = 0;
       }
@@ -1013,7 +1051,11 @@ int32_t TIDL_onnxRtImportInit(GraphProto& onnxGraph, onnxRtParams_t *onnxRtParam
 
     if (inputDCAdded == 0)
     {
-      if(gParams.inElementType[i] != TIDL_SignedWord && gParams.inElementType[i] != TIDL_SignedDoubleWord) //For pointpillars, keep the inElementType same (int32) for indices
+      if(gParams.inElementType[i] != TIDL_SignedWord &&
+         gParams.inElementType[i] != TIDL_SignedDoubleWord && //For pointpillars, keep the inElementType same (int32) for indices
+         gParams.inElementType[i] != TIDL_Bool &&
+         gParams.inElementType[i] != TIDL_UnsignedDoubleWord &&
+         gParams.inElementType[i] != TIDL_UnsignedWord)
       {
         if(gParams.numFeatureBits == 32)
         {
@@ -1041,11 +1083,6 @@ int32_t TIDL_onnxRtImportInit(GraphProto& onnxGraph, onnxRtParams_t *onnxRtParam
             gParams.inElementType[i] = TIDL_SignedChar;
           }
         }
-      }
-      if(gParams.inElementType[i] == TIDL_SignedDoubleWord)
-      {
-        // indices can be 64-bit for scatter/gather, tidl doesn't support 64-bit indices, hence convert them to 32-bit
-        gParams.inElementType[i] = TIDL_SignedWord;
       }
     }
 

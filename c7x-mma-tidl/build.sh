@@ -29,11 +29,13 @@ show_usage() {
     echo " -j<N>                Number of parallel build jobs (e.g., -j8, -j16)"
     echo " --install            Copy built libraries, headers and tidl_tools tarball. Do not use during development"
     echo " --install_path       Path to copy built libraries, headers and tidl_tools tarball. Do not use during development"
+    echo " --build_with_cuda    Enable CUDA build (yes or no)"
     echo ""
     echo "Environment Variables:"
     echo " TARGET_BUILD         Used as fallback if --target_build option is not provided"
     echo " TARGET_PLATFORM      Used as fallback if --target_platform option is not provided"
     echo " PSDK_INSTALL_PATH    Used as fallback if --psdk_install_path option is not provided"
+    echo " BUILD_WITH_CUDA      Used as fallback if --build_with_cuda option is not provided"
     echo ""
 }
 
@@ -44,11 +46,14 @@ SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 ENV_TARGET_BUILD="$TARGET_BUILD"
 ENV_TARGET_PLATFORM="$TARGET_PLATFORM"
 ENV_PSDK_INSTALL_PATH="$PSDK_INSTALL_PATH"
+ENV_BUILD_WITH_CUDA="$BUILD_WITH_CUDA"
+ENV_CONCERTO_GCC_VERSION="$CONCERTO_GCC_VERSION"
 
 # Set default values
 ARG_TARGET_BUILD=""
 ARG_TARGET_PLATFORM=""
 ARG_PSDK_INSTALL_PATH=""
+ARG_BUILD_WITH_CUDA=""
 
 SCRUB=0
 
@@ -76,6 +81,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --psdk_install_path)
             ARG_PSDK_INSTALL_PATH="$2"
+            shift 2
+            ;;
+        --build_with_cuda)
+            ARG_BUILD_WITH_CUDA="$2"
             shift 2
             ;;
         --scrub)
@@ -124,6 +133,22 @@ if [ -n "$ARG_PSDK_INSTALL_PATH" ]; then
     PSDK_INSTALL_PATH="$ARG_PSDK_INSTALL_PATH"
 elif [ -n "$ENV_PSDK_INSTALL_PATH" ]; then
     PSDK_INSTALL_PATH="$ENV_PSDK_INSTALL_PATH"
+fi
+
+if [ -n "$ARG_BUILD_WITH_CUDA" ]; then
+    BUILD_WITH_CUDA="$ARG_BUILD_WITH_CUDA"
+elif [ -n "$ENV_BUILD_WITH_CUDA" ]; then
+    BUILD_WITH_CUDA="$ENV_BUILD_WITH_CUDA"
+else
+    BUILD_WITH_CUDA="no"  # Default
+fi
+
+# CUDA PC build requires GCC version selection for concerto make flow.
+# Respect an existing environment value, otherwise default to 11.
+if [ -n "$ENV_CONCERTO_GCC_VERSION" ]; then
+    CONCERTO_GCC_VERSION="$ENV_CONCERTO_GCC_VERSION"
+else
+    CONCERTO_GCC_VERSION="11"
 fi
 
 # Normalize input
@@ -191,6 +216,10 @@ build_with_config() {
     if [ ! -z "$PSDK_INSTALL_PATH" ]; then
         BUILD_FLAGS="${BUILD_FLAGS} PSDK_INSTALL_PATH=$PSDK_INSTALL_PATH"
     fi
+    if [ "$platform_type" == "PC" ] && [ "$BUILD_WITH_CUDA" == "yes" ]; then
+        BUILD_FLAGS="${BUILD_FLAGS} BUILD_WITH_CUDA=yes"
+        export CONCERTO_GCC_VERSION
+    fi
 
     if [ "$SCRUB" == "1" ]; then
         echo
@@ -209,6 +238,10 @@ build_with_config() {
         echo "  PSDK_INSTALL_PATH: $PSDK_INSTALL_PATH"
         echo "  TARGET_BUILD:      $build_type"
         echo "  TARGET_PLATFORM:   $platform_type"
+        echo "  BUILD_WITH_CUDA:   $BUILD_WITH_CUDA"
+        if [ "$platform_type" == "PC" ] && [ "$BUILD_WITH_CUDA" == "yes" ]; then
+            echo "  CONCERTO_GCC_VERSION: $CONCERTO_GCC_VERSION"
+        fi
         echo "  SCRUB:             $SCRUB"
         if [ -n "$MAKE_JOBS" ]; then
             echo "  PARALLEL_JOBS:     $MAKE_JOBS"

@@ -81,7 +81,8 @@
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
-/* None */
+#define TIDL_RNN_SIGMOID_BOUND   (20.0f)
+#define TIDL_RNN_TANH_BOUND      (10.0f)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -106,13 +107,16 @@ int32_t TIDL_rnnRefProcess(TIDL_Handle intAlgHandle,
                             void *inPtr,
                             void *WPtr,
                             void *RPtr,
+                            void *biasPtr,
                             void *initial_hPtr,
                             void *outPtr,
                             const sTIDL_DataParams_t *inDataParams,
                             const sTIDL_DataParams_t *WParams,
                             const sTIDL_DataParams_t *RParams,
+                            const sTIDL_DataParams_t *biasParams,
                             const sTIDL_DataParams_t *initial_hParams,
-                            const sTIDL_DataParams_t *outDataParams);
+                            const sTIDL_DataParams_t *outDataParams,
+                            int8_t useTaylor);
                               
 int32_t TIDL_rnnRefAlloc(const TIDL_LayerSpecificParams *layerSpecificParams,
                          const TIDL_NetworkCommonParams *commonParams,

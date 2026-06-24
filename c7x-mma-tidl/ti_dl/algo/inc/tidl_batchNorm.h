@@ -247,4 +247,8 @@ int32_t TIDL_sign_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_
 
 /* None */
 
+
+int32_t TIDL_batchNormGetPerfData(void* linkHandle,
+                                 double *perfData);
+
 #endif /* TIDL_BATCHNORM_H_*/

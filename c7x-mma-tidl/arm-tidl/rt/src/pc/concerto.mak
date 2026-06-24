@@ -41,6 +41,8 @@ ifeq ($(RTOS_SDK),$(filter $(RTOS_SDK), mcu_plus_sdk mcu_sdk))
         DMA_LIBS += libdrivers-ti_sdk_cfg_default_hostemu_gcc-linux.a
         DMA_LIBS += libhal-ti_sdk_cfg_default_hostemu_gcc-linux.a
         DMA_LIBS += libti_sdk_cfg_default_hostemu_gcc-linux.a
+        # libti_sdk_cfg_default calls Arch_Interrupt_DisableAll/RestoreAll
+        DMA_LIBS += libarch-ti_sdk_cfg_default_hostemu_gcc-linux.a
     endif
 else
     LDIRS += $(PDK_PATH)/ti/csl/lib/$(SOC)/c7x-hostemu/$(TARGET_BUILD)
@@ -83,6 +85,7 @@ MMA_LIBS =
 MMA_LIBS += mmalib_cn_x86_64
 MMA_LIBS += mmalib_x86_64
 MMA_LIBS += common_x86_64
+MMA_LIBS += perfEst_x86_64
 
 TIDL_LIBS =
 TIDL_LIBS += tidl_algo
@@ -112,13 +115,12 @@ VISION_APPS_UTILS_LIBS += app_utils_init
 VISION_APPS_UTILS_LIBS += app_utils_file_io
 
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
-    VISION_APPS_UTILS_LIBS += app_utils_init_vdk
-    VISION_APPS_UTILS_LIBS += app_utils_ipc
-    VISION_APPS_UTILS_LIBS += app_utils_remote_service
-    VISION_APPS_UTILS_LIBS += app_utils_misc
-    VISION_APPS_UTILS_LIBS += app_utils_pc_osal
-    VISION_APPS_UTILS_LIBS += app_utils_perf_stats
-    VISION_APPS_UTILS_LIBS += app_utils_console_io
+    # app_utils_timer provides appLogGetTimeInUsec/appLogGetGlobalTimeInUsec/appLogWaitMsecs
+    # which are called by the TIOVX platform (vx_platform_pc).
+    # VDK/IPC/remote-service libs (app_utils_init_vdk, app_utils_ipc, etc.) are NOT
+    # needed for PC simulation - they register non-TIDL HW kernels and are only
+    # used by the armv8 EVM builds.
+    VISION_APPS_UTILS_LIBS += app_utils_timer
 endif
 
 

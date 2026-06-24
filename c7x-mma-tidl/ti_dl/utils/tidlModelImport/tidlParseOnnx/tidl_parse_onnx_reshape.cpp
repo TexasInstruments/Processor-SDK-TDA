@@ -79,11 +79,49 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Reshape")> ()
     return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
   }
 
+  /* Load const data tensor (input[0]) into layer.bias when it is a constant initializer. */
+  {
+    auto constIt = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 0);
+    if (constIt != md.constTensorIndices.end())
+    {
+      status = copyFloatConst(graph, index, 0, layer.bias, INPUT_REQUIRED);
+      if (status == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+      {
+        TIDL_LOG_ERROR(gDiags.gDiagList, "Allowlisting : Reshape layer : Unable to read const data initializer at index 0 for node %s", graph.node(index).name().c_str());
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      }
+    }
+    else
+    {
+      layer.bias.ptr     = NULL;
+      layer.bias.bufSize = 0;
+    }
+  }
 
   status = checkShapeInferenceforOnnx(md);
 
   NodeProto node = graph.node(index);
   attrIdx = getIntAttr(node, "allowzero", &allowzero, 0);
+
+  /* Locate dims of data tensor (input[0]) — it may be variable or constant. */
+  std::vector<int32_t> dataDims;
+  {
+    auto varIt = std::find(md.varTensorIndices.begin(), md.varTensorIndices.end(), 0);
+    if (varIt != md.varTensorIndices.end())
+    {
+      int32_t pos = std::distance(md.varTensorIndices.begin(), varIt);
+      dataDims = md.varTensorsDims[pos];
+    }
+    else
+    {
+      auto constIt = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 0);
+      if (constIt != md.constTensorIndices.end())
+      {
+        int32_t pos = std::distance(md.constTensorIndices.begin(), constIt);
+        dataDims = md.constTensorsDims[pos];
+      }
+    }
+  }
 
   /**
   * Handling 0 in the shape attribute
@@ -95,9 +133,9 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Reshape")> ()
     {
       if (shape[i] == 0)
       {
-        if (i < md.varTensorsDims[0].size())
+        if (i < (int32_t)dataDims.size())
         {
-          shape[i] = md.varTensorsDims[0][i];
+          shape[i] = dataDims[i];
         }
         else
         {
@@ -132,9 +170,9 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Reshape")> ()
     // Found -1 at negIdx
     if(negIdx != -1)
     {
-      for (int32_t i = 0; i < md.varTensorsDims[0].size(); i++)
+      for (int32_t i = 0; i < (int32_t)dataDims.size(); i++)
       {
-        inputTotalVol = inputTotalVol * md.varTensorsDims[0][i];
+        inputTotalVol = inputTotalVol * dataDims[i];
       }
       shape[negIdx] = inputTotalVol/shapeTotalVol;
     }

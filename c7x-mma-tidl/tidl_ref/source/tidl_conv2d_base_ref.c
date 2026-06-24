@@ -564,9 +564,7 @@ template<int Ksize, class Tin, class Tw, class Tb, class Tacc> void TIDL_refConv
 #endif
 }
 
-#ifdef BUILD_WITH_CUDA
-int CUDNNLC;
-#endif
+/* CUDNNLC global removed for thread safety - now uses thread-local storage via TIDL_cudaSetThreadLayerIdx() */
 template<class Tin, class Tw>
     int32_t isAVXSupported(uint32_t flowCtrl, int32_t strideWidth, int32_t strideHeight, int32_t dilationWidth, int32_t dilationHeight, int32_t otf, int32_t inImPitch, int32_t outImPitch)
 {
@@ -740,7 +738,7 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
     {
 
 #ifdef BUILD_WITH_CUDA
-      CUDNNLC = layerIdx;
+      TIDL_cudaSetThreadLayerIdx(layerIdx);
       /*Temporarily block CUDA for Calibration..*/
       // if((createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) != TIDL_FLOW_CTRL_REF_STAT)
       if (TRUE)
@@ -778,6 +776,7 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
                              coeffsWidth, coeffsHeight, dilationWidth, dilationHeight, strideWidth, strideHeight, params->enableBias, TIDL_isPadOTF(net->deviceName), leftPad, topPad, padVal, algLayer->layerParams.convParams.startRowNumberInTensor, buffParams->inHeight, buffParams->inWidth);
       }
 
+#if defined TIDL_COVERAGE_DEAD_CODE
       if (((uint32_t)createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)
       {
         if (isPerChannelQuantizationEnabled(params, net->calibrationOption) == 1)
@@ -793,6 +792,7 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
           net->TIDLLayers[layerIdx].layerParams.convParams.weightScale = accMaxWeightScale;
         }
       }
+#endif
 
       outRoundBits = net->TIDLLayers[layerIdx].outData.roundBits;
       if (typeid(Tin) == typeid(float32_tidl))
@@ -802,6 +802,8 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
 
       uint8_t *roundBitsPtr = (uint8_t *)(&outRoundBits);
       int32_t enablePerChannelShift = 0;
+    #if defined TIDL_COVERAGE_DEAD_CODE
+    /*Legacy per channel quantization code is now disabled:*/
       if (isPerChannelQuantizationEnabled(params, net->calibrationOption) == 1)
       {
         int32_t chIdx;
@@ -827,6 +829,7 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
         }
         enablePerChannelShift = 1;
       }
+    #endif
 
       int32_t satLow;
       int32_t satHigh;
@@ -853,55 +856,6 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
         }
       }
 
-#ifdef BUILD_WITH_CUDA
-/*Disable cuda kernel*/
-#if 0
-if((createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) != TIDL_FLOW_CTRL_REF_STAT)
-{
-  int32_t sizeOstream = numBatches*outBatchPitch;
-  Tout *devPtrOf;
-  int32_t precisionAdjustmentShift = 0;
-  if (mixedPrecision == 1)
-  {
-    precisionAdjustmentShift = 8;
-  }
-
-  if(typeid(Tin) == typeid(float32_tidl))
-  {
-    float32_tidl fmin, fmax;
-    TIDL_getSaturationFloat(&net->TIDLLayers[layerIdx],&fmin,&fmax);
-    TIDL_cudaSaturateV1(&devPtrOf, numBatches, params->numOutChannels, height / strideHeight, width / strideWidth, outChPitch, outImPitch, outRoundBits, fmin, fmax);//Performing Saturation for float
-  }
-  else
-  {
-    if(TIDL_isAsymQuantEnabledTFL(quantizationStyle) || (TIDL_isKernelHighPrecision(tidlLayer->layerKernelType) == (int32_t)TRUE))
-    {
-      uint8_t* mmav2_Scales = (uint8_t*) algLayer->layerParams.convParams.mmaScalesPtr + algLayer->layerParams.convParams.biasRefExtraOffset;
-      uint8_t* mmav2_Shifts = (uint8_t*) algLayer->layerParams.convParams.mmaShiftsPtr + algLayer->layerParams.convParams.biasRefExtraOffset;
-      int32_t i0 = 0;
-      if(mixedPrecision == 1)
-      {
-        for(i0 = 0; i0 < params->numOutChannels; i0++)
-        {
-          mmav2_Shifts[i0] += 8U;
-        }
-      }
-      TIDL_cudaSaturateFixedPointAsym<Tacc,Tout,Tin>(&devPtrOf, numBatches, params->numOutChannels, buffParams->outHeight, buffParams->outWidth, outChPitch, outImPitch, buffParams->mmaPSATMin, buffParams->mmaPSATMax, mmav2_Scales, mmav2_Shifts, padVal);
-    }
-    else
-    {
-      TIDL_cudaSaturateFixedPoint<Tacc,Tout>(&devPtrOf, numBatches, params->numOutChannels, buffParams->outHeight, buffParams->outWidth, outChPitch, outImPitch, roundBitsPtr, satLow, satHigh, enablePerChannelShift, precisionAdjustmentShift);//Performing Saturation for Fixed Point
-    }
-  }
-
-  TIDL_cudaOutputTx( devPtrOf, sizeOstream, numBatches, params->numOutChannels, height, width, outChPitch, outImPitch, strideHeight, strideWidth, pOutChanne); //Performing Tx of output stream
-}
-else
-#endif
-      {
-        /*Mark init as completed to prevent re-allocation of buffers for subsequent frames:*/
-        TIDL_cudaSetInitFlag(CUDNNLC);
-#endif
         int64_t tempAcc;
         /* Extra offset to handle split workload with grouped conv. Need to review this change */
         uint8_t *mmav2_Scales = (uint8_t *)algLayer->layerParams.convParams.mmaScalesPtr + algLayer->layerParams.convParams.biasRefExtraOffset + algLayer->layerParams.convParams.biasMultiCoreExtraOffset;
@@ -910,6 +864,87 @@ else
         int32_t numOutChannels = params->numOutChannels;
         int32_t mmaPSATMin = buffParams->mmaPSATMin;
         int32_t mmaPSATMax = buffParams->mmaPSATMax;
+
+#ifdef BUILD_WITH_CUDA
+        sTIDL_Layer_t *pTIDLNet = &net->TIDLLayers[layerIdx];
+        int32_t outputStartOffset = buffParams->outPadOffset;
+        if (tidlLayer->outData.elementType == TIDL_SinglePrecFloat)
+        {
+          TIDL_cudaConv2DSaturateFloat((float*)accPtr, 
+                                       (float*)pOutChanne,
+                                       numBatches,
+                                       numOutChannels,
+                                       height,
+                                       width,
+                                       strideHeight,
+                                       strideWidth,
+                                       outBatchPitch,
+                                       outChPitch,
+                                       outImPitch,
+                                       (float) 0, /*No pad fill values in float mode*/
+                                       buffParams->outHeight, 
+                                       buffParams->outWidth,
+                                       buffParams->outPadOffset,
+                                       pTIDLNet
+          );
+        }
+        /*Asymmetric mode for saturation:*/
+        else if ((TIDL_QuantStyleAsymNP2_TFL == quantizationStyle) || (TIDL_isKernelHighPrecision(tidlLayer->layerKernelType) != (int32_t)FALSE))
+        {
+
+          TIDL_cudaSaturateFixedPoint(accPtr, 
+                                      pOutChanne,
+                                      numBatches,
+                                      numOutChannels,
+                                      height,
+                                      width,
+                                      strideHeight,
+                                      strideWidth,
+                                      outBatchPitch,
+                                      outChPitch,
+                                      outImPitch,
+                                      mmav2_Scales,
+                                      mmav2_Shifts,
+                                      outRoundBits,
+                                      mmaPSATMin,
+                                      mmaPSATMax,
+                                      buffParams->outZeroPoint,
+                                      buffParams->outHeight, 
+                                      buffParams->outWidth,
+                                      buffParams->outPadOffset,
+                                      mixedPrecision,
+                                      pTIDLNet                                        
+                                    );
+        }
+        else
+        {
+          /*Standard V1 saturation:*/
+          TIDL_cudaSaturateFixedPoint(accPtr, 
+                                      pOutChanne,
+                                      numBatches,
+                                      numOutChannels,
+                                      height,
+                                      width,
+                                      strideHeight,
+                                      strideWidth,
+                                      outBatchPitch,
+                                      outChPitch,
+                                      outImPitch,
+                                      NULL,
+                                      NULL,
+                                      outRoundBits,
+                                      satLow,
+                                      satHigh,
+                                      buffParams->outZeroPoint,
+                                      buffParams->outHeight, 
+                                      buffParams->outWidth,
+                                      buffParams->outPadOffset,
+                                      mixedPrecision,
+                                      pTIDLNet                                        
+                                    );
+        }
+
+#else
 
         OPENACC(data present(accPtr[:1 + (numBatches - 1) * outBatchPitch + (numOutChannels - 1) * outChPitch + (((height - strideHeight + (height % strideHeight)) / strideHeight) * outImPitch) + ((width - strideWidth + (width % strideWidth)) / strideWidth)])
                     copy(pOutChanne[:1 + (numBatches - 1) * outBatchPitch + (numOutChannels - 1) * outChPitch + (((height - strideHeight + (height % strideHeight)) / strideHeight) * outImPitch) + ((width - strideWidth + (width % strideWidth)) / strideWidth)]))
@@ -947,8 +982,6 @@ else
                     tempAcc = (int64_t)outAcc * (int64_t)mmav2_Scales[i6];
                     OPENACC(routine(TIDL_roundSatMMA))
                     outAcc = (Tacc)TIDL_roundSatMMA(tempAcc, mmav2_Shifts[i6], mmaPSATMin, mmaPSATMax);
-                    outAcc = ((int64_t)outAcc & (int64_t)0xFFFFFFFFFFU); // Only 40 bits are valid in the accumulator..
-
                     /* The below condition will be activated when asymmetric support is enabled for 16bit convolution layer. */
                     if (std::is_same<Tin, int8_t>::value || std::is_same<Tin, uint8_t>::value)
                     {
@@ -1013,9 +1046,7 @@ else
             }
           }
         }
-#ifdef BUILD_WITH_CUDA
-      }
-#endif /*BUILD_WITH_CUDA*/
+#endif
     }
   }
   return status;
@@ -1828,6 +1859,12 @@ void TIDL_conv2dSetupBuffParams(const sTIDL_ConvParams_t *conv2dparams,
     buffParams->mmaPSATMax = conv2dparams->maxPSAT;
   }
 
+  #ifdef BUILD_WITH_CUDA
+  /* ((dataParams->padH) * dataParams->pitch[TIDL_LINE_PITCH]) + (dataParams->padW);*/
+  buffParams->outPadOffset = (outDataParams->padH * outDataParams->pitch[TIDL_LINE_PITCH]) + outDataParams-> padW; 
+  #else
+  buffParams->outPadOffset = 0; /*Unused in non CUDA flows currently*/
+  #endif
   buffParams->secondRoundBits = outRoundBits;
   buffParams->avgPoolingRoundBits = 2;
   buffParams->biasQFact = 0; //: TODO: Not used
@@ -1840,6 +1877,7 @@ void TIDL_conv2dSetupBuffParams(const sTIDL_ConvParams_t *conv2dparams,
   buffParams->numTotRoi = inDataParams->dimValues[TIDL_DIM_BATCH];
   buffParams->inBatchPitch = inDataParams->pitch[TIDL_ROI_PITCH];
   buffParams->outBatchPitch = outDataParams->pitch[TIDL_ROI_PITCH];
+  buffParams->outZeroPoint = outDataParams->tensorZeroPoint;
   buffParams->scratchSize = algLayer->scratchSize;
   buffParams->scratchMem = algLayer->scratchMem;
   buffParams->memcpyTr = (uint8_t *)algLayer->memcpyTr;

@@ -100,19 +100,6 @@ const vector<TidlConstraint> tidlConstraintEltwise = {
         }
     ),
     TIDL_CSTR(
-        "Mod is not supported as an individual operator",
-        "Mod is not supported as an individual operator",
-        "",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            if(layer->layerParams.eltWiseParams.eltWiseType == TIDL_EltWiseMod)
-            {
-                return false;
-            }
-
-            return true;
-        }
-    ),
-    TIDL_CSTR(
         "Both inputs as variable are supported in Sub only if firmware version >= 10_01_06_00",
         "Both inputs as variable are supported in Sub only if firmware version >= 10_01_06_00",
         "Both inputs as variable are supported in Sub only if firmware version >= 10_01_06_00",
@@ -504,22 +491,6 @@ const vector<TidlConstraint> tidlConstraintEltwise = {
                     }
                 }
             }
-            return true;
-        }
-    ),
-    TIDL_CSTR(
-        "Only fmod = 1 is supported in Mod layer",
-        "Only fmod = 1 is supported in Mod layer",
-        "",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            if(layer->layerParams.eltWiseParams.eltWiseType == TIDL_EltWiseMod)
-            {
-                if(layer->layerParams.eltWiseParams.fmodValue != 1)
-                {
-                    return false;
-                }
-            }
-
             return true;
         }
     ),

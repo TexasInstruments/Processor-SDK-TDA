@@ -75,8 +75,8 @@
     {
         "displayName": "MCU FSS OSPI (QSPI)",
         "tisci_ip_name_list": [
-            "TISCI_DEV_MCU_FSS0_OSPI_1",
-            "TISCI_DEV_MCU_FSS0_OSPI_2"
+            "TISCI_DEV_MCU_FSS0_OSPI_0",
+            "TISCI_DEV_MCU_FSS0_OSPI_1"
         ]
     },
     {

@@ -322,7 +322,9 @@ template<typename Tsrc, typename Tdst>
   if (isKernelHighPrecision == TRUE &&
       (!((typeid(Tsrc) == typeid(float32_tidl)) &&
          (typeid(Tdst) == typeid(float32_tidl)))) &&
-      (type == TIDL_DC_TYPE_OUTPUT))
+      (type == TIDL_DC_TYPE_OUTPUT ||
+      type == TIDL_DC_TYPE_PTQ_TO_NATIVE   ||
+      type == TIDL_DC_TYPE_NATIVE_TO_PTQ ))
   {
     if ((typeid(Tsrc) == typeid(float32_tidl)) ||
         (typeid(Tdst) == typeid(float32_tidl)))
@@ -745,6 +747,12 @@ static int32_t TIDL_dataConvertRefProcess(TIDL_Handle intAlgHandle,
   {
     outZeroPoint = params->outZeroPoint;
     inZeroPoint = params->inZeroPoint;
+
+    if (isKernelHighPrecision == TRUE)
+    {
+      inZeroPoint = inDataParams->tensorZeroPoint;
+      outZeroPoint = tidlLayer->outData.tensorZeroPoint;
+    }
 
     if (params->layout != params->outLayout)
     {

@@ -25,6 +25,7 @@ SRCS_COMMON =
 # Include all common files and also the top level makefiles as CSL is the base module
 PACKAGE_SRCS_COMMON  = makefile makefile.mk csl_component.mk test/csl_test_component.mk .gitignore csl.h cslr.h csl_error.h
 PACKAGE_SRCS_COMMON += src_files_csl_trim.mk makefile_csl_trim.mk
+PACKAGE_SRCS_COMMON += makefile_csl_ipfma.mk
 PACKAGE_SRCS_COMMON += cslr_device.h soc.h csl_mainpage.h
 PACKAGE_SRCS_COMMON += hw_types.h tistdtypes.h csl_types.h csl_utils.h
 PACKAGE_SRCS_COMMON += docs build

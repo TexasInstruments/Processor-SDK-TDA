@@ -79,7 +79,7 @@ ALL_CSL_BUILDS = CSL CSL2 CSL_TRIM
 ############################
 
 ifeq ($(CSL_BUILD),$(filter $(CSL_BUILD), CSL))
-csl_LIB_LIST = csl_init csl_intc csl csl_utils_common csl_uart_console
+csl_LIB_LIST = csl_init csl_intc csl csl_ipfma csl_utils_common csl_uart_console
 endif
 
 ifeq ($(CSL_BUILD),$(filter $(CSL_BUILD), CSL_TRIM))
@@ -276,6 +276,29 @@ ifeq ($(SOC),$(filter $(SOC), omapl137 c6747 omapl138))
 csl_intc_$(SOC)_CORELIST = c674x
 endif
 export csl_intc_$(SOC)_CORELIST
+
+# CSL_IPFMA
+csl_ipfma_COMP_LIST = csl_ipfma
+csl_ipfma_RELPATH = ti/csl/csl_ipfma
+csl_ipfma_PATH = $(PDK_CSL_COMP_PATH)
+csl_ipfma_LIBNAME = ti.csl_ipfma
+csl_ipfma_LIBPATH = $(csl_ipfma_PATH)/lib
+csl_ipfma_MAKEFILE = -fmakefile_csl_ipfma.mk
+export csl_ipfma_MAKEFILE
+export csl_ipfma_LIBNAME
+export csl_ipfma_LIBPATH
+csl_ipfma_BOARD_DEPENDENCY = no
+csl_ipfma_CORE_DEPENDENCY = no
+export csl_ipfma_COMP_LIST
+export csl_ipfma_BOARD_DEPENDENCY
+export csl_ipfma_CORE_DEPENDENCY
+csl_ipfma_PKG_LIST = csl_ipfma
+export csl_ipfma_PKG_LIST
+csl_ipfma_INCLUDE = $(csl_ipfma_PATH)
+csl_ipfma_SOCLIST = j721s2 j784s4
+export csl_ipfma_SOCLIST
+csl_ipfma_$(SOC)_CORELIST = mcu1_0 mcu2_0
+export csl_ipfma_$(SOC)_CORELIST
 
 # Utils Common
 csl_utils_common_COMP_LIST = csl_utils_common
@@ -1875,6 +1898,33 @@ csl_EXAMPLE_LIST += csl_ddr_ecc_test_app
 endif
 csl_ddr_ecc_test_app_SBL_APPIMAGEGEN = yes
 export csl_ddr_ecc_test_app_SBL_APPIMAGEGEN
+
+# DDR ECC RB ENABLE test app
+csl_ddr_ecc_test_app_rb_enable_COMP_LIST = csl_ddr_ecc_test_app_rb_enable
+csl_ddr_ecc_test_app_rb_enable_RELPATH = ti/csl/example/ddr/ddr_ecc_test_app
+csl_ddr_ecc_test_app_rb_enable_PATH = $(PDK_CSL_COMP_PATH)/example/ddr/ddr_ecc_test_app
+csl_ddr_ecc_test_app_rb_enable_MAKEFILE   = -f$(PDK_CSL_COMP_PATH)/example/ddr/ddr_ecc_test_app/makefile RB_ENABLE=TRUE
+export csl_ddr_ecc_test_app_rb_enable_MAKEFILE
+csl_ddr_ecc_test_app_rb_enable_BOARD_DEPENDENCY = yes
+csl_ddr_ecc_test_app_rb_enable_CORE_DEPENDENCY = yes
+export csl_ddr_ecc_test_app_rb_enable_COMP_LIST
+export csl_ddr_ecc_test_app_rb_enable_BOARD_DEPENDENCY
+export csl_ddr_ecc_test_app_rb_enable_CORE_DEPENDENCY
+csl_ddr_ecc_test_app_rb_enable_PKG_LIST = csl_ddr_ecc_test_app_rb_enable
+csl_ddr_ecc_test_app_rb_enable_INCLUDE = $(csl_ddr_ecc_test_app_rb_enable_PATH)
+csl_ddr_ecc_test_app_rb_enable_BOARDLIST = j721s2_evm j784s4_evm
+export csl_ddr_ecc_test_app_rb_enable_BOARDLIST
+ifeq ($(BOARD),$(filter $(BOARD), j721s2_evm j784s4_evm))
+csl_ddr_ecc_test_app_rb_enable_$(SOC)_CORELIST = mcu1_0
+endif
+export csl_ddr_ecc_test_app_rb_enable_$(SOC)_CORELIST
+
+# Packaged for below CSL_BUILDS
+ifeq ($(CSL_BUILD),$(filter $(CSL_BUILD), CSL))
+csl_EXAMPLE_LIST += csl_ddr_ecc_test_app_rb_enable
+endif
+csl_ddr_ecc_test_app_rb_enable_SBL_APPIMAGEGEN = yes
+export csl_ddr_ecc_test_app_rb_enable_SBL_APPIMAGEGEN
 
 # CCM R5 test app
 csl_ccmr5_baremetal_test_app_COMP_LIST = csl_ccmr5_baremetal_test_app

@@ -234,15 +234,16 @@ endif
   #Top Level C7100/C7120/C7504 Define:
   COMPILER_FLAGS += -D__$(TARGET_C7X_VERSION)__
 
-  ifeq (yes,$(or $(BUILD_WITH_OPENACC),$(BUILD_WITH_CUDA)))
+  ifeq ($(BUILD_WITH_CUDA),yes)
     ifeq ($(TARGET_BUILD), debug)
-      COMPILER_FLAGS += -std=c++14  -DHOST_EMULATION -w -D_HOST_BUILD -DGCC_BUILD
-      GCC_DEBUG_CFLAGS :=-g
+      COMPILER_FLAGS += -std=c++17  -DHOST_EMULATION -w -D_HOST_BUILD -DGCC_BUILD -O0
+      GCC_DEBUG_CFLAGS :=-g 
+      CUDA_BUILD_FLAGS := -g -G
     else
       ifeq ($(DEVELOPER_BUILD), 0)
-        COMPILER_FLAGS += -std=c++14 -O3 -DHOST_EMULATION -D_HOST_BUILD -DGCC_BUILD
+        COMPILER_FLAGS += -std=c++17 -O3 -DHOST_EMULATION -D_HOST_BUILD -DGCC_BUILD
       else
-        COMPILER_FLAGS += -std=c++14 -O3 -DHOST_EMULATION -D_HOST_BUILD -DGCC_BUILD -g
+        COMPILER_FLAGS += -std=c++17 -O3 -DHOST_EMULATION -D_HOST_BUILD -DGCC_BUILD -g -G
       endif
     endif
   else
@@ -483,8 +484,11 @@ OBJDIRS := $(call  CHANGE_PATHSEP,$(OBJDIRS))
 
 CFLAGS := $(COMPILER_FLAGS) $(CFLAGS)
 
+# Enable dynamic shape support for all builds (PC and target)
+CFLAGS += -DTIDL_DYNAMIC_SHAPE
+
 #$(info OBJDIRS $(OBJDIRS))
-SMS ?= 50 52 60 70 # CUDA 9.0 version onward, sm_30 sm_35 sm_37 are not supported or not needed, hence removed
+SMS ?= 75 80 86 89 90 100 120 110# CUDA 9.0 version onward, sm_30 sm_35 sm_37 are not supported or not needed, hence removed
 ifeq ($(GENCODE_FLAGS),)
 # Generate SASS code for each SM architecture listed in $(SMS)
 $(foreach sm,$(SMS),$(eval GENCODE_FLAGS += -gencode arch=compute_$(sm),code=sm_$(sm)))
@@ -563,7 +567,7 @@ else
 endif
 else
 ifeq ($(BUILD_WITH_CUDA),yes)
-	$(Q)$(CUDA_PATH)/bin/nvcc -ccbin  $(CC) $(CFLAGS) $(GENCODE_FLAGS) -Xcompiler -fPIC -o $@ -c $<
+	$(Q)$(CUDA_PATH)/bin/nvcc --cudart static -ccbin  $(CC) $(CFLAGS) $(GENCODE_FLAGS) $(CUDA_BUILD_FLAGS) -Xcompiler -fPIC -o $@ -c $<
 else
 	$(Q)$(CC) $(CFLAGS) $(GCC_DEBUG_CFLAGS) -fPIC  $< -o $@
 endif
@@ -743,7 +747,7 @@ endif
 else
 	$(Q)$(RM_CMD) $(OUTFILE)
 ifeq ($(BUILD_WITH_CUDA),yes)
-	$(Q)$(CUDA_PATH)/bin/nvcc -ccbin $(LD) -o $(OUTFILE) $(KOFILES) $(OFILES) $(LDFILES) $(LDFLAGS)  -m64
+	$(Q)$(CUDA_PATH)/bin/nvcc --cudart static -ccbin $(LD) -o $(OUTFILE) $(KOFILES) $(OFILES) $(LDFILES) $(LDFLAGS) -lpthread -ldl -lrt -m64
 else
 	$(Q)$(LD) -o $(OUTFILE) $(KOFILES) $(OFILES) $(LDFILES) $(LDFLAGS)
 endif

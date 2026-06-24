@@ -133,5 +133,9 @@ int32_t TIDL_dataConvertDeviceExec(void                            *linkHandle,
                                int32_t                          currIterCount);
 
 
+
+int32_t TIDL_dataConvertGetPerfData(void* linkHandle,
+                                 double *perfData);
+
 #endif /* ITIDL_DATACONVERT_H*/
 

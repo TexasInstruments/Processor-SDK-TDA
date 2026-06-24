@@ -2513,24 +2513,24 @@ static vx_status readInput(AppObj *obj, vx_context context, vx_user_data_object 
 
                     if(ioBufDesc->inDataFormat[id] == 1) /* RGB */
                     {
-                        start_offset = (0 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
+                        start_offset = (0 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
                         pR = (vx_uint8 *)input_buffer + start_offset;
 
-                        start_offset = (1 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
+                        start_offset = (1 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
                         pG = (vx_uint8 *)input_buffer + start_offset;
 
-                        start_offset = (2 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
+                        start_offset = (2 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
                         pB = (vx_uint8 *)input_buffer + start_offset;
                     }
                     else if(ioBufDesc->inDataFormat[id] == 0) /* BGR */
                     {
-                        start_offset = (0 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
+                        start_offset = (0 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
                         pB = (vx_uint8 *)input_buffer + start_offset;
 
-                        start_offset = (1 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
+                        start_offset = (1 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
                         pG = (vx_uint8 *)input_buffer + start_offset;
 
-                        start_offset = (2 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
+                        start_offset = (2 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
                         pR = (vx_uint8 *)input_buffer + start_offset;
                     }
 
@@ -2569,24 +2569,24 @@ static vx_status readInput(AppObj *obj, vx_context context, vx_user_data_object 
 
                     if(ioBufDesc->inDataFormat[id] == 1) /* RGB */
                     {
-                        start_offset = (0 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
+                        start_offset = (0 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
                         pR = (vx_uint16 *)((vx_uint8 *)input_buffer + start_offset);
 
-                        start_offset = (1 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
+                        start_offset = (1 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
                         pG = (vx_uint16 *)((vx_uint8 *)input_buffer + start_offset);
 
-                        start_offset = (2 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
+                        start_offset = (2 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
                         pB = (vx_uint16 *)((vx_uint8 *)input_buffer + start_offset);
                     }
                     else if(ioBufDesc->inDataFormat[id] == 0) /* BGR */
                     {
-                        start_offset = (0 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
+                        start_offset = (0 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
                         pB = (vx_uint16 *)((vx_uint8 *)input_buffer + start_offset);
 
-                        start_offset = (1 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
+                        start_offset = (1 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
                         pG = (vx_uint16 *)((vx_uint8 *)input_buffer + start_offset);
 
-                        start_offset = (2 * input_strides[2]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
+                        start_offset = (2 * ioBufDesc->inChannelPitch[id]) + (ioBufDesc->inPadT[id] * input_strides[1]) + (ioBufDesc->inPadL[id] * input_strides[0]);
                         pR = (vx_uint16 *)((vx_uint8 *)input_buffer + start_offset);
                     }
 

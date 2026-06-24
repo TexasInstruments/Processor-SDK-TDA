@@ -4,6 +4,8 @@ lib/
 out/
 test_out/
 *.egg-info
+ctags
+cscope.out
 *.bak
 *.pyc
 __pycache__

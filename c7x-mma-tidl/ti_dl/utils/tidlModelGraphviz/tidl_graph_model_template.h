@@ -49,6 +49,16 @@ const char* HTML_TEMPLATE = R"raw(
             <line x1="8" y1="11" x2="14" y2="11"></line>
         </svg>
     </div>
+    <input type="file" id="perf-csv-input" accept=".csv" style="display:none">
+    <div id="csv-upload-icon" onclick="document.getElementById('perf-csv-input').click()" title="Upload Performance CSV">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="8" y1="13" x2="16" y2="13"></line>
+            <line x1="8" y1="17" x2="16" y2="17"></line>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+        </svg>
+    </div>
     <div id="sidenav" class="sidenav">
         <a href="javascript:void(0)" class="closebtn" onclick="closeSideBar()">&#215;</a>
         <div id="node_properties_container">
@@ -80,6 +90,9 @@ const char* HTML_TEMPLATE = R"raw(
             </div>
             <div class="properties-section" id="outputs">
                 <h3>OUTPUTS</h3>
+            </div>
+            <div class="properties-section" id="performance">
+                <h3>PERFORMANCE</h3>
             </div>
             <div class="properties-section" id="attributes">
                 <h3>ATTRIBUTES</h3>
@@ -323,11 +336,13 @@ const char* HTML_TEMPLATE = R"raw(
         
         .property-value {
             flex-grow: 1;
+            min-width: 0;
             word-break: break-all;
             padding: 2px 5px;
             background-color: #f5f5f5;
             border-radius: 3px;
             max-height: 60px;
+            overflow-x: hidden;
             overflow-y: auto;
             scrollbar-width: thin;
             scrollbar-color: #999 #f5f5f5;
@@ -374,12 +389,274 @@ const char* HTML_TEMPLATE = R"raw(
             background-color: #999;
             border-radius: 3px;
         }
+
+        .array-toggle-btn {
+            color: #4a90d9;
+            cursor: pointer;
+            font-size: 11px;
+            user-select: none;
+            margin-left: 4px;
+            font-style: italic;
+        }
+        .array-toggle-btn:hover {
+            text-decoration: underline;
+        }
+        .array-expanded {
+            word-break: break-all;
+            white-space: normal;
+            margin-top: 2px;
+        }
+
+        #csv-upload-icon {
+            position: fixed;
+            bottom: 5px;
+            left: 125px;
+            z-index: 100;
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        #csv-upload-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: #888888;
+            transition: stroke 0.2s ease;
+        }
+
+        #csv-upload-icon:hover svg {
+            stroke: #444444;
+        }
+
+        #csv-upload-icon.loaded svg {
+            stroke: #4CAF50;
+        }
+
+        .perf-subheader {
+            font-size: 11px;
+            font-weight: bold;
+            color: #555;
+            padding: 5px 0 3px 0;
+            margin-top: 6px;
+            border-top: 1px solid #ccc;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .perf-no-data {
+            color: #999;
+            font-style: italic;
+            font-size: 12px;
+            text-align: center;
+            padding: 8px 0;
+        }
     </style>
 
     <script>
         var currentSelectedNodeId = null;
         const nodeInfoMap = new Map();
         const edgeInfoMap = new Map();
+
+        // Performance data from CSV
+        let perfDataMap = new Map();   // layerNum (string) -> { colName: value, ... }
+        let perfCsvOrder = [];         // layer numbers in CSV execution order
+
+        function loadPerfCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showPerfNotification('Invalid file: please upload a .csv file.', 'error');
+                event.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onerror = function(e) {
+                const msg = reader.error ? reader.error.message : 'unknown error';
+                showPerfNotification('Failed to read file: ' + msg + '\n(Check file permissions — file may be owned by root, change the owner)', 'error');
+                event.target.value = '';
+            };
+
+            reader.onload = function(e) {
+                const lines = e.target.result.trim().split('\n');
+                if (lines.length < 2) {
+                    showPerfNotification('Invalid CSV: file is empty or has no data rows.', 'error');
+                    return;
+                }
+
+                const headers = lines[0].split(',').map(h => h.trim());
+
+                // Check required columns
+                const requiredCols = ['Layer', 'Layer Cycles'];
+                const missingCols = requiredCols.filter(c => !headers.includes(c));
+                if (missingCols.length > 0) {
+                    showPerfNotification('Invalid CSV: missing required column(s): ' + missingCols.join(', '), 'error');
+                    return;
+                }
+
+                // Parse into temp structures first — only commit after all checks pass
+                const tempDataMap = new Map();
+                const tempCsvOrder = [];
+                const rowWarnings = [];
+                let csvDeclaredSum = null;
+
+                for (let i = 1; i < lines.length; i++) {
+                    const vals = lines[i].split(',').map(v => v.trim());
+                    if (!vals[0]) continue;
+                    const layerNum = vals[0];
+
+                    // Detect and capture the summary row silently
+                    const sumMatch = lines[i].trim().match(/^Sum of Layer Cycles\s+(\d+)/i);
+                    if (sumMatch) {
+                        csvDeclaredSum = parseInt(sumMatch[1]);
+                        continue;
+                    }
+
+                    if (isNaN(parseInt(layerNum))) {
+                        rowWarnings.push('Row ' + i + ': invalid layer number "' + layerNum + '"');
+                        continue;
+                    }
+
+                    const layerCyclesIdx = headers.indexOf('Layer Cycles');
+                    if (layerCyclesIdx >= 0 && isNaN(parseInt(vals[layerCyclesIdx]))) {
+                        rowWarnings.push('Row ' + i + ' (Layer ' + layerNum + '): non-numeric Layer Cycles value');
+                    }
+
+                    const row = {};
+                    headers.forEach((h, j) => { row[h] = vals[j] !== undefined ? vals[j].trim() : '0'; });
+                    tempDataMap.set(layerNum, row);
+                    tempCsvOrder.push(layerNum);
+                }
+
+                // Validate computed sum against declared sum in CSV (warning only)
+                if (csvDeclaredSum !== null) {
+                    const computedSum = tempCsvOrder.reduce((acc, ln) => {
+                        return acc + (parseInt(tempDataMap.get(ln)['Layer Cycles']) || 0);
+                    }, 0);
+                    if (computedSum !== csvDeclaredSum) {
+                        rowWarnings.push('Layer Cycles sum mismatch: CSV declares ' +
+                            csvDeclaredSum.toLocaleString() + ' but rows sum to ' + computedSum.toLocaleString());
+                    }
+                }
+
+                // Build excluded layer ID sets (Data + ConstData)
+                const excludedLayerIds = new Set(
+                    [...nodeInfoMap.values()]
+                        .filter(info => {
+                            const op = info.get('op_type').trim();
+                            return op.startsWith('Data [') || op.startsWith('ConstData [');
+                        })
+                        .map(info => info.get('layer').replace(/\D/g, ''))
+                );
+
+                // Count check: graph non-Data/non-ConstData vs CSV (also excluding Data/ConstData entries)
+                const graphLayerIds = new Set(
+                    [...nodeInfoMap.values()]
+                        .filter(info => {
+                            const op = info.get('op_type').trim();
+                            return !op.startsWith('Data [') && !op.startsWith('ConstData [');
+                        })
+                        .map(info => info.get('layer').replace(/\D/g, ''))
+                );
+                const csvLayerIds = new Set(tempCsvOrder.filter(id => !excludedLayerIds.has(id)));
+
+                const inGraphNotCsv = [...graphLayerIds].filter(id => !csvLayerIds.has(id)).sort((a,b) => a-b);
+                const inCsvNotGraph = [...csvLayerIds].filter(id => !graphLayerIds.has(id)).sort((a,b) => a-b);
+
+                if (inGraphNotCsv.length > 0 || inCsvNotGraph.length > 0) {
+                    const errors = [];
+                    if (inGraphNotCsv.length > 0)
+                        errors.push('In graph but missing from CSV: ' + inGraphNotCsv.join(', '));
+                    if (inCsvNotGraph.length > 0)
+                        errors.push('In CSV but not found in graph: ' + inCsvNotGraph.join(', '));
+                    showPerfNotification('CSV rejected — layer mismatch:\n' + errors.join('\n'), 'error');
+                    event.target.value = '';
+                    return;
+                }
+
+                // All checks passed — commit
+                perfDataMap = tempDataMap;
+                perfCsvOrder = tempCsvOrder;
+                document.getElementById('csv-upload-icon').classList.add('loaded');
+
+                if (rowWarnings.length > 0) {
+                    showPerfNotification('CSV loaded with warnings:\n' + rowWarnings.join('\n'), 'warning');
+                } else {
+                    showPerfNotification('Performance CSV loaded: ' + perfCsvOrder.length + ' layers', 'success');
+                }
+
+                if (currentSelectedNodeId) setSideBarValues(currentSelectedNodeId);
+            };
+            reader.readAsText(file);
+        }
+
+        function getExecOrder(info) {
+            const match = info.get('op_type').trim().match(/\[(\d+)\s+\d+\]/);
+            return match ? parseInt(match[1]) : null;
+        }
+
+        function getCumulativePerf(nodeId) {
+            const targetInfo = nodeInfoMap.get(nodeId);
+            if (!targetInfo) return null;
+            const targetExecOrder = getExecOrder(targetInfo);
+            if (targetExecOrder === null) return null;
+
+            let total = 0;
+            nodeInfoMap.forEach((info, id) => {
+                const execOrder = getExecOrder(info);
+                if (execOrder === null || execOrder > targetExecOrder) return;
+                const layerId = info.get('layer').replace(/\D/g, '');
+                const perfRow = perfDataMap.get(layerId);
+                if (perfRow) total += parseInt(perfRow['Layer Cycles']) || 0;
+            });
+            return total;
+        }
+
+        function getBranchLayerCycles(nodeId) {
+            if (perfDataMap.size === 0) return null;
+            // BFS backwards through the graph, summing Layer Cycles of all ancestors
+            const visited = new Set();
+            const queue = [nodeId];
+            let total = 0;
+            while (queue.length > 0) {
+                const currId = queue.shift();
+                if (visited.has(currId)) continue;
+                visited.add(currId);
+                // Walk edges to find input nodes of currId
+                edgeInfoMap.forEach((value) => {
+                    if (value.get('output_node') === currId) {
+                        const inputId = value.get('input_node');
+                        if (inputId && !visited.has(inputId)) {
+                            queue.push(inputId);
+                        }
+                    }
+                });
+                // Accumulate cycles for ancestor nodes (not the node itself)
+                if (currId !== nodeId) {
+                    const info = nodeInfoMap.get(currId);
+                    if (info) {
+                        const num = info.get('layer').replace(/\D/g, '');
+                        const perfRow = perfDataMap.get(num);
+                        if (perfRow) total += parseInt(perfRow['Layer Cycles']) || 0;
+                    }
+                }
+            }
+            return total;
+        }
+
+        function showPerfNotification(msg, type) {
+            const bgColor = type === 'error'   ? 'rgba(180,0,0,0.9)'
+                          : type === 'warning' ? 'rgba(160,100,0,0.9)'
+                          :                     'rgba(0,0,0,0.75)';
+            const duration = type === 'error' ? 7000 : type === 'warning' ? 6000 : 3000;
+            const el = document.createElement('div');
+            el.textContent = msg;
+            el.style.cssText = 'position:fixed;top:10px;right:10px;background:' + bgColor +
+                ';color:white;padding:10px 14px;border-radius:4px;z-index:1000;max-width:380px;white-space:pre-wrap;line-height:1.5;font-size:13px';
+            document.body.appendChild(el);
+            setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, duration);
+        }
 
          // Variable to track current zoom level
         let currentZoom = 1.0;
@@ -482,6 +759,20 @@ const char* HTML_TEMPLATE = R"raw(
             
             // Add node information
             const nodeInfo = splitNodeContentTrim.shift().split(/\s+/).filter(word => word !== '');
+
+            // Extract input ID ordering and remove Input IDs / Output ID from attribute display
+            let inputIdOrder = [];
+            const inputIdsLineIdx = splitNodeContentTrim.findIndex(line => line.startsWith('Input IDs:'));
+            if (inputIdsLineIdx !== -1) {
+                const inputIdsStr = splitNodeContentTrim[inputIdsLineIdx].replace('Input IDs:', '').trim();
+                inputIdOrder = inputIdsStr.split(',').map(s => s.trim()).filter(s => s !== '');
+                splitNodeContentTrim.splice(inputIdsLineIdx, 1);
+            }
+            const outputIdLineIdx = splitNodeContentTrim.findIndex(line => line.startsWith('Output ID:'));
+            if (outputIdLineIdx !== -1) {
+                splitNodeContentTrim.splice(outputIdLineIdx, 1);
+            }
+
             document.getElementById('node_layer_num').textContent = nodeInfo[1].replace(/\D/g, '');
             document.getElementById('node_type').textContent = nodeInfo[2];
             document.getElementById('node_name').textContent = nodeInfo[3].trim().replace(/^['"]|['"]$/g, '');
@@ -503,7 +794,13 @@ const char* HTML_TEMPLATE = R"raw(
             while (attributesDiv.children.length > 1) {
                 attributesDiv.removeChild(attributesDiv.lastChild);
             }
-            
+
+            // Clear previous performance
+            const performanceDiv = document.getElementById('performance');
+            while (performanceDiv.children.length > 1) {
+                performanceDiv.removeChild(performanceDiv.lastChild);
+            }
+
 
             // Add input/output information
             const ioHtmlTemplate = `
@@ -526,6 +823,26 @@ const char* HTML_TEMPLATE = R"raw(
                     outputNodes.push(value.get("output_node"));
                 }
             });
+
+            // Sort inputNodes by the order specified in Input IDs
+            if (inputIdOrder.length > 0) {
+                inputNodes.sort((aNodeId, bNodeId) => {
+                    const aEl = document.getElementById(aNodeId);
+                    const bEl = document.getElementById(bNodeId);
+                    const aTitle = aEl ? aEl.querySelector('title').textContent : '';
+                    const bTitle = bEl ? bEl.querySelector('title').textContent : '';
+                    const aMatch = aTitle.match(/Output ID:\s*([\d,]+)/);
+                    const bMatch = bTitle.match(/Output ID:\s*([\d,]+)/);
+                    const aOutputId = aMatch ? aMatch[1].split(',')[0].trim() : null;
+                    const bOutputId = bMatch ? bMatch[1].split(',')[0].trim() : null;
+                    const aIdx = aOutputId !== null ? inputIdOrder.indexOf(aOutputId) : -1;
+                    const bIdx = bOutputId !== null ? inputIdOrder.indexOf(bOutputId) : -1;
+                    if (aIdx === -1 && bIdx === -1) return 0;
+                    if (aIdx === -1) return 1;
+                    if (bIdx === -1) return -1;
+                    return aIdx - bIdx;
+                });
+            }
 
             const ioMap = new Map([['inputs', inputNodes], ['outputs', outputNodes]]);
             ioMap.forEach((value, key) => {
@@ -677,8 +994,88 @@ const char* HTML_TEMPLATE = R"raw(
                 const valueElement = newAttributeDiv.querySelector(".property-value");
                 labelElement.textContent = element[0];
                 labelElement.title = element[0];
-                valueElement.textContent = element[1];
+                const val = element[1];
+                const isScaleAttr = /^(weightScales|bias)/.test(element[0]);
+                const commaCount = val ? (val.match(/,/g) || []).length : 0;
+                if (isScaleAttr && commaCount > 3) {
+                    const values = val.split(',');
+
+                    const previewSpan = document.createElement('span');
+                    previewSpan.textContent = values.slice(0, 3).join(', ');
+
+                    const toggleBtn = document.createElement('span');
+                    toggleBtn.className = 'array-toggle-btn';
+                    toggleBtn.textContent = `...[${values.length} \u25bc]`;
+
+                    const expandedDiv = document.createElement('div');
+                    expandedDiv.className = 'array-expanded';
+                    expandedDiv.style.display = 'none';
+                    expandedDiv.textContent = val;
+
+                    valueElement.appendChild(previewSpan);
+                    valueElement.appendChild(toggleBtn);
+                    valueElement.appendChild(expandedDiv);
+
+                    toggleBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const isExpanded = expandedDiv.style.display !== 'none';
+                        if (isExpanded) {
+                            expandedDiv.style.display = 'none';
+                            previewSpan.style.display = '';
+                            toggleBtn.textContent = `...[${values.length} \u25bc]`;
+                            valueElement.style.maxHeight = '60px';
+                            valueElement.style.width = '';
+                        } else {
+                            valueElement.style.width = valueElement.offsetWidth + 'px';
+                            expandedDiv.style.display = '';
+                            previewSpan.style.display = 'none';
+                            toggleBtn.textContent = `...[${values.length} \u25b2]`;
+                            valueElement.style.maxHeight = '200px';
+                            valueElement.style.overflowY = 'auto';
+                        }
+                    });
+                } else {
+                    valueElement.textContent = val;
+                }
                 attributesDiv.appendChild(newAttributeDiv);
+            }
+
+            // Populate performance section
+            const layerNum = nodeInfo[1].replace(/\D/g, '');
+            const perfCols = ['Layer Cycles'];
+            const fmt = n => (parseInt(n) || 0).toLocaleString();
+
+            if (perfDataMap.size > 0) {
+                const indivData = perfDataMap.get(layerNum);
+                if (indivData) {
+                    const cumulCycles = getCumulativePerf(nodeId);
+
+                    const indivRow = document.createElement('div');
+                    indivRow.className = 'property-row';
+                    indivRow.innerHTML = `<label class="property-label" title="Layer cycles taken by this layer individually, excluding any other layers">Individual layer cycle</label><div class="property-value">${fmt(indivData['Layer Cycles'])}</div>`;
+                    performanceDiv.appendChild(indivRow);
+
+                    const branchCycles = getBranchLayerCycles(nodeId);
+                    const branchRow = document.createElement('div');
+                    branchRow.className = 'property-row';
+                    branchRow.innerHTML = `<label class="property-label" title="Total layer cycles of all upstream layers feeding into this layer, tracing back through all input branches">Branch layer cycle</label><div class="property-value">${branchCycles !== null ? fmt(branchCycles) : 'N/A'}</div>`;
+                    performanceDiv.appendChild(branchRow);
+
+                    const cumulRow = document.createElement('div');
+                    cumulRow.className = 'property-row';
+                    cumulRow.innerHTML = `<label class="property-label" title="Total layer cycles accumulated from the first layer in the execution order up to and including this layer">Cumulative layer cycle</label><div class="property-value">${cumulCycles !== null ? fmt(cumulCycles) : 'N/A'}</div>`;
+                    performanceDiv.appendChild(cumulRow);
+                } else {
+                    const noData = document.createElement('div');
+                    noData.className = 'perf-no-data';
+                    noData.textContent = 'No performance data for this layer';
+                    performanceDiv.appendChild(noData);
+                }
+            } else {
+                const prompt = document.createElement('div');
+                prompt.className = 'perf-no-data';
+                prompt.textContent = 'Upload a CSV to see performance data';
+                performanceDiv.appendChild(prompt);
             }
         }
 
@@ -889,6 +1286,9 @@ const char* HTML_TEMPLATE = R"raw(
         }
         
         document.addEventListener('DOMContentLoaded', () => {
+            // CSV performance upload
+            document.getElementById('perf-csv-input').addEventListener('change', loadPerfCSV);
+
             // Set up search functionality
             document.getElementById('search-button').addEventListener('click', searchNode);
             document.getElementById('search-input').addEventListener('keypress', function(e) {

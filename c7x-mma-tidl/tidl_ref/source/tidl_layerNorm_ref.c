@@ -77,6 +77,9 @@
 #include "tidl_layerNorm.h"
 #include "tidl_layerNorm_ref.h"
 #include "tidl_forceNegativeTest.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -228,6 +231,19 @@ template<class Tin, class Tout, class typeExEx2> static int32_t TIDL_refLayerNor
 
   if (status == TIDL_SUCCESS)
   {
+    #ifdef BUILD_WITH_CUDA_LAYERNORM
+    // call cuda layernorm wrapper
+    int32_t netVersionCheck = (intAlgHandle->createParams->net->netVersion >= TIDL_NET_VERSION_FW_11_00_00_00) && 
+                  ((TIDL_SignedChar == ((int32_t)inDataParams->elementType)) || (TIDL_UnsignedChar == ((int32_t)inDataParams->elementType)) ||
+                    (TIDL_SignedShort == ((int32_t)inDataParams->elementType)) || (TIDL_UnsignedShort == ((int32_t)inDataParams->elementType)));
+
+    int32_t deviceCheck = (intAlgHandle->createParams->net->deviceName == TIDL_TDA4VM) || (inDataParams->elementType == TIDL_UnsignedChar) || (inDataParams->elementType == TIDL_UnsignedShort) ||
+                          ((outDataParams->tensorScale/sqrt(epsilon * inScale * inScale)) > (float)(std::numeric_limits<uint8_t>::max()));
+
+    status = TIDL_cudaLayerNorm<Tin, Tout, typeExEx2>(inData, outData, params->isInstanceNorm, params->axis, icnt[0], icnt[1], icnt[2], icnt[3], icnt[4], icnt[5],
+                      dim[0], dim[1], dim[2], dim[3], dim[4], outDim[0], outDim[1], outDim[2], outDim[3], outDim[4], 
+                      epsilon, inScale, outScale, scaleAvg, shiftAvg, minValueAcc, maxValueAcc, netVersionCheck, deviceCheck);
+    #else
     if(params->isInstanceNorm == 1)
     {
       /* In case of InstanceNorm, axis should be along channel */
@@ -521,6 +537,7 @@ template<class Tin, class Tout, class typeExEx2> static int32_t TIDL_refLayerNor
     {
       status = TIDL_ERROR_LAYERNORM_UNSUPPORTED_AXIS;
     }
+    #endif
   }
   return status;
 }
@@ -603,6 +620,11 @@ template<class Tin, class Tout> static int32_t TIDL_refLayerNormCoreFloat(Tin *i
 
   if (status == TIDL_SUCCESS)
   {
+    #ifdef BUILD_WITH_CUDA_LAYERNORM
+    // call cuda layernorm float wrapper
+    status = TIDL_cudaLayerNormFloat<Tin, Tout>(inData, outData, params->isInstanceNorm, params->axis, icnt[0], icnt[1], icnt[2], icnt[3], icnt[4], icnt[5],
+                      dim[0], dim[1], dim[2], dim[3], dim[4], epsilon);
+    #else
     if(params->isInstanceNorm == 1)
     {
       /* In case of InstanceNorm, axis should be along channel */
@@ -718,6 +740,7 @@ template<class Tin, class Tout> static int32_t TIDL_refLayerNormCoreFloat(Tin *i
     {
       status = TIDL_ERROR_LAYERNORM_UNSUPPORTED_AXIS;
     }
+    #endif
   }
 
   return status;

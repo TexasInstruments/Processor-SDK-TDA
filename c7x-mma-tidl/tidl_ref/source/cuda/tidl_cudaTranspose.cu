@@ -13,40 +13,6 @@
 #include "itidl_ti.h"
 #include "tidl_cudaUtilities.cu"
 #include "tidl_cuda_mem_manager.h"
-/* External declaration of the global memory manager pointer */
-extern TIDL_CudaMemManager* g_cudaMemManager;
-
-
-// Persistent memory structure for Transpose
-typedef struct {
-    int isInit;
-    void *dpInput;
-    void *dpOutput;
-} TIDL_cudaTP;
-
-static TIDL_cudaTP CUDATP[MEM_BUFF_ARRAY_LEN] = {0};
-
-// Function to free device pointers
-void TIDL_cudaFreeTransposeCudaPtrs()
-{
-    for(int i = 0; i < MEM_BUFF_ARRAY_LEN; i++)
-    {
-        if(CUDATP[i].dpInput) cudaFree(CUDATP[i].dpInput);
-        if(CUDATP[i].dpOutput) cudaFree(CUDATP[i].dpOutput);
-        
-        CUDATP[i].dpInput = 0;
-        CUDATP[i].dpOutput = 0;
-        CUDATP[i].isInit = 0;
-    }
-    cudaDeviceSynchronize();
-}
-
-void TIDL_cudaSetTransposeInitFlag(int32_t layerIdx)
-{
-    if(layerIdx >= 0 && layerIdx < MEM_BUFF_ARRAY_LEN) {
-        CUDATP[layerIdx].isInit = 1;
-    }
-}
 
 // Transpose kernel
 template <class Tin, class Tout>
@@ -106,37 +72,47 @@ int TIDL_cudaTranspose(
     // Calculate memory sizes
     size_t input_size = inBatches * inBatchPitch * sizeof(Tin);
     size_t output_size = outBatches * outBatchPitch * sizeof(Tout);
-    
-    // Persistent memory allocation
-    if(!CUDATP[CUDNNLC].isInit) {
-        checkCudaErr(cudaMalloc((void**)&CUDATP[CUDNNLC].dpInput, input_size));
-        checkCudaErr(cudaMalloc((void**)&CUDATP[CUDNNLC].dpOutput, output_size));
-        CUDATP[CUDNNLC].isInit = 1;
+
+    Tin* d_input = NULL;
+    Tout* d_output = NULL;
+
+    // Get GPU pointers (allocate if needed)
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&d_input, input_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), input, (void**)&d_input, input_size) != IALG_EOK)
+        {
+            printf("Transpose: Unable to find input pointer\n");
+        }
     }
-    
-    // Get persistent pointers
-    Tin* d_input = (Tin*)CUDATP[CUDNNLC].dpInput;
-    Tout* d_output = (Tout*)CUDATP[CUDNNLC].dpOutput;
-    
-    // Copy input data to GPU
-    checkCudaErr(cudaMemcpy(d_input, input, input_size, cudaMemcpyHostToDevice));
-    
-    // Launch kernel
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size) != IALG_EOK)
+        {
+            printf("Transpose: Unable to find output pointer\n");
+        }
+    }
+
+    // ---- CUDA Streams Optimization ----------------------------------------
+    cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
+
+    // Async H2D
+    checkCudaErr(cudaMemcpyAsync(d_input, input, input_size, cudaMemcpyHostToDevice, stream));
+
+    // Launch kernel on stream
     int total_elements = inBatches * inDIM1 * inDIM2 * inChannels * inHeight * inWidth;
     int grid_size = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-    
-    TransposeKernel<Tin, Tout><<<grid_size, THREADS_PER_BLOCK>>>(
+
+    TransposeKernel<Tin, Tout><<<grid_size, THREADS_PER_BLOCK, 0, stream>>>(
         d_input, d_output,
         inBatches, inDIM1, inDIM2, inChannels, inHeight, inWidth,
         inBatchPitch, inDIM1Pitch, inDIM2Pitch, inChPitch, inPitch,
         outBatchPitch, outDIM1Pitch, outDIM2Pitch, outChPitch, outPitch,
         outDIM1, outDIM2, outChannels, outHeight, outWidth,
         pp, lp, cp, d1p, d2p, bp);
-    
-    checkCudaErr(cudaGetLastError());
-    
-    // Copy output from GPU to CPU
-    checkCudaErr(cudaMemcpy(output, d_output, output_size, cudaMemcpyDeviceToHost));
+
+    // Async D2H
+    checkCudaErr(cudaMemcpyAsync(output, d_output, output_size, cudaMemcpyDeviceToHost, stream));
+    checkCudaErr(cudaStreamSynchronize(stream));
     
     return IALG_EOK;
 }
@@ -146,4 +122,4 @@ template int TIDL_cudaTranspose<short, short>(short const*, short*, int, int, in
 template int TIDL_cudaTranspose<float, float>(float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 template int TIDL_cudaTranspose<unsigned char, unsigned char>(unsigned char const*, unsigned char*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 template int TIDL_cudaTranspose<unsigned short, unsigned short>(unsigned short const*, unsigned short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
-
+template int TIDL_cudaTranspose<signed int ,signed int>(signed int const*, signed int*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);

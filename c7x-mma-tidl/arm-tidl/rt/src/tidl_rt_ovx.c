@@ -60,6 +60,8 @@
 *
 */
 
+//#undef _POSIX_C_SOURCE
+//#define _POSIX_C_SOURCE 200809L
 #include <TI/tivx.h>
 #include <TI/tivx_config.h>
 #include <TI/tivx_task.h>
@@ -95,7 +97,14 @@
 #include "tidl_rt_ovx_debug_utils.h"
 #include "tidl_rt_profile.h"
 #include "tidl_rt_force_negative_test.h"
-
+#if _POSIX_C_SOURCE >= 199309L
+#include <time.h>   /* for nanosleep */
+int nanosleep(const struct timespec *req,
+              struct timespec *rem);
+int clock_gettime (clockid_t __clock_id, struct timespec *__tp);
+int pthread_mutex_lock (pthread_mutex_t *__mutex);
+int pthread_mutex_unlock (pthread_mutex_t *__mutex);
+#endif
 extern char* strdup(const char *ptr);
 
 #define TIVX_TIDL_TRACE_DATA_SIZE  (64 * 1024 * 1024)
@@ -187,8 +196,8 @@ static vx_user_data_object setOutArgs(vx_context context);
 
 static vx_status addParam(vx_reference params[], vx_reference obj, uint32_t *num_params);
 
-static void createInputTensors(AppObj *obj, vx_context context, vx_user_data_object config, vx_tensor *input_tensors);
-static void createOutputTensors(AppObj *obj, vx_context context, vx_user_data_object config, vx_tensor *output_tensors);
+static vx_status createInputTensors(AppObj *obj, vx_context context, vx_user_data_object config, vx_tensor *input_tensors);
+static vx_status createOutputTensors(AppObj *obj, vx_context context, vx_user_data_object config, vx_tensor *output_tensors);
 
 #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
 /*
@@ -333,7 +342,9 @@ static void __attribute__((constructor)) lib_init(void)
 int32_t getTidlRtFlowCtrl(void)
 {
     int32_t flowCtrl;
-    #ifdef x86_64
+    #if defined(x86_64) || defined(SOC_TDA54)
+        /* TODO [TIDL-14527]: Run ref flow by default on TDA54 until silicon is available.
+         * Revert SOC_TDA54 condition when TDA54 silicon comes. */
         flowCtrl = 1;
     #else
         flowCtrl = 0;
@@ -658,7 +669,10 @@ int32_t TIDLRT_create(sTIDLRT_Params_t *prms, void **handle)
                 }
             }
             #endif
+
+            // Init
             status = tidl_rt_ovx_Init();
+
 #if defined (HOST_EMULATION)
             /*
              * FORCE NEGATIVE TEST START
@@ -1166,6 +1180,18 @@ int32_t TIDLRT_create(sTIDLRT_Params_t *prms, void **handle)
 
             TIDLRT_profileEnd(&obj->profilePoints, TIDLRT_PROFILE_TIDLRT_CREATE);
             printProfileInfo(&obj->profilePoints);
+        }
+        else
+        {
+            if(i == 0)
+            {
+                /*
+                 * Setting handle even if status fails so the caller can still
+                 * call TIDLRT_deactivate and TIDLRT_delete functions to delete
+                 * any allocated buffers
+                 */
+                *handle = rtHandle;
+            }
         }
     }
 
@@ -1913,6 +1939,7 @@ static vx_user_data_object mapConfig(AppObj *obj, vx_context context, const sTID
     <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     <justification end> */
     if ((int32_t)VX_SUCCESS == status)
+    /* LDRA_JUSTIFY_END */
     {
         status = vxMapUserDataObject(config, 0, sizeof(tivxTIDLJ7Params), &map_id,
                 (void **)&tidlParams, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, 0);
@@ -2022,7 +2049,6 @@ static vx_user_data_object mapConfig(AppObj *obj, vx_context context, const sTID
             }
         }
     }
-    /* LDRA_JUSTIFY_END */
 
     return config;
 }
@@ -2048,6 +2074,7 @@ static vx_user_data_object mapNetwork(AppObj* obj, void * netPtr, int32_t capaci
     <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     <justification end> */
     if ((int32_t)VX_SUCCESS == status)
+    /* LDRA_JUSTIFY_END */
     {
         TIDLRT_profileStart(&obj->profilePoints, TIDLRT_PROFILE_VX_MAP_USER_DATA_OBJECT);
         status = vxMapUserDataObject(network, 0, capacity, &map_id,
@@ -2096,7 +2123,6 @@ static vx_user_data_object mapNetwork(AppObj* obj, void * netPtr, int32_t capaci
 
         }
     }
-    /* LDRA_JUSTIFY_END */
 
     tidlrt_printf("TIDL_RT_OVX: Mapping network file... Done %d bytes\n", (uint32_t)capacity);
 
@@ -2122,6 +2148,7 @@ static vx_user_data_object setCreateParams(AppObj *obj, sTIDLRT_Params_t *prms, 
     <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     <justification end> */
     if ((int32_t)VX_SUCCESS == status)
+    /* LDRA_JUSTIFY_END */
     {
         status = vxMapUserDataObject(createParams, 0, capacity, &map_id,
                 (void **)&createParams_buffer, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, 0);
@@ -2182,7 +2209,6 @@ static vx_user_data_object setCreateParams(AppObj *obj, sTIDLRT_Params_t *prms, 
             (void)vxUnmapUserDataObject(createParams, map_id);
         }
     }
-    /* LDRA_JUSTIFY_END */
 
     return createParams;
 }
@@ -2206,6 +2232,7 @@ static vx_user_data_object setInArgs(AppObj *obj)
     <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     <justification end> */
     if ((int32_t)VX_SUCCESS == status)
+    /* LDRA_JUSTIFY_END */
     {
         status = vxMapUserDataObject(inArgs, 0, capacity, &map_id,
                 (void **)&inArgs_buffer, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, 0);
@@ -2252,7 +2279,6 @@ static vx_user_data_object setInArgs(AppObj *obj)
             (void)vxUnmapUserDataObject(inArgs, map_id);
         }
     }
-    /* LDRA_JUSTIFY_END */
     return inArgs;
 }
 
@@ -2362,6 +2388,7 @@ static vx_status create_graph_tidl_tiovx(AppObj *obj)
     <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     <justification end> */
     if(status == (int32_t)VX_SUCCESS)
+    /* LDRA_JUSTIFY_END */
     {
         #ifndef BUILD_WITH_OPENACC
         (void)snprintf(tidlrt_string, (TIDLRT_STRING_SIZE + 32), "TIDL subgraph %s", (char*)obj->ioBufDesc.outDataName[0]);
@@ -2370,13 +2397,13 @@ static vx_status create_graph_tidl_tiovx(AppObj *obj)
         (void)vxSetReferenceName(vxCastRefFromGraph(obj->graph), tidlrt_string);
 
         /* Create array of input tensors */
-        createInputTensors(obj, obj->context, obj->config, obj->input_tensors);
+        status = createInputTensors(obj, obj->context, obj->config, obj->input_tensors);
 
         /* Create array of output tensors */
-        createOutputTensors(obj, obj->context, obj->config, obj->output_tensors);
+        status |= createOutputTensors(obj, obj->context, obj->config, obj->output_tensors);
 
         /* The 1st param MUST be config */
-        status = addParam(params, vxCastRefFromUserDataObject(obj->config), &num_params);
+        status |= addParam(params, vxCastRefFromUserDataObject(obj->config), &num_params);
 
         /* The 2nd param MUST be network */
         status |= addParam(params, vxCastRefFromUserDataObject(obj->network), &num_params);
@@ -2407,26 +2434,27 @@ static vx_status create_graph_tidl_tiovx(AppObj *obj)
         We are only adding 6 params before this check
         <justification end> */
         if(status == (int32_t)VX_SUCCESS)
+        /* LDRA_JUSTIFY_END */
         {
             /* Create TIDL Node */
             #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
-            if (obj->is_tidl_node_tensor_list) 
+            if (obj->is_tidl_node_tensor_list)
             {
                 /* Packing Input tensors in vx_object_array */
                 obj->input_tensor_list = createObjArray(obj->context, obj->input_tensors, obj->num_input_tensors);
 
                 /* Packing Output tensors in vx_object_array */
                 obj->output_tensor_list = createObjArray(obj->context, obj->output_tensors, obj->num_output_tensors);
-                
+
                 obj->tidl_node = tivxTIDLNodeV2(
-                                                obj->graph, 
+                                                obj->graph,
                                                 obj->config,
                                                 obj->network,
                                                 obj->createParams,
                                                 obj->inArgs,
                                                 obj->outArgs,
                                                 obj->traceData,
-                                                obj->input_tensor_list, 
+                                                obj->input_tensor_list,
                                                 obj->output_tensor_list);
             }
             else
@@ -2562,9 +2590,7 @@ static vx_status create_graph_tidl_tiovx(AppObj *obj)
                 obj->firstProcessCall = 1;
             }
         }
-        /* LDRA_JUSTIFY_END */
     }
-    /* LDRA_JUSTIFY_END */
     return status;
 }
 
@@ -2578,8 +2604,8 @@ static vx_status verify_graph_tidl_tiovx(AppObj *obj)
     status = vxVerifyGraph(obj->graph);
     if(status!= (int32_t)VX_SUCCESS)
     {
-	tidlrt_printf("TIDL_RT_OVX: ERROR: Verifying TIDL graph ... Failed !!!\n");
-	status = VX_FAILURE;
+        tidlrt_printf("TIDL_RT_OVX: ERROR: Verifying TIDL graph ... Failed !!!\n");
+        status = VX_FAILURE;
     }
     if (status != (int32_t)VX_FAILURE)
     {
@@ -2719,6 +2745,7 @@ static vx_status run_graph_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], sTI
              * "VX_ZONE_ERROR: [tivxQueueGet:401] no elements found in que"
              * 
              */
+             /*MISRA Rule 17.3: Reviewed clock_gettime is defined in time.h with _POSIX_C_SOURCE 200809L*/
             (void)nanosleep(&event_wait_time, NULL);
             event_status = vxWaitEvent(obj->context, &event, vx_true_e);
             if((event_status == (vx_status)VX_SUCCESS) &&
@@ -2726,7 +2753,7 @@ static vx_status run_graph_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], sTI
                (event.app_value == TIDL_NODE_ERROR_EVENT))
             {
                 status = (int32_t)VX_FAILURE;
-                tidlrt_printf("TIDL_RT_OVX: VX_EVENT_NODE_ERROR caught.\n");
+                tidlrt_printf("TIDL_RT_OVX: VX_EVENT_NODE_ERROR caught after TIDL_process() call.\n");
             }
         }
 
@@ -2770,6 +2797,7 @@ static vx_status run_graph_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], sTI
              * "VX_ZONE_ERROR: [tivxQueueGet:401] no elements found in que"
              * 
              */
+             /*MISRA Rule 17.3: Reviewed clock_gettime is defined in time.h with _POSIX_C_SOURCE 200809L*/
             (void)nanosleep(&event_wait_time, NULL);
             event_status = vxWaitEvent(obj->context, &event, vx_true_e);
             if((event_status == (vx_status)VX_SUCCESS) &&
@@ -2777,7 +2805,7 @@ static vx_status run_graph_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], sTI
                (event.app_value == TIDL_NODE_ERROR_EVENT))
             {
                 status = (int32_t)VX_FAILURE;
-                tidlrt_printf("TIDL_RT_OVX: VX_EVENT_NODE_ERROR caught.\n");
+                tidlrt_printf("TIDL_RT_OVX: VX_EVENT_NODE_ERROR caught after TIDL_process() call.\n");
             }
         }
 
@@ -2840,6 +2868,10 @@ static vx_size getTensorDataType(vx_int32 tidl_type)
     else if(tidl_type == TIDL_SignedDoubleWord)
     {
         openvx_type = VX_TYPE_INT64;
+    }
+    else if(tidl_type == TIDL_Bool)
+    {
+        openvx_type = VX_TYPE_UINT8;
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -2910,7 +2942,7 @@ static uint32_t getElementSize(uint32_t data_type)
     return elementSize;
 }
 
-static void createInputTensors(AppObj *obj, vx_context context, vx_user_data_object config, vx_tensor *input_tensors)
+static vx_status createInputTensors(AppObj *obj, vx_context context, vx_user_data_object config, vx_tensor *input_tensors)
 {
     vx_status status = VX_SUCCESS;
     int32_t input_buf_size = 0;
@@ -3007,25 +3039,54 @@ static void createInputTensors(AppObj *obj, vx_context context, vx_user_data_obj
             status = tivxMapTensorPatch(input_tensors[id], 4, start, input_sizes, &map_id_input, input_strides, &input_buffer, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
 
             /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            Safe programming and cant be true in real usecase
+            <justification end> */
+            if(status == (int32_t)VX_SUCCESS)
+            /* LDRA_JUSTIFY_END */
+            {
+                /* Reset the input buffer, this will take care of padding requirement for TIDL */
+                (void)memset(input_buffer, 0, (capacity*input_strides[0]));
+                input_buf_size += ioBufDesc->inNumBatches[id]*ioBufDesc->inNumChannels[id]*ioBufDesc->inWidth[id]*ioBufDesc->inHeight[id];
+                tidlrt_printf("TIDL_RT_OVX: input_buffer = %p %d\n", input_buffer, capacity);
+                (void)tivxUnmapTensorPatch(input_tensors[id], map_id_input);
+            }
+            /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
             <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             Safe programming and cant be true in real usecase
             <justification end> */
-            if(status != (int32_t)VX_SUCCESS)
+            else
             {
                 tidlrt_printf("TIDL_RT_OVX: Error in tivxMapTensorPatch\n");
             }
             /* LDRA_JUSTIFY_END */
-
-            /* Reset the input buffer, this will take care of padding requirement for TIDL */
-            (void)memset(input_buffer, 0, (capacity*input_strides[0]));
-            input_buf_size += ioBufDesc->inNumBatches[id]*ioBufDesc->inNumChannels[id]*ioBufDesc->inWidth[id]*ioBufDesc->inHeight[id];
-            tidlrt_printf("TIDL_RT_OVX: input_buffer = %p %d\n", input_buffer, capacity);
-            (void)tivxUnmapTensorPatch(input_tensors[id], map_id_input);
         }
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        Users are never expected to pass invalid data type during Inference
+        <justification end> */
+        else
+        {
+            status = VX_FAILURE;
+        }
+        /* LDRA_JUSTIFY_END */
+
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        Safe programming and cant be true in real usecase
+        <justification end> */
+        if(status != (int32_t)VX_SUCCESS)
+        {
+            break;
+        }
+        /* LDRA_JUSTIFY_END */
     }
 
-    return;
+    return status;
 }
 
 #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
@@ -3040,8 +3101,9 @@ static vx_object_array createObjArray(vx_context context, vx_tensor *tensors, ui
 }
 #endif
 
-static void createOutputTensors(AppObj *obj, vx_context context, vx_user_data_object config, vx_tensor *output_tensors)
+static vx_status createOutputTensors(AppObj *obj, vx_context context, vx_user_data_object config, vx_tensor *output_tensors)
 {
+    vx_status status = VX_SUCCESS;
     vx_size output_sizes[MAX_TENSOR_DIMS];
 
     uint32_t id;
@@ -3058,21 +3120,42 @@ static void createOutputTensors(AppObj *obj, vx_context context, vx_user_data_ob
         vx_size data_type = getTensorDataType(ioBufDesc->outElementType[id]);
 
         /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        <metric start> branch <metric end>
+        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         No test case is expected to hit this code path since all tidl datatypes
         are covered in getTensorDataType
         <justification end> */
         if(data_type != (uint32_t)VX_TYPE_INVALID)
+        /* LDRA_JUSTIFY_END */
         {
             output_tensors[id] = vxCreateTensor(context, 4, output_sizes, data_type, 0);
         }
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        No test case is expected to hit this code path since all tidl datatypes
+        are covered in getTensorDataType
+        <justification end> */
+        else
+        {
+            status = VX_FAILURE;
+        }
         /* LDRA_JUSTIFY_END */
 
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        No test case is expected to hit this code path since all tidl datatypes
+        are covered in getTensorDataType
+        <justification end> */
+        if(status != (int32_t)VX_SUCCESS)
+        {
+            break;
+        }
+        /* LDRA_JUSTIFY_END */
     }
 
-
-    return;
+    return status;
 }
 
 #if defined TIDL_COVERAGE_DEAD_CODE
@@ -3380,8 +3463,10 @@ static vx_status map_cp_in_tidlrt_tensor_tiovx(AppObj *obj, vx_context context, 
             tidlrt_printf("TIDL_RT_OVX: input_sizes[3] = %d, dim = %d \n", (uint32_t)input_sizes[3], ioBufDesc->inNumBatches[id]);
 
             status = tivxMapTensorPatch(input_tensors[id], 4, start, input_sizes, &map_id_input, input_strides, &pinputBuffer, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+
             /* Reset the input buffer, this will take care of padding requirement for TIDL */
             input_buf_size += ioBufDesc->inNumBatches[id]*ioBufDesc->inNumChannels[id]*ioBufDesc->inWidth[id]*ioBufDesc->inHeight[id] * ioBufDesc->inDIM1[id]* ioBufDesc->inDIM2[id];
+
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
             <justification start> DEBUG_TRACE : This function is solely for debugging purposes and is not part of the production code.
@@ -3402,12 +3487,28 @@ static vx_status map_cp_in_tidlrt_tensor_tiovx(AppObj *obj, vx_context context, 
             }
             /* LDRA_JUSTIFY_END */
 
-            tidlrt_printf("TIDL_RT_OVX: input_buffer = %p %d\n", pinputBuffer, capacity);
-
-            if(status == (int32_t)VX_SUCCESS) {
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            Safe programming and cant be true in real usecase
+            <justification end> */
+            if(status == (int32_t)VX_SUCCESS)
+            /* LDRA_JUSTIFY_END */
+            {
                 status = cp_data_in_tidlrt_tensor_tiovx(obj, in, pinputBuffer, id, tidlrt_id);
+                tidlrt_printf("TIDL_RT_OVX: input_buffer = %p %d\n", pinputBuffer, capacity);
+                (void)tivxUnmapTensorPatch(input_tensors[id], map_id_input);
             }
-            (void)tivxUnmapTensorPatch(input_tensors[id], map_id_input);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            Safe programming and cant be true in real usecase
+            <justification end> */
+            else
+            {
+                tidlrt_printf("TIDL_RT_OVX: Error in tivxMapTensorPatch\n");
+            }
+            /* LDRA_JUSTIFY_END */
         }
     }
 
@@ -3488,6 +3589,14 @@ static vx_status memset_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
                 output_strides[3] = output_sizes[2] * output_strides[2];
 
                 status = tivxMapTensorPatch(output_tensors[id], 4, start, output_sizes, &map_id_output, output_strides, &output_buffer, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+
+                /* LDRA_JUSTIFY_START
+                <metric start> branch <metric end>
+                <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                Safe programming and cant be true in real usecase
+                <justification end> */
+                if (status == (int32_t)VX_SUCCESS)
+                /* LDRA_JUSTIFY_END */
                 {
                     int32_t outWidth  = ioBufDesc->outWidth[id]  + ioBufDesc->outPadL[id];
                     int32_t outHeight = ioBufDesc->outHeight[id] + ioBufDesc->outPadT[id] + ioBufDesc->outPadB[id];;
@@ -3499,8 +3608,18 @@ static vx_status memset_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
                     {
                         (void)memset( output_buffer, 0, outWidth * outHeight * elementSizeBytes);
                     }
+                    (void)tivxUnmapTensorPatch(output_tensors[id], map_id_output);
                 }
-                (void)tivxUnmapTensorPatch(output_tensors[id], map_id_output);
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                Safe programming and cant be true in real usecase
+                <justification end> */
+                else
+                {
+                    tidlrt_printf("TIDL_RT_OVX: Error in tivxMapTensorPatch\n");
+                }
+                /* LDRA_JUSTIFY_END */
             }
         }
         else
@@ -3563,7 +3682,27 @@ static vx_status map_cp_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
     {
         tidlrt_id = get_tidlrt_id(id, (char *) ioBufDesc->outDataName[id], out, ioBufDesc->numOutputBuf);
 
-        if((out[tidlrt_id]->memType != TIDLRT_MEM_SHARED) || (is_tidlrt_out_tensor_same(ioBufDesc, out, id, tidlrt_id) == 0))
+        uint8_t isOutputInSharedMem = (out[tidlrt_id]->memType == TIDLRT_MEM_SHARED) ? 1U : 0U;
+        uint8_t isOutputTensorSame = (uint8_t)(is_tidlrt_out_tensor_same(ioBufDesc, out, id, tidlrt_id));
+
+        /*
+         * Propagate the runtime-computed output dimensions back into the
+         * caller-supplied output tensors in case of dynamic outputs
+         */
+        if((outArgs != NULL) && (out[tidlrt_id]->isDynamic == 1U))
+        {
+            for (d = 0U; d < (uint32_t)TIDL_DIM_MAX; d++)
+            {
+                out[tidlrt_id]->dimValues[d] = outArgs->outDimValues[id][d];
+            }
+            out[tidlrt_id]->pitch[TIDL_LINE_PITCH]    = outArgs->outPitchValues[id][TIDL_LINE_PITCH];
+            out[tidlrt_id]->pitch[TIDL_CHANNEL_PITCH] = outArgs->outPitchValues[id][TIDL_CHANNEL_PITCH];
+            out[tidlrt_id]->pitch[TIDL_DIM2_PITCH]    = outArgs->outPitchValues[id][TIDL_DIM2_PITCH];
+            out[tidlrt_id]->pitch[TIDL_DIM1_PITCH]    = outArgs->outPitchValues[id][TIDL_DIM1_PITCH];
+            out[tidlrt_id]->pitch[TIDL_ROI_PITCH]     = outArgs->outPitchValues[id][TIDL_ROI_PITCH];
+        }
+
+        if((isOutputInSharedMem == 0U) || (isOutputTensorSame == 0U))
         {
             vx_size data_type = getTensorDataType(ioBufDesc->outElementType[id]);
 
@@ -3631,17 +3770,36 @@ static vx_status map_cp_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
                 output_strides[3] = output_sizes[2] * output_strides[2];
 
                 status = tivxMapTensorPatch(output_tensors[id], 4, start, output_sizes, &map_id_output, output_strides, &output_buffer, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
-                if (outArgs != NULL)
+
+                /* LDRA_JUSTIFY_START
+                <metric start> branch <metric end>
+                <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                Safe programming and cant be true in real usecase
+                <justification end> */
+                if (status == (int32_t)VX_SUCCESS)
+                /* LDRA_JUSTIFY_END */
                 {
-                    status = cp_data_out_tensor_tidlrt_tiovx(obj, out, output_buffer, id, elementSize, data_type, outArgs->scale[id], tidlrt_id);
+                    if (outArgs != NULL)
+                    {
+                        status = cp_data_out_tensor_tidlrt_tiovx(obj, out, output_buffer, id, elementSize, data_type, outArgs->scale[id], tidlrt_id);
 
-                    tidlrt_printf("TIDL_RT_OVX: elementSize = %d, OutElementType = %d scale[%d] = %f, rtelemType = %d, rtZp = %d, rtScale = %f\n",
-                        elementSize, data_type, id, outArgs->scale[id],
-                        out[tidlrt_id]->elementType, out[tidlrt_id]->zeroPoint,
-                        out[tidlrt_id]->scale);
+                        tidlrt_printf("TIDL_RT_OVX: elementSize = %d, OutElementType = %d scale[%d] = %f, rtelemType = %d, rtZp = %d, rtScale = %f\n",
+                            elementSize, data_type, id, outArgs->scale[id],
+                            out[tidlrt_id]->elementType, out[tidlrt_id]->zeroPoint,
+                            out[tidlrt_id]->scale);
+                    }
+                    (void)tivxUnmapTensorPatch(output_tensors[id], map_id_output);
                 }
-
-                (void)tivxUnmapTensorPatch(output_tensors[id], map_id_output);
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                Safe programming and cant be true in real usecase
+                <justification end> */
+                else
+                {
+                    tidlrt_printf("TIDL_RT_OVX: Error in tivxMapTensorPatch\n");
+                }
+                /* LDRA_JUSTIFY_END */
             }
 
             tidlrt_printf("TIDL_RT_OVX: output_sizes[0] = %d, outWidht = %d padL = %d padR = %d\n", (uint32_t)output_sizes[0], ioBufDesc->outWidth[id], ioBufDesc->outPadL[id], ioBufDesc->outPadR[id]);
@@ -3652,18 +3810,6 @@ static vx_status map_cp_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
         else
         {
             tidlrt_printf("TIDL_RT_OVX: Shared Mem is used for Output Buff\n");
-        }
-
-        /*
-         * Propagate the runtime-computed output dimensions back into the
-         * caller-supplied output tensors
-         */
-        if(outArgs != NULL)
-        {
-            for (d = 0U; d < (uint32_t)TIDL_DIM_MAX; d++)
-            {
-                out[tidlrt_id]->dimValues[d] = (int32_t)outArgs->outDimValues[id][d];
-            }
         }
     }
     if(outArgs != NULL)
@@ -4049,10 +4195,11 @@ static vx_status allocate_intermediate_tensors(IntHandle_t *rtHandle)
                         out_tensor->scale = ioBufDesc->outTensorScale[j];
                         out_tensor->zeroPoint = ioBufDesc->outZeroPoint[j];
                         out_tensor->layout = ioBufDesc->outLayout[j];
-                        out_tensor->pitch[TIDL_ROI_PITCH] = ioBufDesc->outPadL[j] + ioBufDesc->outWidth[j] + ioBufDesc->outPadR[j];
+                        out_tensor->pitch[TIDL_LINE_PITCH]    = ioBufDesc->outPadL[j] + ioBufDesc->outWidth[j] + ioBufDesc->outPadR[j];
                         out_tensor->pitch[TIDL_CHANNEL_PITCH] = ioBufDesc->outChannelPitch[j];
-                        out_tensor->pitch[TIDL_DIM2_PITCH] = out_tensor->pitch[TIDL_CHANNEL_PITCH] * ioBufDesc->outNumChannels[j];;
-                        out_tensor->pitch[TIDL_DIM1_PITCH] = out_tensor->pitch[TIDL_DIM2_PITCH] * ioBufDesc->outDIM2[j];
+                        out_tensor->pitch[TIDL_DIM2_PITCH]    = out_tensor->pitch[TIDL_CHANNEL_PITCH] * ioBufDesc->outNumChannels[j];
+                        out_tensor->pitch[TIDL_DIM1_PITCH]    = out_tensor->pitch[TIDL_DIM2_PITCH] * ioBufDesc->outDIM2[j];
+                        out_tensor->pitch[TIDL_ROI_PITCH]     = out_tensor->pitch[TIDL_DIM1_PITCH] * ioBufDesc->outDIM1[j];
                         out_tensor->padValues[0] = ioBufDesc->outPadL[j];
                         out_tensor->padValues[1] = ioBufDesc->outPadR[j];
                         out_tensor->padValues[2] = ioBufDesc->outPadT[j];
@@ -4063,6 +4210,7 @@ static vx_status allocate_intermediate_tensors(IntHandle_t *rtHandle)
                         out_tensor->dimValues[TIDL_DIM_DIM2] = ioBufDesc->outDIM2[j];
                         out_tensor->dimValues[TIDL_DIM_DIM1] = ioBufDesc->outDIM1[j];
                         out_tensor->dimValues[TIDL_DIM_BATCH] = ioBufDesc->outNumBatches[j];
+                        out_tensor->isDynamic = (uint8_t)ioBufDesc->outIsDynamic[j];
                         (void)strcpy((char*)out_tensor->name,(char*)ioBufDesc->outDataName[j]);
                         out_tensor->memType = TIDLRT_MEM_SHARED;
 

@@ -103,7 +103,6 @@ void copy_asis_linear(Tdst *dst, Tsrc *src,
     int32_t i0, i1, i2, i3;
     Tdst *d0 = dst + dst_offset, *d1, *d2, *d3;
     Tsrc *s0 = src + src_offset, *s1, *s2, *s3;
-    float data;
 
     for (i0 = 0; i0 < nb; i0++)
     {
@@ -119,8 +118,7 @@ void copy_asis_linear(Tdst *dst, Tsrc *src,
                 s3 = s2;
                 for (i3 = 0; i3 < np; i3++)
                 {
-                    data = *s3++;
-                    *d3++ = (Tdst)data;
+                    *d3++ = (Tdst)(*s3++);
                 }
                 d2 += dst_lp;
                 s2 += src_lp;
@@ -148,7 +146,6 @@ void copy_asis_transpose(Tdst *dst, Tsrc *src,
     int32_t i0, i1, i2, i3;
     Tdst *d0 = dst + dst_offset, *d1, *d2, *d3;
     Tsrc *s0 = src + src_offset, *s1, *s2, *s3;
-    float data;
 
     for (i0 = 0; i0 < nb; i0++)
     {
@@ -164,8 +161,7 @@ void copy_asis_transpose(Tdst *dst, Tsrc *src,
                 s3 = s2;
                 for (i3 = 0; i3 < np; i3++)
                 {
-                    data = *s3;
-                    *d3 = (Tdst)data;
+                    *d3 = (Tdst)(*s3);
                     s3 += src_pp;
                     d3 += dst_pp;
                 }
@@ -562,7 +558,7 @@ Not in scope of TIDL-RT safety use case. Hence this file is justified not to inc
 <justification end> */
 static int32_t tidlrt_getDatElementSize(int32_t elementType)
 {
-  if ((elementType == TIDL_SignedChar) || (elementType == TIDL_UnsignedChar))
+  if ((elementType == TIDL_SignedChar) || (elementType == TIDL_UnsignedChar) || (elementType == TIDL_Bool))
   {
     return sizeof(int8_t);
   }
@@ -726,19 +722,26 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
     {
         if(in[tidlrt_id]->memType != TIDLRT_MEM_SHARED)
         {
-            int32_t c = ioBufDesc->inNumChannels[id] * ioBufDesc->inDIM1[id] * ioBufDesc->inDIM2[id];
-            int32_t n = ioBufDesc->inNumBatches[id];
+            int32_t c, n;
+            int32_t chPitch = in[tidlrt_id]->pitch[TIDL_CHANNEL_PITCH];
+            if (in[tidlrt_id]->isDynamic == 1)
+            {
+                n = in[tidlrt_id]->dimValues[TIDLRT_DIM_BATCH];
+                c = in[tidlrt_id]->dimValues[TIDLRT_DIM_NUMCH] * in[tidlrt_id]->dimValues[TIDLRT_DIM_DIM2] * in[tidlrt_id]->dimValues[TIDLRT_DIM_DIM1];
+            }
+            else
+            {
+                c = ioBufDesc->inNumChannels[id] * ioBufDesc->inDIM1[id] * ioBufDesc->inDIM2[id];
+                n = ioBufDesc->inNumBatches[id];
+                if(chPitch == -1)
+                {
+                    chPitch = ioBufDesc->inWidth[id]*ioBufDesc->inHeight[id];
+                }
+            }
             void *rtPtr  = in[tidlrt_id]->ptr;
             void * ivPtr = input_buffer;
             int32_t elementSizeBytes  = tidlrt_getDatElementSize(in[tidlrt_id]->elementType);
-            int32_t chPitch = in[tidlrt_id]->pitch[TIDL_CHANNEL_PITCH];
             int32_t memcpSize;
-
-            if(chPitch == -1)
-            {
-                chPitch = ioBufDesc->inWidth[id]*ioBufDesc->inHeight[id];
-            }
-
             memcpSize = n * c * elementSizeBytes * chPitch;
             memcpy(ivPtr, rtPtr, memcpSize);
             tidlrt_printf("TIDL_RT_OVX : Memcpy Input Buffer \n"); 
@@ -758,54 +761,32 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
         void *rtPtr  = in[tidlrt_id]->ptr;
         void *ivPtr = input_buffer;
 
-        if (in[tidlrt_id]->dimValues[TIDLRT_DIM_BATCH] > 0)
+        /*
+         * If tensor is dyanmic, read dimensions from tensor structure
+         * else from iobuf descriptor
+         */ 
+        if (in[tidlrt_id]->isDynamic == 1)
         {
             b =  in[tidlrt_id]->dimValues[TIDLRT_DIM_BATCH];
-        }
-        else
-        {
-            b = ioBufDesc->inNumBatches[id];
-        }
-
-        if (in[tidlrt_id]->dimValues[TIDLRT_DIM_NUMCH] > 0)
-        {
             c =  in[tidlrt_id]->dimValues[TIDLRT_DIM_NUMCH] * in[tidlrt_id]->dimValues[TIDLRT_DIM_DIM2] * in[tidlrt_id]->dimValues[TIDLRT_DIM_DIM1];
-        }
-        else
-        {
-            c = ioBufDesc->inNumChannels[id] * ioBufDesc->inDIM1[id] * ioBufDesc->inDIM2[id];
-        }
-
-        if (in[tidlrt_id]->dimValues[TIDLRT_DIM_HEIGHT] > 0)
-        {
             h =  in[tidlrt_id]->dimValues[TIDLRT_DIM_HEIGHT];
-        }
-        else
-        {
-            h = ioBufDesc->inHeight[id];
-        }
-
-        if (in[tidlrt_id]->dimValues[TIDLRT_DIM_WIDTH] > 0)
-        {
             w =  in[tidlrt_id]->dimValues[TIDLRT_DIM_WIDTH];
-        }
-        else
-        {
-            w = ioBufDesc->inWidth[id];
-        }
-
-        if (in[tidlrt_id]->pitch[TIDLRT_CHANNEL_PITCH] > 0)
-        {
+            lp = w + in[tidlrt_id]->padValues[0] + in[tidlrt_id]->padValues[1];
+            offset = lp * in[tidlrt_id]->padValues[2] + in[tidlrt_id]->padValues[0];
             cp = in[tidlrt_id]->pitch[TIDLRT_CHANNEL_PITCH];
         }
         else
         {
+            b = ioBufDesc->inNumBatches[id];
+            c = ioBufDesc->inNumChannels[id] * ioBufDesc->inDIM1[id] * ioBufDesc->inDIM2[id];
+            h = ioBufDesc->inHeight[id];
+            w = ioBufDesc->inWidth[id];
+            lp = w + ioBufDesc->inPadL[id] + ioBufDesc->inPadR[id];
+            offset = lp * ioBufDesc->inPadT[id] + ioBufDesc->inPadL[id];
             cp = ioBufDesc->inChannelPitch[id];
         }
 
         bp = c * cp;
-        lp = w + in[tidlrt_id]->padValues[0] + in[tidlrt_id]->padValues[1];
-        offset = lp * in[tidlrt_id]->padValues[2] + in[tidlrt_id]->padValues[0];
 
         float scale = ioBufDesc->inTensorScale[id];
         float inScale = in[tidlrt_id]->scale;
@@ -858,8 +839,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_asis((uint16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_asis(( int16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_asis((uint32_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_asis(( int32_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_asis((uint64_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_asis(( int64_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_asis((   float*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_asis((    bool*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -872,8 +863,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_asis((uint16_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_asis(( int16_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_asis((uint32_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_asis(( int32_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_asis((uint64_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_asis(( int64_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_asis((   float*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_asis((    bool*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -886,8 +887,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_asis((uint16_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_asis(( int16_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_asis((uint32_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_asis(( int32_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_asis((uint64_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_asis(( int64_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_asis((   float*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_asis((    bool*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -900,8 +911,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_asis((uint16_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_asis(( int16_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_asis((uint32_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_asis(( int32_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_asis((uint64_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_asis(( int64_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_asis((   float*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_asis((    bool*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -914,8 +935,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_asis((uint16_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_asis(( int16_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_asis((uint32_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_asis(( int32_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_asis((   float*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_asis((    bool*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -932,8 +963,14 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_asis(( int32_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] == TIDL_UnsignedWord)
                         copy_asis(( uint32_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_asis((   float*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_asis((    bool*)ivPtr, ( int32_t *)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -946,8 +983,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_asis((uint16_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_asis(( int16_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_asis((uint32_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_asis(( int32_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_asis((   float*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_asis((    bool*)ivPtr, (float *)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -960,8 +1007,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_asis((uint16_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_asis(( int16_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_asis((uint32_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_asis(( int32_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_asis((   float*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_asis((  bool*)ivPtr, (uint64_t *)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -974,14 +1031,42 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_asis((uint16_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_asis(( int16_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_asis((uint32_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_asis(( int32_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
                         copy_asis(( uint64_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
                         copy_asis(( int64_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
-                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
-                        copy_asis(( int32_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_asis((   float*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_asis((  bool*)ivPtr, (int64_t *)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDLRT_Bool:
+                    if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedChar)
+                        copy_asis(( uint8_t*)ivPtr, (uint8_t *)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedChar)
+                        copy_asis((  int8_t*)ivPtr, (uint8_t *)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedShort)
+                        copy_asis((uint16_t*)ivPtr, (uint8_t *)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
+                        copy_asis(( int16_t*)ivPtr, (uint8_t *)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_asis((uint32_t*)ivPtr, (uint8_t *)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_asis(( int32_t*)ivPtr, (uint8_t *)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (   bool*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (   bool*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
+                        copy_asis((   float*)ivPtr, (uint8_t *)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_asis((  bool*)ivPtr, (uint8_t *)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -999,8 +1084,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_scale((uint16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_scale(( int16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_scale((uint32_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_scale(( int32_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_scale((uint64_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_scale(( int64_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_scale((   float*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_scale((    bool*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1013,8 +1108,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_scale((uint16_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_scale(( int16_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_scale((uint32_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_scale(( int32_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_scale((uint64_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_scale(( int64_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_scale((   float*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_scale((    bool*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1027,8 +1132,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_scale((uint16_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_scale(( int16_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_scale((uint32_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_scale(( int32_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_scale((uint64_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_scale(( int64_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_scale((   float*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_scale((    bool*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1041,8 +1156,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_scale((uint16_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_scale(( int16_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_scale((uint32_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_scale(( int32_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_scale((uint64_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_scale(( int64_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_scale((   float*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_scale((    bool*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1055,8 +1180,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_scale((uint16_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_scale(( int16_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_scale((uint32_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_scale(( int32_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_scale((uint64_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_scale(( int64_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_scale((   float*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_scale((    bool*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1069,8 +1204,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_scale((uint16_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_scale(( int16_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_scale((uint32_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_scale(( int32_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_scale((uint64_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_scale(( int64_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_scale((   float*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_scale((    bool*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1083,8 +1228,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_scale((uint16_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_scale(( int16_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_scale((uint32_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_scale(( int32_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_scale((uint64_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_scale(( int64_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_scale((   float*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_scale((    bool*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1097,8 +1252,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_scale((uint16_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_scale(( int16_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_scale((uint32_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_scale(( int32_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_scale((uint64_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_scale(( int64_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_scale((   float*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_scale((    bool*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1111,8 +1276,42 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_scale((uint16_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_scale(( int16_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_scale((uint32_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_scale(( int32_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_scale((uint64_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_scale(( int64_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_scale((   float*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_scale((    bool*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDLRT_Bool:
+                    if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedChar)
+                        copy_scale(( uint8_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedChar)
+                        copy_scale((  int8_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedShort)
+                        copy_scale((uint16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
+                        copy_scale(( int16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_scale((uint32_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_scale(( int32_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_scale((uint64_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_scale(( int64_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
+                        copy_scale((   float*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_scale((    bool*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1130,8 +1329,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zf((uint16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zf(( int16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zf((   float*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_zf((    bool*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1144,8 +1353,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zf((uint16_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zf(( int16_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zf((   float*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_zf((    bool*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1158,8 +1377,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zf((uint16_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zf(( int16_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zf((   float*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_zf((    bool*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1172,8 +1401,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zf((uint16_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zf(( int16_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zf((   float*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_zf((    bool*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1186,8 +1425,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zf((uint16_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zf(( int16_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zf((   float*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_zf((    bool*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1200,8 +1449,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zf((uint16_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zf(( int16_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zf((   float*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_zf((    bool*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1214,8 +1473,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zf((uint16_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zf(( int16_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zf((   float*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_zf((    bool*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1228,8 +1497,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zf((uint16_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zf(( int16_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zf((   float*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_zf((    bool*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1242,8 +1521,42 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zf((uint16_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zf(( int16_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zf((   float*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_zf((    bool*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDLRT_Bool:
+                    if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedChar)
+                        copy_zf(( uint8_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedChar)
+                        copy_zf((  int8_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedShort)
+                        copy_zf((uint16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
+                        copy_zf(( int16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, (   bool*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, (   bool*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (   bool*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (   bool*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
+                        copy_zf((   float*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
+                    else if(ioBufDesc->inElementType[id] == TIDL_Bool)
+                        copy_zf((    bool*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1261,8 +1574,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zfscale((uint16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zfscale(( int16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zfscale((   float*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_Bool)
+                        copy_zfscale((   bool*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1275,8 +1598,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zfscale((uint16_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zfscale(( int16_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zfscale((   float*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_Bool)
+                        copy_zfscale((   bool*)ivPtr, (  int8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1289,8 +1622,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zfscale((uint16_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zfscale(( int16_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zfscale((   float*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_Bool)
+                        copy_zfscale((   bool*)ivPtr, (uint16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1303,8 +1646,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zfscale((uint16_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zfscale(( int16_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zfscale((   float*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_Bool)
+                        copy_zfscale((   bool*)ivPtr, ( int16_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1317,8 +1670,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zfscale((uint16_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zfscale(( int16_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zfscale((   float*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_Bool)
+                        copy_zfscale((   bool*)ivPtr, (uint32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1331,8 +1694,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zfscale((uint16_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zfscale(( int16_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zfscale((   float*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_Bool)
+                        copy_zfscale((   bool*)ivPtr, ( int32_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1345,8 +1718,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zfscale((uint16_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zfscale(( int16_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zfscale((   float*)ivPtr, (   float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_Bool)
+                        copy_zfscale((   bool*)ivPtr, (    float*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1359,8 +1742,18 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zfscale((uint16_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zfscale(( int16_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zfscale((   float*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_Bool)
+                        copy_zfscale((   bool*)ivPtr, (uint64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1373,8 +1766,42 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
                         copy_zfscale((uint16_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
                         copy_zfscale(( int16_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
                         copy_zfscale((   float*)ivPtr, ( int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_Bool)
+                        copy_zfscale((   bool*)ivPtr, (  int64_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDLRT_Bool:
+                    if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedChar)
+                        copy_zfscale(( uint8_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedChar)
+                        copy_zfscale((  int8_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedShort)
+                        copy_zfscale((uint16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedShort)
+                        copy_zfscale(( int16_t*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedWord)
+                        copy_zfscale((uint32_t*)ivPtr, (   bool*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedWord)
+                        copy_zfscale(( int32_t*)ivPtr, (   bool*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_UnsignedDoubleWord)
+                        copy_zfscale((uint64_t*)ivPtr, (   bool*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_SignedDoubleWord)
+                        copy_zfscale(( int64_t*)ivPtr, (   bool*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] == TIDL_SinglePrecFloat)
+                        copy_zfscale((   float*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
+                    else if(ioBufDesc->inElementType[id] ==  TIDL_Bool)
+                        copy_zfscale((   bool*)ivPtr, ( uint8_t*)rtPtr, src_bp, src_cp, src_lp, src_pp, 0, bp, cp, lp, pp, offset, b, c, h, w, zp, inScale, scale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1401,17 +1828,18 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
     {
         if(out[tidlrt_id]->memType != TIDLRT_MEM_SHARED)
         {
-            int32_t c = ioBufDesc->outNumChannels[id] * ioBufDesc->outDIM1[id] * ioBufDesc->outDIM2[id];
-            int32_t n = ioBufDesc->outNumBatches[id];
-            void * rtPtr = out[tidlrt_id]->ptr;
-            void *ivPtr  = output_buffer;
-            int32_t elementSizeBytes  = tidlrt_getDatElementSize(out[tidlrt_id]->elementType);
-            int32_t memcpSize;
+            int32_t c, n;
             int32_t chPitch = out[tidlrt_id]->pitch[TIDL_CHANNEL_PITCH];
+            c = ioBufDesc->outNumChannels[id] * ioBufDesc->outDIM1[id] * ioBufDesc->outDIM2[id];
+            n = ioBufDesc->outNumBatches[id];
             if(chPitch == -1)
             {
                 chPitch = ioBufDesc->outWidth[id]*ioBufDesc->outHeight[id];
             }
+            void * rtPtr = out[tidlrt_id]->ptr;
+            void *ivPtr  = output_buffer;
+            int32_t elementSizeBytes  = tidlrt_getDatElementSize(out[tidlrt_id]->elementType);
+            int32_t memcpSize;
             memcpSize = n * c * elementSizeBytes * chPitch;
             memcpy(rtPtr, ivPtr, memcpSize);
             tidlrt_printf("TIDL_RT_OVX : Memcpy output Buffer %p %d %s %s\n", rtPtr, memcpSize, ioBufDesc->outDataName[id], out[tidlrt_id]->name); 
@@ -1431,19 +1859,6 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
         float outScale;
         void * rtPtr = out[tidlrt_id]->ptr;
         void *ivPtr  = output_buffer;
-
-        /*
-         * Just like cp_data_in_tensor_tidlrt_tiovx update for supporting
-         * runtime changing shapes, we should we picking these values from
-         * out tensor instead of ioBufDesc. But currently the way output
-         * buffer is allocated to onnxruntime is based on ioBufDesc. So
-         * the output buffer from onnxruntime is always asme size as decided in
-         * ioBufDesc and not actual model. Based on that case this logic still
-         * works. Correct fix is to not allocate based on ioBufDesc but actual
-         * output shape as calculated and updated in TIDL_OutArgs after
-         * TIDL_Process. This requires change in onnxruntime. Post that this
-         * logic should also be updated. It is a TODO 
-         */ 
 
         b = ioBufDesc->outNumBatches[id];
         c = ioBufDesc->outNumChannels[id] * ioBufDesc->outDIM1[id] * ioBufDesc->outDIM2[id];
@@ -1515,6 +1930,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_asis(( uint64_t*)rtPtr, ( uint8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_asis(( int64_t*)rtPtr, ( uint8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_asis(( uint8_t*)rtPtr, ( uint8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -1537,6 +1954,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_asis((uint64_t*)rtPtr, (  int8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_asis(( int64_t*)rtPtr, (  int8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_asis(( uint8_t*)rtPtr, (  int8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -1559,6 +1978,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_asis((uint64_t*)rtPtr, (uint16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_asis(( int64_t*)rtPtr, (uint16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_asis(( uint8_t*)rtPtr, (uint16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -1581,6 +2002,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_asis((uint64_t*)rtPtr, ( int16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_asis(( int64_t*)rtPtr, ( int16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_asis(( uint8_t*)rtPtr, ( int16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -1603,6 +2026,128 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_asis((uint64_t*)rtPtr, (   float*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_asis(( int64_t*)rtPtr, (   float*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_asis(( uint8_t*)rtPtr, (   float*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_Bool:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_asis(( uint8_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_asis((  int8_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_asis((uint16_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_asis(( int16_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_asis((uint32_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_asis(( int32_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_asis((   float*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_asis(( uint64_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_asis(( int64_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_asis(( uint8_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_UnsignedWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_asis(( uint8_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_asis((  int8_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_asis((uint16_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_asis(( int16_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_asis((uint32_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_asis(( int32_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_asis((   float*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_asis((uint64_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_asis(( int64_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_asis(( uint8_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_SignedWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_asis(( uint8_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_asis((  int8_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_asis((uint16_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_asis(( int16_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_asis((uint32_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_asis(( int32_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_asis((   float*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_asis((uint64_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_asis(( int64_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_asis(( uint8_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_UnsignedDoubleWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_asis(( uint8_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_asis((  int8_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_asis((uint16_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_asis(( int16_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_asis((uint32_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_asis(( int32_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_asis((   float*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_asis((uint64_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_asis(( int64_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_asis(( uint8_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_SignedDoubleWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_asis(( uint8_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_asis((  int8_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_asis((uint16_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_asis(( int16_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_asis((uint32_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_asis(( int32_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_asis((   float*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_asis((uint64_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_asis(( int64_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_asis(( uint8_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w);
                     else
                         return VX_FAILURE;
                     break;
@@ -1630,6 +2175,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_scale((uint64_t*)rtPtr, ( uint8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_scale(( int64_t*)rtPtr, ( uint8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_scale(( uint8_t*)rtPtr, ( uint8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1652,6 +2199,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_scale((uint64_t*)rtPtr, (  int8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_scale(( int64_t*)rtPtr, (  int8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_scale(( uint8_t*)rtPtr, (  int8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1674,6 +2223,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_scale((uint64_t*)rtPtr, (uint16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_scale(( int64_t*)rtPtr, (uint16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_scale(( uint8_t*)rtPtr, (uint16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1696,6 +2247,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_scale((uint64_t*)rtPtr, ( int16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_scale(( int64_t*)rtPtr, ( int16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_scale(( uint8_t*)rtPtr, ( int16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1717,7 +2270,129 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                     else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
                         copy_scale((uint64_t*)rtPtr, (   float*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
-                        copy_scale(( int64_t*)rtPtr, (   float*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                        copy_scale(( uint8_t*)rtPtr, (   float*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_scale(( uint8_t*)rtPtr, (   float*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_Bool:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_scale(( uint8_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_scale((  int8_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_scale((uint16_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_scale(( int16_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_scale((uint32_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_scale(( int32_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_scale((   float*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_scale((uint64_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_scale(( int64_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_scale(( uint8_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_UnsignedWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_scale(( uint8_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_scale((  int8_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_scale((uint16_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_scale(( int16_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_scale((uint32_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_scale(( int32_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_scale((   float*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_scale((uint64_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_scale(( int64_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_scale(( uint8_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_SignedWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_scale(( uint8_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_scale((  int8_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_scale((uint16_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_scale(( int16_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_scale((uint32_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_scale(( int32_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_scale((   float*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_scale((uint64_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_scale(( int64_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_scale(( uint8_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_UnsignedDoubleWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_scale(( uint8_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_scale((  int8_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_scale((uint16_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_scale(( int16_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_scale((uint32_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_scale(( int32_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_scale((   float*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_scale((uint64_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_scale(( int64_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_scale(( uint8_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_SignedDoubleWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_scale(( uint8_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_scale((  int8_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_scale((uint16_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_scale(( int16_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_scale((uint32_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_scale(( int32_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_scale((   float*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_scale((uint64_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_scale(( int64_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_scale(( uint8_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, scale, outScale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1745,6 +2420,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_zf((uint64_t*)rtPtr, ( uint8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_zf(( int64_t*)rtPtr, ( uint8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zf(( uint8_t*)rtPtr, ( uint8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1767,6 +2444,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_zf((uint64_t*)rtPtr, (  int8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_zf(( int64_t*)rtPtr, (  int8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zf(( uint8_t*)rtPtr, (  int8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1789,6 +2468,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_zf((uint64_t*)rtPtr, (uint16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_zf(( int64_t*)rtPtr, (uint16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zf(( uint8_t*)rtPtr, (uint16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1811,6 +2492,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_zf((uint64_t*)rtPtr, ( int16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_zf(( int64_t*)rtPtr, ( int16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zf(( uint8_t*)rtPtr, ( int16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1833,6 +2516,128 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_zf((uint64_t*)rtPtr, (   float*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_zf(( int64_t*)rtPtr, (   float*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zf(( uint8_t*)rtPtr, (   float*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_Bool:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_zf(( uint8_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_zf((  int8_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_zf((uint16_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_zf(( int16_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_zf((uint32_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_zf(( int32_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_zf((   float*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_zf((uint64_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_zf(( int64_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zf(( uint8_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_UnsignedWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_zf(( uint8_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_zf((  int8_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_zf((uint16_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_zf(( int16_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_zf((uint32_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_zf(( int32_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_zf((   float*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_zf((uint64_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_zf(( int64_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zf(( uint8_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_SignedWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_zf(( uint8_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_zf((  int8_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_zf((uint16_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_zf(( int16_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_zf((uint32_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_zf(( int32_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_zf((   float*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_zf((uint64_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_zf(( int64_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zf(( uint8_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_UnsignedDoubleWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_zf(( uint8_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_zf((  int8_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_zf((uint16_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_zf(( int16_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_zf((uint32_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_zf(( int32_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_zf((   float*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_zf((uint64_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_zf(( int64_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zf(( uint8_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_SignedDoubleWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_zf(( uint8_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_zf((  int8_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_zf((uint16_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_zf(( int16_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_zf((uint32_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_zf(( int32_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_zf((   float*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_zf((uint64_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_zf(( int64_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zf(( uint8_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp);
                     else
                         return VX_FAILURE;
                     break;
@@ -1860,6 +2665,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_zfscale((uint64_t*)rtPtr, ( uint8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_zfscale(( int64_t*)rtPtr, ( uint8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zfscale(( uint8_t*)rtPtr, ( uint8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1882,6 +2689,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_zfscale((uint64_t*)rtPtr, (  int8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_zfscale(( int64_t*)rtPtr, (  int8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zfscale(( uint8_t*)rtPtr, (  int8_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1904,6 +2713,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_zfscale((uint64_t*)rtPtr, (uint16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_zfscale(( int64_t*)rtPtr, (uint16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zfscale(( uint8_t*)rtPtr, (uint16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1926,6 +2737,8 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_zfscale((uint64_t*)rtPtr, ( int16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_zfscale(( int64_t*)rtPtr, ( int16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zfscale(( uint8_t*)rtPtr, ( int16_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
                     else
                         return VX_FAILURE;
                     break;
@@ -1948,6 +2761,128 @@ vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], 
                         copy_zfscale((uint64_t*)rtPtr, (   float*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
                     else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
                         copy_zfscale(( int64_t*)rtPtr, (   float*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zfscale(( uint8_t*)rtPtr, (   float*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_Bool:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_zfscale(( uint8_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_zfscale((  int8_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_zfscale((uint16_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_zfscale(( int16_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_zfscale((uint32_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_zfscale(( int32_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_zfscale((   float*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_zfscale((uint64_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_zfscale(( int64_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zfscale(( uint8_t*)rtPtr, ( bool*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_UnsignedWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_zfscale(( uint8_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_zfscale((  int8_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_zfscale((uint16_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_zfscale(( int16_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_zfscale((uint32_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_zfscale(( int32_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_zfscale((   float*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_zfscale((uint64_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_zfscale(( int64_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zfscale(( uint8_t*)rtPtr, (uint32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_SignedWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_zfscale(( uint8_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_zfscale((  int8_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_zfscale((uint16_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_zfscale(( int16_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_zfscale((uint32_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_zfscale(( int32_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_zfscale((   float*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_zfscale((uint64_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_zfscale(( int64_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zfscale(( uint8_t*)rtPtr, ( int32_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_UnsignedDoubleWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_zfscale(( uint8_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_zfscale((  int8_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_zfscale((uint16_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_zfscale(( int16_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_zfscale((uint32_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_zfscale(( int32_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_zfscale((   float*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_zfscale((uint64_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_zfscale(( int64_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zfscale(( uint8_t*)rtPtr, (uint64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else
+                        return VX_FAILURE;
+                    break;
+                case TIDL_SignedDoubleWord:
+                    if(out[tidlrt_id]->elementType == TIDLRT_Uint8)
+                        copy_zfscale(( uint8_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int8)
+                        copy_zfscale((  int8_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint16)
+                        copy_zfscale((uint16_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int16)
+                        copy_zfscale(( int16_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint32)
+                        copy_zfscale((uint32_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int32)
+                        copy_zfscale(( int32_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Float32)
+                        copy_zfscale((   float*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Uint64)
+                        copy_zfscale((uint64_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Int64)
+                        copy_zfscale(( int64_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
+                    else if(out[tidlrt_id]->elementType == TIDLRT_Bool)
+                        copy_zfscale(( uint8_t*)rtPtr, ( int64_t*)ivPtr, bp, cp, lp, pp, offset, dst_bp, dst_cp, dst_lp, dst_pp, 0, b, c, h, w, -zp * scale / outScale, scale, outScale);
                     else
                         return VX_FAILURE;
                     break;

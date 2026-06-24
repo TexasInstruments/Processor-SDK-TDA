@@ -186,5 +186,9 @@ float32_tidl TIDL_floatSat(float32_tidl outAcc, sTIDL_Layer_t  * tidlLayer);
 
 /* None */
 
+
+int32_t TIDL_poolingGetPerfData(void* linkHandle,
+                                 double *perfData);
+
 #endif /* TIDL_POOLING_H_*/
 

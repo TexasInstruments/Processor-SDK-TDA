@@ -297,7 +297,7 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.conv_transpose")>()
   void **ptr;
   ptr = &layer.weights.ptr;
   float *srcWtPtr = (float *)*ptr;
-  float *weightPtr = (float *)malloc(sizeof(float) * tensorSize);
+  float *weightPtr = (float *)my_calloc(tensorSize, sizeof(float));
   if (weightPtr == NULL)
   {
     TIDL_LOG_ERROR(gDiags.gDiagList, "Could not allocate transpose buffer for deconvolution");

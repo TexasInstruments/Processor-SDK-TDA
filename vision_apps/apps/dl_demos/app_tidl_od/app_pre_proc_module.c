@@ -135,6 +135,11 @@ vx_status app_init_pre_proc(vx_context context, PreProcObj *preProcObj, char *ob
         else local_preproc_config->tensor_format = 1; //BGR
     }
 
+    /* Use inChannelPitch from TIDL IO buf desc so the preproc kernel writes
+     * each channel at the same stride the TIDL inference kernel reads with.
+     * TIDL may apply DDR alignment that makes inChannelPitch != paddedW * paddedH. */
+    local_preproc_config->channel_pitch = (vx_uint32)ioBufDesc->inChannelPitch[0];
+
     for(i = 0 ; i < 4; i++)
     {
         local_preproc_config->crop[i] = 0;

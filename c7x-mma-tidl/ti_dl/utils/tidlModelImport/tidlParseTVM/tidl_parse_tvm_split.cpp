@@ -86,26 +86,95 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("split")>()
     }
     layer.inData[0].numDim = numDim;
     layer.numOutBufs = md.numOutputs;
-    
+
+    // Initialize input tensor dimensions from metadata
+    // TIDL requires all TIDL_DIM_MAX (6) dimensions to be > 0
+    if (md.varTensorsDims.size() > 0 && md.varTensorsDims[0].size() > 0)
+    {
+        // Initialize all dimensions to 1 (unused dimensions)
+        for (int32_t j = 0; j < TIDL_DIM_MAX; j++)
+        {
+            layer.inData[0].dimValues[j] = 1;
+        }
+
+        // Fill actual dimensions from metadata (right-aligned in 6D array)
+        int32_t inTensorSize = md.varTensorsDims[0].size();
+        for (int32_t j = inTensorSize - 1, k = TIDL_DIM_MAX - 1; j >= 0; j--, k--)
+        {
+            layer.inData[0].dimValues[k] = md.varTensorsDims[0][j];
+        }
+    }
+
+    // Initialize output tensor dimensions from metadata
+    // TIDL requires all TIDL_DIM_MAX (6) dimensions to be > 0
+    for (int32_t i = 0; i < md.numOutputs; i++)
+    {
+        // Initialize all dimensions to 1 (unused dimensions)
+        for (int32_t j = 0; j < TIDL_DIM_MAX; j++)
+        {
+            layer.outData[i].dimValues[j] = 1;
+        }
+
+        // Fill actual dimensions from metadata (right-aligned in 6D array)
+        if (i < md.outputTensorDims.size() && md.outputTensorDims[i].size() > 0)
+        {
+            int32_t outTensorSize = md.outputTensorDims[i].size();
+            for (int32_t j = outTensorSize - 1, k = TIDL_DIM_MAX - 1; j >= 0; j--, k--)
+            {
+                layer.outData[i].dimValues[k] = md.outputTensorDims[i][j];
+            }
+        }
+    }
+
+    // Store metadata in layer for later use during duplication
+    layer.allowlistingMetaData = md;
+
     auto attrs = call->attrs.as<SplitAttrs>();
     // Get attributes
-    if (attrs != NULL)
+    if ( (attrs != NULL) )
     {
-        // Get axis
+        /* Get axis - Relay IR ensures axis is always present in attributes */
         axis = attrs->axis;
     }
 
+    /* Normalize axis to positive index before accessing varTensorsDims */
+    int32_t original_axis = axis;
+    if (axis < 0) {
+        axis = numDim + axis;
+    }
+
+    /* In Relay IR, "indices_or_sections" attribute directly gives the indices for split along an axis 
+        (As opposed to ONNX split operator - which specifies the size of a each split)
+       
+       "slicePoints" in TIDL sliceParams are also indices of split (effectively same interpretation as indices_or_sections attribute) 
+       However "slicePoints" expects 2 additions values - First index = 0 (starting index along axis), Last index = dimension size along axis (end index along axis) */
     auto attr_indices_or_sections = attrs->indices_or_sections;
-    if (attrs != NULL && attrs->indices_or_sections.defined())
+    if ( (attrs != NULL) && (attrs->indices_or_sections.defined()) )
     {
         // Handle Variant<Box<int64_t>, Array<Box<int64_t>>>
         if (auto box_opt = attrs->indices_or_sections.as<tvm::runtime::Box<int64_t>>())
         {
+            /* Single integer in Split - Split the axis into N equal sections */
             auto box_val = box_opt.value();
-            int64_t sections = box_val->value;
+            int64_t num_sections = box_val->value;
+
+            /* Get the dimension size along the split axis */
+            int32_t axis_dim = md.varTensorsDims[0][axis];
+            int32_t section_size = axis_dim / num_sections;
+
+            /* Populate slicePoints for equal-sized sections */
+            sliceParams.slicePoints[0] = 0;
+            for (itr_slice = 0; itr_slice < num_sections; ++itr_slice)
+            {
+                sliceParams.slicePoints[itr_slice + 1] = (itr_slice + 1) * section_size;
+            }
+            /* Ensure the last slice point is exactly the axis dimension (handles rounding) */
+            sliceParams.slicePoints[num_sections] = axis_dim;
+            itr_slice = num_sections;
         }
         else if (auto arr_opt = attrs->indices_or_sections.as<tvm::runtime::Array<tvm::runtime::Box<int64_t>>>())
         {
+            /* Array of values in Split => multiple parts to split into */
             auto arr = arr_opt.value();
 
             sliceParams.slicePoints[0] = 0;
@@ -120,8 +189,10 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("split")>()
             }
         }
     }
-    else if (md.numConstInputs >= 1)
+    else if (md.numConstInputs >= 1) /* Corresponds to case when Split indices come as constant inputs */
     {
+        /* This condition is never hit in Relay IR today. Relay IR always converts indices to the attribute "indices_or_sections"
+        Maintained to be in conjunction with ONNX parser - and if required in future on migration to Relax IR */
         sBuffer_t split_buffer;
         int32_t numElements = 1;
 
@@ -129,12 +200,10 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("split")>()
 
         long long int *split_ptr = (long long int *)split_buffer.ptr;
 
-        layer.numOutBufs = split_buffer.bufSize;
         sliceParams.slicePoints[0] = 0;
-        // TVM parses the slice point on the axis instead of the range( in onnx)
         for (itr_slice = 0; itr_slice < split_buffer.bufSize; itr_slice++)
         {
-            sliceParams.slicePoints[itr_slice + 1] = sliceParams.slicePoints[itr_slice];
+            sliceParams.slicePoints[itr_slice + 1] = sliceParams.slicePoints[itr_slice] + split_ptr[itr_slice];
         }
 
         free(split_ptr);
@@ -147,9 +216,11 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("split")>()
         return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
     }
 
+    /* Populate the last data index as last slicePoint - corresponds to dimension length along the axis */
     sliceParams.slicePoints[itr_slice + 1] = md.varTensorsDims[0][axis];
-    axis = TIDL_relayNormalizeAxis(axis, numDim);
-    layer.layerParams.sliceParams.axis = (long long int)axis;
+
+    int32_t tidl_axis = TIDL_relayNormalizeAxis(original_axis, numDim);
+    layer.layerParams.sliceParams.axis = (long long int)tidl_axis;
 
     return TIDL_ALLOWLISTING_LAYER_CHECK_PASSED;
 }

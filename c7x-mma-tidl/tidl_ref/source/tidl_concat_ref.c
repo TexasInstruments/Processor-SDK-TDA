@@ -74,6 +74,9 @@
 #include "tidl_alg_utils.h"
 #include "tidl_concat_ref.h"
 #include "tidl_forceNegativeTest.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 typedef struct
 {
@@ -338,6 +341,15 @@ int32_t TIDL_refConcatProcess(
   uint16_t numTotDim1 = inParams->dimValues[TIDL_DIM_DIM1];
   uint16_t numTotDim2 = inParams->dimValues[TIDL_DIM_DIM2];
 
+  #ifdef BUILD_WITH_CUDA_CONCAT
+  int32_t outputPadOffset = ((tidlLayer->outData.padH) * tidlLayer->outData.pitch[TIDL_LINE_PITCH]) + (tidlLayer->outData.padW);
+  #endif
+
+  if((intAlgHandle->gcHelperHandle != NULL) && (tidlLayer->layerParams.concatParams.axis == TIDL_DIM_NUMCH))
+  {
+    numTotDim1 = 1;
+    numTotDim2 = 1;
+  }
   accMemSize = (int32_t)sizeof(int32_t)*((int32_t)numTotRoi*numTotDim1*numTotDim2*concatBuffParams->numOutChannels*concatBuffParams->outChPitch);
   outPtrtemp = (uint8_t *)outPtr;
   if (algLayer->scratchSize >= accMemSize)
@@ -370,7 +382,7 @@ int32_t TIDL_refConcatProcess(
         for (l = 0; l < (int32_t)numTotDim2; l++)
         {
           refAccPtrTemp = refAccPtr + (l * outParams->pitch[TIDL_DIM2_PITCH]) + (k * outParams->pitch[TIDL_DIM1_PITCH]) + (j * outParams->pitch[TIDL_ROI_PITCH]);
-          outPtrtemp = outPtr + ((l * outParams->pitch[TIDL_DIM2_PITCH]) + (k * outParams->pitch[TIDL_DIM1_PITCH]) + (j * outParams->pitch[TIDL_ROI_PITCH])) * BytesPerElement;
+          outPtrtemp = outPtr + (((l * outParams->pitch[TIDL_DIM2_PITCH]) + (k * outParams->pitch[TIDL_DIM1_PITCH]) + (j * outParams->pitch[TIDL_ROI_PITCH])) * BytesPerElement);
 
           for (i4 = 0; i4 < (concatBuffParams->numInData); i4++)
           {
@@ -421,27 +433,87 @@ int32_t TIDL_refConcatProcess(
             if (inDataParams->elementType == TIDL_SignedChar)
             {
               int8_t * inPtr = ((int8_t *)inPtrs[i4] + inPtrOffset);
+#ifdef BUILD_WITH_CUDA_CONCAT
+              {
+                uint8_t mmaScaleVal = concatBuffParams->derivedScales ? concatBuffParams->derivedScales[i4] : 1;
+                uint8_t mmaShiftVal = concatBuffParams->derivedShifts ? concatBuffParams->derivedShifts[i4] : 0;
+                int32_t biasTerm = (int32_t) (concatBuffParams->derivedBias ? *((int32_t *)concatBuffParams->derivedBias + i4) : 0);
+                TIDL_cudaConcatOp<int8_t, int32_t>(inPtr, refAccPtrTemp, inDataScale[i4],
+                    concatBuffParams->numInChannels, concatBuffParams->inHeight, concatBuffParams->inWidth,
+                    concatBuffParams->inChPitch, concatBuffParams->outChPitch, concatBuffParams->inPitch, concatBuffParams->outPitch,
+                    i4, isKernelHighPrecision, mmaScaleVal, mmaShiftVal, biasTerm,
+                    concatBuffParams->outElemType, TIDL_SAT_LO_INT8, TIDL_SAT_HI_INT8);
+              }
+#else
               TIDL_refConcat(intAlgHandle, (int8_t*)inPtr, refAccPtrTemp, inDataScale[i4], concatBuffParams, i4, isKernelHighPrecision);
+#endif
             }
             else if (inDataParams->elementType == TIDL_UnsignedChar)
             {
               uint8_t * inPtr = ((uint8_t *)inPtrs[i4] + inPtrOffset);
+#ifdef BUILD_WITH_CUDA_CONCAT
+              {
+                uint8_t mmaScaleVal = concatBuffParams->derivedScales ? concatBuffParams->derivedScales[i4] : 1;
+                uint8_t mmaShiftVal = concatBuffParams->derivedShifts ? concatBuffParams->derivedShifts[i4] : 0;
+                int32_t biasTerm = (int32_t) (concatBuffParams->derivedBias ? *((int32_t *)concatBuffParams->derivedBias + i4) : 0);
+                TIDL_cudaConcatOp<uint8_t, int32_t>(inPtr, refAccPtrTemp, inDataScale[i4],
+                    concatBuffParams->numInChannels, concatBuffParams->inHeight, concatBuffParams->inWidth,
+                    concatBuffParams->inChPitch, concatBuffParams->outChPitch, concatBuffParams->inPitch, concatBuffParams->outPitch,
+                    i4, isKernelHighPrecision, mmaScaleVal, mmaShiftVal, biasTerm,
+                    concatBuffParams->outElemType, TIDL_SAT_LO_UINT8, TIDL_SAT_HI_UINT8);
+              }
+#else
               TIDL_refConcat(intAlgHandle, (uint8_t*)inPtr, refAccPtrTemp, inDataScale[i4], concatBuffParams, i4, isKernelHighPrecision);
+#endif
             }
             else if (inDataParams->elementType == TIDL_SignedShort)
             {
               int16_t * inPtr = ((int16_t *)inPtrs[i4] + inPtrOffset);
+#ifdef BUILD_WITH_CUDA_CONCAT
+              {
+                uint8_t mmaScaleVal = concatBuffParams->derivedScales ? concatBuffParams->derivedScales[i4] : 1;
+                uint8_t mmaShiftVal = concatBuffParams->derivedShifts ? concatBuffParams->derivedShifts[i4] : 0;
+                int32_t biasTerm = (int32_t) (concatBuffParams->derivedBias ? *((int64_t *)concatBuffParams->derivedBias + i4) : 0);
+                TIDL_cudaConcatOp<int16_t, int32_t>(inPtr, refAccPtrTemp, inDataScale[i4],
+                    concatBuffParams->numInChannels, concatBuffParams->inHeight, concatBuffParams->inWidth,
+                    concatBuffParams->inChPitch, concatBuffParams->outChPitch, concatBuffParams->inPitch, concatBuffParams->outPitch,
+                    i4, isKernelHighPrecision, mmaScaleVal, mmaShiftVal, biasTerm,
+                    concatBuffParams->outElemType, TIDL_SAT_LO_INT16, TIDL_SAT_HI_INT16);
+              }
+#else
               TIDL_refConcat(intAlgHandle, (int16_t*)inPtr, refAccPtrTemp, inDataScale[i4], concatBuffParams, i4, isKernelHighPrecision);
+#endif
             }
             else if (inDataParams->elementType == TIDL_UnsignedShort)
             {
               uint16_t * inPtr = ((uint16_t *)inPtrs[i4] + inPtrOffset);
+#ifdef BUILD_WITH_CUDA_CONCAT
+              {
+                uint8_t mmaScaleVal = concatBuffParams->derivedScales ? concatBuffParams->derivedScales[i4] : 1;
+                uint8_t mmaShiftVal = concatBuffParams->derivedShifts ? concatBuffParams->derivedShifts[i4] : 0;
+                int32_t biasTerm = (int32_t) (concatBuffParams->derivedBias ? *((int64_t *)concatBuffParams->derivedBias + i4) : 0);
+                TIDL_cudaConcatOp<uint16_t, int32_t>(inPtr, refAccPtrTemp, inDataScale[i4],
+                    concatBuffParams->numInChannels, concatBuffParams->inHeight, concatBuffParams->inWidth,
+                    concatBuffParams->inChPitch, concatBuffParams->outChPitch, concatBuffParams->inPitch, concatBuffParams->outPitch,
+                    i4, isKernelHighPrecision, mmaScaleVal, mmaShiftVal, biasTerm,
+                    concatBuffParams->outElemType, TIDL_SAT_LO_UINT16, TIDL_SAT_HI_UINT16);
+              }
+#else
               TIDL_refConcat(intAlgHandle, (uint16_t*)inPtr, refAccPtrTemp, inDataScale[i4], concatBuffParams, i4, isKernelHighPrecision);
+#endif
             }
             else if (inDataParams->elementType == TIDL_SinglePrecFloat)
             {
               float32_tidl * inPtr = ((float32_tidl *)inPtrs[i4] + inPtrOffset);
+#ifdef BUILD_WITH_CUDA_CONCAT
+              TIDL_cudaConcatOp<float, float>(inPtr, (float*)refAccPtrTemp, 1,
+                  concatBuffParams->numInChannels, concatBuffParams->inHeight, concatBuffParams->inWidth,
+                  concatBuffParams->inChPitch, concatBuffParams->outChPitch, concatBuffParams->inPitch, concatBuffParams->outPitch,
+                  i4, isKernelHighPrecision, 1, 0, 0,
+                  concatBuffParams->outElemType, 0, 0);
+#else
               TIDL_refConcat(intAlgHandle, (float32_tidl*)inPtr, (float32_tidl*)refAccPtrTemp, 1.0, concatBuffParams, i4, isKernelHighPrecision);
+#endif
             }
             else
             {
@@ -451,28 +523,68 @@ int32_t TIDL_refConcatProcess(
             
             if (tidlLayer->outData.elementType == TIDL_SignedChar)
             {
+#ifdef BUILD_WITH_CUDA_CONCAT
+              TIDL_cudaConcatQuantize<int32_t, int8_t>(refAccPtrTemp, (int8_t*)outPtrtemp,
+                  concatBuffParams->numInChannels, concatBuffParams->inHeight, concatBuffParams->inWidth,
+                  concatBuffParams->outChPitch, concatBuffParams->outPitch,
+                  tidlLayer->outData.roundBits, TIDL_SAT_LO_INT8, TIDL_SAT_HI_INT8,
+                  isKernelHighPrecision, tidlLayer->outData.elementType, outputPadOffset, 0.0f, 0.0f,outParams->tensorZeroPoint);
+#else
               TIDL_refConcatQuantize(intAlgHandle, layerIdx, refAccPtrTemp, (int8_t*)outPtrtemp,
               tidlLayer->outData.roundBits, concatBuffParams, TIDL_SAT_LO_INT8, TIDL_SAT_HI_INT8, inParams, outParams,isKernelHighPrecision);
+#endif
             }
             else if (tidlLayer->outData.elementType == TIDL_UnsignedChar)
             {
+#ifdef BUILD_WITH_CUDA_CONCAT
+              TIDL_cudaConcatQuantize<int32_t, uint8_t>(refAccPtrTemp, (uint8_t*)outPtrtemp,
+                  concatBuffParams->numInChannels, concatBuffParams->inHeight, concatBuffParams->inWidth,
+                  concatBuffParams->outChPitch, concatBuffParams->outPitch,
+                  tidlLayer->outData.roundBits, TIDL_SAT_LO_UINT8, TIDL_SAT_HI_UINT8,
+                  isKernelHighPrecision, tidlLayer->outData.elementType, outputPadOffset, 0.0f, 0.0f,outParams->tensorZeroPoint);
+#else
               TIDL_refConcatQuantize(intAlgHandle, layerIdx, refAccPtrTemp, (uint8_t*)outPtrtemp,
               tidlLayer->outData.roundBits, concatBuffParams, TIDL_SAT_LO_UINT8, TIDL_SAT_HI_UINT8, inParams, outParams, isKernelHighPrecision);
+#endif
             }
             else if (tidlLayer->outData.elementType == TIDL_SignedShort)
             {
+#ifdef BUILD_WITH_CUDA_CONCAT
+              TIDL_cudaConcatQuantize<int32_t, int16_t>(refAccPtrTemp, (int16_t*)outPtrtemp,
+                  concatBuffParams->numInChannels, concatBuffParams->inHeight, concatBuffParams->inWidth,
+                  concatBuffParams->outChPitch, concatBuffParams->outPitch,
+                  tidlLayer->outData.roundBits, TIDL_SAT_LO_INT16, TIDL_SAT_HI_INT16,
+                  isKernelHighPrecision, tidlLayer->outData.elementType, outputPadOffset, 0.0f, 0.0f,outParams->tensorZeroPoint);
+#else
               TIDL_refConcatQuantize(intAlgHandle, layerIdx, refAccPtrTemp, (int16_t*)outPtrtemp,
               tidlLayer->outData.roundBits, concatBuffParams, TIDL_SAT_LO_INT16, TIDL_SAT_HI_INT16, inParams, outParams,isKernelHighPrecision);
+#endif
             }
             else if (tidlLayer->outData.elementType == TIDL_UnsignedShort)
             {
+#ifdef BUILD_WITH_CUDA_CONCAT
+              TIDL_cudaConcatQuantize<int32_t, uint16_t>(refAccPtrTemp, (uint16_t*)outPtrtemp,
+                  concatBuffParams->numInChannels, concatBuffParams->inHeight, concatBuffParams->inWidth,
+                  concatBuffParams->outChPitch, concatBuffParams->outPitch,
+                  tidlLayer->outData.roundBits, TIDL_SAT_LO_UINT16, TIDL_SAT_HI_UINT16,
+                  isKernelHighPrecision, tidlLayer->outData.elementType, outputPadOffset, 0.0f, 0.0f,outParams->tensorZeroPoint);
+#else
               TIDL_refConcatQuantize(intAlgHandle, layerIdx, refAccPtrTemp, (uint16_t*)outPtrtemp,
               tidlLayer->outData.roundBits, concatBuffParams, TIDL_SAT_LO_UINT16, TIDL_SAT_HI_UINT16, inParams, outParams,isKernelHighPrecision);
+#endif
             }
             else if (tidlLayer->outData.elementType == TIDL_SinglePrecFloat)
             {
+#ifdef BUILD_WITH_CUDA_CONCAT
+              TIDL_cudaConcatQuantize<float, float>((float*)refAccPtrTemp, (float*)outPtrtemp,
+                  concatBuffParams->numInChannels, concatBuffParams->inHeight, concatBuffParams->inWidth,
+                  concatBuffParams->outChPitch, concatBuffParams->outPitch,
+                  tidlLayer->outData.roundBits, TIDL_SAT_LO_UINT16, TIDL_SAT_HI_UINT16,
+                  isKernelHighPrecision, tidlLayer->outData.elementType, outputPadOffset, -FLT_MAX, FLT_MAX, outParams->tensorZeroPoint);
+#else
               TIDL_refConcatQuantize(intAlgHandle, layerIdx, (float32_tidl *)refAccPtrTemp, (float32_tidl *)outPtrtemp,
               tidlLayer->outData.roundBits, concatBuffParams, TIDL_SAT_LO_UINT16, TIDL_SAT_HI_UINT16, inParams, outParams,isKernelHighPrecision);
+#endif
             }
             else
             {
@@ -651,10 +763,12 @@ int32_t TIDL_concatRefProcess(TIDL_NetworkCommonParams *commonParams,
 
   (void)memcpy(&createParams, commonParams->createParams, sizeof(TIDL_CreateParams));
   intAlgObj.createParams = (TIDL_CreateParams *)&createParams;
+  intAlgObj.gcHelperHandle = (sGCHelperHandle *)(commonParams->gcHelperHandle);
   if (commonParams->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_CONCAT_FORCE_SCRATCH_SIZE)
   {
     algLayer->scratchSize = 0;
   }
+
   status = TIDL_refConcatProcess(&intAlgObj,
                                  algLayer,
                                  tidlLayer,
@@ -664,6 +778,5 @@ int32_t TIDL_concatRefProcess(TIDL_NetworkCommonParams *commonParams,
                                  outDataParams,
                                  &concatBuffParams,
                                  isKernelHighPrecision);
-
   return status;
 }

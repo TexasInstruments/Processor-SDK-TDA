@@ -113,6 +113,12 @@
 #include "tidl_lstm.h"
 #include "tidl_gru.h"
 #include "tidl_rnn.h"
+#include "tidl_gatherElements.h"
+#include "tidl_gatherND.h"
+#include "tidl_cast.h"
+#include "tidl_size.h"
+#include "tidl_shape.h"
+#include "tidl_nonZero.h"
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */

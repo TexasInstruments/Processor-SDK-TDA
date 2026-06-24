@@ -96,9 +96,14 @@ int32_t TIDL_forceInnerProductRef(
   inDataParams = &pNet->TIDLLayers[tidlLayer->inData[0]].outData;
   numOutNodes = (uint16_t)tidlLayer->outData.dimValues[TIDL_DIM_WIDTH];
   numInNodes = (uint16_t)inDataParams->dimValues[TIDL_DIM_WIDTH];
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
   forceRef = (TIDL_referencFlow(createParamsPtr) == 0) ? 1 : 0;
   if (forceRef == 1)
   {
+    /* LDRA_JUSTIFY_END */
     if (((createParamsPtr->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == 0U) &&
         ((createParamsPtr->reservedCtrl & TIDL_REF_CODE_FOR_IP) == 0U))
     {
@@ -188,8 +193,13 @@ int32_t TIDL_innerProductAllocNew(const TIDL_LayerSpecificParams *layerSpecificP
   {
     status = TIDL_deviceCommonRefAlloc(layerSpecificParams, commonParams, layerIdx, memorySize);
 /* Have addtional space for bias during forced reference for inner product */
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification end> */
     if (forceRef == 1)
     {
+      /* LDRA_JUSTIFY_END */
       memorySize[TIDL_LAYER_MEMORY_PERSISTENT] += (tranformSize + biasParamSize + TIDL_ALIGNMENT_SIZE);
     }
   }

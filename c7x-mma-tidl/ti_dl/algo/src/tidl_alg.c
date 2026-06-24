@@ -71,6 +71,7 @@
 #include "tidl_alg_int.h"
 #include "tidl_types.h"
 #include "tidl_layer.h"
+#include "tidl_innerProduct.h"
 #include "itidl_ti.h"
 #include "perfsim.h"
 #include "tidl_priv_algo.h"
@@ -84,9 +85,15 @@
 #include "workload_ref_exec.h"
 #include "gc_helper.h"
 #include "tidl_forceNegativeTest.h"
+#include "tidl_device_mem_properties.h"
 
 #define TEMP_FORCE_OUTPUT_TO_DDR (0)
 #define VAILD_DDR_BUFFER         (1U)
+
+#define DEFAULT_CORE_LOOP_CYCLES (6000ULL)
+#if defined(SOC_J784S4) 
+    #define EFFECTIVE_NUM_EMIF_PORTS_J784S4 (3U)
+#endif
 
 #if defined(SOC_AM62A)
 // Reducing scratch ask to less for smaller devices
@@ -342,15 +349,15 @@ int32_t TIDL_layerAlloc(const TIDL_LayerSpecificParams *layerSpecificParams,
     status = TIDL_detectOutAlloc(createParams, layerIdx, memRec, commonParams->TIDLLayersBufPtr);
   }
   /* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
-and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
-<justification end> */
+  <metric start> statement branch <metric end>
+  <justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
+  and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
+  <justification end> */
   else if ((createParams->net->TIDLLayers[layerIdx].layerType == TIDL_OdOutputReformatLayer))
   {
     status = TIDL_flattenAlloc(createParams, layerIdx, memRec, commonParams->TIDLLayersBufPtr);
   }
-/* LDRA_JUSTIFY_END */
+  /* LDRA_JUSTIFY_END */
 #if defined TIDL_COVERAGE_DEAD_CODE
   else if (createParams->net->TIDLLayers[layerIdx].layerType == TIDL_RoiPoolingLayer)
   {
@@ -363,10 +370,10 @@ and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justif
   }
 #endif
   /* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
-and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
-<justification end> */
+  <metric start> statement branch <metric end>
+  <justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
+  and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
+  <justification end> */
   else
   /* LDRA_JUSTIFY_END */
   {
@@ -477,7 +484,7 @@ static int32_t TIDL_layerInit(const TIDL_LayerSpecificParams *layerSpecificParam
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
   <justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
-and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
+  and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
   <justification end> */
   else if ((createParams->net->TIDLLayers[layerIdx].layerType == TIDL_OdOutputReformatLayer))
   {
@@ -486,7 +493,7 @@ and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justif
                               paramMemTabOffset, dataMemTabOffset,
                               memRec, outPtr, commonParams->TIDLLayersBufPtr);
   }
-/* LDRA_JUSTIFY_END */
+  /* LDRA_JUSTIFY_END */
 #if defined TIDL_COVERAGE_DEAD_CODE
   else if (createParams->net->TIDLLayers[layerIdx].layerType == TIDL_RoiPoolingLayer)
   {
@@ -511,7 +518,7 @@ and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justif
   /* LDRA_JUSTIFY_START
   <metric start> statement branch<metric end>
   <justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
-and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
+  and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
   <justification end> */
   else
   /* LDRA_JUSTIFY_END */
@@ -675,12 +682,6 @@ int32_t TIDL_alloc(const IALG_Params *params,
           {
             gcHelperHandle = NULL;
           }
-          status = TIDL_applyConstraintsOnGC(createParams, wlSuperGrp, gcHelperHandle);
-          if (status != IALG_EOK)
-          {
-            tidl_printf(0, "TIDL_applyConstaintsonGC failed!\n");
-            status = IALG_EFAIL;
-          }
         }
       }
       if (status == IALG_EOK)
@@ -715,7 +716,14 @@ int32_t TIDL_alloc(const IALG_Params *params,
         memRec[ALG_SCRATCH_L1_MEM_MEMREC].size = (uint32_t)l1MemSize;
         memRec[ALG_SCRATCH_L1_MEM_MEMREC].attrs = IALG_SCRATCH;
         memRec[ALG_SCRATCH_L1_MEM_MEMREC].alignment = 128;
+        #if defined(SOC_TDA54) && !defined(HOST_EMULATION) // No L1 cachable mem in VDK
+        //TODO: remove when silicon is available
+        tidl_printf(0, "TIDL_alloc : l1MemSize = %dKB, l2MemSize = %dKB, l3MemSize = %dKB\n", l1MemSize/1024, l2MemSize/1024, l3MemSize/1024);
+        tidl_printf(0, "TIDL_alloc : l1MemSize = %dKB != 0 but no L1 memory support for TDA54 VDK, allocating in L2 memory\n", l1MemSize/1024);
+        memRec[ALG_SCRATCH_L1_MEM_MEMREC].space = (IALG_MemSpace)IALG_DARAM1;
+        #else
         memRec[ALG_SCRATCH_L1_MEM_MEMREC].space = (IALG_MemSpace)IALG_DARAM0;
+        #endif
 
         memRec[ALG_SCRATCH_L2_MEM_MEMREC].size = (uint32_t)l2MemSize;
         memRec[ALG_SCRATCH_L2_MEM_MEMREC].attrs = IALG_SCRATCH;
@@ -837,6 +845,13 @@ int32_t TIDL_alloc(const IALG_Params *params,
 
         sGetLayerIdContext_t getLayerIdContext;
         int32_t layerId;
+#ifdef HOST_EMULATION
+        /*
+         * Tracks whether any layer in this network is forced to run on the
+         * reference flow (e.g: InnerProduct)
+         */
+        uint8_t hasForceRefLayer = 0U;
+#endif
 
         getLayerIdInit(&getLayerIdContext,
                        relativeCoreId,
@@ -943,7 +958,7 @@ int32_t TIDL_alloc(const IALG_Params *params,
           memRec[ALG_LAYERS_MEMREC].size += (uint32_t)(sizeof(sTIDL_AlgLayer_t) + 128U);
 
           /* Memory used for output buffers, needed only for reference flow without NC */
-          if (((uint64_t)INT32_MAX - (memorySize[TIDL_LAYER_MEMORY_OUTPUT] + 128U)) < memRec[ALG_SCRATCH_DATA_BUFF_MEMREC].size)
+          if (((uint64_t)UINT32_MAX - (memorySize[TIDL_LAYER_MEMORY_OUTPUT] + 128U)) < memRec[ALG_SCRATCH_DATA_BUFF_MEMREC].size)
           {
             status = TIDL_ERR_FAILURE;
             tidl_printf(0, "TIDL_alloc : Error | Intermediate output memory required to execute this models exceeds available scratch memory\n");
@@ -952,7 +967,7 @@ int32_t TIDL_alloc(const IALG_Params *params,
           memRec[ALG_SCRATCH_DATA_BUFF_MEMREC].size += (memorySize[TIDL_LAYER_MEMORY_OUTPUT] + 128U);
 
           /* Scratch memory used by layer, needed only for reference flow without NC */
-          if (((uint64_t)INT32_MAX - (memorySize[TIDL_LAYER_MEMORY_PERSISTENT] + 128U)) < memRec[ALG_LAYERS_PARAMS_BUFF_MEMREC].size)
+          if (((uint64_t)UINT32_MAX - (memorySize[TIDL_LAYER_MEMORY_PERSISTENT] + 128U)) < memRec[ALG_LAYERS_PARAMS_BUFF_MEMREC].size)
           {
             status = TIDL_ERR_FAILURE;
             tidl_printf(0, "TIDL_alloc : Error | Parameter memory required to execute this models exceeds available layer memory\n");
@@ -965,6 +980,18 @@ int32_t TIDL_alloc(const IALG_Params *params,
             /* Scratch buffer is common across all the layers hence only request the maximum scratch size */
             memRec[ALG_REF_SCRATCH_BUFF_MEMREC].size = TIDL_ALIGN_CEIL((int32_t)memorySize[TIDL_LAYER_MEMORY_SCRATCH], 128);
           }
+
+#ifdef HOST_EMULATION
+          /*
+           * Even in non-ref mode, InnerProduct may be forced to run on the 
+           * reference flow. Scratch buffer must be preserved for such layers.
+           */
+          if ((createParams->net->TIDLLayers[layerId].layerType == TIDL_InnerProductLayer) &&
+              (TIDL_forceInnerProductRef(createParams, &createParams->net->TIDLLayers[layerId]) == 1))
+          {
+            hasForceRefLayer = 1U;
+          }
+#endif
         }
 
         if (status == IALG_EOK)
@@ -1082,7 +1109,15 @@ int32_t TIDL_alloc(const IALG_Params *params,
             {
 
 #if !ENABLE_BACKWARDS_COMPATIBILITY
-              memRec[ALG_REF_SCRATCH_BUFF_MEMREC].size = 128U;
+            #ifdef HOST_EMULATION
+              // Skip the ref scratch buffer reset when any layer is forced to ref
+              if (hasForceRefLayer == 0U)
+              {
+                memRec[ALG_REF_SCRATCH_BUFF_MEMREC].size = 128U;
+              }
+            #else
+                memRec[ALG_REF_SCRATCH_BUFF_MEMREC].size = 128U;
+            #endif
 #else
               memRec[ALG_REF_OUTPUT_BUFF_MEMREC].size = (2U * sizeof(float32_tidl) * maxOutFeatMapSize) + TRACE_STRINGS_MEM_SIZE; /* Twice for input and output */
 #endif
@@ -1178,32 +1213,26 @@ int32_t TIDL_alloc(const IALG_Params *params,
             memRec[ALG_SCRATCH_DATA_BUFF_EXT_MEMREC].size = 128;
 #if ENABLE_PREEMPTION
 /* memTab to allocate memory to backup context memory for pre-emption */
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_START
-<metric start> branch <metric end>
-<justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
-The condition check is deterministic and does not impact the safety or reliability of the system.
-Therefore, it is excluded from safety coverage requirements.
-<justification end> */
-#endif
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            The condition check is deterministic and does not impact the safety or reliability of the system.
+            Therefore, it is excluded from safety coverage requirements.
+            <justification end> */
             if (TIDL_checkIfPreEmptionEnabled(createParams) != 0)
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_END */
-#endif
+            /* LDRA_JUSTIFY_END */
             {
               /* Making this memTab as PERSIST to avoid context memory DDR to DDR copy */
               memRec[ALG_SCRATCH_DATA_BUFF_EXT_MEMREC].attrs = IALG_PERSIST;
               memRec[ALG_CONTEXT_MEM_MEMREC].size =
                   TIDL_getContextMemSize(createParams->targetPriority, perfInfoOut);
             }
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
-The condition check is deterministic and does not impact the safety or reliability of the system.
-Therefore, it is excluded from safety coverage requirements.
-<justification end> */
-#endif
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            The condition check is deterministic and does not impact the safety or reliability of the system.
+            Therefore, it is excluded from safety coverage requirements.
+            <justification end> */
             else
             {
 #endif
@@ -1211,9 +1240,7 @@ Therefore, it is excluded from safety coverage requirements.
 #if ENABLE_PREEMPTION
             }
 #endif
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_END */
-#endif
+            /* LDRA_JUSTIFY_END */
             memRec[ALG_CONTEXT_MEM_MEMREC].space = TIDL_DDR_MEMREC_NON_CACHEABLE;
             memRec[ALG_CONTEXT_MEM_MEMREC].attrs = IALG_PERSIST;
             memRec[ALG_CONTEXT_MEM_MEMREC].alignment = 128;
@@ -1330,8 +1357,8 @@ int32_t TIDL_init(IALG_Handle handle,
   relativeCoreId = GET_RELATIVE_COREIDX(coreId, createParams->coreStartIdx);
 
   int32_t currAlgLayer = 0;
-  int32_t paramMemTabOffset = 0;
-  int32_t dataMemTabOffset = 0;
+  uint32_t paramMemTabOffset = 0;
+  uint32_t dataMemTabOffset = 0;
   sPerfSim_t *perfInfoOut;
 
   int32_t i, j;
@@ -1357,34 +1384,26 @@ int32_t TIDL_init(IALG_Handle handle,
 
   status = TIDL_initDebugTraceParams(createParams->traceLogLevel, createParams->traceWriteLevel, createParams->TIDLVprintf, createParams->TIDLWriteBinToFile,
                                      createParams->TIDLReadBinFromFile, createParams->traceBaseName);
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
-This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
-TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
-<justification end> */
-#endif
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
+  TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
+  <justification end> */
   if (status != IALG_EOK)
   {
     TIDL_LOG_ERROR(TIDL_ERROR_GROUP_DEBUG_TRACE, TIDL_ERROR_DEBUG_TRACE_INVALID_PARAM);
     status = IALG_EFAIL;
   }
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_END */
-#endif
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
-This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
-TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
-<justification end> */
-#endif
+  /* LDRA_JUSTIFY_END */
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
+  TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
+  <justification end> */
   if (status == IALG_EOK)
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_END */
-#endif
+  /* LDRA_JUSTIFY_END */
   {
     algHandle->TIDLLayersBuf =
         (sTIDL_LayerBuf_t *)(void *)memRec[ALG_LAYERS_MEMREC].base;
@@ -1903,10 +1922,17 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
       #endif
       if ( (createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY)
       {
-        /* If previous and current layer id are the same then this indicates that layer is split across multiple workloads,
-        currently doing this only for concat layer as not very sure about how group convolution was handled earlier. Potentially
-        this logic can be used in general for all reference flow*/
-        if ( ( (createParams->net->TIDLLayers[layerId].layerType == TIDL_TransposeLayer) )  && ( prevDataIdExecuted == layerId ) )
+        /* If previous and current layer id are the same then this indicates that layer is split across multiple workloads.
+           Ref process full data in one call. So we have to skip ref execution after first call. 
+        */
+
+        if (((createParams->net->TIDLLayers[layerId].layerType == TIDL_TransposeLayer) ||
+             (createParams->net->TIDLLayers[layerId].layerType == TIDL_GatherNDLayer)  ||
+             (createParams->net->TIDLLayers[layerId].layerType == TIDL_LSTMLayer)  ||
+             (createParams->net->TIDLLayers[layerId].layerType == TIDL_GRULayer)  ||
+             (createParams->net->TIDLLayers[layerId].layerType == TIDL_RNNLayer)
+            ) && ( prevDataIdExecuted == layerId )
+           )
         {
           continue;
         }
@@ -1978,7 +2004,7 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
         algLayer->isInOutData[j] = (int16_t)TIDL_isOutDataBuff(createParams->net, inDataId, createParams->currLayersGroupId);
 
         algLayer->inWorkloadIdx[j] = (int16_t)-1;
-        // if (createParams->net->TIDLLayers[algLayer->inLayerIdx[j]].layerType != TIDL_DataLayer && gcHelperHandle != NULL)
+        /* if (createParams->net->TIDLLayers[algLayer->inLayerIdx[j]].layerType != TIDL_DataLayer && gcHelperHandle != NULL) */
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
         <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
@@ -1988,12 +2014,24 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
         if (gcHelperHandle != NULL)
         {
           /* LDRA_JUSTIFY_END */
-          // TODO: Might have to make this multi-core safe
+          /* TODO: Might have to make this multi-core safe */
           /* Workload db is expected to be ordered by group execution order. Hence, the producer workload is expected to be
             nearby to the consumer workload in the array. Parsing db backwards from the current workload may result in quickly
             finding the producer workload. */
 
           sWorkloadUnit_t *pWLUnit = getWLUnitPtr(gcHelperHandle, currAlgLayer);
+#ifdef HOST_EMULATION
+          if ((createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY)
+          {
+            if ((createParams->net->TIDLLayers[layerId].layerType == TIDL_LSTMLayer ||
+                 createParams->net->TIDLLayers[layerId].layerType == TIDL_GRULayer  ||
+                 createParams->net->TIDLLayers[layerId].layerType == TIDL_RNNLayer) &&
+                 j < 4)
+            {
+              pWLUnit = getWLUnitPtr(gcHelperHandle, currAlgLayer + 1);
+            }
+          }
+#endif
 
           if (pWLUnit != NULL)
           {
@@ -2064,6 +2102,17 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
             gcHelperHandle->pBufDB->pBufList = NULL;
           }
           sWorkloadUnit_t *pWLUnit = getWLUnitPtr(gcHelperHandle, currAlgLayer);
+#ifdef HOST_EMULATION
+          if ((createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY)
+          {
+            if (createParams->net->TIDLLayers[layerId].layerType == TIDL_LSTMLayer ||
+                createParams->net->TIDLLayers[layerId].layerType == TIDL_GRULayer  ||
+                createParams->net->TIDLLayers[layerId].layerType == TIDL_RNNLayer)
+            {
+              pWLUnit = getWLUnitPtr(gcHelperHandle, currAlgLayer + 1);
+            }
+          }
+#endif
           algLayer->outBufIdxWl = WorkloadRefExec_GetOutBufIdx(pWLUnit, gcHelperHandle);
           if (algLayer->outBufIdxWl == IALG_EFAIL)
           {
@@ -2104,7 +2153,7 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
         if (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_PROCESS_FORCE_DMACURIDX_INVALID)
         {
           /* this to exceed totalNumChannels(13) for non-interleave and then interleave case*/
-          algHandle->dmaChannelAllocContext.currChannelIdx = 10;
+          algHandle->dmaChannelAllocContext.currChannelIdx = 15;
         }
 
         TIDL_resetSysmem(algHandle->sysMems);
@@ -2130,6 +2179,7 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
                                       &wlRefParams.origOutHeight, &wlRefParams.origOutCh, &wlRefParams.origOutChPitch, &wlRefParams.origOutRoiPitch, &wlRefParams.origOutBatch);
         }
 #endif
+#ifdef TIDL_DEVICE_MULTICORE
         if ((gcHelperHandle != NULL) &&
             (createParams->net->TIDLLayers[layerId].layerType == TIDL_TransposeLayer && (createParams->net->TIDLLayers[layerId].multiCoreMode & TIDL_MULTI_CORE_BATCH) == TIDL_MULTI_CORE_BATCH))
         {/* Batch dimension in Transpose Layer for multicore batch split will be set here, because the original batch dimension in layer property is coming as total batch of this layer.*/
@@ -2138,6 +2188,7 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
                                       wlRefParams.origInHeight, wlRefParams.origInCh, &wlRefParams.origGrp, wlRefParams.origInChPitch, wlRefParams.origInRoiPitch, wlRefParams.origInBatch,
                                       &wlRefParams.origOutHeight, &wlRefParams.origOutCh, &wlRefParams.origOutChPitch, &wlRefParams.origOutRoiPitch, &wlRefParams.origOutBatch);
         }
+#endif
         if ((createParams->forceNegativeTest == TIDL_SAFETY_FLAG_DEVICE_UTILS_FORCE_WL_NULL) || (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_CONV2D_DEVICE_FORCE_LAYERSPECIFICPARAMS_WL_NULL))
         {
           layerSpecificParams.workloadUnit = NULL;
@@ -2186,8 +2237,8 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
                                   memorySize,
                                   outPtr,
                                   memRec,
-                                  &paramMemTabOffset,
-                                  &dataMemTabOffset,
+                                  (int32_t *)&paramMemTabOffset,
+                                  (int32_t *)&dataMemTabOffset,
                                   algHandle); //: TODO: memRec shouldnt be used eventually
 #if ENABLE_BACKWARDS_COMPATIBILITY
           algHandle->createParams->flowCtrl = flowCtrlOrig;
@@ -2211,7 +2262,7 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
         {
           paramMemTabOffset = INT32_MAX;
         }
-        if (paramMemTabOffset > (int32_t)memRec[ALG_LAYERS_PARAMS_BUFF_MEMREC].size)
+        if (paramMemTabOffset > memRec[ALG_LAYERS_PARAMS_BUFF_MEMREC].size)
         {
           /*tidl_printf(0,"Memory used for  ALG_LAYERS_PARAMS_BUFF_MEMREC is greater than requested \n");*/
           TIDL_LOG_ERROR(TIDL_ERROR_GROUP_COMMON, TIDL_ERROR_COMMON_EXCEED_PARAMS_MEMTAB_REQUEST);
@@ -2219,9 +2270,9 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
         }
         if (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_INIT_FORCE_PRMMEMTBOFS_MAX)
         {
-          dataMemTabOffset = INT32_MAX;
+          dataMemTabOffset = UINT32_MAX;
         }
-        if (dataMemTabOffset > (int32_t)memRec[ALG_SCRATCH_DATA_BUFF_MEMREC].size)
+        if (dataMemTabOffset > memRec[ALG_SCRATCH_DATA_BUFF_MEMREC].size)
         {
           /* tidl_printf(0,"Memory used for  ALG_SCRATCH_DATA_BUFF_MEMREC is greater than requested \n"); */
           TIDL_LOG_ERROR(TIDL_ERROR_GROUP_COMMON, TIDL_ERROR_COMMON_EXCEED_DATA_MEMTAB_REQUEST);
@@ -2237,6 +2288,10 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
         for (int32_t k = 0; k < TIDL_PROFILE_MAX; k++)
         {
           algLayer->metaData.profilePoint[k] = 0;
+        }
+        if(commonParams.createParams->net->TIDLLayers[layerId].layerType == TIDL_ReshapeLayer)
+        {
+          algLayer->metaData.profilePoint[2] = DEFAULT_CORE_LOOP_CYCLES; //CoreLoop cycles are set to default value here as Reshape is not WL;
         }
 #ifdef HOST_EMULATION
         prevDataIdExecuted = layerId;
@@ -2316,8 +2371,49 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
     if (algHandle->perfSimOutput != NULL)
     {
       sPerfSimConfig_t *pSimConfig = &algHandle->perfSimOutput->simConfig;
+#ifdef SOC_J784S4
+      pSimConfig->numEMIFPorts = EFFECTIVE_NUM_EMIF_PORTS_J784S4;
+#endif
       algHandle->ddrBytesPerCPUCycle = (float32_tidl)pSimConfig->numEMIFPorts * (float32_tidl)pSimConfig->freqDDR *
                                        ((float32_tidl)pSimConfig->busWidthDDR / 8.0f) * (pSimConfig->ddrEfficiency / (float32_tidl)pSimConfig->freqMHz);
+  #ifdef PERF_MODELLING
+      sDeviceMemProperties_t deviceMemProperties[MEMSPACE_MAX];
+
+      deviceMemProperties[MEMSPACE_L2] =
+      {
+        memRec[ALG_SCRATCH_L2_MEM_MEMREC].base,
+        memRec[ALG_SCRATCH_L2_MEM_MEMREC].size,
+        (double)((pSimConfig->busWidth_L3_L2/8.0f) * (pSimConfig->L2Efficiency))
+      };
+      deviceMemProperties[MEMSPACE_MSMC] =
+      {
+        memRec[ALG_SCRATCH_L3_MEM_MEMREC].base,
+        memRec[ALG_SCRATCH_L3_MEM_MEMREC].size,
+        (double)((pSimConfig->matPanelSize) * (pSimConfig->msmcEfficiency))
+      };
+      deviceMemProperties[MEMSPACE_DDR] =
+      {
+        memRec[ALG_SCRATCH_DATA_BUFF_EXT_MEMREC].base,
+        memRec[ALG_SCRATCH_DATA_BUFF_EXT_MEMREC].size,
+        (double)(algHandle->ddrBytesPerCPUCycle)
+      };      
+      deviceMemProperties[MEMSPACE_L1] =
+      {
+        memRec[ALG_SCRATCH_L1_MEM_MEMREC].base,
+        memRec[ALG_SCRATCH_L1_MEM_MEMREC].size,
+        (double)((pSimConfig->busWidth_L3_L2/8.0f) * (pSimConfig->L2Efficiency))
+      };
+      deviceMemProperties[MEMSPACE_L2].trCyclesPerByte   = 1.0 / (pSimConfig->matPanelSize * pSimConfig->L2Efficiency);
+      deviceMemProperties[MEMSPACE_MSMC].trCyclesPerByte = 1.0 / (pSimConfig->matPanelSize * pSimConfig->msmcEfficiency);
+      deviceMemProperties[MEMSPACE_DDR].trCyclesPerByte  = 1.0 / (algHandle->ddrBytesPerCPUCycle);/* efficiency is already included */
+      
+      TIDL_setMemSpaceConfig(deviceMemProperties);
+
+      if(createParams->flowCtrl == TIDL_FLOW_CTRL_PERF_MODEL)
+      {
+        DmaUtilsAutoInc3d_setPerfExecMode();
+      }
+#endif
     }
 #if ENABLE_PREEMPTION
     if (algHandle->isPreEmptionEnable != 0)
@@ -2330,25 +2426,25 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
 
       IALG_MemRec *pMemRec = (IALG_MemRec *)TIDL_getContextMemRec(algHandle);
       /* LDRA_JUSTIFY_START
-      <metric start> branch <metric end>
-      <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
-      <justification end> */
+      <metric start> branch <metric end>
+      <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      <justification end> */
       if (pMemRec != NULL)
       {
         /* LDRA_JUSTIFY_END */
         algHandle->preEmptContextInfo.contextMemPtr = (uint8_t *)pMemRec->base;
         algHandle->preEmptContextInfo.contextMemSize = (int32_t)pMemRec->size;
         /* LDRA_JUSTIFY_START
-        <metric start> branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
-        <justification end> */
+        <metric start> branch <metric end>
+        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification end> */
         if (gcOut != NULL)
         {
           /* LDRA_JUSTIFY_END */
           /* LDRA_JUSTIFY_START
-          <metric start> branch <metric end>
-          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
-          <justification end> */
+          <metric start> branch <metric end>
+          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification end> */
           /* Initialize preemption handle */
           if (status == IALG_EOK)
           {
@@ -2372,9 +2468,9 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
         }
       } // pMemRec
       /* LDRA_JUSTIFY_START
-      <metric start> statement branch <metric end>
-      <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
-      <justification end> */
+      <metric start> statement branch <metric end>
+      <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      <justification end> */
       else
       {
         status = IALG_EFAIL;
@@ -2480,7 +2576,7 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
     }
   }
 
-  #ifdef BUILD_WITH_CUDA
+  #ifdef BUILD_WITH_CUDA_MEM_MANAGER
   /* Initialize CUDA Memory Manager - parallel GPU memory for all memrecs */
   if(status == IALG_EOK)
   {
@@ -2488,11 +2584,14 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
     
     /* Allocate memory for the manager structure */
     algHandle->cudaMemManager = malloc(sizeof(TIDL_CudaMemManager));
-    g_cudaMemManager = (TIDL_CudaMemManager*)algHandle->cudaMemManager;
     if(algHandle->cudaMemManager == NULL)
     {
       tidl_printf(0, "Failed to allocate CUDA Memory Manager structure\n");
       status = IALG_EFAIL;
+    }
+    else
+    {
+      TIDL_cudaSetThreadManager((TIDL_CudaMemManager*)algHandle->cudaMemManager);
     }
     
     if(status == IALG_EOK)
@@ -2544,7 +2643,7 @@ TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
       }
     }
   }
-#endif
+  #endif
 
   TIDL_L1DandL2CacheWbInv();
 }
@@ -2572,15 +2671,11 @@ else
             IALG_EFAIL - Unspecified error
 ----------------------------------------------------------------------------
 */
-#ifndef HOST_EMULATION
-#if defined(SOC_J721S2) || defined(SOC_AM62A)
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int32_t TIDL_control.* <function end>
 <justification start> NOT_IN_SCOPE: This code is not in scope for single core SOC
 <justification end> */
-#endif
-#endif
 int32_t TIDL_control(IVISION_Handle Handle,
                      IALG_Cmd cmd,
                      const IALG_Params *inParams,
@@ -2599,17 +2694,8 @@ int32_t TIDL_control(IVISION_Handle Handle,
   TIDL_Handle algHandle = algHandle1;
   if (algHandle != NULL)
   {
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start> NOT_IN_SCOPE: This code is not in scope for single core SOC
-<justification end> */
-#endif
     switch (cmd)
     {
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_START */
-#endif
     case TIVX_TIDL_CMD_GET_C7X_PTRS:
     {
       if (outParams == NULL)
@@ -2655,21 +2741,12 @@ int32_t TIDL_control(IVISION_Handle Handle,
 #endif
       break;
     }
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start> NOT_IN_SCOPE: This code is not in scope for single core SOC
-<justification end> */
-#endif
     default:
     {
       tidl_printf(0, "Invalid Node Cmd Id\n");
       status = IALG_EFAIL;
       break;
     }
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_END */
-#endif
     }
   }
   else
@@ -2680,7 +2757,9 @@ int32_t TIDL_control(IVISION_Handle Handle,
   return (status);
 }
 
-/* #define INTERNAL_PROFILING */
+#ifdef PERF_MODELLING
+  #define INTERNAL_PROFILING
+#endif
 #ifdef INTERNAL_PROFILING
 typedef struct
 {
@@ -2695,6 +2774,7 @@ static TIDL_LayerMetaData gLayerMetaData = {0};
 static sTIDLProfilePrintInfo_t gProfilePrintInfo[] =
     {
         {"%6s,", "%6d,", "Layer", NULL},
+        {"%6s,", "%6d,", "LayerType", &gLayerMetaData.layerType},
         {"%15s,", "%15llu,", "Layer Cycles", &gLayerMetaData.profilePoint[TIDL_PROFILE_LAYER]},
         {"%15s,", "%15llu,", "kernelOnlyCycles", &gLayerMetaData.profilePoint[TIDL_PROFILE_KERNEL_ONLY]},
         {"%15s,", "%15llu,", "coreLoopCycles", &gLayerMetaData.profilePoint[TIDL_PROFILE_CORE_LOOP]},
@@ -2795,7 +2875,7 @@ int32_t TIDL_layerProcess(
   {
     status = TIDL_odOutputReformatProcess(intAlgHandle, algLayer, TIDLLayer, inPtrs, outPtrs, sysMems);
   }
-/* LDRA_JUSTIFY_END */
+  /* LDRA_JUSTIFY_END */
 #if defined TIDL_COVERAGE_DEAD_CODE
   else if (TIDLLayer->layerType == TIDL_SqueezeLayer)
   {
@@ -2828,8 +2908,8 @@ int32_t TIDL_layerProcess(
     TIDL_LOG_ERROR(TIDL_ERROR_GROUP_COMMON, TIDL_ERROR_COMMON_UNSUPPORTED_LAYER);
     status = IALG_EFAIL;
   }
-  TIDL_L1DandL2CacheWbInv();
   /* LDRA_JUSTIFY_END */
+  TIDL_L1DandL2CacheWbInv();
   return (status);
 }
 
@@ -2868,6 +2948,15 @@ int32_t TIDL_process(IVISION_Handle Handle,
   /*RESET_MISRA("16.7")  -> Reset rule 16.7  */
   TIDL_Handle algHandle = (TIDL_Handle)(void *)(Handle);
   tidl_printf(1, "TIDL_process is started with handle : %p \n", algHandle);
+
+#ifdef BUILD_WITH_CUDA_MEM_MANAGER
+  /* Set thread-local CUDA memory manager for this instance */
+  if(algHandle->cudaMemManager != NULL)
+  {
+    TIDL_cudaSetThreadManager((TIDL_CudaMemManager*)algHandle->cudaMemManager);
+  }
+#endif
+
   int32_t oldIntState = 0;
   int32_t lockState = UNLOCKED;
 
@@ -3010,7 +3099,10 @@ int32_t TIDL_process(IVISION_Handle Handle,
             break;
           }
 
+// Remove this deadcode one dynamic input is enabled
+#if defined TIDL_COVERAGE_DEAD_CODE
 #if defined TIDL_DYNAMIC_SHAPE
+
            /*
            * If input data layer is dynamic in shape, parse the shape from
            * tidlInArgs
@@ -3043,6 +3135,7 @@ int32_t TIDL_process(IVISION_Handle Handle,
              * layer with NHWC format.
              */
           }
+#endif
 #endif
 
 #if defined TIDL_COVERAGE_DEAD_CODE
@@ -3178,8 +3271,14 @@ int32_t TIDL_process(IVISION_Handle Handle,
         if ( (intAlgHandle->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY)
         {
           /* If previous and current layer id is same then skip execution of the workload in reference flow. This is because
-          in reference flow we will be calling the complete layer during first workload processing itself*/
-          if ( ( (intAlgHandle->createParams->net->TIDLLayers[layerId].layerType == TIDL_TransposeLayer) )  && ( prevDataIdExecuted == layerId ) )
+            in reference flow we will be calling the complete layer during first workload processing itself*/
+          if (((intAlgHandle->createParams->net->TIDLLayers[layerId].layerType == TIDL_TransposeLayer) ||
+               (intAlgHandle->createParams->net->TIDLLayers[layerId].layerType == TIDL_GatherNDLayer)  ||
+               (intAlgHandle->createParams->net->TIDLLayers[layerId].layerType == TIDL_LSTMLayer)  ||
+               (intAlgHandle->createParams->net->TIDLLayers[layerId].layerType == TIDL_GRULayer)  ||
+               (intAlgHandle->createParams->net->TIDLLayers[layerId].layerType == TIDL_RNNLayer)
+              ) && ( prevDataIdExecuted == layerId )
+            )
           {
             #if TIDL_DEVICE_MULTICORE
             if(algHandle->createParams->net->inferenceMode == (int32_t)TIDL_inferenceModeLowLatency)
@@ -3211,9 +3310,9 @@ int32_t TIDL_process(IVISION_Handle Handle,
           {
             numCores = algHandle->createParams->net->numCores;
             /* LDRA_JUSTIFY_START
-            <metric start> branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
-            <justification end> */
+            <metric start> branch <metric end>
+            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification end> */
             if (workloadUnit != NULL)
             {
               /* LDRA_JUSTIFY_END */
@@ -3301,8 +3400,8 @@ int32_t TIDL_process(IVISION_Handle Handle,
                 sTIDL_Layer_t *inTidlLayer = &intAlgHandle->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[inBufIdx]];
                 orgNumBatches[inBufIdx] = inTidlLayer->outData.dimValues[TIDL_DIM_BATCH];
               }
-
-              if (isRefExecFlowEnabled == 1)
+              /*Inputs of GatherND can have different number of dimensions and batches. We need to avoid call this function for gatherND*/
+              if (isRefExecFlowEnabled == 1 && tidlLayer->layerType != TIDL_GatherNDLayer && tidlLayer->layerType != TIDL_GatherLayer)
               {
                 TIDL_privSetTensorDimensions(intAlgHandle->createParams, intAlgHandle->alglayerParams, algLayer, workloadUnit,
                                             wlRefParams.origInHeight, wlRefParams.origInCh, &wlRefParams.origGrp, wlRefParams.origInChPitch, wlRefParams.origInRoiPitch, wlRefParams.origInBatch,
@@ -3354,7 +3453,6 @@ int32_t TIDL_process(IVISION_Handle Handle,
               #endif
               #endif
           }
-
           if(status == IALG_EOK)
           {
             if (intAlgHandle->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_OUTPTRS_NULL) /* forcing invalid dataId to check the negative case of TIDL_E_INVALID_IO_LINE_PITCH */
@@ -3377,6 +3475,10 @@ int32_t TIDL_process(IVISION_Handle Handle,
               // TODO: Change this for ST
               algLayer->procType = TIDL_getAlgProcType(workloadUnit);
               algLayer->memcpyTr = intAlgHandle->memcpyTr;
+
+              #ifdef BUILD_WITH_CUDA
+              TIDL_cudaSetThreadLayerIdx(layerId);
+              #endif
 
               status = WorkloadRefExec_Process(intAlgHandle, &commonParams, workloadUnit, algLayer, tidlLayer, inPtrs, outPtrs, layerId, relativeCoreId);
 
@@ -3402,7 +3504,7 @@ int32_t TIDL_process(IVISION_Handle Handle,
                   if ( (intAlgHandle->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY)
                   {
                     // Setting Full tesnsor dims for layers in which all WLs are processed in one shot for ref flow
-                    if ((intAlgHandle->createParams->net->TIDLLayers[layerId].layerType == TIDL_TransposeLayer))
+                    if ((intAlgHandle->createParams->net->TIDLLayers[layerId].layerType == TIDL_TransposeLayer) || (intAlgHandle->createParams->net->TIDLLayers[layerId].layerType == TIDL_GatherNDLayer))
                     {
                       subTensorDims     = &auxilaryWorkloadDB[currAlgLayer].outFullTensorDims;
                     }
@@ -3500,9 +3602,9 @@ int32_t TIDL_process(IVISION_Handle Handle,
           {
             numCores = algHandle->createParams->net->numCores;
             /* LDRA_JUSTIFY_START
-            <metric start> branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
-            <justification end> */
+            <metric start> branch <metric end>
+            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification end> */
             if (workloadUnit != NULL)
             {
               /* LDRA_JUSTIFY_END */
@@ -3526,6 +3628,7 @@ int32_t TIDL_process(IVISION_Handle Handle,
               Corresponding algLayer will be present only if layer executes on current core */
             tidlOutArgs->metaDataLayer[algLayer->execLayerNum].actualOps = algLayer->metaData.actualOps;
             tidlOutArgs->metaDataLayer[algLayer->execLayerNum].layerExecId = layerId;
+            tidlOutArgs->metaDataLayer[algLayer->execLayerNum].layerType = intAlgHandle->createParams->net->TIDLLayers[layerId].layerType;
             tidlOutArgs->metaDataLayer[algLayer->execLayerNum].totalOps = algLayer->metaData.totalOps;
 #ifdef SOC_TDA54
           tidlOutArgs->metaDataLayer[algLayer->execLayerNum].ddrBandwidthRead  += workloadUnit->ddrBandwidthRead;
@@ -3599,7 +3702,7 @@ int32_t TIDL_process(IVISION_Handle Handle,
     <justification end> */
     if ((status == IALG_EOK) && (intAlgHandle != NULL))
     {
-/* LDRA_JUSTIFY_END */
+    /* LDRA_JUSTIFY_END */
 #if ENABLE_PREEMPTION
       /* Disable interrupts here */
       if (intAlgHandle->isPreEmptionEnable != 0)
@@ -3632,6 +3735,11 @@ int32_t TIDL_process(IVISION_Handle Handle,
         tidlOutArgs->outDimValues[i][TIDL_DIM_NUMCH] = dataParams->dimValues[TIDL_DIM_NUMCH];
         tidlOutArgs->outDimValues[i][TIDL_DIM_HEIGHT] = dataParams->dimValues[TIDL_DIM_HEIGHT];
         tidlOutArgs->outDimValues[i][TIDL_DIM_WIDTH] = dataParams->dimValues[TIDL_DIM_WIDTH];
+        tidlOutArgs->outPitchValues[i][TIDL_ROI_PITCH] = dataParams->pitch[TIDL_ROI_PITCH];
+        tidlOutArgs->outPitchValues[i][TIDL_DIM1_PITCH] = dataParams->pitch[TIDL_DIM1_PITCH];
+        tidlOutArgs->outPitchValues[i][TIDL_DIM2_PITCH] = dataParams->pitch[TIDL_DIM2_PITCH];
+        tidlOutArgs->outPitchValues[i][TIDL_CHANNEL_PITCH] = dataParams->pitch[TIDL_CHANNEL_PITCH];
+        tidlOutArgs->outPitchValues[i][TIDL_LINE_PITCH] = dataParams->pitch[TIDL_LINE_PITCH];
       }
       tidlOutArgs->numOutBufs = (int32_t)outBufs->numBufs;
       tidlOutArgs->numLayers = intAlgHandle->createParams->net->numLayers;
@@ -3701,21 +3809,17 @@ void TIDL_activate(IALG_Handle handle)
   /* Do Activation only if it is deactivated or just after creation */
   /*----------------------------------------------------------------*/
   int32_t status = IALG_EOK;
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_START
-<metric start> branch <metric end>
-<justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
-The condition check is deterministic and does not impact the safety or reliability of the system.
-Therefore, it is excluded from safety coverage requirements.
-<justification end> */
-#endif
+  /* LDRA_JUSTIFY_START
+  <metric start> branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  The condition check is deterministic and does not impact the safety or reliability of the system.
+  Therefore, it is excluded from safety coverage requirements.
+  <justification end> */
   if (algHandle->algState == (uint8_t)ALG_NOT_ACTIVE)
   {
-#ifndef HOST_EMULATION
-/* LDRA_JUSTIFY_END */
-#endif
-/* TIDL_LDRA_TAG_ALG_PRIOR_CHECK_005 */
-/* Initialize the DMA Utils Handle */
+  /* LDRA_JUSTIFY_END */
+  /* TIDL_LDRA_TAG_ALG_PRIOR_CHECK_005 */
+  /* Initialize the DMA Utils Handle */
 #ifdef HOST_EMULATION
     if (((uint32_t)algHandle->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY)
     {
@@ -3763,7 +3867,7 @@ Therefore, it is excluded from safety coverage requirements.
         <justification end> */
         if (status == IALG_EOK)
         {
-/* LDRA_JUSTIFY_END */
+          /* LDRA_JUSTIFY_END */
 #if ENABLE_PREEMPTION
           /* Copy Pre-emption ContextMemory to Internal memory*/
           if (intAlgHandle->isPreEmptionEnable != 0)
@@ -3959,18 +4063,18 @@ inference */
 #endif
   (void)memcpy(memRec, algHandle->memRec, sizeof(IALG_MemRec) * algHandle->numMemRecs);
 
-#ifdef BUILD_WITH_CUDA
+#ifdef BUILD_WITH_CUDA_MEM_MANAGER
   /* Free CUDA Memory Manager */
   if(algHandle->cudaMemManager != NULL)
   {
     tidl_printf(1, "Freeing CUDA Memory Manager...\n");
-    TIDL_cudaMemManagerPrintStats((TIDL_CudaMemManager*)algHandle->cudaMemManager);
+    TIDL_cudaSetThreadManager((TIDL_CudaMemManager*)algHandle->cudaMemManager);
+    //TIDL_cudaMemManagerPrintStats((TIDL_CudaMemManager*)algHandle->cudaMemManager);
     TIDL_cudaMemManagerFree((TIDL_CudaMemManager*)algHandle->cudaMemManager);
     free(algHandle->cudaMemManager);
     algHandle->cudaMemManager = NULL;
+    TIDL_cudaSetThreadManager(NULL);
   }
-  
-  TIDL_cudaFreeAllCudaPtrs();
 #endif
   return status;
 }

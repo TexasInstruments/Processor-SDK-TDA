@@ -134,21 +134,19 @@ static int32_t WorkloadRefExec_getValidOffset(const sTIDL_DataParams_t *dataPara
   int32_t offset = 0;
   int32_t padR_h = 0;
   int32_t padR_w = 0;
-  int32_t i = 0, j = 0;
   int32_t isNetInOut = -1;
 
-  while (isNetInOut == -1)
+  for (int32_t j = 0; j < TIDLLayer->numInBufs; j++)
   {
-    int32_t dataIdNum[] = {TIDLLayer->numInBufs, TIDLLayer->numOutBufs};
-    for (j = 0; j < dataIdNum[i]; j++)
+    if (TIDLLayer->inData[j] == dataParams->dataId)
     {
-      if (TIDLLayer->inData[j] == dataParams->dataId)
-      {
-        isNetInOut = (i == 0) ? TIDL_ALG_INPUT : TIDL_ALG_OUTPUT;
-        break;
-      }
+      isNetInOut = TIDL_ALG_INPUT;
+      break;
     }
-    i++;
+  }
+  if ((isNetInOut == -1) && (TIDLLayer->outData.dataId == dataParams->dataId))
+  {
+    isNetInOut = TIDL_ALG_OUTPUT;
   }
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
@@ -296,7 +294,13 @@ static inline void WorkloadRefExec_getPtrsFromWorkload(const TIDL_NetworkCommonP
               ptrToArrMem = &refInPtrs[arrIdx];
               if ((gcPtr == NULL) || (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY))
               {
-                gcPtr = (uint8_t *)inPtrs[arrIdx] + (joint->offset * elemSize);
+                if((tidlLayer->layerType == TIDL_GatherLayer) && (tidlLayer->layerParams.gatherParams.axis == TIDL_DIM_WIDTH) && (arrIdx == 1)){
+                  /*in width wise gather, we are doing process in reverse order. So from NC offset will come in indices, that is not required in ref with nc.*/
+                  gcPtr = (uint8_t *)inPtrs[arrIdx];
+                }
+                else{
+                  gcPtr = (uint8_t *)inPtrs[arrIdx] + (joint->offset * elemSize);
+                }
               }
             }
           }
@@ -311,9 +315,15 @@ static inline void WorkloadRefExec_getPtrsFromWorkload(const TIDL_NetworkCommonP
             /* LDRA_JUSTIFY_END */
             {
               ptrToArrMem = &refOutPtrs[arrIdx];
-              if (gcPtr == NULL)
+              if((gcPtr == NULL) || (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY))
               {
-                gcPtr = (uint8_t *)outPtrs[arrIdx] + (joint->offset * elemSize);
+                if((tidlLayer->layerType == TIDL_GatherLayer) && (tidlLayer->layerParams.gatherParams.axis == TIDL_DIM_WIDTH)){
+                  /*in width wise gather, we are doing process in reverse order. So from NC offset will come in output, that is not required in ref with nc.*/
+                  gcPtr = (uint8_t *)outPtrs[arrIdx];
+                }
+                else{
+                  gcPtr = (uint8_t *)outPtrs[arrIdx] + (joint->offset * elemSize);
+                }
               }
             }
           }
@@ -385,6 +395,15 @@ void WorkloadRefExec_getPtrs(TIDL_NetworkCommonParams *commonParams,
     {
       isGcSupportAvailable = 1;
     }
+    #ifdef HOST_EMULATION
+    if (((commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY) && 
+        ((tidlLayer->layerType == TIDL_LSTMLayer) ||
+         (tidlLayer->layerType == TIDL_GRULayer)  ||
+         (tidlLayer->layerType == TIDL_RNNLayer)))
+    {
+      isGcSupportAvailable = 0;
+    }
+    #endif
   }
 
 /* Detection output layer and custom layer internally handles offsets and only takes input pointers from GC */
@@ -662,7 +681,7 @@ int32_t WorkloadRefExec_GetOutBufIdx(const sWorkloadUnit_t *workloadUnit, const 
   sLink_t *linkPtrList[MAX_LINKS_PER_WL];
   if ((gcHelperHandle != NULL) && (workloadUnit != NULL))
   {
-    for (int32_t linkIdx = 0; linkIdx < workloadUnit->numLinks; linkIdx++)
+    for (int32_t linkIdx = workloadUnit->numLinks - 1; linkIdx >= 0; linkIdx--)
     {
       getLinkPtrs(workloadUnit, NOT_VALID, linkIdx, linkPtrList);
       const sLink_t *link = linkPtrList[0];
@@ -815,7 +834,8 @@ int32_t WorkloadRefExec_Process(TIDL_Handle algHandle,
 #endif
 
 /*over writing Layer meta data with performance data from workload*/
-#ifdef SOC_TDA54
+//TODO: remove when silicon is available
+#if defined (SOC_TDA54) && defined (HOST_EMULATION)
   if(algHandle->gcHelperHandle != NULL)/*should not be populated during stats collection run*/
   {
     TIDL_updateprofileData(algHandle->alglayerParams[algHandle->currAlgLayer].metaData.profilePoint,
@@ -840,7 +860,6 @@ int32_t WorkloadRefExec_Process(TIDL_Handle algHandle,
   }
 
 #endif
-
   return status;
 }
 
@@ -885,22 +904,6 @@ int32_t WorkloadRefExec_writeTraceDataBuf(void *outPtr,
     numBatches = subTensorDims->batch;
   }
 
-  if (tidlLayer->layerType == TIDL_PoolingLayer)
-  {
-    sTIDL_PoolingParams_t *params = &tidlLayer->layerParams.poolParams;
-    if ((params->kernelW == 0) && (params->kernelH == 0))
-    {
-      /*
-       * HACK
-       * Global pooling:
-       * This is a hack. Import manually changes global average pool output
-       * shape casuing this hack. For coreect fix there should be a reshape
-       * after pooling to move channels to width for subsequent IP layer.
-       * Then this hack can go away.
-       */
-      numChannels = 1;
-    }
-  }
   if (tensorPosition != NULL)
   {
     /* @TODO: Need to handle cases where tiling is done along other dimensions */

@@ -15,6 +15,7 @@
         "/networking/networking",
         "/optiflash/optiflash",
         "/security/security",
+        "/pdm_utils/tools/dm_power_config",
     ],
     "devices": [
         "AM62x",

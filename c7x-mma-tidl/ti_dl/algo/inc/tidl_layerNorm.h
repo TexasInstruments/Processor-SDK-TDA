@@ -130,4 +130,8 @@ float TIDL_layerNormUpdateEpsilon(float epsilon, float outScale, float inScale, 
 
 /* None */
 
+
+int32_t TIDL_layerNormGetPerfData(void* linkHandle,
+                                 double *perfData);
+
 #endif /* TIDL_LAYERNORM_H_*/

@@ -76,6 +76,8 @@ for input_detail in input_details:
         input_data = np.random.randn(*shape).astype(np.uint64)
     elif (type == tidlruntime.TIDL_SignedDoubleWord):
         input_data = np.random.randn(*shape).astype(np.int62)
+    elif (type == tidlruntime.TIDL_Bool):
+        input_data = np.random.randn(*shape).astype(np.bool_)
     else:
         print("[ERROR] Invalid datatype")
         sys.exit(-1)

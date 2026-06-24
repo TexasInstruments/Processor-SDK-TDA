@@ -85,7 +85,7 @@ const vector<TidlConstraint> tidlConstraintClip =
         "Only min <= 0 and max > 0 is supported",
         "Only min <= 0 and max > 0 is supported",
         [](const sTIDL_LayerPC_t *layer, string &logs){
-            if(!((layer->actParams.clipMin <= 0) && (layer->actParams.clipMax > 0)))
+            if(!((layer->clipParams.clipMin <= 0) && (layer->clipParams.clipMax > 0)))
             {
                 return false;
             }

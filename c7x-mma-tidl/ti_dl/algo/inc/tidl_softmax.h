@@ -116,4 +116,6 @@ int32_t TIDL_softmaxDeviceExec(void *linkHandle,
                                int32_t currFlowStage[],
                                int32_t currIterCount);
 
+int32_t TIDL_softmaxGetPerfData(void* linkHandle, double *perfData);
+
 #endif /* ITIDL_SOFTMAX_H*/

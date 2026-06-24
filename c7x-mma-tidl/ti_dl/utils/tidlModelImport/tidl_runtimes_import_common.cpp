@@ -66,6 +66,9 @@
 #include <unistd.h>
 #include <google/protobuf/message.h>
 #include <google/protobuf/text_format.h>
+#include <utility>
+#include <regex>
+
 using namespace std;
 using ::google::protobuf::Message;
 #include "object_detection/protos/ssd.pb.h"
@@ -524,7 +527,7 @@ std::vector<int32_t> tidl_fillDenyListOption(std::string deny_list)
         ret.push_back(itoken);
         token = strtok(NULL, ",");
     }
-    delete deny_list_char;
+    delete[] deny_list_char;
     return ret;
 }
 
@@ -663,7 +666,7 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
           char *cstr = new char[str.length() + 1];
           strcpy(cstr, str.c_str());
           options->m_deny_list = TIDL_readCommaSeparatedString(cstr);
-          delete cstr;
+          delete[] cstr;
         }
         catch(std::string &e) {
             TIDL_GLOBAL_REPORT_ERROR("Could not parse malformed deny_list option");
@@ -679,7 +682,7 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
           char *cstr = new char[str.length() + 1];
           strcpy(cstr, str.c_str());
           options->m_custom_layers_names_list = TIDL_readCommaSeparatedString(cstr);
-          delete cstr;
+          delete[] cstr;
         }
         catch(std::string &e) {
             TIDL_GLOBAL_REPORT_ERROR("Could not parse malformed custom_layers_names_list option");
@@ -701,7 +704,7 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
             int_types.push_back(stoi(str));
           }
           options->m_net_inelement_type = int_types;
-          delete cstr;
+          delete[] cstr;
         }
         catch(std::string &e) {
             TIDL_GLOBAL_REPORT_ERROR("Could not parse malformed net_inelement_type option");
@@ -717,7 +720,7 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
           char *cstr = new char[str.length() + 1];
           strcpy(cstr, str.c_str());
           options->m_deny_list_layer_type = TIDL_readCommaSeparatedString(cstr);
-          delete cstr;
+          delete[] cstr;
         }
         catch(std::string &e) {
             TIDL_GLOBAL_REPORT_ERROR("Could not parse malformed deny_list option");
@@ -732,7 +735,7 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
           char *cstr = new char[str.length() + 1];
           strcpy(cstr, str.c_str());
           options->m_deny_list_layer_name = TIDL_readCommaSeparatedString(cstr);
-          delete cstr;
+          delete[] cstr;
         }
         catch(std::string &e) {
             TIDL_GLOBAL_REPORT_ERROR("Could not parse malformed deny_list option");
@@ -748,7 +751,7 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
           char *cstr = new char[str.length() + 1];
           strcpy(cstr, str.c_str());
           options->m_allow_list_layer_name = TIDL_readCommaSeparatedString(cstr);
-          delete cstr;
+          delete[] cstr;
         }
         catch(std::string &e) {
             TIDL_GLOBAL_REPORT_ERROR("Could not parse malformed allow_list option");
@@ -843,6 +846,18 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
         options->m_enable_tfr_optimization = tfr_optimization_mapping[option_value];
     }
 
+    if (!strcmp("advanced_options:enable_concat_no_op", option_name.c_str()))
+    {
+        /* 0 -> disable concat no op optimization, 1 -> enable concat no op optimization (Default) */
+        std::map<std::string, int> concat_no_op_mapping {{"0", 0}, {"1", 1}};
+        if(concat_no_op_mapping.find(option_value) == concat_no_op_mapping.end())
+        {
+            TIDL_GLOBAL_REPORT_ERROR("Unsupported concat_no_op_type, specify either '0' or '1'");
+            return false;
+        }
+        options->m_enable_concat_no_op = concat_no_op_mapping[option_value];
+    }
+
     if (!strcmp("advanced_options:high_resolution_optimization", option_name.c_str()))
     {
       std::stringstream(option_value) >> options->m_high_resolution_optimization;
@@ -862,6 +877,11 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
         std::stringstream(option_value) >> options->m_enable_custom_layers;
     }
 
+    if (!strcmp("advanced_options:graph_optimization_level", option_name.c_str()))
+    {
+        std::stringstream(option_value) >> options->m_graph_optimization_level;
+    }
+
     if (!strcmp("advanced_options:enable_shape_folding", option_name.c_str()))
     {
         std::stringstream(option_value) >> options->m_enable_shape_folding;
@@ -870,6 +890,11 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
     if (!strcmp("advanced_options:optimize_batchnorm_higherdims", option_name.c_str()))
     {
         std::stringstream(option_value) >> options->m_optimize_batchnorm_higherdims;
+    }
+
+    if (!strcmp("bias_calibration_factor", option_name.c_str()))
+    {
+        std::stringstream(option_value) >> options->m_bias_calibration_factor;
     }
 
     if (!strcmp("ti_internal_nc_flag", option_name.c_str()))
@@ -885,7 +910,7 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
           char *cstr = new char[str.length() + 1];
           strcpy(cstr, str.c_str());
           std::vector<std::string> ctrl = TIDL_readCommaSeparatedString(cstr);
-          delete cstr;
+          delete[] cstr;
 
           for(auto& s : ctrl)
           {
@@ -921,9 +946,17 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
     {
       options->m_output_feature_16bit_names_list = option_value;
     }
+    if (!strcmp("advanced_options:mp_16bit_resolved_feature_names_list", option_name.c_str()))
+    {
+      options->m_mp_16bit_resolved_feature_names_list = option_value;
+    }
     if (!strcmp("advanced_options:params_16bit_names_list", option_name.c_str()))
     {
       options->m_params_16bit_names_list = option_value;
+    }
+    if (!strcmp("advanced_options:native_layer_names_list", option_name.c_str()))
+    {
+      options->m_native_layer_names_list = option_value;
     }
     if (!strcmp("advanced_options:single_core_layers_names_list", option_name.c_str()))
     {
@@ -986,6 +1019,52 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
                 cores+=", ";
             }
             TIDL_GLOBAL_REPORT_ERROR("Unsupported num_cores(%d), number of cores allowed are %s", options->m_num_cores, cores.c_str());
+            return false;
+        }
+    }
+
+    if (strcmp("advanced_options:copy_tensor_quant_spec", option_name.c_str()) == 0)
+    {
+        // Option for copy_tensor_quant_spec given as string of tuple "(tesor1,tensor2),(tensor8,tensor5)..."
+        try
+        {
+          std::string str = option_value;
+
+          // Regular expression to match tuples like (abc, xyz)
+          std::regex tupleRegex(R"(\(\s*([^,]+)\s*,\s*([^)]+)\s*\))");
+          std::smatch match;
+          std::string::const_iterator searchStart(str.cbegin());
+
+          while (std::regex_search(searchStart, str.cend(), match, tupleRegex))
+          {
+              std::string first = match[1].str();
+              std::string second = match[2].str();
+
+              // Remove leading whitespace
+              first.erase(first.begin(), std::find_if(first.begin(), first.end(), [](unsigned char ch) {
+                return !std::isspace(ch);
+              }));
+
+              second.erase(second.begin(), std::find_if(second.begin(), second.end(), [](unsigned char ch) {
+                return !std::isspace(ch);
+              }));
+
+              // Remove trailing whitespace
+              first.erase(std::find_if(first.rbegin(), first.rend(), [](unsigned char ch) {
+                return !std::isspace(ch);
+              }).base(), first.end());
+
+              second.erase(std::find_if(second.rbegin(), second.rend(), [](unsigned char ch) {
+                return !std::isspace(ch);
+              }).base(), second.end());
+
+              options->m_copy_tensor_quant_spec.emplace_back(first, second);
+
+              searchStart = match.suffix().first;
+          }
+        }
+        catch(std::string &e) {
+            TIDL_GLOBAL_REPORT_ERROR("Could not parse malformed same_scale_tensors option");
             return false;
         }
     }
@@ -1143,7 +1222,9 @@ void TIDL_printInterfaceOptions(TIDL_osrtOptions * options)
     TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "pre_batchnorm_fold                              = %d ", options->m_pre_batchnorm_fold);
     TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "add_data_convert_ops                            = %d ", options->m_add_data_convert_ops);
     TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "output_feature_16bit_names_list                 = %s ", options->m_output_feature_16bit_names_list.c_str());
+    TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "mp_16bit_resolved_feature_names_list            = %s ", options->m_mp_16bit_resolved_feature_names_list.c_str());
     TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "m_params_16bit_names_list                       = %s ", options->m_params_16bit_names_list.c_str());
+    TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "m_native_layer_names_list                       = %s ", options->m_native_layer_names_list.c_str());
     TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "m_single_core_layers_names_list                 = %s ", options->m_single_core_layers_names_list.c_str());
     TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "m_spatial_split_layers_names_list               = %s ", options->m_spatial_split_layers_names_list.c_str());
     TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "m_channel_split_layers_names_list               = %s ", options->m_channel_split_layers_names_list.c_str());
@@ -1333,6 +1414,7 @@ void TIDL_setDefaultOptions(TIDL_osrtOptions * osrt_options)
   osrt_options->m_activation_clipping                          = 1;
   osrt_options->m_weight_clipping                              = 1;
   osrt_options->m_bias_calibration                             = 1;
+  osrt_options->m_bias_calibration_factor                      = 0.05f;
   osrt_options->m_channel_wise_quantization                    = 0;
   osrt_options->m_bias_clipping                                = 0;
   osrt_options->m_add_data_convert_ops                         = 0;
@@ -1345,7 +1427,9 @@ void TIDL_setDefaultOptions(TIDL_osrtOptions * osrt_options)
   osrt_options->m_tidl_tools_path                              = "";
   osrt_options->m_model_type                                   = "";
   osrt_options->m_output_feature_16bit_names_list              = "";
+  osrt_options->m_mp_16bit_resolved_feature_names_list         = "";
   osrt_options->m_params_16bit_names_list                      = "";
+  osrt_options->m_native_layer_names_list                      = "";
   osrt_options->m_meta_layers_names_list                       = "";
   osrt_options->m_deny_list                                    = {};
   osrt_options->m_deny_list_layer_type                         = {};
@@ -1366,10 +1450,13 @@ void TIDL_setDefaultOptions(TIDL_osrtOptions * osrt_options)
   osrt_options->m_nc_temp_info_dir                             = "/tmp";
   osrt_options->m_temp_buffer_dir                              = "/dev/shm";
   osrt_options->m_enable_custom_layers                         = 0;
+  osrt_options->m_use_16bit_for_topk                           = 1;
   osrt_options->m_enable_tfr_optimization                      = -1;
-  osrt_options->m_enable_shape_folding                         = 0;
+  osrt_options->m_graph_optimization_level                     = TIDL_OPTIMIZE_LEVEL_BASIC;
+  osrt_options->m_enable_shape_folding                         = -1;
   osrt_options->m_optimize_batchnorm_higherdims                = 0;
   osrt_options->m_softmax_16bit_scale_update                   = 0;
+  osrt_options->m_enable_concat_no_op                          = 1;
 }
 
 
@@ -1389,17 +1476,23 @@ int32_t TIDL_runtimesGparamsInit(TIDL_osrtOptions * osrt_options, int32_t modelT
   gParams.partialInitDuringCompile = osrt_options->m_partial_init_during_compile;
   gParams.packetizeMode = osrt_options->m_packetize_mode;
   gParams.inferenceMode = osrt_options->m_inference_mode;
+  gParams.graphOptimizationLevel = osrt_options->m_graph_optimization_level;
   gParams.enableShapeFolding = osrt_options->m_enable_shape_folding;
   gParams.optimizeBatchNormHigherDims = osrt_options->m_optimize_batchnorm_higherdims;
   gParams.enableHighResOptimization = osrt_options->m_high_resolution_optimization;
   gParams.batchMode = osrt_options->m_batch_mode;
   gParams.enableCustomLayers = osrt_options->m_enable_custom_layers;
+  gParams.use16BitForTopK = osrt_options->m_use_16bit_for_topk;
+  gParams.enableConcatNoOp = osrt_options->m_enable_concat_no_op;
+  gParams.biasCalibrationFactor = osrt_options->m_bias_calibration_factor;
   strcpy((char*)gParams.quantParamsPrototxtFile, osrt_options->m_quant_params_proto_path.c_str());
   strcpy((char*)gParams.networkName, osrt_options->m_network_name.c_str());
   strcpy((char*)gParams.c7xFirmwareVersion, osrt_options->m_c7x_firmware_version.c_str());
   strcpy((char*)gParams.logFileName, osrt_options->m_log_file_name.c_str());
   strcpy((char *)&gParams.outputFeature16bitNamesList[0], const_cast<char *>(osrt_options->m_output_feature_16bit_names_list.c_str()));
+  strcpy((char *)&gParams.mp16bitResolvedFeatureNamesList[0], const_cast<char *>(osrt_options->m_mp_16bit_resolved_feature_names_list.c_str()));
   strcpy((char *)&gParams.params16bitNamesList[0], const_cast<char *>(osrt_options->m_params_16bit_names_list.c_str()));
+  strcpy((char *)&gParams.nativeLayerNamesList[0], const_cast<char *>(osrt_options->m_native_layer_names_list.c_str()));
   strcpy((char *)&gParams.singleCoreLayersNames[0], const_cast<char *>(osrt_options->m_single_core_layers_names_list.c_str()));
   strcpy((char*)gParams.ncTempInfoDir, osrt_options->m_nc_temp_info_dir.c_str());
   strcpy((char *)&gParams.spatialSplitLayersNames[0], const_cast<char *>(osrt_options->m_spatial_split_layers_names_list.c_str()));
@@ -1462,6 +1555,24 @@ int32_t TIDL_runtimesGparamsInit(TIDL_osrtOptions * osrt_options, int32_t modelT
   {
     gParams.numCores = osrt_options->m_num_cores;
   }
+
+  if(gParams.graphOptimizationLevel == TIDL_OPTIMIZE_LEVEL_EXTENDED)
+  {
+    if(gParams.enableShapeFolding == -1)
+    {
+      gParams.enableShapeFolding = 1;
+    }
+    // Other higher optimization flag can be added here in future
+  }
+  else
+  {
+    if(gParams.enableShapeFolding == -1)
+    {
+      gParams.enableShapeFolding = 0;
+    }
+    // Other higher optimization flag can be added here in future
+  }
+
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
 
@@ -1507,6 +1618,7 @@ int32_t TIDL_addInputDataLayer6D(int32_t idx, int32_t numBatches, int32_t numDim
   layer.outData[0].dimValues[TIDL_DIM_WIDTH ] = gParams.inWidth[idx];
   strcpy((char *)layer.name,  layerName);
   strcpy((char *)layer.outDataNames[0],  layerName);
+  strcpy((char*)inDataNames[idx], layerName);
   layer.outConsumerCnt[0] = 1;
   layer.outConsumerLinked[0] = 0;
 
@@ -1589,13 +1701,16 @@ int32_t TIDL_runtimesPostProcessNet(TIDL_osrtOptions * osrt_options, int32_t cal
   gParams.numFramesBiasCalibration = calibrationFrames;
   gParams.calibrationOption = osrt_options->m_tidl_calibration_flags;
   gParams.biasCalibrationIterations = osrt_options->m_calibration_iterations;
+  gParams.biasCalibrationFactor = osrt_options->m_bias_calibration_factor;
   gParams.mixedPrecisionFactor = osrt_options->m_mixed_precision_factor;
   gParams.modelGroupId = osrt_options->m_model_group_id;
   gParams.enableHighResOptimization = osrt_options->m_high_resolution_optimization;
   gParams.compileConstraintsFlag = osrt_options->m_compileConstraintsFlag;
   gParams.foldPreBnConv2D = osrt_options->m_pre_batchnorm_fold;
   strcpy((char *)&gParams.outputFeature16bitNamesList[0], const_cast<char *>(osrt_options->m_output_feature_16bit_names_list.c_str()));
+  strcpy((char *)&gParams.mp16bitResolvedFeatureNamesList[0], const_cast<char *>(osrt_options->m_mp_16bit_resolved_feature_names_list.c_str()));
   strcpy((char *)&gParams.params16bitNamesList[0], const_cast<char *>(osrt_options->m_params_16bit_names_list.c_str()));
+  strcpy((char *)&gParams.nativeLayerNamesList[0], const_cast<char *>(osrt_options->m_native_layer_names_list.c_str()));
   strcpy((char *)&gParams.singleCoreLayersNames[0], const_cast<char *>(osrt_options->m_single_core_layers_names_list.c_str()));
   strcpy((char *)&gParams.spatialSplitLayersNames[0], const_cast<char *>(osrt_options->m_spatial_split_layers_names_list.c_str()));
   strcpy((char *)&gParams.channelSplitLayersNames[0], const_cast<char *>(osrt_options->m_channel_split_layers_names_list.c_str()));
@@ -1605,8 +1720,10 @@ int32_t TIDL_runtimesPostProcessNet(TIDL_osrtOptions * osrt_options, int32_t cal
     gParams.ddrLayers[i] = osrt_options->m_reserved_ctrl_1[i];
   }
 
+  gParams.copyTensorQuantSpec = osrt_options->m_copy_tensor_quant_spec;
   gParams.softmax16BitScaleUpdate = osrt_options->m_softmax_16bit_scale_update;
   gParams.use16BitForTopK = osrt_options->m_use_16bit_for_topk;
+  gParams.graphOptimizationLevel = osrt_options->m_graph_optimization_level;
   gParams.enableShapeFolding = osrt_options->m_enable_shape_folding;
   gParams.optimizeBatchNormHigherDims = osrt_options->m_optimize_batchnorm_higherdims;
 
@@ -1665,11 +1782,6 @@ int32_t TIDL_runtimesPostProcessNet(TIDL_osrtOptions * osrt_options, int32_t cal
       orgTIDLNetStructure.TIDLPCLayers[i].weightsElementSizeInBits = gParams.numParamBits;
   }
 
-  if(numParamBits == 32)
-  {
-    tidl_convertElementTypeGivenParambits(&orgTIDLNetStructure, orgTIDLNetStructure.numLayers, 32);
-  }
-
   /* Relay import uses different names for these files, avoid re-initializating the names here */
   if(gParams.modelType != TIDL_IMPORT_MODEL_FORMAT_TVM_RELAY)
   {
@@ -1725,6 +1837,66 @@ void TIDL_broadcastFloatTensor(sBuffer_t &buf, int32_t bufSize)
 }
 
 /** Prints the parse table */
+std::string TIDL_parseReasonFromDiagString(const std::string& diagString)
+{
+  // Use the exact same parsing mechanism as ONNXRT flow
+  std::string reason = diagString;
+  reason = reason.substr(reason.rfind(':') + 1);
+  reason = reason.substr(0, reason.find("--"));
+  reason.erase(reason.find_last_not_of(' ') + 1);
+  reason.erase(0, reason.find_first_not_of(' '));
+  return reason;
+}
+
+void TIDL_buildParseTableFromDiags(
+  const DiagList_t& diagList,
+  std::vector<std::vector<std::string>>& denylistData,
+  std::function<std::pair<std::string, std::string>(int)> nodeInfoExtractor
+)
+{
+  if (diagList.empty())
+  {
+    return;
+  }
+
+  // Track nodes already added to prevent duplicates
+  std::set<std::string> addedNodes;
+
+  for (int index = 0; index < diagList.size(); index++)
+  {
+    // Only process unsupported/error diagnostics
+    if (diagList[index].getKind() != TIDL_ModelDiagnostic::DK_NotSupported &&
+        diagList[index].getKind() != TIDL_ModelDiagnostic::DK_Error &&
+        diagList[index].getKind() != TIDL_ModelDiagnostic::DK_NotVerified)
+    {
+      continue;
+    }
+
+    // Get node information from runtime-specific extractor
+    auto nodeInfo = nodeInfoExtractor(index);
+    std::string opType = nodeInfo.first;
+    std::string nodeName = nodeInfo.second;
+
+    // Skip if this node has already been added
+    if (addedNodes.find(nodeName) != addedNodes.end())
+    {
+      continue;
+    }
+
+    // Parse reason from diagnostic string using common logic (same as ONNXRT)
+    std::string diag = diagList[index].getString();
+    std::string reason = TIDL_parseReasonFromDiagString(diag);
+
+    // Use defaults if extraction failed
+    if (opType.empty()) opType = "Unknown";
+    if (nodeName.empty()) nodeName = "N/A";
+    if (reason.empty()) reason = diag; // fallback to full diagnostic
+
+    denylistData.push_back({opType, nodeName, reason});
+    addedNodes.insert(nodeName);
+  }
+}
+
 void TIDL_printParseTable(std::string supportedNodes, std::string offloadSubGraph, std::string unsupportedNodes, std::vector<std::vector<std::string>> denylistData)
 {
   std::stringstream tableStream;
@@ -1734,11 +1906,22 @@ void TIDL_printParseTable(std::string supportedNodes, std::string offloadSubGrap
   std::vector<std::vector<std::string>> data;
   std::vector<TIDL_table_align_t> columnAlignment;
 
-  header = {"Core","No. of Nodes","Number of Subgraphs"};
-  data =  {
-            {"C7x",supportedNodes,offloadSubGraph},
-            {"CPU",unsupportedNodes,"x"}
-          };
+  if (gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TVM_RELAY)
+  {
+    header = {"Offload type","No. of Nodes","Number of Subgraphs"};
+    data =  {
+              {"TIDL",supportedNodes,offloadSubGraph},
+              {"TVM generated code (C7x)",unsupportedNodes,"x"}
+            };
+  }
+  else
+  {
+    header = {"Core","No. of Nodes","Number of Subgraphs"};
+    data =  {
+              {"C7x",supportedNodes,offloadSubGraph},
+              {"CPU",unsupportedNodes,"x"}
+            };
+  }
   columnAlignment = {ALIGN_LEFT,ALIGN_RIGHT,ALIGN_RIGHT};
   TIDL_createTable(tableStream,header,data,1,columnAlignment);
   tableString = tableStream.str();

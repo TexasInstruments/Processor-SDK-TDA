@@ -99,52 +99,52 @@ int32_t TidlParseTVM::parse<OpNameStr("pad")>()
   if ((padMode == "constant"))
   {
     constant_value=0;
-  }
-  else
-  {
-    layer.layerParams.padLayerParams.padType = TIDL_PadModeUnsupported;
-  }
-  /* Pad value can be in 2nd input */
-  if (call->args.size() >= 2)
-  {
-
-    // In TVM pad, if there's a constant pad value, it's typically in args[1]
-    // Check if args[1] is a constant
-    if (call->args[1].as<tvm::relay::ConstantNode>())
+    /* Pad value can be in 2nd input */
+    if (call->args.size() >= 2)
     {
-      buf = TIDL_extractConstantTensorData(call, layer.allowlistingMetaData.constTensorIndices[0], layer.allowlistingMetaData, 0);
-      if(buf.ptr != NULL)
+
+      // In TVM pad, if there's a constant pad value, it's typically in args[1]
+      // Check if args[1] is a constant
+      if (call->args[1].as<tvm::relay::ConstantNode>())
       {
-        float32_tidl *padPtr = (float32_tidl *)buf.ptr;
-        constant_value = padPtr[0];
-        layer.layerParams.padLayerParams.padConstValue = (int32_t)padPtr[0];
+        buf = TIDL_extractConstantTensorData(call, layer.allowlistingMetaData.constTensorIndices[0], layer.allowlistingMetaData, 0);
+        if(buf.ptr != NULL)
+        {
+          float32_tidl *padPtr = (float32_tidl *)buf.ptr;
+          constant_value = padPtr[0];
+          layer.layerParams.padLayerParams.padConstValue = (int32_t)padPtr[0];
+        }
+        else
+        {
+          layer.layerParams.padLayerParams.padConstValue = 0;
+        }
       }
       else
       {
+        // args[1] is not a constant, default to 0
         layer.layerParams.padLayerParams.padConstValue = 0;
       }
     }
+    /* If still not found, set default value as 0 */
     else
     {
-      // args[1] is not a constant, default to 0
       layer.layerParams.padLayerParams.padConstValue = 0;
     }
-  }
-  /* If still not found, set default value as 0 */
-  else
-  {
-    layer.layerParams.padLayerParams.padConstValue = 0;
-  }
 
-  /* Only zero pad is supported */
-  if (constant_value != 0)
+    /* Only zero pad is supported for constant mode */
+    if (constant_value != 0)
+    {
+      layer.layerParams.padLayerParams.padType = TIDL_PadModeUnsupported;
+    }
+    else
+    {
+      layer.layerParams.padLayerParams.padType = TIDL_PadZero;
+    }
+  }
+  else
   {
     layer.layerParams.padLayerParams.padType = TIDL_PadModeUnsupported;
-  }
-  else
-  {
-    layer.layerParams.padLayerParams.padType = TIDL_PadZero;
-  }
+   }
 
   /* Extract pad values from pad_width attribute */
   tot_axis = attrs->pad_width.size();

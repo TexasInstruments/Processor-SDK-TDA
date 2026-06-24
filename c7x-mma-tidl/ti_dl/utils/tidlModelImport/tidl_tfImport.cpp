@@ -955,10 +955,7 @@ int32_t TIDL_tfMapSliceParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
     else
     {
       pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].numOutBufs = value.i();
-      for (j = 0; j < value.i(); j++)
-      {
-        slicePoints[j] = -1;
-      }
+      pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].layerPCParams.sliceParams.setSlicePoints = 1;
     }
   }
   else
@@ -1335,7 +1332,7 @@ int32_t tidl_checkParamsForHardSigmoidLayerTFLite(sTIDL_LayerPC_t &TIDLPCLayers1
     return 0;
   }
 
-  if(TIDLPCLayers3.actParams.clipMax != 1)
+  if(TIDLPCLayers3.clipParams.clipMax != 1)
   {
     return 0;
   }

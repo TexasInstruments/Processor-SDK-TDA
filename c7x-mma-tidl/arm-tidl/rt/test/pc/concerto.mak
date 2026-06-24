@@ -39,6 +39,8 @@ ifeq ($(RTOS_SDK),$(filter $(RTOS_SDK), mcu_plus_sdk mcu_sdk))
         DMA_LIBS += libdrivers-ti_sdk_cfg_default_hostemu_gcc-linux.a
         DMA_LIBS += libhal-ti_sdk_cfg_default_hostemu_gcc-linux.a
         DMA_LIBS += libti_sdk_cfg_default_hostemu_gcc-linux.a
+        # libti_sdk_cfg_default calls Arch_Interrupt_DisableAll/RestoreAll
+        DMA_LIBS += libarch-ti_sdk_cfg_default_hostemu_gcc-linux.a
     endif
 else
     LDIRS += $(PDK_PATH)/ti/csl/lib/$(SOC)/c7x-hostemu/$(TARGET_BUILD)

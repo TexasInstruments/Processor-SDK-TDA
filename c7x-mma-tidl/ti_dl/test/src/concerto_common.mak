@@ -27,6 +27,13 @@ CSOURCES += $(foreach file, $(COMMON_FILES), ../../../../common/$(file))
 # include search directories needed by all platforms
 ifeq ($(RTOS_SDK),mcu_sdk)
 IDIRS += $(MCU_SDK_PATH)/source
+IDIRS += $(MCU_SDK_PATH)/source/compatibility/dpl/include
+IDIRS += $(MCU_SDK_PATH)/source/arch/include
+IDIRS += $(MCU_SDK_PATH)/source/arch/c76/include
+IDIRS += $(MCU_SDK_PATH)/source/compiler/c76-ti-c7000
+IDIRS += $(MCU_SDK_PATH)/source/device/tda54/include
+IDIRS += $(MCU_SDK_PATH)/source/device/tda54/include/hw
+IDIRS += $(MCU_SDK_PATH)/ti_sdk_config/tda54/default/Hal_Cfg
 IDIRS += $(MCU_SDK_PATH)/source/drivers
 IDIRS += $(MCU_SDK_PATH)/source/drivers/hw_include
 IDIRS += $(DMA_UTILS_PATH)

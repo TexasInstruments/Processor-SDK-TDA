@@ -128,5 +128,9 @@ int32_t TIDL_topKDeviceExec(void                            *linkHandle,
                             int32_t                          currFlowStage[],
                             int32_t                          currIterCount);
 
+
+int32_t TIDL_topKGetPerfData(void* linkHandle,
+                                 double *perfData);
+
 #endif /* ITIDL_TOPK_H*/
 

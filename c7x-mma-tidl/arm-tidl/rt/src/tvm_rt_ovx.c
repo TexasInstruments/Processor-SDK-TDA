@@ -337,7 +337,7 @@ init_tvm_tiovx(TVMAppObj *obj, sTVMRT_Params_t *prms)
       memcpy(tvmParams->input_names_offset, prms->input_names_offset,
              sizeof(prms->input_names_offset));
       memcpy(tvmParams->input_names, prms->input_names,
-             sizeof(prms->input_names_offset));
+             sizeof(prms->input_names));
       memcpy(tvmParams->tensors_params, prms->tensors_params,
              sizeof(prms->tensors_params));
 

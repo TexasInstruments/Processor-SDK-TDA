@@ -734,6 +734,117 @@ static void addParam(vx_reference params[], vx_reference obj)
     num_params++;
 }
 
+vx_status writeTIDLOutput(char *file_name, TIDLObj *tidlObj)
+{
+    vx_status status = VX_SUCCESS;
+
+    vx_tensor output;
+    vx_size numCh;
+    vx_int32 ch, tensor_id;
+
+    vx_map_id map_id_config;
+    sTIDL_IOBufDesc_t *ioBufDesc;
+    tivxTIDLJ7Params *tidlParams;
+
+    vxMapUserDataObject(tidlObj->config, 0, sizeof(tivxTIDLJ7Params), &map_id_config,
+                    (void **)&tidlParams, VX_READ_ONLY, VX_MEMORY_TYPE_HOST, 0);
+
+    ioBufDesc = (sTIDL_IOBufDesc_t *)&tidlParams->ioBufDesc;
+
+    for(tensor_id = 0; tensor_id < tidlObj->num_output_tensors; tensor_id++)
+    {
+        vxQueryObjectArray((vx_object_array)tidlObj->output_tensor_arr_batch[tensor_id], VX_OBJECT_ARRAY_NUMITEMS, &numCh, sizeof(vx_size));
+
+        for(ch = 0; ch < numCh; ch++)
+        {
+            vx_size num_dims;
+            void *data_ptr;
+            vx_map_id map_id;
+
+            vx_size    start[APP_MAX_TENSOR_DIMS];
+            vx_size    tensor_strides[APP_MAX_TENSOR_DIMS];
+            vx_size    tensor_sizes[APP_MAX_TENSOR_DIMS];
+
+            output  = (vx_tensor)vxGetObjectArrayItem((vx_object_array)tidlObj->output_tensor_arr_batch[tensor_id], ch);
+
+            vxQueryTensor(output, VX_TENSOR_NUMBER_OF_DIMS, &num_dims, sizeof(vx_size));
+
+            if(num_dims != 4)
+            {
+                printf("Number of dims != 4! exiting.. \n");
+                vxReleaseTensor(&output);
+                break;
+            }
+
+            vxQueryTensor(output, VX_TENSOR_DIMS, tensor_sizes, num_dims * sizeof(vx_size));
+
+            vx_uint32 d;
+            for(d = 0; d < num_dims; d++)
+            {
+                start[d] = 0;
+            }
+
+            tensor_strides[0] = 1;
+            for(d = 1; d < num_dims; d++)
+            {
+                tensor_strides[d] = tensor_strides[d-1] * tensor_sizes[d-1];
+            }
+
+            status = tivxMapTensorPatch(output, num_dims, start, tensor_sizes, &map_id, tensor_strides, &data_ptr, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+
+            if(VX_SUCCESS == status)
+            {
+                vx_char new_name[APP_MAX_FILE_PATH];
+                vx_size stride_w  = tensor_sizes[0]; /* padded width stride */
+                vx_size stride_ch = tensor_sizes[0] * tensor_sizes[1]; /* one W*H slice */
+                vx_size stride_b  = stride_ch * tensor_sizes[2]; /* one batch slice */
+                vx_uint32 b, c, row;
+
+                snprintf(new_name, APP_MAX_FILE_PATH, "%s_tensor_%d_%dx%dx%dx%d_ch%d.bin",
+                         file_name, tensor_id,
+                         ioBufDesc->outWidth[tensor_id], ioBufDesc->outHeight[tensor_id],
+                         (uint32_t)tensor_sizes[2], (uint32_t)tensor_sizes[3], ch);
+                FILE *fp = fopen(new_name, "wb");
+                if(NULL == fp)
+                {
+                    printf("Unable to open file %s for writing!\n", new_name);
+                    tivxUnmapTensorPatch(output, map_id);
+                    vxReleaseTensor(&output);
+                    status = VX_FAILURE;
+                    break;
+                }
+
+                for(b = 0; b < tensor_sizes[3]; b++)
+                {
+                    for(c = 0; c < tensor_sizes[2]; c++)
+                    {
+                        /* skip top and left spatial padding per slice */
+                        uint8_t *pOut = (uint8_t *)data_ptr
+                            + b * stride_b
+                            + c * stride_ch
+                            + ioBufDesc->outPadT[tensor_id] * stride_w
+                            + ioBufDesc->outPadL[tensor_id];
+
+                        for(row = 0; row < ioBufDesc->outHeight[tensor_id]; row++)
+                        {
+                            fwrite(pOut, 1, ioBufDesc->outWidth[tensor_id], fp);
+                            pOut += stride_w;
+                        }
+                    }
+                }
+                fclose(fp);
+
+                tivxUnmapTensorPatch(output, map_id);
+            }
+            vxReleaseTensor(&output);
+        }
+    }
+
+  vxUnmapUserDataObject(tidlObj->config, map_id_config);
+
+  return(status);
+}
+
 #ifdef COMPUTE_CHECKSUM
 static void getQC(uint8_t *pIn, uint8_t *pOut, int32_t inSize)
 {

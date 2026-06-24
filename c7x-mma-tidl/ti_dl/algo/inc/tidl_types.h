@@ -131,6 +131,8 @@ typedef VXLIB_F32 TIDL_F32;  /*!< Single precision floating point */
 #define TIDL_ERR_BUFFER_TOO_SMALL         ((int32_t) VXLIB_ERR_BUFFER_TOO_SMALL)
 /** \brief Add custom errors after this */
 #define TIDL_ERROR_START                  ((int32_t) 256)
+/** \brief Add custom errors after this */
+#define TIDL_STATUS_SKIP_DMAS             ((int32_t) 257)
 /* @} */
 
 typedef int32_t TIDL_STATUS;    /*!< return value for all VXLIB functions */
@@ -149,10 +151,15 @@ typedef void* TIDL_KernelHandle;
  *
  *  @{
  */
+
+#define TIDL_FUNCTION_PERFMODEL_FLAG     ((int32_t) 0x40)
+#define TIDL_FUNCTION_PERFMODEL_MASK    ((TIDL_FUNCTION_PERFMODEL_FLAG - 1))
+
 /** \brief Natural C implementation of the function */
 #define TIDL_FUNCTION_NATC            ((int32_t) 0)
 /** \brief Optimized Function using MMA + C7x architecture */
 #define TIDL_FUNCTION_OPTIMIZED_C7x   ((int32_t) 1)
+/** \brief Optimized Function using MMA + C7x architecture */
 /** \brief Max function style */
 #define TIDL_FUNC_STYLE_MAX           ((int32_t) 2)
 /** \brief Performance modelling of the function */

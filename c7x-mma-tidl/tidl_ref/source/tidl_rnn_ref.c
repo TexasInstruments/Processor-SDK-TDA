@@ -239,6 +239,35 @@ int32_t TIDL_rnnRefInit(const TIDL_LayerSpecificParams *layerSpecificParams,
 }
 
 /**
+ * @brief Scalar replica of exp_highprecision_vec: same range reduction + 5th-order Taylor
+ */
+static inline float32_tidl TIDL_rnnExpScalar(float32_tidl x)
+{
+  float32_tidl ln2     = 0.693147180559945f;
+  float32_tidl ln2_inv = 1.442695040888963f;
+
+  float32_tidl n_raw = x * ln2_inv;
+  float32_tidl n_adj = (n_raw >= 0.0f) ? (n_raw + 0.5f) : (n_raw - 0.5f);
+  int32_t n          = (int32_t) n_adj;
+
+  float32_tidl n_f = (float32_tidl) n;
+  float32_tidl f   = x - n_f * ln2;
+
+  float32_tidl exp_f = 1.0f + f * (1.0f + f * (0.5f + f * (0.16666667f + f * (0.04166667f + f * 0.00833333f))));
+
+  int32_t scale_bits = (n + 127) << 23;
+  float32_tidl scale;
+  memcpy(&scale, &scale_bits, sizeof(float32_tidl));
+
+  float32_tidl result = exp_f * scale;
+
+  if (n > 127)  result = 3.4e38f;
+  if (n < -126) result = 0.0f;
+
+  return result;
+}
+
+/**
  * @brief Sigmoid activation function for RNN
  * @param x: input value
  * @return sigmoid(x)
@@ -259,6 +288,31 @@ static inline float32_tidl TIDL_rnnSigmoid(float32_tidl x)
 }
 
 /**
+ * @brief Sigmoid activation function implemented using taylor series expansion
+ * @param x: input value
+ * @return sigmoid(x)
+ */
+static inline float32_tidl TIDL_rnnSigmoidTaylor(float32_tidl x)
+{
+  x = (x > TIDL_RNN_SIGMOID_BOUND) ? TIDL_RNN_SIGMOID_BOUND : x;
+  x = (x < -TIDL_RNN_SIGMOID_BOUND) ? -TIDL_RNN_SIGMOID_BOUND : x;
+
+  int32_t neg_mask         = (x < 0.0f);
+  float32_tidl abs_x       = neg_mask ? -x : x;
+  float32_tidl exp_neg_abs = TIDL_rnnExpScalar(-abs_x);
+  float32_tidl denom       = 1.0f + exp_neg_abs;
+
+  /* RCPSP + 2 Newton-Raphson iterations — matches __recip + NR in sigmoid_vec */
+  float32_tidl recip = __recip(denom);
+  recip = recip * (2.0f - denom * recip);
+  recip = recip * (2.0f - denom * recip);
+
+  float32_tidl sig_neg = 1.0f - recip;
+
+  return neg_mask ? sig_neg : recip;
+}
+
+/**
  * @brief Tanh activation function for RNN, implemented using sigmoid to improve numerical stability
  * @param x: input value
  * @return tanh(x)
@@ -272,6 +326,32 @@ static inline float32_tidl TIDL_rnnTanh(float32_tidl x)
 }
 
 /**
+ * @brief Tanh activation function implemented using taylor series expansion
+ * @param x: input value
+ * @return tanh(x)
+ */
+static inline float32_tidl TIDL_rnnTanhTaylor(float32_tidl x)
+{
+  x = (x > TIDL_RNN_TANH_BOUND) ? TIDL_RNN_TANH_BOUND : x;
+  x = (x < -TIDL_RNN_TANH_BOUND) ? -TIDL_RNN_TANH_BOUND : x;
+
+  int32_t   neg_mask     = (x < 0.0f);
+  float32_tidl abs_x     = neg_mask ? -x : x;
+  float32_tidl exp_neg2x = TIDL_rnnExpScalar(-2.0f * abs_x);
+  float32_tidl numer     = 1.0f - exp_neg2x;
+  float32_tidl denom     = 1.0f + exp_neg2x;
+
+  /* RCPSP + 2 Newton-Raphson iterations — matches __recip + NR in tanh_vec */
+  float32_tidl recip = __recip(denom);
+  recip       = recip * (2.0f - denom * recip);
+  recip       = recip * (2.0f - denom * recip);
+
+  float32_tidl tanh_pos = numer * recip;
+
+  return neg_mask ? -tanh_pos : tanh_pos;
+}
+
+/**
  * @brief Apply activation function
  *
  * @param val              : input value
@@ -280,10 +360,12 @@ static inline float32_tidl TIDL_rnnTanh(float32_tidl x)
  * @param activation_beta  : beta value for parametric activations
  * @param isClipSet        : flag to indicate whether clip value is set or not
  * @param clip             : clip value
+ * @param useTaylor        : flag to indicate whether to use taylor series based implementation
  * @return activated value
  */
 static inline float32_tidl TIDL_rnnActivation(float32_tidl val, int32_t actType, float32_tidl activation_alpha,
-                                               float32_tidl activation_beta, int32_t isClipSet, float32_tidl clip)
+                                               float32_tidl activation_beta, int8_t isClipSet, float32_tidl clip,
+                                               int8_t useTaylor)
 {
   if (isClipSet == 1)
   {
@@ -298,11 +380,11 @@ static inline float32_tidl TIDL_rnnActivation(float32_tidl val, int32_t actType,
   }
   else if (actType == TIDL_Sigmoid)
   {
-    activatedVal = TIDL_rnnSigmoid(val);
+    activatedVal = (useTaylor == 1) ? TIDL_rnnSigmoidTaylor(val) : TIDL_rnnSigmoid(val);
   }
   else if (actType == TIDL_Tanh)
   {
-    activatedVal = TIDL_rnnTanh(val);
+    activatedVal = (useTaylor == 1) ? TIDL_rnnTanhTaylor(val) : TIDL_rnnTanh(val);
   }
   else if (actType == TIDL_LeakyReLU)
   {
@@ -325,6 +407,69 @@ static inline float32_tidl TIDL_rnnActivation(float32_tidl val, int32_t actType,
   }
 
   return activatedVal;
+}
+
+/* Volatile accumulators, bias pre-loaded — matches C7x per-lane FP order */
+template<class Tin> static void TIDL_rnnGateComputeTaylor(
+    const Tin *xt, const Tin *ht_prev,
+    const Tin *W_dir, const Tin *R_dir, const Tin *B_dir,
+    Tin *ht_new,
+    int32_t input_size, int32_t hidden_size)
+{
+  /* B_dir: [2*hidden_size] = [Wb, Rb] */
+  const Tin *Wb = (B_dir != NULL) ? B_dir + 0 * hidden_size : NULL;
+  const Tin *Rb = (B_dir != NULL) ? B_dir + 1 * hidden_size : NULL;
+
+  for (int32_t hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
+  {
+    /* Compute Ht (pre-activation) = Wb + Xt*(Wi^T) + Rb + Ht-1*(Ri^T) */
+    volatile float32_tidl wx = (Wb != NULL) ? Wb[hiddenIdx] : 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < input_size; inputIdx++)
+    {
+      wx += (float32_tidl)xt[inputIdx] * W_dir[hiddenIdx * input_size + inputIdx];
+    }
+    volatile float32_tidl rh = (Rb != NULL) ? Rb[hiddenIdx] : 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < hidden_size; inputIdx++)
+    {
+      rh += ht_prev[inputIdx] * R_dir[hiddenIdx * hidden_size + inputIdx];
+    }
+    ht_new[hiddenIdx] = (float32_tidl)wx + (float32_tidl)rh;
+  }
+}
+
+/* Standard gate computation as per onnxruntime */
+template<class Tin> static void TIDL_rnnGateComputeStandard(
+    const Tin *xt, const Tin *ht_prev,
+    const Tin *W_dir, const Tin *R_dir, const Tin *B_dir,
+    Tin *ht_new,
+    int32_t input_size, int32_t hidden_size)
+{
+  /* B_dir: [2*hidden_size] = [Wb, Rb] */
+  const Tin *Wb = (B_dir != NULL) ? B_dir + 0 * hidden_size : NULL;
+  const Tin *Rb = (B_dir != NULL) ? B_dir + 1 * hidden_size : NULL;
+
+  /* Ht = f(Xt*(Wi^T) + Ht-1*(Ri^T) + Wb + Rb) */
+  for (int32_t hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
+  {
+    float32_tidl sum = 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < input_size; inputIdx++)
+    {
+      sum += (float32_tidl)xt[inputIdx] * W_dir[hiddenIdx * input_size + inputIdx];
+    }
+    for (int32_t inputIdx = 0; inputIdx < hidden_size; inputIdx++)
+    {
+      sum += ht_prev[inputIdx] * R_dir[hiddenIdx * hidden_size + inputIdx];
+    }
+    if (Wb != NULL)
+    {
+      sum += Wb[hiddenIdx];
+    }
+    if (Rb != NULL)
+    {
+      sum += Rb[hiddenIdx];
+    }
+    ht_new[hiddenIdx] = sum;
+  }
 }
 
 /**
@@ -354,6 +499,7 @@ static inline float32_tidl TIDL_rnnActivation(float32_tidl val, int32_t actType,
  * @param RParams          : parameters of the recurrence weights buffer
  * @param initial_hParams  : parameters of the initial hidden state buffer
  * @param outDataParams    : parameters of the output data buffer
+ * @param useTaylor        : flag to indicate whether to use taylor series expansion for activations
  * @return  IALG_EOK       - Successful
  *          IALG_EFAIL     - Unspecified error
  */
@@ -361,6 +507,7 @@ template<class Tin, class Tout> static int32_t TIDL_refRNNCoreFloat(
     Tin *inPtr,
     Tin *WPtr,
     Tin *RPtr,
+    Tin *biasPtr,
     Tin *initial_hPtr,
     Tout *outPtr,
     TIDL_Handle intAlgHandle,
@@ -370,23 +517,27 @@ template<class Tin, class Tout> static int32_t TIDL_refRNNCoreFloat(
     const sTIDL_DataParams_t *inDataParams,
     const sTIDL_DataParams_t *WParams,
     const sTIDL_DataParams_t *RParams,
+    const sTIDL_DataParams_t *biasParams,
     const sTIDL_DataParams_t *initial_hParams,
-    const sTIDL_DataParams_t *outDataParams)
+    const sTIDL_DataParams_t *outDataParams,
+    int8_t useTaylor)
 {
   int32_t status = IALG_EOK;
   sTIDL_Network_t *net = intAlgHandle->createParams->net;
   int32_t hidden_size = params->hidden_size;
   int32_t direction = params->direction;
   int32_t layout = params->layout;
-  int32_t isClipSet = params->isClipSet;
+  int8_t isClipSet = params->isClipSet;
   float32_tidl clip = params->clip;
 
   /* Determine number of directions */
   int32_t num_directions = 1;
-  if (direction == TIDL_RNNBidirectional)
+  #if defined TIDL_COVERAGE_DEAD_CODE
+  if (direction == TIDL_RecurrentBidirectional)
   {
     num_directions = 2;
   }
+  #endif
 
   /* Extract batch_size, seq_length, input_size from input dimensions based on layout */
   int32_t batch_size, seq_length, input_size;
@@ -403,12 +554,6 @@ template<class Tin, class Tout> static int32_t TIDL_refRNNCoreFloat(
     batch_size = inDataParams->dimValues[TIDL_DIM_NUMCH];
     seq_length = inDataParams->dimValues[TIDL_DIM_HEIGHT];
     input_size = inDataParams->dimValues[TIDL_DIM_WIDTH];
-  }
-
-  float32_tidl *B_all = NULL;
-  if (params->bias != 0)
-  {
-    B_all = (float32_tidl *)get_int8_t_pointer((int8_t *)net, params->bias);
   }
 
   int32_t *sequence_lens = NULL;
@@ -440,7 +585,7 @@ template<class Tin, class Tout> static int32_t TIDL_refRNNCoreFloat(
     int32_t YhOffset = outDataParams->pitch[incrementAxis] * seq_length;
     Tout *Y_h = Y + YhOffset;
 
-    int32_t dirIdx, timeIdx, batchIdx, hiddenIdx, inputIdx;
+    int32_t dirIdx, timeIdx, batchIdx, hiddenIdx;
 
     for (dirIdx = 0; dirIdx < num_directions; dirIdx++)
     {
@@ -451,20 +596,11 @@ template<class Tin, class Tout> static int32_t TIDL_refRNNCoreFloat(
       int32_t activation_f_idx = dirIdx;
 
       /* W: [num_directions, hidden_size, input_size] */
-      Tin *Wi = WPtr + dirIdx * hidden_size * input_size;
-
+      Tin *W_dir = WPtr + dirIdx * hidden_size * input_size;
       /* R: [num_directions, hidden_size, hidden_size] */
-      Tin *Ri = RPtr + dirIdx * hidden_size * hidden_size;
-
+      Tin *R_dir = RPtr + dirIdx * hidden_size * hidden_size;
       /* B: [num_directions, 2*hidden_size] = [Wb, Rb] */
-      Tin *Wb = NULL;
-      Tin *Rb = NULL;
-      if (B_all != NULL)
-      {
-        Tin *B_dir = B_all + dirIdx * 2 * hidden_size;
-        Wb = B_dir + 0 * hidden_size;
-        Rb = B_dir + 1 * hidden_size;
-      }
+      Tin *B_dir = (biasPtr != NULL) ? biasPtr + dirIdx * 2 * hidden_size : NULL;
 
       /*
        * Initialize Ht from initial_h
@@ -496,14 +632,20 @@ template<class Tin, class Tout> static int32_t TIDL_refRNNCoreFloat(
          * Bidirectional: dirIdx 0 -> forward, dirIdx 1 -> reverse
          */
         int32_t isReverse = 0;
-        if (direction == TIDL_RNNReverse)
+        if (direction == TIDL_RecurrentReverse)
         {
           isReverse = 1;
         }
-        else if ((direction == TIDL_RNNBidirectional) && (dirIdx == 1))
+        #if defined TIDL_COVERAGE_DEAD_CODE
+        else if ((direction == TIDL_RecurrentBidirectional) && (dirIdx == 1))
         {
           isReverse = 1;
         }
+        else
+        {
+          /* Not reachable */
+        }
+        #endif
         int32_t timeStep = (isReverse == 0) ? timeIdx : (seq_length - 1 - timeIdx);
 
         for (batchIdx = 0; batchIdx < batch_size; batchIdx++)
@@ -567,43 +709,24 @@ template<class Tin, class Tout> static int32_t TIDL_refRNNCoreFloat(
 
           Tin *ht_prev = Ht + batchIdx * hidden_size;
 
-          /*
-           * Compute: Ht = f(Xt*(Wi^T) + Ht-1*(Ri^T) + Wb + Rb)
-           */
-          for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
+          /* Dispatch gate computation based on useTaylor */
+          if (useTaylor)
           {
-            /* Xt*(Wi^T) */
-            float32_tidl sum = 0.0f;
-            for (inputIdx = 0; inputIdx < input_size; inputIdx++)
-            {
-              sum += (float32_tidl)xt[inputIdx] * Wi[hiddenIdx * input_size + inputIdx];
-            }
-            /* Ht-1*(Ri^T) */
-            for (inputIdx = 0; inputIdx < hidden_size; inputIdx++)
-            {
-              sum += ht_prev[inputIdx] * Ri[hiddenIdx * hidden_size + inputIdx];
-            }
-            /* Wb bias */
-            if (Wb != NULL)
-            {
-              sum += Wb[hiddenIdx];
-            }
-            /* Rb bias */
-            if (Rb != NULL)
-            {
-              sum += Rb[hiddenIdx];
-            }
-
-            ht_new[hiddenIdx] = TIDL_rnnActivation(sum, params->activations[activation_f_idx],
-                                                   params->activation_alpha[activation_f_idx],
-                                                   params->activation_beta[activation_f_idx],
-                                                   isClipSet, clip);
+            TIDL_rnnGateComputeTaylor<Tin>(xt, ht_prev, W_dir, R_dir, B_dir, ht_new, input_size, hidden_size);
+          }
+          else
+          {
+            TIDL_rnnGateComputeStandard<Tin>(xt, ht_prev, W_dir, R_dir, B_dir, ht_new, input_size, hidden_size);
           }
 
-          /* Copy new values back to ht_prev now that all gates are computed */
+          /* Apply activation and update hidden state */
           for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
           {
-            ht_prev[hiddenIdx] = ht_new[hiddenIdx];
+            ht_prev[hiddenIdx] = TIDL_rnnActivation(ht_new[hiddenIdx],
+                                                    params->activations[activation_f_idx],
+                                                    params->activation_alpha[activation_f_idx],
+                                                    params->activation_beta[activation_f_idx],
+                                                    isClipSet, clip, useTaylor);
           }
 
           /*
@@ -674,13 +797,16 @@ template<class Tin, class Tout> static int32_t TIDL_refRNNCoreFloat(
  * @param inPtr           : Pointer to input buffer (X tensor)
  * @param WPtr            : Pointer to weights buffer (W tensor)
  * @param RPtr            : Pointer to recurrence weights buffer (R tensor)
+ * @param biasPtr         : Pointer to bias buffer (may be NULL)
  * @param initial_hPtr    : Initial hidden state pointer (may be NULL)
  * @param outPtr          : Output pointer
  * @param inDataParams    : pointer to input data parameters
  * @param WParams         : pointer to weights data parameters
  * @param RParams         : pointer to recurrence weights data parameters
+ * @param biasParams      : pointer to bias data parameters
  * @param initial_hParams : pointer to initial_h data parameters
  * @param outDataParams   : pointer to output data parameters
+ * @param useTaylor       : flag to indicate whether to use taylor series expansion for activations
  * @return  IALG_EOK   - Successful
  *          IALG_EFAIL - Unspecified error
  */
@@ -691,13 +817,16 @@ int32_t TIDL_rnnRefProcess(TIDL_Handle intAlgHandle,
                             void *inPtr,
                             void *WPtr,
                             void *RPtr,
+                            void *biasPtr,
                             void *initial_hPtr,
                             void *outPtr,
                             const sTIDL_DataParams_t *inDataParams,
                             const sTIDL_DataParams_t *WParams,
                             const sTIDL_DataParams_t *RParams,
+                            const sTIDL_DataParams_t *biasParams,
                             const sTIDL_DataParams_t *initial_hParams,
-                            const sTIDL_DataParams_t *outDataParams)
+                            const sTIDL_DataParams_t *outDataParams,
+                            int8_t useTaylor)
 {
   int32_t status = IALG_EOK;
   int32_t layerIdx = algLayer->layerIdx;
@@ -707,6 +836,7 @@ int32_t TIDL_rnnRefProcess(TIDL_Handle intAlgHandle,
     status = TIDL_refRNNCoreFloat((float32_tidl *)inPtr,
                                   (float32_tidl *)WPtr,
                                   (float32_tidl *)RPtr,
+                                  (float32_tidl *)biasPtr,
                                   (float32_tidl *)initial_hPtr,
                                   (float32_tidl *)outPtr,
                                   intAlgHandle,
@@ -716,8 +846,10 @@ int32_t TIDL_rnnRefProcess(TIDL_Handle intAlgHandle,
                                   inDataParams,
                                   WParams,
                                   RParams,
+                                  biasParams,
                                   initial_hParams,
-                                  outDataParams);
+                                  outDataParams,
+                                  useTaylor);
   }
   else
   {

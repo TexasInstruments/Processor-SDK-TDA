@@ -174,7 +174,13 @@ int32_t TIDL_padProcessNew(TIDL_NetworkCommonParams *commonParams,
   sTIDL_AlgPadParams_t* algPadParams = &algLayer->layerParams.padParams;
   sTIDL_PadLayerParams_t *params = &tidlLayer->layerParams.padLayerParams;
   int32_t padConstValue = 0;
-
+#ifdef PERF_MODELLING
+  double perfDmaDatawl[1]= { 0.0 };
+  uint64_t perfDmaBWDatawl[6]= { 0 };
+  uint64_t *profilePoint = (uint64_t *)&algLayer->metaData.profilePoint[0];
+  DmaUtilsAutoInc3d_resetPerfData();
+  DmaUtilsAutoInc3d_resetDmaMemBwData();
+#endif
   if (params->padType == (int32_t)TIDL_PadZero)
   {
     padConstValue = 0;
@@ -274,6 +280,23 @@ int32_t TIDL_padProcessNew(TIDL_NetworkCommonParams *commonParams,
     /* This layer does not use standard WL flow, so need to handle layer level cache writeback explicitly in this layer */
     TIDL_L1DCacheWbInv();
   }
+#ifdef PERF_MODELLING
+  DmaUtilsAutoInc3d_getDmaPerformance(&perfDmaDatawl[0]);
+  DmaUtilsAutoInc3d_getDmaMemBwData(&perfDmaBWDatawl[0]);
+  
+  TIDL_updateprofileData(profilePoint,
+                             TIDL_PROFILE_CORE_LOOP,
+                             0,
+                             perfDmaDatawl[0]);
+  TIDL_updateprofileData(profilePoint,
+                             TIDL_PROFILE_DDR_BW_READ,
+                             0,
+                             perfDmaBWDatawl[DMA_DDR_READ_IDX]);
+  TIDL_updateprofileData(profilePoint,
+                             TIDL_PROFILE_DDR_BW_WRITE,
+                             0,
+                             perfDmaBWDatawl[DMA_DDR_WRITE_IDX]);
+#endif
 
   return status;
 }

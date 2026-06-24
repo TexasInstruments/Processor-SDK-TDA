@@ -142,10 +142,16 @@ std::string layerTypeString(int32_t type)
       { TIDL_TopKLayer, "TIDL_TopKLayer"},
       { TIDL_TileLayer, "TIDL_TileLayer"},
       { TIDL_LogicalOpLayer, "TIDL_LogicalOpLayer"},
-      { TIDL_RMSNormalizationLayer, "RMSNormalization"},
+      { TIDL_RMSNormalizationLayer, "TIDL_RMSNormalization"},
       { TIDL_LSTMLayer, "TIDL_LSTMLayer"},
       { TIDL_GRULayer, "TIDL_GRULayer"},
       { TIDL_RNNLayer, "TIDL_RNNLayer"},
+      { TIDL_GatherNDLayer, "TIDL_GatherNDLayer"},
+      { TIDL_CastLayer, "TIDL_CastLayer" },
+      { TIDL_GatherElementsLayer, "TIDL_GatherElementsLayer" },
+      { TIDL_ShapeLayer, "TIDL_ShapeLayer"},
+      { TIDL_SizeLayer, "TIDL_SizeLayer"},
+      { TIDL_NonZeroLayer, "TIDL_NonZeroLayer"},
       { TIDL_UnsupportedLayer, "TIDL_UnsupportedLayer" },
    };
    return find(type, layerTypeNames);
@@ -207,6 +213,12 @@ std::string layerTypeShort(int32_t type)
       { TIDL_LSTMLayer,             "LSTM" },
       { TIDL_GRULayer,              "GRU" },
       { TIDL_RNNLayer,              "RNN" },
+      { TIDL_GatherNDLayer,         "GatherND" },
+      { TIDL_CastLayer,             "Cast" },
+      { TIDL_GatherElementsLayer,   "GatherElements" },
+      { TIDL_ShapeLayer,            "Shape" },
+      { TIDL_SizeLayer,             "Size" },
+      { TIDL_NonZeroLayer,          "NonZero"},
       { TIDL_UnsupportedLayer,      "Unsupported" },
    };
    return find(type, layerTypeNames);
@@ -220,7 +232,6 @@ std::string actTypeShort(int32_t type)
                               { TIDL_RelU, "RelU" }, \
                               { TIDL_PRelU, "PRelU" }, \
                               { TIDL_RelU6, "RelU6" }, \
-                              { TIDL_Clip, "Clip" }, \
                               { TIDL_Sigmoid, "Sigmoid" }, \
                               { TIDL_Tanh, "Tanh" }, \
                               { TIDL_HardSigmoid, "HardSigmoid" }, \
@@ -377,7 +388,6 @@ std::string activationTypeString(int32_t type)
       { TIDL_RelU, "TIDL_RelU" },
       { TIDL_PRelU, "TIDL_PRelU" },
       { TIDL_RelU6, "TIDL_RelU6" },
-      { TIDL_Clip, "TIDL_Clip" },
       { TIDL_Sigmoid, "TIDL_Sigmoid" },
       { TIDL_Tanh, "TIDL_Tanh" },
       { TIDL_HardSigmoid, "TIDL_HardSigmoid" },
@@ -521,7 +531,7 @@ std::string logicalOpTypeString(uint32_t type)
      { TIDL_GreaterOrEqual, "GreaterOrEqual"},
      { TIDL_Less, "Less"},
      { TIDL_LessOrEqual, "LessOrEqual"},
-     { TIDL_Not, "TIDL_Not"},
+     { TIDL_Not, "Not"},
      { TIDL_IsInf, "IsInf"},
      { TIDL_IsNaN, "IsNan"},
      { TIDL_Where, "Where"},
@@ -634,6 +644,8 @@ std::string dataConvertTypeString(int32_t type)
      { TIDL_DC_TYPE_OUTPUT, "TIDL_DC_TYPE_OUTPUT" },
      { TIDL_DC_TYPE_INTERMEDIATE, "TIDL_DC_TYPE_INTERMEDIATE" },
      { TIDL_DC_TYPE_MIXED_PRECISION, "TIDL_DC_TYPE_MIXED_PRECISION"},
+     { TIDL_DC_TYPE_PTQ_TO_NATIVE ,"TIDL_DC_TYPE_PTQ_TO_NATIVE"},
+     { TIDL_DC_TYPE_NATIVE_TO_PTQ ,"TIDL_DC_TYPE_NATIVE_TO_PTQ"},
    };
    return find(type, dataConvertTypeNames);
 }
@@ -715,16 +727,16 @@ std::string gridSamplePadModeString(int32_t type)
    return find(type, gridSamplePadModeNames);
 }
 
-std::string rnnDirectionString(int32_t direction)
+std::string recurrentDirectionString(int32_t direction)
 {
-   stringmap rnnDirectionNames =
+   stringmap recurrentDirectionNames =
    {
-     { TIDL_RNNForward,       "TIDL_RNNForward"},
-     { TIDL_RNNReverse,       "TIDL_RNNReverse"},
-     { TIDL_RNNBidirectional, "TIDL_RNNBidirectional"},
+     { TIDL_RecurrentForward,       "TIDL_RecurrentForward"},
+     { TIDL_RecurrentReverse,       "TIDL_RecurrentReverse"},
+     { TIDL_RecurrentBidirectional, "TIDL_RecurrentBidirectional"},
    };
 
-   return find(direction, rnnDirectionNames);
+   return find(direction, recurrentDirectionNames);
 }
 
 } // namespace TIDL_Strings

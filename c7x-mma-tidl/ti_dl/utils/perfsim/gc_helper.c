@@ -85,8 +85,12 @@ void getMetaDataID(int64_t id, sMetaDataID_t *pMetaDataID)
   pMetaDataID->multiBufIndex =
       psIntMetaDataID->multiBufIndex;
   // some issue with how the int to MetaData casting happens , causing all zero binary bits to give -1 in decimal
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
   pMetaDataID->tileType = (psIntMetaDataID->tileType <= (int64_t)NO_TILE) ? (int64_t)NO_TILE : psIntMetaDataID->tileType;
-
+  /* LDRA_JUSTIFY_END */
   return;
 }
 

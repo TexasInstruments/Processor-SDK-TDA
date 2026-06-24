@@ -178,7 +178,7 @@ int32_t               imHeight)
   float step_h, step_w;
 
    int32_t aspect_ratios_size = prior_box_param.aspect_ratio_size();
-  float  * aspect_ratios   = (float *)my_malloc((aspect_ratios_size*3)*sizeof(float));
+  float  * aspect_ratios   = (float *)my_calloc((aspect_ratios_size*3), sizeof(float));
   bool flip = prior_box_param.flip();
   int ptr_offset = 0;
   aspect_ratios[ptr_offset++] = 1.0;
@@ -293,7 +293,7 @@ int32_t               imHeight)
     variance[0] = 1.0;
   }
 
-  sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_malloc(sizeof(sTIDL_AnchorBoxParams_t));
+  sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_calloc(1, sizeof(sTIDL_AnchorBoxParams_t));
   anchorBox->numAnchors = num_priors;
   anchorBox->numKeyPoints = num_keypoint;
   anchorBox->headWidth = img_width/step_w;
@@ -395,7 +395,7 @@ sTIDL_DetectOutputParams_t & detectOutParams
   int32_t num_rotations = prior_box_3dod_param.rotation_size();
   int32_t num_scales = prior_box_3dod_param.anchor_length_size();
 
-  sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_malloc(sizeof(sTIDL_AnchorBoxParams_t));
+  sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_calloc(1, sizeof(sTIDL_AnchorBoxParams_t));
   anchorBox->numAnchors = num_rotations*num_scales;
 
   int32_t box_counter = 0;
@@ -593,7 +593,7 @@ int32_t tidl_metaArch_import(tidl_import_config * params)
     {
       for(k =0; k < tidlMetaArch.caffe_ssd(j).box_input_size(); k++)
       {
-        sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_malloc(sizeof(sTIDL_AnchorBoxParams_t));
+        sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_calloc(1, sizeof(sTIDL_AnchorBoxParams_t));
         anchorBox->numAnchors = 1;
         anchorBox->numKeyPoints = 0;
         anchorBox->headWidth = -1;
@@ -728,7 +728,7 @@ int32_t tidl_metaArch_import(tidl_import_config * params)
       // for(k =0; k < tidlMetaArch.centernet(j).box_input_size(); k++)
       for(k =0; k < tidlMetaArch.centernet(j).class_input_size(); k++)
       {
-        sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_malloc(sizeof(sTIDL_AnchorBoxParams_t));
+        sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_calloc(1, sizeof(sTIDL_AnchorBoxParams_t));
         anchorBox->numAnchors = 1;
         anchorBox->numKeyPoints = 0;
         anchorBox->headWidth = -1;
@@ -859,7 +859,7 @@ int32_t tidl_metaArch_import(tidl_import_config * params)
       return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
     }
 
-    sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_malloc(numHeads*sizeof(sTIDL_AnchorBoxParams_t));
+    sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_calloc(numHeads, sizeof(sTIDL_AnchorBoxParams_t));
     for(k =0; k < numHeads; k++)
     {
       anchorBox[k].numKeyPoints = 0;
@@ -959,7 +959,7 @@ int32_t tidl_metaArch_import(tidl_import_config * params)
       return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
     }
 
-    sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_malloc(numHeads*sizeof(sTIDL_AnchorBoxParams_t));
+    sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_calloc(numHeads, sizeof(sTIDL_AnchorBoxParams_t));
 
 
     for(k =0; k < numHeads; k++)
@@ -1241,7 +1241,7 @@ int32_t tidl_metaArch_import(tidl_import_config * params)
       // for(k =0; k < tidlMetaArch.tidl_bevformer(j).box_input_size(); k++)
       for(k =0; k < tidlMetaArch.tidl_bevformer(j).class_input_size(); k++)
       {
-        sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_malloc(sizeof(sTIDL_AnchorBoxParams_t));
+        sTIDL_AnchorBoxParams_t* anchorBox = (sTIDL_AnchorBoxParams_t*)my_calloc(1, sizeof(sTIDL_AnchorBoxParams_t));
         anchorBox->numAnchors = 1;
         anchorBox->numKeyPoints = 0;
         anchorBox->headWidth = -1;

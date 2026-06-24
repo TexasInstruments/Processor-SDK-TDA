@@ -66,6 +66,7 @@ ifeq ($(BUILD_ENABLE_ETHFW),yes)
                 else ifeq ($(TARGET_OS),SAFERTOS)
 
                     ifeq ($(RTOS_SDK),pdk)
+                        IDIRS += $(ETHFW_PATH)/utils/ethfw_abstract/jacinto
                         IDIRS += $(PDK_PATH)/packages/ti/transport/lwip/lwip-stack/src/include
                         IDIRS += $(PDK_PATH)/packages/ti/transport/lwip/lwip-port/safertos/include
                         IDIRS += $(PDK_PATH)/packages/ti/transport/lwip/lwip-port/config

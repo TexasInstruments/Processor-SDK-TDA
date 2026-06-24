@@ -65,7 +65,9 @@
 
 #include <vector>
 #include <string>
+#include <functional>
 #include "tidl_runtimes_infer_common.h"
+#include "tidl_import_diag.h"
 #include "itidl_ti.h"
 
 #define DEFAULT_COMPILE_CONSTRAINT_NC_FLAGS (0x1 | 0x40 | 0x200 | 0x400)
@@ -149,9 +151,13 @@ public:
   m_nc_temp_info_dir("/tmp"),
   m_temp_buffer_dir("/dev/shm"),
   m_enable_tfr_optimization(-1),
-  m_enable_shape_folding(0),
+  m_graph_optimization_level(0),
+  m_enable_shape_folding(-1),
   m_optimize_batchnorm_higherdims(0),
-  m_softmax_16bit_scale_update(0)
+  m_softmax_16bit_scale_update(0),
+  m_use_16bit_for_topk(1),
+  m_enable_concat_no_op(1),
+  m_bias_calibration_factor(0.05)
   {}
 
   int m_debug_level;
@@ -176,6 +182,7 @@ public:
   int m_inference_mode;
   int m_num_cores;
   int m_enable_custom_layers;
+  int m_graph_optimization_level;
   int m_enable_shape_folding;
   int m_optimize_batchnorm_higherdims;
 
@@ -201,7 +208,9 @@ public:
   std::vector<std::string> m_custom_layers_names_list; //option for custom_layers_names_list.
   std::vector<int> m_net_inelement_type;
   std::string m_output_feature_16bit_names_list;
+  std::string m_mp_16bit_resolved_feature_names_list;
   std::string m_params_16bit_names_list;
+  std::string m_native_layer_names_list;
   std::string m_meta_layers_names_list;
   std::string m_log_file_name;  // option to give log file name
   std::string m_nc_temp_info_dir;  // option to give path for dumping nc temp info files
@@ -213,13 +222,16 @@ public:
   std::string m_channel_split_layers_names_list; /* Layers forced to channel split in multi core inference */
   std::string m_network_name;
 
+  std::vector<std::pair<std::string,std::string>>  m_copy_tensor_quant_spec; /* Pair of tensor names to force same spec on */
+
   sTIDL_odParameters_t odUserParams;
 
   int osrtDebugPrintLevel;
   int m_enable_tfr_optimization;
   int m_softmax_16bit_scale_update;
   int m_use_16bit_for_topk;
-
+  int m_enable_concat_no_op;
+  float m_bias_calibration_factor;
 };
 
 
@@ -264,6 +276,22 @@ void TIDL_broadcastFloatTensor(sBuffer_t &buf, int32_t bufSize);
 int32_t TIDL_readDeviceConfigParams(char * fileName);
 
 void TIDL_printParseTable(std::string supportedNodes, std::string offloadSubGraph, std::string unsupportedNodes, std::vector<std::vector<std::string>> denylistData);
+
+/* Parse reason/message from a diagnostic string by extracting text after last ':' and cleaning up */
+std::string TIDL_parseReasonFromDiagString(const std::string& diagString);
+
+/* Build parse table denylist data from diagnostics list
+ * Parameters:
+ *   diagList: The diagnostics list to process
+ *   denylistData: Output vector to populate with {opType, nodeName, reason} entries
+ *   nodeInfoExtractor: Callback function that takes diagnostic index and returns {opType, nodeName} pair
+ *                      This allows runtime-specific extraction logic while keeping reason parsing common
+ */
+void TIDL_buildParseTableFromDiags(
+  const DiagList_t& diagList,
+  std::vector<std::vector<std::string>>& denylistData,
+  std::function<std::pair<std::string, std::string>(int)> nodeInfoExtractor
+);
 
 bool TIDL_isVersionInRange(const char *version, const char *minVersion, const char *maxVersion);
 

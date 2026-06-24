@@ -4,11 +4,11 @@ set -e
 #############################################################
 ########################[ Variables ]########################
 
-CICD_TAG="CICD.PSDK.ANALYTICS.12.00.00.01"
+CICD_TAG="CICD.PSDK.ANALYTICS.12.00.00.02"
 REPO_URL="https://github.com/TexasInstruments/ProcessorSDK"
 RELEASE_ARTIFACTS_URL="$REPO_URL/releases/download/$CICD_TAG"
 
-MMALIB_VERSION="11_02_00_06"
+MMALIB_VERSION="11_02_00_11"
 DSPLIB_VERSION="3_4_0_0"
 MATHLIB_VERSION="3_1_2_1"
 

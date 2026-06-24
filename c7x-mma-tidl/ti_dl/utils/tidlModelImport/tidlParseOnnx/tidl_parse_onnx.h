@@ -70,6 +70,7 @@
 #include "tidl_import_api.h"
 #include "tidl_import_diag.h"
 #include "tidl_import_common_model_check.h"
+#include "tidl_common_utils_infer_import.h"
 
 using namespace std;
 using namespace onnx;
@@ -92,7 +93,9 @@ extern "C" int32_t TIDL_isInputConstInGraph(GraphProto &onnGraph, const string n
 
 const std::vector<int32_t> unsupportedDataTypes = {TIDL_UnsignedDoubleWord, TIDL_SignedDoubleWord, TIDL_SignedWord, TIDL_UnsignedWord};
 const std::vector<int32_t> supportedLayerTypes = {
-    TIDL_GatherLayer, 
+    TIDL_GatherLayer,
+    TIDL_GatherNDLayer, 
+    TIDL_GatherElementsLayer, 
     TIDL_ArgOpLayer, 
     TIDL_ScatterElementsLayer, 
     TIDL_SliceLayer,
@@ -106,6 +109,12 @@ const std::vector<int32_t> supportedLayerTypes = {
     TIDL_ConcatLayer, 
     TIDL_SplitLayer, 
     TIDL_TopKLayer,
+    TIDL_ShapeLayer,
+    TIDL_SizeLayer,
+    TIDL_TileLayer,
+    TIDL_LogicalOpLayer,
+    TIDL_NonZeroLayer,
+    TIDL_EltWiseLayer
 };
 
 static std::map<std::string, int32_t> activationMap = {
@@ -165,6 +174,7 @@ struct TidlParseOnnx
     int32_t containsSuffix(std::string str, std::string suffix);
     int32_t getTIDLDataTypeFromOnnxDataType (int32_t onnxDataType);
     std::string getOriginalNameFromDuplicateName(std::string duplicateName);
+    int32_t getInputDataType(GraphProto& onnxGraph, int32_t nodeIdx, int32_t inputIdx);
     int32_t convertIndicesToInt32(sBuffer_t& weights);
     bool isLayerIONumSupported(sTIDL_LayerPC_t &layer);
     bool isLayerIODataTypesSupported(sTIDL_LayerPC_t &layer);

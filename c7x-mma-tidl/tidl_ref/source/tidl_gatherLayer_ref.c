@@ -129,39 +129,67 @@ template<class Tin, class Tindx, class Tout> static int32_t TIDL_refGather(Tin *
   int32_t inDataNumRows = inDataParams->dimValues[TIDL_DIM_HEIGHT];
   int32_t inDataNumCols = inDataParams->dimValues[TIDL_DIM_WIDTH];
 
-  int32_t src_index, dst_index, line_index;
+  int32_t src_index, dst_index, index;
 
   for (i0 = 0; i0 < inIndicesNumCols; i0++)
   {
-    line_index = (int32_t)indices[i0];
+    index = (int32_t)indices[i0];
 
-    // Invalid index
-    if ((line_index >= inDataNumRows) || (line_index < (-inDataNumRows)))
+    if(params->axis != TIDL_DIM_WIDTH)
     {
-      /*in case of invalid index filling with zero tensor point*/
-      tidl_printf(0, "Invalid index for gather layer - %d\n", line_index);
+      // Invalid index
+      if ((index >= inDataNumRows) || (index < (-inDataNumRows)))
+      {
+        /*in case of invalid index filling with zero tensor point*/
+        tidl_printf(0, "Invalid index for gather layer - %d\n", index);
+        dst_index = i0 * inDataNumCols;
+        for (i1 = 0; i1 < inDataNumCols; i1++)
+        {
+          output[dst_index] = (Tout)inDataParams->tensorZeroPoint;
+          dst_index = dst_index + 1;
+        }
+        continue;
+      }
+
+      // Wrap around for negative indices
+      if ((index < 0))
+      {
+        index = index + inDataNumRows;
+      }
+
       dst_index = i0 * inDataNumCols;
+      src_index = index * inDataPitch;
       for (i1 = 0; i1 < inDataNumCols; i1++)
       {
-        output[dst_index] = (Tout)inDataParams->tensorZeroPoint;
+        output[dst_index] = (Tout)data[src_index];
         dst_index = dst_index + 1;
+        src_index = src_index + 1;
       }
-      continue;
     }
-
-    // Wrap around for negative indices
-    if ((line_index < 0))
+    else
     {
-      line_index = line_index + inDataNumRows;
-    }
+      // Invalid index
+      if ((index >= inDataNumCols) || (index < (-inDataNumCols)))
+      {
+        /*in case of invalid index filling with zero tensor point*/
+        tidl_printf(0, "Invalid index for gather layer - %d\n", index);
+        for (i1 = 0; i1 < inDataNumRows; i1++)
+        {
+          output[i1*inIndicesNumCols + i0] = (Tout)inDataParams->tensorZeroPoint;
+        }
+        continue;
+      }
 
-    dst_index = i0 * inDataNumCols;
-    src_index = line_index * inDataPitch;
-    for (i1 = 0; i1 < inDataNumCols; i1++)
-    {
-      output[dst_index] = (Tout)data[src_index];
-      dst_index = dst_index + 1;
-      src_index = src_index + 1;
+      // Wrap around for negative indices
+      if ((index < 0))
+      {
+        index = index + inDataNumCols;
+      }
+
+      for (i1 = 0; i1 < inDataNumRows; i1++)
+      {
+        output[i1*inIndicesNumCols + i0] = (Tout)data[i1*inDataNumCols + index];
+      }
     }
   }
 
@@ -276,6 +304,48 @@ int32_t TIDL_gatherRefProcess(TIDL_Handle intAlgHandle,
       status = TIDL_refGather((uint16_t *)data,
                               (int32_t *)indices,
                               (uint16_t *)outPtr,
+                              intAlgHandle,
+                              layerIdx,
+                              params,
+                              algLayer,
+                              inDataParams,
+                              inIndicesParams,
+                              outDataParams);
+    }
+  }
+  else if (TIDL_SignedWord == ((int32_t)inDataParams->elementType))
+  {
+    if (TIDL_SignedWord != ((int32_t)inIndicesParams->elementType))
+    {
+      tidl_printf(0, "Indice data type should int32");
+      status = TIDL_ERR_FAILURE;
+    }
+    else
+    {
+      status = TIDL_refGather((int32_t *)data,
+                              (int32_t *)indices,
+                              (int32_t *)outPtr,
+                              intAlgHandle,
+                              layerIdx,
+                              params,
+                              algLayer,
+                              inDataParams,
+                              inIndicesParams,
+                              outDataParams);
+    }
+  }
+  else if (TIDL_UnsignedWord == ((int32_t)inDataParams->elementType))
+  {
+    if (TIDL_SignedWord != ((int32_t)inIndicesParams->elementType))
+    {
+      tidl_printf(0, "Indice data type should int32");
+      status = TIDL_ERR_FAILURE;
+    }
+    else
+    {
+      status = TIDL_refGather((uint32_t *)data,
+                              (int32_t *)indices,
+                              (uint32_t *)outPtr,
                               intAlgHandle,
                               layerIdx,
                               params,

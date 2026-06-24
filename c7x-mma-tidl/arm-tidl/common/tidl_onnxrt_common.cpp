@@ -144,6 +144,7 @@ int32_t TIDL_setRtTensorParameters(sTIDLRT_Tensor_t * allocatedPtrs, sTIDLRT_Ten
   int32_t numBatches = numVirtualCores * numSuperBatches;
   int32_t numIosPerCore;
 
+  uint8_t isDynamic = 0;
   uint8_t * ptr;
   int32_t numElementsPerBatch;
   char tensorName[TIDL_MAX_ALG_IN_BUFS][TIDL_STRING_SIZE];
@@ -171,9 +172,22 @@ int32_t TIDL_setRtTensorParameters(sTIDLRT_Tensor_t * allocatedPtrs, sTIDLRT_Ten
     numIosPerCore = ioBufDesc->numOutputBuf / numBatches;
   }
 
-  if(infer_ops->TIDLRT_isSharedMem(ptr) && isInfer)
+  if (isInfer)
   {
-    memType = TIDLRT_MEM_SHARED;
+    if(infer_ops->TIDLRT_isSharedMem(ptr))
+    {
+      memType = TIDLRT_MEM_SHARED;
+    }
+
+    // Set dynamic flag if dynamic
+    if(isInput == 1)
+    {
+      isDynamic = (uint8_t)ioBufDesc->inIsDynamic[currTensorNum];
+    }
+    else
+    {
+      isDynamic = (uint8_t)ioBufDesc->outIsDynamic[currTensorNum];
+    }
   }
 
   for(int l = 0; l < numSuperBatches; l++)
@@ -185,18 +199,27 @@ int32_t TIDL_setRtTensorParameters(sTIDLRT_Tensor_t * allocatedPtrs, sTIDLRT_Ten
       status = infer_ops->TIDLRT_setTensorDefault(rtPtrs[idx]);
       rtPtrs[idx]->layout = TIDLRT_LT_NCHW;
       rtPtrs[idx]->bufferSize = bufferSize; /* This is set only for input to handle TIDL-4466, output buffer size is kept -1 by default */
-      if(isInput == 1)
+      rtPtrs[idx]->isDynamic = isDynamic;
+
+      /*
+       * If input is dynamic, set the tensor values correctly so that it can
+       * be properly read during invoke call
+       */ 
+      if(isInput == 1 && rtPtrs[idx]->isDynamic)
       {
         for (int32_t l = 0; l < TIDL_DIM_MAX; l++)
         {
           rtPtrs[idx]->dimValues[l] = onnxRtParams->tensorShape[currTensorNum][l];
         }
-        rtPtrs[idx]->padValues[0] = ioBufDesc->inPadL[currTensorNum];
-        rtPtrs[idx]->padValues[1] = ioBufDesc->inPadR[currTensorNum];
-        rtPtrs[idx]->padValues[2] = ioBufDesc->inPadT[currTensorNum];
-        rtPtrs[idx]->padValues[3] = ioBufDesc->inPadB[currTensorNum];
+        /* padValues describe the SOURCE buffer layout. OSRT always provides a flat
+         * (unpadded) input tensor, so pads are 0 — ioBufDesc pads apply only to
+         * the C7x destination buffer, not to the flat OSRT source. */
+        rtPtrs[idx]->padValues[0] = 0;
+        rtPtrs[idx]->padValues[1] = 0;
+        rtPtrs[idx]->padValues[2] = 0;
+        rtPtrs[idx]->padValues[3] = 0;
 
-        // Channel pitch
+        // Channel Pitch
         rtPtrs[idx]->pitch[TIDL_CHANNEL_PITCH] = rtPtrs[idx]->dimValues[TIDL_DIM_WIDTH] * rtPtrs[idx]->dimValues[TIDL_DIM_HEIGHT];
       }
 
@@ -252,6 +275,20 @@ int32_t TIDL_subgraphRtInvoke(int32_t osrtDebugPrintLevel, OnnxTIDLSubGraphParam
   }
   status = infer_ops->TIDLRT_invoke(handle, in, out);
 
+  /* Propagate actual output shapes and pitches back to onnxRtParams */
+  for (j = 0; j < onnxRtParams->numNetOutData; j++)
+  {
+    int32_t idx = j; /* per-tensor index assuming single core / single batch */
+    for (int32_t d = 0; d < TIDL_DIM_MAX; d++)
+    {
+      onnxRtParams->outputTensorShape[j][d] = out[idx]->dimValues[d];
+    }
+    for (int32_t d = 0; d < TIDL_DIM_MAX - 1; d++)
+    {
+      onnxRtParams->outputTensorPitch[j][d] = out[idx]->pitch[d];
+    }
+  }
+
   if(osrtDebugPrintLevel)
   {
     TIDL_printSubgraphStats(stats);
@@ -278,13 +315,15 @@ int32_t getTidlRtOutShapeEnv()
 
 extern "C"
 {
-/** Find output shape for a particular ONNX RT output name using TIDL RT Io buf descriptor */ 
-int32_t TIDL_getOutputShape(void * ioBufDescVPtr, int8_t onnxName[], std::vector<int64_t> &shape)
+/** Find output shape for a particular ONNX RT output name using TIDL RT iobuf-descriptor (for non-dynamic output) or onnxrtParams (for dynamic output) */ 
+int32_t TIDL_getOutputShapeAndPitch(void * ioBufDescVPtr, onnxRtParams_t * onnxRtParams, int8_t onnxName[], std::vector<int64_t> &shape, std::vector<int64_t> &pitch)
 {
   int32_t status = 0;
   sTIDL_IOBufDesc_t *ioBufDescPtr = (sTIDL_IOBufDesc_t *)ioBufDescVPtr;
   std::vector<int64_t> nchw_shape;
   std::vector<int64_t> nchw_var_shape;
+  std::vector<int64_t> nchw_pitch;
+  std::vector<int64_t> nchw_var_pitch;
   int32_t varDim = getTidlRtOutShapeEnv();
   char onnxNameCrop[TIDL_STRING_SIZE];
   strcpy(onnxNameCrop, (char *)onnxName);
@@ -298,44 +337,99 @@ int32_t TIDL_getOutputShape(void * ioBufDescVPtr, int8_t onnxName[], std::vector
     if((strcmp((char *)ioBufDescPtr->outDataName[i], (char *)onnxName) == 0) ||
         (strcmp((char *)ioBufDescPtr->outDataName[i], (char *)onnxNameCrop) == 0))
     {
-      nchw_shape = { ioBufDescPtr->outNumBatches[i], ioBufDescPtr->outDIM1[i], ioBufDescPtr->outDIM2[i], ioBufDescPtr->outNumChannels[i], ioBufDescPtr->outHeight[i], ioBufDescPtr->outWidth[i]}; 
-      if(ioBufDescPtr->inferenceMode == TIDL_inferenceModeHighThroughput)
+      /* If post-invoke actual shapes are available and this output is dynamic, use them */
+      if (onnxRtParams != nullptr)
       {
-        /* Multi core throughput mode is treated as single batch from TIDL perspective, so outNumBatches = 1. numVirtualCores are used to indicate the number of such 
-        TIDL instances to be run on different cores. numSuperBatches indicates number of times parallel inference needs to be run to infer all batches. 
-        ONNX runtime requests dimensions from TIDL to allocate output buffers and get the corresponding ONNX runtime tensors,
-        so memory needs to be allocated for the actual number of batches in model which is numSuperBatches * numVirtualCores */
-        nchw_shape = { ioBufDescPtr->numSuperBatches * ioBufDescPtr->numVirtualCores, ioBufDescPtr->outDIM1[i], ioBufDescPtr->outDIM2[i], ioBufDescPtr->outNumChannels[i], ioBufDescPtr->outHeight[i], ioBufDescPtr->outWidth[i]};           
+        for (int j = 0; j < onnxRtParams->numNetOutData; j++)
+        {
+          if (onnxRtParams->outIsDynamic[j] && strcmp((char *)onnxRtParams->outDataNames[j], (char *)onnxName) == 0)
+          {
+            nchw_shape.resize(TIDL_DIM_MAX);
+            for (int32_t d = 0; d < TIDL_DIM_MAX; d++)
+            {
+              nchw_shape[d] = onnxRtParams->outputTensorShape[j][d];
+            }
+            nchw_pitch.resize(TIDL_DIM_MAX - 1);
+            for (int32_t d = 0; d < TIDL_DIM_MAX - 1; d++)
+            {
+              nchw_pitch[d] = onnxRtParams->outputTensorPitch[j][d];
+            }
+            break;
+          }
+        }
       }
+      /* Else get output shape from ioBufDesc */
+      if (nchw_shape.empty())
+      {
+        nchw_shape = {ioBufDescPtr->outNumBatches[i],
+                      ioBufDescPtr->outDIM1[i],
+                      ioBufDescPtr->outDIM2[i],
+                      ioBufDescPtr->outNumChannels[i],
+                      ioBufDescPtr->outHeight[i],
+                      ioBufDescPtr->outWidth[i]};
+      }
+
+      /*
+       * Multi core throughput mode is treated as single batch from TIDL perspective,
+       * so outNumBatches = 1. numVirtualCores are used to indicate the number of such
+       * TIDL instances to be run on different cores. numSuperBatches indicates number
+       * of times parallel inference needs to be run to infer all batches.
+       * ONNX runtime requests dimensions from TIDL to allocate output buffers and
+       * get the corresponding ONNX runtime tensors, so memory needs to be allocated
+       * for the actual number of batches in model which is
+       * numSuperBatches * numVirtualCores
+       */
+      if (ioBufDescPtr->inferenceMode == TIDL_inferenceModeHighThroughput)
+      {
+        nchw_shape[0] = ioBufDescPtr->numSuperBatches * ioBufDescPtr->numVirtualCores;
+      }
+
       /*Slice based on valid number of output vectors:*/
       int32_t vectorOffset = TIDL_DIM_MAX - ioBufDescPtr->numValidTensorDims[i];
       if(nchw_shape[0] > 1)
       {
-        /*TIDL batch dimension is not contigious */
+        /*TIDL batch dimension is not contiguous */
         vectorOffset++;
         nchw_var_shape = std::vector<int64_t>(nchw_shape.begin() + vectorOffset, nchw_shape.end());
         nchw_var_shape.insert(nchw_var_shape.begin(), nchw_shape[0]);
+        if (!nchw_pitch.empty())
+        {
+          int32_t pitchOffset = (vectorOffset < (int32_t)nchw_pitch.size()) ? vectorOffset : (int32_t)nchw_pitch.size();
+          nchw_var_pitch = std::vector<int64_t>(nchw_pitch.begin() + pitchOffset, nchw_pitch.end());
+          nchw_var_pitch.insert(nchw_var_pitch.begin(), nchw_pitch[0]);
+        }
       }
       else
       {
         nchw_var_shape = std::vector<int64_t>(nchw_shape.begin() + vectorOffset, nchw_shape.end());
+        if (!nchw_pitch.empty())
+        {
+          int32_t pitchOffset = (vectorOffset < (int32_t)nchw_pitch.size()) ? vectorOffset : (int32_t)nchw_pitch.size();
+          nchw_var_pitch = std::vector<int64_t>(nchw_pitch.begin() + pitchOffset, nchw_pitch.end());
+        }
       }
-      
     }
   }
 
   if(varDim != 0)
   {
     shape = nchw_var_shape;
+    if (!nchw_var_pitch.empty())
+    {
+      pitch = nchw_var_pitch;
+    }
   }
   else
   {
     shape = nchw_shape;
+    if (!nchw_pitch.empty())
+    {
+      pitch = nchw_pitch;
+    }
   }
-  
+
   if(shape.size() == 0)
   {
-    // Should we error here?
     printf("Warning : Couldn't find corresponding ioBuf tensor for onnx tensor with matching name \n");
   }
 

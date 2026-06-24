@@ -213,10 +213,12 @@ int getElementSize(int dtype)
     if(dtype == TIDL_UnsignedShort) return sizeof(uint16_t);
     if(dtype == TIDL_SignedShort) return sizeof(int16_t);
     if(dtype == TIDL_SinglePrecFloat) return sizeof(float);
+    if(dtype == TIDL_Bool) return sizeof(bool);
     if(dtype == TIDLRT_Uint32) return sizeof(uint32_t);
     if(dtype == TIDLRT_Int32) return sizeof(int32_t);
     if(dtype == TIDLRT_Uint64) return sizeof(uint64_t);
     if(dtype == TIDLRT_Int64) return sizeof(int64_t);
+    if(dtype == TIDLRT_Bool) return sizeof(bool);
 
     throw std::runtime_error("[ERROR] Invalid TIDL Data type");
 }
@@ -242,6 +244,7 @@ int getArrayType(const py::array& np_array)
     if (dtype.is(py::dtype::of<float>())) return TIDL_SinglePrecFloat;
     if (dtype.is(py::dtype::of<uint64_t>())) return TIDL_UnsignedDoubleWord;
     if (dtype.is(py::dtype::of<int64_t>())) return TIDL_SignedDoubleWord;
+    if (dtype.is(py::dtype::of<bool>())) return TIDL_Bool;
 
     return (-1);
 }
@@ -405,10 +408,11 @@ std::pair<int,std::string> setRtTensorParameters(void *dataPtr,
                 tensorArr[idx]->scale = ioBufDesc->inTensorScale[index];
                 tensorArr[idx]->zeroPoint = ioBufDesc->inZeroPoint[index];
                 tensorArr[idx]->layout = ioBufDesc->inLayout[index];
-                tensorArr[idx]->pitch[TIDL_ROI_PITCH] = ioBufDesc->inPadL[index] + ioBufDesc->inWidth[index] + ioBufDesc->inPadR[index];
+                tensorArr[idx]->pitch[TIDL_LINE_PITCH]    = ioBufDesc->inPadL[index] + ioBufDesc->inWidth[index] + ioBufDesc->inPadR[index];
                 tensorArr[idx]->pitch[TIDL_CHANNEL_PITCH] = ioBufDesc->inChannelPitch[index];
                 tensorArr[idx]->pitch[TIDL_DIM2_PITCH]    = tensorArr[idx]->pitch[TIDL_CHANNEL_PITCH] * ioBufDesc->inNumChannels[index];
                 tensorArr[idx]->pitch[TIDL_DIM1_PITCH]    = tensorArr[idx]->pitch[TIDL_DIM2_PITCH] * ioBufDesc->inDIM2[index];
+                tensorArr[idx]->pitch[TIDL_ROI_PITCH]     = tensorArr[idx]->pitch[TIDL_DIM1_PITCH] * ioBufDesc->inDIM1[index];
                 tensorArr[idx]->padValues[0] = ioBufDesc->inPadL[index];
                 tensorArr[idx]->padValues[1] = ioBufDesc->inPadR[index];
                 tensorArr[idx]->padValues[2] = ioBufDesc->inPadT[index];
@@ -430,10 +434,11 @@ std::pair<int,std::string> setRtTensorParameters(void *dataPtr,
                 tensorArr[idx]->scale = ioBufDesc->outTensorScale[index];
                 tensorArr[idx]->zeroPoint = ioBufDesc->outZeroPoint[index];
                 tensorArr[idx]->layout = ioBufDesc->outLayout[index];
-                tensorArr[idx]->pitch[TIDL_ROI_PITCH] = ioBufDesc->outPadL[index] + ioBufDesc->outWidth[index] + ioBufDesc->outPadR[index];
+                tensorArr[idx]->pitch[TIDL_LINE_PITCH]    = ioBufDesc->outPadL[index] + ioBufDesc->outWidth[index] + ioBufDesc->outPadR[index];
                 tensorArr[idx]->pitch[TIDL_CHANNEL_PITCH] = ioBufDesc->outChannelPitch[index];
-                tensorArr[idx]->pitch[TIDL_DIM2_PITCH]    = tensorArr[idx]->pitch[TIDL_CHANNEL_PITCH] * ioBufDesc->outNumChannels[index];;
+                tensorArr[idx]->pitch[TIDL_DIM2_PITCH]    = tensorArr[idx]->pitch[TIDL_CHANNEL_PITCH] * ioBufDesc->outNumChannels[index];
                 tensorArr[idx]->pitch[TIDL_DIM1_PITCH]    = tensorArr[idx]->pitch[TIDL_DIM2_PITCH] * ioBufDesc->outDIM2[index];
+                tensorArr[idx]->pitch[TIDL_ROI_PITCH]     = tensorArr[idx]->pitch[TIDL_DIM1_PITCH] * ioBufDesc->outDIM1[index];
                 tensorArr[idx]->padValues[0] = ioBufDesc->outPadL[index];
                 tensorArr[idx]->padValues[1] = ioBufDesc->outPadR[index];
                 tensorArr[idx]->padValues[2] = ioBufDesc->outPadT[index];
@@ -793,6 +798,10 @@ static py::dict runInferenceSession(TIDLRT_InferenceSession &sess, const py::dic
         {
             outputs[name.c_str()] = createPyArray<int64_t>((void *)outDataPtr[i], outShape);
         }
+        else if (elementType == TIDL_Bool)
+        {
+            outputs[name.c_str()] = createPyArray<bool>((void *)outDataPtr[i], outShape);
+        }
         else
         {
             throw std::runtime_error("Invalid Output dataype");
@@ -984,6 +993,7 @@ PYBIND11_MODULE(tidlruntime_core, m) {
     m.attr("TIDL_SinglePrecFloat")      = TIDL_SinglePrecFloat;
     m.attr("TIDL_UnsignedDoubleWord")   = TIDL_UnsignedDoubleWord;
     m.attr("TIDL_SignedDoubleWord")     = TIDL_SignedDoubleWord;
+    m.attr("TIDL_Bool")                 = TIDL_Bool;
 
     py::class_<CompileInputDetail>(m, "CompileInputDetail", "Class for details of single input")
         .def_readonly("detail",&CompileInputDetail::detail, "Dictionary having all input details")
@@ -1010,6 +1020,7 @@ PYBIND11_MODULE(tidlruntime_core, m) {
     m.attr("TIDL_SinglePrecFloat")      = TIDL_SinglePrecFloat;
     m.attr("TIDL_UnsignedDoubleWord")   = TIDL_UnsignedDoubleWord;
     m.attr("TIDL_SignedDoubleWord")     = TIDL_SignedDoubleWord;
+    m.attr("TIDL_Bool")                 = TIDL_Bool;
 
     py::class_<InferenceInputDetail>(m, "InferenceInputDetail", "Class for details of single input")
         .def_readonly("detail",&InferenceInputDetail::detail, "Dictionary having all input details")

@@ -105,5 +105,6 @@ int32_t TIDL_sliceProcessNew(TIDL_NetworkCommonParams *commonParams,
                               void                 * outPtrs[],
                               int32_t                layerIdx);
 
+
 #endif /* ITIDL_CROP_H*/
 

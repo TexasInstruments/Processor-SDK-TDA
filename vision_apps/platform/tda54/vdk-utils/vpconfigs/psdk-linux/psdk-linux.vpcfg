@@ -12,8 +12,6 @@
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.DM.DM_MSRAM.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(PSDK_OUT)/u-boot-m55-spl.bin,,,image,} {$(PSDK_OUT)/lpddr5-firmware.bin,0x2a000,,image,} "/>
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.DM.M55_SS.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(PSDK_OUT)/u-boot-m55-spl,,,symbols,} "/>
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.DM.M55_SS.CLUSTER_0.#EXTRA_PROPERTIES#/sws/variant" value="AFM_M55"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Designware_IP.VIRTIO_GPU.virtio_gpu.#SCML_PROPERTIES#capabilities" value="3d"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Designware_IP.VIRTIO_GPU.virtio_gpu.#SCML_PROPERTIES#screen0" value="1024x768"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.GTC.GTC_0.#SCML_PROPERTIES#GTC_DEFAULT_ENABLE" value="true"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.GTC.GTC_1.#SCML_PROPERTIES#GTC_DEFAULT_ENABLE" value="true"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.MCU_PADCFG_0.#EXTRA_PROPERTIES#DISABLE_ALL_ROUTER" value="false"/>
@@ -43,13 +41,11 @@
   <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.CLUSTER_0.#EXTRA_PROPERTIES#/sws/variant" value="OCX_A720AE"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DDR_0.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(PSDK_OUT)/tispl.bin,0x00080000,,image,} {$(PSDK_OUT)/u-boot.img,0x01000000,,image,} {$(PSDK_OUT)/Image,0x02000000,,image,} {$(PSDK_OUT)/k3-tda54-vdk.dtb,0x08000000,,image,} {$(PSDK_OUT)/k3-tda54-vdk-vision-apps.dtbo,0x09000000,,image,} "/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DSS.DISPC_0.#SCML_PROPERTIES#FRAME_PROCESSING_TIME_IN_US" value="500000"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Peripherals.IMG_GPU_DXS8_256.#EXTRA_PROPERTIES#runtime_disabled" value="true"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Peripherals.IMG_GPU_DXS8_256.#SCML_PROPERTIES#sim_arguments" value="--simlib $(vpconfigDir)/../shared/devices/gpu_72.2.408.4039.so --watchdog-disable --cconfig=TB_MULTICORE_0 --transif_build_opts CSIM"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Peripherals.IMG_GPU_DXS8.IMG_GPU_DXS8_256.#EXTRA_PROPERTIES#runtime_disabled" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Peripherals.IMG_GPU_DXS8.IMG_GPU_DXS8_256.#SCML_PROPERTIES#sim_arguments" value="--simlib $(vpconfigDir)/../shared/devices/gpu_72.2.408.4039.so --watchdog-disable --cconfig=TB_MULTICORE_0 --transif_build_opts CSIM"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.VIRTIO.#EXTRA_PROPERTIES#/config/image_out" value="$(PSDK_OUT)/rootfs-img.ext4"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.VIRTIO.#EXTRA_PROPERTIES#/config/image_path" value="$(PSDK_OUT)/rootfs-img.ext4"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.VIRTIO_ETHERNET.#EXTRA_PROPERTIES#/config/enabled" value="true"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.VIRTIO_ETHERNET.#EXTRA_PROPERTIES#/config/hostbridge_userNetPorts" value="8022=22"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.VIRTIO_ETHERNET.#EXTRA_PROPERTIES#/config/hostbridge_userNetworking" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.virtio_net_tlm_0.#SCML_PROPERTIES#SLIRP_PORT_FORWARDING" value="8022=22"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.VP9D.#EXTRA_PROPERTIES#/config/root_path" value="$(vpconfigDir)"/>
   <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD4_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/DWSLL/Param_CardCapacity_ReducedConfig" value="_16G"/>
   <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD4_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/DWSLL/Param_CardType" value="SDv3.00"/>

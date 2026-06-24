@@ -194,7 +194,7 @@ sTokenMapping gsTokenMap_tidl_import_config[MAX_ITEMS_TO_PARSE] =
           "This is contribution which is used to update the bias in each iteration based \n"
           "on the difference of actual mean with respect to the mean after quantization. \n"
           "\n"
-          "The default value is \"0.1\" (Fixed)\n"},
+          "The default value is \"0.05\" (Fixed)\n"},
           {(char *)"biasCalibrationIterations",      &gParams.biasCalibrationIterations     , INT_32, SINGLE, false, false, NULL,
           "Definition of biasCalibrationIterations: see --help-biasCalibrationIterations",
           "This parameter is only applicable when calibrationOption is \n"
@@ -501,6 +501,16 @@ sTokenMapping gsTokenMap_tidl_import_config[MAX_ITEMS_TO_PARSE] =
           "layer number, second one is unique data id and last one is the name as given in the original network's model format. This third"
           "column gives the name which will be present in the TIDL imported network after merging any layer. User should use this value for"
           "outputFeature16bitNamesList", NULL},
+        {(char *)"mp16bitResolvedFeatureNamesList",      &gParams.mp16bitResolvedFeatureNamesList       , STRING, SINGLE, false, false, NULL,
+          "List of names of the layers (separated by comma or space or tab) as in the original model whose feature/activation output"
+          "user wants to be in 16 bit. "
+          "Note that if for a given layer feature/activations is in 16 bit then parameters will automatically become 16 bit"
+          "As TIDL merges certain layers, this list should correspond to the last layer in the merged output. User can find this mapping"
+          "by running the import tool once without this parameter which generates <outputNetFile>.layer_info.txt where outputNetFile is "
+          "same as given by the user in the import config file. This *.layer_info.txt file contains three columns the first one is the "
+          "layer number, second one is unique data id and last one is the name as given in the original network's model format. This third"
+          "column gives the name which will be present in the TIDL imported network after merging any layer. User should use this value for"
+          "mp16bitResolvedFeatureNamesList", NULL},
         {(char *)"c7xFirmwareVersion",      &gParams.c7xFirmwareVersion       , STRING, SINGLE, false, false, NULL,
           "C7x firmware version to compile models for", NULL},
         {(char *)"params16bitNamesList",       &gParams.params16bitNamesList      , STRING, SINGLE, false, false, NULL,
@@ -514,6 +524,8 @@ sTokenMapping gsTokenMap_tidl_import_config[MAX_ITEMS_TO_PARSE] =
           "layer number, second one is unique data id and last one is the name as given in the original network's model format. This third"
           "column gives the name which will be present in the TIDL imported network after merging any layer. User should use this value for"
           "params16bitNamesList", NULL},
+          {(char *)"nativeLayerNamesList",  &gParams.nativeLayerNamesList , STRING, SINGLE, false, false, NULL,
+          "Comma-separated list of output layer names to run with native precision.  Use this to optimize performance for specific layers.", NULL},
           {(char* )"mixedPrecisionFactor",             &gParams.mixedPrecisionFactor, FLOAT, SINGLE, false, false, NULL,
           "This parameter is used when customer wants to enable the automated mixed precision feature. It is defined as mixedPrecisionFactor = "
           "(Acceptable latency with mixed precision / Latency with 8 bit inference), e.g. if acceptable latency is 1.2 times the 8 bit "
@@ -542,6 +554,8 @@ sTokenMapping gsTokenMap_tidl_import_config[MAX_ITEMS_TO_PARSE] =
           " "},
           {(char *)"batchMode", &gParams.batchMode, INT_32, SINGLE, false, false, NULL,
           "batchMode=0 (Default) Disable batch stitching, batchMode=1 Enable stitching", NULL},
+          {(char *)"graphOptimizationLevel", &gParams.graphOptimizationLevel, INT_32, SINGLE, false, false, NULL,
+          "graphOptimizationLevel=0 (TIDL_OPTIMIZE_LEVEL_BASIC, default) Enable only Basic optimizations, graphOptimizationLevel=1 (TIDL_OPTIMIZE_LEVEL_EXTENDED) Enable extended and basic optimizations to execute", NULL},
           {(char *)"enableShapeFolding", &gParams.enableShapeFolding, INT_32, SINGLE, false, false, NULL,
           "enableShapeFolding=0 (Default) Disable shape folding, enableShapeFolding=1 Enable shape folding", NULL},
           {(char *)"optimizeBatchNormHigherDims", &gParams.optimizeBatchNormHigherDims, INT_32, SINGLE, false, false, NULL,
@@ -556,8 +570,13 @@ sTokenMapping gsTokenMap_tidl_import_config[MAX_ITEMS_TO_PARSE] =
           "This parameter is used when user wants to enable the Packetization of the weights buffer for the convolution layers", NULL},
           {(char *)"ncTempInfoDir",             &gParams.ncTempInfoDir, STRING, SINGLE, false, false, NULL,
           "Path to dump NC info files", NULL},
-        {(char *)"enableTFROptimization", &gParams.enableTFROptimization, INT_32, SINGLE, false, false, NULL,
-          "Flag to enable Experimental TFR Optimizations: 0 = disable (default) / 1 = Using Float Range for Calibartion / 2 = Using Global Histogram for calibration", NULL},
+          {(char *)"enableTFROptimization", &gParams.enableTFROptimization, INT_32, SINGLE, false, false, NULL,
+            "Flag to enable Experimental TFR Optimizations: 0 = disable (default) / 1 = Using Float Range for Calibartion / 2 = Using Global Histogram for calibration", NULL},
+          {(char *)"enableConcatNoOp", &gParams.enableConcatNoOp, INT_32, SINGLE, false, false, NULL,
+            "Flag to enable concat no op optimizations: 0 = disable / 1 = Enable (default)", NULL},
+          {(char *)"enableZeroPointForOutputDataConvert",      &gParams.enableZeroPointForOutputDataConvert     , INT_32, SINGLE, false, false, NULL,
+            "Enable zero-point for Output DataConvert: 0 -> False, 1 -> True",
+            " "},
 } ;
 
 /*

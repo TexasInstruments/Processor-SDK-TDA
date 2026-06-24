@@ -107,7 +107,7 @@ void dlPreProcess_RGB_image
 {
     uint32_t skip_mean_scale = 0;
     uint32_t pos_x = 0, pos_y = 0;
-    uint32_t ch_offset = prms->output_dimensions[0] * prms->output_dimensions[1];
+    uint32_t ch_offset = prms->channel_pitch;
 
     if(prms->mean[0]==0 && prms->mean[1]==0 && prms->mean[2]==0 &&
        prms->scale[0]==1 && prms->scale[1]==1 && prms->scale[2]==1)

@@ -120,7 +120,7 @@ ________________________________________________________________________________
 
 #define MAX_WORKLOAD_PER_CORE     (10000)    /**< Maximum number of Workload per Core*/
 #define MAX_SRC                   (TIDL_NUM_IN_BUFS)       /**< Maximum number of input source*/
-#define MAX_SINK                  (4)                      /**< Maximum number of output sink*/
+#define MAX_SINK                  (8)                      /**< Maximum number of output sink*/
 #define MAX_INPUT_LINKS           (15U)                      /**< Maximum number of supported input links to a Workload*/
 #define MAX_SCRATCH_MEM_REGIONS_PER_WL   (1)
 
@@ -618,6 +618,7 @@ typedef struct
   int32_t  period;
   int32_t  dbIndex;
   int32_t  numSrc;
+  int8_t   configureTrigger;
   sJoint_t sink;
   sJoint_t src[MAX_SRC];
 } sLink_t;
@@ -645,6 +646,7 @@ typedef struct
 * @param numLinks  : Number of active links in the workload                 *
 * @param numIter   : Number of iterations for workload unit to finish       *
 * @param link      : workload is represented by a list of  links            *
+* @param isWLNOP   : if current workload is NOP or not                      *
 
  @Todo : May be we keep this as dynamic size instead of fix size            *
 ****************************************************************************/
@@ -659,6 +661,7 @@ typedef struct
   int32_t layerId;
   int32_t subLayerId;
   int32_t numIter  ;
+  int32_t isWLNOP;
   void*   privInfo ;
   sProcParams_t procParam;
 #ifdef SOC_TDA54

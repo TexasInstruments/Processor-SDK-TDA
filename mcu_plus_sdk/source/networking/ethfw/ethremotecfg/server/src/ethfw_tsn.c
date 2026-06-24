@@ -600,21 +600,23 @@ static int32_t EthFwTsn_logBuffer(bool flush, const char *str)
     int32_t loglen = strlen(str);
     int32_t status = ENET_SOK;
 
-    EthFwOsal_lockMutex(gEthFwTsnObj.hLogMutex);
-
-    usedLen = strlen((char *)gEthFwTsnObj.logBuf);
-    bufSizeLeft = sizeof(gEthFwTsnObj.logBuf)-usedLen;
-    if (bufSizeLeft > loglen)
+    if(loglen > 0)
     {
-        snprintf((char *)&gEthFwTsnObj.logBuf[usedLen], bufSizeLeft, "%s", str);
-    }
-    else
-    {
-        snprintf((char *)&gEthFwTsnObj.logBuf[0], sizeof(gEthFwTsnObj.logBuf), "log overflow!\n");
-    }
+        EthFwOsal_lockMutex(gEthFwTsnObj.hLogMutex);
 
-    EthFwOsal_unlockMutex(gEthFwTsnObj.hLogMutex);
+        usedLen = strlen((char *)gEthFwTsnObj.logBuf);
+        bufSizeLeft = sizeof(gEthFwTsnObj.logBuf)-usedLen;
+        if (bufSizeLeft > loglen)
+        {
+            snprintf((char *)&gEthFwTsnObj.logBuf[usedLen], bufSizeLeft, "%s" ETHFW_LOG_BUFFER_ENDLINE, str);
+        }
+        else
+        {
+            snprintf((char *)&gEthFwTsnObj.logBuf[0], sizeof(gEthFwTsnObj.logBuf), "log overflow!\n");
+        }
 
+        EthFwOsal_unlockMutex(gEthFwTsnObj.hLogMutex);
+    }
     return status;
 }
 

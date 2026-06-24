@@ -83,18 +83,21 @@
 
 #include "tidl_alg_int.h"
 #include "tidl_bufParams.h"
-#include "tidl_alg_int.h"
 #include "tidl_device_utils_nc.h"
 #include "tidl_commonUtils_stats.h"
 #include "tidl_traceUtils.h"
 #include <typeinfo>
 #include <limits>
+#ifdef BUILD_WITH_CUDA
+#include <chrono>
+#endif
+#include "tidl_device_mem_properties.h"
 
 #define TIDL_INTERNAL_POOLING_WEIGHT_Q_U8 ((uint32_t)8)
 #define TIDL_INTERNAL_POOLING_WEIGHT_Q_U16 ((uint32_t)12)
 #define TIDL_INTERNAL_INDATA_Q ((uint32_t)7)
 
-#if !defined(HOST_EMULATION) || defined(SOC_TDA54)
+#if defined(PERF_MODELLING) || !defined(HOST_EMULATION) || defined(SOC_TDA54) || defined(BUILD_WITH_CUDA)
 #define ENABLE_PROFILE  (1)
 #else
 #define ENABLE_PROFILE  (0)
@@ -326,7 +329,14 @@ void my_free(void *ptr);
 static inline void TIDL_getTscTime(uint64_t *time1)
 {
 #if ENABLE_PROFILE
+#ifdef BUILD_WITH_CUDA
+  /* Use x86 high-resolution clock for CUDA builds */
+  auto now = std::chrono::high_resolution_clock::now();
+  *time1 = (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+#else
+  /* Use C7x Time Stamp Counter for target builds */
   *time1 = __TSC;
+#endif
 #endif
 }
 
@@ -493,9 +503,10 @@ void TIDL_printOutDataProperties(sTIDL_DataParams_t *outData, int32_t layerIdx);
 #define TIDL_FLOW_CTRL_MMA_NATC (0x00000004U)
 #define TIDL_FLOW_CTRL_DSP_NATC (0x00000008U)
 #define TIDL_FLOW_CTRL_REF_COMP (0x00000010U)
-/* AVX Optimised kernels for refernce flow */
+/* AVX Optimised kernels for reference flow */
 #define TIDL_FLOW_CTRL_AVX_REF (0x00000020U)
 #define TIDL_FLOW_CTRL_AVX_FLOAT (0x00000040U)
+#define TIDL_FLOW_CTRL_PERF_MODEL (0x00000080U)
 
 int32_t TIDL_getProcessingElementSizeInBytes(const sTIDL_Layer_t *tidlLayer);
 #if defined TIDL_COVERAGE_DEAD_CODE

@@ -84,7 +84,8 @@
 #include "tidl_alg_utils_ref.h"
 #if defined TIDL_DYNAMIC_SHAPE
 #include "tidl_shapeInference.h"
-#endif
+#endif // TIDL_DYNAMIC_SHAPE
+
 
 #include "gc.h"
 #include "gc_helper.h"
@@ -345,7 +346,11 @@ int32_t TIDL_FillPaddedRows(uint8_t *inPtr,
 
         if ((retVal == IALG_EOK) && (k < (numBatches - 1)))
         {
+      #ifndef PERF_MODELLING /* for target run lets call wait from here */
           DmaUtilsAutoInc3d_wait(dmautilsContext, TIDL_DMA_CHANNEL_MEMCPY);
+      #else
+          DmaUtilsAutoInc3d_wait_wrapper(dmautilsContext, TIDL_DMA_CHANNEL_MEMCPY);
+      #endif
           retVal = DmaUtilsAutoInc3d_deconfigure(dmautilsContext, TIDL_DMA_CHANNEL_MEMCPY, trMem, 1);
         }
       }
@@ -517,12 +522,6 @@ void TIDL_resetSysmem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX])
     sysMems[i].offset = 0;
   }
 
-  return;
-}
-
-void TIDL_reset_OneMem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX], int32_t i)
-{
-  sysMems[i].offset = 0;
   return;
 }
 
@@ -845,7 +844,8 @@ int32_t TIDL_getOutProcHeight(int32_t inHeight, sTIDL_Layer_t *currentLayer, sTI
      (currentLayer->layerType == TIDL_ReduceLayer) ||
      (currentLayer->layerType == TIDL_ScatterElementsLayer) ||
      (currentLayer->layerType == TIDL_GatherLayer) ||
-     (currentLayer->layerType == TIDL_LayerNormLayer))
+     (currentLayer->layerType == TIDL_LayerNormLayer) ||
+     (currentLayer->layerType == TIDL_GatherElementsLayer))
   {
     retVal = inHeight;
   }
@@ -969,9 +969,20 @@ int32_t TIDL_refGetScratchDataSize(const TIDL_NetworkCommonParams *commonParams,
   scratchDataSize = (int32_t)tempValue; //: TODO: This will not be needed if we use perfsim output during alloc also
   /*Need to implement callbacks for scratchsizes!*/
 
-  if (TIDL_getDatElementSize(commonParams->net->TIDLLayers[layerIdx].outData.elementType) <= 2)
+  if((commonParams->net->TIDLLayers[layerIdx].layerType == TIDL_EltWiseLayer &&
+      commonParams->net->TIDLLayers[layerIdx].layerParams.eltWiseParams.eltWiseType == TIDL_EltWiseMod) &&
+     (dataParams->elementType == TIDL_SignedWord || dataParams->elementType == TIDL_UnsignedWord))
+  {
+    /* For eltwise layer int32/uint32, we need to allocate scratch buffer for 64bit accumulator */
+    scratchDataSize *= (((int32_t)(sizeof(int64_t))) / TIDL_getDatElementSize(dataParams->elementType));
+  }
+  else if (TIDL_getDatElementSize(commonParams->net->TIDLLayers[layerIdx].outData.elementType) <= 2)
   {
     scratchDataSize *= ((commonParams->net->TIDLLayers[layerIdx].weightsElementSizeInBits + 7) / 8) * ((int32_t)(sizeof(int32_t)));
+  }
+  else
+  {
+    /*empty else for MisraC*/
   }
   if (commonParams->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_DEVICE_UTILS_FORCE_SCRATCHDATASIZE_NEG)
   {
@@ -1773,6 +1784,11 @@ int32_t TIDL_resolveLayerOutputShape(IVISION_InBufs *inBufs,
   sTIDL_DataParams_t *inDataParams[TIDL_MAX_ALG_IN_BUFS];
   int32_t numFound = 0;
   
+  if (intAlgHandle->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_NUMINBUFS_ZERO)
+  {
+    TIDLLayer->numInBufs = 0;
+  }
+
   if (TIDLLayer->numInBufs > 0)
   {
     numFound = TIDL_getMultipleDataParams(intAlgHandle->createParams->net,
@@ -1780,6 +1796,11 @@ int32_t TIDL_resolveLayerOutputShape(IVISION_InBufs *inBufs,
                                           TIDLLayer->numInBufs,
                                           inDataParams);
     
+    if (intAlgHandle->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_NUMFOUND_MISMATCH)
+    {
+      numFound = TIDLLayer->numInBufs - 1; /* Force mismatch */
+    }
+
     if (numFound != TIDLLayer->numInBufs)
     {
       tidl_printf(0, "TIDL_resolveLayerOutputShape: Failed to resolve all input dataIds. Found %d out of %d\n",
@@ -1790,17 +1811,45 @@ int32_t TIDL_resolveLayerOutputShape(IVISION_InBufs *inBufs,
     /* Perform shape inference if all inputs resolved successfully */
     if (status == IALG_EOK)
     {
-      /* Use new parameter-based API with NULL context for runtime */
-      shapeStatus = TIDL_inferShapeGeneric(TIDLLayer->layerType,
+      int32_t            layerType = TIDLLayer->layerType;
+      sTIDL_DataParams_t *outData  = &TIDLLayer->outData;
+
+      if (intAlgHandle->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_SHAPE_INFER_OUTDATAPARAM_NULL)
+      {
+        outData = NULL;
+      }
+
+      if (intAlgHandle->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_SHAPE_INFER_LAYERTYPE_INVALID)
+      {
+        layerType = -1; /* NULL shape infer function */
+      }
+
+      if ((intAlgHandle->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_SHAPE_INFER_GATHERND_INDATAPARAMS1_NULL) &&
+          (layerType == TIDL_GatherNDLayer))
+      {
+        inDataParams[1] = NULL; /* Force NULL indices param for GatherND shape inference negative test */
+      }
+
+      shapeStatus = TIDL_inferShapeGeneric(layerType,
                                           &TIDLLayer->layerParams,
                                           inDataParams,
                                           TIDLLayer->numInBufs,
-                                          &TIDLLayer->outData,
+                                          outData,
                                           NULL);  /* NULL context for runtime */
-      
+
       if (shapeStatus == TIDL_SHAPE_INFERENCE_OK)
       {
-        TIDL_recalcDataParamsPitch(&TIDLLayer->outData);
+        if (intAlgHandle->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_RECALCPITCH_DATAPARAM_NULL)
+        {
+          outData = NULL;
+        }
+  
+        if (intAlgHandle->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_RECALCPITCH_PADW_NONZERO)
+        {
+          outData->padW = 1;
+        }
+
+        TIDL_recalcDataParamsPitch(outData);
       }
       else if (shapeStatus == TIDL_SHAPE_INFERENCE_ERR_UNSUPPORTED_LAYER)
       {
@@ -1814,6 +1863,11 @@ int32_t TIDL_resolveLayerOutputShape(IVISION_InBufs *inBufs,
         status = IALG_EFAIL;
       }
     }
+  }
+  else
+  {
+    tidl_printf(0, "TIDL_resolveLayerOutputShape: numInBufs is zero\n");
+    status = IALG_EFAIL;
   }
 
   return status;
@@ -1874,12 +1928,18 @@ int32_t TIDL_getLayerInPtrs(
       {
         if (intAlgHandle->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_PITCHWIDTH_INVALID)
         {
-          inDataParams->pitch[TIDL_LINE_PITCH] = inDataParams->pitch[TIDL_LINE_PITCH] - 2;
+          inDataParams->pitch[TIDL_LINE_PITCH] = inDataParams->pitch[TIDL_LINE_PITCH] + 2;
         }
         inPtrs[j] =
             TIDL_getDataBuff(inBufs->bufDesc, inBufs->numBufs, curInDataId, inDataParams->dimValues[TIDL_DIM_BATCH], inDataParams->pitch);
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start> SAFETY_CHECK: The condition in this if statement is necessary to ensure that the code does not attempt to write trace data when the input pointer is NULL, 
+        which could lead to undefined behavior. This check is crucial for robustness and safety, especially in scenarios where the input data may not be available or valid.
+        <justification end> */
         if (inPtrs[j] != NULL)
         {
+          /* LDRA_JUSTIFY_END */
           TIDLLayer->inData[j] = intAlgHandle->createParams->net->TIDLLayers[algLayer->inLayerIdx[j]].outData.dataId;
           twStatus = tidl_writeTraceDataBuf((int8_t *)inPtrs[j],
                                             intAlgHandle->createParams->net,
@@ -2004,8 +2064,14 @@ int32_t TIDL_getLayerInPtrs(
                                             relativeCoreId,
                                             intAlgHandle->createParams->traceBaseName,
                                             1);
+          /* LDRA_JUSTIFY_START
+          <metric start> branch <metric end>
+          <justification start> SAFETY_CHECK: This condition is necessary to handle the scenario where the trace write operation fails, 
+          ensuring that the error is properly reported and handled.
+          <justification end> */
           if (twStatus != IALG_EOK)
           {
+            /* LDRA_JUSTIFY_END */
             tidl_printf(0, "Trace write failed\n");
           }
         }
@@ -2054,7 +2120,7 @@ int32_t TIDL_getLayerInPtrs(
       }
     }
   }
-#endif
+#endif // TIDL_DYNAMIC_SHAPE
 
   return twStatus;
 }
@@ -2171,12 +2237,10 @@ int32_t TIDL_getLayerOutPtrs(
           {
             TIDL_zeroOutputTensors((int64_t *)outPtrs[j], (int64_t)TIDLLayer->outData.tensorZeroPoint, TIDLLayer->outData.dimValues[TIDL_DIM_BATCH] * TIDLLayer->outData.pitch[TIDL_ROI_PITCH]);
           }
-#ifdef TIDL_COVERAGE_DEAD_CODE
           else if (TIDLLayer->outData.elementType == TIDL_UnsignedDoubleWord)
           {
             TIDL_zeroOutputTensors((uint64_t *)outPtrs[j], (uint64_t)TIDLLayer->outData.tensorZeroPoint, TIDLLayer->outData.dimValues[TIDL_DIM_BATCH] * TIDLLayer->outData.pitch[TIDL_ROI_PITCH]);
           }
-#endif
           else
           {
             /*Unsupported*/
@@ -2387,43 +2451,6 @@ void TIDL_getPadParams(WorkloadUnitExec_padParams *padParams,
   }
 }
 
-/* [TIDL-1840] Temp fix for adding space between ping and pong buffers for SFM until fix from GC is ready*/
-static void TIDL_correctColFlowCnt(int32_t layerIdx,
-                                   const sTIDL_Network_t *net,
-                                   sLink_t *link)
-{
-  if (net->TIDLLayers[layerIdx].layerType == TIDL_ConvolutionLayer)
-  {
-    /* Is column flow? */
-    if ((net->TIDLLayers[layerIdx].layerParams.convParams.numGroups == net->TIDLLayers[layerIdx].layerParams.convParams.numInChannels) &&
-        (net->TIDLLayers[layerIdx].layerParams.convParams.numInChannels == net->TIDLLayers[layerIdx].layerParams.convParams.numOutChannels))
-    {
-#if TIDL_2386_NOT_FIXED
-      if (link->subType == (int32_t)LINK_X_COEFF_IN_ANY_TO_FINAL)
-      {
-        int32_t flow = FLOW_PIPELINE;
-#ifdef TIDL_COVERAGE_DEAD_CODE_NO_TEST
-        if (link->src[0].flowCnt[flow][0] == 0)
-        {
-          flow = FLOW_PIPEUP;
-        }
-#endif
-        /*Only flatten if < 64K of volume*/
-        int32_t flattenedVolume = link->src[0].flowCnt[flow][0] * link->src[0].flowCnt[flow][1];
-        if ((uint32_t)flattenedVolume < ((uint32_t)0xFFFF))
-        {
-          link->src[0].flowCnt[flow][0] = link->src[0].flowCnt[flow][0] * link->src[0].flowCnt[flow][1];
-          link->src[0].flowCnt[flow][1] = 1;
-          link->sink.flowCnt[flow][0] = link->sink.flowCnt[flow][0] * link->sink.flowCnt[flow][1];
-          link->sink.flowCnt[flow][1] = 1;
-        }
-      }
-#endif
-    }
-  }
-  return;
-}
-
 int32_t TIDL_getDataFlowType(const sWorkloadUnit_t *workloadUnit,
                              const sGCHelperHandle *gcHelperHandle)
 {
@@ -2433,162 +2460,6 @@ int32_t TIDL_getDataFlowType(const sWorkloadUnit_t *workloadUnit,
   dataFlowType = WLMetaDataID.dataFlowType;
 
   return dataFlowType;
-}
-
-static void TIDL_applyConstraintsOnWorkloadUnit(sWorkloadUnit_t *workloadUnit,
-                                                sGCHelperHandle *gcHelperHandle,
-                                                const sTIDL_Network_t *net,
-                                                int32_t currLayersGroupId)
-{
-  sLink_t *link;
-  sJoint_t *joint;
-  const sTIDL_Layer_t *tidlLayer;
-  int32_t linkIdx, srcIdx;
-  sLink_t *linkPtrList[MAX_LINKS_PER_WL];
-
-  tidlLayer = &net->TIDLLayers[workloadUnit->layerId];
-
-  for (linkIdx = 0; linkIdx < workloadUnit->numLinks; linkIdx++)
-  {
-    getLinkPtrs(workloadUnit, NOT_VALID, linkIdx, linkPtrList);
-    link = linkPtrList[0];
-
-    TIDL_correctColFlowCnt(workloadUnit->layerId,
-                           net,
-                           link);
-
-    for (srcIdx = 0; srcIdx < (link->numSrc + 1); srcIdx++)
-    {
-      sBufParams_t *bufParam;
-      int32_t dataId;
-
-      if (srcIdx < link->numSrc)
-      {
-        joint = &link->src[srcIdx];
-      }
-      else
-      {
-        joint = &link->sink;
-      }
-
-      bufParam = getBufParamsFromBufIndex(gcHelperHandle, joint->bufDBindex);
-      sMetaDataID_t pMetaDataID = {0, 0, 0, 0, 0, 0};
-      getMetaDataID(bufParam->dataId, &pMetaDataID);
-      dataId = pMetaDataID.layerId;
-
-      /* Below condition identifies if a given buffer is input or output of the network */
-      if (((TIDL_isInDataBuff(net, dataId, currLayersGroupId) == 1) ||
-           (TIDL_isOutDataBuff(net, dataId, currLayersGroupId) == 1)) &&
-          (pMetaDataID.type == (int32_t)BUF_FM_FULL))
-      {
-        int32_t bufIdx;
-
-        for (bufIdx = 0; bufIdx < (tidlLayer->numInBufs + 1); bufIdx++)
-        {
-          int32_t tidlLayerDataId;
-          if (bufIdx < tidlLayer->numInBufs)
-          {
-            tidlLayerDataId = tidlLayer->inData[bufIdx];
-          }
-          else
-          {
-            tidlLayerDataId = tidlLayer->outData.dataId;
-          }
-
-          if (tidlLayerDataId == dataId)
-          {
-#if TIDL_1913_NOT_FIXED
-            /* If a given buffer is input or output of the network then set baseMem as NOT_VALID */
-            bufParam->baseMem = NOT_VALID;
-#endif
-            break;
-          }
-        }
-      }
-
-#if TIDL_3350_NOT_FIXED
-      int32_t isColflowLayer = TIDL_isColumnFlowlayer(tidlLayer,
-                                                      (const sWorkloadUnit_t *)workloadUnit,
-                                                      (const sGCHelperHandle *)gcHelperHandle);
-
-      if ((isColflowLayer == 1) && ((tidlLayer->layerType == TIDL_PoolingLayer) || (tidlLayer->layerType == TIDL_ConvolutionLayer)))
-      {
-        int32_t numSplit = getNumSplits((const void *)workloadUnit);
-
-        if (numSplit == 2) /* LFM Case */
-        {
-          if ((srcIdx < link->numSrc) && (pMetaDataID.type == (int32_t)BUF_FM_OUT_PART))
-          {
-            /* Presently not handled at gc and therefore source tr should be programmed in sync with the sink tr */
-            joint->flowCnt[FLOW_PIPELINE][TWO_D] = link->sink.flowCnt[FLOW_PIPELINE][TWO_D];
-          }
-          else if ((srcIdx == link->numSrc) && (pMetaDataID.type == (int32_t)BUF_FM_IN_PART))
-          {
-            joint->flowCnt[FLOW_PIPELINE][TWO_D] = link->src[0].flowCnt[FLOW_PIPELINE][TWO_D];
-          }
-          else
-          {
-            /*do nothing*/
-          }
-        }
-      }
-#endif
-    }
-  }
-}
-
-static int32_t TIDL_applyConstraintsOnGCBufferType(sGCHelperHandle *gcHelperHandle,
-                                                   const sTIDL_Network_t *net,
-                                                   sWorkloadSuperGroup_t *wlSuperGroup,
-                                                   int32_t currLayersGroupId)
-{
-  int32_t status = TIDL_SUCCESS;
-  int32_t workloadUnitIdx;
-  int32_t groupIdx, subGroupIdx;
-
-  //: TODO: Remove this once information comes from NC
-  wlSuperGroup->numGroups = 1;
-
-  for (groupIdx = 0; groupIdx < wlSuperGroup->numGroups; groupIdx++)
-  {
-    sWorkloadGroup_t *wlGroup = &wlSuperGroup->workloadGrpList[groupIdx];
-    for (subGroupIdx = 0; subGroupIdx < wlGroup->numSubGroups; subGroupIdx++)
-    {
-      sWorkloadSubGroup_t *wlSubGroup = &wlGroup->subGroup[subGroupIdx];
-      for (workloadUnitIdx = wlSubGroup->startIndexWLUnitDB; workloadUnitIdx <= wlSubGroup->endIndexWLUnitDB; workloadUnitIdx++)
-      {
-        sWorkloadUnit_t *workloadUnit = getWLUnitPtr(gcHelperHandle, workloadUnitIdx);
-
-        if ((workloadUnit != NULL) && (gcHelperHandle != NULL))
-        {
-          TIDL_applyConstraintsOnWorkloadUnit(workloadUnit, gcHelperHandle, net, currLayersGroupId);
-        }
-        else
-        {
-          tidl_printf(0, "TIDL_applyConstraintsOnGCBufferType: workloadUnit is NULL for workloadUnitIdx %d\n", workloadUnitIdx);
-          status = TIDL_ERR_NULL_POINTER;
-          break;
-        }
-      }
-    }
-  }
-  return status;
-}
-
-int32_t TIDL_applyConstraintsOnGC(const TIDL_CreateParams *createParams,
-                                  sWorkloadSuperGroup_t *wlSuperGroup,
-                                  sGCHelperHandle *gcHelperHandle)
-{
-  int32_t status = IALG_EOK;
-  if (wlSuperGroup != NULL)
-  {
-    status = TIDL_applyConstraintsOnGCBufferType(gcHelperHandle, createParams->net, wlSuperGroup, createParams->currLayersGroupId);
-  }
-  else
-  {
-    status = TIDL_ERR_NULL_POINTER;
-  }
-  return status;
 }
 
 int32_t TIDL_switchHandles(void *algHandle)
@@ -2620,7 +2491,7 @@ int32_t TIDL_switchHandles(void *algHandle)
   }
   return retVal;
 }
-
+ 
 int32_t TIDL_referencFlow(const TIDL_CreateParams *pCreateParams)
 {
   int32_t refFlow = 0;
@@ -2729,8 +2600,14 @@ int32_t TIDL_MoveNetToPrivateMemory(TIDL_Handle algHandle,
       }
     }
     algHandle->createParams->net = (sTIDL_Network_t *)memRec[ALG_PERSIST_DDR_NET_MEMREC].base;
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start> SAFETY_CHECK: This condition is necessary to ensure that the data flow information is valid before attempting to access it,
+    preventing potential null pointer dereferences or invalid memory accesses.
+    <justification end> */
     if (algHandle->createParams->net->dataFlowInfo != 0)
     {
+      /* LDRA_JUSTIFY_END */
       sGraphCompilerOutArgs_t *gcOutArgs = NULL;
       sGCDataBase_t *gcDatabase = NULL;
       sGCCommonDataBase_t *gcCommonDataBase = NULL;

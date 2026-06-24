@@ -76,10 +76,22 @@
 #include <limits>
 #include <math.h>
 #include <float.h>
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
+#include "tidl_activation_optimizations.h"
 
 #define TIDL_HISTOGRAM_ACTIVATION_RANGEFACTOR (4.0)
 
 #ifdef HOST_EMULATION
+
+int32_t TIDL_getTensorSize(const int32_t* dimValues, const int32_t* pitch)
+{
+  int32_t tensorSize = 1 + (dimValues[TIDL_DIM_BATCH]-1)*pitch[TIDL_ROI_PITCH] + (dimValues[TIDL_DIM_DIM1]-1)*pitch[TIDL_DIM_DIM1] + (dimValues[TIDL_DIM_DIM2]-1)*pitch[TIDL_DIM_DIM2] \
+                        + (dimValues[TIDL_DIM_NUMCH]-1)*pitch[TIDL_DIM_NUMCH] + (dimValues[TIDL_DIM_HEIGHT]-1)*pitch[TIDL_DIM_HEIGHT] + (dimValues[TIDL_DIM_WIDTH]-1);
+
+  return tensorSize;
+}
 
 /**
  * @brief To find min and max in the tensor
@@ -129,21 +141,32 @@ void TIDL_TensorMinMaxStats(const Tsrc * ptr, const sTIDL_DataParams_t * dataPrm
 
   else
   {
-    for (i0 = 0; i0 < dataPrms->dimValues[TIDL_DIM_BATCH]; i0++)
+    #ifdef BUILD_WITH_CUDA_STATS
+    if(TIDL_isLayerSupportedOnGPU())
     {
-      for (i1 = 0; i1 < dataPrms->dimValues[TIDL_DIM_DIM1]; i1++)
+      // call cuda min max wrapper
+      int32_t dataSize = TIDL_getTensorSize(dataPrms->dimValues, dataPrms->pitch);
+      TIDL_cudaMinMax<Tsrc, TminMax>(ptr + padOffset, min, max, dataSize);
+    }
+    else
+    #endif
+    {
+      for (i0 = 0; i0 < dataPrms->dimValues[TIDL_DIM_BATCH]; i0++)
       {
-        for (i2 = 0; i2 < dataPrms->dimValues[TIDL_DIM_DIM2]; i2++)
+        for (i1 = 0; i1 < dataPrms->dimValues[TIDL_DIM_DIM1]; i1++)
         {
-          for (i3 = 0; i3 < dataPrms->dimValues[TIDL_DIM_NUMCH]; i3++)
+          for (i2 = 0; i2 < dataPrms->dimValues[TIDL_DIM_DIM2]; i2++)
           {
-            for (i4 = 0; i4 < dataPrms->dimValues[TIDL_DIM_HEIGHT]; i4++)
+            for (i3 = 0; i3 < dataPrms->dimValues[TIDL_DIM_NUMCH]; i3++)
             {
-              for (i5 = 0; i5 < dataPrms->dimValues[TIDL_DIM_WIDTH]; i5++)
+              for (i4 = 0; i4 < dataPrms->dimValues[TIDL_DIM_HEIGHT]; i4++)
               {
-                val = (TminMax)ptr[padOffset + (i0*dataPrms->pitch[TIDL_ROI_PITCH]) + (i1*dataPrms->pitch[TIDL_DIM_DIM1]) + (i2*dataPrms->pitch[TIDL_DIM_DIM2]) + (i3*dataPrms->pitch[TIDL_DIM_NUMCH]) + (i4*dataPrms->pitch[TIDL_DIM_HEIGHT]) + i5];
-                *min = (val < *min) ? val : *min;
-                *max = (val > *max) ? val : *max;
+                for (i5 = 0; i5 < dataPrms->dimValues[TIDL_DIM_WIDTH]; i5++)
+                {
+                  val = (TminMax)ptr[padOffset + (i0*dataPrms->pitch[TIDL_ROI_PITCH]) + (i1*dataPrms->pitch[TIDL_DIM_DIM1]) + (i2*dataPrms->pitch[TIDL_DIM_DIM2]) + (i3*dataPrms->pitch[TIDL_DIM_NUMCH]) + (i4*dataPrms->pitch[TIDL_DIM_HEIGHT]) + i5];
+                  *min = (val < *min) ? val : *min;
+                  *max = (val > *max) ? val : *max;
+                }
               }
             }
           }
@@ -235,25 +258,37 @@ int32_t TIDL_TensorMinMaxHistStats(const Tsrc * ptr,
 
   if((!isinf(maxValue ) && !isinf(minValue)) && ((maxValue - minValue) != 0.0)) /*not all values in tensor constant */
   {
-    for (i0 = 0; i0 < dataPrms->dimValues[TIDL_DIM_BATCH]; i0++)
+    #ifdef BUILD_WITH_CUDA_STATS
+    if(TIDL_isLayerSupportedOnGPU())
     {
-      for (i1 = 0; i1 < dataPrms->dimValues[TIDL_DIM_NUMCH]; i1++)
+      // call cuda histogram wrapper
+      TIDL_cudaGetHistogram<Tsrc, TminMax>(ptr, histogramPtr, padOffset, minValue, maxValue, numBins, dataPrms->tensorZeroPoint, dataPrms->tensorScale,
+                                            dataPrms->dimValues[TIDL_DIM_BATCH], dataPrms->dimValues[TIDL_DIM_NUMCH], dataPrms->dimValues[TIDL_DIM_HEIGHT], dataPrms->dimValues[TIDL_DIM_WIDTH],
+                                            dataPrms->pitch[TIDL_ROI_PITCH], dataPrms->pitch[TIDL_CHANNEL_PITCH], dataPrms->pitch[TIDL_LINE_PITCH]);
+    }
+    else
+    #endif
+    {
+      for (i0 = 0; i0 < dataPrms->dimValues[TIDL_DIM_BATCH]; i0++)
       {
-        for (i2 = 0; i2 < dataPrms->dimValues[TIDL_DIM_HEIGHT]; i2++)
+        for (i1 = 0; i1 < dataPrms->dimValues[TIDL_DIM_NUMCH]; i1++)
         {
-          for (i3 = 0; i3 < dataPrms->dimValues[TIDL_DIM_WIDTH]; i3++)
+          for (i2 = 0; i2 < dataPrms->dimValues[TIDL_DIM_HEIGHT]; i2++)
           {
-            val = (TminMax)ptr[padOffset + (i0*dataPrms->pitch[TIDL_ROI_PITCH]) + (i1*dataPrms->pitch[TIDL_CHANNEL_PITCH]) + (i2*dataPrms->pitch[TIDL_LINE_PITCH]) + i3];
-            valFloat = (float32_tidl)(val - dataPrms->tensorZeroPoint) / dataPrms->tensorScale;
-            valNorm = (valFloat - minValue)/(maxValue - minValue) * ((float32_tidl)numBins-1.0f);
-
-            binIdx = (valNorm + 0.5);/* Round to nearest integer */
-
-            if ( binIdx > (numBins-1) )
+            for (i3 = 0; i3 < dataPrms->dimValues[TIDL_DIM_WIDTH]; i3++)
             {
-              binIdx = (numBins-1);
+              val = (TminMax)ptr[padOffset + (i0*dataPrms->pitch[TIDL_ROI_PITCH]) + (i1*dataPrms->pitch[TIDL_CHANNEL_PITCH]) + (i2*dataPrms->pitch[TIDL_LINE_PITCH]) + i3];
+              valFloat = (float32_tidl)(val - dataPrms->tensorZeroPoint) / dataPrms->tensorScale;
+              valNorm = (valFloat - minValue)/(maxValue - minValue) * ((float32_tidl)numBins-1.0f);
+
+              binIdx = (valNorm + 0.5);/* Round to nearest integer */
+
+              if ( binIdx > (numBins-1) )
+              {
+                binIdx = (numBins-1);
+              }
+              histogramPtr[binIdx]++;
             }
-            histogramPtr[binIdx]++;
           }
         }
       }
@@ -302,6 +337,146 @@ int32_t TIDL_TensorMinMaxHistStats(const Tsrc * ptr,
   }
 
   return status;
+}
+
+
+
+bool TIDL_isQuantizationPassThroughLayer(sTIDL_Layer_t *layer) {
+  if(layer->layerType == TIDL_CropLayer ||
+      layer->layerType == TIDL_ReshapeLayer ||
+      layer->layerType == TIDL_TransposeLayer ||
+      layer->layerType == TIDL_DataConvertLayer ||
+      layer->layerType == TIDL_DetectionOutputLayer ||
+      // layer->layerType == TIDL_GridSampleLayer || /*Passthrough logic is only checking idx '0' input which is gridsample's input, so we can use it as a passthrough layer*/
+      layer->layerType == TIDL_BatchReshapeLayer ||
+      layer->layerType == TIDL_GatherLayer ||
+      layer->layerType == TIDL_ReduceLayer ||
+      layer->layerType == TIDL_SliceLayer ||
+      layer->layerType == TIDL_TopKLayer
+  ) {
+    return true;
+  }
+  return false;
+}
+
+float32_tidl TIDL_clamp(float32_tidl value, float32_tidl minVal, float32_tidl maxVal)
+{
+  if(value < minVal) return minVal;
+  if(value > maxVal) return maxVal;
+  return value;
+}
+
+/**
+ * @brief Function which finds the first producer layer
+ *
+ * @param pLayer : Pointer to the current layer
+ * @return int32_t : returns updated required or not
+ */
+
+bool TIDL_isProducerLayer(sTIDL_Layer_t *pLayer)
+{
+  bool isComputeLayer = false;
+  if(pLayer->layerType == TIDL_ConvolutionLayer ||
+     pLayer->layerType == TIDL_Deconv2DLayer ||
+     pLayer->layerType == TIDL_EltWiseLayer  ||
+     pLayer->layerType == TIDL_InnerProductLayer ||
+     pLayer->layerType == TIDL_DeformableConvLayer
+     )
+  {
+    isComputeLayer = true;
+  }
+  else if(pLayer->layerType == TIDL_DataConvertLayer && pLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_INPUT)
+  {
+    isComputeLayer = true;
+  }
+  return isComputeLayer;  
+}
+
+int32_t TIDL_getNumOutputs(sTIDL_Network_t *net, int32_t layerIndex, int32_t dataId)
+{
+  int32_t numOutputs = 0;
+  for (int32_t i1 = 0; i1 < layerIndex; i1++)
+  {
+    for (int32_t i2 = 0; i2 < net->TIDLLayers[i1].numInBufs; i2++)
+    {
+      if (net->TIDLLayers[i1].inData[i2] == dataId)
+      {
+        numOutputs++;
+      }
+    }
+  }
+  return numOutputs;
+}
+
+int32_t TIDL_getOutLayer(sTIDL_Network_t *net, int32_t layerIndex, int32_t dataId)
+{
+  for (int32_t i1 = 0; i1 < layerIndex; i1++)
+  {
+    for (int32_t i2 = 0; i2 < net->TIDLLayers[i1].numInBufs; i2++)
+    {
+      if (net->TIDLLayers[i1].inData[i2] == dataId)
+      {
+        return (i1);
+      }
+    }
+  }
+  return -1;
+}
+
+/* When the consumer of the layer is a range optimized activation such as Sigmoid, Tanh, the 
+  per channel mean of layer in float pass should be computed based on the activation range constraints 
+  instead of using the output ptr statistics. 
+
+  Implementation: For every range optimized activation layer, we will find the corresponding input layer 
+  and compute the per channel mean based on the activation range constraints of the consumer layer. 
+*/
+void TIDL_isLayerConsumerRangeOptimizedActivation(sTIDL_Network_t *net, int32_t layerIdx) 
+{
+  if(!TIDL_isProducerLayer(&(net->TIDLLayers[layerIdx])) || TIDL_getNumOutputs(net, net->numLayers, net->TIDLLayers[layerIdx].outData.dataId) > 1) {
+    return;
+  }
+
+  int32_t consumerLayerIdx = TIDL_getOutLayer(net, net->numLayers, net->TIDLLayers[layerIdx].outData.dataId);
+  bool consumerIsRangeOptimizedActivation = false;
+  while((consumerLayerIdx != -1) && (consumerLayerIdx < net->numLayers) && !TIDL_isProducerLayer(&net->TIDLLayers[consumerLayerIdx])) 
+  {
+    if(TIDL_isLayerRangeOptimizedActivation(&net->TIDLLayers[consumerLayerIdx])) {
+      consumerIsRangeOptimizedActivation = true;
+      break;
+    }
+    else {
+      if(TIDL_getNumOutputs(net, net->numLayers, net->TIDLLayers[consumerLayerIdx].outData.dataId) > 1) {
+        break;
+      }
+      consumerLayerIdx = TIDL_getOutLayer(net, net->numLayers, net->TIDLLayers[consumerLayerIdx].outData.dataId);
+    }
+  }
+
+  if(!consumerIsRangeOptimizedActivation) {
+    return;
+  }
+
+  float32_tidl minVal, maxVal;
+  TIDL_getActivationOptimizedInputRange(&net->TIDLLayers[consumerLayerIdx], &minVal, &maxVal);
+
+  sTIDL_Layer_t *producerLayer = &net->TIDLLayers[layerIdx];
+  if(producerLayer->numOutBufs == 1) {
+    if(producerLayer->clipParams.isClipEnabled == 1) {
+      producerLayer->clipParams.clipMin = TIDL_clamp(producerLayer->clipParams.clipMin, minVal, maxVal);
+      producerLayer->clipParams.clipMax = TIDL_clamp(producerLayer->clipParams.clipMax, minVal, maxVal);
+    } else if(producerLayer->actParams.actType == TIDL_RelU) {
+      producerLayer->outData.minTensorValue = 0.0f;
+      producerLayer->outData.maxTensorValue = TIDL_clamp(producerLayer->outData.maxTensorValue, 0.0f, maxVal);
+      producerLayer->clipParams.clipMin = producerLayer->outData.minTensorValue;
+      producerLayer->clipParams.clipMax = producerLayer->outData.maxTensorValue;
+    } else {
+      producerLayer->outData.minTensorValue = TIDL_clamp(producerLayer->outData.minTensorValue, minVal, maxVal);
+      producerLayer->outData.maxTensorValue = TIDL_clamp(producerLayer->outData.maxTensorValue, minVal, maxVal);
+      producerLayer->clipParams.clipMin = producerLayer->outData.minTensorValue;
+      producerLayer->clipParams.clipMax = producerLayer->outData.maxTensorValue;
+    }
+    producerLayer->actParams.actType += TIDL_TOTAL_NONLINEAR_ACT_OPS + 1; 
+  }
 }
 /**
  * @brief To find tensor perChannel mean
@@ -379,61 +554,85 @@ int32_t  TIDL_TensorPerChannelMeanStats(sTIDL_Network_t * net,
     updateFactor = 1.0/((float32_tidl)currIterationCount + 1.0);
       //:TODO: Add minimum value so that when num images are we don't loose information from end images
     // printf("Upper bound\n");
-    if((net->TIDLLayers[currLayerNum].layerType == TIDL_InnerProductLayer) && (net->TIDLLayers[currLayerNum].layerParams.innerProductParams.constIdx == 1))
+    #ifdef BUILD_WITH_CUDA_STATS
+    if(TIDL_isLayerSupportedOnGPU())
     {
-      for (i0 = 0; i0 < dataPrms->dimValues[TIDL_DIM_BATCH]; i0++)
+      // call cuda per channel mean wrapper
+      TIDL_cudaPerChannelMeans<Tsrc>(&ptr[padOffset], &meanPtr[currOffsetInfloats], net->TIDLLayers[currLayerNum].layerType, net->TIDLLayers[currLayerNum].layerParams.innerProductParams.constIdx,
+                  dataPrms->dimValues[TIDL_DIM_BATCH], dataPrms->dimValues[TIDL_DIM_DIM1], dataPrms->dimValues[TIDL_DIM_DIM2], dataPrms->dimValues[TIDL_DIM_NUMCH], dataPrms->dimValues[TIDL_DIM_HEIGHT], dataPrms->dimValues[TIDL_DIM_WIDTH],
+                  dataPrms->pitch[TIDL_ROI_PITCH], dataPrms->pitch[TIDL_DIM1_PITCH], dataPrms->pitch[TIDL_DIM2_PITCH], dataPrms->pitch[TIDL_CHANNEL_PITCH], dataPrms->pitch[TIDL_LINE_PITCH],
+                  updateFactor, dataPrms->tensorZeroPoint, dataPrms->tensorScale);
+    }
+    else
+    #endif
+    {
+      if((net->TIDLLayers[currLayerNum].layerType == TIDL_InnerProductLayer) && (net->TIDLLayers[currLayerNum].layerParams.innerProductParams.constIdx == 1))
       {
-        for (i1 = 0; i1 < dataPrms->dimValues[TIDL_DIM_DIM1]; i1++)
+        for (i3 = 0; i3 < dataPrms->dimValues[TIDL_DIM_NUMCH]; i3++)
         {
-          for (i2 = 0; i2 < dataPrms->dimValues[TIDL_DIM_DIM2]; i2++)
+          for (i4 = 0; i4 < dataPrms->dimValues[TIDL_DIM_WIDTH]; i4++)
           {
-            for (i3 = 0; i3 < dataPrms->dimValues[TIDL_DIM_NUMCH]; i3++)
+            sum = 0;
+            for (i0 = 0; i0 < dataPrms->dimValues[TIDL_DIM_BATCH]; i0++)
             {
-              for (i4 = 0; i4 < dataPrms->dimValues[TIDL_DIM_WIDTH]; i4++)
+              for (i1 = 0; i1 < dataPrms->dimValues[TIDL_DIM_DIM1]; i1++)
               {
-                sum = 0;
-                for (i5 = 0; i5 < dataPrms->dimValues[TIDL_DIM_HEIGHT]; i5++)
+                for (i2 = 0; i2 < dataPrms->dimValues[TIDL_DIM_DIM2]; i2++)
                 {
-                  /*Need to cross check if it makes sense to have channels averaged*/
+                  for (i5 = 0; i5 < dataPrms->dimValues[TIDL_DIM_HEIGHT]; i5++)
                   {
-                    val = (Tsrc)ptr[padOffset + (i0*dataPrms->pitch[TIDL_ROI_PITCH]) + (i1*dataPrms->pitch[TIDL_DIM1_PITCH]) + (i2*dataPrms->pitch[TIDL_DIM2_PITCH])
-                    + (i3*dataPrms->pitch[TIDL_CHANNEL_PITCH]) + (i5*dataPrms->pitch[TIDL_LINE_PITCH]) + i4];
-                    sum += (float32_tidl)val;
+                    /*Need to cross check if it makes sense to have channels averaged*/
+                    {
+                      val = (Tsrc)ptr[padOffset + (i0*dataPrms->pitch[TIDL_ROI_PITCH]) + (i1*dataPrms->pitch[TIDL_DIM1_PITCH]) + (i2*dataPrms->pitch[TIDL_DIM2_PITCH])
+                      + (i3*dataPrms->pitch[TIDL_CHANNEL_PITCH]) + (i5*dataPrms->pitch[TIDL_LINE_PITCH]) + i4];
+                      if((net->TIDLLayers[currLayerNum].outData.elementType == TIDL_SinglePrecFloat) && (net->TIDLLayers[currLayerNum].actParams.actType > TIDL_TOTAL_NONLINEAR_ACT_OPS)) 
+                      {
+                        val = val < net->TIDLLayers[currLayerNum].clipParams.clipMin ? net->TIDLLayers[currLayerNum].clipParams.clipMin : val;
+                        val = val > net->TIDLLayers[currLayerNum].clipParams.clipMax ? net->TIDLLayers[currLayerNum].clipParams.clipMax : val;
+                       }
+                      sum += (float32_tidl)val;
+                    }
                   }
                 }
-
-                currChannelMean = sum / ((float32_tidl)dataPrms->dimValues[TIDL_DIM_HEIGHT]);
-                currChannelMean = (currChannelMean - (float32_tidl)dataPrms->tensorZeroPoint) / dataPrms->tensorScale;
-                runningChannelMean = meanPtr[currOffsetInfloats + i3 * dataPrms->dimValues[TIDL_DIM_WIDTH] + i4];
-                meanPtr[currOffsetInfloats + i3 * dataPrms->dimValues[TIDL_DIM_WIDTH] + i4] = (runningChannelMean * (1.0 - updateFactor)) +
-                                                                                              (currChannelMean * (updateFactor));
               }
             }
+
+            currChannelMean = sum / (((float32_tidl)dataPrms->dimValues[TIDL_DIM_HEIGHT]) * dataPrms->dimValues[TIDL_DIM_DIM2] *
+                                                    dataPrms->dimValues[TIDL_DIM_DIM1] * dataPrms->dimValues[TIDL_DIM_BATCH]);
+            currChannelMean = (currChannelMean - (float32_tidl)dataPrms->tensorZeroPoint) / dataPrms->tensorScale;
+            runningChannelMean = meanPtr[currOffsetInfloats + i3 * dataPrms->dimValues[TIDL_DIM_WIDTH] + i4];
+            meanPtr[currOffsetInfloats + i3 * dataPrms->dimValues[TIDL_DIM_WIDTH] + i4] = (runningChannelMean * (1.0 - updateFactor)) +
+                                                                                          (currChannelMean * (updateFactor));
           }
         }
       }
-    }
-    else
-    {
-      for (i0 = 0; i0 < dataPrms->dimValues[TIDL_DIM_BATCH]; i0++)
+      else
       {
-        for (i1 = 0; i1 < dataPrms->dimValues[TIDL_DIM_NUMCH]; i1++)
+        for (i0 = 0; i0 < dataPrms->dimValues[TIDL_DIM_BATCH]; i0++)
         {
-          sum = 0;
-          for (i2 = 0; i2 < dataPrms->dimValues[TIDL_DIM_HEIGHT]; i2++)
+          for (i1 = 0; i1 < dataPrms->dimValues[TIDL_DIM_NUMCH]; i1++)
           {
-            for (i3 = 0; i3 < dataPrms->dimValues[TIDL_DIM_WIDTH]; i3++)
+            sum = 0;
+            for (i2 = 0; i2 < dataPrms->dimValues[TIDL_DIM_HEIGHT]; i2++)
             {
-              val = (Tsrc)ptr[padOffset + (i0*dataPrms->pitch[TIDL_ROI_PITCH]) + (i1*dataPrms->pitch[TIDL_CHANNEL_PITCH]) + (i2*dataPrms->pitch[TIDL_LINE_PITCH]) + i3];
-              sum += (float32_tidl)val;
+              for (i3 = 0; i3 < dataPrms->dimValues[TIDL_DIM_WIDTH]; i3++)
+              {
+                val = (Tsrc)ptr[padOffset + (i0*dataPrms->pitch[TIDL_ROI_PITCH]) + (i1*dataPrms->pitch[TIDL_CHANNEL_PITCH]) + (i2*dataPrms->pitch[TIDL_LINE_PITCH]) + i3];
+                if((net->TIDLLayers[currLayerNum].outData.elementType == TIDL_SinglePrecFloat) && (net->TIDLLayers[currLayerNum].actParams.actType > TIDL_TOTAL_NONLINEAR_ACT_OPS)) 
+                {
+                  val = val < net->TIDLLayers[currLayerNum].clipParams.clipMin ? net->TIDLLayers[currLayerNum].clipParams.clipMin : val;
+                  val = val > net->TIDLLayers[currLayerNum].clipParams.clipMax ? net->TIDLLayers[currLayerNum].clipParams.clipMax : val;
+                }
+                sum += (float32_tidl)val;
+              }
             }
+            currChannelMean = sum / ((float32_tidl)dataPrms->dimValues[TIDL_DIM_WIDTH] *
+                                                      (float32_tidl)dataPrms->dimValues[TIDL_DIM_HEIGHT]);
+            currChannelMean = (currChannelMean - (float32_tidl)dataPrms->tensorZeroPoint) / dataPrms->tensorScale;
+            runningChannelMean = meanPtr[currOffsetInfloats + i1];
+            meanPtr[currOffsetInfloats + i1] = (runningChannelMean * (1.0f - updateFactor)) +
+                                                            (currChannelMean * (updateFactor));
           }
-          currChannelMean = sum / ((float32_tidl)dataPrms->dimValues[TIDL_DIM_WIDTH] *
-                                                    (float32_tidl)dataPrms->dimValues[TIDL_DIM_HEIGHT]);
-          currChannelMean = (currChannelMean - (float32_tidl)dataPrms->tensorZeroPoint) / dataPrms->tensorScale;
-          runningChannelMean = meanPtr[currOffsetInfloats + i1];
-          meanPtr[currOffsetInfloats + i1] = (runningChannelMean * (1.0f - updateFactor)) +
-                                                          (currChannelMean * (updateFactor));
         }
       }
     }
@@ -731,10 +930,10 @@ static int32_t TIDL_UpdateTensorRangeStats(TIDL_Handle intAlgHandle, int32_t lay
     }
 
 
-    if (net->TIDLLayers[layerIdx].actParams.actType == TIDL_Clip)
+    if (net->TIDLLayers[layerIdx].clipParams.isClipEnabled == 1)
     {
-      net->TIDLLayers[layerIdx].outData.minTensorValue = net->TIDLLayers[layerIdx].actParams.clipMin;
-      net->TIDLLayers[layerIdx].outData.maxTensorValue = net->TIDLLayers[layerIdx].actParams.clipMax;
+      net->TIDLLayers[layerIdx].outData.minTensorValue = net->TIDLLayers[layerIdx].clipParams.clipMin;
+      net->TIDLLayers[layerIdx].outData.maxTensorValue = net->TIDLLayers[layerIdx].clipParams.clipMax;
     }
 
     if (net->TIDLLayers[layerIdx].actParams.actType == TIDL_RelU6)
@@ -787,75 +986,115 @@ static int32_t TIDL_UpdateTensorPerChannelMeanStats(TIDL_Handle intAlgHandle,
 {
   int32_t status = TIDL_SUCCESS;
   sTIDL_Network_t * net = intAlgHandle->createParams->net;
-  if (TIDL_getDatElementSize(net->TIDLLayers[layerIdx].outData.elementType) <= 2)
+
+  if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_SignedChar)
   {
-    if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_SignedChar)
+    status = TIDL_TensorPerChannelMeanStats(net,
+                                            layerIdx,
+                                            (int8_t*)ptr,
+                                            &net->TIDLLayers[layerIdx].outData,
+                                            intAlgHandle->refScratchBuf,
+                                            intAlgHandle->refScratchBufSize,
+                                            (int32_t)intAlgHandle->procCallCounter);
+  }
+  else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_UnsignedChar)
+  {
+    status = TIDL_TensorPerChannelMeanStats(net,
+                                            layerIdx,
+                                            (uint8_t*)ptr,
+                                            &net->TIDLLayers[layerIdx].outData,
+                                            intAlgHandle->refScratchBuf,
+                                            intAlgHandle->refScratchBufSize,
+                                            (int32_t)intAlgHandle->procCallCounter);
+  }
+  else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_SignedShort)
+  {
+    status = TIDL_TensorPerChannelMeanStats(net,
+                                            layerIdx,
+                                            (int16_t*)ptr,
+                                            &net->TIDLLayers[layerIdx].outData,
+                                            intAlgHandle->refScratchBuf,
+                                            intAlgHandle->refScratchBufSize,
+                                            (int32_t)intAlgHandle->procCallCounter);
+  }
+  else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_UnsignedShort)
+  {
+    status = TIDL_TensorPerChannelMeanStats(net,
+                                            layerIdx,
+                                            (uint16_t*)ptr,
+                                            &net->TIDLLayers[layerIdx].outData,
+                                            intAlgHandle->refScratchBuf,
+                                            intAlgHandle->refScratchBufSize,
+                                            (int32_t)intAlgHandle->procCallCounter);
+  }
+  else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_Bool)
+  {
+    status = TIDL_TensorPerChannelMeanStats(net,
+                                            layerIdx,
+                                            (bool*)ptr,
+                                            &net->TIDLLayers[layerIdx].outData,
+                                            intAlgHandle->refScratchBuf,
+                                            intAlgHandle->refScratchBufSize,
+                                            (int32_t)intAlgHandle->procCallCounter);
+  }
+  else if(net->TIDLLayers[layerIdx].outData.elementType == TIDL_SinglePrecFloat)
+  {
+    TIDL_isLayerConsumerRangeOptimizedActivation(net, layerIdx);
+    status = TIDL_TensorPerChannelMeanStats(net,
+                                          layerIdx,
+                                          (float32_tidl*)ptr,
+                                          &net->TIDLLayers[layerIdx].outData,
+                                          intAlgHandle->refScratchBuf,
+                                          intAlgHandle->refScratchBufSize,
+                                          (int32_t)intAlgHandle->procCallCounter);
+    if(net->TIDLLayers[layerIdx].actParams.actType > TIDL_TOTAL_NONLINEAR_ACT_OPS)
     {
-     status = TIDL_TensorPerChannelMeanStats(net,
-                                             layerIdx,
-                                             (int8_t*)ptr,
-                                             &net->TIDLLayers[layerIdx].outData,
-                                             intAlgHandle->refScratchBuf,
-                                             intAlgHandle->refScratchBufSize,
-                                             (int32_t)intAlgHandle->procCallCounter);
+      net->TIDLLayers[layerIdx].actParams.actType -= (TIDL_TOTAL_NONLINEAR_ACT_OPS + 1);
     }
-    else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_UnsignedChar)
-    {
-      status = TIDL_TensorPerChannelMeanStats(net,
-                                             layerIdx,
-                                             (uint8_t*)ptr,
-                                             &net->TIDLLayers[layerIdx].outData,
-                                             intAlgHandle->refScratchBuf,
-                                             intAlgHandle->refScratchBufSize,
-                                             (int32_t)intAlgHandle->procCallCounter);
-    }
-    else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_SignedShort)
-    {
-      status = TIDL_TensorPerChannelMeanStats(net,
-                                             layerIdx,
-                                             (int16_t*)ptr,
-                                             &net->TIDLLayers[layerIdx].outData,
-                                             intAlgHandle->refScratchBuf,
-                                             intAlgHandle->refScratchBufSize,
-                                             (int32_t)intAlgHandle->procCallCounter);
-    }
-    else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_UnsignedShort)
-    {
-      status = TIDL_TensorPerChannelMeanStats(net,
-                                             layerIdx,
-                                             (uint16_t*)ptr,
-                                             &net->TIDLLayers[layerIdx].outData,
-                                             intAlgHandle->refScratchBuf,
-                                             intAlgHandle->refScratchBufSize,
-                                             (int32_t)intAlgHandle->procCallCounter);
-    }
-    else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_Bool)
-    {
-      status = TIDL_TensorPerChannelMeanStats(net,
-                                             layerIdx,
-                                             (bool*)ptr,
-                                             &net->TIDLLayers[layerIdx].outData,
-                                             intAlgHandle->refScratchBuf,
-                                             intAlgHandle->refScratchBufSize,
-                                             (int32_t)intAlgHandle->procCallCounter);
-    }
-    else
-    {
-      status = TIDL_ERR_FAILURE;
-    }
+  }
+  else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_SignedWord)
+  {
+    status = TIDL_TensorPerChannelMeanStats(net,
+                                          layerIdx,
+                                          (int32_t*)ptr,
+                                          &net->TIDLLayers[layerIdx].outData,
+                                          intAlgHandle->refScratchBuf,
+                                          intAlgHandle->refScratchBufSize,
+                                          (int32_t)intAlgHandle->procCallCounter);
+  }
+  else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_UnsignedWord)
+  {
+    status = TIDL_TensorPerChannelMeanStats(net,
+                                          layerIdx,
+                                          (uint32_t*)ptr,
+                                          &net->TIDLLayers[layerIdx].outData,
+                                          intAlgHandle->refScratchBuf,
+                                          intAlgHandle->refScratchBufSize,
+                                          (int32_t)intAlgHandle->procCallCounter);
+  }
+  else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_SignedDoubleWord)
+  {
+    status = TIDL_TensorPerChannelMeanStats(net,
+                                          layerIdx,
+                                          (int64_t*)ptr,
+                                          &net->TIDLLayers[layerIdx].outData,
+                                          intAlgHandle->refScratchBuf,
+                                          intAlgHandle->refScratchBufSize,
+                                          (int32_t)intAlgHandle->procCallCounter);
+  }
+  else if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_UnsignedDoubleWord)
+  {
+    status = TIDL_TensorPerChannelMeanStats(net,
+                                          layerIdx,
+                                          (uint64_t*)ptr,
+                                          &net->TIDLLayers[layerIdx].outData,
+                                          intAlgHandle->refScratchBuf,
+                                          intAlgHandle->refScratchBufSize,
+                                          (int32_t)intAlgHandle->procCallCounter);
   }
   else
   {
-    if(net->TIDLLayers[layerIdx].outData.elementType == TIDL_SinglePrecFloat)
-    {
-      status = TIDL_TensorPerChannelMeanStats(net,
-                                           layerIdx,
-                                           (float32_tidl*)ptr,
-                                           &net->TIDLLayers[layerIdx].outData,
-                                           intAlgHandle->refScratchBuf,
-                                           intAlgHandle->refScratchBufSize,
-                                           (int32_t)intAlgHandle->procCallCounter);
-    }
+    status = TIDL_ERR_FAILURE;
   }
 
   return status;

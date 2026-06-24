@@ -110,8 +110,6 @@ typedef struct
 
 } tivxTIDLNestedKernelObj;
 
-static const uint32_t max_entries = MAX_TENSOR_DIMS;
-
 /* Max Targets in current target to be registered */
 #define TIDL_MAX_TARGETS (3U)
 
@@ -178,6 +176,7 @@ static vx_status VX_CALLBACK tivxKernelTIDLControl(tivx_target_kernel_instance k
 static vx_object_array createObjArray(vx_context context, vx_tensor *tensors, uint32_t num_tensors);
 #endif
 static vx_status copyTensorHandles(vx_tensor src, vx_tensor dst);
+static vx_status removeTensorHandles(vx_tensor tensor);
 
 /* Copy data pointer of the source vx_tensor data object to destination vx_tensor object*/
 static vx_status copyTensorHandles(vx_tensor src, vx_tensor dst)
@@ -196,6 +195,35 @@ static vx_status copyTensorHandles(vx_tensor src, vx_tensor dst)
     if(status == (vx_status)VX_SUCCESS)
     {
         status = tivxReferenceImportHandle((vx_reference)dst,
+        (const void **)addr,
+        (const uint32_t *)size,
+        num_entries);
+    }
+
+    return status;
+}
+
+static vx_status removeTensorHandles(vx_tensor tensor)
+{
+    vx_status status = (vx_status)VX_SUCCESS;
+    void            *addr[MAX_TENSOR_DIMS] = {NULL};
+    uint32_t        size[MAX_TENSOR_DIMS];
+    uint32_t        num_entries;
+
+    status = tivxReferenceExportHandle((vx_reference)tensor,
+                                         addr,
+                                         size,
+                                         MAX_TENSOR_DIMS,
+                                         &num_entries);
+
+    for (uint32_t i = 0U; i < num_entries; i++)
+    {
+        addr[i] = NULL;
+    }
+
+    if(status == (vx_status)VX_SUCCESS)
+    {
+        status = tivxReferenceImportHandle((vx_reference)tensor,
         (const void **)addr,
         (const uint32_t *)size,
         num_entries);
@@ -725,18 +753,7 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
                     {
                         prms->outputTensors[j][i] = (vx_tensor)(outputTensorDescList[(j * num_output_tensors_per_core) + i]->host_ref);
                     }
-                    /* Create new reference using existing reference as example for input/output tensors */
-                    for(uint32_t i = 0U; i < num_input_tensors_per_core; i++)
-                    {
-                        prms->inputTensors[j][i] = (vx_tensor)tivxCreateReferenceFromExemplar(context, (vx_reference)prms->inputTensors[j][i]);
-                    }
-                    for(uint32_t i = 0U; i < num_output_tensors_per_core; i++)
-                    {
-                        prms->outputTensors[j][i] = (vx_tensor)tivxCreateReferenceFromExemplar(context, (vx_reference)prms->outputTensors[j][i]);
-                    }
                 }
-
-
             }
             else
             {
@@ -751,20 +768,7 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
                         prms->outputTensors[j][i] = (vx_tensor)(obj_desc[(TIVX_KERNEL_TIDL_IN_FIRST_TENSOR + prms->num_input_tensors + (j * num_output_tensors_per_core) + i)]->host_ref);
                     }
                 }
-                for(uint32_t j = 0U; j < prms->num_virtual_cores; j++)
-                {
-                    /* Create new reference using existing reference as example for input/output tensors */
-                    for(uint32_t i = 0U; i < num_input_tensors_per_core; i++)
-                    {
-                        prms->inputTensors[j][i] = (vx_tensor)tivxCreateReferenceFromExemplar(context, (vx_reference)prms->inputTensors[j][i]);
-                    }
-                    for(uint32_t i = 0U; i < num_output_tensors_per_core; i++)
-                    {
-                        prms->outputTensors[j][i] = (vx_tensor)tivxCreateReferenceFromExemplar(context, (vx_reference)prms->outputTensors[j][i]);
-                    }
-                }
             }
-            
 
             if(prms->inference_mode == (uint32_t)TIDL_inferenceModeLowLatency) /* Create num_cores (4) copies from num_virtual_cores (1) input/output tensors for individual cores */
             {
@@ -780,10 +784,12 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
                         for(uint32_t i = 0U; i < num_input_tensors_per_core; i++)
                         {
                             prms->inputTensors[j][i] = (vx_tensor)tivxCreateReferenceFromExemplar(context, (vx_reference)prms->inputTensors[0][i]);
+                            status |= copyTensorHandles(prms->inputTensors[0][i], prms->inputTensors[j][i]);
                         }
                         for(uint32_t i = 0U; i < num_output_tensors_per_core; i++)
                         {
                             prms->outputTensors[j][i] = (vx_tensor)tivxCreateReferenceFromExemplar(context, (vx_reference)prms->outputTensors[0][i]);
+                            status |= copyTensorHandles(prms->outputTensors[0][i], prms->outputTensors[j][i]);
                         }
                     }
                 }
@@ -987,31 +993,6 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
 
         if(status == (vx_status)VX_SUCCESS)
         {
-            /* Save input/output tensor pointers used as part of graph creation to be deleted in Delete callback
-               Must be done after vxVerifyGraph since buffer is allocated during vxVerifyGraph */
-            for(uint32_t j = 0U; j < prms->num_cores; j++)
-            {
-                for(uint32_t i = 0U; i < num_input_tensors_per_core; i++)
-                {
-                    status |= tivxReferenceExportHandle((vx_reference)prms->inputTensors[j][i],
-                                                            prms->addrInput[j][i],
-                                                            prms->sizeInput[j][i],
-                                                            max_entries,
-                                                            &prms->numEntriesInput[j][i]);
-                }
-                for(uint32_t i = 0U; i < num_output_tensors_per_core; i++)
-                {
-                    status |= tivxReferenceExportHandle((vx_reference)prms->outputTensors[j][i],
-                                                        prms->addrOutput[j][i],
-                                                        prms->sizeOutput[j][i],
-                                                        max_entries,
-                                                        &prms->numEntriesOutput[j][i]);
-                }
-            }
-        }
-
-        if(status == (vx_status)VX_SUCCESS)
-        {
             (void)tivxSetTargetKernelInstanceContext(kernel, prms,  (uint32_t)(sizeof(tivxTIDLNestedKernelObj)));
         }
 
@@ -1073,29 +1054,6 @@ static vx_status VX_CALLBACK tivxKernelTIDLDelete(
 
     if(status == (vx_status)VX_SUCCESS)
     {
-        for(uint32_t j = 0U; j < prms->num_cores; j++)
-        {
-            for(uint32_t i = 0U; i < (prms->num_input_tensors/prms->num_virtual_cores); i++)
-            {
-                prms->addrInput[j][i][0] = NULL;  // Set first address to NULL
-                status |= tivxReferenceImportHandle((vx_reference)prms->inputTensors[j][i],
-                                                (const void **)prms->addrInput[j][i],
-                                                (const uint32_t *) prms->sizeInput[j][i],
-                                                prms->numEntriesInput[j][i]);
-            }
-            for(uint32_t i = 0U; i < (prms->num_output_tensors/prms->num_virtual_cores); i++)
-            {
-                prms->addrOutput[j][i][0] = NULL;  // Set first address to NULL
-                status |= tivxReferenceImportHandle((vx_reference)prms->outputTensors[j][i],
-                                                (const void **)prms->addrOutput[j][i],
-                                                (const uint32_t *) prms->sizeOutput[j][i],
-                                                prms->numEntriesOutput[j][i]);
-            }
-        }
-    }
-
-    if(status == (vx_status)VX_SUCCESS)
-    {
         if(prms->kernel != NULL)
         {
             status = vxRemoveKernel(prms->kernel);
@@ -1122,18 +1080,22 @@ static vx_status VX_CALLBACK tivxKernelTIDLDelete(
                 status |= vxReleaseObjectArray(&prms->output_tensor_list[j]);
             }
             
-            for(uint32_t i = 0U; i < num_input_tensors_per_core; i++)
+            if((prms->inference_mode == (uint32_t)TIDL_inferenceModeLowLatency) && (j != 0U))
             {
-                status |= vxReleaseTensor(&prms->inputTensors[j][i]);
-            }
-            for(uint32_t i = 0U; i < num_output_tensors_per_core; i++)
-            {
-                status |= vxReleaseTensor(&prms->outputTensors[j][i]);
+                for(uint32_t i = 0U; i < num_input_tensors_per_core; i++)
+                {
+                    status |= removeTensorHandles(prms->inputTensors[j][i]);
+                    status |= vxReleaseTensor(&prms->inputTensors[j][i]);
+                }
+                for(uint32_t i = 0U; i < num_output_tensors_per_core; i++)
+                {
+                    status |= removeTensorHandles(prms->outputTensors[j][i]);
+                    status |= vxReleaseTensor(&prms->outputTensors[j][i]);
+                }
             }
             status |= vxReleaseUserDataObject(&prms->outArgs[j]);
         }
     }
-
 
     return (status);
 }

@@ -232,9 +232,16 @@ int32_t TidlParseOnnx::saveAllowlistingMetaData()
     }
     layer.allowlistingMetaData.constTensorNames.push_back(graph.node(index).input(constIdx).c_str());
     vector<int32_t> dims;
-    for(int j = 0; j < tensor.dims_size(); j++)
+    if (tensor.dims_size() > 0)
     {
-      dims.push_back(tensor.dims(j));
+      for(int j = 0; j < tensor.dims_size(); j++)
+      {
+        dims.push_back(tensor.dims(j));
+      }
+    }
+    else
+    {
+      dims.push_back(1);
     }
     layer.allowlistingMetaData.constTensorsDims.push_back(dims);
   }

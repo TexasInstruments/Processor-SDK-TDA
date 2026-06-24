@@ -1590,7 +1590,7 @@ int32_t TIDL_tfliteMapMinimumParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
   int32_t idx,j;
   pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].layerType = TIDL_ClipLayer;
   pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].outData[0].dataId = (*dataIndex)++;
-  pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.actType = TIDL_Clip;
+  pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.isClipEnabled = 1;
 
   auto operators = (*tfliteModel->subgraphs())[0]->operators();
   auto tensors   = (*tfliteModel->subgraphs())[0]->tensors();
@@ -1611,8 +1611,8 @@ int32_t TIDL_tfliteMapMinimumParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
   }
   if(data)
   {
-    readTensor(data, (uint8_t *)&pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.clipMax);
-    pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.clipMin = -FLT_MAX;
+    readTensor(data, (uint8_t *)&pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.clipMax);
+    pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.clipMin = -FLT_MAX;
   }
   return 0;
 }
@@ -1626,7 +1626,7 @@ int32_t TIDL_tfliteMapMaximumParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
   int32_t idx,j;
   pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].layerType = TIDL_ClipLayer;
   pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].outData[0].dataId = (*dataIndex)++;
-  pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.actType = TIDL_Clip;
+  pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.isClipEnabled = 1;
 
   auto operators = (*tfliteModel->subgraphs())[0]->operators();
   auto tensors   = (*tfliteModel->subgraphs())[0]->tensors();
@@ -1647,8 +1647,8 @@ int32_t TIDL_tfliteMapMaximumParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
   }
   if(data)
   {
-    readTensor(data, (uint8_t *)&pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.clipMin);
-    pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.clipMax = FLT_MAX;
+    readTensor(data, (uint8_t *)&pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.clipMin);
+    pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.clipMax = FLT_MAX;
   }
   return 0;
 }
@@ -2453,9 +2453,9 @@ int32_t tidl_tfliteLayerFillTensorNames(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructu
 
       if(pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.actType == TIDL_RelU6)
       {
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.actType = TIDL_Clip;
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.clipMax = 6.0;
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.clipMin = 0;
+          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.isClipEnabled = 1;
+          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.clipMax = 6.0;
+          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.clipMin = 0;
           pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].outData[0].elementType = tidl_getElementType(0);
 
       }
@@ -2467,10 +2467,10 @@ int32_t tidl_tfliteLayerFillTensorNames(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructu
         auto *zero_point = tensor->quantization()->zero_point();
         if (scale && min && max)
         {
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.actType = TIDL_Clip;
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.clipMax = max->Get(0);
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.clipMin = min->Get(0);
-          if(pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.clipMin >= 0)
+          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.isClipEnabled = 1;
+          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.clipMax = max->Get(0);
+          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.clipMin = min->Get(0);
+          if(pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.clipMin >= 0)
           {
             pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].outData[0].elementType = tidl_getElementType(0);
           }
@@ -2481,7 +2481,7 @@ int32_t tidl_tfliteLayerFillTensorNames(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructu
         }
         else if (scale && zero_point)
         {
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.actType = TIDL_Clip;
+          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.isClipEnabled = 1;
 
           int32_t inMax = 127;
           int32_t inMin = -128;
@@ -2492,9 +2492,9 @@ int32_t tidl_tfliteLayerFillTensorNames(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructu
             inMin = 0;
           }
 
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.clipMax = (inMax - zero_point->Get(0)) * scale->Get(0);
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.clipMin = (inMin-zero_point->Get(0)) * scale->Get(0);
-          if(pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].actParams.clipMin >= 0)
+          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.clipMax = (inMax - zero_point->Get(0)) * scale->Get(0);
+          pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.clipMin = (inMin-zero_point->Get(0)) * scale->Get(0);
+          if(pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].clipParams.clipMin >= 0)
           {
             pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].outData[0].elementType = tidl_getElementType(0);
           }

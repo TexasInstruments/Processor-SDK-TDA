@@ -65,17 +65,43 @@
 const vector<TidlConstraint> tidlConstraintCast =
 {
     TIDL_CSTR(
-        "Only supported at the terminal nodes (Input/Output) of the network",
-        "Only supported at the terminal nodes (Input/Output) of the network",
-        "",
+        "Unsupported data type with Cast layer",
+        "Unsupported data type with Cast layer",
+        "Unsupported data type with Cast layer",
         [](const sTIDL_LayerPC_t *layer, string &logs){
-            if(layer->optimized == 1 && gParams.addDataConvertToNet == 0)
+            if (gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_ONNX_RT)
             {
-                return false;
+                if (layer->layerPCParams.castParams.castTo == -1) {
+                    return false;
+                }
             }
-            else if(layer->layerPCParams.castParams.terminal == TIDL_CastNotTerminal)
+            return true;
+        }
+    ),
+    TIDL_CSTR(
+        "Only the default round mode (Up) is supported with Cast round attribute",
+        "Only the default round mode (Up) is supported with Cast round attribute",
+        "Only the default round mode (Up) is supported with Cast round attribute",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            if (gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_ONNX_RT)
             {
-                return false;
+                if (layer->layerPCParams.castParams.roundMode != TIDL_CastRoundUp) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    ),
+    TIDL_CSTR(
+        "Only the default saturate mode (1) is supported with Cast saturate attribute",
+        "Only the default saturate mode (1) is supported with Cast saturate attribute",
+        "Only the default saturate mode (1) is supported with Cast saturate attribute",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            if (gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_ONNX_RT)
+            {
+                if (layer->layerPCParams.castParams.saturate != 1) {
+                    return false;
+                }
             }
             return true;
         }

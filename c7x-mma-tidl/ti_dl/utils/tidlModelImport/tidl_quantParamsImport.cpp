@@ -115,11 +115,30 @@ std::string TIDL_elementTypeToString(int32_t elementType) {
     {5, "int32"},
     {6, "float32"},
     {7, "uint64"},
-    {8, "int64"}
+    {8, "int64"},
+    {9, "bool"}
   };
   auto it = typeMap.find(elementType);
   if (it != typeMap.end()) return it->second;
   return "unknown";
+}
+
+int32_t TIDL_StringToElementType(const std::string& elementType) {
+  static const std::unordered_map<std::string, int32_t> typeMap = {
+    {"uint8"  , 0 },
+    {"int8"   , 1 },
+    {"uint16" , 2 },
+    {"int16"  , 3 },
+    {"uint32" , 4 },
+    {"int32"  , 5 },
+    {"float32", 6 },
+    {"uint64" , 7 },
+    {"int64"  , 8 },
+    {"bool"   , 9 }
+  };
+  auto it = typeMap.find(elementType);
+  if (it != typeMap.end()) return it->second;
+  return 0;
 }
 
 /**
@@ -756,18 +775,21 @@ int32_t TIDL_importQuantParamsFromProtoTxt(sTIDL_OrgNetwork_t *pOrgTIDLNetStruct
     {
       pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].minTensorValue = QuantParamsMsg.layers(idx).outputs(0).min();
       pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].maxTensorValue = QuantParamsMsg.layers(idx).outputs(0).max();
+      pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].elementType = TIDL_StringToElementType(QuantParamsMsg.layers(idx).outputs(0).element_type());
+      pOrgTIDLNetStructure->TIDLPCLayers[i].weightsElementSizeInBits = QuantParamsMsg.layers(idx).bit_depth();
 
-      if (gParams.preQuantizedModel == 1 && pOrgTIDLNetStructure->TIDLPCLayers[i].actParams.actType == TIDL_Clip)
+      if (gParams.preQuantizedModel == 1 && pOrgTIDLNetStructure->TIDLPCLayers[i].clipParams.isClipEnabled == 1)
       {
         // For pre-quantized models with clip activation, adjust the clip values to match the imported quantization parameters
-        pOrgTIDLNetStructure->TIDLPCLayers[i].actParams.clipMin = pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].minTensorValue;
-        pOrgTIDLNetStructure->TIDLPCLayers[i].actParams.clipMax = pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].maxTensorValue;
+        pOrgTIDLNetStructure->TIDLPCLayers[i].clipParams.clipMin = pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].minTensorValue;
+        pOrgTIDLNetStructure->TIDLPCLayers[i].clipParams.clipMax = pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].maxTensorValue;
       }
     }
+    TIDL_UpdateInDataBuff (pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0]);
   }
   
   // copy the imported data into the device network
-  tidl_copyPCNetToDeviceNet(pOrgTIDLNetStructure, pTIDLNetStructure, &gParams, pOrgTIDLNetStructure->numLayers);
+  pTIDLNetStructure->numLayers = tidl_copyPCNetToDeviceNet(pOrgTIDLNetStructure, pTIDLNetStructure, &gParams, pOrgTIDLNetStructure->numLayers);
   pTIDLNetStructure->isQuantStatsAvailable = 1;
 
   // free indexing array

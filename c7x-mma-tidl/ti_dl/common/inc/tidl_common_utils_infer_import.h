@@ -73,6 +73,22 @@
 
 #include "itidl_ti.h"
 
+/**
+@enum    eTIDL_RecurrentInputs
+@brief   List of inputs used in RNN operators (LSTM, GRU & RNN)
+*/
+typedef enum
+{
+  TIDL_RecurrentInputX = 0,
+  TIDL_RecurrentInputW,
+  TIDL_RecurrentInputR,
+  TIDL_RecurrentInputB,
+  TIDL_RecurrentInputSequenceLens,
+  TIDL_RecurrentInputInitialH,
+  TIDL_RecurrentInputInitialC,
+  TIDL_RecurrentInputPeepholes,
+}eTIDL_RecurrentInputs;
+
 int32_t TIDL_getDatElementSize(int32_t elementType);
 
 void TIDL_innerProductGetBiasScaleSize(const sTIDL_DataParams_t        * outData,

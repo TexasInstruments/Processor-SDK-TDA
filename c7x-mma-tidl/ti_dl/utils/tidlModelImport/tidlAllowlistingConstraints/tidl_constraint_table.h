@@ -150,6 +150,12 @@
 #include "tidl_constraint_lstm.h"
 #include "tidl_constraint_gru.h"
 #include "tidl_constraint_rnn.h"
+#include "tidl_constraint_gatherND.h"
+#include "tidl_constraint_gatherElements.h"
+#include "tidl_constraint_shape.h"
+#include "tidl_constraint_size.h"
+#include "tidl_constraint_attention.h"
+#include "tidl_constraint_nonZero.h"
 
 
 /// @brief Contains the constraints and other metadata of TIDL layers
@@ -208,7 +214,6 @@ static const map<int32_t, TidlConstraintTableEntry> tidlConstraintTable =
     JTE( TIDL_TopKLayer                , tidlConstraintTopK),
     JTE( TIDL_PriorBoxLayer            , tidlConstraintPriorBox),
     JTE( TIDL_PermuteLayer             , {}),
-    JTE( TIDL_ShapeLayer               , {}),
     JTE( TIDL_ClipLayer                , tidlConstraintClip),
     JTE( TIDL_MinimumLayer             , {}),
     JTE( TIDL_LeakyReluLayer           , tidlConstraintLeakyRelu),
@@ -261,6 +266,13 @@ static const map<int32_t, TidlConstraintTableEntry> tidlConstraintTable =
     JTE( TIDL_LSTMLayer                , tidlConstraintLSTM),
     JTE( TIDL_GRULayer                 , tidlConstraintGRU),
     JTE( TIDL_RNNLayer                 , tidlConstraintRNN),
+    JTE( TIDL_GatherNDLayer            , tidlConstraintGatherND),
+    JTE( TIDL_CastLikeLayer            , tidlConstraintCast),
+    JTE( TIDL_GatherElementsLayer      , tidlConstraintGatherElements),
+    JTE( TIDL_ShapeLayer               , tidlConstraintShape),
+    JTE( TIDL_SizeLayer                , tidlConstraintSize),
+    JTE( TIDL_AttentionLayer           , tidlConstraintAttention),
+    JTE( TIDL_NonZeroLayer             , tidlConstraintNonZero),
 };
 
 #endif /*TIDL_CONSTRAINT_TABLE_H_ */

@@ -69,7 +69,7 @@
 #include "tidl_import_api.h"
 #include "tidl_import_diag.h"
 #include "tidl_import_common_model_check.h"
-
+#include "tidl_common_utils_infer_import.h"
 #include "tidl_runtimes_infer_common.h"
 
 #include <tvm/relay/expr.h>
@@ -120,6 +120,7 @@ struct TidlParseTVM
     bool TIDL_RelayBroadcast(Expr tensor, Expr constant, int32_t &numCh);
     int32_t getTIDLDataTypeFromTVMDataType(int32_t tvmDataType);
     int32_t convertIndicesToInt32(sBuffer_t& weights);
+    bool isLayerIONumSupported(sTIDL_LayerPC_t &layer);
 };
 
 int32_t TIDL_relayExprDims(Expr expr);

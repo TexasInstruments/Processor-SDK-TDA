@@ -76,6 +76,10 @@
 #include "tidl_resize_ref.h"
 #include "tidl_resize.h"
 
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
+
 template <class Tin>
 int32_t TIDL_refResize(
     const Tin *pIn,
@@ -130,6 +134,13 @@ int32_t TIDL_refResize(
   //OPENACC(data copyin(pIn[0: 1+((numBatches-1) * inBatchPitch + (numInChannels-1) * inChPitch + (inPitch * (inHeight-1) + (inWidth-1)))])
                //copy(pOut[0: 1+((numBatches-1) * outBatchPitch + (numInChannels-1) * outChPitch + (outPitch * (outHeight-1) + (outWidth-1)))]))
 {
+  #ifdef BUILD_WITH_CUDA_RESIZE
+  // call cuda resize wrapper
+  uint32_t leftPadResize = (TIDL_isPadOTF(createParams->net->deviceName) == 1U) ? 0 : 1;
+  status = TIDL_cudaResize<Tin>(pIn, pOut, numBatches, numInChannels, inHeight, inWidth, outHeight, outWidth, inBatchPitch, inChPitch, inPitch,
+                                outBatchPitch, outChPitch, outPitch, params->resizeRatio[TIDL_DIM_HEIGHT], params->resizeRatio[TIDL_DIM_WIDTH], 
+                                params->resizePadZeroOffset, params->mode, leftPadResize, 0, 0, 0, 0, tidlLayer->outData.tensorZeroPoint);
+  #else
   if (params->mode == TIDL_ResizePadZero)
   {
     // initialize output buffer with zeroes
@@ -308,6 +319,7 @@ int32_t TIDL_refResize(
     tidl_printf(0, "params->mode is  Not supported !!!\n ");
     status = TIDL_ERR_FAILURE;
   }
+  #endif
   }
   return status;
 }
@@ -381,6 +393,12 @@ int32_t TIDL_resizeProcessSP(
   //OPENACC(data copyin(in[0: 1+((numBatches-1) * inBatchPitch + (numInChannels-1) * inChPitch + (inPitch * (inHeight-1) + (inWidth-1)))])
                //copyout(out[0: 1+((numBatches-1) * outBatchPitch + (numInChannels-1) * outChPitch + (outPitch * (outHeight-1) + (outWidth-1)))]))
 {
+  #ifdef BUILD_WITH_CUDA_RESIZE
+  // call cuda resize wrapper
+  status = TIDL_cudaResize<float>(in, out, numBatches, numInChannels, inHeight, inWidth, outHeight, outWidth, inBatchPitch, inChPitch, inPitch,
+                                outBatchPitch, outChPitch, outPitch, params->resizeRatio[TIDL_DIM_HEIGHT], params->resizeRatio[TIDL_DIM_WIDTH], 
+                                params->resizePadZeroOffset, params->mode, 0, inDataParams[0]->padH, inDataParams[0]->padW, inOffset, outOffset, tidlLayer->outData.tensorZeroPoint);
+  #else
   if (params->mode == TIDL_ResizePadZero)
   {
     // initialize output buffer with zeroes
@@ -507,6 +525,7 @@ int32_t TIDL_resizeProcessSP(
     tidl_printf(0,"params->mode is  Not supported !!!\n ");
     status = TIDL_ERR_FAILURE;
   }
+  #endif
 }
   return status;
 }
@@ -591,13 +610,23 @@ int32_t TIDL_resizeRefProcess(const TIDL_CreateParams *createParams,
       {
         for (uint32_t j = 0; j < resizeInWidthBytes; j++)
         {
+          /* LDRA_JUSTIFY_START
+          <metric start> branch <metric end>
+          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification end> */
           if(1 == copyTopLine)
           {
+            /* LDRA_JUSTIFY_END */
             // *(inPtrOrig + k * inBatchPitch + c * resizeInChPitchBytes + (inElmtSize*leftPadResize) + j) = *(inPtr + k * inBatchPitch + c * resizeInChPitchBytes + j);
             inPtrOrig[(k * inBatchPitch) + (c * resizeInChPitchBytes) + (inElmtSize*leftPadResize) + j] = inPtrOrig[(k * inBatchPitch) + (c * resizeInChPitchBytes) + j + ((((1U)*inPitch) + leftPadResize) * inElmtSize)];
           }
+          /* LDRA_JUSTIFY_START
+          <metric start> branch <metric end>
+          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification end> */
           if(1 == copyBottomLine)
           {
+            /* LDRA_JUSTIFY_END */
             // *(inPtrOrig + k * inBatchPitch + c * resizeInChPitchBytes + (inElmtSize*leftPadResize) + (inputHeight + 1) * inPitchBytes + j) =
                 //     *(inPtr + k * inBatchPitch + c * resizeInChPitchBytes + (inputHeight - 1) * inPitchBytes + j);
             inPtrOrig[(k * inBatchPitch) + (c * resizeInChPitchBytes) + (inElmtSize*leftPadResize) + ((inputHeight + 1U) * inPitchBytes) + j] =
@@ -651,12 +680,22 @@ int32_t TIDL_resizeRefProcess(const TIDL_CreateParams *createParams,
       {
         for (uint32_t j = 0; j < resizeInWidthBytes; j++)
         {
+          /* LDRA_JUSTIFY_START
+          <metric start> branch <metric end>
+          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification end> */
           if(1 == copyTopLine)
           {
+            /* LDRA_JUSTIFY_END */
             inPtrOrig[(k * inBatchPitch) + (c * resizeInChPitchBytes) + (inElmtSize*leftPadResize) + j] = 0;
           }
+          /* LDRA_JUSTIFY_START
+          <metric start> branch <metric end>
+          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification end> */
           if(1 == copyBottomLine)
           {
+            /* LDRA_JUSTIFY_END */
             inPtrOrig[(k * inBatchPitch) + (c * resizeInChPitchBytes) + (inElmtSize*leftPadResize) + ((inputHeight + 1U) * inPitchBytes) + j] = 0;
           }
         }

@@ -269,6 +269,10 @@ typedef struct
   int32_t outBufSize[TIDL_IO_MAX_NUM_CORES * (uint32_t)TIDL_MAX_ALG_OUT_BUFS];
   /** Number of valid dimensions in the output tensor (ONNX)*/
   int32_t numValidTensorDims[TIDL_IO_MAX_NUM_CORES * (uint32_t)TIDL_MAX_ALG_OUT_BUFS];
+  /** Set to 1 if the input tensor has symbolic (variable) dimensions in the ONNX model */
+  int32_t inIsDynamic[TIDL_IO_MAX_NUM_CORES * (uint32_t)TIDL_MAX_ALG_IN_BUFS];
+  /** Set to 1 if the output tensor has symbolic (variable) dimensions in the ONNX model */
+  int32_t outIsDynamic[TIDL_IO_MAX_NUM_CORES * (uint32_t)TIDL_MAX_ALG_OUT_BUFS];
 } sTIDL_IOBufDesc_t;
 
 

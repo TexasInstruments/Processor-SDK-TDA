@@ -44,6 +44,7 @@
 
 #define DYN_LOAD_MEM_DEFAULT_ALIGN 128
 #define MAX_PTR_SIZE_MAP_SIZE  (1024U)
+
 typedef struct {
   void *ptrs[MAX_PTR_SIZE_MAP_SIZE];
   int  sizes[MAX_PTR_SIZE_MAP_SIZE];
@@ -60,7 +61,34 @@ typedef struct {
   const char  **dsp_syms_names; /**< firmware symbol names */
   void        **dsp_syms_addrs; /**< firmware symbol REAL addresses */
   AllocPtrSizeMap_t *dlif_alloc_size_map; /**< DLOAD allocations */
+  uintptr_t     input_buf_start; /**< Start of input buffer for in-place check */
+  uintptr_t     input_buf_end;   /**< End of input buffer for in-place check */
 } Dspload_Client_t;
+
+/* DLOAD segment flags from dload_api.h */
+#define DLOAD_SF_executable  0x1  /* Memory must be executable   */
+#define DLOAD_SF_relocatable 0x2  /* Segment must be relocatable */
+#define DLOAD_SF_writable    0x4  /* Memory must be writable     */
+
+/** \brief Helper to check if a segment is read-only data (rodata)
+ *  Rodata segments are NOT writable AND NOT executable.
+ *  - flags=0x2 (relocatable only) → rodata ✓
+ *  - flags=0x3 (executable + relocatable) → CODE, not rodata
+ *  - flags=0x6 (writable + relocatable) → data, not rodata
+ */
+static BOOL is_rodata_segment(DLOAD_SEGMENT_FLAGS flags)
+{
+  /* Must not be writable AND must not be executable */
+  return ((flags & (DLOAD_SF_writable | DLOAD_SF_executable)) == 0) ? TRUE : FALSE;
+}
+
+/** \brief Helper to check if address is within the input buffer range
+ *  Used to determine if a segment was mapped in-place
+ */
+static BOOL is_inplace_address(Dspload_Client_t *client, uintptr_t addr)
+{
+  return (addr >= client->input_buf_start && addr < client->input_buf_end) ? TRUE : FALSE;
+}
 
 static void dspload_free_all(AllocPtrSizeMap_t *alloc_size_map);
 
@@ -92,6 +120,7 @@ static const char *dsp_syms_names[] = {
 
 "appMemAlloc",
 "appMemFree",
+"appMemResetScratchHeap",
 "appUdmaGetObj",
 
 "DmaUtilsAutoInc3d_configure",
@@ -176,6 +205,7 @@ dspload_get_dsp_syms_addrs(void)
   dsp_syms_addrs[i++] = &fflush;
   dsp_syms_addrs[i++] = &appMemAlloc;
   dsp_syms_addrs[i++] = &appMemFree;
+  dsp_syms_addrs[i++] = &appMemResetScratchHeap;
   dsp_syms_addrs[i++] = &appUdmaGetObj;
   dsp_syms_addrs[i++] = &DmaUtilsAutoInc3d_configure;
   dsp_syms_addrs[i++] = &DmaUtilsAutoInc3d_convertTrVirtToPhyAddr;
@@ -220,6 +250,10 @@ dspload_load_program(void *file_data, int file_size)
       dspload_client->dsp_syms_size  = sizeof(dsp_syms_names)/sizeof(char*);
       dspload_client->dsp_syms_names = dsp_syms_names;
       dspload_client->dsp_syms_addrs = dspload_get_dsp_syms_addrs();
+
+      /* Store input buffer range for in-place segment detection */
+      dspload_client->input_buf_start = (uintptr_t)file_data;
+      dspload_client->input_buf_end   = (uintptr_t)file_data + file_size;
 
       LOADER_FILE_DESC f;
       f.binary = (int8_t *) file_data;
@@ -503,6 +537,11 @@ BOOL DLIF_update_all_dsbts(void)
 /* DLIF_ALLOCATE() - Return the load address of the segment/section          */
 /*      described in its parameters and record the run address in            */
 /*      run_address field of DLOAD_MEMORY_REQUEST.                           */
+/*                                                                           */
+/* In-place mapping for read-only segments:                                  */
+/*      For rodata segments, instead of allocating new memory, we map        */
+/*      directly to the file data in the input buffer. This avoids memcpy    */
+/*      and reduces memory usage for large constant data (e.g., weights).    */
 /*****************************************************************************/
 BOOL DLIF_allocate(void* client_handle, struct DLOAD_MEMORY_REQUEST *req)
 {
@@ -511,13 +550,37 @@ BOOL DLIF_allocate(void* client_handle, struct DLOAD_MEMORY_REQUEST *req)
   /* For TVM dynamic loader, target address must be in DDR                  */
   /*------------------------------------------------------------------------*/
   struct DLOAD_MEMORY_SEGMENT* obj_desc = req->segment;
-  void* addr = DLIF_malloc(obj_desc->memsz_in_bytes);
+  void* addr = NULL;
 
-  #if LOADER_MEM_DEBUG
-  printf("DLIF_allocate: %d bytes starting at %p (relocated from 0x%llx)\n",
-                      obj_desc->memsz_in_bytes, addr,
-                      (uint64_t)obj_desc->target_address);
-  #endif
+  /*------------------------------------------------------------------------*/
+  /* In-place mapping for read-only (rodata) segments                       */
+  /* If segment is read-only and has file data, map directly to input buffer*/
+  /*------------------------------------------------------------------------*/
+  if (is_rodata_segment(req->flags) && obj_desc->objsz_in_bytes > 0)
+  {
+    /* Calculate the address in the input buffer where segment data resides */
+    LOADER_FILE_DESC* f = req->fp;
+    addr = (void*)(f->orig + req->offset);
+
+    #if LOADER_MEM_DEBUG
+    printf("DLIF_allocate (in-place rodata): %d bytes at %p (offset=%u)\n",
+                        obj_desc->memsz_in_bytes, addr, req->offset);
+    #endif
+
+    /* Mark as already loaded - no copy needed */
+    req->is_loaded = TRUE;
+  }
+  else
+  {
+    /* Normal allocation for writable/executable segments */
+    addr = DLIF_malloc(obj_desc->memsz_in_bytes);
+
+    #if LOADER_MEM_DEBUG
+    printf("DLIF_allocate: %d bytes starting at %p (relocated from 0x%llx)\n",
+                        obj_desc->memsz_in_bytes, addr,
+                        (uint64_t)obj_desc->target_address);
+    #endif
+  }
 
   obj_desc->target_address = (TARGET_ADDRESS) addr;
 
@@ -530,15 +593,37 @@ BOOL DLIF_allocate(void* client_handle, struct DLOAD_MEMORY_REQUEST *req)
 /*****************************************************************************/
 /* DLIF_RELEASE() - Unmap or free target memory that was previously          */
 /*      allocated by DLIF_allocate().                                        */
+/*                                                                           */
+/* Skip freeing for in-place mapped segments:                                */
+/*      Segments that were mapped in-place to the input buffer should not    */
+/*      be freed - they are part of the original file data.                  */
 /*****************************************************************************/
 BOOL DLIF_release(void* client_handle, struct DLOAD_MEMORY_SEGMENT* ptr)
 {
+  Dspload_Client_t* dspload_client = (Dspload_Client_t*) client_handle;
+  uintptr_t addr = (uintptr_t) ptr->target_address;
+
+  /*------------------------------------------------------------------------*/
+  /* Check if this is an in-place mapped segment                            */
+  /* If address is within input buffer range, it's in-place - don't free    */
+  /*------------------------------------------------------------------------*/
+  if (is_inplace_address(dspload_client, addr))
+  {
+    #if LOADER_MEM_DEBUG
+    printf("DLIF_release (in-place, skip free): %d bytes at %p\n",
+                        ptr->memsz_in_bytes, (void*) ptr->target_address);
+    #endif
+    return TRUE;
+  }
+
+  /* Normal free for allocated segments */
   DLIF_free((void*) ptr->target_address);
 
   #if LOADER_MEM_DEBUG
   printf("DLIF_free: %d bytes starting at %p\n",
                       ptr->memsz_in_bytes, (void*) ptr->target_address);
   #endif
+
   return TRUE;
 }
 
@@ -547,6 +632,9 @@ BOOL DLIF_release(void* client_handle, struct DLOAD_MEMORY_SEGMENT* ptr)
 /*      Returns a host pointer to the data in the host_address field of the  */
 /*      DLOAD_MEMORY_REQUEST object.                                         */
 /* C7x load to C7x: use the same buffer for target_address and host_address  */
+/*                                                                           */
+/* Skip copy for in-place mapped segments:                                   */
+/*      If segment was marked as already loaded (in-place), skip memcpy.     */
 /*****************************************************************************/
 BOOL DLIF_copy(void* client_handle, struct DLOAD_MEMORY_REQUEST* req)
 {
@@ -555,6 +643,24 @@ BOOL DLIF_copy(void* client_handle, struct DLOAD_MEMORY_REQUEST* req)
 
   int result = 1;
   void *buf = NULL;
+
+  /*------------------------------------------------------------------------*/
+  /* Skip copy for in-place mapped rodata segments                          */
+  /*------------------------------------------------------------------------*/
+  if (req->is_loaded && is_rodata_segment(req->flags))
+  {
+    /* Segment already mapped in-place, no copy needed */
+    buf = (void *) obj_desc->target_address;
+
+    #if LOADER_MEM_DEBUG
+    printf("DLIF_copy (in-place, skip copy): %d bytes at %p\n",
+                        obj_desc->objsz_in_bytes, buf);
+    #endif
+
+    req->host_address = buf;
+    return TRUE;
+  }
+
   if (obj_desc->objsz_in_bytes)
   {
     buf = (void *) obj_desc->target_address;
@@ -587,6 +693,10 @@ BOOL DLIF_copy(void* client_handle, struct DLOAD_MEMORY_REQUEST* req)
 /*      memory.                                                              */
 /* C7x load to C7x: target address and host address point to the same buffer */
 /*                  no need to copy.  Perform cache WbInv on the segment     */
+/*                                                                           */
+/* For in-place rodata segments, use cache invalidate only:                  */
+/*      - Writeback NOT needed: data wasn't modified (no memcpy happened)    */
+/*      - Invalidate IS needed: ensure CPU reads fresh data from DDR         */
 /*****************************************************************************/
 BOOL DLIF_write(void* client_handle, struct DLOAD_MEMORY_REQUEST* req)
 {
@@ -596,14 +706,32 @@ BOOL DLIF_write(void* client_handle, struct DLOAD_MEMORY_REQUEST* req)
     req->host_address = NULL;
   }
 
-  /* cache WbInv on the dloaded segment, Data Cache -> DDR (-> Program Cache) */
   struct DLOAD_MEMORY_SEGMENT* obj_desc = req->segment;
-  appMemCacheWbInv((void *)obj_desc->target_address, obj_desc->memsz_in_bytes);
 
-  #if LOADER_MEM_DEBUG
-  printf("DLIF_write: %d bytes starting at %p\n",
-         obj_desc->memsz_in_bytes, obj_desc->target_address);
-  #endif
+  /*------------------------------------------------------------------------*/
+  /* For in-place rodata, only invalidate cache (no writeback needed)       */
+  /* Data wasn't modified, but we need to ensure program cache sees DDR data*/
+  /*------------------------------------------------------------------------*/
+  if (req->is_loaded && is_rodata_segment(req->flags))
+  {
+    /* Cache invalidate only - data already in DDR, just ensure cache coherency */
+    appMemCacheInv((void *)obj_desc->target_address, obj_desc->memsz_in_bytes);
+
+    #if LOADER_MEM_DEBUG
+    printf("DLIF_write (in-place, cache inv only): %d bytes at %p\n",
+           obj_desc->memsz_in_bytes, (void*)obj_desc->target_address);
+    #endif
+  }
+  else
+  {
+    /* Normal case: cache WbInv on the dloaded segment, Data Cache -> DDR (-> Program Cache) */
+    appMemCacheWbInv((void *)obj_desc->target_address, obj_desc->memsz_in_bytes);
+
+    #if LOADER_MEM_DEBUG
+    printf("DLIF_write: %d bytes starting at %p\n",
+           obj_desc->memsz_in_bytes, (void*)obj_desc->target_address);
+    #endif
+  }
 
   return TRUE;
 }

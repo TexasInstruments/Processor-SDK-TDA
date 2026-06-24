@@ -227,23 +227,67 @@ int32_t TIDL_lstmRefInit(const TIDL_LayerSpecificParams *layerSpecificParams,
 }
 
 /**
+ * Scalar replica of exp_highprecision_vec: same range reduction + 5th-order Taylor
+ */
+static inline float32_tidl TIDL_lstmExpScalar(float32_tidl x)
+{
+  float32_tidl ln2     = 0.693147180559945f;
+  float32_tidl ln2_inv = 1.442695040888963f;
+
+  float32_tidl n_raw = x * ln2_inv;
+  float32_tidl n_adj = (n_raw >= 0.0f) ? (n_raw + 0.5f) : (n_raw - 0.5f);
+  int32_t n          = (int32_t) n_adj;
+
+  float32_tidl n_f = (float32_tidl) n;
+  float32_tidl f   = x - n_f * ln2;
+
+  float32_tidl exp_f = 1.0f + f * (1.0f + f * (0.5f + f * (0.16666667f + f * (0.04166667f + f * 0.00833333f))));
+
+  int32_t scale_bits = (n + 127) << 23;
+  float32_tidl scale;
+  memcpy(&scale, &scale_bits, sizeof(float32_tidl));
+
+  float32_tidl result = exp_f * scale;
+
+  if (n > 127)  result = 3.4e38f;
+  if (n < -126) result = 0.0f;
+
+  return result;
+}
+
+/**
  * @brief Sigmoid activation function for LSTM
  * @param x: input value
  * @return sigmoid(x)
  */
 static inline float32_tidl TIDL_lstmSigmoid(float32_tidl x)
 {
-  float32_tidl result;
-  if (x >= 0)
-  {
-    result = 1 / (1 + exp(-x));
-  }
-  else
-  {
-    result = exp(x) / (1 + exp(x));
-  }
+  return 1.0f / (1.0f + expf(-x));
+}
 
-  return result;
+/**
+ * @brief Sigmoid activation function implemented using taylor series expansion
+ * @param x: input value
+ * @return sigmoid(x)
+ */
+static inline float32_tidl TIDL_lstmSigmoidTaylor(float32_tidl x)
+{
+  x = (x > TIDL_LSTM_SIGMOID_BOUND) ? TIDL_LSTM_SIGMOID_BOUND : x;
+  x = (x < -TIDL_LSTM_SIGMOID_BOUND) ? -TIDL_LSTM_SIGMOID_BOUND : x;
+
+  int32_t neg_mask         = (x < 0.0f);
+  float32_tidl abs_x       = neg_mask ? -x : x;
+  float32_tidl exp_neg_abs = TIDL_lstmExpScalar(-abs_x);
+  float32_tidl denom       = 1.0f + exp_neg_abs;
+
+  /* RCPSP + 2 Newton-Raphson iterations — matches __recip + NR in sigmoid_vec */
+  float32_tidl recip = __recip(denom);
+  recip = recip * (2.0f - denom * recip);
+  recip = recip * (2.0f - denom * recip);
+
+  float32_tidl sig_neg = 1.0f - recip;
+
+  return neg_mask ? sig_neg : recip;
 }
 
 /**
@@ -254,9 +298,33 @@ static inline float32_tidl TIDL_lstmSigmoid(float32_tidl x)
 static inline float32_tidl TIDL_lstmTanh(float32_tidl x)
 {
   float32_tidl result;
-  result = 2.0f * TIDL_lstmSigmoid(2.0f * x) - 1.0f;
+  return tanhf(x);
+}
 
-  return result;
+/**
+ * @brief Tanh activation function implemented using taylor series expansion
+ * @param x: input value
+ * @return tanh(x)
+ */
+static inline float32_tidl TIDL_lstmTanhTaylor(float32_tidl x)
+{
+  x = (x > TIDL_LSTM_TANH_BOUND) ? TIDL_LSTM_TANH_BOUND : x;
+  x = (x < -TIDL_LSTM_TANH_BOUND) ? -TIDL_LSTM_TANH_BOUND : x;
+
+  int32_t   neg_mask     = (x < 0.0f);
+  float32_tidl abs_x     = neg_mask ? -x : x;
+  float32_tidl exp_neg2x = TIDL_lstmExpScalar(-2.0f * abs_x);
+  float32_tidl numer     = 1.0f - exp_neg2x;
+  float32_tidl denom     = 1.0f + exp_neg2x;
+
+  /* RCPSP + 2 Newton-Raphson iterations — matches __recip + NR in tanh_vec */
+  float32_tidl recip = __recip(denom);
+  recip       = recip * (2.0f - denom * recip);
+  recip       = recip * (2.0f - denom * recip);
+
+  float32_tidl tanh_pos = numer * recip;
+
+  return neg_mask ? -tanh_pos : tanh_pos;
 }
 
 /**
@@ -268,10 +336,12 @@ static inline float32_tidl TIDL_lstmTanh(float32_tidl x)
  * @param activation_beta  : beta value for parametric activations
  * @param isClipSet        : flag to indicate whether clip value is set or not
  * @param clip             : clip value
+ * @param useTaylor        : flag to indicate whether to use taylor series based implementation
  * @return activated value
  */
 static inline float32_tidl TIDL_lstmActivation(float32_tidl val, int32_t actType, float32_tidl activation_alpha,
-                                               float32_tidl activation_beta,  int32_t isClipSet, float32_tidl clip)
+                                               float32_tidl activation_beta,  int8_t isClipSet, float32_tidl clip,
+                                               int8_t useTaylor)
 {
   if(isClipSet == 1)
   {
@@ -286,11 +356,11 @@ static inline float32_tidl TIDL_lstmActivation(float32_tidl val, int32_t actType
   }
   else if (actType == TIDL_Sigmoid)
   {
-    activatedVal = TIDL_lstmSigmoid(val);
+    activatedVal = (useTaylor == 1) ? TIDL_lstmSigmoidTaylor(val) : TIDL_lstmSigmoid(val);
   }
   else if (actType == TIDL_Tanh)
   {
-    activatedVal = TIDL_lstmTanh(val);
+    activatedVal = (useTaylor == 1) ? TIDL_lstmTanhTaylor(val) : TIDL_lstmTanh(val);
   }
   else if (actType == TIDL_LeakyReLU)
   {
@@ -313,6 +383,243 @@ static inline float32_tidl TIDL_lstmActivation(float32_tidl val, int32_t actType
   }
 
   return activatedVal;
+}
+
+/* Volatile accumulators, bias pre-loaded — matches C7x per-lane FP order */
+template<class Tin> static void TIDL_lstmGateComputeDevice(
+    const Tin *xt,
+    const Tin *ht_prev, const Tin *ct_prev,
+    const Tin *W_dir, const Tin *R_dir,
+    const Tin *B_dir, const Tin *P_dir,
+    Tin *gate_i, Tin *gate_o,
+    Tin *gate_f, Tin *gate_c,
+    int32_t input_size, int32_t hidden_size)
+{
+  /* W_dir: [4*hidden_size, input_size],  ONNX gate order: i,o,f,c */
+  const Tin *Wi  = W_dir + 0 * hidden_size * input_size;
+  const Tin *Wo  = W_dir + 1 * hidden_size * input_size;
+  const Tin *Wf  = W_dir + 2 * hidden_size * input_size;
+  const Tin *Wc  = W_dir + 3 * hidden_size * input_size;
+
+  /* R_dir: [4*hidden_size, hidden_size], ONNX gate order: i,o,f,c */
+  const Tin *Ri  = R_dir + 0 * hidden_size * hidden_size;
+  const Tin *Ro  = R_dir + 1 * hidden_size * hidden_size;
+  const Tin *Rf  = R_dir + 2 * hidden_size * hidden_size;
+  const Tin *Rc  = R_dir + 3 * hidden_size * hidden_size;
+
+  /* B_dir: [8*hidden_size] = [Wbi,Wbo,Wbf,Wbc,Rbi,Rbo,Rbf,Rbc] */
+  const Tin *Wbi = (B_dir != NULL) ? B_dir + 0 * hidden_size : NULL;
+  const Tin *Wbo = (B_dir != NULL) ? B_dir + 1 * hidden_size : NULL;
+  const Tin *Wbf = (B_dir != NULL) ? B_dir + 2 * hidden_size : NULL;
+  const Tin *Wbc = (B_dir != NULL) ? B_dir + 3 * hidden_size : NULL;
+  const Tin *Rbi = (B_dir != NULL) ? B_dir + 4 * hidden_size : NULL;
+  const Tin *Rbo = (B_dir != NULL) ? B_dir + 5 * hidden_size : NULL;
+  const Tin *Rbf = (B_dir != NULL) ? B_dir + 6 * hidden_size : NULL;
+  const Tin *Rbc = (B_dir != NULL) ? B_dir + 7 * hidden_size : NULL;
+
+  /* P_dir: [3*hidden_size] = [Pi,Po,Pf] */
+  const Tin *Pi  = (P_dir != NULL) ? P_dir + 0 * hidden_size : NULL;
+  const Tin *Pf  = (P_dir != NULL) ? P_dir + 2 * hidden_size : NULL;
+
+  for (int32_t hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
+  {
+    /* Input gate (pre-activation): it = (Wbi + Xt*(Wi^T) + Rbi + Ht-1*(Ri^T) + Pi(.)Ct-1) */
+    volatile float32_tidl wx_i = (Wbi != NULL) ? Wbi[hiddenIdx] : 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < input_size; inputIdx++)
+    {
+      wx_i += (float32_tidl)xt[inputIdx] * Wi[hiddenIdx * input_size + inputIdx];
+    }
+    volatile float32_tidl rh_i = (Rbi != NULL) ? Rbi[hiddenIdx] : 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < hidden_size; inputIdx++)
+    {
+      rh_i += ht_prev[inputIdx] * Ri[hiddenIdx * hidden_size + inputIdx];
+    }
+    gate_i[hiddenIdx] = (float32_tidl)wx_i + (float32_tidl)rh_i;
+    if (Pi != NULL)
+    {
+      gate_i[hiddenIdx] += Pi[hiddenIdx] * ct_prev[hiddenIdx];
+    }
+
+    /* Output gate (pre-activation & without peepholes): ot = (Wbo + Xt*(Wo^T) + Rbo + Ht-1*(Ro^T)) */
+    volatile float32_tidl wx_o = (Wbo != NULL) ? Wbo[hiddenIdx] : 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < input_size; inputIdx++)
+    {
+      wx_o += (float32_tidl)xt[inputIdx] * Wo[hiddenIdx * input_size + inputIdx];
+    }
+    volatile float32_tidl rh_o = (Rbo != NULL) ? Rbo[hiddenIdx] : 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < hidden_size; inputIdx++)
+    {
+      rh_o += ht_prev[inputIdx] * Ro[hiddenIdx * hidden_size + inputIdx];
+    }
+    gate_o[hiddenIdx] = (float32_tidl)wx_o + (float32_tidl)rh_o;
+
+    /* Forget gate (pre-activation): ft = (Wbf + Xt*(Wf^T) + Rbf + Ht-1*(Rf^T) + Pf(.)Ct-1) */
+    volatile float32_tidl wx_f = (Wbf != NULL) ? Wbf[hiddenIdx] : 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < input_size; inputIdx++)
+    {
+      wx_f += (float32_tidl)xt[inputIdx] * Wf[hiddenIdx * input_size + inputIdx];
+    }
+    volatile float32_tidl rh_f = (Rbf != NULL) ? Rbf[hiddenIdx] : 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < hidden_size; inputIdx++)
+    {
+      rh_f += ht_prev[inputIdx] * Rf[hiddenIdx * hidden_size + inputIdx];
+    }
+    gate_f[hiddenIdx] = (float32_tidl)wx_f + (float32_tidl)rh_f;
+    if (Pf != NULL)
+    {
+      gate_f[hiddenIdx] += Pf[hiddenIdx] * ct_prev[hiddenIdx];
+    }
+
+    /* Cell gate (pre-activation): ct = (Wbc + Xt*(Wc^T) + Rbc + Ht-1*(Rc^T)) */
+    volatile float32_tidl wx_g = (Wbc != NULL) ? Wbc[hiddenIdx] : 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < input_size; inputIdx++)
+    {
+      wx_g += (float32_tidl)xt[inputIdx] * Wc[hiddenIdx * input_size + inputIdx];
+    }
+    volatile float32_tidl rh_g = (Rbc != NULL) ? Rbc[hiddenIdx] : 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < hidden_size; inputIdx++)
+    {
+      rh_g += ht_prev[inputIdx] * Rc[hiddenIdx * hidden_size + inputIdx];
+    }
+    gate_c[hiddenIdx] = (float32_tidl)wx_g + (float32_tidl)rh_g;
+  }
+}
+
+/* Standard gate computation as per onnxruntime */
+template<class Tin> static void TIDL_lstmGateComputeStandard(
+    const Tin *xt,
+    const Tin *ht_prev, const Tin *ct_prev,
+    const Tin *W_dir, const Tin *R_dir,
+    const Tin *B_dir, const Tin *P_dir,
+    Tin *gate_i, Tin *gate_o,
+    Tin *gate_f, Tin *gate_c,
+    int32_t input_size, int32_t hidden_size)
+{
+  /* W_dir: [4*hidden_size, input_size],  ONNX gate order: i,o,f,c */
+  const Tin *Wi  = W_dir + 0 * hidden_size * input_size;
+  const Tin *Wo  = W_dir + 1 * hidden_size * input_size;
+  const Tin *Wf  = W_dir + 2 * hidden_size * input_size;
+  const Tin *Wc  = W_dir + 3 * hidden_size * input_size;
+
+  /* R_dir: [4*hidden_size, hidden_size], ONNX gate order: i,o,f,c */
+  const Tin *Ri  = R_dir + 0 * hidden_size * hidden_size;
+  const Tin *Ro  = R_dir + 1 * hidden_size * hidden_size;
+  const Tin *Rf  = R_dir + 2 * hidden_size * hidden_size;
+  const Tin *Rc  = R_dir + 3 * hidden_size * hidden_size;
+
+  /* B_dir: [8*hidden_size] = [Wbi,Wbo,Wbf,Wbc,Rbi,Rbo,Rbf,Rbc] */
+  const Tin *Wbi = (B_dir != NULL) ? B_dir + 0 * hidden_size : NULL;
+  const Tin *Wbo = (B_dir != NULL) ? B_dir + 1 * hidden_size : NULL;
+  const Tin *Wbf = (B_dir != NULL) ? B_dir + 2 * hidden_size : NULL;
+  const Tin *Wbc = (B_dir != NULL) ? B_dir + 3 * hidden_size : NULL;
+  const Tin *Rbi = (B_dir != NULL) ? B_dir + 4 * hidden_size : NULL;
+  const Tin *Rbo = (B_dir != NULL) ? B_dir + 5 * hidden_size : NULL;
+  const Tin *Rbf = (B_dir != NULL) ? B_dir + 6 * hidden_size : NULL;
+  const Tin *Rbc = (B_dir != NULL) ? B_dir + 7 * hidden_size : NULL;
+
+  /* P_dir: [3*hidden_size] = [Pi,Po,Pf] */
+  const Tin *Pi  = (P_dir != NULL) ? P_dir + 0 * hidden_size : NULL;
+  const Tin *Pf  = (P_dir != NULL) ? P_dir + 2 * hidden_size : NULL;
+
+  /* Input gate (pre-activation): it = (Xt*(Wi^T) + Ht-1*(Ri^T) + Pi(.)Ct-1 + Wbi + Rbi) */
+  for (int32_t hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
+  {
+    float32_tidl sum = 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < input_size; inputIdx++)
+    {
+      sum += (float32_tidl)xt[inputIdx] * Wi[hiddenIdx * input_size + inputIdx];
+    }
+    for (int32_t inputIdx = 0; inputIdx < hidden_size; inputIdx++)
+    {
+      sum += ht_prev[inputIdx] * Ri[hiddenIdx * hidden_size + inputIdx];
+    }
+    if (Pi != NULL)
+    {
+      sum += Pi[hiddenIdx] * ct_prev[hiddenIdx];
+    }
+    if (Wbi != NULL)
+    {
+      sum += Wbi[hiddenIdx];
+    }
+    if (Rbi != NULL)
+    {
+      sum += Rbi[hiddenIdx];
+    }
+    gate_i[hiddenIdx] = sum;
+  }
+
+  /* Forget gate (pre-activation): ft = (Xt*(Wf^T) + Ht-1*(Rf^T) + Pf(.)Ct-1 + Wbf + Rbf) */
+  for (int32_t hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
+  {
+    float32_tidl sum = 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < input_size; inputIdx++)
+    {
+      sum += (float32_tidl)xt[inputIdx] * Wf[hiddenIdx * input_size + inputIdx];
+    }
+    for (int32_t inputIdx = 0; inputIdx < hidden_size; inputIdx++)
+    {
+      sum += ht_prev[inputIdx] * Rf[hiddenIdx * hidden_size + inputIdx];
+    }
+    if (Pf != NULL)
+    {
+      sum += Pf[hiddenIdx] * ct_prev[hiddenIdx];
+    }
+    if (Wbf != NULL)
+    {
+      sum += Wbf[hiddenIdx];
+    }
+    if (Rbf != NULL)
+    {
+      sum += Rbf[hiddenIdx];
+    }
+    gate_f[hiddenIdx] = sum;
+  }
+
+  /* Cell gate (pre-activation): ct = g(Xt*(Wc^T) + Ht-1*(Rc^T) + Wbc + Rbc) */
+  for (int32_t hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
+  {
+    float32_tidl sum = 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < input_size; inputIdx++)
+    {
+      sum += (float32_tidl)xt[inputIdx] * Wc[hiddenIdx * input_size + inputIdx];
+    }
+    for (int32_t inputIdx = 0; inputIdx < hidden_size; inputIdx++)
+    {
+      sum += ht_prev[inputIdx] * Rc[hiddenIdx * hidden_size + inputIdx];
+    }
+    if (Wbc != NULL)
+    {
+      sum += Wbc[hiddenIdx];
+    }
+    if (Rbc != NULL)
+    {
+      sum += Rbc[hiddenIdx];
+    }
+    gate_c[hiddenIdx] = sum;
+  }
+
+  /* Output gate (pre-activatino & without peepholes): (Xt*(Wo^T) + Ht-1*(Ro^T) + Wbo + Rbo) */
+  for (int32_t hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
+  {
+    float32_tidl sum = 0.0f;
+    for (int32_t inputIdx = 0; inputIdx < input_size; inputIdx++)
+    {
+      sum += (float32_tidl)xt[inputIdx] * Wo[hiddenIdx * input_size + inputIdx];
+    }
+    for (int32_t inputIdx = 0; inputIdx < hidden_size; inputIdx++)
+    {
+      sum += ht_prev[inputIdx] * Ro[hiddenIdx * hidden_size + inputIdx];
+    }
+    if (Wbo != NULL)
+    {
+      sum += Wbo[hiddenIdx];
+    }
+    if (Rbo != NULL)
+    {
+      sum += Rbo[hiddenIdx];
+    }
+    gate_o[hiddenIdx] = sum;
+  }
 }
 
 /**
@@ -347,6 +654,7 @@ static inline float32_tidl TIDL_lstmActivation(float32_tidl val, int32_t actType
  * @param initial_cParams  : parameters of the initial cell state buffer
  * @param peepholesParams  : parameters of the peephole weights buffer
  * @param outDataParams    : parameters of the output data buffer
+ * @param useTaylor        : flag to indicate whether to use taylor series expansion for activations
  * @return  IALG_EOK       - Successful
  *          IALG_EFAIL     - Unspecified error
  */
@@ -354,6 +662,7 @@ template<class Tin, class Tout> static int32_t TIDL_refLSTMCoreFloat(
     Tin *inPtr,
     Tin *WPtr,
     Tin *RPtr,
+    Tin *biasPtr,
     Tin *initial_hPtr,
     Tin *initial_cPtr,
     Tin *peepholesPtr,
@@ -365,10 +674,12 @@ template<class Tin, class Tout> static int32_t TIDL_refLSTMCoreFloat(
     const sTIDL_DataParams_t *inDataParams,
     const sTIDL_DataParams_t *WParams,
     const sTIDL_DataParams_t *RParams,
+    const sTIDL_DataParams_t *biasParams,
     const sTIDL_DataParams_t *initial_hParams,
     const sTIDL_DataParams_t *initial_cParams,
     const sTIDL_DataParams_t *peepholesParams,
-    const sTIDL_DataParams_t *outDataParams)
+    const sTIDL_DataParams_t *outDataParams,
+    int8_t useTaylor)
 {
   int32_t status = IALG_EOK;
   sTIDL_Network_t *net = intAlgHandle->createParams->net;
@@ -376,15 +687,17 @@ template<class Tin, class Tout> static int32_t TIDL_refLSTMCoreFloat(
   int32_t direction = params->direction;
   int32_t layout = params->layout;
   int32_t input_forget = params->input_forget;
-  int32_t isClipSet = params->isClipSet;
+  int8_t isClipSet = params->isClipSet;
   float32_tidl clip = params->clip;
   
   /* Determine number of directions */
   int32_t num_directions = 1;
-  if (direction == TIDL_RNNBidirectional)
+  #if defined TIDL_COVERAGE_DEAD_CODE
+  if (direction == TIDL_RecurrentBidirectional)
   {
     num_directions = 2;
   }
+  #endif
 
   /* Extract batch_size, seq_length from input dimensions based on layout */
   int32_t batch_size, seq_length, input_size;
@@ -401,12 +714,6 @@ template<class Tin, class Tout> static int32_t TIDL_refLSTMCoreFloat(
     batch_size = inDataParams->dimValues[TIDL_DIM_NUMCH];
     seq_length = inDataParams->dimValues[TIDL_DIM_HEIGHT];
     input_size = inDataParams->dimValues[TIDL_DIM_WIDTH];
-  }
-
-  float32_tidl *B_all = NULL;
-  if (params->bias != 0)
-  {
-    B_all = (float32_tidl *)get_int8_t_pointer((int8_t *)net, params->bias);
   }
 
   int32_t *sequence_lens = NULL;
@@ -452,43 +759,16 @@ template<class Tin, class Tout> static int32_t TIDL_refLSTMCoreFloat(
 
       /* W: [num_directions, 4*hidden_size, input_size], ONNX gate order: i,o,f,c */
       Tin *W_dir = WPtr + dirIdx * 4 * hidden_size * input_size;
-      Tin *Wi = W_dir + 0 * hidden_size * input_size;
-      Tin *Wo = W_dir + 1 * hidden_size * input_size;
-      Tin *Wf = W_dir + 2 * hidden_size * input_size;
-      Tin *Wc = W_dir + 3 * hidden_size * input_size;
 
       /* R: [num_directions, 4*hidden_size, hidden_size] */
       Tin *R_dir = RPtr + dirIdx * 4 * hidden_size * hidden_size;
-      Tin *Ri = R_dir + 0 * hidden_size * hidden_size;
-      Tin *Ro = R_dir + 1 * hidden_size * hidden_size;
-      Tin *Rf = R_dir + 2 * hidden_size * hidden_size;
-      Tin *Rc = R_dir + 3 * hidden_size * hidden_size;
 
-      /* B: [num_directions, 8*hidden_size] = [Wbi,Wbo,Wbf,Wbc, Rbi,Rbo,Rbf,Rbc] */
-      float32_tidl *Wbi = NULL, *Wbo = NULL, *Wbf = NULL, *Wbc = NULL;
-      float32_tidl *Rbi = NULL, *Rbo = NULL, *Rbf = NULL, *Rbc = NULL;
-      if (B_all != NULL)
-      {
-        float32_tidl *B_dir = B_all + dirIdx * 8 * hidden_size;
-        Wbi = B_dir + 0 * hidden_size;
-        Wbo = B_dir + 1 * hidden_size;
-        Wbf = B_dir + 2 * hidden_size;
-        Wbc = B_dir + 3 * hidden_size;
-        Rbi = B_dir + 4 * hidden_size;
-        Rbo = B_dir + 5 * hidden_size;
-        Rbf = B_dir + 6 * hidden_size;
-        Rbc = B_dir + 7 * hidden_size;
-      }
+      /* B: [num_directions, 8*hidden_size] = [Wbi,Wbo,Wbf,Wbc, Rbi,Rbo,Rbf,Rbc] or NULL */
+      Tin *B_dir = (biasPtr != NULL) ? biasPtr + dirIdx * 8 * hidden_size : NULL;
 
-      /* P (peepholes): [num_directions, 3*hidden_size] = [Pi, Po, Pf] */
-      Tin *Pi = NULL, *Po = NULL, *Pf = NULL;
-      if (peepholesPtr != NULL)
-      {
-        Tin *P_dir = peepholesPtr + dirIdx * 3 * hidden_size;
-        Pi = P_dir + 0 * hidden_size;
-        Po = P_dir + 1 * hidden_size;
-        Pf = P_dir + 2 * hidden_size;
-      }
+      /* P: [num_directions, 3*hidden_size] = [Pi, Po, Pf] or NULL */
+      Tin *P_dir = (peepholesPtr != NULL) ? peepholesPtr + dirIdx * 3 * hidden_size : NULL;
+      Tin *Po    = (P_dir != NULL) ? P_dir + 1 * hidden_size : NULL;
 
       /*
       * Initialize Ht and Ct from initial states
@@ -536,14 +816,21 @@ template<class Tin, class Tout> static int32_t TIDL_refLSTMCoreFloat(
         * Bidirectional: dirIdx 0 → forward, dirIdx 1 → reverse
         */
         int32_t isReverse = 0;
-        if (direction == TIDL_RNNReverse)
+        if (direction == TIDL_RecurrentReverse)
         {
           isReverse = 1;
         }
-        else if ((direction == TIDL_RNNBidirectional) && (dirIdx == 1))
+        #if defined TIDL_COVERAGE_DEAD_CODE
+        else if ((direction == TIDL_RecurrentBidirectional) && (dirIdx == 1))
         {
           isReverse = 1;
         }
+        else
+        {
+          /* Not reachable */
+        }
+        #endif
+
         int32_t timeStep = (isReverse == 0) ? timeIdx : (seq_length - 1 - timeIdx);
 
         for (batchIdx = 0; batchIdx < batch_size; batchIdx++)
@@ -612,174 +899,59 @@ template<class Tin, class Tout> static int32_t TIDL_refLSTMCoreFloat(
           Tin *gate_f = gates + 2 * hidden_size;
           Tin *gate_c = gates + 3 * hidden_size;
 
-          /* Compute input gate: it = f(Xt*(Wi^T) + Ht-1*(Ri^T) + Pi(.)Ct-1 + Wbi + Rbi) */
-          for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
+          if (useTaylor == 1)
           {
-            float32_tidl sum = 0.0f;
-            for (inputIdx = 0; inputIdx < input_size; inputIdx++)
-            {
-              sum += (float32_tidl)xt[inputIdx] * Wi[hiddenIdx * input_size + inputIdx];
-            }
-            for (inputIdx = 0; inputIdx < hidden_size; inputIdx++)
-            {
-              sum += ht_prev[inputIdx] * Ri[hiddenIdx * hidden_size + inputIdx];
-            }
-            if (Pi != NULL)
-            {
-              sum += Pi[hiddenIdx] * ct_prev[hiddenIdx];
-            }
-            if (Wbi != NULL)
-            {
-              sum += Wbi[hiddenIdx];
-            }
-            if (Rbi != NULL)
-            {
-              sum += Rbi[hiddenIdx];
-            }
-
-            gate_i[hiddenIdx] = sum;
+            TIDL_lstmGateComputeDevice<Tin>(xt, ht_prev, ct_prev,
+                                           W_dir, R_dir, B_dir, P_dir,
+                                           gate_i, gate_o, gate_f, gate_c,
+                                           input_size, hidden_size);
+          }
+          else
+          {
+            TIDL_lstmGateComputeStandard<Tin>(xt, ht_prev, ct_prev,
+                                             W_dir, R_dir, B_dir, P_dir,
+                                             gate_i, gate_o, gate_f, gate_c,
+                                             input_size, hidden_size);
           }
 
-          /* Compute forget gate: ft = f(Xt*(Wf^T) + Ht-1*(Rf^T) + Pf(.)Ct-1 + Wbf + Rbf) */
+          /* Activate gates and update cell/hidden state */
           for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
           {
-            float32_tidl sum = 0.0f;
-            for (inputIdx = 0; inputIdx < input_size; inputIdx++)
+            float32_tidl it = TIDL_lstmActivation(gate_i[hiddenIdx], params->activations[activation_f_idx],
+                                                  params->activation_alpha[activation_f_idx], params->activation_beta[activation_f_idx],
+                                                  isClipSet, clip, useTaylor);
+            float32_tidl ft = TIDL_lstmActivation(gate_f[hiddenIdx], params->activations[activation_f_idx],
+                                                  params->activation_alpha[activation_f_idx], params->activation_beta[activation_f_idx],
+                                                  isClipSet, clip, useTaylor);
+
+            if (input_forget != 0)
             {
-              sum += (float32_tidl)xt[inputIdx] * Wf[hiddenIdx * input_size + inputIdx];
-            }
-            for (inputIdx = 0; inputIdx < hidden_size; inputIdx++)
-            {
-              sum += ht_prev[inputIdx] * Rf[hiddenIdx * hidden_size + inputIdx];
-            }
-            if (Pf != NULL)
-            {
-              sum += Pf[hiddenIdx] * ct_prev[hiddenIdx];
-            }
-            if (Wbf != NULL)
-            {
-              sum += Wbf[hiddenIdx];
-            }
-            if (Rbf != NULL)
-            {
-              sum += Rbf[hiddenIdx];
+              ft = 1.0f - it;
             }
 
-            gate_f[hiddenIdx] = sum;
-          }
+            float32_tidl ct = TIDL_lstmActivation(gate_c[hiddenIdx], params->activations[activation_g_idx],
+                                                  params->activation_alpha[activation_g_idx], params->activation_beta[activation_g_idx],
+                                                  isClipSet, clip, useTaylor);
 
-          /* Compute cell gate: ct = g(Xt*(Wc^T) + Ht-1*(Rc^T) + Wbc + Rbc) */
-          for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
-          {
-            float32_tidl sum = 0.0f;
-            for (inputIdx = 0; inputIdx < input_size; inputIdx++)
-            {
-              sum += (float32_tidl)xt[inputIdx] * Wc[hiddenIdx * input_size + inputIdx];
-            }
-            for (inputIdx = 0; inputIdx < hidden_size; inputIdx++)
-            {
-              sum += ht_prev[inputIdx] * Rc[hiddenIdx * hidden_size + inputIdx];
-            }
-            if (Wbc != NULL)
-            {
-              sum += Wbc[hiddenIdx];
-            }
-            if (Rbc != NULL)
-            {
-              sum += Rbc[hiddenIdx];
-            }
+            ct_prev[hiddenIdx] = ft * ct_prev[hiddenIdx] + it * ct;
 
-            gate_c[hiddenIdx] = sum;
-          }
-
-          /*
-          * Compute output gate pre-activation: Xt*(Wo^T) + Ht-1*(Ro^T) + Wbo + Rbo
-          * Note: Peephole Po(.)Ct is added after cell state update
-          */
-          for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
-          {
-            float32_tidl sum = 0.0f;
-            for (inputIdx = 0; inputIdx < input_size; inputIdx++)
-            {
-              sum += (float32_tidl)xt[inputIdx] * Wo[hiddenIdx * input_size + inputIdx];
-            }
-            for (inputIdx = 0; inputIdx < hidden_size; inputIdx++)
-            {
-              sum += ht_prev[inputIdx] * Ro[hiddenIdx * hidden_size + inputIdx];
-            }
-            if (Wbo != NULL)
-            {
-              sum += Wbo[hiddenIdx];
-            }
-            if (Rbo != NULL)
-            {
-              sum += Rbo[hiddenIdx];
-            }
-
-            gate_o[hiddenIdx] = sum;
-          }
-
-          /* Apply gate activation (f) to input and forget gates */
-          for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
-          {
-            gate_i[hiddenIdx] = TIDL_lstmActivation(gate_i[hiddenIdx], params->activations[activation_f_idx],
-                                                    params->activation_alpha[activation_f_idx], params->activation_beta[activation_f_idx],
-                                                    isClipSet, clip);
-            gate_f[hiddenIdx] = TIDL_lstmActivation(gate_f[hiddenIdx], params->activations[activation_f_idx],
-                                                    params->activation_alpha[activation_f_idx], params->activation_beta[activation_f_idx],
-                                                    isClipSet, clip);
-          }
-
-          /* If input_forget is set, couple forget gate: ft = 1 - it */
-          if (input_forget != 0)
-          {
-            for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
-            {
-              gate_f[hiddenIdx] = 1.0f - gate_i[hiddenIdx];
-            }
-          }
-
-          /* Apply cell input activation (g) to cell gate */
-          for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
-          {
-            gate_c[hiddenIdx] = TIDL_lstmActivation(gate_c[hiddenIdx], params->activations[activation_g_idx],
-                                                    params->activation_alpha[activation_g_idx], params->activation_beta[activation_g_idx],
-                                                    isClipSet, clip);
-          }
-
-          /* Update cell state: Ct = ft (.) Ct-1 + it (.) ct */
-          for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
-          {
-            ct_prev[hiddenIdx] = gate_f[hiddenIdx] * ct_prev[hiddenIdx] + gate_i[hiddenIdx] * gate_c[hiddenIdx];
-          }
-
-          /*
-          * Add peephole Po(.)Ct to output gate (uses new Ct), then activate.
-          * ot = f(Xt*(Wo^T) + Ht-1*(Ro^T) + Po(.)Ct + Wbo + Rbo)
-          */
-          for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
-          {
             float32_tidl outGateVal = gate_o[hiddenIdx];
             if (Po != NULL)
             {
               outGateVal += Po[hiddenIdx] * ct_prev[hiddenIdx];
             }
-            gate_o[hiddenIdx] = TIDL_lstmActivation(outGateVal, params->activations[activation_f_idx],
-                                                    params->activation_alpha[activation_f_idx], params->activation_beta[activation_f_idx],
-                                                    isClipSet, clip);
-          }
+            float32_tidl ot = TIDL_lstmActivation(outGateVal, params->activations[activation_f_idx],
+                                                  params->activation_alpha[activation_f_idx], params->activation_beta[activation_f_idx],
+                                                  isClipSet, clip, useTaylor);
 
-          /* Compute hidden state: Ht = ot (.) h(Ct) */
-          for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
-          {
             /*
             * Avoiding clipping in Ct to match the onnxruntime behavior
             * https://github.com/microsoft/onnxruntime/issues/27224 - this fixes the clipping in Ct
             * Pass isClipSet instead of 0 once this issue is merged in onnxruntime
             */
-            ht_prev[hiddenIdx] = gate_o[hiddenIdx] * TIDL_lstmActivation(ct_prev[hiddenIdx], params->activations[activation_h_idx],
-                                                    params->activation_alpha[activation_h_idx], params->activation_beta[activation_h_idx],
-                                                    0, clip);
+            ht_prev[hiddenIdx] = ot * TIDL_lstmActivation(ct_prev[hiddenIdx], params->activations[activation_h_idx],
+                                                  params->activation_alpha[activation_h_idx], params->activation_beta[activation_h_idx],
+                                                  0, clip, useTaylor);
           }
 
           /*
@@ -879,6 +1051,7 @@ template<class Tin, class Tout> static int32_t TIDL_refLSTMCoreFloat(
  * @param inPtr         : Pointer to input buffers to be processed
  * @param WPtr          : Pointer to weights buffer
  * @param RPtr          : Pointer to recurrence weights buffer
+ * @param biasPtr       : Pointer to bias buffer (may be NULL)
  * @param initial_hPtr  : Initial hidden state pointer
  * @param initial_cPtr  : Initial cell state pointer
  * @param peepholesPtr  : Peephole weights pointer
@@ -886,10 +1059,12 @@ template<class Tin, class Tout> static int32_t TIDL_refLSTMCoreFloat(
  * @param inDataParams  : pointer to input data parameters
  * @param WParams       : pointer to weights parameters
  * @param RParams       : pointer to recurrence weights parameters
+ * @param biasParams    : pointer to bias data parameters
  * @param initial_hParams : pointer to initial_h data parameters
  * @param initial_cParams : pointer to initial_c data parameters
  * @param peepholesParams : pointer to peephole weights parameters
  * @param outDataParams : pointer to output data parameters
+ * @param useTaylor     : flag to indicate whether to use taylor series expansion for activations
  * @return  IALG_EOK   - Successful
  *          IALG_EFAIL - Unspecified error
  */
@@ -900,6 +1075,7 @@ int32_t TIDL_lstmRefProcess(TIDL_Handle intAlgHandle,
                             void *inPtr,
                             void *WPtr,
                             void *RPtr,
+                            void *biasPtr,
                             void *initial_hPtr,
                             void *initial_cPtr,
                             void *peepholesPtr,
@@ -907,10 +1083,12 @@ int32_t TIDL_lstmRefProcess(TIDL_Handle intAlgHandle,
                             const sTIDL_DataParams_t *inDataParams,
                             const sTIDL_DataParams_t *WParams,
                             const sTIDL_DataParams_t *RParams,
+                            const sTIDL_DataParams_t *biasParams,
                             const sTIDL_DataParams_t *initial_hParams,
                             const sTIDL_DataParams_t *initial_cParams,
                             const sTIDL_DataParams_t *peepholesParams,
-                            const sTIDL_DataParams_t *outDataParams)
+                            const sTIDL_DataParams_t *outDataParams,
+                            int8_t useTaylor)
 {
   int32_t status = IALG_EOK;
   int32_t layerIdx = algLayer->layerIdx;
@@ -920,6 +1098,7 @@ int32_t TIDL_lstmRefProcess(TIDL_Handle intAlgHandle,
     status = TIDL_refLSTMCoreFloat((float32_tidl *)inPtr,
                                    (float32_tidl *)WPtr,
                                    (float32_tidl *)RPtr,
+                                   (float32_tidl *)biasPtr,
                                    (float32_tidl *)initial_hPtr,
                                    (float32_tidl *)initial_cPtr,
                                    (float32_tidl *)peepholesPtr,
@@ -931,10 +1110,12 @@ int32_t TIDL_lstmRefProcess(TIDL_Handle intAlgHandle,
                                    inDataParams,
                                    WParams,
                                    RParams,
+                                   biasParams,
                                    initial_hParams,
                                    initial_cParams,
                                    peepholesParams,
-                                   outDataParams);
+                                   outDataParams,
+                                   useTaylor);
   }
   else
   {

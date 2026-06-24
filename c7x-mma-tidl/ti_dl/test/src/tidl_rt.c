@@ -323,7 +323,7 @@ TIMemObject memObj_DMEM0;
 TIMemObject memObj_DMEM1;
 TIMemObject memObj_SARAM0;
 TIMemObject memObj_EXTMEM;
-extern void* tidltb_alignMalloc(int32_t size, int32_t alignment);
+extern void* tidltb_alignMalloc(size_t size, int32_t alignment);
 
 extern void tidltb_alignFree(void * ptr);
 
@@ -436,6 +436,7 @@ int32_t TIDLRT_setTensorDefault(sTIDLRT_Tensor_t *tensor)
     tensor->pitch[TIDL_CHANNEL_PITCH] = -1;
     tensor->pitch[TIDL_DIM1_PITCH]    = -1;
     tensor->pitch[TIDL_DIM2_PITCH]    = -1;
+    tensor->pitch[TIDL_LINE_PITCH]    = -1;
     tensor->padValues[0] = 0;
     tensor->padValues[1] = 0;
     tensor->padValues[2] = 0;
@@ -1300,7 +1301,7 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
 {
 
   sTIDLRTTB_IntHandle_t *rtHandle = (sTIDLRTTB_IntHandle_t *)handle;
-  int32_t status = IALG_EOK, i;
+  int32_t status = IALG_EOK, i, j;
   int32_t frameIdx = 0;
   IM_Fxns *algHandle = rtHandle->algHandle;
   /*-----------------------------------------------------------------
@@ -1357,7 +1358,7 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
 #else
     inArgs.enableLayerPerfTraces = (prms->traceLogLevel > 0);
 #endif
-    if(!(TIDL_FLOW_CTRL_REF_STAT & prms->flowCtrl))
+    if(!((prms->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) || (prms->flowCtrl & TIDL_FLOW_CTRL_PERF_MODEL)))
     {
       if (rtHandle->procIdx == 0)
       {
@@ -1377,7 +1378,7 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
       tidl_tb_printf(0, " ..");
       rtHandle->procIdx++;
     }
-    else
+    else if(prms->flowCtrl & TIDL_FLOW_CTRL_REF_STAT)
     {
       /*Calibration progress:*/
       tidl_tb_progressBar((float)((float)(rtHandle->procIdx + 1)/gParams.numFrames));
@@ -1413,12 +1414,28 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
         status = algHandle->ivision->algProcess((IVISION_Handle)algHandle,
                                                 &inBufs, &outBufs, (IVISION_InArgs *)&inArgs, (IVISION_OutArgs *)&outArgs);
       }
+
+      for(i = 0; i < ioBufDescPtr->numOutputBuf; i++)
+      {
+        if( out[i]->isDynamic == 1 )
+        {
+          for (j = 0; j < TIDL_DIM_MAX; j++)
+          {
+            out[i]->dimValues[j] = outArgs.outDimValues[i][j];
+          }
+          out[i]->pitch[TIDL_LINE_PITCH]    = outArgs.outPitchValues[i][TIDL_LINE_PITCH];
+          out[i]->pitch[TIDL_CHANNEL_PITCH] = outArgs.outPitchValues[i][TIDL_CHANNEL_PITCH];
+          out[i]->pitch[TIDL_DIM2_PITCH]    = outArgs.outPitchValues[i][TIDL_DIM2_PITCH];
+          out[i]->pitch[TIDL_DIM1_PITCH]    = outArgs.outPitchValues[i][TIDL_DIM1_PITCH];
+          out[i]->pitch[TIDL_ROI_PITCH]     = outArgs.outPitchValues[i][TIDL_ROI_PITCH];
+        }
+      }
       
       gPrivArgs = outArgs.privArgs ;
       tidl_write_frameHeader(frameIdx, 2);
 
       tidl_profileMarkerEnd();
-      if(!(TIDL_FLOW_CTRL_REF_STAT & prms->flowCtrl))
+      if(!((prms->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) || (prms->flowCtrl & TIDL_FLOW_CTRL_PERF_MODEL)))
       {
         tidl_printProfileInfo();
       }
@@ -1499,15 +1516,38 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
     }
     tidl_wait_for_uc_end();
   }
-  
+
+  if (status == IALG_EOK)
+  {
+    /* Fill the performance modelling stats from outArgs into net structure for each layer */
+    if(prms->flowCtrl == TIDL_FLOW_CTRL_PERF_MODEL)
+    {
+      sTIDL_Network_t* net = rtHandle->createParams.net;
+      int32_t layerIdx;
+      int32_t profileIdx;
+      for(layerIdx = 0; layerIdx < net->numLayers; layerIdx++)
+      {
+        sTIDL_Layer_t* currLayer = &net->TIDLLayers[layerIdx];
+        for(profileIdx = TIDL_PROFILE_LAYER; profileIdx < TIDL_PROFILE_MAX; profileIdx++)
+        {
+          currLayer->profilePoints[profileIdx] = outArgs.metaDataLayer[layerIdx].profilePoint[profileIdx];
+        }
+        if(outArgs.metaDataLayer[layerIdx].layerExecId == -1)
+        {
+          currLayer->profilePoints[0] = 0xFFFFFFFFFFFFFFFFU;
+        }
+      }
+    }
+  }
+
 Exit:
-  if(!(TIDL_FLOW_CTRL_REF_STAT & prms->flowCtrl))
+  if(!((prms->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) || (prms->flowCtrl & TIDL_FLOW_CTRL_PERF_MODEL)))
   {
     tidl_tb_printf(0, " ....");
   }
   tidl_FreeNetInputMem(ioBufDescPtr, inBufDesc);
   tidl_FreeNetOutputMem(ioBufDescPtr, outBufDesc);
-  if(!(TIDL_FLOW_CTRL_REF_STAT & prms->flowCtrl))
+  if(!((prms->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) || (prms->flowCtrl & TIDL_FLOW_CTRL_PERF_MODEL)))
   {
     tidl_tb_printf(0, " .....");
   }

@@ -97,14 +97,24 @@ int32_t TIDL_getDatElementSize(int32_t elementType)
   {
     size = 4;
   }
+  /* LDRA_JUSTIFY_START
+  <metric start> branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
   else if ((elementType == TIDL_UnsignedDoubleWord) || (elementType == TIDL_SignedDoubleWord))
   {
+    /* LDRA_JUSTIFY_END */
     size = 8;
   }
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification end> */
   else
   {
     size = 1;
   }
+  /* LDRA_JUSTIFY_END */
   return size;
 }
 

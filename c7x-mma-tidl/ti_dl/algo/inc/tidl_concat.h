@@ -125,4 +125,8 @@ int32_t TIDL_concatProcessNew(TIDL_NetworkCommonParams *commonParams,
 float32_tidl TIDL_floatSat(float32_tidl outAcc, sTIDL_Layer_t  * tidlLayer);
 void TIDL_UpdateScaleFactors(TIDL_Handle intAlgHandle, int32_t i, int32_t updateStats, int64_t accMin, int64_t accMax);
 
+
+int32_t TIDL_concatGetPerfData(void* linkHandle,
+                                 double *perfData);
+
 #endif /* TIDL_CONCAT_H_*/

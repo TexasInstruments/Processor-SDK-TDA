@@ -228,6 +228,13 @@ tivxKernelTVMCreate
     status = tivxMemResetScratchHeap((vx_enum)TIVX_MEM_EXTERNAL_SCRATCH);
     VX_PRINT(VX_ZONE_INFO, "ResetScratchHep: status = %d\n", status);
   }
+  #if defined(SOC_J784S4) || defined(SOC_AM62A) || defined(SOC_J722S) || defined(SOC_J742S2)
+  if ((vx_status)VX_SUCCESS == status)
+  {
+    status = tivxMemResetScratchHeap((vx_enum)TIVX_MEM_EXTERNAL_SCRATCH_NON_CACHEABLE);
+    VX_PRINT(VX_ZONE_INFO, "ResetScratchHeap (non-cacheable): status = %d\n", status);
+  }
+  #endif
   if ((vx_status)VX_SUCCESS == status)
   {
     /* IMPORTANT! Config data is assumed to be available at index 0 */

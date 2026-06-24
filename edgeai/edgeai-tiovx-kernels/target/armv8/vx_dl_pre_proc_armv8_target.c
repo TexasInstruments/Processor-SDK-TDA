@@ -254,6 +254,7 @@ static vx_status VX_CALLBACK tivxKernelDLPreProcArmv8Process
         params.scale[0]                 = dlParams->scale[0];
         params.scale[1]                 = dlParams->scale[1];
         params.scale[2]                 = dlParams->scale[2];
+        params.channel_pitch            = dlParams->channel_pitch;
 
         vx_df_image image_format = in_img_desc->format;
 

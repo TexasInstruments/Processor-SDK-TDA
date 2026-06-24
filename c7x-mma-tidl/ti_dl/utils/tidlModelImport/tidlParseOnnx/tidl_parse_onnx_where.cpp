@@ -75,5 +75,36 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Where")> ()
   sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
   layer.numInBufs = md.numInputs;
 
+  layer.weights.ptr = NULL;
+  layer.weights.bufSize = 0;
+  layer.bias.ptr = NULL;
+  layer.bias.bufSize = 0;
+
+  for (int32_t i = 0; i < md.numConstInputs; i++)
+  {
+    int32_t constTensorIdx = md.constTensorIndices[i];
+    sBuffer_t *buf = NULL;
+
+    if (constTensorIdx != 1 && constTensorIdx != 2)
+    {
+      continue;
+    }
+
+    if (constTensorIdx == 1)
+    {
+      status = copyFloatConst(graph, index, constTensorIdx, layer.weights, INPUT_REQUIRED); // X
+    }
+    else if (constTensorIdx == 2)
+    {
+      status = copyFloatConst(graph, index, constTensorIdx, layer.bias, INPUT_REQUIRED);  // Y
+    }
+
+    if(status == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+    {
+      TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Cannot read initializer tensor : Only float, int32 and int64 tensor is supported");
+      return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+    }
+  }
+
   return status;
 }

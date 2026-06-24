@@ -471,15 +471,29 @@ template <class Tin, class Tout>
 int32_t TIDL_softplus_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
 {
   int32_t status = TIDL_SUCCESS;
-  float32_tidl inValF, outValF, expOut;
+  float32_tidl inValF, outValF;
   const Tin * inData = NULL;
   inData = (const Tin *) dataIn;
   Tout * outData = (Tout *) dataOut;
   inValF = ((float32_tidl)*inData - (float32_tidl)Zx) * (1.0f/Sx);
 
-  
-  expOut = (float32_tidl)exp_taylor(inValF);
-  outValF = (float32_tidl)MATHLIB_ln(expOut + 1.0f);
+  /* Two-regime softplus (no exp computation):
+  * Small |x| (<=3.6): 3-term minimax Horner in s=x^2
+  *   softplus(x) = x/2 + ln2 + s*(0.12392657 + s*(-0.00435581 + s*0.00012791))
+  *   Max polynomial error < 0.003; combined max error 0.027
+  *   (half the error of the prior 4-term Taylor polynomial at 0.054).
+  * Large |x| (>3.6): max(x,0), error = exp(-|x|) <= exp(-3.6) ~= 0.027 */
+
+  const float32_tidl log2baseE = 0.693147180559945f;
+
+  float32_tidl s     = inValF * inValF;
+  float32_tidl inner = -0.00435581f + s * 0.00012791f;
+  inner              = 0.12392657f  + s * inner;
+
+  float32_tidl outPoly  = inValF * 0.5f + log2baseE + s * inner;
+  float32_tidl absxf    = (inValF >= 0.0f) ?  inValF : -inValF;
+  float32_tidl maxXzero = (inValF >= 0.0f) ?  inValF :  0.0f;
+  outValF  = (absxf <= 3.6f) ? outPoly : maxXzero;
 
   int32_t outMin = 0;
   outMin = std::numeric_limits<Tout>::lowest();
@@ -500,6 +514,41 @@ int32_t TIDL_softplus_nonLut(const void* dataIn, void* dataOut, int32_t Zx, floa
   *outData   = (Tout)outValInt;
   return status;
 }
+
+#if defined(__C7604__)
+template <>
+inline int32_t TIDL_softplus_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+      const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
+{
+  int32_t status = TIDL_SUCCESS;
+  float32_tidl inValF, outValF;
+  const floating_point::bfloat16_t * inData = NULL;
+  inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t * outData = (floating_point::bfloat16_t *) dataOut;
+  inValF = (float32_tidl)*inData ;
+
+  /* Two-regime softplus (no exp computation):
+  * Small |x| (<=3.6): 3-term minimax Horner in s=x^2
+  *   softplus(x) = x/2 + ln2 + s*(0.12392657 + s*(-0.00435581 + s*0.00012791))
+  *   Max polynomial error < 0.003; combined max error 0.027
+  *   (half the error of the prior 4-term Taylor polynomial at 0.054).
+  * Large |x| (>3.6): max(x,0), error = exp(-|x|) <= exp(-3.6) ~= 0.027 */
+
+  const float32_tidl log2baseE = 0.693147180559945f;
+
+  float32_tidl s     = inValF * inValF;
+  float32_tidl inner = -0.00435581f + s * 0.00012791f;
+  inner              = 0.12392657f  + s * inner;
+
+  float32_tidl outPoly  = inValF * 0.5f + log2baseE + s * inner;
+  float32_tidl absxf    = (inValF >= 0.0f) ?  inValF : -inValF;
+  float32_tidl maxXzero = (inValF >= 0.0f) ?  inValF :  0.0f;
+  outValF  = (absxf <= 3.6f) ? outPoly : maxXzero;
+
+  *outData   = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+#endif
 
 template <class Tin, class Tout>
 int32_t TIDL_softsign_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
@@ -512,7 +561,9 @@ int32_t TIDL_softsign_nonLut(const void* dataIn, void* dataOut, int32_t Zx, floa
   inValF = ((float32_tidl)*inData - (float32_tidl)Zx) * (1.0f/Sx);
   absInValF = (inValF < 0.0f) ? (-1.0f * inValF) : inValF;
 
-  outValF = (float32_tidl)(inValF / (absInValF + 1.0f));
+  float32_tidl denom = absInValF + 1.0f;
+  float32_tidl r = __recip(denom);
+  outValF = inValF * r;
   int32_t outMin = 0;
   outMin = std::numeric_limits<Tout>::lowest();
   int32_t outMax = 0;
@@ -532,6 +583,29 @@ int32_t TIDL_softsign_nonLut(const void* dataIn, void* dataOut, int32_t Zx, floa
   *outData   = (Tout)outValInt;
   return status;
 }
+
+#if defined(__C7604__)
+template <>
+inline int32_t TIDL_softsign_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
+{
+  int32_t status = TIDL_SUCCESS;
+  float32_tidl inValF, outValF, absInValF;
+  const floating_point::bfloat16_t * inData = NULL;
+  inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t * outData = (floating_point::bfloat16_t *) dataOut;
+  inValF = (float32_tidl)*inData;
+  absInValF = (inValF < 0.0f) ? (-1.0f * inValF) : inValF;
+
+  float32_tidl denom = absInValF + 1.0f;
+  float32_tidl r = __recip(denom);
+  outValF = inValF * r;
+
+  *outData   = (floating_point::bfloat16_t)outValF;
+  return status;
+}
+#endif
+
 
 template <class Tin, class Tout>
 int32_t TIDL_ceil_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2)
@@ -1908,6 +1982,426 @@ template int32_t TIDL_sign_nonLut<int16_t, uint16_t>(const void* dataIn, void* d
 template int32_t TIDL_sign_nonLut<int16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_sign_nonLut<uint16_t, uint16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
 template int32_t TIDL_sign_nonLut<uint16_t, int16_t>(const void* dataIn, void* dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy, float32_tidl param1, float32_tidl param2);
+
+#if defined(__C7604__)
+/* BFloat16 template specializations - only available on C7604 (TDA54) */
+
+template <>
+inline int32_t TIDL_tanh_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status = TIDL_SUCCESS;
+  float32_tidl inValF, outValF, numer, denom;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  inValF                 = (float32_tidl) *inData;
+  float32_tidl tanhInput = 2.0f * inValF;
+  // Clamp to [-6, 6] to avoid overflow in exp_taylor
+  tanhInput = (tanhInput > 6.0f) ? 6.0f : tanhInput;
+  tanhInput = (tanhInput < -6.0f) ? -6.0f : tanhInput;
+  outValF   = exp_taylor(tanhInput);
+  numer     = outValF - 1.0f;
+  denom     = outValF + 1.0f;
+  outValF   = numer * __recip(denom);
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+#endif
+
+#if defined(__C7604__)
+template <>
+inline int32_t TIDL_gelu_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+  float32_tidl mulFact                     = 0.044715f;
+
+  float32_tidl inValF       = (float32_tidl) *inData;
+  float32_tidl recipSqrtval = (float32_tidl) (M_PI / 2.0);
+  float32_tidl mulfactor    = __recip_sqrt(recipSqrtval);
+  float32_tidl outValF      = 2.0f * mulfactor;
+  float32_tidl inValFIntr   = (mulFact * inValF * inValF * inValF);
+  inValFIntr                = inValF + inValFIntr;
+  outValF                   = outValF * inValFIntr; // z = sqrt(2/PI)*(x+0.044715x^3)
+
+  // Clamp to [-6, 6] to avoid overflow in exp_taylor
+  outValF                = (outValF > 6.0f) ? 6.0f : outValF;
+  outValF                = (outValF < -6.0f) ? -6.0f : outValF;
+  outValF                = exp_taylor(outValF);
+  float32_tidl numer     = outValF - 1.0f;
+  float32_tidl denom     = outValF + 1.0f;
+  float32_tidl mulFactor = __recip(denom);
+  outValF                = inValF * (1.0f + (numer * mulFactor)); // 0.5x(1+tanh(z))
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_gelu_fused_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+  float32_tidl mulFact                     = 0.044715f;
+
+  float32_tidl inValF       = (float32_tidl) *inData;
+  float32_tidl recipSqrtval = (float32_tidl) (M_PI / 2.0);
+  float32_tidl mulfactor    = __recip_sqrt(recipSqrtval);
+  float32_tidl outValF      = 2.0f * mulfactor;
+  float32_tidl inValFIntr   = (mulFact * inValF * inValF * inValF);
+  inValFIntr                = inValF + inValFIntr;
+  outValF                   = outValF * inValFIntr; // z = sqrt(2/PI)*(x+0.044715x^3)
+
+  // Clamp to [-6, 6] to avoid overflow in exp_taylor
+  outValF                = (outValF > 6.0f) ? 6.0f : outValF;
+  outValF                = (outValF < -6.0f) ? -6.0f : outValF;
+  outValF                = exp_taylor(outValF);
+  float32_tidl numer     = outValF - 1.0f;
+  float32_tidl denom     = outValF + 1.0f;
+  float32_tidl mulFactor = __recip(denom);
+  outValF                = inValF * (1.0f + (numer * mulFactor)); // x*(1+tanh(z))
+  outValF                = outValF * 0.5f;                        // 0.5*x*(1+tanh(z))
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_elu_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  float32_tidl inValF  = (float32_tidl) *inData;
+  float32_tidl outValF = (inValF < 0.0f) ? (param1 * (exp_taylor(inValF) - 1.0f)) : inValF;
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_celu_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  float32_tidl inValF  = (float32_tidl) *inData;
+  float32_tidl outValF = (inValF < 0.0f) ? param1 * (exp_taylor(inValF / param1) - 1.0f) : inValF;
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_hardSigmoid_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  float32_tidl inValF  = (float32_tidl) *inData;
+  float32_tidl outValF = (param1 * inValF) + param2;
+  outValF              = (outValF > 1.0f) ? 1.0f : outValF;
+  outValF              = (outValF < 0.0f) ? 0.0f : outValF;
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_atan_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  float32_tidl inValF  = (float32_tidl) *inData;
+  float32_tidl outValF = MATHLIB_atan(inValF);
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_sin_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  float32_tidl inValF  = (float32_tidl) *inData;
+  float32_tidl outValF = MATHLIB_sin(inValF);
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_cos_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  float32_tidl inValF  = (float32_tidl) *inData;
+  float32_tidl outValF = MATHLIB_cos(inValF);
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_sinh_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status = TIDL_SUCCESS;
+  float32_tidl inValF, outValF, numer;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  inValF = (float32_tidl) *inData;
+  // sinh(x) = (e^x - e^(-x)) / 2 = (e^x - 1/e^x) / 2
+  outValF = exp_taylor(inValF);
+  numer   = outValF - __recip(outValF);
+  outValF = numer * 0.5f;
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_cosh_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status = TIDL_SUCCESS;
+  float32_tidl inValF, outValF, numer;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  inValF = (float32_tidl) *inData;
+  // cosh(x) = (e^x + e^(-x)) / 2 = (e^x + 1/e^x) / 2
+  outValF = exp_taylor(inValF);
+  numer   = outValF + __recip(outValF);
+  outValF = numer * 0.5f;
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_abs_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  float32_tidl inValF  = (float32_tidl) *inData;
+  float32_tidl outValF = fabsf(inValF);
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_neg_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  float32_tidl inValF  = (float32_tidl) *inData;
+  float32_tidl outValF = -inValF;
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_floor_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status = TIDL_SUCCESS;
+  float32_tidl inValF, outValF;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  inValF           = (float32_tidl) *inData;
+  int32_t inValInt = (int32_t) inValF;
+  outValF          = (float32_tidl) inValInt;
+  if ((inValF < 0.0f) && (inValF != outValF)) {
+    outValF = outValF - 1.0f;
+  }
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_sqrt_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  float32_tidl inValF  = (float32_tidl) *inData;
+  float32_tidl outValF = MATHLIB_sqrt(inValF);
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+template <>
+inline int32_t TIDL_erf_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  float32_tidl inValF  = (float32_tidl) *inData;
+  float32_tidl outValF = taylor_erf(inValF);
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
+template <>
+inline int32_t TIDL_silu_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+  float32_tidl outValF;
+
+  float32_tidl inValF = (float32_tidl) *inData;
+  // In onnx if denom is 0 in division, then output is 0
+  if (inValF == (float32_tidl) 0.0f) {
+    outValF = (float32_tidl) 0.0f;
+  } else {
+    float32_tidl mathlibOut = (float32_tidl) MATHLIB_exp((float32_tidl) -1.0f * inValF);
+    outValF                 = inValF * (1.0f / (1.0f + mathlibOut));
+  }
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+#endif
+
+template <>
+inline int32_t TIDL_hardswish_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2)
+{
+  int32_t status                           = TIDL_SUCCESS;
+  const floating_point::bfloat16_t *inData = (const floating_point::bfloat16_t *) dataIn;
+  floating_point::bfloat16_t *outData      = (floating_point::bfloat16_t *) dataOut;
+
+  float32_tidl inValF  = (float32_tidl) *inData;
+  float32_tidl clipped = (param1 * inValF) + param2;
+  clipped              = (clipped > 1.0f) ? 1.0f : clipped;
+  clipped              = (clipped < 0.0f) ? 0.0f : clipped;
+  float32_tidl outValF = inValF * clipped;
+
+  *outData = (floating_point::bfloat16_t) outValF;
+  return status;
+}
+#endif
+
+#if defined(__C7604__)
+template int32_t TIDL_tanh_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_elu_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_hardSigmoid_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_gelu_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_gelu_fused_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_atan_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_sin_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_sinh_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_cos_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_cosh_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_neg_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_abs_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_floor_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_sqrt_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_erf_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_hardswish_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+template int32_t TIDL_celu_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
+template int32_t TIDL_silu_nonLut<floating_point::bfloat16_t, floating_point::bfloat16_t>(
+    const void *dataIn, void *dataOut, int32_t Zx, float32_tidl Sx, int32_t Zy, float32_tidl Sy,
+    float32_tidl param1, float32_tidl param2);
+#endif
+#endif // __C7604__
 
 #endif /* LUT_MODULE_H_ */
 

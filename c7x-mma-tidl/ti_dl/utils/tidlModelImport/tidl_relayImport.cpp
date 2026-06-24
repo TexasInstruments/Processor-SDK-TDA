@@ -103,8 +103,21 @@ TIDL_osrtOptions * relayOptions = new TIDL_osrtOptions;
 #define MAX_NAME_LEN 512
 extern sTIDL_runtimesImportState_t runtimes_import_state;
 int32_t gNumInputDataLayers;
+
+// Per-layer consumed-output-slots bitmask for TVM composites that set
+// "output_slots_mask" (bit i = output slot i is consumed downstream).
+// Indexed by layerIndex; populated in TIDL_relayImportNode and consumed
+// by tidl_relayAddSingleOutDataLayer to wire the correct outData slot.
+static uint16_t g_relayConsumedOutputsMasks[TIDL_NUM_MAX_PC_LAYERS];
+
 /* Creating this vector to deny offload of TVM decomposed operators */
 std::vector<std::string> deny_list_layer_name_composite;
+
+/* Global storage for TVMRT node info - maps diagnostic index to {opType, nodeName}
+ * This provides TVMRT with equivalent context to ONNXRT's graph access
+ */
+static std::map<int, std::pair<std::string, std::string>> gRelayNodeInfoMap;
+
 /* Same data structure defined in python/tvm/relay/backend/contrib/tidl.py
 *  so that it can be passed from python to C/C++
 */
@@ -128,6 +141,12 @@ typedef struct ODPostProcInfo
 static tidl_import_config relay_import_init_params;
 
 // Functions
+/* Helper to store node info when diagnostic is added - maps diagnostic index to {opType, nodeName} */
+static void TIDL_relayStoreNodeInfo(int diagIndex, const std::string& opType, const std::string& nodeName)
+{
+  gRelayNodeInfoMap[diagIndex] = {opType, nodeName};
+}
+
 static int32_t TIDL_relayImportGetNewLayerIndex()
 {
   int32_t index = runtimes_import_state.layerIndex++;
@@ -558,9 +577,9 @@ void TIDL_relaySetActivation(int zp_len, int *zp, int scale_len, float *scale,
   float q_min = (out_type == "uint8") ?   0.0f : -128.0f;
   float q_max = (out_type == "uint8") ? 255.0f :  127.0f;
 
-  layer.actParams.actType = TIDL_Clip;
-  layer.actParams.clipMin = (q_min - zp[0]) * scale[0];
-  layer.actParams.clipMax = (q_max - zp[0]) * scale[0];
+  layer.clipParams.isClipEnabled = 1;
+  layer.clipParams.clipMin = (q_min - zp[0]) * scale[0];
+  layer.clipParams.clipMax = (q_max - zp[0]) * scale[0];
 
   // When importing 8-bit pre-quantized models with asymmetric quantization
   // to 8-bit TIDL formats, we often need advanced quantization because
@@ -572,9 +591,9 @@ void TIDL_relaySetActivation(int zp_len, int *zp, int scale_len, float *scale,
   // Keep ClipLayer's actType, so that it can be merged later
   // TODO: Use a flag to force calibration for network w/ all TIDL_Clip actType
   if (gParams.numParamBits <= 8)
-    if (layer.actParams.clipMin == 0.0f &&
-        layer.actParams.clipMax - 5.999 >= 0 &&
-        layer.actParams.clipMax - 5.999 <= 0.01 &&
+    if (layer.clipParams.clipMin == 0.0f &&
+        layer.clipParams.clipMax - 5.999 >= 0 &&
+        layer.clipParams.clipMax - 5.999 <= 0.01 &&
         layer.layerType != TIDL_ClipLayer)
     {
       layer.actParams.actType = TIDL_RelU6;
@@ -640,6 +659,7 @@ int32_t TIDL_relayImportInit(int32_t subgraph_id,
   RelayDebugPrint("In TIDL_relayImportInit subgraph_id=%d\n", subgraph_id);
   /* Reset all the memories to to NULL, there could be multiple subgraphs */
   memset(&orgTIDLNetStructure, 0, sizeof(sTIDL_OrgNetwork_t));
+  memset(g_relayConsumedOutputsMasks, 0, sizeof(g_relayConsumedOutputsMasks));
   memset(&tIDLNetStructure,    0, sizeof(sTIDL_Network_t));
   runtimes_import_state.layerIndex = 0;
   runtimes_import_state.dataIndex  = 0;
@@ -673,6 +693,8 @@ int32_t TIDL_relayImportInit(int32_t subgraph_id,
     if(input_descriptors[i].element_type==TIDL_SignedDoubleWord){
        gParams.inElementType[i] =TIDL_SignedWord;
     }
+
+    gParams.modelInElementType[i] = gParams.inElementType[i];
     TIDL_updateNamesList ((char*)gParams.inDataNamesList, i, (char *)input_descriptors[i].name);
   }
   gNumInputDataLayers = num_inputs;
@@ -703,6 +725,11 @@ int32_t TIDL_relayImportInit(int32_t subgraph_id,
                       output_descriptors[i].scale, output_descriptors[i].zp,
                       output_descriptors[i].element_type, is_nchw);
     }
+  }
+
+  for(int i=0; i< num_outputs; i++)
+  {
+    gParams.modelOutElementType[i] = gParams.outElementType[i];
   }
 
   gParams.addDataConvertToNet = (ADD_DC_LAYER_AT_INPUT | ADD_DC_LAYER_AT_OUTPUT);
@@ -982,6 +1009,20 @@ int32_t TIDL_relayImportNode(relay::Call call, int zp_len, void *zp_ptr,
   auto result = TidlParseTVM(call,0,layer);
   layer = result.layer;
 
+  // Read output_slots_mask from the composite function's DictAttrs if present.
+  g_relayConsumedOutputsMasks[layerIndex] = 0;
+  if (const auto* fn_node = call->op.as<tvm::relay::FunctionNode>())
+  {
+    if (const auto* fn_attrs = fn_node->attrs.as<DictAttrsNode>())
+    {
+      if (fn_attrs->dict.count("output_slots_mask"))
+      {
+        if (const auto* iv = fn_attrs->dict.at("output_slots_mask").as<IntImmNode>())
+          g_relayConsumedOutputsMasks[layerIndex] = (uint16_t)iv->value;
+      }
+    }
+  }
+
   if (auto out_tensor_type = call->checked_type().as<TensorTypeNode>())
   {
     auto out_type = DLDataType2String(out_tensor_type->dtype);
@@ -1126,6 +1167,65 @@ int32_t TIDL_relayImportLinkNode(void *in_out_indices)
   for (int i = 0; i < layer.numOutBufs; i++)
      layer.outConsumerCnt[i] = in_out->num_out_nodes;
 
+  // When only a subset of a multi-output composite's slots are consumed
+  // (signalled by output_slots_mask), move the canonical subgraph output
+  // name from slot 0 to the actually-consumed slot and clear all others.
+  // This lets tidl_relayAddSingleOutDataLayer wire the output DataLayer
+  // to the correct outData[consumed_slot] instead of always slot 0 and
+  // outDataNames[0]="" prevents spurious linkage.
+  // which determines which addSliceToY/Yh/Yc flag is set downstream.
+  //
+  // Skipped when:
+  //   - consumedOutputsMask == 0 (attribute absent, backward compatible)
+  //   - num_out_nodes > 0: outConsumerCnt > 0 on consumed slots means
+  //     downstream ops already have inDataNames matching the auto-generated
+  //     outDataNames — remapping would break those connections.
+  if (layer.numOutBufs > 1 &&
+      g_relayConsumedOutputsMasks[layerIndex] != 0)
+  {
+    uint16_t slotsMask = g_relayConsumedOutputsMasks[layerIndex];
+
+    // Check if any consumed slot already has downstream consumers
+    // (outConsumerCnt > 0 means num_out_nodes > 0).
+    bool needsRemap = true;
+    for (int i = 0; i < layer.numOutBufs; i++)
+    {
+      if (((slotsMask >> i) & 1) && layer.outConsumerCnt[i] > 0)
+      {
+        needsRemap = false;
+        break;
+      }
+    }
+
+    if (needsRemap)
+    {
+      // Save canonical base name — always placed at slot 0 by line 1091 above.
+      char canonicalName[TIDL_STRING_SIZE];
+      memcpy(canonicalName, layer.outDataNames[0], TIDL_STRING_SIZE);
+
+      int k = 0;
+      for (int i = 0; i < layer.numOutBufs; i++)
+      {
+        if ((slotsMask >> i) & 1)
+        {
+          // Consumed slot: assign the k-th sequential name.
+          if (k == 0)
+            memcpy(layer.outDataNames[i], canonicalName, TIDL_STRING_SIZE);
+          else
+            snprintf((char*)layer.outDataNames[i], TIDL_STRING_SIZE,
+                     "%s:%d", canonicalName, k);
+          k++;
+        }
+        else
+        {
+          // Not consumed: clear so no spurious tidl_linkOutputTensors match.
+          memset(layer.outDataNames[i], 0, TIDL_STRING_SIZE);
+          layer.outConsumerCnt[i] = 0;
+        }
+      }
+    }
+  }
+
   tidl_linkInputTensors( &orgTIDLNetStructure, layerIndex);
   tidl_linkOutputTensors(&orgTIDLNetStructure, layerIndex);
 
@@ -1149,11 +1249,40 @@ static void tidl_relayAddSingleOutDataLayer()
         layer.layerType  = TIDL_DataLayer;
         layer.numInBufs = 1;
         layer.numOutBufs = -1;
-        layer.inData[0].dataId = layer_i.outData[0].dataId;
-        memcpy(layer.inDataNames[0], layer_i.outDataNames[0], TIDL_STRING_SIZE);
+
+        // For multi-output composites that set output_slots_mask, link the
+        // output DataLayer to the first consumed slot rather than always slot 0.
+        // This ensures tidl_handleRecurrentLayers sets addSliceToY/Yh/Yc for
+        // the correct slot (e.g. addSliceToYc=1 for LSTM with only Y_c used).
+        // g_relayConsumedOutputsMasks[i] is 0 when the attribute is absent —
+        // falls back to slot 0, preserving the original behaviour.
+        int32_t linkSlot = 0;
+        if (layer_i.numOutBufs > 1 &&
+            g_relayConsumedOutputsMasks[i] != 0)
+        {
+          uint16_t mask = g_relayConsumedOutputsMasks[i];
+          for (int32_t s = 0; s < layer_i.numOutBufs; s++)
+          {
+            if ((mask >> s) & 1) { linkSlot = s; break; }
+          }
+        }
+
+        // Wire the DataLayer to the correct outData slot.
+        // Use outDataNames[linkSlot]: after the remap above, the canonical
+        // subgraph output name (e.g. "tidl_0_o0") is at outDataNames[linkSlot]
+        // and slot 0 is cleared.  When no remap (linkSlot==0 or mask==0),
+        // outDataNames[0] still holds the canonical name — both cases are
+        // handled correctly by indexing with linkSlot.
+        layer.inData[0].dataId = layer_i.outData[linkSlot].dataId;
+        memcpy(layer.inDataNames[0], layer_i.outDataNames[linkSlot], TIDL_STRING_SIZE);
         memcpy(layer.outDataNames[0], layer.inDataNames[0], TIDL_STRING_SIZE);
-        layer_i.outConsumerCnt[0] = 1;
-        layer_i.outConsumerLinked[0] = 1;
+        layer_i.outConsumerCnt[linkSlot] = 1;
+        layer_i.outConsumerLinked[linkSlot] = 1;
+        // Prevent re-triggering of this function for slot 0 when linkSlot != 0.
+        if (linkSlot != 0)
+        {
+          layer_i.outConsumerCnt[0] = 1;
+        }
         addOneLayer = 1;
       }
     }
@@ -1426,6 +1555,7 @@ int32_t TIDL_relayAllowNode(relay::Call call)
      (std::find(relayOptions->m_deny_list_layer_name.begin(), relayOptions->m_deny_list_layer_name.end(), span_name) != relayOptions->m_deny_list_layer_name.end()))
   {
     TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Node %s added to unsupported nodes as specified in deny list", span_name.c_str());
+    TIDL_relayStoreNodeInfo(gDiags.gDiagList.size() - 1, op_name, span_name);
     if (relayOptions->osrtDebugPrintLevel)
     {
       gDiags.reportLastModeDiag();
@@ -1441,6 +1571,7 @@ int32_t TIDL_relayAllowNode(relay::Call call)
     if(std::find(relayOptions->m_allow_list_layer_name.begin(), relayOptions->m_allow_list_layer_name.end(), span_name) == relayOptions->m_allow_list_layer_name.end())
     {
       TIDL_LOG_INFO(gDiags.gDiagList, "Node %s added to unsupported nodes since it is not part of allow list specified in runtime options", span_name.c_str());
+      TIDL_relayStoreNodeInfo(gDiags.gDiagList.size() - 1, op_name, span_name);
       if (relayOptions->osrtDebugPrintLevel)
       {
         gDiags.reportLastModeDiag();
@@ -1453,15 +1584,30 @@ int32_t TIDL_relayAllowNode(relay::Call call)
   memset(&layer, 0, sizeof(sTIDL_LayerPC_t));
   strncpy((char *)layer.name, op_name.c_str(), MAX_NAME_LEN);
 
-
   int32_t status = 0;
   /* will use it to check the logs which got pushed while checking allowlisting for current layer */
   int32_t diagListSize = gDiags.gDiagList.size();
   layer = TidlParseTVM(call,0,layer).layer;
+
+  // Check I/O buffer count limits before constraint validation (following ONNX RT flow pattern)
+  TidlParseTVM parser(call, 0, layer);
+  if (!parser.isLayerIONumSupported(layer))
+  {
+    layer.parseStatus = TIDL_ParseFailed;
+  }
+
   status = tidlCheckAllowlistingConstraints(layer);
+
+  // Store node info for any diagnostics added by parsing/constraint checking
+  for (int i = diagListSize; i < gDiags.gDiagList.size(); i++)
+  {
+    TIDL_relayStoreNodeInfo(i, op_name, span_name);
+  }
+
   if (status == TIDL_ALLOWLISTING_LAYER_TYPE_UNSUPPORTED)
   {
     TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Layer type not supported by TIDL --- layer type - %s,  Node name - %s", " ", span_name.c_str());
+    TIDL_relayStoreNodeInfo(gDiags.gDiagList.size() - 1, op_name, span_name);
     if (relayOptions->osrtDebugPrintLevel > 0)
     {
       gDiags.reportLastModeDiag();
@@ -1483,11 +1629,46 @@ int32_t TIDL_relayAllowNode(relay::Call call)
   }
 
   TIDL_LOG_SUPPORTED(gDiags.gDiagList,  "Layers type supported by TIDL --- layer type - %d,  Node name - %s", layer.layerType, span_name.c_str());
+  TIDL_relayStoreNodeInfo(gDiags.gDiagList.size() - 1, op_name, span_name);
   if (relayOptions->osrtDebugPrintLevel > 0)
   {
     gDiags.reportLastModeDiag();
   }
   return 1;
+}
+
+/** Print parsing diagnostics table for TVMRT flow
+ * Similar to ONNXRT's TIDL_generateParseTable but adapted for TVM
+ * Called from Python after partitioning is complete
+ */
+void TIDL_relayPrintParsingDiagnostics(int32_t numTotalNodes, int32_t numSupportedNodes, int32_t numSubgraphs)
+{
+  std::string supportedNodesStr = std::to_string(numSupportedNodes);
+  std::string offloadSubGraphStr = std::to_string(numSubgraphs);
+  std::string unsupportedNodesStr = std::to_string(numTotalNodes - numSupportedNodes);
+  std::vector<std::vector<std::string>> denylistData = {};
+
+  // Use common diagnostic parsing function with TVMRT node info from stored context
+  // gRelayNodeInfoMap was populated during TIDL_relayAllowNode calls, mapping diag index to {opType, nodeName}
+  TIDL_buildParseTableFromDiags(
+    gDiags.gDiagList,
+    denylistData,
+    [&](int index) -> std::pair<std::string, std::string> {
+      // Retrieve stored node info by diagnostic index - this is TVMRT's equivalent to ONNXRT's graph access
+      auto it = gRelayNodeInfoMap.find(index);
+      if (it != gRelayNodeInfoMap.end())
+      {
+        return it->second; // {opType, nodeName}
+      }
+      // Fallback if index not found (shouldn't happen for unsupported nodes)
+      return {"Unknown", "N/A"};
+    }
+  );
+
+  TIDL_printParseTable(supportedNodesStr, offloadSubGraphStr, unsupportedNodesStr, denylistData);
+
+  // Clear only our state after printing - don't touch gDiags.gDiagList as it may be used elsewhere
+  gRelayNodeInfoMap.clear();
 }
 
 // Globally registered functions so that TVM can find and call
@@ -1523,3 +1704,6 @@ TVM_REGISTER_GLOBAL("TIDL_relayAllowNode")
 
 TVM_REGISTER_GLOBAL("TIDL_relayUpdateDenyList")
 .set_body_typed(TIDL_relayUpdateDenyList);
+
+TVM_REGISTER_GLOBAL("TIDL_relayPrintParsingDiagnostics")
+.set_body_typed(TIDL_relayPrintParsingDiagnostics);

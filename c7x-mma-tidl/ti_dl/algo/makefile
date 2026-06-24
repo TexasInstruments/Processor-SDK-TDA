@@ -38,26 +38,19 @@ INCLUDE_PATHS+= -I ./inc/stats
 ########################################################################
 ifeq ($(TARGET_PLATFORM), PC)
 SUBDIRS += ./src/stats
+HFILES += ../common/inc/tidl_activation_optimizations.h
 endif
 ########################################################################
 
 CFILES += $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/*.c))
 HFILES += $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/*.h))
-CPPFILES += $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/*.cpp))
-
-########################################################################
-# Exclude specific source files when TIDL_EXCLUDE_UNSUPPORTED_KERNELS=1
-########################################################################
-ifeq ($(TIDL_EXCLUDE_UNSUPPORTED_KERNELS),1)
-CFILES := $(filter-out \
-    ./src/tidl_logicalOpLayer.c \
-    ./src/tidl_lstm.c \
-    ./src/tidl_rmsNorm.c \
-    ./src/tidl_tile.c \
-    ,$(CFILES))
-CFLAGS += -DTIDL_EXCLUDE_UNSUPPORTED_KERNELS
+ifeq ($(TIDL_ENABLE_OPERATOR_WITH_UNIMPLEMENTED_KERNELS),1)
+CFLAGS += -DTIDL_KERNEL_NOT_IMPLEMENTED
+else
+CFILES := $(filter-out ./src/tidl_rmsNorm.c,$(CFILES))
+HFILES := $(filter-out ./inc/tidl_rmsNorm.h,$(HFILES))
 endif
-########################################################################
+CPPFILES += $(foreach dir,$(SUBDIRS),$(wildcard $(dir)/*.cpp))
 
 ########################################################################
 #Common files is getting executed in Target and other modules
@@ -65,10 +58,8 @@ endif
 INCLUDE_PATHS+= -I ../common/inc
 HFILES += ../common/inc/tidl_common_utils_infer_import.h
 CFILES += ../common/src/tidl_common_utils_infer_import.c
-ifdef TIDL_DYNAMIC_SHAPE
 HFILES += ../common/inc/tidl_shapeInference.h
 CFILES += ../common/src/tidl_shapeInference.c
-endif
 
 ########################################################################
 #Stats Collection file is getting executed in Target for the following layers
@@ -130,6 +121,9 @@ INCLUDE_PATHS+= -I ../inc
 INCLUDE_PATHS+= -I $(DSP_COMMON_DIR)
 INCLUDE_PATHS+= -I ../../tidl_ref/include
 INCLUDE_PATHS+= -I ../../tidl-kernels/include
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+INCLUDE_PATHS+= -I ../../tidl-kernels/utils/floating_point/include
+endif
 INCLUDE_PATHS+= -I ../../tidl-kernels/source
 INCLUDE_PATHS+= -I ../../tidl_priv/include
 INCLUDE_PATHS+= -I ../../tidl_priv/source/tidsp

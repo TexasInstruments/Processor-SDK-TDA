@@ -92,6 +92,11 @@
 #ifndef _A72_BUILD
   #ifdef DMA_UTILS_STANDALONE
     #include "udma_standalone/udma.h"
+    #if defined(SOC_TDA54) && !defined(HOST_EMULATION) 
+    #include "hal/Dru/v0/include/Dru_Hal.h"
+    #define CSL_MSMC_DRU0_CFG_BASE (0x6AC00000UL)
+    #define UDMA_UTC_BASE_DRU0      (CSL_MSMC_DRU0_CFG_BASE)   /* Central DRU */
+    #endif
   #else
     #include "ti/drv/udma/udma.h"
     #include "ti/drv/sciclient/sciclient.h"
@@ -160,8 +165,31 @@ const char * TIDL_LayerString[] =
 "TIDL_ReduceLayer          ",
 "TIDL_ScatterElementsLayer ",
 "TIDL_SqueezeLayer         ",
+"TIDL_TanhLayer            ",
+"TIDL_HardSigmoidLayer     ",
+"TIDL_ELULayer             ",
+"TIDL_ReshapeLayer         ",
+"TIDL_ConstDataLayer       ",
+"TIDL_GatherLayer          ",
+"TIDL_TransposeLayer       ",
 "TIDL_LayerNormLayer       ",
-"TIDL_UnsupportedLayer     "
+"TIDL_GridSampleLayer      ",
+"TIDL_TopKLayer            ",
+"TIDL_DeformableConvLayer  ",
+"TIDL_TileLayer            ",
+"TIDL_LogicalOpLayer       ",
+"TIDL_RMSNormalizationLayer",
+"TIDL_LSTMLayer            ",
+"TIDL_GRULayer             ",
+"TIDL_RNNLayer             ",
+"TIDL_GatherNDLayer        ",
+"TIDL_CastLayer            ",
+"TIDL_GatherElementsLayer  ",
+"TIDL_ShapeLayer           ",
+"TIDL_SizeLayer            ",
+"TIDL_AttentionLayer       ",
+"TIDL_NonZeroLayer         ",
+"TIDL_UnsupportedLayer     ",
 };
 sTIDL_TBInstHanle tidl_tbHanles[TIDL_TB_MAX_INS_HANDLES];
 sTIDL_TBInstHanle tidl_tb_handle[TIDL_TB_MAX_INS_HANDLES];
@@ -305,7 +333,11 @@ void tidl_printStatus(int32_t status)
 }
 
 #ifndef _A72_BUILD
+#if defined(SOC_TDA54) && !defined(HOST_EMULATION)
+Dru_Hal_InstanceType druHalInstance;
+#else
 struct Udma_DrvObj  udmaDrvObj;
+#endif
 #ifndef DMA_UTILS_STANDALONE
 #if defined(SOC_J721E) || defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2)
 int32_t tidl_sciclientDmscGetVersion(char *version_str, uint32_t version_str_size)
@@ -514,13 +546,23 @@ char * moveToNextElement(char *in, char *LinePtr)
   return(LinePtr);
 }
 
+#if !defined(SOC_TDA54) || defined(HOST_EMULATION)
 static void TIDL_printf(const char *str)
 {
 }
+#endif
 
 void * tidl_tb_udma_init( void)
 {
 #ifndef _A72_BUILD
+#if defined(SOC_TDA54) && !defined(HOST_EMULATION) && !defined(TIDLRT_BUILD)
+  Dru_Hal_InitParamsType druHalInitParams;
+  /* DRU0 base address = 0x6AC00000UL */
+  druHalInitParams.HwDruRegsPtr = (Dru_Hal_Regs *) UDMA_UTC_BASE_DRU0;
+  druHalInitParams.UserArgsPtr = NULL;
+  Dru_Hal_Init(&druHalInstance, &druHalInitParams);
+  return &druHalInstance;
+#else
   Udma_InitPrms initPrms;
   UdmaInitPrms_init(UDMA_INST_ID_MAIN_0, &initPrms);
   initPrms.printFxn = &TIDL_printf;
@@ -530,6 +572,7 @@ void * tidl_tb_udma_init( void)
   initPrms.virtToPhyFxn = tidltb_virtToPhyAddrConversion;
   Udma_init(&udmaDrvObj, &initPrms);
   return &udmaDrvObj;
+#endif
 #else
   return NULL;
 #endif
@@ -640,11 +683,15 @@ void updateDefaultParams(tidl_net_config * params)
   {
     if(params->flowCtrl & TIDL_FLOW_CTRL_REF_STAT)
     {
-      params->updateNetWithStats = 1;
+      params->updateNetWithStats = TIDL_UPDATE_QUANT_STATS;
+    }
+    else if(params->flowCtrl & TIDL_FLOW_CTRL_PERF_MODEL)
+    {
+      params->updateNetWithStats = TIDL_UPDATE_PERF_MODEL_STATS;
     }
     else
     {
-      params->updateNetWithStats = 0;
+      params->updateNetWithStats = TIDL_UPDATE_NONE;
     }
   }
 
@@ -829,9 +876,9 @@ int32_t initRandomDataS16(int16_t *ptr, int16_t batch, int16_t n,
 
 }
 
-static inline float tidl_tb_sat(float val, float min, float max)
+static inline double tidl_tb_sat(double val, double min, double max)
 {
-    float out;
+    double out;
     out = (val<min) ? min : val;
     out = (out>max) ? max : out;
     return out;
@@ -839,7 +886,7 @@ static inline float tidl_tb_sat(float val, float min, float max)
 
 void tidl_tb_dataConvert(void *src, void *dst, int32_t src_offset, int32_t dst_offset, int32_t batch,
                          int32_t nd1, int32_t nd2, int32_t nc, int32_t nl, int32_t np,
-                         int32_t src_d1p, int32_t dst_d1p, int32_t src_d2p, int32_t dst_d2p, int32_t src_cp, int32_t dst_cp, int32_t src_lp, int32_t dst_lp, int32_t src_pp, int32_t dst_pp,
+                         int32_t src_rp, int32_t dst_rp, int32_t src_d1p, int32_t dst_d1p, int32_t src_d2p, int32_t dst_d2p, int32_t src_cp, int32_t dst_cp, int32_t src_lp, int32_t dst_lp, int32_t src_pp, int32_t dst_pp,
                          float in_zf, float out_zf, float in_scale, float out_scale, int32_t in_type, int32_t out_type)
 {
     int32_t ii, i0, i1, i2, i3, i4, in_idx, out_idx;
@@ -856,9 +903,58 @@ void tidl_tb_dataConvert(void *src, void *dst, int32_t src_offset, int32_t dst_o
               {
                   for (i4 = 0; i4 < np; i4++)
                   {
-                    in_idx = src_offset + ii * src_d1p * nd1 + i0 * src_d1p + i1 * src_d2p + i2 * src_cp + i3 * src_lp + i4 * src_pp;
-                    out_idx = dst_offset + ii * dst_d1p * nd1 + i0 * dst_d1p + i1 * dst_d2p + i2 * dst_cp + i3 * dst_lp + i4 * dst_pp;
-
+                    in_idx = src_offset + ii * src_rp + i0 * src_d1p + i1 * src_d2p + i2 * src_cp + i3 * src_lp + i4 * src_pp;
+                    out_idx = dst_offset + ii * dst_rp + i0 * dst_d1p + i1 * dst_d2p + i2 * dst_cp + i3 * dst_lp + i4 * dst_pp;
+                    /** No scale handling, direct copy condition */
+                    if (in_type == out_type && 
+                        scale == 1.0 && in_zf == out_zf && in_zf == 0)
+                    {
+                      if(in_type == TIDL_UnsignedChar)
+                      {
+                        ((uint8_t*)dst)[out_idx] = ((uint8_t *)src)[in_idx];
+                      }
+                      else if(in_type ==  TIDL_SignedChar)
+                      {
+                        ((int8_t*)dst)[out_idx] = ((int8_t*)src)[in_idx];
+                      }
+                      else if(in_type ==  TIDL_UnsignedShort)
+                      {
+                        ((uint16_t*)dst)[out_idx] = ((uint16_t*)src)[in_idx];
+                      }
+                      else if(in_type ==  TIDL_SignedShort)
+                      {
+                        ((int16_t*)dst)[out_idx] = ((int16_t*)src)[in_idx];
+                      }
+                      else if(in_type ==  TIDL_UnsignedWord)
+                      {
+                        ((uint32_t*)dst)[out_idx] = ((uint32_t*)src)[in_idx];
+                      }
+                      else if(in_type ==  TIDL_SignedWord)
+                      {
+                        ((int32_t*)dst)[out_idx] = ((int32_t*)src)[in_idx];
+                      }
+                      else if(in_type == TIDL_SinglePrecFloat)
+                      {
+                        ((float*)dst)[out_idx] = ((float*)src)[in_idx];
+                      }
+                      else if(in_type ==  TIDL_SignedDoubleWord)
+                      {
+                        ((int64_t*)dst)[out_idx] = ((int64_t*)src)[in_idx];
+                      }
+                      else if(in_type ==  TIDL_UnsignedDoubleWord)
+                      {
+                        ((uint64_t*)dst)[out_idx] = ((uint64_t*)src)[in_idx];
+                      }
+                      else if(in_type ==  TIDL_Bool)
+                      {
+                        ((bool*)dst)[out_idx] = ((bool*)src)[in_idx];
+                      }
+                      else
+                      {
+                        TIDLTB_ASSERT_MSG(0);
+                      }
+                      continue;
+                    }
                     if (in_type == TIDL_UnsignedChar)
                     {
                       data = ((uint8_t *)src)[in_idx];
@@ -906,27 +1002,27 @@ void tidl_tb_dataConvert(void *src, void *dst, int32_t src_offset, int32_t dst_o
                     data = ((data - in_zf) * scale + out_zf);
                     if(out_type ==  TIDL_UnsignedChar)
                     {
-                      ((uint8_t*)dst)[out_idx] = (uint8_t)tidl_tb_sat(data, 0.0, 255.0);
+                      ((uint8_t*)dst)[out_idx] = (uint8_t)tidl_tb_sat(data, 0.0, (double)UINT8_MAX);
                     }
                     else if(out_type ==  TIDL_SignedChar)
                     {
-                      ((int8_t*)dst)[out_idx] = (int8_t)tidl_tb_sat(data, -128.0, 127.0);
+                      ((int8_t*)dst)[out_idx] = (int8_t)tidl_tb_sat(data, (double)INT8_MIN, (double)INT8_MAX);
                     }
                     else if(out_type ==  TIDL_UnsignedShort)
                     {
-                      ((uint16_t*)dst)[out_idx] = (uint16_t)tidl_tb_sat(data, 0.0, 65535.0);
+                      ((uint16_t*)dst)[out_idx] = (uint16_t)tidl_tb_sat(data, 0.0, (double)UINT16_MAX);
                     }
                     else if(out_type ==  TIDL_SignedShort)
                     {
-                      ((int16_t*)dst)[out_idx] = (int16_t)tidl_tb_sat(data, -32768.0, 32767.0);
+                      ((int16_t*)dst)[out_idx] = (int16_t)tidl_tb_sat(data, (double)INT16_MIN, (double)INT16_MAX);
                     }
                     else if(out_type ==  TIDL_UnsignedWord)
                     {
-                      ((uint32_t*)dst)[out_idx] = (uint32_t)tidl_tb_sat(data, 0.0, 4294967295.0);
+                      ((uint32_t*)dst)[out_idx] = (uint32_t)tidl_tb_sat(data, 0.0, (double)UINT32_MAX);
                     }
                     else if(out_type ==  TIDL_SignedWord)
                     {
-                      ((int32_t*)dst)[out_idx] = (int32_t)tidl_tb_sat(data, -2147483648.0, 2147483647);
+                      ((int32_t*)dst)[out_idx] = (int32_t)tidl_tb_sat(data, (double)INT32_MIN, (double)INT32_MAX);
                     }
                     else if(out_type == TIDL_SinglePrecFloat)
                     {
@@ -934,11 +1030,11 @@ void tidl_tb_dataConvert(void *src, void *dst, int32_t src_offset, int32_t dst_o
                     }
                     else if(out_type ==  TIDL_SignedDoubleWord)
                     {
-                      ((int64_t*)dst)[out_idx] = (int64_t)tidl_tb_sat(data, 0.0, 4294967295.0);
+                      ((int64_t*)dst)[out_idx] = (int64_t)tidl_tb_sat(data, (double)INT64_MIN, (double)INT64_MAX);
                     }
                     else if(out_type ==  TIDL_UnsignedDoubleWord)
                     {
-                      ((uint64_t*)dst)[out_idx] = (uint64_t)tidl_tb_sat(data, -2147483648.0, 2147483647);
+                      ((uint64_t*)dst)[out_idx] = (uint64_t)tidl_tb_sat(data, 0.0, (double)UINT64_MAX);
                     }
                     else if(out_type ==  TIDL_Bool)
                     {
@@ -1231,7 +1327,7 @@ int32_t tidl_writeNet(sTIDL_Network_t * net, uint8_t * fileString, int32_t model
   }
 }
 
-int32_t tidl_updateNet(sTIDL_Network_t * netDst, sTIDL_Network_t * netSrc)
+int32_t tidl_updateNet(sTIDL_Network_t * netDst, sTIDL_Network_t * netSrc, tidl_net_config * params)
 {
   int32_t i, j;
 
@@ -1241,21 +1337,35 @@ int32_t tidl_updateNet(sTIDL_Network_t * netDst, sTIDL_Network_t * netSrc)
     sTIDL_Layer_t *TIDLLayerDst = &netDst->TIDLLayers[i];
     if(TIDLLayerSrc->layersGroupId == TIDL_TB_CURR_LAYERS_GROUP_ID)
     {
-      for(j = 0; j < TIDLLayerSrc->numOutBufs; j++)
+      /* Update quant stats */
+      if(params->updateNetWithStats == TIDL_UPDATE_QUANT_STATS)
       {
-        TIDLLayerDst->outData.minTensorValue = TIDLLayerSrc->outData.minTensorValue;
-        TIDLLayerDst->outData.maxTensorValue = TIDLLayerSrc->outData.maxTensorValue;
-        TIDLLayerDst->outData.tensorScale = TIDLLayerSrc->outData.tensorScale;
-        TIDLLayerDst->outData.roundBits = TIDLLayerSrc->outData.roundBits;
-      }
+        for(j = 0; j < TIDLLayerSrc->numOutBufs; j++)
+        {
+          TIDLLayerDst->outData.minTensorValue = TIDLLayerSrc->outData.minTensorValue;
+          TIDLLayerDst->outData.maxTensorValue = TIDLLayerSrc->outData.maxTensorValue;
+          TIDLLayerDst->outData.tensorScale = TIDLLayerSrc->outData.tensorScale;
+          TIDLLayerDst->outData.roundBits = TIDLLayerSrc->outData.roundBits;
+        }
 
-      if ( TIDLLayerSrc->layerType == TIDL_ConvolutionLayer )
+        if ( TIDLLayerSrc->layerType == TIDL_ConvolutionLayer )
+        {
+          /* THis is needed for channel wise quantation as this
+          varible will store the weightScale of the channel where
+          absolute maximum float value is found */
+          TIDLLayerDst->layerParams.convParams.weightScale =
+            TIDLLayerSrc->layerParams.convParams.weightScale;
+        }
+      }
+    }
+
+    /* Update perfomance modelling stats */
+    if((params->updateNetWithStats == TIDL_UPDATE_PERF_MODEL_STATS))
+    {
+      int32_t profileIdx;
+      for(profileIdx = TIDL_PROFILE_LAYER; profileIdx < TIDL_PROFILE_MAX; profileIdx++)
       {
-        /* THis is needed for channel wise quantation as this
-        varible will store the weightScale of the channel where
-        absolute maximum float value is found */
-        TIDLLayerDst->layerParams.convParams.weightScale =
-          TIDLLayerSrc->layerParams.convParams.weightScale;
+        TIDLLayerDst->profilePoints[profileIdx] = TIDLLayerSrc->profilePoints[profileIdx];
       }
     }
   }
@@ -1270,8 +1380,11 @@ int32_t tidl_writeNetWithStats(tidl_net_config * params, sTIDL_Network_t * net)
   if (origNet != NULL)
   {
     tidl_readFile(origNet, params->netBinFile);
-    tidl_updateNet(origNet, net);
-    origNet->isQuantStatsAvailable = 1;
+    tidl_updateNet(origNet, net, params);
+    if(params->updateNetWithStats == TIDL_UPDATE_QUANT_STATS)
+    {
+      origNet->isQuantStatsAvailable = 1;
+    }
     tidl_writeNet(origNet, params->netBinFile, netSize);
     free(origNet);
   }
@@ -1444,10 +1557,11 @@ int32_t tidl_ReadNetInput(TI_FILE * fp1, tidl_net_config *params, sTIDL_IOBufDes
       float inTensorScale;
       float inZeroPoint;
 
+      int32_t dst_rp = ins[numBuffs]->pitch[TIDL_ROI_PITCH];
       int32_t dst_d2p = ins[numBuffs]->pitch[TIDL_DIM2_PITCH];
       int32_t dst_d1p = ins[numBuffs]->pitch[TIDL_DIM1_PITCH];
       int32_t dst_cp = ins[numBuffs]->pitch[TIDL_CHANNEL_PITCH];
-      int32_t dst_lp = ins[numBuffs]->pitch[TIDL_ROI_PITCH];
+      int32_t dst_lp = ins[numBuffs]->pitch[TIDL_LINE_PITCH];
       int32_t dst_pp = 1;
       int32_t dst_offset =  ins[numBuffs]->padValues[2] * dst_lp + ins[numBuffs]->padValues[0];
       float dst_scale = ins[numBuffs]->scale;
@@ -1507,8 +1621,13 @@ int32_t tidl_ReadNetInput(TI_FILE * fp1, tidl_net_config *params, sTIDL_IOBufDes
         elementSizeBytes = sizeof(float);
       }
       tidl_tb_dataConvert((void *)ptr, (void *)ins[numBuffs]->ptr, 0, dst_offset, n, d1, d2, c, h, w,
-                          d2 * c * h * w, dst_d1p, c * h * w, dst_d2p, h * w, dst_cp, w, dst_lp, 1, dst_pp, inZeroPoint, dst_zp,
-                           inTensorScale, dst_scale, inElementType, ins[numBuffs]->elementType);
+                          d1 * d2 * c * h * w, dst_rp,
+                          d2 * c * h * w, dst_d1p,
+                          c * h * w, dst_d2p,
+                          h * w, dst_cp,
+                          w, dst_lp,
+                          1, dst_pp,
+                          inZeroPoint, dst_zp, inTensorScale, dst_scale, inElementType, ins[numBuffs]->elementType);
       free(ptr);
     }
     else if (params->inFileFormat == 4)
@@ -1590,10 +1709,11 @@ int32_t tidl_allocInOutTensors(sTIDL_IOBufDesc_t *ioPrms, sTIDLRT_Tensor_t *ins[
       outs[i]->scale = ioPrms->outTensorScale[i];
       outs[i]->zeroPoint = ioPrms->outZeroPoint[i];
       outs[i]->layout = ioPrms->outLayout[i];
-      outs[i]->pitch[TIDL_ROI_PITCH] = ioPrms->outPadL[i] + ioPrms->outWidth[i] + ioPrms->outPadR[i];
+      outs[i]->pitch[TIDL_LINE_PITCH]    = ioPrms->outPadL[i] + ioPrms->outWidth[i] + ioPrms->outPadR[i];
       outs[i]->pitch[TIDL_CHANNEL_PITCH] = ioPrms->outChannelPitch[i];
       outs[i]->pitch[TIDL_DIM2_PITCH]    = outs[i]->pitch[TIDL_CHANNEL_PITCH] * ioPrms->outNumChannels[i];;
       outs[i]->pitch[TIDL_DIM1_PITCH]    = outs[i]->pitch[TIDL_DIM2_PITCH] * ioPrms->outDIM2[i];
+      outs[i]->pitch[TIDL_ROI_PITCH]     = outs[i]->pitch[TIDL_DIM1_PITCH] * ioPrms->outDIM1[i];
       outs[i]->padValues[0] = ioPrms->outPadL[i];
       outs[i]->padValues[1] = ioPrms->outPadR[i];
       outs[i]->padValues[2] = ioPrms->outPadT[i];
@@ -1604,6 +1724,7 @@ int32_t tidl_allocInOutTensors(sTIDL_IOBufDesc_t *ioPrms, sTIDLRT_Tensor_t *ins[
       outs[i]->dimValues[TIDL_DIM_DIM2]   = ioPrms->outDIM2[i];
       outs[i]->dimValues[TIDL_DIM_DIM1]   = ioPrms->outDIM1[i];
       outs[i]->dimValues[TIDL_DIM_BATCH]   = ioPrms->outNumBatches[i];
+      outs[i]->isDynamic = ioPrms->outIsDynamic[i];
    }
   }
   if(status == 0)
@@ -1626,10 +1747,11 @@ int32_t tidl_allocInOutTensors(sTIDL_IOBufDesc_t *ioPrms, sTIDLRT_Tensor_t *ins[
       ins[i]->scale = ioPrms->inTensorScale[i];
       ins[i]->zeroPoint = ioPrms->inZeroPoint[i];
       ins[i]->layout = ioPrms->inLayout[i];
-      ins[i]->pitch[TIDL_ROI_PITCH] = ioPrms->inPadL[i] + ioPrms->inWidth[i] + ioPrms->inPadR[i];
+      ins[i]->pitch[TIDL_LINE_PITCH]    = ioPrms->inPadL[i] + ioPrms->inWidth[i] + ioPrms->inPadR[i];
       ins[i]->pitch[TIDL_CHANNEL_PITCH] = ioPrms->inChannelPitch[i];
       ins[i]->pitch[TIDL_DIM2_PITCH]    = ins[i]->pitch[TIDL_CHANNEL_PITCH] * ioPrms->inNumChannels[i];;
       ins[i]->pitch[TIDL_DIM1_PITCH]    = ins[i]->pitch[TIDL_DIM2_PITCH] * ioPrms->inDIM2[i];
+      ins[i]->pitch[TIDL_ROI_PITCH]     = ins[i]->pitch[TIDL_DIM1_PITCH] * ioPrms->inDIM1[i];
       ins[i]->padValues[0] = ioPrms->inPadL[i];
       ins[i]->padValues[1] = ioPrms->inPadR[i];
       ins[i]->padValues[2] = ioPrms->inPadT[i];
@@ -1641,6 +1763,17 @@ int32_t tidl_allocInOutTensors(sTIDL_IOBufDesc_t *ioPrms, sTIDLRT_Tensor_t *ins[
       ins[i]->dimValues[TIDL_DIM_DIM1]  = ioPrms->inDIM1[i];
       ins[i]->dimValues[TIDL_DIM_BATCH]   = ioPrms->inNumBatches[i];
       strcpy((char*)ins[i]->name,(char*)ioPrms->inDataName[i]);
+      ins[i]->isDynamic = ioPrms->inIsDynamic[i];
+      /* TODO: Dynamic input support in tidl_tb
+       * Currently dimValues and pitches are always set from ioBufDesc max dims, and
+       * tidl_ReadNetInput fills ins[i]->ptr with the ioBufDesc layout (including padding).
+       * For true dynamic input support, the test bench would need to:
+       *   1. Set ins[i]->dimValues to the actual input dims for this inference
+       *   2. Set ins[i]->pitch[TIDL_CHANNEL_PITCH] = actual_W * actual_H (packed)
+       *   3. Set ins[i]->padValues = 0 (source is flat)
+       *   4. Fill ins[i]->ptr with actual-sized flat data
+       * The datamove reformat path will then correctly copy actual data into the
+       * C7x input buffer using the ioBufDesc destination layout. */
     }
   }
 
@@ -1814,10 +1947,11 @@ int32_t tidl_WriteNetOutputMem (tidl_net_config *params, sTIDL_IOBufDesc_t * ioP
     int32_t w = out[i]->dimValues[TIDL_DIM_WIDTH];
     int32_t h = out[i]->dimValues[TIDL_DIM_HEIGHT];
 
+    int32_t src_rp =  out[i]->pitch[TIDL_ROI_PITCH];
     int32_t src_d1p = out[i]->pitch[TIDL_DIM1_PITCH];
     int32_t src_d2p = out[i]->pitch[TIDL_DIM2_PITCH];
     int32_t src_cp = out[i]->pitch[TIDL_CHANNEL_PITCH];
-    int32_t src_lp = out[i]->pitch[TIDL_ROI_PITCH];
+    int32_t src_lp = out[i]->pitch[TIDL_LINE_PITCH];
     int32_t src_pp = 1;
 
     int32_t src_offset =  out[i]->padValues[2] * src_lp + out[i]->padValues[0];
@@ -1852,8 +1986,14 @@ int32_t tidl_WriteNetOutputMem (tidl_net_config *params, sTIDL_IOBufDesc_t * ioP
     TIDLTB_ASSERT_EXIT(ptr);
 
     tidl_tb_dataConvert((void *)out[i]->ptr, (void *)ptr,  src_offset, 0, n, d1, d2, c, h, w,
-                        src_d1p, d2 * c * h * w, src_d2p, c * h * w, src_cp, h * w, src_lp, w, src_pp, 1, src_zf, 0, out[i]->scale, outTensorScale,
-                         out[i]->elementType, outElementType);
+                        src_rp, d1 * d2 * c * h * w,
+                        src_d1p, d2 * c * h * w,
+                        src_d2p, c * h * w,
+                        src_cp, h * w,
+                        src_lp, w,
+                        src_pp, 1,
+                        src_zf, 0, out[i]->scale, outTensorScale, out[i]->elementType, outElementType);
+
     FWRITE(ptr,1,tensorSize, fp1);
     free(ptr);
     FCLOSE(fp1);
@@ -2206,3 +2346,4 @@ void tidl_write_frameInfo(int32_t frameIdx, uint64_t totalCycles, uint64_t ddrRe
   fData->frameInfo[frameIdx].totalBW_DDR = ddrRead + ddrWrite;
 #endif
 }
+

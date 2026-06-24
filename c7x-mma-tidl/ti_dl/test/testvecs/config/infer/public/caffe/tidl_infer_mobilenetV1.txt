@@ -1,0 +1,17 @@
+inFileFormat    = 2
+postProcType = 1
+numFrames   = 1
+netBinFile      = "testvecs/config/tidl_models/caffe/tidl_net_mobilenet_v1.bin"
+ioConfigFile   = "testvecs/config/tidl_models/caffe/tidl_io_mobilenet_v1_1.bin"
+outData =   testvecs/output/airshow_mobileNetv1.bin
+inData  =   testvecs/config/classification_list.txt
+quantRangeExpansionFactor = 1.0
+quantRangeUpdateFactor = 0.0
+#inFileFormat    = 3
+#inData  =   testvecs/input/0000_3_224x224_paded.y
+writeBinsAsHeader = 0
+debugTraceLevel = 0
+writeTraceLevel = 0
+#writeOutput = 0
+
+

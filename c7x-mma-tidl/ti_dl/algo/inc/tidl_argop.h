@@ -96,6 +96,9 @@ int32_t TIDL_argOpDeviceExec(void                            *linkHandle,
                                int32_t                          currFlowStage[],
                                int32_t                          currIterCount);
 
+int32_t TIDL_argOpGetPerfData(void* linkHandle,
+                              double *perfData);
+
 void TIDL_UpdateScaleFactors(TIDL_Handle intAlgHandle, int32_t i, int32_t updateStats, int64_t accMin, int64_t accMax);
 
 

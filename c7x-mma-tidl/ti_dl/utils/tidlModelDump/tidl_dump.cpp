@@ -263,6 +263,10 @@ void TIDL_dump::dumpLayer(int layerNum)
       break;
     case TIDL_LogicalOpLayer:
       dumpLogicalOpLayerParams (layer);
+    case TIDL_ShapeLayer:
+      dumpShapeParams (layer);
+      break;
+    case TIDL_SizeLayer:
       break;
     case TIDL_RMSNormalizationLayer:
       dumpRMSNormalizationParams (layer);
@@ -276,21 +280,57 @@ void TIDL_dump::dumpLayer(int layerNum)
     case TIDL_RNNLayer:
       dumpRNNParams(layer);
       break;
+    case TIDL_GatherNDLayer:
+      dumpGatherNDParams(layer);
+      break;
+    case TIDL_GatherElementsLayer:
+      dumpGatherElementsParams(layer);
+      break;
+    case TIDL_NonZeroLayer:
+      dumpNonZeroParams(layer);
+      break;
     case TIDL_UnsupportedLayer:
        break;
-   }
-   dumpActParams(&layer->actParams);
-   if (hasOption("perfsim"))
-      dumpPerfSimInfo(layerNum);
+  }
 
-   if (layer->numOutBufs > 0)
+  dumpActParams(&layer->actParams);
+  dumpClipParams(&layer->clipParams);
+  if (hasOption("perfsim"))
+    dumpPerfSimInfo(layerNum);
+
+  if (layer->numOutBufs > 0)
+  {
+    os << format("Outputs:\n");
+    os.push();
+    for (j = 0; j < layer->numOutBufs; j++)
+      dumpTensorParams(&layer->outData);
+    os.pop();
+  }
+
+   if (layer->numInBufs > 0)
    {
-      os << format("Outputs:\n");
-      os.push();
-      for (j = 0; j < layer->numOutBufs; j++)
-	      dumpTensorParams(&layer->outData);
-      os.pop();
+      os << format("Input IDs: ");
+      for (j = 0; j < layer->numInBufs; j++)
+      {
+	      os << format("%d", layer->inData[j]);
+        if (j != layer->numInBufs - 1)
+          os << format(",");
+      }
+      os << format("\n");
    }
+
+  if (layer->numOutBufs > 0)
+  {
+    os << format("Output ID: ");
+    for (j = 0; j < layer->numOutBufs; j++)
+    {
+      os << format("%d", layer->outData.dataId);
+      if (j != layer->numOutBufs - 1)
+        os << format(",");
+    }
+    os << format("\n");
+  }
+
    os.pop();
 }
 
@@ -298,10 +338,18 @@ void TIDL_dump::dumpActParams(const sTIDL_ActParams_t *pActParams)
 {
    os << format("actParams:\n");
    os.push();
-   os << format("actType=%s\n",
-                activationTypeString(pActParams->actType).c_str());
-   os << format("slopeScale=%f clipMin/Max=(%f,%f)\n",
-      pActParams->slopeScale, pActParams->clipMin, pActParams->clipMax);
+   os << format("actType=%s slopeScale=%f\n",
+                activationTypeString(pActParams->actType).c_str(),
+                pActParams->slopeScale);
+   os.pop();
+}
+
+void TIDL_dump::dumpClipParams(const sTIDL_ClipParams_t *pClipParams)
+{
+   os << format("clipParams:\n");
+   os.push();
+   os << format("isClipEnabled=%d clipMin=%f clipMax=%f\n",
+                pClipParams->isClipEnabled, pClipParams->clipMin, pClipParams->clipMax);
    os.pop();
 }
 
@@ -338,6 +386,13 @@ void TIDL_dump::dumpTensorParams(const sTIDL_DataParams_t *pData)
       if (i != nDim-1) os << format(",");
    }
    os << format("]  ");
+   os << format("dynDimMask=[");
+   for (i = 0; i < nDim; ++i)
+   {
+      os << format("%d", (pData->dynDimMask >> i) & 1);
+      if (i != nDim-1) os << format(",");
+   }
+   os << format("]  ");
 
    os << format("elementType=%s\n",
                 elementTypeString(pData->elementType).c_str());
@@ -371,6 +426,47 @@ void TIDL_dump::dumpDataLayerParams(const sTIDL_Layer_t *pLayer)
   os << format("numChannels=%d dataQ=%d\n", pData->numChannels, pData->dataQ);
 }
 
+// Helper to dump per-channel weightScales and biasScales
+void TIDL_dump::dumpAsymQuantArrays(const sTIDL_Layer_t *pLayer,
+                                    int32_t numWeightScaleChannels,
+                                    int32_t numBiasChannels,
+                                    int32_t weightScalesOffset,
+                                    int32_t biasOffset)
+{
+   if (pLayer->layerKernelType != TIDL_HighPrecisionKernel)
+      return;
+   if (pNet == nullptr)
+      return;
+
+   const int8_t *base = (const int8_t *)pNet;
+
+   if (weightScalesOffset != 0 && numWeightScaleChannels > 0)
+   {
+      const float *p = (const float *)(base + weightScalesOffset);
+      os << format("weightScales[%d]:", numWeightScaleChannels);
+      for (int i = 0; i < numWeightScaleChannels; ++i)
+         os << format("%s%f", (i == 0 ? "" : ","), p[i]);
+      os << format("\n");
+   }
+   if (biasOffset != 0 && numBiasChannels > 0)
+   {
+      os << format("bias[%d]:", numBiasChannels);
+      if (pLayer->weightsElementSizeInBits == 8)
+      {
+        const int32_t *p = (const int32_t *)(base + biasOffset);
+        for (int i = 0; i < numBiasChannels; ++i)
+            os << format("%s%d", (i == 0 ? "" : ","), p[i]);
+      }
+      else if (pLayer->weightsElementSizeInBits == 16)
+      {
+        const int64_t *p = (const int64_t *)(base + biasOffset);
+        for (int i = 0; i < numBiasChannels; ++i)
+            os << format("%s%ld", (i == 0 ? "" : ","), (long)p[i]);
+      }
+      os << format("\n");
+   }
+}
+
 void TIDL_dump::dumpConvolutionLayerParams(const sTIDL_Layer_t *pLayer)
 {
   const sTIDL_ConvParams_t *pConv = &pLayer->layerParams.convParams;
@@ -382,8 +478,12 @@ void TIDL_dump::dumpConvolutionLayerParams(const sTIDL_Layer_t *pLayer)
   os << format("strideH/W=[%d,%d] ", pConv->strideH, pConv->strideW);
   os << format("padH/W=[%d,%d] ", pConv->padH, pConv->padW);
   os << format("dilationH/W=[%d,%d]\n", pConv->dilationH, pConv->dilationW);
-  os << format("weightScale=%f biasScale=%f\n",
-         pConv->weightScale, pConv->biasScale);
+
+  if (pLayer->layerKernelType != TIDL_HighPrecisionKernel)
+    os << format("weightScale=%f biasScale=%f\n",pConv->weightScale, pConv->biasScale);
+
+  dumpAsymQuantArrays(pLayer, pConv->numOutChannels, pConv->numOutChannels,
+                      pConv->weightScales, pConv->bias);
 }
 
 void TIDL_dump::dumpDeconvolutionLayerParams(const sTIDL_Layer_t *pLayer)
@@ -397,8 +497,12 @@ void TIDL_dump::dumpDeconvolutionLayerParams(const sTIDL_Layer_t *pLayer)
   os << format("strideH/W=[%d,%d] ", pConv->strideH, pConv->strideW);
   os << format("padH/W=[%d,%d] ", pConv->padH, pConv->padW);
   os << format("dilationH/W=[%d,%d]\n", pConv->dilationH, pConv->dilationW);
-  os << format("weightScale=%f biasScale=%f\n",
-         pConv->weightScale, pConv->biasScale);
+
+  if (pLayer->layerKernelType != TIDL_HighPrecisionKernel)
+    os << format("weightScale=%f biasScale=%f\n",pConv->weightScale, pConv->biasScale);
+
+  dumpAsymQuantArrays(pLayer, pConv->numOutChannels, pConv->numOutChannels,
+                      pConv->weightScales, pConv->bias);
 }
 
 void TIDL_dump::dumpPoolingLayerParams(const sTIDL_Layer_t *pLayer)
@@ -459,16 +563,28 @@ void TIDL_dump::dumpInnerProductLayerParams(const sTIDL_Layer_t *pLayer)
 {
   const sTIDL_InnerProductParams_t *pIP = &pLayer->layerParams.innerProductParams;
   int32_t isMatmulEnabled = pLayer->numInBufs == 1 ? TIDL_MATMUL_DISABLED : TIDL_MATMUL_ENABLED;
-  os << format("activationType=%d numInRows=%d numInCols=%d numOutCols=%d transA=%d numBChannels=%d,;\n",
+  os << format("activationType=%d numInRows=%d numInCols=%d numOutCols=%d transA=%d numBChannels=%d\n",
          pIP->activationType, pIP->numInRows, pIP->numInCols, pIP->numOutCols, pIP->inputATranspose, pIP->numBChannels);
-  os << format("weightsQ=%d weightScale=%f zeroWeightValue=%d\n",
-         pIP->weightsQ, pIP->weightScale, pIP->zeroWeightValue);
-  os << format("biasScale=%f biasQ=%d inDataQ=%d outDataQ=%d interDataQ=%d\n",
-         pIP->biasScale, pIP->biasQ, pIP->inDataQ, pIP->outDataQ, pIP->interDataQ);
-  os << format("biasB=%d\n", pIP->biasB);
+  if (pLayer->layerKernelType != TIDL_HighPrecisionKernel)
+  {
+    os << format("weightScale=%f biasScale=%f\n", 
+          pIP->weightScale, pIP->biasScale);
+    os << format("biasQ=%d inDataQ=%d outDataQ=%d interDataQ=%d\n",
+         pIP->biasQ, pIP->inDataQ, pIP->outDataQ, pIP->interDataQ);
+    os << format("biasB=%d\n", pIP->biasB);
+  }
   os << format("inputBTranspose=%d\n", pIP->inputBTranspose);
-  os << format("weights:0x%x bias:0x%x\n", pIP->weights, pIP->bias);
   os << format("isMatmulEnabled=%d\n", isMatmulEnabled);
+  // Per-channel asym arrays are only valid for constIdx!=0
+  // (column/B-const quantization). Row quantization (constIdx==0) does
+  // not produce per-output-column scales/biases that match the dump layout.
+  if (pIP->constIdx != 0 && pIP->constIdx != -1)
+  {
+    int32_t ipBCh = pIP->numBChannels > 0 ? (int32_t)pIP->numBChannels : 1;
+    int32_t ipChannels = (int32_t)pIP->numOutCols * ipBCh;
+    dumpAsymQuantArrays(pLayer, ipChannels, ipChannels,
+                        pIP->weightScales, pIP->bias);
+  }
 }
 
 void TIDL_dump::dumpSoftMaxLayerParams(const sTIDL_Layer_t *pLayer)
@@ -577,6 +693,28 @@ void TIDL_dump::dumpTopKParams (const sTIDL_Layer_t *pLayer)
   os << format("\n");  
 }
 
+void TIDL_dump::dumpGatherNDParams (const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_GatherNDLayerParams_t *pGatherND = &pLayer->layerParams.gatherNDParams;
+  os << format("batchDims=%d\n", pGatherND->batchDims);
+  os << format("\n");  
+}
+
+
+void TIDL_dump::dumpGatherElementsParams (const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_GatherElementsParams_t *pGatherElements = &pLayer->layerParams.gatherElementsParams;
+  os << format("axis=%d\n", pGatherElements->axis);
+  os << format("\n");  
+}
+
+void TIDL_dump::dumpNonZeroParams (const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_NonZeroParams_t *pNonZero = &pLayer->layerParams.nonZeroParams;
+  os << format("numValidInputDims=%d\n", pNonZero->numValidInputDims);
+  os << format("\n");  
+}
+
 void TIDL_dump::dumpTileParams (const sTIDL_Layer_t *pLayer)
 {
   const sTIDL_TileParams_t *pTile = &pLayer->layerParams.tileParams;
@@ -593,6 +731,12 @@ void TIDL_dump::dumpRMSNormalizationParams (const sTIDL_Layer_t *pLayer)
 {
   const sTIDL_RMSNormParams_t *pRMSNorm = &pLayer->layerParams.rmsNormParams;
   os << format("axis=%d, epsilon=%f, stash_type=%d\n", pRMSNorm->axis, pRMSNorm->epsilon, pRMSNorm->stashType);
+}
+
+void TIDL_dump::dumpShapeParams (const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_ShapeParams_t *pShape = &pLayer->layerParams.shapeParams;
+  os << format("start=%d end=%d\n", pShape->start, pShape->end);
 }
 
 void TIDL_dump::dumpTransposeParams(const sTIDL_Layer_t *pLayer)
@@ -706,7 +850,7 @@ void TIDL_dump::dumpLSTMParams(const sTIDL_Layer_t *pLayer)
 {
   const sTIDL_LSTMParams_t *pLSTM = &pLayer->layerParams.lstmParams;
   int32_t num_directions = 1;
-  if(pLSTM->direction == TIDL_RNNBidirectional)
+  if(pLSTM->direction == TIDL_RecurrentBidirectional)
   {
     num_directions = 2;
   }
@@ -729,7 +873,7 @@ void TIDL_dump::dumpLSTMParams(const sTIDL_Layer_t *pLayer)
   {
     os << format("clip=%f\n", pLSTM->clip);
   }
-  os << format("direction=%s\n", rnnDirectionString(pLSTM->direction).c_str());
+  os << format("direction=%s\n", recurrentDirectionString(pLSTM->direction).c_str());
   os << format("hidden_size=%d\n", pLSTM->hidden_size);
   os << format("input_forget=%d\n", pLSTM->input_forget);
   os << format("layout=%d\n", pLSTM->layout);
@@ -739,7 +883,7 @@ void TIDL_dump::dumpGRUParams(const sTIDL_Layer_t *pLayer)
 {
   const sTIDL_GRUParams_t *pGRU = &pLayer->layerParams.gruParams;
   int32_t num_directions = 1;
-  if(pGRU->direction == TIDL_RNNBidirectional)
+  if(pGRU->direction == TIDL_RecurrentBidirectional)
   {
     num_directions = 2;
   }
@@ -761,7 +905,7 @@ void TIDL_dump::dumpGRUParams(const sTIDL_Layer_t *pLayer)
   {
     os << format("clip=%f\n", pGRU->clip);
   }
-  os << format("direction=%s\n", rnnDirectionString(pGRU->direction).c_str());
+  os << format("direction=%s\n", recurrentDirectionString(pGRU->direction).c_str());
   os << format("hidden_size=%d\n", pGRU->hidden_size);
   os << format("layout=%d\n", pGRU->layout);
   os << format("linear_before_reset=%d\n", pGRU->linear_before_reset);
@@ -771,7 +915,7 @@ void TIDL_dump::dumpRNNParams(const sTIDL_Layer_t *pLayer)
 {
   const sTIDL_RNNParams_t *pRNN = &pLayer->layerParams.rnnParams;
   int32_t num_directions = 1;
-  if(pRNN->direction == TIDL_RNNBidirectional)
+  if(pRNN->direction == TIDL_RecurrentBidirectional)
   {
     num_directions = 2;
   }
@@ -792,7 +936,7 @@ void TIDL_dump::dumpRNNParams(const sTIDL_Layer_t *pLayer)
   {
     os << format("clip=%f\n", pRNN->clip);
   }
-  os << format("direction=%s\n", rnnDirectionString(pRNN->direction).c_str());
+  os << format("direction=%s\n", recurrentDirectionString(pRNN->direction).c_str());
   os << format("hidden_size=%d\n", pRNN->hidden_size);
   os << format("layout=%d\n", pRNN->layout);
 }

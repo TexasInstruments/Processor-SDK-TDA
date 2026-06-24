@@ -121,6 +121,6 @@ void app_deinit_tidl_bev(TIDLObj *obj, vx_int32 bufq_depth);
 void app_delete_tidl_bev(TIDLObj *obj);
 vx_status app_create_graph_tidl_4D(vx_context context, vx_graph graph, TIDLObj *tidlObj, vx_object_array input_tensor_arr1);
 
-vx_status writeTIDLOutput(vx_object_array output_arr, vx_char *out_name);
+vx_status writeTIDLOutput(char *file_name, TIDLObj *tidlObj);
 
 #endif

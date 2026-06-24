@@ -96,6 +96,14 @@ int32_t TIDL_quantStatsFixedOrFloat(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure, s
 int8_t TIDL_isLayerParamsToBeUpdated(int32_t layerType);
 int32_t TIDL_increasePrecision(int32_t elementType);
 int32_t TIDL_increaseWeightPrecision(sTIDL_LayerPC_t * layer, int32_t weightsElementSizeInBits);
+int32_t TIDL_setUpdatedElementType(int32_t layerType, sTIDL_OrgNetwork_t* pOrgTIDLNetStructure, int32_t layerIndex);
+int32_t TIDL_updateDataTypesFixedPoint(sTIDL_OrgNetwork_t  * pOrgTIDLNetStructure, tidl_import_config * params, int32_t numLayers,
+    std::unordered_map<int32_t, std::function<int32_t(sTIDL_OrgNetwork_t*, int32_t)>>& sTIDL_updateOutElementTypeMap);
+void TIDL_setDefaultWeightElementBits(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure,tidl_import_config * params,int32_t numLayers);
+void TIDL_convert8bitLayersTo16Bit(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure,tidl_import_config * params,int32_t numLayers);
+int32_t TIDL_asymUpdateNetworkWithConstraints(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure,
+                              tidl_import_config * params,
+                              int32_t numLayers);
 
 #endif /*TIDL_QUANTIZE_INCLUDE_H_ */
 

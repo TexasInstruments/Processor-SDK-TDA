@@ -1198,16 +1198,6 @@ template<class Tin, class Tout, class Tacc> static int32_t TIDL_refSpatialAvgPoo
                */
               int32_t poolSize = (endH - startH) * (endW - startW);
 
-              /* This check Ensure that the last pooling starts inside the image (at least 1 pixel)
-               * Onnxruntime == 1.21 has fixed for this issue by decrementing output shape(we are currently at onnruntime-tidl==1.15)
-                 this check can be removed after onnxruntime-tidl version moved to 1.21
-                *https://github.com/microsoft/onnxruntime/blob/main/onnxruntime/core/providers/cpu/nn/pool_attributes.h
-              */
-              if (poolSize == 0)
-              {
-                continue;
-              }
-
               sumBlock = 0;
 
               OPENACC(loop seq)

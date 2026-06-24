@@ -144,8 +144,8 @@ typedef struct
   int64_t type : 5;
   int64_t dependentLayerId : 16;
   int64_t tileType : 4;
-  int64_t multiBufIndex : 2;
-  int64_t rsvd : 13;
+  int64_t multiBufIndex : 4;
+  int64_t rsvd : 11;
 } sIntMetaDataID_t;
 
 typedef struct

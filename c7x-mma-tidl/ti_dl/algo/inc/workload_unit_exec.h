@@ -72,13 +72,14 @@
 #ifndef WORKLOAD_UNIT_EXEC_H_
 #define WORKLOAD_UNIT_EXEC_H_
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <dmautils.h>
 #include "itidl_ti.h"
 #include "gc.h"
 #include "gc_helper.h"
-/* ========================================================================== */
-/*                             Include Files                                  */
-/* ========================================================================== */
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -441,6 +442,9 @@ typedef int32_t (*WorkloadUnitExec_LinkFrameInitFuncPtr)(void *linkHandle,
                                       WorkloadUnitExec_LinkFrameInitParams_t *frameInitParams,
                                       const sLink_t *link);
 
+typedef int32_t (*WorkloadUnitExec_LinkGetPerformanceDataFuncPtr)(void *linkHandle, 
+                                                                 double* performanceData);
+
 /**
  @struct  WorkloadUnitExec_LinkParams
  @brief   This structure defines the parameters for link initialization
@@ -461,6 +465,8 @@ typedef struct
   WorkloadUnitExec_LinkExecFuncPtr execFuncPtr;
   /** Call back function for frame level initialization of some */
   WorkloadUnitExec_LinkFrameInitFuncPtr frameInitFuncPtr;
+  /** Call back function to get the kernel compute estimates */
+  WorkloadUnitExec_LinkGetPerformanceDataFuncPtr getPerformanceDataFuncPtr;
 }WorkloadUnitExec_LinkParams;
 
 
