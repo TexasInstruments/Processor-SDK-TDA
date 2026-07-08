@@ -264,14 +264,14 @@ typedef struct
     /**< VPAC INTD configuration registers for LDC */
     CSL_ldc_coreRegs        ldcRegs;
     /**< LDC core registers (includes both config and status registers) */
-    CSL_ldc_dualylutRegs    ldcLumaLut;
-    /**< LDC Luma (Y) width conversion LUT - 257 entries */
-    CSL_ldc_dualclutRegs    ldcChromaLut;
-    /**< LDC Chroma (C) width conversion LUT - 257 entries */
     CSL_lseRegs             lseRegs;
     /**< LSE registers (includes both config and status registers) */
     CSL_LdcHtsConfigReg vpacLdcHts;
     /**< HTS configuration registers for LDC (custom structure for HTS) */
+    CSL_ldc_dualylutRegs    ldcLumaLut;
+    /**< LDC Luma (Y) width conversion LUT - 257 entries */
+    CSL_ldc_dualclutRegs    ldcChromaLut;
+    /**< LDC Chroma (C) width conversion LUT - 257 entries */
 } VhwaVpacLdcSocReadBack;
 
 /**
@@ -360,6 +360,10 @@ typedef struct
 
     uint32_t                enableReconfigReinitReg;
     /**< Flag to enable reconfiguration and reinitialization of registers. */
+    /* One-shot enable      - 1U
+    *  Continuous enable    - 2U
+    *  Disabled             - 0U
+    */
 
 
     Ldc_RemapLutCfg         lumaLutCfg;
@@ -369,7 +373,11 @@ typedef struct
     /**< Used to save a copy of the Chroma Tone Map LUT in the handle object for Reconfiguration */
 
     uint32_t                enableStatusRegValidate;
-    /**< Flag to enable status register validation */
+    /**< Flag to enable status register validation. */
+    /* One-shot enable      - 1U
+    *  Continuous enable    - 2U
+    *  Disabled             - 0U
+    */
     /*
      * If this flag is enabled, the user must take care of invoking the
      * VHWA_M2M_IOCTL_LDC_VALIDATE_REG after the frame process request,
@@ -382,7 +390,11 @@ typedef struct
     /**< Holds the latest LDC, VPAC INTD, and LSE status register values for this handle */
 
     uint32_t                enableConfigRegValidate;
-    /**< Flag to enable config register validation */
+    /**< Flag to enable config register validation. */
+    /* One-shot enable      - 1U
+    *  Continuous enable    - 2U
+    *  Disabled             - 0U
+    */
     /*
      * 1. If this flag is enabled, the user must ensure that memory allocation
      *    is performed first for both goldenReg and readBackReg. The required
@@ -627,7 +639,24 @@ int32_t Vhwa_m2mLdcConfigRegReadback(const Vhwa_M2mLdcHandleObj *hObj, const Vhw
  * \return          Returns FVID2_SOK on success, or a negative error code on failure.
  */
 int32_t vhwaM2mLdcUpdateConfigRegGroup(VhwaVpacLdcSocReadBack *RegVal, const Vhwa_M2mLdcInstObj *instObj, const Vhwa_M2mLdcHandleObj *hObj);
+
+/**
+* \brief Compares configuration register memory across 3 parts: config, luma LUT, and chroma LUT.
+*
+* Splits the memory comparison into three logical parts:
+* 1. Configuration registers (before LUTs)
+* 2. Luma LUT (conditional on lumaLutCfg.enable)
+* 3. Chroma LUT (conditional on chromaLutCfg.enable)
+*
+* Each part only proceeds if the previous comparison succeeded.
+*
+* \param hObj      Pointer to the LDC handle object.
+*
+* \return          Returns FVID2_SOK on success, or a negative error code on failure.
+*/
+int32_t Vhwa_M2mLdcConfigRegMemCompare(const Vhwa_M2mLdcHandleObj *hObj);
 #endif
+
 #ifdef __cplusplus
 }
 #endif

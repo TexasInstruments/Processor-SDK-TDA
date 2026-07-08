@@ -19,7 +19,8 @@ endif
 # List all the external components/interfaces, whose interface header files
 # need to be included for this component
 INCLUDE_EXTERNAL_INTERFACES = pdk
-INCLUDE_INTERNAL_INTERFACES = csl
+
+include $(PDK_INSTALL_PATH)/ti/drv/csirx/src/csirx/makefile
 
 # Common source files and CFLAGS across all platforms and cores
 SRCS_COMMON += csirx_soc.c csirx_drvInit.c csirx_drv.c csirx_drvUdma.c csirx_event.c

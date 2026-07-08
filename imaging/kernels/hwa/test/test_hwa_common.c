@@ -1813,6 +1813,193 @@ vx_int32 write_uyvy_output_image(char * file_name, vx_image out)
     return len1 ;
 }
 
+/* Read NV12 P12 input image */
+vx_status readNV12P12Input(char* file_name, vx_image in_img)
+{
+    vx_status status = VX_SUCCESS;
+    FILE * fp = fopen(file_name, "rb");
+    vx_rectangle_t rect;
+    vx_imagepatch_addressing_t image_addr1;
+    vx_imagepatch_addressing_t image_addr2;
+    vx_map_id map_id1;
+    vx_map_id map_id2;
+    void * data_ptr1;
+    void * data_ptr2;
+    vx_uint32 img_width;
+    vx_uint32 img_height;
+    vx_uint32 num_bytes_per_pixel = 3; /* 3 bytes for 2 pixels in P12 */
+    vx_uint32 num_bytes_read_from_file;
+    vx_uint32 num_bytes;
+
+    if(!fp)
+    {
+        printf("readNV12P12Input: Unable to open file %s\n", file_name);
+        return (VX_FAILURE);
+    }
+
+    vxQueryImage(in_img, VX_IMAGE_WIDTH, &img_width, sizeof(vx_uint32));
+    vxQueryImage(in_img, VX_IMAGE_HEIGHT, &img_height, sizeof(vx_uint32));
+
+    rect.start_x = 0;
+    rect.start_y = 0;
+    rect.end_x = img_width;
+    rect.end_y = img_height;
+
+    /* Read Y plane - P12 format: 3 bytes for 2 pixels */
+    status = vxMapImagePatch(in_img, &rect, 0, &map_id1, &image_addr1, &data_ptr1,
+                             VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+
+    if(status == VX_SUCCESS)
+    {
+        num_bytes = ((img_width + 1) / 2) * num_bytes_per_pixel * img_height;
+        num_bytes_read_from_file = fread(data_ptr1, 1, num_bytes, fp);
+
+        if(num_bytes_read_from_file != num_bytes)
+        {
+            printf("readNV12P12Input: Incorrect bytes read for Y plane from file %s\n", file_name);
+            status = VX_FAILURE;
+        }
+        vxUnmapImagePatch(in_img, map_id1);
+    }
+    else
+    {
+        printf("readNV12P12Input: Unable to map Y plane\n");
+    }
+
+    rect.start_y = 0;
+    rect.end_y = img_height / 2;
+
+    /* Read UV plane - P12 format: 3 bytes for 2 pixels */
+    if(status == VX_SUCCESS)
+    {
+        status = vxMapImagePatch(in_img, &rect, 1, &map_id2, &image_addr2,
+                                 &data_ptr2, VX_READ_AND_WRITE,
+                                 VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+    }
+
+    if(status == VX_SUCCESS)
+    {
+        num_bytes = ((img_width + 1) / 2) * num_bytes_per_pixel * (img_height / 2);
+        num_bytes_read_from_file = fread(data_ptr2, 1, num_bytes, fp);
+
+        if(num_bytes_read_from_file != num_bytes)
+        {
+            printf("readNV12P12Input: Incorrect bytes read for UV plane from file %s\n", file_name);
+            status = VX_FAILURE;
+        }
+        vxUnmapImagePatch(in_img, map_id2);
+    }
+    else
+    {
+        printf("readNV12P12Input: Unable to map UV plane\n");
+    }
+
+    fclose(fp);
+
+    return status;
+}
+
+/* Write NV12 P12 output image to file pointer */
+vx_int32 write_output_image_fp_nv12_p12(FILE * fp, vx_image out_image)
+{
+    vx_status status;
+
+    status = vxGetStatus((vx_reference)out_image);
+
+    if(status == VX_SUCCESS)
+    {
+        vx_rectangle_t rect;
+        vx_imagepatch_addressing_t image_addr1;
+        vx_imagepatch_addressing_t image_addr2;
+        vx_map_id map_id1;
+        vx_map_id map_id2;
+        void * data_ptr1;
+        void * data_ptr2;
+        vx_uint32 img_width;
+        vx_uint32 img_height;
+        vx_uint32 num_bytes;
+        vx_uint32 num_bytes_per_pixel = 3; /* 3 bytes for 2 pixels in P12 */
+        vx_uint32 num_bytes_written_to_file = 0;
+
+        vxQueryImage(out_image, VX_IMAGE_WIDTH, &img_width, sizeof(vx_uint32));
+        vxQueryImage(out_image, VX_IMAGE_HEIGHT, &img_height, sizeof(vx_uint32));
+
+        rect.start_x = 0;
+        rect.start_y = 0;
+        rect.end_x = img_width;
+        rect.end_y = img_height;
+
+        /* Write Y plane */
+        status = vxMapImagePatch(out_image, &rect, 0, &map_id1, &image_addr1, &data_ptr1,
+                                 VX_READ_ONLY, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+
+        num_bytes = ((img_width + 1) / 2) * num_bytes_per_pixel * img_height;
+
+        if(status == VX_SUCCESS)
+        {
+            num_bytes_written_to_file += fwrite(data_ptr1, 1, num_bytes, fp);
+
+            if(num_bytes_written_to_file != num_bytes)
+            {
+                printf("write_output_image_fp_nv12_p12: Incorrect bytes written for Y plane\n");
+            }
+        }
+        else
+        {
+            printf("write_output_image_fp_nv12_p12: Unable to map Y plane\n");
+        }
+
+        rect.start_y = 0;
+        rect.end_y = img_height / 2;
+
+        /* Write UV plane */
+        status = vxMapImagePatch(out_image, &rect, 1, &map_id2, &image_addr2,
+                                 &data_ptr2, VX_READ_ONLY,
+                                 VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+
+        num_bytes = ((img_width + 1) / 2) * num_bytes_per_pixel * (img_height / 2);
+
+        if(status == VX_SUCCESS)
+        {
+            num_bytes_written_to_file += fwrite(data_ptr2, 1, num_bytes, fp);
+
+            if(num_bytes_written_to_file != (num_bytes + ((img_width + 1) / 2) * num_bytes_per_pixel * img_height))
+            {
+                printf("write_output_image_fp_nv12_p12: Incorrect bytes written for UV plane\n");
+            }
+        }
+        else
+        {
+            printf("write_output_image_fp_nv12_p12: Unable to map UV plane\n");
+        }
+
+        vxUnmapImagePatch(out_image, map_id1);
+        vxUnmapImagePatch(out_image, map_id2);
+
+        return num_bytes_written_to_file;
+    }
+
+    return -1;
+}
+
+/* Open and write NV12 P12 output image */
+vx_int32 write_output_image_nv12_p12(char * file_name, vx_image out)
+{
+    FILE * fp;
+    printf("Opening file %s \n", file_name);
+
+    fp = fopen(file_name, "wb");
+    if(!fp)
+    {
+        printf("Unable to open file %s\n", file_name);
+        return -1;
+    }
+    vx_uint32 len1 = write_output_image_fp_nv12_p12(fp, out);
+    fclose(fp);
+    printf("%d bytes written to %s\n", len1, file_name);
+    return len1;
+}
+
 /* LDRA Coverage related functions to capture test coverage data */
 #if defined(LDRA_COVERAGE)
 int32_t imaging_vpac_coverage_start()

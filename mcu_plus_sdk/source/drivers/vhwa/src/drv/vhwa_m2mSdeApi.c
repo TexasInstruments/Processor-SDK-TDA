@@ -1442,16 +1442,18 @@ Int32 vhwa_m2mSdeControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if ((NULL != handle) && (NULL != cmdArgs))
                 /* LDRA_JUSTIFY_END */
                 {
-                    uint32_t *enableFlag = (uint32_t *)cmdArgs;
-                    if ((uint32_t)1U == *enableFlag)
+                    uint32_t modeVal = *((uint32_t *)cmdArgs);
+                    if (modeVal > VHWA_SAFETY_MODE_CONTINUOUS)
                     {
-                        hObj->enableReconfigReinitReg = 1U;
+                        GT_1trace(VhwaSdeTrace, GT_ERR,
+                            "Invalid safety mode value %u for IOCTL_VHWA_M2M_SDE_ENABLE_RECONFIG_REG !!\n", modeVal);
+                        status = FVID2_EBADARGS;
                     }
                     else
                     {
-                        hObj->enableReconfigReinitReg = 0U;
+                        hObj->enableReconfigReinitReg = modeVal;
+                        status = FVID2_SOK;
                     }
-                    status = FVID2_SOK;
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement <metric end>
@@ -1484,23 +1486,21 @@ Int32 vhwa_m2mSdeControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if ((NULL != handle) && (NULL != cmdArgs))
                 /* LDRA_JUSTIFY_END */
                 {
-                    uint32_t *enableFlag = (uint32_t *)cmdArgs;
-
-                    /* Disable Interrupt since the below flag is accessed in the ISR */
-                    cookie = HwiP_disable();
-
-                    if ((uint32_t)1U == *enableFlag)
+                    uint32_t modeVal = *((uint32_t *)cmdArgs);
+                    if (modeVal > VHWA_SAFETY_MODE_CONTINUOUS)
                     {
-                        hObj->enableStatusRegValidate = (uint32_t)UTRUE;
+                        GT_1trace(VhwaSdeTrace, GT_ERR,
+                            "Invalid safety mode value %u for VHWA_M2M_IOCTL_SDE_ENABLE_STATUS_REG_VALIDATE !!\n", modeVal);
+                        status = FVID2_EBADARGS;
                     }
                     else
                     {
-                        hObj->enableStatusRegValidate = (uint32_t)UFALSE;
+                        /* Disable Interrupt since the below flag is accessed in the ISR */
+                        cookie = HwiP_disable();
+                        hObj->enableStatusRegValidate = modeVal;
+                        HwiP_restore(cookie);
+                        status = FVID2_SOK;
                     }
-
-                    HwiP_restore(cookie);
-
-                    status = FVID2_SOK;
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement <metric end>
@@ -1533,7 +1533,7 @@ Int32 vhwa_m2mSdeControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if (NULL != handle)
                 /* LDRA_JUSTIFY_END */
                 {
-                    if (UTRUE == hObj->enableStatusRegValidate)
+                    if (VHWA_SAFETY_MODE_DISABLED != hObj->enableStatusRegValidate)
                     {
                         status = Vhwa_m2mSdeStatusRegValidate(&hObj->statusRegs, &instObj->socInfo);
                         /* LDRA_JUSTIFY_START
@@ -1550,23 +1550,23 @@ Int32 vhwa_m2mSdeControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                         }
                         /* LDRA_JUSTIFY_END */
                     }
-                    if (UTRUE == hObj->enableConfigRegValidate)
+                    if (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)
                     {
                         status = Vhwa_m2mSdeConfigRegReadback(hObj, instObj);
                     }
 
                     /* Release the hardware lock after the configReg readback or statusReg */
-                    if ((UTRUE == hObj->enableStatusRegValidate) ||
-                        (UTRUE == hObj->enableConfigRegValidate))
+                    if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableStatusRegValidate) ||
+                        (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
                     {
                         Vhwa_commonHwaLockRelease(VHWA_DMPAC_SDE_LOCK_IDX);
                     }
 
-                    if (UTRUE == hObj->enableStatusRegValidate)
+                    /* Reset the statusReg validate flag only in one-shot mode */
+                    if (VHWA_SAFETY_MODE_ONESHOT == hObj->enableStatusRegValidate)
                     {
-                        /* Reset the statusReg validate flag */
                         cookie = HwiP_disable();
-                        hObj->enableStatusRegValidate = (uint32_t)UFALSE;
+                        hObj->enableStatusRegValidate = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
                         HwiP_restore(cookie);
                     }
 
@@ -1578,7 +1578,7 @@ Int32 vhwa_m2mSdeControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                     Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
                     However, due to the stated rationale, this is not tested.
                     <justification end> */
-                    if ((UTRUE == hObj->enableConfigRegValidate) && (FVID2_SOK == status))
+                    if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (FVID2_SOK == status))
                     /* LDRA_JUSTIFY_END */
                     {
                         /* Callback with goldenReg and ReadBackReg pointer to application for memory comparison */
@@ -1615,10 +1615,13 @@ Int32 vhwa_m2mSdeControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                         }
                         /* LDRA_JUSTIFY_END */
 
-                        /* Disable Interrupt since the below flag is accessed in the ISR and reset the configReg validate flag */
-                        cookie = HwiP_disable();
-                        hObj->enableConfigRegValidate = (uint32_t)UFALSE;
-                        HwiP_restore(cookie);
+                        /* Reset the configReg validate flag only in one-shot mode */
+                        if (VHWA_SAFETY_MODE_ONESHOT == hObj->enableConfigRegValidate)
+                        {
+                            cookie = HwiP_disable();
+                            hObj->enableConfigRegValidate = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
+                            HwiP_restore(cookie);
+                        }
                     }
                 }
                 else
@@ -1643,18 +1646,20 @@ Int32 vhwa_m2mSdeControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if ((NULL != handle) && (NULL != cmdArgs))
                 /* LDRA_JUSTIFY_END */
                 {
-                    uint32_t *enableFlag = (uint32_t *)cmdArgs;
-                    cookie = HwiP_disable();
-                    if ((uint32_t)1U == *enableFlag)
+                    uint32_t modeVal = *((uint32_t *)cmdArgs);
+                    if (modeVal > VHWA_SAFETY_MODE_CONTINUOUS)
                     {
-                        hObj->enableConfigRegValidate = (uint32_t)UTRUE;
+                        GT_1trace(VhwaSdeTrace, GT_ERR,
+                            "Invalid safety mode value %u for VHWA_M2M_IOCTL_SDE_ENABLE_CONFIG_REG_READBACK !!\n", modeVal);
+                        status = FVID2_EBADARGS;
                     }
                     else
                     {
-                        hObj->enableConfigRegValidate = (uint32_t)UFALSE;
+                        cookie = HwiP_disable();
+                        hObj->enableConfigRegValidate = modeVal;
+                        HwiP_restore(cookie);
+                        status = FVID2_SOK;
                     }
-                    HwiP_restore(cookie);
-                    status = FVID2_SOK;
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
@@ -2018,7 +2023,7 @@ Int32 vhwa_m2mSdeProcessReq(Fdrv_Handle handle, Fvid2_FrameList *inFrmList,
                 status = CSL_sdeSetBufParam(instObj->socInfo.sdeRegs,
                                                 &hObj->sdeBuffPrms);
 
-                if (((uint32_t)UTRUE == hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
+                if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
                 {
                     (void)CSL_sdeSetBufParam(&(goldenRegVal->sdeRegs), &hObj->sdeBuffPrms);
                 }
@@ -2056,10 +2061,14 @@ Int32 vhwa_m2mSdeProcessReq(Fdrv_Handle handle, Fvid2_FrameList *inFrmList,
 
 #if !defined(SOC_J722S)
             /* Invoke the reconfig-MMR if enableReconfigReinitReg enabled for the current handle */
-            if (UTRUE == hObj->enableReconfigReinitReg)
+            if (VHWA_SAFETY_MODE_DISABLED != hObj->enableReconfigReinitReg)
             {
                 status = Vhwa_m2mSdeReconfigReinitReg(instObj, hObj, qObj);
-                hObj->enableReconfigReinitReg = (uint32_t)UFALSE;
+                /* Reset only in one-shot mode */
+                if (VHWA_SAFETY_MODE_ONESHOT == hObj->enableReconfigReinitReg)
+                {
+                    hObj->enableReconfigReinitReg = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
+                }
             }
 #endif
 
@@ -2259,8 +2268,8 @@ Int32 vhwa_m2mSdeGetProcessReq(Fdrv_Handle handle,
             /* LDRA_JUSTIFY_END */
         }
         /* New request can now be submitted to the SDE IP for non-readBack of StatusRegisters/ConfigurationRegisters enabled frames */
-        if((UFALSE == hObj->enableStatusRegValidate) &&
-            (UFALSE == hObj->enableConfigRegValidate))
+        if ((VHWA_SAFETY_MODE_DISABLED == hObj->enableStatusRegValidate) &&
+            (VHWA_SAFETY_MODE_DISABLED == hObj->enableConfigRegValidate))
         {
             Vhwa_commonHwaLockRelease(VHWA_DMPAC_SDE_LOCK_IDX);
         }
@@ -2537,7 +2546,12 @@ int32_t Vhwa_m2mSdeReInit(void)
     if ((uint32_t)UTRUE == instObj->isRegistered)
     /* LDRA_JUSTIFY_END */
     {
-        status = Vhwa_m2mSdeUdmaDeInit(instObj);
+        status = Vhwa_m2mSdeStopCh(instObj);
+
+        if(FVID2_SOK == status)
+        {        
+            status = Vhwa_m2mSdeUdmaDeInit(instObj);
+        }
 
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
@@ -3090,8 +3104,8 @@ static Vhwa_M2mSdeHandleObj *Vhwa_sdeAllocHandleObj(
                 hObj = &gM2mSdeHandleObj[cnt];
                 Fvid2Utils_memset(hObj, 0x0, sizeof(Vhwa_M2mSdeHandleObj));
                 gM2mSdeHandleObj[cnt].isUsed = (uint32_t)UTRUE;
-                gM2mSdeHandleObj[cnt].enableReconfigReinitReg = (uint32_t)UFALSE;
-                gM2mSdeHandleObj[cnt].enableStatusRegValidate = (uint32_t)UFALSE;
+                gM2mSdeHandleObj[cnt].enableReconfigReinitReg = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
+                gM2mSdeHandleObj[cnt].enableStatusRegValidate = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
                 hObj->hIdx = cnt;
                 break;
             }
@@ -3795,7 +3809,7 @@ static int32_t Vhwa_sdeEnableFoco(const Vhwa_M2mSdeInstObj *instObj,
     Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
     However, due to the stated rationale, this is not tested.
     <justification end> */
-    if (((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate)) && (NULL != goldenRegVal))
+    if (((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)) && (NULL != goldenRegVal))
     /* LDRA_JUSTIFY_END */
     {
         status = CSL_dmpacFocoSetConfig(&(goldenRegVal->dmpacFocoRegs), DMPAC_FOCO_CHANNEL_0,
@@ -3827,7 +3841,7 @@ static int32_t Vhwa_sdeEnableFoco(const Vhwa_M2mSdeInstObj *instObj,
     Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
     However, due to the stated rationale, this is not tested.
     <justification end> */
-    if (((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate)) && (NULL != goldenRegVal))
+    if (((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)) && (NULL != goldenRegVal))
     /* LDRA_JUSTIFY_END */
     {
         status = CSL_dmpacFocoSetConfig(&(goldenRegVal->dmpacFocoRegs), DMPAC_FOCO_CHANNEL_1,
@@ -3865,7 +3879,7 @@ static int32_t Vhwa_m2mSdeSetConfigInHW(const Vhwa_M2mSdeInstObj *instObj,
     Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
     However, due to the stated rationale, this is not tested.
     <justification end> */
-    if (((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate)) && (NULL != goldenRegVal))
+    if (((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)) && (NULL != goldenRegVal))
     /* LDRA_JUSTIFY_END */
     {
         status = CSL_sdeSetBufParam(&(goldenRegVal->sdeRegs), &hObj->sdeBuffPrms);
@@ -3895,7 +3909,7 @@ static int32_t Vhwa_m2mSdeSetConfigInHW(const Vhwa_M2mSdeInstObj *instObj,
     Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
     However, due to the stated rationale, this is not tested.
     <justification end> */
-    if (((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate)) && (NULL != goldenRegVal))
+    if (((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)) && (NULL != goldenRegVal))
     /* LDRA_JUSTIFY_END */
     {
         status = CSL_sdeSetConfig(&(goldenRegVal->sdeRegs),
@@ -3913,7 +3927,7 @@ static int32_t Vhwa_m2mSdeSetConfigInHW(const Vhwa_M2mSdeInstObj *instObj,
     Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
     However, due to the stated rationale, this is not tested.
     <justification end> */
-    if (((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate)) && (NULL != goldenRegVal))
+    if (((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)) && (NULL != goldenRegVal))
     /* LDRA_JUSTIFY_END */
     {
         CSL_sdeEnablePsa(&(goldenRegVal->sdeRegs), hObj->createArgs.enablePsa);
@@ -3961,7 +3975,7 @@ static int32_t Vhwa_m2mSdeSetConfigInHW(const Vhwa_M2mSdeInstObj *instObj,
         Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
         However, due to the stated rationale, this is not tested.
         <justification end> */
-        if (((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate)) && (NULL != goldenRegVal))
+        if (((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)) && (NULL != goldenRegVal))
         /* LDRA_JUSTIFY_END */
         {
             status = CSL_lseSetConfig(&(goldenRegVal->lseRegs), &hObj->lseCfg);
@@ -4066,7 +4080,7 @@ static int32_t Vhwa_sdeSubmitRequest(Vhwa_M2mSdeInstObj *instObj,
     /* Submit Rings to the Ring Accelerator */
 
     /* Update the SdeStatusRegisterGroup with valid status register values for dynamic registers */
-    if((uint32_t)UTRUE == hObj->enableStatusRegValidate)
+    if(VHWA_SAFETY_MODE_DISABLED != hObj->enableStatusRegValidate)
     {
         status = VhwaM2mSdeUpdateStatusRegGroup(hObj);
     }
@@ -4078,7 +4092,7 @@ static int32_t Vhwa_sdeSubmitRequest(Vhwa_M2mSdeInstObj *instObj,
 
 #if !defined(SOC_J722S)
     /* Update the SdeConfigRegisterGroup with config register values for frame specific Static Config, INTD and HTS registers */
-    if((uint32_t)UTRUE == hObj->enableConfigRegValidate)
+    if(VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)
     {
         status = vhwaM2mSdeUpdateConfigRegGroup(goldenRegVal, instObj, hObj);
     }
@@ -4329,7 +4343,7 @@ static int32_t Vhwa_m2mSdeReconfigReinitReg(const Vhwa_M2mSdeInstObj *instObj, c
             Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
             However, due to the stated rationale, this is not tested.
             <justification end> */
-            if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
+            if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
             /* LDRA_JUSTIFY_END */
             {
                 status = CSL_sdeSetBufParam(&(goldenRegVal->sdeRegs),

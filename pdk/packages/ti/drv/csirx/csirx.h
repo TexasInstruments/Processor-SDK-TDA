@@ -65,7 +65,7 @@
 /*                             Include Files                                  */
 /* ========================================================================== */
 
-#include <ti/csl/csl_csirx.h>
+#include <ti/drv/csirx/src/csirx/csl_csirx.h>
 #include <ti/drv/fvid2/fvid2.h>
 #include <ti/drv/csirx/soc/csirx_soc.h>
 #include <ti/drv/csirx/include/csirx_cfg.h>

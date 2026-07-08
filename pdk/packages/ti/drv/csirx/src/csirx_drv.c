@@ -147,7 +147,7 @@ static void CsirxDrv_deleteChQueues(CsirxDrv_ChObj *chObj);
 
 static int32_t CsirxDrv_startIoctl(CsirxDrv_VirtContext *virtContext);
 
-static int32_t CsirxDrv_asfEventTrigIoctl(CsirxDrv_VirtContext *virtContext);
+static int32_t CsirxDrv_asfEventTrigIoctl(const CsirxDrv_VirtContext *virtContext);
 
 static int32_t CsirxDrv_stopIoctl(CsirxDrv_VirtContext *virtContext);
 
@@ -208,19 +208,19 @@ Fdrv_Handle CsirxDrv_create(uint32_t drvId,
                             void *createStatusArgs,
                             const Fvid2_DrvCbParams *fdmCbParams)
 {
-    Fdrv_Handle drvHandle = NULL;
+    Fdrv_Handle drvHandle = NULL_PTR;
     int32_t retVal = FVID2_SOK;
     CsirxDrv_CommonObj *captObj;
-    CsirxDrv_InstObj *instObj = NULL;
+    CsirxDrv_InstObj *instObj = NULL_PTR;
     Csirx_CreateParams *createParams;
     Csirx_CreateStatus *status;
     uint32_t chIdx, virtContextId, chId;
     CsirxDrv_VirtContext *virtContext;
 
-    /* Check for NULL pointers and invalid arguments */
-    if ((NULL == createArgs)       ||
-        (NULL == createStatusArgs) ||
-        (NULL == fdmCbParams)      ||
+    /* Check for NULL_PTR pointers and invalid arguments */
+    if ((NULL_PTR == createArgs)       ||
+        (NULL_PTR == createStatusArgs) ||
+        (NULL_PTR == fdmCbParams)      ||
         (CSIRX_CAPT_DRV_ID != drvId))
     {
         GT_0trace(CsirxTrace, GT_ERR, "Invalid arguments\r\n");
@@ -235,7 +235,7 @@ Fdrv_Handle CsirxDrv_create(uint32_t drvId,
              virtContextId < CSIRX_NUM_VIRTUAL_CONTEXT ;
              virtContextId++)
         {
-            if (CSIRX_DRV_USAGE_STATUS_NOT_USED == 
+            if (CSIRX_DRV_USAGE_STATUS_NOT_USED ==
                                   captObj->virtContext[instId][virtContextId].inUse)
             {
                 virtContext = &captObj->virtContext[instId][virtContextId];
@@ -262,7 +262,7 @@ Fdrv_Handle CsirxDrv_create(uint32_t drvId,
         }
     }
 
-    if (NULL != instObj)
+    if (NULL_PTR != instObj)
     {
         /* Pend on the instance semaphore */
         (void)SemaphoreP_pend(instObj->lockSem, SemaphoreP_WAIT_FOREVER);
@@ -315,7 +315,7 @@ Fdrv_Handle CsirxDrv_create(uint32_t drvId,
          for (chIdx = 0U ; chIdx < createParams->numCh ; chIdx++)
          {
              if ((CSIRX_CH_TYPE_CAPT == instObj->chObj[chIdx].chCfg->chType) &&
-                 (NULL               == instObj->commonObjRef->initParams.drvHandle))
+                 (NULL_PTR               == instObj->commonObjRef->initParams.drvHandle))
              {
                  retVal = FVID2_EBADARGS;
                  GT_0trace(CsirxTrace,
@@ -378,7 +378,7 @@ Fdrv_Handle CsirxDrv_create(uint32_t drvId,
             CSL_csirxAssertPixelIfReset((CSL_csi_rx_ifRegs *)instObj->shimBaseAddr, UFALSE);
         }
     }
-    if (NULL != createStatusArgs)
+    if (NULL_PTR != createStatusArgs)
     {
         status = (Csirx_CreateStatus *)createStatusArgs;
         status->retVal = retVal;
@@ -393,7 +393,7 @@ Fdrv_Handle CsirxDrv_create(uint32_t drvId,
     }
     else
     {
-        if (NULL != instObj)
+        if (NULL_PTR != instObj)
         {
             /* Deallocate if error occurs */
             for (chIdx = 0U ; chIdx < createParams->numCh ; chIdx++)
@@ -406,7 +406,7 @@ Fdrv_Handle CsirxDrv_create(uint32_t drvId,
                   GT_ERR,
                   "Create failed for given configuration\r\n");
     }
-    if (NULL != instObj)
+    if (NULL_PTR != instObj)
     {
         /* Post the instance semaphore */
         (void)SemaphoreP_post(instObj->lockSem);
@@ -442,13 +442,13 @@ int32_t CsirxDrv_delete(Fdrv_Handle handle, void *reserved)
 {
     int32_t retVal = FVID2_SOK;
     uint32_t chIdx;
-    CsirxDrv_InstObj *instObj = NULL;
+    CsirxDrv_InstObj *instObj = NULL_PTR;
     CsirxDrv_VirtContext *virtContext;
     CsirxDrv_CommonObj *captObj;
 
     captObj = &gCsirxCommonObj;
-    /* Check for NULL pointers and invalid arguments */
-    if (NULL == handle)
+    /* Check for NULL_PTR pointers and invalid arguments */
+    if (NULL_PTR == handle)
     {
         GT_0trace(CsirxTrace, GT_ERR, "Invalid arguments\r\n");
         retVal = FVID2_EBADARGS;
@@ -459,7 +459,7 @@ int32_t CsirxDrv_delete(Fdrv_Handle handle, void *reserved)
         instObj = virtContext->instObj;
     }
 
-    if (NULL != instObj)
+    if (NULL_PTR != instObj)
     {
         /* Pend on the instance semaphore */
         (void)SemaphoreP_pend(instObj->lockSem, SemaphoreP_WAIT_FOREVER);
@@ -471,7 +471,7 @@ int32_t CsirxDrv_delete(Fdrv_Handle handle, void *reserved)
             /* TODO: Currently only done for Capture channels */
             for (chIdx = 0U ; chIdx < virtContext->numCh ; chIdx++)
             {
-                if (CSIRX_DRV_CH_STATE_STOPPED == 
+                if (CSIRX_DRV_CH_STATE_STOPPED ==
                         instObj->chObj[virtContext->chId[chIdx]].status)
                 {
                     CsirxDrv_deleteChObj(
@@ -535,10 +535,10 @@ int32_t CsirxDrv_queue(Fdrv_Handle handle,
     CsirxDrv_QueObj *qObj;
     CsirxDrv_VirtContext *virtContext;
 
-    /* Check for NULL pointers */
-    if((NULL == handle) || (NULL == frmList))
+    /* Check for NULL_PTR pointers */
+    if((NULL_PTR == handle) || (NULL_PTR == frmList))
     {
-        GT_0trace(CsirxTrace, GT_ERR, "NULL pointer\n");
+        GT_0trace(CsirxTrace, GT_ERR, "NULL_PTR pointer\n");
         retVal = FVID2_EBADARGS;
     }
     if(FVID2_SOK == retVal)
@@ -566,7 +566,7 @@ int32_t CsirxDrv_queue(Fdrv_Handle handle,
         /* for all frames that need to be queued */
         for (frmCnt = 0U ; frmCnt < frmList->numFrames ; frmCnt++)
         {
-            /* Get FVID2 frame pointer - NULL check is already done in
+            /* Get FVID2 frame pointer - NULL_PTR check is already done in
              * check frame list function */
             frm = frmList->frames[frmCnt];
             chIdx = virtContext->chId[frm->chNum];
@@ -586,7 +586,7 @@ int32_t CsirxDrv_queue(Fdrv_Handle handle,
                 /* Allocate a free queue object from the pool */
                 qObj =
                  (CsirxDrv_QueObj *) Fvid2Utils_dequeue(chObj->bufManObj.freeQ);
-                if (NULL == qObj)
+                if (NULL_PTR == qObj)
                 {
                     GT_0trace(
                         CsirxTrace, GT_ERR,
@@ -613,10 +613,10 @@ int32_t CsirxDrv_queue(Fdrv_Handle handle,
                     gTrSubmit[gTrSubmitCnt][0U] = (uint32_t)qObj->trpd;
                     gTrSubmit[gTrSubmitCnt][1U] = instObj->drvInstId;
                     gTrSubmit[gTrSubmitCnt][2U] = chIdx;
-                    if (NULL != gCsirxCommonObj.getTimeStamp)
+                    if (NULL_PTR != gCsirxCommonObj.getTimeStamp)
                     {
                         gTrSubmit[gTrSubmitCnt][3U] =
-                                        (uint32_t)gCsirxCommonObj.getTimeStamp(NULL);
+                                        (uint32_t)gCsirxCommonObj.getTimeStamp(NULL_PTR);
                     }
                     else
                     {
@@ -645,8 +645,8 @@ int32_t CsirxDrv_queue(Fdrv_Handle handle,
                     /* Add the queue object in driver's current queue */
                     Fvid2Utils_queue(chObj->bufManObj.curQ, &qObj->qElem, qObj);
                     instObj->status.queueCount[chIdx]++;
-                    /* Mark frame in frmList as NULL */
-                    frmList->frames[frmCnt] = NULL;
+                    /* Mark frame in frmList as NULL_PTR */
+                    frmList->frames[frmCnt] = NULL_PTR;
                 }
             }
         }
@@ -664,16 +664,16 @@ int32_t CsirxDrv_dequeue(Fdrv_Handle handle,
 {
     int32_t retVal = FVID2_SOK,tempRetVal = UDMA_SOK;
     CsirxDrv_InstObj *instObj;
-    CsirxDrv_ChObj *chObj = NULL;
+    CsirxDrv_ChObj *chObj = NULL_PTR;
     uint32_t chIdx, cookie;
     volatile uint32_t loopBreakFlag = 1U;
     CsirxDrv_QueObj *qObj;
     uint64_t pDesc;
     CsirxDrv_VirtContext *virtContext;
 
-    /* Check for NULL pointers */
-    if((NULL == handle) ||
-       (NULL == frmList))
+    /* Check for NULL_PTR pointers */
+    if((NULL_PTR == handle) ||
+       (NULL_PTR == frmList))
     {
         GT_0trace(CsirxTrace, GT_ERR, "Invalid argument!!\r\n");
         retVal = FVID2_EBADARGS;
@@ -696,7 +696,7 @@ int32_t CsirxDrv_dequeue(Fdrv_Handle handle,
     {
         /* init frame list fields */
         frmList->numFrames  = 0U;
-        frmList->perListCfg = NULL;
+        frmList->perListCfg = NULL_PTR;
         for (chIdx = 0U ; chIdx < virtContext->numCh ; chIdx++)
         {
             chObj = &instObj->chObj[(virtContext->chId[chIdx])];
@@ -706,27 +706,27 @@ int32_t CsirxDrv_dequeue(Fdrv_Handle handle,
             do
             {
                 qObj = (CsirxDrv_QueObj *) Fvid2Utils_dequeue(chObj->bufManObj.doneQ);
-                if (NULL != qObj)
+                if (NULL_PTR != qObj)
                 {
                     if (CSIRX_DRV_Q_OBJ_TYPE_FD != qObj->type)
                     {
-                        GT_assert(CsirxTrace, (NULL != qObj->chObj));
-                        GT_assert(CsirxTrace, (NULL != qObj->frm));
+                        GT_assert(CsirxTrace, (NULL_PTR != qObj->chObj));
+                        GT_assert(CsirxTrace, (NULL_PTR != qObj->frm));
                         frmList->frames[frmList->numFrames] = qObj->frm;
                         frmList->numFrames++;
                         instObj->status.dequeueCount[chObj->chId]++;
 
                     }
                     /* Give back the queue object back to the free pool */
-                    qObj->frm = NULL;
-                    if(NULL != chObj)
+                    qObj->frm = NULL_PTR;
+                    if(NULL_PTR != chObj)
                     {
                         Fvid2Utils_queue(chObj->bufManObj.freeQ, &qObj->qElem, qObj);
                     }
                 }
                  /* Max frames limit exceeded exit */
                 if ((FVID2_MAX_FRAME_PTR <= frmList->numFrames) ||
-                    (NULL == qObj))
+                    (NULL_PTR == qObj))
                 {
                     loopBreakFlag = 0U;
                 }
@@ -740,7 +740,7 @@ int32_t CsirxDrv_dequeue(Fdrv_Handle handle,
     {
         /* When an instance is stopped, return all the request in
          * channel's current queue as well. */
-        GT_assert(CsirxTrace, (NULL != instObj));
+        GT_assert(CsirxTrace, (NULL_PTR != instObj));
         if (CSIRX_DRV_STATE_STOPPED == virtContext->state)
         {
             for (chIdx = 0U ; chIdx < virtContext->numCh ; chIdx++)
@@ -764,8 +764,8 @@ int32_t CsirxDrv_dequeue(Fdrv_Handle handle,
                             /* Give the buffers in current state */
                             qObj = (CsirxDrv_QueObj *)
                                 Fvid2Utils_dequeue(chObj->bufManObj.curQ);
-                            GT_assert(CsirxTrace, (NULL != qObj));
-                            if (NULL != qObj)
+                            GT_assert(CsirxTrace, (NULL_PTR != qObj));
+                            if (NULL_PTR != qObj)
                             {
                                 GT_assert(CsirxTrace,
                                   (chObj->chId == qObj->chObj->chId));
@@ -775,14 +775,14 @@ int32_t CsirxDrv_dequeue(Fdrv_Handle handle,
                                   (pDesc == (uint64_t)(qObj->trpd)));
                                 if (CSIRX_DRV_Q_OBJ_TYPE_FD != qObj->type)
                                 {
-                                    GT_assert(CsirxTrace, (NULL != qObj->frm));
+                                    GT_assert(CsirxTrace, (NULL_PTR != qObj->frm));
                                     qObj->frm->status = FVID2_FRAME_STATUS_ABORTED;
                                     frmList->frames[frmList->numFrames] = qObj->frm;
                                     frmList->numFrames++;
                                     instObj->status.dequeueCount[chObj->chId]++;
                                 }
                                 /* Give back the queue object back to the free pool */
-                                qObj->frm = NULL;
+                                qObj->frm = NULL_PTR;
                                 GT_assert(CsirxTrace, (chObj == qObj->chObj));
                                 Fvid2Utils_queue(chObj->bufManObj.freeQ,
                                                 &qObj->qElem,
@@ -792,7 +792,7 @@ int32_t CsirxDrv_dequeue(Fdrv_Handle handle,
                         /* Max frames limit exceeded exit or no more frames for this
                          * channel, continue with next channel */
                         if ((UDMA_ETIMEOUT == tempRetVal) || (FVID2_MAX_FRAME_PTR <= frmList->numFrames) ||
-                            (NULL == qObj))
+                            (NULL_PTR == qObj))
                         {
                             break;
                         }
@@ -853,8 +853,8 @@ int32_t CsirxDrv_control(Fdrv_Handle handle,
     CsirxDrv_VirtContext *virtContext;
     uint32_t chIdx;
 
-    /* Check for NULL pointers */
-    if (NULL == handle)
+    /* Check for NULL_PTR pointers */
+    if (NULL_PTR == handle)
     {
         GT_0trace(CsirxTrace, GT_ERR, "Invalid argument!!\r\n");
         retVal = FVID2_EBADARGS;
@@ -924,7 +924,7 @@ int32_t CsirxDrv_control(Fdrv_Handle handle,
             break;
             case IOCTL_CSIRX_TRIG_ASF_EVENT:
                 retVal = CsirxDrv_asfEventTrigIoctl(virtContext);
-            break;   
+            break;
             default:
             {
                 GT_0trace(CsirxTrace, GT_ERR,
@@ -938,7 +938,7 @@ int32_t CsirxDrv_control(Fdrv_Handle handle,
     return retVal;
 }
 
-static int32_t CsirxDrv_asfEventTrigIoctl(CsirxDrv_VirtContext *virtContext)
+static int32_t CsirxDrv_asfEventTrigIoctl(const CsirxDrv_VirtContext *virtContext)
 {
     int32_t retVal = FVID2_SOK;
     CSIRX_AsfIrqTest asfIrqTest;
@@ -962,7 +962,7 @@ static int32_t CsirxDrv_asfEventTrigIoctl(CsirxDrv_VirtContext *virtContext)
         asfIrqTest.asfSramCorrErrIrqTest = instCfg->trigAsfTestIntr.asfSramCorrErrTest;
     }
 
-    
+
     if (CDN_EOK != CSIRX_SetTestAsfIrqs(&instObj->cslObj.cslCfgData, &asfIrqTest))
     {
         retVal = FVID2_EFAIL;
@@ -1159,7 +1159,7 @@ static int32_t CsirxDrv_setCslCfgParams(CsirxDrv_CommonObj *captObj,
                             &instObj->createParams.instCfg.asfFatalNonFatalCfg,
                                 sizeof (CSIRX_AsfFatalNonFatalSelect));
         status = CSIRX_SetAsfFatalNonfatal(&instObj->cslObj.cslCfgData, &asfFatalNonFatalSelect);
-        
+
         if (CDN_EOK != status) {
             retVal = FVID2_EBADARGS;
         }
@@ -1324,8 +1324,8 @@ static int32_t CsirxDrv_createChQueues(CsirxDrv_ChObj *chObj)
     {
         bmObj = &chObj->bufManObj;
 
-        bmObj->freeQ         = NULL;
-        bmObj->curQ          = NULL;
+        bmObj->freeQ         = NULL_PTR;
+        bmObj->curQ          = NULL_PTR;
 
         /* Create Queues */
         retVal += Fvid2Utils_constructQ(&bmObj->freeLlObj);
@@ -1347,7 +1347,7 @@ static int32_t CsirxDrv_createChQueues(CsirxDrv_ChObj *chObj)
             qObj->inUse = CSIRX_DRV_USAGE_STATUS_NOT_USED;
             qObj->type  = CSIRX_DRV_Q_OBJ_TYPE_NORMAL;
             qObj->chObj = chObj;
-            qObj->frm   = NULL;
+            qObj->frm   = NULL_PTR;
             qObj->trpd  =
                     (CSL_UdmapCppi5TRPD *)CsirxDrv_getTrpdMemAddr(chObj,
                                                                   qCnt);
@@ -1357,7 +1357,7 @@ static int32_t CsirxDrv_createChQueues(CsirxDrv_ChObj *chObj)
             tempRetVal = CsirxDrv_udmaRxTrpdInit(
                                 &chObj->rxChObj,
                                 (uint8_t *)qObj->trpd,
-                                NULL,
+                                NULL_PTR,
                                 chObj->chCfg,
                                 chObj->chId);
             if (FVID2_SOK != tempRetVal)
@@ -1383,17 +1383,17 @@ static void CsirxDrv_deleteChQueues(CsirxDrv_ChObj *chObj)
     CsirxDrv_QueObj    *qObj;
     CsirxDrv_BufManObj *bmObj;
 
-    /* NULL pointer check */
-    GT_assert(CsirxTrace, (NULL != chObj));
+    /* NULL_PTR pointer check */
+    GT_assert(CsirxTrace, (NULL_PTR != chObj));
     bmObj = &chObj->bufManObj;
 
-    if (NULL != bmObj->freeQ)
+    if (NULL_PTR != bmObj->freeQ)
     {
         /* Free-up all the queued free queue objects */
         for(;;)
         {
             qObj = (CsirxDrv_QueObj *) Fvid2Utils_dequeue(bmObj->freeQ);
-            if (NULL == qObj)
+            if (NULL_PTR == qObj)
             {
                 /* No more in queue */
                 break;
@@ -1402,22 +1402,22 @@ static void CsirxDrv_deleteChQueues(CsirxDrv_ChObj *chObj)
 
         /* Delete the free Q */
         Fvid2Utils_destructQ(bmObj->freeQ);
-        bmObj->freeQ = NULL;
+        bmObj->freeQ = NULL_PTR;
     }
 
 
-    if (NULL != bmObj->curQ)
+    if (NULL_PTR != bmObj->curQ)
     {
         /* Delete the free Q */
         Fvid2Utils_destructQ(bmObj->curQ);
-        bmObj->curQ = NULL;
+        bmObj->curQ = NULL_PTR;
     }
 
-    if (NULL != bmObj->doneQ)
+    if (NULL_PTR != bmObj->doneQ)
     {
         /* Delete the free Q */
         Fvid2Utils_destructQ(bmObj->doneQ);
-        bmObj->doneQ = NULL;
+        bmObj->doneQ = NULL_PTR;
     }
 }
 
@@ -1429,8 +1429,8 @@ static int32_t CsirxDrv_startIoctl(CsirxDrv_VirtContext *virtContext)
     CSIRX_StreamCtrl strmCtrlParams;
     CsirxDrv_InstObj *instObj;
 
-    /* Check for NULL pointers */
-    GT_assert(CsirxTrace, (NULL != virtContext));
+    /* Check for NULL_PTR pointers */
+    GT_assert(CsirxTrace, (NULL_PTR != virtContext));
     GT_assert(CsirxTrace, (CSIRX_NUM_CH >= virtContext->numCh));
     instObj = virtContext->instObj;
     /* Pend the instance semaphore */
@@ -1499,8 +1499,8 @@ static int32_t CsirxDrv_stopIoctl(CsirxDrv_VirtContext *virtContext)
     CSIRX_StreamCtrl strmCtrlParams;
     CsirxDrv_InstObj *instObj;
 
-    /* Check for NULL pointers */
-    GT_assert(CsirxTrace, (NULL != virtContext));
+    /* Check for NULL_PTR pointers */
+    GT_assert(CsirxTrace, (NULL_PTR != virtContext));
     GT_assert(CsirxTrace, (CSIRX_NUM_CH >= virtContext->numCh));
     instObj = virtContext->instObj;
     /* Pend the instance semaphore */
@@ -1532,8 +1532,8 @@ static int32_t CsirxDrv_stopIoctl(CsirxDrv_VirtContext *virtContext)
                      retVal = FVID2_EBADARGS;
                      break;
                  }
-            }        
-        }            
+            }
+        }
     }
     for (chIdx = 0U ; chIdx < virtContext->numCh ; chIdx++)
     {
@@ -1634,7 +1634,7 @@ static uint32_t CsirxDrv_getStrmId(const Csirx_PlatformData *platformData,
        on which physical stream it supported */
     for (loopCnt = 0U ; loopCnt < CSIRX_INSTANCE_ID_MAX ; loopCnt++)
     {
-        if (( CSIRX_STRM_SUPPORT_SUPPORTED == 
+        if (( CSIRX_STRM_SUPPORT_SUPPORTED ==
                         platformData->strmStatus[instId][loopCnt] ) &&
             ( platformData->strmType[instId][loopCnt] == strmType ))
         {
@@ -2012,7 +2012,7 @@ static int32_t Csirx_startCh(CsirxDrv_ChObj *chObj)
                     /* Allocate a free queue object from the pool */
                     qObj =
                      (CsirxDrv_QueObj *) Fvid2Utils_dequeue(chObj->bufManObj.freeQ);
-                    if (NULL == qObj)
+                    if (NULL_PTR == qObj)
                     {
                         GT_0trace(
                             CsirxTrace, GT_ERR,
@@ -2022,7 +2022,7 @@ static int32_t Csirx_startCh(CsirxDrv_ChObj *chObj)
                     if(FVID2_SOK == retVal)
                     {
                         /* Copy the frame to the driver's queue object */
-                        qObj->frm = NULL;
+                        qObj->frm = NULL_PTR;
                         /* Re-program dim0 and destination buffer */
                         pTr = UdmaUtils_getTrpdTr1Pointer((uint8_t *)qObj->trpd, 0U);
                         /* Keep over-writing frameDrop buffer with each incoming line */
@@ -2040,10 +2040,10 @@ static int32_t Csirx_startCh(CsirxDrv_ChObj *chObj)
                             gTrSubmit[gTrSubmitCnt][0U] = (uint32_t)qObj->trpd;
                             gTrSubmit[gTrSubmitCnt][1U] = instObj->drvInstId;
                             gTrSubmit[gTrSubmitCnt][2U] = chIdx;
-                            if (NULL != gCsirxCommonObj.getTimeStamp)
+                            if (NULL_PTR != gCsirxCommonObj.getTimeStamp)
                             {
                                 gTrSubmit[gTrSubmitCnt][3U] =
-                                                (uint32_t)gCsirxCommonObj.getTimeStamp(NULL);;
+                                                (uint32_t)gCsirxCommonObj.getTimeStamp(NULL_PTR);;
                             }
                             else
                             {
@@ -2168,7 +2168,7 @@ static int32_t CsirxDrv_getActiveChNumIoctl(CsirxDrv_InstObj *instObj,
 {
     int32_t retVal = FVID2_SOK;
 
-    GT_assert(CsirxTrace, (NULL != instObj));
+    GT_assert(CsirxTrace, (NULL_PTR != instObj));
     *chNum = instObj->numCaptCh;
 
     return retVal;
@@ -2180,7 +2180,7 @@ static int32_t CsirxDrv_getFreeChNumIoctl(CsirxDrv_InstObj *instObj,
     int32_t retVal = FVID2_SOK;
     uint32_t chIdx;
 
-    GT_assert(CsirxTrace, (NULL != instObj));
+    GT_assert(CsirxTrace, (NULL_PTR != instObj));
 
     for (chIdx = 0U ; chIdx < CSIRX_NUM_CH ; chIdx++)
     {
@@ -2208,7 +2208,7 @@ static int32_t CsirxDrv_startChannelIoctl(CsirxDrv_InstObj *instObj,
     int32_t retVal = FVID2_SOK;
     CsirxDrv_ChObj *chObj;
 
-    GT_assert(CsirxTrace, (NULL != instObj));
+    GT_assert(CsirxTrace, (NULL_PTR != instObj));
     GT_assert(CsirxTrace, (CSIRX_NUM_CH > chNum));
 
     /* Get channel object */
@@ -2224,7 +2224,7 @@ static int32_t CsirxDrv_stopChannelIoctl(CsirxDrv_InstObj *instObj,
     int32_t retVal = FVID2_SOK;
     CsirxDrv_ChObj *chObj;
 
-    GT_assert(CsirxTrace, (NULL != instObj));
+    GT_assert(CsirxTrace, (NULL_PTR != instObj));
     GT_assert(CsirxTrace, (CSIRX_NUM_CH > chNum));
 
     /* Get channel object */

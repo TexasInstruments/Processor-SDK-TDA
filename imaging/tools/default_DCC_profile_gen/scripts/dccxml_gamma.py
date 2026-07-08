@@ -58,7 +58,7 @@ def GenGAMMAXML(directory, filebase, params, gamma_params):
         dccxml.AddUseCase(handle, module_params, gamma_params['USE_CASE'][i])
 
     r_table = '../tables/lut_gamma_BT709.txt'
-    if params['YUV_GAMMA'] == 1:
+    if params.get('YUV_GAMMA', 0) == 1:
         r_table = '../tables/lut_gamma_high_contrast.txt'
 
     shutil.copy(r_table, os.path.join(directory, 'lut_viss_fcc_gamma.txt'))

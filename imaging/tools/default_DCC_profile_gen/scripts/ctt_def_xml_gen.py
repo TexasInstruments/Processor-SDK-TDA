@@ -242,7 +242,7 @@ def generate_gamma_xml(sys_params, gamma_params, params):
     dccxml_gamma.GenGAMMAXML(gamma_Dir, gamma_File, params, gamma_params)
     return
 
-def generate_dcc_gen_script(sys_params,params):
+def generate_dcc_gen_script(sys_params, params):
     dcc_gen_File = 'generate_dcc.sh'
     dcc_gen_Dir  = sys_params['PRJ_DIR'] + '/dcc_xmls/'+params['WDR_MODE']
 
@@ -293,7 +293,10 @@ def generate_dcc_gen_script(sys_params,params):
     handle.write('$DCC_TOOL_PATH/dcc_gen_linux %s_viss_blc.xml\n' %params['SENSOR_NAME'])
     handle.write('$DCC_TOOL_PATH/dcc_gen_linux %s_cfa_dcc.xml\n' %params['SENSOR_NAME'])
     handle.write('$DCC_TOOL_PATH/dcc_gen_linux %s_viss_gamma_dcc.xml\n' %params['SENSOR_NAME'])
-    handle.write('$DCC_TOOL_PATH/dcc_gen_linux %s_rawfe_lsc_dcc.xml\n' %params['SENSOR_NAME'])
+
+    if 'LSC_LENS_SPEC_FILE' in sys_params:
+        handle.write('$DCC_TOOL_PATH/dcc_gen_linux %s_rawfe_lsc_dcc.xml\n' %params['SENSOR_NAME'])
+
     handle.write('$DCC_TOOL_PATH/dcc_gen_linux %s_%s_decompand_dcc.xml\n' %(params['SENSOR_NAME'], params['WDR_MODE']))
     if(params['WDR_MODE'] == 'wdr'):
         handle.write('$DCC_TOOL_PATH/dcc_gen_linux %s_wdr_glbce_dcc.xml\n' %params['SENSOR_NAME'])

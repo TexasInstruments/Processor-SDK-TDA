@@ -107,6 +107,9 @@
 #ifdef SOC_J722S 
 #define NUM_CPU_CORES               (2u)
 #endif
+#ifdef SOC_J742S2
+#define NUM_CPU_CORES               (4u)
+#endif
 
 #define ABS_FLT(a) ((a) > 0)?(a):(-(a))
 

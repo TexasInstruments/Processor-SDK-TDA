@@ -259,9 +259,18 @@ typedef struct
     Nf_WdTimerErrEventParams wdTimerEePrms;
      /**< Parameters for the Watchdog timer Error Events */
     uint32_t                enableReconfigReinitReg;
-    /**< Flag to control the periodic reconfiguration of registers for NF */
+    /**< Flag to enable reconfiguration and reinitialization of registers. */
+    /* One-shot enable      - 1U
+    *  Continuous enable    - 2U
+    *  Disabled             - 0U
+    */
 
     uint32_t                enableStatusRegValidate;
+    /**< Flag to enable status register validation. */
+    /* One-shot enable      - 1U
+    *  Continuous enable    - 2U
+    *  Disabled             - 0U
+    */
     /*
      * If this flag is enabled, the user must take care of invoking the
      * VHWA_M2M_IOCTL_NF_VALIDATE_REG after the frame process request,
@@ -273,15 +282,19 @@ typedef struct
     NfStatusRegisterGroup   nfStatusRegs;
     /**< Holds the latest NF, HTS status register values for this handle */
     uint32_t                enableConfigRegValidate;
-    /**< Flag to enable config register validation */
-    /*   1. The goldenReg, readBackReg, memory comparison CB pointers in the Vhwa_M2mDofHandleObj
+    /**< Flag to enable config register validation. */
+    /* One-shot enable      - 1U
+    *  Continuous enable    - 2U
+    *  Disabled             - 0U
+    */
+    /*   1. The goldenReg, readBackReg, memory comparison CB pointers in the Vhwa_M2mNfHandleObj
     *    structure must be populated using the control commands
-    *    VHWA_M2M_IOCTL_DOF_SET_CONFIG_REG_PTRS before submitting
+    *    VHWA_M2M_IOCTL_NF_SET_CONFIG_REG_PTRS before submitting
     *    the frame processing request.
     *
     *    2. If this flag is enabled, the user must ensure that memory allocation
     *    is performed first for both goldenReg and readBackReg. The required
-    *    size for the readback memory can be obtained using VHWA_M2M_IOCTL_DOF_GET_READBACK_SIZE.
+    *    size for the readback memory can be obtained using VHWA_M2M_IOCTL_NF_GET_READBACK_SIZE.
     */
 
     Nf_ConfigRegValidateParams          configRegMemPrms;

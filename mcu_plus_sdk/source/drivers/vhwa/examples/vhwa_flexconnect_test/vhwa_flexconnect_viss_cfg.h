@@ -780,6 +780,70 @@ AppViss_TestConfig gAppVissFcTestConfig[] =
         /* VISS config */
         &gVissCfg[0]
     },
+    /* 12, Three Frame Merge wth two YUV420, saturation and AEWB output (copied from ../vhwa_viss_test/vhwa_viss_cfg.h)  */
+    {
+        /* VISS Parameters */
+        {
+            /* Input Mode */
+            VHWA_M2M_VISS_MODE_THREE_FRAME_MERGE,
+            /* In Format */
+            {
+                0, 1920, 1080, {1920*2, 1920*2, 1920*2}, {FALSE},
+                FVID2_DF_RAW, FVID2_SF_PROGRESSIVE,
+                FVID2_CCSF_BITS16_PACKED
+            },
+            /* Output Parameters */
+            {
+                {
+                    /* Output Enabled */
+                    TRUE,
+                    /* Output Format */
+                    {
+                        0, 1920, 1080, {1920*2, 1920*2, 1920*2}, {FALSE},
+                        FVID2_DF_YUV420SP_UV, FVID2_SF_PROGRESSIVE,
+                        FVID2_CCSF_BITS12_UNPACKED16
+                    }
+                },
+                {
+                    FALSE,
+                    {
+                    }
+                },
+                {
+                    /* Output Enabled */
+                    TRUE,
+                    /* Output Format */
+                    {
+                        0, 1920, 1080, {1920, 1920, 1920}, {FALSE},
+                        FVID2_DF_YUV420SP_UV, FVID2_SF_PROGRESSIVE,
+                        FVID2_CCSF_BITS8_PACKED
+                    }
+                },
+                {
+                    FALSE,
+                    {
+                    }
+                },
+                {
+                    FALSE,
+                    {
+                    }
+                },
+                /* H3A Output */
+                {
+                    FALSE,
+                    {
+                    }
+                },
+            },
+            .enableGlbce = TRUE,                           /* enable GLBCE */
+            .enableNsf4 = TRUE,                           /* Enable NSF4 */
+            .edgeEnhancerMode = VHWA_M2M_VISS_EE_DISABLE,       /* EE Mode */
+            .enableDpc = TRUE                            /* Enable DPC */
+        },
+        /* VISS config */
+        &gVissCfg[2]
+    },
 };
 
 #endif

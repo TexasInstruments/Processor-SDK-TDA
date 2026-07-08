@@ -273,8 +273,9 @@ PDK-11220 | [Errata] USART: Erroneous triggering of timeout interrupt           
 
 ## Known Issues
 
-NA
-
+ID         | Head Line                                                                        | Module   | Affected Versions      | Affected Platforms
+-----------|----------------------------------------------------------------------------------|----------|------------------------|-------------------
+ETHFW-3691 | EthFw code has 9 unresolved static analysis violations                           | ETHFW    | PROCESSOR_SDK_11.02.01 | J722S
 
 ## Limitations
 

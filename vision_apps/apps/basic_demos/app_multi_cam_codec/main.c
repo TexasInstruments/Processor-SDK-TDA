@@ -2197,7 +2197,7 @@ static void set_sensor_defaults(SensorObj *sensorObj)
 static void set_ref_pool_defaults(AppGraphParamRefPool *poolObj)
 {
     poolObj->width          = 1920;
-    poolObj->height         = 1080;
+    poolObj->height         = 1088;
     poolObj->format         = VX_DF_IMAGE_NV12;
     poolObj->num_planes     = 2;
     poolObj->num_channels   = 1;

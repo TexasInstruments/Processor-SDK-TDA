@@ -67,6 +67,7 @@
             -i${MCU_PLUS_SDK_PATH}/source/drivers/lib
             -i${MCU_PLUS_SDK_PATH}/source/pdm_utils/lib
             -i${MCU_PLUS_SDK_PATH}/source/kernel/freertos/lib
+            -i${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/dm_stub/lib
             -i${CG_TOOL_ROOT}/lib
             -m=dm_power_analysis_app.${ConfigName}.map
             --diag_suppress=10063
@@ -96,6 +97,7 @@
                 -ldrivers.j722s.wkup-r5f.ti-arm-clang.debug.lib
                 -lpdm_utils.j722s.wkup-r5fss0-0.ti-arm-clang.debug.lib
                 -lsciserver.j722s.wkup-r5f.ti-arm-clang.debug.lib
+                -ldm_stub.j722s.wkup-r5f.ti-arm-clang.debug.lib
                 -llibc.a
                 -llibsysbm.a
             "
@@ -112,6 +114,7 @@
                 -ldrivers.j722s.wkup-r5f.ti-arm-clang.release.lib
                 -lpdm_utils.j722s.wkup-r5fss0-0.ti-arm-clang.release.lib
                 -lsciserver.j722s.wkup-r5f.ti-arm-clang.release.lib
+                -ldm_stub.j722s.wkup-r5f.ti-arm-clang.release.lib
                 -llibc.a
                 -llibsysbm.a
             "

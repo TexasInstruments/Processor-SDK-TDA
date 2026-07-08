@@ -413,12 +413,21 @@ typedef struct {
  *
  * This structure can be used to configure safety-related features
  * such as error event monitoring and watchdog timer settings.
- * 
  *
- * The following safety mechanisms can be enabled by setting the individual parameters:
- * - DMPAC12 and DMPAC-F2 enable_reconfig_and_reinit_Reg: Enables the reconfiguration and reinitialization of the registers safety mechanism feature.
- * - DMPAC10 enable_status_reg_validation: Enables the status register validation safety mechanism feature.
- * - DMPAC7 enable_readback_config_registers: Enables the readback of configuration registers for safety validation.
+ * The following safety mechanisms can be enabled by setting the individual
+ * parameters:
+ * - DMPAC12 and DMPAC-F2 enable_reconfig_and_reinit_Reg: Enables the
+ *   reconfiguration and reinitialization of the registers safety mechanism
+ *   feature.
+ * - DMPAC10 enable_status_reg_validation: Enables the status register
+ *   validation safety mechanism feature.
+ * - DMPAC7 enable_readback_config_registers: Enables the readback of
+ *   configuration registers for safety validation.
+ *
+ * Operation modes for safety flags:
+ * - 0 = disabled: The feature is turned off.
+ * - 1 = one-shot: The feature operates once per trigger.
+ * - 2 = continuous: The feature operates continuously until stopped.
  *
  * \ingroup group_vision_function_dmpac_dof
  */

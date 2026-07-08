@@ -352,9 +352,12 @@ typedef struct
      /**< Parameters for the Watchdog timer Error Events */
 
     uint32_t                enableStatusRegValidate;
-    /**
-     * Flag to enable status register validation for SDE.
-     *
+    /**< Flag to enable status register validation. */
+    /* One-shot enable      - 1U
+    *  Continuous enable    - 2U
+    *  Disabled             - 0U
+    */
+    /*
      * If this flag is enabled, the user must take care of invoking the
      * VHWA_M2M_IOCTL_SDE_VALIDATE_STATUS_REG after the frame process request,
      * to accumulate the status values and reset the flag for current frame
@@ -366,10 +369,18 @@ typedef struct
     /**< Holds the latest DOF, and LSE status register values for this handle */
 
     uint32_t                enableReconfigReinitReg;
-    /* Flag to control the periodic reconfiguration of registers */
+    /**< Flag to enable reconfiguration and reinitialization of registers. */
+    /* One-shot enable      - 1U
+    *  Continuous enable    - 2U
+    *  Disabled             - 0U
+    */
 
     uint32_t                enableConfigRegValidate;
-    /**< Flag to enable config register validation */
+    /**< Flag to enable config register validation. */
+    /* One-shot enable      - 1U
+    *  Continuous enable    - 2U
+    *  Disabled             - 0U
+    */
     /*
     *
     * 1. The goldenReg, readBackReg, and memory comparison callback pointers in the Vhwa_M2mSdeHandleObj

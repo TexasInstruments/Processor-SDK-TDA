@@ -945,7 +945,12 @@ int32_t Vhwa_m2mLdcReInit(void)
      * channels are initialized, so reinit is required. */
     if ((uint32_t)UTRUE == instObj->isRegistered)
     {
-        status = Vhwa_m2mLdcUdmaDeInit(instObj);
+        status = Vhwa_m2mLdcStopCh(instObj);
+
+        if(FVID2_SOK == status)
+        {
+            status = Vhwa_m2mLdcUdmaDeInit(instObj);
+        }
 
         if(FVID2_SOK == status)
         {
@@ -1212,6 +1217,8 @@ Fdrv_Handle vhwa_m2mLdcCreate(UInt32 drvId, UInt32 drvInstId,
                 /* Setting it to UTRUE so that next request will update in HW. */
                 hObj->isCfgUpdated = 1u;
 
+                Fvid2Utils_memset(&hObj->chromaLutCfg, 0, sizeof(Ldc_RemapLutCfg));
+                Fvid2Utils_memset(&hObj->lumaLutCfg, 0, sizeof(Ldc_RemapLutCfg));
             }
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
@@ -1539,7 +1546,7 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 /* LDRA_JUSTIFY_END */
                 {
                     rdBwLtCfg = (Ldc_RdBwLimitConfig *)cmdArgs;
-                    if(((uint32_t)UTRUE == hObj->enableReconfigReinitReg) || ((uint32_t)UTRUE == hObj->enableConfigRegValidate))
+                    if((VHWA_SAFETY_MODE_DISABLED != hObj->enableReconfigReinitReg) || (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
                     {
                         /* Keep a copy of the LUT in hObj to reconfigure the registers*/
                         Fvid2Utils_memcpy(&hObj->ldcCfg.rdBwLimitCfg, rdBwLtCfg, sizeof(Ldc_RdBwLimitConfig));
@@ -1548,7 +1555,7 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                         instObj->socInfo.ldcRegs, rdBwLtCfg);
 
                     /* If configRegValidate is enabled, also update golden memory to reuse CSL code */
-                    if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate))
+                    if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
                     {
                         VhwaVpacLdcSocReadBack *goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
                         if (NULL != goldenRegVal)
@@ -1663,17 +1670,15 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 <justification end> */
                 if (NULL != lutCfg)
                 {
-                    if(UTRUE == hObj->enableReconfigReinitReg)
-                    {
-                        /* Keep a copy of the LUT in hObj to reconfigure the registers*/
-                        Fvid2Utils_memcpy(&hObj->lumaLutCfg, lutCfg, sizeof(Ldc_RemapLutCfg));
-                    }
+                    /* Keep a copy of the LUT in hObj to reconfigure the registers*/
+                    Fvid2Utils_memcpy(&hObj->lumaLutCfg, lutCfg, sizeof(Ldc_RemapLutCfg));
+
                     status = CSL_ldcSetLumaToneMapLutCfg(
                         instObj->socInfo.ldcRegs,
                         instObj->socInfo.lumaLutBaseAddr, lutCfg);
 
                     /* If config register validation is enabled, also write LUT to golden memory */
-                    if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate))
+                    if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
                     {
                         VhwaVpacLdcSocReadBack *goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
                         if (NULL != goldenRegVal)
@@ -1728,17 +1733,15 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 lutCfg = (Ldc_RemapLutCfg *)cmdArgs;
                 if (NULL != lutCfg)
                 {
-                    if(UTRUE == hObj->enableReconfigReinitReg)
-                    {
-                        /* Keep a copy of the LUT in hObj to reconfigure the registers*/
-                        Fvid2Utils_memcpy(&hObj->chromaLutCfg, lutCfg, sizeof(Ldc_RemapLutCfg));
-                    }
+                    /* Keep a copy of the LUT in hObj to reconfigure the registers*/
+                    Fvid2Utils_memcpy(&hObj->chromaLutCfg, lutCfg, sizeof(Ldc_RemapLutCfg));
+
                     status = CSL_ldcSetChromaToneMapLutCfg(
                         instObj->socInfo.ldcRegs,
                         instObj->socInfo.chromaLutBaseAddr, lutCfg);
 
                     /* If config register validation is enabled, also write LUT to golden memory */
-                    if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate))
+                    if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
                     {
                         VhwaVpacLdcSocReadBack *goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
                         if (NULL != goldenRegVal)
@@ -1857,16 +1860,18 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if ((NULL != handle) && (NULL != cmdArgs))
                 /* LDRA_JUSTIFY_END */
                 {
-                uint32_t *enableFlag = (uint32_t *)cmdArgs;
-                if ((uint32_t)1U == *enableFlag)
-                {
-                    hObj->enableReconfigReinitReg = 1U;
-                }
-                else
-                {
-                    hObj->enableReconfigReinitReg = 0U;
-                }
-                status = FVID2_SOK;
+                    uint32_t modeVal = *((uint32_t *)cmdArgs);
+                    if (modeVal > VHWA_SAFETY_MODE_CONTINUOUS)
+                    {
+                        GT_1trace(VhwaLdcTrace, GT_ERR,
+                            "Invalid safety mode value %u for VHWA_M2M_IOCTL_LDC_ENABLE_RECONFIG_REINIT_REG !!\n", modeVal);
+                        status = FVID2_EBADARGS;
+                    }
+                    else
+                    {
+                        hObj->enableReconfigReinitReg = modeVal;
+                        status = FVID2_SOK;
+                    }
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement <metric end>
@@ -1899,23 +1904,21 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if ((NULL != handle) && (NULL != cmdArgs))
                 /* LDRA_JUSTIFY_END */
                 {
-                    uint32_t *enableFlag = (uint32_t *)cmdArgs;
-
-                    /* Disable Interrupt since the below flag is accessed in the ISR */
-                    cookie = HwiP_disable();
-
-                    if ((uint32_t)1U == *enableFlag)
+                    uint32_t modeVal = *((uint32_t *)cmdArgs);
+                    if (modeVal > VHWA_SAFETY_MODE_CONTINUOUS)
                     {
-                        hObj->enableStatusRegValidate = (uint32_t)UTRUE;
+                        GT_1trace(VhwaLdcTrace, GT_ERR,
+                            "Invalid safety mode value %u for VHWA_M2M_IOCTL_LDC_ENABLE_STATUS_REG_VALIDATE !!\n", modeVal);
+                        status = FVID2_EBADARGS;
                     }
                     else
                     {
-                        hObj->enableStatusRegValidate = (uint32_t)UFALSE;
+                        /* Disable Interrupt since the below flag is accessed in the ISR */
+                        cookie = HwiP_disable();
+                        hObj->enableStatusRegValidate = modeVal;
+                        HwiP_restore(cookie);
+                        status = FVID2_SOK;
                     }
-
-                    HwiP_restore(cookie);
-
-                    status = FVID2_SOK;
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement <metric end>
@@ -1948,7 +1951,7 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if (NULL != handle)
                 /* LDRA_JUSTIFY_END */
                 {
-                    if (UTRUE == hObj->enableStatusRegValidate)
+                    if (VHWA_SAFETY_MODE_DISABLED != hObj->enableStatusRegValidate)
                     {
                         status = Vhwa_m2mLdcStatusRegValidate(hObj, &instObj->socInfo);
                         /* LDRA_JUSTIFY_START
@@ -1965,28 +1968,28 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                         }
                         /* LDRA_JUSTIFY_END */
                     }
-                    if (UTRUE == hObj->enableConfigRegValidate)
+                    if (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)
                     {
                         /* Readback config registers */
                         status = Vhwa_m2mLdcConfigRegReadback(hObj, instObj);
                     }
 
                     /* Release the hardware lock after the configReg readback or statusReg */
-                    if ((UTRUE == hObj->enableStatusRegValidate) ||
-                        (UTRUE == hObj->enableConfigRegValidate))
+                    if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableStatusRegValidate) ||
+                        (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
                     {
                         Vhwa_commonHwaLockRelease(instObj->hwaLockIdx);
                     }
 
-                    if (UTRUE == hObj->enableStatusRegValidate)
+                    /* Reset the statusReg validate flag only in one-shot mode */
+                    if (VHWA_SAFETY_MODE_ONESHOT == hObj->enableStatusRegValidate)
                     {
-                        /* Reset the statusReg validate flag */
                         cookie = HwiP_disable();
-                        hObj->enableStatusRegValidate = (uint32_t)UFALSE;
+                        hObj->enableStatusRegValidate = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
                         HwiP_restore(cookie);
                     }
 
-                    if ((UTRUE == hObj->enableConfigRegValidate) && (FVID2_SOK == status))
+                    if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (FVID2_SOK == status))
                     {
                         /* Callback with goldenReg and ReadBackReg pointer to application for memory comparison */
                         /* LDRA_JUSTIFY_START
@@ -2002,13 +2005,7 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                             (NULL != hObj->configRegMemPrms.configRegReadbackPtr))
                         /* LDRA_JUSTIFY_END */
                         {
-                            Vhwa_M2mLdcConfigRegMemParams configRegMemPtrs;
-                            configRegMemPtrs.golden_ptr = hObj->configRegMemPrms.configGoldenRegPtr;
-                            configRegMemPtrs.readback_ptr = hObj->configRegMemPrms.configRegReadbackPtr;
-                            configRegMemPtrs.readback_mem_size = sizeof(VhwaVpacLdcSocReadBack);
-                            configRegMemPtrs.appData = (void *)hObj->configRegMemPrms.appData;
-
-                            status = hObj->configRegMemPrms.cbFxn((Fvid2_Handle)hObj, &configRegMemPtrs);
+                            status = Vhwa_M2mLdcConfigRegMemCompare(hObj);
                         }
                         /* LDRA_JUSTIFY_START
                         <metric start> statement branch <metric end>
@@ -2040,10 +2037,13 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                         }
                         /* LDRA_JUSTIFY_END */
 
-                        /* Disable Interrupt since the below flag is accessed in the ISR and reset the configReg validate flag */
-                        cookie = HwiP_disable();
-                        hObj->enableConfigRegValidate = (uint32_t)UFALSE;
-                        HwiP_restore(cookie);
+                        /* Reset the configReg validate flag only in one-shot mode */
+                        if (VHWA_SAFETY_MODE_ONESHOT == hObj->enableConfigRegValidate)
+                        {
+                            cookie = HwiP_disable();
+                            hObj->enableConfigRegValidate = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
+                            HwiP_restore(cookie);
+                        }
                     }
                 }
                 /* LDRA_JUSTIFY_START
@@ -2077,23 +2077,21 @@ Int32 vhwa_m2mLdcControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if ((NULL != handle) && (NULL != cmdArgs))
                 /* LDRA_JUSTIFY_END */
                 {
-                    uint32_t *enableFlag = (uint32_t *)cmdArgs;
-
-                    /* Disable Interrupt since the below flag is accessed in the ISR */
-                    cookie = HwiP_disable();
-
-                    if ((uint32_t)1U == *enableFlag)
+                    uint32_t modeVal = *((uint32_t *)cmdArgs);
+                    if (modeVal > VHWA_SAFETY_MODE_CONTINUOUS)
                     {
-                        hObj->enableConfigRegValidate = (uint32_t)UTRUE;
+                        GT_1trace(VhwaLdcTrace, GT_ERR,
+                            "Invalid safety mode value %u for VHWA_M2M_IOCTL_LDC_ENABLE_CONFIG_REG_READBACK !!\n", modeVal);
+                        status = FVID2_EBADARGS;
                     }
                     else
                     {
-                        hObj->enableConfigRegValidate = (uint32_t)UFALSE;
+                        /* Disable Interrupt since the below flag is accessed in the ISR */
+                        cookie = HwiP_disable();
+                        hObj->enableConfigRegValidate = modeVal;
+                        HwiP_restore(cookie);
+                        status = FVID2_SOK;
                     }
-
-                    HwiP_restore(cookie);
-
-                    status = FVID2_SOK;
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement <metric end>
@@ -2588,10 +2586,14 @@ The test framework does not support the configuration required to trigger this e
 
 #if !defined(VHWA_VPAC_IP_REV_VPAC3L)
             /* Invoke the reconfig-MMR if enableReconfigReinitReg enabled for the current handle */
-            if (UTRUE == hObj->enableReconfigReinitReg)
+            if (VHWA_SAFETY_MODE_DISABLED != hObj->enableReconfigReinitReg)
             {
                 status = Vhwa_m2mLdcReconfigReinitReg(instObj, hObj, qObj);
-                hObj->enableReconfigReinitReg = (uint32_t)UFALSE;
+                /* Reset only in one-shot mode */
+                if (VHWA_SAFETY_MODE_ONESHOT == hObj->enableReconfigReinitReg)
+                {
+                    hObj->enableReconfigReinitReg = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
+                }
                 hObj->isCfgUpdated = 0u;
             }
 #endif
@@ -2762,8 +2764,8 @@ Int32 vhwa_m2mLdcGetProcessReq(Fdrv_Handle handle,
             }
             /* LDRA_JUSTIFY_END */
         }
-        if ((UFALSE == hObj->enableStatusRegValidate) &&
-        (UFALSE == hObj->enableConfigRegValidate))
+        if ((VHWA_SAFETY_MODE_DISABLED == hObj->enableStatusRegValidate) &&
+        (VHWA_SAFETY_MODE_DISABLED == hObj->enableConfigRegValidate))
         {
             Vhwa_commonHwaLockRelease(instObj->hwaLockIdx);
         }
@@ -3442,8 +3444,8 @@ static Vhwa_M2mLdcHandleObj *vhwaM2mLdcAllocHandleObj(
                 hObj = &gM2mLdcHandleObj[cnt];
                 Fvid2Utils_memset(hObj, 0x0, sizeof(Vhwa_M2mLdcHandleObj));
                 gM2mLdcHandleObj[cnt].isUsed = (uint32_t)UTRUE;
-                gM2mLdcHandleObj[cnt].enableReconfigReinitReg = (uint32_t)UFALSE;
-                gM2mLdcHandleObj[cnt].enableStatusRegValidate = (uint32_t)UFALSE;
+                gM2mLdcHandleObj[cnt].enableReconfigReinitReg = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
+                gM2mLdcHandleObj[cnt].enableStatusRegValidate = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
                 hObj->hIdx = cnt;
                 break;
             }
@@ -3738,7 +3740,7 @@ static int32_t vhwaM2mLdcSetConfigInHW(const Vhwa_M2mLdcInstObj *instObj,
     Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
     However, due to the stated rationale, this is not tested.
     <justification end> */
-    if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
+    if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
     /* LDRA_JUSTIFY_END */
     {
         status = CSL_ldcSetConfig(&(goldenRegVal->ldcRegs), &hObj->ldcCfg);
@@ -3769,12 +3771,38 @@ static int32_t vhwaM2mLdcSetConfigInHW(const Vhwa_M2mLdcInstObj *instObj,
         Effect on this unit: If the control reaches here, the code base is expected to accumulate and return the error.
         However, due to the stated rationale, this is not tested.
         <justification end> */
-        if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
+        if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
         /* LDRA_JUSTIFY_END */
         {
             status = CSL_lseSetConfig(&(goldenRegVal->lseRegs), &hObj->lseCfg);
         }
 
+    }
+    /* Disable Luma Tone Mapping LUT in hardware if it is not enabled for the current handle */
+    if((FVID2_SOK == status) && (0U == hObj->lumaLutCfg.enable))
+    {
+        status = CSL_ldcSetLumaToneMapLutCfg(
+                        instObj->socInfo.ldcRegs,
+                        instObj->socInfo.lumaLutBaseAddr, &hObj->lumaLutCfg);
+        if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
+        {
+            status = CSL_ldcSetLumaToneMapLutCfg(
+                                &goldenRegVal->ldcRegs,
+                                (volatile uint32_t *)goldenRegVal->ldcLumaLut.LUT, &hObj->lumaLutCfg);
+        }
+    }
+    /* Disable Chroma Tone Mapping LUT in hardware if it is not enabled for the current handle */
+    if((FVID2_SOK == status) && (0U == hObj->chromaLutCfg.enable))
+    {
+        status = CSL_ldcSetChromaToneMapLutCfg(
+                        instObj->socInfo.ldcRegs,
+                        instObj->socInfo.chromaLutBaseAddr, &hObj->chromaLutCfg);
+        if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
+        {
+            status = CSL_ldcSetChromaToneMapLutCfg(
+                                &goldenRegVal->ldcRegs,
+                                (volatile uint32_t *)goldenRegVal->ldcChromaLut.LUT, &hObj->chromaLutCfg);
+        }
     }
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
@@ -3793,7 +3821,7 @@ static int32_t vhwaM2mLdcSetConfigInHW(const Vhwa_M2mLdcInstObj *instObj,
     }
 #if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     /* Update the LdcConfigRegisterGroup with config register values for frame specific Static Config, HTS registers */
-    if((uint32_t)UTRUE == hObj->enableConfigRegValidate)
+    if(VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)
     {
         status = vhwaM2mLdcUpdateConfigRegGroup(goldenRegVal, instObj, hObj);
     }
@@ -3834,7 +3862,7 @@ static int32_t vhwaM2mLdcSubmitRequest(Vhwa_M2mLdcInstObj *instObj,
 
     /* Update the LdcStatusRegisterGroup with valid status register values for dynamic registers */
 #if !defined(VHWA_VPAC_IP_REV_VPAC3L)
-    if((uint32_t)UTRUE == hObj->enableStatusRegValidate)
+    if(VHWA_SAFETY_MODE_DISABLED != hObj->enableStatusRegValidate)
     {
         status = vhwaM2mLdcUpdateStatusRegGroup(hObj);
     }
@@ -3873,7 +3901,7 @@ static int32_t vhwaM2mLdcSubmitRequest(Vhwa_M2mLdcInstObj *instObj,
     However, due to the stated rationale, this is not tested.
     <justification end> */
 #if !defined(VHWA_VPAC_IP_REV_VPAC3L)
-    if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate))
+    if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
     /* LDRA_JUSTIFY_END */
     {
         VhwaVpacLdcSocReadBack *goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
@@ -3915,7 +3943,7 @@ static int32_t vhwaM2mLdcSubmitRequest(Vhwa_M2mLdcInstObj *instObj,
         Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
         However, due to the stated rationale, this is not tested.
         <justification end> */
-        if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate))
+        if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
         /* LDRA_JUSTIFY_END */
         {
             VhwaVpacLdcSocReadBack *goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
@@ -4798,7 +4826,7 @@ static void vhwaM2mLdcSetAddress(Vhwa_M2mLdcHandleObj *hObj,
     CSL_ldcSetInAddress(socInfo->ldcRegs, frm->addr[0], frm->addr[1]);
 
     /* If config register validation is enabled, also write input addresses to golden memory */
-    if ((uint32_t)UTRUE == hObj->enableConfigRegValidate)
+    if (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)
     {
         VhwaVpacLdcSocReadBack *goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
         /* LDRA_JUSTIFY_START
@@ -5156,7 +5184,7 @@ static int32_t Vhwa_m2mLdcReconfigReinitReg(Vhwa_M2mLdcInstObj *instObj,
             Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
             However, due to the stated rationale, this is not tested.
             <justification end> */
-            if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate))
+            if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
             /* LDRA_JUSTIFY_END */
             {
                 VhwaVpacLdcSocReadBack *goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
@@ -5230,7 +5258,7 @@ static int32_t Vhwa_m2mLdcReconfigReinitReg(Vhwa_M2mLdcInstObj *instObj,
             Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
             However, due to the stated rationale, this is not tested.
             <justification end> */
-            if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate))
+            if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
             /* LDRA_JUSTIFY_END */
             {
                 VhwaVpacLdcSocReadBack *goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
@@ -5302,7 +5330,7 @@ static int32_t Vhwa_m2mLdcReconfigReinitReg(Vhwa_M2mLdcInstObj *instObj,
             Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
             However, due to the stated rationale, this is not tested.
             <justification end> */
-            if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate))
+            if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
             /* LDRA_JUSTIFY_END */
             {
                 VhwaVpacLdcSocReadBack *goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
@@ -5334,7 +5362,7 @@ static int32_t Vhwa_m2mLdcReconfigReinitReg(Vhwa_M2mLdcInstObj *instObj,
         {
             CSL_vpacEnableModule(instObj->socInfo.vpacCntlRegs,
                                  VPAC_MODULE_LDC, (uint32_t)UTRUE);
-            if ((uint32_t)UTRUE == hObj->enableConfigRegValidate)
+            if (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)
             {
                 VhwaVpacLdcSocReadBack *goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
                 /* LDRA_JUSTIFY_START
@@ -5522,8 +5550,9 @@ int32_t Vhwa_m2mLdcStatusRegValidate(Vhwa_M2mLdcHandleObj *hObj, const Ldc_SocIn
     LdcStatusRegisterGroup *expected = NULL;
     const CSL_HtsHwaParams *htsPrms = NULL;
     expected = &hObj->statusRegs;
-    htsPrms         = GetVpacHtsParams(CSL_HTS_HWA_SCH_MSC1);
+    htsPrms         = GetVpacHtsParams(CSL_HTS_HWA_SCH_LDC0);
     uint32_t regVal;
+    uint32_t warning_bits_mask;
 
     /* Null pointer check */
     /* LDRA_JUSTIFY_START
@@ -5607,9 +5636,9 @@ int32_t Vhwa_m2mLdcStatusRegValidate(Vhwa_M2mLdcHandleObj *hObj, const Ldc_SocIn
         Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
         However, due to the stated rationale, this is not tested.
         <justification end> */
-        if ((uint32_t)FVID2_SOK != regVal)
+        if ((uint32_t)VHWA_VPAC_LDC_PRIVATE_MEM_SIZE_RESET_VALUE != regVal)
         {
-            GT_1trace(VhwaLdcTrace, GT_INFO, "StatusRegValidate: ldcRegs->PRIVATE_MEMSIZE is %d\n", regVal);
+            GT_1trace(VhwaLdcTrace, GT_ERR, "StatusRegValidate: ldcRegs->PRIVATE_MEMSIZE is %d\n", regVal);
         }
         /* LDRA_JUSTIFY_END */
     }
@@ -5782,7 +5811,12 @@ int32_t Vhwa_m2mLdcStatusRegValidate(Vhwa_M2mLdcHandleObj *hObj, const Ldc_SocIn
     if (status == FVID2_SOK)
     /* LDRA_JUSTIFY_END */
     {
-        /* Validate LDC ERR_STATUS - should be 0 (no errors) */
+        /* Validate LDC ERR_STATUS - error bits should be 0 (no errors) */
+        regVal = CSL_REG32_RD(&socInfo->ldcRegs->ERR_STATUS);
+        warning_bits_mask = (CSL_LDC_CORE_ERR_STATUS_P_IBLK_OUTB_MASK | 
+            CSL_LDC_CORE_ERR_STATUS_M_IBLK_OUTB_MASK | 
+            CSL_LDC_CORE_ERR_STATUS_IFRAME_OUTB_MASK);
+
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
         <justification start>
@@ -5791,9 +5825,17 @@ int32_t Vhwa_m2mLdcStatusRegValidate(Vhwa_M2mLdcHandleObj *hObj, const Ldc_SocIn
         Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
         However, due to the stated rationale, this is not tested.
         <justification end> */
-        if ((uint32_t)FVID2_SOK != CSL_REG32_RD(&socInfo->ldcRegs->ERR_STATUS))
+        /* Check warning bits and report warning if mismatch */
+        if ((regVal & warning_bits_mask) != 0U)
         {
-            GT_0trace(VhwaLdcTrace, GT_INFO, "StatusRegValidate: ldcRegs->ERR_STATUS mismatch\n");
+            GT_1trace(VhwaLdcTrace, GT_INFO, "StatusRegValidate: ldcRegs->ERR_STATUS warning bits mismatch, value: 0x%X\n", (regVal & warning_bits_mask));
+        }
+
+        /* Check the rest of the bits and report error if mismatch */
+        if ((regVal & ~warning_bits_mask) != 0U)
+        {
+            GT_1trace(VhwaLdcTrace, GT_ERR, "StatusRegValidate: ldcRegs->ERR_STATUS error bits mismatch, value: 0x%X\n", (regVal & ~warning_bits_mask));
+            status = FVID2_EFAIL;
         }
         /* LDRA_JUSTIFY_END */
     }
@@ -6237,6 +6279,17 @@ int32_t vhwaM2mLdcSetDefaultGoldenRegMemValues(const Vhwa_M2mLdcHandleObj *hObj,
             CSL_FINS(reg_val, LDC_CORE_HYBD_CHCBUFF_PARAM_ENDLINE, (uint32_t)0x1fffU);
             goldenReg->ldcRegs.HYBD_CHCBUFF_PARAM = reg_val;
             #endif
+            
+            status = CSL_ldcSetChromaToneMapLutCfg(
+                                &goldenReg->ldcRegs,
+                                (volatile uint32_t *)goldenReg->ldcChromaLut.LUT, &hObj->chromaLutCfg);
+            if (FVID2_SOK == status)
+            {
+                status = CSL_ldcSetLumaToneMapLutCfg(
+                                    &goldenReg->ldcRegs,
+                                    (volatile uint32_t *)goldenReg->ldcLumaLut.LUT, &hObj->lumaLutCfg);
+            }
+
         }
     }
 
@@ -6512,7 +6565,7 @@ int32_t vhwaM2mLdcUpdateConfigRegGroup(VhwaVpacLdcSocReadBack *RegVal, const Vhw
         Effect on this unit: If control reaches here, the code base is expected to prevent undefined behaviour by avoiding dereferencing a NULL pointer.
         However, due to the stated rationale, this is not tested.
         <justification end> */
-        if (NULL != instObj->socInfo.lumaLutBaseAddr)
+        if ((NULL != instObj->socInfo.lumaLutBaseAddr) && ((uint32_t)UTRUE == hObj->lumaLutCfg.enable))
         /* LDRA_JUSTIFY_END */
         {
             const uint32_t lutMask = (CSL_LDC_DUALYLUT_LUT_LUT_1_MASK | CSL_LDC_DUALYLUT_LUT_LUT_0_MASK);
@@ -6539,7 +6592,7 @@ int32_t vhwaM2mLdcUpdateConfigRegGroup(VhwaVpacLdcSocReadBack *RegVal, const Vhw
         Effect on this unit: If control reaches here, the code base is expected to prevent undefined behaviour by avoiding dereferencing a NULL pointer.
         However, due to the stated rationale, this is not tested.
         <justification end> */
-        if (NULL != instObj->socInfo.chromaLutBaseAddr)
+        if ((NULL != instObj->socInfo.chromaLutBaseAddr) && ((uint32_t)UTRUE == hObj->chromaLutCfg.enable))
         /* LDRA_JUSTIFY_END */
         {
             const uint32_t lutMask = (CSL_LDC_DUALCLUT_LUT_LUT_1_MASK | CSL_LDC_DUALCLUT_LUT_LUT_0_MASK);
@@ -6801,4 +6854,64 @@ int32_t Vhwa_m2mLdcGetSl2Info(Vhwa_M2mLdcSl2Info *sl2Info)
     }
 
     return retVal;
+}
+
+int32_t Vhwa_M2mLdcConfigRegMemCompare(const Vhwa_M2mLdcHandleObj *hObj)
+{
+    int32_t status = FVID2_SOK;
+    Vhwa_M2mLdcConfigRegMemParams configRegMemPtrs;
+    uint32_t configSize;
+    void *goldenPtr, *readbackPtr;
+
+    if (NULL == hObj)
+    {
+        status = FVID2_EBADARGS;
+    }
+    else if ((NULL == hObj->configRegMemPrms.cbFxn) ||
+             (NULL == hObj->configRegMemPrms.configGoldenRegPtr) ||
+             (NULL == hObj->configRegMemPrms.configRegReadbackPtr))
+    {
+        status = FVID2_EBADARGS;
+    }
+    else
+    {
+        /* Part 1: Compare configuration registers (before LUTs) */
+        configSize = sizeof(VhwaVpacLdcSocReadBack) - sizeof(CSL_ldc_dualylutRegs) - sizeof(CSL_ldc_dualclutRegs);
+        configRegMemPtrs.golden_ptr = hObj->configRegMemPrms.configGoldenRegPtr;
+        configRegMemPtrs.readback_ptr = hObj->configRegMemPrms.configRegReadbackPtr;
+        configRegMemPtrs.readback_mem_size = configSize;
+        configRegMemPtrs.appData = (void *)hObj->configRegMemPrms.appData;
+
+        status = hObj->configRegMemPrms.cbFxn((Fvid2_Handle)(uintptr_t)hObj, &configRegMemPtrs);
+
+        /* Part 2: Compare Luma LUT (conditional on enable) */
+        if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->lumaLutCfg.enable))
+        {
+            goldenPtr = (void *)&hObj->configRegMemPrms.configGoldenRegPtr->ldcLumaLut;
+            readbackPtr = (void *)&hObj->configRegMemPrms.configRegReadbackPtr->ldcLumaLut;
+
+            configRegMemPtrs.golden_ptr = goldenPtr;
+            configRegMemPtrs.readback_ptr = readbackPtr;
+            configRegMemPtrs.readback_mem_size = sizeof(CSL_ldc_dualylutRegs);
+            configRegMemPtrs.appData = (void *)hObj->configRegMemPrms.appData;
+
+            status = hObj->configRegMemPrms.cbFxn((Fvid2_Handle)(uintptr_t)hObj, &configRegMemPtrs);
+        }
+
+        /* Part 3: Compare Chroma LUT (conditional on enable) */
+        if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->chromaLutCfg.enable))
+        {
+            goldenPtr = (void *)&hObj->configRegMemPrms.configGoldenRegPtr->ldcChromaLut;
+            readbackPtr = (void *)&hObj->configRegMemPrms.configRegReadbackPtr->ldcChromaLut;
+
+            configRegMemPtrs.golden_ptr = goldenPtr;
+            configRegMemPtrs.readback_ptr = readbackPtr;
+            configRegMemPtrs.readback_mem_size = sizeof(CSL_ldc_dualclutRegs);
+            configRegMemPtrs.appData = (void *)hObj->configRegMemPrms.appData;
+
+            status = hObj->configRegMemPrms.cbFxn((Fvid2_Handle)(uintptr_t)hObj, &configRegMemPtrs);
+        }
+    }
+
+    return status;
 }

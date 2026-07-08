@@ -85,10 +85,14 @@
 
 #ifndef VPAC3L
 /* VPAC SL2 Firewall Bank IDs (internal use only - not exposed in header) */
-#define APP_VPAC_FWL_BANK0_ID    (6080U)
-#define APP_VPAC_FWL_BANK1_ID    (6081U)
-#define APP_VPAC_FWL_BANK2_ID    (6082U)
-#define APP_VPAC_FWL_BANK3_ID    (6083U)
+#define APP_VPAC_FWL_VPAC0_BANK0_ID    (6080U)
+#define APP_VPAC_FWL_VPAC0_BANK1_ID    (6081U)
+#define APP_VPAC_FWL_VPAC0_BANK2_ID    (6082U)
+#define APP_VPAC_FWL_VPAC0_BANK3_ID    (6083U)
+#define APP_VPAC_FWL_VPAC1_BANK0_ID    (6084U)
+#define APP_VPAC_FWL_VPAC1_BANK1_ID    (6085U)
+#define APP_VPAC_FWL_VPAC1_BANK2_ID    (6086U)
+#define APP_VPAC_FWL_VPAC1_BANK3_ID    (6087U)
 
 /* DMPAC SL2 Firewall Bank IDs (internal use only - not exposed in header) */
 #define APP_DMPAC_FWL_BANK0_ID    (6016U)
@@ -120,12 +124,20 @@
 /*                         Internal Constants                                 */
 /* ========================================================================== */
 
-/* VPAC SL2 Firewall Bank IDs (common for all VPAC modules: VISS, LDC, MSC, NF) */
-static const uint16_t VPAC_FWL_IDS[VHWA_NUM_SL2_BANKS] = {
-    APP_VPAC_FWL_BANK0_ID,
-    APP_VPAC_FWL_BANK1_ID,
-    APP_VPAC_FWL_BANK2_ID,
-    APP_VPAC_FWL_BANK3_ID
+/* VPAC0 SL2 Firewall Bank IDs (for VISS, LDC, MSC, NF on VPAC0) */
+static const uint16_t VPAC0_FWL_IDS[VHWA_NUM_SL2_BANKS] = {
+    APP_VPAC_FWL_VPAC0_BANK0_ID,
+    APP_VPAC_FWL_VPAC0_BANK1_ID,
+    APP_VPAC_FWL_VPAC0_BANK2_ID,
+    APP_VPAC_FWL_VPAC0_BANK3_ID
+};
+
+/* VPAC1 SL2 Firewall Bank IDs (for VISS, LDC, MSC, NF on VPAC1, J784S4 only) */
+static const uint16_t VPAC1_FWL_IDS[VHWA_NUM_SL2_BANKS] = {
+    APP_VPAC_FWL_VPAC1_BANK0_ID,
+    APP_VPAC_FWL_VPAC1_BANK1_ID,
+    APP_VPAC_FWL_VPAC1_BANK2_ID,
+    APP_VPAC_FWL_VPAC1_BANK3_ID
 };
 
 /* DMPAC SL2 Firewall Bank IDs (common for all DMPAC modules: DOF, SDE) */
@@ -137,13 +149,13 @@ static const uint16_t DMPAC_FWL_IDS[VHWA_NUM_SL2_BANKS] = {
 };
 
 /* ========================================================================== */
-/*                   FIREWALL STATE TRACKING FOR LBIST                        */
+/*                   FIREWALL STATE TRACKING FOR BIST                         */
 /* ========================================================================== */
 
 /**
- * Firewall state tracking for LBIST support
- * Tracks which firewall regions are enabled before LBIST, so they can be
- * selectively restored after LBIST completion.
+ * Firewall state tracking for BIST support
+ * Tracks which firewall regions are enabled before BIST, so they can be
+ * selectively restored after BIST completion.
  */
 
 /* Maximum VPAC instances: 1 for J721S2/J742S2, 2 for J784S4 */
@@ -160,10 +172,10 @@ static const uint16_t DMPAC_FWL_IDS[VHWA_NUM_SL2_BANKS] = {
  *   - Call appVhwaEnableVpacFirewall() via APP_VPAC_ENABLE_FIREWALL command
  *   - Enables all firewalls unconditionally, sets flags to 1
  *
- * LBIST flow (after firewall enabled):
+ * BIST flow (after firewall enabled):
  *   - Call appVpacFirewallDisableAll() -> disables HW, preserves flags=1
- *   - Run LBIST (hardware resets)
- *   - Call appVhwaEnableVpacFirewallAfterLbist() -> checks flags, re-enables only modules where flag=1 */
+ *   - Run BIST (hardware resets)
+ *   - Call appVhwaEnableVpacFirewallAfterBist() -> checks flags, re-enables only modules where flag=1 */
 static uint8_t gVpacFirewallEnabled[MAX_VPAC_INSTANCES][MAX_VPAC_REGIONS] = {
     {0, 0, 0, 0},  /* VPAC0: All disabled by default */
     {0, 0, 0, 0}   /* VPAC1: All disabled by default */
@@ -303,20 +315,34 @@ vx_status appVpacFirewallEnable(
 {
     vx_status status = (vx_status)VX_SUCCESS;
     uint8_t actualR5PrivId = r5PrivId;
+    const uint16_t *vpacFwlIds;
 
 #if defined(SOC_J784S4) || defined(SOC_J742S2)
     /* Override R5 privilege ID based on VPAC instance for J784S4/J742S2 */
     if (vpacInstId == 0U)
     {
         actualR5PrivId = TISCI_PRIV_ID_MAIN_0_R5_0;  /* VPAC0 uses MCU2_0 (R5_0) */
+        vpacFwlIds = VPAC0_FWL_IDS;
     }
     else if (vpacInstId == 1U)
     {
         actualR5PrivId = TISCI_PRIV_ID_MAIN_2_R5_0;  /* VPAC1 uses MCU4_0 (R5_2) */
+        vpacFwlIds = VPAC1_FWL_IDS;
     }
     else
     {
         VX_PRINT(VX_ZONE_WARNING, "[FWL] Invalid VPAC instance ID: %d\n", vpacInstId);
+        status = (vx_status)VX_FAILURE;
+    }
+#else
+    /* Single VPAC instance (VPAC0) for other platforms */
+    if (vpacInstId == 0U)
+    {
+        vpacFwlIds = VPAC0_FWL_IDS;
+    }
+    else
+    {
+        VX_PRINT(VX_ZONE_WARNING, "[FWL] Invalid VPAC instance ID: %d (only VPAC0 available)\n", vpacInstId);
         status = (vx_status)VX_FAILURE;
     }
 #endif
@@ -324,7 +350,7 @@ vx_status appVpacFirewallEnable(
     if (status == (vx_status)VX_SUCCESS)
     {
         status = appConfigureSl2Firewall(
-            VPAC_FWL_IDS,
+            vpacFwlIds,
             regionIdx,
             startAddr,
             size,
@@ -339,7 +365,7 @@ vx_status appVpacFirewallEnable(
     }
     else
     {
-        /* Mark firewall region as enabled for LBIST state tracking */
+        /* Mark firewall region as enabled for BIST state tracking */
         if ((vpacInstId < MAX_VPAC_INSTANCES) && (regionIdx < MAX_VPAC_REGIONS))
         {
             gVpacFirewallEnabled[vpacInstId][regionIdx] = 1U;
@@ -395,7 +421,7 @@ vx_status appDmpacFirewallEnable(
     }
     else
     {
-        /* Mark firewall region as enabled for LBIST state tracking */
+        /* Mark firewall region as enabled for BIST state tracking */
         if (regionIdx < MAX_DMPAC_REGIONS)
         {
             gDmpacFirewallEnabled[regionIdx] = 1U;
@@ -470,8 +496,26 @@ vx_status appVpacFirewallDisable(
     uint8_t regionIdx)
 {
     vx_status status = (vx_status)VX_SUCCESS;
+    const uint16_t *vpacFwlIds;
 
-    status = appDisableSl2Firewall(VPAC_FWL_IDS, regionIdx);
+    if (vpacInstId == 0U)
+    {
+        vpacFwlIds = VPAC0_FWL_IDS;
+    }
+    else if (vpacInstId == 1U)
+    {
+        vpacFwlIds = VPAC1_FWL_IDS;
+    }
+    else
+    {
+        VX_PRINT(VX_ZONE_ERROR, "[FWL] Invalid VPAC instance ID: %d\n", vpacInstId);
+        status = (vx_status)VX_FAILURE;
+    }
+
+    if (status == (vx_status)VX_SUCCESS)
+    {
+        status = appDisableSl2Firewall(vpacFwlIds, regionIdx);
+    }
 
     if (status != (vx_status)VX_SUCCESS)
     {
@@ -479,7 +523,7 @@ vx_status appVpacFirewallDisable(
     }
     else
     {
-        /* Mark firewall region as disabled for LBIST state tracking */
+        /* Mark firewall region as disabled for BIST state tracking */
         if ((vpacInstId < MAX_VPAC_INSTANCES) && (regionIdx < MAX_VPAC_REGIONS))
         {
             gVpacFirewallEnabled[vpacInstId][regionIdx] = 0U;
@@ -513,7 +557,7 @@ vx_status appDmpacFirewallDisable(
     }
     else
     {
-        /* Mark firewall region as disabled for LBIST state tracking */
+        /* Mark firewall region as disabled for BIST state tracking */
         if (regionIdx < MAX_DMPAC_REGIONS)
         {
             gDmpacFirewallEnabled[regionIdx] = 0U;
@@ -524,12 +568,12 @@ vx_status appDmpacFirewallDisable(
 }
 
 /**
- * \brief Disable all VPAC SL2 firewall regions for LBIST
+ * \brief Disable all VPAC SL2 firewall regions for BIST
  *
- * Disables all SL2 firewall regions for a specific VPAC instance before LBIST.
+ * Disables all SL2 firewall regions for a specific VPAC instance before BIST.
  * Only disables regions that are currently enabled (tracked via state).
  * This function can be called from MCU1_0 (safety application) via IPC
- * before initiating LBIST to ensure no firewall violations occur.
+ * before initiating BIST to ensure no firewall violations occur.
  *
  * \param vpacInstId VPAC instance ID (0 for VPAC0, 1 for VPAC1 on J784S4)
  *
@@ -542,8 +586,9 @@ vx_status appVpacFirewallDisableAll(uint8_t vpacInstId)
     vx_status ret;
     uint8_t regionIdx;
     uint8_t numDisabled = 0U;
+    const uint16_t *vpacFwlIds;
 
-    VX_PRINT(VX_ZONE_INFO, "[FWL] Disabling VPAC%d SL2 firewalls for LBIST\n", vpacInstId);
+    VX_PRINT(VX_ZONE_INFO, "[FWL] Disabling VPAC%d SL2 firewalls for BIST\n", vpacInstId);
 
     if (vpacInstId >= MAX_VPAC_INSTANCES)
     {
@@ -552,15 +597,25 @@ vx_status appVpacFirewallDisableAll(uint8_t vpacInstId)
     }
     else
     {
+        /* Select correct firewall IDs based on VPAC instance */
+        if (vpacInstId == 0U)
+        {
+            vpacFwlIds = VPAC0_FWL_IDS;
+        }
+        else
+        {
+            vpacFwlIds = VPAC1_FWL_IDS;
+        }
+
         /* Disable only VPAC firewall regions that are currently enabled (LDC, MSC, NF, VISS) */
-        /* IMPORTANT: Call internal disable to preserve state flags for LBIST recovery */
+        /* IMPORTANT: Call internal disable to preserve state flags for BIST recovery */
         for (regionIdx = VPAC_FWL_REGION_LDC; regionIdx <= VPAC_FWL_REGION_VISS; regionIdx++)
         {
             /* Only disable if firewall was previously enabled */
             if (gVpacFirewallEnabled[vpacInstId][regionIdx] != 0U)
             {
                 /* Call internal disable WITHOUT clearing the state flag */
-                ret = appDisableSl2Firewall(VPAC_FWL_IDS, regionIdx);
+                ret = appDisableSl2Firewall(vpacFwlIds, regionIdx);
                 if (ret != (vx_status)VX_SUCCESS)
                 {
                     VX_PRINT(VX_ZONE_ERROR, "[FWL] Failed to disable VPAC%d region %d\n", vpacInstId, regionIdx);
@@ -571,7 +626,7 @@ vx_status appVpacFirewallDisableAll(uint8_t vpacInstId)
                 {
                     numDisabled++;
                     /* NOTE: We do NOT clear gVpacFirewallEnabled[vpacInstId][regionIdx] here */
-                    /* Flag stays as 1 to indicate "should be enabled after LBIST" */
+                    /* Flag stays as 1 to indicate "should be enabled after BIST" */
                 }
             }
         }
@@ -582,7 +637,7 @@ vx_status appVpacFirewallDisableAll(uint8_t vpacInstId)
         }
         else if (status == (vx_status)VX_SUCCESS)
         {
-            VX_PRINT(VX_ZONE_INFO, "[FWL] Disabled %d VPAC%d SL2 firewalls for LBIST (state flags preserved)\n", numDisabled, vpacInstId);
+            VX_PRINT(VX_ZONE_INFO, "[FWL] Disabled %d VPAC%d SL2 firewalls for BIST (state flags preserved)\n", numDisabled, vpacInstId);
         }
         else
         {
@@ -594,12 +649,12 @@ vx_status appVpacFirewallDisableAll(uint8_t vpacInstId)
 }
 
 /**
- * \brief Disable all DMPAC SL2 firewall regions for LBIST
+ * \brief Disable all DMPAC SL2 firewall regions for BIST
  *
- * Disables all SL2 firewall regions for DMPAC before LBIST.
+ * Disables all SL2 firewall regions for DMPAC before BIST.
  * Only disables regions that are currently enabled (tracked via state).
  * This function can be called from MCU1_0 (safety application) via IPC
- * before initiating LBIST to ensure no firewall violations occur.
+ * before initiating BIST to ensure no firewall violations occur.
  *
  * \param dmpacInstId DMPAC instance ID (0 for DMPAC0, only 1 DMPAC exists)
  *
@@ -613,7 +668,7 @@ vx_status appDmpacFirewallDisableAll(uint8_t dmpacInstId)
     uint8_t regionIdx;
     uint8_t numDisabled = 0U;
 
-    VX_PRINT(VX_ZONE_INFO, "[FWL] Disabling DMPAC%d SL2 firewalls for LBIST\n", dmpacInstId);
+    VX_PRINT(VX_ZONE_INFO, "[FWL] Disabling DMPAC%d SL2 firewalls for BIST\n", dmpacInstId);
 
     /* Note: Only 1 DMPAC instance exists for all devices */
     if (dmpacInstId != 0U)
@@ -624,7 +679,7 @@ vx_status appDmpacFirewallDisableAll(uint8_t dmpacInstId)
     else
     {
         /* Disable only DMPAC firewall regions that are currently enabled (DOF_MAIN, DOF_REFERENCE, SDE) */
-        /* IMPORTANT: Call internal disable to preserve state flags for LBIST recovery */
+        /* IMPORTANT: Call internal disable to preserve state flags for BIST recovery */
         for (regionIdx = DMPAC_FWL_REGION_DOF_MAIN; regionIdx <= DMPAC_FWL_REGION_SDE; regionIdx++)
         {
             /* Only disable if firewall was previously enabled */
@@ -642,7 +697,7 @@ vx_status appDmpacFirewallDisableAll(uint8_t dmpacInstId)
                 {
                     numDisabled++;
                     /* NOTE: We do NOT clear gDmpacFirewallEnabled[regionIdx] here */
-                    /* Flag stays as 1 to indicate "should be enabled after LBIST" */
+                    /* Flag stays as 1 to indicate "should be enabled after BIST" */
                 }
             }
         }
@@ -653,7 +708,7 @@ vx_status appDmpacFirewallDisableAll(uint8_t dmpacInstId)
         }
         else if (status == (vx_status)VX_SUCCESS)
         {
-            VX_PRINT(VX_ZONE_INFO, "[FWL] Disabled %d DMPAC%d SL2 firewalls for LBIST (state flags preserved)\n", numDisabled, dmpacInstId);
+            VX_PRINT(VX_ZONE_INFO, "[FWL] Disabled %d DMPAC%d SL2 firewalls for BIST (state flags preserved)\n", numDisabled, dmpacInstId);
         }
         else
         {
@@ -665,16 +720,16 @@ vx_status appDmpacFirewallDisableAll(uint8_t dmpacInstId)
 }
 
 /**
- * \brief Query if VPAC firewall region should be enabled after LBIST
+ * \brief Query if VPAC firewall region should be enabled after BIST
  *
  * Checks the state tracking to determine if a VPAC firewall region was
- * enabled before LBIST and should be re-enabled during reconfiguration.
+ * enabled before BIST and should be re-enabled during reconfiguration.
  *
  * \param vpacInstId VPAC instance ID (0 for VPAC0, 1 for VPAC1 on J784S4)
  * \param regionIdx  Firewall region index (0-3 for LDC/MSC/NF/VISS)
  *
- * \return 1 if firewall should be enabled (was enabled before LBIST)
- *         0 if firewall should NOT be enabled (was disabled before LBIST)
+ * \return 1 if firewall should be enabled (was enabled before BIST)
+ *         0 if firewall should NOT be enabled (was disabled before BIST)
  */
 uint8_t appVpacFirewallShouldEnable(uint8_t vpacInstId, uint8_t regionIdx)
 {
@@ -689,16 +744,16 @@ uint8_t appVpacFirewallShouldEnable(uint8_t vpacInstId, uint8_t regionIdx)
 }
 
 /**
- * \brief Query if DMPAC firewall region should be enabled after LBIST
+ * \brief Query if DMPAC firewall region should be enabled after BIST
  *
  * Checks the state tracking to determine if a DMPAC firewall region was
- * enabled before LBIST and should be re-enabled during reconfiguration.
+ * enabled before BIST and should be re-enabled during reconfiguration.
  *
  * \param dmpacInstId DMPAC instance ID (0 for DMPAC0, only 1 DMPAC exists)
  * \param regionIdx   Firewall region index (0-2 for DOF_MAIN/DOF_REF/SDE)
  *
- * \return 1 if firewall should be enabled (was enabled before LBIST)
- *         0 if firewall should NOT be enabled (was disabled before LBIST)
+ * \return 1 if firewall should be enabled (was enabled before BIST)
+ *         0 if firewall should NOT be enabled (was disabled before BIST)
  */
 uint8_t appDmpacFirewallShouldEnable(uint8_t dmpacInstId, uint8_t regionIdx)
 {

@@ -2011,10 +2011,10 @@ TEST_WITH_ARG(tivxTIDL, testTIDLPreempt, ArgPriority, PARAMETERS_PRIORITY)
 
 TESTCASE_TESTS(tivxTIDL,
     testTIDL,
-    testTIDLReplicate,
+    // testTIDLReplicate,           // Removing this since 11.2.1 SDK does not contain this feature from TIOVX. Enable once feature is available
     #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
     testTIDLObjArray,
-    testTIDLObjArrayReplicate,
+    // testTIDLObjArrayReplicate,   // Removing this since 11.2.1 SDK does not contain this feature from TIOVX. Enable once feature is available
     #endif
     #if (C7XMMA_COUNT > 1)
     testMultiTIDL,

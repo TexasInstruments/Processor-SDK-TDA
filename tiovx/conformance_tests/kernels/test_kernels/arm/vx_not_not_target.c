@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2023 Texas Instruments Incorporated
+ * Copyright (c) 2023-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -209,6 +209,10 @@ static vx_status VX_CALLBACK tivxNotNotCreate(
             context = vxCreateContext();
             prms->graph = vxCreateGraph(context);
             status = vxGetStatus((vx_reference)prms->graph);
+            if(status != VX_SUCCESS)
+            {
+                vxReleaseContext(&context);
+            }
         }
 
         if(status == VX_SUCCESS)
@@ -255,7 +259,7 @@ static vx_status VX_CALLBACK tivxNotNotCreate(
 
         if(status == VX_SUCCESS)
         {
-            tivxSetTargetKernelInstanceContext(kernel, prms,  sizeof(tivxNotNotKernelParams));
+            tivxSetTargetKernelInstanceContext(kernel, prms, sizeof(tivxNotNotKernelParams));
             VX_PRINT_KERNEL(VX_ZONE_INFO, kernel, "Not Not Kernel created\n");
         }
     }
@@ -305,7 +309,9 @@ static vx_status VX_CALLBACK tivxNotNotDelete(
             status |= vxReleaseImage(&prms->int_image);
             status |= vxReleaseGraph(&prms->graph);
         }
+        tivxMemFree(prms, sizeof(tivxNotNotKernelParams), TIVX_MEM_EXTERNAL);
     }
+
     return status;
 }
 

@@ -72,8 +72,8 @@
 #include <vhwa/include/vhwa_m2mMsc.h>
 #include <vhwa/include/vhwa_m2mViss.h>
 #include <vhwa/include/vhwa_m2mFlexConnect.h>
-#if !defined(SOC_AM62A) /* LBIST not applicable for am62a */
-#include <vhwa/include/vhwa_m2mLbist.h>
+#if !defined(SOC_AM62A) /* BIST not applicable for am62a */
+#include <vhwa/include/vhwa_m2mBist.h>
 #endif
 
 #if !defined(SOC_AM62A) && !defined(SOC_J722S)
@@ -157,14 +157,15 @@ static Udma_DrvObjectInt gAppUdmaDrvObj;
 
 static Fvid2_Handle gFvid2VhwaDrvHandle = NULL;
 static int32_t vhwaPowerOnModules(uint32_t instId);
+static int32_t vhwaPowerOffModules(uint32_t instId);
 
 #if defined(SOC_J721E) || defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2)
 static int32_t appVhwaEnableVpacFirewall(uint32_t vpacInstId);
 static int32_t appVhwaEnableDmpacFirewall(void);
 static int32_t appVhwaDisableVpacFirewall(uint32_t vpacInstId);
 static int32_t appVhwaDisableDmpacFirewall(void);
-static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId);
-static int32_t appVhwaEnableDmpacFirewallAfterLbist(void);
+static int32_t appVhwaEnableVpacFirewallAfterBist(uint32_t vpacInstId);
+static int32_t appVhwaEnableDmpacFirewallAfterBist(void);
 static int32_t appVhwaVpacHandler(char *service_name, uint32_t cmd, void *prm, uint32_t prm_size, uint32_t flags);
 #endif
 static int32_t appVhwaHandler(char *service_name, uint32_t cmd, void *prm, uint32_t prm_size, uint32_t flags);
@@ -477,7 +478,7 @@ int32_t appVhwaDmpacInit(void)
 #if defined(ENABLE_DOF) && defined(ENABLE_SDE)
     if (0 == status)
     {
-        status = Vhwa_m2mLbistInit();
+        status = Vhwa_m2mBistInit();
     }
 #endif
 
@@ -503,7 +504,7 @@ int32_t appVhwaDmpacDeInit(void)
 #endif
 
 #if defined(ENABLE_DOF) && defined(ENABLE_SDE)
-    (void)Vhwa_m2mLbistDeInit();
+    (void)Vhwa_m2mBistDeInit();
 #endif
 
     return (0);
@@ -1108,11 +1109,11 @@ int32_t appVhwaVpacInit(uint32_t vpacInst)
     }
 #endif
 
-#if !defined(SOC_AM62A) /* LBIST not applicable for am62a */
+#if !defined(SOC_AM62A) /* BIST not applicable for am62a */
 #if defined(ENABLE_LDC) && defined(ENABLE_MSC) && defined(ENABLE_NF) && defined(ENABLE_VISS)
     if (0 == status)
     {
-        status = Vhwa_m2mLbistInit();
+        status = Vhwa_m2mBistInit();
     }
 #endif
 #endif
@@ -1145,9 +1146,9 @@ int32_t appVhwaVpacDeInit(void)
     Vhwa_m2mFcDeInit();
 #endif
 
-#if !defined(SOC_AM62A) /* LBIST not applicable for am62a */
+#if !defined(SOC_AM62A) /* BIST not applicable for am62a */
 #if defined(ENABLE_LDC) && defined(ENABLE_MSC) && defined(ENABLE_NF) && defined(ENABLE_VISS)
-    (void)Vhwa_m2mLbistDeInit();
+    (void)Vhwa_m2mBistDeInit();
 #endif
 #endif
 
@@ -1159,7 +1160,7 @@ int32_t appVhwaVpacDeInit(void)
 /**
  * Normal VPAC firewall enable (called via APP_VPAC_ENABLE_FIREWALL IPC command)
  * Enables ALL module firewalls unconditionally and sets all flags to 1.
- * For LBIST recovery, use appVhwaEnableVpacFirewallAfterLbist() instead.
+ * For BIST recovery, use appVhwaEnableVpacFirewallAfterBist() instead.
  */
 static int32_t appVhwaEnableVpacFirewall(uint32_t vpacInstId)
 {
@@ -1322,7 +1323,7 @@ static int32_t appVhwaEnableVpacFirewall(uint32_t vpacInstId)
 /**
  * Normal DMPAC firewall enable (called via APP_DMPAC_ENABLE_FIREWALL IPC command)
  * Enables ALL module firewalls unconditionally and sets all flags to 1.
- * For LBIST recovery, use appVhwaEnableDmpacFirewallAfterLbist() instead.
+ * For BIST recovery, use appVhwaEnableDmpacFirewallAfterBist() instead.
  */
 static int32_t appVhwaEnableDmpacFirewall(void)
 {
@@ -1476,7 +1477,7 @@ static int32_t appVhwaEnableDmpacFirewall(void)
 /**
  * Normal VPAC firewall disable (called via APP_VPAC_DISABLE_FIREWALL IPC command)
  * Disables ALL module firewalls and clears flags to 0.
- * LBIST recovery will respect this state and NOT re-enable firewalls.
+ * BIST recovery will respect this state and NOT re-enable firewalls.
  */
 static int32_t appVhwaDisableVpacFirewall(uint32_t vpacInstId)
 {
@@ -1528,7 +1529,7 @@ static int32_t appVhwaDisableVpacFirewall(uint32_t vpacInstId)
 /**
  * Normal DMPAC firewall disable (called via APP_DMPAC_DISABLE_FIREWALL IPC command)
  * Disables ALL module firewalls and clears flags to 0.
- * LBIST recovery will respect this state and NOT re-enable firewalls.
+ * BIST recovery will respect this state and NOT re-enable firewalls.
  */
 static int32_t appVhwaDisableDmpacFirewall(void)
 {
@@ -1570,15 +1571,15 @@ static int32_t appVhwaDisableDmpacFirewall(void)
 }
 
 /**
- * LBIST VPAC firewall recovery - can be called directly by LBIST application
- * Checks flags and restores ONLY firewalls that were enabled before LBIST (flag=1).
- * Used after LBIST hardware reset to selectively restore protection.
+ * BIST VPAC firewall recovery - can be called directly by BIST application
+ * Checks flags and restores ONLY firewalls that were enabled before BIST (flag=1).
+ * Used after BIST hardware reset to selectively restore protection.
  */
-static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
+static int32_t appVhwaEnableVpacFirewallAfterBist(uint32_t vpacInstId)
 {
     int32_t status = (int32_t)VX_SUCCESS;
 
-    VX_PRINT(VX_ZONE_INFO, "[LBIST] Restoring VPAC%d firewall state\n", vpacInstId);
+    VX_PRINT(VX_ZONE_INFO, "[BIST] Restoring VPAC%d firewall state\n", vpacInstId);
 
 #if defined(ENABLE_LDC)
     if (((int32_t)VX_SUCCESS == status) && (0u != appVpacFirewallShouldEnable((uint8_t)vpacInstId, VPAC_FWL_REGION_LDC)))
@@ -1596,7 +1597,7 @@ static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
 
             if ((int32_t)VX_SUCCESS == status)
             {
-                VX_PRINT(VX_ZONE_INFO, "[LBIST] Restored VPAC%d LDC firewall\n", vpacInstId);
+                VX_PRINT(VX_ZONE_INFO, "[BIST] Restored VPAC%d LDC firewall\n", vpacInstId);
             }
         }
     }
@@ -1618,7 +1619,7 @@ static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
 
             if ((int32_t)VX_SUCCESS == status)
             {
-                VX_PRINT(VX_ZONE_INFO, "[LBIST] Restored VPAC%d MSC firewall\n", vpacInstId);
+                VX_PRINT(VX_ZONE_INFO, "[BIST] Restored VPAC%d MSC firewall\n", vpacInstId);
             }
         }
     }
@@ -1640,7 +1641,7 @@ static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
 
             if ((int32_t)VX_SUCCESS == status)
             {
-                VX_PRINT(VX_ZONE_INFO, "[LBIST] Restored VPAC%d NF firewall\n", vpacInstId);
+                VX_PRINT(VX_ZONE_INFO, "[BIST] Restored VPAC%d NF firewall\n", vpacInstId);
             }
         }
     }
@@ -1662,7 +1663,7 @@ static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
 
             if ((int32_t)VX_SUCCESS == status)
             {
-                VX_PRINT(VX_ZONE_INFO, "[LBIST] Restored VPAC%d VISS firewall\n", vpacInstId);
+                VX_PRINT(VX_ZONE_INFO, "[BIST] Restored VPAC%d VISS firewall\n", vpacInstId);
             }
         }
     }
@@ -1672,16 +1673,16 @@ static int32_t appVhwaEnableVpacFirewallAfterLbist(uint32_t vpacInstId)
 }
 
 /**
- * LBIST DMPAC firewall recovery - can be called directly by LBIST application
- * Checks flags and restores ONLY firewalls that were enabled before LBIST (flag=1).
- * Used after LBIST hardware reset to selectively restore protection.
+ * BIST DMPAC firewall recovery - can be called directly by BIST application
+ * Checks flags and restores ONLY firewalls that were enabled before BIST (flag=1).
+ * Used after BIST hardware reset to selectively restore protection.
  */
-static int32_t appVhwaEnableDmpacFirewallAfterLbist(void)
+static int32_t appVhwaEnableDmpacFirewallAfterBist(void)
 {
     int32_t status = (int32_t)VX_SUCCESS;
     uint8_t dmpacInstId = (uint8_t)VHWA_M2M_DOF_DRV_INST_ID;
 
-    VX_PRINT(VX_ZONE_INFO, "[LBIST] Restoring DMPAC firewall state\n");
+    VX_PRINT(VX_ZONE_INFO, "[BIST] Restoring DMPAC firewall state\n");
 
 #if defined(ENABLE_DOF)
     if (((int32_t)VX_SUCCESS == status) && (0u != appDmpacFirewallShouldEnable(dmpacInstId, DMPAC_FWL_REGION_DOF_MAIN)))
@@ -1702,7 +1703,7 @@ static int32_t appVhwaEnableDmpacFirewallAfterLbist(void)
 
             if ((int32_t)VX_SUCCESS == status)
             {
-                VX_PRINT(VX_ZONE_INFO, "[LBIST] Restored DMPAC DOF MAIN firewall\n");
+                VX_PRINT(VX_ZONE_INFO, "[BIST] Restored DMPAC DOF MAIN firewall\n");
 
                 /* Restore DOF REFERENCE region if it was enabled */
                 if (appDmpacFirewallShouldEnable(dmpacInstId, DMPAC_FWL_REGION_DOF_REFERENCE) != 0U)
@@ -1713,7 +1714,7 @@ static int32_t appVhwaEnableDmpacFirewallAfterLbist(void)
 
                     if ((int32_t)VX_SUCCESS == status)
                     {
-                        VX_PRINT(VX_ZONE_INFO, "[LBIST] Restored DMPAC DOF REFERENCE firewall\n");
+                        VX_PRINT(VX_ZONE_INFO, "[BIST] Restored DMPAC DOF REFERENCE firewall\n");
                     }
                     else
                     {
@@ -1741,7 +1742,7 @@ static int32_t appVhwaEnableDmpacFirewallAfterLbist(void)
 
             if ((int32_t)VX_SUCCESS == status)
             {
-                VX_PRINT(VX_ZONE_INFO, "[LBIST] Restored DMPAC SDE firewall\n");
+                VX_PRINT(VX_ZONE_INFO, "[BIST] Restored DMPAC SDE firewall\n");
             }
         }
     }
@@ -1847,12 +1848,12 @@ static int32_t appVhwaVpacHandler(char *service_name, uint32_t cmd, void *prm, u
                     switch (cmdPrms)
                     {
                         case APP_VHWA_VPAC0_INST:
-                            ctrlCmd = VHWA_M2M_IOCTL_LBIST_VPAC0_ACQUIRE_LOCK;
+                            ctrlCmd = VHWA_M2M_IOCTL_BIST_VPAC0_ACQUIRE_LOCK;
                             fwlIdx = 0u;
                             status = 0;
                             break;
                         case APP_VHWA_VPAC1_INST:
-                            ctrlCmd = VHWA_M2M_IOCTL_LBIST_VPAC1_ACQUIRE_LOCK;
+                            ctrlCmd = VHWA_M2M_IOCTL_BIST_VPAC1_ACQUIRE_LOCK;
                             fwlIdx = 1u;
                             status = 0;
                             break;
@@ -1883,14 +1884,19 @@ static int32_t appVhwaVpacHandler(char *service_name, uint32_t cmd, void *prm, u
                             VX_PRINT(VX_ZONE_ERROR, "[appVhwaVpacHandler] ERROR: vhwaPowerOnModules Failed \n");
                         }
                     }
+                    if (0 == status)
+                    {
+                        status = (int32_t)appVpacFirewallDisableAll((uint8_t)fwlIdx);
+                    }
+
+                    if(0 == status)
+                    {
+                        status = vhwaPowerOffModules(cmdPrms);
+                    }                    
                 }
                 else
                 {
                     appLogPrintf(" appVhwaVpacHandler: ERROR: Invalid VPAC Params Size !!!\n");
-                }
-                if (0 == status)
-                {
-                    status = (int32_t)appVpacFirewallDisableAll((uint8_t)fwlIdx);
                 }
                 break;
             /* Release VPAC lock */
@@ -1904,12 +1910,12 @@ static int32_t appVhwaVpacHandler(char *service_name, uint32_t cmd, void *prm, u
                     switch (cmdPrms)
                     {
                         case APP_VHWA_VPAC0_INST:
-                            ctrlCmd = VHWA_M2M_IOCTL_LBIST_VPAC0_RELEASE_LOCK;
+                            ctrlCmd = VHWA_M2M_IOCTL_BIST_VPAC0_RELEASE_LOCK;
                             fwlIdx = 0;
                             status = 0;
                             break;
                         case APP_VHWA_VPAC1_INST:
-                            ctrlCmd = VHWA_M2M_IOCTL_LBIST_VPAC1_RELEASE_LOCK;
+                            ctrlCmd = VHWA_M2M_IOCTL_BIST_VPAC1_RELEASE_LOCK;
                             fwlIdx = 1;
                             status = 0;
                             break;
@@ -1928,7 +1934,7 @@ static int32_t appVhwaVpacHandler(char *service_name, uint32_t cmd, void *prm, u
                     if (0 == status)
                     {
                         /* Now Revert the firewall settings */
-                        status = appVhwaEnableVpacFirewallAfterLbist(fwlIdx);
+                        status = appVhwaEnableVpacFirewallAfterBist(fwlIdx);
                     }
 
                     if ((0 == status) && (NULL != gFvid2VhwaDrvHandle))
@@ -2177,7 +2183,7 @@ static int32_t appVhwaHandler(char *service_name, uint32_t cmd, void *prm, uint3
             case APP_DMPAC_ACQUIRE_LOCK:
                 if (NULL != gFvid2VhwaDrvHandle)
                 {
-                    status = Fvid2_control(gFvid2VhwaDrvHandle, VHWA_M2M_IOCTL_LBIST_DMPAC_ACQUIRE_LOCK, NULL, NULL);
+                    status = Fvid2_control(gFvid2VhwaDrvHandle, VHWA_M2M_IOCTL_BIST_DMPAC_ACQUIRE_LOCK, NULL, NULL);
                     if (status != FVID2_SOK)
                     {
                         VX_PRINT(VX_ZONE_ERROR, "[appVhwaHandler] ERROR: Failed to acquire lock\n");
@@ -2192,6 +2198,10 @@ static int32_t appVhwaHandler(char *service_name, uint32_t cmd, void *prm, uint3
                 {
                     status = appDmpacFirewallDisableAll(0u);
                 }
+                if (0 == status)
+                {
+                    status = vhwaPowerOffModules(APP_VHWA_DMPAC_INST);
+                }
                 break;
             case APP_DMPAC_RELEASE_LOCK:
                 /* First Power On Modules, before releasing locks */
@@ -2199,11 +2209,11 @@ static int32_t appVhwaHandler(char *service_name, uint32_t cmd, void *prm, uint3
                 if (0 == status)
                 {
                     /* Now restore the fiewall settings */
-                    status = appVhwaEnableDmpacFirewallAfterLbist();
+                    status = appVhwaEnableDmpacFirewallAfterBist();
                 }
                 if ((0 == status) && (NULL != gFvid2VhwaDrvHandle))
                 {
-                    status = Fvid2_control(gFvid2VhwaDrvHandle, VHWA_M2M_IOCTL_LBIST_DMPAC_RELEASE_LOCK, NULL, NULL);
+                    status = Fvid2_control(gFvid2VhwaDrvHandle, VHWA_M2M_IOCTL_BIST_DMPAC_RELEASE_LOCK, NULL, NULL);
                     if (status != FVID2_SOK)
                     {
                         VX_PRINT(VX_ZONE_ERROR, "[appVhwaHandler] ERROR: Failed to release lock\n");
@@ -2275,7 +2285,7 @@ int32_t appVhwaRemoteServiceInit(void)
         {
             /* Without this service, driver can't be used, so opening driver in the service initialization.
              * But this means DMPAC must be initialized before calling this API */
-            gFvid2VhwaDrvHandle = Fvid2_create(FVID2_VHWA_M2M_LBIST_DRV_ID,
+            gFvid2VhwaDrvHandle = Fvid2_create(FVID2_VHWA_M2M_BIST_DRV_ID,
                                         0, NULL, NULL, NULL);
 
             if (NULL == gFvid2VhwaDrvHandle)
@@ -2364,7 +2374,7 @@ int32_t appVhwaVpacRemoteServiceInit(void)
         {
             /* Without this service, driver can't be used, so opening driver in the service initialization.
              * But this means VPAC must be initialized before calling this API */
-            gFvid2VhwaDrvHandle = Fvid2_create(FVID2_VHWA_M2M_LBIST_DRV_ID,
+            gFvid2VhwaDrvHandle = Fvid2_create(FVID2_VHWA_M2M_BIST_DRV_ID,
                                         0, NULL, NULL, NULL);
 
             if (NULL == gFvid2VhwaDrvHandle)
@@ -2465,7 +2475,7 @@ static int32_t vhwaPowerOnModules(uint32_t instId)
         status = Sciclient_pmSetModuleState(TISCI_DEV_VPAC0, TISCI_MSG_VALUE_DEVICE_SW_STATE_ON, TISCI_MSG_FLAG_AOP, SCICLIENT_SERVICE_WAIT_FOREVER);
         if (FVID2_SOK != status)
         {
-            VX_PRINT(VX_ZONE_ERROR, "[LBIST] ERROR:Failed to power on VPAC0\n");
+            VX_PRINT(VX_ZONE_ERROR, "[BIST] ERROR:Failed to power on VPAC0\n");
         }
     }
     #if defined(SOC_J784S4) || defined(SOC_J742S2)
@@ -2474,7 +2484,7 @@ static int32_t vhwaPowerOnModules(uint32_t instId)
         status = Sciclient_pmSetModuleState(TISCI_DEV_VPAC1, TISCI_MSG_VALUE_DEVICE_SW_STATE_ON, TISCI_MSG_FLAG_AOP, SCICLIENT_SERVICE_WAIT_FOREVER);
         if (FVID2_SOK != status)
         {
-            VX_PRINT(VX_ZONE_ERROR, "[LBIST] ERROR:Failed to power on VPAC1\n");
+            VX_PRINT(VX_ZONE_ERROR, "[BIST] ERROR:Failed to power on VPAC1\n");
         }
     }
     #endif
@@ -2488,13 +2498,59 @@ static int32_t vhwaPowerOnModules(uint32_t instId)
             status = Sciclient_pmSetModuleState(TISCI_DEV_DMPAC0_SDE_0, TISCI_MSG_VALUE_DEVICE_SW_STATE_ON, TISCI_MSG_FLAG_AOP, SCICLIENT_SERVICE_WAIT_FOREVER);
             if (FVID2_SOK != status)
             {
-                VX_PRINT(VX_ZONE_ERROR, "[LBIST] ERROR:Failed to power on SDE\n");
+                VX_PRINT(VX_ZONE_ERROR, "[BIST] ERROR:Failed to power on SDE\n");
             }
 #endif
         }
         else
         {
-            VX_PRINT(VX_ZONE_ERROR, "[LBIST] ERROR:Failed to power on DMPAC\n");
+            VX_PRINT(VX_ZONE_ERROR, "[BIST] ERROR:Failed to power on DMPAC\n");
+        }
+    }
+    #endif
+
+    return (status);
+}
+
+static int32_t vhwaPowerOffModules(uint32_t instId)
+{
+    int32_t status = FVID2_EFAIL;
+
+    if((uint32_t)APP_VHWA_VPAC0_INST == instId)
+    {
+        status = Sciclient_pmSetModuleState(TISCI_DEV_VPAC0, TISCI_MSG_VALUE_DEVICE_SW_STATE_AUTO_OFF, TISCI_MSG_FLAG_AOP, SCICLIENT_SERVICE_WAIT_FOREVER);
+        if (FVID2_SOK != status)
+        {
+            VX_PRINT(VX_ZONE_ERROR, "[BIST] ERROR:Failed to power off VPAC0\n");
+        }
+    }
+    #if defined(SOC_J784S4) || defined(SOC_J742S2)
+    else if((uint32_t)APP_VHWA_VPAC1_INST == instId)
+    {
+        status = Sciclient_pmSetModuleState(TISCI_DEV_VPAC1, TISCI_MSG_VALUE_DEVICE_SW_STATE_AUTO_OFF, TISCI_MSG_FLAG_AOP, SCICLIENT_SERVICE_WAIT_FOREVER);
+        if (FVID2_SOK != status)
+        {
+            VX_PRINT(VX_ZONE_ERROR, "[BIST] ERROR:Failed to power off VPAC1\n");
+        }
+    }
+    #endif
+    #if !defined(SOC_AM62A)
+    else /* DMPAC */
+    {
+        status = Sciclient_pmSetModuleState(TISCI_DEV_DMPAC0, TISCI_MSG_VALUE_DEVICE_SW_STATE_AUTO_OFF, TISCI_MSG_FLAG_AOP, SCICLIENT_SERVICE_WAIT_FOREVER);
+        if (FVID2_SOK == status)
+        {
+#if !defined(SOC_J722S) /* J722S doesn't require separate power domain for SDE */
+            status = Sciclient_pmSetModuleState(TISCI_DEV_DMPAC0_SDE_0, TISCI_MSG_VALUE_DEVICE_SW_STATE_AUTO_OFF, TISCI_MSG_FLAG_AOP, SCICLIENT_SERVICE_WAIT_FOREVER);
+            if (FVID2_SOK != status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "[BIST] ERROR:Failed to power off SDE\n");
+            }
+#endif
+        }
+        else
+        {
+            VX_PRINT(VX_ZONE_ERROR, "[BIST] ERROR:Failed to power off DMPAC\n");
         }
     }
     #endif

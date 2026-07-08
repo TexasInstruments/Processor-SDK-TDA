@@ -860,7 +860,7 @@ static void vhwa_m2mMscFrmDoneIsr(Vhwa_M2mMscInstObj *instObj,
                         CSL_lseStopChannels(comObj->socInfo.lseRegs, &hObj->lseCfg[0]);
 #if !defined(VHWA_VPAC_IP_REV_VPAC3L)
                         /* For sequential processing, the LSE config is updated in golden config registers. */
-                        if ((uint32_t)UTRUE == hObj->enableConfigRegValidate)
+                        if ((uint32_t)VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)
                         {
                             /* LDRA_JUSTIFY_START
                             <metric start> branch <metric end>

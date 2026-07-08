@@ -219,6 +219,48 @@ vx_status tivxVpacLdcSetParamsFromDcc(
                         (uint64_t)pcfg->mesh_table,
                         (vx_enum)TIVX_MEM_EXTERNAL);
                 }
+                
+                #ifndef x86_64
+                /* Configure luma tone mapping LUT for bit-depth conversion */
+                if (0U != params->ylut_en)
+                {
+                    Ldc_RemapLutCfg *remap_lut_cfg = (Ldc_RemapLutCfg *)&ldc_obj->lut_cfg;
+                    int32_t fvid2_status;
+
+                    remap_lut_cfg->enable = 1U;
+                    remap_lut_cfg->inputBits = params->yin_bits;
+                    remap_lut_cfg->outputBits = params->yout_bits;
+                    remap_lut_cfg->tableAddr = params->ylut;
+
+                    fvid2_status = Fvid2_control(ldc_obj->handle,
+                        IOCTL_LDC_SET_LUMA_TONEMAP_LUT_CFG, remap_lut_cfg, NULL);
+                    if (FVID2_SOK != fvid2_status)
+                    {
+                        VX_PRINT(VX_ZONE_ERROR, "Failed to set luma tone mapping LUT\n");
+                        status = (vx_status)VX_FAILURE;
+                    }
+                }
+
+                /* Configure chroma tone mapping LUT for bit-depth conversion */
+                if (0U != params->clut_en)
+                {
+                    Ldc_RemapLutCfg *remap_lut_cfg = (Ldc_RemapLutCfg *)&ldc_obj->lut_cfg;
+                    int32_t fvid2_status;
+
+                    remap_lut_cfg->enable = 1U;
+                    remap_lut_cfg->inputBits = params->cin_bits;
+                    remap_lut_cfg->outputBits = params->cout_bits;
+                    remap_lut_cfg->tableAddr = params->clut;
+
+                    fvid2_status = Fvid2_control(ldc_obj->handle,
+                        IOCTL_LDC_SET_CHROMA_TONEMAP_LUT_CFG, remap_lut_cfg, NULL);
+                    if (FVID2_SOK != fvid2_status)
+                    {
+                        VX_PRINT(VX_ZONE_ERROR, "Failed to set chroma tone mapping LUT\n");
+                        status = (vx_status)VX_FAILURE;
+                    }
+                }
+                #endif
             }
 
             tivxCheckStatus(&status, tivxMemBufferUnmap(target_ptr_dcc, dcc_buf_desc->mem_size, (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_ONLY));

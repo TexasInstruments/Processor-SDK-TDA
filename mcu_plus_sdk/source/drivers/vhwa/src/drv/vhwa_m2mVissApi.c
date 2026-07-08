@@ -926,7 +926,12 @@ int32_t Vhwa_m2mVissReInit(void)
     if ((uint32_t)UTRUE == instObj->initDone)
     /* LDRA_JUSTIFY_END */
     {
-        status = Vhwa_m2mVissUdmaUtcDeInit(instObj);
+        status = Vhwa_m2mVissStopUtcCh(instObj);
+
+        if(FVID2_SOK == status)
+        {
+            status = Vhwa_m2mVissUdmaUtcDeInit(instObj);
+        }
 
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
@@ -1249,6 +1254,19 @@ Fdrv_Handle vhwa_m2mVissCreate(UInt32 drvId, UInt32 drvInstId,
                 /* Allocate Descriptor, Ring memories */
                 status = Vhwa_m2mVissAllocUdmaMem(instObj, hObj);
             }
+
+            #if !defined(VHWA_VPAC_IP_REV_VPAC3L)
+            if (FVID2_SOK == status)
+            {
+                status = Vhwa_m2mVissInitReadbackTrMem(hObj);
+                if (FVID2_SOK != status)
+                {
+                    GT_0trace(VhwaVissTrace, GT_ERR,
+                            "Readback TR memory initialization failed !!\n");
+                }
+            }
+            #endif
+
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
             <justification start>
@@ -2546,16 +2564,18 @@ Int32 vhwa_m2mVissControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if ((NULL != handle) && (NULL != cmdArgs))
                 /* LDRA_JUSTIFY_END */
                 {
-                    uint32_t *enableFlag = (uint32_t *)cmdArgs;
-                    if ((uint32_t)1U == *enableFlag)
+                    uint32_t modeVal = *((uint32_t *)cmdArgs);
+                    if (modeVal > VHWA_SAFETY_MODE_CONTINUOUS)
                     {
-                        hObj->enableReconfigReinitReg = 1U;
+                        GT_1trace(VhwaVissTrace, GT_ERR,
+                            "Invalid safety mode value %u for VHWA_M2M_IOCTL_VISS_ENABLE_RECONFIG_REINIT_REG !!\n", modeVal);
+                        status = FVID2_EBADARGS;
                     }
                     else
                     {
-                        hObj->enableReconfigReinitReg = 0U;
+                        hObj->enableReconfigReinitReg = modeVal;
+                        status = FVID2_SOK;
                     }
-                    status = FVID2_SOK;
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement <metric end>
@@ -2588,23 +2608,21 @@ Int32 vhwa_m2mVissControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if ((NULL != handle) && (NULL != cmdArgs))
                 /* LDRA_JUSTIFY_END */
                 {
-                    uint32_t *enableFlag = (uint32_t *)cmdArgs;
-
-                    /* Disable Interrupt since the below flag is accessed in the ISR */
-                    cookie = HwiP_disable();
-
-                    if ((uint32_t)1U == *enableFlag)
+                    uint32_t modeVal = *((uint32_t *)cmdArgs);
+                    if (modeVal > VHWA_SAFETY_MODE_CONTINUOUS)
                     {
-                        hObj->enableStatusRegValidate = (uint32_t)UTRUE;
+                        GT_1trace(VhwaVissTrace, GT_ERR,
+                            "Invalid safety mode value %u for VHWA_M2M_IOCTL_VISS_ENABLE_STATUS_REG_VALIDATE !!\n", modeVal);
+                        status = FVID2_EBADARGS;
                     }
                     else
                     {
-                        hObj->enableStatusRegValidate = (uint32_t)UFALSE;
+                        /* Disable Interrupt since the below flag is accessed in the ISR */
+                        cookie = HwiP_disable();
+                        hObj->enableStatusRegValidate = modeVal;
+                        HwiP_restore(cookie);
+                        status = FVID2_SOK;
                     }
-
-                    HwiP_restore(cookie);
-
-                    status = FVID2_SOK;
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement <metric end>
@@ -2637,7 +2655,7 @@ Int32 vhwa_m2mVissControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if (NULL != handle)
                 /* LDRA_JUSTIFY_END */
                 {
-                    if (UTRUE == hObj->enableStatusRegValidate)
+                    if (VHWA_SAFETY_MODE_DISABLED != hObj->enableStatusRegValidate)
                     {
                         status = Vhwa_m2mVissStatusRegValidate(hObj, &instObj->socInfo);
                         /* LDRA_JUSTIFY_START
@@ -2654,28 +2672,28 @@ Int32 vhwa_m2mVissControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                         }
                         /* LDRA_JUSTIFY_END */
                     }
-                    if (UTRUE == hObj->enableConfigRegValidate)
+                    if (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)
                     {
                         /* Readback config registers */
-                        status = Vhwa_m2mVissConfigRegReadback(hObj, instObj);
+                        status = Vhwa_m2mVissSubmitReadbackUDMABuf(instObj, hObj);
                     }
 
                     /* Release the hardware lock after the configReg readback or statusReg */
-                    if ((UTRUE == hObj->enableStatusRegValidate) ||
-                        (UTRUE == hObj->enableConfigRegValidate))
+                    if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableStatusRegValidate) ||
+                        (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
                     {
-                        Vhwa_commonHwaLockRelease(VHWA_VPAC0_VISS_LOCK_IDX);
+                        Vhwa_commonHwaLockRelease(instObj->hwaLockIdx);
                     }
 
-                    if (UTRUE == hObj->enableStatusRegValidate)
+                    /* Reset the statusReg validate flag only in one-shot mode */
+                    if (VHWA_SAFETY_MODE_ONESHOT == hObj->enableStatusRegValidate)
                     {
-                        /* Reset the statusReg validate flag */
                         cookie = HwiP_disable();
-                        hObj->enableStatusRegValidate = (uint32_t)UFALSE;
+                        hObj->enableStatusRegValidate = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
                         HwiP_restore(cookie);
                     }
 
-                    if ((UTRUE == hObj->enableConfigRegValidate) && (FVID2_SOK == status))
+                    if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (FVID2_SOK == status))
                     {
                         status = Vhwa_M2mVissUpdateBuffers(hObj);
 
@@ -2711,10 +2729,13 @@ Int32 vhwa_m2mVissControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                             GT_0trace(VhwaVissTrace, GT_ERR, "VISS: Vhwa_M2mVissUpdateBuffers failed!\n");
                         }
 
-                        /* Disable Interrupt since the below flag is accessed in the ISR and reset the configReg validate flag */
-                        cookie = HwiP_disable();
-                        hObj->enableConfigRegValidate = (uint32_t)UFALSE;
-                        HwiP_restore(cookie);
+                        /* Reset the configReg validate flag only in one-shot mode */
+                        if (VHWA_SAFETY_MODE_ONESHOT == hObj->enableConfigRegValidate)
+                        {
+                            cookie = HwiP_disable();
+                            hObj->enableConfigRegValidate = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
+                            HwiP_restore(cookie);
+                        }
                     }
                 }
                 else
@@ -2738,23 +2759,21 @@ Int32 vhwa_m2mVissControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if ((NULL != handle) && (NULL != cmdArgs))
                 /* LDRA_JUSTIFY_END */
                 {
-                    uint32_t *enableFlag = (uint32_t *)cmdArgs;
-
-                    /* Disable Interrupt since the below flag is accessed in the ISR */
-                    cookie = HwiP_disable();
-
-                    if ((uint32_t)1U == *enableFlag)
+                    uint32_t modeVal = *((uint32_t *)cmdArgs);
+                    if (modeVal > VHWA_SAFETY_MODE_CONTINUOUS)
                     {
-                        hObj->enableConfigRegValidate = (uint32_t)UTRUE;
+                        GT_1trace(VhwaVissTrace, GT_ERR,
+                            "Invalid safety mode value %u for VHWA_M2M_IOCTL_VISS_ENABLE_CONFIG_REG_READBACK !!\n", modeVal);
+                        status = FVID2_EBADARGS;
                     }
                     else
                     {
-                        hObj->enableConfigRegValidate = (uint32_t)UFALSE;
+                        /* Disable Interrupt since the below flag is accessed in the ISR */
+                        cookie = HwiP_disable();
+                        hObj->enableConfigRegValidate = modeVal;
+                        HwiP_restore(cookie);
+                        status = FVID2_SOK;
                     }
-
-                    HwiP_restore(cookie);
-
-                    status = FVID2_SOK;
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement <metric end>
@@ -2857,6 +2876,14 @@ Int32 vhwa_m2mVissControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
 
                         /* Initialize buffer object for the handle */
                         Vhwa_m2mVissInitReadbackBuffObject(instObj, hObj, hObj->readbackBufferObjHolder);
+
+                        /* Set TRs for readback */
+                        status = Vhwa_m2mVissSetReadbackTransferRecord(instObj, hObj);
+                        if(FVID2_SOK != status)
+                        {
+                            GT_0trace(VhwaVissTrace, GT_ERR,
+                                "Failed to set TR for config reg readback!!\n");
+                        }
                     }
                 }
                 /* LDRA_JUSTIFY_START
@@ -3143,10 +3170,14 @@ Int32 vhwa_m2mVissProcessReq(Fdrv_Handle handle, Fvid2_FrameList *inFrmList,
             }
 #if !defined(VHWA_VPAC_IP_REV_VPAC3L)
             /* Invoke the reconfig-MMR if enableReconfigReinitReg enabled for the current handle */
-            if (UTRUE == hObj->enableReconfigReinitReg)
+            if (VHWA_SAFETY_MODE_DISABLED != hObj->enableReconfigReinitReg)
             {
                 status = Vhwa_m2mVissReconfigReinitReg(instObj, hObj, qObj);
-                hObj->enableReconfigReinitReg = (uint32_t)UFALSE;
+                /* Reset only in one-shot mode */
+                if (VHWA_SAFETY_MODE_ONESHOT == hObj->enableReconfigReinitReg)
+                {
+                    hObj->enableReconfigReinitReg = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
+                }
             }
 #endif
             /* LDRA_JUSTIFY_START
@@ -3357,7 +3388,9 @@ Int32 vhwa_m2mVissGetProcessReq(Fdrv_Handle handle,
             /* LDRA_JUSTIFY_END */
         }
 
-        if (UFALSE == hObj->fcStatus.isFlexConnect)
+        if ((UFALSE == hObj->fcStatus.isFlexConnect) &&
+            ((VHWA_SAFETY_MODE_DISABLED == hObj->enableStatusRegValidate) &&
+            (VHWA_SAFETY_MODE_DISABLED == hObj->enableConfigRegValidate)))
         {
             Vhwa_commonHwaLockRelease(instObj->hwaLockIdx);
         }
@@ -4624,7 +4657,7 @@ static int32_t vhwaM2mVissSubmitRequest(Vhwa_M2mVissInstObj *instObj,
         }
 #if !defined(VHWA_VPAC_IP_REV_VPAC3L)
         /* Update the VissStatusRegisterGroup with valid status register values for dynamic registers */
-        if((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableStatusRegValidate))
+        if((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableStatusRegValidate))
         {
             status = vhwaM2mVissUpdateStatusRegGroup(hObj);
         }
@@ -6990,136 +7023,11 @@ int32_t Vhwa_m2mVissStatusRegValidate(Vhwa_M2mVissHandleObj *hObj, const Viss_So
     return status;
 }
 
-int32_t Vhwa_m2mVissConfigRegReadback(Vhwa_M2mVissHandleObj *hObj, Vhwa_M2mVissInstObj *instObj)
-{
-    int32_t status = FVID2_SOK;
-    uint32_t *readback = NULL;
-    CSL_htsRegs *htsRegs = NULL;
-
-    /* LDRA_JUSTIFY_START
-    <metric start> statement branch <metric end>
-    <justification start>
-	Rationale: The component level negative test framework and test applications cannot reach this portion.
-	The parameters are pre-validated by the caller before the control reaches here.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if ((hObj == NULL) || (instObj == NULL))
-    {
-        status = FVID2_EBADARGS;
-    }
-    /* LDRA_JUSTIFY_END */
-
-    /* LDRA_JUSTIFY_START
-    <metric start> branch <metric end>
-    <justification start>
-    Rationale: The component level negative test framework and test applications cannot reach this portion.
-    This failure case is out of scope for the imaging test framework.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if (FVID2_SOK == status)
-    /* LDRA_JUSTIFY_END */
-    {
-        readback = hObj->configRegMemPrms.configRegReadbackPtr;
-        htsRegs = instObj->socInfo.htsRegs;
-    }
-
-    /* LDRA_JUSTIFY_START
-    <metric start> statement branch <metric end>
-    <justification start>
-	Rationale: The component level negative test framework and test applications cannot reach this portion.
-	The parameters are pre-validated by the caller before the control reaches here.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if ((NULL == readback) || (NULL == htsRegs))
-    {
-        status = FVID2_EBADARGS;
-    }
-    /* LDRA_JUSTIFY_END */
-    else
-    {
-        /* Read current values from hardware registers */
-        /* submit udma ring */
-        status = Vhwa_m2mVissSubmitReadbackUDMABuf(instObj, hObj);
-        /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        This failure case is out of scope for the imaging test framework.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */
-        if(FVID2_SOK != status)
-        {
-            GT_0trace(VhwaVissTrace, GT_ERR,
-                "Vhwa_m2mVissSubmitReadbackUDMABuf Submit Failed !!\n");
-        }
-        /* LDRA_JUSTIFY_END */
-
-    }
-
-    return status;
-}
-#endif
-
-int32_t Vhwa_m2mVissGetSl2Info(Vhwa_M2mVissSl2Info *sl2Info)
-{
-    int32_t retVal = FVID2_SOK;
-    Vhwa_M2mVissInstObj *instObj = &gM2mVissInstObj[0U];
-
-    /* LDRA_JUSTIFY_START
-    <metric start> statement branch <metric end>
-    <justification start>
-	Rationale: The component level negative test framework and test applications cannot reach this portion.
-	The parameters are pre-validated by the caller before the control reaches here.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    if ((NULL == instObj) || (NULL == sl2Info))
-    {
-        retVal = FVID2_EBADARGS;
-    }
-    /* LDRA_JUSTIFY_END */
-    /* LDRA_JUSTIFY_START
-    <metric start> statement branch <metric end>
-    <justification start>
-    Rationale: The component level negative test framework and test applications cannot reach this portion.
-    This failure case is out of scope for the imaging test framework.
-    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-    However, due to the stated rationale, this is not tested.
-    <justification end> */
-    else if ((uint32_t)UFALSE == instObj->isSl2AllocDone)
-    {
-        /* SL2 memory not allocated yet */
-        GT_0trace(VhwaVissTrace, GT_ERR,
-            "SL2 Memory is not allocated. Call Vhwa_m2mVissAllocSl2() first.\n");
-        retVal = FVID2_EFAIL;
-    }
-    /* LDRA_JUSTIFY_END */
-    else
-    {
-        sl2Info->sl2Addr = instObj->sl2Addr;
-        sl2Info->sl2Size = instObj->sl2Size;
-    }
-
-    return retVal;
-}
-
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 int32_t Vhwa_m2mVissSubmitReadbackUDMABuf(Vhwa_M2mVissInstObj *instObj,
-    Vhwa_M2mVissHandleObj *hObj)
+    const Vhwa_M2mVissHandleObj *hObj)
 {
     int32_t status = FVID2_SOK;
     int32_t semStatus = FVID2_SOK;
-    uint8_t *pTrMem = NULL;
-    CSL_UdmapCppi5TRPD *pTrpd = NULL;
-    uint32_t packetInfoSize;
-    uint32_t numOfTr = 0;
-    uint32_t buffObjectCnt = 0;
-    Vhwa_M2mVissConfigBuffobj *bufferObjHolder = NULL;
-    CSL_UdmapTR15 *pTrLocal = NULL;
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -7136,76 +7044,8 @@ int32_t Vhwa_m2mVissSubmitReadbackUDMABuf(Vhwa_M2mVissInstObj *instObj,
     /* LDRA_JUSTIFY_END */
     else
     {
-        VhwaAl_Cache_Wb(hObj->readbackBufferInfo.bufferPtr, hObj->readbackBufferInfo.length, CacheP_TYPE_L1D);
-
-        /* Prepare UDMA TRPD for register readback */
-        packetInfoSize = sizeof(CSL_UdmapTR15);
-        pTrMem = instObj->configTxTrMem;
-        pTrpd = (CSL_UdmapCppi5TRPD*) pTrMem;
-
-        /* Invalidate cache before changing contents */
-        VhwaAl_Cache_Inv(pTrMem, VHWA_M2M_VISS_UDMA_CONFIG_TRPD_SIZE, CacheP_TYPE_L1D);
-
-        /* Setup buffer object holder for readback */
-        bufferObjHolder = hObj->readbackBufferObjHolder;
-        Vhwa_m2mVissUpdateReadbackBufObj(hObj);
-        numOfTr = Vhwa_m2mVissCalcNumOfTrsForReadback(hObj);
-        pTrLocal = (CSL_UdmapTR15*) ((uint32_t) pTrMem + packetInfoSize);
-
-        /* Make TRPD */
-        Vhwa_m2mVissmakeTrpd(pTrpd, UDMA_TR_TYPE_15, numOfTr, instObj->configCqRingNum);
-
-        instObj->configTxTrRespMem = (uint8_t*) ((uint32_t) pTrMem + (packetInfoSize * (numOfTr + 1U)));
-
-        /* Setup Transfer Records for each buffer object */
-        for (buffObjectCnt = 0; buffObjectCnt < (uint32_t)BUFF_ID_MAXBUFID; buffObjectCnt++)
-        {
-            if (true == bufferObjHolder[buffObjectCnt].isUsed)
-            {
-                pTrLocal->flags =
-                CSL_FMK(UDMAP_TR_FLAGS_TYPE, (uint32_t)15U) |
-                CSL_FMK(UDMAP_TR_FLAGS_STATIC, (uint32_t)0U) |
-                CSL_FMK(UDMAP_TR_FLAGS_EOL, (uint32_t)0U) |
-                CSL_FMK(UDMAP_TR_FLAGS_EVENT_SIZE, CSL_UDMAP_TR_FLAGS_EVENT_SIZE_COMPLETION) |
-                CSL_FMK(UDMAP_TR_FLAGS_TRIGGER0, CSL_UDMAP_TR_FLAGS_TRIGGER_NONE) |
-                CSL_FMK(UDMAP_TR_FLAGS_TRIGGER0_TYPE, CSL_UDMAP_TR_FLAGS_TRIGGER_TYPE_ALL) |
-                CSL_FMK(UDMAP_TR_FLAGS_TRIGGER1, CSL_UDMAP_TR_FLAGS_TRIGGER_NONE) |
-                CSL_FMK(UDMAP_TR_FLAGS_TRIGGER1_TYPE, CSL_UDMAP_TR_FLAGS_TRIGGER_TYPE_ALL) |
-                CSL_FMK(UDMAP_TR_FLAGS_CMD_ID, (uint32_t)0x25U) |
-                CSL_FMK(UDMAP_TR_FLAGS_SA_INDIRECT, (uint32_t)0U) |
-                CSL_FMK(UDMAP_TR_FLAGS_DA_INDIRECT, (uint32_t)0U) |
-                CSL_FMK(UDMAP_TR_FLAGS_EOP, (uint32_t)1U);
-
-                pTrLocal->icnt0 = (uint16_t)bufferObjHolder[buffObjectCnt].length;
-                pTrLocal->icnt1 = 1U;
-                pTrLocal->icnt2 = 1U;
-                pTrLocal->icnt3 = 1U;
-                pTrLocal->dim1 = (int32_t)pTrLocal->icnt0;
-                pTrLocal->dim2 = 0;
-                pTrLocal->dim3 = 0;
-                pTrLocal->addr = (uint64_t)bufferObjHolder[buffObjectCnt].srcPtr;
-                pTrLocal->fmtflags = 0x00000000U; /* Linear addressing, 1 byte per elem */
-                pTrLocal->dicnt0 = (uint16_t)bufferObjHolder[buffObjectCnt].length;
-                pTrLocal->dicnt1 = 1U;
-                pTrLocal->dicnt2 = 1U;
-                pTrLocal->dicnt3 = 1U;
-                pTrLocal->ddim1 = (int32_t)pTrLocal->dicnt0;
-                pTrLocal->ddim2 = 0;
-                pTrLocal->ddim3 = 0;
-                pTrLocal->daddr = (uint64_t)bufferObjHolder[buffObjectCnt].dstPtr;
-
-                pTrLocal++;
-            }
-        }
-
-        /* Clear TR response memory */
-        *(uint32_t*) instObj->configTxTrRespMem = 0xFFFFFFFFU;
-
-        /* Write back contents into memory after changing */
-        VhwaAl_Cache_Wb(pTrMem, VHWA_M2M_VISS_UDMA_CONFIG_TRPD_SIZE, CacheP_TYPE_L1D);
-
         /* Submit linked list of UDMA TR's to ring queue */
-        status = Vhwa_m2mVissSubmitConfigUDMARing(instObj, instObj->configTxTrMem);
+        status = Vhwa_m2mVissSubmitConfigUDMARing(instObj, hObj->readbackTxTrMem);
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
         <justification start>
@@ -7281,17 +7121,121 @@ int32_t Vhwa_m2mVissSubmitReadbackUDMABuf(Vhwa_M2mVissInstObj *instObj,
             }
             /* LDRA_JUSTIFY_END */
         }
-        /* LDRA_JUSTIFY_START
-        <metric start> branch <metric end>
-        <justification start>
-        Rationale: The component level negative test framework and test applications cannot reach this portion.
-        The parameters are pre-validated by the caller before the control reaches here.
-        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
-        However, due to the stated rationale, this is not tested.
-        <justification end> */
-        if (NULL != hObj)
-        /* LDRA_JUSTIFY_END */
+    }
+
+    return status;
+}
+
+int32_t Vhwa_m2mVissSetReadbackTransferRecord(const Vhwa_M2mVissInstObj *instObj,
+    Vhwa_M2mVissHandleObj *hObj)
+{
+    int32_t status = FVID2_SOK;
+    uint8_t *pTrMem = NULL;
+    CSL_UdmapCppi5TRPD *pTrpd = NULL;
+    uint32_t packetInfoSize;
+    uint32_t numOfTr = 0;
+    uint32_t buffObjectCnt = 0;
+    Vhwa_M2mVissConfigBuffobj *bufferObjHolder = NULL;
+    CSL_UdmapTR15 *pTrLocal = NULL;
+
+    if ((instObj == NULL) || (hObj == NULL) ||
+        (NULL == hObj->readbackBufferInfo.bufferPtr) ||
+        (NULL == hObj->readbackTxTrMem))
+    {
+        status = FVID2_EBADARGS;
+        GT_0trace(VhwaVissTrace, GT_ERR,
+                "SetReadbackTransferRecord: Invalid NULL pointer !!\n");
+    }
+    else
+    {
+        VhwaAl_Cache_Wb(hObj->readbackBufferInfo.bufferPtr, hObj->readbackBufferInfo.length, CacheP_TYPE_L1D);
+
+        /* Prepare UDMA TRPD for register readback */
+        packetInfoSize = sizeof(CSL_UdmapTR15);
+        pTrMem = hObj->readbackTxTrMem;
+        pTrpd = (CSL_UdmapCppi5TRPD*) pTrMem;
+
+        /* Invalidate cache before changing contents */
+        VhwaAl_Cache_Inv(pTrMem, VHWA_M2M_VISS_UDMA_CONFIG_TRPD_SIZE, CacheP_TYPE_L1D);
+
+        /* Setup buffer object holder for readback */
+        bufferObjHolder = hObj->readbackBufferObjHolder;
+        Vhwa_m2mVissUpdateReadbackBufObj(hObj);
+        numOfTr = Vhwa_m2mVissCalcNumOfTrsForReadback(hObj);
+        if (numOfTr > VHWA_M2M_VISS_UDMA_CONFIG_NUM_TR_DESC)
         {
+            status = FVID2_EFAIL;
+            GT_1trace(VhwaVissTrace, GT_ERR,
+                    "SetReadbackTransferRecord: numOfTr (%d) exceeds max !!\n", numOfTr);
+        }
+        else
+        {
+            /* Make TRPD */
+            Vhwa_m2mVissmakeTrpd(pTrpd, UDMA_TR_TYPE_15, numOfTr, instObj->configCqRingNum);
+            pTrLocal = (CSL_UdmapTR15*) ((uint32_t) pTrMem + packetInfoSize);
+
+            uint32_t respMemOffset = packetInfoSize * (numOfTr + 1U);
+            if ((respMemOffset + sizeof(uint32_t)) > VHWA_M2M_VISS_UDMA_CONFIG_TRPD_SIZE)
+            {
+                status = FVID2_EFAIL;
+                GT_0trace(VhwaVissTrace, GT_ERR,
+                        "SetReadbackTransferRecord: Buffer overflow !!\n");
+            }
+            else
+            {
+                hObj->readbackTxTrRespMem = (uint8_t*) ((uint32_t) pTrMem + respMemOffset);
+            }            
+        }
+
+        if (FVID2_SOK == status)
+        {
+            /* Setup Transfer Records for each buffer object */
+            for (buffObjectCnt = 0; buffObjectCnt < (uint32_t)BUFF_ID_MAXBUFID; buffObjectCnt++)
+            {
+                if (true == bufferObjHolder[buffObjectCnt].isUsed)
+                {
+                    pTrLocal->flags =
+                    CSL_FMK(UDMAP_TR_FLAGS_TYPE, (uint32_t)15U) |
+                    CSL_FMK(UDMAP_TR_FLAGS_STATIC, (uint32_t)0U) |
+                    CSL_FMK(UDMAP_TR_FLAGS_EOL, (uint32_t)0U) |
+                    CSL_FMK(UDMAP_TR_FLAGS_EVENT_SIZE, CSL_UDMAP_TR_FLAGS_EVENT_SIZE_COMPLETION) |
+                    CSL_FMK(UDMAP_TR_FLAGS_TRIGGER0, CSL_UDMAP_TR_FLAGS_TRIGGER_NONE) |
+                    CSL_FMK(UDMAP_TR_FLAGS_TRIGGER0_TYPE, CSL_UDMAP_TR_FLAGS_TRIGGER_TYPE_ALL) |
+                    CSL_FMK(UDMAP_TR_FLAGS_TRIGGER1, CSL_UDMAP_TR_FLAGS_TRIGGER_NONE) |
+                    CSL_FMK(UDMAP_TR_FLAGS_TRIGGER1_TYPE, CSL_UDMAP_TR_FLAGS_TRIGGER_TYPE_ALL) |
+                    CSL_FMK(UDMAP_TR_FLAGS_CMD_ID, (uint32_t)0x25U) |
+                    CSL_FMK(UDMAP_TR_FLAGS_SA_INDIRECT, (uint32_t)0U) |
+                    CSL_FMK(UDMAP_TR_FLAGS_DA_INDIRECT, (uint32_t)0U) |
+                    CSL_FMK(UDMAP_TR_FLAGS_EOP, (uint32_t)1U);
+
+                    pTrLocal->icnt0 = (uint16_t)bufferObjHolder[buffObjectCnt].length;
+                    pTrLocal->icnt1 = 1U;
+                    pTrLocal->icnt2 = 1U;
+                    pTrLocal->icnt3 = 1U;
+                    pTrLocal->dim1 = (int32_t)pTrLocal->icnt0;
+                    pTrLocal->dim2 = 0;
+                    pTrLocal->dim3 = 0;
+                    pTrLocal->addr = (uint64_t)bufferObjHolder[buffObjectCnt].srcPtr;
+                    pTrLocal->fmtflags = 0x00000000U; /* Linear addressing, 1 byte per elem */
+                    pTrLocal->dicnt0 = (uint16_t)bufferObjHolder[buffObjectCnt].length;
+                    pTrLocal->dicnt1 = 1U;
+                    pTrLocal->dicnt2 = 1U;
+                    pTrLocal->dicnt3 = 1U;
+                    pTrLocal->ddim1 = (int32_t)pTrLocal->dicnt0;
+                    pTrLocal->ddim2 = 0;
+                    pTrLocal->ddim3 = 0;
+                    pTrLocal->daddr = (uint64_t)bufferObjHolder[buffObjectCnt].dstPtr;
+
+                    pTrLocal++;
+                }
+            }
+
+            /* Clear TR response memory */
+            *(uint32_t*) hObj->readbackTxTrRespMem = 0xFFFFFFFFU;
+
+            /* Write back contents into memory after changing */
+            VhwaAl_Cache_Wb(pTrMem, VHWA_M2M_VISS_UDMA_CONFIG_TRPD_SIZE, CacheP_TYPE_L1D);
+
             VhwaAl_Cache_Inv(hObj->readbackBufferInfo.bufferPtr,
                 hObj->readbackBufferInfo.length, CacheP_TYPE_L1D);
         }
@@ -7549,3 +7493,46 @@ int32_t Vhwa_M2mVissUpdateBuffers(const Vhwa_M2mVissHandleObj *hObj)
     return status;
 }
 #endif
+
+int32_t Vhwa_m2mVissGetSl2Info(Vhwa_M2mVissSl2Info *sl2Info)
+{
+    int32_t retVal = FVID2_SOK;
+    Vhwa_M2mVissInstObj *instObj = &gM2mVissInstObj[0U];
+
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+	Rationale: The component level negative test framework and test applications cannot reach this portion.
+	The parameters are pre-validated by the caller before the control reaches here.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
+    if ((NULL == instObj) || (NULL == sl2Info))
+    {
+        retVal = FVID2_EBADARGS;
+    }
+    /* LDRA_JUSTIFY_END */
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    This failure case is out of scope for the imaging test framework.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
+    else if ((uint32_t)UFALSE == instObj->isSl2AllocDone)
+    {
+        /* SL2 memory not allocated yet */
+        GT_0trace(VhwaVissTrace, GT_ERR,
+            "SL2 Memory is not allocated. Call Vhwa_m2mVissAllocSl2() first.\n");
+        retVal = FVID2_EFAIL;
+    }
+    /* LDRA_JUSTIFY_END */
+    else
+    {
+        sl2Info->sl2Addr = instObj->sl2Addr;
+        sl2Info->sl2Size = instObj->sl2Size;
+    }
+
+    return retVal;
+}

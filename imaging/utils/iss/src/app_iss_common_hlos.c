@@ -148,6 +148,11 @@
 #include <dcc_2a_ub9xx_raw_test_pattern.h>
 #endif /* ENABLE_2A */
 
+#if defined(PC)
+#ifndef appLogPrintf
+    #define appLogPrintf(...) printf(__VA_ARGS__)
+    #endif
+#endif
 
 #ifdef VPAC3L
 static uint8_t  dcc_viss_ov2312[DCC_VISS_OV2312_DCC_CFG_NUM_ELEM] = DCC_VISS_OV2312DCC_CFG;

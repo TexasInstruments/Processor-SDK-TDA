@@ -246,21 +246,21 @@ vx_status appDmpacFirewallDisable(
     uint8_t regionIdx);
 
 /**
- * \brief Disable all VPAC SL2 firewall regions for LBIST
+ * \brief Disable all VPAC SL2 firewall regions for BIST
  *
- * Disables all SL2 firewall regions for a specific VPAC instance before LBIST.
- * LBIST (Logic Built-In Self Test) requires unrestricted SL2 access and
+ * Disables all SL2 firewall regions for a specific VPAC instance before BIST.
+ * BIST (Built-In Self Test for LBIST or PBIST) requires unrestricted SL2 access and
  * performs hardware reset which clears firewall configuration.
  *
  * CRITICAL: This function disables hardware firewalls but PRESERVES state flags.
  * The flags remain set to indicate which firewalls should be re-enabled after
- * LBIST, ensuring correct state restoration.
+ * BIST, ensuring correct state restoration.
  *
  * Disables enabled regions for the specified VPAC: LDC, MSC, NF, VISS
  *
- * LBIST Usage Flow:
- * 1. Call this function before LBIST - disables HW, preserves flags
- * 2. Run LBIST (hardware powers down/resets)
+ * BIST Usage Flow:
+ * 1. Call this function before BIST - disables HW, preserves flags
+ * 2. Run BIST (hardware powers down/resets)
  * 3. Use appVpacFirewallShouldEnable() to query which firewalls to restore
  * 4. Re-enable only firewalls where flag = 1
  *
@@ -274,21 +274,21 @@ vx_status appDmpacFirewallDisable(
 vx_status appVpacFirewallDisableAll(uint8_t vpacInstId);
 
 /**
- * \brief Disable all DMPAC SL2 firewall regions for LBIST
+ * \brief Disable all DMPAC SL2 firewall regions for BIST
  *
- * Disables all SL2 firewall regions for DMPAC before LBIST.
- * LBIST (Logic Built-In Self Test) requires unrestricted SL2 access and
+ * Disables all SL2 firewall regions for DMPAC before BIST.
+ * BIST (Built-In Self Test for LBIST or PBIST) requires unrestricted SL2 access and
  * performs hardware reset which clears firewall configuration.
  *
  * CRITICAL: This function disables hardware firewalls but PRESERVES state flags.
  * The flags remain set to indicate which firewalls should be re-enabled after
- * LBIST, ensuring correct state restoration.
+ * BIST, ensuring correct state restoration.
  *
  * Disables enabled DMPAC regions: DOF_MAIN, DOF_REFERENCE, SDE
  *
- * LBIST Usage Flow:
- * 1. Call this function before LBIST - disables HW, preserves flags
- * 2. Run LBIST (hardware powers down/resets)
+ * BIST Usage Flow:
+ * 1. Call this function before BIST - disables HW, preserves flags
+ * 2. Run BIST (hardware powers down/resets)
  * 3. Use appDmpacFirewallShouldEnable() to query which firewalls to restore
  * 4. Re-enable only firewalls where flag = 1
  *
@@ -302,38 +302,38 @@ vx_status appVpacFirewallDisableAll(uint8_t vpacInstId);
 vx_status appDmpacFirewallDisableAll(uint8_t dmpacInstId);
 
 /**
- * \brief Query if VPAC firewall region should be enabled after LBIST
+ * \brief Query if VPAC firewall region should be enabled after BIST
  *
  * Checks the state tracking to determine if a VPAC firewall region was
- * enabled before LBIST and should be re-enabled during reconfiguration.
+ * enabled before BIST and should be re-enabled during reconfiguration.
  *
  * Use this in appVhwaVpacRemoteServiceInit() to conditionally enable firewalls:
- * - If returns 1: Enable firewall (was enabled before LBIST)
- * - If returns 0: Skip firewall enable (was disabled before LBIST)
+ * - If returns 1: Enable firewall (was enabled before BIST)
+ * - If returns 0: Skip firewall enable (was disabled before BIST)
  *
  * \param vpacInstId VPAC instance ID (0 for VPAC0, 1 for VPAC1 on J784S4)
  * \param regionIdx  Firewall region index (0-3 for LDC/MSC/NF/VISS)
  *
- * \return 1 if firewall should be enabled (was enabled before LBIST)
- *         0 if firewall should NOT be enabled (was disabled before LBIST)
+ * \return 1 if firewall should be enabled (was enabled before BIST)
+ *         0 if firewall should NOT be enabled (was disabled before BIST)
  */
 uint8_t appVpacFirewallShouldEnable(uint8_t vpacInstId, uint8_t regionIdx);
 
 /**
- * \brief Query if DMPAC firewall region should be enabled after LBIST
+ * \brief Query if DMPAC firewall region should be enabled after BIST
  *
  * Checks the state tracking to determine if a DMPAC firewall region was
- * enabled before LBIST and should be re-enabled during reconfiguration.
+ * enabled before BIST and should be re-enabled during reconfiguration.
  *
  * Use this in appVhwaRemoteServiceInit() to conditionally enable firewalls:
- * - If returns 1: Enable firewall (was enabled before LBIST)
- * - If returns 0: Skip firewall enable (was disabled before LBIST)
+ * - If returns 1: Enable firewall (was enabled before BIST)
+ * - If returns 0: Skip firewall enable (was disabled before BIST)
  *
  * \param dmpacInstId DMPAC instance ID (0 for DMPAC0, only 1 DMPAC exists)
  * \param regionIdx   Firewall region index (0-2 for DOF_MAIN/DOF_REF/SDE)
  *
- * \return 1 if firewall should be enabled (was enabled before LBIST)
- *         0 if firewall should NOT be enabled (was disabled before LBIST)
+ * \return 1 if firewall should be enabled (was enabled before BIST)
+ *         0 if firewall should NOT be enabled (was disabled before BIST)
  */
 uint8_t appDmpacFirewallShouldEnable(uint8_t dmpacInstId, uint8_t regionIdx);
 

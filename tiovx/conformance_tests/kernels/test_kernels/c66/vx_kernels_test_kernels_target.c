@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -67,13 +67,16 @@
 
 void tivxAddTargetKernelTiovxOverhead(void);
 void tivxAddTargetKernelTestTarget(void);
+void tivxAddTargetKernelTestNot(void);
 
 void tivxRemoveTargetKernelTiovxOverhead(void);
 void tivxRemoveTargetKernelTestTarget(void);
+void tivxRemoveTargetKernelTestNot(void);
 
 static Tivx_Target_Kernel_List  gTivx_target_kernel_list[] = {
     {&tivxAddTargetKernelTestTarget, &tivxRemoveTargetKernelTestTarget},
     {&tivxAddTargetKernelTiovxOverhead, &tivxRemoveTargetKernelTiovxOverhead},
+    {&tivxAddTargetKernelTestNot, &tivxRemoveTargetKernelTestNot}
 };
 
 void tivxRegisterTestKernelsTargetDspKernels(void)

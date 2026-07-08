@@ -1211,7 +1211,7 @@ Int32 Vhwa_m2mNfControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                     <justification end> */
                     /* Update golden memory if config register validation is enabled */
 
-                    if ((FVID2_SOK == status) && ((uint32_t)UTRUE == hObj->enableConfigRegValidate))
+                    if ((FVID2_SOK == status) && (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
                     /* LDRA_JUSTIFY_END */
                     {
                         VhwaVpacNfSocReadBack *goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
@@ -1440,16 +1440,18 @@ Int32 Vhwa_m2mNfControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if ((NULL != handle) && (NULL != cmdArgs))
                 /* LDRA_JUSTIFY_END */
                 {
-                    uint32_t *enableFlag = (uint32_t *)cmdArgs;
-                    if ((uint32_t)1U == *enableFlag)
+                    uint32_t modeVal = *((uint32_t *)cmdArgs);
+                    if (modeVal > VHWA_SAFETY_MODE_CONTINUOUS)
                     {
-                        hObj->enableReconfigReinitReg = 1U;
+                        GT_1trace(VhwaNfTrace, GT_ERR,
+                            "Invalid safety mode value %u for VHWA_M2M_IOCTL_NF_ENABLE_RECONFIG_REINIT_REG !!\n", modeVal);
+                        status = FVID2_EBADARGS;
                     }
                     else
                     {
-                        hObj->enableReconfigReinitReg = 0U;
+                        hObj->enableReconfigReinitReg = modeVal;
+                        status = FVID2_SOK;
                     }
-                    status = FVID2_SOK;
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement <metric end>
@@ -1480,18 +1482,20 @@ Int32 Vhwa_m2mNfControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if ((NULL != handle) && (NULL != cmdArgs))
                 /* LDRA_JUSTIFY_END */
                 {
-                    uint32_t *enableFlag = (uint32_t *)cmdArgs;
-                    cookie = HwiP_disable();
-                    if ((uint32_t)1U == *enableFlag)
+                    uint32_t modeVal = *((uint32_t *)cmdArgs);
+                    if (modeVal > VHWA_SAFETY_MODE_CONTINUOUS)
                     {
-                        hObj->enableStatusRegValidate = (uint32_t)UTRUE;
+                        GT_1trace(VhwaNfTrace, GT_ERR,
+                            "Invalid safety mode value %u for VHWA_M2M_IOCTL_NF_ENABLE_STATUS_REG_VALIDATE !!\n", modeVal);
+                        status = FVID2_EBADARGS;
                     }
                     else
                     {
-                        hObj->enableStatusRegValidate = (uint32_t)UFALSE;
+                        cookie = HwiP_disable();
+                        hObj->enableStatusRegValidate = modeVal;
+                        HwiP_restore(cookie);
+                        status = FVID2_SOK;
                     }
-                    HwiP_restore(cookie);
-                    status = FVID2_SOK;
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
@@ -1518,7 +1522,7 @@ Int32 Vhwa_m2mNfControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if (NULL != handle)
                 /* LDRA_JUSTIFY_END */
                 {
-                    if (UTRUE == hObj->enableStatusRegValidate)
+                    if (VHWA_SAFETY_MODE_DISABLED != hObj->enableStatusRegValidate)
                     {
                         status = Vhwa_m2mNfStatusRegValidate(&hObj->nfStatusRegs, &instObj->socInfo);
                         /* LDRA_JUSTIFY_START
@@ -1533,28 +1537,28 @@ Int32 Vhwa_m2mNfControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                         }
                         /* LDRA_JUSTIFY_END */
                     }
-                    if (UTRUE == hObj->enableConfigRegValidate)
+                    if (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)
                     {
                         /* Readback config registers */
                         status = Vhwa_m2mNfConfigRegReadback(hObj, instObj);
                     }
 
                     /* Release the hardware lock after the configReg readback or statusReg */
-                    if ((UTRUE == hObj->enableStatusRegValidate) ||
-                        (UTRUE == hObj->enableConfigRegValidate))
+                    if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableStatusRegValidate) ||
+                        (VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate))
                     {
                         Vhwa_commonHwaLockRelease(instObj->hwaLockIdx);
                     }
 
-                    if (UTRUE == hObj->enableStatusRegValidate)
+                    /* Reset the statusReg validate flag only in one-shot mode */
+                    if (VHWA_SAFETY_MODE_ONESHOT == hObj->enableStatusRegValidate)
                     {
-                        /* Reset the statusReg validate flag */
                         cookie = HwiP_disable();
-                        hObj->enableStatusRegValidate = (uint32_t)UFALSE;
+                        hObj->enableStatusRegValidate = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
                         HwiP_restore(cookie);
                     }
 
-                    if ((UTRUE == hObj->enableConfigRegValidate) && (FVID2_SOK == status))
+                    if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (FVID2_SOK == status))
                     {
                         /* Callback with goldenReg and ReadBackReg pointer to application for memory comparison */
                         /* LDRA_JUSTIFY_START
@@ -1602,10 +1606,13 @@ Int32 Vhwa_m2mNfControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                         }
                         /* LDRA_JUSTIFY_END */
 
-                        /* Disable Interrupt since the below flag is accessed in the ISR and reset the configReg validate flag */
-                        cookie = HwiP_disable();
-                        hObj->enableConfigRegValidate = (uint32_t)UFALSE;
-                        HwiP_restore(cookie);
+                        /* Reset the configReg validate flag only in one-shot mode */
+                        if (VHWA_SAFETY_MODE_ONESHOT == hObj->enableConfigRegValidate)
+                        {
+                            cookie = HwiP_disable();
+                            hObj->enableConfigRegValidate = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
+                            HwiP_restore(cookie);
+                        }
                     }
                 }
                 /* LDRA_JUSTIFY_START
@@ -1635,18 +1642,20 @@ Int32 Vhwa_m2mNfControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 if ((NULL != handle) && (NULL != cmdArgs))
                 /* LDRA_JUSTIFY_END */
                 {
-                    uint32_t *enableFlag = (uint32_t *)cmdArgs;
-                    cookie = HwiP_disable();
-                    if ((uint32_t)1U == *enableFlag)
+                    uint32_t modeVal = *((uint32_t *)cmdArgs);
+                    if (modeVal > VHWA_SAFETY_MODE_CONTINUOUS)
                     {
-                        hObj->enableConfigRegValidate = (uint32_t)UTRUE;
+                        GT_1trace(VhwaNfTrace, GT_ERR,
+                            "Invalid safety mode value %u for VHWA_M2M_IOCTL_NF_ENABLE_CONFIG_REG_READBACK !!\n", modeVal);
+                        status = FVID2_EBADARGS;
                     }
                     else
                     {
-                        hObj->enableConfigRegValidate = (uint32_t)UFALSE;
+                        cookie = HwiP_disable();
+                        hObj->enableConfigRegValidate = modeVal;
+                        HwiP_restore(cookie);
+                        status = FVID2_SOK;
                     }
-                    HwiP_restore(cookie);
-                    status = FVID2_SOK;
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
@@ -2074,14 +2083,18 @@ Int32 Vhwa_m2mNfProcessReq(Fdrv_Handle handle, Fvid2_FrameList *inFrmList,
             }
 
             /* Invoke the reconfig-MMR if enableReconfigReinitReg enabled for the current handle */
-            if (UTRUE == hObj->enableReconfigReinitReg)
+            if (VHWA_SAFETY_MODE_DISABLED != hObj->enableReconfigReinitReg)
             {
                 status = Vhwa_m2mNfReconfigReinitReg(instObj, hObj, qObj);
-                hObj->enableReconfigReinitReg = (uint32_t)UFALSE;
+                /* Reset only in one-shot mode */
+                if (VHWA_SAFETY_MODE_ONESHOT == hObj->enableReconfigReinitReg)
+                {
+                    hObj->enableReconfigReinitReg = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
+                }
             }
 
             /* Update the NfStatusRegisterGroup with valid status register values for dynamic registers */
-            if ((uint32_t)UTRUE == hObj->enableStatusRegValidate)
+            if (VHWA_SAFETY_MODE_DISABLED != hObj->enableStatusRegValidate)
             {
                 status = vhwaM2mNfUpdateStatusRegGroup(hObj);
             }
@@ -2250,8 +2263,8 @@ Int32 Vhwa_m2mNfGetProcessReq(Fdrv_Handle handle,
             /* LDRA_JUSTIFY_END */
         }
         /* New request can now be submitted to the NF IP for non-readBack of StatusRegisters/ConfigurationRegisters enabled frames */
-        if ((UFALSE == hObj->enableStatusRegValidate) &&
-            (UFALSE == hObj->enableConfigRegValidate))
+        if ((VHWA_SAFETY_MODE_DISABLED == hObj->enableStatusRegValidate) &&
+            (VHWA_SAFETY_MODE_DISABLED == hObj->enableConfigRegValidate))
         {
             Vhwa_commonHwaLockRelease(instObj->hwaLockIdx);
         }
@@ -2459,7 +2472,13 @@ int32_t Vhwa_m2mNfReInit(void)
     if ((uint32_t)UTRUE == instObj->isRegistered)
     /* LDRA_JUSTIFY_END_DISABLED */
     {
-        status = Vhwa_m2mNfUdmaDeInit(instObj);
+
+        status = Vhwa_m2mNfStopCh(instObj);
+
+        if(FVID2_SOK == status)
+        {     
+            status = Vhwa_m2mNfUdmaDeInit(instObj);
+        }
 
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
@@ -2586,8 +2605,8 @@ static Vhwa_M2mNfHandleObj *Vhwa_nfAllocHdlObj(const Vhwa_M2mNfInstObj *instObj)
             hObj = &gM2mNfHandleObj[cnt];
             Fvid2Utils_memset(hObj, 0x0, sizeof(Vhwa_M2mNfHandleObj));
             gM2mNfHandleObj[cnt].isUsed = (uint32_t)UTRUE;
-            gM2mNfHandleObj[cnt].enableReconfigReinitReg = (uint32_t)UFALSE;
-            gM2mNfHandleObj[cnt].enableStatusRegValidate = (uint32_t)UFALSE;
+            gM2mNfHandleObj[cnt].enableReconfigReinitReg = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
+            gM2mNfHandleObj[cnt].enableStatusRegValidate = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
             hObj->hIdx = cnt;
             break;
         }
@@ -3370,7 +3389,7 @@ int32_t Vhwa_m2mNfSetConfigInHW(const Vhwa_M2mNfInstObj *instObj,
     /* Configure NF Core */
     CSL_nfSetConfig(instObj->socInfo.nfRegs,
                 &hObj->nfCfg[itrCnt].nfCfg);
-    if (((uint32_t)UTRUE == hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
+    if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
     {
         CSL_nfSetConfig(&goldenRegVal->nfRegs, &hObj->nfCfg[itrCnt].nfCfg);
     }
@@ -3393,7 +3412,7 @@ int32_t Vhwa_m2mNfSetConfigInHW(const Vhwa_M2mNfInstObj *instObj,
         Rationale: The component level negative test framework and test applications cannot reach this portion. The test framework does not support the configuration required to trigger this error scenario.
         Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application. This behaviour is part of the application design. An error print statement can be added in a future release if required.
         <justification end> */
-        if (((uint32_t)UTRUE == hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
+        if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
         /* LDRA_JUSTIFY_END */
         {
             status = CSL_lseSetConfig(&goldenRegVal->nfLseRegs, &hObj->lseCfg[itrCnt]);
@@ -3457,7 +3476,7 @@ int32_t Vhwa_m2mNfSetFrameSize(Vhwa_M2mNfInstObj *instObj,
     Rationale: The component level negative test framework and test applications cannot reach this portion. The parameters are pre-validated by the caller before the control reaches here.
     Effect on this unit: If control reaches here, the code base is expected to prevent undefined behaviour by avoiding dereferencing a NULL pointer. However, due to the stated rationale, this is not tested.
     <justification end> */
-    if (((uint32_t)UTRUE == hObj->enableConfigRegValidate) && (NULL != hObj->configRegMemPrms.configGoldenRegPtr))
+    if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (NULL != hObj->configRegMemPrms.configGoldenRegPtr))
     /* LDRA_JUSTIFY_END */
     {
         CSL_nfUpdateConfig(&hObj->configRegMemPrms.configGoldenRegPtr->nfRegs, &hObj->nfCfg[itrCnt].nfCfg);
@@ -3472,7 +3491,7 @@ int32_t Vhwa_m2mNfSetFrameSize(Vhwa_M2mNfInstObj *instObj,
     Rationale: The component level negative test framework and test applications cannot reach this portion. The parameters are pre-validated by the caller before the control reaches here.
     Effect on this unit: If control reaches here, the code base is expected to prevent undefined behaviour by avoiding dereferencing a NULL pointer. However, due to the stated rationale, this is not tested.
     <justification end> */
-    if (((uint32_t)UTRUE == hObj->enableConfigRegValidate) && (NULL != hObj->configRegMemPrms.configGoldenRegPtr))
+    if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (NULL != hObj->configRegMemPrms.configGoldenRegPtr))
     /* LDRA_JUSTIFY_END */
     {
         /* LDRA_JUSTIFY_START
@@ -3548,7 +3567,7 @@ int32_t Vhwa_m2mNfSubmitRequest(Vhwa_M2mNfInstObj *instObj,
     Rationale: The component level negative test framework and test applications cannot reach this portion. The parameters are pre-validated by the caller before the control reaches here.
     Effect on this unit: If control reaches here, the code base is expected to prevent undefined behaviour by avoiding dereferencing a NULL pointer. However, due to the stated rationale, this is not tested.
     <justification end> */
-    if (((uint32_t)UTRUE == hObj->enableConfigRegValidate) && (goldenRegVal != NULL))
+    if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (goldenRegVal != NULL))
     /* LDRA_JUSTIFY_END */
     {
         retVal = vhwaM2mNfUpdateConfigRegGroup(goldenRegVal, instObj, hObj);
@@ -3735,7 +3754,7 @@ static int32_t Vhwa_m2mNfReconfigReinitReg(const Vhwa_M2mNfInstObj *instObj,
             Rationale: The component level negative test framework and test applications cannot reach this portion. The parameters are pre-validated by the caller before the control reaches here.
             Effect on this unit: If control reaches here, the code base is expected to prevent undefined behaviour by avoiding dereferencing a NULL pointer. However, due to the stated rationale, this is not tested.
             <justification end> */
-            if(((uint32_t)UTRUE == hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
+            if((VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (NULL != goldenRegVal))
             /* LDRA_JUSTIFY_END */
             {
                 CSL_vpacEnableModule(&goldenRegVal->vpacCntlRegs,

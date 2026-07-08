@@ -1062,6 +1062,10 @@ typedef struct
     
     uint32_t                enableReconfigReinitReg;
     /**< Flag to enable reconfiguration and reinitialization of registers. */
+    /* One-shot enable      - 1U
+    *  Continuous enable    - 2U
+    *  Disabled             - 0U
+    */
 
     uint32_t                enableStatusRegValidate;
     /**< Flag to enable status register validation */
@@ -1072,6 +1076,10 @@ typedef struct
      * after validation. Otherwise, there is a risk of continuous invocation
      * of Vhwa_m2mVissUpdateStatusRegGroup.
      */
+    /* One-shot enable      - 1U
+    *  Continuous enable    - 2U
+    *  Disabled             - 0U
+    */
 
     VissStatusRegisterGroup  statusRegs;
     /**< Holds the latest VISS, VPAC INTD, and LSE status register values for this handle */
@@ -1097,6 +1105,10 @@ typedef struct
      *    validation. Otherwise, there is a risk of continuous invocation of
      *    Vhwa_m2mVissUpdateConfigRegGroup.
      */
+    /* One-shot enable      - 1U
+    *  Continuous enable    - 2U
+    *  Disabled             - 0U
+    */
 
     Viss_ConfigRegValidateParams          configRegMemPrms;
     /**< Parameters for the config Reg memory compare */
@@ -1109,6 +1121,11 @@ typedef struct
 
     Vhwa_M2mVissConfigBuffobj   readbackBufferObjHolder[BUFF_ID_MAXBUFID];
     /* Readback buffer object holder */
+
+    uint8_t                     *readbackTxTrMem;
+    /**< Pointer to readback TX TR Descr Memory */
+    uint8_t                     *readbackTxTrRespMem;
+    /**< Pointer to readback TX TR response Memory */
 
 } Vhwa_M2mVissHandleObj;
 
@@ -1326,6 +1343,7 @@ int32_t Vhwa_m2mVissStartUtcCh(const Vhwa_M2mVissInstObj *instObj);
 int32_t Vhwa_m2mVissStartCh(const Vhwa_M2mVissInstObj *instObj);
 int32_t Vhwa_m2mVissStartConfigCh(const Vhwa_M2mVissInstObj *instObj);
 int32_t Vhwa_m2mVissStopCh(const Vhwa_M2mVissInstObj *instObj);
+int32_t Vhwa_m2mVissStopUtcCh(const Vhwa_M2mVissInstObj *instObj);
 
 int32_t Vhwa_m2mVissSubmitRing(Vhwa_M2mVissInstObj *instObj,
     Vhwa_M2mVissHandleObj *hObj);
@@ -1465,20 +1483,6 @@ int32_t Vhwa_m2mVissAcquireHwaLock(uint32_t semTimeout);
 
 #if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 /**
- * \brief Performs configuration register readback for VISS module.
- *
- * This function reads back the configuration registers from hardware and stores them
- * in the readback buffer. It also calls vhwaM2mVissUpdateConfigRegGroup to update
- * the golden register values with static configuration and HTS registers.
- *
- * \param hObj      Pointer to the VISS handle object.
- * \param instObj   Pointer to the VISS instance object.
- *
- * \return          Returns FVID2_SOK on success, or a negative error code on failure.
- */
-int32_t Vhwa_m2mVissConfigRegReadback(Vhwa_M2mVissHandleObj *hObj, Vhwa_M2mVissInstObj *instObj);
-
-/**
  * \brief Updates the configuration register group with current configuration values.
  *
  * This function updates the provided register structure with configuration values from
@@ -1492,11 +1496,15 @@ int32_t Vhwa_m2mVissConfigRegReadback(Vhwa_M2mVissHandleObj *hObj, Vhwa_M2mVissI
  * \return          Returns FVID2_SOK on success, or a negative error code on failure.
  */
 int32_t vhwaM2mVissUpdateConfigRegGroup(uint32_t *RegVal, Vhwa_M2mVissInstObj *instObj, Vhwa_M2mVissHandleObj *hObj);
-
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
+int32_t Vhwa_m2mVissInitReadbackTrMem(Vhwa_M2mVissHandleObj *hObj);
+#endif
 int32_t Vhwa_m2mVissSubmitReadbackUDMABuf(Vhwa_M2mVissInstObj *instObj,
-        Vhwa_M2mVissHandleObj *hObj);
+        const Vhwa_M2mVissHandleObj *hObj);
 uint32_t Vhwa_m2mVissCalcNumOfTrsForReadback(const Vhwa_M2mVissHandleObj *hObj);
 void Vhwa_m2mVissUpdateReadbackBufObj(Vhwa_M2mVissHandleObj *hObj);
+int32_t Vhwa_m2mVissSetReadbackTransferRecord(const Vhwa_M2mVissInstObj *instObj,
+    Vhwa_M2mVissHandleObj *hObj);
 #endif
 #ifdef __cplusplus
 }

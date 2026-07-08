@@ -75,6 +75,7 @@
 #include <utils/iss/include/app_iss.h>
 #include <inttypes.h>
 #include <dcc_ldc_multiRegion_imx390.h>
+#include <dcc_ldc_lut_imx390.h>
 
 #ifndef M_PI
 #define M_PIF   3.14159265358979323846f
@@ -859,6 +860,21 @@ typedef struct {
     char *target_string, *target_string_2;
 } ArgNegative;
 
+typedef struct {
+    const char* testName;
+    const char* target_string;
+    const char* target_string_2;
+    int lut_enabled;
+} ArgDccLut;
+
+typedef struct {
+    const char* testName;
+    const char* target_string;
+    const char* target_string_2;
+    int lut_enabled;
+    int enable_safety_mechanism;
+} ArgDccLutSafety;
+
 #define ADD_VX_BORDERS_WARP_AFFINE(testArgName, nextmacro, ...) \
     CT_EXPAND(nextmacro(testArgName "/VX_BORDER_UNDEFINED", __VA_ARGS__, { VX_BORDER_UNDEFINED, {{ 0 }} }))
 
@@ -896,6 +912,16 @@ typedef struct {
 
 #define PARAMETERS_SAFETY \
     CT_GENERATE_PARAMETERS("lena", ADD_SIZE_SMALL_SET, ADD_VX_BORDERS_WARP_AFFINE, ADD_VX_INTERPOLATION_TYPE_BILINEAR, ADD_VX_MATRIX_PARAM_WARP_AFFINE, ADD_VX_INPUT_MODES_LENA, ADD_VX_OUTPUT_MODES, ADD_VX_MESH_MODES, ADD_SAFETY_MECHANISM, ADD_SET_TARGET_PARAMETERS_MULTI_INST, ARG, warp_affine_read_image_8u, "lena.bmp", 0, 0)
+
+#define ADD_LUT_ENABLED(testArgName, nextmacro, ...) \
+    CT_EXPAND(nextmacro(testArgName "/lut_enabled=off", __VA_ARGS__, 0)), \
+    CT_EXPAND(nextmacro(testArgName "/lut_enabled=on", __VA_ARGS__, 1))
+
+#define SET_NODE_TARGET_PARAMETERS_LUT \
+    CT_GENERATE_PARAMETERS("target", ADD_SET_TARGET_PARAMETERS, ADD_LUT_ENABLED, ARG)
+
+#define SET_NODE_TARGET_PARAMETERS_LUT_SAFETY \
+    CT_GENERATE_PARAMETERS("target", ADD_SET_TARGET_PARAMETERS, ADD_LUT_ENABLED, ADD_SAFETY_MECHANISM, ARG)
 
 #define ADD_VX_IN_FORMATS(testArgName, nextmacro, ...) \
     CT_EXPAND(nextmacro(testArgName "/VX_DF_IMAGE_U8", __VA_ARGS__, VX_DF_IMAGE_U8)), \
@@ -1700,6 +1726,510 @@ TEST_WITH_ARG(tivxHwaVpacLdc, testGraphProcessingSafety, ArgSafety,
 }
 #endif
 
+#ifndef x86_64
+TEST_WITH_ARG(tivxHwaVpacLdc, testGraphProcessingDccWithLut, ArgDccLut, SET_NODE_TARGET_PARAMETERS_LUT)
+{
+    vx_context context = context_->vx_context_;
+    vx_image input = 0, output = 0;
+    vx_image output_lut = 0;
+    vx_user_data_object param_obj;
+    vx_graph graph = 0;
+    vx_node node = 0;
+    tivx_vpac_ldc_params_t params;
+
+    vx_user_data_object dcc_param_ldc = NULL;
+    const vx_char dcc_ldc_user_data_object_name[] = "dcc_ldc";
+    vx_size dcc_buff_size = 1;
+    vx_map_id dcc_ldc_buf_map_id;
+    uint8_t * dcc_ldc_buf;
+    int32_t dcc_status;
+    uint32_t sensor_dcc_id;
+    uint32_t sensor_dcc_mode;
+    char *sensor_name = NULL;
+    char *file_name = NULL;
+    char file[MAXPATHLENGTH];
+    uint32_t checksum_actual;
+    /* Expected checksums: [0]=1st output Luma, [1]=1st output Chroma,
+     *                     [2]=2nd output (LUT) Luma, [3]=2nd output (LUT) Chroma */
+    uint32_t checksum_expected[4] = {0x5c06583a, 0x3bb3bfed, 0x11617b52, 0x77d7e1ac};
+    size_t sz;
+    vx_rectangle_t rect;
+    char output_file[MAXPATHLENGTH];
+
+    sensor_name = SENSOR_SONY_IMX390_UB953_D3;
+    sensor_dcc_mode = 0;
+    sensor_dcc_id = 390;
+    file_name = "psdkra/app_single_cam/in0.raw";
+
+    if (NULL != arg_->target_string)
+    {
+        ASSERT(vx_true_e == tivxIsTargetEnabled(arg_->target_string));
+    }
+    if (NULL != arg_->target_string_2)
+    {
+        ASSERT(vx_true_e == tivxIsTargetEnabled(arg_->target_string_2));
+    }
+
+    {
+        tivxHwaLoadKernels(context);
+        CT_RegisterForGarbageCollection(context, ct_teardown_hwa_kernels, CT_GC_OBJECT);
+
+        ASSERT_VX_OBJECT(graph = vxCreateGraph(context), VX_TYPE_GRAPH);
+
+        ASSERT_VX_OBJECT(input = vxCreateImage(context, 1920, 1080, TIVX_DF_IMAGE_NV12_P12), VX_TYPE_IMAGE);
+        ASSERT_VX_OBJECT(output = vxCreateImage(context, 1920, 1080, TIVX_DF_IMAGE_NV12_P12), VX_TYPE_IMAGE);
+
+        sz = snprintf(file, MAXPATHLENGTH, "%s/%s", ct_get_test_file_path(), file_name);
+        ASSERT_(return, (sz < MAXPATHLENGTH));
+
+        VX_CALL(readNV12P12Input(file, input));
+
+        tivx_vpac_ldc_params_init(&params);
+        params.luma_interpolation_type = 1;
+        params.dcc_camera_id = sensor_dcc_id;
+
+        ASSERT_VX_OBJECT(param_obj = vxCreateUserDataObject(context, "tivx_vpac_ldc_params_t",
+                                                            sizeof(tivx_vpac_ldc_params_t), NULL), (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+        VX_CALL(vxCopyUserDataObject(param_obj, 0, sizeof(tivx_vpac_ldc_params_t), &params, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
+
+        /* Creating DCC based on lut_enabled flag */
+        if(1 == arg_->lut_enabled)
+        {
+            ASSERT_VX_OBJECT(output_lut = vxCreateImage(context, 1920, 1080, VX_DF_IMAGE_NV12), VX_TYPE_IMAGE);
+            /* Use DCC with LUT parameters enabled */
+            dcc_buff_size = DCC_LDC_LUT_IMX390_CFG_NUM_ELEM;
+
+            ASSERT_VX_OBJECT(dcc_param_ldc = vxCreateUserDataObject( context, (const vx_char*)&dcc_ldc_user_data_object_name,
+                dcc_buff_size, NULL),(enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+            VX_CALL(vxMapUserDataObject(
+                dcc_param_ldc,
+                0,
+                dcc_buff_size,
+                &dcc_ldc_buf_map_id,
+                (void **)&dcc_ldc_buf,
+                VX_WRITE_ONLY,
+                VX_MEMORY_TYPE_HOST,
+                0
+            ));
+            memset(dcc_ldc_buf, 0xAB, dcc_buff_size);
+
+            static uint8_t dcc_ldc_imx390_with_lut[DCC_LDC_LUT_IMX390_CFG_NUM_ELEM] = DCC_LDC_LUT_IMX390_CFG;
+            memcpy(dcc_ldc_buf, dcc_ldc_imx390_with_lut, dcc_buff_size);
+
+            VX_CALL(vxUnmapUserDataObject(dcc_param_ldc, dcc_ldc_buf_map_id));
+        }
+        else
+        {
+            /* Use normal DCC without LUT */
+            dcc_buff_size = appIssGetDCCSizeLDC(sensor_name, sensor_dcc_mode);
+
+            ASSERT_VX_OBJECT(dcc_param_ldc = vxCreateUserDataObject( context, (const vx_char*)&dcc_ldc_user_data_object_name,
+                dcc_buff_size, NULL),(enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+            VX_CALL(vxMapUserDataObject(
+                dcc_param_ldc,
+                0,
+                dcc_buff_size,
+                &dcc_ldc_buf_map_id,
+                (void **)&dcc_ldc_buf,
+                VX_WRITE_ONLY,
+                VX_MEMORY_TYPE_HOST,
+                0
+            ));
+            memset(dcc_ldc_buf, 0xAB, dcc_buff_size);
+
+            dcc_status = appIssGetDCCBuffLDC(sensor_name, sensor_dcc_mode, dcc_ldc_buf, dcc_buff_size);
+            ASSERT(dcc_status == 0);
+
+            VX_CALL(vxUnmapUserDataObject(dcc_param_ldc, dcc_ldc_buf_map_id));
+        }
+        /* Done w/ DCC */
+
+        ASSERT_VX_OBJECT(node = tivxVpacLdcNode(graph,
+                                param_obj,
+                                NULL,
+                                NULL,
+                                NULL,
+                                NULL,
+                                dcc_param_ldc,
+                                input,
+                                output,
+                                output_lut), VX_TYPE_NODE);
+
+        VX_CALL(vxSetNodeTarget(node, VX_TARGET_STRING, arg_->target_string));
+        VX_CALL(vxVerifyGraph(graph));
+        VX_CALL(vxProcessGraph(graph));
+        VX_CALL(vxProcessGraph(graph));
+        VX_CALL(vxProcessGraph(graph));
+        VX_CALL(vxProcessGraph(graph));
+
+        #if defined(TEST_LDC_CHECKSUM_LOGGING)
+        /* Save outputs based on lut_enabled flag */
+        if(1 == arg_->lut_enabled)
+        {
+            /* When LUT is enabled, save both outputs */
+
+            /* Save 1st output (NV12_P12 format - without LUT) */
+            sz = snprintf(output_file, MAXPATHLENGTH, "%s/output/ldc_12to12_no_lut_enabled.yuv",
+                         ct_get_test_file_path());
+            ASSERT_(return, (sz < MAXPATHLENGTH));
+            write_output_image_nv12_p12(output_file, output);
+            printf("Saved 1st output (NV12_P12 - no LUT) to: %s\n", output_file);
+
+            /* Save 2nd output (NV12 8-bit format - with LUT) */
+            sz = snprintf(output_file, MAXPATHLENGTH, "%s/output/ldc_12to8_lut_enabled.yuv",
+                         ct_get_test_file_path());
+            ASSERT_(return, (sz < MAXPATHLENGTH));
+            write_output_image_nv12_8bit(output_file, output_lut);
+            printf("Saved 2nd output (NV12 8-bit - with LUT) to: %s\n", output_file);
+        }
+        else
+        {
+            /* When LUT is disabled, save only the primary output */
+            sz = snprintf(output_file, MAXPATHLENGTH, "%s/output/ldc_12to12_lut_disabled.yuv",
+                         ct_get_test_file_path());
+            ASSERT_(return, (sz < MAXPATHLENGTH));
+            write_output_image_nv12_p12(output_file, output);
+            printf("Saved output (NV12_P12) to: %s\n", output_file);
+        }
+        #endif
+
+        rect.start_x = 0;
+        rect.start_y = 0;
+        rect.end_x = 1920;
+        rect.end_y = 1080;
+
+        /* Verify checksums */
+        checksum_actual = tivx_utils_simple_image_checksum(output, 0, rect);
+        #if defined(TEST_LDC_CHECKSUM_LOGGING)
+        printf("LUT %s - 1st output (no LUT) Luma checksum: 0x%08x\n",
+               arg_->lut_enabled ? "ENABLED" : "DISABLED", checksum_actual);
+        #endif
+        ASSERT(checksum_expected[0] == checksum_actual);
+
+        if(1 == arg_->lut_enabled)
+        {
+            checksum_actual = tivx_utils_simple_image_checksum(output_lut, 0, rect);
+            #if defined(TEST_LDC_CHECKSUM_LOGGING)
+            printf("LUT %s - 2nd output (with LUT) Luma checksum: 0x%08x\n",
+               arg_->lut_enabled ? "ENABLED" : "DISABLED", checksum_actual);
+            #endif
+            ASSERT(checksum_expected[2] == checksum_actual);
+        }
+
+        rect.end_y /= 2;
+        checksum_actual = tivx_utils_simple_image_checksum(output, 1, rect);
+        #if defined(TEST_LDC_CHECKSUM_LOGGING)
+        printf("LUT %s - 1st output (no LUT) Chroma checksum: 0x%08x\n",
+               arg_->lut_enabled ? "ENABLED" : "DISABLED", checksum_actual);
+        #endif
+        ASSERT(checksum_expected[1] == checksum_actual);
+
+        if(1 == arg_->lut_enabled)
+        {
+            checksum_actual = tivx_utils_simple_image_checksum(output_lut, 1, rect);
+            #if defined(TEST_LDC_CHECKSUM_LOGGING)
+            printf("LUT %s - 2nd output (with LUT) Chroma checksum: 0x%08x\n",
+                arg_->lut_enabled ? "ENABLED" : "DISABLED", checksum_actual);
+            #endif
+            ASSERT(checksum_expected[3] == checksum_actual);
+        }
+
+        VX_CALL(vxReleaseNode(&node));
+        VX_CALL(vxReleaseGraph(&graph));
+        VX_CALL(vxReleaseImage(&output));
+        if(1 == arg_->lut_enabled)
+        {
+            VX_CALL(vxReleaseImage(&output_lut));
+        }
+        VX_CALL(vxReleaseImage(&input));
+        VX_CALL(vxReleaseUserDataObject(&param_obj));
+        VX_CALL(vxReleaseUserDataObject(&dcc_param_ldc));
+
+        ASSERT(node == 0);
+        ASSERT(graph == 0);
+        ASSERT(output == 0);
+        ASSERT(output_lut == 0);
+        ASSERT(input == 0);
+        ASSERT(param_obj == 0);
+        ASSERT(dcc_param_ldc == 0);
+
+        tivxHwaUnLoadKernels(context);
+    }
+}
+
+#if defined(VPAC3)
+TEST_WITH_ARG(tivxHwaVpacLdc, testGraphProcessingDccWithLutSafety, ArgDccLutSafety, SET_NODE_TARGET_PARAMETERS_LUT_SAFETY)
+{
+    vx_context context = context_->vx_context_;
+    vx_image input = 0, output = 0, output_lut = 0;
+    vx_user_data_object param_obj;
+    vx_graph graph = 0;
+    vx_node node = 0;
+    tivx_vpac_ldc_params_t params;
+
+    vx_user_data_object dcc_param_ldc = NULL;
+    const vx_char dcc_ldc_user_data_object_name[] = "dcc_ldc";
+    vx_size dcc_buff_size = 1;
+    vx_map_id dcc_ldc_buf_map_id;
+    uint8_t * dcc_ldc_buf;
+    int32_t dcc_status;
+    uint32_t sensor_dcc_id;
+    uint32_t sensor_dcc_mode;
+    char *sensor_name = NULL;
+    char *file_name = NULL;
+    char file[MAXPATHLENGTH];
+    uint32_t checksum_actual;
+    /* Expected checksums: [0]=1st output Luma, [1]=1st output Chroma,
+     *                     [2]=2nd output (LUT) Luma, [3]=2nd output (LUT) Chroma */
+    uint32_t checksum_expected[4] = {0x5c06583a, 0x3bb3bfed, 0x11617b52, 0x77d7e1ac};
+    size_t sz;
+    vx_rectangle_t rect;
+
+    /* Safety mechanism variables */
+    tivx_vpac_ldc_safety_mechanism_params_t safety_mechanism_params;
+    vx_user_data_object safety_mechanism_obj = NULL;
+    vx_reference safety_ref[1] = { NULL };
+
+    tivx_vpac_ldc_bandwidth_params_t bandwidth_params;
+    vx_user_data_object bandwidth_params_obj = NULL;
+    vx_reference bw_ref[1];
+
+    sensor_name = SENSOR_SONY_IMX390_UB953_D3;
+    sensor_dcc_mode = 0;
+    sensor_dcc_id = 390;
+    file_name = "psdkra/app_single_cam/in0.raw";
+
+    if (NULL != arg_->target_string)
+    {
+        ASSERT(vx_true_e == tivxIsTargetEnabled(arg_->target_string));
+    }
+    if (NULL != arg_->target_string_2)
+    {
+        ASSERT(vx_true_e == tivxIsTargetEnabled(arg_->target_string_2));
+    }
+
+    {
+        tivxHwaLoadKernels(context);
+        CT_RegisterForGarbageCollection(context, ct_teardown_hwa_kernels, CT_GC_OBJECT);
+
+        ASSERT_VX_OBJECT(graph = vxCreateGraph(context), VX_TYPE_GRAPH);
+
+        ASSERT_VX_OBJECT(input = vxCreateImage(context, 1920, 1080, TIVX_DF_IMAGE_NV12_P12), VX_TYPE_IMAGE);
+        ASSERT_VX_OBJECT(output = vxCreateImage(context, 1920, 1080, TIVX_DF_IMAGE_NV12_P12), VX_TYPE_IMAGE);
+
+        sz = snprintf(file, MAXPATHLENGTH, "%s/%s", ct_get_test_file_path(), file_name);
+        ASSERT_(return, (sz < MAXPATHLENGTH));
+
+        VX_CALL(readNV12P12Input(file, input));
+
+        tivx_vpac_ldc_params_init(&params);
+        params.luma_interpolation_type = 1;
+        params.dcc_camera_id = sensor_dcc_id;
+
+        ASSERT_VX_OBJECT(param_obj = vxCreateUserDataObject(context, "tivx_vpac_ldc_params_t",
+                                                            sizeof(tivx_vpac_ldc_params_t), NULL), (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+        VX_CALL(vxCopyUserDataObject(param_obj, 0, sizeof(tivx_vpac_ldc_params_t), &params, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
+
+        /* Create DCC based on lut_enabled flag */
+        if(1 == arg_->lut_enabled)
+        {
+            ASSERT_VX_OBJECT(output_lut = vxCreateImage(context, 1920, 1080, VX_DF_IMAGE_NV12), VX_TYPE_IMAGE);
+            /* Use DCC with LUT parameters enabled */
+            dcc_buff_size = DCC_LDC_LUT_IMX390_CFG_NUM_ELEM;
+
+            ASSERT_VX_OBJECT(dcc_param_ldc = vxCreateUserDataObject( context, (const vx_char*)&dcc_ldc_user_data_object_name,
+                dcc_buff_size, NULL),(enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+            VX_CALL(vxMapUserDataObject(
+                dcc_param_ldc,
+                0,
+                dcc_buff_size,
+                &dcc_ldc_buf_map_id,
+                (void **)&dcc_ldc_buf,
+                VX_WRITE_ONLY,
+                VX_MEMORY_TYPE_HOST,
+                0
+            ));
+            memset(dcc_ldc_buf, 0xAB, dcc_buff_size);
+
+            static uint8_t dcc_ldc_imx390_with_lut[DCC_LDC_LUT_IMX390_CFG_NUM_ELEM] = DCC_LDC_LUT_IMX390_CFG;
+            memcpy(dcc_ldc_buf, dcc_ldc_imx390_with_lut, dcc_buff_size);
+
+            VX_CALL(vxUnmapUserDataObject(dcc_param_ldc, dcc_ldc_buf_map_id));
+        }
+        else
+        {
+            /* Use normal DCC without LUT */
+            dcc_buff_size = appIssGetDCCSizeLDC(sensor_name, sensor_dcc_mode);
+
+            ASSERT_VX_OBJECT(dcc_param_ldc = vxCreateUserDataObject( context, (const vx_char*)&dcc_ldc_user_data_object_name,
+                dcc_buff_size, NULL),(enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+            VX_CALL(vxMapUserDataObject(
+                dcc_param_ldc,
+                0,
+                dcc_buff_size,
+                &dcc_ldc_buf_map_id,
+                (void **)&dcc_ldc_buf,
+                VX_WRITE_ONLY,
+                VX_MEMORY_TYPE_HOST,
+                0
+            ));
+            memset(dcc_ldc_buf, 0xAB, dcc_buff_size);
+
+            dcc_status = appIssGetDCCBuffLDC(sensor_name, sensor_dcc_mode, dcc_ldc_buf, dcc_buff_size);
+            ASSERT(dcc_status == 0);
+
+            VX_CALL(vxUnmapUserDataObject(dcc_param_ldc, dcc_ldc_buf_map_id));
+        }
+        /* Done w/ DCC */
+
+        ASSERT_VX_OBJECT(node = tivxVpacLdcNode(graph,
+                                param_obj,
+                                NULL,
+                                NULL,
+                                NULL,
+                                NULL,
+                                dcc_param_ldc,
+                                input,
+                                output,
+                                output_lut), VX_TYPE_NODE);
+
+        VX_CALL(vxSetNodeTarget(node, VX_TARGET_STRING, arg_->target_string));
+        VX_CALL(vxVerifyGraph(graph));
+
+        /* IMPORTANT: Enable safety mechanism FIRST before sending other commands */
+        if(0U != arg_->enable_safety_mechanism)
+        {
+            tivx_vpac_ldc_safety_mech_prms_init(&safety_mechanism_params);
+            switch (arg_->enable_safety_mechanism)
+            {
+                case 1:
+                    /* safety_mechanism=reconfigReinitMMR */
+                    safety_mechanism_params.enable_reconfig_and_reinit_Reg = 1U;
+                    break;
+                case 2:
+                    /* safety_mechanism=statusRegValidate */
+                    safety_mechanism_params.enable_status_reg_validation = 1U;
+                    break;
+                case 3:
+                    /* safety_mechanism=configRegReadback */
+                    safety_mechanism_params.enable_readback_config_registers = 1U;
+                    break;
+                case 4:
+                    /* safety_mechanism=allMechanisms */
+                    safety_mechanism_params.enable_reconfig_and_reinit_Reg = 1U;
+                    safety_mechanism_params.enable_status_reg_validation = 1U;
+                    safety_mechanism_params.enable_readback_config_registers = 1U;
+                    break;
+                default:
+                // Invalid value
+                break;
+            }
+
+            ASSERT_VX_OBJECT(safety_mechanism_obj = vxCreateUserDataObject(context,
+            "tivx_vpac_ldc_safety_mechanism_params_t",
+            sizeof(tivx_vpac_ldc_safety_mechanism_params_t),
+            &safety_mechanism_params),
+            (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+            safety_ref[0] = (vx_reference)safety_mechanism_obj;
+            VX_CALL(tivxNodeSendCommand(node, 0, TIVX_VPAC_LDC_CMD_ENABLE_VPAC_SAFETY_MECHANISM, safety_ref, 1));
+        }
+
+        /* Send bandwidth limiter command - ensures VBUSMR_CFG is properly initialized */
+        if(0U != arg_->enable_safety_mechanism)
+        {
+            tivx_vpac_ldc_bandwidth_prms_init(&bandwidth_params);
+            bandwidth_params.bandwidth_control = 4095u;
+
+            ASSERT_VX_OBJECT(bandwidth_params_obj = vxCreateUserDataObject(context,
+                "tivx_vpac_ldc_bandwidth_params_t",
+                sizeof(tivx_vpac_ldc_bandwidth_params_t),
+                &bandwidth_params),
+                (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+            bw_ref[0] = (vx_reference)bandwidth_params_obj;
+            VX_CALL(tivxNodeSendCommand(node, 0, TIVX_VPAC_LDC_CMD_SET_READ_BW_LIMIT_PARAMS, bw_ref, 1));
+                    
+        }
+
+        VX_CALL(vxProcessGraph(graph));
+
+        /* Periodic reconfiguration test - execute graph again with safety mechanism */
+        if(1U == arg_->enable_safety_mechanism)
+        {
+            VX_CALL(vxCopyUserDataObject(safety_mechanism_obj, 0, sizeof(tivx_vpac_ldc_safety_mechanism_params_t), &safety_mechanism_params, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
+            safety_ref[0] = (vx_reference)safety_mechanism_obj;
+            VX_CALL(tivxNodeSendCommand(node, 0, TIVX_VPAC_LDC_CMD_ENABLE_VPAC_SAFETY_MECHANISM, safety_ref, 1));
+            VX_CALL(vxProcessGraph(graph));
+        }
+
+        /* Verify checksums */
+        rect.start_x = 0;
+        rect.start_y = 0;
+        rect.end_x = 1920;
+        rect.end_y = 1080;
+
+        checksum_actual = tivx_utils_simple_image_checksum(output, 0, rect);
+        ASSERT(checksum_expected[0] == checksum_actual);
+
+        rect.end_y = 540;
+        checksum_actual = tivx_utils_simple_image_checksum(output, 1, rect);
+        ASSERT(checksum_expected[1] == checksum_actual);
+        rect.end_y = 1080;
+
+        if(1 == arg_->lut_enabled)
+        {
+            checksum_actual = tivx_utils_simple_image_checksum(output_lut, 0, rect);
+            ASSERT(checksum_expected[2] == checksum_actual);
+
+            rect.end_y = 540;
+            checksum_actual = tivx_utils_simple_image_checksum(output_lut, 1, rect);
+            ASSERT(checksum_expected[3] == checksum_actual);
+            rect.end_y = 1080;
+        }
+
+        VX_CALL(vxReleaseNode(&node));
+        VX_CALL(vxReleaseGraph(&graph));
+        VX_CALL(vxReleaseImage(&output));
+        if(1 == arg_->lut_enabled)
+        {
+            VX_CALL(vxReleaseImage(&output_lut));
+        }
+        VX_CALL(vxReleaseImage(&input));
+        VX_CALL(vxReleaseUserDataObject(&param_obj));
+        VX_CALL(vxReleaseUserDataObject(&dcc_param_ldc));
+
+        if(0U != arg_->enable_safety_mechanism)
+        {
+            VX_CALL(vxReleaseUserDataObject(&safety_mechanism_obj));
+            VX_CALL(vxReleaseUserDataObject(&bandwidth_params_obj));
+        }
+
+        ASSERT(node == 0);
+        ASSERT(graph == 0);
+        ASSERT(output == 0);
+        ASSERT(output_lut == 0);
+        ASSERT(input == 0);
+        ASSERT(param_obj == 0);
+        ASSERT(dcc_param_ldc == 0);
+
+        if(0U != arg_->enable_safety_mechanism)
+        {
+            ASSERT(safety_mechanism_obj == 0);
+            ASSERT(bandwidth_params_obj == 0);
+        }
+
+        tivxHwaUnLoadKernels(context);
+    }
+}
+#endif
+#endif
 
 static void warp_perspective_generate_matrix(vx_float32 *m, int src_width, int src_height, int dst_width, int dst_height, int type)
 {
@@ -9159,7 +9689,9 @@ TESTCASE_TESTS(tivxHwaVpacLdc,
     #if defined(VPAC3)
     #ifndef x86_64
     ,
-    testGraphProcessingSafety
+    testGraphProcessingSafety,
+    testGraphProcessingDccWithLut,
+    testGraphProcessingDccWithLutSafety
     #endif
     #endif
     ,

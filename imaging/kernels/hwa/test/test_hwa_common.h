@@ -74,8 +74,11 @@ void ct_teardown_hwa_kernels(void/*vx_context*/ **context_);
 void ct_read_raw_image_to_vx_image(vx_image image, const char* fileName, uint16_t file_byte_pack);
 void ct_write_image2(vx_image image, const char* fileName);
 vx_status readNV12Input(char* file_name, vx_image in_img);
+vx_status readNV12P12Input(char* file_name, vx_image in_img);
 vx_int32 write_output_image_fp(FILE * fp, vx_image out_image);
 vx_int32 write_output_image_nv12_8bit(char * file_name, vx_image out);
+vx_int32 write_output_image_fp_nv12_p12(FILE * fp, vx_image out_image);
+vx_int32 write_output_image_nv12_p12(char * file_name, vx_image out);
 
 /* VISS common functions */
 

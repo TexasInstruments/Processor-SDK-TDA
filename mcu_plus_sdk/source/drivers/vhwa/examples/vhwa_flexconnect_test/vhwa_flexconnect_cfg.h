@@ -400,7 +400,31 @@ Vhwa_M2mFcGraphPathInfo gPathInfo[] =
             {VHWA_FC_PORT_VISS_OUT_Y8, VHWA_FC_PORT_DDR},
             {VHWA_FC_PORT_VISS_OUT_UV8, VHWA_FC_PORT_DDR},            
         }
-    },         
+    }, 
+    /* 27 */
+    /* 3 Frame VISS input , Y8,UV8 -> MSC0_IN_0/1 and Y12,UV12 -> DDR*/
+    {
+        17,
+        {
+            {VHWA_FC_PORT_DDR, VHWA_FC_PORT_VISS_IN_0}, 
+            {VHWA_FC_PORT_DDR, VHWA_FC_PORT_VISS_IN_1},
+            {VHWA_FC_PORT_DDR, VHWA_FC_PORT_VISS_IN_2},         
+            {VHWA_FC_PORT_VISS_OUT_Y8, VHWA_FC_PORT_MSC0_IN_0},
+            {VHWA_FC_PORT_VISS_OUT_UV8, VHWA_FC_PORT_MSC0_IN_1},            
+            {VHWA_FC_PORT_VISS_OUT_Y12, VHWA_FC_PORT_DDR},
+            {VHWA_FC_PORT_VISS_OUT_UV12, VHWA_FC_PORT_DDR},                  
+            {VHWA_FC_PORT_MSC0_OUT_0, VHWA_FC_PORT_DDR},
+            {VHWA_FC_PORT_MSC0_OUT_1, VHWA_FC_PORT_DDR},
+            {VHWA_FC_PORT_MSC0_OUT_2, VHWA_FC_PORT_DDR},
+            {VHWA_FC_PORT_MSC0_OUT_3, VHWA_FC_PORT_DDR},   
+            {VHWA_FC_PORT_MSC0_OUT_4, VHWA_FC_PORT_DDR},
+            {VHWA_FC_PORT_MSC0_OUT_5, VHWA_FC_PORT_DDR},
+            {VHWA_FC_PORT_MSC0_OUT_6, VHWA_FC_PORT_DDR},
+            {VHWA_FC_PORT_MSC0_OUT_7, VHWA_FC_PORT_DDR},     
+            {VHWA_FC_PORT_MSC0_OUT_8, VHWA_FC_PORT_DDR},     
+            {VHWA_FC_PORT_MSC0_OUT_9, VHWA_FC_PORT_DDR},
+        }
+    },        
 
 };
 
@@ -988,6 +1012,28 @@ AppFc_TestParams gAppFcTestPrms[] =
                 &gPathInfo[26],
                 &gAppVissFcTestConfig[3],
                 NULL,
+                NULL
+            }, {0}, {0}, {0}
+        },
+        .isEnableTest = UTRUE,                   /* isEnableTest */
+        .vissIsSwitchGlbceCtx = UFALSE,          /* vissIsSwitchGlbceCtx */
+        .vissChCfgOnEachIter = UFALSE,           /* vissChCfgOnEachIter  */
+    },
+    /* 23: THREE_FRAME_MERGE DDR->VISS->DDR 1920x1080 */
+    {
+        .testName = "TC_023",                   /* Test Name */
+        .numHandles = 1,                        /* Num Handles */
+        .repeatCnt = 3,                         /* Repeate Count */
+        .isPerformanceTest = UFALSE,             /* Is Performance */
+        .isVissEnabled = UTRUE,                  /* isVissEnabled */
+        .isMsc0Enabled = UTRUE,                  /* Is Msc0Enabled */
+        .isMsc1Enabled = UFALSE,                 /* isMsc1Enabled */
+        .testCfg =                              /* Test Config */
+        {
+            {
+                &gPathInfo[27],                 /* DDR->VISS->DDR (Y8+UV8) */
+                &gAppVissFcTestConfig[12],         /* THREE_FRAME_MERGE from vhwa_viss_test TC 2 */
+                &gAppMscFcTestCfg[14],
                 NULL
             }, {0}, {0}, {0}
         },

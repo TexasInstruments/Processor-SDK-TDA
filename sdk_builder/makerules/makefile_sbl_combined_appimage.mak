@@ -37,12 +37,16 @@ CERT_SCRIPT=$(PDK_PATH)/packages/ti/build/makerules/x509CertificateGen.sh
 LINUX_BUILD_DIR_PATH=${SBL_REPO_PATH}/tools/combined_appimage/bin/${BOARD}/
 
 ATF_TARGET_BOARD=generic
-ifeq ($(SOC),j784s4)
+ifeq ($(SOC),$(filter $(SOC), j784s4 j742s2))
 	ATF_TARGET_BOARD=j784s4
 endif
 
 # For hs-fs board, SOC_TYPE will be hs_fs. For hs-se board, SOC_TYPE will be hs
-SOC_TYPE?=gp
+ifeq ($(SOC),$(filter $(SOC), j722s j742s2))
+    SOC_TYPE?=hs_fs
+else
+    SOC_TYPE?=gp
+endif
 
 # Setting OS type (like freertos, safertos) here in lowercase letter
 BUILD_OS_TYPE?=$(shell echo $(RTOS) | tr '[:upper:]' '[:lower:]')
@@ -66,24 +70,36 @@ LATEAPP2_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/lateapp2
 ATF_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/atf_optee.appimage
 DTB_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/tidtb_linux.appimage
 KERNEL_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/tikernelimage_linux.appimage
+QNX_IFS_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/ifs_qnx.appimage
 TIFS_BINARY_PATH=$(PDK_PATH)/packages/ti/drv/sciclient/soc/$(SCICLIENT_VERSION)/tifs.bin
-BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/mmcsd/sbl_boot_app_mmcsd_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage
+MMCSD_BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/mmcsd/sbl_boot_app_mmcsd_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage
+ECU_MMCSD_BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/mmcsd/sbl_boot_app_mmcsd_$(ECU_BUILD)_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage
+OSPI_BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/ospi/sbl_boot_app_ospi_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage
+ECU_OSPI_BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/ospi/sbl_boot_app_ospi_$(ECU_BUILD)_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage
 else ifeq ($(SOC_TYPE),hs_fs)
 LATEAPP1_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/lateapp1.hs_fs
 LATEAPP2_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/lateapp2.hs_fs
 ATF_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/atf_optee.appimage.hs_fs
 DTB_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/tidtb_linux.appimage.hs_fs
 KERNEL_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/tikernelimage_linux.appimage.hs_fs
+QNX_IFS_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/ifs_qnx.appimage.hs_fs
 TIFS_BINARY_PATH=$(PDK_PATH)/packages/ti/drv/sciclient/soc/$(SCICLIENT_VERSION)/tifs-hs-fs-enc.bin
-BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/mmcsd/sbl_boot_app_mmcsd_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage.hs_fs
+MMCSD_BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/mmcsd/sbl_boot_app_mmcsd_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage.hs_fs
+ECU_MMCSD_BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/mmcsd/sbl_boot_app_mmcsd_$(ECU_BUILD)_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage.hs_fs
+OSPI_BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/ospi/sbl_boot_app_ospi_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage.hs_fs
+ECU_OSPI_BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/ospi/sbl_boot_app_ospi_$(ECU_BUILD)_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage.hs_fs
 else ifeq ($(SOC_TYPE),hs)
 LATEAPP1_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/lateapp1.signed
 LATEAPP2_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/lateapp2.signed
 ATF_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/atf_optee.appimage.signed
 DTB_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/tidtb_linux.appimage.signed
 KERNEL_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/tikernelimage_linux.appimage.signed
+QNX_IFS_BINARY_PATH=$(SBL_COMBINED_BOOTFILES_PATH)/ifs_qnx.appimage.signed
 TIFS_BINARY_PATH=$(PDK_PATH)/packages/ti/drv/sciclient/soc/$(SCICLIENT_VERSION)/tifs-hs-enc.bin
-BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/mmcsd/sbl_boot_app_mmcsd_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage.signed
+MMCSD_BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/mmcsd/sbl_boot_app_mmcsd_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage.signed
+ECU_MMCSD_BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/mmcsd/sbl_boot_app_mmcsd_$(ECU_BUILD)_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage.signed
+OSPI_BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/ospi/sbl_boot_app_ospi_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage.signed
+ECU_OSPI_BOOTAPP_IMAGE_PATH=$(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/ospi/sbl_boot_app_ospi_$(ECU_BUILD)_$(HLOS)_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage.signed
 endif
 
 REMOTE_CORE_LIST_LATEAPP1_COMBINED=
@@ -152,8 +168,8 @@ sbl_syscfg_gui:
 sbl_combined_bootimage_install_sd:
 ifeq ($(BUILD_QNX_MPU), yes)
 	@echo "Installing QNX FS SBL to SD Card..."
-	cp $(SBL_COMBINED_BOOTFILES_PATH)/atf_optee.appimage $(SBL_SD_FS_PATH)/atf_optee.appimage
-	cp $(SBL_COMBINED_BOOTFILES_PATH)/ifs_qnx.appimage $(SBL_SD_FS_PATH)/ifs_qnx.appimage
+	cp $(ATF_BINARY_PATH) $(SBL_SD_FS_PATH)/atf_optee.appimage
+	cp $(QNX_IFS_BINARY_PATH) $(SBL_SD_FS_PATH)/ifs_qnx.appimage
 endif
 ifeq ($(BUILD_LINUX_MPU), yes)
 	@echo "Installing LINUX FS SBL to SD Card..."
@@ -204,9 +220,9 @@ sbl_bootapp_sd:
     ifeq ($(BUILD_QNX_MPU), yes)
 		$(MAKE) -C $(PDK_PATH)/packages/ti/build boot_app_mmcsd_qnx ECU_BUILD=$(ECU_BUILD) TOOLS_INSTALL_PATH=$(PSDK_TOOLS_PATH) DISABLE_RECURSE_DEPS=no BOARD=$(BOARD) CORE=$(SBL_CORE) -s
         ifeq ($(ECU_BUILD), no)
-			cp $(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/mmcsd/sbl_boot_app_mmcsd_qnx_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage $(SBL_COMBINED_BOOTFILES_PATH)/app
+			cp $(MMCSD_BOOTAPP_IMAGE_PATH) $(SBL_COMBINED_BOOTFILES_PATH)/app
         else
-			cp $(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/mmcsd/sbl_boot_app_mmcsd_$(ECU_BUILD)_qnx_$(BOARD)_$(SBL_CORE)_$(BUILD_OS_TYPE)_TestApp_release.appimage $(SBL_COMBINED_BOOTFILES_PATH)/app
+			cp $(ECU_MMCSD_BOOTAPP_IMAGE_PATH) $(SBL_COMBINED_BOOTFILES_PATH)/app
         endif
     endif
     ifeq ($(BUILD_LINUX_MPU), yes)
@@ -215,7 +231,7 @@ sbl_bootapp_sd:
         else
 			$(MAKE) -C $(PDK_PATH)/packages/ti/build boot_app_mmcsd_linux TOOLS_INSTALL_PATH=$(PSDK_TOOLS_PATH) DISABLE_RECURSE_DEPS=no BOARD=$(BOARD) CORE=$(SBL_CORE) -s BUILD_OS_TYPE=$(BUILD_OS_TYPE) HLOSBOOT=linux
         endif
-		cp $(BOOTAPP_IMAGE_PATH) $(SBL_COMBINED_BOOTFILES_PATH)/app
+		cp $(MMCSD_BOOTAPP_IMAGE_PATH) $(SBL_COMBINED_BOOTFILES_PATH)/app
     endif
 
 sbl_bootapp_ospi:
@@ -223,14 +239,14 @@ sbl_bootapp_ospi:
     ifeq ($(BUILD_QNX_MPU), yes)
 		$(MAKE) -C $(PDK_PATH)/packages/ti/build boot_app_ospi_qnx ECU_BUILD=$(ECU_BUILD) TOOLS_INSTALL_PATH=$(PSDK_TOOLS_PATH) DISABLE_RECURSE_DEPS=no BOARD=$(BOARD) CORE=$(SBL_CORE) -s
         ifeq ($(ECU_BUILD), no)
-			cp $(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/ospi/sbl_boot_app_ospi_qnx_$(BOARD)_$(SBL_CORE)_freertos_TestApp_release.appimage $(SBL_COMBINED_BOOTFILES_PATH)/ospi/sbl_boot_app_ospi_qnx_$(BOARD)_$(SBL_CORE)_freertos_TestApp_release.appimage
+			cp $(OSPI_BOOTAPP_IMAGE_PATH) $(SBL_COMBINED_BOOTFILES_PATH)/ospi/sbl_boot_app_ospi_qnx_$(BOARD)_$(SBL_CORE)_freertos_TestApp_release.appimage
         else
-			cp $(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/ospi/sbl_boot_app_ospi_$(ECU_BUILD)_qnx_$(BOARD)_$(SBL_CORE)_freertos_TestApp_release.appimage $(SBL_COMBINED_BOOTFILES_PATH)/ospi/sbl_boot_app_ospi_qnx_$(BOARD)_$(SBL_CORE)_freertos_TestApp_release.appimage
+			cp $(ECU_OSPI_BOOTAPP_IMAGE_PATH) $(SBL_COMBINED_BOOTFILES_PATH)/ospi/sbl_boot_app_ospi_qnx_$(BOARD)_$(SBL_CORE)_freertos_TestApp_release.appimage
         endif
     endif
     ifeq ($(BUILD_LINUX_MPU), yes)
 		$(MAKE) -C $(PDK_PATH)/packages/ti/build boot_app_ospi_linux TOOLS_INSTALL_PATH=$(PSDK_TOOLS_PATH) DISABLE_RECURSE_DEPS=no BOARD=$(BOARD) CORE=$(SBL_CORE) -s
-		cp $(PDK_PATH)/packages/ti/boot/sbl/example/boot_app/binary/$(BOARD)/ospi/sbl_boot_app_ospi_linux_$(BOARD)_$(SBL_CORE)_freertos_TestApp_release.appimage $(SBL_COMBINED_BOOTFILES_PATH)/ospi/sbl_boot_app_ospi_linux_$(BOARD)_$(SBL_CORE)_freertos_TestApp_release.appimage
+		cp $(OSPI_BOOTAPP_IMAGE_PATH) $(SBL_COMBINED_BOOTFILES_PATH)/ospi/sbl_boot_app_ospi_linux_$(BOARD)_$(SBL_CORE)_freertos_TestApp_release.appimage
     endif
 
 #############
@@ -333,6 +349,20 @@ sbl_appimage: sbl_combined_atf_optee
 		$(MULTICORE_APPIMAGE_GEN_TOOL_PATH)/MulticoreImageGen LE $(DEV_ID) $(SBL_COMBINED_BOOTFILES_PATH)/atf_optee.appimage 0 $(SBL_COMBINED_BOOTFILES_PATH)/rprcs/atf_only.rprc
 		$(MULTICORE_APPIMAGE_GEN_TOOL_PATH)/MulticoreImageGen LE $(DEV_ID) $(SBL_COMBINED_BOOTFILES_PATH)/ifs_qnx.appimage 0 $(SBL_COMBINED_BOOTFILES_PATH)/rprcs/ifs_qnx.rprc
     endif
+	# Sign the generated appimages for hs and hs_fs SoCs
+	$(eval GENFILES := atf_optee ifs_qnx)
+    ifeq ($(SOC_TYPE),hs)
+		@for i in $(GENFILES); do \
+			echo "Signing $$i.appimage for HS SoC..."; \
+			$(CERT_SCRIPT) -b $(SBL_COMBINED_BOOTFILES_PATH)/$$i.appimage -o $(SBL_COMBINED_BOOTFILES_PATH)/$$i.appimage.signed -c R5 -l 0x41C00100 -k $(PDK_PATH)/packages/ti/build/makerules/k3_dev_mpk.pem; \
+		done
+    else ifeq ($(SOC_TYPE),hs_fs)
+		@for i in $(GENFILES); do \
+			echo "Signing $$i.appimage for HS_FS SoC..."; \
+			$(CERT_SCRIPT) -b $(SBL_COMBINED_BOOTFILES_PATH)/$$i.appimage -o $(SBL_COMBINED_BOOTFILES_PATH)/$$i.appimage.hs_fs -c R5 -l 0x41C00100 -k $(PDK_PATH)/packages/ti/build/makerules/rom_degenerateKey.pem; \
+		done
+    endif
+
     endif
     ifeq ($(BUILD_LINUX_MPU), yes)
 		@echo "Generating Linux appimages..."

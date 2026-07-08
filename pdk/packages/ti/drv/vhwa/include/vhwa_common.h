@@ -102,8 +102,8 @@ extern "C" {
 /** \brief FVID2 Driver Id for Flex-connect Memory to Memory. */
 #define FVID2_VHWA_M2M_FC_DRV_ID        (FVID2_VHWA_M2M_VISS_OTF_DRV_ID + 0x01U)
 
-/** \brief FVID2 Driver Id for LBIST driver. */
-#define FVID2_VHWA_M2M_LBIST_DRV_ID     (FVID2_VHWA_M2M_FC_DRV_ID + 0x01U)
+/** \brief FVID2 Driver Id for BIST driver. */
+#define FVID2_VHWA_M2M_BIST_DRV_ID     (FVID2_VHWA_M2M_FC_DRV_ID + 0x01U)
 
 /** @} */
 
@@ -323,8 +323,8 @@ extern "C" {
 /** \brief Log enable for FC module */
 #define VhwaFcTrace                            ((uint32_t) GT_ERR   |\
                                                 (uint32_t) GT_TraceState_Enable)
-/** \brief Log enable for LBIST module */
-#define VhwaM2mLbistTrace                      ((uint32_t) GT_ERR   |\
+/** \brief Log enable for BIST module */
+#define VhwaM2mBistTrace                      ((uint32_t) GT_ERR   |\
                                                 (uint32_t) GT_TraceState_Enable)
 #endif
 /** @} */

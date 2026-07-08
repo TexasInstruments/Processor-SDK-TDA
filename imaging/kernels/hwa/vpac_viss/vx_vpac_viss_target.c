@@ -5010,14 +5010,8 @@ static vx_status tivxEnableVpacVissSafetyMechanisms(
                         (tivx_vpac_viss_safety_mechanism_params_t *)params_ptr;
 
                     /* Enable or disable reconfigMMR based on input parameter */
-                    if ((vx_bool)vx_true_e == (vx_bool)safety_params->enable_reconfig_and_reinit_Reg)
-                    {
-                        enable = 1U;
-                    }
-                    else
-                    {
-                        enable = 0U;
-                    }
+                    /* Pass mode directly: 0=disabled, 1=one-shot, 2=continuous */
+                    enable = (uint32_t)safety_params->enable_reconfig_and_reinit_Reg;
                     fvid2_status = Fvid2_control(vissObj->handle, VHWA_M2M_IOCTL_VISS_ENABLE_RECONFIG_REINIT_REG, &enable, NULL);
                     /* LDRA_JUSTIFY_START
                     <metric start> statement branch <metric end>
@@ -5033,17 +5027,10 @@ static vx_status tivxEnableVpacVissSafetyMechanisms(
                         status = (vx_status)VX_FAILURE;
                     }
                     /* LDRA_JUSTIFY_END */
-                    safety_params->enable_reconfig_and_reinit_Reg = (uint32_t)vx_false_e;
 
                     /* Enable or disable status register validation based on input parameter */
-                    if ((vx_bool)vx_true_e == (vx_bool)safety_params->enable_status_reg_validation)
-                    {
-                        enable = 1U;
-                    }
-                    else
-                    {
-                        enable = 0U;
-                    }
+                    /* Pass mode directly: 0=disabled, 1=one-shot, 2=continuous */
+                    enable = (uint32_t)safety_params->enable_status_reg_validation;
                     fvid2_status = Fvid2_control(vissObj->handle, VHWA_M2M_IOCTL_VISS_ENABLE_STATUS_REG_VALIDATE, &enable, NULL);
                     /* LDRA_JUSTIFY_START
                     <metric start> statement branch <metric end>
@@ -5059,10 +5046,10 @@ static vx_status tivxEnableVpacVissSafetyMechanisms(
                         status = (vx_status)VX_FAILURE;
                     }
                     /* LDRA_JUSTIFY_END */
-                    safety_params->enable_status_reg_validation = (uint32_t)vx_false_e;
 
                     /* Enable or disable config register validation based on input parameter */
-                    if ((vx_bool)vx_true_e == (vx_bool)safety_params->enable_readback_config_registers)
+                    /* Pass mode directly: 0=disabled, 1=one-shot, 2=continuous */
+                    if (0U != safety_params->enable_readback_config_registers)
                     {
                         uint32_t readback_size = 0U;
 
@@ -5149,7 +5136,7 @@ static vx_status tivxEnableVpacVissSafetyMechanisms(
                         if ((vx_status)VX_SUCCESS == status)
                         /* LDRA_JUSTIFY_END */
                         {
-                            enable = 1U;
+                            enable = (uint32_t)safety_params->enable_readback_config_registers;
                             fvid2_status = Fvid2_control(vissObj->handle, VHWA_M2M_IOCTL_VISS_ENABLE_CONFIG_REG_READBACK, &enable, NULL);
                             /* LDRA_JUSTIFY_START
                             <metric start> statement branch <metric end>
@@ -5192,7 +5179,6 @@ static vx_status tivxEnableVpacVissSafetyMechanisms(
                             status = (vx_status)VX_FAILURE;
                         }
                         /* LDRA_JUSTIFY_END */
-                        safety_params->enable_readback_config_registers = (uint32_t)vx_false_e;
                     }
                 }
                 else

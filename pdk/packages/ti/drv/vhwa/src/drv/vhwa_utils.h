@@ -87,6 +87,41 @@ extern "C" {
 
 #define VHWA_MAX_LOCK                   (12u)
 
+/**
+ * @brief Flags to enable or configure the safety mechanism.
+ *
+ * The safety mechanism can operate in the following modes:
+ * - One-shot mode: The mechanism is triggered once and then disabled until re-enabled.
+ * - Continuous mode: The mechanism remains active and continuously monitors or enforces safety.
+ * - Disabled mode: The safety mechanism is turned off and does not perform any checks or actions.
+ *
+ * @param enableReconfigReinitReg
+ *        If set, triggers re-initialization and re-configuration of the registers.
+ *
+ * @param enableStatusRegValidate
+ *        If set, enables validation of the status register to ensure system integrity.
+ *
+ * @param enableConfigRegValidate
+ *        If set, enables validation of the configuration register to detect misconfiguration.
+ */
+/* ========================================================================== */
+/*                           Safety Mechanism Modes                           */
+/* ========================================================================== */
+/**
+ *  \brief Safety mechanism mode: Disabled
+ */
+#define VHWA_SAFETY_MODE_DISABLED    (0U)
+
+/**
+ *  \brief Safety mechanism mode: One-shot enable
+ */
+#define VHWA_SAFETY_MODE_ONESHOT     (1U)
+
+/**
+ *  \brief Safety mechanism mode: Continuous enable
+ */
+#define VHWA_SAFETY_MODE_CONTINUOUS  (2U)
+
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
@@ -153,7 +188,7 @@ void Vhwa_commonDeleteHwaLock(uint32_t idx);
 int32_t Vhwa_commonHwaLockAquire(uint32_t idx, uint32_t timeout);
 void Vhwa_commonHwaLockRelease(uint32_t idx);
 
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L) /* LBIST not applicable for am62a, and not enabled on J722S */
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L) /* BIST not applicable for am62a, and not enabled on J722S */
 int32_t Vhwa_m2mDofReInit(void);
 int32_t Vhwa_m2mSdeReInit(void);
 int32_t Vhwa_m2mVissReInit(void);

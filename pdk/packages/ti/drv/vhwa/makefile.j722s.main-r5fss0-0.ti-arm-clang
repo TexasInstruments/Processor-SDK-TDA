@@ -34,7 +34,7 @@ FILES_common := \
     vhwa_m2mFcResManages.c \
     vhwa_m2mFcDrvEvtManager.c \
     vhwa_m2mFcConfig.c \
-    vhwa_m2mLbistDrv.c \
+    vhwa_m2mBistDrv.c \
     csl_ee.c \
     csl_glbce.c \
     csl_h3a.c \

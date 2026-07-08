@@ -56,8 +56,12 @@ extern "C" {
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
-/* None */
-
+/**
+ *  \brief Macro for the reset value of the PRIVATE_MEMSIZE status register
+ *         for LDC. This value is used to compare the status register
+ *         during VPAC-10 safety mechanism (status readback)
+ */
+#define VHWA_VPAC_LDC_PRIVATE_MEM_SIZE_RESET_VALUE   (0x000A1E2AU)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */

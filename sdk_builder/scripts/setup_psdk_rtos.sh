@@ -532,7 +532,7 @@ echo "[core secdev] Checking ..."
 if [ -d ./core-secdev-k3 ]; then
     echo "core-secdev-k3 found!"
 else
-    git clone https://git.ti.com/git/security-development-tools/core-secdev-k3.git
+    git clone https://github.com/TexasInstruments/core-secdev-k3
 fi
 echo "[core secdev] Checking ... Done"
 
@@ -575,7 +575,7 @@ else
     mkdir opkg-utils-${OPKG_VERSION} 
     cd opkg-utils-${OPKG_VERSION} 
     git init
-    git remote add origin https://git.yoctoproject.org/git/opkg-utils
+    git remote add origin https://git.yoctoproject.org/opkg-utils
     git fetch --depth 1 origin $OPKG_VERSION
     git checkout FETCH_HEAD 
     cd .. 

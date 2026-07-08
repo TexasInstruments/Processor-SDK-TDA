@@ -69,7 +69,14 @@
 
 #define DDR_HEAP_MEM_SIZE               (DDR_MCU2_1_LOCAL_HEAP_SIZE)
 #define ENABLE_FVID2
-#define ENABLE_VHWA_DMPAC
 #undef ENABLE_UDMA_COPY
+
+#if ((defined(ECU_SRV) || defined(ECU_FC)))                     // Disabling DMPAC for SRV and FC demos
+    #undef ENABLE_VHWA_DMPAC
+#elif (defined(ECU_AVP4))                                       // Enabling DMPAC for AVP4 demo
+    #define ENABLE_VHWA_DMPAC
+#else                                                           // Enabling DMPAC for all non ECU demos
+    #define ENABLE_VHWA_DMPAC
+#endif
 
 #endif /* APP_CFG_MCU2_1_H_ */

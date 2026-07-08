@@ -158,7 +158,14 @@ int8_t gConfigVissTdCompRingMem[VHWA_M2M_VISS_MAX_CONFIG_DMA_CH]
 uint8_t gConfigVissRxTprdMem[VHWA_M2M_VISS_MAX_HANDLES]
     [VHWA_M2M_VISS_MAX_CONFIG_DMA_CH][VHWA_M2M_VISS_UDMA_CONFIG_TRPD_SIZE]
     __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
-
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
+/**
+ * \brief TRPD memory for readback for each handle and for each channel in handle
+ */
+uint8_t gReadbackVissRxTprdMem[VHWA_M2M_VISS_MAX_HANDLES]
+    [VHWA_M2M_VISS_MAX_CONFIG_DMA_CH][VHWA_M2M_VISS_UDMA_CONFIG_TRPD_SIZE]
+    __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
+#endif
 /**
  * \brief Ring memory, one ring for each output channel.
  */
@@ -1345,6 +1352,71 @@ int32_t Vhwa_m2mVissStopCh(const Vhwa_M2mVissInstObj *instObj)
     return (status);
 }
 
+int32_t Vhwa_m2mVissStopUtcCh(const Vhwa_M2mVissInstObj *instObj)
+{
+    int32_t         status = FVID2_EBADARGS;
+    uint32_t        cnt;
+    Udma_ChHandle   chHndl;
+
+    /* Check for Null pointer */
+    GT_assert(VhwaVissTrace, (NULL != instObj));
+
+    /* By default, all channels are disabled, on the last handle close */
+    for (cnt = 0u; cnt < VHWA_M2M_VISS_MAX_DMA_CH; cnt ++)
+    {
+        chHndl = instObj->utcChHndl[cnt];
+
+        /* UDMA Channel disable */
+        status = Udma_chDisable(chHndl, UDMA_DEFAULT_CH_DISABLE_TIMEOUT);
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach this portion.
+        This failure case is out of scope for the imaging test framework.
+        Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if(UDMA_SOK != status)
+        {
+            GT_0trace(VhwaVissTrace, GT_ERR,
+                "UDMA channel disable failed!!\n");
+            status = FVID2_EFAIL;
+            break;
+        }
+        /* LDRA_JUSTIFY_END */
+    }
+
+    /* Convert UDMA status to FVID2 status,
+       so that the caller of this function always uses FVID2 status only */
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    This failure case is out of scope for the imaging test framework.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
+    if(UDMA_SOK == status)
+    /* LDRA_JUSTIFY_END */
+    {
+        status = FVID2_SOK;
+    }
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    This failure case is out of scope for the imaging test framework.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
+    else
+    {
+        status = FVID2_EFAIL;
+    }
+    /* LDRA_JUSTIFY_END */
+    return (status);
+}
+
 int32_t Vhwa_m2mVissSubmitRing(Vhwa_M2mVissInstObj *instObj,
     Vhwa_M2mVissHandleObj *hObj)
 {
@@ -1848,6 +1920,28 @@ int32_t Vhwa_m2mVissAllocConfigUdmaMem(Vhwa_M2mVissInstObj *instObj)
 
     return (status);
 }
+#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
+int32_t Vhwa_m2mVissInitReadbackTrMem(Vhwa_M2mVissHandleObj *hObj)
+{
+    int32_t  status = FVID2_SOK;
+
+    if (NULL == hObj)
+    {
+        status = FVID2_EBADARGS;
+    }
+    else
+    {
+        if(UTRUE == hObj->isUsed)
+        {
+            hObj->readbackTxTrMem = &gReadbackVissRxTprdMem[hObj->hIdx][0U][0U];
+            Fvid2Utils_memset(hObj->readbackTxTrMem, 0x0U,
+                    VHWA_M2M_VISS_UDMA_CONFIG_TRPD_SIZE);
+        }
+    }
+
+    return (status);
+}
+#endif
 
 int32_t Vhwa_m2mVissAllocGlbceCntxSaveRestoreUdmaMem(const Vhwa_M2mVissInstObj *instObj, Vhwa_M2mVissHandleObj *hObj)
 {

@@ -577,37 +577,34 @@ int32_t CSL_ldcSetLumaToneMapLutCfg(CSL_ldc_coreRegs *coreRegs,
     Effect on this unit: If control reaches here, the code base is expected to prevent undefined behaviour by avoiding dereferencing a NULL pointer.
     However, due to the stated rationale, this is not tested.
     <justification end> */
-    if ((NULL == coreRegs) || (NULL == lutCfg))
+    if (NULL == coreRegs)
     {
         status = FVID2_EBADARGS;
     }
-    /* LDRA_JUSTIFY_END */
+    else if (NULL == lutCfg)
+    {
+        /* Disable LUT when config is NULL */
+        CSL_REG32_FINS(&coreRegs->DUALOUT_CFG,
+            LDC_CORE_DUALOUT_CFG_YLUT_EN, 0U);
+    }
     else if ((uint32_t)UTRUE == lutCfg->enable)
     {
+        /* Validate LUT configuration */
         if (NULL == lutAddr)
         {
             status = FVID2_EINVALID_PARAMS;
         }
-        if ((12u < lutCfg->inputBits) ||
-            (8u > lutCfg->inputBits))
+        else if ((lutCfg->inputBits < 8u) || (lutCfg->inputBits > 12u))
         {
             status = FVID2_EINVALID_PARAMS;
         }
-        if ((12u < lutCfg->outputBits) ||
-            (8u > lutCfg->outputBits))
+        else if ((lutCfg->outputBits < 8u) || (lutCfg->outputBits > 12u))
         {
             status = FVID2_EINVALID_PARAMS;
         }
-    }
-    else
-    {
-      /*Do Nothing*/
-    }
-
-    if (FVID2_SOK == status)
-    {
-        if ((uint32_t)UTRUE == lutCfg->enable)
+        else
         {
+            /* All validations passed — configure LUT */
             regVal = CSL_REG32_RD(&coreRegs->DUALOUT_CFG);
             CSL_FINS(regVal, LDC_CORE_DUALOUT_CFG_YIN_BITDPTH,
                 lutCfg->inputBits);
@@ -615,14 +612,13 @@ int32_t CSL_ldcSetLumaToneMapLutCfg(CSL_ldc_coreRegs *coreRegs,
                 lutCfg->outputBits);
             CSL_FINS(regVal, LDC_CORE_DUALOUT_CFG_YLUT_EN, 1u);
             CSL_REG32_WR(&coreRegs->DUALOUT_CFG, regVal);
-
             CSL_ldcSetRemapLut(lutAddr, lutCfg->tableAddr);
         }
-        else
-        {
-            CSL_REG32_FINS(&coreRegs->DUALOUT_CFG,
-                LDC_CORE_DUALOUT_CFG_YLUT_EN, 0U);
-        }
+    }
+    else
+    {
+        CSL_REG32_FINS(&coreRegs->DUALOUT_CFG,
+            LDC_CORE_DUALOUT_CFG_YLUT_EN, 0U);
     }
 
     return (status);
@@ -652,52 +648,48 @@ int32_t CSL_ldcSetChromaToneMapLutCfg(CSL_ldc_coreRegs *coreRegs,
     Effect on this unit: If control reaches here, the code base is expected to prevent undefined behaviour by avoiding dereferencing a NULL pointer.
     However, due to the stated rationale, this is not tested.
     <justification end> */
-    if ((NULL == coreRegs) || (NULL == lutCfg))
+    if (NULL == coreRegs)
     {
         status = FVID2_EBADARGS;
     }
-    /* LDRA_JUSTIFY_END */
+    else if (NULL == lutCfg)
+    {
+        /* Disable LUT when config is NULL */
+        CSL_REG32_FINS(&coreRegs->DUALOUT_CFG,
+            LDC_CORE_DUALOUT_CFG_CLUT_EN, 0U);
+    }
     else if ((uint32_t)UTRUE == lutCfg->enable)
     {
+        /* Validate LUT configuration */
         if (NULL == lutAddr)
         {
             status = FVID2_EINVALID_PARAMS;
         }
-        if ((12u < lutCfg->inputBits) ||
-            (8u > lutCfg->inputBits))
+        else if ((lutCfg->inputBits < 8u) || (lutCfg->inputBits > 12u))
         {
             status = FVID2_EINVALID_PARAMS;
         }
-        if ((12u < lutCfg->outputBits) ||
-            (8u > lutCfg->outputBits))
+        else if ((lutCfg->outputBits < 8u) || (lutCfg->outputBits > 12u))
         {
             status = FVID2_EINVALID_PARAMS;
         }
-    }
-    else
-    {
-      /*Do Nothing*/
-    }
-
-    if (FVID2_SOK == status)
-    {
-        if ((uint32_t)UTRUE == lutCfg->enable)
+        else
         {
+            /* All validations passed — configure LUT */
             regVal = CSL_REG32_RD(&coreRegs->DUALOUT_CFG);
             CSL_FINS(regVal, LDC_CORE_DUALOUT_CFG_CIN_BITDPTH,
                 lutCfg->inputBits);
             CSL_FINS(regVal, LDC_CORE_DUALOUT_CFG_COUT_BITDPTH,
                 lutCfg->outputBits);
-            CSL_FINS(regVal, LDC_CORE_DUALOUT_CFG_CLUT_EN, (uint32_t)1u);
+            CSL_FINS(regVal, LDC_CORE_DUALOUT_CFG_CLUT_EN, (uint32_t)1U);
             CSL_REG32_WR(&coreRegs->DUALOUT_CFG, regVal);
-
             CSL_ldcSetRemapLut(lutAddr, lutCfg->tableAddr);
         }
-        else
-        {
-            CSL_REG32_FINS(&coreRegs->DUALOUT_CFG,
-                LDC_CORE_DUALOUT_CFG_YLUT_EN, 0U);
-        }
+    }
+    else
+    {
+        CSL_REG32_FINS(&coreRegs->DUALOUT_CFG,
+            LDC_CORE_DUALOUT_CFG_CLUT_EN, 0U);
     }
 
     return (status);

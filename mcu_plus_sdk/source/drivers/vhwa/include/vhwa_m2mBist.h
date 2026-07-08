@@ -34,26 +34,26 @@
 
 /**
  *  \ingroup  DRV_VHWA_MODULE
- *  \defgroup DRV_LBIST_MODULE LBIST Module
- *            LBIST Module
+ *  \defgroup DRV_BIST_MODULE BIST Module
+ *            BIST Module
  *
  */
 /**
- *  \ingroup  DRV_LBIST_MODULE
- *  \defgroup DRV_LBIST_MODULE_INTERFACE LBIST Interface
- *            Interface file for LBIST M2M FVID2 driver
+ *  \ingroup  DRV_BIST_MODULE
+ *  \defgroup DRV_BIST_MODULE_INTERFACE BIST Interface
+ *            Interface file for BIST M2M FVID2 driver
  *
  *  @{
  */
 /**
- *  \file vhwa_m2mLbist.h
+ *  \file vhwa_m2mBist.h
  *
  *  \brief  Defines the structures / control operations that could be used to
- *          configure / control LBIST M2M driver
+ *          configure / control BIST M2M driver
  */
 
-#ifndef VHWA_M2M_LBIST_H_
-#define VHWA_M2M_LBIST_H_
+#ifndef VHWA_M2M_BIST_H_
+#define VHWA_M2M_BIST_H_
 
 /* ========================================================================== */
 /*                             Include Files                                  */
@@ -71,18 +71,18 @@ extern "C" {
 /* ========================================================================== */
 
 /**
- *  \anchor Vhwa_LBist
- *  \name   VHWA LBIST IOCTL macros
- *  \brief  Input/Output control MACRO's for LBIST driver
+ *  \anchor Vhwa_Bist
+ *  \name   VHWA BIST IOCTL macros
+ *  \brief  Input/Output control MACRO's for BIST driver
  *
  *  @{
  */
-#define VHWA_M2M_IOCTL_LBIST_VPAC0_ACQUIRE_LOCK       (VHWA_IOCTL_COMMON_IOCTL_BASE + 1u)
-#define VHWA_M2M_IOCTL_LBIST_VPAC0_RELEASE_LOCK       (VHWA_M2M_IOCTL_LBIST_VPAC0_ACQUIRE_LOCK + 1u)
-#define VHWA_M2M_IOCTL_LBIST_VPAC1_ACQUIRE_LOCK       (VHWA_M2M_IOCTL_LBIST_VPAC0_RELEASE_LOCK + 1u)
-#define VHWA_M2M_IOCTL_LBIST_VPAC1_RELEASE_LOCK       (VHWA_M2M_IOCTL_LBIST_VPAC1_ACQUIRE_LOCK + 1u)
-#define VHWA_M2M_IOCTL_LBIST_DMPAC_ACQUIRE_LOCK       (VHWA_M2M_IOCTL_LBIST_VPAC1_RELEASE_LOCK + 1u)
-#define VHWA_M2M_IOCTL_LBIST_DMPAC_RELEASE_LOCK       (VHWA_M2M_IOCTL_LBIST_DMPAC_ACQUIRE_LOCK + 1u)
+#define VHWA_M2M_IOCTL_BIST_VPAC0_ACQUIRE_LOCK       (VHWA_IOCTL_COMMON_IOCTL_BASE + 1u)
+#define VHWA_M2M_IOCTL_BIST_VPAC0_RELEASE_LOCK       (VHWA_M2M_IOCTL_BIST_VPAC0_ACQUIRE_LOCK + 1u)
+#define VHWA_M2M_IOCTL_BIST_VPAC1_ACQUIRE_LOCK       (VHWA_M2M_IOCTL_BIST_VPAC0_RELEASE_LOCK + 1u)
+#define VHWA_M2M_IOCTL_BIST_VPAC1_RELEASE_LOCK       (VHWA_M2M_IOCTL_BIST_VPAC1_ACQUIRE_LOCK + 1u)
+#define VHWA_M2M_IOCTL_BIST_DMPAC_ACQUIRE_LOCK       (VHWA_M2M_IOCTL_BIST_VPAC1_RELEASE_LOCK + 1u)
+#define VHWA_M2M_IOCTL_BIST_DMPAC_RELEASE_LOCK       (VHWA_M2M_IOCTL_BIST_DMPAC_ACQUIRE_LOCK + 1u)
  /** @} */
 
 
@@ -95,9 +95,9 @@ extern "C" {
 /*                          Function Declarations                             */
 /* ========================================================================== */
 
-int32_t Vhwa_m2mLbistInit(void);
+int32_t Vhwa_m2mBistInit(void);
 
-int32_t Vhwa_m2mLbistDeInit(void);
+int32_t Vhwa_m2mBistDeInit(void);
 
 /* ========================================================================== */
 /*                          Function Definitions                              */
@@ -109,7 +109,7 @@ int32_t Vhwa_m2mLbistDeInit(void);
 }
 #endif
 
-#endif /* VHWA_M2M_LBIST_H_ */
+#endif /* VHWA_M2M_BIST_H_ */
 
 /** @} */
 

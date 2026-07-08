@@ -32,9 +32,9 @@
  */
 
 /**
- *  \file vhwa_m2mLbistDrv.c
+ *  \file vhwa_m2mBistDrv.c
  *
- *  \brief API Implementation for the M2M LBist VHWA driver, used mainly for running LBIST
+ *  \brief API Implementation for the M2M Bist VHWA driver, used mainly for running LBIST or PBIST
  *
  */
 
@@ -44,33 +44,31 @@
 
 #include <vhwa_dmpac_abstraction_layer.h>
 #include <include/vhwa_common.h>
-#include <include/vhwa_m2mLbist.h>
+#include <include/vhwa_m2mBist.h>
 #include "src/drv/vhwa_utils.h"
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
-//#define VHWA_M2M_LBIST_MAX_UTC_MODULES              (5)
-//#define VHWA_M2M_LBIST_MAX_UTC_REG                  (500)
 
-#define VHWA_M2M_LBIST_VPAC0_UTC0_IDX               (0)
-#define VHWA_M2M_LBIST_VPAC0_UTC1_IDX               (1)
-#define VHWA_M2M_LBIST_VPAC1_UTC0_IDX               (2)
-#define VHWA_M2M_LBIST_VPAC1_UTC1_IDX               (3)
-#define VHWA_M2M_LBIST_DMPAC_UTC_IDX                (4)
+#define VHWA_M2M_BIST_VPAC0_UTC0_IDX               (0)
+#define VHWA_M2M_BIST_VPAC0_UTC1_IDX               (1)
+#define VHWA_M2M_BIST_VPAC1_UTC0_IDX               (2)
+#define VHWA_M2M_BIST_VPAC1_UTC1_IDX               (3)
+#define VHWA_M2M_BIST_DMPAC_UTC_IDX                (4)
 
 #if defined(VHWA_M2M_VPAC_INSTANCE)
     #if (VHWA_M2M_VPAC_INSTANCE == 0)
-        #define VHWA_M2M_LBIST_VPAC0_UTC_BASE_ADDR          (CSL_VPAC0_DRU_UTC_VPAC1_DRU_MMR_CFG_DRU_DRU_BASE)
+        #define VHWA_M2M_BIST_VPAC0_UTC_BASE_ADDR          (CSL_VPAC0_DRU_UTC_VPAC1_DRU_MMR_CFG_DRU_DRU_BASE)
     #endif
 
     #if (VHWA_M2M_VPAC_INSTANCE == 1)
-        #define VHWA_M2M_LBIST_VPAC1_UTC_BASE_ADDR          (CSL_VPAC1_DRU_UTC_VPAC1_DRU_MMR_CFG_DRU_DRU_BASE)
+        #define VHWA_M2M_BIST_VPAC1_UTC_BASE_ADDR          (CSL_VPAC1_DRU_UTC_VPAC1_DRU_MMR_CFG_DRU_DRU_BASE)
     #endif
 #endif
 
-#define VHWA_M2M_LBIST_DMPAC_UTC_BASE_ADDR          (CSL_DMPAC0_DRU_UTC_DMPAC0_DRU_MMR_CFG_DRU_DRU_BASE)
+#define VHWA_M2M_BIST_DMPAC_UTC_BASE_ADDR          (CSL_DMPAC0_DRU_UTC_DMPAC0_DRU_MMR_CFG_DRU_DRU_BASE)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -80,33 +78,31 @@ typedef struct
 {
     uint32_t                        isRegistered;
     VhwaAl_SemaphoreP_Struct        lock;
-} Vhwa_M2mLbistDrvInstObj;
+} Vhwa_M2mBistDrvInstObj;
 
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
 
-Fdrv_Handle Vhwa_m2mLbistCreate(UInt32 drvId, UInt32 drvInstId,
+Fdrv_Handle Vhwa_m2mBistCreate(UInt32 drvId, UInt32 drvInstId,
     Ptr createArgs, Ptr createStatusArgs, const Fvid2_DrvCbParams *cbPrms);
-Int32 Vhwa_m2mLbistDelete(Fdrv_Handle handle, Ptr deleteArgs);
-Int32 Vhwa_m2mLbistControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
+Int32 Vhwa_m2mBistDelete(Fdrv_Handle handle, Ptr deleteArgs);
+Int32 Vhwa_m2mBistControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
     Ptr cmdStatusArgs);
 
-//static void vhwaM2mLbistSaveUTCContext(uint32_t utcReg, uint32_t utcIdx, uint32_t numCh);
-//static void vhwaM2mLbistRestoreUTCContext(uint32_t utcReg, uint32_t utcIdx, uint32_t numCh);
 
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
 
-Fvid2_DrvOps gVhwaM2mLbistDrvFvid2Ops = {
-    FVID2_VHWA_M2M_LBIST_DRV_ID,
+Fvid2_DrvOps gVhwaM2mBistDrvFvid2Ops = {
+    FVID2_VHWA_M2M_BIST_DRV_ID,
     /**< Unique driver Id. */
-    Vhwa_m2mLbistCreate,
+    Vhwa_m2mBistCreate,
     /**< FVID2 create function pointer. */
-    Vhwa_m2mLbistDelete,
+    Vhwa_m2mBistDelete,
     /**< FVID2 delete function pointer. */
-    Vhwa_m2mLbistControl,
+    Vhwa_m2mBistControl,
     /**< FVID2 control function pointer. */
     NULL, NULL,
     /**< FVID2 queue function pointer. */
@@ -116,84 +112,86 @@ Fvid2_DrvOps gVhwaM2mLbistDrvFvid2Ops = {
     /**< FVID2 get processed request function pointer. */
 };
 
-Vhwa_M2mLbistDrvInstObj gVhwaM2mLbistDrvInstObj = {0};
+Vhwa_M2mBistDrvInstObj gVhwaM2mBistDrvInstObj = {0};
 
-//uint64_t gUtcRegVal[VHWA_M2M_LBIST_MAX_UTC_MODULES][VHWA_M2M_LBIST_MAX_UTC_REG] = {0};
 
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */
 
-int32_t Vhwa_m2mLbistInit(void)
+int32_t Vhwa_m2mBistInit(void)
 {
     int32_t                     status = FVID2_SOK;
-    Vhwa_M2mLbistDrvInstObj    *instObj = &gVhwaM2mLbistDrvInstObj;
+    Vhwa_M2mBistDrvInstObj    *instObj = &gVhwaM2mBistDrvInstObj;
     #if !defined(MCU_PLUS_SDK)
     SemaphoreP_Params           params;
     #endif
 
-    status = Fvid2_registerDriver(&gVhwaM2mLbistDrvFvid2Ops);
+    status = Fvid2_registerDriver(&gVhwaM2mBistDrvFvid2Ops);
 
     if (FVID2_SOK == status)
     {
-        gVhwaM2mLbistDrvInstObj.isRegistered = 1u;
+        gVhwaM2mBistDrvInstObj.isRegistered = 1u;
     }
 
-    /* Allocate lock semaphore */
-    #if defined(MCU_PLUS_SDK)
-    if(FVID2_SOK != SemaphoreP_constructBinary(&instObj->lock,1U))
-    #else
-    SemaphoreP_Params_init(&params);
-    params.mode = SemaphoreP_Mode_BINARY;
-    instObj->lock = SemaphoreP_create(1U, &params);
-    if (NULL == instObj->lock)
-    #endif
+    if (FVID2_SOK == status)
     {
-        GT_0trace(VhwaM2mLbistTrace, GT_ERR,
-            "Failed to allocate instance semaphore!!\n");
-        status = FVID2_EALLOC;
+        /* Allocate lock semaphore */
+        #if defined(MCU_PLUS_SDK)
+        if(FVID2_SOK != SemaphoreP_constructBinary(&instObj->lock,1U))
+        #else
+        SemaphoreP_Params_init(&params);
+        params.mode = SemaphoreP_Mode_BINARY;
+        instObj->lock = SemaphoreP_create(1U, &params);
+        if (NULL == instObj->lock)
+        #endif
+        {
+            GT_0trace(VhwaM2mBistTrace, GT_ERR,
+                "Failed to allocate instance semaphore!!\n");
+            status = FVID2_EALLOC;
+        }
     }
     return (status);
 }
 
-int32_t Vhwa_m2mLbistDeInit(void)
+int32_t Vhwa_m2mBistDeInit(void)
 {
-    if (1u == gVhwaM2mLbistDrvInstObj.isRegistered)
+    if (1u == gVhwaM2mBistDrvInstObj.isRegistered)
     {
-        (void)Fvid2_unRegisterDriver(&gVhwaM2mLbistDrvFvid2Ops);
-        gVhwaM2mLbistDrvInstObj.isRegistered = 0u;
+        (void)Fvid2_unRegisterDriver(&gVhwaM2mBistDrvFvid2Ops);
+        gVhwaM2mBistDrvInstObj.isRegistered = 0u;
     }
 
     #if defined(MCU_PLUS_SDK)
-    SemaphoreP_destruct(&gVhwaM2mLbistDrvInstObj.lock);
+    SemaphoreP_destruct(&gVhwaM2mBistDrvInstObj.lock);
     #else
-    if (NULL != gVhwaM2mLbistDrvInstObj.lock)
+    if (NULL != gVhwaM2mBistDrvInstObj.lock)
     {
-        (void)SemaphoreP_delete(gVhwaM2mLbistDrvInstObj.lock);
-        gVhwaM2mLbistDrvInstObj.lock = NULL;
+        (void)SemaphoreP_delete(gVhwaM2mBistDrvInstObj.lock);
+        gVhwaM2mBistDrvInstObj.lock = NULL;
     }
     #endif
     return (FVID2_SOK);
 }
 
-Fdrv_Handle Vhwa_m2mLbistCreate(UInt32 drvId, UInt32 drvInstId,
+Fdrv_Handle Vhwa_m2mBistCreate(UInt32 drvId, UInt32 drvInstId,
     Ptr createArgs, Ptr createStatusArgs, const Fvid2_DrvCbParams *cbPrms)
 {
     Fdrv_Handle             handle = NULL;
 
-    if ((FVID2_VHWA_M2M_LBIST_DRV_ID == drvId) && (0U == drvInstId))
+    if ((FVID2_VHWA_M2M_BIST_DRV_ID == drvId) && (0U == drvInstId))
     {
-        handle = (Fdrv_Handle)&gVhwaM2mLbistDrvInstObj;
+        handle = (Fdrv_Handle)&gVhwaM2mBistDrvInstObj;
     }
 
     return (handle);
 }
 
-Int32 Vhwa_m2mLbistDelete(Fdrv_Handle handle, Ptr deleteArgs)
+Int32 Vhwa_m2mBistDelete(Fdrv_Handle handle, Ptr deleteArgs)
 {
     int32_t status = FVID2_EFAIL;
 
-    if ((Vhwa_M2mLbistDrvInstObj *)handle == &gVhwaM2mLbistDrvInstObj)
+    if ((Vhwa_M2mBistDrvInstObj *)handle == &gVhwaM2mBistDrvInstObj)
     {
         status = FVID2_SOK;
     }
@@ -201,18 +199,18 @@ Int32 Vhwa_m2mLbistDelete(Fdrv_Handle handle, Ptr deleteArgs)
     return (status);
 }
 
-Int32 Vhwa_m2mLbistControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
+Int32 Vhwa_m2mBistControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
     Ptr cmdStatusArgs)
 {
     int32_t                     status = FVID2_SOK;
 #if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     uint32_t                    cnt;
 #endif
-    Vhwa_M2mLbistDrvInstObj    *instObj = NULL;
+    Vhwa_M2mBistDrvInstObj    *instObj = NULL;
 
-    if ((Vhwa_M2mLbistDrvInstObj *)handle == &gVhwaM2mLbistDrvInstObj)
+    if ((Vhwa_M2mBistDrvInstObj *)handle == &gVhwaM2mBistDrvInstObj)
     {
-        instObj =  &gVhwaM2mLbistDrvInstObj;
+        instObj =  &gVhwaM2mBistDrvInstObj;
         status = FVID2_SOK;
     }
     else
@@ -227,19 +225,19 @@ Int32 Vhwa_m2mLbistControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
 #ifdef VHWA_M2M_VPAC_INSTANCE
 #if (VHWA_M2M_VPAC_INSTANCE == 0)
 #if !defined(VHWA_VPAC_IP_REV_VPAC3L)
-            case VHWA_M2M_IOCTL_LBIST_VPAC0_ACQUIRE_LOCK:
+            case VHWA_M2M_IOCTL_BIST_VPAC0_ACQUIRE_LOCK:
                 for (cnt = VHWA_VPAC0_VISS_LOCK_IDX; cnt <= VHWA_VPAC0_NF_LOCK_IDX; cnt ++)
                 {
                     status = Vhwa_commonHwaLockAquire(cnt, SYSTEMP_WAIT_FOREVER);
                     if (FVID2_SOK != status)
                     {
-                        GT_1trace(VhwaM2mLbistTrace, GT_ERR,
+                        GT_1trace(VhwaM2mBistTrace, GT_ERR,
                             "Failed to acquire semaphore for %d!!\n", cnt);
                         break;
                     }
                 }
                 break;
-            case VHWA_M2M_IOCTL_LBIST_VPAC0_RELEASE_LOCK:
+            case VHWA_M2M_IOCTL_BIST_VPAC0_RELEASE_LOCK:
                 /* Before releasing lock, restore the registers of UTC */
 
                 /* Since driver does not support multiple instances of the modules,
@@ -272,20 +270,20 @@ Int32 Vhwa_m2mLbistControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
 #endif
 
 #if (VHWA_M2M_VPAC_INSTANCE == 1)
-            case VHWA_M2M_IOCTL_LBIST_VPAC1_ACQUIRE_LOCK:
+            case VHWA_M2M_IOCTL_BIST_VPAC1_ACQUIRE_LOCK:
                 for (cnt = VHWA_VPAC1_VISS_LOCK_IDX; cnt <= VHWA_VPAC1_NF_LOCK_IDX; cnt ++)
                 {
                     status = Vhwa_commonHwaLockAquire(cnt, SYSTEMP_WAIT_FOREVER);
                     if (FVID2_SOK != status)
                     {
-                        GT_1trace(VhwaM2mLbistTrace, GT_ERR,
+                        GT_1trace(VhwaM2mBistTrace, GT_ERR,
                             "Failed to acquire semaphore for %d!!\n", cnt);
                         break;
                     }
                 }
 
                 break;
-            case VHWA_M2M_IOCTL_LBIST_VPAC1_RELEASE_LOCK:
+            case VHWA_M2M_IOCTL_BIST_VPAC1_RELEASE_LOCK:
                 /* Before Releasing the locks restore UTC registers */
 
                 /* Since driver does not support multiple instances of the modules,
@@ -319,19 +317,19 @@ Int32 Vhwa_m2mLbistControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
 
 #ifdef VHWA_M2M_DMPAC_INSTANCE
 #if !defined(VHWA_VPAC_IP_REV_VPAC3L)
-            case VHWA_M2M_IOCTL_LBIST_DMPAC_ACQUIRE_LOCK:
+            case VHWA_M2M_IOCTL_BIST_DMPAC_ACQUIRE_LOCK:
                 for (cnt = VHWA_DMPAC_DOF_LOCK_IDX; cnt <= VHWA_DMPAC_SDE_LOCK_IDX; cnt ++)
                 {
                     status = Vhwa_commonHwaLockAquire(cnt, SYSTEMP_WAIT_FOREVER);
                     if (FVID2_SOK != status)
                     {
-                        GT_1trace(VhwaM2mLbistTrace, GT_ERR,
+                        GT_1trace(VhwaM2mBistTrace, GT_ERR,
                             "Failed to acquire semaphore for %d!!\n", cnt);
                         break;
                     }
                 }
                 break;
-            case VHWA_M2M_IOCTL_LBIST_DMPAC_RELEASE_LOCK:
+            case VHWA_M2M_IOCTL_BIST_DMPAC_RELEASE_LOCK:
                 /* Before Releasing the locks restore UTC registers */
                 status = Vhwa_m2mDofReInit();
                 if (FVID2_SOK == status)

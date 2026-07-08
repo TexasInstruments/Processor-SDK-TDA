@@ -121,7 +121,7 @@
 #define APP_DMPAC_DISABLE_FIREWALL       (0x000A)
 
 /**
- *  Remote service command to Run LBIST on VPAC0
+ *  Remote service command to Run BIST on VPAC0
  */
 #define APP_VPAC_ACQUIRE_LOCK         (0x000B)
 

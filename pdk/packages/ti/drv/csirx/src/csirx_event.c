@@ -529,7 +529,10 @@ int32_t CsirxDrv_eventEnable(Fdrv_Handle drvHandle,
                 if(((eventType & CSIRX_EVENT_TYPE_ASF_TRANS_TO_ERR) >>
                         CSL_CSIRX_ASF_INT_STATUS_ASF_TRANS_TO_ERR_SHIFT) == 1U)
                 {
-                    CSIRX_GetAsfTransToFaultMask(&instObj->cslObj.cslCfgData, &asfTransToFaultMsk);
+                    if(CDN_EOK != CSIRX_GetAsfTransToFaultMask(&instObj->cslObj.cslCfgData, &asfTransToFaultMsk))
+		    		{
+						retVal = FVID2_EFAIL;
+		    		}
                     
                     asfTransToFaultMsk.asfTransToFaultMask &= (uint8_t)
                             (~((1U & CSIRX_EVENT_TYPE_ASF_TRANS_TO_FAULT) >>
@@ -695,7 +698,10 @@ int32_t CsirxDrv_eventDisable(Fdrv_Handle drvHandle,
                 if(((eventType & CSIRX_EVENT_TYPE_ASF_TRANS_TO_ERR) >>
                         CSL_CSIRX_ASF_INT_STATUS_ASF_TRANS_TO_ERR_SHIFT) == 1U)
                 {
-                    CSIRX_GetAsfTransToFaultMask(&instObj->cslObj.cslCfgData, &asfTransToFaultMsk);
+                    if(CDN_EOK != CSIRX_GetAsfTransToFaultMask(&instObj->cslObj.cslCfgData, &asfTransToFaultMsk))
+		    		{
+						retVal = FVID2_EFAIL;
+		    		}
                     
                     asfTransToFaultMsk.asfTransToFaultMask |= (uint8_t)
                             ((1U & CSIRX_EVENT_TYPE_ASF_TRANS_TO_FAULT) >>
