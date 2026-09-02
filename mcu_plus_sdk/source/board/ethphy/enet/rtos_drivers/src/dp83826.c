@@ -67,7 +67,17 @@ static void Dp83826_rmwExtReg(EthPhyDrv_Handle hPhy,
                               uint16_t val);
 
 static int32_t Dp83826_getSpeedDuplex (EthPhyDrv_Handle hPhy,
-                                       Phy_Link_SpeedDuplex* pConfig);                              
+                                       Phy_Link_SpeedDuplex *pConfig);
+
+
+static int32_t Dp83826_reset(EthPhyDrv_Handle hPhy);
+
+static int32_t Dp83826_isResetComplete (EthPhyDrv_Handle hPhy, bool *pCompleted);
+
+static int32_t Dp83826_restart(EthPhyDrv_Handle hPhy);
+
+static int32_t Dp83826_isRestartComplete (EthPhyDrv_Handle hPhy, bool *pCompleted);
+
 
 /* ========================================================================== */
 /*                          Function Declarations                             */
@@ -88,8 +98,10 @@ Phy_DrvObj_t gEnetPhyDrvDp83826 =
         .isPhyDevSupported  = Dp83826_isPhyDevSupported,
         .isMacModeSupported = Dp83826_isMacModeSupported,
         .config             = Dp83826_config,
-        .reset              = GenericPhy_reset,
-        .isResetComplete    = GenericPhy_isResetComplete,
+        .reset              = Dp83826_reset,
+        .isResetComplete    = Dp83826_isResetComplete,
+        .restart            = Dp83826_restart,
+        .isRestartComplete  = Dp83826_isRestartComplete,
         .readExtReg         = GenericPhy_readExtReg,
         .writeExtReg        = GenericPhy_writeExtReg,
         .printRegs          = Dp83826_printRegs,
@@ -204,12 +216,12 @@ int32_t Dp83826_config(EthPhyDrv_Handle hPhy,
     if (mii == PHY_MAC_MII_RMII)
     {
         /*Enabled RMII mode*/
-        Dp83826_rmwExtReg(hPhy, Dp83826_RCSR, PHY_BIT(Dp83826_RMII_BIT), PHY_BIT(Dp83826_RMII_BIT));
+        Dp83826_rmwExtReg(hPhy, DP83826_RCSR, RCSR_RMII_MODE, RCSR_RMII_MODE);
     }
     else if (mii == PHY_MAC_MII_MII)
     {
         /*Enabled MII mode*/
-        Dp83826_rmwExtReg(hPhy, Dp83826_RCSR, PHY_BIT(Dp83826_RMII_BIT), 0x0);
+        Dp83826_rmwExtReg(hPhy, DP83826_RCSR, RCSR_RMII_MODE, 0x0);
     }
     return status;
 }
@@ -221,20 +233,20 @@ static void Dp83826_enableAutoMdix(EthPhyDrv_Handle hPhy,
 
     PHYTRACE_DBG("PHY %u: %s automatic cross-over\n",
                  PhyPriv_getPhyAddr(hPhy), enable ? "enable" : "disable");
-                  pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, Dp83826_PHYCR,
+                  pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83826_PHYCR,
                   PHYCR_AUTOMDIX_ENABLE,
                   enable ? PHYCR_AUTOMDIX_ENABLE : 0);
 
     if (enable)
     {
         PHYTRACE_DBG("PHY %u: enable Robust Auto-MDIX\n", PhyPriv_getPhyAddr(hPhy));
-        pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, Dp83826_CR1,
+        pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83826_CR1,
                        CR1_ROBUSTAUTOMDIX,
                        CR1_ROBUSTAUTOMDIX);
     }
     else
     {
-        pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, Dp83826_PHYCR,
+        pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83826_PHYCR,
                        PHYCR_FORCEMDIX_MASK,
                        PHYCR_FORCEMDIX_MDI);
     }
@@ -265,13 +277,13 @@ void Dp83826_printRegs(EthPhyDrv_Handle hPhy)
     printf("PHY %u: ANNPTR      = 0x%04x\r\n",phyAddr, val);
     pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_ANNPRR, &val);
     printf("PHY %u: ANNPRR      = 0x%04x\r\n",phyAddr, val);
-    pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, Dp83826_CR1, &val);
+    pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, DP83826_CR1, &val);
     printf("PHY %u: CR1     = 0x%04x\n",phyAddr, val);
     pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_GIGSR, &val);
     printf("PHY %u: STS1        = 0x%04x\r\n",phyAddr, val);
     pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_GIGESR, &val);
     printf("PHY %u: 1KSCR       = 0x%04x\r\n",phyAddr, val);
-    pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, Dp83826_PHYCR, &val);
+    pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, DP83826_PHYCR, &val);
     printf("PHY %u: PHYCR   = 0x%04x\n",phyAddr, val);
 }
 
@@ -303,7 +315,84 @@ static void Dp83826_rmwExtReg(EthPhyDrv_Handle hPhy,
     }
 }
 
-int32_t Dp83826_getSpeedDuplex (EthPhyDrv_Handle hPhy, Phy_Link_SpeedDuplex* pConfig)
+static int32_t Dp83826_reset(EthPhyDrv_Handle hPhy)
+{
+    int32_t status = PHY_EFAIL;
+
+    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    /* Global software reset: all PHY internal circuits including IEEE-defined
+     * registers and all extended registers are reset */
+    PHYTRACE_DBG("PHY %u: global soft-reset\n", PhyPriv_getPhyAddr(hPhy));
+
+    status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83826_PHYRCR, PHYRCR_SWRESET, PHYRCR_SWRESET);
+
+    return status;
+}
+
+static int32_t Dp83826_isResetComplete (EthPhyDrv_Handle hPhy, bool *pCompleted)
+{
+    int32_t status = PHY_EFAIL;
+    uint16_t val = 0;
+
+    if ((hPhy == NULL) ||
+        (pCompleted == NULL))
+    {
+        return PHY_EBADARGS;
+    }
+
+    *pCompleted = false;
+
+    Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
+
+    /* Reset is complete when RESET bit was self-cleared */
+    status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHYRCR_SWRESET, &val);
+
+    if (PHY_SOK == status)
+    {
+        *pCompleted = ((val & PHYRCR_SWRESET) == 0U);
+    }
+
+    PHYTRACE_DBG("PHY %u: soft-reset is %scomplete\n", PhyPriv_getPhyAddr(hPhy), *pCompleted ? "" : "not");
+
+    return status;
+}
+
+static int32_t Dp83826_restart(EthPhyDrv_Handle hPhy)
+{
+    int32_t status = PHY_EFAIL;
+
+    Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
+
+    /* Software restart: full reset, not including registers */
+    PHYTRACE_DBG("PHY %u: soft-restart\n",PhyPriv_getPhyAddr(hPhy));
+
+    status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83826_PHYRCR, PHYRCR_SWRESTART, PHYRCR_SWRESTART);
+
+    return status;
+}
+
+static int32_t Dp83826_isRestartComplete (EthPhyDrv_Handle hPhy, bool *pCompleted)
+{
+    int32_t status = PHY_EFAIL;
+    uint16_t val = 0;
+
+    Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
+
+    /* Restart is complete when RESTART bit has self-cleared */
+    status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, DP83826_PHYRCR, &val);
+
+    if (status == PHY_SOK)
+    {
+        *pCompleted = ((val & PHYRCR_SWRESTART) == 0U);
+    }
+
+    PHYTRACE_DBG("PHY %u: soft-restart is %scomplete\n", PhyPriv_getPhyAddr(hPhy), *pCompleted ? "" : "not");
+
+    return status;
+}
+
+static int32_t Dp83826_getSpeedDuplex (EthPhyDrv_Handle hPhy, Phy_Link_SpeedDuplex *pConfig)
 {
     int32_t  status;
     uint32_t speed;

@@ -393,7 +393,6 @@ typedef struct
     uint32_t                            wdTimerErrStatus;
     /* Timestamp for the most recent frame processed. */
     uint64_t                            timestamp;
-#if !defined(VPAC3L)
     /* Physical address for register readback memory */
     uint64_t                            readback_mem_ptr_phys;
     /* Virtual address for register readback memory */
@@ -406,7 +405,6 @@ typedef struct
     uint32_t                            config_reg_mem_size;    
     /*! configuration buffer, if configThroughUDMA is true */
     Vhwa_M2mVissConfigAppBuff           readbackBufferInfo;
-#endif
 } tivxVpacVissObj;
 
 typedef struct

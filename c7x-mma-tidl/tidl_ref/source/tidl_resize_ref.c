@@ -76,6 +76,8 @@
 #include "tidl_resize_ref.h"
 #include "tidl_resize.h"
 
+using namespace floating_point::bf16_c7x;
+
 #ifdef BUILD_WITH_CUDA
 #include "tidl_cuda.h"
 #endif
@@ -188,7 +190,9 @@ int32_t TIDL_refResize(
           hIdx = hLoc + 0.5;
               /* LDRA_JUSTIFY_START
               <metric start> statement branch <metric end>
-              <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+              <justification start>
+              Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+              Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
               <justification end> */
           hIdx = (hIdx < inHeight) ? hIdx : (inHeight - 1U);
               /* LDRA_JUSTIFY_END */
@@ -198,7 +202,9 @@ int32_t TIDL_refResize(
           wIdx = wLoc + 0.5;
               /* LDRA_JUSTIFY_START
               <metric start> statement branch <metric end>
-              <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+              <justification start>
+              Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+              Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
               <justification end> */
           wIdx = (wIdx < inWidth) ? wIdx : (inWidth - 1U);
               /* LDRA_JUSTIFY_END */
@@ -335,6 +341,7 @@ int32_t TIDL_refResize(
  * @param outDataParams : parameters of the output data buffer
  * @param basePrmPtr : Copy of Resize layer parameters
  */
+template <class Tin, class Tout>
 int32_t TIDL_resizeProcessSP(
     sTIDL_Layer_t *tidlLayer,
     void *inPtrs[],
@@ -345,8 +352,8 @@ int32_t TIDL_resizeProcessSP(
 {
   int32_t status = TIDL_SUCCESS;
   sTIDL_ResizeLayerParams_t *params = &tidlLayer->layerParams.resizeParams;
-  float32_tidl *in = (float32_tidl *)inPtrs[0];
-  float32_tidl *out = (float32_tidl *)outPtr;
+  Tin *in = (Tin *)inPtrs[0];
+  Tout *out = (Tout *)outPtr;
 
   uint32_t numInChannels = (uint16_t)inDataParams[0]->dimValues[TIDL_DIM_NUMCH];
   uint32_t inWidth = (uint16_t)inDataParams[0]->dimValues[TIDL_DIM_WIDTH];
@@ -373,18 +380,18 @@ int32_t TIDL_resizeProcessSP(
   }
   else
   {
-    wRatio = 0;
+    wRatio = 0.0f;
     status = TIDL_ERR_FAILURE;
   }
   if (status == TIDL_SUCCESS)
   {
-  if (params->resizeRatio[TIDL_DIM_HEIGHT] > 0.0f)
-  {
-    hRatio = 1.0f / params->resizeRatio[TIDL_DIM_HEIGHT];
-  }
-  else
-  {
-    hRatio = 0;
+    if (params->resizeRatio[TIDL_DIM_HEIGHT] > 0.0f)
+    {
+      hRatio = 1.0f / params->resizeRatio[TIDL_DIM_HEIGHT];
+    }
+    else
+    {
+      hRatio = 0.0f;
       status = TIDL_ERR_FAILURE;
     }
   }
@@ -395,14 +402,14 @@ int32_t TIDL_resizeProcessSP(
 {
   #ifdef BUILD_WITH_CUDA_RESIZE
   // call cuda resize wrapper
-  status = TIDL_cudaResize<float>(in, out, numBatches, numInChannels, inHeight, inWidth, outHeight, outWidth, inBatchPitch, inChPitch, inPitch,
+  status = TIDL_cudaResize<Tin>(in, out, numBatches, numInChannels, inHeight, inWidth, outHeight, outWidth, inBatchPitch, inChPitch, inPitch,
                                 outBatchPitch, outChPitch, outPitch, params->resizeRatio[TIDL_DIM_HEIGHT], params->resizeRatio[TIDL_DIM_WIDTH], 
                                 params->resizePadZeroOffset, params->mode, 0, inDataParams[0]->padH, inDataParams[0]->padW, inOffset, outOffset, tidlLayer->outData.tensorZeroPoint);
   #else
   if (params->mode == TIDL_ResizePadZero)
   {
     // initialize output buffer with zeroes
-    memset (out, 0, (numBatches * outBatchPitch * sizeof (float32_tidl)) );
+    memset (out, 0, (numBatches * outBatchPitch * sizeof (Tout)) );
 
     in               = in + (inDataParams[0]->padH*inPitch) + inDataParams[0]->padW;
     // out              = out + (tidlLayer->outData.padH*outPitch) + tidlLayer->outData.padW;
@@ -444,22 +451,26 @@ int32_t TIDL_resizeProcessSP(
       {
         for (k = 0; k < numInChannels; k++)
       {
-        hLoc = (hRatio * ((float32_tidl)i + 0.5)) - 0.5;
+        hLoc = (hRatio * ((float32_tidl)i + 0.5f)) - 0.5f;
         hLoc = (hLoc < 0.0f) ? 0.0f : hLoc;
-        hIdx = hLoc+0.5;
+        hIdx = hLoc+0.5f;
               /* LDRA_JUSTIFY_START
               <metric start> statement branch <metric end>
-              <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+              <justification start>
+              Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+              Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
               <justification end> */
         hIdx = (hIdx < inHeight) ? hIdx : (inHeight-1U);
               /* LDRA_JUSTIFY_END */
 
-        wLoc = (wRatio * ((float32_tidl)j + 0.5)) - 0.5;
+        wLoc = (wRatio * ((float32_tidl)j + 0.5f)) - 0.5f;
         wLoc = (wLoc < 0.0f) ? 0.0f : wLoc;
-        wIdx = wLoc+0.5;
+        wIdx = wLoc+0.5f;
               /* LDRA_JUSTIFY_START
               <metric start> statement branch <metric end>
-              <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+              <justification start>
+              Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+              Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
               <justification end> */
         wIdx = (wIdx < inWidth) ? wIdx : (inWidth-1U);
               /* LDRA_JUSTIFY_END */
@@ -481,7 +492,7 @@ int32_t TIDL_resizeProcessSP(
     uint32_t l = 0;
     float32_tidl hLoc, wLoc;
     uint32_t hIdx, wIdx, hNext, wNext;
-    float32_tidl w00, w01, w10, w11;
+    Tin w00, w01, w10, w11;
 
     //OPENACC(parallel loop collapse(4))
     for (l = 0; l < (uint32_t)numBatches; l++)
@@ -492,18 +503,18 @@ int32_t TIDL_resizeProcessSP(
       {
         for (k = 0; k < numInChannels; k++)
       {
-        hLoc = (hRatio * ((float32_tidl)i + 0.5)) - 0.5;
+        hLoc = (hRatio * ((float32_tidl)i + 0.5f)) - 0.5f;
         hLoc = (hLoc < 0.0f) ? 0.0f : hLoc;
         hIdx = hLoc;
         hNext = (hIdx < (inHeight-1U)) ? 1U : 0U;
         w11 = hLoc - (float32_tidl)hIdx;
-        w10 = 1.0f - w11;
+        w10 = (Tin)1.0f - w11;
 
-        wLoc = (wRatio * ((float32_tidl)j + 0.5)) - 0.5;
+        wLoc = (wRatio * ((float32_tidl)j + 0.5f)) - 0.5f;
         wLoc = (wLoc < 0.0f) ? 0.0f : wLoc;
         wIdx = wLoc;
         w01 = wLoc - (float32_tidl)wIdx;
-        w00 = 1.0f - w01;
+        w00 = (Tin)1.0f - w01;
         int32_t inputOffset = inOffset+ (inPitch  * hIdx) + wIdx;
         int32_t outputOffset = outOffset + (outPitch * (i)) + (j);
         wNext = (wIdx < (inWidth-1U)) ? 1U : 0U;
@@ -513,7 +524,8 @@ int32_t TIDL_resizeProcessSP(
         float32_tidl i10 = *(in + (l*inBatchPitch) + (k*inChPitch) + inputOffset + (hNext*inPitch));
         float32_tidl i11 = *(in + (l*inBatchPitch) + (k*inChPitch) + inputOffset + (hNext*inPitch) + wNext);
 
-        out[(l*outBatchPitch) + (k*outChPitch) + (uint32_t)outputOffset] = ((w10*((i00* w00) +  (i01* w01))) + (w11*((i10* w00) +  (i11* w01))));
+        out[(l*outBatchPitch) + (k*outChPitch) + (uint32_t)outputOffset] = (((float32_tidl)w10*((i00* (float32_tidl)w00) +  (i01* (float32_tidl)w01))) +
+                                                                           ((float32_tidl)w11*((i10* (float32_tidl)w00) +  (i11* (float32_tidl)w01))));
         //*(out + l*outBatchPitch + k*outChPitch + outputOffset) = (w10*(i00* w00 +  i01* w01) + w11*(i10* w00 +  i11* w01));
         }
       }
@@ -580,7 +592,17 @@ int32_t TIDL_resizeRefProcess(const TIDL_CreateParams *createParams,
     {
       inDataPrms[j]  = &createParams->net->TIDLLayers[algLayer->inLayerIdx[j]].outData;
     }
-    status = TIDL_resizeProcessSP(tidlLayer, inPtrs, outPtrs[0], inDataPrms, &tidlLayer->outData, (uint8_t*)createParams->net);
+    status = TIDL_resizeProcessSP<float32_tidl, float32_tidl>(tidlLayer, inPtrs, outPtrs[0], inDataPrms, &tidlLayer->outData, (uint8_t*)createParams->net);
+    return (status);
+  }
+  else if(inDataParams->elementType == TIDL_BFloat16)
+  {
+    sTIDL_DataParams_t * inDataPrms[TIDL_NUM_IN_BUFS] = {0};
+    for(int j=0; j < tidlLayer->numInBufs; j++)
+    {
+      inDataPrms[j]  = &createParams->net->TIDLLayers[algLayer->inLayerIdx[j]].outData;
+    }
+    status = TIDL_resizeProcessSP<bfloat16_tidl, bfloat16_tidl>(tidlLayer, inPtrs, outPtrs[0], inDataPrms, &tidlLayer->outData, (uint8_t*)createParams->net);
     return (status);
   }
 #endif
@@ -612,7 +634,9 @@ int32_t TIDL_resizeRefProcess(const TIDL_CreateParams *createParams,
         {
           /* LDRA_JUSTIFY_START
           <metric start> branch <metric end>
-          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification start>
+          Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
           <justification end> */
           if(1 == copyTopLine)
           {
@@ -622,7 +646,9 @@ int32_t TIDL_resizeRefProcess(const TIDL_CreateParams *createParams,
           }
           /* LDRA_JUSTIFY_START
           <metric start> branch <metric end>
-          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification start>
+          Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
           <justification end> */
           if(1 == copyBottomLine)
           {
@@ -682,7 +708,9 @@ int32_t TIDL_resizeRefProcess(const TIDL_CreateParams *createParams,
         {
           /* LDRA_JUSTIFY_START
           <metric start> branch <metric end>
-          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification start>
+          Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
           <justification end> */
           if(1 == copyTopLine)
           {
@@ -691,7 +719,9 @@ int32_t TIDL_resizeRefProcess(const TIDL_CreateParams *createParams,
           }
           /* LDRA_JUSTIFY_START
           <metric start> branch <metric end>
-          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification start>
+          Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
           <justification end> */
           if(1 == copyBottomLine)
           {

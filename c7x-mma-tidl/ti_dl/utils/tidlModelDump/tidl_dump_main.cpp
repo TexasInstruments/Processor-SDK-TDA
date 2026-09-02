@@ -77,7 +77,7 @@
 static sTIDL_Network_t *read_network(const char *net_filename);
 static sTIDL_IOBufDesc_t *read_IOParams(const char *iodesc_filename);
 static void readLayerInfoFile(const char *liFileName, int nLayers, 
-                              TIDL_dump::layerNames_t &layerNames, int inferenceMode);
+                              TIDL_dump::sLayerSpecificInfo_t *layersInfo, int inferenceMode);
 static const char *get_arg(int argc, char *argv[], int index);
 static void usage();
 
@@ -128,7 +128,7 @@ int main(int32_t argc, char *argv[])
 
   sTIDL_Network_t *network = nullptr;
   sTIDL_IOBufDesc_t *IOParams = nullptr;
-  TIDL_dump::layerNames_t layerNames;
+  TIDL_dump::sLayerSpecificInfo_t layersInfo[TIDL_NUM_MAX_LAYERS];
 
   // Read network file
   if (network_filename)
@@ -136,7 +136,7 @@ int main(int32_t argc, char *argv[])
      network = read_network(network_filename);
      // Read layer info file, to get layer names
      std::string liFileName = std::string(network_filename) + ".layer_info.txt";
-     readLayerInfoFile(liFileName.c_str(), network->numLayers, layerNames, network->inferenceMode);
+     readLayerInfoFile(liFileName.c_str(), network->numLayers, layersInfo, network->inferenceMode);
   }
 
   // Read IOBufDesc file
@@ -144,7 +144,7 @@ int main(int32_t argc, char *argv[])
      IOParams = read_IOParams(io_filename);
 
   // Instantiate the dumper 
-  TIDL_dump dumper(*os, network, IOParams, &layerNames, options);
+  TIDL_dump dumper(*os, network, IOParams, layersInfo, options);
 
   // Invoke the dumper to print the network
   dumper.dumpNet();
@@ -221,7 +221,7 @@ sTIDL_IOBufDesc_t *read_IOParams(const char *iodesc_filename)
 
 // Read the layer info file, and fill in layer names map
 void readLayerInfoFile(const char *liFileName, int nLayers, 
-                       TIDL_dump::layerNames_t &layerNames, int inferenceMode)
+                       TIDL_dump::sLayerSpecificInfo_t *layersInfo, int inferenceMode)
 {
   FILE *fpNames = fopen(liFileName, "r");
   if (!fpNames)
@@ -229,7 +229,7 @@ void readLayerInfoFile(const char *liFileName, int nLayers,
   for (int i = 0; i < nLayers; i++)
   {
     char name[300];
-    int temp1, temp2, temp3;
+    int temp1, temp2, temp3 = -1;
 
     if(inferenceMode != TIDL_inferenceModeLowLatency) /*single core inference*/
     {
@@ -241,13 +241,17 @@ void readLayerInfoFile(const char *liFileName, int nLayers,
     }
     else
     {
-      if (fscanf(fpNames, "%d %d  %d %s", &temp1, &temp2, &temp3, name) != 4)
+      if (fscanf(fpNames, "%d %d %d %s", &temp1, &temp2, &temp3, name) != 4)
       {
          printf("parsing error reading layer info file %s\n", liFileName);
          return;
       }
     }
-    layerNames[i] = name;
+    layersInfo[i].layerName = name;
+
+    layersInfo[i].multiCoreMode = temp3 != -1 
+                                  ? temp3 
+                                  : TIDL_NOT_MULTI_CORE;
   }
   fclose(fpNames);
 }

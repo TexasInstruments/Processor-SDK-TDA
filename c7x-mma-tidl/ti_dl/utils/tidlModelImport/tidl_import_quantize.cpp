@@ -75,6 +75,8 @@
 #include "tidl_import_diag.h"
 #include "tidl_import_lut.h"
 #include "tidl_activation_optimizations.h"
+#include "tidl_bfloat16.h"
+#include "tidl_common_utils_infer_import.h"
 
 #define __MODULE__ "[QUANTIZATION]"
 
@@ -91,24 +93,7 @@ int debugLayeId = 0;
 #define SYMMETRIC_16BIT_SIGNED_MAX (32767.0)
 #define SYMMETRIC_16BIT_UNSIGNED_MAX (65535.0)
 #define TIDL_MAX_GRID_TRAVERSAL (32768)
-static std::unordered_set<int> quantizationPassThroughLayers = {
-  TIDL_CropLayer,
-  TIDL_ReshapeLayer,
-  TIDL_TransposeLayer,
-  TIDL_DataConvertLayer,
-  TIDL_DetectionOutputLayer,
-  // TIDL_GridSampleLayer, /*Passthrough logic is only checking idx '0' input which is gridsample's input, so we can use it as a passthrough layer*/
-  TIDL_BatchReshapeLayer,
-  TIDL_GatherLayer,
-  TIDL_GatherElementsLayer,
-  TIDL_ReduceLayer,
-  TIDL_SliceLayer,
-  TIDL_TopKLayer,
-  TIDL_PoolingLayer,
-  TIDL_ResizeLayer,
-  TIDL_TileLayer,
-  TIDL_GatherNDLayer
-}; 
+
 static std::unordered_map<int, bool> quantizationPassThroughMap = {};
 static std::map<int32_t, pair<float32_tidl, float32_tidl>> floatRangeMap = {};
 static std::unordered_map<int32_t, pair<float32_tidl, float32_tidl>> activationProducerRangeMap = {
@@ -174,6 +159,8 @@ float32_tidl TIDL_clamp(float32_tidl value, float32_tidl minVal, float32_tidl ma
   if(value > maxVal) return maxVal;
   return value;
 }
+
+void TIDL_setWeightElementBitsFromElementType(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure);
 
 //DUPLICATED FROM STRINGS.CPP:
 typedef std::map<int, const std::string> stringmap;
@@ -1613,7 +1600,7 @@ bool TIDL_asymRangeToScale(float32_tidl *bufferScale, TzeroPoint *zeroPoint, flo
         zpSatMax = std::numeric_limits<uint16_t>::max(), zpSatMin = std::numeric_limits<uint16_t>::min();
         zpOffset = maxQuantizedLimit;
       }
-      else if (quantizedElemType == TIDL_SinglePrecFloat)
+      else if (quantizedElemType == TIDL_SinglePrecFloat || quantizedElemType == TIDL_BFloat16)
       {
         *bufferScale = 1.0;
         *zeroPoint = 0;
@@ -2042,7 +2029,7 @@ int32_t TIDL_UpdateScaleFactors(sTIDL_OrgNetwork_t * net,
        /* multiply by the quantization scale */
       accScale = indata->tensorScale  * (1 << TIDL_INTERNAL_INDATA_Q);
       /*TIDL-4415: Float to int16 conversion handling for dataconvert:*/
-      if(params->type == TIDL_DC_TYPE_INPUT && (net->TIDLPCLayers[i].outData[0].elementType == TIDL_UnsignedShort || net->TIDLPCLayers[i].outData[0].elementType == TIDL_SignedShort) && net->TIDLPCLayers[i].inData[0].elementType == TIDL_SinglePrecFloat)
+      if(params->type == TIDL_DC_TYPE_INPUT && (net->TIDLPCLayers[i].outData[0].elementType == TIDL_UnsignedShort || net->TIDLPCLayers[i].outData[0].elementType == TIDL_SignedShort) && (net->TIDLPCLayers[i].inData[0].elementType == TIDL_SinglePrecFloat || net->TIDLPCLayers[i].inData[0].elementType == TIDL_BFloat16))
       {
         /*Determine the nearest power of 2 value*/
         float outTensorScale; int32_t outZeroPoint;
@@ -2362,7 +2349,7 @@ This is as good as not applying any additional scale on input and directly apply
             /* This indicates that for data convert layer on output side, output tensor scale is given by the
             user and we  have to adhere to it hence disable updating the tensor scale. If output is float then this
             gets automatically taken care as scale to be multiplied is float*/
-            if (net->TIDLPCLayers[i].outData[0].elementType == TIDL_SinglePrecFloat )
+            if (net->TIDLPCLayers[i].outData[0].elementType == TIDL_SinglePrecFloat || net->TIDLPCLayers[i].outData[0].elementType == TIDL_BFloat16)
             {
               net->TIDLPCLayers[i].outData[0].roundBits   = 0;
             }
@@ -2696,8 +2683,7 @@ This is as good as not applying any additional scale on input and directly apply
   }
   if( (net->TIDLPCLayers[i].layerType == TIDL_DataConvertLayer && 
        net->TIDLPCLayers[i].layerParams.dataConvertParams.type == TIDL_DC_TYPE_INTERMEDIATE &&
-       net->TIDLPCLayers[i].layerPCParams.dataConvertParams.canUpdateTensorScale == 0) || 
-      (net->TIDLPCLayers[i].layerType == TIDL_CropLayer && net->TIDLPCLayers[i].layerParams.cropParams.multiCoreMode != TIDL_NOT_MULTI_CORE) )
+       net->TIDLPCLayers[i].layerPCParams.dataConvertParams.canUpdateTensorScale == 0))
   {
       /* This piece of code is for making the intermediate DC layer and crop layer added for multi-core act as a bypass layer act as a bypass layer */
       net->TIDLPCLayers[i].outData[0].roundBits = 0;
@@ -3033,7 +3019,7 @@ int32_t TIDL_importQuantLayerParams_HPTQ(sTIDL_OrgNetwork_t   * pOrgTIDLNetStruc
         if(pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.dataConvertParams.type ==  TIDL_DC_TYPE_OUTPUT)
         {
           if( ((pOrgTIDLNetStructure->TIDLPCLayers[i].inData[0].elementType == TIDL_UnsignedChar) || (pOrgTIDLNetStructure->TIDLPCLayers[i].inData[0].elementType ==  TIDL_SignedChar)) \
-          && (pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].elementType ==  TIDL_SinglePrecFloat))
+          && (pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].elementType ==  TIDL_SinglePrecFloat || pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].elementType ==  TIDL_BFloat16))
             pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].tensorScale = 1;
         }
       }
@@ -3194,8 +3180,53 @@ int32_t TIDL_updateAsymRangeConstraints(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure
       } 
     }
   }
+
+  /* Constraining the Scales of InitialH and InitialC with Output Scale for LSTM Layers */
+  for(int32_t i = 0; i < numLayers; i++) {
+    if(pOrgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_LSTMLayer) {
+      sTIDL_LayerPC_t *currLayer = &pOrgTIDLNetStructure->TIDLPCLayers[i];
+      /* Recurrent Inputs are stored as layer attribute instead of layer input */ 
+      int32_t initialHLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, numLayers, currLayer->inData[TIDL_RecurrentInputB + 1].dataId);
+      int32_t initialCLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, numLayers, currLayer->inData[TIDL_RecurrentInputB + 2].dataId);
+      if(initialHLayerIdx == -1 || initialCLayerIdx == -1) {
+        TIDL_GLOBAL_REPORT_ERROR("Unable to find initialH or initialC inputs for LSTM layer : %s", currLayer->outDataNames[0]);
+        return -1;
+      }
+      int32_t inputIdx = tidl_getInLayer(*pOrgTIDLNetStructure, numLayers, currLayer->inData[0].dataId);
+      if(inputIdx == -1) {
+        TIDL_GLOBAL_REPORT_ERROR("Unable to find input for LSTM layer : %s", currLayer->outDataNames[0]);
+        return -1;
+      }
+      sTIDL_DataParams_t *inputData = &pOrgTIDLNetStructure->TIDLPCLayers[inputIdx].outData[0];
+      sTIDL_DataParams_t *initialHData = &pOrgTIDLNetStructure->TIDLPCLayers[initialHLayerIdx].outData[0];
+      sTIDL_DataParams_t *initialCData = &pOrgTIDLNetStructure->TIDLPCLayers[initialCLayerIdx].outData[0];
+      sTIDL_DataParams_t *outputData = &currLayer->outData[0];
+      float32_tidl minValue = std::min(outputData->minTensorValue, std::min(initialHData->minTensorValue, initialCData->minTensorValue));
+      float32_tidl maxValue = std::max(outputData->maxTensorValue, std::max(initialHData->maxTensorValue, initialCData->maxTensorValue));
+      initialHData->minTensorValue = initialCData->minTensorValue = outputData->minTensorValue = minValue;
+      initialHData->maxTensorValue = initialCData->maxTensorValue = outputData->maxTensorValue = maxValue;
+
+      if(pOrgTIDLNetStructure->TIDLPCLayers[initialHLayerIdx].clipParams.isClipEnabled == 1) {
+        pOrgTIDLNetStructure->TIDLPCLayers[initialHLayerIdx].clipParams.clipMin = minValue;
+        pOrgTIDLNetStructure->TIDLPCLayers[initialHLayerIdx].clipParams.clipMax = maxValue;
+      }
+      if(pOrgTIDLNetStructure->TIDLPCLayers[initialCLayerIdx].clipParams.isClipEnabled == 1) {
+        pOrgTIDLNetStructure->TIDLPCLayers[initialCLayerIdx].clipParams.clipMin = minValue;
+        pOrgTIDLNetStructure->TIDLPCLayers[initialCLayerIdx].clipParams.clipMax = maxValue;
+      }
+      if(currLayer->clipParams.isClipEnabled == 1) {
+        currLayer->clipParams.clipMin = minValue;
+        currLayer->clipParams.clipMax = maxValue;
+      }
+
+      int32_t outElementType = currLayer->weightsElementSizeInBits == 8 ? TIDL_SignedChar : ((currLayer->weightsElementSizeInBits == 16) ? TIDL_SignedShort : TIDL_SinglePrecFloat);
+      inputData->elementType = initialHData->elementType = initialCData->elementType = outputData->elementType = outElementType;
+      initialHData->tensorType = initialCData->tensorType = outputData->tensorType = TIDL_SYMMETRIC_TENSOR;
+    }
+  }
   return 0;
 }
+
 
 /*Why is pTIDLNetStructure being passed here?*/
 int32_t TIDL_updateParamsRange(sTIDL_OrgNetwork_t   * pOrgTIDLNetStructure,
@@ -3289,16 +3320,29 @@ int32_t TIDL_updateParamsRange(sTIDL_OrgNetwork_t   * pOrgTIDLNetStructure,
         {
           data = (void **)&(pOrgTIDLNetStructure->TIDLPCLayers[i].slope.ptr);
         }
-        TIDL_findRange((float*)(*data), dataSize, &min, &max, 1.0);
-        /* Check for updating Indices for gather layer. Find range with int32_t casted pointer instead of float */
+        int32_t dataType = TIDL_SinglePrecFloat;
+        if (pOrgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_ConstDataLayer )
+        {
+          dataType = pOrgTIDLNetStructure->TIDLPCLayers[i].weights.dataType;
+        }
+
+        /* For gather layer indices, use int32 dataType */
         if(pOrgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_ConstDataLayer)
         {
           int32_t outIdx = tidl_getOutLayer(pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].dataId);
-          if(outIdx != -1 && ((pOrgTIDLNetStructure->TIDLPCLayers[outIdx].layerType == TIDL_GatherLayer) || (pOrgTIDLNetStructure->TIDLPCLayers[outIdx].layerType == TIDL_GatherNDLayer) || (pOrgTIDLNetStructure->TIDLPCLayers[outIdx].layerType == TIDL_GatherElementsLayer)))
+          if(outIdx != -1 && ((pOrgTIDLNetStructure->TIDLPCLayers[outIdx].layerType == TIDL_GatherLayer) ||
+                              (pOrgTIDLNetStructure->TIDLPCLayers[outIdx].layerType == TIDL_GatherNDLayer) ||
+                              (pOrgTIDLNetStructure->TIDLPCLayers[outIdx].layerType == TIDL_GatherElementsLayer)))
           {
-            min = FLT_MAX, max = -FLT_MAX;
-            TIDL_findRange((int32_t*)(*data), dataSize, &min, &max, 1.0);
+            dataType = TIDL_SignedWord;
           }
+        }
+
+        if (dispatchTypedBuffer(*data, dataType, [dataSize, &min, &max](auto* typedPtr) {
+          TIDL_findRange(typedPtr, dataSize, &min, &max, 1.0);
+        }) != TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
+        {
+          return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
         }
         if(j == TIDL_WEIGHT_QUANT_PARAMS)
         {
@@ -3566,6 +3610,193 @@ void TIDL_QuantizeFloatToFixed(Tout *quantizedBuffer,
     intermediateValue = intermediateValue < min ? min : intermediateValue;
     quantizedBuffer[i0*bufferPitch] = (Tout) intermediateValue;
   }
+}
+
+/*This function converts the weights and slopes from float32 to bfloat16 for each layer.
+ * When storeAsFP32 is false (default), the buffers are replaced with true 16-bit BF16 storage
+ * as expected by the inference kernels.
+ * When storeAsFP32 is true, each value is rounded to BF16 precision but stored back as a
+ * float32 in the original buffer (no reallocation, no size change).  This is used during
+ * bias calibration so that TIDL_allocAndCopyModelParams can safely copy the clone. */
+int32_t TIDL_convertWeightsAndSlopesToBF16(sTIDL_OrgNetwork_t * orgTIDLNetStructure,
+                                          sTIDL_Network_t  * tIDLNetStructure,
+                                          tidl_import_config * gParams,
+                                          uint32_t numLayers,
+                                          bool storeAsFP32 = false)
+{
+    for (uint32_t layerIdx = 0; layerIdx < numLayers; layerIdx++)
+    {
+      
+      /* Do not typecast for ConstDataLayer with fixed point output */
+      if((orgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_ConstDataLayer && orgTIDLNetStructure->TIDLPCLayers[layerIdx].outData[0].elementType == TIDL_SignedWord) ||
+        orgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_ReshapeLayer
+        )
+      {
+        continue;
+      }
+
+      if(orgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_ConstDataLayer)
+      {
+        int32_t nextLayerIdx = tidl_getOutLayer(orgTIDLNetStructure, orgTIDLNetStructure->numLayers, orgTIDLNetStructure->TIDLPCLayers[layerIdx].outData[0].dataId);
+        if(nextLayerIdx == -1)
+        {
+          TIDL_GLOBAL_REPORT_ERROR("ConstDataLayer %s has no consumer", orgTIDLNetStructure->TIDLPCLayers[layerIdx].outDataNames[0]);
+          return -1;
+        }
+        /* If the consumer is a GridSample layer with nearest mode AND this const data feeds the
+           grid input (inData[1]), pre-compute the integer pixel indices at FP32 precision and
+           store them back in the buffer. The buffer is kept as FP32 (skip BF16 conversion below)
+           so the runtime reads exact integer-valued coordinates without precision loss. */
+        int32_t constDataId = orgTIDLNetStructure->TIDLPCLayers[layerIdx].outData[0].dataId;
+        bool isGridInput = (orgTIDLNetStructure->TIDLPCLayers[nextLayerIdx].inData[1].dataId == constDataId);
+        if(orgTIDLNetStructure->TIDLPCLayers[nextLayerIdx].layerType == TIDL_GridSampleLayer &&
+           orgTIDLNetStructure->TIDLPCLayers[nextLayerIdx].layerParams.gridSampleParams.mode == TIDL_ModeNearest &&
+           isGridInput)
+        {
+          sBuffer_t& gridBuf = orgTIDLNetStructure->TIDLPCLayers[layerIdx].weights;
+          int32_t bufSize = gridBuf.bufSize;  /* number of float32 elements */
+
+          /* Data (feature map) dimensions come from the first input of GridSample */
+          int32_t data_w = orgTIDLNetStructure->TIDLPCLayers[nextLayerIdx].inData[0].dimValues[TIDL_DIM_HEIGHT];
+          int32_t data_h = orgTIDLNetStructure->TIDLPCLayers[nextLayerIdx].inData[0].dimValues[TIDL_DIM_NUMCH];
+          int32_t align_corners = orgTIDLNetStructure->TIDLPCLayers[nextLayerIdx].layerParams.gridSampleParams.align_corners;
+
+          float32_tidl *gridPtr = (float32_tidl *)gridBuf.ptr;
+
+          /* Grid is stored as interleaved (x, y) pairs for every output position.
+             Apply the same un-normalization as TIDL_refGridSampleFloat and round to
+             the nearest integer, exactly matching what the runtime would compute
+             from FP32 — replacing the normalized float coordinates with pixel indices. */
+          for(int32_t i = 0; i < bufSize; i += 2)
+          {
+            float32_tidl x_norm = gridPtr[i];
+            float32_tidl y_norm = gridPtr[i + 1];
+
+            float32_tidl x, y;
+            if(align_corners == 1)
+            {
+              x = ((x_norm + 1.0F) / 2.0F) * ((float32_tidl)data_w - 1.0F);
+              y = ((y_norm + 1.0F) / 2.0F) * ((float32_tidl)data_h - 1.0F);
+            }
+            else
+            {
+              x = (((x_norm + 1.0F) * (float32_tidl)data_w) - 1.0F) / 2.0F;
+              y = (((y_norm + 1.0F) * (float32_tidl)data_h) - 1.0F) / 2.0F;
+            }
+
+            gridPtr[i]     = (float32_tidl)nearbyintf(x);
+            gridPtr[i + 1] = (float32_tidl)nearbyintf(y);
+          }
+
+          orgTIDLNetStructure->TIDLPCLayers[nextLayerIdx].layerParams.gridSampleParams.is_grid_precomputed = 1;
+        }
+        else if (orgTIDLNetStructure->TIDLPCLayers[nextLayerIdx].layerType == TIDL_GridSampleLayer &&
+                 orgTIDLNetStructure->TIDLPCLayers[nextLayerIdx].layerParams.gridSampleParams.mode == TIDL_ModeBilinear &&
+                 isGridInput)
+        {
+          sBuffer_t& gridBuf = orgTIDLNetStructure->TIDLPCLayers[layerIdx].weights;
+          int32_t bufSize = gridBuf.bufSize;
+
+          int32_t data_w     = orgTIDLNetStructure->TIDLPCLayers[nextLayerIdx].inData[0].dimValues[TIDL_DIM_HEIGHT];
+          int32_t data_h     = orgTIDLNetStructure->TIDLPCLayers[nextLayerIdx].inData[0].dimValues[TIDL_DIM_NUMCH];
+          int32_t align_corners = orgTIDLNetStructure->TIDLPCLayers[nextLayerIdx].layerParams.gridSampleParams.align_corners;
+
+          float32_tidl *gridPtr = (float32_tidl *)gridBuf.ptr;
+
+          /* Pre-compute denormalized (x, y) pixel coordinates at FP32 precision.
+           * The runtime will read these directly and skip the BF16 un-normalization
+           * arithmetic, avoiding chained rounding errors. Unlike nearest mode, the
+           * values are NOT rounded to integers — bilinear needs the fractional part
+           * for weight computation. The float values are converted to BF16 by the
+           * weight conversion pass below (one rounding step). */
+          for (int32_t i = 0; i < bufSize; i += 2)
+          {
+            float32_tidl x_norm = gridPtr[i];
+            float32_tidl y_norm = gridPtr[i + 1];
+
+            float32_tidl x, y;
+            if (align_corners == 1)
+            {
+              x = ((x_norm + 1.0F) / 2.0F) * ((float32_tidl)data_w - 1.0F);
+              y = ((y_norm + 1.0F) / 2.0F) * ((float32_tidl)data_h - 1.0F);
+            }
+            else
+            {
+              x = (((x_norm + 1.0F) * (float32_tidl)data_w) - 1.0F) / 2.0F;
+              y = (((y_norm + 1.0F) * (float32_tidl)data_h) - 1.0F) / 2.0F;
+            }
+
+            gridPtr[i]     = x;   /* raw float — NOT rounded to integer */
+            gridPtr[i + 1] = y;
+          }
+
+          orgTIDLNetStructure->TIDLPCLayers[nextLayerIdx].layerParams.gridSampleParams.is_grid_precomputed = 1;
+        }
+      }
+
+      /* Convert weights from float32 to bfloat16 */
+      sBuffer_t& weightBuf = orgTIDLNetStructure->TIDLPCLayers[layerIdx].weights;
+      if (weightBuf.ptr != NULL && weightBuf.bufSize > 0)
+      {
+        int32_t bufSize = weightBuf.bufSize;
+        float32_tidl *floatPtr = (float32_tidl *)weightBuf.ptr;
+        if (storeAsFP32)
+        {
+          /* Round each weight to BF16 precision in-place, keep as float32 container.
+           * This preserves the original buffer size so callers that copy bufSize*sizeof(float)
+           * bytes (e.g. TIDL_allocAndCopyModelParams) remain correct. */
+          for (int32_t k = 0; k < bufSize; k++)
+          {
+            floatPtr[k] = (float32_tidl)bfloat16_tidl(floatPtr[k]);
+          }
+        }
+        else
+        {
+          /* Final model path: replace FP32 buffer with a true 16-bit BF16 buffer.
+           * The inference kernels read 16 bits per element. */
+          bfloat16_tidl *bf16Ptr = (bfloat16_tidl *)my_malloc(bufSize * sizeof(uint16_t));
+          if (bf16Ptr == NULL)
+          {
+              TIDL_GLOBAL_REPORT_ERROR("TIDL_convertWeightsDataType - Not enough memory for weights conversion at layer %d", layerIdx);
+              return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+          }
+          TIDL_convertFP32ToBF16((const float32_tidl*)floatPtr, (bfloat16_tidl*)bf16Ptr, bufSize);
+          my_free(weightBuf.ptr);
+          weightBuf.ptr = (void *)bf16Ptr;
+        }
+      }
+
+      /* Convert slopes from float32 to bfloat16 */
+      sBuffer_t& slopeBuf = orgTIDLNetStructure->TIDLPCLayers[layerIdx].slope;
+      if (slopeBuf.ptr != NULL && slopeBuf.bufSize > 0)
+      {
+          int32_t bufSize = slopeBuf.bufSize;
+          float32_tidl *floatPtr = (float32_tidl *)slopeBuf.ptr;
+          if (storeAsFP32)
+          {
+            /* Round each slope to BF16 precision in-place, keep as float32 container. */
+            for (int32_t k = 0; k < bufSize; k++)
+            {
+              floatPtr[k] = (float32_tidl)bfloat16_tidl(floatPtr[k]);
+            }
+          }
+          else
+          {
+            /* Final model path: replace FP32 buffer with a true 16-bit BF16 buffer. */
+            bfloat16_tidl *bf16Ptr = (bfloat16_tidl *)my_malloc(bufSize * sizeof(uint16_t));
+            if (bf16Ptr == NULL)
+            {
+                TIDL_GLOBAL_REPORT_ERROR("TIDL_convertSlopesDataType - Not enough memory for Slope conversion at layer %d", layerIdx);
+                return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+            }
+            TIDL_convertFP32ToBF16((const float32_tidl*)floatPtr, (bfloat16_tidl*)bf16Ptr, bufSize);
+            my_free(slopeBuf.ptr);
+            slopeBuf.ptr = (void *)bf16Ptr;
+          }
+      }
+    }
+
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
 
 int32_t TIDL_calculateBitsRequired(int64_t quantizedValue)
@@ -4897,6 +5128,583 @@ int32_t TIDL_asymUpdateScalesAndShifts(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure
       TIDL_asymRangeToScale(&outData->tensorScale, &outData->tensorZeroPoint, outData->minTensorValue, outData->maxTensorValue, TIDL_SYMMETRIC_TENSOR, outData->elementType, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].quantizeConstraint);
       TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, outData->dataId);
     }
+    else if(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_LSTMLayer)
+    {
+      sTIDL_LayerPC_t *lstmLayer = &pOrgTIDLNetStructure->TIDLPCLayers[layerIdx];
+      TIDL_asymRangeToScale(&outData->tensorScale, &outData->tensorZeroPoint, outData->minTensorValue, outData->maxTensorValue, TIDL_SYMMETRIC_TENSOR, outData->elementType, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].quantizeConstraint);
+
+      for(int32_t inpIdx = TIDL_RecurrentInputB + 1; inpIdx <= TIDL_RecurrentInputB + 3; inpIdx++)
+      {
+        int32_t inLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, lstmLayer->inData[inpIdx].dataId);
+        if(inLayerIdx == -1 || pOrgTIDLNetStructure->TIDLPCLayers[inLayerIdx].layerType != TIDL_ConstDataLayer) { 
+          continue;
+        }
+        sTIDL_LayerPC_t *constLayer = &pOrgTIDLNetStructure->TIDLPCLayers[inLayerIdx];
+        uint8_t * quantizedWeights = (uint8_t *)my_calloc(constLayer->weights.bufSize, sizeof(float32_tidl));
+
+        float min = constLayer->clipParams.clipMin;
+        float max = constLayer->clipParams.clipMax;
+        bool zeroOutBuf = TIDL_asymRangeToScale(&constLayer->outData[0].tensorScale, &constLayer->outData[0].tensorZeroPoint, min, max, TIDL_SYMMETRIC_TENSOR, lstmLayer->outData[0].elementType);
+
+        /*Quantize and store weights:*/
+        if (weightsElementSizeInBits <= 8)
+        {
+          /*8-bit*/
+          TIDL_QuantizeFloatToFixed(&((int8_t*)quantizedWeights)[0], (float*)constLayer->weights.ptr, constLayer->weights.bufSize, 1.0, constLayer->outData[0].tensorScale, constLayer->outData[0].tensorZeroPoint);
+        }
+        else
+        {
+          /*16-bit*/
+          TIDL_QuantizeFloatToFixed(&((int16_t*)quantizedWeights)[0], (float*)constLayer->weights.ptr, constLayer->weights.bufSize, 1.0, constLayer->outData[0].tensorScale, constLayer->outData[0].tensorZeroPoint);
+        }
+        my_free(constLayer->weights.ptr);
+        constLayer->weights.ptr = quantizedWeights;
+        TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, inLayerIdx);
+      }
+
+      int32_t weightLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, lstmLayer->inData[TIDL_RecurrentInputW].dataId);
+      int32_t recurrentWeightLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, lstmLayer->inData[TIDL_RecurrentInputR].dataId);
+      int32_t biasLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, lstmLayer->inData[TIDL_RecurrentInputB].dataId);
+
+      if(weightLayerIdx == -1 || recurrentWeightLayerIdx == -1 || biasLayerIdx == -1)
+      {
+        TIDL_GLOBAL_REPORT_ERROR("Error finding weight/recurrent weight/bias layers for LSTM");
+        return -1;
+      }
+      sTIDL_LayerPC_t *weightLayer = &pOrgTIDLNetStructure->TIDLPCLayers[weightLayerIdx];
+      sTIDL_LayerPC_t *recurrentWeightLayer = &pOrgTIDLNetStructure->TIDLPCLayers[recurrentWeightLayerIdx];
+      sTIDL_LayerPC_t *biasLayer = &pOrgTIDLNetStructure->TIDLPCLayers[biasLayerIdx];
+      if(weightLayer->layerType != TIDL_ConstDataLayer || recurrentWeightLayer->layerType != TIDL_ConstDataLayer || biasLayer->layerType != TIDL_ConstDataLayer)
+      {
+        TIDL_GLOBAL_REPORT_ERROR("Weight/Recurrent weight/Bias layers for LSTM should be ConstData layers");
+        return -1;
+      }
+
+      const sTIDL_DataParams_t *inData = TIDL_getOutData(pOrgTIDLNetStructure, lstmLayer->inData[TIDL_RecurrentInputX].dataId);
+      const sTIDL_DataParams_t *initialH = TIDL_getOutData(pOrgTIDLNetStructure, lstmLayer->inData[TIDL_RecurrentInputB + 1].dataId);
+      const sTIDL_DataParams_t *initialC = TIDL_getOutData(pOrgTIDLNetStructure, lstmLayer->inData[TIDL_RecurrentInputB + 2].dataId);
+      sTIDL_DataParams_t *peepholes = nullptr;
+      if(lstmLayer->layerParams.lstmParams.isPeepholesPresent) {
+        int32_t peepholeLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, lstmLayer->inData[TIDL_RecurrentInputPeepholes].dataId);
+        if(peepholeLayerIdx == -1){
+          TIDL_GLOBAL_REPORT_ERROR("Error finding peephole input layer for LSTM");
+          return -1;
+        }
+        peepholes = &pOrgTIDLNetStructure->TIDLPCLayers[peepholeLayerIdx].outData[0];
+      }
+
+      float32_tidl Sx = inData->tensorScale;
+      int32_t Zx = inData->tensorZeroPoint;
+      float32_tidl Sy = outData->tensorScale;
+
+      int32_t numDirections = lstmLayer->layerParams.lstmParams.direction == TIDL_RecurrentBidirectional ? 2 : 1;
+      int32_t seqLength, batchSize, inputSize, hiddenSize;
+      hiddenSize = lstmLayer->layerParams.lstmParams.hidden_size;
+      if (lstmLayer->layerParams.lstmParams.layout == 0)
+      {
+        /* input shape: [seq_length, batch_size, input_size] */
+        seqLength = inData->dimValues[TIDL_DIM_NUMCH];
+        batchSize = inData->dimValues[TIDL_DIM_HEIGHT];
+        inputSize = inData->dimValues[TIDL_DIM_WIDTH];
+      }
+      else
+      {
+        /* input shape: [batch_size, seq_length, input_size] */
+        batchSize = inData->dimValues[TIDL_DIM_NUMCH];
+        seqLength = inData->dimValues[TIDL_DIM_HEIGHT];
+        inputSize = inData->dimValues[TIDL_DIM_WIDTH];
+      }
+
+      void *quantizedWeights = my_malloc(weightLayer->weights.bufSize * sizeof(float32_tidl));
+      void *quantizedRecurrentWeights = my_malloc(recurrentWeightLayer->weights.bufSize * sizeof(float32_tidl));
+      void *quantizedBias = my_malloc(biasLayer->weights.bufSize * sizeof(float32_tidl) * (weightsElementSizeInBits <= 8 ? 1 : 2));
+      float32_tidl *activationScales = (float32_tidl*)lstmLayer->layerPCParams.lstmParams.activationScales.ptr;
+      
+      if(weightsElementSizeInBits <= 8) {
+        weightLayer->outData[0].elementType = TIDL_SignedChar;
+        recurrentWeightLayer->outData[0].elementType = TIDL_SignedChar;
+        biasLayer->outData[0].elementType = TIDL_SignedWord;
+      } else {
+        weightLayer->outData[0].elementType = TIDL_SignedShort;
+        recurrentWeightLayer->outData[0].elementType = TIDL_SignedShort;
+        biasLayer->outData[0].elementType = TIDL_SignedDoubleWord;
+      }
+
+      float32_tidl inputGateInternalScale, forgetGateInternalScale, cellGateInternalScale, outputGateInternalScale;
+      float32_tidl inputGateOutScale, forgetGateOutScale, cellGateOutScale, outputGateOutScale;
+
+      uint8_t *mmaScales = (uint8_t *)lstmLayer->derivedScales.ptr;
+      uint8_t *mmaShifts = (uint8_t *)lstmLayer->derivedShifts.ptr;
+
+      int32_t activationF = lstmLayer->layerParams.lstmParams.activations[0];
+      int32_t activationG = lstmLayer->layerParams.lstmParams.activations[1];
+      int32_t activationH = lstmLayer->layerParams.lstmParams.activations[2];
+
+      int32_t weightOffset = hiddenSize * inputSize;
+      int32_t recurrentWeightOffset = hiddenSize * hiddenSize;
+      int32_t biasOffset = hiddenSize;
+
+      int32_t mmaScaleOffset = 0, mmaShiftOffset = 0;
+      for(int32_t dir = 0; dir < numDirections; dir++)
+      {
+        // Quantizing the Input Gate
+        {
+          float32_tidl maxValue = std::max(activationProducerRangeMap[activationF].first, activationProducerRangeMap[activationF].second);
+          if(lstmLayer->layerParams.lstmParams.isClipSet) {
+            maxValue = TIDL_clamp(maxValue, -lstmLayer->layerParams.lstmParams.clip, lstmLayer->layerParams.lstmParams.clip);
+          }
+          float32_tidl gateInternalScale = ((weightsElementSizeInBits <= 8) ? (127.0f) : (32767.0f)) / maxValue;
+          inputGateOutScale = (weightsElementSizeInBits <= 8) ? 127.0f : 32767.0f;
+          inputGateInternalScale = gateInternalScale;
+
+          /* Weights are quantized with per tensor scale */
+          float32_tidl *weightsPtr = (float32_tidl *)weightLayer->weights.ptr + (dir * 4 * hiddenSize * inputSize);
+          float32_tidl *rWeightsPtr = (float32_tidl *)recurrentWeightLayer->weights.ptr + (dir * 4 * hiddenSize * hiddenSize);
+          float32_tidl *biasPtr = (float32_tidl *)biasLayer->weights.ptr + (dir * 8 * hiddenSize);
+          float32_tidl *recurrentBiasPtr = biasPtr + (hiddenSize * 4);
+
+          float32_tidl weightScale, recurrentWeightScale;
+
+          // Quantize weights for input gate
+          {
+            float32_tidl min = FLT_MAX;
+            float32_tidl max = -FLT_MAX;
+            TIDL_findRange(weightsPtr, (inputSize * hiddenSize), &min, &max, 1.0);
+            weightScale = (weightsElementSizeInBits <= 8 ? 127.0f : 32767.0f) / std::max(std::abs(min), std::abs(max));
+            if(weightsElementSizeInBits <= 8)
+            {
+              TIDL_QuantizeFloatToFixed((int8_t*)quantizedWeights + (dir * 4 * hiddenSize * inputSize), weightsPtr, inputSize * hiddenSize, 1.0, weightScale, 0);
+            }
+            else
+            {
+              TIDL_QuantizeFloatToFixed((int16_t*)quantizedWeights + (dir * 4 * hiddenSize * inputSize), weightsPtr, inputSize * hiddenSize, 1.0, weightScale, 0);
+            }
+            
+            for(int32_t i = 0; i < hiddenSize; i++) {
+              float32_tidl biasValue = biasPtr[i] * Sx;
+              float32_tidl sum = 0.0f;
+              for(int32_t j = 0; j < inputSize; j++) {
+                sum += weightsPtr[i * inputSize + j];
+              }
+              sum = sum * (float32_tidl)Zx;
+              biasValue = (biasValue - sum) * weightScale;
+              if (weightsElementSizeInBits <= 8)
+              {
+                ((int32_t*)quantizedBias + (dir * 8 * hiddenSize))[i] = (int32_t) round(biasValue);
+              }
+              else
+              {
+                ((int64_t*)quantizedBias + (dir * 8 * hiddenSize))[i] = (int64_t) round(biasValue);
+              }
+            }
+
+            float32_tidl scaleRatio = gateInternalScale / (weightScale * Sx);
+            TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+            mmaScaleOffset++;
+            mmaShiftOffset++;
+          }
+
+          // Quantize recurrent weights for input gate
+          {
+            float32_tidl min = FLT_MAX;
+            float32_tidl max = -FLT_MAX;
+            TIDL_findRange((float*)rWeightsPtr, (hiddenSize * hiddenSize), &min, &max, 1.0);
+            recurrentWeightScale = (weightsElementSizeInBits <= 8 ? 127.0f : 32767.0f) / std::max(std::abs(min), std::abs(max));
+            if(weightsElementSizeInBits <= 8)
+            {
+              TIDL_QuantizeFloatToFixed((int8_t*)quantizedRecurrentWeights + (dir * 4 * hiddenSize * hiddenSize), rWeightsPtr, hiddenSize * hiddenSize, 1.0, recurrentWeightScale, 0);
+            }
+            else
+            {
+              TIDL_QuantizeFloatToFixed((int16_t*)quantizedRecurrentWeights + (dir * 4 * hiddenSize * hiddenSize), rWeightsPtr, hiddenSize * hiddenSize, 1.0, recurrentWeightScale, 0);
+            }
+
+            for(int32_t i = 0; i < hiddenSize; i++) {
+              float32_tidl biasValue = recurrentBiasPtr[i] * Sy * recurrentWeightScale;
+              if (weightsElementSizeInBits <= 8)
+              {
+                ((int32_t*)quantizedBias + (dir * 8 * hiddenSize) + (4 * hiddenSize))[i] = (int32_t) round(biasValue);
+              }
+              else
+              {
+                ((int64_t*)quantizedBias + (dir * 8 * hiddenSize) + (4 * hiddenSize))[i] = (int64_t) round(biasValue);
+              }
+            }
+
+            float32_tidl scaleRatio = gateInternalScale / (recurrentWeightScale * Sy);
+            TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+            mmaScaleOffset++;
+            mmaShiftOffset++;
+          }
+
+          // Quantization for peephole weights if present
+          {
+            if(lstmLayer->layerParams.lstmParams.isPeepholesPresent) {
+              float32_tidl scaleRatio = gateInternalScale / (peepholes->tensorScale * Sy);
+              TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+            }
+            else
+            {
+              mmaScales[mmaScaleOffset] = 1;
+              mmaShifts[mmaShiftOffset] = 0;
+            }
+            mmaScaleOffset++;
+            mmaShiftOffset++;
+          }
+        }
+
+
+        /* Quantizing the Forget Gate */
+        {
+          float32_tidl maxValue = std::max(activationProducerRangeMap[activationF].first, activationProducerRangeMap[activationF].second);
+          if(lstmLayer->layerParams.lstmParams.isClipSet) {
+            maxValue = TIDL_clamp(maxValue, -lstmLayer->layerParams.lstmParams.clip, lstmLayer->layerParams.lstmParams.clip);
+          }
+          float32_tidl gateInternalScale = ((weightsElementSizeInBits <= 8) ? (127.0f) : (32767.0f)) / maxValue;
+          forgetGateOutScale = (weightsElementSizeInBits <= 8) ? 127.0f : 32767.0f;
+          forgetGateInternalScale = gateInternalScale;
+
+          /* Weights are quantized with per tensor scale */
+          float32_tidl *weightsPtr = (float32_tidl *)weightLayer->weights.ptr + (dir * 4 * hiddenSize * inputSize) + (inputSize * hiddenSize * 2); 
+          float32_tidl *rWeightsPtr = (float32_tidl *)recurrentWeightLayer->weights.ptr + (dir * 4 * hiddenSize * hiddenSize) + (hiddenSize * hiddenSize * 2);
+          float32_tidl *biasPtr = (float32_tidl *)biasLayer->weights.ptr + (dir * 8 * hiddenSize) + (biasOffset * 2);
+          float32_tidl *recurrentBiasPtr = biasPtr + (hiddenSize * 4);
+
+          // Quantize weights for forget gate
+          {
+            float32_tidl min = FLT_MAX;
+            float32_tidl max = -FLT_MAX;
+            TIDL_findRange(weightsPtr, (inputSize * hiddenSize), &min, &max, 1.0);
+            float32_tidl weightScale = (weightsElementSizeInBits <= 8 ? 127.0f : 32767.0f) / std::max(std::abs(min), std::abs(max));
+            if(weightsElementSizeInBits <= 8)
+            {
+              TIDL_QuantizeFloatToFixed((int8_t*)quantizedWeights + (dir * 4 * hiddenSize * inputSize) + (2 * inputSize * hiddenSize), weightsPtr, inputSize * hiddenSize, 1.0, weightScale, 0);
+            }
+            else
+            {
+              TIDL_QuantizeFloatToFixed((int16_t*)quantizedWeights + (dir * 4 * hiddenSize * inputSize) + (2 * inputSize * hiddenSize), weightsPtr, inputSize * hiddenSize, 1.0, weightScale, 0);
+            }
+            
+            for(int32_t i = 0; i < hiddenSize; i++) {
+              float32_tidl biasValue = biasPtr[i] * Sx;
+              float32_tidl sum = 0.0f;
+              for(int32_t j = 0; j < inputSize; j++) {
+                sum += weightsPtr[i * inputSize + j];
+              }
+              sum = sum * (float32_tidl)Zx;
+              biasValue = (biasValue - sum) * weightScale;
+              if (weightsElementSizeInBits <= 8)
+              {
+                ((int32_t*)quantizedBias + (dir * 8 * hiddenSize) + (2 * hiddenSize))[i] = (int32_t) round(biasValue);
+              }
+              else
+              {
+                ((int64_t*)quantizedBias + (dir * 8 * hiddenSize) + (2 * hiddenSize))[i] = (int64_t) round(biasValue);
+              }
+            }
+
+            float32_tidl scaleRatio = gateInternalScale / (weightScale * inData->tensorScale);
+            TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+            mmaScaleOffset++;
+            mmaShiftOffset++;
+          }
+
+          // Quantize recurrent weights for forget gate
+          {
+            float32_tidl min = FLT_MAX;
+            float32_tidl max = -FLT_MAX;
+            TIDL_findRange((float*)rWeightsPtr, (hiddenSize * hiddenSize), &min, &max, 1.0);
+            float32_tidl recurrentWeightScale = (weightsElementSizeInBits <= 8 ? 127.0f : 32767.0f) / std::max(std::abs(min), std::abs(max));
+            if(weightsElementSizeInBits <= 8)
+            {
+              TIDL_QuantizeFloatToFixed((int8_t*)quantizedRecurrentWeights + (dir * 4 * hiddenSize * hiddenSize) + (hiddenSize * hiddenSize * 2), rWeightsPtr, hiddenSize * hiddenSize, 1.0, recurrentWeightScale, 0);
+            }
+            else
+            {
+              TIDL_QuantizeFloatToFixed((int16_t*)quantizedRecurrentWeights + (dir * 4 * hiddenSize * hiddenSize) + (hiddenSize * hiddenSize * 2), rWeightsPtr, hiddenSize * hiddenSize, 1.0, recurrentWeightScale, 0);
+            }
+
+            for(int32_t i = 0; i < hiddenSize; i++) {
+              float32_tidl biasValue = recurrentBiasPtr[i] * Sy * recurrentWeightScale;
+              if (weightsElementSizeInBits <= 8)
+              {
+                ((int32_t*)quantizedBias + (dir * 8 * hiddenSize) + (6 * hiddenSize))[i] = (int32_t) round(biasValue);
+              }
+              else
+              {
+                ((int64_t*)quantizedBias + (dir * 8 * hiddenSize) + (6 * hiddenSize))[i] = (int64_t) round(biasValue);
+              }
+            }
+
+            float32_tidl scaleRatio = gateInternalScale / (recurrentWeightScale * Sy);
+            TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+            mmaScaleOffset++;
+            mmaShiftOffset++;
+          }
+
+          // Quantization for peephole weights if present
+          {
+            if(lstmLayer->layerParams.lstmParams.isPeepholesPresent) {
+              float32_tidl scaleRatio = gateInternalScale / (peepholes->tensorScale * Sy);
+              TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+            }
+            else
+            {
+              mmaScales[mmaScaleOffset] = 1;
+              mmaShifts[mmaShiftOffset] = 0;
+            }
+            mmaScaleOffset++;
+            mmaShiftOffset++;
+          }
+        }
+
+        // Quantizing the Cell Gate
+        {
+          float32_tidl maxValue = std::max(activationProducerRangeMap[activationG].first, activationProducerRangeMap[activationG].second);
+          if(lstmLayer->layerParams.lstmParams.isClipSet) {
+            maxValue = TIDL_clamp(maxValue, -lstmLayer->layerParams.lstmParams.clip, lstmLayer->layerParams.lstmParams.clip);
+          }
+          float32_tidl gateInternalScale = ((weightsElementSizeInBits <= 8) ? (127.0f) : (32767.0f)) / maxValue;
+          cellGateOutScale = (weightsElementSizeInBits <= 8) ? 127.0f : 32767.0f;
+          cellGateInternalScale = gateInternalScale;
+
+          /* Weights are quantized with per tensor scale */
+          float32_tidl *weightsPtr = (float32_tidl *)weightLayer->weights.ptr + (dir * 4 * hiddenSize * inputSize) + (inputSize * hiddenSize * 3);
+          float32_tidl *rWeightsPtr = (float32_tidl *)recurrentWeightLayer->weights.ptr + (dir * 4 * hiddenSize * hiddenSize) + (hiddenSize * hiddenSize * 3);
+          float32_tidl *biasPtr = (float32_tidl *)biasLayer->weights.ptr + (dir * 8 * hiddenSize) + (hiddenSize* 3);
+          float32_tidl *recurrentBiasPtr = biasPtr + (hiddenSize * 4);
+
+          // Quantize weights for cell gate
+          {
+            float32_tidl min = FLT_MAX;
+            float32_tidl max = -FLT_MAX;
+            TIDL_findRange(weightsPtr, (inputSize * hiddenSize), &min, &max, 1.0);
+            float32_tidl weightScale = (weightsElementSizeInBits <= 8 ? 127.0f : 32767.0f) / std::max(std::abs(min), std::abs(max));
+            if(weightsElementSizeInBits <= 8)
+            {
+              TIDL_QuantizeFloatToFixed((int8_t*)quantizedWeights + (dir * 4 * hiddenSize * inputSize) + (3 * inputSize * hiddenSize), weightsPtr, inputSize * hiddenSize, 1.0, weightScale, 0);
+            }
+            else
+            {
+              TIDL_QuantizeFloatToFixed((int16_t*)quantizedWeights + (dir * 4 * hiddenSize * inputSize) + (3 * inputSize * hiddenSize), weightsPtr, inputSize * hiddenSize, 1.0, weightScale, 0);
+            }
+            
+            for(int32_t i = 0; i < hiddenSize; i++) {
+              float32_tidl biasValue = biasPtr[i] * Sx;
+              float32_tidl sum = 0.0f;
+              for(int32_t j = 0; j < inputSize; j++) {
+                sum += weightsPtr[i * inputSize + j];
+              }
+              sum = sum * (float32_tidl)Zx;
+              biasValue = (biasValue - sum) * weightScale;
+              if (weightsElementSizeInBits <= 8)
+              {
+                ((int32_t*)quantizedBias + (dir * 8 * hiddenSize) + (3 * hiddenSize))[i] = (int32_t) round(biasValue);
+              }
+              else
+              {
+                ((int64_t*)quantizedBias + (dir * 8 * hiddenSize) + (3 * hiddenSize))[i] = (int64_t) round(biasValue);
+              }
+            }
+
+            float32_tidl scaleRatio = gateInternalScale / (weightScale * Sx);
+            TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+            mmaScaleOffset++;
+            mmaShiftOffset++;
+          }
+
+          // Quantize recurrent weights for Cell gate
+          {
+            float32_tidl min = FLT_MAX;
+            float32_tidl max = -FLT_MAX;
+            TIDL_findRange((float*)rWeightsPtr, (hiddenSize * hiddenSize), &min, &max, 1.0);
+            float32_tidl recurrentWeightScale = (weightsElementSizeInBits <= 8 ? 127.0f : 32767.0f) / std::max(std::abs(min), std::abs(max));
+            if(weightsElementSizeInBits <= 8)
+            {
+              TIDL_QuantizeFloatToFixed((int8_t*)quantizedRecurrentWeights + (dir * 4 * hiddenSize * hiddenSize) + (3 * hiddenSize * hiddenSize), rWeightsPtr, hiddenSize * hiddenSize, 1.0, recurrentWeightScale, 0);
+            }
+            else
+            {
+              TIDL_QuantizeFloatToFixed((int16_t*)quantizedRecurrentWeights + (dir * 4 * hiddenSize * hiddenSize) + (3 * hiddenSize * hiddenSize), rWeightsPtr, hiddenSize * hiddenSize, 1.0, recurrentWeightScale, 0);
+            }
+
+            for(int32_t i = 0; i < hiddenSize; i++) {
+              float32_tidl biasValue = recurrentBiasPtr[i] * Sy * recurrentWeightScale;
+              if (weightsElementSizeInBits <= 8)
+              {
+                ((int32_t*)quantizedBias + (dir * 8 * hiddenSize) + (7 * hiddenSize))[i] = (int32_t) round(biasValue);
+              }
+              else
+              {
+                ((int64_t*)quantizedBias + (dir * 8 * hiddenSize) + (7 * hiddenSize))[i] = (int64_t) round(biasValue);
+              }
+            }
+
+            float32_tidl scaleRatio = gateInternalScale / (recurrentWeightScale * Sy);
+            TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+            mmaScaleOffset++;
+            mmaShiftOffset++;
+          }
+        }
+
+        // Computing the MMA Sclaes and Shifts for Cell State Update
+        {
+          float32_tidl scaleRatio = 1/forgetGateOutScale;
+          TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+          mmaScaleOffset++;
+          mmaShiftOffset++;
+          scaleRatio = Sy/(inputGateOutScale * cellGateOutScale);
+          TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+          mmaScaleOffset++;
+          mmaShiftOffset++;
+        }
+
+        // Quantizing the Output Gate
+        {
+          float32_tidl maxValue = std::max(activationProducerRangeMap[activationF].first, activationProducerRangeMap[activationF].second);
+          if(lstmLayer->layerParams.lstmParams.isClipSet) {
+            maxValue = TIDL_clamp(maxValue, -lstmLayer->layerParams.lstmParams.clip, lstmLayer->layerParams.lstmParams.clip);
+          }
+          float32_tidl gateInternalScale = ((weightsElementSizeInBits <= 8) ? (127.0f) : (32767.0f)) / maxValue;
+          outputGateInternalScale = gateInternalScale;
+          outputGateOutScale = (weightsElementSizeInBits <= 8) ? 127.0f : 32767.0f;
+
+          /* Weights are quantized with per tensor scale */
+          float32_tidl *weightsPtr = (float32_tidl *)weightLayer->weights.ptr  + (dir * 4 * hiddenSize * inputSize) + (inputSize * hiddenSize);
+          float32_tidl *rWeightsPtr = (float32_tidl *)recurrentWeightLayer->weights.ptr + (dir * 4 * hiddenSize * hiddenSize) + (hiddenSize * hiddenSize);
+          float32_tidl *biasPtr = (float32_tidl *)biasLayer->weights.ptr + (dir * 8 * hiddenSize) + hiddenSize;
+          float32_tidl *recurrentBiasPtr = biasPtr + 4*hiddenSize;
+
+          // Quantize weights for output gate
+          {
+            float32_tidl min = FLT_MAX;
+            float32_tidl max = -FLT_MAX;
+            TIDL_findRange(weightsPtr, (inputSize * hiddenSize), &min, &max, 1.0);
+            float32_tidl weightScale = (weightsElementSizeInBits <= 8 ? 127.0f : 32767.0f) / std::max(std::abs(min), std::abs(max));
+            if(weightsElementSizeInBits <= 8)
+            {
+              TIDL_QuantizeFloatToFixed((int8_t*)quantizedWeights + (dir * 4 * inputSize * hiddenSize) + (inputSize * hiddenSize), weightsPtr, inputSize * hiddenSize, 1.0, weightScale, 0);
+            }
+            else
+            {
+              TIDL_QuantizeFloatToFixed((int16_t*)quantizedWeights + (dir * 4 * inputSize * hiddenSize) + (inputSize * hiddenSize), weightsPtr, inputSize * hiddenSize, 1.0, weightScale, 0);
+            }
+            
+            for(int32_t i = 0; i < hiddenSize; i++) {
+              float32_tidl biasValue = biasPtr[i] * Sx;
+              float32_tidl sum = 0.0f;
+              for(int32_t j = 0; j < inputSize; j++) {
+                sum += weightsPtr[i * inputSize + j];
+              }
+              sum = sum * (float32_tidl)Zx;
+              biasValue = (biasValue - sum) * weightScale;
+              if (weightsElementSizeInBits <= 8)
+              {
+                ((int32_t*)quantizedBias + (dir * 8 * hiddenSize) + (hiddenSize))[i] = (int32_t) round(biasValue);
+              }
+              else
+              {
+                ((int64_t*)quantizedBias + (dir * 8 * hiddenSize) + (hiddenSize))[i] = (int64_t) round(biasValue);
+              }
+            }
+
+            float32_tidl scaleRatio = gateInternalScale / (weightScale * Sx);
+            TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+            mmaScaleOffset++;
+            mmaShiftOffset++;
+          }
+
+          // Quantize recurrent weights for output gate
+          {
+            float32_tidl min = FLT_MAX;
+            float32_tidl max = -FLT_MAX;
+            TIDL_findRange((float*)rWeightsPtr, (hiddenSize * hiddenSize), &min, &max, 1.0);
+            float32_tidl recurrentWeightScale = (weightsElementSizeInBits <= 8 ? 127.0f : 32767.0f) / std::max(std::abs(min), std::abs(max));
+            if(weightsElementSizeInBits <= 8)
+            {
+              TIDL_QuantizeFloatToFixed((int8_t*)quantizedRecurrentWeights + (dir * 4 * hiddenSize * hiddenSize) + (hiddenSize * hiddenSize), rWeightsPtr, hiddenSize * hiddenSize, 1.0, recurrentWeightScale, 0);
+            }
+            else
+            {
+              TIDL_QuantizeFloatToFixed((int16_t*)quantizedRecurrentWeights + (dir * 4 * hiddenSize * hiddenSize) + (hiddenSize * hiddenSize), rWeightsPtr, hiddenSize * hiddenSize, 1.0, recurrentWeightScale, 0);
+            }
+
+            for(int32_t i = 0; i < hiddenSize; i++) {
+              float32_tidl biasValue = recurrentBiasPtr[i] * Sy * recurrentWeightScale;
+              if (weightsElementSizeInBits <= 8)
+              {
+                ((int32_t*)quantizedBias + (dir * 8 * hiddenSize) + (5 * hiddenSize))[i] = (int32_t) round(biasValue);
+              }
+              else
+              {
+                ((int64_t*)quantizedBias + (dir * 8 * hiddenSize) + (5 * hiddenSize))[i] = (int64_t) round(biasValue);
+              }
+            }
+
+            float32_tidl scaleRatio = gateInternalScale / (recurrentWeightScale * Sy);
+            TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+            mmaScaleOffset++;
+            mmaShiftOffset++;
+          }
+
+          // Quantization for peephole weights if present
+          {
+            if(lstmLayer->layerParams.lstmParams.isPeepholesPresent) {
+              float32_tidl scaleRatio = gateInternalScale / (peepholes->tensorScale * Sy);
+              TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+            }
+            else
+            {
+              mmaScales[mmaScaleOffset] = 1;
+              mmaShifts[mmaShiftOffset] = 0;
+            }
+            mmaScaleOffset++;
+            mmaShiftOffset++;
+          }
+        }
+
+        // Computing the MMA Sclaes and Shifts for Hidden State Update
+        {
+          float32_tidl activationHOutScale = (weightsElementSizeInBits <= 8) ? 127.0f : 32767.0f;
+          float32_tidl scaleRatio = Sy / (outputGateOutScale * activationHOutScale);
+          TIDL_getMMAv2_ScaleShiftAndError(scaleRatio, &mmaScales[mmaScaleOffset], &mmaShifts[mmaShiftOffset], maxWeightBits, maxScaleMMAv2);
+          mmaScaleOffset++;
+          mmaShiftOffset++;
+        }
+      }
+
+      // Input and Output scales for input gate activation
+      activationScales[0] = inputGateInternalScale;
+      activationScales[1] = inputGateOutScale;
+
+      // Input and Output scales for forget gate activation
+      activationScales[2] = forgetGateInternalScale;
+      activationScales[3] = forgetGateOutScale;
+
+      // Input and Output scales for cell gate activation
+      activationScales[4] = cellGateInternalScale;
+      activationScales[5] = cellGateOutScale;
+      
+      // Input and Output scales for output gate activation
+      activationScales[6] = outputGateInternalScale;
+      activationScales[7] = outputGateOutScale;
+      
+      // Input and Output scales for hidden state activation
+      activationScales[8] = Sy;
+      activationScales[9] = (weightsElementSizeInBits <= 8) ? 127.0f : 32767.0f;
+
+      my_free(weightLayer->weights.ptr);
+      my_free(recurrentWeightLayer->weights.ptr);
+      my_free(biasLayer->weights.ptr);
+
+      weightLayer->weights.ptr = quantizedWeights;
+      recurrentWeightLayer->weights.ptr = quantizedRecurrentWeights;
+      biasLayer->weights.ptr = quantizedBias;
+
+      weightLayer->weightsElementSizeInBits = weightsElementSizeInBits;
+      recurrentWeightLayer->weightsElementSizeInBits = weightsElementSizeInBits;
+      biasLayer->weightsElementSizeInBits = weightsElementSizeInBits * 4;
+    }
     else if (pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_DataConvertLayer && 
              (pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerParams.dataConvertParams.type == TIDL_DC_TYPE_OUTPUT))
     {
@@ -5079,6 +5887,23 @@ int32_t TIDL_isPassThroughLayer(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure, sTIDL_
 int32_t TIDL_updateActivationRangeBasedElementTypes(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure, int32_t numLayers, tidl_import_config *configParams) {
   for(int32_t layerIdx = 0; layerIdx < numLayers; layerIdx++) {
     sTIDL_LayerPC_t * currLayer = &pOrgTIDLNetStructure->TIDLPCLayers[layerIdx];
+
+    /* Special Case handling for LSTM to prevent override of DataType constraint */
+    bool producerOfLSTM = false;
+    for(int32_t i = 0; i < currLayer->numOutBufs; i++) {
+      std::vector<int32_t> consumerLayerIdxs = tidl_getOutLayers(*pOrgTIDLNetStructure, numLayers, currLayer->outData[i].dataId);
+      for(int32_t consumerLayerIdx: consumerLayerIdxs) {
+        if(pOrgTIDLNetStructure->TIDLPCLayers[consumerLayerIdx].layerType == TIDL_LSTMLayer) {
+          producerOfLSTM = true;
+          break;
+        }
+      }
+    }
+
+    if(producerOfLSTM) {
+      continue;
+    }
+
     if(currLayer->layerKernelType == TIDL_HighPrecisionKernel) {
       // if the layer range is entirely on one side of zero, then we can convert the output tensor to unsigned and use asymmetric quantization
       // this is only possible if all consumer layers can support asymmetric tensors, which is checked in TIDL_areConsumerLayersAsym
@@ -5250,12 +6075,20 @@ int32_t TIDL_importQuantLayerParams(sTIDL_OrgNetwork_t   * pOrgTIDLNetStructure,
     }
     //TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "layer %d quantization : %s && %d",i,(char*)pOrgTIDLNetStructure->TIDLPCLayers[i].name,pOrgTIDLNetStructure->TIDLPCLayers[i].layerType);
     int32_t weightsElementSizeInBits = pOrgTIDLNetStructure->TIDLPCLayers[i].weightsElementSizeInBits;
-    const sTIDL_DataParams_t * indata = TIDL_getOutData(pOrgTIDLNetStructure,
-                        pOrgTIDLNetStructure->TIDLPCLayers[i].inData[0].dataId);
-    if(indata == NULL)
+
+    const sTIDL_DataParams_t *indata;
+    if(pOrgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_ConstDataLayer)
     {
-      TIDL_GLOBAL_REPORT_ERROR("Cannot find Producer");
-      return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+      indata = &pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0];
+    }
+    else
+    {
+      indata = TIDL_getOutData(pOrgTIDLNetStructure, pOrgTIDLNetStructure->TIDLPCLayers[i].inData[0].dataId);
+      if(indata == NULL)
+      {
+        TIDL_GLOBAL_REPORT_ERROR("Cannot find Producer");
+        return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+      }
     }
 
     debugLayeId = i;
@@ -5323,7 +6156,8 @@ int32_t TIDL_importQuantLayerParams(sTIDL_OrgNetwork_t   * pOrgTIDLNetStructure,
           consumerLayer->layerType == TIDL_ConvolutionLayer || 
           consumerLayer->layerType == TIDL_InnerProductLayer ||
           consumerLayer->layerType == TIDL_EltWiseLayer ||
-          consumerLayer->layerType == TIDL_ConcatLayer
+          consumerLayer->layerType == TIDL_ConcatLayer ||
+          consumerLayer->layerType == TIDL_LSTMLayer
         )) {
           // For asymmetric consumers the const data will be quantized during the scale compute
           continue;
@@ -5658,8 +6492,20 @@ void TIDL_updateBiasForBiasCalibration(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure
       bool scalarBN = true;
       int32_t idx = 1;
       int32_t dataSize = pOrgTIDLNetStructureOrig->TIDLPCLayers[i].quantParams[TIDL_WEIGHT_QUANT_PARAMS].size;
-      void *weightParams = *pOrgTIDLNetStructureOrig->TIDLPCLayers[i].quantParams[TIDL_WEIGHT_QUANT_PARAMS].prmPtr;
-      void *biasParams = *pOrgTIDLNetStructureOrig->TIDLPCLayers[i].quantParams[TIDL_BIAS_QUANT_PARAMS].prmPtr;
+      /* Guard against null prmPtr: for BF16 calibration, quantParams are not populated. */
+      void *weightParams = NULL;
+      void *biasParams = NULL;
+      if(pOrgTIDLNetStructureOrig->TIDLPCLayers[i].quantParams[TIDL_WEIGHT_QUANT_PARAMS].prmPtr != NULL &&
+         pOrgTIDLNetStructureOrig->TIDLPCLayers[i].quantParams[TIDL_BIAS_QUANT_PARAMS].prmPtr != NULL)
+      {
+        weightParams = *pOrgTIDLNetStructureOrig->TIDLPCLayers[i].quantParams[TIDL_WEIGHT_QUANT_PARAMS].prmPtr;
+        biasParams = *pOrgTIDLNetStructureOrig->TIDLPCLayers[i].quantParams[TIDL_BIAS_QUANT_PARAMS].prmPtr;
+      }
+      else
+      {
+        /* prmPtr is null (BF16 calibration path) - skip scalar check, treat as non-scalar */
+        scalarBN = false;
+      }
       while (scalarBN && idx < dataSize)
       {
         if(pOrgTIDLNetStructure->TIDLPCLayers[i].weightsElementSizeInBits == 8) {
@@ -5731,6 +6577,10 @@ int32_t TIDL_quantStatsFixedOrFloat(sTIDL_OrgNetwork_t    * pOrgTIDLNetStructure
       {
         orgOutElem[i] = configParams->outElementType[i];
         configParams->outElementType[i] = configParams->modelOutElementType[i];
+      }
+      if(configParams->mixedPrecisionFactor != -1)
+      {
+        TIDL_setWeightElementBitsFromElementType(pOrgTIDLNetStructure);
       }
       TIDL_IMPORT_CHECK_AND_RETURN(updatePadAndWriteModel(pOrgTIDLNetStructure, pTIDLNetStructure, configParams), "");
       pTIDLNetStructure->isQuantStatsAvailable = 0;
@@ -5938,7 +6788,7 @@ int32_t TIDL_updateNetworkWithQuantizationConstraints(sTIDL_OrgNetwork_t * pOrgT
             gridLayer->quantizeConstraint = TIDL_QuantizeUnconstrained;
           }
         }
-        else if(params->numParamBits <= 16)
+        else if(params->numParamBits <= 16 && params->inferencePrecisionMode == TIDL_InferencePrecisionModeFixedPoint)
         {
           gridLayer->outData[0].tensorScale = TIDL_GRID_INPUT_SCALE_16BIT;
           gridLayer->outData[0].elementType = TIDL_SignedShort;
@@ -6215,14 +7065,42 @@ int32_t TIDL_runIterativeCalibration(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure,
     warmpIters = configParams->biasCalibrationIterations/10;
 
     /*****    Loop for bias calibration  *****/
+    /* Detect if this is BF16 floating-point calibration mode */
+    bool isBF16Mode = (configParams->numParamBits == 16 &&
+                       configParams->inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint);
+
     for(int i = 0; i < configParams->biasCalibrationIterations; i++)
     {
-      /* Run quant stats tool to get per channel mean means after quantization */
-      TIDL_GLOBAL_REPORT_SUBHEADING(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, TIDL_ModelDiagnostic::DK_NoColor, "Fixed-point Calibration Iteration [%d / %d]:", (i + 1U), configParams->biasCalibrationIterations);
-      TIDL_IMPORT_CHECK_AND_RETURN(TIDL_quantStatsFixedOrFloat(pOrgTIDLNetStructure,
-                                  pTIDLNetStructure,
-                                  configParams,
-                                  STATS_COLLECTION_FIXED_POINT), "");
+      /* Run quant stats tool to get per channel mean after quantization */
+      if (isBF16Mode)
+      {
+        TIDL_GLOBAL_REPORT_SUBHEADING(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, TIDL_ModelDiagnostic::DK_NoColor, "BF16 Bias Calibration Iteration [%d / %d]:", (i + 1U), configParams->biasCalibrationIterations);
+
+        /* Convert weights/slopes to BF16-rounded FP32 in-place for stats collection.
+         * storeAsFP32=true keeps buffers as float32 so TIDL_quantStatsFixedOrFloat's
+         * internal clone can safely copy them. */
+        TIDL_IMPORT_CHECK_AND_RETURN(TIDL_convertWeightsAndSlopesToBF16(pOrgTIDLNetStructure,
+                                        pTIDLNetStructure,
+                                        configParams,
+                                        numLayers,
+                                        /*storeAsFP32=*/true), "");
+
+        /* Collect stats using float-mode inference (TIDL_quantStatsFixedOrFloat internally
+         * creates its own copy, so pOrgTIDLNetStructure is not modified by this call) */
+        TIDL_IMPORT_CHECK_AND_RETURN(TIDL_quantStatsFixedOrFloat(pOrgTIDLNetStructure,
+                                        pTIDLNetStructure,
+                                        configParams,
+                                        STATS_COLLECTION_FLOAT), "");
+      }
+      else
+      {
+        TIDL_GLOBAL_REPORT_SUBHEADING(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, TIDL_ModelDiagnostic::DK_NoColor, "Fixed-point Calibration Iteration [%d / %d]:", (i + 1U), configParams->biasCalibrationIterations);
+        TIDL_IMPORT_CHECK_AND_RETURN(TIDL_quantStatsFixedOrFloat(pOrgTIDLNetStructure,
+                                        pTIDLNetStructure,
+                                        configParams,
+                                        STATS_COLLECTION_FIXED_POINT), "");
+      }
+
       if (( configParams->calibrationOption & TIDL_CalibOptionBiasCalibration) == TIDL_CalibOptionBiasCalibration)
       {
         /*Read the per Channel  mean stats per channel */
@@ -6257,7 +7135,7 @@ int32_t TIDL_runIterativeCalibration(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure,
         TIDL_updateBiasForBiasCalibration(pOrgTIDLNetStructureBkpFloat, pOrgTIDLNetStructure, perChannelMeanDelta, numLayers);
       }
 
-      /* Copy the updated bias to orgTIDLNetStructure, which will be used in next iteration for quantization */
+      /* Copy the updated bias (and for BF16, restore FP32 weights) from backup to live for next iteration */
       TIDL_copyModelParams(pOrgTIDLNetStructure, pOrgTIDLNetStructureBkpFloat, numLayers);
 
       //TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "\n \n \n *****************   Calibration iteration number %d completed ************************ \n \n \n \n", i);
@@ -6292,7 +7170,6 @@ int32_t TIDL_runIterativeCalibration(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure,
 
     return status;
 }
-
 
 static int32_t TIDL_isIterativeCalibrationRequired(tidl_import_config * configParams)
 {
@@ -6499,16 +7376,6 @@ static bool TIDL_isRangeExemptLayerType(int32_t layerType)
 }
 
 /**
- * @brief Returns true when the layer is a CropLayer operating in multi-core mode.
- *        Such layers are inserted internally by TIDL and already carry known ranges.
- */
-static bool TIDL_isMultiCoreCropLayer(const sTIDL_LayerPC_t *pLayer)
-{
-  return (pLayer->layerType == TIDL_CropLayer) &&
-         (pLayer->layerParams.cropParams.multiCoreMode != TIDL_NOT_MULTI_CORE);
-}
-
-/**
  * @brief Returns true when a BatchNorm layer is exempt from the range check.
  *
  * Two separate policies apply:
@@ -6556,9 +7423,6 @@ static bool TIDL_layerNeedsRangeCheck(const sTIDL_LayerPC_t *pLayer)
   if (TIDL_isRangeExemptLayerType(pLayer->layerType))
     return false;
 
-  if (TIDL_isMultiCoreCropLayer(pLayer))
-    return false;
-
   /* Clip activation carries its own range in clipMin/clipMax — no check needed */
   if (pLayer->clipParams.isClipEnabled == 1)
     return false;
@@ -6594,7 +7458,7 @@ int32_t TIDL_isAllFeatureRangeAvailable(sTIDL_OrgNetwork_t *pOrgNetStructure, in
     if (TIDL_layerNeedsRangeCheck(pLayer))
     {
       TIDL_GLOBAL_REPORT_WARNING("Range not supplied for layer - %s - %s, running calibration\n",
-                                 TIDL_LayerString[pLayer->layerType], (char*)pLayer->outDataNames[0]);
+                                 TIDL_GetLayerString(pLayer->layerType), (char*)pLayer->outDataNames[0]);
       featureRangeAvailable = 0;
     }
   }
@@ -6833,6 +7697,16 @@ bool TIDL_doesLayerSupportAsymTensors(sTIDL_LayerPC_t * currLayer, sTIDL_OrgNetw
     {
       isAsymSupported = true;
     }
+  }
+  else if(currLayer->layerType == TIDL_LSTMLayer && TIDL_isSupportedInFirmwareVersion((const char*)gParams.c7xFirmwareVersion,"11_02_12_00"))
+  {
+    int32_t weightLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, currLayer->inData[TIDL_RecurrentInputW].dataId);
+    if(weightLayerIdx == -1)
+    {
+      TIDL_GLOBAL_REPORT_ERROR("Weight layer not found for LSTM layer");
+      return false;
+    }
+    isAsymSupported = pOrgTIDLNetStructure->TIDLPCLayers[weightLayerIdx].layerType == TIDL_ConstDataLayer;
   }
   else if (currLayer->layerType == TIDL_DataConvertLayer &&
            currLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_OUTPUT &&
@@ -7486,7 +8360,7 @@ int32_t TIDL_import_quantize(uint32_t layerIndex)
   /*Set default kernel execution to be via High Throughput kernels*/
   TIDL_setDefaultKernelType(&orgTIDLNetStructure, layerIndex);
 
-  if ( (gParams.numParamBits < 32) )
+  if ( (gParams.numParamBits < 32) && (gParams.inferencePrecisionMode == TIDL_InferencePrecisionModeFixedPoint) )
   {
     /* Per channel quantization is only applicable with power of quantization, hence force it if its not */
     if (( gParams.calibrationOption & TIDL_CalibOptionPerChannelWeightQuantization) == TIDL_CalibOptionPerChannelWeightQuantization)
@@ -7676,6 +8550,28 @@ int32_t TIDL_import_quantize(uint32_t layerIndex)
     {
       TIDL_deleteWeightsBiasValueArray(weightValueArray, biasValueArray, &orgTIDLNetStructure);
     }
+  }
+  else if (gParams.numParamBits == 16 && gParams.inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint)
+  {
+    for (int i = 0; i < TIDL_MAX_ALG_IN_BUFS; i++)
+    {
+      gParams.inElementType[i] = TIDL_BFloat16;
+    }
+    tIDLNetStructure.isQuantStatsAvailable = 1;
+    /* Run bias calibration before final BF16 weight conversion.
+     * TIDL_runIterativeCalibration detects BF16 mode via inferencePrecisionMode and
+     * numParamBits, and uses STATS_COLLECTION_FLOAT with BF16-rounded weights instead
+     * of STATS_COLLECTION_FIXED_POINT. */
+    if ((gParams.calibrationOption & TIDL_CalibOptionBiasCalibration) == TIDL_CalibOptionBiasCalibration)
+    {
+      TIDL_IMPORT_CHECK_AND_RETURN(TIDL_runIterativeCalibration(&orgTIDLNetStructure,
+                                                                &tIDLNetStructure,
+                                                                &gParams), "");
+    }
+    TIDL_IMPORT_CHECK_AND_RETURN(TIDL_convertWeightsAndSlopesToBF16(&orgTIDLNetStructure, &tIDLNetStructure, &gParams, layerIndex), "");
+    TIDL_IMPORT_CHECK_AND_RETURN(updatePadAndWriteModel(&orgTIDLNetStructure, &tIDLNetStructure, &gParams), "");
+    /* Float inference is only supported in ref only flow so do not execute network compiler */
+    gParams.executeNetworkCompiler = 0;
   }
   else
   {

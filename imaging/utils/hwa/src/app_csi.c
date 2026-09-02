@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2025 Texas Instruments Incorporated
+ * Copyright (c) 2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -60,35 +60,18 @@
  *
  */
 
+#if (defined(SOC_AM62A) && defined(adas))
+
 #include <utils/udma/include/app_udma.h>
 #include <utils/console_io/include/app_log.h>
 #include <utils/sciclient/include/app_sciclient_wrapper_api.h>
 #include <utils/hwa/include/app_hwa.h>
-
-
-#if defined(MCU_PLUS_SDK)
 #include <drivers/hw_include/tistdtypes.h>
 #include <drivers/hw_include/csl_types.h>
 #include <drivers/udma.h>
 #include <drivers/csirx.h>
-/* csirx is supported on SOC_AM62A, csitx is not */
-#if !defined(SOC_AM62A)
-#include <drivers/csitx.h>
-#endif
-#else
-#include <csirx/csirx.h>
-#include <csitx/csitx.h>
-#include <ti/drv/fvid2/include/fvid2_api.h>
-#endif /* defined(MCU_PLUS_SDK) */
-
-#if defined(MCU_PLUS_SDK)
-#define CSITX_ESC_CLK_FREQ_HZ         (16000000U)
-#define CSITX_MAIN_CLK_HZ             (500000000U)
-#endif /* defined(MCU_PLUS_SDK) */
 
 #define APP_DEBUG_VHWA
-
-#if defined (SOC_J721E) || defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined (SOC_J722S) || (defined(SOC_AM62A) && defined(adas))
 
 int32_t appCsi2RxInit(void)
 {
@@ -98,27 +81,8 @@ int32_t appCsi2RxInit(void)
 
     appLogPrintf("CSI2RX: Init ... !!!\n");
 
-    #if !defined(SOC_AM62A) && !defined(SOC_J722S)
-        SET_DEVICE_STATE_ON(TISCI_DEV_CSI_PSILSS0);
-    #endif
-
     SET_DEVICE_STATE_ON(TISCI_DEV_CSI_RX_IF0);
-
-    #if !defined(SOC_AM62A) && !defined(SOC_J722S)
-    SET_DEVICE_STATE_ON(TISCI_DEV_CSI_RX_IF1);
-    #if defined(SOC_J784S4) || defined(SOC_J742S2)
-        SET_DEVICE_STATE_ON(TISCI_DEV_CSI_RX_IF2);
-    #endif
-    #endif
-
     SET_DEVICE_STATE_ON(TISCI_DEV_DPHY_RX0);
-
-    #if !defined(SOC_AM62A) && !defined(SOC_J722S)
-    SET_DEVICE_STATE_ON(TISCI_DEV_DPHY_RX1);
-    #if defined(SOC_J784S4) || defined(SOC_J742S2)
-        SET_DEVICE_STATE_ON(TISCI_DEV_DPHY_RX2);
-    #endif
-    #endif
 
     Csirx_initParamsInit(&initPrmsCsirx);
     initPrmsCsirx.drvHandle = appUdmaCsirxCsitxGetObj();
@@ -142,116 +106,4 @@ int32_t appCsi2RxDeInit(void)
     }
     return (retVal);
 }
-#endif /* defined (SOC_J721E) || defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined (SOC_J722S) || defined(SOC_AM62A) */
-
-#if !defined(SOC_AM62A)
-
-int32_t appCsi2TxInit(void)
-{
-    int32_t fstatus = FVID2_SOK;
-
-    Csitx_InitParams initPrmsCsitx;
-
-    appLogPrintf("CSI2TX: Init ... !!!\n");
-
-    #if !defined (SOC_J722S)
-    uint32_t regVal = 0U, unlocked = 0U;
-
-    SET_DEVICE_STATE_ON(TISCI_DEV_CSI_PSILSS0);
-
-    #if defined(SOC_J784S4) || defined(SOC_J742S2)
-        SET_DEVICE_STATE_ON(TISCI_DEV_CSI_TX_IF0);
-        SET_DEVICE_STATE_ON(TISCI_DEV_CSI_TX_IF1);
-    #endif
-
-    #if defined(SOC_J721S2)
-        SET_DEVICE_STATE_ON(TISCI_DEV_CSI_TX_IF_V2_0);
-        SET_DEVICE_STATE_ON(TISCI_DEV_CSI_TX_IF_V2_1);
-    #endif
-
-    SET_DEVICE_STATE_ON(TISCI_DEV_DPHY_TX0);
-    #if !defined (SOC_J721E)
-        SET_DEVICE_STATE_ON(TISCI_DEV_DPHY_TX1);
-    #endif
-
-    /* MISRA Deviation: MISRA.CAST.OBJ_PTR_TO_INT.2012
-     * Justification: Hardware register access requires pointer to integer conversion
-     * for memory-mapped register addressing */
-    regVal = CSL_REG32_RD(CSL_CTRL_MMR0_CFG0_BASE +
-                          CSL_MAIN_CTRL_MMR_CFG0_LOCK1_KICK0);
-    if ((regVal & 0x1U) == 0U)
-    {
-        /* Unlock MMR */
-        unlocked = 1U;
-        /* MISRA Deviation: MISRA.CAST.OBJ_PTR_TO_INT.2012
-         * Justification: Hardware register access requires pointer to integer conversion
-         * for memory-mapped register addressing */
-        CSL_REG32_WR(CSL_CTRL_MMR0_CFG0_BASE +
-                     CSL_MAIN_CTRL_MMR_CFG0_LOCK1_KICK0,
-                     0x68EF3490U);
-        /* MISRA Deviation: MISRA.CAST.OBJ_PTR_TO_INT.2012
-         * Justification: Hardware register access requires pointer to integer conversion
-         * for memory-mapped register addressing */
-        CSL_REG32_WR(CSL_CTRL_MMR0_CFG0_BASE +
-                     CSL_MAIN_CTRL_MMR_CFG0_LOCK1_KICK1,
-                     0xD172BC5AU);
-        appLogPrintf("Unlocked MMR to program CSITX DPHY register ... !!!\n");
-    }
-
-    /* Select CSITX0 as the source for DPHYTX0 */
-    /* MISRA Deviation: MISRA.CAST.OBJ_PTR_TO_INT.2012
-     * Justification: Hardware register access requires pointer to integer conversion
-     * for memory-mapped register addressing */
-    CSL_REG32_WR(CSL_CTRL_MMR0_CFG0_BASE +
-                    CSL_MAIN_CTRL_MMR_CFG0_DPHY_TX0_CTRL,
-                    0x1);
-    #if !defined (SOC_J721E)
-        /* Select CSITX1 as the source for DPHYTX1 */
-        /* MISRA Deviation: MISRA.CAST.OBJ_PTR_TO_INT.2012
-         * Justification: Hardware register access requires pointer to integer conversion
-         * for memory-mapped register addressing */
-        CSL_REG32_WR(CSL_CTRL_MMR0_CFG0_BASE +
-                        CSL_MAIN_CTRL_MMR_CFG0_DPHY_TX1_CTRL,
-                        0x1);
-    #endif
-    /* Lock MMR back if unlocked here */
-    if (unlocked == 1U)
-    {
-        /* MISRA Deviation: MISRA.CAST.OBJ_PTR_TO_INT.2012
-         * Justification: Hardware register access requires pointer to integer conversion
-         * for memory-mapped register addressing */
-        CSL_REG32_WR(CSL_CTRL_MMR0_CFG0_BASE +
-                     CSL_MAIN_CTRL_MMR_CFG0_LOCK1_KICK0,
-                     0U);
-        appLogPrintf("Locked MMR after programming CSITX DPHY register ... !!!\n");
-    }
-
-    #else
-    SET_CLOCK_FREQ (TISCI_DEV_CSI_TX_IF0, TISCI_DEV_CSI_TX_IF0_ESC_CLK_CLK, (int32_t)CSITX_ESC_CLK_FREQ_HZ);
-    SET_CLOCK_FREQ (TISCI_DEV_CSI_TX_IF0, TISCI_DEV_CSI_TX_IF0_MAIN_CLK_CLK, (int32_t)CSITX_MAIN_CLK_HZ);
-    #endif /* if !defined(SOC_J722S) */
-
-    Csitx_initParamsInit(&initPrmsCsitx);
-    initPrmsCsitx.drvHandle = appUdmaCsirxCsitxGetObj();
-    fstatus = Csitx_init(&initPrmsCsitx);
-    if(fstatus!=FVID2_SOK)
-    {
-        appLogPrintf("CSI2TX: ERROR: Csitx_init failed !!!\n");
-    }
-    appLogPrintf("CSI2TX: Init ... Done !!!\n");
-
-    return (fstatus);
-}
-
-int32_t appCsi2TxDeInit(void)
-{
-    int32_t retVal = FVID2_SOK;
-    retVal = Csitx_deInit();
-    if(retVal!=FVID2_SOK)
-    {
-        appLogPrintf("CSI2TX: ERROR: Csitx_deInit failed !!!\n");
-    }
-    return (retVal);
-}
-
-#endif /* !defined(SOC_AM62A) */
+#endif /* defined(SOC_AM62A) && defined(adas) */

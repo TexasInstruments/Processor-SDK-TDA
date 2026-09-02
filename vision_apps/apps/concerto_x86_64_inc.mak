@@ -11,22 +11,14 @@ ifeq ($(TARGET_CPU),x86_64)
     IMAGING_IDIRS += $(IMAGING_PATH)/kernels/include
     IMAGING_IDIRS += $(IMAGING_PATH)/sensor_drv/include
 
-    VISION_APPS_KERNELS_IDIRS =
-    VISION_APPS_KERNELS_IDIRS += $(VISION_APPS_PATH)/kernels
-    VISION_APPS_KERNELS_IDIRS += $(VISION_APPS_PATH)/kernels/img_proc/include
-    VISION_APPS_KERNELS_IDIRS += $(VISION_APPS_PATH)/kernels/fileio/include
-
     VISION_APPS_MODULES_IDIRS =
     VISION_APPS_MODULES_IDIRS += $(VISION_APPS_PATH)/modules/include
 
-    VISION_APPS_SRV_IDIRS =
-    VISION_APPS_SRV_IDIRS += $(VISION_APPS_PATH)/kernels/srv/include
-    VISION_APPS_SRV_IDIRS += $(VISION_APPS_PATH)/kernels/srv/c66
-    VISION_APPS_SRV_IDIRS += $(VISION_APPS_PATH)/kernels/srv/gpu/3dsrv
-
-    VISION_APPS_SAMPLE_IDIRS =
-    VISION_APPS_SAMPLE_IDIRS += $(VISION_APPS_PATH)/kernels/sample/include
-    VISION_APPS_SAMPLE_IDIRS += $(VISION_APPS_PATH)/kernels/sample/host
+    APP_KERNELS_IDIRS =
+    APP_KERNELS_IDIRS += $(APP_KERNELS_PATH)/kernels
+    APP_KERNELS_IDIRS += $(APP_KERNELS_PATH)/kernels/img_proc/include
+    APP_KERNELS_IDIRS += $(APP_KERNELS_PATH)/kernels/img_proc/host
+    APP_KERNELS_IDIRS += $(APP_KERNELS_PATH)/kernels/fileio/include
 
     VISION_APPS_APPLIBS_IDIRS =
     VISION_APPS_APPLIBS_IDIRS += $(VISION_APPS_PATH)/applibs
@@ -34,16 +26,28 @@ ifeq ($(TARGET_CPU),x86_64)
     PTK_IDIRS =
     PTK_IDIRS += $(PTK_PATH)/include
 
-    VISION_APPS_STEREO_KERNELS_IDIRS =
-    VISION_APPS_STEREO_KERNELS_IDIRS += $(VISION_APPS_PATH)/kernels/stereo/include
+    APP_SRV_IDIRS =
+    APP_SRV_IDIRS += $(APP_KERNELS_PATH)/kernels/srv/include
+    APP_SRV_IDIRS += $(APP_KERNELS_PATH)/kernels/srv/target/dsp
+    APP_SRV_IDIRS += $(APP_KERNELS_PATH)/kernels/srv/target/gpu/3dsrv
 
-    EDGEAI_IDIRS =
-    EDGEAI_IDIRS += $(EDGEAI_UTILS_PATH)/include
-    EDGEAI_IDIRS += $(EDGEAI_KERNELS_PATH)/include
+    APP_SAMPLE_IDIRS =
+    APP_SAMPLE_IDIRS += $(APP_KERNELS_PATH)/kernels/sample/include
+    APP_SAMPLE_IDIRS += $(APP_KERNELS_PATH)/kernels/sample/host
 
-    BUILD_PROFILE_EDGEAI_REL = Release
+    APP_STEREO_KERNELS_IDIRS =
+    APP_STEREO_KERNELS_IDIRS += $(APP_KERNELS_PATH)/kernels/stereo/include
+
+    PLATFORM_IDIRS =
+    PLATFORM_IDIRS += $(PLATFORM_PATH)/hlos/include
+    PLATFORM_IDIRS += $(PLATFORM_PATH)
+
+    IDIRS += $(PLATFORM_IDIRS)
+
 
     LDIRS       += $(VISION_APPS_PATH)/out/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+    LDIRS       += $(PLATFORM_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+    LDIRS       += $(APP_KERNELS_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
     LDIRS       += $(APP_UTILS_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
     LDIRS       += $(TIOVX_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
     LDIRS       += $(IMAGING_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
@@ -55,22 +59,21 @@ ifeq ($(TARGET_CPU),x86_64)
     ifeq ($(ENABLE_NEW_TIDL_STRUCTURE),yes)
         LDIRS       += $(TIDL_PATH)/tiovx_kernels/lib/$(TARGET_PLATFORM)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
     endif
-
     LDIRS       += $(TIDL_PATH)/ti_dl/lib/$(TARGET_SOC)/$(TARGET_PLATFORM)/algo/$(TARGET_BUILD)
-    LDIRS       += $(EDGEAI_UTILS_PATH)/HOST/lib/$(BUILD_PROFILE_EDGEAI_REL)
-    LDIRS       += $(EDGEAI_KERNELS_PATH)/HOST/lib/$(BUILD_PROFILE_EDGEAI_REL)
 
+    # Initialize the variables empty when building both debug and release binaries together
     TIOVX_LIBS  =
     IMAGING_LIBS =
-    VISION_APPS_SRV_LIBS  =
-    VISION_APPS_SAMPLE_LIBS  =
-    VISION_APPS_OPENGL_UTILS_LIBS =
-    VISION_APPS_KERNELS_LIBS  =
+    APP_SRV_LIBS  =
+    APP_SAMPLE_LIBS  =
+    APP_OPENGL_UTILS_LIBS =
+    APP_KERNELS_LIBS  =
+    APP_STEREO_LIBS  =
     VISION_APPS_MODULES_LIBS  =
     TEST_LIBS =
     PTK_LIBS =
-    VISION_APPS_STEREO_LIBS =
     VISION_APPS_UTILS_LIBS  =
+    HLOS_PLATFORM_LIBS  =
 
     # This section is for apps to link against tivision_apps library instead of static libs
     ifeq ($(LINK_SHARED_OBJ)$(TARGETTYPE),yesexe)
@@ -115,7 +118,6 @@ ifeq ($(TARGET_CPU),x86_64)
 
         SYS_STATIC_LIBS += $(APP_UTILS_LIBS)
 
-        TIOVX_LIBS  =
         TIOVX_LIBS += vx_vxu vx_framework
         TIOVX_LIBS += vx_kernels_host_utils vx_kernels_target_utils
         TIOVX_LIBS += vx_platform_pc
@@ -123,7 +125,7 @@ ifeq ($(TARGET_CPU),x86_64)
         TIOVX_LIBS += vx_kernels_openvx_ext vx_target_kernels_openvx_ext
         TIOVX_LIBS += vx_target_kernels_tutorial
         ifneq ($(SOC), tda54)
-            TIOVX_LIBS += vx_app_c7x_target_kernel
+            TIOVX_LIBS += vx_target_kernels_add_img
         endif
         TIOVX_LIBS += vx_utils
         TIOVX_LIBS += vx_kernels_tidl
@@ -139,7 +141,6 @@ ifeq ($(TARGET_CPU),x86_64)
 
         TIOVX_LIBS += vx_target_kernels_tidl vx_target_kernels_ivision_common
 
-        IMAGING_LIBS =
         IMAGING_LIBS += vx_kernels_imaging
         IMAGING_LIBS += ti_imaging_aealg
         IMAGING_LIBS += ti_imaging_awbalg
@@ -170,60 +171,26 @@ ifeq ($(TARGET_CPU),x86_64)
             endif
         endif
 
-        VISION_APPS_UTILS_LIBS  =
         ifneq ($(SOC),$(filter $(SOC), am62a))
             VISION_APPS_UTILS_LIBS += app_utils_draw2d
         else ifeq ($(TISDK_IMAGE), adas)
             VISION_APPS_UTILS_LIBS += app_utils_draw2d
-        endif
-        VISION_APPS_UTILS_LIBS += app_utils_init
-        ifeq ($(SOC),$(filter $(SOC), tda54))
-            VISION_APPS_UTILS_LIBS += app_utils_init_vdk
         endif
         ifeq ($(SOC),$(filter $(SOC), j721e j721s2 j784s4 j742s2))
             VISION_APPS_UTILS_LIBS += app_utils_grpx
             VISION_APPS_UTILS_LIBS += app_utils_hwa
         endif
 
-        VISION_APPS_SRV_LIBS  =
-        VISION_APPS_SRV_LIBS  += vx_kernels_srv vx_target_kernels_srv_gpu
-        VISION_APPS_SRV_LIBS  += vx_target_kernels_srv_c66
-        VISION_APPS_SRV_LIBS  += vx_applib_srv_bowl_lut_gen
-        VISION_APPS_SRV_LIBS  += vx_applib_srv_calibration
-        VISION_APPS_SRV_LIBS  += vx_srv_render_utils
-
-        VISION_APPS_SAMPLE_LIBS  =
-        VISION_APPS_SAMPLE_LIBS  += vx_kernels_sample vx_target_kernels_sample_a72
-
-        VISION_APPS_OPENGL_UTILS_LIBS =
-        VISION_APPS_OPENGL_UTILS_LIBS += app_utils_opengl
-
-        VISION_APPS_KERNELS_LIBS  =
-        VISION_APPS_KERNELS_LIBS += vx_kernels_img_proc
-        VISION_APPS_KERNELS_LIBS += vx_target_kernels_img_proc_a72
-        VISION_APPS_KERNELS_LIBS += vx_kernels_fileio
-        VISION_APPS_KERNELS_LIBS += vx_target_kernels_fileio
-        ifneq ($(SOC), am62a)
-            VISION_APPS_KERNELS_LIBS += vx_target_kernels_img_proc_r5f
-        endif
-        ifeq ($(SOC),$(filter $(SOC), j721e j721s2 j784s4 j742s2))
-            VISION_APPS_KERNELS_LIBS += vx_target_kernels_img_proc_c66
-            VISION_APPS_KERNELS_LIBS += vx_target_kernels_img_proc_c71
+        HLOS_PLATFORM_LIBS += app_init_pc_common
+        ifeq ($(SOC),$(filter $(SOC), tda54))
+            HLOS_PLATFORM_LIBS += app_utils_init_vdk
         endif
 
-        VISION_APPS_MODULES_LIBS  =
         VISION_APPS_MODULES_LIBS += vx_app_modules
 
-        PTK_LIBS =
         PTK_LIBS += ptk_base
         PTK_LIBS += ptk_algos
 
-        VISION_APPS_STEREO_LIBS =
-        VISION_APPS_STEREO_LIBS += vx_kernels_common
-        VISION_APPS_STEREO_LIBS += vx_kernels_stereo
-        VISION_APPS_STEREO_LIBS += vx_target_kernels_stereo
-
-        TEST_LIBS =
         TEST_LIBS += vx_tiovx_tests vx_tiovx_internal_tests vx_conformance_tests vx_conformance_tests_testmodule
         ifeq ($(SOC),$(filter $(SOC), j721e j722s j721s2 j784s4 j742s2))
             TEST_LIBS += vx_target_kernels_vpac_aewb
@@ -233,6 +200,28 @@ ifeq ($(TARGET_CPU),x86_64)
         ifeq ($(SOC),$(filter $(SOC), j721e j721s2 j784s4 j742s2))
             TEST_LIBS += vx_kernels_srv_tests
             TEST_LIBS += vx_applib_tests
+        endif
+
+        APP_SRV_LIBS  += vx_kernels_srv vx_target_kernels_srv_gpu
+        APP_SRV_LIBS  += vx_target_kernels_srv_c6x
+        APP_SRV_LIBS  += vx_applib_srv_bowl_lut_gen
+        APP_SRV_LIBS  += vx_applib_srv_calibration
+        APP_SRV_LIBS  += vx_srv_render_utils
+
+        APP_SAMPLE_LIBS  += vx_kernels_sample vx_target_kernels_sample_arm
+
+        APP_OPENGL_UTILS_LIBS += app_utils_opengl
+
+        APP_KERNELS_LIBS += vx_kernels_img_proc
+        APP_KERNELS_LIBS += vx_target_kernels_img_proc_arm
+        APP_KERNELS_LIBS += vx_kernels_fileio
+        APP_KERNELS_LIBS += vx_target_kernels_fileio
+        ifneq ($(SOC), am62a)
+            APP_KERNELS_LIBS += vx_target_kernels_img_proc_mcu
+        endif
+        ifeq ($(SOC),$(filter $(SOC), j721s2 j784s4 j742s2))
+            APP_KERNELS_LIBS += vx_target_kernels_img_proc_c7x
+            APP_KERNELS_LIBS += vx_target_kernels_img_proc_c6x
         endif
 
         MMA_LIBS =
@@ -263,6 +252,13 @@ ifeq ($(TARGET_CPU),x86_64)
             PDK_LIBS += ti.osal.lib
         endif
 
+        APP_STEREO_LIBS += vx_kernels_common
+        APP_STEREO_LIBS += vx_kernels_stereo
+        APP_STEREO_LIBS += vx_target_kernels_stereo
+
+        APP_KERNELS_UTILS_LIBS =
+        APP_KERNELS_UTILS_LIBS += vx_kernel_utils
+
         MCU_PLUS_SDK_LIBS =
         MCU_SDK_LIBS =
 
@@ -288,10 +284,12 @@ ifeq ($(TARGET_CPU),x86_64)
 
         STATIC_LIBS = $(MMA_LIBS)
         STATIC_LIBS += $(TIOVX_LIBS)
+        STATIC_LIBS += $(HLOS_PLATFORM_LIBS)
         STATIC_LIBS += $(TIDL_LIBS)
         STATIC_LIBS += vxlib_$(TARGET_CPU) c6xsim_$(TARGET_CPU)_C66
         STATIC_LIBS += $(VISION_APPS_UTILS_LIBS)
-        STATIC_LIBS += $(VISION_APPS_KERNELS_LIBS)
+        STATIC_LIBS += $(APP_KERNELS_LIBS)
+        STATIC_LIBS += $(APP_KERNELS_UTILS_LIBS)
 
         ifeq ($(SOC), j722s)
             STATIC_LIBS += C7524-MMA2_256-host-emulation

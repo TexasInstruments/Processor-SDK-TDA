@@ -1349,11 +1349,7 @@ static vx_status app_init(AppObj *obj)
         tivxHwaLoadKernels(obj->context);
         tivxVideoIOLoadKernels(obj->context);
         tivxImagingLoadKernels(obj->context);
-#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
-        tivxEdgeaiImgProcLoadKernels(obj->context);
-#else
         tivxImgProcLoadKernels(obj->context);
-#endif
         tivxTIDLLoadKernels(obj->context);
         tivxFileIOLoadKernels(obj->context);
         APP_PRINTF("Kernel loading done!\n");
@@ -1541,11 +1537,7 @@ static void app_deinit(AppObj *obj)
     tivxHwaUnLoadKernels(obj->context);
     tivxVideoIOUnLoadKernels(obj->context);
     tivxImagingUnLoadKernels(obj->context);
-#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
-    tivxEdgeaiImgProcUnLoadKernels(obj->context);
-#else
     tivxImgProcUnLoadKernels(obj->context);
-#endif
     tivxFileIOUnLoadKernels(obj->context);
     APP_PRINTF("Kernels unload done!\n");
 

@@ -147,7 +147,7 @@ template<class Tin, class Tout>
   int32_t *indPtr = NULL;
   int32_t dim[TIDL_PITCH_MAX], icnt[TIDL_DIM_MAX], indicesPitch = 0;
   int32_t i1 = 0, i2 = 0, i3 = 0, i4 = 0, i5 = 0, i6 = 0, outOffset = 0, inPitch = 0, outPitch = 0;
-  Tout valueLimit = 0;
+  Tout valueLimit = (Tout)0;
   const sTIDL_TopKParams_t *topKParams = &tidlLayer->layerParams.topKParams;
 
   if (topKParams->largest == 1)
@@ -175,7 +175,10 @@ template<class Tin, class Tout>
   icnt[topKParams->axis] = 1;
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+  <justification start>
+  Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+  Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+  This does not impact functional correctness or safety.
   <justification end> */
   switch (topKParams->axis)
   {
@@ -220,7 +223,10 @@ template<class Tin, class Tout>
 #endif
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+  <justification start>
+  Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+  Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+  This does not impact functional correctness or safety.
   <justification end> */
   default:
   {
@@ -322,6 +328,10 @@ int32_t TIDL_topKProcess(TIDL_NetworkCommonParams *commonParams,
     if (inDataParams->elementType == TIDL_SinglePrecFloat)
     {
       status = TIDL_refTopK<float32_tidl, float32_tidl>((float32_tidl *)inPtrs[0], (float32_tidl *)outPtrs[0], inDataParams, tidlLayer);
+    }
+    else if (inDataParams->elementType == TIDL_BFloat16)
+    {
+       status = TIDL_refTopK<bfloat16_tidl, bfloat16_tidl>((bfloat16_tidl *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inDataParams, tidlLayer);
     }
     else if (inDataParams->elementType == TIDL_UnsignedChar)
     {

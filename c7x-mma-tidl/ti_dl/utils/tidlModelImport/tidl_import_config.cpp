@@ -95,6 +95,8 @@ sTokenStringSubst postProcTypeSubst[] = {
 
 sTokenMapping gsTokenMap_tidl_import_config[MAX_ITEMS_TO_PARSE] =
 {
+        {(char* )"inferencePrecisionMode",             &gParams.inferencePrecisionMode            , INT_32, SINGLE, false, false, NULL,
+          "Tensor Data type: 1 = float  / 1 = Fixed (default)", NULL},
         {(char* )"randParams",             &gParams.randParams            , INT_32, SINGLE, false, false, NULL,
           "Use random model weights and values: 1 = true / 0 = false (default)", NULL},
         {(char *)"modelType",              &gParams.modelType             , INT_32, SINGLE, false, false, &modelTypeSubst[0],

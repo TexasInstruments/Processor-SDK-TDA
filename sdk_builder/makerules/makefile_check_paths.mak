@@ -28,6 +28,7 @@ else
 	@if [ ! -d $(MCU_PLUS_SDK_PATH) ]; then echo 'ERROR: $(MCU_PLUS_SDK_PATH) not found !!!'; exit 1; fi
 endif
 	@if [ ! -d $(VISION_APPS_PATH) ]; then echo 'ERROR: $(VISION_APPS_PATH) not found !!!'; exit 1; fi
+	@if [ ! -d $(PLATFORM_PATH) ]; then echo 'ERROR: $(PLATFORM_PATH) not found !!!'; exit 1; fi
 	@if [ ! -d $(TIOVX_PATH) ]; then echo 'ERROR: $(TIOVX_PATH) not found !!!'; exit 1; fi
 	@if [ ! -d $(APP_UTILS_PATH) ]; then echo 'ERROR: $(APP_UTILS_PATH) not found !!!'; exit 1; fi
 ifeq ($(SOC), $(filter $(SOC), j721e j721s2 j784s4 j742s2))

@@ -133,13 +133,11 @@ static vx_status tivxVpacLdcMapTivxToVhwaErrEvents(uint32_t tivx_err_events,
 static int32_t tivxVpacLdcFrameComplCb(Fvid2_Handle handle, void *appData);
 static void tivxVpacLdcErrorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData);
 static void tivxVpacLdcWdTimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData);
-#if !defined(VPAC3L)
 int32_t tivxVpacLdcConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms);
-#endif
+
 static vx_status vpacLdcInstObjInit(void);
 static void vpacLdcInstObjDeinit(void);
 
-#if !defined(VPAC3L)
 static vx_status tivxEnableVpacLdcSafetyMechanisms(
     tivxVpacLdcObj *ldcObj,
     const tivx_obj_desc_user_data_object_t *usr_data_obj);
@@ -147,7 +145,7 @@ static vx_status tivxEnableVpacLdcSafetyMechanisms(
 static vx_status tivxVpacLdcAllocReadbackBuffers(tivxVpacLdcObj *ldcObj);
 
 static void tivxVpacLdcFreeReadbackBuffers(tivxVpacLdcObj *ldcObj);
-#endif
+
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
@@ -515,9 +513,7 @@ static vx_status VX_CALLBACK tivxVpacLdcProcess(
     Fvid2_FrameList       *outFrmList;
     uint64_t               cur_time = 0ULL;
     tivx_obj_desc_t         *out_base_desc = NULL;
-    #if !defined(VPAC3L)
     vx_status               validate_reg_status = (vx_status)VX_SUCCESS;
-    #endif
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -950,7 +946,7 @@ static vx_status VX_CALLBACK tivxVpacLdcProcess(
             status = (vx_status)VX_ERROR_TIMEOUT;
         }
         /* LDRA_JUSTIFY_END */
-#if !defined(VPAC3L)
+
         /* Call the control command for statusReg/configReg validate */
         {
             fvid2_status = Fvid2_control(ldc_obj->handle, VHWA_M2M_IOCTL_LDC_VALIDATE_REG, NULL, NULL);
@@ -969,7 +965,7 @@ static vx_status VX_CALLBACK tivxVpacLdcProcess(
             }
             /* LDRA_JUSTIFY_END */
         }
-#endif
+
     }
 
     /* LDRA_JUSTIFY_START
@@ -1010,12 +1006,10 @@ static vx_status VX_CALLBACK tivxVpacLdcProcess(
             );
     }
 
-    #if !defined(VPAC3L)
     if(((vx_status)VX_SUCCESS != status) || ((vx_status)VX_SUCCESS != validate_reg_status))
     {
         status = (vx_status)VX_FAILURE;
     }
-    #endif
     return (status);
 }
 
@@ -2384,13 +2378,12 @@ static vx_status VX_CALLBACK tivxVpacLdcDelete(
                 (void)tivxEventDelete(&ldc_obj->waitForProcessCmpl);
             }
 
-#if !defined(VPAC3L)
             /* Free config register readback buffers if allocated */
             if ((ldc_obj->readback_mem_ptr_phys != 0u) || (ldc_obj->golden_reg_mem_ptr_phys != 0u))
             {
                 tivxVpacLdcFreeReadbackBuffers(ldc_obj);
             }
-#endif
+
             tivxVpacLdcFreeObject(&gTivxVpacLdcInstObj, ldc_obj);
         }
     }
@@ -2588,7 +2581,6 @@ static vx_status VX_CALLBACK tivxVpacLdcControl(
             }
 #endif
 
-#if !defined(VPAC3L)
             case TIVX_VPAC_LDC_CMD_ENABLE_VPAC_SAFETY_MECHANISM:
             {
                 status = tivxEnableVpacLdcSafetyMechanisms(ldc_obj,
@@ -2608,7 +2600,7 @@ static vx_status VX_CALLBACK tivxVpacLdcControl(
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-#endif
+
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
             <justification start>
@@ -3833,7 +3825,6 @@ static vx_status tivxVpacLdcEnableErrorEventsCmd(tivxVpacLdcObj *ldc_obj,
     return status;
 }
 
-#if !defined(VPAC3L)
 /* Callback for config register and golden register memory comparison */
 int32_t tivxVpacLdcConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms)
 {
@@ -4486,7 +4477,7 @@ static vx_status tivxEnableVpacLdcSafetyMechanisms(
 
     return status;
 }
-#endif
+
 /* ========================================================================== */
 /*                              Driver Callbacks                              */
 /* ========================================================================== */

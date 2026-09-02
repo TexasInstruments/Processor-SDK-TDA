@@ -204,7 +204,10 @@ void TIDL_updateDDRBandwidthData(uint64_t *ptr, uint64_t read_bytes_total, uint6
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void tidlPerfStatsDdrStatsReadCounters.* <function end>
-<justification start> DEBUG_TRACE : This function is solely for debugging purposes and is not part of the production code.
+<justification start>
+Rationale - DEBUG_TRACE: This function is solely for debugging purposes and is not part of the production code.
+Effect on this UNIT - If the control reaches here, code is expected to function correctly for debug/trace purpose. 
+However, due to the stated rationale, this is not covered in production code.
 <justification end> */
 void tidlPerfStatsDdrStatsReadCounters(uint32_t *val0, uint32_t *val1, uint32_t *val2, uint32_t *val3, bool raw)
 {
@@ -429,7 +432,9 @@ float32_tidl TIDL_getMMAv2_ScaleShiftAndError(
     /* Handle edge case: all values skipped */
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if(skipCount == maxScaleValue)
     {
@@ -542,7 +547,9 @@ int64_t TIDL_roundSat(int64_t val, int32_t bits, int32_t min, int32_t max)
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int64_t TIDL_roundSatMMA.* <function end>
-<justification start> NOT_IN_SCOPE : This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+<justification start>
+Rationale - NOT_IN_SCOPE: This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 #endif
 OPENACC(routine(TIDL_roundSatMMA))
@@ -676,7 +683,9 @@ int32_t TIDL_getKernelDataType(int32_t tidlElemType)
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void TIDL_UpdateScaleFactors.* <function end>
-<justification start> NOT_IN_SCOPE : This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+<justification start>
+Rationale - NOT_IN_SCOPE: This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 #endif
 void TIDL_UpdateScaleFactors(TIDL_Handle intAlgHandle, int32_t i, int32_t updateStats, int64_t accMin, int64_t accMax)
@@ -687,7 +696,7 @@ void TIDL_UpdateScaleFactors(TIDL_Handle intAlgHandle, int32_t i, int32_t update
     sTIDL_Network_t *net = intAlgHandle->createParams->net;
     int32_t elementSizeBytes = TIDL_getDatElementSize(net->TIDLLayers[i].outData.elementType);
     /* For float we don't have to call update anything for stats collection */
-    if (elementSizeBytes == 4)
+    if (elementSizeBytes == 4 || net->TIDLLayers[i].outData.elementType == (int32_t)TIDL_BFloat16)
     {
       net->TIDLLayers[i].outData.roundBits = 0;
       net->TIDLLayers[i].outData.tensorScale = 1.0f;
@@ -914,9 +923,12 @@ int32_t TIDL_prePareMemcpyTr(
   DmaUtilsAutoInc3d_TransferProp transferProp;
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  <justification start>
+  Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
   This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
   TIDL_LDRA_TAG : TIDL_LDRA_TAG_COMMONUTILS_PRIOR_CHECK_003
+  Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+  This does not affect runtime behavior or safety.
   <justification end> */
   if (trMem != NULL)
   {
@@ -954,9 +966,12 @@ int32_t TIDL_prePareMemcpyTr(
     retVal = DmaUtilsAutoInc3d_prepareTr(&trPrepParams, &transferProp);
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+    <justification start>
+    Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
      This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
      TIDL_LDRA_TAG : TIDL_LDRA_TAG_COMMONUTILS_PRIOR_CHECK_001
+    Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+    This does not affect runtime behavior or safety.
     <justification end> */
     if (retVal != (int32_t)DMAUTILS_SOK)
     {
@@ -967,9 +982,12 @@ int32_t TIDL_prePareMemcpyTr(
   }
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  <justification start>
+  Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
   This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
   TIDL_LDRA_TAG : TIDL_LDRA_TAG_COMMONUTILS_PRIOR_CHECK_003
+  Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+  This does not affect runtime behavior or safety.
   <justification end> */
   else
   {
@@ -1063,9 +1081,12 @@ int32_t TIDL_memcpy2D(
         retVal = DmaUtilsAutoInc3d_convertTrVirtToPhyAddr(dmaUtilsContext, &trPrepParam, convertMask);
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+        <justification start>
+        Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
         This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
         TIDL_LDRA_TAG : TIDL_LDRA_TAG_COMMONUTILS_PRIOR_CHECK_001
+        Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+        This does not affect runtime behavior or safety.
         <justification end> */
         if (retVal != (int32_t)DMAUTILS_SOK)
         {
@@ -1075,9 +1096,12 @@ int32_t TIDL_memcpy2D(
         /* LDRA_JUSTIFY_END */
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+        <justification start>
+        Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
         This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
         TIDL_LDRA_TAG : TIDL_LDRA_TAG_COMMONUTILS_PRIOR_CHECK_001
+        Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+        This does not affect runtime behavior or safety.
         <justification end> */
         if (retVal != IALG_EFAIL)
         {
@@ -1086,9 +1110,12 @@ int32_t TIDL_memcpy2D(
           retVal = DmaUtilsAutoInc3d_configure(dmaUtilsContext, TIDL_DMA_CHANNEL_MEMCPY, trMem, (int32_t)1);
           /* LDRA_JUSTIFY_START
           <metric start> statement branch <metric end>
-          <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+          <justification start>
+          Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
           This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
           TIDL_LDRA_TAG : TIDL_LDRA_TAG_COMMONUTILS_PRIOR_CHECK_002
+          Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+          This does not affect runtime behavior or safety.
           <justification end> */
           if (retVal != (int32_t)DMAUTILS_SOK)
           {
@@ -1098,9 +1125,12 @@ int32_t TIDL_memcpy2D(
           /* LDRA_JUSTIFY_END */
           /* LDRA_JUSTIFY_START
           <metric start> branch <metric end>
-          <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+          <justification start>
+          Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
           This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
           TIDL_LDRA_TAG : TIDL_LDRA_TAG_COMMONUTILS_PRIOR_CHECK_002
+          Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+          This does not affect runtime behavior or safety.
           <justification end> */
           if (retVal != IALG_EFAIL)
           {
@@ -1115,9 +1145,12 @@ int32_t TIDL_memcpy2D(
       }
       /* LDRA_JUSTIFY_START
       <metric start> branch <metric end>
-      <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+      <justification start>
+      Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
       This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
       TIDL_LDRA_TAG : TIDL_LDRA_TAG_COMMONUTILS_PRIOR_CHECK_002
+      Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+      This does not affect runtime behavior or safety.
       <justification end> */
       if (retVal != IALG_EFAIL)
       {
@@ -1174,7 +1207,10 @@ void tidl_printf(int8_t traceLevel, const char *format, ...)
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> float32_tidl \* tidl_convertParamsToFloat.* <function end>
-<justification start> DEBUG_TRACE : This function is solely for debugging purposes and is not part of the production code.
+<justification start>
+Rationale - DEBUG_TRACE: This function is solely for debugging purposes and is not part of the production code.
+Effect on this UNIT - If the control reaches here, code is expected to function correctly for debug/trace purpose. 
+However, due to the stated rationale, this is not covered in production code.
 <justification end> */
 float32_tidl *tidl_convertParamsToFloat(void *buf,
                                         int32_t numElements,
@@ -1223,7 +1259,10 @@ float32_tidl *tidl_convertParamsToFloat(void *buf,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int32_t tidl_writeTraceParamBuf.* <function end>
-<justification start> DEBUG_TRACE : This function is solely for debugging purposes and is not part of the production code.
+<justification start>
+Rationale - DEBUG_TRACE: This function is solely for debugging purposes and is not part of the production code.
+Effect on this UNIT - If the control reaches here, code is expected to function correctly for debug/trace purpose. 
+However, due to the stated rationale, this is not covered in production code.
 <justification end> */
 int32_t tidl_writeTraceParamBuf(sTIDL_Network_t *net,
                                 sTIDL_AlgLayer_t *algLayer,
@@ -1348,7 +1387,10 @@ int32_t tidl_writeTraceParamBuf(sTIDL_Network_t *net,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int32_t tidl_writeTraceDataBuf.* <function end>
-<justification start> DEBUG_TRACE : This function is solely for debugging purposes and is not part of the production code.
+<justification start>
+Rationale - DEBUG_TRACE: This function is solely for debugging purposes and is not part of the production code.
+Effect on this UNIT - If the control reaches here, code is expected to function correctly for debug/trace purpose. 
+However, due to the stated rationale, this is not covered in production code.
 <justification end> */
 int32_t tidl_writeTraceDataBuf(int8_t *ptr,
                                sTIDL_Network_t *net,
@@ -1620,6 +1662,24 @@ int32_t tidl_writeTraceDataBuf(int8_t *ptr,
                           }
                         }
                       }
+                       else if (dataBuffParam->elementType == TIDL_BFloat16)
+                      {
+                        uint16_t *src, *dst;
+                        int32_t k;
+                        src = ((uint16_t *)ptr + (k1 * inBlkPitchW) + (m * dim1Pitch) + (l * dim2Pitch) + (j * temp_currChPitch) + (i * linePitch) + (dataBuffParam->padH * linePitch) + dataBuffParam->padW);
+                        dst = ((uint16_t *)outPtr + offset);
+                        for (k = 0; k < outWidth; k++)
+                        {
+                          dst[k] = src[k];  
+                          if (tidl_getWriteLevel() == 3)
+                          {
+                            uint32_t f32_bits = ((uint32_t)src[k]) << 16;
+                            float32_tidl f32_val;
+                            (void)memcpy(&f32_val, &f32_bits, sizeof(float32_tidl));
+                            floatPtr[offset + k] = f32_val;
+                          }
+                        }
+                      }
                       else
                       {
                         (void)memcpy((outPtr + (offset * elementSizeBytes)),
@@ -1865,6 +1925,25 @@ int32_t tidl_writeTraceDataBuf(int8_t *ptr,
                         if (tidl_getWriteLevel() == 3)
                         {
                           floatPtr[offset + k] = ((float32_tidl)src[k] - dataBuffParam->tensorZeroPoint) / (dataBuffParam->tensorScale);
+                        }
+                      }
+                    }
+                    else if (dataBuffParam->elementType == TIDL_BFloat16)
+                    {
+                      uint16_t *src;
+                      uint16_t *dst;
+                      int32_t k;
+                      src = (((uint16_t *)ptr) + (batchIdx * batchPitch) + (m * dim1Pitch) + (l * dim2Pitch) + (j * temp_currChPitch) + (i * linePitch) + (dataBuffParam->padH * linePitch) + dataBuffParam->padW);
+                      dst = (((uint16_t *)outPtr) + offset);
+                      for (k = 0; k < dataBuffParam->dimValues[TIDL_DIM_WIDTH]; k++)
+                      {
+                        dst[k] = src[k];
+                        if (tidl_getWriteLevel() == 3)
+                        {
+                          uint32_t f32_bits = ((uint32_t)src[k]) << 16;
+                          float32_tidl f32_val;
+                          (void)memcpy(&f32_val, &f32_bits, sizeof(float32_tidl));
+                          floatPtr[offset + k] = f32_val;
                         }
                       }
                     }
@@ -2589,7 +2668,9 @@ int32_t TIDL_generateFillSeamPredicateRegisters(
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void TIDL_getSaturationFloat.* <function end>
-<justification start> NOT_IN_SCOPE : This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+<justification start>
+Rationale - NOT_IN_SCOPE: This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 #endif
 void TIDL_getSaturationFloat(
@@ -2641,7 +2722,9 @@ void TIDL_getSaturationFloat(
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> float32_tidl TIDL_floatSat.* <function end>
-<justification start> NOT_IN_SCOPE : This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+<justification start>
+Rationale - NOT_IN_SCOPE: This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 #endif
 OPENACC(routine(TIDL_floatSat))
@@ -2654,6 +2737,29 @@ float32_tidl TIDL_floatSat(
   TIDL_getSaturationFloat(tidlLayer, &min, &max);
   temp_outAcc = (temp_outAcc > max) ? max : temp_outAcc;
   temp_outAcc = (temp_outAcc < min) ? min : temp_outAcc;
+  return temp_outAcc;
+}
+
+float32_tidl TIDL_BF16Sat(
+    float32_tidl outAcc,
+    sTIDL_Layer_t *tidlLayer)
+{
+  float32_tidl temp_outAcc = outAcc;
+  float32_tidl min, max;
+  TIDL_getSaturationFloat(tidlLayer, &min, &max);
+  /* Clamp activation bounds to BF16 representable range.
+   * bfloat16_tidl(FLT_MAX) overflows to BF16 +inf via round-to-nearest-even:
+   * FLT_MAX exponent == overflow threshold (not >), so the guard is bypassed
+   * and the rounding carry produces 0x7F80.  Cap to BF16 max/lowest first. */
+  const float32_tidl bf16Max = (float32_tidl)std::numeric_limits<bfloat16_tidl>::max();
+  const float32_tidl bf16Min = (float32_tidl)std::numeric_limits<bfloat16_tidl>::lowest();
+  if (max > bf16Max) { max = bf16Max; }
+  if (min < bf16Min) { min = bf16Min; }
+  temp_outAcc = (temp_outAcc > max) ? max : temp_outAcc;
+  temp_outAcc = (temp_outAcc < min) ? min : temp_outAcc;
+  /* Round clamped value to BF16 precision (7 mantissa bits).
+   * Value is within BF16 range, so the round-trip is safe. */
+  temp_outAcc = (float32_tidl)bfloat16_tidl(temp_outAcc);
   return temp_outAcc;
 }
 
@@ -2918,7 +3024,9 @@ val can be represented as val = scale*(2^(shift)).
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void TIDL_convertFloatToScaleAndShift.* <function end>
-<justification start> NOT_IN_SCOPE : This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+<justification start>
+Rationale - NOT_IN_SCOPE: This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 #endif
 OPENACC(routine(TIDL_convertFloatToScaleAndShift))
@@ -3610,7 +3718,9 @@ int32_t dataId)
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int32_t float_to_int_c7x.* <function end>
-<justification start> NOT_IN_SCOPE : This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+<justification start>
+Rationale - NOT_IN_SCOPE: This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 #endif
 int32_t float_to_int_c7x(float32_tidl x)
@@ -3681,20 +3791,18 @@ int32_t TIDL_isOutDataBuff(const sTIDL_Network_t *pTIDLNetStructure,
 {
   int32_t i, j;
   int32_t status = 0;
-#ifndef HOST_EMULATION
 /* LDRA_JUSTIFY_START
-   <metric start> statement branch <metric end>
-   <justification start>  LDRA_JUSTIFICATION_ALGUTILS_SAFETY_CHECK : safe programming hard to hit this condition with real world data
-   <justification end> */
-#endif
+  <metric start> statement branch <metric end>
+  <justification start> 
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
+  <justification end> */
   if (pTIDLNetStructure->numLayers >= TIDL_NUM_MAX_LAYERS)
   {
     status = -1;
   }
   else
-#ifndef HOST_EMULATION
 /* LDRA_JUSTIFY_END */
-#endif
   {
     for (i = 0; i < pTIDLNetStructure->numLayers; i++)
     {

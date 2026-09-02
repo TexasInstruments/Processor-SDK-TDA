@@ -100,11 +100,20 @@ extern "C" {
 /*! \brief Control Register (CTRL) */
 #define DP83869_CTRL                          (0x1FU)
 
+/*! \brief Fast Link Drop Register (GEN_CFG_FLD) */
+#define DP83869_GENFLDCFG                     (0x2DU)
+
 /*! \brief Fast Link Drop Threshold Configuration Register (FLD_THR_CFG) */
 #define DP83869_FLDTHRCFG                     (0x2EU)
 
 /*! \brief RGMII Control Register (RGMIICTL) */
 #define DP83869_RGMIICTL                      (0x32U)
+
+/*! \brief RGMII Control Register (RGMIICTL2) */
+#define DP83869_RGMIICTL2                     (0x33U)
+
+/*! \brief 100BT Register (G_100BT_REG0) */
+#define DP83869_G100BT0                       (0x43U)
 
 /*! \brief Viterbi Module Configuration Register (VTM_CFG) */
 #define DP83869_VTMCFG                        (0x53U)
@@ -125,7 +134,7 @@ extern "C" {
 #define DP83869_IOMUXCFG                      (0x170U)
 
 /*! \brief GPIO Mux Control Register (GPIO_MUX_CTRL). RGZ devices only */
-#define DP83869_GPIOMUXCTRL                   (0x172U)
+#define DP83869_GPIOMUXCTRL                   (0x1E0U)
 
 /*! \brief OP Mode decode Register (OP_MODE_DECODE) */
 #define DP83869_OP_MODE_DECODE                (0x1DFU)
@@ -197,6 +206,48 @@ extern "C" {
 #define LEDCR1_LED3SEL_MASK                   (0xF000U)
 #define LEDCR1_LED3SEL_OFFSET                 (12U)
 
+/* LEDCR2 register definitions */
+#define LEDCR2_LED0DRVEN_OFFSET                    (0U)
+#define LEDCR2_LED0DRVEN_MASK                 (0x0001U)
+#define LEDCR2_LED0DRVVAL_OFFSET                   (1U)
+#define LEDCR2_LED0DRVVAL_MASK                (0x0002U)
+#define LEDCR2_LED0POLARITY_OFFSET                 (2U)
+#define LEDCR2_LED0POLARITY_MASK              (0x0004U)
+#define LEDCR2_LED0RESERVED_OFFSET                 (3U)
+#define LEDCR2_LED0RESERVED_MASK              (0x0008U)
+#define LEDCR2_LED1DRVEN_OFFSET                    (4U)
+#define LEDCR2_LED1DRVEN_MASK                 (0x0010U)
+#define LEDCR2_LED1DRVVAL_OFFSET                   (5U)
+#define LEDCR2_LED1DRVVAL_MASK                (0x0020U)
+#define LEDCR2_LED1POLARITY_OFFSET                 (6U)
+#define LEDCR2_LED1POLARITY_MASK              (0x0040U)
+#define LEDCR2_LED1RESERVED_OFFSET                 (7U)
+#define LEDCR2_LED1RESERVED_MASK              (0x0080U)
+#define LEDCR2_LED2DRVEN_OFFSET                    (8U)
+#define LEDCR2_LED2DRVEN_MASK                 (0x0100U)
+#define LEDCR2_LED2DRVVAL_OFFSET                   (9U)
+#define LEDCR2_LED2DRVVAL_MASK                (0x0200U)
+#define LEDCR2_LED2POLARITY_OFFSET                (10U)
+#define LEDCR2_LED2POLARITY_MASK              (0x0400U)
+#define LEDCR2_LED2RESERVED_OFFSET                (11U)
+#define LEDCR2_LED2RESERVED_MASK              (0x0800U)
+#define LEDCR2_LED3DRVEN_OFFSET                   (12U)
+#define LEDCR2_LED3DRVEN_MASK                 (0x1000U)
+#define LEDCR2_LED3DRVVAL_OFFSET                  (13U)
+#define LEDCR2_LED3DRVVAL_MASK                (0x2000U)
+#define LEDCR2_LED3POLARITY_OFFSET                (14U)
+#define LEDCR2_LED3POLARITY_MASK              (0x4000U)
+#define LEDCR2_LED3RESERVED_OFFSET                (15U)
+#define LEDCR2_LED3RESERVED_MASK              (0x8000U)
+
+/* LEDCR3 register definitions */
+#define LEDCR3_LEDSBYPASS_STRETCHING          PHY_BIT(2U)
+
+#define LEDCR3_LEDSBLINKRATE_OFFSET           (0x0U)
+#define LEDCR3_LEDSBLINKRATE_MASK             (0x0003U)
+#define LEDCR3_LEDSBYPASS_OFFSET              (0x02U)
+#define LEDCR3_LEDSBYPASS_MASK                (0x0004)
+
 /* CFG3 register definitions */
 #define CFG3_ROBUSTAUTOMDIX                   PHY_BIT(9)
 #define CFG3_ANEGADVFD_EN                     PHY_BIT(11)
@@ -205,10 +256,35 @@ extern "C" {
 #define CTRL_SWRESET                          PHY_BIT(15)
 #define CTRL_SWRESTART                        PHY_BIT(14)
 
+/* GEN_CFG_FLD */
+#define GENFLDCFG_MODE_OFFSET                 (0U)
+#define GENFLDCFG_MODE_MASK                   (0x001FU)
+
 /* RGMIICTL register definitions */
-#define RGMIICTL_RGMIIEN                      PHY_BIT(7)
-#define RGMIICTL_TXCLKDLY                     PHY_BIT(1)
-#define RGMIICTL_RXCLKDLY                     PHY_BIT(0)
+#define RGMIICTL_RGMIIEN                      PHY_BIT(7U)
+#define RGMIICTL_TXCLKDLY                     PHY_BIT(1U)
+#define RGMIICTL_RXCLKDLY                     PHY_BIT(0U)
+#define RGMIICTL_TXHALFFULLTHR_OFFSET         (3U)
+#define RGMIICTL_TXHALFFULLTHR_MASK           (0x0018U)
+#define RGMIICTL_RXHALFFULLTHR_OFFSET         (5U)
+#define RGMIICTL_RXHALFFULLTHR_MASK           (0x0060U)
+
+/*! \brief RGMIICTL2 register definitions */
+#define RGMIICTL2_LOWLATENCY10100EN           PHY_BIT(2U)
+#define RGMIICTL2_RXHALFFULLTHR_MSB           PHY_BIT(1U)
+#define RGMIICTL2_TXHALFFULLTHR_MSB           PHY_BIT(0U)
+
+/* G_100BT_REG0 register definitions */
+#define G100BT0_FASTRXDV                      PHY_BIT(0U)
+#define G100BT0_ODDNIBBLE_DETECT              PHY_BIT(1U)
+#define G100BT0_DISABLE_SCR                   PHY_BIT(2U)
+#define G100BT0_BYPASS_4B5B_RX                PHY_BIT(3U)
+#define G100BT0_IPG_ERR_DETECT_EN             PHY_BIT(4U)
+#define G100BT0_ENH_MLT3_DETECT_EN            PHY_BIT(5U)
+#define G100BT0_FORCE_100BT_LINK_GOOD         PHY_BIT(6U)
+#define G100BT0_CFG_DIS_DSCR_100_TOUT         PHY_BIT(11U)
+#define G100BT0_DESCR_UNLOCK_TOUT_OFFSET      (7U)
+#define G100BT0_DESCR_UNLOCK_TOUT_MASK        (0x0780U)
 
 /* FLDTHRCFG register definitions */
 #define FLDTHRCFG_FLDTHR_MASK                 (0x0007U)
@@ -251,10 +327,10 @@ extern "C" {
 #define GPIOMUXCTRL_GPIO0_OFFSET              (0U)
 
 /* OPMODE DECODE register definitions */
-#define OP_MODE_DECODE_RGMII_MII_SEL          PHY_BIT(5)
+#define OP_MODE_DECODE_RGMII_MII_SEL          PHY_BIT(5U)
 
 /*! \brief PHY STS bits */
-#define DP83869_PHYSTS_LINK	    PHY_BIT(10)
+#define DP83869_PHYSTS_LINK	                  PHY_BIT(10U)
 
 
 /* ========================================================================== */

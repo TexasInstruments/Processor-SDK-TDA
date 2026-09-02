@@ -655,8 +655,10 @@ int32_t TIDL_conv2DInitNew(const TIDL_LayerSpecificParams *layerSpecificParams,
       TIDL_getSaturationLimits(commonParams->net->TIDLLayers[layerIdx].outData.elementType, &satLow, &satHigh);
       /* LDRA_JUSTIFY_START
       <metric start> statement branch <metric end>
-      <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      <justification start>
+      Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
       Here conv2dparams->minPSAT never less than satLow and conv2dparams->maxPSAT never greater than satHigh.
+      Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
       <justification end> */
       conv2dparams->minPSAT = (conv2dparams->minPSAT < satLow)? satLow : conv2dparams->minPSAT;
       conv2dparams->maxPSAT = (conv2dparams->maxPSAT > satHigh)? satHigh : conv2dparams->maxPSAT;

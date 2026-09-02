@@ -89,25 +89,39 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Sub")> ()
       TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Sub layer : Unable to find initializer at index %d for node %s", constTensorIdx, graph.node(index).name().c_str());
       return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
     }
-    int32_t varTensorIdx = md.varTensorIndices[0];
-    constSize = getConstSize(constTensor);
-
-    if(constSize == 1) /*  Sub constant to layer */
+    if (md.numVarInputs > 0)
     {
-      int32_t nodeIdx = getNodeIdx(graph, graph.node(index).input(constTensorIdx).c_str());
-      int32_t isInputDQ = 0;
-      if (nodeIdx != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+      constSize = getConstSize(constTensor);
+      if(constSize == 1) /*  Sub constant to layer */
       {
-        isInputDQ = strcmp(graph.node(nodeIdx).op_type().c_str(), "DequantizeLinear") == 0;
-      }
+        int32_t nodeIdx = getNodeIdx(graph, graph.node(index).input(constTensorIdx).c_str());
+        int32_t isInputDQ = 0;
+        if (nodeIdx != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+        {
+          isInputDQ = strcmp(graph.node(nodeIdx).op_type().c_str(), "DequantizeLinear") == 0;
+        }
 
-      if(constTensor.data_type() != TensorProto_DataType_FLOAT && !isInputDQ)
-      {
-        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Sub layer : Supported only if data type of constant is float");
-        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+        if(constTensor.data_type() != TensorProto_DataType_FLOAT && !isInputDQ)
+        {
+          TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Sub layer : Supported only if data type of constant is float");
+          return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+        }
       }
     }
   }
+
+  /* Both inputs constant: store second const in layer.bias for tidl_foldConstEltwise */
+  if (md.numConstInputs == 2)
+  {
+    int constTensorIdx1 = md.constTensorIndices[1];
+    status = copyFloatConst(graph, index, constTensorIdx1, layer.bias, INPUT_REQUIRED);
+    if (status == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+    {
+      TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Cannot read initializer tensor : Only float, int32 and int64 tensor is supported");
+      return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+    }
+  }
+
   return 0;
 }
 

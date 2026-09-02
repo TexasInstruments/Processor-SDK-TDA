@@ -232,6 +232,7 @@ include $(ALGBASE_PATH)/makerules/rules.mk
 CFLAGS+= -I $(PROTOBUF_INC_DIR)
 CFLAGS+= -I $(FLATBUF_INC_DIR)
 CFLAGS+= -I ../../inc
+CFLAGS+= -I ../../algo/inc
 CFLAGS+= -I ../../common/inc
 CFLAGS+= -I ../caffeImport
 CFLAGS+= -I ../tidlMetaArch

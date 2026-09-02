@@ -674,7 +674,7 @@ uint32_t CSIRX_GetAsfIrqs(const CSIRX_PrivateData *pD, CSIRX_AsfIrqs *value);
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_SetAsfIrqs(CSIRX_PrivateData *pD, const CSIRX_AsfIrqs *value);
+uint32_t CSIRX_SetAsfIrqs(const CSIRX_PrivateData *pD, const CSIRX_AsfIrqs *value);
 
 /**
  * getter for CSIRX_AsfIrqMaskCfg
@@ -692,7 +692,7 @@ uint32_t CSIRX_GetAsfIrqMaskCfg(const CSIRX_PrivateData *pD, CSIRX_AsfIrqMaskCfg
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_SetAsfIrqMaskCfg(CSIRX_PrivateData *pD, const CSIRX_AsfIrqMaskCfg *value);
+uint32_t CSIRX_SetAsfIrqMaskCfg(const CSIRX_PrivateData *pD, const CSIRX_AsfIrqMaskCfg *value);
 
 /**
  * getter for CSIRX_AsfIrqTest
@@ -710,7 +710,7 @@ uint32_t CSIRX_GetTestAsfIrqs(const CSIRX_PrivateData *pD, CSIRX_AsfIrqTest *val
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_SetTestAsfIrqs(CSIRX_PrivateData *pD, const CSIRX_AsfIrqTest *value);
+uint32_t CSIRX_SetTestAsfIrqs(const CSIRX_PrivateData *pD, const CSIRX_AsfIrqTest *value);
 
 /**
  * getter for CSIRX_AsfFatalNonFatalSelect
@@ -728,7 +728,7 @@ uint32_t CSIRX_GetAsfFatalNonfatal(const CSIRX_PrivateData *pD, CSIRX_AsfFatalNo
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_SetAsfFatalNonfatal(CSIRX_PrivateData *pD, const CSIRX_AsfFatalNonFatalSelect *value);
+uint32_t CSIRX_SetAsfFatalNonfatal(const CSIRX_PrivateData *pD, const CSIRX_AsfFatalNonFatalSelect *value);
 
 /**
  * setter for CSIRX_AsfTransToCtrl
@@ -737,7 +737,7 @@ uint32_t CSIRX_SetAsfFatalNonfatal(CSIRX_PrivateData *pD, const CSIRX_AsfFatalNo
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_SetAsfTransMonToCtrl(CSIRX_PrivateData *pD, const CSIRX_AsfTransToCtrl *value);
+uint32_t CSIRX_SetAsfTransMonToCtrl(const CSIRX_PrivateData *pD, const CSIRX_AsfTransToCtrl *value);
 
 /**
  * getter for CSIRX_AsfTransToFaultMask
@@ -746,7 +746,7 @@ uint32_t CSIRX_SetAsfTransMonToCtrl(CSIRX_PrivateData *pD, const CSIRX_AsfTransT
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_GetAsfTransToFaultMask(CSIRX_PrivateData *pD, CSIRX_AsfTransToFaultMask *value);
+uint32_t CSIRX_GetAsfTransToFaultMask(const CSIRX_PrivateData *pD, CSIRX_AsfTransToFaultMask *value);
 
 /**
  * setter for CSIRX_AsfTransToFaultMask
@@ -755,7 +755,7 @@ uint32_t CSIRX_GetAsfTransToFaultMask(CSIRX_PrivateData *pD, CSIRX_AsfTransToFau
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_SetAsfTransToFaultMask(CSIRX_PrivateData *pD, const CSIRX_AsfTransToFaultMask *value);
+uint32_t CSIRX_SetAsfTransToFaultMask(const CSIRX_PrivateData *pD, const CSIRX_AsfTransToFaultMask *value);
 
 /**
  * getter for CSIRX_AsfTransToFaultStatus
@@ -764,7 +764,7 @@ uint32_t CSIRX_SetAsfTransToFaultMask(CSIRX_PrivateData *pD, const CSIRX_AsfTran
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_GetAsfTransToFaultStatus(CSIRX_PrivateData *pD, CSIRX_AsfTransToFaultStatus *value);
+uint32_t CSIRX_GetAsfTransToFaultStatus(const CSIRX_PrivateData *pD, CSIRX_AsfTransToFaultStatus *value);
 
 /**
  *  @}

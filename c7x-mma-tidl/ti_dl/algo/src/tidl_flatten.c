@@ -122,6 +122,10 @@ int32_t TIDL_flattenProcessNew(TIDL_NetworkCommonParams *commonParams,
     {
       TIDL_flattenRefProcess((float32_tidl *)inPtrs[0], (float32_tidl *)outPtrs[0], inPtrOffset, outPtrOffset, inWidth, inHeight, inChs, numROIs, inPitch, inChPitch, inROIPitch, outROIPitch);
     }
+    else if(inDataParams->elementType == TIDL_BFloat16)
+    {
+      TIDL_flattenRefProcess((bfloat16_tidl *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inPtrOffset, outPtrOffset, inWidth, inHeight, inChs, numROIs, inPitch, inChPitch, inROIPitch, outROIPitch);
+    }
     else
     {
       tidl_printf(0,"Un supported  elementType in %s File, %d Line \n  ", __FILE__, __LINE__);

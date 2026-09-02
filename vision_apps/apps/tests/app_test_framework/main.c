@@ -85,7 +85,7 @@
 #include <stdarg.h>
 
 #include "test_engine/test.h"
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 
 #ifdef HAVE_VERSION_INC
 #include "openvx_cts_version.inc"
@@ -95,13 +95,15 @@
 
 #undef CT_TESTCASE
 #define CT_TESTCASE(testcase) struct CT_TestCaseEntry* testcase##_register();
-#include "custom_app_kernel_library_tests.h"
+#include "srv/test/test_main.h"
+#include "stereo/test/test_main.h"
 #include "applib_library_tests.h"
 
 #undef CT_TESTCASE
 #define CT_TESTCASE(testcase) testcase##_register,
 CT_RegisterTestCaseFN g_testcase_testframework_register_fns[] = {
-    #include "custom_app_kernel_library_tests.h"
+    #include "srv/test/test_main.h"
+    #include "stereo/test/test_main.h"
     #include "applib_library_tests.h"
     NULL
 };

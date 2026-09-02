@@ -1,0 +1,30 @@
+{
+    "vtm": {
+        "VTM_DEVINFO_PWR0": "0x00000004",
+        "VTM_CFG_REG_CFG1": "0x42040000",
+        "VTM_CFG_REG_CFG2": "0x42050000",
+        "TMPSENS_CTRL_OFFSET": "0x300",
+        "TMPSENS_STAT_OFFSET": "0x308",
+        "INSTANCE_OFFSET": "0x20",
+        "CONFIG_VALUE": "0x50",
+        "bitFields": {
+            "numOfSensor": {
+                "startBit": 4,
+                "endBit": 7
+            },
+            "adcCode": {
+                "startBit": 0,
+                "endBit": 9
+            }
+        },
+        "sensorMap": {
+            "0": {"description": "Near MCU_R5FSS in VDD_MCU"},
+            "1": {"description": "On VDD_MCU / VDD_CPU boundary near A72 (in VDD_MCU)"},
+            "2": {"description": "Near GPU in VDD_CORE"},
+            "3": {"description": "On VDD_CORE / VDD_CPU boundary near C7x / MMA (in VDD_CORE)"},
+            "4": {"description": "On VDD_CORE / VDD_CPU boundary near A72 (in VDD_CORE)"},
+            "5": {"description": "On VDD_CORE / VDD_CPU boundary near C7x / MMA (in VDD_CORE)"},
+            "6": {"description": "Near LPDDR4 in VDD_CORE (DDR)"}
+        }
+    }
+}

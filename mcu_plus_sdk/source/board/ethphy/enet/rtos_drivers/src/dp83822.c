@@ -153,11 +153,12 @@ bool Dp83822_isMacModeSupported(EthPhyDrv_Handle hPhy,
         case PHY_MAC_MII_RMII:
             supported = true;
             break;
-
-        /* This driver doesn't support MII and RGMII interfaces,
-         * but the DP83822 PHY does support them */
         case PHY_MAC_MII_MII:
+            supported = true;
+            break;
         case PHY_MAC_MII_RGMII:
+            supported = true;
+            break;
         default:
             supported = false;
             break;
@@ -304,7 +305,7 @@ int32_t Dp83822_getSpeedDuplex (EthPhyDrv_Handle hPhy, Phy_Link_SpeedDuplex* pCo
                     break;
             }
         }
-        else 
+        else
         {
             *pConfig = PHY_LINK_INVALID;
         }

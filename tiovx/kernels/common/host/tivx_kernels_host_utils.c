@@ -278,7 +278,6 @@ vx_status tivxKernelsHostUtilsAddKernelTargetMcu(vx_kernel kernel)
     #ifdef SOC_FAMILY_TDA5
     status = tivxAddKernelTarget(kernel, TIVX_TARGET_MCU0);
     status = tivxAddKernelTarget(kernel, TIVX_TARGET_MCU1);
-    status = tivxAddKernelTarget(kernel, TIVX_TARGET_RMCU0_0);
     #else
     #ifndef SOC_AM62A
     status = tivxAddKernelTarget(kernel, TIVX_TARGET_MCU2_0);

@@ -162,7 +162,8 @@ $(_MODULE)_COPT += -mcpu=cortex-a15
 else ifneq ($(filter $(TARGET_CPU),A72 A72F),)
 $(_MODULE)_COPT += -mcpu=cortex-a72
 else ifneq ($(filter $(TARGET_CPU),A720),)
-$(_MODULE)_COPT += -mcpu=cortex-a720
+# LCPD-48628: Disable SVE as it's disabled in ATF
+$(_MODULE)_COPT += -mcpu=cortex-a720+nosve
 else ifneq ($(filter $(TARGET_CPU),A53 A53F),)
 $(_MODULE)_COPT += -mcpu=cortex-a53
 endif

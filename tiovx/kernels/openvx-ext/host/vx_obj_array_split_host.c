@@ -307,7 +307,6 @@ vx_status tivxAddKernelObjArraySplit(vx_context context)
             #elif defined(SOC_TDA54)
             tivxAddKernelTarget(kernel, TIVX_TARGET_MCU0);
             tivxAddKernelTarget(kernel, TIVX_TARGET_MCU1);
-            tivxAddKernelTarget(kernel, TIVX_TARGET_RMCU0_0);
             #else
             tivxAddKernelTarget(kernel, TIVX_TARGET_MCU2_0);
             #endif

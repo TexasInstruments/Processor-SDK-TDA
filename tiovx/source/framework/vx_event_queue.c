@@ -1,6 +1,6 @@
 /*
 *
-* Copyright (c) 2018 Texas Instruments Incorporated
+* Copyright (c) 2018-2026 Texas Instruments Incorporated
 *
 * All rights reserved not granted herein.
 *
@@ -139,7 +139,9 @@ void ownEventQueueEnableEvents(tivx_event_queue_t *event_q, vx_bool enable)
 }
 
 vx_status ownEventQueueAddEvent(tivx_event_queue_t *event_q,
-        vx_enum event_id, uint64_t timestamp, uint32_t app_value, uintptr_t param1, uintptr_t param2, uintptr_t param3)
+        vx_enum event_id, uint64_t timestamp, uint32_t app_value,
+        uintptr_t param1, uintptr_t param2, uintptr_t param3,
+        vx_uint16 param4, const volatile tivx_error_info_t *param5)
 {
     vx_status status = (vx_status)VX_FAILURE;
 
@@ -161,6 +163,15 @@ vx_status ownEventQueueAddEvent(tivx_event_queue_t *event_q,
             elem->param1 = param1;
             elem->param2 = param2;
             elem->param3 = param3;
+            elem->param4 = param4;
+            if(param5 != NULL)
+            {
+                tivx_obj_desc_memcpy(&elem->param5, param5, (uint32_t)sizeof(tivx_error_info_t));
+            }
+            else
+            {
+                elem->param5.error_info_size = 0;
+            }
 
             status = tivxQueuePut(&event_q->ready_queue, idx, TIVX_EVENT_TIMEOUT_NO_WAIT);
 
@@ -235,7 +246,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSendUserEvent(vx_context context, vx_uint32
                     &context->event_queue,
                     (vx_enum)VX_EVENT_USER,
                     timestamp, app_value,
-                    (uintptr_t)app_value, (uintptr_t)parameter, (uintptr_t)0);
+                    (uintptr_t)app_value, (uintptr_t)parameter, (uintptr_t)0, (vx_uint16)0, NULL);
         }
         else
         {
@@ -318,6 +329,16 @@ vx_status ownWaitEventQueue(
                 event->event_info.node_error.graph = (vx_graph)elem->param1;
                 event->event_info.node_error.node = (vx_node)elem->param2;
                 event->event_info.node_error.status = (vx_status)elem->param3;
+                event->event_info.node_error.replicated_node_idx = elem->param4;
+                event->event_info.node_error.error_info_size = elem->param5.error_info_size;
+                if(elem->param5.error_info_size > 0U)
+                {
+                    memcpy(event->event_info.node_error.error_info,
+                        elem->param5.error_info, elem->param5.error_info_size);
+                    /* Clear the event queue memory for hygiene */
+                    memset(elem->param5.error_info, 0, (uint32_t)elem->param5.error_info_size);
+                    elem->param5.error_info_size = 0;
+                }
             }
 /* LDRA_JUSTIFY_START
 <metric start> branch <metric end>
@@ -515,7 +536,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSendUserGraphEvent(vx_graph graph, vx_uint3
         {
             uint64_t timestamp = tivxPlatformGetTimeInUsecs()*1000U;
             status = ownEventQueueAddEvent(&graph->event_queue, (vx_enum)VX_EVENT_USER, timestamp,
-                                            app_value, (uintptr_t)app_value, (uintptr_t)parameter, (uintptr_t)0);
+                                            app_value, (uintptr_t)app_value, (uintptr_t)parameter, (uintptr_t)0, (vx_uint16)0, NULL);
         }
         else
         {

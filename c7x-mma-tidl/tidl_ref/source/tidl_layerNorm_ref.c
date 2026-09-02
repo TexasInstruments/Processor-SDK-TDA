@@ -81,6 +81,8 @@
 #include "tidl_cuda.h"
 #endif
 
+using namespace floating_point::bf16_c7x;
+
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
@@ -747,6 +749,210 @@ template<class Tin, class Tout> static int32_t TIDL_refLayerNormCoreFloat(Tin *i
 }
 
 /**
+ * @brief This is main function for LayerNorm and InstanceNorm for BFloat16
+ *
+ * @tparam Tin  : template for input
+ * @tparam Tw   : template for weights
+ * @tparam Tb   : template for Bias
+ * @tparam Tout : template for output
+ * @tparam Tsat : template for saturate values
+ * @param inPtr : Input pointer on which bacthNorm is applied
+ * @param outPtr : Output pointer after reduce opreation
+ * @param weightsPtr : Pointer to weights buffer
+ * @param slopePtr : Pointer to the Slope buffer
+ * @param biasPtr  : Pointer to the Bias values
+ * @param intAlgHandle : tidl algorothm handle
+ * @param layerIdx :index of the current layer
+ * @param params : copy of bacthNorm parameters
+ * @param algLayer : Pointer to the layer specific parameters
+ * @param inDataParams : parameters of the input data buffer
+ * @param outDataParams : parameters of the output data buffer
+ * @param satLow : min value for the saturation
+ * @param satHigh : max value for the saturation
+ * @return  IALG_EOK   - Successful
+ *          IALG_EFAIL - Unspecified error
+ */
+template<class Tin, class Tout> static int32_t TIDL_refLayerNormCoreBFloat16(Tin *inPtr,
+                                                                          Tout *outPtr,
+                                                                          TIDL_Handle intAlgHandle,
+                                                                          int32_t layerIdx,
+                                                                          sTIDL_LayerNormParams_t *params,
+                                                                          sTIDL_AlgLayer_t *algLayer,
+                                                                          const sTIDL_DataParams_t *inDataParams,
+                                                                          const sTIDL_DataParams_t *outDataParams)
+{
+  int32_t status = TIDL_SUCCESS;
+  int32_t i0, i1, i2, i3, i4, i5;
+  int32_t icnt[TIDL_DIM_MAX] = {0};
+  int32_t dim[TIDL_DIM_MAX] = {0};
+  int32_t inVolume = 1;
+  int32_t meanOffset = 0;
+  int32_t inOffset = 0;
+  bfloat16_tidl epsilon = (bfloat16_tidl)params->epsilon;
+  float32_tidl acceX, acceX2;
+  bfloat16_tidl inp, ep, inp_sqrt, denom;
+
+  for (i0 = 0; i0 < (TIDL_DIM_MAX - 1); i0++)
+  {
+    icnt[i0] = inDataParams->dimValues[i0];
+    inVolume *= icnt[i0];
+    dim[i0] = inDataParams->pitch[i0];
+  }
+  icnt[TIDL_DIM_MAX - 1] = inDataParams->dimValues[TIDL_DIM_MAX - 1];
+  inVolume *= icnt[TIDL_DIM_MAX - 1];
+
+  Tin *inData = (Tin *)inPtr;
+  Tout *outData = (Tout *)outPtr;
+  int32_t width = icnt[5];
+  int32_t height = icnt[4];
+
+  /*Scratch required for sum(x) & sum(x^2) per row/channel*/
+  int32_t scratchSizeRequired = 2 * icnt[4] * (int32_t)sizeof(uint16_t);
+
+  bfloat16_tidl *eX;
+  bfloat16_tidl *eX2;
+
+  float32_tidl acceXChannel = 0.0f, acceX2Channel = 0.0f;
+
+  if (intAlgHandle->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_LAYERNORM_SCRATCH_SIZE_ERROR)
+  {
+    algLayer->scratchSize = 0;
+  }
+
+  if (algLayer->scratchSize >= scratchSizeRequired)
+  {
+    eX  = (bfloat16_tidl *)algLayer->scratchMem;
+    eX2 = (bfloat16_tidl *)(((uint8_t *)(algLayer->scratchMem)) + (icnt[4] * (int32_t)sizeof(uint16_t)));
+  }
+  else
+  {
+    status = TIDL_ERROR_LAYERNORM_INSUFFICIENT_REF_SCRATCH;
+  }
+
+  if (status == TIDL_SUCCESS)
+  {
+    #ifdef BUILD_WITH_CUDA_LAYERNORM
+    status = TIDL_cudaLayerNormFloat<bfloat16_tidl, bfloat16_tidl>(inData, outData, params->isInstanceNorm, params->axis, icnt[0], icnt[1], icnt[2], icnt[3], icnt[4], icnt[5],
+                      dim[0], dim[1], dim[2], dim[3], dim[4], (float)epsilon);
+    #else
+    if(params->isInstanceNorm == 1)
+    {
+      /* In case of InstanceNorm, axis should be along channel */
+      if(params->axis == TIDL_DIM_NUMCH)
+      {
+        bfloat16_tidl N = (bfloat16_tidl)(height * width);
+        for(i0 = 0; i0 < icnt[0]; i0++)
+        {
+          for(i1 = 0; i1 < icnt[1]; i1++)
+          {
+            for(i2 = 0; i2 < icnt[2]; i2++)
+            {
+              for(i3 = 0; i3 < icnt[3]; i3++)
+              {
+                meanOffset = i3;
+                acceXChannel = 0.0f; 
+                acceX2Channel = 0.0f;
+                for(i4 = 0; i4 < icnt[4]; i4++)
+                {
+                  acceX  = 0.0f;
+                  acceX2 = 0.0f;
+                  for(i5 = 0; i5 < icnt[5]; i5++)
+                  {
+                    inOffset = (i0 * dim[0]) + (i1 * dim[1]) + (i2 * dim[2]) + (i3 * dim[3]) + (i4 * dim[4]) + i5;
+                    float32_tidl xf = (float32_tidl)inData[inOffset];
+                    acceX  += xf;
+                    acceX2 += (xf * xf);
+                  }
+                  acceXChannel += (float32_tidl)(bfloat16_tidl)(acceX);
+                  acceX2Channel += (float32_tidl)(bfloat16_tidl)(acceX2);
+                }
+                eX[meanOffset]  = (bfloat16_tidl)acceXChannel;
+                eX2[meanOffset] = (bfloat16_tidl)acceX2Channel;
+
+                /*Compute N^2*(variance + epsilon) = N*sum(x^2) - sum(x)^2 + epsilon*N^2:*/
+                inp      = (N * eX2[meanOffset]) - (eX[meanOffset] * eX[meanOffset]);
+                ep       = epsilon * N * N;
+                inp_sqrt = inp + ep;
+
+                denom = (bfloat16_tidl)__recip_sqrt(inp_sqrt);
+
+                /*Calculate final output: (N*x - sum(x)) * (1/(N*std)) = (x - mean)/std */
+                for(i4 = 0; i4 < icnt[4]; i4++)
+                {
+                  for(i5 = 0; i5 < icnt[5]; i5++)
+                  {
+                    inOffset = (i0 * dim[0]) + (i1 * dim[1]) + (i2 * dim[2]) + (i3 * dim[3]) + (i4 * dim[4]) + i5;
+                    outData[inOffset] = (Tout)((N * inData[inOffset] - eX[meanOffset]) * denom);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      else
+      {
+        status = TIDL_ERROR_LAYERNORM_UNSUPPORTED_AXIS;
+      }
+    }
+    /* LayerNorm */
+    else if(params->axis == TIDL_DIM_WIDTH)
+    {
+      bfloat16_tidl W = (bfloat16_tidl)width;
+      for(i0 = 0; i0 < icnt[0]; i0++)
+      {
+        for (i1 = 0; i1 < icnt[1]; i1++)
+        {
+          for (i2 = 0; i2 < icnt[2]; i2++)
+          {
+            for (i3 = 0; i3 < icnt[3]; i3++)
+            {
+              /*Accumulate sum(x) and sum(x^2) in fp32, compute denom, then output per row:*/
+              for (i4 = 0; i4 < icnt[4]; i4++)
+              {
+                meanOffset = i4;
+                acceX  = 0.0f;
+                acceX2 = 0.0f;
+                for (i5 = 0; i5 < icnt[5]; i5++)
+                {
+                  inOffset = (i0 * dim[0]) + (i1 * dim[1]) + (i2 * dim[2]) + (i3 * dim[3]) + (i4 * dim[4]) + i5;
+                  float32_tidl xf = (float32_tidl)inData[inOffset];
+                  acceX  += xf;
+                  acceX2 += (xf * xf);
+                }
+                eX[meanOffset]  = (bfloat16_tidl)acceX;
+                eX2[meanOffset] = (bfloat16_tidl)acceX2;
+
+                /*Compute W^2*(variance + epsilon) = W*sum(x^2) - sum(x)^2 + epsilon*W^2:*/
+                inp      = (W * eX2[meanOffset]) - (eX[meanOffset] * eX[meanOffset]);
+                ep       = epsilon * W * W;
+                inp_sqrt = inp + ep;
+
+                denom = (bfloat16_tidl)__recip_sqrt(inp_sqrt);
+
+                /*Calculate final output: (W*x - sum(x)) * (1/(W*std)) = (x - mean)/std */
+                for (i5 = 0; i5 < icnt[5]; i5++)
+                {
+                  inOffset = (i0 * dim[0]) + (i1 * dim[1]) + (i2 * dim[2]) + (i3 * dim[3]) + (i4 * dim[4]) + i5;
+                  outData[inOffset] = (Tout)((W * inData[inOffset] - eX[meanOffset]) * denom);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    else
+    {
+      status = TIDL_ERROR_LAYERNORM_UNSUPPORTED_AXIS;
+    }
+    #endif
+  }
+
+  return status;
+}
+
+/**
  * @brief Reduce layer reference implementation
  *
  * @param intAlgHandle : tidl algorothm handle
@@ -800,9 +1006,12 @@ int32_t TIDL_layerNormRefProcess(TIDL_Handle intAlgHandle,
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+    <justification start>
+    Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
     This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
     TIDL_LDRA_TAG : TIDL_LDRA_TAG_LAYERNORM_PRIOR_CHECK_001
+    Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+    This does not affect runtime behavior or safety.
     <justification end> */
     else
     {
@@ -876,6 +1085,17 @@ int32_t TIDL_layerNormRefProcess(TIDL_Handle intAlgHandle,
     {
       status = TIDL_refLayerNormCoreFloat((float32_tidl *)inPtr,
                                           (float32_tidl *)outPtr,
+                                          intAlgHandle,
+                                          layerIdx,
+                                          params,
+                                          algLayer,
+                                          inDataParams,
+                                          outDataParams);
+    }
+    else if (TIDL_BFloat16 == ((int32_t)inDataParams->elementType))
+    {
+      status = TIDL_refLayerNormCoreBFloat16((bfloat16_tidl *)inPtr,
+                                          (bfloat16_tidl *)outPtr,
                                           intAlgHandle,
                                           layerIdx,
                                           params,

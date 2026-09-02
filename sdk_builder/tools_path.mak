@@ -29,7 +29,7 @@ ifeq ($(SOC),am62a)
 else ifeq ($(SOC),tda54)
     MMALIB_PATH ?= $(PSDK_PATH)/mmalib_11_02_01_04
 else
-    MMALIB_PATH ?= $(PSDK_PATH)/mmalib_11_02_00_11
+    MMALIB_PATH ?= $(PSDK_PATH)/mmalib_12_01_00_01
 endif
 
 IVISION_PATH ?= $(PSDK_PATH)/ivision
@@ -51,6 +51,8 @@ endif
 IMAGING_PATH ?= $(PSDK_PATH)/imaging
 VIDEO_IO_PATH ?= $(PSDK_PATH)/video_io
 VISION_APPS_PATH ?= $(PSDK_PATH)/vision_apps
+APP_KERNELS_PATH ?= $(PSDK_PATH)/app_kernels
+PLATFORM_PATH ?= $(PSDK_PATH)/platform
 MCUSW_PATH ?= $(PSDK_PATH)/mcusw
 PTK_PATH ?= $(PSDK_PATH)/ti-perception-toolkit
 TIADALG_PATH ?= $(PSDK_PATH)/tiadalg
@@ -127,7 +129,7 @@ else ifeq ($(SOC),j742s2)
 else ifeq ($(SOC),j722s)
   export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-j722s-evm-11_02_01_03
 else ifeq ($(SOC),tda54)
-    export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-tda54-vdk-12_00_01_04
+    export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-tda54-vdk-12_01_00_06
 else ifeq ($(SOC),am62a)
     ifeq ($(TISDK_IMAGE), edgeai)
         export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-edgeai-am62a-evm-11.02.09.03

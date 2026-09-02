@@ -76,7 +76,7 @@ function help() {
 
 class JtagTool {
     static selectorList = ["all", "clock_tree", "pll", "psc", "pet", "junction_temp"];
-    static supportedSoc = ["j784s4", "j721s2", "j721e", "j722s", "j7200"];
+    static supportedSoc = ["j784s4", "j742s2", "j721s2", "j721e", "j722s", "j7200"];
 
     constructor(soc, mmrKeyValDir) {
         this.soc = soc;

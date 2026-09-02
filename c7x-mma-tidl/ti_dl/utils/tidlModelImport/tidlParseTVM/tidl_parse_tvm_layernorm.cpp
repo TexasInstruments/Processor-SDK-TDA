@@ -72,7 +72,7 @@ template<>
 int32_t TidlParseTVM::parse<OpNameStr("tidl.layer_normalization")>()
 {
     int32_t axis, status = 0, numDim;
-    float32_tidl epsilon = 10e-5;
+    float32_tidl epsilon = 1e-5;
     layer.layerType = TIDL_LayerNormLayer;
     layer.numInBufs = 1;
     // layer.numOutBufs = 3;  // LayerNormalization returns 3 outputs: normalized, mean, inv_stdev
@@ -103,7 +103,7 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.layer_normalization")>()
 
     if (epsilon == (float32_tidl)0)
     {
-        epsilon = epsilon + 10e-5;
+        epsilon = epsilon + 1e-5;
     }
 
     layer.layerParams.layerNormParams.epsilon = epsilon;

@@ -60,6 +60,8 @@ typedef struct {
     uint32_t graph_consumed_graph_app_value;
     /*! \brief Set to an enum value in \ref vx_type_e. */
     vx_enum type;
+    /*! \brief Pipe buf idx used for when to begin graph processing on source node */
+    int32_t pipeup_buf_idx;
 } tivx_parameters_t;
 
 /*! \brief The list of data refs other than graph parameters. */
@@ -478,25 +480,11 @@ vx_status ownGraphScheduleGraphWrapper(vx_graph graph);
  */
 vx_bool ownCheckGraphCompleted(vx_graph graph, uint32_t pipeline_id);
 
-
-/*! \brief Check if a graph should be scheduled after a graph parameter
- *         has been enqueued
- *
- *         This returns true only when graph execution mode is
- *         VX_GRAPH_SCHEDULE_MODE_QUEUE_AUTO and graph_parameter_index
- *         is the graph parameter which acts as a trigger for auto
- *         scheduling.
- *
- * \ingroup group_vx_graph
- */
-vx_bool ownGraphDoScheduleGraphAfterEnqueue(vx_graph graph, uint32_t graph_parameter_index);
-
 /*! \brief Update graph performance
  *
  * \ingroup group_vx_graph
  */
 vx_status ownUpdateGraphPerf(vx_graph graph, uint32_t pipeline_id);
-
 
 /*! \brief Graph execution state for given pipeline ID
  *

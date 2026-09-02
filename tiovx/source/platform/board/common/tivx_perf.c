@@ -71,7 +71,6 @@ extern uint32_t g_ipc_cpu_id_map[TIVX_CPU_ID_MAX];
 
 void ownPlatformGetTargetPerfStats(uint32_t app_cpu_id, uint32_t target_values[TIVX_TARGET_RESOURCE_COUNT])
 {
-/* Enable once perf_stats is enabled in app_utils
     int32_t status;
     app_perf_stats_tiovx_stats_t tiovx_stats;
     status = appPerfStatsCpuTiovxStatsGet(app_cpu_id, &tiovx_stats);
@@ -83,7 +82,6 @@ void ownPlatformGetTargetPerfStats(uint32_t app_cpu_id, uint32_t target_values[T
         target_values[2] = tiovx_stats.target_kernel_instance_max;
         target_values[3] = tiovx_stats.target_kernel_max;
     }
-*/
 }
 
 void ownIpcGetCpuMap(uint32_t cpu_id_map[TIVX_CPU_ID_MAX])

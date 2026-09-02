@@ -79,6 +79,7 @@ typedef struct
     int m_core_start_idx;
     int m_flow_ctrl;
     char m_temp_buffer_dir[TIDL_STRING_SIZE];
+    char m_trace_base_name[TIDL_STRING_SIZE];
 } TIDL_TidlRtEPInferOptions;
 
 

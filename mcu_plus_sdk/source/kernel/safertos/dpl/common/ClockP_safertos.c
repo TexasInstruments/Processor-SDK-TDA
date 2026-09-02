@@ -309,7 +309,9 @@ uint64_t ClockP_getTimeUsec()
  */
 static void ClockP_sleepTicks(uint32_t ticks)
 {
-    xTaskDelay(ticks);
+    /* This API gaurantees a minimum delay for the number of mentioned milliseconds
+     * Adding a tick gaurantees the minimum delay limit */    
+    xTaskDelay(ticks + 1U);
 }
 
 /*

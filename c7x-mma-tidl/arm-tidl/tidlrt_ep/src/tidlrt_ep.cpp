@@ -77,6 +77,7 @@ void TIDL_setDefaultOptions(TIDL_TidlRtEPInferOptions *options)
     options->m_core_start_idx = 1;
     options->m_flow_ctrl = -1;
     strcpy(options->m_temp_buffer_dir, "/dev/shm");
+    options->m_trace_base_name[0] = '\0';
 }
 
 int32_t TIDL_createInferSession(TIDL_TidlRtEPInferState *state)
@@ -140,6 +141,8 @@ int32_t TIDL_createInferSession(TIDL_TidlRtEPInferState *state)
 #ifdef x86_64
     strcpy(subgraphRtCreateOptions->tempBufferDir, options->m_temp_buffer_dir);
 #endif
+    strncpy(subgraphRtCreateOptions->traceBaseName, options->m_trace_base_name, TIDLRT_STRING_SIZE - 1);
+    subgraphRtCreateOptions->traceBaseName[TIDLRT_STRING_SIZE - 1] = '\0';
 
     //Create the session
     status = TIDL_subgraphRtCreate(subgraphRtCreateOptions, &state->m_infer_ops, NULL, &state->m_tidlrt_params);

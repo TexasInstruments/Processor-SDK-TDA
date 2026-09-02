@@ -42,6 +42,7 @@ const defines_r5f = {
         "BUILD_MCU",
         "CONFIG_OSAL_MINIMAL_QUEUES",
         "MAKEFILE_BUILD",
+        "CONFIG_UDMAP_MULTI_CH_CFG"
     ],
 };
 

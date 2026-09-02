@@ -403,20 +403,6 @@ vx_status tivxKernelsTargetUtilsAssignTargetNameMcu(char *target_name)
     {
         status = (vx_status)VX_FAILURE;
     }
-#elif defined(R52P)
-    vx_enum self_cpu;
-
-    self_cpu = tivxGetSelfCpuId();
-
-    if ( self_cpu == (vx_enum)TIVX_CPU_ID_RMCU0_0 )
-    {
-        (void)strncpy(target_name, TIVX_TARGET_RMCU0_0, TIVX_TARGET_MAX_NAME);
-        status = (vx_status)VX_SUCCESS;
-    }
-    else
-    {
-        status = (vx_status)VX_FAILURE;
-    }
 #endif /* #if (defined(R5F) || defined(PC)) && (defined(SOC_FAMILY_J7) || defined(SOC_FAMILY_AM)) */
 
     return status;

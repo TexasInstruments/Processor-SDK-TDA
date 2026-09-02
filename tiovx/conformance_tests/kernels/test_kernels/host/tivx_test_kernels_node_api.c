@@ -352,6 +352,19 @@ VX_API_ENTRY vx_node VX_API_CALL tivxTestNotNode(vx_graph graph,
     return node;
 }
 
+VX_API_ENTRY vx_node VX_API_CALL tivxTestErrorInfoNode(vx_graph graph, vx_scalar error_info_value, vx_scalar error_info_size)
+{
+    vx_reference prms[] = {
+            (vx_reference)error_info_value,
+            (vx_reference)error_info_size
+    };
+    vx_node node = tivxCreateNodeByKernelName(graph,
+                                           TIVX_KERNEL_TEST_ERROR_INFO_NAME,
+                                           prms,
+                                           dimof(prms));
+    return node;
+}
+
 VX_API_ENTRY vx_node VX_API_CALL tivxMultiDSPNotNotNode(vx_graph graph,
                                       vx_image            input,
                                       vx_image            output)

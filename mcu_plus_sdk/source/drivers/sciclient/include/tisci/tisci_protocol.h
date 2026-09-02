@@ -461,6 +461,10 @@ struct tisci_sec_header {
 #define TISCI_MSG_RM_UDMAP_TX_CH_CFG            (0x1205U)
 /* Reserved ID not for (re)use */
 #define TISCI_MSG_RM_RESERVED_1206              (0x1206U)
+/**
+ * RM TISCI message to configure multiple Navigator Subsystem UDMAP transmit channel
+ */
+#define TISCI_MSG_RM_UDMAP_TX_MULTI_CH_CFG      (0x1207U)
 /* Reserved ID not for (re)use */
 #define TISCI_MSG_RM_RESERVED_1210              (0x1210U)
 /* Reserved ID not for (re)use */
@@ -514,6 +518,10 @@ struct tisci_sec_header {
  * RM TISCI message to write PSI-L thread RT registers via the PSI-L proxy
  */
 #define TISCI_MSG_RM_PSIL_WRITE                 (0x1283U)
+/**
+ * RM TISCI message to write PSI-L thread RT registers to multiple threads
+ */
+#define TISCI_MSG_RM_PSIL_MULTI_CH_WRITE        (0x1284U)
 /**
  * RM TISCI message to setup a Navigator Subsystem proxy for
  * configuration

@@ -19,7 +19,7 @@
 #include <TI/tivx.h>
 
 #ifndef DISABLE_APP_UTILS_DEP
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 #endif
 
 int vx_conformance_test_main(int argc, char* argv[]);

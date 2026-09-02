@@ -159,7 +159,7 @@ Diagnostic message guidelines:
   * Please double-check the grammar and spelling. Users are expected to see these messages.
 */
 class TIDL_ImportDiagnostics {
-  static constexpr const char *sigil = "[TIDL Import]";
+  static constexpr const char *sigil = "[IMPORT]";
   int errors = 0;
   int warnings = 0;
   std::mutex diag_mutex;
@@ -301,7 +301,7 @@ private:
     }
 
     if(d.getKind()!=TIDL_ModelDiagnostic::DK_Print && d.getKind()!=TIDL_ModelDiagnostic::DK_PrintHeading && d.getKind()!=TIDL_ModelDiagnostic::DK_PrintSubheading)
-      fprintf(this->logPtr, "%s ", sigil);
+      fprintf(this->logPtr, "%s", sigil);
     d.emit(this->logPtr);
 
     if(color != 0){
@@ -323,7 +323,7 @@ private:
       else
         fprintf(this->logPtr, "\033[%dm", color);
     }
-    fprintf(this->logPtr, "%s ", sigil);
+    fprintf(this->logPtr, "%s", sigil);
     vfprintf(this->logPtr, fmt, args);
 
     if(color != 0){

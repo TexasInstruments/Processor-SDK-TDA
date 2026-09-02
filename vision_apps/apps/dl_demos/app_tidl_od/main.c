@@ -1084,7 +1084,6 @@ static vx_status app_init(AppObj *obj)
 #if !defined(SOC_AM62A)
         tivxImgProcLoadKernels(obj->context);
 #endif
-        tivxEdgeaiImgProcLoadKernels(obj->context);
         tivxTIDLLoadKernels(obj->context);
     }
 
@@ -1216,8 +1215,6 @@ static void app_deinit(AppObj *obj)
     tivxImgProcUnLoadKernels(obj->context);
     APP_PRINTF("ImgProc unload Done! \n");
 #endif
-    tivxEdgeaiImgProcUnLoadKernels(obj->context);
-    APP_PRINTF("EdgeAI ImgProc unload Done! \n");
 
     tivxVideoIOUnLoadKernels(obj->context);
     APP_PRINTF("VideoIO unload Done! \n");

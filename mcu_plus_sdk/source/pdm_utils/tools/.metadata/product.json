@@ -4,12 +4,13 @@
     ],
     "name": "DM-Configuration-Tool",
     "displayName": "Device Manager Configuration Tool",
-    "version": "1.0.0-alpha",
+    "version": "1.1.0",
     "includePaths": [
         ".."
     ],
     "devices": [
         "J784S4",
-        "J721S2"
+        "J721S2",
+        "J742S2"
     ]
 }

@@ -76,6 +76,8 @@
 #include "tidl_cuda.h"
 #endif
 
+using namespace floating_point::bf16_c7x;
+
 #ifdef HOST_EMULATION
 /**
  * @brief This is reference implementation of floating point GridSample layer
@@ -160,7 +162,8 @@ template<class Tin, class Tgrid, class Tout>
     inDataParams->padH, inDataParams->padW,
     gridParams->padH, gridParams->padW,
     tidlLayer->outData.padH, tidlLayer->outData.padW,
-    (int)inDataParams->tensorScale, (int)gridParams->tensorScale, (int)tidlLayer->outData.tensorScale
+    (int)inDataParams->tensorScale, (int)gridParams->tensorScale, (int)tidlLayer->outData.tensorScale,
+    (int)params->is_grid_precomputed
   );
   #else
 
@@ -190,15 +193,18 @@ template<class Tin, class Tgrid, class Tout>
             y = (float32_tidl)(grid[grid_offset + 1] / gridParams->tensorScale);
 
             /* map (x,y) to actual point in input data based on align_corners using input widht and height */
-            if (align_corners == true)
+            if (params->is_grid_precomputed == false)
             {
-              x = ((x + 1.0F) / 2.0F) * ((float32_tidl)data_w - 1.0F);
-              y = ((y + 1.0F) / 2.0F) * ((float32_tidl)data_h - 1.0F);
-            }
-            else
-            {
-              x = (((x + 1.0F) * ((float32_tidl)data_w)) - 1.0F) / 2.0F;
-              y = (((y + 1.0F) * ((float32_tidl)data_h)) - 1.0F) / 2.0F;
+              if (align_corners == true)
+              {
+                x = ((x + 1.0F) / 2.0F) * ((float32_tidl)data_w - 1.0F);
+                y = ((y + 1.0F) / 2.0F) * ((float32_tidl)data_h - 1.0F);
+              }
+              else
+              {
+                x = (((x + 1.0F) * ((float32_tidl)data_w)) - 1.0F) / 2.0F;
+                y = (((y + 1.0F) * ((float32_tidl)data_h)) - 1.0F) / 2.0F;
+              }
             }
 
             if (params->mode == (int32_t)TIDL_ModeBilinear)
@@ -236,13 +242,233 @@ template<class Tin, class Tgrid, class Tout>
               /*Round grid values and access:*/
               for (int32_t c = 0; c < data_c; c++)
               {
-                /* round function in c rounds away from zero in case of 0.5, Ex: 1.5 -> 2, 2.5 -> 3
+                int32_t xint_round, yint_round;
+                /* If the grid buffer holds pre-computed integer pixel
+                   indices (written at import time by TIDL_convertWeightsAndSlopesToBF16 for
+                   BF16 networks with a const-data nearest-mode grid), read the values directly
+                   and skip the un-normalization that was already applied at import time. */
+                if (params->is_grid_precomputed == true)
+                {
+                  xint_round = (int32_t)grid[grid_offset];
+                  yint_round = (int32_t)grid[grid_offset + 1];
+                }
+                else
+                {
+                  /* round function in c rounds away from zero in case of 0.5, Ex: 1.5 -> 2, 2.5 -> 3
                   Onnxruntime uses round to even number which is nearbyintf function in c, it will round 1.5 to 2, 2.5 to 2,
                   hence using nearintf in place of round */
-                int32_t xint_round = nearbyintf(x);
-                int32_t yint_round = nearbyintf(y);
+                  int32_t xint_round = nearbyintf(x);
+                  int32_t yint_round = nearbyintf(y);
+                }
                 /*Bounds check for pad to get outVal:*/
                 out_val = ((yint_round >= 0) && (yint_round < data_h) && (xint_round >= 0) && (xint_round < data_w)) ? (float32_tidl)data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (yint_round * inChannelPitch) + (xint_round * inLinePitch)] : 0.0F;
+                out[(i0 * outBatchPitch) + (i1 * outDim1Pitch) + (i2 * outDim2Pitch) + c + (i3 * outChannelPitch) + (i4 * outLinePitch)] = (Tout)out_val;
+              }
+            }
+            else
+            {
+              /*Unsupported*/
+              tidl_printf(0, "TIDL_ERROR_GRIDSAMPLE_NOT_IMPLEMENTED Error \n ");
+              status = IALG_EFAIL;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+  #endif
+  TIDL_L1DandL2CacheWbInv();
+  return status;
+}
+
+/**
+ * @brief This is reference implementation of BFloat16 for GridSample layer
+ *
+ * @tparam Tin : template for input data buffers
+ * @tparam Tout : template for output data buffers
+ * @param  pIn : Pointer to input memory
+ * @param  pOut : Pointer to output memory
+ * @param inPtrOffset  : offset for the input buffer for gridsample
+ * @param outPtrOffset : offset for the input buffer for gridsample
+ * @param outWidth : width of the output buffer
+ * @param outHeight : height of the output buffer
+ * @param numChs : no of channels
+ * @param numROIs : no of ROIs
+ * @param inLinePitch : pitch of the input buffer
+ * @param outLinePitch : pitch of the output buffer
+ * @param inChPitch : Chnnel pitch of the input buffer
+ * @param outChPitch : Chnnel pitch of the output buffer
+ * @param inROIPitch : ROI pitch of the input buffer
+ * @param outROIPitch : ROI pitch of the output buffer
+ */
+template<class Tin, class Tgrid, class Tout>
+    int32_t TIDL_refGridSampleBFloat16(
+        const Tin *pIn,
+        const Tgrid *pGrid,
+        Tout *pOut,
+        const sTIDL_DataParams_t *inDataParams,
+        const sTIDL_DataParams_t *gridParams,
+        const sTIDL_Layer_t *tidlLayer)
+{
+  Tin *data;
+  Tgrid *grid;
+  int32_t status = IALG_EOK;
+  const sTIDL_GridSampleParams_t *params = &tidlLayer->layerParams.gridSampleParams;
+  int32_t align_corners = params->align_corners;
+
+  int32_t data_c = (int32_t)inDataParams->dimValues[TIDL_DIM_WIDTH];
+  int32_t data_h = (int32_t)inDataParams->dimValues[TIDL_DIM_NUMCH];
+  int32_t data_w = (int32_t)inDataParams->dimValues[TIDL_DIM_HEIGHT];
+
+  int32_t inBatchPitch = (int32_t)inDataParams->pitch[TIDL_ROI_PITCH];
+  int32_t inDim1Pitch = (int32_t)inDataParams->pitch[TIDL_DIM1_PITCH];
+  int32_t inDim2Pitch = (int32_t)inDataParams->pitch[TIDL_DIM2_PITCH];
+  int32_t inChannelPitch = (int32_t)inDataParams->pitch[TIDL_CHANNEL_PITCH];
+  int32_t inLinePitch = (int32_t)inDataParams->pitch[TIDL_LINE_PITCH];
+
+  int32_t outBatchPitch = (int32_t)tidlLayer->outData.pitch[TIDL_ROI_PITCH];
+  int32_t outDim1Pitch = (int32_t)tidlLayer->outData.pitch[TIDL_DIM1_PITCH];
+  int32_t outDim2Pitch = (int32_t)tidlLayer->outData.pitch[TIDL_DIM2_PITCH];
+  int32_t outChannelPitch = (int32_t)tidlLayer->outData.pitch[TIDL_CHANNEL_PITCH];
+  int32_t outLinePitch = (int32_t)tidlLayer->outData.pitch[TIDL_LINE_PITCH];
+
+  int32_t out_n = (int32_t)tidlLayer->outData.dimValues[TIDL_DIM_BATCH];
+  int32_t out_dim1 = (int32_t)tidlLayer->outData.dimValues[TIDL_DIM_DIM1];
+  int32_t out_dim2 = (int32_t)tidlLayer->outData.dimValues[TIDL_DIM_DIM2];
+  int32_t out_h = (int32_t)tidlLayer->outData.dimValues[TIDL_DIM_NUMCH];
+  int32_t out_w = (int32_t)tidlLayer->outData.dimValues[TIDL_DIM_HEIGHT];
+
+  int32_t inDataPitch = (int32_t)inDataParams->pitch[TIDL_LINE_PITCH];
+  int32_t gridBatchPitch = (int32_t)gridParams->pitch[TIDL_ROI_PITCH];
+  int32_t gridDim1Pitch = (int32_t)gridParams->pitch[TIDL_DIM1_PITCH];
+  int32_t gridDim2Pitch = (int32_t)gridParams->pitch[TIDL_DIM2_PITCH];
+  int32_t gridChannelPitch = (int32_t)gridParams->pitch[TIDL_CHANNEL_PITCH];
+  int32_t gridLinePitch = (int32_t)gridParams->pitch[TIDL_LINE_PITCH];
+  int32_t outPitch = (int32_t)tidlLayer->outData.pitch[TIDL_LINE_PITCH];
+
+  data = (Tin *)pIn + (inDataParams->padH * inDataPitch) + inDataParams->padW;
+  grid = (Tgrid *)pGrid + (gridParams->padH * gridLinePitch) + gridParams->padW;
+
+  Tout *out = (Tout *)pOut + (tidlLayer->outData.padH * outPitch) + tidlLayer->outData.padW;
+
+  #ifdef BUILD_WITH_CUDA_GRIDSAMPLE
+  // Use CUDA wrapper with extracted parameters
+  status = TIDL_cudaGridSampleFloat<Tin, Tgrid, Tout>(
+    pIn, pGrid, pOut,
+    params->mode, (align_corners == 1),
+    out_n, out_dim1, out_dim2, data_c, data_h, data_w,
+    out_h, out_w,
+    inBatchPitch, inDim1Pitch, inDim2Pitch, inChannelPitch, inLinePitch,
+    gridBatchPitch, gridDim1Pitch, gridDim2Pitch, gridChannelPitch, gridLinePitch,
+    outBatchPitch, outDim1Pitch, outDim2Pitch, outChannelPitch, outLinePitch,
+    inDataParams->padH, inDataParams->padW,
+    gridParams->padH, gridParams->padW,
+    tidlLayer->outData.padH, tidlLayer->outData.padW,
+    (int)inDataParams->tensorScale, (int)gridParams->tensorScale, (int)tidlLayer->outData.tensorScale, 
+    (int)params->is_grid_precomputed
+  );
+  #else
+  /* bL: bottomLeft point
+     bR: bottomRight point
+     tL: topLeft point
+     tR: topRight point
+  */
+  bfloat16_tidl x, y, bL, bR, tL, tR, out_val;
+  Tin bL_val, bR_val, tL_val, tR_val;
+  int32_t x_bL, y_bL, x_bR, y_bR, x_tR, y_tR, x_tL, y_tL;
+
+  for (int32_t i0 = 0; i0 < out_n; i0++)
+  {
+    for (int32_t i1 = 0; i1 < out_dim1; i1++)
+    {
+      for (int32_t i2 = 0; i2 < out_dim2; i2++)
+      {
+        for (int32_t i3 = 0; i3 < out_h; i3++)
+        {
+          for (int32_t i4 = 0; i4 < out_w; i4++)
+          {
+            /* find current point (x,y) in grid, also changing them back to float for mapping to corresponding point in input data */
+            int32_t grid_offset = (i0 * gridBatchPitch) + (i1 * gridDim1Pitch) + (i2 * gridDim2Pitch) + (i3 * gridChannelPitch) + (i4 * gridLinePitch);
+
+            x = grid[grid_offset];
+            y = grid[grid_offset + 1];
+
+            if (params->is_grid_precomputed == false)
+            {
+              /* map (x,y) to actual point in input data based on align_corners using input widht and height */
+              if (align_corners == true)
+              {
+                x = ((x + (bfloat16_tidl)1.0F) * (bfloat16_tidl)0.5f) * ((bfloat16_tidl)data_w - (bfloat16_tidl)1.0F);
+                y = ((y + (bfloat16_tidl)1.0F) * (bfloat16_tidl)0.5f) * ((bfloat16_tidl)data_h - (bfloat16_tidl)1.0F);
+              }
+              else
+              {
+                x = (((x + (bfloat16_tidl)1.0F) * ((bfloat16_tidl)data_w)) - (bfloat16_tidl)1.0F) * (bfloat16_tidl)0.5f;
+                y = (((y + (bfloat16_tidl)1.0F) * ((bfloat16_tidl)data_h)) - (bfloat16_tidl)1.0F) * (bfloat16_tidl)0.5f;
+              }
+            }
+
+            if (params->mode == (int32_t)TIDL_ModeBilinear)
+            {
+              x_bL = floor(x);
+              y_bL = floor(y);
+              x_bR = x_bL + 1;
+              y_bR = y_bL;
+              x_tL = x_bL;
+              y_tL = y_bL + 1;
+              x_tR = x_bL + 1;
+              y_tR = y_bL + 1;
+
+              /* weights of four points */
+              bL = (((bfloat16_tidl)x_tR) - x) * (((bfloat16_tidl)y_tR) - y);
+              bR = (x - ((bfloat16_tidl)x_tL)) * (((bfloat16_tidl)y_tL) - y);
+              tL = (((bfloat16_tidl)x_bR) - x) * (y - ((bfloat16_tidl)y_bR));
+              tR = (x - ((bfloat16_tidl)x_bL)) * (y - ((bfloat16_tidl)y_bL));
+
+              for (int32_t c = 0; c < data_c; c++)
+              {
+                /* current channel data present at four points, if indices are going out of bound then use 0
+                for 'zeros' padding mode (udpate this when we add support for other padding modes) */
+                bR_val = ((y_bR >= 0) && (y_bR < data_h) && (x_bR >= 0) && (x_bR < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (y_bR * inChannelPitch) + (x_bR * inLinePitch)] : (Tin)0.0f;
+                bL_val = ((y_bL >= 0) && (y_bL < data_h) && (x_bL >= 0) && (x_bL < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (y_bL * inChannelPitch) + (x_bL * inLinePitch)] : (Tin)0.0f;
+                tL_val = ((y_tR >= 0) && (y_tR < data_h) && (x_tR >= 0) && (x_tR < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (y_tR * inChannelPitch) + (x_tR * inLinePitch)] : (Tin)0.0f;
+                tR_val = ((y_tL >= 0) && (y_tL < data_h) && (x_tL >= 0) && (x_tL < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (y_tL * inChannelPitch) + (x_tL * inLinePitch)] : (Tin)0.0f;
+
+                out_val = ((((float32_tidl)bR_val) * (float32_tidl)bR) + 
+                           (((float32_tidl)bL_val) * (float32_tidl)bL) + 
+                           (((float32_tidl)tL_val) * (float32_tidl)tR) + 
+                           (((float32_tidl)tR_val) * (float32_tidl)tL));
+                out[(i0 * outBatchPitch) + (i1 * outDim1Pitch) + (i2 * outDim2Pitch) + c + (i3 * outChannelPitch) + (i4 * outLinePitch)] = tidl_sat_bf16(out_val);
+              }
+            }
+            else if (params->mode == (int32_t)TIDL_ModeNearest)
+            {
+              /*Round grid values and access:*/
+              for (int32_t c = 0; c < data_c; c++)
+              {
+                int32_t xint_round, yint_round;
+                /* If the grid buffer holds pre-computed integer pixel
+                   indices (written at import time by TIDL_convertWeightsAndSlopesToBF16 for
+                   BF16 networks with a const-data nearest-mode grid), read the values directly
+                   and skip the un-normalization that was already applied at import time. */
+                if (params->is_grid_precomputed == true)
+                {
+                  xint_round = (int32_t)grid[grid_offset];
+                  yint_round = (int32_t)grid[grid_offset + 1];
+                }
+                else
+                {
+                  /* round function in c rounds away from zero in case of 0.5, Ex: 1.5 -> 2, 2.5 -> 3
+                    Onnxruntime uses round to even number which is nearbyintf function in c, it will round 1.5 to 2, 2.5 to 2,
+                    hence using nearbyintf in place of round */
+                  /*nearbyintf expects input in float32. bfloat16 value internally typecasted to float32 before sending to the function. 
+                  The output of the function is not affected by bf16->fp32 cast, so no need for bf16 native implementation of nearbyintf() */
+                  xint_round = nearbyintf(x);
+                  yint_round = nearbyintf(y);
+                }
+                /*Bounds check for pad to get outVal:*/
+                out_val = ((yint_round >= 0) && (yint_round < data_h) && (xint_round >= 0) && (xint_round < data_w)) ? data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (yint_round * inChannelPitch) + (xint_round * inLinePitch)] : (bfloat16_tidl)0.0F;
                 out[(i0 * outBatchPitch) + (i1 * outDim1Pitch) + (i2 * outDim2Pitch) + c + (i3 * outChannelPitch) + (i4 * outLinePitch)] = (Tout)out_val;
               }
             }
@@ -555,6 +781,14 @@ int32_t TIDL_gridsampleProcess(TIDL_NetworkCommonParams *commonParams,
     if (inDataParams->elementType == TIDL_SinglePrecFloat)
     {
       status = TIDL_refGridSampleFloat<float32_tidl, float32_tidl, float32_tidl>((float32_tidl *)inPtrs[0], (float32_tidl *)inPtrs[1], (float32_tidl *)outPtrs[0], inDataParams, gridParams, tidlLayer);
+    }
+    else if (inDataParams->elementType == TIDL_BFloat16)
+    {
+      status = TIDL_refGridSampleBFloat16<bfloat16_tidl, bfloat16_tidl, bfloat16_tidl>(
+          (bfloat16_tidl *)inPtrs[0],
+          (bfloat16_tidl *)inPtrs[1],
+          (bfloat16_tidl *)outPtrs[0],
+          inDataParams, gridParams, tidlLayer);
     }
     else if (inDataParams->elementType == TIDL_UnsignedChar)
     {

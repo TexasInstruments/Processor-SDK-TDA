@@ -11,6 +11,8 @@
 # "opkg_utils" is required for making opkg repo: git://git.yoctoproject.org/opkg-utils
 #  - This can be automatically downloaded from running setup_psdk_rtos.sh
 
+include $(PSDK_PATH)/vision_apps/build_flags.mak
+
 ifeq ($(SOC),j721e)
 LINUX_FIRMWARE_PREFIX=j7
 else
@@ -20,7 +22,7 @@ endif
 IPK_TARGET_INC_PATH  = usr/include/processor_sdk
 OPKG_UTILS_PATH     ?= $(PSDK_PATH)/opkg-utils-d179a334f7bfbe55dec4839607dac2c38f6b7c8f
 IPK_VERSION_STRING  ?= $(PSDK_VERSION)
-J7_IP_ADDRESS       ?= 192.168.999.999
+J7_IP_ADDRESS       ?= 0.0.0.0
 
 # Return the last word after a '/'.
 # ex: <some_dir_path>/REPO/tidl_j7_xx_yy_zz_ww will give tidl_j7_xx_yy_zz_ww
@@ -31,28 +33,30 @@ tidl_dir = $(notdir $(TIDL_PATH))
 
 # Use this to use a subset of the interface headers in the component folders
 IPK_INCLUDE_FOLDERS=app_utils/utils \
-					imaging/algos/dcc/include \
-					imaging/algos/ae/include \
-					imaging/algos/awb/include \
-					imaging/itt_server_remote/include \
-					imaging/kernels/include \
-					imaging/ti_2a_wrapper/include \
-					imaging/sensor_drv/include \
-					imaging/utils \
-					ivision \
-					$(tidl_dir)/arm-tidl/rt/inc \
-					$(tidl_dir)/arm-tidl/tiovx_kernels/include \
-					tiovx/conformance_tests/test_engine \
-					tiovx/include \
-					tiovx/kernels/include \
-					tiovx/utils/include \
-					vision_apps/platform/$(SOC) \
-					vision_apps/applibs \
-					vision_apps/kernels \
-					vision_apps/modules \
-					vision_apps/utils \
-					video_io/kernels/include \
-					vxlib/packages/ti/vxlib/src/common
+    imaging/algos/dcc/include \
+    imaging/algos/ae/include \
+    imaging/algos/awb/include \
+    imaging/itt_server_remote/include \
+    imaging/kernels/include \
+    imaging/ti_2a_wrapper/include \
+    imaging/sensor_drv/include \
+    imaging/utils \
+    ivision \
+    $(tidl_dir)/arm-tidl/rt/inc \
+    $(tidl_dir)/arm-tidl/tiovx_kernels/include \
+    tiovx/conformance_tests/test_engine \
+    tiovx/include \
+    tiovx/kernels/include \
+    tiovx/utils/include \
+    app_kernels/kernels \
+    app_kernels/utils \
+    platform/hlos/include \
+    platform/memory_map/$(SOC) \
+    vision_apps/applibs \
+    vision_apps/modules \
+    vision_apps/utils \
+    video_io/kernels/include \
+    vxlib/packages/ti/vxlib/src/common
 
 ifeq ($(BUILD_PTK),yes)
 IPK_INCLUDE_FOLDERS += ti-perception-toolkit/include
@@ -73,8 +77,8 @@ endif
 
 VISION_APPS_TMP_PATH = /tmp/tivision_apps
 IPK_TMP_PATH = $(VISION_APPS_TMP_PATH)/ipk
-IPK_OUT_PATH = $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(MPU_CPU)/LINUX/$(LINUX_APP_PROFILE)
-OPKG_REPO_OUT_PATH = $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(MPU_CPU)/LINUX/$(LINUX_APP_PROFILE)/opkg_repo
+IPK_OUT_PATH = $(PSDK_PATH)/ipk
+OPKG_REPO_OUT_PATH = $(PSDK_PATH)/opkg_repo
 
 .PHONY: ipk ipk_package ipk_prepare_repo ip_addr_check ipk_deploy ipk_clean deb_package deb_clean
 
@@ -124,6 +128,9 @@ ipk_package: linux_fs_install
 	# form debian-binary
 	echo 2.0 > $(VISION_APPS_TMP_PATH)/debian-binary
 
+	rm -rf $(IPK_OUT_PATH)
+	mkdir -p $(IPK_OUT_PATH)
+
 	# package into .ipk
 	ar r $(IPK_OUT_PATH)/tivision-apps_$(IPK_VERSION_STRING)$(IPK_PGK_SUFFIX).ipk \
 		 $(VISION_APPS_TMP_PATH)/control.tar.gz \
@@ -139,9 +146,9 @@ ipk_prepare_repo:
 	rm -rf $(OPKG_REPO_OUT_PATH)
 	mkdir -p $(OPKG_REPO_OUT_PATH)
 	cp $(IPK_OUT_PATH)/*.ipk $(OPKG_REPO_OUT_PATH)/.
-	cd $(OPKG_REPO_OUT_PATH); $(OPKG_UTILS_PATH)/opkg-make-index -a . > ./Packages; \
-		gzip ./Packages; cd $(VISION_APPS_PATH)
-	tar czf $(IPK_OUT_PATH)/opkg-repo_$(PSDK_VERSION).tar.gz -C $(IPK_OUT_PATH) ./opkg_repo
+	cd $(OPKG_REPO_OUT_PATH) && $(OPKG_UTILS_PATH)/opkg-make-index -a . > ./Packages && \
+		gzip ./Packages
+	tar czf $(IPK_OUT_PATH)/opkg-repo_$(PSDK_VERSION).tar.gz -C $(PSDK_PATH) opkg_repo
 
 # check to make sure J7_IP_ADDRESS is set
 ip_addr_check:
@@ -149,14 +156,13 @@ ip_addr_check:
 
 # deploy the opkg repository to the target fs using scp (be sure to update J7_IP_ADDRESS
 ipk_deploy: ip_addr_check
-	ssh root@$(J7_IP_ADDRESS) "mkdir -p /opkg_repo"
-	ssh root@$(J7_IP_ADDRESS) "rm -r /opkg_repo"
+	ssh root@$(J7_IP_ADDRESS) "rm -rf /opkg_repo && mkdir -p /opkg_repo"
 	scp -pr $(OPKG_REPO_OUT_PATH) root@$(J7_IP_ADDRESS):/opkg_repo
 
 # clean-up intermediate files/folder and previous output ipk
 ipk_clean:
 	rm -rf $(VISION_APPS_TMP_PATH)
-	rm -f $(IPK_OUT_PATH)/tivision-apps_$(VERSION_STRING).ipk
+	rm -f $(IPK_OUT_PATH)/tivision-apps_$(IPK_VERSION_STRING).ipk
 
 ## Exprimental: deb_package and deb_clean
 # PKG_DIST can be 'yocto4.0', 'ubuntu22.04', 'debian12.5'...
@@ -212,4 +218,3 @@ deb_package:
 # clean-up intermediate files/folder and previous output ipk
 deb_clean:
 	rm -f $(DEB_OUT_PATH)/$(PKG_NAME).deb
-

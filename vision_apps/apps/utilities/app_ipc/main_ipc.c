@@ -63,7 +63,7 @@
 #include <utils/ipc/include/app_ipc.h>
 #include <utils/console_io/include/app_log.h>
 #include <utils/timer/include/app_timer.h>
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 #include "app_common.h"
 
 #define NUM_MSGS        (5u)

@@ -66,7 +66,7 @@
 #include <utils/mem/include/app_mem.h>
 #include <utils/console_io/include/app_log.h>
 #include <utils/timer/include/app_timer.h>
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 
 #if defined (QNX)
 #include <hw/inout.h>

@@ -41,6 +41,8 @@
 /*                             Include Files                                  */
 /* ========================================================================== */
 #include <ti/drv/csirx/src/csirx_drvPriv.h>
+#include <ti/csl/csl_esm.h>
+#include <ti/csl/soc.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -1069,7 +1071,7 @@ static void CsirxDrv_asfEsmLowEventIsrFxn(uintptr_t arg)
     for(instIdx = 0U; instIdx < CSIRX_INSTANCE_ID_MAX; instIdx++)
     {
         instObj = (CsirxDrv_InstObj *)&gCsirxCommonObj.instObj[instIdx];
-        status[instIdx].eventGroup = CSIRX_ESM_HI_EVENT_GROUP_ASF;
+        status[instIdx].eventGroup = CSIRX_ESM_LOW_EVENT_GROUP_ASF;
         status[instIdx].eventMasks = 0U;
         status[instIdx].drvHandle  = instObj->eventObj->drvHandle;
         
@@ -1118,6 +1120,26 @@ static void CsirxDrv_asfEsmLowEventIsrFxn(uintptr_t arg)
             /* Issue a CB to application */
             eventObj->eventPrms.eventCb(status[instIdx], eventObj->eventPrms.appData);
         }
+    }
+
+    /* CSIRX_GetAsfIrqs/CSIRX_SetAsfIrqs above only ack the local CSIRX
+     * status register. The interrupt reaching this ISR was aggregated and
+     * latched by MAIN ESM (CSI_RX_IFn FATAL/NONFATAL, one pair per CSIRX
+     * instance starting at CSLR_ESM0_ESM_LVL_EVENT_CSI_RX_IF0_CSI_FATAL_0);
+     * ESM holds its own aggregate LOW-priority line asserted until each
+     * pending bit is explicitly cleared there too and EOI is written. Without
+     * this, the line never de-asserts and this ISR re-enters immediately on
+     * return, hanging the core in an interrupt storm. */
+    {
+        uint32_t esmBit;
+
+        for (esmBit = CSLR_ESM0_ESM_LVL_EVENT_CSI_RX_IF0_CSI_FATAL_0;
+             esmBit < (CSLR_ESM0_ESM_LVL_EVENT_CSI_RX_IF0_CSI_FATAL_0 + (CSIRX_INSTANCE_ID_MAX * 2U));
+             esmBit++)
+        {
+            (void)ESMClearIntrStatus((uint32_t)CSL_ESM0_CFG_BASE, esmBit);
+        }
+        (void)ESMWriteEOI((uint32_t)CSL_ESM0_CFG_BASE, (uint32_t)ESM_INTR_TYPE_LOW_PRIO_ERROR);
     }
 
     /** Enable HW interrupts here */

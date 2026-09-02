@@ -163,7 +163,7 @@ extern "C" {
 /*! \brief Max number of times a given node can be replicated
  * \ingroup group_vx_node_cfg
  */
-#define TIVX_NODE_MAX_REPLICATE            (64u)
+#define TIVX_NODE_MAX_REPLICATE            (12u)
 
 /*! \brief Max number node objects supported
  * \ingroup group_vx_node_cfg

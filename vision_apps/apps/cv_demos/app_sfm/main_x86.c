@@ -59,7 +59,7 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 
 int app_sfm_main(int argc, char* argv[]);
 

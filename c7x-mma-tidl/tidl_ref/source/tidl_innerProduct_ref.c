@@ -75,6 +75,7 @@
 #include "tidl_alg_utils.h"
 #include "tidl_commonUtils.h"
 #include "tidl_innerProduct_ref.h"
+using namespace floating_point::bf16_mma;
 
 
 #ifdef BUILD_WITH_CUDA
@@ -273,7 +274,10 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
           }
           /* LDRA_JUSTIFY_START
           <metric start> statement branch <metric end>
-          <justification start> PRIOR_CHECK : singleton batch in input A and non-singleton batch in input B is not supported
+          <justification start>
+          Rationale - PRIOR_CHECK: singleton batch in input A and non-singleton batch in input B is not supported
+          Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+          This does not affect runtime behavior or safety.
           <justification end> */
           if (i1 == TIDL_DIM_BATCH)
           {
@@ -311,7 +315,9 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
     {
       /* LDRA_JUSTIFY_START
       <metric start> statement branch <metric end>
-      <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      <justification start>
+      Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
       <justification end> */
       batches = MAX(inADataParams->dimValues[TIDL_DIM_BATCH], inBDataParams->dimValues[TIDL_DIM_BATCH]);
       /* LDRA_JUSTIFY_END */
@@ -531,6 +537,13 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
   #ifdef BUILD_WITH_CUDA_INNERPRODUCT
   float floatSatLow, floatSatHigh;
   TIDL_getSaturationFloat(&net->TIDLLayers[layerIdx], &floatSatLow, &floatSatHigh);
+  if (tidlLayer->outData.elementType == TIDL_BFloat16)
+  {
+    const float bf16Max = (float)std::numeric_limits<bfloat16_tidl>::max();
+    const float bf16Min = (float)std::numeric_limits<bfloat16_tidl>::lowest();
+    if (floatSatHigh > bf16Max) floatSatHigh = bf16Max;
+    if (floatSatLow  < bf16Min) floatSatLow  = bf16Min;
+  }
   status = TIDL_cudaInnerProductFused<Tin, TBin, Tw, Tb, Tout, Tacc>(
       inPtr, inBPtr, outPtr, pBiasData, weightsPtr,
       batches, dim1, dim2, channels, numBChannels, numInCols, numOutCols, numInRows, numOutRows,
@@ -606,7 +619,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                       biasOffset = biasOffset + outColIdx;
                       for (uint32_t inColIdx = 0; inColIdx < numInCols; inColIdx++)
                       {
-                        acc += inPtr[inOffset + (inColIdx * inALinePitch)] * inBPtr[biasOffset + ((inColIdx * inBLinePitch))]; /* Not tested*/
+                        acc += (Tacc)inPtr[inOffset + (inColIdx * inALinePitch)] * (Tacc)inBPtr[biasOffset + ((inColIdx * inBLinePitch))]; /* Not tested*/
                       }
                     }
                     else if (inputBTranspose != 0) /* transpose needed for inputB */
@@ -618,7 +631,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                       biasOffset = biasOffset + (outColIdx * inBLinePitch);
                       for (uint32_t inColIdx = 0; inColIdx < numInCols; inColIdx++)
                       {
-                        acc += inPtr[inOffset + inColIdx] * inBPtr[biasOffset + inColIdx];
+                        acc += (Tacc)inPtr[inOffset + inColIdx] * (Tacc)inBPtr[biasOffset + inColIdx];
                       }
                     }
                     else /* no transpose needed */
@@ -628,7 +641,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                       biasOffset = biasOffset + outColIdx;
                       for (uint32_t inColIdx = 0; inColIdx < numInCols; inColIdx++)
                       {
-                        acc += inPtr[inOffset + inColIdx] * inBPtr[biasOffset + (inColIdx * inBLinePitch)];
+                        acc += (Tacc)inPtr[inOffset + inColIdx] * (Tacc)inBPtr[biasOffset + (inColIdx * inBLinePitch)];
                       }
                     }
                   }
@@ -641,7 +654,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                       biasOffset = biasOffset + outColIdx;
                       for (uint32_t inColIdx = 0; inColIdx < numInCols; inColIdx++)
                       {
-                        acc += inPtr[inOffset + (inColIdx * inALinePitch)] * weightsPtr[biasOffset + (inColIdx * inBLinePitch)]; /* Not tested*/
+                        acc += (Tacc)inPtr[inOffset + (inColIdx * inALinePitch)] * (Tacc)weightsPtr[biasOffset + (inColIdx * inBLinePitch)]; /* Not tested*/
                       }
                     }
                     else if (inputBTranspose != 0) /* transpose needed for inputB */
@@ -653,7 +666,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                       biasOffset = biasOffset + (outColIdx * inBLinePitch);
                       for (uint32_t inColIdx = 0; inColIdx < numInCols; inColIdx++)
                       {
-                        acc += inPtr[inOffset + inColIdx] * weightsPtr[biasOffset + inColIdx];
+                        acc += (Tacc)inPtr[inOffset + inColIdx] * (Tacc)weightsPtr[biasOffset + inColIdx];
                       }
                     }
                     else /* no transpose needed */
@@ -662,7 +675,7 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                       biasOffset = biasOffset + outColIdx;
                       for (uint32_t inColIdx = 0; inColIdx < numInCols; inColIdx++)
                       {
-                        acc += inPtr[inOffset + inColIdx] * weightsPtr[biasOffset + (inColIdx * inBLinePitch)];
+                        acc += (Tacc)inPtr[inOffset + inColIdx] * (Tacc)weightsPtr[biasOffset + (inColIdx * inBLinePitch)];
                       }
                     }
                   }
@@ -677,7 +690,12 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
                     acc = TIDL_floatSat(acc, &net->TIDLLayers[layerIdx]);
                     outPtr[offset + outIdx] = acc;
                   }
-                  else 
+                  else if (tidlLayer -> outData.elementType == TIDL_BFloat16)
+                {
+                  acc = TIDL_BF16Sat(acc, &net->TIDLLayers[layerIdx]);
+                  outPtr[offset + outIdx] = acc;
+                }
+                else
                   #endif
                   if (isHighPrecision != 0)
                   {
@@ -824,6 +842,21 @@ template<class Tw, class Tb, class Tacc>
     float32_tidl minFloat, maxFloat;
     TIDL_getSaturationFloat(tidlLayer, &minFloat, &maxFloat);
     status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc, (float32_tidl *)inPtr, (float32_tidl *)inBPtr, (float32_tidl *)refPtr, biasPtr, weightsPtr, buffParams, minFloat, maxFloat);
+  }
+  else if (outElementType == TIDL_BFloat16)
+  {
+    sTIDL_Layer_t *tidlLayer = &intAlgHandle->createParams->net->TIDLLayers[layerIdx];
+    float32_tidl minFloat, maxFloat;
+    TIDL_getSaturationFloat(tidlLayer, &minFloat, &maxFloat);
+    float32_tidl bf16Max = (float32_tidl)std::numeric_limits<bfloat16_tidl>::max();
+    float32_tidl bf16Min = (float32_tidl)std::numeric_limits<bfloat16_tidl>::lowest();
+    if (maxFloat > bf16Max) { maxFloat = bf16Max; }
+    if (minFloat < bf16Min) { minFloat = bf16Min; }
+    status = TIDL_refInnerProduct(intAlgHandle, layerIdx, acc,
+        (bfloat16_tidl *)inPtr,
+        (const bfloat16_tidl *)inBPtr,
+        (bfloat16_tidl *)refPtr,
+        biasPtr, weightsPtr, buffParams, minFloat, maxFloat);
   }
   else
 #endif
@@ -1319,6 +1352,13 @@ int32_t TIDL_innerProductRefProcess(
           status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, (int16_t *)biasPtr, (int8_t *)weightPtr, (int64_t)accInt, tidlLayer->outData.elementType, buffParams);
         }
       }
+#ifdef HOST_EMULATION
+      else if (tidlLayer->outData.elementType == TIDL_BFloat16)
+      {
+        float32_tidl accFloat = 0.0f;
+        status = TIDL_refInnerProductParamBitDepth(intAlgHandle, layerIdx, inPtr, inBPtr, outPtr, (float32_tidl *)orgBiasPtrFloat, (bfloat16_tidl *)weightPtr, (float32_tidl)accFloat, tidlLayer->outData.elementType, buffParams);
+      }
+#endif
       else if ((tidlLayer->weightsElementSizeInBits <= 16))
       {
         if (TIDL_isKernelHighPrecision(tidlLayer->layerKernelType) != (int32_t)FALSE)

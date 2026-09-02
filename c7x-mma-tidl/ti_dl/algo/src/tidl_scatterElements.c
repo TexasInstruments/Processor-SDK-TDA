@@ -199,7 +199,9 @@ int32_t TIDL_scatterElementsInitNew(const TIDL_LayerSpecificParams *layerSpecifi
                      &handle);
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if (handle != NULL)
     {
@@ -222,7 +224,9 @@ int32_t TIDL_scatterElementsInitNew(const TIDL_LayerSpecificParams *layerSpecifi
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     else
     {

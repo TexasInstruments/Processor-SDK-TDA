@@ -21,22 +21,13 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A720 x86_64))
             CSOURCES    += main_linux_arm.c
 
             include $(VISION_APPS_PATH)/apps/concerto_mpu_inc.mak
-
-            IDIRS       += $(EDGEAI_KERNELS_PATH)/include
             IDIRS       += $(TIOVX_PATH)/source/include
-
-            SHARED_LIBS += edgeai-apps-utils
-            SHARED_LIBS += edgeai-tiovx-kernels
         endif
     endif
 
-    IDIRS       += $(EDGEAI_IDIRS)
-    IDIRS       += $(VISION_APPS_KERNELS_IDIRS)
+    IDIRS       += $(APP_KERNELS_IDIRS)
 
-    STATIC_LIBS += $(VISION_APPS_KERNELS_LIBS)
-
-    SHARED_LIBS += edgeai-apps-utils
-    SHARED_LIBS += edgeai-tiovx-kernels
+    STATIC_LIBS += $(APP_KERNELS_LIBS)
 
     ifneq ($(SOC),$(filter $(SOC), j784s4 tda54))
         SKIPBUILD=1

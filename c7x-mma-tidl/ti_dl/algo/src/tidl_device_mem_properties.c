@@ -26,12 +26,26 @@
 #include "tidl_device_mem_properties.h"
 
 #ifdef PERF_MODELLING
+/* SOC_AM62AX causes dmautils.h to pull in <drivers/udma.h> (MCU+ SDK v1) which
+ * defines Udma_DrvHandle as void* and sets the UDMA_H_ guard, blocking the
+ * standalone udma.h. Pre-include standalone udma.h here so it wins the guard
+ * race and struct Udma_DrvObj / struct Udma_ChObj are fully defined. J722S is
+ * unaffected (dmautils.h does not include v1 udma.h for SOC_J722S). */
+#ifdef SOC_AM62AX
+#include "drivers/dmautils/udma_standalone/udma.h"
+#endif
 #include "tidl_device_utils.h"
+/* cslr_C7X_CPU.h provides CSL_C7X_CPU_COREPACK_NUM_* used only for multi-C7x PDK SOCs */
+#if defined(SOC_J784S4) || defined(SOC_J742S2)
 #include <ti/csl/arch/c7x/cslr_C7X_CPU.h>
-#if defined (SOC_J784S4) ||  defined (SOC_J721S2)
+#endif
+/* priv header provides DmaUtilsAutoInc3d_Context, CSL_DRU_t, CSL_UdmapTR, Udma_DrvHandle */
+#if defined(SOC_J784S4) || defined(SOC_J721S2) || defined(SOC_J742S2) || defined(SOC_J721E) 
 #include "ti/drv/udma/dmautils/src/dmautils_autoincrement_3d_priv.h"
-#else
-#include "dmautils/include/dmautils_autoincrement_3d.h"
+#elif defined(SOC_TDA54)
+#include "dmautils_autoincrement_3d_priv.h"
+#else /* MCU_PLUS_SDK (J722S, AM62A) */
+#include "drivers/dmautils/src/dmautils_autoincrement_3d_priv.h"
 #endif
 
 #if defined (__C7100__) || defined (__C7120__)
@@ -432,9 +446,14 @@ void DmaUtilsAutoInc3d_wait_wrapper(void *autoIncrementContext, int32_t channelI
 }
 void DmaUtilsAutoInc3d_wait_copyWrapper(void *autoIncrementContext, int32_t channelId, bool enableSingleChCopy) 
 {
-  
-  DmaUtilsAutoInc3d_wait_perfModelling(autoIncrementContext, channelId, &DmaUtilsAutoInc3dPerfData[0], &DmaUtilsAutoInc3dMemBwData[0], enableSingleChCopy);
-  
+  /* 
+    This is a utility function used only to capture perf estimates without changing the trigger counts for given channel as this function is 
+    only called in TIDL_memcpy2D where we actually need memcpy to switch handles, so decrementing the count will be overdo as decrement already happens in DmaUtilsAutoInc3d_wait 
+  */
+  if(gDMAMode == DMA_PERFMODEL_MODE)
+  {
+    DmaUtilsAutoInc3d_wait_perfModelling(autoIncrementContext, channelId, &DmaUtilsAutoInc3dPerfData[0], &DmaUtilsAutoInc3dMemBwData[0], enableSingleChCopy);
+  }
   return ;
 }
 void DmaUtilsAutoInc3d_setPerfExecMode(void)

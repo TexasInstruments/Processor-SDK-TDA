@@ -36,6 +36,18 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
 */
+/**
+ *  \ingroup CSL_IP_MODULE
+ *  \defgroup CSL_RAT RAT CSL-FL
+ *
+ *  @{
+ */
+/**
+ *  \file  csl_rat.h
+ *
+ *  \brief This is the include file for the RAT CSL-FL module.
+ */
+
 #ifndef CSL_RAT_H_
 #define CSL_RAT_H_
 
@@ -852,6 +864,8 @@ bool CSL_ratConfigRegionTranslation(CSL_ratRegs *pRatRegs, uint32_t regionIndex,
  *   @n This function is used to check configure a region address translation for the
  *      specified region index. The translation is checked for enable after
  *      it is configured.
+ *   @n This API can be called as a work around for errata ID i2449 in order to 
+ *      periodically verify the integrity of the RAT MMR. 
  *
  *   @b Arguments
  *   @n  pRatRegs           - A pointer (of type CSL_ratRegs*) to the base
@@ -901,4 +915,5 @@ int32_t CSL_ratVerifyConfigRegionTranslation(const CSL_ratRegs *pRatRegs, uint32
 }
 #endif
 
-#endif
+#endif   /* CSL_RAT_H_ */
+/** @} */

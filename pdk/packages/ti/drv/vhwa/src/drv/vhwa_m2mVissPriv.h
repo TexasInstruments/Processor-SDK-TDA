@@ -1481,7 +1481,6 @@ void Vhwa_m2mDisableFcVissHtsIntr(void);
 
 int32_t Vhwa_m2mVissAcquireHwaLock(uint32_t semTimeout);
 
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 /**
  * \brief Updates the configuration register group with current configuration values.
  *
@@ -1496,16 +1495,13 @@ int32_t Vhwa_m2mVissAcquireHwaLock(uint32_t semTimeout);
  * \return          Returns FVID2_SOK on success, or a negative error code on failure.
  */
 int32_t vhwaM2mVissUpdateConfigRegGroup(uint32_t *RegVal, Vhwa_M2mVissInstObj *instObj, Vhwa_M2mVissHandleObj *hObj);
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 int32_t Vhwa_m2mVissInitReadbackTrMem(Vhwa_M2mVissHandleObj *hObj);
-#endif
 int32_t Vhwa_m2mVissSubmitReadbackUDMABuf(Vhwa_M2mVissInstObj *instObj,
         const Vhwa_M2mVissHandleObj *hObj);
 uint32_t Vhwa_m2mVissCalcNumOfTrsForReadback(const Vhwa_M2mVissHandleObj *hObj);
 void Vhwa_m2mVissUpdateReadbackBufObj(Vhwa_M2mVissHandleObj *hObj);
 int32_t Vhwa_m2mVissSetReadbackTransferRecord(const Vhwa_M2mVissInstObj *instObj,
     Vhwa_M2mVissHandleObj *hObj);
-#endif
 #ifdef __cplusplus
 }
 #endif

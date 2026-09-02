@@ -92,6 +92,8 @@ public:
     std::string m_artifacts_folder;
     /* Path to redirect temporary buffers, defaults to /dev/shm */
     std::string m_temp_buffer_dir;
+    /* Base name for trace files, defaults to /tmp/tidl_trace */
+    std::string m_trace_base_name;
 
     int osrtDebugPrintLevel;
 

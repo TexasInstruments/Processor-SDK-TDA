@@ -70,6 +70,11 @@
 extern uint32_t __BSS_START;
 extern uint32_t __BSS_END;
 
+/* LDRA_JUSTIFY
+<metric start> statement branch <metric end>
+<function start> void extended_system_pre_init.* <function end>
+<justification start> TIOVX_CODE_COVERAGE_RTOS_PDK_UM02
+<justification end> */
 void extended_system_pre_init(void)
 {
     /* initialize .bss section to zero */

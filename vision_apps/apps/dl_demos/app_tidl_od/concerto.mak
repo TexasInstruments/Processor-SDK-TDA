@@ -18,10 +18,10 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86_64 A72 A53 A720))
 
         include $(VISION_APPS_PATH)/apps/concerto_x86_64_inc.mak
 
-        IDIRS       += $(VISION_APPS_KERNELS_IDIRS)
+        IDIRS       += $(APP_KERNELS_IDIRS)
         IDIRS       += $(VISION_APPS_MODULES_IDIRS)
 
-        STATIC_LIBS += $(VISION_APPS_KERNELS_LIBS)
+        STATIC_LIBS += $(APP_KERNELS_LIBS)
         STATIC_LIBS += $(VISION_APPS_MODULES_LIBS)
         STATIC_LIBS += $(TIADALG_LIBS)
 
@@ -35,10 +35,11 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86_64 A72 A53 A720))
 
             include $(VISION_APPS_PATH)/apps/concerto_mpu_inc.mak
 
-            IDIRS       += $(VISION_APPS_KERNELS_IDIRS)
+            IDIRS       += $(APP_KERNELS_IDIRS)
             IDIRS       += $(VISION_APPS_MODULES_IDIRS)
 
-            STATIC_LIBS += $(VISION_APPS_KERNELS_LIBS)
+            STATIC_LIBS += $(APP_KERNELS_LIBS)
+            STATIC_LIBS += $(APP_KERNELS_UTILS_LIBS)
             STATIC_LIBS += $(VISION_APPS_MODULES_LIBS)
 
             # AM62A Linux: Link drm_wrapper for DRM/KMS display with zero-copy
@@ -51,10 +52,6 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86_64 A72 A53 A720))
 
         endif
     endif
-
-    IDIRS       += $(EDGEAI_IDIRS)
-    SHARED_LIBS += edgeai-apps-utils
-    SHARED_LIBS += edgeai-tiovx-kernels
 
     ifeq ($(SOC), $(filter $(SOC), am62a))
         ifeq ($(TARGET_CPU),x86_64)

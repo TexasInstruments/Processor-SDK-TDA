@@ -1,7 +1,7 @@
 /*
  * Data version: 210812_211103
  *
- * Copyright (C) 2021-2025, Texas Instruments Incorporated
+ * Copyright (C) 2021-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,10 +37,11 @@
 #include <config.h>
 #include <types/short_types.h>
 
-#define TISCI_MSG_FLAG_FW_CAP_MAX (0x02U)
+#define TISCI_MSG_FLAG_FW_CAP_MAX (0x03U)
 const u64 soc_fw_caps[TISCI_MSG_FLAG_FW_CAP_MAX] = {
 	TISCI_MSG_FLAG_FW_CAP_GENERIC_CAP,
 	TISCI_MSG_FLAG_FW_CAP_DM,
+	TISCI_MSG_FLAG_FW_CAP_RM_UDMAP_MULTI_CH_CFG,
 };
 
 #endif /* SOC_J721E_CAPABILITIES_H */

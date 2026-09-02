@@ -178,16 +178,16 @@ int32_t TIDL_setRtTensorParameters(sTIDLRT_Tensor_t * allocatedPtrs, sTIDLRT_Ten
     {
       memType = TIDLRT_MEM_SHARED;
     }
+  }
 
-    // Set dynamic flag if dynamic
-    if(isInput == 1)
-    {
-      isDynamic = (uint8_t)ioBufDesc->inIsDynamic[currTensorNum];
-    }
-    else
-    {
-      isDynamic = (uint8_t)ioBufDesc->outIsDynamic[currTensorNum];
-    }
+  // Set dynamic flag if dynamic
+  if(isInput == 1)
+  {
+    isDynamic = (uint8_t)ioBufDesc->inIsDynamic[currTensorNum];
+  }
+  else
+  {
+    isDynamic = (uint8_t)ioBufDesc->outIsDynamic[currTensorNum];
   }
 
   for(int l = 0; l < numSuperBatches; l++)
@@ -207,9 +207,25 @@ int32_t TIDL_setRtTensorParameters(sTIDLRT_Tensor_t * allocatedPtrs, sTIDLRT_Ten
        */ 
       if(isInput == 1 && rtPtrs[idx]->isDynamic)
       {
-        for (int32_t l = 0; l < TIDL_DIM_MAX; l++)
+        int32_t maxDims[TIDL_DIM_MAX];
+        maxDims[TIDL_DIM_BATCH]  = ioBufDesc->inNumBatches[currTensorNum];
+        maxDims[TIDL_DIM_DIM1]   = ioBufDesc->inDIM1[currTensorNum];
+        maxDims[TIDL_DIM_DIM2]   = ioBufDesc->inDIM2[currTensorNum];
+        maxDims[TIDL_DIM_NUMCH]  = ioBufDesc->inNumChannels[currTensorNum];
+        maxDims[TIDL_DIM_HEIGHT] = ioBufDesc->inHeight[currTensorNum];
+        maxDims[TIDL_DIM_WIDTH]  = ioBufDesc->inWidth[currTensorNum];
+        for (int32_t d = 0; d < TIDL_DIM_MAX; d++)
         {
-          rtPtrs[idx]->dimValues[l] = onnxRtParams->tensorShape[currTensorNum][l];
+          if(onnxRtParams->tensorShape[currTensorNum][d] > maxDims[d])
+          {
+            printf("ERROR: Dynamic input %d dim[%d] runtime value %d exceeds max allowed %d\n",
+                   currTensorNum, d, onnxRtParams->tensorShape[currTensorNum][d], maxDims[d]);
+            return -1;
+          }
+        }
+        for (int32_t d = 0; d < TIDL_DIM_MAX; d++)
+        {
+          rtPtrs[idx]->dimValues[d] = onnxRtParams->tensorShape[currTensorNum][d];
         }
         /* padValues describe the SOURCE buffer layout. OSRT always provides a flat
          * (unpadded) input tensor, so pads are 0 — ioBufDesc pads apply only to
@@ -265,12 +281,14 @@ int32_t TIDL_subgraphRtInvoke(int32_t osrtDebugPrintLevel, OnnxTIDLSubGraphParam
     /* Input tesnsors property set up */
     for (j = 0; j < onnxRtParams->numNetInData; j++)
     {
-      TIDL_setRtTensorParameters(ins, in, j, ioBufDesc, infer_ops, onnxRtParams, isInfer, 1);
+      status = TIDL_setRtTensorParameters(ins, in, j, ioBufDesc, infer_ops, onnxRtParams, isInfer, 1);
+      if(status != 0) return status;
     }
     /* Output tesnsors property set up */
     for (j = 0; j < onnxRtParams->numNetOutData; j++)
     {
-      TIDL_setRtTensorParameters(outs, out, j, ioBufDesc, infer_ops, onnxRtParams, isInfer, 0);
+      status = TIDL_setRtTensorParameters(outs, out, j, ioBufDesc, infer_ops, onnxRtParams, isInfer, 0);
+      if(status != 0) return status;
     }
   }
   status = infer_ops->TIDLRT_invoke(handle, in, out);

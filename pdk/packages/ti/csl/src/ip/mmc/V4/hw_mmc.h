@@ -91,10 +91,10 @@ extern "C"
 #define MMC_PVHSSDR12                                                                               ((uintptr_t)0x064U)
 #define MMC_PVSDR25SDR50                                                                         ((uintptr_t)0x068U)
 #define MMC_PVSDR104DDR50                                                                       ((uintptr_t)0x06cU)
-#define MMC_BTCR                                                                                          ((uintptr_t)0x070U)
+#define MMC_BTCR                                                                                          ((uintptr_t)0x0f4U)
 #define MMC_PVHS400                                                                                    ((uintptr_t)0x074U)
-#define MMC_VREG                                                                                          ((uintptr_t)0x078U)
-#define MMC_SHAREDBUSCONTROL                                                                 ((uintptr_t)0x0e0U)
+#define MMC_VREG                                                                                          ((uintptr_t)0x0f8U)
+#define MMC_SHAREDBUSCONTROL                                                                 ((uintptr_t)0x0e6U)
 #define MMC_REV                                                                                             ((uintptr_t)0x0fcU)
 /* @} */
 

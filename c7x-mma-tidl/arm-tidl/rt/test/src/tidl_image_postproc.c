@@ -941,7 +941,7 @@ int32_t tidl_tb_postProc(int32_t width, int32_t height, int32_t n, int32_t frame
   }
   else if ((gParams.postProcType == 3) || (gParams.postProcType == 4))
   {
-    if ((elementType != TIDL_UnsignedChar) && (elementType != TIDL_UnsignedShort) && (elementType != TIDL_SinglePrecFloat) && (elementType != TIDL_SignedWord) )
+    if ((elementType != TIDL_UnsignedChar) && (elementType != TIDL_UnsignedShort) && (elementType != TIDL_SinglePrecFloat) && (elementType != TIDL_SignedWord) && (elementType != TIDL_BFloat16))
     {
       printf(" Unsupported elementType %d in tidl_tb_postProc\n", elementType);
     }

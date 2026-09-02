@@ -5,8 +5,7 @@ TARGET      := vx_applib_srv_bowl_lut_gen
 TARGETTYPE  := library
 CSOURCES    := $(call all-c-files)
 
-IDIRS       += $(VISION_APPS_PATH)/kernels/srv/include
-
+IDIRS       += $(APP_KERNELS_PATH)/kernels/srv/include
 
 include $(FINALE)
 

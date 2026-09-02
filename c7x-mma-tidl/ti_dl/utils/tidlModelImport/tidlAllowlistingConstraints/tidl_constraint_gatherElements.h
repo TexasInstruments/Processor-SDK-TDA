@@ -106,7 +106,7 @@ const vector<TidlConstraint> tidlConstraintGatherElements =
             vector<int32_t> dataDims;
             vector<int32_t> indicesDims;
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
-            int32_t axis = layer->layerParams.gatherParams.axis;
+            int32_t axis = layer->layerParams.gatherElementsParams.axis;
             for (int32_t i = 0; i < md.varTensorIndices.size(); i++)
             {
                 if (md.varTensorIndices[i] == 0) dataIsVar = 1;
@@ -152,42 +152,60 @@ const vector<TidlConstraint> tidlConstraintGatherElements =
         }
     ),
     TIDL_CSTR(
-        "Data cannot be a constant. Only indices can be constant.",
-        "Data cannot be a constant. Only indices can be constant.",
-        "Data cannot be a Constant. Only indices can be constant.",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
-            if(md.numConstInputs > 0)
-            {
-                int constTensorIdx = md.constTensorIndices[0];
-                if (constTensorIdx == 0)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-    ),
-    TIDL_CSTR(
         "Data and indices batch dimension should be same.",
         "Data and indices batch dimension should be same.",
         "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
 
-            if(layer->optimized && (layer->inData[0].dimValues[TIDL_DIM_BATCH] != layer->inData[1].dimValues[TIDL_DIM_BATCH]))
+            if(layer->optimized)
             {
-                return false;
+                if(layer->inData[0].dimValues[TIDL_DIM_BATCH] != layer->inData[1].dimValues[TIDL_DIM_BATCH])
+                {
+                    return false;
+                }
             }
-            
+            else
+            {
+                int8_t dataIsVar = 0, indicesIsVar = 0;
+                vector<int32_t> dataDims;
+                vector<int32_t> indicesDims;
+                sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+
+                for (int32_t i = 0; i < (int32_t)md.varTensorIndices.size(); i++)
+                {
+                    if (md.varTensorIndices[i] == 0) dataIsVar = 1;
+                    if (md.varTensorIndices[i] == 1) indicesIsVar = 1;
+                }
+
+                if(dataIsVar && indicesIsVar)
+                {
+                    dataDims   = md.varTensorsDims[0];
+                    indicesDims = md.varTensorsDims[1];
+                }
+                else if(dataIsVar && !indicesIsVar)
+                {
+                    dataDims   = md.varTensorsDims[0];
+                    indicesDims = md.constTensorsDims[0];
+                }
+                else if(!dataIsVar && indicesIsVar)
+                {
+                    dataDims   = md.constTensorsDims[0];
+                    indicesDims = md.varTensorsDims[0];
+                }
+
+                if((int32_t)dataDims.size() >= TIDL_DIM_MAX &&
+                   (int32_t)indicesDims.size() >= TIDL_DIM_MAX
+                   && dataDims[TIDL_DIM_BATCH] > 0 &&
+                   indicesDims[TIDL_DIM_BATCH] > 0)
+                {
+                    if(dataDims[TIDL_DIM_BATCH] != indicesDims[TIDL_DIM_BATCH])
+                    {
+                        return false;
+                    }
+                }
+            }
+
             return true;
         }
-    ),
-    //TIDL_CSTR(
-    //    "GatherElements is not supported as an individual operator",
-    //    "GatherElements is not supported as an individual operator",
-    //    "GatherElements is not supported as an individual operator",
-    //    [](const sTIDL_LayerPC_t *layer, string &logs){
-    //        return false;
-    //    }
-    //),
+    )
 };

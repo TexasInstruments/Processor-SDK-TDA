@@ -348,7 +348,7 @@ VX_API_ENTRY vx_node VX_API_CALL tivxDmpacSdeNode(vx_graph graph,
  */
  void tivx_dmpac_sde_params_init(tivx_dmpac_sde_params_t *prms);
 
-#if !defined(SOC_J722S)
+
 /*!
  * \brief Function to initialize SDE safety mechanism parameters with default values
  *
@@ -358,7 +358,7 @@ VX_API_ENTRY vx_node VX_API_CALL tivxDmpacSdeNode(vx_graph graph,
  */
 void tivx_dmpac_sde_safety_mech_prms_init(
 	tivx_dmpac_sde_safety_mechanism_params_t *prms);
-#endif
+
 #ifdef __cplusplus
 }
 #endif

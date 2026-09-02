@@ -80,6 +80,7 @@
 #include <float.h>
 #if (HOST_EMULATION)
 #include <malloc.h>
+#include "tidl_bfloat16.h"
 #endif
 
 #include <ivision.h>
@@ -593,15 +594,6 @@ int32_t is_tidlrt_in_tensor_same( sTIDL_IOBufDesc_t *ioBufDesc, sTIDLRT_Tensor_t
     {
         return 0;
     }
-    int32_t chPitch = in[tidlrt_id]->pitch[TIDL_CHANNEL_PITCH];
-    if(chPitch == -1)
-    {
-        chPitch = ioBufDesc->inWidth[id]*ioBufDesc->inHeight[id];
-    }
-    if(chPitch != ioBufDesc->inChannelPitch[id])
-    {
-        return 0;
-    }
     if(in[tidlrt_id]->layout != ioBufDesc->inLayout[id])
     {
         return 0;
@@ -611,6 +603,18 @@ int32_t is_tidlrt_in_tensor_same( sTIDL_IOBufDesc_t *ioBufDesc, sTIDLRT_Tensor_t
         return 0;
     }
     if(in[tidlrt_id]->scale != ioBufDesc->inTensorScale[id])
+    {
+        return 0;
+    }
+
+    int32_t chPitch = in[tidlrt_id]->pitch[TIDL_CHANNEL_PITCH];
+  
+    if(chPitch == -1)
+    {
+        chPitch = ioBufDesc->inWidth[id]*ioBufDesc->inHeight[id];
+    }
+  
+    if(ioBufDesc->inIsDynamic[id] != 1 && chPitch != ioBufDesc->inChannelPitch[id])
     {
         return 0;
     }
@@ -662,11 +666,19 @@ static void tidl_copyRTTensorToInBufs(const sTIDL_Network_t *net, sTIDL_IOBufDes
       void *rtPtr  = ins[i]->ptr;
       void * ivPtr = BufDescList[i].bufPlanes[0].buf;
       int32_t elementSizeBytes  = tidltb_getDatElementSize(ins[i]->elementType);
-      memcpy(ivPtr, rtPtr, n * d1 * d2 * c * elementSizeBytes * ins[i]->pitch[TIDL_CHANNEL_PITCH]);
+      memcpy(ivPtr, rtPtr, n * d1 * d2 * c *  ioPrms->inChannelPitch[i] * elementSizeBytes);
     }
     else
     {
-      /** Needs to be updated for 6D*/
+      /*
+       * This else case mostly never hit because how strict allocation is for
+       * input tensors i,e is_tidlrt_in_tensor_same is true. Hence this is
+       * not maintained. 
+       * 
+       * Needs update for 6D.
+       * Also net pointer is not required here and is anyway NULL when it comes
+       * here.
+       */
       int32_t h, w, lp, cp;
       int32_t i0, i1, i2, i3, offset, idx;
       float data;
@@ -683,7 +695,7 @@ static void tidl_copyRTTensorToInBufs(const sTIDL_Network_t *net, sTIDL_IOBufDes
       int32_t zp = ins[i]->zeroPoint;
       int32_t layout = ins[i]->layout;
 
-      if(ins[i]->elementType == TIDL_SinglePrecFloat)
+      if(ins[i]->elementType == TIDL_SinglePrecFloat || ins[i]->elementType == TIDL_BFloat16)
       {
         inScale = 1.0;
         zp = 0;
@@ -1017,6 +1029,18 @@ void tidl_copyOutBufsToRTTensor(sTIDL_IOBufDesc_t * ioPrms,  sTIDLRT_Tensor_t   
             {
               data = ((int16_t*)ivPtr)[offset + i3*cp*c + i0*cp + i1*lp + i2];
             }
+            #if (!HOST_EMULATION)
+            else if(ioPrms->outElementType[i] == TIDL_BFloat16)
+            {
+              /*Temporarily using int16_t container, since scale will be "1" & zero point 0 for BF16*/
+              data = ((int16_t*)ivPtr)[offset + i3*cp*c + i0*cp + i1*lp + i2];
+            }
+            #else
+            else if(ioPrms->outElementType[i] == TIDL_BFloat16)
+            {
+              data = ((bfloat16_tidl*)ivPtr)[offset + i3*cp*c + i0*cp + i1*lp + i2];
+            }
+            #endif
             else if(ioPrms->outElementType[i] == TIDL_SinglePrecFloat)
             {
               data = ((float*)ivPtr)[offset + i3*cp*c + i0*cp + i1*lp + i2];
@@ -1351,6 +1375,7 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
     }
 
     outArgs.iVisionOutArgs.size = sizeof(TIDL_outArgs);
+
     inArgs.iVisionInArgs.size = sizeof(TIDL_InArgs);
     inArgs.iVisionInArgs.subFrameInfo = 0;
 #ifdef HOST_EMULATION
@@ -1358,6 +1383,14 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
 #else
     inArgs.enableLayerPerfTraces = (prms->traceLogLevel > 0);
 #endif
+    for (i = 0; i < inBufs.numBufs; i++)
+    {
+      for (j = 0; j < TIDL_DIM_MAX; j++)
+      {
+          inArgs.inDimValues[i][j] = (int32_t)in[i]->dimValues[j];
+      }
+    }
+    
     if(!((prms->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) || (prms->flowCtrl & TIDL_FLOW_CTRL_PERF_MODEL)))
     {
       if (rtHandle->procIdx == 0)

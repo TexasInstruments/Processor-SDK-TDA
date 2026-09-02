@@ -80,55 +80,56 @@
 using namespace std;
 typedef enum
 {
-  TIDL_PriorBoxLayer        = TIDL_UnsupportedLayer+1,
-  TIDL_PermuteLayer          ,
-  TIDL_ClipLayer             ,
-  TIDL_MinimumLayer          ,
-  TIDL_LeakyReluLayer        ,
-  TIDL_IdentityLayer         ,
-  TIDL_BatchToSpaceLayer     ,
-  TIDL_SpaceToBatchLayer     ,
-  TIDL_PackLayer             ,
-  TIDL_DequantizeLayer       ,
-  TIDL_QuantizeLayer         ,
-  TIDL_SqrtLayer             ,
-  TIDL_ReduceMeanLayer       ,
-  TIDL_ReduceSumLayer       ,
-  TIDL_PowLayer              ,
-  TIDL_DivLayer              ,
-  TIDL_SubLayer              ,
-  TIDL_PatchMergeLayer       ,
-  TIDL_AsinLayer             ,
-  TIDL_AsinhLayer            ,
-  TIDL_HardSwishLayer        ,
-  TIDL_MishLayer             ,
-  TIDL_LogLayer              ,
-  TIDL_UnsqueezeLayer        ,
-  TIDL_AbsLayer              ,
-  TIDL_FloorLayer            ,
-  TIDL_ExpLayer              ,
-  TIDL_SinLayer              ,
-  TIDL_ErfLayer              ,
-  TIDL_InstanceNormLayer     ,
-  TIDL_SpaceToDepthLayer     ,
-  TIDL_AcosLayer             ,
-  TIDL_AtanLayer             ,
-  TIDL_SinhLayer             ,
-  TIDL_NegLayer              ,
-  TIDL_CosLayer              ,
-  TIDL_CoshLayer             ,
-  TIDL_TanLayer              ,
-  TIDL_ExpandLayer           ,
-  TIDL_SwishLayer            ,
-  TIDL_SoftPlusLayer         ,
-  TIDL_SoftSignLayer         ,
-  TIDL_CeilLayer             ,
-  TIDL_CeluLayer             ,
-  TIDL_SeluLayer             ,
-  TIDL_RoundLayer            ,
-  TIDL_SignLayer             ,
-  TIDL_GroupNormLayer        ,
-  TIDL_CastLikeLayer         ,
+  TIDL_PriorBoxLayer                = TIDL_UnsupportedLayer+1,
+  TIDL_PermuteLayer                 ,
+  TIDL_ClipLayer                    ,
+  TIDL_MinimumLayer                 ,
+  TIDL_LeakyReluLayer               ,
+  TIDL_IdentityLayer                ,
+  TIDL_BatchToSpaceLayer            ,
+  TIDL_SpaceToBatchLayer            ,
+  TIDL_PackLayer                    ,
+  TIDL_DequantizeLayer              ,
+  TIDL_QuantizeLayer                ,
+  TIDL_SqrtLayer                    ,
+  TIDL_ReduceMeanLayer              ,
+  TIDL_ReduceSumLayer               ,
+  TIDL_PowLayer                     ,
+  TIDL_DivLayer                     ,
+  TIDL_SubLayer                     ,
+  TIDL_PatchMergeLayer              ,
+  TIDL_AsinLayer                    ,
+  TIDL_AsinhLayer                   ,
+  TIDL_HardSwishLayer               ,
+  TIDL_MishLayer                    ,
+  TIDL_LogLayer                     ,
+  TIDL_UnsqueezeLayer               ,
+  TIDL_AbsLayer                     ,
+  TIDL_FloorLayer                   ,
+  TIDL_ExpLayer                     ,
+  TIDL_SinLayer                     ,
+  TIDL_ErfLayer                     ,
+  TIDL_InstanceNormLayer            ,
+  TIDL_SpaceToDepthLayer            ,
+  TIDL_AcosLayer                    ,
+  TIDL_AtanLayer                    ,
+  TIDL_SinhLayer                    ,
+  TIDL_NegLayer                     ,
+  TIDL_CosLayer                     ,
+  TIDL_CoshLayer                    ,
+  TIDL_TanLayer                     ,
+  TIDL_ExpandLayer                  ,
+  TIDL_SwishLayer                   ,
+  TIDL_SoftPlusLayer                ,
+  TIDL_SoftSignLayer                ,
+  TIDL_CeilLayer                    ,
+  TIDL_CeluLayer                    ,
+  TIDL_SeluLayer                    ,
+  TIDL_RoundLayer                   ,
+  TIDL_SignLayer                    ,
+  TIDL_GroupNormLayer               ,
+  TIDL_CastLikeLayer                ,
+  TIDL_SkipSimplifiedLayerNormLayer ,
 }eTIDL_PCLayerType;
 
 typedef enum
@@ -192,7 +193,7 @@ typedef enum
   TIDL_MAX_QUANT_PARAMS,
 }eTIDL_QuantParamsType;
 
-extern const char * TIDL_LayerString[];
+const char* TIDL_GetLayerString(int32_t layerType);
 
 #define TIDL_NUM_MAX_PC_LAYERS (4096)
 #define TIDL_NUM_MAX_SUBGRAPH_NODES (864)
@@ -455,6 +456,8 @@ typedef struct{
   sBuffer_t initial_c;
   /** Buffer containing peepholes tensor */
   sBuffer_t peepholes;
+  /** Buffer containing activation input and output scales */
+  sBuffer_t activationScales;
   /** Flag to indicate whether multiple outputs are handled by slice or not */
   int8_t isOutputSliced;
 }sTIDL_LSTMPCParams_t;
@@ -485,6 +488,13 @@ typedef struct{
   /** Flag to indicate whether slice points are set by parser */
   int8_t setSlicePoints;
 }sTIDL_SlicePCParams_t;
+
+typedef struct{
+  /** Epsilon value for numerical stability of division */
+  float32_tidl epsilon;
+  /** Has sum output */
+  int8_t hasSumOut;
+}sTIDL_SkipSimplifiedLayerNormParams_t;
 
 /**
 @struct sTIDL_allowlistingMetaData
@@ -564,6 +574,7 @@ typedef union {
   sTIDL_RNNPCParams_t rnnParams;
   sTIDL_AttentionPCParams_t attentionParams;
   sTIDL_SlicePCParams_t sliceParams;
+  sTIDL_SkipSimplifiedLayerNormParams_t skipSimplifiedLayerNormParams;
 } sTIDL_LayerPCParams_t;
 
 /**
@@ -651,8 +662,6 @@ typedef struct {
     int32_t weightsElementSizeInBits;  //kernel weights in bits
     /** Offset selection method for stride. \ref eTIDL_StrideOffsetMethod */
     int32_t strideOffsetMethod;
-    /* Indicates whether layer is split across multiple cores */
-    int32_t multiCoreMode;
     int32_t scratchMemRequired;
     int32_t weightsReordered;
     sTIDL_QuantParams_t quantParams[TIDL_MAX_QUANT_PARAMS];

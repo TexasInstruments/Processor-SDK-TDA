@@ -23,8 +23,8 @@ ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), x86_64 A72 A53 A720))
         CSOURCES    += app_obj_arr_split_module.c
 
         IDIRS       += $(IMAGING_IDIRS)
-        IDIRS       += $(VISION_APPS_PATH)/kernels/img_proc/include
-        IDIRS       += $(VISION_APPS_PATH)/kernels/fileio/include
+        IDIRS       += $(APP_KERNELS_PATH)/kernels/img_proc/include
+        IDIRS       += $(APP_KERNELS_PATH)/kernels/fileio/include
         IDIRS       += $(TIDL_PATH)/ti_dl/inc
         IDIRS       += $(VISION_APPS_PATH)/modules/include
 

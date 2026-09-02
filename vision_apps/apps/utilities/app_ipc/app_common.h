@@ -67,7 +67,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <TI/tivx.h>
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 
 //#define APP_DEBUG
 #define APP_USE_FILEIO

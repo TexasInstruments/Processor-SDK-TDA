@@ -244,6 +244,17 @@ VX_API_ENTRY vx_node VX_API_CALL tivxTestNotNode(vx_graph graph,
                                       vx_image            input,
                                       vx_image            output);
 
+/*! \brief [Graph] Creates a TEST_ERROR_INFO Node.
+ * \param [in] graph The reference to the graph.
+ * \param [in] error_info_value
+ * \param [in] error_info_size
+ * \see <tt>TIVX_KERNEL_TEST_ERROR_INFO_NAME</tt>
+ * \ingroup group_vision_function_test_error_info
+ * \return <tt>\ref vx_node</tt>.
+ * \retval vx_node A node reference. Any possible errors preventing a successful creation should be checked using <tt>\ref vxGetStatus</tt>
+ */
+VX_API_ENTRY vx_node VX_API_CALL tivxTestErrorInfoNode(vx_graph graph, vx_scalar error_info_value, vx_scalar error_info_size);
+
 /*! \brief [Graph] Creates a MULTI_DSP_NOT_NOT Node.
  * \param [in] graph The reference to the graph.
  * \param [in] input

@@ -68,15 +68,18 @@ void tivxAddTargetKernelCmdTimeoutTest(void);
 void tivxAddTargetKernelNotNot_arm(void);
 void tivxAddTargetKernelTiovxOverhead(void);
 void tivxAddTargetKernelMultiDSPNotNot_arm(void);
+void tivxAddTargetKernelTestErrorInfo(void);
 
 void tivxRemoveTargetKernelCmdTimeoutTest(void);
 void tivxRemoveTargetKernelNotNot_arm(void);
 void tivxRemoveTargetKernelTiovxOverhead(void);
 void tivxRemoveTargetKernelMultiDSPNotNot_arm(void);
+void tivxRemoveTargetKernelTestErrorInfo(void);
 
 static Tivx_Target_Kernel_List  gTivx_target_kernel_list[] = {
     {&tivxAddTargetKernelCmdTimeoutTest, &tivxRemoveTargetKernelCmdTimeoutTest},
     {&tivxAddTargetKernelTiovxOverhead, &tivxRemoveTargetKernelTiovxOverhead},
+    {&tivxAddTargetKernelTestErrorInfo, &tivxRemoveTargetKernelTestErrorInfo},
 #if defined(LINUX) || defined(QNX)
     {&tivxAddTargetKernelNotNot_arm, &tivxRemoveTargetKernelNotNot_arm},
     {&tivxAddTargetKernelMultiDSPNotNot_arm, &tivxRemoveTargetKernelMultiDSPNotNot_arm},

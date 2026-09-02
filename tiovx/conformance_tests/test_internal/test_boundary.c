@@ -419,6 +419,80 @@ TEST(tivxObjDescBoundary, negativeTestOwnEventQueueCreate)
 }
 #endif  /* Not R5F */
 
+/* When calling vxReplicateNode, an additional tivx_error_info_obj_desc is allocated in the node
+ * When enabling pipelining, an additional tivx_error_info_obj_desc is allocated for each pipeline depth.
+ */
+TEST(tivxObjDescBoundary, negativeTestvxReplicateNode)
+{
+    vx_context context = context_->vx_context_;
+    vx_graph graph = 0;
+    vx_kernel kernel = 0;
+    vx_node node = 0;
+    vx_image image = 0;
+    vx_object_array in_arr = 0, out_arr = 0;
+    vx_image in0 = 0, out0 = 0;
+    vx_bool replicate2[2] = { vx_true_e, vx_true_e };
+    tivx_obj_desc_t *filler[TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST];
+    uint32_t num_filled = 0;
+    uint32_t i;
+
+    ASSERT_VX_OBJECT(graph  = vxCreateGraph(context), VX_TYPE_GRAPH);
+    ASSERT_VX_OBJECT(kernel = vxGetKernelByEnum(context, VX_KERNEL_BOX_3x3), VX_TYPE_KERNEL);
+    ASSERT_VX_OBJECT(image  = vxCreateImage(context, 16, 16, VX_DF_IMAGE_U8), VX_TYPE_IMAGE);
+    ASSERT_VX_OBJECT(in_arr  = vxCreateObjectArray(context, (vx_reference)image, 2), VX_TYPE_OBJECT_ARRAY);
+    ASSERT_VX_OBJECT(out_arr = vxCreateObjectArray(context, (vx_reference)image, 2), VX_TYPE_OBJECT_ARRAY);
+    ASSERT_VX_OBJECT(in0  = (vx_image)vxGetObjectArrayItem(in_arr, 0), VX_TYPE_IMAGE);
+    ASSERT_VX_OBJECT(out0 = (vx_image)vxGetObjectArrayItem(out_arr, 0), VX_TYPE_IMAGE);
+
+    ASSERT_VX_OBJECT(node = vxCreateGenericNode(graph, kernel), VX_TYPE_NODE);
+    VX_CALL(vxSetParameterByIndex(node, 0, (vx_reference)in0));
+    VX_CALL(vxSetParameterByIndex(node, 1, (vx_reference)out0));
+
+    /* Drain the shared object descriptor pool to exactly zero free slots,
+     * regardless of how many are already used by context/graph/node setup above. */
+    for (num_filled = 0; num_filled < TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST; num_filled++)
+    {
+        filler[num_filled] = ownObjDescAlloc((vx_enum)TIVX_OBJ_DESC_USER_DATA_OBJECT, (vx_reference)image);
+        if (NULL == filler[num_filled])
+        {
+            break;
+        }
+    }
+
+    /* Zero free slots: vxReplicateNode's own error_info_obj_desc allocation fails. */
+    ASSERT_EQ_VX_STATUS(VX_ERROR_NO_RESOURCES, vxReplicateNode(graph, node, replicate2, 2));
+
+    /* Free exactly one slot: vxReplicateNode now succeeds, consuming it for obj_desc_error_info[0]. */
+    ASSERT(num_filled > 0U);
+    num_filled--;
+    VX_CALL(ownObjDescFree(&filler[num_filled]));
+    ASSERT_EQ_VX_STATUS(VX_SUCCESS, vxReplicateNode(graph, node, replicate2, 2));
+    ASSERT(node->obj_desc_error_info[0] != NULL);
+
+    /* Free exactly one more slot: ownNodeAllocObjDescForPipeline's obj_desc[1] allocation
+     * consumes it, leaving nothing for the error_info companion allocated right after it. */
+    ASSERT(num_filled > 0U);
+    num_filled--;
+    VX_CALL(ownObjDescFree(&filler[num_filled]));
+    ASSERT_EQ_VX_STATUS(VX_ERROR_NO_RESOURCES, ownNodeAllocObjDescForPipeline(node, 2));
+
+    for (i = 0; i < num_filled; i++)
+    {
+        if (NULL != filler[i])
+        {
+            VX_CALL(ownObjDescFree(&filler[i]));
+        }
+    }
+
+    VX_CALL(vxReleaseNode(&node));
+    VX_CALL(vxReleaseImage(&in0));
+    VX_CALL(vxReleaseImage(&out0));
+    VX_CALL(vxReleaseObjectArray(&in_arr));
+    VX_CALL(vxReleaseObjectArray(&out_arr));
+    VX_CALL(vxReleaseImage(&image));
+    VX_CALL(vxReleaseGraph(&graph));
+}
+
 TESTCASE_TESTS(tivxObjDescBoundary,
         negativeTestObjDescBoundary,
         negativeBoundaryThreshold,
@@ -428,5 +502,6 @@ TESTCASE_TESTS(tivxObjDescBoundary,
         negativeTestOwnEventQueueCreate,
 #endif  /* Not R5F */
         negativeBoundaryTestownContextCreateCmdObj2,
-        testownContextFlushCmdPendQueue
+        testownContextFlushCmdPendQueue,
+        negativeTestvxReplicateNode
         )

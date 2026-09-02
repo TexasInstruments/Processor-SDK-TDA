@@ -102,8 +102,12 @@ fi
 
 # Create an SSH agent and load the key baked into the image at build time
 eval $(ssh-agent -s)
-ssh-add /root/.ssh/id_rsa
-export GIT_SSH_COMMAND="ssh -i /root/.ssh/id_rsa"
+ssh-add $HOME/.ssh/id_rsa
+export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/id_rsa"
+
+if [ -f /home/pokyuser/.ssh/id_rsa ]; then
+    ssh-add /home/pokyuser/.ssh/id_rsa 2>/dev/null || true
+fi
 
 total_build_start_time=`date +%s`
 date=`date '+%b_%d_%Y_%I_%M_%p'`
@@ -1412,16 +1416,14 @@ if [ "${release_build}" == "false" ]; then
   fi
 fi
 if [ "${docs_build}" == "false" ] && [ "${quick_ethfw_build}" == "false" ]; then
-  # Copy SDL source files for all builds (enet_ecc_test needs them)
-  # But only build SDL libraries for ethfw builds
-  if [ "${enet_build}" == "true" ]; then
-    echo "Copying SDL source files for enet build..."
-    cp -rf ${clone_dir}/sdl ${sdk_install_path}
-    echo "SDL source files copied (libraries will not be built for enet builds)"
-  else
+  if [ "${enet_build}" != "true" ]; then
+    # ethfw build: build SDL before PDK (SDL does not depend on PDK libs here)
     build_sdl
   fi
   pdk_build
+  if [ "${enet_build}" == "true" ]; then
+    build_sdl || echo "WARNING: SDL build had failures — enet_ecc_test may fail to link"
+  fi
 fi
 
 
@@ -1982,7 +1984,7 @@ copying_artifacts_nas() {
     fi
   fi
   
-  if [ "${release_build}" == "false" ]; then 
+  if [ "${release_build}" == "false" ]; then
   # Only trigger tests if the builds have not been triggered by promotion job.
   # In case of promotion job, it also handles the test triggers.
 
@@ -2005,7 +2007,7 @@ copying_artifacts_nas() {
         if [[ "$trigger_tests" == "true" ]]; then
           case $soc in
             j7200) JOB="ethfw-j7200-pg2.0-full-test"; JIRA="ETHFW-2915" ;;
-            j721e) JOB="view/CPSW/job/ethfw-j721e-pg1.1-full-test"; JIRA="ETHFW-2916" ;;
+            j721e) JOB="ethfw-j721e-pg1.1-full-test"; JIRA="ETHFW-2916" ;;
             j784s4) JOB="ethfw-j784s4-pg2.0-full-test"; JIRA="ETHFW-2917" ;;
           esac
         fi

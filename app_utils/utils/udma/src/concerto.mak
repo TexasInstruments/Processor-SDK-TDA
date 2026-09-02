@@ -25,12 +25,15 @@ ifneq ($(TARGET_PLATFORM),PC)
         endif
 
         ifeq ($(RTOS_SDK),mcu_sdk)
-            DEFS     += MCU_SDK
             IDIRS    += $(DMA_UTILS_PATH)
             IDIRS    += $(DMA_UTILS_PATH)/udma_standalone
             IDIRS    += $(DMA_UTILS_PATH)/udma_standalone/include
             IDIRS    += $(DMA_UTILS_PATH)/csl
             IDIRS    += $(DMA_UTILS_PATH)/include
+            IDIRS    += $(MCU_SDK_PATH)/source/drivers/Udma/v0/soc/$(SOC)
+            IDIRS    += $(MCU_SDK_PATH)/source/hal/Bcdma/v0/include
+            IDIRS    += $(MCU_SDK_PATH)/source/hal/Dru/v0/include
+            IDIRS    += $(MCU_SDK_PATH)/source/hal/Psilcfg/v0/include
         endif
 
         ifeq ($(TARGET_OS),QNX)

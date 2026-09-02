@@ -98,7 +98,9 @@ static int32_t WorkloadRefExec_getIndexFromDataId(int32_t dataId, int32_t dataId
   int32_t arrIdx = WORKLOAD_REF_BUF_NOT_FOUND;
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   for (int32_t i = 0; i < numDataId; i++)
   {
@@ -117,7 +119,9 @@ static int32_t WorkloadRefExec_getIndexFromDataId(int32_t dataId, int32_t dataId
   /* LDRA_JUSTIFY_END */
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if (!(arrIdx != WORKLOAD_REF_BUF_NOT_FOUND))
   {
@@ -150,7 +154,9 @@ static int32_t WorkloadRefExec_getValidOffset(const sTIDL_DataParams_t *dataPara
   }
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if (algLayer->gcHelperHandle == NULL)
   {
@@ -238,7 +244,9 @@ static inline void WorkloadRefExec_getPtrsFromWorkload(const TIDL_NetworkCommonP
   sLink_t *linkPtrList[MAX_LINKS_PER_WL];
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if(workloadUnit != NULL)
   {
@@ -286,7 +294,9 @@ static inline void WorkloadRefExec_getPtrsFromWorkload(const TIDL_NetworkCommonP
             arrIdx = WorkloadRefExec_getIndexFromDataId(pMetaDataID.layerId, tidlLayer->inData, tidlLayer->numInBufs, refInPtrs);
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if (arrIdx >= 0)
             /* LDRA_JUSTIFY_END */
@@ -309,7 +319,9 @@ static inline void WorkloadRefExec_getPtrsFromWorkload(const TIDL_NetworkCommonP
             arrIdx = WorkloadRefExec_getIndexFromDataId(pMetaDataID.layerId, &tidlLayer->outData.dataId, tidlLayer->numOutBufs, refOutPtrs);
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data. This code is maintained to avoid array out of bound error.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data. This code is maintained to avoid array out of bound error.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if (arrIdx >= 0) // checking arrIdx before accessing, MISRA caught this issue
             /* LDRA_JUSTIFY_END */
@@ -331,7 +343,9 @@ static inline void WorkloadRefExec_getPtrsFromWorkload(const TIDL_NetworkCommonP
           gcPtr = (uint8_t *)gcPtr + (joint->superOffset * (algLayer->wlRepeatIter * elemSize));
           /* LDRA_JUSTIFY_START
           <metric start> branch <metric end>
-          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification start>
+          Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
           <justification end> */
           if (((uintptr_t)gcPtr < (uintptr_t)(*ptrToArrMem)) || ((*ptrToArrMem) == NULL))
           {
@@ -381,7 +395,9 @@ void WorkloadRefExec_getPtrs(TIDL_NetworkCommonParams *commonParams,
 #ifndef HOST_EMULATION
 /* LDRA_JUSTIFY_START
 <metric start> branch <metric end>
-<justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+<justification start>
+Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
 <justification end> */
 #endif
   if (workloadUnit != NULL)
@@ -410,7 +426,9 @@ void WorkloadRefExec_getPtrs(TIDL_NetworkCommonParams *commonParams,
 #ifndef HOST_EMULATION
 /* LDRA_JUSTIFY_START
 <metric start> branch <metric end>
-<justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+<justification start>
+Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
 <justification end> */
 #endif
   if (tidlLayer->layerType != TIDL_CustomLayer)
@@ -453,7 +471,9 @@ void WorkloadRefExec_getRefParams(WorkloadRefExec_RefExecParams *wlRefParams,
 #ifndef HOST_EMULATION
 /* LDRA_JUSTIFY_START
 <metric start> branch <metric end>
-<justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+<justification start>
+Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
 <justification end> */
 #endif
   if ((workloadUnit != NULL) && (gcHelperHandle != NULL))
@@ -761,17 +781,6 @@ int32_t WorkloadRefExec_Process(TIDL_Handle algHandle,
 
   status = TIDL_layerProcessNew(commonParams, algLayer, tidlLayer, refInPtrs, refOutPtrs, layerId);
 
-#if ENABLE_OLD_FLOW
-  if (status == NOT_VALID)
-  {
-    if (commonParams->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_LAYERPROCESS_FORCE_REDUCELAYER_NULL)
-    {
-      algHandle->perfSimOutput = NULL;
-    }
-    status = TIDL_layerProcess(algHandle, algLayer, tidlLayer, refInPtrs, refOutPtrs, algHandle->sysMems,
-                               layerId, commonParams);
-  }
-#endif
 #ifdef HOST_EMULATION
   if ((status == IALG_EOK) && (algHandle->gcHelperHandle == NULL)) // Only for stats collection run
   {
@@ -869,7 +878,10 @@ int32_t WorkloadRefExec_Process(TIDL_Handle algHandle,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int32_t WorkloadRefExec_writeTraceDataBuf.* <function end>
-<justification start> DEBUG_TRACE : This function is solely for debugging purposes and is not part of the production code.
+<justification start>
+Rationale - DEBUG_TRACE: This function is solely for debugging purposes and is not part of the production code.
+Effect on this UNIT - If the control reaches here, code is expected to function correctly for debug/trace purpose. 
+However, due to the stated rationale, this is not covered in production code.
 <justification end> */
 int32_t WorkloadRefExec_writeTraceDataBuf(void *outPtr,
                                           TIDL_Handle algHandle,

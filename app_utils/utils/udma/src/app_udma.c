@@ -93,9 +93,9 @@
 extern struct Udma_DrvObj *gUdmaDrvObj;
 extern struct Udma_ChObj  *gUdmaChObj;
 #else
-#if defined(MCU_PLUS_SDK)
+#if defined(MCU_PLUS_SDK) || defined(MCU_SDK)
 static Udma_DrvObject gAppUdmaDrvObj;
-#elif defined(PDK) || defined(MCU_SDK)
+#elif defined(PDK)
 static struct Udma_DrvObj gAppUdmaDrvObj;
 #endif
 #endif
@@ -108,6 +108,9 @@ static struct Udma_DrvObj gAppUdmaDrvObjCsirxCsitx;
 #endif
 #if defined(SOC_J722S) || (defined(SOC_AM62A) && defined(adas))
 static Udma_DrvObjectInt gAppUdmaDrvObjCsirxCsitx;
+#endif
+#if defined(MCU_SDK)
+static Udma_DrvObject gAppUdmaDrvObjCsirxCsitx;
 #endif
 
 /* ========================================================================== */
@@ -177,9 +180,9 @@ int32_t appUdmaInit(const app_udma_init_prms_t *prms)
 #if defined(SOC_AM62A) && defined(QNX) && defined(edgeai)
     udmaInstId = UDMA_INST_ID_CSI_BCDMA_0;
 #else
-#if defined(MCU_PLUS_SDK)
+#if defined(MCU_PLUS_SDK) || defined(MCU_SDK)
     udmaInstId = UDMA_INST_ID_0;
-#elif defined(PDK) || defined(MCU_SDK)
+#elif defined(PDK)
     udmaInstId = UDMA_INST_ID_MAIN_0;
 #endif
 #endif
@@ -298,7 +301,7 @@ void *appUdmaGetObj(void)
     #endif
 }
 
-#if defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined (SOC_J722S) || (defined(SOC_AM62A) && defined(adas))
+#if defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined (SOC_J722S) || defined(SOC_FAMILY_TDA5) || (defined(SOC_AM62A) && defined(adas))
 int32_t appUdmaCsirxCsitxInit(void)
 {
     int32_t         retVal = 0;
@@ -309,6 +312,8 @@ int32_t appUdmaCsirxCsitxInit(void)
 
     #if defined(MCU_PLUS_SDK)
     udmaInstId = UDMA_INST_ID_BCDMA_1;
+    #elif defined(MCU_SDK)
+    udmaInstId = UDMA_INST_ID_MAIN_RT_BCDMA_2;
     #elif defined(PDK)
     udmaInstId = UDMA_INST_ID_BCDMA_0;
     #endif
@@ -346,7 +351,7 @@ int32_t appUdmaCsirxCsitxDeInit(void)
 
 void *appUdmaCsirxCsitxGetObj(void)
 {
-    #if defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J722S) || (defined(SOC_AM62A) && defined(adas))
+    #if defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J722S) || defined (SOC_FAMILY_TDA5) || (defined(SOC_AM62A) && defined(adas))
     return (void *)&gAppUdmaDrvObjCsirxCsitx;
     #elif defined(SOC_AM62A) && defined(QNX) && defined(edgeai)
     return (void *)gUdmaDrvObj;

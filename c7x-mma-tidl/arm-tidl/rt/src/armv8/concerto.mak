@@ -21,39 +21,46 @@ TARGET_OVX_PATH ?= TDA54
 endif
 
 LDIRS += $(TIOVX_PATH)/lib/$(TARGET_OVX_PATH)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
-LDIRS += $(VISION_APPS_PATH)/out/$(TARGET_OVX_PATH)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+LDIRS += $(PLATFORM_PATH)/out/$(TARGET_OVX_PATH)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 LDIRS += $(LINUX_FS_PATH)/usr/lib
 LDIRS += $(APP_UTILS_PATH)/lib/$(TARGET_OVX_PATH)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 LDIRS += $(TIDL_PATH)/arm-tidl/tiovx_kernels/lib/$(TARGET_OVX_PATH)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 
 TIOVX_LIBS  =
-TIOVX_LIBS += vx_framework
-#TIOVX_LIBS += vx_platform_psdk_j7
-TIOVX_LIBS += vx_kernels_host_utils
-TIOVX_LIBS += vx_kernels_tidl
-TIOVX_LIBS += vx_nested_kernels_tidl
-TIOVX_LIBS += vx_kernels_tvm
-
+TIOVX_LIBS += vx_vxu vx_framework
+TIOVX_LIBS += vx_kernels_host_utils vx_kernels_target_utils
+TIOVX_LIBS += vx_platform_board_hlos
 TIOVX_LIBS += vx_kernels_openvx_core
+TIOVX_LIBS += vx_kernels_openvx_ext vx_target_kernels_openvx_ext
+TIOVX_LIBS += vx_kernels_tidl
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J784S4 j784s4 J722S j722s J742S2 j742s2))
+TIOVX_LIBS += vx_nested_kernels_tidl
+endif
+TIOVX_LIBS += vx_kernels_tvm
 TIOVX_LIBS += vx_utils
 
-VISION_APPS_UTILS_LIBS += app_utils_console_io
-VISION_APPS_UTILS_LIBS += app_utils_file_io
-VISION_APPS_UTILS_LIBS += app_utils_ipc
-VISION_APPS_UTILS_LIBS += app_rtos_linux_mpu1_common
-VISION_APPS_UTILS_LIBS += app_utils_remote_service
-VISION_APPS_UTILS_LIBS += app_utils_mem
-VISION_APPS_UTILS_LIBS += app_utils_perf_stats
-VISION_APPS_UTILS_LIBS += app_utils_init
+APP_UTILS_LIBS += app_utils_console_io
+APP_UTILS_LIBS += app_utils_file_io
+APP_UTILS_LIBS += app_utils_ipc
+APP_UTILS_LIBS += app_utils_timer
+APP_UTILS_LIBS += app_utils_remote_service
+APP_UTILS_LIBS += app_utils_mem
+APP_UTILS_LIBS += app_utils_perf_stats
 
-# STATIC_LIBS += $(TIOVX_LIBS)
-# STATIC_LIBS += $(VISION_APPS_UTILS_LIBS)
+HLOS_PLATFORM_LIBS =
+HLOS_PLATFORM_LIBS += app_init_hlos_common
+HLOS_PLATFORM_LIBS += ipc_common
+
+STATIC_LIBS += $(TIOVX_LIBS)
+STATIC_LIBS += $(APP_UTILS_LIBS)
+STATIC_LIBS += $(HLOS_PLATFORM_LIBS)
 
 SHARED_LIBS += ti_rpmsg_char
-SHARED_LIBS += tivision_apps
 SHARED_LIBS += rt
 
 include $($(_MODULE)_SDIR)/../concerto_common.mak
+
+IDIRS += $(PLATFORM_PATH)/hlos/include
 
 include $(FINALE)
 

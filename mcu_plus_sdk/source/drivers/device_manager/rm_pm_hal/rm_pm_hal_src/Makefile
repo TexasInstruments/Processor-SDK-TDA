@@ -78,9 +78,10 @@ obj-security-y+=$(filter tifs/src/hs/%,$(obj-y))
 obj-security-boot-y=$(filter tifs/src/security/core/%,$(obj-security-y))
 obj-security-boot-y+=$(filter tifs/src/security/boot/%,$(obj-security-y))
 obj-security-boot-y+=$(filter tifs/src/security/secure_rm/%,$(obj-security-y))
+obj-security-boot-y+=$(filter tifs/src/security/secure_pm/%,$(obj-security-y))
 
 # Remove security objects related to boot from the list
-obj-security-other-y=$(filter-out tifs/src/security/boot/%,$(filter-out tifs/src/security/core/%,$(filter-out tifs/src/security/secure_rm/%,$(obj-security-y))))
+obj-security-other-y=$(filter-out tifs/src/security/boot/%,$(filter-out tifs/src/security/core/%,$(filter-out tifs/src/security/secure_rm/%,$(filter-out tifs/src/security/secure_pm/%,$(obj-security-y)))))
 
 # Collect all obj-y's
 $(obj)/built-in.o: $(obj-nonsec-y) FORCE

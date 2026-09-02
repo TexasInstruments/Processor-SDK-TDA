@@ -80,6 +80,25 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Squeeze")> ()
 
   sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
 
+  /* Get dims of data tensor (input 0), whether it is variable or const */
+  std::vector<int32_t> dataDims;
+  for (int32_t k = 0; k < (int32_t)md.varTensorIndices.size(); k++)
+  {
+    if (md.varTensorIndices[k] == 0)
+    {
+      dataDims = md.varTensorsDims[k];
+      break;
+    }
+  }
+  for (int32_t k = 0; k < (int32_t)md.constTensorIndices.size(); k++)
+  {
+    if (md.constTensorIndices[k] == 0)
+    {
+      dataDims = md.constTensorsDims[k];
+      break;
+    }
+  }
+
   axesIdx = getAttrIdx(node, "axes");
   if (axesIdx != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
   {
@@ -90,7 +109,8 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Squeeze")> ()
       getIntAttr(node, "axes",   &axes[ii], ii);
     }
   }
-  else if(md.numInputs == 2 && md.numConstInputs == 1)
+  else if(md.numInputs == 2 &&
+          std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 1) != md.constTensorIndices.end())
   {
     /* axes can be an constant input in opset 18*/
     sBuffer_t buf;
@@ -126,10 +146,10 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Squeeze")> ()
   else if (md.numInputs == 1)
   {
     // If axes is not provided, all the single dimensions will be removed from the shape 
-    for (int i = 0; i < md.varTensorsDims[0].size(); i++)
+    for (int i = 0; i < (int32_t)dataDims.size(); i++)
     {
       int axes_size = 0;
-      if(md.varTensorsDims[0][i] == 1){
+      if(dataDims[i] == 1){
         axes[axes_size] = i;
         axes_size += 1;
       }
@@ -148,21 +168,14 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Squeeze")> ()
     return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
   }
 
-  /** If shape inference is not done on model, we assume the tensor is of 4 dimensions by default*/
-  if (layer.allowlistingMetaData.varTensorsDims.size() != 0)
-  {
-    numDim = layer.allowlistingMetaData.varTensorsDims[0].size();
-    numDim = (numDim == 0)? 4:numDim;
-  }
-  else
-  {
-    numDim = 4;
-  }
-  if(layer.allowlistingMetaData.varTensorsDims[0].size() != 0){
+  /** Get numDim from data tensor (input 0), whether it is variable or const */
+  numDim = (dataDims.size() != 0) ? (int32_t)dataDims.size() : 4;
+
+  if(dataDims.size() != 0){
     for (ii=0 ; ii < num_axes_4_squeeze; ii++)
     {
       int32_t axisToSqueeze = axes[ii] < 0 ? numDim + axes[ii] : axes[ii];
-      if(md.varTensorsDims[0][axisToSqueeze] != 1)
+      if(dataDims[axisToSqueeze] != 1)
       {
         TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Squeeze layer : Input Dimension across given axes should be 1");
         return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
@@ -198,6 +211,22 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Squeeze")> ()
       {
         layer.layerPCParams.squeezeParams.axis[ii] = 1; // squeeze this particular axis
       }
+    }
+  }
+
+  /* If data input (input 0) is a constant initializer, store it in layer.weights
+   * so tidl_addConstDataLayers can create the appropriate ConstDataLayer */
+  for (int32_t i = 0; i < (int32_t)md.numConstInputs; i++)
+  {
+    if (md.constTensorIndices[i] == 0)
+    {
+      int32_t status = copyFloatConst(graph, index, 0, layer.weights, INPUT_REQUIRED);
+      if (status != 0)
+      {
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Squeeze layer : Unable to read constant data input");
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      }
+      break;
     }
   }
 

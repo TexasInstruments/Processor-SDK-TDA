@@ -73,7 +73,7 @@
 #include "tidl_alg_int.h"
 #include "tidl_commonUtils.h"
 #include "tidl_detectionOutput.h"
-#include "tidl_detectionOutput_int.h"
+#include "tidl_detectionOutput.h"
 #include <math.h>
 template int32_t TIDL_findValidLocation_cn<int8_t>(const sTIDL_DetectOutputParams_t *params,
                                                    sTIDL_ALgDetectOutputParams_t *algDetLyrParams,
@@ -92,6 +92,12 @@ template int32_t TIDL_findValidLocation_cn<float32_tidl>(const sTIDL_DetectOutpu
                                                   float32_tidl *priorData);
 
 template int32_t TIDL_sparseDetScoreCalc_cn<float32_tidl>(const sTIDL_DetectOutputParams_t *params, sTIDL_ALgDetectOutputParams_t *algDetLyrParams);
+
+template int32_t TIDL_findValidLocation_cn<bfloat16_tidl>(const sTIDL_DetectOutputParams_t *params,
+                                                   sTIDL_ALgDetectOutputParams_t *algDetLyrParams,
+                                                   float32_tidl *priorData);
+
+template int32_t TIDL_sparseDetScoreCalc_cn<bfloat16_tidl>(const sTIDL_DetectOutputParams_t *params, sTIDL_ALgDetectOutputParams_t *algDetLyrParams);
 
 /**
  ----------------------------------------------------------------------------
@@ -138,6 +144,10 @@ int32_t TIDL_findValidLocation_cn(const sTIDL_DetectOutputParams_t *params,
   else if (algDetLyrParams->elementType == TIDL_SignedShort)
   {
     maxInit = -32768;
+  }
+  else if (algDetLyrParams->elementType == TIDL_BFloat16)
+  {
+    maxFloat = -(float32_tidl)std::numeric_limits<bfloat16_tidl>::max();
   }
   else // if (algDetLyrParams->elementType == TIDL_SinglePrecFloat)
   {
@@ -297,7 +307,7 @@ int32_t TIDL_findValidLocation_cn(const sTIDL_DetectOutputParams_t *params,
         {
           for (int32_t curx = 0; curx < anchorBox[i].headWidth; curx++)
           {
-            if (algDetLyrParams->elementType == TIDL_SinglePrecFloat)
+            if (algDetLyrParams->elementType == TIDL_SinglePrecFloat || algDetLyrParams->elementType == TIDL_BFloat16)
             {
               maxConfObj = maxFloat;
               minConfObj = -(maxFloat + 1);
@@ -388,6 +398,10 @@ int32_t TIDL_sparseDetScoreCalc_cn(const sTIDL_DetectOutputParams_t *params, sTI
   else if (algDetLyrParams->elementType == TIDL_SignedShort)
   {
     maxInit = -32768;
+  }
+  else if (algDetLyrParams->elementType == TIDL_BFloat16)
+  {
+    maxFloat = -(float32_tidl)std::numeric_limits<bfloat16_tidl>::max();
   }
   else // if (algDetLyrParams->elementType == TIDL_SinglePrecFloat)
   {
@@ -613,7 +627,7 @@ int32_t TIDL_sparseDetScoreCalc_cn(const sTIDL_DetectOutputParams_t *params, sTI
       onebyqFact = algDetLyrParams->inConfdataQList[head];
       zeroPoint = algDetLyrParams->inConfdataZPList[head];
       
-      if (algDetLyrParams->elementType == TIDL_SinglePrecFloat)
+      if (algDetLyrParams->elementType == TIDL_SinglePrecFloat || algDetLyrParams->elementType == TIDL_BFloat16)
       {
         max = maxFloat;
       }
@@ -644,9 +658,9 @@ int32_t TIDL_sparseDetScoreCalc_cn(const sTIDL_DetectOutputParams_t *params, sTI
       {
         inVal = ((Tconf *)(algDetLyrParams->inConfDataList[head]))[(curLoc + (algDetLyrParams->confHeadPitchList[head][TIDL_CHANNEL_PITCH] * ((anchor*anchorStride) + (i4*classStride))))];
 
-        if (typeid(Tconf) == typeid(float32_tidl))
+        if (typeid(Tconf) == typeid(float32_tidl) || typeid(Tconf) == typeid(bfloat16_tidl))
         {
-          ftemp = inVal - max; // in float32_tidl else portion will not work, as data is typecasted as int32_t
+          ftemp = inVal - max; // in float32_tidl or bfloat16_tidl, else portion will not work, as data is typecasted as int32_t
         }
         else
         {

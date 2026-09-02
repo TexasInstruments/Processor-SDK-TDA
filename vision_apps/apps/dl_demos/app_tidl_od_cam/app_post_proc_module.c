@@ -87,8 +87,8 @@ vx_status app_init_post_proc(vx_context context, PostProcObj *postProcObj, char 
     local_postproc_config->od_prms.formatter[3] = 3;
     local_postproc_config->od_prms.formatter[4] = 5;
     local_postproc_config->od_prms.formatter[5] = 4;
-    local_postproc_config->od_prms.scaleX = DISPLAY_WIDTH/416;
-    local_postproc_config->od_prms.scaleY = DISPLAY_HEIGHT/416;
+    local_postproc_config->od_prms.scaleX = DISPLAY_WIDTH/416.0;
+    local_postproc_config->od_prms.scaleY = DISPLAY_HEIGHT/416.0;
     local_postproc_config->od_prms.viz_th = 0.2;
 
     local_postproc_config->num_input_tensors = postProcObj->num_input_tensors;

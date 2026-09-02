@@ -94,7 +94,7 @@ static const TIDL_CoreFunctionMap gTIDLCoreFunctionMapping[] =
   {/*TIDL_FlattenLayer          */ NULL, NULL, NULL},
   {/*TIDL_DropOutLayer          */ NULL, NULL, NULL},
   {/*TIDL_ArgOpLayer            */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_argOpProcessNew},
-  {/*TIDL_DetectionOutputLayer  */ NULL, NULL, NULL},
+  {/*TIDL_DetectionOutputLayer  */ TIDL_DetectionOutputAlloc, TIDL_DetectionOutputInit, TIDL_DetectionOutputProcess},
   {/*TIDL_ShuffleChannelLayer   */ TIDL_shuffleChannelAllocNew, TIDL_shuffleChannelInitNew, TIDL_shuffleChannelProcessNew},
   {/*TIDL_ResizeLayer           */ TIDL_resizeAllocNew, TIDL_resizeInitNew, TIDL_resizeProcessNew},
   {/*TIDL_RoiPoolingLayer       */ NULL, NULL, NULL},
@@ -103,7 +103,7 @@ static const TIDL_CoreFunctionMap gTIDLCoreFunctionMapping[] =
   {/*TIDL_SigmoidLayer          */ NULL, NULL, NULL},
   {/*TIDL_PadLayer              */ TIDL_padAllocNew, TIDL_padInitNew, TIDL_padProcessNew},
   {/*TIDL_ColorConversionLayer  */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_colorConvertProcessNew},
-  {/*TIDL_OdOutputReformatLayer */ NULL, NULL, NULL},
+  {/*TIDL_OdOutputReformatLayer */ TIDL_OdOutputReformatAlloc, TIDL_OdOutputReformatInit, TIDL_OdOutputReformatProcess},
   {/*TIDL_DataConvertLayer      */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_dataConvertProcessNew},
   {/*TIDL_CustomLayer           */ TIDL_customAllocNew, TIDL_customInitNew, TIDL_customProcessNew},
   {/*TIDL_BatchReshapeLayer     */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_batchReshapeProcessNew},
@@ -158,10 +158,10 @@ static int32_t TIDL_migratedToNewAllocInitFunc(sTIDL_Layer_t * layer, const sWor
   int32_t isMigrated = TIDL_isLayerMigrated(layer);
 
   /* Go to ref flow if workloadUnit is NULL and  gcHelperHandle not NULL */
-  if ( (workoadUnit == NULL) && (gcHelperHandle != NULL))
-  {
-    isMigrated = 0;
-  }
+  // if ( (workoadUnit == NULL) && (gcHelperHandle != NULL))
+  // {
+  //   isMigrated = 0;
+  // }
 
   return isMigrated;
 }

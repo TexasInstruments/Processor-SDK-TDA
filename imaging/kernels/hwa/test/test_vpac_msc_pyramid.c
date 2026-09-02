@@ -3261,7 +3261,7 @@ TEST_WITH_ARG(tivxHwaVpacMscPyramid, testGraphProcessingChecksum_10bit_acc, Arg,
     CT_EXPAND(nextmacro(testArgName "/ONE_THIRDS_SCALE", __VA_ARGS__, 0.25f))
 #define PARAMETERS_CKSUM_10_BIT_ACC \
     CT_GENERATE_PARAMETERS("checksum", ADD_VX_BORDERS_REQUIRE_UNDEFINED_ONLY, ADD_SIZE_NONE, ADD_SET_TARGET_PARAMETERS, ADD_VX_SCALE_CKSUM_10BIT_ACC, ARG, NULL, NULL)
-#if !defined(VPAC3L)
+
 TEST_WITH_ARG(tivxHwaVpacMscPyramidPositive, testGraphProcessingChecksum_10bit_acc_sm, Arg,
     PARAMETERS_CKSUM_10_BIT_ACC
 )
@@ -3458,13 +3458,12 @@ TEST_WITH_ARG(tivxHwaVpacMscPyramidPositive, testGraphProcessingChecksum_10bit_a
         tivxHwaUnLoadKernels(context);
     }
 }
-#endif
+
 #define ADD_VX_SCALE_CKSUM_10BIT_ACC(testArgName, nextmacro, ...) \
     CT_EXPAND(nextmacro(testArgName "/ONE_THIRDS_SCALE", __VA_ARGS__, 0.25f))
 #define PARAMETERS_CKSUM_10_BIT_ACC \
     CT_GENERATE_PARAMETERS("checksum", ADD_VX_BORDERS_REQUIRE_UNDEFINED_ONLY, ADD_SIZE_NONE, ADD_SET_TARGET_PARAMETERS, ADD_VX_SCALE_CKSUM_10BIT_ACC, ARG, NULL, NULL)
 
-#if !defined(VPAC3L)
 TEST_WITH_ARG(tivxHwaVpacMscPyramidPositive, testGraphProcessingChecksum_10bit_acc_sm10, Arg,
     PARAMETERS_CKSUM_10_BIT_ACC
 )
@@ -3844,7 +3843,6 @@ TEST_WITH_ARG(tivxHwaVpacMscPyramidPositive, testGraphProcessingChecksum_10bit_a
         tivxHwaUnLoadKernels(context);
     }
 }
-#endif
 #define ADD_SET_TARGET_PARAMETERS_INST_CC_TEST(testArgName, nextmacro, ...) \
     CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_VPAC_MSC1/TIVX_TARGET_VPAC_MSC1", __VA_ARGS__, TIVX_TARGET_VPAC_MSC1, TIVX_TARGET_VPAC_MSC1))
 #define ADD_SIZE_SMALL_SET_TEST(testArgName, nextmacro, ...) \
@@ -8007,12 +8005,10 @@ TESTCASE_TESTS(tivxHwaVpacMscPyramidPositive,
         testGraphProcessingChecksum_10bit_targetparams_filt1_phase0_sel1
         #if defined(VPAC3) || defined(VPAC3L)
         #ifndef x86_64
-        #if !defined(VPAC3L)
         ,        
         testGraphProcessingChecksum_10bit_acc_sm,
         testGraphProcessingChecksum_10bit_acc_sm10,
         testGraphProcessingChecksum_10bit_acc_sm7
-        #endif
         #endif
         #endif
     )

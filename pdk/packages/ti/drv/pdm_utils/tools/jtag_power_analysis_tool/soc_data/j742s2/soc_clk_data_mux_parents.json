@@ -1,0 +1,2468 @@
+{
+    "clk_ACSPCIE0_BUFCLK_MUX_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_REF_DER_OUT_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT4_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_REF_OUT_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_REF_DER_OUT_CLK",
+            "div": 1
+        }
+    ],
+    "clk_ACSPCIE1_BUFCLK_MUX_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_REF_DER_OUT_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT4_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_REF_OUT_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        }
+    ],
+    "clk_ATL_AWS_SEL_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_0_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_1_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_2_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_3_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_4_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_0_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_1_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_2_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_3_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_4_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_AUDIO_EXT_REFCLK0_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_AUDIO_EXT_REFCLK1_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        }
+    ],
+    "clk_ATL_BWS_SEL_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_0_MCASP_AFSR_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_1_MCASP_AFSR_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_2_MCASP_AFSR_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_3_MCASP_AFSR_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_4_MCASP_AFSR_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_0_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_1_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_2_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_3_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_4_MCASP_AFSX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_AUDIO_EXT_REFCLK0_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_AUDIO_EXT_REFCLK1_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        }
+    ],
+    "clk_ATL_PCLKMUX_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV2_16FFT_MAIN_4_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT2_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_POSTDIV3_16FFT_MAIN_0_HSDIVOUT7_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_EXT_REFCLK0_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_EXT_REFCLK1_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        }
+    ],
+    "clk_CPSW0_CPTS_RCLK_SEL_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_3_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_POSTDIV3_16FFT_MAIN_0_HSDIVOUT6_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_CPTS0_RFT_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_CPTS0_RFT_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_EXT_REFCLK0_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_EXT_REFCLK1_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN0_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN1_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN2_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN3_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN0_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN1_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP1_LN2_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP3_LN2_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_K3_PLL_CTRL_WRAP_MAIN_0_CHIP_DIV1_CLK_CLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW2G_CPTS_RCLK_SEL_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_3_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_POSTDIV3_16FFT_MAIN_0_HSDIVOUT6_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_CPTS0_RFT_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_CPTS0_RFT_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_EXT_REFCLK0_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_EXT_REFCLK1_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN0_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN1_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN2_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN3_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN0_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN1_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP1_LN2_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP3_LN2_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_K3_PLL_CTRL_WRAP_WKUP_0_CHIP_DIV1_CLK_CLK",
+            "div": 2
+        }
+    ],
+    "clk_CPSW9_LN1_REFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN2_REFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN2_REFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN1_RXCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN2_RXCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN2_RXCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN1_RXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN2_RXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN2_RXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN1_TXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN2_TXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN2_TXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN1_TXMCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN2_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN2_TXMCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN2_REFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN3_REFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN3_REFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN2_RXCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN3_RXCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN3_RXCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN2_RXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN3_RXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN3_RXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN2_TXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN3_TXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN3_TXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN2_TXMCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN3_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN3_TXMCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN5_REFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN0_REFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN0_REFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN5_RXCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN0_RXCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN0_RXCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN5_RXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN0_RXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN0_RXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN5_TXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN0_TXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN0_TXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN5_TXMCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN0_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN0_TXMCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN6_REFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN1_REFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN1_REFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN6_RXCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN1_RXCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN1_RXCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN6_RXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN1_RXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN1_RXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN6_TXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN1_TXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN1_TXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN6_TXMCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN1_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN1_TXMCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN7_REFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN2_REFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN2_REFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN7_RXCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN2_RXCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN2_RXCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN7_RXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN2_RXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN2_RXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN7_TXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN2_TXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN2_TXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN7_TXMCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN2_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN2_TXMCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN8_REFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN3_REFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN3_REFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN8_RXCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN3_RXCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN3_RXCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN8_RXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN3_RXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN3_RXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN8_TXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN3_TXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN3_TXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_CPSW9_LN8_TXMCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN3_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN3_TXMCLK",
+            "div": 1
+        }
+    ],
+    "clk_DPHY_CLK_SEL_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_HFOSC1_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_3_HSDIVOUT4_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT4_CLK",
+            "div": 1
+        }
+    ],
+    "clk_DPI0_EXT_CLKSEL_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_19_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_VOUT0_EXTPCLKIN_OUT",
+            "div": 1
+        }
+    ],
+    "clk_DPI1_CLKOUT_SEL_parents": [
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_K3_DSS_MAIN_0_DSS_INST0_PARA_1_OUT_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_K3_DSS_MAIN_0_DSS_INST0_PARA_3_OUT_CLK",
+            "div": 1
+        }
+    ],
+    "clk_DPI_0_PCLK_SEL_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_16_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DPI_1_PCLK_SEL_OUT0",
+            "div": 1
+        }
+    ],
+    "clk_DPI_1_PCLK_SEL_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_17_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DPI0_EXT_CLKSEL_OUT0",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DPI0_EXT_CLKSEL_OUT0",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_16_HSDIVOUT0_CLK",
+            "div": 1
+        }
+    ],
+    "clk_DPI_2_PCLK_SEL1_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_16_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_17_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DPI0_EXT_CLKSEL_OUT0",
+            "div": 1
+        }
+    ],
+    "clk_DPI_3_PCLK_SEL_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_16_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_17_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_17_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DPI0_EXT_CLKSEL_OUT0",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DPI0_EXT_CLKSEL_OUT0",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        }
+    ],
+    "clk_EMMCSD1_LB_CLKSEL_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MMC1_CLKLB_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MMC1_CLK_OUT",
+            "div": 1
+        }
+    ],
+    "clk_EMMCSD_REFCLK_SEL_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_0_HSDIVOUT2_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT2_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT2_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_3_HSDIVOUT2_CLK",
+            "div": 1
+        }
+    ],
+    "clk_MAIN_PLL4_XREF_SEL_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT4",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_EXT_REFCLK1_OUT",
+            "div": 1
+        }
+    ],
+    "clk_MAIN_PLL_HFOSC_SEL_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_HFOSC1_CLK_OUT",
+            "div": 1
+        }
+    ],
+    "clk_MAIN_TIMER16_AFS_EN_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT16",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER16_AFS_SEL_OUT0",
+            "div": 1
+        }
+    ],
+    "clk_MAIN_TIMER16_AFS_SEL_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCASP0_AFSR_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCASP0_AFSX_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCASP1_AFSR_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCASP1_AFSX_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCASP2_AFSR_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCASP2_AFSX_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCASP3_AFSR_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCASP3_AFSX_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCASP4_AFSR_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCASP4_AFSX_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        }
+    ],
+    "clk_MAIN_TIMER17_AFS_EN_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT17",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER17_AFS_SEL_OUT0",
+            "div": 1
+        }
+    ],
+    "clk_MAIN_TIMER18_AFS_EN_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT18",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER18_AFS_SEL_OUT0",
+            "div": 1
+        }
+    ],
+    "clk_MAIN_TIMER19_AFS_EN_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT19",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER19_AFS_SEL_OUT0",
+            "div": 1
+        }
+    ],
+    "clk_MAIN_TIMER_CLKSEL_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_HFOSC1_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_POSTDIV3_16FFT_MAIN_0_HSDIVOUT8_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_12P5M_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_3_HSDIVOUT3_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_EXT_REFCLK0_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_EXT_REFCLK1_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_LPXOSC_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_CPTS0_RFT_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT3_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_POSTDIV2_16FFT_MAIN_2_HSDIVOUT6_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV2_16FFT_MAIN_4_HSDIVOUT2_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_NAVSS512J7AM_MAIN_0_CPTS0_GENF2",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_NAVSS512J7AM_MAIN_0_CPTS0_GENF3",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_CPSW_2GUSS_MAIN_0_CPTS_GENF0",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_CPSW_9XUSS_J7AM_MAIN_0_CPTS_GENF0",
+            "div": 1
+        }
+    ],
+    "clk_MAIN_WWDT_RTICLK_SEL_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_LPXOSC_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_12P5M_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_32K_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_HFOSC1_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_HFOSC1_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_HFOSC1_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_HFOSC1_CLK_OUT",
+            "div": 1
+        }
+    ],
+    "clk_MCAN_CLK_SEL_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_0_HSDIVOUT4_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_EXT_REFCLK0_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_HFOSC1_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        }
+    ],
+    "clk_MCU_ADC_clk_sel_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MCU_0_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_EXT_REFCLK0_OUT",
+            "div": 1
+        }
+    ],
+    "clk_MCU_CLKOUT_MUX_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT0_CLK",
+            "div": 5
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT0_CLK",
+            "div": 10
+        }
+    ],
+    "clk_MCU_MCAN_CLKSEL_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT3_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_EXT_REFCLK0_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT2_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        }
+    ],
+    "clk_MCU_OBSCLK_OUT_parents": [
+        {
+            "clk_name": "CLK_J742S2_MCU_OBSCLK_DIV_OUT0",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        }
+    ],
+    "clk_MCU_OBSCLK_SEL_parents": [
+        {
+            "clk_name": "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_12P5M_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MCU_0_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MCU_0_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT2_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT3_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT4_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_32K_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT2_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT3_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT4_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_LPXOSC_CLKOUT",
+            "div": 1
+        }
+    ],
+    "clk_MCU_R5_core0_clksel_parents": [
+        {
+            "clk_name": "CLK_J742S2_K3_PLL_CTRL_WRAP_WKUP_0_CHIP_DIV1_CLK_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_K3_PLL_CTRL_WRAP_WKUP_0_CHIP_DIV1_CLK_CLK",
+            "div": 3
+        }
+    ],
+    "clk_MCU_R5_phase0_clksel_parents": [
+        {
+            "clk_name": "CLK_J742S2_K3_PLL_CTRL_WRAP_WKUP_0_CHIP_DIV1_CLK_CLK",
+            "div": 3
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        }
+    ],
+    "clk_MCU_SPI0_CLK_LPBK_MUX_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_SPI0_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_SPI_MCU_0_IO_CLKSPIO_CLK",
+            "div": 1
+        }
+    ],
+    "clk_MCU_SPI1_CLK_LPBK_MUX_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_SPI1_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_SPI_MCU_1_IO_CLKSPIO_CLK",
+            "div": 1
+        }
+    ],
+    "clk_MCU_SPI1_CLK_MUX_parents": [
+        {
+            "clk_name": "CLK_J742S2_SPI_MAIN_3_IO_CLKSPIO_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCU_SPI1_CLK_LPBK_MUX_OUT0",
+            "div": 1
+        }
+    ],
+    "clk_MCU_TIMER1_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MCU_TIMER_CLKSEL_OUT1",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MCU_0_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_MCU_TIMER3_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MCU_TIMER_CLKSEL_OUT3",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MCU_2_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_MCU_TIMER5_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MCU_TIMER_CLKSEL_OUT5",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MCU_4_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_MCU_TIMER7_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MCU_TIMER_CLKSEL_OUT7",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MCU_6_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_MCU_TIMER9_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MCU_TIMER_CLKSEL_OUT9",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MCU_8_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_MCU_TIMER_CLKSEL_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_K3_PLL_CTRL_WRAP_WKUP_0_CHIP_DIV1_CLK_CLK",
+            "div": 4
+        },
+        {
+            "clk_name": "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_12P5M_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT2_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_EXT_REFCLK0_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_LPXOSC_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_CPSW_2GUSS_MCU_0_CPTS_GENF0",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_32K_CLK",
+            "div": 1
+        }
+    ],
+    "clk_MCU_USART_CLKSEL_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT3_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_POSTDIV3_16FFT_MAIN_1_HSDIVOUT5_CLK",
+            "div": 1
+        }
+    ],
+    "clk_MCU_WWD_CLKSEL_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_LPXOSC_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_12P5M_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_32K_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        }
+    ],
+    "clk_McASP_AHCLKO_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_0_MCASP_AHCLKR_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_1_MCASP_AHCLKR_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_2_MCASP_AHCLKR_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_3_MCASP_AHCLKR_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_4_MCASP_AHCLKR_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_0_MCASP_AHCLKX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_1_MCASP_AHCLKX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_2_MCASP_AHCLKX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_3_MCASP_AHCLKX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_MCASP_MAIN_4_MCASP_AHCLKX_POUT",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT_1",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT_2",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT_3",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV2_16FFT_MAIN_4_HSDIVOUT2_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        }
+    ],
+    "clk_McASP_AUXCLK_SEL_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV2_16FFT_MAIN_4_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT2_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT_1",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT_2",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT_3",
+            "div": 1
+        }
+    ],
+    "clk_SPI0_CLK_LPBK_MUX_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_SPI0_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_SPI_MAIN_0_IO_CLKSPIO_CLK",
+            "div": 1
+        }
+    ],
+    "clk_SPI1_CLK_LPBK_MUX_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_SPI1_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_SPI_MAIN_1_IO_CLKSPIO_CLK",
+            "div": 1
+        }
+    ],
+    "clk_SPI2_CLK_LPBK_MUX_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_SPI2_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_SPI_MAIN_2_IO_CLKSPIO_CLK",
+            "div": 1
+        }
+    ],
+    "clk_SPI3_CLK_LPBK_MUX_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_SPI3_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_SPI_MAIN_3_IO_CLKSPIO_CLK",
+            "div": 1
+        }
+    ],
+    "clk_SPI3_CLK_MUX_parents": [
+        {
+            "clk_name": "CLK_J742S2_SPI_MAIN_3_IO_CLKSPIO_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_SPI3_CLK_LPBK_MUX_OUT0",
+            "div": 1
+        }
+    ],
+    "clk_SPI5_CLK_LPBK_MUX_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_SPI5_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_SPI_MAIN_5_IO_CLKSPIO_CLK",
+            "div": 1
+        }
+    ],
+    "clk_SPI6_CLK_LPBK_MUX_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_SPI6_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_SPI_MAIN_6_IO_CLKSPIO_CLK",
+            "div": 1
+        }
+    ],
+    "clk_SPI7_CLK_LPBK_MUX_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_SPI7_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_SPI_MAIN_7_IO_CLKSPIO_CLK",
+            "div": 1
+        }
+    ],
+    "clk_TIMER11_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT11",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MAIN_10_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_TIMER13_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT13",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MAIN_12_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_TIMER15_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT15",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MAIN_14_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_TIMER17_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER17_AFS_EN_OUT0",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MAIN_16_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_TIMER19_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER19_AFS_EN_OUT0",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MAIN_18_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_TIMER1_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT1",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MAIN_0_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_TIMER3_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT3",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MAIN_2_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_TIMER5_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT5",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MAIN_4_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_TIMER7_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT7",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MAIN_6_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_TIMER9_CASCADE_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT9",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_DMTIMER_DMC1MS_MAIN_8_TIMER_PWM",
+            "div": 1
+        }
+    ],
+    "clk_UFS_CLK_SEL_parents": [
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_HFOSC1_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_POSTDIV3_16FFT_MAIN_1_HSDIVOUT6_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_EXT_REFCLK1_OUT",
+            "div": 1
+        }
+    ],
+    "clk_USB0_SerDes_refclk_Mux_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP3_LN3_REFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP3_LN3_REFCLK",
+            "div": 1
+        }
+    ],
+    "clk_USB0_SerDes_rxclk_Mux_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP3_LN3_RXCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP3_LN3_RXCLK",
+            "div": 1
+        }
+    ],
+    "clk_USB0_SerDes_rxfclk_Mux_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP3_LN3_RXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP3_LN3_RXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_USB0_SerDes_txfclk_Mux_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP3_LN3_TXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP3_LN3_TXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_USB0_SerDes_txmclk_Mux_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP3_LN3_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP3_LN3_TXMCLK",
+            "div": 1
+        }
+    ],
+    "clk_VPAC_CLK_SEL_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_25_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT1_CLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN0_REFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN0_REFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN0_REFCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN0_RXCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN0_RXCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN0_RXCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN0_RXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN0_RXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN0_RXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN0_TXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN0_TXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN0_TXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN0_TXMCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN0_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN0_TXMCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN1_REFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN1_REFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN1_REFCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN1_RXCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN1_RXCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN1_RXCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN1_RXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN1_RXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN1_RXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN1_TXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN1_TXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN1_TXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN1_TXMCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN1_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN1_TXMCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN2_REFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN2_REFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN2_REFCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN2_RXCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN2_RXCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN2_RXCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN2_RXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN2_RXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN2_RXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN2_TXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN2_TXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN2_TXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN2_TXMCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN2_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN2_TXMCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN3_REFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN3_REFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN3_REFCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN3_RXCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN3_RXCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN3_RXCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN3_RXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN3_RXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN3_RXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN3_TXFCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN3_TXFCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN3_TXFCLK",
+            "div": 1
+        }
+    ],
+    "clk_VUSR_LN3_TXMCLK_parents": [
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN3_TXMCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN3_TXMCLK",
+            "div": 1
+        }
+    ],
+    "clk_WKUP_I2C_MCUPLL_BYPASS_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT3_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        }
+    ],
+    "clk_WKUP_USART_MCUPLL_BYPASS_parents": [
+        {
+            "clk_name": "CLK_J742S2_WKUP_USART_CLKSEL_OUT0",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        }
+    ],
+    "clk_gpmc_fclk_sel_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_0_HSDIVOUT3_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT1_CLK",
+            "div": 6
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT1_CLK",
+            "div": 4
+        },
+        {
+            "clk_name": "CLK_J742S2_K3_PLL_CTRL_WRAP_MAIN_0_CHIP_DIV1_CLK_CLK",
+            "div": 4
+        }
+    ],
+    "clk_k3_pll_ctrl_wrap_main_0_parents": [
+        {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT0",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_0_HSDIVOUT0_CLK",
+            "div": 1
+        }
+    ],
+    "clk_k3_pll_ctrl_wrap_wkup_0_parents": [
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MCU_0_HSDIVOUT0_CLK",
+            "div": 1
+        }
+    ],
+    "clk_main_pll8_sel_extwave_parents": [
+        {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_8_FOUTVCOP_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV0_16FFT_MAIN_8_HSDIVOUT0_CLK",
+            "div": 1
+        }
+    ],
+    "clk_main_pll9_sel_extwave_parents": [
+        {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_9_FOUTVCOP_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV0_16FFT_MAIN_9_HSDIVOUT0_CLK",
+            "div": 1
+        }
+    ],
+    "clk_mcasp_ahclkr_mux_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_HFOSC1_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_AUDIO_EXT_REFCLK0_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_AUDIO_EXT_REFCLK1_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT_1",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT_2",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT_3",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        }
+    ],
+    "clk_mcu_OSPI0_iclk_sel_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_OSPI0_DQS_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_FSS_MCU_0_OSPI_0_OSPI_OCLK_CLK",
+            "div": 1
+        }
+    ],
+    "clk_mcu_OSPI1_iclk_sel_parents": [
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_MCU_OSPI1_DQS_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_FSS_MCU_0_OSPI_1_OSPI_OCLK_CLK",
+            "div": 1
+        }
+    ],
+    "clk_mcu_OSPI_ref_clk_sel_out0_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT4_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT4_CLK",
+            "div": 1
+        }
+    ],
+    "clk_obsclk0_mux_parents": [
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_0_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT1_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_3_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV2_16FFT_MAIN_4_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_5_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV0_16FFT_MAIN_6_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV0_16FFT_MAIN_26_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV0_16FFT_MAIN_27_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV0_16FFT_MAIN_28_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV0_16FFT_MAIN_12_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_OBSCLK1_MUX_OUT0",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV2_16FFT_MAIN_14_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_16_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_17_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_19_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_UFSHCI2P1SS_16FFC_MAIN_0_UFSHCI_MPHY_TX_REF_SYMBOLCLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_UFSHCI2P1SS_16FFC_MAIN_0_UFSHCI_MPHY_M31_VCO_19P2M_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_UFSHCI2P1SS_16FFC_MAIN_0_UFSHCI_MPHY_M31_VCO_26M_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV1_16FFT_MAIN_25_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_NAVSS512J7AM_MAIN_0_CPTS0_GENF3",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_12P5M_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_LPXOSC_CLKOUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_0_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_BOARD_0_HFOSC1_CLK_OUT",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        }
+    ],
+    "clk_obsclk1_mux_parents": [
+        {
+            "clk_name": "CLK_J742S2_COMPUTE_CLUSTER_J7AHP_MAIN_0_C71SS0_C7X_DIVH_CLK4_OBSCLK_OUT_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_COMPUTE_CLUSTER_J7AHP_MAIN_0_A72SS0_ARM0_DIVH_CLK8_OBSCLK_OUT_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "0",
+            "div": 0
+        }
+    ],
+    "clk_wkup_gpio0_clksel_parents": [
+        {
+            "clk_name": "CLK_J742S2_K3_PLL_CTRL_WRAP_WKUP_0_CHIP_DIV1_CLK_CLK",
+            "div": 6
+        },
+        {
+            "clk_name": "CLK_J742S2_K3_PLL_CTRL_WRAP_WKUP_0_CHIP_DIV1_CLK_CLK",
+            "div": 6
+        },
+        {
+            "clk_name": "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_32K_CLK",
+            "div": 1
+        },
+        {
+            "clk_name": "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_12P5M_CLK",
+            "div": 1
+        }
+    ]
+}

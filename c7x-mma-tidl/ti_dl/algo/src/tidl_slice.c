@@ -165,6 +165,10 @@ int32_t TIDL_sliceProcessNew(TIDL_NetworkCommonParams *commonParams,
       {
         TIDL_sliceRefProcess((float32_tidl *)refInPtr, (float32_tidl *)refOutPtr, inPtrOffset, outPtrOffset, outWidth, outHeight, outChs, outDim1, outDim2, numROIs, inPitch, outPitch, inChPitch, outChPitch, inDim1Pitch, outDim1Pitch, inDim2Pitch, outDim2Pitch, inROIPitch, outROIPitch);
       }
+      else if (inDataParams->elementType == TIDL_BFloat16)
+      {
+        TIDL_sliceRefProcess((bfloat16_tidl *)refInPtr, (bfloat16_tidl *)refOutPtr, inPtrOffset, outPtrOffset, outWidth, outHeight, outChs, outDim1, outDim2, numROIs, inPitch, outPitch, inChPitch, outChPitch, inDim1Pitch, outDim1Pitch, inDim2Pitch, outDim2Pitch, inROIPitch, outROIPitch);
+      }
       else if ((inDataParams->elementType == TIDL_SignedChar) || (inDataParams->elementType == TIDL_UnsignedChar))
       {
         TIDL_sliceRefProcess((uint8_t *)refInPtr, (uint8_t *)refOutPtr, inPtrOffset, outPtrOffset, outWidth, outHeight, outChs, outDim1, outDim2, numROIs, inPitch, outPitch, inChPitch, outChPitch, inDim1Pitch, outDim1Pitch, inDim2Pitch, outDim2Pitch, inROIPitch, outROIPitch);

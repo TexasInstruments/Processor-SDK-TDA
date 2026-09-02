@@ -116,6 +116,10 @@ int32_t TIDL_transposeProcessNew(TIDL_NetworkCommonParams *commonParams,
     {
       TIDL_transposeRefProcess<float32_tidl, float32_tidl>((float32_tidl *)inPtrs[0], (float32_tidl *)outPtrs[0], inDataParams, tidlLayer);
     }
+    else if (inDataParams->elementType == TIDL_BFloat16)
+    {
+      TIDL_transposeRefProcess<bfloat16_tidl, bfloat16_tidl>((bfloat16_tidl *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inDataParams, tidlLayer);
+    }
     else if (inDataParams->elementType == TIDL_UnsignedChar)
     {
       TIDL_transposeRefProcess<uint8_t, uint8_t>((uint8_t *)inPtrs[0], (uint8_t *)outPtrs[0], inDataParams, tidlLayer);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025, Texas Instruments Incorporated
+ * Copyright (c) 2020-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -534,6 +534,13 @@ static int32_t Sciserver_UserProcessMsg(uint32_t *msg_recv,
             respMsgSize = sizeof(struct tisci_msg_rm_udmap_tx_ch_cfg_resp);
             Sciserver_printf("case: TISCI_MSG_RM_UDMAP_TX_CH_CFG\n");
             break;
+#ifdef CONFIG_UDMAP_MULTI_CH_CFG
+        case TISCI_MSG_RM_UDMAP_TX_MULTI_CH_CFG:
+            reqMsgSize = sizeof(struct tisci_msg_rm_udmap_tx_multi_ch_cfg_req);
+            respMsgSize = sizeof(struct tisci_msg_rm_udmap_tx_multi_ch_cfg_resp);
+            Sciserver_printf("case: TISCI_MSG_RM_UDMAP_TX_MULTI_CH_CFG\n");
+            break;
+#endif
         case TISCI_MSG_RM_UDMAP_RX_CH_CFG:
             reqMsgSize = sizeof(struct tisci_msg_rm_udmap_rx_ch_cfg_req);
             respMsgSize = sizeof(struct tisci_msg_rm_udmap_rx_ch_cfg_resp);
@@ -578,6 +585,10 @@ static int32_t Sciserver_UserProcessMsg(uint32_t *msg_recv,
             reqMsgSize = sizeof(struct tisci_msg_rm_psil_write_req);
             respMsgSize = sizeof(struct tisci_msg_rm_psil_write_resp);
             Sciserver_printf("case: TISCI_MSG_RM_PSIL_WRITE\n");
+            break;
+        case TISCI_MSG_RM_PSIL_MULTI_CH_WRITE:
+            reqMsgSize = sizeof(struct tisci_msg_rm_psil_multi_ch_write_req);
+            respMsgSize = sizeof(struct tisci_msg_rm_psil_multi_ch_write_resp);
             break;
         case TISCI_MSG_RM_PROXY_CFG:
             reqMsgSize = sizeof(struct tisci_msg_rm_proxy_cfg_req);
@@ -749,6 +760,9 @@ static int32_t Sciserver_UserProcessMsg(uint32_t *msg_recv,
         case TISCI_MSG_RM_RING_CFG:
         case TISCI_MSG_RM_RING_MON_CFG:
         case TISCI_MSG_RM_UDMAP_TX_CH_CFG:
+#ifdef CONFIG_UDMAP_MULTI_CH_CFG
+        case TISCI_MSG_RM_UDMAP_TX_MULTI_CH_CFG:
+#endif
         case TISCI_MSG_RM_UDMAP_RX_CH_CFG:
         case TISCI_MSG_RM_PROXY_CFG:
             if (hw_host_id == TISCI_HOST_ID_TIFS2DM)

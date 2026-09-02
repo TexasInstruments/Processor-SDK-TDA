@@ -1461,7 +1461,6 @@ void tivx_h3a_aew_config_init(tivx_h3a_aew_config *prms)
         memset(prms, 0x0, sizeof(tivx_h3a_aew_config));
     }
 }
-#if !defined(VPAC3L)
 void tivx_vpac_viss_safety_mech_prms_init(tivx_vpac_viss_safety_mechanism_params_t *prms)
 {
     if (NULL != prms)
@@ -1473,5 +1472,4 @@ void tivx_vpac_viss_safety_mech_prms_init(tivx_vpac_viss_safety_mechanism_params
     }
 }
 
-#endif
 #endif

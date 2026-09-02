@@ -505,6 +505,51 @@ int32_t CsirxDrv_delete(Fdrv_Handle handle, void *reserved)
             if (1U == captObj->numVirtContUsed[instObj->drvInstId])
             {
                 instObj->inUse = (uint32_t)CSIRX_DRV_USAGE_STATUS_NOT_USED;
+
+                /* Quiesce the D-PHY back to a cold-like state before the
+                 * next Csirx_create() re-runs Csirx_dphyCfg(). That function
+                 * only ever produces a working lane if its lane-enable write
+                 * is a genuine 0->1 edge on that lane's reset bit; on chip
+                 * reset the lane control register starts at 0, so the first
+                 * bring-up gets that edge for every lane it enables. A lane
+                 * that was left disabled by an earlier, narrower-lane-count
+                 * session (dlEnable=0, dlReset=1) never got that edge, and
+                 * Csirx_dphyCfg()'s lane-enable write is a blind rewrite that
+                 * would set dlReset=1 again -- no edge, no reset pulse, and
+                 * CsirxDrv_dphyrxCoreLaneReady() spins on that lane's ISO
+                 * ready bit forever. Zeroing the lane control register here
+                 * (and re-asserting the common resets it mirrors) guarantees
+                 * every lane sees a real edge on the next bring-up,
+                 * including ones never enabled before. */
+                {
+                    CSIRX_DphyLaneControl cfgCsiRxDphyDown;
+                    uint32_t downLoopCnt;
+
+                    cfgCsiRxDphyDown.clEnable = 0U;
+                    cfgCsiRxDphyDown.clReset  = 0U;
+                    for (downLoopCnt = 0U; downLoopCnt < CSIRX_CAPT_DATA_LANES_MAX; downLoopCnt++)
+                    {
+                        cfgCsiRxDphyDown.dlEnable[downLoopCnt] = 0U;
+                        cfgCsiRxDphyDown.dlReset[downLoopCnt]  = 0U;
+                    }
+                    (void)CSIRX_SetDphyLaneControl(&instObj->cslObj.cslCfgData,
+                                                   &cfgCsiRxDphyDown);
+                }
+                /* Re-assert the common resets that Csirx_dphyCfg() releases
+                 * in steps 3-4, mirroring them back down. */
+                CsirxDrv_dphyCommonReset(instObj->dPhyCoreAddr, 0U);
+                CsirxDrv_dphyrxPsoDisable(instObj->dPhyCoreAddr, 0U);
+
+                /* Force the next Csirx_create() on this instance to re-run
+                 * the full D-PHY bring-up (Csirx_setDphyCfg() -> Csirx_dphyCfg())
+                 * instead of skipping it via the stale-config fast path.
+                 * dpyCfgDone is otherwise only ever cleared once, at
+                 * Csirx_init() time, so without this a later create() with a
+                 * different lane count (or any other D-PHY parameter not
+                 * tracked by CsirxDrv_checkDphyrxConfig()) would silently
+                 * keep running against the first session's D-PHY lane
+                 * configuration. */
+                instObj->dpyCfgDone = UFALSE;
             }
             captObj->numVirtContUsed[instObj->drvInstId]--;
         }
@@ -966,6 +1011,22 @@ static int32_t CsirxDrv_asfEventTrigIoctl(const CsirxDrv_VirtContext *virtContex
     if (CDN_EOK != CSIRX_SetTestAsfIrqs(&instObj->cslObj.cslCfgData, &asfIrqTest))
     {
         retVal = FVID2_EFAIL;
+    }
+
+    /* The test-force bits above are level-held: as long as they stay set,
+     * asf_int_status stays continuously re-asserted, so any interrupt
+     * consumer forwarding this event (e.g. via ESM) never sees it de-assert
+     * and re-fires forever. Pulse it back to 0 so this is a momentary
+     * trigger rather than a permanent level. */
+    if (retVal == FVID2_SOK)
+    {
+        CSIRX_AsfIrqTest asfIrqTestClr;
+
+        Fvid2Utils_memset(&asfIrqTestClr, 0, sizeof (asfIrqTestClr));
+        if (CDN_EOK != CSIRX_SetTestAsfIrqs(&instObj->cslObj.cslCfgData, &asfIrqTestClr))
+        {
+            retVal = FVID2_EFAIL;
+        }
     }
 
     return retVal;

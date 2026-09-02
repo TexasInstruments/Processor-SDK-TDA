@@ -16,11 +16,7 @@ ifneq ($(ECU_BUILD), no)
         ifneq ($(ECU_BUILD), fc)
             $(error "Invalid ECU_BUILD value: $(ECU_BUILD) for SOC=$(SOC). Must be 'no' or 'fc'.")
         endif
-    else ifeq ($(SOC), j721s2)
-        ifneq ($(filter $(ECU_BUILD), srv fc avp4), $(ECU_BUILD))
-            $(error "Invalid ECU_BUILD value: $(ECU_BUILD) for SOC=$(SOC). Must be one of 'no', 'srv', 'fc', or 'avp4'.")
-        endif
-    else ifeq ($(SOC), j784s4)
+    else ifeq ($(SOC),$(filter $(SOC), j721s2 j784s4 j742s2))
         ifneq ($(filter $(ECU_BUILD), srv fc avp4), $(ECU_BUILD))
             $(error "Invalid ECU_BUILD value: $(ECU_BUILD) for SOC=$(SOC). Must be one of 'no', 'srv', 'fc', or 'avp4'.")
         endif

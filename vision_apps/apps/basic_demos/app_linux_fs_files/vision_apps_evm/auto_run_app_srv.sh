@@ -24,6 +24,15 @@ if [[ ${PROCESSOR} == *_"J721S2"_* ]]; then
     k3conf disable device 214 # I2C0
     k3conf disable device 224 # NAVSS0
 
+    k3conf disable device 0   # MCU_ADC0
+    k3conf disable device 1   # MCU_ADC1
+    k3conf disable device 154 # DSS_DSI0
+    k3conf disable device 207 # MCU_MCAN0
+    k3conf disable device 208 # MCU_MCAN1
+    k3conf disable device 108 # MCU_FSS0_HYPERBUS
+    k3conf disable device 109 # MCU_OSPI0
+    k3conf disable device 110 # MCU_OSPI1
+
 elif [[ ${PROCESSOR} == *_"J784S4"_* ]] || [[ ${PROCESSOR} == *_"J742S2"_* ]]; then
     # Disable unused devices for ECU_BUILD
     k3conf disable device 241 # CODEC0

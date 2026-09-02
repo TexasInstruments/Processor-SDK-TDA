@@ -412,10 +412,10 @@ void tivx_obj_desc_strncpy(volatile void *dst, volatile void *src, uint32_t size
     d[i] = 0;
 }
 
-void tivx_obj_desc_memcpy(volatile void *dst, volatile void *src, uint32_t size)
+void tivx_obj_desc_memcpy(volatile void *dst, const volatile void *src, uint32_t size)
 {
     volatile uint8_t *d=(volatile uint8_t*)dst;
-    volatile uint8_t *s=(volatile uint8_t*)src;
+    const volatile uint8_t *s=(const volatile uint8_t*)src;
     uint32_t i;
 
     for(i=0; i<size; i++)

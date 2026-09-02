@@ -163,7 +163,7 @@ extern "C" {
 /*! \brief Max number of times a given node can be replicated
  * \ingroup group_vx_node_cfg
  */
-#define TIVX_NODE_MAX_REPLICATE            (64u)
+#define TIVX_NODE_MAX_REPLICATE            (12u)
 
 /*! \brief Max number node objects supported
  * \ingroup group_vx_node_cfg
@@ -273,7 +273,7 @@ extern "C" {
 /*! \brief Maximum number of objects supported in object array
  * \ingroup group_vx_object_array_cfg
  */
-#define TIVX_OBJECT_ARRAY_MAX_ITEMS        (32u)
+#define TIVX_OBJECT_ARRAY_MAX_ITEMS        (128u)
 
 /*! \brief Max number object arrays supported
  * \ingroup group_vx_object_array_cfg
@@ -481,7 +481,7 @@ extern "C" {
 /*! \brief Max target kernel instances that will be active on a CPU at the same time
  * \ingroup group_vx_ti_extensions_cfg
  */
-#define TIVX_TARGET_KERNEL_INSTANCE_MAX    (64u)
+#define TIVX_TARGET_KERNEL_INSTANCE_MAX    (90u)
 
 /*! \brief Max target kernel that will be active on a CPU at the same time
  * \ingroup group_vx_ti_extensions_cfg

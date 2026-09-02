@@ -3,7 +3,7 @@
  *
  * UDMAP management infrastructure
  *
- * Copyright (C) 2018-2025, Texas Instruments Incorporated
+ * Copyright (C) 2018-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -4339,6 +4339,51 @@ s32 rm_udmap_tx_ch_cfg(u32 *msg_recv)
 
 	return r;
 }
+
+#ifdef CONFIG_UDMAP_MULTI_CH_CFG
+s32 rm_udmap_tx_multi_ch_cfg(u32 *msg_recv)
+{
+	s32 r = SUCCESS;
+	struct tisci_msg_rm_udmap_tx_multi_ch_cfg_req *msg =
+		(struct tisci_msg_rm_udmap_tx_multi_ch_cfg_req *) msg_recv;
+	struct tisci_msg_rm_udmap_tx_ch_cfg_req ch_msg;
+	u8 iter_idx;
+
+	for (iter_idx = 0U; iter_idx < msg->num_ch; iter_idx++) {
+		ch_msg.hdr.host          = msg->hdr.host;
+		ch_msg.hdr.flags         = msg->hdr.flags;
+		ch_msg.hdr.seq           = msg->hdr.seq;
+		ch_msg.hdr.type          = TISCI_MSG_RM_UDMAP_TX_CH_CFG;
+		ch_msg.valid_params = msg->valid_params;
+		ch_msg.nav_id       = msg->nav_id;
+		ch_msg.index        = ((u16) iter_idx * (u16) msg->ch_offset) + msg->start_index;
+		ch_msg.txcq_qnum    = ((u16) iter_idx * (u16) msg->txcq_offset) + msg->start_txcq_qnum;
+		ch_msg.tx_pause_on_err   = msg->tx_pause_on_err;
+		ch_msg.tx_filt_einfo     = msg->tx_filt_einfo;
+		ch_msg.tx_filt_pswords   = msg->tx_filt_pswords;
+		ch_msg.tx_atype          = msg->tx_atype;
+		ch_msg.tx_chan_type      = msg->tx_chan_type;
+		ch_msg.tx_supr_tdpkt     = msg->tx_supr_tdpkt;
+		ch_msg.tx_fetch_size     = msg->tx_fetch_size;
+		ch_msg.tx_credit_count   = msg->tx_credit_count;
+		ch_msg.tx_priority       = msg->tx_priority;
+		ch_msg.tx_qos            = msg->tx_qos;
+		ch_msg.tx_orderid        = msg->tx_orderid;
+		ch_msg.fdepth            = msg->fdepth;
+		ch_msg.tx_sched_priority = msg->tx_sched_priority;
+		ch_msg.tx_burst_size     = msg->tx_burst_size;
+		ch_msg.tx_tdtype         = msg->tx_tdtype;
+		ch_msg.extended_ch_type  = msg->extended_ch_type;
+
+		r = rm_udmap_tx_ch_cfg((u32 *) &ch_msg);
+		if (r != SUCCESS) {
+			break;
+		}
+	}
+
+	return r;
+}
+#endif
 
 s32 rm_udmap_rx_ch_cfg(u32 *msg_recv)
 {

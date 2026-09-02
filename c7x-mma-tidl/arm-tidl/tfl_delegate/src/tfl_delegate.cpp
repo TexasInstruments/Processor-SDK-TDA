@@ -65,6 +65,7 @@ struct  TfLiteTIDLDelegateOptions {
   int core_start_idx;
   int flow_ctrl = -1;
   char temp_buffer_dir[TIDLRT_STRING_SIZE];
+  char trace_base_name[TIDLRT_STRING_SIZE];
 };
 
 constexpr int kMaxTIDLGraphs = 32;
@@ -118,6 +119,8 @@ TfLiteStatus tidlDelegate::Init(TfLiteContext* context, const TfLiteDelegatePara
   subgraphRtCreateOptions->inferenceMode = -1;
   subgraphRtCreateOptions->flowCtrl = options_.flow_ctrl;
   strcpy(subgraphRtCreateOptions->tempBufferDir, options_.temp_buffer_dir);
+  strncpy(subgraphRtCreateOptions->traceBaseName, options_.trace_base_name, TIDLRT_STRING_SIZE - 1);
+  subgraphRtCreateOptions->traceBaseName[TIDLRT_STRING_SIZE - 1] = '\0';
 
   status = TIDL_subgraphRtCreate(subgraphRtCreateOptions, &options_.infer_ops, std::to_string(subgraphId).c_str(), subgraphParams);
 
@@ -319,6 +322,7 @@ TfLiteDelegate* tflite_plugin_create_delegate(char** options_keys,
   options->core_start_idx = 1;
   options->flow_ctrl = -1;
   strcpy(options->temp_buffer_dir, "/dev/shm");
+  options->trace_base_name[0] = '\0';
 
   char deny_list[512];
 
@@ -357,6 +361,11 @@ TfLiteDelegate* tflite_plugin_create_delegate(char** options_keys,
           options->flow_ctrl = -1;
         }
     }
+    if (strcmp("advanced_options:trace_base_name", options_keys[idx]) == 0)
+    {
+        strncpy(options->trace_base_name, options_values[idx], TIDLRT_STRING_SIZE - 1);
+        options->trace_base_name[TIDLRT_STRING_SIZE - 1] = '\0';
+    }
     #ifdef x86_64
     if (strcmp("advanced_options:temp_buffer_dir", options_keys[idx]) == 0)
     {
@@ -389,6 +398,11 @@ TfLiteDelegate* tflite_plugin_create_delegate(char** options_keys,
   strcat(options->artifacts_folder, "/");
 
   options->osrtDebugPrintLevel = (options->debug_level == 0) ? 0 : 1;
+
+  if(options->trace_base_name[0] != '\0')
+  {
+    TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "trace_base_name      = %s \n", options->trace_base_name);
+  }
 
   TfLiteDelegate *tidl_delegate = TfLiteTIDLDelegateCreate(options);
 

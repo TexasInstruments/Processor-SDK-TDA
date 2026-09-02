@@ -4,6 +4,8 @@
 # Edit this file to suit your specific build needs
 #
 
+include $(PSDK_PATH)/vision_apps/build_flags.mak
+
 ifeq ($(PROFILE), $(filter $(PROFILE),debug all))
 LINUX_APP_PROFILE=debug
 endif
@@ -42,6 +44,7 @@ ifeq ($(YOCTO_STAGE),)
 	if [ -f $(LINUX_FS_BOOT_PATH)/version ]; then cp -rf $(LINUX_FS_BOOT_PATH)/* $(LINUX_BOOTFS_STAGE_PATH)/; fi
 endif
 	install -m 775 -d $(LINUX_FS_STAGE_PATH)/usr/lib
+	install -m 775 -d $(LINUX_FS_STAGE_PATH)/usr/include
 
 ifeq ($(BUILD_CPU_MPU1),yes)
 	# copy application binaries and scripts
@@ -73,6 +76,8 @@ ifneq ($(SOC),am62a)
 	# Since AM62A currently (06.03.2026) is latched to REL.TIDL.11.01.10.00, this library is not available.
 	# Remove this condition once AM62A moves to REL.TIDL.11.02.04.00 or greater.
 	cp -P $(TIDL_PATH)/arm-tidl/tidlrt_ep/out/$(TARGET_SOC)/$(MPU_CPU)/LINUX/$(LINUX_APP_PROFILE)/*.so*  $(LINUX_FS_STAGE_PATH)/usr/lib
+
+	cp $(TIDL_PATH)/arm-tidl/rt/inc/*.h  $(LINUX_FS_STAGE_PATH)/usr/include
 endif
 
 	cp -P $(TIDL_PATH)/arm-tidl/rt/out/$(TARGET_SOC)/$(MPU_CPU)/LINUX/$(LINUX_APP_PROFILE)/*.so*  $(LINUX_FS_STAGE_PATH)/usr/lib
@@ -141,7 +146,7 @@ ifeq ($(BUILD_CPU_MCU1_0),yes)
 ifneq ($(SOC), $(filter $(SOC), am62a j722s))
 	# copy remote firmware files for mcu1_0
 	$(eval IMAGE_NAME := vx_app_rtos_linux_mcu1_0.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-mcu-r5f0_0-fw
 endif
@@ -154,14 +159,14 @@ endif
 ifeq ($(BUILD_CPU_MCU1_1),yes)
 	# copy remote firmware files for mcu1_1
 	$(eval IMAGE_NAME := vx_app_rtos_linux_mcu1_1.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-mcu-r5f0_1-fw
 endif
 ifeq ($(BUILD_CPU_MCU2_0),yes)
 	# copy remote firmware files for mcu2_0
 	$(eval IMAGE_NAME := vx_app_rtos_linux_mcu2_0.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-main-r5f0_0-fw
 ifeq ($(HS),1)
@@ -172,7 +177,7 @@ endif
 ifeq ($(BUILD_CPU_MCU2_1),yes)
 	# copy remote firmware files for mcu2_1
 	$(eval IMAGE_NAME := vx_app_rtos_linux_mcu2_1.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-main-r5f0_1-fw
 ifeq ($(HS),1)
@@ -183,7 +188,7 @@ endif
 ifeq ($(BUILD_CPU_MCU3_0),yes)
 	# copy remote firmware files for mcu3_0
 	$(eval IMAGE_NAME := vx_app_rtos_linux_mcu3_0.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-main-r5f1_0-fw
 ifeq ($(HS),1)
@@ -194,7 +199,7 @@ endif
 ifeq ($(BUILD_CPU_MCU3_1),yes)
 	# copy remote firmware files for mcu3_1
 	$(eval IMAGE_NAME := vx_app_rtos_linux_mcu3_1.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-main-r5f1_1-fw
 ifeq ($(HS),1)
@@ -205,7 +210,7 @@ endif
 ifeq ($(BUILD_CPU_MCU4_0),yes)
 	# copy remote firmware files for mcu4_0
 	$(eval IMAGE_NAME := vx_app_rtos_linux_mcu4_0.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-main-r5f2_0-fw
 ifeq ($(HS),1)
@@ -216,7 +221,7 @@ endif
 ifeq ($(BUILD_CPU_MCU4_1),yes)
 	# copy remote firmware files for mcu4_1
 	$(eval IMAGE_NAME := vx_app_rtos_linux_mcu4_1.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-main-r5f2_1-fw
 ifeq ($(HS),1)
@@ -227,7 +232,7 @@ endif
 ifeq ($(BUILD_CPU_C6x_1),yes)
 	# copy remote firmware files for c6x_1
 	$(eval IMAGE_NAME := vx_app_rtos_linux_c6x_1.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/C66/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/C66/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(CGT6X_ROOT)/bin/strip6x -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-c66_0-fw
 ifeq ($(HS),1)
@@ -238,7 +243,7 @@ endif
 ifeq ($(BUILD_CPU_C6x_2),yes)
 	# copy remote firmware files for c6x_2
 	$(eval IMAGE_NAME := vx_app_rtos_linux_c6x_2.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/C66/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/C66/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(CGT6X_ROOT)/bin/strip6x -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-c66_1-fw
 ifeq ($(HS),1)
@@ -250,7 +255,7 @@ ifneq ($(SOC),am62a)
 ifeq ($(BUILD_CPU_C7x_1),yes)
 	# copy remote firmware files for c7x_1
 	$(eval IMAGE_NAME := vx_app_rtos_linux_c7x_1.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(CGT7X_ROOT)/bin/strip7x -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-c71_0-fw
 ifeq ($(HS),1)
@@ -265,7 +270,7 @@ ifeq ($(TISDK_IMAGE),edgeai)
 else
 	$(eval IMAGE_NAME := dsp_adas_c7x_1_release_strip.out)
 endif
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-c71_0-fw
 ifeq ($(HS),1)
 	$(TI_SECURE_DEV_PKG)/scripts/secure-binary-image.sh $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME).signed
@@ -275,7 +280,7 @@ endif
 ifeq ($(BUILD_CPU_C7x_2),yes)
 	# copy remote firmware files for c7x_2
 	$(eval IMAGE_NAME := vx_app_rtos_linux_c7x_2.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(CGT7X_ROOT)/bin/strip7x -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-c71_1-fw
 ifeq ($(HS),1)
@@ -286,7 +291,7 @@ endif
 ifeq ($(BUILD_CPU_C7x_3),yes)
 	# copy remote firmware files for c7x_3
 	$(eval IMAGE_NAME := vx_app_rtos_linux_c7x_3.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(CGT7X_ROOT)/bin/strip7x -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-c71_2-fw
 ifeq ($(HS),1)
@@ -297,7 +302,7 @@ endif
 ifeq ($(BUILD_CPU_C7x_4),yes)
 	# copy remote firmware files for c7x_4
 	$(eval IMAGE_NAME := vx_app_rtos_linux_c7x_4.out)
-	cp $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
+	cp $(PLATFORM_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(LINUX_APP_PROFILE)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/.
 	$(CGT7X_ROOT)/bin/strip7x -p $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME)
 	ln -sr $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(FIRMWARE_SUBFOLDER)/$(IMAGE_NAME) $(LINUX_FS_STAGE_PATH)/usr/lib/firmware/$(LINUX_FIRMWARE_PREFIX)-c71_3-fw
 ifeq ($(HS),1)
@@ -400,9 +405,10 @@ YOCTO_VARS = PROFILE=release \
 yocto_build:
 	$(COPYDIR) $(PSDK_PATH)/psdk_include/* $(PSDK_PATH)/.
 	$(YOCTO_VARS) $(MAKE) app_utils
+	$(YOCTO_VARS) $(MAKE) tiovx
+	$(YOCTO_VARS) $(MAKE) platform_hlos
 	$(YOCTO_VARS) $(MAKE) imaging
 	$(YOCTO_VARS) $(MAKE) video_io
-	$(YOCTO_VARS) $(MAKE) tiovx
 
 ifeq ($(ENABLE_NEW_TIDL_STRUCTURE),yes)
 	$(YOCTO_VARS) $(MAKE) -C $(PSDK_PATH)/tidl_j7/arm-tidl tidl_tiovx_arm_kernels TARGET_BUILD=release
@@ -410,9 +416,17 @@ else
 	$(YOCTO_VARS) $(MAKE) tidl_tiovx_kernels
 endif
 
+	$(YOCTO_VARS) $(MAKE) app_kernels
+
 ifneq ($(SOC_FAMILY), $(filter $(SOC_FAMILY), SOC_FAMILY_TDA5))
 	$(YOCTO_VARS) $(MAKE) ptk
 endif
+
+# Build tidl_rt for J7* devices (not AM62A)
+ifneq ($(SOC),am62a)
+	$(YOCTO_VARS) $(MAKE) tidl_rt
+endif
+
 	$(YOCTO_VARS) $(MAKE) -C $(VISION_APPS_PATH) tivision_apps
 
 ifeq ($(SOC),tda54)

@@ -535,6 +535,17 @@ int32_t TIDL_softmaxProcessNew(TIDL_NetworkCommonParams *commonParams,
             axis,
             outTranspose);
       }
+      else if (inDataParams->elementType == TIDL_BFloat16)
+      {
+        TIDL_softmaxRefProcessBFloat16<bfloat16_tidl, float32_tidl>(
+              tidlLayer, 
+              (bfloat16_tidl *)inPtrs[0], 
+              (float32_tidl *)outPtrs[0], 
+              &inDataParams, 
+              &tidlLayer->outData, 
+              (uint8_t *)commonParams->createParams->net, 
+              outTranspose);
+      }
       else
       {
         /* TIDL_LDRA_TAG_SOFTMAX_PRIOR_CHECK_002 */
@@ -671,6 +682,25 @@ int32_t TIDL_softmaxProcessNew(TIDL_NetworkCommonParams *commonParams,
       else
       {
         /* TIDL_LDRA_TAG_SOFTMAX_PRIOR_CHECK_003 */
+        status = TIDL_ERR_INVALID_TYPE;
+      }
+    }
+    else if (outElementType == TIDL_BFloat16)
+    {
+      if (inDataParams->elementType == TIDL_BFloat16)
+      {
+        TIDL_softmaxRefProcessBFloat16<bfloat16_tidl, bfloat16_tidl>(
+              tidlLayer, 
+              (bfloat16_tidl *)inPtrs[0], 
+              (bfloat16_tidl *)outPtrs[0], 
+              &inDataParams, 
+              &tidlLayer->outData, 
+              (uint8_t *)commonParams->createParams->net, 
+              outTranspose);
+      }
+      else
+      {
+        /* TIDL_LDRA_TAG_SOFTMAX_PRIOR_CHECK_002 */
         status = TIDL_ERR_INVALID_TYPE;
       }
     }

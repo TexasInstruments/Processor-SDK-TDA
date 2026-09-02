@@ -61,16 +61,14 @@
  */
 
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <utils/console_io/include/app_log.h>
 #include <utils/timer/include/app_timer.h>
 #include <utils/file_io/include/app_fileio.h>
 #include <utils/ipc/include/app_ipc.h>
-#include <stdint.h>
 
-#include <app_mem_map.h>
-#include <app_cfg.h>
-#include <common.h>
+#include <platform.h>
 
 #if defined(QNX)
 #include <sys/slog.h>
@@ -78,7 +76,7 @@
 #endif
 
 extern core_config_t core_config[];
-extern uint8_t num_cpus;
+extern uint8_t num_cores;
 
 #if 0
 #if defined(QNX)
@@ -106,7 +104,7 @@ int main(void)
     appLogInitPrmSetDefault(&log_init_prm);
     appFileIOInitPrmSetDefault(&fileio_init_prm);
 
-    for (int i = 0; i < num_cpus; i++)
+    for (int i = 0; i < num_cores; i++)
     {
         if (core_config[i].enable_log_rd_cpu)
         {

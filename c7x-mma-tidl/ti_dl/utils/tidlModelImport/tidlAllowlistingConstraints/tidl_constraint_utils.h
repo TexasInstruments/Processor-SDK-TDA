@@ -66,5 +66,5 @@
 #include "tidl_deviceInfo.h"
 
 int32_t tidlCheckShapeInferenceforOnnx(sTIDL_allowlistingMetaData md);
-bool tidlIsInducedLayer(sTIDL_LayerPC_t layer);
+bool skipConstraintCheck(sTIDL_LayerPC_t layer);
 int32_t tidlGetNonSingletonNumDims(std::vector<int32_t> dims);

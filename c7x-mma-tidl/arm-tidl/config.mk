@@ -88,12 +88,15 @@ ENABLE_SDK_11_0_COMPATIBILITY    ?= 0
 # Enable compatibility to build on 11.1 SDK
 ENABLE_SDK_11_1_COMPATIBILITY    ?= 0
 
+#Enable performance modelling flow 
+ENABLE_PERFORMANCE_MODELLING     ?= 0
+
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
   CGT_C7X_VERSION := 6.1.0.STS
   MMALIB_VERSION  := 11_02_01_04
 else
   CGT_C7X_VERSION := 5.0.0.LTS
-  MMALIB_VERSION  := 11_02_00_11
+  MMALIB_VERSION  := 12_01_00_01
 endif
 
 PSDK_TOOLS_PATH     ?= $(HOME)/ti
@@ -162,7 +165,7 @@ PDK_INSTALL_PATH    ?=$(PSDK_INSTALL_PATH)/pdk/packages
 
 TIDL_PATH           ?=$(abspath ../../)
 TIOVX_PATH          ?=$(PSDK_INSTALL_PATH)/tiovx
-VISION_APPS_PATH    ?=$(PSDK_INSTALL_PATH)/vision_apps
+PLATFORM_PATH       ?=$(PSDK_INSTALL_PATH)/platform
 APP_UTILS_PATH      ?=$(PSDK_INSTALL_PATH)/app_utils
 TIDL_PROTOBUF_PATH  ?=$(PSDK_INSTALL_PATH)/protobuf-3.21.12
 CUDA_PATH           ?= /usr/local/cuda

@@ -278,10 +278,13 @@ void tidlrt_printf(const char *fmt, ...)
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> DEBUG_TRACE : This function is solely for debugging purposes and is not part of the production code.
+    <justification start>
+    Rationale - DEBUG_TRACE: This function is solely for debugging purposes and is not part of the production code.
     Users aren't expected to set TIDL_RT_DEBUG env variable,
     only for debug purposes.
     TIDL_LDRA_TAG: TIDL_LDRA_TAG_TIDL_RT_DEBUG_ENV_VAR
+    Effect on this UNIT - If the control reaches here, code is expected to function correctly for debug/trace purpose. 
+    However, due to the stated rationale, this is not covered in production code.
     <justification end> */
     if(tidlrt_debuglevel == 0U)
     /* LDRA_JUSTIFY_END */
@@ -290,10 +293,13 @@ void tidlrt_printf(const char *fmt, ...)
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> DEBUG_TRACE : This function is solely for debugging purposes and is not part of the production code.
+    <justification start>
+    Rationale - DEBUG_TRACE: This function is solely for debugging purposes and is not part of the production code.
     Users aren't expected to set TIDL_RT_DEBUG env variable,
     only for debug purposes.
     TIDL_LDRA_TAG: TIDL_LDRA_TAG_TIDL_RT_DEBUG_ENV_VAR
+    Effect on this UNIT - If the control reaches here, code is expected to function correctly for debug/trace purpose. 
+    However, due to the stated rationale, this is not covered in production code.
     <justification end> */
     else
     {
@@ -312,9 +318,12 @@ static void __attribute__((constructor)) lib_init(void)
     debug_str = getenv("TIDL_RT_DEBUG");
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> DEBUG_TRACE : This function is solely for debugging purposes and is not part of the production code.
+    <justification start>
+    Rationale - DEBUG_TRACE: This function is solely for debugging purposes and is not part of the production code.
     Users aren't expected to set TIDL_RT_DEBUG env variable,
     only for debug purposes.
+    Effect on this UNIT - If the control reaches here, code is expected to function correctly for debug/trace purpose. 
+    However, due to the stated rationale, this is not covered in production code.
     <justification end> */
     if(!debug_str)
     /* LDRA_JUSTIFY_END */
@@ -323,9 +332,12 @@ static void __attribute__((constructor)) lib_init(void)
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> DEBUG_TRACE : This function is solely for debugging purposes and is not part of the production code.
+    <justification start>
+    Rationale - DEBUG_TRACE: This function is solely for debugging purposes and is not part of the production code.
     Users aren't expected to set TIDL_RT_DEBUG env variable,
     only for debug purposes.
+    Effect on this UNIT - If the control reaches here, code is expected to function correctly for debug/trace purpose. 
+    However, due to the stated rationale, this is not covered in production code.
     <justification end> */
     else
     {
@@ -697,7 +709,9 @@ int32_t TIDLRT_create(sTIDLRT_Params_t *prms, void **handle)
 #endif
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if((int32_t)VX_SUCCESS != status)
             {
@@ -1147,10 +1161,13 @@ int32_t TIDLRT_create(sTIDLRT_Params_t *prms, void **handle)
 #if !defined (HOST_EMULATION)
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> DEBUG_TRACE : This function is solely for debugging purposes and is not part of the production code.
+            <justification start>
+            Rationale - DEBUG_TRACE: This function is solely for debugging purposes and is not part of the production code.
             Users aren't expected to set TIDL_RT_DEBUG env variable,
             only for debug purposes.
             TIDL_LDRA_TAG: TIDL_LDRA_TAG_TIDL_RT_DEBUG_ENV_VAR
+            Effect on this UNIT - If the control reaches here, code is expected to function correctly for debug/trace purpose. 
+            However, due to the stated rationale, this is not covered in production code.
             <justification end> */
             if(tidlrt_debuglevel == 3U)
             {
@@ -1330,9 +1347,12 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
                 {
                     /* LDRA_JUSTIFY_START
                     <metric start> statement branch <metric end>
-                    <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+                    <justification start>
+                    Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
                     This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
                     TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_RT_PRIOR_CHECK_001
+                    Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+                    This does not affect runtime behavior or safety.
                     <justification end> */
                     if (i >= TIDL_MAX_INTERMEDIATE_TENSOR)
                     {
@@ -1359,9 +1379,12 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
                 {
                     /* LDRA_JUSTIFY_START
                     <metric start> statement branch <metric end>
-                    <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+                    <justification start>
+                    Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
                     This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
                     TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_RT_PRIOR_CHECK_001
+                    Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+                    This does not affect runtime behavior or safety.
                     <justification end> */
                     if (i >= TIDL_MAX_INTERMEDIATE_TENSOR)
                     {
@@ -1386,10 +1409,13 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
 
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
-                <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+                <justification start>
+                Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
                 This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
                 TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_RT_PRIOR_CHECK_001
                 TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_RT_PRIOR_CHECK_002
+                Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+                This does not affect runtime behavior or safety.
                 <justification end> */
                 if (status == (int32_t)VX_SUCCESS)
                 {
@@ -1422,9 +1448,12 @@ int32_t TIDLRT_delete(void *handle)
         {
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+            <justification start>
+            Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
             This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
             TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_RT_PRIOR_CHECK_001
+            Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+            This does not affect runtime behavior or safety.
             <justification end> */
             if (((IntHandle_t*)rtHandle->next != NULL) && (i >= TIDL_MAX_INTERMEDIATE_TENSOR))
             {
@@ -1936,7 +1965,9 @@ static vx_user_data_object mapConfig(AppObj *obj, vx_context context, const sTID
 
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if ((int32_t)VX_SUCCESS == status)
     /* LDRA_JUSTIFY_END */
@@ -1946,19 +1977,23 @@ static vx_user_data_object mapConfig(AppObj *obj, vx_context context, const sTID
 
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         vxMapUserDataObject fails if vx_user_data_object provided is NULL.
         The vx_user_data_object provided here is config which is already
         checked for NULL in vxGetStatus
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if ((int32_t)VX_SUCCESS == status)
         /* LDRA_JUSTIFY_END */
         {
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             tidlParams will never be null if the status above is VX_SUCCESS
             i.e config has been successfully mapped to tidlParams
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if(tidlParams == NULL)
             {
@@ -1969,9 +2004,11 @@ static vx_user_data_object mapConfig(AppObj *obj, vx_context context, const sTID
 
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             tidlParams will never be null if the status above is VX_SUCCESS
             i.e config has been successfully mapped to tidlParams
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             else
             {
@@ -2071,7 +2108,9 @@ static vx_user_data_object mapNetwork(AppObj* obj, void * netPtr, int32_t capaci
 
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if ((int32_t)VX_SUCCESS == status)
     /* LDRA_JUSTIFY_END */
@@ -2083,19 +2122,23 @@ static vx_user_data_object mapNetwork(AppObj* obj, void * netPtr, int32_t capaci
 
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         vxMapUserDataObject fails if vx_user_data_object provided is NULL.
         The vx_user_data_object provided here is network which is already
         checked for NULL in vxGetStatus
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if ((int32_t)VX_SUCCESS == status)
         /* LDRA_JUSTIFY_END */
         {
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             network_buffer will never be null if the status above is VX_SUCCESS
             i.e network has been successfully mapped to network_buffer.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if(network_buffer != NULL)
             {
@@ -2107,9 +2150,11 @@ static vx_user_data_object mapNetwork(AppObj* obj, void * netPtr, int32_t capaci
             }
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             network_buffer will never be null if the status above is VX_SUCCESS
             i.e network has been successfully mapped to network_buffer
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             else
             {
@@ -2145,7 +2190,9 @@ static vx_user_data_object setCreateParams(AppObj *obj, sTIDLRT_Params_t *prms, 
 
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if ((int32_t)VX_SUCCESS == status)
     /* LDRA_JUSTIFY_END */
@@ -2155,20 +2202,24 @@ static vx_user_data_object setCreateParams(AppObj *obj, sTIDLRT_Params_t *prms, 
 
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         vxMapUserDataObject fails if vx_user_data_object provided is NULL.
         The vx_user_data_object provided here is createParams which is already
         checked for NULL in vxGetStatus
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if ((int32_t)VX_SUCCESS == status)
         /* LDRA_JUSTIFY_END */
         {
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             createParams_buffer will never be null if the status above is
             VX_SUCCESS i.e createParams has been successfully mapped to
             createParams_buffer
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if(createParams_buffer != NULL)
             {
@@ -2195,10 +2246,12 @@ static vx_user_data_object setCreateParams(AppObj *obj, sTIDLRT_Params_t *prms, 
 
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             createParams_buffer will never be null if the status above is
             VX_SUCCESS i.e createParams has been successfully mapped to
             createParams_buffer
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             else
             {
@@ -2229,7 +2282,9 @@ static vx_user_data_object setInArgs(AppObj *obj)
 
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if ((int32_t)VX_SUCCESS == status)
     /* LDRA_JUSTIFY_END */
@@ -2239,19 +2294,23 @@ static vx_user_data_object setInArgs(AppObj *obj)
 
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         vxMapUserDataObject fails if vx_user_data_object provided is NULL.
         The vx_user_data_object provided here is inArgs which is already
         checked for NULL in vxGetStatus
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if ((int32_t)VX_SUCCESS == status)
         /* LDRA_JUSTIFY_END */
         {
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             inArgs_buffer will never be null if the status above is VX_SUCCESS
             i.e inArgs has been successfully mapped to inArgs_buffer
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if(inArgs_buffer != NULL)
             {
@@ -2266,9 +2325,11 @@ static vx_user_data_object setInArgs(AppObj *obj)
             }
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             inArgs_buffer will never be null if the status above is VX_SUCCESS
             i.e inArgs has been successfully mapped to inArgs_buffer
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             else
             {
@@ -2298,7 +2359,9 @@ static vx_user_data_object setOutArgs(vx_context context)
 
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if ((int32_t)VX_SUCCESS == status)
     {
@@ -2307,19 +2370,23 @@ static vx_user_data_object setOutArgs(vx_context context)
 
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         vxMapUserDataObject fails if vx_user_data_object provided is NULL.
         The vx_user_data_object provided here is outArgs which is already
         checked for NULL in vxGetStatus
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if ((int32_t)VX_SUCCESS == status)
         /* LDRA_JUSTIFY_END */
         {
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             outArgs_buffer will never be null if the status above is VX_SUCCESS
             i.e outArgs has been successfully mapped to outArgs_buffer
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if(outArgs_buffer != NULL)
             {
@@ -2330,9 +2397,11 @@ static vx_user_data_object setOutArgs(vx_context context)
 
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             outArgs_buffer will never be null if the status above is VX_SUCCESS
             i.e outArgs has been successfully mapped to outArgs_buffer
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             else
             {
@@ -2353,10 +2422,12 @@ static vx_status addParam(vx_reference params[], vx_reference obj, uint32_t *num
     vx_status status = VX_FAILURE;
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     this is a utility function and is expected to be used to only to add
     appParams for tivxTIDLNode, hence only 6 params are added at max which is
     less than TIDL_MAX_PARAMS (16)
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if((*num_params < TIDL_MAX_PARAMS))
     {
@@ -2385,7 +2456,9 @@ static vx_status create_graph_tidl_tiovx(AppObj *obj)
 
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if(status == (int32_t)VX_SUCCESS)
     /* LDRA_JUSTIFY_END */
@@ -2429,9 +2502,11 @@ static vx_status create_graph_tidl_tiovx(AppObj *obj)
 
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         addParam fails if num_params > TIDL_MAX_PARAMS (16).
         We are only adding 6 params before this check
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if(status == (int32_t)VX_SUCCESS)
         /* LDRA_JUSTIFY_END */
@@ -2538,7 +2613,9 @@ static vx_status create_graph_tidl_tiovx(AppObj *obj)
 #else
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if(obj->coreNum != 1U)
             {
@@ -2637,19 +2714,23 @@ static vx_status tidlrt_update_inargs_dim_values(AppObj *obj, sTIDLRT_Tensor_t *
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     vxMapUserDataObject fails if vx_user_data_object provided is NULL.
     The vx_user_data_object provided here is obj->inArgs which is already
     validated during setInArgs() at init time.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if ((int32_t)VX_SUCCESS == status)
     /* LDRA_JUSTIFY_END */
     {
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         inArgs_buffer will never be null if the status above is VX_SUCCESS
         i.e inArgs has been successfully mapped to inArgs_buffer
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if (inArgs_buffer != NULL)
         /* LDRA_JUSTIFY_END */
@@ -2672,9 +2753,11 @@ static vx_status tidlrt_update_inargs_dim_values(AppObj *obj, sTIDLRT_Tensor_t *
         }
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         inArgs_buffer will never be null if the status above is VX_SUCCESS
         i.e inArgs has been successfully mapped to inArgs_buffer
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         else
         {
@@ -2845,7 +2928,7 @@ static vx_size getTensorDataType(vx_int32 tidl_type)
     {
         openvx_type = VX_TYPE_INT8;
     }
-    else if(tidl_type == TIDL_UnsignedShort)
+    else if(tidl_type == TIDL_UnsignedShort || tidl_type == TIDL_BFloat16)
     {
         openvx_type = VX_TYPE_UINT16;
     }
@@ -2875,8 +2958,10 @@ static vx_size getTensorDataType(vx_int32 tidl_type)
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     This else block is for MISRA-C purposes
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     else if(tidl_type == TIDL_SinglePrecFloat)
     /* LDRA_JUSTIFY_END */
@@ -2885,8 +2970,10 @@ static vx_size getTensorDataType(vx_int32 tidl_type)
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     This else block is for MISRA-C purposes
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     else
     {
@@ -2910,8 +2997,11 @@ static uint32_t getElementSize(uint32_t data_type)
     #ifdef HOST_EMULATION
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+    <justification start>
+    Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
     This else if block is uncovered due to unsupported datatype (64-bit). This code is maintained for future use.
+    Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+    This does not impact functional correctness or safety.
     <justification end> */
     else if((data_type == (uint32_t)VX_TYPE_INT32) || (data_type == (uint32_t)VX_TYPE_UINT32) || (data_type == (uint32_t)VX_TYPE_FLOAT32))
     /* LDRA_JUSTIFY_END */
@@ -2920,8 +3010,11 @@ static uint32_t getElementSize(uint32_t data_type)
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+    <justification start>
+    Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
     This else if block is uncovered due to unsupported datatype (64-bit). This code is maintained for future use.
+    Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+    This does not impact functional correctness or safety.
     <justification end> */
     else if((data_type == (uint32_t)VX_TYPE_INT64) || (data_type == (uint32_t)VX_TYPE_UINT64))
     {
@@ -2931,8 +3024,10 @@ static uint32_t getElementSize(uint32_t data_type)
     #endif
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     This else block is for MISRA-C purposes
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     else
     {
@@ -2987,8 +3082,11 @@ static vx_status createInputTensors(AppObj *obj, vx_context context, vx_user_dat
         }
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        <justification start>
+        Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
         No test case is expected to have VX_TYPE_UINT64 datatype
+        Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+        This does not impact functional correctness or safety.
         <justification end> */
         else if((data_type == (uint32_t)VX_TYPE_INT32) || (data_type == (uint32_t)VX_TYPE_UINT32) || (data_type == (uint32_t)VX_TYPE_FLOAT32))
         {
@@ -2997,8 +3095,11 @@ static vx_status createInputTensors(AppObj *obj, vx_context context, vx_user_dat
         }
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        <justification start>
+        Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
         No test case is expected to have VX_TYPE_UINT64 datatype
+        Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+        This does not impact functional correctness or safety.
         <justification end> */
         else if((data_type == (uint32_t)VX_TYPE_INT64) || (data_type == (uint32_t)VX_TYPE_UINT64))
         {
@@ -3008,9 +3109,12 @@ static vx_status createInputTensors(AppObj *obj, vx_context context, vx_user_dat
 
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        <justification start>
+        Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
         No test case is expected to hit this code path since all tidl datatypes
         are covered in getTensorDataType
+        Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+        This does not impact functional correctness or safety.
         <justification end> */
         else
         {
@@ -3029,8 +3133,10 @@ static vx_status createInputTensors(AppObj *obj, vx_context context, vx_user_dat
 
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         Users are never expected to pass invalid data type during Inference
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if(data_type != (uint32_t)VX_TYPE_INVALID)
         /* LDRA_JUSTIFY_END */
@@ -3040,8 +3146,10 @@ static vx_status createInputTensors(AppObj *obj, vx_context context, vx_user_dat
 
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             Safe programming and cant be true in real usecase
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if(status == (int32_t)VX_SUCCESS)
             /* LDRA_JUSTIFY_END */
@@ -3054,8 +3162,10 @@ static vx_status createInputTensors(AppObj *obj, vx_context context, vx_user_dat
             }
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             Safe programming and cant be true in real usecase
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             else
             {
@@ -3065,8 +3175,10 @@ static vx_status createInputTensors(AppObj *obj, vx_context context, vx_user_dat
         }
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         Users are never expected to pass invalid data type during Inference
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         else
         {
@@ -3076,8 +3188,10 @@ static vx_status createInputTensors(AppObj *obj, vx_context context, vx_user_dat
 
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         Safe programming and cant be true in real usecase
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if(status != (int32_t)VX_SUCCESS)
         {
@@ -3121,9 +3235,11 @@ static vx_status createOutputTensors(AppObj *obj, vx_context context, vx_user_da
 
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         No test case is expected to hit this code path since all tidl datatypes
         are covered in getTensorDataType
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if(data_type != (uint32_t)VX_TYPE_INVALID)
         /* LDRA_JUSTIFY_END */
@@ -3132,9 +3248,11 @@ static vx_status createOutputTensors(AppObj *obj, vx_context context, vx_user_da
         }
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         No test case is expected to hit this code path since all tidl datatypes
         are covered in getTensorDataType
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         else
         {
@@ -3144,9 +3262,11 @@ static vx_status createOutputTensors(AppObj *obj, vx_context context, vx_user_da
 
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         No test case is expected to hit this code path since all tidl datatypes
         are covered in getTensorDataType
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if(status != (int32_t)VX_SUCCESS)
         {
@@ -3267,9 +3387,11 @@ static vx_status set_in_tidlrt_tensor_refs(AppObj *obj, vx_tensor *input_tensors
 
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             numPlanes for vx_tensor type is always 1 as defined by
             tivxReferenceExportHandle function.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if(numPlanes == 1U)
             {
@@ -3289,9 +3411,11 @@ static vx_status set_in_tidlrt_tensor_refs(AppObj *obj, vx_tensor *input_tensors
             }
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             numPlanes for vx_tensor type is always 1 as defined by
             tivxReferenceExportHandle function.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             else
             {
@@ -3334,9 +3458,11 @@ static vx_status set_out_tidlrt_tensor_refs(AppObj *obj, vx_tensor *output_tenso
                                                     &numPlanes);
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             numPlanes for vx_tensor type is always 1 as defined by
             tivxReferenceExportHandle function.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if(numPlanes == 1U)
             {
@@ -3356,9 +3482,11 @@ static vx_status set_out_tidlrt_tensor_refs(AppObj *obj, vx_tensor *output_tenso
             }
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             numPlanes for vx_tensor type is always 1 as defined by
             tivxReferenceExportHandle function.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             else
             {
@@ -3424,8 +3552,11 @@ static vx_status map_cp_in_tidlrt_tensor_tiovx(AppObj *obj, vx_context context, 
             }
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+            <justification start>
+            Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
             No test case is expected to have VX_TYPE_UINT64 datatype.
+            Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+            This does not impact functional correctness or safety.
             <justification end> */
             else if((data_type == (uint32_t)VX_TYPE_INT32) || (data_type == (uint32_t)VX_TYPE_UINT32) || (data_type == (uint32_t)VX_TYPE_FLOAT32))
             {
@@ -3434,8 +3565,11 @@ static vx_status map_cp_in_tidlrt_tensor_tiovx(AppObj *obj, vx_context context, 
             }
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+            <justification start>
+            Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
             No test case is expected to have VX_TYPE_UINT64 datatype.
+            Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+            This does not impact functional correctness or safety.
             <justification end> */
             else if((data_type == (uint32_t)VX_TYPE_INT64) || (data_type == (uint32_t)VX_TYPE_UINT64))
             {
@@ -3444,8 +3578,11 @@ static vx_status map_cp_in_tidlrt_tensor_tiovx(AppObj *obj, vx_context context, 
             /* LDRA_JUSTIFY_END */
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+            <justification start>
+            Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
             No test case is expected to have VX_TYPE_UINT64 datatype.
+            Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+            This does not impact functional correctness or safety.
             <justification end> */
             else
             {
@@ -3469,10 +3606,13 @@ static vx_status map_cp_in_tidlrt_tensor_tiovx(AppObj *obj, vx_context context, 
 
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> DEBUG_TRACE : This function is solely for debugging purposes and is not part of the production code.
+            <justification start>
+            Rationale - DEBUG_TRACE: This function is solely for debugging purposes and is not part of the production code.
             Users aren't expected to set TIDL_RT_DEBUG env variable,
             only for debug purposes.
             TIDL_LDRA_TAG: TIDL_LDRA_TAG_TIDL_RT_DEBUG_ENV_VAR
+            Effect on this UNIT - If the control reaches here, code is expected to function correctly for debug/trace purpose. 
+            However, due to the stated rationale, this is not covered in production code.
             <justification end> */
             if (tidlrt_debuglevel > 0U)
             {
@@ -3489,8 +3629,10 @@ static vx_status map_cp_in_tidlrt_tensor_tiovx(AppObj *obj, vx_context context, 
 
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             Safe programming and cant be true in real usecase
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if(status == (int32_t)VX_SUCCESS)
             /* LDRA_JUSTIFY_END */
@@ -3501,8 +3643,10 @@ static vx_status map_cp_in_tidlrt_tensor_tiovx(AppObj *obj, vx_context context, 
             }
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             Safe programming and cant be true in real usecase
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             else
             {
@@ -3563,9 +3707,11 @@ static vx_status memset_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
-                <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                <justification start>
+                Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
                 All datatypes are already covered in getTensorDataType
                 Added the else block for MISRA-C purposes
+                Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                 <justification end> */
                 else if((data_type == (uint32_t)VX_TYPE_FLOAT32))
                 {
@@ -3574,9 +3720,11 @@ static vx_status memset_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
-                <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                <justification start>
+                Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
                 All datatypes are already covered in getTensorDataType
                 Added the else block for MISRA-C purposes
+                Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                 <justification end> */
                 else
                 {
@@ -3592,8 +3740,10 @@ static vx_status memset_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
 
                 /* LDRA_JUSTIFY_START
                 <metric start> branch <metric end>
-                <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                <justification start>
+                Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
                 Safe programming and cant be true in real usecase
+                Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                 <justification end> */
                 if (status == (int32_t)VX_SUCCESS)
                 /* LDRA_JUSTIFY_END */
@@ -3612,8 +3762,10 @@ static vx_status memset_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
-                <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                <justification start>
+                Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
                 Safe programming and cant be true in real usecase
+                Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                 <justification end> */
                 else
                 {
@@ -3715,9 +3867,11 @@ static vx_status map_cp_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
 
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             After inference i.e. vxProcessGraph the output tensor are not NULL
             and are valid. Refer to run_graph_tidlrt_tiovx function.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if ((int32_t)VX_SUCCESS == status)
             /* LDRA_JUSTIFY_END */
@@ -3744,9 +3898,11 @@ static vx_status map_cp_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
-                <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                <justification start>
+                Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
                 All datatypes are already covered in getTensorDataType
                 Added the else block for MISRA-C purposes
+                Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                 <justification end> */
                 else if((data_type == (uint32_t)VX_TYPE_FLOAT32))
                 {
@@ -3755,9 +3911,11 @@ static vx_status map_cp_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
-                <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                <justification start>
+                Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
                 All datatypes are already covered in getTensorDataType
                 Added the else block for MISRA-C purposes
+                Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                 <justification end> */
                 else
                 {
@@ -3773,8 +3931,10 @@ static vx_status map_cp_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
 
                 /* LDRA_JUSTIFY_START
                 <metric start> branch <metric end>
-                <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                <justification start>
+                Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
                 Safe programming and cant be true in real usecase
+                Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                 <justification end> */
                 if (status == (int32_t)VX_SUCCESS)
                 /* LDRA_JUSTIFY_END */
@@ -3792,8 +3952,10 @@ static vx_status map_cp_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
                 }
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
-                <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                <justification start>
+                Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
                 Safe programming and cant be true in real usecase
+                Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                 <justification end> */
                 else
                 {
@@ -3929,8 +4091,11 @@ static vx_status allocate_intermediate_tensors(IntHandle_t *rtHandle)
         {
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+            <justification start>
+            Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
             Standard bubble sort algorithm
+            Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+            This does not impact functional correctness or safety.
             <justification end> */
             if (outBufSizes[j] < outBufSizes[j + 1])
             {
@@ -4019,9 +4184,12 @@ static vx_status allocate_intermediate_tensors(IntHandle_t *rtHandle)
                 {
                     /* LDRA_JUSTIFY_START
                     <metric start> statement branch <metric end>
-                    <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+                    <justification start>
+                    Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
                     This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
                     TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_RT_PRIOR_CHECK_001
+                    Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+                    This does not affect runtime behavior or safety.
                     <justification end> */
                     if (p >= TIDL_MAX_INTERMEDIATE_TENSOR)
                     {
@@ -4053,11 +4221,13 @@ static vx_status allocate_intermediate_tensors(IntHandle_t *rtHandle)
                     {
                         /* LDRA_JUSTIFY_START
                         <metric start> statement branch <metric end>
-                        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                        <justification start>
+                        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
                         This check is to ensure that the we loop over complete outBufPool
                         to check for output_tensor. out_tensor is already present
                         in outBufPool, hence the loop will never reach termination
                         by the condition k < numUniqueOutBufNeeded.
+                        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                         <justification end> */
                         for (int32_t k = 0; k < numUniqueOutBufNeeded; k++)
                         /* LDRA_JUSTIFY_END */
@@ -4073,9 +4243,12 @@ static vx_status allocate_intermediate_tensors(IntHandle_t *rtHandle)
 
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
-                <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+                <justification start>
+                Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
                 This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
                 TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_RT_PRIOR_CHECK_001
+                Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+                This does not affect runtime behavior or safety.
                 <justification end> */
                 if(status == (vx_status)VX_FAILURE)
                 {
@@ -4086,9 +4259,12 @@ static vx_status allocate_intermediate_tensors(IntHandle_t *rtHandle)
 
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
-            <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+            <justification start>
+            Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
             This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
             TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_RT_PRIOR_CHECK_001
+            Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+            This does not affect runtime behavior or safety.
             <justification end> */
             if (status == (vx_status)VX_SUCCESS)
             /* LDRA_JUSTIFY_END */

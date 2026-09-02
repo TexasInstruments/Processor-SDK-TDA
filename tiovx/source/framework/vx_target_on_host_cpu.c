@@ -1,6 +1,6 @@
 /*
 *
-* Copyright (c) 2017-2023 Texas Instruments Incorporated
+* Copyright (c) 2017-2026 Texas Instruments Incorporated
 *
 * All rights reserved not granted herein.
 *
@@ -84,6 +84,26 @@ static void ownTargetNodeDescNodeExecuteUserKernel(tivx_obj_desc_node_t *node_ob
         prm_ref[i] = ownReferenceGetHandleFromObjDescId(prm_obj_desc_id[i]);
     }
     node_obj_desc->exe_status = (uint32_t)ownNodeUserKernelExecute((vx_node)(uintptr_t)node_obj_desc->base.host_ref, prm_ref);
+
+    /* Setting tivx_error_info is not supported for user kernels, only target kernels.
+     * However, since the rest of the framework has adapted tivx_error_info per-replica reporting,
+     * this workaround allows user kernel's error to be reported in both replicate and non-replicate cases.
+     */
+    if (tivxFlagIsBitSet(node_obj_desc->flags, TIVX_NODE_FLAG_IS_REPLICATED) ==
+        (vx_bool)vx_true_e)
+    {
+        tivx_obj_desc_node_error_info_t *error_info_obj_desc =
+            (tivx_obj_desc_node_error_info_t *)ownObjDescGet((uint16_t)node_obj_desc->error_info_obj_desc_id);
+
+        if (NULL != error_info_obj_desc)
+        {
+            error_info_obj_desc->replicated_node_error_info[0].replica_status = node_obj_desc->exe_status;
+        }
+    }
+    else
+    {
+        node_obj_desc->single_error_info.replica_status = node_obj_desc->exe_status;
+    }
 }
 
 static void ownTargetCmdDescHandlerHost(const tivx_obj_desc_cmd_t *cmd_obj_desc)
@@ -179,14 +199,56 @@ static vx_action ownTargetCmdDescHandleUserCallback(tivx_obj_desc_node_t *node_o
     /* send completion event if enabled */
     ownNodeCheckAndSendCompletionEvent(node_obj_desc, timestamp);
 
-    /* if an error occurred within the node, then send an error completion event */
+    /* exe_status itself is depreceated, but still tells us if at least one replica failed */
     if ((vx_status)VX_SUCCESS != (vx_status)node_obj_desc->exe_status)
     {
-        ownNodeCheckAndSendErrorEvent(node_obj_desc, timestamp, (vx_status)node_obj_desc->exe_status);
-    }
+        vx_bool replicate_read = (vx_bool)vx_false_e;
 
-    /* Clearing node status now that it has been sent as an error event */
-    node_obj_desc->exe_status = 0;
+        if (tivxFlagIsBitSet(node_obj_desc->flags, TIVX_NODE_FLAG_IS_REPLICATED) ==
+            (vx_bool)vx_true_e)
+        {
+            tivx_obj_desc_node_error_info_t *error_info_obj_desc =
+                (tivx_obj_desc_node_error_info_t *)ownObjDescGet((uint16_t)node_obj_desc->error_info_obj_desc_id);
+
+            if (NULL != error_info_obj_desc)
+            {
+                uint32_t cnt;
+                replicate_read = (vx_bool)vx_true_e;
+
+                for (cnt = 0; cnt < node_obj_desc->num_of_replicas; cnt++)
+                {
+                    volatile tivx_error_info_t *replica_error_info = &(error_info_obj_desc->replicated_node_error_info[cnt]);
+
+                    if ((vx_status)VX_SUCCESS != (vx_status)replica_error_info->replica_status)
+                    {
+                        ownNodeCheckAndSendErrorEvent(node_obj_desc, timestamp,
+                            (vx_status)replica_error_info->replica_status,
+                            (vx_uint16)cnt, replica_error_info);
+                    }
+
+                    /* Clearing replica status now that it has been sent as an error event. */
+                    tivx_obj_desc_memset(replica_error_info->error_info, 0, (uint32_t)replica_error_info->error_info_size);
+                    replica_error_info->replica_status = 0;
+                    replica_error_info->error_info_size = 0;
+                }
+            }
+        }
+
+        /* Fallback if reading the replicate error_info_obj_desc was unsuccessful */
+        if (replicate_read == (vx_bool)vx_false_e)
+        {
+            ownNodeCheckAndSendErrorEvent(node_obj_desc, timestamp,
+                (vx_status)node_obj_desc->single_error_info.replica_status,
+                (vx_uint16)0, &node_obj_desc->single_error_info);
+
+            /* Clearing full node status now that it has been sent as an error event */
+            tivx_obj_desc_memset(node_obj_desc->single_error_info.error_info, 0, (uint32_t)TIVX_MAX_ERROR_INFO_SIZE);
+            node_obj_desc->single_error_info.replica_status = 0;
+            node_obj_desc->single_error_info.error_info_size = 0;
+        }
+
+        node_obj_desc->exe_status = 0;
+    }
 
     /* first we let any node events to go thru before sending graph events */
     if(is_send_graph_complete_event!= 0)

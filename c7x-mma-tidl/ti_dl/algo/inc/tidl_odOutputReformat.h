@@ -74,29 +74,26 @@
 
 #include "tidl_alg_int.h"
 
-/**
- ----------------------------------------------------------------------------
- @ingroup    TIDL_OdOutputReformat
- @fn         TIDL_odOutputReformatProcess
- @brief      Reformat output layer as required by runtime
- @param      intAlgHandle : Ptr to alg internal handle
- @param      algLayer : Ptr to alg layer parameter used in TIDL_OdOutputReformat layer
- @param      tidlLayer: Ptr to tidl layer parameter used in TIDL_OdOutputReformat layer
- @param      inPtrs: Ptrs to input buffers to be processed
- @param      outPtrs: Ptrs to output buffers to be processed
- @param      sysMems: Ptr to memory releated buffers used in TIDL_OdOutputReformat layer
- @remarks    None
- @return     status  - Add status values 
- ----------------------------------------------------------------------------
-*/
-                     
-int32_t TIDL_odOutputReformatProcess(
-                                TIDL_Handle          intAlgHandle,
-                                const sTIDL_AlgLayer_t     * algLayer,
-                                sTIDL_Layer_t  * tidlLayer,
-                                void                 * inPtrs[],
-                                void                 * outPtrs[],
-                                sTIDL_sysMemHandle_t * sysMems);
+int32_t TIDL_OdOutputReformatAlloc(const TIDL_LayerSpecificParams *layerSpecificParams,
+                                  const TIDL_NetworkCommonParams *commonParams,
+                                  int32_t layerIdx,
+                                  int32_t memorySize[TIDL_LAYER_MEMORY_MAX]);
+
+int32_t TIDL_OdOutputReformatInit(const TIDL_LayerSpecificParams *layerSpecificParams,
+                                 const TIDL_NetworkCommonParams *commonParams,
+                                 sTIDL_AlgLayer_t *algLayer,
+                                 int32_t layerIdx,
+                                 uint8_t *memory[TIDL_LAYER_MEMORY_MAX],
+                                 int32_t memorySize[TIDL_LAYER_MEMORY_MAX],
+                                 void **outPtr);
+
+
+int32_t TIDL_OdOutputReformatProcess(TIDL_NetworkCommonParams *commonParams,
+                                    sTIDL_AlgLayer_t *algLayer,
+                                    sTIDL_Layer_t *tidlLayer,
+                                    void *inPtrs[],
+                                    void *outPtrs[],
+                                    int32_t layerIdx);
 
 #endif /* ITIDL_ODOUTPUTREFORMAT_H*/
 

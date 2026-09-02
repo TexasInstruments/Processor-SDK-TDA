@@ -190,7 +190,10 @@ int32_t TIDL_gruRefInit(const TIDL_LayerSpecificParams *layerSpecificParams,
   TIDL_updateGRUMemorySizes(layerSpecificParams, commonParams, layerIdx, &scratchDataSize, &outDataSize, memorySize);
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  <justification start>
+  Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+  This does not affect runtime behavior or safety.
   <justification end> */
   if (outPtr != NULL )
   {

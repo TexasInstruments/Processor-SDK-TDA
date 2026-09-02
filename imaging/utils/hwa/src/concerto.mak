@@ -15,9 +15,12 @@ endif
 
 ifeq ($(TARGET_CPU),R5F)
 ifneq ($(SOC), $(filter $(SOC), am62a j722s))
-CSOURCES    := app_hwa.c app_csi.c app_hwa_firewall.c
+CSOURCES    := app_hwa.c app_hwa_firewall.c
 else
-CSOURCES    := app_hwa.c app_csi.c
+CSOURCES    := app_hwa.c
+ifeq ($(SOC), am62a)
+CSOURCES	+= app_csi.c
+endif
 endif
 endif
 

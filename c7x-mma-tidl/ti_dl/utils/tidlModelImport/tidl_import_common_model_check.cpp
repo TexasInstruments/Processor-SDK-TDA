@@ -1825,7 +1825,7 @@ static void checkScatterElementsLayers(const sTIDL_LayerPC_t &layerPC, DiagList_
   {
     TIDL_LOG_UNSUPPORTED(diags, "%s :"
       "%s should be removed in import process, otherwise this model will not work",
-      TIDL_LayerString[layerPC.layerType], layerPC.name);
+      TIDL_GetLayerString(layerPC.layerType), layerPC.name);
   }
 }
 
@@ -1837,7 +1837,7 @@ static void checkReduceLayers(const sTIDL_LayerPC_t &layerPC, DiagList_t &diags)
   {
     TIDL_LOG_UNSUPPORTED(diags, "%s "
       "%s: should be removed in import process, otherwise this model will not work",
-      TIDL_LayerString[layerPC.layerType], layerPC.name);
+      TIDL_GetLayerString(layerPC.layerType), layerPC.name);
   }
 }
 
@@ -1846,7 +1846,7 @@ static void checkFoldedLayers(const sTIDL_LayerPC_t &layerPC, DiagList_t &diags)
 {
   TIDL_LOG_UNSUPPORTED(diags, "%s "
      "%s: should be removed in import process to support this model",
-     TIDL_LayerString[layerPC.layerType], layerPC.name);
+     TIDL_GetLayerString(layerPC.layerType), layerPC.name);
 }
 
 static void checkQuantStatsAvailable(sTIDL_Network_t * resultTIDLNetStructure, sTIDL_OrgNetwork_t * orgTIDLNetStructure, DiagList_t &diags)
@@ -1865,7 +1865,7 @@ static void checkDataflowInfoAvailable(sTIDL_Network_t * resultTIDLNetStructure,
   {
     if(((gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TFLITE_RT) || (gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_ONNX_RT) ||
                             (gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TVM_RELAY))
-             && (gParams.numParamBits == 32))
+             && ((gParams.numParamBits == 32) || (gParams.numParamBits == 16 && gParams.inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint)))
     {
       /* OSRT floating pass -- Corresponding warning is added in OSRT */
     }
@@ -1989,7 +1989,7 @@ int tidlModelCheck(tidl_import_config * params, sTIDL_OrgNetwork_t * orgTIDLNetS
   checkQuantStatsAvailable(resultNetStructure, orgTIDLNetStructure, diags);
   checkDataflowInfoAvailable(resultNetStructure, orgTIDLNetStructure, diags);
 
-  if(gParams.numParamBits != 32)
+  if((gParams.numParamBits != 32) && (gParams.inferencePrecisionMode == TIDL_InferencePrecisionModeFixedPoint))
   {
     if((warningCount == 0) && (errorCount == 0))
     {

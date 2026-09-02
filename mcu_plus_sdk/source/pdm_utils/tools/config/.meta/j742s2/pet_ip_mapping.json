@@ -1,0 +1,252 @@
+{
+    "WKUP SMS 0": {
+        "ip_name": "J742S2_DEV_WKUP_HSM0",
+        "input_name": "DEV_WKUP_HSM0_DAP_CLK",
+        "tisci_ip_name": "",
+        "tisci_input_name": "",
+        "lpsc_name": "LPSC_dmsc",
+        "dependent_psc_list": [],
+        "programmable": false,
+        "default_freq_mhz": 333.333333,
+        "enableLpsc": false
+    },
+    "MCU R5FSS 0": {
+        "ip_name": "J742S2_DEV_MCU_FSS0_FSAS_0",
+        "input_name": "DEV_MCU_FSS0_FSAS_0_GCLK",
+        "tisci_ip_name": "",
+        "tisci_input_name": "",
+        "lpsc_name": "LPSC_wkup_alwayson",
+        "dependent_psc_list": [],
+        "programmable": false,
+        "default_freq_mhz": 1000,
+        "enableLpsc": false
+    },
+    "MAIN A72SS 0": {
+        "ip_name": "J742S2_DEV_A72SS0",
+        "input_name": "DEV_A72SS0_ARM0_CLK_CLK",
+        "tisci_ip_name": "TISCI_DEV_A72SS0_CORE0",
+        "tisci_input_name": "TISCI_DEV_A72SS0_ARM0_CLK_CLK",
+        "lpsc_name": "LPSC_A72_Cluster_0",
+        "dependent_psc_list": [],
+        "programmable": true,
+        "default_freq_mhz": 2000,
+        "enableLpsc": false
+    },
+    "MAIN R5FSS 0_0": {
+        "ip_name": "J742S2_DEV_R5FSS0_CORE0",
+        "input_name": "DEV_R5FSS0_CORE0_CPU_CLK",
+        "tisci_ip_name": "TISCI_DEV_R5FSS0_CORE0",
+        "tisci_input_name": "TISCI_DEV_R5FSS0_CORE0_CPU_CLK",
+        "lpsc_name": "LPSC_Pulsar_0_R5_0",
+        "dependent_psc_list": [],
+        "programmable": true,
+        "default_freq_mhz": 1000,
+        "enableLpsc": false
+    },
+    "MAIN R5FSS 0_1": {
+        "ip_name": "J742S2_DEV_R5FSS0_CORE1",
+        "input_name": "DEV_R5FSS0_CORE1_CPU_CLK",
+        "tisci_ip_name": "TISCI_DEV_R5FSS0_CORE1",
+        "tisci_input_name": "TISCI_DEV_R5FSS0_CORE1_CPU_CLK",
+        "lpsc_name": "LPSC_Pulsar_0_R5_1",
+        "dependent_psc_list": [],
+        "programmable": true,
+        "default_freq_mhz": 1000,
+        "enableLpsc": false
+    },
+    "MAIN R5FSS 1_0": {
+        "ip_name": "J742S2_DEV_R5FSS1_CORE0",
+        "input_name": "DEV_R5FSS1_CORE0_CPU_CLK",
+        "tisci_ip_name": "TISCI_DEV_R5FSS1_CORE0",
+        "tisci_input_name": "TISCI_DEV_R5FSS1_CORE0_CPU_CLK",
+        "lpsc_name": "LPSC_Pulsar_1_R5_0",
+        "dependent_psc_list": ["TISCI_DEV_RTI30"],
+        "programmable": true,
+        "default_freq_mhz": 1000,
+        "enableLpsc": false
+    },
+    "MAIN R5FSS 1_1": {
+        "ip_name": "J742S2_DEV_R5FSS1_CORE1",
+        "input_name": "DEV_R5FSS1_CORE1_CPU_CLK",
+        "tisci_ip_name": "TISCI_DEV_R5FSS1_CORE1",
+        "tisci_input_name": "TISCI_DEV_R5FSS1_CORE1_CPU_CLK",
+        "lpsc_name": "LPSC_Pulsar_1_R5_1",
+        "dependent_psc_list": ["TISCI_DEV_RTI31"],
+        "programmable": true,
+        "default_freq_mhz": 1000,
+        "enableLpsc": false
+    },
+    "MAIN R5FSS 2_0": {
+        "ip_name": "J742S2_DEV_R5FSS2_CORE0",
+        "input_name": "DEV_R5FSS2_CORE0_CPU_CLK",
+        "tisci_ip_name": "TISCI_DEV_R5FSS2_CORE0",
+        "tisci_input_name": "TISCI_DEV_R5FSS2_CORE0_CPU_CLK",
+        "lpsc_name": "LPSC_Pulsar_2_R5_0",
+        "dependent_psc_list": ["TISCI_DEV_RTI32"],
+        "programmable": true,
+        "default_freq_mhz": 1000,
+        "enableLpsc": false
+    },
+    "MAIN R5FSS 2_1": {
+        "ip_name": "J742S2_DEV_R5FSS2_CORE1",
+        "input_name": "DEV_R5FSS2_CORE1_CPU_CLK",
+        "tisci_ip_name": "TISCI_DEV_R5FSS2_CORE1",
+        "tisci_input_name": "TISCI_DEV_R5FSS2_CORE1_CPU_CLK",
+        "lpsc_name": "LPSC_Pulsar_2_R5_1",
+        "dependent_psc_list": ["TISCI_DEV_RTI33"],
+        "programmable": true,
+        "default_freq_mhz": 1000,
+        "enableLpsc": false
+    },
+    "MAIN C71SS 0": {
+        "ip_name": "J742S2_DEV_COMPUTE_CLUSTER0_C71SS0",
+        "input_name": "DEV_COMPUTE_CLUSTER0_C71SS0_C7X_CLK",
+        "tisci_ip_name": "TISCI_DEV_COMPUTE_CLUSTER0_C71SS0",
+        "tisci_input_name": "TISCI_DEV_COMPUTE_CLUSTER0_C71SS0_CORE0_C7X_CLK",
+        "lpsc_name": "LPSC_C71x_0",
+        "dependent_psc_list": ["TISCI_DEV_COMPUTE_CLUSTER0_DRU4"],
+        "programmable": true,
+        "default_freq_mhz": 1000,
+        "enableLpsc": false
+    },
+    "MAIN C71SS 1": {
+        "ip_name": "J742S2_DEV_COMPUTE_CLUSTER0_C71SS1",
+        "input_name": "DEV_COMPUTE_CLUSTER0_C71SS1_C7X_CLK",
+        "tisci_ip_name": "TISCI_DEV_COMPUTE_CLUSTER0_C71SS1",
+        "tisci_input_name": "TISCI_DEV_COMPUTE_CLUSTER0_C71SS1_CORE0_C7X_CLK",
+        "lpsc_name": "LPSC_C71x_1",
+        "dependent_psc_list": ["TISCI_DEV_COMPUTE_CLUSTER0_DRU5"],
+        "programmable": true,
+        "default_freq_mhz": 1000,
+        "enableLpsc": false
+    },
+    "MAIN C71SS 2": {
+        "ip_name": "J742S2_DEV_COMPUTE_CLUSTER0_C71SS2",
+        "input_name": "DEV_COMPUTE_CLUSTER0_C71SS2_C7X_CLK",
+        "tisci_ip_name": "TISCI_DEV_COMPUTE_CLUSTER0_C71SS2",
+        "tisci_input_name": "TISCI_DEV_COMPUTE_CLUSTER0_C71SS2_CORE0_C7X_CLK",
+        "lpsc_name": "LPSC_C66x_0",
+        "dependent_psc_list": ["TISCI_DEV_COMPUTE_CLUSTER0_DRU6"],
+        "programmable": true,
+        "default_freq_mhz": 1000,
+        "enableLpsc": false
+    },
+    "VPAC 0": {
+        "ip_name": "J742S2_DEV_VPAC0",
+        "input_name": "DEV_VPAC0_MAIN_CLK",
+        "tisci_ip_name": "TISCI_DEV_VPAC0",
+        "tisci_input_name": "TISCI_DEV_VPAC0_MAIN_CLK",
+        "lpsc_name": "LPSC_VPAC",
+        "dependent_psc_list": [],
+        "programmable": true,
+        "default_freq_mhz": 720,
+        "enableLpsc": true
+    },
+    "VPAC 1": {
+        "ip_name": "J742S2_DEV_VPAC1",
+        "input_name": "DEV_VPAC1_MAIN_CLK",
+        "tisci_ip_name": "TISCI_DEV_VPAC1",
+        "tisci_input_name": "TISCI_DEV_VPAC1_MAIN_CLK",
+        "lpsc_name": "LPSC_vpac_1",
+        "dependent_psc_list": [],
+        "programmable": true,
+        "default_freq_mhz": 720,
+        "enableLpsc": true
+    },
+    "DMPAC 0": {
+        "ip_name": "J742S2_DEV_DMPAC0",
+        "input_name": "DEV_DMPAC0_CLK",
+        "tisci_ip_name": "TISCI_DEV_DMPAC0",
+        "tisci_input_name": "TISCI_DEV_DMPAC0_CLK",
+        "lpsc_name": "LPSC_DMPAC",
+        "dependent_psc_list": [],
+        "programmable": true,
+        "default_freq_mhz": 480,
+        "enableLpsc": true
+    },
+    "Graphic Processing Unit 0": {
+        "ip_name": "J742S2_DEV_J7AEP_GPU_BXS464_WRAP0_GPU_SS_0",
+        "input_name": "DEV_J7AEP_GPU_BXS464_WRAP0_GPU_SS_0_GPU_PLL_CLK",
+        "tisci_ip_name": "TISCI_DEV_J7AEP_GPU_BXS464_WRAP0_GPU_SS_0",
+        "tisci_input_name": "TISCI_DEV_J7AEP_GPU_BXS464_WRAP0_GPU_SS_0_GPU_PLL_CLK",
+        "lpsc_name": "LPSC_GPUCOM",
+        "dependent_psc_list": [],
+        "programmable": true,
+        "default_freq_mhz": 800,
+        "enableLpsc": true
+    },
+    "Video Encoder/Decoder 0": {
+        "ip_name": "J742S2_DEV_CODEC0",
+        "input_name": "DEV_CODEC0_VPU_ACLK_CLK",
+        "tisci_ip_name": "TISCI_DEV_CODEC0",
+        "tisci_input_name": "TISCI_DEV_CODEC0_VPU_ACLK_CLK",
+        "lpsc_name": "LPSC_encode_1",
+        "dependent_psc_list": [],
+        "programmable": true,
+        "default_freq_mhz": 600,
+        "enableLpsc": true
+    },
+    "Video Encoder/Decoder 1": {
+        "ip_name": "J742S2_DEV_CODEC1",
+        "input_name": "DEV_CODEC1_VPU_ACLK_CLK",
+        "tisci_ip_name": "TISCI_DEV_CODEC1",
+        "tisci_input_name": "TISCI_DEV_CODEC1_VPU_ACLK_CLK",
+        "lpsc_name": "LPSC_decode_0",
+        "dependent_psc_list": [],
+        "programmable": true,
+        "default_freq_mhz": 600,
+        "enableLpsc": true
+    },
+    "LPDDR4 EMIF 0": {
+        "ip_name": "J742S2_DEV_DDR0",
+        "input_name": "DEV_DDR0_DDRSS_DDR_PLL_CLK",
+        "tisci_ip_name": "TISCI_DEV_DDR0",
+        "tisci_input_name": "TISCI_DEV_DDR0_DDRSS_CFG_CLK",
+        "lpsc_name": "LPSC_EMIF_CFG_0",
+        "dependent_psc_list": [
+            "TISCI_DEV_EMIF_DATA_0_VD"
+        ],
+        "programmable": false,
+        "default_freq_mhz": 1066.5,
+        "enableLpsc": true
+    },
+    "LPDDR4 EMIF 1": {
+        "ip_name": "J742S2_DEV_DDR1",
+        "input_name": "DEV_DDR1_DDRSS_DDR_PLL_CLK",
+        "tisci_ip_name": "TISCI_DEV_DDR1",
+        "tisci_input_name": "TISCI_DEV_DDR1_DDRSS_CFG_CLK",
+        "lpsc_name": "LPSC_EMIF_CFG_1",
+        "dependent_psc_list": [
+            "TISCI_DEV_EMIF_DATA_1_VD"
+        ],
+        "programmable": false,
+        "default_freq_mhz": 1066.5,
+        "enableLpsc": true
+    },
+    "LPDDR4 EMIF 2": {
+        "ip_name": "J742S2_DEV_DDR2",
+        "input_name": "DEV_DDR2_DDRSS_DDR_PLL_CLK",
+        "tisci_ip_name": "TISCI_DEV_DDR2",
+        "tisci_input_name": "TISCI_DEV_DDR2_DDRSS_CFG_CLK",
+        "lpsc_name": "LPSC_emif_cfg_2",
+        "dependent_psc_list": [
+            "TISCI_DEV_EMIF_DATA_2_VD"
+        ],
+        "programmable": false,
+        "default_freq_mhz": 1066.5,
+        "enableLpsc": true
+    },
+    "LPDDR4 EMIF 3": {
+        "ip_name": "J742S2_DEV_DDR3",
+        "input_name": "DEV_DDR3_DDRSS_DDR_PLL_CLK",
+        "tisci_ip_name": "TISCI_DEV_DDR3",
+        "tisci_input_name": "TISCI_DEV_DDRSS_CFG_CLK",
+        "lpsc_name": "LPSC_emif_cfg_3",
+        "dependent_psc_list": [
+            "TISCI_DEV_EMIF_DATA_3_VD"
+        ],
+        "programmable": false,
+        "default_freq_mhz": 1066.5,
+        "enableLpsc": true
+    }
+}

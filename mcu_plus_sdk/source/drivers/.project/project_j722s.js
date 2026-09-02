@@ -549,6 +549,7 @@ const defines_wkup_r5 = {
         "WKUP_R5",
         "ENABLE_SCICLIENT_DIRECT",
         "ENABLE_PHY_TUNING_SOC_BUILD",
+        "CONFIG_UDMAP_MULTI_CH_CFG",
     ],
 };
 
@@ -556,6 +557,7 @@ const defines_mcu_r5 = {
     common: [
         "MCU_R5",
         "ENABLE_PHY_TUNING_SOC_BUILD",
+        "CONFIG_UDMAP_MULTI_CH_CFG",
     ],
 };
 
@@ -565,6 +567,7 @@ const defines_main_r5 = {
         "FVID2_CFG_TRACE_ENABLE",
         "FVID2_CFG_ASSERT_ENABLE",
         "ENABLE_PHY_TUNING_SOC_BUILD",
+        "CONFIG_UDMAP_MULTI_CH_CFG",
     ],
 };
 
@@ -576,11 +579,13 @@ const cflags_wkup_r5f = {
 
 const defines_c75ss0 = {
     common: [
+        "CONFIG_UDMAP_MULTI_CH_CFG",
     ],
 };
 
 const defines_c75ss1 = {
     common: [
+        "CONFIG_UDMAP_MULTI_CH_CFG",
     ],
 };
 

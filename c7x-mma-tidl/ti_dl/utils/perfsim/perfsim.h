@@ -51,6 +51,7 @@
 
 #define  ERR_FLAG_SPATIAL_JOIN_NOT_SUPPORTED  (1U)
 #define  ERR_FLAG_OTF_NOT_SUPPORTED           (2U)
+
 #define FILE_NAME_SIZE  (512)
 
 /**
@@ -180,6 +181,7 @@ typedef struct
   int32_t padCReq ;
 } sBufferInfo_t;
 
+
 /**<
 *******************************************************************************
 @struct sPerfSimConfig_t
@@ -263,6 +265,14 @@ typedef struct
   char outputDirName[FILE_NAME_SIZE];
   char fileNameGrpInfo[FILE_NAME_SIZE]  ;
 
+  /* Flags to force spatial/Batch split in low latency mode*/
+  int32_t forceSpatialSplitInLowLatencyMode;
+  int32_t forceBatchSplitInLowLatencyMode;
+
+  /* User specified singlecore/multicore layer indices */
+  int32_t singleCoreLayersIndices[TIDL_NUM_MAX_LAYERS];
+  int32_t spatialSplitLayersIndices[TIDL_NUM_MAX_LAYERS];
+  int32_t channelSplitLayersIndices[TIDL_NUM_MAX_LAYERS];
 } sPerfSimConfig_t;
 
 /**<

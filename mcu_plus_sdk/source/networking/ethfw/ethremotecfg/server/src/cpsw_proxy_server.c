@@ -398,7 +398,7 @@ static uint8_t gCpswProxyServer_autosarEthDriverTaskStackBuf[CPSWPROXYSERVER_AUT
 
 static uint8_t gCpswProxyServerRpmsgbuf[ETHREMOTECFG_IPC_DATA_SIZE] __attribute__ ((aligned(1024)));
 
-static uint8_t gCpswProxyServer_remoteClientEthDriverTaskStackBuf[CPSWPROXY_ETH_CLIENT_TASK_STACK] __attribute__ ((aligned(CPSWPROXY_IPC_TASK_STACKALIGN)));
+static uint8_t gCpswProxyServer_remoteClientEthDriverTaskStackBuf[CPSWPROXY_ETH_CLIENT_TASK_STACK] __attribute__ ((aligned(CPSWPROXY_ETH_CLIENT_TASK_ALIGN)));
 
 /**< Buffer to store received messages. 256 messages of 512 bytes +
         space for book-keeping */

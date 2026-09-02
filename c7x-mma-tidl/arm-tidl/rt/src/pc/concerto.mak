@@ -71,7 +71,7 @@ else
     LDIRS += $(TIDL_PATH)/ti_dl/lib/$(TARGET_SOC)/PC/algo/$(TARGET_BUILD)
 endif
 LDIRS += $(TIOVX_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
-LDIRS += $(VISION_APPS_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+LDIRS += $(PLATFORM_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 LDIRS += $(APP_UTILS_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 LDIRS += $(TIDL_PATH)/arm-tidl/tiovx_kernels/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 LDIRS += $(TIDL_PATH)/tiovx_kernels/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
@@ -109,10 +109,12 @@ TIOVX_LIBS += vx_target_kernels_dsp
 TIOVX_LIBS += vx_target_kernels_source_sink
 TIOVX_LIBS += vx_target_kernels_tutorial vx_kernels_test_kernels
 
-VISION_APPS_UTILS_LIBS  =
-VISION_APPS_UTILS_LIBS += app_utils_mem
-VISION_APPS_UTILS_LIBS += app_utils_init
-VISION_APPS_UTILS_LIBS += app_utils_file_io
+APP_UTILS_LIBS  =
+APP_UTILS_LIBS += app_utils_mem
+APP_UTILS_LIBS += app_utils_file_io
+
+HLOS_PLATFORM_LIBS =
+HLOS_PLATFORM_LIBS += app_init_pc_common
 
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
     # app_utils_timer provides appLogGetTimeInUsec/appLogGetGlobalTimeInUsec/appLogWaitMsecs
@@ -120,7 +122,8 @@ ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
     # VDK/IPC/remote-service libs (app_utils_init_vdk, app_utils_ipc, etc.) are NOT
     # needed for PC simulation - they register non-TIDL HW kernels and are only
     # used by the armv8 EVM builds.
-    VISION_APPS_UTILS_LIBS += app_utils_timer
+    APP_UTILS_LIBS += app_utils_timer
+    HLOS_PLATFORM_LIBS += app_utils_init_vdk
 endif
 
 
@@ -130,13 +133,16 @@ ADDITIONAL_STATIC_LIBS += $(IPC_NOTIFY_LIBS)
 STATIC_LIBS += $(TIDL_LIBS)
 STATIC_LIBS += $(MMA_LIBS)
 STATIC_LIBS += $(TIOVX_LIBS)
-STATIC_LIBS += $(VISION_APPS_UTILS_LIBS)
+STATIC_LIBS += $(APP_UTILS_LIBS)
+STATIC_LIBS += $(HLOS_PLATFORM_LIBS)
 STATIC_LIBS += vxlib_$(TARGET_CPU) c6xsim_$(TARGET_CPU)_C66
 STATIC_LIBS += $(C7X_VERSION)$(C7x_HOSTEMU_COMPILER_STRING)-host-emulation
 
 SHARED_LIBS += rt
 
 include $($(_MODULE)_SDIR)/../concerto_common.mak
+
+IDIRS += $(PLATFORM_PATH)/pc/include
 
 include $(FINALE)
 

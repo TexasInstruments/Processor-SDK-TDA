@@ -27,7 +27,9 @@ format (.gv) for graphviz)
 #define MAX_LAYER_NODES 2048
 #define MAX_LAYER_EDGES 2048
 #define MAX_FILE_NAME_SIZE 1024
-char TIDL_LayerNames[MAX_LAYER_NODES][300] = {0};
+
+TIDL_dump::sLayerSpecificInfo_t layersInfo[TIDL_NUM_MAX_LAYERS];
+
 bool legacyMode = false;   // if true via -legacy, use "classic" node info
 using namespace TIDL_Strings;
 #include "gc.h"
@@ -90,7 +92,8 @@ const char *TIDL_nodeElemTypeColors[] =
   "#00fa04",    //"TIDL_SinglePrecFloat",
   "#bb00fa",    //"TIDL_UnsignedDoubleWord",
   "#bb00fa",    //"TIDL_SignedDoubleWord",
-  "#3235d3ff",    //"TIDL_Bool"
+  "#3235d3ff",  //"TIDL_Bool",
+  "#ff8c00",    //"TIDL_BFloat16"
 };
 
 const char *TIDL_graphBgColors[] =
@@ -281,14 +284,14 @@ static void tidl_LegacyNodeInfo(char *nodeName, const sTIDL_Network_t* pTIDLNetS
   if(pTIDLNetStructure->TIDLLayers[i].numOutBufs != -1)
   {
     sprintf(nodeName,"Layer %d Data ID: %d: %s %s \nInput Dimensions : %dx%dx%dx%dx%dx%d\nOutput Dimensions : %dx%dx%dx%dx%dx%d\n", i, pTIDLNetStructure->TIDLLayers[i].outData.dataId, layerTypeName.c_str(),
-    TIDL_LayerNames[i], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_BATCH],TIDL_LayerNames[i], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM1],TIDL_LayerNames[i], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM2], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_NUMCH], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_HEIGHT], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_WIDTH]
+    layersInfo[i].layerName, pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_BATCH],layersInfo[i].layerName, pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM1],layersInfo[i].layerName, pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM2], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_NUMCH], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_HEIGHT], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_WIDTH]
     , pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_BATCH],pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_DIM1],pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_DIM2], pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_NUMCH], pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_HEIGHT], pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_WIDTH]
     );
   }
   else
   {
     sprintf(nodeName,"Layer %d Data ID : %d: %s %s\nInput Dimensions : %dx%dx%dx%dx%dx%d\nOutput Dimensions : %dx%dx%dx%dx%dx%d\n", i, (pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dataId), layerTypeName.c_str(),
-    TIDL_LayerNames[i], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_BATCH],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM1],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM2], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_NUMCH], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_HEIGHT], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_WIDTH]
+    layersInfo[i].layerName, pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_BATCH],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM1],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM2], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_NUMCH], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_HEIGHT], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_WIDTH]
     , pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_BATCH],pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_DIM1],pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_DIM2], pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_NUMCH], pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_HEIGHT], pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_WIDTH]
     );
   }
@@ -389,11 +392,8 @@ static std::string tidl_NodeInfo(const sTIDL_Network_t* pTIDLNetStructure, const
    }
    // Use the TIDL_dump utility to provide layer information
    TIDL_dump::options_t options = {{"perfsim", true}};
-   TIDL_dump::layerNames_t layerNames; 
-   for (int i = 0; i < pTIDLNetStructure->numLayers; ++i)
-      layerNames[i] = TIDL_LayerNames[i];
    std::ostringstream oss;
-   TIDL_dump dumper(oss, pTIDLNetStructure, /*io=*/nullptr, &layerNames, options);
+   TIDL_dump dumper(oss, pTIDLNetStructure, /*io=*/nullptr, layersInfo, options);
    dumper.dumpLayer(layerNum);
    return oss.str();
 }
@@ -456,7 +456,8 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
   {
     for (i = 0; i < pTIDLNetStructure->numLayers; i++)
     {
-      char name[300];
+      char name[300] = {0};
+      temp3 = -1;
       if(pTIDLNetStructure->inferenceMode != TIDL_inferenceModeLowLatency)/*single core inference*/
       {
         fscanf(fpNames, "%d %d %s", &temp1, &temp2, name);
@@ -465,7 +466,10 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
       {
         fscanf(fpNames, "%d %d %d %s", &temp1, &temp2, &temp3, name);
       }
-      strcpy(TIDL_LayerNames[i], name);
+      layersInfo[i].layerName = name;
+      layersInfo[i].multiCoreMode = temp3 != -1 
+                                    ? temp3
+                                    : TIDL_NOT_MULTI_CORE;
     }
     fclose(fpNames);
   }
@@ -530,9 +534,11 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
         int32_t inLayerIdx = tidl_getInLayer(pTIDLNetStructure, pTIDLNetStructure->numLayers, pTIDLNetStructure->TIDLLayers[i].inData[j]);
         e[i] = agedge(g, n[inLayerIdx], n[i], (char*)tempBuff,TRUE);
         i1 = pTIDLNetStructure->TIDLLayers[i].inData[j];
-        sprintf(tempBuff, " %dx%dx%dx%dx%dx%d", pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_BATCH],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM1], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM2],
-                pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_NUMCH],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_HEIGHT],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_WIDTH]);
-        agset(e[i], "label", (char*)tempBuff);
+        {
+          std::string edgeHtml = TIDL_shapeHtmlLabel(&pTIDLNetStructure->TIDLLayers[inLayerIdx].outData);
+          char *edgeHtmlLabel = agstrdup_html(g, (char*)edgeHtml.c_str());
+          agset(e[i], "label", edgeHtmlLabel);
+        }
       }
       visited[pTIDLNetStructure->TIDLLayers[i].outData.dataId] = 1;
       layerIdxCount++;
@@ -614,9 +620,11 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
         int32_t inLayerIdx = tidl_getInLayer(pTIDLNetStructure, pTIDLNetStructure->numLayers, pTIDLNetStructure->TIDLLayers[i].inData[j]);
         e[i] = agedge(g, n[inLayerIdx], n[i], (char*)tempBuff,TRUE);
         i1 = pTIDLNetStructure->TIDLLayers[i].inData[j];
-        sprintf(tempBuff, " %dx%dx%dx%dx%dx%d", pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_BATCH],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM1], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM2],
-                pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_NUMCH],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_HEIGHT],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_WIDTH]);
-        agset(e[i], "label", (char*)tempBuff);
+        {
+          std::string edgeHtml = TIDL_shapeHtmlLabel(&pTIDLNetStructure->TIDLLayers[inLayerIdx].outData);
+          char *edgeHtmlLabel = agstrdup_html(g, (char*)edgeHtml.c_str());
+          agset(e[i], "label", edgeHtmlLabel);
+        }
       }
       visited[pTIDLNetStructure->TIDLLayers[i].outData.dataId] = 1;
       layerIdxCount++;
@@ -643,9 +651,11 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
         int32_t inLayerIdx = tidl_getInLayer(pTIDLNetStructure, pTIDLNetStructure->numLayers, pTIDLNetStructure->TIDLLayers[i].inData[j]);
         e[i] = agedge(g, n[inLayerIdx], n[i], (char*)tempBuff,TRUE);
         i1 = pTIDLNetStructure->TIDLLayers[i].inData[j];
-        sprintf(tempBuff, " %dx%dx%dx%dx%dx%d", pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_BATCH],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM1], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM2],
-                pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_NUMCH],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_HEIGHT],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_WIDTH]);
-        agset(e[i], "label", (char*)tempBuff);
+        {
+          std::string edgeHtml = TIDL_shapeHtmlLabel(&pTIDLNetStructure->TIDLLayers[inLayerIdx].outData);
+          char *edgeHtmlLabel = agstrdup_html(g, (char*)edgeHtml.c_str());
+          agset(e[i], "label", edgeHtmlLabel);
+        }
       }
       visited[pTIDLNetStructure->TIDLLayers[i].outData.dataId] = 1;
       layerIdxCount++;

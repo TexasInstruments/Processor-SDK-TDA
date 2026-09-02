@@ -1,0 +1,210 @@
+[
+    {
+        "displayName": "WKUP GPIO",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_WKUP_GPIO0",
+            "TISCI_DEV_WKUP_GPIO1"
+        ]
+    },
+    {
+        "displayName": "WKUP I2C",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_WKUP_I2C0"
+        ]
+    },
+    {
+        "displayName": "WKUP UART",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_WKUP_UART0"
+        ]
+    },
+    {
+        "displayName": "MCU CPSW2",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_MCU_CPSW0"
+        ]
+    },
+    {
+        "displayName": "MCU I2C",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_MCU_I2C0",
+            "TISCI_DEV_MCU_I2C1"
+        ]
+    },
+    {
+        "displayName": "MCU UART",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_MCU_UART0"
+        ]
+    },
+    {
+        "displayName": "MCU I3C",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_MCU_I3C0",
+            "TISCI_DEV_MCU_I3C1"
+        ]
+    },
+    {
+        "displayName": "MCU McSPI",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_MCU_MCSPI0",
+            "TISCI_DEV_MCU_MCSPI1",
+            "TISCI_DEV_MCU_MCSPI2"
+        ]
+    },
+    {
+        "displayName": "MCU MCAN",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_MCU_MCAN0",
+            "TISCI_DEV_MCU_MCAN1"
+        ]
+    },
+    {
+        "displayName": "MCU ADC",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_MCU_ADC12FC_16FFC0",
+            "TISCI_DEV_MCU_ADC12FC_16FFC1"
+        ]
+    },
+    {
+        "displayName": "MCU FSS 0: OSPI0 / Hyperbus0",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_MCU_FSS0_HYPERBUS1P0_0"
+        ]
+    },
+    {
+        "displayName": "MCU FSS OSPI (QSPI)",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_MCU_FSS0_OSPI_0",
+            "TISCI_DEV_MCU_FSS0_OSPI_1"
+        ]
+    },
+    {
+        "displayName": "MAIN GPIO",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_GPIO0",
+            "TISCI_DEV_GPIO2",
+            "TISCI_DEV_GPIO4",
+            "TISCI_DEV_GPIO6"
+        ]
+    },
+    {
+        "displayName": "MAIN I2C",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_I2C0",
+            "TISCI_DEV_I2C1",
+            "TISCI_DEV_I2C2",
+            "TISCI_DEV_I2C3",
+            "TISCI_DEV_I2C4",
+            "TISCI_DEV_I2C5",
+            "TISCI_DEV_I2C6"
+        ]
+    },
+    {
+        "displayName": "MAIN UART",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_UART0",
+            "TISCI_DEV_UART1",
+            "TISCI_DEV_UART2",
+            "TISCI_DEV_UART3",
+            "TISCI_DEV_UART4",
+            "TISCI_DEV_UART5",
+            "TISCI_DEV_UART6",
+            "TISCI_DEV_UART7",
+            "TISCI_DEV_UART8",
+            "TISCI_DEV_UART9"
+        ]
+    },
+    {
+        "displayName": "MAIN CPSW2",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_CPSW1"
+        ]
+    },
+    {
+        "displayName": "MAIN McSPI",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_MCSPI0",
+            "TISCI_DEV_MCSPI1",
+            "TISCI_DEV_MCSPI2",
+            "TISCI_DEV_MCSPI3",
+            "TISCI_DEV_MCSPI4",
+            "TISCI_DEV_MCSPI5",
+            "TISCI_DEV_MCSPI6",
+            "TISCI_DEV_MCSPI7"
+        ]
+    },
+    {
+        "displayName": "MAIN McASP",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_MCASP0",
+            "TISCI_DEV_MCASP1",
+            "TISCI_DEV_MCASP2",
+            "TISCI_DEV_MCASP3",
+            "TISCI_DEV_MCASP4"
+        ]
+    },
+    {
+        "displayName": "MAIN ECAP",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_ECAP0",
+            "TISCI_DEV_ECAP1",
+            "TISCI_DEV_ECAP2"
+        ]
+    },
+    {
+        "displayName": "MAIN EPWM",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_EPWM0",
+            "TISCI_DEV_EPWM1",
+            "TISCI_DEV_EPWM2",
+            "TISCI_DEV_EPWM3",
+            "TISCI_DEV_EPWM4",
+            "TISCI_DEV_EPWM5"
+        ]
+    },
+    {
+        "displayName": "MAIN EQEP",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_EQEP0",
+            "TISCI_DEV_EQEP1",
+            "TISCI_DEV_EQEP2"
+        ]
+    },
+    {
+        "displayName": "MAIN MCAN",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_MCAN0",
+            "TISCI_DEV_MCAN1",
+            "TISCI_DEV_MCAN2",
+            "TISCI_DEV_MCAN3",
+            "TISCI_DEV_MCAN4",
+            "TISCI_DEV_MCAN5",
+            "TISCI_DEV_MCAN6",
+            "TISCI_DEV_MCAN7",
+            "TISCI_DEV_MCAN8",
+            "TISCI_DEV_MCAN9",
+            "TISCI_DEV_MCAN10",
+            "TISCI_DEV_MCAN11",
+            "TISCI_DEV_MCAN12",
+            "TISCI_DEV_MCAN13",
+            "TISCI_DEV_MCAN14",
+            "TISCI_DEV_MCAN15",
+            "TISCI_DEV_MCAN16",
+            "TISCI_DEV_MCAN17"
+        ]
+    },
+    {
+        "displayName": "MAIN MMCSD",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_MMCSD0",
+            "TISCI_DEV_MMCSD1"
+        ]
+    },
+    {
+        "displayName": "MAIN DSS 0: DPI",
+        "tisci_ip_name_list": [
+            "TISCI_DEV_DSS0"
+        ]
+    }
+]

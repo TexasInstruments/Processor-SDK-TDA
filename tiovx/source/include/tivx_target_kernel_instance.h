@@ -117,6 +117,12 @@ typedef struct _tivx_target_kernel_instance {
     /*! \brief Pointer to object descriptor of corresponding node */
     tivx_obj_desc_node_t *node_obj_desc;
 
+    /*! \brief Index of this node replica attached to the target_kernel_instance.
+     *         Valid only when is_kernel_instance_replicated is set. Set once at node-create time.
+     *         Identifies which slot in the replicated node's tivx_obj_desc_node_error_info_t
+     *         this instance writes its error info into. */
+    vx_uint16 replicated_node_idx;
+
 } tivx_target_kernel_instance_t;
 
 /*!

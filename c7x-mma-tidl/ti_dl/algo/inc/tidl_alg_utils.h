@@ -389,25 +389,6 @@ int32_t TIDL_conv2dFillPerChannelParamters(const sTIDL_ConvParams_t *conv2dparam
                                                      const sTIDL_AlgLayer_t               *algLayer,
                                                      int32_t layerIdx);
 
-
-/**
-----------------------------------------------------------------------------
-@ingroup    TIDL_IVISION_SUPPORT
-@fn         TIDL_flattenAlloc
-@brief      Function to Request Memory required by the Flatten layer
-
-@param      params       : Create Parameters
-@param      layerIdx     : Current Layer index in Net structure
-@param      memRec       : memory table populated by the Algorithm
-@remarks    None
-@return     IALG_EOK   - Successful
-IALG_EFAIL - Unspecified error
-----------------------------------------------------------------------------
-*/
-
-int32_t TIDL_flattenAlloc(const TIDL_CreateParams *params,
-  int32_t layerIdx, IALG_MemRec *memRec, sTIDL_LayerBuf_t *TIDLLayersBufPtr);
-
 /**
 ----------------------------------------------------------------------------
 @ingroup    TIDL_IVISION_SUPPORT

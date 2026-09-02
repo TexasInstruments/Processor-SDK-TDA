@@ -92,6 +92,7 @@ vx_status tivxAddKernelMultiInOut(vx_context context);
 vx_status tivxAddKernelFileio(vx_context context);
 vx_status tivxAddKernelTestNot(vx_context context);
 vx_status tivxAddKernelMultiDSPNotNot(vx_context context);
+vx_status tivxAddKernelTestErrorInfo(vx_context context);
 
 vx_status tivxRemoveKernelScalarSink(vx_context context);
 vx_status tivxRemoveKernelScalarSource(vx_context context);
@@ -114,6 +115,7 @@ vx_status tivxRemoveKernelMultiInOut(vx_context context);
 vx_status tivxRemoveKernelFileio(vx_context context);
 vx_status tivxRemoveKernelTestNot(vx_context context);
 vx_status tivxRemoveKernelMultiDSPNotNot(vx_context context);
+vx_status tivxRemoveKernelTestErrorInfo(vx_context context);
 
 static Tivx_Host_Kernel_List  gTivx_host_kernel_list[] = {
     {&tivxAddKernelNotNot, &tivxRemoveKernelNotNot},
@@ -137,6 +139,7 @@ static Tivx_Host_Kernel_List  gTivx_host_kernel_list[] = {
     {&tivxAddKernelFileio, &tivxRemoveKernelFileio},
     {&tivxAddKernelTestNot, &tivxRemoveKernelTestNot},
     {&tivxAddKernelMultiDSPNotNot, &tivxRemoveKernelMultiDSPNotNot},
+    {&tivxAddKernelTestErrorInfo, &tivxRemoveKernelTestErrorInfo},
 };
 
 static vx_status VX_CALLBACK publishKernels(vx_context context)
@@ -186,7 +189,7 @@ void tivxRegisterTestKernelsKernels(void)
     tivxRegisterCaptureTargetArmKernels();
     tivxRegisterTestKernelsTargetArmKernels();
 
-    #if !(defined(SOC_J722S) || defined(SOC_AM62A))
+    #if !(defined(SOC_J722S) || defined(SOC_AM62A) || defined(SOC_TDA54))
     tivxSetSelfCpuId((vx_enum)TIVX_CPU_ID_DSP1);
     tivxRegisterCaptureTargetArmKernels();
     tivxRegisterTestKernelsTargetDspKernels();
@@ -198,6 +201,13 @@ void tivxRegisterTestKernelsKernels(void)
 
     #if defined (SOC_J721E) || defined (SOC_J722S)
     tivxSetSelfCpuId((vx_enum)TIVX_CPU_ID_DSP2);
+    tivxRegisterTestKernelsTargetDspKernels();
+    #endif
+
+    /* On TDA54, TIVX_CPU_ID_DSP1 aliases to DSP_C7_1, so the earlier two calls were redundant.
+     * Hence, DSP_C7_2 must be registered explicitly (Contrarily on J784S4/J742S2, DSP1 = DSP_C7_2). */
+    #if (C7X_COUNT > 1) && defined(SOC_TDA54)
+    tivxSetSelfCpuId((vx_enum)TIVX_CPU_ID_DSP_C7_2);
     tivxRegisterTestKernelsTargetDspKernels();
     #endif
 
@@ -248,7 +258,7 @@ void tivxUnRegisterTestKernelsKernels(void)
     tivxUnRegisterCaptureTargetArmKernels();
     tivxUnRegisterTestKernelsTargetArmKernels();
 
-    #if !(defined(SOC_J722S) || defined(SOC_AM62A))
+    #if !(defined(SOC_J722S) || defined(SOC_AM62A) || defined(SOC_TDA54))
     tivxSetSelfCpuId((vx_enum)TIVX_CPU_ID_DSP1);
     tivxUnRegisterCaptureTargetArmKernels();
     tivxUnRegisterTestKernelsTargetDspKernels();
@@ -260,6 +270,11 @@ void tivxUnRegisterTestKernelsKernels(void)
 
     #if defined (SOC_J721E) || defined (SOC_J722S)
     tivxSetSelfCpuId((vx_enum)TIVX_CPU_ID_DSP2);
+    tivxUnRegisterTestKernelsTargetDspKernels();
+    #endif
+
+    #if (C7X_COUNT > 1) && defined(SOC_TDA54)
+    tivxSetSelfCpuId((vx_enum)TIVX_CPU_ID_DSP_C7_2);
     tivxUnRegisterTestKernelsTargetDspKernels();
     #endif
 

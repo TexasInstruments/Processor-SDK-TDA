@@ -636,6 +636,17 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
         }
     }
 
+    if (!strcmp("inference_precision_mode", option_name.c_str()))
+    {
+        std::stringstream(option_value) >> options->m_inference_precision_mode;
+        std::vector<int> valid_inference_precision_modes{TIDL_InferencePrecisionModeFixedPoint, TIDL_InferencePrecisionModeFloatingPoint};
+        if(std::find(valid_inference_precision_modes.begin(), valid_inference_precision_modes.end(), options->m_inference_precision_mode) == valid_inference_precision_modes.end())
+        {
+            TIDL_GLOBAL_REPORT_ERROR("Unsupported inference_precision_mode");
+            return false;
+        }        
+    }
+
     if (!strcmp("max_num_subgraphs", option_name.c_str()))
     {
         std::stringstream(option_value) >> options->m_num_tidl_subgraphs;
@@ -1101,6 +1112,50 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
     if (!strcmp("advanced_options:bias_clipping", option_name.c_str())) {
         std::stringstream(option_value) >> options->m_bias_clipping;
     }
+
+    if (!strcmp("max_dynamic_dims", option_name.c_str()))
+    {
+        /*
+         * Format: "dimParam=maxVal,dimParam=maxVal,..."
+         * Comma-separated dim_param=value pairs. dim_param strings are
+         * model-level symbols shared across all inputs.
+         * Example: "batch_size=4, seq_len=128"
+         */
+        auto trim = [](const std::string& s) -> std::string {
+            size_t start = s.find_first_not_of(" \t\r\n");
+            if (start == std::string::npos) return "";
+            size_t end = s.find_last_not_of(" \t\r\n");
+            return s.substr(start, end - start + 1);
+        };
+
+        options->m_max_dynamic_dims.clear();
+        std::stringstream ss(option_value);
+        std::string dim_token;
+        while (std::getline(ss, dim_token, ','))
+        {
+            if (trim(dim_token).empty()) continue;
+            size_t eq_pos = dim_token.find('=');
+            if (eq_pos == std::string::npos)
+            {
+                TIDL_GLOBAL_REPORT_ERROR("max_dynamic_dims: expected "
+                    "'dimParam=maxVal' but got '%s'", trim(dim_token).c_str());
+                return false;
+            }
+            std::string dim_name = trim(dim_token.substr(0, eq_pos));
+            std::string val_str  = trim(dim_token.substr(eq_pos + 1));
+            int32_t max_val = 0;
+            std::stringstream(val_str) >> max_val;
+            if (max_val <= 0)
+            {
+                TIDL_GLOBAL_REPORT_ERROR("max_dynamic_dims: max value "
+                    "must be a positive integer (got '%s' for dim '%s')",
+                    val_str.c_str(), dim_name.c_str());
+                return false;
+            }
+            options->m_max_dynamic_dims[dim_name] = max_val;
+        }
+    }
+
     return true;
 }
 
@@ -1141,6 +1196,16 @@ bool TIDL_checkInterfaceOptions(TIDL_osrtOptions * options)
 /** Options derived from the basic options read from interface */
 void TIDL_derivedInterfaceOptions(TIDL_osrtOptions * options)
 {
+  if(options->m_num_param_bits == 8 && options->m_inference_precision_mode == TIDL_InferencePrecisionModeFloatingPoint)
+  {
+    TIDL_GLOBAL_REPORT_WARNING("8 bit Float is not supported. Switching to 8 bit INT");
+    options->m_inference_precision_mode = TIDL_InferencePrecisionModeFixedPoint;
+  }
+  else if(options->m_num_param_bits == 32 && options->m_inference_precision_mode == TIDL_InferencePrecisionModeFixedPoint)
+  {
+    TIDL_GLOBAL_REPORT_WARNING("32 bit INT is not supported. Switching to 32 bit Float");
+    options->m_inference_precision_mode = TIDL_InferencePrecisionModeFloatingPoint;
+  }
   if(options->m_quantization_scale_type == TIDL_QuantStyleAsymNP2)
   {
     if((options->m_tidl_calibration_flags & TIDL_CalibNoOutlier) == 0)
@@ -1398,6 +1463,7 @@ void TIDL_setDefaultOptions(TIDL_osrtOptions * osrt_options)
 {
   osrt_options->m_debug_level                                  = 0;
   osrt_options->m_num_param_bits                               = 8;
+  osrt_options->m_inference_precision_mode                     = TIDL_InferencePrecisionModeFixedPoint;
   osrt_options->m_num_tidl_subgraphs                           = 16;
   osrt_options->m_num_tidl_subgraph_max_node                   = 0;
   osrt_options->m_enable_rt_multi_subgraph_support             = 0;
@@ -1465,6 +1531,7 @@ int32_t TIDL_runtimesGparamsInit(TIDL_osrtOptions * osrt_options, int32_t modelT
 {
   setDefaultParams(&gParams);
   gParams.numParamBits = osrt_options->m_num_param_bits;
+  gParams.inferencePrecisionMode = osrt_options->m_inference_precision_mode;
   gParams.numFeatureBits = osrt_options->m_num_param_bits;
   gParams.foldPreBnConv2D = osrt_options->m_pre_batchnorm_fold;
   gParams.addDataConvertToNet = osrt_options->m_add_data_convert_ops;
@@ -1741,7 +1808,8 @@ int32_t TIDL_runtimesPostProcessNet(TIDL_osrtOptions * osrt_options, int32_t cal
       {
         gParams.inZeroPoint[i] = zp[i];
       }
-      if(numParamBits == 32)
+      // Treating BF16 same as FP32 to update quant factor to 1 and zero point to 0, as no calibration/quantization is performed for BF16 
+      if(numParamBits == 32 || (numParamBits == 16 && osrt_options->m_inference_precision_mode == TIDL_InferencePrecisionModeFloatingPoint))
       {
         gParams.inQuantFactor[i] = 1.0;
         gParams.inZeroPoint[i] = 0.0;
@@ -1790,6 +1858,18 @@ int32_t TIDL_runtimesPostProcessNet(TIDL_osrtOptions * osrt_options, int32_t cal
     snprintf((char *)gParams.outputNetFile, FILE_NAME_SIZE, "%s/%s_tidl_net.bin", artifacts_folder, subGraphName);
     snprintf((char *)gParams.outputParamsFile, FILE_NAME_SIZE, "%s/%s_tidl_io_", artifacts_folder, subGraphName);
     sprintf((char *)gParams.inData, "%s/%s_calib_raw_data.bin", artifacts_folder, subGraphName);
+    /* Set inDimsFile when any network input has dynamic dimensions. */
+    memset((char *)gParams.inDimsFile, 0, FILE_NAME_SIZE);
+    for (int i = 0; i < orgTIDLNetStructure.numLayers; i++)
+    {
+      if ((orgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_DataLayer) &&
+          (orgTIDLNetStructure.TIDLPCLayers[i].numInBufs == -1) &&
+          (orgTIDLNetStructure.TIDLPCLayers[i].outData[0].dynDimMask != 0))
+      {
+        snprintf((char *)gParams.inDimsFile, FILE_NAME_SIZE, "%s/%s_calib_input_dims.txt", artifacts_folder, subGraphName);
+        break;
+      }
+    }
   }
   TIDL_IMPORT_CHECK_AND_RETURN(TIDL_import_backend(orgTIDLNetStructure.numLayers, runtimes_import_state.dataIndex), "");
 

@@ -203,14 +203,14 @@ __global__ void ResizeBilinearFloatKernel(
     hLoc = (hLoc < 0.0f) ? 0.0f : hLoc;
     int hIdx = hLoc;
     int hNext = (hIdx < (inHeight-1U)) ? 1U : 0U;
-    float w11 = hLoc - (float32_tidl)hIdx;
-    float w10 = 1.0f - w11;
+    T w11 = (T)(hLoc - (float32_tidl)hIdx);
+    T w10 = (T)1.0f - w11;
 
     float wLoc = (wRatio * ((float)j + 0.5f)) - 0.5f;
     wLoc = (wLoc < 0.0f) ? 0.0f : wLoc;
     int wIdx = wLoc;
-    float w01 = wLoc - (float32_tidl)wIdx;
-    float w00 = 1.0f - w01;
+    T w01 = (T)(wLoc - (float32_tidl)wIdx);
+    T w00 = (T)1.0f - w01;
     int wNext = (wIdx < (inWidth-1U)) ? 1U : 0U;
 
     int32_t inputOffset = inOffset + (inPitch  * hIdx) + wIdx;
@@ -221,7 +221,8 @@ __global__ void ResizeBilinearFloatKernel(
     float i10 = *(pIn + (l*inBatchPitch) + (k*inChPitch) + inputOffset + (hNext*inPitch));
     float i11 = *(pIn + (l*inBatchPitch) + (k*inChPitch) + inputOffset + (hNext*inPitch) + wNext);
 
-    pOut[(l*outBatchPitch) + (k*outChPitch) + (uint32_t)outputOffset] = ((w10*((i00* w00) +  (i01* w01))) + (w11*((i10* w00) +  (i11* w01))));
+    pOut[(l*outBatchPitch) + (k*outChPitch) + (uint32_t)outputOffset] = (((float)w10*((i00* (float)w00) +  (i01* (float)w01))) + 
+                                                                         ((float)w11*((i10* (float)w00) +  (i11* (float)w01))));
 }
 
 template<class T>
@@ -247,7 +248,7 @@ int TIDL_cudaResize(
     int32_t offset = (inPitch + leftPadResize);
     uint8_t* input_base = (uint8_t*)input - offset*inElementSize;
 
-    if(mode == TIDL_ResizeBilinear && !std::is_floating_point<T>::value)
+    if(mode == TIDL_ResizeBilinear && !std::is_floating_point<T>::value && !std::is_same<T, bfloat16_tidl>::value)
     {
         input = (T*)input_base;
         input_size = input_size_with_pad;
@@ -297,7 +298,7 @@ int TIDL_cudaResize(
     {
         int total_elements = numBatches * numInChannels * outHeight * outWidth;
         int grid_size = GRID_SIZE(total_elements, THREADS_PER_BLOCK);
-        if(std::is_floating_point<T>::value)
+        if(std::is_floating_point<T>::value || std::is_same<T, bfloat16_tidl>::value)
         {
             ResizeBilinearFloatKernel<T><<<grid_size, THREADS_PER_BLOCK, 0, stream>>>(d_input, d_output, numBatches, numInChannels, inHeight, inWidth, outHeight, outWidth,
                     inBatchPitch, inChPitch, inPitch, outBatchPitch, outChPitch, outPitch, 1/hRatio, 1/wRatio, inOffset, outOffset);
@@ -328,3 +329,4 @@ template int TIDL_cudaResize<float>(float const*, float*, int, int, int, int, in
 template int TIDL_cudaResize<unsigned char>(unsigned char const*, unsigned char*, int, int, int, int, int, int, int, int, int, int, int, int, float, float, int, int, int, int, int, int, int, int);
 template int TIDL_cudaResize<signed char>(signed char const*, signed char*, int, int, int, int, int, int, int, int, int, int, int, int, float, float, int, int, int, int, int, int, int, int);
 template int TIDL_cudaResize<unsigned short>(unsigned short const*, unsigned short*, int, int, int, int, int, int, int, int, int, int, int, int, float, float, int, int, int, int, int, int, int, int);
+template int TIDL_cudaResize<bfloat16_tidl>(bfloat16_tidl const*, bfloat16_tidl*, int, int, int, int, int, int, int, int, int, int, int, int, float, float, int, int, int, int, int, int, int, int);

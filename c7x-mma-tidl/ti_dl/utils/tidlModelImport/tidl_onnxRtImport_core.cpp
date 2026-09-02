@@ -128,6 +128,7 @@ static const std::unordered_map<std::string, vector<int32_t>> ONNXNodeOptionalOu
   {"LSTM", {0, 1, 2}},
   {"GRU",  {0, 1}},
   {"RNN",  {0, 1}},
+  {"SkipSimplifiedLayerNormalization", {1,2,3}},
 };
 
 /*
@@ -252,7 +253,9 @@ static const std::unordered_set<std::string> individualSupportedOnnxOps (
     "Shape",
     "Size",
     "Attention",
-    "NonZero"
+    "NonZero",
+    "SimplifiedLayerNormalization",
+    "SkipSimplifiedLayerNormalization"
   }
 );
 
@@ -957,13 +960,23 @@ int32_t TIDL_onnxRtImportInit(GraphProto& onnxGraph, onnxRtParams_t *onnxRtParam
         }
         else if (osrt_options->m_num_param_bits > 8)
         {
-          if(gParams.outElementType[i] == TIDL_UnsignedChar || gParams.outElementType[i] == TIDL_UnsignedShort)
+          if(gParams.inferencePrecisionMode == TIDL_InferencePrecisionModeFixedPoint) 
           {
-            gParams.outElementType[i] = TIDL_UnsignedShort;
+            if(gParams.outElementType[i] == TIDL_UnsignedChar || gParams.outElementType[i] == TIDL_UnsignedShort)
+            {
+              gParams.outElementType[i] = TIDL_UnsignedShort;
+            }
+            else
+            {
+              gParams.outElementType[i] = TIDL_SignedShort;
+            }
           }
-          else
+          else if(gParams.inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint)
           {
-            gParams.outElementType[i] = TIDL_SignedShort;
+            gParams.outElementType[i] = TIDL_BFloat16;
+          }
+          else {
+            TIDL_GLOBAL_REPORT_WARNING("Unsupported output element type for subgraph %s, layer %d", subgraph_name, i);
           }
         }
         else
@@ -1003,7 +1016,14 @@ int32_t TIDL_onnxRtImportInit(GraphProto& onnxGraph, onnxRtParams_t *onnxRtParam
         }
         else if (osrt_options->m_num_param_bits > 8)
         {
-          gParams.outElementType[i] = TIDL_SignedShort;
+          if(gParams.inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint)
+          {
+            gParams.outElementType[i] = TIDL_BFloat16;
+          }
+          else
+          {
+            gParams.outElementType[i] = TIDL_SignedShort;
+          }
         }
         else
         {
@@ -1017,9 +1037,74 @@ int32_t TIDL_onnxRtImportInit(GraphProto& onnxGraph, onnxRtParams_t *onnxRtParam
   {
     status = TIDL_ortGetType(onnxRtParams->inputTensorElementType[i], &gParams.inElementType[i], &elementSize);
     gParams.modelInElementType[i] = gParams.inElementType[i];
-    int32_t layerIndex = TIDL_addInputDataLayer6D(i, onnxRtParams->tensorShape[i][TIDL_DIM_BATCH], onnxRtParams->tensorShape[i][TIDL_DIM_DIM1], onnxRtParams->tensorShape[i][TIDL_DIM_DIM2], onnxRtParams->tensorShape[i][TIDL_DIM_NUMCH], onnxRtParams->tensorShape[i][TIDL_DIM_HEIGHT], onnxRtParams->tensorShape[i][TIDL_DIM_WIDTH],
-                                                     (char*)onnxRtParams->inDataNames[i]);
+
+    /* Build the 6-D shape for TIDL_addInputDataLayer6D.
+     * tensorShape from ORT is always a concrete data shape.
+     * For named dynamic dims (has_dim_param): mark dynDimMask and optionally
+     * overwrite with user-supplied max value from max_dynamic_dims.
+     * dynDimMask: bit N set means dimValues[N] can vary at runtime. */
+    int32_t shape6d[TIDL_DIM_MAX];
+    uint8_t dynDimMask = 0;
+
+    for (int32_t d = 0; d < TIDL_DIM_MAX; d++)
+    {
+      shape6d[d] = onnxRtParams->tensorShape[i][d];
+    }
+
+    std::string inName(reinterpret_cast<const char*>(onnxRtParams->inDataNames[i]));
+
+    /* Find this input in the ONNX graph to identify dynamic dims. */
+    const ::onnx::TensorShapeProto* onnxShape = nullptr;
+    for (int k = 0; k < onnxGraph.input_size(); k++)
+    {
+      if (onnxGraph.input(k).name() == inName &&
+          onnxGraph.input(k).type().has_tensor_type() &&
+          onnxGraph.input(k).type().tensor_type().has_shape())
+      {
+        onnxShape = &onnxGraph.input(k).type().tensor_type().shape();
+        break;
+      }
+    }
+
+    if (onnxShape)
+    {
+      const std::map<std::string, int32_t>& dim_map = osrt_options->m_max_dynamic_dims;
+      int32_t ndims = onnxShape->dim_size();
+      for (int32_t d = 0; d < ndims; d++)
+      {
+        int32_t pos = TIDL_DIM_MAX - ndims + d;
+        if (onnxShape->dim(d).has_dim_param())
+        {
+          dynDimMask |= (1u << pos);
+          auto dim_it = dim_map.find(onnxShape->dim(d).dim_param());
+          if (dim_it != dim_map.end())
+          {
+            shape6d[pos] = dim_it->second;
+          }
+          /* else: keep tensorShape (concrete data shape from ORT) */
+        }
+      }
+
+      if (dynDimMask)
+      {
+        TIDL_GLOBAL_REPORT_INFO(osrt_options->osrtDebugPrintLevel,
+          "Input '%s': shape [%d,%d,%d,%d,%d,%d] dynDimMask=0x%x", inName.c_str(),
+          shape6d[TIDL_DIM_BATCH], shape6d[TIDL_DIM_DIM1], shape6d[TIDL_DIM_DIM2],
+          shape6d[TIDL_DIM_NUMCH], shape6d[TIDL_DIM_HEIGHT], shape6d[TIDL_DIM_WIDTH],
+          dynDimMask);
+      }
+    }
+
+    int32_t layerIndex = TIDL_addInputDataLayer6D(i,
+      shape6d[TIDL_DIM_BATCH], shape6d[TIDL_DIM_DIM1], shape6d[TIDL_DIM_DIM2],
+      shape6d[TIDL_DIM_NUMCH], shape6d[TIDL_DIM_HEIGHT], shape6d[TIDL_DIM_WIDTH],
+      (char*)onnxRtParams->inDataNames[i]);
+
+    /* Mark which 6-D dims are dynamic so the runtime propagates shapes correctly. */
+    orgTIDLNetStructure.TIDLPCLayers[layerIndex].outData[0].dynDimMask = dynDimMask;
+
     TIDL_updateNamesList ((char*)gParams.inDataNamesList, i, (char *)onnxRtParams->inDataNames[i]);
+  
     if(status != 0)
     {
       return status;

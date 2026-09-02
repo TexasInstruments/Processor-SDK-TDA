@@ -11,11 +11,11 @@ ifeq ($(PROFILE), $(filter $(PROFILE),release all))
 UBOOT_APP_PROFILE=release
 endif
 
-VISION_APPS_LINUX_DM=$(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(UBOOT_APP_PROFILE)/vx_app_rtos_linux_mcu1_0.out
-VISION_APPS_LINUX_DM_STRIP=$(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(UBOOT_APP_PROFILE)/vx_app_rtos_linux_mcu1_0_strip.out
+PLATFORM_LINUX_DM=$(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(UBOOT_APP_PROFILE)/vx_app_rtos_linux_mcu1_0.out
+PLATFORM_LINUX_DM_STRIP=$(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(UBOOT_APP_PROFILE)/vx_app_rtos_linux_mcu1_0_strip.out
 
-VISION_APPS_QNX_DM=$(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(UBOOT_APP_PROFILE)/vx_app_rtos_qnx_mcu1_0.out
-VISION_APPS_QNX_DM_STRIP=$(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(UBOOT_APP_PROFILE)/vx_app_rtos_qnx_mcu1_0_strip.out
+PLATFORM_QNX_DM=$(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(UBOOT_APP_PROFILE)/vx_app_rtos_qnx_mcu1_0.out
+PLATFORM_QNX_DM_STRIP=$(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(UBOOT_APP_PROFILE)/vx_app_rtos_qnx_mcu1_0_strip.out
 
 CROSS_COMPILE=$(GCC_LINUX_ARM_ROOT)/bin/$(CROSS_COMPILE_LINARO)
 
@@ -35,10 +35,10 @@ endif
 uboot_check_firmware:
 ifeq ($(BUILD_TARGET_MODE),yes)
 ifeq ($(BUILD_LINUX_MPU),yes)
-	@if [ ! -f  $(VISION_APPS_LINUX_DM) ]; then echo 'ERROR: $(VISION_APPS_LINUX_DM) not found !!!'; exit 1; fi
+	@if [ ! -f  $(PLATFORM_LINUX_DM) ]; then echo 'ERROR: $(PLATFORM_LINUX_DM) not found !!!'; exit 1; fi
 endif
 ifeq ($(BUILD_QNX_MPU),yes)
-	@if [ ! -f $(VISION_APPS_QNX_DM) ]; then echo 'ERROR: $(VISION_APPS_QNX_DM) !!!'; exit 1; fi
+	@if [ ! -f $(PLATFORM_QNX_DM) ]; then echo 'ERROR: $(PLATFORM_QNX_DM) !!!'; exit 1; fi
 endif
 endif
 
@@ -59,24 +59,24 @@ else
 	$(eval IMAGE_NAME := dm_adas_mcu1_0_release.out)
 	$(eval IMAGE_NAME_STRIP := dm_adas_mcu1_0_release_strip.out)
 endif
-ifneq ($(wildcard $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/release/$(IMAGE_NAME)),)
-	rm -f $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/release/$(IMAGE_NAME)
-	rm -f $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/release/$(IMAGE_NAME_STRIP)
+ifneq ($(wildcard $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/release/$(IMAGE_NAME)),)
+	rm -f $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/release/$(IMAGE_NAME)
+	rm -f $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/release/$(IMAGE_NAME_STRIP)
 endif
-	cp $(VISION_APPS_LINUX_DM) $(VISION_APPS_LINUX_DM_STRIP)
-	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(VISION_APPS_LINUX_DM_STRIP)
-	ln -s $(VISION_APPS_LINUX_DM) $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/release/$(IMAGE_NAME)
-	ln -s $(VISION_APPS_LINUX_DM_STRIP) $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/release/$(IMAGE_NAME_STRIP)
+	cp $(PLATFORM_LINUX_DM) $(PLATFORM_LINUX_DM_STRIP)
+	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(PLATFORM_LINUX_DM_STRIP)
+	ln -s $(PLATFORM_LINUX_DM) $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/release/$(IMAGE_NAME)
+	ln -s $(PLATFORM_LINUX_DM_STRIP) $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/release/$(IMAGE_NAME_STRIP)
 ifeq  ($(SOC), am62a)
-	cp $(VISION_APPS_LINUX_DM_STRIP) $(PSDK_LINUX_PATH)/board-support/prebuilt-images/am62a-evm/ti-dm/am62axx/$(IMAGE_NAME_STRIP)
+	cp $(PLATFORM_LINUX_DM_STRIP) $(PSDK_LINUX_PATH)/board-support/prebuilt-images/am62a-evm/ti-dm/am62axx/$(IMAGE_NAME_STRIP)
 	$(MAKE) -j8 -C $(PSDK_LINUX_PATH)/board-support/ti-u-boot-* ARCH=arm O=$(SOC)-arm64-linux $(SOC)x_evm_a53_defconfig
 endif
 ifeq  ($(SOC), j722s)
-	cp $(VISION_APPS_LINUX_DM_STRIP) $(PSDK_LINUX_PATH)/board-support/prebuilt-images/ti-dm/j722s/ipc_echo_testb_mcu1_0_release_strip.xer5f
+	cp $(PLATFORM_LINUX_DM_STRIP) $(PSDK_LINUX_PATH)/board-support/prebuilt-images/ti-dm/j722s/ipc_echo_testb_mcu1_0_release_strip.xer5f
 	$(MAKE) -C $(PSDK_LINUX_PATH)/board-support/ti-u-boot-* ARCH=arm O=$(SOC)-arm64-linux -j8 $(SOC)_evm_a53_defconfig
 endif
 ifeq ($(SOC), $(filter $(SOC), j721e j721s2 j784s4 j742s2))
-	cp $(VISION_APPS_LINUX_DM_STRIP) $(PSDK_LINUX_PATH)/board-support/prebuilt-images/ti-dm/$(SOC)/ipc_echo_testb_mcu1_0_release_strip.xer5f
+	cp $(PLATFORM_LINUX_DM_STRIP) $(PSDK_LINUX_PATH)/board-support/prebuilt-images/ti-dm/$(SOC)/ipc_echo_testb_mcu1_0_release_strip.xer5f
 	$(MAKE) -C $(PSDK_LINUX_PATH)/board-support/ti-u-boot-* ARCH=arm O=$(SOC)-arm64-linux -j8 $(SOC)_evm_a72_defconfig
 endif
 ifeq  ($(SOC), am62a)
@@ -86,18 +86,18 @@ else
 endif
 endif
 ifeq ($(BUILD_QNX_MPU),yes)
-	cp $(VISION_APPS_QNX_DM) $(VISION_APPS_QNX_DM_STRIP)
-	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(VISION_APPS_QNX_DM_STRIP)
+	cp $(PLATFORM_QNX_DM) $(PLATFORM_QNX_DM_STRIP)
+	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(PLATFORM_QNX_DM_STRIP)
 ifeq  ($(SOC), am62a)
-	cp $(VISION_APPS_QNX_DM_STRIP) $(PSDK_LINUX_PATH)/board-support/prebuilt-images/am62a-evm/ti-dm/am62axx/ipc_echo_testb_mcu1_0_release_strip.xer5f
+	cp $(PLATFORM_QNX_DM_STRIP) $(PSDK_LINUX_PATH)/board-support/prebuilt-images/am62a-evm/ti-dm/am62axx/ipc_echo_testb_mcu1_0_release_strip.xer5f
 	$(MAKE) -j8 -C $(PSDK_LINUX_PATH)/board-support/ti-u-boot-* ARCH=arm O=$(SOC)-arm64-qnx  $(SOC)x_evm_a53_defconfig
 endif
 ifeq  ($(SOC), j722s)
-	cp $(VISION_APPS_QNX_DM_STRIP) $(PSDK_LINUX_PATH)/board-support/prebuilt-images/ti-dm/j722s/ipc_echo_testb_mcu1_0_release_strip.xer5f
+	cp $(PLATFORM_QNX_DM_STRIP) $(PSDK_LINUX_PATH)/board-support/prebuilt-images/ti-dm/j722s/ipc_echo_testb_mcu1_0_release_strip.xer5f
 	$(MAKE) -C $(PSDK_LINUX_PATH)/board-support/ti-u-boot-* ARCH=arm O=$(SOC)-arm64-qnx -j8 $(SOC)_evm_a53_defconfig
 endif
 ifeq ($(SOC), $(filter $(SOC), j721e j721s2 j784s4 j742s2))
-	cp $(VISION_APPS_QNX_DM_STRIP) $(PSDK_LINUX_PATH)/board-support/prebuilt-images/ti-dm/$(SOC)/ipc_echo_testb_mcu1_0_release_strip.xer5f
+	cp $(PLATFORM_QNX_DM_STRIP) $(PSDK_LINUX_PATH)/board-support/prebuilt-images/ti-dm/$(SOC)/ipc_echo_testb_mcu1_0_release_strip.xer5f
 	$(MAKE) -C $(PSDK_LINUX_PATH)/board-support/ti-u-boot-* ARCH=arm O=$(SOC)-arm64-qnx -j8 $(SOC)_evm_a72_defconfig
 endif
 ifeq  ($(SOC), am62a)

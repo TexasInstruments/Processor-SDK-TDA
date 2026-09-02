@@ -74,6 +74,9 @@
 #include <ostream>
 #include <map>
 
+// Build graphviz HTML inner content for a tensor shape label
+std::string TIDL_shapeHtmlLabel(const sTIDL_DataParams_t *pData);
+
 /*
  * This class provides a facility for dumping the TIDL network data structure
  * to an output stream as human-readable text.  
@@ -95,16 +98,22 @@
  *   d.dumpIODesc()            - dump the IOBufDesc
  *   d.dumpLayer(layerNum)     - dump one layer
  */
-class TIDL_dump 
+class TIDL_dump
 {
 public:
+   typedef struct
+   {
+      std::string layerName;
+      int32_t multiCoreMode;
+   } sLayerSpecificInfo_t;
+
    typedef std::map<std::string, int> options_t;
-   typedef std::map<int, std::string> layerNames_t;
-   TIDL_dump(std::ostream& os, 
-             const sTIDL_Network_t* net, 
-	     const sTIDL_IOBufDesc_t* io = nullptr,
-	     const layerNames_t* layerNames = nullptr,
-	     options_t user_options = {});
+   TIDL_dump(std::ostream &os,
+             const sTIDL_Network_t *net,
+             const sTIDL_IOBufDesc_t *io = nullptr,
+             const sLayerSpecificInfo_t *layersInfo = nullptr,
+             options_t user_options = {});
+
 public:
    bool hasOption(const std::string &opt) 
       { return options.find(opt) != options.end() && options[opt] == true; } 
@@ -117,7 +126,7 @@ private:
    indent_ostream os;
    const sTIDL_Network_t* pNet;
    const sTIDL_IOBufDesc_t *pIODesc;
-   const layerNames_t *layerNames;
+   const sLayerSpecificInfo_t *layersInfo;
    const sGraphCompilerOutArgs_t *pSimInfo();
 
    void dumpTensorParams(const sTIDL_DataParams_t *pData);
@@ -159,6 +168,7 @@ private:
    void dumpCustomLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpGatherElementsParams(const sTIDL_Layer_t *pLayer);
    void dumpNonZeroParams(const sTIDL_Layer_t *pLayer);
+   void dumpGatherParams(const sTIDL_Layer_t *pLayer);
    void dumpUnsupportedLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpActParams(const sTIDL_ActParams_t *pActParams);
    void dumpClipParams(const sTIDL_ClipParams_t *pClipParams);

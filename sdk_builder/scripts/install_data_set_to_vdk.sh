@@ -7,17 +7,32 @@ rootfs_folder=$built_images/mnt
 
 untar_file()
 {
+    if [ ! -d $rootfs_folder ]
+    then
+        echo "Mount point $rootfs_folder not found, creating it ..."
+        mkdir -p $rootfs_folder
+    fi
+
     if [ -d $rootfs_folder ]
     then
         echo "Installing $data_set_file to $test_data_folder ..."
         if [ -f $data_set_file ]
         then
+            echo "Unmounting $rootfs_folder (if mounted) ..."
             sudo umount $rootfs_folder >/dev/null 2>&1 || true
-            sudo mount $built_images/rootfs-img.ext4 $rootfs_folder
+            echo "Attaching $built_images/rootfs-img.wic as loop device ..."
+            loop_dev=$(sudo losetup --find --partscan --show $built_images/rootfs-img.wic)
+            echo "Mounting rootfs partition ${loop_dev}p2 to $rootfs_folder ..."
+            sudo mount ${loop_dev}p2 $rootfs_folder
+            echo "Extracting $data_set_file to $test_data_folder ..."
             sudo mkdir -p $test_data_folder
             sudo tar -xf $data_set_file $tar_arg -C $test_data_folder
+            echo "Syncing to disk ..."
             sync
+            echo "Unmounting $rootfs_folder ..."
             sudo umount $rootfs_folder
+            echo "Detaching loop device $loop_dev ..."
+            sudo losetup -d $loop_dev
             echo "Installing $data_set_file to $test_data_folder/ ... Done"
         else
             echo "ERROR: $data_set_file not found !!!"

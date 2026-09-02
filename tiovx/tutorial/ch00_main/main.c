@@ -65,7 +65,7 @@
 #include <vx_tutorial.h>
 
 #ifndef DISABLE_APP_UTILS_DEP
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 #endif
 
 static void show_usage(int argc, char* argv[])

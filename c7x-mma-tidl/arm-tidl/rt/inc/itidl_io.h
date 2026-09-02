@@ -111,6 +111,7 @@ typedef double float64_tidl;
 #define TIDL_UnsignedDoubleWord    ((int32_t) 7)
 #define TIDL_SignedDoubleWord      ((int32_t) 8)
 #define TIDL_Bool                  ((int32_t) 9)
+#define TIDL_BFloat16              ((int32_t) 10)
 /* @} */
 
 /**

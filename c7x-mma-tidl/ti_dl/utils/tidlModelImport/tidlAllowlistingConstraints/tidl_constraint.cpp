@@ -73,8 +73,7 @@ int32_t tidlCheckAllowlistingConstraints(sTIDL_LayerPC_t layer, DiagList_t &diag
     {
         return 0;
     }
-    /* If not parse failed or unsupported - no allowlisting metadata means layer added by us */
-    if (tidlIsInducedLayer(layer))
+    if (skipConstraintCheck(layer))
     {
         return TIDL_ALLOWLISTING_LAYER_CHECK_PASSED;
     }

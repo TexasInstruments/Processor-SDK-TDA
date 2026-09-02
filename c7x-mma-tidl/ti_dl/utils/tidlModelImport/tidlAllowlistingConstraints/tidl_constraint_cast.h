@@ -65,9 +65,9 @@
 const vector<TidlConstraint> tidlConstraintCast =
 {
     TIDL_CSTR(
-        "Unsupported data type with Cast layer",
-        "Unsupported data type with Cast layer",
-        "Unsupported data type with Cast layer",
+        "Only bool, float32 and signed/unsigned 8/16/32/64-bit integers are supported as cast destination types",
+        "Only bool, float32 and signed/unsigned 8/16/32/64-bit integers are supported as cast destination types",
+        "Only bool, float32 and signed/unsigned 8/16/32/64-bit integers are supported as cast destination types",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             if (gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_ONNX_RT)
             {

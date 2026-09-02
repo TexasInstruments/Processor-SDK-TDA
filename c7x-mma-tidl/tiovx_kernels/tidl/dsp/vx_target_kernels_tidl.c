@@ -77,7 +77,9 @@ void tivxRegisterTIDLTargetKernels(void)
 /* LDRA_JUSTIFY
 <metric start> statement <metric end>
 <function start> void tivxUnRegisterTIDLTargetKernels.* <function end>
-<justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+<justification start>
+Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
 <justification end> */
 void tivxUnRegisterTIDLTargetKernels(void)
 {

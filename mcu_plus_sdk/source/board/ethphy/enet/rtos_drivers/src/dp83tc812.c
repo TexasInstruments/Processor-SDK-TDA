@@ -55,7 +55,9 @@
 #define DP83TC812_REV_CS2                     (1U)
 #define DP83TC813_MODEL                       (0x21U)
 #define DP83TC814_MODEL                       (0x26U)
-#define DP83TC815_MODEL                       (0x20U)
+#define DP83TC815_MODEL                       (0x2EU)
+#define DP83TC817_MODEL                       (0x2BU)
+
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -67,6 +69,7 @@ enum dp83tc812_chip_type {
          DP83TC813 = 2,
          DP83TC814 = 3,
          DP83TC815 = 4,
+         DP83TC817 = 5,
 };
 
 struct dp83tc812_privParams {
@@ -181,7 +184,8 @@ bool Dp83tc812_isPhyDevSupported(EthPhyDrv_Handle hPhy,
     bool supported = false;
 
     if ((version->oui == DP83TC812_OUI) &&
-        ((version->model == (DP83TC812_MODEL)) || (version->model == (DP83TC813_MODEL)) || (version->model == (DP83TC814_MODEL)) || (version->model == (DP83TC815_MODEL))))
+        ((version->model == (DP83TC812_MODEL)) || (version->model == (DP83TC813_MODEL)) || (version->model == (DP83TC814_MODEL))
+        || (version->model == (DP83TC815_MODEL)) || (version->model == (DP83TC817_MODEL)) ))
     {
         supported = true;
     }
@@ -200,7 +204,8 @@ bool Dp83tc812_isPhyDevSupported(EthPhyDrv_Handle hPhy,
         dp83tc812_params.chip = DP83TC814;
     else if (version->model == DP83TC815_MODEL)
         dp83tc812_params.chip = DP83TC815;
-
+    else if (version->model == DP83TC817_MODEL)
+        dp83tc812_params.chip = DP83TC817;
     return supported;
 }
 
@@ -212,6 +217,7 @@ bool Dp83tc812_isMacModeSupported(EthPhyDrv_Handle hPhy,
     switch (mii)
     {
         case PHY_MAC_MII_MII:
+            supported = true;
             break;
         case PHY_MAC_MII_GMII:
             break;
@@ -219,6 +225,9 @@ bool Dp83tc812_isMacModeSupported(EthPhyDrv_Handle hPhy,
             supported = true;
             break;
         case PHY_MAC_MII_SGMII:
+            supported = true;
+            break;
+        case PHY_MAC_MII_RMII:
             supported = true;
             break;
         default:
@@ -315,7 +324,7 @@ int32_t Dp83tc812_config(EthPhyDrv_Handle hPhy,
 static void Dp83tc812_setLoopbackCfg(EthPhyDrv_Handle hPhy,
                                    bool enable)
 {
-    bool complete;
+    bool complete = false;
     int32_t status;
     uint16_t val;
     Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
@@ -349,18 +358,24 @@ static void Dp83tc812_setLoopbackCfg(EthPhyDrv_Handle hPhy,
 
     do
     {
-        complete = Dp83tc812_isResetComplete(hPhy);
+        Dp83tc812_isResetComplete(hPhy, &complete);
     }
     while (!complete);
 }
 
 
-void Dp83tc812_reset(EthPhyDrv_Handle hPhy)
+int32_t Dp83tc812_reset(EthPhyDrv_Handle hPhy)
 {
+    int32_t status = PHY_EFAIL;
+
     Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
+
     /* Global software reset */
     PHYTRACE_DBG("PHY %u: global soft-reset\n", PhyPriv_getPhyAddr(hPhy));
-    pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, MII_DP83TC812_RESET_CTRL, DP83TC812_SW_RESET, DP83TC812_SW_RESET);
+
+    status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, MII_DP83TC812_RESET_CTRL, DP83TC812_SW_RESET, DP83TC812_SW_RESET);
+
+    return status;
 }
 
 static void Dp83tc812_resetHw(EthPhyDrv_Handle hPhy)
@@ -372,23 +387,32 @@ static void Dp83tc812_resetHw(EthPhyDrv_Handle hPhy)
     pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, MII_DP83TC812_RESET_CTRL, DP83TC812_HW_RESET, DP83TC812_HW_RESET);
 }
 
-bool Dp83tc812_isResetComplete(EthPhyDrv_Handle hPhy)
+int32_t Dp83tc812_isResetComplete(EthPhyDrv_Handle hPhy, bool* pCompleted)
 {
-    int32_t status;
-    uint16_t val;
-    bool complete = false;
+    int32_t status = PHY_EFAIL;
+    uint16_t val = 0;
+
+    if ((hPhy == NULL) ||
+        (pCompleted == NULL))
+    {
+        return PHY_EBADARGS;
+    }
+
+    *pCompleted = false;
+
     Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
 
     /* Reset is complete when RESET bits have self-cleared */
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, MII_DP83TC812_RESET_CTRL, &val);
+
     if (status == PHY_SOK)
     {
-        complete = ((val & (DP83TC812_SW_RESET | DP83TC812_HW_RESET)) == 0U);
+        *pCompleted = ((val & (DP83TC812_SW_RESET | DP83TC812_HW_RESET)) == 0U);
     }
 
-    PHYTRACE_DBG("PHY %u: global reset is %s complete\n", PhyPriv_getPhyAddr(hPhy), complete ? "" : "not");
+    PHYTRACE_DBG("PHY %u: global reset is %s complete\n", PhyPriv_getPhyAddr(hPhy), *pCompleted ? "" : "not");
 
-    return complete;
+    return status;
 }
 
 static int32_t Dp83tc812_readMmd(EthPhyDrv_Handle hPhy, uint16_t devad, uint32_t reg, uint16_t *val)
@@ -520,7 +544,7 @@ static void Dp83tc812_chipInit(EthPhyDrv_Handle hPhy)
     Dp83tc812_resetHw(hPhy);
     do
     {
-        complete = Dp83tc812_isResetComplete(hPhy);
+        Dp83tc812_isResetComplete(hPhy, &complete);
     }
     while (!complete);
 
@@ -576,16 +600,27 @@ static void Dp83tc812_chipInit(EthPhyDrv_Handle hPhy)
                                    sizeof(dp83tc812_cs2_slave_init)/sizeof(dp83tc812_cs2_slave_init[0]));
                 PHYTRACE_DBG("PHY %u: Applying configuration for DP83TC815 CS2.0 Slave\n", PhyPriv_getPhyAddr(hPhy));}
             break;
+        case DP83TC817:
+            if (dp83tc812_params.is_master){
+                Dp83tc812_writeSeq(hPhy, dp83tc817_master_init,
+                                   sizeof(dp83tc817_master_init)/sizeof(dp83tc817_master_init[0]));
+                PHYTRACE_DBG("PHY %u: Applying configuration for DP83TC817 Master\n", PhyPriv_getPhyAddr(hPhy));}
+            else{
+                Dp83tc812_writeSeq(hPhy, dp83tc817_slave_init,
+                                   sizeof(dp83tc817_slave_init)/sizeof(dp83tc817_slave_init[0]));
+                PHYTRACE_DBG("PHY %u: Applying configuration for DP83TC817 Slave\n", PhyPriv_getPhyAddr(hPhy));}
+            break;
         default:
             PHYTRACE_DBG("PHY %u: No supported DP83TC81x Chip. Skipping chip-specific configuration!\n", PhyPriv_getPhyAddr(hPhy));
             break;
+
     };
 
     /* Perform a software reset to restart the PHY with the updated configuration */
     Dp83tc812_reset(hPhy);
     do
     {
-        complete = Dp83tc812_isResetComplete(hPhy);
+        Dp83tc812_isResetComplete(hPhy, &complete);
     }
     while (!complete);
 
@@ -781,18 +816,18 @@ int32_t Dp83tc812_getSpeedDuplex (EthPhyDrv_Handle hPhy, Phy_Link_SpeedDuplex* p
     Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
 
     /* Restart is complete when RESET bit has self-cleared */
-    status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, DP83TC812_PHYSTS, &val);
+    status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_BMSR, &val);
     if (status == PHY_SOK)
     {
-        if (val & DP83TC812_PHYSTS_LINK)
+        if (val & PHY_BIT(2))
         {
             speed = 100;
             *pConfig = PHY_LINK_FD100;
-        } else 
+        } else
         {
             *pConfig = PHY_LINK_INVALID;
         }
-        
+
     }
 
     PHYTRACE_DBG("PHY %u: selected speed is %d Mbps with %s-duplex\n", PhyPriv_getPhyAddr(hPhy), speed, (val & PHYST_DUPLEXMODEENV_FD) ? "full" : "half");

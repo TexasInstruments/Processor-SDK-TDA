@@ -276,6 +276,69 @@ static CsirxTestParams gCsirxTestCases[] =
                                 TASK_CFG_ID_1CH_YUV422_8BIT_DUAL_PIXEL,
                             },
     },
+    {
+      .enableTest   = TEST_ENABLE,
+      .tcId         = 3550U,
+      .tcName       = "CSIRX DRV Coverage Improvement",
+      .disableInfo      = NULL,
+      .tcType       = (CSIRX_TCT_FUNCTIONAL | CSIRX_TCT_NEGATIVE),
+      .printEnable  = PRINT_ENABLE,
+      .profilingEnable  = PRF_DISABLE,
+      .iterationCnt = 1U,
+      .numTasks     = 1U,
+      .testType     = {CSIRX_TEST_TYPE_CAPTURE_ONLY,},
+      .taskCfgId    = {
+                          TASK_CFG_ID_COVERAGE,
+                      },
+    },
+    {
+      .enableTest   = TEST_ENABLE,
+      .tcId         = 4000U,
+      .tcName       = "CSIRX CSL Coverage Improvement",
+      .disableInfo      = NULL,
+      .tcType       = (CSIRX_TCT_FUNCTIONAL | CSIRX_TCT_NEGATIVE),
+      .printEnable  = PRINT_ENABLE,
+      .profilingEnable  = PRF_DISABLE,
+      .iterationCnt = 1U,
+      .numTasks     = 1U,
+      .testType     = {CSIRX_TEST_TYPE_CAPTURE_ONLY,},
+      .taskCfgId    = {
+                          TASK_CFG_ID_COVERAGE_CSL,
+                      },
+    },
+    {
+      .enableTest   = TEST_ENABLE,
+      .tcId         = 4005U,
+      .tcName       = "CSIRX FVID2 Coverage Improvement",
+      .disableInfo      = NULL,
+      .tcType       = (CSIRX_TCT_FUNCTIONAL | CSIRX_TCT_NEGATIVE),
+      .printEnable  = PRINT_ENABLE,
+      .profilingEnable  = PRF_DISABLE,
+      .iterationCnt = 1U,
+      .numTasks     = 1U,
+      .testType     = {CSIRX_TEST_TYPE_CAPTURE_ONLY,},
+      .taskCfgId    = {
+                          TASK_CFG_ID_COVERAGE_FVID2,
+                      },
+    },
+    {
+      .enableTest       = TEST_ENABLE,
+      .tcId             = 4010U,
+      .tcName           = "4 Channel RAW12 Capture: no timestamp callback",
+      .disableInfo      = NULL,
+      .printEnable      = PRINT_DISABLE,
+      .profilingEnable  = PRF_DISABLE,
+      .tcType           = (CSIRX_TCT_SANITY | CSIRX_TCT_FUNCTIONAL),
+      .dcEnable         = DATA_CHECK_DISABLE,
+      .iterationCnt     = 1U,
+      .numTasks         = 1U,
+      .testType         = {
+                              CSIRX_TEST_TYPE_CAPTURE_ONLY,
+                          },
+      .taskCfgId        = {
+                              TASK_CFG_ID_4CH_RAW12_NO_TS,
+                          },
+    }
 };
 
 #ifdef __cplusplus

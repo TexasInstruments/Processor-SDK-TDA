@@ -130,7 +130,6 @@ int32_t tivxVpacVissFrameComplCb(Fvid2_Handle handle, void *appData);
 static void tivxVpacVissErrorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData);
 static void tivxVpacVissWdTimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData);
 
-#if !defined(VPAC3L)
 static vx_status tivxEnableVpacVissSafetyMechanisms(
     tivxVpacVissObj *vissObj,
     const tivx_obj_desc_user_data_object_t *usr_data_obj);
@@ -138,7 +137,6 @@ static vx_status tivxEnableVpacVissSafetyMechanisms(
 static vx_status tivxVpacVissAllocReadbackBuffers(tivxVpacVissObj *vissObj, uint32_t config_reg_readback_addr);
 
 static void tivxVpacVissFreeReadbackBuffers(tivxVpacVissObj *vissObj);
-#endif
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
@@ -1341,13 +1339,11 @@ This behaviour is part of the application design. An error print statement can b
             Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application.
             However, due to the stated rationale, this is not tested.
             <justification end> */
-#if !defined(VPAC3L)
             if ((vissObj->readback_mem_ptr_phys != 0u) || (vissObj->golden_reg_mem_ptr_phys != 0u))
             /* LDRA_JUSTIFY_END */
             {
                 tivxVpacVissFreeReadbackBuffers(vissObj);
             }
-#endif
 /* LDRA_JUSTIFY_START
 <metric start> branch <metric end>
 <justification start> Rationale: The component level negative test framework and test applications cannot reach this portion.
@@ -1393,9 +1389,7 @@ static vx_status VX_CALLBACK tivxVpacVissProcess(
     tivx_obj_desc_user_data_object_t *h3a_out_desc = NULL;
     tivx_obj_desc_distribution_t *raw_histogram_desc = NULL;
     tivx_obj_desc_t         *out_base_desc = NULL;
-    #if !defined(VPAC3L)
     vx_status                   validate_reg_status = (vx_status)VX_SUCCESS;
-    #endif
 
     uint64_t start_time, cur_time;
     tivx_ae_awb_params_t   aewb_params;
@@ -1972,7 +1966,7 @@ Effect on this unit: If the control reaches here, our code base is expected to a
                 }
             }
             /* LDRA_JUSTIFY_END */
-#if !defined(VPAC3L)
+
             /* Call the control command for statusReg/configReg validate */
             {
                 fvid2_status = Fvid2_control(vissObj->handle, VHWA_M2M_IOCTL_VISS_VALIDATE_REG, NULL, NULL);
@@ -1982,7 +1976,6 @@ Effect on this unit: If the control reaches here, our code base is expected to a
                     validate_reg_status = (vx_status)VX_FAILURE;
                 }
             }
-#endif
         }
     }
 
@@ -2085,12 +2078,10 @@ Effect on this unit: If the control reaches here, our code base is expected to a
         status = tivxVpacVissUnmapUserDesc(&vissObj->viss_prms_target_ptr, config_desc);
     }
 
-    #if !defined(VPAC3L)
     if(((vx_status)VX_SUCCESS != status) || ((vx_status)VX_SUCCESS != validate_reg_status))
     {
         status = (vx_status)VX_FAILURE;
     }
-    #endif
 
     return (status);
 }
@@ -2212,7 +2203,6 @@ Effect on this unit: If the control reaches here, our code base is expected to a
                 break;
             }
 #endif
-#if !defined(VPAC3L)
             case TIVX_VPAC_VISS_CMD_ENABLE_SAFETY_MECHANISM:
             {
                 status = tivxEnableVpacVissSafetyMechanisms(vissObj,
@@ -2232,7 +2222,6 @@ Effect on this unit: If the control reaches here, our code base is expected to a
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-#endif
             default:
             {
                 VX_PRINT(VX_ZONE_ERROR, "Invalid Node Command Id\n");
@@ -4771,7 +4760,7 @@ static vx_status tivxVpacVissEnableErrorEventsCmd(tivxVpacVissObj *vissObj,
 
     return status;
 }
-#if !defined(VPAC3L)
+
 static vx_status tivxVpacVissAllocReadbackBuffers(tivxVpacVissObj *vissObj, uint32_t config_reg_readback_addr)
 {
     vx_status status = (vx_status)VX_SUCCESS;
@@ -5214,7 +5203,7 @@ static vx_status tivxEnableVpacVissSafetyMechanisms(
 
     return status;
 }
-#endif
+
 /* ========================================================================== */
 /*                              Driver Callbacks                              */
 /* ========================================================================== */
@@ -5282,7 +5271,6 @@ static void tivxVpacVissWdTimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrE
         }
     }
 }
-#if !defined(VPAC3L)
 /* Callback for config register and golden register memory comparison for VISS */
 int32_t tivxVpacVissConfigRegMemCompareCb(const Fvid2_Handle handle, void *configRegPrms)
 {
@@ -5332,6 +5320,6 @@ int32_t tivxVpacVissConfigRegMemCompareCb(const Fvid2_Handle handle, void *confi
 
     return status;
 }
+
 /* LDRA_JUSTIFY_END */
-#endif
 BUILD_ASSERT((sizeof(Vhwa_M2mVissPsaSign) == sizeof(((tivx_vpac_viss_psa_timestamp_data_t *)0)->psa_values))? 1U : 0U);

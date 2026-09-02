@@ -14,6 +14,8 @@
 #include "tidl_cudaUtilities.cu"
 #include "tidl_cuda_mem_manager.h"
 
+using namespace floating_point::bf16_c7x;
+
 #define TIDL_GRID_INTERNAL_SCALE_8BIT (16U)
 #define TIDL_GRID_INTERNAL_SCALE_16BIT (256U)
 
@@ -34,7 +36,7 @@ __global__ void GridSampleKernelFloat(
     int gridBatchPitch, int gridDim1Pitch, int gridDim2Pitch, int gridChannelPitch, int gridLinePitch,
     int outBatchPitch, int outDim1Pitch, int outDim2Pitch, int outChannelPitch, int outLinePitch,
     int inPadH, int inPadW, int gridPadH, int gridPadW, int outPadH, int outPadW, 
-    int inTensorScale, int gridTensorScale, int outTensorScale)
+    int inTensorScale, int gridTensorScale, int outTensorScale, int isGridPrecomputed)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int total_elements = numBatches * numDim1 * numDim2 * outHeight * outWidth;
@@ -60,12 +62,15 @@ __global__ void GridSampleKernelFloat(
     y = (float)(grid_data[grid_offset + 1]) / (float)gridTensorScale;
 
     // Map coordinates from [-1,1] to pixel coordinates
-    if (align_corners) {
-        x = ((x + 1.0f) / 2.0f) * (inWidth - 1);
-        y = ((y + 1.0f) / 2.0f) * (inHeight - 1);
-    } else {
-        x = (((x + 1.0f) * inWidth) - 1.0f) / 2.0f;
-        y = (((y + 1.0f) * inHeight) - 1.0f) / 2.0f;
+    if (isGridPrecomputed == 0)
+    {
+        if (align_corners) {
+            x = ((x + 1.0f) / 2.0f) * (inWidth - 1);
+            y = ((y + 1.0f) / 2.0f) * (inHeight - 1);
+        } else {
+            x = (((x + 1.0f) * inWidth) - 1.0f) / 2.0f;
+            y = (((y + 1.0f) * inHeight) - 1.0f) / 2.0f;
+        }
     }
 
     if(align_mode == TIDL_ModeBilinear){
@@ -102,10 +107,134 @@ __global__ void GridSampleKernelFloat(
     }
     else if (align_mode == TIDL_ModeNearest){
         for (int c = 0; c < numChannels; c++){
-            int x_nearest = nearbyintf(x);
-            int y_nearest = nearbyintf(y);
+            int x_nearest, y_nearest;
+
+            if (isGridPrecomputed == 1)
+            {
+                x_nearest = (int)grid[grid_offset];
+                y_nearest = (int)grid[grid_offset + 1];
+            }
+            else
+            {
+                x_nearest = nearbyintf(x);
+                y_nearest = nearbyintf(y);
+            }
             out_val = ((y_nearest >=0) && (y_nearest < inHeight) && (x_nearest >=0) && (x_nearest < inWidth)) ? (float)data[(b*inBatchPitch) + (d1*inDim1Pitch) + (d2*inDim2Pitch) + (c*1) + (y_nearest*inChannelPitch) + (x_nearest*inLinePitch)] : 0.f;
             out_val = out_val * (float)(outTensorScale) / (float)(inTensorScale);
+            out[(b*outBatchPitch) + (d1*outDim1Pitch) + (d2*outDim2Pitch) + c + (h*outChannelPitch) + (w*outLinePitch)] = (Tout)out_val;
+        }
+    }
+    else{
+        printf("Mode not supported\n");
+        return;
+    }
+}
+
+// Template-based GridSample kernel using conv2d style syntax
+template <class Tin, class Tgrid, class Tout>
+__global__ void GridSampleKernelBFloat16(
+    const Tin* __restrict__ input,
+    const Tgrid* __restrict__ grid,
+    Tout* __restrict__ output,
+    int align_mode,
+    bool align_corners,
+    int numBatches, int numDim1, int numDim2, int numChannels, int inHeight, int inWidth,
+    int outHeight, int outWidth,
+    int inBatchPitch, int inDim1Pitch, int inDim2Pitch, int inChannelPitch, int inLinePitch,
+    int gridBatchPitch, int gridDim1Pitch, int gridDim2Pitch, int gridChannelPitch, int gridLinePitch,
+    int outBatchPitch, int outDim1Pitch, int outDim2Pitch, int outChannelPitch, int outLinePitch,
+    int inPadH, int inPadW, int gridPadH, int gridPadW, int outPadH, int outPadW, 
+    int inTensorScale, int gridTensorScale, int outTensorScale, int isGridPrecomputed)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int total_elements = numBatches * numDim1 * numDim2 * outHeight * outWidth;
+    if(idx >= total_elements) return;
+
+    // Apply padding offsets to pointers
+    Tin* data = (Tin*)input + (inPadH * inLinePitch) + inPadW;
+    Tgrid* grid_data = (Tgrid*)grid + (gridPadH * gridLinePitch) + gridPadW;
+    Tout* out = (Tout*)output + (outPadH * outLinePitch) + outPadW;
+
+    // Convert linear index to 5D coordinates (batch, dim1, dim2, height, width)
+    int b = idx / (numDim1 * numDim2 * outHeight * outWidth);
+    int d1 = (idx / (numDim2 * outHeight * outWidth)) % numDim1;
+    int d2 = (idx / (outHeight * outWidth)) % numDim2;
+    int h = (idx / outWidth) % outHeight;
+    int w = idx % outWidth;
+
+    int grid_offset = b * gridBatchPitch + d1 * gridDim1Pitch + d2 * gridDim2Pitch + h * gridChannelPitch + w * gridLinePitch;
+
+    bfloat16_tidl x, y, out_val;
+
+    x = (grid_data[grid_offset]);
+    y = (grid_data[grid_offset + 1]);
+
+    // Map coordinates from [-1,1] to pixel coordinates
+    if (isGridPrecomputed == 0)
+    {
+        if (align_corners == true)
+        {
+            x = ((x + (bfloat16_tidl)1.0F) * (bfloat16_tidl)0.5F) * ((bfloat16_tidl)inWidth - (bfloat16_tidl)1.0F);
+            y = ((y + (bfloat16_tidl)1.0F) * (bfloat16_tidl)0.5F) * ((bfloat16_tidl)inHeight - (bfloat16_tidl)1.0F);
+        }
+        else
+        {
+            x = (((x + (bfloat16_tidl)1.0F) * ((bfloat16_tidl)inWidth)) - (bfloat16_tidl)1.0F) * (bfloat16_tidl)0.5F;
+            y = (((y + (bfloat16_tidl)1.0F) * ((bfloat16_tidl)inHeight)) - (bfloat16_tidl)1.0F) * (bfloat16_tidl)0.5F;
+        }
+    }
+
+    if(align_mode == TIDL_ModeBilinear){
+        bfloat16_tidl bL, bR, tL, tR;
+        Tin bL_val, bR_val, tL_val, tR_val;
+        int32_t x_bL, y_bL, x_bR, y_bR, x_tR, y_tR, x_tL, y_tL;
+
+        x_bL = floorf(x);
+        y_bL = floorf(y);
+        x_bR = x_bL + 1;
+        y_bR = y_bL;
+        x_tL = x_bL;
+        y_tL = y_bL + 1;
+        x_tR = x_bL + 1;
+        y_tR = y_bL + 1;
+        
+        // Weights for bilinear interpolation
+        bL = ((bfloat16_tidl)x_tR - x) * ((bfloat16_tidl)y_tR - y);
+        bR = (x - (bfloat16_tidl)x_tL) * ((bfloat16_tidl)y_tL - y);
+        tL = ((bfloat16_tidl)x_bR - x) * (y - (bfloat16_tidl)y_bR);
+        tR = (x - (bfloat16_tidl)x_bL) * (y - (bfloat16_tidl)y_bL);
+
+        for (int c = 0; c < numChannels; c++) {
+            // Sample four corner points with bounds checking
+            bR_val = ((y_bR >=0) && (y_bR < inHeight) && (x_bR >=0) && (x_bR < inWidth)) ? data[(b*inBatchPitch) + (d1*inDim1Pitch) + (d2*inDim2Pitch) + (c*1) + (y_bR*inChannelPitch) + (x_bR*inLinePitch)] : (Tin)0.0f;
+            bL_val = ((y_bL >=0) && (y_bL < inHeight) && (x_bL >=0) && (x_bL < inWidth)) ? data[(b*inBatchPitch) + (d1*inDim1Pitch) + (d2*inDim2Pitch) + (c*1) + (y_bL*inChannelPitch) + (x_bL*inLinePitch)] : (Tin)0.0f;
+            tL_val = ((y_tL >=0) && (y_tL < inHeight) && (x_tL >=0) && (x_tL < inWidth)) ? data[(b*inBatchPitch) + (d1*inDim1Pitch) + (d2*inDim2Pitch) + (c*1) + (y_tL*inChannelPitch) + (x_tL*inLinePitch)] : (Tin)0.0f;
+            tR_val = ((y_tR >=0) && (y_tR < inHeight) && (x_tR >=0) && (x_tR < inWidth)) ? data[(b*inBatchPitch) + (d1*inDim1Pitch) + (d2*inDim2Pitch) + (c*1) + (y_tR*inChannelPitch) + (x_tR*inLinePitch)] : (Tin)0.0f;
+            
+            // Compute bilinear interpolation
+            out_val = ((float)bL_val * (float)bL + 
+                       (float)bR_val * (float)bR + 
+                       (float)tL_val * (float)tL + 
+                       (float)tR_val * (float)tR);
+
+            out[b * outBatchPitch + d1 * outDim1Pitch + d2 * outDim2Pitch + c + h * outChannelPitch + w * outLinePitch] = cuda_sat_bf16(out_val);
+        }
+    }
+    else if (align_mode == TIDL_ModeNearest){
+        for (int c = 0; c < numChannels; c++){
+            int x_nearest, y_nearest;
+
+            if (isGridPrecomputed == 1)
+            {
+                x_nearest = (int32_t)grid[grid_offset];
+                y_nearest = (int32_t)grid[grid_offset + 1];
+            }
+            else
+            {
+                x_nearest = nearbyintf(x);
+                y_nearest = nearbyintf(y);
+            }
+            out_val = ((y_nearest >=0) && (y_nearest < inHeight) && (x_nearest >=0) && (x_nearest < inWidth)) ? (Tout)data[(b*inBatchPitch) + (d1*inDim1Pitch) + (d2*inDim2Pitch) + (c*1) + (y_nearest*inChannelPitch) + (x_nearest*inLinePitch)] : (Tout)0.0f;
             out[(b*outBatchPitch) + (d1*outDim1Pitch) + (d2*outDim2Pitch) + c + (h*outChannelPitch) + (w*outLinePitch)] = (Tout)out_val;
         }
     }
@@ -264,7 +393,7 @@ int TIDL_cudaGridSampleFloat(
     int gridBatchPitch, int gridDim1Pitch, int gridDim2Pitch, int gridChannelPitch, int gridLinePitch,
     int outBatchPitch, int outDim1Pitch, int outDim2Pitch, int outChannelPitch, int outLinePitch,
     int inPadH, int inPadW, int gridPadH, int gridPadW, int outPadH, int outPadW,
-    int inTensorScale, int gridTensorScale, int outTensorScale
+    int inTensorScale, int gridTensorScale, int outTensorScale, int isGridPrecomputed
 )
 {
     // Calculate memory sizes
@@ -276,20 +405,21 @@ int TIDL_cudaGridSampleFloat(
     Tgrid* d_grid = NULL;
     Tout* d_output = NULL;
 
-    void* inPtrs[2] = {(void*)input, (void*)grid};
-    uint32_t inDataSizes[2] = {(uint32_t)input_size, (uint32_t)grid_size};
-    TIDL_cudaMemManagerPreLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), inPtrs, NULL, 2, inDataSizes);
-
     // Get GPU pointers after synchronization
     TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&d_input, input_size);
     TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), grid, (void**)&d_grid, grid_size);
     TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size);
+
+    checkCudaErr(cudaMemcpy(d_input, input, input_size, cudaMemcpyHostToDevice));
+    checkCudaErr(cudaMemcpy(d_grid, grid, grid_size, cudaMemcpyHostToDevice));
     
     // Launch kernel
     int total_elements = numBatches * numDim1 * numDim2 * outHeight * outWidth;
     int grid_size_launch = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
     
-    GridSampleKernelFloat<Tin, Tgrid, Tout><<<grid_size_launch, THREADS_PER_BLOCK>>>(
+    if(std::is_same<Tin, bfloat16_tidl>::value)
+    {
+        GridSampleKernelBFloat16<Tin, Tgrid, Tout><<<grid_size_launch, THREADS_PER_BLOCK>>>(
         d_input, d_grid, d_output, align_mode, align_corners,
         numBatches, numDim1, numDim2, numChannels, inHeight, inWidth,
         outHeight, outWidth,
@@ -297,12 +427,25 @@ int TIDL_cudaGridSampleFloat(
         gridBatchPitch, gridDim1Pitch, gridDim2Pitch, gridChannelPitch, gridLinePitch,
         outBatchPitch, outDim1Pitch, outDim2Pitch, outChannelPitch, outLinePitch,
         inPadH, inPadW, gridPadH, gridPadW, outPadH, outPadW,
-        inTensorScale, gridTensorScale, outTensorScale);
+        inTensorScale, gridTensorScale, outTensorScale, isGridPrecomputed);
 
+    }
+    else 
+    {
+
+        GridSampleKernelFloat<Tin, Tgrid, Tout><<<grid_size_launch, THREADS_PER_BLOCK>>>(
+            d_input, d_grid, d_output, align_mode, align_corners,
+            numBatches, numDim1, numDim2, numChannels, inHeight, inWidth,
+            outHeight, outWidth,
+            inBatchPitch, inDim1Pitch, inDim2Pitch, inChannelPitch, inLinePitch,
+            gridBatchPitch, gridDim1Pitch, gridDim2Pitch, gridChannelPitch, gridLinePitch,
+            outBatchPitch, outDim1Pitch, outDim2Pitch, outChannelPitch, outLinePitch,
+            inPadH, inPadW, gridPadH, gridPadW, outPadH, outPadW,
+            inTensorScale, gridTensorScale, outTensorScale, isGridPrecomputed);
+    }
+            
     checkCudaErr(cudaGetLastError());
-    void* outPtrs[1] = {(void*)output};
-    uint32_t outDataSizes[1] = {(uint32_t)output_size};
-    TIDL_cudaMemManagerPostLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), outPtrs, 1, outDataSizes);
+    checkCudaErr(cudaMemcpy(output, d_output, output_size, cudaMemcpyDeviceToHost));
 
     return IALG_EOK;
 }
@@ -333,15 +476,14 @@ int TIDL_cudaGridSample(
     Tgrid* d_grid = NULL;
     Tout* d_output = NULL;
 
-    void* inPtrs[2] = {(void*)input, (void*)grid};
-    uint32_t inDataSizes[2] = {(uint32_t)input_size, (uint32_t)grid_size};
-    TIDL_cudaMemManagerPreLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), inPtrs, NULL, 2, inDataSizes);
-
     // Get GPU pointers after synchronization
     TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&d_input, input_size);
     TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), grid, (void**)&d_grid, grid_size);
     TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size);
     
+    checkCudaErr(cudaMemcpy(d_input, input, input_size, cudaMemcpyHostToDevice));
+    checkCudaErr(cudaMemcpy(d_grid, grid, grid_size, cudaMemcpyHostToDevice));
+
     // Launch kernel
     int total_elements = numBatches * numDim1 * numDim2 * outHeight * outWidth;
     int grid_size_launch = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
@@ -357,11 +499,8 @@ int TIDL_cudaGridSample(
         inTensorScale, gridTensorScale, outTensorScale);
 
     checkCudaErr(cudaGetLastError());
-    
-    void* outPtrs[1] = {(void*)output};
-    uint32_t outDataSizes[1] = {(uint32_t)output_size};
-    TIDL_cudaMemManagerPostLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), outPtrs, 1, outDataSizes);
-    
+    checkCudaErr(cudaMemcpy(output, d_output, output_size, cudaMemcpyDeviceToHost));
+
     return IALG_EOK;
 }
 
@@ -371,4 +510,5 @@ template int TIDL_cudaGridSample<unsigned char, short, unsigned int, short, unsi
 template int TIDL_cudaGridSample<unsigned short, short, unsigned long, int, unsigned short, unsigned short>(unsigned short const*, short const*, unsigned short*, int, bool, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 template int TIDL_cudaGridSample<short, short, long, int, unsigned short, short>(short const*, short const*, short*, int, bool, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 template int TIDL_cudaGridSample<signed char, short, int, short, unsigned char, signed char>(signed char const*, short const*, signed char*, int, bool, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
-template int TIDL_cudaGridSampleFloat<float, float, float>(float const*, float const*, float*, int, bool, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaGridSampleFloat<float, float, float>(float const*, float const*, float*, int, bool, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaGridSampleFloat<bfloat16_tidl, bfloat16_tidl, bfloat16_tidl>(bfloat16_tidl const*, bfloat16_tidl const*, bfloat16_tidl*, int, bool, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);

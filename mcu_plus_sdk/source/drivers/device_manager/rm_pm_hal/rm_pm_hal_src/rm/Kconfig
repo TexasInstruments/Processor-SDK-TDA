@@ -38,7 +38,7 @@
 
 menu "Resource Manager Feature Support"
 
-config RM 
+config RM
 	bool "Enable Resource Manager"
 	help
 	 Enable support for Resource Manager functions
@@ -183,6 +183,18 @@ config UDMAP_PKTDMA
 	default y if SOC_AM62
 	help
 	 Enable support for DMSS PKTDMA channel types
+
+config UDMAP_MULTI_CH_CFG
+	bool "Enable support for udmap multi channel config"
+	depends on RM_UDMAP
+	default y if SOC_J721E
+	default y if SOC_J7200
+	default y if SOC_J721S2
+	default y if SOC_J784S4
+	default y if SOC_J722S
+	default n
+	help
+	 Enable support for udmap multi channel config
 
 config RM_PROXY
 	bool "Enable Proxy support in Resource Manager"

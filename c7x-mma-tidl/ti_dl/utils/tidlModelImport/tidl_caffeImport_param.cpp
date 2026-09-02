@@ -175,6 +175,7 @@ int32_t TIDL_caffeCopyFloatInitializerTensor(NetParameter& netStructure, NetPara
 
   buf.ptr = data;
   buf.bufSize = dataSize;
+  buf.dataType = TIDL_SinglePrecFloat;
 
   return 0;
 }

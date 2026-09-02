@@ -83,6 +83,45 @@ using namespace TIDL_Strings;
 #define TIDL_MATMUL_DISABLED 0
 #define TIDL_MATMUL_ENABLED 1
 
+std::string TIDL_shapeHtmlLabel(const sTIDL_DataParams_t *pData)
+{
+  static const char* DYN_COLOR     = "#0f56a7ff";
+  static const char* NON_DYN_COLOR = "#000000";
+
+  uint32_t allDynMask = (1u << TIDL_DIM_MAX) - 1u;
+  bool allStatic  = (pData->dynDimMask == 0);
+  bool allDynamic = ((uint32_t)pData->dynDimMask & allDynMask) == allDynMask;
+
+  if (allStatic || allDynamic) {
+    /* Single FONT tag → single <text> element → zero gap. */
+    const char* color = allDynamic ? DYN_COLOR : NON_DYN_COLOR;
+    std::string html = std::string("<FONT COLOR=\"") + color + "\">";
+    if (allDynamic) html += "<B>";
+    for (int i = 0; i < TIDL_DIM_MAX; i++) {
+      if (i > 0) html += "&#215;";
+      html += std::to_string(pData->dimValues[i]);
+    }
+    if (allDynamic) html += "</B>";
+    return html + "</FONT>";
+  }
+
+  /* Mixed: one FONT tag per dim/separator so each <text> segment is
+     short (1-3 chars) → small, uniform font-metric gaps. */
+  std::string html;
+  for (int i = 0; i < TIDL_DIM_MAX; i++) {
+    if (i > 0)
+      html += std::string("<FONT COLOR=\"") + NON_DYN_COLOR + "\">&#215;</FONT>";
+    bool isDyn = ((pData->dynDimMask >> i) & 1) != 0;
+    if (isDyn)
+      html += std::string("<FONT COLOR=\"") + DYN_COLOR + "\"><B>"
+              + std::to_string(pData->dimValues[i]) + "</B></FONT>";
+    else
+      html += std::string("<FONT COLOR=\"") + NON_DYN_COLOR + "\">"
+              + std::to_string(pData->dimValues[i]) + "</FONT>";
+  }
+  return html;
+}
+
 // Default options that control the dump behavior.
 // Any options passed to the contructor override these defaults.
 const TIDL_dump::options_t TIDL_dump::default_options =
@@ -92,17 +131,16 @@ const TIDL_dump::options_t TIDL_dump::default_options =
 };
 
 // Constructor for TIDL_dump object.
-TIDL_dump::TIDL_dump(std::ostream& os,
-                     const sTIDL_Network_t* net,
-	             const sTIDL_IOBufDesc_t* io /*=nullptr*/,
-	             const layerNames_t* layerNames /*=nullptr*/,
-	             options_t user_options  /*={}*/) :
-      os(indent_ostream(os)), pNet(net), pIODesc(io),
-      layerNames(layerNames), options(default_options)
+TIDL_dump::TIDL_dump(std::ostream &os,
+                     const sTIDL_Network_t *net,
+                     const sTIDL_IOBufDesc_t *io /*=nullptr*/,
+                     const sLayerSpecificInfo_t *layersInfo /*=nullptr*/,
+                     options_t user_options /*={}*/) : os(indent_ostream(os)), pNet(net), pIODesc(io),
+                                                       layersInfo(layersInfo), options(default_options)
 {
-   // overide default options with any that were passed in
-   for (auto it : user_options)
-      options[it.first] = it.second;
+  // overide default options with any that were passed in
+  for (auto it : user_options)
+    options[it.first] = it.second;
 }
 
 // Main API to dump the network
@@ -148,19 +186,21 @@ void TIDL_dump::dumpLayer(int layerNum)
   int layerType = layer->layerType;
   int j;
   const std::string layerTypeName = layerTypeString(layerType);
-  const std::string layerName = layerNames ? layerNames->at(layerNum)
-                                           : std::string();
+
+  const sLayerSpecificInfo_t pLayerSpecificInfo = layersInfo != NULL
+                                                      ? layersInfo[layerNum]
+                                                      : sLayerSpecificInfo_t{std::string(), 0};
+
   if (layerType < 0 || layerType > TIDL_UnsupportedLayer)
     layerType = TIDL_UnsupportedLayer;
   os << format("Layer %d: %s \"%.*s\"\n",
-               layerNum, layerTypeName.c_str(), 128, layerName.c_str());
+               layerNum, layerTypeName.c_str(), 128, pLayerSpecificInfo.layerName.c_str());
   os.push();
   os << format("weightsElementSizeInBits=%d\n",
                layer->weightsElementSizeInBits);
   os << format("kernelType=%d\n",
               layer->layerKernelType);
-  os << format("multiCoreMode=%s\n", multiCoreString(layer->multiCoreMode).c_str());
-
+  os << format("multiCoreMode=%s\n", multiCoreString(pLayerSpecificInfo.multiCoreMode).c_str());
   os << format("strideOffsetMethod=%s\n",
                strideOffsetMethodString(layer->strideOffsetMethod).c_str());
   switch(layerType)
@@ -288,6 +328,9 @@ void TIDL_dump::dumpLayer(int layerNum)
       break;
     case TIDL_NonZeroLayer:
       dumpNonZeroParams(layer);
+      break;
+    case TIDL_GatherLayer:
+      dumpGatherParams(layer);
       break;
     case TIDL_UnsupportedLayer:
        break;
@@ -668,7 +711,6 @@ void TIDL_dump::dumpCropLayerParams(const sTIDL_Layer_t *pLayer)
   os << format("outDataQ=%d ", pCrop->outDataQ);
   os << format("offsetW=%d ", pCrop->offsetW);
   os << format("offsetH=%d\n", pCrop->offsetH);
-  os << format("CropLayerMode=%s\n", multiCoreString(pCrop->multiCoreMode).c_str());
 }
 
 void TIDL_dump::dumpGridSampleParams(const sTIDL_Layer_t *pLayer)
@@ -700,6 +742,13 @@ void TIDL_dump::dumpGatherNDParams (const sTIDL_Layer_t *pLayer)
   os << format("\n");  
 }
 
+
+void TIDL_dump::dumpGatherParams (const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_GatherLayerParams_t *pGather = &pLayer->layerParams.gatherParams;
+  os << format("axis=%d", pGather->axis);
+  os << format("\n");  
+}
 
 void TIDL_dump::dumpGatherElementsParams (const sTIDL_Layer_t *pLayer)
 {

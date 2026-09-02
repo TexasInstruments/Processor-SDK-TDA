@@ -361,6 +361,7 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
   void *handle1;
 #endif
   TI_FILE * fp1;
+  TI_FILE * dimsFp;
   sTIDLRT_Params_t prms;
   sTIDLRT_PerfStats_t stats;
   uint64_t read_bytes_start, write_bytes_start;
@@ -775,7 +776,31 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
       gIOParams    = *tidl_tb_handle[configCnt].ioParams;
       gParams      = *tidl_tb_handle[configCnt].configParams;
       handle = tidl_tb_handle[configCnt].algHandle;
-      fp1    = tidl_tb_handle[configCnt].inFile ;   
+      fp1    = tidl_tb_handle[configCnt].inFile ;
+
+      dimsFp = NULL;
+      for (j = 0; j < gIOParams.numInputBuf; j++)
+      {
+        if (gIOParams.inIsDynamic[j])
+        {
+          if (gParams.inDimsFile[0] == '\0')
+          {
+            tidl_tb_printf(0, "Error: dynamic input detected but inDimsFile not specified\n");
+            status = IALG_EFAIL;
+          }
+          else
+          {
+            dimsFp = FOPEN((char *)gParams.inDimsFile, "r");
+            if (dimsFp == NULL)
+            {
+              tidl_tb_printf(0, "Error: could not open inDimsFile: %s\n", gParams.inDimsFile);
+              status = IALG_EFAIL;
+            }
+          }
+          break;
+        }
+      }
+
       for(i = gParams.startFrameIdx; ((i < (gParams.startFrameIdx + gParams.numFrames)) && (status == IALG_EOK)); i = i + (gIOParams.numVirtualCores * gIOParams.numSuperBatches))
       {
         currentFrameIdx = i;
@@ -825,6 +850,11 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
             }
 
             status = tidl_allocInOutTensors(&gIOParams, in, out);
+          }
+
+          if((status == IALG_EOK) && (dimsFp != NULL))
+          {
+            status = tidl_applyDimsFromFile(dimsFp, &gIOParams, in);
           }
 
           if((status == IALG_EOK) && (params->inFileFormat < 5))
@@ -1038,7 +1068,12 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
       if(status != IALG_EOK)
       {
         tidl_printStatus(status);
-      }    
+      }
+      if (dimsFp != NULL)
+      {
+        FCLOSE(dimsFp);
+        dimsFp = NULL;
+      }
     }
 
     if (gStop == 1)

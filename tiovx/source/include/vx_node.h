@@ -57,6 +57,9 @@ typedef struct _vx_node {
     tivx_obj_desc_node_t  *obj_desc[TIVX_GRAPH_MAX_PIPELINE_DEPTH];
     /*! \brief Command Object descriptor */
     tivx_obj_desc_cmd_t *obj_desc_cmd[TIVX_GRAPH_MAX_PIPELINE_DEPTH];
+    /*! \brief Node Error Info Object descriptor.
+     *         Valid only when the node is replicated (TIVX_NODE_FLAG_IS_REPLICATED). */
+    tivx_obj_desc_node_error_info_t *obj_desc_error_info[TIVX_GRAPH_MAX_PIPELINE_DEPTH];
     /*! \brief Node performance */
     vx_perf_t perf;
     /*! \brief parameter replicated flags */
@@ -146,6 +149,9 @@ typedef struct _vx_node {
 
     /*! \brief Depth of a given node. */
     vx_uint32 node_depth;
+
+    /*! \brief Completion flag for when enough enqueues have been completed for pipeup of source node */
+    vx_bool pipeup_enqueues_complete;
 
 } tivx_node_t;
 
@@ -330,8 +336,7 @@ void ownNodeCheckAndSendCompletionEvent(const tivx_obj_desc_node_t *node_obj_des
  *
  * \ingroup group_vx_node
  */
-void ownNodeCheckAndSendErrorEvent(const tivx_obj_desc_node_t *node_obj_desc, uint64_t timestamp, vx_status status);
-
+void ownNodeCheckAndSendErrorEvent(const tivx_obj_desc_node_t *node_obj_desc, uint64_t timestamp, vx_status status, vx_uint16 replicated_node_idx, const volatile tivx_error_info_t *error_info);
 
 /*! \brief Alloc additional node obj desc's for pipelining
  *

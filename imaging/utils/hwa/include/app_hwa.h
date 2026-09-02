@@ -256,15 +256,17 @@ typedef struct
  */
 int32_t appFvid2Init(void);
 
+#if (defined(SOC_AM62A) && defined(adas))
 /** \brief Performs initializations needed for CSI2RX driver
  *
  */
 int32_t appCsi2RxInit(void);
 
-/** \brief Performs initializations needed for CSI2TX driver
+/** \brief Performs de-initializations needed for CSI2RX driver
  *
  */
-int32_t appCsi2TxInit(void);
+int32_t appCsi2RxDeInit(void);
+#endif
 
 /** \brief Performs initializations needed for VHWA drivers
  *
@@ -272,15 +274,6 @@ int32_t appCsi2TxInit(void);
 int32_t appVhwaVpacInit(uint32_t vpacInst);
 int32_t appVhwaDmpacInit(void);
 
-/** \brief Performs de-initializations needed for CSI2RX driver
- *
- */
-int32_t appCsi2RxDeInit(void);
-
-/** \brief Performs de-initializations needed for CSI2TX driver
- *
- */
-int32_t appCsi2TxDeInit(void);
 
 /** \brief Performs de-initializations needed for Fvid2
  *

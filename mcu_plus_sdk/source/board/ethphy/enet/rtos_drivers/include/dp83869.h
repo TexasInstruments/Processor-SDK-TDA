@@ -79,32 +79,48 @@ extern "C" {
  */
 typedef enum Dp83869_Gpio0Mode_e
 {
-    /*! RX_ER */
-    DP83869_GPIO0_RXERR     = 0x0U,
+    /*! Clock Out */
+    DP83869_GPIO0_CLK_OUT = 0x0U,
 
-    /*! 1588 TX SFD */
-    DP83869_GPIO0_1588TXSFD = 0x1U,
+    /*! Interrupt */
+    DP83869_GPIO0_INT = 0x2U,
 
-    /*! 1588 RX SFD */
-    DP83869_GPIO0_1588RXSFD = 0x2U,
+    /*! Link Status */
+    DP83869_GPIO0_LINK_STATUS = 0x3U,
 
-    /*! WOL */
-    DP83869_GPIO0_WOL       = 0x3U,
+    /*! Transmit SFD */
+    DP83869_GPIO0_TX_SFD = 0x5U,
 
-    /*! Energy Detect (1000Base-T and 100Base-TX only) */
-    DP83869_GPIO0_ENERGYDET = 0x4U,
+    /*! Receive SFD */
+    DP83869_GPIO0_RX_SFD = 0x6U,
 
-    /*! LED_3 */
-    DP83869_GPIO0_LED3      = 0x6U,
+    /*! Wake on LAN*/
+    DP83869_GPIO0_WOL = 0x7U,
 
-    /*! PRBS Errors / Loss of Sync */
-    DP83869_GPIO0_PRBSERR   = 0x7U,
+    /* Energy Detect (100/1000M)*/
+    DP83869_GPIO0_ED = 0x8U,
+
+    /*! PRBS Errors */
+    DP83869_GPIO0_PRBS_ERR = 0x9U,
+
+    /*! LED_2 */
+    DP83869_GPIO0_LED_2 = 0xAU,
+
+    /*! LED_GPIO (3) */
+    DP83869_GPIO0_LED_GPIO_3 = 0xBU,
+
+    /*! CRS */
+    DP83869_GPIO0_CRS = 0xCU,
+
+    /*! COL */
+    DP83869_GPIO0_COL = 0xDU,
 
     /*! Constant 0 */
-    DP83869_GPIO0_CONSTANT0 = 0x8U,
+    DP83869_GPIO0_CONSTANT0 = 0xEU,
 
     /*! Constant 1 */
-    DP83869_GPIO0_CONSTANT1 = 0x9U,
+    DP83869_GPIO0_CONSTANT1 = 0xFU,
+
 } Dp83869_Gpio0Mode;
 
 /*!
@@ -112,32 +128,47 @@ typedef enum Dp83869_Gpio0Mode_e
  */
 typedef enum Dp83869_Gpio1Mode_e
 {
+    /*! Clock Out */
+    DP83869_GPIO1_CLK_OUT = 0x0U,
+
+    /*! Interrupt */
+    DP83869_GPIO1_INT = 0x2U,
+
+    /*! Link Status */
+    DP83869_GPIO1_LINK_STATUS = 0x3U,
+
+    /*! Transmit SFD */
+    DP83869_GPIO1_TX_SFD = 0x5U,
+
+    /*! Receive SFD */
+    DP83869_GPIO1_RX_SFD = 0x6U,
+
+    /*! Wake on LAN*/
+    DP83869_GPIO1_WOL = 0x7U,
+
+    /* Energy Detect (100/1000M)*/
+    DP83869_GPIO1_ED = 0x8U,
+
+    /*! PRBS Errors */
+    DP83869_GPIO1_PRBS_ERR = 0x9U,
+
+    /*! LED_2 */
+    DP83869_GPIO1_LED_2 = 0xAU,
+
+    /*! LED_GPIO (3) */
+    DP83869_GPIO1_LED_GPIO_3 = 0xBU,
+
+    /*! CRS */
+    DP83869_GPIO1_CRS = 0xCU,
+
     /*! COL */
-    DP83869_GPIO1_COL       = 0x0U,
-
-    /*! 1588 TX SFD */
-    DP83869_GPIO1_1588TXSFD = 0x1U,
-
-    /*! 1588 RX SFD */
-    DP83869_GPIO1_1588RXSFD = 0x2U,
-
-    /*! WOL */
-    DP83869_GPIO1_WOL       = 0x3U,
-
-    /*! Energy Detect (1000Base-T and 100Base-TX only) */
-    DP83869_GPIO1_ENERGYDET = 0x4U,
-
-    /*! LED_3 */
-    DP83869_GPIO1_LED3      = 0x6U,
-
-    /*! PRBS Errors / Loss of Sync */
-    DP83869_GPIO1_PRBSERR   = 0x7U,
+    DP83869_GPIO1_COL = 0xDU,
 
     /*! Constant 0 */
-    DP83869_GPIO1_CONSTANT0 = 0x8U,
+    DP83869_GPIO1_CONSTANT0 = 0xEU,
 
     /*! Constant 1 */
-    DP83869_GPIO1_CONSTANT1 = 0x9U,
+    DP83869_GPIO1_CONSTANT1 = 0xFU,
 } Dp83869_Gpio1Mode;
 
 /*!
@@ -260,9 +291,10 @@ int32_t Dp83869_config(EthPhyDrv_Handle hPhy,
                         Phy_Mii mii,
                         bool loopbackEn);
 
-void Dp83869_reset(EthPhyDrv_Handle hPhy);
+int32_t Dp83869_reset(EthPhyDrv_Handle hPhy);
 
-bool Dp83869_isResetComplete(EthPhyDrv_Handle hPhy);
+int32_t Dp83869_isResetComplete(EthPhyDrv_Handle hPhy,
+                                bool *pComplete);
 
 void Dp83869_printRegs(EthPhyDrv_Handle hPhy);
 

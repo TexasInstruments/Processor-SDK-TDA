@@ -122,6 +122,7 @@ typedef struct
     uint8_t meanImage[FILE_NAME_SIZE];
     uint8_t ioConfigFile[FILE_NAME_SIZE];
     uint8_t tempBufferDir[FILE_NAME_SIZE];
+    uint8_t inDimsFile[FILE_NAME_SIZE];
 
 } tidl_net_config;
 

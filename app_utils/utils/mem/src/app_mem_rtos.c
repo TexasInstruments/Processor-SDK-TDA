@@ -770,7 +770,7 @@ void  appMemCacheInv(void *ptr, uint32_t size)
         ptr,
         APP_MEM_ALIGN32(size, APP_MEM_ALIGN_MIN_BYTES));
     /*JIRA: ADASVISION-7149 - TODO: to be enabled once Cache Ops are supported under mcu_sdk
-    #elif(MCU_SDK)
+    #elif defined(MCU_SDK)
     Arch_Cache_Inv(
         (uintptr_t)ptr,
         APP_MEM_ALIGN32(size, APP_MEM_ALIGN_MIN_BYTES));
@@ -793,7 +793,7 @@ void  appMemCacheWb(void *ptr, uint32_t size)
         ptr,
         APP_MEM_ALIGN32(size, APP_MEM_ALIGN_MIN_BYTES));
     /*JIRA: ADASVISION-7149 - TODO: to be enabled once Cache Ops are supported under mcu_sdk
-    #elif(MCU_SDK)
+    #elif defined(MCU_SDK)
     Arch_Cache_Wb(
         (uintptr_t)ptr,
         APP_MEM_ALIGN32(size, APP_MEM_ALIGN_MIN_BYTES));
@@ -816,7 +816,7 @@ void  appMemCacheWbInv(void *ptr, uint32_t size)
     CacheP_wbInv(
         ptr,
         APP_MEM_ALIGN32(size, APP_MEM_ALIGN_MIN_BYTES));
-    #elif(MCU_SDK)
+    #elif defined(MCU_SDK)
     /*JIRA: ADASVISION-7149 - TODO: to be enabled once Cache Ops are supported under mcu_sdk
      Arch_Cache_WbInv(
          (uintptr_t)ptr,

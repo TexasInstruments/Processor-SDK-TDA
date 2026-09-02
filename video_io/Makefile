@@ -5,8 +5,13 @@ include build_flags.mak
 # Project specific build defs (don't change across different combos):
 
 BUILD_DEFS += $(SOC_DEF)
+BUILD_DEFS += $(ECU_BUILD_DEF)
 
-DIRECTORIES := kernels
+ifeq ($(SOC), am62a)
+BUILD_DEFS += $(TISDK_IMAGE)
+endif
+
+DIRECTORIES := kernels utils
 
 TARGET_COMBOS :=
 

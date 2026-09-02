@@ -37,9 +37,5 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86_64 A72 A53 A720))
         endif
     endif
 
-    IDIRS       += $(EDGEAI_IDIRS)
-    SHARED_LIBS += edgeai-apps-utils
-    SHARED_LIBS += edgeai-tiovx-kernels
-
     include $(FINALE)
 endif

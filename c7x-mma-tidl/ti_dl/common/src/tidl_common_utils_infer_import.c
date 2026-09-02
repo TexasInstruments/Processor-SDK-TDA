@@ -89,7 +89,7 @@ int32_t TIDL_getDatElementSize(int32_t elementType)
   {
     size = 1;
   }
-  else if ((elementType == TIDL_SignedShort) || (elementType == TIDL_UnsignedShort))
+  else if ((elementType == TIDL_SignedShort) || (elementType == TIDL_UnsignedShort) || (elementType == TIDL_BFloat16))
   {
     size = 2;
   }
@@ -99,7 +99,9 @@ int32_t TIDL_getDatElementSize(int32_t elementType)
   }
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   else if ((elementType == TIDL_UnsignedDoubleWord) || (elementType == TIDL_SignedDoubleWord))
   {
@@ -108,7 +110,9 @@ int32_t TIDL_getDatElementSize(int32_t elementType)
   }
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   else
   {

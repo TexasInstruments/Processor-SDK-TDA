@@ -78,6 +78,8 @@
 #include "tidl_cuda.h"
 #endif
 
+using namespace floating_point::bf16_c7x;
+
 // #define lutTensorScale (1.0/255.0) /* This is an intermediate variable set by user */
 #define lutTensorZP (0.0)                               /* This is an intermediate variable set by user */
 #define SCALE_PRECISION_BITS 8                          /* This parameter specifies the precision to which the scale of float should be calculated while converting float to scale and shift */
@@ -105,13 +107,13 @@ template<class Tin, class Tout, class Tacc>
   float32_tidl outputTensorScale = outDataParams->tensorScale;
   float32_tidl inputTensorScale = inDataParams->tensorScale;
   float32_tidl inputTensorScaleInv = ((float32_tidl)1) / inputTensorScale;
-#if defined(__C7100__) || defined(__C7120__)
+#if defined(__C7100__) || defined(__C7120__) || defined(__C7604__)
   float32_tidl lutTensorScale = 1.0 / 255.0;
 #endif
   float32_tidl quantScale = 255.0f;
   if ((typeid(Tin) == typeid(int16_t)) || (typeid(Tin) == typeid(uint16_t)))
   {
-#if defined(__C7100__) || defined(__C7120__)
+#if defined(__C7100__) || defined(__C7120__) || defined(__C7604__)
     lutTensorScale = 1.0 / 65535.0;
 #endif
     quantScale = 65535.0f;
@@ -221,7 +223,7 @@ template<class Tin, class Tout, class Tacc>
                 expOut = float_to_int_c7x((exp_taylor(inputLUT * inputTensorScaleInv) * (quantScale))); /*LUT output calculation, out = (exp(-5∗sx)∗(1/sp))+zp */
               }
               else
-#if defined(__C7504__) || defined(__C7524__) || defined(__C7604__) 
+#if defined(__C7504__) || defined(__C7524__)
               {
                 int32_t inputLUT = (int32_t)(inPtr[i5 * dim[5] + i4 * dim[4] + i3 * dim[3] + i2 * dim[2] + i1 * dim[1] + i0 * dim[0]] - xMax);
                 expOut = round((exp_taylor(inputLUT * inputTensorScaleInv) * (quantScale))); /*LUT output calculation, out = (exp(-5∗sx)∗(1/sp))+zp */
@@ -348,9 +350,12 @@ template<class Tin, class Tout> void TIDL_softmaxRefProcess(
       }
       /* LDRA_JUSTIFY_START
       <metric start> branch <metric end>
-      <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+      <justification start>
+      Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
       This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
       TIDL_LDRA_TAG : TIDL_LDRA_TAG_SOFTMAX_PRIOR_CHECK_002
+      Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+      This does not affect runtime behavior or safety.
       <justification end> */
       else if (inDataParams->elementType == TIDL_UnsignedShort)
       {
@@ -359,9 +364,12 @@ template<class Tin, class Tout> void TIDL_softmaxRefProcess(
       }
       /* LDRA_JUSTIFY_START
       <metric start> statement branch <metric end>
-      <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+      <justification start>
+      Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
       This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
       TIDL_LDRA_TAG : TIDL_LDRA_TAG_SOFTMAX_PRIOR_CHECK_002
+      Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+      This does not affect runtime behavior or safety.
       <justification end> */
       else
       {
@@ -518,9 +526,12 @@ template<class Tin, class Tout> void TIDL_softmaxRefProcess(
     }
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+    <justification start>
+    Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
     This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
     TIDL_LDRA_TAG : TIDL_LDRA_TAG_SOFTMAX_PRIOR_CHECK_003
+    Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+    This does not affect runtime behavior or safety.
     <justification end> */
     else if ((inDataParams->elementType == TIDL_SignedShort) || (inDataParams->elementType == TIDL_UnsignedShort))
     {
@@ -542,9 +553,12 @@ template<class Tin, class Tout> void TIDL_softmaxRefProcess(
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+    <justification start>
+    Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
     This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
     TIDL_LDRA_TAG : TIDL_LDRA_TAG_SOFTMAX_PRIOR_CHECK_003
+    Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+    This does not affect runtime behavior or safety.
     <justification end> */
     else
     {
@@ -645,7 +659,7 @@ int32_t TIDL_softmaxRefProcessFloat(const sTIDL_Layer_t *tidlLayer,
 
   #ifdef BUILD_WITH_CUDA_SOFTMAX
   // call cuda float softmax wrapper
-  TIDL_cudaSoftmaxFloat(inPtr, out, icnt, dim, ddim);
+  TIDL_cudaSoftmaxFloat<float32_tidl, float32_tidl>(inPtr, out, icnt, dim, ddim);
   #else
   int32_t i0, i1, i2, i3, i4, i5;
 
@@ -695,6 +709,157 @@ int32_t TIDL_softmaxRefProcessFloat(const sTIDL_Layer_t *tidlLayer,
               }
 #endif
               output = (numer / denom);
+              out[(i5 * ddim[5]) + (i4 * ddim[4]) + (i3 * ddim[3]) + (i2 * ddim[2]) + (i1 * ddim[1]) + (i0 * ddim[0])] = output;
+            }
+          }
+        }
+      }
+    }
+  }
+  #endif
+  return IALG_EOK;
+}
+
+/**
+ * @brief This function is the BFloat16 reference implementation of softmax layer
+ *
+ * @param tidlLayer : Pointer to the common layer parameters
+ * @param inPtrs : Pointer to input memory
+ * @param outPtr : Pointer to output memory
+ * @param inDataParams : parameters of the input data buffer
+ * @param outDataParams : parameters of the output data buffer
+ * @param basePrmPtr : Copy of softmax layer parameters
+ */
+
+template<class Tin, class Tout> 
+int32_t TIDL_softmaxRefProcessBFloat16(const sTIDL_Layer_t *tidlLayer,
+                                    Tin *inPtrs,
+                                    Tout *outPtr,
+                                    sTIDL_DataParams_t *inDataParams[],
+                                    const sTIDL_DataParams_t *outDataParams,
+                                    uint8_t *basePrmPtr,
+                                    int32_t outTranspose)
+{
+  Tin *in = (Tin *)inPtrs;
+  Tout *out = (Tout *)outPtr;
+
+  int32_t inOffset = 0;
+
+  int32_t axis = tidlLayer->layerParams.softMaxParams.axis;
+  int32_t icnt[TIDL_DIM_MAX] = {0};
+  int32_t dim[TIDL_DIM_MAX] = {0};
+  int32_t ddim[TIDL_DIM_MAX] = {0};
+
+  Tin max = -std::numeric_limits<Tin>::max();
+  Tout numer, expOut;
+  Tin inDataVal = (Tin)0.0f;
+  Tout output = (Tout)0.0f;
+  Tin *inPtr = &in[inOffset];
+  Tin temp;
+  float32_tidl denom = 0.0f;
+
+  /*Set dims & counts:*/
+  if (outTranspose != 0)
+  {
+    /*DIM0*/
+    icnt[0] = inDataParams[0]->dimValues[TIDL_DIM_WIDTH];
+    dim[0] = 1U;
+    ddim[0] = outDataParams->pitch[TIDL_LINE_PITCH];
+    /*DIM1*/
+    icnt[1] = inDataParams[0]->dimValues[TIDL_DIM_HEIGHT];
+    dim[1] = inDataParams[0]->pitch[TIDL_LINE_PITCH];
+    ddim[1] = 1U;
+  }
+  else
+  {
+    /*DIM0*/
+    icnt[0] = inDataParams[0]->dimValues[TIDL_DIM_WIDTH];
+    dim[0] = 1U;
+    ddim[0] = 1U;
+    /*DIM1*/
+    icnt[1] = inDataParams[0]->dimValues[TIDL_DIM_HEIGHT];
+    dim[1] = inDataParams[0]->pitch[TIDL_LINE_PITCH];
+    ddim[1] = outDataParams->pitch[TIDL_LINE_PITCH];
+  }
+  /*DIM2*/
+  icnt[2] = inDataParams[0]->dimValues[TIDL_DIM_NUMCH];
+  dim[2] = inDataParams[0]->pitch[TIDL_CHANNEL_PITCH];
+  ddim[2] = outDataParams->pitch[TIDL_CHANNEL_PITCH];
+  /*DIM3*/
+  icnt[3] = inDataParams[0]->dimValues[TIDL_DIM_DIM2];
+  dim[3] = inDataParams[0]->pitch[TIDL_DIM2_PITCH];
+  ddim[3] = outDataParams->pitch[TIDL_DIM2_PITCH];
+  /*DIM4*/
+  icnt[4] = inDataParams[0]->dimValues[TIDL_DIM_DIM1];
+  dim[4] = inDataParams[0]->pitch[TIDL_DIM1_PITCH];
+  ddim[4] = outDataParams->pitch[TIDL_DIM1_PITCH];
+  /*DIM5*/
+  icnt[5] = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
+  dim[5] = inDataParams[0]->pitch[TIDL_ROI_PITCH];
+  ddim[5] = outDataParams->pitch[TIDL_ROI_PITCH];
+
+  /*Use softmax's "axis" parameter to swap the innermost dimension*/
+  int32_t icnt_temp, dim_temp, ddim_temp;
+  icnt_temp = icnt[0];
+  dim_temp = dim[0];
+  ddim_temp = ddim[0];
+  /* axis dim -> dim 0*/
+  icnt[0] = icnt[(int32_t)TIDL_DIM_MAX - 1 - axis];
+  dim[0] = dim[(int32_t)TIDL_DIM_MAX - 1 - axis];
+  ddim[0] = ddim[(int32_t)TIDL_DIM_MAX - 1 - axis];
+  /* axis dim <- dim 0*/
+  icnt[(int32_t)TIDL_DIM_MAX - 1 - axis] = icnt_temp;
+  dim[(int32_t)TIDL_DIM_MAX - 1 - axis] = dim_temp;
+  ddim[(int32_t)TIDL_DIM_MAX - 1 - axis] = ddim_temp;
+
+  #ifdef BUILD_WITH_CUDA_SOFTMAX
+  // call cuda float softmax wrapper
+  TIDL_cudaSoftmaxFloat<Tin, Tout>(inPtr, out, icnt, dim, ddim);
+  #else
+  int32_t i0, i1, i2, i3, i4, i5;
+
+  /* OPENACC(data copyin(inPtr[: 1+ (icnt[5]-1) * dim[5] + (icnt[4]-1) * dim[4] + (icnt[3]-1) * dim[3] + (icnt[2]-1) * dim[2] + (icnt[1]-1) * dim[1] + (icnt[0]-1) * dim[0]]) \
+               copy(out[: 1+ (icnt[5]-1) * ddim[5] + (icnt[4]-1) * ddim[4] + (icnt[3]-1) * ddim[3] + (icnt[2]-1) * ddim[2] + (icnt[1]-1) * ddim[1] + (icnt[0]-1) * ddim[0]])) */
+  // OPENACC(parallel loop collapse(5))
+  for (i5 = 0; i5 < icnt[5]; i5++)
+  {
+    for (i4 = 0; i4 < icnt[4]; i4++)
+    {
+      for (i3 = 0; i3 < icnt[3]; i3++)
+      {
+        for (i2 = 0; i2 < icnt[2]; i2++)
+        {
+          for (i1 = 0; i1 < icnt[1]; i1++)
+          {
+            max = -std::numeric_limits<Tin>::max();
+            denom = 0.0f;
+            // OPENACC(loop)
+            /*Find Max:*/
+            for (i0 = 0; i0 < icnt[0]; i0++)
+            {
+              inDataVal = inPtr[(i5 * dim[5]) + (i4 * dim[4]) + (i3 * dim[3]) + (i2 * dim[2]) + (i1 * dim[1]) + (i0 * dim[0])];
+              max = (max > inDataVal) ? max : inDataVal;
+            }
+            // OPENACC(loop)
+            /*Find Denominator*/
+            for (i0 = 0; i0 < icnt[0]; i0++)
+            {
+              inDataVal = inPtr[(i5 * dim[5]) + (i4 * dim[4]) + (i3 * dim[3]) + (i2 * dim[2]) + (i1 * dim[1]) + (i0 * dim[0])];
+              /*Subtract "max" for mathematical stability*/
+              temp = (inDataVal - max);
+              expOut = (Tout)exp_taylor_bf16(temp);
+
+              denom += (float32_tidl)expOut;
+              out[(i5 * ddim[5]) + (i4 * ddim[4]) + (i3 * ddim[3]) + (i2 * ddim[2]) + (i1 * ddim[1]) + (i0 * ddim[0])] = expOut;
+            }
+
+            Tout denomInv = (Tout)__recip(denom);
+            // OPENACC(loop)
+            /*Calculate softmax at a per element granularity*/
+            for (i0 = 0; i0 < icnt[0]; i0++)
+            {
+              numer = out[(i5 * ddim[5]) + (i4 * ddim[4]) + (i3 * ddim[3]) + (i2 * ddim[2]) + (i1 * ddim[1]) + (i0 * ddim[0])];
+              output = (numer * denomInv);
               out[(i5 * ddim[5]) + (i4 * ddim[4]) + (i3 * ddim[3]) + (i2 * ddim[2]) + (i1 * ddim[1]) + (i0 * ddim[0])] = output;
             }
           }
@@ -854,5 +1019,23 @@ template void TIDL_softmaxRefProcess(
     const sTIDL_DataParams_t *inDataParams,
     const sTIDL_DataParams_t *outDataParams,
     int32_t axis,
+    int32_t outTranspose);
+
+template int32_t TIDL_softmaxRefProcessBFloat16(
+    const sTIDL_Layer_t *tidlLayer,
+    bfloat16_tidl *inPtrs,
+    bfloat16_tidl *outPtr,
+    sTIDL_DataParams_t *inDataParams[],
+    const sTIDL_DataParams_t *outDataParams,
+    uint8_t *basePrmPtr,
+    int32_t outTranspose);
+
+template int32_t TIDL_softmaxRefProcessBFloat16(
+    const sTIDL_Layer_t *tidlLayer,
+    bfloat16_tidl *inPtrs,
+    float32_tidl *outPtr,
+    sTIDL_DataParams_t *inDataParams[],
+    const sTIDL_DataParams_t *outDataParams,
+    uint8_t *basePrmPtr,
     int32_t outTranspose);
 #endif

@@ -149,7 +149,6 @@ typedef struct
     /* Timestamp for the most recent frame processed. */
     uint64_t                timestamp;
 
-#if !defined(VPAC3L)
     /* Physical address for register readback memory */
     uint64_t                           readback_mem_ptr_phys;
 
@@ -164,7 +163,6 @@ typedef struct
 
     /* Size of the configuration register memory */
     uint32_t                           config_reg_mem_size;
-#endif
 } tivxVpacMscScaleObj;
 
 struct tivxVpacMscScaleInstObj_t

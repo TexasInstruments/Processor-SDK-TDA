@@ -1,0 +1,2009 @@
+{
+    "LPSC_wkup_alwayson": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_wkup_alwayson",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 0,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MCU_CPSW0",
+            "MCU_CPT2_AGGR0",
+            "MCU_CTRL_MMR0",
+            "MCU_DCC0",
+            "MCU_DCC1",
+            "MCU_DCC2",
+            "MCU_ESM0",
+            "MCU_FSS0_FSAS_0",
+            "MCU_FSS0_HYPERBUS1P0_0",
+            "MCU_FSS0_OSPI_0",
+            "MCU_FSS0_OSPI_1",
+            "MCU_I2C0",
+            "MCU_I2C1",
+            "MCU_MCSPI0",
+            "MCU_MCSPI1",
+            "MCU_MCSPI2",
+            "MCU_MSRAM_1MB0",
+            "MCU_NAVSS0_INTR_ROUTER_0",
+            "MCU_NAVSS0_MCRC_0",
+            "MCU_NAVSS0_MODSS",
+            "MCU_NAVSS0_MODSS_ECC_AGGR0",
+            "MCU_NAVSS0_PROXY0",
+            "MCU_NAVSS0_PSILCFG_0",
+            "MCU_NAVSS0_RINGACC0",
+            "MCU_NAVSS0_SEC_PROXY0",
+            "MCU_NAVSS0_UDMAP_0",
+            "MCU_NAVSS0_UDMASS",
+            "MCU_NAVSS0_UDMASS_ECC_AGGR0",
+            "MCU_NAVSS0_UDMASS_INTA_0",
+            "MCU_PDMA0",
+            "MCU_PDMA1",
+            "MCU_PDMA2",
+            "MCU_PDMA3",
+            "MCU_PLL0",
+            "MCU_SA3_SS0_SA_UL_0",
+            "MCU_SEC_MMR0",
+            "MCU_TIMER0",
+            "MCU_TIMER1",
+            "MCU_TIMER2",
+            "MCU_TIMER3",
+            "MCU_TIMER4",
+            "MCU_TIMER5",
+            "MCU_TIMER6",
+            "MCU_TIMER7",
+            "MCU_TIMER8",
+            "MCU_TIMER9",
+            "MCU_UART0",
+            "WKUP_CTRL_MMR0",
+            "WKUP_DDPA0",
+            "WKUP_ESM0",
+            "WKUP_GPIOMUX_INTRTR0",
+            "WKUP_VTM0"
+        ]
+    },
+    "LPSC_dmsc": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_dmsc",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 1,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "WKUP_SMS0"
+        ]
+    },
+    "LPSC_debug2dmsc": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_debug2dmsc",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 2,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_wkup_gpio": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_wkup_gpio",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 3,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "WKUP_GPIO0",
+            "WKUP_GPIO1",
+            "WKUP_I2C0",
+            "WKUP_UART0"
+        ]
+    },
+    "LPSC_wkupmcu2main": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_wkupmcu2main",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 4,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_main2wkupmcu": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_main2wkupmcu",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 5,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_mcu_test": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_test",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 6,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MCU_EFUSE0",
+            "MCU_PBIST0",
+            "MCU_PBIST1"
+        ]
+    },
+    "LPSC_mcu_debug": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_debug",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 7,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_mcu_mcan_0": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_mcan_0",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 8,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MCU_MCAN0"
+        ]
+    },
+    "LPSC_mcu_mcan_1": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_mcan_1",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 9,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MCU_MCAN1"
+        ]
+    },
+    "LPSC_mcu_ospi_0": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_ospi_0",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 10,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MCU_FSS0_OSPI_0"
+        ]
+    },
+    "LPSC_mcu_ospi_1": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_ospi_1",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 11,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MCU_FSS0_OSPI_1"
+        ]
+    },
+    "LPSC_mcu_hyperbus": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_hyperbus",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 12,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MCU_FSS0_HYPERBUS1P0_0"
+        ]
+    },
+    "LPSC_mcu_i3c_0": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_i3c_0",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 13,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MCU_I3C0"
+        ]
+    },
+    "LPSC_mcu_i3c_1": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_i3c_1",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 14,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MCU_I3C1"
+        ]
+    },
+    "LPSC_mcu_adc_0": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_adc_0",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 15,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MCU_ADC0"
+        ]
+    },
+    "LPSC_mcu_adc_1": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_adc_1",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 16,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MCU_ADC1"
+        ]
+    },
+    "LPSC_wkup_spare0": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_wkup_spare0",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 17,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "WKUP_SMS0"
+        ]
+    },
+    "LPSC_wkup_spare1": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_wkup_spare1",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 18,
+        "pd_name": "PD_wkup",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_mcu_r5_0": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_r5_0",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 19,
+        "pd_name": "PD_mcu_pulsar",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "MCU_R5FSS0_CORE0",
+            "MCU_RTI0"
+        ]
+    },
+    "LPSC_mcu_r5_1": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_r5_1",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 20,
+        "pd_name": "PD_mcu_pulsar",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "MCU_R5FSS0_CORE1",
+            "MCU_RTI1"
+        ]
+    },
+    "LPSC_mcu_pulsar_pbist_0": {
+        "gpsc_name": "WKUP_PSC0",
+        "lpsc_name": "LPSC_mcu_pulsar_pbist_0",
+        "base_addr": "0x0000000042000000",
+        "lpsc_index": 21,
+        "pd_name": "PD_mcu_pulsar",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "MCU_PBIST2"
+        ]
+    },
+    "LPSC_bspare_pdaon_0": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_bspare_pdaon_0",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 0,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_bspare_pdaon_1": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_bspare_pdaon_1",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 1,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_bspare_pdaon_2": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_bspare_pdaon_2",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 2,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_bspare_pdaon_3": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_bspare_pdaon_3",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 3,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_bspare_pdaon_4": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_bspare_pdaon_4",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 4,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_bspare_pdaon_5": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_bspare_pdaon_5",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 5,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_bspare_pdaon_6": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_bspare_pdaon_6",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 6,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_bspare_pdaon_7": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_bspare_pdaon_7",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 7,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_gpucom1": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_gpucom1",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 8,
+        "pd_name": "PD_GPUCOM1",
+        "pd_index": 1,
+        "controlled_ip_instances": []
+    },
+    "LPSC_gpupbist1": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_gpupbist1",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 9,
+        "pd_name": "PD_GPUCOM1",
+        "pd_index": 1,
+        "controlled_ip_instances": []
+    },
+    "LPSC_gpucore1": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_gpucore1",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 10,
+        "pd_name": "PD_GPUCORE1",
+        "pd_index": 2,
+        "controlled_ip_instances": []
+    },
+    "LPSC_bspare_pd2_1": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_bspare_pd2_1",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 11,
+        "pd_name": "PD_GPUCORE1",
+        "pd_index": 2,
+        "controlled_ip_instances": []
+    },
+    "LPSC_emif_data_3": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_emif_data_3",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 12,
+        "pd_name": "PD_DDR3",
+        "pd_index": 3,
+        "controlled_ip_instances": []
+    },
+    "LPSC_emif_cfg_3": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_emif_cfg_3",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 13,
+        "pd_name": "PD_DDR3",
+        "pd_index": 3,
+        "controlled_ip_instances": [
+            "DDR3"
+        ]
+    },
+    "LPSC_msmc_l1_0": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_msmc_l1_0",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 14,
+        "pd_name": "PD_ANA0",
+        "pd_index": 4,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_C71SS0",
+            "COMPUTE_CLUSTER0_DRU4"
+        ]
+    },
+    "LPSC_dru_0": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_dru_0",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 15,
+        "pd_name": "PD_ANA0",
+        "pd_index": 4,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_DRU4"
+        ]
+    },
+    "LPSC_ana_pbist_0": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_ana_pbist_0",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 16,
+        "pd_name": "PD_ANA0",
+        "pd_index": 4,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_AW4_MSMC_DFT_EMBED_PBIST_0"
+        ]
+    },
+    "LPSC_msmc_l1_1": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_msmc_l1_1",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 17,
+        "pd_name": "PD_ANA1",
+        "pd_index": 5,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_C71SS1",
+            "COMPUTE_CLUSTER0_DRU5"
+        ]
+    },
+    "LPSC_dru_1": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_dru_1",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 18,
+        "pd_name": "PD_ANA1",
+        "pd_index": 5,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_DRU5"
+        ]
+    },
+    "LPSC_ana_pbist_1": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_ana_pbist_1",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 19,
+        "pd_name": "PD_ANA1",
+        "pd_index": 5,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_AW5_MSMC_DFT_EMBED_PBIST_0"
+        ]
+    },
+    "LPSC_msmc_l1_2": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_msmc_l1_2",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 20,
+        "pd_name": "PD_ANA2",
+        "pd_index": 6,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_C71SS2",
+            "COMPUTE_CLUSTER0_DRU6"
+        ]
+    },
+    "LPSC_dru_2": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_dru_2",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 21,
+        "pd_name": "PD_ANA2",
+        "pd_index": 6,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_DRU6"
+        ]
+    },
+    "LPSC_ana_pbist_2": {
+        "gpsc_name": "j7am_bolt_psc_wrap0",
+        "lpsc_name": "LPSC_ana_pbist_2",
+        "base_addr": "0x0000000000420000",
+        "lpsc_index": 22,
+        "pd_name": "PD_ANA2",
+        "pd_index": 6,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_AW6_MSMC_DFT_EMBED_PBIST_0"
+        ]
+    },
+    "LPSC_main_alwayson": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_alwayson",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 0,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_DRU0",
+            "COMPUTE_CLUSTER0_MSMC2_WRAP_0",
+            "CPT2_AGGR0",
+            "CPT2_AGGR1",
+            "CPT2_AGGR2",
+            "CPT2_AGGR3",
+            "CPT2_AGGR4",
+            "CPT2_AGGR5",
+            "CTRL_MMR0",
+            "DCC0",
+            "DCC1",
+            "DCC2",
+            "DCC3",
+            "DCC4",
+            "DCC5",
+            "DCC6",
+            "DCC7",
+            "DCC8",
+            "DCC9",
+            "EFUSE0",
+            "ESM0",
+            "GPIO0",
+            "MSRAM_512K0",
+            "MSRAM_512K1",
+            "MSRAM_512K2",
+            "NAVSS0_BCDMA_0",
+            "NAVSS0_CPTS_0",
+            "NAVSS0_DMA_VIRTID_0",
+            "NAVSS0_DMA_VIRTID_1",
+            "NAVSS0_INTR_0",
+            "NAVSS0_MAILBOX1_0",
+            "NAVSS0_MAILBOX1_1",
+            "NAVSS0_MAILBOX1_10",
+            "NAVSS0_MAILBOX1_11",
+            "NAVSS0_MAILBOX1_2",
+            "NAVSS0_MAILBOX1_3",
+            "NAVSS0_MAILBOX1_4",
+            "NAVSS0_MAILBOX1_5",
+            "NAVSS0_MAILBOX1_6",
+            "NAVSS0_MAILBOX1_7",
+            "NAVSS0_MAILBOX1_8",
+            "NAVSS0_MAILBOX1_9",
+            "NAVSS0_MAILBOX_0",
+            "NAVSS0_MAILBOX_1",
+            "NAVSS0_MAILBOX_10",
+            "NAVSS0_MAILBOX_11",
+            "NAVSS0_MAILBOX_2",
+            "NAVSS0_MAILBOX_3",
+            "NAVSS0_MAILBOX_4",
+            "NAVSS0_MAILBOX_5",
+            "NAVSS0_MAILBOX_6",
+            "NAVSS0_MAILBOX_7",
+            "NAVSS0_MAILBOX_8",
+            "NAVSS0_MAILBOX_9",
+            "NAVSS0_MCRC_0",
+            "NAVSS0_MODSS",
+            "NAVSS0_MODSS_CFG_0",
+            "NAVSS0_MODSS_ECC_AGGR_0",
+            "NAVSS0_MODSS_INTA_0",
+            "NAVSS0_MODSS_INTA_1",
+            "NAVSS0_NBSS_0",
+            "NAVSS0_NBSS_ECC_AGGR_0",
+            "NAVSS0_NORTH_0",
+            "NAVSS0_NORTH_1",
+            "NAVSS0_PROXY_0",
+            "NAVSS0_PVU_0",
+            "NAVSS0_PVU_1",
+            "NAVSS0_RINGACC_0",
+            "NAVSS0_SEC_PROXY_0",
+            "NAVSS0_SPINLOCK_0",
+            "NAVSS0_TIMERMGR_0",
+            "NAVSS0_TIMERMGR_1",
+            "NAVSS0_UDMAP_0",
+            "NAVSS0_UDMASS",
+            "NAVSS0_UDMASS_ECC_AGGR_0",
+            "NAVSS0_UDMASS_INTA_0",
+            "NAVSS0_VIRTSS",
+            "NAVSS0_VIRTSS_CBASS_0",
+            "NAVSS0_VIRTSS_ECC_AGGR_0",
+            "PDMA1",
+            "PDMA2",
+            "PDMA3",
+            "PDMA4",
+            "PDMA5",
+            "PDMA6",
+            "PDMA7",
+            "PLL0",
+            "PSRAM2KECC0",
+            "PSRAMECC0",
+            "SEC_MMR0",
+            "TIMER4",
+            "TIMER5",
+            "TIMER6",
+            "TIMER7"
+        ]
+    },
+    "LPSC_main_test": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_test",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 1,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "DFTSS0"
+        ]
+    },
+    "LPSC_main_pbist": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_pbist",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 2,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "PBIST0",
+            "PBIST1",
+            "PBIST3",
+            "PBIST4"
+        ]
+    },
+    "LPSC_PER_audio": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PER_audio",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 3,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MCASP0",
+            "MCASP1",
+            "MCASP2",
+            "MCASP3",
+            "MCASP4"
+        ]
+    },
+    "LPSC_PER_ATL": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PER_ATL",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 4,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "atl0"
+        ]
+    },
+    "LPSC_PER_MLB": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PER_MLB",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 5,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "NAVSS0"
+        ]
+    },
+    "LPSC_PER_motor": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PER_motor",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 6,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "ECAP0",
+            "ECAP1",
+            "ECAP2",
+            "EPWM0",
+            "EPWM1",
+            "EPWM2",
+            "EPWM3",
+            "EPWM4",
+            "EPWM5",
+            "EQEP0",
+            "EQEP1",
+            "EQEP2"
+        ]
+    },
+    "LPSC_PER_miscio": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PER_miscio",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 7,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "I2C0"
+        ]
+    },
+    "LPSC_PER_GPMC": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PER_GPMC",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 8,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "ELM0",
+            "GPMC0"
+        ]
+    },
+    "LPSC_PER_VPFE": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PER_VPFE",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 9,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "CMPEVENT_INTRTR0",
+            "GPIO2",
+            "GPIO4",
+            "GPIO6",
+            "GPIOMUX_INTRTR0",
+            "GTC0",
+            "MAIN2MCU_LVL_INTRTR0",
+            "MAIN2MCU_PLS_INTRTR0",
+            "TIMESYNC_INTRTR0"
+        ]
+    },
+    "LPSC_PER_vpe": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PER_vpe",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 10,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "j7am_ffi_cbass_glue0"
+        ]
+    },
+    "LPSC_PER_spare0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PER_spare0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 11,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "TIMER10",
+            "TIMER11",
+            "TIMER12",
+            "TIMER13",
+            "TIMER14",
+            "TIMER15",
+            "TIMER16",
+            "TIMER17",
+            "TIMER18",
+            "TIMER19",
+            "TIMER8",
+            "TIMER9"
+        ]
+    },
+    "LPSC_PER_spare1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PER_spare1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 12,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "j7am_ffi_cbass_glue0"
+        ]
+    },
+    "LPSC_main_debug": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_debug",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 13,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "CCDEBUGSS0",
+            "CCDEBUGSS1",
+            "CCDEBUGSS2",
+            "DEBUGSS0",
+            "DEBUGSS_WRAP0",
+            "DEBUGSUSPENDRTR0",
+            "PDMA0",
+            "PDMA8",
+            "STM0"
+        ]
+    },
+    "LPSC_EMIF_DATA_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_EMIF_DATA_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 14,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_EMIF_CFG_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_EMIF_CFG_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 15,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "DDR0"
+        ]
+    },
+    "LPSC_EMIF_DATA_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_EMIF_DATA_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 16,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": []
+    },
+    "LPSC_EMIF_CFG_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_EMIF_CFG_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 17,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "DDR1"
+        ]
+    },
+    "LPSC_PER_SPARE2": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PER_SPARE2",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 18,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "j7am_ffi_cbass_glue0"
+        ]
+    },
+    "LPSC_cc_top_PBIST": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_cc_top_PBIST",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 19,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_DIVH2_DIVH_0",
+            "COMPUTE_CLUSTER0_DIVP_TFT_0"
+        ]
+    },
+    "LPSC_USB_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_USB_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 20,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "USB0"
+        ]
+    },
+    "LPSC_USB_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_USB_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 21,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "vusr_dual0"
+        ]
+    },
+    "LPSC_USB_2": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_USB_2",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 22,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "j7am_ffi_cbass_glue0"
+        ]
+    },
+    "LPSC_MMC4b_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_MMC4b_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 23,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MMCSD1"
+        ]
+    },
+    "LPSC_MMC4b_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_MMC4b_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 24,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_DRU0"
+        ]
+    },
+    "LPSC_MMC8b_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_MMC8b_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 25,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "MMCSD0"
+        ]
+    },
+    "LPSC_UFS_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_UFS_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 26,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "UFS0"
+        ]
+    },
+    "LPSC_UFS_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_UFS_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 27,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "j7am_ffi_cbass_glue0"
+        ]
+    },
+    "LPSC_PCIe_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PCIe_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 28,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "PCIE0"
+        ]
+    },
+    "LPSC_PCIe_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PCIe_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 29,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "PCIE1"
+        ]
+    },
+    "LPSC_PCIe_2": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PCIe_2",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 30,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "PCIE2"
+        ]
+    },
+    "LPSC_PCIe_3": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PCIe_3",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 31,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "PCIE3"
+        ]
+    },
+    "LPSC_SAUL": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_SAUL",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 32,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "SA2_UL0"
+        ]
+    },
+    "LPSC_PER_I3C": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_PER_I3C",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 33,
+        "pd_name": "GP_Core_CTL",
+        "pd_index": 0,
+        "controlled_ip_instances": [
+            "j7am_ffi_cbass_glue0"
+        ]
+    },
+    "LPSC_main_mcanss_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 34,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "MCAN0"
+        ]
+    },
+    "LPSC_main_mcanss_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 35,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "MCAN1"
+        ]
+    },
+    "LPSC_main_mcanss_2": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_2",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 36,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "MCAN2"
+        ]
+    },
+    "LPSC_main_mcanss_3": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_3",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 37,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "MCAN3"
+        ]
+    },
+    "LPSC_main_mcanss_4": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_4",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 38,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "MCAN4",
+            "MCAN5",
+            "MCAN6",
+            "MCAN7",
+            "MCAN8",
+            "MCAN9"
+        ]
+    },
+    "LPSC_main_mcanss_5": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_5",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 39,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "MCAN10",
+            "MCAN11",
+            "MCAN12",
+            "MCAN13",
+            "MCAN14",
+            "MCAN15",
+            "MCAN16",
+            "MCAN17"
+        ]
+    },
+    "LPSC_main_mcanss_6": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_6",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 40,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_GIC500SS"
+        ]
+    },
+    "LPSC_main_mcanss_7": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_7",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 41,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "MCSPI0",
+            "MCSPI1",
+            "MCSPI2",
+            "MCSPI3"
+        ]
+    },
+    "LPSC_main_mcanss_8": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_8",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 42,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "MCSPI4",
+            "MCSPI5",
+            "MCSPI6",
+            "MCSPI7"
+        ]
+    },
+    "LPSC_main_mcanss_9": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_9",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 43,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "UART0",
+            "UART1"
+        ]
+    },
+    "LPSC_main_mcanss_10": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_10",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 44,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "UART2",
+            "UART3"
+        ]
+    },
+    "LPSC_main_mcanss_11": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_11",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 45,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "UART4",
+            "UART5",
+            "UART6",
+            "UART7",
+            "UART8",
+            "UART9"
+        ]
+    },
+    "LPSC_main_mcanss_12": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_12",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 46,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "I2C1",
+            "I2C2",
+            "I2C3"
+        ]
+    },
+    "LPSC_main_mcanss_13": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_main_mcanss_13",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 47,
+        "pd_name": "PD_mcanss",
+        "pd_index": 1,
+        "controlled_ip_instances": [
+            "I2C4",
+            "I2C5",
+            "I2C6"
+        ]
+    },
+    "LPSC_DSS": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_DSS",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 48,
+        "pd_name": "PD_DSS",
+        "pd_index": 2,
+        "controlled_ip_instances": [
+            "DSS0"
+        ]
+    },
+    "LPSC_DSS_PBIST": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_DSS_PBIST",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 49,
+        "pd_name": "PD_DSS",
+        "pd_index": 2,
+        "controlled_ip_instances": [
+            "PBIST5"
+        ]
+    },
+    "LPSC_DSI": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_DSI",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 50,
+        "pd_name": "PD_DSS",
+        "pd_index": 2,
+        "controlled_ip_instances": [
+            "DSS_DSI0"
+        ]
+    },
+    "LPSC_eDP_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_eDP_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 51,
+        "pd_name": "PD_DSS",
+        "pd_index": 2,
+        "controlled_ip_instances": [
+            "DSS_EDP0"
+        ]
+    },
+    "LPSC_eDP_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_eDP_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 52,
+        "pd_name": "PD_DSS",
+        "pd_index": 2,
+        "controlled_ip_instances": []
+    },
+    "LPSC_CSIRX_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_CSIRX_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 53,
+        "pd_name": "PD_DSS",
+        "pd_index": 2,
+        "controlled_ip_instances": [
+            "csi_rx_if0"
+        ]
+    },
+    "LPSC_CSIRX_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_CSIRX_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 54,
+        "pd_name": "PD_DSS",
+        "pd_index": 2,
+        "controlled_ip_instances": [
+            "csi_rx_if1"
+        ]
+    },
+    "LPSC_CSIRX_2": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_CSIRX_2",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 55,
+        "pd_name": "PD_DSS",
+        "pd_index": 2,
+        "controlled_ip_instances": [
+            "csi_rx_if2"
+        ]
+    },
+    "LPSC_CSITX_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_CSITX_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 56,
+        "pd_name": "PD_DSS",
+        "pd_index": 2,
+        "controlled_ip_instances": [
+            "CSI_TX_IF0"
+        ]
+    },
+    "LPSC_TX_DPHY_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_TX_DPHY_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 57,
+        "pd_name": "PD_DSS",
+        "pd_index": 2,
+        "controlled_ip_instances": [
+            "DPHY_TX0"
+        ]
+    },
+    "LPSC_CSIRX_PHY_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_CSIRX_PHY_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 58,
+        "pd_name": "PD_DSS",
+        "pd_index": 2,
+        "controlled_ip_instances": [
+            "DPHY_RX0"
+        ]
+    },
+    "LPSC_CSIRX_PHY_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_CSIRX_PHY_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 59,
+        "pd_name": "PD_DSS",
+        "pd_index": 2,
+        "controlled_ip_instances": [
+            "DPHY_RX1"
+        ]
+    },
+    "LPSC_CSIRX_PHY_2": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_CSIRX_PHY_2",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 60,
+        "pd_name": "PD_DSS",
+        "pd_index": 2,
+        "controlled_ip_instances": [
+            "DPHY_RX2"
+        ]
+    },
+    "LPSC_ICSSG_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_ICSSG_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 61,
+        "pd_name": "PD_ICSS",
+        "pd_index": 3,
+        "controlled_ip_instances": []
+    },
+    "LPSC_ICSSG_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_ICSSG_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 62,
+        "pd_name": "PD_ICSS",
+        "pd_index": 3,
+        "controlled_ip_instances": []
+    },
+    "LPSC_9GSS": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_9GSS",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 63,
+        "pd_name": "PD_9GSS",
+        "pd_index": 4,
+        "controlled_ip_instances": [
+            "cpsw_9xuss_j7am0"
+        ]
+    },
+    "LPSC_SERDES_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_SERDES_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 64,
+        "pd_name": "PD_SERDES_0",
+        "pd_index": 5,
+        "controlled_ip_instances": [
+            "wiz16b8m4ct3_0"
+        ]
+    },
+    "LPSC_SERDES_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_SERDES_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 65,
+        "pd_name": "PD_SERDES_1",
+        "pd_index": 6,
+        "controlled_ip_instances": [
+            "wiz16b8m4ct3_1"
+        ]
+    },
+    "LPSC_SERDES_2": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_SERDES_2",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 66,
+        "pd_name": "PD_SERDES_2",
+        "pd_index": 7,
+        "controlled_ip_instances": []
+    },
+    "LPSC_SERDES_3": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_SERDES_3",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 67,
+        "pd_name": "PD_SERDES_3",
+        "pd_index": 8,
+        "controlled_ip_instances": []
+    },
+    "LPSC_SERDES_4": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_SERDES_4",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 68,
+        "pd_name": "PD_SERDES_4",
+        "pd_index": 9,
+        "controlled_ip_instances": [
+            "wiz16b8m4ct3_4"
+        ]
+    },
+    "LPSC_SERDES_5": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_SERDES_5",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 69,
+        "pd_name": "PD_SERDES_5",
+        "pd_index": 10,
+        "controlled_ip_instances": [
+            "wiz16b8m4ct3_2"
+        ]
+    },
+    "LPSC_DMtimer_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_DMtimer_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 70,
+        "pd_name": "PD_timer",
+        "pd_index": 11,
+        "controlled_ip_instances": [
+            "TIMER0"
+        ]
+    },
+    "LPSC_DMtimer_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_DMtimer_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 71,
+        "pd_name": "PD_timer",
+        "pd_index": 11,
+        "controlled_ip_instances": [
+            "TIMER1"
+        ]
+    },
+    "LPSC_DMtimer_2": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_DMtimer_2",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 72,
+        "pd_name": "PD_timer",
+        "pd_index": 11,
+        "controlled_ip_instances": [
+            "TIMER2"
+        ]
+    },
+    "LPSC_DMtimer_3": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_DMtimer_3",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 73,
+        "pd_name": "PD_timer",
+        "pd_index": 11,
+        "controlled_ip_instances": [
+            "TIMER3"
+        ]
+    },
+    "LPSC_C71x_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_C71x_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 74,
+        "pd_name": "PD_C71x_0",
+        "pd_index": 12,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_C71SS0",
+            "COMPUTE_CLUSTER0_C71SS0_CORE0",
+            "RTI16"
+        ]
+    },
+    "LPSC_C71x_0_PBIST": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_C71x_0_PBIST",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 75,
+        "pd_name": "PD_C71x_0",
+        "pd_index": 12,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_AC71_4_DFT_EMBED_PBIST_0"
+        ]
+    },
+    "LPSC_C71x_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_C71x_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 76,
+        "pd_name": "PD_C71x_1",
+        "pd_index": 13,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_C71SS1",
+            "COMPUTE_CLUSTER0_C71SS1_CORE0",
+            "RTI17"
+        ]
+    },
+    "LPSC_C71x_1_PBIST": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_C71x_1_PBIST",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 77,
+        "pd_name": "PD_C71x_1",
+        "pd_index": 13,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_AC71_5_DFT_EMBED_PBIST_0"
+        ]
+    },
+    "LPSC_A72_Cluster_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_A72_Cluster_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 78,
+        "pd_name": "PD_A72_cluster_0",
+        "pd_index": 14,
+        "controlled_ip_instances": [
+            "A72SS0"
+        ]
+    },
+    "LPSC_A72_Cluster_0_PBIST": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_A72_Cluster_0_PBIST",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 79,
+        "pd_name": "PD_A72_cluster_0",
+        "pd_index": 14,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_ARM0_DFT_EMBED_PBIST_0",
+            "COMPUTE_CLUSTER0_ARM0_DFT_EMBED_PBIST_1"
+        ]
+    },
+    "LPSC_A72_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_A72_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 80,
+        "pd_name": "PD_A72_0",
+        "pd_index": 15,
+        "controlled_ip_instances": [
+            "A72SS0_CORE0",
+            "RTI0"
+        ]
+    },
+    "LPSC_A72_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_A72_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 81,
+        "pd_name": "PD_A72_1",
+        "pd_index": 16,
+        "controlled_ip_instances": [
+            "A72SS0_CORE1",
+            "RTI1"
+        ]
+    },
+    "LPSC_GPUCOM": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_GPUCOM",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 86,
+        "pd_name": "PD_GPUCOM",
+        "pd_index": 20,
+        "controlled_ip_instances": [
+            "J7AEP_GPU_BXS464_WRAP0_GPU_SS_0",
+            "RTI15"
+        ]
+    },
+    "LPSC_GPUPBIST": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_GPUPBIST",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 87,
+        "pd_name": "PD_GPUCOM",
+        "pd_index": 20,
+        "controlled_ip_instances": [
+            "J7AEP_GPU_BXS464_WRAP0_DFT_EMBED_PBIST_0"
+        ]
+    },
+    "LPSC_gpucore": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_gpucore",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 88,
+        "pd_name": "PD_GPUCORE",
+        "pd_index": 21,
+        "controlled_ip_instances": [
+            "J7AEP_GPU_BXS464_WRAP0_GPUCORE_0"
+        ]
+    },
+    "LPSC_C66x_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_C66x_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 89,
+        "pd_name": "PD_C66x_0",
+        "pd_index": 22,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_C71SS2",
+            "COMPUTE_CLUSTER0_C71SS2_CORE0",
+            "RTI18"
+        ]
+    },
+    "LPSC_C66x_PBIST_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_C66x_PBIST_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 90,
+        "pd_name": "PD_C66x_0",
+        "pd_index": 22,
+        "controlled_ip_instances": [
+            "COMPUTE_CLUSTER0_AC71_6_DFT_EMBED_PBIST_0"
+        ]
+    },
+    "LPSC_Pulsar_0_R5_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_Pulsar_0_R5_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 93,
+        "pd_name": "PD_Pulsar_0",
+        "pd_index": 24,
+        "controlled_ip_instances": [
+            "R5FSS0_CORE0",
+            "RTI28"
+        ]
+    },
+    "LPSC_Pulsar_0_R5_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_Pulsar_0_R5_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 94,
+        "pd_name": "PD_Pulsar_0",
+        "pd_index": 24,
+        "controlled_ip_instances": [
+            "R5FSS0_CORE1",
+            "RTI29"
+        ]
+    },
+    "LPSC_Pulsar_pbist_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_Pulsar_pbist_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 95,
+        "pd_name": "PD_Pulsar_0",
+        "pd_index": 24,
+        "controlled_ip_instances": [
+            "PBIST2"
+        ]
+    },
+    "LPSC_Pulsar_1_R5_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_Pulsar_1_R5_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 96,
+        "pd_name": "PD_Pulsar_1",
+        "pd_index": 25,
+        "controlled_ip_instances": [
+            "R5FSS1_CORE0",
+            "RTI30"
+        ]
+    },
+    "LPSC_Pulsar_1_R5_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_Pulsar_1_R5_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 97,
+        "pd_name": "PD_Pulsar_1",
+        "pd_index": 25,
+        "controlled_ip_instances": [
+            "R5FSS1_CORE1",
+            "RTI31"
+        ]
+    },
+    "LPSC_Pulsar_Pbist_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_Pulsar_Pbist_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 98,
+        "pd_name": "PD_Pulsar_1",
+        "pd_index": 25,
+        "controlled_ip_instances": [
+            "PBIST10"
+        ]
+    },
+    "LPSC_decode_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_decode_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 99,
+        "pd_name": "PD_decode_0",
+        "pd_index": 26,
+        "controlled_ip_instances": [
+            "CODEC1"
+        ]
+    },
+    "LPSC_decode_pbist": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_decode_pbist",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 100,
+        "pd_name": "PD_decode_0",
+        "pd_index": 26,
+        "controlled_ip_instances": [
+            "PBIST15"
+        ]
+    },
+    "LPSC_encode_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_encode_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 101,
+        "pd_name": "PD_encode_0",
+        "pd_index": 27,
+        "controlled_ip_instances": []
+    },
+    "LPSC_encode_pbist": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_encode_pbist",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 102,
+        "pd_name": "PD_encode_0",
+        "pd_index": 27,
+        "controlled_ip_instances": []
+    },
+    "LPSC_DMPAC": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_DMPAC",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 103,
+        "pd_name": "PD_DMPAC",
+        "pd_index": 28,
+        "controlled_ip_instances": [
+            "DMPAC0",
+            "DMPAC0_CTSET_0",
+            "DMPAC0_DOF_0",
+            "DMPAC0_DRU_0",
+            "DMPAC0_FOCO_0",
+            "DMPAC0_FOCO_1",
+            "DMPAC0_HTS_0",
+            "DMPAC0_INTD_0"
+        ]
+    },
+    "LPSC_SDE": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_SDE",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 104,
+        "pd_name": "PD_DMPAC",
+        "pd_index": 28,
+        "controlled_ip_instances": [
+            "DMPAC0_SDE_0"
+        ]
+    },
+    "LPSC_DMPAC_PBIST": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_DMPAC_PBIST",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 105,
+        "pd_name": "PD_DMPAC",
+        "pd_index": 28,
+        "controlled_ip_instances": [
+            "PBIST7"
+        ]
+    },
+    "LPSC_VPAC": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_VPAC",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 106,
+        "pd_name": "PD_VPAC",
+        "pd_index": 29,
+        "controlled_ip_instances": [
+            "VPAC0"
+        ]
+    },
+    "LPSC_VPAC_PBIST": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_VPAC_PBIST",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 107,
+        "pd_name": "PD_VPAC",
+        "pd_index": 29,
+        "controlled_ip_instances": [
+            "PBIST8"
+        ]
+    },
+    "LPSC_A72_Clstr0_Core2": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_A72_Clstr0_Core2",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 108,
+        "pd_name": "PD_A72_CL0_2",
+        "pd_index": 30,
+        "controlled_ip_instances": [
+            "A72SS0_CORE2",
+            "RTI2"
+        ]
+    },
+    "LPSC_A72_Clstr0_Core3": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_A72_Clstr0_Core3",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 109,
+        "pd_name": "PD_A72_CL0_3",
+        "pd_index": 31,
+        "controlled_ip_instances": [
+            "A72SS0_CORE3",
+            "RTI3"
+        ]
+    },
+    "LPSC_vpac_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_vpac_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 112,
+        "pd_name": "PD_VPAC_1",
+        "pd_index": 34,
+        "controlled_ip_instances": [
+            "VPAC1"
+        ]
+    },
+    "LPSC_vpac_1_pbist": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_vpac_1_pbist",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 113,
+        "pd_name": "PD_VPAC_1",
+        "pd_index": 34,
+        "controlled_ip_instances": [
+            "PBIST13"
+        ]
+    },
+    "LPSC_encode_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_encode_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 114,
+        "pd_name": "PD_ENCODE_1",
+        "pd_index": 35,
+        "controlled_ip_instances": [
+            "CODEC0"
+        ]
+    },
+    "LPSC_encode_1_pbist": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_encode_1_pbist",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 115,
+        "pd_name": "PD_ENCODE_1",
+        "pd_index": 35,
+        "controlled_ip_instances": [
+            "PBIST11"
+        ]
+    },
+    "LPSC_CSITX_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_CSITX_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 116,
+        "pd_name": "PD_DSI_1",
+        "pd_index": 36,
+        "controlled_ip_instances": [
+            "CSI_TX_IF1",
+            "DSS_DSI1"
+        ]
+    },
+    "LPSC_TX_DPHY_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_TX_DPHY_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 117,
+        "pd_name": "PD_DSI_1",
+        "pd_index": 36,
+        "controlled_ip_instances": [
+            "DPHY_TX1"
+        ]
+    },
+    "LPSC_dsi_1_pbist": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_dsi_1_pbist",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 118,
+        "pd_name": "PD_DSI_1",
+        "pd_index": 36,
+        "controlled_ip_instances": []
+    },
+    "LPSC_cpsw_2": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_cpsw_2",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 119,
+        "pd_name": "PD_CPSW2",
+        "pd_index": 37,
+        "controlled_ip_instances": [
+            "CPSW1"
+        ]
+    },
+    "LPSC_emif_data_2": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_emif_data_2",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 120,
+        "pd_name": "PD_DDR2",
+        "pd_index": 38,
+        "controlled_ip_instances": []
+    },
+    "LPSC_emif_cfg_2": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_emif_cfg_2",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 121,
+        "pd_name": "PD_DDR2",
+        "pd_index": 38,
+        "controlled_ip_instances": [
+            "DDR2"
+        ]
+    },
+    "LPSC_Pulsar_2_R5_0": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_Pulsar_2_R5_0",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 122,
+        "pd_name": "PD_Pulsar_2",
+        "pd_index": 39,
+        "controlled_ip_instances": [
+            "R5FSS2_CORE0",
+            "RTI32"
+        ]
+    },
+    "LPSC_Pulsar_2_R5_1": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_Pulsar_2_R5_1",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 123,
+        "pd_name": "PD_Pulsar_2",
+        "pd_index": 39,
+        "controlled_ip_instances": [
+            "R5FSS2_CORE1",
+            "RTI33"
+        ]
+    },
+    "LPSC_Pulsar_2_pbist": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_Pulsar_2_pbist",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 124,
+        "pd_name": "PD_Pulsar_2",
+        "pd_index": 39,
+        "controlled_ip_instances": [
+            "PBIST14"
+        ]
+    },
+    "LPSC_spare_4": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_spare_4",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 125,
+        "pd_name": "PD_SPARE4",
+        "pd_index": 40,
+        "controlled_ip_instances": []
+    },
+    "LPSC_spare_5": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_spare_5",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 126,
+        "pd_name": "PD_SPARE5",
+        "pd_index": 41,
+        "controlled_ip_instances": []
+    },
+    "LPSC_spare_6": {
+        "gpsc_name": "PSC0",
+        "lpsc_name": "LPSC_spare_6",
+        "base_addr": "0x0000000000400000",
+        "lpsc_index": 127,
+        "pd_name": "PD_SPARE6",
+        "pd_index": 42,
+        "controlled_ip_instances": []
+    }
+}

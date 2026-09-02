@@ -59,10 +59,13 @@
 /*                            Global Variables                                */
 /* ========================================================================== */
 extern Vhwa_M2mMscCommonObj   gM2mMscCommonObj;
+extern const CSL_HtsHwaParams gCslHtsParams[CSL_HTS_HWA_MAX_SCH];
 
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
+
+static void vhwa_m2mMscHtsThreadStop(const CSL_MscHtsConfigReg *mscHtsRegs, const CSL_HtsSchConfig *cfg);
 
 /**
  * \brief   ISR handler for MSC interrupt
@@ -666,9 +669,7 @@ static void vhwa_m2mMscFrmDoneIsr(Vhwa_M2mMscInstObj *instObj,
     uint32_t              cnt;
     Vhwa_M2mMscHandleObj *hObj = NULL;
     Vhwa_M2mMscQueueObj  *qObj = NULL;
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     VhwaVpacMscSocReadBack *goldenRegVal = NULL;
-#endif
 
  /* LDRA_JUSTIFY_START
     <metric start>  branch <metric end>
@@ -726,9 +727,7 @@ static void vhwa_m2mMscFrmDoneIsr(Vhwa_M2mMscInstObj *instObj,
             /* LDRA_JUSTIFY_END */
 
             {
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
                 goldenRegVal = hObj->configRegMemPrms.configGoldenRegPtr;
-#endif
                  /* LDRA_JUSTIFY_START
                 <metric start>  branch <metric end>
                 <justification start>
@@ -858,7 +857,7 @@ static void vhwa_m2mMscFrmDoneIsr(Vhwa_M2mMscInstObj *instObj,
                         }
 
                         CSL_lseStopChannels(comObj->socInfo.lseRegs, &hObj->lseCfg[0]);
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
+
                         /* For sequential processing, the LSE config is updated in golden config registers. */
                         if ((uint32_t)VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)
                         {
@@ -876,8 +875,25 @@ static void vhwa_m2mMscFrmDoneIsr(Vhwa_M2mMscInstObj *instObj,
                                 CSL_lseStopChannels(&goldenRegVal->lseRegs, &hObj->lseCfg[0]);
                             }
                         }
-#endif
+
                         CSL_htsThreadStop(comObj->socInfo.htsRegs, &hObj->htsCfg[0]);
+
+                        if ((uint32_t)VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)
+                        {
+                            /* LDRA_JUSTIFY_START
+                            <metric start> branch <metric end>
+                            <justification start>
+                            Rationale: The component level negative test framework and test applications cannot reach this portion.
+                            The test framework does not support the configuration required to trigger this error scenario.
+                            Effect on this unit: The unit is NOT expected to result in an error because the branch statement is pre-validated by the application.
+                            This behaviour is part of the application design. An error print statement can be added in a future release if required.
+                            <justification end> */
+                            if (NULL != goldenRegVal)
+                            /* LDRA_JUSTIFY_END */
+                            {
+                                vhwa_m2mMscHtsThreadStop(&goldenRegVal->mscHtsRegs, &hObj->htsCfg[0]);
+                            }
+                        }
                     }
                 }
                 /* LDRA_JUSTIFY_START
@@ -985,6 +1001,94 @@ static void vhwa_m2mMscGetIntrStat(const Vhwa_M2mMscInstObj *instObj,
                 regVal);
 
             *frmDoneStat = 1U;
+        }
+    }
+}
+
+static void vhwa_m2mMscHtsThreadStop(const CSL_MscHtsConfigReg *mscHtsRegs, const CSL_HtsSchConfig *cfg)
+{
+    uint32_t cnt;
+    const CSL_HtsHwaParams *htsPrms = NULL;
+
+/* LDRA_JUSTIFY_START
+<metric start> branch <metric end>
+<justification start>
+Rationale: The negative test framework and test apps cannot reach the false case of this condition.
+           'mscHtsRegs and cfg' are passed during safety configuration validation.
+Effect on this unit: If the control reaches here, the code base is expected to accumulate and return the error.
+However, due to the stated rationale, this is not tested.
+<justification end> */
+    if ((NULL != mscHtsRegs) && (NULL != cfg))
+/* LDRA_JUSTIFY_END */
+    {
+        htsPrms = &gCslHtsParams[cfg->schId];
+
+        /* Stop scheduler */
+        CSL_REG32_FINS(&mscHtsRegs->SCHEDULER_CONTROL[0],
+            HTS_HWA0_SCHEDULER_CONTROL_SCH_EN, 0U);
+
+        /* Stop consumers */
+        for (cnt = 0U; cnt < htsPrms->maxConsumer; cnt ++)
+        {
+            if ((uint32_t)UFALSE == cfg->dmaProdCfg[cnt].bypass)
+            {
+                if ((uint32_t)UTRUE == cfg->consCfg[cnt].enable)
+                {
+                    CSL_REG32_FINS(&mscHtsRegs->CONS_CONTROL[cnt],
+                        HTS_HWA0_CONS0_CONTROL_CONS_EN, 0U);
+                }
+
+                if ((uint32_t)UTRUE == cfg->dmaProdCfg[cnt].enable)
+                {
+                    CSL_REG32_FINS(&mscHtsRegs->PROD_CONTROL_DMA[cnt],
+                        HTS_DMA0_PROD0_CONTROL_PROD_EN, 0U);
+                    CSL_REG32_FINS(&mscHtsRegs->PROD_DMA_SCHEDULER_CONTROL[cnt],
+                        HTS_DMA0_SCHEDULER_CONTROL_SCH_EN, 0U);
+
+#if defined(VHWA_VPAC_IP_REV_VPAC3) || defined(VHWA_VPAC_IP_REV_VPAC3L)
+                    if ((uint32_t)UTRUE == htsPrms->isDmaProdPaSupported[cnt])
+                    {
+                        if (UTRUE == cfg->dmaProdCfg[cnt].paCfg.enable)
+                        {
+                            CSL_REG32_FINS(&mscHtsRegs->PA_CONTROL_DMA[cnt],
+                                HTS_DMA8_PA0_CONTROL_PA_ENABLE, 0U);
+                        }
+                    }
+#endif
+                }
+            }
+        }
+
+        /* Stop producers */
+        for (cnt = 0U; cnt < htsPrms->maxProducer; cnt ++)
+        {
+            if ((uint32_t)UFALSE == cfg->dmaConsCfg[cnt].bypass)
+            {
+                if ((uint32_t)UTRUE == cfg->prodCfg[cnt].enable)
+                {
+                    CSL_REG32_FINS(&mscHtsRegs->PROD_CONTROL[cnt],
+                        HTS_HWA0_PROD0_CONTROL_PROD_EN, 0U);
+
+#if defined(VHWA_VPAC_IP_REV_VPAC3) || defined(VHWA_VPAC_IP_REV_VPAC3L)
+                    if ((uint32_t)UTRUE == htsPrms->isPaSupported[cnt])
+                    {
+                        if (UTRUE == cfg->prodCfg[cnt].paCfg.enable)
+                        {
+                            CSL_REG32_FINS(&mscHtsRegs->PA_CONTROL[cnt],
+                                HTS_HWA0_PA0_CONTROL_PA_ENABLE, 0U);
+                        }
+                    }
+#endif
+                }
+
+                if ((uint32_t)UTRUE == cfg->dmaConsCfg[cnt].enable)
+                {
+                    CSL_REG32_FINS(&mscHtsRegs->CONS_CONTROL_DMA[cnt],
+                        HTS_DMA240_CONS0_CONTROL_CONS_EN, 0U);
+                    CSL_REG32_FINS(&mscHtsRegs->CONS_DMA_SCHEDULER_CONTROL[cnt],
+                        HTS_DMA240_SCHEDULER_CONTROL_SCH_EN, 0U);
+                }
+            }
         }
     }
 }

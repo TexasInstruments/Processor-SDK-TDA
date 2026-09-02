@@ -512,7 +512,7 @@ void CsirxDrv_udmaCQEventCb(Udma_EventHandle eventHandle,
     CsirxDrv_BufManObj *bmObj;
     uint64_t pDesc = 0;
     uint32_t *pTrResp;
-    uint32_t pTrRespVal, pTrRespStsTypeVal;
+    uint32_t pTrRespVal, pTrRespStsTypeVal, pTrRespInfoVal;
     uint32_t curQCnt, appCb = UFALSE, cookie, chIdx;
     uint64_t timeStamp;
     CSL_UdmapTR1 *pTr;
@@ -627,6 +627,7 @@ void CsirxDrv_udmaCQEventCb(Udma_EventHandle eventHandle,
 
                         pTrRespVal = CSL_REG32_RD(pTrResp);
                         pTrRespStsTypeVal = CSL_REG32_FEXT(pTrResp, UDMAP_TR_RESPONSE_STATUS_TYPE);
+                        pTrRespInfoVal = CSL_FEXT(pTrRespVal, UDMAP_TR_RESPONSE_STATUS_INFO);
                         /* check TR response */
                         if (CSL_UDMAP_TR_RESPONSE_STATUS_COMPLETE != pTrRespStsTypeVal)
                         {
@@ -649,9 +650,7 @@ void CsirxDrv_udmaCQEventCb(Udma_EventHandle eventHandle,
                             {
                                 /* Transfer exception*/
                                 if(CSL_UDMAP_TR_RESPONSE_STATUS_TRANSFER_EXCEP_SHORT_PACKET ==
-                                    ((pTrRespVal >>
-                                     (CSL_UDMAP_TR_RESPONSE_STATUS_INFO_SHIFT)) &
-                                    (CSL_UDMAP_TR_RESPONSE_STATUS_INFO_MASK)))
+                                    pTrRespInfoVal)
                                     /* \ref CSL_ErrType_t */
                                 {
                                     /* Received frame is truncated */
@@ -659,9 +658,7 @@ void CsirxDrv_udmaCQEventCb(Udma_EventHandle eventHandle,
                                     chObj->instObj->status.errorFrameCount[chObj->chCfg->chId]++;
                                 }
                                 else if (CSL_UDMAP_TR_RESPONSE_STATUS_TRANSFER_EXCEP_LONG_PACKET ==
-                                          ((pTrRespVal >>
-                                           (CSL_UDMAP_TR_RESPONSE_STATUS_INFO_SHIFT)) &
-                                          (CSL_UDMAP_TR_RESPONSE_STATUS_INFO_MASK)))
+                                          pTrRespInfoVal)
                                           /* \ref CSL_ErrType_t */
                                 {
                                     /* Received frame is elongated */

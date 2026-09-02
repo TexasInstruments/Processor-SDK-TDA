@@ -193,7 +193,10 @@ int32_t TIDL_customProcessNew(TIDL_NetworkCommonParams *commonParams,
     sysMemsLocal[TIDL_SYSMEM_L2_SCRATCH].base   = (sysMems + TIDL_SYSMEM_L2_SCRATCH)->base;
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+    <justification start>
+    Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+    Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+    This does not impact functional correctness or safety.
     <justification end> */
     if (perfInfoOut != NULL)
     {
@@ -315,8 +318,10 @@ int32_t TIDL_customInitNew(const TIDL_LayerSpecificParams *layerSpecificParams,
                      &dst);
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     This condition is maintained to avoid null pointer dereference exceptions.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if(dst != NULL)
     /* LDRA_JUSTIFY_END */
@@ -342,8 +347,10 @@ int32_t TIDL_customInitNew(const TIDL_LayerSpecificParams *layerSpecificParams,
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     This condition is maintained to avoid null pointer dereference exceptions.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     else
     {

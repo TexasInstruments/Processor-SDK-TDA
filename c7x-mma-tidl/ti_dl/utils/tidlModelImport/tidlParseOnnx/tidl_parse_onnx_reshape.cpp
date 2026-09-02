@@ -103,79 +103,27 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Reshape")> ()
   NodeProto node = graph.node(index);
   attrIdx = getIntAttr(node, "allowzero", &allowzero, 0);
 
-  /* Locate dims of data tensor (input[0]) — it may be variable or constant. */
-  std::vector<int32_t> dataDims;
-  {
-    auto varIt = std::find(md.varTensorIndices.begin(), md.varTensorIndices.end(), 0);
-    if (varIt != md.varTensorIndices.end())
-    {
-      int32_t pos = std::distance(md.varTensorIndices.begin(), varIt);
-      dataDims = md.varTensorsDims[pos];
-    }
-    else
-    {
-      auto constIt = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 0);
-      if (constIt != md.constTensorIndices.end())
-      {
-        int32_t pos = std::distance(md.constTensorIndices.begin(), constIt);
-        dataDims = md.constTensorsDims[pos];
-      }
-    }
-  }
-
-  /**
-  * Handling 0 in the shape attribute
-  */
-  if ((status != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL) && (allowzero == 0))
-  {
-    int64_t* shape = (int64_t*)layer.weights.ptr;
-    for (int32_t i = 0; i < layer.weights.bufSize; i++)
-    {
-      if (shape[i] == 0)
-      {
-        if (i < (int32_t)dataDims.size())
-        {
-          shape[i] = dataDims[i];
-        }
-        else
-        {
-          shape[i] = 1;
-        }
-      }
-    }
-  }
-
-  /**
-  * Handling -1 in the shape attribute
-  */
+  layer.layerParams.reshapeParams.minusOneDimIdx = -1;
+  layer.layerParams.reshapeParams.passthroughMask = 0;
   if (status != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
   {
-    int64_t* shape = (int64_t*)layer.weights.ptr;
-    int64_t inputTotalVol = 1;
-    int64_t shapeTotalVol = 1;
-
-    int32_t negIdx = -1;
+    int64_t* shape    = (int64_t*)layer.weights.ptr;
+    int32_t  remDim   = TIDL_DIM_MAX - layer.weights.bufSize;
+    int32_t  negIdx   = -1;
+    int32_t  ptMask6D = 0;
     for (int32_t i = 0; i < layer.weights.bufSize; i++)
     {
-      if (shape[i] == -1)
+      if (shape[i] == 0 && allowzero == 0)
+      {
+        ptMask6D |= (1 << (remDim + i));
+      }
+      else if (shape[i] == -1)
       {
         negIdx = i;
       }
-      else
-      {
-        shapeTotalVol = shapeTotalVol * shape[i];
-      }
     }
-
-    // Found -1 at negIdx
-    if(negIdx != -1)
-    {
-      for (int32_t i = 0; i < (int32_t)dataDims.size(); i++)
-      {
-        inputTotalVol = inputTotalVol * dataDims[i];
-      }
-      shape[negIdx] = inputTotalVol/shapeTotalVol;
-    }
+    layer.layerParams.reshapeParams.passthroughMask = ptMask6D;
+    layer.layerParams.reshapeParams.minusOneDimIdx  = (negIdx >= 0) ? (remDim + negIdx) : -1;
   }
 
   /* changing the shapes to int32_t */

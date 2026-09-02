@@ -1,0 +1,131 @@
+/*
+ *
+ * Copyright (c) 2026 Texas Instruments Incorporated
+ *
+ * All rights reserved not granted herein.
+ *
+ * Limited License.
+ *
+ * Texas Instruments Incorporated grants a world-wide, royalty-free, non-exclusive
+ * license under copyrights and patents it now or hereafter owns or controls to make,
+ * have made, use, import, offer to sell and sell ("Utilize") this software subject to the
+ * terms herein.  With respect to the foregoing patent license, such license is granted
+ * solely to the extent that any such patent is necessary to Utilize the software alone.
+ * The patent license shall not apply to any combinations which include this software,
+ * other than combinations with devices manufactured by or for TI ("TI Devices").
+ * No hardware patent is licensed hereunder.
+ *
+ * Redistributions must preserve existing copyright notices and reproduce this license
+ * (including the above copyright notice and the disclaimer and (if applicable) source
+ * code license limitations below) in the documentation and/or other materials provided
+ * with the distribution
+ *
+ * Redistribution and use in binary form, without modification, are permitted provided
+ * that the following conditions are met:
+ *
+ * *       No reverse engineering, decompilation, or disassembly of this software is
+ * permitted with respect to any software provided in binary form.
+ *
+ * *       any redistribution and use are licensed by TI for use only with TI Devices.
+ *
+ * *       Nothing shall obligate TI to provide you with source code for the software
+ * licensed and provided to you in object code.
+ *
+ * If software source code is provided to you, modification and redistribution of the
+ * source code are permitted provided that the following conditions are met:
+ *
+ * *       any redistribution and use of the source code, including any resulting derivative
+ * works, are licensed by TI for use only with TI Devices.
+ *
+ * *       any redistribution and use of any object code compiled from the source code
+ * and any resulting derivative works, are licensed by TI for use only with TI Devices.
+ *
+ * Neither the name of Texas Instruments Incorporated nor the names of its suppliers
+ *
+ * may be used to endorse or promote products derived from this software without
+ * specific prior written permission.
+ *
+ * DISCLAIMER.
+ *
+ * THIS SOFTWARE IS PROVIDED BY TI AND TI'S LICENSORS "AS IS" AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL TI AND TI'S LICENSORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+--ram_model
+-heap  0x20000
+-stack 0x20000
+--args 0x1000
+--diag_suppress=10068 /* "no matching section" */
+--cinit_compression=off
+-e _c_int00
+
+SECTIONS
+{
+    boot:
+    {
+      boot.*<boot.oe71>(.text)
+    } load > DDR_C7x_3_BOOT ALIGN(0x200000)
+    .vecs       >       DDR_C7x_3_VECS ALIGN(0x400000)
+    .secure_vecs >      DDR_C7x_3_SECURE_VECS ALIGN(0x200000)
+    .text:_c_int00>     DDR_C7x_3_BOOT ALIGN(0x200000)
+    .text       >       DDR_C7x_3 ALIGN(0x100000)
+    .text.hwi   >       DDR_C7x_3 ALIGN(0x100000)
+    .bss        >       DDR_C7x_3  /* Zero-initialized data */
+    RUN_START(__BSS_START)
+    RUN_END(__BSS_END)
+
+    .data       >       DDR_C7x_3  /* Initialized data */
+
+    .cinit      >       DDR_C7x_3  /* could be part of const */
+    .init_array >       DDR_C7x_3  /* C++ initializations */
+    .stack      >       DDR_C7x_3  ALIGN(0x20000) /* MUST be 128KB aligned to handle nested interrupts */
+    .args       >       DDR_C7x_3
+    .cio        >       DDR_C7x_3
+    .const      >       DDR_C7x_3
+    .switch     >       DDR_C7x_3
+    .sysmem     >       DDR_C7x_3 /* heap */
+    /* .bss:taskStackSection:tiovx (NOLOAD) : {} > L2RAM_C7x_3 */
+    .bss:taskStackSection       > DDR_C7x_3
+    .bss:ddr_local_mem      (NOLOAD) : {} > DDR_C7X_3_LOCAL_HEAP
+    .bss:ddr_scratch_mem    (NOLOAD) : {} > DDR_C7X_3_SCRATCH
+
+    .bss:ddr_non_cache_mem      (NOLOAD) : {} > DDR_C7X_3_LOCAL_HEAP_NON_CACHEABLE
+    .bss:ddr_scratch_non_cache_mem    (NOLOAD) : {} > DDR_C7X_3_SCRATCH_NON_CACHEABLE
+
+    .bss:app_log_mem        (NOLOAD) : {} > APP_LOG_MEM
+    .bss:app_fileio_mem     (NOLOAD) : {} > APP_FILEIO_MEM
+    .bss:tiovx_obj_desc_mem (NOLOAD) : {} > TIOVX_OBJ_DESC_MEM
+    .bss:ipc_vring_mem      (NOLOAD) : {} > IPC_VRING_MEM
+
+    .bss:l1mem              (NOLOAD)(NOINIT) : {} > L2RAM_C7x_3
+    .bss:l2mem              (NOLOAD)(NOINIT) : {} > L2RAM_C7x_3
+    .bss:l3mem              (NOLOAD)(NOINIT) : {} > MSMC_C7x_3
+
+    ipc_data_buffer:       > DDR_C7x_3
+    .tracebuf                : {} align(1024)   > DDR_C7x_3
+    .resource_table          :
+    {
+        __RESOURCE_TABLE = .;
+    }                                           > DDR_C7x_3_RESOURCE_TABLE
+    .bss.debug_mem_trace_buf > DDR_C7x_3_IPC_TRACE
+
+    GROUP:              >  DDR_C7x_3
+    {
+        .data.Mmu_tableArray          : type=NOINIT
+        .data.Mmu_tableArraySlot      : type=NOINIT
+        .data.Mmu_level1Table         : type=NOINIT
+        .data.Mmu_tableArray_NS       : type=NOINIT
+        .data.Mmu_tableArraySlot_NS   : type=NOINIT
+        .data.Mmu_level1Table_NS      : type=NOINIT
+    }
+
+
+}

@@ -78,6 +78,8 @@
 #include "tidl_pooling_ref.h"
 #include "tidl_forceNegativeTest.h"
 
+using namespace floating_point::bf16_c7x;
+
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
@@ -476,7 +478,7 @@ template<class Tin, class Tout, class Tacc, class Tscale> static int32_t TIDL_re
               sumBlock += inRowCol;
             }
           }
-          result = sumBlock * scaleValue;
+          result = (Tscale)sumBlock * (Tscale)scaleValue;
           min = (result < min) ? result : min;
           max = (result > max) ? result : max;
           accPtr[(i0 * outBatchPitch) + (i1 * outChPitch)] = result;
@@ -487,7 +489,7 @@ template<class Tin, class Tout, class Tacc, class Tscale> static int32_t TIDL_re
     int32_t satLow;
     int32_t satHigh;
     int32_t mixedPrecision = 0;
-    Tout temp = 0;
+    Tout temp = Tout();
 
     temp = std::numeric_limits<Tout>::lowest();
     satLow = (int32_t)temp;
@@ -531,6 +533,10 @@ template<class Tin, class Tout, class Tacc, class Tscale> static int32_t TIDL_re
           {
             OPENACC(routine(TIDL_floatSat))
             result = TIDL_floatSat(result, &net->TIDLLayers[layerIdx]);
+          }
+          else if(std::is_same<Tacc, bfloat16_tidl>::value)
+          {
+            result = TIDL_BF16Sat(result, &net->TIDLLayers[layerIdx]);
           }
           else
           {
@@ -644,6 +650,19 @@ static int32_t TIDL_refGlobalPoolingProcess(sTIDL_Network_t *net,
                                poolingBuffParams->outChPitch,
                                params->numChannels,
                                (float32_tidl *)outPtr,
+                               tidlLayer, inDataParams,
+                               net, algLayer);
+    }
+    else if (poolingBuffParams->inElementType == TIDL_BFloat16)
+    {
+      TIDL_refGlobalMaxPooling((bfloat16_tidl *)inPtr,
+                               poolingBuffParams->inWidth,
+                               poolingBuffParams->inHeight,
+                               poolingBuffParams->inPitch,
+                               poolingBuffParams->inChPitch,
+                               poolingBuffParams->outChPitch,
+                               params->numChannels,
+                               (bfloat16_tidl *)outPtr,
                                tidlLayer, inDataParams,
                                net, algLayer);
     }
@@ -818,6 +837,23 @@ static int32_t TIDL_refGlobalPoolingProcess(sTIDL_Network_t *net,
                                           algLayer,
                                           tidlLayer, inDataParams);
       }
+      else if (poolingBuffParams->inElementType == TIDL_BFloat16)
+      {
+        bfloat16_tidl scaleValue = (bfloat16_tidl)1.0f / (bfloat16_tidl)(poolingBuffParams->inWidth * poolingBuffParams->inHeight);
+        status = TIDL_refGlobalAvgPooling(net,
+                                          (bfloat16_tidl *)inPtr,
+                                          poolingBuffParams->inWidth,
+                                          poolingBuffParams->inHeight,
+                                          poolingBuffParams->inPitch,
+                                          poolingBuffParams->inChPitch,
+                                          poolingBuffParams->outChPitch,
+                                          params->numChannels,
+                                          (bfloat16_tidl *)outPtr,
+                                          (float32_tidl *)accPtr,
+                                          scaleValue,
+                                          algLayer,
+                                          tidlLayer, inDataParams);
+      }
       else
       {
         /*do nothing*/
@@ -876,7 +912,7 @@ template<class Tin> static void TIDL_refSpatialMaxPooling(sTIDL_Network_t *net,
 {
   Tin inRowCol;
   int32_t i0, i1, i2, i3, i4, i5;
-  Tin maxValue = 0;
+  Tin maxValue = Tin();
   int32_t outPitch = tidlLayer->outData.pitch[TIDL_LINE_PITCH];
   int32_t numBatches = (int32_t)inDataParams->dimValues[TIDL_DIM_BATCH];
   uint32_t inBatchPitch = (uint32_t)inDataParams->pitch[TIDL_ROI_PITCH];
@@ -884,7 +920,7 @@ template<class Tin> static void TIDL_refSpatialMaxPooling(sTIDL_Network_t *net,
   Tin *inData = (Tin *)pInChannel;
   Tin *outData = (Tin *)pOutChannel;
 
-  Tin initValue = 0;
+  Tin initValue = Tin();
   initValue = std::numeric_limits<Tin>::lowest();
 
   int32_t isBorderPixel;
@@ -892,7 +928,7 @@ template<class Tin> static void TIDL_refSpatialMaxPooling(sTIDL_Network_t *net,
   int32_t batchOffset, channelOffset, spatialOffsetY, spatialOffsetX;
 
   // For float pass we are making assumptions of padded buffer whereas fixed pass uses OTF pad.
-  if (inDataParams->elementType == TIDL_SinglePrecFloat)
+  if (inDataParams->elementType == TIDL_SinglePrecFloat || inDataParams->elementType == TIDL_BFloat16)
   {
     validPosXMin = tidlLayer->layerParams.poolParams.padL;
     validPosXMax = tidlLayer->layerParams.poolParams.padL + width;
@@ -1069,7 +1105,7 @@ template<class Tin, class Tout, class Tacc> static int32_t TIDL_refSpatialAvgPoo
   int32_t spatialOffsetY, spatialOffsetX;
 
   // For float pass we are making assumptions of padded buffer whereas fixed pass uses OTF pad.
-  if (inDataParams->elementType == TIDL_SinglePrecFloat)
+  if (inDataParams->elementType == TIDL_SinglePrecFloat || inDataParams->elementType == TIDL_BFloat16)
   {
     validPosXMin = tidlLayer->layerParams.poolParams.padL;
     validPosXMax = tidlLayer->layerParams.poolParams.padL + width;
@@ -1225,6 +1261,10 @@ template<class Tin, class Tout, class Tacc> static int32_t TIDL_refSpatialAvgPoo
               {
                 scaleValue = 1.0f / (float)poolSize;
               }
+              else if(std::is_same<Tacc, bfloat16_tidl>::value)
+              {
+                scaleValue = (bfloat16_tidl)1.0f / (bfloat16_tidl)poolSize;
+              }
               else
               {
                 scaleValue = ((uint32_t)1 << (uint32_t)roundVal) / (uint32_t)(poolSize);
@@ -1246,7 +1286,7 @@ template<class Tin, class Tout, class Tacc> static int32_t TIDL_refSpatialAvgPoo
     int32_t satHigh;
     int32_t mixedPrecision = 0;
     int32_t procElemSize;
-    Tout temp = 0;
+    Tout temp = Tout();
     temp = std::numeric_limits<Tout>::lowest();
     satLow = (int32_t)temp;
     temp = std::numeric_limits<Tout>::max();
@@ -1282,6 +1322,10 @@ template<class Tin, class Tout, class Tacc> static int32_t TIDL_refSpatialAvgPoo
               {
                 OPENACC(routine(TIDL_floatSat))
                 result = TIDL_floatSat(result, &net->TIDLLayers[layerIdx]);
+              }
+              else if(std::is_same<Tacc, bfloat16_tidl>::value)
+              {
+                result = TIDL_BF16Sat(result, &net->TIDLLayers[layerIdx]);
               }
               else
               {
@@ -1446,6 +1490,27 @@ static int32_t TIDL_refSpatialPoolingProcess(sTIDL_Network_t *net,
                                 padW,
                                 padH,
                                 (float32_tidl *)outPtr,
+                                tidlLayer, inDataParams, algLayer);
+    }
+    else if (poolingBuffParams->inElementType == TIDL_BFloat16)
+    {
+      TIDL_refSpatialMaxPooling(net,
+                                (bfloat16_tidl *)inPtr,
+                                algLayer->layerParams.poolParams.startRowNumberInTensor,
+                                algLayer->layerParams.poolParams.orgInTensorHeight,
+                                poolingBuffParams->inWidth,
+                                poolingBuffParams->inHeight,
+                                poolingBuffParams->inPitch,
+                                poolingBuffParams->inChPitch,
+                                poolingBuffParams->outChPitch,
+                                params->numChannels,
+                                params->kernelW,
+                                params->kernelH,
+                                params->strideW,
+                                params->strideH,
+                                padW,
+                                padH,
+                                (bfloat16_tidl *)outPtr,
                                 tidlLayer, inDataParams, algLayer);
     }
     else
@@ -1629,6 +1694,27 @@ static int32_t TIDL_refSpatialPoolingProcess(sTIDL_Network_t *net,
                                          padH,
                                          (float32_tidl *)outPtr,
                                          (float32_tidl *)accPtr,
+                                         algLayer,
+                                         tidlLayer, inDataParams);
+    }
+    else if (poolingBuffParams->inElementType == TIDL_BFloat16)
+    {
+      status = TIDL_refSpatialAvgPooling(net,
+                                         (bfloat16_tidl *)inPtr,
+                                         poolingBuffParams->inWidth,
+                                         poolingBuffParams->inHeight,
+                                         poolingBuffParams->inPitch,
+                                         poolingBuffParams->inChPitch,
+                                         poolingBuffParams->outChPitch,
+                                         params->numChannels,
+                                         params->kernelW,
+                                         params->kernelH,
+                                         params->strideW,
+                                         params->strideH,
+                                         padW,
+                                         padH,
+                                         (bfloat16_tidl *)outPtr,
+                                         (bfloat16_tidl *)accPtr,
                                          algLayer,
                                          tidlLayer, inDataParams);
     }

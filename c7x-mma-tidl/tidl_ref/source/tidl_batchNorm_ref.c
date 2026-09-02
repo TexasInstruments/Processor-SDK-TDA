@@ -82,6 +82,8 @@
 #include "tidl_cuda.h"
 #endif
 
+using namespace floating_point::bf16_c7x;
+
 
 
 //#define TIDL_REF_BATCH_NORM_DEBUG
@@ -208,7 +210,7 @@ static int32_t TIDL_refBatchNormCore(Tin  *inPtr,
   Tw weightVal;
   int32_t slopeQBits = 0;
   int32_t slopeFact  = 1;
-  Tw preluScale = 1;
+  Tw preluScale = Tw(1.0f);
   uint32_t accumulatorSize = (uint32_t)(sizeof(*refAccPtr));
 
   params->numChannels = inDataParams->dimValues[TIDL_DIM_NUMCH];
@@ -263,7 +265,7 @@ static int32_t TIDL_refBatchNormCore(Tin  *inPtr,
             {
               preluScale = slopePtr[i2];
               slopeQBits = 8;
-              int32_t tempSlopeFact = preluScale*(((int32_t)1) << slopeQBits);
+              int32_t tempSlopeFact = (int32_t)preluScale*(((int32_t)1) << slopeQBits);
               float32_tidl floatSlopeFact = (float32_tidl)(tempSlopeFact) /
               intAlgHandle->createParams->net->TIDLLayers[layerIdx].actParams.slopeScale;
               slopeFact = (int32_t)(floatSlopeFact);
@@ -284,12 +286,12 @@ static int32_t TIDL_refBatchNormCore(Tin  *inPtr,
               for (i1=0; i1<imWidth; i1++)
               {
                 inDataVal = (Tin)(inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1]);
-                out = ((inDataVal* weightVal) + (biasPtr[i2]));
+                out = (((Tacc)inDataVal* (Tacc)weightVal) + (biasPtr[i2]));
                 if (out < 0)
                 {
                   if (typeid(Tacc) == typeid(float32_tidl))
                   {
-                    out = out * preluScale;
+                    out = (Tacc)out * (Tacc)preluScale;
                   }
                   else
                   {
@@ -330,7 +332,7 @@ static int32_t TIDL_refBatchNormCore(Tin  *inPtr,
     int32_t satHigh;
     int32_t mixedPrecision = 0;
     int32_t outRoundBits;
-    Tout temp = 0;
+    Tout temp = Tout();
     temp  = std::numeric_limits<Tout>::lowest();
     satLow = (int32_t)temp;
     temp  = std::numeric_limits<Tout>::max();
@@ -383,8 +385,15 @@ static int32_t TIDL_refBatchNormCore(Tin  *inPtr,
                     out = temp_refAccPtr[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1];
                     if (std::is_same<Tacc, float32_tidl>::value)
                     {
-                      //OPENACC(routine(TIDL_floatSat))
-                      out =  TIDL_floatSat(out, &net->TIDLLayers[layerIdx]);
+                      if (net->TIDLLayers[layerIdx].outData.elementType == TIDL_BFloat16)
+                      {
+                        out = TIDL_BF16Sat(out, &net->TIDLLayers[layerIdx]);
+                      }
+                      else
+                      {
+                        //OPENACC(routine(TIDL_floatSat))
+                        out = TIDL_floatSat(out, &net->TIDLLayers[layerIdx]);
+                      }
                     }
                     else
                     {
@@ -445,7 +454,7 @@ static void TIDL_HighAccuracySigmoidProcess(Tin  *inPtr,
   int32_t numTotBatches = inDataParams->dimValues[TIDL_DIM_BATCH];
   Tin  *inData = (Tin *)inPtr;
   Tout *outData = (Tout *)outPtr;
-  Tout satHigh = 0, satLow = 0;
+  Tout satHigh = Tout(), satLow = Tout();
   float inValF, outValF;
     // float inValF_2;
   float inputScale = inDataParams->tensorScale;
@@ -475,18 +484,32 @@ static void TIDL_HighAccuracySigmoidProcess(Tin  *inPtr,
           {
             for (i1=0; i1<imWidth; i1++)
             {
-              Tin  inDataVal;
-              inDataVal = (inData[(i5*inBatchPitch) + (i4*inDim1Pitch) + (i3*inDim2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1]);
-              inValF = ((float)inDataVal - inDataParams->tensorZeroPoint) * inDataScaleFact;
-              outValF = div_sp(1.0, (exp_taylor_sigmoid(inValF) + 1.0f));
-              outValF = outValF*outDataParams->tensorScale;
-              /* LDRA_JUSTIFY_START
-              <metric start> statement branch <metric end>
-              <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
-              <justification end> */
-              out = (Tout) ((outValF > satHigh) ? satHigh : outValF); /*Upper bound only*/
-              /* LDRA_JUSTIFY_END */
-              outData[(i5*outBatchPitch) + (i4*outDim1Pitch) + (i3*outDim2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)out;
+              if(typeid(Tin) == typeid(bfloat16_tidl))
+              {
+                using namespace floating_point::bf16_c7x;
+                Tin inDataVal;
+                inDataVal = (inData[(i5*inBatchPitch) + (i4*inDim1Pitch) + (i3*inDim2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1]);
+                bfloat16_tidl outValF = exp_taylor_sigmoid_bf16(inDataVal);
+                out = (Tout) ((outValF > (bfloat16_tidl)satHigh) ? (bfloat16_tidl)satHigh : outValF); /*Upper bound only*/
+                outData[(i5*outBatchPitch) + (i4*outDim1Pitch) + (i3*outDim2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)out;
+              }
+              else
+              {
+                Tin  inDataVal;
+                inDataVal = (inData[(i5*inBatchPitch) + (i4*inDim1Pitch) + (i3*inDim2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1]);
+                inValF = ((float)inDataVal - inDataParams->tensorZeroPoint) * inDataScaleFact;
+                outValF = div_sp(1.0, (exp_taylor_sigmoid(inValF) + 1.0f));
+                outValF = outValF*outDataParams->tensorScale;
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start>
+                Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
+                <justification end> */
+                out = (Tout) ((outValF > (float32_tidl)satHigh) ? (float32_tidl)satHigh : outValF); /*Upper bound only*/
+                /* LDRA_JUSTIFY_END */
+                outData[(i5*outBatchPitch) + (i4*outDim1Pitch) + (i3*outDim2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)out;
+              }
             }
           }
         }
@@ -637,8 +660,11 @@ static int32_t TIDL_refSigmoidCore(Tin  *inPtr,
               }
               /* LDRA_JUSTIFY_START
               <metric start> statement branch <metric end>
-              <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
-              Need conditional check for all the use case so else cannot be reached.       
+              <justification start>
+              Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+              Need conditional check for all the use case so else cannot be reached.
+              Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+              This does not affect runtime behavior or safety.
               <justification end> */
               else if ((inDataValShl8 < threshold2) && (inDataValShl8 >= constZero))
               /* LDRA_JUSTIFY_END */
@@ -647,8 +673,11 @@ static int32_t TIDL_refSigmoidCore(Tin  *inPtr,
               }
               /* LDRA_JUSTIFY_START
               <metric start> statement branch <metric end>
-              <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+              <justification start>
+              Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
               Need conditional check for all the use case so else cannot be reached.
+              Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+              This does not affect runtime behavior or safety.
               <justification end> */
 			        else
 			        {
@@ -687,8 +716,11 @@ static int32_t TIDL_refSigmoidCore(Tin  *inPtr,
       #endif
       /* LDRA_JUSTIFY_START
       <metric start> statement branch <metric end>
-      <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+      <justification start>
+      Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
       This can be reached only through compilation time unreachable during inference time.
+      Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+      This does not affect runtime behavior or safety.
       <justification end> */
       if(((uint32_t)intAlgHandle->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)
       {
@@ -1084,6 +1116,21 @@ static int32_t TIDL_refBatchNormBitDepth(void *inPtr,
                                     inDataParams,
                                     outDataParams);
   }
+  else if(TIDL_BFloat16 == ((int32_t)outDataParams->elementType))
+  {
+    status = TIDL_refBatchNormCore((bfloat16_tidl *)inPtr,
+                                    (bfloat16_tidl *)outPtr,
+                                    weightsPtr,
+                                    slopePtr,
+                                    biasPtr,
+                                    accPtr,
+                                    intAlgHandle,
+                                    layerIdx,
+                                    params,
+                                    algLayer,
+                                    inDataParams,
+                                    outDataParams);
+  }
   else
   {
     status = TIDL_ERR_FAILURE;
@@ -1243,6 +1290,14 @@ static int32_t TIDL_refSigmoidProcess(TIDL_Handle intAlgHandle,
 	  	status = TIDL_ERR_NOT_IMPLEMENTED;
 	  }
   }
+  else if(TIDL_BFloat16 == ((int32_t)outDataParams->elementType))
+  {
+    TIDL_HighAccuracySigmoidProcess((bfloat16_tidl *)inPtr,
+                                    (bfloat16_tidl *)outPtr,
+                                    params,
+                                    inDataParams,
+                                    outDataParams);
+  }
   else  //if(TIDL_SinglePrecFloat == ((int32_t)buffParams->inElementType))
   {
     int32_t i0, i1, i2, i3, i4, i5;
@@ -1298,16 +1353,22 @@ static int32_t TIDL_refSigmoidProcess(TIDL_Handle intAlgHandle,
                 
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
-                <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+                <justification start>
+                Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
                 Sigmoid output never goes less than 0.
+                Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+                This does not affect runtime behavior or safety.
                 <justification end> */
                 Min = (out<Min) ? out : Min;
                 /* LDRA_JUSTIFY_END */
                 
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
-                <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+                <justification start>
+                Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
                 Sigmoid output never goes more than 1.
+                Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+                This does not affect runtime behavior or safety.
                 <justification end> */
                 Max = (out>Max) ? out : Max;
                 /* LDRA_JUSTIFY_END */
@@ -1325,8 +1386,11 @@ static int32_t TIDL_refSigmoidProcess(TIDL_Handle intAlgHandle,
       //OPENACC(routine(TIDL_getDatElementSign))
       /* LDRA_JUSTIFY_START
       <metric start> branch <metric end>
-      <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+      <justification start>
+      Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
       Float Datatype always returns as signed.
+      Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+      This does not affect runtime behavior or safety.
       <justification end> */
       if(TIDL_getDatElementSign(outDataParams->elementType) == 1)
       {
@@ -1337,8 +1401,11 @@ static int32_t TIDL_refSigmoidProcess(TIDL_Handle intAlgHandle,
 
       /* LDRA_JUSTIFY_START
       <metric start> statement branch <metric end>
-      <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+      <justification start>
+      Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
       Float Datatype always returns as signed.
+      Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+      This does not affect runtime behavior or safety.
       <justification end> */
       else
       {
@@ -1927,8 +1994,11 @@ static int32_t TIDL_refNonLinearNonLUTCore(TIDL_Handle intAlgHandle,
               }
               /* LDRA_JUSTIFY_START
               <metric start> branch <metric end>
-              <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+              <justification start>
+              Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
               Prior check occurs for other activation types.
+              Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+              This does not affect runtime behavior or safety.
               <justification end> */
               else if(tidlLayer->actParams.actType == TIDL_Sign)
               /* LDRA_JUSTIFY_END */
@@ -1938,8 +2008,11 @@ static int32_t TIDL_refNonLinearNonLUTCore(TIDL_Handle intAlgHandle,
               }     
               /* LDRA_JUSTIFY_START
               <metric start> statement branch <metric end>
-              <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+              <justification start>
+              Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
               Prior check occurs for other activation types.
+              Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+              This does not affect runtime behavior or safety.
               <justification end> */
               else
               {
@@ -2694,13 +2767,17 @@ static int32_t TIDL_refFloatNonLinear(TIDL_Handle intAlgHandle,
                   float32_tidl outMax = std::numeric_limits<float32_tidl>::max();
                   /* LDRA_JUSTIFY_START
                   <metric start> statement branch <metric end>
-                  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  <justification start>
+                  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                   <justification end> */
                   outValF = (outValF > outMax)? outMax : outValF;
                   /* LDRA_JUSTIFY_END */
                   /* LDRA_JUSTIFY_START
                   <metric start> statement branch <metric end>
-                  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  <justification start>
+                  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                   <justification end> */
                   outValF = (outValF < outMin)? outMin : outValF;
                   /* LDRA_JUSTIFY_END */
@@ -2725,13 +2802,17 @@ static int32_t TIDL_refFloatNonLinear(TIDL_Handle intAlgHandle,
                   
                   /* LDRA_JUSTIFY_START
                   <metric start> statement branch <metric end>
-                  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  <justification start>
+                  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                   <justification end> */
                   outValF = (outValF > outMax)? outMax : outValF;
                   /* LDRA_JUSTIFY_END */
                   /* LDRA_JUSTIFY_START
                   <metric start> statement branch <metric end>
-                  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  <justification start>
+                  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                   <justification end> */
                   outValF = (outValF < outMin)? outMin : outValF;
                   /* LDRA_JUSTIFY_END */
@@ -2810,6 +2891,446 @@ static int32_t TIDL_refFloatNonLinear(TIDL_Handle intAlgHandle,
               
               /* LDRA_JUSTIFY_START
               <metric start> statement branch <metric end>
+              <justification start>
+              Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+              Prior check occurs for other activation types.
+              Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+              This does not affect runtime behavior or safety.
+              <justification end> */
+              else
+              {
+                status = TIDL_ERR_NOT_IMPLEMENTED;
+              }
+            }
+          }
+      }
+      }
+    }
+  }
+  return status;
+}
+
+/**
+ * @brief This is main function perform non-linear activation operation if inp-output is in bf16-bf16 manner
+ * @tparam Tin  : template for input
+ * @tparam Tout : template for output
+ * @param inPtr : Input pointer on which bacthNorm is applied
+ * @param outPtr : Output pointer after batchNorm opreation
+ * @param layerIdx :index of the current layer
+ * @param params : copy of bacthNorm parameters
+ * @param inDataParams : parameters of the input data buffer
+ * @param outDataParams : parameters of the output data buffer
+ * @param tidlLayer : Pointer to the common layer parameters
+ * @return  IALG_EOK   - Successful
+ *          IALG_EFAIL - Unspecified error
+ */
+template <class Tin, class Tout>
+static int32_t TIDL_refBFloat16NonLinear(TIDL_Handle intAlgHandle,
+                                   Tin  *inPtr,
+                                   Tout *outPtr,
+                                   int32_t layerIdx,
+                                   sTIDL_BatchNormParams_t *params,
+                                   sTIDL_DataParams_t *inDataParams,
+                                   sTIDL_DataParams_t *outDataParams,
+                                   const sTIDL_Layer_t    *tidlLayer
+                                   )
+{
+  int32_t status = TIDL_SUCCESS;
+  int32_t i0, i1, i2, i3, i4, i5;
+  int32_t imWidth    = (int32_t)inDataParams->dimValues[TIDL_DIM_WIDTH];
+  int32_t imHeight   = (int32_t)inDataParams->dimValues[TIDL_DIM_HEIGHT];
+  int32_t inDIM2     = (int32_t)inDataParams->dimValues[TIDL_DIM_DIM2];
+  int32_t inDIM1     = (int32_t)inDataParams->dimValues[TIDL_DIM_DIM1];
+  int32_t inPitch    = (int32_t)inDataParams->pitch[TIDL_LINE_PITCH];
+  int32_t inChPitch  = (int32_t)inDataParams->pitch[TIDL_CHANNEL_PITCH];
+  int32_t inDIM2Pitch  = (int32_t)inDataParams->pitch[TIDL_DIM_DIM2];
+  int32_t inDIM1Pitch  = (int32_t)inDataParams->pitch[TIDL_DIM_DIM1];
+  int32_t inBatchPitch  = (int32_t)inDataParams->pitch[TIDL_ROI_PITCH];
+  int32_t outPitch   = (int32_t)outDataParams->pitch[TIDL_LINE_PITCH];
+  int32_t outChPitch = (int32_t)outDataParams->pitch[TIDL_CHANNEL_PITCH];
+  int32_t outDIM2Pitch  = (int32_t)outDataParams->pitch[TIDL_DIM_DIM2];
+  int32_t outDIM1Pitch  = (int32_t)outDataParams->pitch[TIDL_DIM_DIM1];
+  int32_t outBatchPitch = (int32_t)outDataParams->pitch[TIDL_ROI_PITCH];
+  int32_t numTotBatches = inDataParams->dimValues[TIDL_DIM_BATCH];
+  params->numChannels = inDataParams->dimValues[TIDL_DIM_NUMCH];
+  /*workload already adds offset so not to add here
+  */
+  Tin  *inData = (Tin *)inPtr;
+  Tout *outData = (Tout *)outPtr;
+  bfloat16_tidl alpha = (bfloat16_tidl)tidlLayer->layerParams.batchNormParams.inDataQ/((bfloat16_tidl)TIDL_NON_LIN_PARAM_SCALE);
+  bfloat16_tidl beta = (bfloat16_tidl)tidlLayer->layerParams.batchNormParams.weightsQ/((bfloat16_tidl)TIDL_NON_LIN_PARAM_SCALE);
+
+  int32_t c =  params->numChannels;
+
+  /* OPENACC(data copyin(inData[((numTotBatches-1)*inBatchPitch) + ((c-1)*inChPitch) + ((imHeight-1)*inPitch) + (imWidth-1)]) \
+               copy(outData[((numTotBatches-1)*outBatchPitch) + ((c-1)*outChPitch) + ((imHeight-1)*outPitch) + (imWidth-1)]))
+
+  OPENACC(parallel loop collapse(4)) */
+  for (i5 = 0; i5 < numTotBatches; i5++)
+  {
+    for(i4 = 0; i4 < inDIM1; i4++)
+    {
+      for(i3 = 0; i3 < inDIM2; i3++)
+      {
+        for (i2 = 0; i2 < c; i2++)
+        {
+          for (i0=0; i0<imHeight; i0++)
+          {
+            for (i1=0; i1<imWidth; i1++)
+            {
+              Tin  inDataVal;
+              if(tidlLayer->actParams.actType == TIDL_Tanh)
+              {
+                inDataVal = (inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1]);
+                bfloat16_tidl outValF = taylor_tanh_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if(tidlLayer->actParams.actType == TIDL_HardSigmoid)
+              {
+                inDataVal = (inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1]);
+                bfloat16_tidl outValF = alpha*inDataVal + beta;
+                bfloat16_tidl omin = 0;
+                bfloat16_tidl omax = 1;
+                outValF = (outValF > omax) ? omax : outValF;
+                outValF = (outValF < omin) ? omin : outValF;
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if(tidlLayer->actParams.actType == TIDL_ELU)
+              {
+                inDataVal = (inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1]);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)((inDataVal < (bfloat16_tidl)0.0f) ? (alpha*(exp_taylor_bf16(inDataVal) - (bfloat16_tidl)1.0f)) : inDataVal);
+              }
+              else if (tidlLayer->actParams.actType == TIDL_GELU)
+              {
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF;
+                if(intAlgHandle->createParams->net->netVersion >= TIDL_NET_VERSION_FW_11_00_00_00)
+                {
+                  outValF = gelu_bf16(inDataVal);
+                }
+                else
+                {
+                  status = TIDL_ERR_FAILURE;
+                  break;
+                }
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_LeakyReLU)
+              {
+                bfloat16_tidl outValF = 0;
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl alpha = tidlLayer->actParams.slopeScale;
+                if(inDataVal >= (bfloat16_tidl)0.0f)
+                {
+                  outValF = inDataVal;
+                }
+                else
+                {
+                  outValF = inDataVal * alpha;
+                }
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_HardSwish){
+                bfloat16_tidl hardswish_alpha = (bfloat16_tidl)0.16666666666f;
+                bfloat16_tidl hardswish_beta = (bfloat16_tidl)0.5f;
+
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = hardswish_alpha*inDataVal + hardswish_beta;
+                
+                bfloat16_tidl omin = 0;
+                bfloat16_tidl omax = 1;
+                outValF = (outValF > omax) ? omax : outValF;
+                outValF = (outValF < omin) ? omin : outValF;
+
+                outValF = outValF * inDataVal;
+
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Swish){
+                bfloat16_tidl swish_alpha = (bfloat16_tidl)tidlLayer->actParams.alpha;
+                bfloat16_tidl swish_beta = (bfloat16_tidl)1.0f;
+
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl temp = ((bfloat16_tidl)-1.0f)*swish_alpha*inDataVal;
+                bfloat16_tidl reciprocal_outValF = exp_taylor_bf16(temp) + swish_beta;
+                bfloat16_tidl outValF = ((bfloat16_tidl)1.0f)/reciprocal_outValF;
+
+                outValF = outValF * inDataVal;
+
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Exp){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = exp_taylor_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Erf){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = taylor_erf_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Reciprocal){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF;
+
+                // In onnx if denom is 0 in division, then output is 0
+                if(inDataVal == (bfloat16_tidl)0)
+                {
+                  outValF = 0;
+                }
+                else
+                {
+                  outValF = ((bfloat16_tidl)1.0f) / inDataVal;
+                  bfloat16_tidl outMin = std::numeric_limits<Tout>::lowest();
+                  bfloat16_tidl outMax = std::numeric_limits<Tout>::max();
+                  /* LDRA_JUSTIFY_START
+                  <metric start> statement branch <metric end>
+                  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  <justification end> */
+                  outValF = (outValF > outMax)? outMax : outValF;
+                  /* LDRA_JUSTIFY_END */
+                  /* LDRA_JUSTIFY_START
+
+                  <metric start> statement branch <metric end>
+                  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  <justification end> */
+                  outValF = (outValF < outMin)? outMin : outValF;
+                  /* LDRA_JUSTIFY_END */
+                }
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_SiLU){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF;
+
+                // In onnx if denom is 0 in division, then output is 0
+                if(inDataVal == (bfloat16_tidl)0)
+                {
+                  outValF = 0;
+                }
+                else
+                {
+                  bfloat16_tidl denom = ((bfloat16_tidl)1.0f) + exp_taylor_bf16(((bfloat16_tidl)-1.0f) * inDataVal);
+                  outValF = (bfloat16_tidl)__recip(denom);
+                  /* Newton-Raphson refinement for reciprocal: x*(2 - a*x) */
+                  outValF = outValF * ((bfloat16_tidl)2.0f - denom * outValF);
+                  outValF = inDataVal * outValF;
+                  bfloat16_tidl outMin = std::numeric_limits<Tout>::lowest();
+                  bfloat16_tidl outMax = std::numeric_limits<Tout>::max();
+                  
+                  /* LDRA_JUSTIFY_START
+                  <metric start> statement branch <metric end>
+                  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  <justification end> */
+                  outValF = (outValF > outMax)? outMax : outValF;
+                  /* LDRA_JUSTIFY_END */
+                  /* LDRA_JUSTIFY_START
+                  <metric start> statement branch <metric end>
+                  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  <justification end> */
+                  outValF = (outValF < outMin)? outMin : outValF;
+                  /* LDRA_JUSTIFY_END */
+                }
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Asin){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = taylor_asin_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Asinh){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = taylor_asinh_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Mish){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                
+                bfloat16_tidl outValF = taylor_log_bf16((bfloat16_tidl)1.0f + exp_taylor_bf16(inDataVal));
+                outValF = taylor_tanh_bf16(outValF);
+                outValF = outValF * inDataVal;
+
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Log){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = taylor_log_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Abs){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = inDataVal;
+                if(outValF < (bfloat16_tidl)0.0f)
+                {
+                  outValF = -(outValF);
+                }
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Floor){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                
+                int32_t inValInt = (int32_t)inDataVal;
+                bfloat16_tidl outValF = (bfloat16_tidl)inValInt;
+                if((inDataVal < (bfloat16_tidl)0.0f) && (inDataVal != outValF))
+                {
+                  outValF = outValF - (bfloat16_tidl)1.0f;
+                }
+
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Sin){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = taylor_sin_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Sqrt){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = sqrt_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Acos){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = taylor_acos_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Atan){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = taylor_atan_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Sinh){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = taylor_sinh_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Cos){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = taylor_cos_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Cosh){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = taylor_cosh_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Neg){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = -(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Tan){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = taylor_tan_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Pow){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = taylor_pow_bf16(inDataVal, alpha);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Logit){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                /**
+                 * logit(x) = log(x/(1-x))
+                */
+                bfloat16_tidl logitIn = inDataVal;
+                //Clamp inDataVal in [0,1] range
+                logitIn = (logitIn > (bfloat16_tidl)1.0f) ? (bfloat16_tidl)1.0f : logitIn;
+                logitIn = (logitIn < (bfloat16_tidl)0.0f) ? (bfloat16_tidl)0.0f : logitIn;
+
+                bfloat16_tidl denom = (bfloat16_tidl)1.0f - logitIn;
+                denom = (denom < (bfloat16_tidl)TIDL_LOGIT_CLIP_MIN) ? (bfloat16_tidl)TIDL_LOGIT_CLIP_MIN : denom;
+                logitIn = (logitIn < (bfloat16_tidl)TIDL_LOGIT_CLIP_MIN) ? (bfloat16_tidl)TIDL_LOGIT_CLIP_MIN : logitIn;
+                
+                bfloat16_tidl outValF = taylor_log_bf16(logitIn/denom);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_SoftPlus){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = softplus_bf16(inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_SoftSign){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl absVal = (inDataVal < (bfloat16_tidl)0.0f) ? -(inDataVal) : inDataVal;
+                bfloat16_tidl outValF = inDataVal / ((bfloat16_tidl)1.0f + absVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Ceil){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                int32_t inValInt = (int32_t)inDataVal;
+                bfloat16_tidl outValF = (bfloat16_tidl)inValInt;
+                if((inDataVal > (bfloat16_tidl)0.0f) && (inDataVal != outValF))
+                {
+                  outValF = outValF + (bfloat16_tidl)1.0f;
+                }
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Celu){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl temp = alpha * (exp_taylor_bf16(inDataVal / alpha) - (bfloat16_tidl)1.0f);
+                
+                bfloat16_tidl val1 = inDataVal < (bfloat16_tidl)0.0f ? (bfloat16_tidl)0.0f : inDataVal;
+                bfloat16_tidl val2 = temp < (bfloat16_tidl)0.0f ? temp : (bfloat16_tidl)0.0f; 
+
+                bfloat16_tidl outValF = val1 + val2;
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Selu){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF = inDataVal <= (bfloat16_tidl)0.0f ? beta * (alpha * exp_taylor_bf16(inDataVal) - alpha) : (beta * inDataVal);
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Round){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF;
+                
+                bfloat16_tidl absInDataVal = (inDataVal < (bfloat16_tidl)0.0f) ? -(inDataVal) : inDataVal;
+
+                int32_t integerPart = (int32_t)(absInDataVal);
+                bfloat16_tidl fractionalPart = absInDataVal - (bfloat16_tidl)integerPart;
+                if (fractionalPart < (bfloat16_tidl)0.5f)
+                {
+                  // Round down
+                  outValF = (bfloat16_tidl)integerPart;
+                } 
+                else if (fractionalPart > (bfloat16_tidl)0.5f) 
+                {
+                  // Round up
+                  outValF = (bfloat16_tidl)integerPart + (bfloat16_tidl)1.0f;
+                } 
+                else 
+                {
+                  // Exactly half - round to nearest even
+                  if (integerPart % 2 == 0) {
+                      // Even number, round down
+                      outValF = (bfloat16_tidl)integerPart;
+                  } else {
+                      // Odd number, round up to make it even
+                      outValF = (bfloat16_tidl)integerPart + (bfloat16_tidl)1.0f;
+                  }
+                }
+                outValF = inDataVal < (bfloat16_tidl)0.0f ? outValF * (bfloat16_tidl)-1.0f : outValF;
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              else if (tidlLayer->actParams.actType == TIDL_Sign){
+                inDataVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                bfloat16_tidl outValF;
+                if(inDataVal != (bfloat16_tidl)0.0f)
+                {
+                  outValF = inDataVal > (bfloat16_tidl)0.0f ? (bfloat16_tidl)1.0f : (bfloat16_tidl)-1.0f;
+                }
+                else
+                {
+                  outValF = (bfloat16_tidl)0.0f;
+                }
+                
+                outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outDIM2Pitch) + (i2*outChPitch) + (i0*outPitch) + i1] = (Tout)outValF;
+              }
+              /* LDRA_JUSTIFY_END */
+              
+              /* LDRA_JUSTIFY_START
+              <metric start> statement branch <metric end>
               <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
               Prior check occurs for other activation types.
               <justification end> */
@@ -2867,6 +3388,45 @@ static int32_t TIDL_fullyFloatReferenceNonLinear(TIDL_Handle intAlgHandle,
   return status;
 }
 
+/**
+ * @brief This function is non-linear activations implementation for bfloat16
+ *
+ * @param intAlgHandle : tidl algorithm handle
+ * @param algLayer : Pointer to the layer specific parameters
+ * @param tidlLayer : Pointer to the common layer parameters
+ * @param params : copy of batch norm layer parameters
+ * @param inPtr : Pointer to input buffers to be processed
+ * @param outPtr : Pointer to output buffers to be processed
+ * @param inDataParams : pointer to input data parameters
+ * @param outDataParams : pointer to output data parameters
+ * @return  IALG_EOK   - Successful
+ *          IALG_EFAIL - Unspecified error
+ */
+static int32_t TIDL_BFloat16ReferenceNonLinear(TIDL_Handle intAlgHandle,
+                                      sTIDL_AlgLayer_t *algLayer,
+                                      const sTIDL_Layer_t    *tidlLayer,
+                                      sTIDL_BatchNormParams_t *params,
+                                      void *inPtr,
+                                      void *outPtr,
+                                      sTIDL_DataParams_t *inDataParams,
+                                      sTIDL_DataParams_t *outDataParams)
+{
+  int32_t status = TIDL_SUCCESS;
+  int32_t layerIdx = algLayer->layerIdx;
+
+  status = TIDL_refBFloat16NonLinear(intAlgHandle,
+                              (bfloat16_tidl*)inPtr,
+                              (bfloat16_tidl*)outPtr,
+                                layerIdx,
+                                params,
+                                inDataParams,
+                                outDataParams,
+                                tidlLayer
+                                );
+
+  return status;
+}
+
  /**
  * @brief BatchNorm layer reference implementation
  *
@@ -2918,6 +3478,23 @@ static int32_t TIDL_refBatchNormProcess(TIDL_Handle intAlgHandle,
                                        algLayer,
                                        inDataParams,
                                        outDataParams);
+  }
+  else if(outDataParams->elementType == TIDL_BFloat16)
+  {
+    biasPtr = ((int8_t *)(intAlgHandle->createParams->net) + params->bias);
+    
+    status = TIDL_refBatchNormBitDepth(inPtr,
+                                        outPtr,
+                                        (bfloat16_tidl *)weightPtr,
+                                        (bfloat16_tidl *)slopePtr,
+                                        (float32_tidl *)biasPtr,
+                                        (float32_tidl *)accPtr,
+                                        params,
+                                        intAlgHandle,
+                                        layerIdx,
+                                        algLayer,
+                                        inDataParams,
+                                        outDataParams);
   }
   else if(tidlLayer->weightsElementSizeInBits <= 8)
   {
@@ -3052,7 +3629,8 @@ int32_t TIDL_batchNormRefProcess(TIDL_NetworkCommonParams *commonParams,
 
   if((tidlLayer->actParams.actType == TIDL_NoAct) || (tidlLayer->actParams.actType == TIDL_RelU) || 
      (tidlLayer->actParams.actType == TIDL_RelU6) || (tidlLayer->actParams.actType == TIDL_PRelU) ||
-     (inDataParams->elementType == TIDL_SinglePrecFloat))
+     (inDataParams->elementType == TIDL_SinglePrecFloat) ||
+     (inDataParams->elementType == TIDL_BFloat16))
     {
       algLayer->layerParams.batchNormParams.lutParams.nonLinearActMethod = -1;
     }
@@ -3126,6 +3704,21 @@ int32_t TIDL_batchNormRefProcess(TIDL_NetworkCommonParams *commonParams,
       tidlLayer->actParams.actType = -1;
     }
     status = TIDL_fullyFloatReferenceNonLinear(&intAlgObj,
+                                        algLayer,
+                                        tidlLayer,
+                                        params,
+                                        inPtrs[0],
+                                        outPtrs[0],
+                                        inDataParams,
+                                        &tidlLayer->outData);
+  }
+  else if((TIDL_floatReferenceKernelSupportsActivation(tidlLayer) != 0) && ((inDataParams->elementType == TIDL_BFloat16)))
+  {
+    if(intAlgObj.createParams->forceNegativeTest == TIDL_SAFETY_FLAG_BATCHNORM_FORCE_BATCHNORM_CORE_ERROR_FLOAT_REFERENCE)
+    {
+      tidlLayer->actParams.actType = -1;
+    }
+    status = TIDL_BFloat16ReferenceNonLinear(&intAlgObj,
                                         algLayer,
                                         tidlLayer,
                                         params,

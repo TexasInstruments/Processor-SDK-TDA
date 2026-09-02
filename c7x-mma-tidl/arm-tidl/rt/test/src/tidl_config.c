@@ -118,6 +118,7 @@ sTokenMapping gsTokenMap_tidl_net[MAX_ITEMS_TO_PARSE] =
         {(char *)"testCaseName",             &gParams.testCaseName                   , STRING, SINGLE, false, false, NULL, NULL, NULL},
         {(char *)"testCaseDesc",             &gParams.testCaseDesc                   , STRING, SINGLE, false, false, NULL, NULL, NULL},
         {(char *)"ioConfigFile",             &gParams.ioConfigFile                   , STRING, SINGLE, false, false, NULL, NULL, NULL},
+        {(char *)"inDimsFile",               &gParams.inDimsFile                     , STRING, SINGLE, false, false, NULL, NULL, NULL},
 } ;
 
 

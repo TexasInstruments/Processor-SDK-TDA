@@ -15,6 +15,8 @@
 #include "tidl_cuda_mem_manager.h"
 #include "tidl_errors.h"
 
+using namespace floating_point::bf16_c7x;
+
 #define RSQRT_MASK (0xFFFFFFFFFFFF8000)
 /* External declaration of the global memory manager pointer */
 extern TIDL_CudaMemManager* TIDL_cudaGetThreadManager();
@@ -90,6 +92,71 @@ __global__ void LayerNormFloatKernel(
     for(w = ty; w < width; w += THREADS_PER_BLOCK_Y) {
         int offset = b*batchPitch + d1*dim1Pitch + d2*dim2Pitch + c*channelPitch + h*linePitch + w;
         output[offset] = (input[offset] - mean) * denom;
+    }
+}
+
+__global__ void LayerNormBFloat16Kernel(
+    const bfloat16_tidl* __restrict__ input,
+    bfloat16_tidl* __restrict__ output,
+    int numBatches, int numDim1, int numDim2, int numChannels, int height, int width,
+    int batchPitch, int dim1Pitch, int dim2Pitch, int channelPitch, int linePitch,
+    float epsilon
+)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int tx = threadIdx.x, ty = threadIdx.y;
+    int total_elements = numBatches * numDim1 * numDim2 * numChannels * height;
+    if(idx >= total_elements) return;
+    
+    __shared__ float reduction_mean[THREADS_PER_BLOCK_X][THREADS_PER_BLOCK_Y];
+    __shared__ float reduction_variance[THREADS_PER_BLOCK_X][THREADS_PER_BLOCK_Y];
+    
+    // Calculate indices for the current element
+    int b = idx / (numDim1 * numDim2 * numChannels * height); // batch
+    int d1 = (idx / (numDim2 * numChannels * height)) % numDim1; // dim1
+    int d2 = (idx / (numChannels * height)) % numDim2; // dim2
+    int c = (idx / height) % numChannels; // channel
+    int h = idx % height; // height
+    int w, stride;
+    
+    float acceX = 0, acceX2 = 0, xf = 0;
+    bfloat16_tidl mean, variance;
+    bfloat16_tidl denom, inp_sqrt, inp, ep;
+
+    for(w = ty; w < width; w += THREADS_PER_BLOCK_Y)
+    {
+        int offset = b*batchPitch + d1*dim1Pitch + d2*dim2Pitch + c*channelPitch + h*linePitch + w;
+        xf = (float)input[offset];
+        acceX  += (xf);
+        acceX2 += (xf * xf);
+    }
+    reduction_mean[tx][ty] = acceX;
+    reduction_variance[tx][ty] = acceX2;
+
+    for(stride = THREADS_PER_BLOCK_Y / 2; stride >= 1; stride /= 2) {
+        __syncthreads();
+        if(ty < stride) {
+            reduction_mean[tx][ty] += reduction_mean[tx][ty + stride];
+            reduction_variance[tx][ty] += reduction_variance[tx][ty + stride];
+        }
+    }
+    __syncthreads();
+    
+    mean = (bfloat16_tidl)reduction_mean[tx][0];
+    variance = (bfloat16_tidl)reduction_variance[tx][0];
+    inp = ((bfloat16_tidl)width * variance) - (mean * mean);
+    ep = (bfloat16_tidl)epsilon * (bfloat16_tidl)(width * width);
+    /* Clamp inp to 0: residual bf16 cancellation error can make it slightly negative */
+    if ((float)inp < 0.0f) inp = (bfloat16_tidl)0.0f;
+    inp_sqrt = inp + ep;
+    denom = (bfloat16_tidl)__recip_sqrt_cuda((float)inp_sqrt);
+
+    for(w = ty; w < width; w += THREADS_PER_BLOCK_Y)
+    {
+        int offset = b*batchPitch + d1*dim1Pitch + d2*dim2Pitch + c*channelPitch + h*linePitch + w;
+        bfloat16_tidl in = (bfloat16_tidl)width * input[offset] - mean;
+        in = in * denom;
+        output[offset] = in;
     }
 }
 
@@ -177,6 +244,97 @@ __global__ void InstanceNormFloatKernel(
     }
 }
 
+__global__ void InstanceNormBFloat16Kernel(
+    const bfloat16_tidl* __restrict__ input,
+    bfloat16_tidl* __restrict__ output,
+    int numBatches, int numDim1, int numDim2, int numChannels, int height, int width,
+    int batchPitch, int dim1Pitch, int dim2Pitch, int channelPitch, int linePitch,
+    float epsilon
+)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int tx = threadIdx.x, ty = threadIdx.y;
+    int total_elements = numBatches * numDim1 * numDim2 * numChannels;
+    if(idx >= total_elements) return;
+    
+    __shared__ float reduction_mean[THREADS_PER_BLOCK_X][THREADS_PER_BLOCK_Y];
+    __shared__ float reduction_variance[THREADS_PER_BLOCK_X][THREADS_PER_BLOCK_Y];
+    
+    // Calculate indices for the current element
+    int b = idx / (numDim1 * numDim2 * numChannels); // batch
+    int d1 = (idx / (numDim2 * numChannels)) % numDim1; // dim1
+    int d2 = (idx / numChannels) % numDim2; // dim2
+    int c = idx % numChannels; // channel
+    int h, w, stride;
+
+    /* Per-row accumulation matching the ref:
+     * 1. Each row: parallel-reduce partial sums across ty threads → full fp32 row sum
+     * 2. ty=0 bf16-casts the full row sum and accumulates into fp32 channel accum
+     * 3. After all rows, broadcast channel sum to all threads via shared memory
+     * Using the existing reduction arrays for the per-row reduction. */
+    float acceXChannel = 0.0f, acceX2Channel = 0.0f;
+    bfloat16_tidl mean, variance;
+    bfloat16_tidl denom, inp_sqrt, inp, ep;
+
+    for(h = 0; h < height; h++) {
+        float row_acceX = 0.0f, row_acceX2 = 0.0f;
+        for(w = ty; w < width; w += THREADS_PER_BLOCK_Y) {
+            int offset = b*batchPitch + d1*dim1Pitch + d2*dim2Pitch + c*channelPitch + h*linePitch + w;
+            float xf = (float)input[offset];
+            row_acceX  += xf;
+            row_acceX2 += (xf * xf);
+        }
+        /* Row-level reduction: sum all ty threads' partial row sums → full fp32 row sum */
+        reduction_mean[tx][ty]     = row_acceX;
+        reduction_variance[tx][ty] = row_acceX2;
+        for(stride = THREADS_PER_BLOCK_Y / 2; stride >= 1; stride /= 2) {
+            __syncthreads();
+            if(ty < stride) {
+                reduction_mean[tx][ty]     += reduction_mean[tx][ty + stride];
+                reduction_variance[tx][ty] += reduction_variance[tx][ty + stride];
+            }
+        }
+        __syncthreads();
+        /* bf16-cast the full row sum and accumulate into channel fp32 (matches ref) */
+        if(ty == 0) {
+            acceXChannel  += (float)(bfloat16_tidl)reduction_mean[tx][0];
+            acceX2Channel += (float)(bfloat16_tidl)reduction_variance[tx][0];
+        }
+    }
+
+    /* Broadcast channel sums from ty=0 to all threads */
+    if(ty == 0) {
+        reduction_mean[tx][0]     = acceXChannel;
+        reduction_variance[tx][0] = acceX2Channel;
+    }
+    __syncthreads();
+
+    /* bf16-cast final channel sums — matches ref's eX / eX2 */
+    mean     = (bfloat16_tidl)reduction_mean[tx][0];
+    variance = (bfloat16_tidl)reduction_variance[tx][0];
+    bfloat16_tidl N = (bfloat16_tidl)(width * height);
+
+    /* Denom calculation in bf16, no Newton-Raphson refinement (matches ref) */
+    inp      = (N * variance) - (mean * mean);
+    ep       = (bfloat16_tidl)epsilon * N * N;
+    /* Clamp inp to 0: residual bf16 cancellation error can make it slightly negative */
+    if ((float)inp < 0.0f) inp = (bfloat16_tidl)0.0f;
+    inp_sqrt = inp + ep;
+    denom    = (bfloat16_tidl)__recip_sqrt_cuda((float)inp_sqrt);
+
+    for(int i = ty; i < height * width; i += THREADS_PER_BLOCK_Y)
+    {
+        h = i / width;
+        w = i % width;
+        int offset = b*batchPitch + d1*dim1Pitch + d2*dim2Pitch + c*channelPitch + h*linePitch + w;
+        bfloat16_tidl in = N * input[offset] - mean;
+        in = in * denom;
+        output[offset] = in;
+    }
+
+}
+
+
 template<class Tin, class Tout>
 int TIDL_cudaLayerNormFloat(
     Tin* input,
@@ -242,12 +400,26 @@ int TIDL_cudaLayerNormFloat(
             dim3 blockDim(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y);
             dim3 gridDim(GRID_SIZE(total_elements, THREADS_PER_BLOCK_X));
 
-            InstanceNormFloatKernel<<<gridDim, blockDim, 0, stream>>>(
-                d_input, d_output,
-                numBatches, numDim1, numDim2, numChannels, height, width,
-                batchPitch, dim1Pitch, dim2Pitch, channelPitch, linePitch,
-                epsilon
-            );
+            if(std::is_same<Tin, bfloat16_tidl>::value && std::is_same<Tout, bfloat16_tidl>::value)
+            {
+                InstanceNormBFloat16Kernel<<<gridDim, blockDim, 0, stream>>>(
+                    reinterpret_cast<const bfloat16_tidl *>(d_input),
+                    reinterpret_cast<bfloat16_tidl *>(d_output),
+                    numBatches, numDim1, numDim2, numChannels, height, width,
+                    batchPitch, dim1Pitch, dim2Pitch, channelPitch, linePitch,
+                    epsilon
+                );
+            }
+            else
+            {
+                InstanceNormFloatKernel<<<gridDim, blockDim, 0, stream>>>(
+                    reinterpret_cast<const float *>(d_input),
+                    reinterpret_cast<float *>(d_output),
+                    numBatches, numDim1, numDim2, numChannels, height, width,
+                    batchPitch, dim1Pitch, dim2Pitch, channelPitch, linePitch,
+                    epsilon
+                );
+            }
         }
         else
         {
@@ -263,12 +435,26 @@ int TIDL_cudaLayerNormFloat(
             dim3 blockDim(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y);
             dim3 gridDim(GRID_SIZE(total_elements, THREADS_PER_BLOCK_X));
 
-            LayerNormFloatKernel<<<gridDim, blockDim, 0, stream>>>(
-                d_input, d_output,
-                numBatches, numDim1, numDim2, numChannels, height, width,
-                batchPitch, dim1Pitch, dim2Pitch, channelPitch, linePitch,
-                epsilon
-            );
+            if(std::is_same<Tin, bfloat16_tidl>::value)
+            {
+                LayerNormBFloat16Kernel<<<gridDim, blockDim, 0, stream>>>(
+                    reinterpret_cast<const bfloat16_tidl *>(d_input),
+                    reinterpret_cast<bfloat16_tidl *>(d_output),
+                    numBatches, numDim1, numDim2, numChannels, height, width,
+                    batchPitch, dim1Pitch, dim2Pitch, channelPitch, linePitch,
+                    epsilon
+                );
+            }
+            else
+            {
+                LayerNormFloatKernel<<<gridDim, blockDim, 0, stream>>>(
+                    reinterpret_cast<const float *>(d_input),
+                    reinterpret_cast<float *>(d_output),
+                    numBatches, numDim1, numDim2, numChannels, height, width,
+                    batchPitch, dim1Pitch, dim2Pitch, channelPitch, linePitch,
+                    epsilon
+                );
+            }
         }
         else
         {
@@ -623,3 +809,4 @@ template int TIDL_cudaLayerNorm<unsigned char, signed char, unsigned long>(unsig
 template int TIDL_cudaLayerNorm<unsigned short, short, unsigned long>(unsigned short*, short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float, float, unsigned char, unsigned char, int, int, int, int);
 template int TIDL_cudaLayerNorm<short, short, long>(short*, short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float, float, unsigned char, unsigned char, int, int, int, int);
 template int TIDL_cudaLayerNormFloat<float, float>(float*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, float);
+template int TIDL_cudaLayerNormFloat<bfloat16_tidl, bfloat16_tidl>(bfloat16_tidl*, bfloat16_tidl*, int, int, int, int, int, int, int, int, int, int, int, int, int, float);

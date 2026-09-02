@@ -323,6 +323,11 @@ int32_t TIDL_subgraphRtCreate(sTIDL_subgraphRtCreateOptions_t* subgraphRtCreateO
   prms.coreStartIdx = subgraphRtCreateOptions->coreStartIdx;
   
   strncpy(prms.traceSubgraphName, name.c_str(), TIDLRT_STRING_SIZE - 1);
+  if(subgraphRtCreateOptions->traceBaseName[0] != '\0')
+  {
+    strncpy(prms.traceBaseName, subgraphRtCreateOptions->traceBaseName, TIDLRT_STRING_SIZE - 1);
+    prms.traceBaseName[TIDLRT_STRING_SIZE - 1] = '\0';
+  }
   sTIDL_IOBufDesc_t *ioBufDesc = (sTIDL_IOBufDesc_t *)prms.ioBufDescPtr;
   if(subgraphRtCreateOptions->inferenceMode != -1) /* Provision to force inference Mode for a particular RT handle creation if necessary */
   {

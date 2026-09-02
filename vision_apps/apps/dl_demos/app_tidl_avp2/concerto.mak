@@ -17,9 +17,9 @@ CSOURCES    += main_x86.c
 
 include $(VISION_APPS_PATH)/apps/concerto_x86_64_inc.mak
 
-IDIRS       += $(VISION_APPS_KERNELS_IDIRS)
+IDIRS       += $(APP_KERNELS_IDIRS)
 
-STATIC_LIBS += $(VISION_APPS_KERNELS_LIBS)
+STATIC_LIBS += $(APP_KERNELS_LIBS)
 STATIC_LIBS += $(TIADALG_LIBS)
 
 endif
@@ -33,16 +33,12 @@ CSOURCES    += main_linux_arm.c
 
 include $(VISION_APPS_PATH)/apps/concerto_mpu_inc.mak
 
-IDIRS       += $(VISION_APPS_KERNELS_IDIRS)
+IDIRS       += $(APP_KERNELS_IDIRS)
 
-STATIC_LIBS += $(VISION_APPS_KERNELS_LIBS)
+STATIC_LIBS += $(APP_KERNELS_LIBS)
 
 endif
 endif
-
-IDIRS       += $(EDGEAI_IDIRS)
-SHARED_LIBS += edgeai-apps-utils
-SHARED_LIBS += edgeai-tiovx-kernels
 
 ifeq ($(SOC),j722s)
 SKIPBUILD=1

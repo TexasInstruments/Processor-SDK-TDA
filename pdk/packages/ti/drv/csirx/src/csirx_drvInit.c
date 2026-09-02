@@ -128,7 +128,6 @@ extern CsirxDrv_CommonObj gCsirxCommonObj;
 /* ========================================================================== */
 /*                  Internal/Private Function Declarations                   */
 /* ========================================================================== */
-static int32_t CsirxDrv_initParamsCheck(const Csirx_InitParams *initParams);
 static int32_t CsirxDrv_coreInit(CsirxDrv_InstObj *instObj);
 static int32_t CsirxDrv_chInit(CsirxDrv_InstObj *instObj);
 int32_t CsirxDrv_init(CsirxDrv_CommonObj *captObj);
@@ -277,20 +276,6 @@ int32_t Csirx_deInit(void)
 /* ========================================================================== */
 /*                       Static Function Definitions                          */
 /* ========================================================================== */
-static int32_t CsirxDrv_initParamsCheck(const Csirx_InitParams *initParams)
-{
-    int32_t retVal = FVID2_SOK;
-
-    if (NULL == initParams->drvHandle)
-    {
-        retVal = FVID2_EBADARGS;
-        GT_0trace(CsirxTrace,
-                  GT_ERR,
-                  "Invalid UDMA DRV Handle!!\r\n");
-    }
-
-    return retVal;
-}
 static int32_t CsirxDrv_chInit(CsirxDrv_InstObj *instObj)
 {
     int32_t retVal = FVID2_SOK;

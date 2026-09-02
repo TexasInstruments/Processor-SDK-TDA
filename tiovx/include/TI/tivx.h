@@ -150,6 +150,11 @@ extern "C" {
  */
 #define TIVX_SUPER_NODE_MAX_OBJECTS        (16u)
 
+/*! \brief Max number of times a blocked error_info retries before overwriting
+ * \ingroup group_vx_ti_extensions_cfg
+ */
+#define TIVX_MAX_ERROR_INFO_RETRIES        (2u)
+
 /*
  * The following parameters are publicly included to retain functionality
  * within the boundary test cases.

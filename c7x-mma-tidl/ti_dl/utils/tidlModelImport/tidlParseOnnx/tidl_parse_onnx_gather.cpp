@@ -68,7 +68,9 @@ using namespace onnx;
 
 template<> int32_t TidlParseOnnx:: parse<OnnxStr("Gather")> ()
 {
-  int32_t status =0, axis, numDim;
+  int32_t status = 0;
+  int32_t axis = 0;
+  int32_t numDim;
   TensorProto indexTensor = onnx::TensorProto::default_instance();
   bool indexTensorFound = false;
   layer.layerType = TIDL_GatherLayer;
@@ -78,8 +80,15 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Gather")> ()
   layer.layerParams.gatherParams.thresholdPadSize = 0;
   layer.layerParams.gatherParams.thresholdPadValue = 0;
 
-  /** If shape inference is not done on model, we assume the tensor is of 4 dimensions by default*/
-  if (md.varTensorsDims.size() != 0)
+  /** If shape inference is not done on model, we assume the tensor is of 4 dimensions by default.
+   *  numDim must reflect the DATA tensor rank for correct axis translation. */
+  if (md.numConstInputs > 0 && md.constTensorIndices[0] == 0)
+  {
+    // data is const: get rank from constTensorsDims
+    numDim = md.constTensorsDims[0].size();
+    numDim = (numDim == 0) ? 4 : numDim;
+  }
+  else if (md.varTensorsDims.size() != 0)
   {
     numDim = md.varTensorsDims[0].size();
     numDim = (numDim == 0)? 4:numDim;
@@ -106,6 +115,12 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Gather")> ()
   layer.layerParams.gatherParams.axis = axis;
   layer.layerParams.gatherParams.isIdxScalar = 0;
   
+  if(md.numConstInputs > 1)
+  {
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Gather layer : Both data and indices as constants is not supported");
+    return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+  }
+
   if(md.numConstInputs > 0)
   {
     int constTensorIdx = md.constTensorIndices[0];

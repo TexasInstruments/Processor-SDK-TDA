@@ -212,9 +212,9 @@ const vector<TidlConstraint> tidlConstraintAttention =
         }
     ),
     TIDL_CSTR(
-        "Not supported as an individual operator",
-        "Not supported as an individual operator",
-        "Not supported as an individual operator",
+        "",
+        "",
+        "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
             if(layer->optimized == 1)

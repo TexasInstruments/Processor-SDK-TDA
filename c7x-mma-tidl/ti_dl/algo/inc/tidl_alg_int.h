@@ -95,6 +95,7 @@
 #include "tidl_forceNegativeTest.h"
 #include "tidl_errors.h"
 #include "tidl_common_utils_infer_import.h"
+#include "tidl_bfloat16.h"
 
 using namespace c7x;
 
@@ -323,10 +324,6 @@ int64_t _TSC_read(void);
 #endif
 
 #define ENABLE_OLD_FLOW (1)
-
-#ifndef __C7100__
-#define ENABLE_BACKWARDS_COMPATIBILITY  (0) //Intended only for OTF flow till all layers migrated
-#endif
 
 #define TIDL_1913_NOT_FIXED (1)
 #define TIDL_2386_NOT_FIXED (1)
@@ -1193,8 +1190,6 @@ typedef struct
   float32_tidl ddrBytesPerCPUCycle;
   void    * preEmptHandle;
   TIDL_preEmptContextObj  preEmptContextInfo;
-  sODLayerInfo_t odLayerInfo[TIDL_OBJ_DET_MAX_HEADS];
-  int32_t numODLayer ;
   int32_t groupId;
   TIDL_controlSetArgs controlArgs;
   void* cudaMemManager;  /**< Pointer to TIDL_CudaMemManager structure (opaque pointer) */
@@ -1534,6 +1529,585 @@ static inline float32_tidl exp_taylor(float32_tidl x)
   return ePwX;
 }
 
+static inline bfloat16_tidl exp_taylor_bf16(bfloat16_tidl x)
+{
+  using namespace floating_point::bf16_c7x;
+
+  bfloat16_tidl twoPwF, ePwX;
+  bfloat16_tidl ln2      = (bfloat16_tidl)0.693147180559945f;
+  bfloat16_tidl oneByLn2 = (bfloat16_tidl)1.44269504090f;
+  bfloat16_tidl oneBy6   = (bfloat16_tidl)0.1666667f;
+  bfloat16_tidl oneBy24  = (bfloat16_tidl)0.0416667f;
+  bfloat16_tidl y        = oneByLn2 * x;
+  int32_t yI            = (int32_t)y;
+  bfloat16_tidl yf       = y - (bfloat16_tidl)yI;
+
+  bfloat16_tidl floatRes = yf * ln2;
+
+  /* Precomputing constant products to avoid cumulative quantization error */
+  bfloat16_tidl temp1 = (bfloat16_tidl)0.240226507f; /* ln2 * ln2 * 0.5 */
+  bfloat16_tidl temp2 = (bfloat16_tidl)0.0555041209f; /* ln2 * ln2 * ln2 * oneBy6 */
+  bfloat16_tidl temp3 = (bfloat16_tidl)0.00961813703f; /* ln2 * ln2 * ln2 * ln2 * oneBy24 */
+
+  twoPwF = (bfloat16_tidl)1.0f + floatRes + ((yf * yf) * temp1);
+  twoPwF = twoPwF + ((yf * yf * yf) * temp2);
+  twoPwF = twoPwF + ((yf * yf * yf * yf) * temp3);
+
+  uint16_t exponent = (uint16_t)(yI + 127);
+  exponent = (exponent << 7);
+  bfloat16_tidl twoPowK(exponent, bfloat16_tidl::from_bits());
+  ePwX = twoPwF * twoPowK;
+
+  if(yI == 128) {
+    ePwX = std::numeric_limits<bfloat16_tidl>::max();
+  }
+  if(yI < -127) {
+    ePwX = (bfloat16_tidl)0.0f;
+  }
+
+  return ePwX;
+}
+
+static inline bfloat16_tidl exp_taylor_sigmoid_bf16(bfloat16_tidl x)
+{
+  using namespace floating_point::bf16_c7x;
+  bfloat16_tidl inVal = (bfloat16_tidl)-1.0 * x;
+  bfloat16_tidl output = exp_taylor_bf16(inVal);
+  output = output + (bfloat16_tidl)1.0;
+  output = __recip(output);
+  return output;
+}
+
+static inline bfloat16_tidl taylor_log_bf16(bfloat16_tidl x){
+
+  using namespace floating_point::bf16_c7x;
+
+  // Handle x <= 0
+  bfloat16_tidl zero   = (bfloat16_tidl)0.0f;
+  bfloat16_tidl outMin = std::numeric_limits<bfloat16_tidl>::lowest();
+  if(x <= zero)
+  {
+    return outMin;
+  }
+
+  // Argument reduction: decompose x = m * 2^e, m in [1.0, 2.0)
+  // Without this, y = (x-1)/(x+1) approaches 1 for large x and the
+  // 4-term atanh series diverges badly (output saturates ~3.25).
+  // After reduction y = (m-1)/(m+1) is in [0, 1/3), where truncation
+  // error of the 4-term series is < 0.5 BF16 ULP.
+  //
+  // BF16 bit layout: [sign(1)] [biased_exp(8)] [mantissa(7)]
+  int32_t biased_exp = (int32_t)((x.x >> 7) & 0xFFU);
+  int32_t e          = biased_exp - 127;
+
+  // Force biased exponent to 127 (true exp = 0) keeping original mantissa:
+  // this produces m in [1.0, 2.0)
+  bfloat16_tidl m(static_cast<uint16_t>((x.x & 0x007FU) | (127U << 7)),
+                  bfloat16_tidl::from_bits());
+
+  // ln(x) = ln(m) + e * ln(2)
+  // ln(m) = 2 * atanh(y),  y = (m - 1) / (m + 1)
+  bfloat16_tidl one = (bfloat16_tidl)1.0f;
+  bfloat16_tidl two = (bfloat16_tidl)2.0f;
+  bfloat16_tidl c3  = (bfloat16_tidl)0.3333333333333f; // 1/3
+  bfloat16_tidl c5  = (bfloat16_tidl)0.2f;             // 1/5
+  bfloat16_tidl c7  = (bfloat16_tidl)0.1428571492433f; // 1/7
+  bfloat16_tidl ln2 = (bfloat16_tidl)0.693147180559945f;
+
+  bfloat16_tidl y  = (m - one) / (m + one);
+  bfloat16_tidl y2 = y * y;
+  bfloat16_tidl atanh_y = y * (one + y2 * (c3 + y2 * (c5 + y2 * c7)));
+
+  bfloat16_tidl res = two * atanh_y + (bfloat16_tidl)e * ln2;
+
+  return res;
+}
+
+static inline bfloat16_tidl taylor_pow_bf16(bfloat16_tidl base, bfloat16_tidl exponent)
+{
+  using namespace floating_point::bf16_c7x;
+
+  bfloat16_tidl zero = (bfloat16_tidl)0.0f;
+
+  // base == 0: return 0
+  if (base == zero)
+  {
+    return zero;
+  }
+
+  // base < 0: mirror std::pow behaviour
+  //   integer exponent → compute pow(|base|, n) and restore sign
+  //   non-integer exponent → result is complex, return BF16 NaN
+  if (base < zero)
+  {
+    int32_t n_int = (int32_t)exponent;
+    if ((bfloat16_tidl)n_int != exponent)
+    {
+      return bfloat16_tidl::nan();
+    }
+    bfloat16_tidl abs_result = exp_taylor_bf16(exponent * taylor_log_bf16(-base));
+    // Odd integer exponent → result is negative
+    if ((n_int & 1) != 0)
+    {
+      return -abs_result;
+    }
+    return abs_result;
+  }
+
+  // base > 0: x^n = exp(n * ln(x))
+  return exp_taylor_bf16(exponent * taylor_log_bf16(base));
+}
+
+static inline bfloat16_tidl sqrt_bf16(bfloat16_tidl x)
+{
+  using namespace floating_point::bf16_c7x;
+
+  bfloat16_tidl zero = (bfloat16_tidl)0.0f;
+  bfloat16_tidl OneP5 = (bfloat16_tidl)1.5f;
+  bfloat16_tidl xhalf    = (bfloat16_tidl)0.5f * x;
+
+  // sqrt of zero or negative → 0
+  if (x <= zero)
+  {
+    return zero;
+  }
+
+  bfloat16_tidl r = __recip_sqrt(x);
+  // Newton-Raphson refinement: r_{n+1} = r_n * (1.5 - xhalf * r_n^2)
+  
+  r = r * (OneP5 - (xhalf * r * r));    // Newton-Raphson Refinement: iteration 1 
+  r = r * (OneP5 - (xhalf * r * r));    // Newton-Raphson Refinement: iteration 2 
+
+  // sqrt(x) = x * rsqrt(x)
+  return x * r;
+}
+
+static inline bfloat16_tidl gelu_bf16(bfloat16_tidl x)
+{
+  /* Exact GELU: GELU(x) = 0.5 * x * (1 + erf(x / sqrt(2)))
+   * erf computed via Abramowitz & Stegun 7.1.26 rational approximation.
+   * Max absolute error in erf: |eps| <= 1.5e-7 for all x >= 0.
+   * Symmetry erf(-x) = -erf(x) handles negative inputs.
+   * All intermediate computation in fp32; result cast back to bf16. */
+
+  float32_tidl in     = (float32_tidl)x;
+  float32_tidl erfArg = in * 0.70710678118f;   /* x / sqrt(2) */
+
+  /* Work on |erfArg|, restore sign at the end via erf(-x) = -erf(x) */
+  float32_tidl sign = (erfArg < 0.0f) ? -1.0f : 1.0f;
+  float32_tidl ax   = (erfArg < 0.0f) ? -erfArg : erfArg;
+
+  /* t = 1 / (1 + p * ax),  p = 0.3275911
+   * One Newton-Raphson step on __recip for ~28-bit accuracy */
+  float32_tidl denom = 1.0f + 0.3275911f * ax;
+  float32_tidl t     = __recip(denom);
+  t = t * (2.0f - denom * t);
+
+  /* Horner-form polynomial: t*(a1 + t*(a2 + t*(a3 + t*(a4 + t*a5))))
+   * a1= 0.254829592, a2=-0.284496736, a3=1.421413741,
+   * a4=-1.453152027, a5= 1.061405429                                  */
+  float32_tidl poly =  1.061405429f;
+  poly = -1.453152027f + t * poly;
+  poly =  1.421413741f + t * poly;
+  poly = -0.284496736f + t * poly;
+  poly =  0.254829592f + t * poly;
+  poly = t * poly;
+
+  /* exp(-ax^2) drives the correction term to 0 for large |x|,
+   * giving implicit saturation erf -> +/-1 without an explicit clamp */
+  float32_tidl expTerm = exp_taylor(-ax * ax);
+
+  /* erf(erfArg) = sign * (1 - poly * exp(-ax^2)) */
+  float32_tidl erfVal = sign * (1.0f - poly * expTerm);
+
+  return bfloat16_tidl(0.5f * in * (1.0f + erfVal));
+}
+
+static inline bfloat16_tidl softplus_bf16(bfloat16_tidl x){
+  using namespace floating_point::bf16_c7x;
+
+  /* 3-term minimax Horner polynomial for softplus(x) = x/2 + ln2 + s*(a1 + s*(a2 + s*a3))
+   * s = x^2.  Coefficients from minimax optimisation on [-3.6, 3.6].
+   * Combined max error 0.027 — half that of the prior 4-term Taylor. */
+  bfloat16_tidl log2baseE   = (bfloat16_tidl) 0.693147180559945f; /* ln2 */
+  bfloat16_tidl oneBy2      = (bfloat16_tidl) 0.5f;
+  bfloat16_tidl c1    = (bfloat16_tidl) 0.12392657f;  /* minimax s   coefficient */
+  bfloat16_tidl c2    = (bfloat16_tidl) (-0.00435581f); /* minimax s²  coefficient */
+  bfloat16_tidl c3    = (bfloat16_tidl) 0.00012791f;  /* minimax s³  coefficient */
+  bfloat16_tidl zero = (bfloat16_tidl) 0.0f;
+  bfloat16_tidl thresh   = (bfloat16_tidl) 3.6f; /* optimal crossover for 3-term minimax */
+
+  bfloat16_tidl absVal = x < (bfloat16_tidl)0.0f ? -x : x;
+  bfloat16_tidl maxXZero = x < (bfloat16_tidl)0.0f ? (bfloat16_tidl)0.0f : x;
+  bfloat16_tidl s = x * x;
+  bfloat16_tidl inner = c2 + s * c3;
+  inner = c1 + s * inner;
+  bfloat16_tidl outVal = x * oneBy2 + log2baseE + s * inner;
+  outVal = absVal <= thresh ? outVal : maxXZero;
+
+  return outVal;
+}
+
+static inline bfloat16_tidl taylor_tan_bf16(bfloat16_tidl x){
+
+  /*
+  this implemention follows tidl-kernels logic of tan for bf16
+  could use taylor series approximation of tan instead 
+  */
+  using namespace floating_point::bf16_c7x;
+
+  // tan(x) = sin(x)/cos(x), using Taylor series
+  // sin(x) = x - x^3/6 + x^5/120 - x^7/5040
+  // cos(x) = 1 - x^2/2 + x^4/24 - x^6/720
+  bfloat16_tidl c_sin1 = (bfloat16_tidl)1.0f;
+  bfloat16_tidl c_sin3 = (bfloat16_tidl)-0.1666667f;  // -1/6
+  bfloat16_tidl c_sin5 = (bfloat16_tidl)0.0083333f;   //  1/120
+  bfloat16_tidl c_cos0 = (bfloat16_tidl)1.0f;
+  bfloat16_tidl c_cos2 = (bfloat16_tidl)-0.5f;        // -1/2
+  bfloat16_tidl c_cos4 = (bfloat16_tidl)0.0416667f;   //  1/24
+
+  bfloat16_tidl x2   = x * x;
+  bfloat16_tidl sinX = x * (c_sin1 + x2 * (c_sin3 + x2 * c_sin5));
+  bfloat16_tidl cosX = c_cos0 + x2 * (c_cos2 + x2 * c_cos4);
+
+  bfloat16_tidl res = sinX / cosX;
+  return res;
+}
+
+static inline bfloat16_tidl taylor_cos_bf16(bfloat16_tidl x){
+
+  using namespace floating_point::bf16_c7x;
+
+  // cos(x) = sin(|x| + pi/2)
+  // Range reduction via Cody-Waite two-part pi then sin polynomial evaluation.
+  //
+  // Algorithm:
+  //   Y  = |x| + pi/2           -- shift cos -> sin domain
+  //   Y  = pi/2 if Y > MAX      -- large-angle guard
+  //   N  = floor(Y / pi)        -- quadrant index
+  //   s  = (N even) ? +1 : -1   -- sign flip per quadrant
+  //   F  = (Y - N*C1) - N*C2    -- Cody-Waite precision range reduction
+  //   G  = F * F
+  //   R  = G*(s1 + G*(s2 + G*(s3 + G*s4)))    -- Horner sin poly correction
+  //   result = (F + F*R) * s    -- sin(F) * sign
+  //   (if |F| < MIN, result = F * s  -- small-angle pass-through)
+
+  bfloat16_tidl MAX    = (bfloat16_tidl)1048576.0f;
+  bfloat16_tidl MIN    = (bfloat16_tidl)2.4414062e-4f;  // threshold for small-angle path
+  bfloat16_tidl InvPI  = (bfloat16_tidl)0.3183099f;    // 1/pi
+  bfloat16_tidl HalfPI = (bfloat16_tidl)1.5707963f;    // pi/2
+  bfloat16_tidl C1     = (bfloat16_tidl)3.140625f;     // Cody-Waite high part of pi
+  bfloat16_tidl C2     = (bfloat16_tidl)9.6765359e-4f; // Cody-Waite low  part of pi
+  bfloat16_tidl s1     = (bfloat16_tidl)-1.6666657e-1f; // -1/3! = -1/6
+  bfloat16_tidl s2     = (bfloat16_tidl)8.3330251e-3f;  //  1/5! = 1/120
+  bfloat16_tidl s3     = (bfloat16_tidl)-1.9807419e-4f; // -1/7! = -1/5040
+  bfloat16_tidl s4     = (bfloat16_tidl)2.6019030e-6f;  //  1/9! = 1/362880
+
+  // |x| -- clear sign bit natively (no function call)
+  bfloat16_tidl absX(static_cast<uint16_t>(x.x & 0x7FFFU), bfloat16_tidl::from_bits());
+
+  // Shift to sin domain
+  bfloat16_tidl Y = absX + HalfPI;
+
+  // Large-angle guard: clamp Y to HalfPI when above representable range
+  if(Y > MAX)
+  {
+    Y = HalfPI;
+  }
+
+  // Quadrant index: N = floor(Y / pi)
+  bfloat16_tidl X = Y * InvPI;
+  int32_t       N = (int32_t)X;               // truncate == floor for positive Y
+  bfloat16_tidl Z = (bfloat16_tidl)N;
+
+  // Sign: even quadrant -> +1, odd quadrant -> -1
+  bfloat16_tidl s = ((N & 1) == 0) ? (bfloat16_tidl)1.0f : (bfloat16_tidl)-1.0f;
+
+  // Cody-Waite two-part range reduction for precision
+  bfloat16_tidl F = (Y - Z * C1) - Z * C2;
+
+  // |F| -- clear sign bit natively
+  bfloat16_tidl R(static_cast<uint16_t>(F.x & 0x7FFFU), bfloat16_tidl::from_bits());
+
+  // Pre-compute small-angle result (F * s) before overwriting R
+  bfloat16_tidl outputRMin = R * s;
+
+  // G = F^2
+  bfloat16_tidl G = F * F;
+
+  // Horner evaluation: R = G * (s1 + G*(s2 + G*(s3 + G*s4)))
+  bfloat16_tidl poly = ((s4 * G + s3) * G + s2) * G + s1;
+  poly = poly * G;
+
+  // sin(F) * sign
+  bfloat16_tidl res = (F + F * poly) * s;
+
+  // Small-angle pass-through: for |F| < MIN, sin(F) ≈ F
+  if(R < MIN)
+  {
+    res = outputRMin;
+  }
+
+  return res;
+}
+
+static inline bfloat16_tidl taylor_sin_bf16(bfloat16_tidl x){
+
+  using namespace floating_point::bf16_c7x;
+
+  // sin(x) via Cody-Waite range reduction and sin polynomial evaluation.
+  //
+  // Algorithm:
+  //   Y  = (|x| > MAX) ? 0 : x   -- large-angle guard (clamp to 0)
+  //   N  = floor(Y / pi)          -- quadrant index
+  //   s  = (N even) ? +1 : -1     -- sign flip per quadrant
+  //   F  = (Y - N*C1) - N*C2      -- Cody-Waite precision range reduction
+  //   G  = F * F
+  //   R  = G*(s1 + G*(s2 + G*(s3 + G*s4)))   -- Horner sin poly correction
+  //   result = (F + F*R) * s
+
+  bfloat16_tidl MAX   = (bfloat16_tidl)1048576.0f;
+  bfloat16_tidl InvPI = (bfloat16_tidl)0.3183099f;    // 1/pi
+  bfloat16_tidl C1    = (bfloat16_tidl)3.140625f;     // Cody-Waite high part of pi
+  bfloat16_tidl C2    = (bfloat16_tidl)9.6765359e-4f; // Cody-Waite low  part of pi
+  bfloat16_tidl s1    = (bfloat16_tidl)-1.6666657e-1f; // -1/3! = -1/6
+  bfloat16_tidl s2    = (bfloat16_tidl)8.3330251e-3f;  //  1/5! = 1/120
+  bfloat16_tidl s3    = (bfloat16_tidl)-1.9807419e-4f; // -1/7! = -1/5040
+  bfloat16_tidl s4    = (bfloat16_tidl)2.6019030e-6f;  //  1/9! = 1/362880
+
+  // |x| -- clear sign bit natively (no function call)
+  bfloat16_tidl absX(static_cast<uint16_t>(x.x & 0x7FFFU), bfloat16_tidl::from_bits());
+
+  // Large-angle guard: clamp to 0 when |x| > MAX so result is 0
+  bfloat16_tidl Y = (absX > MAX) ? (bfloat16_tidl)0.0f : x;
+
+  // Quadrant index: N = floor(Y / pi)
+  bfloat16_tidl X = Y * InvPI;
+  int32_t       N = (int32_t)X;          // truncate == floor for positive Y
+  bfloat16_tidl Z = (bfloat16_tidl)N;
+
+  // Sign: even quadrant -> +1, odd quadrant -> -1
+  bfloat16_tidl s = ((N & 1) == 0) ? (bfloat16_tidl)1.0f : (bfloat16_tidl)-1.0f;
+
+  // Cody-Waite two-part range reduction for precision
+  bfloat16_tidl F = (Y - Z * C1) - Z * C2;
+
+  // G = F^2
+  bfloat16_tidl G = F * F;
+
+  // Horner evaluation: R = G*(s1 + G*(s2 + G*(s3 + G*s4)))
+  bfloat16_tidl R = ((s4 * G + s3) * G + s2) * G + s1;
+  R = R * G;
+
+  // sin(F) * sign
+  return (F + F * R) * s;
+}
+
+static inline bfloat16_tidl taylor_asin_bf16(bfloat16_tidl x){
+  using namespace floating_point::bf16_c7x;
+
+  bfloat16_tidl zero   = (bfloat16_tidl)0.0f;
+  bfloat16_tidl one    = (bfloat16_tidl)1.0f;
+  bfloat16_tidl rsqr2  = (bfloat16_tidl)0.7071067811f;
+  bfloat16_tidl HalfPI = (bfloat16_tidl)1.5707963268f;
+
+  // Domain: |x| > 1 → NaN
+  bfloat16_tidl x_abs = (x < zero) ? -x : x;
+  if (x_abs > one)
+  {
+    return bfloat16_tidl::nan();
+  }
+
+  // 4-term polynomial for asin(t) on [0, 1/√2]:
+  //   asin(t) ≈ t + c2·t³ + c4·t⁵ + c6·t⁷
+  // Truncation error ≤ (1/√2)^9 · 105/3456 ≈ 0.0012 — within 1 BF16 ULP
+  bfloat16_tidl c2 = (bfloat16_tidl)0.1666667f;  // 1/6
+  bfloat16_tidl c4 = (bfloat16_tidl)0.075f;       // 3/40
+  bfloat16_tidl c6 = (bfloat16_tidl)0.04464f;     // 15/336
+
+  // Argument reduction: map (1/√2, 1] → [0, 1/√2) via asin(x) = π/2 - asin(√(1-x²))
+  bfloat16_tidl t;
+  bool large = (x_abs > rsqr2);
+  if (large)
+  {
+    bfloat16_tidl a = one - (x_abs * x_abs);
+    t = sqrt_bf16(a);
+  }
+  else
+  {
+    t = x_abs;
+  }
+
+  // Evaluate polynomial at t
+  bfloat16_tidl t2   = t * t;
+  bfloat16_tidl t3   = t2 * t;
+  bfloat16_tidl t5   = t3 * t2;
+  bfloat16_tidl t7   = t5 * t2;
+  bfloat16_tidl poly = t + (c2 * t3) + (c4 * t5) + (c6 * t7);
+
+  // Reconstruct from reduced branch: asin(x) = π/2 - asin(√(1-x²))
+  bfloat16_tidl res = large ? (HalfPI - poly) : poly;
+
+  // Restore sign: asin(-x) = -asin(x)
+  return (x < zero) ? -res : res;
+}
+
+static inline bfloat16_tidl taylor_acos_bf16(bfloat16_tidl x){
+  using namespace floating_point::bf16_c7x;
+
+  bfloat16_tidl zero   = (bfloat16_tidl)0.0f;
+  bfloat16_tidl one    = (bfloat16_tidl)1.0f;
+  bfloat16_tidl rsqr2  = (bfloat16_tidl)0.7071067811f;
+  bfloat16_tidl HalfPI = (bfloat16_tidl)1.5707963268f;
+
+  // Domain: |x| > 1 → NaN
+  bfloat16_tidl x_abs = (x < zero) ? -x : x;
+  if (x_abs > one)
+  {
+    return bfloat16_tidl::nan();
+  }
+
+  // 4-term polynomial for asin(t) on [0, 1/√2]:
+  //   asin(t) ≈ t + c2·t³ + c4·t⁵ + c6·t⁷
+  bfloat16_tidl c2 = (bfloat16_tidl)0.1666667f;  // 1/6
+  bfloat16_tidl c4 = (bfloat16_tidl)0.075f;       // 3/40
+  bfloat16_tidl c6 = (bfloat16_tidl)0.04464f;     // 15/336
+
+  // Argument reduction: map (1/√2, 1] → [0, 1/√2) via asin(x) = π/2 - asin(√(1-x²))
+  bfloat16_tidl t;
+  bool large = (x_abs > rsqr2);
+  if (large)
+  {
+    bfloat16_tidl a = one - (x_abs * x_abs);
+    t = sqrt_bf16(a);
+  }
+  else
+  {
+    t = x_abs;
+  }
+
+  // Evaluate polynomial at t
+  bfloat16_tidl t2   = t * t;
+  bfloat16_tidl t3   = t2 * t;
+  bfloat16_tidl t5   = t3 * t2;
+  bfloat16_tidl t7   = t5 * t2;
+  //Can reduce multiplication like we did in exp_taylor_bf16 or use Horner's Form
+  bfloat16_tidl poly = t + (c2 * t3) + (c4 * t5) + (c6 * t7);
+
+  // Reconstruct intermediate asin result
+  bfloat16_tidl asin_res = large ? (HalfPI - poly) : poly;
+
+  // Restore sign: asin(-x) = -asin(x)
+  bfloat16_tidl signed_asin = (x < zero) ? -asin_res : asin_res;
+
+  // acos(x) = π/2 - asin(x)
+  return HalfPI - signed_asin;
+}
+
+static inline bfloat16_tidl taylor_atan_bf16(bfloat16_tidl x){
+  using namespace floating_point::bf16_c7x;
+
+  bfloat16_tidl zero     = (bfloat16_tidl)0.0f;
+  bfloat16_tidl one      = (bfloat16_tidl)1.0f;
+  bfloat16_tidl tan_pi8  = (bfloat16_tidl)0.4142136f;  // tan(π/8) = √2 - 1
+  bfloat16_tidl pi_over4 = (bfloat16_tidl)0.7853981f;  // π/4
+  bfloat16_tidl pi_over2 = (bfloat16_tidl)1.5707963f;  // π/2
+
+  // Polynomial coefficients: atan(u) ≈ u + c3·u³ + c5·u⁵ + c7·u⁷  (Maclaurin)
+  bfloat16_tidl c3 = (bfloat16_tidl)(-0.3333333f);  // -1/3
+  bfloat16_tidl c5 = (bfloat16_tidl)( 0.2000000f);  //  1/5
+  bfloat16_tidl c7 = (bfloat16_tidl)(-0.1428571f);  // -1/7
+
+  bfloat16_tidl x_abs = (x < zero) ? -x : x;
+
+  // Reduction 1: map |x| > 1 → 1/|x| ∈ (0, 1)
+  bool swap = (x_abs > one);
+  bfloat16_tidl t = swap ? ((bfloat16_tidl)1.0f / x_abs) : x_abs;
+
+  // Reduction 2: map t ∈ (tan(π/8), 1] → u ∈ (-tan(π/8), 0]
+  //   atan(t) = π/4 + atan((t-1)/(t+1))
+  bool large = (t > tan_pi8);
+  bfloat16_tidl u = large ? ((t - one) / (t + one)) : t;
+
+  // 4-term Maclaurin polynomial on [-tan(π/8), tan(π/8)]
+  bfloat16_tidl u2   = u * u;
+  bfloat16_tidl u3   = u2 * u;
+  bfloat16_tidl u5   = u3 * u2;
+  bfloat16_tidl u7   = u5 * u2;
+  bfloat16_tidl poly = u + (c3 * u3) + (c5 * u5) + (c7 * u7);
+
+  // Reconstruct atan(t) then atan(|x|)
+  bfloat16_tidl atan_t     = large ? (pi_over4 + poly) : poly;
+  bfloat16_tidl atan_x_abs = swap  ? (pi_over2 - atan_t) : atan_t;
+
+  // Restore sign: atan is an odd function
+  return (x < zero) ? -atan_x_abs : atan_x_abs;
+}
+
+static inline bfloat16_tidl taylor_tanh_bf16(bfloat16_tidl x){
+  using namespace floating_point::bf16_c7x;
+
+  bfloat16_tidl inVal, outVal, numer, denom;
+  
+  // tanh(x) = (e^(2x) - 1) / (e^(2x) + 1), multiply by 2 first
+  inVal = x * (bfloat16_tidl)2.0f;
+  
+  //Clamp 2x to [-6, 6] range
+  inVal = (inVal > (bfloat16_tidl)6.0f) ? (bfloat16_tidl)6.0f : inVal;
+  inVal = (inVal < (bfloat16_tidl)-6.0f) ? (bfloat16_tidl)-6.0f : inVal;
+
+  outVal = exp_taylor_bf16(inVal);
+  numer = outVal - (bfloat16_tidl)1.0f;
+  denom = outVal + (bfloat16_tidl)1.0f;
+  outVal = numer / denom;
+
+  return outVal;
+  
+}
+
+static inline bfloat16_tidl taylor_sinh_bf16(bfloat16_tidl x){
+  using namespace floating_point::bf16_c7x;
+
+  // sinh(x) = (e^(x) - e^(-x)) / 2)
+  bfloat16_tidl inVal = x, outVal, numer;
+
+  outVal = exp_taylor_bf16(inVal);  
+  numer = outVal - ((bfloat16_tidl)1.0f / outVal);
+  outVal = numer * (bfloat16_tidl)0.5f;
+
+  return outVal;
+}
+
+static inline bfloat16_tidl taylor_asinh_bf16(bfloat16_tidl x){
+  using namespace floating_point::bf16_c7x;
+
+  // Using |x| to avoid catastrophic cancellation for large negative x.
+  // For x < 0 in BF16: x + sqrt(x^2+1) suffers cancellation because
+  // BF16's 7-bit mantissa rounds sqrt(x^2+1) to |x|, collapsing the sum to 0.
+  // Instead, using odd symmetry: asinh(-x) = -asinh(x).
+  // |x| + sqrt(x^2+1) >= 1 always, growing as 2|x| for large |x| — no cancellation.
+  bfloat16_tidl zero = (bfloat16_tidl)0.0f;
+  bfloat16_tidl one  = (bfloat16_tidl)1.0f;
+  bfloat16_tidl absx = (x < zero) ? -x : x;
+  bfloat16_tidl x2p1 = absx * absx + one;       // |x|^2 + 1  (always >= 1)
+  bfloat16_tidl s    = sqrt_bf16(x2p1);          // sqrt(|x|^2 + 1)
+  bfloat16_tidl res  = taylor_log_bf16(absx + s);// ln(|x| + sqrt(|x|^2+1))
+  return (x < zero) ? -res : res;
+}
+
+static inline bfloat16_tidl taylor_cosh_bf16(bfloat16_tidl x){
+  using namespace floating_point::bf16_c7x;
+
+  // cosh(x) = (e^(x) + e^(-x)) / 2)
+  bfloat16_tidl inVal = x, outVal, numer;
+
+  outVal = exp_taylor_bf16(inVal);  
+  numer = outVal + ((bfloat16_tidl)1.0f / outVal);
+  outVal = numer * (bfloat16_tidl)0.5f;
+
+  return outVal;
+}
+
 static inline float_vec exp_taylor_f16(float_vec x)
 {
   float_vec twoPwF, ePwX = 0.0f;
@@ -1597,6 +2171,38 @@ static inline float32_tidl taylor_erf(float32_tidl x){
 
   float32_tidl res = 1.0f - (c3*x3) + (c5*x5) - (c7*x7) + (c9*x9);
   res = res * twoByPI * x;
+  return res;
+}
+
+static inline bfloat16_tidl taylor_erf_bf16(bfloat16_tidl x){
+  
+  using namespace floating_point::bf16_c7x;
+
+  bfloat16_tidl c3 = (bfloat16_tidl)0.3333333333333f;
+  bfloat16_tidl twoByPI = (bfloat16_tidl)1.1283791670955f;
+  bfloat16_tidl c5 = (bfloat16_tidl)0.1000000f;
+  bfloat16_tidl c7 = (bfloat16_tidl)0.0238095238095f;
+  bfloat16_tidl c9 = (bfloat16_tidl)0.0046296296296f;
+
+  bfloat16_tidl x3 = x * x;
+  bfloat16_tidl x5 = x3 * x3;
+  bfloat16_tidl x7 = x5 * x3;
+  bfloat16_tidl x9 = x7 * x3;
+
+  bfloat16_tidl res = (bfloat16_tidl)1.0f - (c3*x3) + (c5*x5) - (c7*x7) + (c9*x9);
+  res = res * twoByPI * x;
+
+  bfloat16_tidl erf_min = (bfloat16_tidl)-1.0f;
+  bfloat16_tidl erf_max = (bfloat16_tidl)1.0f;
+  if(res < erf_min)
+  {
+    res = erf_min;
+  }
+  if(res > erf_max)
+  {
+    res = erf_max;
+  }
+
   return res;
 }
 
@@ -1681,16 +2287,6 @@ static inline BBox * get_Bbox_pointer(BBox arr[], int32_t offset)
 
 int32_t TIDL_getLayerNum(const sTIDL_Network_t * pTIDLNetStructure, int32_t dataId);
 int32_t TIDL_getDatElementSign(int32_t elementType);
-int32_t TIDL_layerProcess(
-  TIDL_Handle          intAlgHandle,//:TODO: Ideally should not pass handle
-  sTIDL_AlgLayer_t     * algLayer,
-  sTIDL_Layer_t        * TIDLLayer,
-  void                 * inPtrs[],
-  void                 * outPtrs[],
-  sTIDL_sysMemHandle_t * sysMems,
-  int32_t i,
-  TIDL_NetworkCommonParams   *commonParams);
-
 
 int32_t TIDL_FillPaddedCols(
   uint8_t *ptr,

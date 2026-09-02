@@ -204,7 +204,7 @@ static void appMemFreeListItem(app_mem_list_t *mem_map_list)
         obj->cur_alloc--;
     }
 
-    sprintf(name, "%s/%s_%d", fd_path, obj->shm_name, m->buf_id);
+    sprintf(name, "%s/%s_%u", fd_path, obj->shm_name, m->buf_id);
 
     if(fd_path[0] == 0)
     {
@@ -423,24 +423,86 @@ static int32_t appMemInitLocal(app_mem_init_prm_t *prm)
 
         /* Within the same system, the names used for creating the shared memory
          * buffers has to be unique for avoiding memory allocation error. So, create
-         * a unique string per process based on a template string.
+         * a unique string per process.
          */
-        strcpy(obj->shm_name, "vashm_buff_XXXXXX");
-
-        fd = mkstemp(obj->shm_name);
-
-        if (fd < 0)
+        if (fd_path[0] != 0)
         {
-            printf("MEM: Init ... (mkstemp) failed!!!\n");
-            perror("MEM:");
-            status = -1;
+            /* Use mkstemp to atomically create a unique name in fd_path. */
+            char tmp_path[MAX_SHM_BUFF_NAME_LEN];
+            size_t fd_path_len = strlen(fd_path);
+
+            (void)snprintf(tmp_path, sizeof(tmp_path), "%s/vashm_buff_XXXXXX", fd_path);
+
+            fd = mkstemp(tmp_path);
+
+            if (fd < 0)
+            {
+                printf("MEM: Init ... (mkstemp) failed!!!\n");
+                perror("MEM:");
+                status = -1;
+            }
+            else
+            {
+                /* Store only the basename; buffer names are built as fd_path + "/" + shm_name + "_<id>" */
+                strncpy(obj->shm_name, &tmp_path[fd_path_len + 1U], sizeof(obj->shm_name) - 1U);
+                obj->shm_name[sizeof(obj->shm_name) - 1U] = '\0';
+
+                close(fd);
+
+                /* Delete the file created by mkstemp() call. */
+                (void)unlink(tmp_path);
+            }
         }
         else
         {
-            close(fd);
+            /* shm_open is used for buffer allocation. PID is unique among
+             * running processes. Clean up any stale per-buffer objects left
+             * by a previous process with the same PID. Buffer IDs are
+             * sequential so we stop at the first ENOENT.
+             */
+            uint32_t id;
+            char stale[MAX_SHM_BUFF_NAME_LEN];
+            char probe[MAX_SHM_BUFF_NAME_LEN];
 
-            /* Delete the file created by mkstemp() call. */
-            unlink(obj->shm_name);
+            (void)snprintf(obj->shm_name, sizeof(obj->shm_name), "vashm_buff_%d", (int)getpid());
+
+            for (id = 0U; ; id++)
+            {
+                (void)snprintf(stale, sizeof(stale), "/%s_%u", obj->shm_name, id);
+                if (shm_unlink(stale) < 0)
+                {
+                    if (errno == ENOENT)
+                    {
+                        break;
+                    }
+                    printf("MEM: Init ... (shm_unlink stale) failed!!!\n");
+                    perror("MEM:");
+                    status = -1;
+                    break;
+                }
+            }
+
+            /* Probe with the base name (no _<id> suffix, so no collision with
+             * actual buffers) to verify shm_open works before proceeding.
+             */
+            if (status == 0)
+            {
+                (void)snprintf(probe, sizeof(probe), "/%s", obj->shm_name);
+                (void)shm_unlink(probe);
+
+                fd = shm_open(probe, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+                if (fd < 0)
+                {
+                    printf("MEM: Init ... (shm_open probe) failed!!!\n");
+                    perror("MEM:");
+                    status = -1;
+                }
+                else
+                {
+                    close(fd);
+                    (void)shm_unlink(probe);
+                }
+            }
         }
 
         /* Initialize the pthread mutex */
@@ -654,7 +716,7 @@ void *appMemAlloc(uint32_t block, uint32_t size, uint32_t align)
          * Files are created under /dev/shm directory, i.e. file
          * names like /dev/shm/vashm_buff_<randomstring>_<integer>
          */
-        sprintf(name, "%s/%s_%d", fd_path, obj->shm_name, obj->next_free_id);
+        sprintf(name, "%s/%s_%u", fd_path, obj->shm_name, obj->next_free_id);
 
         if(fd_path[0] == 0)
         {

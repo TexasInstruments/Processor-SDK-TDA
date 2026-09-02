@@ -62,7 +62,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 #include <utils/perf_stats/include/app_perf_stats.h>
 
 int main(int argc, char *argv[])

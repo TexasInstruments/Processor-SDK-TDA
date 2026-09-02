@@ -21,7 +21,7 @@ APP_NAME = csirx_unit_testapp_$(BUILD_OS_TYPE)
 # This file is common makefile for building CSIRX unit test app for both TI-RTOS/baremetal
 #
 SRCDIR = . ../src ../src/soc
-INCDIR = . ../src ../testInput
+INCDIR = . ../src ../testInput $(PDK_CSIRX_COMP_PATH)/src $(PDK_CSIRX_COMP_PATH)/soc/V0
 
 
 
@@ -32,7 +32,7 @@ SRCS_COMMON = main_rtos.c
 # Common source files and CFLAGS across all platforms and cores
 PACKAGE_SRCS_COMMON = . ../src ../testInput ../../csirx_ut_component.mk
 SRCS_COMMON += csirx_test_parser.c csirx_test_common.c csirx_utils_mem.c csirx_sensorCfg.c
-SRCS_COMMON += csirx_test_misc.c csirx_test_code.c
+SRCS_COMMON += csirx_test_misc.c csirx_test_code.c csirx_test_coverage.c csirx_test_csl_coverage.c csirx_test_fvid2_coverage.c
 #SRCS_COMMON += utils_mem.c utils_prf.c
 
 CFLAGS_LOCAL_COMMON = $(PDK_CFLAGS) $(CSIRX_CFLAGS) $(FVID2_CFLAGS) $(CFLAGS_OS_DEFINES)

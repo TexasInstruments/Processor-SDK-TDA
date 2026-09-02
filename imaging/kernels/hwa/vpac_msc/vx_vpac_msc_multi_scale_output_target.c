@@ -128,16 +128,15 @@ static void tivxVpacMscMultiScaleErrorCb(Fvid2_Handle handle, uint32_t errEvents
 static void tivxVpacMscMultiScaleWdTimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData);
 
 /* Config register readback callback */
-#if !defined(VPAC3L)
 int32_t tivxVpacMscScaleConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms);
 
 /* Buffer allocation/free functions */
 static vx_status tivxVpacMscScaleAllocReadbackBuffers(tivxVpacMscScaleObj *mscObj);
 static void tivxVpacMscScaleFreeReadbackBuffers(tivxVpacMscScaleObj *mscObj);
+
 static vx_status tivxEnableVpacMscSafetyMechanisms(
     tivxVpacMscScaleObj *mscObj,
     const tivx_obj_desc_user_data_object_t *usr_data_obj);
-#endif
 
 /* Function prototype for link skip function */
 uint32_t tivxVpacMscScaleDoLinkSkip(tivx_obj_desc_image_t *in_img_desc, tivx_obj_desc_image_t *out_img_desc[], uint32_t num_outputs);
@@ -1516,13 +1515,12 @@ static vx_status VX_CALLBACK tivxVpacMscScaleDelete(
                 (void)tivxEventDelete(&msc_obj->wait_for_compl);
             }
 
-#if !defined(VPAC3L)
             /* Free config register readback buffers if allocated */
             if ((msc_obj->readback_mem_ptr_phys != 0u) || (msc_obj->golden_reg_mem_ptr_phys != 0u))
             {
                 tivxVpacMscScaleFreeReadbackBuffers(msc_obj);
             }
-#endif
+
             tivxVpacMscScaleFreeObject(inst_obj, msc_obj);
         }
     }
@@ -1554,9 +1552,7 @@ static vx_status VX_CALLBACK tivxVpacMscScaleProcess(
     uint32_t                div_fact = 0;
     uint32_t                res = 0;
     tivx_obj_desc_t         *out_base_desc = NULL;
-    #if !defined(VPAC3L)
     vx_status               validate_reg_status = (vx_status)VX_SUCCESS;
-    #endif
 
     /* LDRA_JUSTIFY_START
     <metric start>  statement branch <metric end>
@@ -1976,7 +1972,7 @@ static vx_status VX_CALLBACK tivxVpacMscScaleProcess(
             status = (vx_status)VX_ERROR_TIMEOUT;
         }
         /* LDRA_JUSTIFY_END */
-#if !defined(VPAC3L)
+
         /* Call the control command for statusreg/configReg validate */
         {
             fvid2_status = Fvid2_control(msc_obj->handle, VHWA_M2M_IOCTL_MSC_VALIDATE_REG, NULL, NULL);
@@ -1995,7 +1991,6 @@ static vx_status VX_CALLBACK tivxVpacMscScaleProcess(
             }
             /* LDRA_JUSTIFY_END */
         }
-#endif
     }
 
     /* LDRA_JUSTIFY_START
@@ -2045,12 +2040,10 @@ static vx_status VX_CALLBACK tivxVpacMscScaleProcess(
             );
     }
 
-    #if !defined(VPAC3L)
     if(((vx_status)VX_SUCCESS != status) || ((vx_status)VX_SUCCESS != validate_reg_status))
     {
         status = (vx_status)VX_FAILURE;
     }
-    #endif
 
     return status;
 }
@@ -2171,7 +2164,6 @@ static vx_status VX_CALLBACK tivxVpacMscScaleControl(
                 break;
             }
             /* MSC: Add case to control callback for safety mechanism */
-#if !defined(VPAC3L)
             case TIVX_VPAC_MSC_CMD_ENABLE_SAFETY_MECHANISM:
             {
                 status = tivxEnableVpacMscSafetyMechanisms(msc_obj,
@@ -2191,7 +2183,6 @@ static vx_status VX_CALLBACK tivxVpacMscScaleControl(
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-#endif
             default:
             {
                 VX_PRINT(VX_ZONE_ERROR, "Invalid Command Id\n");
@@ -4155,7 +4146,6 @@ static vx_status tivxVpacMscMultiScaleEnableErrorEventsCmd(tivxVpacMscScaleObj *
 /*                    Config Register Readback Functions                     */
 /* ========================================================================== */
 
-#if !defined(VPAC3L)
 static vx_status tivxVpacMscScaleAllocReadbackBuffers(tivxVpacMscScaleObj *mscObj)
 {
     vx_status status = (vx_status)VX_SUCCESS;
@@ -4402,6 +4392,7 @@ static void tivxVpacMscScaleFreeReadbackBuffers(tivxVpacMscScaleObj *mscObj)
         mscObj->config_reg_mem_size = 0u;
     }
 }
+
 /* MSC: Enable safety mechanism function */
 static vx_status tivxEnableVpacMscSafetyMechanisms(
     tivxVpacMscScaleObj *mscObj,
@@ -4684,7 +4675,6 @@ static vx_status tivxEnableVpacMscSafetyMechanisms(
 
     return status;
 }
-#endif
 
 /* ========================================================================== */
 /*                              Driver Callbacks                              */
@@ -4711,7 +4701,6 @@ int32_t tivxVpacMscMultiScaleFrameComplCb(Fvid2_Handle handle, void *appData)
     return FVID2_SOK;
 }
 
-#if !defined(VPAC3L)
 int32_t tivxVpacMscScaleConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms)
 {
     Vhwa_M2mMscConfigRegMemParams *msc_config_reg_prms = (Vhwa_M2mMscConfigRegMemParams *)configRegPrms;
@@ -4822,7 +4811,6 @@ int32_t tivxVpacMscScaleConfigRegMemCompareCb(Fvid2_Handle handle, void *configR
 
     return status;
 }
-#endif
 
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>

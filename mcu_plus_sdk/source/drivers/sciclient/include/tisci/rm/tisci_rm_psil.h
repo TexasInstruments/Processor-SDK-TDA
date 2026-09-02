@@ -283,6 +283,42 @@ struct tisci_msg_rm_psil_write_resp {
     struct tisci_header hdr;
 } __attribute__((__packed__));
 
+/**
+ * \brief Writes the same PSI-L thread configuration register to multiple
+ * threads via the PSI-L configuration proxy.
+ * Thread i is addressed as: thread + (i * stride).
+ *
+ * \param hdr          Standard TISCI header
+ * \param valid_params Reserved for future use; initialize to zero
+ * \param nav_id       SoC device ID of Navigator Subsystem
+ * \param thread       First PSI-L thread ID
+ * \param num_threads  Number of threads to write (>= 1)
+ * \param stride       Thread ID increment per step (1 = consecutive)
+ * \param taddr        Register address (same for all threads)
+ * \param data         Bits to set/clear within mask
+ * \param mask         Bitmask selecting which bits to modify
+ * \param rsvd         Reserved; set to zero
+ */
+struct tisci_msg_rm_psil_multi_ch_write_req {
+    struct tisci_header hdr;
+    uint32_t            valid_params;
+    uint16_t            nav_id;
+    uint16_t            thread;
+    uint16_t            num_threads;
+    uint16_t            stride;
+    uint16_t            taddr;
+    uint32_t            data;
+    uint32_t            mask;
+    uint16_t            rsvd;
+} __attribute__((__packed__));
+
+/**
+ * \brief Response to a multi-channel PSI-L write request
+ */
+struct tisci_msg_rm_psil_multi_ch_write_resp {
+    struct tisci_header hdr;
+} __attribute__((__packed__));
+
 
 #ifdef __cplusplus
 }

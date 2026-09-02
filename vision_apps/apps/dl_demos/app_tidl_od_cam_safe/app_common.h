@@ -73,9 +73,8 @@
 #include <utils/iss/include/app_iss.h>
 #include <TI/tivx_img_proc.h>
 #include <TI/tivx_fileio.h>
-
-#include <edgeai_tiovx_nodes.h>
-#include <edgeai_tiovx_target_kernels.h>
+#include <TI/tivx_img_proc_nodes.h>
+#include <TI/tivx_img_proc_kernels.h>
 
 #include <stdio.h>
 #include <stdint.h>

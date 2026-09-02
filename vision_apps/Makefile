@@ -1,4 +1,3 @@
-
 include tools_path.mak
 
 # Edit below file to change default build options
@@ -12,7 +11,6 @@ endif
 
 BUILD_DEFS += $(SOC_DEF)
 BUILD_DEFS += $(ECU_BUILD_DEF)
-BUILD_DEFS += $(foreach CORE,$(ENABLED_IPC_CORES),$(CORE))
 
 ifeq ($(SOC), am62a)
     BUILD_DEFS += $(TISDK_IMAGE)
@@ -25,10 +23,6 @@ endif
 DIRECTORIES :=
 
 ifeq ($(SOC),am62a)
-    DIRECTORIES += utils/app_init
-    DIRECTORIES += utils/sciserver
-    DIRECTORIES += utils/mpu
-    DIRECTORIES += platform/$(SOC)
     DIRECTORIES += modules
     DIRECTORIES += apps/basic_demos/app_c7x_kernel
     DIRECTORIES += apps/basic_demos/app_fd_exchange
@@ -41,9 +35,6 @@ ifeq ($(SOC),am62a)
         DIRECTORIES += apps/tests/app_vx_conformance_video_io
     endif
     DIRECTORIES += apps/utilities
-
-    DIRECTORIES += kernels/fileio
-    DIRECTORIES += kernels/img_proc
 
     #Note: For QNX use case, include the below directories irrespective of adas of edgeai image
     ifeq ($(BUILD_QNX_MPU),yes)
@@ -85,24 +76,18 @@ else
 
     ifneq ($(SOC),tda54)
         DIRECTORIES += utils
-        DIRECTORIES += kernels
         DIRECTORIES += applibs
     endif
 
     DIRECTORIES += modules
-    DIRECTORIES += platform/$(SOC)
 
     ifeq ($(BUILD_EDGEAI),no)
         ifeq ($(SOC),tda54)
-            DIRECTORIES += kernels/img_proc
-            DIRECTORIES += kernels/fileio
-            DIRECTORIES += utils/app_init
-            DIRECTORIES += utils/app_init_vdk
             DIRECTORIES += utils/grpx
             DIRECTORIES += utils/draw2d
-            DIRECTORIES += utils/dss
             DIRECTORIES += apps/utilities/app_remote_log
             DIRECTORIES += apps/utilities/app_ipc
+            DIRECTORIES += apps/utilities/app_heap_stats
             DIRECTORIES += apps/utilities/app_mem
             DIRECTORIES += apps/tests/app_vx_conformance_tidl
             DIRECTORIES += apps/tests/app_vx_conformance_hwa
@@ -121,56 +106,42 @@ TARGET_COMBOS :=
 
 ifeq ($(BUILD_TARGET_MODE),yes)
     ifeq ($(PROFILE), $(filter $(PROFILE), debug all))
-    ifeq ($(BUILD_ISA_R5F),yes)
-        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):R5F:3:debug:TIARMCGT_LLVM
-    endif
-    ifeq ($(BUILD_ISA_R52P),yes)
-        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):R52P:3:debug:TIARMCGT_LLVM
-    endif
-    ifeq ($(BUILD_ISA_M55),yes)
-        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):M55:3:debug:TIARMCGT_LLVM
-    endif
-    ifeq ($(BUILD_ISA_C6x),yes)
-        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):C66:2:debug:CGT6X
-    endif
-    ifeq ($(BUILD_ISA_C7x),yes)
-        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):$(C7X_TARGET):1:debug:CGT7X
-    endif
-    ifeq ($(BUILD_ISA_MPU),yes)
         ifeq ($(BUILD_LINUX_MPU),yes)
             TARGET_COMBOS += $(TARGET_SOC):LINUX:$(MPU_CPU):1:debug:GCC_LINUX_ARM
         endif
         ifeq ($(BUILD_QNX_MPU),yes)
             TARGET_COMBOS += $(TARGET_SOC):QNX:$(MPU_CPU):1:debug:GCC_QNX_ARM
         endif
+        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):$(C7X_TARGET):1:debug:CGT7X
+        ifeq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
+            TARGET_COMBOS += $(TARGET_SOC):$(RTOS):M55:1:debug:TIARMCGT_LLVM
+            TARGET_COMBOS += $(TARGET_SOC):$(RTOS):R52P:1:debug:TIARMCGT_LLVM
+        else
+            TARGET_COMBOS += $(TARGET_SOC):$(RTOS):R5F:1:debug:TIARMCGT_LLVM
+        endif
+        ifeq ($(TARGET_SOC),J721E)
+            TARGET_COMBOS += $(TARGET_SOC):$(RTOS):C66:1:debug:CGT6X
+        endif
     endif
-  endif
 
-  ifeq ($(PROFILE), $(filter $(PROFILE), release all))
-    ifeq ($(BUILD_ISA_R5F),yes)
-        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):R5F:3:release:TIARMCGT_LLVM
-    endif
-    ifeq ($(BUILD_ISA_R52P),yes)
-        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):R52P:3:release:TIARMCGT_LLVM
-    endif
-    ifeq ($(BUILD_ISA_M55),yes)
-        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):M55:3:release:TIARMCGT_LLVM
-    endif
-    ifeq ($(BUILD_ISA_C6x),yes)
-        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):C66:2:release:CGT6X
-    endif
-    ifeq ($(BUILD_ISA_C7x),yes)
-        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):$(C7X_TARGET):1:release:CGT7X
-    endif
-    ifeq ($(BUILD_ISA_MPU),yes)
+    ifeq ($(PROFILE), $(filter $(PROFILE), release all))
         ifeq ($(BUILD_LINUX_MPU),yes)
             TARGET_COMBOS += $(TARGET_SOC):LINUX:$(MPU_CPU):1:release:GCC_LINUX_ARM
         endif
         ifeq ($(BUILD_QNX_MPU),yes)
             TARGET_COMBOS += $(TARGET_SOC):QNX:$(MPU_CPU):1:release:GCC_QNX_ARM
         endif
+        TARGET_COMBOS += $(TARGET_SOC):$(RTOS):$(C7X_TARGET):1:release:CGT7X
+        ifeq ($(SOC_FAMILY),SOC_FAMILY_TDA5)
+            TARGET_COMBOS += $(TARGET_SOC):$(RTOS):M55:1:release:TIARMCGT_LLVM
+            TARGET_COMBOS += $(TARGET_SOC):$(RTOS):R52P:1:release:TIARMCGT_LLVM
+        else
+            TARGET_COMBOS += $(TARGET_SOC):$(RTOS):R5F:1:release:TIARMCGT_LLVM
+        endif
+        ifeq ($(TARGET_SOC),J721E)
+            TARGET_COMBOS += $(TARGET_SOC):$(RTOS):C66:1:release:CGT6X
+        endif
     endif
-  endif
 endif
 
 ifeq ($(BUILD_EMULATION_MODE),yes)
@@ -254,12 +225,9 @@ include $(CONCERTO_ROOT)/rules.mak
 
 # Project specific rules
 
-.PHONY: all check_ipc_cores
+.PHONY: all
 
 all:
-
-check_ipc_cores:
-	$(call CHECK_IPC_CORES,$(VISION_APPS_PATH),$(ENABLED_IPC_CORES))
 
 doxy_docs:
 	-$(Q)$(MKDIR) docs/user_guide/ $(QUIET) || true
@@ -275,27 +243,3 @@ doxy_design_docs:
 doxy_datasheet_docs:
 	-$(Q)$(MKDIR) docs/datasheet/ $(QUIET) || true
 	$(DOXYGEN) internal_docs/doxy_cfg_datasheet/datasheet_$(SOC).cfg 2> internal_docs/doxy_cfg_datasheet/doxy_warnings.txt
-
-define CHECK_IPC_CORES
-    $(eval core_cfg := $(1)/.build_core.bak)
-    $(eval core_cfg_temp := $(1)/.build_core_temp.bak)
-    @if [ ! -f $(core_cfg) ]; then \
-        touch $(core_cfg); \
-        for core in $(2); do \
-            echo $$core >> $(core_cfg); \
-        done; \
-    else \
-        touch $(core_cfg_temp); \
-        for core in $(2); do \
-            echo $$core >> $(core_cfg_temp); \
-        done; \
-        if ! diff -q $(core_cfg) $(core_cfg_temp) > /dev/null; then \
-            touch $(VISION_APPS_PATH)/platform/$(SOC)/rtos/common/app_init.c; \
-            touch $(VISION_APPS_PATH)/platform/$(SOC)/linux/app_init.c; \
-            touch $(VISION_APPS_PATH)/platform/$(SOC)/qnx/app_init.c; \
-            mv $(core_cfg_temp) $(core_cfg); \
-        else \
-            rm -f $(core_cfg_temp); \
-        fi; \
-    fi
-endef

@@ -88,9 +88,11 @@ static vx_status VX_CALLBACK tivxTIDLValidate(vx_node node,
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     Minimum number of parameters is 7, and this is ensured during node
     creation itself. Users are expected to use TIDL node impl for this kernel.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if (num_params < TIVX_KERNEL_TIDL_NUM_MIN_PARAMETERS)
     {
@@ -123,9 +125,11 @@ static vx_status VX_CALLBACK tivxTIDLValidate(vx_node node,
         
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         Config cannot be NULL/altered outside this purpose as it is being used
         for TIDL node creation and is hence the same object is used during validation
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if ((config_size != sizeof(tivxTIDLJ7Params)))
         {
@@ -321,9 +325,12 @@ vx_kernel tivxAddKernelTIDL(vx_context context,
                                                 );
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
-                <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+                <justification start>
+                Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
                 This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
                 TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_HOST_PRIOR_CHECK_001
+                Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+                This does not affect runtime behavior or safety.
                 <justification end> */
                 if (status != (vx_status)VX_SUCCESS)
                 {
@@ -347,9 +354,12 @@ vx_kernel tivxAddKernelTIDL(vx_context context,
 
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
-                <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+                <justification start>
+                Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
                 This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
                 TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_HOST_PRIOR_CHECK_001
+                Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+                This does not affect runtime behavior or safety.
                 <justification end> */
                 if (status != (vx_status)VX_SUCCESS)
                 {
@@ -373,9 +383,12 @@ vx_kernel tivxAddKernelTIDL(vx_context context,
 
                 /* LDRA_JUSTIFY_START
                 <metric start> statement branch <metric end>
-                <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+                <justification start>
+                Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
                 This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
                 TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_HOST_PRIOR_CHECK_001
+                Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+                This does not affect runtime behavior or safety.
                 <justification end> */
                 if (status != (vx_status)VX_SUCCESS)
                 {
@@ -437,9 +450,12 @@ vx_kernel tivxAddKernelTIDL(vx_context context,
 
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+            <justification start>
+            Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
                 This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
             TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_HOST_PRIOR_CHECK_001
+            Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+            This does not affect runtime behavior or safety.
             <justification end> */
             if( status != (vx_status)VX_SUCCESS)
             {
@@ -506,9 +522,12 @@ vx_status tivxAddKernelTIDLV2(vx_context context)
                                             );
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+            <justification start>
+            Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
             This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
             TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_HOST_PRIOR_CHECK_001
+            Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+            This does not affect runtime behavior or safety.
             <justification end> */
             if (status != (vx_status)VX_SUCCESS)
             {
@@ -531,9 +550,12 @@ vx_status tivxAddKernelTIDLV2(vx_context context)
 
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+        <justification start>
+        Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
         This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
         TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_HOST_PRIOR_CHECK_001
+        Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+        This does not affect runtime behavior or safety.
         <justification end> */
         if (status != (vx_status)VX_SUCCESS)
         {
@@ -554,9 +576,12 @@ vx_status tivxAddKernelTIDLV2(vx_context context)
 
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+        <justification start>
+        Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
         This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
         TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_HOST_PRIOR_CHECK_001
+        Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+        This does not affect runtime behavior or safety.
         <justification end> */
         if (status != (vx_status)VX_SUCCESS)
         {
@@ -614,9 +639,12 @@ vx_status tivxAddKernelTIDLV2(vx_context context)
 
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+        <justification start>
+        Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
         This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
         TIDL_LDRA_TAG : TIDL_LDRA_TAG_TIDL_HOST_PRIOR_CHECK_001
+        Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+        This does not affect runtime behavior or safety.
         <justification end> */
         if( status != (vx_status)VX_SUCCESS)
         {

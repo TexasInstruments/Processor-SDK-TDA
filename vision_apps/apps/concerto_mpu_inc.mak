@@ -9,21 +9,22 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
     IMAGING_IDIRS += $(IMAGING_PATH)/utils/itt_server/include
     IMAGING_IDIRS += $(IMAGING_PATH)/utils/network_api/include
 
-    VISION_APPS_KERNELS_IDIRS =
-    VISION_APPS_KERNELS_IDIRS += $(VISION_APPS_PATH)/kernels
-    VISION_APPS_KERNELS_IDIRS += $(VISION_APPS_PATH)/kernels/img_proc/include
-    VISION_APPS_KERNELS_IDIRS += $(VISION_APPS_PATH)/kernels/fileio/include
+    APP_KERNELS_IDIRS =
+    APP_KERNELS_IDIRS += $(APP_KERNELS_PATH)/kernels
+    APP_KERNELS_IDIRS += $(APP_KERNELS_PATH)/kernels/img_proc/include
+    APP_KERNELS_IDIRS += $(APP_KERNELS_PATH)/kernels/img_proc/host
+    APP_KERNELS_IDIRS += $(APP_KERNELS_PATH)/kernels/fileio/include
 
     VISION_APPS_MODULES_IDIRS =
     VISION_APPS_MODULES_IDIRS += $(VISION_APPS_PATH)/modules/include
 
-    VISION_APPS_SRV_IDIRS =
-    VISION_APPS_SRV_IDIRS += $(VISION_APPS_PATH)/kernels/srv/include
-    VISION_APPS_SRV_IDIRS += $(VISION_APPS_PATH)/kernels/srv/c66
-    VISION_APPS_SRV_IDIRS += $(VISION_APPS_PATH)/kernels/srv/gpu/3dsrv
+    APP_SRV_IDIRS =
+    APP_SRV_IDIRS += $(APP_KERNELS_PATH)/kernels/srv/include
+    APP_SRV_IDIRS += $(APP_KERNELS_PATH)/kernels/srv/target/dsp
+    APP_SRV_IDIRS += $(APP_KERNELS_PATH)/kernels/srv/target/gpu/3dsrv
 
-    VISION_APPS_SAMPLE_IDIRS += $(VISION_APPS_PATH)/kernels/sample/include
-    VISION_APPS_SAMPLE_IDIRS += $(VISION_APPS_PATH)/kernels/sample/host
+    APP_SAMPLE_IDIRS += $(APP_KERNELS_PATH)/kernels/sample/include
+    APP_SAMPLE_IDIRS += $(APP_KERNELS_PATH)/kernels/sample/host
 
     VISION_APPS_APPLIBS_IDIRS =
     VISION_APPS_APPLIBS_IDIRS += $(VISION_APPS_PATH)/applibs
@@ -31,30 +32,14 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
     PTK_IDIRS =
     PTK_IDIRS += $(PTK_PATH)/include
 
-    VISION_APPS_STEREO_KERNELS_IDIRS =
-    VISION_APPS_STEREO_KERNELS_IDIRS += $(VISION_APPS_PATH)/kernels/stereo/include
+    APP_STEREO_KERNELS_IDIRS =
+    APP_STEREO_KERNELS_IDIRS += $(APP_KERNELS_PATH)/kernels/stereo/include
 
-    EDGEAI_IDIRS =
-    EDGEAI_IDIRS += $(EDGEAI_UTILS_PATH)/include
-    EDGEAI_IDIRS += $(EDGEAI_KERNELS_PATH)/include
+    PLATFORM_IDIRS =
+    PLATFORM_IDIRS += $(PLATFORM_PATH)/hlos/include
+    PLATFORM_IDIRS += $(PLATFORM_PATH)
 
-    ifeq ($(TARGET_OS),LINUX)
-        IDIRS       += $(VISION_APPS_PATH)/platform/$(SOC)/linux/mpu1
-        IDIRS       += $(VISION_APPS_PATH)/platform/$(SOC)/linux
-    endif
-    ifeq ($(TARGET_OS),QNX)
-        IDIRS       += $(VISION_APPS_PATH)/platform/$(SOC)/qnx/mpu1
-        IDIRS       += $(VISION_APPS_PATH)/platform/$(SOC)/qnx
-    endif
-
-    IDIRS       += $(VISION_APPS_PATH)/platform/$(SOC)/rtos/common
-    IDIRS       += $(VISION_APPS_PATH)/platform/$(SOC)/rtos
-    IDIRS       += $(VISION_APPS_PATH)/platform/common
-
-    BUILD_PROFILE_EDGEAI_REL = Release
-
-    LDIRS       += $(EDGEAI_UTILS_PATH)/$(TARGET_OS)/lib/$(BUILD_PROFILE_EDGEAI_REL)
-    LDIRS       += $(EDGEAI_KERNELS_PATH)/$(TARGET_OS)/lib/$(BUILD_PROFILE_EDGEAI_REL)
+    IDIRS += $(PLATFORM_IDIRS)
 
     # These rpath-link linker options are to provide directories for
     # secondary *.so file lookup
@@ -69,7 +54,6 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
     endif
 
     CFLAGS+=-Wno-format-truncation
-
 
     ifeq ($(TARGET_OS), QNX)
 
@@ -109,17 +93,20 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
 
     endif # ifeq ($(TARGET_OS), QNX)
 
+    # Initialize the variables empty when building both debug and release binaries together
     TIOVX_LIBS  =
     IMAGING_LIBS =
-    VISION_APPS_SRV_LIBS  =
-    VISION_APPS_SAMPLE_LIBS  =
-    VISION_APPS_OPENGL_UTILS_LIBS =
-    VISION_APPS_KERNELS_LIBS  =
+    APP_SRV_LIBS  =
+    APP_SAMPLE_LIBS  =
+    APP_OPENGL_UTILS_LIBS =
+    APP_KERNELS_LIBS  =
+    APP_KERNELS_UTILS_LIBS =
     VISION_APPS_MODULES_LIBS  =
     TEST_LIBS =
     PTK_LIBS =
-    VISION_APPS_STEREO_LIBS =
+    APP_STEREO_LIBS =
     VISION_APPS_UTILS_LIBS  =
+    HLOS_PLATFORM_LIBS  =
 
     # CTools include paths needed regardless of linking mode
     ifeq ($(CTOOLS_BUILD_ENABLED), yes)
@@ -139,6 +126,8 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
     else   # ifeq ($(LINK_SHARED_OBJ),yes)
 
         LDIRS       += $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+        LDIRS       += $(PLATFORM_PATH)/lib/$(TARGET_SOC)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+        LDIRS       += $(APP_KERNELS_PATH)/lib/$(TARGET_SOC)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
         LDIRS       += $(APP_UTILS_PATH)/lib/$(TARGET_SOC)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
         LDIRS       += $(VIDEO_IO_PATH)/lib/$(TARGET_SOC)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
         LDIRS       += $(TIOVX_PATH)/lib/$(TARGET_SOC)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
@@ -257,21 +246,30 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
         ifneq ($(TARGET_PLATFORM), TDA54)
             VISION_APPS_UTILS_LIBS += app_utils_hwa
         endif
-        VISION_APPS_UTILS_LIBS += app_utils_init
+        HLOS_PLATFORM_LIBS += app_init_hlos_common
+        HLOS_PLATFORM_LIBS += ipc_common
 
-        VISION_APPS_OPENGL_UTILS_LIBS += app_utils_opengl
+        APP_OPENGL_UTILS_LIBS += app_utils_opengl
+        APP_KERNELS_UTILS_LIBS += vx_kernel_utils
 
-        VISION_APPS_SAMPLE_LIBS  += vx_kernels_sample vx_target_kernels_sample_a72
+        APP_SAMPLE_LIBS  += vx_kernels_sample vx_target_kernels_sample_arm
 
-        VISION_APPS_SRV_LIBS  += vx_kernels_srv vx_target_kernels_srv_gpu
-        VISION_APPS_SRV_LIBS  += vx_applib_srv_bowl_lut_gen
-        VISION_APPS_SRV_LIBS  += vx_applib_srv_calibration
-        VISION_APPS_SRV_LIBS  += vx_srv_render_utils
+        APP_SRV_LIBS  += vx_kernels_srv vx_target_kernels_srv_gpu
+        APP_SRV_LIBS  += vx_applib_srv_bowl_lut_gen
+        APP_SRV_LIBS  += vx_applib_srv_calibration
+        APP_SRV_LIBS  += vx_srv_render_utils
+        APP_SRV_LIBS  += vx_srv_render_utils_tools
 
-        VISION_APPS_KERNELS_LIBS += vx_kernels_img_proc
-        VISION_APPS_KERNELS_LIBS += vx_target_kernels_img_proc_a72
-        VISION_APPS_KERNELS_LIBS += vx_kernels_fileio
-        VISION_APPS_KERNELS_LIBS += vx_target_kernels_fileio
+        APP_KERNELS_LIBS += vx_kernels_img_proc
+        APP_KERNELS_LIBS += vx_target_kernels_img_proc_arm
+        APP_KERNELS_LIBS += vx_kernels_fileio
+        APP_KERNELS_LIBS += vx_target_kernels_fileio
+
+        ifneq ($(TARGET_PLATFORM), $(filter $(TARGET_PLATFORM), AM62A))
+            APP_STEREO_LIBS += vx_kernels_common
+            APP_STEREO_LIBS += vx_kernels_stereo
+            APP_STEREO_LIBS += vx_target_kernels_stereo
+        endif
 
         # vx_app_modules not used for AM62A EdgeAI Linux
         ifneq ($(TARGET_PLATFORM),AM62A)
@@ -281,12 +279,6 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
         else ifneq ($(TARGET_OS),LINUX)
             VISION_APPS_MODULES_LIBS += vx_app_modules
         else
-        endif
-
-        ifneq ($(TARGET_PLATFORM), $(filter $(TARGET_PLATFORM), AM62A))
-            VISION_APPS_STEREO_LIBS += vx_kernels_common
-            VISION_APPS_STEREO_LIBS += vx_kernels_stereo
-            VISION_APPS_STEREO_LIBS += vx_target_kernels_stereo
         endif
 
         PTK_LIBS += ptk_base
@@ -312,11 +304,9 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
 
         STATIC_LIBS += $(TIOVX_LIBS)
         STATIC_LIBS += $(VISION_APPS_UTILS_LIBS)
-        ifeq ($(TARGET_OS),LINUX)
-            STATIC_LIBS += app_rtos_linux_mpu1_common
-        endif
+        STATIC_LIBS += $(HLOS_PLATFORM_LIBS)
         ifeq ($(TARGET_OS),QNX)
-            STATIC_LIBS += app_rtos_qnx_mpu1_common app_utils_rtos
+            STATIC_LIBS += app_utils_rtos
         endif
 
         ifeq ($(TARGET_OS),LINUX)

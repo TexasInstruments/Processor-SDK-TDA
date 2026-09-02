@@ -142,34 +142,6 @@ int app_c7x_kernel_main(int argc, char* argv[])
     return status;
 }
 
-static vx_status app_c7x_kernels_load(vx_context context)
-{
-    #ifdef x86_64
-    {
-        /* trick PC emulation mode to register these kernels on C7x */
-        void tivxSetSelfCpuId(vx_enum cpu_id);
-
-        tivxSetSelfCpuId(TIVX_CPU_ID_DSP_C7_1);
-        app_c7x_target_kernel_img_add_register();
-        tivxSetSelfCpuId(TIVX_CPU_ID_DSP1);
-    }
-    #endif
-    return app_c7x_kernel_img_add_register(context);
-}
-
-static vx_status app_c7x_kernels_unload(vx_context context)
-{
-    vx_status status = VX_SUCCESS;
-    #ifdef x86_64
-    status = app_c7x_target_kernel_img_add_unregister();
-    #endif
-    if(status == VX_SUCCESS)
-    {
-        status = app_c7x_kernel_img_add_unregister(context);
-    }
-    return status;
-}
-
 static vx_status app_init(AppObj *obj)
 {
     vx_status status = VX_SUCCESS;
@@ -178,7 +150,7 @@ static vx_status app_init(AppObj *obj)
 
     if(status == VX_SUCCESS)
     {
-        status = app_c7x_kernels_load(obj->context);
+        tivxImgProcLoadKernels(obj->context);
     }
 
     return status;
@@ -187,7 +159,8 @@ static vx_status app_init(AppObj *obj)
 static vx_status app_deinit(AppObj *obj)
 {
     vx_status status = VX_SUCCESS;
-    status = app_c7x_kernels_unload(obj->context);
+
+    tivxImgProcUnLoadKernels(obj->context);
 
     if (status == VX_SUCCESS)
     {
@@ -239,12 +212,10 @@ static vx_status app_create_graph(AppObj *obj)
     }
     if(status == VX_SUCCESS)
     {
-        obj->node = app_c7x_kernel_img_add_kernel_node(
-                                obj->graph,
-                                obj->input_img1,
-                                obj->input_img2,
-                                obj->output_img
-                                );
+        obj->node = tivxAddImgNode(obj->graph,
+                                   obj->input_img1,
+                                   obj->input_img2,
+                                   obj->output_img);
         status = vxGetStatus((vx_reference)obj->node);
     }
 

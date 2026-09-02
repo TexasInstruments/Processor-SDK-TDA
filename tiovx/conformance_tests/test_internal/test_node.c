@@ -338,19 +338,23 @@ TEST(tivxInternalNode, negativeTestNodeCheckAndSendErrorEvent)
     VX_CALL(vxRegisterEvent((vx_reference)node, VX_EVENT_NODE_ERROR, 0, NODE0_COMPLETED_EVENT));
     VX_CALL(vxDisableEvents(((&(node->base))->context)));
     tivx_obj_desc_node_t *node_obj_desc = (tivx_obj_desc_node_t *)node->obj_desc[0];
-    ownNodeCheckAndSendErrorEvent(node_obj_desc, 0, (vx_status)node_obj_desc->exe_status);
+    ownNodeCheckAndSendErrorEvent(node_obj_desc, 0, (vx_status)node_obj_desc->exe_status,
+        (vx_uint16)0, (const tivx_error_info_t *)&node_obj_desc->single_error_info);
 
     VX_CALL(vxEnableEvents(((&(node->base))->context)));
     ASSERT_EQ_VX_STATUS(VX_ERROR_INVALID_PARAMETERS, ownRegisterEvent(((vx_reference)node), TIVX_EVENT_GRAPH_STREAMING_QUEUE, VX_EVENT_NODE_ERROR, 0, NODE0_COMPLETED_EVENT, vx_true_e));
     ownEventQueueEnableEvents(&node->graph->streaming_event_queue, (vx_bool)vx_false_e);
-    ownNodeCheckAndSendErrorEvent(node_obj_desc, 0, (vx_status)node_obj_desc->exe_status);
+    ownNodeCheckAndSendErrorEvent(node_obj_desc, 0, (vx_status)node_obj_desc->exe_status,
+        (vx_uint16)0, (const tivx_error_info_t *)&node_obj_desc->single_error_info);
 
     ASSERT_EQ_VX_STATUS(VX_SUCCESS, ownRegisterEvent(((vx_reference)node), TIVX_EVENT_GRAPH_QUEUE, VX_EVENT_NODE_ERROR, 0, NODE0_COMPLETED_EVENT, vx_true_e));
     ownEventQueueEnableEvents(&node->graph->event_queue, (vx_bool)vx_false_e);
-    ownNodeCheckAndSendErrorEvent(node_obj_desc, 0, (vx_status)node_obj_desc->exe_status);
+    ownNodeCheckAndSendErrorEvent(node_obj_desc, 0, (vx_status)node_obj_desc->exe_status,
+        (vx_uint16)0, (const tivx_error_info_t *)&node_obj_desc->single_error_info);
 
     node_obj_desc->base.host_ref = 0;
-    ownNodeCheckAndSendErrorEvent(node_obj_desc, 0, (vx_status)node_obj_desc->exe_status);
+    ownNodeCheckAndSendErrorEvent(node_obj_desc, 0, (vx_status)node_obj_desc->exe_status,
+        (vx_uint16)0, (const tivx_error_info_t *)&node_obj_desc->single_error_info);
 
     VX_CALL(vxReleaseNode(&node));
     VX_CALL(vxReleaseGraph(&graph));
@@ -871,6 +875,103 @@ TEST(tivxInternalNode, TestBranchownNodeUserKernelExecute)
     VX_CALL(vxReleaseGraph(&graph));
 }
 
+/* CODE COVERAGE:
+ * Testcase to hit NULL check in ownTargetNodeDescNodeExecuteUserKernel() for a replicated user kernel node.
+ */
+TEST(tivxInternalNode, TestBranchownTargetNodeDescNodeExecuteUserKernelReplicated)
+{
+    vx_context context = context_->vx_context_;
+    vx_graph graph = 0;
+    vx_kernel user_kernel = 0;
+    vx_node node = 0;
+    vx_image image = 0;
+    vx_object_array in_arr = 0, out_arr = 0;
+    vx_image in0 = 0, out0 = 0;
+    vx_bool replicate2[2] = { vx_true_e, vx_true_e };
+
+    ASSERT_NO_FAILURE(own_register_kernel(context, &user_kernel));
+
+    ASSERT_VX_OBJECT(graph = vxCreateGraph(context), VX_TYPE_GRAPH);
+    ASSERT_VX_OBJECT(image = vxCreateImage(context, 16, 16, VX_DF_IMAGE_U8), VX_TYPE_IMAGE);
+    ASSERT_VX_OBJECT(in_arr = vxCreateObjectArray(context, (vx_reference)image, 2), VX_TYPE_OBJECT_ARRAY);
+    ASSERT_VX_OBJECT(out_arr = vxCreateObjectArray(context, (vx_reference)image, 2), VX_TYPE_OBJECT_ARRAY);
+    ASSERT_VX_OBJECT(in0 = (vx_image)vxGetObjectArrayItem(in_arr, 0), VX_TYPE_IMAGE);
+    ASSERT_VX_OBJECT(out0 = (vx_image)vxGetObjectArrayItem(out_arr, 0), VX_TYPE_IMAGE);
+
+    ASSERT_VX_OBJECT(node = vxCreateGenericNode(graph, user_kernel), VX_TYPE_NODE);
+    VX_CALL(vxSetParameterByIndex(node, 0, (vx_reference)in0));
+    VX_CALL(vxSetParameterByIndex(node, 1, (vx_reference)out0));
+
+    VX_CALL(vxReplicateNode(graph, node, replicate2, 2));
+
+    VX_CALL(vxVerifyGraph(graph));
+
+    /* Inject invalid obj_desc_error_info ID to enter NULL branch */
+    ASSERT(node->obj_desc_error_info[0] != NULL);
+    node->obj_desc[0]->error_info_obj_desc_id = (vx_uint32)TIVX_OBJ_DESC_INVALID;
+
+    VX_CALL(vxProcessGraph(graph));
+
+    VX_CALL(vxReleaseNode(&node));
+    VX_CALL(vxReleaseImage(&in0));
+    VX_CALL(vxReleaseImage(&out0));
+    VX_CALL(vxReleaseObjectArray(&in_arr));
+    VX_CALL(vxReleaseObjectArray(&out_arr));
+    VX_CALL(vxReleaseImage(&image));
+    VX_CALL(vxRemoveKernel(user_kernel));
+    VX_CALL(vxReleaseGraph(&graph));
+}
+
+/* CODE COVERAGE:
+ * Testcase to hit the NULL checks in ownTargetNodeDescNodeExecuteTargetKernel() (vx_target.c)
+ * and ownTargetCmdDescHandleUserCallback() (vx_target_on_host_cpu.c) for a replicated TARGET
+ * kernel node.
+ */
+TEST(tivxInternalNode, TestBranchownTargetNodeDescNodeExecuteTargetKernelReplicated)
+{
+    vx_context context = context_->vx_context_;
+    vx_graph graph = 0;
+    vx_node node = 0;
+    vx_object_array error_info_val_array = 0;
+    vx_scalar value_exemplar = 0, value_elem = 0;
+    vx_scalar error_info_size = 0;
+    vx_uint64 exemplar_value = 0;
+    vx_uint16 test_size = 4;
+    vx_bool replicate2[2] = { vx_true_e, vx_false_e };
+
+    tivxTestKernelsLoadKernels(context);
+
+    ASSERT_VX_OBJECT(graph             = vxCreateGraph(context), VX_TYPE_GRAPH);
+    ASSERT_VX_OBJECT(value_exemplar    = vxCreateScalar(context, VX_TYPE_UINT64, &exemplar_value), VX_TYPE_SCALAR);
+    ASSERT_VX_OBJECT(error_info_val_array = vxCreateObjectArray(context, (vx_reference)value_exemplar, 2), VX_TYPE_OBJECT_ARRAY);
+    VX_CALL(vxReleaseScalar(&value_exemplar));
+
+    ASSERT_VX_OBJECT(error_info_size  = vxCreateScalar(context, VX_TYPE_UINT16, &test_size), VX_TYPE_SCALAR);
+
+    ASSERT_VX_OBJECT(value_elem = (vx_scalar)vxGetObjectArrayItem(error_info_val_array, 0), VX_TYPE_SCALAR);
+    ASSERT_VX_OBJECT(node = tivxTestErrorInfoNode(graph, value_elem, error_info_size), VX_TYPE_NODE);
+    VX_CALL(vxReleaseScalar(&value_elem));
+
+    VX_CALL(vxSetNodeTarget(node, VX_TARGET_STRING, TIVX_TARGET_CAPTURE1));
+    VX_CALL(vxReplicateNode(graph, node, replicate2, 2));
+
+    VX_CALL(vxVerifyGraph(graph));
+
+    /* Inject invalid obj_desc_error_info ID to enter the NULL branch in both
+     * ownTargetNodeDescNodeExecuteTargetKernel() and ownTargetCmdDescHandleUserCallback() */
+    ASSERT(node->obj_desc_error_info[0] != NULL);
+    node->obj_desc[0]->error_info_obj_desc_id = (vx_uint32)TIVX_OBJ_DESC_INVALID;
+
+    VX_CALL(vxProcessGraph(graph));
+
+    VX_CALL(vxReleaseNode(&node));
+    VX_CALL(vxReleaseObjectArray(&error_info_val_array));
+    VX_CALL(vxReleaseScalar(&error_info_size));
+    VX_CALL(vxReleaseGraph(&graph));
+
+    tivxTestKernelsUnLoadKernels(context);
+}
+
 TESTCASE_TESTS(tivxInternalNode,
     negativeTestSetNodeParameterNumBufByIndex,
     negativeTestNodeGetParameterNumBuf,
@@ -895,5 +996,7 @@ TESTCASE_TESTS(tivxInternalNode,
     negativeTestKernelInit,
     negativeTestKernelDeinit,
     TestBranchownNodeGetNextNode,
-    TestBranchownNodeUserKernelExecute
+    TestBranchownNodeUserKernelExecute,
+    TestBranchownTargetNodeDescNodeExecuteUserKernelReplicated,
+    TestBranchownTargetNodeDescNodeExecuteTargetKernelReplicated
     )

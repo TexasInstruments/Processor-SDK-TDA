@@ -164,7 +164,7 @@ struct TidlParseOnnx
     int32_t getIntAttr(const NodeProto& node, char * name, int32_t * valuePtr, int32_t idx);
     int32_t getStringAttr(const NodeProto& node, char * name, char * valuePtr, int32_t idx);
     int32_t getTensorDim(TensorProto& tensor, int32_t idx);
-    int32_t copyTensor(GraphProto& onnGraph, TensorProto& tensor, void ** ptr, int32_t * size, const string name, int32_t inputRequired);
+    int32_t copyTensor(GraphProto& onnGraph, TensorProto& tensor, sBuffer_t &buf, const string name, int32_t inputRequired);
     bool isTensorDQ(GraphProto& onnGraph, TensorProto& tensor);
     int32_t getNodeIdxFromInput(GraphProto& onnxGraph, const char *bufName);
     int32_t copyFloatConst(GraphProto& onnGraph, int32_t nIdx, int32_t inIdx, sBuffer_t &buf, int32_t inputRequired);

@@ -138,6 +138,28 @@ ifeq ($(TARGET_PLATFORM), PC)
 INCLUDE_PATHS+= -I ../utils/tidlModelImport
 endif
 
+# PERF_MODELLING + MCU_SDK (TDA54): add dmautils sub-dir paths for the priv header include chain
+ifeq ($(TARGET_PLATFORM), PC)
+ifeq ($(ENABLE_PERFORMANCE_MODELLING),1)
+ifeq ($(RTOS_SDK),mcu_sdk)
+INCLUDE_PATHS+= -I $(DMA_UTILS_PATH)/src
+INCLUDE_PATHS+= -I $(DMA_UTILS_PATH)/udma_standalone
+INCLUDE_PATHS+= -I $(DMA_UTILS_PATH)/udma_standalone/include
+INCLUDE_PATHS+= -I $(DMA_UTILS_PATH)/csl
+INCLUDE_PATHS+= -I $(DMA_UTILS_PATH)/csl/udmap/v0
+INCLUDE_PATHS+= -I $(DMA_UTILS_PATH)/include
+endif
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a))
+# MCU Plus SDK CSL headers guard DRU types under SOC_AM62AX; define it so csl_dru.h includes dru/v0/csl_dru.h
+CFLAGS+= -DSOC_AM62AX
+endif
+# dmautils_autoincrement_3d_priv.h uses DMA_UTILS_STANDALONE to select the correct udma.h path
+ifneq ($(filter $(RTOS_SDK), mcu_sdk mcu_plus_sdk),)
+    CFLAGS+= -DDMA_UTILS_STANDALONE
+endif
+endif
+endif
+
 #mv7100 should be in rules.mk
 CFLAGS += $(INCLUDE_PATHS)
 

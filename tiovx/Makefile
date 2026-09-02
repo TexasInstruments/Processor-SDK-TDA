@@ -133,25 +133,25 @@ BUILD_PLATFORM :=
 
 # Project specific rules
 
-.PHONY: all vision_apps_utils doxy_docs doxy_docs_design
-all: vision_apps_utils
+.PHONY: all platform_utils doxy_docs doxy_docs_design
+all: platform_utils
 
 # Note: this has to be moved after "all" in order to ensure expo_utils is processed first
 include $(CONCERTO_ROOT)/rules.mak
 
 # Makefile targets need no leading indent
 ifeq ($(BUILD_EMULATION_MODE),yes)
-vision_apps_utils:
-	BUILD_TARGET_MODE=no $(MAKE) -C $(VISION_APPS_PATH) app_utils_init
+platform_utils:
+	BUILD_TARGET_MODE=no $(MAKE) -C $(PLATFORM_PATH) app_init_pc_common
 ifeq ($(SOC_FAMILY), SOC_FAMILY_TDA5)
-	BUILD_TARGET_MODE=no $(MAKE) -C $(VISION_APPS_PATH) app_utils_init_vdk_stub
+	BUILD_TARGET_MODE=no $(MAKE) -C $(PLATFORM_PATH) app_utils_init_vdk_stub
 endif
-	BUILD_TARGET_MODE=no $(MAKE) -C $(VISION_APPS_PATH) cp_to_lib
+	BUILD_TARGET_MODE=no $(MAKE) -C $(PLATFORM_PATH) cp_to_lib
 	BUILD_TARGET_MODE=no $(MAKE) -C $(APP_UTILS_PATH) app_utils_mem
 	BUILD_TARGET_MODE=no $(MAKE) -C $(APP_UTILS_PATH) app_utils_file_io
 	BUILD_TARGET_MODE=no $(MAKE) -C $(APP_UTILS_PATH) cp_to_lib
 else
-vision_apps_utils:
+platform_utils:
 endif
 
 SOC_LIST = "j721e" "j721s2" "j784s4" "j742s2" "j722s" "am62a" "tda54"

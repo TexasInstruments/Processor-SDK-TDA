@@ -63,6 +63,7 @@
 #ifndef TIDL_RUNTIMES_IMPORT_COMMON_H_
 #define TIDL_RUNTIMES_IMPORT_COMMON_H_
 
+#include <map>
 #include <vector>
 #include <string>
 #include <functional>
@@ -117,6 +118,7 @@ public:
   TIDL_osrtOptions() :
   m_debug_level(0),
   m_num_param_bits(8),
+  m_inference_precision_mode(TIDL_InferencePrecisionModeFixedPoint),
   m_num_tidl_subgraphs(16),
   m_num_tidl_subgraph_max_node(0),
   m_enable_rt_multi_subgraph_support(0),
@@ -162,6 +164,7 @@ public:
 
   int m_debug_level;
   int m_num_param_bits;
+  int m_inference_precision_mode;
   int m_num_tidl_subgraphs;
   int m_num_tidl_subgraph_max_node;
   int m_enable_rt_multi_subgraph_support;
@@ -223,6 +226,13 @@ public:
   std::string m_network_name;
 
   std::vector<std::pair<std::string,std::string>>  m_copy_tensor_quant_spec; /* Pair of tensor names to force same spec on */
+
+  /*
+   * Max values for dynamic (symbolic) dims.
+   * Set via compile option "max_dynamic_dims":
+   * "batch_size=4,seq_len=128"
+   */
+  std::map<std::string, int32_t> m_max_dynamic_dims;
 
   sTIDL_odParameters_t odUserParams;
 

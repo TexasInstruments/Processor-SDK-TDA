@@ -293,7 +293,6 @@ int32_t tivxVpacMscPmdFrameComplCb(Fvid2_Handle handle, void *appData);
 static void tivxVpacMscPmdErrorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData);
 static void tivxVpacMscPmdWdTimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData);
 
-#if !defined(VPAC3L)
 /* Config register readback callback */
 int32_t tivxVpacMscPmdConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms);
 
@@ -304,7 +303,6 @@ static void tivxVpacMscPmdFreeReadbackBuffers(tivxVpacMscPmdObj *mscObj);
 static vx_status tivxEnableVpacMscSafetyMechanisms(
     tivxVpacMscPmdObj *mscObj,
     const tivx_obj_desc_user_data_object_t *usr_data_obj);
-#endif
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -1601,13 +1599,12 @@ static vx_status VX_CALLBACK tivxVpacMscPmdDelete(
                 (void)tivxEventDelete(&msc_obj->wait_for_compl);
             }
 
-#if !defined(VPAC3L)
             /* Free config register readback buffers if allocated */
             if ((msc_obj->readback_mem_ptr_phys != 0u) || (msc_obj->golden_reg_mem_ptr_phys != 0u))
             {
                 tivxVpacMscPmdFreeReadbackBuffers(msc_obj);
             }
-#endif
+
             tivxVpacMscPmdFreeObject(inst_obj, msc_obj);
         }
     }
@@ -1654,9 +1651,7 @@ static vx_status VX_CALLBACK tivxVpacMscPmdProcess(
     Vhwa_M2mMscPsaSign       psa;
     uint32_t                psa_store_idx = 0u;
     tivx_obj_desc_t         *out_pmd_base_desc;
-    #if !defined(VPAC3L)
     vx_status               validate_reg_status = (vx_status)VX_SUCCESS;
-    #endif
 
     /* LDRA_JUSTIFY_START
     <metric start>  statement branch <metric end>
@@ -2047,7 +2042,7 @@ static vx_status VX_CALLBACK tivxVpacMscPmdProcess(
                         status = (vx_status)VX_ERROR_TIMEOUT;
                     }
                     /* LDRA_JUSTIFY_END */
-#if !defined(VPAC3L)
+
                     /* Call the control command for statusreg/configReg validate */
                     {
                         fvid2_status = Fvid2_control(msc_obj->handle, VHWA_M2M_IOCTL_MSC_VALIDATE_REG, NULL, NULL);
@@ -2066,7 +2061,6 @@ static vx_status VX_CALLBACK tivxVpacMscPmdProcess(
                         }
                         /* LDRA_JUSTIFY_END */
                     }
-#endif
                 }
             }
         }
@@ -2115,12 +2109,10 @@ static vx_status VX_CALLBACK tivxVpacMscPmdProcess(
             );
     }
 
-    #if !defined(VPAC3L)
     if(((vx_status)VX_SUCCESS != status) || ((vx_status)VX_SUCCESS != validate_reg_status))
     {
         status = (vx_status)VX_FAILURE;
     }
-    #endif
 
     return (status);
 }
@@ -2232,7 +2224,6 @@ static vx_status VX_CALLBACK tivxVpacMscPmdControl(
                 break;
             }
             /* MSC: Add case to control callback for safety mechanism */
-#if !defined(VPAC3L)
             case TIVX_VPAC_MSC_CMD_ENABLE_SAFETY_MECHANISM:
             {
                 status = tivxEnableVpacMscSafetyMechanisms(msc_obj,
@@ -2252,7 +2243,6 @@ static vx_status VX_CALLBACK tivxVpacMscPmdControl(
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-#endif
             default:
             {
                 VX_PRINT(VX_ZONE_ERROR, "Invalid Command Id\n");
@@ -3824,7 +3814,6 @@ static vx_status tivxVpacMscPmdEnableErrorEventsCmd(tivxVpacMscPmdObj *msc_obj,
 
     return status;
 }
-#if !defined(VPAC3L)
 /* MSC: Enable safety mechanism function */
 static vx_status tivxEnableVpacMscSafetyMechanisms(
     tivxVpacMscPmdObj *mscObj,
@@ -4351,7 +4340,7 @@ static void tivxVpacMscPmdFreeReadbackBuffers(tivxVpacMscPmdObj *mscObj)
         mscObj->config_reg_mem_size = 0u;
     }
 }
-#endif
+
 /* ========================================================================== */
 /*                              Driver Callbacks                              */
 /* ========================================================================== */
@@ -4416,7 +4405,6 @@ static void tivxVpacMscPmdWdTimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerEr
 }
 /* LDRA_JUSTIFY_END */
 
-#if !defined(VPAC3L)
 int32_t tivxVpacMscPmdConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms)
 {
     Vhwa_M2mMscConfigRegMemParams *msc_config_reg_prms = (Vhwa_M2mMscConfigRegMemParams *)configRegPrms;
@@ -4526,7 +4514,6 @@ int32_t tivxVpacMscPmdConfigRegMemCompareCb(Fvid2_Handle handle, void *configReg
 
     return status;
 }
-#endif
 BUILD_ASSERT((sizeof(Vhwa_M2mMscPsaSign) == sizeof(((tivx_vpac_msc_psa_timestamp_data_t *)0)->psa_values))? 1U : 0U);
 
 

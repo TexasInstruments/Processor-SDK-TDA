@@ -20,6 +20,7 @@
 #include <ctime>
 #include "tidlruntime_infer.h"
 #include "tidlruntime_compile.h"
+#include "tidl_bfloat16.h"
 
 namespace py = pybind11;
 
@@ -212,6 +213,7 @@ int getElementSize(int dtype)
     if(dtype == TIDL_SignedChar) return sizeof(int8_t);
     if(dtype == TIDL_UnsignedShort) return sizeof(uint16_t);
     if(dtype == TIDL_SignedShort) return sizeof(int16_t);
+    if(dtype == TIDL_BFloat16) return sizeof(uint16_t);
     if(dtype == TIDL_SinglePrecFloat) return sizeof(float);
     if(dtype == TIDL_Bool) return sizeof(bool);
     if(dtype == TIDLRT_Uint32) return sizeof(uint32_t);
@@ -765,6 +767,10 @@ static py::dict runInferenceSession(TIDLRT_InferenceSession &sess, const py::dic
         if (elementType == TIDL_SinglePrecFloat)
         {
             outputs[name.c_str()] = createPyArray<float>((void *)outDataPtr[i], outShape);
+        }
+        else if (elementType == TIDL_BFloat16)
+        {
+            outputs[name.c_str()] = createPyArray<bfloat16_tidl>((void *)outDataPtr[i], outShape);
         }
         else if (elementType == TIDL_UnsignedChar)
         {

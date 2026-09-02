@@ -23,6 +23,7 @@ tidl_conv2d_base.c  used for depthwise convolution.
 #include "itidl_ti.h"
 #include "tidl_cuda_mem_manager.h"
 
+using namespace floating_point::bf16_mma;
 
 //CUDA KERNELS:
 
@@ -115,6 +116,32 @@ __global__ void TIDL_convSaturateCudaFloat(Tacc *X, Tout *Y, int N, int C, int H
     Y[ nc * (outBatchPitch) + cc * (outChPitch) + hc * (outImPitch) + wc] = outAcc;
   }
 }
+
+template <class Tacc, class Tout>
+__global__ void TIDL_convSaturateCudaBFloat16(
+    Tacc  *X,
+    Tout  *Y,
+    int N, int C, int H, int W,
+    int outBatchPitch, int outChPitch, int outImPitch,
+    float satLow, float satHigh)
+{
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= N * C * H * W) return;
+
+  int k  = i;
+  int nc = k / (C * H * W); k = k % (C * H * W);
+  int cc = k / (H * W);     k = k % (H * W);
+  int hc = k / W;
+  int wc = k % W;
+
+  int idx = nc * outBatchPitch + cc * outChPitch + hc * outImPitch + wc;
+  float val = (float)X[idx];
+  // cuda_bf16Sat signature: (val, actMin, actMax)
+  Tout res = cuda_bf16Sat(val, satLow, satHigh);
+  Y[idx] = res;
+}
+
+
 /**
 ----------------------------------------------------------------------------
 @fn         TIDL_cudaConvKernel
@@ -257,7 +284,7 @@ __global__ void TIDL_cudaConvKernel(
         }
 
         const Tw coefData = pCoeffs[coeffChannelOffset + (i4 * coeffsWidth) + i5];
-        outAcc += (Tacc)(inData * coefData);
+        outAcc += ((Tacc)inData * (Tacc)coefData);
       }
     }
   }
@@ -372,7 +399,7 @@ __global__ void TIDL_cudaConvKernel1x1(
     }
 
     const Tw coefData = pCoeffs[coeffBaseOffset + i0];
-    outAcc += (Tacc)(inData * coefData);
+    outAcc += ((Tacc)inData * (Tacc)coefData);
   }
 
   // Write output
@@ -511,31 +538,31 @@ __global__ void TIDL_cudaConvKernel3x3(
     // Row 0 (filter positions 0,1,2) - preserve accumulation order: row by row, col by col
     {
       const Tin in0 = (isOTFpad && !(validY0 && validX0)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset0 + spatialX0];
-      outAcc += (Tacc)(in0 * c0);
+      outAcc += ((Tacc)in0 * (Tacc)c0);
       const Tin in1 = (isOTFpad && !(validY0 && validX1)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset0 + spatialX1];
-      outAcc += (Tacc)(in1 * c1);
+      outAcc += ((Tacc)in1 * (Tacc)c1);
       const Tin in2 = (isOTFpad && !(validY0 && validX2)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset0 + spatialX2];
-      outAcc += (Tacc)(in2 * c2);
+      outAcc += ((Tacc)in2 * (Tacc)c2);
     }
-    
+
     // Row 1 (filter positions 3,4,5)
     {
       const Tin in3 = (isOTFpad && !(validY1 && validX0)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset1 + spatialX0];
-      outAcc += (Tacc)(in3 * c3);
+      outAcc += ((Tacc)in3 * (Tacc)c3);
       const Tin in4 = (isOTFpad && !(validY1 && validX1)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset1 + spatialX1];
-      outAcc += (Tacc)(in4 * c4);
+      outAcc += ((Tacc)in4 * (Tacc)c4);
       const Tin in5 = (isOTFpad && !(validY1 && validX2)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset1 + spatialX2];
-      outAcc += (Tacc)(in5 * c5);
+      outAcc += ((Tacc)in5 * (Tacc)c5);
     }
-    
+
     // Row 2 (filter positions 6,7,8)
     {
       const Tin in6 = (isOTFpad && !(validY2 && validX0)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset2 + spatialX0];
-      outAcc += (Tacc)(in6 * c6);
+      outAcc += ((Tacc)in6 * (Tacc)c6);
       const Tin in7 = (isOTFpad && !(validY2 && validX1)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset2 + spatialX1];
-      outAcc += (Tacc)(in7 * c7);
+      outAcc += ((Tacc)in7 * (Tacc)c7);
       const Tin in8 = (isOTFpad && !(validY2 && validX2)) ? (Tin)padVal : pInChannel[inChannelOffset + inYOffset2 + spatialX2];
-      outAcc += (Tacc)(in8 * c8);
+      outAcc += ((Tacc)in8 * (Tacc)c8);
     }
   }
 
@@ -596,9 +623,10 @@ void TIDL_cudaSaturationFloat(
 @remarks    None
 ----------------------------------------------------------------------------
 */
+template <class Tacc, class Tout>
 int TIDL_cudaConv2DSaturateFloat(
-                                 float *accPtr,
-                                 float *outPtr,
+                                 Tacc *accPtr,
+                                 Tout *outPtr,
                                  int32_t numBatches,
                                  int32_t numOutChannels,
                                  int32_t height,
@@ -616,8 +644,8 @@ int TIDL_cudaConv2DSaturateFloat(
                                 )
 {
   /*Pointers:*/
-  float     *dpAcc = NULL;
-  float     *dpOut = NULL;
+  Tacc     *dpAcc = NULL;
+  Tout     *dpOut = NULL;
  
   /*Initializations:*/
   float satLow, satHigh;
@@ -626,15 +654,15 @@ int TIDL_cudaConv2DSaturateFloat(
 
 
   /*Translate accPtr to GPU pointer */
-  if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accPtr, (void**)&dpAcc, sizeof(float) * sizeOutstream) != IALG_EOK)
+  if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accPtr, (void**)&dpAcc, sizeof(Tacc) * sizeOutstream) != IALG_EOK)
   {
     printf("Convolve2D: Unable to find accumulator pointer\n");
   }
 
   /*Translate outPtr to GPU pointer */
-  if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), outPtr, (void**)&dpOut, sizeof(float) * sizeOutstream) != IALG_EOK)
+  if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), outPtr, (void**)&dpOut, sizeof(Tout) * sizeOutstream) != IALG_EOK)
   {
-    if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), outPtr, (void**)&dpOut, sizeof(float) * sizeOutstream) != IALG_EOK)
+    if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), outPtr, (void**)&dpOut, sizeof(Tout) * sizeOutstream) != IALG_EOK)
     {
       printf("Convolve2D: Unable to find output pointer\n");
     }
@@ -643,30 +671,38 @@ int TIDL_cudaConv2DSaturateFloat(
   // ---- CUDA Streams Optimization ----------------------------------------
   cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
 
-  TIDL_convFillZeroPoint<float><<<GRID_SIZE(sizeOutstream, THREADS_PER_BLOCK), THREADS_PER_BLOCK, 0, stream>>>(
+  TIDL_convFillZeroPoint<Tout><<<GRID_SIZE(sizeOutstream, THREADS_PER_BLOCK), THREADS_PER_BLOCK, 0, stream>>>(
       dpOut, sizeOutstream, (float)0);
 
   if(pTIDLNet->outData.elementType == TIDL_SinglePrecFloat)
   {
     TIDL_cudaSaturationFloat(pTIDLNet, &satLow, &satHigh);
     TIDL_convSaturateCudaFloat<float, float><<<GRID_SIZE(sizeOutstream, THREADS_PER_BLOCK), THREADS_PER_BLOCK, 0, stream>>>(
-        dpAcc, dpOut,
+        reinterpret_cast<float *>(dpAcc),
+        reinterpret_cast<float *>(dpOut),
         numBatches, numOutChannels, outHeight, outWidth,
         outBatchPitch, outChPitch, outImPitch,
         0, satLow, satHigh);
   }
+  else if(pTIDLNet->outData.elementType == TIDL_BFloat16)
+  {
+    TIDL_cudaSaturationFloat(pTIDLNet, &satLow, &satHigh);
+    TIDL_convSaturateCudaBFloat16<float, bfloat16_tidl><<<GRID_SIZE(sizeOutstream, THREADS_PER_BLOCK), THREADS_PER_BLOCK, 0, stream>>>(
+        reinterpret_cast<float *>(dpAcc),
+        reinterpret_cast<bfloat16_tidl *>(dpOut),
+        numBatches, numOutChannels, outHeight, outWidth,
+        outBatchPitch, outChPitch, outImPitch,
+        satLow, satHigh);
+  }
 
   /* Async D2H – ordered after kernels on same stream */
   checkCudaErr(cudaMemcpyAsync(outPtr, dpOut,
-                                sizeof(float) * (sizeOutstream - outPadOffset),
+                                sizeof(Tout) * (sizeOutstream - outPadOffset),
                                 cudaMemcpyDeviceToHost, stream));
   checkCudaErr(cudaStreamSynchronize(stream));
 
-
   return 0;
 }
-
-
 
 /**
 ----------------------------------------------------------------------------
@@ -1105,9 +1141,18 @@ template int TIDL_cudaConvolve2d<signed char, short, long, long>(signed char*, s
 template int TIDL_cudaConvolve2d<unsigned short, short, long, long>(unsigned short*, short*, long*, long*, long*, long*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 template int TIDL_cudaConvolve2d<short, short, long, long>(short*, short*, long*, long*, long*, long*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 template int TIDL_cudaConvolve2d<unsigned char, short, long, long>(unsigned char*, short*, long*, long*, long*, long*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaConvolve2d<bfloat16_tidl, bfloat16_tidl, float, float>(bfloat16_tidl*, bfloat16_tidl*, float*, float*, float*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaConvolve2d<unsigned short, bfloat16_tidl, float, float>(unsigned short*, bfloat16_tidl*, float*, float*, float*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaConvolve2d<short, bfloat16_tidl, float, float>(short*, bfloat16_tidl*, float*, float*, float*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaConvolve2d<unsigned char, bfloat16_tidl, float, float>(unsigned char*, bfloat16_tidl*, float*, float*, float*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaConvolve2d<signed char, bfloat16_tidl, float, float>(signed char*, bfloat16_tidl*, float*, float*, float*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 
 
 template int TIDL_cudaSaturateFixedPoint<float, float>(float*, float*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int,int,  int, int, int, int, sTIDL_Layer_t*);
+template int TIDL_cudaSaturateFixedPoint<float, short>(float*, short*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int,int,  int, int, int, int, sTIDL_Layer_t*);
+template int TIDL_cudaSaturateFixedPoint<float, unsigned short>(float*, unsigned short*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int,int,  int, int, int, int, sTIDL_Layer_t*);
+template int TIDL_cudaSaturateFixedPoint<float, signed char>(float*, signed char*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int,int,  int, int, int, int, sTIDL_Layer_t*);
+template int TIDL_cudaSaturateFixedPoint<float, unsigned char>(float*, unsigned char*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int,int,  int, int, int, int, sTIDL_Layer_t*);
 template int TIDL_cudaSaturateFixedPoint<int, unsigned short>(int*, unsigned short*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
 template int TIDL_cudaSaturateFixedPoint<long, unsigned short>(long*, unsigned short*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
 template int TIDL_cudaSaturateFixedPoint<long, signed char>(long*, signed char*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
@@ -1116,3 +1161,7 @@ template int TIDL_cudaSaturateFixedPoint<long, short>(long*, short*, int, int, i
 template int TIDL_cudaSaturateFixedPoint<int, short>(int*, short*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
 template int TIDL_cudaSaturateFixedPoint<int, signed char>(int*, signed char*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
 template int TIDL_cudaSaturateFixedPoint<long, unsigned char>(long*, unsigned char*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
+template int TIDL_cudaSaturateFixedPoint<float, bfloat16_tidl>(float*, bfloat16_tidl*, int, int, int, int, int, int, int, int, int, unsigned char*, unsigned char*, int, int, int, int, int, int, int, int, sTIDL_Layer_t*);
+
+template int TIDL_cudaConv2DSaturateFloat<float, float>(float*, float*, int, int, int, int, int, int, int, int, int, float , int, int, int, sTIDL_Layer_t *);
+template int TIDL_cudaConv2DSaturateFloat<float, bfloat16_tidl>(float *, bfloat16_tidl *, int, int, int, int, int, int, int, int, int, float , int, int, int, sTIDL_Layer_t *);

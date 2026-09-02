@@ -139,6 +139,9 @@ static tivx_shm_obj_count_t g_tivx_obj_desc_shm_table[] = {
     },
     {
         0, 0, "TIVX_OBJ_DESC_SUPER_NODE", (vx_enum)TIVX_OBJ_DESC_SUPER_NODE, (vx_bool)vx_false_e
+    },
+    {
+        0, 0, "TIVX_OBJ_DESC_NODE_ERROR_INFO", (vx_enum)TIVX_OBJ_DESC_NODE_ERROR_INFO, (vx_bool)vx_false_e
     }
 };
 
@@ -674,6 +677,9 @@ void ownLogResourceInit(void)
        items allowed within a container object. Attempting to create any additional replicated
        nodes beyond the size of its respective container would be unsuccessful. */
     BUILD_ASSERT(((TIVX_NODE_MAX_REPLICATE <= (TIVX_OBJECT_ARRAY_MAX_ITEMS > TIVX_PYRAMID_MAX_LEVEL_OBJECTS ? TIVX_OBJECT_ARRAY_MAX_ITEMS : TIVX_PYRAMID_MAX_LEVEL_OBJECTS) ? 1 : 0)));
+
+    /* Error Info Maximum retries must be non-negative */
+    BUILD_ASSERT((TIVX_MAX_ERROR_INFO_RETRIES >= 0));
 
     /* Defined structure size should match calculated size */
     BUILD_ASSERT(((TIVX_RESOURCE_STATS_TABLE_SIZE == dimof(g_tivx_resource_stats_table) ? 1 : 0)));

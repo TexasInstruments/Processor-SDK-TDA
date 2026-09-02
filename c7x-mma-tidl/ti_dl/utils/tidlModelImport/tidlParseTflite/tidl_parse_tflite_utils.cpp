@@ -116,6 +116,7 @@ int32_t TidlParseTflite::copyInputConstTensor(const TfLiteRegistration* registra
 
   if(input->type == kTfLiteFloat32)
   {
+    buf.dataType = TIDL_SinglePrecFloat;
     buf.bufSize = input->bytes / sizeof(float);
     buf.ptr = (float *)my_malloc(buf.bufSize*sizeof(float));
     memcpy(buf.ptr, ptr, buf.bufSize*sizeof(float));
@@ -125,6 +126,7 @@ int32_t TidlParseTflite::copyInputConstTensor(const TfLiteRegistration* registra
   }
   else if (input->type == kTfLiteInt32)
   {
+    buf.dataType = TIDL_SignedWord;
     buf.bufSize = input->bytes / sizeof(int);
     buf.ptr = (float *)my_malloc(buf.bufSize*sizeof(float));
     memcpy(buf.ptr, ptr, buf.bufSize*sizeof(int));
@@ -137,8 +139,10 @@ int32_t TidlParseTflite::copyInputConstTensor(const TfLiteRegistration* registra
     {
       scaleBuf.bufSize = scale->size;
       scaleBuf.ptr = (float *)my_malloc(scaleBuf.bufSize*sizeof(float));
+      scaleBuf.dataType = TIDL_SinglePrecFloat;
       zpBuf.bufSize = scaleBuf.bufSize;
       zpBuf.ptr = (int *)my_malloc(zpBuf.bufSize * sizeof(int));
+      zpBuf.dataType = TIDL_SignedWord;
 
       float * qscale        = (float *)scaleBuf.ptr;
       int32_t * qzero_point = (int32_t*)zpBuf.ptr;
@@ -169,6 +173,7 @@ int32_t TidlParseTflite::copyInputConstTensor(const TfLiteRegistration* registra
       if(gParams.quantizationStyle != TIDL_QuantStyleAsymNP2_TFL)
       {
         int* dst = (int*)buf.ptr;
+        buf.dataType = TIDL_SignedWord;
         uint8_t * src = (uint8_t *)ptr;
         for (int i = 0; i < buf.bufSize; i++)
         {
@@ -178,6 +183,7 @@ int32_t TidlParseTflite::copyInputConstTensor(const TfLiteRegistration* registra
       else
       {
         uint8_t * dst = (uint8_t *)buf.ptr;
+        buf.dataType = TIDL_UnsignedChar;
         uint8_t * src = (uint8_t *)ptr;
         for (int i = 0; i < buf.bufSize; i++)
         {
@@ -190,6 +196,7 @@ int32_t TidlParseTflite::copyInputConstTensor(const TfLiteRegistration* registra
       if(gParams.quantizationStyle != TIDL_QuantStyleAsymNP2_TFL)
       {
         int* dst = (int*)buf.ptr;
+        buf.dataType = TIDL_SignedWord;
         int8_t * src = (int8_t *)ptr;
         for (int i = 0; i < buf.bufSize; i++)
         {
@@ -199,6 +206,7 @@ int32_t TidlParseTflite::copyInputConstTensor(const TfLiteRegistration* registra
       else
       {
         int8_t * dst = (int8_t *)buf.ptr;
+        buf.dataType = TIDL_SignedChar;
         int8_t * src = (int8_t *)ptr;
         for (int i = 0; i < buf.bufSize; i++)
         {
@@ -221,8 +229,10 @@ int32_t TidlParseTflite::copyInputConstTensor(const TfLiteRegistration* registra
       }
       scaleBuf.bufSize = scale->size;
       scaleBuf.ptr = (float *)my_malloc(scaleBuf.bufSize*sizeof(float));
+      scaleBuf.dataType = TIDL_SinglePrecFloat;
       zpBuf.bufSize = zero_point->size;
       zpBuf.ptr = (int *)my_malloc(zpBuf.bufSize*sizeof(int));
+      zpBuf.dataType = TIDL_SignedWord;
 
       float * qscale        = (float *)scaleBuf.ptr;
       int32_t * qzero_point = (int32_t*)zpBuf.ptr;

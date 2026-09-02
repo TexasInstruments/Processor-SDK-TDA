@@ -78,7 +78,7 @@ using namespace std;
 #define TIDL_SW_LUT_TABLE_SIZE_16B (65536U)
 #define TIDL_SW_LUT_TABLE_SIZE_INTERPOL_16B (256U)
 
-#if defined(SOC_J784S4) || defined(SOC_J721E) || defined(SOC_J721S2)
+#if defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J721E) || defined(SOC_J721S2)
 #define TIDL_LUT_DEVICEID 0
 #elif defined(SOC_AM62A)
 #define TIDL_LUT_DEVICEID 1
@@ -383,7 +383,7 @@ int32_t TIDL_getFinalnonLinearActMethod(sTIDL_NonLinearAct_LUT_importActParams_t
           if ((inDataType == (int32_t)TIDL_UnsignedChar || inDataType == (int32_t)TIDL_SignedChar) &&
           (outDataType == (int32_t)TIDL_UnsignedChar || outDataType == (int32_t)TIDL_SignedChar))
           {
-            #if defined(SOC_J784S4) || defined(SOC_J721E) || defined(SOC_J721S2)
+            #if defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J721E) || defined(SOC_J721S2)
             nonLinearActMethod = TIDL_HW_LUT_8B;
             #elif defined(SOC_J722S)
             nonLinearActMethod = TIDL_HW_ILUT_8B;
@@ -396,7 +396,7 @@ int32_t TIDL_getFinalnonLinearActMethod(sTIDL_NonLinearAct_LUT_importActParams_t
           else if ((inDataType == (int32_t)TIDL_UnsignedShort || inDataType == (int32_t)TIDL_SignedShort) &&
               (outDataType == (int32_t)TIDL_UnsignedShort || outDataType == (int32_t)TIDL_SignedShort))
           {
-            #if defined(SOC_J784S4) || defined(SOC_J721E) || defined(SOC_J721S2)
+            #if defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J721E) || defined(SOC_J721S2)
             nonLinearActMethod = TIDL_HW_INTERPOLATED_LUT_16B;
             #else
             nonLinearActMethod = -1;

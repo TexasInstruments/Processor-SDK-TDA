@@ -1,6 +1,6 @@
 /*
 *
-* Copyright (c) 2017-2025 Texas Instruments Incorporated
+* Copyright (c) 2017-2026 Texas Instruments Incorporated
 *
 * All rights reserved not granted herein.
 *
@@ -390,4 +390,65 @@ VX_API_ENTRY vx_bool tivxIsTargetKernelInstanceReplicated(tivx_target_kernel_ins
     }
 
     return retVal;
+}
+
+/* NOTE: May need a user kernel counterpart if it becomes necessary to error info on those */
+VX_API_ENTRY vx_status VX_API_CALL tivxSetTargetKernelInstanceErrorInfo(
+            tivx_target_kernel_instance target_kernel_instance,
+            const void *error_info, vx_uint16 error_info_size)
+{
+    vx_status status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
+
+    if ((NULL != target_kernel_instance) && (NULL != error_info))
+    {
+        if ((error_info_size <= TIVX_MAX_ERROR_INFO_SIZE) && (error_info_size > 0))
+        {
+            volatile tivx_error_info_t *dst_error_info = NULL;
+
+            if ((vx_bool)vx_true_e == target_kernel_instance->is_kernel_instance_replicated)
+            {
+                tivx_obj_desc_node_error_info_t *error_info_obj_desc =
+                    (tivx_obj_desc_node_error_info_t *)ownObjDescGet((uint16_t)
+                        target_kernel_instance->node_obj_desc->error_info_obj_desc_id);
+
+                if (NULL != error_info_obj_desc)
+                {
+                    dst_error_info = &error_info_obj_desc->replicated_node_error_info[target_kernel_instance->replicated_node_idx];
+                }
+            }
+            else
+            {
+                dst_error_info = &target_kernel_instance->node_obj_desc->single_error_info;
+            }
+
+            if (NULL != dst_error_info)
+            {
+                uint32_t i;
+
+                /* Retry loop:
+                 *  - Prevents error_info/error_info_size from being overwritten
+                 *    with new error_info if the host hasn't read and cleared them yet.
+                 */
+                for (i = 0; (i < TIVX_MAX_ERROR_INFO_RETRIES) && ((uint16_t)0 != dst_error_info->error_info_size); i++)
+                {
+                    ownErrorInfoRetryWait(i, "Error_info");
+                }
+
+                tivx_obj_desc_memcpy(dst_error_info->error_info,
+                    error_info, error_info_size);
+                dst_error_info->error_info_size = error_info_size;
+
+                status = (vx_status)VX_SUCCESS;
+            }
+        }
+        else
+        {
+            VX_PRINT(VX_ZONE_ERROR, "%s less than error_info_size or error_info_size is 0! May need to increase the value of %s in include/VX/vx_khr_pipelining.h\n", "TIVX_MAX_ERROR_INFO_SIZE");
+        }
+    }
+    else
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Invalid Params: target_kernel_instance is NULL or error_info is NULL\n");
+    }
+    return status;
 }

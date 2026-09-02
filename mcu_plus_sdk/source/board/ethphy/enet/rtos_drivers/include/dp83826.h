@@ -73,6 +73,57 @@ extern "C" {
 /* ========================================================================== */
 
 /*!
+ * \brief LED modes (sources).
+ */
+typedef enum Dp83826_LedMode_e
+{
+    /*! Link established */
+    DP83826_LED_LINK_OK          = 0x0U,
+
+    /*! Receive or transmit activity */
+    DP83826_LED_RXTXACT          = 0x1U,
+
+    /*! Transmit activity */
+    DP83826_LED_TXACT            = 0x2U,
+
+    /*! Receive activity */
+    DP83826_LED_RXACT            = 0x3U,
+
+    /*! Collision detected */
+    DP83826_LED_COLLISION        = 0x4U,
+
+    /*! Speed, High for 100BASE-TX */
+    DP83826_LED_SPEED_100BTX     = 0x5U,
+
+    /*! Speed, High for 10BASE-T */
+    DP83826_LED_SPEED_10BTX      = 0x6U,
+
+    /*! Full-Duplex */
+    DP83826_LED_FULL_DUPLEX      = 0x7U,
+
+    /*! LINK OK / BLINK on TX/RX Activity */
+    DP83826_LED_BLINK_ACT        = 0x8U,
+
+    /*! Active Stretch Signal */
+    DP83826_LED_STRETCH_ACT      = 0x9U,
+
+    /*! MII LINK (100BT+FD) */
+    DP83826_LED_100BTFD           = 0xAU,
+
+    /*! LPI Mode (Energy Efficient Ethernet) */
+    DP83826_LED_LPI_MODE         = 0xBU,
+
+    /*! TX/RX MII Error */
+    DP83826_LED_RXTXERR          = 0xCU,
+
+    /*! Link Lost (remains on until register 0x0001 is read) */
+    DP83826_LED_LINK_LOSS        = 0xDU,
+
+    /*! Blink for PRBS error (remains ON for single error, remains until counter is cleared) */
+    DP83826_LED_PRBS_ERROR       = 0xEU,
+} Dp83826_LedMode;
+
+/*!
  * \brief dp83826 PHY configuration parameters.
  */
 typedef struct Dp83826_Cfg_s

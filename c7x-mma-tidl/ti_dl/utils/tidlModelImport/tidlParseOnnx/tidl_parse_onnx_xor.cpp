@@ -101,7 +101,7 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Xor")> ()
 
     if(status == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
     {
-      TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Cannot read initializer tensor : Only float, int32 and int64 tensor is supported");
+      TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Cannot read initializer tensor : Only bool, float, int32 and int64 tensor is supported");
       return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
     }
   }

@@ -33,14 +33,19 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-
+#if defined(SOC_AM62A) || defined(SOC_J722S) || defined(SOC_J784S4)   || defined(SOC_J742S2)
+#include <c6x_migration.h>   /* _mfence() → __memory_fence(__MFENCE_ALL_COLORS) */
+#endif
 
 /** \brief Get C++ symbols */
 #if defined(SOC_J784S4)   || defined(SOC_J742S2)
   extern void TIDL_c7xCleaninvalidateL1DCache(void);
   extern void TIDL_c7xCleaninvalidateL2Cache(void);
 #endif
-
+#if defined(SOC_AM62A) || defined(SOC_J722S)
+  extern void TIDL_c7xCleaninvalidateL1DCache(void);
+#endif
+ 
 
 /**
  * \brief J7AHP requires user app to explicitly invoke cache ops
@@ -50,8 +55,14 @@
 extern "C" void TVM_cacheWbInv(void)
 {
 #if defined(SOC_J784S4)   || defined(SOC_J742S2)
+  _mfence();
   TIDL_c7xCleaninvalidateL1DCache();
   TIDL_c7xCleaninvalidateL2Cache();
+#endif
+
+#if defined(SOC_AM62A) || defined(SOC_J722S)
+  _mfence();
+  TIDL_c7xCleaninvalidateL1DCache();
 #endif
 }
 

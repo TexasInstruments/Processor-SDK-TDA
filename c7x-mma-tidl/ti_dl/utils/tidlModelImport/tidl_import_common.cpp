@@ -112,6 +112,7 @@ using ::google::protobuf::io::CodedOutputStream;
 #include "tidl_import_lut.h"
 #include "tidl_common_utils_infer_import.h"
 #include "tidl_shapeInference.h"
+#include "tidl_bfloat16.h"
 
 #define __MODULE__ "[PARSER]"
 
@@ -145,7 +146,7 @@ extern uint8_t tidl_OdDirInputNames[TIDL_MAX_TF_SSD_LAYERS][TIDL_MAX_ALG_OUT_BUF
 extern uint8_t tidl_OdOutputNames[TIDL_MAX_TF_SSD_LAYERS][TIDL_STRING_SIZE];
 extern std::string tidl_OdFramework;
 extern uint32_t tidl_reorderedParamsOffset;
-const char * TIDL_LayerString[] =
+static const char * TIDL_LayerString[] =
 {
 "TIDL_DataLayer",
 "TIDL_ConvolutionLayer",
@@ -177,8 +178,8 @@ const char * TIDL_LayerString[] =
 "TIDL_ColorConversionLayer",
 "TIDL_OdOutputReformatLayer",
 "TIDL_DataConvertLayer",
-"TIDL_CustomLayer          ",
-"TIDL_BatchReshapeLayer    ",
+"TIDL_CustomLayer",
+"TIDL_BatchReshapeLayer",
 "TIDL_ReduceLayer",
 "TIDL_ScatterElementsLayer",
 "TIDL_SqueezeLayer" ,
@@ -209,7 +210,7 @@ const char * TIDL_LayerString[] =
 "TIDL_UnsupportedLayer" ,
 "TIDL_PriorBoxLayer" ,
 "TIDL_PermuteLayer" ,
-"TIDL_CLipLayer" ,
+"TIDL_ClipLayer" ,
 "TIDL_MinimumLayer" ,
 "TIDL_LeakyReluLayer",
 "TIDL_IdentityLayer",
@@ -255,8 +256,15 @@ const char * TIDL_LayerString[] =
 "TIDL_RoundLayer",
 "TIDL_SignLayer",
 "TIDL_GroupNormLayer",
-"TIDL_AttentionLayer",
+"TIDL_CastLikeLayer",
+"TIDL_SkipSimplifiedLayerNormLayer",
 };
+
+const char* TIDL_GetLayerString(int32_t layerType)
+{
+    static const int32_t N = (int32_t)(sizeof(TIDL_LayerString)/sizeof(TIDL_LayerString[0]));
+    return (layerType >= 0 && layerType < N) ? TIDL_LayerString[layerType] : "TIDL_UnknownLayer";
+}
 
 std::vector<int32_t> tidl_getInLayers(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex, int32_t dataId);
 
@@ -774,7 +782,7 @@ void TIDL_asymAllocScalesPointers(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure, uin
   int32_t numOutputChannels = 0;
   for (layerIdx = 0; layerIdx < numLayers; layerIdx++)
   {
-    if(TIDL_doesLayerSupportAsymTensors(&pOrgTIDLNetStructure->TIDLPCLayers[layerIdx]))
+    if(TIDL_doesLayerSupportAsymTensors(&pOrgTIDLNetStructure->TIDLPCLayers[layerIdx], pOrgTIDLNetStructure))
     {
       if(TIDL_QuantStyleAsymNP2 == gParams.quantizationStyle && (pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_ConcatLayer || 
         (pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_EltWiseLayer && 
@@ -789,10 +797,33 @@ void TIDL_asymAllocScalesPointers(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure, uin
         pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedScales.ptr = (uint8_t *)my_calloc( numInputs,  ((pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].weightsElementSizeInBits + 7) / 8));
         pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedShifts.ptr = (uint8_t *)my_calloc( numInputs,  ((pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].weightsElementSizeInBits + 7) / 8));
       }
+      else if(TIDL_QuantStyleAsymNP2 == gParams.quantizationStyle && pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_LSTMLayer && TIDL_doesLayerSupportAsymTensors(&pOrgTIDLNetStructure->TIDLPCLayers[layerIdx], pOrgTIDLNetStructure)) 
+      {
+        /* 
+          Input Gate (it) - MMA Scale and Shift for Weights, Recurrent Weights and Cell Gate products
+          Forget Gate (ft) - MMA Scale and Shift for Weights, Recurrent Weights and Cell Gate products
+          Output Gate (ot) - MMA Scale and Shift for Weights, Recurrent Weights and Cell Gate products
+          Cell Gate (ct) - MMA Scale and Shift for Weights, Recurrent Weights products
+          New Cell State (Ct) - MMA Scale and Shift For Forget Gate and Input Gate products 
+          New Hidden State (Ht) - MMA Scale and Shift for compute
+        */
+        int32_t numDerivedScales = 14;
+        if(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerParams.lstmParams.direction == TIDL_RecurrentBidirectional)
+        {
+          numDerivedScales *= 2;
+        }
+        int32_t numActivationScales = 5 * 2; // number of times activations being used
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedScales.bufSize = numDerivedScales;
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedShifts.bufSize = numDerivedScales;
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerPCParams.lstmParams.activationScales.bufSize = numActivationScales;
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedScales.ptr = (uint8_t *)my_calloc( numDerivedScales,  sizeof(uint8_t));
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedShifts.ptr = (uint8_t *)my_calloc( numDerivedScales,  sizeof(uint8_t));
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerPCParams.lstmParams.activationScales.ptr = (uint8_t *)my_calloc(numActivationScales,  sizeof(float32_tidl));
+      }
       else if(TIDL_QuantStyleAsymNP2 == gParams.quantizationStyle &&
-          TIDL_doesLayerSupportAsymTensors(&pOrgTIDLNetStructure->TIDLPCLayers[layerIdx]) && pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_BatchNormLayer  &&
+          TIDL_doesLayerSupportAsymTensors(&pOrgTIDLNetStructure->TIDLPCLayers[layerIdx], pOrgTIDLNetStructure) && pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_BatchNormLayer  &&
           pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_DataConvertLayer &&
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_DataLayer)
+          pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_DataLayer && !TIDL_isPassThroughLayer(&pOrgTIDLNetStructure->TIDLPCLayers[layerIdx]))
       {
         /*Allocate for a worst case scenario:*/
         numOutputChannels = pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].bias.bufSize;
@@ -844,11 +875,17 @@ void TIDL_allocAndCopyModelParams(sTIDL_OrgNetwork_t * orgTIDLNetStructureDst,sT
         needed by custom layer. This memory is already in terms of bytes */
         bufSizeInBytes = orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].weights.bufSize;
       }
+      else if (gParams.quantizationStyle == TIDL_QuantStyleAsymNP2_TFL)
+      {
+        bufSizeInBytes = orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].weights.bufSize;
+      }
+      else if (orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].layerType == TIDL_ConstDataLayer)
+      {
+        bufSizeInBytes = orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].weights.bufSize* (tidl_getElementSizeInBits(orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].weights.dataType)/8);
+      }
       else
       {
-        bufSizeInBytes = (gParams.quantizationStyle == TIDL_QuantStyleAsymNP2_TFL)?
-                          orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].weights.bufSize:
-                          orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].weights.bufSize* sizeof(float);
+        bufSizeInBytes = orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].weights.bufSize* sizeof(float);
       }
       orgTIDLNetStructureDst->TIDLPCLayers[layerIdx].weights.ptr = my_malloc( bufSizeInBytes);
 
@@ -1017,6 +1054,42 @@ void TIDL_allocAndCopyModelParams(sTIDL_OrgNetwork_t * orgTIDLNetStructureDst,sT
         }
       }
     }
+    else if(orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].layerType == TIDL_LSTMLayer)
+    {
+      if(TIDL_QuantStyleAsymNP2 == gParams.quantizationStyle && TIDL_doesLayerSupportAsymTensors(&orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx], orgTIDLNetStructureSrc))
+      {
+        int32_t numDerivedScales = orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].derivedScales.bufSize;
+        int32_t numActivationScales = orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].layerPCParams.lstmParams.activationScales.bufSize;
+
+        orgTIDLNetStructureDst->TIDLPCLayers[layerIdx].layerPCParams.lstmParams.activationScales.bufSize = numActivationScales;
+        orgTIDLNetStructureDst->TIDLPCLayers[layerIdx].derivedScales.bufSize = numDerivedScales;
+        orgTIDLNetStructureDst->TIDLPCLayers[layerIdx].derivedShifts.bufSize = numDerivedScales;
+
+        orgTIDLNetStructureDst->TIDLPCLayers[layerIdx].layerPCParams.lstmParams.activationScales.ptr = (uint8_t *)my_calloc(numActivationScales, sizeof(float32_tidl));
+        orgTIDLNetStructureDst->TIDLPCLayers[layerIdx].derivedScales.ptr = (uint8_t *)my_calloc(numDerivedScales, sizeof(uint8_t));
+        orgTIDLNetStructureDst->TIDLPCLayers[layerIdx].derivedShifts.ptr = (uint8_t *)my_calloc(numDerivedScales, sizeof(uint8_t));
+
+        if(orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].layerPCParams.lstmParams.activationScales.ptr != NULL)
+        {
+          memcpy(orgTIDLNetStructureDst->TIDLPCLayers[layerIdx].layerPCParams.lstmParams.activationScales.ptr,
+                  orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].layerPCParams.lstmParams.activationScales.ptr,
+                  numActivationScales * sizeof(float32_tidl));
+        }
+
+        if(orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].derivedScales.ptr != NULL)
+        {
+          memcpy(orgTIDLNetStructureDst->TIDLPCLayers[layerIdx].derivedScales.ptr,
+                  orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].derivedScales.ptr,
+                  numDerivedScales * sizeof(uint8_t));
+        }
+        if(orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].derivedShifts.ptr != NULL)
+        {
+          memcpy(orgTIDLNetStructureDst->TIDLPCLayers[layerIdx].derivedShifts.ptr,
+                  orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].derivedShifts.ptr,
+                  numDerivedScales * sizeof(uint8_t));
+        }
+      }
+    }
     if ( orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].bias.ptr != NULL )
     {
       orgTIDLNetStructureDst->TIDLPCLayers[layerIdx].bias.bufSize =
@@ -1111,6 +1184,10 @@ void TIDL_copyModelParams(sTIDL_OrgNetwork_t * orgTIDLNetStructureDst,sTIDL_OrgN
       if(orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].layerType == TIDL_CustomLayer)
       {
         bufSizeInBytes = orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].weights.bufSize;
+      }
+      else if (orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].layerType == TIDL_ConstDataLayer)
+      {
+        bufSizeInBytes = orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].weights.bufSize * (tidl_getElementSizeInBits(orgTIDLNetStructureSrc->TIDLPCLayers[layerIdx].weights.dataType)/8);
       }
       else
       {
@@ -1306,6 +1383,13 @@ void TIDL_copyModelParams(sTIDL_OrgNetwork_t * orgTIDLNetStructureDst,sTIDL_OrgN
   }
 }
 
+bool TIDL_isPassThroughLayer(sTIDL_LayerPC_t *layer) {
+  if(quantizationPassThroughLayers.find(layer->layerType) == quantizationPassThroughLayers.end()) {
+    return false;
+  }
+  return true;
+}
+
 void TIDL_freeModelParams(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure, uint32_t numLayers)
 {
   int32_t layerIdx;
@@ -1323,28 +1407,34 @@ void TIDL_freeModelParams(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure, uint32_t nu
       pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].lutData.ptr= NULL;
     }
 
-    if(TIDL_doesLayerSupportAsymTensors(&pOrgTIDLNetStructure->TIDLPCLayers[layerIdx]))
+    if((TIDL_QuantStyleAsymNP2 == gParams.quantizationStyle) && TIDL_doesLayerSupportAsymTensors(&pOrgTIDLNetStructure->TIDLPCLayers[layerIdx], pOrgTIDLNetStructure) && !TIDL_isPassThroughLayer(&pOrgTIDLNetStructure->TIDLPCLayers[layerIdx]))
     {
-      if(TIDL_QuantStyleAsymNP2 == gParams.quantizationStyle && TIDL_doesLayerSupportAsymTensors(&pOrgTIDLNetStructure->TIDLPCLayers[layerIdx]))
-      { 
-        if(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_BatchNormLayer &&
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_LayerNormLayer &&
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_SoftMaxLayer &&
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_InnerProductLayer)
-        {
-          my_free(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedBias.ptr);
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedBias.ptr = NULL;
-          my_free(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedScales.ptr);
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedScales.ptr = NULL;
-          my_free(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedShifts.ptr);
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedShifts.ptr = NULL;
-        }
-        else if(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_InnerProductLayer){
-          my_free(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedBias.ptr);
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedBias.ptr = NULL;
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedScales.ptr = NULL;
-          pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedShifts.ptr = NULL;
-        }
+      if(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_BatchNormLayer &&
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_LayerNormLayer &&
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_SoftMaxLayer &&
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_InnerProductLayer &&
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType != TIDL_LSTMLayer)
+      {
+        my_free(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedBias.ptr);
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedBias.ptr = NULL;
+        my_free(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedScales.ptr);
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedScales.ptr = NULL;
+        my_free(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedShifts.ptr);
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedShifts.ptr = NULL;
+      }
+      else if(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_InnerProductLayer){
+        my_free(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedBias.ptr);
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedBias.ptr = NULL;
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedScales.ptr = NULL;
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedShifts.ptr = NULL;
+      }
+      else if(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_LSTMLayer){
+        my_free(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerPCParams.lstmParams.activationScales.ptr);
+        my_free(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedScales.ptr);
+        my_free(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedShifts.ptr);
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerPCParams.lstmParams.activationScales.ptr = NULL;
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedScales.ptr = NULL;
+        pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].derivedShifts.ptr = NULL;
       }
     }
 
@@ -1435,7 +1525,7 @@ int32_t TIDL_writeModel(sTIDL_Network_t * tIDLNetStructure,
       return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
     }
   }
-  if(configParams->numParamBits == 32)
+  if(configParams->numParamBits == 32 || (configParams->numParamBits == 16 && configParams->inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint))
   {
     biasParamSize = 4;
   }
@@ -1685,6 +1775,16 @@ int32_t TIDL_writeModel(sTIDL_Network_t * tIDLNetStructure,
           else
           {
             tIDLNetStructure->TIDLLayers[tiLayerIndex].layerParams.lstmParams.sequence_lens = NULL;
+          }
+
+          if(gParams.quantizationStyle == TIDL_QuantStyleAsymNP2 && TIDL_doesLayerSupportAsymTensors(&orgTIDLNetStructure->TIDLPCLayers[i], orgTIDLNetStructure))
+          {
+            tIDLNetStructure->TIDLLayers[tiLayerIndex].layerParams.lstmParams.derivedScales =
+              TIDL_alignParamsWrite(fp1, &orgTIDLNetStructure->TIDLPCLayers[i].derivedScales, &totalParamSize, sizeof(uint8_t));
+            tIDLNetStructure->TIDLLayers[tiLayerIndex].layerParams.lstmParams.derivedShifts =
+              TIDL_alignParamsWrite(fp1, &orgTIDLNetStructure->TIDLPCLayers[i].derivedShifts, &totalParamSize, sizeof(uint8_t));
+            tIDLNetStructure->TIDLLayers[tiLayerIndex].layerParams.lstmParams.activationScales =
+              TIDL_alignParamsWrite(fp1, &orgTIDLNetStructure->TIDLPCLayers[i].layerPCParams.lstmParams.activationScales, &totalParamSize, sizeof(float32_tidl));
           }
         }
         else if (orgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_GRULayer)
@@ -3100,7 +3200,8 @@ int32_t TIDL_updateOutElementTypeDataConvertLayer(sTIDL_OrgNetwork_t   *pOrgTIDL
     int32_t outElementType = 0;
     if((gParams.inElementType[inParamIdx] == TIDL_SinglePrecFloat) ||
     (gParams.inElementType[inParamIdx] == TIDL_SignedChar) ||
-    (gParams.inElementType[inParamIdx] == TIDL_SignedShort))
+    (gParams.inElementType[inParamIdx] == TIDL_SignedShort) ||
+    (gParams.inElementType[inParamIdx] == TIDL_BFloat16))
     {
       outElementType = tidl_getElementType(1);
     }
@@ -4106,12 +4207,9 @@ int32_t TIDL_tfOutReshapeReshapeLayer(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure
     /** Reshape layer introduces by TIDL, should would already be updated, don't update shape*/
     return 0;
   }
+
   TIDLPCLayers.outData[0].numDim = TIDLPCLayers.inData[0].numDim;
-  /*Check if any dimension is -1 or 0. If it is 0, then the corresponding input dimension
-  is set to the output dimension. Atmost 1 dimension can be -1, in which case it is calculated
-  from other dimensions.
-  */
-  int32_t minusOnePresent = -1;
+
   int32_t i, remDim=0, dim=0, startIdx = 0;
   int32_t weights[TIDL_DIM_MAX];
   for(i = 0; i < TIDLPCLayers.weights.bufSize; i++)
@@ -4122,6 +4220,46 @@ int32_t TIDL_tfOutReshapeReshapeLayer(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure
   int32_t* outData = TIDLPCLayers.outData[0].dimValues;
   int32_t* inData = TIDLPCLayers.inData[0].dimValues;
 
+  // Handle 0 and -1
+  int32_t  bufSizeW  = TIDLPCLayers.weights.bufSize;
+  int32_t  remDimW   = TIDL_DIM_MAX - bufSizeW;
+  int32_t  allowZero = TIDLPCLayers.layerPCParams.reshapeParams.allowZero;
+  uint64_t totalSize = 1;
+  for (int32_t k = 0; k < TIDL_DIM_MAX; k++)
+  {
+    totalSize *= inData[k];
+  }
+
+  uint64_t partialSize = 1;
+  int32_t  negIdx = -1;
+  for (int32_t j = 0; j < bufSizeW; j++)
+  {
+    if (weights[j] == 0 && allowZero == 0)
+    {
+      weights[j] = inData[remDimW + j];
+      partialSize *= weights[j];
+    }
+    else if (weights[j] == -1)
+    {
+      negIdx = j;
+    }
+    else
+    {
+      partialSize *= weights[j];
+    }
+  }
+  if (negIdx != -1)
+  {
+    weights[negIdx] = (int32_t)(totalSize / partialSize);
+  }
+
+  /* Write resolved values back so weights.ptr reflects concrete dims */
+  for (int32_t j = 0; j < TIDLPCLayers.weights.bufSize; j++)
+  {
+    ((int32_t*)(TIDLPCLayers.weights.ptr))[j] = weights[j];
+  }
+
+  // Update the output shapes
   if (TIDLPCLayers.weights.bufSize == TIDL_DIM_MAX)
   {
     for (int32_t i = 0; i < TIDLPCLayers.weights.bufSize; i++)
@@ -4193,31 +4331,6 @@ int32_t TIDL_tfOutReshapeReshapeLayer(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure
     {
       outData[dim++] = weights[i];
     }
-  }
-
-  uint64_t totalSize = 1;
-  for(i = 0; i<TIDL_DIM_MAX; i++)
-  {
-    totalSize *= TIDLPCLayers.inData[0].dimValues[i];
-    if(outData[i]==0) {
-      outData[i] = TIDLPCLayers.inData[0].dimValues[i];
-    }
-    else if(outData[i]==-1) {
-      minusOnePresent = i;
-    }
-  }
-
-  if(minusOnePresent != -1)
-  {
-  int32_t curSize = 1;
-  for(int i=0;i<TIDL_DIM_MAX;i++)
-  {
-    if(i != minusOnePresent)
-    {
-      curSize *= outData[i];
-    }
-  }
-  outData[minusOnePresent] = totalSize/curSize;
   }
 
   int32_t notOne = 0, notOneIndex = 0, idx=0;
@@ -7098,290 +7211,6 @@ int32_t tidl_setAxis(sTIDL_LayerPC_t& layer, int32_t axis)
   return status;
 }
 
-
-int32_t tidl_isDataCovertSupportedForMultiCore(sTIDL_LayerPC_t& layer)
-{
-  int32_t isSplitSupported = 1;
-
-  if(layer.layerType == TIDL_DataConvertLayer) 
-  {
-    if(layer.layerParams.dataConvertParams.type != TIDL_DC_TYPE_INPUT ||  layer.layerParams.dataConvertParams.type != TIDL_DC_TYPE_OUTPUT)
-    {
-      isSplitSupported = 0;
-    }
-
-    if(layer.layerParams.dataConvertParams.layout != layer.layerParams.dataConvertParams.outLayout)/* Data convert layer with layout change not supported on muliple cores */
-    {
-      isSplitSupported = 0;
-    }
-  }
-
-  return isSplitSupported;
-}
-
-/*this function checks if a layer can be split across multi-core based on it's height*/
-int32_t TIDL_canSplitHeightForKernelSize(sTIDL_LayerPC_t& layer, int32_t numCores)
-{
-  int32_t noSplit = 0;
-  int32_t kernelH = 0, splitHeight = 0, transferLines = 0, strideH = 0;
-
-  if(layer.layerType == TIDL_PoolingLayer)
-  {
-    kernelH = layer.layerParams.poolParams.kernelH;
-    strideH = layer.layerParams.poolParams.strideH;
-  }
-  else if(layer.layerType == TIDL_ConvolutionLayer)
-  {
-    kernelH = ( (layer.layerParams.convParams.kernelH - 1)*(layer.layerParams.convParams.dilationH) ) + 1;
-    strideH = layer.layerParams.convParams.strideH;
-  }
-
-  splitHeight = (layer.inData[0].dimValues[TIDL_DIM_HEIGHT]) / numCores; /*even if there is uneven split there will be atleast one core which will have this height*/
-  transferLines = (kernelH - 1)/2;
-
-  if(splitHeight < transferLines) /*if our transferLines is more than the height for a core then we do not split that layer*/
-  {
-    noSplit = 1;
-  }
-
-  return noSplit;
-}
-
-/* This function checks if a layer cannot be split across multi-core based on it's i/p buf height*/
-static int32_t TIDL_inputHeightSplitNotPossible(sTIDL_LayerPC_t& layer, int32_t numCores)
-{
-  int32_t noSplit = 0;
-  for(int32_t i = 0; i < layer.numInBufs; i++)
-  {
-    if( (layer.inData[0].dimValues[TIDL_DIM_HEIGHT] < numCores) &&
-        (layer.inData[0].dimValues[TIDL_DIM_HEIGHT] > 0) &&
-        /* For ConstLayer, decision can come from other i/p buf., since it can be broadcast case. */
-        (layer.layerType != TIDL_ConstDataLayer) )
-        {
-          noSplit = 1;
-          break;
-        }
-  }
-  return noSplit;
-}
-
-/* This function checks if a layer cannot be split across multi-core based on it's i/p buf height, o/p buf height and kernel size*/
-static int32_t TIDL_layerHeightSplitNotPossible(sTIDL_LayerPC_t& layer, int32_t numCores)
-{
-  /* Height too small for kernel size or less than number of cores so split not possible */
-  if( (TIDL_canSplitHeightForKernelSize(layer, numCores)) ||
-      (TIDL_inputHeightSplitNotPossible(layer, numCores)) ||
-      ((layer.outData[0].dimValues[TIDL_DIM_HEIGHT] < numCores) && (layer.outData[0].dimValues[TIDL_DIM_HEIGHT] > 0))
-  )
-    return 1; /* height split not possible */
-  else
-    return 0; /* height split possible */
-}
-
-std::vector<int32_t> layersSupportedForChannelSplit = 
-{
- TIDL_EltWiseLayer,
- TIDL_ConvolutionLayer,
- TIDL_PoolingLayer,
- TIDL_InnerProductLayer,
- TIDL_BatchNormLayer,
- TIDL_ResizeLayer,
- TIDL_ConcatLayer,
- TIDL_SoftMaxLayer,
- TIDL_DataConvertLayer,
- TIDL_SliceLayer,
- TIDL_LayerNormLayer
-};
-
-std::vector<int32_t> layersSupportedForSpatialSplit = 
-{
-  TIDL_ConvolutionLayer,       
-  TIDL_PoolingLayer,           
-  TIDL_ReLULayer,              
-  TIDL_PReLULayer,             
-  TIDL_EltWiseLayer,           
-  TIDL_BatchNormLayer,         
-  TIDL_ConcatLayer,                         
-  TIDL_SliceLayer,
-  TIDL_ArgOpLayer,       /* always channel-wise */     
-  TIDL_ShuffleChannelLayer,    
-  TIDL_ResizeLayer,            
-  TIDL_SigmoidLayer,           
-  TIDL_DataConvertLayer,    
-  TIDL_TanhLayer,              
-  TIDL_HardSigmoidLayer,       
-  TIDL_ELULayer,               
-  TIDL_LayerNormLayer
-};
-
-int32_t  tidl_doesLayerSupportSpatialSplit(sTIDL_OrgNetwork_t& pOrgTIDLNetStructure, int32_t lyrIdx, int32_t numCores)
-{
-  int32_t isSplitSupported = 0;
-  sTIDL_LayerPC_t& layer = pOrgTIDLNetStructure.TIDLPCLayers[lyrIdx];
-
-  if(std::find(layersSupportedForSpatialSplit.begin(), layersSupportedForSpatialSplit.end(), layer.layerType) != layersSupportedForSpatialSplit.end())
-  {
-    isSplitSupported = 1;
-  }
-
-  /* Deny special cases of above layers which are not supported */
-  
-  if((layer.layerType == TIDL_PoolingLayer) && (layer.layerParams.poolParams.kernelH == 0) && (layer.layerParams.poolParams.kernelW == 0))
-  {
-    /* Global pooling */
-    isSplitSupported = 0;
-  }
-
-  int32_t axis = tidl_getAxis(layer); 
- 
-  if(axis == TIDL_DIM_HEIGHT)/* Height wise axis not supported */
-  {
-    isSplitSupported = 0;
-  }
-
-
-  if(!tidl_isDataCovertSupportedForMultiCore(layer))
-  {
-    isSplitSupported = 0;
-  }
-
-  /* Height too small for kernel size or less than number of cores so split not possible */
-  if( TIDL_layerHeightSplitNotPossible(layer, numCores) )
-  {
-    isSplitSupported = 0;
-    return isSplitSupported; /* Any check post this is irrelevant since not enough dimension size to split */
-  }
-
-  /* For TIDL_SliceLayer even if split is supported, force to single core if the previous layer is TIDL_NOT_MULTI_CORE        */
-  /* This is to avoid TIDL_SliceLayer passing wrong memery pointer (from current core mem instead of core 0 mem) to next layer*/
-  if ( (layer.layerType == TIDL_SliceLayer) && isSplitSupported)
-  {
-    /* check whether the prev. layer is TIDL_NOT_MULTI_CORE */
-    int32_t inIdx = tidl_getInLayer(pOrgTIDLNetStructure, pOrgTIDLNetStructure.numLayers, layer.inData[0].dataId);
-    if(orgTIDLNetStructure.TIDLPCLayers[inIdx].multiCoreMode == TIDL_NOT_MULTI_CORE)
-      isSplitSupported = 0;
-  }
-
-  /* Disabling Multicore Spatial Split for Eltwise layer where one input is broadcasted along height dimension. */
-  if((layer.layerType == TIDL_EltWiseLayer) && (layer.inData[0].dimValues[TIDL_DIM_HEIGHT] != layer.inData[1].dimValues[TIDL_DIM_HEIGHT]))
-  {
-    isSplitSupported = 0;
-  }
-#if 0
-  int32_t isSplitSupported = 1;
-
-  sTIDL_LayerPC_t& layer = pOrgTIDLNetStructure.TIDLPCLayers[lyrIdx];
-
-  if((layer.layerType == TIDL_PoolingLayer && layer.layerParams.poolParams.kernelH == 0 && layer.layerParams.poolParams.kernelW == 0) || /*global pooling*/
-    layer.layerType == TIDL_FlattenLayer ||
-    layer.layerType == TIDL_SoftMaxLayer ||
-    layer.layerType == TIDL_InnerProductLayer ||
-    layer.layerType == TIDL_DetectionOutputLayer ||
-    layer.layerType == TIDL_ReduceLayer ||
-    layer.layerType == TIDL_GatherLayer ||
-    layer.layerType == TIDL_ReshapeLayer ||
-    layer.layerType == TIDL_SqueezeLayer ||
-    layer.layerType == TIDL_ScatterElementsLayer ||
-    layer.layerType == TIDL_DataConvertLayer ||
-    layer.layerType == TIDL_PadLayer ||
-    layer.layerType == TIDL_CropLayer ||
-    layer.layerType == TIDL_Deconv2DLayer||
-    TIDL_canSplitHeightForKernelSize(layer, numCores) ||
-    (layer.inData[0].dimValues[TIDL_DIM_HEIGHT] < numCores && layer.inData[0].dimValues[TIDL_DIM_HEIGHT] > 0)  ||
-    (layer.outData[0].dimValues[TIDL_DIM_HEIGHT] < numCores && layer.outData[0].dimValues[TIDL_DIM_HEIGHT] > 0) ||
-    (layer.layerType == TIDL_DataLayer || layer.layerType == TIDL_ConstDataLayer))
-  {
-    isSplitSupported = 0;
-  }
-#endif
-  return isSplitSupported;
-}
-
-/*This function checks if row-flow layer requires full buffer (in case of channel split)*/
-static int32_t tidl_isLayerRowFlowChannelSplit(sTIDL_LayerPC_t& layer) 
-{
-
-  int32_t rowFlowStitch = 0;
-
-  if( (layer.layerType == TIDL_ConvolutionLayer && (layer.layerParams.convParams.numInChannels/layer.layerParams.convParams.numGroups != 1)) )
-  {
-    /*check for row flow and channel split*/
-    rowFlowStitch = layer.multiCoreMode == TIDL_MULTI_CORE_CHANNEL;
-  }
-
-  return rowFlowStitch;
-}
-
-/*this function checks wether a Layer Supports Channel Wise Split Across multi-core*/
-/*for now only setting Global Pooling to support Channel Wise Split*/
-int32_t  tidl_doesLayerSupportChannelSplit(sTIDL_OrgNetwork_t& pOrgTIDLNetStructure, int32_t lyrIdx, int32_t numCores)
-{
-  int32_t isSplitSupported = 0;
-
-  sTIDL_LayerPC_t& layer = pOrgTIDLNetStructure.TIDLPCLayers[lyrIdx];
-
-  if(std::find(layersSupportedForChannelSplit.begin(), layersSupportedForChannelSplit.end(), layer.layerType) != layersSupportedForChannelSplit.end())
-  {
-    isSplitSupported = 1;
-  }
-
-  /* Deny special cases of above layers which are not supported */
-  
-  if((layer.layerType == TIDL_PoolingLayer) && (layer.layerParams.poolParams.kernelH == 0) && (layer.layerParams.poolParams.kernelW == 0))
-  {
-    /* Global pooling */
-    isSplitSupported = 0;
-  }
-
-  if(layer.layerType == TIDL_InnerProductLayer && !tidl_isLayerMatMul(layer)) /*normal inner product not supported only matmul supported */
-  {
-    isSplitSupported = 0;
-  }
-
-  int32_t axis = tidl_getAxis(layer);
-
-  if(axis == TIDL_DIM_NUMCH) /*channel split not supported for channel axis*/
-  {
-    isSplitSupported = 0;
-  }
-
-  if(!tidl_isDataCovertSupportedForMultiCore(layer))
-  {
-    isSplitSupported = 0;
-  }
-
-  
-  if( ((layer.inData[0].dimValues[TIDL_DIM_NUMCH] < numCores) && (layer.inData[0].dimValues[TIDL_DIM_NUMCH] > 0))  ||
-      ((layer.outData[0].dimValues[TIDL_DIM_NUMCH] < numCores) && (layer.outData[0].dimValues[TIDL_DIM_NUMCH] > 0)) )
-  {
-    /*num channels less then num cores*/
-    isSplitSupported = 0;
-    return isSplitSupported;
-  }
-  
-  return isSplitSupported;
-}
-
-int32_t tidl_doesLayerSupportBatchSplit(sTIDL_OrgNetwork_t& pOrgTIDLNetStructure, int32_t lyrIdx, int32_t numCores)
-{
-  int32_t isSplitSupported = 1;
-  sTIDL_LayerPC_t& layer = pOrgTIDLNetStructure.TIDLPCLayers[lyrIdx];
-
-  if(layer.inData[0].dimValues[TIDL_DIM_BATCH] != layer.outData[0].dimValues[TIDL_DIM_BATCH]) /*num batches not same in i/p and o/p*/
-  {
-    isSplitSupported = 0;
-    return isSplitSupported;
-  }
-
-  if( ((layer.inData[0].dimValues[TIDL_DIM_BATCH] < numCores) && (layer.inData[0].dimValues[TIDL_DIM_BATCH] > 0))  || 
-      ((layer.outData[0].dimValues[TIDL_DIM_BATCH] < numCores) && (layer.outData[0].dimValues[TIDL_DIM_BATCH] > 0)) ) /*num batches is less then num cores*/
-  {
-    isSplitSupported = 0;
-    return isSplitSupported;
-  }
-  return isSplitSupported;
-}
-
 int32_t tidl_isLayerMatMul(sTIDL_LayerPC_t& layer)
 {
   int32_t isMatMul = 0;
@@ -7451,138 +7280,6 @@ int32_t doesLayerRequireScratchMemory(sTIDL_OrgNetwork_t& pOrgTIDLNetStructure, 
   return scratchMemRequired;
 }
 
-
-/* This function checks if a particular layer is supported across multiple cores and updates the
-corresponding state in layer properties. This updation is done for all layers in the network */
-void tidl_updateMultiCoreState(sTIDL_OrgNetwork_t& pOrgTIDLNetStructure, tidl_import_config * params)
-{
-
-  int32_t numCores = params->numCores;
-  bool    allLayerSingleCore = true;
-
-  for(int i = 0; i < pOrgTIDLNetStructure.numLayers; i++)
-  {
-    sTIDL_LayerPC_t& layer = pOrgTIDLNetStructure.TIDLPCLayers[i];
-
-    if(layer.multiCoreMode == TIDL_MULTI_CORE_CROP_SPATIAL_JOIN || 
-       layer.multiCoreMode == TIDL_MULTI_CORE_CHANNEL_WITH_JOIN ||
-       layer.multiCoreMode == TIDL_MULTI_CORE_BATCH_WITH_JOIN || 
-       layer.multiCoreMode == TIDL_MULTI_CORE_SPATIAL_JOIN_WITH_CROP)
-    {
-        continue; /* skip for crop-join layers */
-    }
-
-    if (gParams.forceBatchSplitInLowLatencyMode == 1)
-    {
-      if(tidl_doesLayerSupportBatchSplit(pOrgTIDLNetStructure, i, numCores) == 1)
-      {
-        layer.multiCoreMode = TIDL_MULTI_CORE_BATCH;
-      }
-      else 
-      {
-        layer.multiCoreMode = TIDL_NOT_MULTI_CORE;
-      }
-    }
-    else if (gParams.forceSpatialSplitInLowLatencyMode == 1)
-    {
-      if(tidl_doesLayerSupportSpatialSplit(pOrgTIDLNetStructure, i, numCores) == 1)
-      {
-        layer.multiCoreMode = TIDL_MULTI_CORE_SPATIAL;
-      }
-      else
-      {
-        layer.multiCoreMode = TIDL_NOT_MULTI_CORE;
-      }
-    }
-    else 
-    {
-      if(tidl_doesLayerSupportBatchSplit(pOrgTIDLNetStructure, i, numCores) == 1)
-      {
-        layer.multiCoreMode = TIDL_MULTI_CORE_BATCH;
-      } 
-      else if(tidl_doesLayerSupportSpatialSplit(pOrgTIDLNetStructure, i, numCores) == 1)
-      {
-        layer.multiCoreMode = TIDL_MULTI_CORE_SPATIAL;
-      }  
-#if 0
-      else if(tidl_doesLayerSupportChannelSplit(pOrgTIDLNetStructure, i, numCores) == 1)
-      {
-        layer.multiCoreMode = TIDL_MULTI_CORE_CHANNEL;
-      }
-#endif  
-      else
-      {
-        layer.multiCoreMode = TIDL_NOT_MULTI_CORE;
-      } 
-    }
-
-
-    /* Force layers specified in singleCoreLayersNames user option to single core mode */
-    if (strcmp((char *)params->singleCoreLayersNames, "") != 0)
-    {
-      char singleCoreLayers[TIDL_MAX_ALG_IN_BUFS][TIDL_MAX_DATA_NAME];
-      int32_t numSingleCoreLayer = tidl_getStringsFromList((char *)params->singleCoreLayersNames, (char *)singleCoreLayers, TIDL_MAX_DATA_NAME);
-      int32_t j = 0;
-
-      for (j = 0; j < numSingleCoreLayer; j++)
-      {
-        if(strcmp((char * )layer.outDataNames[0], singleCoreLayers[j]) == 0)
-        {
-          layer.multiCoreMode = TIDL_NOT_MULTI_CORE;
-        }
-      }
-    }
-
-    /* Force layers specified in channelSplitLayersNames user option to TIDL_MULTI_CORE_CHANNEL mode */
-    if (strcmp((char *)params->channelSplitLayersNames, "") != 0)
-    {
-      char channelSplitLayers[TIDL_MAX_ALG_IN_BUFS][TIDL_MAX_DATA_NAME];
-      int32_t numChannelSplitLayers = tidl_getStringsFromList((char *)params->channelSplitLayersNames, (char *)channelSplitLayers, TIDL_MAX_DATA_NAME);
-      int32_t j = 0;
-
-      for (j = 0; j < numChannelSplitLayers; j++)
-      {
-        if(strcmp((char * )layer.outDataNames[0], channelSplitLayers[j]) == 0 && 
-           tidl_doesLayerSupportChannelSplit(pOrgTIDLNetStructure, i, numCores) == 1)
-        {
-          layer.multiCoreMode = TIDL_MULTI_CORE_CHANNEL;
-        }
-      }
-    }
-    
-    /* Force layers specified in spatialSplitLayersNames user option to TIDL_MULTI_CORE_SPATIAL mode */
-    if (strcmp((char *)params->spatialSplitLayersNames, "") != 0)
-    {
-      char spatialSplitLayers[TIDL_MAX_ALG_IN_BUFS][TIDL_MAX_DATA_NAME];
-      int32_t numspatialSplitLayers = tidl_getStringsFromList((char *)params->spatialSplitLayersNames, (char *)spatialSplitLayers, TIDL_MAX_DATA_NAME);
-      int32_t j = 0;
-
-      for (j = 0; j < numspatialSplitLayers; j++)
-      {
-        if(strcmp((char * )layer.outDataNames[0], spatialSplitLayers[j]) == 0 && tidl_doesLayerSupportSpatialSplit(pOrgTIDLNetStructure, i, numCores) == 1)
-        {
-          layer.multiCoreMode = TIDL_MULTI_CORE_SPATIAL;
-        }
-      }
-    }
-
-    /* if at least one layer in MULTI_CORE mode */
-    if (layer.multiCoreMode != TIDL_NOT_MULTI_CORE)
-      allLayerSingleCore = false;
-
-  }
-
-
-
-  /* If all the layers are in Single Core mode */
-  if (allLayerSingleCore)
-  {
-    params->inferenceMode = TIDL_inferenceModeDefault;
-    params->numCores      = 1;
-    TIDL_GLOBAL_REPORT_WARNING("None of the layers support MULTI_CORE mode. Defaulting to 'inferenceMode = 0' !");
-  }
-}
-
 void tidl_updateScratchMemoryRequirement(sTIDL_OrgNetwork_t& pOrgTIDLNetStructure)
 {
   for(int i = 0; i < pOrgTIDLNetStructure.numLayers; i++)
@@ -7598,167 +7295,6 @@ void tidl_updateScratchMemoryRequirement(sTIDL_OrgNetwork_t& pOrgTIDLNetStructur
     }
   }
   return;
-}
-
-int32_t tidl_addCropLayerForMultiCore(sTIDL_OrgNetwork_t& pOrgTIDLNetStructure, int32_t layerIndex, int32_t * dataIndex, int32_t quantizationStyle, int32_t numCores)
-{
-  map< pair<int, int>, int> cropLayerModeMap; /*this map is used to store the transition in multi-core modes and the type of Crop Layer to be added for that transition*/
-                                              /*key:<Producer Mode, Consumer Mode> val:Crop layer multicore mode*/
-
-  map< pair<int, int>, int> joinLayerModeMap; /*this map is used to store the transition in multi-core modes and the type of Join to be added for that transition*/
-                                              /*key:<Producer Mode, Consumer Mode> val:Producer layer multicore mode to be updated*/
-
-                              /*Producer Mode*/        /*Consumer Mode*/         /*Type of Crop Layer to be added */
-  joinLayerModeMap.insert( { {TIDL_MULTI_CORE_SPATIAL, TIDL_NOT_MULTI_CORE},     TIDL_MULTI_CORE_SPATIAL_WITH_JOIN} );
-  joinLayerModeMap.insert( { {TIDL_MULTI_CORE_SPATIAL, TIDL_MULTI_CORE_CHANNEL}, TIDL_MULTI_CORE_SPATIAL_WITH_JOIN} );
-  joinLayerModeMap.insert( { {TIDL_MULTI_CORE_SPATIAL, TIDL_MULTI_CORE_BATCH},   TIDL_MULTI_CORE_SPATIAL_WITH_JOIN} );
-
-  joinLayerModeMap.insert( { {TIDL_MULTI_CORE_BATCH,   TIDL_NOT_MULTI_CORE},     TIDL_MULTI_CORE_BATCH_WITH_JOIN}   );
-  joinLayerModeMap.insert( { {TIDL_MULTI_CORE_BATCH,   TIDL_MULTI_CORE_CHANNEL}, TIDL_MULTI_CORE_BATCH_WITH_JOIN}   );
-  joinLayerModeMap.insert( { {TIDL_MULTI_CORE_BATCH,   TIDL_MULTI_CORE_SPATIAL}, TIDL_MULTI_CORE_BATCH_WITH_JOIN}   );
-
-  joinLayerModeMap.insert( { {TIDL_MULTI_CORE_CHANNEL, TIDL_NOT_MULTI_CORE},     TIDL_MULTI_CORE_CHANNEL_WITH_JOIN} );
-  joinLayerModeMap.insert( { {TIDL_MULTI_CORE_CHANNEL, TIDL_MULTI_CORE_SPATIAL}, TIDL_MULTI_CORE_CHANNEL_WITH_JOIN} );
-  joinLayerModeMap.insert( { {TIDL_MULTI_CORE_CHANNEL, TIDL_MULTI_CORE_BATCH},   TIDL_MULTI_CORE_CHANNEL_WITH_JOIN} );
-
-  cropLayerModeMap.insert( { {TIDL_MULTI_CORE_SPATIAL_JOIN_WITH_CROP, TIDL_NOT_MULTI_CORE},     TIDL_MULTI_CORE_CROP_SPATIAL_JOIN} );
-  cropLayerModeMap.insert( { {TIDL_MULTI_CORE_SPATIAL_JOIN_WITH_CROP, TIDL_MULTI_CORE_CHANNEL}, TIDL_MULTI_CORE_CROP_SPATIAL_JOIN} );
-  cropLayerModeMap.insert( { {TIDL_MULTI_CORE_SPATIAL_JOIN_WITH_CROP, TIDL_MULTI_CORE_BATCH},   TIDL_MULTI_CORE_CROP_SPATIAL_JOIN} );
-
-  int8_t cropLayerNumber[TIDL_STRING_SIZE];
-  int32_t count = 0;
-
-  /* Map to store the Crop Layer which are already allocated. */
-  /* This will be used for reuse, if multiple consumers are there */
-  map<int32_t, int32_t> layerCropMap; /*key:producer, val:crop layer*/
-
-
-  for(int i = 0; i < pOrgTIDLNetStructure.numLayers; i++)
-  {
-    sTIDL_LayerPC_t& layer = pOrgTIDLNetStructure.TIDLPCLayers[i];
-    for(int inLyrIdx = 0; inLyrIdx < layer.numInBufs; inLyrIdx++)
-    {
-      int32_t prevLayerIdx = tidl_getInLayer(pOrgTIDLNetStructure, layerIndex, layer.inData[inLyrIdx].dataId);
-      if(prevLayerIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL && !TIDL_isInputLayerType(layer.layerType))
-      {
-        return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
-      }
-      /*we check if we need to add crop layer between previous layer and current layer based on the multi-core modes*/
-      if( !( (pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].layerType == TIDL_DataLayer) && (pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].numInBufs == -1) ) )
-      {
-        /* Do not add crop layer for input data layer */
-        /*if we have layers that can not be split SPATIALly one after the other we only add crop layer once*/
-        int32_t curLayerMultiCoreMode = tidl_isLayerRowFlowChannelSplit(layer) ? TIDL_NOT_MULTI_CORE : layer.multiCoreMode; /*if the current layer is row flow and channel split then it needs the full buffer*/
-
-        if(joinLayerModeMap.find({pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].multiCoreMode, curLayerMultiCoreMode}) != joinLayerModeMap.end()) 
-        {
-          pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].multiCoreMode = joinLayerModeMap[{pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].multiCoreMode, curLayerMultiCoreMode}];
-        }
-        else if( cropLayerModeMap.find({pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].multiCoreMode, curLayerMultiCoreMode}) != cropLayerModeMap.end()) /*we only enter this when we need to add Crop Layer for Multi-Core*/
-        {
-          sTIDL_LayerPC_t* cropLayer = NULL;
-
-          /* Check whether the prevLayerIdx already has a crop layer, if so, see can it be reused */
-          if (layerCropMap.find(prevLayerIdx) != layerCropMap.end())
-          {
-            int CropLayerIdx = layerCropMap[prevLayerIdx];
-            cropLayer = &(pOrgTIDLNetStructure.TIDLPCLayers[CropLayerIdx]);
-          }
-          else /* Not found, Create a new Crop Layer */
-          {
-            cropLayer = &(pOrgTIDLNetStructure.TIDLPCLayers[layerIndex]);
-            cropLayer->layerType = TIDL_CropLayer;
-            cropLayer->multiCoreMode = cropLayerModeMap[{pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].multiCoreMode, curLayerMultiCoreMode}];
-            cropLayer->layerParams.cropParams.multiCoreMode = cropLayer->multiCoreMode;
-            cropLayer->numInBufs = 1;
-            cropLayer->numOutBufs = 1;
-            cropLayer->outData[0].dataId = (*dataIndex)++;
-            cropLayer->outConsumerCnt[0] = 1;
-            cropLayer->outConsumerLinked[0] = 1;
-            cropLayer->actParams.actType = TIDL_NoAct;
-            cropLayer->outData[0].elementType = pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].outData[0].elementType;
-            cropLayer->outData[0].batchPadW = pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].outData[0].batchPadW;
-            cropLayer->outData[0].batchPadH = pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].outData[0].batchPadH;
-            cropLayer->outData[0].numBatchW = pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].outData[0].numBatchW;
-            cropLayer->outData[0].numBatchH = pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].outData[0].numBatchH;
-            cropLayer->outData[0].tensorScale = pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].outData[0].tensorScale;
-            cropLayer->outData[0].tensorZeroPoint = pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].outData[0].tensorZeroPoint;
-            cropLayer->outData[0].roundBits = 0;
-
-            for(int dim = 0; dim < TIDL_DIM_MAX; dim++) /*input and output dimensions are the same as the prev layer output dimension*/
-            {
-              cropLayer->inData[0].dimValues[dim] = cropLayer->outData[0].dimValues[dim] = pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].outData[0].dimValues[dim];
-            }
-
-
-              /* Store the layer to Crop layer map */
-              layerCropMap[prevLayerIdx] = layerIndex;
-
-              cropLayer->layerParams.cropParams.numChannels = 0;
-              cropLayer->layerParams.cropParams.offsetH = 0;
-              cropLayer->layerParams.cropParams.offsetW = 0;
-
-              cropLayer->inData[0].dataId = pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].outData[0].dataId;
-
-              /* Copy input name to output name */
-            strcpy((char*)cropLayer->inDataNames[0], (char*)pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].outDataNames[0]);
-              strcpy((char*)cropLayer->outDataNames[0], (char*)pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].outDataNames[0]);
-            strcat((char*)cropLayer->outDataNames[0], "_multicore_intermediate_layer");
-            // strcpy((char*)cropLayer->inDataNames[0], (char*)pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].outDataNames[0]);
-
-              /* Update output name to be unique for each of the added crop layers
-                  (else in case of multiple crop layers added as output of single layer, same name would result in issues in sorting layers in proc order) */
-              // sprintf((char *)cropLayerNumber, "%d", count);
-              // strcat(strcat((char*)cropLayer->outDataNames[0], "_crop_layer_"), (char *)cropLayerNumber);
-              // count++;
-
-              layerIndex++;
-              TIDL_UpdateInDataBuff(&pOrgTIDLNetStructure, layerIndex, pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].outData[0]);
-          }
-
-          /* make connections for the current layer to the crop layer */
-            layer.inData[inLyrIdx].dataId = cropLayer->outData[0].dataId;
-            strcpy((char*)layer.inDataNames[inLyrIdx], (char*)cropLayer->outDataNames[0]);
-            TIDL_UpdateInDataBuff(&pOrgTIDLNetStructure, layerIndex, cropLayer->outData[0]);
-        }
-      }
-    }
-  }
-
-  for(int i = 0; i < pOrgTIDLNetStructure.numLayers; i++)
-  {
-    if(pOrgTIDLNetStructure.TIDLPCLayers[i].multiCoreMode == TIDL_MULTI_CORE_SPATIAL_JOIN_WITH_CROP)
-    {
-      pOrgTIDLNetStructure.TIDLPCLayers[i].multiCoreMode = TIDL_MULTI_CORE_SPATIAL;
-    }
-  }
-
-
-  /*Update Reshape layers which follow crop-join layers to have if the Reshape layer is in multi-core mode and previous layer is crop-join layer
-    because reshape can't actually move data from single memory to each core's memory */
-  for(int i = 0; i < pOrgTIDLNetStructure.numLayers; i++)
-  {
-    sTIDL_LayerPC_t& layer = pOrgTIDLNetStructure.TIDLPCLayers[i];
-    if(layer.layerType == TIDL_ReshapeLayer && layer.multiCoreMode != TIDL_NOT_MULTI_CORE)
-    {
-      /* Reshape layer not supported in multi-core mode if previous layer is a crop-join layer */
-      int32_t prevLayerIdx = tidl_getInLayer(pOrgTIDLNetStructure, pOrgTIDLNetStructure.numLayers, layer.inData[0].dataId);
-
-      if(layer.multiCoreMode == TIDL_MULTI_CORE_BATCH && ((pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].multiCoreMode & TIDL_MULTI_CORE_CROP_BATCH_JOIN) == TIDL_MULTI_CORE_CROP_BATCH_JOIN)){
-        layer.multiCoreMode |= TIDL_MULTI_CORE_CROP_BATCH_JOIN;
-      }
-      else if(layer.multiCoreMode == TIDL_MULTI_CORE_SPATIAL && ((pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].multiCoreMode & TIDL_MULTI_CORE_CROP_SPATIAL_JOIN) == TIDL_MULTI_CORE_CROP_SPATIAL_JOIN)){
-        layer.multiCoreMode |= TIDL_MULTI_CORE_CROP_SPATIAL_JOIN;
-      }
-      else if(layer.multiCoreMode == TIDL_MULTI_CORE_CHANNEL && ((pOrgTIDLNetStructure.TIDLPCLayers[prevLayerIdx].multiCoreMode & TIDL_MULTI_CORE_CROP_CHANNEL_JOIN) == TIDL_MULTI_CORE_CROP_CHANNEL_JOIN)){
-        layer.multiCoreMode |= TIDL_MULTI_CORE_CROP_CHANNEL_JOIN;
-      }
-    }
-  }
-
-  pOrgTIDLNetStructure.numLayers = layerIndex;
-
-  return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
 
 
@@ -8721,11 +8257,172 @@ int32_t tidl_transposeWeights (float* src_ptr, float* dst_ptr, int32_t channels,
   return status;
 }
 
+/*
+ * tidl_convertSkipSimplifiedLayerNorm
+ *
+ * Decomposes SkipSimplifiedLayerNormalization into native TIDL layers.
+ *
+ * Without bias, without sum output:
+ *
+ *   input ─┐
+ *   skip  ─┴─► ADD ──────────────────► RMSNorm ──► output
+ *
+ * With bias (input[3]), without sum output:
+ *
+ *   input ─┐
+ *   skip  ─┴─► ADD ──► biasAdd ───────► RMSNorm ──► output
+ *                         ▲
+ *                       bias (ConstData)
+ *
+ * With sum output (output[3] = input_skip_bias_sum):
+ *
+ *   input ─┐
+ *   skip  ─┴─► ADD ──► [biasAdd] ──┬──► RMSNorm ──► output
+ *                                   └──► input_skip_bias_sum
+ *
+ */
+int32_t tidl_convertSkipSimplifiedLayerNorm(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t* dataIndex, int32_t numLayers)
+{
+  int32_t status = 0;
+
+  for (int32_t i = 0; i < numLayers; i++)
+  {
+    if (orgTIDLNetStructure.TIDLPCLayers[i].layerType != TIDL_SkipSimplifiedLayerNormLayer)
+    {
+      continue;
+    }
+
+    sTIDL_LayerPC_t& layer = orgTIDLNetStructure.TIDLPCLayers[i];
+
+    float32_tidl epsilon = layer.layerPCParams.skipSimplifiedLayerNormParams.epsilon;
+    int8_t hasSumOut = layer.layerPCParams.skipSimplifiedLayerNormParams.hasSumOut;
+
+    // Save sum output information from original layer's output[3]
+    sTIDL_DataParams_t savedSumOutputData = layer.outData[3];
+    char savedSumOutputName[TIDL_STRING_SIZE];
+    strcpy(savedSumOutputName, (char*)layer.outDataNames[3]);
+    int32_t savedSumOutputConsumerCnt = layer.outConsumerCnt[3];
+    int32_t savedSumOutputConsumerLinked = layer.outConsumerLinked[3];
+    int8_t savedSumOutputIsOriginal = layer.isOutDataNameOriginal[3];
+
+    // Save original output count and set to use only output[0] (feeds to next layer)
+    int32_t originalNumOutBufs = layer.numOutBufs;
+
+    // Modify the layer to ADD with one output
+    layer.layerType = TIDL_EltWiseLayer;
+    layer.layerParams.eltWiseParams.eltWiseType = TIDL_EltWiseSum;
+
+    layer.allowlistingMetaData.numInputs = 2;
+    layer.allowlistingMetaData.numValidInputs = 2;
+    layer.allowlistingMetaData.numVarInputs = 2;
+    layer.allowlistingMetaData.numConstInputs = 0;
+    layer.allowlistingMetaData.constTensorIndices.clear();
+    layer.allowlistingMetaData.constTensorsDims.clear();
+    layer.allowlistingMetaData.validInputIndices = {0, 1};
+
+    layer.numOutBufs = 1;
+    layer.outConsumerCnt[0] = 1;
+    layer.outConsumerLinked[0] = 1;
+
+    // Clear unused output descriptors (we only need output[0] now)
+    for (int32_t idx = 1; idx < originalNumOutBufs; idx++)
+    {
+      memset(&layer.outData[idx], 0, sizeof(sTIDL_DataParams_t));
+    }
+
+    int32_t producerForRmsNorm = i;
+
+    // Add bias if present
+    if (layer.bias.ptr != NULL && layer.bias.bufSize > 0)
+    {
+      TIDL_addLayer(orgTIDLNetStructure, i, TIDL_EltWiseLayer, dataIndex, ADD_LAYER_AFTER, {0});
+
+      sTIDL_LayerPC_t& biasAddLayer = orgTIDLNetStructure.TIDLPCLayers[orgTIDLNetStructure.numLayers - 1];
+      biasAddLayer.layerParams.eltWiseParams.eltWiseType = TIDL_EltWiseSum;
+
+      producerForRmsNorm = orgTIDLNetStructure.numLayers - 1;
+
+      int32_t biasAddConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, (void*)layer.bias.ptr, layer.bias.bufSize, layer.bias.dataType, orgTIDLNetStructure.numLayers);
+      if(biasAddConstIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+      {
+        return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+      }
+
+      sTIDL_LayerPC_t& biasAddConstLayer = orgTIDLNetStructure.TIDLPCLayers[biasAddConstIdx];
+      for (int32_t j = 0; j < TIDL_DIM_MAX; j++)
+      {
+        biasAddConstLayer.outData[0].dimValues[j] = 1;
+      }
+      biasAddConstLayer.outData[0].dimValues[TIDL_DIM_WIDTH] = layer.bias.bufSize;
+
+      biasAddLayer.numInBufs = 2;
+      biasAddLayer.inData[1].dataId = biasAddConstLayer.outData[0].dataId;
+      strcpy((char*)biasAddLayer.inDataNames[1], (char*)biasAddConstLayer.outDataNames[0]);
+      biasAddLayer.allowlistingMetaData.numConstInputs = 1;
+      biasAddLayer.allowlistingMetaData.constTensorIndices = {1};
+
+      layer.bias.ptr = NULL;
+      layer.bias.bufSize = 0;
+    }
+
+    TIDL_addLayer(orgTIDLNetStructure, producerForRmsNorm, TIDL_RMSNormalizationLayer, dataIndex, ADD_LAYER_AFTER, {0});
+
+    sTIDL_LayerPC_t& rmsNormLayer = orgTIDLNetStructure.TIDLPCLayers[orgTIDLNetStructure.numLayers - 1];
+    rmsNormLayer.layerParams.rmsNormParams.epsilon = epsilon;
+    rmsNormLayer.layerParams.rmsNormParams.axis = TIDL_DIM_WIDTH;
+    rmsNormLayer.layerParams.rmsNormParams.stashType = 1;
+    rmsNormLayer.weights = layer.weights;
+    rmsNormLayer.numInBufs = 1;
+    rmsNormLayer.allowlistingMetaData.varTensorsDims.clear();
+    rmsNormLayer.allowlistingMetaData.varTensorsDims.push_back(layer.allowlistingMetaData.varTensorsDims[0]);
+    rmsNormLayer.allowlistingMetaData.numVarInputs = 1;
+    rmsNormLayer.allowlistingMetaData.numConstInputs = 0;
+
+    if (hasSumOut)
+    {
+      sTIDL_LayerPC_t& producerLayerForRmsNorm = orgTIDLNetStructure.TIDLPCLayers[producerForRmsNorm];
+
+      /*
+       * The sum output is the same tensor as the ADD/biasAdd output[0].
+       * Rename the producer's single output to the sum output name
+       */
+      strcpy((char*)producerLayerForRmsNorm.outDataNames[0], savedSumOutputName);
+      producerLayerForRmsNorm.isOutDataNameOriginal[0] = savedSumOutputIsOriginal;
+
+      // Update RMSNorm input name to match the renamed producer output
+      strcpy((char*)rmsNormLayer.inDataNames[0], savedSumOutputName);
+
+      // Account for both RMSNorm (already 1) and external sum consumers
+      producerLayerForRmsNorm.outConsumerCnt[0] = 1 + savedSumOutputConsumerCnt;
+      producerLayerForRmsNorm.outConsumerLinked[0] = 1 + savedSumOutputConsumerLinked;
+
+      // Redirect all consumers of the original sum output dataId to the producer output
+      int32_t addOutputDataId = producerLayerForRmsNorm.outData[0].dataId;
+      for (int32_t k = 0; k < orgTIDLNetStructure.numLayers; k++)
+      {
+        for (int32_t m = 0; m < orgTIDLNetStructure.TIDLPCLayers[k].numInBufs; m++)
+        {
+          if (orgTIDLNetStructure.TIDLPCLayers[k].inData[m].dataId == savedSumOutputData.dataId)
+          {
+            orgTIDLNetStructure.TIDLPCLayers[k].inData[m].dataId = addOutputDataId;
+            strcpy((char*)orgTIDLNetStructure.TIDLPCLayers[k].inDataNames[m], savedSumOutputName);
+          }
+        }
+      }
+    }
+
+    layer.weights.ptr = NULL;
+    layer.weights.bufSize = 0;
+  }
+
+  return status;
+}
+
 int32_t tidl_splitNormLayer(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t* dataIndex, int32_t numLayers, bool isInstanceNorm)
 {
   int32_t status = 0;
   int32_t i1 = 0, i2 = 0, addBufSize = 0, mulBufSize = 0;
-  float *mulPtr, *addPtr;
+  void *mulPtr, *addPtr;
 
   for (i1 = 0; i1 < numLayers; i1++)
   {
@@ -8745,7 +8442,7 @@ int32_t tidl_splitNormLayer(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t* d
         mulPtr = (float*) normLayer.weights.ptr;
         mulBufSize = normLayer.weights.bufSize;
 
-        int32_t mulConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, mulPtr, mulBufSize, orgTIDLNetStructure.numLayers);  
+        int32_t mulConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, (void*)mulPtr, mulBufSize, normLayer.weights.dataType, orgTIDLNetStructure.numLayers);  
         if(mulConstIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
         {
           return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
@@ -8817,16 +8514,31 @@ int32_t tidl_splitNormLayer(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t* d
           mulBufSize = numChannels * numWidth;
           addPtr = (float*) malloc(addBufSize * sizeof(float));
           mulPtr = (float*) malloc(mulBufSize * sizeof(float));
-          for(int i = 0; i < numGroups; i++)
-          {
-            for(int j = 0; j < channelsPerGroup; j++)
-            {
-              for(int k = 0; k < numWidth; k++)
+
+          auto expandGroupNorm = [numGroups, channelsPerGroup, numWidth](void* srcPtr, float* dstPtr, int32_t dataType) {
+            return dispatchTypedBuffer(srcPtr, dataType, [dstPtr, numGroups, channelsPerGroup, numWidth](auto* ptr) {
+              for(int32_t i = 0; i < numGroups; i++)
               {
-                addPtr[(i * channelsPerGroup * numWidth) + (j * numWidth) + k] = ((float*) normLayer.bias.ptr)[i];
-                mulPtr[(i * channelsPerGroup * numWidth) + (j * numWidth) + k] = ((float*) normLayer.weights.ptr)[i];
+                for(int32_t j = 0; j < channelsPerGroup; j++)
+                {
+                  for(int32_t k = 0; k < numWidth; k++)
+                  {
+                    dstPtr[(i * channelsPerGroup * numWidth) + (j * numWidth) + k] = (float)ptr[i];
+                  }
+                }
               }
-            }
+              return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
+            });
+          };
+
+          if (expandGroupNorm(normLayer.bias.ptr, (float*)addPtr, normLayer.bias.dataType) != TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
+          {
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+          }
+
+          if (expandGroupNorm(normLayer.weights.ptr, (float*)mulPtr, normLayer.weights.dataType) != TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
+          {
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
           }
         }
         else
@@ -8838,8 +8550,8 @@ int32_t tidl_splitNormLayer(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t* d
           mulBufSize = normLayer.weights.bufSize;
         }
 
-        int32_t addConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, addPtr, addBufSize, orgTIDLNetStructure.numLayers);    
-        int32_t mulConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, mulPtr, mulBufSize, orgTIDLNetStructure.numLayers);  
+        int32_t addConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, (void*)addPtr, addBufSize, normLayer.bias.dataType, orgTIDLNetStructure.numLayers);
+        int32_t mulConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, (void*)mulPtr, mulBufSize, normLayer.weights.dataType, orgTIDLNetStructure.numLayers);  
         if(addConstIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL || mulConstIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
         {
           return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
@@ -11829,7 +11541,7 @@ static int32_t tidl_splitBidirectionalRecurrentLayers(sTIDL_OrgNetwork_t &orgTID
       {
         backwardConstLayer.allowlistingMetaData.outputDataTypes.clear();
       }
-      backwardConstLayer.allowlistingMetaData.outputDataTypes = {backwardConstLayer.outData[0].elementType};
+      backwardConstLayer.allowlistingMetaData.outputDataTypes = {producerLayer.weights.dataType};
 
       backwardConstLayer.weights.ptr            = backwardWeights;
       backwardConstLayer.weights.bufSize        = newBufSize;
@@ -12339,6 +12051,75 @@ int32_t tidl_handleRecurrentLayers (sTIDL_OrgNetwork_t  &orgTIDLNetStructure, in
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
 
+/* In BF16 mode, tidl_updateOutDataShape propagates TIDL_BFloat16 from the TopK merged buffer
+ * into the indices slice output.  Indices are integer data and must be typed as
+ * TIDL_SignedShort (matching the 2-byte element size used by the TOPK_BUFFER_INCREMENT_16BIT
+ * packing scheme).  Must be called after ALL tidl_updateOutDataShape calls and after
+ * tidl_changeOutElementType to avoid being overwritten.
+ * If the consumer of the indices slice is a DataConvert layer, its output elementType is also
+ * updated to TIDL_SignedShort. */
+int32_t tidl_bf16ChangeTopKIndicesSliceOutElementType(sTIDL_OrgNetwork_t &orgTIDLNetStructure)
+{
+  if (!(gParams.numParamBits == 16 && gParams.inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint))
+  {
+    return 0;
+  }
+
+  for (int32_t lIdx = 0; lIdx < orgTIDLNetStructure.numLayers; lIdx++)
+  {
+    if (orgTIDLNetStructure.TIDLPCLayers[lIdx].layerType != TIDL_TopKLayer)
+    {
+      continue;
+    }
+    int32_t mergedDataId = orgTIDLNetStructure.TIDLPCLayers[lIdx].outData[0].dataId;
+
+    for (int32_t sIdx = 0; sIdx < orgTIDLNetStructure.numLayers; sIdx++)
+    {
+      sTIDL_LayerPC_t *sliceLayer = &orgTIDLNetStructure.TIDLPCLayers[sIdx];
+      if (sliceLayer->layerType != TIDL_SliceLayer ||
+          sliceLayer->inData[0].dataId != mergedDataId)
+      {
+        continue;
+      }
+      /* Indices slice has slicePoints[0] > 0; values slice starts at 0 */
+      if (sliceLayer->layerParams.sliceParams.slicePoints[0] <= 0)
+      {
+        continue;
+      }
+
+      sliceLayer->outData[0].elementType = TIDL_SignedShort;
+
+      int32_t consumerIdx = tidl_getOutLayer(orgTIDLNetStructure,
+                                             orgTIDLNetStructure.numLayers,
+                                             sliceLayer->outData[0].dataId);
+      if (consumerIdx < 0)
+      {
+        continue;
+      }
+
+      sTIDL_LayerPC_t *consumerLayer = &orgTIDLNetStructure.TIDLPCLayers[consumerIdx];
+
+      /* Propagate TIDL_SignedShort to the matching inData of the consumer */
+      for (int32_t b = 0; b < consumerLayer->numInBufs; b++)
+      {
+        if (consumerLayer->inData[b].dataId == sliceLayer->outData[0].dataId)
+        {
+          consumerLayer->inData[b].elementType = TIDL_SignedShort;
+          break;
+        }
+      }
+
+      /* If the consumer is a DataConvert layer, update its output elementType too */
+      if (consumerLayer->layerType == TIDL_DataConvertLayer)
+      {
+        consumerLayer->outData[0].elementType = TIDL_SignedShort;
+      }
+    }
+  }
+
+  return 0;
+}
+
 int32_t tidl_mergeSplitLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex)
 {
   int32_t i1, i2, i3, i4;
@@ -12523,41 +12304,52 @@ int32_t tidl_broadcastWeights (sTIDL_LayerPC_t& constLayer, int32_t broadcastSiz
 
   return status;
 }
-int32_t tidl_createConstDataLayer (sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t* dataIndex, float* data, int32_t dataSize, int32_t layerIndex)
+int32_t tidl_createConstDataLayer (sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t* dataIndex, void* data, int32_t dataSize, int32_t dataType, int32_t numLayers)
 {
   int32_t status = 0;
 
-  sTIDL_LayerPC_t& constLayer = pOrgTIDLNetStructure.TIDLPCLayers[layerIndex];
+  sTIDL_LayerPC_t& constLayer = pOrgTIDLNetStructure.TIDLPCLayers[numLayers];
   constLayer.layerType = TIDL_ConstDataLayer;
   constLayer.numInBufs  = -1;
   constLayer.numOutBufs = 1;
   constLayer.outData[0].dataId = (*dataIndex)++;
   constLayer.outConsumerCnt[0] = 1;
   constLayer.outConsumerLinked[0] = 0;
-  pOrgTIDLNetStructure.numLayers = layerIndex + 1;
+  pOrgTIDLNetStructure.numLayers = numLayers + 1;
 
-  float* constPtr = (float*)malloc(dataSize * sizeof (float));
+  size_t elementSize = tidl_getElementSizeInBits(dataType) / 8;
+
+  if (elementSize == 0)
+  {
+    TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Invalid element size for creating const data layer");
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+  }
+
+  size_t totalByteSize = dataSize * elementSize;
+  void* constPtr = malloc(totalByteSize);
   if (constPtr == NULL)
   {
     TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Could not allocate memory for creating const data layer");
     return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
   }
 
-  memcpy (constPtr, data, dataSize * sizeof (float));
+  memcpy(constPtr, data, totalByteSize);
 
   constLayer.weights.ptr = constPtr;
   constLayer.weights.bufSize = dataSize;
+  constLayer.weights.dataType = dataType;
 
   char append[TIDL_APPEND_NAME];
   sprintf(append, "_%d", addedLayers++);
   strcpy((char*)constLayer.outDataNames[0], append);
 
   constLayer.outData[0].elementType = tidl_getElementType(1);
+  constLayer.allowlistingMetaData.outputDataTypes = {dataType};
 
   /**Free the source pointer as the data is now copied to const pointer*/
   free (data);
 
-  return layerIndex;
+  return numLayers;
 }
 
 int32_t tidl_replacePatchEmbeddingBlock(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t* dataIndex, sTIDL_ConvParams_t* params, float* ptr, float* bias, int32_t convIdx)
@@ -12678,7 +12470,7 @@ int32_t tidl_replacePatchEmbeddingBlock(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructur
   int32_t bufSize = params->numOutChannels * params->numInChannels * params->kernelH * params->kernelW;
   int32_t biasSize = params->numOutChannels;
 
-  int32_t constIdx = tidl_createConstDataLayer (pOrgTIDLNetStructure, dataIndex, ptr, bufSize, pOrgTIDLNetStructure.numLayers);
+  int32_t constIdx = tidl_createConstDataLayer (pOrgTIDLNetStructure, dataIndex, (void*)ptr, bufSize, TIDL_SinglePrecFloat, pOrgTIDLNetStructure.numLayers);
   if(constIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
   {
     return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
@@ -12770,7 +12562,7 @@ int32_t tidl_replacePatchEmbeddingBlock(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructur
     constDims.push_back(biasSize);
     biasAdd.allowlistingMetaData.constTensorsDims.push_back(constDims);
 
-    constIdx = tidl_createConstDataLayer (pOrgTIDLNetStructure, dataIndex, bias, biasSize, pOrgTIDLNetStructure.numLayers);
+    constIdx = tidl_createConstDataLayer (pOrgTIDLNetStructure, dataIndex, (void*)bias, biasSize, TIDL_SinglePrecFloat, pOrgTIDLNetStructure.numLayers);
     if(constIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
     {
       return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
@@ -12910,6 +12702,22 @@ static const std::set<int32_t> nativeLayerMap = {
   TIDL_SizeLayer
 };
 
+bool tidl_isLayerInNativeMode(sTIDL_LayerPC_t *layer) {
+  bool isNative = nativeLayerMap.find(layer->layerType) != nativeLayerMap.end();
+  if(layer->layerType == TIDL_LSTMLayer) {
+    int32_t hidden_size = layer->layerParams.lstmParams.hidden_size;
+    std::vector<int32_t> tensorDims = layer->allowlistingMetaData.varTensorsDims[0];
+    int32_t input_size = tensorDims[2];
+
+    // For larger processing size, using fixed mode inference is more optimal
+    if( hidden_size > 64 && input_size > 64)
+    {
+      isNative = false;
+    }
+  }
+  return isNative;
+}
+
 int8_t tidl_getLayerQuantMode(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIdx)
 {
   int8_t quantMode = TIDL_LAYER_PTQ;
@@ -12926,7 +12734,7 @@ int8_t tidl_getLayerQuantMode(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t
     }
   }
 
-  bool isCurrLayerNative = (nativeLayerMap.count(tidl_layer.layerType) > 0);
+  bool isCurrLayerNative = tidl_isLayerInNativeMode(&tidl_layer);
   bool isInLayerNative   = false;
   bool isOutLayerNative  = false;
   sTIDL_LayerPC_t *inLayer = NULL;
@@ -12934,12 +12742,12 @@ int8_t tidl_getLayerQuantMode(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t
   if(inputIndices.size() > 0)
   {
     inLayer = &pOrgTIDLNetStructure.TIDLPCLayers[inputIndices[0]];
-    isInLayerNative = (nativeLayerMap.count(inLayer->layerType) > 0);
+    isInLayerNative = tidl_isLayerInNativeMode(inLayer);
   }
   if(outputIndices.size() > 0)
   {
     outLayer = &pOrgTIDLNetStructure.TIDLPCLayers[outputIndices[0]];
-    isOutLayerNative = (nativeLayerMap.count(outLayer->layerType) > 0);
+    isOutLayerNative = tidl_isLayerInNativeMode(outLayer);
   }
 
   if(isCurrLayerNative && tidl_layer.layerType == TIDL_EltWiseLayer)
@@ -15719,6 +15527,9 @@ int32_t tidl_copyPCNetToDeviceNet(sTIDL_OrgNetwork_t  * pOrgTIDLNetStructure,
 
   pTIDLNetStructure->netVersion = TIDL_NET_VERSION_FW_ACTIVE;
 
+  /*  Initialize all layers with zeroes to avoid junk values  */
+  memset(&pTIDLNetStructure->TIDLLayers, 0, sizeof(sTIDL_Layer_t) * numLayers);
+  
   for (i = 0; i < numLayers; i++)
   {
     if (pOrgTIDLNetStructure->TIDLPCLayers[i].layerType != TIDL_UnsupportedLayer)
@@ -15732,7 +15543,6 @@ int32_t tidl_copyPCNetToDeviceNet(sTIDL_OrgNetwork_t  * pOrgTIDLNetStructure,
       pTIDLNetStructure->TIDLLayers[tiLayerIndex].numOutBufs = pOrgTIDLNetStructure->TIDLPCLayers[i].numOutBufs;
       pTIDLNetStructure->TIDLLayers[tiLayerIndex].weightsElementSizeInBits = pOrgTIDLNetStructure->TIDLPCLayers[i].weightsElementSizeInBits;
       pTIDLNetStructure->TIDLLayers[tiLayerIndex].strideOffsetMethod = pOrgTIDLNetStructure->TIDLPCLayers[i].strideOffsetMethod;
-      pTIDLNetStructure->TIDLLayers[tiLayerIndex].multiCoreMode = pOrgTIDLNetStructure->TIDLPCLayers[i].multiCoreMode;
       pTIDLNetStructure->TIDLLayers[tiLayerIndex].scratchMemRequired = pOrgTIDLNetStructure->TIDLPCLayers[i].scratchMemRequired;
       if(pTIDLNetStructure->TIDLLayers[tiLayerIndex].layerType == TIDL_ConvolutionLayer)
       {
@@ -15773,7 +15583,7 @@ int32_t tidl_copyPCNetToDeviceNet(sTIDL_OrgNetwork_t  * pOrgTIDLNetStructure,
         pTIDLNetStructure->TIDLLayers[tiLayerIndex].outData = pOrgTIDLNetStructure->TIDLPCLayers[i].outData[j];
 
         /* Make sure all the quantization scales are set to 1.0 for float mode */
-        if ( configParams->numParamBits == 32 )
+        if ( configParams->numParamBits == 32 || (configParams->numParamBits == 16 && configParams->inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint))
         {
           if(pTIDLNetStructure->TIDLLayers[tiLayerIndex].actParams.actType != TIDL_LeakyReLU)
           {
@@ -15821,7 +15631,7 @@ int32_t tidl_copyPCNetToDeviceNet(sTIDL_OrgNetwork_t  * pOrgTIDLNetStructure,
     {
       if (pOrgTIDLNetStructure->TIDLPCLayers[i].layerType != TIDL_UnsupportedLayer)
       {
-        fprintf(nfp,"%5d|%-30s|", layerIndexCount++, TIDL_LayerString[pOrgTIDLNetStructure->TIDLPCLayers[i].layerType], pOrgTIDLNetStructure->TIDLPCLayers[i].outDataNames[0]);
+        fprintf(nfp,"%5d|%-30s|", layerIndexCount++, TIDL_GetLayerString(pOrgTIDLNetStructure->TIDLPCLayers[i].layerType), pOrgTIDLNetStructure->TIDLPCLayers[i].outDataNames[0]);
         if (strlen((const char *)pOrgTIDLNetStructure->TIDLPCLayers[i].outDataNames[0]) > 50)
         {
           fprintf(nfp,"%-50s|", &pOrgTIDLNetStructure->TIDLPCLayers[i].outDataNames[0][strlen((const char *)pOrgTIDLNetStructure->TIDLPCLayers[i].outDataNames[0]) - 50]);
@@ -16295,6 +16105,31 @@ int32_t tidl_layerDoesnotNeedConstDataLayer (sTIDL_OrgNetwork_t&  pOrgTIDLNetStr
   return status;
 }
 
+static int32_t tidl_allocateAndCopyConstData(sBuffer_t* constData, sTIDL_LayerPC_t& constLayer)
+{
+  if (!constData || !constData->ptr)
+  {
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+  }
+
+  size_t elementSize = tidl_getElementSizeInBits(constData->dataType) / 8;
+
+  size_t totalByteSize = constData->bufSize * elementSize;
+  constLayer.weights.ptr = (void *)my_malloc(totalByteSize);
+
+  if (constLayer.weights.ptr == nullptr)
+  {
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+  }
+
+  memcpy(constLayer.weights.ptr, constData->ptr, totalByteSize);
+  constLayer.weights.bufSize = constData->bufSize;
+  constLayer.weights.dataType = constData->dataType;
+  constLayer.allowlistingMetaData.outputDataTypes = {constData->dataType};
+
+  return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
+}
+
 int32_t tidl_addConstDataLayers (sTIDL_OrgNetwork_t&  pOrgTIDLNetStructure, int32_t layerIndex, int32_t * dataIndex, tidl_import_config* configParams)
 {
   for (int32_t i=0;i<layerIndex;i++)
@@ -16306,7 +16141,11 @@ int32_t tidl_addConstDataLayers (sTIDL_OrgNetwork_t&  pOrgTIDLNetStructure, int3
         pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_InnerProductLayer ||
         pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_GatherNDLayer  ||
         pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_GridSampleLayer ||
-        pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_GatherElementsLayer)
+        pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_GatherElementsLayer ||
+        pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_SliceLayer ||
+        pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_UnsqueezeLayer ||
+        pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_ExpandLayer ||
+        pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_SqueezeLayer)
     {
       sTIDL_LayerPC_t& layer = pOrgTIDLNetStructure.TIDLPCLayers[i];
 
@@ -16329,49 +16168,27 @@ int32_t tidl_addConstDataLayers (sTIDL_OrgNetwork_t&  pOrgTIDLNetStructure, int3
 
         if (pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_GatherLayer || pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_GatherNDLayer || (pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_GatherElementsLayer))
         {
-          /* Gather indices const input should be specially handled as the data is stored in int32 format*/
-          if (md.constTensorIndices[0] == 1)
+          /* GatherLayer/GatherND/GatherElements: data (input[0]) or indices (input[1]) may be const.
+           * Indices are int32; data uses the float element type set below. */
+          if (tidl_allocateAndCopyConstData(&layer.weights, constLayer) != TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
           {
-            /* Only gather indices input can be constant */
-
-            int32_t* dst_ptr = (int32_t*)my_malloc(layer.weights.bufSize*sizeof(int32_t));
-            int32_t* src_ptr = (int32_t*)layer.weights.ptr;
-
-            for (int32_t j = 0; j < layer.weights.bufSize; j++)
-            {
-              dst_ptr[j] = src_ptr[j];
-            }
-
-            /* Update the const buffer pointer*/
-            constLayer.weights.ptr = dst_ptr;
-          }
-          else
-          {
-            if(pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_GatherElementsLayer || pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_GatherNDLayer)
-            {
-              TIDL_GLOBAL_REPORT_ERROR("GatherElements/GatherND Layer: Only indices input is supported as const, input data can be a var input/actual input but not const.");
-              return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
-            }
-            else
-            {
-              TIDL_GLOBAL_REPORT_ERROR("Gather Layer: Only indices input is supported as const, input data can be a var input/actual input but not const.");
-              return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
-            }
-            
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
           }
         }
         else if (pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_TransposeLayer)
         {
-          constLayer.weights.ptr = (float *)my_malloc(layer.bias.bufSize*sizeof(float));
-          memcpy (constLayer.weights.ptr, layer.bias.ptr, layer.bias.bufSize*sizeof(float));          
+          if (tidl_allocateAndCopyConstData(&layer.bias, constLayer) != TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
+          {
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+          }
         }
         else
         {
-          constLayer.weights.ptr = (float *)my_malloc(layer.weights.bufSize*sizeof(float));
-          memcpy (constLayer.weights.ptr, layer.weights.ptr, layer.weights.bufSize*sizeof(float));
+          if (tidl_allocateAndCopyConstData(&layer.weights, constLayer) != TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
+          {
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+          }
         }
-
-        constLayer.weights.bufSize = layer.weights.bufSize;
 
         int32_t broadCastDone = tidl_doesConstNeedBroadcastSupport(layer, constLayer);
         if(broadCastDone == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL){
@@ -16381,10 +16198,9 @@ int32_t tidl_addConstDataLayers (sTIDL_OrgNetwork_t&  pOrgTIDLNetStructure, int3
         /*Free the layer's weights pointer as they are now copied to const layer weights:*/
         if (pOrgTIDLNetStructure.TIDLPCLayers[i].layerType == TIDL_TransposeLayer)
         {
-          constLayer.weights.bufSize = layer.bias.bufSize;
           free(layer.bias.ptr);
           layer.bias.ptr = NULL;
-          layer.bias.bufSize = 0;        
+          layer.bias.bufSize = 0;
         }
         else if(layer.weights.ptr)
         {
@@ -16493,33 +16309,33 @@ int32_t tidl_addConstDataLayers (sTIDL_OrgNetwork_t&  pOrgTIDLNetStructure, int3
           constLayer.outConsumerCnt[0] = 1;
           constLayer.outConsumerLinked[0] = 0;
           sBuffer_t* constData;
-          if (j == 0) constData = &scatterLayer.weights;
-          else constData = &scatterLayer.bias;
+          if (j == 0)
+          {
+            constData = &scatterLayer.weights;
+          }
+          else
+          {
+            constData = &scatterLayer.bias;
+          }
 
           input = md.constTensorIndices[j];
-          
-          if (input == 1) 
+
+          if (input == 1)
           {
             //indices - 64-bit
-            constLayer.weights.bufSize = constData->bufSize;
-            constLayer.outData[0].elementType = TIDL_SignedWord;
-
-            int32_t* dst_ptr = (int32_t*)my_malloc(constData->bufSize*sizeof(int32_t));
-            int32_t* src_ptr = (int32_t*)constData->ptr;
-
-            for (int32_t j = 0; j < constData->bufSize; j++)
+            if (tidl_allocateAndCopyConstData(constData, constLayer) != TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
             {
-              dst_ptr[j] = src_ptr[j];
+              return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
             }
-            /* Update the const buffer pointer*/
-            constLayer.weights.ptr = (void*)dst_ptr;
+            constLayer.outData[0].elementType = TIDL_SignedWord;
           }
           else
           {
             //inData, updates
-            constLayer.weights.ptr = (float *)my_malloc(constData->bufSize*sizeof(float));
-            memcpy (constLayer.weights.ptr, constData->ptr, constData->bufSize*sizeof(float));
-            constLayer.weights.bufSize = constData->bufSize;
+            if (tidl_allocateAndCopyConstData(constData, constLayer) != TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
+            {
+              return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+            }
             constLayer.outData[0].elementType = tidl_getElementType(1);
           }
           
@@ -16613,11 +16429,6 @@ int32_t tidl_addConstDataLayers (sTIDL_OrgNetwork_t&  pOrgTIDLNetStructure, int3
         memset(constLayer.weights.ptr, 0, bufSize * sizeof(float));
         constLayer.weights.bufSize = bufSize;
         constLayer.outData[0].elementType = TIDL_SinglePrecFloat;
-        if(constLayer.allowlistingMetaData.outputDataTypes.size() != 0)
-        {
-          constLayer.allowlistingMetaData.outputDataTypes.clear();
-        }
-        constLayer.allowlistingMetaData.outputDataTypes = {constLayer.outData[0].elementType};
 
         for (int32_t dimIdx = 0; dimIdx < TIDL_DIM_MAX; dimIdx++)
         {
@@ -16711,21 +16522,18 @@ int32_t tidl_addConstDataLayers (sTIDL_OrgNetwork_t&  pOrgTIDLNetStructure, int3
           constLayer.outConsumerCnt[0] = 1;
           constLayer.outConsumerLinked[0] = 0;
 
-          constLayer.weights.ptr = (float *)my_malloc(constData->bufSize * sizeof(float));
-          memcpy (constLayer.weights.ptr, constData->ptr, constData->bufSize * sizeof(float));
-          constLayer.weights.bufSize = constData->bufSize;
-          constLayer.outData[0].elementType = TIDL_SinglePrecFloat;
-          if(constLayer.allowlistingMetaData.outputDataTypes.size() != 0)
+          if (tidl_allocateAndCopyConstData(constData, constLayer) != TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
           {
-            constLayer.allowlistingMetaData.outputDataTypes.clear();
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
           }
-          constLayer.allowlistingMetaData.outputDataTypes = {constLayer.outData[0].elementType};
+          constLayer.outData[0].elementType = TIDL_SinglePrecFloat;
 
           if(constData->ptr != NULL)
           {
             free(constData->ptr);
             constData->ptr = NULL;
             constData->bufSize = 0;
+            constData->dataType = -1;
           }
           int32_t numDim = md.constTensorsDims[j].size();
           int32_t remDim = TIDL_DIM_MAX - numDim;
@@ -16883,15 +16691,11 @@ int32_t tidl_addConstDataLayers (sTIDL_OrgNetwork_t&  pOrgTIDLNetStructure, int3
           constLayer.outConsumerCnt[0] = 1;
           constLayer.outConsumerLinked[0] = 0;
 
-          constLayer.weights.ptr = (float *)my_malloc(constData->bufSize * sizeof(float));
-          memcpy (constLayer.weights.ptr, constData->ptr, constData->bufSize * sizeof(float));
-          constLayer.weights.bufSize = constData->bufSize;
-          constLayer.outData[0].elementType = TIDL_SinglePrecFloat;
-          if(constLayer.allowlistingMetaData.outputDataTypes.size() != 0)
+          if (tidl_allocateAndCopyConstData(constData, constLayer) != TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
           {
-            constLayer.allowlistingMetaData.outputDataTypes.clear();
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
           }
-          constLayer.allowlistingMetaData.outputDataTypes = {constLayer.outData[0].elementType};
+          constLayer.outData[0].elementType = TIDL_SinglePrecFloat;
 
           if(constData->ptr != NULL)
           {
@@ -17057,15 +16861,11 @@ int32_t tidl_addConstDataLayers (sTIDL_OrgNetwork_t&  pOrgTIDLNetStructure, int3
           constLayer.outConsumerCnt[0] = 1;
           constLayer.outConsumerLinked[0] = 0;
 
-          constLayer.weights.ptr = (float *)my_malloc(constData->bufSize * sizeof(float));
-          memcpy (constLayer.weights.ptr, constData->ptr, constData->bufSize * sizeof(float));
-          constLayer.weights.bufSize = constData->bufSize;
-          constLayer.outData[0].elementType = TIDL_SinglePrecFloat;
-          if(constLayer.allowlistingMetaData.outputDataTypes.size() != 0)
+          if (tidl_allocateAndCopyConstData(constData, constLayer) != TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
           {
-            constLayer.allowlistingMetaData.outputDataTypes.clear();
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
           }
-          constLayer.allowlistingMetaData.outputDataTypes = {constLayer.outData[0].elementType};
+          constLayer.outData[0].elementType = TIDL_SinglePrecFloat;
 
           if(constData->ptr != NULL)
           {
@@ -17157,11 +16957,11 @@ int32_t tidl_addConstDataLayers (sTIDL_OrgNetwork_t&  pOrgTIDLNetStructure, int3
         constLayer.outConsumerCnt[0] = 1;
         constLayer.outConsumerLinked[0] = 0;
 
-        constLayer.weights.ptr = (float *)my_malloc(constData->bufSize * sizeof(float));
-        memcpy(constLayer.weights.ptr, constData->ptr, constData->bufSize * sizeof(float));
-        constLayer.weights.bufSize = constData->bufSize;
-        constLayer.outData[0].elementType = tidl_getElementType(1);
-
+        if (tidl_allocateAndCopyConstData(constData, constLayer) != TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
+        {
+          return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
+        constLayer.outData[0].elementType = constLayer.allowlistingMetaData.outputDataTypes[0];
         free(constData->ptr);
         constData->ptr = NULL;
         constData->bufSize = 0;
@@ -17407,7 +17207,11 @@ static int32_t tidl_doesOutputNeedsDataConvert(sTIDL_OrgNetwork_t  &pOrgTIDLNetS
     {
       if (params->outElementType[bufIdx] == pOrgTIDLNetStructure.TIDLPCLayers[producerLayerIdx].outData[0].elementType)
       {
-        if ((params->outTensorScale[bufIdx] == 1.0) &&
+        if(params->numParamBits == 16 && params->inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint)
+        {
+          needsDataConvert = 1;
+        }
+        else if ((params->outTensorScale[bufIdx] == 1.0) &&
             (params->outZeroPoint[bufIdx]  == 0.0 ) )
         {
           needsDataConvert  = 0;
@@ -17429,7 +17233,7 @@ static int32_t tidl_doesOutputNeedsDataConvert(sTIDL_OrgNetwork_t  &pOrgTIDLNetS
       (pOrgTIDLNetStructure.TIDLPCLayers[producerLayerIdx].layerType == TIDL_NonZeroLayer) ||
       (pOrgTIDLNetStructure.TIDLPCLayers[producerLayerIdx].layerType == TIDL_ShapeLayer) ||
       (pOrgTIDLNetStructure.TIDLPCLayers[producerLayerIdx].layerType == TIDL_SizeLayer)) &&
-      (gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_ONNX_RT))
+      (gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_ONNX_RT) && (pOrgTIDLNetStructure.TIDLPCLayers[producerLayerIdx].outData[0].elementType != TIDL_BFloat16))
   {
     needsDataConvert  = 0;
   }
@@ -17544,7 +17348,8 @@ int32_t tidl_decideOutElementTypeForInputDCLayer (sTIDL_OrgNetwork_t &pOrgTIDLNe
   vector<int32_t> outIdx = tidl_getOutLayers(pOrgTIDLNetStructure, pOrgTIDLNetStructure.numLayers, pOrgTIDLNetStructure.TIDLPCLayers[layerIdx].outData[0].dataId);
   if((params->inElementType[inParamIdx] == TIDL_SinglePrecFloat) ||
     (params->inElementType[inParamIdx] == TIDL_SignedChar) ||
-    (params->inElementType[inParamIdx] == TIDL_SignedShort))
+    (params->inElementType[inParamIdx] == TIDL_SignedShort) || 
+    (params->inElementType[inParamIdx] == TIDL_BFloat16))
   {
     outElementType = tidl_getElementType(1);
   }
@@ -17952,7 +17757,7 @@ static void tidl_printOpsList_dup(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure)
   for (int i = 0; i < pOrgTIDLNetStructure.numLayers; i++)
   {
     TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "%5d|%-30s|%-50s|%-50s|%-50s|", i,
-    TIDL_LayerString[pOrgTIDLNetStructure.TIDLPCLayers[i].layerType],
+    TIDL_GetLayerString(pOrgTIDLNetStructure.TIDLPCLayers[i].layerType),
     pOrgTIDLNetStructure.TIDLPCLayers[i].name,
     pOrgTIDLNetStructure.TIDLPCLayers[i].inDataNames[0],
     pOrgTIDLNetStructure.TIDLPCLayers[i].outDataNames[0]);
@@ -20712,7 +20517,6 @@ int32_t tidl_addCropLayerForValidPadSupport(sTIDL_OrgNetwork_t  &pOrgTIDLNetStru
         pOrgTIDLNetStructure.TIDLPCLayers[layerIndex].layerParams.cropParams.numChannels = numOutChannels;
         pOrgTIDLNetStructure.TIDLPCLayers[layerIndex].layerParams.cropParams.offsetW = localPadW - padL;
         pOrgTIDLNetStructure.TIDLPCLayers[layerIndex].layerParams.cropParams.offsetH = localPadH - padT;
-        pOrgTIDLNetStructure.TIDLPCLayers[layerIndex].layerParams.cropParams.multiCoreMode = TIDL_NOT_MULTI_CORE;
         /* Copy Activation params*/
         pOrgTIDLNetStructure.TIDLPCLayers[layerIndex].actParams = pOrgTIDLNetStructure.TIDLPCLayers[i].actParams;
         pOrgTIDLNetStructure.TIDLPCLayers[layerIndex].clipParams = pOrgTIDLNetStructure.TIDLPCLayers[i].clipParams;
@@ -20801,7 +20605,6 @@ int32_t tidl_addCropLayerForValidPadSupport(sTIDL_OrgNetwork_t  &pOrgTIDLNetStru
         cropLayer.layerParams.cropParams.numChannels = numOutChannels;
         cropLayer.layerParams.cropParams.offsetW = pOrgTIDLNetStructure.TIDLPCLayers[i].layerParams.poolParams.padL - padL;
         cropLayer.layerParams.cropParams.offsetH = pOrgTIDLNetStructure.TIDLPCLayers[i].layerParams.poolParams.padT - padT;
-        cropLayer.layerParams.cropParams.multiCoreMode = TIDL_NOT_MULTI_CORE;
         cropLayer.numMacs =
         (int64_t)((int64_t)cropLayer.outData[0].dimValues[TIDL_DIM_BATCH] * cropLayer.outData[0].dimValues[TIDL_DIM_NUMCH] *
           cropLayer.outData[0].dimValues[TIDL_DIM_HEIGHT] * cropLayer.outData[0].dimValues[TIDL_DIM_WIDTH] * 4);
@@ -22887,7 +22690,7 @@ int32_t tidl_changeElemType(int32_t elemTypeOld, int32_t numParamBits)
     {
       elemTypeNew = TIDL_SinglePrecFloat;
     }
-    else if(numParamBits == 16)
+    else if(numParamBits == 16 && gParams.inferencePrecisionMode == TIDL_InferencePrecisionModeFixedPoint)
     {
       if(sign)
       {
@@ -22897,6 +22700,10 @@ int32_t tidl_changeElemType(int32_t elemTypeOld, int32_t numParamBits)
       {
         elemTypeNew = TIDL_UnsignedShort;
       }
+    }
+    else if(numParamBits == 16 && gParams.inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint)
+    {
+      elemTypeNew = TIDL_BFloat16;
     }
     else if(numParamBits == 8)
     {
@@ -23117,7 +22924,7 @@ int32_t tf_isLayerType(char* layerName, int32_t  startLayer, sTIDL_OrgNetwork_t 
     int32_t nextlayerIdx = startLayer;
     for (i = 0; i < numOps; i++)
     {
-      strcat(layerOpsString, TIDL_LayerString[pOrgTIDLNetStructure.TIDLPCLayers[nextlayerIdx].layerType]);
+      strcat(layerOpsString, TIDL_GetLayerString(pOrgTIDLNetStructure.TIDLPCLayers[nextlayerIdx].layerType));
       if ((pOrgTIDLNetStructure.TIDLPCLayers[nextlayerIdx].numOutBufs == 1) && (pOrgTIDLNetStructure.TIDLPCLayers[nextlayerIdx].outConsumerCnt[0] == 1))
       {
         nextlayerIdx = tidl_getOutLayer(pOrgTIDLNetStructure, pOrgTIDLNetStructure.numLayers, pOrgTIDLNetStructure.TIDLPCLayers[nextlayerIdx].outData[0].dataId);
@@ -23182,6 +22989,11 @@ int32_t tidl_getElementType(int32_t sign)
   }
   else if (gParams.numFeatureBits <= 16)
   {
+    if(gParams.inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint)
+    {
+      return TIDL_BFloat16;
+    }
+
     if (sign)
     {
       return(TIDL_SignedShort);
@@ -23204,7 +23016,7 @@ int32_t tidl_getElementSizeInBits(int32_t elementType)
   {
     size = 1;
   }
-  else if ((elementType == TIDL_SignedShort) || (elementType == TIDL_UnsignedShort))
+  else if ((elementType == TIDL_SignedShort) || (elementType == TIDL_UnsignedShort) || (elementType == TIDL_BFloat16))
   {
     size = 2;
   }
@@ -23231,7 +23043,8 @@ int32_t TIDL_getDatElementSign(int32_t elementType)
       (elementType == TIDL_SignedShort) ||
       (elementType == TIDL_SignedWord) ||
       (elementType == TIDL_SinglePrecFloat) ||
-      (elementType == TIDL_SignedDoubleWord))
+      (elementType == TIDL_SignedDoubleWord) ||
+      (elementType == TIDL_BFloat16))
   {
     sign = 1;
   }
@@ -23309,6 +23122,234 @@ int32_t tidl_isEltwiseAddSubMulDiv (const sTIDL_LayerPC_t* layer)
   return status;
 }
 
+/**
+ * Compute the flat index into tensor `inDims` corresponding to a flat index
+ * `outFlatIdx` in `outDims`, applying numpy-style broadcast rules.
+ */
+static int32_t tidl_broadcastFlatIndex(int32_t outFlatIdx,
+                                        const std::vector<int32_t>& outDims,
+                                        const std::vector<int32_t>& inDims)
+{
+  int32_t ndim = (int32_t)outDims.size();
+
+  /* Pad inDims with leading 1s to match ndim */
+  std::vector<int32_t> inDimsPadded(ndim, 1);
+  int32_t offset = ndim - (int32_t)inDims.size();
+  for (int32_t i = 0; i < (int32_t)inDims.size(); i++)
+    inDimsPadded[offset + i] = inDims[i];
+
+  /* Compute row-major strides for padded input */
+  std::vector<int32_t> inStrides(ndim, 1);
+  for (int32_t d = ndim - 2; d >= 0; d--)
+    inStrides[d] = inStrides[d + 1] * inDimsPadded[d + 1];
+
+  /* Decompose outFlatIdx into per-dimension indices */
+  int32_t remaining = outFlatIdx;
+  std::vector<int32_t> outIdx(ndim);
+  for (int32_t d = ndim - 1; d >= 0; d--)
+  {
+    outIdx[d] = remaining % outDims[d];
+    remaining /= outDims[d];
+  }
+
+  /* Map to input flat index: broadcast dims (size==1) always use index 0 */
+  int32_t inFlatIdx = 0;
+  for (int32_t d = 0; d < ndim; d++)
+  {
+    int32_t idx = (inDimsPadded[d] == 1) ? 0 : outIdx[d];
+    inFlatIdx += idx * inStrides[d];
+  }
+  return inFlatIdx;
+}
+
+/**
+ * Compute the numpy-style broadcast output shape from two input dim vectors.
+ */
+static std::vector<int32_t> tidl_broadcastOutputShape(const std::vector<int32_t>& dimsA,
+                                                       const std::vector<int32_t>& dimsB)
+{
+  int32_t ndim = (int32_t)std::max(dimsA.size(), dimsB.size());
+  std::vector<int32_t> outDims(ndim);
+  int32_t offsetA = ndim - (int32_t)dimsA.size();
+  int32_t offsetB = ndim - (int32_t)dimsB.size();
+  for (int32_t d = 0; d < ndim; d++)
+  {
+    int32_t a = (d >= offsetA) ? dimsA[d - offsetA] : 1;
+    int32_t b = (d >= offsetB) ? dimsB[d - offsetB] : 1;
+    outDims[d] = std::max(a, b);
+  }
+  return outDims;
+}
+
+/**
+ * Fold EltWise layers whose both inputs are constant initializers
+ * into a single ConstDataLayer with the pre-computed result.
+ *
+ * Must run before tidl_convertEltwiseToBNLayer so that BN conversion never
+ * sees a both-const layer.
+ *
+ * Parse files store:
+ *   layer.weights  <- data for constTensorIndices[0]  (input 0)
+ *   layer.bias     <- data for constTensorIndices[1]  (input 1)
+ */
+/**
+ * Dead branch elimination pass.
+ *
+ * A layer is dead if it is not a DataLayer or ConstDataLayer and all of its
+ * output buffers have outConsumerCnt == 0.  Processing in reverse topological
+ * order (layers are sorted by tidl_sortLayersInProcOrder before this call)
+ * handles chains: a leaf dead layer is removed first, its producer's consumer
+ * count is decremented, and the producer is caught in the same pass if it also
+ * becomes dead.
+ *
+ * Dead layers are marked numInBufs = -1 / numOutBufs = -1 for compaction by
+ * the tidl_removeMergedLayersFromNet call that follows.
+ */
+int32_t tidl_removeDeadBranches(sTIDL_OrgNetwork_t &orgTIDLNetStructure)
+{
+  int32_t numLayers = orgTIDLNetStructure.numLayers;
+  int32_t deadCount = 0;
+
+  /* Reverse topological order: leaf dead layers are processed first so chains
+   * are eliminated in a single pass */
+  for (int32_t i = numLayers - 1; i >= 0; i--)
+  {
+    sTIDL_LayerPC_t &layer = orgTIDLNetStructure.TIDLPCLayers[i];
+
+    if (layer.layerType == TIDL_DataLayer || layer.layerType == TIDL_ConstDataLayer)
+      continue;
+
+    bool dead = true;
+    for (int32_t j = 0; j < layer.numOutBufs; j++)
+    {
+      if (layer.outConsumerCnt[j] > 0)
+      {
+        dead = false;
+        break;
+      }
+    }
+
+    if (!dead)
+      continue;
+
+    deadCount++;
+
+    /* Decrement consumer counts of this layer's producers */
+    for (int32_t j = 0; j < layer.numInBufs; j++)
+    {
+      int32_t inDataId = layer.inData[j].dataId;
+      if (inDataId <= 0)
+        continue;
+
+      std::vector<int32_t> inLayers = tidl_getInLayers(orgTIDLNetStructure, numLayers, inDataId);
+      for (int32_t producerIdx : inLayers)
+      {
+        sTIDL_LayerPC_t &prod = orgTIDLNetStructure.TIDLPCLayers[producerIdx];
+        for (int32_t k = 0; k < prod.numOutBufs; k++)
+        {
+          if (prod.outData[k].dataId == inDataId)
+          {
+            if (prod.outConsumerCnt[k] > 0)
+              prod.outConsumerCnt[k]--;
+            if (prod.outConsumerLinked[k] > 0)
+              prod.outConsumerLinked[k]--;
+            break;
+          }
+        }
+      }
+    }
+
+    layer.numInBufs  = -1;
+    layer.numOutBufs = -1;
+  }
+
+  if(gParams.debugTraceLevel > 0)
+  {
+    if (deadCount > 0)
+      TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "tidl_removeDeadBranches: Removing %d dead layers", deadCount);
+  }
+
+  return 0;
+}
+
+int32_t tidl_foldConstEltwise(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, int32_t numLayers)
+{
+  for (int32_t i = 0; i < numLayers; i++)
+  {
+    sTIDL_LayerPC_t& layer = pOrgTIDLNetStructure.TIDLPCLayers[i];
+    sTIDL_allowlistingMetaData& md = layer.allowlistingMetaData;
+
+    if (layer.layerType != TIDL_EltWiseLayer || !tidl_isEltwiseAddSubMulDiv(&layer))
+      continue;
+
+    if (md.numVarInputs != 0)
+      continue;
+
+    if (layer.weights.ptr == NULL || layer.bias.ptr == NULL)
+      continue;
+
+    /* Determine which buffer is input 0 (A) and input 1 (B).
+     * constTensorIndices[0] holds the input-slot index of the first const.
+     * For two-const eltwise this is always {0,1}, so weights=input0, bias=input1. */
+    float* ptrA = (float*)layer.weights.ptr;   /* input 0 */
+    float* ptrB = (float*)layer.bias.ptr;       /* input 1 */
+    std::vector<int32_t>& dimsA = md.constTensorsDims[0];
+    std::vector<int32_t>& dimsB = md.constTensorsDims[1];
+    std::vector<int32_t> outDims = tidl_broadcastOutputShape(dimsA, dimsB);
+
+    int32_t outSize = 1;
+    for (auto d : outDims)
+      outSize *= d;
+
+    float* result = (float*)my_malloc(outSize * sizeof(float));
+    if (result == NULL)
+    {
+      TIDL_GLOBAL_REPORT_ERROR("tidl_foldConstEltwise: memory allocation failed");
+      return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+    }
+
+    auto eltWiseType = layer.layerParams.eltWiseParams.eltWiseType;
+    for (int32_t j = 0; j < outSize; j++)
+    {
+      float a = ptrA[tidl_broadcastFlatIndex(j, outDims, dimsA)];
+      float b = ptrB[tidl_broadcastFlatIndex(j, outDims, dimsB)];
+      switch (eltWiseType)
+      {
+        case TIDL_EltWiseSum:     result[j] = a + b; break;
+        case TIDL_EltWiseProduct: result[j] = a * b; break;
+        case TIDL_EltWiseDiv:     result[j] = a / b; break;
+        case TIDL_EltWiseSub:     result[j] = a - b; break;
+        default:                  result[j] = a + b; break;
+      }
+    }
+
+    /* Free the two source buffers */
+    free(layer.weights.ptr);
+    layer.weights.ptr = NULL;
+    free(layer.bias.ptr);
+    layer.bias.ptr = NULL;
+    layer.bias.bufSize = 0;
+
+    /* Convert layer in-place to ConstDataLayer */
+    layer.layerType   = TIDL_ConstDataLayer;
+    layer.numInBufs   = -1;
+    layer.numOutBufs  = 1;
+
+    layer.weights.ptr     = result;
+    layer.weights.bufSize = outSize;
+
+    /* Set output dimensions from shape-inferred output dims */
+    int32_t remDim = TIDL_DIM_MAX - (int32_t)outDims.size();
+    int32_t dim = 0;
+    for (int32_t d = 0; d < remDim; d++)
+      layer.outData[0].dimValues[dim++] = 1;
+    for (int32_t d = 0; d < (int32_t)outDims.size(); d++)
+      layer.outData[0].dimValues[dim++] = outDims[d];
+
+    layer.outData[0].elementType = tidl_getElementType(1);
+  }
+  return 0;
+}
 
 int32_t tidl_convertEltwiseToBNLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t numLayers, int32_t *dataIndex)
 {
@@ -23322,9 +23363,28 @@ int32_t tidl_convertEltwiseToBNLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, 
       auto eltWiseType = layer->layerParams.eltWiseParams.eltWiseType;
       auto md = layer->allowlistingMetaData;
 
-      /* Both variable inputs */
-      if (md.numConstInputs == 0)
+      /* Both variable inputs, or both constant (both constant is handled by tidl_foldConstEltwise) */
+      if (md.numConstInputs == 0 || md.numVarInputs == 0)
       {
+        continue;
+      }
+
+      /* For Div, const / variable: add Reciprocal on variable input, convert to Product */
+      if (eltWiseType == TIDL_EltWiseDiv && md.constTensorIndices[0] == 0)
+      {
+        std::vector<int32_t> inNodes;
+        inNodes.push_back(md.varTensorIndices[0]);
+        TIDL_IMPORT_CHECK_AND_RETURN(TIDL_addLayer(pOrgTIDLNetStructure, i, TIDL_BatchNormLayer, dataIndex, ADD_LAYER_BEFORE, inNodes), "");
+        sTIDL_LayerPC_t& addedLayer = pOrgTIDLNetStructure.TIDLPCLayers[pOrgTIDLNetStructure.numLayers - 1];
+        addedLayer.actParams.actType = TIDL_Reciprocal;
+        addedLayer.layerPCParams.batchNormParams.momentum = 0.9;
+        addedLayer.layerPCParams.batchNormParams.trainingMode = 0;
+        layer->layerParams.eltWiseParams.eltWiseType = TIDL_EltWiseProduct;
+        layer->bias.ptr     = my_malloc(layer->weights.bufSize * sizeof(float));
+        layer->bias.bufSize = layer->weights.bufSize;
+        float *bptr = (float *)layer->bias.ptr;
+        for (int lc = 0; lc < layer->bias.bufSize; lc++)
+          bptr[lc] = 0.0f;
         continue;
       }
 
@@ -27941,7 +28001,137 @@ int32_t tidl_convertGatherElementsAxisToWidthwiseAxis(sTIDL_OrgNetwork_t  &pOrgT
   return 0;
 }
 
-/* if axis is not along TIDL_DIM_HEIGHT, then add reshape before and after gather layer to convert it into line gather (axis = TIDL_DIM_HEIGHT) 
+/* Optimize the 3-layer pattern Transpose -> Gather(axis=HEIGHT) -> Transpose into a single
+ * Gather(axis=WIDTH), eliminating both transpose layers.
+ *
+ * The pattern arises when a HEIGHT-axis gather is surrounded by transposes that swap the
+ * HEIGHT and WIDTH dimensions (perm = [0,1,2,3,5,4]).  Because the first transpose moves
+ * the original WIDTH data into the HEIGHT slot, gathering along HEIGHT is equivalent to
+ * gathering along WIDTH of the original tensor.  The second transpose restores the dimension
+ * order, so the net input/output shapes are identical to a direct WIDTH-axis gather.
+ *
+ * Conditions for the optimization to apply:
+ *   - T1 (predecessor of Gather's data input) is a Transpose with perm [0,1,2,3,5,4],
+ *     has exactly one consumer (the Gather), and carries no data-type conversion.
+ *   - Gather has axis == TIDL_DIM_HEIGHT and exactly one consumer (T2).
+ *   - T2 (successor of Gather's output) is a Transpose with perm [0,1,2,3,5,4] and
+ *     carries no data-type conversion.
+ *
+ */
+int32_t tidl_optimizeTransposeGatherTranspose(sTIDL_OrgNetwork_t &orgTIDLNetStructure,
+                                               int32_t* dataIndex,
+                                               int32_t numLayers)
+{
+  for (int32_t i = 0; i < numLayers; i++)
+  {
+    auto &gatherLayer = orgTIDLNetStructure.TIDLPCLayers[i];
+
+    if (gatherLayer.layerType != TIDL_GatherLayer)
+    {
+      continue;
+    }
+
+    if (gatherLayer.layerParams.gatherParams.axis != TIDL_DIM_HEIGHT)
+    {
+      continue;
+    }
+
+    // Check T1 (predecessor of data input)
+    int32_t t1Idx = tidl_getInLayer(orgTIDLNetStructure, numLayers, gatherLayer.inData[0].dataId);
+    if (t1Idx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+    {
+      continue;
+    }
+
+    auto &t1Layer = orgTIDLNetStructure.TIDLPCLayers[t1Idx];
+
+    if (t1Layer.layerType != TIDL_TransposeLayer || t1Layer.outConsumerCnt[0] != 1)
+    {
+      continue;
+    }
+    if (t1Layer.layerParams.transposeParams.isDataConvertNeeded)
+    {
+      continue;
+    }
+
+    // T1 perm must be exactly [0,1,2,3,5,4] (HEIGHT<->WIDTH swap, others identity)
+    int32_t *perm1 = t1Layer.layerParams.transposeParams.perm;
+    bool t1Valid = (perm1[TIDL_DIM_HEIGHT] == TIDL_DIM_WIDTH && perm1[TIDL_DIM_WIDTH]  == TIDL_DIM_HEIGHT);
+    for (int32_t j = 0; j < TIDL_DIM_MAX && t1Valid; j++)
+    {
+      if (j != TIDL_DIM_HEIGHT && j != TIDL_DIM_WIDTH && perm1[j] != j)
+      {
+        t1Valid = false;
+      }
+    }
+    if (!t1Valid)
+    {
+      continue;
+    }
+
+    // Check T2 (successor of gather output)
+    if (gatherLayer.outConsumerCnt[0] != 1)
+    {
+      continue;
+    }
+  
+    int32_t t2Idx = tidl_getOutLayer(orgTIDLNetStructure, numLayers, gatherLayer.outData[0].dataId);
+    if (t2Idx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+    {
+      continue;
+    }
+
+    auto &t2Layer = orgTIDLNetStructure.TIDLPCLayers[t2Idx];
+
+    if (t2Layer.layerType != TIDL_TransposeLayer)
+    {
+      continue;
+    }
+    if (t2Layer.layerParams.transposeParams.isDataConvertNeeded)
+    {
+      continue;
+    }
+
+    // T2 perm must also be [0,1,2,3,5,4] (inverse of T1 for a simple HEIGHT<->WIDTH swap)
+    int32_t *perm2 = t2Layer.layerParams.transposeParams.perm;
+    bool t2Valid = (perm2[TIDL_DIM_HEIGHT] == TIDL_DIM_WIDTH && perm2[TIDL_DIM_WIDTH]  == TIDL_DIM_HEIGHT);
+    for (int32_t j = 0; j < TIDL_DIM_MAX && t2Valid; j++)
+    {
+      if (j != TIDL_DIM_HEIGHT && j != TIDL_DIM_WIDTH && perm2[j] != j)
+      {
+        t2Valid = false;
+      }
+    }
+    if (!t2Valid)
+    {
+      continue;
+    }
+
+    // --- Apply transformation ---
+
+    // Bypass T1: wire gather's data input directly to T1's input
+    gatherLayer.inData[0] = t1Layer.inData[0];
+    strcpy((char*)gatherLayer.inDataNames[0], (char*)t1Layer.inDataNames[0]);
+
+    // Change gather axis to WIDTH
+    gatherLayer.layerParams.gatherParams.axis = TIDL_DIM_WIDTH;
+
+    // Bypass T2: wire gather's output to T2's output (correct shape inherited)
+    gatherLayer.outData[0] = t2Layer.outData[0];
+    strcpy((char*)gatherLayer.outDataNames[0], (char*)t2Layer.outDataNames[0]);
+    gatherLayer.outConsumerCnt[0] = t2Layer.outConsumerCnt[0];
+
+    // Mark T1 and T2 as dead
+    t1Layer.numInBufs = -1;
+    t1Layer.numOutBufs = -1;
+    t2Layer.numInBufs = -1;
+    t2Layer.numOutBufs = -1;
+  }
+
+  return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
+}
+
+/* if axis is not along TIDL_DIM_HEIGHT, then add reshape before and after gather layer to convert it into line gather (axis = TIDL_DIM_HEIGHT)
   Example:  input shape: 1x1xD2xCxHxW
             indices shape: 1x1x1x1x1xO    (Only 1D indices are supported)
             axis = 2 (along D2), dimensions higher than axis should be 1
@@ -28565,26 +28755,32 @@ int32_t tidl_updateConstDataLayerRange(sTIDL_OrgNetwork_t  *pOrgTIDLNetStructure
     if(pOrgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_ConstDataLayer)
     {
       sTIDL_LayerPC_t &layer = pOrgTIDLNetStructure->TIDLPCLayers[i];
-      float* ptr = (float*) layer.weights.ptr;
-      float32_tidl min = FLT_MAX, max = -1.0 * FLT_MAX;
-      for(int32_t j = 0; j < layer.weights.bufSize; j++)
-      {
-        min = std::min(min, ptr[j]);
-        max = std::max(max, ptr[j]);
-      }
-      
+
+      float min = FLT_MAX, max = -1.0 * FLT_MAX;
+
       // for gather layer indices will be in int32
       int32_t pIdx = tidl_getOutLayer(pOrgTIDLNetStructure, numLayers, layer.outData[0].dataId);
-      if(pIdx != -1 && pOrgTIDLNetStructure->TIDLPCLayers[pIdx].layerType == TIDL_GatherLayer)
+      int32_t dataType = (pIdx != -1 && pOrgTIDLNetStructure->TIDLPCLayers[pIdx].layerType == TIDL_GatherLayer)
+                         ? TIDL_SignedWord
+                         : layer.weights.dataType;
+
+      if (gParams.modelType != TIDL_IMPORT_MODEL_FORMAT_ONNX && gParams.modelType != TIDL_IMPORT_MODEL_FORMAT_ONNX_RT)
       {
-        int32_t* _ptr = (int32_t*) layer.weights.ptr;
-        min = FLT_MAX;
-        max = FLT_MIN;
-        for(int32_t j = 0; j < layer.weights.bufSize; j++)
-        {
-          min = std::min(min, (float32_tidl) _ptr[j]);
-          max = std::max(max, (float32_tidl) _ptr[j]);
-        }
+        dataType = TIDL_SinglePrecFloat;
+      }
+
+      if (dispatchTypedBuffer(layer.weights.ptr, dataType, [layer, &min, &max](auto* typedPtr) {
+            min = FLT_MAX;
+            max = -1.0 * FLT_MAX;
+            for(int32_t j = 0; j < layer.weights.bufSize; j++)
+            {
+              float val = (float)typedPtr[j];
+              min = std::min(min, val);
+              max = std::max(max, val);
+            }
+          }) != TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
+      {
+        return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
       }
 
       layer.clipParams.isClipEnabled = 1;
@@ -28631,7 +28827,7 @@ int32_t tidl_convertReduceMeanReduceSumToMatMulLayer(sTIDL_OrgNetwork_t  &pOrgTI
 
       if(axis == TIDL_DIM_WIDTH)
       {
-        int32_t constIdx = tidl_createConstDataLayer(pOrgTIDLNetStructure, &dataIndex, ptr, numElements, layerIndex);
+        int32_t constIdx = tidl_createConstDataLayer(pOrgTIDLNetStructure, &dataIndex, (void*)ptr, numElements, TIDL_SinglePrecFloat, layerIndex);
         sTIDL_LayerPC_t &constLayer = pOrgTIDLNetStructure.TIDLPCLayers[constIdx];
         if(i1Layer.allowlistingMetaData.constTensorIndices.size() >= 1)
         {
@@ -28717,7 +28913,7 @@ int32_t tidl_convertReduceMeanReduceSumToMatMulLayer(sTIDL_OrgNetwork_t  &pOrgTI
       else
       {
         // Add a reshape layer followed by matmul layer which is having constant input as inputA and varibale input as input B
-        int32_t constIdx = tidl_createConstDataLayer(pOrgTIDLNetStructure, &dataIndex, ptr, numElements, layerIndex);
+        int32_t constIdx = tidl_createConstDataLayer(pOrgTIDLNetStructure, &dataIndex, (void*)ptr, numElements, TIDL_SinglePrecFloat, layerIndex);
         sTIDL_LayerPC_t &constLayer = pOrgTIDLNetStructure.TIDLPCLayers[constIdx];
         if(i1Layer.allowlistingMetaData.constTensorIndices.size() >= 1)
         {
@@ -28809,6 +29005,25 @@ int32_t tidl_convertReduceMeanReduceSumToMatMulLayer(sTIDL_OrgNetwork_t  &pOrgTI
   }
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
+
+void splitString(const std::string &s, std::vector<std::string> &tokens) {
+    int32_t len = s.length(), i = 0, j = 0;
+    
+    for(i = 0, j = 0; i < len; i++) {
+      if(s[i] == ' ' || s[i] == ',' || s[i] == '\t') {
+        std::string token = s.substr(j, i - j);
+        if(!token.empty()) {
+          tokens.push_back(token);
+        }
+        j = i + 1;
+      }
+    }
+    std::string token = s.substr(j, len - j);
+    if(!token.empty()) {
+      tokens.push_back(token);
+    }
+}
+
 void splitString(const std::string &s, std::unordered_set<std::string> &tokens) {
     int32_t len = s.length(), i = 0, j = 0;
     
@@ -28822,7 +29037,9 @@ void splitString(const std::string &s, std::unordered_set<std::string> &tokens) 
       }
     }
     std::string token = s.substr(j, len - j);
-    tokens.insert(token);
+    if(!token.empty()) {
+      tokens.insert(token);
+    }
 }
 
 bool tidl_traverseValidMPBranch(sTIDL_OrgNetwork_t *net, int32_t layerIdx, int32_t destIdx, std::unordered_map<int32_t, int32_t> &highPrecisionLayers, std::unordered_set<std::string> &output16BitFeatureList, std::unordered_map<int32_t, int32_t> &visitedMap) {
@@ -29456,7 +29673,7 @@ int32_t tidl_convertExpandToEltwiseSumLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStru
           ptr[i] = 0.0;
         }
       }
-      int32_t constIdx = tidl_createConstDataLayer(pOrgTIDLNetStructure, &dataIndex, ptr, bufSize, layerIndex);
+      int32_t constIdx = tidl_createConstDataLayer(pOrgTIDLNetStructure, &dataIndex, (void*)ptr, bufSize, TIDL_SinglePrecFloat, layerIndex);
       sTIDL_LayerPC_t &constLayer = pOrgTIDLNetStructure.TIDLPCLayers[constIdx];
       for(int i = 0; i < TIDL_DIM_MAX; i++)
       {
@@ -29632,7 +29849,7 @@ int32_t tidl_mapGemmMatMulToIP(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, int32_t
               float *addPtr = (float*) ipLayer.bias.ptr;
               int32_t addBufSize = ipLayer.bias.bufSize;
 
-              int32_t addConstIdx  = tidl_createConstDataLayer (pOrgTIDLNetStructure, dataIndex, addPtr, addBufSize, pOrgTIDLNetStructure.numLayers);
+              int32_t addConstIdx  = tidl_createConstDataLayer (pOrgTIDLNetStructure, dataIndex, (void*)addPtr, addBufSize, ipLayer.bias.dataType, pOrgTIDLNetStructure.numLayers);
               if(addConstIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
               {
                 return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
@@ -30278,7 +30495,8 @@ bool tidl_isCalibrationInNativeTypes()
     return ((gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_ONNX || 
             gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_ONNX_RT ||
             gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TVM_RELAY ) &&
-            gParams.preQuantizedModel == 0
+            gParams.preQuantizedModel == 0 && 
+          !(gParams.numParamBits == 16 && gParams.inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint)
            );
 }
 
@@ -30593,6 +30811,7 @@ int32_t tidl_convertShapeAndSizeToConst(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructur
       free(layer.weights.ptr);
     }
     layer.weights.ptr = ptr;
+    layer.weights.dataType = TIDL_SignedWord;
     layer.weights.bufSize = outputSize;
 
     // Disconnect the input layer
@@ -30811,7 +31030,7 @@ int32_t tidl_splitAttentionLayer(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32
       float scale = attentionLayer.layerParams.attentionParams.scale;
       float *scalePtr = (float *)my_malloc(sizeof(float));
       *scalePtr = scale;
-      int32_t scaleConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, scalePtr, 1, orgTIDLNetStructure.numLayers);
+      int32_t scaleConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, (void*)scalePtr, 1, TIDL_SinglePrecFloat, orgTIDLNetStructure.numLayers);
       if(scaleConstIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
       {
         return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
@@ -30841,7 +31060,7 @@ int32_t tidl_splitAttentionLayer(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32
         attentionMaskLayer.numOutBufs = 1;
         float *maskPtr = (float *)my_malloc( attentionLayer.bias.bufSize * sizeof(float));
         memcpy(maskPtr, attentionLayer.bias.ptr, attentionLayer.bias.bufSize * sizeof(float));
-        int32_t maskConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, maskPtr, attentionLayer.bias.bufSize, orgTIDLNetStructure.numLayers);
+        int32_t maskConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, (void*)maskPtr, attentionLayer.bias.bufSize, attentionLayer.bias.dataType, orgTIDLNetStructure.numLayers);
         if(maskConstIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
         {
           return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
@@ -30882,7 +31101,7 @@ int32_t tidl_splitAttentionLayer(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32
         float *softcapReciprocalPtr = (float *)my_malloc(sizeof(float));
         float softcap_reciprocal = 1.0/attentionLayer.layerParams.attentionParams.softcap;
         *softcapReciprocalPtr = softcap_reciprocal;
-        int32_t softcapReciprocalConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, softcapReciprocalPtr, 1, orgTIDLNetStructure.numLayers);
+        int32_t softcapReciprocalConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, (void*)softcapReciprocalPtr, 1, TIDL_SinglePrecFloat, orgTIDLNetStructure.numLayers);
         if(softcapReciprocalConstIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
         {
           return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
@@ -30910,7 +31129,7 @@ int32_t tidl_splitAttentionLayer(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32
         float *softcapPtr = (float *)my_malloc(sizeof(float));
         float softcap = attentionLayer.layerParams.attentionParams.softcap;
         *softcapPtr = softcap;
-        int32_t softcapConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, softcapPtr, 1, orgTIDLNetStructure.numLayers);
+        int32_t softcapConstIdx  = tidl_createConstDataLayer (orgTIDLNetStructure, dataIndex, (void*)softcapPtr, 1, TIDL_SinglePrecFloat, orgTIDLNetStructure.numLayers);
         if(softcapConstIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
         {
           return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
@@ -31295,6 +31514,145 @@ int32_t tidl_fillGatherProp(sTIDL_OrgNetwork_t &orgTIDLNetStructure, int32_t num
         gatherLayer.layerParams.gatherParams.viewChannels = orgTIDLNetStructure.TIDLPCLayers[outLayerIdx].layerParams.convParams.numInChannels;
       }
     }
+  }
+  return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
+}
+
+int32_t tidl_validateMPConfig(sTIDL_OrgNetwork_t &orgTIDLNetStructure, tidl_import_config *params)
+{
+  std::string output16BitFeatureListStr = (char *)params->outputFeature16bitNamesList;
+
+  std::vector<std::string> output16BitFeatureList;
+  splitString(output16BitFeatureListStr, output16BitFeatureList);
+
+  int32_t numLayers = orgTIDLNetStructure.numLayers;
+  std::vector<bool> isOutput16BitFeatureFound(output16BitFeatureList.size(), false);
+
+  for(int32_t i = 0; i < numLayers; i++)
+  {
+    sTIDL_LayerPC_t& layer = orgTIDLNetStructure.TIDLPCLayers[i];
+    for(int32_t outBufIdx = 0; outBufIdx < layer.numOutBufs; outBufIdx++)
+    {
+      std::string outDataName((char *)layer.outDataNames[outBufIdx]);
+      for(int32_t idx = 0; idx < output16BitFeatureList.size(); idx++)
+      {
+        if(outDataName == output16BitFeatureList[idx])
+        {
+          isOutput16BitFeatureFound[idx] = true;
+          break;
+        }
+      }
+    }
+  }
+
+  for(int32_t i = 0; i < isOutput16BitFeatureFound.size(); i++)
+  {
+    if(!isOutput16BitFeatureFound[i])
+    {
+      std::string output16BitFeatureName = output16BitFeatureList[i];
+      TIDL_GLOBAL_REPORT_WARNING("Output feature '%s' from outputFeature16bitNamesList not found in the model", output16BitFeatureName.c_str());
+    }
+  }
+  return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
+}
+
+/** 
+ * This optimization converts strided slice layer to gather layer with indices of the gather being 
+  calculated by iterating over the slice start and end idx and incrementing the idx by steps.
+
+ * Gather having the non-singular dimension higher than axis are not supported, and hence adding a
+  transpose across the gather layer to move the axis dimension at the very start of the non-singular dimensions.
+*/
+int32_t tidl_convertStridedSliceToContinousSlice(sTIDL_OrgNetwork_t &orgTIDLNetStructure, int32_t numLayers, int32_t* dataIndex)
+{
+  for(int32_t i1 = 0; i1 < numLayers; i1++)
+  {
+    sTIDL_LayerPC_t& sliceLayer = orgTIDLNetStructure.TIDLPCLayers[i1];
+    if(sliceLayer.layerType != TIDL_SliceLayer || sliceLayer.layerParams.sliceParams.stride <= 1)
+    {
+      continue;
+    }
+
+    int32_t stride = sliceLayer.layerParams.sliceParams.stride;
+    int32_t sliceAxis = sliceLayer.layerParams.sliceParams.axis;
+    int32_t sliceStart = sliceLayer.layerParams.sliceParams.slicePoints[0];
+    int32_t sliceEnd = sliceLayer.layerParams.sliceParams.slicePoints[1];
+    int32_t* inputDimensions = sliceLayer.inData[0].dimValues;
+
+    // Compute output dimension size (number of elements along slice axis after gathering)
+    int32_t outDimSize = (sliceEnd - sliceStart + stride - 1) / stride;
+    if (outDimSize <= 0)
+    {
+      continue;
+    }
+
+    int32_t* gatherIndices = (int32_t*)malloc(outDimSize * sizeof(int32_t));
+    if (!gatherIndices)
+    {
+      return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+    }
+
+    // Populate gather indices based on slice start, end and stride
+    for (int32_t idx = sliceStart, indicesIdx = 0; idx < sliceEnd; idx += stride)
+    {
+      gatherIndices[indicesIdx++] = idx;
+    }
+
+    // Create constant layer for gather indices
+    int32_t constIndicesLayerIdx = tidl_createConstDataLayer(orgTIDLNetStructure, dataIndex, (float*)gatherIndices, outDimSize, TIDL_SinglePrecFloat, orgTIDLNetStructure.numLayers);
+    sTIDL_LayerPC_t& indicesConstLayer = orgTIDLNetStructure.TIDLPCLayers[constIndicesLayerIdx];
+    for(int32_t k = 0; k < TIDL_DIM_MAX; k++)
+    {
+      indicesConstLayer.outData[0].dimValues[k] = 1;
+    }
+    indicesConstLayer.outData[0].dimValues[TIDL_DIM_HEIGHT] = 1;
+    indicesConstLayer.outData[0].dimValues[TIDL_DIM_WIDTH] = outDimSize;
+    sliceLayer.inData[1] = indicesConstLayer.outData[0];
+    strcpy((char *)sliceLayer.inDataNames[1], (char *)indicesConstLayer.outDataNames[0]);
+
+    //check if the higher dimension to axis of slice layer have all dimensions as singular dimension or not
+    bool isAxisUpdateNeededForGather = false;
+    for(int32_t i2 = 0 ; i2 < sliceAxis ; i2++)
+    {
+      if(sliceLayer.inData[0].dimValues[i2] > 1)
+      { 
+        isAxisUpdateNeededForGather = true;
+      }
+    }
+
+    if(isAxisUpdateNeededForGather)
+    {
+      /** As input shape with dimension higher than axis as 1 is supported, 
+       * Add a transpose layer to make the axis of the gather layer at position in which higher dimension above sliceAxis is singular dimension. */
+      TIDL_addLayer(orgTIDLNetStructure, i1, TIDL_TransposeLayer, dataIndex, ADD_LAYER_BEFORE, {0});
+      sTIDL_LayerPC_t& transposeLayerBefore = orgTIDLNetStructure.TIDLPCLayers[orgTIDLNetStructure.numLayers - 1];
+      int32_t perm[] = {0, 1, 2, 3, 4, 5};
+      for(int32_t i2 = 0 ; i2 < sliceAxis ; i2++)
+      {
+        if(sliceLayer.inData[0].dimValues[i2] != 1)
+        { 
+          perm[sliceAxis] = i2;
+          perm[i2] = sliceAxis;
+          break; 
+        }
+      }
+      tidl_configureTransposeLayer(&transposeLayerBefore, perm);
+
+      memcpy(transposeLayerBefore.layerParams.transposeParams.perm, perm, TIDL_DIM_MAX * sizeof(int32_t));
+
+      /** Add a transpose layer just after the slice layer to get back the dimensional values after the Gather operation is been performed at the desired index */
+      TIDL_addLayer(orgTIDLNetStructure, i1, TIDL_TransposeLayer, dataIndex, ADD_LAYER_AFTER);
+      sTIDL_LayerPC_t& transposeLayerAfter = orgTIDLNetStructure.TIDLPCLayers[orgTIDLNetStructure.numLayers - 1];
+      tidl_configureTransposeLayer(&transposeLayerAfter, perm);
+      memcpy(transposeLayerAfter.layerParams.transposeParams.perm, perm, TIDL_DIM_MAX * sizeof(int32_t));
+    }
+
+    // Convert slice layer to gather layer
+    sliceLayer.layerType = TIDL_GatherLayer;
+    sliceLayer.numInBufs = 2;
+    sliceLayer.layerParams.gatherParams.axis = sliceAxis;
+    sliceLayer.layerParams.gatherParams.isIdxScalar = 0;
+    sliceLayer.outData[0].dimValues[sliceAxis] = outDimSize;
   }
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }

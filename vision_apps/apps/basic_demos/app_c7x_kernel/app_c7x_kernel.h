@@ -63,6 +63,12 @@
 #ifndef APP_C7X_KERNEL_H
 #define APP_C7X_KERNEL_H
 
+#include <TI/tivx.h>
+#include <TI/tivx_task.h>
+#include <TI/tivx_target_kernel.h>
+#include "tivx_kernels_host_utils.h"
+#include <TI/tivx_img_proc.h>
+
 #define APP_DEBUG
 #ifdef APP_DEBUG
 #define APP_PRINTF(f_, ...) printf((f_), ##__VA_ARGS__)
@@ -73,35 +79,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <VX/vx.h>
-
-
-/** \brief Index of input image 1 in parameter list */
-#define APP_C7X_IMG_ADD_IN0_IMG_IDX   (0u)
-
-/** \brief Index of input image 2 in parameter list */
-#define APP_C7X_IMG_ADD_IN1_IMG_IDX   (1u)
-
-/** \brief Index of output image in parameter list */
-#define APP_C7X_IMG_ADD_OUT0_IMG_IDX  (2u)
-
-/** \brief Total number of parameters for this function */
-#define APP_C7X_IMG_ADD_MAX_PARAMS    (3u)
-
-/** \brief Image Add kernel name */
-#define APP_C7X_KERNEL_IMG_ADD_NAME     "app_c7x_kernel.img_add"
-
-/* target kernels register/unregister */
-void app_c7x_target_kernel_img_add_register(void);
-vx_status app_c7x_target_kernel_img_add_unregister(void);
-
-/* host side kernel wrapper register/unregister */
-vx_status app_c7x_kernel_img_add_register(vx_context);
-vx_status app_c7x_kernel_img_add_unregister(vx_context);
-
-/* kernels node */
-vx_node app_c7x_kernel_img_add_kernel_node(vx_graph graph, vx_image img1, vx_image img2, vx_image img_out);
 
 #ifdef __cplusplus
 }

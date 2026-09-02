@@ -60,7 +60,7 @@
 *
 */
 
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 
 static int32_t tidlrt_instance_count = 0;
 int tidlrt_printf(const char *fmt, ...);
@@ -92,8 +92,10 @@ int32_t tidl_rt_ovx_DeInit(int memOnly)
     int32_t status = 0;
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     This case is used only on segmentation fault.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if (memOnly == 1)
     {
@@ -103,8 +105,10 @@ int32_t tidl_rt_ovx_DeInit(int memOnly)
     /* LDRA_JUSTIFY_END */
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     This case is used only on segmentation fault.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     else if(tidlrt_instance_count > 0)
     /* LDRA_JUSTIFY_END */

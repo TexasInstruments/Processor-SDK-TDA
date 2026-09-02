@@ -166,6 +166,14 @@ then
         arr+=("libc6:i386")  # for running the ti-cgt-c6000 installer (only on 22.04, since not preinstalled)
     fi
 
+    if [ $qnx_build -eq 1 ] && [ ${SOC} = "tda54" ]
+    then
+        arr+=("fdisk")       # for building the PSDK QNX SD card img file
+        arr+=("dosfstools")  # for building the PSDK QNX SD card img file
+        arr+=("mtools")      # for building the PSDK QNX SD card img file
+        arr+=("bmap-tools")  # for building the PSDK QNX SD card img file
+    fi
+
     # If we are doing more than just building RTOS firmware for yocto, there may be more packages we need
     if [ $firmware_only -eq 0 ]
     then
@@ -234,6 +242,7 @@ then
     arr+=("libtool")    # for building protobuf-3.21.12
     arr+=("libyaml-cpp-dev")    # for building yaml-cpp in host-emulation
     arr+=("libavformat-dev")    # for including avformat headers in host-emulation
+    arr+=("libclang-dev")       # for rust bindgen
 
 #    Prior to 9.00.00 SDK release, the following additional packages were also installed but are no longer needed in
 #    9.00.00.  The list is kept here as a reference in case something stops working on a new machine installation, this list
@@ -392,6 +401,48 @@ then
             rm xpack-riscv-none-elf-gcc-14.2.0-1-linux-x64.tar.gz
         fi
         echo "[riscv-none-elf-gcc-14.2.0-1] Done"
+    fi
+
+    # Install rustc for Ethernet Switch Firmware on TDA54
+    if [ "${SOC}" == "tda54" ]; then
+        RUSTC_VERSION=1.94.0
+        RUSTC_TARGETS="thumbv8m.main-none-eabihf armv8r-none-eabihf"
+        export RUSTUP_HOME=${PSDK_TOOLS_PATH}/rustup_${RUSTC_VERSION}
+        export CARGO_HOME=${PSDK_TOOLS_PATH}/cargo_${RUSTC_VERSION}
+        echo "[rustc] Checking ..."
+        if [ -x "${CARGO_HOME}/bin/rustc" ]; then
+            echo "rustc found: $(${CARGO_HOME}/bin/rustc --version)"
+            for target in ${RUSTC_TARGETS}; do
+                if ! ${CARGO_HOME}/bin/rustup target list --installed 2> /dev/null | grep -qx "${target}"; then
+                    echo "Adding missing target ${target}"
+                    ${CARGO_HOME}/bin/rustup target add ${target}
+                fi
+            done
+        else
+            if [ ! -f ${PSDK_TOOLS_PATH}/rustup-init.sh ]; then
+                curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o ${PSDK_TOOLS_PATH}/rustup-init.sh
+            fi
+            chmod +x ${PSDK_TOOLS_PATH}/rustup-init.sh
+            ${PSDK_TOOLS_PATH}/rustup-init.sh -y --no-modify-path --default-toolchain ${RUSTC_VERSION} \
+                --target $(echo ${RUSTC_TARGETS} | tr ' ' ',')
+            rm ${PSDK_TOOLS_PATH}/rustup-init.sh
+            ${CARGO_HOME}/bin/rustc --version
+            ${CARGO_HOME}/bin/cargo --version
+        fi
+
+        RUSTC_BASHRC_MARKER="# rustc for TDA54 ethfw (added by setup_psdk_rtos.sh)"
+        if ! grep -qF "${RUSTC_BASHRC_MARKER}" "${HOME}/.bashrc" 2> /dev/null; then
+            {
+                echo ""
+                echo "${RUSTC_BASHRC_MARKER}"
+                echo "export RUSTUP_HOME=${RUSTUP_HOME}"
+                echo "export CARGO_HOME=${CARGO_HOME}"
+                echo "export PATH=\"${CARGO_HOME}/bin:\${PATH}\""
+            } >> "${HOME}/.bashrc"
+            echo "Added rustc env vars to ~/.bashrc."
+        fi
+        \. "${HOME}/.bashrc"
+        echo "[rustc] Done"
     fi
 
     # Install sysconfig tool for MCU+SDK build
@@ -572,13 +623,13 @@ echo "[opkg-utils] Checking ..." # opkg is needed for running rule in vision_app
 if [ -d opkg-utils-${OPKG_VERSION} ]; then
     echo "opkg-utils-${OPKG_VERSION} found!"
 else
-    mkdir opkg-utils-${OPKG_VERSION} 
-    cd opkg-utils-${OPKG_VERSION} 
+    mkdir opkg-utils-${OPKG_VERSION}
+    cd opkg-utils-${OPKG_VERSION}
     git init
     git remote add origin https://git.yoctoproject.org/opkg-utils
     git fetch --depth 1 origin $OPKG_VERSION
-    git checkout FETCH_HEAD 
-    cd .. 
+    git checkout FETCH_HEAD
+    cd ..
 fi
 echo "[opkg-utils] Done"
 
@@ -677,9 +728,9 @@ if ! command -v pip3 &> /dev/null
 then
     export PATH=${HOME}/.local/bin:$PATH
 fi
-pip3 install pycryptodomex --user  # for building ATF, OPTEE (built for qnx sbl)
-pip3 install meson --user          # for building edegai-gst-plugins
-pip3 install jsonschema --user     # for building linux uboot with PSDK Linux top-level makefile using the "make uboot" rule (HS and enabling MCU1_0)
+pip3 install pycryptodomex --user        # for building ATF, OPTEE (built for qnx sbl)
+pip3 install meson --user                # for building edegai-gst-plugins
+pip3 install 'jsonschema>=4.0.0' --user  # for building linux uboot with PSDK Linux top-level makefile using the "make uboot" rule (HS and enabling MCU1_0)
 pip3 install yamllint --user
 if [ ${SOC} = 'tda54' ] && [ ! -z "${MCU_SDK_PATH}" ]
 then

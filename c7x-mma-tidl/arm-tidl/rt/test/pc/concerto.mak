@@ -10,6 +10,7 @@ INCLUDE_PATHS+= -I $(DSP_TOOLS)/host_emulation/include/$(C7X_VERSION)$(C7x_HOSTE
 
 
 # library search dirs are always platform specific
+LDIRS += $(PLATFORM_PATH)/out/PC/$(TARGET_CPU)/LINUX/$(TARGET_BUILD)
 LDIRS += $(DSP_TOOLS)/host_emulation
 
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a J722S j722s TDA54 tda54))

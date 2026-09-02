@@ -100,7 +100,7 @@ static void Dp83867_setGpioMux(EthPhyDrv_Handle hPhy,
 static void Dp83867_setLedMode(EthPhyDrv_Handle hPhy,
                                const Dp83867_LedMode *ledMode);
 
-static void Dp83867_restart(EthPhyDrv_Handle hPhy);
+static int32_t Dp83867_restart(EthPhyDrv_Handle hPhy);
 
 static void Dp83867_rmwExtReg(EthPhyDrv_Handle hPhy,
                               uint32_t reg,
@@ -588,40 +588,62 @@ static void Dp83867_setLedMode(EthPhyDrv_Handle hPhy,
     pRegAccessApi->EnetPhy_writeReg(pRegAccessApi->pArgs, DP83867_LEDCR1, val);
 }
 
-static void Dp83867_restart(EthPhyDrv_Handle hPhy)
+static int32_t Dp83867_restart(EthPhyDrv_Handle hPhy)
 {
+    int32_t status = PHY_EFAIL;
+
     Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
+
     /* Software restart: full reset, not including registers */
     PHYTRACE_DBG("PHY %u: soft-restart\n",PhyPriv_getPhyAddr(hPhy));
-    pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83867_CTRL, CTRL_SWRESTART, CTRL_SWRESTART);
+
+    status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83867_CTRL, CTRL_SWRESTART, CTRL_SWRESTART);
+
+    return status;
 }
 
-void Dp83867_reset(EthPhyDrv_Handle hPhy)
+int32_t Dp83867_reset(EthPhyDrv_Handle hPhy)
 {
+    int32_t status = PHY_EFAIL;
+
     Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
+
     /* Global software reset: all PHY internal circuits including IEEE-defined
      * registers and all extended registers are reset */
     PHYTRACE_DBG("PHY %u: global soft-reset\n", PhyPriv_getPhyAddr(hPhy));
-    pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83867_CTRL, CTRL_SWRESET, CTRL_SWRESET);
+
+    status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83867_CTRL, CTRL_SWRESET, CTRL_SWRESET);
+
+    return status;
 }
 
-bool Dp83867_isResetComplete(EthPhyDrv_Handle hPhy)
+int32_t Dp83867_isResetComplete(EthPhyDrv_Handle hPhy,
+                                bool *pCompleted)
 {
-    int32_t status;
-    uint16_t val;
-    bool complete = false;
+    int32_t status = PHY_EFAIL;;
+    uint16_t val = 0;
+
+    if ((hPhy == NULL) ||
+        (pCompleted == NULL))
+    {
+        return PHY_EBADARGS;
+    }
+
+    *pCompleted = false;
+
     Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
 
     /* Reset is complete when RESET bit has self-cleared */
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, DP83867_CTRL, &val);
+
     if (status == PHY_SOK)
     {
-        complete = ((val & CTRL_SWRESET) == 0U);
+        *pCompleted = ((val & CTRL_SWRESET) == 0U);
     }
 
     PHYTRACE_DBG("PHY %u: global soft-reset is %scomplete\n", PhyPriv_getPhyAddr(hPhy), complete ? "" : "not");
 
-    return complete;
+    return status;
 }
 
 static void Dp83867_rmwExtReg(EthPhyDrv_Handle hPhy,

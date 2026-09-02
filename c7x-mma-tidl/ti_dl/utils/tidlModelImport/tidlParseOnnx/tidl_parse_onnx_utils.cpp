@@ -650,76 +650,62 @@ int32_t TidlParseOnnx::getTensorDim(TensorProto& tensor, int32_t idx)
   }
 }
 
-int32_t TidlParseOnnx::copyTensor(GraphProto& onnGraph, TensorProto& tensor, void ** ptr, int32_t * size, const string name, int32_t inputRequired)
+template <typename DstT, typename AccessorFunc>
+static int32_t copyTensorHelper(TensorProto& tensor, void** ptr, int32_t* size,
+                                int32_t protoSize, AccessorFunc protoGet)
 {
-  int32_t i, tensorSize = 1;
-
-  * ptr = NULL;
-  if (tensor.data_type() == TensorProto_DataType_FLOAT) //DT_FLOAT
+  int32_t tensorSize = 1;
+  for (int32_t i = 0; i < tensor.dims_size(); i++)
   {
-    float *dst;
-    for (i = 0; i < tensor.dims_size(); i++)
-    {
-      tensorSize *= tensor.dims(i);
-    }
-    *size = tensorSize;
-    dst = (float *)my_malloc(*size *sizeof(float));
-
-    if (tensor.float_data_size() > 0)
-    {
-      if (tensor.float_data_size() != tensorSize)
-      {
-        TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Tensor size and Dims size is not matching");
-      }
-
-      for (i = 0; i < tensorSize; i++)
-      {
-        dst[i] = tensor.float_data(i);
-      }
-    }
-    else if (tensor.raw_data().size() > 0)
-    {
-      if ((tensor.raw_data().size() / sizeof(float)) != tensorSize)
-      {
-        TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Tensor size and Dims size is not matching");
-      }
-      memcpy(dst, (float *)tensor.raw_data().c_str(), tensor.raw_data().size());
-    }
-    *ptr = dst;
-    return 0;
+    tensorSize *= tensor.dims(i);
   }
-  else if (tensor.data_type() == TensorProto_DataType_INT64) //DT_INT64
+  *size = tensorSize;
+  DstT* dst = (DstT*)my_malloc(*size * sizeof(DstT));
+  if(dst == NULL)
   {
-    long long int *dst;
-    for (i = 0; i < tensor.dims_size(); i++)
-    {
-      tensorSize *= tensor.dims(i);
-    }
-    *size = tensorSize;
-    dst = (long long int *)my_malloc(*size *sizeof(long long int));
+    TIDL_GLOBAL_REPORT_ERROR("Unable to allocate memory for tensor data of size %d", (*size * sizeof(DstT)));
+    return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+  }
 
-    if (tensor.int64_data_size() > 0)
+  if (protoSize > 0)
+  {
+    if (protoSize != tensorSize)
     {
-      if (tensor.int64_data_size() != tensorSize)
-      {
-        TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Tensor size and Dims size is not matching");
-      }
+      TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Tensor size and Dims size is not matching");
+    }
+    for (int32_t i = 0; i < tensorSize; i++)
+    {
+      dst[i] = static_cast<DstT>(protoGet(i));
+    }
+  }
+  else if (tensor.raw_data().size() > 0)
+  {
+    if ((tensor.raw_data().size() / sizeof(DstT)) != static_cast<size_t>(tensorSize))
+    {
+      TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Tensor size and Dims size is not matching");
+    }
+    memcpy(dst, tensor.raw_data().c_str(), tensor.raw_data().size());
+  }
 
-      for (i = 0; i < tensorSize; i++)
-      {
-        dst[i] = tensor.int64_data(i);
-      }
-    }
-    else if (tensor.raw_data().size() > 0)
-    {
-      if ((tensor.raw_data().size() / sizeof(long long int)) != tensorSize)
-      {
-        TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Tensor size and Dims size is not matching");
-      }
-      memcpy(dst, (long long int *)tensor.raw_data().c_str(), tensor.raw_data().size());
-    }
-    *ptr = dst;
-    return 0;
+  *ptr = dst;
+
+  return TIDL_ALLOWLISTING_LAYER_CHECK_PASSED;
+}
+
+int32_t TidlParseOnnx::copyTensor(GraphProto& onnGraph, TensorProto& tensor, sBuffer_t &buf, const string name, int32_t inputRequired)
+{
+  buf.ptr = NULL;
+  if (tensor.data_type() == TensorProto_DataType_FLOAT)
+  {
+    buf.dataType = TIDL_SinglePrecFloat;
+    return copyTensorHelper<float>(tensor, &buf.ptr, &buf.bufSize, tensor.float_data_size(),
+                                   [&](int32_t i){ return tensor.float_data(i); });
+  }
+  else if (tensor.data_type() == TensorProto_DataType_INT64)
+  {
+    buf.dataType = TIDL_SignedDoubleWord;
+    return copyTensorHelper<int64_t>(tensor, &buf.ptr, &buf.bufSize, tensor.int64_data_size(),
+                                     [&](int32_t i){ return (int64_t)tensor.int64_data(i); });
   }
   /*All DQ Combinations:*/
   else if(isTensorDQ(onnGraph, tensor))
@@ -762,18 +748,19 @@ int32_t TidlParseOnnx::copyTensor(GraphProto& onnGraph, TensorProto& tensor, voi
         numOutChannels = tensorScales.dims(0);
       }
 
-      int32_t i,j;
+      int32_t i, j, tensorSize = 1;
 
       for(i = 0 ; i < tensor.dims_size(); i++)
       {
         tensorSize *= tensor.dims(i);
       }
-      *size = tensorSize;
+      buf.bufSize = tensorSize;
+      buf.dataType = TIDL_SinglePrecFloat;
       int32_t perChannelSize = tensorSize / numOutChannels;
       /*Allocate float buffer:*/
       float *output = NULL;
       output = (float*) malloc(sizeof(float) * tensorSize);
-      *ptr = output;
+      buf.ptr = output;
       if(output == NULL)
       {
         TIDL_GLOBAL_REPORT_ERROR("Unable to allocate buffer for dequantized parameters");
@@ -956,44 +943,62 @@ int32_t TidlParseOnnx::copyTensor(GraphProto& onnGraph, TensorProto& tensor, voi
         }
       }
   }
-  else if (tensor.data_type() == TensorProto_DataType_INT32) //DT_INT32
+  else if (tensor.data_type() == TensorProto_DataType_INT32)
   {
-    int32_t *dst;
-    for (i = 0; i < tensor.dims_size(); i++)
-    {
-      tensorSize *= tensor.dims(i);
-    }
-    *size = tensorSize;
-    dst = (int32_t*)my_malloc((*size) * sizeof(int32_t));
-
-    if (tensor.int32_data_size() > 0)
-    {
-      if (tensor.int32_data_size() != tensorSize)
-      {
-        TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Tensor size and Dims size is not matching");
-      }
-
-      for (i = 0; i < tensorSize; i++)
-      {
-        dst[i] = tensor.int32_data(i);
-      }
-    }
-    else if (tensor.raw_data().size() > 0)
-    {
-      if ((tensor.raw_data().size() / sizeof(int32_t)) != tensorSize)
-      {
-        TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Tensor size and Dims size is not matching");
-      }
-      memcpy(dst, (int32_t *)tensor.raw_data().c_str(), tensor.raw_data().size());
-    }
-    *ptr = dst;
-    return 0;
+    buf.dataType = TIDL_SignedWord;
+    return copyTensorHelper<int32_t>(tensor, &buf.ptr, &buf.bufSize, tensor.int32_data_size(),
+                                     [&](int32_t i){ return tensor.int32_data(i); });
+  }
+#if 0
+  else if (tensor.data_type() == TensorProto_DataType_UINT32)
+  {
+    buf.dataType = TIDL_UnsignedWord;
+    return copyTensorHelper<uint32_t>(tensor, &buf.ptr, &buf.bufSize, (int32_t)tensor.uint64_data_size(),
+                                      [&](int32_t i){ return (uint32_t)tensor.uint64_data(i); });
+  }
+  else if (tensor.data_type() == TensorProto_DataType_UINT64)
+  {
+    buf.dataType = TIDL_UnsignedDoubleWord;
+    return copyTensorHelper<uint64_t>(tensor, &buf.ptr, &buf.bufSize, (int32_t)tensor.uint64_data_size(),
+                                      [&](int32_t i){ return (uint64_t)tensor.uint64_data(i); });
+  }
+  else if (tensor.data_type() == TensorProto_DataType_INT8)
+  {
+    buf.dataType = TIDL_SignedChar;
+    return copyTensorHelper<int8_t>(tensor, &buf.ptr, &buf.bufSize, tensor.int32_data_size(),
+                                    [&](int32_t i){ return (int8_t)tensor.int32_data(i); });
+  }
+  else if (tensor.data_type() == TensorProto_DataType_UINT8)
+  {
+    buf.dataType = TIDL_UnsignedChar;
+    return copyTensorHelper<uint8_t>(tensor, &buf.ptr, &buf.bufSize, tensor.int32_data_size(),
+                                     [&](int32_t i){ return (uint8_t)tensor.int32_data(i); });
+  }
+  else if (tensor.data_type() == TensorProto_DataType_INT16)
+  {
+    buf.dataType = TIDL_SignedShort;
+    return copyTensorHelper<int16_t>(tensor, &buf.ptr, &buf.bufSize, tensor.int32_data_size(),
+                                     [&](int32_t i){ return (int16_t)tensor.int32_data(i); });
+  }
+  else if (tensor.data_type() == TensorProto_DataType_UINT16)
+  {
+    buf.dataType = TIDL_UnsignedShort;
+    return copyTensorHelper<uint16_t>(tensor, &buf.ptr, &buf.bufSize, tensor.int32_data_size(),
+                                      [&](int32_t i){ return (uint16_t)tensor.int32_data(i); });
+  }
+#endif
+  else if (tensor.data_type() == TensorProto_DataType_BOOL)
+  {
+    buf.dataType = TIDL_Bool;
+    return copyTensorHelper<bool>(tensor, &buf.ptr, &buf.bufSize, tensor.int32_data_size(),
+                                  [&](int32_t i){ return (bool)tensor.int32_data(i); });
   }
   else
   {
     TIDL_GLOBAL_REPORT_UNSUPPORTED("Unsupported Onnx import data type : %d ", tensor.data_type());
     return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
   }
+
   return TIDL_ALLOWLISTING_LAYER_CHECK_PASSED;
 }
 
@@ -1052,7 +1057,7 @@ int32_t TidlParseOnnx::copyFloatConst(GraphProto& onnGraph, int32_t nIdx, int32_
       }
       return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
     }
-    return copyTensor(onnGraph, tensor, &buf.ptr, &buf.bufSize, onnGraph.node(nIdx).input(inIdx), inputRequired);
+    return copyTensor(onnGraph, tensor, buf, onnGraph.node(nIdx).input(inIdx), inputRequired);
   }
   else
   {
@@ -1182,6 +1187,26 @@ bool TidlParseOnnx::isLayerIODataTypesSupported(sTIDL_LayerPC_t &layer)
   sTIDL_allowlistingMetaData& md = layer.allowlistingMetaData;
   std::vector<int32_t> varTensorIndices = md.varTensorIndices;
   bool isDataTypeSupported = true;
+
+  // Reject immediately if any input or output has an unknown ONNX type
+  for(int32_t i = 0; i < md.numVarInputs; i++)
+  {
+    if((md.inputDataTypes.size() > i) && md.inputDataTypes[varTensorIndices[i]] == -1)
+    {
+      TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Layer %s : Unknown input data type (unsupported ONNX type)", (char *)layer.name);
+      status = TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      break;
+    }
+  }
+  for(int32_t i = 0; i < md.numOutputs; i++)
+  {
+    if((md.outputDataTypes.size() > i) && md.outputDataTypes[i] == -1)
+    {
+      TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Layer %s : Unknown output data type (unsupported ONNX type)", (char *)layer.name);
+      status = TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      break;
+    }
+  }
 
   for(int32_t i = 0; i < md.numVarInputs; i++)
   {

@@ -322,7 +322,7 @@ sBufParams_t * getBufParamsFromBufIndexStrict(const sGCHelperHandle * gcHelperHa
 */
 void getLinkPtrs(const sWorkloadUnit_t *pWL, int32_t linkSubType, int32_t linkIdx, sLink_t* linkPtrList[]);
 
-sWorkloadUnit_t * getWLUnitPtr(sGCHelperHandle * gcHelperHandle, int32_t unitIdx);
+sWorkloadUnit_t * getWLUnitPtr(const sGCHelperHandle * gcHelperHandle, int32_t unitIdx);
 
 int32_t getLinkIdx(const sWorkloadUnit_t *pWL, int32_t linkSubType, int32_t *linkIdx);
 

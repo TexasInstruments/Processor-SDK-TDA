@@ -196,6 +196,13 @@ ifdef SystemRoot
     COMPILER_FLAGS += /DBUILD_WITH_OPENACC
   endif
 
+  ifeq ($(ENABLE_PERFORMANCE_MODELLING),1)
+  ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J721S2 j721s2 J784S4 j784s4 J722S j722s AM62A am62a J721E j721e))
+    COMPILER_FLAGS += /DPERF_MODELLING
+    COMPILER_FLAGS += /DPERF_MODELING
+  endif
+  endif
+
   ifeq ($(BUILD_WITH_CUDA),yes)
   ARFLAGS := /nologo /MACHINE:x64 /ignore:4099
   else
@@ -257,6 +264,13 @@ endif
         COMPILER_FLAGS += -std=c++14 -O3 -DHOST_EMULATION -D_HOST_BUILD -DGCC_BUILD -g -march=x86-64
       endif
     endif
+  endif
+
+  ifeq ($(ENABLE_PERFORMANCE_MODELLING),1)
+  ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J721S2 j721s2 J784S4 j784s4 J722S j722s AM62A am62a J721E j721e))
+    COMPILER_FLAGS += -DPERF_MODELLING
+    COMPILER_FLAGS += -DPERF_MODELING
+  endif
   endif
 
 ifeq ($(BUILD_WITH_OPENACC),yes)

@@ -129,6 +129,20 @@ static vx_status ownDestructNode(vx_reference ref)
                     }
 /* LDRA_JUSTIFY_END */
                 }
+                if(node->obj_desc_error_info[pipe_id]!=NULL)
+                {
+                    status = ownObjDescFree((tivx_obj_desc_t**)&node->obj_desc_error_info[pipe_id]);
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_NODE_UM008
+<justification end> */
+                    if ((vx_status)VX_SUCCESS != status)
+                    {
+                        VX_PRINT(VX_ZONE_ERROR, "Node error info object descriptor free failed!\n");
+                        put_break = (vx_bool)vx_true_e;
+                    }
+/* LDRA_JUSTIFY_END */
+                }
                 if ((vx_bool)vx_true_e == put_break)
                 {
                     break;
@@ -162,6 +176,8 @@ static vx_status ownInitNodeObjDesc(vx_node node, vx_kernel kernel, uint32_t pip
 
     obj_desc->target_kernel_index[0] = 0;
     obj_desc->exe_status = 0;
+    tivx_obj_desc_memset(&obj_desc->single_error_info, 0, (uint32_t)sizeof(tivx_error_info_t));
+    obj_desc->error_info_obj_desc_id = (vx_enum)TIVX_OBJ_DESC_INVALID;
     obj_desc->num_params = kernel->signature.num_parameters;
 
     for(idx=0; idx<kernel->signature.num_parameters; idx++)
@@ -189,7 +205,6 @@ static vx_status ownInitNodeObjDesc(vx_node node, vx_kernel kernel, uint32_t pip
     }
 
     obj_desc->num_pipeup_bufs = kernel->num_pipeup_bufs;
-    obj_desc->pipeup_buf_idx  = kernel->pipeup_buf_idx;
     obj_desc->source_state    = (uint32_t)kernel->state;
 
     obj_desc->block_width = TIVX_DEFAULT_TILE_WIDTH;
@@ -1633,7 +1648,7 @@ void ownNodeCheckAndSendCompletionEvent(const tivx_obj_desc_node_t *node_obj_des
             {
                 if((vx_status)VX_SUCCESS != ownEventQueueAddEvent(&node->base.context->event_queue,
                             (vx_enum)VX_EVENT_NODE_COMPLETED, timestamp, node->node_completed_context_app_value,
-                            (uintptr_t)node->graph, (uintptr_t)node, (uintptr_t)0))
+                            (uintptr_t)node->graph, (uintptr_t)node, (uintptr_t)0, (vx_uint16)0, NULL))
                 {
                     VX_PRINT(VX_ZONE_ERROR,"Failed to add event to event queue\n");
                 }
@@ -1643,7 +1658,7 @@ void ownNodeCheckAndSendCompletionEvent(const tivx_obj_desc_node_t *node_obj_des
             {
                 if((vx_status)VX_SUCCESS != ownEventQueueAddEvent(&node->graph->streaming_event_queue,
                             (vx_enum)VX_EVENT_NODE_COMPLETED, timestamp, node->node_completed_graph_streaming_app_value,
-                            (uintptr_t)node->graph, (uintptr_t)node, (uintptr_t)0))
+                            (uintptr_t)node->graph, (uintptr_t)node, (uintptr_t)0, (vx_uint16)0, NULL))
                 {
                     VX_PRINT(VX_ZONE_ERROR,"Failed to add event to event queue\n");
                 }
@@ -1653,7 +1668,7 @@ void ownNodeCheckAndSendCompletionEvent(const tivx_obj_desc_node_t *node_obj_des
             {
                 if((vx_status)VX_SUCCESS != ownEventQueueAddEvent(&node->graph->event_queue,
                             (vx_enum)VX_EVENT_NODE_COMPLETED, timestamp, node->node_completed_graph_app_value,
-                            (uintptr_t)node->graph, (uintptr_t)node, (uintptr_t)0))
+                            (uintptr_t)node->graph, (uintptr_t)node, (uintptr_t)0, (vx_uint16)0, NULL))
                 {
                     VX_PRINT(VX_ZONE_ERROR,"Failed to add event to event queue\n");
                 }
@@ -1662,7 +1677,7 @@ void ownNodeCheckAndSendCompletionEvent(const tivx_obj_desc_node_t *node_obj_des
     }
 }
 
-void ownNodeCheckAndSendErrorEvent(const tivx_obj_desc_node_t *node_obj_desc, uint64_t timestamp, vx_status status)
+void ownNodeCheckAndSendErrorEvent(const tivx_obj_desc_node_t *node_obj_desc, uint64_t timestamp, vx_status status, vx_uint16 replicated_node_idx, const volatile tivx_error_info_t *error_info)
 {
     vx_node node = (vx_node)(uintptr_t)node_obj_desc->base.host_ref;
 
@@ -1678,7 +1693,7 @@ void ownNodeCheckAndSendErrorEvent(const tivx_obj_desc_node_t *node_obj_desc, ui
             {
                 if((vx_status)VX_SUCCESS != ownEventQueueAddEvent(&node->base.context->event_queue,
                             (vx_enum)VX_EVENT_NODE_ERROR, timestamp, node->node_error_context_app_value,
-                            (uintptr_t)node->graph, (uintptr_t)node, (uintptr_t)status))
+                            (uintptr_t)node->graph, (uintptr_t)node, (uintptr_t)status, replicated_node_idx, error_info))
                 {
                     VX_PRINT(VX_ZONE_ERROR,"Failed to add event to context event queue \n");
                 }
@@ -1688,7 +1703,7 @@ void ownNodeCheckAndSendErrorEvent(const tivx_obj_desc_node_t *node_obj_desc, ui
             {
                 if((vx_status)VX_SUCCESS != ownEventQueueAddEvent(&node->graph->event_queue,
                             (vx_enum)VX_EVENT_NODE_ERROR, timestamp, node->node_error_graph_app_value,
-                            (uintptr_t)node->graph, (uintptr_t)node, (uintptr_t)status))
+                            (uintptr_t)node->graph, (uintptr_t)node, (uintptr_t)status, replicated_node_idx, error_info))
                 {
                     VX_PRINT(VX_ZONE_ERROR,"Failed to add event to graph event queue \n");
                 }
@@ -1742,6 +1757,7 @@ VX_API_ENTRY vx_node VX_API_CALL vxCreateGenericNode(vx_graph graph, vx_kernel k
                         {
                             node->obj_desc_cmd[idx] = NULL;
                             node->obj_desc[idx] = NULL;
+                            node->obj_desc_error_info[idx] = NULL;
                         }
                         node->user_callback = NULL;
                         node->local_data_ptr = NULL;
@@ -1766,10 +1782,11 @@ VX_API_ENTRY vx_node VX_API_CALL vxCreateGenericNode(vx_graph graph, vx_kernel k
                         node->super_node = NULL;
                         node->timeout_val = kernel->timeout_val;
                         node->node_depth = 1;
+                        node->pipeup_enqueues_complete = (vx_bool)vx_false_e;
                         node->is_timed_out = (vx_bool)vx_false_e;
                         node->is_initialized = (vx_bool)vx_false_e;
 
-                        /* assign refernce type specific callback's */
+                        /* assign reference type specific callback's */
                         node->base.destructor_callback = &ownDestructNode;
                         node->base.mem_alloc_callback = NULL;
                         node->base.release_callback = &ownReleaseReferenceBufferGeneric;
@@ -2120,7 +2137,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetNodeAttribute(vx_node node, vx_enum attr
                     if (VX_CHECK_PARAM(ptr, size, vx_border_t, 0x3U))
                     {
                         /* set for pipeline index 0, assumed to be called before graph verify */
-                        tivx_obj_desc_memcpy(&node->obj_desc[0]->border_mode, (volatile vx_border_t *)ptr, (uint32_t)sizeof(vx_border_t));
+                        tivx_obj_desc_memcpy(&node->obj_desc[0]->border_mode, ptr, (uint32_t)sizeof(vx_border_t));
                     }
                     else
                     {
@@ -2464,6 +2481,28 @@ VX_API_ENTRY vx_status VX_API_CALL vxReplicateNode(vx_graph graph, vx_node first
         first_node->obj_desc[0]->is_prm_replicated = 0;
         first_node->obj_desc[0]->num_of_replicas = (uint32_t)num_of_replicas;
 
+        /* Allocate the node's error info object descriptor.
+         * If node is also pipelined, ownNodeAllocObjDescForPipeline() ensures the
+         * other node's get a unique object descriptor.
+         */
+        first_node->obj_desc_error_info[0] = (tivx_obj_desc_node_error_info_t*)ownObjDescAlloc(
+            (vx_enum)TIVX_OBJ_DESC_NODE_ERROR_INFO, vxCastRefFromNode(first_node));
+
+        if(first_node->obj_desc_error_info[0] != NULL)
+        {
+            first_node->obj_desc[0]->error_info_obj_desc_id = first_node->obj_desc_error_info[0]->base.obj_desc_id;
+        }
+        else
+        {
+            VX_PRINT(VX_ZONE_ERROR, "Unable to allocate error_info_obj_desc for node\n");
+            VX_PRINT(VX_ZONE_ERROR, "Exceeded max object descriptors available.\n");
+            VX_PRINT_BOUND_ERROR("TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST");
+            status = (vx_status)VX_ERROR_NO_RESOURCES;
+        }
+    }
+
+    if(status == (vx_status)VX_SUCCESS)
+    {
         for (n = 0u; n < number_of_parameters; n++)
         {
             if(replicate[n] != 0)
@@ -2825,6 +2864,7 @@ vx_status ownNodeAllocObjDescForPipeline(vx_node node, uint32_t pipeline_depth)
                 obj_desc->node_complete_cmd_obj_desc_id = (vx_enum)TIVX_OBJ_DESC_INVALID; /* obj_desc->node_complete_cmd_obj_desc_id, allocated later during graph verify */
                 /* obj_desc->target_kernel_index[], updated after kernel init */
                 obj_desc->exe_status = 0;
+                tivx_obj_desc_memset(&obj_desc->single_error_info, 0, (uint32_t)sizeof(tivx_error_info_t));
                 obj_desc->exe_time_beg_h = 0;
                 obj_desc->exe_time_beg_l = 0;
                 obj_desc->exe_time_end_h = 0;
@@ -2836,6 +2876,27 @@ vx_status ownNodeAllocObjDescForPipeline(vx_node node, uint32_t pipeline_depth)
                 obj_desc->is_prm_replicated = obj_desc_0->is_prm_replicated;
                 obj_desc->num_of_replicas = obj_desc_0->num_of_replicas;
                 obj_desc->debug_zonemask = obj_desc_0->debug_zonemask;
+                obj_desc->error_info_obj_desc_id = (vx_enum)TIVX_OBJ_DESC_INVALID;
+                /* Allocate a unique node_error_obj_desc for each pipelined node.
+                 * These obj_descs are only needed if the node is also replicated. */
+                if (tivxFlagIsBitSet(obj_desc->flags, TIVX_NODE_FLAG_IS_REPLICATED) ==
+                    (vx_bool)vx_true_e)
+                {
+                    node->obj_desc_error_info[pipe_id] = (tivx_obj_desc_node_error_info_t*)ownObjDescAlloc(
+                        (vx_enum)TIVX_OBJ_DESC_NODE_ERROR_INFO, vxCastRefFromNode(node));
+
+                    if(node->obj_desc_error_info[pipe_id] != NULL)
+                    {
+                        obj_desc->error_info_obj_desc_id = node->obj_desc_error_info[pipe_id]->base.obj_desc_id;
+                    }
+                    else
+                    {
+                        VX_PRINT(VX_ZONE_ERROR, "Unable to allocate error_info_obj_desc for pipelined node\n");
+                        VX_PRINT(VX_ZONE_ERROR, "Exceeded max object descriptors available.\n");
+                        VX_PRINT_BOUND_ERROR("TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST");
+                        status = (vx_status)VX_ERROR_NO_RESOURCES;
+                    }
+                }
 
                 /* copying data_id[], out_node_id[], in_node_id[]
                  * from 0th obj desc but these are overriden later
@@ -2867,8 +2928,8 @@ vx_status ownNodeAllocObjDescForPipeline(vx_node node, uint32_t pipeline_depth)
             else
             {
                 VX_PRINT(VX_ZONE_ERROR, "Unable to allocate obj desc for node\n");
-                VX_PRINT(VX_ZONE_ERROR, "Exceeded max object descriptors available. Increase TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST value\n");
-                VX_PRINT(VX_ZONE_ERROR, "Increase TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST value in include/TI/soc/tivx_config_<soc>.h\n");
+                VX_PRINT(VX_ZONE_ERROR, "Exceeded max object descriptors available.\n");
+                VX_PRINT_BOUND_ERROR("TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST");
                 status = (vx_status)VX_ERROR_NO_RESOURCES;
             }
         }

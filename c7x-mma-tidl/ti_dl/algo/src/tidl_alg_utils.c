@@ -82,6 +82,7 @@
 #include "tidl_innerProduct_mma.h"
 #include "tidl_forceNegativeTest.h"
 #include "tidl_alg_utils_ref.h"
+#include "bfloat16.h"
 #if defined TIDL_DYNAMIC_SHAPE
 #include "tidl_shapeInference.h"
 #endif // TIDL_DYNAMIC_SHAPE
@@ -133,7 +134,10 @@ void TIDL_getMMAv2_ScaleAndShift(float32_tidl scaleRatio, uint8_t *scale, uint8_
   // Check if scaleRatio > 255
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+  <justification start>
+  Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+  Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+  This does not impact functional correctness or safety.
   <justification end> */
   if (scaleRatio > 255.0f)
   {
@@ -288,7 +292,10 @@ int32_t TIDL_FillPaddedRows(uint8_t *inPtr,
         }
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        <justification start>
+        Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+        This does not impact functional correctness or safety.
         <justification end> */
         else if (TIDL_PADDING_TYPE_BOTTOM == paddingType)
         {
@@ -300,7 +307,10 @@ int32_t TIDL_FillPaddedRows(uint8_t *inPtr,
         }
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        <justification start>
+        Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+        This does not impact functional correctness or safety.
         <justification end> */
         else if ((TIDL_PADDING_TYPE_TOP_LEFT == paddingType) ||
                  (TIDL_PADDING_TYPE_ST_TOP_LEFT == paddingType))
@@ -408,7 +418,10 @@ int32_t TIDL_FillPaddedCols(uint8_t *ptr, const sBufferInfo_t *bufInfo, int32_t 
       }
       /* LDRA_JUSTIFY_START
       <metric start> statement branch <metric end>
-      <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+      <justification start>
+      Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+      Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+      This does not impact functional correctness or safety.
       <justification end> */
       else if (elementType == TIDL_SignedShort)
       /* LDRA_JUSTIFY_END */
@@ -419,7 +432,10 @@ int32_t TIDL_FillPaddedCols(uint8_t *ptr, const sBufferInfo_t *bufInfo, int32_t 
       }
       /* LDRA_JUSTIFY_START
       <metric start> statement branch <metric end>
-      <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+      <justification start>
+      Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+      Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+      This does not impact functional correctness or safety.
       <justification end> */
       else
       {
@@ -581,7 +597,7 @@ int32_t TIDL_isOutDataFlat(const sTIDL_Network_t *pTIDLNetStructure,
 int32_t TIDL_getDatElementSign(int32_t elementType)
 {
   int32_t sign = 1;
-  if ((elementType == TIDL_SignedChar) || (elementType == TIDL_SignedShort) || (elementType == TIDL_SignedWord) || (elementType == TIDL_SinglePrecFloat))
+  if ((elementType == TIDL_SignedChar) || (elementType == TIDL_SignedShort) || (elementType == TIDL_SignedWord) || (elementType == TIDL_SinglePrecFloat) || (elementType == TIDL_BFloat16))
   {
     sign = 1;
   }
@@ -914,7 +930,9 @@ void TIDL_poolingGetUpdatedPadValues(int32_t Fr, int32_t strideVal, int32_t padH
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int32_t TIDL_refGetOutDataSize.* <function end>
-<justification start> NOT_IN_SCOPE : This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+<justification start>
+Rationale - NOT_IN_SCOPE: This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 #endif
 int32_t TIDL_refGetOutDataSize(const TIDL_NetworkCommonParams *commonParams,
@@ -950,7 +968,9 @@ int32_t TIDL_refGetOutDataSize(const TIDL_NetworkCommonParams *commonParams,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int32_t TIDL_refGetScratchDataSize.* <function end>
-<justification start> NOT_IN_SCOPE : This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+<justification start>
+Rationale - NOT_IN_SCOPE: This function is specific to host emulation (HE) and is intended to be used exclusively in HE builds. It is not applicable or invoked in non-HE environments.
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 #endif
 int32_t TIDL_refGetScratchDataSize(const TIDL_NetworkCommonParams *commonParams,
@@ -1112,106 +1132,6 @@ void TIDL_outBuffInit(const TIDL_CreateParams *params,
   }
 #endif
   return;
-}
-
-/**
-----------------------------------------------------------------------------
-@ingroup    TIDL_IVISION_SUPPORT
-@fn         TIDL_flattenAlloc
-@brief      Function to Request Memory required by the Flatten layer
-
-@param      params       : Create Parameters
-@param      layerIdx     : Current Layer index in Net structure
-@param      memRec       : memory table populated by the Algorithm
-@param      TIDLLayersBuf: Temp structure to store outDataSize and Data Id's
-@remarks    None
-@return     IALG_EOK   - Successful
-IALG_EFAIL - Unspecified error
-----------------------------------------------------------------------------
-*/
-/* LDRA_JUSTIFY
-<metric start> statement branch <metric end>
-<function start> int32_t TIDL_flattenAlloc.* <function end>
-<justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
-and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
-<justification end> */
-int32_t TIDL_flattenAlloc(const TIDL_CreateParams *params,
-                          int32_t layerIdx, IALG_MemRec *memRec, sTIDL_LayerBuf_t *TIDLLayersBufPtr)
-{
-  int32_t outDataSize = TIDL_updateDataParamsPitch(&params->net->TIDLLayers[layerIdx].outData);
-
-  if (params->optimiseExtMem != TIDL_OptimiseExtMemL0)
-  {
-#ifdef HOST_EMULATION
-    if (((uint32_t)params->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != 0U)
-    {
-      outDataSize = TIDL_findFreeOutBuff(params, layerIdx, outDataSize, TIDLLayersBufPtr);
-    }
-#endif
-    TIDLLayersBufPtr->outDataSize[layerIdx] = outDataSize;
-  }
-
-  TIDL_outBuffAlloc(params, layerIdx, memRec, outDataSize);
-
-  return 0;
-}
-
-/**
-----------------------------------------------------------------------------
-@ingroup    TIDL_IVISION_SUPPORT
-@fn         TIDL_flattenInit
-@brief      Function to Initialize the Flatten layer specific params
-
-@param      params       : Create Parameters
-@param      layerIdx     : Current Layer index in Net structure
-@param      algLayer     : Pointer to current layer algorithm specific params
-@param      paramMemTabOffset : Current Offset in ALG_LAYERS_PARAMS_BUFF_MEMREC
-@param      dataMemTabOffset : Current Offset in ALG_SCRATCH_DATA_BUFF_MEMREC
-@param      memRec       : memory table populated by the Algorithm
-@param      outPtr       : Pointer to Layer output Pointers list
-@param      TIDLLayersBuf: Temp structure to store outDataSize and Data Id's
-@remarks    None
-@return     IALG_EOK   - Successful
-IALG_EFAIL - Unspecified error
-----------------------------------------------------------------------------
-*/
-/* LDRA_JUSTIFY
-<metric start> statement branch <metric end>
-<function start> int32_t TIDL_flattenInit.* <function end>
-<justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
-and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
-<justification end> */
-int32_t TIDL_flattenInit(
-    const TIDL_CreateParams *params, int32_t layerIdx,
-    sTIDL_AlgLayer_t *algLayer, int32_t *paramMemTabOffset,
-    int32_t *dataMemTabOffset, const IALG_MemRec *memRec,
-    void **outPtr, sTIDL_LayerBuf_t *TIDLLayersBufPtr)
-{
-  int32_t status = IALG_EOK;
-
-  int32_t outDataSize = TIDL_updateDataParamsPitch(&params->net->TIDLLayers[layerIdx].outData);
-
-  if (params->optimiseExtMem != TIDL_OptimiseExtMemL0)
-  {
-#ifdef HOST_EMULATION
-    if (((uint32_t)params->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != 0U)
-    {
-      outDataSize = TIDL_findFreeOutBuff(params, layerIdx, outDataSize, TIDLLayersBufPtr);
-    }
-#endif
-    TIDLLayersBufPtr->outDataSize[layerIdx] = outDataSize;
-  }
-
-  if (status == IALG_EOK)
-  {
-    TIDL_outBuffInit(params, layerIdx, dataMemTabOffset, memRec, outPtr, outDataSize);
-    algLayer->scratchSize = 0;
-    algLayer->metaData.totalOps =
-        (params->net->TIDLLayers[layerIdx].outData.dimValues[TIDL_DIM_NUMCH] *
-         params->net->TIDLLayers[layerIdx].layerParams.eltWiseParams.numInData);
-    algLayer->metaData.actualOps = algLayer->metaData.totalOps;
-  }
-  return status;
 }
 
 #if defined TIDL_COVERAGE_DEAD_CODE
@@ -1803,7 +1723,7 @@ int32_t TIDL_resolveLayerOutputShape(IVISION_InBufs *inBufs,
 
     if (numFound != TIDLLayer->numInBufs)
     {
-      tidl_printf(0, "TIDL_resolveLayerOutputShape: Failed to resolve all input dataIds. Found %d out of %d\n",
+      tidl_printf(0, "TIDL_resolveLayerOutputShape: Failed to resolve all input data ids. Found %d out of %d\n",
                   numFound, TIDLLayer->numInBufs);
       status = IALG_EFAIL;
     }
@@ -1853,12 +1773,12 @@ int32_t TIDL_resolveLayerOutputShape(IVISION_InBufs *inBufs,
       }
       else if (shapeStatus == TIDL_SHAPE_INFERENCE_ERR_UNSUPPORTED_LAYER)
       {
-        tidl_printf(1, "TIDL_resolveLayerOutputShape: Shape inference for layer type %d is not registered\n",
+        tidl_printf(1, "TIDL_resolveLayerOutputShape: Runtime Shape inference for layer type %d is not registered\n",
                     TIDLLayer->layerType);
       }
       else
       {
-        tidl_printf(0, "TIDL_resolveLayerOutputShape: Shape inference failed with status %d for layer type %d\n",
+        tidl_printf(0, "TIDL_resolveLayerOutputShape: Runtime Shape inference failed with status %d for layer type %d\n",
                     shapeStatus, TIDLLayer->layerType);
         status = IALG_EFAIL;
       }
@@ -1866,7 +1786,7 @@ int32_t TIDL_resolveLayerOutputShape(IVISION_InBufs *inBufs,
   }
   else
   {
-    tidl_printf(0, "TIDL_resolveLayerOutputShape: numInBufs is zero\n");
+    tidl_printf(0, "TIDL_resolveLayerOutputShape: Number of input buffer is zero\n");
     status = IALG_EFAIL;
   }
 
@@ -1934,8 +1854,10 @@ int32_t TIDL_getLayerInPtrs(
             TIDL_getDataBuff(inBufs->bufDesc, inBufs->numBufs, curInDataId, inDataParams->dimValues[TIDL_DIM_BATCH], inDataParams->pitch);
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> SAFETY_CHECK: The condition in this if statement is necessary to ensure that the code does not attempt to write trace data when the input pointer is NULL, 
+        <justification start>
+        Rationale - SAFETY_CHECK: The condition in this if statement is necessary to ensure that the code does not attempt to write trace data when the input pointer is NULL, 
         which could lead to undefined behavior. This check is crucial for robustness and safety, especially in scenarios where the input data may not be available or valid.
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if (inPtrs[j] != NULL)
         {
@@ -1960,7 +1882,10 @@ int32_t TIDL_getLayerInPtrs(
                                             1);
           /* LDRA_JUSTIFY_START
           <metric start> statement branch <metric end>
-          <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+          <justification start>
+          Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+          Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+          This does not impact functional correctness or safety.
           <justification end> */
           if (twStatus != IALG_EOK)
           {
@@ -2066,8 +1991,10 @@ int32_t TIDL_getLayerInPtrs(
                                             1);
           /* LDRA_JUSTIFY_START
           <metric start> branch <metric end>
-          <justification start> SAFETY_CHECK: This condition is necessary to handle the scenario where the trace write operation fails, 
+          <justification start>
+          Rationale - SAFETY_CHECK: This condition is necessary to handle the scenario where the trace write operation fails, 
           ensuring that the error is properly reported and handled.
+          Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
           <justification end> */
           if (twStatus != IALG_EOK)
           {
@@ -2103,7 +2030,7 @@ int32_t TIDL_getLayerInPtrs(
           int32_t numBytesToCopy = inDataParams->pitch[TIDL_ROI_PITCH] * dataElementSize * totalBatchesToCopy;
           /* LDRA_JUSTIFY_START
           <metric start> branch <metric end>
-          <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+          <justification start> PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
            This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
            TIDL_LDRA_TAG :  TIDL_LDRA_TAG_ALGUTILS_PRIOR_CHECK_001
           <justification end> */
@@ -2221,6 +2148,10 @@ int32_t TIDL_getLayerOutPtrs(
           {
             TIDL_zeroOutputTensors((uint16_t *)outPtrs[j], (uint16_t)TIDLLayer->outData.tensorZeroPoint, TIDLLayer->outData.dimValues[TIDL_DIM_BATCH] * TIDLLayer->outData.pitch[TIDL_ROI_PITCH]);
           }
+           else if (TIDLLayer->outData.elementType == TIDL_BFloat16)
+          {
+            TIDL_zeroOutputTensors((bfloat16_tidl *)outPtrs[j], (bfloat16_tidl)TIDLLayer->outData.tensorZeroPoint, TIDLLayer->outData.dimValues[TIDL_DIM_BATCH] * TIDLLayer->outData.pitch[TIDL_ROI_PITCH]);
+          }
           else if (TIDLLayer->outData.elementType == TIDL_SinglePrecFloat)
           {
             TIDL_zeroOutputTensors((float32_tidl *)outPtrs[j], (float32_tidl)TIDLLayer->outData.tensorZeroPoint, TIDLLayer->outData.dimValues[TIDL_DIM_BATCH] * TIDLLayer->outData.pitch[TIDL_ROI_PITCH]);
@@ -2263,7 +2194,10 @@ int32_t TIDL_getLayerOutPtrs(
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int32_t TIDL_copyPersistentWeightsToIntMem.* <function end>
-<justification start> FUTURE_USE : This function is present to support future testing scenarios and it is retained for robustness and exception handling..
+<justification start>
+Rationale - FUTURE_USE: This function is present to support future testing scenarios and it is retained for robustness and exception handling..
+Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+This does not impact functional correctness or safety.
 <justification end> */
 
 /**
@@ -2418,14 +2352,20 @@ void TIDL_getPadParams(WorkloadUnitExec_padParams *padParams,
         }
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        <justification start>
+        Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+        This does not impact functional correctness or safety.
         <justification end> */
         else if (padParams->outBufParams == getBufParamsFromBufIndexStrict(gcHelperHandle, link->sink.bufDBindex))
         /* LDRA_JUSTIFY_END */
         {
           /* LDRA_JUSTIFY_START
           <metric start> statement branch <metric end>
-          <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+          <justification start>
+          Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+          Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+          This does not impact functional correctness or safety.
           <justification end> */
           /* Concat layer with no output DMA may show this situation where proc links point to the same buffer */
           if (link->sink.offset <= padParams->outOffset)
@@ -2439,7 +2379,10 @@ void TIDL_getPadParams(WorkloadUnitExec_padParams *padParams,
         }
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        <justification start>
+        Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+        This does not impact functional correctness or safety.
         <justification end> */
         else
         {
@@ -2470,7 +2413,10 @@ int32_t TIDL_switchHandles(void *algHandle)
 #if defined(SOC_J721S2) || defined(SOC_AM62A)
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
-<justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+<justification start>
+Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+This does not impact functional correctness or safety.
 <justification end> */
 #endif
   if ((lastActiveHandle != handle) && (lastActiveHandle != NULL))
@@ -2502,12 +2448,7 @@ int32_t TIDL_referencFlow(const TIDL_CreateParams *pCreateParams)
     refFlow = 1;
   }
 #endif
-#if ENABLE_BACKWARDS_COMPATIBILITY
-  if ((TIDL_isPadOTF(pCreateParams->net->deviceName) == TRUE))
-  {
-    refFlow = 1;
-  }
-#endif
+
   return refFlow;
 }
 
@@ -2523,9 +2464,7 @@ uint32_t TIDL_getSizeNet(const TIDL_CreateParams *pCreateParams)
            pCreateParams->net->netBufInfo[TIDL_NET_COMPILER_BUF].size +
            pCreateParams->net->netBufInfo[TIDL_NET_GC_BUF].size;
 #ifdef HOST_EMULATION
-#if !ENABLE_BACKWARDS_COMPATIBILITY
     if (TIDL_referencFlow(pCreateParams) != 0)
-#endif
     {
       /* TIDL_NET_PARAMS_BUF is allocated memory at the last position in ALG_PERSIST_DDR_NET_MEMREC */
       size = pCreateParams->net->netBufInfo[TIDL_NET_GC_BUF].offset + pCreateParams->net->netBufInfo[TIDL_NET_GC_BUF].size;
@@ -2602,8 +2541,10 @@ int32_t TIDL_MoveNetToPrivateMemory(TIDL_Handle algHandle,
     algHandle->createParams->net = (sTIDL_Network_t *)memRec[ALG_PERSIST_DDR_NET_MEMREC].base;
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: This condition is necessary to ensure that the data flow information is valid before attempting to access it,
+    <justification start>
+    Rationale - SAFETY_CHECK: This condition is necessary to ensure that the data flow information is valid before attempting to access it,
     preventing potential null pointer dereferences or invalid memory accesses.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if (algHandle->createParams->net->dataFlowInfo != 0)
     {

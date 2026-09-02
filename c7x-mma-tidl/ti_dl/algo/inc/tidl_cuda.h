@@ -64,7 +64,7 @@
 
 #ifdef BUILD_WITH_CUDA
 #include "itidl_ti.h"
-
+#include "tidl_cuda_bfloat16.h"
 
 template <class Tin, class Tw, class Tb, class Tacc>
 int TIDL_cudaConvolve2d(
@@ -106,8 +106,9 @@ void minmaxGPU(const int numTotRoi, const Tx* x, int *min, int *max);
 template <class Tx>
 void minmax_Thrust(const int N,const Tx* x,Tx *min,Tx *max);
 
-int TIDL_cudaConv2DSaturateFloat(float *accPtr,
-                                 float *outPtr,
+template <class Tacc, class Tout>
+int TIDL_cudaConv2DSaturateFloat(Tacc *accPtr,
+                                 Tout *outPtr,
                                  int32_t numBatches,
                                  int32_t numOutChannels,
                                  int32_t height,
@@ -218,7 +219,7 @@ int TIDL_cudaGridSampleFloat(
     int gridBatchPitch, int gridDim1Pitch, int gridDim2Pitch, int gridChannelPitch, int gridLinePitch,
     int outBatchPitch, int outDim1Pitch, int outDim2Pitch, int outChannelPitch, int outLinePitch,
     int inPadH, int inPadW, int gridPadH, int gridPadW, int outPadH, int outPadW,
-    int inTensorScale, int gridTensorScale, int outTensorScale
+    int inTensorScale, int gridTensorScale, int outTensorScale, int isGridPrecomputed
 );
 
 template <class Tin, class Tgrid, class Tacc, class TgridDeNorm, class TgridWeight, class Tout>
@@ -445,9 +446,10 @@ int TIDL_cudaSoftmaxFixed(
     Tin outputTensorZP
 );
 
+template <class Tin, class Tout>
 int TIDL_cudaSoftmaxFloat(
-    float* input,
-    float* output,
+    Tin* input,
+    Tout* output,
     int32_t* inDims,
     int32_t* inPitches,
     int32_t* outPitches

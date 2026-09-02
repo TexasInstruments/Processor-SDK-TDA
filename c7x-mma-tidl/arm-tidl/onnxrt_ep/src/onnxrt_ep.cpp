@@ -42,6 +42,7 @@ void TIDL_setDefaultOptions(TIDL_OnnxrtEPInferOptions * osrt_options)
   osrt_options->core_start_idx = 1;
   osrt_options->m_flow_ctrl = -1;
   osrt_options->m_temp_buffer_dir = "/dev/shm";
+  osrt_options->m_trace_base_name = "";
 }
 
 /* Read interface options and populate to TIDL runtimes option class */
@@ -93,6 +94,10 @@ bool TIDL_populateOptions(std::vector<std::pair<std::string,std::string>> interf
         printf("ERROR : artifacts_folder not a directory");
         return false;
       }
+    }
+    else if (!strcmp("advanced_options:trace_base_name", key.c_str()))
+    {
+      options->m_trace_base_name = value;
     }
     else if (!strcmp("advanced_options:flow_ctrl", key.c_str()))
     {
@@ -156,6 +161,10 @@ bool TIDL_populateOptions(std::vector<std::pair<std::string,std::string>> interf
   #ifdef x86_64
   TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "temp_buffer_dir      = %s \n", data_->m_temp_buffer_dir.c_str());
   #endif
+  if(!data_->m_trace_base_name.empty())
+  {
+    TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "trace_base_name      = %s \n", data_->m_trace_base_name.c_str());
+  }
 
   return true;
 }
@@ -333,6 +342,8 @@ int32_t TIDL_createStateInferFunc(OnnxTIDLSubGraphParams * state_subGraph, const
   subgraphRtCreateOptions->inferenceMode = -1;
   subgraphRtCreateOptions->flowCtrl = data_->m_flow_ctrl;
   strcpy(subgraphRtCreateOptions->tempBufferDir, data_->m_temp_buffer_dir.c_str());
+  strncpy(subgraphRtCreateOptions->traceBaseName, data_->m_trace_base_name.c_str(), TIDLRT_STRING_SIZE - 1);
+  subgraphRtCreateOptions->traceBaseName[TIDLRT_STRING_SIZE - 1] = '\0';
 
   status = TIDL_subgraphRtCreate(subgraphRtCreateOptions, &data_->infer_ops, state_subGraph->subGraphName_, subgraphParams);
 

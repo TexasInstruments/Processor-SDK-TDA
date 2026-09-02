@@ -187,14 +187,13 @@ static vx_status tivxDmpacSdeMapTivxToVhwaErrEvents(uint32_t tivx_err_events,
 int32_t tivxDmpacSdeFrameComplCb(Fvid2_Handle handle, void *appData);
 void tivxDmpacSdeErrorCb(Fvid2_Handle handle, uint32_t errEvents, void *appData);
 static void tivxDmpacSdeWdTimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrEvents, void *appData);
-#if !defined(SOC_J722S)
 static vx_status tivxEnableDmpacSdeSafetyMechanisms(
     tivxDmpacSdeObj *sdeObj,
     const tivx_obj_desc_user_data_object_t *usr_data_obj);
 static vx_status tivxDmpacSdeAllocReadbackBuffers(tivxDmpacSdeObj *sdeObj);
 static void tivxDmpacSdeFreeReadbackBuffers(tivxDmpacSdeObj *sdeObj);
 static int32_t tivxDmpacSdeConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms);
-#endif
+
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
@@ -336,9 +335,7 @@ static vx_status VX_CALLBACK tivxDmpacSdeProcess(
     Fvid2_FrameList                  *outFrmList;
     uint64_t                         cur_time;
     tivx_obj_desc_t                  *out_base_desc = NULL;
-    #if !defined(SOC_J722S)
     vx_status                        validate_reg_status = (vx_status)VX_SUCCESS;
-    #endif
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -562,7 +559,7 @@ static vx_status VX_CALLBACK tivxDmpacSdeProcess(
             status = (vx_status)VX_ERROR_TIMEOUT;
         }
         /* LDRA_JUSTIFY_END */
-#if !defined(SOC_J722S)
+
         /* Call the control command for statusreg/configreg validate */
         {
             fvid2_status = Fvid2_control(sde_obj->handle, VHWA_M2M_IOCTL_SDE_VALIDATE_REG, NULL, NULL);
@@ -572,7 +569,7 @@ static vx_status VX_CALLBACK tivxDmpacSdeProcess(
                 validate_reg_status = (vx_status)VX_FAILURE;
             }
         }
-#endif
+
         cur_time = tivxPlatformGetTimeInUsecs() - cur_time;
     }
 
@@ -649,12 +646,11 @@ static vx_status VX_CALLBACK tivxDmpacSdeProcess(
         }
     }
 
-    #if !defined(SOC_J722S)
     if(((vx_status)VX_SUCCESS != status) || ((vx_status)VX_SUCCESS != validate_reg_status))
     {
         status = (vx_status)VX_FAILURE;
     }
-    #endif
+
     return status;
 }
 
@@ -1123,10 +1119,9 @@ static vx_status VX_CALLBACK tivxDmpacSdeDelete(
                 (void)tivxEventDelete(&sde_obj->waitForProcessCmpl);
             }
 
-#if !defined(SOC_J722S)
             /* Free the readback and golden register buffers */
             tivxDmpacSdeFreeReadbackBuffers(sde_obj);
-#endif
+
             tivxDmpacSdeFreeObject(&gTivxDmpacSdeInstObj, sde_obj);
         }
     }
@@ -1235,7 +1230,6 @@ static vx_status VX_CALLBACK tivxDmpacSdeControl(
                 break;
             }
 #endif
-#if !defined(SOC_J722S)
             case TIVX_DMPAC_SDE_CMD_ENABLE_DMPAC_SAFETY_MECHANISM:
             {
                 status = tivxEnableDmpacSdeSafetyMechanisms(sde_obj,
@@ -1255,7 +1249,6 @@ static vx_status VX_CALLBACK tivxDmpacSdeControl(
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-#endif
             default:
             {
                 VX_PRINT(VX_ZONE_ERROR, "Invalid Node Command Id\n");
@@ -1866,7 +1859,6 @@ static vx_status tivxDmpacSdeEnableErrorEventsCmd(tivxDmpacSdeObj *sde_obj,
     return status;
 }
 
-#if !defined(SOC_J722S)
 static vx_status tivxEnableDmpacSdeSafetyMechanisms(
     tivxDmpacSdeObj *sdeObj,
     const tivx_obj_desc_user_data_object_t *usr_data_obj)
@@ -2362,7 +2354,7 @@ static void tivxDmpacSdeFreeReadbackBuffers(tivxDmpacSdeObj *sdeObj)
         }
     }
 }
-#endif
+
 /* ========================================================================== */
 /*                              Driver Callbacks                              */
 /* ========================================================================== */
@@ -2429,7 +2421,6 @@ static void tivxDmpacSdeWdTimerErrorCb(Fvid2_Handle handle, uint32_t wdTimerErrE
 }
 
 /* LDRA_JUSTIFY_END */
-#if !defined(SOC_J722S)
 /* Callback for config register and golden register memory comparison */
 static int32_t tivxDmpacSdeConfigRegMemCompareCb(Fvid2_Handle handle, void *configRegPrms)
 {
@@ -2509,7 +2500,7 @@ static int32_t tivxDmpacSdeConfigRegMemCompareCb(Fvid2_Handle handle, void *conf
 
     return status;
 }
-#endif
+
 BUILD_ASSERT((((VHWA_SDE_RD_ERR == TIVX_DMPAC_SDE_RD_ERR))? 1U : 0U));
 BUILD_ASSERT((((VHWA_SDE_WR_ERR ==TIVX_DMPAC_SDE_WR_ERR))? 1U : 0U));
 BUILD_ASSERT((((VHWA_SDE_FOCO0_SL2_WR_ERR == TIVX_DMPAC_SDE_FOCO0_SL2_WR_ERR))? 1U : 0U));

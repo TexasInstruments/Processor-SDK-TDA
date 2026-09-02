@@ -124,7 +124,10 @@ static inline void TIDL_poolingSetPrivAlgArgs(sTIDL_AlgLayer_t *algLayer, const 
   uint32_t coreId = createParams->coreId;
   uint32_t coreStartIdx = createParams->coreStartIdx;
   uint32_t coreEndIdx = coreStartIdx + createParams->net->numCores - 1U;
-  uint32_t multiCoreMode = createParams->net->TIDLLayers[layerIdx].multiCoreMode;
+  
+  int32_t multiCoreMode = (algLayer->workloadUnit != NULL)
+                            ? algLayer->workloadUnit->multiCoreMode
+                            : TIDL_NOT_MULTI_CORE;
 
   spatialMultiCoreMode = ( (multiCoreMode & (int32_t)TIDL_MULTI_CORE_SPATIAL)  == (int32_t)TIDL_MULTI_CORE_SPATIAL);
   curCoreisMiddleCore = ((coreId != coreStartIdx) && (coreId != coreEndIdx));
@@ -132,7 +135,9 @@ static inline void TIDL_poolingSetPrivAlgArgs(sTIDL_AlgLayer_t *algLayer, const 
 #endif
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if (algLayer->workloadUnit != NULL)
   /* LDRA_JUSTIFY_END */

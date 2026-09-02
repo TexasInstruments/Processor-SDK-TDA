@@ -1,6 +1,6 @@
 /*
 *
-* Copyright (c) 2017-2025 Texas Instruments Incorporated
+* Copyright (c) 2017-2026 Texas Instruments Incorporated
 *
 * All rights reserved not granted herein.
 *
@@ -68,6 +68,7 @@
 #include <TI/tivx_mem.h>
 #include <TI/tivx_config.h>
 #include <TI/tivx_ext_raw_image.h>
+#include <VX/vx_khr_pipelining.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -249,6 +250,9 @@ typedef enum _tivx_obj_desc_type_e {
         super node */
     TIVX_OBJ_DESC_SUPER_NODE   = 0x14,
 
+    /*! \brief Object descriptor that has per-replica node error info */
+    TIVX_OBJ_DESC_NODE_ERROR_INFO = 0x15,
+
     /*! \brief Value of a invalid object descriptor */
     TIVX_OBJ_DESC_INVALID       = 0xFFFFu
 
@@ -361,6 +365,34 @@ typedef struct _tivx_obj_desc_t {
 } tivx_obj_desc_t;
 
 /*!
+ * \brief Per-replica node error info
+ *
+ *        Bundles one replica's diagnostic bytes, size, and execution
+ *        status. Used inline (single_error_info) on tivx_obj_desc_node_t
+ *        for non-replicated nodes, and as an array element inside
+ *        tivx_obj_desc_node_error_info_t for replicated nodes.
+ *
+ * \ingroup group_tivx_obj_desc
+ */
+typedef struct _tivx_error_info
+{
+    /*! \brief Up to TIVX_MAX_ERROR_INFO_SIZE number of bytes for additional information in the case of an error event.
+     *         Provides the application additional diagnostic context beyond vx_status alone.
+     *         Only the first error_info_size bytes are valid.
+     */
+    vx_uint8 error_info[TIVX_MAX_ERROR_INFO_SIZE];
+
+    /*! \brief The number of valid bytes in error_info. 0 if not in use.
+     */
+    vx_uint16 error_info_size;
+
+     /*! \brief This replica's execution status
+      */
+    uint32_t replica_status;
+
+} tivx_error_info_t;
+
+/*!
  * \brief Node object descriptor
  *
  *        Fields with name target_* are only accessed by target CPU
@@ -409,7 +441,7 @@ typedef struct _tivx_obj_desc_node
      */
     volatile uint32_t target_kernel_index[TIVX_NODE_MAX_REPLICATE];
 
-    /*! \brief node execution status */
+    /*! \brief Legacy field: node execution status */
     volatile uint32_t exe_status;
 
     /*! \brief node execution time */
@@ -508,11 +540,6 @@ typedef struct _tivx_obj_desc_node
      */
     volatile uint32_t num_pipeup_bufs;
 
-    /*! \brief Pipe buf idx used for when to begin graph
-     *         processing on source node
-     */
-    volatile uint32_t pipeup_buf_idx;
-
     /*! \brief variable to store the tile width for the given node
      */
     volatile uint32_t block_width;
@@ -524,6 +551,17 @@ typedef struct _tivx_obj_desc_node
     /*! \brief Debug zonemask of a given object descriptor node.
      */
     volatile vx_uint32 debug_zonemask;
+
+    /*! \brief Object descriptor ID of the tivx_obj_desc_node_error_info_t
+     *         holding a TIVX_NODE_MAX_REPLICATE number of tivx_error_info_t structs.
+     *         Valid only when the node is replicated.
+     */
+    volatile vx_uint32 error_info_obj_desc_id;
+
+    /*! \brief Singular error info for this node, valid when the node is NOT replicated.
+     */
+    volatile tivx_error_info_t single_error_info;
+    /* May need to add rsv bytes if a new field comes after this*/
 
 } tivx_obj_desc_node_t;
 
@@ -986,7 +1024,7 @@ void tivx_obj_desc_strncpy(volatile void *dst, volatile void *src, uint32_t size
  *
  * \ingroup group_tivx_obj_desc
  */
-void tivx_obj_desc_memcpy(volatile void *dst, volatile void *src, uint32_t size);
+void tivx_obj_desc_memcpy(volatile void *dst, const volatile void *src, uint32_t size);
 
 /*!
  * \brief Utility function for memory/string copy/set operation on object descriptor pointers

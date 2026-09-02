@@ -3,7 +3,7 @@
  *
  * Resource Manager APIs
  *
- * Copyright (C) 2017-2025, Texas Instruments Incorporated
+ * Copyright (C) 2017-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -192,6 +192,22 @@ s32 rm_udmap_gcfg_cfg(u32 *msg_recv);
  * \return SUCCESS if message processed successfully, else error
  */
 s32 rm_udmap_tx_ch_cfg(u32 *msg_recv);
+
+#ifdef CONFIG_UDMAP_MULTI_CH_CFG
+/**
+ * \brief UDMAP transmit multiple channel configure message handler
+ *
+ * \param msg_recv TISCI message
+ *
+ * \return SUCCESS if message processed successfully, else error
+ */
+s32 rm_udmap_tx_multi_ch_cfg(u32 *msg_recv);
+#else
+static inline s32 rm_udmap_tx_multi_ch_cfg(u32 *msg_recv __attribute__((unused)))
+{
+	return -EINIT;
+}
+#endif
 
 /**
  * \brief UDMAP receive channel configure message handler

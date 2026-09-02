@@ -72,6 +72,8 @@
 #include "tidl_alg_int.h"
 #include "tidl_odOutputReformat.h"
 #include "tidl_commonUtils.h"
+#include "tidl_alg_utils.h"
+#include "tidl_alg_utils_ref.h"
 
 /* This function is used to avoid empty file compilation error and unused function warning */
 void TIDL_odOutputReformat_dummyFunc(void)
@@ -83,8 +85,10 @@ void TIDL_odOutputReformat_dummyFunc(void)
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void TIDL_odOutputReformat.* <function end>
-<justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
+<justification start>
+Rationale - NOT_IN_SCOPE: This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
 and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 /**
  * @brief Implementation of OD output reformat layer
@@ -472,34 +476,162 @@ template<class Tin, class Tout> void TIDL_odOutputReformat(
 
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
-<function start> int32_t TIDL_odOutputReformatProcess.* <function end>
-<justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
+<function start> int32_t TIDL_odOutputReformatAlloc.* <function end>
+<justification start>
+Rationale - NOT_IN_SCOPE: This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
 and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
+<justification end> */
+/**
+ ----------------------------------------------------------------------------
+ @ingroup    TIDL_OdOutputReformatLayer
+ @fn         TIDL_odOutputReformatAlloc
+ @brief      OD Output Reformatting Layer
+ ----------------------------------------------------------------------------
+*/
+int32_t TIDL_OdOutputReformatAlloc(const TIDL_LayerSpecificParams *layerSpecificParams,
+                                  const TIDL_NetworkCommonParams *commonParams,
+                                  int32_t layerIdx,
+                                  int32_t memorySize[TIDL_LAYER_MEMORY_MAX])
+{
+  int32_t status = IALG_EOK;
+
+  const TIDL_CreateParams *params = commonParams->createParams;
+  int32_t outDataSize = TIDL_updateDataParamsPitch(&params->net->TIDLLayers[layerIdx].outData);
+
+  if (params->optimiseExtMem != TIDL_OptimiseExtMemL0)
+  {
+#ifdef HOST_EMULATION
+    if (((uint32_t)params->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != 0U)
+    {
+      outDataSize = TIDL_findFreeOutBuff(params, layerIdx, outDataSize, commonParams->TIDLLayersBufPtr);
+    }
+#endif
+    commonParams->TIDLLayersBufPtr->outDataSize[layerIdx] = outDataSize;
+  }
+
+  if ( !(TIDL_isOutDataBuff(params->net,
+                          params->net->TIDLLayers[layerIdx].outData.dataId,
+                          params->currLayersGroupId) == 0
+        ) 
+        || !(params->net->dataFlowInfo == NULL)
+      )
+  {
+    outDataSize = 0;
+  }
+ 
+  memorySize[TIDL_LAYER_MEMORY_SCRATCH] += 0;
+  memorySize[TIDL_LAYER_MEMORY_PERSISTENT] += ((uint32_t)outDataSize);
+  memorySize[TIDL_LAYER_MEMORY_OUTPUT] += 0;
+
+  return status;
+}
+
+/* LDRA_JUSTIFY
+<metric start> statement branch <metric end>
+<function start> int32_t TIDL_odOutputReformatInit.* <function end>
+<justification start>
+Rationale - NOT_IN_SCOPE: This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
+and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
+<justification end> */
+/**
+ ----------------------------------------------------------------------------
+ @ingroup    TIDL_OdOutputReformatLayer
+ @fn         TIDL_odOutputReformatInit
+ @brief      OD Output Reformatting Layer
+ ----------------------------------------------------------------------------
+*/
+int32_t TIDL_OdOutputReformatInit(const TIDL_LayerSpecificParams *layerSpecificParams,
+                                 const TIDL_NetworkCommonParams *commonParams,
+                                 sTIDL_AlgLayer_t *algLayer,
+                                 int32_t layerIdx,
+                                 uint8_t *memory[TIDL_LAYER_MEMORY_MAX],
+                                 int32_t memorySize[TIDL_LAYER_MEMORY_MAX],
+                                 void **outPtr)
+{
+  int32_t status = IALG_EOK;
+  // TODO
+  const TIDL_CreateParams *params = commonParams->createParams;
+
+  int32_t outDataSize = TIDL_updateDataParamsPitch(&params->net->TIDLLayers[layerIdx].outData);
+
+  if (params->optimiseExtMem != TIDL_OptimiseExtMemL0)
+  {
+#ifdef HOST_EMULATION
+    if (((uint32_t)params->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != 0U)
+    {
+      outDataSize = TIDL_findFreeOutBuff(params, layerIdx, outDataSize, commonParams->TIDLLayersBufPtr);
+    }
+#endif
+    commonParams->TIDLLayersBufPtr->outDataSize[layerIdx] = outDataSize;
+  }
+
+  if (status == IALG_EOK)
+  {
+    if ((TIDL_isOutDataBuff(params->net,
+                          params->net->TIDLLayers[layerIdx].outData.dataId,
+                          params->currLayersGroupId) == 1)
+#ifdef HOST_EMULATION
+        || (params->net->dataFlowInfo != NULL)
+#endif
+    )
+    {
+      *outPtr = NULL;
+    }
+#ifdef HOST_EMULATION
+    else
+    {
+      /* outDataSize is 0 means, not allocate the new memory for output buffer */
+      if (outDataSize == 0)
+      {
+        *outPtr = NULL;
+      }
+      else
+      {
+        TIDL_AllocatePtr((intptr_t)memory[TIDL_LAYER_MEMORY_OUTPUT],
+                        0,
+                        outDataSize,
+                        128,
+                        outPtr);
+      }
+    }
+#endif
+
+    algLayer->scratchSize = 0;
+    algLayer->metaData.totalOps =
+        (params->net->TIDLLayers[layerIdx].outData.dimValues[TIDL_DIM_NUMCH] *
+         params->net->TIDLLayers[layerIdx].layerParams.eltWiseParams.numInData);
+    algLayer->metaData.actualOps = algLayer->metaData.totalOps;
+  }
+
+  return status;
+}
+
+/* LDRA_JUSTIFY
+<metric start> statement branch <metric end>
+<function start> int32_t TIDL_odOutputReformatProcess.* <function end>
+<justification start>
+Rationale - NOT_IN_SCOPE: This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
+and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 /**
  ----------------------------------------------------------------------------
  @ingroup    TIDL_OdOutputReformatLayer
  @fn         TIDL_odOutputReformatProcess
  @brief      OD Output Reformatting Layer
-
- @param      intAlgHandle : tidl algorithm handle
- @param      algLayer : Ptr to alg layer parameter used in OD Output Reformatting layer
- @param      tidlLayer: Ptr to tidl layer parameter used in OD Output Reformatting layer
- @param      inPtrs: Ptrs to input buffers to be processed
- @param      outPtrs: Ptrs to output buffers to be processed
- @param      sysMems: Ptr to memory related buffers used in OD Output Reformatting layer
- @remarks    None
  ----------------------------------------------------------------------------
 */
-int32_t TIDL_odOutputReformatProcess(
-    TIDL_Handle intAlgHandle,
-    const sTIDL_AlgLayer_t *algLayer,
-    sTIDL_Layer_t *tidlLayer,
-    void *inPtrs[],
-    void *outPtrs[],
-    sTIDL_sysMemHandle_t *sysMems)
+int32_t TIDL_OdOutputReformatProcess(TIDL_NetworkCommonParams *commonParams,
+                                    sTIDL_AlgLayer_t *algLayer,
+                                    sTIDL_Layer_t *tidlLayer,
+                                    void *inPtrs[],
+                                    void *outPtrs[],
+                                    int32_t layerIdx)
 {
   int32_t status = IALG_EOK;
+
   int32_t outWidth = tidlLayer->outData.dimValues[TIDL_DIM_WIDTH];
   int32_t outHeight = tidlLayer->outData.dimValues[TIDL_DIM_HEIGHT];
 
@@ -517,12 +649,17 @@ int32_t TIDL_odOutputReformatProcess(
   int32_t inPtrOffset = 0;
   int32_t outPtrOffset = 0;
 
-  if (((uint32_t)intAlgHandle->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)
+  if (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)
   {
     int32_t layerIdx;
     layerIdx = algLayer->layerIdx;
 
-    TIDL_UpdateScaleFactors(intAlgHandle, layerIdx, 0, 0, 1);
+    TIDL_Obj intAlgObj;
+    TIDL_CreateParams createParams;
+    (void)memcpy(&createParams, commonParams->createParams, sizeof(TIDL_CreateParams));
+    intAlgObj.createParams = (TIDL_CreateParams *)&createParams;
+
+    TIDL_UpdateScaleFactors(&intAlgObj, layerIdx, 0, 0, 1);
   }
 
   TIDL_odOutputReformat((float32_tidl *)inPtrs[0], (float32_tidl *)outPtrs[0], inPtrOffset, outPtrOffset, outWidth, outHeight, outPitch,

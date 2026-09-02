@@ -93,12 +93,19 @@ typedef enum {
     APP_PERF_HWA_DOF,
     APP_PERF_HWA_SDE,
     APP_PERF_HWA_GPU,
-    #if defined(SOC_J784S4) || defined(SOC_J742S2)
+    #if defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_TDA54)
     APP_PERF_HWA_VPAC2_VISS,
     APP_PERF_HWA_VPAC2_LDC,
     APP_PERF_HWA_VPAC2_NF,
     APP_PERF_HWA_VPAC2_MSC0,
     APP_PERF_HWA_VPAC2_MSC1,
+    #endif
+    #if defined(SOC_TDA54)
+    APP_PERF_HWA_VPAC3_VISS,
+    APP_PERF_HWA_VPAC3_LDC,
+    APP_PERF_HWA_VPAC3_NF,
+    APP_PERF_HWA_VPAC3_MSC0,
+    APP_PERF_HWA_VPAC3_MSC1,
     #endif
     APP_PERF_HWA_MAX
 

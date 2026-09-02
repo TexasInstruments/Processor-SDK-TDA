@@ -84,6 +84,10 @@ const vector<TidlConstraint> tidlConstraintSqueeze =
         "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
+            if(layer->allowlistingMetaData.varTensorsDims.size() == 0)
+            {
+                return true;
+            }
             int32_t numDims = tidlGetNonSingletonNumDims(layer->allowlistingMetaData.varTensorsDims[0]);
             if(numDims > 6)
             {

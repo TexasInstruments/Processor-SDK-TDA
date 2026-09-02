@@ -349,7 +349,6 @@ static void Vhwa_m2mDofCalGwPrms(const Dof_Config *dofConfig, uint32_t *refBot,
                                  uint32_t *refTop, uint32_t *curBot,
                                  uint32_t *curTop);
 
-#if !defined(SOC_J722S)
 /**
  * \brief   Reconfigure DOF MMR registers as needed for the current handle/queue.
  *
@@ -402,7 +401,6 @@ static int32_t vhwaM2mDofUpdateStatusRegGroup(Vhwa_M2mDofHandleObj *hObj);
  * @return Returns 0 on success, or a negative error code on failure.
  */
 int32_t vhwaM2mDofSetDefaultGoldenRegMemValues(const Vhwa_M2mDofHandleObj *hObj, const Vhwa_M2mDofInstObj *instObj);
-#endif
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -1176,7 +1174,6 @@ Vhwa_M2mDofHandleObj *Vhwa_m2mDofGetHandleObj(uint32_t cnt)
 }
 /* LDRA_JUSTIFY_END */
 
-#if !defined(SOC_J722S)
 int32_t Vhwa_m2mDofReInit(void)
 {
     int32_t                status = FVID2_SOK;
@@ -1317,7 +1314,7 @@ int32_t Vhwa_m2mDofReInit(void)
 
     return (status);
 }
-#endif
+
 /* ========================================================================== */
 /*                          FVID2 Function implementation                     */
 /* ========================================================================== */
@@ -1690,9 +1687,7 @@ Int32 vhwa_m2mDofControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
     Dof_ErrEventParams     *eePrms = NULL;
     Vhwa_HtsLimiter        *bwLimit = NULL;
     Dof_WdTimerErrEventParams *wdTimerEePrms = NULL;
-#if !defined(SOC_J722S)
     uint32_t                cookie;
-#endif
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -2083,7 +2078,7 @@ Int32 vhwa_m2mDofControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-#if !defined(SOC_J722S)
+
             case VHWA_M2M_IOCTL_DOF_ENABLE_RECONFIG_REINIT_REG:
             {
                 /* LDRA_JUSTIFY_START
@@ -2452,7 +2447,7 @@ Int32 vhwa_m2mDofControl(Fdrv_Handle handle, UInt32 cmd, Ptr cmdArgs,
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-#endif
+
             /* Default Case */
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
@@ -2690,7 +2685,6 @@ Int32 vhwa_m2mDofProcessReq(Fdrv_Handle handle, Fvid2_FrameList *inFrmList,
                 }
             }
 
-#if !defined(SOC_J722S)
             /* Invoke the reconfig-MMR if enableReconfigReinitReg enabled for the current handle */
             if (VHWA_SAFETY_MODE_DISABLED != hObj->enableReconfigReinitReg)
             {
@@ -2701,7 +2695,6 @@ Int32 vhwa_m2mDofProcessReq(Fdrv_Handle handle, Fvid2_FrameList *inFrmList,
                     hObj->enableReconfigReinitReg = (uint32_t)VHWA_SAFETY_MODE_DISABLED;
                 }
             }
-#endif
 
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
@@ -3707,12 +3700,11 @@ static int32_t vhwaM2mDofSubmitRequest(Vhwa_M2mDofInstObj *instObj,
         }
 
         /* Update the DofStatusRegisterGroup with valid status register values for frame specific registers */
-#if !defined(SOC_J722S)
         if(VHWA_SAFETY_MODE_DISABLED != hObj->enableStatusRegValidate)
         {
             status = vhwaM2mDofUpdateStatusRegGroup(hObj);
         }
-#endif
+
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
         <justification start>
@@ -3733,13 +3725,12 @@ static int32_t vhwaM2mDofSubmitRequest(Vhwa_M2mDofInstObj *instObj,
         /* LDRA_JUSTIFY_END */
     }
 
-#if !defined(SOC_J722S)
     /* Update the DofConfigRegisterGroup with config register values for frame specific Static Config, INTD and HTS registers */
     if(VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate)
     {
         status = vhwaM2mDofUpdateConfigRegGroup(goldenRegVal, instObj, hObj);
     }
-#endif
+
     if (FVID2_SOK == status)
     {
         /* Better to set Active object to this q object, so that if
@@ -4582,7 +4573,6 @@ static void vhwaM2mDofSetBwLimitParams(Vhwa_M2mDofHandleObj *hObj,
     }
 }
 
-#if !defined(SOC_J722S)
 static int32_t Vhwa_m2mDofReconfigReinitReg(const Vhwa_M2mDofInstObj *instObj, const Vhwa_M2mDofHandleObj *hObj, const Vhwa_M2mDofQueueObj *qObj)
 {
     int32_t status = FVID2_SOK;
@@ -4682,7 +4672,6 @@ static int32_t Vhwa_m2mDofReconfigReinitReg(const Vhwa_M2mDofInstObj *instObj, c
 
     return status;
 }
-#endif
 
 static int32_t Vhwa_m2mDofSetIntrInHW(uint32_t vhwaIrqNum,
                                 volatile CSL_dmpac_intd_cfgRegs  *intdRegs,
@@ -4718,7 +4707,7 @@ static int32_t Vhwa_m2mDofSetIntrInHW(uint32_t vhwaIrqNum,
     return status;
 }
 
-#if !defined(SOC_J722S)
+
 static int32_t vhwaM2mDofUpdateStatusRegGroup(Vhwa_M2mDofHandleObj *hObj)
 {
     DofStatusRegisterGroup *statusRegs;
@@ -5931,4 +5920,3 @@ int32_t vhwaM2mDofUpdateConfigRegGroup(VhwaDmpacDofSocReadBack *RegVal, const Vh
 
     return status;
 }
-#endif

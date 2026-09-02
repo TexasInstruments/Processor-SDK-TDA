@@ -1278,10 +1278,6 @@ uint32_t CSIRX_AsfTransToCtrlSF(const CSIRX_AsfTransToCtrl *obj)
         {
             ret = CDN_EINVAL;
         }
-        if (obj->asfTransToCtrl > (0xFFFFU))
-        {
-            ret = CDN_EINVAL;
-        }
     }
 
     return ret;

@@ -1,6 +1,6 @@
 /*
 *
-* Copyright (c) 2017 Texas Instruments Incorporated
+* Copyright (c) 2017-2026 Texas Instruments Incorporated
 *
 * All rights reserved not granted herein.
 *
@@ -275,6 +275,15 @@ tivx_target_kernel tivxTargetKernelInstanceGetKernel(tivx_target_kernel_instance
  * \ingroup group_tivx_target_kernel_instance
  */
 vx_uint32 tivxGetTargetKernelInstanceDebugZonemask(tivx_target_kernel_instance target_kernel_instance);
+
+/*!
+ * \brief Set the error info on a target kernel instance's node_obj_desc
+ *
+ * \ingroup group_tivx_target_kernel_instance
+ */
+VX_API_ENTRY vx_status tivxSetTargetKernelInstanceErrorInfo(
+            tivx_target_kernel_instance target_kernel_instance,
+            const void *error_info, vx_uint16 error_info_size);
 
 static inline vx_bool tivxFlagIsBitSet(uint32_t flag_var, uint32_t flag_val);
 static inline void tivxFlagBitSet(volatile uint32_t *flag_var, uint32_t flag_val);

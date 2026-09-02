@@ -70,7 +70,7 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("GroupNormalization")> ()
 {
   int32_t status=0;
   int32_t numGroups = 1;
-  float32_tidl epsilon = 0;
+  float32_tidl epsilon = 1e-5;
   int32_t stashType = 1;
   layer.layerType = TIDL_GroupNormLayer;
   layer.numInBufs = 1;
@@ -93,7 +93,7 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("GroupNormalization")> ()
 
   /* Handle the case of divide by 0 */
   if(epsilon == (float32_tidl)0){
-    epsilon = epsilon + 10e-5;
+    epsilon = epsilon + 1e-5;
   }
 
   layer.layerPCParams.groupNormParams.epsilon = epsilon;

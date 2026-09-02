@@ -56,6 +56,69 @@
 
 #define   NONE (-1)
 
+/*  Check the return value of functionCall passed and Free variable number of pointers passed if functionCall return RETURN_FAIL  */
+#define CHECK_FREE_RET(functionCall, ...)                                                                                                                         \
+  do                                                                                                                                                              \
+  {                                                                                                                                                               \
+    int32_t retValue = functionCall;                                                                                                                              \
+    if (retValue != RETURN_PASS)                                                                                                                                  \
+    {                                                                                                                                                             \
+      utils_printf(NC_ERR_FILE, NULL, "ERROR : [file:%s, func:%s, line:%d] Function call returned the Value = %d\n", __FILE__, __FUNCTION__, __LINE__, retValue); \
+      void *freeList[] = {__VA_ARGS__};                                                                                                                           \
+      size_t freeListSize = sizeof(freeList) / sizeof(freeList[0]);                                                                                               \
+                                                                                                                                                                  \
+      for (int32_t i = 0; i < freeListSize; i++)                                                                                                                  \
+      {                                                                                                                                                           \
+        if (freeList[i] != NULL)                                                                                                                                  \
+        {                                                                                                                                                         \
+          free(freeList[i]);                                                                                                                                      \
+          freeList[i] = NULL;                                                                                                                                     \
+        }                                                                                                                                                         \
+      }                                                                                                                                                           \
+      return retValue;                                                                                                                                            \
+    }                                                                                                                                                             \
+  } while (0);
+
+/*  Allocate heap memory and assign to dst pointer and Free variable number of pointers passed if malloc fails  */
+#define ALLOC_FREE_RET(dst, type, size, ...)                                                                                                \
+  do                                                                                                                                        \
+  {                                                                                                                                         \
+    dst = (type *)malloc(size);                                                                                                             \
+    if (dst == NULL)                                                                                                                        \
+    {                                                                                                                                       \
+      utils_printf(NC_ERR_FILE, NULL, "ERROR : [file:%s, func:%s, line:%d] Could not allocate memory\n", __FILE__, __FUNCTION__, __LINE__); \
+      void *freeList[] = {__VA_ARGS__};                                                                                                     \
+      size_t freeListSize = sizeof(freeList) / sizeof(freeList[0]);                                                                         \
+                                                                                                                                            \
+      for (int32_t i = 0; i < freeListSize; i++)                                                                                            \
+      {                                                                                                                                     \
+        if (freeList[i] != NULL)                                                                                                            \
+        {                                                                                                                                   \
+          free(freeList[i]);                                                                                                                \
+          freeList[i] = NULL;                                                                                                               \
+        }                                                                                                                                   \
+      }                                                                                                                                     \
+      return RETURN_FAIL;                                                                                                                   \
+    }                                                                                                                                       \
+  } while (0);
+
+/*  Free variable number of pointers passed  */
+#define FREE_ALL(...)                                             \
+  do                                                              \
+  {                                                               \
+    void *freeList[] = {__VA_ARGS__};                             \
+    size_t freeListSize = sizeof(freeList) / sizeof(freeList[0]); \
+                                                                  \
+    for (int32_t i = 0; i < freeListSize; i++)                    \
+    {                                                             \
+      if (freeList[i] != NULL)                                    \
+      {                                                           \
+        free(freeList[i]);                                        \
+        freeList[i] = NULL;                                       \
+      }                                                           \
+    }                                                             \
+  } while (0);
+
 /**  */
 #define MAX_ADDITIONAL_INPUTS (1)
 

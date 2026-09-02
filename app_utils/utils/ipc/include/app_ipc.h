@@ -313,7 +313,7 @@ extern "C" {
  */
 
 /** \brief RPMsg Port used for TIOVX IPC */
-#define APP_IPC_TIOVX_RPMSG_PORT_ID      (13u)
+#define APP_IPC_TIOVX_RPMSG_PORT_ID      (39u)
 
 #if defined (SOC_AM62A)
 /** \brief RPMsg Port used for Remote service */
@@ -323,14 +323,14 @@ extern "C" {
 #define APP_IPC_ECHO_TEST_RPMSG_PORT_ID  (21u)
 #else
 /** \brief RPMsg Port used for Remote service */
-#define APP_IPC_REMOTE_SERVICE_RPMSG_PORT_ID      (21u)
+#define APP_IPC_REMOTE_SERVICE_RPMSG_PORT_ID      (41u)
 
 /** \brief RPMsg Port used for echo test */
-#define APP_IPC_ECHO_TEST_RPMSG_PORT_ID  (14u)
+#define APP_IPC_ECHO_TEST_RPMSG_PORT_ID  (42u)
 #endif
 
 /** \brief RPMsg Port used for RPMsg proto echo test */
-#define APP_IPC_RPMSG_PROTO_ECHO_TEST_RPMSG_PORT_ID  (12u)
+#define APP_IPC_RPMSG_PROTO_ECHO_TEST_RPMSG_PORT_ID  (36u)
 
 /** \brief Returned by \ref appGetHostOSType if MPU is running RTOS */
 #define APP_HOST_TYPE_RTOS (0U)

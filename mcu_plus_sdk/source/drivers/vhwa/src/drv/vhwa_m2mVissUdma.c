@@ -158,14 +158,14 @@ int8_t gConfigVissTdCompRingMem[VHWA_M2M_VISS_MAX_CONFIG_DMA_CH]
 uint8_t gConfigVissRxTprdMem[VHWA_M2M_VISS_MAX_HANDLES]
     [VHWA_M2M_VISS_MAX_CONFIG_DMA_CH][VHWA_M2M_VISS_UDMA_CONFIG_TRPD_SIZE]
     __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
+    
 /**
  * \brief TRPD memory for readback for each handle and for each channel in handle
  */
 uint8_t gReadbackVissRxTprdMem[VHWA_M2M_VISS_MAX_HANDLES]
     [VHWA_M2M_VISS_MAX_CONFIG_DMA_CH][VHWA_M2M_VISS_UDMA_CONFIG_TRPD_SIZE]
     __attribute__((aligned(UDMA_CACHELINE_ALIGNMENT)));
-#endif
+
 /**
  * \brief Ring memory, one ring for each output channel.
  */
@@ -1920,7 +1920,7 @@ int32_t Vhwa_m2mVissAllocConfigUdmaMem(Vhwa_M2mVissInstObj *instObj)
 
     return (status);
 }
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
+
 int32_t Vhwa_m2mVissInitReadbackTrMem(Vhwa_M2mVissHandleObj *hObj)
 {
     int32_t  status = FVID2_SOK;
@@ -1941,7 +1941,7 @@ int32_t Vhwa_m2mVissInitReadbackTrMem(Vhwa_M2mVissHandleObj *hObj)
 
     return (status);
 }
-#endif
+
 
 int32_t Vhwa_m2mVissAllocGlbceCntxSaveRestoreUdmaMem(const Vhwa_M2mVissInstObj *instObj, Vhwa_M2mVissHandleObj *hObj)
 {

@@ -3,7 +3,7 @@ include build_flags.mak
 include tools_path.mak
 
 # Edit below file to change default build options
-include vision_apps_build_flags.mak
+include platform_build_flags.mak
 
 # Additional make targets to build various related components
 ifeq ($(RTOS_SDK),pdk)
@@ -17,6 +17,7 @@ endif
 
 include makerules/makefile_tidl_mmalib.mak
 include makerules/makefile_tiovx_ptk_imaging.mak
+include makerules/makefile_platform.mak
 include makerules/makefile_test_data.mak
 include makerules/makefile_linux_arm.mak
 include makerules/makefile_help.mak
@@ -24,13 +25,14 @@ include makerules/makefile_config.mak
 include makerules/makefile_tiadalg.mak
 include makerules/makefile_check_paths.mak
 include makerules/makefile_qnx.mak
-include makerules/makefile_sbl.mak
 ifeq ($(RTOS_SDK),pdk)
+include makerules/makefile_sbl.mak
 include makerules/makefile_ethfw.mak
 endif
 include makerules/makefile_ipk.mak
 include makerules/makefile_uboot.mak
 include makerules/makefile_sbl_combined_appimage.mak
+include makerules/makefile_app_kernels.mak
 include makerules/makefile_vision_apps.mak
 include makerules/makefile_edgeai.mak
 include makerules/makefile_vdk.mak
@@ -38,8 +40,8 @@ include makerules/makefile_vdk.mak
 # Set Variables for SOC specific rule dependencies used in make rules below
 ifeq ($(SOC), $(filter $(SOC), j721e j721s2 j784s4 j742s2))
     SOC_VARIABLE_RULES=tiadalg qnx
-    SOC_VARIABLE_CLEAN=tiadalg_clean qnx_clean sbl_bootimage_clean
-    SOC_VARIABLE_SCRUB=tiadalg_scrub qnx_scrub sbl_bootimage_scrub
+    SOC_VARIABLE_CLEAN=tiadalg_clean qnx_clean sbl_clean
+    SOC_VARIABLE_SCRUB=tiadalg_scrub qnx_scrub sbl_scrub
     SOC_VARIABLE_DOCS=tiadalg_docs
     ifeq ($(BUILD_ENABLE_ETHFW),yes)
         SOC_VARIABLE_RULES += ethfw
@@ -48,19 +50,19 @@ ifeq ($(SOC), $(filter $(SOC), j721e j721s2 j784s4 j742s2))
     endif
 else ifeq ($(SOC), $(filter $(SOC), j722s))
     SOC_VARIABLE_RULES=qnx
-    SOC_VARIABLE_CLEAN=qnx_clean sbl_bootimage_clean
-    SOC_VARIABLE_SCRUB=qnx_scrub sbl_bootimage_scrub
+    SOC_VARIABLE_CLEAN=qnx_clean sbl_clean
+    SOC_VARIABLE_SCRUB=qnx_scrub sbl_scrub
     SOC_VARIABLE_DOCS=
 else ifeq ($(SOC), $(filter $(SOC), am62a))
     SOC_VARIABLE_RULES=qnx
-    SOC_VARIABLE_CLEAN=qnx_clean sbl_bootimage_clean
-    SOC_VARIABLE_SCRUB=qnx_scrub sbl_bootimage_scrub
+    SOC_VARIABLE_CLEAN=qnx_clean sbl_clean
+    SOC_VARIABLE_SCRUB=qnx_scrub sbl_scrub
     SOC_VARIABLE_DOCS=
 else ifeq ($(SOC), $(filter $(SOC), tda54))
-SOC_VARIABLE_RULES=qnx dmautils
-SOC_VARIABLE_CLEAN=qnx_clean dmautils_clean
-SOC_VARIABLE_SCRUB=qnx_scrub dmautils_scrub
-SOC_VARIABLE_DOCS=
+    SOC_VARIABLE_RULES=qnx dmautils
+    SOC_VARIABLE_CLEAN=qnx_clean dmautils_clean
+    SOC_VARIABLE_SCRUB=qnx_scrub dmautils_scrub
+    SOC_VARIABLE_DOCS=
 endif
 
 ifeq ($(BUILD_PTK),yes)
@@ -74,25 +76,28 @@ sdk: sdk_check_paths rtos_sdk
 	$(MAKE) app_utils
 	$(MAKE) vxlib
 	$(MAKE) tiovx
+	$(MAKE) platform_hlos
 	$(MAKE) imaging
 	$(MAKE) video_io
+	$(MAKE) $(SOC_VARIABLE_RULES)
 	$(MAKE) tidl_lib
 	$(MAKE) tidl_tiovx_kernels
-	$(MAKE) $(SOC_VARIABLE_RULES)
-	$(MAKE) vision_apps
 ifeq ($(BUILD_ENABLE_TIDL_RT),yes)
 	$(MAKE) tidl_rt
 endif
+	$(MAKE) app_kernels
+	$(MAKE) vision_apps
+	$(MAKE) platform_rtos
 ifeq ($(BUILD_CPU_MCU1_0),yes)
 	$(MAKE) uboot
 endif
 
-sdk_clean: sdk_check_paths rtos_sdk_clean app_utils_clean imaging_clean video_io_clean vxlib_clean tiovx_clean tidl_lib_clean tidl_tiovx_kernels_clean tidl_rt_clean vision_apps_clean $(SOC_VARIABLE_CLEAN)
+sdk_clean: sdk_check_paths rtos_sdk_clean app_utils_clean imaging_clean video_io_clean vxlib_clean tiovx_clean tidl_lib_clean tidl_tiovx_kernels_clean tidl_rt_clean app_kernels_clean platform_clean vision_apps_clean $(SOC_VARIABLE_CLEAN)
 ifeq ($(BUILD_CPU_MCU1_0),yes)
 	$(MAKE) uboot_clean
 endif
 
-sdk_scrub: sdk_check_paths rtos_sdk_scrub app_utils_scrub imaging_scrub video_io_scrub vxlib_scrub tiovx_scrub tidl_lib_scrub tidl_tiovx_kernels_scrub tidl_rt_scrub vision_apps_scrub $(SOC_VARIABLE_SCRUB) edgeai_scrub
+sdk_scrub: sdk_check_paths rtos_sdk_scrub app_utils_scrub imaging_scrub video_io_scrub vxlib_scrub tiovx_scrub tidl_lib_scrub tidl_tiovx_kernels_scrub tidl_rt_scrub app_kernels_scrub platform_scrub vision_apps_scrub $(SOC_VARIABLE_SCRUB)
 ifeq ($(BUILD_CPU_MCU1_0),yes)
 	$(MAKE) uboot_clean
 endif

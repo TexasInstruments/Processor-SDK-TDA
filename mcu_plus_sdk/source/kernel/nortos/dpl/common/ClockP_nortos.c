@@ -349,15 +349,11 @@ static void ClockP_sleepTicks(uint32_t ticks)
 {
     SemaphoreP_Object semObj;
 
-    if (ticks > 0U) {
-        /*
-         *  Construct a semaphore with 0 count that will never be posted.
-         *  We will timeout pending on this semaphore.
-         */
-        (void) SemaphoreP_constructBinary(&semObj, 0);
-        (void) SemaphoreP_pend(&semObj, ticks);
-        (void) SemaphoreP_destruct(&semObj);
-    }
+    /* This API gaurantees a minimum delay for the number of mentioned milliseconds 
+     * Adding a tick gaurantees the minimum delay limit */
+    (void) SemaphoreP_constructBinary(&semObj, 0);
+    (void) SemaphoreP_pend(&semObj, ticks + 1U);
+    (void) SemaphoreP_destruct(&semObj);
 }
 
 

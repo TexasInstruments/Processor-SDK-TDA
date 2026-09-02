@@ -22,10 +22,10 @@ ifeq ($(TARGET_CPU),x86_64)
 
 	LDIRS       += $(CGT7X_ROOT)/host_emulation
 	LDIRS       += $(APP_UTILS_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
-	LDIRS       += $(VISION_APPS_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+	LDIRS       += $(PLATFORM_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 
 	STATIC_LIBS += app_utils_mem
-	STATIC_LIBS += app_utils_init
+	STATIC_LIBS += app_init_pc_common
 
 	ifeq ($(SOC_FAMILY), SOC_FAMILY_TDA5)
 		STATIC_LIBS += app_utils_init_vdk_stub

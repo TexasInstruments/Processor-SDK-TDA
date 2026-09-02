@@ -87,7 +87,9 @@ void getMetaDataID(int64_t id, sMetaDataID_t *pMetaDataID)
   // some issue with how the int to MetaData casting happens , causing all zero binary bits to give -1 in decimal
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   pMetaDataID->tileType = (psIntMetaDataID->tileType <= (int64_t)NO_TILE) ? (int64_t)NO_TILE : psIntMetaDataID->tileType;
   /* LDRA_JUSTIFY_END */
@@ -154,7 +156,7 @@ sBufParams_t *getBufParamsFromBufIndexStrict(const sGCHelperHandle *gcHelperHand
   }
   return pBufParam;
 }
-sWorkloadUnit_t *getWLUnitPtr(sGCHelperHandle *gcHelperHandle, int32_t unitIdx)
+sWorkloadUnit_t *getWLUnitPtr(const sGCHelperHandle *gcHelperHandle, int32_t unitIdx)
 {
   sWorkloadUnit_t *pWLUnit = NULL;
 #if 0
@@ -321,7 +323,10 @@ int32_t getLayerIdToExecute(void *getIdContext,
             context->subGroupIdx = 0;
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+            <justification start>
+            Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+            Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+            This does not impact functional correctness or safety.
             <justification end> */
             if (context->groupIdx < context->wlSuperGroup->numGroups)
             {
@@ -345,9 +350,12 @@ int32_t getLayerIdToExecute(void *getIdContext,
       wlPtr = getWLUnitPtr(context->gcHelperHandle, workLoadId);
       /* LDRA_JUSTIFY_START
       <metric start> branch <metric end>
-      <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+      <justification start>
+      Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
       This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
       TIDL_LDRA_TAG : TIDL_LDRA_TAG_GC_HELPER_PRIOR_CHECK_001
+      Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+      This does not affect runtime behavior or safety.
       <justification end> */
       if (wlPtr != NULL)
       /* LDRA_JUSTIFY_END */
@@ -446,10 +454,12 @@ int8_t *getGCDataBase(sGraphCompilerOutArgs_t *gcInfo, int32_t dataBaseType)
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int32_t getDimSplitForCore.* <function end>
-<justification start> NOT_IN_SCOPE : This code is maintained to be common between X86 and EVM.
+<justification start>
+Rationale - NOT_IN_SCOPE: This code is maintained to be common between X86 and EVM.
 And this code is applicable for only multi core devices. We cannot use the macro of multi core
 devices to mask this code because these pre-processor directives are not available on X86 side of code for
 good reasons. So preventing this code to be checked by LDRA for multi core devices on EVM
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 #endif
 
@@ -476,10 +486,12 @@ int32_t getDimSplitForCore(int32_t coreIdx, int32_t numCore, int32_t totalDimVal
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int32_t getNumInChforCore.* <function end>
-<justification start> NOT_IN_SCOPE : This code is maintained to be common between X86 and EVM.
+<justification start>
+Rationale - NOT_IN_SCOPE: This code is maintained to be common between X86 and EVM.
 And this code is applicable for only multi core devices. We cannot use the macro of multi core
 devices to mask this code because these pre-processor directives are not available on X86 side of code for
 good reasons. So preventing this code to be checked by LDRA for multi core devices on EVM
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 #endif
 int32_t getNumInChforCore(int32_t coreIdx, int32_t numCore, int32_t totalNi, int32_t totalGrpNum, int32_t layerType)
@@ -502,10 +514,12 @@ int32_t getNumInChforCore(int32_t coreIdx, int32_t numCore, int32_t totalNi, int
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int32_t getNumOutChforCore.* <function end>
-<justification start> NOT_IN_SCOPE : This code is maintained to be common between X86 and EVM.
+<justification start>
+Rationale - NOT_IN_SCOPE: This code is maintained to be common between X86 and EVM.
 And this code is applicable for only multi core devices. We cannot use the macro of multi core
 devices to mask this code because these pre-processor directives are not available on X86 side of code for
 good reasons. So preventing this code to be checked by LDRA for multi core devices on EVM
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 #endif
 int32_t getNumOutChforCore(int32_t coreIdx, int32_t numCore, int32_t totalNo, int32_t totalGrpNum, int32_t layerType)

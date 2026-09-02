@@ -44,7 +44,7 @@
 #include <TI/tivx.h>
 #include <TI/tivx_sample.h>
 #include <tivx_sample_kernels_priv.h>
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 #include <tivx_utils_file_rd_wr.h>
 #include <TI/tivx_task.h>
 
@@ -317,7 +317,7 @@ int main(int argc, char *argv[])
     }
     tivxSampleLoadKernels(context);
     #ifndef PC
-    tivxRegisterSampleTargetA72Kernels();
+    tivxRegisterSampleTargetMpuKernels();
     #endif
 
     graph = vxCreateGraph(context);
@@ -415,7 +415,7 @@ int main(int argc, char *argv[])
     vxReleaseGraph(&graph);
 
     #ifndef PC
-    tivxUnRegisterSampleTargetA72Kernels();
+    tivxUnRegisterSampleTargetMpuKernels();
     #endif
     tivxSampleUnLoadKernels(context);
     vxReleaseContext(&context);

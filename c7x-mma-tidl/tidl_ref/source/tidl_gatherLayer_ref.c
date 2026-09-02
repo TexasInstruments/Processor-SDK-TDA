@@ -387,6 +387,35 @@ int32_t TIDL_gatherRefProcess(TIDL_Handle intAlgHandle,
                               outDataParams);
     }
   }
+  else if (TIDL_BFloat16 == ((int32_t)inDataParams->elementType))
+  {
+    if (TIDL_SignedWord == ((int32_t)inIndicesParams->elementType))
+    {
+      status = TIDL_refGather((bfloat16_tidl *)data,
+                              (int32_t *)indices,
+                              (bfloat16_tidl *)outPtr,
+                              intAlgHandle,
+                              layerIdx,
+                              params,
+                              algLayer,
+                              inDataParams,
+                              inIndicesParams,
+                              outDataParams);
+    }
+    else
+    {
+      status = TIDL_refGather((bfloat16_tidl *)data,
+                              (bfloat16_tidl *)indices,
+                              (bfloat16_tidl *)outPtr,
+                              intAlgHandle,
+                              layerIdx,
+                              params,
+                              algLayer,
+                              inDataParams,
+                              inIndicesParams,
+                              outDataParams);
+    }
+  }
   else
   {
     status = TIDL_ERR_FAILURE;

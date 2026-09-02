@@ -54,7 +54,7 @@ vxlib_clean:
 	$(MAKE) -C $(VXLIB_PATH) clean
 
 tiovx:
-	$(MAKE) -C $(TIOVX_PATH) RTOS_SDK=$(RTOS_SDK) vision_apps_utils
+	$(MAKE) -C $(TIOVX_PATH) RTOS_SDK=$(RTOS_SDK) platform_utils
 	$(MAKE) -C $(TIOVX_PATH) RTOS_SDK=$(RTOS_SDK)
 
 tiovx_clean:

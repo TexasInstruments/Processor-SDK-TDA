@@ -28,7 +28,7 @@ ifeq ($(TARGET_PLATFORM),PC)
 	# otherwise the linker will use the libraries located in $(TIOVX_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 	#LDIRS       +=$(TIDL_PATH)/lib/PC/dsp/$(TARGET_BUILD)
 
-	IDIRS       += $(VISION_APPS_PATH)
+	IDIRS       += $(PLATFORM_PATH)/pc/include
 
 	STATIC_LIBS := vx_conformance_tests
 

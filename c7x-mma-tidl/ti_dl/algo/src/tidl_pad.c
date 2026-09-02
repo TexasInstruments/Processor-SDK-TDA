@@ -123,7 +123,9 @@ int32_t TIDL_padInitNew(const TIDL_LayerSpecificParams *layerSpecificParams,
                    &dst);
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if (dst != NULL)
   {
@@ -137,7 +139,9 @@ int32_t TIDL_padInitNew(const TIDL_LayerSpecificParams *layerSpecificParams,
     memorySize[TIDL_LAYER_MEMORY_OUTPUT] = (uint32_t)memorySize[TIDL_LAYER_MEMORY_OUTPUT] + ((uint32_t)outDataSize + 128U);
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if ((paramMemSize != 0) && (paramOffset != 0))
     {
@@ -148,7 +152,9 @@ int32_t TIDL_padInitNew(const TIDL_LayerSpecificParams *layerSpecificParams,
   }
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   else
   {
@@ -250,6 +256,10 @@ int32_t TIDL_padProcessNew(TIDL_NetworkCommonParams *commonParams,
     if (inDataParams->elementType == TIDL_SinglePrecFloat)
     {
       TIDL_padRefProcess((float32_tidl *)inPtrs[0], (float32_tidl *)outPtrs[0], inPtrOffset, outPtrOffset, inDataParams, &tidlLayer->outData, params, padConstValue, perChannelPadValPtr);
+    }
+    else if ((inDataParams->elementType == TIDL_BFloat16))
+    {
+      TIDL_padRefProcess((bfloat16_tidl *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inPtrOffset, outPtrOffset, inDataParams, &tidlLayer->outData, params, padConstValue, perChannelPadValPtr);
     }
     else if ((inDataParams->elementType == TIDL_SignedChar))
     {

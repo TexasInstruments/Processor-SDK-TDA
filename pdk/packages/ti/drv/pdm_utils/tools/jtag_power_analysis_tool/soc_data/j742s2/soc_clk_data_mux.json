@@ -1,0 +1,1554 @@
+{
+    "clk_data_ACSPCIE0_BUFCLK_MUX_out0": {
+        "parents": "clk_ACSPCIE0_BUFCLK_MUX_out0_parents",
+        "reg": "0x108074",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_ACSPCIE0_BUFCLK_MUX_out1": {
+        "parents": "clk_ACSPCIE0_BUFCLK_MUX_out0_parents",
+        "reg": "0x10807c",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_ACSPCIE1_BUFCLK_MUX_out0": {
+        "parents": "clk_ACSPCIE1_BUFCLK_MUX_out0_parents",
+        "reg": "0x108070",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_ACSPCIE1_BUFCLK_MUX_out1": {
+        "parents": "clk_ACSPCIE1_BUFCLK_MUX_out0_parents",
+        "reg": "0x108078",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_ATL_AWS_SEL_out0": {
+        "parents": "clk_ATL_AWS_SEL_out0_parents",
+        "reg": "0x1082b0",
+        "start_bit": 0,
+        "bitfield_width": 5
+    },
+    "clk_data_ATL_AWS_SEL_out1": {
+        "parents": "clk_ATL_AWS_SEL_out0_parents",
+        "reg": "0x1082b4",
+        "start_bit": 0,
+        "bitfield_width": 5
+    },
+    "clk_data_ATL_AWS_SEL_out2": {
+        "parents": "clk_ATL_AWS_SEL_out0_parents",
+        "reg": "0x1082b8",
+        "start_bit": 0,
+        "bitfield_width": 5
+    },
+    "clk_data_ATL_AWS_SEL_out3": {
+        "parents": "clk_ATL_AWS_SEL_out0_parents",
+        "reg": "0x1082bc",
+        "start_bit": 0,
+        "bitfield_width": 5
+    },
+    "clk_data_ATL_BWS_SEL_out0": {
+        "parents": "clk_ATL_BWS_SEL_out0_parents",
+        "reg": "0x1082a0",
+        "start_bit": 0,
+        "bitfield_width": 5
+    },
+    "clk_data_ATL_BWS_SEL_out1": {
+        "parents": "clk_ATL_BWS_SEL_out0_parents",
+        "reg": "0x1082a4",
+        "start_bit": 0,
+        "bitfield_width": 5
+    },
+    "clk_data_ATL_BWS_SEL_out2": {
+        "parents": "clk_ATL_BWS_SEL_out0_parents",
+        "reg": "0x1082a8",
+        "start_bit": 0,
+        "bitfield_width": 5
+    },
+    "clk_data_ATL_BWS_SEL_out3": {
+        "parents": "clk_ATL_BWS_SEL_out0_parents",
+        "reg": "0x1082ac",
+        "start_bit": 0,
+        "bitfield_width": 5
+    },
+    "clk_data_ATL_PCLKMUX_out0": {
+        "parents": "clk_ATL_PCLKMUX_parents",
+        "reg": "0x1082c0",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_CPSW0_CPTS_RCLK_SEL_out0": {
+        "parents": "clk_CPSW0_CPTS_RCLK_SEL_parents",
+        "reg": "0x108090",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_CPSW2G_CPTS_RCLK_SEL_out0": {
+        "parents": "clk_CPSW2G_CPTS_RCLK_SEL_parents",
+        "reg": "0x40f08050",
+        "start_bit": 8,
+        "bitfield_width": 4
+    },
+    "clk_data_CPSW9_LN1_REFCLK_out0": {
+        "parents": "clk_CPSW9_LN1_REFCLK_parents",
+        "reg": "0x1040a8",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN1_RXCLK_out0": {
+        "parents": "clk_CPSW9_LN1_RXCLK_parents",
+        "reg": "0x1040a8",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN1_RXFCLK_out0": {
+        "parents": "clk_CPSW9_LN1_RXFCLK_parents",
+        "reg": "0x1040a8",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN1_TXFCLK_out0": {
+        "parents": "clk_CPSW9_LN1_TXFCLK_parents",
+        "reg": "0x1040a8",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN1_TXMCLK_out0": {
+        "parents": "clk_CPSW9_LN1_TXMCLK_parents",
+        "reg": "0x1040a8",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN2_REFCLK_out0": {
+        "parents": "clk_CPSW9_LN2_REFCLK_parents",
+        "reg": "0x1040ac",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN2_RXCLK_out0": {
+        "parents": "clk_CPSW9_LN2_RXCLK_parents",
+        "reg": "0x1040ac",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN2_RXFCLK_out0": {
+        "parents": "clk_CPSW9_LN2_RXFCLK_parents",
+        "reg": "0x1040ac",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN2_TXFCLK_out0": {
+        "parents": "clk_CPSW9_LN2_TXFCLK_parents",
+        "reg": "0x1040ac",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN2_TXMCLK_out0": {
+        "parents": "clk_CPSW9_LN2_TXMCLK_parents",
+        "reg": "0x1040ac",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN5_REFCLK_out0": {
+        "parents": "clk_CPSW9_LN5_REFCLK_parents",
+        "reg": "0x1040c0",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN5_RXCLK_out0": {
+        "parents": "clk_CPSW9_LN5_RXCLK_parents",
+        "reg": "0x1040c0",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN5_RXFCLK_out0": {
+        "parents": "clk_CPSW9_LN5_RXFCLK_parents",
+        "reg": "0x1040c0",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN5_TXFCLK_out0": {
+        "parents": "clk_CPSW9_LN5_TXFCLK_parents",
+        "reg": "0x1040c0",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN5_TXMCLK_out0": {
+        "parents": "clk_CPSW9_LN5_TXMCLK_parents",
+        "reg": "0x1040c0",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN6_REFCLK_out0": {
+        "parents": "clk_CPSW9_LN6_REFCLK_parents",
+        "reg": "0x1040c4",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN6_RXCLK_out0": {
+        "parents": "clk_CPSW9_LN6_RXCLK_parents",
+        "reg": "0x1040c4",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN6_RXFCLK_out0": {
+        "parents": "clk_CPSW9_LN6_RXFCLK_parents",
+        "reg": "0x1040c4",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN6_TXFCLK_out0": {
+        "parents": "clk_CPSW9_LN6_TXFCLK_parents",
+        "reg": "0x1040c4",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN6_TXMCLK_out0": {
+        "parents": "clk_CPSW9_LN6_TXMCLK_parents",
+        "reg": "0x1040c4",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN7_REFCLK_out0": {
+        "parents": "clk_CPSW9_LN7_REFCLK_parents",
+        "reg": "0x1040c8",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN7_RXCLK_out0": {
+        "parents": "clk_CPSW9_LN7_RXCLK_parents",
+        "reg": "0x1040c8",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN7_RXFCLK_out0": {
+        "parents": "clk_CPSW9_LN7_RXFCLK_parents",
+        "reg": "0x1040c8",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN7_TXFCLK_out0": {
+        "parents": "clk_CPSW9_LN7_TXFCLK_parents",
+        "reg": "0x1040c8",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN7_TXMCLK_out0": {
+        "parents": "clk_CPSW9_LN7_TXMCLK_parents",
+        "reg": "0x1040c8",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN8_REFCLK_out0": {
+        "parents": "clk_CPSW9_LN8_REFCLK_parents",
+        "reg": "0x1040cc",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN8_RXCLK_out0": {
+        "parents": "clk_CPSW9_LN8_RXCLK_parents",
+        "reg": "0x1040cc",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN8_RXFCLK_out0": {
+        "parents": "clk_CPSW9_LN8_RXFCLK_parents",
+        "reg": "0x1040cc",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN8_TXFCLK_out0": {
+        "parents": "clk_CPSW9_LN8_TXFCLK_parents",
+        "reg": "0x1040cc",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_CPSW9_LN8_TXMCLK_out0": {
+        "parents": "clk_CPSW9_LN8_TXMCLK_parents",
+        "reg": "0x1040cc",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_DPHY_CLK_SEL_out0": {
+        "parents": "clk_DPHY_CLK_SEL_out0_parents",
+        "reg": "0x108310",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_DPHY_CLK_SEL_out1": {
+        "parents": "clk_DPHY_CLK_SEL_out0_parents",
+        "reg": "0x108314",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_DPI0_EXT_CLKSEL_out0": {
+        "parents": "clk_DPI0_EXT_CLKSEL_parents",
+        "reg": "0x108300",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_DPI_1_PCLK_SEL_out0": {
+        "parents": "clk_DPI_1_PCLK_SEL_parents",
+        "reg": "0x108324",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_DPI_3_PCLK_SEL_out0": {
+        "parents": "clk_DPI_3_PCLK_SEL_parents",
+        "reg": "0x10832c",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_EMMCSD1_LB_CLKSEL_out0": {
+        "parents": "clk_EMMCSD1_LB_CLKSEL_parents",
+        "reg": "0x1080b4",
+        "start_bit": 16,
+        "bitfield_width": 1
+    },
+    "clk_data_EMMCSD_REFCLK_SEL_out0": {
+        "parents": "clk_EMMCSD_REFCLK_SEL_out0_parents",
+        "reg": "0x1080b0",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_EMMCSD_REFCLK_SEL_out1": {
+        "parents": "clk_EMMCSD_REFCLK_SEL_out0_parents",
+        "reg": "0x1080b4",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_GTC_CLK_MUX_out0": {
+        "parents": "clk_CPSW0_CPTS_RCLK_SEL_parents",
+        "reg": "0x108030",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_CPSW2_CPTS_CLK_MUX_out0": {
+        "parents": "clk_CPSW0_CPTS_RCLK_SEL_parents",
+        "reg": "0x108094",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_PLL4_XREF_SEL_out0": {
+        "parents": "clk_MAIN_PLL4_XREF_SEL_parents",
+        "reg": "0x43008090",
+        "start_bit": 4,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out0": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x43008080",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out1": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x43008084",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out12": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x430080b0",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out14": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x430080b8",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out16": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x430080c0",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out17": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x430080c4",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out19": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x430080cc",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out2": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x43008088",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out25_0": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x430080e4",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out26_0": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x430080e8",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out27_0": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x430080ec",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out28": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x430080f0",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out3": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x4300808c",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out4": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x43008090",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out5": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x43008094",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out6": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x43008098",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out7": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x4300809c",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out8": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x430080a0",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_PLL_HFOSC_SEL_out9": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x430080a4",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_TIMER16_AFS_EN_out0": {
+        "parents": "clk_MAIN_TIMER16_AFS_EN_parents",
+        "reg": "0x108140",
+        "start_bit": 23,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_TIMER16_AFS_SEL_out0": {
+        "parents": "clk_MAIN_TIMER16_AFS_SEL_parents",
+        "reg": "0x108140",
+        "start_bit": 16,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER17_AFS_EN_out0": {
+        "parents": "clk_MAIN_TIMER17_AFS_EN_parents",
+        "reg": "0x108144",
+        "start_bit": 23,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_TIMER17_AFS_SEL_out0": {
+        "parents": "clk_MAIN_TIMER16_AFS_SEL_parents",
+        "reg": "0x108144",
+        "start_bit": 16,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER18_AFS_EN_out0": {
+        "parents": "clk_MAIN_TIMER18_AFS_EN_parents",
+        "reg": "0x108148",
+        "start_bit": 23,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_TIMER18_AFS_SEL_out0": {
+        "parents": "clk_MAIN_TIMER16_AFS_SEL_parents",
+        "reg": "0x108148",
+        "start_bit": 16,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER19_AFS_EN_out0": {
+        "parents": "clk_MAIN_TIMER19_AFS_EN_parents",
+        "reg": "0x10814c",
+        "start_bit": 23,
+        "bitfield_width": 1
+    },
+    "clk_data_MAIN_TIMER19_AFS_SEL_out0": {
+        "parents": "clk_MAIN_TIMER16_AFS_SEL_parents",
+        "reg": "0x10814c",
+        "start_bit": 16,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out0": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108100",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out1": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108104",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out10": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108128",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out11": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x10812c",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out12": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108130",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out13": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108134",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out14": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108138",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out15": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x10813c",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out16": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108140",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out17": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108144",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out18": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108148",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out19": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x10814c",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out2": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108108",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out3": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x10810c",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out4": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108110",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out5": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108114",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out6": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108118",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out7": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x10811c",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out8": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108120",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_TIMER_CLKSEL_out9": {
+        "parents": "clk_MAIN_TIMER_CLKSEL_out0_parents",
+        "reg": "0x108124",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out0": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x108380",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out1": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x108384",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out15_0": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x1083bc",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out16_0": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x1083c0",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out17_0": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x1083c4",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out18_0": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x1083c8",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out19_0": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x1083cc",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out2": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x108388",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out28_0": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x1083f0",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out29_0": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x1083f4",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out3": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x10838c",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out30_0": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x1083f8",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out31_0": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x1083fc",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out32_0": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x108600",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out33_0": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x108604",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out4": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x108390",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out5": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x108394",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out6": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x108398",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MAIN_WWDT_RTICLK_SEL_out7": {
+        "parents": "clk_MAIN_WWDT_RTICLK_SEL_out0_parents",
+        "reg": "0x10839c",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MCAN_CLK_SEL_out0": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x108480",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out1": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x108484",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out10": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x1084a8",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out11": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x1084ac",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out12": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x1084b0",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out13": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x1084b4",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out14_0": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x1084b8",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out15_0": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x1084bc",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out16_0": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x1084c0",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out17_0": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x1084c4",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out2": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x108488",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out3": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x10848c",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out4": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x108490",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out5": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x108494",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out6": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x108498",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out7": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x10849c",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out8": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x1084a0",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCAN_CLK_SEL_out9": {
+        "parents": "clk_MCAN_CLK_SEL_out0_parents",
+        "reg": "0x1084a4",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCU_ADC_clk_sel_out0": {
+        "parents": "clk_MCU_ADC_clk_sel_out0_parents",
+        "reg": "0x40f08040",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCU_ADC_clk_sel_out1": {
+        "parents": "clk_MCU_ADC_clk_sel_out0_parents",
+        "reg": "0x40f08044",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCU_CLKOUT_MUX_out0": {
+        "parents": "clk_MCU_CLKOUT_MUX_parents",
+        "reg": "0x40f08010",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_MCAN_CLKSEL_out0": {
+        "parents": "clk_MCU_MCAN_CLKSEL_out0_parents",
+        "reg": "0x40f08020",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCU_MCAN_CLKSEL_out1": {
+        "parents": "clk_MCU_MCAN_CLKSEL_out0_parents",
+        "reg": "0x40f08024",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_MCU_OBSCLK_OUT_out0": {
+        "parents": "clk_MCU_OBSCLK_OUT_parents",
+        "reg": "0x43008000",
+        "start_bit": 24,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_OBSCLK_SEL_out0": {
+        "parents": "clk_MCU_OBSCLK_SEL_parents",
+        "reg": "0x43008000",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_MCU_R5_core0_clksel_out0": {
+        "parents": "clk_MCU_R5_core0_clksel_parents",
+        "reg": "0x40f08080",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_R5_core1_clksel_out0": {
+        "parents": "clk_MCU_R5_core0_clksel_parents",
+        "reg": "0x40f08080",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_R5_phase0_clksel_out0": {
+        "parents": "clk_MCU_R5_phase0_clksel_parents",
+        "reg": "0x40f08080",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_R5_phase1_clksel_out0": {
+        "parents": "clk_MCU_R5_phase0_clksel_parents",
+        "reg": "0x40f08080",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_SPI0_CLK_LPBK_MUX_out0": {
+        "parents": "clk_MCU_SPI0_CLK_LPBK_MUX_parents",
+        "reg": "0x43008110",
+        "start_bit": 16,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_SPI1_CLK_LPBK_MUX_out0": {
+        "parents": "clk_MCU_SPI1_CLK_LPBK_MUX_parents",
+        "reg": "0x43008114",
+        "start_bit": 16,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_SPI1_CLK_MUX_out0": {
+        "parents": "clk_MCU_SPI1_CLK_MUX_parents",
+        "reg": "0x40f04060",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_TIMER1_CASCADE_out0": {
+        "parents": "clk_MCU_TIMER1_CASCADE_parents",
+        "reg": "0x40f04204",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_TIMER3_CASCADE_out0": {
+        "parents": "clk_MCU_TIMER3_CASCADE_parents",
+        "reg": "0x40f0420c",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_TIMER5_CASCADE_out0": {
+        "parents": "clk_MCU_TIMER5_CASCADE_parents",
+        "reg": "0x40f04214",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_TIMER7_CASCADE_out0": {
+        "parents": "clk_MCU_TIMER7_CASCADE_parents",
+        "reg": "0x40f0421c",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_TIMER9_CASCADE_out0": {
+        "parents": "clk_MCU_TIMER9_CASCADE_parents",
+        "reg": "0x40f04224",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_TIMER_CLKSEL_out0": {
+        "parents": "clk_MCU_TIMER_CLKSEL_out0_parents",
+        "reg": "0x40f08100",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MCU_TIMER_CLKSEL_out1": {
+        "parents": "clk_MCU_TIMER_CLKSEL_out0_parents",
+        "reg": "0x40f08104",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MCU_TIMER_CLKSEL_out2": {
+        "parents": "clk_MCU_TIMER_CLKSEL_out0_parents",
+        "reg": "0x40f08108",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MCU_TIMER_CLKSEL_out3": {
+        "parents": "clk_MCU_TIMER_CLKSEL_out0_parents",
+        "reg": "0x40f0810c",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MCU_TIMER_CLKSEL_out4": {
+        "parents": "clk_MCU_TIMER_CLKSEL_out0_parents",
+        "reg": "0x40f08110",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MCU_TIMER_CLKSEL_out5": {
+        "parents": "clk_MCU_TIMER_CLKSEL_out0_parents",
+        "reg": "0x40f08114",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MCU_TIMER_CLKSEL_out6": {
+        "parents": "clk_MCU_TIMER_CLKSEL_out0_parents",
+        "reg": "0x40f08118",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MCU_TIMER_CLKSEL_out7": {
+        "parents": "clk_MCU_TIMER_CLKSEL_out0_parents",
+        "reg": "0x40f0811c",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MCU_TIMER_CLKSEL_out8": {
+        "parents": "clk_MCU_TIMER_CLKSEL_out0_parents",
+        "reg": "0x40f08120",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MCU_TIMER_CLKSEL_out9": {
+        "parents": "clk_MCU_TIMER_CLKSEL_out0_parents",
+        "reg": "0x40f08124",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MCU_USART_CLKSEL_out0": {
+        "parents": "clk_MCU_USART_CLKSEL_parents",
+        "reg": "0x40f081c0",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_MCU_WWD_CLKSEL_out0": {
+        "parents": "clk_MCU_WWD_CLKSEL_out0_parents",
+        "reg": "0x40f08180",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_MCU_WWD_CLKSEL_out1": {
+        "parents": "clk_MCU_WWD_CLKSEL_out0_parents",
+        "reg": "0x40f08184",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_McASP_AHCLKO_out0": {
+        "parents": "clk_McASP_AHCLKO_out0_parents",
+        "reg": "0x1082e0",
+        "start_bit": 0,
+        "bitfield_width": 5
+    },
+    "clk_data_McASP_AHCLKO_out1": {
+        "parents": "clk_McASP_AHCLKO_out0_parents",
+        "reg": "0x1082e4",
+        "start_bit": 0,
+        "bitfield_width": 5
+    },
+    "clk_data_McASP_AUXCLK_SEL_out0": {
+        "parents": "clk_McASP_AUXCLK_SEL_out0_parents",
+        "reg": "0x108200",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_McASP_AUXCLK_SEL_out1": {
+        "parents": "clk_McASP_AUXCLK_SEL_out0_parents",
+        "reg": "0x108204",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_McASP_AUXCLK_SEL_out2": {
+        "parents": "clk_McASP_AUXCLK_SEL_out0_parents",
+        "reg": "0x108208",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_McASP_AUXCLK_SEL_out3": {
+        "parents": "clk_McASP_AUXCLK_SEL_out0_parents",
+        "reg": "0x10820c",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_McASP_AUXCLK_SEL_out4": {
+        "parents": "clk_McASP_AUXCLK_SEL_out0_parents",
+        "reg": "0x108210",
+        "start_bit": 0,
+        "bitfield_width": 3
+    },
+    "clk_data_NAVSS_CPTS_RCLK_SEL_out0": {
+        "parents": "clk_CPSW0_CPTS_RCLK_SEL_parents",
+        "reg": "0x108098",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_PCIEn_CPTS_RCLK_MUX_out0": {
+        "parents": "clk_CPSW0_CPTS_RCLK_SEL_parents",
+        "reg": "0x108080",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_PCIEn_CPTS_RCLK_MUX_out1": {
+        "parents": "clk_CPSW0_CPTS_RCLK_SEL_parents",
+        "reg": "0x108084",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_PCIEn_CPTS_RCLK_MUX_out2": {
+        "parents": "clk_CPSW0_CPTS_RCLK_SEL_parents",
+        "reg": "0x108088",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_PCIEn_CPTS_RCLK_MUX_out3": {
+        "parents": "clk_CPSW0_CPTS_RCLK_SEL_parents",
+        "reg": "0x10808c",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_SERDES0_CORE_REFCLK_out0": {
+        "parents": "clk_DPHY_CLK_SEL_out0_parents",
+        "reg": "0x108400",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_SERDES1_CORE_REFCLK_out0": {
+        "parents": "clk_DPHY_CLK_SEL_out0_parents",
+        "reg": "0x108410",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_SERDES2_CORE_REFCLK_out0": {
+        "parents": "clk_DPHY_CLK_SEL_out0_parents",
+        "reg": "0x108420",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_SERDES4_CORE_REFCLK_out0": {
+        "parents": "clk_DPHY_CLK_SEL_out0_parents",
+        "reg": "0x108440",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_SPI0_CLK_LPBK_MUX_out0": {
+        "parents": "clk_SPI0_CLK_LPBK_MUX_parents",
+        "reg": "0x108190",
+        "start_bit": 16,
+        "bitfield_width": 1
+    },
+    "clk_data_SPI1_CLK_LPBK_MUX_out0": {
+        "parents": "clk_SPI1_CLK_LPBK_MUX_parents",
+        "reg": "0x108194",
+        "start_bit": 16,
+        "bitfield_width": 1
+    },
+    "clk_data_SPI2_CLK_LPBK_MUX_out0": {
+        "parents": "clk_SPI2_CLK_LPBK_MUX_parents",
+        "reg": "0x108198",
+        "start_bit": 16,
+        "bitfield_width": 1
+    },
+    "clk_data_SPI3_CLK_LPBK_MUX_out0": {
+        "parents": "clk_SPI3_CLK_LPBK_MUX_parents",
+        "reg": "0x10819c",
+        "start_bit": 16,
+        "bitfield_width": 1
+    },
+    "clk_data_SPI3_CLK_MUX_out0": {
+        "parents": "clk_SPI3_CLK_MUX_parents",
+        "reg": "0x40f04060",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_SPI5_CLK_LPBK_MUX_out0": {
+        "parents": "clk_SPI5_CLK_LPBK_MUX_parents",
+        "reg": "0x1081a4",
+        "start_bit": 16,
+        "bitfield_width": 1
+    },
+    "clk_data_SPI6_CLK_LPBK_MUX_out0": {
+        "parents": "clk_SPI6_CLK_LPBK_MUX_parents",
+        "reg": "0x1081a8",
+        "start_bit": 16,
+        "bitfield_width": 1
+    },
+    "clk_data_SPI7_CLK_LPBK_MUX_out0": {
+        "parents": "clk_SPI7_CLK_LPBK_MUX_parents",
+        "reg": "0x1081ac",
+        "start_bit": 16,
+        "bitfield_width": 1
+    },
+    "clk_data_TIMER11_CASCADE_out0": {
+        "parents": "clk_TIMER11_CASCADE_parents",
+        "reg": "0x10422c",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_TIMER13_CASCADE_out0": {
+        "parents": "clk_TIMER13_CASCADE_parents",
+        "reg": "0x104234",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_TIMER15_CASCADE_out0": {
+        "parents": "clk_TIMER15_CASCADE_parents",
+        "reg": "0x10423c",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_TIMER17_CASCADE_out0": {
+        "parents": "clk_TIMER17_CASCADE_parents",
+        "reg": "0x104244",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_TIMER19_CASCADE_out0": {
+        "parents": "clk_TIMER19_CASCADE_parents",
+        "reg": "0x10424c",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_TIMER1_CASCADE_out0": {
+        "parents": "clk_TIMER1_CASCADE_parents",
+        "reg": "0x104204",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_TIMER3_CASCADE_out0": {
+        "parents": "clk_TIMER3_CASCADE_parents",
+        "reg": "0x10420c",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_TIMER5_CASCADE_out0": {
+        "parents": "clk_TIMER5_CASCADE_parents",
+        "reg": "0x104214",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_TIMER7_CASCADE_out0": {
+        "parents": "clk_TIMER7_CASCADE_parents",
+        "reg": "0x10421c",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_TIMER9_CASCADE_out0": {
+        "parents": "clk_TIMER9_CASCADE_parents",
+        "reg": "0x104224",
+        "start_bit": 8,
+        "bitfield_width": 1
+    },
+    "clk_data_UFS_CLK_SEL_out0": {
+        "parents": "clk_UFS_CLK_SEL_parents",
+        "reg": "0x1080c0",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_USB0_REFCLK_SEL_out0": {
+        "parents": "clk_MAIN_PLL_HFOSC_SEL_out0_parents",
+        "reg": "0x1080e0",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_USB0_SerDes_refclk_Mux_out0": {
+        "parents": "clk_USB0_SerDes_refclk_Mux_parents",
+        "reg": "0x104000",
+        "start_bit": 27,
+        "bitfield_width": 1
+    },
+    "clk_data_USB0_SerDes_rxclk_Mux_out0": {
+        "parents": "clk_USB0_SerDes_rxclk_Mux_parents",
+        "reg": "0x104000",
+        "start_bit": 27,
+        "bitfield_width": 1
+    },
+    "clk_data_USB0_SerDes_rxfclk_Mux_out0": {
+        "parents": "clk_USB0_SerDes_rxfclk_Mux_parents",
+        "reg": "0x104000",
+        "start_bit": 27,
+        "bitfield_width": 1
+    },
+    "clk_data_USB0_SerDes_txfclk_Mux_out0": {
+        "parents": "clk_USB0_SerDes_txfclk_Mux_parents",
+        "reg": "0x104000",
+        "start_bit": 27,
+        "bitfield_width": 1
+    },
+    "clk_data_USB0_SerDes_txmclk_Mux_out0": {
+        "parents": "clk_USB0_SerDes_txmclk_Mux_parents",
+        "reg": "0x104000",
+        "start_bit": 27,
+        "bitfield_width": 1
+    },
+    "clk_data_VPAC_CLK_SEL_out0": {
+        "parents": "clk_VPAC_CLK_SEL_parents",
+        "reg": "0x1080f0",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN0_REFCLK_out0": {
+        "parents": "clk_VUSR_LN0_REFCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 24,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN0_RXCLK_out0": {
+        "parents": "clk_VUSR_LN0_RXCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 24,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN0_RXFCLK_out0": {
+        "parents": "clk_VUSR_LN0_RXFCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 24,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN0_TXFCLK_out0": {
+        "parents": "clk_VUSR_LN0_TXFCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 24,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN0_TXMCLK_out0": {
+        "parents": "clk_VUSR_LN0_TXMCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 24,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN1_REFCLK_out0": {
+        "parents": "clk_VUSR_LN1_REFCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 25,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN1_RXCLK_out0": {
+        "parents": "clk_VUSR_LN1_RXCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 25,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN1_RXFCLK_out0": {
+        "parents": "clk_VUSR_LN1_RXFCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 25,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN1_TXFCLK_out0": {
+        "parents": "clk_VUSR_LN1_TXFCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 25,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN1_TXMCLK_out0": {
+        "parents": "clk_VUSR_LN1_TXMCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 25,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN2_REFCLK_out0": {
+        "parents": "clk_VUSR_LN2_REFCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 26,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN2_RXCLK_out0": {
+        "parents": "clk_VUSR_LN2_RXCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 26,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN2_RXFCLK_out0": {
+        "parents": "clk_VUSR_LN2_RXFCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 26,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN2_TXFCLK_out0": {
+        "parents": "clk_VUSR_LN2_TXFCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 26,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN2_TXMCLK_out0": {
+        "parents": "clk_VUSR_LN2_TXMCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 26,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN3_REFCLK_out0": {
+        "parents": "clk_VUSR_LN3_REFCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 27,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN3_RXCLK_out0": {
+        "parents": "clk_VUSR_LN3_RXCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 27,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN3_RXFCLK_out0": {
+        "parents": "clk_VUSR_LN3_RXFCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 27,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN3_TXFCLK_out0": {
+        "parents": "clk_VUSR_LN3_TXFCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 27,
+        "bitfield_width": 1
+    },
+    "clk_data_VUSR_LN3_TXMCLK_out0": {
+        "parents": "clk_VUSR_LN3_TXMCLK_parents",
+        "reg": "0x104520",
+        "start_bit": 27,
+        "bitfield_width": 1
+    },
+    "clk_data_WKUP_I2C_MCUPLL_BYPASS_out0": {
+        "parents": "clk_WKUP_I2C_MCUPLL_BYPASS_parents",
+        "reg": "0x43008060",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_WKUP_USART_CLKSEL_out0": {
+        "parents": "clk_MCU_USART_CLKSEL_parents",
+        "reg": "0x43008064",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_WKUP_USART_MCUPLL_BYPASS_out0": {
+        "parents": "clk_WKUP_USART_MCUPLL_BYPASS_parents",
+        "reg": "0x43008060",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_gpmc_fclk_sel_out0": {
+        "parents": "clk_gpmc_fclk_sel_parents",
+        "reg": "0x1080d0",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_k3_pll_ctrl_wrap_main_0_sysclkout_clk": {
+        "parents": "clk_k3_pll_ctrl_wrap_main_0_parents",
+        "reg": "0x410000",
+        "bitfield_width": 1
+    },
+    "clk_data_k3_pll_ctrl_wrap_wkup_0_sysclkout_clk": {
+        "parents": "clk_k3_pll_ctrl_wrap_wkup_0_parents",
+        "reg": "0x42010000",
+        "bitfield_width": 1
+    },
+    "clk_data_main_pll8_sel_extwave_out0": {
+        "parents": "clk_main_pll8_sel_extwave_parents",
+        "reg": "0x688040",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_main_pll9_sel_extwave_out0": {
+        "parents": "clk_main_pll9_sel_extwave_parents",
+        "reg": "0x689040",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_mcasp_ahclkr_mux_out0": {
+        "parents": "clk_mcasp_ahclkr_mux_out0_parents",
+        "reg": "0x108240",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_mcasp_ahclkr_mux_out1": {
+        "parents": "clk_mcasp_ahclkr_mux_out0_parents",
+        "reg": "0x108244",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_mcasp_ahclkr_mux_out2": {
+        "parents": "clk_mcasp_ahclkr_mux_out0_parents",
+        "reg": "0x108248",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_mcasp_ahclkr_mux_out3": {
+        "parents": "clk_mcasp_ahclkr_mux_out0_parents",
+        "reg": "0x10824c",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_mcasp_ahclkr_mux_out4_0": {
+        "parents": "clk_mcasp_ahclkr_mux_out0_parents",
+        "reg": "0x108250",
+        "start_bit": 0,
+        "bitfield_width": 4
+    },
+    "clk_data_mcasp_ahclkx_mux_out0": {
+        "parents": "clk_mcasp_ahclkr_mux_out0_parents",
+        "reg": "0x108240",
+        "start_bit": 8,
+        "bitfield_width": 4
+    },
+    "clk_data_mcasp_ahclkx_mux_out1": {
+        "parents": "clk_mcasp_ahclkr_mux_out0_parents",
+        "reg": "0x108244",
+        "start_bit": 8,
+        "bitfield_width": 4
+    },
+    "clk_data_mcasp_ahclkx_mux_out2": {
+        "parents": "clk_mcasp_ahclkr_mux_out0_parents",
+        "reg": "0x108248",
+        "start_bit": 8,
+        "bitfield_width": 4
+    },
+    "clk_data_mcasp_ahclkx_mux_out3": {
+        "parents": "clk_mcasp_ahclkr_mux_out0_parents",
+        "reg": "0x10824c",
+        "start_bit": 8,
+        "bitfield_width": 4
+    },
+    "clk_data_mcasp_ahclkx_mux_out4": {
+        "parents": "clk_mcasp_ahclkr_mux_out0_parents",
+        "reg": "0x108250",
+        "start_bit": 8,
+        "bitfield_width": 4
+    },
+    "clk_data_mcu_OSPI0_iclk_sel_out0": {
+        "parents": "clk_mcu_OSPI0_iclk_sel_parents",
+        "reg": "0x40f08030",
+        "start_bit": 4,
+        "bitfield_width": 1
+    },
+    "clk_data_mcu_OSPI1_iclk_sel_out0": {
+        "parents": "clk_mcu_OSPI1_iclk_sel_parents",
+        "reg": "0x40f08034",
+        "start_bit": 4,
+        "bitfield_width": 1
+    },
+    "clk_data_mcu_OSPI_ref_clk_sel_out0": {
+        "parents": "clk_mcu_OSPI_ref_clk_sel_out0_parents",
+        "reg": "0x40f08030",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_mcu_OSPI_ref_clk_sel_out1": {
+        "parents": "clk_mcu_OSPI_ref_clk_sel_out0_parents",
+        "reg": "0x40f08034",
+        "start_bit": 0,
+        "bitfield_width": 1
+    },
+    "clk_data_obsclk0_mux_out0": {
+        "parents": "clk_obsclk0_mux_parents",
+        "reg": "0x108000",
+        "start_bit": 0,
+        "bitfield_width": 5
+    },
+    "clk_data_obsclk1_mux_out0": {
+        "parents": "clk_obsclk1_mux_parents",
+        "reg": "0x108004",
+        "start_bit": 0,
+        "bitfield_width": 2
+    },
+    "clk_data_wkup_gpio0_clksel_out0": {
+        "parents": "clk_wkup_gpio0_clksel_parents",
+        "reg": "0x43008070",
+        "start_bit": 0,
+        "bitfield_width": 2
+    }
+}

@@ -99,23 +99,38 @@ int32_t tidlCheckShapeInferenceforOnnx(sTIDL_allowlistingMetaData md)
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
 
-/**
- * Returns true if the Allowlisting metadata is filled
- * Current purpose: if this is not filled up, this indicates a layer
- * added by TIDL network optimization
- * Current method: checks if number of variable is 0 and this is not
- * a DataLayer
- * TODO: needs to be removed and add a proper flag for layers which
- * are added as a part of TIDL net optimization
-*/
-bool tidlIsInducedLayer(sTIDL_LayerPC_t layer)
+/*
+ * Function to skipConstraintCheck 
+ */
+bool skipConstraintCheck(sTIDL_LayerPC_t layer)
 {
+  bool skip = false;
+
+  /*
+   * Skip if layer is induced by TIDL.
+   * Currently there is no flag to check if layer is induced.
+   * 
+   * HACK: Use allowlistingMetadata.numVarInputs.
+   * 
+   * TODO: Add proper flag if layer is induced by TIDL
+   */
   if ((layer.allowlistingMetaData.numVarInputs == 0) &&
-  (layer.layerType != TIDL_DataLayer))
+      (layer.layerType != TIDL_DataLayer))
   {
-    return true;
+    skip = true;
   }
-  return false;
+
+  /*
+   * The hack above skips slice if it has no variable input originally as well.
+   */
+  if(skip == true &&
+     layer.layerType == TIDL_SliceLayer &&
+     layer.optimized == 0)
+  {
+    skip = false;
+  }
+
+  return skip;
 }
 
 int32_t tidlGetNonSingletonNumDims(std::vector<int32_t> dims)

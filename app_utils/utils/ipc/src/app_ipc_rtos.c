@@ -1870,7 +1870,7 @@ const char *appIpcGetCpuName(uint32_t app_cpu_id)
     const char *name = "invalid";
     if(app_cpu_id < APP_IPC_CPU_MAX)
     {
-        name = Ipc_mpGetName(g_app_to_ipc_cpu_id[app_cpu_id]);
+        name = Ipc_mpGetName((uint16_t)g_app_to_ipc_cpu_id[app_cpu_id]);
     }
     return name;
 }

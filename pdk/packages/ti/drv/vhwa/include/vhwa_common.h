@@ -341,15 +341,16 @@ extern "C" {
  */
 
 /** \brief Product ID for VISS IP */
-#if defined(SOC_J722S)
+#if defined(SOC_J722S) || defined(SOC_AM62A)
 #define VHWA_HW_PID_VISS      (0x64C40200U)
+/** \brief Product ID for LDC IP */
+#define VHWA_HW_PID_LDC       (0x64C60002U)
 #else
+#define VHWA_HW_PID_LDC       (0x64C60001U)
 #define VHWA_HW_PID_VISS      (0x64C40100U)
 #endif
 /** \brief Product ID for MSC IP */
 #define VHWA_HW_PID_MSC       (0x64C20100U)
-/** \brief Product ID for LDC IP */
-#define VHWA_HW_PID_LDC       (0x64C60001U)
 /** \brief Product ID for NF IP */
 #define VHWA_HW_PID_NF        (0x64C81900U)
 /** \brief Product ID for DOF IP */
@@ -357,7 +358,7 @@ extern "C" {
 /** \brief Product ID for SDE IP */
 #define VHWA_HW_PID_SDE       (0x64840100U)
 /** \brief Product ID for VPAC IP */
-#if defined(SOC_J722S)
+#if defined(SOC_J722S) || defined(SOC_AM62A)
 #define VHWA_HW_PID_VPAC      (0x64C00400U)
 #else
 #define VHWA_HW_PID_VPAC      (0x64C00300U)

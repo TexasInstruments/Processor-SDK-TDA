@@ -53,7 +53,7 @@
 #include <TI/tivx.h>
 #include <TI/tivx_task.h>
 #include <utils/drm_wrapper/include/drm_wrapper.h>
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 #include <utils/perf_stats/include/app_perf_stats.h>
 
 #define APP_DRM_TEST_WIDTH      (1920u)

@@ -434,6 +434,7 @@ extern "C" {
 // #define TIDL_ERROR_LSTM_SEQ_NOT_SUPPORTED                  (2U)
 #define TIDL_ERROR_LSTM_VAR_SEQ_NOT_SUPPORTED              (2U)
 #define TIDL_ERROR_LSTM_CIP_NOT_SUPPORTED                  (3U)
+#define TIDL_ERROR_LSTM_INVALID_DATATYPE                   (4U)
 
 /** TIDL_ERROR_GROUP_GRU error types */
 #define TIDL_ERROR_GRU_RSVD                                (0U)

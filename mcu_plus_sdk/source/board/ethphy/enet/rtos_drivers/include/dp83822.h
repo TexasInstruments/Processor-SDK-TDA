@@ -115,10 +115,6 @@ int32_t Dp83822_config(EthPhyDrv_Handle hPhy,
                         Phy_Mii mii,
                         bool loopbackEn);
 
-void Dp83822_reset(EthPhyDrv_Handle hPhy);
-
-bool Dp83822_isResetComplete(EthPhyDrv_Handle hPhy);
-
 void Dp83822_printRegs(EthPhyDrv_Handle hPhy);
 /* ========================================================================== */
 /*                        Deprecated Function Declarations                    */

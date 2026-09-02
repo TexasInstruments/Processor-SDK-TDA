@@ -41,7 +41,7 @@
 #include <VX/vx.h>
 #include <TI/tivx.h>
 
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 #include "app_common.h"
 
 typedef struct

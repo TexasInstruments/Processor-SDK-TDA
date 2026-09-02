@@ -74,7 +74,7 @@
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> static Tdst tidl_rt_sat.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 template <typename Tdst>
@@ -91,7 +91,7 @@ static Tdst tidl_rt_sat(float val)
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void copy_asis_linear.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 template <typename Tsrc, typename Tdst>
@@ -134,7 +134,7 @@ void copy_asis_linear(Tdst *dst, Tsrc *src,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void copy_asis_transpose.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 template <typename Tsrc, typename Tdst>
@@ -179,7 +179,7 @@ void copy_asis_transpose(Tdst *dst, Tsrc *src,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void copy_zf_linear.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 template <typename Tsrc, typename Tdst>
@@ -225,7 +225,7 @@ void copy_zf_linear(Tdst *dst, Tsrc *src,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void copy_zf_transpose.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 template <typename Tsrc, typename Tdst>
@@ -273,7 +273,7 @@ void copy_zf_transpose(Tdst *dst, Tsrc *src,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void copy_scale_linear.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 template <typename Tsrc, typename Tdst>
@@ -319,7 +319,7 @@ void copy_scale_linear(Tdst *dst, Tsrc *src,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void copy_scale_transpose.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 template <typename Tsrc, typename Tdst>
@@ -368,7 +368,7 @@ void copy_scale_transpose(Tdst *dst, Tsrc *src,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void copy_zfscale_linear.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 template <typename Tsrc, typename Tdst>
@@ -414,7 +414,7 @@ void copy_zfscale_linear(Tdst *dst, Tsrc *src,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void copy_zfscale_transpose.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 template <typename Tsrc, typename Tdst>
@@ -462,7 +462,7 @@ void copy_zfscale_transpose(Tdst *dst, Tsrc *src,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void copy_asis.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 template<typename Tsrc, typename Tdst>
@@ -484,7 +484,7 @@ void copy_asis(Tdst *dst, Tsrc *src,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void copy_zf.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 template<typename Tsrc, typename Tdst>
@@ -507,7 +507,7 @@ void copy_zf(Tdst *dst, Tsrc *src,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void copy_scale.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 template<typename Tsrc, typename Tdst>
@@ -530,7 +530,7 @@ void copy_scale(Tdst *dst, Tsrc *src,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> void copy_zfscale.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 template<typename Tsrc, typename Tdst>
@@ -553,7 +553,7 @@ void copy_zfscale(Tdst *dst, Tsrc *src,
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> static int32_t tidlrt_getDatElementSize.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 static int32_t tidlrt_getDatElementSize(int32_t elementType)
@@ -585,7 +585,7 @@ int tidlrt_printf(const char *fmt, ...);
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> vx_status is_tidlrt_in_tensor_same.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 vx_status is_tidlrt_in_tensor_same( sTIDL_IOBufDesc_t *ioBufDesc, sTIDLRT_Tensor_t *in[], uint32_t id, uint32_t tidlrt_id)
@@ -655,7 +655,7 @@ vx_status is_tidlrt_in_tensor_same( sTIDL_IOBufDesc_t *ioBufDesc, sTIDLRT_Tensor
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> vx_status is_tidlrt_out_tensor_same.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 vx_status is_tidlrt_out_tensor_same( sTIDL_IOBufDesc_t *ioBufDesc, sTIDLRT_Tensor_t *in[], uint32_t id, uint32_t tidlrt_id)
@@ -711,7 +711,7 @@ vx_status is_tidlrt_out_tensor_same( sTIDL_IOBufDesc_t *ioBufDesc, sTIDLRT_Tenso
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> vx_status cp_data_in_tidlrt_tensor_tiovx.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], void *input_buffer, uint32_t id, uint32_t tidlrt_id)
@@ -1816,7 +1816,7 @@ vx_status cp_data_in_tidlrt_tensor_tiovx(AppObj *obj, sTIDLRT_Tensor_t *in[], vo
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> vx_status cp_data_out_tensor_tidlrt_tiovx.* <function end>
-<justification start> NOT_IN_SCOPE : This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
+<justification start> NOT_IN_SCOPE: This file is used in context of open source run time usages such as ONNX-RT or TFLite-RT. 
 Not in scope of TIDL-RT safety use case. Hence this file is justified not to include in tidl-runtime coverage build
 <justification end> */
 vx_status cp_data_out_tensor_tidlrt_tiovx(AppObj *obj, sTIDLRT_Tensor_t *out[], void *output_buffer, uint32_t id, uint32_t elementSize, vx_size data_type, float scale, uint32_t tidlrt_id)

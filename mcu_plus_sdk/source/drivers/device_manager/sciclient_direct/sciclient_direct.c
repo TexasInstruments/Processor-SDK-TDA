@@ -335,6 +335,7 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
             case TISCI_MSG_RM_RING_CFG:
             case TISCI_MSG_RM_RING_MON_CFG:
             case TISCI_MSG_RM_UDMAP_TX_CH_CFG:
+            case TISCI_MSG_RM_UDMAP_TX_MULTI_CH_CFG:
             case TISCI_MSG_RM_UDMAP_RX_CH_CFG:
             case TISCI_MSG_RM_PROXY_CFG:
                 memcpy((void *)message, (const void *)pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
@@ -571,10 +572,11 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
             case TISCI_MSG_RM_PSIL_UNPAIR:
             case TISCI_MSG_RM_PSIL_READ:
             case TISCI_MSG_RM_PSIL_WRITE:
+            case TISCI_MSG_RM_PSIL_MULTI_CH_WRITE:
                 /*
                  * These RM messages are entirely processed on DMSC.
                  * When called on mcu1_0 directly, these are treated
-                 * as native calls to DMSC. If these requests are made 
+                 * as native calls to DMSC. If these requests are made
                  * from other CPUs, the sciserver will take care of
                  * setting the forward status prior to calling this function.
                  */
@@ -620,9 +622,7 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
                  * The WKUP_R5 will always be secure when trying to send the message
                  * to the TIFS directly to avoid self blocking.
                  */
-                uint32_t bkupMode;
-                bkupMode = gSciclientHandle.isSecureMode;
-                gSciclientHandle.isSecureMode = 1U;
+                *fwdStatus = SCISERVER_FORWARD_MSG;
                 Sciclient_printf("Handling baseport, security or other message and forwarded to TIFS\n");
                 ret = Sciclient_serviceSecureProxy(pReqPrm, pRespPrm);
                 if(CSL_PASS != ret)
@@ -630,7 +630,6 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
                     Sciclient_printf("ERROR:: Sciclient_service: Failed to process baseport, ");
                     Sciclient_printf("security or other system message forwarded to TIFS\n");
                 }
-                gSciclientHandle.isSecureMode = bkupMode;
                 break;
             }
         }
@@ -1230,6 +1229,12 @@ int32_t Sciclient_ProcessRmMessage(void *tx_msg)
             Sciclient_printf("case: TISCI_MSG_RM_UDMAP_TX_CH_CFG\n");
             r = rm_udmap_tx_ch_cfg((uint32_t *)tx_msg);
             break;
+#ifdef CONFIG_UDMAP_MULTI_CH_CFG
+        case TISCI_MSG_RM_UDMAP_TX_MULTI_CH_CFG:
+            Sciclient_printf("case: TISCI_MSG_RM_UDMAP_TX_MULTI_CH_CFG\n");
+            r = rm_udmap_tx_multi_ch_cfg((uint32_t *)tx_msg);
+            break;
+#endif
         case TISCI_MSG_RM_UDMAP_RX_CH_CFG:
             Sciclient_printf("case: TISCI_MSG_RM_UDMAP_RX_CH_CFG\n");
             r = rm_udmap_rx_ch_cfg((uint32_t *)tx_msg);

@@ -975,12 +975,19 @@ char *appPerfStatsGetHwaName(app_perf_hwa_id_t hwa_id)
         " DOF ",
         " SDE ",
         " GPU ",
-#if defined(SOC_J784S4) || defined(SOC_J742S2)
+#if defined(SOC_J784S4) || defined(SOC_J742S2) || defined (SOC_TDA54)
         " VISS_1",
         " LDC_1",
         " BLNF_1",
         " MSC0_1",
         " MSC1_1",
+#endif
+#if defined(SOC_TDA54)
+        " VISS_2",
+        " LDC_2",
+        " BLNF_2",
+        " MSC0_2",
+        " MSC1_2",
 #endif
         "INVAL"};
     char *name;

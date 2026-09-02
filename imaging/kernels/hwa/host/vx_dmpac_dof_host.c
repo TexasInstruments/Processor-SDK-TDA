@@ -1189,7 +1189,6 @@ void tivx_dmpac_dof_hts_bw_limit_prms_init(
     }
 }
 
-#if !defined(SOC_J722S)
 void tivx_dmpac_dof_safety_mech_prms_init(
     tivx_dmpac_dof_safety_mechanism_params_t *prms)
 {
@@ -1200,6 +1199,5 @@ void tivx_dmpac_dof_safety_mech_prms_init(
         prms->enable_readback_config_registers    = (uint32_t)vx_false_e;
     }
 }
-#endif
 
 #endif /* BUILD_DMPAC_DOF */

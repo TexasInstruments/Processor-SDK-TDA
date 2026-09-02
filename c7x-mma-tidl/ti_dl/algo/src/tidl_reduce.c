@@ -219,9 +219,12 @@ int32_t TIDL_reduceProcessNew(TIDL_NetworkCommonParams *commonParams,
         }
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+        <justification start>
+        Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
          This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
           TIDL_LDRA_TAG : TIDL_LDRA_TAG_REDUCE_PRIOR_CHECK_001, TIDL_LDRA_TAG_REDUCE_PRIOR_CHECK_002
+        Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+        This does not affect runtime behavior or safety.
         <justification end> */
         else if((dstBufParams->dataType == DATA_16_BIT) || (dstBufParams->dataType == DATA_16S_BIT))
         {
@@ -237,9 +240,12 @@ int32_t TIDL_reduceProcessNew(TIDL_NetworkCommonParams *commonParams,
         /* LDRA_JUSTIFY_END */
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+        <justification start>
+        Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
          This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
           TIDL_LDRA_TAG : TIDL_LDRA_TAG_REDUCE_PRIOR_CHECK_001, TIDL_LDRA_TAG_REDUCE_PRIOR_CHECK_002
+        Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+        This does not affect runtime behavior or safety.
         <justification end> */
         else
         {

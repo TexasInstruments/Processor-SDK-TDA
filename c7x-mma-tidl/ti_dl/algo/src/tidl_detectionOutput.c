@@ -68,14 +68,12 @@
 ----------------------------------------------------------------------------
 */
 #include <typeinfo>
-#include "tidl_alg_int.h"
-#include "tidl_commonUtils.h"
 #include "tidl_detectionOutput.h"
-#include "tidl_detectionOutput_int.h"
 #include <math.h>
 #include <stdlib.h>
 #include "tidl_types.h"
 #include "tidl_forceNegativeTest.h"
+#include "tidl_alg_utils_ref.h"
 
 #define ZERO 0
 #define ONE 1
@@ -114,6 +112,12 @@ template void TIDL_sparseLocDataFetch<int16_t>(const sTIDL_DetectOutputParams_t 
                                                int32_t countK);
 
 template void TIDL_sparseLocDataFetch<float32_tidl>(const sTIDL_DetectOutputParams_t *params,
+                                                    const sTIDL_ALgDetectOutputParams_t *algDetLyrParams,
+                                                    sTIDL_AnchorBoxParams_t *anchorBox,
+                                                    int32_t curClass,
+                                                    int32_t countK);
+
+template void TIDL_sparseLocDataFetch<bfloat16_tidl>(const sTIDL_DetectOutputParams_t *params,
                                              const sTIDL_ALgDetectOutputParams_t *algDetLyrParams,
                                              sTIDL_AnchorBoxParams_t *anchorBox,
                                              int32_t curClass,
@@ -144,6 +148,14 @@ template int32_t TIDL_objOuputPreperation<int16_t>(const sTIDL_DetectOutputParam
                                                    int32_t cls);
 
 template int32_t TIDL_objOuputPreperation<float32_tidl>(const sTIDL_DetectOutputParams_t *params,
+                                                        const sTIDL_ALgDetectOutputParams_t *algDetLyrParams,
+                                                        float32_tidl *priorData,
+                                                        float32_tidl *objData,
+                                                        int32_t keepKCnt,
+                                                        int32_t numDet,
+                                                        int32_t cls);
+
+template int32_t TIDL_objOuputPreperation<bfloat16_tidl>(const sTIDL_DetectOutputParams_t *params,
                                                  const sTIDL_ALgDetectOutputParams_t *algDetLyrParams,
                                                  float32_tidl *priorData,
                                                  float32_tidl *objData,
@@ -170,368 +182,6 @@ TIDL_findValidLocation_cn_fun_ptr func_ptr2;
 typedef int32_t (*TIDL_sparseDetScoreCalc_cn_fun_ptr)(const sTIDL_DetectOutputParams_t *params, sTIDL_ALgDetectOutputParams_t *algDetLyrParams);
 
 TIDL_sparseDetScoreCalc_cn_fun_ptr func_ptr3;
-
-/**
- ----------------------------------------------------------------------------
- @ingroup TIDL_detectionOutput
- @fn      TIDL_detectionOutputProcess
- @brief   detectionOutput Layer
-
- @param   intAlgHandle : This structure is the main handle.
- @param   algLayer : Ptr to alg layer parameter used in detectionOutput layer
- @param   tidlLayer: Ptr to tidl layer parameter used in detectionOutput layer
- @param   inPtrs: Ptrs to input buffers to be processed
- @param   outPtrs: Ptrs to output buffers to be processed
- @param   sysMems:Ptr to memory releated buffers used in detectionOutput layer
- @remarks    None
- ----------------------------------------------------------------------------
-*/
-int32_t TIDL_detectionOutputProcess(
-    TIDL_Handle intAlgHandle,
-    sTIDL_AlgLayer_t *algLayer,
-    sTIDL_Layer_t *tidlLayer,
-    void *inPtrs[],
-    void *outPtrs[],
-    sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX])
-{
-
-  int32_t status = TIDL_SUCCESS;
-  int32_t flowCtrl = intAlgHandle->createParams->flowCtrl;
-
-  sTIDL_DetectOutputParams_t *params = &tidlLayer->layerParams.detectOutParams;
-  sTIDL_ALgDetectOutputParams_t *algDetLyrParams = &algLayer->layerParams.detectionOutputParams;
-
-  /* Get output data  pointer*/
-  int8_t(*outPtr)[] = (int8_t(*)[])(outPtrs[0]);
-  int32_t dataOffset = (tidlLayer->outData.padH * tidlLayer->outData.pitch[TIDL_LINE_PITCH]) + tidlLayer->outData.padW;
-  TIDL_ODLayerHeaderInfo *outputData = (TIDL_ODLayerHeaderInfo *)((((float32_tidl *)(*outPtr)) + dataOffset));
-
-  outputData->numDetObjects = 0;
-  outputData->odObjectType = 0;
-
-  /* Seting flag for forceNegativeTest to avoid interface change using unused flaf reserve3*/
-  params->reserve3 =  intAlgHandle->createParams->forceNegativeTest;
-
-  if (params->numKeypoints > 0)
-  {
-    (void)TIDL_SetObjDetectionFormat(&(outputData->odObjectType), TIDL_DetectKeyPoints);
-  }
-  if (params->subCodeType == (int32_t)TIDL_ObjectPose)
-  {
-    (void)TIDL_SetObjDetectionFormat(&(outputData->odObjectType), TIDL_DetectObjectPose);
-  }
-  #if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
-  if ((params->metaArchType == (int32_t)TIDL_metaArchTIDLCenterPoint) && (params->codeType == 0))
-  {
-    (void)TIDL_SetObjDetectionFormat(&(outputData->odObjectType), TIDL_DetectRawData);
-    outputData->objInfoSize = ((sizeof(TIDL_ODLayerRawObjInfo) - (sizeof(float32_tidl) * TIDL_OD_MAX_NUM_REG_PARAMS)) + (sizeof(float32_tidl) * algDetLyrParams->boxParamsSize) + (sizeof(float32_tidl) * (uint32_t)(uint32_t)algDetLyrParams->extraParamSize));
-  }
-  else
-  #endif 
-  if ((params->metaArchType != (int32_t)TIDL_metaArchTIDL3DOD) && (params->metaArchType != (int32_t)TIDL_metaArchTIDLBEVFormer))
-  {
-    outputData->objInfoSize = ((sizeof(TIDL_ODLayerObjInfo) - (sizeof(TIDL_ODLayerKeyPoint) * (uint32_t)TIDL_OD_MAX_KEY_POINTS)) + (sizeof(TIDL_ODLayerKeyPoint) * (uint32_t)params->numKeypoints));
-    if (params->subCodeType == (int32_t)TIDL_ObjectPose)
-    {
-      outputData->objInfoSize += (float32_tidl)sizeof(TIDL_ODLayerObjectPose);
-    }
-    (void)TIDL_SetObjDetectionFormat(&(outputData->odObjectType), TIDL_Detect2DBox);
-  }
-  else /*3D OD */
-  {
-    outputData->objInfoSize = sizeof(TIDL_3DODLayerObjInfo);
-    if(params->codeType == 8) /* for pointPillars 3d OD, output does not includes pitch and roll angles*/
-    {
-      outputData->objInfoSize = (float32_tidl)sizeof(TIDL_3DODLayerObjInfo) - (2.0 * (float32_tidl)sizeof(float32_tidl));
-    }
-    (void)TIDL_SetObjDetectionFormat(&(outputData->odObjectType), TIDL_Detect3DBox);
-  }
-
-  outputData->odNumKeyPoints = params->numKeypoints;
-  outputData->objInfoOffset = sizeof(TIDL_ODLayerHeaderInfo); // size of the structure
-
-  algDetLyrParams->numOutElementPer_2dBox = (sizeof(TIDL_ODLayerObjInfo) - (sizeof(TIDL_ODLayerKeyPoint) * TIDL_OD_MAX_KEY_POINTS)) / sizeof(float32_tidl);
-
-  #if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
-  if ((params->metaArchType == (int32_t)TIDL_metaArchTIDLCenterPoint) && (params->codeType == 0))
-  {
-    algDetLyrParams->numOutElementPer_2dBox = (sizeof(TIDL_ODLayerRawObjInfo) - (sizeof(float32_tidl) * TIDL_OD_MAX_NUM_REG_PARAMS)) / sizeof(float32_tidl);
-  }
-  #endif
-
-  algDetLyrParams->numOutElementPer_3dBox = sizeof(TIDL_3DODLayerObjInfo) / sizeof(float32_tidl);
-  if(params->codeType == 8) /* for pointPillars 3d OD, output does not includes pitch and roll angles*/
-  {
-    algDetLyrParams->numOutElementPer_3dBox = ((int32_t)sizeof(TIDL_3DODLayerObjInfo) / sizeof(float32_tidl)) - 2;
-  }
-
-  float32_tidl *outObjData = (float32_tidl *)outputData + ((int32_t)(outputData->objInfoOffset / (int64_t)sizeof(float32_tidl)));
-
-  int32_t simdWidth = TIDL_SIMD_WIDTH >> 2;
-  uint32_t simdShift = 0;
-  simdShift = SIMD_SHIFT_FROM_WIDTH<(TIDL_SIMD_WIDTH >> 2)>::_value;
-
-  // if((flowCtrl & TIDL_FLOW_CTRL_REF_STAT) != TIDL_FLOW_CTRL_REF_STAT)
-  {
-    float32_tidl *priorData;
-    int32_t numDet, keepKCnt;
-
-#ifdef TIDL_DET_LAYER_PROFILE
-    long long acc0 = 0, acc1 = 0, acc2 = 0, acc3 = 0, acc4 = 0;
-    long long t0, t1;
-#endif
-
-#ifdef TIDL_DET_LAYER_PROFILE
-    t0 = __TSC;
-#endif
-    priorData = (float32_tidl *)algDetLyrParams->priorBoxPtr;
-
-    /* Consolidate all the location and confidnece head pointers, along with their pitch*/
-    TIDL_updateLocConfHeadPtrs(intAlgHandle->createParams->net->TIDLLayers, algLayer, inPtrs);
-
-    /*
-    Points to Note. There are two places where decision of DDR flow is taken
-    1. Early decision, When topM or topMAllClasses is less than zero. This is singel pass but from start itself it is DDR flow
-    2. Secondly late decision, If valid points becomes more than the calculated topM
-       value then another pass is performed with all topM related pointers being in DDR and topM value being the worst possible
-       value. That happens in the function "TIDL_findValidLocAndScore"
-    */
-
-    int32_t availableL2Size = sysMems[TIDL_SYSMEM_L2_SCRATCH].size;
-    if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_TOPMDDR)
-    {
-      availableL2Size = 0;
-    }
-
-    /*Data space needed is (10C - 10)*topM for modules outside class loop. hence deriving topM based on avaibility of L2 space*/
-    if (params->scoreConverter == TIDL_scoreConverterSIGMOID)
-    {
-      /*Data space needed is (10C - 10)*topM for modules outside class loop. hence deriving topM based on avaibility of L2 space*/
-      algDetLyrParams->topM = ((availableL2Size) / (TIDL_SIGMOID_SCRATCH_BYTES_PER_CLASS * (params->numClasses - algDetLyrParams->isBckClsAvailable)));
-    }
-    else
-    {
-      /*Data space needed is (12C - 12)*topM for modules outside class loop. hence deriving topM based on avaibility of L2 space*/
-      algDetLyrParams->topM = ((availableL2Size) / (TIDL_SOFTMAX_SCRATCH_BYTES_PER_CLASS * (params->numClasses - algDetLyrParams->isBckClsAvailable)));
-    }
-
-    algDetLyrParams->topM = (int32_t)(((uint32_t)algDetLyrParams->topM >> simdShift) << simdShift); // making multiple of 16 for ci restriction
-
-    // ci code has restriction to have topMAllClasses value 16 less than acctual value
-    algDetLyrParams->topMAllClasses = (algDetLyrParams->topM * (params->numClasses - algDetLyrParams->isBckClsAvailable)) - simdWidth;
-
-    if ((algDetLyrParams->topM <= 0) || (algDetLyrParams->topMAllClasses <= 0))
-    {
-      // early decision of DDR flow. Thre could be late decision when valid locations become more than this topM
-      // Eventually memory will not get allocated in L2, and so DDR memories will be selected inside the function "TIDL_allocInternalMemBuffers"
-
-      algDetLyrParams->topM = algDetLyrParams->topMDdr / (params->numClasses - algDetLyrParams->isBckClsAvailable);
-
-      algDetLyrParams->topM = ((algDetLyrParams->topM + simdWidth - 1)>> simdShift) << simdShift; // making multiple of 16 for ci restriction
-
-      // ci code has restriction to have topMAllClasses value 16 less than acctual value
-      algDetLyrParams->topMAllClasses = (algDetLyrParams->topM * (params->numClasses - algDetLyrParams->isBckClsAvailable)) - simdWidth;
-    }
-
-    keepKCnt = 0;
-#ifdef TIDL_DET_LAYER_PROFILE
-    t1 = __TSC;
-    tidl_printf(0, "TIDL_updateLocConfHeadPtrs() cycle is %lld \n", (t1 - t0));
-    t0 = __TSC;
-#endif
-
-    /*Allocate internal memory for different scratch data buffers*/
-    status = TIDL_allocInternalMemBuffers(params, algDetLyrParams, priorData, sysMems);
-
-#ifdef TIDL_DET_LAYER_PROFILE
-    t1 = __TSC;
-    tidl_printf(0, "TIDL_allocInternalMemBuffers() cycle is %lld \n", (t1 - t0));
-    t0 = __TSC;
-#endif
-
-    /*Find locations where scores are higher than the user provided threshold. These are valid locations for which accurate score and decoding of boxes will be done in later part of code.
-    If for any class score is higher than user provided threshold then this location is to be considered for further processing, otherwise it will be discarded.
-    In softmax this is achieved by calculating the upper bound of score for an object for each location by observing the score across all the classes.
-    In sigmoid acctual score are compared instead of upper bound in softmax.
-  */
-
-    TIDL_odFindValidLocAndScore_ixX_oxX_PrivArgs *pKerPrivArgs =
-        (TIDL_odFindValidLocAndScore_ixX_oxX_PrivArgs *)algLayer->kernelHandle[0][0];
-
-    if (status == TIDL_SUCCESS)
-    {
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_KERNEL_SCORECONVERT)
-      {
-        params->scoreConverter = -1;
-      }
-      else if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_KERNEL_TOPM)
-      {
-        algDetLyrParams->topMAllClasses = -1;
-      }
-      else
-      {
-        /*Do nothing*/
-      }
-      status = TIDL_findValidLocAndScore(pKerPrivArgs, params, algDetLyrParams, priorData, flowCtrl);
-    }
-
-#ifdef TIDL_DET_LAYER_PROFILE
-    t1 = __TSC;
-    tidl_printf(0, "TIDL_validPointScoreCalc() cycle is %lld \n", (t1 - t0));
-    t0 = __TSC;
-#endif
-
-    /*Every data of all modules in this class loop will work from L2
-    All valid objects are kept in L2.
-   */
-
-    /* One approach could be that class by class topK slection and bounding box decoding
-     is done. Another approach could be to do topK and box decoding for all
-     classes and keep the data in L2.
-     First Approach advantage is that L2 requirement will be less and disadvantge is box decoding
-     might get repeated for points where two class bounding boxes are lying exactly at the same place.
-
-     In second approach L2 requirement is high, but has potential to avoid same bounding box decoding for
-     multiple classes.
-
-     For 100 class, and topK=100 total ~16KB L2 space is needed assuming 4 float32_tidl parameter for one box.
-     And that too if all the classes has valid 100 elements then 16KB will be filled.
-
-     However taking first approach for now for simplicity with knowledge that for some valid points
-     box decoding may happen multiple times for different classes. And this will be helpful to extend
-     the support of models where location parameters are not shared.
-  */
-
-    if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_MINSCOREV2)
-    {
-      params->topKAllClasses = 390;
-    }
-    if (params->topKAllClasses != -1)
-    {
-      /*In this flow select topKAllClasses number of detections across all classes before applying NMS*/
-
-      /*Find topK scores among all valid scores*/
-      TIDL_topKAllClassesSelection(params, algDetLyrParams);
-    }
-
-    for (int32_t cls = 0; cls < params->numClasses; cls++)
-    {
-
-      if ((cls == params->backgroundLabelId) || (status != TIDL_SUCCESS))
-      {
-        continue;
-      }
-
-#ifdef TIDL_DET_LAYER_PROFILE
-      t0 = __TSC;
-#endif
-
-      /*Find topK scores among all valid scores*/
-      int32_t countK = TIDL_topKSelection(params, algDetLyrParams, cls);
-
-#ifdef TIDL_OD_L1_DEBUG
-      tidl_printf(0, "For class = %d, countK = %d\n", cls, countK);
-#endif
-
-#ifdef TIDL_DET_LAYER_PROFILE
-      t1 = __TSC;
-      acc0 += (t1 - t0);
-      t0 = __TSC;
-#endif
-
-      #if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
-      if ((params->metaArchType == (int32_t)TIDL_metaArchTIDLCenterPoint) && (params->codeType == 0))
-      {
-        numDet = countK;
-        TIDL_objOuputPreperationiX(params, algDetLyrParams, priorData, outObjData, keepKCnt, numDet, cls);
-        keepKCnt = keepKCnt + numDet;
-      }
-      else
-      {
-      #endif
-#ifdef TIDL_DET_LAYER_PROFILE
-        t1 = __TSC;
-        acc1 += (t1 - t0);
-        t0 = __TSC;
-#endif
-        /*For valid locations, fetch the sparse location head data*/
-        TIDL_sparseLocDataFetchiX(params, algDetLyrParams, (sTIDL_AnchorBoxParams_t *)priorData, cls, countK);
-
-        if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_CODETYPE)
-        {
-          params->codeType = -1;
-        }
-
-        /*From previously fetched sparse location data, decode the box and keypoints parameters*/
-        TIDL_boxParamsDecoding(params, algDetLyrParams, priorData, countK);
-
-#ifdef TIDL_DET_LAYER_PROFILE
-        t1 = __TSC;
-        acc2 += (t1 - t0);
-        t0 = __TSC;
-#endif
-
-        if((params->metaArchType != (int32_t)TIDL_metaArchTIDLBEVFormer))
-        {
-          /*Non maxima supression of the valid boxes*/
-          numDet = TIDL_applyNMSFast(params, algDetLyrParams, countK);
-        }
-        else
-        {
-          /*filtering out the valid boxes which are in range*/
-          numDet = TIDL_filterNotInRangeBox(params, algDetLyrParams, countK);
-        }
-
-#ifdef TIDL_OD_L1_DEBUG
-        tidl_printf(0, "For class = %d, numDet = %d\n", cls, numDet);
-#endif
-
-#ifdef TIDL_DET_LAYER_PROFILE
-        t1 = __TSC;
-        acc3 += (t1 - t0);
-        t0 = __TSC;
-#endif
-
-        TIDL_objOuputPreperationiX(params, algDetLyrParams, priorData, outObjData, keepKCnt, numDet, cls);
-
-        keepKCnt = keepKCnt + numDet;
-
-#ifdef TIDL_DET_LAYER_PROFILE
-        t1 = __TSC;
-        acc4 += (t1 - t0);
-#endif
-      #if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
-      }
-      #endif
-    }
-
-    outputData->numDetObjects = (keepKCnt > params->keepTopK) ? params->keepTopK : keepKCnt;
-
-#ifdef TIDL_DET_LAYER_PROFILE
-    tidl_printf(0, "TIDL_topKSelection() cycle is %lld \n", acc0);
-    tidl_printf(0, "TIDL_sparseLocDataFetch() cycle is %lld \n", acc1);
-    tidl_printf(0, "TIDL_boxParamsDecoding() cycle is %lld \n", acc2);
-    tidl_printf(0, "TIDL_applyNMSFast() cycle is %lld \n", acc3);
-    tidl_printf(0, "TIDL_objOuputPreperation() cycle is %lld \n", acc4);
-#endif
-  }
-  
-  #ifdef HOST_EMULATION
-  if ((flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)
-  {
-    /* LDRA_JUSTIFY_START
-    <metric start> statement branch <metric end>
-    <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
-    <justification end> */
-    if (TIDL_getDatElementSign(intAlgHandle->createParams->net->TIDLLayers[algLayer->layerIdx].outData.elementType) == 1)
-    {
-      TIDL_UpdateScaleFactors(intAlgHandle, algLayer->layerIdx, 1, -1, 1);
-    }
-    /* LDRA_JUSTIFY_END */
-  }
-  #endif
-  return status;
-}
 
 /**
  * @brief Function to update the locations and confedences based on input tensor scales
@@ -565,7 +215,7 @@ void TIDL_updateLocConfHeadPtrs(sTIDL_Layer_t *TIDLLayers, sTIDL_AlgLayer_t *alg
   {
     locHeadOffset = 0;
     confHeadOffset = params->numHeads;
-    if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_HEADSIZE)
+    if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_HEADSIZE)
     {
       params->reserve0 = 0;
     }
@@ -573,26 +223,26 @@ void TIDL_updateLocConfHeadPtrs(sTIDL_Layer_t *TIDLLayers, sTIDL_AlgLayer_t *alg
     {
       extraHeadOffset = (params->reserve0 != 0) ? (2 * params->numHeads) : 0;
     }
-    #if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
     if ((params->metaArchType == (int32_t)TIDL_metaArchTIDLCenterPoint) && (params->reserve1 != -1))
     {
       confHeadOffset = 0;
     }
-    #endif
+#endif
   }
 
   for (int32_t j = 0; j < params->numHeads; j++)
   {
 
     /*get location data pointer, scale and other parameters*/
-    int8_t(*inLocPtr)[] = (int8_t(*)[])(inPtrs[j + locHeadOffset]);
+    int8_t (*inLocPtr)[] = (int8_t (*)[])(inPtrs[j + locHeadOffset]);
     /* Except of top and bottom padding all the data is processed*/
     dataOffset = algDetLyrParams->locDataOffset[j];
     int8_t *inLocData = (int8_t *)(*inLocPtr + dataOffset);
     algDetLyrParams->inLocDataList[j] = (void *)inLocData;
 
     /* Get conf data  pointer and scale*/
-    int8_t(*inConfPtr)[] = (int8_t(*)[])(inPtrs[j + confHeadOffset]);
+    int8_t (*inConfPtr)[] = (int8_t (*)[])(inPtrs[j + confHeadOffset]);
 
     /* Except of top and bottom padding all the data is processed*/
     dataOffset = algDetLyrParams->confDataOffset[j];
@@ -600,7 +250,7 @@ void TIDL_updateLocConfHeadPtrs(sTIDL_Layer_t *TIDLLayers, sTIDL_AlgLayer_t *alg
     algDetLyrParams->inConfDataList[j] = (void *)inConfData;
 
     /* Get extra data  pointer and scale*/
-    int8_t(*inExtraPtr)[] = (int8_t(*)[])(inPtrs[j + extraHeadOffset]);
+    int8_t (*inExtraPtr)[] = (int8_t (*)[])(inPtrs[j + extraHeadOffset]);
 
     dataOffset = algDetLyrParams->extraDataOffset[j];
     float32_tidl *inExtraData = (float32_tidl *)(((int8_t *)(*inExtraPtr)) + dataOffset);
@@ -670,11 +320,10 @@ void TIDL_updateLocConfHeadPtrs(sTIDL_Layer_t *TIDLLayers, sTIDL_AlgLayer_t *alg
                                                                                  ((k * algDetLyrParams->extraHeadPitchList[j][TIDL_CHANNEL_PITCH]) *
                                                                                   (numAnchor * algDetLyrParams->extraParamSize) * algDetLyrParams->elmSize));
 
-      if ((inLocDataParams->elementType == TIDL_SinglePrecFloat) || (inLocDataParams->tensorScale == 0.0f))
+      if ((inLocDataParams->elementType == TIDL_SinglePrecFloat) || (inLocDataParams->elementType == TIDL_BFloat16) || (inLocDataParams->tensorScale == 0.0f))
       {
         algDetLyrParams->inLocdataQList[(j * params->numSubHeads) + k] = 1.0f;
         algDetLyrParams->inLocdataZPList[(j * params->numSubHeads) + k] = 0.0f;
-        
       }
       else
       {
@@ -682,7 +331,7 @@ void TIDL_updateLocConfHeadPtrs(sTIDL_Layer_t *TIDLLayers, sTIDL_AlgLayer_t *alg
         algDetLyrParams->inLocdataZPList[(j * params->numSubHeads) + k] = (((float32_tidl)inLocDataParams->tensorZeroPoint));
       }
 
-      if ((inConfDataParams->elementType == TIDL_SinglePrecFloat) || (inConfDataParams->tensorScale == 0.0f))
+      if ((inConfDataParams->elementType == TIDL_SinglePrecFloat) || (inConfDataParams->elementType == TIDL_BFloat16) || (inConfDataParams->tensorScale == 0.0f))
       {
         algDetLyrParams->inConfdataQList[(j * params->numSubHeads) + k] = 1.0f;
         algDetLyrParams->inConfdataZPList[(j * params->numSubHeads) + k] = 0.0f;
@@ -693,7 +342,7 @@ void TIDL_updateLocConfHeadPtrs(sTIDL_Layer_t *TIDLLayers, sTIDL_AlgLayer_t *alg
         algDetLyrParams->inConfdataZPList[(j * params->numSubHeads) + k] = (((float32_tidl)inConfDataParams->tensorZeroPoint));
       }
 
-      if ((inExtraDataParams->elementType == TIDL_SinglePrecFloat) || (inExtraDataParams->tensorScale == 0.0f))
+      if ((inExtraDataParams->elementType == TIDL_SinglePrecFloat) || (inExtraDataParams->elementType == TIDL_BFloat16) || (inExtraDataParams->tensorScale == 0.0f))
       {
         algDetLyrParams->inExtradataQList[(j * params->numSubHeads) + k] = 1.0f;
         algDetLyrParams->inExtradataZPList[(j * params->numSubHeads) + k] = 0.0f;
@@ -746,7 +395,7 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
   }
 
   /*Advancing the DDR pointer for already allocated scratch pointer at init*/
-  (void*)TIDL_getMemoryChunkFromSysmem(sysMems, algDetLyrParams->scratchDDRConsumed, 128U, TIDL_SYSMEM_DDR_SCRATCH, IALG_SCRATCH);
+  (void *)TIDL_getMemoryChunkFromSysmem(sysMems, algDetLyrParams->scratchDDRConsumed, 128U, TIDL_SYSMEM_DDR_SCRATCH, IALG_SCRATCH);
 
   maxConfPlaneSize = TIDL_ALIGN_CEIL(maxConfPlaneSize, 64);
 
@@ -756,7 +405,7 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
   /*****************************************************************************/
 
   /* Corrupting system memory for forceNegative test cases */
-  if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPKBBOX_INTMEM)
+  if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPKBBOX_INTMEM)
   {
     sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
     sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
@@ -773,12 +422,12 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
     case ZERO:
     {
       /* Corrupting system memory for forceNegative test cases */
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPKBBOX)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPKBBOX)
       {
-         sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
       }
       algDetLyrParams->topKBbox = (BBox *)TIDL_getMemoryChunkFromSysmem(sysMems, params->topK * (int64_t)sizeof(BBox), 128U, TIDL_SYSMEM_L1_SCRATCH, IALG_SCRATCH);
       if (algDetLyrParams->topKBbox == NULL)
@@ -792,17 +441,17 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
         }
       }
       case_varible = ONE;
-      
-    }break;
+    }
+    break;
     case ONE:
     {
       /* Corrupting system memory for forceNegative test cases */
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPKSCORE)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPKSCORE)
       {
-         sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
       }
       algDetLyrParams->topKLoc = (float32_tidl *)algDetLyrParams->topKBbox;
       algDetLyrParams->topKScore = (uint16_t *)TIDL_getMemoryChunkFromSysmem(sysMems, topK * (int64_t)sizeof(uint16_t), 128U, TIDL_SYSMEM_L1_SCRATCH, IALG_SCRATCH);
@@ -817,17 +466,17 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
         }
       }
       case_varible = TWO;
-      
-    }break;
+    }
+    break;
     case TWO:
     {
       /* Corrupting system memory for forceNegative test cases */
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPKINDICES)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPKINDICES)
       {
-         sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
       }
       algDetLyrParams->topKIndices = (int32_t *)TIDL_getMemoryChunkFromSysmem(sysMems, topK * sizeof(int32_t), 128U, TIDL_SYSMEM_L1_SCRATCH, IALG_SCRATCH);
       if (algDetLyrParams->topKIndices == NULL)
@@ -841,17 +490,17 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
         }
       }
       case_varible = THREE;
-      
-    }break;
+    }
+    break;
     case THREE:
     {
       /* Corrupting system memory for forceNegative test cases */
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_NMSKEPTINDICES)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_NMSKEPTINDICES)
       {
-         sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
       }
       algDetLyrParams->nmsKeptIndices = (int32_t *)TIDL_getMemoryChunkFromSysmem(sysMems, topK * sizeof(int32_t), 128U, TIDL_SYSMEM_L1_SCRATCH, IALG_SCRATCH);
       if (algDetLyrParams->nmsKeptIndices == NULL)
@@ -865,17 +514,17 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
         }
       }
       case_varible = FOUR;
-      
-    }break;
+    }
+    break;
     case FOUR:
     {
       /* Corrupting system memory for forceNegative test cases */
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_COUNTMLIST)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_COUNTMLIST)
       {
-         sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
       }
       algDetLyrParams->countMList = (int32_t *)TIDL_getMemoryChunkFromSysmem(sysMems, sizeof(int32_t) * numClasses, 128U, TIDL_SYSMEM_L1_SCRATCH, IALG_SCRATCH);
       if (algDetLyrParams->countMList == NULL)
@@ -889,17 +538,17 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
         }
       }
       case_varible = FIVE;
-      
-    }break;
+    }
+    break;
     case FIVE:
     {
       /* Corrupting system memory for forceNegative test cases */
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_COUNTMLISTACC)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_COUNTMLISTACC)
       {
-         sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
       }
       algDetLyrParams->countMListAcc = (int32_t *)TIDL_getMemoryChunkFromSysmem(sysMems, sizeof(int32_t) * numClasses, 128U, TIDL_SYSMEM_L1_SCRATCH, IALG_SCRATCH);
       if (algDetLyrParams->countMListAcc == NULL)
@@ -913,18 +562,18 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
         }
       }
       case_varible = SIX;
-      
-    }break;
+    }
+    break;
     case SIX:
     {
       /* Corrupting system memory for forceNegative test cases */
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TEMPSCORE)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TEMPSCORE)
       {
-         sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
-         params->scoreConverter = (int32_t)TIDL_scoreConverterSOFTMAX;
+        sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
+        params->scoreConverter = (int32_t)TIDL_scoreConverterSOFTMAX;
       }
       if (params->scoreConverter == (int32_t)TIDL_scoreConverterSOFTMAX)
       {
@@ -940,25 +589,24 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
           }
         }
         case_varible = SEVEN;
-        
       }
       else
       {
         algDetLyrParams->tempScore = NULL;
-        case_varible = SEVEN;   
+        case_varible = SEVEN;
       }
       break;
     }
     case SEVEN:
     {
       /* Corrupting system memory for forceNegative test cases */
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPMINDICES)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPMINDICES)
       {
-         sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
-         algDetLyrParams->topMIndicesDdr = NULL;
+        sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
+        algDetLyrParams->topMIndicesDdr = NULL;
       }
       /****************** L2D memory allocation ************************************/
       /* Sigmoid L2 memory need --> (4*(C - 1)<topMindices> + 4*(C - 1)<topMindicesSorted> + 2*(C - 1)<topMScore> )*topM = 10(C-1)topM*/
@@ -976,18 +624,18 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
         }
       }
       case_varible = EIGHT;
-     
-    } break;
+    }
+    break;
     case EIGHT:
     {
       /* Corrupting system memory for forceNegative test cases */
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPMINDICESSORTED)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPMINDICESSORTED)
       {
-         sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
-         algDetLyrParams->topMIndicesSortedDdr = NULL;
+        sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
+        algDetLyrParams->topMIndicesSortedDdr = NULL;
       }
       algDetLyrParams->topMIndicesSorted = (int32_t *)TIDL_getMemoryChunkFromSysmem(sysMems, topM * sizeof(int32_t) * (numClasses - algDetLyrParams->isBckClsAvailable), 128U, TIDL_SYSMEM_L2_SCRATCH, IALG_SCRATCH);
       if (algDetLyrParams->topMIndicesSorted == NULL)
@@ -1001,18 +649,18 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
         }
       }
       case_varible = NINE;
-      
-    }break;
+    }
+    break;
     case NINE:
     {
       /* Corrupting system memory for forceNegative test cases */
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPMSCORE)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPMSCORE)
       {
-         sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
-         algDetLyrParams->topMScoreDdr = NULL;
+        sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
+        algDetLyrParams->topMScoreDdr = NULL;
       }
       /*In softmax all the classes are assumed to be valid temporarily, hence allocating the space for storing all the indices*/
       /*Also scores are seperated for each class with distinct boundary, hence allocating topMIndices, and topMScore for numClasses*topM*/
@@ -1029,19 +677,19 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
         }
       }
       case_varible = TEN;
-      
-    }break;
+    }
+    break;
     case TEN:
     {
       /* Corrupting system memory for forceNegative test cases */
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPMSCORESORTED)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_TOPMSCORESORTED)
       {
-         sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
-         algDetLyrParams->topMScoreSortedDdr = NULL;
-         params->scoreConverter = (int32_t)TIDL_scoreConverterSOFTMAX;
+        sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
+        algDetLyrParams->topMScoreSortedDdr = NULL;
+        params->scoreConverter = (int32_t)TIDL_scoreConverterSOFTMAX;
       }
       if (params->scoreConverter == (int32_t)TIDL_scoreConverterSOFTMAX)
       {
@@ -1058,17 +706,17 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
         }
       }
       case_varible = ELEVEN;
-      
-    }break;
+    }
+    break;
     case ELEVEN:
     {
       /* Corrupting system memory for forceNegative test cases */
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_PRED)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_PRED)
       {
-         sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
       }
       /*L3 scratch memory allocation*/
       /*Each element is trated as int, so total bytes = maxConfPlaneSize*4, andone bit for each byte. SO total bytes  = maxConfPlaneSize*4/8*/
@@ -1084,22 +732,22 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
         }
       }
       case_varible = TWELEVE;
-      
-    }break;
+    }
+    break;
     case TWELEVE:
     {
       /* Corrupting system memory for forceNegative test cases */
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_FEATMAXMINVAL)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_NULLPTR_FEATMAXMINVAL)
       {
-         sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
-         sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L1_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L2_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_L3_SCRATCH].size = 0;
+        sysMems[TIDL_SYSMEM_DDR_SCRATCH].size = 0;
         params->scoreConverter = (int32_t)TIDL_scoreConverterSOFTMAX;
       }
       if (params->scoreConverter == (int32_t)TIDL_scoreConverterSOFTMAX)
       {
-        algDetLyrParams->featMaxMinVal = (float32_tidl *)TIDL_getMemoryChunkFromSysmem(sysMems, maxConfPlaneSize * 2 * algDetLyrParams->elmSize, 128U, TIDL_SYSMEM_L3_SCRATCH, IALG_SCRATCH);  
+        algDetLyrParams->featMaxMinVal = (float32_tidl *)TIDL_getMemoryChunkFromSysmem(sysMems, maxConfPlaneSize * 2 * algDetLyrParams->elmSize, 128U, TIDL_SYSMEM_L3_SCRATCH, IALG_SCRATCH);
         if (algDetLyrParams->featMaxMinVal == NULL)
         {
           algDetLyrParams->featMaxMinVal = (float32_tidl *)TIDL_getMemoryChunkFromSysmem(sysMems, maxConfPlaneSize * 2 * algDetLyrParams->elmSize, 128U, TIDL_SYSMEM_DDR_SCRATCH, IALG_SCRATCH);
@@ -1112,13 +760,13 @@ int32_t TIDL_allocInternalMemBuffers(sTIDL_DetectOutputParams_t *params, sTIDL_A
         }
       }
       case_varible = THIRTEEN;
-      
-    }break;
+    }
+    break;
     default:
     {
       flag = 0;
-      
-    }break;
+    }
+    break;
     }
   }
 
@@ -1170,7 +818,7 @@ int32_t TIDL_topKSelection(const sTIDL_DetectOutputParams_t *params, sTIDL_ALgDe
       }
     }
 
-    if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_MAXSCORE)
+    if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_MAXSCORE)
     {
       maxScore = (int16_t)scoreTh - 1;
     }
@@ -1240,7 +888,7 @@ void TIDL_topKAllClassesSelection(const sTIDL_DetectOutputParams_t *params, cons
           }
         }
       }
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_MINSCORE)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_MINSCORE)
       {
         minScore = (int16_t)scoreTh - 1;
       }
@@ -1292,12 +940,20 @@ void TIDL_sparseLocDataFetchiX(sTIDL_DetectOutputParams_t *params, sTIDL_ALgDete
     func_ptr = TIDL_sparseLocDataFetch<int16_t>;
     func_ptr(params, algDetLyrParams, anchorBox, curClass, countK);
   }
-  else
+  else if (algDetLyrParams->elementType == TIDL_BFloat16)
   {
     #ifdef HOST_EMULATION
-    func_ptr = TIDL_sparseLocDataFetch<float32_tidl>;
+    func_ptr = TIDL_sparseLocDataFetch<bfloat16_tidl>;
     func_ptr(params, algDetLyrParams, anchorBox, curClass, countK);
     #endif
+    /* do nothing*/
+  }
+  else
+  {
+#ifdef HOST_EMULATION
+    func_ptr = TIDL_sparseLocDataFetch<float32_tidl>;
+    func_ptr(params, algDetLyrParams, anchorBox, curClass, countK);
+#endif
     /* do nothing*/
   }
 }
@@ -1312,9 +968,8 @@ void TIDL_sparseLocDataFetchiX(sTIDL_DetectOutputParams_t *params, sTIDL_ALgDete
  * @param countK : number of K values
  * @return None
  */
-template <typename Tloc>
-void TIDL_sparseLocDataFetch(const sTIDL_DetectOutputParams_t *params, const sTIDL_ALgDetectOutputParams_t *algDetLyrParams,
-                             sTIDL_AnchorBoxParams_t *anchorBox, int32_t curClass, int32_t countK)
+template<typename Tloc> void TIDL_sparseLocDataFetch(const sTIDL_DetectOutputParams_t *params, const sTIDL_ALgDetectOutputParams_t *algDetLyrParams,
+                                                     sTIDL_AnchorBoxParams_t *anchorBox, int32_t curClass, int32_t countK)
 {
   Tloc *restrict inPtr;
   Tloc *restrict regPtr;
@@ -1367,7 +1022,7 @@ void TIDL_sparseLocDataFetch(const sTIDL_DetectOutputParams_t *params, const sTI
     col = (float32_tidl)loc - (row * algDetLyrParams->confHeadPitchList[head][TIDL_LINE_PITCH]);
 
     onebyqFact = algDetLyrParams->inLocdataQList[head];
-    zeroPoint =  algDetLyrParams->inLocdataZPList[head];
+    zeroPoint = algDetLyrParams->inLocdataZPList[head];
     onebyqFactReg = algDetLyrParams->inExtradataQList[head];
     regZeroPoint = algDetLyrParams->inExtradataZPList[head];
     linePitch = algDetLyrParams->locHeadPitchList[head][TIDL_LINE_PITCH];
@@ -1379,7 +1034,7 @@ void TIDL_sparseLocDataFetch(const sTIDL_DetectOutputParams_t *params, const sTI
 
     if (params->metaArchType == (int32_t)TIDL_metaArchTIDLYoloV8)
     {
-      if( params->codeType == 12) /* rtmdet box preprocessing*/
+      if (params->codeType == 12) /* rtmdet box preprocessing*/
       {
         int32_t j = 0;
         float32_tidl box_exp;
@@ -1459,10 +1114,10 @@ void TIDL_sparseLocDataFetch(const sTIDL_DetectOutputParams_t *params, const sTI
       /* In 3d od box parameters are x y z w l h yaw pitch roll.
          For NMS only x y and l w is required.
       */
-     /* In bevformer box parameters are x y z w l h yaw pitch roll.
-        For filtering on box range only x y and z is required.
-        here 0th is X, 1st is Y, 4th is Z and 3rd is used for H 
-      */
+      /* In bevformer box parameters are x y z w l h yaw pitch roll.
+         For filtering on box range only x y and z is required.
+         here 0th is X, 1st is Y, 4th is Z and 3rd is used for H
+       */
       outBboxPtr[(i * 4) + 0] = (inPtr[(((chNo * anchorStirde) + (0 * bbStride)) * chPitch) + (row * linePitch) + col] - zeroPoint) * onebyqFact;
       outBboxPtr[(i * 4) + 1] = (inPtr[(((chNo * anchorStirde) + (1 * bbStride)) * chPitch) + (row * linePitch) + col] - zeroPoint) * onebyqFact;
       outBboxPtr[(i * 4) + 2] = (inPtr[(((chNo * anchorStirde) + (3 * bbStride)) * chPitch) + (row * linePitch) + col] - zeroPoint) * onebyqFact;
@@ -1480,7 +1135,7 @@ void TIDL_sparseLocDataFetch(const sTIDL_DetectOutputParams_t *params, const sTI
  * @return None
  */
 void TIDL_boxParamsDecoding(const sTIDL_DetectOutputParams_t *params, const sTIDL_ALgDetectOutputParams_t *algDetLyrParams,
-                               float32_tidl *priorData, int32_t countK)
+                            float32_tidl *priorData, int32_t countK)
 {
 
   float32_tidl boxWidth;
@@ -1551,7 +1206,7 @@ void TIDL_boxParamsDecoding(const sTIDL_DetectOutputParams_t *params, const sTID
       dXmax = dCx + dW;
       dYmax = dCy + dH;
     }
-    #if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
     else if (codeType == 1)
     {
       dXmin = (centerX - (0.5f * boxWidth)) + (pVariance[cxId] * curLoc[(4 * cnt) + cxId]);
@@ -1559,7 +1214,7 @@ void TIDL_boxParamsDecoding(const sTIDL_DetectOutputParams_t *params, const sTID
       dXmax = (centerX + (0.5f * boxWidth)) + (pVariance[wId] * curLoc[(4 * cnt) + wId]);
       dYmax = (centerY + (0.5f * boxHeight)) + (pVariance[hId] * curLoc[(4 * cnt) + hId]);
     }
-    #endif
+#endif
     else if ((codeType == 9) || (codeType == 12) || ((params->metaArchType == (int32_t)TIDL_metaArchTIDLCenterPoint) && (params->subCodeType == 2))) // yolov8 or rtmdet or Multiheaded Centernet "TIDL_CenternetMultiHead" is 2 (need to add in 'arm-tidl')
     {
       dXmin = centerX - (curLoc[(4 * cnt) + cxId] * stepW);
@@ -1579,7 +1234,7 @@ void TIDL_boxParamsDecoding(const sTIDL_DetectOutputParams_t *params, const sTID
       dXmax *= stepW;
       dYmax *= stepH;
     }
-    #if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
     else if (codeType == 3) /*PriorBoxParameter_CodeType_CORNER_SIZE */
     {
       dXmin = (centerX - (0.5f * boxWidth)) + (pVariance[cxId] * curLoc[(4 * cnt) + cxId] * boxWidth);
@@ -1587,7 +1242,7 @@ void TIDL_boxParamsDecoding(const sTIDL_DetectOutputParams_t *params, const sTID
       dXmax = (centerX + (0.5f * boxWidth)) + (pVariance[wId] * curLoc[(4 * cnt) + wId] * boxWidth);
       dYmax = (centerY + (0.5f * boxHeight)) + (pVariance[hId] * curLoc[(4 * cnt) + hId] * boxHeight);
     }
-    #endif
+#endif
     else if (codeType == 4) // yolov3
     {
       float32_tidl dx = 1.0f / (exp_taylor(-curLoc[(4 * cnt) + cxId]) + 1.0f);
@@ -1660,9 +1315,9 @@ void TIDL_boxParamsDecoding(const sTIDL_DetectOutputParams_t *params, const sTID
       dXmax = dCx + (dW / 2.0f);
       dYmax = dCy + (dH / 2.0f);
     }
-    else if(codeType == 13) /* BEVFormer box decoding*/
+    else if (codeType == 13) /* BEVFormer box decoding*/
     {
-      /* According to onnx 
+      /* According to onnx
           out_X = Box[0],
           out_Y = Box[1]
           out_Z = Box[4]
@@ -1689,7 +1344,6 @@ void TIDL_boxParamsDecoding(const sTIDL_DetectOutputParams_t *params, const sTID
     curBox->xmax = dXmax;
     curBox->ymax = dYmax;
   }
-
 }
 
 /**
@@ -1716,6 +1370,11 @@ void TIDL_objOuputPreperationiX(sTIDL_DetectOutputParams_t *params, sTIDL_ALgDet
     func_ptr1 = TIDL_objOuputPreperation<int16_t>;
     func_ptr1(params, algDetLyrParams, priorData, objData, keepKCnt, numDet, cls);
   }
+  else if (algDetLyrParams->elementType == TIDL_BFloat16)
+  {
+    func_ptr1 = TIDL_objOuputPreperation<bfloat16_tidl>;
+    func_ptr1(params, algDetLyrParams, priorData, objData, keepKCnt, numDet, cls);
+  }
   else
   {
     func_ptr1 = TIDL_objOuputPreperation<float32_tidl>;
@@ -1735,9 +1394,9 @@ void TIDL_objOuputPreperationiX(sTIDL_DetectOutputParams_t *params, sTIDL_ALgDet
  * @param cls : class lable for top k selection
  * @return int32_t : no of detected objects
  */
-template <typename Tloc>
-int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const sTIDL_ALgDetectOutputParams_t *algDetLyrParams,
-                                 float32_tidl *priorData, float32_tidl *objData, int32_t keepKCnt, int32_t numDet, int32_t cls)
+template<typename Tloc>
+    int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const sTIDL_ALgDetectOutputParams_t *algDetLyrParams,
+                                     float32_tidl *priorData, float32_tidl *objData, int32_t keepKCnt, int32_t numDet, int32_t cls)
 {
   int32_t numOutDataPerObject;
   int32_t objSrcIdx, objDstIdx = 0;
@@ -1745,7 +1404,7 @@ int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const
   int32_t replaceLowestScoreBox = 1;
   float32_tidl currBoxScore;
 
-  #if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
   if ((params->metaArchType == (int32_t)TIDL_metaArchTIDLCenterPoint) && (params->codeType == 0))
   {
     Tloc *restrict inPtr;
@@ -1847,12 +1506,10 @@ int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const
     return numDet;
   }
   else
-  #endif
-  if ((params->metaArchType != (int32_t)TIDL_metaArchTIDL3DOD) && (params->metaArchType != (int32_t)TIDL_metaArchTIDLBEVFormer))
+#endif
+      if ((params->metaArchType != (int32_t)TIDL_metaArchTIDL3DOD) && (params->metaArchType != (int32_t)TIDL_metaArchTIDLBEVFormer))
   {
-    numOutDataPerObject = algDetLyrParams->numOutElementPer_2dBox
-                            + (algDetLyrParams->numOutElementPerKeypoint * params->numKeypoints)
-                            + algDetLyrParams->numSubCodeElements;  // Each keypoint is defined by (x,y,conf) at output
+    numOutDataPerObject = algDetLyrParams->numOutElementPer_2dBox + (algDetLyrParams->numOutElementPerKeypoint * params->numKeypoints) + algDetLyrParams->numSubCodeElements; // Each keypoint is defined by (x,y,conf) at output
   }
   else
   {
@@ -1929,13 +1586,13 @@ int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const
         int32_t bbStride = 1;
         float32_tidl pi = 3.1415926f;
 
-        if(params->metaArchType == (int32_t)TIDL_metaArchTIDLBEVFormer)
+        if (params->metaArchType == (int32_t)TIDL_metaArchTIDLBEVFormer)
         {
           objData[((numOutDataPerObject * objDstIdx) + 3)] = algDetLyrParams->topKBbox[objSrcIdx].xmin; // X
           objData[((numOutDataPerObject * objDstIdx) + 4)] = algDetLyrParams->topKBbox[objSrcIdx].ymin; // Y
-          
+
           objData[((numOutDataPerObject * objDstIdx) + 6)] = exp_taylor((locPtr[(((chNo * anchorStirde) + (2 * bbStride)) * chPitch) + (curY * linePitch) + curX] - zeroPointLoc) * onebyqFactLoc); // Height
-          objData[((numOutDataPerObject * objDstIdx) + 7)] = algDetLyrParams->topKBbox[objSrcIdx].ymax; // Width
+          objData[((numOutDataPerObject * objDstIdx) + 7)] = algDetLyrParams->topKBbox[objSrcIdx].ymax;                                                                                             // Width
           objData[((numOutDataPerObject * objDstIdx) + 8)] = exp_taylor((locPtr[(((chNo * anchorStirde) + (5 * bbStride)) * chPitch) + (curY * linePitch) + curX] - zeroPointLoc) * onebyqFactLoc); // Length
 
           // objData[((numOutDataPerObject * objDstIdx) + 9)] = algDetLyrParams->topKBbox[objSrcIdx].xmin;
@@ -1948,19 +1605,19 @@ int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const
           float32_tidl boxYaw2 = (locPtr[(((chNo * anchorStirde) + (7 * bbStride)) * chPitch) + (curY * linePitch) + curX] - zeroPointLoc) * onebyqFactLoc;
           float32_tidl eps = 10E-5;
           float32_tidl yaw1DivYaw2, outYaw;
-          
-          if(boxYaw2 == 0.0)
+
+          if (boxYaw2 == 0.0)
           {
             boxYaw2 += eps;
           }
 
           yaw1DivYaw2 = boxYaw1 / boxYaw2;
-        
+
           outYaw = atan(yaw1DivYaw2);
 
-          if(boxYaw2 < 0.0f)
+          if (boxYaw2 < 0.0f)
           {
-            if(boxYaw1 > 0.0f)
+            if (boxYaw1 > 0.0f)
             {
               outYaw += pi;
             }
@@ -1976,11 +1633,11 @@ int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const
         {
           objData[((numOutDataPerObject * objDstIdx) + 3)] = (algDetLyrParams->topKBbox[objSrcIdx].xmin +
                                                               algDetLyrParams->topKBbox[objSrcIdx].xmax) /
-                                                            2.0f;
+                                                             2.0f;
 
           objData[((numOutDataPerObject * objDstIdx) + 4)] = (algDetLyrParams->topKBbox[objSrcIdx].ymin +
                                                               algDetLyrParams->topKBbox[objSrcIdx].ymax) /
-                                                            2.0f;
+                                                             2.0f;
 
           objData[((numOutDataPerObject * objDstIdx) + 6)] = (algDetLyrParams->topKBbox[objSrcIdx].xmax -
                                                               algDetLyrParams->topKBbox[objSrcIdx].xmin);
@@ -2022,7 +1679,7 @@ int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const
 
             angle = angle + anchorBox[head].boxAngle[anchor];
             angle = angle - anchorBox[head].offsetDir;
-            if(params->codeType == 11) /* codeType for fastBEV*/
+            if (params->codeType == 11) /* codeType for fastBEV*/
             {
               /* 2 is multiplied with chNo or Anchor number because there are two directions in dirHead*/
               dir = ((float32_tidl)dirPtr[(((chNo * 2) + 0) * chPitchDir) + (curY * linePitchDir) + curX] - zeroPointDir) * onebyqFactDir;
@@ -2049,7 +1706,7 @@ int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const
             angle = angle + (pi * max_dir);
 
             objData[((numOutDataPerObject * objDstIdx) + 9)] = angle;
-            if(params->codeType == 11)
+            if (params->codeType == 11)
             {
               objData[((numOutDataPerObject * objDstIdx) + 10)] = (locPtr[(((chNo * anchorStirde) + (7 * bbStride)) * chPitch) + (curY * linePitch) + curX] - zeroPointLoc) * onebyqFactLoc;
               objData[((numOutDataPerObject * objDstIdx) + 11)] = (locPtr[(((chNo * anchorStirde) + (8 * bbStride)) * chPitch) + (curY * linePitch) + curX] - zeroPointLoc) * onebyqFactLoc;
@@ -2057,7 +1714,7 @@ int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const
           }
         }
       }
-      
+
       if ((params->numKeypoints > 0) || (params->subCodeType == (int32_t)TIDL_ObjectPose))
       {
         int32_t objPkdIndx;
@@ -2071,9 +1728,7 @@ int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const
         int32_t numInCodeElements;
         if (params->metaArchType == (int32_t)TIDL_metaArchTIDLYolo)
         {
-            numInCodeElements = 5 + params->numClasses
-                                  + (algDetLyrParams->numInElementPerKeypoint * params->numKeypoints)
-                                  + algDetLyrParams->numSubCodeElements;
+          numInCodeElements = 5 + params->numClasses + (algDetLyrParams->numInElementPerKeypoint * params->numKeypoints) + algDetLyrParams->numSubCodeElements;
         }
         else
         {
@@ -2168,7 +1823,10 @@ int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const
             kpY = (inPtr[((chNo + 5 + params->numClasses + (algDetLyrParams->numInElementPerKeypoint * j) + 1) * chPitch) + (curY * linePitch) + curX] - zeroPoint) * onebyqFact;
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+            <justification start>
+            Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+            Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+            This does not impact functional correctness or safety.
             <justification end> */
             if (params->keypointConfidence == 1)
             {
@@ -2182,7 +1840,10 @@ int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const
             kpY = (inPtr[((chNo + 4 + (algDetLyrParams->numInElementPerKeypoint * j) + 1) * chPitch) + (curY * linePitch) + curX] - zeroPoint) * onebyqFact;
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+            <justification start>
+            Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+            Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+            This does not impact functional correctness or safety.
             <justification end> */
             if (params->keypointConfidence == 1)
             {
@@ -2447,10 +2108,10 @@ int32_t TIDL_findValidLocAndScore(void *pKerPrivArgs,
 
   TIDL_odFindValidLocAndScore_ixX_oxX_PrivArgs *pKerPrivArgsL =
       (TIDL_odFindValidLocAndScore_ixX_oxX_PrivArgs *)pKerPrivArgs;
-  #ifdef HOST_EMULATION
+#ifdef HOST_EMULATION
   if ((((uint32_t)flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY))
   {
-    if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_ELEMENTTYPE)
+    if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_ELEMENTTYPE)
     {
       algDetLyrParams->elementType = TIDL_SignedDoubleWord;
     }
@@ -2490,6 +2151,17 @@ int32_t TIDL_findValidLocAndScore(void *pKerPrivArgs,
         func_ptr3(params, algDetLyrParams);
       }
     }
+    else if (algDetLyrParams->elementType == TIDL_BFloat16)
+    {
+      func_ptr2 = TIDL_findValidLocation_cn<bfloat16_tidl>;
+      countM = func_ptr2(params, algDetLyrParams, priorData);
+
+      if (countM <= algDetLyrParams->topMAllClasses)
+      {
+        func_ptr3 = TIDL_sparseDetScoreCalc_cn<bfloat16_tidl>;
+        func_ptr3(params, algDetLyrParams);
+      }
+    }
     else
     {
       status = TIDL_ERR_NOT_IMPLEMENTED;
@@ -2497,25 +2169,27 @@ int32_t TIDL_findValidLocAndScore(void *pKerPrivArgs,
     }
   }
   else
-  #endif
+#endif
   {
     countM = pKerPrivArgsL->execute((void *)pKerPrivArgsL, NULL, NULL, NULL, NULL);
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
-    if(countM < 0)
+    if (countM < 0)
     {
       status = TIDL_ERR_INVALID_VALUE;
     }
     /* LDRA_JUSTIFY_END */
-  }  
+  }
 
 #ifdef TIDL_OD_L1_DEBUG
   tidl_printf(0, "Maximum COunt M  is %d \n", countM);
 #endif
 
-  if((params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_ELEMENTTYPE) || (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_ELEMENTTYPE_16BIT) || (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_ELEMENTTYPE_16BITV2))
+  if ((params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_ELEMENTTYPE) || (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_ELEMENTTYPE_16BIT) || (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_ELEMENTTYPE_16BITV2))
   {
     countM = algDetLyrParams->topMAllClasses + 1;
   }
@@ -2534,15 +2208,15 @@ int32_t TIDL_findValidLocAndScore(void *pKerPrivArgs,
     algDetLyrParams->topMIndicesSorted = algDetLyrParams->topMIndicesSortedDdr;
 
     algDetLyrParams->topM = algDetLyrParams->topMDdr / (params->numClasses - algDetLyrParams->isBckClsAvailable);
-    algDetLyrParams->topM = ((algDetLyrParams->topM + simdWidth - 1)>> simdShift) << simdShift; // making multiple of 16 as part for ci restriction
+    algDetLyrParams->topM = ((algDetLyrParams->topM + simdWidth - 1) >> simdShift) << simdShift; // making multiple of 16 as part for ci restriction
 
     // ci code has restriction to have topMAllClasses value 16 less than acctual value
     algDetLyrParams->topMAllClasses = (algDetLyrParams->topM * (params->numClasses - algDetLyrParams->isBckClsAvailable)) - simdWidth;
 
-    #ifdef HOST_EMULATION
+#ifdef HOST_EMULATION
     if (((uint32_t)flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != 0U)
     {
-      if((params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_ELEMENTTYPE_16BIT) || (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_ELEMENTTYPE_16BITV2))
+      if ((params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_ELEMENTTYPE_16BIT) || (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_ELEMENTTYPE_16BITV2))
       {
         algDetLyrParams->elementType = TIDL_SignedShort;
       }
@@ -2581,6 +2255,17 @@ int32_t TIDL_findValidLocAndScore(void *pKerPrivArgs,
           func_ptr3(params, algDetLyrParams);
         }
       }
+      else if (algDetLyrParams->elementType == TIDL_BFloat16)
+      {
+        func_ptr2 = TIDL_findValidLocation_cn<bfloat16_tidl>;
+        countM = func_ptr2(params, algDetLyrParams, priorData);
+
+        if (countM <= algDetLyrParams->topMAllClasses)
+        {
+          func_ptr3 = TIDL_sparseDetScoreCalc_cn<bfloat16_tidl>;
+          func_ptr3(params, algDetLyrParams);
+        }
+      }
       else
       {
         status = TIDL_ERR_NOT_IMPLEMENTED;
@@ -2588,11 +2273,10 @@ int32_t TIDL_findValidLocAndScore(void *pKerPrivArgs,
       }
     }
     else
-    #endif
+#endif
     {
       pKerPrivArgsL->execute((void *)pKerPrivArgsL, NULL, NULL, NULL, NULL);
     }
-  
   }
   return status;
 }
@@ -2650,12 +2334,12 @@ void TIDL_collectLocConfHeadInfo(sTIDL_Layer_t *TIDLLayers, sTIDL_AlgLayer_t *al
     {
       extraHeadOffset = 2 * params->numHeads;
     }
-    #if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
     else if ((params->metaArchType == TIDL_metaArchTIDLCenterPoint) && (params->reserve1 != -1))
     {
       confHeadOffset = 0;
     }
-    #endif
+#endif
     else
     {
       /*do nothing*/
@@ -2676,24 +2360,24 @@ void TIDL_collectLocConfHeadInfo(sTIDL_Layer_t *TIDLLayers, sTIDL_AlgLayer_t *al
     {
       /* TIDL_3DODLayerObjInfo holds 12 prameters for a 3D object. objId, x, y, z, l, w, h, yaw, pitch, roll, cls, score.
         Out of these 12 parameters 9 needed to represent a 3D box (x, y, z, l, w, h, yaw, pitch, roll)*/
-      algDetLyrParams->boxParamsSize = (9) + (2 * num_keypoint); 
-      if(params->codeType == 8) /* for pointPillars 3d OD, output does not includes pitch and roll angles*/
+      algDetLyrParams->boxParamsSize = (9) + (2 * num_keypoint);
+      if (params->codeType == 8) /* for pointPillars 3d OD, output does not includes pitch and roll angles*/
       {
         algDetLyrParams->boxParamsSize = (9 - 2) + (2 * num_keypoint);
       }
-      
+
       algDetLyrParams->extraParamSize = 2;
     }
     else if (params->metaArchType == (int32_t)TIDL_metaArchTIDLCenterPoint)
     {
       algDetLyrParams->boxParamsSize = inLocDataParams->dimValues[TIDL_DIM_NUMCH];
       algDetLyrParams->extraParamSize = inExtraDataParams->dimValues[TIDL_DIM_NUMCH];
-      #if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
       if (params->reserve0 == 0)
       {
         algDetLyrParams->extraParamSize = 0;
       }
-      #endif
+#endif
     }
     else
     {
@@ -2704,7 +2388,7 @@ void TIDL_collectLocConfHeadInfo(sTIDL_Layer_t *TIDLLayers, sTIDL_AlgLayer_t *al
     /*This Error check can go inside import tool*/
     if (params->metaArchType != (int32_t)TIDL_metaArchTIDLYolo)
     {
-      if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_HEADSIZE)
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_HEADSIZE)
       {
         inLocDataParams->dimValues[TIDL_DIM_NUMCH] = 1;
         numPriors = 0;
@@ -2754,13 +2438,13 @@ void TIDL_collectLocConfHeadInfo(sTIDL_Layer_t *TIDLLayers, sTIDL_AlgLayer_t *al
         algDetLyrParams->confDataOffset[(j * params->numSubHeads) + k] +=
             ((inConfDataParams->pitch[TIDL_CHANNEL_PITCH] * 4) * TIDL_getDatElementSize(inConfDataParams->elementType));
       }
-      #if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
       else if ((params->metaArchType == (int32_t)TIDL_metaArchTIDLCenterPoint) && (params->reserve1 != -1))
       {
         algDetLyrParams->confDataOffset[(j * params->numSubHeads) + k] +=
             ((inConfDataParams->pitch[TIDL_CHANNEL_PITCH] * params->reserve1) * TIDL_getDatElementSize(inConfDataParams->elementType));
       }
-      #endif
+#endif
       else
       {
         /*do nothing*/
@@ -2785,11 +2469,11 @@ void TIDL_collectLocConfHeadInfo(sTIDL_Layer_t *TIDLLayers, sTIDL_AlgLayer_t *al
       algDetLyrParams->extraHeadPitchList[(j * params->numSubHeads) + k][TIDL_LINE_PITCH] = inExtraDataParams->pitch[TIDL_LINE_PITCH];
     }
   }
-  if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_TOTCNTFLT_INVALID)
+  if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_TOTCNTFLT_INVALID)
   {
     elementType = TIDL_SinglePrecFloat;
   }
-  if(params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_TOTCNTSHORT_INVALID)
+  if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_TOTCNTSHORT_INVALID)
   {
     elementType = TIDL_SignedShort;
   }
@@ -2804,4 +2488,724 @@ void TIDL_collectLocConfHeadInfo(sTIDL_Layer_t *TIDLLayers, sTIDL_AlgLayer_t *al
   {
     algDetLyrParams->isBckClsAvailable = 0;
   }
+}
+
+/*  Implementing TIDL_CoreFunctionMap for TIDL_DetectionOutputLayer  */
+
+int32_t TIDL_DetectionOutputAlloc(const TIDL_LayerSpecificParams *layerSpecificParams,
+                                  const TIDL_NetworkCommonParams *commonParams,
+                                  int32_t layerIdx,
+                                  int32_t memorySize[TIDL_LAYER_MEMORY_MAX])
+{
+  int32_t status = IALG_EOK;
+  const TIDL_CreateParams *params = commonParams->createParams;
+
+#ifdef HOST_EMULATION
+  if (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == 0U)
+  {
+    /* TIDL_LDRA_TAG_DEVICEUTILS_PRIOR_CHECK_002 & TIDL_LDRA_TAG_DEVICEUTILS_PRIOR_CHECK_003 */
+    uint32_t genricFlowHandleSize = sizeof(TIDL_GenericHandle);
+    int32_t numSubHandles = 1U;
+    uint32_t kerHandleSize = TIDL_getKernelHandleSize(commonParams->createParams, layerIdx, numSubHandles);
+    uint32_t numGenericFlowHandles = TIDL_getNumGenericFlowHandles(&commonParams->createParams->net->TIDLLayers[layerIdx]);
+
+    memorySize[TIDL_LAYER_MEMORY_PERSISTENT] += (genricFlowHandleSize * numGenericFlowHandles);
+    memorySize[TIDL_LAYER_MEMORY_PERSISTENT] += ((kerHandleSize * numGenericFlowHandles));
+  }
+  
+#endif
+  int32_t outDataSize = TIDL_updateDataParamsPitch(&params->net->TIDLLayers[layerIdx].outData);
+  int32_t numConfPts = 0;
+  int32_t curData = 0;
+  int32_t scratchDataSize;
+  uint32_t curCnfPlaneSize = 0;
+  uint32_t maxConfPlaneSize = 0;
+  uint32_t elementSize = 0;
+  int32_t priorBoxParamSize;
+
+  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(params->net,
+                                                        params->net->TIDLLayers[layerIdx].inData[0]);
+
+  sTIDL_DetectOutputParams_t *detectOutParams = &params->net->TIDLLayers[layerIdx].layerParams.detectOutParams;
+
+  elementSize = TIDL_getDatElementSize(inDataParams->elementType);
+
+  priorBoxParamSize = detectOutParams->numHeads * detectOutParams->numSubHeads * (int32_t)sizeof(sTIDL_AnchorBoxParams_t);
+
+  if (detectOutParams->metaArchType != (int32_t)TIDL_metaArchTIDLYolo)
+  {
+    /*total number input buffers will be twice the number of heads, and first half are location heads,
+      and second half is confidence head*/
+    for (int32_t i = ((uint32_t)params->net->TIDLLayers[layerIdx].numInBufs >> 1U); i < (params->net->TIDLLayers[layerIdx].numInBufs); i++)
+    {
+      const int32_t (*indimValues)[TIDL_DIM_MAX] =
+          (const int32_t (*)[TIDL_DIM_MAX])
+              inDataParams->dimValues;
+
+      const int32_t (*inpitchValues)[TIDL_DIM_MAX] =
+          (const int32_t (*)[TIDL_DIM_MAX])
+              inDataParams->pitch;
+
+      curData = ((int32_t)(*indimValues)[TIDL_DIM_BATCH] *
+                  (int32_t)(*indimValues)[TIDL_DIM_NUMCH] *
+                  ((int32_t)(*indimValues)[TIDL_DIM_HEIGHT]) *
+                  ((int32_t)(*inpitchValues)[TIDL_LINE_PITCH]));
+
+      curCnfPlaneSize = ((int32_t)(*indimValues)[TIDL_DIM_HEIGHT]) * ((int32_t)(*inpitchValues)[TIDL_LINE_PITCH]);
+
+      numConfPts += curData;
+
+      if (maxConfPlaneSize < curCnfPlaneSize)
+      {
+        maxConfPlaneSize = curCnfPlaneSize;
+      }
+    }
+  }
+  else
+  {
+    for (int32_t i = 0; i < (params->net->TIDLLayers[layerIdx].numInBufs); i++)
+    {
+      const int32_t (*indimValues)[TIDL_DIM_MAX] =
+          (const int32_t (*)[TIDL_DIM_MAX])
+              inDataParams->dimValues;
+
+      const int32_t (*inpitchValues)[TIDL_DIM_MAX] =
+          (const int32_t (*)[TIDL_DIM_MAX])
+              inDataParams->pitch;
+
+      curData = ((int32_t)(*indimValues)[TIDL_DIM_BATCH] *
+                  (((int32_t)(*indimValues)[TIDL_DIM_NUMCH]) - 5) * // yolo has conf and location as common head, and it has 5 channels for box parameter(4) and objectness score(1)
+                  ((int32_t)(*indimValues)[TIDL_DIM_HEIGHT]) *
+                  ((int32_t)(*inpitchValues)[TIDL_LINE_PITCH]));
+
+      numConfPts += curData;
+
+      curCnfPlaneSize = ((int32_t)(*indimValues)[TIDL_DIM_HEIGHT]) * ((int32_t)(*inpitchValues)[TIDL_LINE_PITCH]);
+
+      if (maxConfPlaneSize < curCnfPlaneSize)
+      {
+        maxConfPlaneSize = curCnfPlaneSize;
+      }
+    }
+  }
+
+  if (params->optimiseExtMem != TIDL_OptimiseExtMemL0)
+  {
+#ifdef HOST_EMULATION
+    if (((uint32_t)params->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != 0U)
+    {
+      outDataSize = TIDL_findFreeOutBuff(params, layerIdx, outDataSize, commonParams->TIDLLayersBufPtr);
+    }
+#endif
+    commonParams->TIDLLayersBufPtr->outDataSize[layerIdx] = outDataSize;
+  }
+
+#ifdef HOST_EMULATION
+  if (!(TIDL_isOutDataBuff(params->net,
+                            params->net->TIDLLayers[layerIdx].outData.dataId,
+                            params->currLayersGroupId) == 0) ||
+      !(params->net->dataFlowInfo == NULL))
+  {
+    outDataSize = 0;
+  }
+#else
+  outDataSize = 0;
+#endif
+
+  /*For worst scenario all the sratch memory is reserved in DDR*/
+
+  // L2 related pointers
+  /* topMScore, topMScoreSorted, topMIndices, topMIndicesSorted*/
+  scratchDataSize = (numConfPts * (((int64_t)sizeof(int16_t) * 2) + ((int64_t)sizeof(int32_t) * 2))) + (128 * 4);
+
+  // L1 related pointers
+  scratchDataSize += ((detectOutParams->topK * (int64_t)sizeof(BBox)) + 128);               // topKBbox
+  scratchDataSize += ((detectOutParams->topK * (int64_t)sizeof(uint16_t)) + 128);           // topKScore
+  scratchDataSize += ((detectOutParams->topK * (int64_t)sizeof(int32_t)) + 128);            // topKIndices
+  scratchDataSize += ((detectOutParams->topK * (int64_t)sizeof(int32_t)) + 128);            // nmsKeptIndices
+  scratchDataSize += (((int64_t)sizeof(int32_t) * detectOutParams->numClasses) + 128);      // countMList
+  scratchDataSize += (((int64_t)sizeof(int32_t) * detectOutParams->numClasses) + 128);      // countMListAcc
+  scratchDataSize += ((detectOutParams->numClasses * (int64_t)sizeof(float32_tidl)) + 128); // if (softmax) tempScore
+
+  // L3 related pointers
+  maxConfPlaneSize = (maxConfPlaneSize >> 6U) << 6U; // make it multiple of 64 for SIMD width
+  uint32_t tempSizeValue = 0U;
+  tempSizeValue = (((maxConfPlaneSize + 63U) >> 1U) + 128U);
+  scratchDataSize += (int32_t)tempSizeValue; // pred
+  tempSizeValue = ((maxConfPlaneSize * 2U * elementSize) + 128U);
+  scratchDataSize += (int32_t)tempSizeValue; // featMaxMinVal
+
+  scratchDataSize = scratchDataSize - memorySize[TIDL_LAYER_MEMORY_SCRATCH]; /* Additional Scratch size needed  */
+  
+  scratchDataSize = scratchDataSize > 0 
+                      ? scratchDataSize
+                      : 0;
+
+  memorySize[TIDL_LAYER_MEMORY_SCRATCH] += scratchDataSize;
+  memorySize[TIDL_LAYER_MEMORY_PERSISTENT] += ((uint32_t)priorBoxParamSize) + ((uint32_t)outDataSize);
+  memorySize[TIDL_LAYER_MEMORY_OUTPUT] += 0;
+
+  return status;
+}
+
+int32_t TIDL_DetectionOutputInit(const TIDL_LayerSpecificParams *layerSpecificParams,
+                                 const TIDL_NetworkCommonParams *commonParams,
+                                 sTIDL_AlgLayer_t *algLayer,
+                                 int32_t layerIdx,
+                                 uint8_t *memory[TIDL_LAYER_MEMORY_MAX],
+                                 int32_t memorySize[TIDL_LAYER_MEMORY_MAX],
+                                 void **outPtr)
+{
+  static int32_t numODLayers = 0;
+  int32_t status = IALG_EOK;
+  const TIDL_CreateParams *params = commonParams->createParams;
+
+  numODLayers++;
+
+  if (params->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_INIT_FORCE_NUMODLAYER_INVALID)
+  {
+    numODLayers = TIDL_OBJ_DET_MAX_HEADS;
+  }
+
+  sTIDL_LayerBuf_t *TIDLLayersBufPtr = commonParams->TIDLLayersBufPtr;
+  int32_t currOffset[TIDL_LAYER_MEMORY_MAX] = {0};
+
+  int32_t outDataSize = TIDL_updateDataParamsPitch(&params->net->TIDLLayers[layerIdx].outData);
+  int32_t numConfPts = 0;
+  uint32_t priorBoxParamSize;
+  int32_t curData = 0;
+  int32_t scratchDataSize;
+  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(params->net,
+                                                        params->net->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_ALgDetectOutputParams_t *algDetectOutParams = &algLayer->layerParams.detectionOutputParams;
+  float32_tidl *priorData;
+
+  sTIDL_DetectOutputParams_t *detectOutParams = &params->net->TIDLLayers[layerIdx].layerParams.detectOutParams;
+  priorData = (float32_tidl *)(((int8_t *)params->net) + detectOutParams->priorBox);
+
+  if (numODLayers >= TIDL_OBJ_DET_MAX_HEADS)
+  {
+    TIDL_LOG_ERROR(TIDL_ERROR_GROUP_COMMON, TIDL_ERROR_COMMON_EXCEED_OBJ_DET_MAX_HEADS);
+    status = IALG_EFAIL;
+  }
+  else 
+  {
+    if ( detectOutParams->metaArchType != (int32_t)TIDL_metaArchTIDLYolo)
+    {
+      /*total number input buffers will be twice the number of heads, and first half are location heads,
+        and second half is confidence head*/
+      for (int32_t i = ((uint32_t)params->net->TIDLLayers[layerIdx].numInBufs >> 1U); i < (params->net->TIDLLayers[layerIdx].numInBufs); i++)
+      {
+        const int32_t (*indimValues)[TIDL_DIM_MAX] =
+            (const int32_t (*)[TIDL_DIM_MAX])
+                inDataParams->dimValues;
+  
+        const int32_t (*inpitchValues)[TIDL_DIM_MAX] =
+            (const int32_t (*)[TIDL_DIM_MAX])
+                inDataParams->pitch;
+  
+        curData = ((int32_t)(*indimValues)[TIDL_DIM_BATCH] *
+                   (int32_t)(*indimValues)[TIDL_DIM_NUMCH] *
+                   ((int32_t)(*indimValues)[TIDL_DIM_HEIGHT]) *
+                   ((int32_t)(*inpitchValues)[TIDL_LINE_PITCH]));
+  
+        numConfPts += curData;
+      }
+    }
+    else
+    {
+      for (int32_t i = 0; i < (params->net->TIDLLayers[layerIdx].numInBufs); i++)
+      {
+        const int32_t (*indimValues)[TIDL_DIM_MAX] =
+            (const int32_t (*)[TIDL_DIM_MAX])
+                inDataParams->dimValues;
+  
+        const int32_t (*inpitchValues)[TIDL_DIM_MAX] =
+            (const int32_t (*)[TIDL_DIM_MAX])
+                inDataParams->pitch;
+  
+        curData = ((int32_t)(*indimValues)[TIDL_DIM_BATCH] *
+                   (((int32_t)(*indimValues)[TIDL_DIM_NUMCH]) - 5) * // yolo has conf and location as common head, and it has 5 channels for box parameter(4) and objectness score(1)
+                   ((int32_t)(*indimValues)[TIDL_DIM_HEIGHT]) *
+                   ((int32_t)(*inpitchValues)[TIDL_LINE_PITCH]));
+  
+        numConfPts += curData;
+      }
+    }
+  
+    if (params->optimiseExtMem != TIDL_OptimiseExtMemL0)
+    {
+  #ifdef HOST_EMULATION
+      if (((uint32_t)params->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != 0U)
+      {
+        outDataSize = TIDL_findFreeOutBuff(params, layerIdx, outDataSize, TIDLLayersBufPtr);
+      }
+  #endif
+      TIDLLayersBufPtr->outDataSize[layerIdx] = outDataSize;
+    }
+
+    if (((uint32_t)params->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == 0U)
+    {
+      uint32_t numGenericFlowHandles = TIDL_getNumGenericFlowHandles(&params->net->TIDLLayers[layerIdx]);
+      algLayer->kerHandleSize = TIDL_getOdFindValidLocAndScoreKernelHandleSize(&params->net->TIDLLayers[layerIdx]);
+  
+      for (int32_t j = 0; j < numGenericFlowHandles; j++)
+      {
+        /* Memory for KernelHandle is allocated next to GenericFlow handle so that
+            it is easy to copy them to L1D in a single DMA transfer in the Process call */
+        TIDL_AllocatePtr((intptr_t)memory[TIDL_LAYER_MEMORY_PERSISTENT],
+                         &currOffset[TIDL_LAYER_MEMORY_PERSISTENT],
+                         algLayer->kerHandleSize,
+                         1,
+                         &algLayer->kernelHandle[0][j]);
+      }
+    }
+
+    priorBoxParamSize = detectOutParams->numHeads * detectOutParams->numSubHeads * (int32_t)sizeof(sTIDL_AnchorBoxParams_t);
+  
+    TIDL_AllocatePtr((intptr_t)memory[TIDL_LAYER_MEMORY_PERSISTENT],
+                     &currOffset[TIDL_LAYER_MEMORY_PERSISTENT],
+                     priorBoxParamSize,
+                     128,
+                     &algDetectOutParams->priorBoxPtr);
+  
+    (void)memcpy((void *)algDetectOutParams->priorBoxPtr, (const void *)priorData, priorBoxParamSize);
+  
+    if ((TIDL_isOutDataBuff(params->net,
+                            params->net->TIDLLayers[layerIdx].outData.dataId,
+                            params->currLayersGroupId) == 1)
+  #ifdef HOST_EMULATION
+        || (params->net->dataFlowInfo != NULL)
+  #endif
+    )
+    {
+      *outPtr = NULL;
+    }
+  #ifdef HOST_EMULATION
+    else
+    {
+      /* outDataSize is 0 means, not allocate the new memory for output buffer */
+      if (outDataSize == 0)
+      {
+        *outPtr = NULL;
+      }
+      else
+      {
+        TIDL_AllocatePtr((intptr_t)memory[TIDL_LAYER_MEMORY_OUTPUT],
+                         &currOffset[TIDL_LAYER_MEMORY_OUTPUT],
+                         outDataSize,
+                         128,
+                         outPtr);
+      }
+    }
+  #endif
+  
+    {
+      algLayer->scratchSize = 0;
+  
+      scratchDataSize = numConfPts * (int64_t)sizeof(int16_t);
+  
+      TIDL_AllocatePtr((intptr_t)memory[TIDL_LAYER_MEMORY_SCRATCH],
+                       &currOffset[TIDL_LAYER_MEMORY_SCRATCH],
+                       scratchDataSize,
+                       128,
+                       (void**)&algLayer->layerParams.detectionOutputParams.topMScoreDdr);
+  
+      TIDL_AllocatePtr((intptr_t)memory[TIDL_LAYER_MEMORY_SCRATCH],
+                       &currOffset[TIDL_LAYER_MEMORY_SCRATCH],
+                       scratchDataSize,
+                       128,
+                       (void**)&algLayer->layerParams.detectionOutputParams.topMScoreSortedDdr);
+      
+      scratchDataSize = numConfPts * (int64_t)sizeof(int32_t);
+  
+      TIDL_AllocatePtr((intptr_t)memory[TIDL_LAYER_MEMORY_SCRATCH],
+                       &currOffset[TIDL_LAYER_MEMORY_SCRATCH],
+                       scratchDataSize,
+                       128,
+                       (void**)&algLayer->layerParams.detectionOutputParams.topMIndicesDdr);
+  
+      TIDL_AllocatePtr((intptr_t)memory[TIDL_LAYER_MEMORY_SCRATCH],
+                       &currOffset[TIDL_LAYER_MEMORY_SCRATCH],
+                       scratchDataSize,
+                       128,
+                       (void**)&algLayer->layerParams.detectionOutputParams.topMIndicesSortedDdr);
+  
+      algLayer->layerParams.detectionOutputParams.topMDdr = numConfPts;
+      algLayer->layerParams.detectionOutputParams.scratchDDRConsumed = currOffset[TIDL_LAYER_MEMORY_SCRATCH];
+
+      memorySize[TIDL_LAYER_MEMORY_OUTPUT] += currOffset[TIDL_LAYER_MEMORY_OUTPUT];
+      memorySize[TIDL_LAYER_MEMORY_PERSISTENT] += currOffset[TIDL_LAYER_MEMORY_PERSISTENT];
+
+      algLayer->metaData.totalOps =
+          (params->net->TIDLLayers[layerIdx].outData.dimValues[TIDL_DIM_NUMCH] *
+           params->net->TIDLLayers[layerIdx].layerParams.eltWiseParams.numInData);
+      algLayer->metaData.actualOps = algLayer->metaData.totalOps;
+  
+      params->net->TIDLLayers[algLayer->layerIdx].layerParams.detectOutParams.reserve3 = params->forceNegativeTest;
+      TIDL_collectLocConfHeadInfo(params->net->TIDLLayers, algLayer, NULL, algDetectOutParams->priorBoxPtr);
+  
+  #ifdef HOST_EMULATION
+      if (((uint32_t)params->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == 0U)
+  #endif
+      {
+        status = TIDL_odFindValidLocAndScoreKernelInit(params, algLayer, &params->net->TIDLLayers[layerIdx], 0, 0, 0);
+      }
+    }
+  }
+
+  return status;
+}
+
+int32_t TIDL_DetectionOutputProcess(TIDL_NetworkCommonParams *commonParams,
+                                    sTIDL_AlgLayer_t *algLayer,
+                                    sTIDL_Layer_t *tidlLayer,
+                                    void *inPtrs[],
+                                    void *outPtrs[],
+                                    int32_t layerIdx)
+{
+  int32_t status = IALG_EOK;
+  int32_t flowCtrl = commonParams->createParams->flowCtrl;
+  sTIDL_sysMemHandle_t* sysMems = commonParams->tidlCommonParams->sysMems;
+
+  sTIDL_DetectOutputParams_t *params = &tidlLayer->layerParams.detectOutParams;
+  sTIDL_ALgDetectOutputParams_t *algDetLyrParams = &algLayer->layerParams.detectionOutputParams;
+
+  /* Get output data  pointer*/
+  int8_t (*outPtr)[] = (int8_t (*)[])(outPtrs[0]);
+  int32_t dataOffset = (tidlLayer->outData.padH * tidlLayer->outData.pitch[TIDL_LINE_PITCH]) + tidlLayer->outData.padW;
+  TIDL_ODLayerHeaderInfo *outputData = (TIDL_ODLayerHeaderInfo *)((((float32_tidl *)(*outPtr)) + dataOffset));
+
+  outputData->numDetObjects = 0;
+  outputData->odObjectType = 0;
+
+  /* Seting flag for forceNegativeTest to avoid interface change using unused flaf reserve3*/
+  params->reserve3 = commonParams->createParams->forceNegativeTest;
+
+  if (params->numKeypoints > 0)
+  {
+    (void)TIDL_SetObjDetectionFormat(&(outputData->odObjectType), TIDL_DetectKeyPoints);
+  }
+  if (params->subCodeType == (int32_t)TIDL_ObjectPose)
+  {
+    (void)TIDL_SetObjDetectionFormat(&(outputData->odObjectType), TIDL_DetectObjectPose);
+  }
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
+  if ((params->metaArchType == (int32_t)TIDL_metaArchTIDLCenterPoint) && (params->codeType == 0))
+  {
+    (void)TIDL_SetObjDetectionFormat(&(outputData->odObjectType), TIDL_DetectRawData);
+    outputData->objInfoSize = ((sizeof(TIDL_ODLayerRawObjInfo) - (sizeof(float32_tidl) * TIDL_OD_MAX_NUM_REG_PARAMS)) + (sizeof(float32_tidl) * algDetLyrParams->boxParamsSize) + (sizeof(float32_tidl) * (uint32_t)(uint32_t)algDetLyrParams->extraParamSize));
+  }
+  else
+#endif
+      if ((params->metaArchType != (int32_t)TIDL_metaArchTIDL3DOD) && (params->metaArchType != (int32_t)TIDL_metaArchTIDLBEVFormer))
+  {
+    outputData->objInfoSize = ((sizeof(TIDL_ODLayerObjInfo) - (sizeof(TIDL_ODLayerKeyPoint) * (uint32_t)TIDL_OD_MAX_KEY_POINTS)) + (sizeof(TIDL_ODLayerKeyPoint) * (uint32_t)params->numKeypoints));
+    if (params->subCodeType == (int32_t)TIDL_ObjectPose)
+    {
+      outputData->objInfoSize += (float32_tidl)sizeof(TIDL_ODLayerObjectPose);
+    }
+    (void)TIDL_SetObjDetectionFormat(&(outputData->odObjectType), TIDL_Detect2DBox);
+  }
+  else /*3D OD */
+  {
+    outputData->objInfoSize = sizeof(TIDL_3DODLayerObjInfo);
+    if (params->codeType == 8) /* for pointPillars 3d OD, output does not includes pitch and roll angles*/
+    {
+      outputData->objInfoSize = (float32_tidl)sizeof(TIDL_3DODLayerObjInfo) - (2.0 * (float32_tidl)sizeof(float32_tidl));
+    }
+    (void)TIDL_SetObjDetectionFormat(&(outputData->odObjectType), TIDL_Detect3DBox);
+  }
+
+  outputData->odNumKeyPoints = params->numKeypoints;
+  outputData->objInfoOffset = sizeof(TIDL_ODLayerHeaderInfo); // size of the structure
+
+  algDetLyrParams->numOutElementPer_2dBox = (sizeof(TIDL_ODLayerObjInfo) - (sizeof(TIDL_ODLayerKeyPoint) * TIDL_OD_MAX_KEY_POINTS)) / sizeof(float32_tidl);
+
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
+  if ((params->metaArchType == (int32_t)TIDL_metaArchTIDLCenterPoint) && (params->codeType == 0))
+  {
+    algDetLyrParams->numOutElementPer_2dBox = (sizeof(TIDL_ODLayerRawObjInfo) - (sizeof(float32_tidl) * TIDL_OD_MAX_NUM_REG_PARAMS)) / sizeof(float32_tidl);
+  }
+#endif
+
+  algDetLyrParams->numOutElementPer_3dBox = sizeof(TIDL_3DODLayerObjInfo) / sizeof(float32_tidl);
+  if (params->codeType == 8) /* for pointPillars 3d OD, output does not includes pitch and roll angles*/
+  {
+    algDetLyrParams->numOutElementPer_3dBox = ((int32_t)sizeof(TIDL_3DODLayerObjInfo) / sizeof(float32_tidl)) - 2;
+  }
+
+  float32_tidl *outObjData = (float32_tidl *)outputData + ((int32_t)(outputData->objInfoOffset / (int64_t)sizeof(float32_tidl)));
+
+  int32_t simdWidth = TIDL_SIMD_WIDTH >> 2;
+  uint32_t simdShift = 0;
+  simdShift = SIMD_SHIFT_FROM_WIDTH<(TIDL_SIMD_WIDTH >> 2)>::_value;
+
+  // if((flowCtrl & TIDL_FLOW_CTRL_REF_STAT) != TIDL_FLOW_CTRL_REF_STAT)
+  {
+    float32_tidl *priorData;
+    int32_t numDet, keepKCnt;
+
+#ifdef TIDL_DET_LAYER_PROFILE
+    long long acc0 = 0, acc1 = 0, acc2 = 0, acc3 = 0, acc4 = 0;
+    long long t0, t1;
+#endif
+
+#ifdef TIDL_DET_LAYER_PROFILE
+    t0 = __TSC;
+#endif
+    priorData = (float32_tidl *)algDetLyrParams->priorBoxPtr;
+
+    /* Consolidate all the location and confidnece head pointers, along with their pitch*/
+    TIDL_updateLocConfHeadPtrs(commonParams->createParams->net->TIDLLayers, algLayer, inPtrs);
+
+    /*
+    Points to Note. There are two places where decision of DDR flow is taken
+    1. Early decision, When topM or topMAllClasses is less than zero. This is singel pass but from start itself it is DDR flow
+    2. Secondly late decision, If valid points becomes more than the calculated topM
+       value then another pass is performed with all topM related pointers being in DDR and topM value being the worst possible
+       value. That happens in the function "TIDL_findValidLocAndScore"
+    */
+
+    int32_t availableL2Size = sysMems[TIDL_SYSMEM_L2_SCRATCH].size;
+    if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_TOPMDDR)
+    {
+      availableL2Size = 0;
+    }
+
+    /*Data space needed is (10C - 10)*topM for modules outside class loop. hence deriving topM based on avaibility of L2 space*/
+    if (params->scoreConverter == TIDL_scoreConverterSIGMOID)
+    {
+      /*Data space needed is (10C - 10)*topM for modules outside class loop. hence deriving topM based on avaibility of L2 space*/
+      algDetLyrParams->topM = ((availableL2Size) / (TIDL_SIGMOID_SCRATCH_BYTES_PER_CLASS * (params->numClasses - algDetLyrParams->isBckClsAvailable)));
+    }
+    else
+    {
+      /*Data space needed is (12C - 12)*topM for modules outside class loop. hence deriving topM based on avaibility of L2 space*/
+      algDetLyrParams->topM = ((availableL2Size) / (TIDL_SOFTMAX_SCRATCH_BYTES_PER_CLASS * (params->numClasses - algDetLyrParams->isBckClsAvailable)));
+    }
+
+    algDetLyrParams->topM = (int32_t)(((uint32_t)algDetLyrParams->topM >> simdShift) << simdShift); // making multiple of 16 for ci restriction
+
+    // ci code has restriction to have topMAllClasses value 16 less than acctual value
+    algDetLyrParams->topMAllClasses = (algDetLyrParams->topM * (params->numClasses - algDetLyrParams->isBckClsAvailable)) - simdWidth;
+
+    if ((algDetLyrParams->topM <= 0) || (algDetLyrParams->topMAllClasses <= 0))
+    {
+      // early decision of DDR flow. Thre could be late decision when valid locations become more than this topM
+      // Eventually memory will not get allocated in L2, and so DDR memories will be selected inside the function "TIDL_allocInternalMemBuffers"
+
+      algDetLyrParams->topM = algDetLyrParams->topMDdr / (params->numClasses - algDetLyrParams->isBckClsAvailable);
+
+      algDetLyrParams->topM = ((algDetLyrParams->topM + simdWidth - 1) >> simdShift) << simdShift; // making multiple of 16 for ci restriction
+
+      // ci code has restriction to have topMAllClasses value 16 less than acctual value
+      algDetLyrParams->topMAllClasses = (algDetLyrParams->topM * (params->numClasses - algDetLyrParams->isBckClsAvailable)) - simdWidth;
+    }
+
+    keepKCnt = 0;
+#ifdef TIDL_DET_LAYER_PROFILE
+    t1 = __TSC;
+    tidl_printf(0, "TIDL_updateLocConfHeadPtrs() cycle is %lld \n", (t1 - t0));
+    t0 = __TSC;
+#endif
+
+    /*Allocate internal memory for different scratch data buffers*/
+    status = TIDL_allocInternalMemBuffers(params, algDetLyrParams, priorData, sysMems);
+
+#ifdef TIDL_DET_LAYER_PROFILE
+    t1 = __TSC;
+    tidl_printf(0, "TIDL_allocInternalMemBuffers() cycle is %lld \n", (t1 - t0));
+    t0 = __TSC;
+#endif
+
+    /*Find locations where scores are higher than the user provided threshold. These are valid locations for which accurate score and decoding of boxes will be done in later part of code.
+    If for any class score is higher than user provided threshold then this location is to be considered for further processing, otherwise it will be discarded.
+    In softmax this is achieved by calculating the upper bound of score for an object for each location by observing the score across all the classes.
+    In sigmoid acctual score are compared instead of upper bound in softmax.
+  */
+
+    TIDL_odFindValidLocAndScore_ixX_oxX_PrivArgs *pKerPrivArgs =
+        (TIDL_odFindValidLocAndScore_ixX_oxX_PrivArgs *)algLayer->kernelHandle[0][0];
+
+    if (status == TIDL_SUCCESS)
+    {
+      if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_KERNEL_SCORECONVERT)
+      {
+        params->scoreConverter = -1;
+      }
+      else if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_KERNEL_TOPM)
+      {
+        algDetLyrParams->topMAllClasses = -1;
+      }
+      else
+      {
+        /*Do nothing*/
+      }
+      status = TIDL_findValidLocAndScore(pKerPrivArgs, params, algDetLyrParams, priorData, flowCtrl);
+    }
+
+#ifdef TIDL_DET_LAYER_PROFILE
+    t1 = __TSC;
+    tidl_printf(0, "TIDL_validPointScoreCalc() cycle is %lld \n", (t1 - t0));
+    t0 = __TSC;
+#endif
+
+    /*Every data of all modules in this class loop will work from L2
+    All valid objects are kept in L2.
+   */
+
+    /* One approach could be that class by class topK slection and bounding box decoding
+     is done. Another approach could be to do topK and box decoding for all
+     classes and keep the data in L2.
+     First Approach advantage is that L2 requirement will be less and disadvantge is box decoding
+     might get repeated for points where two class bounding boxes are lying exactly at the same place.
+
+     In second approach L2 requirement is high, but has potential to avoid same bounding box decoding for
+     multiple classes.
+
+     For 100 class, and topK=100 total ~16KB L2 space is needed assuming 4 float32_tidl parameter for one box.
+     And that too if all the classes has valid 100 elements then 16KB will be filled.
+
+     However taking first approach for now for simplicity with knowledge that for some valid points
+     box decoding may happen multiple times for different classes. And this will be helpful to extend
+     the support of models where location parameters are not shared.
+  */
+
+    if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_MINSCOREV2)
+    {
+      params->topKAllClasses = 390;
+    }
+    if (params->topKAllClasses != -1)
+    {
+      /*In this flow select topKAllClasses number of detections across all classes before applying NMS*/
+
+      /*Find topK scores among all valid scores*/
+      TIDL_topKAllClassesSelection(params, algDetLyrParams);
+    }
+
+    for (int32_t cls = 0; cls < params->numClasses; cls++)
+    {
+
+      if ((cls == params->backgroundLabelId) || (status != TIDL_SUCCESS))
+      {
+        continue;
+      }
+
+#ifdef TIDL_DET_LAYER_PROFILE
+      t0 = __TSC;
+#endif
+
+      /*Find topK scores among all valid scores*/
+      int32_t countK = TIDL_topKSelection(params, algDetLyrParams, cls);
+
+#ifdef TIDL_OD_L1_DEBUG
+      tidl_printf(0, "For class = %d, countK = %d\n", cls, countK);
+#endif
+
+#ifdef TIDL_DET_LAYER_PROFILE
+      t1 = __TSC;
+      acc0 += (t1 - t0);
+      t0 = __TSC;
+#endif
+
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
+      if ((params->metaArchType == (int32_t)TIDL_metaArchTIDLCenterPoint) && (params->codeType == 0))
+      {
+        numDet = countK;
+        TIDL_objOuputPreperationiX(params, algDetLyrParams, priorData, outObjData, keepKCnt, numDet, cls);
+        keepKCnt = keepKCnt + numDet;
+      }
+      else
+      {
+#endif
+#ifdef TIDL_DET_LAYER_PROFILE
+        t1 = __TSC;
+        acc1 += (t1 - t0);
+        t0 = __TSC;
+#endif
+        /*For valid locations, fetch the sparse location head data*/
+        TIDL_sparseLocDataFetchiX(params, algDetLyrParams, (sTIDL_AnchorBoxParams_t *)priorData, cls, countK);
+
+        if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_CODETYPE)
+        {
+          params->codeType = -1;
+        }
+
+        /*From previously fetched sparse location data, decode the box and keypoints parameters*/
+        TIDL_boxParamsDecoding(params, algDetLyrParams, priorData, countK);
+
+#ifdef TIDL_DET_LAYER_PROFILE
+        t1 = __TSC;
+        acc2 += (t1 - t0);
+        t0 = __TSC;
+#endif
+
+        if ((params->metaArchType != (int32_t)TIDL_metaArchTIDLBEVFormer))
+        {
+          /*Non maxima supression of the valid boxes*/
+          numDet = TIDL_applyNMSFast(params, algDetLyrParams, countK);
+        }
+        else
+        {
+          /*filtering out the valid boxes which are in range*/
+          numDet = TIDL_filterNotInRangeBox(params, algDetLyrParams, countK);
+        }
+
+#ifdef TIDL_OD_L1_DEBUG
+        tidl_printf(0, "For class = %d, numDet = %d\n", cls, numDet);
+#endif
+
+#ifdef TIDL_DET_LAYER_PROFILE
+        t1 = __TSC;
+        acc3 += (t1 - t0);
+        t0 = __TSC;
+#endif
+
+        TIDL_objOuputPreperationiX(params, algDetLyrParams, priorData, outObjData, keepKCnt, numDet, cls);
+
+        keepKCnt = keepKCnt + numDet;
+
+#ifdef TIDL_DET_LAYER_PROFILE
+        t1 = __TSC;
+        acc4 += (t1 - t0);
+#endif
+#if defined TIDL_COVERAGE_DEAD_CODE_NO_TEST
+      }
+#endif
+    }
+
+    outputData->numDetObjects = (keepKCnt > params->keepTopK) ? params->keepTopK : keepKCnt;
+
+#ifdef TIDL_DET_LAYER_PROFILE
+    tidl_printf(0, "TIDL_topKSelection() cycle is %lld \n", acc0);
+    tidl_printf(0, "TIDL_sparseLocDataFetch() cycle is %lld \n", acc1);
+    tidl_printf(0, "TIDL_boxParamsDecoding() cycle is %lld \n", acc2);
+    tidl_printf(0, "TIDL_applyNMSFast() cycle is %lld \n", acc3);
+    tidl_printf(0, "TIDL_objOuputPreperation() cycle is %lld \n", acc4);
+#endif
+  }
+
+#ifdef HOST_EMULATION
+  if ((flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)
+  {
+    TIDL_Obj intAlgObj;
+    TIDL_CreateParams createParams;
+    (void)memcpy(&createParams, commonParams->createParams, sizeof(TIDL_CreateParams));
+    intAlgObj.createParams = (TIDL_CreateParams *)&createParams;
+
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+    <justification end> */
+    if (TIDL_getDatElementSign(commonParams->createParams->net->TIDLLayers[algLayer->layerIdx].outData.elementType) == 1)
+    {
+      TIDL_UpdateScaleFactors(&intAlgObj, algLayer->layerIdx, 1, -1, 1);
+    }
+    /* LDRA_JUSTIFY_END */
+  }
+#endif
+
+  TIDL_L1DandL2CacheWbInv();
+  return status;
 }

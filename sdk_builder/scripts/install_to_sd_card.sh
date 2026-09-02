@@ -62,15 +62,15 @@ untar_rootfs()
                 fi
                 sudo chmod 777 -R $rootfs_folder/usr/lib/
                 sudo chmod 777 -R $rootfs_folder/usr/bin/
-                sudo chmod 777 -R $rootfs_folder/usr/include/edgeai-apps-utils/
-                sudo chmod 777 -R $rootfs_folder/usr/include/edgeai-tiovx-kernels/
                 if [ "${TISDK_IMAGE}" = "edgeai" ]
                 then
+                sudo chmod 777 -R $rootfs_folder/usr/include/edgeai-apps-utils/
+                sudo chmod 777 -R $rootfs_folder/usr/include/edgeai-tiovx-kernels/
                 sudo chmod 777 -R $rootfs_folder/usr/include/edgeai-tiovx-apps/
                 sudo chmod 777 -R $rootfs_folder/usr/include/edgeai-tiovx-modules/
+                sudo chmod 777 $rootfs_folder/usr/bin/edgeai-tiovx-kernels-test
                 sudo chmod 777 $rootfs_folder/usr/bin/edgeai-tiovx-modules-test
                 fi
-                sudo chmod 777 $rootfs_folder/usr/bin/edgeai-tiovx-kernels-test
                 sudo chmod 666 $rootfs_folder/etc/security/limits.conf
                 sudo chmod 644 $rootfs_folder/usr/lib/systemd/system/*
                 sudo chmod 644 $rootfs_folder/usr/lib/systemd/system.conf.d/*.conf

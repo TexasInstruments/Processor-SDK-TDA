@@ -1,6 +1,6 @@
 /*
 *
-* Copyright (c) 2018 Texas Instruments Incorporated
+* Copyright (c) 2018-2026 Texas Instruments Incorporated
 *
 * All rights reserved not granted herein.
 *
@@ -65,6 +65,8 @@
 #ifndef TIVX_EVENT_QUEUE_H_
 #define TIVX_EVENT_QUEUE_H_
 
+#include <TI/tivx_obj_desc.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -86,6 +88,7 @@ extern "C" {
 #define TIVX_ENUM_EVENT_QUEUE      (vx_enum)0x2   /*!< \brief A <tt>\ref tivx_queue_type_e</tt>. */
 
 /*! \brief Element inserted into event queue
+ * \note Currently, only VX_EVENT_NODE_ERROR uses param3-5.
  * \ingroup group_tivx_event_queue
  */
 typedef struct _tivx_event_queue_elem_t
@@ -96,6 +99,8 @@ typedef struct _tivx_event_queue_elem_t
     uintptr_t param1;
     uintptr_t param2;
     uintptr_t param3;
+    vx_uint16 param4;
+    tivx_error_info_t param5;
 } tivx_event_queue_elem_t;
 
 /*!
@@ -182,7 +187,9 @@ vx_status ownEventQueueDelete(tivx_event_queue_t *event_q);
  * \ingroup group_tivx_event_queue
  */
 vx_status ownEventQueueAddEvent(tivx_event_queue_t *event_q,
-        vx_enum event_id, uint64_t timestamp, uint32_t app_value, uintptr_t param1, uintptr_t param2, uintptr_t param3);
+        vx_enum event_id, uint64_t timestamp, uint32_t app_value,
+        uintptr_t param1, uintptr_t param2, uintptr_t param3,
+        vx_uint16 param4, const volatile tivx_error_info_t *param5);
 
 
 /*!

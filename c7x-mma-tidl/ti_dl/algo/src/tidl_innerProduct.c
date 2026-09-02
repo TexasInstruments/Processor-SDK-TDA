@@ -98,7 +98,9 @@ int32_t TIDL_forceInnerProductRef(
   numInNodes = (uint16_t)inDataParams->dimValues[TIDL_DIM_WIDTH];
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   forceRef = (TIDL_referencFlow(createParamsPtr) == 0) ? 1 : 0;
   if (forceRef == 1)
@@ -195,7 +197,9 @@ int32_t TIDL_innerProductAllocNew(const TIDL_LayerSpecificParams *layerSpecificP
 /* Have addtional space for bias during forced reference for inner product */
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if (forceRef == 1)
     {

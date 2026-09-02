@@ -1,0 +1,4118 @@
+{
+    "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT": {
+        "drv": "clk_drv_soc_hfosc0"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_0_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_mcu_0"
+    },
+    "CLK_J742S2_HSDIV1_16FFT_MCU_0_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_0_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv1_16fft_mcu_0_hsdiv0"
+    },
+    "CLK_J742S2_K3_PLL_CTRL_WRAP_WKUP_0_SYSCLKOUT_CLK": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_pllctrl_mux_reg_ro",
+        "data": "clk_data_k3_pll_ctrl_wrap_wkup_0_sysclkout_clk"
+    },
+    "CLK_J742S2_K3_PLL_CTRL_WRAP_WKUP_0_CHIP_DIV1_CLK_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_K3_PLL_CTRL_WRAP_WKUP_0_SYSCLKOUT_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg",
+        "data": "clk_data_k3_pll_ctrl_wrap_wkup_0_chip_div1_clk_clk"
+    },
+    "CLK_J742S2_GLUELOGIC_LPXOSC_CLKOUT": {
+        "drv": "clk_drv_fixed"
+    },
+    "CLK_J742S2_MCU_R5_CORE0_CLKSEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_R5_core0_clksel_out0"
+    },
+    "CLK_J742S2_MCU_R5_CORE1_CLKSEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_R5_core1_clksel_out0"
+    },
+    "CLK_J742S2_MCU_R5_PHASE0_CLKSEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_R5_phase0_clksel_out0"
+    },
+    "CLK_J742S2_MCU_R5_PHASE1_CLKSEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_R5_phase1_clksel_out0"
+    },
+    "CLK_J742S2_BOARD_0_HFOSC1_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_hfosc1_clk_out"
+    },
+    "CLK_J742S2_BOARD_0_CPTS0_RFT_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_CPTS0_RFT_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_EXT_REFCLK1_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_EXT_REFCLK1_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_CPTS0_RFT_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_CPTS0_RFT_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_EXT_REFCLK0_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_EXT_REFCLK0_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_I2C0_SCL_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_I2C0_SCL_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_I2C1_SCL_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_I2C1_SCL_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_I3C0_SCL_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_I3C0_SCL_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_I3C0_SDA_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_I3C0_SDA_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_MCAN0_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_MCAN0_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_MCAN1_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_MCAN1_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_OSPI0_DQS_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_OSPI0_DQS_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_OSPI0_LBCLKO_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_OSPI0_LBCLKO_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_OSPI1_DQS_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_OSPI1_DQS_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_OSPI1_LBCLKO_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_OSPI1_LBCLKO_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_RGMII1_RXC_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_RGMII1_RXC_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_RMII1_REF_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_RMII1_REF_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_SPI0_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_SPI0_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_MCU_SPI1_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCU_SPI1_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_WKUP_I2C0_SCL_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_WKUP_I2C0_SCL_out"
+    },
+    "CLK_J742S2_CPSW_2GUSS_MCU_0_CPTS_GENF0": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_2guss_mcu_0_cpts_genf0"
+    },
+    "CLK_J742S2_CPSW_2GUSS_MCU_0_MDIO_MDCLK_O": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_2guss_mcu_0_mdio_mdclk_o"
+    },
+    "CLK_J742S2_CPSW_2GUSS_MCU_0_RGMII1_TXC_O": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_2guss_mcu_0_rgmii1_txc_o"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MCU_0_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_mcu_0_timer_pwm"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MCU_2_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_mcu_2_timer_pwm"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MCU_4_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_mcu_4_timer_pwm"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MCU_6_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_mcu_6_timer_pwm"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MCU_8_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_mcu_8_timer_pwm"
+    },
+    "CLK_J742S2_FSS_MCU_0_HYPERBUS1P0_0_HPB_OUT_CLK_N": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_fss_mcu_0_hyperbus1p0_0_hpb_out_clk_n"
+    },
+    "CLK_J742S2_FSS_MCU_0_HYPERBUS1P0_0_HPB_OUT_CLK_P": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_fss_mcu_0_hyperbus1p0_0_hpb_out_clk_p"
+    },
+    "CLK_J742S2_FSS_MCU_0_OSPI_0_OSPI_OCLK_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_fss_mcu_0_ospi_0_ospi_oclk_clk"
+    },
+    "CLK_J742S2_FSS_MCU_0_OSPI_1_OSPI_OCLK_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_fss_mcu_0_ospi_1_ospi_oclk_clk"
+    },
+    "CLK_J742S2_HSDIV1_16FFT_MCU_0_HSDIVOUT1_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_0_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv1_16fft_mcu_0_hsdiv1"
+    },
+    "CLK_J742S2_I3C_MCU_0_I3C_SCL_DO": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_i3c_mcu_0_i3c_scl_do"
+    },
+    "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_12P5M_CLK": {
+        "drv": "clk_drv_fixed"
+    },
+    "CLK_J742S2_J7AM_WAKEUP_16FF_WKUP_0_WKUP_RCOSC_32K_CLK": {
+        "drv": "clk_drv_fixed"
+    },
+    "CLK_J742S2_K3_PLL_CTRL_WRAP_WKUP_0_CHIP_DIV24_CLK_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_K3_PLL_CTRL_WRAP_WKUP_0_SYSCLKOUT_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg",
+        "data": "clk_data_k3_pll_ctrl_wrap_wkup_0_chip_div24_clk_clk"
+    },
+    "CLK_J742S2_MCU_OSPI0_ICLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcu_OSPI0_iclk_sel_out0"
+    },
+    "CLK_J742S2_MCU_OSPI1_ICLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcu_OSPI1_iclk_sel_out0"
+    },
+    "CLK_J742S2_MSHSI2C_MCU_0_PORSCL": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mshsi2c_mcu_0_porscl"
+    },
+    "CLK_J742S2_MSHSI2C_MCU_1_PORSCL": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mshsi2c_mcu_1_porscl"
+    },
+    "CLK_J742S2_MSHSI2C_WKUP_0_PORSCL": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mshsi2c_wkup_0_porscl"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_1_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_mcu_1"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_2_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_GLUELOGIC_HFOSC0_CLKOUT",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_mcu_2"
+    },
+    "CLK_J742S2_SPI_MCU_0_IO_CLKSPIO_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_spi_mcu_0_io_clkspio_clk"
+    },
+    "CLK_J742S2_SPI_MCU_1_IO_CLKSPIO_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_spi_mcu_1_io_clkspio_clk"
+    },
+    "CLK_J742S2_SPI_MCU_2_IO_CLKSPIO_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_spi_mcu_2_io_clkspio_clk"
+    },
+    "CLK_J742S2_WKUP_GPIO0_CLKSEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_wkup_gpio0_clksel_out0"
+    },
+    "CLK_J742S2_MCU_SPI0_CLK_LPBK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_SPI0_CLK_LPBK_MUX_out0"
+    },
+    "CLK_J742S2_MCU_SPI1_CLK_LPBK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_SPI1_CLK_LPBK_MUX_out0"
+    },
+    "CLK_J742S2_MCU_SPI1_CLK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_SPI1_CLK_MUX_out0"
+    },
+    "CLK_J742S2_MCU_WWD_CLKSEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_WWD_CLKSEL_out0"
+    },
+    "CLK_J742S2_MCU_WWD_CLKSEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_WWD_CLKSEL_out1"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_1_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_mcu_1_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT1_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_1_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_mcu_1_hsdiv1"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT2_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_1_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_mcu_1_hsdiv2"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT3_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_1_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_mcu_1_hsdiv3"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MCU_1_HSDIVOUT4_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_1_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_mcu_1_hsdiv4"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_2_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_mcu_2_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT1_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_2_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_mcu_2_hsdiv1"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT2_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_2_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_mcu_2_hsdiv2"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT3_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_2_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_mcu_2_hsdiv3"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MCU_2_HSDIVOUT4_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MCU_2_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_mcu_2_hsdiv4"
+    },
+    "CLK_J742S2_MCU_OSPI_REF_CLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcu_OSPI_ref_clk_sel_out0"
+    },
+    "CLK_J742S2_MCU_OSPI_REF_CLK_SEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcu_OSPI_ref_clk_sel_out1"
+    },
+    "CLK_J742S2_CPSW2G_CPTS_RCLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW2G_CPTS_RCLK_SEL_out0"
+    },
+    "CLK_J742S2_MCU_ADC_CLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_ADC_clk_sel_out0"
+    },
+    "CLK_J742S2_MCU_ADC_CLK_SEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_ADC_clk_sel_out1"
+    },
+    "CLK_J742S2_MCU_MCAN_CLKSEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_MCAN_CLKSEL_out0"
+    },
+    "CLK_J742S2_MCU_MCAN_CLKSEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_MCAN_CLKSEL_out1"
+    },
+    "CLK_J742S2_MCU_TIMER_CLKSEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER_CLKSEL_out0"
+    },
+    "CLK_J742S2_MCU_TIMER_CLKSEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER_CLKSEL_out1"
+    },
+    "CLK_J742S2_MCU_TIMER_CLKSEL_OUT2": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER_CLKSEL_out2"
+    },
+    "CLK_J742S2_MCU_TIMER_CLKSEL_OUT3": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER_CLKSEL_out3"
+    },
+    "CLK_J742S2_MCU_TIMER_CLKSEL_OUT4": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER_CLKSEL_out4"
+    },
+    "CLK_J742S2_MCU_TIMER_CLKSEL_OUT5": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER_CLKSEL_out5"
+    },
+    "CLK_J742S2_MCU_TIMER_CLKSEL_OUT6": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER_CLKSEL_out6"
+    },
+    "CLK_J742S2_MCU_TIMER_CLKSEL_OUT7": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER_CLKSEL_out7"
+    },
+    "CLK_J742S2_MCU_TIMER_CLKSEL_OUT8": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER_CLKSEL_out8"
+    },
+    "CLK_J742S2_MCU_TIMER_CLKSEL_OUT9": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER_CLKSEL_out9"
+    },
+    "CLK_J742S2_MCU_USART_CLKSEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_USART_CLKSEL_out0"
+    },
+    "CLK_J742S2_WKUP_I2C_MCUPLL_BYPASS_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_WKUP_I2C_MCUPLL_BYPASS_out0"
+    },
+    "CLK_J742S2_WKUP_USART_CLKSEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_WKUP_USART_CLKSEL_out0"
+    },
+    "CLK_J742S2_WKUP_USART_MCUPLL_BYPASS_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_WKUP_USART_MCUPLL_BYPASS_out0"
+    },
+    "CLK_J742S2_MCU_TIMER1_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER1_CASCADE_out0"
+    },
+    "CLK_J742S2_MCU_TIMER3_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER3_CASCADE_out0"
+    },
+    "CLK_J742S2_MCU_TIMER5_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER5_CASCADE_out0"
+    },
+    "CLK_J742S2_MCU_TIMER7_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER7_CASCADE_out0"
+    },
+    "CLK_J742S2_MCU_TIMER9_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_TIMER9_CASCADE_out0"
+    },
+    "CLK_J742S2_GLUELOGIC_ACSPCIE0_BUFFER_PAD0_M": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_GLUELOGIC_ACSPCIe0_buffer_PAD0_M"
+    },
+    "CLK_J742S2_GLUELOGIC_ACSPCIE0_BUFFER_PAD0_P": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_GLUELOGIC_ACSPCIe0_buffer_PAD0_P"
+    },
+    "CLK_J742S2_GLUELOGIC_ACSPCIE0_BUFFER_PAD1_M": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_GLUELOGIC_ACSPCIe0_buffer_PAD1_M"
+    },
+    "CLK_J742S2_GLUELOGIC_ACSPCIE0_BUFFER_PAD1_P": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_GLUELOGIC_ACSPCIe0_buffer_PAD1_P"
+    },
+    "CLK_J742S2_GLUELOGIC_ACSPCIE1_BUFFER_PAD0_M": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_GLUELOGIC_ACSPCIe1_buffer_PAD0_M"
+    },
+    "CLK_J742S2_GLUELOGIC_ACSPCIE1_BUFFER_PAD0_P": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_GLUELOGIC_ACSPCIe1_buffer_PAD0_P"
+    },
+    "CLK_J742S2_GLUELOGIC_ACSPCIE1_BUFFER_PAD1_M": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_GLUELOGIC_ACSPCIe1_buffer_PAD1_M"
+    },
+    "CLK_J742S2_GLUELOGIC_ACSPCIE1_BUFFER_PAD1_P": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_GLUELOGIC_ACSPCIe1_buffer_PAD1_P"
+    },
+    "CLK_J742S2_K3_DPHY_RX_MAIN_0_PPI_D_RX_ULPS_ESC": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_K3_DPHY_RX_main_0_ppi_d_rx_ulps_esc"
+    },
+    "CLK_J742S2_K3_DPHY_RX_MAIN_0_PPI_RX_BYTE_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_K3_DPHY_RX_main_0_ppi_rx_byte_clk"
+    },
+    "CLK_J742S2_K3_DPHY_RX_MAIN_1_PPI_D_RX_ULPS_ESC": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_K3_DPHY_RX_main_1_ppi_d_rx_ulps_esc"
+    },
+    "CLK_J742S2_K3_DPHY_RX_MAIN_1_PPI_RX_BYTE_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_K3_DPHY_RX_main_1_ppi_rx_byte_clk"
+    },
+    "CLK_J742S2_K3_DPHY_RX_MAIN_2_PPI_D_RX_ULPS_ESC": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_K3_DPHY_RX_main_2_ppi_d_rx_ulps_esc"
+    },
+    "CLK_J742S2_K3_DPHY_RX_MAIN_2_PPI_RX_BYTE_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_K3_DPHY_RX_main_2_ppi_rx_byte_clk"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out0"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out1"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT12": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out12"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT14": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out14"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT16": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out16"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT17": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out17"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT19": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out19"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT2": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out2"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT25_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out25_0"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT26_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out26_0"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT27_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out27_0"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT28": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out28"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT3": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out3"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT4": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out4"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT5": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out5"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT6": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out6"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT7": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out7"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT8": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out8"
+    },
+    "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT9": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL_HFOSC_SEL_out9"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out0"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out1"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT15_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out15_0"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT16_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out16_0"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT17_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out17_0"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT18_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out18_0"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT19_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out19_0"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT2": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out2"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT28_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out28_0"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT29_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out29_0"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT3": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out3"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT30_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out30_0"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT31_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out31_0"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT32_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out32_0"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT33_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out33_0"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT4": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out4"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT5": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out5"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT6": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out6"
+    },
+    "CLK_J742S2_MAIN_WWDT_RTICLK_SEL_OUT7": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_WWDT_RTICLK_SEL_out7"
+    },
+    "CLK_J742S2_MCU_CLKOUT_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_CLKOUT_MUX_out0"
+    },
+    "CLK_J742S2_MCU_OBSCLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_OBSCLK_SEL_out0"
+    },
+    "CLK_J742S2_USB0_REFCLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_USB0_REFCLK_SEL_out0"
+    },
+    "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_atl_main_0_atl_io_port_atclk_out"
+    },
+    "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT_1": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_atl_main_0_atl_io_port_atclk_out_1"
+    },
+    "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT_2": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_atl_main_0_atl_io_port_atclk_out_2"
+    },
+    "CLK_J742S2_ATL_MAIN_0_ATL_IO_PORT_ATCLK_OUT_3": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_atl_main_0_atl_io_port_atclk_out_3"
+    },
+    "CLK_J742S2_BOARD_0_AUDIO_EXT_REFCLK0_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_AUDIO_EXT_REFCLK0_out"
+    },
+    "CLK_J742S2_BOARD_0_AUDIO_EXT_REFCLK1_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_AUDIO_EXT_REFCLK1_out"
+    },
+    "CLK_J742S2_BOARD_0_CSI0_RXCLKN_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_CSI0_RXCLKN_out"
+    },
+    "CLK_J742S2_BOARD_0_CSI0_RXCLKP_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_CSI0_RXCLKP_out"
+    },
+    "CLK_J742S2_BOARD_0_CSI1_RXCLKN_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_CSI1_RXCLKN_out"
+    },
+    "CLK_J742S2_BOARD_0_CSI1_RXCLKP_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_CSI1_RXCLKP_out"
+    },
+    "CLK_J742S2_BOARD_0_CSI2_RXCLKN_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_CSI2_RXCLKN_out"
+    },
+    "CLK_J742S2_BOARD_0_CSI2_RXCLKP_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_CSI2_RXCLKP_out"
+    },
+    "CLK_J742S2_BOARD_0_GPMC0_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_GPMC0_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_HYP0_RXPMCLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_HYP0_RXPMCLK_out"
+    },
+    "CLK_J742S2_BOARD_0_HYP0_TXFLCLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_HYP0_TXFLCLK_out"
+    },
+    "CLK_J742S2_BOARD_0_HYP1_RXPMCLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_HYP1_RXPMCLK_out"
+    },
+    "CLK_J742S2_BOARD_0_HYP1_TXFLCLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_HYP1_TXFLCLK_out"
+    },
+    "CLK_J742S2_BOARD_0_I2C0_SCL_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_I2C0_SCL_out"
+    },
+    "CLK_J742S2_BOARD_0_I2C1_SCL_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_I2C1_SCL_out"
+    },
+    "CLK_J742S2_BOARD_0_I2C2_SCL_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_I2C2_SCL_out"
+    },
+    "CLK_J742S2_BOARD_0_I2C3_SCL_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_I2C3_SCL_out"
+    },
+    "CLK_J742S2_BOARD_0_I2C4_SCL_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_I2C4_SCL_out"
+    },
+    "CLK_J742S2_BOARD_0_I2C5_SCL_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_I2C5_SCL_out"
+    },
+    "CLK_J742S2_BOARD_0_I2C6_SCL_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_I2C6_SCL_out"
+    },
+    "CLK_J742S2_BOARD_0_LED_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_LED_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN0_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN0_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN10_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN10_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN11_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN11_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN12_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN12_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN13_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN13_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN14_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN14_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN15_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN15_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN16_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN16_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN17_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN17_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN1_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN1_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN2_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN2_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN3_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN3_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN4_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN4_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN5_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN5_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN6_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN6_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN7_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN7_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN8_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN8_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCAN9_RX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCAN9_RX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP0_ACLKR_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP0_ACLKR_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP0_ACLKX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP0_ACLKX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP0_AFSR_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP0_AFSR_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP0_AFSX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP0_AFSX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP1_ACLKR_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP1_ACLKR_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP1_ACLKX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP1_ACLKX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP1_AFSR_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP1_AFSR_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP1_AFSX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP1_AFSX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP2_ACLKR_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP2_ACLKR_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP2_ACLKX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP2_ACLKX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP2_AFSR_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP2_AFSR_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP2_AFSX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP2_AFSX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP3_ACLKR_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP3_ACLKR_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP3_ACLKX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP3_ACLKX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP3_AFSR_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP3_AFSR_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP3_AFSX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP3_AFSX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP4_ACLKR_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP4_ACLKR_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP4_ACLKX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP4_ACLKX_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP4_AFSR_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP4_AFSR_out"
+    },
+    "CLK_J742S2_BOARD_0_MCASP4_AFSX_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MCASP4_AFSX_out"
+    },
+    "CLK_J742S2_BOARD_0_MMC1_CLKLB_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MMC1_CLKLB_out"
+    },
+    "CLK_J742S2_BOARD_0_MMC1_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_MMC1_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_RGMII1_RXC_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_RGMII1_RXC_out"
+    },
+    "CLK_J742S2_BOARD_0_RMII_REF_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_RMII_REF_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_SERDES0_REFCLK_N_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SERDES0_REFCLK_N_out"
+    },
+    "CLK_J742S2_BOARD_0_SERDES0_REFCLK_P_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SERDES0_REFCLK_P_out"
+    },
+    "CLK_J742S2_BOARD_0_SERDES1_REFCLK_N_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SERDES1_REFCLK_N_out"
+    },
+    "CLK_J742S2_BOARD_0_SERDES1_REFCLK_P_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SERDES1_REFCLK_P_out"
+    },
+    "CLK_J742S2_BOARD_0_SERDES2_REFCLK_N_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SERDES2_REFCLK_N_out"
+    },
+    "CLK_J742S2_BOARD_0_SERDES2_REFCLK_P_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SERDES2_REFCLK_P_out"
+    },
+    "CLK_J742S2_BOARD_0_SERDES4_REFCLK_N_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SERDES4_REFCLK_N_out"
+    },
+    "CLK_J742S2_BOARD_0_SERDES4_REFCLK_P_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SERDES4_REFCLK_P_out"
+    },
+    "CLK_J742S2_BOARD_0_SPI0_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SPI0_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_SPI1_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SPI1_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_SPI2_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SPI2_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_SPI3_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SPI3_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_SPI5_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SPI5_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_SPI6_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SPI6_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_SPI7_CLK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_SPI7_CLK_out"
+    },
+    "CLK_J742S2_BOARD_0_TCK_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_TCK_out"
+    },
+    "CLK_J742S2_BOARD_0_VOUT0_EXTPCLKIN_OUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_board_0_VOUT0_EXTPCLKIN_out"
+    },
+    "CLK_J742S2_COMPUTE_CLUSTER_J7AHP_MAIN_0_A72SS0_ARM0_DIVH_CLK8_OBSCLK_OUT_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_compute_cluster_j7ahp_main_0_a72ss0_arm0_divh_clk8_obsclk_out_clk"
+    },
+    "CLK_J742S2_COMPUTE_CLUSTER_J7AHP_MAIN_0_C71SS0_C7X_DIVH_CLK4_OBSCLK_OUT_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_compute_cluster_j7ahp_main_0_c71ss0_c7x_divh_clk4_obsclk_out_clk"
+    },
+    "CLK_J742S2_CPSW_2GUSS_MAIN_0_CPTS_GENF0": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_2guss_main_0_cpts_genf0"
+    },
+    "CLK_J742S2_CPSW_2GUSS_MAIN_0_MDIO_MDCLK_O": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_2guss_main_0_mdio_mdclk_o"
+    },
+    "CLK_J742S2_CPSW_2GUSS_MAIN_0_RGMII1_TXC_O": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_2guss_main_0_rgmii1_txc_o"
+    },
+    "CLK_J742S2_CPSW_9XUSS_J7AM_MAIN_0_CPTS_GENF0": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_9xuss_j7am_main_0_cpts_genf0"
+    },
+    "CLK_J742S2_CPSW_9XUSS_J7AM_MAIN_0_MDIO_MDCLK_O": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_9xuss_j7am_main_0_mdio_mdclk_o"
+    },
+    "CLK_J742S2_CPSW_9XUSS_J7AM_MAIN_0_SERDES1_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_9xuss_j7am_main_0_serdes1_txclk"
+    },
+    "CLK_J742S2_CPSW_9XUSS_J7AM_MAIN_0_SERDES2_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_9xuss_j7am_main_0_serdes2_txclk"
+    },
+    "CLK_J742S2_CPSW_9XUSS_J7AM_MAIN_0_SERDES3_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_9xuss_j7am_main_0_serdes3_txclk"
+    },
+    "CLK_J742S2_CPSW_9XUSS_J7AM_MAIN_0_SERDES4_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_9xuss_j7am_main_0_serdes4_txclk"
+    },
+    "CLK_J742S2_CPSW_9XUSS_J7AM_MAIN_0_SERDES5_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_9xuss_j7am_main_0_serdes5_txclk"
+    },
+    "CLK_J742S2_CPSW_9XUSS_J7AM_MAIN_0_SERDES6_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_9xuss_j7am_main_0_serdes6_txclk"
+    },
+    "CLK_J742S2_CPSW_9XUSS_J7AM_MAIN_0_SERDES7_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_9xuss_j7am_main_0_serdes7_txclk"
+    },
+    "CLK_J742S2_CPSW_9XUSS_J7AM_MAIN_0_SERDES8_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_cpsw_9xuss_j7am_main_0_serdes8_txclk"
+    },
+    "CLK_J742S2_DEBUGSS_K3_WRAP_CV0_MAIN_0_CSTPIU_TRACECLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_debugss_k3_wrap_cv0_main_0_cstpiu_traceclk"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MAIN_0_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_main_0_timer_pwm"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MAIN_10_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_main_10_timer_pwm"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MAIN_12_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_main_12_timer_pwm"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MAIN_14_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_main_14_timer_pwm"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MAIN_16_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_main_16_timer_pwm"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MAIN_18_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_main_18_timer_pwm"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MAIN_2_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_main_2_timer_pwm"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MAIN_4_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_main_4_timer_pwm"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MAIN_6_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_main_6_timer_pwm"
+    },
+    "CLK_J742S2_DMTIMER_DMC1MS_MAIN_8_TIMER_PWM": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_dmtimer_dmc1ms_main_8_timer_pwm"
+    },
+    "CLK_J742S2_EMMCSD4SS_MAIN_0_EMMCSDSS_IO_CLK_O": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_emmcsd4ss_main_0_emmcsdss_io_clk_o"
+    },
+    "CLK_J742S2_GPMC_MAIN_0_PO_GPMC_DEV_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_gpmc_main_0_po_gpmc_dev_clk"
+    },
+    "CLK_J742S2_K3_DSS_EDP_MAIN_0_PHY_LN0_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_k3_dss_edp_main_0_phy_ln0_txclk"
+    },
+    "CLK_J742S2_K3_DSS_EDP_MAIN_0_PHY_LN1_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_k3_dss_edp_main_0_phy_ln1_txclk"
+    },
+    "CLK_J742S2_K3_DSS_EDP_MAIN_0_PHY_LN2_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_k3_dss_edp_main_0_phy_ln2_txclk"
+    },
+    "CLK_J742S2_K3_DSS_EDP_MAIN_0_PHY_LN3_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_k3_dss_edp_main_0_phy_ln3_txclk"
+    },
+    "CLK_J742S2_K3_DSS_MAIN_0_DSS_INST0_DPI_0_OUT_2X_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_k3_dss_main_0_dss_inst0_dpi_0_out_2x_clk"
+    },
+    "CLK_J742S2_K3_DSS_MAIN_0_DSS_INST0_DPI_0_OUT_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_k3_dss_main_0_dss_inst0_dpi_0_out_clk"
+    },
+    "CLK_J742S2_K3_DSS_MAIN_0_DSS_INST0_DPI_1_OUT_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_k3_dss_main_0_dss_inst0_dpi_1_out_clk"
+    },
+    "CLK_J742S2_K3_DSS_MAIN_0_DSS_INST0_DPI_2_OUT_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_k3_dss_main_0_dss_inst0_dpi_2_out_clk"
+    },
+    "CLK_J742S2_K3_DSS_MAIN_0_DSS_INST0_DPI_3_OUT_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_k3_dss_main_0_dss_inst0_dpi_3_out_clk"
+    },
+    "CLK_J742S2_K3_DSS_MAIN_0_DSS_INST0_PARA_1_OUT_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_k3_dss_main_0_dss_inst0_para_1_out_clk"
+    },
+    "CLK_J742S2_K3_DSS_MAIN_0_DSS_INST0_PARA_3_OUT_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_k3_dss_main_0_dss_inst0_para_3_out_clk"
+    },
+    "CLK_J742S2_MCASP_AHCLKR_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcasp_ahclkr_mux_out0"
+    },
+    "CLK_J742S2_MCASP_AHCLKR_MUX_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcasp_ahclkr_mux_out1"
+    },
+    "CLK_J742S2_MCASP_AHCLKR_MUX_OUT2": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcasp_ahclkr_mux_out2"
+    },
+    "CLK_J742S2_MCASP_AHCLKR_MUX_OUT3": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcasp_ahclkr_mux_out3"
+    },
+    "CLK_J742S2_MCASP_AHCLKR_MUX_OUT4_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcasp_ahclkr_mux_out4_0"
+    },
+    "CLK_J742S2_MCASP_AHCLKX_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcasp_ahclkx_mux_out0"
+    },
+    "CLK_J742S2_MCASP_AHCLKX_MUX_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcasp_ahclkx_mux_out1"
+    },
+    "CLK_J742S2_MCASP_AHCLKX_MUX_OUT2": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcasp_ahclkx_mux_out2"
+    },
+    "CLK_J742S2_MCASP_AHCLKX_MUX_OUT3": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcasp_ahclkx_mux_out3"
+    },
+    "CLK_J742S2_MCASP_AHCLKX_MUX_OUT4": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_mcasp_ahclkx_mux_out4"
+    },
+    "CLK_J742S2_MCASP_MAIN_0_MCASP_ACLKR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_0_mcasp_aclkr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_0_MCASP_ACLKX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_0_mcasp_aclkx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_0_MCASP_AFSR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_0_mcasp_afsr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_0_MCASP_AFSX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_0_mcasp_afsx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_0_MCASP_AHCLKR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_0_mcasp_ahclkr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_0_MCASP_AHCLKX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_0_mcasp_ahclkx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_1_MCASP_ACLKR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_1_mcasp_aclkr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_1_MCASP_ACLKX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_1_mcasp_aclkx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_1_MCASP_AFSR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_1_mcasp_afsr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_1_MCASP_AFSX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_1_mcasp_afsx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_1_MCASP_AHCLKR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_1_mcasp_ahclkr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_1_MCASP_AHCLKX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_1_mcasp_ahclkx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_2_MCASP_ACLKR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_2_mcasp_aclkr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_2_MCASP_ACLKX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_2_mcasp_aclkx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_2_MCASP_AFSR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_2_mcasp_afsr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_2_MCASP_AFSX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_2_mcasp_afsx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_2_MCASP_AHCLKR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_2_mcasp_ahclkr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_2_MCASP_AHCLKX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_2_mcasp_ahclkx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_3_MCASP_ACLKR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_3_mcasp_aclkr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_3_MCASP_ACLKX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_3_mcasp_aclkx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_3_MCASP_AFSR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_3_mcasp_afsr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_3_MCASP_AFSX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_3_mcasp_afsx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_3_MCASP_AHCLKR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_3_mcasp_ahclkr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_3_MCASP_AHCLKX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_3_mcasp_ahclkx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_4_MCASP_ACLKR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_4_mcasp_aclkr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_4_MCASP_ACLKX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_4_mcasp_aclkx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_4_MCASP_AFSR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_4_mcasp_afsr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_4_MCASP_AFSX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_4_mcasp_afsx_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_4_MCASP_AHCLKR_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_4_mcasp_ahclkr_pout"
+    },
+    "CLK_J742S2_MCASP_MAIN_4_MCASP_AHCLKX_POUT": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mcasp_main_4_mcasp_ahclkx_pout"
+    },
+    "CLK_J742S2_MCU_OBSCLK_DIV_OUT0": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_MCU_OBSCLK_SEL_OUT0",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg_go",
+        "data": "clk_data_mcu_obsclk_div_out0"
+    },
+    "CLK_J742S2_MSHSI2C_MAIN_0_PORSCL": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mshsi2c_main_0_porscl"
+    },
+    "CLK_J742S2_MSHSI2C_MAIN_1_PORSCL": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mshsi2c_main_1_porscl"
+    },
+    "CLK_J742S2_MSHSI2C_MAIN_2_PORSCL": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mshsi2c_main_2_porscl"
+    },
+    "CLK_J742S2_MSHSI2C_MAIN_3_PORSCL": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mshsi2c_main_3_porscl"
+    },
+    "CLK_J742S2_MSHSI2C_MAIN_4_PORSCL": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mshsi2c_main_4_porscl"
+    },
+    "CLK_J742S2_MSHSI2C_MAIN_5_PORSCL": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mshsi2c_main_5_porscl"
+    },
+    "CLK_J742S2_MSHSI2C_MAIN_6_PORSCL": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_mshsi2c_main_6_porscl"
+    },
+    "CLK_J742S2_NAVSS512J7AM_MAIN_0_CPTS0_GENF2": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_navss512j7am_main_0_cpts0_genf2"
+    },
+    "CLK_J742S2_NAVSS512J7AM_MAIN_0_CPTS0_GENF3": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_navss512j7am_main_0_cpts0_genf3"
+    },
+    "CLK_J742S2_NAVSS512J7AM_MAIN_0_CPTS_0_TS_GENF0": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_navss512j7am_main_0_cpts_0_ts_genf0"
+    },
+    "CLK_J742S2_NAVSS512J7AM_MAIN_0_CPTS_0_TS_GENF1": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_navss512j7am_main_0_cpts_0_ts_genf1"
+    },
+    "CLK_J742S2_OBSCLK1_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_obsclk1_mux_out0"
+    },
+    "CLK_J742S2_PCIE_G3X4_128_MAIN_0_PCIE_LANE0_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_pcie_g3x4_128_main_0_pcie_lane0_txclk"
+    },
+    "CLK_J742S2_PCIE_G3X4_128_MAIN_0_PCIE_LANE1_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_pcie_g3x4_128_main_0_pcie_lane1_txclk"
+    },
+    "CLK_J742S2_PCIE_G3X4_128_MAIN_0_PCIE_LANE2_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_pcie_g3x4_128_main_0_pcie_lane2_txclk"
+    },
+    "CLK_J742S2_PCIE_G3X4_128_MAIN_0_PCIE_LANE3_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_pcie_g3x4_128_main_0_pcie_lane3_txclk"
+    },
+    "CLK_J742S2_PCIE_G3X4_128_MAIN_1_PCIE_LANE0_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_pcie_g3x4_128_main_1_pcie_lane0_txclk"
+    },
+    "CLK_J742S2_PCIE_G3X4_128_MAIN_1_PCIE_LANE1_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_pcie_g3x4_128_main_1_pcie_lane1_txclk"
+    },
+    "CLK_J742S2_PCIE_G3X4_128_MAIN_1_PCIE_LANE2_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_pcie_g3x4_128_main_1_pcie_lane2_txclk"
+    },
+    "CLK_J742S2_PCIE_G3X4_128_MAIN_1_PCIE_LANE3_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_pcie_g3x4_128_main_1_pcie_lane3_txclk"
+    },
+    "CLK_J742S2_PCIE_G3X4_128_MAIN_2_PCIE_LANE0_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_pcie_g3x4_128_main_2_pcie_lane0_txclk"
+    },
+    "CLK_J742S2_PCIE_G3X4_128_MAIN_2_PCIE_LANE1_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_pcie_g3x4_128_main_2_pcie_lane1_txclk"
+    },
+    "CLK_J742S2_PCIE_G3X4_128_MAIN_3_PCIE_LANE0_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_pcie_g3x4_128_main_3_pcie_lane0_txclk"
+    },
+    "CLK_J742S2_PCIE_G3X4_128_MAIN_3_PCIE_LANE1_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_pcie_g3x4_128_main_3_pcie_lane1_txclk"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_0_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT0",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_0"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_0_FOUTPOSTDIV_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_0_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_postdiv",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_0_postdiv"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_1_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT1",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_1"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_1_FOUTPOSTDIV_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_1_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_postdiv",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_1_postdiv"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_12_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT12",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_12"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_14_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT14",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_14"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_16_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT16",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_16"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_17_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT17",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_17"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_19_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT19",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_19"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_2_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT2",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_2"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_2_FOUTPOSTDIV_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_2_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_postdiv",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_2_postdiv"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_25_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT25_0",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_25"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_26_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT26_0",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_26"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_27_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT27_0",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_27"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_28_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT28",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_28"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_3_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT3",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_3"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_5_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT5",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_5"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_6_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT6",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_6"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_7_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT7",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_7"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_8_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT8",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_8"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_9_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL_HFOSC_SEL_OUT9",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_9"
+    },
+    "CLK_J742S2_POSTDIV2_16FFT_MAIN_2_HSDIVOUT6_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_2_FOUTPOSTDIV_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_postdiv_hsdiv",
+        "data": "clk_data_postdiv2_16fft_main_2_hsdiv6"
+    },
+    "CLK_J742S2_POSTDIV2_16FFT_MAIN_2_HSDIVOUT7_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_2_FOUTPOSTDIV_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_postdiv_hsdiv",
+        "data": "clk_data_postdiv2_16fft_main_2_hsdiv7"
+    },
+    "CLK_J742S2_POSTDIV3_16FFT_MAIN_0_HSDIVOUT5_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_0_FOUTPOSTDIV_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_postdiv_hsdiv",
+        "data": "clk_data_postdiv3_16fft_main_0_hsdiv5"
+    },
+    "CLK_J742S2_POSTDIV3_16FFT_MAIN_0_HSDIVOUT6_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_0_FOUTPOSTDIV_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_postdiv_hsdiv",
+        "data": "clk_data_postdiv3_16fft_main_0_hsdiv6"
+    },
+    "CLK_J742S2_POSTDIV3_16FFT_MAIN_0_HSDIVOUT7_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_0_FOUTPOSTDIV_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_postdiv_hsdiv",
+        "data": "clk_data_postdiv3_16fft_main_0_hsdiv7"
+    },
+    "CLK_J742S2_POSTDIV3_16FFT_MAIN_0_HSDIVOUT8_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_0_FOUTPOSTDIV_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_postdiv_hsdiv",
+        "data": "clk_data_postdiv3_16fft_main_0_hsdiv8"
+    },
+    "CLK_J742S2_POSTDIV3_16FFT_MAIN_1_HSDIVOUT5_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_1_FOUTPOSTDIV_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_postdiv_hsdiv",
+        "data": "clk_data_postdiv3_16fft_main_1_hsdiv5"
+    },
+    "CLK_J742S2_POSTDIV3_16FFT_MAIN_1_HSDIVOUT6_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_1_FOUTPOSTDIV_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_postdiv_hsdiv",
+        "data": "clk_data_postdiv3_16fft_main_1_hsdiv6"
+    },
+    "CLK_J742S2_POSTDIV3_16FFT_MAIN_1_HSDIVOUT7_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_1_FOUTPOSTDIV_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_postdiv_hsdiv",
+        "data": "clk_data_postdiv3_16fft_main_1_hsdiv7"
+    },
+    "CLK_J742S2_POSTDIV3_16FFT_MAIN_1_HSDIVOUT8_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_1_FOUTPOSTDIV_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_postdiv_hsdiv",
+        "data": "clk_data_postdiv3_16fft_main_1_hsdiv8"
+    },
+    "CLK_J742S2_SPI_MAIN_0_IO_CLKSPIO_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_spi_main_0_io_clkspio_clk"
+    },
+    "CLK_J742S2_SPI_MAIN_1_IO_CLKSPIO_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_spi_main_1_io_clkspio_clk"
+    },
+    "CLK_J742S2_SPI_MAIN_2_IO_CLKSPIO_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_spi_main_2_io_clkspio_clk"
+    },
+    "CLK_J742S2_SPI_MAIN_3_IO_CLKSPIO_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_spi_main_3_io_clkspio_clk"
+    },
+    "CLK_J742S2_SPI_MAIN_4_IO_CLKSPIO_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_spi_main_4_io_clkspio_clk"
+    },
+    "CLK_J742S2_SPI_MAIN_5_IO_CLKSPIO_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_spi_main_5_io_clkspio_clk"
+    },
+    "CLK_J742S2_SPI_MAIN_6_IO_CLKSPIO_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_spi_main_6_io_clkspio_clk"
+    },
+    "CLK_J742S2_SPI_MAIN_7_IO_CLKSPIO_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_spi_main_7_io_clkspio_clk"
+    },
+    "CLK_J742S2_UFSHCI2P1SS_16FFC_MAIN_0_UFSHCI_MPHY_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_ufshci2p1ss_16ffc_main_0_ufshci_mphy_REFCLK"
+    },
+    "CLK_J742S2_UFSHCI2P1SS_16FFC_MAIN_0_UFSHCI_MPHY_TX_REF_SYMBOLCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_ufshci2p1ss_16ffc_main_0_ufshci_mphy_TX_Ref_SymbolClk"
+    },
+    "CLK_J742S2_UFSHCI2P1SS_16FFC_MAIN_0_UFSHCI_MPHY_M31_VCO_19P2M_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_ufshci2p1ss_16ffc_main_0_ufshci_mphy_m31_VCO_19P2M_CLK"
+    },
+    "CLK_J742S2_UFSHCI2P1SS_16FFC_MAIN_0_UFSHCI_MPHY_M31_VCO_26M_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_ufshci2p1ss_16ffc_main_0_ufshci_mphy_m31_VCO_26M_CLK"
+    },
+    "CLK_J742S2_USB3P0SS_16FFC_MAIN_0_PIPE_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_usb3p0ss_16ffc_main_0_pipe_txclk"
+    },
+    "CLK_J742S2_VUSR_DUAL_MAIN_0_V0_RXFL_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_vusr_dual_main_0_v0_rxfl_clk"
+    },
+    "CLK_J742S2_VUSR_DUAL_MAIN_0_V0_TXPM_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_vusr_dual_main_0_v0_txpm_clk"
+    },
+    "CLK_J742S2_VUSR_DUAL_MAIN_0_V1_RXFL_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_vusr_dual_main_0_v1_rxfl_clk"
+    },
+    "CLK_J742S2_VUSR_DUAL_MAIN_0_V1_TXPM_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_vusr_dual_main_0_v1_txpm_clk"
+    },
+    "CLK_J742S2_VUSR_DUAL_MAIN_0_VUSRX_LN0_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_vusr_dual_main_0_vusrx_ln0_txclk"
+    },
+    "CLK_J742S2_VUSR_DUAL_MAIN_0_VUSRX_LN1_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_vusr_dual_main_0_vusrx_ln1_txclk"
+    },
+    "CLK_J742S2_VUSR_DUAL_MAIN_0_VUSRX_LN2_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_vusr_dual_main_0_vusrx_ln2_txclk"
+    },
+    "CLK_J742S2_VUSR_DUAL_MAIN_0_VUSRX_LN3_TXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_vusr_dual_main_0_vusrx_ln3_txclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CDT_MAIN_0_CK_M": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4cdt_main_0_ck_m"
+    },
+    "CLK_J742S2_WIZ16B8M4CDT_MAIN_0_CK_P": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4cdt_main_0_ck_p"
+    },
+    "CLK_J742S2_WIZ16B8M4CDT_MAIN_0_IP1_PPI_M_RXCLKESC_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4cdt_main_0_ip1_ppi_M_RxClkEsc_clk"
+    },
+    "CLK_J742S2_WIZ16B8M4CDT_MAIN_0_IP1_PPI_TXBYTECLKHS_CL_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4cdt_main_0_ip1_ppi_TxByteClkHS_cl_clk"
+    },
+    "CLK_J742S2_WIZ16B8M4CDT_MAIN_0_IP2_PPI_TXBYTECLKHS_CL_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4cdt_main_0_ip2_ppi_TxByteClkHS_cl_clk"
+    },
+    "CLK_J742S2_WIZ16B8M4CDT_MAIN_1_CK_M": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4cdt_main_1_ck_m"
+    },
+    "CLK_J742S2_WIZ16B8M4CDT_MAIN_1_CK_P": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4cdt_main_1_ck_p"
+    },
+    "CLK_J742S2_WIZ16B8M4CDT_MAIN_1_IP1_PPI_M_RXCLKESC_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4cdt_main_1_ip1_ppi_M_RxClkEsc_clk"
+    },
+    "CLK_J742S2_WIZ16B8M4CDT_MAIN_1_IP1_PPI_TXBYTECLKHS_CL_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4cdt_main_1_ip1_ppi_TxByteClkHS_cl_clk"
+    },
+    "CLK_J742S2_WIZ16B8M4CDT_MAIN_1_IP2_PPI_TXBYTECLKHS_CL_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4cdt_main_1_ip2_ppi_TxByteClkHS_cl_clk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_CMN_REFCLK_M": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_cmn_refclk_m"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_CMN_REFCLK_P": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_cmn_refclk_p"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP1_LN2_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip1_ln2_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP1_LN2_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip1_ln2_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP1_LN2_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip1_ln2_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP1_LN2_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip1_ln2_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP1_LN2_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip1_ln2_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP1_LN3_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip1_ln3_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP1_LN3_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip1_ln3_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP1_LN3_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip1_ln3_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP1_LN3_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip1_ln3_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP1_LN3_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip1_ln3_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN0_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln0_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN0_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln0_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN0_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln0_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN0_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln0_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN0_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln0_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN1_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln1_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN1_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln1_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN1_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln1_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN1_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln1_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN1_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln1_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN2_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln2_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN2_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln2_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN2_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln2_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN2_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln2_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN2_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln2_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN3_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln3_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN3_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln3_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN3_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln3_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN3_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln3_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP2_LN3_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip2_ln3_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP3_LN3_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip3_ln3_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP3_LN3_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip3_ln3_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP3_LN3_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip3_ln3_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP3_LN3_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip3_ln3_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP3_LN3_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip3_ln3_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN0_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln0_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN0_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln0_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN0_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln0_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN0_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln0_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN0_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln0_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN1_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln1_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN1_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln1_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN1_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln1_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN1_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln1_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN1_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln1_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN2_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln2_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN2_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln2_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN2_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln2_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN2_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln2_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN2_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln2_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN3_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln3_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN3_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln3_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN3_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln3_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN3_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln3_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_IP4_LN3_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ip4_ln3_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_REF_DER_OUT_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ref_der_out_clk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_0_REF_OUT_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_0_ref_out_clk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_CMN_REFCLK_M": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_cmn_refclk_m"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_CMN_REFCLK_P": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_cmn_refclk_p"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN0_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln0_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN0_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln0_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN0_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln0_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN0_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln0_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN0_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln0_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN1_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln1_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN1_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln1_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN1_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln1_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN1_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln1_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN1_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln1_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN2_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln2_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN2_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln2_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN2_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln2_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN2_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln2_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN2_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln2_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN3_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln3_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN3_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln3_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN3_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln3_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN3_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln3_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP1_LN3_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip1_ln3_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN0_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln0_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN0_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln0_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN0_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln0_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN0_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln0_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN0_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln0_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN1_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln1_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN1_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln1_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN1_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln1_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN1_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln1_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN1_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln1_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN2_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln2_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN2_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln2_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN2_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln2_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN2_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln2_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN2_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln2_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN3_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln3_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN3_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln3_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN3_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln3_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN3_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln3_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP2_LN3_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip2_ln3_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP3_LN2_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip3_ln2_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP3_LN2_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip3_ln2_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP3_LN2_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip3_ln2_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP3_LN2_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip3_ln2_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP3_LN2_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip3_ln2_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP3_LN3_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip3_ln3_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP3_LN3_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip3_ln3_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP3_LN3_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip3_ln3_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP3_LN3_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip3_ln3_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_IP3_LN3_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ip3_ln3_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_REF_DER_OUT_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ref_der_out_clk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_1_REF_OUT_CLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_1_ref_out_clk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_CMN_REFCLK_M": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_cmn_refclk_m"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN0_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln0_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN0_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln0_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN0_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln0_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN0_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln0_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN0_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln0_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN1_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln1_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN1_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln1_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN1_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln1_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN1_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln1_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN1_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln1_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN2_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln2_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN2_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln2_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN2_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln2_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN2_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln2_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN2_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln2_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN3_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln3_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN3_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln3_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN3_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln3_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN3_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln3_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP1_LN3_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip1_ln3_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN2_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip2_ln2_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN2_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip2_ln2_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN2_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip2_ln2_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN2_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip2_ln2_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN2_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip2_ln2_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN3_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip2_ln3_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN3_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip2_ln3_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN3_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip2_ln3_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN3_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip2_ln3_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_2_IP2_LN3_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_2_ip2_ln3_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_CMN_REFCLK_M": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_cmn_refclk_m"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_CMN_REFCLK_P": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_cmn_refclk_p"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN0_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln0_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN0_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln0_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN0_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln0_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN0_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln0_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN0_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln0_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN1_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln1_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN1_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln1_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN1_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln1_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN1_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln1_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN1_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln1_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN2_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln2_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN2_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln2_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN2_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln2_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN2_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln2_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN2_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln2_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN3_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln3_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN3_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln3_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN3_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln3_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN3_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln3_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP1_LN3_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip1_ln3_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN0_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln0_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN0_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln0_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN0_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln0_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN0_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln0_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN0_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln0_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN1_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln1_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN1_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln1_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN1_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln1_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN1_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln1_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN1_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln1_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN2_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln2_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN2_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln2_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN2_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln2_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN2_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln2_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN2_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln2_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN3_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln3_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN3_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln3_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN3_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln3_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN3_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln3_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP2_LN3_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip2_ln3_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP3_LN3_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip3_ln3_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP3_LN3_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip3_ln3_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP3_LN3_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip3_ln3_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP3_LN3_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip3_ln3_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP3_LN3_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip3_ln3_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN0_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln0_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN0_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln0_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN0_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln0_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN0_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln0_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN0_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln0_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN1_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln1_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN1_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln1_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN1_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln1_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN1_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln1_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN1_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln1_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN2_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln2_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN2_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln2_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN2_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln2_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN2_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln2_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN2_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln2_txmclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN3_REFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln3_refclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN3_RXCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln3_rxclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN3_RXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln3_rxfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN3_TXFCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln3_txfclk"
+    },
+    "CLK_J742S2_WIZ16B8M4CT3_MAIN_4_IP4_LN3_TXMCLK": {
+        "drv": "clk_drv_from_device",
+        "data": "clk_data_wiz16b8m4ct3_main_4_ip4_ln3_txmclk"
+    },
+    "CLK_J742S2_ATL_AWS_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_ATL_AWS_SEL_out0"
+    },
+    "CLK_J742S2_ATL_AWS_SEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_ATL_AWS_SEL_out1"
+    },
+    "CLK_J742S2_ATL_AWS_SEL_OUT2": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_ATL_AWS_SEL_out2"
+    },
+    "CLK_J742S2_ATL_AWS_SEL_OUT3": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_ATL_AWS_SEL_out3"
+    },
+    "CLK_J742S2_ATL_BWS_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_ATL_BWS_SEL_out0"
+    },
+    "CLK_J742S2_ATL_BWS_SEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_ATL_BWS_SEL_out1"
+    },
+    "CLK_J742S2_ATL_BWS_SEL_OUT2": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_ATL_BWS_SEL_out2"
+    },
+    "CLK_J742S2_ATL_BWS_SEL_OUT3": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_ATL_BWS_SEL_out3"
+    },
+    "CLK_J742S2_CPSW9_LN1_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN1_REFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN1_RXCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN1_RXCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN1_RXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN1_RXFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN1_TXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN1_TXFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN1_TXMCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN1_TXMCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN2_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN2_REFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN2_RXCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN2_RXCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN2_RXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN2_RXFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN2_TXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN2_TXFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN2_TXMCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN2_TXMCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN5_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN5_REFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN5_RXCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN5_RXCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN5_RXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN5_RXFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN5_TXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN5_TXFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN5_TXMCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN5_TXMCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN6_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN6_REFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN6_RXCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN6_RXCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN6_RXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN6_RXFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN6_TXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN6_TXFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN6_TXMCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN6_TXMCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN7_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN7_REFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN7_RXCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN7_RXCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN7_RXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN7_RXFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN7_TXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN7_TXFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN7_TXMCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN7_TXMCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN8_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN8_REFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN8_RXCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN8_RXCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN8_RXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN8_RXFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN8_TXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN8_TXFCLK_out0"
+    },
+    "CLK_J742S2_CPSW9_LN8_TXMCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW9_LN8_TXMCLK_out0"
+    },
+    "CLK_J742S2_DPI1_CLKOUT_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_j7_dpi_1_clk_out",
+        "data": "clk_data_DPI1_CLKOUT_SEL_out0"
+    },
+    "CLK_J742S2_EMMCSD1_LB_CLKSEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_EMMCSD1_LB_CLKSEL_out0"
+    },
+    "CLK_J742S2_MAIN_PLL4_XREF_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_PLL4_XREF_SEL_out0"
+    },
+    "CLK_J742S2_MAIN_TIMER16_AFS_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER16_AFS_SEL_out0"
+    },
+    "CLK_J742S2_MAIN_TIMER17_AFS_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER17_AFS_SEL_out0"
+    },
+    "CLK_J742S2_MAIN_TIMER18_AFS_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER18_AFS_SEL_out0"
+    },
+    "CLK_J742S2_MAIN_TIMER19_AFS_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER19_AFS_SEL_out0"
+    },
+    "CLK_J742S2_MCU_OBSCLK_OUT_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCU_OBSCLK_OUT_out0"
+    },
+    "CLK_J742S2_SPI0_CLK_LPBK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_SPI0_CLK_LPBK_MUX_out0"
+    },
+    "CLK_J742S2_SPI1_CLK_LPBK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_SPI1_CLK_LPBK_MUX_out0"
+    },
+    "CLK_J742S2_SPI2_CLK_LPBK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_SPI2_CLK_LPBK_MUX_out0"
+    },
+    "CLK_J742S2_SPI3_CLK_LPBK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_SPI3_CLK_LPBK_MUX_out0"
+    },
+    "CLK_J742S2_SPI3_CLK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_SPI3_CLK_MUX_out0"
+    },
+    "CLK_J742S2_SPI5_CLK_LPBK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_SPI5_CLK_LPBK_MUX_out0"
+    },
+    "CLK_J742S2_SPI6_CLK_LPBK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_SPI6_CLK_LPBK_MUX_out0"
+    },
+    "CLK_J742S2_SPI7_CLK_LPBK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_SPI7_CLK_LPBK_MUX_out0"
+    },
+    "CLK_J742S2_UFS_CLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_UFS_CLK_SEL_out0"
+    },
+    "CLK_J742S2_USB0_SERDES_REFCLK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_USB0_SerDes_refclk_Mux_out0"
+    },
+    "CLK_J742S2_USB0_SERDES_RXCLK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_USB0_SerDes_rxclk_Mux_out0"
+    },
+    "CLK_J742S2_USB0_SERDES_RXFCLK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_USB0_SerDes_rxfclk_Mux_out0"
+    },
+    "CLK_J742S2_USB0_SERDES_TXFCLK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_USB0_SerDes_txfclk_Mux_out0"
+    },
+    "CLK_J742S2_USB0_SERDES_TXMCLK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_USB0_SerDes_txmclk_Mux_out0"
+    },
+    "CLK_J742S2_VUSR_LN0_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN0_REFCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN0_RXCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN0_RXCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN0_RXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN0_RXFCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN0_TXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN0_TXFCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN0_TXMCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN0_TXMCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN1_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN1_REFCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN1_RXCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN1_RXCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN1_RXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN1_RXFCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN1_TXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN1_TXFCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN1_TXMCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN1_TXMCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN2_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN2_REFCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN2_RXCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN2_RXCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN2_RXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN2_RXFCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN2_TXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN2_TXFCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN2_TXMCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN2_TXMCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN3_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN3_REFCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN3_RXCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN3_RXCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN3_RXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN3_RXFCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN3_TXFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN3_TXFCLK_out0"
+    },
+    "CLK_J742S2_VUSR_LN3_TXMCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VUSR_LN3_TXMCLK_out0"
+    },
+    "CLK_J742S2_HSDIV0_16FFT_MAIN_12_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_12_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv0_16fft_main_12_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV0_16FFT_MAIN_26_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_26_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv0_16fft_main_26_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV0_16FFT_MAIN_27_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_27_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv0_16fft_main_27_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV0_16FFT_MAIN_28_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_28_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv0_16fft_main_28_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV0_16FFT_MAIN_6_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_6_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv0_16fft_main_6_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV0_16FFT_MAIN_7_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_7_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv0_16fft_main_7_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV0_16FFT_MAIN_8_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_8_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv0_16fft_main_8_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV0_16FFT_MAIN_9_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_9_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv0_16fft_main_9_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV1_16FFT_MAIN_16_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_16_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv1_16fft_main_16_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV1_16FFT_MAIN_16_HSDIVOUT1_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_16_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv1_16fft_main_16_hsdiv1"
+    },
+    "CLK_J742S2_HSDIV1_16FFT_MAIN_17_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_17_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv1_16fft_main_17_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV1_16FFT_MAIN_17_HSDIVOUT1_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_17_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv1_16fft_main_17_hsdiv1"
+    },
+    "CLK_J742S2_HSDIV1_16FFT_MAIN_19_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_19_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv1_16fft_main_19_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV1_16FFT_MAIN_25_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_25_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv1_16fft_main_25_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV1_16FFT_MAIN_25_HSDIVOUT1_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_25_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv1_16fft_main_25_hsdiv1"
+    },
+    "CLK_J742S2_HSDIV1_16FFT_MAIN_5_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_5_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv1_16fft_main_5_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV1_16FFT_MAIN_5_HSDIVOUT1_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_5_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv1_16fft_main_5_hsdiv1"
+    },
+    "CLK_J742S2_HSDIV2_16FFT_MAIN_14_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_14_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv2_16fft_main_14_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV2_16FFT_MAIN_14_HSDIVOUT1_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_14_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv2_16fft_main_14_hsdiv1"
+    },
+    "CLK_J742S2_HSDIV2_16FFT_MAIN_14_HSDIVOUT2_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_14_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv2_16fft_main_14_hsdiv2"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_0_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_0_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_0_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_0_HSDIVOUT1_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_0_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_0_hsdiv1"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_0_HSDIVOUT2_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_0_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_0_hsdiv2"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_0_HSDIVOUT3_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_0_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_0_hsdiv3"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_0_HSDIVOUT4_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_0_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_0_hsdiv4"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_1_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_1_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT1_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_1_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_1_hsdiv1"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT2_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_1_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_1_hsdiv2"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT3_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_1_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_1_hsdiv3"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT1_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_2_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_2_hsdiv1"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT2_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_2_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_2_hsdiv2"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT3_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_2_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_2_hsdiv3"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_2_HSDIVOUT4_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_2_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_2_hsdiv4"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_3_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_3_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_3_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_3_HSDIVOUT1_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_3_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_3_hsdiv1"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_3_HSDIVOUT2_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_3_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_3_hsdiv2"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_3_HSDIVOUT3_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_3_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_3_hsdiv3"
+    },
+    "CLK_J742S2_HSDIV4_16FFT_MAIN_3_HSDIVOUT4_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_3_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv4_16fft_main_3_hsdiv4"
+    },
+    "CLK_J742S2_K3_PLL_CTRL_WRAP_MAIN_0_SYSCLKOUT_CLK": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_pllctrl_mux_reg_ro",
+        "data": "clk_data_k3_pll_ctrl_wrap_main_0_sysclkout_clk"
+    },
+    "CLK_J742S2_K3_PLL_CTRL_WRAP_MAIN_0_CHIP_DIV1_CLK_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_K3_PLL_CTRL_WRAP_MAIN_0_SYSCLKOUT_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg",
+        "data": "clk_data_k3_pll_ctrl_wrap_main_0_chip_div1_clk_clk"
+    },
+    "CLK_J742S2_MAIN_PLL8_SEL_EXTWAVE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_main_pll8_sel_extwave_out0"
+    },
+    "CLK_J742S2_MAIN_PLL9_SEL_EXTWAVE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_main_pll9_sel_extwave_out0"
+    },
+    "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_4_FOUTVCOP_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_MAIN_PLL4_XREF_SEL_OUT0",
+            "div": 1
+        },
+        "drv": "clk_drv_pll_16fft",
+        "data": "clk_data_pllfracf2_ssmod_16fft_main_4"
+    },
+    "CLK_J742S2_ACSPCIE0_BUFCLK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_ACSPCIE0_BUFCLK_MUX_out0"
+    },
+    "CLK_J742S2_ACSPCIE0_BUFCLK_MUX_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_ACSPCIE0_BUFCLK_MUX_out1"
+    },
+    "CLK_J742S2_ACSPCIE1_BUFCLK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_ACSPCIE1_BUFCLK_MUX_out0"
+    },
+    "CLK_J742S2_ACSPCIE1_BUFCLK_MUX_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_ACSPCIE1_BUFCLK_MUX_out1"
+    },
+    "CLK_J742S2_CPSW0_CPTS_RCLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_CPSW0_CPTS_RCLK_SEL_out0"
+    },
+    "CLK_J742S2_DPHY_CLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_DPHY_CLK_SEL_out0"
+    },
+    "CLK_J742S2_DPHY_CLK_SEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_DPHY_CLK_SEL_out1"
+    },
+    "CLK_J742S2_DPI0_EXT_CLKSEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_DPI0_EXT_CLKSEL_out0"
+    },
+    "CLK_J742S2_DPI_1_PCLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_DPI_1_PCLK_SEL_out0"
+    },
+    "CLK_J742S2_DPI_2_PCLK_SEL1_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_j7_dpi_2_pclk",
+        "data": "clk_data_DPI_2_PCLK_SEL1_out0"
+    },
+    "CLK_J742S2_DPI_3_PCLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg_j7_dpi_3_pclk",
+        "data": "clk_data_DPI_3_PCLK_SEL_out0"
+    },
+    "CLK_J742S2_EMMCSD_REFCLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_EMMCSD_REFCLK_SEL_out0"
+    },
+    "CLK_J742S2_EMMCSD_REFCLK_SEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_EMMCSD_REFCLK_SEL_out1"
+    },
+    "CLK_J742S2_GTC_CLK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_GTC_CLK_MUX_out0"
+    },
+    "CLK_J742S2_MAIN_CPSW2_CPTS_CLK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_CPSW2_CPTS_CLK_MUX_out0"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out0"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out1"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT10": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out10"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT11": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out11"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT12": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out12"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT13": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out13"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT14_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out14_0"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT15_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out15_0"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT16_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out16_0"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT17_0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out17_0"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT2": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out2"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT3": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out3"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT4": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out4"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT5": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out5"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT6": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out6"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT7": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out7"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT8": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out8"
+    },
+    "CLK_J742S2_MCAN_CLK_SEL_OUT9": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MCAN_CLK_SEL_out9"
+    },
+    "CLK_J742S2_NAVSS_CPTS_RCLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_NAVSS_CPTS_RCLK_SEL_out0"
+    },
+    "CLK_J742S2_PCIEN_CPTS_RCLK_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_PCIEn_CPTS_RCLK_MUX_out0"
+    },
+    "CLK_J742S2_PCIEN_CPTS_RCLK_MUX_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_PCIEn_CPTS_RCLK_MUX_out1"
+    },
+    "CLK_J742S2_PCIEN_CPTS_RCLK_MUX_OUT2": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_PCIEn_CPTS_RCLK_MUX_out2"
+    },
+    "CLK_J742S2_PCIEN_CPTS_RCLK_MUX_OUT3": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_PCIEn_CPTS_RCLK_MUX_out3"
+    },
+    "CLK_J742S2_SERDES0_CORE_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_SERDES0_CORE_REFCLK_out0"
+    },
+    "CLK_J742S2_SERDES1_CORE_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_SERDES1_CORE_REFCLK_out0"
+    },
+    "CLK_J742S2_SERDES2_CORE_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_SERDES2_CORE_REFCLK_out0"
+    },
+    "CLK_J742S2_SERDES4_CORE_REFCLK_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_SERDES4_CORE_REFCLK_out0"
+    },
+    "CLK_J742S2_USART_PROGRAMMABLE_CLOCK_DIVIDER_OUT0": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg_go",
+        "data": "clk_data_USART_Programmable_Clock_Divider_out0"
+    },
+    "CLK_J742S2_USART_PROGRAMMABLE_CLOCK_DIVIDER_OUT1": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg_go",
+        "data": "clk_data_USART_Programmable_Clock_Divider_out1"
+    },
+    "CLK_J742S2_USART_PROGRAMMABLE_CLOCK_DIVIDER_OUT2": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg_go",
+        "data": "clk_data_USART_Programmable_Clock_Divider_out2"
+    },
+    "CLK_J742S2_USART_PROGRAMMABLE_CLOCK_DIVIDER_OUT3": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg_go",
+        "data": "clk_data_USART_Programmable_Clock_Divider_out3"
+    },
+    "CLK_J742S2_USART_PROGRAMMABLE_CLOCK_DIVIDER_OUT4": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg_go",
+        "data": "clk_data_USART_Programmable_Clock_Divider_out4"
+    },
+    "CLK_J742S2_USART_PROGRAMMABLE_CLOCK_DIVIDER_OUT5": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg_go",
+        "data": "clk_data_USART_Programmable_Clock_Divider_out5"
+    },
+    "CLK_J742S2_USART_PROGRAMMABLE_CLOCK_DIVIDER_OUT6": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg_go",
+        "data": "clk_data_USART_Programmable_Clock_Divider_out6"
+    },
+    "CLK_J742S2_USART_PROGRAMMABLE_CLOCK_DIVIDER_OUT7": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg_go",
+        "data": "clk_data_USART_Programmable_Clock_Divider_out7"
+    },
+    "CLK_J742S2_USART_PROGRAMMABLE_CLOCK_DIVIDER_OUT8": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg_go",
+        "data": "clk_data_USART_Programmable_Clock_Divider_out8"
+    },
+    "CLK_J742S2_USART_PROGRAMMABLE_CLOCK_DIVIDER_OUT9": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_HSDIV4_16FFT_MAIN_1_HSDIVOUT0_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg_go",
+        "data": "clk_data_USART_Programmable_Clock_Divider_out9"
+    },
+    "CLK_J742S2_VPAC_CLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_VPAC_CLK_SEL_out0"
+    },
+    "CLK_J742S2_GPMC_FCLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_gpmc_fclk_sel_out0"
+    },
+    "CLK_J742S2_HSDIV2_16FFT_MAIN_4_HSDIVOUT0_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_4_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv2_16fft_main_4_hsdiv0"
+    },
+    "CLK_J742S2_HSDIV2_16FFT_MAIN_4_HSDIVOUT1_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_4_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv2_16fft_main_4_hsdiv1"
+    },
+    "CLK_J742S2_HSDIV2_16FFT_MAIN_4_HSDIVOUT2_CLK": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_PLLFRACF2_SSMOD_16FFT_MAIN_4_FOUTVCOP_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_pll_16fft_hsdiv",
+        "data": "clk_data_hsdiv2_16fft_main_4_hsdiv2"
+    },
+    "CLK_J742S2_OBSCLK0_MUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_obsclk0_mux_out0"
+    },
+    "CLK_J742S2_ATL_PCLKMUX_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_ATL_PCLKMUX_out0"
+    },
+    "CLK_J742S2_DPI_0_PCLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_j7_dpi_0_pclk",
+        "data": "clk_data_DPI_0_PCLK_SEL_out0"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out0"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out1"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT10": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out10"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT11": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out11"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT12": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out12"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT13": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out13"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT14": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out14"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT15": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out15"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT16": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out16"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT17": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out17"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT18": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out18"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT19": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out19"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT2": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out2"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT3": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out3"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT4": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out4"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT5": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out5"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT6": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out6"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT7": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out7"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT8": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out8"
+    },
+    "CLK_J742S2_MAIN_TIMER_CLKSEL_OUT9": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER_CLKSEL_out9"
+    },
+    "CLK_J742S2_MCASP_AHCLKO_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_McASP_AHCLKO_out0"
+    },
+    "CLK_J742S2_MCASP_AHCLKO_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_McASP_AHCLKO_out1"
+    },
+    "CLK_J742S2_MCASP_AUXCLK_SEL_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_McASP_AUXCLK_SEL_out0"
+    },
+    "CLK_J742S2_MCASP_AUXCLK_SEL_OUT1": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_McASP_AUXCLK_SEL_out1"
+    },
+    "CLK_J742S2_MCASP_AUXCLK_SEL_OUT2": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_McASP_AUXCLK_SEL_out2"
+    },
+    "CLK_J742S2_MCASP_AUXCLK_SEL_OUT3": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_McASP_AUXCLK_SEL_out3"
+    },
+    "CLK_J742S2_MCASP_AUXCLK_SEL_OUT4": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_McASP_AUXCLK_SEL_out4"
+    },
+    "CLK_J742S2_TIMER11_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_TIMER11_CASCADE_out0"
+    },
+    "CLK_J742S2_TIMER13_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_TIMER13_CASCADE_out0"
+    },
+    "CLK_J742S2_TIMER15_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_TIMER15_CASCADE_out0"
+    },
+    "CLK_J742S2_TIMER1_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_TIMER1_CASCADE_out0"
+    },
+    "CLK_J742S2_TIMER3_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_TIMER3_CASCADE_out0"
+    },
+    "CLK_J742S2_TIMER5_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_TIMER5_CASCADE_out0"
+    },
+    "CLK_J742S2_TIMER7_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_TIMER7_CASCADE_out0"
+    },
+    "CLK_J742S2_TIMER9_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_TIMER9_CASCADE_out0"
+    },
+    "CLK_J742S2_OBSCLK0_DIV_OUT0": {
+        "type": "CLK_TYPE_DIV",
+        "parent": {
+            "clk_name": "CLK_J742S2_OBSCLK0_MUX_OUT0",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg_go",
+        "data": "clk_data_obsclk0_div_out0"
+    },
+    "CLK_J742S2_MAIN_TIMER16_AFS_EN_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER16_AFS_EN_out0"
+    },
+    "CLK_J742S2_MAIN_TIMER17_AFS_EN_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER17_AFS_EN_out0"
+    },
+    "CLK_J742S2_MAIN_TIMER18_AFS_EN_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER18_AFS_EN_out0"
+    },
+    "CLK_J742S2_MAIN_TIMER19_AFS_EN_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_MAIN_TIMER19_AFS_EN_out0"
+    },
+    "CLK_J742S2_TIMER17_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_TIMER17_CASCADE_out0"
+    },
+    "CLK_J742S2_TIMER19_CASCADE_OUT0": {
+        "type": "CLK_TYPE_MUX",
+        "drv": "clk_drv_mux_reg",
+        "data": "clk_data_TIMER19_CASCADE_out0"
+    },
+    "CLK_J742S2_K3_PLL_CTRL_WRAP_MAIN_0_CHIP_DIV24_CLK_CLK": {
+        "parent": {
+            "clk_name": "CLK_J742S2_K3_PLL_CTRL_WRAP_MAIN_0_SYSCLKOUT_CLK",
+            "div": 1
+        },
+        "drv": "clk_drv_div_reg",
+        "data": "clk_data_k3_pll_ctrl_wrap_main_0_chip_div24_clk_clk"
+    }
+}

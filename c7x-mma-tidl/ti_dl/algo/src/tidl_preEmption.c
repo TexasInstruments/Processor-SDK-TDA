@@ -232,7 +232,9 @@ int32_t TIDL_addPriorityObject(
   {
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if (gTIDL_activePriorityLevels < TIDL_MAX_PRIORITY_LEVEL)
     /* LDRA_JUSTIFY_END */
@@ -242,7 +244,9 @@ int32_t TIDL_addPriorityObject(
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     else
     {
@@ -254,7 +258,9 @@ int32_t TIDL_addPriorityObject(
   }
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if(status == IALG_EOK)
   /* LDRA_JUSTIFY_END */
@@ -262,7 +268,9 @@ int32_t TIDL_addPriorityObject(
     pPriorityInfo = &gTIDL_priorityTable[priorityIndex];
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     for(objIdx = 0 ; objIdx < TIDL_MAX_OBJECTS_PER_LEVEL ; objIdx++)
     /* LDRA_JUSTIFY_END */
@@ -278,7 +286,9 @@ int32_t TIDL_addPriorityObject(
     }
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if(objIdx < TIDL_MAX_OBJECTS_PER_LEVEL)
     /* LDRA_JUSTIFY_END */
@@ -287,7 +297,9 @@ int32_t TIDL_addPriorityObject(
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     else
     {
@@ -299,7 +311,9 @@ int32_t TIDL_addPriorityObject(
   }
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if(status == IALG_EOK)
   /* LDRA_JUSTIFY_END */
@@ -315,7 +329,9 @@ int32_t TIDL_addPriorityObject(
     ,priorityId, handle);
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if ((pPriorityInfo != NULL) && (pPriorityObj != NULL))
   /* LDRA_JUSTIFY_END */
@@ -335,7 +351,9 @@ int32_t TIDL_removePriorityObject( void *handle, IALG_MemRec *pMemRec)
   uint32_t idx = 0;
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if(gTIDL_firstObject != 0)
   {
@@ -349,7 +367,9 @@ int32_t TIDL_removePriorityObject( void *handle, IALG_MemRec *pMemRec)
   }
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if(status != IALG_EFAIL)
   /* LDRA_JUSTIFY_END */
@@ -398,7 +418,9 @@ int32_t TIDL_removePriorityObject( void *handle, IALG_MemRec *pMemRec)
         TIDL_getPriorityObject(pPriorityInfo,TIDL_ALIVE_EXCLUDING_FIRST);
       /* LDRA_JUSTIFY_START
       <metric start> branch <metric end>
-      <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      <justification start>
+      Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
       <justification end> */
       if(firstAliveObj != NULL)
       /* LDRA_JUSTIFY_END */
@@ -432,7 +454,9 @@ static TIDL_priorityObject_t* TIDL_getPriorityObject(TIDL_priorityWiseTable_t *p
   int32_t objIdx = 0;
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if(searchType == (int32_t)TIDL_ALIVE_EXCLUDING_FIRST )
   /* LDRA_JUSTIFY_END */
@@ -441,14 +465,18 @@ static TIDL_priorityObject_t* TIDL_getPriorityObject(TIDL_priorityWiseTable_t *p
   }
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   for(; objIdx < TIDL_MAX_OBJECTS_PER_LEVEL; objIdx++)
   /* LDRA_JUSTIFY_END */
   {
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if(((uint32_t)pPriorityInfo->objInfo[objIdx].alive != 0U) && (searchType == (int32_t)TIDL_ALIVE_EXCLUDING_FIRST) )
     {
@@ -457,7 +485,9 @@ static TIDL_priorityObject_t* TIDL_getPriorityObject(TIDL_priorityWiseTable_t *p
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     else
     {
@@ -466,7 +496,9 @@ static TIDL_priorityObject_t* TIDL_getPriorityObject(TIDL_priorityWiseTable_t *p
      /* LDRA_JUSTIFY_END */
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if((pPriorityInfo->objInfo[objIdx].alive ==0) && (searchType == (int32_t)TIDL_FIRST_NON_ALIVE) )
     {
@@ -481,7 +513,9 @@ static TIDL_priorityObject_t* TIDL_getPriorityObject(TIDL_priorityWiseTable_t *p
   }
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if(objIdx < TIDL_MAX_OBJECTS_PER_LEVEL)
   /* LDRA_JUSTIFY_END */
@@ -490,7 +524,9 @@ static TIDL_priorityObject_t* TIDL_getPriorityObject(TIDL_priorityWiseTable_t *p
   }
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   else
   {
@@ -625,7 +661,9 @@ void TIDL_calculatePreemptionList(void * preEmptHandle, int32_t numLayers, int32
         {
           /* LDRA_JUSTIFY_START
           <metric start> statement branch <metric end>
-          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification start>
+          Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
           <justification end> */
           if (curProcTime <= (threshold - activateProcTime))
           {
@@ -756,14 +794,18 @@ int32_t TIDL_lockForPreemption(void* algHandle, const TIDL_CreateParams * create
   #endif
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if (*plockState != LOCKED)
    /* LDRA_JUSTIFY_END */
   {
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if (createParams->pFxnLock != NULL)
     /* LDRA_JUSTIFY_END */
@@ -784,7 +826,9 @@ int32_t TIDL_lockForPreemption(void* algHandle, const TIDL_CreateParams * create
 #endif
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     else
     {
@@ -804,7 +848,9 @@ void TIDL_unlockForPreemption(int32_t oldIntState, const TIDL_CreateParams * cre
   {
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if (createParams->pFxnUnLock != NULL)
     /* LDRA_JUSTIFY_END */
@@ -887,9 +933,12 @@ int32_t TIDL_updateContextMemPtrsForPreemption(TIDL_preEmptContextObj  *contextI
     TIDL_preEmptionObj *handle = (TIDL_preEmptionObj *)preEmptHandle;
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> DEBUG_TRACE: This code is for debugging purpose.
+    <justification start>
+    Rationale - DEBUG_TRACE: This code is for debugging purpose.
     The condition check is deterministic and does not impact the safety or reliability of the system.
     Therefore, it is excluded from safety coverage requirements.
+    Effect on this UNIT - If the control reaches here, code is expected to function correctly for debug/trace purpose. 
+    However, due to the stated rationale, this is not covered in production code.
     <justification end> */
     if(lyrNum == 0){
       tidl_printf(PREEMPT_PRINT_LVL,"%8s,%8s,%8s,%8s", "Data_idx", "procTime", "ctxSize-total", "preEmptLayerId");
@@ -908,7 +957,9 @@ int32_t TIDL_updateContextMemPtrsForPreemption(TIDL_preEmptContextObj  *contextI
       int32_t flag = 1;
       /* LDRA_JUSTIFY_START
       <metric start> branch <metric end>
-      <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      <justification start>
+      Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
       <justification end> */
       if(lyrNum != NOT_VALID)
       /* LDRA_JUSTIFY_END */
@@ -924,14 +975,18 @@ int32_t TIDL_updateContextMemPtrsForPreemption(TIDL_preEmptContextObj  *contextI
           bufInfo = &pBufList[bufDBIndex];
           /* LDRA_JUSTIFY_START
           <metric start> statement branch <metric end>
-          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification start>
+          Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
           <justification end> */
           if (( bufInfo->space == (int32_t)L2 ) || ( bufInfo->space == (int32_t)MSMC )) // Do not backup DDR buffer
           /* LDRA_JUSTIFY_END */
           {
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if ( bufInfo->space == (int32_t)L2 )
             {
@@ -944,9 +999,11 @@ int32_t TIDL_updateContextMemPtrsForPreemption(TIDL_preEmptContextObj  *contextI
             }
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data. This else block is to maintained for MISRAC coding guidelines.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data. This else block is to maintained for MISRAC coding guidelines.
             The condition check is deterministic and does not impact the safety or reliability of the system.\
             Therefore, it is excluded from safety coverage requirements.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             else
             {
@@ -970,10 +1027,12 @@ int32_t TIDL_updateContextMemPtrsForPreemption(TIDL_preEmptContextObj  *contextI
   }
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
   Here bufInfo->space cannot be equal to ( int32_t ) L2.
   The condition check is deterministic and does not impact the safety or reliability of the system. \
   Therefore, it is excluded from safety coverage requirements.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if (((uintptr_t)contextMemPtr - (uintptr_t)contextInfoPtr->contextMemPtr ) > contextInfoPtr->contextMemSize)
   {
@@ -996,7 +1055,9 @@ void  TIDL_restoreContextMemToIntMemForPreemption(const TIDL_preEmptContextObj  
       tempBufHeight = (int32_t)contextMemSize/UINT16_MAX;
       /* LDRA_JUSTIFY_START
       <metric start> statement branch <metric end>
-      <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      <justification start>
+      Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
       <justification end> */
       if(contextMemSize > UINT16_MAX)
       {
@@ -1044,7 +1105,9 @@ void  TIDL_storeContextMemToExtMemForPreemption(TIDL_preEmptContextObj  *context
       tempBufHeight = (int32_t)contextMemSize/UINT16_MAX;
       /* LDRA_JUSTIFY_START
       <metric start> statement branch <metric end>
-      <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      <justification start>
+      Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
       <justification end> */
       if(contextMemSize > UINT16_MAX)
       {

@@ -267,7 +267,7 @@ template<class Tin, class Tacc> static void TIDL_refEltWiseProduct(const Tin *pI
             {
               uint32_t inOffset = (i1 * eltWiseBuffParams->inDIM1Pitch) + (i2 * eltWiseBuffParams->inDIM2Pitch) + (i3 * eltWiseBuffParams->inChPitch) + (i4 * eltWiseBuffParams->inPitch) + (i5 * eltWiseBuffParams->pixelPitch);
               uint32_t outOffset = (i1 * eltWiseBuffParams->outDIM1Pitch) + (i2 * eltWiseBuffParams->outDIM2Pitch) + (i3 * eltWiseBuffParams->outChPitch) + (i4 * eltWiseBuffParams->outPitch) + i5;
-              pAcc[outOffset] = ((pIn[inOffset] * scale) - zeropoint);
+              pAcc[outOffset] = (((Tacc)pIn[inOffset] * scale) - zeropoint);
             }
           }
         }
@@ -290,7 +290,7 @@ template<class Tin, class Tacc> static void TIDL_refEltWiseProduct(const Tin *pI
               uint32_t inOffset = (i1 * eltWiseBuffParams->inDIM1Pitch) + (i2 * eltWiseBuffParams->inDIM2Pitch) + (i3 * eltWiseBuffParams->inChPitch) + (i4 * eltWiseBuffParams->inPitch) + (i5 * eltWiseBuffParams->pixelPitch);
               uint32_t outOffset = (i1 * eltWiseBuffParams->outDIM1Pitch) + (i2 * eltWiseBuffParams->outDIM2Pitch) + (i3 * eltWiseBuffParams->outChPitch) + (i4 * eltWiseBuffParams->outPitch) + i5;
               // OPENACC(atomic update)
-              pAcc[outOffset] *= ((pIn[inOffset] * scale) - zeropoint);
+              pAcc[outOffset] *= (((Tacc)pIn[inOffset] * scale) - zeropoint);
             }
           }
         }
@@ -562,7 +562,10 @@ template<class Tacc, class Tout> static void TIDL_refEltWiseMMAv2Quantize(TIDL_H
               uint32_t outOffset = (i0 * eltWiseBuffParams->outBatchPitch + i1 * eltWiseBuffParams->outDIM1Pitch) + (i2 * eltWiseBuffParams->outDIM2Pitch) + (i3 * eltWiseBuffParams->outChPitch) + (i4 * eltWiseBuffParams->outPitch) + i5;
               /* LDRA_JUSTIFY_START
                <metric start> branch <metric end>
-               <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+               <justification start>
+               Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+               Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+               This does not affect runtime behavior or safety.
                <justification end> */
               if (outElemType != TIDL_SinglePrecFloat)
               {
@@ -573,7 +576,10 @@ template<class Tacc, class Tout> static void TIDL_refEltWiseMMAv2Quantize(TIDL_H
               }
               /* LDRA_JUSTIFY_START
                <metric start> statement branch <metric end>
-               <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+               <justification start>
+               Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+               Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+               This does not affect runtime behavior or safety.
                <justification end> */
               else
               {
@@ -661,7 +667,7 @@ template<class Tacc, class Tout> static void TIDL_refEltWiseQuantize(TIDL_Handle
   int32_t satHigh;
   int32_t mixedPrecision = 0;
   int32_t procElemSize;
-  Tout temp = 0;
+  Tout temp = Tout();
   procElemSize = TIDL_getProcessingElementSizeInBytes(tidlLayer);
 
   temp = std::numeric_limits<Tout>::lowest();
@@ -721,6 +727,10 @@ template<class Tacc, class Tout> static void TIDL_refEltWiseQuantize(TIDL_Handle
               {
                 // OPENACC(routine(TIDL_floatSat))
                 outAcc = TIDL_floatSat(outAcc, tidlLayer);
+              }
+               else if (tidlLayer->outData.elementType == TIDL_BFloat16)
+              {
+                outAcc = TIDL_BF16Sat(outAcc, tidlLayer);
               }
               else
               {
@@ -908,7 +918,8 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
 
     /*Asym support*/
     if ((TIDL_isKernelHighPrecision(tidlLayer->layerKernelType) == (int32_t)TRUE) &&
-        (tidlLayer->outData.elementType != TIDL_SinglePrecFloat))
+        (tidlLayer->outData.elementType != TIDL_SinglePrecFloat) &&
+        (tidlLayer->outData.elementType != TIDL_BFloat16))
     {
       commonScale = params->mmaScale;
       mmaShift = params->mmaShift;
@@ -1115,6 +1126,17 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
                             i4,
                             j);
         }
+        else if(inDataParams->elementType == TIDL_BFloat16)
+        {
+          TIDL_refEltWiseOp((bfloat16_tidl *)inPtr,
+                            (float32_tidl *)refAccPtrRoi,
+                            1.0,
+                            0,
+                            eltWiseBuffParams,
+                            params,
+                            i4,
+                            j);
+        }
         else
         {
           tidl_printf(0,"TIDL_EltWise in elementType is  Not supported !!!\n ");
@@ -1124,12 +1146,16 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
 
       if (((TIDL_isAsymQuantEnabledTFL(quantizationStyle) != FALSE) ||
            (TIDL_isKernelHighPrecision(tidlLayer->layerKernelType) == (int32_t)TRUE)) &&
-          (tidlLayer->outData.elementType != TIDL_SinglePrecFloat))
+          (tidlLayer->outData.elementType != TIDL_SinglePrecFloat) &&
+          (tidlLayer->outData.elementType != TIDL_BFloat16))
       {
         /* LDRA_JUSTIFY_START
-        <metric start> branch <metric end>
-        <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
-        <justification end> */
+        <metric start> branch <metric end>
+        <justification start> 
+        Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+        Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+        This does not affect runtime behavior or safety.
+        <justification end> */
         if (tidlLayer->outData.elementType != TIDL_SinglePrecFloat)
         /* LDRA_JUSTIFY_END */
         {
@@ -1150,9 +1176,12 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
             }
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
-            <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+            <justification start>
+            Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
             This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
             TIDL_LDRA_TAG : TIDL_LDRA_TAG_ELTWISE_PRIOR_CHECK_001
+            Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+            This does not affect runtime behavior or safety.
             <justification end> */
             else if (tidlLayer->outData.elementType == TIDL_UnsignedShort)
             /* LDRA_JUSTIFY_END */
@@ -1200,9 +1229,12 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
           }
         }
         /* LDRA_JUSTIFY_START
-        <metric start> statement branch <metric end>
-        <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
-        <justification end> */
+        <metric start> statement branch <metric end>
+        <justification start> 
+        Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+        Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+        This does not affect runtime behavior or safety.
+        <justification end> */
         else
         {
           /*Float pass*/
@@ -1249,9 +1281,12 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
                                     eltWiseBuffParams);
           }
           /* LDRA_JUSTIFY_START
-          <metric start> branch <metric end>
-          <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
-          <justification end> */
+          <metric start> branch <metric end>
+          <justification start> 
+          Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+          Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+          This does not affect runtime behavior or safety.
+          <justification end> */
           else if (tidlLayer->outData.elementType == TIDL_UnsignedShort)
           {
             TIDL_refEltWiseQuantize(intAlgHandle,
@@ -1270,9 +1305,12 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
                                     eltWiseBuffParams);
           }
           /* LDRA_JUSTIFY_START
-          <metric start> statement branch <metric end>
-          <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
-          <justification end> */
+          <metric start> statement branch <metric end>
+          <justification start> 
+          Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+          Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+          This does not affect runtime behavior or safety.
+          <justification end> */
           else
           {
             tidl_printf(0, "TIDL_EltWiseProduct out elementType is  Not supported !!!\n ");
@@ -1320,6 +1358,14 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
                                     (float32_tidl *)refAccPtr,
                                     (float32_tidl *)outPtrLocal,
                                     eltWiseBuffParams); /* Last 2 parameters not used for float */
+          }
+          else if (tidlLayer->outData.elementType == TIDL_BFloat16) /* Use only to saturate at max/min */
+          {
+            TIDL_refEltWiseQuantize(intAlgHandle,
+                                    layerIdx,
+                                    (float32_tidl *)refAccPtr,
+                                    (bfloat16_tidl *)outPtrLocal,
+                                    eltWiseBuffParams);
           }
           else
           {

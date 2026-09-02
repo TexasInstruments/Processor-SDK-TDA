@@ -74,6 +74,8 @@
 #include "tidl_commonUtils.h"
 #include <math.h>
 
+using namespace floating_point::bf16_mma;
+
 #define BIAS_BITDEPTH_32BITS (0)
 #define TEMP_DISABLE_DECONV (1)
 
@@ -240,7 +242,7 @@ template<class Tin, class Tw, class Tb, class Tacc> void TIDL_refDeconv2dKernel(
                 {
                   coefData = pCoeffs[coeffOffset + (i4 * coeffsWidth) + i5];
                   accPtr[outdataOffset + (i6 * outChPitch) + (i2 * outImPitch * strideHeight) + (i3 * strideWidth) +
-                         (i4 * dilationHeight * outImPitch) + (i5 * dilationWidth)] += (inData * coefData);
+                         (i4 * dilationHeight * outImPitch) + (i5 * dilationWidth)] += ((Tacc)inData * (Tacc)coefData);
                 }
               }
             }
@@ -411,7 +413,7 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
       }
       outRoundBits = net->TIDLLayers[layerIdx].outData.roundBits;
 
-      if (typeid(Tin) == typeid(float32_tidl))
+      if (typeid(Tin) == typeid(float32_tidl) || typeid(Tin) == typeid(bfloat16_tidl))
       {
         outRoundBits = 0;
       }
@@ -433,6 +435,10 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
               {
                 // OPENACC(routine(TIDL_floatSat))
                 outAcc = TIDL_floatSat(outAcc, pTIDLNet);
+              }
+              else if (tidlLayer->outData.elementType == TIDL_BFloat16)
+              {
+                outAcc = TIDL_BF16Sat(outAcc, pTIDLNet);
               }
               else
               {
@@ -499,6 +505,17 @@ template<class Tw, class Tb, class Tacc>
         accPtr,
         createParams, layerIdx, params, buffParams,
         1, 1); /* last 2 arguments not used for float */
+  }
+  else if (inElementType == TIDL_BFloat16)
+  {
+    status = TIDL_refDeconv2d(
+        ((bfloat16_tidl *)inPtr + inDataOffset),
+        wgtPtr,
+        biasPtr,
+        (((bfloat16_tidl *)refPtr) + outDataOffset),
+        accPtr,
+        createParams, layerIdx, params, buffParams,
+        1, 1); /* last 2 arguments not used for BF16/float */
   }
   else if ((buffParams->outElementType == TIDL_UnsignedChar) ||
            (buffParams->outElementType == TIDL_UnsignedShort))
@@ -750,6 +767,10 @@ int32_t TIDL_deconv2dRefProcess(
 #else
       status = TIDL_refDeconv2dBitDepth(inPtr, refPtr, ((int8_t *)weightPtr), ((int16_t *)biasptr), ((int32_t *)accPtr), createParams, layerIdx, params, buffParams, inElementType, inDataOffset, outDataOffset);
 #endif
+    }
+    else if (inElementType == TIDL_BFloat16)
+    {
+      status = TIDL_refDeconv2dBitDepth(inPtr, refPtr, ((bfloat16_tidl *)weightPtr), orgbiasptr_float, ((float32_tidl *)accPtr), createParams, layerIdx, params, buffParams, inElementType, inDataOffset, outDataOffset);
     }
     else if (tidlLayer->weightsElementSizeInBits <= 16)
     {

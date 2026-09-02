@@ -137,8 +137,7 @@ typedef struct {
 #define ADD_SET_TARGET_PARAMETERS(testArgName, nextmacro, ...) \
     CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_MPU_0", __VA_ARGS__, TIVX_TARGET_MPU_0)), \
     CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_MCU0", __VA_ARGS__, TIVX_TARGET_MCU0)), \
-    CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_DSP_C7_1", __VA_ARGS__, TIVX_TARGET_DSP_C7_1)), \
-    CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_RMCU0_0", __VA_ARGS__, TIVX_TARGET_RMCU0_0))
+    CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_DSP_C7_1", __VA_ARGS__, TIVX_TARGET_DSP_C7_1))
 #else
 #define ADD_SET_TARGET_PARAMETERS(testArgName, nextmacro, ...) \
     CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_MPU_0", __VA_ARGS__, TIVX_TARGET_MPU_0)), \

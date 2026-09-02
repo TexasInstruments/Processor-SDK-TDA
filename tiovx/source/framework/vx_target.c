@@ -378,6 +378,24 @@ static void ownTargetNodeDescNodeExecuteKernel(
 #endif
 }
 
+void ownErrorInfoRetryWait(uint32_t iteration, const char *field_name)
+{
+    tivxTaskWaitMsecs(1);
+    if (iteration == TIVX_MAX_ERROR_INFO_RETRIES - 1)
+    {
+        VX_PRINT(VX_ZONE_ERROR, "[TARGET] %s write still BLOCKED. WAITED %u MS! Proceeding with write OVER previous %s!", field_name, TIVX_MAX_ERROR_INFO_RETRIES, field_name);
+        VX_PRINT(VX_ZONE_ERROR, "%s may be incorrect! Please increase your pipeline depth or TIVX_MAX_ERROR_INFO_RETRIES to prevent this from happening!", field_name);
+    }
+    else if (iteration == 0)
+    {
+        VX_PRINT(VX_ZONE_WARNING, "[TARGET] %s write BLOCKED. WAITED 1 MS!\n", field_name);
+    }
+    else
+    {
+        ;
+    }
+}
+
 static void ownTargetNodeDescNodeExecuteTargetKernel(
     tivx_obj_desc_node_t *node_obj_desc, uint16_t prm_obj_desc_id[])
 {
@@ -389,17 +407,38 @@ static void ownTargetNodeDescNodeExecuteTargetKernel(
     uint32_t is_prm_data_ref_q_flag = node_obj_desc->is_prm_data_ref_q;
     tivx_obj_desc_t *parent_obj_desc[TIVX_KERNEL_MAX_PARAMS] = {NULL};
     tivx_obj_desc_t *prm_obj_desc;
+    tivx_obj_desc_node_error_info_t *error_info_obj_desc = NULL;
+
+    /* Local placeholders for target_kernel_exec statuses in the case of an error */
+    vx_status aggregated_status = 0;
+    vx_status replica_statuses[TIVX_NODE_MAX_REPLICATE] = {0};
 
     if (tivxFlagIsBitSet(node_obj_desc->flags,TIVX_NODE_FLAG_IS_REPLICATED) ==
         (vx_bool)vx_true_e)
     {
         loop_max = node_obj_desc->num_of_replicas;
+
+        error_info_obj_desc = (tivx_obj_desc_node_error_info_t *)
+            ownObjDescGet((uint16_t)node_obj_desc->error_info_obj_desc_id);
+
+        if (NULL == error_info_obj_desc)
+        {
+            VX_PRINT(VX_ZONE_ERROR, "error_info_obj_desc is NULL for replicated node!\n");
+            VX_PRINT(VX_ZONE_ERROR, "Only the last replica's error_info will be kept in single_error_info!\n");
+        }
     }
 
     for (cnt = 0; cnt < loop_max; cnt ++)
     {
         target_kernel_instance = ownTargetKernelInstanceGet(
                 (uint16_t)node_obj_desc->target_kernel_index[cnt], (vx_enum)node_obj_desc->kernel_id);
+
+        /* Re-point to the obj_desc calling this helper function ExecuteTargetKernel
+         * target_kernel_instance is by default set to obj_desc[pipeline_id == 0] from node-create time. */
+        if (target_kernel_instance != NULL)
+        {
+            target_kernel_instance->node_obj_desc = node_obj_desc;
+        }
 
         for(i=0; i<node_obj_desc->num_params ; i++)
         {
@@ -560,7 +599,12 @@ static void ownTargetNodeDescNodeExecuteTargetKernel(
                  */
                 if((is_prm_data_ref_q_flag & ((uint32_t)1U << i)) != 0U)
                 {
+/* LDRA_JUSTIFY_START
+<metric start> branch <metric end>
+<justification start> TIOVX_BRANCH_COVERAGE_TIVX_TARGET_UBR048
+<justification end> */
                     if(NULL != params[i])
+/* LDRA_JUSTIFY_END */
                     {
                         parent_obj_desc[i] = ownObjDescGet(params[i]->scope_obj_desc_id);
 
@@ -621,16 +665,18 @@ static void ownTargetNodeDescNodeExecuteTargetKernel(
             {
                 params[0] = (tivx_obj_desc_t *) ownObjDescGet( node_obj_desc->base.scope_obj_desc_id );
 
-                node_obj_desc->exe_status |= (uint32_t)ownTargetKernelExecute(target_kernel_instance, params,
+                replica_statuses[cnt] = ownTargetKernelExecute(target_kernel_instance, params,
                     1);
             }
             else
             #endif
             {
                 ownTargetSetTimestamp(node_obj_desc, params);
-                node_obj_desc->exe_status |= (uint32_t)ownTargetKernelExecute(target_kernel_instance, params,
+                replica_statuses[cnt] = ownTargetKernelExecute(target_kernel_instance, params,
                     (uint16_t)node_obj_desc->num_params);
             }
+
+            aggregated_status |= replica_statuses[cnt];
         }
     }
 
@@ -684,6 +730,55 @@ static void ownTargetNodeDescNodeExecuteTargetKernel(
         }
     }
 
+    /*
+     * These error checks are in the case of pipelining where a target cycles back to the same node_obj_desc before the host can service an error
+     */
+
+    /* This conditional allows successful runs to not potentially stall a pipeline.
+     * Since successful runs don't enter this branch, the node_obj_desc status information can eventually be inaccurate.
+     * This inaccuracy applies to the tivx_error_info statuses in the node_obj_desc's error_node_obj_desc as well.
+     * These fields are internal to the framework and is not visible to the end user, so this is an accepted limitation of pipelining.
+     */
+    if (aggregated_status != (vx_status)VX_SUCCESS)
+    {
+        /* Since retry loop is done to buy time for host to read error and clear exe_status,
+         * only run loop if the host is determined to actually be listening.
+         * Done with similar check as ownTargetNodeDescSendComplete's
+         */
+        if (tivxFlagIsBitSet(node_obj_desc->flags, TIVX_NODE_FLAG_IS_USER_CALLBACK) == (vx_bool)vx_true_e)
+        {
+            /* Retry loop:
+             *  - Prevents the node_obj_desc fields exe_status, replica/node error_info from being overwritten
+             *    with a new error_info if the host hasn't read and cleared them yet.
+             */
+            for (i = 0; (i < TIVX_MAX_ERROR_INFO_RETRIES) && ((vx_status)VX_SUCCESS != node_obj_desc->exe_status); i++)
+            {
+                ownErrorInfoRetryWait(i, "Error status");
+            }
+        }
+        /* Retry either successful or skipped. Continue with standard error reporting */
+
+        /* If not replicated, then the error_info_obj_desc is NULL, store in node's single_error_info field.
+         * A potential mismatch (i.e. NULL on replicate) is checked at start of Execute.
+         */
+        if (NULL == error_info_obj_desc)
+        {
+            /* If not replicated and in this branch, the status will always not be Success */
+            node_obj_desc->single_error_info.replica_status = (uint32_t)replica_statuses[0];
+        }
+        else /* Is replicated, store to the right spots in error_info_obj_desc. */
+        {
+            for (cnt = 0; cnt < loop_max; cnt++)
+            {
+                /* Check prevents old error info from being clobbered with a success */
+                if (replica_statuses[cnt] != (vx_status)VX_SUCCESS)
+                   error_info_obj_desc->replicated_node_error_info[cnt].replica_status = (uint32_t)replica_statuses[cnt];
+            }
+        }
+
+        /* NOTE: Legacy field, kept as "did anything fail" gate. */
+        node_obj_desc->exe_status = (uint32_t)aggregated_status;
+    }
 }
 
 static vx_bool ownTargetNodeDescIsPrevPipeNodeBlocked(tivx_obj_desc_node_t *node_obj_desc)
@@ -1004,6 +1099,7 @@ static vx_status ownTargetNodeDescNodeCreate(tivx_obj_desc_node_t *node_obj_desc
                 (vx_bool)vx_true_e)
             {
                 target_kernel_instance->is_kernel_instance_replicated = (vx_bool)vx_true_e;
+                target_kernel_instance->replicated_node_idx = (vx_uint16)cnt;
             }
 
             /* save index key for fast retrival of handle during run-time */

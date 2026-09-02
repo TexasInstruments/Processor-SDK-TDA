@@ -50,7 +50,7 @@ __global__ void TIDL_CudaConcatKernel(
     Tacc tempVal = (Tacc)inData[inOffset] * scale;
     
     // Optional MMA quantization for high precision kernel
-    if (isKernelHighPrecision && outElemType != TIDL_SinglePrecFloat)
+    if (isKernelHighPrecision && outElemType != TIDL_SinglePrecFloat && outElemType != TIDL_BFloat16)
     {
         int64_t tempAcc = (int64_t)tempVal + biasTerm;
         tempAcc = tempAcc * mmaScale;
@@ -96,6 +96,10 @@ __global__ void TIDL_CudaConcatQuantizeKernel(
     {
         // Float path: apply float saturation
         outAcc = cuda_floatSat((float)outAcc, floatSatHigh, floatSatLow);
+    }
+    else if(std::is_same<Tout, bfloat16_tidl>::value)
+    {
+        outAcc = cuda_bf16Sat((float)outAcc, floatSatLow, floatSatHigh);
     }
     else if (isKernelHighPrecision)
     {
@@ -273,6 +277,7 @@ template int TIDL_cudaConcatOp<uint8_t, int32_t>(uint8_t const*, int32_t*, int32
 template int TIDL_cudaConcatOp<int16_t, int32_t>(int16_t const*, int32_t*, int32_t, int, int, int, int, int, int, int, int, int, unsigned char, unsigned char, int32_t, int, int32_t, int32_t);
 template int TIDL_cudaConcatOp<uint16_t, int32_t>(uint16_t const*, int32_t*, int32_t, int, int, int, int, int, int, int, int, int, unsigned char, unsigned char, int32_t, int, int32_t, int32_t);
 template int TIDL_cudaConcatOp<float, float>(float const*, float*, int32_t, int, int, int, int, int, int, int, int, int, unsigned char, unsigned char, int32_t, int, int32_t, int32_t);
+template int TIDL_cudaConcatOp<bfloat16_tidl, float>(bfloat16_tidl const*, float*, int32_t, int, int, int, int, int, int, int, int, int, unsigned char, unsigned char, int32_t, int, int32_t, int32_t);
 
 // Template instantiations for TIDL_cudaConcatQuantize
 template int TIDL_cudaConcatQuantize<int32_t, int8_t>(int32_t const*, int8_t*, int, int, int, int, int, int, int32_t, int32_t, int, int, int, float, float,int);
@@ -280,3 +285,4 @@ template int TIDL_cudaConcatQuantize<int32_t, uint8_t>(int32_t const*, uint8_t*,
 template int TIDL_cudaConcatQuantize<int32_t, int16_t>(int32_t const*, int16_t*, int, int, int, int, int, int, int32_t, int32_t, int, int, int, float, float,int);
 template int TIDL_cudaConcatQuantize<int32_t, uint16_t>(int32_t const*, uint16_t*, int, int, int, int, int, int, int32_t, int32_t, int, int, int, float, float,int);
 template int TIDL_cudaConcatQuantize<float, float>(float const*, float*, int, int, int, int, int, int, int32_t, int32_t, int, int, int, float, float,int);
+template int TIDL_cudaConcatQuantize<float, bfloat16_tidl>(float const*, bfloat16_tidl*, int, int, int, int, int, int, int32_t, int32_t, int, int, int, float, float,int);

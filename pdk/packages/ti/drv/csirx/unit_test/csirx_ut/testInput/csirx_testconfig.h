@@ -43,6 +43,9 @@
 /*                             Include Files                                  */
 /* ========================================================================== */
 #include <csirx_test.h>
+#include <csirx_test_coverage.h>
+#include <csirx_test_csl_coverage.h>
+#include <csirx_test_fvid2_coverage.h>
 #include <csirx_testconfig_priv.h>
 #ifdef __cplusplus
 extern "C" {
@@ -302,7 +305,7 @@ Csirx_InstCfg gInstCfg[] =
         .dataLanesMap         = {1U, 2U, 3U, 4U},
         .enableErrbypass      = UFALSE,
         .numPixelsStrm0       = 0,
-    },   
+    },
     /* Instance config No. 3 */
     {
         .enableCsiv2p0Support = UTRUE,
@@ -528,6 +531,34 @@ CsirxTestTaskCfg gTestTaskCfg[] =
         .instCfgId   = INST_CFG_ID_DRV_ID0_1CH_YUV422_8BIT_DUAL_PIXEL,
         .taskId      = 0U,
         .testFxnPtr  = &Csirx_captureTest,
+    },
+    /* Coverage improvement tests */
+    {
+        .taskCfgId   = TASK_CFG_ID_COVERAGE,
+        .instCfgId   = INST_CFG_ID_DRV_ID0_1CH_RGB888,
+        .taskId      = 0U,
+        .testFxnPtr  = &CsirxCov_runAllTests,
+    },
+    /* CSL Coverage improvement tests */
+    {
+        .taskCfgId   = TASK_CFG_ID_COVERAGE_CSL,
+        .instCfgId   = INST_CFG_ID_DRV_ID0_1CH_RGB888,
+        .taskId      = 0U,
+        .testFxnPtr  = &CsirxCovCsl_runAllTests,
+    },
+    /* FVID2 Coverage improvement tests */
+    {
+        .taskCfgId   = TASK_CFG_ID_COVERAGE_FVID2,
+        .instCfgId   = INST_CFG_ID_DRV_ID0_1CH_RGB888,
+        .taskId      = 0U,
+        .testFxnPtr  = &CsirxFvid2_runAllTests,
+    },
+    /* 4-Channel RAW12 Capture without timestamp */
+    {
+        .taskCfgId   = TASK_CFG_ID_4CH_RAW12_NO_TS,
+        .instCfgId   = INST_CFG_ID_DRV_ID0_4CH_RAW12,
+        .taskId      = 0U,
+        .testFxnPtr  = &Csirx_captureTestNoTimestamp,
     },
 
 };

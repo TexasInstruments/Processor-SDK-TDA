@@ -119,6 +119,7 @@ typedef struct
   int32_t inferenceMode;
   int32_t flowCtrl;
   char tempBufferDir[TIDLRT_STRING_SIZE];  /* Path to redirect temporary buffers instead of /dev/shm */
+  char traceBaseName[TIDLRT_STRING_SIZE];  /* Base name for trace files, defaults to /tmp/tidl_trace */
 } sTIDL_subgraphRtCreateOptions_t;
 
 extern "C"

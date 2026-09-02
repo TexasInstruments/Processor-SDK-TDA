@@ -62,14 +62,12 @@ int TIDL_refCudaSlice(
     Tin* d_input = NULL;
     Tout* d_output = NULL;
 
-    void* inPtrs[1] = {(void*)pIn};
-    uint32_t inDataSizes[1] = {(uint32_t)input_size};
-    TIDL_cudaMemManagerPreLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), inPtrs, NULL, 1, inDataSizes);
-
     // Get GPU pointers after synchronization
     TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), pIn, (void**)&d_input, input_size);
     TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), pOut,  (void**)&d_output, output_size);
-    
+
+    checkCudaErr(cudaMemcpy(d_input, pIn, input_size, cudaMemcpyHostToDevice));
+
     int total_elements = numROIs * numDim1 * numDim2 * numChs * outHeight * outWidth;
     int grid_size = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
@@ -83,10 +81,7 @@ int TIDL_refCudaSlice(
     outDim2Pitch,  inROIPitch,  outROIPitch);
 
     checkCudaErr(cudaGetLastError());
-    
-    void* outPtrs[1] = {(void*)pOut};
-    uint32_t outDataSizes[1] = {(uint32_t)output_size};
-    TIDL_cudaMemManagerPostLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), outPtrs, 1, outDataSizes);
+    checkCudaErr(cudaMemcpy(pOut, d_output, output_size, cudaMemcpyDeviceToHost));
 
     return IALG_EOK;
 }
@@ -95,3 +90,4 @@ template int TIDL_refCudaSlice<unsigned char, unsigned char>(unsigned char const
 template int TIDL_refCudaSlice<float, float>(float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 template int TIDL_refCudaSlice<unsigned short, unsigned short>(unsigned short const*, unsigned short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 template int TIDL_refCudaSlice<unsigned int, unsigned int>(unsigned int const*, unsigned int*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_refCudaSlice<bfloat16_tidl, bfloat16_tidl>(bfloat16_tidl const*, bfloat16_tidl*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);

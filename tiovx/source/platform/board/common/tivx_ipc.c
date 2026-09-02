@@ -149,25 +149,24 @@ uint32_t g_ipc_cpu_id_map[TIVX_CPU_ID_MAX] = {
 };
 #endif
 
-/* TIOVX-2178: Re-align once figured out at app_utils level */
 #if defined (SOC_TDA54)
 uint32_t g_ipc_cpu_id_map[TIVX_CPU_ID_MAX] = {
     APP_IPC_CPU_C7x_1,
-    APP_IPC_CPU_INVALID,
-    APP_IPC_CPU_INVALID,
-    APP_IPC_CPU_INVALID,
+    APP_IPC_CPU_C7x_2,
+    APP_IPC_CPU_C7x_3,
+    APP_IPC_CPU_C7x_4,
     APP_IPC_CPU_MPU1_0,
     APP_IPC_CPU_RMCU0_0,
-    APP_IPC_CPU_INVALID,
-    APP_IPC_CPU_INVALID,
-    APP_IPC_CPU_INVALID,
-    APP_IPC_CPU_INVALID,
-    APP_IPC_CPU_INVALID,
+    APP_IPC_CPU_RMCU0_1,
+    APP_IPC_CPU_RMCU1_0,
+    APP_IPC_CPU_RMCU1_1,
+    APP_IPC_CPU_RMCU2_0,
+    APP_IPC_CPU_RMCU2_1,
     APP_IPC_CPU_MCU0_M55,
     APP_IPC_CPU_MCU1_M55,
-    APP_IPC_CPU_INVALID,
-    APP_IPC_CPU_INVALID,
-    APP_IPC_CPU_INVALID
+    APP_IPC_CPU_MCU2_M55,
+    APP_IPC_CPU_MCU3_M55,
+    APP_IPC_CPU_MCU4_M55
 };
 #endif
 

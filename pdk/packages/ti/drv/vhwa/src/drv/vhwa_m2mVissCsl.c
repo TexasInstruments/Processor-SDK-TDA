@@ -7468,7 +7468,7 @@ int32_t Vhwa_m2mVissProcessAppBuf(Vhwa_M2mVissInstObj *instObj,
     return status;
 }
 
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
+
 void Vhwa_m2mVissInitReadbackBuffObject(const Vhwa_M2mVissInstObj *instObj,
         Vhwa_M2mVissHandleObj *hObj,
         const Vhwa_M2mVissConfigBuffobj *bufferObjHolder)
@@ -8439,6 +8439,9 @@ void Vhwa_m2mVissUpdateReadbackBufObj(Vhwa_M2mVissHandleObj *hObj)
 #if defined(VHWA_VPAC_IP_REV_VPAC3)
 	uint32_t fcp2_enable=0;
 #endif
+#if defined(VHWA_VPAC_IP_REV_VPAC3L)
+        uint32_t pcid_enable=0;
+#endif
 	/* LDRA_JUSTIFY_START
 	<metric start> statement branch <metric end>
 	<justification start>
@@ -8462,6 +8465,9 @@ void Vhwa_m2mVissUpdateReadbackBufObj(Vhwa_M2mVissHandleObj *hObj)
                 glbce_enable = hObj->vsPrms.enableGlbce;
         #if defined(VHWA_VPAC_IP_REV_VPAC3)
                 fcp2_enable = hObj->vsPrms.enableMVPipe;
+        #endif
+        #if defined(VHWA_VPAC_IP_REV_VPAC3L)
+                pcid_enable = hObj->vsPrms.enablePcid;
         #endif
                 for (buffObjectCnt = 0; buffObjectCnt < (uint32_t)BUFF_ID_MAXBUFID; buffObjectCnt++)
                 {
@@ -8505,6 +8511,13 @@ void Vhwa_m2mVissUpdateReadbackBufObj(Vhwa_M2mVissHandleObj *hObj)
         #if defined(VHWA_VPAC_IP_REV_VPAC3)
                 hObj->readbackBufferObjHolder[BUFF_ID_FCP2_HIST_REGS].isUsed = false;
         #endif
+        #if defined(VHWA_VPAC_IP_REV_VPAC3L)
+        if(UFALSE == pcid_enable)
+		{
+                hObj->readbackBufferObjHolder[BUFF_ID_PCID_REGS].isUsed = false;
+                hObj->readbackBufferObjHolder[BUFF_ID_PCID_IR_REMAP_LUT_REGS].isUsed = false;
+		}
+        #endif
         }
 }
 
@@ -8537,4 +8550,3 @@ uint32_t Vhwa_m2mVissCalcNumOfTrsForReadback(const Vhwa_M2mVissHandleObj *hObj)
 	}
 	return cnt;
 }
-#endif

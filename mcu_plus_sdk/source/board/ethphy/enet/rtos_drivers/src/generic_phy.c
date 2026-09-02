@@ -93,6 +93,8 @@ Phy_DrvObj_t gEnetPhyDrvGeneric =
         .getId                            = GenericPhy_getId,
         .isPowerDownActive                = GenericPhy_isPowerDownActive,
         .ctrlPowerDown                    = GenericPhy_ctrlPowerDown,
+        .getLocalCaps                     = GenericPhy_getLocalCaps,
+        .setAdvertisement                 = GenericPhy_setAdvertisement,
         .enableAdvertisement              = GenericPhy_enableAdvertisement,
         .disableAdvertisement             = GenericPhy_disableAdvertisement,
         .ctrlAutoNegotiation              = GenericPhy_ctrlAutoNegotiation,
@@ -100,13 +102,10 @@ Phy_DrvObj_t gEnetPhyDrvGeneric =
         .isAutoNegotiationEnabled         = GenericPhy_isAutoNegotiationEnabled,
         .isAutoNegotiationComplete        = GenericPhy_isAutoNegotiationComplete,
         .isAutoNegotiationRestartComplete = GenericPhy_isAutoNegotiationRestartComplete,
+        .isGigabitSupported               = GenericPhy_isGigabitSupported,
         .isLinkUp                         = GenericPhy_isLinkUp,
         .setSpeedDuplex                   = GenericPhy_setSpeedDuplex,
         .getSpeedDuplex                   = NULL,
-        .setMiiMode                       = NULL,
-        .ctrlExtFD                        = NULL,
-        .ctrlOddNibbleDetection           = NULL,
-        .ctrlRxErrIdle                    = NULL,
      },
 };
 
@@ -134,33 +133,73 @@ static bool GenericPhy_isMacModeSupported(EthPhyDrv_Handle hPhy, Phy_Mii mii)
     return true;
 }
 
-void GenericPhy_reset(EthPhyDrv_Handle hPhy)
+int32_t GenericPhy_reset(EthPhyDrv_Handle hPhy)
 {
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
+    int32_t status = PHY_EFAIL;
+
+    if (NULL == hPhy)
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_rmwReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
     PHYTRACE_DBG("PHY %u: reset\n", ((Phy_Obj_t*) hPhy)->phyAddr);
 
     /* Reset the PHY */
-    pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_BMCR, BMCR_RESET, BMCR_RESET);
+    status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_BMCR, BMCR_RESET, BMCR_RESET);
+
+laError:
+
+    return status;
 }
 
-bool GenericPhy_isResetComplete(EthPhyDrv_Handle hPhy)
+int32_t GenericPhy_isResetComplete(EthPhyDrv_Handle hPhy, bool *pCompleted)
 {
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
-    int32_t status;
-    uint16_t val;
-    bool complete = false;
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
+    int32_t status = PHY_EFAIL;
+    uint16_t val = 0;
+
+    if ((NULL == hPhy) ||
+        (NULL == pCompleted))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    *pCompleted = false;
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_readReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
     /* Reset is complete when RESET bit has self-cleared */
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_BMCR, &val);
+
     if (status == PHY_SOK)
     {
-        complete = ((val & BMCR_RESET) == 0U);
+        *pCompleted = ((val & BMCR_RESET) == 0U);
     }
 
-    PHYTRACE_DBG("PHY %u: reset is %scomplete\n", ((Phy_Obj_t*) hPhy)->phyAddr, complete ? "" : "not");
+    PHYTRACE_DBG("PHY %u: reset is %scomplete\n", ((Phy_Obj_t*) hPhy)->phyAddr, *pCompleted ? "" : "not");
 
-    return complete;
+laError:
+
+    return status;
 }
 
 int32_t GenericPhy_readReg(EthPhyDrv_Handle hPhy,
@@ -172,9 +211,9 @@ int32_t GenericPhy_readReg(EthPhyDrv_Handle hPhy,
 
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, reg, pVal);
 
-    PHYTRACE_VERBOSE_IF(status == PHY_SOK,
+    PHYTRACE_VERBOSE_IF(status != PHY_SOK,
                         "PHY %u: failed to read reg %u\n", ((Phy_Obj_t*) hPhy)->phyAddr, reg);
-    PHYTRACE_ERR_IF(status != PHY_SOK,
+    PHYTRACE_ERR_IF(status == PHY_SOK,
                     "PHY %u: read reg %u val 0x%04x\n", ((Phy_Obj_t*) hPhy)->phyAddr, reg, *pVal);
 
     return status;
@@ -201,7 +240,7 @@ int32_t GenericPhy_readExtReg(EthPhyDrv_Handle hPhy,
 {
     Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
     uint16_t devad = MMD_CR_DEVADDR;
-    int32_t status;
+    int32_t status = PHY_EFAIL;
 
     status = pRegAccessApi->EnetPhy_writeReg(pRegAccessApi->pArgs, PHY_MMD_CR, devad | MMD_CR_ADDR);
 
@@ -212,7 +251,7 @@ int32_t GenericPhy_readExtReg(EthPhyDrv_Handle hPhy,
 
     if (status == PHY_SOK)
     {
-        pRegAccessApi->EnetPhy_writeReg(pRegAccessApi->pArgs, PHY_MMD_CR, devad | MMD_CR_DATA_NOPOSTINC);
+        status = pRegAccessApi->EnetPhy_writeReg(pRegAccessApi->pArgs, PHY_MMD_CR, devad | MMD_CR_DATA_NOPOSTINC);
     }
 
     if (status == PHY_SOK)
@@ -220,9 +259,9 @@ int32_t GenericPhy_readExtReg(EthPhyDrv_Handle hPhy,
         status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_MMD_DR, val);
     }
 
-    PHYTRACE_VERBOSE_IF(status == PHY_SOK,
+    PHYTRACE_VERBOSE_IF(status != PHY_SOK,
                          "PHY %u: failed to read reg %u\n", ((Phy_Obj_t*) hPhy)->phyAddr, reg);
-    PHYTRACE_ERR_IF(status != PHY_SOK,
+    PHYTRACE_ERR_IF(status == PHY_SOK,
                      "PHY %u: read reg %u val 0x%04x\n", ((Phy_Obj_t*) hPhy)->phyAddr, reg, *val);
 
     return status;
@@ -233,25 +272,25 @@ int32_t GenericPhy_writeExtReg(EthPhyDrv_Handle hPhy,
                                 uint16_t val)
 {
     Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
-	uint16_t devad = MMD_CR_DEVADDR;
-    int32_t status;
+    uint16_t devad = MMD_CR_DEVADDR;
+    int32_t status = PHY_EFAIL;
 
-    PHYTRACE_VERBOSE("PHY %u: write %u val 0x%04x\n", ((Phy_Obj_t*) hPhy)->phyAddr;, reg, val);
+    PHYTRACE_VERBOSE("PHY %u: write %u val 0x%04x\n", ((Phy_Obj_t*) hPhy)->phyAddr, reg, val);
 
     status = pRegAccessApi->EnetPhy_writeReg(pRegAccessApi->pArgs, PHY_MMD_CR, devad | MMD_CR_ADDR);
     if (status == PHY_SOK)
     {
-        pRegAccessApi->EnetPhy_writeReg(pRegAccessApi->pArgs, PHY_MMD_DR, reg);
+        status = pRegAccessApi->EnetPhy_writeReg(pRegAccessApi->pArgs, PHY_MMD_DR, reg);
     }
 
     if (status == PHY_SOK)
     {
-        pRegAccessApi->EnetPhy_writeReg(pRegAccessApi->pArgs, PHY_MMD_CR, devad | MMD_CR_DATA_NOPOSTINC);
+        status = pRegAccessApi->EnetPhy_writeReg(pRegAccessApi->pArgs, PHY_MMD_CR, devad | MMD_CR_DATA_NOPOSTINC);
     }
 
     if (status == PHY_SOK)
     {
-        pRegAccessApi->EnetPhy_writeReg(pRegAccessApi->pArgs, PHY_MMD_DR, val);
+        status = pRegAccessApi->EnetPhy_writeReg(pRegAccessApi->pArgs, PHY_MMD_DR, val);
     }
 
     PHYTRACE_ERR_IF(status != PHY_SOK,
@@ -274,14 +313,28 @@ void GenericPhy_printRegs(EthPhyDrv_Handle hPhy)
     }
 }
 
-int32_t GenericPhy_getId (EthPhyDrv_Handle hPhy, 
+int32_t GenericPhy_getId (EthPhyDrv_Handle hPhy,
                           uint32_t* pId)
 {
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
     uint16_t val = 0;
-    uint32_t res = 0;
     int32_t status = PHY_EFAIL;
 
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+    if ((NULL == hPhy) ||
+        (NULL == pId))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_readReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_PHYIDR1, &val);
 
@@ -290,7 +343,7 @@ int32_t GenericPhy_getId (EthPhyDrv_Handle hPhy,
         goto laError;
     }
 
-    res = ((uint32_t) val) << 16;
+    *pId = ((uint32_t) val) << 16;
 
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_PHYIDR2, &val);
 
@@ -299,9 +352,7 @@ int32_t GenericPhy_getId (EthPhyDrv_Handle hPhy,
         goto laError;
     }
 
-    res |= (uint32_t) val;
-
-    *pId = res;
+    *pId |= (uint32_t) val;
 
 laError:
 
@@ -311,10 +362,25 @@ laError:
 int32_t GenericPhy_isPowerDownActive (EthPhyDrv_Handle hPhy,
                                       bool *pActive)
 {
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
     uint16_t val = 0;
-    bool res = false;
     int32_t status = PHY_EFAIL;
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == hPhy) ||
+        (NULL == pActive))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_readReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_BMCR, &val);
 
@@ -323,12 +389,12 @@ int32_t GenericPhy_isPowerDownActive (EthPhyDrv_Handle hPhy,
         goto laError;
     }
 
+    *pActive = false;
+
     if (BMCR_PWRDOWN == (val & BMCR_PWRDOWN))
     {
-        res = true;
+        *pActive = true;
     }
-
-    *pActive = res;
 
 laError:
 
@@ -336,29 +402,130 @@ laError:
 }
 
 int32_t GenericPhy_ctrlPowerDown (EthPhyDrv_Handle hPhy,
-                                  bool control)
+                                  bool enable)
 {
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
     uint16_t val = 0;
+    int32_t status = PHY_EFAIL;
 
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+    if (NULL == hPhy)
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
-    if (control)
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_rmwReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    if (enable)
     {
         //Power Down mode
         val = BMCR_ISOLATE | BMCR_PWRDOWN;
     }
 
-    return pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_BMCR, BMCR_ISOLATE | BMCR_PWRDOWN, val);
+    status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_BMCR, BMCR_ISOLATE | BMCR_PWRDOWN, val);
+
+laError:
+
+    return status;
 }
 
-int32_t GenericPhy_enableAdvertisement (EthPhyDrv_Handle hPhy,
-                                        uint32_t advertisement)
+int32_t GenericPhy_getLocalCaps (EthPhyDrv_Handle hPhy,
+                                 uint32_t *pCapabilities)
 {
-    uint16_t val = 0;
-    uint32_t tmpMask = 0;
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
+    uint16_t val  = 0U;
     int32_t status = PHY_EFAIL;
 
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+    if (NULL == hPhy)
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_readReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    /* Get 10/100 Mbps capabilities */
+    status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_BMSR, &val);
+
+    if (PHY_SOK != status)
+    {
+        goto laError;
+    }
+
+    if ((val & BMSR_100FD) != 0U)
+    {
+        *pCapabilities |= PHY_LINK_CAP_FD100;
+    }
+
+    if ((val & BMSR_100HD) != 0U)
+    {
+        *pCapabilities |= PHY_LINK_CAP_HD100;
+    }
+
+    if ((val & BMSR_10FD) != 0U)
+    {
+        *pCapabilities |= PHY_LINK_CAP_FD10;
+    }
+
+    if ((val & BMSR_10HD) != 0U)
+    {
+        *pCapabilities |= PHY_LINK_CAP_HD10;
+    }
+
+    /* Get extended (1 Gbps) capabilities if supported */
+    if ((val & BMSR_GIGEXTSTS) != 0U)
+    {
+        status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_GIGESR, &val);
+
+        if (PHY_SOK != status)
+        {
+            goto laError;
+        }
+
+        if ((val & GIGESR_1000FD) != 0U)
+        {
+            *pCapabilities |= PHY_LINK_CAP_FD1000;
+        }
+
+        if ((val & GIGESR_1000HD) != 0U)
+        {
+            *pCapabilities |= PHY_LINK_CAP_HD1000;
+        }
+    }
+
+laError:
+
+    return status;
+}
+
+int32_t GenericPhy_setAdvertisement (EthPhyDrv_Handle hPhy,
+                                     uint32_t capabilities,
+                                     uint32_t advertisement)
+{
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
+    uint16_t val = 0;
+    uint32_t mask = 0;
+    int32_t  status = PHY_EFAIL;
+
+    if (NULL == hPhy)
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
     if (0 == advertisement)
     {
@@ -366,33 +533,68 @@ int32_t GenericPhy_enableAdvertisement (EthPhyDrv_Handle hPhy,
         goto laError;
     }
 
-    tmpMask = PHY_LINK_ADV_HD10 | PHY_LINK_ADV_FD10 | PHY_LINK_ADV_HD100 | PHY_LINK_ADV_FD100;
-
-    if (0 != (advertisement & tmpMask))
+    if (advertisement != (capabilities & advertisement))
     {
-        val |= ANAR_802P3;
+        status = PHY_EINVALIDPARAMS;
+        goto laError;
+    }
 
-        if (0 != (advertisement & PHY_LINK_ADV_HD10))
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_rmwReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    if ((0 != (capabilities & PHY_LINK_ADV_10))  ||
+        (0 != (capabilities & PHY_LINK_ADV_100)))
+    {
+        if (0 != (capabilities & PHY_LINK_ADV_HD10))
         {
-            val |= ANAR_10HD;
+            mask |= ANAR_10HD;
+
+            if (0 != (advertisement & PHY_LINK_ADV_HD10))
+            {
+                val |= ANAR_10HD;
+            }
         }
 
-        if (0 != (advertisement & PHY_LINK_ADV_FD10))
+        if (0 != (capabilities & PHY_LINK_ADV_FD10))
         {
-            val |= ANAR_10FD;
+            mask |= ANAR_10FD;
+
+            if (0 != (advertisement & PHY_LINK_ADV_FD10))
+            {
+                val |= ANAR_10FD;
+            }
         }
 
-        if (0 != (advertisement & PHY_LINK_ADV_HD100))
+        if (0 != (capabilities & PHY_LINK_ADV_HD100))
         {
-            val |= ANAR_100HD;
+            mask |= ANAR_100HD;
+
+            if (0 != (advertisement & PHY_LINK_ADV_HD100))
+            {
+                val |= ANAR_100HD;
+            }
         }
 
-        if (0 != (advertisement & PHY_LINK_ADV_FD100))
+        if (0 != (capabilities & PHY_LINK_ADV_FD100))
         {
-            val |= ANAR_100FD;
+            mask |= ANAR_100FD;
+
+            if (0 != (advertisement & PHY_LINK_ADV_FD100))
+            {
+                val |= ANAR_100FD;
+            }
         }
 
-        status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_ANAR, ANAR_802P3 | ANAR_10HD | ANAR_10FD | ANAR_100HD | ANAR_100FD, val);
+        mask |= ANAR_802P3;
+        val  |= ANAR_802P3;
+
+        status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_ANAR, mask, val);
 
         if (PHY_SOK != status)
         {
@@ -400,26 +602,161 @@ int32_t GenericPhy_enableAdvertisement (EthPhyDrv_Handle hPhy,
         }
     }
 
-    val = 0;
-    tmpMask = PHY_LINK_ADV_HD1000 | PHY_LINK_ADV_FD1000;
-
-    if (0 != (advertisement & tmpMask))
+    if (capabilities & PHY_LINK_ADV_1000)
     {
-        if (0 != (advertisement & PHY_LINK_ADV_HD1000))
+        mask = 0;
+        val  = 0;
+
+        if (0 != (capabilities & PHY_LINK_ADV_HD1000))
         {
-            val |= GIGSR_1000HD;
+            mask |= GIGCR_1000HD;
+
+            if (0 != (advertisement & PHY_LINK_ADV_HD1000))
+            {
+                val |= GIGCR_1000HD;
+            }
         }
 
-        if (0 != (advertisement & PHY_LINK_ADV_FD1000))
+        if (0 != (capabilities & PHY_LINK_ADV_FD1000))
         {
-            val |= GIGSR_1000FD;
+            mask |= GIGCR_1000FD;
+
+            if (0 != (advertisement & PHY_LINK_ADV_FD1000))
+            {
+                val |= GIGCR_1000FD;
+            }
         }
 
-        status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_GIGCR, GIGSR_1000FD | GIGSR_1000HD, val);
+        status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_GIGCR, mask, val);
 
         if (PHY_SOK != status)
         {
             goto laError;
+        }
+    }
+
+laError:
+
+    return status;
+}
+
+int32_t GenericPhy_enableAdvertisement (EthPhyDrv_Handle hPhy,
+                                        uint32_t capabilities,
+                                        uint32_t advertisement)
+{
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
+    uint16_t val = 0;
+    uint32_t mask = 0;
+    int32_t  status = PHY_EFAIL;
+
+    if (NULL == hPhy)
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    if (0 == advertisement)
+    {
+        status = PHY_SOK;
+        goto laError;
+    }
+
+    if (advertisement != (capabilities & advertisement))
+    {
+        status = PHY_EINVALIDPARAMS;
+        goto laError;
+    }
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_rmwReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    if ((0 != (capabilities & PHY_LINK_ADV_10))  ||
+        (0 != (capabilities & PHY_LINK_ADV_100)))
+    {
+        if (0 != (capabilities & PHY_LINK_ADV_HD10))
+        {
+            if (0 != (advertisement & PHY_LINK_ADV_HD10))
+            {
+                mask |= ANAR_10HD;
+                val |= ANAR_10HD;
+            }
+        }
+
+        if (0 != (capabilities & PHY_LINK_ADV_FD10))
+        {
+            if (0 != (advertisement & PHY_LINK_ADV_FD10))
+            {
+                mask |= ANAR_10FD;
+                val |= ANAR_10FD;
+            }
+        }
+
+        if (0 != (capabilities & PHY_LINK_ADV_HD100))
+        {
+            if (0 != (advertisement & PHY_LINK_ADV_HD100))
+            {
+                mask |= ANAR_100HD;
+                val |= ANAR_100HD;
+            }
+        }
+
+        if (0 != (capabilities & PHY_LINK_ADV_FD100))
+        {
+            if (0 != (advertisement & PHY_LINK_ADV_FD100))
+            {
+                mask |= ANAR_100FD;
+                val |= ANAR_100FD;
+            }
+        }
+
+        if (0 != mask)
+        {
+            status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_ANAR, mask, val);
+
+            if (PHY_SOK != status)
+            {
+                goto laError;
+            }
+        }
+    }
+
+    if (capabilities & PHY_LINK_ADV_1000)
+    {
+        val  = 0;
+        mask = 0;
+
+        if (0 != (capabilities & PHY_LINK_ADV_HD1000))
+        {
+            if (0 != (advertisement & PHY_LINK_ADV_HD1000))
+            {
+                mask |= GIGCR_1000HD;
+                val |= GIGCR_1000HD;
+            }
+        }
+
+        if (0 != (capabilities & PHY_LINK_ADV_FD1000))
+        {
+            if (0 != (advertisement & PHY_LINK_ADV_FD1000))
+            {
+                mask |= GIGCR_1000FD;
+                val |= GIGCR_1000FD;
+            }
+        }
+
+        if (0 != mask)
+        {
+            status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_GIGCR, mask, val);
+
+           if (PHY_SOK != status)
+           {
+               goto laError;
+           }
         }
     }
 
@@ -429,13 +766,18 @@ laError:
 }
 
 int32_t GenericPhy_disableAdvertisement (EthPhyDrv_Handle hPhy,
+                                         uint32_t capabilities,
                                          uint32_t advertisement)
 {
-    uint16_t val = 0;
-    uint32_t tmpMask = 0;
-    int32_t status = PHY_EFAIL;
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
+    uint32_t mask = 0;
+    int32_t  status = PHY_EFAIL;
 
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+    if (NULL == hPhy)
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
     if (0 == advertisement)
     {
@@ -443,61 +785,95 @@ int32_t GenericPhy_disableAdvertisement (EthPhyDrv_Handle hPhy,
         goto laError;
     }
 
-    tmpMask = PHY_LINK_ADV_HD10 | PHY_LINK_ADV_FD10 | PHY_LINK_ADV_HD100 | PHY_LINK_ADV_FD100;
-
-    if (0 != (advertisement & tmpMask))
+    if (advertisement != (capabilities & advertisement))
     {
-        val = ANAR_802P3 | PHY_LINK_ADV_HD10 | PHY_LINK_ADV_FD10 | PHY_LINK_ADV_HD100 | PHY_LINK_ADV_FD100;
+        status = PHY_EINVALIDPARAMS;
+        goto laError;
+    }
 
-        if (0 != (advertisement & PHY_LINK_ADV_HD10))
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_rmwReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    if ((0 != (capabilities & PHY_LINK_ADV_10))  ||
+        (0 != (capabilities & PHY_LINK_ADV_100)))
+    {
+        if (0 != (capabilities & PHY_LINK_ADV_HD10))
         {
-            val &= ~ANAR_10HD;
+            if (0 != (advertisement & PHY_LINK_ADV_HD10))
+            {
+                mask |= ANAR_10HD;
+            }
         }
 
-        if (0 != (advertisement & PHY_LINK_ADV_FD10))
+        if (0 != (capabilities & PHY_LINK_ADV_FD10))
         {
-            val &= ~ANAR_10FD;
+            if (0 != (advertisement & PHY_LINK_ADV_FD10))
+            {
+                mask |= ANAR_10FD;
+            }
         }
 
-        if (0 != (advertisement & PHY_LINK_ADV_HD100))
+        if (0 != (capabilities & PHY_LINK_ADV_HD100))
         {
-            val &= ~ANAR_100HD;
+            if (0 != (advertisement & PHY_LINK_ADV_HD100))
+            {
+                mask |= ANAR_100HD;
+            }
         }
 
-        if (0 != (advertisement & PHY_LINK_ADV_FD100))
+        if (0 != (capabilities & PHY_LINK_ADV_FD100))
         {
-            val &= ~ANAR_100FD;
+            if (0 != (advertisement & PHY_LINK_ADV_FD100))
+            {
+                mask |= ANAR_100FD;
+            }
         }
 
-        status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_ANAR, ANAR_802P3 | ANAR_10HD | ANAR_10FD | ANAR_100HD | ANAR_100FD, val);
-
-        if (PHY_SOK != status)
+        if (0 != mask)
         {
-            goto laError;
+            status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_ANAR, mask, 0);
+
+            if (PHY_SOK != status)
+            {
+                goto laError;
+            }
         }
     }
 
-    tmpMask = PHY_LINK_ADV_HD1000 | PHY_LINK_ADV_FD1000;
-
-    if (0 != (advertisement & tmpMask))
+    if (capabilities & PHY_LINK_ADV_1000)
     {
-        val = GIGSR_1000HD | GIGSR_1000FD;
+        mask = 0;
 
-        if (0 != (advertisement & PHY_LINK_ADV_HD1000))
+        if (0 != (capabilities & PHY_LINK_ADV_HD1000))
         {
-            val &= ~GIGSR_1000HD;
+            if (0 != (advertisement & PHY_LINK_ADV_HD1000))
+            {
+                mask |= GIGCR_1000HD;
+            }
         }
 
-        if (0 != (advertisement & PHY_LINK_ADV_FD1000))
+        if (0 != (capabilities & PHY_LINK_ADV_FD1000))
         {
-            val &= ~GIGSR_1000FD;
+            if (0 != (advertisement & PHY_LINK_ADV_FD1000))
+            {
+                mask |= GIGCR_1000FD;
+            }
         }
 
-        status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_GIGCR, GIGSR_1000FD | GIGSR_1000HD, val);
-
-        if (PHY_SOK != status)
+        if (0 != mask)
         {
-            goto laError;
+            status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_GIGCR, mask, 0);
+
+           if (PHY_SOK != status)
+           {
+               goto laError;
+           }
         }
     }
 
@@ -509,10 +885,25 @@ laError:
 int32_t GenericPhy_ctrlAutoNegotiation(EthPhyDrv_Handle hPhy,
                                        uint32_t control)
 {
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
     uint16_t val  = 0;
     uint16_t mask = 0;
+    int32_t  status = PHY_EFAIL;
 
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+    if (NULL == hPhy)
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_rmwReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
     switch(control)
     {
@@ -538,20 +929,44 @@ int32_t GenericPhy_ctrlAutoNegotiation(EthPhyDrv_Handle hPhy,
             break;
         default:
             /* unknown control command */
+            status = PHY_EINVALIDPARAMS;
             break;
     }
 
-    return pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_BMCR, mask, val);
+    if (PHY_EINVALIDPARAMS == status)
+    {
+        goto laError;
+    }
+
+    status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_BMCR, mask, val);
+
+laError:
+
+    return status;
 }
 
 int32_t GenericPhy_isLinkPartnerAutoNegotiationAble (EthPhyDrv_Handle hPhy,
                                                      bool *pAble)
 {
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
     uint16_t val = 0;
-    bool res = false;
     int32_t status = PHY_EFAIL;
 
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+    if ((NULL == hPhy) ||
+        (NULL == pAble))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_readReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_ANER, &val);
 
@@ -560,12 +975,12 @@ int32_t GenericPhy_isLinkPartnerAutoNegotiationAble (EthPhyDrv_Handle hPhy,
         goto laError;
     }
 
+    *pAble = false;
+
     if (ANER_LPISANABLE == (val & ANER_LPISANABLE))
     {
-        res = true;
+        *pAble = true;
     }
-
-    *pAble = res;
 
 laError:
 
@@ -575,11 +990,25 @@ laError:
 int32_t GenericPhy_isAutoNegotiationEnabled(EthPhyDrv_Handle hPhy,
                                             bool *pEnabled)
 {
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
     uint16_t val = 0;
-    bool res = false;
     int32_t status = PHY_EFAIL;
 
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+    if ((NULL == hPhy) ||
+        (NULL == pEnabled))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_readReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_BMCR, &val);
 
@@ -588,12 +1017,12 @@ int32_t GenericPhy_isAutoNegotiationEnabled(EthPhyDrv_Handle hPhy,
         goto laError;
     }
 
+    *pEnabled = false;
+
     if (BMCR_ANEN == (val & BMCR_ANEN))
     {
-        res = true;
+        *pEnabled = true;
     }
-
-    *pEnabled = res;
 
 laError:
 
@@ -603,11 +1032,25 @@ laError:
 int32_t GenericPhy_isAutoNegotiationComplete (EthPhyDrv_Handle hPhy,
                                               bool *pCompleted)
 {
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
     uint16_t val = 0;
-    bool res = false;
     int32_t status = PHY_EFAIL;
 
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+    if ((NULL == hPhy) ||
+        (NULL == pCompleted))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_readReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_BMSR, &val);
 
@@ -616,12 +1059,12 @@ int32_t GenericPhy_isAutoNegotiationComplete (EthPhyDrv_Handle hPhy,
         goto laError;
     }
 
+    *pCompleted = false;
+
     if (BMSR_ANCOMPLETE == (val & BMSR_ANCOMPLETE))
     {
-        res = true;
+        *pCompleted = true;
     }
-
-    *pCompleted = res;
 
 laError:
 
@@ -631,11 +1074,26 @@ laError:
 int32_t GenericPhy_isAutoNegotiationRestartComplete (EthPhyDrv_Handle hPhy,
                                                      bool *pCompleted)
 {
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
     uint16_t val = 0;
     bool res = false;
     int32_t status = PHY_EFAIL;
 
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+    if ((NULL == hPhy) ||
+        (NULL == pCompleted))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_readReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_BMCR, &val);
 
@@ -657,12 +1115,28 @@ laError:
 }
 
 int32_t GenericPhy_setSpeedDuplex (EthPhyDrv_Handle hPhy,
+                                   uint32_t capabilities,
                                    uint32_t settings)
 {
-    uint16_t val  = 0;
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
+    uint16_t val = 0;
     uint16_t mask = 0;
+    int32_t status = PHY_EFAIL;
 
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+    if (NULL == hPhy)
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_rmwReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
     mask = BMCR_SPEED100 | BMCR_SPEED1000 | BMCR_FD;
 
@@ -670,44 +1144,98 @@ int32_t GenericPhy_setSpeedDuplex (EthPhyDrv_Handle hPhy,
     {
         case PHY_LINK_HD10:
             /* Select 10Mbps, Half-Duplex */
+            if (0 == (capabilities & PHY_LINK_CAP_HD10))
+            {
+                status = PHY_EINVALIDPARAMS;
+            }
+
             val  = 0;
             break;
         case PHY_LINK_FD10:
             /* Select 10Mbps, Full-Duplex */
+            if (0 == (capabilities & PHY_LINK_CAP_FD10))
+            {
+                status = PHY_EINVALIDPARAMS;
+            }
+
             val  = BMCR_FD;
             break;
         case PHY_LINK_HD100:
             /* Select 100Mbps, Half-Duplex */
+            if (0 == (capabilities & PHY_LINK_CAP_HD100))
+            {
+                status = PHY_EINVALIDPARAMS;
+            }
+
             val  = BMCR_SPEED100;
             break;
         case PHY_LINK_FD100:
             /* Select 100Mbps, Full-Duplex */
+            if (0 == (capabilities & PHY_LINK_CAP_FD100))
+            {
+                status = PHY_EINVALIDPARAMS;
+            }
+
             val  = BMCR_SPEED100 | BMCR_FD;
             break;
         case PHY_LINK_HD1000:
             /* Select 1000Mbps, Half-Duplex */
+            if (0 == (capabilities & PHY_LINK_CAP_HD1000))
+            {
+                status = PHY_EINVALIDPARAMS;
+            }
+
             val  = BMCR_SPEED1000;
             break;
         case PHY_LINK_FD1000:
             /* Select 1000Mbps, Full-Duplex */
+            if (0 == (capabilities & PHY_LINK_CAP_FD1000))
+            {
+                status = PHY_EINVALIDPARAMS;
+            }
+
             val  = BMCR_SPEED1000 | BMCR_FD;
             break;
         default:
             /* unknown control command */
+            status = PHY_EINVALIDPARAMS;
             break;
     }
 
-    return pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_BMCR, mask, val);
+    if (PHY_EINVALIDPARAMS == status)
+    {
+        goto laError;
+    }
+
+    status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_BMCR, mask, val);
+
+laError:
+
+    return status;
 }
 
 int32_t GenericPhy_isLinkUp (EthPhyDrv_Handle hPhy,
                              bool *pLinkUp)
 {
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
     uint16_t val = 0;
-    bool res = false;
     int32_t status = PHY_EFAIL;
 
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+    if ((NULL == hPhy) ||
+        (NULL == pLinkUp))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_readReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
 
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_BMSR, &val);
 
@@ -726,13 +1254,55 @@ int32_t GenericPhy_isLinkUp (EthPhyDrv_Handle hPhy,
             goto laError;
         }
 
+        *pLinkUp = false;
+
         if (0 != (val & BMSR_LINKSTS))
         {
-            res = true;
+            *pLinkUp = true;
         }
     }
 
-    *pLinkUp = res;
+laError:
+
+    return status;
+}
+
+int32_t GenericPhy_isGigabitSupported (EthPhyDrv_Handle hPhy,
+                                       bool *pSupported)
+{
+    Phy_RegAccessCb_t* pRegAccessApi = NULL;
+    uint16_t val = 0;
+    int32_t status = PHY_EFAIL;
+
+    if ((NULL == hPhy) ||
+        (NULL == pSupported))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
+
+    if ((NULL == pRegAccessApi->EnetPhy_readReg) ||
+        (NULL == pRegAccessApi->pArgs))
+    {
+        status = PHY_EBADARGS;
+        goto laError;
+    }
+
+    status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, PHY_BMSR, &val);
+
+    if (PHY_SOK != status)
+    {
+        goto laError;
+    }
+
+    *pSupported = false;
+
+    if (0 != (val & BMSR_GIGEXTSTS))
+    {
+        *pSupported = true;
+    }
 
 laError:
 

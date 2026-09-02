@@ -165,4 +165,17 @@ template void TIDL_flattenRefProcess(const float32_tidl *pIn,
                                      int32_t inROIPitch,
                                      int32_t outROIPitch);
 
+template void TIDL_flattenRefProcess(const bfloat16_tidl *pIn,
+                                     bfloat16_tidl *pOut,
+                                     int32_t inPtrOffset,
+                                     int32_t outPtrOffset,
+                                     int32_t width,
+                                     int32_t height,
+                                     int32_t numChs,
+                                     int32_t numROIs,
+                                     int32_t inLinePitch,
+                                     int32_t inChPitch,
+                                     int32_t inROIPitch,
+                                     int32_t outROIPitch);
+                                     
 #endif

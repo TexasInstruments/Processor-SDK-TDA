@@ -1,0 +1,24 @@
+# Build outputs
+out/
+lib/
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.so.*
+*.d
+*.map
+*.exe
+*.out
+
+# Editor artifacts
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS artifacts
+.DS_Store
+Thumbs.db

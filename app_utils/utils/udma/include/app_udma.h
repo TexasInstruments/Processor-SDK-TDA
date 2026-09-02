@@ -91,9 +91,10 @@
 #include <drivers/udma/udma_priv.h>
 #endif
 #elif defined(MCU_SDK)
-/* MCU_SDK only has udma_standalone, used for both host emulation and target builds */
-/* Target builds also use udma_standalone since no separate full UDMA driver headers exist */
+#if defined(HOST_EMULATION)
 #include <udma_standalone/udma.h>
+#endif
+#include <Udma/v0/include/Udma.h>
 #elif defined(PDK)
 #include <ti/drv/udma/udma.h>
 #endif

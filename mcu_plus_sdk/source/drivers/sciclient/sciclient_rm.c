@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2024, Texas Instruments Incorporated
+ * Copyright (c) 2018-2026, Texas Instruments Incorporated
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -294,6 +294,34 @@ int32_t Sciclient_rmUdmapTxChCfg(
     return r;
 }
 
+#ifdef CONFIG_UDMAP_MULTI_CH_CFG
+int32_t Sciclient_rmUdmapTxMultiChCfg(
+            const struct tisci_msg_rm_udmap_tx_multi_ch_cfg_req *req,
+            const struct tisci_msg_rm_udmap_tx_multi_ch_cfg_resp *resp,
+            uint32_t timeout)
+{
+    int32_t r;
+    Sciclient_ReqPrm_t sciReq = {0};
+    sciReq.messageType    = TISCI_MSG_RM_UDMAP_TX_MULTI_CH_CFG;
+    sciReq.flags          = TISCI_MSG_FLAG_AOP;
+    sciReq.pReqPayload    = (const uint8_t *) req;
+    sciReq.reqPayloadSize = (uint32_t) sizeof(*req);
+    sciReq.timeout        = timeout;
+
+    Sciclient_RespPrm_t sciResp = {0};
+    sciResp.flags           = 0;
+    sciResp.pRespPayload    = (uint8_t *) resp;
+    sciResp.respPayloadSize = (uint32_t) sizeof(*resp);
+
+    r = Sciclient_service(&sciReq, &sciResp);
+    if ((sciResp.flags & TISCI_MSG_FLAG_ACK) != TISCI_MSG_FLAG_ACK) {
+        r = CSL_EFAIL;
+    }
+
+    return r;
+}
+#endif
+
 int32_t Sciclient_rmUdmapRxChCfg(
             const struct tisci_msg_rm_udmap_rx_ch_cfg_req *req,
             const struct tisci_msg_rm_udmap_rx_ch_cfg_resp *resp,
@@ -472,6 +500,33 @@ int32_t Sciclient_rmPsilWrite(const struct tisci_msg_rm_psil_write_req *req,
 
     Sciclient_RespPrm_t sciResp = {0};
     struct tisci_msg_rm_psil_write_resp resp;
+    sciResp.flags           = 0;
+    sciResp.pRespPayload    = (uint8_t*)&resp;
+    sciResp.respPayloadSize = (uint32_t)sizeof(resp);
+
+    r = Sciclient_service(&sciReq, &sciResp);
+    if ((r != SystemP_SUCCESS) ||
+        ((sciResp.flags & TISCI_MSG_FLAG_ACK) != TISCI_MSG_FLAG_ACK)) {
+        r = SystemP_FAILURE;
+    }
+
+    return r;
+}
+
+int32_t Sciclient_rmPsilMultiChWrite(
+                              const struct tisci_msg_rm_psil_multi_ch_write_req *req,
+                              uint32_t timeout)
+{
+    int32_t r;
+    Sciclient_ReqPrm_t sciReq = {0};
+    sciReq.messageType    = TISCI_MSG_RM_PSIL_MULTI_CH_WRITE;
+    sciReq.flags          = TISCI_MSG_FLAG_AOP;
+    sciReq.pReqPayload    = (const uint8_t *) req;
+    sciReq.reqPayloadSize = (uint32_t) sizeof(*req);
+    sciReq.timeout        = timeout;
+
+    Sciclient_RespPrm_t sciResp = {0};
+    struct tisci_msg_rm_psil_multi_ch_write_resp resp;
     sciResp.flags           = 0;
     sciResp.pRespPayload    = (uint8_t*)&resp;
     sciResp.respPayloadSize = (uint32_t)sizeof(resp);

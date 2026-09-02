@@ -373,7 +373,7 @@ template<class Tin, class Tw, class Tb, class Tacc> void TIDL_refConv2dKernel(
                                             (i4 * inImPitch * dilationHeight) + (i5 * dilationWidth)];
                       }
                       coefData = pCoeffs[coeffOffset + (i4 * coeffsWidth) + i5];
-                      outAcc += (inData * coefData);
+                      outAcc += ((Tacc)inData * (Tacc)coefData);
                     }
                   }
                 }
@@ -537,7 +537,7 @@ template<int Ksize, class Tin, class Tw, class Tb, class Tacc> void TIDL_refConv
                         inData = pInChannel[indataOffset + (i0 * inChPitch) + ((i2)*inImPitch) + i3 + (i4 * inImPitch * dilationHeight) + (i5 * dilationWidth)];
                       }
                       coefData = pCoeffs[coeffOffset + (i4 * coeffsWidth) + i5];
-                      outAcc += (inData * coefData);
+                      outAcc += ((Tacc)inData * (Tacc)coefData);
                     }
                   }
                 }
@@ -581,7 +581,7 @@ template<class Tin, class Tw>
   {
     avx = 0;
   }
-  if ((typeid(Tw) == typeid(float32_tidl)) && ((flowCtrl & TIDL_FLOW_CTRL_AVX_FLOAT) != TIDL_FLOW_CTRL_AVX_FLOAT))
+  if ((typeid(Tw) == typeid(float32_tidl) || typeid(Tw) == typeid(bfloat16_tidl)) && ((flowCtrl & TIDL_FLOW_CTRL_AVX_FLOAT) != TIDL_FLOW_CTRL_AVX_FLOAT))
   {
     avx = 0;
   }
@@ -642,12 +642,12 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
   uint16_t dilationHeight = params->dilationH;
   uint16_t p_w = (params->padL < params->padR) ? params->padR : params->padL;
   uint16_t p_h = (params->padT < params->padB) ? params->padB : params->padT;
-  uint16_t width = ((((uint32_t)buffParams->inWidth + (p_w * 2U) - (((coeffsWidth - 1U) * dilationWidth) + 1U)) / strideWidth) + 1U) * strideWidth;
-  uint16_t height = ((((uint32_t)buffParams->inHeight + (p_h * 2U) - (((coeffsHeight - 1U) * dilationHeight) + 1U)) / strideHeight) + 1U) * strideHeight;
-  uint16_t inImPitch = buffParams->inPitch;
+  uint32_t width = ((((uint32_t)buffParams->inWidth + (p_w * 2U) - (((coeffsWidth - 1U) * dilationWidth) + 1U)) / strideWidth) + 1U) * strideWidth;
+  uint32_t height = ((((uint32_t)buffParams->inHeight + (p_h * 2U) - (((coeffsHeight - 1U) * dilationHeight) + 1U)) / strideHeight) + 1U) * strideHeight;
+  uint32_t inImPitch = buffParams->inPitch;
   uint32_t inChPitch = buffParams->inChPitch;
   uint32_t inBatchPitch = buffParams->inBatchPitch;
-  uint16_t outImPitch = buffParams->outPitch;
+  uint32_t outImPitch = buffParams->outPitch;
   uint32_t outChPitch = buffParams->outChPitch;
   uint32_t outBatchPitch = buffParams->outBatchPitch;
   uint8_t outRoundBits;
@@ -750,10 +750,14 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
       else
 #endif /*BUILD_WITH_CUDA*/
 #if defined(_HOST_BUILD) && !defined(_OPENACC)
-          if ((isAVXSupported<Tin, Tw>(createParams->flowCtrl, strideWidth, strideHeight, dilationWidth, dilationHeight, TIDL_isPadOTF(net->deviceName), inImPitch, outImPitch) && (numBatches == 1U)))
+      if ((isAVXSupported<Tin, Tw>(createParams->flowCtrl, strideWidth, strideHeight, dilationWidth, dilationHeight, TIDL_isPadOTF(net->deviceName), inImPitch, outImPitch) && (numBatches == 1U)))
       {
-        TIDL_refConv2dKernelAvxProc(pInChannel, pCoeffs, pBias, accPtr, &min, &max, numGroups, numInChannels,
-                                    numOutChannels, inChPitch, outChPitch, width, height, inImPitch, coeffsWidth, coeffsHeight, params->enableBias);
+        if constexpr (!std::is_same<Tin, bfloat16_tidl>::value &&
+                    !std::is_same<Tw,  bfloat16_tidl>::value)
+        {
+          TIDL_refConv2dKernelAvxProc(pInChannel, pCoeffs, pBias, accPtr, &min, &max, numGroups, numInChannels,
+                                      numOutChannels, inChPitch, outChPitch, width, height, inImPitch, coeffsWidth, coeffsHeight, params->enableBias);
+        }
       }
       else
 #endif
@@ -795,7 +799,7 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
 #endif
 
       outRoundBits = net->TIDLLayers[layerIdx].outData.roundBits;
-      if (typeid(Tin) == typeid(float32_tidl))
+      if (typeid(Tin) == typeid(float32_tidl) || typeid(Tin) == typeid(bfloat16_tidl))
       {
         outRoundBits = 0;
       }
@@ -868,9 +872,29 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
 #ifdef BUILD_WITH_CUDA
         sTIDL_Layer_t *pTIDLNet = &net->TIDLLayers[layerIdx];
         int32_t outputStartOffset = buffParams->outPadOffset;
-        if (tidlLayer->outData.elementType == TIDL_SinglePrecFloat)
+        if (tidlLayer->outData.elementType == TIDL_BFloat16)
         {
-          TIDL_cudaConv2DSaturateFloat((float*)accPtr, 
+          TIDL_cudaConv2DSaturateFloat((float*)accPtr,
+                                       (bfloat16_tidl*)pOutChanne,
+                                       numBatches,
+                                       numOutChannels,
+                                       height,
+                                       width,
+                                       strideHeight,
+                                       strideWidth,
+                                       outBatchPitch,
+                                       outChPitch,
+                                       outImPitch,
+                                       (float)0, /*No pad fill values in float mode*/
+                                       buffParams->outHeight,
+                                       buffParams->outWidth,
+                                       buffParams->outPadOffset,
+                                       pTIDLNet
+          );
+        }
+        else if (tidlLayer->outData.elementType == TIDL_SinglePrecFloat)
+        {
+          TIDL_cudaConv2DSaturateFloat((float*)accPtr,
                                        (float*)pOutChanne,
                                        numBatches,
                                        numOutChannels,
@@ -881,8 +905,8 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
                                        outBatchPitch,
                                        outChPitch,
                                        outImPitch,
-                                       (float) 0, /*No pad fill values in float mode*/
-                                       buffParams->outHeight, 
+                                       (float)0, /*No pad fill values in float mode*/
+                                       buffParams->outHeight,
                                        buffParams->outWidth,
                                        buffParams->outPadOffset,
                                        pTIDLNet
@@ -977,6 +1001,10 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
                     OPENACC(routine(TIDL_floatSat))
                     outAcc = TIDL_floatSat(outAcc, pTIDLNet);
                   }
+                  else if (tidlLayer->outData.elementType == TIDL_BFloat16)
+                  {
+                    outAcc = TIDL_BF16Sat(outAcc, pTIDLNet);
+                  }
                   else
                   {
                     tempAcc = (int64_t)outAcc * (int64_t)mmav2_Scales[i6];
@@ -1025,6 +1053,10 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
                   {
                     OPENACC(routine(TIDL_floatSat))
                     outAcc = TIDL_floatSat(outAcc, pTIDLNet);
+                  }
+                  else if (outElementType == TIDL_BFloat16)
+                  {
+                    outAcc = TIDL_BF16Sat(outAcc, pTIDLNet);
                   }
                   else
                   {
@@ -1106,6 +1138,16 @@ template<class Tw, class Tb, class Tacc>
         (float32_tidl *)wgtPtr,
         (float32_tidl *)biasPtr,
         (((float32_tidl *)refPtr) + outDataOffset),
+        (float32_tidl *)accPtr,
+        createParams, layerIdx, params, buffParams, algLayer);
+  }
+  else if (inElementType == TIDL_BFloat16)
+  {
+    status = TIDL_refConv2d(
+        ((bfloat16_tidl *)inPtr + inDataOffset),
+        (bfloat16_tidl *)wgtPtr,
+        (float32_tidl *)biasPtr,
+        (((bfloat16_tidl *)refPtr) + outDataOffset),
         (float32_tidl *)accPtr,
         createParams, layerIdx, params, buffParams, algLayer);
   }
@@ -1426,7 +1468,7 @@ int32_t TIDL_refConv2dProcess(
   }
 
   if (!((TIDL_isAsymQuantEnabledTFL(quantizationStyle) != FALSE) ||
-        ((TIDL_isKernelHighPrecision(tidlLayer->layerKernelType) != (int32_t)FALSE) && (tidlLayer->weightsElementSizeInBits < 32))))
+        ((TIDL_isKernelHighPrecision(tidlLayer->layerKernelType) != (int32_t)FALSE) && (tidlLayer->weightsElementSizeInBits < 32) && (tidlLayer->outData.elementType != TIDL_BFloat16))))
   {
 #if USE_16BIT_BIAS_FOR_8BIT_MODE
     if (tidlLayer->weightsElementSizeInBits <= 8)
@@ -1618,6 +1660,10 @@ int32_t TIDL_refConv2dProcess(
       TIDL_LOG_ERROR(TIDL_ERROR_GROUP_CONV, TIDL_ERROR_CONV_UNSUPPORTED_DATA_TYPE);
       status = TIDL_ERR_FAILURE;
     }
+  }
+  else if (buffParams->inElementType == TIDL_BFloat16)
+  {
+    status = TIDL_refConv2dBitDepth(inPtr, refPtr, (bfloat16_tidl *)weightPtr, (float32_tidl *)orgbiasptrfloat, (float32_tidl *)accPtr, createParams, layerIdx, params, buffParams, buffParams->inElementType, inDataOffset, outDataOffset, algLayer);
   }
   else if (tidlLayer->weightsElementSizeInBits <= 16)
   {

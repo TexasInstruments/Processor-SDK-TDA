@@ -60,6 +60,8 @@
 *
 */
 
+#define TIVX_GRAPH_PARAMETER_AUTO_TRIGGER_INDEX 0U
+
 #include <vx_internal.h>
 
 
@@ -369,6 +371,7 @@ VX_API_ENTRY vx_status vxSetGraphScheduleConfig(
                                 graph->parameters[param_idx].queue_enable = (vx_bool)vx_true_e;
                                 graph->parameters[param_idx].num_buf = graph_parameters_queue_params_list[i].refs_list_size;
                                 graph->parameters[param_idx].type = graph_parameters_queue_params_list[i].refs_list[0]->type;
+                                graph->parameters[param_idx].pipeup_buf_idx = (int32_t)graph->parameters[param_idx].node->kernel->num_pipeup_bufs;
 
                                 status = ownGraphPipelineValidateRefsList(graph_parameters_queue_params_list[i]);
 
@@ -636,6 +639,7 @@ static vx_status ownGraphParameterEnqueueReadyRef(vx_graph graph,
     {
         vx_uint32 ref_id;
         vx_uint32 num_enqueue = 0;
+        vx_node node = graph->parameters[graph_parameter_index].node;
 
         for(ref_id=0; (ref_id < num_refs) && ((vx_status)VX_SUCCESS == status); ref_id++)
         {
@@ -855,32 +859,65 @@ static vx_status ownGraphParameterEnqueueReadyRef(vx_graph graph,
             }
         }
 
-        if(((vx_status)VX_SUCCESS == status) && (num_enqueue > 0U))
+        /* This section is related to automatically triggering of the graph */
+        if(((vx_status)VX_SUCCESS == status) &&
+           (num_enqueue > 0U) &&
+           (graph->schedule_mode == (vx_enum)VX_GRAPH_SCHEDULE_MODE_QUEUE_AUTO) &&
+           (node == graph->parameters[TIVX_GRAPH_PARAMETER_AUTO_TRIGGER_INDEX].node))
         {
-            /* Note: keeping compatibility with deprecated API */
-            if (graph->parameters[graph_parameter_index].node->obj_desc[0]->pipeup_buf_idx > 1U)
+            /* Only proceed with checks if pipeup is not already complete for this node */
+            if (node->pipeup_enqueues_complete == (vx_bool)vx_false_e)
             {
-                graph->parameters[graph_parameter_index].node->obj_desc[0]->pipeup_buf_idx = graph->parameters[graph_parameter_index].node->obj_desc[0]->pipeup_buf_idx - 1U;
+                uint32_t i;
+                vx_bool all_graph_params_for_node_satisfied = (vx_bool)vx_true_e;
+
+                /* Decrement this parameter's pipeup_buf_idx by the number of buffers enqueued */
+                graph->parameters[graph_parameter_index].pipeup_buf_idx =
+                    graph->parameters[graph_parameter_index].pipeup_buf_idx - (int32_t)num_enqueue;
+
+                /* Check if ALL graph parameters of this node have reached zero (fully satisfied) */
+                for (i = 0U; i < graph->num_params; i++)
+                {
+                    if (graph->parameters[i].node == node)
+                    {
+                        if (graph->parameters[i].pipeup_buf_idx > 0)
+                        {
+                            all_graph_params_for_node_satisfied = (vx_bool)vx_false_e;
+                            break;
+                        }
+                    }
+                }
+
+                /* Set pipeup complete flag when all parameters are satisfied and trigger graph */
+                if (all_graph_params_for_node_satisfied == (vx_bool)vx_true_e)
+                {
+                    /* During pipeup, we only want to enqueue the number of frames for trigger index beyond the pipeup value of 1 */
+                    int32_t tmp_num_enqueue = abs(graph->parameters[TIVX_GRAPH_PARAMETER_AUTO_TRIGGER_INDEX].pipeup_buf_idx)+1;
+
+                    /* Mark pipeup as complete for this node */
+                    node->pipeup_enqueues_complete = (vx_bool)vx_true_e;
+
+                    /* Trigger if the graph for the node that was just satisfied */
+                    status = ownGraphScheduleGraph(graph, (uint32_t)tmp_num_enqueue);
+                }
             }
             else
             {
-                /* if graph mode is 'VX_GRAPH_SCHEDULE_MODE_QUEUE_AUTO' and
-                 * enqueue of a reference at this parameter should trigger
-                 * a graph schedule then schedule the graph */
-                if(ownGraphDoScheduleGraphAfterEnqueue(graph, graph_parameter_index)==(vx_bool)vx_true_e)
+                /* Trigger if graph parameter 0 */
+                if (TIVX_GRAPH_PARAMETER_AUTO_TRIGGER_INDEX == graph_parameter_index)
                 {
                     status = ownGraphScheduleGraph(graph, num_enqueue);
+                }
+            }
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_GRAPH_PIPELINE_UTJT004
 <justification end> */
-                    if((vx_status)VX_SUCCESS != status)
-                    {
-                        VX_PRINT(VX_ZONE_ERROR,"Failed to schedule graph \n");
-                    }
-/* LDRA_JUSTIFY_END */
-                }
+            if((vx_status)VX_SUCCESS != status)
+            {
+                VX_PRINT(VX_ZONE_ERROR,"Failed to schedule graph \n");
             }
+/* LDRA_JUSTIFY_END */
         }
     }
     return status;
@@ -1602,23 +1639,6 @@ vx_status ownGraphScheduleGraph(vx_graph graph, uint32_t num_schedule)
         status = (vx_status)VX_FAILURE;
     }
     return status;
-}
-
-vx_bool ownGraphDoScheduleGraphAfterEnqueue(vx_graph graph, uint32_t graph_parameter_index)
-{
-    vx_bool do_schedule_graph_after_enqueue = (vx_bool)vx_false_e;
-
-    if(graph != NULL)
-    {
-        if(graph->schedule_mode==(vx_enum)VX_GRAPH_SCHEDULE_MODE_QUEUE_AUTO)
-        {
-            if(graph_parameter_index == 0U)
-            {
-                do_schedule_graph_after_enqueue = (vx_bool)vx_true_e;
-            }
-        }
-    }
-    return do_schedule_graph_after_enqueue;
 }
 
 tivx_data_ref_queue ownGraphGetParameterDataRefQueue(vx_graph graph, vx_uint32 graph_parameter_index)

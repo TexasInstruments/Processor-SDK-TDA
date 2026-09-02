@@ -105,6 +105,66 @@ int32_t TIDL_shapeInfer_PassThrough(
     return TIDL_SHAPE_INFERENCE_OK;
 }
 
+/* -------------------------------------------------------------------------
+ * Reshape (dynamic shape support)
+ *
+ * Recomputes output dims that were -1 or 0 (passthrough) in the original
+ * shape spec, using TIDL 6D params baked in at import time:
+ *   reshapeParams.passthroughMask  — bits set → copy in[d] to out[d]
+ *   reshapeParams.minusOneDimIdx   — index of the inferred dim; -1 if none
+ *
+ * All other output dims keep their import-time values (from the temp copy
+ * provided by TIDL_inferShapeGeneric).
+ * ------------------------------------------------------------------------- */
+int32_t TIDL_shapeInfer_Reshape(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context)
+{
+    (void)numInBufs;
+    (void)context;
+
+    int32_t minusOneDimIdx  = layerParams->reshapeParams.minusOneDimIdx;
+    int32_t passthroughMask = layerParams->reshapeParams.passthroughMask;
+    int32_t d;
+
+    /* Step 1: apply passthrough dims */
+    for (d = 0; d < TIDL_DIM_MAX; d++)
+    {
+        if ((passthroughMask >> d) & 1)
+        {
+            outDataParam->dimValues[d] = inDataParams[0]->dimValues[d];
+        }
+    }
+
+    /* Step 2: recompute the inferred (-1) dim */
+    if (minusOneDimIdx >= 0)
+    {
+        int32_t totalInputVol    = 1;
+        int32_t partialOutputVol = 1;
+
+        for (d = 0; d < TIDL_DIM_MAX; d++)
+        {
+            totalInputVol *= inDataParams[0]->dimValues[d];
+        }
+        for (d = 0; d < TIDL_DIM_MAX; d++)
+        {
+            if (d != minusOneDimIdx)
+            {
+                partialOutputVol *= outDataParam->dimValues[d];
+            }
+        }
+        if (partialOutputVol > 0)
+        {
+            outDataParam->dimValues[minusOneDimIdx] = totalInputVol / partialOutputVol;
+        }
+    }
+
+    return TIDL_SHAPE_INFERENCE_OK;
+}
+
 // Remove this if the operator supports dynamic shape during inference
 #ifdef HOST_EMULATION
 /* -------------------------------------------------------------------------
@@ -539,7 +599,10 @@ int32_t TIDL_shapeInfer_GatherND(
     // Step 1: Copy batch dimensions from data tensor
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> FUTURE_USE: GatherND with batch_dims > 0 requires dynamic reshape of NonZero output which is not currently supported; this loop is retained for future support when batch_dims > 0 models become available.
+    <justification start>
+    Rationale - FUTURE_USE: GatherND with batch_dims > 0 requires dynamic reshape of NonZero output which is not currently supported; this loop is retained for future support when batch_dims > 0 models become available.
+    Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+    This does not impact functional correctness or safety.
     <justification end> */
     for (int32_t i = 0; i < batchDims && currentOutputIdx < TIDL_DIM_MAX; i++)
     {
@@ -2062,8 +2125,8 @@ const TIDL_ShapeInferEntry_t
     /* [37] TIDL_ELULayer — identity */
     { TIDL_ELULayer,                TIDL_shapeInfer_PassThrough },
 
-    /* [38] TIDL_ReshapeLayer — static (output shape baked in at import) */
-    { TIDL_ReshapeLayer,            NULL                        },
+    /* [38] TIDL_ReshapeLayer — dynamic shape support */
+    { TIDL_ReshapeLayer,            TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Reshape)  },
 
     /* [39] TIDL_ConstDataLayer — identity */
     { TIDL_ConstDataLayer,          TIDL_shapeInfer_PassThrough },

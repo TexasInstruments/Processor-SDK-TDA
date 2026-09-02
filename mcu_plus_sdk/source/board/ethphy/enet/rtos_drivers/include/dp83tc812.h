@@ -143,9 +143,9 @@ int32_t Dp83tc812_config(EthPhyDrv_Handle hPhy,
                         Phy_Mii mii,
                         bool loopbackEn);
 
-void Dp83tc812_reset(EthPhyDrv_Handle hPhy);
+int32_t Dp83tc812_reset(EthPhyDrv_Handle hPhy);
 
-bool Dp83tc812_isResetComplete(EthPhyDrv_Handle hPhy);
+int32_t Dp83tc812_isResetComplete(EthPhyDrv_Handle hPhy, bool *pCompleted);
 
 void Dp83tc812_printRegs(EthPhyDrv_Handle hPhy);
 /* ========================================================================== */

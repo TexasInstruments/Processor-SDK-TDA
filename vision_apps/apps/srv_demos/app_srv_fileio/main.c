@@ -55,7 +55,7 @@
 #include <tivx_utils_graph_perf.h>
 #include <utils/perf_stats/include/app_perf_stats.h>
 #ifndef PC
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 #endif
 #include "app_common.h"
 

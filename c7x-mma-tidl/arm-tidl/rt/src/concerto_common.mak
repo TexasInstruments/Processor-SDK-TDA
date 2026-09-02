@@ -31,7 +31,6 @@ else ifeq ($(ENABLE_SDK_11_1_COMPATIBILITY), 1)
 DEFS+=ENABLE_SDK_11_1_COMPATIBILITY
 endif
 
-
 ifeq ($(CODE_COVERAGE_ENABLED_FOR_TIDL), yes)
 DEFS+= CODE_COVERAGE_ENABLED_FOR_TIDL
 endif
@@ -48,6 +47,4 @@ IDIRS += $(TIDL_PATH)/arm-tidl/tiovx_kernels/include
 IDIRS += $(TIOVX_PATH)/utils/include
 IDIRS += $($(_MODULE)_SDIR)/../../../inc
 IDIRS += $($(_MODULE)_SDIR)/../../../rt/inc
-IDIRS += $(VISION_APPS_PATH)
 IDIRS += $(APP_UTILS_PATH)
-

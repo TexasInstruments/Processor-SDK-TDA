@@ -69,6 +69,7 @@
 */
 
 #include "tidl_traceUtils.h"
+#include "tidl_bfloat16.h"
 
 void TIDL_getSaturationLimits(int32_t elementType, int32_t *satLow, int32_t *satHigh)
 {
@@ -91,6 +92,11 @@ void TIDL_getSaturationLimits(int32_t elementType, int32_t *satLow, int32_t *sat
   {
     *satLow  = std::numeric_limits<int16_t>::lowest();
     *satHigh = std::numeric_limits<int16_t>::max();
+  }
+  else if( elementType == TIDL_BFloat16 )
+  {
+    *satLow  = std::numeric_limits<bfloat16_tidl>::lowest();
+    *satHigh = std::numeric_limits<bfloat16_tidl>::max();
   }
   else
   {

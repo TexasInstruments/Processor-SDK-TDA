@@ -1738,8 +1738,6 @@ typedef struct {
     CT_EXPAND(nextmacro(testArgName "/safety_mechanism=all", __VA_ARGS__, 4))
 #define PARAMETERS_10BIT_TO_8BIT_SM \
     CT_GENERATE_PARAMETERS("instance", ADD_SET_TARGET_PARAMETERS, ADD_DUMMY, ADD_SAFETY_MECHANISM, ARG)
-
-#if !defined(VPAC3L)
 TEST_WITH_ARG(tivxHwaVpacMscScaleMultiOutputPositive, testGraphProcessing_10bit_to_8bit_Safety_Mech, ArgFixed_10bit_to_8bit_Sm,
     PARAMETERS_10BIT_TO_8BIT_SM
 )
@@ -1936,7 +1934,7 @@ TEST_WITH_ARG(tivxHwaVpacMscScaleMultiOutputPositive, testGraphProcessing_10bit_
     }
     ASSERT(y12 == 0);
 }
-#endif
+
 #if defined(VPAC3) || defined(VPAC3L)
 static uint32_t expected_cksm_msc_simul_processing[] = {
     0x59ab963a,
@@ -1955,8 +1953,6 @@ typedef struct {
     CT_EXPAND(nextmacro(testArgName "/isEnableSimulProcessing = 1", __VA_ARGS__, 1))
 #define PARAMETERS_FIX_SIMUL_PROCESSING_SAFETY \
     CT_GENERATE_PARAMETERS("instance", ADD_SET_TARGET_PARAMETERS, ADD_DUMMY,ADD_SIMUL_PROCESSING_MODE,ADD_SAFETY_MECHANISM, ARG)
-
-#if !defined (x86_64) && !defined(VPAC3L)
 TEST_WITH_ARG(tivxHwaVpacMscScaleMultiOutput, testGraphProcessing_Nv12_Simul_Processing_safety, ArgFixed_safety_simul, PARAMETERS_FIX_SIMUL_PROCESSING_SAFETY)
 {
     vx_context context = context_->vx_context_;
@@ -2118,7 +2114,6 @@ TEST_WITH_ARG(tivxHwaVpacMscScaleMultiOutput, testGraphProcessing_Nv12_Simul_Pro
     ASSERT(src_image == 0);
     ASSERT(safety_mechanism_obj == 0);
 }
-#endif
 #define PARAMETERS_FIX_SIMUL_PROCESSING \
     CT_GENERATE_PARAMETERS("instance", ADD_SET_TARGET_PARAMETERS, ADD_DUMMY,ADD_SIMUL_PROCESSING_MODE, ARG)
 TEST_WITH_ARG(tivxHwaVpacMscScaleMultiOutput, testGraphProcessing_Nv12_Simul_Processing, ArgFixed, PARAMETERS_FIX_SIMUL_PROCESSING)
@@ -12148,10 +12143,8 @@ TESTCASE_TESTS(tivxHwaVpacMscScaleMultiOutput,
     ,
     testGraphProcessing_Nv12_Simul_Processing
     #ifndef x86_64
-    #if !defined(VPAC3L)
     ,
     testGraphProcessing_Nv12_Simul_Processing_safety
-    #endif
     #endif
     ,
     testGraphProcessing_Diff_Bit_Depth,
@@ -12199,10 +12192,8 @@ TESTCASE_TESTS(tivxHwaVpacMscScaleMultiOutputPositive,
     testGraphProcessing_UYVY_cnt8,
     testGraphProcessing_OutHeightvsInHeight
     #ifndef x86_64
-    #if !defined(VPAC3L)
     ,    
     testGraphProcessing_10bit_to_8bit_Safety_Mech
-    #endif
     #endif
     #endif
 )

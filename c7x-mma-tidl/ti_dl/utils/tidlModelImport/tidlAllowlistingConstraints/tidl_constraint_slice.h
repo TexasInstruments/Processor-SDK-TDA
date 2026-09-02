@@ -219,6 +219,22 @@ const vector<TidlConstraint> tidlConstraintSlice = {
         }
     ), 
     TIDL_CSTR(
+        "Slice with stride greater than 0 is supported",
+        "Slice with stride greater than 0 is supported",
+        "Slice with stride greater than 0 is supported",
+        [](const sTIDL_LayerPC_t *layer, string &logs){
+            auto params = layer->layerParams.sliceParams;
+            if (params.stride < 0)
+            {
+                stringstream ss;
+                ss<<"Only slice with stride > 0 is supported, stride found = "<<params.stride;
+                logs = ss.str();
+                return false;
+            }
+            return true;
+        }
+    ),
+    TIDL_CSTR(
         "Only supports non-batch dimension",
         "Only supports non-batch dimension",
         "Only supports non-batch dimension",
@@ -231,17 +247,4 @@ const vector<TidlConstraint> tidlConstraintSlice = {
             return true;
         }
     ),
-    TIDL_CSTR(
-        "Non-singular stride are not supported individually",
-        "Non-singular stride are not supported individually",
-        "Non-singular stride are not supported individually",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            auto params = layer->layerParams.sliceParams;
-            if (params.stride != 1)
-            {
-                return false;
-            }
-            return true;
-        }
-    )
 };

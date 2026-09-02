@@ -65,7 +65,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <TI/tivx.h>
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 
 void vx_tutorial_run_all();
 void vx_tutorial_run_interactive();

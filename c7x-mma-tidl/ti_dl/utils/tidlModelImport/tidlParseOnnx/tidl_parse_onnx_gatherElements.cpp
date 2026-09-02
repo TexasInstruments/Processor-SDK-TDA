@@ -75,8 +75,14 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("GatherElements")> ()
   layer.numInBufs = graph.node(index).input_size();
   sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
 
-  /** If shape inference is not done on model, we assume the tensor is of 4 dimensions by default*/
-  if (md.varTensorsDims.size() != 0)
+  /** If shape inference is not done on model, we assume the tensor is of 4 dimensions by default.
+   *  numDim must reflect the DATA tensor rank for correct axis translation. */
+  if (md.numConstInputs > 0 && md.constTensorIndices[0] == 0)
+  {
+    numDim = md.constTensorsDims[0].size();
+    numDim = (numDim == 0) ? 4 : numDim;
+  }
+  else if (md.varTensorsDims.size() != 0)
   {
     numDim = md.varTensorsDims[0].size();
     numDim = (numDim == 0)? 4:numDim;
@@ -108,6 +114,12 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("GatherElements")> ()
   layer.layerParams.gatherElementsParams.axis = axis;
   layer.layerParams.gatherElementsParams.isIdxScalar = 0;
   
+  if(md.numConstInputs > 1)
+  {
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "GatherElements layer : Both data and indices as constants is not supported");
+    return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+  }
+
   if(md.numConstInputs > 0)
   {
     int constTensorIdx = md.constTensorIndices[0];

@@ -95,6 +95,16 @@ __device__ inline Tout cuda_sat(float val)
     return (Tout)out;
 }
 
+__device__ inline bfloat16_tidl cuda_sat_bf16(bfloat16_tidl val)
+{
+    bfloat16_tidl max_val = (float)cuda::std::numeric_limits<bfloat16_tidl>::max();
+    bfloat16_tidl min_val = (float)cuda::std::numeric_limits<bfloat16_tidl>::lowest();
+    bfloat16_tidl temp_val = val;
+    temp_val = (temp_val < min_val) ? min_val : temp_val;
+    bfloat16_tidl out = (temp_val > max_val) ? max_val : temp_val;
+    return out;
+}
+
 __device__ inline int64_t cuda_roundSatMMA(int64_t val, int32_t bits, int32_t min, int32_t max)
 {
   int64_t temp;
@@ -130,6 +140,22 @@ __device__ inline float cuda_floatSat(float val, float max, float min)
     float temp_val = (val > max) ? max : val;
     temp_val = (temp_val < min) ? min : temp_val;
     return temp_val;
+}
+
+__device__ inline bfloat16_tidl cuda_bf16Sat(float val, float actMin, float actMax)
+{
+    // Clamp activation bounds to BF16 representable range.
+    // Use cuda::std::numeric_limits — the std:: specialization is only visible
+    // to the host compiler; device code requires the cuda::std:: counterpart.
+    float bf16Max = (float)cuda::std::numeric_limits<bfloat16_tidl>::max();
+    float bf16Min = (float)cuda::std::numeric_limits<bfloat16_tidl>::lowest();
+    float clampMax = (actMax > bf16Max) ? bf16Max : actMax;
+    float clampMin = (actMin < bf16Min) ? bf16Min : actMin;
+    // Clamp value
+    float clamped = (val > clampMax) ? clampMax : val;
+    clamped = (clamped < clampMin) ? clampMin : clamped;
+    // Downcast using RNE
+    return bfloat16_tidl(clamped);
 }
 
 
@@ -209,6 +235,60 @@ __device__ inline float cuda_exp_taylor(float x)
     vp = (yI > 14);
     // ePwX = __select(vp, (float32_tidl)FLT_MAX, ePwX);
     ePwX = vp ? FLT_MAX : ePwX;
+    return ePwX;
+}
+
+__device__ inline bfloat16_tidl cuda_exp_taylor_bf16(bfloat16_tidl x)
+{
+    using namespace floating_point::bf16_c7x;
+
+    bfloat16_tidl twoPwF, ePwX;
+    bfloat16_tidl ln2      = (bfloat16_tidl)0.693147180559945f;
+    bfloat16_tidl oneByLn2 = (bfloat16_tidl)1.44269504090f;
+    bfloat16_tidl oneBy6   = (bfloat16_tidl)0.1666667f;
+    bfloat16_tidl oneBy24  = (bfloat16_tidl)0.0416667f;
+    bfloat16_tidl y        = oneByLn2 * x;
+    int32_t yI            = (int32_t)y;
+    bfloat16_tidl yf       = y - (bfloat16_tidl)yI;
+    bfloat16_tidl oneBy65356 = (bfloat16_tidl)0.0000152587890625f;
+
+    bfloat16_tidl floatRes = yf * ln2;
+
+    /* Precomputing constant products to avoid cumulative quantization error */
+    bfloat16_tidl temp1 = (bfloat16_tidl)0.240226507f; /* ln2 * ln2 * 0.5 */
+    bfloat16_tidl temp2 = (bfloat16_tidl)0.0555041209f; /* ln2 * ln2 * ln2 * oneBy6 */
+    bfloat16_tidl temp3 = (bfloat16_tidl)0.00961813703f; /* ln2 * ln2 * ln2 * ln2 * oneBy24 */
+
+    twoPwF = (bfloat16_tidl)1.0f + floatRes + ((yf * yf) * temp1);
+    twoPwF = twoPwF + ((yf * yf * yf) * temp2);
+    twoPwF = twoPwF + ((yf * yf * yf * yf) * temp3);
+
+    int32_t tempShiftL = (1 << 16) << yI;
+    int32_t tempShiftR = (1 << 16) >> (-yI);
+
+    if(yI > 0)
+    {
+        tempShiftL = tempShiftL;
+    }
+    else
+    {
+        tempShiftL = tempShiftR;
+    }
+
+    ePwX = twoPwF * (bfloat16_tidl)(tempShiftL);
+
+    ePwX = ePwX * oneBy65356;
+
+    if((int32_t)-16 > yI)
+    {
+        ePwX=(bfloat16_tidl)0.0f;
+    }
+
+    if(yI > (int32_t)14)
+    {
+        ePwX = cuda::std::numeric_limits<bfloat16_tidl>::max();
+    }
+
     return ePwX;
 }
 
@@ -457,6 +537,91 @@ __device__ __forceinline__ uint32_t rcp_tbl(uint32_t index) {
     return reciprocalTable[index];
 }
 
+
+// ---------------------------------------------------------------------------
+// bf16_recip_bitmatch: bit-accurate SW model of the C7604 VRCPBF instruction.
+//
+// Mirrors the algorithm in bf16_standalone.h (namespace vrcpbf):
+//   • 128-entry LUT indexed by the 7 mantissa bits of the BF16 input
+//   • Each entry is the BF16 bit-pattern of recip(1 + m/128), m = 0..127
+//   • Exponent inversion:
+//       m == 0 (exact power-of-2) → new_biased_exp = 254 - old_biased_exp
+//       m  > 0                    → new_biased_exp = 253 - old_biased_exp
+//   • Special cases:
+//       NaN          → canonical +qNaN (0x7FC0), sign cleared
+//       ±inf         → ±zero
+//       zero/subnorm → ±inf
+// ---------------------------------------------------------------------------
+__device__ __forceinline__ bfloat16_tidl bf16_recip_bitmatch(bfloat16_tidl x) {
+    __device__ static const uint16_t vrcpbf_lut[128] = {
+        /* m=  0 */ 0x3F80, 0x3F7E, 0x3F7C, 0x3F7A,
+        /* m=  4 */ 0x3F78, 0x3F76, 0x3F74, 0x3F72,
+        /* m=  8 */ 0x3F71, 0x3F6F, 0x3F6D, 0x3F6B,
+        /* m= 12 */ 0x3F6A, 0x3F68, 0x3F67, 0x3F65,
+        /* m= 16 */ 0x3F63, 0x3F62, 0x3F60, 0x3F5F,
+        /* m= 20 */ 0x3F5D, 0x3F5C, 0x3F5A, 0x3F59,
+        /* m= 24 */ 0x3F57, 0x3F56, 0x3F55, 0x3F53,
+        /* m= 28 */ 0x3F52, 0x3F50, 0x3F4F, 0x3F4E,
+        /* m= 32 */ 0x3F4D, 0x3F4B, 0x3F4A, 0x3F49,
+        /* m= 36 */ 0x3F48, 0x3F46, 0x3F45, 0x3F44,
+        /* m= 40 */ 0x3F43, 0x3F42, 0x3F41, 0x3F3F,
+        /* m= 44 */ 0x3F3E, 0x3F3D, 0x3F3C, 0x3F3B,
+        /* m= 48 */ 0x3F3A, 0x3F39, 0x3F38, 0x3F37,
+        /* m= 52 */ 0x3F36, 0x3F35, 0x3F34, 0x3F33,
+        /* m= 56 */ 0x3F32, 0x3F31, 0x3F30, 0x3F2F,
+        /* m= 60 */ 0x3F2E, 0x3F2D, 0x3F2C, 0x3F2B,
+        /* m= 64 */ 0x3F2A, 0x3F2A, 0x3F29, 0x3F28,
+        /* m= 68 */ 0x3F27, 0x3F26, 0x3F25, 0x3F24,
+        /* m= 72 */ 0x3F24, 0x3F23, 0x3F22, 0x3F21,
+        /* m= 76 */ 0x3F20, 0x3F20, 0x3F1F, 0x3F1E,
+        /* m= 80 */ 0x3F1D, 0x3F1D, 0x3F1C, 0x3F1B,
+        /* m= 84 */ 0x3F1A, 0x3F1A, 0x3F19, 0x3F18,
+        /* m= 88 */ 0x3F17, 0x3F17, 0x3F16, 0x3F15,
+        /* m= 92 */ 0x3F15, 0x3F14, 0x3F13, 0x3F13,
+        /* m= 96 */ 0x3F12, 0x3F11, 0x3F11, 0x3F10,
+        /* m=100 */ 0x3F0F, 0x3F0F, 0x3F0E, 0x3F0E,
+        /* m=104 */ 0x3F0D, 0x3F0C, 0x3F0C, 0x3F0B,
+        /* m=108 */ 0x3F0B, 0x3F0A, 0x3F09, 0x3F09,
+        /* m=112 */ 0x3F08, 0x3F08, 0x3F07, 0x3F07,
+        /* m=116 */ 0x3F06, 0x3F05, 0x3F05, 0x3F04,
+        /* m=120 */ 0x3F04, 0x3F03, 0x3F03, 0x3F02,
+        /* m=124 */ 0x3F02, 0x3F01, 0x3F01, 0x3F00
+    };
+
+    // bfloat16_tidl stores the raw 16-bit pattern in the public member x.
+    uint16_t bits16 = x.x;
+
+    bool     sign = (bits16 & 0x8000u) != 0u;
+    uint16_t exp  = (bits16 & 0x7F80u) >> 7;
+    uint16_t man  =  bits16 & 0x007Fu;
+
+    auto make = [](uint16_t b) { return bfloat16_tidl(b, bfloat16_tidl::from_bits()); };
+
+    // NaN (exp=0xFF, man!=0) → canonical +qNaN (0x7FC0), sign cleared
+    if (exp == 0xFFu && man != 0u)
+        return make(0x7FC0u);
+
+    // ±inf → ±zero
+    if (exp == 0xFFu)
+        return make(sign ? 0x8000u : 0x0000u);
+
+    // zero / subnormal (exp=0) → ±inf
+    if (exp == 0u)
+        return make(sign ? 0xFF80u : 0x7F80u);
+
+    // Normal: look up reciprocal significand for input significand in [1, 2)
+    uint16_t lut_entry = vrcpbf_lut[man];
+    uint16_t lut_man   = lut_entry & 0x007Fu;
+    int      new_exp   = (man == 0u) ? (254 - (int)exp) : (253 - (int)exp);
+
+    if (new_exp >= 0xFF) return make(sign ? 0xFF80u : 0x7F80u);  // overflow → ±inf
+    if (new_exp <= 0   ) return make(sign ? 0x8000u : 0x0000u);  // underflow → ±zero
+
+    uint16_t result = (uint16_t)(sign ? 0x8000u : 0x0000u)
+                    | (uint16_t)((new_exp & 0xFF) << 7)
+                    | lut_man;
+    return make(result);
+}
 
 __device__ __forceinline__ float __recip_bitmatch(float x) {
     const uint32_t fc = FC_ROUND_EVEN; // use your desired rounding/FTZ mode

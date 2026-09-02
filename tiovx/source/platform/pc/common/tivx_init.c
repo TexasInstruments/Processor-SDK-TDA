@@ -124,7 +124,22 @@ void tivxInit(void)
 {
     pthread_mutex_lock(&g_mutex);
 
-    if (g_init_status <= 1U)
+    uint32_t enabled_core_count = 1U;
+
+    if (tivxGetVdkObj() != NULL)
+    {
+        enabled_core_count = 0U;
+
+        for (uint32_t i = 0U; i < 32U; i++)
+        {
+            if (((tivxVdkGetEmulatedCores() >> i) & 1U) == 1U)
+            {
+                enabled_core_count++;
+            }
+        }
+    }
+
+    if (g_init_status < enabled_core_count)
     {
         tivx_set_debug_zone(VX_ZONE_INFO);
         tivx_set_debug_zone(VX_ZONE_ERROR);

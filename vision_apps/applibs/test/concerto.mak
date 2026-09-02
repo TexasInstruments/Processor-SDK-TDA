@@ -43,10 +43,10 @@ IDIRS       += $(TIOVX_PATH)/include
 IDIRS       += $(TIOVX_PATH)/conformance_tests
 IDIRS       += $(TIOVX_PATH)/source/include
 IDIRS       += $(VISION_APPS_PATH)/applibs
-IDIRS       += $(VISION_APPS_PATH)/kernels/srv/include
-IDIRS       += $(VISION_APPS_PATH)/kernels/srv/c66
-IDIRS       += $(VISION_APPS_PATH)
-IDIRS       += $(VISION_APPS_PATH)/kernels/srv/gpu/3dsrv
+IDIRS       += $(APP_KERNELS_PATH)/kernels/srv/include
+IDIRS       += $(APP_KERNELS_PATH)/kernels/srv/target/dsp
+IDIRS       += $(APP_KERNELS_PATH)/kernels/srv/target/gpu/3dsrv
+IDIRS       += $(APP_KERNELS_PATH)/utils/include
 IDIRS       += $(IMAGING_PATH)/kernels/include
 IDIRS       += $(IMAGING_PATH)/sensor_drv/include
 

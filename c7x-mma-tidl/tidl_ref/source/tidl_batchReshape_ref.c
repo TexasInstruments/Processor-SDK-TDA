@@ -171,6 +171,11 @@ int32_t TIDL_refBatchReshapeiX(
     TIDL_refBatchReshape((float32_tidl *)pIn, (float32_tidl *)pOut, inPtrOffset, outPtrOffset, width, height, numChs,
                          numBatches, inLinePitch, outLinePitch, inChPitch, outChPitch, inBatchPitch, outBatchPitch);
   }
+  else if (elementType == TIDL_BFloat16)
+  {
+    TIDL_refBatchReshape((bfloat16_tidl *)pIn, (bfloat16_tidl *)pOut, inPtrOffset, outPtrOffset, width, height, numChs,
+                         numBatches, inLinePitch, outLinePitch, inChPitch, outChPitch, inBatchPitch, outBatchPitch);
+  }
   else if ((elementType == TIDL_SignedChar) || (elementType == TIDL_UnsignedChar))
   {
     TIDL_refBatchReshape((uint8_t *)pIn, (uint8_t *)pOut, inPtrOffset, outPtrOffset, width, height, numChs,

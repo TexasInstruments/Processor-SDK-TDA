@@ -189,6 +189,9 @@ static EthFwOsal_Clock gEthFwOsalClockfreertosPool[ETHFW_OSAL_FREERTOS_MAX_CLOCK
 /* global pool of statically allocated clock pools */
 static EthFwOsal_Mailbox gEthFwOsalMailboxfreertosPool[ETHFW_OSAL_FREERTOS_MAX_MAILBOX];
 
+/* Global pool of statically allocated args memory for clocks. */
+static EthFwOsal_clockCbArgs gEthFwOsalClockArgsPool[ETHFW_OSAL_FREERTOS_MAX_CLOCK];
+
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */
@@ -218,6 +221,7 @@ void EthFwOsal_init(void)
         memset(&gEthFwOsalClockfreertosPool[0], 0, sizeof(gEthFwOsalClockfreertosPool));
         memset(&gEthFwOsalEventfreertosPool[0], 0, sizeof(gEthFwOsalEventfreertosPool));
         memset(&gEthFwOsalMailboxfreertosPool[0], 0, sizeof(gEthFwOsalMailboxfreertosPool));
+        memset(&gEthFwOsalClockArgsPool[0], 0, sizeof(gEthFwOsalClockArgsPool));
 
         osalInitDone = BTRUE;
 
@@ -601,10 +605,6 @@ EthFwOsal_ClockHandle EthFwOsal_createClock(void (*func)(void*), EthFwOsal_Clock
 
     EnetAppUtils_assert(handle != NULL);
 
-    cbArgs = malloc(sizeof(EthFwOsal_clockCbArgs));
-
-    EnetAppUtils_assert(cbArgs != NULL);
-
     memset(handle, 0, sizeof(EthFwOsal_clockCbArgs));
 
     ClockP_Params_init(&clkParams);
@@ -613,6 +613,7 @@ EthFwOsal_ClockHandle EthFwOsal_createClock(void (*func)(void*), EthFwOsal_Clock
     clkParams.timeout   = params->period;
     clkParams.callback  = EthFwOsal_clockCb;
 
+    cbArgs = &gEthFwOsalClockArgsPool[index];
     cbArgs->cbFxn       = func;
     cbArgs->args         = params->arg;
     clkParams.args      = (void*)(cbArgs);

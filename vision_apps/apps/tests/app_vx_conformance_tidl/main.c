@@ -85,7 +85,7 @@
 #include <stdarg.h>
 
 #include "test_engine/test.h"
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 
 #ifdef HAVE_VERSION_INC
 #include "openvx_cts_version.inc"

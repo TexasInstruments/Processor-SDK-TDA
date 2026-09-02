@@ -155,14 +155,16 @@ ENABLE_SDK_11_0_COMPATIBILITY    ?= 0
 # Enable compatibility to build on 11.1 SDK
 ENABLE_SDK_11_1_COMPATIBILITY    ?= 0
 
+#Enable performance modelling flow 
+ENABLE_PERFORMANCE_MODELLING     ?= 0
+
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
   CGT_C7X_VERSION := 6.1.0.STS
   MMALIB_VERSION  := 11_02_01_04
 else
   CGT_C7X_VERSION := 5.0.0.LTS
-  MMALIB_VERSION  := 11_02_00_11
+  MMALIB_VERSION  := 12_01_00_01
 endif
-
 
 ifdef SystemRoot
 PSDK_TOOLS_PATH     ?= "C:/ti"
@@ -180,7 +182,7 @@ CONCERTO_ROOT       ?=$(PSDK_BUILDER_PATH)\concerto
 MCU_PLUS_SDK_PATH   ?=$(PSDK_INSTALL_PATH)\mcu_plus_sdk
 MCU_SDK_PATH        ?=$(PSDK_INSTALL_PATH)\mcu_sdk
 TIOVX_PATH          ?=$(PSDK_INSTALL_PATH)\tiovx
-VISION_APPS_PATH    ?=$(PSDK_INSTALL_PATH)\vision_apps
+PLATFORM_PATH       ?=$(PSDK_INSTALL_PATH)\platform
 
 ifeq ($(ENABLE_SDK_9_2_COMPATIBILITY), 1)
   ENABLE_SDK_10_0_COMPATIBILITY = 0
@@ -244,7 +246,7 @@ CONCERTO_ROOT       ?=$(PSDK_BUILDER_PATH)/concerto
 MCU_PLUS_SDK_PATH   ?=$(PSDK_INSTALL_PATH)/mcu_plus_sdk
 MCU_SDK_PATH        ?=$(PSDK_INSTALL_PATH)/mcu_sdk
 TIOVX_PATH          ?=$(PSDK_INSTALL_PATH)/tiovx
-VISION_APPS_PATH    ?=$(PSDK_INSTALL_PATH)/vision_apps
+PLATFORM_PATH       ?=$(PSDK_INSTALL_PATH)/platform
 
 LINUX_FS_PATH       ?=$(PSDK_INSTALL_PATH)/targetfs
 TVM_HOME            ?=$(PSDK_INSTALL_PATH)/targetfs/usr/include/tvm

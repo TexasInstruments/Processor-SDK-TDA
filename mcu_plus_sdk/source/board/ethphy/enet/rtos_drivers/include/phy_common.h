@@ -87,7 +87,7 @@ extern "C" {
 /*! \brief Generic failure error condition (typically caused by hardware). */
 #define PHY_EFAIL                         (-(int32_t) (1))
 /*! \brief Bad arguments (i.e. NULL pointer). */
-#define PHY_EBADARGS                      (-(int32_t) (2))  (-(int32_t) (2))
+#define PHY_EBADARGS                      (-(int32_t) (2))
 /*! \brief Invalid parameters (i.e. value out-of-range). */
 #define PHY_EINVALIDPARAMS                (-(int32_t) (3))
 /*! \brief Time out while waiting for a given condition to happen. */
@@ -189,6 +189,16 @@ extern "C" {
 #define PHY_LINK_ADV_HD1000               PHY_BIT(5)
 /*! \brief 1-Gbps, full-duplex advertisement flag. */
 #define PHY_LINK_ADV_FD1000               PHY_BIT(6)
+/*! \brief 10-Mbps, full and half-duplex advertisement mask. */
+#define PHY_LINK_ADV_10                   (PHY_LINK_ADV_HD10 | PHY_LINK_ADV_FD10)
+/*! \brief 100-Mbps, full and half-duplex advertisement mask. */
+#define PHY_LINK_ADV_100                  (PHY_LINK_ADV_HD100 | PHY_LINK_ADV_FD100)
+/*! \brief 1-Gbps, full and half-duplex advertisement mask. */
+#define PHY_LINK_ADV_1000                 (PHY_LINK_ADV_HD1000 | PHY_LINK_ADV_FD1000)
+/*! \brief Auto-negotiation advertisement mask with all duplexity and speed values set. */
+#define PHY_LINK_ADV_ALL                  (PHY_LINK_ADV_HD10 | PHY_LINK_ADV_FD10 |   \
+                                           PHY_LINK_ADV_HD100 | PHY_LINK_ADV_FD100 |  \
+                                           PHY_LINK_ADV_HD1000 | PHY_LINK_ADV_FD1000)
 
 /*! \brief  Fast link down option - energy lost */
 #define PHY_FAST_LINK_DOWN_ENERGY_LOST              PHY_BIT(0)
@@ -279,6 +289,18 @@ typedef enum Phy_AutoNegCtrl_e
     PHY_AUTO_NEGOTIATION_CTRL_ENABLE_AND_RESTART,
 }Phy_AutoNegCtrl;
 
+typedef enum Phy_Mdi_e
+{
+    /*! \brief Manual MDI configuration */
+    PHY_MDI_MANUAL_CONFIG = 0U,
+
+    /*! \brief Manual MDI-X configuration */
+    PHY_MDIX_MANUAL_CONFIG,
+
+    /*! \brief Enable automatic crossover */
+    PHY_AUTO_CROSSOVER,
+}Phy_Mdi;
+
 typedef struct
 {
     int32_t (*EnetPhy_readReg)(void* pArgs, uint32_t reg, uint16_t *val);
@@ -292,6 +314,9 @@ typedef struct
             uint16_t *val);
 
     int32_t (*EnetPhy_writeExtReg)(void*  pArgs, uint32_t reg,
+            uint16_t val);
+
+    int32_t (*EnetPhy_rmwExtReg)(void*  pArgs, uint32_t reg, uint16_t mask,
             uint16_t val);
 
     /*!Argument that needs to be passed to the above callbacks */
@@ -387,8 +412,10 @@ typedef struct
          * operation.
          *
          * \param hPhy     PHY device handle
+         *
+         * \return \ref EnetPhy_ErrorCodes
          */
-        void (*reset)(EthPhyDrv_Handle hPhy);
+        int32_t (*reset)(EthPhyDrv_Handle hPhy);
 
         /*!
          * \brief PHY specific soft reset status.
@@ -396,11 +423,12 @@ typedef struct
          * PHY-specific function that drivers must implement to check if soft-reset
          * operation is complete.
          *
-         * \param hPhy     PHY device handle
+         * \param hPhy       PHY device handle
+         * \param pCompleted Reset completed when true, otherwise not completed.
          *
-         * \return Whether soft-reset is complete or not.
+         * \return \ref EnetPhy_ErrorCodes
          */
-        bool (*isResetComplete)(EthPhyDrv_Handle hPhy);
+        int32_t (*isResetComplete)(EthPhyDrv_Handle hPhy, bool *pCompleted);
 
         /*!
          * \brief Read PHY register.
@@ -741,10 +769,11 @@ typedef struct
          * PHY-specific function that drivers must implement to start a soft-restart
          * operation.
          *
-         * \param hPhy     PHY device handle
+         * \param hPhy PHY device handle
          *
+         * \return \ref EnetPhy_ErrorCodes
          */
-        void (*restart)(EthPhyDrv_Handle hPhy);
+        int32_t (*restart)(EthPhyDrv_Handle hPhy);
 
         /*!
          * \brief PHY specific soft reset status.
@@ -753,7 +782,8 @@ typedef struct
          * operation is complete.
          *
          * \param hPhy       PHY device handle
-         * \param pCompleted Pointer to place holder where the result will be stored
+         * \param pCompleted Pointer to place holder where soft-restart operation state
+         *                   will be stored
          *                   false - software restart ongoing
          *                   true  - software restart completed
          *
@@ -782,12 +812,13 @@ typedef struct
          * by setting/clearing "Power Down" bit (Bit 11).
          *
          * \param hPhy       PHY device handle
-         * \param control    When set the IEEE power down feature will be activated.
-         *                   Normal mode otherwise.
+         * \param enable     Enable/Disable the IEEE power down feature.
+         *                   false - normal mode
+         *                   true - IEEE power down mode
          *
          * \return \ref EnetPhy_ErrorCodes
          */
-        int32_t (*ctrlPowerDown)(EthPhyDrv_Handle hPhy, bool control);
+        int32_t (*ctrlPowerDown)(EthPhyDrv_Handle hPhy, bool enable);
 
         /*!
          * \brief Checks if IEEE power down feature is enabled
@@ -796,7 +827,7 @@ typedef struct
          * by reading "Power Down" bit (Bit 11).
          *
          * \param hPhy        PHY device handle
-         * \param pActive     Pointer to place holder where the result will be stored
+         * \param pActive     Pointer to place holder where the power mode state will be stored
          *                    false - normal mode
          *                    true  - IEEE power down mode
          *
@@ -806,6 +837,7 @@ typedef struct
 
         /*!
          * \brief Based on flags will enable required advertisement for Auto Negotiation phase.
+         *        The rest of the advertisements will be disabled.
          *
          * Access IEEE Auto-Negotiation Advertisement Register (Register 4) and IEEE MASTER-SLAVE
          * Control Register (Register 9) to set specified advertisement bits. 10HD (Bit 5), 10FD
@@ -813,6 +845,13 @@ typedef struct
          * The 1000HD (Bit 10) and 1000FD (Bit 11) on MASTER-SLAVE Control Register.
          *
          * \param hPhy           PHY device handle
+         * \param capabilities   Contains capability flags specific to this PHY.
+         *                       PHY_LINK_CAP_HD10   - 10Mbps, Half-Duplex capability
+         *                       PHY_LINK_CAP_FD10   - 10Mbps, Full-Duplex capability
+         *                       PHY_LINK_CAP_HD100  - 100Mbps, Half-Duplex capability
+         *                       PHY_LINK_CAP_FD100  - 100Mbps, Full-Duplex capability
+         *                       PHY_LINK_CAP_HD1000 - 1000Mbps, Half-Duplex capability
+         *                       PHY_LINK_CAP_FD1000 - 1000Mbps, Full-Duplex capability
          * \param advertisement  Contains advertisement flags to enable as described below.
          *                       PHY_LINK_ADV_HD10   - 10Mbps, Half-Duplex advertisement
          *                       PHY_LINK_ADV_FD10   - 10Mbps, Full-Duplex advertisement
@@ -823,10 +862,40 @@ typedef struct
          *
          * \return \ref EnetPhy_ErrorCodes
          */
-        int32_t (*enableAdvertisement)(EthPhyDrv_Handle hPhy, uint32_t advertisement);
+        int32_t (*setAdvertisement)(EthPhyDrv_Handle hPhy, uint32_t capabilities, uint32_t advertisement);
 
         /*!
-         * \brief Based on flags will disable required advertisement for Auto Negotiation phase
+         * \brief Based on flags will enable required advertisement for Auto Negotiation phase.
+         *        The rest of the advertisements will not change.
+         *
+         * Access IEEE Auto-Negotiation Advertisement Register (Register 4) and IEEE MASTER-SLAVE
+         * Control Register (Register 9) to set specified advertisement bits. 10HD (Bit 5), 10FD
+         * (Bit 6), 100HD (Bit 7) and 100FD (Bit 8) on Auto-Negotiation Advertisement Register.
+         * The 1000HD (Bit 10) and 1000FD (Bit 11) on MASTER-SLAVE Control Register.
+         *
+         * \param hPhy           PHY device handle
+         * \param capabilities   Contains capability flags specific to this PHY.
+         *                       PHY_LINK_CAP_HD10   - 10Mbps, Half-Duplex capability
+         *                       PHY_LINK_CAP_FD10   - 10Mbps, Full-Duplex capability
+         *                       PHY_LINK_CAP_HD100  - 100Mbps, Half-Duplex capability
+         *                       PHY_LINK_CAP_FD100  - 100Mbps, Full-Duplex capability
+         *                       PHY_LINK_CAP_HD1000 - 1000Mbps, Half-Duplex capability
+         *                       PHY_LINK_CAP_FD1000 - 1000Mbps, Full-Duplex capability
+         * \param advertisement  Contains advertisement flags to enable as described below.
+         *                       PHY_LINK_ADV_HD10   - 10Mbps, Half-Duplex advertisement
+         *                       PHY_LINK_ADV_FD10   - 10Mbps, Full-Duplex advertisement
+         *                       PHY_LINK_ADV_HD100  - 100Mbps, Half-Duplex advertisement
+         *                       PHY_LINK_ADV_FD100  - 100Mbps, Full-Duplex advertisement
+         *                       PHY_LINK_ADV_HD1000 - 1000Mbps, Half-Duplex advertisement
+         *                       PHY_LINK_ADV_FD1000 - 1000Mbps, Full-Duplex advertisement
+         *
+         * \return \ref EnetPhy_ErrorCodes
+         */
+        int32_t (*enableAdvertisement)(EthPhyDrv_Handle hPhy, uint32_t capabilities, uint32_t advertisement);
+
+        /*!
+         * \brief Based on flags will disable required advertisement for Auto Negotiation phase.
+         *        The rest of the advertisements will not change.
          *
          * Access IEEE Auto-Negotiation Advertisement Register (Register 4) and IEEE MASTER-SLAVE
          * Control Register (Register 9) to clear specified advertisement bits. 10HD (Bit 5), 10FD
@@ -834,6 +903,13 @@ typedef struct
          * The 1000HD (Bit 10) and 1000FD (Bit 11) on MASTER-SLAVE Control Register.
          *
          * \param hPhy           PHY device handle
+         * \param capabilities   Contains capability flags specific to this PHY.
+         *                       PHY_LINK_CAP_HD10   - 10Mbps, Half-Duplex capability
+         *                       PHY_LINK_CAP_FD10   - 10Mbps, Full-Duplex capability
+         *                       PHY_LINK_CAP_HD100  - 100Mbps, Half-Duplex capability
+         *                       PHY_LINK_CAP_FD100  - 100Mbps, Full-Duplex capability
+         *                       PHY_LINK_CAP_HD1000 - 1000Mbps, Half-Duplex capability
+         *                       PHY_LINK_CAP_FD1000 - 1000Mbps, Full-Duplex capability
          * \param advertisement  Contains advertisement flags to disable as described below.
          *                       PHY_LINK_ADV_HD10   - 10Mbps, Half-Duplex advertisement
          *                       PHY_LINK_ADV_FD10   - 10Mbps, Full-Duplex advertisement
@@ -844,7 +920,7 @@ typedef struct
          *
          * \return \ref EnetPhy_ErrorCodes
          */
-        int32_t (*disableAdvertisement)(EthPhyDrv_Handle hPhy, uint32_t advertisement);
+        int32_t (*disableAdvertisement)(EthPhyDrv_Handle hPhy, uint32_t capabilities, uint32_t advertisement);
 
         /*!
          * \brief Controls Auto Negotiation feature
@@ -912,7 +988,7 @@ typedef struct
          * Access IEEE Control Register (Register 0) to read "Restart Auto-Negotiation" bit (Bit 9).
          *
          * \param hPhy        PHY device handle
-         * \param pCompleted   Pointer to place holder where the result will be stored
+         * \param pCompleted  Pointer to place holder where the result will be stored
          *                    false - Auto Negotiation restart process not completed
          *                    true - Auto Negotiation restart process completed
          *
@@ -935,6 +1011,20 @@ typedef struct
         int32_t (*isLinkUp)(EthPhyDrv_Handle hPhy, bool *pLinkUp);
 
         /*!
+         * \brief Checks for Gigabit support on PHY
+         *
+         * Access IEEE Status Register (Register 1) to read "Extended status for 1000Base T" bit (Bit 8).
+         *
+         * \param hPhy          PHY device handle
+         * \param pSupported    Pointer to place holder where the result will be stored
+         *                      false - PHY doesn't support Gigabit speeds
+         *                      true  - PHY supports Gigabit speeds
+         *
+         * \return \ref EnetPhy_ErrorCodes
+         */
+        int32_t (*isGigabitSupported) (EthPhyDrv_Handle hPhy, bool *pSupported);
+
+        /*!
          * \brief Sets speed and duplex settings to control data rate
          *        of the Ethernet link when Auto Negotiation is disabled
          *
@@ -943,12 +1033,19 @@ typedef struct
          * together with duplex by setting/clearing of "Duplex Mode" bit (Bit 8).
          *
          * \param hPhy           PHY device handle
+         * \param capabilities   Contains capability flags specific to this PHY.
+         *                       PHY_LINK_CAP_HD10   - 10Mbps, Half-Duplex capability
+         *                       PHY_LINK_CAP_FD10   - 10Mbps, Full-Duplex capability
+         *                       PHY_LINK_CAP_HD100  - 100Mbps, Half-Duplex capability
+         *                       PHY_LINK_CAP_FD100  - 100Mbps, Full-Duplex capability
+         *                       PHY_LINK_CAP_HD1000 - 1000Mbps, Half-Duplex capability
+         *                       PHY_LINK_CAP_FD1000 - 1000Mbps, Full-Duplex capability
          * \param settings       Contains speed/duplex combination flag to select.
          *                       \ref Phy_Link_SpeedDuplex
          *
          * \return \ref EnetPhy_ErrorCodes
          */
-        int32_t (*setSpeedDuplex)(EthPhyDrv_Handle hPhy, uint32_t settings);
+        int32_t (*setSpeedDuplex)(EthPhyDrv_Handle hPhy, uint32_t capabilities, uint32_t settings);
 
         /*!
          * \brief Provides selected speed and duplex when link is up
@@ -965,75 +1062,25 @@ typedef struct
         int32_t (*getSpeedDuplex)(EthPhyDrv_Handle hPhy, Phy_Link_SpeedDuplex* pConfig);
 
         /*!
-         * \brief Configures MII mode
+         * \brief Obtains speed/duplex capabilities of the PHY.
          *
-         * Accessing vendor specific or extended registers based on type of PHY to configure MII mode.
+         * Access IEEE Status Register (Register 1) to read bits "Extend Status" (Bit 8) and
+         * speed/duplex capability bits (Bit 11 - 14). Based on "Extended Status" bit the IEEE
+         * Extended Status Register (Register 15) can be accessed to read speed/duplex capability
+         * bits (Bit 12 - 13).
          *
-         * \param hPhy           PHY device handle
-         * \param mii            MII mode to configure. See \ref Phy_Mii.
-         *
-         * \return \ref EnetPhy_ErrorCodes
-         */
-        void (*setMiiMode)(EthPhyDrv_Handle hPhy, Phy_Mii mii);
-
-        /*!
-         * \brief Enables to declare Full Duplex also in parallel detect link.
-         *
-         * Accessing vendor specific or extended registers based on type of PHY.
-         *
-         * \param hPhy       PHY device handle.
-         * \param control    Enable/Disable Full-Duplex also in parallel detect link.
-         *                   false - disable Full-Duplex in parallel detect link
-         *                   true  - enable Full-Duplex in parallel detect link
+         * \param hPhy            PHY device handle.
+         * \param pCapabilities   Pointer to place holder where the capabilities will be stored
+         *                        PHY_LINK_CAP_HD10   - 10Mbps, Half-Duplex capability
+         *                        PHY_LINK_CAP_FD10   - 10Mbps, Full-Duplex capability
+         *                        PHY_LINK_CAP_HD100  - 100Mbps, Half-Duplex capability
+         *                        PHY_LINK_CAP_FD100  - 100Mbps, Full-Duplex capability
+         *                        PHY_LINK_CAP_HD1000 - 1000Mbps, Half-Duplex capability
+         *                        PHY_LINK_CAP_FD1000 - 1000Mbps, Full-Duplex capability
          *
          * \return \ref EnetPhy_ErrorCodes
          */
-        int32_t (*ctrlExtFD)(EthPhyDrv_Handle hPhy, bool control);
-
-        /*!
-         * \brief Controls detection of transmit error in odd-nibble boundary.
-         *
-         * Accessing vendor specific or extended registers based on type of PHY.
-         * Some PHY's are not providing such a feature.
-         *
-         * \param hPhy       PHY device handle.
-         * \param control    Enable/Disable Full-Duplex also in parallel detect link.
-         *                   false - disable detection of transmit error in odd-nibble boundary.
-         *                   true  - enable detection of transmit error in odd-nibble boundary.
-         *
-         * \return \ref EnetPhy_ErrorCodes
-         */
-        int32_t (*ctrlOddNibbleDetection)(EthPhyDrv_Handle hPhy, bool control);
-
-        /*!
-         * \brief Controls detection of Receive Symbol Error during IDLE State.
-         *
-         * Accessing vendor specific or extended registers based on type of PHY.
-         * Some PHY's are not providing such a feature.
-         *
-         * \param hPhy       PHY device handle.
-         * \param control    Enable/Disable Full-Duplex also in parallel detect link.
-         *                   false - disable detection of Receive Symbol Error during IDLE State.
-         *                   true  - enable detection of Receive Symbol Error during IDLE State.
-         *
-         * \return \ref EnetPhy_ErrorCodes
-         */
-        int32_t (*ctrlRxErrIdle)(EthPhyDrv_Handle hPhy, bool control);
-
-        /*!
-         * \brief Controls fast link down option.
-         *
-         * Accessing vendor specific or extended registers based on type of PHY.
-         * Some PHY's are not providing such a feature.
-         *
-         * \param hPhy       PHY device handle.
-         * \param control    Enable/Disable Full-Duplex also in parallel detect link.
-         *                   false - disable detection of Receive Symbol Error during IDLE State.
-         *                   true  - enable detection of Receive Symbol Error during IDLE State.
-         *
-         * \return \ref EnetPhy_ErrorCodes
-         */
-        int32_t (*ctrlFastLinkDownOption)(EthPhyDrv_Handle hPhy, uint32_t control);
+        int32_t (*getLocalCaps)(EthPhyDrv_Handle hPhy, uint32_t *pCapabilities);
     } fxn;
 
     EthPhyDrv_Handle hDrv;
@@ -1073,21 +1120,31 @@ int32_t GenericPhy_writeExtReg(EthPhyDrv_Handle hPhy,
                                 uint32_t reg,
                                 uint16_t val);
 
-void GenericPhy_reset(EthPhyDrv_Handle hPhy);
+int32_t GenericPhy_reset(EthPhyDrv_Handle hPhy);
 
-bool GenericPhy_isResetComplete(EthPhyDrv_Handle hPhy);
+int32_t GenericPhy_isResetComplete(EthPhyDrv_Handle hPhy,
+                                   bool *pCompleted);
 
 int32_t GenericPhy_ctrlPowerDown(EthPhyDrv_Handle hPhy,
-                                 bool control);
+                                 bool enable);
 
 int32_t GenericPhy_isPowerDownActive(EthPhyDrv_Handle hPhy,
-                                     bool *active);
+                                     bool *pActive);
+
+int32_t GenericPhy_getLocalCaps (EthPhyDrv_Handle hPhy,
+                                 uint32_t *pCapabilities);
+
+int32_t GenericPhy_setAdvertisement(EthPhyDrv_Handle hPhy,
+                                    uint32_t capabilities,
+                                    uint32_t advertisement);
 
 int32_t GenericPhy_enableAdvertisement(EthPhyDrv_Handle hPhy,
-                                   uint32_t advertisement);
+                                       uint32_t capabilities,
+                                       uint32_t advertisement);
 
 int32_t GenericPhy_disableAdvertisement(EthPhyDrv_Handle hPhy,
-                                       uint32_t advertisement);
+                                        uint32_t capabilities,
+                                        uint32_t advertisement);
 
 int32_t GenericPhy_ctrlAutoNegotiation(EthPhyDrv_Handle hPhy,
                                        uint32_t control);
@@ -1104,7 +1161,11 @@ int32_t GenericPhy_isAutoNegotiationComplete (EthPhyDrv_Handle hPhy,
 int32_t GenericPhy_isAutoNegotiationRestartComplete (EthPhyDrv_Handle hPhy,
                                                      bool *completed);
 
+int32_t GenericPhy_isGigabitSupported (EthPhyDrv_Handle hPhy,
+                                       bool *pSupported);
+
 int32_t GenericPhy_setSpeedDuplex (EthPhyDrv_Handle hPhy,
+                                   uint32_t capabilities,
                                    uint32_t settings);
 
 int32_t GenericPhy_isLinkUp (EthPhyDrv_Handle hPhy,

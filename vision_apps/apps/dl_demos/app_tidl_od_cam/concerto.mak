@@ -26,9 +26,9 @@ CSOURCES    += main_x86.c
 
 include $(VISION_APPS_PATH)/apps/concerto_x86_64_inc.mak
 
-IDIRS       += $(VISION_APPS_KERNELS_IDIRS)
+IDIRS       += $(APP_KERNELS_IDIRS)
 
-STATIC_LIBS += $(VISION_APPS_KERNELS_LIBS)
+STATIC_LIBS += $(APP_KERNELS_LIBS)
 STATIC_LIBS += $(TIADALG_LIBS)
 STATIC_LIBS += $(IMAGING_LIBS)
 
@@ -54,36 +54,27 @@ IDIRS += $(LINUX_FS_PATH)/usr/include/libdrm/
 IDIRS += $(LINUX_FS_PATH)/usr/include/drm/
 endif
 
-IDIRS       += $(VISION_APPS_KERNELS_IDIRS)
+IDIRS       += $(APP_KERNELS_IDIRS)
 
-STATIC_LIBS += $(VISION_APPS_KERNELS_LIBS)
+STATIC_LIBS += $(APP_KERNELS_LIBS)
 STATIC_LIBS += $(TIADALG_LIBS)
 STATIC_LIBS += $(IMAGING_LIBS)
-STATIC_LIBS += vx_kernels_img_proc
-STATIC_LIBS += vx_kernels_fileio
-STATIC_LIBS += vx_target_kernels_fileio
 
 endif
 endif
 
 IDIRS += $(IMAGING_IDIRS)
-IDIRS += $(VISION_APPS_PATH)/kernels/img_proc/include
-IDIRS += $(VISION_APPS_PATH)/kernels/fileio/include
 IDIRS += $(VISION_APPS_PATH)/modules/include
 
 ifeq ($(SOC),$(filter $(SOC), am62a))
 ifeq ($(TARGET_OS),$(filter $(TARGET_OS), LINUX QNX))
-IDIRS += $(EDGEAI_KERNELS_PATH)/include
+IDIRS += $(APP_KERNELS_IDIRS)
 IDIRS += $(TIOVX_PATH)/source/include
 endif
 endif
 
 STATIC_LIBS += $(TIADALG_LIBS)
-STATIC_LIBS += vx_app_modules
-
-IDIRS       += $(EDGEAI_IDIRS)
-SHARED_LIBS += edgeai-apps-utils
-SHARED_LIBS += edgeai-tiovx-kernels
+STATIC_LIBS += $(VISION_APPS_MODULES_LIBS)
 
 ifeq ($(SOC),j722s)
 SKIPBUILD=1

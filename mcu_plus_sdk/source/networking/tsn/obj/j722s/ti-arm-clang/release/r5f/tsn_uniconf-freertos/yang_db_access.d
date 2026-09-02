@@ -1,0 +1,36 @@
+obj/j722s/ti-arm-clang/release/r5f/tsn_uniconf-freertos//yang_db_access.obj: \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_uniconf/yangs/yang_db_access.c \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_buildconf/sitara_buildconf.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_buildconf/gptp_buildconf.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_buildconf/avtp_buildconf.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_buildconf/mrp_buildconf.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_buildconf/lldp_buildconf.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/unibase.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/unibase_macros.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_logging.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_esarray.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_strutils.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_llist.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_confutils.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_fileio.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_getmem.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/cb_thread.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/tilld/cb_lld_thread.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/tilld/sitara/lld_thread.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/ClockP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/SystemP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/DebugP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/TaskP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/SemaphoreP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_uniconf/yangs/yang_modules.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_uniconf/yangs/yang_db_access.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_uniconf/yangs/../uc_dbal.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_uniconf/yangs/../hal/uc_hwal.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_uniconf/yangs/../hal/../uc_dbal.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_uniconf/yangs/../uc_notice.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_uniconf/yangs/../uc_binconf.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_uniconf/yangs/yang_db_runtime.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_uniconf/yangs/yang_db_identiyref.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_uniconf/yangs/yang_db_enumeration.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_uniconf/yangs/yang_db_bits.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_uniconf/yangs/yang_node.h

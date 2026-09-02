@@ -180,6 +180,10 @@ void TIDL_depthToSpaceRefProcess(
   {
     TIDL_refDepthToSpace((float32_tidl *)pIn, (float32_tidl *)pOut, inPtrOffset, outPtrOffset, outWidth, outHeight, numChs, numROIs, inLinePitch, outLinePitch, inChPitch, outChPitch, inROIPitch, outROIPitch, blockSize);
   }
+  else if (elementType == TIDL_BFloat16)
+  {
+    TIDL_refDepthToSpace((bfloat16_tidl *)pIn, (bfloat16_tidl *)pOut, inPtrOffset, outPtrOffset, outWidth, outHeight, numChs, numROIs, inLinePitch, outLinePitch, inChPitch, outChPitch, inROIPitch, outROIPitch, blockSize);
+  }
   else if ((elementType == TIDL_SignedChar) || (elementType == TIDL_UnsignedChar))
   {
     TIDL_refDepthToSpace((uint8_t *)pIn, (uint8_t *)pOut, inPtrOffset, outPtrOffset, outWidth, outHeight, numChs, numROIs, inLinePitch, outLinePitch, inChPitch, outChPitch, inROIPitch, outROIPitch, blockSize);

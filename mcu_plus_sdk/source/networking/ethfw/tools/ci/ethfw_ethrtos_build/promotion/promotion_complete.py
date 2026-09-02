@@ -600,11 +600,17 @@ def _promotion_flow_impl(args: argparse.Namespace) -> int:
         jinfo = dict(jcfg['JENKINS_SERVER_INFO'])
 
     user = jinfo.get('jenkins_user')
-    token = jinfo.get('jenkins_api_token')
+    token = os.environ.get('JENKINS_API_TOKEN') or jinfo.get('jenkins_api_token')
     base_url = jinfo.get('jenkins_url')
     test_base_url = jinfo.get('test_jenkins_url', base_url)
     test_user = jinfo.get('test_jenkins_user', user)
-    test_token = jinfo.get('test_jenkins_api_token', token)
+    test_token = os.environ.get('TEST_JENKINS_API_TOKEN') or jinfo.get('test_jenkins_api_token', token)
+
+    if not token or not test_token:
+        logger.error('Jenkins API token not set. Provide via JENKINS_API_TOKEN / '
+                      'TEST_JENKINS_API_TOKEN env vars (do not store tokens in %s).',
+                      args.jenkins_config)
+        return 2
     nas_base = jinfo.get('nas_base_url')
 
     # Build job 1 (ETHFW)

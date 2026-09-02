@@ -1,5 +1,5 @@
 CURRENT_DIR := $(shell pwd)
-SYSCONFIG_VERSION := 1.20.0
+SYSCONFIG_VERSION := 1.24.2
 
 HOME_DIR := $(HOME)
 SYSCFG_PATH := $(HOME_DIR)/ti/sysconfig_$(SYSCONFIG_VERSION)
@@ -10,7 +10,7 @@ NWJS_CMD := $(SYSCFG_PATH)/nw/nw
 NWJS_CMD_ARGS := $(SYSCFG_PATH)
 BOARD ?= j784s4_evm
 
-BOARDLIST := j784s4_evm j721s2_evm
+BOARDLIST := j784s4_evm j721s2_evm j742s2_evm
 
 ifeq ($(BOARD), j784s4_evm)
 SYSCFG_DEVICE := J784S4_TDA4AP_TDA4VP_TDA4AH_TDA4VH_AM69x
@@ -18,6 +18,10 @@ endif
 
 ifeq ($(BOARD), j721s2_evm)
 SYSCFG_DEVICE := J721S2_TDA4VE_TDA4AL_TDA4VL_AM68x
+endif
+
+ifeq ($(BOARD), j742s2_evm)
+SYSCFG_DEVICE := J742S2
 endif
 
 check_board:

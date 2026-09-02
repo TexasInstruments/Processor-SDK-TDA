@@ -60,7 +60,7 @@
  *
  */
 
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 
 int app_tidl_front_cam_main(int argc, char* argv[]);
 

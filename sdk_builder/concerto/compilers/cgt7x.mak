@@ -79,6 +79,8 @@ $(_MODULE)_COPT += -g -D_DEBUG_=1
 else ifneq ($(filter $(TARGET_BUILD),release production),)
 ifeq ($(LDRA_COVERAGE_ENABLED),yes)
 $(_MODULE)_COPT += --opt_level=0 --gen_opt_info=2 -DNDEBUG
+else ifeq ($(CODE_COVERAGE_ENABLED_FOR_TIDL),yes)
+$(_MODULE)_COPT += --opt_level=0 --gen_opt_info=2 -DNDEBUG
 else
 $(_MODULE)_COPT += --opt_level=3 --gen_opt_info=2 -DNDEBUG
 endif

@@ -99,6 +99,14 @@ int32_t TIDL_softmaxRefProcessFloat(const sTIDL_Layer_t        * tidlLayer,
                                     uint8_t              * basePrmPtr,
                                     int32_t               outTranspose);
 
+template <class Tin, class Tout>
+int32_t TIDL_softmaxRefProcessBFloat16(const sTIDL_Layer_t        * tidlLayer,
+                                    Tin                 * inPtrs,
+                                    Tout                * outPtr,
+                                    sTIDL_DataParams_t   * inDataParams[],
+                                    const sTIDL_DataParams_t   * outDataParams,
+                                    uint8_t              * basePrmPtr,
+                                    int32_t               outTranspose);
 
 
 #endif /* TIDL_SOFTMAX_REF_H_*/

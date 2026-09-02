@@ -66,11 +66,11 @@ sudo apt install -y build-essential git git-lfs python3 python3-pip wget unzip l
 
 - Clone the repository:
 ```bash
-git clone https://github.com/TexasInstruments/ProcessorSDK.git
+git clone https://github.com/TexasInstruments/Processor-SDK-TDA.git
 ```
 - Navigate to the project directory:
 ```bash
-cd ProcessorSDK
+cd Processor-SDK-TDA
 ```
 - Export the required environment variables:
 ```bash
@@ -98,7 +98,7 @@ Once images are built, deploy them to the supported EVM or target hardware and v
 
 - Create a bootable SD card:
 ```bash
-# run the following command from the project root (ProcessorSDK) directory
+# run the following command from the project root (Processor-SDK-TDA) directory
 sudo ./sdk_builder/scripts/mk-linux-card.sh /dev/<sdX>  # replace <sdX> with your SD card device
 ```
 
@@ -119,11 +119,11 @@ make linux_fs_install_sd
 - Download the TIDL models and data sets for testing
 ```bash
 # Common data set 
-wget https://github.com/TexasInstruments/ProcessorSDK/releases/download/CICD_12_00_00_00/psdk_rtos_ti_data_set_12_00_00_00.tar.gz
+wget https://github.com/TexasInstruments/Processor-SDK-TDA/releases/download/CICD_12_00_00_00/psdk_rtos_ti_data_set_12_00_00_00.tar.gz
 
 # TIDL models (SoC-specific) 
 # Example for J784S4
-wget https://github.com/TexasInstruments/ProcessorSDK/releases/download/CICD_12_00_00_00/psdk_rtos_ti_tidl_models_12_00_00_00_j784s4.tar.gz
+wget https://github.com/TexasInstruments/Processor-SDK-TDA/releases/download/CICD_12_00_00_00/psdk_rtos_ti_tidl_models_12_00_00_00_j784s4.tar.gz
 ```
 
 - Install the data sets and models to the target:

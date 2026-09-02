@@ -293,18 +293,19 @@ CFILESCC:= $(filter %.cc,$(CFILES))
 CFILESASM:= $(filter %.asm,$(CFILES))
 CFILES:= $(CFILESK) $(CFILESC) $(CFILESASM) $(CFILESCPP) $(CFILESCC)
 
-#OFILES:= $(addsuffix .obj, $(basename $(notdir $(CFILES))))
+# VPATH lets make locate source files by basename when CFILES has absolute paths
+VPATH := $(sort $(dir $(CFILES)))
 
-OFILES:= $(CFILESC:%.c=%.obj)
-OFILES+= $(CFILESCPP:%.cpp=%.obj)
-OFILES+= $(CFILESCC:%.cc=%.obj)
+OFILES:= $(addsuffix .obj, $(basename $(notdir $(CFILESC))))
+OFILES+= $(addsuffix .obj, $(basename $(notdir $(CFILESCPP))))
+OFILES+= $(addsuffix .obj, $(basename $(notdir $(CFILESCC))))
 ifneq ($(TARGET_PLATFORM) , PC)
-OFILES+= $(CFILESASM:%.asm=%.obj)
+OFILES+= $(addsuffix .obj, $(basename $(notdir $(CFILESASM))))
 endif
-DEPILES:= $(CFILESC:%.c=%.dep)
-DEPILES+= $(CFILESCPP:%.cpp=%.dep)
-DEPILES+= $(CFILESCC:%.cc=%.dep)
-KOFILES:= $(CFILESK:%.k=%.obj)
+DEPILES:= $(addsuffix .dep, $(basename $(notdir $(CFILESC))))
+DEPILES+= $(addsuffix .dep, $(basename $(notdir $(CFILESCPP))))
+DEPILES+= $(addsuffix .dep, $(basename $(notdir $(CFILESCC))))
+KOFILES:= $(addsuffix .obj, $(basename $(notdir $(CFILESK))))
 
 BUILDDIR := $(CURR_BUILD_FOLDER)/$(_MODPATH)/
 BUILDDIR := $(call  CHANGE_PATHSEP,$(BUILDDIR))

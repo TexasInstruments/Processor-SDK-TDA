@@ -160,7 +160,7 @@ template<class Tin, class Tacc> void TIDL_refConcat(
         int32_t inOffset = (i1 * concatBuffParams->inChPitch) + (i2 * concatBuffParams->inPitch) + i3;
         int32_t outOffset = (i1 * concatBuffParams->outChPitch) + (i2 * concatBuffParams->outPitch) + i3;
         pAcc[outOffset] = pIn[inOffset] * scale;
-        if (TRUE == isKernelHighPrecision && outElemType != TIDL_SinglePrecFloat)
+        if (TRUE == isKernelHighPrecision && outElemType != TIDL_SinglePrecFloat && outElemType != TIDL_BFloat16)
         {
           if (outElemType == TIDL_SignedChar || outElemType == TIDL_UnsignedChar)
           {
@@ -277,6 +277,10 @@ template<class Tacc, class Tout> void TIDL_refConcatQuantize(
         {
           //OPENACC(routine(TIDL_floatSat))
           outAcc = TIDL_floatSat(outAcc, &net->TIDLLayers[layerIdx]);
+        }
+        else if (elementtype == TIDL_BFloat16)
+        {
+          outAcc = TIDL_BF16Sat(outAcc, &net->TIDLLayers[layerIdx]);
         }
         else if((isKernelHighPrecision == TRUE))
         {
@@ -515,6 +519,19 @@ int32_t TIDL_refConcatProcess(
               TIDL_refConcat(intAlgHandle, (float32_tidl*)inPtr, (float32_tidl*)refAccPtrTemp, 1.0, concatBuffParams, i4, isKernelHighPrecision);
 #endif
             }
+            else if (inDataParams->elementType == TIDL_BFloat16)
+            {
+              bfloat16_tidl *inPtr = ((bfloat16_tidl *)inPtrs[i4] + inPtrOffset);
+#ifdef BUILD_WITH_CUDA_CONCAT
+              TIDL_cudaConcatOp<bfloat16_tidl, float>(inPtr, (float*)refAccPtrTemp, 1,
+                  concatBuffParams->numInChannels, concatBuffParams->inHeight, concatBuffParams->inWidth,
+                  concatBuffParams->inChPitch, concatBuffParams->outChPitch, concatBuffParams->inPitch, concatBuffParams->outPitch,
+                  i4, isKernelHighPrecision, 1, 0, 0,
+                  concatBuffParams->outElemType, 0, 0);
+#else
+              TIDL_refConcat(intAlgHandle, inPtr, (float32_tidl*)refAccPtrTemp, 1.0f, concatBuffParams, i4, isKernelHighPrecision);
+#endif
+            }
             else
             {
               tidl_printf(0,"TIDL_Concatlayer in elementType is  Not suported !!!\n ");
@@ -584,6 +601,19 @@ int32_t TIDL_refConcatProcess(
 #else
               TIDL_refConcatQuantize(intAlgHandle, layerIdx, (float32_tidl *)refAccPtrTemp, (float32_tidl *)outPtrtemp,
               tidlLayer->outData.roundBits, concatBuffParams, TIDL_SAT_LO_UINT16, TIDL_SAT_HI_UINT16, inParams, outParams,isKernelHighPrecision);
+#endif
+            }
+            else if (tidlLayer->outData.elementType == TIDL_BFloat16)
+            {
+#ifdef BUILD_WITH_CUDA_CONCAT
+              TIDL_cudaConcatQuantize<float, bfloat16_tidl>((float*)refAccPtrTemp, (bfloat16_tidl*)outPtrtemp,
+                  concatBuffParams->numInChannels, concatBuffParams->inHeight, concatBuffParams->inWidth,
+                  concatBuffParams->outChPitch, concatBuffParams->outPitch,
+                  tidlLayer->outData.roundBits, TIDL_SAT_LO_UINT16, TIDL_SAT_HI_UINT16,
+                  isKernelHighPrecision, tidlLayer->outData.elementType, outputPadOffset, -FLT_MAX, FLT_MAX, outParams->tensorZeroPoint);
+#else
+              TIDL_refConcatQuantize(intAlgHandle, layerIdx, (float32_tidl *)refAccPtrTemp, (bfloat16_tidl *)outPtrtemp,
+                tidlLayer->outData.roundBits, concatBuffParams, TIDL_SAT_LO_UINT16, TIDL_SAT_HI_UINT16, inParams, outParams, isKernelHighPrecision);
 #endif
             }
             else
@@ -680,7 +710,10 @@ int32_t TIDL_concatRefInit(const TIDL_LayerSpecificParams *layerSpecificParams,
                                &scratchDataSize, &outDataSize, memorySize);
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  <justification start> 
+  Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+  This does not affect runtime behavior or safety.
   <justification end> */
   if (outPtr != NULL )
   {

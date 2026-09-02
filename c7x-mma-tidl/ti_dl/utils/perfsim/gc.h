@@ -662,6 +662,7 @@ typedef struct
   int32_t subLayerId;
   int32_t numIter  ;
   int32_t isWLNOP;
+  int32_t multiCoreMode;
   void*   privInfo ;
   sProcParams_t procParam;
 #ifdef SOC_TDA54

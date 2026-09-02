@@ -181,11 +181,6 @@ TEST(tivxInternalGraphPipeline, negativeTestownGraphScheduleGraph)
     VX_CALL(vxReleaseGraph(&graph));
 }
 
-TEST(tivxInternalGraphPipeline, negativeTestownGraphDoScheduleGraphAfterEnqueue)
-{
-    ASSERT(vx_false_e == ownGraphDoScheduleGraphAfterEnqueue(NULL, 0));
-}
-
 TEST(tivxInternalGraphPipeline, negativeTestownGraphGetNumSchedule1)
 {
     vx_context context = context_->vx_context_;
@@ -332,7 +327,6 @@ TESTCASE_TESTS(tivxInternalGraphPipeline,
     negativeTestownGraphGetNumSchedule,
     negativeTestownCheckGraphCompleted1,
     negativeTestownGraphScheduleGraph,
-    negativeTestownGraphDoScheduleGraphAfterEnqueue,
     negativeTestownGraphGetNumSchedule1,
     negativeTestGraphParameterDequeueDoneRefNullHostRef
     )

@@ -1585,7 +1585,6 @@ static vx_status VX_CALLBACK tivxVpacMscPyramidInitialize(vx_node node,
     return status;
 }
 
-#if !defined(VPAC3L)
 /* MSC: Initialize safety mechanism parameters */
 void tivx_vpac_msc_safety_mech_prms_init(tivx_vpac_msc_safety_mechanism_params_t *prms)
 {
@@ -1596,7 +1595,6 @@ void tivx_vpac_msc_safety_mech_prms_init(tivx_vpac_msc_safety_mechanism_params_t
         prms->enable_readback_config_registers = (uint32_t)vx_false_e;
     }
 }
-#endif
 /* ========================================================================== */
 /*                          Local Functions                                   */
 /* ========================================================================== */

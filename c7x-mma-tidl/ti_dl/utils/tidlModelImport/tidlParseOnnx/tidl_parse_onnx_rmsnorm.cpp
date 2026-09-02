@@ -69,7 +69,7 @@ using namespace onnx;
 template<> int32_t TidlParseOnnx:: parse<OnnxStr("RMSNormalization")> ()
 {
     int32_t axis=-1, status=0, stash_type=1, numDim;
-    float32_tidl epsilon = 10e-5;
+    float32_tidl epsilon = 1e-5;
     layer.layerType = TIDL_RMSNormalizationLayer;
     layer.numInBufs = 1;
 
@@ -87,7 +87,7 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("RMSNormalization")> ()
     /* Handle the case of divide by 0 */
     if(epsilon == (float32_tidl)0)
     {
-        epsilon = epsilon + 10e-5;
+        epsilon = epsilon + 1e-5;
     }
 
     numDim = layer.allowlistingMetaData.varTensorsDims[0].size();

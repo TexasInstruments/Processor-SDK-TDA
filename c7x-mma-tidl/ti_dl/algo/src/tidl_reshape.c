@@ -244,6 +244,15 @@ int32_t TIDL_reshapeProcessNew(TIDL_NetworkCommonParams *commonParams,
                                  (float32_tidl *)outPtrs[0],
                                  layerIdx);
   }
+  else if (tidlLayer->outData.elementType == TIDL_BFloat16)
+  {
+    status = TIDL_reshapeProcess(commonParams,
+                                 algLayer,
+                                 tidlLayer,
+                                 (bfloat16_tidl *)inPtrs[0],
+                                 (bfloat16_tidl *)outPtrs[0],
+                                 layerIdx);
+  }
   else if ((tidlLayer->outData.elementType == TIDL_SignedChar) || (tidlLayer->outData.elementType == TIDL_UnsignedChar))
   {
     status = TIDL_reshapeProcess(commonParams,

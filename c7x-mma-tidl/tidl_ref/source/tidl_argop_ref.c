@@ -75,6 +75,8 @@
 #include "tidl_alg_utils.h"
 #include "tidl_argop_ref.h"
 
+using namespace floating_point::bf16_c7x;
+
 /**
  * @brief This is reference implementation of ArgOp (ArgMax or ArgMin) layer
  *
@@ -356,6 +358,23 @@ int32_t TIDL_ArgOpRefProcess(sTIDL_Network_t      * net,
       tidlLayer->outData.minTensorValue = 0;
       tidlLayer->outData.maxTensorValue = inDataParams->dimValues[TIDL_DIM_NUMCH]-1;
     }
+    else if (inDataParams->elementType == TIDL_BFloat16)
+    {
+      status = TIDL_argmaxRefProcess(algLayer,
+        params,
+        inDataParams,
+        outDataParams,
+        (bfloat16_tidl *)inPtr,
+        (bfloat16_tidl *)outPtr,
+        imWidth,
+        imHeight,
+        inDIM1,
+        inDIM2,
+        numTotRoi,
+        inPitch, outPitch, inChPitch, outChPitch);
+      tidlLayer->outData.minTensorValue = 0;
+      tidlLayer->outData.maxTensorValue = inDataParams->dimValues[TIDL_DIM_NUMCH]-1;
+    }
     else
     {
       tidl_printf(0,"TIDL_ArgOpLayer in elementType is  Not suported !!!\n ");
@@ -431,6 +450,23 @@ int32_t TIDL_ArgOpRefProcess(sTIDL_Network_t      * net,
         outDataParams,
         (float32_tidl *)inPtr,
         (float32_tidl *)outPtr,
+        imWidth,
+        imHeight,
+        inDIM1,
+        inDIM2,
+        numTotRoi,
+        inPitch, outPitch, inChPitch, outChPitch);
+      tidlLayer->outData.minTensorValue = 0;
+      tidlLayer->outData.maxTensorValue = inDataParams->dimValues[TIDL_DIM_NUMCH]-1;
+    }
+    else if (inDataParams->elementType == TIDL_BFloat16)
+    {
+      status = TIDL_argminRefProcess(algLayer,
+        params,
+        inDataParams,
+        outDataParams,
+        (bfloat16_tidl *)inPtr,
+        (bfloat16_tidl *)outPtr,
         imWidth,
         imHeight,
         inDIM1,

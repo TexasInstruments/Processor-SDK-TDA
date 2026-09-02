@@ -231,7 +231,7 @@ int32_t TIDL_getProtoMsgLayerIdx(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure,
 
   // get layer type
   int32_t layerTypeIdx = pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType;
-  string layerType = TIDL_LayerString[layerTypeIdx];
+  string layerType = TIDL_GetLayerString(layerTypeIdx);
 
   // generate key
   string key = layerName+'_'+layerType;
@@ -855,7 +855,7 @@ void TIDL_exportQuantParamsToProtoTxt(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure,
 
     // set layer type
     int32_t layerTypeIdx = currPCLayer->layerType;
-    string layerType = TIDL_LayerString[layerTypeIdx];
+    string layerType = TIDL_GetLayerString(layerTypeIdx);
     currLayer->set_layer_type(layerType);
 
     // set bit depth
@@ -941,8 +941,11 @@ int8_t TIDL_isAllQuantParamsToBeImportedAvailable(TIDLNetQuantParams *QuantParam
     if(QuantParamsMsg->layers(idx).weights(0).max() == FLT_MAX || QuantParamsMsg->layers(idx).weights(0).min() == FLT_MIN ) return 0;
   }
 
-  //if outputs are available but min/max isnt calibrated, return false
-  if(QuantParamsMsg->layers(idx).outputs_size() > 0)
+  /** If outputs are available but min/max isnt calibrated, return false
+      Skip TIDL_DataLayer: calibration of data layers not required for bypassing calibration
+  */
+  if(QuantParamsMsg->layers(idx).outputs_size() > 0 &&
+     QuantParamsMsg->layers(idx).layer_type() != "TIDL_DataLayer")
   {
     if(QuantParamsMsg->layers(idx).outputs(0).max() == FLT_MAX || QuantParamsMsg->layers(idx).outputs(0).min() == FLT_MIN ) return 0;
   }
@@ -1007,6 +1010,42 @@ int8_t TIDL_canBypassCalibration(sTIDL_OrgNetwork_t* pOrgTIDLNetStructure,
         // if all the quant params required for calibration bypass for current layer are not present, return false
         if(!TIDL_isAllQuantParamsToBeImportedAvailable(&QuantParamsMsg, idx))
         {
+          const char* netLayerName = (const char*)pOrgTIDLNetStructure->TIDLPCLayers[i].outDataNames[0];
+          if(idx == -1)
+          {
+            TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL,
+              "Inadequate parameters: net layer %d (%s) not found in prototxt", i, netLayerName);
+          }
+          else
+          {
+            const char* protoLayerType = QuantParamsMsg.layers(idx).layer_type().c_str();
+            if(QuantParamsMsg.layers(idx).weights_size() > 0 &&
+               (QuantParamsMsg.layers(idx).weights(0).max() == FLT_MAX ||
+                QuantParamsMsg.layers(idx).weights(0).min() == FLT_MIN))
+            {
+              TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL,
+                "Inadequate parameters: net layer %d (%s) [prototxt idx %d, type %s]: weights uncalibrated (min=%g max=%g)",
+                i, netLayerName, idx, protoLayerType,
+                QuantParamsMsg.layers(idx).weights(0).min(), QuantParamsMsg.layers(idx).weights(0).max());
+            }
+            else if(QuantParamsMsg.layers(idx).outputs_size() > 0 &&
+                    (QuantParamsMsg.layers(idx).outputs(0).max() == FLT_MAX ||
+                     QuantParamsMsg.layers(idx).outputs(0).min() == FLT_MIN))
+            {
+              TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL,
+                "Inadequate parameters: net layer %d (%s) [prototxt idx %d, type %s]: outputs uncalibrated (min=%g max=%g)",
+                i, netLayerName, idx, protoLayerType,
+                QuantParamsMsg.layers(idx).outputs(0).min(), QuantParamsMsg.layers(idx).outputs(0).max());
+            }
+            else if(QuantParamsMsg.layers(idx).bias_size() > 0)
+            {
+              TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL,
+                "Inadequate parameters: net layer %d (%s) [prototxt idx %d, type %s]: bias uncalibrated or incomplete (min=%g max=%g size=%d value_size=%d)",
+                i, netLayerName, idx, protoLayerType,
+                QuantParamsMsg.layers(idx).bias(0).min(), QuantParamsMsg.layers(idx).bias(0).max(),
+                QuantParamsMsg.layers(idx).bias(0).size(), QuantParamsMsg.layers(idx).bias(0).value_size());
+            }
+          }
           TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Inadequate parameters provided, running calibration");
           delete[] protoMsgLayerIdxArr;
           protoMsgLayerIdxArr = NULL;

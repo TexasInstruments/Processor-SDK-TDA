@@ -76,6 +76,8 @@
 #include <limits>
 #include "tidl_reduce_ref.h"
 
+using namespace floating_point::bf16_c7x;
+
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
@@ -308,6 +310,17 @@ int32_t TIDL_reduceRefProcess(TIDL_Handle intAlgHandle,
   {
     status = TIDL_refReduceCore((float32_tidl *)inPtr,
                                 (float32_tidl *)outPtr,
+                                intAlgHandle,
+                                layerIdx,
+                                params,
+                                algLayer,
+                                inDataParams,
+                                outDataParams);
+  }
+  else if (TIDL_BFloat16 == ((int32_t)inDataParams->elementType))
+  {
+    status = TIDL_refReduceCore((bfloat16_tidl *)inPtr,
+                                (bfloat16_tidl *)outPtr,
                                 intAlgHandle,
                                 layerIdx,
                                 params,

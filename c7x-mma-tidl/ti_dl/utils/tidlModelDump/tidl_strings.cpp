@@ -90,6 +90,16 @@ static std::string find(int32_t key, const stringmap& smap)
 
 //---------------------------------------------------------------------------
 // Mappings from itidl_ti.h
+std::string inferencePrecisionModeString(int32_t mode)
+{
+   stringmap inferencePrecisionModeNames = 
+   {
+      { TIDL_InferencePrecisionModeFixedPoint, "TIDL_InferencePrecisionModeFixedPoint" },
+      { TIDL_InferencePrecisionModeFloatingPoint, "TIDL_InferencePrecisionModeFloatingPoint" },
+   };
+   return find(mode, inferencePrecisionModeNames);
+}
+
 std::string layerTypeString(int32_t type)
 {
    stringmap layerTypeNames = 
@@ -372,7 +382,6 @@ std::string multiCoreString(int32_t type)
       { TIDL_MULTI_CORE_SPATIAL, "TIDL_MULTI_CORE_SPATIAL" },
       { TIDL_MULTI_CORE_CHANNEL, "TIDL_MULTI_CORE_CHANNEL" },
       { TIDL_MULTI_CORE_BATCH, "TIDL_MULTI_CORE_BATCH" },
-      { TIDL_MULTI_CORE_CROP_SPATIAL_JOIN, "TIDL_MULTI_CORE_CROP_SPATIAL_JOIN" },
       { TIDL_MULTI_CORE_SPATIAL_WITH_JOIN , "TIDL_MULTI_CORE_SPATIAL_WITH_JOIN" },
       { TIDL_MULTI_CORE_CHANNEL_WITH_JOIN, "TIDL_MULTI_CORE_CHANNEL_WITH_JOIN" },
       { TIDL_MULTI_CORE_BATCH_WITH_JOIN, "TIDL_MULTI_CORE_BATCH_WITH_JOIN" },
@@ -500,6 +509,7 @@ std::string elementTypeString(uint32_t type)
       { TIDL_UnsignedDoubleWord, "TIDL_UnsignedDoubleWord"},
       { TIDL_SignedDoubleWord, "TIDL_SignedDoubleWord"},
       { TIDL_Bool,         "TIDL_Bool"},
+      { TIDL_BFloat16, "TIDL_BFloat16"},
    };
    return find(type, elementTypeNames);
 }

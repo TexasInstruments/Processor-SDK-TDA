@@ -11,6 +11,9 @@ function getSocName() {
 		case "J722S_TDA4VEN_TDA4AEN_AM67":
 			soc_name = "j722s";
 			break;
+		case "J742S2":
+			soc_name = "j742s2";
+			break;
 	}
 	return soc_name;
 }

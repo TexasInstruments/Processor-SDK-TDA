@@ -3199,7 +3199,6 @@ static vx_status app_init(AppObj *obj)
     {
         tivxHwaLoadKernels(obj->context);
         tivxVideoIOLoadKernels(obj->context);
-        tivxEdgeaiImgProcLoadKernels(obj->context);
         tivxImagingLoadKernels(obj->context);
         tivxImgProcLoadKernels(obj->context);
         tivxTIDLLoadKernels(obj->context);
@@ -3342,7 +3341,6 @@ static void app_deinit(AppObj *obj)
     tivxVideoIOUnLoadKernels(obj->context);
     tivxImagingUnLoadKernels(obj->context);
     tivxImgProcUnLoadKernels(obj->context);
-    tivxEdgeaiImgProcUnLoadKernels(obj->context);
     tivxFileIOUnLoadKernels(obj->context);
     APP_PRINT("Kernels unload done!\n");
 

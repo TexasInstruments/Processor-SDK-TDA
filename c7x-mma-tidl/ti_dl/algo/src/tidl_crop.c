@@ -84,6 +84,11 @@ int32_t TIDL_cropProcessNew(TIDL_NetworkCommonParams *commonParams,
   int32_t status = IALG_EOK;
 
 #ifdef HOST_EMULATION
+
+  int32_t multiCoreMode = (algLayer->workloadUnit != NULL)
+                            ? algLayer->workloadUnit->multiCoreMode
+                            : TIDL_NOT_MULTI_CORE;
+
   if (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != 0U)
   {
     sTIDL_DataParams_t *inDataParams = &commonParams->createParams->net->TIDLLayers[(int32_t)algLayer->inLayerIdx[0]].outData;
@@ -115,11 +120,11 @@ int32_t TIDL_cropProcessNew(TIDL_NetworkCommonParams *commonParams,
       inPtrOffset = (inPitch * cropOffsetH) + cropOffsetW;
     }
 #if TIDL_DEVICE_MULTICORE
-    else if ((params->multiCoreMode == TIDL_MULTI_CORE_SPATIAL_WITH_JOIN))
+    else if ((multiCoreMode == TIDL_MULTI_CORE_SPATIAL_WITH_JOIN))
     {
       TIDL_GetTensorDimensions(commonParams->createParams->net, algLayer->workloadUnit, algLayer->layerIdx, NULL, NULL, NULL, NULL, &outHeight, NULL);
     }
-    else if ((params->multiCoreMode == TIDL_MULTI_CORE_CROP_CHANNEL_JOIN))
+    else if ((multiCoreMode == TIDL_MULTI_CORE_CHANNEL_WITH_JOIN))
     {
       TIDL_GetTensorDimensions(commonParams->createParams->net, algLayer->workloadUnit, algLayer->layerIdx, NULL, NULL, &inChs, NULL, NULL, NULL);
     }
@@ -131,6 +136,11 @@ int32_t TIDL_cropProcessNew(TIDL_NetworkCommonParams *commonParams,
     if (inDataParams->elementType == TIDL_SinglePrecFloat)
     {
       TIDL_cropRefProcess((float32_tidl *)inPtrs[0], (float32_tidl *)outPtrs[0], inPtrOffset, outPtrOffset,
+                          outWidth, outHeight, inChs, numDim2, numDim1, numROIs, inPitch, outPitch, inChPitch, inDim2Pitch, inDim1Pitch, inROIPitch, outChPitch, outDim2Pitch, outDim1Pitch, outROIPitch);
+    }
+    else if (inDataParams->elementType == TIDL_BFloat16)
+    {
+      TIDL_cropRefProcess((bfloat16_tidl *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inPtrOffset, outPtrOffset,
                           outWidth, outHeight, inChs, numDim2, numDim1, numROIs, inPitch, outPitch, inChPitch, inDim2Pitch, inDim1Pitch, inROIPitch, outChPitch, outDim2Pitch, outDim1Pitch, outROIPitch);
     }
     else if ((inDataParams->elementType == TIDL_SignedChar) || (inDataParams->elementType == TIDL_UnsignedChar))

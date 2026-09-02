@@ -58,6 +58,7 @@
 #define TISCI_MSG_FLAG_FW_CAP_GET_DEVICE_MULTIPLE       BIT(13)
 #define TISCI_MSG_FLAG_FW_CAP_LPM_IRQ_CONTEXT_LOST      BIT(14)
 #define TISCI_MSG_FLAG_FW_CAP_LPM_CLK_CONTEXT_LOST      BIT(15)
+#define TISCI_MSG_FLAG_FW_CAP_RM_UDMAP_MULTI_CH_CFG     BIT(16)
 
 /**
  * \brief Notification message to indicate the DMSC is available.

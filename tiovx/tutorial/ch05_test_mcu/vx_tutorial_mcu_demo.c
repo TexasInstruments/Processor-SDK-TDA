@@ -123,7 +123,7 @@ void vx_tutorial_mcu_demo(vx_bool use_mcu3_core)
     #elif defined(SOC_TDA54)
     if (vx_true_e == use_mcu1_core)
     {
-        vxSetNodeTarget(node0, VX_TARGET_STRING, TIVX_TARGET_RMCU0_0);
+        vxSetNodeTarget(node0, VX_TARGET_STRING, TIVX_TARGET_MCU1);
     }
     #else
     if (vx_true_e == use_mcu3_core)
@@ -162,7 +162,7 @@ void vx_tutorial_mcu_demo(vx_bool use_mcu3_core)
     #elif defined(SOC_TDA54)
     if (vx_true_e == use_mcu1_core)
     {
-        vxSetNodeTarget(node1, VX_TARGET_STRING, TIVX_TARGET_RMCU0_0);
+        vxSetNodeTarget(node1, VX_TARGET_STRING, TIVX_TARGET_MCU1);
     }
     #else
     if (vx_true_e == use_mcu3_core)

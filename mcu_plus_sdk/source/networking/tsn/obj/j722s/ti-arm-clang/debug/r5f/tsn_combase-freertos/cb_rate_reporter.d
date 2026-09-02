@@ -1,0 +1,37 @@
+obj/j722s/ti-arm-clang/debug/r5f/tsn_combase-freertos//cb_rate_reporter.obj: \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/cb_rate_reporter.c \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_buildconf/sitara_buildconf.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_buildconf/gptp_buildconf.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_buildconf/avtp_buildconf.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_buildconf/mrp_buildconf.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_buildconf/lldp_buildconf.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/cb_rate_reporter.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/unibase.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/unibase_macros.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_logging.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_esarray.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_strutils.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_llist.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_confutils.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_fileio.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_unibase/ub_getmem.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/combase_private.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/combase.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/cb_ethernet.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/tilld/cb_lld_ethernet.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/tilld/lldenet.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/tilld/lldtype.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/tilld/lldtsync.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/cb_thread.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/tilld/cb_lld_thread.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/tilld/sitara/lld_thread.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/ClockP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/SystemP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/DebugP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/TaskP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/SemaphoreP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/cb_ipcshmem.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/tilld/cb_lld_ipcshmem.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/cb_tmevent.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/tilld/cb_lld_tmevent.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/networking/tsn/tsn-stack/tsn_combase/cb_xtimer.h

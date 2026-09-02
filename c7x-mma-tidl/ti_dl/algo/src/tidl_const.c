@@ -146,9 +146,12 @@ int32_t TIDL_constDataInitNew(const TIDL_LayerSpecificParams *layerSpecificParam
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int32_t TIDL_constDataProcessNew.* <function end>
-<justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+<justification start>
+Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
 This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
 TIDL_LDRA_TAG : TIDL_LDRA_TAG_CONSTDATA_PRIOR_CHECK_001
+Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+This does not affect runtime behavior or safety.
 <justification end> */
 int32_t TIDL_constDataProcessNew(TIDL_NetworkCommonParams *commonParams,
                               sTIDL_AlgLayer_t     * algLayer,

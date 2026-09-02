@@ -69,7 +69,7 @@ using namespace onnx;
 template<> int32_t TidlParseOnnx:: parse<OnnxStr("LayerNormalization")> ()
 {
   int32_t axis, status=0, numDim;
-  float32_tidl epsilon = 10e-5;
+  float32_tidl epsilon = 1e-5;
   layer.layerType = TIDL_LayerNormLayer;
   layer.numInBufs = 1;
 
@@ -100,11 +100,11 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("LayerNormalization")> ()
 
   /* Handle the case of divide by 0 */
   if(epsilon == (float32_tidl)0){
-    epsilon = epsilon + 10e-5;
+    epsilon = epsilon + 1e-5;
   }
 
   layer.layerParams.layerNormParams.epsilon = epsilon;
-  
+
   status = copyFloatConst(graph, index, 1, layer.weights, INPUT_REQUIRED);
   if(status == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
   {

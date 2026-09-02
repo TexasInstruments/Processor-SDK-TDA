@@ -206,5 +206,5 @@ MEMORY
     /* Inter-core ethernet shared desc queues. MUST be non-cached or cache-coherent [ size 2 MB ] */
     INTERCORE_ETH_DESC_MEM            : ORIGIN = 0xE4000000 , LENGTH = 0x00200000
     /* Inter-core ethernet shared data buffers. MUST be non-cached or cache-coherent [ size 14 MB ] */
-    INTERCORE_ETH_DATA_MEM            : ORIGIN = 0xE4200000 , LENGTH = 0x01E00000
+    INTERCORE_ETH_DATA_MEM            : ORIGIN = 0xE4200000 , LENGTH = 0x00E00000
 }

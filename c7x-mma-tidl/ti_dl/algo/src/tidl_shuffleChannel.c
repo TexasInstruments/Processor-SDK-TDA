@@ -206,6 +206,24 @@ int32_t TIDL_shuffleChannelProcessNew(TIDL_NetworkCommonParams *commonParams,
                                     inROIPitch,
                                     outROIPitch);
     }
+    else if (inDataParams->elementType == TIDL_BFloat16)
+    {
+      TIDL_shuffleChannelRefProcess((bfloat16_tidl *)inPtrs[0],
+                                    (bfloat16_tidl *)outPtrs[0],
+                                    inPtrOffset,
+                                    outPtrOffset,
+                                    inWidth,
+                                    inHeight,
+                                    numInChannels,
+                                    shuffleGroups,
+                                    numROIs,
+                                    inPitch,
+                                    outPitch,
+                                    inChPitch,
+                                    outChPitch,
+                                    inROIPitch,
+                                    outROIPitch);
+    }
     else if ((inDataParams->elementType == TIDL_SignedChar) || (inDataParams->elementType == TIDL_UnsignedChar))
     {
       TIDL_shuffleChannelRefProcess((uint8_t *)inPtrs[0],

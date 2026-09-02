@@ -100,6 +100,34 @@ static TIDL_OnnxrtEPData * data_ = new TIDL_OnnxrtEPData;
 extern "C"
 {
 
+GraphCache buildGraphCache(const onnx::GraphProto& graph)
+{
+  GraphCache cache;
+  
+  for(const auto &init : graph.initializer())
+  {
+    cache.initializer_names.insert(init.name());
+  }
+
+  for(const auto &out : graph.output())
+  {
+    cache.graph_output_names.insert(out.name());
+  }
+
+  for (const auto &node : graph.node())
+  {
+    for(const auto &in : node.input())
+    {
+      if (!in.empty())
+      {
+        cache.tensor_consumer_count[in]++;
+      }
+    }
+  }
+
+  return cache;
+}
+
 std::vector<int32_t> getNodeInputShape(GraphProto& onnxGraph, const std::string name, int32_t debugLevel)
 {
   std::vector<int32_t> dims;
@@ -579,6 +607,146 @@ std::vector<std::vector<int>> divideGraphPartition(GraphProto& onnxGraph, std::v
   }
   return suportedNodeGroupsSubdivided;
 }
+
+std::pair<int,int> computeSubgraphIO(const onnx::GraphProto& graph,const GraphCache& graph_cache,const std::vector<int>& subgraph_node_ids)
+{
+  std::unordered_set<std::string> produced_inside;
+  std::unordered_map<std::string, int> internal_consumer_count;
+
+  //Collect produced tensors
+  for(int nid : subgraph_node_ids)
+  {
+    const auto &node = graph.node(nid);
+    for (const auto &out : node.output())
+    {
+      if(!out.empty())
+      {
+        produced_inside.insert(out);
+      }
+    }
+  }
+
+  //Collect internal consumers
+  for(int nid : subgraph_node_ids)
+  {
+    const auto &node = graph.node(nid);
+    for(const auto &in : node.input())
+    {
+      if(in.empty())
+      {
+        continue;
+      }
+      if(produced_inside.count(in))
+      {
+        internal_consumer_count[in]++;
+      }
+    }
+  }
+
+  std::vector<std::string> subgraph_inputs;
+  std::vector<std::string> subgraph_outputs;
+
+  //Compute subgraph inputs
+  for(int nid : subgraph_node_ids)
+  {
+    const auto &node = graph.node(nid);
+    for(const auto &in : node.input())
+    {
+      if (in.empty())
+      {
+        continue;
+      }
+      //node is graph input if is not produced inside and it is not initializer
+      if(produced_inside.count(in) == 0 && graph_cache.initializer_names.count(in) == 0)
+      {
+        subgraph_inputs.push_back(in);
+      }
+    }
+  }
+
+  std::sort(subgraph_inputs.begin(),subgraph_inputs.end());
+  subgraph_inputs.erase(std::unique(subgraph_inputs.begin(), subgraph_inputs.end()),subgraph_inputs.end());
+
+  //Compute subgraph outputs
+
+  for(const auto& tensor : produced_inside)
+  {
+    int total_consumers = 0;
+    auto it = graph_cache.tensor_consumer_count.find(tensor);
+    if (it != graph_cache.tensor_consumer_count.end())
+    {
+      total_consumers = it->second;
+    }
+    int internal_consumers = internal_consumer_count[tensor];
+
+    bool used_outside = total_consumers > internal_consumers;
+    bool is_graph_output = graph_cache.graph_output_names.count(tensor);
+
+    if(used_outside || is_graph_output)
+    {
+      subgraph_outputs.push_back(tensor);
+    }
+  }
+  return {subgraph_inputs.size(),subgraph_outputs.size()};
+}
+
+std::vector<std::vector<int>> divideGraphPartitionIO(GraphProto& onnxGraph,const GraphCache& graph_cache, std::vector<std::vector<int>> supportedNodeGroups, std::vector<std::string> supportedFusedNodesNames)
+{
+  std::vector<std::vector<int>> suportedNodeGroupsSubdivided = {};
+  for (int i = 0; i < supportedNodeGroups.size(); i++)
+  {
+    std::pair<int,int> graph_io_size = computeSubgraphIO(onnxGraph,graph_cache,supportedNodeGroups[i]);
+    if ( graph_io_size.first <= TIDL_MAX_ALG_IN_BUFS && graph_io_size.second <= TIDL_MAX_ALG_OUT_BUFS)
+    {
+      suportedNodeGroupsSubdivided.push_back(supportedNodeGroups[i]);
+    }
+    else
+    {
+      std::vector<int> tempNodeGroups = {};
+      int partitionStart = 0;
+      int currentIdx = 0;
+      while (currentIdx < supportedNodeGroups[i].size())
+      {
+        tempNodeGroups.push_back(supportedNodeGroups[i][currentIdx]);
+        std::pair<int,int> temp_graph_io_size = computeSubgraphIO(onnxGraph,graph_cache,tempNodeGroups);
+        if ( temp_graph_io_size.first > TIDL_MAX_ALG_IN_BUFS || temp_graph_io_size.second > TIDL_MAX_ALG_OUT_BUFS)
+        {
+          tempNodeGroups.pop_back();
+          std::string nodeName;
+          currentIdx -= 1;
+          while(currentIdx >= partitionStart)
+          {
+            nodeName = onnxGraph.node(supportedNodeGroups[i][currentIdx]).name();
+            if (std::find(supportedFusedNodesNames.begin(), supportedFusedNodesNames.end(), nodeName) == supportedFusedNodesNames.end())
+            {
+              break;
+            }
+            tempNodeGroups.pop_back();
+            currentIdx--;
+          }
+          if (tempNodeGroups.size() > 0)
+          {
+            suportedNodeGroupsSubdivided.push_back(tempNodeGroups);
+          }
+          tempNodeGroups.clear();
+          partitionStart = currentIdx + 1;
+          currentIdx = currentIdx + 1;
+        }
+        else
+        {
+          currentIdx += 1;
+        }
+      }
+      if(tempNodeGroups.size() > 0)
+      {
+        suportedNodeGroupsSubdivided.push_back(tempNodeGroups);
+      }
+      TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "\nSubgraph %d further subdivided to satisfy max input/output constraints", i);
+    }
+  }
+  return suportedNodeGroupsSubdivided;
+}
+
 
 std::vector<int> TIDL_getInputNodes(int idx, GraphProto& onnxGraph);
 std::vector<int> TIDL_getOutputNodes(int idx, GraphProto& onnxGraph);
@@ -1614,6 +1782,8 @@ int32_t TIDL_getSupportedNodesImport(std::string& data, std::vector<std::vector<
 
   auto onnxGraph = model_proto.graph();
 
+  GraphCache graph_cache = buildGraphCache(onnxGraph);
+
   std::vector<int> sortedNodeIndices = sortOnnxGraphInTopologicalOrder(onnxGraph);
   if (sortedNodeIndices.size() != onnxGraph.node_size())
   {
@@ -1932,8 +2102,8 @@ int32_t TIDL_getSupportedNodesImport(std::string& data, std::vector<std::vector<
     numMaxNodes = data_->osrt_options.m_num_tidl_subgraph_max_node;
   }
 
-  std::vector<std::vector<int>> suportedNodeGroupsSubdivided = divideGraphPartition(onnxGraph, suportedNodeGroupsOptimized, numMaxNodes, supportedFusedNodesNames);
-
+  std::vector<std::vector<int>> suportedNodeGroupsSubdivided1 = divideGraphPartition(onnxGraph, suportedNodeGroupsOptimized, numMaxNodes, supportedFusedNodesNames);
+  std::vector<std::vector<int>> suportedNodeGroupsSubdivided = divideGraphPartitionIO(onnxGraph,graph_cache,suportedNodeGroupsSubdivided1,supportedFusedNodesNames);
   if(suportedNodeGroupsSubdivided.size() > data_->osrt_options.m_num_tidl_subgraphs)
   {
     TIDL_GLOBAL_REPORT_WARNING("Number of subgraphs generated (%d) > max_num_subgraphs(%d) provided in options. Best %d subgraphs will be created. Additional subgraphs will be delegated to ARM", suportedNodeGroupsSubdivided.size(), data_->osrt_options.m_num_tidl_subgraphs, data_->osrt_options.m_num_tidl_subgraphs);
@@ -2045,9 +2215,20 @@ int32_t TIDL_convertInDataToFloat (float* dstPtr, dataType *srcPtr, int32_t buff
 int32_t TIDL_writeQuantizedInput(onnxRtParams_t * onnxRtParams, char * inputName,
                               int32_t isCurrFrameIdx1, int32_t numParamBits, int32_t inferenceMode, float ** inQuantFactorInput)
 {
+  /* Derive companion dims file path: replace _calib_raw_data.bin with _calib_input_dims.txt */
+  char dimsFileName[FILE_NAME_SIZE];
+  strncpy(dimsFileName, inputName, FILE_NAME_SIZE - 1);
+  dimsFileName[FILE_NAME_SIZE - 1] = '\0';
+  char * suffix = strstr(dimsFileName, "_calib_raw_data.bin");
+  if (suffix != NULL)
+  {
+    strcpy(suffix, "_calib_input_dims.txt");
+  }
+
   if(isCurrFrameIdx1) //remove file at the beginning if it exists, in order to avoid appending contents from previous run
   {
     remove(inputName);
+    remove(dimsFileName);
   }
   FILE* fp = fopen(inputName, "ab+");
 
@@ -2184,6 +2365,36 @@ int32_t TIDL_writeQuantizedInput(onnxRtParams_t * onnxRtParams, char * inputName
     scratch_mem=NULL;   // to avoid double free error
   }
   fclose(fp);
+
+  /* Write one line of per-input dims to the companion dims file.
+   * Format: b_0 d1_0 d2_0 c_0 h_0 w_0;  b_1 d1_1 d2_1 c_1 h_1 w_1;  ...
+   * This is consumed by the inference via inDimsFile for dynamic input models.
+   */
+  if (suffix != NULL)
+  {
+    FILE* dimsFp = fopen(dimsFileName, "a");
+    if (dimsFp != NULL)
+    {
+      for (int i = 0; i < onnxRtParams->numNetInData; i++)
+      {
+        if (i > 0)
+        {
+          fprintf(dimsFp, "; ");
+        }
+
+        for (int d = 0; d < TIDL_DIM_MAX; d++)
+        {
+          fprintf(dimsFp, "%d", onnxRtParams->tensorShape[i][d]);
+          if (d < TIDL_DIM_MAX - 1)
+          {
+            fprintf(dimsFp, " ");
+          }
+        }
+      }
+      fprintf(dimsFp, "\n");
+      fclose(dimsFp);
+    }
+  }
 
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
@@ -2922,6 +3133,17 @@ int32_t TIDL_computeImportFunc(OnnxTIDLSubGraphParams * state_subGraph, std::str
 
   onnxRtParams_t * onnxRtParams = &state_subGraph->onnxRtParams;
 
+  if(onnxRtParams->numNetInData > TIDL_MAX_ALG_IN_BUFS)
+  {
+    TIDL_GLOBAL_REPORT_ERROR("Number of inputs to the graph is %d,maximum supported is %d", onnxRtParams->numNetInData,TIDL_MAX_ALG_IN_BUFS);
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+  }
+  if(onnxRtParams->numNetOutData > TIDL_MAX_ALG_OUT_BUFS)
+  {
+    TIDL_GLOBAL_REPORT_ERROR("Number of outputs to the graph is %d,maximum supported is %d", onnxRtParams->numNetOutData,TIDL_MAX_ALG_OUT_BUFS);
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+  }
+
   int32_t status = 0;
   state_subGraph->currFrameIdx_++;
     /* [TIDL-4702] : Update the subgraph string_buf for each frame */
@@ -3009,12 +3231,12 @@ int32_t TIDL_computeImportFunc(OnnxTIDLSubGraphParams * state_subGraph, std::str
 int32_t TIDL_computeInvokeFunc(OnnxTIDLSubGraphParams * state_subGraph)
 {
   int32_t status = 0;
-  if((data_->osrt_options.m_num_param_bits != 32) && (data_->osrt_options.m_prequantized_model == 0))
+  if((data_->osrt_options.m_num_param_bits != 32) && !(data_->osrt_options.m_num_param_bits == 16 && data_->osrt_options.m_inference_precision_mode == TIDL_InferencePrecisionModeFloatingPoint) && (data_->osrt_options.m_prequantized_model == 0))
   {
-    /* Floating point pass for subgraph input collection not required in case of execution with numParamBits = 32 */
+    /* Floating point pass for subgraph input collection not required in case of execution with numParamBits = 32 and BF16 inference mode */
     TIDL_IMPORT_CHECK_AND_RETURN(TIDL_subgraphRtInvoke(data_->osrt_options.osrtDebugPrintLevel, state_subGraph, &data_->infer_ops), "");
   }
-  else if((data_->osrt_options.m_num_param_bits == 32))
+  else if((data_->osrt_options.m_num_param_bits == 32) || (data_->osrt_options.m_num_param_bits == 16 && data_->osrt_options.m_inference_precision_mode == TIDL_InferencePrecisionModeFloatingPoint))
   {
     /* In 32-bit float mode the floating point invoke is skipped, so output buffers
      * are zeroed.  Exception: if the output node in subgraph is Shape or Size with

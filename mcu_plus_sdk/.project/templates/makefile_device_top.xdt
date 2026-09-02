@@ -127,8 +127,17 @@ libs-private: $(BUILD_COMBO_PRIVATE_ALL)
 
 % for (component of args.component_list) {
 $(BUILD_COMBO_`component.name`):
+% if (component.name == "sdl") {
+	@if [ -d `component.relpath` ]; then \
+		$(MAKE) -C `component.relpath` -f makefile`component.tag`.`args.device`.$(subst `component.name`_,,$@) all; \
+	else \
+		echo "Skipping SDL (not present in this snapshot)"; \
+	fi
+
+% } else {
 	$(MAKE) -C `component.relpath` -f makefile`component.tag`.`args.device`.$(subst `component.name`_,,$@) all
 
+% }
 % }
 
 # Various Component Clean Targets
@@ -158,8 +167,17 @@ libs-private-clean: $(BUILD_COMBO_PRIVATE_CLEAN_ALL)
 
 % for (component of args.component_list) {
 $(BUILD_COMBO_CLEAN_`component.name`):
+% if (component.name == "sdl") {
+	@if [ -d `component.relpath` ]; then \
+		$(MAKE) -C `component.relpath` -f makefile`component.tag`.`args.device`.$(subst `component.name`_,,$(subst _clean,,$@)) clean; \
+	else \
+		echo "Skipping SDL clean (not present in this snapshot)"; \
+	fi
+
+% } else {
 	$(MAKE) -C `component.relpath` -f makefile`component.tag`.`args.device`.$(subst `component.name`_,,$(subst _clean,,$@)) clean
 
+% }
 % }
 
 # Various Component Scrub Targets
@@ -189,8 +207,17 @@ libs-private-scrub: $(BUILD_COMBO_PRIVATE_SCRUB_ALL)
 
 % for (component of args.component_list) {
 $(BUILD_COMBO_SCRUB_`component.name`):
+% if (component.name == "sdl") {
+	@if [ -d `component.relpath` ]; then \
+		$(MAKE) -C `component.relpath` -f makefile`component.tag`.`args.device`.$(subst `component.name`_,,$(subst _scrub,,$@)) scrub; \
+	else \
+		echo "Skipping SDL scrub (not present in this snapshot)"; \
+	fi
+
+% } else {
 	$(MAKE) -C `component.relpath` -f makefile`component.tag`.`args.device`.$(subst `component.name`_,,$(subst _scrub,,$@)) scrub
 
+% }
 % }
 
 BUILD_COMBO_EXAMPLE_ALL =
@@ -241,8 +268,15 @@ examples-private: $(BUILD_COMBO_EXAMPLE_PRIVATE_ALL)
 
 % for (example of args.example_list) {
 `example.buildTarget`:
+% if (example.relpath.includes("/sdl/")) {
+	@if [ -d `example.relpath` ]; then \
+		$(MAKE) -C `example.relpath` -f makefile all; \
+	fi
+
+% } else {
 	$(MAKE) -C `example.relpath` -f makefile all
 
+% }
 % }
 % for (example of args.system_example_list) {
 `example.buildTarget`:
@@ -284,8 +318,15 @@ examples-private-clean: $(BUILD_COMBO_EXAMPLE_PRIVATE_CLEAN_ALL)
 
 % for (example of args.example_list) {
 `example.buildTargetClean`:
+% if (example.relpath.includes("/sdl/")) {
+	@if [ -d `example.relpath` ]; then \
+		$(MAKE) -C `example.relpath` -f makefile clean; \
+	fi
+
+% } else {
 	$(MAKE) -C `example.relpath` -f makefile clean
 
+% }
 % }
 % for (example of args.system_example_list) {
 `example.buildTargetClean`:
@@ -327,8 +368,15 @@ examples-scrub-private: $(BUILD_COMBO_EXAMPLE_PRIVATE_SCRUB_ALL)
 
 % for (example of args.example_list) {
 `example.buildTargetScrub`:
+% if (example.relpath.includes("/sdl/")) {
+	@if [ -d `example.relpath` ]; then \
+		$(MAKE) -C `example.relpath` -f makefile scrub; \
+	fi
+
+% } else {
 	$(MAKE) -C `example.relpath` -f makefile scrub
 
+% }
 % }
 % for (example of args.system_example_list) {
 `example.buildTargetScrub`:

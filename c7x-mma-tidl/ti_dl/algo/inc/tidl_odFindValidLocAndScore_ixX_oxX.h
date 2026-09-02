@@ -121,7 +121,7 @@ typedef struct
   int32_t inputHeight;         // Specifies the input height
   int32_t numSplitsPerCh;       /* Specifies the num of Splits Per Channel */
   int32_t totalNumKernelCalls; // Specifies the total number of kernel calls.
-  sTIDL_DetectOutputParams_t * params;
+  sTIDL_DetectOutputParams_t params;
   float32_tidl* priorData;
   sTIDL_ALgDetectOutputParams_t * algDetLyrParams;
 } TIDL_odFindValidLocAndScore_ixX_oxX_InitArgs ;
@@ -222,4 +222,3 @@ int32_t TIDL_odFindValidLocAndScore_ixX_oxX_exec(
 /* ======================================================================== */
 /*  End of file:  TIDL_odFindValidLocAndScore_ixX_ixX_oxX.h                     */
 /* ======================================================================== */
-

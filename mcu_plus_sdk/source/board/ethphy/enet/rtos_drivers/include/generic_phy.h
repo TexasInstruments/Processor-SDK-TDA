@@ -204,9 +204,10 @@ extern "C" {
 /* ========================================================================== */
 /*                          Function Declarations                             */
 /* ========================================================================== */
-void GenericPhy_reset(EthPhyDrv_Handle hPhy);
+int32_t GenericPhy_reset(EthPhyDrv_Handle hPhy);
 
-bool GenericPhy_isResetComplete(EthPhyDrv_Handle hPhy);
+int32_t GenericPhy_isResetComplete(EthPhyDrv_Handle hPhy,
+                                   bool *pCompleted);
 
 int32_t GenericPhy_readReg(EthPhyDrv_Handle hPhy,
                            uint32_t reg,
@@ -227,15 +228,20 @@ int32_t GenericPhy_writeExtReg(EthPhyDrv_Handle hPhy,
 void GenericPhy_printRegs(EthPhyDrv_Handle hPhy);
 
 int32_t GenericPhy_ctrlPowerDown(EthPhyDrv_Handle hPhy,
-                                 bool control);
+                                 bool enable);
 
 int32_t GenericPhy_isPowerDownActive(EthPhyDrv_Handle hPhy,
                                      bool *pActive);
 
+int32_t GenericPhy_getLocalCaps (EthPhyDrv_Handle hPhy,
+                                 uint32_t *pCapabilities);
+
 int32_t GenericPhy_enableAdvertisement(EthPhyDrv_Handle hPhy,
+                                       uint32_t capabilities,
                                        uint32_t advertisement);
 
 int32_t GenericPhy_disableAdvertisement(EthPhyDrv_Handle hPhy,
+                                        uint32_t capabilities,
                                         uint32_t advertisement);
 
 int32_t GenericPhy_ctrlAutoNegotiation(EthPhyDrv_Handle hPhy,
@@ -253,7 +259,11 @@ int32_t GenericPhy_isAutoNegotiationComplete(EthPhyDrv_Handle hPhy,
 int32_t GenericPhy_isAutoNegotiationRestartComplete(EthPhyDrv_Handle hPhy,
                                                     bool *pCompleted);
 
+int32_t GenericPhy_isGigabitSupported (EthPhyDrv_Handle hPhy,
+                                       bool *pSupported);
+
 int32_t GenericPhy_setSpeedDuplex(EthPhyDrv_Handle hPhy,
+                                  uint32_t capabilities,
                                   uint32_t settings);
 
 int32_t GenericPhy_isLinkUp(EthPhyDrv_Handle hPhy,

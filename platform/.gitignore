@@ -1,0 +1,9 @@
+lib/
+out/
+cscope.out
+tags
+*.bak
+rtos/*/cores/*/src/generated
+__pycache__
+*.pyc
+*.egg-info

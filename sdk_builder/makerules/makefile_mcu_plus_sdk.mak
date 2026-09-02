@@ -44,10 +44,6 @@ endif
 	$(MAKE) -C $(MCU_PLUS_SDK_PATH) libs DEVICE=$(BUILD_MCU_PLUS_SDK_DEVICE) PROFILE=$(current_profile) -s; \
 	$(MAKE) -C $(MCU_PLUS_SDK_PATH)/source/drivers/vhwa -f makefile.$(BUILD_MCU_PLUS_SDK_DEVICE).main-r5fss0-0.ti-arm-clang PROFILE=$(current_profile) -s; \
 	)
-ifeq ($(BUILD_CPU_MCU1_0),yes)
-	@echo Generating SysConfig files for vision_apps
-	$(SYSCFG_NODE) $(SYSCFG_CLI_PATH)/dist/cli.js --product $(MCU_PLUS_SDK_PATH)/.metadata/product.json --context wkup-r5fss0-0 --part Default --package AMW --output $(PSDK_PATH)/vision_apps/platform/$(SOC)/rtos/mcu1_0/generated $(PSDK_PATH)/vision_apps/platform/$(SOC)/rtos/mcu1_0/${MCU_SYSCFG_FILE}
-endif
 endif
 
 mcu_plus_sdk: mcu_plus_sdk_emu

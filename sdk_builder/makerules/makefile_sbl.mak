@@ -36,7 +36,7 @@ OSPI_LOCATION_HLOS_KERNEL_IMAGE=7C0000
 OSPI_PATTERN=3FE0000
 OSPI_PATTERN_FILE=$(PDK_PATH)/packages/ti/board/src/flash/nor/ospi/nor_spi_patterns.bin
 
-SBL_BOOTFILES_PATH=$(VISION_APPS_PATH)/out/sbl_bootfiles
+SBL_BOOTFILES_PATH=$(PLATFORM_PATH)/out/sbl_bootfiles
 
 #UNIFLASH INFO
 UNIFLASH_VERSION=uniflash_6.0.0
@@ -115,12 +115,12 @@ endif
 
 ifeq ($(BUILD_LINUX_MPU), yes)
 	SBL_SD_FS_PATH=$(LINUX_SD_FS_BOOT_PATH)
-	LDS_PATH=$(VISION_APPS_PATH)/platform/$(SOC)/linux/linux_lds
+	LDS_PATH=$(PLATFORM_PATH)/hlos/src/linux_lds
 	# With or without OP-TEE (1 or 0)
 endif
 ifeq ($(BUILD_QNX_MPU), yes)
 	SBL_SD_FS_PATH=$(QNX_SD_FS_BOOT_PATH)
-	LDS_PATH=$(VISION_APPS_PATH)/platform/$(SOC)/qnx/qnx_lds
+	LDS_PATH=$(PLATFORM_PATH)/hlos/src/qnx_lds
 	# With or without OP-TEE (1 or 0)
 	USE_OPTEE = 0
 endif
@@ -132,35 +132,35 @@ sbl_atf_optee:
 ifeq ($(BUILD_QNX_MPU), yes)
 ifeq ($(USE_OPTEE),$(filter $(USE_OPTEE), 1))
 	# For ATF, setting HANDLE_EA_EL3_FIRST_NS=0 for QNX so that the all runtime exception to be routed to current exception level (or in EL1 if the current exception level is EL0)
-	$(MAKE) -C $(VISION_APPS_PATH)/../trusted-firmware-a -s -j32 CROSS_COMPILE=$(CROSS_COMPILE) CC="$(CROSS_COMPILE)gcc --sysroot=$(LINUX_SYSROOT_ARM)" PLAT=k3 TARGET_BOARD=$(ATF_TARGET_BOARD) SPD=opteed  HANDLE_EA_EL3_FIRST_NS=0 K3_USART=$(K3_USART)
+	$(MAKE) -C $(PLATFORM_PATH)/../trusted-firmware-a -s -j32 CROSS_COMPILE=$(CROSS_COMPILE) CC="$(CROSS_COMPILE)gcc --sysroot=$(LINUX_SYSROOT_ARM)" PLAT=k3 TARGET_BOARD=$(ATF_TARGET_BOARD) SPD=opteed  HANDLE_EA_EL3_FIRST_NS=0 K3_USART=$(K3_USART)
 else
 	# For ATF, setting HANDLE_EA_EL3_FIRST_NS=0 for QNX so that the all runtime exception to be routed to current exception level (or in EL1 if the current exception level is EL0)
-	$(MAKE) -C $(VISION_APPS_PATH)/../trusted-firmware-a -s -j32 CROSS_COMPILE=$(CROSS_COMPILE) CC="$(CROSS_COMPILE)gcc --sysroot=$(LINUX_SYSROOT_ARM)" PLAT=k3 TARGET_BOARD=$(ATF_TARGET_BOARD) HANDLE_EA_EL3_FIRST_NS=0 K3_USART=$(K3_USART)
+	$(MAKE) -C $(PLATFORM_PATH)/../trusted-firmware-a -s -j32 CROSS_COMPILE=$(CROSS_COMPILE) CC="$(CROSS_COMPILE)gcc --sysroot=$(LINUX_SYSROOT_ARM)" PLAT=k3 TARGET_BOARD=$(ATF_TARGET_BOARD) HANDLE_EA_EL3_FIRST_NS=0 K3_USART=$(K3_USART)
 endif
 endif
 ifeq ($(BUILD_LINUX_MPU), yes)
 ifeq ($(USE_OPTEE),$(filter $(USE_OPTEE), 1))
-	$(MAKE) -C $(VISION_APPS_PATH)/../trusted-firmware-a -s -j32 CROSS_COMPILE=$(CROSS_COMPILE) CC="$(CROSS_COMPILE)gcc --sysroot=$(LINUX_SYSROOT_ARM)" PLAT=k3 TARGET_BOARD=$(ATF_TARGET_BOARD) SPD=opteed K3_USART=$(K3_USART)
+	$(MAKE) -C $(PLATFORM_PATH)/../trusted-firmware-a -s -j32 CROSS_COMPILE=$(CROSS_COMPILE) CC="$(CROSS_COMPILE)gcc --sysroot=$(LINUX_SYSROOT_ARM)" PLAT=k3 TARGET_BOARD=$(ATF_TARGET_BOARD) SPD=opteed K3_USART=$(K3_USART)
 else
-	$(MAKE) -C $(VISION_APPS_PATH)/../trusted-firmware-a -s -j32 CROSS_COMPILE=$(CROSS_COMPILE) CC="$(CROSS_COMPILE)gcc --sysroot=$(LINUX_SYSROOT_ARM)" PLAT=k3 TARGET_BOARD=$(ATF_TARGET_BOARD) K3_USART=$(K3_USART)
+	$(MAKE) -C $(PLATFORM_PATH)/../trusted-firmware-a -s -j32 CROSS_COMPILE=$(CROSS_COMPILE) CC="$(CROSS_COMPILE)gcc --sysroot=$(LINUX_SYSROOT_ARM)" PLAT=k3 TARGET_BOARD=$(ATF_TARGET_BOARD) K3_USART=$(K3_USART)
 endif
 endif
 
 ifeq ($(USE_OPTEE),$(filter $(USE_OPTEE), 1))
-	$(MAKE) -C $(VISION_APPS_PATH)/../optee_os -s -j32 CROSS_COMPILE_core=$(GCC_LINUX_ARM_ROOT)/bin/aarch64-none-linux-gnu- CROSS_COMPILE_ta_arm32=$(GCC_LINUX_ARM_ROOT)/bin/aarch64-none-linux-gnu- CROSS_COMPILE_ta_arm64=$(GCC_LINUX_ARM_ROOT)/bin/aarch64-none-linux-gnu- NOWERROR=1 CFG_TEE_TA_LOG_LEVEL=0 CFG_TEE_CORE_LOG_LEVEL=2 CFG_ARM64_core=y ta-targets=ta_arm64 PLATFORM=k3 PLATFORM_FLAVOR=j7 CFG_CONSOLE_UART=$(CFG_CONSOLE_UART)
+	$(MAKE) -C $(PLATFORM_PATH)/../optee_os -s -j32 CROSS_COMPILE_core=$(GCC_LINUX_ARM_ROOT)/bin/aarch64-none-linux-gnu- CROSS_COMPILE_ta_arm32=$(GCC_LINUX_ARM_ROOT)/bin/aarch64-none-linux-gnu- CROSS_COMPILE_ta_arm64=$(GCC_LINUX_ARM_ROOT)/bin/aarch64-none-linux-gnu- NOWERROR=1 CFG_TEE_TA_LOG_LEVEL=0 CFG_TEE_CORE_LOG_LEVEL=2 CFG_ARM64_core=y ta-targets=ta_arm64 PLATFORM=k3 PLATFORM_FLAVOR=j7 CFG_CONSOLE_UART=$(CFG_CONSOLE_UART)
 endif
 	mkdir -p $(ATF_OPTEE_PATH)
-	cp $(VISION_APPS_PATH)/../trusted-firmware-a/build/k3/$(ATF_TARGET_BOARD)/release/bl31.bin $(ATF_OPTEE_PATH)/bl31.bin
+	cp $(PLATFORM_PATH)/../trusted-firmware-a/build/k3/$(ATF_TARGET_BOARD)/release/bl31.bin $(ATF_OPTEE_PATH)/bl31.bin
 ifeq ($(USE_OPTEE),$(filter $(USE_OPTEE), 1))
-	cp $(VISION_APPS_PATH)/../optee_os/out/arm-plat-k3/core/tee-pager_v2.bin $(ATF_OPTEE_PATH)/bl32.bin
+	cp $(PLATFORM_PATH)/../optee_os/out/arm-plat-k3/core/tee-pager_v2.bin $(ATF_OPTEE_PATH)/bl32.bin
 endif
 
 
 sbl_atf_optee_scrub:
-	$(MAKE) -C $(VISION_APPS_PATH)/../trusted-firmware-a clean
-	$(MAKE) -C $(VISION_APPS_PATH)/../optee_os clean CFG_ARM64_core=y PLATFORM=k3 PLATFORM_FLAVOR=j7
-	rm -rf $(VISION_APPS_PATH)/../trusted-firmware-a/build/k3
-	rm -rf $(VISION_APPS_PATH)/../optee_os/out/arm-plat-k3
+	$(MAKE) -C $(PLATFORM_PATH)/../trusted-firmware-a clean
+	$(MAKE) -C $(PLATFORM_PATH)/../optee_os clean CFG_ARM64_core=y PLATFORM=k3 PLATFORM_FLAVOR=j7
+	rm -rf $(PLATFORM_PATH)/../trusted-firmware-a/build/k3
+	rm -rf $(PLATFORM_PATH)/../optee_os/out/arm-plat-k3
 
 sbl_pdk_sd:
 	$(MAKE) -C $(PDK_PATH)/packages/ti/build sbl_mmcsd_img TOOLS_INSTALL_PATH=$(PSDK_TOOLS_PATH) DISABLE_RECURSE_DEPS=no BOARD=$(BOARD) CORE=$(SBL_CORE) -s
@@ -254,12 +254,12 @@ pdk_bootapp_ospi_hs: pdk_bootapp_ospi
 sbl_vision_apps_bootimage_1:
 	mkdir -p $(SBL_BOOTFILES_PATH)/rprcs
 ifeq ($(BUILD_CPU_MCU2_0),yes)
-	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu2_0.out
-	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu2_0.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_mcu2_0.out.rprc
+	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu2_0.out
+	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu2_0.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_mcu2_0.out.rprc
 endif
 ifeq ($(BUILD_CPU_MCU2_1),yes)
-	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu2_1.out
-	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu2_1.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_mcu2_1.out.rprc
+	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu2_1.out
+	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu2_1.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_mcu2_1.out.rprc
 endif
 	$(MULTICORE_APPIMAGE_GEN_TOOL_PATH)/MulticoreImageGen LE $(DEV_ID) $(SBL_BOOTFILES_PATH)/lateapp1 $(REMOTE_CORE_LIST_LATEAPP1)
 
@@ -270,44 +270,44 @@ sbl_vision_apps_bootimage_hs_1:
 sbl_vision_apps_bootimage_2:
 	mkdir -p $(SBL_BOOTFILES_PATH)/rprcs
 ifeq ($(BUILD_CPU_MCU3_0),yes)
-	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu3_0.out
-	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu3_0.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_mcu3_0.out.rprc
+	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu3_0.out
+	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu3_0.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_mcu3_0.out.rprc
 endif
 ifeq ($(BUILD_CPU_MCU3_1),yes)
-	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu3_1.out
-	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu3_1.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_mcu3_1.out.rprc
+	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu3_1.out
+	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu3_1.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_mcu3_1.out.rprc
 endif
 ifeq ($(BUILD_CPU_MCU4_0),yes)
-	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu4_0.out
-	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu4_0.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_mcu4_0.out.rprc
+	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu4_0.out
+	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu4_0.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_mcu4_0.out.rprc
 endif
 ifeq ($(BUILD_CPU_MCU4_1),yes)
-	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu4_1.out
-	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(VISION_APPS_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu4_1.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_mcu4_1.out.rprc
+	$(TIARMCGT_LLVM_ROOT)/bin/tiarmstrip -p $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu4_1.out
+	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(PLATFORM_PATH)/out/$(TARGET_SOC)/R5F/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_mcu4_1.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_mcu4_1.out.rprc
 endif
 ifeq ($(BUILD_CPU_C6x_1),yes)
-	$(CGT6X_ROOT)/bin/strip6x -p $(VISION_APPS_PATH)/out/$(TARGET_SOC)/C66/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c6x_1.out
-	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(VISION_APPS_PATH)/out/$(TARGET_SOC)/C66/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c6x_1.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_c6x_1.out.rprc
+	$(CGT6X_ROOT)/bin/strip6x -p $(PLATFORM_PATH)/out/$(TARGET_SOC)/C66/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c6x_1.out
+	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(PLATFORM_PATH)/out/$(TARGET_SOC)/C66/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c6x_1.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_c6x_1.out.rprc
 endif
 ifeq ($(BUILD_CPU_C6x_2),yes)
-	$(CGT6X_ROOT)/bin/strip6x -p $(VISION_APPS_PATH)/out/$(TARGET_SOC)/C66/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c6x_2.out
-	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(VISION_APPS_PATH)/out/$(TARGET_SOC)/C66/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c6x_2.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_c6x_2.out.rprc
+	$(CGT6X_ROOT)/bin/strip6x -p $(PLATFORM_PATH)/out/$(TARGET_SOC)/C66/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c6x_2.out
+	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(PLATFORM_PATH)/out/$(TARGET_SOC)/C66/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c6x_2.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_c6x_2.out.rprc
 endif
 ifeq ($(BUILD_CPU_C7x_1),yes)
-	$(CGT7X_ROOT)/bin/strip7x -p $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_1.out
-	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_1.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_c7x_1.out.rprc
+	$(CGT7X_ROOT)/bin/strip7x -p $(PLATFORM_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_1.out
+	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(PLATFORM_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_1.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_c7x_1.out.rprc
 endif
 ifeq ($(BUILD_CPU_C7x_2),yes)
-	$(CGT7X_ROOT)/bin/strip7x -p $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_2.out
-	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_2.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_c7x_2.out.rprc
+	$(CGT7X_ROOT)/bin/strip7x -p $(PLATFORM_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_2.out
+	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(PLATFORM_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_2.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_c7x_2.out.rprc
 endif
 ifeq ($(BUILD_CPU_C7x_3),yes)
-	$(CGT7X_ROOT)/bin/strip7x -p $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_3.out
-	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_3.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_c7x_3.out.rprc
+	$(CGT7X_ROOT)/bin/strip7x -p $(PLATFORM_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_3.out
+	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(PLATFORM_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_3.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_c7x_3.out.rprc
 endif
 ifeq ($(BUILD_CPU_C7x_4),yes)
-	$(CGT7X_ROOT)/bin/strip7x -p $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_4.out
-	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(VISION_APPS_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_4.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_c7x_4.out.rprc
+	$(CGT7X_ROOT)/bin/strip7x -p $(PLATFORM_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_4.out
+	mono $(SBL_OUT2RPRC_GEN_TOOL_PATH)/out2rprc.exe $(PLATFORM_PATH)/out/$(TARGET_SOC)/$(C7X_TARGET)/$(RTOS)/$(QNX_APP_PROFILE)/vx_app_rtos_qnx_c7x_4.out $(SBL_BOOTFILES_PATH)/rprcs/vx_app_rtos_qnx_c7x_4.out.rprc
 endif
 	$(MULTICORE_APPIMAGE_GEN_TOOL_PATH)/MulticoreImageGen LE $(DEV_ID) $(SBL_BOOTFILES_PATH)/lateapp2 $(REMOTE_CORE_LIST_LATEAPP2)
 

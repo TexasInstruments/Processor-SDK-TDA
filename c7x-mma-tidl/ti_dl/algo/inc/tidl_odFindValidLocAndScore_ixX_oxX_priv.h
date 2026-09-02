@@ -74,7 +74,7 @@
 #ifndef _TIDL_ODFINDVALIDLOC_IXX_IXX_OXX_PRIV_H_
 #define _TIDL_ODFINDVALIDLOC_IXX_IXX_OXX_PRIV_H_
 
-#include "tidl_detectionOutput_int.h"
+#include "tidl_detectionOutput.h"
 #include "tidl_odFindValidLocAndScore_ixX_oxX.h"
 #include <math.h>
 #include <stdlib.h>
@@ -189,4 +189,3 @@ int32_t TIDL_odFindValidLocAndScore_exec_c7x(
 /* ======================================================================== */
 /*  End of file:  TIDL_odFindValidLocAndScore_ixX_ixX_oxX.h                              */
 /* ======================================================================== */
-

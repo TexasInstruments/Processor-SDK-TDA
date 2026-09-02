@@ -76,6 +76,8 @@ using namespace std;
 #define DEFAULT_COMPILE_CONSTRAINT_NC_FLAGS (0x1 | 0x40 | 0x200 | 0x400)
 /* Copy of NC TIDL_ENABLE_PERFLOG_TRACE flag */
 #define TIDL_ENABLE_PERFLOG_TRACE (0x5000000)
+/* Copy of NC TIDL_CONSTRAINT_UPDATE_CSV_ONLY flag */
+#define TIDL_CONSTRAINT_UPDATE_CSV_ONLY (0x00400000)
 #define ADD_DC_LAYER_AT_INPUT  (1)
 #define ADD_DC_LAYER_AT_OUTPUT (2)
 
@@ -100,6 +102,7 @@ typedef struct
     int32_t  quantRoundAdd;
     int32_t  numParamBits;
     int32_t  numFeatureBits;
+    int32_t  inferencePrecisionMode;
     int32_t  inFileFormat;
     int32_t  numFrames;
     int32_t  numFramesBiasCalibration;
@@ -125,6 +128,7 @@ typedef struct
     int32_t  inDataNorm[TIDL_MAX_ALG_IN_BUFS];
     int32_t  inDataPadInTIDL[TIDL_MAX_ALG_IN_BUFS];
     uint8_t  inData[FILE_NAME_SIZE];
+    uint8_t  inDimsFile[FILE_NAME_SIZE];
     uint8_t  inDataNamesList[TIDL_MAX_ALG_IN_BUFS*FILE_NAME_SIZE];
     uint8_t  outDataNamesList[TIDL_MAX_ALG_OUT_BUFS*FILE_NAME_SIZE];
     uint8_t  metaLayersNamesList[TIDL_MAX_ALG_IN_BUFS*FILE_NAME_SIZE];

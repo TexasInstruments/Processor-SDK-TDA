@@ -143,9 +143,9 @@ int32_t Dp83tg720_config(EthPhyDrv_Handle hPhy,
                         Phy_Mii mii,
                         bool loopbackEn);
 
-void Dp83tg720_reset(EthPhyDrv_Handle hPhy);
+int32_t Dp83tg720_reset(EthPhyDrv_Handle hPhy);
 
-bool Dp83tg720_isResetComplete(EthPhyDrv_Handle hPhy);
+int32_t Dp83tg720_isResetComplete(EthPhyDrv_Handle hPhy, bool *pComplete);
 
 void Dp83tg720_printRegs(EthPhyDrv_Handle hPhy);
 /* ========================================================================== */

@@ -634,7 +634,6 @@ void tivx_dmpac_sde_params_init(tivx_dmpac_sde_params_t *prms)
     }
 }
 
-#if !defined(SOC_J722S)
 void tivx_dmpac_sde_safety_mech_prms_init(tivx_dmpac_sde_safety_mechanism_params_t *prms)
 {
     if (NULL != prms)
@@ -644,6 +643,5 @@ void tivx_dmpac_sde_safety_mech_prms_init(tivx_dmpac_sde_safety_mechanism_params
         prms->enable_readback_config_registers    = (uint32_t)vx_false_e;
     }
 }
-#endif
 
 #endif /* BUILD_DMPAC_SDE */

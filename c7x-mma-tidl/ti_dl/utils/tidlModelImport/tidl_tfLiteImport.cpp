@@ -197,6 +197,7 @@ int32_t TIDL_tfliteCopyInputConstTensor(const Model* tfliteModel, int32_t nIdx, 
   readTensor(data, (uint8_t *) ptr);
   if(tensor->type() == TensorType_FLOAT32)
   {
+    buf.dataType = TIDL_SinglePrecFloat;
     buf.bufSize = data->size() / sizeof(float);
     buf.ptr = (float *)my_malloc(buf.bufSize*sizeof(float));
     memcpy(buf.ptr, ptr, buf.bufSize*sizeof(float));
@@ -207,6 +208,7 @@ int32_t TIDL_tfliteCopyInputConstTensor(const Model* tfliteModel, int32_t nIdx, 
   }
   else if (tensor->type() == TensorType_INT32)
   {
+    buf.dataType = TIDL_SignedWord;
     buf.bufSize = data->size() / sizeof(int);
     buf.ptr = (float *)my_malloc(buf.bufSize*sizeof(float));
     memcpy(buf.ptr, ptr, buf.bufSize*sizeof(int));
@@ -218,8 +220,10 @@ int32_t TIDL_tfliteCopyInputConstTensor(const Model* tfliteModel, int32_t nIdx, 
     {
       scaleBuf.bufSize = scale->size();
       scaleBuf.ptr = (float *)my_malloc(scaleBuf.bufSize*sizeof(float));
+      scaleBuf.dataType = TIDL_SinglePrecFloat;
       zpBuf.bufSize = scaleBuf.bufSize;
       zpBuf.ptr = (int *)my_malloc(zpBuf.bufSize * sizeof(int));
+      zpBuf.dataType = TIDL_SignedWord;
 
       float * qscale        = (float *)scaleBuf.ptr;
       int32_t * qzero_point = (int32_t*)zpBuf.ptr;
@@ -251,6 +255,7 @@ int32_t TIDL_tfliteCopyInputConstTensor(const Model* tfliteModel, int32_t nIdx, 
       if(gParams.quantizationStyle != TIDL_QuantStyleAsymNP2_TFL)
       {
         int* dst = (int*)buf.ptr;
+        buf.dataType = TIDL_SignedWord;
         uint8_t * src = (uint8_t *)ptr;
         for (int i = 0; i < buf.bufSize; i++)
         {
@@ -260,6 +265,7 @@ int32_t TIDL_tfliteCopyInputConstTensor(const Model* tfliteModel, int32_t nIdx, 
       else
       {
         uint8_t * dst = (uint8_t *)buf.ptr;
+        buf.dataType = TIDL_UnsignedChar;
         uint8_t * src = (uint8_t *)ptr;
         for (int i = 0; i < buf.bufSize; i++)
         {
@@ -272,6 +278,7 @@ int32_t TIDL_tfliteCopyInputConstTensor(const Model* tfliteModel, int32_t nIdx, 
       if(gParams.quantizationStyle != TIDL_QuantStyleAsymNP2_TFL)
       {
         int* dst = (int*)buf.ptr;
+        buf.dataType = TIDL_SignedWord;
         int8_t * src = (int8_t *)ptr;
         for (int i = 0; i < buf.bufSize; i++)
         {
@@ -281,6 +288,7 @@ int32_t TIDL_tfliteCopyInputConstTensor(const Model* tfliteModel, int32_t nIdx, 
       else
       {
         int8_t * dst = (int8_t *)buf.ptr;
+        buf.dataType = TIDL_SignedChar;
         int8_t * src = (int8_t *)ptr;
         for (int i = 0; i < buf.bufSize; i++)
         {
@@ -304,8 +312,10 @@ int32_t TIDL_tfliteCopyInputConstTensor(const Model* tfliteModel, int32_t nIdx, 
       }
       scaleBuf.bufSize = scale->size();
       scaleBuf.ptr = (float *)my_malloc(scaleBuf.bufSize*sizeof(float));
+      scaleBuf.dataType = TIDL_SinglePrecFloat;
       zpBuf.bufSize = zero_point->size();
       zpBuf.ptr = (int *)my_malloc(zpBuf.bufSize*sizeof(int));
+      zpBuf.dataType = TIDL_SignedWord;
 
       float * qscale        = (float *)scaleBuf.ptr;
       int32_t * qzero_point = (int32_t*)zpBuf.ptr;

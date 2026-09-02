@@ -76,6 +76,8 @@
 #include <limits>
 #include "tidl_scatterElements_ref.h"
 
+using namespace floating_point::bf16_c7x;
+
 // #define TIDL_REF_BATCH_NORM_DEBUG
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -116,7 +118,7 @@ template<class Tin, class Tacc> void TIDL_refScatterElementsOutputUpdation(Tacc 
 {
   if (reduction == (int32_t)TIDL_ScatterElementsAdd)
   {
-    if(std::is_same<Tacc, float32_tidl>::value)
+    if(std::is_same<Tacc, float32_tidl>::value || std::is_same<Tacc, bfloat16_tidl>::value)
     {
       float32_tidl sum = accPtr[targetIndex] + (Tacc)update[updateIndex];
       sum = (sum >= maxValue) ? (Tacc)maxValue : sum;
@@ -576,7 +578,7 @@ static int32_t TIDL_refScatterElements(Tin  *data,
     {
       if (params->reduction == (int32_t)TIDL_ScatterElementsAdd)
       {
-        Tout temp = 0;
+        Tout temp = Tout();
         Tacc outAcc;
         temp = std::numeric_limits<Tout>::lowest();
         int32_t minValueOutput = (int32_t)temp;
@@ -596,6 +598,10 @@ static int32_t TIDL_refScatterElements(Tin  *data,
         {
           //openacc(routine(TIDL_floatSat))
           outAcc = TIDL_floatSat(outAcc, (sTIDL_Layer_t  *)tidlLayer);
+        }
+        else if(outDataParams->elementType == TIDL_BFloat16)
+        {
+          outAcc = TIDL_BF16Sat(outAcc, (sTIDL_Layer_t  *)tidlLayer);
         }
         else
         {
@@ -1030,6 +1036,31 @@ int32_t TIDL_scatterElementsRefProcess(TIDL_Handle intAlgHandle,
                                        (int32_t *)indices,
                                        (float32_tidl *)update,
                                        (float32_tidl *)outPtr,
+                                       (float32_tidl *)accPtr,
+                                       intAlgHandle,
+                                       layerIdx,
+                                       params,
+                                       algLayer,
+                                       tidlLayer,
+                                       inDataParams,
+                                       inIndicesParams,
+                                       inUpdateParams,
+                                       outDataParams);
+    }
+  }
+  else if (TIDL_BFloat16 == ((int32_t)inDataParams->elementType))
+  {
+    if (TIDL_SignedWord != ((int32_t)inIndicesParams->elementType))
+    {
+      tidl_printf(0, "Indice data type should int32");
+      status = TIDL_ERR_FAILURE;
+    }
+    else
+    {
+      status = TIDL_refScatterElements((bfloat16_tidl *)data,
+                                       (int32_t *)indices,
+                                       (bfloat16_tidl *)update,
+                                       (bfloat16_tidl *)outPtr,
                                        (float32_tidl *)accPtr,
                                        intAlgHandle,
                                        layerIdx,

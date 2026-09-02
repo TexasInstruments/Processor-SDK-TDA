@@ -89,7 +89,7 @@ void TIDL_refDataConvertHighPrecision (
   Tsrc *s0 = src + src_offset, *s1, *s2, *s3, *s4, *s5;
   Tdst data;
   Tbias acc;
-  Tdst min = 0, max = 0;
+  Tdst min = Tdst(), max = Tdst();
   max = std::numeric_limits<Tdst>::max();
   min = std::numeric_limits<Tdst>::lowest();
 
@@ -121,15 +121,26 @@ void TIDL_refDataConvertHighPrecision (
             for (i5 = 0; i5 < np; i5++)
             {
               acc = (Tbias)(*s5);
-              if (typeid (Tsrc) == typeid (float32_tidl) ||
-                  typeid (Tdst) == typeid (float32_tidl))
+              acc = acc * scale + bias;
+              /*Input float & Output float*/
+              if((typeid (Tdst) == typeid (float32_tidl)))
               {
-                acc = acc * scale + bias;
+
                 *d5 = tidl_sat<Tdst>(acc);
+              }
+              else if (typeid (Tsrc) == typeid (float32_tidl))
+              {
+                if (acc > 0)
+                {
+                  *d5 = tidl_sat<Tdst>(acc + 0.5);
+                }
+                else
+                {
+                  *d5 = tidl_sat<Tdst>(acc - 0.5);
+                }
               }
               else 
               {
-                acc = acc * scale + bias;
                 *d5 = TIDL_roundSat(acc, shift, min, max);
               }
               s5 += src_pp;
@@ -182,7 +193,7 @@ template<typename Tsrc, typename Tdst, typename Tacc, typename Tscale>
   Tdst *d0 = dst + dst_offset, *d1, *d2, *d3, *d4, *d5;
   Tsrc *s0 = src + src_offset, *s1, *s2, *s3, *s4, *s5;
   Tacc data, val;
-  Tdst min = 0, max = 0;
+  Tdst min = Tdst(), max = Tdst();
   max = std::numeric_limits<Tdst>::max();
   min = std::numeric_limits<Tdst>::lowest();
 
@@ -407,9 +418,12 @@ template<typename Tsrc, typename Tdst>
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+    <justification start>
+    Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
     This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
     TIDL_LDRA_TAG : TIDL_LDRA_TAG_DATACONVERT_PRIOR_CHECK_001
+    Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+    This does not affect runtime behavior or safety.
     <justification end> */
     else if ((sizeof(Tsrc) == (uint32_t)1) ||
             (sizeof(Tdst) == (uint32_t)1))
@@ -427,9 +441,12 @@ template<typename Tsrc, typename Tdst>
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+    <justification start>
+    Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
     This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
     TIDL_LDRA_TAG : TIDL_LDRA_TAG_DATACONVERT_PRIOR_CHECK_001
+    Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+    This does not affect runtime behavior or safety.
     <justification end> */
     else
     {
@@ -621,6 +638,307 @@ template<class Tsrc> void TIDL_TensorMinMaxinFloat(const Tsrc *ptr, const sTIDL_
     }
   }
 }
+static int32_t TIDL_bf16DataConvertRefProcess(
+    int32_t inElemType, int32_t outElemType, uint32_t dcType,
+    int32_t nb, int32_t nd1, int32_t nd2, int32_t nc, int32_t nl, int32_t np,
+    int32_t src_bp, int32_t dst_bp,
+    int32_t src_d1p, int32_t dst_d1p,
+    int32_t src_d2p, int32_t dst_d2p,
+    int32_t src_cp, int32_t dst_cp,
+    int32_t src_lp, int32_t dst_lp,
+    int32_t src_pp, int32_t dst_pp,
+    void *inPtrs[], void *outPtrs[])
+{
+  int32_t src_elem_size = 1;
+  if ((inElemType == TIDL_SinglePrecFloat) || (inElemType == TIDL_SignedWord) ||
+      (inElemType == TIDL_UnsignedWord))
+  {
+    src_elem_size = 4;
+  }
+  else if ((inElemType == TIDL_BFloat16) || (inElemType == TIDL_SignedShort) ||
+           (inElemType == TIDL_UnsignedShort))
+  {
+    src_elem_size = 2;
+  }
+  else if ((inElemType == TIDL_SignedDoubleWord) || (inElemType == TIDL_UnsignedDoubleWord))
+  {
+    src_elem_size = 8;
+  }
+  else
+  {
+    src_elem_size = 1;
+  }
+
+  int32_t dst_elem_size = 2; /* BFloat16, SignedShort, UnsignedShort */
+  if ((outElemType == TIDL_SinglePrecFloat) ||
+      (outElemType == TIDL_SignedWord)      ||
+      (outElemType == TIDL_UnsignedWord))
+  {
+    dst_elem_size = 4;
+  }
+  else if ((outElemType == TIDL_SignedDoubleWord) || (outElemType == TIDL_UnsignedDoubleWord))
+  {
+    dst_elem_size = 8;
+  }
+  else if ((outElemType == TIDL_SignedChar) || (outElemType == TIDL_UnsignedChar))
+  {
+    dst_elem_size = 1;
+  }
+
+  /* Convert element-unit pitches (already NHWC-adjusted by caller) to byte-unit pitches */
+  int32_t src_bp_b  = src_bp  * src_elem_size;
+  int32_t dst_bp_b  = dst_bp  * dst_elem_size;
+  int32_t src_d1p_b = src_d1p * src_elem_size;
+  int32_t dst_d1p_b = dst_d1p * dst_elem_size;
+  int32_t src_d2p_b = src_d2p * src_elem_size;
+  int32_t dst_d2p_b = dst_d2p * dst_elem_size;
+  int32_t src_cp_b  = src_cp  * src_elem_size;
+  int32_t dst_cp_b  = dst_cp  * dst_elem_size;
+  int32_t src_lp_b  = src_lp  * src_elem_size;
+  int32_t dst_lp_b  = dst_lp  * dst_elem_size;
+  int32_t src_pp_b  = src_pp  * src_elem_size;
+  int32_t dst_pp_b  = dst_pp  * dst_elem_size;
+
+  int32_t i0, i1, i2, i3, i4, i5;
+  uint8_t *s0 = (uint8_t *)inPtrs[0],  *s1, *s2, *s3, *s4, *s5;
+  uint8_t *d0 = (uint8_t *)outPtrs[0], *d1, *d2, *d3, *d4, *d5;
+
+  for (i0 = 0; i0 < nb; i0++)
+  {
+    d1 = d0;
+    s1 = s0;
+    for (i1 = 0; i1 < nd1; i1++)
+    {
+      d2 = d1;
+      s2 = s1;
+      for (i2 = 0; i2 < nd2; i2++)
+      {
+        d3 = d2;
+        s3 = s2;
+        for (i3 = 0; i3 < nc; i3++)
+        {
+          d4 = d3;
+          s4 = s3;
+          for (i4 = 0; i4 < nl; i4++)
+          {
+            d5 = d4;
+            s5 = s4;
+            for (i5 = 0; i5 < np; i5++)
+            {
+              if (dcType == TIDL_DC_TYPE_INPUT)
+              {
+                /* Any type -> BFloat16 */
+                float32_tidl src_val = 0.0f;
+                if (inElemType == TIDL_SinglePrecFloat)
+                {
+                  src_val = *(float32_tidl *)s5;
+                }
+                else if (inElemType == TIDL_BFloat16)
+                {
+                  src_val = (float32_tidl)(*(bfloat16_tidl *)s5);
+                }
+                else if (inElemType == TIDL_SignedChar)
+                {
+                  src_val = (float32_tidl)(*(int8_t *)s5);
+                }
+                else if (inElemType == TIDL_UnsignedChar)
+                {
+                  src_val = (float32_tidl)(*(uint8_t *)s5);
+                }
+                else if (inElemType == TIDL_SignedShort)
+                {
+                  src_val = (float32_tidl)(*(int16_t *)s5);
+                }
+                else if (inElemType == TIDL_UnsignedShort)
+                {
+                  src_val = (float32_tidl)(*(uint16_t *)s5);
+                }
+                else if (inElemType == TIDL_SignedWord)
+                {
+                  src_val = (float32_tidl)(*(int32_t *)s5);
+                }
+                else if (inElemType == TIDL_UnsignedWord)
+                {
+                  src_val = (float32_tidl)(*(uint32_t *)s5);
+                }
+                else if (inElemType == TIDL_SignedDoubleWord)
+                {
+                  src_val = (float32_tidl)(*(int64_t *)s5);
+                }
+                else if (inElemType == TIDL_UnsignedDoubleWord)
+                {
+                  src_val = (float32_tidl)(*(uint64_t *)s5);
+                }
+                *(bfloat16_tidl *)d5 = tidl_sat_bf16(bfloat16_tidl(src_val));
+              }
+              else if (dcType == TIDL_DC_TYPE_OUTPUT)
+              {
+                /* BFloat16 -> any type */
+                float32_tidl val = (float32_tidl)(*(bfloat16_tidl *)s5);
+                if (outElemType == TIDL_SinglePrecFloat)
+                {
+                  *(float32_tidl *)d5 = val;
+                }
+                else if (outElemType == TIDL_BFloat16)
+                {
+                  *(bfloat16_tidl *)d5 = bfloat16_tidl(val);
+                }
+                else if (outElemType == TIDL_SignedChar)
+                {
+                  *(int8_t *)d5 = tidl_sat<int8_t>(val > 0 ? val + 0.5f : val - 0.5f);
+                }
+                else if (outElemType == TIDL_UnsignedChar)
+                {
+                  *(uint8_t *)d5 = tidl_sat<uint8_t>(val > 0 ? val + 0.5f : val - 0.5f);
+                }
+                else if (outElemType == TIDL_SignedShort)
+                {
+                  *(int16_t *)d5 = tidl_sat<int16_t>(val > 0 ? val + 0.5f : val - 0.5f);
+                }
+                else if (outElemType == TIDL_UnsignedShort)
+                {
+                  *(uint16_t *)d5 = tidl_sat<uint16_t>(val > 0 ? val + 0.5f : val - 0.5f);
+                }
+                else if (outElemType == TIDL_SignedWord)
+                {
+                  *(int32_t *)d5 = tidl_sat<int32_t>(val > 0 ? val + 0.5f : val - 0.5f);
+                }
+                else if (outElemType == TIDL_UnsignedWord)
+                {
+                  *(uint32_t *)d5 = tidl_sat<uint32_t>(val > 0 ? val + 0.5f : val - 0.5f);
+                }
+                else if (outElemType == TIDL_SignedDoubleWord)
+                {
+                  *(int64_t *)d5 = (int64_t)val;
+                }
+                else if (outElemType == TIDL_UnsignedDoubleWord)
+                {
+                  *(uint64_t *)d5 = (uint64_t)val;
+                }
+                else
+                {
+                  *(float32_tidl *)d5 = val;
+                }
+              }
+              else
+              {
+                /* Intermediate: TIDL_DC_TYPE_PTQ_TO_NATIVE, TIDL_DC_TYPE_NATIVE_TO_PTQ,
+                 * or layout conversion (NCHW <-> NHWC).
+                 * Dispatch on which side is BFloat16. */
+                if (inElemType == TIDL_BFloat16 && outElemType == TIDL_BFloat16)
+                {
+                  /* BF16 -> BF16: layout conversion or saturation-only pass */
+                  *(bfloat16_tidl *)d5 = tidl_sat_bf16(*(bfloat16_tidl *)s5);
+                }
+                else if (outElemType == TIDL_BFloat16)
+                {
+                  /* Any -> BF16: PTQ_TO_NATIVE (quantized -> network-native BF16) */
+                  float32_tidl src_val = 0.0f;
+                  if (inElemType == TIDL_SinglePrecFloat)
+                  {
+                    src_val = *(float32_tidl *)s5;
+                  }
+                  else if (inElemType == TIDL_SignedChar)
+                  {
+                    src_val = (float32_tidl)(*(int8_t *)s5);
+                  }
+                  else if (inElemType == TIDL_UnsignedChar)
+                  {
+                    src_val = (float32_tidl)(*(uint8_t *)s5);
+                  }
+                  else if (inElemType == TIDL_SignedShort)
+                  {
+                    src_val = (float32_tidl)(*(int16_t *)s5);
+                  }
+                  else if (inElemType == TIDL_UnsignedShort)
+                  {
+                    src_val = (float32_tidl)(*(uint16_t *)s5);
+                  }
+                  else if (inElemType == TIDL_SignedWord)
+                  {
+                    src_val = (float32_tidl)(*(int32_t *)s5);
+                  }
+                  else if (inElemType == TIDL_UnsignedWord)
+                  {
+                    src_val = (float32_tidl)(*(uint32_t *)s5);
+                  }
+                  else if (inElemType == TIDL_SignedDoubleWord)
+                  {
+                    src_val = (float32_tidl)(*(int64_t *)s5);
+                  }
+                  else if (inElemType == TIDL_UnsignedDoubleWord)
+                  {
+                    src_val = (float32_tidl)(*(uint64_t *)s5);
+                  }
+                  *(bfloat16_tidl *)d5 = tidl_sat_bf16(bfloat16_tidl(src_val));
+                }
+                else
+                {
+                  /* BF16 -> Any: NATIVE_TO_PTQ (network-native BF16 -> quantized) */
+                  float32_tidl val = (float32_tidl)(*(bfloat16_tidl *)s5);
+                  if (outElemType == TIDL_SinglePrecFloat)
+                  {
+                    *(float32_tidl *)d5 = val;
+                  }
+                  else if (outElemType == TIDL_SignedChar)
+                  {
+                    *(int8_t *)d5 = tidl_sat<int8_t>(val > 0 ? val + 0.5f : val - 0.5f);
+                  }
+                  else if (outElemType == TIDL_UnsignedChar)
+                  {
+                    *(uint8_t *)d5 = tidl_sat<uint8_t>(val > 0 ? val + 0.5f : val - 0.5f);
+                  }
+                  else if (outElemType == TIDL_SignedShort)
+                  {
+                    *(int16_t *)d5 = tidl_sat<int16_t>(val > 0 ? val + 0.5f : val - 0.5f);
+                  }
+                  else if (outElemType == TIDL_UnsignedShort)
+                  {
+                    *(uint16_t *)d5 = tidl_sat<uint16_t>(val > 0 ? val + 0.5f : val - 0.5f);
+                  }
+                  else if (outElemType == TIDL_SignedWord)
+                  {
+                    *(int32_t *)d5 = tidl_sat<int32_t>(val > 0 ? val + 0.5f : val - 0.5f);
+                  }
+                  else if (outElemType == TIDL_UnsignedWord)
+                  {
+                    *(uint32_t *)d5 = tidl_sat<uint32_t>(val > 0 ? val + 0.5f : val - 0.5f);
+                  }
+                  else if (outElemType == TIDL_SignedDoubleWord)
+                  {
+                    *(int64_t *)d5 = (int64_t)val;
+                  }
+                  else if (outElemType == TIDL_UnsignedDoubleWord)
+                  {
+                    *(uint64_t *)d5 = (uint64_t)val;
+                  }
+                  else
+                  {
+                    *(float32_tidl *)d5 = val;
+                  }
+                }
+              }
+              s5 += src_pp_b;
+              d5 += dst_pp_b;
+            }
+            s4 += src_lp_b;
+            d4 += dst_lp_b;
+          }
+          s3 += src_cp_b;
+          d3 += dst_cp_b;
+        }
+        s2 += src_d2p_b;
+        d2 += dst_d2p_b;
+      }
+      s1 += src_d1p_b;
+      d1 += dst_d1p_b;
+    }
+    s0 += src_bp_b;
+    d0 += dst_bp_b;
+  }
+
+  return TIDL_SUCCESS;
+}
 
 static int32_t TIDL_dataConvertRefProcess(TIDL_Handle intAlgHandle,
                                           sTIDL_AlgLayer_t *algLayer,
@@ -666,6 +984,11 @@ static int32_t TIDL_dataConvertRefProcess(TIDL_Handle intAlgHandle,
       if (inDataParams->elementType == TIDL_SinglePrecFloat)
       {
         TIDL_TensorMinMaxinFloat((float32_tidl *)inPtrs[0], inDataParams, 0, 1.0, &min, &max);
+        inZeroPoint = 0;
+      }
+      else if (inDataParams->elementType == TIDL_BFloat16)
+      {
+        TIDL_TensorMinMaxinFloat((bfloat16_tidl *)inPtrs[0], inDataParams, 0, 1.0, &min, &max);
         inZeroPoint = 0;
       }
       else if (inDataParams->elementType == TIDL_SignedChar)
@@ -772,7 +1095,20 @@ static int32_t TIDL_dataConvertRefProcess(TIDL_Handle intAlgHandle,
   }
   if (status == TIDL_SUCCESS)
   {
-    if (inDataParams->elementType == TIDL_SinglePrecFloat)
+    if(inDataParams->elementType == TIDL_BFloat16 || tidlLayer->outData.elementType == TIDL_BFloat16)
+    {
+      status = TIDL_bf16DataConvertRefProcess(
+          inDataParams->elementType, tidlLayer->outData.elementType, (uint32_t)params->type,
+          inBhs, indim1, indim2, inChs, outHeight, outWidth,
+          inBhPitch, outBhPitch,
+          ind1Pitch, outd1Pitch,
+          ind2Pitch, outd2Pitch,
+          inChPitch, outChPitch,
+          inPitch, outPitch,
+          inElPitch, outElPitch,
+          inPtrs, outPtrs);
+    }
+    else if (inDataParams->elementType == TIDL_SinglePrecFloat)
     {
       inZeroPoint = 0;
       if (intAlgHandle->createParams->net->quantizationStyle == TIDL_QuantStyleAsymNP2_TFL)

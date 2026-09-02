@@ -14,6 +14,8 @@
 #include <type_traits>
 #include "tidl_cuda_mem_manager.h"
 
+using namespace floating_point::bf16_mma;
+
 // EltWise Sum kernel - matches reference loop structure exactly (no branching)
 template <class Tin, class Tacc>
 __global__ void EltWiseSumKernel(
@@ -255,9 +257,14 @@ __global__ void EltWiseQuantizeKernel(
 
     Tacc outAcc = accumulator[outOffset];
 
-    if (std::is_floating_point<Tout>::value)
+    // if constexpr avoids instantiating incompatible branches for each Tout type.
+    if constexpr (std::is_same<Tout, bfloat16_tidl>::value)
     {
-        outAcc = cuda_floatSat(outAcc, floatSatHigh, floatSatLow);
+        output[outOffset] = cuda_bf16Sat((float)outAcc, floatSatLow, floatSatHigh);
+    }
+    else if constexpr (std::is_floating_point<Tout>::value)
+    {
+        output[outOffset] = cuda_floatSat((float)outAcc, floatSatHigh, floatSatLow);
     }
     else
     {
@@ -265,10 +272,9 @@ __global__ void EltWiseQuantizeKernel(
         if (mixedPrecision == 1)
         {
             outAcc = (int64_t)outAcc >> 8;
+        }
+        output[outOffset] = outAcc;
     }
-    }
-
-    output[outOffset] = outAcc;
 }
 
 
@@ -524,3 +530,7 @@ template int TIDL_cudaEltWiseQuantize<long, unsigned short>(long const*, unsigne
 template int TIDL_cudaEltWiseQuantize<long, short>(long const*, short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
 template int TIDL_cudaEltWiseMMAv2Quantize<long, short>(long const*, short*, unsigned char, unsigned char, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 template int TIDL_cudaEltWiseMMAv2Quantize<float, float>(float const*, float*, unsigned char, unsigned char, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseOp<bfloat16_tidl, float>(bfloat16_tidl const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseQuantize<float, bfloat16_tidl>(float const*, bfloat16_tidl*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
+template int TIDL_cudaEltWiseOp<float, bfloat16_tidl>(float const*, bfloat16_tidl*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
+template int TIDL_cudaEltWiseQuantize<bfloat16_tidl, float>(bfloat16_tidl const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);

@@ -101,7 +101,7 @@ static void Dp83tg720_configClkShift(EthPhyDrv_Handle hPhy, bool txClkShiftEn, b
 static void Dp83tg720_configIntr(EthPhyDrv_Handle hPhy, bool intrEn);
 
 static int32_t Dp83tg720_getSpeedDuplex (EthPhyDrv_Handle hPhy,
-                                       Phy_Link_SpeedDuplex* pConfig); 
+                                       Phy_Link_SpeedDuplex *pConfig);
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -305,7 +305,7 @@ int32_t Dp83tg720_config(EthPhyDrv_Handle hPhy,
 static void Dp83tg720_setLoopbackCfg(EthPhyDrv_Handle hPhy,
                                    bool enable)
 {
-    bool complete;
+    bool complete = false;
     int32_t status;
     uint16_t val;
     const uint8_t phyAddr = PhyPriv_getPhyAddr(hPhy);
@@ -340,18 +340,23 @@ static void Dp83tg720_setLoopbackCfg(EthPhyDrv_Handle hPhy,
 
     do
     {
-        complete = Dp83tg720_isResetComplete(hPhy);
+        Dp83tg720_isResetComplete(hPhy, &complete);
     }
     while (!complete);
 }
 
-
-void Dp83tg720_reset(EthPhyDrv_Handle hPhy)
+int32_t Dp83tg720_reset(EthPhyDrv_Handle hPhy)
 {
+    int32_t status = PHY_EFAIL;
+
     Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
+
     /* Global software reset */
     PHYTRACE_DBG("PHY %u: global soft-reset\n", PhyPriv_getPhyAddr(hPhy));
-    pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, MII_DP83TG720_RESET_CTRL, DP83TG720_SW_RESET, DP83TG720_SW_RESET);
+
+    status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, MII_DP83TG720_RESET_CTRL, DP83TG720_SW_RESET, DP83TG720_SW_RESET);
+
+    return status;
 }
 
 static void Dp83tg720_resetHw(EthPhyDrv_Handle hPhy)
@@ -362,25 +367,34 @@ static void Dp83tg720_resetHw(EthPhyDrv_Handle hPhy)
     pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, MII_DP83TG720_RESET_CTRL, DP83TG720_HW_RESET, DP83TG720_HW_RESET);
 }
 
-bool Dp83tg720_isResetComplete(EthPhyDrv_Handle hPhy)
+int32_t Dp83tg720_isResetComplete(EthPhyDrv_Handle hPhy,
+                                  bool *pCompleted)
 {
-    int32_t status;
+    int32_t status = PHY_EFAIL;
     uint16_t val;
-    bool complete = false;
+
+    if ((hPhy == NULL) ||
+        (pCompleted == NULL))
+    {
+        return PHY_EBADARGS;
+    }
+
+    *pCompleted = false;
+
     Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
 
     /* Reset is complete when RESET bits have self-cleared */
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, MII_DP83TG720_RESET_CTRL, &val);
+
     if (status == PHY_SOK)
     {
-        complete = ((val & (DP83TG720_SW_RESET | DP83TG720_HW_RESET)) == 0U);
+        *pCompleted = ((val & (DP83TG720_SW_RESET | DP83TG720_HW_RESET)) == 0U);
     }
 
     PHYTRACE_DBG("PHY %u: global reset is %s complete\n", PhyPriv_getPhyAddr(hPhy), complete ? "" : "not");
 
-    return complete;
+    return status;
 }
-
 static int32_t Dp83tg720_readMmd(EthPhyDrv_Handle hPhy, uint16_t devad, uint32_t reg, uint16_t *val)
 {
     int32_t status;
@@ -505,9 +519,9 @@ static void Dp83tg720_chipInit(EthPhyDrv_Handle hPhy)
 
     /* Perform a hardware reset prior to configuration */
     Dp83tg720_resetHw(hPhy);
-     do
+    do
     {
-        complete = Dp83tg720_isResetComplete(hPhy);
+        Dp83tg720_isResetComplete(hPhy, &complete);
     }
     while (!complete);
 
@@ -552,7 +566,7 @@ static void Dp83tg720_chipInit(EthPhyDrv_Handle hPhy)
     Dp83tg720_reset(hPhy);
     do
     {
-        complete = Dp83tg720_isResetComplete(hPhy);
+        Dp83tg720_isResetComplete(hPhy, &complete);
     }
     while (!complete);
 
@@ -757,11 +771,11 @@ int32_t Dp83tg720_getSpeedDuplex (EthPhyDrv_Handle hPhy, Phy_Link_SpeedDuplex* p
         {
             speed = 1000;
             *pConfig = PHY_LINK_FD1000;
-        } else 
+        } else
         {
             *pConfig = PHY_LINK_INVALID;
         }
-        
+
     }
     PHYTRACE_DBG("PHY %u: selected speed is %d Mbps with %s-duplex\n", PhyPriv_getPhyAddr(hPhy), speed, (val & PHYST_DUPLEXMODEENV_FD) ? "full" : "half");
 

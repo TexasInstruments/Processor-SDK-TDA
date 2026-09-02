@@ -72,6 +72,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <assert.h>
 #include <stdarg.h>
 #include <math.h>
@@ -128,7 +129,7 @@ typedef struct
 
 
 
-const char * TIDL_LayerString[] =
+static const char * TIDL_LayerString[] =
 {
 "TIDL_DataLayer            ",
 "TIDL_ConvolutionLayer     ",
@@ -191,6 +192,13 @@ const char * TIDL_LayerString[] =
 "TIDL_NonZeroLayer         ",
 "TIDL_UnsupportedLayer     ",
 };
+
+static const char* TIDL_GetLayerString(int32_t layerType)
+{
+    static const int32_t N = (int32_t)(sizeof(TIDL_LayerString)/sizeof(TIDL_LayerString[0]));
+    return (layerType >= 0 && layerType < N) ? TIDL_LayerString[layerType] : "TIDL_UnknownLayer";
+}
+
 sTIDL_TBInstHanle tidl_tbHanles[TIDL_TB_MAX_INS_HANDLES];
 sTIDL_TBInstHanle tidl_tb_handle[TIDL_TB_MAX_INS_HANDLES];
 int32_t firstOutWrite  = 0;
@@ -584,7 +592,7 @@ int32_t tidltb_getDatElementSize(int32_t elementType)
   {
     return 1;
   }
-  else if ((elementType == TIDL_SignedShort) || (elementType == TIDL_UnsignedShort))
+  else if ((elementType == TIDL_SignedShort) || (elementType == TIDL_UnsignedShort) || (elementType == TIDL_BFloat16))
   {
     return 2;
   }
@@ -1732,24 +1740,27 @@ int32_t tidl_allocInOutTensors(sTIDL_IOBufDesc_t *ioPrms, sTIDLRT_Tensor_t *ins[
     for(i = 0; i < ioPrms->numInputBuf; i++)
     {
       status = TIDLRT_setTensorDefault(ins[i]);
-      size = ioPrms->inBufSize[i];
-      ins[i]->bufferSize  = ioPrms->inBufSize[i]; /* Actual buffer size needed by TIDL as specified by ioPrms->outBufSize is allocated by application */
-      int32_t elementSizeBytes;
       ins[i]->elementType = ioPrms->inElementType[i];
-      elementSizeBytes = tidltb_getDatElementSize(ins[i]->elementType);
-      size *= elementSizeBytes;
-      ins[i]->ptr = (void *)calloc(size,1);
+      int32_t elementSizeBytes = tidltb_getDatElementSize(ins[i]->elementType);
+
+      /* Allocate at max dims (inBufSize) for all inputs so dynamic inputs can
+       * hold any valid frame without realloc.  For dynamic inputs, dimValues
+       * and pitch are overwritten per-frame by tidl_applyDimsFromFile before
+       * each tidl_ReadNetInput + TIDLRT_invoke call. */
+      ins[i]->bufferSize = ioPrms->inBufSize[i];
+      size = ioPrms->inBufSize[i] * elementSizeBytes;
+      ins[i]->ptr = (void *)calloc(size, 1);
       if(ins[i]->ptr == NULL)
       {
         status = 1;
         break;
       }
-      ins[i]->scale = ioPrms->inTensorScale[i];
+      ins[i]->scale     = ioPrms->inTensorScale[i];
       ins[i]->zeroPoint = ioPrms->inZeroPoint[i];
-      ins[i]->layout = ioPrms->inLayout[i];
+      ins[i]->layout    = ioPrms->inLayout[i];
       ins[i]->pitch[TIDL_LINE_PITCH]    = ioPrms->inPadL[i] + ioPrms->inWidth[i] + ioPrms->inPadR[i];
       ins[i]->pitch[TIDL_CHANNEL_PITCH] = ioPrms->inChannelPitch[i];
-      ins[i]->pitch[TIDL_DIM2_PITCH]    = ins[i]->pitch[TIDL_CHANNEL_PITCH] * ioPrms->inNumChannels[i];;
+      ins[i]->pitch[TIDL_DIM2_PITCH]    = ins[i]->pitch[TIDL_CHANNEL_PITCH] * ioPrms->inNumChannels[i];
       ins[i]->pitch[TIDL_DIM1_PITCH]    = ins[i]->pitch[TIDL_DIM2_PITCH] * ioPrms->inDIM2[i];
       ins[i]->pitch[TIDL_ROI_PITCH]     = ins[i]->pitch[TIDL_DIM1_PITCH] * ioPrms->inDIM1[i];
       ins[i]->padValues[0] = ioPrms->inPadL[i];
@@ -1759,26 +1770,155 @@ int32_t tidl_allocInOutTensors(sTIDL_IOBufDesc_t *ioPrms, sTIDLRT_Tensor_t *ins[
       ins[i]->dimValues[TIDL_DIM_WIDTH]   = ioPrms->inWidth[i];
       ins[i]->dimValues[TIDL_DIM_HEIGHT]  = ioPrms->inHeight[i];
       ins[i]->dimValues[TIDL_DIM_NUMCH]   = ioPrms->inNumChannels[i];
-      ins[i]->dimValues[TIDL_DIM_DIM2]  = ioPrms->inDIM2[i];
-      ins[i]->dimValues[TIDL_DIM_DIM1]  = ioPrms->inDIM1[i];
+      ins[i]->dimValues[TIDL_DIM_DIM2]    = ioPrms->inDIM2[i];
+      ins[i]->dimValues[TIDL_DIM_DIM1]    = ioPrms->inDIM1[i];
       ins[i]->dimValues[TIDL_DIM_BATCH]   = ioPrms->inNumBatches[i];
-      strcpy((char*)ins[i]->name,(char*)ioPrms->inDataName[i]);
+      strcpy((char*)ins[i]->name, (char*)ioPrms->inDataName[i]);
       ins[i]->isDynamic = ioPrms->inIsDynamic[i];
-      /* TODO: Dynamic input support in tidl_tb
-       * Currently dimValues and pitches are always set from ioBufDesc max dims, and
-       * tidl_ReadNetInput fills ins[i]->ptr with the ioBufDesc layout (including padding).
-       * For true dynamic input support, the test bench would need to:
-       *   1. Set ins[i]->dimValues to the actual input dims for this inference
-       *   2. Set ins[i]->pitch[TIDL_CHANNEL_PITCH] = actual_W * actual_H (packed)
-       *   3. Set ins[i]->padValues = 0 (source is flat)
-       *   4. Fill ins[i]->ptr with actual-sized flat data
-       * The datamove reformat path will then correctly copy actual data into the
-       * C7x input buffer using the ioBufDesc destination layout. */
     }
   }
 
   return status;
 
+}
+
+/* Read one line from dimsFp and update dimValues + packed pitch for every
+ * dynamic input.  Format: 6 values per input in input-index order:
+ * b_0 d1_0 d2_0 c_0 h_0 w_0;  b_1 d1_1 d2_1 c_1 h_1 w_1;  ...
+ * Values for non-dynamic inputs are not consumed
+ */
+int32_t tidl_applyDimsFromFile(TI_FILE *dimsFp, sTIDL_IOBufDesc_t *ioPrms, sTIDLRT_Tensor_t *ins[])
+{
+  char line[TIDL_CFG_MAX_LINE_SIZE];
+  if (FGETS(line, TIDL_CFG_MAX_LINE_SIZE, dimsFp) == NULL)
+  {
+    return IALG_EFAIL; // EOF or error
+  }
+
+  // Remove trailing newline if present
+  char *newline = strchr(line, '\n');
+  if (newline) *newline = '\0';
+
+  // Split line by semicolons to get input groups
+  char *line_copy = (char *)malloc(strlen(line) + 1);
+  if (!line_copy) {
+    tidl_tb_printf(0, "Error: out of memory\n");
+    return IALG_EFAIL;
+  }
+  strcpy(line_copy, line);
+
+  char *token = strtok(line_copy, ";");
+  int input_index = 0;
+
+  while (token != NULL && input_index < ioPrms->numInputBuf)
+  {
+    // Skip leading/trailing whitespace
+    while (*token != '\0' && isspace((unsigned char)*token)) token++;
+    char *end = token + strlen(token) - 1;
+    while (end > token && isspace((unsigned char)*end)) *end-- = '\0';
+
+    if (*token == '\0' || !ioPrms->inIsDynamic[input_index]) {
+      // Empty segment or non-dynamic input: skip without parsing
+      token = strtok(NULL, ";");
+      input_index++;
+      continue;
+    }
+
+    // Parse the numbers in this token (space-separated) using sscanf to avoid
+    // nested strtok clobbering the outer (semicolon) tokenizer state.
+    int values[TIDL_DIM_MAX] = {0};
+    uint32_t count = 0;
+    const char *p = token;
+
+    while (count < TIDL_DIM_MAX) {
+      int val, consumed;
+      if (sscanf(p, " %d%n", &val, &consumed) != 1) break;
+      values[count++] = val;
+      p += consumed;
+    }
+
+    if (count == 0) {
+      tidl_tb_printf(0, "Error: inDimsFile empty input specification for input %d\n", input_index);
+      free(line_copy);
+      return IALG_EFAIL;
+    }
+
+    // Parse exactly TIDL_DIM_MAX values: b d1 d2 c h w
+    // Values: [0]=b, [1]=d1, [2]=d2, [3]=c, [4]=h, [5]=w
+    if (count != TIDL_DIM_MAX) {
+      tidl_tb_printf(0, "Error: inDimsFile expected %d values per input, got %d for input %d\n", TIDL_DIM_MAX, count, input_index);
+      free(line_copy);
+      return IALG_EFAIL;
+    }
+    int32_t b = values[TIDL_DIM_BATCH];
+    int32_t d1 = values[TIDL_DIM_DIM1];
+    int32_t d2 = values[TIDL_DIM_DIM2];
+    int32_t c = values[TIDL_DIM_NUMCH];
+    int32_t h = values[TIDL_DIM_HEIGHT];
+    int32_t w = values[TIDL_DIM_WIDTH];
+
+    // Bounds checking: actual dims must not exceed max allocated dims
+    if (w > ioPrms->inWidth[input_index] || h > ioPrms->inHeight[input_index] ||
+        c > ioPrms->inNumChannels[input_index] || b > ioPrms->inNumBatches[input_index] ||
+        d1 > ioPrms->inDIM1[input_index] || d2 > ioPrms->inDIM2[input_index])
+    {
+      tidl_tb_printf(0, "Error: inDimsFile input %d dims (%d %d %d %d %d %d) exceed"
+                     " ioBufDesc max (%d %d %d %d %d %d)\n", input_index,
+                     b, d1, d2, c, h, w,
+                     ioPrms->inNumBatches[input_index], ioPrms->inDIM1[input_index], ioPrms->inDIM2[input_index],
+                     ioPrms->inNumChannels[input_index], ioPrms->inHeight[input_index], ioPrms->inWidth[input_index]);
+      free(line_copy);
+      return IALG_EFAIL;
+    }
+
+    // Update the tensor dimensions
+    ins[input_index]->dimValues[TIDL_DIM_WIDTH]  = w;
+    ins[input_index]->dimValues[TIDL_DIM_HEIGHT] = h;
+    ins[input_index]->dimValues[TIDL_DIM_NUMCH]  = c;
+    ins[input_index]->dimValues[TIDL_DIM_BATCH]  = b;
+    ins[input_index]->dimValues[TIDL_DIM_DIM1]   = d1;
+    ins[input_index]->dimValues[TIDL_DIM_DIM2]   = d2;
+
+    /* Packed pitches — no padding in the source buffer */
+    if (ins[input_index]->layout == TIDL_LT_NHWC)
+    {
+      ins[input_index]->pitch[TIDL_LINE_PITCH]    = w * c;
+      ins[input_index]->pitch[TIDL_CHANNEL_PITCH] = 1;
+    }
+    else
+    {
+      ins[input_index]->pitch[TIDL_LINE_PITCH]    = w;
+      ins[input_index]->pitch[TIDL_CHANNEL_PITCH] = w * h;
+    }
+    ins[input_index]->pitch[TIDL_DIM2_PITCH] = w * h * c;
+    ins[input_index]->pitch[TIDL_DIM1_PITCH] = ins[input_index]->pitch[TIDL_DIM2_PITCH] * d2;
+    ins[input_index]->pitch[TIDL_ROI_PITCH]  = ins[input_index]->pitch[TIDL_DIM1_PITCH] * d1;
+    ins[input_index]->padValues[0] = 0;
+    ins[input_index]->padValues[1] = 0;
+    ins[input_index]->padValues[2] = 0;
+    ins[input_index]->padValues[3] = 0;
+
+    // Move to next input
+    token = strtok(NULL, ";");
+    input_index++;
+  }
+
+  free(line_copy);
+
+  // Check if we have more inputs than provided data
+  if (input_index < ioPrms->numInputBuf) {
+    int i;
+    // Check if remaining inputs are all static (not dynamic)
+    for (i = input_index; i < ioPrms->numInputBuf; i++) {
+      if (ioPrms->inIsDynamic[i]) {
+        tidl_tb_printf(0, "Error: inDimsFile insufficient data for input %d\n", i);
+        return IALG_EFAIL;
+      }
+    }
+    // If remaining are all static, it's OK
+  }
+
+  return IALG_EOK;
 }
 
 int32_t tidl_freeInOutTensors(sTIDL_IOBufDesc_t * ioPrms, sTIDLRT_Tensor_t * ins[], sTIDLRT_Tensor_t * outs[])
@@ -2027,7 +2167,7 @@ int32_t tidltb_printNetInfo(sTIDL_Network_t * pTIDLNetStructure,
   {
     strcpy(printBuf,"");
     sprintf(printBuf + strlen(printBuf),"%5d|%-30s|",i,
-                TIDL_LayerString[pTIDLNetStructure->TIDLLayers[i].layerType]);
+                TIDL_GetLayerString(pTIDLNetStructure->TIDLLayers[i].layerType));
     sprintf(printBuf + strlen(printBuf),"%6d|%6d|%6d|",pTIDLNetStructure->TIDLLayers[i].layersGroupId,
                              pTIDLNetStructure->TIDLLayers[i].numInBufs,
                              pTIDLNetStructure->TIDLLayers[i].numOutBufs);

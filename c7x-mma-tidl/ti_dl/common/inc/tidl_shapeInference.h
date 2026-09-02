@@ -318,6 +318,35 @@ int32_t TIDL_shapeInfer_PassThrough(
     TIDL_ShapeContext_t       *context);
 
 /**
+ * @brief   Reshape shape inference (dynamic shape support).
+ *
+ *          Recomputes the output dims that were -1 or 0 (passthrough) in the
+ *          original shape spec, using the TIDL 6D params baked in at import:
+ *            reshapeParams.passthroughMask  — bitmask of output dim indices
+ *              that copy from the corresponding input dim at runtime.
+ *            reshapeParams.minusOneDimIdx   — TIDL 6D index of the inferred
+ *              (-1) output dim; -1 if none.
+ *
+ *          Steps:
+ *            1. For each bit set in passthroughMask:
+ *                 outDataParam->dimValues[d] = inDataParams[0]->dimValues[d]
+ *            2. If minusOneDimIdx >= 0:
+ *                 outDataParam->dimValues[minusOneDimIdx] =
+ *                   totalInputVol / (product of all other output dims)
+ *
+ *          Output dims not covered by either step keep their import-time
+ *          values (from the temp copy passed by TIDL_inferShapeGeneric).
+ *
+ *          Preconditions : nIn >= 1.
+ */
+int32_t TIDL_shapeInfer_Reshape(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context);
+
+/**
  * @brief   EltWise shape inference (broadcast-aware).
  *
  *          For each dimension d in [0, TIDL_DIM_MAX):

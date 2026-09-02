@@ -155,6 +155,8 @@ int32_t TIDL_castRefProcess(sTIDL_DataParams_t *inDataParams,
       TIDL_castRef((const int8_t *)inPtrs[0], (uint64_t *)outPtrs[0], inDataParams, tidlLayer);
     } else if (outType == TIDL_Bool) {
       TIDL_castRef((const int8_t *)inPtrs[0], (bool *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_BFloat16) {
+      TIDL_castRef((const int8_t *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inDataParams, tidlLayer);
     } else {
       tidl_printf(0,"Unsupported output elementType in %s File, %d Line \n  ", __FILE__, __LINE__);
       status = IALG_EFAIL;
@@ -180,6 +182,8 @@ int32_t TIDL_castRefProcess(sTIDL_DataParams_t *inDataParams,
       TIDL_castRef((const uint8_t *)inPtrs[0], (uint64_t *)outPtrs[0], inDataParams, tidlLayer);
     } else if (outType == TIDL_Bool) {
       TIDL_castRef((const uint8_t *)inPtrs[0], (bool *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_BFloat16) {
+      TIDL_castRef((const uint8_t *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inDataParams, tidlLayer);
     } else {
       tidl_printf(0,"Unsupported output elementType in %s File, %d Line \n  ", __FILE__, __LINE__);
       status = IALG_EFAIL;
@@ -205,6 +209,8 @@ int32_t TIDL_castRefProcess(sTIDL_DataParams_t *inDataParams,
       TIDL_castRef((const int16_t *)inPtrs[0], (uint64_t *)outPtrs[0], inDataParams, tidlLayer);
     } else if (outType == TIDL_Bool) {
       TIDL_castRef((const int16_t *)inPtrs[0], (bool *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_BFloat16) {
+      TIDL_castRef((const int16_t *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inDataParams, tidlLayer);
     } else {
       tidl_printf(0,"Unsupported output elementType in %s File, %d Line \n  ", __FILE__, __LINE__);
       status = IALG_EFAIL;
@@ -230,6 +236,8 @@ int32_t TIDL_castRefProcess(sTIDL_DataParams_t *inDataParams,
       TIDL_castRef((const uint16_t *)inPtrs[0], (uint64_t *)outPtrs[0], inDataParams, tidlLayer);
     } else if (outType == TIDL_Bool) {
       TIDL_castRef((const uint16_t *)inPtrs[0], (bool *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_BFloat16) {
+      TIDL_castRef((const uint16_t *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inDataParams, tidlLayer);
     } else {
       tidl_printf(0,"Unsupported output elementType in %s File, %d Line \n  ", __FILE__, __LINE__);
       status = IALG_EFAIL;
@@ -255,6 +263,8 @@ int32_t TIDL_castRefProcess(sTIDL_DataParams_t *inDataParams,
       TIDL_castRef((const float32_tidl *)inPtrs[0], (uint64_t *)outPtrs[0], inDataParams, tidlLayer);
     } else if (outType == TIDL_Bool) {
       TIDL_castRef((const float32_tidl *)inPtrs[0], (bool *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_BFloat16) {
+      TIDL_castRef((const float32_tidl *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inDataParams, tidlLayer);
     } else {
       tidl_printf(0,"Unsupported output elementType in %s File, %d Line \n  ", __FILE__, __LINE__);
       status = IALG_EFAIL;
@@ -280,6 +290,8 @@ int32_t TIDL_castRefProcess(sTIDL_DataParams_t *inDataParams,
       TIDL_castRef((const int32_t *)inPtrs[0], (uint64_t *)outPtrs[0], inDataParams, tidlLayer);
     } else if (outType == TIDL_Bool) {
       TIDL_castRef((const int32_t *)inPtrs[0], (bool *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_BFloat16) {
+      TIDL_castRef((const int32_t *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inDataParams, tidlLayer);
     } else {
       tidl_printf(0,"Unsupported output elementType in %s File, %d Line \n  ", __FILE__, __LINE__);
       status = IALG_EFAIL;
@@ -305,6 +317,8 @@ int32_t TIDL_castRefProcess(sTIDL_DataParams_t *inDataParams,
       TIDL_castRef((const uint32_t *)inPtrs[0], (uint64_t *)outPtrs[0], inDataParams, tidlLayer);
     } else if (outType == TIDL_Bool) {
       TIDL_castRef((const uint32_t *)inPtrs[0], (bool *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_BFloat16) {
+      TIDL_castRef((const uint32_t *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inDataParams, tidlLayer);
     } else {
       tidl_printf(0,"Unsupported output elementType in %s File, %d Line \n  ", __FILE__, __LINE__);
       status = IALG_EFAIL;
@@ -330,6 +344,8 @@ int32_t TIDL_castRefProcess(sTIDL_DataParams_t *inDataParams,
       TIDL_castRef((const int64_t *)inPtrs[0], (uint64_t *)outPtrs[0], inDataParams, tidlLayer);
     } else if (outType == TIDL_Bool) {
       TIDL_castRef((const int64_t *)inPtrs[0], (bool *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_BFloat16) {
+      TIDL_castRef((const int64_t *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inDataParams, tidlLayer);
     } else {
       tidl_printf(0,"Unsupported output elementType in %s File, %d Line \n  ", __FILE__, __LINE__);
       status = IALG_EFAIL;
@@ -355,6 +371,8 @@ int32_t TIDL_castRefProcess(sTIDL_DataParams_t *inDataParams,
       TIDL_castRef((const uint64_t *)inPtrs[0], (uint64_t *)outPtrs[0], inDataParams, tidlLayer);
     } else if (outType == TIDL_Bool) {
       TIDL_castRef((const uint64_t *)inPtrs[0], (bool *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_BFloat16) {
+      TIDL_castRef((const uint64_t *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inDataParams, tidlLayer);
     } else {
       tidl_printf(0,"Unsupported output elementType in %s File, %d Line \n  ", __FILE__, __LINE__);
       status = IALG_EFAIL;
@@ -380,6 +398,35 @@ int32_t TIDL_castRefProcess(sTIDL_DataParams_t *inDataParams,
       TIDL_castRef((const bool *)inPtrs[0], (uint64_t *)outPtrs[0], inDataParams, tidlLayer);
     } else if (outType == TIDL_Bool) {
       TIDL_castRef((const bool *)inPtrs[0], (bool *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_BFloat16) {
+      TIDL_castRef((const bool *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inDataParams, tidlLayer);
+    } else {
+      tidl_printf(0,"Unsupported output elementType in %s File, %d Line \n  ", __FILE__, __LINE__);
+      status = IALG_EFAIL;
+    }
+  } else if (inType == TIDL_BFloat16) {
+    if (outType == TIDL_SignedChar) {
+      TIDL_castRef((const bfloat16_tidl *)inPtrs[0], (int8_t *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_UnsignedChar) {
+      TIDL_castRef((const bfloat16_tidl *)inPtrs[0], (uint8_t *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_SignedShort) {
+      TIDL_castRef((const bfloat16_tidl *)inPtrs[0], (int16_t *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_UnsignedShort) {
+      TIDL_castRef((const bfloat16_tidl *)inPtrs[0], (uint16_t *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_SinglePrecFloat) {
+      TIDL_castRef((const bfloat16_tidl *)inPtrs[0], (float32_tidl *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_SignedWord) {
+      TIDL_castRef((const bfloat16_tidl *)inPtrs[0], (int32_t *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_UnsignedWord) {
+      TIDL_castRef((const bfloat16_tidl *)inPtrs[0], (uint32_t *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_SignedDoubleWord) {
+      TIDL_castRef((const bfloat16_tidl *)inPtrs[0], (int64_t *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_UnsignedDoubleWord) {
+      TIDL_castRef((const bfloat16_tidl *)inPtrs[0], (uint64_t *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_Bool) {
+      TIDL_castRef((const bfloat16_tidl *)inPtrs[0], (bool *)outPtrs[0], inDataParams, tidlLayer);
+    } else if (outType == TIDL_BFloat16) {
+      TIDL_castRef((const bfloat16_tidl *)inPtrs[0], (bfloat16_tidl *)outPtrs[0], inDataParams, tidlLayer);
     } else {
       tidl_printf(0,"Unsupported output elementType in %s File, %d Line \n  ", __FILE__, __LINE__);
       status = IALG_EFAIL;
@@ -794,6 +841,51 @@ template void TIDL_castRef(const uint64_t *pIn,
                                  sTIDL_Layer_t *tidlLayer);
 
 template void TIDL_castRef(const uint64_t *pIn,
+                                 uint64_t *pOut,
+                                 sTIDL_DataParams_t *inDataParams,
+                                 sTIDL_Layer_t *tidlLayer);
+
+template void TIDL_castRef(const bfloat16_tidl *pIn,
+                                 signed char *pOut,
+                                 sTIDL_DataParams_t *inDataParams,
+                                 sTIDL_Layer_t *tidlLayer);
+
+template void TIDL_castRef(const bfloat16_tidl *pIn,
+                                 unsigned char *pOut,
+                                 sTIDL_DataParams_t *inDataParams,
+                                 sTIDL_Layer_t *tidlLayer);
+
+template void TIDL_castRef(const bfloat16_tidl *pIn,
+                                 short *pOut,
+                                 sTIDL_DataParams_t *inDataParams,
+                                 sTIDL_Layer_t *tidlLayer);
+
+template void TIDL_castRef(const bfloat16_tidl *pIn,
+                                 unsigned short *pOut,
+                                 sTIDL_DataParams_t *inDataParams,
+                                 sTIDL_Layer_t *tidlLayer);
+
+template void TIDL_castRef(const bfloat16_tidl *pIn,
+                                 float *pOut,
+                                 sTIDL_DataParams_t *inDataParams,
+                                 sTIDL_Layer_t *tidlLayer);
+
+template void TIDL_castRef(const bfloat16_tidl *pIn,
+                                 int32_t *pOut,
+                                 sTIDL_DataParams_t *inDataParams,
+                                 sTIDL_Layer_t *tidlLayer);
+
+template void TIDL_castRef(const bfloat16_tidl *pIn,
+                                 uint32_t *pOut,
+                                 sTIDL_DataParams_t *inDataParams,
+                                 sTIDL_Layer_t *tidlLayer);
+
+template void TIDL_castRef(const bfloat16_tidl *pIn,
+                                 int64_t *pOut,
+                                 sTIDL_DataParams_t *inDataParams,
+                                 sTIDL_Layer_t *tidlLayer);
+
+template void TIDL_castRef(const bfloat16_tidl *pIn,
                                  uint64_t *pOut,
                                  sTIDL_DataParams_t *inDataParams,
                                  sTIDL_Layer_t *tidlLayer);

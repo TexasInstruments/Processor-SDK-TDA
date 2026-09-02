@@ -391,7 +391,11 @@ $(BUILD_COMBO_safertos):
 	$(MAKE) -C source/kernel/safertos -f makefile.j722s.$(subst safertos_,,$@) all
 
 $(BUILD_COMBO_sdl):
-	$(MAKE) -C source/sdl -f makefile.j722s.$(subst sdl_,,$@) all
+	@if [ -d source/sdl ]; then \
+		$(MAKE) -C source/sdl -f makefile.j722s.$(subst sdl_,,$@) all; \
+	else \
+		echo "Skipping SDL (not present in this snapshot)"; \
+	fi
 
 $(BUILD_COMBO_safety_checkers):
 	$(MAKE) -C source/safety_checkers -f makefile.j722s.$(subst safety_checkers_,,$@) all
@@ -514,7 +518,11 @@ $(BUILD_COMBO_CLEAN_safertos):
 	$(MAKE) -C source/kernel/safertos -f makefile.j722s.$(subst safertos_,,$(subst _clean,,$@)) clean
 
 $(BUILD_COMBO_CLEAN_sdl):
-	$(MAKE) -C source/sdl -f makefile.j722s.$(subst sdl_,,$(subst _clean,,$@)) clean
+	@if [ -d source/sdl ]; then \
+		$(MAKE) -C source/sdl -f makefile.j722s.$(subst sdl_,,$(subst _clean,,$@)) clean; \
+	else \
+		echo "Skipping SDL clean (not present in this snapshot)"; \
+	fi
 
 $(BUILD_COMBO_CLEAN_safety_checkers):
 	$(MAKE) -C source/safety_checkers -f makefile.j722s.$(subst safety_checkers_,,$(subst _clean,,$@)) clean
@@ -637,7 +645,11 @@ $(BUILD_COMBO_SCRUB_safertos):
 	$(MAKE) -C source/kernel/safertos -f makefile.j722s.$(subst safertos_,,$(subst _scrub,,$@)) scrub
 
 $(BUILD_COMBO_SCRUB_sdl):
-	$(MAKE) -C source/sdl -f makefile.j722s.$(subst sdl_,,$(subst _scrub,,$@)) scrub
+	@if [ -d source/sdl ]; then \
+		$(MAKE) -C source/sdl -f makefile.j722s.$(subst sdl_,,$(subst _scrub,,$@)) scrub; \
+	else \
+		echo "Skipping SDL scrub (not present in this snapshot)"; \
+	fi
 
 $(BUILD_COMBO_SCRUB_safety_checkers):
 	$(MAKE) -C source/safety_checkers -f makefile.j722s.$(subst safety_checkers_,,$(subst _scrub,,$@)) scrub
@@ -1390,52 +1402,84 @@ examples-private: dm_app
 	$(MAKE) -C examples/safety/safety_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile all
 
  dcc_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  rti_app_uc1_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  rti_app_uc2_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/rti/UC2/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/rti/UC2/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rti/UC2/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  rti_app_uc3_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/rti/UC3/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/rti/UC3/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rti/UC3/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  rti_app_uc4_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
-	$(MAKE) -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+	@if [ -d examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all; \
+	fi
 
  dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang:
 	$(MAKE) -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile all
@@ -2227,52 +2271,84 @@ examples-private-clean: $(BUILD_COMBO_EXAMPLE_PRIVATE_CLEAN_ALL)
 	$(MAKE) -C examples/safety/safety_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile clean
 
  dcc_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  rti_app_uc1_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  rti_app_uc2_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/rti/UC2/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/rti/UC2/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rti/UC2/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  rti_app_uc3_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/rti/UC3/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/rti/UC3/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rti/UC3/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  rti_app_uc4_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
-	$(MAKE) -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+	@if [ -d examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean; \
+	fi
 
  dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile clean
@@ -3064,52 +3140,84 @@ examples-scrub-private: $(BUILD_COMBO_EXAMPLE_PRIVATE_SCRUB_ALL)
 	$(MAKE) -C examples/safety/safety_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang -f makefile scrub
 
  dcc_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/dcc/dcc_modes/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  ecc_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/ecc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  mcu_esm0_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/esm/mcu_esm0/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  mcrc_auto_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/mcrc/mcrc_auto/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  mcrc_full_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/mcrc/mcrc_full_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  mcrc_semi_cpu_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/mcrc/mcrc_semi_cpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  mtog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/mtog/mtog_example/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  pbist_mpu_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/pbist/pbist_mpu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  pok_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/pok/pok_mcu/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  rom_checksum_example_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rom_checksum/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  rti_app_uc1_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rti/UC1/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  rti_app_uc2_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/rti/UC2/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/rti/UC2/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rti/UC2/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  rti_app_uc3_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/rti/UC3/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/rti/UC3/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rti/UC3/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  rti_app_uc4_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/rti/UC4/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
-	$(MAKE) -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+	@if [ -d examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang ]; then \
+		$(MAKE) -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub; \
+	fi
 
  dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_scrub:
 	$(MAKE) -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile scrub

@@ -73,26 +73,48 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Expand")> ()
   sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
 
   layer.numInBufs = 1;
-  if(md.constTensorIndices.size() > 0)
+  for (int32_t i = 0; i < (int32_t)md.constTensorIndices.size(); i++)
   {
-    int constTensorIdx = md.constTensorIndices[0];
-    sBuffer_t buffer;
-    status = copyFloatConst(graph, index, constTensorIdx, buffer, INPUT_REQUIRED);
-    if(status == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+    int constTensorIdx = md.constTensorIndices[i];
+    if (constTensorIdx == 1)
     {
-      TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Cannot read initializer tensor : Only float, int32 and int64 tensor is supported");
-      return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
-    }
+      /* Shape input (input 1) is a constant — absorb into expandParams */
+      sBuffer_t buffer;
+      status = copyFloatConst(graph, index, 1, buffer, INPUT_REQUIRED);
+      if (status == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+      {
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Cannot read initializer tensor : Only float, int32 and int64 tensor is supported");
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      }
 
-    for(int i = 0; i < TIDL_DIM_MAX; i++)
-    {
-      layer.layerPCParams.expandParams.shape[i] = 1;
-    }
+      for (int j = 0; j < TIDL_DIM_MAX; j++)
+      {
+        layer.layerPCParams.expandParams.shape[j] = 1;
+      }
 
-    int offset = std::max(0, ((int32_t)TIDL_DIM_MAX - buffer.bufSize));
-    for(int i = 0; i < buffer.bufSize; i++)
+      int offset = std::max(0, ((int32_t)TIDL_DIM_MAX - buffer.bufSize));
+      for (int j = 0; j < buffer.bufSize; j++)
+      {
+        layer.layerPCParams.expandParams.shape[j + offset] = (int32_t)((int64_t*)buffer.ptr)[j];
+      }
+
+      if (buffer.ptr)
+      {
+        free(buffer.ptr);
+        buffer.ptr = NULL;
+        buffer.bufSize = 0;
+      }
+    }
+    else if (constTensorIdx == 0)
     {
-      layer.layerPCParams.expandParams.shape[i + offset] = (int32_t)((int64_t*)buffer.ptr)[i];
+      /* Data input (input 0) is a constant initializer — store in layer.weights
+       * so tidl_addConstDataLayers can create the appropriate ConstDataLayer */
+      status = copyFloatConst(graph, index, 0, layer.weights, INPUT_REQUIRED);
+      if (status == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+      {
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Expand layer : Unable to read constant data input");
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      }
     }
   }
   return 0;

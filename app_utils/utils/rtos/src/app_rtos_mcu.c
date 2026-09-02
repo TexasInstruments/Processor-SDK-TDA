@@ -90,7 +90,7 @@ void extended_system_pre_init(void);
 void extended_system_pre_init(void)
 {
     /* initialize .bss section to zero */
-    uint32_t bss_size = ((uintptr_t)&__BSS_END - (uintptr_t)&__BSS_START);
+    uint32_t bss_size = (uint32_t)((uintptr_t)&__BSS_END - (uintptr_t)&__BSS_START);
     (void)memset((void*)&__BSS_START, 0x00, bss_size);
 }
 #endif

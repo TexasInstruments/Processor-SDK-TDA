@@ -1610,7 +1610,6 @@ void tivx_vpac_ldc_params_init(tivx_vpac_ldc_params_t *prms)
     }
 }
 
-#if !defined(VPAC3L)
 void tivx_vpac_ldc_safety_mech_prms_init(tivx_vpac_ldc_safety_mechanism_params_t *prms)
 {
     if (NULL != prms)
@@ -1620,6 +1619,5 @@ void tivx_vpac_ldc_safety_mech_prms_init(tivx_vpac_ldc_safety_mechanism_params_t
         prms->enable_readback_config_registers = (uint32_t)vx_false_e;
     }
 }
-#endif
 
 #endif

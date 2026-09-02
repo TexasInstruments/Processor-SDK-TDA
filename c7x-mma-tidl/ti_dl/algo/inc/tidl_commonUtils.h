@@ -88,6 +88,7 @@
 #include "tidl_traceUtils.h"
 #include <typeinfo>
 #include <limits>
+#include "tidl_bfloat16.h"
 #ifdef BUILD_WITH_CUDA
 #include <chrono>
 #endif
@@ -218,6 +219,7 @@ void TIDL_getSaturationLimits(int32_t elementType, int32_t *satLow, int32_t *sat
 
 void TIDL_getSaturationFloat(sTIDL_Layer_t *tidlLayer1, float32_tidl *min1, float32_tidl *max1);
 float32_tidl TIDL_floatSat(float32_tidl outAcc1, sTIDL_Layer_t *tidlLayer1);
+float32_tidl TIDL_BF16Sat(float32_tidl outAcc1, sTIDL_Layer_t *tidlLayer1);
 
 void TIDL_UpdateScaleFactors(TIDL_Handle intAlgHandle, int32_t i, int32_t updateStats, int64_t accMin, int64_t accMax);
 
@@ -443,8 +445,10 @@ static inline Tdst tidl_sat(float32_tidl val)
   float32_tidl temp_val = 0.0f;
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
   This is a safety check to ensure that the values doesn't cross min and max boundaries.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   max = (float32_tidl) std::numeric_limits<Tdst>::max();
   min = (float32_tidl) std::numeric_limits<Tdst>::lowest();
@@ -453,6 +457,26 @@ static inline Tdst tidl_sat(float32_tidl val)
   out = (temp_val > max) ? max : temp_val;
 
   return (Tdst)out;
+}
+
+static inline bfloat16_tidl tidl_sat_bf16(bfloat16_tidl val)
+{
+  bfloat16_tidl out;
+  bfloat16_tidl max = 0.0f;
+  bfloat16_tidl min = 0.0f;
+  bfloat16_tidl temp_val = 0.0f;
+  /* LDRA_JUSTIFY_START
+  <metric start> statement branch <metric end>
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  This is a safety check to ensure that the values doesn't cross min and max boundaries.
+  <justification end> */
+  max = std::numeric_limits<bfloat16_tidl>::max();
+  min = std::numeric_limits<bfloat16_tidl>::lowest();
+  /* LDRA_JUSTIFY_END */
+  temp_val = (val < min) ? min : val;
+  out = (temp_val > max) ? max : temp_val;
+
+  return out;
 }
 
 int32_t tidl_writeLayerMinMax(sTIDL_Network_t *net, int32_t currLayersGroupId, int8_t *scratchPtr, uint32_t scratchSize);

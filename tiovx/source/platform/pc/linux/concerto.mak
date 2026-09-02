@@ -51,7 +51,7 @@ ifeq ($(TARGET_PLATFORM),PC)
 
 		IDIRS += $(TIOVX_PATH)/source/include $(COMMON_FILES_BASE_PATH)
 		IDIRS += $(APP_UTILS_PATH)
-		IDIRS += $(VISION_APPS_PATH)/platform/$(SOC)/rtos
+		IDIRS += $(PLATFORM_PATH)/memory_map/$(SOC)
 		IDIRS += $(TIOVX_PATH)/source/platform/common/os/posix
 		IDIRS += $(TIOVX_PATH)/source/platform/common/targets
 		IDIRS += $(TIOVX_PATH)/source/platform/common

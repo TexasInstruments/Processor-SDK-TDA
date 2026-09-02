@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Khronos Group Inc.
+ * Copyright (c) 2012-2026 The Khronos Group Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -143,7 +143,7 @@ static void VX_CALLBACK ownStreamingPipeliningTask(void *app_var)
                                 graph->is_streaming_error = (vx_bool)vx_true_e;
 
                                 /* Sending error event to trigger node queue if registered */
-                                ownNodeCheckAndSendErrorEvent(graph->nodes[graph->trigger_node_index]->obj_desc[0], tivxPlatformGetTimeInUsecs()*1000U, (vx_status)VX_ERROR_TIMEOUT);
+                                ownNodeCheckAndSendErrorEvent(graph->nodes[graph->trigger_node_index]->obj_desc[0], tivxPlatformGetTimeInUsecs()*1000U, (vx_status)VX_ERROR_TIMEOUT, (vx_uint16)0, NULL);
                                 done = (vx_bool)vx_true_e;
                             }
 /* LDRA_JUSTIFY_END */
@@ -204,7 +204,7 @@ static void VX_CALLBACK ownStreamingPipeliningTask(void *app_var)
             (void)tivxEventPost(graph->stop_done);
 
             /* Sending error event to trigger node queue if registered */
-            ownNodeCheckAndSendErrorEvent(graph->nodes[graph->trigger_node_index]->obj_desc[0], tivxPlatformGetTimeInUsecs()*1000U, (vx_status)VX_ERROR_TIMEOUT);
+            ownNodeCheckAndSendErrorEvent(graph->nodes[graph->trigger_node_index]->obj_desc[0], tivxPlatformGetTimeInUsecs()*1000U, (vx_status)VX_ERROR_TIMEOUT, (vx_uint16)0, NULL);
             done = (vx_bool)vx_true_e;
         }
     }
@@ -308,7 +308,7 @@ vx_status ownSendUserGraphEvent(vx_graph graph, vx_uint32 app_value, const void 
                 &graph->streaming_event_queue,
                 (vx_enum)VX_EVENT_USER,
                 timestamp, app_value,
-                (uintptr_t)app_value, (uintptr_t)parameter, (uintptr_t)0);
+                (uintptr_t)app_value, (uintptr_t)parameter, (uintptr_t)0, (vx_uint16)0, NULL);
 
     return status;
 }

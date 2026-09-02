@@ -360,7 +360,6 @@ static int32_t Vhwa_m2mMscGetProcessReq(Fdrv_Handle handle,
 static void Vhwa_mscUpdateYuv422iCslPrms(Vhwa_M2mMscHandleObj *hObj,
                                          CSL_MscConfig *cslMscCfg);
 
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
                                          /**
  * \brief   Reconfigure MSC Reg registers as needed for the current handle/queue.
  *
@@ -411,7 +410,6 @@ static int32_t vhwaM2mMscUpdateStatusRegGroup(Vhwa_M2mMscHandleObj *hObj);
  * @return Returns 0 on success, or a negative error code on failure.
  */
 int32_t vhwaM2mMscSetDefaultGoldenRegMemValues(const Vhwa_M2mMscHandleObj *hObj, const Vhwa_M2mMscCommonObj *comObj);
-#endif
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -1040,9 +1038,7 @@ static int32_t Vhwa_m2mMscControl(Fdrv_Handle handle, uint32_t cmd, Ptr cmdArgs,
     Vhwa_M2mMscCommonObj   *comObj = NULL;
     Vhwa_HtsLimiter        *htsLimit = NULL;
     Msc_WdTimerErrEventParams *wdTimerEePrms = NULL;
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
     uint32_t                cookie;
-#endif
 
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
@@ -1510,7 +1506,7 @@ static int32_t Vhwa_m2mMscControl(Fdrv_Handle handle, uint32_t cmd, Ptr cmdArgs,
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
+
             case VHWA_M2M_IOCTL_MSC_ENABLE_RECONFIG_REINIT_REG:
             {
                 /* LDRA_JUSTIFY_START
@@ -1855,7 +1851,6 @@ static int32_t Vhwa_m2mMscControl(Fdrv_Handle handle, uint32_t cmd, Ptr cmdArgs,
                 /* LDRA_JUSTIFY_END */
                 break;
             }
-#endif
             /* Default Case */
             /* LDRA_JUSTIFY_START
             <metric start>statement branch <metric end>
@@ -2290,7 +2285,6 @@ static int32_t Vhwa_m2mMscProcessReq(Fdrv_Handle handle,
                     comObj->socInfo.vpacIntdRegs, qObj->hObj);
             }
 
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
             /* Invoke the reconfig-Reg if enableReconfigReinitReg enabled for the current handle */
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
@@ -2315,7 +2309,6 @@ static int32_t Vhwa_m2mMscProcessReq(Fdrv_Handle handle,
             {
                 retVal = vhwaM2mMscUpdateStatusRegGroup(hObj);
             }
-#endif
 
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
@@ -3042,7 +3035,6 @@ static int32_t Vhwa_mscDeInit(void)
     return (retVal);
 }
 
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 int32_t Vhwa_m2mMscReInit(void)
 {
     int32_t                status = FVID2_SOK;
@@ -3188,7 +3180,7 @@ int32_t Vhwa_m2mMscReInit(void)
 
     return (status);
 }
-#endif
+
 static Vhwa_M2mMscHandleObj *Vhwa_mscAllocHdlObj(const Vhwa_M2mMscInstObj *instObj,
                                                 uint32_t instId)
 {
@@ -5185,7 +5177,6 @@ int32_t Vhwa_m2mMscSubmitRequest(Vhwa_M2mMscInstObj *instObj,
         Rationale: The component level negative test framework and test applications cannot reach this portion. The test framework does not support the configuration required to trigger this error scenario.
         Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status and return the same to the application. However, due to the stated rationale, this is not tested.
         <justification end> */
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
         if ((VHWA_SAFETY_MODE_DISABLED != hObj->enableConfigRegValidate) && (goldenRegVal != NULL))
         /* LDRA_JUSTIFY_END */
         {
@@ -5203,7 +5194,7 @@ int32_t Vhwa_m2mMscSubmitRequest(Vhwa_M2mMscInstObj *instObj,
             }
             /* LDRA_JUSTIFY_END */
         }
-#endif
+
         /* Start Channels in HTS */
         if (FVID2_SOK == retVal)
         {
@@ -5468,7 +5459,6 @@ void Vhwa_m2mDisableFcMscHtsIntr(void)
                         instObj->fcPipeline);
 }
 
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 static int32_t Vhwa_m2mMscReconfigReinitReg(const Vhwa_M2mMscInstObj *instObj,
                                             Vhwa_M2mMscCommonObj *comObj,
                                             const Vhwa_M2mMscQueueObj *qObj)
@@ -6948,7 +6938,6 @@ int32_t vhwaM2mMscUpdateConfigRegGroup(VhwaVpacMscSocReadBack *RegVal, const Vhw
 
     return status;
 }
-#endif
 int32_t Vhwa_m2mMscGetSl2Info(Vhwa_M2mMscSl2Info *sl2Info)
 {
     int32_t retVal = FVID2_SOK;

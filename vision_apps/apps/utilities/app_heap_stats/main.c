@@ -65,7 +65,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <VX/vx.h>
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 #include <utils/ipc/include/app_ipc.h>
 #include <utils/perf_stats/include/app_perf_stats.h>
 #include <utils/console_io/include/app_log.h>

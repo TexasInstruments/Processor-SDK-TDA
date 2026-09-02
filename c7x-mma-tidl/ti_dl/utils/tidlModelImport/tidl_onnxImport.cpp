@@ -4190,7 +4190,7 @@ int32_t TIDL_onnxMapRMSNormBaseParams (GraphProto&  onnGraph, int32_t i, sTIDL_L
   /* Handle the case of divide by 0 */
   if(epsilon == (float32_tidl)0)
   {
-    epsilon = epsilon + 10e-5;
+    epsilon = epsilon + 1e-5;
   }
   layer.layerParams.rmsNormParams.epsilon = epsilon;
 
@@ -6416,7 +6416,7 @@ int32_t tidl_fuseLayerNormBetaGamma(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, i
 
             free(pGamma);
             /*Create a const buffer for weights:*/
-            int32_t constIdx = tidl_createConstDataLayer (pOrgTIDLNetStructure, dataIndex, weightsPtr, bufSize, pOrgTIDLNetStructure.numLayers);
+            int32_t constIdx = tidl_createConstDataLayer (pOrgTIDLNetStructure, dataIndex, weightsPtr, bufSize, TIDL_SinglePrecFloat, pOrgTIDLNetStructure.numLayers);
             if(constIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
             {
               return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
@@ -7095,13 +7095,20 @@ int32_t mapOnnxTypeToTidlOutputType(int onnx_elem_type,tidl_import_config* param
       }
       else if (params->numParamBits > 8)
       {
-        if(params->outElementType[outputIdx] == TIDL_UnsignedChar || params->outElementType[outputIdx] == TIDL_UnsignedShort)
+        if(params->inferencePrecisionMode == TIDL_InferencePrecisionModeFixedPoint) 
         {
-          params->outElementType[outputIdx] = TIDL_UnsignedShort;
+          if(params->outElementType[outputIdx] == TIDL_UnsignedChar || params->outElementType[outputIdx] == TIDL_UnsignedShort)
+          {
+            params->outElementType[outputIdx] = TIDL_UnsignedShort;
+          }
+          else
+          {
+            params->outElementType[outputIdx] = TIDL_SignedShort;
+          }
         }
-        else
+        else 
         {
-          params->outElementType[outputIdx] = TIDL_SignedShort;
+          params->outElementType[outputIdx] = TIDL_BFloat16;
         }
       }
       else
@@ -7133,7 +7140,14 @@ int32_t mapOnnxTypeToTidlOutputType(int onnx_elem_type,tidl_import_config* param
       }
       else if (params->numParamBits > 8)
       {
-        params->outElementType[outputIdx] = TIDL_SignedShort;
+        if(params->inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint)
+        {
+          params->outElementType[outputIdx] = TIDL_BFloat16;
+        }
+        else
+        {
+          params->outElementType[outputIdx] = TIDL_SignedShort;
+        }
       }
       else
       {
@@ -7777,6 +7791,12 @@ int32_t onnx_import(tidl_import_config * params, int32_t *totalData, int32_t* to
   {
     numNetOutData = tidl_getStringsFromList((char *)params->outDataNamesList, (char*)outDataNames, TIDL_MAX_DATA_NAME);
   }
+
+  if(numNetOutData > TIDL_MAX_ALG_OUT_BUFS)
+  {
+    TIDL_GLOBAL_REPORT_ERROR("Number of outputs to the graph is %d,maximum supported is %d", numNetOutData,TIDL_MAX_ALG_OUT_BUFS);
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+  }
   
   for (i = 0; i < numNetOutData; i++)
   {
@@ -7834,6 +7854,12 @@ int32_t onnx_import(tidl_import_config * params, int32_t *totalData, int32_t* to
     numNetInData = tidl_getStringsFromList((char *)params->inDataNamesList, (char*)inDataNames, TIDL_MAX_DATA_NAME);
   }
 
+  if(numNetInData > TIDL_MAX_ALG_IN_BUFS)
+  {
+    TIDL_GLOBAL_REPORT_ERROR("Number of inputs to the graph is %d, maximum supported is %d", numNetInData,TIDL_MAX_ALG_IN_BUFS);
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+  }
+  
   for (i = 0; i < numNetInData; i++)
   {
     //Automatically parse shape from inputs if not set explicitly
@@ -8067,6 +8093,11 @@ int32_t tidl_supportMultiChannelMatMul(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure,
         int32_t numSingletonDims = 0;
         int32_t constIdx = matmulLayer.allowlistingMetaData.constTensorIndices[0];
         int32_t constLayerIdx = tidl_getInLayer(pOrgTIDLNetStructure, layerIndex, matmulLayer.inData[constIdx].dataId);
+        /*
+        Optimization is unsupported for A-side constant input since output reshape is computed using A-side shape
+        even in the case of B-side input being variable. Reading shapes from B-side requires separate handling for change in the number of bias scales.
+        */
+        if(constIdx == 0) continue;
         if(constLayerIdx == -1 || pOrgTIDLNetStructure.TIDLPCLayers[constLayerIdx].layerType != TIDL_ConstDataLayer)
         {
           continue;

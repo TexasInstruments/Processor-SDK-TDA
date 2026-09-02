@@ -72,6 +72,7 @@
 
 namespace TIDL_Strings
 {
+   std::string inferencePrecisionModeString(int32_t mode);
    std::string layerTypeString(int32_t type);
    std::string layerTypeShort(int32_t type);
    std::string actTypeShort(int32_t type);

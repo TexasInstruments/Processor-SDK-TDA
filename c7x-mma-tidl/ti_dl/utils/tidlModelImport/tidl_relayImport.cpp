@@ -303,10 +303,12 @@ sBuffer_t TIDL_extractConstantTensorData(const relay::Call& call, int arg_index,
         if (data_type == "int64")
         {
             buffer.ptr = NDArrtoInt64(tensorExpr, numElements);
+            buffer.dataType = TIDL_SignedDoubleWord;
         }
         else
         {
             buffer.ptr = NDArrtoFloat(tensorExpr, numElements, ndarr_zp, ndarr_scale);
+            buffer.dataType = TIDL_SinglePrecFloat;
         }
 
         buffer.bufSize = numElements;

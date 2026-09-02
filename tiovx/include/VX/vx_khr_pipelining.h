@@ -583,6 +583,14 @@ typedef struct _vx_event_node_completed {
     /*!< \brief node which generated this event */
 } vx_event_node_completed;
 
+/*! \brief Max number of bytes of additional diagnostic info a target kernel
+ *         can attach to a VX_EVENT_NODE_ERROR event via
+ *         tivxSetTargetKernelInstanceErrorInfo()
+ *
+ * \ingroup group_event
+ */
+#define TIVX_MAX_ERROR_INFO_SIZE           (52u)
+
 /*! \brief Parameter structure returned with event of type VX_EVENT_NODE_ERROR
  *
  * \ingroup group_event
@@ -597,6 +605,15 @@ typedef struct _vx_event_node_error {
 
     vx_status status;
     /*!< \brief error condition of node */
+
+    vx_uint16 replicated_node_idx;
+    /*!< \brief Index of the replica the error arose from (0 if not replicated) */
+
+    vx_uint8 error_info[TIVX_MAX_ERROR_INFO_SIZE];
+    /*!< \brief Kernel specific error info of node error */
+
+    vx_uint16 error_info_size;
+    /*!< \brief Number of valid bytes in error_info */
 } vx_event_node_error;
 
 /*! \brief Parameter structure returned with event of type VX_EVENT_USER_EVENT

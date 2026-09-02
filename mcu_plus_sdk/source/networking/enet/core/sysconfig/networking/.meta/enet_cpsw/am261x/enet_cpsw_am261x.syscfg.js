@@ -23,7 +23,7 @@ const pinMuxScript = system.getScript("./enet_cpsw_am261x_pinmux");
 const enet_cpsw_pinmux_config = {
     name: "pinmuxConfig",
     displayName: "Pinmux config",
-	longDescription: "Configuration of pinmux for CPSW",
+    longDescription: "Configuration of pinmux for CPSW",
     collapsed:true,
     config: [
 
@@ -33,7 +33,7 @@ const enet_cpsw_pinmux_config = {
 const enet_cpsw_cpdma_channel_config = {
     name: "cpdmaChConfig",
     displayName: "DMA channel config",
-	longDescription: "Configuration of Tx/Rx DMA channels",
+    longDescription: "Configuration of Tx/Rx DMA channels",
     collapsed:true,
     config: [
         {
@@ -48,7 +48,7 @@ const enet_cpsw_cpdma_channel_config = {
 const enet_cpsw_lwipIf_config = {
     name: "lwipIfConfig",
     displayName: "LWIP Interface config",
-	longDescription: "Configuration of LWIP Interface",
+    longDescription: "Configuration of LWIP Interface",
     collapsed:true,
     config: [
 
@@ -105,7 +105,7 @@ const enet_cpsw_system_config = {
         },
         {
             name: "macAddrConfig",
-            description: "MAC address to set in the driver. 'Auto Assign shall select the address automatiically from EEPROM and/or EFUSES. 'Manual Entry' will allow to input MAC address",
+            description: "MAC address to set in the driver. 'Auto Assign shall select the address automatically from EEPROM and/or EFUSES. 'Manual Entry' will allow to input MAC address from sysconfig",
             displayName: "MAC Address Assignment Method",
             onChange:function (inst, ui) {
                 if(inst.macAddrConfig === "Auto Assign") {
@@ -126,7 +126,7 @@ const enet_cpsw_system_config = {
         },
         {
             name: "macAddrList",
-            description: "MAC address to set in the driver. Enter MAC address. Seperate multiple MAC address with comma. Eg.: aa:bb:bb:cc:dd:ee,01:22:33:aa:bb:ee",
+            description: "MAC address to set in the driver. Enter MAC address. Seperate multiple MAC address with comma. Eg.: aa:bb:bb:cc:dd:ee,01:22:33:aa:bb:ee. Note: Each device on the network must have a unique MAC address. Duplicate MAC addresses will cause network conflicts.",
             displayName: "MAC Address List",
             default: "70:ff:76:1d:ec:f2,70:ff:76:1d:ec:e3",
             hidden: true,
@@ -186,19 +186,19 @@ function getEnetClockConfig(device_name)
 enet_clock_config =
     {
 
-	clockIds        : [ "SOC_RcmPeripheralId_CPTS", "SOC_RcmPeripheralId_CPSW_5_50_250"],
-	clockFrequencies: [
-	    {
-	        moduleId: "SOC_RcmPeripheralId_CPTS",
-	        clkId   : "SOC_RcmPeripheralClockSource_SYS_CLK",
-	        clkRate : 250000000,
-	    },
+    clockIds        : [ "SOC_RcmPeripheralId_CPTS", "SOC_RcmPeripheralId_CPSW_5_50_250"],
+    clockFrequencies: [
         {
-	        moduleId: "SOC_RcmPeripheralId_CPSW_5_50_250",
-	        clkId   : "SOC_RcmPeripheralClockSource_DPLL_CORE_HSDIV0_CLKOUT1",
-	        clkRate : 500000000,
-	    },
-	],
+            moduleId: "SOC_RcmPeripheralId_CPTS",
+            clkId   : "SOC_RcmPeripheralClockSource_SYS_CLK",
+            clkRate : 250000000,
+        },
+        {
+            moduleId: "SOC_RcmPeripheralId_CPSW_5_50_250",
+            clkId   : "SOC_RcmPeripheralClockSource_DPLL_CORE_HSDIV0_CLKOUT1",
+            clkRate : 500000000,
+        },
+    ],
     }
     }
     else if (device_name === "am261x-som")
@@ -206,19 +206,19 @@ enet_clock_config =
 enet_clock_config =
     {
 
-	clockIds        : [ "SOC_RcmPeripheralId_CPTS", , "SOC_RcmPeripheralId_CPSW_5_50_250"],
-	clockFrequencies: [
-	    {
-	        moduleId: "SOC_RcmPeripheralId_CPTS",
-	        clkId   : "SOC_RcmPeripheralClockSource_SYS_CLK",
-	        clkRate : 200000000,
-	    },
+    clockIds        : [ "SOC_RcmPeripheralId_CPTS", , "SOC_RcmPeripheralId_CPSW_5_50_250"],
+    clockFrequencies: [
         {
-	        moduleId: "SOC_RcmPeripheralId_CPSW_5_50_250",
-	        clkId   : "SOC_RcmPeripheralClockSource_DPLL_CORE_HSDIV0_CLKOUT1",
-	        clkRate : 500000000,
-	    },
-	],
+            moduleId: "SOC_RcmPeripheralId_CPTS",
+            clkId   : "SOC_RcmPeripheralClockSource_SYS_CLK",
+            clkRate : 200000000,
+        },
+        {
+            moduleId: "SOC_RcmPeripheralId_CPSW_5_50_250",
+            clkId   : "SOC_RcmPeripheralClockSource_DPLL_CORE_HSDIV0_CLKOUT1",
+            clkRate : 500000000,
+        },
+    ],
     }
     }
 
@@ -630,7 +630,7 @@ function addSharedModuleInstances(inst) {
     return modInstances;
 }
 function getCpuInfo() {
-	const cpuInfo = new Map(
+    const cpuInfo = new Map(
                                [
                                  ['CSL_CORE_ID_R5FSS0_0',{subsystem: "R5FSS",
                                   clusternum: "0", core: "0"}],
@@ -638,7 +638,7 @@ function getCpuInfo() {
                                   clusternum: "0", core: "1"}],
                                ],
                              );
-	return cpuInfo.get(getCpuID());
+    return cpuInfo.get(getCpuID());
 }
 
 function getEnetResPartInfoNumCores() {

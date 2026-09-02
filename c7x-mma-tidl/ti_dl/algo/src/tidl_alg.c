@@ -86,6 +86,7 @@
 #include "gc_helper.h"
 #include "tidl_forceNegativeTest.h"
 #include "tidl_device_mem_properties.h"
+#include "tidl_coverage.h"
 
 #define TEMP_FORCE_OUTPUT_TO_DDR (0)
 #define VAILD_DDR_BUFFER         (1U)
@@ -210,9 +211,12 @@ static int32_t TIDL_getMaxOutputBufSizeFromNC(const sGCHelperHandle *gcHelperHan
   int32_t maxSize = 0;
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  <justification start>
+  Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
   This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
   TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_001
+  Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+  This does not affect runtime behavior or safety.
   <justification end> */
   if (gcHelperHandle != NULL)
   {
@@ -318,72 +322,6 @@ static void TIDL_printMemorySizeStats(const IALG_MemRec memRec[],
   return;
 }
 
-int32_t TIDL_layerAlloc(const TIDL_LayerSpecificParams *layerSpecificParams,
-                        const TIDL_NetworkCommonParams *commonParams,
-                        int32_t layerIdx,
-                        int32_t memorySize[TIDL_LAYER_MEMORY_MAX],
-                        IALG_MemRec memRec[]) //: TODO: Remove memrec from here eventually
-{
-  int32_t status = IALG_EOK;
-
-  const TIDL_CreateParams *createParams = commonParams->createParams;
-  //: TODO: Below generic flow code should be removed after migrating to workload based flow
-  /* Request memory for genericFlowHandle and KernelHandle for supported layers */
-  int32_t isNewGenericFlow = TIDL_isNewGenericFlowEnabled(createParams, layerIdx);
-  if ((((uint32_t)createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == 0U) && (isNewGenericFlow != 0))
-  {
-    /* TIDL_LDRA_TAG_DEVICEUTILS_PRIOR_CHECK_002 & TIDL_LDRA_TAG_DEVICEUTILS_PRIOR_CHECK_003 */
-    uint32_t genricFlowHandleSize = sizeof(TIDL_GenericHandle);
-    int32_t numSubHandles = 1U;
-    uint32_t kerHandleSize = TIDL_getKernelHandleSize(createParams, layerIdx, numSubHandles);
-    uint32_t numGenericFlowHandles = TIDL_getNumGenericFlowHandles(&createParams->net->TIDLLayers[layerIdx]);
-
-    memRec[ALG_LAYERS_PARAMS_BUFF_MEMREC].size += (genricFlowHandleSize * numGenericFlowHandles);
-    memRec[ALG_LAYERS_PARAMS_BUFF_MEMREC].size += ((kerHandleSize * numGenericFlowHandles));
-  }
-
-  if ((createParams->net->TIDLLayers[layerIdx].layerType == TIDL_DetectionOutputLayer) ||
-      (createParams->net->TIDLLayers[layerIdx].layerType == TIDL_OdPostProcessingLayer))
-  {
-
-    status = TIDL_detectOutAlloc(createParams, layerIdx, memRec, commonParams->TIDLLayersBufPtr);
-  }
-  /* LDRA_JUSTIFY_START
-  <metric start> statement branch <metric end>
-  <justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
-  and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
-  <justification end> */
-  else if ((createParams->net->TIDLLayers[layerIdx].layerType == TIDL_OdOutputReformatLayer))
-  {
-    status = TIDL_flattenAlloc(createParams, layerIdx, memRec, commonParams->TIDLLayersBufPtr);
-  }
-  /* LDRA_JUSTIFY_END */
-#if defined TIDL_COVERAGE_DEAD_CODE
-  else if (createParams->net->TIDLLayers[layerIdx].layerType == TIDL_RoiPoolingLayer)
-  {
-    status = TIDL_roiPoolingAlloc(createParams, layerIdx, memRec, commonParams->TIDLLayersBufPtr);
-  }
-  else if ((createParams->net->TIDLLayers[layerIdx].layerType == TIDL_SqueezeLayer) ||
-           (createParams->net->TIDLLayers[layerIdx].layerType == TIDL_ReshapeLayer))
-  {
-    status = TIDL_flattenAlloc(createParams, layerIdx, memRec, commonParams->TIDLLayersBufPtr);
-  }
-#endif
-  /* LDRA_JUSTIFY_START
-  <metric start> statement branch <metric end>
-  <justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
-  and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
-  <justification end> */
-  else
-  /* LDRA_JUSTIFY_END */
-  {
-    TIDL_LOG_ERROR(TIDL_ERROR_GROUP_COMMON, TIDL_ERROR_COMMON_UNSUPPORTED_LAYER);
-    status = IALG_EFAIL;
-  }
-
-  return status;
-}
-
 /*this function sets the offset in weight buffers for Convolution Channel split*/
 static void TIDL_setMultiCoreCoeffOffset(sTIDL_Layer_t *tidlLayer, sTIDL_AlgLayer_t *algLayer, int32_t startCoreIdx, int32_t curCoreIdx, int32_t numCores)
 {
@@ -392,7 +330,12 @@ static void TIDL_setMultiCoreCoeffOffset(sTIDL_Layer_t *tidlLayer, sTIDL_AlgLaye
   algLayer->layerParams.convParams.biasMultiCoreExtraOffset = 0U;
 
 #if TIDL_DEVICE_MULTICORE
-  if ((tidlLayer->layerType == TIDL_ConvolutionLayer) && ((tidlLayer->multiCoreMode & TIDL_MULTI_CORE_CHANNEL) == TIDL_MULTI_CORE_CHANNEL) && (curCoreIdx > startCoreIdx))
+  
+  int32_t multiCoreMode  = (algLayer->workloadUnit != NULL)
+                            ? algLayer->workloadUnit->multiCoreMode
+                            : TIDL_NOT_MULTI_CORE;
+          
+  if ((tidlLayer->layerType == TIDL_ConvolutionLayer) && ((multiCoreMode & TIDL_MULTI_CORE_CHANNEL) == TIDL_MULTI_CORE_CHANNEL) && (curCoreIdx > startCoreIdx))
   {
     int32_t numInChannelsSplit = 0, numOutChannelsSplit = 0, numGroupSplit = 0;
     int32_t weightSize = TIDL_ALIGN_CEIL(tidlLayer->weightsElementSizeInBits, 8U) / 8U;
@@ -418,116 +361,6 @@ static void TIDL_setMultiCoreCoeffOffset(sTIDL_Layer_t *tidlLayer, sTIDL_AlgLaye
     algLayer->layerParams.convParams.biasMultiCoreExtraOffset = numGroupSplit * (numOutChannelsSplit / numGroupSplit);
   }
 #endif
-}
-
-static int32_t TIDL_layerInit(const TIDL_LayerSpecificParams *layerSpecificParams,
-                              const TIDL_NetworkCommonParams *commonParams,
-                              sTIDL_AlgLayer_t *algLayer,
-                              int32_t layerIdx,
-                              uint8_t *memory[TIDL_LAYER_MEMORY_MAX],
-                              int32_t memorySize[TIDL_LAYER_MEMORY_MAX],
-                              void **outPtr,
-                              const IALG_MemRec memRec[], //: TODO: Should be removed
-                              int32_t *paramMemTabOffset, //: TODO: Should be removed
-                              int32_t *dataMemTabOffset,  //: TODO: Should be removed
-                              TIDL_Handle algHandle)      //: TODO: Need to see why this was needed
-{
-  int32_t status = IALG_EOK;
-
-  const TIDL_CreateParams *createParams = commonParams->createParams;
-
-  uint32_t targetDevice = createParams->net->deviceName;
-  int32_t numSubHandles = 1U;
-  TIDL_forceTargetDeviceNonOTF(&targetDevice, createParams->net->TIDLLayers[layerIdx].layerType, -1);
-
-  /* Check if new GenericFlow is enabled for this layer */
-  //: TODO: this code will be removed once we completely migrate to workload based mechanism
-  int32_t isNewGenericFlow = TIDL_isNewGenericFlowEnabled(createParams, layerIdx);
-  if ((((uint32_t)createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == 0U) && (isNewGenericFlow != 0))
-  {
-    uint32_t numGenericFlowHandles = TIDL_getNumGenericFlowHandles(&createParams->net->TIDLLayers[layerIdx]);
-
-    for (int32_t j = 0; j < numGenericFlowHandles; j++)
-    {
-      /* Memory for KernelHandle is allocated next to GenericFlow handle so that
-          it is easy to copy them to L1D in a single DMA transfer in the Process call */
-      algLayer->kernelHandle[0][j] =
-          get_uint8_t_pointer((uint8_t *)(void *)memRec[ALG_LAYERS_PARAMS_BUFF_MEMREC].base, *paramMemTabOffset);
-      algLayer->kerHandleSize = TIDL_getKernelHandleSize(createParams, layerIdx, numSubHandles);
-      *paramMemTabOffset += algLayer->kerHandleSize;
-    }
-  }
-
-  if ((createParams->net->TIDLLayers[layerIdx].layerType == TIDL_DetectionOutputLayer) ||
-      (createParams->net->TIDLLayers[layerIdx].layerType == TIDL_OdPostProcessingLayer))
-  {
-    int32_t numODLayer = algHandle->numODLayer;
-    sODLayerInfo_t *odLayerInfo = algHandle->odLayerInfo;
-    if (TIDL_OBJ_DET_MAX_HEADS <= numODLayer)
-    {
-      /* tidl_printf(0,"OD Heads exceeds the max limit of %d - %d\n", TIDL_OBJ_DET_MAX_HEADS, numODLayer); */
-      TIDL_LOG_ERROR(TIDL_ERROR_GROUP_COMMON, TIDL_ERROR_COMMON_EXCEED_OBJ_DET_MAX_HEADS);
-      status = IALG_EFAIL;
-    }
-    else
-    {
-      odLayerInfo[numODLayer].i_OD = layerIdx;
-      odLayerInfo[numODLayer].algLayer_OD = algLayer;
-      status = TIDL_detectOutInit(createParams, layerIdx,
-                                  algLayer,
-                                  paramMemTabOffset, dataMemTabOffset,
-                                  memRec, outPtr, commonParams->TIDLLayersBufPtr);
-      numODLayer++;
-    }
-    algHandle->numODLayer = numODLayer;
-  }
-  /* LDRA_JUSTIFY_START
-  <metric start> statement branch <metric end>
-  <justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
-  and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
-  <justification end> */
-  else if ((createParams->net->TIDLLayers[layerIdx].layerType == TIDL_OdOutputReformatLayer))
-  {
-    status = TIDL_flattenInit(createParams, layerIdx,
-                              algLayer,
-                              paramMemTabOffset, dataMemTabOffset,
-                              memRec, outPtr, commonParams->TIDLLayersBufPtr);
-  }
-  /* LDRA_JUSTIFY_END */
-#if defined TIDL_COVERAGE_DEAD_CODE
-  else if (createParams->net->TIDLLayers[layerIdx].layerType == TIDL_RoiPoolingLayer)
-  {
-    status = TIDL_roiPoolingInit(createParams, layerIdx,
-                                 algLayer,
-                                 paramMemTabOffset, dataMemTabOffset,
-                                 memRec, outPtr, commonParams->TIDLLayersBufPtr);
-  }
-  else if ((createParams->net->TIDLLayers[layerIdx].layerType == TIDL_SqueezeLayer) ||
-           (createParams->net->TIDLLayers[layerIdx].layerType == TIDL_ReshapeLayer))
-  {
-    status = TIDL_flattenInit(createParams, layerIdx,
-                              algLayer,
-                              paramMemTabOffset, dataMemTabOffset,
-                              memRec, outPtr, commonParams->TIDLLayersBufPtr);
-  }
-  else if (createParams->net->TIDLLayers[layerIdx].layerType == TIDL_DataLayer)
-  {
-    /* Nothing is required to be done for data layers*/
-  }
-#endif
-  /* LDRA_JUSTIFY_START
-  <metric start> statement branch<metric end>
-  <justification start> NOT_IN_SCOPE : This condition implements the OD output reformat layer which is common for both tflite and onnx runtimes
-  and cannot be exercised from tidl-runtime(OSRT_SCOPE). Hence this file is justified not to include in tidl-runtime build.
-  <justification end> */
-  else
-  /* LDRA_JUSTIFY_END */
-  {
-    TIDL_LOG_ERROR(TIDL_ERROR_GROUP_COMMON, TIDL_ERROR_COMMON_UNSUPPORTED_LAYER);
-    status = IALG_EFAIL;
-  }
-
-  return status;
 }
 
 int32_t getLayerExecutionNumber(int32_t dataId, int32_t layerExecutionOrder[], int32_t numLayers)
@@ -583,6 +416,9 @@ int32_t TIDL_alloc(const IALG_Params *params,
   uint32_t memorySize[TIDL_LAYER_MEMORY_MAX] = {0};
   sWorkloadSuperGroup_t *wlSuperGrp = NULL;
   int32_t flag = 1;
+
+  /* TIDL_coverage_start is a ldra coverage tag to mark the start of coverage for TIDL */
+  TIDL_coverage_start();
 
   /* TIDL_odOutputReformat_dummyFunc is a dummy function to avoid unused function warning */
   TIDL_odOutputReformat_dummyFunc();
@@ -912,37 +748,17 @@ int32_t TIDL_alloc(const IALG_Params *params,
           layerSpecificParams.isMixedPrecEnabled = 1U;
 
           (void)memset(memorySize, 0, sizeof(memorySize));
-
+          
+          if (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_ALLOC_FORCE_LAYERTYPE_INVALID)
+          {
+            int32_t *playerType = &(commonParams.createParams->net->TIDLLayers[layerId].layerType);
+            *playerType = TIDL_UnsupportedLayer;
+          }
+          
           status = TIDL_layerAllocNew(&layerSpecificParams,
                                       &commonParams,
                                       layerId,
                                       (int32_t *)memorySize);
-
-#if ENABLE_OLD_FLOW
-          /* Go to old flow if new mapping is not available */
-          if (status == (int32_t)NOT_VALID)
-          {
-#if ENABLE_BACKWARDS_COMPATIBILITY
-            TIDL_CreateParams *createParamsCopy = (TIDL_CreateParams *)createParams;
-            int32_t flowCtrlOrig = createParams->flowCtrl;
-            if (gcOutArgs != NULL)
-              createParamsCopy->flowCtrl = TIDL_FLOW_CTRL_REF_ONLY;
-#endif
-            if (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_ALLOC_FORCE_LAYERTYPE_INVALID)
-            {
-              int32_t *playerType = &(commonParams.createParams->net->TIDLLayers[layerId].layerType);
-              *playerType = TIDL_UnsupportedLayer;
-            }
-            status = TIDL_layerAlloc(&layerSpecificParams,
-                                     &commonParams,
-                                     layerId,
-                                     (int32_t *)memorySize,
-                                     memRec); //: TODO: memRec shouldnt be used eventually
-#if ENABLE_BACKWARDS_COMPATIBILITY
-            createParamsCopy->flowCtrl = flowCtrlOrig;
-#endif
-          }
-#endif
 
           if (status != IALG_EOK)
           {
@@ -1108,7 +924,6 @@ int32_t TIDL_alloc(const IALG_Params *params,
 #endif
             {
 
-#if !ENABLE_BACKWARDS_COMPATIBILITY
             #ifdef HOST_EMULATION
               // Skip the ref scratch buffer reset when any layer is forced to ref
               if (hasForceRefLayer == 0U)
@@ -1118,9 +933,7 @@ int32_t TIDL_alloc(const IALG_Params *params,
             #else
                 memRec[ALG_REF_SCRATCH_BUFF_MEMREC].size = 128U;
             #endif
-#else
-              memRec[ALG_REF_OUTPUT_BUFF_MEMREC].size = (2U * sizeof(float32_tidl) * maxOutFeatMapSize) + TRACE_STRINGS_MEM_SIZE; /* Twice for input and output */
-#endif
+
               if (createParams->traceWriteLevel == 3)
               {
                 memRec[ALG_REF_OUTPUT_BUFF_MEMREC].size = (uint32_t)((sizeof(float32_tidl) + 1U) * (uint32_t)maxOutFeatMapSize) + TRACE_STRINGS_MEM_SIZE;
@@ -1215,9 +1028,11 @@ int32_t TIDL_alloc(const IALG_Params *params,
 /* memTab to allocate memory to backup context memory for pre-emption */
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             The condition check is deterministic and does not impact the safety or reliability of the system.
             Therefore, it is excluded from safety coverage requirements.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if (TIDL_checkIfPreEmptionEnabled(createParams) != 0)
             /* LDRA_JUSTIFY_END */
@@ -1229,9 +1044,11 @@ int32_t TIDL_alloc(const IALG_Params *params,
             }
             /* LDRA_JUSTIFY_START
             <metric start> statement branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
             The condition check is deterministic and does not impact the safety or reliability of the system.
             Therefore, it is excluded from safety coverage requirements.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             else
             {
@@ -1386,9 +1203,12 @@ int32_t TIDL_init(IALG_Handle handle,
                                      createParams->TIDLReadBinFromFile, createParams->traceBaseName);
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  <justification start>
+  Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
   This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
   TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
+  Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+  This does not affect runtime behavior or safety.
   <justification end> */
   if (status != IALG_EOK)
   {
@@ -1398,9 +1218,12 @@ int32_t TIDL_init(IALG_Handle handle,
   /* LDRA_JUSTIFY_END */
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  <justification start>
+  Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
   This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
   TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
+  Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+  This does not affect runtime behavior or safety.
   <justification end> */
   if (status == IALG_EOK)
   /* LDRA_JUSTIFY_END */
@@ -1454,9 +1277,12 @@ int32_t TIDL_init(IALG_Handle handle,
     algHandle->groupId = 0;
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+    <justification start>
+    Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
     This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
     TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_006
+    Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+    This does not affect runtime behavior or safety.
     <justification end> */
     if (algHandle->createParams->net->isGCInfoAvailable != 0)
     {
@@ -1837,12 +1663,6 @@ int32_t TIDL_init(IALG_Handle handle,
     algHandle->dmaChannelAllocContext.currChannelIdx = 0;
     algHandle->dmaChannelAllocContext.totalNumChannels = TIDL_DMA_CHANNEL_MEMCPY;
 
-    algHandle->numODLayer = 0;
-    if (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_INIT_FORCE_NUMODLAYER_INVALID)
-    {
-      algHandle->numODLayer = TIDL_OBJ_DET_MAX_HEADS;
-    }
-
     tidlCommonParams.dmaChannelAllocContext = &algHandle->dmaChannelAllocContext;
     tidlCommonParams.dmaUtilsContext = algHandle->dmaUtilsContext;
     tidlCommonParams.sysMems = &algHandle->sysMems[0];
@@ -2007,9 +1827,12 @@ int32_t TIDL_init(IALG_Handle handle,
         /* if (createParams->net->TIDLLayers[algLayer->inLayerIdx[j]].layerType != TIDL_DataLayer && gcHelperHandle != NULL) */
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+        <justification start>
+        Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
         This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
         TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_007
+        Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+        This does not affect runtime behavior or safety.
         <justification end> */
         if (gcHelperHandle != NULL)
         {
@@ -2086,9 +1909,12 @@ int32_t TIDL_init(IALG_Handle handle,
         algLayer->isOutData[j] = (int16_t)TIDL_isOutDataBuff(createParams->net, outDataId, createParams->currLayersGroupId);
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+        <justification start>
+        Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
         This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
         TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_007
+        Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+        This does not affect runtime behavior or safety.
         <justification end> */
         if (gcHelperHandle != NULL)
         {
@@ -2168,10 +1994,15 @@ int32_t TIDL_init(IALG_Handle handle,
 
         TIDL_setMultiCoreCoeffOffset(&(createParams->net->TIDLLayers[layerId]), algLayer, createParams->coreStartIdx, createParams->coreId, createParams->net->numCores);
         WorkloadRefExec_RefExecParams wlRefParams;
+
+        int32_t multiCoreMode = (algLayer->workloadUnit != NULL)
+                                  ? algLayer->workloadUnit->multiCoreMode
+                                  : TIDL_NOT_MULTI_CORE;
+
 #ifdef HOST_EMULATION
         /* TODO: Remove once workload migration is completed */
         if (((gcHelperHandle != NULL) && ((((uint32_t)createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY))) ||
-            (createParams->net->TIDLLayers[layerId].layerType == TIDL_ConvolutionLayer && (createParams->net->TIDLLayers[layerId].multiCoreMode & TIDL_MULTI_CORE_CHANNEL) == TIDL_MULTI_CORE_CHANNEL))
+            (createParams->net->TIDLLayers[layerId].layerType == TIDL_ConvolutionLayer && (multiCoreMode & TIDL_MULTI_CORE_CHANNEL) == TIDL_MULTI_CORE_CHANNEL))
         {
           sWorkloadUnit_t *pWLUnit = getWLUnitPtr(gcHelperHandle, currAlgLayer);
           TIDL_privSetTensorDimensions(algHandle->createParams, algHandle->alglayerParams, algLayer, pWLUnit,
@@ -2181,7 +2012,7 @@ int32_t TIDL_init(IALG_Handle handle,
 #endif
 #ifdef TIDL_DEVICE_MULTICORE
         if ((gcHelperHandle != NULL) &&
-            (createParams->net->TIDLLayers[layerId].layerType == TIDL_TransposeLayer && (createParams->net->TIDLLayers[layerId].multiCoreMode & TIDL_MULTI_CORE_BATCH) == TIDL_MULTI_CORE_BATCH))
+            (createParams->net->TIDLLayers[layerId].layerType == TIDL_TransposeLayer && (multiCoreMode & TIDL_MULTI_CORE_BATCH) == TIDL_MULTI_CORE_BATCH))
         {/* Batch dimension in Transpose Layer for multicore batch split will be set here, because the original batch dimension in layer property is coming as total batch of this layer.*/
           sWorkloadUnit_t *pWLUnit = getWLUnitPtr(gcHelperHandle, currAlgLayer);
           TIDL_privSetTensorDimensions(algHandle->createParams, algHandle->alglayerParams, algLayer, pWLUnit,
@@ -2194,6 +2025,13 @@ int32_t TIDL_init(IALG_Handle handle,
           layerSpecificParams.workloadUnit = NULL;
           commonParams.gcHelperHandle = NULL;
         }
+
+        if (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_INIT_FORCE_LAYERTYPE_INVALID)
+        {
+          int32_t *playerType = &(commonParams.createParams->net->TIDLLayers[layerId].layerType);
+          *playerType = TIDL_UnsupportedLayer;
+        }
+        
         status = TIDL_layerInitNew(&layerSpecificParams,
                                    &commonParams,
                                    algLayer,
@@ -2205,45 +2043,10 @@ int32_t TIDL_init(IALG_Handle handle,
 #ifdef HOST_EMULATION
         /*TODO: Remove after workload migration */
         if (((gcHelperHandle != NULL) && ((((uint32_t)createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY))) ||
-            (createParams->net->TIDLLayers[layerId].layerType == TIDL_ConvolutionLayer && (createParams->net->TIDLLayers[layerId].multiCoreMode & TIDL_MULTI_CORE_CHANNEL) == TIDL_MULTI_CORE_CHANNEL))
+            (createParams->net->TIDLLayers[layerId].layerType == TIDL_ConvolutionLayer && (multiCoreMode & TIDL_MULTI_CORE_CHANNEL) == TIDL_MULTI_CORE_CHANNEL))
         {
           TIDL_privRestoreTensorDimensions(algHandle->createParams, algLayer, wlRefParams.origInHeight, wlRefParams.origInCh, &wlRefParams.origGrp, wlRefParams.origInChPitch, wlRefParams.origInRoiPitch, wlRefParams.origInBatch,
                                           &wlRefParams.origOutHeight, &wlRefParams.origOutCh, &wlRefParams.origOutChPitch, &wlRefParams.origOutRoiPitch, &wlRefParams.origOutBatch);
-        }
-#endif
-
-#if ENABLE_OLD_FLOW
-        if (status == (int32_t)NOT_VALID)
-        {
-#if ENABLE_BACKWARDS_COMPATIBILITY
-          int32_t flowCtrlOrig = algHandle->createParams->flowCtrl;
-          TIDL_CreateParams *createParamsCopy = (TIDL_CreateParams *)commonParams.createParams;
-          if (perfInfoOut != NULL)
-          {
-            algHandle->createParams->flowCtrl = TIDL_FLOW_CTRL_REF_ONLY;
-            createParamsCopy->flowCtrl = TIDL_FLOW_CTRL_REF_ONLY;
-          }
-#endif
-          if (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_INIT_FORCE_LAYERTYPE_INVALID)
-          {
-            int32_t *playerType = &(commonParams.createParams->net->TIDLLayers[layerId].layerType);
-            *playerType = TIDL_UnsupportedLayer;
-          }
-          status = TIDL_layerInit(&layerSpecificParams,
-                                  &commonParams,
-                                  algLayer,
-                                  layerId,
-                                  memory,
-                                  memorySize,
-                                  outPtr,
-                                  memRec,
-                                  (int32_t *)&paramMemTabOffset,
-                                  (int32_t *)&dataMemTabOffset,
-                                  algHandle); //: TODO: memRec shouldnt be used eventually
-#if ENABLE_BACKWARDS_COMPATIBILITY
-          algHandle->createParams->flowCtrl = flowCtrlOrig;
-          createParamsCopy->flowCtrl = flowCtrlOrig;
-#endif
         }
 #endif
 
@@ -2427,7 +2230,9 @@ int32_t TIDL_init(IALG_Handle handle,
       IALG_MemRec *pMemRec = (IALG_MemRec *)TIDL_getContextMemRec(algHandle);
       /* LDRA_JUSTIFY_START
       <metric start> branch <metric end>
-      <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      <justification start>
+      Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
       <justification end> */
       if (pMemRec != NULL)
       {
@@ -2436,14 +2241,18 @@ int32_t TIDL_init(IALG_Handle handle,
         algHandle->preEmptContextInfo.contextMemSize = (int32_t)pMemRec->size;
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if (gcOut != NULL)
         {
           /* LDRA_JUSTIFY_END */
           /* LDRA_JUSTIFY_START
           <metric start> branch <metric end>
-          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification start>
+          Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
           <justification end> */
           /* Initialize preemption handle */
           if (status == IALG_EOK)
@@ -2469,7 +2278,9 @@ int32_t TIDL_init(IALG_Handle handle,
       } // pMemRec
       /* LDRA_JUSTIFY_START
       <metric start> statement branch <metric end>
-      <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      <justification start>
+      Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
       <justification end> */
       else
       {
@@ -2490,16 +2301,8 @@ int32_t TIDL_init(IALG_Handle handle,
       (void)memset((void *)syncPtr, TIDL_SYNC_WL_STATE_DEFAULT, (uint64_t)TIDL_GLOBAL_SYNC_OFFSET * sizeof(int8_t));
     }
 #endif
-    int32_t numODLayer = algHandle->numODLayer;
-    sODLayerInfo_t *odLayerInfo = algHandle->odLayerInfo;
     sTIDL_Network_t *origNet = createParams->net;
-#if ENABLE_BACKWARDS_COMPATIBILITY
-    int32_t flowCtrlOrig = algHandle->createParams->flowCtrl;
-    if (perfInfoOut != NULL)
-    {
-      algHandle->createParams->flowCtrl = TIDL_FLOW_CTRL_REF_ONLY;
-    }
-#endif
+
     if (algHandle->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_MOVENET_ALGLAYERPARAMS_NULL)
     {
       algHandle->createParams->net->netInitBackupDataOffset[0] = 1;
@@ -2508,17 +2311,7 @@ int32_t TIDL_init(IALG_Handle handle,
     status = TIDL_MoveNetToPrivateMemory(algHandle, memRec, relativeCoreId);
     if (status == IALG_EOK)
     {
-      // Need to do init again specifically for OD as the parameters are assigned quite a lot
-      while (numODLayer > 0)
-      {
-        numODLayer--;
-        status = TIDL_odFindValidLocAndScoreKernelInit(algHandle->createParams,
-                                                       odLayerInfo[numODLayer].algLayer_OD,
-                                                       &algHandle->createParams->net->TIDLLayers[odLayerInfo[numODLayer].i_OD], 0, 0, 0);
-      }
-#if ENABLE_BACKWARDS_COMPATIBILITY
-      algHandle->createParams->flowCtrl = flowCtrlOrig;
-#endif
+
       /*-----------------------------------------------------------------------*/
       /* State to indicate that internal context of algorithm is not active    */
       /*-----------------------------------------------------------------------*/
@@ -2674,7 +2467,9 @@ else
 /* LDRA_JUSTIFY
 <metric start> statement branch <metric end>
 <function start> int32_t TIDL_control.* <function end>
-<justification start> NOT_IN_SCOPE: This code is not in scope for single core SOC
+<justification start>
+Rationale - NOT_IN_SCOPE: This code is not in scope for single core SOC
+Effect on this UNIT - Code prevents the software executing code which is not in scope and maintain system predictability and integrity.
 <justification end> */
 int32_t TIDL_control(IVISION_Handle Handle,
                      IALG_Cmd cmd,
@@ -2756,10 +2551,8 @@ int32_t TIDL_control(IVISION_Handle Handle,
   }
   return (status);
 }
-
-#ifdef PERF_MODELLING
-  #define INTERNAL_PROFILING
-#endif
+/* Disabling INTERNAL_PROFILING by default*/
+/* #define INTERNAL_PROFILING */
 #ifdef INTERNAL_PROFILING
 typedef struct
 {
@@ -2828,90 +2621,6 @@ void TIDL_printProfileData(
 }
 
 #endif
-/**
- * @brief This is the layer processing function and should be called
- *          for each layer process.
- *
- * @param intAlgHandle  : Algorithm Instance handle
- * @param algLayer : This structure contains the layer specific parameters
- * @param TIDLLayer : This structure contains the common layer parameters
- *          in TIDL
- * @param inPtrs : Input Buffer Pointers
- * @param outPtrs : Output Buffer Pointers descriptor
- * @param sysMems : This structure has the system memory handles in TIDL
- * @param i : Layer number to be processed
- * @return int32_t : return value
- */
-int32_t TIDL_layerProcess(
-    TIDL_Handle intAlgHandle,
-    sTIDL_AlgLayer_t *algLayer,
-    sTIDL_Layer_t *TIDLLayer,
-    void *inPtrs[],
-    void *outPtrs[],
-    sTIDL_sysMemHandle_t *sysMems,
-    int32_t i,
-    TIDL_NetworkCommonParams *commonParams)
-{
-  int32_t status = IALG_EOK;
-  if (commonParams->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_LAYERPROCESS_FORCE_REDUCELAYER_NULL)
-  {
-    intAlgHandle->perfSimOutput = NULL;
-  }
-  if ((TIDLLayer->layerType == TIDL_DetectionOutputLayer) || (TIDLLayer->layerType == TIDL_OdPostProcessingLayer))
-  {
-    status = TIDL_detectionOutputProcess(intAlgHandle, algLayer, TIDLLayer, inPtrs, outPtrs, sysMems);
-  }
-#if defined TIDL_COVERAGE_DEAD_CODE
-  else if (TIDLLayer->layerType == TIDL_RoiPoolingLayer)
-  {
-    status = TIDL_roiPoolingProcess(intAlgHandle, algLayer, TIDLLayer, inPtrs, outPtrs, sysMems);
-  }
-#endif
-  /* LDRA_JUSTIFY_START
-  <metric start> statement branch <metric end>
-  <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
-  <justification end> */
-  else if (TIDLLayer->layerType == TIDL_OdOutputReformatLayer)
-  {
-    status = TIDL_odOutputReformatProcess(intAlgHandle, algLayer, TIDLLayer, inPtrs, outPtrs, sysMems);
-  }
-  /* LDRA_JUSTIFY_END */
-#if defined TIDL_COVERAGE_DEAD_CODE
-  else if (TIDLLayer->layerType == TIDL_SqueezeLayer)
-  {
-    // copy input data to output buffer. NC can allocate output and input buffer same
-    status = TIDL_squeezeProcess(intAlgHandle, algLayer, TIDLLayer, inPtrs, outPtrs, sysMems);
-  }
-#endif
-  /* LDRA_JUSTIFY_START
-  <metric start> statement branch <metric end>
-  <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
-  <justification end> */
-  else if (TIDLLayer->layerType == TIDL_ReshapeLayer)
-  /* LDRA_JUSTIFY_END */
-  {
-    /*Copy the data for reference flow if perfsimInfo not available*/
-    if (intAlgHandle->perfSimOutput == NULL)
-    {
-      int32_t cpSize = TIDLLayer->outData.dimValues[TIDL_DIM_BATCH] * TIDLLayer->outData.pitch[TIDL_ROI_PITCH];
-      int32_t outElementSize = TIDL_getDatElementSize(TIDLLayer->outData.elementType);
-
-      (void)memcpy((void *)((size_t)outPtrs[0]), (void *)((size_t)inPtrs[0]), outElementSize * cpSize);
-    }
-  }
-  /* LDRA_JUSTIFY_START
-  <metric start> statement branch <metric end>
-  <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
-  <justification end> */
-  else
-  {
-    TIDL_LOG_ERROR(TIDL_ERROR_GROUP_COMMON, TIDL_ERROR_COMMON_UNSUPPORTED_LAYER);
-    status = IALG_EFAIL;
-  }
-  /* LDRA_JUSTIFY_END */
-  TIDL_L1DandL2CacheWbInv();
-  return (status);
-}
 
 /**
 ----------------------------------------------------------------------------
@@ -3000,9 +2709,12 @@ int32_t TIDL_process(IVISION_Handle Handle,
 
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  <justification start>
+  Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
   This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
   TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002
+  Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+  This does not affect runtime behavior or safety.
   <justification end> */
   if (status != IALG_EOK)
   {
@@ -3025,9 +2737,12 @@ int32_t TIDL_process(IVISION_Handle Handle,
 
       /* LDRA_JUSTIFY_START
       <metric start> statement branch <metric end>
-      <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+      <justification start>
+      Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
       This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
       TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_004
+      Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+      This does not affect runtime behavior or safety.
       <justification end> */
       if (intAlgHandle != NULL)
       /* LDRA_JUSTIFY_END */
@@ -3036,9 +2751,12 @@ int32_t TIDL_process(IVISION_Handle Handle,
       }
       /* LDRA_JUSTIFY_START
       <metric start> statement branch <metric end>
-      <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+      <justification start>
+      Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
       This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
       TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_004
+      Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+      This does not affect runtime behavior or safety.
       <justification end> */
       else
       {
@@ -3048,9 +2766,12 @@ int32_t TIDL_process(IVISION_Handle Handle,
       /* LDRA_JUSTIFY_END */
       /* LDRA_JUSTIFY_START
       <metric start> branch <metric end>
-      <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+      <justification start>
+      Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
       This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
       TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_004
+      Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+      This does not affect runtime behavior or safety.
       <justification end> */
       if (status == IALG_EOK)
       {
@@ -3100,7 +2821,6 @@ int32_t TIDL_process(IVISION_Handle Handle,
           }
 
 // Remove this deadcode one dynamic input is enabled
-#if defined TIDL_COVERAGE_DEAD_CODE
 #if defined TIDL_DYNAMIC_SHAPE
 
            /*
@@ -3135,7 +2855,6 @@ int32_t TIDL_process(IVISION_Handle Handle,
              * layer with NHWC format.
              */
           }
-#endif
 #endif
 
 #if defined TIDL_COVERAGE_DEAD_CODE
@@ -3311,7 +3030,9 @@ int32_t TIDL_process(IVISION_Handle Handle,
             numCores = algHandle->createParams->net->numCores;
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if (workloadUnit != NULL)
             {
@@ -3340,14 +3061,6 @@ int32_t TIDL_process(IVISION_Handle Handle,
           algLayer = get_AlgLayer_t_pointer(algHandle->alglayerParams, currAlgLayer);
           intAlgHandle->alglayerParams[currAlgLayer].metaData.layerExecId = algLayer->layerIdx;
           intAlgHandle->currAlgLayer = currAlgLayer;
-
-#if ENABLE_BACKWARDS_COMPATIBILITY
-          int32_t flowCtrlOrig = intAlgHandle->createParams->flowCtrl;
-          if (algLayer->workloadUnit == NULL)
-          {
-            intAlgHandle->createParams->flowCtrl = TIDL_FLOW_CTRL_REF_ONLY;
-          }
-#endif
           
           int32_t isRestoreHeightsRequired = 0;
 
@@ -3488,9 +3201,12 @@ int32_t TIDL_process(IVISION_Handle Handle,
               {
                 /* LDRA_JUSTIFY_START
                 <metric start> branch <metric end>
-                <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+                <justification start>
+                Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
                 This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
                 TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_001
+                Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+                This does not affect runtime behavior or safety.
                 <justification end> */                
                 if (algLayer->gcHelperHandle != NULL)
                 /* LDRA_JUSTIFY_END */                
@@ -3529,7 +3245,9 @@ int32_t TIDL_process(IVISION_Handle Handle,
                   /* Temporary fix for supertiling ref flow traces. Needs update for supertiling with low latency */
                   /* LDRA_JUSTIFY_START
                   <metric start> branch <metric end>
-                  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  <justification start>
+                  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+                  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                   <justification end> */
                   if((intAlgHandle->createParams->net->inferenceMode  != (int32_t)TIDL_inferenceModeLowLatency))
                   /* LDRA_JUSTIFY_END */
@@ -3573,9 +3291,6 @@ int32_t TIDL_process(IVISION_Handle Handle,
               //: TODO: Need to handle copying persistent weights when group changes
               intAlgHandle->groupId = getLayerIdContext.groupIdx;
 
-#if ENABLE_BACKWARDS_COMPATIBILITY
-              intAlgHandle->createParams->flowCtrl = flowCtrlOrig;
-#endif
               TIDL_getTscTime(&tEnd);
 
               TIDL_updateprofileData(intAlgHandle->alglayerParams[currAlgLayer].metaData.profilePoint, TIDL_PROFILE_LAYER, tStart, tEnd);
@@ -3603,7 +3318,9 @@ int32_t TIDL_process(IVISION_Handle Handle,
             numCores = algHandle->createParams->net->numCores;
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if (workloadUnit != NULL)
             {
@@ -3696,9 +3413,12 @@ int32_t TIDL_process(IVISION_Handle Handle,
 #endif
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+    <justification start>
+    Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
     This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
     TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_001
+    Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+    This does not affect runtime behavior or safety.
     <justification end> */
     if ((status == IALG_EOK) && (intAlgHandle != NULL))
     {
@@ -3775,9 +3495,12 @@ int32_t TIDL_process(IVISION_Handle Handle,
     }
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+    <justification start>
+    Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
     This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
     TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_003
+    Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+    This does not affect runtime behavior or safety.
     <justification end> */
     else
     {
@@ -3811,9 +3534,11 @@ void TIDL_activate(IALG_Handle handle)
   int32_t status = IALG_EOK;
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
   The condition check is deterministic and does not impact the safety or reliability of the system.
   Therefore, it is excluded from safety coverage requirements.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if (algHandle->algState == (uint8_t)ALG_NOT_ACTIVE)
   {
@@ -3852,7 +3577,10 @@ void TIDL_activate(IALG_Handle handle)
                              algHandle->memcpyTr);
       /* LDRA_JUSTIFY_START
       <metric start> branch <metric end>
-      <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+      <justification start>
+      Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+      Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+      This does not impact functional correctness or safety.
       <justification end> */
       if (status == IALG_EOK)
       {
@@ -3863,7 +3591,10 @@ void TIDL_activate(IALG_Handle handle)
         status = TIDL_copyPersistentWeightsToIntMem(intAlgHandle);
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        <justification start>
+        Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
+        Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+        This does not impact functional correctness or safety.
         <justification end> */
         if (status == IALG_EOK)
         {
@@ -3927,9 +3658,12 @@ void TIDL_deactivate(IALG_Handle handle)
 
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  <justification start>
+  Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
   This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
   TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_005
+  Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+  This does not affect runtime behavior or safety.
   <justification end> */
   if (algHandle->algState == (uint8_t)ALG_ACTIVE)
   {
@@ -3960,9 +3694,12 @@ void TIDL_deactivate(IALG_Handle handle)
 
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+    <justification start>
+    Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
     This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
     TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_004
+    Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+    This does not affect runtime behavior or safety.
     <justification end> */
     if (NULL != intAlgHandle)
     {
@@ -3987,9 +3724,12 @@ void TIDL_deactivate(IALG_Handle handle)
 #endif
       /* LDRA_JUSTIFY_START
       <metric start> branch <metric end>
-      <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+      <justification start>
+      Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
       This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
       TIDL_LDRA_TAG : TIDL_LDRA_TAG_ALG_PRIOR_CHECK_005
+      Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+      This does not affect runtime behavior or safety.
       <justification end> */
       /* Release the dma resources*/
       if (intAlgHandle->dmaUtilsContext != NULL)

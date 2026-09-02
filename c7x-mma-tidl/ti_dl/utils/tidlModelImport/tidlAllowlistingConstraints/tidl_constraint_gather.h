@@ -69,12 +69,14 @@ const vector<TidlConstraint> tidlConstraintGather = {
      * Indice data should be 1D (W or 1xW or 1x1xW etc)
      */
     TIDL_CSTR(
-        "Input dimensions must be greater than 1D",
-        "Input dimensions must be greater than 1D",
-        "Input dimensions must be greater than 1D",
+        "Input data dimensions must be greater than 1D",
+        "Input data dimensions must be greater than 1D",
+        "Input data dimensions must be greater than 1D",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
-            int32_t inDataDim = md.varTensorsDims[0].size();
+            int32_t inDataDim = (md.numConstInputs > 0 && md.constTensorIndices[0] == 0)
+                                ? (int32_t)md.constTensorsDims[0].size()
+                                : (int32_t)md.varTensorsDims[0].size();
 
             if (inDataDim < 2)
             {
@@ -101,51 +103,45 @@ const vector<TidlConstraint> tidlConstraintGather = {
         }
     ),
     TIDL_CSTR(
-        "Data cannot be a constant. Only indices can be constant.",
-        "Data cannot be a constant. Only indices can be constant.",
-        "Data cannot be a Constant. Only indices can be constant.",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
-            if(md.numConstInputs > 0)
-            {
-                int constTensorIdx = md.constTensorIndices[0];
-                if (constTensorIdx == 0)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-    ),
-    TIDL_CSTR(
         "Input shape of dimension higher than axis should be 1",
         "Input shape of dimension higher than axis should be 1",
         "Input shape of dimension higher than axis should be 1",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
             int32_t axis = layer->layerParams.gatherParams.axis;
-            int32_t offset = TIDL_DIM_MAX - md.varTensorsDims[0].size();
+
+            bool dataIsConst = (md.numConstInputs > 0 && md.constTensorIndices[0] == 0);
+            vector<int32_t> dataDims    = dataIsConst ? md.constTensorsDims[0] : md.varTensorsDims[0];
             vector<int32_t> indicesDims;
-            int32_t isIndicesConst = 0;
+            if (dataIsConst)
+            {
+                if (md.numVarInputs > 0) indicesDims = md.varTensorsDims[0];
+            }
+            else if (md.numConstInputs >= 1)
+            {
+                indicesDims = md.constTensorsDims[0];
+            }
+
+            int32_t offset = TIDL_DIM_MAX - (int32_t)dataDims.size();
 
             if(md.numConstInputs >= 1)
             {
-                indicesDims = md.constTensorsDims[0];
-
                 /*
                  * If axis dimension shape is 1 and indices have only one value
                  * i.e. 0 then this can be converted to reshape
                  */
-                if(md.varTensorsDims[0][axis - offset] == 1 && ((indicesDims.size() == 0) || (indicesDims.size() == 1 && indicesDims[0] == 1)))
+                if((int32_t)dataDims.size() > (axis - offset) &&
+                   dataDims[axis - offset] == 1 &&
+                   ((indicesDims.size() == 0) || (indicesDims.size() == 1 && indicesDims[0] == 1)))
                 {
                     return true;
                 }
 
                 /*
-                 * If indices is a single/contiguous value, then it is converted
-                 * to slice
+                 * If indices is const and contiguous, it can be converted to slice.
+                 * Only valid when indices is the const input (weights.ptr holds indices).
                  */
-                if (layer->weights.ptr != NULL && layer->weights.bufSize >= 1)
+                if (!dataIsConst && layer->weights.ptr != NULL && layer->weights.bufSize >= 1)
                 {
                     int32_t *idxPtr = (int32_t*)layer->weights.ptr;
 
@@ -169,9 +165,9 @@ const vector<TidlConstraint> tidlConstraintGather = {
 
             if(layer->optimized == 0 && axis != TIDL_DIM_WIDTH)
             {
-                for(int32_t i = 0; (i < (axis - offset) && i < md.varTensorsDims[0].size()); i++)
+                for(int32_t i = 0; (i < (axis - offset) && i < (int32_t)dataDims.size()); i++)
                 {
-                    if(md.varTensorsDims[0][i] != 1)
+                    if(dataDims[i] != 1)
                     {
                         return false;
                     }
@@ -186,20 +182,25 @@ const vector<TidlConstraint> tidlConstraintGather = {
         "Only 1D indices are supported",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
-            int32_t axis = layer->layerParams.gatherParams.axis;
-            int32_t offset = TIDL_DIM_MAX - md.varTensorsDims[0].size();
+            bool dataIsConst = (md.numConstInputs > 0 && md.constTensorIndices[0] == 0);
             vector<int32_t> indicesDims;
-            if(md.numVarInputs > 1)
+            if (md.numVarInputs > 1)
             {
                 indicesDims = md.varTensorsDims[1];
             }
-            else if(md.numConstInputs >= 1)
+            else if (dataIsConst && md.numVarInputs >= 1)
             {
+                // data is const, indices is var
+                indicesDims = md.varTensorsDims[0];
+            }
+            else if (!dataIsConst && md.numConstInputs >= 1)
+            {
+                // data is var, indices is const
                 indicesDims = md.constTensorsDims[0];
             }
             if (indicesDims.size() > 0)
             {
-                for(int32_t i = 0; i < indicesDims.size() - 1; i++)
+                for(int32_t i = 0; i < (int32_t)indicesDims.size() - 1; i++)
                 {
                     if(indicesDims[i] != 1)
                     {

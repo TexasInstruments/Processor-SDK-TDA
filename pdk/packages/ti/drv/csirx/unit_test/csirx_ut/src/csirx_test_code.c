@@ -184,6 +184,84 @@ int32_t Csirx_captureTest(CsirxTestTaskObj *taskObj)
     return retVal;
 }
 
+/** \brief  Capture test that runs without a timestamp callback registered. */
+int32_t Csirx_captureTestNoTimestamp(CsirxTestTaskObj *taskObj)
+{
+    int retVal = FVID2_SOK;
+    uint32_t chIdx;
+    CsirxInstObj *instObj;
+    Fvid2_TimeStampParams tsParams;
+
+    retVal += App_init(taskObj);
+    if (FVID2_SOK != retVal)
+    {
+        GT_0trace(gAppTrace, GT_ERR,
+                  APP_NAME ": [ERROR]App_init() FAILED!!!\r\n");
+    }
+    if (FVID2_SOK == retVal)
+    {
+        retVal += App_create(taskObj);
+        if (FVID2_SOK != retVal)
+        {
+            GT_0trace(gAppTrace, GT_ERR,
+                      APP_NAME ": [ERROR]App_create() FAILED!!!\r\n");
+        }
+    }
+    if (FVID2_SOK == retVal)
+    {
+        /* Clear the timestamp function */
+        tsParams.timeStampFxn = NULL_PTR;
+        (void)Fvid2_control(taskObj->drvHandle,
+                            FVID2_REGISTER_TIMESTAMP_FXN,
+                            &tsParams,
+                            NULL);
+    }
+    if (FVID2_SOK == retVal)
+    {
+        retVal += App_csiTest(taskObj);
+        if (FVID2_SOK != retVal)
+        {
+            GT_0trace(gAppTrace, GT_ERR,
+                      APP_NAME ": [ERROR]App_csiTest() FAILED!!!\r\n");
+        }
+    }
+    if (FVID2_SOK == retVal)
+    {
+        retVal += App_delete(taskObj);
+        if (FVID2_SOK != retVal)
+        {
+            GT_0trace(gAppTrace, GT_ERR,
+                      APP_NAME ": [ERROR]App_delete() FAILED!!!\r\n");
+        }
+    }
+
+    GT_0trace(gAppTrace, GT_INFO,
+              "=============================================================\r\n");
+    GT_0trace(gAppTrace, GT_INFO,
+              " ::Frames per seconds information for channels::\r\n");
+    GT_0trace(gAppTrace, GT_INFO,
+              " |Inst ID   |Channel ID|Frames received|Error Frames|  FPS  |\r\n");
+    instObj = &taskObj->instObj;
+    for (chIdx = 0U ; chIdx < instObj->instCfgInfo->numCh ; chIdx++)
+    {
+        float fps = instObj->chObj[chIdx].fps;
+        GT_6trace(gAppTrace, GT_INFO,
+                  " |%d         |%d         |%d            |%d           | %u.%u |\r\n",
+          instObj->instCfgInfo->csiDrvInst,
+          chIdx,
+          instObj->chObj[chIdx].captFrames,
+          instObj->chObj[chIdx].captErrFrames,
+          (uint32_t)fps,
+          (fps - (uint32_t)fps)*100U);
+    }
+    GT_0trace(gAppTrace, GT_INFO,
+              "=============================================================\r\n");
+
+    taskObj->testResult = retVal;
+
+    return retVal;
+}
+
 static int32_t App_init(CsirxTestTaskObj *taskObj)
 {
     int32_t retVal = FVID2_SOK;
@@ -332,7 +410,7 @@ static int32_t App_csiTest(CsirxTestTaskObj *taskObj)
     {
         senCfg.usePatternGen = 0;
     }
-    
+
     senCfg.numDataLanes = taskObj->instObj.instCfgInfo->instCfg->numDataLanes;
     for (vcNumCnt = 0U; vcNumCnt < senCfg.numCh ; vcNumCnt++)
     {
@@ -633,7 +711,7 @@ static Bool App_continueCapture(CsirxTestTaskObj *taskObj)
     for (chIdx = 0U ;chIdx <  instObj->instCfgInfo->numCh ; chIdx++)
     {
         if ((instObj->chObj[chIdx].captFrames <
-             instObj->chObj[chIdx].chCfgInfo->numCaptFrames) && 
+             instObj->chObj[chIdx].chCfgInfo->numCaptFrames) &&
             (instObj->chObj[chIdx].captErrFrames < instObj->chObj[chIdx].chCfgInfo->numCaptFrames))
         {
             break;

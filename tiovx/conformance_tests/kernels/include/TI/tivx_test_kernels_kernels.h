@@ -170,6 +170,11 @@ extern "C" {
  */
 #define TIVX_KERNEL_MULTI_DSP_NOT_NOT_NAME     "com.ti.test_kernels.multi_dsp_not_not"
 
+/*! \brief test_error_info kernel name
+ *  \see group_vision_function_test_kernels
+ */
+#define TIVX_KERNEL_TEST_ERROR_INFO_NAME     "com.ti.test_kernels.test_error_info"
+
 /*! End of group_vision_function_test_kernels */
 
 /*!

@@ -188,8 +188,11 @@ int32_t TIDL_lstmRefInit(const TIDL_LayerSpecificParams *layerSpecificParams,
 
   TIDL_updateLSTMMemorySizes(layerSpecificParams, commonParams, layerIdx, &scratchDataSize, &outDataSize, memorySize);
   /* LDRA_JUSTIFY_START
-  <metric start> branch <metric end>
-  <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  <metric start> branch <metric end>
+  <justification start> 
+  Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+  Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+  This does not affect runtime behavior or safety.
   <justification end> */
   if (outPtr != NULL )
   {
@@ -1041,6 +1044,549 @@ template<class Tin, class Tout> static int32_t TIDL_refLSTMCoreFloat(
   return status;
 }
 
+template<class T>
+void TIDL_Compute_Activation(T *ptr, int32_t size, 
+  float32_tidl Sx, int32_t Zx, 
+  float32_tidl Sy, int32_t Zy, 
+  int32_t activationType, 
+  float32_tidl activation_alpha, float32_tidl activation_beta, 
+  bool useTaylor)
+{
+  for(int32_t i = 0; i < size; i++)
+  {
+    float32_tidl dequantizedVal = ((float32_tidl)ptr[i] - Zx) / Sx;
+    float32_tidl activatedVal = TIDL_lstmActivation(dequantizedVal, activationType, activation_alpha, activation_beta, 0, 0, useTaylor);
+    ptr[i] = (T)(roundf(activatedVal * Sy) + Zy);
+  }
+}
+
+template<class T1, class T2, class Tacc>
+void TIDL_MMA_EltWiseSum(T1 *A, T2 *B, Tacc *acc, int32_t size) {
+  for(int32_t i = 0; i < size; i++)
+  {
+    acc[i] = (Tacc)A[i] + (Tacc)B[i];
+  }
+}
+
+template<class T1, class T2, class Tacc>
+void TIDL_MMA_EltWiseProduct(T1 *A, T2 *B, Tacc *acc, int32_t size) {
+  for(int32_t i = 0; i < size; i++)
+  {
+    acc[i] = (Tacc)A[i] * (Tacc)B[i];
+  }
+}
+
+template<class Ta, class Tb, class Tacc>
+void TIDL_MMA_Matmul(Ta *A, Tb *B, Tacc *bias, Tacc *out, int32_t inRows, int32_t inCols, int32_t outCols, bool transB = false)
+{
+  for(int32_t i = 0; i < inRows; i++)
+  {
+    for(int32_t j = 0; j < outCols; j++)
+    {
+      Tacc sum = 0;
+      for(int32_t k = 0; k < inCols; k++)
+      {
+        if(transB)
+        {
+          sum += (Tacc)A[i*inCols + k] * (Tacc)B[j*inCols + k];
+        }
+        else
+        {
+          sum += (Tacc)A[i*inCols + k] * (Tacc)B[k*outCols + j];
+        }
+      }
+      if(bias != NULL)
+      {
+        sum += bias[j];
+      }
+      out[i*outCols + j] = sum;
+    }
+  }
+}
+
+template<class Tin, class Tout, class T>
+void TIDL_MMA_Saturate(Tin *inPtr, Tout *outPtr, int32_t size)
+{
+  int32_t minVal = std::numeric_limits<T>::min();
+  int32_t maxVal = std::numeric_limits<T>::max();
+
+  for(int32_t i = 0; i < size; i++)
+  {
+    int32_t val = (int32_t)inPtr[i];
+    if(val < minVal)
+    {
+      outPtr[i] = (Tout)minVal;
+    }
+    else if(val > maxVal)
+    {
+      outPtr[i] = (Tout)maxVal;
+    }
+    else
+    {
+      outPtr[i] = (Tout)val;
+    }
+  }
+}
+
+template<class T, class Tacc>
+void TIDL_MMA_ScaleAndShift(T *ptr, int32_t size, uint8_t scale, uint8_t shift)
+{
+  for(int32_t i = 0; i < size; i++)
+  {
+    Tacc val = ((Tacc)ptr[i] * scale) >> shift;
+    ptr[i] = (T)val;
+  }
+}
+
+/* Round-half-up scale/shift + saturation — matches MMALIB matmul output behavior */
+template<class T, class Tacc, class Tsat>
+void TIDL_MMA_ScaleShiftRound(T *ptr, int32_t size, uint8_t scale, uint8_t shift)
+{
+  for(int32_t i = 0; i < size; i++)
+  {
+    Tacc scaled = (Tacc)ptr[i] * scale;
+    ptr[i] = (T)TIDL_roundSatMMA(scaled, shift,
+                                  std::numeric_limits<Tsat>::min(),
+                                  std::numeric_limits<Tsat>::max());
+  }
+}
+
+
+template<class Tin, class Tw, class Th, class Tc, class Tout, class Tacc> static int32_t TIDL_refLSTMCoreFixed(
+    Tin *inPtr,
+    Tw *WPtr,
+    Tw *RPtr,
+    Tacc *biasPtr,
+    Th *initial_hPtr,
+    Tc *initial_cPtr,
+    Tw *peepholesPtr,
+    Tout *outPtr,
+    TIDL_Handle intAlgHandle,
+    int32_t layerIdx,
+    sTIDL_LSTMParams_t *params,
+    sTIDL_AlgLayer_t *algLayer,
+    const sTIDL_DataParams_t *inDataParams,
+    const sTIDL_DataParams_t *WParams,
+    const sTIDL_DataParams_t *RParams,
+    const sTIDL_DataParams_t *biasParams,
+    const sTIDL_DataParams_t *initial_hParams,
+    const sTIDL_DataParams_t *initial_cParams,
+    const sTIDL_DataParams_t *peepholesParams,
+    const sTIDL_DataParams_t *outDataParams,
+    int8_t useTaylor)
+{
+  int32_t status = IALG_EOK;
+  sTIDL_Network_t *net = intAlgHandle->createParams->net;
+  int32_t hidden_size = params->hidden_size;
+  int32_t direction = params->direction;
+  int32_t layout = params->layout;
+  int32_t input_forget = params->input_forget;
+  int8_t isClipSet = params->isClipSet;
+  float32_tidl clip = params->clip;
+  
+  /* Determine number of directions */
+  int32_t num_directions = 1;
+  #if defined TIDL_COVERAGE_DEAD_CODE
+  if (direction == TIDL_RecurrentBidirectional)
+  {
+    num_directions = 2;
+  }
+  #endif
+
+  /* Extract batch_size, seq_length from input dimensions based on layout */
+  int32_t batch_size, seq_length, input_size;
+  if (layout == 0)
+  {
+    /* X: [seq_length, batch_size, input_size] */
+    seq_length = inDataParams->dimValues[TIDL_DIM_NUMCH];
+    batch_size = inDataParams->dimValues[TIDL_DIM_HEIGHT];
+    input_size = inDataParams->dimValues[TIDL_DIM_WIDTH];
+  }
+  else
+  {
+    /* X: [batch_size, seq_length, input_size] */
+    batch_size = inDataParams->dimValues[TIDL_DIM_NUMCH];
+    seq_length = inDataParams->dimValues[TIDL_DIM_HEIGHT];
+    input_size = inDataParams->dimValues[TIDL_DIM_WIDTH];
+  }
+
+  int32_t *sequence_lens = NULL;
+  if (params->sequence_lens != 0)
+  {
+    sequence_lens = (int32_t *)get_int8_t_pointer((int8_t *)net, params->sequence_lens);
+  }
+
+  /* Scratch layout: Ht[bh] + Ct[bh] + gates[4*h] */
+  int32_t requiredScratchSize = ((2 * batch_size * hidden_size) + (4 * hidden_size)) * sizeof(Tin);
+  if(algLayer->scratchSize < requiredScratchSize)
+  {
+    tidl_printf(0, "Memory for TIDL_refLSTMCoreFloat accumulator is not sufficient exiting...\n");
+    status = IALG_EFAIL;
+  }
+
+  uint8_t *mmaScales = (uint8_t *)get_int8_t_pointer((int8_t *)net, params->derivedScales);
+  uint8_t *mmaShifts = (uint8_t *)get_int8_t_pointer((int8_t *)net, params->derivedShifts);
+  float32_tidl *activationScales = (float32_tidl *)get_int8_t_pointer((int8_t *)net, params->activationScales);
+
+  if(status == IALG_EOK)
+  {
+    int32_t batchHidden = batch_size * hidden_size;
+    Tin *scratch = (Tin *)algLayer->scratchMem;
+    Th *Ht    = (Th *)scratch;
+    Tc *Ct    = (Tc *)(Ht + batchHidden);
+    Tout *gates = (Tout *)(Ct + batchHidden);
+
+    Tin  *X = inPtr;
+    Tout *Y = outPtr;
+
+    /* Calculate output tensor offsets for Y_h and Y_c */
+    int32_t incrementAxis = params->incrementAxis;
+    int32_t YhOffset = outDataParams->pitch[incrementAxis] * seq_length;
+    int32_t YcOffset = YhOffset + outDataParams->pitch[incrementAxis];
+    Tout *Y_h = Y + YhOffset;
+    Tout *Y_c = Y + YcOffset;
+
+    int32_t dirIdx, timeIdx, batchIdx, hiddenIdx, inputIdx;
+
+
+    Tacc *inputGateAcc = (Tacc*)malloc(sizeof(Tacc) * hidden_size);
+    Tacc *forgetGateAcc = (Tacc*)malloc(sizeof(Tacc) * hidden_size);
+    Tacc *cellGateAcc = (Tacc*)malloc(sizeof(Tacc) * hidden_size);
+    Tacc *cellStateAcc = (Tacc*)malloc(sizeof(Tacc) * hidden_size);
+    Tacc *outputGateAcc = (Tacc*)malloc(sizeof(Tacc) * hidden_size);
+
+    Tacc *intermediateAcc = (Tacc*)malloc(sizeof(Tacc) * hidden_size);
+
+    for (dirIdx = 0; dirIdx < num_directions; dirIdx++)
+    {
+      /* Activations for current direction */
+      int32_t activation_f_idx = dirIdx * 3 + 0;
+      int32_t activation_g_idx = dirIdx * 3 + 1;
+      int32_t activation_h_idx = dirIdx * 3 + 2;
+
+      /* W: [num_directions, 4*hidden_size, input_size], ONNX gate order: i,o,f,c */
+      Tw *W_dir = WPtr + dirIdx * 4 * hidden_size * input_size;
+
+      /* R: [num_directions, 4*hidden_size, hidden_size] */
+      Tw *R_dir = RPtr + dirIdx * 4 * hidden_size * hidden_size;
+
+      /* B: [num_directions, 8*hidden_size] = [Wbi,Wbo,Wbf,Wbc, Rbi,Rbo,Rbf,Rbc] or NULL */
+      Tacc *B_dir = (biasPtr != NULL) ? biasPtr + dirIdx * 8 * hidden_size : NULL;
+
+      /* P: [num_directions, 3*hidden_size] = [Pi, Po, Pf] or NULL */
+      Tw *P_dir = (peepholesPtr != NULL) ? peepholesPtr + dirIdx * 3 * hidden_size : NULL;
+      Tw *Po    = (P_dir != NULL) ? P_dir + 1 * hidden_size : NULL;
+
+      /*
+      * Initialize Ht and Ct from initial states
+      * initial_h/c: [num_directions, batch_size, hidden_size]
+      */
+      if (initial_hPtr != NULL)
+      {
+        Th *initH_dir = initial_hPtr + dirIdx * batchHidden;
+        for (hiddenIdx = 0; hiddenIdx < batchHidden; hiddenIdx++)
+        {
+          Ht[hiddenIdx] = initH_dir[hiddenIdx];
+        }
+      }
+      else
+      {
+        for (hiddenIdx = 0; hiddenIdx < batchHidden; hiddenIdx++)
+        {
+          Ht[hiddenIdx] = 0.0f;
+        }
+      }
+
+      if (initial_cPtr != NULL)
+      {
+        Tc *initC_dir = initial_cPtr + dirIdx * batchHidden;
+        for (hiddenIdx = 0; hiddenIdx < batchHidden; hiddenIdx++)
+        {
+          Ct[hiddenIdx] = initC_dir[hiddenIdx];
+        }
+      }
+      else
+      {
+        for (hiddenIdx = 0; hiddenIdx < batchHidden; hiddenIdx++)
+        {
+          Ct[hiddenIdx] = 0.0f;
+        }
+      }
+
+      /* Iterate over time steps */
+      for (timeIdx = 0; timeIdx < seq_length; timeIdx++)
+      {
+        /*
+        * Determine time step based on direction:
+        * Forward:       dirIdx 0 → forward traversal
+        * Reverse:       dirIdx 0 → reverse traversal
+        * Bidirectional: dirIdx 0 → forward, dirIdx 1 → reverse
+        */
+        int32_t isReverse = 0;
+        if (direction == TIDL_RecurrentReverse)
+        {
+          isReverse = 1;
+        }
+        #if defined TIDL_COVERAGE_DEAD_CODE
+        else if ((direction == TIDL_RecurrentBidirectional) && (dirIdx == 1))
+        {
+          isReverse = 1;
+        }
+        else
+        {
+          /* Not reachable */
+        }
+        #endif
+
+        int32_t timeStep = (isReverse == 0) ? timeIdx : (seq_length - 1 - timeIdx);
+
+        for (batchIdx = 0; batchIdx < batch_size; batchIdx++)
+        {
+          /*
+          * if sequence_lens is provided, for time steps past
+          * sequence_lens[batchIdx], output Y = 0 and Ht/Ct remain unchanged.
+          */
+          int32_t batchSeqLen = seq_length;
+          if (sequence_lens != NULL)
+          {
+            batchSeqLen = sequence_lens[batchIdx];
+            if (batchSeqLen > seq_length)
+            {
+              batchSeqLen = seq_length;
+            }
+          }
+
+          if (timeStep >= batchSeqLen)
+          {
+            if (Y != NULL)
+            {
+              int32_t outOffset;
+              if (layout == 0)
+              {
+                outOffset = timeStep * outDataParams->pitch[TIDL_DIM2_PITCH] +
+                            dirIdx * outDataParams->pitch[TIDL_CHANNEL_PITCH] +
+                            batchIdx * outDataParams->pitch[TIDL_LINE_PITCH];
+              }
+              else
+              {
+                outOffset = batchIdx * outDataParams->pitch[TIDL_DIM2_PITCH] +
+                            timeStep * outDataParams->pitch[TIDL_CHANNEL_PITCH] +
+                            dirIdx * outDataParams->pitch[TIDL_LINE_PITCH];
+              }
+              Tout *yt = Y + outOffset;
+              for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
+              {
+                yt[hiddenIdx] = (Tout)0.0f;
+              }
+            }
+            continue;
+          }
+
+          /*
+          * Input dims: layout=0: [NUMCH=seq, HEIGHT=batch, WIDTH=input]
+          *             layout=1: [NUMCH=batch, HEIGHT=seq, WIDTH=input]
+          */
+          int32_t inOffset;
+          if (layout == 0)
+          {
+            inOffset = timeStep * inDataParams->pitch[TIDL_CHANNEL_PITCH] + batchIdx * inDataParams->pitch[TIDL_LINE_PITCH];
+          }
+          else
+          {
+            inOffset = batchIdx * inDataParams->pitch[TIDL_CHANNEL_PITCH] + timeStep * inDataParams->pitch[TIDL_LINE_PITCH];
+          }
+          Tin *xt = X + inOffset;
+
+          Th *ht_prev = Ht + batchIdx * hidden_size;
+          Tc *ct_prev = Ct + batchIdx * hidden_size;
+
+          /* Gate pointers within scratch: [4, hidden_size] */
+          Tout *gate_i = gates + 0 * hidden_size;
+          Tout *gate_o = gates + 1 * hidden_size;
+          Tout *gate_f = gates + 2 * hidden_size;
+          Tout *gate_c = gates + 3 * hidden_size;
+
+          // Compute Input Gate
+          TIDL_MMA_Matmul<Tin, Tw, Tacc>(xt, W_dir, B_dir, inputGateAcc, 1, input_size, hidden_size, true);
+          TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(inputGateAcc, hidden_size, mmaScales[0], mmaShifts[0]);
+
+          TIDL_MMA_Matmul<Th, Tw, Tacc>(ht_prev, R_dir, B_dir + 4*hidden_size, intermediateAcc, 1, hidden_size, hidden_size, true);
+          TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(intermediateAcc, hidden_size, mmaScales[1], mmaShifts[1]);
+          TIDL_MMA_EltWiseSum<Tacc, Tacc, Tacc>(inputGateAcc, intermediateAcc, inputGateAcc, hidden_size);
+
+          if(peepholesPtr != NULL) {
+            TIDL_MMA_EltWiseProduct<Tc, Tw, Tacc>(ct_prev, P_dir, intermediateAcc, hidden_size);
+            TIDL_MMA_ScaleAndShift<Tacc, Tacc>(intermediateAcc, hidden_size, mmaScales[2], mmaShifts[2]);
+            TIDL_MMA_EltWiseSum<Tacc, Tacc, Tacc>(inputGateAcc, intermediateAcc, inputGateAcc, hidden_size);
+          }
+
+          TIDL_MMA_Saturate<Tacc, Tacc, Tw>(inputGateAcc, inputGateAcc, hidden_size);
+          TIDL_Compute_Activation<Tacc>(inputGateAcc, hidden_size, activationScales[0], 0, activationScales[1], 0, params->activations[activation_f_idx],
+                                            params->activation_alpha[activation_f_idx], params->activation_beta[activation_f_idx], useTaylor);
+
+          // Compute Forget Gate
+          int32_t forgetGateWeightOffset = 2 * hidden_size * input_size;
+          int32_t forgetGateBiasOffset = 2 * hidden_size;
+
+          TIDL_MMA_Matmul<Tin, Tw, Tacc>(xt, W_dir + forgetGateWeightOffset, B_dir + forgetGateBiasOffset, forgetGateAcc, 1, input_size, hidden_size, true);
+          TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(forgetGateAcc, hidden_size, mmaScales[3], mmaShifts[3]);
+
+          TIDL_MMA_Matmul<Th, Tw, Tacc>(ht_prev, R_dir + forgetGateWeightOffset, B_dir + forgetGateBiasOffset + 4*hidden_size, intermediateAcc, 1, hidden_size, hidden_size, true);
+          TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(intermediateAcc, hidden_size, mmaScales[4], mmaShifts[4]);
+          TIDL_MMA_EltWiseSum<Tacc, Tacc, Tacc>(forgetGateAcc, intermediateAcc, forgetGateAcc, hidden_size);
+
+          if(peepholesPtr != NULL) {
+            TIDL_MMA_EltWiseProduct<Tc, Tw, Tacc>(ct_prev, P_dir + (2 * hidden_size), intermediateAcc, hidden_size);
+            TIDL_MMA_ScaleAndShift<Tacc, Tacc>(intermediateAcc, hidden_size, mmaScales[5], mmaShifts[5]);
+            TIDL_MMA_EltWiseSum<Tacc, Tacc, Tacc>(forgetGateAcc, intermediateAcc, forgetGateAcc, hidden_size);
+          }
+
+          TIDL_MMA_Saturate<Tacc, Tacc, Tw>(forgetGateAcc, forgetGateAcc, hidden_size);
+          TIDL_Compute_Activation<Tacc>(forgetGateAcc, hidden_size, activationScales[2], 0, activationScales[3], 0, params->activations[activation_f_idx],
+                                            params->activation_alpha[activation_f_idx], params->activation_beta[activation_f_idx], useTaylor);
+
+          // Compute Cell Gate
+          int32_t cellGateWeightOffset = 3 * hidden_size * input_size;
+          int32_t cellGateBiasOffset = 3 * hidden_size;
+          TIDL_MMA_Matmul<Tin, Tw, Tacc>(xt, W_dir + cellGateWeightOffset, B_dir + cellGateBiasOffset, cellGateAcc, 1, input_size, hidden_size, true);
+          TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(cellGateAcc, hidden_size, mmaScales[6], mmaShifts[6]);
+
+          TIDL_MMA_Matmul<Th, Tw, Tacc>(ht_prev, R_dir + cellGateWeightOffset, B_dir + cellGateBiasOffset + 4*hidden_size, intermediateAcc, 1, hidden_size, hidden_size, true);
+          TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(intermediateAcc, hidden_size, mmaScales[7], mmaShifts[7]);
+          TIDL_MMA_EltWiseSum<Tacc, Tacc, Tacc>(cellGateAcc, intermediateAcc, cellGateAcc, hidden_size);
+
+          TIDL_MMA_Saturate<Tacc, Tacc, Tw>(cellGateAcc, cellGateAcc, hidden_size);
+          TIDL_Compute_Activation<Tacc>(cellGateAcc, hidden_size, activationScales[4], 0, activationScales[5], 0, params->activations[activation_g_idx],
+                                            params->activation_alpha[activation_g_idx], params->activation_beta[activation_g_idx], useTaylor);
+
+          // Compute Cell State
+          TIDL_MMA_EltWiseProduct<Tacc, Tc, Tacc>(forgetGateAcc, ct_prev, cellStateAcc, hidden_size);
+          TIDL_MMA_ScaleAndShift<Tacc, Tacc>(cellStateAcc, hidden_size, mmaScales[8], mmaShifts[8]);
+
+          TIDL_MMA_EltWiseProduct<Tacc, Tacc, Tacc>(inputGateAcc, cellGateAcc, intermediateAcc, hidden_size);
+          TIDL_MMA_ScaleAndShift<Tacc, Tacc>(intermediateAcc, hidden_size, mmaScales[9], mmaShifts[9]);
+
+          TIDL_MMA_EltWiseSum<Tacc, Tacc, Tacc>(cellStateAcc, intermediateAcc, cellStateAcc, hidden_size);
+
+          TIDL_MMA_Saturate<Tacc, Tc, Tout>(cellStateAcc, ct_prev, hidden_size); // From now on ct_prev holds the updated cell state values
+
+          // Compute Output Gate
+          int32_t outputGateWeightOffset = hidden_size * input_size;
+          int32_t outputGateBiasOffset = hidden_size;
+
+          TIDL_MMA_Matmul<Tin, Tw, Tacc>(xt, W_dir + outputGateWeightOffset, B_dir + outputGateBiasOffset, outputGateAcc, 1, input_size, hidden_size, true);
+          TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(outputGateAcc, hidden_size, mmaScales[10], mmaShifts[10]);
+
+          TIDL_MMA_Matmul<Th, Tw, Tacc>(ht_prev, R_dir + outputGateWeightOffset, B_dir + outputGateBiasOffset + 4*hidden_size, intermediateAcc, 1, hidden_size, hidden_size, true);
+          TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(intermediateAcc, hidden_size, mmaScales[11], mmaShifts[11]);
+          TIDL_MMA_EltWiseSum<Tacc, Tacc, Tacc>(outputGateAcc, intermediateAcc, outputGateAcc, hidden_size);
+
+          if(peepholesPtr != NULL) {
+            TIDL_MMA_EltWiseProduct<Tc, Tw, Tacc>(ct_prev, Po, intermediateAcc, hidden_size);
+            TIDL_MMA_ScaleAndShift<Tacc, Tacc>(intermediateAcc, hidden_size, mmaScales[12], mmaShifts[12]);
+            TIDL_MMA_EltWiseSum<Tacc, Tacc, Tacc>(outputGateAcc, intermediateAcc, outputGateAcc, hidden_size);
+          }
+          TIDL_MMA_Saturate<Tacc, Tacc, Tw>(outputGateAcc, outputGateAcc, hidden_size);
+          TIDL_Compute_Activation<Tacc>(outputGateAcc, hidden_size, activationScales[6], 0, activationScales[7], 0, params->activations[activation_f_idx],
+                                            params->activation_alpha[activation_f_idx], params->activation_beta[activation_f_idx], useTaylor);
+
+          // Hidden State Update
+          memset(intermediateAcc, 0, sizeof(Tacc) * hidden_size);
+          TIDL_MMA_EltWiseSum<Tc, Tacc, Tacc>(ct_prev, intermediateAcc, intermediateAcc, hidden_size);
+          TIDL_Compute_Activation<Tacc>(intermediateAcc, hidden_size, activationScales[8], 0, activationScales[9], 0, params->activations[activation_h_idx],
+                                            params->activation_alpha[activation_h_idx], params->activation_beta[activation_h_idx], useTaylor);
+          TIDL_MMA_EltWiseProduct<Tacc, Tacc, Tacc>(outputGateAcc, intermediateAcc, intermediateAcc, hidden_size);
+          TIDL_MMA_ScaleAndShift<Tacc, Tacc>(intermediateAcc, hidden_size, mmaScales[13], mmaShifts[13]);
+          TIDL_MMA_Saturate<Tacc, Th, Tout>(intermediateAcc, ht_prev, hidden_size); // From now on ht_prev holds the updated hidden state values
+
+          /*
+          * Output dims layout=0: [DIM2=seq, NUMCH=num_dir, HEIGHT=batch, WIDTH=hidden]
+          *             layout=1: [DIM2=batch, NUMCH=seq, HEIGHT=num_dir, WIDTH=hidden]
+          */
+          if (Y != NULL)
+          {
+            int32_t outOffset;
+            if (layout == 0)
+            {
+              outOffset = timeStep * outDataParams->pitch[TIDL_DIM2_PITCH] +
+                          dirIdx * outDataParams->pitch[TIDL_CHANNEL_PITCH] +
+                          batchIdx * outDataParams->pitch[TIDL_LINE_PITCH];
+            }
+            else
+            {
+              outOffset = batchIdx * outDataParams->pitch[TIDL_DIM2_PITCH] +
+                          timeStep * outDataParams->pitch[TIDL_CHANNEL_PITCH] +
+                          dirIdx   * outDataParams->pitch[TIDL_LINE_PITCH];
+            }
+            Tout *yt = Y + outOffset;
+            for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
+            {
+              yt[hiddenIdx] = (Tout)ht_prev[hiddenIdx];
+            }
+          }
+        } /* end batchIdx */
+      } /* end timeIdx */
+
+      /* Copy to Y_h - final hidden state for this direction */
+      if (Y_h != NULL)
+      {
+        for (batchIdx = 0; batchIdx < batch_size; batchIdx++)
+        {
+          /* Calculate offset based on layout */
+          int32_t outOffset;
+          if (layout == 0)
+          {
+            /* [num_directions, batch_size, hidden_size] */
+            outOffset = dirIdx * batch_size * hidden_size + batchIdx * hidden_size;
+          }
+          else
+          {
+            /* [batch_size, num_directions, hidden_size] */
+            outOffset = batchIdx * num_directions * hidden_size + dirIdx * hidden_size;
+          }
+
+          /* Copy Ht values to Y_h */
+          Th *ht_final = Ht + batchIdx * hidden_size;
+          for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
+          {
+            Y_h[outOffset + hiddenIdx] = (Tout)ht_final[hiddenIdx];
+          }
+        }
+      }
+
+      /* Copy to Y_c - final cell state for this direction */
+      if (Y_c != NULL)
+      {
+        for (batchIdx = 0; batchIdx < batch_size; batchIdx++)
+        {
+          /* Calculate offset based on layout */
+          int32_t outOffset;
+          if (layout == 0)
+          {
+            /* [num_directions, batch_size, hidden_size] */
+            outOffset = dirIdx * batch_size * hidden_size + batchIdx * hidden_size;
+          }
+          else
+          {
+            /* [batch_size, num_directions, hidden_size] */
+            outOffset = batchIdx * num_directions * hidden_size + dirIdx * hidden_size;
+          }
+
+          /* Copy Ct values to Y_c */
+          Tc *ct_final = Ct + batchIdx * hidden_size;
+          for (hiddenIdx = 0; hiddenIdx < hidden_size; hiddenIdx++)
+          {
+            Y_c[outOffset + hiddenIdx] = (Tout)ct_final[hiddenIdx];
+          }
+        }
+      }
+    } /* end dirIdx */
+  }
+
+  return status;
+}
+
+
 /**
  * @brief LSTM layer reference implementation
  *
@@ -1116,6 +1662,222 @@ int32_t TIDL_lstmRefProcess(TIDL_Handle intAlgHandle,
                                    peepholesParams,
                                    outDataParams,
                                    useTaylor);
+  }
+  else if (tidlLayer->weightsElementSizeInBits <= 8){
+    if(inDataParams->elementType == TIDL_SignedChar) {
+      if(initial_hParams->elementType == TIDL_SignedChar) {
+        if(initial_cParams->elementType == TIDL_SignedChar) {
+          status = TIDL_refLSTMCoreFixed(
+            (int8_t *)inPtr, (int8_t *)WPtr, (int8_t *)RPtr, (int32_t *)biasPtr, (int8_t *)initial_hPtr, (int8_t *)initial_cPtr, (int8_t *)peepholesPtr, (int8_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        } 
+        else if(initial_cParams->elementType == TIDL_UnsignedChar) {
+          status = TIDL_refLSTMCoreFixed(
+            (int8_t *)inPtr, (int8_t *)WPtr, (int8_t *)RPtr, (int32_t *)biasPtr, (int8_t *)initial_hPtr, (uint8_t *)initial_cPtr, (int8_t *)peepholesPtr, (int8_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        }
+        else {
+          /* Unsupported data type */
+          TIDL_LOG_ERROR(TIDL_ERROR_GROUP_LSTM, TIDL_ERROR_LSTM_INVALID_DATATYPE);
+          status = IALG_EFAIL;
+        }
+      }
+      else if (initial_hParams->elementType == TIDL_UnsignedChar){
+        if(initial_cParams->elementType == TIDL_SignedChar) {
+          status = TIDL_refLSTMCoreFixed(
+            (int8_t *)inPtr, (int8_t *)WPtr, (int8_t *)RPtr, (int32_t *)biasPtr, (uint8_t *)initial_hPtr, (int8_t *)initial_cPtr, (int8_t *)peepholesPtr, (int8_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        } 
+        else if(initial_cParams->elementType == TIDL_UnsignedChar) {
+          status = TIDL_refLSTMCoreFixed(
+            (int8_t *)inPtr, (int8_t *)WPtr, (int8_t *)RPtr, (int32_t *)biasPtr, (uint8_t *)initial_hPtr, (uint8_t *)initial_cPtr, (int8_t *)peepholesPtr, (int8_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        }
+        else {
+          /* Unsupported data type */
+          TIDL_LOG_ERROR(TIDL_ERROR_GROUP_LSTM, TIDL_ERROR_LSTM_INVALID_DATATYPE);
+          status = IALG_EFAIL;
+        }
+      }
+      else {
+        /* Unsupported data type */
+        TIDL_LOG_ERROR(TIDL_ERROR_GROUP_LSTM, TIDL_ERROR_LSTM_INVALID_DATATYPE);
+        status = IALG_EFAIL;
+      }
+    }
+    else if (inDataParams->elementType == TIDL_UnsignedChar) {
+      if(initial_hParams->elementType == TIDL_SignedChar) {
+        if(initial_cParams->elementType == TIDL_SignedChar) {
+          status = TIDL_refLSTMCoreFixed(
+            (uint8_t *)inPtr, (int8_t *)WPtr, (int8_t *)RPtr, (int32_t *)biasPtr, (int8_t *)initial_hPtr, (int8_t *)initial_cPtr, (int8_t *)peepholesPtr, (uint8_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        } 
+        else if(initial_cParams->elementType == TIDL_UnsignedChar) {
+          status = TIDL_refLSTMCoreFixed(
+            (uint8_t *)inPtr, (int8_t *)WPtr, (int8_t *)RPtr, (int32_t *)biasPtr, (int8_t *)initial_hPtr, (uint8_t *)initial_cPtr, (int8_t *)peepholesPtr, (uint8_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        }
+        else {
+          /* Unsupported data type */
+          TIDL_LOG_ERROR(TIDL_ERROR_GROUP_LSTM, TIDL_ERROR_LSTM_INVALID_DATATYPE);
+          status = IALG_EFAIL;
+        }
+      }
+      else if (initial_hParams->elementType == TIDL_UnsignedChar){
+        if(initial_cParams->elementType == TIDL_SignedChar) {
+          status = TIDL_refLSTMCoreFixed(
+            (uint8_t *)inPtr, (int8_t *)WPtr, (int8_t *)RPtr, (int32_t *)biasPtr, (uint8_t *)initial_hPtr, (int8_t *)initial_cPtr, (int8_t *)peepholesPtr, (uint8_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        } 
+        else if(initial_cParams->elementType == TIDL_UnsignedChar) {
+          status = TIDL_refLSTMCoreFixed(
+            (uint8_t *)inPtr, (int8_t *)WPtr, (int8_t *)RPtr, (int32_t *)biasPtr, (uint8_t *)initial_hPtr, (uint8_t *)initial_cPtr, (int8_t *)peepholesPtr, (uint8_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        }
+        else {
+          /* Unsupported data type */
+          TIDL_LOG_ERROR(TIDL_ERROR_GROUP_LSTM, TIDL_ERROR_LSTM_INVALID_DATATYPE);
+          status = IALG_EFAIL;
+        }
+      }
+      else {
+        /* Unsupported data type */
+        TIDL_LOG_ERROR(TIDL_ERROR_GROUP_LSTM, TIDL_ERROR_LSTM_INVALID_DATATYPE);
+        status = IALG_EFAIL;
+      }
+    }
+    else {
+      /* Unsupported data type */
+      TIDL_LOG_ERROR(TIDL_ERROR_GROUP_LSTM, TIDL_ERROR_LSTM_INVALID_DATATYPE);
+      status = IALG_EFAIL;
+    }
+  }
+  else if (tidlLayer->weightsElementSizeInBits <= 16){
+    if(inDataParams->elementType == TIDL_SignedShort) {
+      if(initial_hParams->elementType == TIDL_SignedShort) {
+        if(initial_cParams->elementType == TIDL_SignedShort) {
+          status = TIDL_refLSTMCoreFixed(
+            (int16_t *)inPtr, (int16_t *)WPtr, (int16_t *)RPtr, (int64_t *)biasPtr, (int16_t *)initial_hPtr, (int16_t *)initial_cPtr, (int16_t *)peepholesPtr, (int16_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        } 
+        else if(initial_cParams->elementType == TIDL_UnsignedShort) {
+          status = TIDL_refLSTMCoreFixed(
+            (int16_t *)inPtr, (int16_t *)WPtr, (int16_t *)RPtr, (int64_t *)biasPtr, (int16_t *)initial_hPtr, (uint16_t *)initial_cPtr, (int16_t *)peepholesPtr, (int16_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        }
+        else {
+          /* Unsupported data type */
+          TIDL_LOG_ERROR(TIDL_ERROR_GROUP_LSTM, TIDL_ERROR_LSTM_INVALID_DATATYPE);
+          status = IALG_EFAIL;
+        }
+      }
+      else if (initial_hParams->elementType == TIDL_UnsignedShort){
+        if(initial_cParams->elementType == TIDL_SignedShort) {
+          status = TIDL_refLSTMCoreFixed(
+            (int16_t *)inPtr, (int16_t *)WPtr, (int16_t *)RPtr, (int64_t *)biasPtr, (uint16_t *)initial_hPtr, (int16_t *)initial_cPtr, (int16_t *)peepholesPtr, (int16_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        }
+        else if (initial_cParams->elementType == TIDL_UnsignedShort) {
+          status = TIDL_refLSTMCoreFixed(
+            (int16_t *)inPtr, (int16_t *)WPtr, (int16_t *)RPtr, (int64_t *)biasPtr, (uint16_t *)initial_hPtr, (uint16_t *)initial_cPtr, (int16_t *)peepholesPtr, (int16_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        }
+        else {
+          /* Unsupported data type */
+          TIDL_LOG_ERROR(TIDL_ERROR_GROUP_LSTM, TIDL_ERROR_LSTM_INVALID_DATATYPE);
+          status = IALG_EFAIL;
+        }
+      }
+    }
+    else if (inDataParams->elementType == TIDL_UnsignedShort) {
+      if(initial_hParams->elementType == TIDL_SignedShort) {
+        if(initial_cParams->elementType == TIDL_SignedShort) {
+          status = TIDL_refLSTMCoreFixed(
+            (uint16_t *)inPtr, (int16_t *)WPtr, (int16_t *)RPtr, (int64_t *)biasPtr, (int16_t *)initial_hPtr, (int16_t *)initial_cPtr, (int16_t *)peepholesPtr, (uint16_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        } 
+        else if(initial_cParams->elementType == TIDL_UnsignedShort) {
+          status = TIDL_refLSTMCoreFixed(
+            (uint16_t *)inPtr, (int16_t *)WPtr, (int16_t *)RPtr, (int64_t *)biasPtr, (int16_t *)initial_hPtr, (uint16_t *)initial_cPtr, (int16_t *)peepholesPtr, (uint16_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        }
+        else {
+          /* Unsupported data type */
+          TIDL_LOG_ERROR(TIDL_ERROR_GROUP_LSTM, TIDL_ERROR_LSTM_INVALID_DATATYPE);
+          status = IALG_EFAIL;
+        }
+      }
+      else if (initial_hParams->elementType == TIDL_UnsignedShort) {
+        if(initial_cParams->elementType == TIDL_SignedShort) {
+          status = TIDL_refLSTMCoreFixed(
+            (uint16_t *)inPtr, (int16_t *)WPtr, (int16_t *)RPtr, (int64_t *)biasPtr, (uint16_t *)initial_hPtr, (int16_t *)initial_cPtr, (int16_t *)peepholesPtr, (uint16_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        }
+        else if (initial_cParams->elementType == TIDL_UnsignedShort) {
+          status = TIDL_refLSTMCoreFixed(
+            (uint16_t *)inPtr, (int16_t *)WPtr, (int16_t *)RPtr, (int64_t *)biasPtr, (uint16_t *)initial_hPtr, (uint16_t *)initial_cPtr, (int16_t *)peepholesPtr, (uint16_t *)outPtr,
+            intAlgHandle, layerIdx, params, algLayer,
+            inDataParams, WParams, RParams, biasParams, initial_hParams, initial_cParams, peepholesParams, outDataParams,
+            useTaylor
+          );
+        }
+        else {
+          /* Unsupported data type */
+          TIDL_LOG_ERROR(TIDL_ERROR_GROUP_LSTM, TIDL_ERROR_LSTM_INVALID_DATATYPE);
+          status = IALG_EFAIL;
+        }
+      }
+    }
+    else {
+      /* Unsupported data type */
+      TIDL_LOG_ERROR(TIDL_ERROR_GROUP_LSTM, TIDL_ERROR_LSTM_INVALID_DATATYPE);
+      status = IALG_EFAIL;
+    }
   }
   else
   {

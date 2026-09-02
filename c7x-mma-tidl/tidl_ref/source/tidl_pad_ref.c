@@ -72,6 +72,8 @@
 #include "tidl_pad_ref.h"
 #include "tidl_commonUtils.h"
 
+using namespace floating_point::bf16_c7x;
+
 /**
  * @brief This is reference implementation of Pad layer
  *
@@ -142,7 +144,8 @@ void TIDL_padRefProcess(
   int32_t padR  =  params->padR;
   int32_t padType = params->padType;
 
-  Tin padValueFinal = padValue;
+  Tin padValueFinal;
+  padValueFinal = padValue;
 
   /* OPENACC(data copyin(padPerChannelPtr[0:numChs], pIn[0: 1 + inPtrOffset  + (numROIs*inROIPitch)   + (numChs* inChPitch)   + ((outHeight - padT) * inLinePitch)   + (outWidth - padL)]) \
                copyout(pOut[0: 1 + outPtrOffset + (numROIs*outROIPitch)  + (numChs* outChPitch)  + (outHeight * outLinePitch)  + outWidth])) */
@@ -280,7 +283,8 @@ void TIDL_padNATCProcess(
   int32_t padR  =  params->padR;
   int32_t padType = params->padType;
 
-  Tin padValueFinal = padValue;
+  Tin padValueFinal;
+  padValueFinal = padValue;
 
   /* OPENACC(data copyin(padPerChannelPtr[0:numChs]) \
                copyout(pOut[0:1 + outPtrOffset + (numROIs*outROIPitch)  + (numChs* outChPitch)  + (outHeight * outLinePitch)  + outWidth])) */
@@ -295,9 +299,12 @@ void TIDL_padNATCProcess(
         {
           /* LDRA_JUSTIFY_START
           <metric start> statement branch <metric end>
-          <justification start> PRIOR_CHECK : Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
+          <justification start>
+          Rationale - PRIOR_CHECK: Under current execution paths, the condition cannot be reached because of logically and structurally preempted by earlier check.
           This condition is guarded by a prior check in the control flow tagged as below mentioned tag in the code.
           TIDL_LDRA_TAG : TIDL_LDRA_TAG_PAD_PRIOR_CHECK_001
+          Effect on this UNIT - As the condition is effectively bypassed due to earlier checks, it remains unexecuted in current test scenarios. 
+          This does not affect runtime behavior or safety.
           <justification end> */
           if(padType == (int32_t)TIDL_PadPerChannel)
           /* LDRA_JUSTIFY_END */
@@ -356,6 +363,14 @@ void TIDL_padNATCProcess(
 
 
 template void TIDL_padRefProcess(const float32_tidl*    pIn, float32_tidl*   pOut, int32_t inPtrOffset, int32_t outPtrOffset,
+  const sTIDL_DataParams_t *inDataParams,
+  const sTIDL_DataParams_t *outDataParams,            
+  sTIDL_PadLayerParams_t *params,
+  int32_t padValue,
+  float32_tidl * padPerChannelPtr
+  );
+
+template void TIDL_padRefProcess(const bfloat16_tidl*    pIn, bfloat16_tidl*   pOut, int32_t inPtrOffset, int32_t outPtrOffset,
   const sTIDL_DataParams_t *inDataParams,
   const sTIDL_DataParams_t *outDataParams,            
   sTIDL_PadLayerParams_t *params,

@@ -153,6 +153,22 @@ template void TIDL_shuffleChannelRefProcess(const float32_tidl *pIn,
                                             int32_t inROIPitch,
                                             int32_t outROIPitch);
 
+template void TIDL_shuffleChannelRefProcess(const bfloat16_tidl *pIn,
+                                            bfloat16_tidl *pOut,
+                                            int32_t inPtrOffset,
+                                            int32_t outPtrOffset,
+                                            int32_t width,
+                                            int32_t height,
+                                            int32_t numInChs,
+                                            int32_t numGroups,
+                                            int32_t numROIs,
+                                            int32_t inLinePitch,
+                                            int32_t outLinePitch,
+                                            int32_t inChPitch,
+                                            int32_t outChPitch,
+                                            int32_t inROIPitch,
+                                            int32_t outROIPitch);
+
 template void TIDL_shuffleChannelRefProcess(const uint8_t *pIn,
                                             uint8_t *pOut,
                                             int32_t inPtrOffset,

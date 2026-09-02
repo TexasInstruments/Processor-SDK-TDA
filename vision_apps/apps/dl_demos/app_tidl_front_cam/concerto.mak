@@ -28,16 +28,13 @@ CSOURCES    += main_linux_arm.c
 include $(VISION_APPS_PATH)/apps/concerto_mpu_inc.mak
 
 STATIC_LIBS += $(IMAGING_LIBS)
-STATIC_LIBS += $(VISION_APPS_KERNELS_LIBS)
+STATIC_LIBS += $(APP_KERNELS_LIBS)
+STATIC_LIBS += $(APP_KERNELS_UTILS_LIBS)
 STATIC_LIBS += $(VISION_APPS_MODULES_LIBS)
 STATIC_LIBS += $(TIADALG_LIBS)
 
-SHARED_LIBS += edgeai-apps-utils
-SHARED_LIBS += edgeai-tiovx-kernels
-
-IDIRS += $(VISION_APPS_KERNELS_IDIRS)
+IDIRS += $(APP_KERNELS_IDIRS)
 IDIRS += $(VISION_APPS_PATH)/modules/include
-IDIRS += $(EDGEAI_KERNELS_PATH)/include
 IDIRS += $(TIOVX_PATH)/source/include
 
 endif

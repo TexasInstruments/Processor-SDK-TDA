@@ -87,15 +87,25 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Split")> ()
   getIntAttr(node, "axis", &axis, 0);
 
   sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
-  /** If shape inference is not done on model, we assume the tensor is of 4 dimensions by default*/
-  if (layer.allowlistingMetaData.varTensorsDims.size() != 0)
+  /** Get numDim from data tensor (input 0), whether it is variable or const */
+  numDim = 4;
+  for (int32_t k = 0; k < (int32_t)layer.allowlistingMetaData.varTensorIndices.size(); k++)
   {
-    numDim = layer.allowlistingMetaData.varTensorsDims[0].size();
-    numDim = (numDim == 0)? 4:numDim;
+    if (layer.allowlistingMetaData.varTensorIndices[k] == 0)
+    {
+      if (layer.allowlistingMetaData.varTensorsDims[k].size() != 0)
+        numDim = layer.allowlistingMetaData.varTensorsDims[k].size();
+      break;
+    }
   }
-  else
+  for (int32_t k = 0; k < (int32_t)layer.allowlistingMetaData.constTensorIndices.size(); k++)
   {
-    numDim = 4;
+    if (layer.allowlistingMetaData.constTensorIndices[k] == 0)
+    {
+      if (layer.allowlistingMetaData.constTensorsDims[k].size() != 0)
+        numDim = layer.allowlistingMetaData.constTensorsDims[k].size();
+      break;
+    }
   }
 
   if (axis < 0)
@@ -171,6 +181,22 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Split")> ()
     {
       TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Split layer : Either num_outputs or split should be defined, but not both");
       return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+    }
+  }
+
+  /* If data input (input 0) is a constant initializer, store it in layer.weights
+   * so tidl_addConstDataLayers can create the appropriate ConstDataLayer */
+  for (int32_t i = 0; i < (int32_t)md.numConstInputs; i++)
+  {
+    if (md.constTensorIndices[i] == 0)
+    {
+      status = copyFloatConst(graph, index, 0, layer.weights, INPUT_REQUIRED);
+      if (status != 0)
+      {
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Split layer : Unable to read constant data input");
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      }
+      break;
     }
   }
 

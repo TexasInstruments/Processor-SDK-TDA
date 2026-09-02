@@ -401,6 +401,7 @@ void udmaDrvPrint(const char *str);
  * Parser functions
  */
 int32_t Csirx_captureTest(CsirxTestTaskObj *taskObj);
+int32_t Csirx_captureTestNoTimestamp(CsirxTestTaskObj *taskObj);
 void csirxTestLogTestResult(const CsirxTestParams *testParams,
                            int32_t                testResult,
                            uint32_t               testCaseId,

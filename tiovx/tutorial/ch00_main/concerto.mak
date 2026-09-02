@@ -13,7 +13,7 @@ ifeq ($(TARGET_PLATFORM),PC)
 	#LDIRS       += $(TIDL_PATH)/lib/PC/dsp/$(TARGET_BUILD)
 	IDIRS       += $(TIOVX_PATH)/tutorial
 	IDIRS       += $(TIOVX_PATH)/tutorial/ch01_common
-	IDIRS       += $(VISION_APPS_PATH)
+	IDIRS       += $(PLATFORM_PATH)/pc/include
 
 	STATIC_LIBS := vx_tutorial
 	STATIC_LIBS += vx_vxu vx_framework

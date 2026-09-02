@@ -38,12 +38,7 @@ IDIRS += $($(_MODULE)_SDIR)/../../inc
 
 # Note: this is linked as shared library. that means you will need to copy
 # the build .so file to the target device (PC or EVM)
-LDIRS += $(VISION_APPS_PATH)/out/$(TARGET_PLATFORM)/$(TARGET_CPU)/LINUX/$(TARGET_BUILD)
 SHARED_LIBS += vx_tidl_rt
-
-# This is needed for tivision_apps (if it is calling this makefile as part of build)
-$(_MODULE)_LOPT += -rpath-link=$(VISION_APPS_PATH)/out/$(TARGET_OVX_PATH)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
-
 
 # defs needed by all platforms
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J721E j721e))

@@ -365,6 +365,14 @@ int32_t TIDL_tfCopyInputConstTensor(GraphDef& tfGraphDef, int32_t nIdx, int32_t 
   buf.ptr = (float *)my_malloc(buf.bufSize*sizeof(float));
   if ((tensor.dtype() == DT_FLOAT) || (tensor.dtype() == DT_INT32)) //DT_FLOAT
   {
+    if(tensor.dtype() == DT_FLOAT)
+    {
+      buf.dataType = TIDL_SinglePrecFloat;
+    }
+    else if(tensor.dtype() == DT_INT32)
+    {
+      buf.dataType = TIDL_SignedWord;
+    }
     memcpy(buf.ptr, tPtr, sizeof(float)*buf.bufSize);
     return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
   }
@@ -1282,11 +1290,11 @@ int32_t TIDL_getTfOpParamMapId(const char  * name)
 
 TIDL_TFLayerMapping_t TIDL_TFLayerMap[] =
 {
-  { (char*)"TIDL_TFSlimFlatten",        (char*)"TIDL_SqueezeLayerTIDL_ReshapeLayer"   , 2 },
-  { (char*)"TIDL_TFPackPackReshape",        (char*)"TIDL_PackLayerTIDL_PackLayerTIDL_ReshapeLayer"   , 3 },
-  { (char*)"TIDL_TFSlimShuffle",        (char*)"ResahpeSqueeze"              , 3 },
-  { (char*)"TIDL_ReshapeLayer",        (char*)"TIDL_ReshapeLayerTIDL_InnerProductLayer"              , 2},
-  { (char*)"TIDL_HardSigmoidLayer",        (char*)"TIDL_BatchNormLayerTIDL_BatchNormLayerTIDL_CLipLayerTIDL_ReLULayer"              , 4}
+  { (char*)"TIDL_TFSlimFlatten",            (char*)"TIDL_SqueezeLayerTIDL_ReshapeLayer", 2 },
+  { (char*)"TIDL_TFPackPackReshape",        (char*)"TIDL_PackLayerTIDL_PackLayerTIDL_ReshapeLayer", 3 },
+  { (char*)"TIDL_TFSlimShuffle",            (char*)"ResahpeSqueeze", 3 },
+  { (char*)"TIDL_ReshapeLayer",             (char*)"TIDL_ReshapeLayerTIDL_InnerProductLayer", 2},
+  { (char*)"TIDL_HardSigmoidLayer",         (char*)"TIDL_BatchNormLayerTIDL_BatchNormLayerTIDL_ClipLayerTIDL_ReLULayer", 4}
 };
 
 int32_t tidl_checkParamsForHardSigmoidLayerTFLite(sTIDL_LayerPC_t &TIDLPCLayers1, sTIDL_LayerPC_t &TIDLPCLayers2, sTIDL_LayerPC_t &TIDLPCLayers3, sTIDL_LayerPC_t &TIDLPCLayers4, float32_tidl *alpha, float32_tidl *beta)

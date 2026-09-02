@@ -83,7 +83,7 @@ using namespace std;
 
 const int32_t TIDL_LUTMethodMapTable[TIDL_NUM_LUT_DATATYPE][TIDL_LUT_TOTAL_NONLINEAR_OPS][TIDL_NUM_LUT_METHOD_DEVICE] = {
   //8-bit
-  //J784s4 || J721E || J721s2,        AM62a,                        J722s,                         Ops     
+  //J784S4||J742S2||J721E||J721S2, AM62A,                          J722S,                          OPS
   TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Sigmoid --     
   TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_Tanh --         
   TIDL_HW_LUT_8B,                  TIDL_SW_NONLUT_8B,              TIDL_HW_ILUT_8B,                // TIDL_HardSigmoid --

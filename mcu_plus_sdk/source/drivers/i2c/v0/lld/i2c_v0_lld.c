@@ -173,6 +173,7 @@
  */
 #define I2C_MAX_CLK_PRESCALAR       ((uint32_t) 255U)
 #define I2C_INTERNAL_CLK_STEP       ((uint32_t) 1000000U)
+#define I2C_FS_MODE_FREQ            ((uint32_t) 400000U)  /* F/S mode maximum frequency (per I2C spec) */
 /** @} */
 
 #define I2C_DELAY_MED               ((uint32_t) 10000U)
@@ -1734,7 +1735,7 @@ static void I2CControllerInitExpClk(uint32_t baseAddr,
         }
     }
 
-    if (outputClk > 400000U)
+    if (outputClk > I2C_FS_MODE_FREQ)
     {
         /* Prescalar bypassed in high speed mode */
         prescalar = 0;
@@ -1760,10 +1761,28 @@ static void I2CControllerInitExpClk(uint32_t baseAddr,
     div_h = divisor / 2U;
     div_l = divisor - div_h;
 
-    if (outputClk > 400000U)
+    if (outputClk > I2C_FS_MODE_FREQ)
     {
-        i2cRegs->SCLL = (uint32_t)((div_l - 7U) << 8U);
-        i2cRegs->SCLH = (uint32_t)((div_h - 5U) << 8U);
+        /* HS mode (> 400 kHz): Two-phase transmission
+         * Phase 1 (F/S, 400 kHz): Address/control in bits [7:0]
+         * Phase 2 (HS, target freq): Data in bits [15:8]
+         * Applies to both 1 MHz and 3.4 MHz (per TRM specification)
+         */
+        uint32_t divisor_fs;
+        uint32_t div_h_fs, div_l_fs;
+        uint32_t scll_val, sclh_val;
+
+        /* Calculate F/S phase divisor for 400 kHz */
+        divisor_fs = (actIntClk / I2C_FS_MODE_FREQ) - 12U;
+        div_h_fs = divisor_fs / 2U;
+        div_l_fs = divisor_fs - div_h_fs;
+
+        /* Combine: HS phase in [15:8], F/S phase in [7:0] */
+        scll_val = ((div_l - 7U) << 8U) | (div_l_fs - 7U);
+        sclh_val = ((div_h - 5U) << 8U) | (div_h_fs - 5U);
+
+        i2cRegs->SCLL = (uint32_t)scll_val;
+        i2cRegs->SCLH = (uint32_t)sclh_val;
     }
     else
     {

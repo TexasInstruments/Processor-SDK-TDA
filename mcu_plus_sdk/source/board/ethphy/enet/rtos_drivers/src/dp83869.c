@@ -101,27 +101,19 @@ static void Dp83869_setGpioMux(EthPhyDrv_Handle hPhy,
 static void Dp83869_setLedMode(EthPhyDrv_Handle hPhy,
                                const Dp83869_LedMode *ledMode);
 
-static void Dp83869_restart(EthPhyDrv_Handle hPhy);
-
 static void Dp83869_rmwExtReg(EthPhyDrv_Handle hPhy,
                               uint32_t reg,
                               uint16_t mask,
                               uint16_t val);
 
-static int32_t Dp83869_isRestartComplete (EthPhyDrv_Handle hPhy,
-                                          bool *pCompleted);
+static int32_t Dp83869_restart(EthPhyDrv_Handle hPhy);
 
-static int32_t Dp83869_getSpeedDuplex (EthPhyDrv_Handle hPhy,
-                                       Phy_Link_SpeedDuplex* pConfig);
+static int32_t Dp83869_isRestartComplete(EthPhyDrv_Handle hPhy,
+                                         bool *pCompleted);
 
-static int32_t Dp83869_enableAdvertisement (EthPhyDrv_Handle hPhy,
-                                            uint32_t advertisement);
+static int32_t Dp83869_getSpeedDuplex(EthPhyDrv_Handle hPhy,
+                                      Phy_Link_SpeedDuplex* pConfig);
 
-static int32_t Dp83869_disableAdvertisement (EthPhyDrv_Handle hPhy,
-                                             uint32_t advertisement);
-
-static int32_t Dp83869_ctrlExtFD (EthPhyDrv_Handle hPhy,
-                                  bool enable);
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -172,12 +164,8 @@ Phy_DrvObj_t gEnetPhyDrvDp83869 =
         .isAutoNegotiationRestartComplete = NULL,
         .setSpeedDuplex                   = NULL,
         .getSpeedDuplex                   = Dp83869_getSpeedDuplex,
-        .enableAdvertisement              = Dp83869_enableAdvertisement,
-        .disableAdvertisement             = Dp83869_disableAdvertisement,
-        .setMiiMode                       = Dp83869_setMiiMode,
-        .ctrlExtFD                        = Dp83869_ctrlExtFD,
-        .ctrlOddNibbleDetection           = NULL,
-        .ctrlRxErrIdle                    = NULL,
+        .enableAdvertisement              = NULL,
+        .disableAdvertisement             = NULL,
     }
 };
 
@@ -194,7 +182,7 @@ void Dp83869_initCfg(Dp83869_Cfg *cfg)
     cfg->txFifoDepth          = 4U;     /* 4 bytes/nibbles */
     cfg->impedanceInMilliOhms = 50000U; /* 50 ohms */
     cfg->idleCntThresh        = 5U;
-    cfg->gpio0Mode            = DP83869_GPIO0_RXERR;
+    cfg->gpio0Mode            = DP83869_GPIO0_LINK_STATUS;
     cfg->gpio1Mode            = DP83869_GPIO1_COL;
     cfg->ledMode[0]           = DP83869_LED_LINKED;
     cfg->ledMode[1]           = DP83869_LED_LINKED_1000BT;
@@ -625,40 +613,61 @@ static void Dp83869_setLedMode(EthPhyDrv_Handle hPhy,
     pRegAccessApi->EnetPhy_writeReg(pRegAccessApi->pArgs, DP83869_LEDCR1, val);
 }
 
-static void Dp83869_restart(EthPhyDrv_Handle hPhy)
+static int32_t Dp83869_restart(EthPhyDrv_Handle hPhy)
 {
+    int32_t status = PHY_EFAIL;
+
     Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
+
     /* Software restart: full reset, not including registers */
     PHYTRACE_DBG("PHY %u: soft-restart\n",PhyPriv_getPhyAddr(hPhy));
-    pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83869_CTRL, CTRL_SWRESTART, CTRL_SWRESTART);
+
+    status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83869_CTRL, CTRL_SWRESTART, CTRL_SWRESTART);
+
+    return status;
 }
 
-void Dp83869_reset(EthPhyDrv_Handle hPhy)
+int32_t Dp83869_reset(EthPhyDrv_Handle hPhy)
 {
+    int32_t status = PHY_EFAIL;
+
     Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
+
     /* Global software reset: all PHY internal circuits including IEEE-defined
      * registers and all extended registers are reset */
     PHYTRACE_DBG("PHY %u: global soft-reset\n", PhyPriv_getPhyAddr(hPhy));
-    pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83869_CTRL, CTRL_SWRESET, CTRL_SWRESET);
+
+    status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83869_CTRL, CTRL_SWRESET, CTRL_SWRESET);
+
+    return status;
 }
 
-bool Dp83869_isResetComplete(EthPhyDrv_Handle hPhy)
+int32_t Dp83869_isResetComplete(EthPhyDrv_Handle hPhy, bool *pCompleted)
 {
-    int32_t status;
-    uint16_t val;
-    bool complete = false;
+    int32_t status = PHY_EFAIL;
+    uint16_t val = 0;
+
+    if ((hPhy == NULL) ||
+        (pCompleted == NULL))
+    {
+        return PHY_EBADARGS;
+    }
+
+    *pCompleted = false;
+
     Phy_RegAccessCb_t* pRegAccessApi = PhyPriv_getRegAccessApi(hPhy);
 
     /* Reset is complete when RESET bit has self-cleared */
     status = pRegAccessApi->EnetPhy_readReg(pRegAccessApi->pArgs, DP83869_CTRL, &val);
+
     if (status == PHY_SOK)
     {
-        complete = ((val & CTRL_SWRESET) == 0U);
+        *pCompleted = ((val & CTRL_SWRESET) == 0U);
     }
 
     PHYTRACE_DBG("PHY %u: global soft-reset is %scomplete\n", PhyPriv_getPhyAddr(hPhy), complete ? "" : "not");
 
-    return complete;
+    return status;
 }
 
 static void Dp83869_rmwExtReg(EthPhyDrv_Handle hPhy,
@@ -763,7 +772,7 @@ void Dp83869_printRegs(EthPhyDrv_Handle hPhy)
     printf("PHY %u: GPIOMUXCTRL = 0x%04x\r\n",phyAddr, val);
 }
 
-int32_t Dp83869_isRestartComplete (EthPhyDrv_Handle hPhy, bool *pCompleted)
+static int32_t Dp83869_isRestartComplete (EthPhyDrv_Handle hPhy, bool *pCompleted)
 {
     int32_t status;
     uint16_t val;
@@ -782,7 +791,7 @@ int32_t Dp83869_isRestartComplete (EthPhyDrv_Handle hPhy, bool *pCompleted)
     return status;
 }
 
-int32_t Dp83869_getSpeedDuplex (EthPhyDrv_Handle hPhy, Phy_Link_SpeedDuplex* pConfig)
+static int32_t Dp83869_getSpeedDuplex (EthPhyDrv_Handle hPhy, Phy_Link_SpeedDuplex *pConfig)
 {
     int32_t  status;
     uint32_t speed;
@@ -846,173 +855,4 @@ int32_t Dp83869_getSpeedDuplex (EthPhyDrv_Handle hPhy, Phy_Link_SpeedDuplex* pCo
     (void)speed;
 
     return status;
-}
-
-int32_t Dp83869_enableAdvertisement (EthPhyDrv_Handle hPhy, uint32_t advertisement)
-{
-    uint16_t val = 0;
-    uint32_t tmpMask = 0;
-    int32_t status = PHY_EFAIL;
-
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
-
-    if (0 == advertisement)
-    {
-        status = PHY_SOK;
-        goto laError;
-    }
-
-    tmpMask = PHY_LINK_ADV_HD10 | PHY_LINK_ADV_FD10 | PHY_LINK_ADV_HD100 | PHY_LINK_ADV_FD100;
-
-    if (0 != (advertisement & tmpMask))
-    {
-        val |= ANAR_802P3;
-
-        if (0 != (advertisement & PHY_LINK_ADV_HD10))
-        {
-            val |= ANAR_10HD;
-        }
-
-        if (0 != (advertisement & PHY_LINK_ADV_FD10))
-        {
-            val |= ANAR_10FD;
-        }
-
-        if (0 != (advertisement & PHY_LINK_ADV_HD100))
-        {
-            val |= ANAR_100HD;
-        }
-
-        if (0 != (advertisement & PHY_LINK_ADV_FD100))
-        {
-            val |= ANAR_100FD;
-        }
-
-        status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_ANAR, ANAR_802P3 | ANAR_10HD | ANAR_10FD | ANAR_100HD | ANAR_100FD, val);
-
-        if (PHY_SOK != status)
-        {
-            goto laError;
-        }
-    }
-
-    val = 0;
-    tmpMask = PHY_LINK_ADV_HD1000 | PHY_LINK_ADV_FD1000;
-
-    if (0 != (advertisement & tmpMask))
-    {
-        if (0 != (advertisement & PHY_LINK_ADV_HD1000))
-        {
-            val |= CFG1_1000HD;
-        }
-
-        if (0 != (advertisement & PHY_LINK_ADV_FD1000))
-        {
-            val |= CFG1_1000FD;
-        }
-
-        status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83869_CFG1, CFG1_1000FD | CFG1_1000HD, val);
-
-        if (PHY_SOK != status)
-        {
-            goto laError;
-        }
-    }
-
-laError:
-
-    return status;
-}
-
-int32_t Dp83869_disableAdvertisement (EthPhyDrv_Handle hPhy, uint32_t advertisement)
-{
-    uint16_t val = 0;
-    uint32_t tmpMask = 0;
-    int32_t status = PHY_EFAIL;
-
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
-
-    if (0 == advertisement)
-    {
-        status = PHY_SOK;
-        goto laError;
-    }
-
-    tmpMask = PHY_LINK_ADV_HD10 | PHY_LINK_ADV_FD10 | PHY_LINK_ADV_HD100 | PHY_LINK_ADV_FD100;
-
-    if (0 != (advertisement & tmpMask))
-    {
-        val = ANAR_802P3 | PHY_LINK_ADV_HD10 | PHY_LINK_ADV_FD10 | PHY_LINK_ADV_HD100 | PHY_LINK_ADV_FD100;
-
-        if (0 != (advertisement & PHY_LINK_ADV_HD10))
-        {
-            val &= ~ANAR_10HD;
-        }
-
-        if (0 != (advertisement & PHY_LINK_ADV_FD10))
-        {
-            val &= ~ANAR_10FD;
-        }
-
-        if (0 != (advertisement & PHY_LINK_ADV_HD100))
-        {
-            val &= ~ANAR_100HD;
-        }
-
-        if (0 != (advertisement & PHY_LINK_ADV_FD100))
-        {
-            val &= ~ANAR_100FD;
-        }
-
-        status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, PHY_ANAR, ANAR_802P3 | ANAR_10HD | ANAR_10FD | ANAR_100HD | ANAR_100FD, val);
-
-        if (PHY_SOK != status)
-        {
-            goto laError;
-        }
-    }
-
-    tmpMask = PHY_LINK_ADV_HD1000 | PHY_LINK_ADV_FD1000;
-
-    if (0 != (advertisement & tmpMask))
-    {
-        val = CFG1_1000HD | CFG1_1000FD;
-
-        if (0 != (advertisement & PHY_LINK_ADV_HD1000))
-        {
-            val &= ~CFG1_1000HD;
-        }
-
-        if (0 != (advertisement & PHY_LINK_ADV_FD1000))
-        {
-            val &= ~CFG1_1000FD;
-        }
-
-        status = pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83869_CFG1, CFG1_1000FD | CFG1_1000HD, val);
-
-        if (PHY_SOK != status)
-        {
-            goto laError;
-        }
-    }
-
-laError:
-
-    return status;
-}
-
-int32_t Dp83869_ctrlExtFD (EthPhyDrv_Handle hPhy,
-                           bool control)
-{
-    uint16_t val = 0;
-
-    Phy_RegAccessCb_t* pRegAccessApi = &((Phy_Obj_t*) hPhy)->regAccessApi;
-
-    if (control)
-    {
-        // enables to declare Full-Duplex also in parallel detect link
-        val = CFG3_ANEGADVFD_EN;
-    }
-
-    return pRegAccessApi->EnetPhy_rmwReg(pRegAccessApi->pArgs, DP83869_CFG3, CFG3_ANEGADVFD_EN, val);
 }

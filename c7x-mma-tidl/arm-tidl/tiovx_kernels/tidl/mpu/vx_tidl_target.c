@@ -341,7 +341,9 @@ static vx_status VX_CALLBACK tivxKernelTIDLProcess
     status = tivxGetTargetKernelInstanceContext(kernel, (void **)&prms, &size);
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if (((vx_status)VX_SUCCESS != status) || (NULL == prms) || (sizeof(tivxTIDLNestedKernelObj) != size))
     {
@@ -351,7 +353,9 @@ static vx_status VX_CALLBACK tivxKernelTIDLProcess
 
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if(status == (vx_status)VX_SUCCESS)
     {
@@ -615,7 +619,9 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
     {
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data. obj_desc[] is sent as argument for callback.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data. obj_desc[] is sent as argument for callback.
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if ((NULL == obj_desc[i]) && (i != TIVX_KERNEL_TIDL_IN_TRACE_DATA_IDX)) /* i = 5 corresponds to trace data dump which can be NULL */
         {
@@ -633,7 +639,9 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
         prms = (tivxTIDLNestedKernelObj *)tivxMemAlloc((uint32_t)(sizeof(tivxTIDLNestedKernelObj)), (vx_enum)TIVX_MEM_EXTERNAL);
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if(prms == NULL)
         {
@@ -643,7 +651,9 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
 
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if(status == (vx_status)VX_SUCCESS)
         {
@@ -654,7 +664,9 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
         }
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if(status == (vx_status)VX_SUCCESS)
         {
@@ -684,7 +696,9 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
                 (void **)&tidlConfigParams, (vx_enum)VX_READ_ONLY, (vx_enum)VX_MEMORY_TYPE_HOST, 0);
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if(status == (vx_status)VX_SUCCESS)
             {
@@ -776,7 +790,9 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
                 {
                     /* LDRA_JUSTIFY_START
                     <metric start> branch <metric end>
-                    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data. num_core is fixed for given SOC and cannot be changed
+                    <justification start>
+                    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data. num_core is fixed for given SOC and cannot be changed
+                    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
                     <justification end> */
                     if(prms->num_cores <= (uint32_t)TIDL_MAX_NUM_CORES) /* To avoid -Werror=array-bounds warning*/
                     {
@@ -796,7 +812,9 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
             }
             /* LDRA_JUSTIFY_START
             <metric start> branch <metric end>
-            <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            <justification start>
+            Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+            Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
             <justification end> */
             if(status == (vx_status)VX_SUCCESS)
             {
@@ -1109,8 +1127,10 @@ void tivxAddTargetKernelTIDL_mpu(void)
     self_cpu = tivxGetSelfCpuId();
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     Here tivxGetSelfCpuId() function always returns TIVX_CPU_ID_MPU_0 for this SOC.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if (self_cpu == (vx_enum)TIVX_CPU_ID_MPU_0)
     {
@@ -1158,7 +1178,9 @@ static vx_status VX_CALLBACK tivxKernelTIDLControl(
         (void **)&prms, &size);
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if(status == (vx_status)VX_SUCCESS)
     {

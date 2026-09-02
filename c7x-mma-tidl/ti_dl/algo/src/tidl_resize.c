@@ -98,7 +98,11 @@ void getResizeInfo(sTIDL_ResizeInfo_t *resizeInfo, const sTIDL_AlgLayer_t *algLa
   uint32_t isFirstTile = algLayer->wlPadParams.isFirstTile;
   uint32_t isLastTile = algLayer->wlPadParams.isLastTile;
   int32_t wlRepeatIter = algLayer->wlRepeatIter;
-  int32_t multiCoreMode = tidlLayer->multiCoreMode;
+  
+  int32_t multiCoreMode = (algLayer->workloadUnit != NULL)
+                            ? algLayer->workloadUnit->multiCoreMode
+                            : TIDL_NOT_MULTI_CORE;
+                          
   int32_t notMultiCoreMode = ((uint32_t)multiCoreMode == TIDL_NOT_MULTI_CORE);
   int32_t isFirstTileType = ((tileType != NO_TILE) && (isFirstTile == 1U) && (wlRepeatIter == 0));
   int32_t isNoTileType = (tileType == NO_TILE);
@@ -210,7 +214,7 @@ static void TIDL_resizeUpdateWorkload(const sWorkloadUnit_t *workloadUnit,
       2) Offset the read from staging buffer by amount equal to the output overlap size.
         This is handled by TIDL in the following code.
       */
-    if ((link->subType == (int32_t)LINK_X_FM_OUT_PART_TO_FULL) && ((numSplit > 1) || tidlLayer->multiCoreMode == TIDL_MULTI_CORE_SPATIAL_WITH_JOIN))
+    if ((link->subType == (int32_t)LINK_X_FM_OUT_PART_TO_FULL) && ((numSplit > 1) || workloadUnit->multiCoreMode == TIDL_MULTI_CORE_SPATIAL_WITH_JOIN))
     {
       link->src[0].offset = link->src[0].offset + ((outPad * outPitch) + outPad);
     }
@@ -223,7 +227,7 @@ static void TIDL_resizeUpdateWorkload(const sWorkloadUnit_t *workloadUnit,
       }
       /* SFMP case we overwrite padded region of the final buffer by links responsible for generating output info */
       // Condition modified to don't reset the offset when the mode is TIDL_ResizePadZero , resizePadZeroOffset is 1 for resize ratio 2.
-      else if (((numSplit == 1) && (tidlLayer->multiCoreMode != TIDL_MULTI_CORE_SPATIAL_WITH_JOIN)) && ((((link->subType == (int32_t)LINK_P) && ((params->mode != TIDL_ResizePadZero) || ((params->resizePadZeroOffset == 0) || (params->resizeRatio[TIDL_DIM_WIDTH] == 4) )))) || (link->subType == (int32_t)LINK_X_FM_OUT_PART_TO_FULL)))
+      else if (((numSplit == 1) && (workloadUnit->multiCoreMode != TIDL_MULTI_CORE_SPATIAL_WITH_JOIN)) && ((((link->subType == (int32_t)LINK_P) && ((params->mode != TIDL_ResizePadZero) || ((params->resizePadZeroOffset == 0) || (params->resizeRatio[TIDL_DIM_WIDTH] == 4) )))) || (link->subType == (int32_t)LINK_X_FM_OUT_PART_TO_FULL)))
       {
         link->sink.offset = link->sink.offset - ((outPad * outPitch) + outPad);
       }
@@ -588,7 +592,9 @@ static int32_t TIDL_resizeDspProcessNew(TIDL_NetworkCommonParams *commonParams,
         /* Perform the operation if the line type is set in copyLineInfo */
         /* LDRA_JUSTIFY_START
         <metric start> branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         if ((resizeInfo.copyLineInfo & lineTypes[i]) == lineTypes[i])
         /* LDRA_JUSTIFY_END */
@@ -641,7 +647,9 @@ static int32_t TIDL_resizeDspProcessNew(TIDL_NetworkCommonParams *commonParams,
           /* Perform the operation if the line type is set in copyLineInfo */
           /* LDRA_JUSTIFY_START
           <metric start> branch <metric end>
-          <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          <justification start>
+          Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+          Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
           <justification end> */
           if ((resizeInfo.copyLineInfo & lineTypes[i]) == lineTypes[i])
           /* LDRA_JUSTIFY_END */

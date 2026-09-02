@@ -827,7 +827,7 @@ static int32_t appMemAddTupleToList(uint32_t dmaBufFd, uint32_t size, uint64_t *
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM07
 <justification end>*/
-        if (vPtr == MAP_FAILED)
+        if ((uintptr_t)vPtr == (uintptr_t)MAP_FAILED)
         {
             appLogPrintf("MEM: ERROR: Failed to translate dmaBufFd %d to "
                    "virtPtr!!! errno=%d (%s)\n", dmaBufFd, errno, strerror(errno));
@@ -924,11 +924,7 @@ static int32_t appMemAddTupleToList(uint32_t dmaBufFd, uint32_t size, uint64_t *
     {
         /* release resources incase of alloc failure */
         appLogPrintf("MEM: ERROR: memory alloc of size = %d bytes, failed with status = %d !!!\n", size, status);
-        if (vPtr == MAP_FAILED)
-        {
-            vPtr = NULL;
-        }
-        else
+        if ((uintptr_t)vPtr != (uintptr_t)MAP_FAILED)
         {
             (void)munmap(vPtr, size);
         }
@@ -1022,7 +1018,7 @@ void *appMemMap(void *phys_ptr, uint32_t size)
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM11
 <justification end>*/
-        if(virt_ptr==MAP_FAILED)
+        if((uintptr_t)virt_ptr==(uintptr_t)MAP_FAILED)
         {
             virt_ptr = NULL;
         }

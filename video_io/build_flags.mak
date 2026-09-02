@@ -3,6 +3,7 @@ PSDK_BUILDER_PATH ?= $(PSDK_PATH)/sdk_builder
 
 # Inherit common build flags from root repo in SDK
 include $(PSDK_BUILDER_PATH)/build_flags.mak
+include $(PSDK_BUILDER_PATH)/makerules/makefile_ecu.mak 
 
 # These flags are only needed within this repo
 ifeq ($(SOC),am62a)

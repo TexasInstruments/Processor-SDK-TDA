@@ -213,6 +213,15 @@ typedef void (*TIDL_Unlock_t) (int32_t val);
 /* @} */
 
 /**
+@enum   eTIDL_InferencePrecisionMode 
+@brief  This enumerator defines the different types of inference precision modes supported by TIDL library
+*/
+typedef enum {
+    TIDL_InferencePrecisionModeFixedPoint = 0,
+    TIDL_InferencePrecisionModeFloatingPoint = 1,
+} eTIDL_InferencePrecisionMode;
+
+/**
  *  \anchor eTIDL_LayerKernelType
  *  \name   TIDL Layer Kernel Type
  *
@@ -602,17 +611,14 @@ typedef enum {
  *  @{
  */
 #define TIDL_NOT_MULTI_CORE                         ((uint32_t) 0U )
-#define TIDL_MULTI_CORE_SPATIAL                     ((uint32_t) 2U )
-#define TIDL_MULTI_CORE_CHANNEL                     ((uint32_t) 4U )
-#define TIDL_MULTI_CORE_BATCH                       ((uint32_t) 8U )
-#define TIDL_MULTI_CORE_CROP_SPATIAL_JOIN           ((uint32_t) 16U)
-#define TIDL_MULTI_CORE_CROP_CHANNEL_JOIN           ((uint32_t) 32U)
-#define TIDL_MULTI_CORE_CROP_BATCH_JOIN             ((uint32_t) 64U) /*might need different modes for split to enable tansition to different multi-core modes*/
-#define TIDL_MULTI_CORE_SPATIAL_JOIN_WITH_CROP      ((uint32_t) 128U)    
+#define TIDL_MULTI_CORE_SPATIAL                     ((uint32_t) 1U )
+#define TIDL_MULTI_CORE_CHANNEL                     ((uint32_t) 2U )
+#define TIDL_MULTI_CORE_BATCH                       ((uint32_t) 4U )
+#define TIDL_MULTI_CORE_JOIN                        ((uint32_t) 8U )
 
-#define TIDL_MULTI_CORE_BATCH_WITH_JOIN            (TIDL_MULTI_CORE_BATCH   | TIDL_MULTI_CORE_CROP_BATCH_JOIN)
-#define TIDL_MULTI_CORE_CHANNEL_WITH_JOIN          (TIDL_MULTI_CORE_CHANNEL | TIDL_MULTI_CORE_CROP_CHANNEL_JOIN)
-#define TIDL_MULTI_CORE_SPATIAL_WITH_JOIN          (TIDL_MULTI_CORE_SPATIAL | TIDL_MULTI_CORE_CROP_SPATIAL_JOIN)
+#define TIDL_MULTI_CORE_SPATIAL_WITH_JOIN           (TIDL_MULTI_CORE_SPATIAL | TIDL_MULTI_CORE_JOIN)
+#define TIDL_MULTI_CORE_CHANNEL_WITH_JOIN           (TIDL_MULTI_CORE_CHANNEL | TIDL_MULTI_CORE_JOIN)
+#define TIDL_MULTI_CORE_BATCH_WITH_JOIN             (TIDL_MULTI_CORE_BATCH   | TIDL_MULTI_CORE_JOIN)
 /* @} */
 
 /**
@@ -686,13 +692,15 @@ typedef enum {
           offset in a large buffer pointed by the parent structure
  @param  bufSize
           Size of the buffer in bytes
+ @param  dataType
+          Data type of the buffer @ref eTIDL_ElementType
 */
 typedef struct
 {
   void* ptr;
   int32_t bufSize;
   int32_t offset;
-  int32_t reserved[1];
+  int32_t dataType;
 }sBuffer_t;
 
 /**
@@ -1871,8 +1879,6 @@ typedef struct {
   int32_t		offsetW;
   /** Vertical offset */
   int32_t		offsetH;
-  /*crop for multic7x or normal crop*/
-  int32_t   multiCoreMode;
 }sTIDL_CropParams_t;
 
 
@@ -1951,6 +1957,8 @@ typedef struct {
   int32_t   mode;
   /** Type of padding modes gridsample supports as defined in \ref eTIDL_GridSamplePaddingMode */
   int32_t   padding_mode;
+  /** Indicates if the grid is precomputed */
+  int32_t  is_grid_precomputed;
 }sTIDL_GridSampleParams_t;
 
 /**
@@ -1964,6 +1972,21 @@ typedef struct {
   /** Transpose permutation */
   int32_t perm[TIDL_DIM_MAX];
 }sTIDL_TransposeParams_t;
+
+/**
+ @struct  sTIDL_ReshapeRtParams_t
+ @brief   Runtime parameters for Reshape layer dynamic shape support.
+          Populated at import time; used by TIDL_shapeInfer_Reshape at runtime
+          to recompute output dims that were originally -1 or 0 in the shape spec.
+*/
+typedef struct {
+  /** TIDL 6D index of the output dim that was -1 in the original shape spec.
+   *  Set to -1 if no dimension was specified as -1. */
+  int32_t minusOneDimIdx;
+  /** Bitmask of TIDL 6D output dim indices that were 0 in the original shape spec
+   *  (passthrough: out[d] = in[d] at runtime). */
+  int32_t passthroughMask;
+}sTIDL_ReshapeRtParams_t;
 
 /**
  @struct  sTIDL_TopKParams_t
@@ -2034,6 +2057,12 @@ typedef struct {
   int32_t layout;
   /** Indicates on which axis the output buffer size has increased*/
   int32_t incrementAxis;
+  /** Offset to derived scales values*/
+  int32_t derivedScales;
+  /** Offset to derived shifts values*/
+  int32_t derivedShifts;
+  /** Offset to activations scales and zeropoints */
+  int32_t activationScales;
 }sTIDL_LSTMParams_t;
 
 /**
@@ -2176,6 +2205,7 @@ typedef union {
   sTIDL_ShapeParams_t                    shapeParams;
   sTIDL_AttentionParams_t                attentionParams;
   sTIDL_NonZeroParams_t                  nonZeroParams;
+  sTIDL_ReshapeRtParams_t                reshapeParams;
 }sTIDL_LayerParams_t;
 /*RESET_MISRA("18.4")  -> Reset rule 18.4 */
 
@@ -2213,8 +2243,6 @@ typedef struct {
   int32_t weightsElementSizeInBits;
   /** Offset selection method for stride. \ref eTIDL_StrideOffsetMethod */
   int32_t strideOffsetMethod;
-  /* Indicates whether layer is split across multiple cores */
-  int32_t multiCoreMode;
   /*To indicate wether the layer requires scratch Memory region*/
   int32_t scratchMemRequired;
   /** Profile points of the layer */

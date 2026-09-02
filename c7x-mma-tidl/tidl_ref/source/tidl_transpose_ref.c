@@ -76,6 +76,8 @@
 #include "tidl_cuda.h"
 #endif
 
+using namespace floating_point::bf16_c7x;
+
 /**
  * @brief This is reference implementation of Transpose layer
  *
@@ -246,6 +248,9 @@ template void TIDL_transposeRefProcess(const uint16_t *pIn, uint16_t *pOut,
                                        sTIDL_DataParams_t *inDataParams, const sTIDL_Layer_t *tidlLayer);
 
 template void TIDL_transposeRefProcess(const int16_t *pIn, int16_t *pOut,
+                                       sTIDL_DataParams_t *inDataParams, const sTIDL_Layer_t *tidlLayer);
+
+template void TIDL_transposeRefProcess(const bfloat16_tidl *pIn, bfloat16_tidl *pOut,
                                        sTIDL_DataParams_t *inDataParams, const sTIDL_Layer_t *tidlLayer);
 
 template void TIDL_transposeRefProcess(const int32_t *pIn, int32_t *pOut,

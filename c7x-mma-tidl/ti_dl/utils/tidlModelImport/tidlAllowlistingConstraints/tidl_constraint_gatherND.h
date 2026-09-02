@@ -96,21 +96,4 @@ const vector<TidlConstraint> tidlConstraintGatherND =
             return true;
         }
     ),
-    TIDL_CSTR(
-        "Data cannot be a constant. Only indices can be constant.",
-        "Data cannot be a constant. Only indices can be constant.",
-        "Data cannot be a Constant. Only indices can be constant.",
-        [](const sTIDL_LayerPC_t *layer, string &logs){
-            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
-            if(md.numConstInputs > 0)
-            {
-                int constTensorIdx = md.constTensorIndices[0];
-                if (constTensorIdx == 0)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-    ),
 };

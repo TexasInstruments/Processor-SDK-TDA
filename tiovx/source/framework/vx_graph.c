@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2025 The Khronos Group Inc.
+ * Copyright (c) 2012-2026 The Khronos Group Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -808,6 +808,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxAddParameterToGraph(vx_graph graph, vx_para
             graph->parameters[graph->num_params].num_buf = 0;
             graph->parameters[graph->num_params].type = (vx_enum)VX_TYPE_PARAMETER;
             graph->parameters[graph->num_params].num_other = 0;
+            graph->parameters[graph->num_params].pipeup_buf_idx = 0U;
             graph->num_params++;
             ownLogSetResourceUsedValue("TIVX_GRAPH_MAX_PARAMS", (uint16_t)graph->num_params);
             status = (vx_status)VX_SUCCESS;
@@ -1184,7 +1185,7 @@ void ownSendGraphCompletedEvent(vx_graph graph)
             {
                 status = ownEventQueueAddEvent(&graph->base.context->event_queue,
                             (vx_enum)VX_EVENT_GRAPH_COMPLETED, timestamp, graph->graph_completed_context_app_value,
-                            (uintptr_t)graph, (uintptr_t)0, (uintptr_t)0);
+                            (uintptr_t)graph, (uintptr_t)0, (uintptr_t)0, (vx_uint16)0, NULL);
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_GRAPH_UM013.
@@ -1201,7 +1202,7 @@ void ownSendGraphCompletedEvent(vx_graph graph)
             {
                 status = ownEventQueueAddEvent(&graph->event_queue,
                             (vx_enum)VX_EVENT_GRAPH_COMPLETED, timestamp, graph->graph_completed_graph_app_value,
-                            (uintptr_t)graph, (uintptr_t)0, (uintptr_t)0);
+                            (uintptr_t)graph, (uintptr_t)0, (uintptr_t)0, (vx_uint16)0, NULL);
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_GRAPH_UM013.

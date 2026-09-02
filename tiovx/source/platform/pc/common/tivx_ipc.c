@@ -322,9 +322,21 @@ int16_t tivxVdkGetSelfOvxIpcCpuId(void)
     }
     else
     {
-        if (strncmp(thread_name, "TIVX_C7\0", 7) == 0U)
+        if (strncmp(thread_name, "TIVX_C71\0", 8) == 0U)
         {
-            cpu_id = TIVX_CPU_ID_DSP1;
+            cpu_id = TIVX_CPU_ID_DSP_C7_1;
+        }
+        else if (strncmp(thread_name, "TIVX_C72\0", 8) == 0U)
+        {
+            cpu_id = TIVX_CPU_ID_DSP_C7_2;
+        }
+        else if (strncmp(thread_name, "TIVX_C73\0", 8) == 0U)
+        {
+            cpu_id = TIVX_CPU_ID_DSP_C7_3;
+        }
+        else if (strncmp(thread_name, "TIVX_C74\0", 8) == 0U)
+        {
+            cpu_id = TIVX_CPU_ID_DSP_C7_4;
         }
         else
         {
@@ -354,9 +366,21 @@ int16_t tivxVdkGetSelfAppIpcCpuId(void)
     }
     else
     {
-        if (strncmp(thread_name, "TIVX_C7\0", 7) == 0U)
+        if (strncmp(thread_name, "TIVX_C71\0", 8) == 0U)
         {
             cpu_id = g_ipc_cpu_id_map[TIVX_CPU_ID_DSP_C7_1];
+        }
+        else if (strncmp(thread_name, "TIVX_C72\0", 8) == 0U)
+        {
+            cpu_id = g_ipc_cpu_id_map[TIVX_CPU_ID_DSP_C7_2];
+        }
+        else if (strncmp(thread_name, "TIVX_C73\0", 8) == 0U)
+        {
+            cpu_id = g_ipc_cpu_id_map[TIVX_CPU_ID_DSP_C7_3];
+        }
+        else if (strncmp(thread_name, "TIVX_C74\0", 8) == 0U)
+        {
+            cpu_id = g_ipc_cpu_id_map[TIVX_CPU_ID_DSP_C7_4];
         }
         else
         {
@@ -387,9 +411,21 @@ int16_t tivxVdkGetSelfCslIpcCpuId(void)
     }
     else
     {
-        if (strncmp(thread_name, "TIVX_C7\0", 7) == 0U)
+        if (strncmp(thread_name, "TIVX_C71\0", 8) == 0U)
         {
             cpu_id = g_ipc_csl_id_map[TIVX_CPU_ID_DSP_C7_1];
+        }
+        else if (strncmp(thread_name, "TIVX_C72\0", 8) == 0U)
+        {
+            cpu_id = g_ipc_csl_id_map[TIVX_CPU_ID_DSP_C7_2];
+        }
+        else if (strncmp(thread_name, "TIVX_C73\0", 8) == 0U)
+        {
+            cpu_id = g_ipc_csl_id_map[TIVX_CPU_ID_DSP_C7_3];
+        }
+        else if (strncmp(thread_name, "TIVX_C74\0", 8) == 0U)
+        {
+            cpu_id = g_ipc_csl_id_map[TIVX_CPU_ID_DSP_C7_4];
         }
         else
         {

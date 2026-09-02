@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2018-2020 Texas Instruments Incorporated
+ *  Copyright (C) 2018-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -486,6 +486,35 @@ int32_t Sciclient_rmUdmapTxChCfg(
             const struct tisci_msg_rm_udmap_tx_ch_cfg_resp *resp,
             uint32_t timeout);
 
+#ifdef CONFIG_UDMAP_MULTI_CH_CFG
+/**
+ *  \brief Configures a Multiple Navigator Subsystem UDMAP transmit channel
+ *
+ *  Configures multiple non-real-time registers of a Navigator Subsystem UDMAP
+ *  transmit channel.  The channel indexs must be assigned to the host defined
+ *  in the TISCI header via the RM board configuration resource assignment
+ *  range list.
+ *
+ *  \n<b>Message</b>:    #TISCI_MSG_RM_UDMAP_TX_MULTI_CH_CFG
+ *  \n<b>Request</b>:    #tisci_msg_rm_udmap_tx_multi_ch_cfg_req
+ *  \n<b>Response</b>:   #tisci_msg_rm_udmap_tx_multi_ch_cfg_resp
+ *
+ *  \param  req             Pointer to UDMAP Tx multi channel configure payload
+ *
+ *  \param  resp            Pointer to UDMAP Tx multi channel configure response
+ *                          payload
+ *
+ *  \param  timeout         Gives a sense of how long to wait for the operation.
+ *                          Refer \ref SystemP_Timeout.
+ *
+ *  \return CSL_PASS on success, else failure
+ */
+int32_t Sciclient_rmUdmapTxMultiChCfg(
+            const struct tisci_msg_rm_udmap_tx_multi_ch_cfg_req *req,
+            const struct tisci_msg_rm_udmap_tx_multi_ch_cfg_resp *resp,
+            uint32_t timeout);
+#endif
+
 /**
  *  \brief Configures a Navigator Subsystem UDMAP receive channel
  *
@@ -669,12 +698,32 @@ int32_t Sciclient_rmPsilWrite(const struct tisci_msg_rm_psil_write_req *req,
                               uint32_t timeout);
 
 /**
+ *  \brief Writes a PSI-L thread real-time register to multiple threads
+ *
+ *  Writes the specified thread real-time configuration register to multiple
+ *  PSI-L threads using the PSI-L configuration proxy.
+ *
+ *  \n<b>Message</b>:    #TISCI_MSG_RM_PSIL_MULTI_CH_WRITE
+ *  \n<b>Request</b>:    #tisci_msg_rm_psil_multi_ch_write_req
+ *
+ *  \param  req             Pointer to PSI-L multi-channel write payload
+ *
+ *  \param  timeout         Gives a sense of how long to wait for the operation.
+ *                          Refer \ref SystemP_Timeout.
+ *
+ *  \return SystemP_SUCCESS on success, else failure
+ */
+int32_t Sciclient_rmPsilMultiChWrite(
+                              const struct tisci_msg_rm_psil_multi_ch_write_req *req,
+                              uint32_t timeout);
+
+/**
  *  \brief Checks the output's control register to see if the output line has an
  *        input line mapped to it.
  *
  *
  *  \param  id             TISCI Device ID of the interrupt router. Some possible values are :
- * 
+ *
  *                         TISCI_DEV_CMP_EVENT_INTROUTER0
  *                         TISCI_DEV_MAIN_GPIOMUX_INTROUTER0
  *                         TISCI_DEV_WKUP_MCU_GPIOMUX_INTROUTER0

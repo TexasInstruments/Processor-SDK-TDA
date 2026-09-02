@@ -595,7 +595,6 @@ int32_t Vhwa_m2mLdcRegisterIsr(Vhwa_M2mLdcInstObj *instObj);
 
 Vhwa_M2mLdcHandleObj *Vhwa_m2mLdcGetHandleObj(uint32_t cnt);
 
-#if !defined(VHWA_VPAC_IP_REV_VPAC3L)
 /**
  * \brief Sets the default golden register memory values for the LDC (Lens Distortion Correction) module.
  *
@@ -655,7 +654,6 @@ int32_t vhwaM2mLdcUpdateConfigRegGroup(VhwaVpacLdcSocReadBack *RegVal, const Vhw
 * \return          Returns FVID2_SOK on success, or a negative error code on failure.
 */
 int32_t Vhwa_M2mLdcConfigRegMemCompare(const Vhwa_M2mLdcHandleObj *hObj);
-#endif
 
 #ifdef __cplusplus
 }

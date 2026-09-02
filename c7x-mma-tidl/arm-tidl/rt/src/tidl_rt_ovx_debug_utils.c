@@ -95,9 +95,11 @@ uint64_t TIDLRT_ReadProfileData(const TIDL_LayerMetaData *pMetaData, int32_t pro
   uint64_t retVal = (uint64_t) layerNum;
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
   TIDLRT_ReadProfileData is always called with valid profileIdx in
   TIDLRT_LogMetaData with the macro TIDL_PROFILE_LAYER (0)
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if(profileIdx != -1)
   /* LDRA_JUSTIFY_END */
@@ -129,10 +131,12 @@ void TIDLRT_LogMetaData(const TIDL_outArgs *outArgsPtr, char* baseName)
     fp = fopen(&traceFileName[0],"w");
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     Users are not expected to infer same model parallelly on multiple threads
     causing multiple writers and fp to be NULL.
     (TIDLRT_LogMetaData is called once per model inference)
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if(fp == NULL)
     {
@@ -166,9 +170,11 @@ void TIDLRT_LogMetaData(const TIDL_outArgs *outArgsPtr, char* baseName)
         int32_t profileIdx = gCyclesProfilePrintInfo[j].profileIdx ;
         /* LDRA_JUSTIFY_START
         <metric start> statement branch <metric end>
-        <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
         profileIdx value is never set to -1 in the gCyclesProfilePrintInfo table.
         All macros defined are non-negative (TIDL_PROFILE_* values).
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
         <justification end> */
         profileVal = (profileIdx == -1) ? (uint64_t)(outArgsPtr->metaDataLayer[i].layerExecId) :
                      (profileIdx == -2) ? (uint64_t)(outArgsPtr->metaDataLayer[i].layerType) :

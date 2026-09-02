@@ -14,6 +14,7 @@
 #include <type_traits>
 #include "tidl_cuda_mem_manager.h"
 
+using namespace floating_point::bf16_mma;
 
 // CUDA version of TIDL_refBatchNormCoreRoundSlope
 __device__ int32_t cuda_roundSlope(
@@ -58,7 +59,7 @@ __global__ void BatchNormComputeKernel(
     Tb biasVal = bias[c];
     
     // Main computation
-    Tacc out = ((inDataVal*weightVal) + biasVal);
+    Tacc out = (((Tacc)inDataVal*(Tacc)weightVal) + biasVal);
     
     Tw preluScale = 1;
     int32_t slopeFact = 1;
@@ -84,7 +85,7 @@ __global__ void BatchNormComputeKernel(
     {
         if (std::is_floating_point<Tacc>::value) 
         {
-            out = out * preluScale;
+            out = (Tacc)out * (Tacc)preluScale;
         } 
         else 
         {
@@ -122,11 +123,16 @@ __global__ void TIDL_CudaBatchNormSaturateKernel(
     int acc_idx = (b * outBatchPitch) + (d1 * outDIM1Pitch) + (d2 * outDIM2Pitch) + (c * outChPitch) + (h * outPitch) + w;
     Tacc out = accumulator[acc_idx];
     
-    if (std::is_floating_point<Tacc>::value) 
+    if (std::is_floating_point<Tacc>::value && std::is_same<Tout, bfloat16_tidl>::value) 
+    {
+        // BFloat16 Saturation - similar to TIDL_BF16Sat
+        out = cuda_bf16Sat(out, floatSatLow, floatSatHigh);
+    }
+    else if (std::is_floating_point<Tacc>::value)
     {
         // Float saturation - use float parameters like TIDL_floatSat
         out = cuda_floatSat(out, floatSatHigh, floatSatLow);
-    } 
+    }
     else 
     {
         // Fixed-point saturation
@@ -910,6 +916,20 @@ template int TIDL_cudaBatchNorm<float, short, int, long>(float const*, short con
 template int TIDL_cudaBatchNorm<float, float, float, float>(float const*, float const*, float const*, float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float);
 template int TIDL_cudaBatchNormSaturation<long, short>(long const*, short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
 template int TIDL_cudaBatchNormSaturation<float, unsigned short>(float const*, unsigned short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
+template int TIDL_cudaBatchNorm<bfloat16_tidl, bfloat16_tidl, float, float>(bfloat16_tidl const*, bfloat16_tidl const*, bfloat16_tidl const*, float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float);
+template int TIDL_cudaBatchNormSaturation<float, bfloat16_tidl>(float const*, bfloat16_tidl*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
+
+// BF16 instantiations
+template int TIDL_cudaBatchNorm<bfloat16_tidl, float, float, float>(bfloat16_tidl const*, float const*, float const*, float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float);
+template int TIDL_cudaBatchNorm<signed char, bfloat16_tidl, float, float>(signed char const*, bfloat16_tidl const*, bfloat16_tidl const*, float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float);
+template int TIDL_cudaBatchNorm<unsigned char, bfloat16_tidl, float, float>(unsigned char const*, bfloat16_tidl const*, bfloat16_tidl const*, float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float);
+template int TIDL_cudaBatchNorm<short, bfloat16_tidl, float, float>(short const*, bfloat16_tidl const*, bfloat16_tidl const*, float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float);
+template int TIDL_cudaBatchNorm<unsigned short, bfloat16_tidl, float, float>(unsigned short const*, bfloat16_tidl const*, bfloat16_tidl const*, float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float);
+template int TIDL_cudaBatchNorm<float, bfloat16_tidl, float, float>(float const*, bfloat16_tidl const*, bfloat16_tidl const*, float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float);
+template int TIDL_cudaBatchNorm<bfloat16_tidl, signed char, short, int>(bfloat16_tidl const*, signed char const*, signed char const*, short const*, int*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float);
+template int TIDL_cudaBatchNorm<bfloat16_tidl, short, int, long>(bfloat16_tidl const*, short const*, short const*, int const*, long*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float);
+template int TIDL_cudaBatchNormSaturation<int, bfloat16_tidl>(int const*, bfloat16_tidl*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
+template int TIDL_cudaBatchNormSaturation<long, bfloat16_tidl>(long const*, bfloat16_tidl*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
 
 
 template int TIDL_cudaHighAccuracySigmoid<short, unsigned short>(short const*, unsigned short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);

@@ -269,8 +269,10 @@ static int32_t TIDL_batchNormInitBiasParamMem(sTIDL_Network_t *net,
   int8_t * biasPtr  = (int8_t *)algBatchNormParams->biasParamMem;
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
   This condition is maintained to avoid null pointer dereference exceptions.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if(biasPtr != NULL)
   /* LDRA_JUSTIFY_END */
@@ -310,8 +312,10 @@ static int32_t TIDL_batchNormInitBiasParamMem(sTIDL_Network_t *net,
   }
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
   This condition is maintained to avoid null pointer dereference exceptions.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   else
   {
@@ -354,8 +358,10 @@ static void TIDL_batchNormInitSlopeFactMem(sTIDL_Network_t *net,
   void * slopePtr  = get_int8_t_pointer((int8_t *)(net),tidlLayer->actParams.slope);
   /* LDRA_JUSTIFY_START
   <metric start> branch <metric end>
-  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+  <justification start>
+  Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
   This condition is maintained to avoid null pointer dereference exceptions.
+  Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
   <justification end> */
   if(algBatchNormParams->slopeFact != NULL)
   /* LDRA_JUSTIFY_END */
@@ -606,8 +612,10 @@ int32_t TIDL_batchNormInitNew(const TIDL_LayerSpecificParams *layerSpecificParam
                                   memory);
     /* LDRA_JUSTIFY_START
     <metric start> branch <metric end>
-    <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+    <justification start>
+    Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
     This condition is maintained to avoid null pointer dereference exceptions.
+    Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
     <justification end> */
     if (status == IALG_EOK) {
     /* LDRA_JUSTIFY_END */

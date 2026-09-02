@@ -279,7 +279,7 @@ ifeq ($(TIDL_KERNELS_FILE_EXISTS) , 1)
 	@echo .
 	@echo ======== MAKING TIDL KERNELS =================
 ifeq ($(TARGET_PLATFORM) , PC)
-	cmake -B ./tidl-kernels/x86_64_build ./tidl-kernels -DSOC=$(TARGET_SOC) -DBUILD_ALL_KERNELS=OFF $(TIDL_SUPPORTED_KERNEL_FLAGS) -DPSDK_INSTALL_PATH=$(PSDK_INSTALL_PATH) -DPERF_MODEL=1 -DBUILD_TESTS=OFF -DHOST_EMU=ON -DCMAKE_BUILD_TYPE=$(TARGET_BUILD) -DINSTALL_PATH=$(ALGBASE_PATH)/ti_dl -DGCOV_ENABLED=$(GCOV_ENABLED) -DMMALIB_PATH=$(MMALIB_PATH)
+	cmake -B ./tidl-kernels/x86_64_build ./tidl-kernels -DSOC=$(TARGET_SOC) -DBUILD_ALL_KERNELS=OFF $(TIDL_SUPPORTED_KERNEL_FLAGS) -DPSDK_INSTALL_PATH=$(PSDK_INSTALL_PATH) -DPERF_MODEL=$(ENABLE_PERFORMANCE_MODELLING) -DBUILD_TESTS=OFF -DHOST_EMU=ON -DCMAKE_BUILD_TYPE=$(TARGET_BUILD) -DINSTALL_PATH=$(ALGBASE_PATH)/ti_dl -DGCOV_ENABLED=$(GCOV_ENABLED) -DMMALIB_PATH=$(MMALIB_PATH)
 	$(MAKE) -C ./tidl-kernels/x86_64_build -f Makefile install
 else
 	cmake -B ./tidl-kernels/dsp_build ./tidl-kernels -DSOC=$(TARGET_SOC) -DBUILD_ALL_KERNELS=OFF $(TIDL_SUPPORTED_KERNEL_FLAGS) -DPSDK_INSTALL_PATH=$(PSDK_INSTALL_PATH) -DBUILD_TESTS=OFF -DHOST_EMU=OFF -DCMAKE_BUILD_TYPE=$(TARGET_BUILD) -DINSTALL_PATH=$(ALGBASE_PATH)/ti_dl -DCODE_COVERAGE_ENABLED_FOR_TIDL=$(CODE_COVERAGE_ENABLED_FOR_TIDL) -DMMALIB_PATH=$(MMALIB_PATH)
@@ -366,7 +366,7 @@ ifeq ($(TIDL_PERFSIM_FILE_EXISTS) , 1)
 	cd ti_dl/utils/perfsim && $(RM_CMD) ti_cnnperfsim*
 endif
 
-ms:
+ms: tidl_lib
 	@echo .
 ifeq ($(TIDL_MS_FILE_EXISTS) , 1)
 	@echo ======== MAKING MODEL SECURITY =================
@@ -481,13 +481,13 @@ custom_clean:
 
 .IGNORE: clean
 ifdef SystemRoot
-clean: nc_clean it_clean tidl_clean dt_clean
+clean: nc_clean it_clean tidl_clean tidl_kernels_clean dt_clean
 else
-clean: nc_clean it_clean tidl_clean gv_clean
+clean: nc_clean it_clean tidl_clean tidl_kernels_clean gv_clean
 endif
 
 .IGNORE: clean
-cleanall: protos_clean nc_clean it_clean tidl_clean gv_clean gv_rt_clean dt_clean ms_clean
+cleanall: protos_clean nc_clean it_clean tidl_clean gv_clean gv_rt_clean dt_clean ms_clean tidl_kernels_clean
 
 scrub: cleanall
 	rm -rf ./ti_dl/lib
@@ -511,6 +511,10 @@ scrub: cleanall
 	rm -rf ./tiovx_kernels/out
 	rm -f ./ti_dl/test/PC_dsp_test_dl_algo.out
 	rm -f ./ti_dl/test/j7-c71_0-fw
+	rm -rf ./tidl-kernels/x86_64_build
+	rm -rf ./tidl-kernels/dsp_build
+	rm -rf ./tidl-kernels/out/
+	rm -rf ./tidl-kernels/lib/
 
 it_run:
 	cd ti_dl/utils/tidlModelImport && $(IT_RUN_SCRIP) &&  cd ../../../

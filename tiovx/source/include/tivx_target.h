@@ -390,6 +390,18 @@ void ownTargetDeInit(void);
 void ownTargetSetTimestamp(
     const tivx_obj_desc_node_t *node_obj_desc, tivx_obj_desc_t *obj_desc[]);
 
+/*!
+ * \brief Common retry-wait body for the "unread error field" retry loop:
+ *        sleeps 1 ms, and logs a WARNING on the first retry or an ERROR
+ *        (with an overwrite notice) on the final retry. Replaces the repeated loop body.
+ *
+ * \param iteration  Current retry iteration (0-based).
+ * \param field_name Name used in the log message
+ *
+ * \ingroup group_tivx_target
+ */
+void ownErrorInfoRetryWait(uint32_t iteration, const char *field_name);
+
 #ifdef __cplusplus
 }
 #endif

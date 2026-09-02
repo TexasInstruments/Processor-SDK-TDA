@@ -2494,7 +2494,7 @@ uint32_t CSIRX_GetAsfIrqs(const CSIRX_PrivateData *pD,
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_SetAsfIrqs(CSIRX_PrivateData *pD,
+uint32_t CSIRX_SetAsfIrqs(const CSIRX_PrivateData *pD,
                            const CSIRX_AsfIrqs *value)
 {
     uint32_t status = CDN_EOK;
@@ -2536,13 +2536,13 @@ uint32_t CSIRX_GetAsfIrqMaskCfg(const CSIRX_PrivateData *pD,
         /* Read ASF Interrupt Mask Register */
         regVal = CPS_REG_READ(&pD->regs->asf_int_mask);
 
-        value->asfIntegrityErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_INTEGRITY_ERR_MASK, regVal)); 
-        value->asfProtocolErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_PROTOCOL_ERR_MASK, regVal)); 
-        value->asfTransToErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_TRANS_TO_ERR_MASK, regVal)); 
-        value->asfCsrErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_CSR_ERR_MASK, regVal)); 
-        value->asfDapErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_DAP_ERR_MASK, regVal)); 
-        value->asfSramUncorrErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_SRAM_UNCORR_ERR_MASK, regVal)); 
-        value->asfSramCorrErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_SRAM_CORR_ERR_MASK, regVal)); 
+        value->asfIntegrityErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_INTEGRITY_ERR_MASK, regVal));
+        value->asfProtocolErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_PROTOCOL_ERR_MASK, regVal));
+        value->asfTransToErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_TRANS_TO_ERR_MASK, regVal));
+        value->asfCsrErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_CSR_ERR_MASK, regVal));
+        value->asfDapErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_DAP_ERR_MASK, regVal));
+        value->asfSramUncorrErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_SRAM_UNCORR_ERR_MASK, regVal));
+        value->asfSramCorrErrIrqm = (uint8_t)(CPS_FLD_READ(CSIRX__ASF_INT_MASK, ASF_SRAM_CORR_ERR_MASK, regVal));
     }
     return (status);
 }
@@ -2554,7 +2554,7 @@ uint32_t CSIRX_GetAsfIrqMaskCfg(const CSIRX_PrivateData *pD,
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_SetAsfIrqMaskCfg(CSIRX_PrivateData *pD,
+uint32_t CSIRX_SetAsfIrqMaskCfg(const CSIRX_PrivateData *pD,
                                    const CSIRX_AsfIrqMaskCfg *value)
 {
     uint32_t status = CDN_EOK;
@@ -2614,7 +2614,7 @@ uint32_t CSIRX_GetTestAsfIrqs(const CSIRX_PrivateData *pD,
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_SetTestAsfIrqs(CSIRX_PrivateData *pD,
+uint32_t CSIRX_SetTestAsfIrqs(const CSIRX_PrivateData *pD,
                            const CSIRX_AsfIrqTest *value)
 {
     uint32_t status = CDN_EOK;
@@ -2674,7 +2674,7 @@ uint32_t CSIRX_GetAsfFatalNonfatal(const CSIRX_PrivateData *pD,
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_SetAsfFatalNonfatal(CSIRX_PrivateData *pD,
+uint32_t CSIRX_SetAsfFatalNonfatal(const CSIRX_PrivateData *pD,
                            const CSIRX_AsfFatalNonFatalSelect *value)
 {
     uint32_t status = CDN_EOK;
@@ -2703,7 +2703,7 @@ uint32_t CSIRX_SetAsfFatalNonfatal(CSIRX_PrivateData *pD,
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_SetAsfTransMonToCtrl(CSIRX_PrivateData *pD,
+uint32_t CSIRX_SetAsfTransMonToCtrl(const CSIRX_PrivateData *pD,
                            const CSIRX_AsfTransToCtrl *value)
 {
     uint32_t status = CDN_EOK;
@@ -2727,7 +2727,7 @@ uint32_t CSIRX_SetAsfTransMonToCtrl(CSIRX_PrivateData *pD,
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_GetAsfTransToFaultMask(CSIRX_PrivateData *pD, 
+uint32_t CSIRX_GetAsfTransToFaultMask(const CSIRX_PrivateData *pD,
                                     CSIRX_AsfTransToFaultMask *value)
 {
     uint32_t status = CDN_EOK;
@@ -2750,7 +2750,7 @@ uint32_t CSIRX_GetAsfTransToFaultMask(CSIRX_PrivateData *pD,
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_SetAsfTransToFaultMask(CSIRX_PrivateData *pD,
+uint32_t CSIRX_SetAsfTransToFaultMask(const CSIRX_PrivateData *pD,
                            const CSIRX_AsfTransToFaultMask *value)
 {
     uint32_t status = CDN_EOK;
@@ -2773,7 +2773,7 @@ uint32_t CSIRX_SetAsfTransToFaultMask(CSIRX_PrivateData *pD,
  * @return CDN_EOK on success
  * @return CDN_EINVAL if any pointer parameters are NULL
  */
-uint32_t CSIRX_GetAsfTransToFaultStatus(CSIRX_PrivateData *pD,
+uint32_t CSIRX_GetAsfTransToFaultStatus(const CSIRX_PrivateData *pD,
                                 CSIRX_AsfTransToFaultStatus *value)
 {
     uint32_t status = CDN_EOK;

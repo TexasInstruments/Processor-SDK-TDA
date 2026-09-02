@@ -168,7 +168,6 @@ int32_t tidl_NetOutputPostproc(tidl_net_config *params, sTIDL_IOBufDesc_t * ioPr
 
 int32_t getFileNameAndIdxFromList(char* listFile, int32_t frameCount, int32_t fileIdx, char* currFile);
 
-extern const char * TIDL_LayerString[];
 extern int32_t firstOutWrite;
 extern int32_t totalTestCount;
 extern int32_t passTestCount;
@@ -210,6 +209,7 @@ void setDefaultParams(tidl_net_config * params);
 void updateDefaultParams(tidl_net_config * params);
 int32_t tidl_getFileSize(uint8_t * fileString);
 int32_t tidl_allocInOutTensors(sTIDL_IOBufDesc_t *ioPrms, sTIDLRT_Tensor_t *ins[], sTIDLRT_Tensor_t *outs[]);
+int32_t tidl_applyDimsFromFile(TI_FILE *dimsFp, sTIDL_IOBufDesc_t *ioPrms, sTIDLRT_Tensor_t *ins[]);
 int32_t tidl_freeInOutTensors(sTIDL_IOBufDesc_t *ioPrms, sTIDLRT_Tensor_t * ins[], sTIDLRT_Tensor_t * outs[]);
 int32_t tidl_CompareNetOutputMem(tidl_net_config *params, sTIDL_IOBufDesc_t * ioPrms, sTIDLRT_Tensor_t * out[]);
 int32_t tidl_WriteNetOutputMem (tidl_net_config *params, sTIDL_IOBufDesc_t * ioPrms, sTIDLRT_Tensor_t * out[], int32_t frameCount);

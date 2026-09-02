@@ -89,4 +89,6 @@ TESTCASE(tivxFileio)
 TESTCASE(tivxTestKernelNot)
 
 TESTCASE(tivxTestKernelsMCNotNot)
+
+TESTCASE(tivxTestKernelErrorInfo)
 #endif /* #if defined(BUILD_TEST_KERNELS) */

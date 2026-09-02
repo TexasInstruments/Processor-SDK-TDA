@@ -400,6 +400,29 @@ typedef struct _tivx_obj_desc_super_node
 } tivx_obj_desc_super_node_t;
 
 /*!
+ * \brief Node Error Info Object Descriptor
+ *
+ *        A separate object descriptor designed to hold TIVX_NODE_MAX_REPLICATE number of
+ *        tivx_error_info_t objects so each node replica can separately report unique
+ *        error_info.
+ *
+ * \ingroup group_tivx_obj_desc_priv
+ */
+typedef struct _tivx_obj_desc_node_error_info
+{
+    /*! \brief base object descriptor
+     */
+    tivx_obj_desc_t base;
+
+    /*! \brief replica error info for each possible replica
+     *  \note Bounded by both sizeof(tivx_error_info_t)/TIVX_MAX_ERROR_INFO_SIZE and TIVX_NODE_MAX_REPLICATE.
+     *  If either are changed, may exceed TIVX_OBJ_DESC_MAX_SHM_ENTRY_SIZE
+     */
+    volatile tivx_error_info_t replicated_node_error_info[TIVX_NODE_MAX_REPLICATE];
+
+} tivx_obj_desc_node_error_info_t;
+
+/*!
  * \brief Object Descriptor Shared memory entry which can hold any of the
  *         supported object descriptor types
  *
@@ -428,6 +451,7 @@ typedef union {
     tivx_obj_desc_data_ref_q_t obj_desc_data_ref_q_union;
     tivx_obj_desc_graph_t obj_desc_graph_union;
     tivx_obj_desc_super_node_t super_node_union;
+    tivx_obj_desc_node_error_info_t node_error_info_union;
 
     uint8_t rsv[TIVX_OBJ_DESC_MAX_SHM_ENTRY_SIZE];
 

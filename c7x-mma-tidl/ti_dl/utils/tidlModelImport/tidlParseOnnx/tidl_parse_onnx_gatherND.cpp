@@ -84,6 +84,12 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("GatherND")> ()
     layer.layerParams.gatherNDParams.batchDims = 0;
   }
 
+  if(md.numConstInputs > 1)
+  {
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "GatherND layer : Both data and indices as constants is not supported");
+    return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+  }
+
   if(md.numConstInputs > 0)
   {
     int constTensorIdx = md.constTensorIndices[0];

@@ -132,4 +132,11 @@ public:
     }
 };
 
+typedef struct
+{
+    std::unordered_set<std::string> initializer_names;
+    std::unordered_set<std::string> graph_output_names;
+    std::unordered_map<std::string,int> tensor_consumer_count ;
+} GraphCache;
+
 #endif  /* TIDL_ONNX_RT_IMPORT_EP_H */

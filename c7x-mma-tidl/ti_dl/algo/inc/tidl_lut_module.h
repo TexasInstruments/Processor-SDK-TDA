@@ -1121,7 +1121,7 @@ int32_t TIDL_swish_nonLut(const void* dataIn, void* dataOut, int32_t Zx, float32
   #endif
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
-  <justification start>  LDRA_JUSTIFICATION_BATCHNORM_SAFETY_CHECK : safe programming hard to hit this condition with real world data
+  <justification start> SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
   <justification end> */
   outValInt = (outValInt > outMax)? outMax : outValInt;
   outValInt = (outValInt < outMin)? outMin : outValInt;

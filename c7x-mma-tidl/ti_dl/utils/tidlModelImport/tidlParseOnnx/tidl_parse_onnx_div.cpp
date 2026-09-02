@@ -110,6 +110,18 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Div")> ()
     }
 	}
 
+  /* Both inputs constant: store second const in layer.bias for tidl_foldConstEltwise */
+  if (md.numConstInputs == 2)
+  {
+    int constTensorIdx1 = md.constTensorIndices[1];
+    status = copyFloatConst(graph, index, constTensorIdx1, layer.bias, INPUT_REQUIRED);
+    if (status == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+    {
+      TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Cannot read initializer tensor : Only float, int32 and int64 tensor is supported");
+      return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+    }
+  }
+
 	return 0;
 }
 

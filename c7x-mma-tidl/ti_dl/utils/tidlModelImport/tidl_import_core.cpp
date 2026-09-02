@@ -193,6 +193,7 @@ void setDefaultParams(tidl_import_config * params)
   params->biasCalibrationIterations = -1;
   params->quantRoundAdd       = 50; // 0 - caffe, 1- tensorFlow
   params->numParamBits        = 8;
+  params->inferencePrecisionMode   = TIDL_InferencePrecisionModeFixedPoint;
   params->inFileFormat        = 2; // 0 - Encoded, 1- RAW
   params->numFrames           = -1;
   params->numFramesBiasCalibration = -1;  // number of frames to be used for bias calibration
@@ -353,9 +354,9 @@ int32_t tidlValidateImportParams(tidl_import_config * params)
      params->foldEltWiseInConv2D = 0;
      TIDL_GLOBAL_REPORT_UNSUPPORTED("foldEltWiseInConv2D is not suported in the current release. Disabling now");
   }
-  if(params->numParamBits == 32)
+  if(params->numParamBits == 32 || params->numParamBits == 16)
   {
-    params->numFeatureBits = 32;
+    params->numFeatureBits = params->numParamBits;
   }
 
   if((params->numParamBits > 8) && (params->numFeatureBits <= 8))
@@ -365,6 +366,16 @@ int32_t tidlValidateImportParams(tidl_import_config * params)
   if((params->numParamBits <= 8) && (params->numFeatureBits > 8))
   {
     params->numParamBits = 12;
+  }
+  if(params->numParamBits == 8 && params->inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint)
+  {
+    TIDL_GLOBAL_REPORT_WARNING("8 bit Float is not supported. Switching to 8 bit INT");
+    params->inferencePrecisionMode = TIDL_InferencePrecisionModeFixedPoint;
+  }
+  else if(params->numParamBits == 32 && params->inferencePrecisionMode == TIDL_InferencePrecisionModeFixedPoint)
+  {
+    TIDL_GLOBAL_REPORT_WARNING("32 bit INT is not supported. Switching to 32 bit Float");
+    params->inferencePrecisionMode = TIDL_InferencePrecisionModeFloatingPoint;
   }
   /* Set inElementType based on numFeatureBits if not set in config file */
   if ((params->numFeatureBits > 8) && ((gParams.addDataConvertToNet & ADD_DC_LAYER_AT_INPUT) == 0))
@@ -381,6 +392,10 @@ int32_t tidlValidateImportParams(tidl_import_config * params)
       if(params->numFeatureBits == 32)
       {
         params->inElementType[i] = TIDL_SinglePrecFloat;
+      }
+      else if(params->numFeatureBits == 16 && params->inferencePrecisionMode == TIDL_InferencePrecisionModeFloatingPoint)
+      {
+        params->inElementType[i] = TIDL_BFloat16;
       }
       else if(params->inElementType[i] == TIDL_UnsignedChar)
       {
@@ -644,6 +659,11 @@ void tidlWriteInferenceConfig(FILE * fp, tidl_import_config * params)
   fprintf(fp, "quantRangeUpdateFactor   = %f\n", params->quantRangeUpdateFactor);
   getAbsPath((char *)params->inData, absPath);
   fprintf(fp, "inData   = %s\n",absPath);
+  if (params->inDimsFile[0] != '\0')
+  {
+    getAbsPath((char *)params->inDimsFile, absPath);
+    fprintf(fp, "inDimsFile   = %s\n", absPath);
+  }
   fprintf(fp, "outData   = \"%s/%s_stats_tool_out.bin\"\n", outDirName,getFileNameFromPath(inConfigFilename));
 
   getAbsPath((char *)params->outputNetFile, absPath);
@@ -876,7 +896,7 @@ int32_t tidlRunPerformanceModellingTool(tidl_import_config * params)
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
 
-int tidlWriteTensorNamesToFile(tidl_import_config * params, const char* suffix)
+int tidlWriteTensorNamesToFile(tidl_import_config * params, const char* suffix, int32_t* multiCoreModes)
 {
   FILE  * fp;
   char *fname;
@@ -914,6 +934,10 @@ int tidlWriteTensorNamesToFile(tidl_import_config * params, const char* suffix)
 
   for (i = 0; i < tidlNet->numLayers; i++)
   {
+    int32_t multiCoreMode = (multiCoreModes == NULL || i == 0) 
+                            ? TIDL_NOT_MULTI_CORE
+                            : multiCoreModes[i];
+
     if(tidlNet->inferenceMode != TIDL_inferenceModeLowLatency)/*single core inference*/
     {
       fprintf(layerInfoFile, "%d %d %s \n", i, tidlNet->TIDLLayers[i].outData.dataId,
@@ -921,7 +945,7 @@ int tidlWriteTensorNamesToFile(tidl_import_config * params, const char* suffix)
     }
     else
     {
-      fprintf(layerInfoFile, "%d %d %d %s \n", i, tidlNet->TIDLLayers[i].outData.dataId, tidlNet->TIDLLayers[i].multiCoreMode,
+      fprintf(layerInfoFile, "%d %d %d %s \n", i, tidlNet->TIDLLayers[i].outData.dataId, multiCoreMode,
         TIDL_getOutDataName(&orgTIDLNetStructure, tidlNet->TIDLLayers[i].outData.dataId));
     }
   }
@@ -931,8 +955,8 @@ int tidlWriteTensorNamesToFile(tidl_import_config * params, const char* suffix)
 }
 
 /** This function removes the string "tidl_net_" and ".bin" from the net bin file names to reduce the folder name size for perfsim
- * NOTE : THIS FUNCTION MUST BE IN SYNC WITH THE FUNCTION WITH SAME NAME IN PERFSIM
- */
+ * NOTE : THIS FUNCTION MUST BE IN SYNC WITH THE FUNCTION SAME `updateOutputDirName` NAME IN PERFSIM
+ */ 
 std::vector<string> TIDL_shortenFolderNameForPerfSim(char * dirName)
 {
   string netFilePath = dirName;
@@ -992,7 +1016,89 @@ int32_t TIDL_copyFileWithoutPermissions(const char* sourceFile, const char* dest
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
 
-int32_t tidlRunPerfSimTool(tidl_import_config * params, int32_t NCExecMode, float *networkTime)
+void TIDL_extractLayerSplitOptions(tidl_import_config *params, int32_t numLayers, int32_t *splitCounts, int32_t *splitIndices)
+{
+  /*  These arrays store the user option layer names  */
+  char singleCoreLayers[numLayers][TIDL_MAX_DATA_NAME];
+  char spatialSplitLayers[numLayers][TIDL_MAX_DATA_NAME];
+  char channelSplitLayers[numLayers][TIDL_MAX_DATA_NAME];
+
+  /*  Comma seperated layer names as single string --> seperate strings  */
+  int32_t singleCoreLayersCount = tidl_getStringsFromList((char *)params->singleCoreLayersNames, (char *)singleCoreLayers, TIDL_MAX_DATA_NAME);
+  int32_t spatialSplitLayersCount = tidl_getStringsFromList((char *)params->spatialSplitLayersNames, (char *)spatialSplitLayers, TIDL_MAX_DATA_NAME);
+  int32_t channelSplitLayersCount = tidl_getStringsFromList((char *)params->channelSplitLayersNames, (char *)channelSplitLayers, TIDL_MAX_DATA_NAME);
+
+  int32_t layerIter = 0;
+
+  /*  This is used to avoid searching same layer name twice  */
+  int8_t visitedLayer[3][numLayers] = {0};
+
+  for (layerIter = 0; layerIter < orgTIDLNetStructure.numLayers; layerIter++)
+  {
+    int32_t innerLayerIter = 0;
+    int foundMatch = 0;
+    int32_t *splitIndexPtr = NULL;
+
+    /*  Search over user specified singleCoreLayers names  */
+    splitIndexPtr = (splitIndices + (0 * numLayers));
+    for (innerLayerIter = 0; innerLayerIter < singleCoreLayersCount; innerLayerIter++)
+    {
+
+      if (visitedLayer[0][innerLayerIter] == 1)
+        continue;
+
+      if (strcmp((char *)orgTIDLNetStructure.TIDLPCLayers[layerIter].outDataNames[0], singleCoreLayers[innerLayerIter]) == 0)
+      {
+        splitIndexPtr[splitCounts[0]++] = layerIter;
+        visitedLayer[0][innerLayerIter] = 1;
+        foundMatch = 1;
+        break;
+      }
+    }
+
+    if (foundMatch)
+      continue; /*  Skip searching other user specified layer lists  */
+
+    /*  Search over user specified spatialSplitLayers names  */
+    splitIndexPtr = (splitIndices + (1 * numLayers));
+    for (innerLayerIter = 0; innerLayerIter < spatialSplitLayersCount; innerLayerIter++)
+    {
+
+      if (visitedLayer[1][innerLayerIter] == 1)
+        continue;
+
+      if (strcmp((char *)orgTIDLNetStructure.TIDLPCLayers[layerIter].outDataNames[0], spatialSplitLayers[innerLayerIter]) == 0)
+      {
+        splitIndexPtr[splitCounts[1]++] = layerIter;
+        visitedLayer[1][innerLayerIter] = 1;
+        foundMatch = 1;
+        break;
+      }
+    }
+
+    if (foundMatch)
+      continue;
+
+    /*  Search over user specified channelSplitLayers names  */
+    splitIndexPtr = (splitIndices + (2 * numLayers));
+    for (innerLayerIter = 0; innerLayerIter < channelSplitLayersCount; innerLayerIter++)
+    {
+
+      if (visitedLayer[2][innerLayerIter] == 1)
+        continue;
+
+      if (strcmp((char *)orgTIDLNetStructure.TIDLPCLayers[layerIter].outDataNames[0], channelSplitLayers[innerLayerIter]) == 0)
+      {
+        splitIndexPtr[splitCounts[2]++] = layerIter;
+        visitedLayer[2][innerLayerIter] = 1;
+        foundMatch = 1;
+        break;
+      }
+    }
+  }
+}
+
+int32_t tidlRunPerfSimTool(tidl_import_config * params, int32_t NCExecMode, int32_t* multiCoreModes, float *networkTime)
 {
   FILE * fp;
   char sysCommand[4 * FILE_NAME_SIZE];
@@ -1099,6 +1205,46 @@ int32_t tidlRunPerfSimTool(tidl_import_config * params, int32_t NCExecMode, floa
       }
 	  fprintf(fp, "-1\n");
   }
+
+  if (params->forceSpatialSplitInLowLatencyMode == 1)
+  {
+    fprintf(fp, "FORCE_SPATIAL_SPLIT_IN_LOW_LATENCY_MODE     =   1\n");
+  }
+  if (params->forceBatchSplitInLowLatencyMode == 1)
+  {
+    fprintf(fp, "FORCE_BATCH_SPLIT_IN_LOW_LATENCY_MODE       =   1\n");
+  }
+
+  int32_t layerSplitCount[3] = {0};
+  int32_t layerSplitIndices[3][orgTIDLNetStructure.numLayers] = {0};
+
+  TIDL_extractLayerSplitOptions(params, orgTIDLNetStructure.numLayers, &layerSplitCount[0], &layerSplitIndices[0][0]);
+
+  /*  Single loop to print all three types of LAYER OPTIONS  */
+  for (int32_t iter = 0; iter < 3; iter++)
+  {
+    int32_t layersCount = layerSplitCount[iter];
+    int32_t *layerIndicesArray = layerSplitIndices[iter];
+    const char *configOptionPrefix = (iter == 0)
+                                         ? "SINGLE_CORE_LAYERS = "
+                                     : (iter == 1)
+                                         ? "SPATIAL_SPLIT_LAYERS = "
+                                         : "CHANNEL_SPLIT_LAYERS = ";
+
+    if (layersCount <= 0)
+    {
+      continue;
+    }
+
+    fprintf(fp, "%s", configOptionPrefix);
+
+    for (int32_t innerIter = 0; innerIter < layersCount; innerIter++)
+    {
+      fprintf(fp, "%d ", *(layerIndicesArray + innerIter));
+    }
+    fprintf(fp, "-1\n");
+  }
+
   fclose(fp);
 
   strcpy(orgPath, psFileName);
@@ -1187,6 +1333,16 @@ int32_t tidlRunPerfSimTool(tidl_import_config * params, int32_t NCExecMode, floa
     TIDL_GLOBAL_REPORT_ERROR("Could not open %s", perfSimInfoFile.c_str());
     return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
   }
+
+  if(perSimInfo->simConfig.numCores != params->numCores)
+  {
+    params->numCores = perSimInfo->simConfig.numCores;
+    if(params->numCores == 1)
+    {
+      params->inferenceMode = TIDL_inferenceModeDefault;
+    }
+  }
+
   memcpy(orderedPerSimInfo, perSimInfo, sizeof(sPerfSim_t));
 
   float networkPerf = TIDL_getPerfsimPerformance(perSimInfo);
@@ -1276,8 +1432,18 @@ int32_t tidlRunPerfSimTool(tidl_import_config * params, int32_t NCExecMode, floa
 
     gcHelperHandle = &gcHelperHandleObj;
     (void)initGCHelperHandle(gcHelperHandle, tidlNet, dataBaseInfo, commonDataBaseInfo);
-
+    
     wlSuperGrp = &gcOut->superWorkload;
+    
+    if(multiCoreModes != NULL)
+    {
+      for(i = 0; i < gcOut->dataBaseInfo.wlDB.count; i++)
+      {
+        int32_t offset = gcOut->dataBaseInfo.wlDB.wlOffset[i];
+        sWorkloadUnit_t* pWLUnit = (sWorkloadUnit_t *)((int8_t *)workLoadUnitDB + offset);
+        multiCoreModes[pWLUnit->layerId] = pWLUnit->multiCoreMode;
+      }
+    }
   }
 
   for (i = 0; i < tidlNet->numLayers; i++)
@@ -1529,7 +1695,7 @@ int32_t tidlRunPerfSimTool(tidl_import_config * params, int32_t NCExecMode, floa
   }
 
 #endif
-
+  
   TIDL_IMPORT_CHECK_AND_RETURN(TIDL_writeInfo(tidlNet,
                         &orgTIDLNetStructure,
                         (const char *)params->outputParamsFile,
@@ -1558,10 +1724,6 @@ int32_t tidlRunPerfSimTool(tidl_import_config * params, int32_t NCExecMode, floa
     {
       gParams.enableOtfPad = 0;
       break;
-    }
-    else if((perSimInfo->checkErrorFlag[i] == ERR_FLAG_SPATIAL_JOIN_NOT_SUPPORTED))
-    {
-      orgTIDLNetStructure.TIDLPCLayers[i].multiCoreMode = TIDL_MULTI_CORE_SPATIAL_JOIN_WITH_CROP;
     }
   }
 
@@ -2106,7 +2268,7 @@ void tidl_printOpsList(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure)
   for (int i = 0; i < pOrgTIDLNetStructure.numLayers; i++)
   {
     // TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "%5d|%-30s|%-50s|%-50s|%5d|%5d|", i, TIDL_LayerString[pOrgTIDLNetStructure.TIDLPCLayers[i].layerType], pOrgTIDLNetStructure.TIDLPCLayers[i].inDataNames[0], pOrgTIDLNetStructure.TIDLPCLayers[i].outDataNames[0], pOrgTIDLNetStructure.TIDLPCLayers[i].inData[0].dataId, pOrgTIDLNetStructure.TIDLPCLayers[i].outData[0].dataId);
-    printf( "%d,%s,%s,%d,", i, TIDL_LayerString[pOrgTIDLNetStructure.TIDLPCLayers[i].layerType], pOrgTIDLNetStructure.TIDLPCLayers[i].outDataNames[0], pOrgTIDLNetStructure.TIDLPCLayers[i].outData[0].dataId);
+    printf( "%d,%s,%s,%d,", i, TIDL_GetLayerString(pOrgTIDLNetStructure.TIDLPCLayers[i].layerType), pOrgTIDLNetStructure.TIDLPCLayers[i].outDataNames[0], pOrgTIDLNetStructure.TIDLPCLayers[i].outData[0].dataId);
     //pOrgTIDLNetStructure.TIDLPCLayers[i].inDataNames[0]pOrgTIDLNetStructure.TIDLPCLayers[i].inData[0].dataId
     for(int j = 0 ; j < pOrgTIDLNetStructure.TIDLPCLayers[i].numInBufs; j++)
     {
@@ -2795,6 +2957,7 @@ static std::string dimsToStr(const std::vector<std::vector<int32_t>>& dims)
   return result;
 }
 
+
 int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &layerIndex, int32_t &dataIndex)
 {
   if(gParams.debugTraceLevel > 0)
@@ -2808,7 +2971,7 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
   for (int i = 0; i < orgTIDLNetStructure.numLayers; i++)
   {
     sTIDL_LayerPC_t &currLayer = orgTIDLNetStructure.TIDLPCLayers[i];
-    std::string key = TIDL_LayerString[currLayer.layerType];
+    std::string key = TIDL_GetLayerString(currLayer.layerType);
     if (frequency_map.find(key) == frequency_map.end())
     {
       frequency_map[key] = {0,0};
@@ -2822,9 +2985,16 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
     }
   }
 
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_foldConstEltwise(orgTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_convertEltwiseToBNLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_addConstDataLayers (orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex, &gParams), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_addInDataLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex), "");
+
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
+
+  // Dead branch elimination: remove layers with no output consumers
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeDeadBranches(orgTIDLNetStructure), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
 
@@ -2868,6 +3038,11 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_splitOutDataLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure,
                              orgTIDLNetStructure.numLayers), "");
+
+  // Convert SkipSimplifiedLayerNorm to ADD + RMSNorm. Should be called before tidl_splitNormLayer
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_convertSkipSimplifiedLayerNorm(orgTIDLNetStructure, &dataIndex, orgTIDLNetStructure.numLayers), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
 
   //logit
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_mergeLogitLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
@@ -2931,6 +3106,7 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_mergePackToNNResizeLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
+
   /*DCN block to optimize:*/
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_optimizeDCNv2Block(orgTIDLNetStructure, layerIndex, dataIndex), "");
 
@@ -2971,7 +3147,8 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_addReshapeAcrossRMSNormLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
-
+  tidl_updateOutDataShape(orgTIDLNetStructure, 0, orgTIDLNetStructure.numLayers, (sTIDL_tfOutReshapeMap_t *)&sTIDL_OutReshapeTable);
+  
   // Remove no-op concat layer with 1 input
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeNoOpConcatLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, dataIndex), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
@@ -3049,6 +3226,11 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
 
+  /* Optimize transpose -> gather(height) -> transpose to gather(width) */
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_optimizeTransposeGatherTranspose(orgTIDLNetStructure, &dataIndex, orgTIDLNetStructure.numLayers), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
+
   /* Only line gather is supported (axis = TIDL_DIM_HEIGHT), converting rest to line gather if possible */
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_convertGatherToLineGather(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
@@ -3082,9 +3264,19 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
 
   /** Fuse Patch Merging Block */
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_fusePatchMergingBlock (orgTIDLNetStructure, &dataIndex, orgTIDLNetStructure.numLayers), "");
+
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_convertStridedSliceToContinousSlice(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
+  tidl_updateOutDataShape(orgTIDLNetStructure, 0, orgTIDLNetStructure.numLayers, (sTIDL_tfOutReshapeMap_t *)&sTIDL_OutReshapeTable);
+  
   /* recheck through slices if something is still there with stride > 1*/
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_recheckSliceStrideSupport (orgTIDLNetStructure, &dataIndex, orgTIDLNetStructure.numLayers), "");
 
+  /* Only line gather is supported (axis = TIDL_DIM_HEIGHT), converting rest to line gather if possible */
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_convertGatherToLineGather(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
+  tidl_updateOutDataShape(orgTIDLNetStructure, 0, orgTIDLNetStructure.numLayers, (sTIDL_tfOutReshapeMap_t *)&sTIDL_OutReshapeTable);
 
   // Change the slice axis to channel dim if it is on higher dimensions
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_reduceSliceDims (orgTIDLNetStructure, &dataIndex, orgTIDLNetStructure.numLayers), "");
@@ -3188,8 +3380,7 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
     TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
     TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
   }
-
-
+  
   if(gParams.foldMaxPoolInConv2D == 1)
   {
     TIDL_IMPORT_CHECK_AND_RETURN(tidl_mergePoolingLayer(orgTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
@@ -3571,7 +3762,7 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
       {
         orgTIDLNetStructure.NCExecMode = GET_PAD_INFO;
         float networkTime;
-        ncRunStatus = tidlRunPerfSimTool(&gParams, orgTIDLNetStructure.NCExecMode, &networkTime);
+        ncRunStatus = tidlRunPerfSimTool(&gParams, orgTIDLNetStructure.NCExecMode, NULL, &networkTime);
         (void)networkTime;
       }
   
@@ -3832,15 +4023,7 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeUnusedDCLayers(orgTIDLNetStructure),"");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_removeMergedLayersFromNet(&orgTIDLNetStructure, &tempTIDLNetStructure), "");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
-
-  if(gParams.inferenceMode == TIDL_inferenceModeLowLatency && gParams.numCores > 1) /*if NC adds or removes layers we update multi-core state and crop layers*/
-  {
-    tidl_updateMultiCoreState(orgTIDLNetStructure, &gParams);
-    /* IMP :: NOTE :: This function should be called after all layers addition/merge is complete, layer deletion post this state is till ok */
-    TIDL_IMPORT_CHECK_AND_RETURN(tidl_addCropLayerForMultiCore(orgTIDLNetStructure, orgTIDLNetStructure.numLayers, &dataIndex, gParams.quantizationStyle, gParams.numCores), "");
-    TIDL_IMPORT_CHECK_AND_RETURN(tidl_sortLayersInProcOrder(&orgTIDLNetStructure, &tempTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
-  }
-
+  
   /*4. Making dataId & layerId same should be called at the end after all the optimizations, no structure change after this*/
   tidl_makeDataIdLayerIdSame(&orgTIDLNetStructure, orgTIDLNetStructure.numLayers);
 
@@ -3852,9 +4035,13 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
     TIDL_IMPORT_CHECK_AND_RETURN(tidl_changeOutElementType(orgTIDLNetStructure, orgTIDLNetStructure.numLayers), "");
   }
 
+  /** For BF16 ref flow, change TopK indices slice output elementType to TIDL_SignedShort:
+   * must be done after all tidl_updateOutDataShape calls and after tidl_changeOutElementType to avoid being overwritten. */
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_bf16ChangeTopKIndicesSliceOutElementType(orgTIDLNetStructure), "");
+
   for (int i = 0; i < orgTIDLNetStructure.numLayers; i++)
   {
-    std::string key = TIDL_LayerString[orgTIDLNetStructure.TIDLPCLayers[i].layerType];
+    std::string key = TIDL_GetLayerString(orgTIDLNetStructure.TIDLPCLayers[i].layerType);
     if (frequency_map.find(key) == frequency_map.end())
     {
       frequency_map[key] = {0,0};
@@ -3909,6 +4096,7 @@ int32_t tidl_optimizeNet(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &lay
     orgTIDLNetStructure.TIDLPCLayers[i].optimized = 1;
   }
   /*Final update of mixed precision state:*/
+  TIDL_IMPORT_CHECK_AND_RETURN(tidl_validateMPConfig(orgTIDLNetStructure, &gParams),"");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_initializeMixedPrecision(orgTIDLNetStructure),"");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_updateMixedPrecisionState(orgTIDLNetStructure),"");
   TIDL_IMPORT_CHECK_AND_RETURN(tidl_updateElementTypesWithNativeTypes(orgTIDLNetStructure),"");
@@ -4076,7 +4264,7 @@ float TIDL_quantizeInferPerfsim(tidl_import_config * configParams, int32_t layer
     return NAN;
   }
   float networkTime;
-  (void)tidlRunPerfSimTool(configParams, orgTIDLNetStructure.NCExecMode, &networkTime);
+  (void)tidlRunPerfSimTool(configParams, orgTIDLNetStructure.NCExecMode, NULL, &networkTime);
   return networkTime;
 }
 
@@ -5098,32 +5286,8 @@ bool TIDL_removeDCLayersfromPCNet(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, tidl
 
         if(padCheck && layoutCheck && IOCheck && paramCheck && specialCheck)
         {
-          std::vector<int32_t> out_layers =  tidl_getOutLayers(pOrgTIDLNetStructure, pOrgTIDLNetStructure.numLayers, layer.outData[0].dataId);
-          std::vector<int32_t> in_layers =  tidl_getInLayers_v2(pOrgTIDLNetStructure, pOrgTIDLNetStructure.numLayers, i);
-          
-          /*before removing dataconvert layers we remove any multi-core crop layers added due to dataconvert for both input and output of Data Convert*/
-
-          for(int32_t outLayerIdx: out_layers)
-          {
-            if (pOrgTIDLNetStructure.TIDLPCLayers[outLayerIdx].layerType == TIDL_CropLayer && 
-                pOrgTIDLNetStructure.TIDLPCLayers[outLayerIdx].layerParams.cropParams.multiCoreMode != TIDL_NOT_MULTI_CORE)
-            {
-              tidl_removeLayerFromNet(pOrgTIDLNetStructure, outLayerIdx); /*removing Crop Layer in output of Data Convert*/
-            }
-          }
-
-          for(int32_t inLayerIdx: in_layers)
-          {
-            if (pOrgTIDLNetStructure.TIDLPCLayers[inLayerIdx].layerType == TIDL_CropLayer && 
-                pOrgTIDLNetStructure.TIDLPCLayers[inLayerIdx].layerParams.cropParams.multiCoreMode != TIDL_NOT_MULTI_CORE)
-            {
-              tidl_removeLayerFromNet(pOrgTIDLNetStructure, inLayerIdx); /*removing Crop Layer in input of Data Convert*/
-            }
-          }
-          
           tidl_removeLayerFromNet(pOrgTIDLNetStructure, i); /* Remove the DataConvert layer from the network */
           removed = true;
-
         }
       }
     }
@@ -5133,7 +5297,6 @@ bool TIDL_removeDCLayersfromPCNet(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, tidl
   {
     int32_t dataIndex = orgTIDLNetStructure.numLayers;
     tidl_removeMergedLayersFromNet(&pOrgTIDLNetStructure, &tempTIDLNetStructure);
-    tidl_addCropLayerForMultiCore(pOrgTIDLNetStructure, orgTIDLNetStructure.numLayers, &(dataIndex), gParams.quantizationStyle, gParams.numCores);
     tidl_sortLayersInProcOrder(&pOrgTIDLNetStructure, &tempTIDLNetStructure, pOrgTIDLNetStructure.numLayers);
   }
   
@@ -5166,29 +5329,6 @@ bool tidl_removeRedundantDataConverts (sTIDL_OrgNetwork_t &pOrgTIDLNetStructure,
 
       if(canRemoveDCLayer)
       {
-        std::vector<int32_t> out_layers =  tidl_getOutLayers(pOrgTIDLNetStructure, pOrgTIDLNetStructure.numLayers, layer.outData[0].dataId);
-        std::vector<int32_t> in_layers =  tidl_getInLayers_v2(pOrgTIDLNetStructure, pOrgTIDLNetStructure.numLayers, i);
-        
-        /*before removing dataconvert layers we remove any multi-core crop layers added due to dataconvert for both input and output of Data Convert*/
-
-        for(int32_t outLayerIdx: out_layers)
-        {
-          if (pOrgTIDLNetStructure.TIDLPCLayers[outLayerIdx].layerType == TIDL_CropLayer && 
-              pOrgTIDLNetStructure.TIDLPCLayers[outLayerIdx].layerParams.cropParams.multiCoreMode != TIDL_NOT_MULTI_CORE)
-          {
-            tidl_removeLayerFromNet(pOrgTIDLNetStructure, outLayerIdx); /*removing Crop Layer in output of Data Convert*/
-          }
-        }
-
-        for(int32_t inLayerIdx: in_layers)
-        {
-          if (pOrgTIDLNetStructure.TIDLPCLayers[inLayerIdx].layerType == TIDL_CropLayer && 
-              pOrgTIDLNetStructure.TIDLPCLayers[inLayerIdx].layerParams.cropParams.multiCoreMode != TIDL_NOT_MULTI_CORE)
-          {
-            tidl_removeLayerFromNet(pOrgTIDLNetStructure, inLayerIdx); /*removing Crop Layer in input of Data Convert*/
-          }
-        }
-        
         tidl_removeLayerFromNet(pOrgTIDLNetStructure, i); /* Remove the DataConvert layer from the network */
         removed = true;
       }
@@ -5199,7 +5339,6 @@ bool tidl_removeRedundantDataConverts (sTIDL_OrgNetwork_t &pOrgTIDLNetStructure,
   {
     int32_t dataIndex = orgTIDLNetStructure.numLayers;
     tidl_removeMergedLayersFromNet(&pOrgTIDLNetStructure, &tempTIDLNetStructure);
-    tidl_addCropLayerForMultiCore(pOrgTIDLNetStructure, orgTIDLNetStructure.numLayers, &(dataIndex), gParams.quantizationStyle, gParams.numCores);
     tidl_sortLayersInProcOrder(&pOrgTIDLNetStructure, &tempTIDLNetStructure, pOrgTIDLNetStructure.numLayers);
   }
   
@@ -5341,10 +5480,11 @@ int32_t TIDL_addDCLayersForAsymConvLayers (sTIDL_OrgNetwork_t &pOrgTIDLNetStruct
  * Mainly because these optimizations depend on some information from quantizer & memory planner modules
 */
 
-int32_t TIDL_runOptimizerPostMemoryPlanner(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, tidl_import_config *params, int32_t& dataIndex)
+int32_t TIDL_runOptimizerPostMemoryPlanner(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, tidl_import_config *params)
 {
   int32_t status = 0;
-
+  /*Set dataIndex via numLayers (TIDL-14856)*/
+  int32_t dataIndex = pOrgTIDLNetStructure.numLayers;
   FILE * fp;
   int64_t modelSize = tidl_getFileSize(params->outputNetFile);
   if(modelSize == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
@@ -5393,9 +5533,6 @@ int32_t TIDL_runOptimizerPostMemoryPlanner(sTIDL_OrgNetwork_t &pOrgTIDLNetStruct
  
     if(gParams.inferenceMode == TIDL_inferenceModeLowLatency && gParams.numCores > 1)
     {
-      tidl_updateMultiCoreState(pOrgTIDLNetStructure, &gParams);
-      /* IMP :: NOTE :: This function should be called after all layers addition/merge is complete, layer deletion post this state is till ok */
-      TIDL_IMPORT_CHECK_AND_RETURN(tidl_addCropLayerForMultiCore(pOrgTIDLNetStructure, pOrgTIDLNetStructure.numLayers, &dataIndex, gParams.quantizationStyle, gParams.numCores), "");
       tidl_sortLayersInProcOrder(&pOrgTIDLNetStructure, &tempTIDLNetStructure, pOrgTIDLNetStructure.numLayers);
     }
     dataIndex = tidl_sortDataIDsinPCNet(&pOrgTIDLNetStructure, MAKE_LAYERID_DATAID_SAME);
@@ -5420,6 +5557,8 @@ int32_t TIDL_import_backend(uint32_t layerIndex, int32_t dataIndex)
   which is same as input element type */
   int32_t num_inps = 0;
 
+  int32_t* multiCoreModes = (int32_t*)malloc(sizeof(int32_t) * TIDL_NUM_MAX_LAYERS);
+  memset(multiCoreModes, 0 , sizeof(int32_t)*TIDL_NUM_MAX_LAYERS);
   /*Below code find the total number of inputs to the network*/
   for (i = 0; i < layerIndex; i++)
   {
@@ -5472,7 +5611,7 @@ int32_t TIDL_import_backend(uint32_t layerIndex, int32_t dataIndex)
   /* Run quantization and perfsim based on modified gParams */
   TIDL_IMPORT_CHECK_AND_RETURN(TIDL_import_quantize(layerIndex), "");
   
-  if(gParams.numParamBits != 32U)
+  if(gParams.numParamBits != 32U && gParams.inferencePrecisionMode == TIDL_InferencePrecisionModeFixedPoint)
   {
     TIDL_GLOBAL_REPORT_HEADING(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, TIDL_ModelDiagnostic::DK_Purple, "[Quantization & Calibration Completed]");
   }
@@ -5480,7 +5619,7 @@ int32_t TIDL_import_backend(uint32_t layerIndex, int32_t dataIndex)
 
   /* Save calib run's copy.  perfsim run could update network layer ordering */
   if (gParams.modelType == 4 /* TVM Relay */)
-    TIDL_IMPORT_CHECK_AND_RETURN(tidlWriteTensorNamesToFile(&gParams, "_calib"), "");
+    TIDL_IMPORT_CHECK_AND_RETURN(tidlWriteTensorNamesToFile(&gParams, "_calib", NULL), "");
   if(gParams.executeNetworkCompiler && dimcheck)
   {
     /** We run NC multiple times under certain conditions. Supertiling pass takes time and is required only for the final NC run
@@ -5501,23 +5640,23 @@ int32_t TIDL_import_backend(uint32_t layerIndex, int32_t dataIndex)
 
     float networkTime;
     orgTIDLNetStructure.NCExecMode = GET_PAD_INFO;
-    TIDL_IMPORT_CHECK_AND_RETURN(tidlRunPerfSimTool(&gParams, orgTIDLNetStructure.NCExecMode, &networkTime), "Memory Planning Failed\n");
+    TIDL_IMPORT_CHECK_AND_RETURN(tidlRunPerfSimTool(&gParams, orgTIDLNetStructure.NCExecMode, multiCoreModes, &networkTime), "Memory Planning Failed\n");
     orgTIDLNetStructure.NCExecMode = NORMAL_EXEC;
     int32_t isNcExecuted = 0;
     if(((gParams.deviceName & TIDL_OTF_FLAG_BIT) == TIDL_OTF_FLAG_BIT) && gParams.enableOtfPad == 0)
     {
       TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Re-running memory planner...");
       gParams.deviceName &= 0xFF;
-      TIDL_IMPORT_CHECK_AND_RETURN(tidlRunPerfSimTool(&gParams, orgTIDLNetStructure.NCExecMode, &networkTime), "Memory Planning Failed\n");
+      TIDL_IMPORT_CHECK_AND_RETURN(tidlRunPerfSimTool(&gParams, orgTIDLNetStructure.NCExecMode, multiCoreModes, &networkTime), "Memory Planning Failed\n");
       tidlRunGraphVizTool(&gParams);
       isNcExecuted = 1;
     }
     
-    if(TIDL_runOptimizerPostMemoryPlanner(orgTIDLNetStructure, &gParams, dataIndex) == 1)
+    if(TIDL_runOptimizerPostMemoryPlanner(orgTIDLNetStructure, &gParams) == 1)
     {
       //Removed Data Convert Layer, rerunning NC
       TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Re-running memory planner...");
-      TIDL_IMPORT_CHECK_AND_RETURN(tidlRunPerfSimTool(&gParams, orgTIDLNetStructure.NCExecMode, &networkTime), "Memory Planning Failed\n");
+      TIDL_IMPORT_CHECK_AND_RETURN(tidlRunPerfSimTool(&gParams, orgTIDLNetStructure.NCExecMode, multiCoreModes, &networkTime), "Memory Planning Failed\n");
       tidlRunGraphVizTool(&gParams);
       isNcExecuted = 1;
     }
@@ -5528,14 +5667,14 @@ int32_t TIDL_import_backend(uint32_t layerIndex, int32_t dataIndex)
       TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Re-running memory planner with high resolution optimization...");
       /* Re-enable ST */
       enableOrDisableST(&enableHighResOptimization, &compileConstraintsFlag, fileGrpInfo, &gParams, 1);
-      TIDL_IMPORT_CHECK_AND_RETURN(tidlRunPerfSimTool(&gParams, orgTIDLNetStructure.NCExecMode, &networkTime), "Memory Planning Failed\n");
+      TIDL_IMPORT_CHECK_AND_RETURN(tidlRunPerfSimTool(&gParams, orgTIDLNetStructure.NCExecMode, multiCoreModes, &networkTime), "Memory Planning Failed\n");
       isNcExecuted = 1;
     }
     
     /*Executing NC, if it is not executed yet.*/
     if(isNcExecuted == 0){
       TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "Re-running memory planner...");
-      TIDL_IMPORT_CHECK_AND_RETURN(tidlRunPerfSimTool(&gParams, orgTIDLNetStructure.NCExecMode, &networkTime), "Memory Planning Failed\n");
+      TIDL_IMPORT_CHECK_AND_RETURN(tidlRunPerfSimTool(&gParams, orgTIDLNetStructure.NCExecMode, multiCoreModes, &networkTime), "Memory Planning Failed\n");
       tidlRunGraphVizTool(&gParams);
       isNcExecuted = 1;
     }
@@ -5543,20 +5682,33 @@ int32_t TIDL_import_backend(uint32_t layerIndex, int32_t dataIndex)
     (void)networkTime;
     TIDL_GLOBAL_REPORT_HEADING(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, TIDL_ModelDiagnostic::DK_Purple, "[Memory Planning Completed]")
   }
+  
   // What about else part?? when dimcheck is false what happens?
-  TIDL_IMPORT_CHECK_AND_RETURN(tidlWriteTensorNamesToFile(&gParams, ""), "");
+  TIDL_IMPORT_CHECK_AND_RETURN(tidlWriteTensorNamesToFile(&gParams, "", multiCoreModes), "");
+  
   tidlRunGraphVizTool(&gParams);
   if (gParams.partialInitDuringCompile != 0)
-     tidlAddPersistentData(&gParams);
+  tidlAddPersistentData(&gParams);
   if (gParams.debugTraceLevel > 0)
-     tidlRunModelDumpTool(&gParams);
+  tidlRunModelDumpTool(&gParams);
   #if defined(PERF_MODELLING)
-    /* Performance modelling inference call*/
-    if(gParams.compileConstraintsFlag & TIDL_ENABLE_PERFLOG_TRACE)
-    {
-      TIDL_IMPORT_CHECK_AND_RETURN(tidlRunPerformanceModellingTool(&gParams), "Performance modelling inference call failed");
-    }
+  /* Performance modelling inference call*/
+  if(gParams.executeNetworkCompiler && gParams.compileConstraintsFlag & TIDL_ENABLE_PERFLOG_TRACE)
+  {
+    TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "---------------------------- Performance Modelling Call ----------------------------");
+    TIDL_IMPORT_CHECK_AND_RETURN(tidlRunPerformanceModellingTool(&gParams), "Performance modelling inference call failed");
+    /* Re-invoke perfsim in CSV-update-only mode: it reads the profilePoints
+    * written above and patches the existing perfsim CSV. analyzeNetwork is
+    * skipped inside perfsim when this flag is set. */
+   float networkTime = NAN;
+   gParams.compileConstraintsFlag |= TIDL_CONSTRAINT_UPDATE_CSV_ONLY;
+   TIDL_IMPORT_CHECK_AND_RETURN(tidlRunPerfSimTool(&gParams, NORMAL_EXEC, multiCoreModes, &networkTime),
+   "Perfsim CSV update (update-only mode) failed");
+   gParams.compileConstraintsFlag &= ~TIDL_CONSTRAINT_UPDATE_CSV_ONLY;
+  }
   #endif
+  
+  if(multiCoreModes != NULL) free(multiCoreModes);
 
   int errorCount = tidlModelCheck(&gParams, &orgTIDLNetStructure);
 

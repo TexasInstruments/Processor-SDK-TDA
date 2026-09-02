@@ -67,7 +67,7 @@
 
 #include <utils/mem/include/app_mem.h>
 #include <utils/mem/include/app_mem_limits.h>
-#include <utils/app_init/include/app_init.h>
+#include <app_init.h>
 
 #define APP_ASSERT_SUCCESS(x)  { if ((x)!=0) while(1); }
 

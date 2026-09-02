@@ -179,6 +179,10 @@ int32_t TIDL_colorConversionRefProcess(void *pIn,
   {
     TIDL_refUV420Conv((float32_tidl *)pIn, (float32_tidl *)pOut, inDataParams, outDataParams);
   }
+  else if (elementType == TIDL_BFloat16)
+  {
+    TIDL_refUV420Conv((bfloat16_tidl *)pIn, (bfloat16_tidl *)pOut, inDataParams, outDataParams);
+  }
   else if (elementType == TIDL_UnsignedChar)
   {
     TIDL_refUV420Conv((uint8_t *)pIn, (uint8_t *)pOut, inDataParams, outDataParams);

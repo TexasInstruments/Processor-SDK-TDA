@@ -204,9 +204,8 @@ typedef struct
 #define ADD_SET_TARGET_PARAMETERS(testArgName, nextmacro, ...) \
     CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_MPU_0", __VA_ARGS__, TIVX_TARGET_MPU_0)), \
     CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_MCU0", __VA_ARGS__, TIVX_TARGET_MCU0)), \
-    CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_DSP_C7_1", __VA_ARGS__, TIVX_TARGET_DSP_C7_1)), \
-    CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_RMCU0_0", __VA_ARGS__, TIVX_TARGET_RMCU0_0))
-#define CORE_LIST ((char const*[]){"A720", "M55", "C7x", "R52+"})
+    CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_DSP_C7_1", __VA_ARGS__, TIVX_TARGET_DSP_C7_1))
+#define CORE_LIST ((char const*[]){"A720", "M55", "C7x"})
 #else
 #define ADD_SET_TARGET_PARAMETERS(testArgName, nextmacro, ...) \
     CT_EXPAND(nextmacro(testArgName "/TIVX_TARGET_MPU_0", __VA_ARGS__, TIVX_TARGET_MPU_0)), \
