@@ -9,11 +9,15 @@ include $(RULES_MAKE)
 endif
 
 ifeq ($(BUILD_OS_TYPE), baremetal)
-  APP_NAME = r5f_cpu6_ip_fma_app_$(BUILD_OS_TYPE)
+  ifeq ($(RB_ENABLE), true)
+    APP_NAME = r5f_cpu6_ip_fma_app_rb_enable_$(BUILD_OS_TYPE)
+  else
+    APP_NAME = r5f_cpu6_ip_fma_app_$(BUILD_OS_TYPE)
+  endif
 endif
 
-SRCDIR = . ./src $(PDK_INSTALL_PATH)/ti/ip_fma/src $(PDK_INSTALL_PATH)/ti/ip_fma/examples/r5f/common/src
-INCDIR = . $(PDK_INSTALL_PATH)/ti/ip_fma/inc $(PDK_INSTALL_PATH)/ti/ip_fma/examples/r5f/common/inc/
+SRCDIR = . ./src $(IP_FMA_COMP_PATH)/src $(IP_FMA_COMP_PATH)/examples/r5f/common/src
+INCDIR = . $(IP_FMA_COMP_PATH)/inc $(IP_FMA_COMP_PATH)/examples/r5f/common/inc/
 
 # List all the external components/interfaces, whose interface header files
 #  need to be included for this component

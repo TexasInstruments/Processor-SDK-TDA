@@ -86,6 +86,11 @@ void app_set_cfg_default(AppObj *obj)
     obj->height_out = 1080;
     obj->is_interactive = 1;
     obj->test_mode = 0;
+    obj->file_read_enable = 0;
+    obj->file_read_dir[0] = '\0';
+    obj->file_read_seq_count = 1;
+    obj->file_read_start_seq = 0;
+    obj->save_debug_images_enable = 0;
     obj->ldc_enable = 0;
     obj->table_width = LDC_TABLE_WIDTH;
     obj->table_height = LDC_TABLE_HEIGHT;
@@ -168,11 +173,11 @@ vx_int32 write_output_image_fp(FILE * fp, vx_image out_image)
     imgaddr_width  = image_addr.dim_x;
     imgaddr_height = image_addr.dim_y;
     imgaddr_stride = image_addr.stride_y;
-    printf("imgaddr_width = %d \n", imgaddr_width);
-    printf("imgaddr_height = %d \n", imgaddr_height);
-    printf("imgaddr_stride = %d \n", imgaddr_stride);
-    printf("width = %d \n", width);
-    printf("height = %d \n", height);
+    APP_PRINTF("imgaddr_width = %d \n", imgaddr_width);
+    APP_PRINTF("imgaddr_height = %d \n", imgaddr_height);
+    APP_PRINTF("imgaddr_stride = %d \n", imgaddr_stride);
+    APP_PRINTF("width = %d \n", width);
+    APP_PRINTF("height = %d \n", height);
 
     num_luma_bytes_written_to_file = 0;
 
@@ -255,6 +260,41 @@ vx_int32 write_output_image_nv12_8bit(char * file_name, vx_image out_nv12)
     return len1;
 }
 
+/* Computes the number of meaningful (non-padding) pixel-data bytes per row
+ * for a mapped raw image exposure, from the addressing TIOVX itself just
+ * computed for that exposure's actual pixel_container -- so this works for
+ * any container without needing to special-case each enum value:
+ * - Unpacked containers (8-bit, 16-bit, and any future unpacked format)
+ *   report a non-zero addr->stride_x equal to their exact bytes-per-pixel;
+ *   the line's meaningful byte count is simply dim_x * stride_x.
+ * - Packed containers report addr->stride_x == 0 (this is how TIOVX itself
+ *   signals "packed" -- see tivxMapRawImagePatch()/vx_raw_image.c). The
+ *   only packed container currently defined is TIVX_RAW_IMAGE_P12_BIT
+ *   (12 bits/pixel, no padding between pixels), whose dense per-line byte
+ *   count is ((dim_x*12)+7)/8 -- the same formula TIOVX uses internally
+ *   when computing that buffer's (alignment-padded) stride_y.
+ * Either way, addr->stride_y (used to advance between rows) already
+ * accounts for interleaving and alignment padding correctly regardless of
+ * pixel_container or exposure count, so no other per-format handling is
+ * needed in the read/write loops below. */
+static vx_uint32 app_raw_image_line_num_bytes(const vx_imagepatch_addressing_t *addr)
+{
+    vx_uint32 num_bytes;
+
+    if (0 != addr->stride_x)
+    {
+        num_bytes = addr->dim_x * (vx_uint32)addr->stride_x;
+    }
+    else
+    {
+        num_bytes = ((addr->dim_x * 12U) + 7U) / 8U;
+    }
+
+    return num_bytes;
+}
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
 vx_int32 read_test_image_raw(char *raw_image_test_fname, tivx_raw_image raw_image, vx_uint32 test_mode)
 {
     char raw_image_fname[MAX_FNAME] = {0};
@@ -262,18 +302,17 @@ vx_int32 read_test_image_raw(char *raw_image_test_fname, tivx_raw_image raw_imag
     char * test_data_path = app_get_test_file_path();
     FILE * fp;
     vx_uint32 width, height, i;
+    vx_uint32 num_exposures, exp_idx;
     vx_imagepatch_addressing_t image_addr;
     vx_rectangle_t rect;
     vx_map_id map_id;
     void *data_ptr;
-    vx_uint32 num_bytes_per_pixel = 2; /*Supports only RAW 12b Unpacked format*/
+    vx_uint32 line_num_bytes;
     vx_uint32 num_bytes_read_from_file = 0;
-    tivx_raw_image_format_t format;
-    vx_uint32 imgaddr_width, imgaddr_height, imgaddr_stride;
 
     tivxQueryRawImage(raw_image, TIVX_RAW_IMAGE_WIDTH, &width, sizeof(vx_uint32));
     tivxQueryRawImage(raw_image, TIVX_RAW_IMAGE_HEIGHT, &height, sizeof(vx_uint32));
-    tivxQueryRawImage(raw_image, TIVX_RAW_IMAGE_FORMAT, &format, sizeof(format));
+    tivxQueryRawImage(raw_image, TIVX_RAW_IMAGE_NUM_EXPOSURES, &num_exposures, sizeof(num_exposures));
     if(0==test_mode)
     {
         if(NULL == test_data_path)
@@ -315,13 +354,103 @@ vx_int32 read_test_image_raw(char *raw_image_test_fname, tivx_raw_image raw_imag
         rect.end_x = width;
         rect.end_y = height;
 
+        num_bytes_read_from_file = 0;
+
+        /* Read every exposure's pixel data in turn, one after another in
+         * the file (exposure 0's full pixel data, then exposure 1's, etc).
+         * Works for any pixel_container/num_exposures/line_interleaved
+         * combination, since tivxMapRawImagePatch() returns the correct
+         * per-exposure addressing (stride_x/stride_y/dim_y) regardless. */
+        for (exp_idx = 0; exp_idx < num_exposures; exp_idx++)
+        {
+            tivxMapRawImagePatch(raw_image,
+                &rect,
+                exp_idx,
+                &map_id,
+                &image_addr,
+                &data_ptr,
+                VX_READ_AND_WRITE,
+                VX_MEMORY_TYPE_HOST,
+                TIVX_RAW_IMAGE_PIXEL_BUFFER
+                );
+
+            if(!data_ptr)
+            {
+                APP_PRINTF("data_ptr is NULL \n");
+                fclose(fp);
+                return -1;
+            }
+
+            line_num_bytes = app_raw_image_line_num_bytes(&image_addr);
+
+            APP_PRINTF("exposure %d: dim_x = %d, dim_y = %d, stride_y = %d, line_num_bytes = %d \n",
+                       exp_idx, image_addr.dim_x, image_addr.dim_y, image_addr.stride_y, line_num_bytes);
+
+            for(i=0;i<(vx_uint32)image_addr.dim_y;i++)
+            {
+                num_bytes_read_from_file += fread(data_ptr, 1, line_num_bytes, fp);
+                data_ptr += image_addr.stride_y;
+            }
+
+            tivxUnmapRawImagePatch(raw_image, map_id);
+        }
+
+        fclose(fp);
+        APP_PRINTF("%d bytes read from %s\n", num_bytes_read_from_file, raw_image_fname);
+    }
+
+    return num_bytes_read_from_file;
+}
+#pragma GCC diagnostic pop
+
+vx_int32 write_output_image_raw(char * file_name, tivx_raw_image raw_image)
+{
+    FILE * fp = fopen(file_name, "wb");
+    vx_uint32 width, height, i;
+    vx_uint32 num_exposures, exp_idx;
+    vx_imagepatch_addressing_t image_addr;
+    vx_rectangle_t rect;
+    vx_map_id map_id;
+    void *data_ptr;
+    vx_uint32 line_num_bytes;
+    vx_uint32 num_bytes_written_to_file;
+
+    if(!fp)
+    {
+        APP_PRINTF("Unable to open file %s\n", file_name);
+        return -1;
+    }
+
+    tivxQueryRawImage(raw_image, TIVX_RAW_IMAGE_WIDTH, &width, sizeof(vx_uint32));
+    tivxQueryRawImage(raw_image, TIVX_RAW_IMAGE_HEIGHT, &height, sizeof(vx_uint32));
+    tivxQueryRawImage(raw_image, TIVX_RAW_IMAGE_NUM_EXPOSURES, &num_exposures, sizeof(num_exposures));
+
+    APP_PRINTF("in width =  %d\n", width);
+    APP_PRINTF("in height =  %d\n", height);
+    APP_PRINTF("in num_exposures =  %d\n", num_exposures);
+
+    rect.start_x = 0;
+    rect.start_y = 0;
+    rect.end_x = width;
+    rect.end_y = height;
+
+    num_bytes_written_to_file = 0;
+
+    /* Write every exposure's pixel data in turn (exposure 0's full pixel
+     * data, then exposure 1's, etc). Works for any pixel_container/
+     * num_exposures/line_interleaved combination, since
+     * tivxMapRawImagePatch() returns the correct per-exposure addressing
+     * (stride_x/stride_y/dim_y) regardless -- see
+     * app_raw_image_line_num_bytes(). */
+    for (exp_idx = 0; exp_idx < num_exposures; exp_idx++)
+    {
         tivxMapRawImagePatch(raw_image,
             &rect,
-            0,
+            exp_idx,
             &map_id,
             &image_addr,
             &data_ptr,
-            VX_READ_AND_WRITE,
+            VX_READ_ONLY,
             VX_MEMORY_TYPE_HOST,
             TIVX_RAW_IMAGE_PIXEL_BUFFER
             );
@@ -332,93 +461,17 @@ vx_int32 read_test_image_raw(char *raw_image_test_fname, tivx_raw_image raw_imag
             fclose(fp);
             return -1;
         }
-        num_bytes_read_from_file = 0;
 
-        imgaddr_width  = image_addr.dim_x;
-        imgaddr_height = image_addr.dim_y;
-        imgaddr_stride = image_addr.stride_y;
+        line_num_bytes = app_raw_image_line_num_bytes(&image_addr);
 
-        printf("imgaddr_width = %d \n", imgaddr_width);
-        printf("imgaddr_height = %d \n", imgaddr_height);
-        printf("imgaddr_stride = %d \n", imgaddr_stride);
-
-        for(i=0;i<imgaddr_height;i++)
+        for(i=0;i<(vx_uint32)image_addr.dim_y;i++)
         {
-            num_bytes_read_from_file += fread(data_ptr, 1, imgaddr_width*num_bytes_per_pixel, fp);
-            data_ptr += imgaddr_stride;
+            num_bytes_written_to_file += fwrite(data_ptr, 1, line_num_bytes, fp);
+            data_ptr += image_addr.stride_y;
         }
 
         tivxUnmapRawImagePatch(raw_image, map_id);
-
-        fclose(fp);
-        printf("%d bytes read from %s\n", num_bytes_read_from_file, raw_image_fname);
     }
-
-    return num_bytes_read_from_file;
-}
-
-vx_int32 write_output_image_raw(char * file_name, tivx_raw_image raw_image)
-{
-    FILE * fp = fopen(file_name, "wb");
-    vx_uint32 width, height, i;
-    vx_imagepatch_addressing_t image_addr;
-    vx_rectangle_t rect;
-    vx_map_id map_id;
-    void *data_ptr;
-    vx_uint32 num_bytes_per_pixel = 2; /*Supports only RAW12b Unpacked format*/
-    vx_uint32 num_bytes_written_to_file;
-    tivx_raw_image_format_t format;
-    vx_uint32 imgaddr_width, imgaddr_height, imgaddr_stride;
-
-    if(!fp)
-    {
-        APP_PRINTF("Unable to open file %s\n", file_name);
-        return -1;
-    }
-
-    tivxQueryRawImage(raw_image, TIVX_RAW_IMAGE_WIDTH, &width, sizeof(vx_uint32));
-    tivxQueryRawImage(raw_image, TIVX_RAW_IMAGE_HEIGHT, &height, sizeof(vx_uint32));
-    tivxQueryRawImage(raw_image, TIVX_RAW_IMAGE_FORMAT, &format, sizeof(format));
-
-    APP_PRINTF("in width =  %d\n", width);
-    APP_PRINTF("in height =  %d\n", height);
-    APP_PRINTF("in format =  %d\n", format.pixel_container);
-
-    rect.start_x = 0;
-    rect.start_y = 0;
-    rect.end_x = width;
-    rect.end_y = height;
-
-    tivxMapRawImagePatch(raw_image,
-        &rect,
-        0,
-        &map_id,
-        &image_addr,
-        &data_ptr,
-        VX_READ_ONLY,
-        VX_MEMORY_TYPE_HOST,
-        TIVX_RAW_IMAGE_PIXEL_BUFFER
-        );
-
-    if(!data_ptr)
-    {
-        APP_PRINTF("data_ptr is NULL \n");
-        fclose(fp);
-        return -1;
-    }
-    num_bytes_written_to_file = 0;
-
-    imgaddr_width  = image_addr.dim_x;
-    imgaddr_height = image_addr.dim_y;
-    imgaddr_stride = image_addr.stride_y;
-
-    for(i=0;i<imgaddr_height;i++)
-    {
-        num_bytes_written_to_file += fwrite(data_ptr, 1, imgaddr_width*num_bytes_per_pixel, fp);
-        data_ptr += imgaddr_stride;
-    }
-
-    tivxUnmapRawImagePatch(raw_image, map_id);
 
     fflush(fp);
     fclose(fp);
@@ -580,9 +633,16 @@ vx_status app_create_ldc(AppObj *obj, vx_image ldc_in_image)
     }
 
     /* LDC Output image in NV12 format */
-    obj->ldc_out = vxCreateImage(obj->context,
-        obj->table_width, obj->table_height,
-        VX_DF_IMAGE_NV12);
+    {
+        uint32_t buf_id;
+        for (buf_id = 0; buf_id < obj->num_cap_buf; buf_id++)
+        {
+            obj->ldc_out_frames[buf_id] = vxCreateImage(obj->context,
+                obj->table_width, obj->table_height,
+                VX_DF_IMAGE_NV12);
+        }
+    }
+    obj->ldc_out = obj->ldc_out_frames[0];
 
     /* Mesh Parameters */
     obj->mesh_params_obj = vxCreateUserDataObject(obj->context,
@@ -645,6 +705,8 @@ vx_status app_create_ldc(AppObj *obj, vx_image ldc_in_image)
 
 vx_status app_delete_ldc(AppObj *obj)
 {
+    uint32_t buf_id;
+
     if(NULL != obj->dcc_param_ldc)
     {
         vxReleaseUserDataObject(&obj->dcc_param_ldc);
@@ -655,10 +717,14 @@ vx_status app_delete_ldc(AppObj *obj)
         vxReleaseImage(&obj->mesh_img);
     }
 
-    if(NULL != obj->ldc_out)
+    for(buf_id=0; buf_id<obj->num_cap_buf; buf_id++)
     {
-        vxReleaseImage(&obj->ldc_out);
+        if(NULL != obj->ldc_out_frames[buf_id])
+        {
+            vxReleaseImage(&(obj->ldc_out_frames[buf_id]));
+        }
     }
+    obj->ldc_out = NULL;
 
     if(NULL != obj->mesh_params_obj)
     {
@@ -705,7 +771,14 @@ vx_status app_create_viss(AppObj *obj, uint32_t sensor_wdr_mode)
     image_height = obj->height_in;
 
     obj->num_viss_out_buf = 3;
-    obj->y8_r8_c2 = vxCreateImage(obj->context, image_width, image_height, VX_DF_IMAGE_NV12);
+    {
+        uint32_t buf_id;
+        for (buf_id = 0; buf_id < obj->num_cap_buf; buf_id++)
+        {
+            obj->y8_r8_c2_frames[buf_id] = vxCreateImage(obj->context, image_width, image_height, VX_DF_IMAGE_NV12);
+        }
+    }
+    obj->y8_r8_c2 = obj->y8_r8_c2_frames[0];
     obj->uv8_g8_c3 = NULL;
 
     obj->y12 = NULL;
@@ -754,7 +827,7 @@ vx_status app_create_viss(AppObj *obj, uint32_t sensor_wdr_mode)
     if (obj->vpac3_dual_fcp_enable == 1U)
     {
         obj->viss_params.fcp1_config = 1; /* RAWFE --> FCP1 */
-        
+
         /* HV pipeline 8bit YUV output on output2 and output3 */
         obj->viss_params.fcp[0].mux_output0 = 0;
         obj->viss_params.fcp[0].mux_output1 = 0;
@@ -794,7 +867,14 @@ vx_status app_create_viss(AppObj *obj, uint32_t sensor_wdr_mode)
     obj->configuration = vxCreateUserDataObject(obj->context, "tivx_vpac_viss_params_t", sizeof(tivx_vpac_viss_params_t), &obj->viss_params);
 
     /* Create h3a_aew_af output buffer (uninitialized) */
-    obj->h3a_aew_af = vxCreateUserDataObject(obj->context, "tivx_h3a_data_t", sizeof(tivx_h3a_data_t), NULL);
+    {
+        uint32_t buf_id;
+        for (buf_id = 0; buf_id < obj->num_cap_buf; buf_id++)
+        {
+            obj->h3a_aew_af_frames[buf_id] = vxCreateUserDataObject(obj->context, "tivx_h3a_data_t", sizeof(tivx_h3a_data_t), NULL);
+        }
+    }
+    obj->h3a_aew_af = obj->h3a_aew_af_frames[0];
 
     if(sensor_dcc_enabled)
     {
@@ -922,11 +1002,15 @@ vx_status app_delete_viss(AppObj *obj)
         status |= vxReleaseImage(&obj->s8_b8_c4);
     }
 
-    if(NULL != obj->y8_r8_c2)
+    for(buf_id=0; buf_id<obj->num_cap_buf; buf_id++)
     {
-        APP_PRINTF("releasing y8_r8_c2\n");
-        status |= vxReleaseImage(&obj->y8_r8_c2);
+      if(NULL != obj->y8_r8_c2_frames[buf_id])
+      {
+        APP_PRINTF("releasing y8_r8_c2_frames[%d]\n", buf_id);
+        status |= vxReleaseImage(&(obj->y8_r8_c2_frames[buf_id]));
+      }
     }
+    obj->y8_r8_c2 = NULL;
 
     if(NULL != obj->uv8_g8_c3)
     {
@@ -953,11 +1037,15 @@ vx_status app_delete_viss(AppObj *obj)
         status |= vxReleaseUserDataObject(&obj->dcc_param_viss);
     }
 
-    if(NULL != obj->h3a_aew_af)
+    for(buf_id=0; buf_id<obj->num_cap_buf; buf_id++)
     {
-        APP_PRINTF("releasing h3a_aew_af\n");
-        status |= vxReleaseUserDataObject(&obj->h3a_aew_af);
+      if(NULL != obj->h3a_aew_af_frames[buf_id])
+      {
+        APP_PRINTF("releasing h3a_aew_af_frames[%d]\n", buf_id);
+        status |= vxReleaseUserDataObject(&(obj->h3a_aew_af_frames[buf_id]));
+      }
     }
+    obj->h3a_aew_af = NULL;
 
     return status;
 }
@@ -1080,6 +1168,8 @@ vx_status app_create_aewb(AppObj *obj, uint32_t sensor_wdr_mode)
     vxSetNodeTarget(obj->node_aewb, VX_TARGET_STRING, TIVX_TARGET_MPU_0);
 #elif defined(adas) && defined(SOC_AM62A)
     vxSetNodeTarget(obj->node_aewb, VX_TARGET_STRING, TIVX_TARGET_MCU1_0);
+#elif defined(SOC_FAMILY_TDA5)
+    vxSetNodeTarget(obj->node_aewb, VX_TARGET_STRING, TIVX_TARGET_MCU0);
 #else
     vxSetNodeTarget(obj->node_aewb, VX_TARGET_STRING, TIVX_TARGET_MCU2_0);
 #endif
@@ -1128,4 +1218,3 @@ vx_status app_delete_aewb(AppObj *obj)
 
     return status;
 }
-

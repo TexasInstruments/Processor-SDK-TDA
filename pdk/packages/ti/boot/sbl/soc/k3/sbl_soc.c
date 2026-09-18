@@ -268,10 +268,10 @@ uint32_t SBL_GetMsgLen(uint8_t *x509_cert_ptr, uint32_t x509_cert_size)
     uint8_t *boot_seq_ptr;
     uint32_t msg_len = 0, boot_seq_len;
     uint8_t *msg_len_ptr = (uint8_t *)&msg_len;
-    /* oid encoding of boot_seq extension - 1.3.6.1.4.1.294.1.1 */
-    uint8_t boot_seq_oid[] = {0x06, 0x09, 0x2B, 0x06, 0x01, 0x04, 0x01, 0x82, 0x26, 0x01, 0x01};
+	/* OID encoding for non-ROM bootable images (SBL) - 1.3.6.1.4.1.294.1.34 */
+    uint8_t sbl_image_size_oid[] = {0x06, 0x09, 0x2B, 0x06, 0x01, 0x04, 0x01, 0x82, 0x26, 0x01, 0x22};
 
-    boot_seq_ptr = SBL_FindSeq(x509_cert_ptr, x509_cert_size, boot_seq_oid, sizeof(boot_seq_oid));
+    boot_seq_ptr = SBL_FindSeq(x509_cert_ptr, x509_cert_size, sbl_image_size_oid, sizeof(sbl_image_size_oid));
     SBL_log(SBL_LOG_MAX,"Found seq @ 0x%x\r\n", boot_seq_ptr);
 
     /* length of seq is stored in the byte after the 0x30 seq_id */

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -77,6 +77,14 @@ void tivxRegisterVideoIOTargetCaptureKernels(void)
     tivxRegisterTargetKernels(gTivx_target_kernel_list, dimof(gTivx_target_kernel_list));
 }
 
+/* LDRA_JUSTIFY
+<metric start> statement branch <metric end>
+<function start> void tivxUnRegisterVideoIOTargetCaptureKernels.* <function end>
+<justification start>
+Rationale: The test framework and test apps cannot reach this portion.
+The function is unused because of an un-implemented feature, this code base is not being used/enabled with the current kernel support.
+Effect on this unit: None; Unused feature, cannot be enabled, control cannot reach to this condition.
+<justification end> */
 void tivxUnRegisterVideoIOTargetCaptureKernels(void)
 {
     tivxUnRegisterTargetKernels(gTivx_target_kernel_list, dimof(gTivx_target_kernel_list));

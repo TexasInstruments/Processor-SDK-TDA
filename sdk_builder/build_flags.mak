@@ -43,6 +43,7 @@ endif
 # Macro to enable LDRA build
 export LDRA_COVERAGE_ENABLED?=no
 export LDRA_COVERAGE_ENABLED_IMAGING?=no
+export LDRA_COVERAGE_ENABLED_VIDEO_IO?=no
 
 # Macro to enable building of CTools library
 export CTOOLS_BUILD_ENABLED ?= no

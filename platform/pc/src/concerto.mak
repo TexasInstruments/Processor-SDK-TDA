@@ -8,10 +8,6 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86 x86_64))
 
   IDIRS       += $(TIOVX_PATH)/source/platform/pc
 
-  ifeq ($(VDK), yes)
-    DEFS += VDK
-  endif
-
   include $(FINALE)
 
 endif

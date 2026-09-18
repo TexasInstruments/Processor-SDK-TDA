@@ -21,6 +21,15 @@ ifeq ($(BUILD_VIDEO_IO_KERNELS),yes)
 
                 IDIRS       += $(TIOVX_PATH)/source/include
 
+                ifeq ($(LDRA_COVERAGE_ENABLED_VIDEO_IO),yes)
+                    IDIRS       += $(HOST_ROOT)/kernels/video_io/coverage_files/include
+                    BUILD_DEFS  += LDRA_COVERAGE_ENABLED_VIDEO_IO
+                endif
+
+                ifeq ($(ASF_TEST_ENABLED_CAPTURE),yes)
+                    BUILD_DEFS  += ASF_TEST_ENABLED_CAPTURE
+                endif
+
                 # JIRA: ADASVISION-7147 - Enable capture kernels in video_io once csirx driver is enabled
                 ifeq ($(SOC), tda54)
                     SKIPBUILD=1

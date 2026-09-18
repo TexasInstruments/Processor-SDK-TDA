@@ -23,11 +23,12 @@
 /*-------------------------------------------*/
 /*       Stack Sizes for various modes       */
 /*-------------------------------------------*/
-__IRQ_STACK_SIZE   = 0x1000;
-__FIQ_STACK_SIZE   = 0x0100;
-__ABORT_STACK_SIZE = 0x0100;
-__UND_STACK_SIZE   = 0x0100;
-__SVC_STACK_SIZE   = 0x0100;
+__IRQ_STACK_SIZE      = 0x1000;
+__FIQ_STACK_SIZE      = 0x0100;
+__ABORT_STACK_SIZE    = 0x0100;
+__UND_STACK_SIZE      = 0x0100;
+__SVC_STACK_SIZE      = 0x0100;
+__LPM_STUB_STACK_SIZE = 0x1000;
 
 /*--------------------------------------------------------------------------*/
 /*                               Memory Map                                 */
@@ -137,6 +138,28 @@ SECTIONS
 #ifdef __LPM_CTX_BUFFER
     .ctx_buffer (NOLOAD) : { . = . + 256K; } palign(128) > __LPM_CTX_BUFFER
 #endif
+
+    GROUP{
+        .lpm_stub_text : {
+            lpm_stub*(.text)
+        }  palign(8)
+
+        .lpm_stub_data : {
+            lpm_stub*(.data)
+        }  palign(8)
+
+        .lpm_stub_bss : {
+            lpm_stub*(.bss)
+        }  palign(8)
+
+        .lpm_stub_rodata : {
+            lpm_stub*(.rodata)
+        }  palign(8)
+
+        .lpm_stub_stack : {
+            . += __LPM_STUB_STACK_SIZE;
+        }  palign(8)
+    }  > MCU_R5F_TCMB
 
     .resource_table          :
     {

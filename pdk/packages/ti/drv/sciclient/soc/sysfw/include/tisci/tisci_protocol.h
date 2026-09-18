@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2017-2025 Texas Instruments Incorporated
+ *  Copyright (C) 2017-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -156,6 +156,7 @@ struct tisci_sec_header {
 #define TISCI_MSG_GET_DEVICE                    (0x0201U)
 #define TISCI_MSG_SET_DEVICE_RESETS             (0x0202U)
 #define TISCI_MSG_DEVICE_DROP_POWERUP_REF       (0x0203U)
+#define TISCI_MSG_GET_DEVICE_MULTIPLE           (0x0204U)
 
 #define TISCI_MSG_PREPARE_SLEEP                 (0x0300U)
 #define TISCI_MSG_ENTER_SLEEP                   (0x0301U)
@@ -255,6 +256,9 @@ struct tisci_sec_header {
 
 /** Message to release authentication resources back to sysfw */
 #define TISCI_MSG_SA2UL_AUTH_RES_RELEASE        (0x9018U)
+
+/** Message to configure ISC PrivIDs */
+#define TISCI_MSG_CONFIGURE_ISC_IDS                (0x9019U)
 
 /* Reserved ID not for (re)use */
 #define TISCI_MSG_SEC_RESERVED_9020             (0x9020U)
@@ -369,6 +373,12 @@ struct tisci_sec_header {
 /* Keywriter lite TISCI message to write keys from a buffer  */
 #define TISCI_MSG_KEY_WRITER_LITE               (0x9045U)
 
+/* Message to get the programmed key writer type */
+#define TISCI_MSG_GET_KEY_WRITER_TYPE           (0x9047U)
+
+/* Message to program the key writer type */
+#define TISCI_MSG_SET_KEY_WRITER_TYPE           (0x9048U)
+
 /******************************************************/
 
 /* Processor Control APIs */
@@ -390,6 +400,9 @@ struct tisci_sec_header {
 
 /** Message to Wait for processor status */
 #define TISCI_MSG_PROC_WAIT_STATUS      (0xC401U)
+
+/** Message to re-apply the x509 firewalls */
+#define TISCI_MSG_PROC_AUTH_APPLY_FWLS   (0xC402U)
 
 /** Message to do authenticated boot configuration of a processor */
 #define TISCI_MSG_PROC_AUTH_BOOT        (0xC120U)
@@ -451,6 +464,10 @@ struct tisci_sec_header {
 #define TISCI_MSG_RM_UDMAP_TX_CH_CFG            (0x1205U)
 /* Reserved ID not for (re)use */
 #define TISCI_MSG_RM_RESERVED_1206              (0x1206U)
+/**
+ * RM TISCI message to configure multiple Navigator Subsystem UDMAP transmit channel
+ */
+#define TISCI_MSG_RM_UDMAP_TX_MULTI_CH_CFG      (0x1207U)
 /* Reserved ID not for (re)use */
 #define TISCI_MSG_RM_RESERVED_1210              (0x1210U)
 /* Reserved ID not for (re)use */
@@ -504,6 +521,10 @@ struct tisci_sec_header {
  * RM TISCI message to write PSI-L thread RT registers via the PSI-L proxy
  */
 #define TISCI_MSG_RM_PSIL_WRITE                 (0x1283U)
+/**
+ * RM TISCI message to write PSI-L thread RT registers to multiple threads
+ */
+#define TISCI_MSG_RM_PSIL_MULTI_CH_WRITE           (0x1284U)
 /**
  * RM TISCI message to setup a Navigator Subsystem proxy for
  * configuration

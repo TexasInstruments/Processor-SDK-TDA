@@ -62,6 +62,7 @@
 
 #include <TI/tivx.h>
 #include <TI/tivx_task.h>
+#include <TI/tivx_mutex.h>
 #include <TI/j7_imaging_aewb.h>
 #include <TI/hwa_vpac_ldc.h>
 #include <TI/video_io_display.h>
@@ -83,15 +84,22 @@
 #include <utils/perf_stats/include/app_perf_stats.h>
 #include <utils/iss/include/app_iss.h>
 
+#ifndef APP_MAX_FILE_PATH
 #define APP_MAX_FILE_PATH           (256u)
+#endif
 #define MAX_FNAME 					  (256u)
 #define APP_ASSERT(x)               assert((x))
 #define APP_ASSERT_VALID_REF(ref)   (APP_ASSERT(vxGetStatus((vx_reference)(ref))==VX_SUCCESS));
 #define MAX_NUM_BUF  8
 #define NUM_BUFS 4u
 
+#ifdef SOC_FAMILY_TDA5
+#define LDC_TABLE_WIDTH             (640)
+#define LDC_TABLE_HEIGHT            (480)
+#else
 #define LDC_TABLE_WIDTH             (1920)
 #define LDC_TABLE_HEIGHT            (1080)
+#endif
 #define LDC_DS_FACTOR               (2)
 #define LDC_BLOCK_WIDTH             (64)
 #define LDC_BLOCK_HEIGHT            (32)
@@ -135,13 +143,16 @@ typedef struct {
     #endif
     vx_enum  ae_awb_result_type;
     tivx_raw_image raw;
+    tivx_raw_image raw_frames[MAX_NUM_BUF];
     tivx_raw_image fs_test_raw_image;
     vx_image y12;
     vx_image uv12_c1;
     vx_image y8_r8_c2;
+    vx_image y8_r8_c2_frames[MAX_NUM_BUF];
     vx_image uv8_g8_c3;
     vx_image s8_b8_c4;
     vx_user_data_object h3a_aew_af;
+    vx_user_data_object h3a_aew_af_frames[MAX_NUM_BUF];
     vx_user_data_object configuration;
     vx_distribution histogram;
     tivx_vpac_viss_params_t viss_params;
@@ -172,6 +183,12 @@ typedef struct {
 
     uint32_t is_interactive;
     uint32_t test_mode;
+
+    uint32_t file_read_enable;
+    char     file_read_dir[APP_MAX_FILE_PATH];
+    uint32_t file_read_seq_count;
+    uint32_t file_read_start_seq;
+
     tivx_task task;
     uint32_t stop_task;
     uint32_t stop_task_done;
@@ -221,6 +238,7 @@ typedef struct {
     uint32_t table_height;
     uint32_t ds_factor;
     vx_image ldc_out;
+    vx_image ldc_out_frames[MAX_NUM_BUF];
     vx_image mesh_img;
     tivx_vpac_ldc_params_t ldc_params;
     vx_user_data_object ldc_param_obj;
@@ -258,6 +276,33 @@ typedef struct {
 #endif
 #if defined(VPAC3) || defined(VPAC3L)
     uint32_t cac_enable;
+#endif
+
+    /* Debug image dump: continuous per-frame dump (config-driven) and
+     * on-demand ITT snapshot both read buffers that TIOVX has confirmed
+     * complete via an explicit dequeue, never a stale/racy pointer.     */
+    uint32_t save_debug_images_enable;
+    int32_t  debug_save_file_index;
+    vx_int32 y8_r8_c2_graph_param_idx;
+    vx_int32 h3a_aew_af_graph_param_idx;
+    vx_int32 ldc_out_graph_param_idx;
+
+#if defined(A72) || defined(A53) || defined(A720)
+    /* "Last completed frame" cache: published by the graph-execution
+     * thread once per iteration, read by save_debug_images() (called
+     * from the ITT server thread) under debug_last_frame_mutex. Note:
+     * this must match app_single_cam_main.h's _APP_DEBUG_ condition
+     * directly, since that macro isn't defined yet at the point this
+     * header is processed (app_single_cam_main.h includes this file
+     * before defining _APP_DEBUG_).                                    */
+    tivx_mutex debug_last_frame_mutex;
+    vx_bool debug_last_frame_valid;
+    tivx_raw_image debug_last_raw;
+    vx_image debug_last_cap_yuv;
+    vx_image debug_last_y8_r8_c2;
+    vx_user_data_object debug_last_h3a;
+    vx_image debug_last_ldc_out;
+    vx_image debug_last_scaler_out;
 #endif
 } AppObj;
 

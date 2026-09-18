@@ -1,4 +1,4 @@
-ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), x86_64 A72 A53))
+ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), x86_64 A720 A72 A53))
 
 include $(PRELUDE)
 
@@ -12,7 +12,7 @@ include $(VISION_APPS_PATH)/apps/concerto_x86_64_inc.mak
 STATIC_LIBS += $(IMAGING_LIBS)
 endif
 
-ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53))
+ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A720 A72 A53))
 ifeq ($(TARGET_OS), $(filter $(TARGET_OS), LINUX QNX))
 CSOURCES    += app_single_cam_main.c
 CSOURCES    += main_linux_arm.c
@@ -30,7 +30,7 @@ endif
 endif
 endif
 
-ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53))
+ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A720 A72 A53))
 ifeq ($(TARGET_OS),SYSBIOS)
 
 TARGETTYPE  := library

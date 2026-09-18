@@ -1342,6 +1342,9 @@ static MCSPI_Handle MCSPI_open_v1(MCSPI_Handle        mcHandle,
                     }
                     else
                     {
+                        /* DMA configuration failed. Call MCSPI_dmaFreeChannel any allocation if happened will be freed. */
+                        MCSPI_dmaFreeChannel(mcHandle);
+
                         ret_flag = UTRUE;
                         retMcHandle = NULL;
                     }

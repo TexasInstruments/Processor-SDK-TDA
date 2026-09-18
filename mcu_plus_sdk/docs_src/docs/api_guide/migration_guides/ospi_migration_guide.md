@@ -231,6 +231,11 @@ There are changes in API names, structure names and macro names. The changes in 
         <td>\ref OSPI_getFlashDataBaseAddr
         <td>In MCU+SDK, this API can be used to get the SOC mapped data base address of the flash
     </tr>
+        <tr>
+        <td>None
+        <td>\ref OSPI_phyTuneSDR
+        <td>In MCU+SDK, this API can be used to tune the OSPI PHY for SDR mode to set optimal PHY parameters
+    </tr>
     <tr>
         <td>None
         <td>\ref OSPI_phyTuneDDR

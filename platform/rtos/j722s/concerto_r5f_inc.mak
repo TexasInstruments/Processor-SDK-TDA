@@ -61,6 +61,10 @@ ifeq ($(TARGET_CPU),R5F)
     TIOVX_LIBS += imaging_coverage
   endif
 
+  ifeq ($(LDRA_COVERAGE_ENABLED_VIDEO_IO), yes)
+    TIOVX_LIBS += video_io_coverage
+  endif
+
   IMAGING_LIBS  = ti_imaging_awbalg
   IMAGING_LIBS += ti_imaging_dcc
   IMAGING_LIBS += vx_kernels_imaging

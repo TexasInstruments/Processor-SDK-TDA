@@ -37,19 +37,72 @@
  *
  */
 
+/* ========================================================================== */
+/*                             Include Files                                  */
+/* ========================================================================== */
+
 #include <stdint.h>
+#include <ti/csl/csl_types.h>
+#include <osal_hwi.h>
 #include <ti/drv/sciclient/sciclient.h>
+#include <ti/drv/sciclient/src/sciclient/sciclient_s2r.h>
+
+/* ========================================================================== */
+/*                           Macros & Typedefs                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
+/* None */
+
+/* ========================================================================== */
+/*                          Function Definitions                              */
+/* ========================================================================== */
+
 
 int32_t Sciclient_prepareSleep(uint32_t *msg_recv)
 {
-    int32_t ret = -1;
-    /* Low power sequence will be implemented in future for j721s2 */
+    int32_t ret = CSL_EFAIL;
+
+    /* Prepare sleep is not supported */
     return ret;
 }
 
 int32_t Sciclient_enterSleep(uint32_t *msg_recv)
 {
-    int32_t ret = -1;
-    /* Low power sequence will be implemented in future for j721s2 */
+    int32_t ret = CSL_PASS;
+    uint8_t mode = -1;
+    struct tisci_msg_enter_sleep_req *req =
+        (struct tisci_msg_enter_sleep_req *) msg_recv;
+
+    if (NULL == req)
+    {
+        ret = CSL_EFAIL;
+    }
+
+    if (ret == CSL_PASS)
+    {
+        mode = req->mode;
+    }
+
+    if ((mode != TISCI_MSG_VALUE_SLEEP_MODE_SOC_OFF) &&
+        (mode != TISCI_MSG_VALUE_SLEEP_MODE_IO_ONLY_PLUS_DDR))
+    {
+        ret = EINVAL;
+    }
+    else
+    {
+        (void)osal_hwip_disable();
+
+        Sciclient_goRetention(mode);
+        /* We never reach this point as we enter into low power mode
+         * and we reload the DM during resume.
+         */
+    }
+
     return ret;
 }

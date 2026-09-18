@@ -170,6 +170,10 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
             TIOVX_LIBS+=vx_target_kernels_capture
         endif
 
+        ifeq ($(LDRA_COVERAGE_ENABLED_VIDEO_IO), yes)
+            TIOVX_LIBS += video_io_coverage
+        endif
+
         IMAGING_LIBS += app_utils_iss
 
         ifeq ($(TARGET_PLATFORM), AM62A)
@@ -216,6 +220,7 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
         VISION_APPS_UTILS_LIBS += app_utils_file_io
         VISION_APPS_UTILS_LIBS += app_utils_remote_service
         VISION_APPS_UTILS_LIBS += app_utils_perf_stats
+        VISION_APPS_UTILS_LIBS += app_utils_hwa
         ifeq ($(CTOOLS_BUILD_ENABLED), yes)
             VISION_APPS_UTILS_LIBS += app_utils_ctools
             VISION_APPS_UTILS_LIBS += app_utils_ctools_wrapper
@@ -243,9 +248,6 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
             endif
         endif
 
-        ifneq ($(TARGET_PLATFORM), TDA54)
-            VISION_APPS_UTILS_LIBS += app_utils_hwa
-        endif
         HLOS_PLATFORM_LIBS += app_init_hlos_common
         HLOS_PLATFORM_LIBS += ipc_common
 

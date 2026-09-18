@@ -832,14 +832,14 @@ static bool OSPI_wrProtectTest(void *arg)
     }
     else
 #endif
-    {   
+    {
         OSPI_initConfig(test);
 
         /* Open the Board OSPI NOR device with OSPI port 0
         and use default OSPI configurations */
         boardHandle = Board_flashOpen(deviceId,
                                     BOARD_OSPI_NOR_INSTANCE, (void *)(&tuneEnable));
-        
+
         if(!boardHandle)
         {
             SPI_log("\n Board_flashOpen failed. \n");
@@ -870,7 +870,7 @@ static bool OSPI_wrProtectTest(void *arg)
                 }
             }
             if(BTRUE == retVal)
-            {                      
+            {
                 if (Board_flashRead(boardHandle, offset, &rxBuf[0],
                                     NOR_BLOCK_SIZE, (void *)(&readMode)))
                 {
@@ -925,7 +925,7 @@ static bool OSPI_wrProtectTest(void *arg)
                 }
             }
             if(BTRUE == retVal)
-            {                      
+            {
                 if (Board_flashRead(boardHandle, offset, &rxBuf[0],
                                     NOR_BLOCK_SIZE, (void *)(&readMode)))
                 {
@@ -941,7 +941,7 @@ static bool OSPI_wrProtectTest(void *arg)
                 {
                     retVal = BFALSE;
                 }
-            }   
+            }
         }
     }
     return retVal;
@@ -1103,8 +1103,22 @@ static bool OSPI_flash_test(void *arg)
             ospi_cfg.phyEnable = BFALSE;
             ospi_cfg.dmaEnable = BFALSE;
             ospi_cfg.intrEnable = BTRUE;
+            /* Legacy SPI test runs in 1-1-1 mode.
+             * xferLines may still be OCTAL from a prior test — reset it
+             * so Nor_ospiOpen sends the flash reset in the correct mode. */
+            if ((OSPI_TEST_ID_DAC_133M_SPI == test->testId) || (OSPI_NAND_TEST_ID_DAC_133M_SPI == test->testId))
+            {
+                ospi_cfg.xferLines    = OSPI_XFER_LINES_SINGLE;
+                ospi_cfg.dtrEnable    = BFALSE;
+                ospi_cfg.numAddrBytes = 3U;
+            }
             OSPI_socSetInitCfg(BOARD_OSPI_DOMAIN, BOARD_OSPI_NOR_INSTANCE, &ospi_cfg);
             boardHandle = Board_flashOpen(deviceId, BOARD_OSPI_NOR_INSTANCE, (void *)(&tuneEnable));
+
+            /* Restore numAddrBytes to 4 so subsequent tests get a clean config */
+            OSPI_socGetInitCfg(BOARD_OSPI_DOMAIN, BOARD_OSPI_NOR_INSTANCE, &ospi_cfg);
+            ospi_cfg.numAddrBytes = 4U;
+            OSPI_socSetInitCfg(BOARD_OSPI_DOMAIN, BOARD_OSPI_NOR_INSTANCE, &ospi_cfg);
         }
     #endif
         for (i = 0; i < testLen; i += blockSize)
@@ -1187,9 +1201,10 @@ static bool OSPI_flash_test(void *arg)
         if (OSPI_TEST_ID_DAC_133M_SPI == test->testId)
         {
             /* Disable PHY in legacy SPI mode (1-1-1) */
-            ospi_cfg.phyEnable = BFALSE;
-            ospi_cfg.dtrEnable = BFALSE;
-            ospi_cfg.xferLines = OSPI_XFER_LINES_SINGLE;
+            ospi_cfg.phyEnable    = BFALSE;
+            ospi_cfg.dtrEnable    = BFALSE;
+            ospi_cfg.xferLines    = OSPI_XFER_LINES_SINGLE;
+            ospi_cfg.numAddrBytes = 3U;
         }
         else if (OSPI_NAND_TEST_ID_DAC_OSDR_50M == test->testId)
         {
@@ -1242,6 +1257,14 @@ static bool OSPI_flash_test(void *arg)
     #endif
         OSPI_socSetInitCfg(BOARD_OSPI_DOMAIN, BOARD_OSPI_NOR_INSTANCE, &ospi_cfg);
         boardHandle = Board_flashOpen(deviceId, BOARD_OSPI_NOR_INSTANCE, (void *)(&tuneEnable));
+
+        /* Restore numAddrBytes to 4 after Legacy SPI read re-open */
+        if (OSPI_TEST_ID_DAC_133M_SPI == test->testId)
+        {
+            OSPI_socGetInitCfg(BOARD_OSPI_DOMAIN, BOARD_OSPI_NOR_INSTANCE, &ospi_cfg);
+            ospi_cfg.numAddrBytes = 4U;
+            OSPI_socSetInitCfg(BOARD_OSPI_DOMAIN, BOARD_OSPI_NOR_INSTANCE, &ospi_cfg);
+        }
     }
 #endif
 #ifdef OSPI_PROFILE

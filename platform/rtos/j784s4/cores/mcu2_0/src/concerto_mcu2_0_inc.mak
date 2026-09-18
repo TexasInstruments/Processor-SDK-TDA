@@ -11,14 +11,16 @@ endif
 ifeq ($(RTOS),FREERTOS)
   CSOURCES += $(SOC)_mpu_cfg.c
   LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_freertos.cmd
+  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map.cmd
 endif
 
 ifeq ($(RTOS),SAFERTOS)
   CSOURCES += $(SOC)_safertos_mpu_cfg.c
   LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_safertos.cmd
+  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map_safertos.cmd
 endif
 
-LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map.cmd
+
 
 IDIRS+=$(ETHFW_PATH)
 

@@ -13,17 +13,16 @@
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.DM.M55_SS.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(PSDK_OUT)/u-boot-m55-spl,,,symbols,} "/>
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.DM.M55_SS.CLUSTER_0.#EXTRA_PROPERTIES#/initialize/INITNSVTOR" value="0x23e80000"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.DM.M55_SS.CLUSTER_0.#EXTRA_PROPERTIES#/sws/variant" value="AFM_M55"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Designware_IP.VIRTIO_GPU.virtio_gpu_tlm_0.#SCML_PROPERTIES#vram_size" value="0x0"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.MCU_PADCFG_0.#EXTRA_PROPERTIES#DISABLE_ALL_ROUTER" value="false"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.MCU_PADCFG_0.MCU_DW_APB_UART_WRAP0_router_uart.#SCML_PROPERTIES#disable_router" value="false"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.UART.DW_UART_PHY_0.#SCML_PROPERTIES#EN_UART_TX_LOG_TO_FILE" value="logs.txt"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.UART.DW_UART_PHY_0.#SCML_PROPERTIES#TerminalAutoOpen" value="true"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Security.ROT.M55_SS.CLUSTER_0.#EXTRA_PROPERTIES#/sws/variant" value="AFM_M55"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Security.ROT.M55_SS.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{../../software/bootcode_M55_without_PSC_dependency/vs/stdout/bootcode.axf,,,image+symbols,} "/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Peripherals.MAIN_PSC_0.#SCML_PROPERTIES#DEPENDENCY_BYPASS" value="true"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Peripherals.MAIN_PSC_1.#SCML_PROPERTIES#DEPENDENCY_BYPASS" value="true"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Security.SEC_PSC_0.#SCML_PROPERTIES#DEPENDENCY_BYPASS" value="true"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.MCU_PSC_0.#SCML_PROPERTIES#DEPENDENCY_BYPASS" value="true"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.MCU_PSC_1.#SCML_PROPERTIES#DEPENDENCY_BYPASS" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.UART.DW_UART_PHY_0.#SCML_PROPERTIES#EN_UART_TX_LOG_TO_FILE" value="logs.txt"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Periphs.UART.DW_UART_PHY_0.#SCML_PROPERTIES#TerminalAutoOpen" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Security.ROT.M55_SS.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{../../software/bootcode_M55_without_PSC_dependency/vs/stdout/bootcode.axf,,,image+symbols,} "/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Security.ROT.M55_SS.CLUSTER_0.#EXTRA_PROPERTIES#/sws/variant" value="AFM_M55"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Security.SEC_PSC_0.#SCML_PROPERTIES#DEPENDENCY_BYPASS" value="true"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Analytics_cluster.RTI_Timer.RTI_Timer_C7X_0.#SCML_PROPERTIES#PRIV_CHECK_BYPASS" value="true"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(PSDK_OUT)/bl31.elf,,,symbols,} {$(PSDK_OUT)/u-boot-spl,,,symbols,} {$(PSDK_OUT)/u-boot,,,symbols,} {$(PSDK_OUT)/vmlinux,,,symbols,} "/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.CLUSTER_0.#EXTRA_PROPERTIES#/sws/ocx/Config/cpu0/arch_timer_freq" value="500000000"/>
@@ -38,19 +37,30 @@
   <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.CLUSTER_0.#EXTRA_PROPERTIES#/sws/ocx/Config/ignore_memory_transaction_failure" value="true"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.CCC.A720_SS.CLUSTER_0.#EXTRA_PROPERTIES#/sws/variant" value="OCX_A720AE"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DDR_0.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(PSDK_OUT)/tispl.bin,0x00080000,,image,} {$(PSDK_OUT)/u-boot.img,0x01000000,,image,} {$(PSDK_OUT)/Image,0x02000000,,image,} {$(PSDK_OUT)/k3-tda54-vdk.dtb,0x08000000,,image,} {$(PSDK_OUT)/k3-tda54-vdk-vision-apps.dtbo,0x09000000,,image,} "/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.CSI2RX_SS_0.SNPS_SS.CSI2_Camera.#SCML_PROPERTIES#default_image_input_file_path" value=""/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.CSI2RX_SS_0.SNPS_SS.CSI2_Camera.#SCML_PROPERTIES#default_image_input_file_path[0]" value="../../vpconfigs/psdk-rtos/images/img_0000.raw"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.CSI2RX_SS_0.SNPS_SS.CSI2_Camera.#SCML_PROPERTIES#default_image_input_file_path[1]" value=""/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.CSI2RX_SS_0.SNPS_SS.CSI2_Camera.#SCML_PROPERTIES#default_image_input_file_path[2]" value=""/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.CSI2RX_SS_0.SNPS_SS.CSI2_Camera.#SCML_PROPERTIES#default_image_output_data_type" value="RAW_12"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.CSI2RX_SS_0.SNPS_SS.CSI2_Camera.#SCML_PROPERTIES#default_luminance_input_file_path" value=""/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.CSI2RX_SS_0.SNPS_SS.CSI2_Camera.#SCML_PROPERTIES#default_luminance_input_file_path[0]" value="../../vpconfigs/psdk-rtos/images/img_0000.raw"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.CSI2RX_SS_0.SNPS_SS.CSI2_Camera.#SCML_PROPERTIES#default_luminance_input_file_path[1]" value=""/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.CSI2RX_SS_0.SNPS_SS.CSI2_Camera.#SCML_PROPERTIES#default_luminance_input_file_path[2]" value=""/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.CSI2RX_SS_0.SNPS_SS.CSI2_Camera.#SCML_PROPERTIES#default_luminance_input_format" value="RGB"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.DDR_SS_0.SNPS_SS.LPDDR_0.#SCML_PROPERTIES#ENABLE_DFI_INIT_COMPLETE" value="true"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.DDR_SS_1.SNPS_SS.LPDDR_0.#SCML_PROPERTIES#ENABLE_DFI_INIT_COMPLETE" value="true"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.DDR_SS_2.SNPS_SS.LPDDR_0.#SCML_PROPERTIES#ENABLE_DFI_INIT_COMPLETE" value="true"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.DWC_IPs.DDR_SS_3.SNPS_SS.LPDDR_0.#SCML_PROPERTIES#ENABLE_DFI_INIT_COMPLETE" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Peripherals.MAIN_PSC_0.#SCML_PROPERTIES#DEPENDENCY_BYPASS" value="true"/>
+  <paramOverrides key="TDA5_System.TDA5_SoC.Main_Domain.Peripherals.MAIN_PSC_1.#SCML_PROPERTIES#DEPENDENCY_BYPASS" value="true"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.VP9D.#EXTRA_PROPERTIES#/config/root_path" value="$(vpconfigDir)"/>
   <paramOverrides key="TDA5_System.TDA5_SoC.Periphs.virtio_net_tlm_0.#SCML_PROPERTIES#SLIRP_PORT_FORWARDING" value="8022=22"/>
   <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD4_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/DWSLL/Param_CardCapacity_ReducedConfig" value="_32G"/>
-  <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD4_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/DWSLL/Param_SD_SWITCH_ACMD_WIDE_WIDTH_MSB_ORDER" value="3"/>
-  <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD8_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/DWSLL/Param_CardCapacity_ReducedConfig" value="_32G"/>
   <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD4_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/DWSLL/Param_CardType" value="SDv3.00"/>
   <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD4_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/DWSLL/Param_SD_CSD_CSD_STRUCTURE" value="1"/>
+  <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD4_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/DWSLL/Param_SD_SWITCH_ACMD_WIDE_WIDTH_MSB_ORDER" value="3"/>
   <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD4_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/ImageInfo/initial_image" value="{$(PSDK_OUT)/rootfs-img.wic,,,image,}"/>
-  <paramOverrides key="TDA5_System.TDA5_SoC.MCU_Domain.Designware_IP.VIRTIO_GPU.virtio_gpu_tlm_0.#SCML_PROPERTIES#vram_size" value="0x0"/>
+  <paramOverrides key="TDA5_System.eMMC_Card.eMMC_SD8_Card.MMCorSDFlashCard.#EXTRA_PROPERTIES#/DWSLL/Param_CardCapacity_ReducedConfig" value="_32G"/>
   <monitorSets name="Default" path="${vpconfigDir}/Default.monitors" chartDisplayScript="">
     <startTrigger type="TIME" value="0"/>
   </monitorSets>

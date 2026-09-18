@@ -614,7 +614,15 @@ static OSPI_Handle OSPI_open_v0(OSPI_Handle handle, const OSPI_Params *params)
             /* Disable PHY pipeline mode */
             CSL_ospiPipelinePhyEnable((const CSL_ospi_flash_cfgRegs *)(hwAttrs->baseAddr), UFALSE);
 
-            if (hwAttrs->dtrEnable)
+            /* numAddrBytes holds the explicit byte count (1-4) set in the SOC
+             * config or overridden by the flash driver. The CSL register field
+             * encodes (byte count - 1). If numAddrBytes is 0 (not set by SOC
+             * config — older SOCs), fall back to dtrEnable-based selection. */
+            if (0U != hwAttrs->numAddrBytes)
+            {
+                numAddrBytes = hwAttrs->numAddrBytes - 1U;
+            }
+            else if (hwAttrs->dtrEnable)
             {
                 numAddrBytes = CSL_OSPI_MEM_MAP_NUM_ADDR_BYTES_4;
             }
@@ -622,7 +630,6 @@ static OSPI_Handle OSPI_open_v0(OSPI_Handle handle, const OSPI_Params *params)
             {
                 numAddrBytes = CSL_OSPI_MEM_MAP_NUM_ADDR_BYTES_3;
             }
-
             /* Set device size cofigurations */
             CSL_ospiSetDevSize((const CSL_ospi_flash_cfgRegs *)(hwAttrs->baseAddr),
                                numAddrBytes,
@@ -1705,7 +1712,7 @@ static int32_t OSPI_control_v0(OSPI_Handle handle, uint32_t cmd, const void *arg
             {
                 object->transferCmd = *ctrlData;
                 ctrlData++;
-                
+
                 if(hwAttrs->dtrEnable == true)
                 {
                     /* If dtr enable is true program the controller in 8D-8D-8D mode */
@@ -1813,10 +1820,19 @@ static int32_t OSPI_control_v0(OSPI_Handle handle, uint32_t cmd, const void *arg
             {
                 uint32_t numAddrBytes;
                 object->xferLines = *ctrlData;
-                numAddrBytes = CSL_OSPI_MEM_MAP_NUM_ADDR_BYTES_3;
-                if ((OSPI_XFER_LINES_OCTAL == object->xferLines) && (hwAttrs->dtrEnable))
+                /* numAddrBytes holds the explicit byte count (1-4). If 0
+                 * (not set — older SOCs), fall back to dtrEnable-based selection. */
+                if (0U != hwAttrs->numAddrBytes)
+                {
+                    numAddrBytes = hwAttrs->numAddrBytes - 1U;
+                }
+                else if (hwAttrs->dtrEnable)
                 {
                     numAddrBytes = CSL_OSPI_MEM_MAP_NUM_ADDR_BYTES_4;
+                }
+                else
+                {
+                    numAddrBytes = CSL_OSPI_MEM_MAP_NUM_ADDR_BYTES_3;
                 }
                 /* Set device size cofigurations */
                 CSL_ospiSetDevSize((const CSL_ospi_flash_cfgRegs *)(hwAttrs->baseAddr),
@@ -1914,7 +1930,7 @@ static int32_t OSPI_control_v0(OSPI_Handle handle, uint32_t cmd, const void *arg
             case OSPI_V0_CMD_ENABLE_XIP_PREFETCH:
             {
                 uint32_t xipPrefetchEnable = *ctrlData;
-                /** 
+                /**
                  * The FSS prefetches 32 bytes ahead of time, and if the flash data is updated,
                  * the FSS will still return the prefetched data instead of initiating a new read request.
                  * XIP prefetch should be enabled only if the controller is in XIP mode else or when reads

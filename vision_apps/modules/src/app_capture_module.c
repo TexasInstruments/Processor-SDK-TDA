@@ -88,6 +88,12 @@ static vx_status configure_capture_params(vx_context context, CaptureObj *captur
         num_capt_instances = 3;
     }
     #endif
+    #if defined(SOC_TDA54)
+    else if ((ch_mask > 0xFFF) && (ch_mask <= 0xFFFF))
+    {
+        num_capt_instances = 4;
+    }
+    #endif
     else
     {
         printf("[CAPTURE_MODULE] - ch_mask parameter is invalid! \n");
@@ -111,15 +117,21 @@ static vx_status configure_capture_params(vx_context context, CaptureObj *captur
         for(id = 0; id < num_capt_instances; id++)
         {
             captureObj->params.instId[id]                       = id;
+            #if defined(SOC_FAMILY_J7) || defined(SOC_FAMILY_AM)
             captureObj->params.instCfg[id].enableCsiv2p0Support = (uint32_t)vx_true_e;
+            #elif defined(SOC_FAMILY_TDA5)
+            captureObj->params.instCfg[id].phyMode              = TIVX_CAPTURE_DPHY_MODE;
+            #endif
             captureObj->params.instCfg[id].numDataLanes         = sensorObj->sensorParams.sensorInfo.numDataLanes;
             APP_PRINTF("captureObj->params.numDataLanes = %d \n", captureObj->params.instCfg[id].numDataLanes);
             captureObj->params.instCfg[id].laneBandSpeed        = sensorObj->sensorParams.sensorInfo.csi_laneBandSpeed;
 
+            #if defined(SOC_FAMILY_J7) || defined(SOC_FAMILY_AM)
             if (0 == strcmp(sensorObj->sensorParams.name, SENSOR_SONY_IMX728_UB971_SONY))
             {
                 captureObj->params.instCfg[id].numPixels = 1U;
             }
+            #endif
 
             for (lane = 0; lane < captureObj->params.instCfg[id].numDataLanes; lane++)
             {
@@ -135,7 +147,11 @@ static vx_status configure_capture_params(vx_context context, CaptureObj *captur
         id = 0;/*CSI2 Instance ID*/
         while(ch_mask > 0)
         {
-            if(ch > 7)
+            if(ch > 11)
+            {
+                id = 3;
+            }
+            if((ch > 7) && (ch <= 11))
             {
                 id = 2;
             }

@@ -24,7 +24,8 @@ VISION_APPS_PC_PATH?=$(VISION_APPS_PATH)/out/PC/x86_64/LINUX
 HOST_MKIFS=mkifs
 BSP_INSTALL_DIR=$(PSDK_QNX_BUILD_PATH)/bsp_800_tda54_vdk/install
 QNX_FIRMWARE_PATH=$(BUILT_IMAGES)/rootfs_freertos
-MOUNT_POINT?=$(BUILT_IMAGES)/mnt
+MOUNT_POINT1?=$(BUILT_IMAGES)/mnt1
+MOUNT_POINT2?=$(BUILT_IMAGES)/mnt2
 LOOP_DEV=$(shell losetup -f)
 endif # end of ifeq ($(BUILD_QNX_MPU),yes)
 
@@ -143,7 +144,7 @@ else ifeq ($(BUILD_QNX_MPU),yes)
 	$(call INSTALL_TEST_DATA,$(BUILT_IMAGES)/qnxfs,vision_apps)
 
 	# copy user.sh script
-	cp $(VISION_APPS_PATH)/platform/$(SOC)/qnx/build/user_tda54.sh  /$(BUILT_IMAGES)/qnxfs/scripts/user.sh
+	cp $(PLATFORM_PATH)/utils/vdk-utils/scripts/qnx/user_tda54.sh  /$(BUILT_IMAGES)/qnxfs/scripts/user.sh
 
 ifeq ($(BUILD_EMULATION_MODE),yes)
 	cp -f $(VISION_APPS_PC_PATH)/$(QNX_APP_PROFILE)/libtivision_apps.so.$(PSDK_VERSION) $(BUILT_IMAGES)/libtivision_apps.so
@@ -161,10 +162,46 @@ ifeq ($(BUILD_CPU_MCU1),yes)
 	cp $(PLATFORM_TARGET_PATH)/M55/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-mcu1-fw
 endif
 
+ifeq ($(BUILD_CPU_MCU2),yes)
+	# copy remote firmware files for mcu2
+	$(eval IMAGE_NAME := vx_app_rtos_qnx_mcu2.out)
+	cp $(PLATFORM_TARGET_PATH)/M55/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-mcu2-fw
+endif
+
+ifeq ($(BUILD_CPU_MCU3),yes)
+	# copy remote firmware files for mcu3
+	$(eval IMAGE_NAME := vx_app_rtos_qnx_mcu3.out)
+	cp $(PLATFORM_TARGET_PATH)/M55/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-mcu3-fw
+endif
+
+ifeq ($(BUILD_CPU_MCU4),yes)
+	# copy remote firmware files for mcu4
+	$(eval IMAGE_NAME := vx_app_rtos_qnx_mcu4.out)
+	cp $(PLATFORM_TARGET_PATH)/M55/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-mcu4-fw
+endif
+
 ifeq ($(BUILD_CPU_C7x_1),yes)
 	# copy remote firmware files for c7x_1
 	$(eval IMAGE_NAME := vx_app_rtos_qnx_c7x_1.out)
 	cp $(PLATFORM_TARGET_PATH)/C7604/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-dsp0-fw
+endif
+
+ifeq ($(BUILD_CPU_C7x_2),yes)
+	# copy remote firmware files for c7x_2
+	$(eval IMAGE_NAME := vx_app_rtos_qnx_c7x_2.out)
+	cp $(PLATFORM_TARGET_PATH)/C7604/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-dsp1-fw
+endif
+
+ifeq ($(BUILD_CPU_C7x_3),yes)
+	# copy remote firmware files for c7x_3
+	$(eval IMAGE_NAME := vx_app_rtos_qnx_c7x_3.out)
+	cp $(PLATFORM_TARGET_PATH)/C7604/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-dsp2-fw
+endif
+
+ifeq ($(BUILD_CPU_C7x_4),yes)
+	# copy remote firmware files for c7x_4
+	$(eval IMAGE_NAME := vx_app_rtos_qnx_c7x_4.out)
+	cp $(PLATFORM_TARGET_PATH)/C7604/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-dsp3-fw
 endif
 
 ifeq ($(BUILD_CPU_RMCU0_0),yes)
@@ -173,7 +210,37 @@ ifeq ($(BUILD_CPU_RMCU0_0),yes)
 	cp $(PLATFORM_TARGET_PATH)/R52P/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-rmcu0_0-fw
 endif
 
-	$(HOST_MKIFS) -v -r$(BUILT_IMAGES)/install $(VISION_APPS_PATH)/platform/$(SOC)/qnx/build/tda54_vdk-ti-vision-sdk.build $(BUILT_IMAGES)/bootfs/qnx-ifs
+ifeq ($(BUILD_CPU_RMCU0_1),yes)
+	# copy remote firmware files for rmcu0_1
+	$(eval IMAGE_NAME := vx_app_rtos_qnx_rmcu0_1.out)
+	cp $(PLATFORM_TARGET_PATH)/R52P/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-rmcu0_1-fw
+endif
+
+ifeq ($(BUILD_CPU_RMCU1_0),yes)
+	# copy remote firmware files for rmcu1_0
+	$(eval IMAGE_NAME := vx_app_rtos_qnx_rmcu1_0.out)
+	cp $(PLATFORM_TARGET_PATH)/R52P/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-rmcu1_0-fw
+endif
+
+ifeq ($(BUILD_CPU_RMCU1_1),yes)
+	# copy remote firmware files for rmcu1_1
+	$(eval IMAGE_NAME := vx_app_rtos_qnx_rmcu1_1.out)
+	cp $(PLATFORM_TARGET_PATH)/R52P/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-rmcu1_1-fw
+endif
+
+ifeq ($(BUILD_CPU_RMCU2_0),yes)
+	# copy remote firmware files for rmcu2_0
+	$(eval IMAGE_NAME := vx_app_rtos_qnx_rmcu2_0.out)
+	cp $(PLATFORM_TARGET_PATH)/R52P/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-rmcu2_0-fw
+endif
+
+ifeq ($(BUILD_CPU_RMCU2_1),yes)
+	# copy remote firmware files for rmcu2_1
+	$(eval IMAGE_NAME := vx_app_rtos_qnx_rmcu2_1.out)
+	cp $(PLATFORM_TARGET_PATH)/R52P/$(RTOS)/$(QNX_APP_PROFILE)/$(IMAGE_NAME)  $(QNX_FIRMWARE_PATH)/$(QNX_FIRMWARE_PREFIX)-rmcu2_1-fw
+endif
+
+	$(HOST_MKIFS) -v -r$(BUILT_IMAGES)/install $(PLATFORM_PATH)/utils/vdk-utils/scripts/qnx/tda54_vdk-ti-vision-sdk.build $(BUILT_IMAGES)/bootfs/qnx-ifs
 	mv *.sym $(BUILT_IMAGES)/bootfs
 
 	@echo ""
@@ -181,26 +248,34 @@ endif
 	@echo Processing images at:
 	@echo "    $(BUILT_IMAGES)/qnxfs"
 	@echo ""
-	mkdir -p $(MOUNT_POINT)
+	mkdir -p $(MOUNT_POINT1)
+	mkdir -p $(MOUNT_POINT2)
 
-	# Create a zero-ed out file of size ~8GB
-	dd if=/dev/zero of=${BUILT_IMAGES}/psdk-qnx-emmc.dat bs=1024 count=8388608
+	# Create a zero-ed out file of size ~16GB
+	dd if=/dev/zero of=${BUILT_IMAGES}/psdk-qnx-fs.img bs=1024 count=16777216
 	sync
-	$(PLATFORM_PATH)/utils/vdk-utils/scripts/qnx/qnx_fs.sh ${BUILT_IMAGES}/psdk-qnx-emmc.dat
+	$(PLATFORM_PATH)/utils/vdk-utils/scripts/qnx/qnx_fs.sh ${BUILT_IMAGES}/psdk-qnx-fs.img
 
 	# Emulate this file as a block device and mount it
-	sudo umount $(MOUNT_POINT) >/dev/null 2>&1 || true
-	sudo losetup -f $(BUILT_IMAGES)/psdk-qnx-emmc.dat
-	sudo mkfs.vfat $(LOOP_DEV) >/dev/null 2>&1
-	sudo mount $(LOOP_DEV) $(MOUNT_POINT)
-
+	sudo umount $(MOUNT_POINT1) >/dev/null 2>&1 || true
+	sudo umount $(MOUNT_POINT2) >/dev/null 2>&1 || true
+	sudo losetup --show -P -f $(BUILT_IMAGES)/psdk-qnx-fs.img
+	ls /dev
+	sudo mkfs.vfat -F 32 $(LOOP_DEV)p1 >/dev/null 2>&1
+	sudo mkfs.vfat -F 32 $(LOOP_DEV)p2 >/dev/null 2>&1
+	sudo mount $(LOOP_DEV)p1 $(MOUNT_POINT1)
+	sudo mount $(LOOP_DEV)p2 $(MOUNT_POINT2)
 	# Actually add contents to the image
-	sudo cp -r $(BUILT_IMAGES)/qnxfs/* $(MOUNT_POINT)
+	sudo cp -r $(BUILT_IMAGES)/bootfs/* $(MOUNT_POINT1)
+	sudo cp -r $(BUILT_IMAGES)/qnxfs/* $(MOUNT_POINT2)
 
 	# Now the sdcard image is ready, umount and detach loop device
-	sudo umount $(MOUNT_POINT)
-	sudo losetup -d $(LOOP_DEV)
-	rm -rf $(MOUNT_POINT)
+	sudo umount $(MOUNT_POINT1)
+	sudo umount $(MOUNT_POINT2)
+	sudo umount $(LOOP_DEV)p1 >/dev/null 2>&1 || true
+	sudo umount $(LOOP_DEV)p2 >/dev/null 2>&1 || true
+	sudo losetup -D $(BUILT_IMAGES)/psdk-qnx-fs.img
+	rm -rf $(MOUNT_POINT1) $(MOUNT_POINT2)
 endif # end of ifeq ($(BUILD_QNX_MPU),yes)
 
 

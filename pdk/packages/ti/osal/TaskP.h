@@ -162,6 +162,8 @@ extern void TaskP_sleep(uint32_t timeout);
 
 /*!
  *  @brief  Function for Task sleep in units of msecs
+ *  @note   This API gaurantees the timeout interval specified as the 
+ *          minimum delay in number of ticks.
  *
  *  @param timeoutInMsecs  sleep in units of msecs.
  */

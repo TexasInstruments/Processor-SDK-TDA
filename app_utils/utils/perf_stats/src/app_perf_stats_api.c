@@ -794,6 +794,8 @@ void appPerfPointGet(app_perf_point_t *prm, app_perf_point_t *perf)
     #ifndef VDK
     *perf = *prm;
     perf->name[APP_PERF_POINT_NAME_MAX-1] = 0;
+    #else
+    memset(perf, 0, sizeof(*perf));
     #endif
 }
 

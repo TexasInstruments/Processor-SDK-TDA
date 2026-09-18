@@ -143,9 +143,7 @@ include $(CONCERTO_ROOT)/rules.mak
 ifeq ($(BUILD_EMULATION_MODE),yes)
 platform_utils:
 	BUILD_TARGET_MODE=no $(MAKE) -C $(PLATFORM_PATH) app_init_pc_common
-ifeq ($(SOC_FAMILY), SOC_FAMILY_TDA5)
 	BUILD_TARGET_MODE=no $(MAKE) -C $(PLATFORM_PATH) app_utils_init_vdk_stub
-endif
 	BUILD_TARGET_MODE=no $(MAKE) -C $(PLATFORM_PATH) cp_to_lib
 	BUILD_TARGET_MODE=no $(MAKE) -C $(APP_UTILS_PATH) app_utils_mem
 	BUILD_TARGET_MODE=no $(MAKE) -C $(APP_UTILS_PATH) app_utils_file_io

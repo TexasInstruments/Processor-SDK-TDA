@@ -53,32 +53,29 @@
 /* ========================================================================== */
 
 static uint32_t gBoardEcuClkModuleMcuIDInit_powerConfig0[] ={
-    // Fixed config - None
-    // GUI configured
+    /* Fixed config - None */
+    /* GUI configured */
 
 };
 
 static uint32_t gBoardEcuClkModuleMcuIDInit_powerConfig1[] ={
-    // Fixed config - None
-    // GUI configured
+    /* Fixed config - None */
+    /* GUI configured */
 
 };
 
 static uint32_t gBoardEcuClkModuleMcuIDInit_powerConfig2[] ={
-    // Fixed config - None
-    // GUI configured
+    /* Fixed config - None */
+    /* GUI configured */
 
 };
 
 static uint32_t gBoardEcuClkModuleMainIDInit_powerConfig0[] = {
-    // Fixed config - None
-    // GUI configured
+    /* Fixed config - None */
+    /* GUI configured */
     TISCI_DEV_VPAC0,
     TISCI_DEV_VPAC1,
-    TISCI_DEV_DMPAC0,
-    TISCI_DEV_J7AEP_GPU_BXS464_WRAP0_GPU_SS_0,
     TISCI_DEV_CODEC0,
-    TISCI_DEV_CODEC1,
     TISCI_DEV_EMIF_DATA_0_VD,
     TISCI_DEV_DDR0,
     TISCI_DEV_EMIF_DATA_1_VD,
@@ -90,14 +87,12 @@ static uint32_t gBoardEcuClkModuleMainIDInit_powerConfig0[] = {
 };
 
 static uint32_t gBoardEcuClkModuleMainIDInit_powerConfig1[] = {
-    // Fixed config - None
-    // GUI configured
+    /* Fixed config - None */
+    /* GUI configured */
     TISCI_DEV_VPAC0,
     TISCI_DEV_VPAC1,
     TISCI_DEV_DMPAC0,
     TISCI_DEV_J7AEP_GPU_BXS464_WRAP0_GPU_SS_0,
-    TISCI_DEV_CODEC0,
-    TISCI_DEV_CODEC1,
     TISCI_DEV_EMIF_DATA_0_VD,
     TISCI_DEV_DDR0,
     TISCI_DEV_EMIF_DATA_1_VD,
@@ -109,14 +104,12 @@ static uint32_t gBoardEcuClkModuleMainIDInit_powerConfig1[] = {
 };
 
 static uint32_t gBoardEcuClkModuleMainIDInit_powerConfig2[] = {
-    // Fixed config - None
-    // GUI configured
+    /* Fixed config - None */
+    /* GUI configured */
     TISCI_DEV_VPAC0,
     TISCI_DEV_VPAC1,
     TISCI_DEV_DMPAC0,
     TISCI_DEV_J7AEP_GPU_BXS464_WRAP0_GPU_SS_0,
-    TISCI_DEV_CODEC0,
-    TISCI_DEV_CODEC1,
     TISCI_DEV_EMIF_DATA_0_VD,
     TISCI_DEV_DDR0,
     TISCI_DEV_EMIF_DATA_1_VD,
@@ -127,54 +120,301 @@ static uint32_t gBoardEcuClkModuleMainIDInit_powerConfig2[] = {
     TISCI_DEV_DDR3,
 };
 
+static uint32_t gBoardEcuClkModuleMcuIDDisable_powerConfig0[] ={
+    /* GUI configured disable PSCs */
+
+    TISCI_DEV_WKUP_GPIO0,
+    TISCI_DEV_WKUP_GPIO1,
+    TISCI_DEV_WKUP_I2C0,
+    TISCI_DEV_MCU_CPSW0,
+    TISCI_DEV_MCU_I2C0,
+    TISCI_DEV_MCU_I2C1,
+    TISCI_DEV_MCU_I3C0,
+    TISCI_DEV_MCU_I3C1,
+    TISCI_DEV_MCU_MCSPI0,
+    TISCI_DEV_MCU_MCSPI1,
+    TISCI_DEV_MCU_MCSPI2,
+    TISCI_DEV_MCU_MCAN0,
+    TISCI_DEV_MCU_MCAN1,
+    TISCI_DEV_MCU_ADC12FC_16FFC0,
+    TISCI_DEV_MCU_ADC12FC_16FFC1,
+    TISCI_DEV_MCU_FSS0_HYPERBUS1P0_0,
+    TISCI_DEV_MCU_FSS0_OSPI_0,
+    TISCI_DEV_MCU_FSS0_OSPI_1,
+};
+
+static uint32_t gBoardEcuClkModuleMcuIDDisable_powerConfig1[] ={
+    /* GUI configured disable PSCs */
+
+    TISCI_DEV_WKUP_GPIO0,
+    TISCI_DEV_WKUP_GPIO1,
+    TISCI_DEV_MCU_CPSW0,
+    TISCI_DEV_MCU_I3C0,
+    TISCI_DEV_MCU_I3C1,
+    TISCI_DEV_MCU_MCSPI0,
+    TISCI_DEV_MCU_MCSPI1,
+    TISCI_DEV_MCU_MCSPI2,
+    TISCI_DEV_MCU_MCAN0,
+    TISCI_DEV_MCU_MCAN1,
+    TISCI_DEV_MCU_ADC12FC_16FFC0,
+    TISCI_DEV_MCU_ADC12FC_16FFC1,
+    TISCI_DEV_MCU_FSS0_HYPERBUS1P0_0,
+    TISCI_DEV_MCU_FSS0_OSPI_0,
+    TISCI_DEV_MCU_FSS0_OSPI_1,
+};
+
+static uint32_t gBoardEcuClkModuleMcuIDDisable_powerConfig2[] ={
+    /* GUI configured disable PSCs */
+
+    TISCI_DEV_WKUP_GPIO0,
+    TISCI_DEV_WKUP_GPIO1,
+    TISCI_DEV_MCU_CPSW0,
+    TISCI_DEV_MCU_I3C0,
+    TISCI_DEV_MCU_I3C1,
+    TISCI_DEV_MCU_MCSPI0,
+    TISCI_DEV_MCU_MCSPI1,
+    TISCI_DEV_MCU_MCSPI2,
+    TISCI_DEV_MCU_MCAN0,
+    TISCI_DEV_MCU_MCAN1,
+    TISCI_DEV_MCU_ADC12FC_16FFC0,
+    TISCI_DEV_MCU_ADC12FC_16FFC1,
+    TISCI_DEV_MCU_FSS0_HYPERBUS1P0_0,
+    TISCI_DEV_MCU_FSS0_OSPI_0,
+    TISCI_DEV_MCU_FSS0_OSPI_1,
+};
+
+static uint32_t gBoardEcuClkModuleMainIDDisable_powerConfig0[] = {
+    /* GUI configured disable PSCs */
+    TISCI_DEV_GPIO0,
+    TISCI_DEV_GPIO2,
+    TISCI_DEV_GPIO4,
+    TISCI_DEV_GPIO6,
+    TISCI_DEV_I2C0,
+    TISCI_DEV_I2C1,
+    TISCI_DEV_I2C2,
+    TISCI_DEV_I2C3,
+    TISCI_DEV_I2C4,
+    TISCI_DEV_I2C5,
+    TISCI_DEV_I2C6,
+    TISCI_DEV_UART0,
+    TISCI_DEV_UART1,
+    TISCI_DEV_UART2,
+    TISCI_DEV_UART3,
+    TISCI_DEV_UART4,
+    TISCI_DEV_UART5,
+    TISCI_DEV_UART6,
+    TISCI_DEV_UART7,
+    TISCI_DEV_CPSW1,
+    TISCI_DEV_MCSPI0,
+    TISCI_DEV_MCSPI1,
+    TISCI_DEV_MCSPI2,
+    TISCI_DEV_MCSPI3,
+    TISCI_DEV_MCSPI4,
+    TISCI_DEV_MCSPI5,
+    TISCI_DEV_MCSPI6,
+    TISCI_DEV_MCSPI7,
+    TISCI_DEV_MCASP0,
+    TISCI_DEV_MCASP1,
+    TISCI_DEV_MCASP2,
+    TISCI_DEV_MCASP3,
+    TISCI_DEV_MCASP4,
+    TISCI_DEV_ECAP0,
+    TISCI_DEV_ECAP1,
+    TISCI_DEV_ECAP2,
+    TISCI_DEV_EPWM0,
+    TISCI_DEV_EPWM1,
+    TISCI_DEV_EPWM2,
+    TISCI_DEV_EPWM3,
+    TISCI_DEV_EPWM4,
+    TISCI_DEV_EPWM5,
+    TISCI_DEV_EQEP0,
+    TISCI_DEV_EQEP1,
+    TISCI_DEV_EQEP2,
+    TISCI_DEV_MCAN0,
+    TISCI_DEV_MCAN1,
+    TISCI_DEV_MCAN10,
+    TISCI_DEV_MCAN11,
+    TISCI_DEV_MCAN12,
+    TISCI_DEV_MCAN13,
+    TISCI_DEV_MCAN14,
+    TISCI_DEV_MCAN15,
+    TISCI_DEV_MCAN16,
+    TISCI_DEV_MCAN17,
+    TISCI_DEV_MCAN2,
+    TISCI_DEV_MCAN3,
+    TISCI_DEV_MCAN4,
+    TISCI_DEV_MCAN5,
+    TISCI_DEV_MCAN6,
+    TISCI_DEV_MCAN7,
+    TISCI_DEV_MCAN8,
+    TISCI_DEV_MCAN9,
+    TISCI_DEV_MMCSD0,
+    TISCI_DEV_DSS0,
+    TISCI_DEV_USB0,
+};
+
+static uint32_t gBoardEcuClkModuleMainIDDisable_powerConfig1[] = {
+    /* GUI configured disable PSCs */
+    TISCI_DEV_UART0,
+    TISCI_DEV_UART1,
+    TISCI_DEV_UART2,
+    TISCI_DEV_UART3,
+    TISCI_DEV_UART4,
+    TISCI_DEV_UART5,
+    TISCI_DEV_UART6,
+    TISCI_DEV_UART7,
+    TISCI_DEV_UART9,
+    TISCI_DEV_CPSW1,
+    TISCI_DEV_MCASP0,
+    TISCI_DEV_MCASP1,
+    TISCI_DEV_MCASP2,
+    TISCI_DEV_MCASP3,
+    TISCI_DEV_MCASP4,
+    TISCI_DEV_ECAP0,
+    TISCI_DEV_ECAP1,
+    TISCI_DEV_ECAP2,
+    TISCI_DEV_EPWM0,
+    TISCI_DEV_EPWM1,
+    TISCI_DEV_EPWM2,
+    TISCI_DEV_EPWM3,
+    TISCI_DEV_EPWM4,
+    TISCI_DEV_EPWM5,
+    TISCI_DEV_EQEP0,
+    TISCI_DEV_EQEP1,
+    TISCI_DEV_EQEP2,
+    TISCI_DEV_MCAN0,
+    TISCI_DEV_MCAN1,
+    TISCI_DEV_MCAN10,
+    TISCI_DEV_MCAN11,
+    TISCI_DEV_MCAN12,
+    TISCI_DEV_MCAN13,
+    TISCI_DEV_MCAN14,
+    TISCI_DEV_MCAN15,
+    TISCI_DEV_MCAN16,
+    TISCI_DEV_MCAN17,
+    TISCI_DEV_MCAN2,
+    TISCI_DEV_MCAN3,
+    TISCI_DEV_MCAN4,
+    TISCI_DEV_MCAN5,
+    TISCI_DEV_MCAN6,
+    TISCI_DEV_MCAN7,
+    TISCI_DEV_MCAN8,
+    TISCI_DEV_MCAN9,
+    TISCI_DEV_MMCSD0,
+    TISCI_DEV_DSS0,
+    TISCI_DEV_USB0,
+};
+
+static uint32_t gBoardEcuClkModuleMainIDDisable_powerConfig2[] = {
+    /* GUI configured disable PSCs */
+    TISCI_DEV_GPIO0,
+    TISCI_DEV_GPIO2,
+    TISCI_DEV_GPIO4,
+    TISCI_DEV_GPIO6,
+    TISCI_DEV_UART0,
+    TISCI_DEV_UART1,
+    TISCI_DEV_UART2,
+    TISCI_DEV_UART3,
+    TISCI_DEV_UART4,
+    TISCI_DEV_UART5,
+    TISCI_DEV_UART6,
+    TISCI_DEV_UART7,
+    TISCI_DEV_CPSW1,
+    TISCI_DEV_MCSPI0,
+    TISCI_DEV_MCSPI1,
+    TISCI_DEV_MCSPI2,
+    TISCI_DEV_MCSPI3,
+    TISCI_DEV_MCSPI4,
+    TISCI_DEV_MCSPI5,
+    TISCI_DEV_MCSPI6,
+    TISCI_DEV_MCSPI7,
+    TISCI_DEV_MCASP0,
+    TISCI_DEV_MCASP1,
+    TISCI_DEV_MCASP2,
+    TISCI_DEV_MCASP3,
+    TISCI_DEV_MCASP4,
+    TISCI_DEV_ECAP0,
+    TISCI_DEV_ECAP1,
+    TISCI_DEV_ECAP2,
+    TISCI_DEV_EPWM0,
+    TISCI_DEV_EPWM1,
+    TISCI_DEV_EPWM2,
+    TISCI_DEV_EPWM3,
+    TISCI_DEV_EPWM4,
+    TISCI_DEV_EPWM5,
+    TISCI_DEV_EQEP0,
+    TISCI_DEV_EQEP1,
+    TISCI_DEV_EQEP2,
+    TISCI_DEV_MCAN0,
+    TISCI_DEV_MCAN1,
+    TISCI_DEV_MCAN10,
+    TISCI_DEV_MCAN11,
+    TISCI_DEV_MCAN12,
+    TISCI_DEV_MCAN13,
+    TISCI_DEV_MCAN14,
+    TISCI_DEV_MCAN15,
+    TISCI_DEV_MCAN16,
+    TISCI_DEV_MCAN17,
+    TISCI_DEV_MCAN2,
+    TISCI_DEV_MCAN3,
+    TISCI_DEV_MCAN4,
+    TISCI_DEV_MCAN5,
+    TISCI_DEV_MCAN6,
+    TISCI_DEV_MCAN7,
+    TISCI_DEV_MCAN8,
+    TISCI_DEV_MCAN9,
+    TISCI_DEV_MMCSD1,
+    TISCI_DEV_DSS0,
+    TISCI_DEV_USB0,
+};
+
 static Board_PllClkCfg_t gBoardEcuPllClkCfgMcu_powerConfig0[] =
-{  // Fixed config
+{   /* Fixed config */
     {
       TISCI_DEV_MCU_CPSW0,
       TISCI_DEV_MCU_CPSW0_CPTS_RFT_CLK_PARENT_HSDIV4_16FFT_MCU_2_HSDIVOUT1_CLK,
       200000000
     },
-   // GUI configured
+   /* GUI configured */
 };
 
 static Board_PllClkCfg_t gBoardEcuPllClkCfgMcu_powerConfig1[] =
-{  // Fixed config
+{   /* Fixed config */
     {
       TISCI_DEV_MCU_CPSW0,
       TISCI_DEV_MCU_CPSW0_CPTS_RFT_CLK_PARENT_HSDIV4_16FFT_MCU_2_HSDIVOUT1_CLK,
       200000000
     },
-   // GUI configured
+   /* GUI configured */
 };
 
 static Board_PllClkCfg_t gBoardEcuPllClkCfgMcu_powerConfig2[] =
-{  // Fixed config
+{   /* Fixed config */
     {
       TISCI_DEV_MCU_CPSW0,
       TISCI_DEV_MCU_CPSW0_CPTS_RFT_CLK_PARENT_HSDIV4_16FFT_MCU_2_HSDIVOUT1_CLK,
       200000000
     },
-   // GUI configured
+   /* GUI configured */
 };
 
-
 static Board_PllClkCfg_t gBoardEcuPllClkCfgMain_powerConfig0[] =
-{  // Fixed config
+{   /* Fixed config */
     {
       TISCI_DEV_GTC0,
       TISCI_DEV_GTC0_GTC_CLK_PARENT_POSTDIV3_16FFT_MAIN_0_HSDIVOUT6_CLK,
       200000000
     },
-    // GUI configured
+    /* GUI configured */
     {
-      TISCI_DEV_A72SS0,
+      TISCI_DEV_A72SS0_CORE0,
       TISCI_DEV_A72SS0_ARM0_CLK_CLK,
-      2000000000
+      1000000000
     },
     {
-      TISCI_DEV_A72SS1,
+      TISCI_DEV_A72SS1_CORE0,
       TISCI_DEV_A72SS1_ARM1_CLK_CLK,
-      2000000000
+      1000000000
     },
     {
       TISCI_DEV_R5FSS0_CORE0,
@@ -182,34 +422,34 @@ static Board_PllClkCfg_t gBoardEcuPllClkCfgMain_powerConfig0[] =
       1000000000
     },
     {
+      TISCI_DEV_R5FSS0_CORE1,
+      TISCI_DEV_R5FSS0_CORE1_CPU_CLK,
+      1000000000
+    },
+    {
       TISCI_DEV_R5FSS1_CORE0,
       TISCI_DEV_R5FSS1_CORE0_CPU_CLK,
-      1000000000
+      100000000
+    },
+    {
+      TISCI_DEV_R5FSS1_CORE1,
+      TISCI_DEV_R5FSS1_CORE1_CPU_CLK,
+      100000000
     },
     {
       TISCI_DEV_R5FSS2_CORE0,
       TISCI_DEV_R5FSS2_CORE0_CPU_CLK,
-      1000000000
+      100000000
     },
     {
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS0_CORE0,
+      TISCI_DEV_R5FSS2_CORE1,
+      TISCI_DEV_R5FSS2_CORE1_CPU_CLK,
+      100000000
+    },
+    {
+      TISCI_DEV_COMPUTE_CLUSTER0_C71SS0,
       TISCI_DEV_COMPUTE_CLUSTER0_C71SS0_CORE0_C7X_CLK,
-      1000000000
-    },
-    {
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS1_CORE0,
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS1_CORE0_C7X_CLK,
-      1000000000
-    },
-    {
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS2_CORE0,
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS2_CORE0_C7X_CLK,
-      1000000000
-    },
-    {
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS3_CORE0,
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS3_CORE0_C7X_CLK,
-      1000000000
+      500000000
     },
     {
       TISCI_DEV_VPAC0,
@@ -222,48 +462,38 @@ static Board_PllClkCfg_t gBoardEcuPllClkCfgMain_powerConfig0[] =
       720000000
     },
     {
-      TISCI_DEV_DMPAC0,
-      TISCI_DEV_DMPAC0_CLK,
-      480000000
-    },
-    {
-      TISCI_DEV_J7AEP_GPU_BXS464_WRAP0_GPU_SS_0,
-      TISCI_DEV_J7AEP_GPU_BXS464_WRAP0_GPU_SS_0_GPU_PLL_CLK,
-      800000000
-    },
-    {
       TISCI_DEV_CODEC0,
       TISCI_DEV_CODEC0_VPU_ACLK_CLK,
-      600000000
-    },
-    {
-      TISCI_DEV_CODEC1,
-      TISCI_DEV_CODEC1_VPU_ACLK_CLK,
       600000000
     },
 };
 
 static Board_PllClkCfg_t gBoardEcuPllClkCfgMain_powerConfig1[] =
-{  // Fixed config
+{   /* Fixed config */
     {
       TISCI_DEV_GTC0,
       TISCI_DEV_GTC0_GTC_CLK_PARENT_POSTDIV3_16FFT_MAIN_0_HSDIVOUT6_CLK,
       200000000
     },
-    // GUI configured
+    /* GUI configured */
     {
-      TISCI_DEV_A72SS0,
+      TISCI_DEV_A72SS0_CORE0,
       TISCI_DEV_A72SS0_ARM0_CLK_CLK,
-      2000000000
+      500000000
     },
     {
-      TISCI_DEV_A72SS1,
+      TISCI_DEV_A72SS1_CORE0,
       TISCI_DEV_A72SS1_ARM1_CLK_CLK,
-      2000000000
+      500000000
     },
     {
       TISCI_DEV_R5FSS0_CORE0,
       TISCI_DEV_R5FSS0_CORE0_CPU_CLK,
+      1000000000
+    },
+    {
+      TISCI_DEV_R5FSS0_CORE1,
+      TISCI_DEV_R5FSS0_CORE1_CPU_CLK,
       1000000000
     },
     {
@@ -272,29 +502,29 @@ static Board_PllClkCfg_t gBoardEcuPllClkCfgMain_powerConfig1[] =
       1000000000
     },
     {
+      TISCI_DEV_R5FSS1_CORE1,
+      TISCI_DEV_R5FSS1_CORE1_CPU_CLK,
+      1000000000
+    },
+    {
       TISCI_DEV_R5FSS2_CORE0,
       TISCI_DEV_R5FSS2_CORE0_CPU_CLK,
       1000000000
     },
     {
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS0_CORE0,
+      TISCI_DEV_R5FSS2_CORE1,
+      TISCI_DEV_R5FSS2_CORE1_CPU_CLK,
+      1000000000
+    },
+    {
+      TISCI_DEV_COMPUTE_CLUSTER0_C71SS0,
       TISCI_DEV_COMPUTE_CLUSTER0_C71SS0_CORE0_C7X_CLK,
-      1000000000
+      500000000
     },
     {
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS1_CORE0,
+      TISCI_DEV_COMPUTE_CLUSTER0_C71SS1,
       TISCI_DEV_COMPUTE_CLUSTER0_C71SS1_CORE0_C7X_CLK,
-      1000000000
-    },
-    {
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS2_CORE0,
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS2_CORE0_C7X_CLK,
-      1000000000
-    },
-    {
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS3_CORE0,
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS3_CORE0_C7X_CLK,
-      1000000000
+      500000000
     },
     {
       TISCI_DEV_VPAC0,
@@ -315,36 +545,26 @@ static Board_PllClkCfg_t gBoardEcuPllClkCfgMain_powerConfig1[] =
       TISCI_DEV_J7AEP_GPU_BXS464_WRAP0_GPU_SS_0,
       TISCI_DEV_J7AEP_GPU_BXS464_WRAP0_GPU_SS_0_GPU_PLL_CLK,
       800000000
-    },
-    {
-      TISCI_DEV_CODEC0,
-      TISCI_DEV_CODEC0_VPU_ACLK_CLK,
-      600000000
-    },
-    {
-      TISCI_DEV_CODEC1,
-      TISCI_DEV_CODEC1_VPU_ACLK_CLK,
-      600000000
     },
 };
 
 static Board_PllClkCfg_t gBoardEcuPllClkCfgMain_powerConfig2[] =
-{  // Fixed config
+{   /* Fixed config */
     {
       TISCI_DEV_GTC0,
       TISCI_DEV_GTC0_GTC_CLK_PARENT_POSTDIV3_16FFT_MAIN_0_HSDIVOUT6_CLK,
       200000000
     },
-    // GUI configured
+    /* GUI configured */
     {
-      TISCI_DEV_A72SS0,
+      TISCI_DEV_A72SS0_CORE0,
       TISCI_DEV_A72SS0_ARM0_CLK_CLK,
-      2000000000
+      500000000
     },
     {
-      TISCI_DEV_A72SS1,
+      TISCI_DEV_A72SS1_CORE0,
       TISCI_DEV_A72SS1_ARM1_CLK_CLK,
-      2000000000
+      500000000
     },
     {
       TISCI_DEV_R5FSS0_CORE0,
@@ -352,64 +572,59 @@ static Board_PllClkCfg_t gBoardEcuPllClkCfgMain_powerConfig2[] =
       1000000000
     },
     {
+      TISCI_DEV_R5FSS0_CORE1,
+      TISCI_DEV_R5FSS0_CORE1_CPU_CLK,
+      1000000000
+    },
+    {
       TISCI_DEV_R5FSS1_CORE0,
       TISCI_DEV_R5FSS1_CORE0_CPU_CLK,
-      1000000000
+      100000000
+    },
+    {
+      TISCI_DEV_R5FSS1_CORE1,
+      TISCI_DEV_R5FSS1_CORE1_CPU_CLK,
+      100000000
     },
     {
       TISCI_DEV_R5FSS2_CORE0,
       TISCI_DEV_R5FSS2_CORE0_CPU_CLK,
-      1000000000
+      100000000
     },
     {
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS0_CORE0,
+      TISCI_DEV_R5FSS2_CORE1,
+      TISCI_DEV_R5FSS2_CORE1_CPU_CLK,
+      100000000
+    },
+    {
+      TISCI_DEV_COMPUTE_CLUSTER0_C71SS0,
       TISCI_DEV_COMPUTE_CLUSTER0_C71SS0_CORE0_C7X_CLK,
       1000000000
     },
     {
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS1_CORE0,
+      TISCI_DEV_COMPUTE_CLUSTER0_C71SS1,
       TISCI_DEV_COMPUTE_CLUSTER0_C71SS1_CORE0_C7X_CLK,
-      1000000000
-    },
-    {
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS2_CORE0,
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS2_CORE0_C7X_CLK,
-      1000000000
-    },
-    {
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS3_CORE0,
-      TISCI_DEV_COMPUTE_CLUSTER0_C71SS3_CORE0_C7X_CLK,
       1000000000
     },
     {
       TISCI_DEV_VPAC0,
       TISCI_DEV_VPAC0_MAIN_CLK,
-      720000000
+      600000000
     },
     {
       TISCI_DEV_VPAC1,
       TISCI_DEV_VPAC1_MAIN_CLK,
-      720000000
+      600000000
     },
     {
       TISCI_DEV_DMPAC0,
       TISCI_DEV_DMPAC0_CLK,
-      480000000
+      240000000
     },
     {
       TISCI_DEV_J7AEP_GPU_BXS464_WRAP0_GPU_SS_0,
       TISCI_DEV_J7AEP_GPU_BXS464_WRAP0_GPU_SS_0_GPU_PLL_CLK,
       800000000
-    },
-    {
-      TISCI_DEV_CODEC0,
-      TISCI_DEV_CODEC0_VPU_ACLK_CLK,
-      600000000
-    },
-    {
-      TISCI_DEV_CODEC1,
-      TISCI_DEV_CODEC1_VPU_ACLK_CLK,
-      600000000
     },
 };
 
@@ -450,6 +665,86 @@ Board_STATUS Board_ecuInit(uint32_t cfg)
     if(status == BOARD_SOK)
     {
         status = Board_ecuInitClock(cfg);
+    }
+    if(status == BOARD_SOK)
+    {
+        status = Board_ecuDisableClock(cfg);
+    }
+
+    return status;
+}
+
+Board_STATUS Board_ecuDisableClock(uint32_t cfg)
+{
+    uint32_t *pMcuDisableArray = NULL;
+    uint32_t *pMainDisableArray = NULL;
+    uint32_t mcuDisableArraySize = 0;
+    uint32_t mainDisableArraySize = 0;
+    Board_STATUS status = BOARD_SOK;
+    uint32_t index = 0;
+
+    /* Select array to use based on config */
+    switch (cfg)
+    {
+        case BOARD_ECU_NONE:
+        {
+            /* For ECU_NONE, no clocks to disable */
+        }
+        break;
+
+        case BOARD_ECU_FC:
+        {
+            pMcuDisableArray = gBoardEcuClkModuleMcuIDDisable_powerConfig0;
+            mcuDisableArraySize = sizeof(gBoardEcuClkModuleMcuIDDisable_powerConfig0) / sizeof(uint32_t);
+
+            pMainDisableArray = gBoardEcuClkModuleMainIDDisable_powerConfig0;
+            mainDisableArraySize = sizeof(gBoardEcuClkModuleMainIDDisable_powerConfig0) / sizeof(uint32_t);
+        }
+        break;
+
+        case BOARD_ECU_SRV:
+        {
+            pMcuDisableArray = gBoardEcuClkModuleMcuIDDisable_powerConfig1;
+            mcuDisableArraySize = sizeof(gBoardEcuClkModuleMcuIDDisable_powerConfig1) / sizeof(uint32_t);
+
+            pMainDisableArray = gBoardEcuClkModuleMainIDDisable_powerConfig1;
+            mainDisableArraySize = sizeof(gBoardEcuClkModuleMainIDDisable_powerConfig1) / sizeof(uint32_t);
+        }
+        break;
+
+        case BOARD_ECU_AVP4:
+        {
+            pMcuDisableArray = gBoardEcuClkModuleMcuIDDisable_powerConfig2;
+            mcuDisableArraySize = sizeof(gBoardEcuClkModuleMcuIDDisable_powerConfig2) / sizeof(uint32_t);
+
+            pMainDisableArray = gBoardEcuClkModuleMainIDDisable_powerConfig2;
+            mainDisableArraySize = sizeof(gBoardEcuClkModuleMainIDDisable_powerConfig2) / sizeof(uint32_t);
+        }
+        break;
+
+        default:
+        {
+            status = BOARD_INVALID_PARAM;
+        }
+        break;
+    }
+
+    /* Disable MCU clocks */
+    if (pMcuDisableArray != NULL)
+     {
+        for (index = 0; index < mcuDisableArraySize && status == BOARD_SOK; index++)
+        {
+            status = Board_moduleClockDisable(pMcuDisableArray[index]);
+        }
+    }
+
+    /* Disable Main clocks */
+    if (pMainDisableArray != NULL)
+    {
+        for (index = 0; index < mainDisableArraySize && status == BOARD_SOK; index++)
+        {
+            status = Board_moduleClockDisable(pMainDisableArray[index]);
+        }
     }
 
     return status;
@@ -626,4 +921,71 @@ static Board_STATUS Board_ecuInitClock(uint32_t cfg)
     }
 
     return status;
+}
+
+/**
+ * @brief  Get the CPU clock rate for a given device ID and ECU configuration.
+ *
+ * This function searches the appropriate clock configuration array based on the ECU config
+ * (FC, SRV, AVP4) and returns the clock rate for the specified TISCI device ID.
+ *
+ * @param tisci_dev_id  TISCI device ID for which the CPU clock rate is requested.
+ * @param cfg           ECU configuration (BOARD_ECU_FC, BOARD_ECU_SRV, BOARD_ECU_AVP4).
+ *
+ * @return              CPU clock rate in Hz if found, BOARD_INVALID_CORE_CLK_FREQ otherwise.
+ */
+int64_t Board_ecuGetCpuClock(uint32_t tisci_dev_id, uint32_t cfg)
+{
+    uint32_t index = 0;    
+    Board_STATUS status = BOARD_SOK;
+    Board_PllClkCfg_t *pMainArray = NULL;
+    uint32_t mainArraySize = 0;
+    int64_t retVal = BOARD_INVALID_CORE_CLK_FREQ;
+
+    /* Select the appropriate clock configuration array based on ECU config */
+    switch (cfg)
+    {
+        
+        case BOARD_ECU_FC:
+        {
+            pMainArray = gBoardEcuPllClkCfgMain_powerConfig0;
+            mainArraySize = sizeof(gBoardEcuPllClkCfgMain_powerConfig0) / sizeof(Board_PllClkCfg_t);
+        }
+        break;
+
+        case BOARD_ECU_SRV:
+        {
+            pMainArray = gBoardEcuPllClkCfgMain_powerConfig1;
+            mainArraySize = sizeof(gBoardEcuPllClkCfgMain_powerConfig1) / sizeof(Board_PllClkCfg_t);
+        }
+        break;
+
+        case BOARD_ECU_AVP4:
+        {
+            pMainArray = gBoardEcuPllClkCfgMain_powerConfig2;
+            mainArraySize = sizeof(gBoardEcuPllClkCfgMain_powerConfig2) / sizeof(Board_PllClkCfg_t);
+        }
+        break;
+
+        default:
+        {
+            status = BOARD_INVALID_PARAM;
+        }
+        break;
+    }
+
+    /* Search for the device ID in the selected array and return its clock rate */
+    if (pMainArray != NULL)
+    {
+        for (index = 0; index < mainArraySize && status == BOARD_SOK; index++)
+        {
+            if (tisci_dev_id == pMainArray[index].tisciDevID)
+            {
+                retVal = pMainArray[index].clkRate;
+                break;
+            }
+        }
+    }
+
+    return retVal;
 }

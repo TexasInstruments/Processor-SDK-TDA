@@ -43,13 +43,16 @@
     ## UART drivers
     #######################################################################
     display_msg "start serial driver"
-    devc-ser8250-dw -e -F -b115200 -c100000000/1 0x53900000^2,333
+    devc-ser8250-dw -e -F -b115200 -c100000000/1 0x53904000^2,333
 
     ############################################################################################
     ## SD memory card / eMMC driver
     ############################################################################################
     display_msg Starting MMC/SD memory card driver... eMMC
     devb-sdmmc-am65x blk cache=1m sdio addr=0x4f80000,irq=312,emmc,bs=sscfg=0x8000 disk name=emmc
+
+    display_msg Starting MMC/SD memory card driver... SD
+    devb-sdmmc-am65x blk cache=1m sdio addr=0x4f8c000,irq=311,timing=~sdr104,bs=sscfg=0x4000 cam pnp disk name=sd
 
 
     ############################################################################################
@@ -559,17 +562,20 @@ echo setting env variables.
 export SYSNAME=nto
 export TERM=qansi
 export HOME=/
+export PS1="TDA54-VDK# "
 export PATH=/proc/boot:/bin:/usr/bin:/sbin:/usr/sbin:/usr/lib:/ti_fs/tibin/:/ti_fs/vision_apps/
 export LD_LIBRARY_PATH=/proc/boot:/lib:/usr/lib:/lib/dll:/lib/dll/pci:/ti_fs/tilib/:ti_fs/vision_apps/
 
 
-echo Mounting the emmc ..
-waitfor /dev/emmc0 5
-mount -tdos -oexe=all /dev/emmc0 /ti_fs
-echo Mounting the emmc to /ti_fs done ..
+echo Mounting the sd ..
+waitfor /dev/sd0t12 5
+mount -tdos -oexe=all /dev/sd0t12 /boot
+echo Mounting the sd boot partition to /boot done ..
+mount -tdos -oexe=all /dev/sd0t12.1 /ti_fs
+echo Mounting the sd fs partition to /ti_fs done ..
 
 echo Looking for user script to run: /ti_fs/scripts/user.sh
-waitfor  /ti_fs/scripts/user.sh
+waitfor  /ti_fs/scripts/user.sh 2
 user_script=/ti_fs/scripts/user.sh
 if [ -e "$user_script" ]; then
     echo Running user script...

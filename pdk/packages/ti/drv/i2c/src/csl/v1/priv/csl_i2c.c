@@ -55,6 +55,8 @@
 
 #define I2C_INTERNAL_CLK_STEP    (1000U)
 
+#define I2C_FS_MODE_FREQ         (400000U)  /* F/S mode maximum frequency (per I2C spec) */
+
 /* ========================================================================== */
 /*                  Internal/Private Function Declarations                    */
 /* ========================================================================== */
@@ -92,9 +94,9 @@ void I2CMasterInitExpClk(uintptr_t baseAddr,
         }
     }
 
-    if (outputClk > 400000U)
+    if (outputClk > I2C_FS_MODE_FREQ)
     {
-        /* Prescalar bypassed in high speed mode */
+        /* Prescalar bypassed for frequencies > 400 kHz */
         prescalar = 0U;
         actIntClk = sysClk;
     }
@@ -118,13 +120,34 @@ void I2CMasterInitExpClk(uintptr_t baseAddr,
     div_h = divisor / 2U;
     div_l = divisor - div_h;
 
-    if (outputClk > 400000U)
+    if (outputClk > I2C_FS_MODE_FREQ)
     {
-        CSL_REG32_WR(baseAddr + CSL_I2C_SCLL, (div_l - 7U) << 8U);
-        CSL_REG32_WR(baseAddr + CSL_I2C_SCLH, (div_h - 5U) << 8U);
+        /* HS mode (> 400 kHz): Two-phase transmission
+         * Phase 1 (F/S, 400 kHz): Address/control in bits [7:0]
+         * Phase 2 (HS, target freq): Data in bits [15:8]
+         * Applies to both 1 MHz and 3.4 MHz (per TRM specification)
+         */
+        uint32_t divisor_fs;
+        uint32_t div_h_fs, div_l_fs;
+        uint32_t scll_val, sclh_val;
+
+        /* Calculate F/S phase divisor for 400 kHz */
+        divisor_fs = (actIntClk / I2C_FS_MODE_FREQ);
+        div_h_fs = divisor_fs / 2U;
+        div_l_fs = divisor_fs - div_h_fs;
+
+        /* Combine: HS phase in [15:8], F/S phase in [7:0] */
+        scll_val = ((div_l - 7U) << 8U) | (div_l_fs - 7U);
+        sclh_val = ((div_h - 5U) << 8U) | (div_h_fs - 5U);
+
+        CSL_REG32_WR(baseAddr + CSL_I2C_SCLL, scll_val);
+        CSL_REG32_WR(baseAddr + CSL_I2C_SCLH, sclh_val);
     }
     else
     {
+        /* Standard mode or Fast mode (≤ 400 kHz)
+         * Write to bits [7:0] only (F/S phase registers)
+         */
         CSL_REG32_WR(baseAddr + CSL_I2C_SCLL, div_l - 7U);
         CSL_REG32_WR(baseAddr + CSL_I2C_SCLH, div_h - 5U);
     }

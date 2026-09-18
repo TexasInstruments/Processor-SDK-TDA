@@ -61,7 +61,7 @@
 #endif
 
 #include <esm.h>
-#include <ti/ip_fma/inc/ip_fma_common.h>
+#include <ip_fma_common.h>
 
 
 /* ========================================================================== */

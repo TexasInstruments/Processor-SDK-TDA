@@ -1,64 +1,35 @@
 /*
-*
-* Copyright (c) 2021 - 2022 Texas Instruments Incorporated
-*
-* All rights reserved not granted herein.
-*
-* Limited License.
-*
-* Texas Instruments Incorporated grants a world-wide, royalty-free, non-exclusive
-* license under copyrights and patents it now or hereafter owns or controls to make,
-* have made, use, import, offer to sell and sell ("Utilize") this software subject to the
-* terms herein.  With respect to the foregoing patent license, such license is granted
-* solely to the extent that any such patent is necessary to Utilize the software alone.
-* The patent license shall not apply to any combinations which include this software,
-* other than combinations with devices manufactured by or for TI ("TI Devices").
-* No hardware patent is licensed hereunder.
-*
-* Redistributions must preserve existing copyright notices and reproduce this license
-* (including the above copyright notice and the disclaimer and (if applicable) source
-* code license limitations below) in the documentation and/or other materials provided
-* with the distribution
-*
-* Redistribution and use in binary form, without modification, are permitted provided
-* that the following conditions are met:
-*
-* *       No reverse engineering, decompilation, or disassembly of this software is
-* permitted with respect to any software provided in binary form.
-*
-* *       any redistribution and use are licensed by TI for use only with TI Devices.
-*
-* *       Nothing shall obligate TI to provide you with source code for the software
-* licensed and provided to you in object code.
-*
-* If software source code is provided to you, modification and redistribution of the
-* source code are permitted provided that the following conditions are met:
-*
-* *       any redistribution and use of the source code, including any resulting derivative
-* works, are licensed by TI for use only with TI Devices.
-*
-* *       any redistribution and use of any object code compiled from the source code
-* and any resulting derivative works, are licensed by TI for use only with TI Devices.
-*
-* Neither the name of Texas Instruments Incorporated nor the names of its suppliers
-*
-* may be used to endorse or promote products derived from this software without
-* specific prior written permission.
-*
-* DISCLAIMER.
-*
-* THIS SOFTWARE IS PROVIDED BY TI AND TI'S LICENSORS "AS IS" AND ANY EXPRESS
-* OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-* OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL TI AND TI'S LICENSORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-* OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-* OF THE POSSIBILITY OF SUCH DAMAGE.
-*
-*/
+ *  Copyright (c) Texas Instruments Incorporated 2026
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *    Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ *    Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the
+ *    distribution.
+ *
+ *    Neither the name of Texas Instruments Incorporated nor the names of
+ *    its contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 /**
  *  \file     lpm_boot.c
  *
@@ -289,7 +260,7 @@ static int32_t Lpm_ospiBootImageLate(sblEntryPoint_t *pEntry, uint32_t imageOffs
 #    endif
 
     if (retVal != E_PASS)
-        AppUtils_Printf(MSG_NORMAL, "Error parsing Main Domain appimage\n");
+        Lpm_uartDrvPrintf("Error parsing Main Domain appimage\n");
 
     return retVal;
 }
@@ -318,24 +289,21 @@ static int32_t Lpm_ospiBootStageImage(sblEntryPoint_t *pEntry, uint32_t address)
             status = Lpm_ospiBootImageLate(&k3xx_evmEntry, OSPI_OFFSET_A72IMG1);
             if (status != E_PASS)
             {
-                AppUtils_Printf(MSG_NORMAL,
-                                "Error parsing A72 appimage #1 for HLOS boot\n");
+                Lpm_uartDrvPrintf("Error parsing A72 appimage #1 for HLOS boot\n");
             }
             else
             {
                 status = Lpm_ospiBootImageLate(&k3xx_evmEntry, OSPI_OFFSET_A72IMG2);
                 if (status != E_PASS)
                 {
-                    AppUtils_Printf(MSG_NORMAL,
-                                    "Error parsing A72 appimage #2 for HLOS boot\n");
+                    Lpm_uartDrvPrintf("Error parsing A72 appimage #2 for HLOS boot\n");
                 }
 #        if defined(LINUX_OS)
                 else
                 {
                     status = Lpm_ospiBootImageLate(&k3xx_evmEntry, OSPI_OFFSET_A72IMG3);
                     if (status != E_PASS)
-                        AppUtils_Printf(MSG_NORMAL,
-                                        "Error parsing A72 appimage #3 for HLOS boot\n");
+                        Lpm_uartDrvPrintf("Error parsing A72 appimage #3 for HLOS boot\n");
                 }
 #        endif
             }
@@ -359,7 +327,7 @@ static int32_t Lpm_ospiLeaveConfigSPI()
     Board_FlashInfo *flashInfo;
 
 #if defined(UART_PRINT_DEBUG)
-    AppUtils_Printf(MSG_NORMAL,"Entered OSPILeaveConfigSPI function...\n");
+    Lpm_uartDrvPrintf("Entered OSPILeaveConfigSPI function...\n");
 #endif
 
     /* Get default OSPI cfg */
@@ -383,15 +351,15 @@ static int32_t Lpm_ospiLeaveConfigSPI()
 
     if (h)
     {
-        AppUtils_Printf(MSG_NORMAL,"OSPI flash left configured in Legacy SPI mode.\n");
+        Lpm_uartDrvPrintf("OSPI flash left configured in Legacy SPI mode.\n");
         flashInfo = (Board_FlashInfo *)h;
-        AppUtils_Printf(MSG_NORMAL,"\n OSPI NOR device ID: 0x%x, manufacturer ID: 0x%x \n",
+        Lpm_uartDrvPrintf("\n OSPI NOR device ID: 0x%x, manufacturer ID: 0x%x \n",
                 flashInfo->device_id, flashInfo->manufacturer_id);
         Board_flashClose(h);
     }
     else
     {
-        AppUtils_Printf(MSG_NORMAL,"Board_flashOpen failed in SPI mode!!\n");
+        Lpm_uartDrvPrintf("Board_flashOpen failed in SPI mode!!\n");
         retVal = E_FAIL;
     }
 
@@ -414,12 +382,11 @@ static void LPM_printSblProfileLog(sblProfileInfo_t *sblProfileLog,
                                  SCICLIENT_SERVICE_WAIT_FOREVER);
     cycles_per_usec = (mcu_clk_freq / 1000000);
 
-    AppUtils_Printf(MSG_NORMAL,
-                    "\r\nProfiling info ....\r\n");
+    Lpm_uartDrvPrintf("\r\nProfiling info ....\r\n");
     sprintf(sbl_test_str,"MCU @ %uHz.\r\n", ((uint32_t)mcu_clk_freq));
-    AppUtils_Printf(MSG_NORMAL,sbl_test_str);
+    Lpm_uartDrvPrintf(sbl_test_str);
     sprintf(sbl_test_str,"cycles per usec  = %u\r\n", cycles_per_usec);
-    AppUtils_Printf(MSG_NORMAL,sbl_test_str);
+    Lpm_uartDrvPrintf(sbl_test_str);
 
     lastlogIndx = sblProfileLogIndx;
 
@@ -428,10 +395,8 @@ static void LPM_printSblProfileLog(sblProfileInfo_t *sblProfileLog,
         i = sblProfileLogIndx;
         prev_cycle_cnt = sblProfileLog[i].cycle_cnt;
         lastlogIndx = MAX_PROFILE_LOG_ENTRIES;
-        AppUtils_Printf(MSG_NORMAL,
-                        "Detected overflow, some profile entries might be lost.\r\n");
-        AppUtils_Printf(MSG_NORMAL,
-                        "Rebuild with a larger vlaue of MAX_PROFILE_LOG_ENTRIES ??\r\n");
+        Lpm_uartDrvPrintf("Detected overflow, some profile entries might be lost.\r\n");
+        Lpm_uartDrvPrintf("Rebuild with a larger vlaue of MAX_PROFILE_LOG_ENTRIES ??\r\n");
     }
 
     while((i % MAX_PROFILE_LOG_ENTRIES) < lastlogIndx)
@@ -440,21 +405,21 @@ static void LPM_printSblProfileLog(sblProfileInfo_t *sblProfileLog,
 
         if (sblProfileLog[i].cycle_cnt < prev_cycle_cnt)
         {
-            AppUtils_Printf(MSG_NORMAL,"**");
+            Lpm_uartDrvPrintf("**");
         }
         else
         {
-            AppUtils_Printf(MSG_NORMAL,"  ");
+            Lpm_uartDrvPrintf("  ");
         }
         cycles_to_us = sblProfileLog[i].cycle_cnt/cycles_per_usec;
         sprintf(sbl_test_str,"fxn:%32s\t", sblProfileLog[i].fxn);
-        AppUtils_Printf(MSG_NORMAL,sbl_test_str);
+        Lpm_uartDrvPrintf(sbl_test_str);
         sprintf(sbl_test_str,"line:%4u\t", sblProfileLog[i].line);
-        AppUtils_Printf(MSG_NORMAL,sbl_test_str);
+        Lpm_uartDrvPrintf(sbl_test_str);
         sprintf(sbl_test_str,"cycle:%10u\t", sblProfileLog[i].cycle_cnt);
-        AppUtils_Printf(MSG_NORMAL,sbl_test_str);
+        Lpm_uartDrvPrintf(sbl_test_str);
         sprintf(sbl_test_str,"timestamp:%10uus\r\n", cycles_to_us);
-        AppUtils_Printf(MSG_NORMAL,sbl_test_str);
+        Lpm_uartDrvPrintf(sbl_test_str);
         prev_cycle_cnt = sblProfileLog[i].cycle_cnt;
         i++;
     }
@@ -466,14 +431,13 @@ static void Lpm_mainDomainBootSetup(void)
 #    if defined(BOOTAPP_MAINDOMAIN_BOARD_SETUP)
     int32_t retVal;
 #        if defined(UART_PRINT_DEBUG)
-    AppUtils_Printf(MSG_NORMAL,
-                    "Configuring Sciclient_board for MAIN domain\n");
+    Lpm_uartDrvPrintf("Configuring Sciclient_board for MAIN domain\n");
 #        endif
 
     Sciclient_BoardCfgPrms_t bootAppBoardCfgPrms = {
-                                                    .boardConfigLow = (uint32_t)&bootAppBoardCfg,
+                                                    .boardConfigLow = (uint32_t)&gLpm_mcuOnlyBoardCfg,
                                                     .boardConfigHigh = 0,
-                                                    .boardConfigSize = sizeof(bootAppBoardCfg),
+                                                    .boardConfigSize = sizeof(gLpm_mcuOnlyBoardCfg),
                                                     .devGrp = DEVGRP_01
                                                    };
     Sciclient_BoardCfgPrms_t bootAppBoardCfgPmPrms = {
@@ -483,37 +447,37 @@ static void Lpm_mainDomainBootSetup(void)
                                                       .devGrp = DEVGRP_01
                                                      };
     Sciclient_BoardCfgPrms_t bootAppBoardCfgRmPrms = {
-                                                      .boardConfigLow = (uint32_t)&bootAppBoardCfg_rm,
+                                                      .boardConfigLow = (uint32_t)&gLpm_mcuOnlyBoardCfgRm,
                                                       .boardConfigHigh = 0,
-                                                      .boardConfigSize = sizeof(bootAppBoardCfg_rm),
+                                                      .boardConfigSize = sizeof(gLpm_mcuOnlyBoardCfgRm),
                                                       .devGrp = DEVGRP_01
                                                      };
     Sciclient_BoardCfgPrms_t bootAppBoardCfgSecPrms = {
-                                                       .boardConfigLow = (uint32_t)&bootAppBoardCfg_sec,
+                                                       .boardConfigLow = (uint32_t)&gLpm_mcuOnlyBoardCfgSec,
                                                        .boardConfigHigh = 0,
-                                                       .boardConfigSize = sizeof(bootAppBoardCfg_sec),
+                                                       .boardConfigSize = sizeof(gLpm_mcuOnlyBoardCfgSec),
                                                        .devGrp = DEVGRP_01
                                                       };
 
     retVal = Sciclient_boardCfg(&bootAppBoardCfgPrms);
     if (retVal != CSL_PASS)
     {
-         AppUtils_Printf(MSG_NORMAL, "Sciclient_boardCfg() failed.\n");
+         Lpm_uartDrvPrintf("Sciclient_boardCfg() failed.\n");
     }
     retVal = Sciclient_boardCfgPm(&bootAppBoardCfgPmPrms);
     if (retVal != CSL_PASS)
     {
-         AppUtils_Printf(MSG_NORMAL, "Sciclient_boardCfgPm() failed.\n");
+         Lpm_uartDrvPrintf("Sciclient_boardCfgPm() failed.\n");
     }
     retVal = Sciclient_boardCfgRm(&bootAppBoardCfgRmPrms);
     if (retVal != CSL_PASS)
     {
-         AppUtils_Printf(MSG_NORMAL, "Sciclient_boardCfgRm() failed.\n");
+         Lpm_uartDrvPrintf("Sciclient_boardCfgRm() failed.\n");
     }
     retVal = Sciclient_boardCfgSec(&bootAppBoardCfgSecPrms);
     if (retVal != CSL_PASS)
     {
-         AppUtils_Printf(MSG_NORMAL, "Sciclient_boardCfgSec() failed.\n");
+         Lpm_uartDrvPrintf("Sciclient_boardCfgSec() failed.\n");
     }
 
     Board_init(BOARD_INIT_PLL_MAIN);
@@ -547,8 +511,7 @@ static int32_t Lpm_requestStageCores(uint8_t stageNum)
         if (sbl_late_slave_core_stages_info[stage][i].tisci_proc_id != SBL_INVALID_ID)
         {
 #if defined(UART_PRINT_DEBUG)
-            AppUtils_Printf(MSG_NORMAL,
-                            "Calling Sciclient_procBootRequestProcessor, ProcId 0x%x... \n",
+            Lpm_uartDrvPrintf("Calling Sciclient_procBootRequestProcessor, ProcId 0x%x... \n",
                             sbl_late_slave_core_stages_info[stage][i].tisci_proc_id);
 #else
             SBL_log(SBL_LOG_MAX,
@@ -560,8 +523,7 @@ static int32_t Lpm_requestStageCores(uint8_t stageNum)
             if (status != CSL_PASS)
             {
 #if defined(UART_PRINT_DEBUG)
-                AppUtils_Printf(MSG_NORMAL,
-                                "Sciclient_procBootRequestProcessor, ProcId 0x%x...FAILED \n",
+                Lpm_uartDrvPrintf("Sciclient_procBootRequestProcessor, ProcId 0x%x...FAILED \n",
                                 sbl_late_slave_core_stages_info[stage][i].tisci_proc_id);
 #else
                 SBL_log(SBL_LOG_MAX,
@@ -587,8 +549,7 @@ static int32_t Lpm_releaseStageCores(uint8_t stageNum)
         if (sbl_late_slave_core_stages_info[stage][i].tisci_proc_id != SBL_INVALID_ID)
         {
 #if defined(UART_PRINT_DEBUG)
-            AppUtils_Printf(MSG_NORMAL,
-                            "Sciclient_procBootReleaseProcessor, ProcId 0x%x...\n",
+            Lpm_uartDrvPrintf("Sciclient_procBootReleaseProcessor, ProcId 0x%x...\n",
                             sbl_late_slave_core_stages_info[stage][i].tisci_proc_id);
 #else
             SBL_log(SBL_LOG_MAX,
@@ -601,8 +562,7 @@ static int32_t Lpm_releaseStageCores(uint8_t stageNum)
             if (status != CSL_PASS)
             {
 #if defined(UART_PRINT_DEBUG)
-                AppUtils_Printf(MSG_NORMAL,
-                                "Sciclient_procBootReleaseProcessor, ProcId 0x%x...FAILED \n",
+                Lpm_uartDrvPrintf("Sciclient_procBootReleaseProcessor, ProcId 0x%x...FAILED \n",
                                 sbl_late_slave_core_stages_info[stage][i].tisci_proc_id);
 #else
                 SBL_log(SBL_LOG_MAX,
@@ -628,13 +588,13 @@ void Lpm_bootAppInit(void)
     status = Board_control(BOARD_CTRL_CMD_SET_RMII_DATA_MUX, NULL);
     if (status != BOARD_SOK)
     {
-        AppUtils_Printf(MSG_NORMAL,"Board_control failed to configure RMII pins\n");
+        Lpm_uartDrvPrintf("Board_control failed to configure RMII pins\n");
     }
     /* Enable CPSW9G MDIO mux */
     status = Board_control(BOARD_CTRL_CMD_SET_GESI_CPSW_MDIO_MUX, NULL);
     if (status != BOARD_SOK)
     {
-        AppUtils_Printf(MSG_NORMAL,"Board_control failed to configure CPSW9G MDIO mux\n");
+        Lpm_uartDrvPrintf("Board_control failed to configure CPSW9G MDIO mux\n");
     }
 #endif
 
@@ -697,14 +657,13 @@ int32_t Lpm_bootApp()
 
         if (retVal != CSL_PASS)
         {
-            AppUtils_Printf(MSG_NORMAL,
-                            "Failed to request all late cores in Stage %d\n\n",
+            Lpm_uartDrvPrintf("Failed to request all late cores in Stage %d\n\n",
                             j);
             Lpm_releaseStageCores(j);
         } else
         {
 #if defined(UART_PRINT_DEBUG)
-            AppUtils_Printf(MSG_NORMAL,"Loading BootImage\n");
+            Lpm_uartDrvPrintf("Loading BootImage\n");
 #else
             SBL_log(SBL_LOG_MAX,
                    "Loading BootImage\n");
@@ -732,8 +691,7 @@ int32_t Lpm_bootApp()
             time_boot_image_late_end[j] = TimerP_getTimeInUsecs();
 #endif
 #if defined(UART_PRINT_DEBUG)
-            AppUtils_Printf(MSG_NORMAL,
-                            "BootImage completed, status = %d\n",
+            Lpm_uartDrvPrintf("BootImage completed, status = %d\n",
                             retVal);
 #else
             SBL_log(SBL_LOG_MAX,
@@ -743,15 +701,13 @@ int32_t Lpm_bootApp()
 
             if (retVal != CSL_PASS)
             {
-                AppUtils_Printf(MSG_NORMAL,
-                                "Failure during image copy and parsing\n\n");
+                Lpm_uartDrvPrintf("Failure during image copy and parsing\n\n");
             } else
             {
                 retVal = Lpm_releaseStageCores(j);
                 if (retVal != CSL_PASS)
                 {
-                    AppUtils_Printf(MSG_NORMAL,
-                                    "Failed to release all late cores\n\n");
+                    Lpm_uartDrvPrintf("Failed to release all late cores\n\n");
                 }
             }
         } /* if (retVal != CSL_PASS) */
@@ -771,8 +727,7 @@ int32_t Lpm_bootApp()
                     SBL_SlaveCoreBoot(core_id, (uint32_t)NULL, &k3xx_evmEntry, SBL_REQUEST_CORE);
                     TaskP_sleep(1*1000);
 #if defined(UART_PRINT_DEBUG)
-                    AppUtils_Printf(MSG_NORMAL,
-                                    "SBL_SlaveCoreBoot completed for Core ID#%d, Entry point is 0x%x\n",
+                    Lpm_uartDrvPrintf("SBL_SlaveCoreBoot completed for Core ID#%d, Entry point is 0x%x\n",
                                     core_id, k3xx_evmEntry.CpuEntryPoint[core_id]);
 #endif
                     booted_core_ids[num_booted_cores] = core_id;
@@ -786,14 +741,12 @@ int32_t Lpm_bootApp()
         } /* if (retVal == CSL_PASS) */        
         if(j == NUM_BOOT_STAGES-1)
         {
-            AppUtils_Printf(MSG_NORMAL,
-                        "Sleeping for 20 seconds after the last stage\n");
+            Lpm_uartDrvPrintf("Sleeping for 20 seconds after the last stage\n");
             TaskP_sleep(20*1000);
         }
         else
         {
-            AppUtils_Printf(MSG_NORMAL,
-                        "Sleeping for 10 seconds after each stage\n");
+            Lpm_uartDrvPrintf("Sleeping for 10 seconds after each stage\n");
             TaskP_sleep(10*1000);
         }        
     } /* for (j = 0; j < NUM_BOOT_STAGES; j++) */
@@ -804,51 +757,41 @@ int32_t Lpm_bootApp()
     if (retVal == CSL_PASS)
     {
         /* Print boot log, including all gathered timestamps */
-        AppUtils_Printf(MSG_NORMAL,
-                        "Boot App: Started at %d usec\n",
+        Lpm_uartDrvPrintf("Boot App: Started at %d usec\n",
                         (uint32_t)time_boot_app_start);
 #if defined(GATHER_STAGE_DETAILS)
         for (j = 0; j < NUM_BOOT_STAGES; j++)
         {
-            AppUtils_Printf(MSG_NORMAL,
-                            "Boot App: Stage %d - Started requesting all cores at %d usec\n",
+            Lpm_uartDrvPrintf("Boot App: Stage %d - Started requesting all cores at %d usec\n",
                             j, (uint32_t)time_request_all_cores_start[j]);
-            AppUtils_Printf(MSG_NORMAL,
-                            "Boot App: Stage %d - Completed requesting all cores at %d usec\n",
+            Lpm_uartDrvPrintf("Boot App: Stage %d - Completed requesting all cores at %d usec\n",
                             j, (uint32_t)time_request_all_cores_end[j]);
-            AppUtils_Printf(MSG_NORMAL,
-                            "Boot App: Stage %d - Started copying and image parsing at %d usec\n",
+            Lpm_uartDrvPrintf("Boot App: Stage %d - Started copying and image parsing at %d usec\n",
                             j, (uint32_t)time_boot_image_late_start[j]);
-            AppUtils_Printf(MSG_NORMAL,
-                            "Boot App: Stage %d - Completed copying and image parsing at %d usec\n",
+            Lpm_uartDrvPrintf("Boot App: Stage %d - Completed copying and image parsing at %d usec\n",
                             j, (uint32_t)time_boot_image_late_end[j]);
 #    if defined(PROFILE_OSPI_READS_ENABLED)
-            AppUtils_Printf(MSG_NORMAL,
-                            "Boot App: Stage %d - stage_memcpy_time = %ju, stage_memcpy_size = %ju\n",
+            Lpm_uartDrvPrintf("Boot App: Stage %d - stage_memcpy_time = %ju, stage_memcpy_size = %ju\n",
                             j, stage_memcpy_time[j], stage_memcpy_size[j]);
 #    endif
-            AppUtils_Printf(MSG_NORMAL,
-                            "Boot App: Stage %d finished at %d usecs\n",
+            Lpm_uartDrvPrintf("Boot App: Stage %d finished at %d usecs\n",
                             j,
                             (uint32_t)time_boot_stage_finish[j]);
         }
 #endif
-        AppUtils_Printf(MSG_NORMAL,
-                        "Boot App: Total Num booted cores = %d\n",
+        Lpm_uartDrvPrintf("Boot App: Total Num booted cores = %d\n",
                         num_booted_cores);
 
         for (core_id = 0; core_id < num_booted_cores; core_id++)
         {
-            AppUtils_Printf(MSG_NORMAL,
-                            "Boot App: Booted Core ID #%d at %d usecs\n",
+            Lpm_uartDrvPrintf("Boot App: Booted Core ID #%d at %d usecs\n",
                             booted_core_ids[core_id],
                             (uint32_t)time_boot_core_finish[core_id]);
         }
     } /* if (retVal == CSL_PASS) */
     else
     {
-        AppUtils_Printf(MSG_NORMAL,
-                        "Boot App: Failure occurred in boot sequence\n");
+        Lpm_uartDrvPrintf("Boot App: Failure occurred in boot sequence\n");
     }
 
 #if defined(LPM_BOOTLOG_OUTPUT_ENABLED)

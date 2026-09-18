@@ -70,7 +70,7 @@
 #define configTIMER_CMD_QUEUE_BUFFER_SIZE   ( ( configTIMER_QUEUE_LENGTH * sizeof( timerQueueMessageType ) ) + safertosapiQUEUE_OVERHEAD_BYTES )
 
 #if defined (BUILD_MCU)
-#define configTIMER_TASK_STACK_SIZE         ( configMINIMAL_STACK_SIZE_WITH_FPU )
+#define configTIMER_TASK_STACK_SIZE         ( configTIMER_STACK_SIZE_WITH_FPU )
 /* The user configuration for the idle task. */
 #define configIDLE_TASK_STACK_SIZE          ( configMINIMAL_STACK_SIZE_WITH_FPU )
 #endif

@@ -47,7 +47,7 @@
 #include <ti/board/src/devices/common/common.h>
 #include <ti/drv/dss/dss.h>
 
-#include "ti/ip_fma/inc/ip_fma_dss.h"
+#include "ip_fma_dss.h"
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */

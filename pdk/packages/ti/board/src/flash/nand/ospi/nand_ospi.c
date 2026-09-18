@@ -534,8 +534,33 @@ NAND_HANDLE Nand_ospiOpen(uint32_t nandIntf, uint32_t portNum, void *params)
     /* Get the OSPI SoC configurations */
     OSPI_socGetInitCfg(SPI_OSPI_DOMAIN_MCU, portNum, &ospiCfg);
 
-    /* Save the DTR enable flag */
-    gDtrEnable = ospiCfg.dtrEnable;
+    /* Apply device-specific address bytes and PHY mode from the device header.
+     *
+     * Errata i2383: the OSPI controller requires 4-byte addressing when
+     * sampling in PHY DDR mode.
+     *
+     *   NAND_ADDR_BYTES_PROGRAMMABLE = 0 — fixed address bytes (e.g.
+     *       W35N01JWTBAG: always 2-byte).  PHY DDR is incompatible since the
+     *       controller needs 4-byte addressing for PHY DDR. TAP (no-PHY) DDR
+     *       is the valid alternative: dtrEnable is preserved so the flash
+     *       operates in 8D-8D-8D DDR mode; phyEnable is forced off so the
+     *       PHY calibration path (which needs 4-byte) is not used.
+     *
+     *   NAND_ADDR_BYTES_PROGRAMMABLE = 1 — switchable address bytes (e.g. a
+     *       future NAND supporting 4-byte). PHY DDR is fully supported when
+     *       NAND_OSPI_ADDR_BYTES is 4. Both dtrEnable and phyEnable are
+     *       preserved from the SOC config.
+     *
+     * For a new NAND device update NAND_OSPI_ADDR_BYTES and
+     * NAND_ADDR_BYTES_PROGRAMMABLE in the corresponding device header file. */
+    ospiCfg.numAddrBytes = NAND_OSPI_ADDR_BYTES;
+    gDtrEnable           = ospiCfg.dtrEnable;
+    if (NAND_ADDR_BYTES_PROGRAMMABLE == 0U)
+    {
+        /* Fixed 2-byte addressing: PHY DDR not compatible per errata i2383.
+         * Force phyEnable off to use TAP DDR mode (DDR without PHY). */
+        ospiCfg.phyEnable = BFALSE;
+    }
     dmaEnable  = ospiCfg.dmaEnable;
 
     /* Reset the PHY tunning configuration data when enabled */
@@ -555,8 +580,10 @@ NAND_HANDLE Nand_ospiOpen(uint32_t nandIntf, uint32_t portNum, void *params)
          * it turned off for open/erase/write operation
          */
         ospiCfg.phyEnable = BFALSE;
-        OSPI_socSetInitCfg(SPI_OSPI_DOMAIN_MCU, portNum, &ospiCfg);
     }
+    /* Always write back config so numAddrBytes and dtrEnable overrides
+     * are applied even when phyEnable was already BFALSE. */
+    OSPI_socSetInitCfg(SPI_OSPI_DOMAIN_MCU, portNum, &ospiCfg);
 
     /* Use default OSPI config params if no params provided */
     OSPI_Params_init(&spiParams);
@@ -595,7 +622,7 @@ NAND_HANDLE Nand_ospiOpen(uint32_t nandIntf, uint32_t portNum, void *params)
                 /* Enable Single SDR mode */
                 Nand_ospiEnableSingleSDR(hwHandle);
             }
-            
+
             /* Set read/write opcode and read dummy cycles */
             Nand_ospiSetOpcode(hwHandle);
 
@@ -634,7 +661,7 @@ void Nand_ospiClose(NAND_HANDLE handle)
 
         if (ospiHandle)
         {
-            /* 
+            /*
             * Some fields in RD_DATA_CAPTURE_REG are modified by the Nand_spiPhyTune API.
             * These fields need to be reset here to avoid errors in subsequent tests.
             */
@@ -799,7 +826,7 @@ static NAND_STATUS Nand_ospiPageLoad(OSPI_Handle ospiHandle, uint32_t rdAddr)
     xipPrefetchEnable = UTRUE;
     fssCfg.pFsasRegs = (CSL_fss_fsas_genregsRegs *)CSL_MCU_FSS0_FSAS_CFG_BASE;
     CSL_fssOspiSetXipPrefetchEnable(&fssCfg, CSL_FSS_FSAS_INTERFACE_PATH_SELECT_OSPI0, xipPrefetchEnable);
-    
+
     return NAND_PASS;
 }
 

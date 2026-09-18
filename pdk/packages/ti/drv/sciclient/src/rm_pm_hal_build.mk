@@ -195,11 +195,15 @@ objtree := $(PDK_INSTALL_PATH)/ti/drv/sciclient/src
 srctree := $(objtree)
 srcroot := $(srctree)
 
+# Only include rm_pm_hal if it exists (not present in GitHub snapshots)
+ifneq ($(wildcard $(PDK_INSTALL_PATH)/ti/drv/sciclient/src/rm_pm_hal/pm/lib/build.mk),)
 $(call _recurse_inc,)
-
 CFLAGS_LOCAL_COMMON += $(cppflags-y)
 CFLAGS_LOCAL_COMMON += -I$(srctree)/rm_pm_hal/pm/soc/$(TARGET_SOC)/include
 CFLAGS_LOCAL_COMMON += -I$(srctree)/rm_pm_hal/include
+else
+CFLAGS_LOCAL_COMMON += $(cppflags-y)
+endif
 CFLAGS_LOCAL_COMMON += -I$(PDK_INSTALL_PATH)/ti/drv/sciclient/soc/$(SCICLIENT_SOCVER)
 CFLAGS_LOCAL_COMMON += -I$(PDK_INSTALL_PATH)/ti/drv/sciclient/src/priv
 CFLAGS_LOCAL_COMMON += -I$(PDK_INSTALL_PATH)/ti/osal

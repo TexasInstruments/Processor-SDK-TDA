@@ -135,9 +135,25 @@ UART_Handle UART_open(uint32_t index, UART_Params *params)
     /* Get handle for this driver instance */
     handle = (UART_Handle)&(UART_config[index]);
     hwAttrs = (UART_HwAttrs *)handle->hwAttrs;
+    uint64_t divisor_16x = hwAttrs->frequency / (16 * params->baudRate);
+    uint64_t divisor_13x = hwAttrs->frequency / (13 * params->baudRate);
 
-    if(params->baudRate >= 460800)
-    {
+    /* Ensure divisors are at least 1 to avoid division by zero */
+    if (divisor_16x == 0) divisor_16x = 1;
+    if (divisor_13x == 0) divisor_13x = 1;
+
+    uint64_t actual_baud_16x = hwAttrs->frequency / (16 * divisor_16x);
+    int64_t error_16x = (int64_t)actual_baud_16x - (int64_t)params->baudRate;
+    uint64_t actual_baud_13x = hwAttrs->frequency / (13 * divisor_13x);
+    int64_t error_13x = (int64_t)actual_baud_13x - (int64_t)params->baudRate;
+
+    /* Get absolute values of errors for comparison */
+    int64_t abs_error_16x = (error_16x < 0) ? (-error_16x) : error_16x;
+    int64_t abs_error_13x = (error_13x < 0) ? (-error_13x) : error_13x;
+
+    if (abs_error_16x <= abs_error_13x) {
+        hwAttrs->operMode = UART16x_OPER_MODE;
+    }else{
         hwAttrs->operMode = UART13x_OPER_MODE;
     }
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2017-2025 Texas Instruments Incorporated
+ *  Copyright (C) 2017-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -69,6 +69,10 @@
 #define TISCI_MSG_FLAG_FW_CAP_CLOCK_SSC                 TISCI_BIT(10)
 #define TISCI_MSG_FLAG_FW_CAP_LPM_ENCRYPT_IMAGE         TISCI_BIT(11)
 #define TISCI_MSG_FLAG_FW_CAP_LPM_BOARDCFG_MANAGED      TISCI_BIT(12)
+#define TISCI_MSG_FLAG_FW_CAP_GET_DEVICE_MULTIPLE       TISCI_BIT(13)
+#define TISCI_MSG_FLAG_FW_CAP_LPM_IRQ_CONTEXT_LOST      TISCI_BIT(14)
+#define TISCI_MSG_FLAG_FW_CAP_LPM_CLK_CONTEXT_LOST      TISCI_BIT(15)
+#define TISCI_MSG_FLAG_FW_CAP_RM_UDMAP_MULTI_CH_CFG     TISCI_BIT(16)
 
 /**
  * \brief Notification message to indicate the DMSC is available.

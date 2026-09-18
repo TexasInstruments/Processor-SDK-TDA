@@ -4,7 +4,7 @@
  */ 
 /* 
  * 
- * Copyright (c) 2024 Texas Instruments Incorporated 
+ * Copyright (c) 2026 Texas Instruments Incorporated 
  * 
  * All rights reserved not granted herein. 
  * 
@@ -82,8 +82,8 @@ MEMORY
     IPC_VRING_MEM                     : ORIGIN = 0xAC000000 , LENGTH = 0x03000000
     /* Memory for remote core logging [ size 256.00 KB ] */
     APP_LOG_MEM                       : ORIGIN = 0xAF000000 , LENGTH = 0x00040000
-    /* Memory for TI OpenVX shared memory. MUST be non-cached or cache-coherent [ size 31.75 MB ] */
-    TIOVX_OBJ_DESC_MEM                : ORIGIN = 0xAF040000 , LENGTH = 0x01FC0000
+    /* Memory for TI OpenVX shared memory. MUST be non-cached or cache-coherent [ size 27.75 MB ] */
+    TIOVX_OBJ_DESC_MEM                : ORIGIN = 0xAF040000 , LENGTH = 0x01BC0000
     /* Memory for remote core file operations [ size  4.00 MB ] */
     APP_FILEIO_MEM                    : ORIGIN = 0xB1000000 , LENGTH = 0x00400000
     /* DDR for MCU4_1 for local heap [ size  8.00 MB ] */

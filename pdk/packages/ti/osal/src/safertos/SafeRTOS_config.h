@@ -39,6 +39,7 @@
 #if defined (BUILD_C7X)
 #define configMINIMAL_STACK_SIZE        ( 16 * 1024 )
 #elif defined (BUILD_MCU)
+#define configTIMER_STACK_SIZE_WITH_FPU         ( 16 * 1024U )
 #define configMINIMAL_STACK_SIZE_WITH_FPU       ( 1024U )
 #define configMINIMAL_STACK_SIZE_WITH_NO_FPU    ( 512U )
 #define configINCLUDE_RUNTIMESTATS          ( 1 )

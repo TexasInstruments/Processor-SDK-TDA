@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017-2023 Texas Instruments Incorporated
+ * Copyright (c) 2017-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -76,7 +76,10 @@ TESTCASE(tivxVideoIOCsitxCsirx)
 
 #if defined(BUILD_CT_TIOVX_VIDEO_IO_CAPTURE_TESTS)
 TESTCASE(tivxVideoIOCapture)
+TESTCASE(tivxVideoIOCaptureAddition)
+#if !defined(LDRA_COVERAGE_ENABLED_VIDEO_IO)
 TESTCASE(tivxVideoIOCaptureSplitMode)
+#endif
 #endif
 
 #endif

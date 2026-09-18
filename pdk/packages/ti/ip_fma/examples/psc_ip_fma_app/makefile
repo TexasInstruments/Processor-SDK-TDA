@@ -8,11 +8,15 @@ include $(RULES_MAKE)
 endif
 
 ifeq ($(BUILD_OS_TYPE), baremetal)
+  ifeq ($(RB_ENABLE), TRUE)
+    APP_NAME = psc_ip_fma_app_rb_enable_$(BUILD_OS_TYPE)
+  else
     APP_NAME = psc_ip_fma_app_$(BUILD_OS_TYPE)
+  endif
 endif
 
-SRCDIR = . src $(PDK_INSTALL_PATH)/ti/ip_fma/src
-INCDIR = . $(PDK_INSTALL_PATH)/ti/ip_fma/inc
+SRCDIR = . src $(IP_FMA_COMP_PATH)/src
+INCDIR = . $(IP_FMA_COMP_PATH)/inc
 
 # List all the external components/interfaces, whose interface header files
 #  need to be included for this component
@@ -23,6 +27,12 @@ COMP_LIST_COMMON = ip_fma
 
 ifeq ($(BUILD_OS_TYPE), baremetal)
   COMP_LIST_COMMON += $(PDK_COMMON_BAREMETAL_COMP)
+
+  ifeq ($(RB_ENABLE), TRUE)
+    COMP_LIST_COMMON := $(filter-out csl,$(COMP_LIST_COMMON))
+    COMP_LIST_COMMON += csl_ipfma
+  endif
+
   SRCS_COMMON += main_baremetal.c
 endif
 

@@ -96,6 +96,7 @@ freertos_EXAMPLE_LIST =
 
 ifeq ($(SOC),$(filter $(SOC), $(freertos_SOCLIST)))
 freertos_EXAMPLE_LIST =  freertos_test_task_switch
+freertos_EXAMPLE_LIST =  freertos_test_task_context_switch
 freertos_EXAMPLE_LIST += freertos_test_ut
 ifneq ($(wildcard $(PDK_FREERTOS_COMP_PATH)/freertos_posix.mak),)
 ifneq ($(wildcard $(PDK_FREERTOS_COMP_PATH)/test/freertos/posix_demo),)
@@ -175,6 +176,28 @@ export freertos_test_task_switch_BOARDLIST
 freertos_test_task_switch_$(SOC)_CORELIST = $(freertos_$(SOC)_CORELIST)
 export freertos_test_task_switch_$(SOC)_CORELIST
 export freertos_test_task_switch_SBL_APPIMAGEGEN = yes
+
+# freertos task context switch test app to validate c7x port context save + restore
+freertos_test_task_context_switch_COMP_LIST = freertos_test_task_context_switch
+freertos_test_task_context_switch_RELPATH = ti/kernel/test/freertos/task_context_switch
+freertos_test_task_context_switch_PATH = $(PDK_FREERTOS_COMP_PATH)/test/freertos/task_context_switch
+freertos_test_task_context_switch_BOARD_DEPENDENCY = yes
+freertos_test_task_context_switch_CORE_DEPENDENCY = yes
+freertos_test_task_context_switch_XDC_CONFIGURO = no
+freertos_test_task_context_switch_MAKEFILE = -f makefile
+export freertos_test_task_context_switch_COMP_LIST
+export freertos_test_task_context_switch_BOARD_DEPENDENCY
+export freertos_test_task_context_switch_CORE_DEPENDENCY
+export freertos_test_task_context_switch_XDC_CONFIGURO
+export freertos_test_task_context_switch_MAKEFILE
+freertos_test_task_context_switch_PKG_LIST = freertos_test_task_context_switch
+export freertos_test_task_context_switch_PKG_LIST
+freertos_test_task_context_switch_INCLUDE = $(freertos_test_task_context_switch_PATH)
+freertos_test_task_context_switch_BOARDLIST = j721e_evm j721s2_evm j784s4_evm
+export freertos_test_task_context_switch_BOARDLIST
+freertos_test_task_context_switch_$(SOC)_CORELIST = c7x_1 c7x_2 c7x_3 c7x_4
+export freertos_test_task_context_switch_$(SOC)_CORELIST
+export freertos_test_task_context_switch_SBL_APPIMAGEGEN = yes
 
 # freertos rtos unit test app
 freertos_test_ut_COMP_LIST = freertos_test_ut

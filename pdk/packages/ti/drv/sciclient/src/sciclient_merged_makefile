@@ -72,7 +72,7 @@ SRCS_COMMON += sciclient_utils.c
 SRCS_COMMON += sciclient_merged.c
 endif
 
-ifeq ($(SOC),$(filter $(SOC), j7200 j784s4 j742s2))
+ifeq ($(SOC),$(filter $(SOC), j7200 j784s4 j742s2 j721s2))
 SRCS_COMMON += sciclient_s2r.c
 endif
 

@@ -118,6 +118,15 @@ static char *app_get_test_file_path()
     return getenv("VX_TEST_DATA_PATH");
     #endif
 }
+
+static void app_update_debug_cache_and_dump(AppObj *obj,
+                                             vx_bool is_yuv_cam_input,
+                                             tivx_raw_image raw_ref,
+                                             vx_image cap_yuv_ref,
+                                             vx_image y8_r8_c2_ref,
+                                             vx_user_data_object h3a_ref,
+                                             vx_image scaler_out_ref,
+                                             vx_image ldc_out_ref);
 #endif //_APP_DEBUG_
 
 /*
@@ -756,7 +765,7 @@ vx_status app_init(AppObj *obj)
     vx_uint8 detectedSensors[ISS_SENSORS_MAX_CHANNEL];
 #if defined(A72) || defined(A53)
 #if defined(LINUX)
-/*ITT server is supported only in target mode and only on Linux*/
+    /* ITT server is supported only in target mode and only on Linux */
     status = itt_server_init((void*)obj, (void*)save_debug_images, (void*)appSingleCamUpdateVpacDcc);
     if(status != 0)
     {
@@ -777,6 +786,14 @@ vx_status app_init(AppObj *obj)
 
     obj->stop_task = 0;
     obj->stop_task_done = 0;
+
+#ifdef _APP_DEBUG_
+    obj->debug_last_frame_valid = vx_false_e;
+    if (tivxMutexCreate(&obj->debug_last_frame_mutex) != VX_SUCCESS)
+    {
+        printf("Warning : Failed to create debug_last_frame_mutex. save_debug_images() will not work \n");
+    }
+#endif
 
 #if defined(SOC_AM62A) && defined(QNX)
     obj->stop_screen_task = 0;
@@ -828,7 +845,7 @@ vx_status app_init(AppObj *obj)
         status = appEnumerateImageSensor(sensor_list, &num_sensors_found);
     }
 
-    if(obj->is_interactive)
+    if(obj->is_interactive && !obj->file_read_enable)
     {
         selectedSensor = 0xFF;
         obj->selectedCam = 0xFF;
@@ -891,17 +908,7 @@ vx_status app_init(AppObj *obj)
         obj->sensor_name = sensor_list[selectedSensor];
         printf("Sensor selected : %s\n", obj->sensor_name);
 
-        ch = 0xFF;
-        fflush (stdin);
-        while ((ch != '0') && (ch != '1'))
-        {
-            fflush (stdin);
-            printf ("LDC Selection Yes(1)/No(0) : ");
-            ch = getchar();
-        }
-
-        obj->ldc_enable = ch - '0';
-
+        #if !defined(SOC_FAMILY_TDA5)
         #ifdef VPAC3
         /* Selection for MV enable */
         ch = 0xFF;
@@ -912,10 +919,10 @@ vx_status app_init(AppObj *obj)
             printf ("Dual FCP enable for MV Selection Yes(1)/No(0) : ");
             ch = getchar();
         }
-        
+
         obj->vpac3_dual_fcp_enable = ch - '0';
         #endif
-        
+
         #if defined(VPAC3) || defined(VPAC3L)
         /* Selection for CAC enable */
         ch = 0xFF;
@@ -926,9 +933,11 @@ vx_status app_init(AppObj *obj)
             printf ("CAC Selection Yes(1)/No(0) : ");
             ch = getchar();
         }
-        
+
         obj->cac_enable = ch - '0';
         #endif
+        #endif
+
     }
     else
     {
@@ -941,6 +950,17 @@ vx_status app_init(AppObj *obj)
             return VX_FAILURE;
         }
     }
+
+    ch = 0xFF;
+    fflush (stdin);
+    while ((ch != '0') && (ch != '1'))
+    {
+        fflush (stdin);
+        printf ("LDC Selection Yes(1)/No(0) : ");
+        ch = getchar();
+    }
+
+    obj->ldc_enable = ch - '0';
 
     obj->sensor_wdr_mode = 0;
 
@@ -960,10 +980,10 @@ vx_status app_init(AppObj *obj)
 #ifdef VPAC3
     /* YUV8 output from dual CC for HV and MV */
     if (obj->vpac3_dual_fcp_enable == 1U)
-    { 
+    {
         /* Display Modification for HV*/
         obj->display_params.outWidth = 960;
-        
+
         /* Display initialization MV*/
         memset(&obj->display_params_MV, 0, sizeof(tivx_display_params_t));
         obj->display_params_MV.opMode = TIVX_KERNEL_DISPLAY_ZERO_BUFFER_COPY_MODE;
@@ -985,6 +1005,10 @@ vx_status app_init(AppObj *obj)
 vx_status app_deinit(AppObj *obj)
 {
     vx_status status = VX_FAILURE;
+
+#ifdef _APP_DEBUG_
+    tivxMutexDelete(&obj->debug_last_frame_mutex);
+#endif
 
 #if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
     /* Common cleanup for synchronization */
@@ -1059,7 +1083,7 @@ vx_status app_create_graph(AppObj *obj)
     vx_image viss_out_image = NULL;
 #ifdef VPAC3
     vx_image viss_out_image_MV = NULL;
-#endif    
+#endif
     vx_image ldc_in_image = NULL;
     vx_image capt_yuv_image = NULL;
 
@@ -1076,8 +1100,12 @@ vx_status app_create_graph(AppObj *obj)
     {
         params_list_depth++;
     }
-    /* Fixed-size to avoid VLA; 3 covers all combinations. */
-    vx_graph_parameter_queue_params_t graph_parameters_queue_params_list[3];
+    /* Fixed-size to avoid VLA; 6 covers all combinations (capture/raw +
+     * AM62A scaler + test_mode display + y8_r8_c2 + h3a_aew_af + ldc_out).
+     * params_list_depth is recomputed below from the actual number of
+     * parameters registered (graph_parameter_num), so this initial value
+     * is unused once _APP_DEBUG_ adds the 3 extra debug parameters.      */
+    vx_graph_parameter_queue_params_t graph_parameters_queue_params_list[6];
 
     printf("Querying %s \n", obj->sensor_name);
     memset(&sensorParams, 0, sizeof(sensorParams));
@@ -1184,12 +1212,15 @@ vx_status app_create_graph(AppObj *obj)
     APP_PRINTF("Sensor DCC ID = %d\n", sensorParams.dccId);
     APP_PRINTF("Sensor Supported Features = 0x%x\n", sensor_features_supported);
     APP_PRINTF("Sensor Enabled Features = 0x%x\n", sensor_features_enabled);
-    sensor_init_status = appInitImageSensor(obj->sensor_name, sensor_features_enabled, channel_mask);/*Mask = 1 for camera # 0*/
-    if(0 != sensor_init_status)
+    if (!obj->file_read_enable)
     {
-        /* Not returning failure because application may be waiting for
-            error/test frame */
-        printf("Error initializing sensor %s \n", obj->sensor_name);
+        sensor_init_status = appInitImageSensor(obj->sensor_name, sensor_features_enabled, channel_mask);/*Mask = 1 for camera # 0*/
+        if(0 != sensor_init_status)
+        {
+            /* Not returning failure because application may be waiting for
+                error/test frame */
+            printf("Error initializing sensor %s \n", obj->sensor_name);
+        }
     }
 
     image_width     = sensorParams.sensorInfo.raw_params.width;
@@ -1225,126 +1256,33 @@ Sensor driver does not support metadata yet.
     /* Setting to num buf of capture node */
     obj->num_cap_buf = NUM_BUFS;
 
-    if(vx_false_e == yuv_cam_input)
+    if (obj->file_read_enable)
     {
-        raw_image = tivxCreateRawImage(obj->context, &sensorParams.sensorInfo.raw_params);
+        if (vx_true_e == yuv_cam_input)
+        {
+            printf("Error: file_read_enable is only supported for RAW sensors (not YUV camera input)\n");
+            return VX_FAILURE;
+        }
 
-        /* allocate Input and Output refs, multiple refs created to allow pipelining of graph */
+        obj->capture_node = NULL;
+        /* allocate multiple raw image refs to allow pipelining of graph */
         for(buf_id=0; buf_id<obj->num_cap_buf; buf_id++)
         {
             if(status == VX_SUCCESS)
             {
-                obj->cap_frames[buf_id] = vxCreateObjectArray(obj->context, (vx_reference)raw_image, num_capture_frames);
-                status = vxGetStatus((vx_reference) obj->cap_frames[buf_id]);
+                obj->raw_frames[buf_id] = tivxCreateRawImage(obj->context, &sensorParams.sensorInfo.raw_params);
+                status = vxGetStatus((vx_reference) obj->raw_frames[buf_id]);
             }
         }
-    }
-    else
-    {
-        capt_yuv_image = vxCreateImage(
-                                obj->context,
-                                sensorParams.sensorInfo.raw_params.width,
-                                sensorParams.sensorInfo.raw_params.height,
-                                VX_DF_IMAGE_UYVY
-                         );
-
-        /* allocate Input and Output refs, multiple refs created to allow pipelining of graph */
-        for(buf_id=0; buf_id<obj->num_cap_buf; buf_id++)
-        {
-            if(status == VX_SUCCESS)
-            {
-                obj->cap_frames[buf_id] = vxCreateObjectArray(obj->context, (vx_reference)capt_yuv_image, num_capture_frames);
-                status = vxGetStatus((vx_reference) obj->cap_frames[buf_id]);
-            }
-        }
-    }
-
-    /* Config initialization */
-    tivx_capture_params_init(&local_capture_config);
-
-    local_capture_config.timeout = 33;
-    local_capture_config.timeoutInitial = 500;
-
-#if defined(SOC_AM62A)
-    local_capture_config.numInst  = 1U;/* Single instance for AM62A */
-#elif defined(SOC_J784S4) || defined(SOC_J742S2)
-    local_capture_config.numInst  = 3U;/* Configure three instances */
-#else
-    local_capture_config.numInst  = 2U;/* Configure both instances */
-#endif
-    local_capture_config.numCh = 1U;/* Single cam. Only 1 channel enabled */
-    {
-        vx_uint8 ch, id, lane, q;
-        for(id = 0; id < local_capture_config.numInst; id++)
-        {
-            local_capture_config.instId[id]                       = id;
-            local_capture_config.instCfg[id].enableCsiv2p0Support = (uint32_t)vx_true_e;
-            local_capture_config.instCfg[id].numDataLanes         = sensorParams.sensorInfo.numDataLanes;
-            local_capture_config.instCfg[id].laneBandSpeed        = sensorParams.sensorInfo.csi_laneBandSpeed;
-
-            for (lane = 0; lane < local_capture_config.instCfg[id].numDataLanes; lane++)
-            {
-                local_capture_config.instCfg[id].dataLanesMap[lane] = lane + 1;
-            }
-            for (q = 0; q < NUM_CAPT_CHANNELS; q++)
-            {
-                ch = (NUM_CAPT_CHANNELS-1)* id + q;
-                local_capture_config.chVcNum[ch]   = q;
-                local_capture_config.chInstMap[ch] = id;
-            }
-        }
-    }
-
-    local_capture_config.chInstMap[0] = obj->selectedCam/NUM_CAPT_CHANNELS;
-    local_capture_config.chVcNum[0]   = obj->selectedCam%NUM_CAPT_CHANNELS;
-
-    capture_config = vxCreateUserDataObject(obj->context, capture_user_data_object_name, sizeof(tivx_capture_params_t), &local_capture_config);
-    APP_PRINTF("capture_config = 0x%p \n", capture_config);
-
-    APP_PRINTF("Creating capture node \n");
-    obj->capture_node = tivxCaptureNode(obj->graph, capture_config, obj->cap_frames[0]);
-    APP_PRINTF("obj->capture_node = 0x%p \n", obj->capture_node);
-
-    if(status == VX_SUCCESS)
-    {
-        status = vxReleaseUserDataObject(&capture_config);
-    }
-    if(status == VX_SUCCESS)
-    {
-        status = vxSetNodeTarget(obj->capture_node, VX_TARGET_STRING, TIVX_TARGET_CAPTURE2);
-    }
-
-    if(vx_false_e == yuv_cam_input)
-    {
-        obj->raw = (tivx_raw_image)vxGetObjectArrayItem(obj->cap_frames[0], 0);
-        if(status == VX_SUCCESS)
-        {
-            status = tivxReleaseRawImage(&raw_image);
-        }
-#ifdef _APP_DEBUG_
-
-
-        obj->fs_test_raw_image = tivxCreateRawImage(obj->context, &(sensorParams.sensorInfo.raw_params));
-
-        if (NULL != obj->fs_test_raw_image)
-        {
-            if(status == VX_SUCCESS)
-            {
-                status = read_test_image_raw(NULL, obj->fs_test_raw_image, obj->test_mode);
-            }
-            else
-            {
-                status = tivxReleaseRawImage(&obj->fs_test_raw_image);
-                obj->fs_test_raw_image = NULL;
-            }
-        }
-#endif //_APP_DEBUG_
+        obj->raw = obj->raw_frames[0];
 
         status = app_create_viss(obj, sensor_wdr_enabled);
         if(VX_SUCCESS == status)
         {
-        vxSetNodeTarget(obj->node_viss, VX_TARGET_STRING, TIVX_TARGET_VPAC_VISS1);
-        tivxSetNodeParameterNumBufByIndex(obj->node_viss, 6u, obj->num_cap_buf);
+            vxSetNodeTarget(obj->node_viss, VX_TARGET_STRING, TIVX_TARGET_VPAC_VISS1);
+#ifndef _APP_DEBUG_
+            tivxSetNodeParameterNumBufByIndex(obj->node_viss, 6u, obj->num_cap_buf);
+#endif
         }
         else
         {
@@ -1352,27 +1290,179 @@ Sensor driver does not support metadata yet.
             return -1;
         }
 
-        status = app_create_aewb(obj, sensor_wdr_enabled);
-        if(VX_SUCCESS != status)
-        {
-            printf("app_create_aewb failed \n");
-            return -1;
-        }
+        /* AEWB result is not consumed by VISS in file-read mode (VISS is
+         * created with ae_awb_result = NULL), so the AEWB node is skipped
+         * entirely to avoid running it against canned frames for no
+         * functional benefit. */
         viss_out_image = obj->y8_r8_c2;
 #ifdef VPAC3
-    /* Populate viss_out_image with image created */
-    if (obj->vpac3_dual_fcp_enable == 1U)
-    {
-        viss_out_image_MV = obj->y12;
-    }
+        /* Populate viss_out_image with image created */
+        if (obj->vpac3_dual_fcp_enable == 1U)
+        {
+            viss_out_image_MV = obj->y12;
+        }
 #endif
         ldc_in_image = viss_out_image;
     }
     else
     {
-        obj->capt_yuv_image = (vx_image)vxGetObjectArrayItem(obj->cap_frames[0], 0);
-        ldc_in_image = obj->capt_yuv_image;
-        vxReleaseImage(&capt_yuv_image);
+        if(vx_false_e == yuv_cam_input)
+        {
+            raw_image = tivxCreateRawImage(obj->context, &sensorParams.sensorInfo.raw_params);
+
+            /* allocate Input and Output refs, multiple refs created to allow pipelining of graph */
+            for(buf_id=0; buf_id<obj->num_cap_buf; buf_id++)
+            {
+                if(status == VX_SUCCESS)
+                {
+                    obj->cap_frames[buf_id] = vxCreateObjectArray(obj->context, (vx_reference)raw_image, num_capture_frames);
+                    status = vxGetStatus((vx_reference) obj->cap_frames[buf_id]);
+                }
+            }
+        }
+        else
+        {
+            capt_yuv_image = vxCreateImage(
+                                    obj->context,
+                                    sensorParams.sensorInfo.raw_params.width,
+                                    sensorParams.sensorInfo.raw_params.height,
+                                    VX_DF_IMAGE_UYVY
+                             );
+
+            /* allocate Input and Output refs, multiple refs created to allow pipelining of graph */
+            for(buf_id=0; buf_id<obj->num_cap_buf; buf_id++)
+            {
+                if(status == VX_SUCCESS)
+                {
+                    obj->cap_frames[buf_id] = vxCreateObjectArray(obj->context, (vx_reference)capt_yuv_image, num_capture_frames);
+                    status = vxGetStatus((vx_reference) obj->cap_frames[buf_id]);
+                }
+            }
+        }
+
+        /* Config initialization */
+        tivx_capture_params_init(&local_capture_config);
+
+        local_capture_config.timeout = 33;
+        local_capture_config.timeoutInitial = 500;
+
+#if defined(SOC_AM62A)
+        local_capture_config.numInst  = 1U;/* Single instance for AM62A */
+#elif defined(SOC_J784S4) || defined(SOC_J742S2)
+        local_capture_config.numInst  = 3U;/* Configure three instances */
+#elif defined(SOC_J721S2) || defined(SOC_J722S) || defined(SOC_J721E)
+        local_capture_config.numInst  = 2U;/* Configure both instances */
+#elif defined(SOC_TDA54)
+        local_capture_config.numInst  = 1U;/* Configure one instances */
+#endif
+        local_capture_config.numCh = 1U;/* Single cam. Only 1 channel enabled */
+        {
+            vx_uint8 ch, id, lane, q;
+            for(id = 0; id < local_capture_config.numInst; id++)
+            {
+                local_capture_config.instId[id]                       = id;
+                #if defined(SOC_FAMILY_J7) || defined(SOC_FAMILY_AM)
+                local_capture_config.instCfg[id].enableCsiv2p0Support = (uint32_t)vx_true_e;
+                #elif defined(SOC_FAMILY_TDA5)
+                local_capture_config.instCfg[id].phyMode              = TIVX_CAPTURE_DPHY_MODE;
+                #endif
+                local_capture_config.instCfg[id].numDataLanes         = sensorParams.sensorInfo.numDataLanes;
+                local_capture_config.instCfg[id].laneBandSpeed        = sensorParams.sensorInfo.csi_laneBandSpeed;
+
+                for (lane = 0; lane < local_capture_config.instCfg[id].numDataLanes; lane++)
+                {
+                    local_capture_config.instCfg[id].dataLanesMap[lane] = lane + 1;
+                }
+                for (q = 0; q < NUM_CAPT_CHANNELS; q++)
+                {
+                    ch = (NUM_CAPT_CHANNELS-1)* id + q;
+                    local_capture_config.chVcNum[ch]   = q;
+                    local_capture_config.chInstMap[ch] = id;
+                }
+            }
+        }
+
+        local_capture_config.chInstMap[0] = obj->selectedCam/NUM_CAPT_CHANNELS;
+        local_capture_config.chVcNum[0]   = obj->selectedCam%NUM_CAPT_CHANNELS;
+
+        capture_config = vxCreateUserDataObject(obj->context, capture_user_data_object_name, sizeof(tivx_capture_params_t), &local_capture_config);
+        APP_PRINTF("capture_config = 0x%p \n", capture_config);
+
+        APP_PRINTF("Creating capture node \n");
+        obj->capture_node = tivxCaptureNode(obj->graph, capture_config, obj->cap_frames[0]);
+        APP_PRINTF("obj->capture_node = 0x%p \n", obj->capture_node);
+
+        if(status == VX_SUCCESS)
+        {
+            status = vxReleaseUserDataObject(&capture_config);
+        }
+        if(status == VX_SUCCESS)
+        {
+            status = vxSetNodeTarget(obj->capture_node, VX_TARGET_STRING, TIVX_TARGET_CAPTURE2);
+        }
+
+        if(vx_false_e == yuv_cam_input)
+        {
+            obj->raw = (tivx_raw_image)vxGetObjectArrayItem(obj->cap_frames[0], 0);
+            if(status == VX_SUCCESS)
+            {
+                status = tivxReleaseRawImage(&raw_image);
+            }
+#ifdef _APP_DEBUG_
+
+
+            obj->fs_test_raw_image = tivxCreateRawImage(obj->context, &(sensorParams.sensorInfo.raw_params));
+
+            if (NULL != obj->fs_test_raw_image)
+            {
+                if(status == VX_SUCCESS)
+                {
+                    status = read_test_image_raw(NULL, obj->fs_test_raw_image, obj->test_mode);
+                }
+                else
+                {
+                    status = tivxReleaseRawImage(&obj->fs_test_raw_image);
+                    obj->fs_test_raw_image = NULL;
+                }
+            }
+#endif //_APP_DEBUG_
+
+            status = app_create_viss(obj, sensor_wdr_enabled);
+            if(VX_SUCCESS == status)
+            {
+            vxSetNodeTarget(obj->node_viss, VX_TARGET_STRING, TIVX_TARGET_VPAC_VISS1);
+#ifndef _APP_DEBUG_
+            tivxSetNodeParameterNumBufByIndex(obj->node_viss, 6u, obj->num_cap_buf);
+#endif
+            }
+            else
+            {
+                printf("app_create_viss failed \n");
+                return -1;
+            }
+
+            status = app_create_aewb(obj, sensor_wdr_enabled);
+            if(VX_SUCCESS != status)
+            {
+                printf("app_create_aewb failed \n");
+                return -1;
+            }
+            viss_out_image = obj->y8_r8_c2;
+#ifdef VPAC3
+        /* Populate viss_out_image with image created */
+        if (obj->vpac3_dual_fcp_enable == 1U)
+        {
+            viss_out_image_MV = obj->y12;
+        }
+#endif
+            ldc_in_image = viss_out_image;
+        }
+        else
+        {
+            obj->capt_yuv_image = (vx_image)vxGetObjectArrayItem(obj->cap_frames[0], 0);
+            ldc_in_image = obj->capt_yuv_image;
+            vxReleaseImage(&capt_yuv_image);
+        }
     }
 
     if (obj->ldc_enable)
@@ -1389,10 +1479,12 @@ Sensor driver does not support metadata yet.
             printf("app_create_ldc returned error \n");
             return status;
         }
+#ifndef _APP_DEBUG_
         if(status == VX_SUCCESS)
         {
             status = tivxSetNodeParameterNumBufByIndex(obj->node_ldc, 7u, obj->num_cap_buf);
         }
+#endif
 
         /*Check if resizing is needed for display*/
         if((obj->table_width >= obj->display_params.outWidth) && (obj->table_height >= obj->display_params.outHeight))
@@ -1572,7 +1664,7 @@ Sensor driver does not support metadata yet.
 #ifdef VPAC3
     /* Check status of MV node creation */
     if (obj->vpac3_dual_fcp_enable == 1U)
-    {    
+    {
         if(status == VX_SUCCESS)
         {
             status = vxSetNodeTarget(obj->displayNode_MV, VX_TARGET_STRING, TIVX_TARGET_DISPLAY1);
@@ -1582,59 +1674,117 @@ Sensor driver does not support metadata yet.
 #endif
 #endif /* #if !(defined(SOC_AM62A) && defined(QNX)) */
 
-    int graph_parameter_num = 0;
+    {
+        int graph_parameter_num = 0;
 
-    /* input @ node index 1, becomes graph parameter 0 */
-    add_graph_parameter_by_node_index(obj->graph, obj->capture_node, 1);
+        if (!obj->file_read_enable)
+        {
+            /* input @ node index 1, becomes graph parameter 0 */
+            add_graph_parameter_by_node_index(obj->graph, obj->capture_node, 1);
 
-    graph_parameters_queue_params_list[graph_parameter_num].graph_parameter_index = graph_parameter_num;
-    graph_parameters_queue_params_list[graph_parameter_num].refs_list_size = obj->num_cap_buf;
-    graph_parameters_queue_params_list[graph_parameter_num].refs_list = (vx_reference*)&(obj->cap_frames[0]);
-    graph_parameter_num++;
+            graph_parameters_queue_params_list[graph_parameter_num].graph_parameter_index = graph_parameter_num;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list_size = obj->num_cap_buf;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list = (vx_reference*)&(obj->cap_frames[0]);
+            graph_parameter_num++;
+        }
+        else
+        {
+            /* VISS raw input @ node index 3, becomes graph parameter 0 */
+            add_graph_parameter_by_node_index(obj->graph, obj->node_viss, 3);
+
+            graph_parameters_queue_params_list[graph_parameter_num].graph_parameter_index = graph_parameter_num;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list_size = obj->num_cap_buf;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list = (vx_reference*)&(obj->raw_frames[0]);
+            graph_parameter_num++;
+        }
 
 #if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
-    /* Scaler output becomes graph parameter 1.  By managing these buffers
-     * as graph parameters we can dequeue the exact image TIOVX just
-     * finished writing, which eliminates the source-side read/write race
-     * that causes tearing when blitting from display_image.             */
-    if(vx_true_e == obj->scaler_enable)
-    {
-        add_graph_parameter_by_node_index(obj->graph, obj->scalerNode, 1);
-        graph_parameters_queue_params_list[graph_parameter_num].graph_parameter_index = graph_parameter_num;
-        graph_parameters_queue_params_list[graph_parameter_num].refs_list_size = obj->num_cap_buf;
-        graph_parameters_queue_params_list[graph_parameter_num].refs_list =
-                (vx_reference*)&(obj->scaler_out_imgs[0]);
-        graph_parameter_num++;
-    }
+        /* Scaler output becomes graph parameter 1.  By managing these buffers
+         * as graph parameters we can dequeue the exact image TIOVX just
+         * finished writing, which eliminates the source-side read/write race
+         * that causes tearing when blitting from display_image.             */
+        if(vx_true_e == obj->scaler_enable)
+        {
+            add_graph_parameter_by_node_index(obj->graph, obj->scalerNode, 1);
+            graph_parameters_queue_params_list[graph_parameter_num].graph_parameter_index = graph_parameter_num;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list_size = obj->num_cap_buf;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list =
+                    (vx_reference*)&(obj->scaler_out_imgs[0]);
+            graph_parameter_num++;
+        }
 #endif
 
-    if(obj->test_mode == 1)
-    {
-        add_graph_parameter_by_node_index(obj->graph, obj->displayNode, 1);
-        /* set graph schedule config such that graph parameter @ index 0 is enqueuable */
-        graph_parameters_queue_params_list[graph_parameter_num].graph_parameter_index = graph_parameter_num;
-        graph_parameters_queue_params_list[graph_parameter_num].refs_list_size = 1;
-        graph_parameters_queue_params_list[graph_parameter_num].refs_list = (vx_reference*)&(obj->display_image);
-        graph_parameter_num++;
-    }
+        if(obj->test_mode == 1)
+        {
+            add_graph_parameter_by_node_index(obj->graph, obj->displayNode, 1);
+            /* set graph schedule config such that graph parameter @ index 0 is enqueuable */
+            graph_parameters_queue_params_list[graph_parameter_num].graph_parameter_index = graph_parameter_num;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list_size = 1;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list = (vx_reference*)&(obj->display_image);
+            graph_parameter_num++;
+        }
 
-    if(status == VX_SUCCESS)
-    {
-        status = tivxSetGraphPipelineDepth(obj->graph, obj->num_cap_buf);
-    }
+#ifdef _APP_DEBUG_
+        if (vx_false_e == yuv_cam_input)
+        {
+            /* y8_r8_c2: VISS output2 @ node index 6 */
+            add_graph_parameter_by_node_index(obj->graph, obj->node_viss, 6);
+            graph_parameters_queue_params_list[graph_parameter_num].graph_parameter_index = graph_parameter_num;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list_size = obj->num_cap_buf;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list = (vx_reference*)&(obj->y8_r8_c2_frames[0]);
+            obj->y8_r8_c2_graph_param_idx = graph_parameter_num;
+            graph_parameter_num++;
 
-    /* Schedule mode auto is used, here we dont need to call vxScheduleGraph
-     * Graph gets scheduled automatically as refs are enqueued to it
-     */
-    if(status == VX_SUCCESS)
-    {
-        status = vxSetGraphScheduleConfig(obj->graph,
-                        VX_GRAPH_SCHEDULE_MODE_QUEUE_AUTO,
-                        params_list_depth,
-                        graph_parameters_queue_params_list
-                        );
+            /* h3a_aew_af: VISS h3a_output @ node index 9 */
+            add_graph_parameter_by_node_index(obj->graph, obj->node_viss, 9);
+            graph_parameters_queue_params_list[graph_parameter_num].graph_parameter_index = graph_parameter_num;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list_size = obj->num_cap_buf;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list = (vx_reference*)&(obj->h3a_aew_af_frames[0]);
+            obj->h3a_aew_af_graph_param_idx = graph_parameter_num;
+            graph_parameter_num++;
+        }
+        else
+        {
+            obj->y8_r8_c2_graph_param_idx = -1;
+            obj->h3a_aew_af_graph_param_idx = -1;
+        }
+
+        if (obj->ldc_enable)
+        {
+            /* ldc_out: LDC out0_img @ node index 7 */
+            add_graph_parameter_by_node_index(obj->graph, obj->node_ldc, 7);
+            graph_parameters_queue_params_list[graph_parameter_num].graph_parameter_index = graph_parameter_num;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list_size = obj->num_cap_buf;
+            graph_parameters_queue_params_list[graph_parameter_num].refs_list = (vx_reference*)&(obj->ldc_out_frames[0]);
+            obj->ldc_out_graph_param_idx = graph_parameter_num;
+            graph_parameter_num++;
+        }
+        else
+        {
+            obj->ldc_out_graph_param_idx = -1;
+        }
+#endif
+
+        params_list_depth = (vx_uint32)graph_parameter_num;
+
+        if(status == VX_SUCCESS)
+        {
+            status = tivxSetGraphPipelineDepth(obj->graph, obj->num_cap_buf);
+        }
+
+        /* Schedule mode auto is used, here we dont need to call vxScheduleGraph
+         * Graph gets scheduled automatically as refs are enqueued to it
+         */
+        if(status == VX_SUCCESS)
+        {
+            status = vxSetGraphScheduleConfig(obj->graph,
+                            VX_GRAPH_SCHEDULE_MODE_QUEUE_AUTO,
+                            params_list_depth,
+                            graph_parameters_queue_params_list
+                            );
+        }
+        APP_PRINTF("vxSetGraphScheduleConfig done\n");
     }
-    APP_PRINTF("vxSetGraphScheduleConfig done\n");
 
     if(status == VX_SUCCESS)
     {
@@ -1747,7 +1897,7 @@ vx_status app_delete_graph(AppObj *obj)
 #ifdef VPAC3
     /* Releasing MV display node */
     if (obj->vpac3_dual_fcp_enable == 1U)
-    {    
+    {
         if(NULL != obj->displayNode_MV)
         {
             APP_PRINTF("releasing MV displayNode\n");
@@ -1756,8 +1906,24 @@ vx_status app_delete_graph(AppObj *obj)
     }
 #endif
 
-    status |= tivxReleaseRawImage(&obj->raw);
-    APP_PRINTF("releasing raw image done\n");
+    if (!obj->file_read_enable)
+    {
+        status |= tivxReleaseRawImage(&obj->raw);
+        APP_PRINTF("releasing raw image done\n");
+    }
+    else
+    {
+        for(buf_id=0; buf_id<obj->num_cap_buf; buf_id++)
+        {
+            if(NULL != obj->raw_frames[buf_id])
+            {
+                APP_PRINTF("releasing raw_frame # %d\n", buf_id);
+                status |= tivxReleaseRawImage(&(obj->raw_frames[buf_id]));
+            }
+        }
+        obj->raw = NULL;
+        APP_PRINTF("releasing raw_frames done\n");
+    }
 
     for(buf_id=0; buf_id<obj->num_cap_buf; buf_id++)
     {
@@ -1802,11 +1968,15 @@ vx_status app_delete_graph(AppObj *obj)
         status |= vxReleaseImage(&obj->s8_b8_c4);
     }
 
-    if(NULL != obj->y8_r8_c2)
+    for(buf_id=0; buf_id<obj->num_cap_buf; buf_id++)
     {
-        APP_PRINTF("releasing y8_r8_c2\n");
-        status |= vxReleaseImage(&obj->y8_r8_c2);
+        if(NULL != obj->y8_r8_c2_frames[buf_id])
+        {
+            APP_PRINTF("releasing y8_r8_c2_frames[%d]\n", buf_id);
+            status |= vxReleaseImage(&(obj->y8_r8_c2_frames[buf_id]));
+        }
     }
+    obj->y8_r8_c2 = NULL;
 
     if(NULL != obj->uv8_g8_c3)
     {
@@ -1833,11 +2003,15 @@ vx_status app_delete_graph(AppObj *obj)
         APP_PRINTF("releasing ae_awb_result done\n");
     }
 
-    if(NULL != obj->h3a_aew_af)
+    for(buf_id=0; buf_id<obj->num_cap_buf; buf_id++)
     {
-        APP_PRINTF("releasing h3a_aew_af\n");
-        status |= vxReleaseUserDataObject(&obj->h3a_aew_af);
+        if(NULL != obj->h3a_aew_af_frames[buf_id])
+        {
+            APP_PRINTF("releasing h3a_aew_af_frames[%d]\n", buf_id);
+            status |= vxReleaseUserDataObject(&(obj->h3a_aew_af_frames[buf_id]));
+        }
     }
+    obj->h3a_aew_af = NULL;
 
     if(NULL != obj->aewb_config)
     {
@@ -1859,7 +2033,7 @@ vx_status app_delete_graph(AppObj *obj)
 #ifdef VPAC3
     /* Releasing MV params object */
     if (obj->vpac3_dual_fcp_enable == 1U)
-    {    
+    {
         if(NULL != obj->display_param_MV_obj)
         {
             APP_PRINTF("releasing MV Display Param Data Object\n");
@@ -1888,11 +2062,15 @@ vx_status app_delete_graph(AppObj *obj)
             status |= vxReleaseImage(&obj->mesh_img);
         }
 
-        if (NULL != obj->ldc_out)
+        for(buf_id=0; buf_id<obj->num_cap_buf; buf_id++)
         {
-            APP_PRINTF("releasing LDC Output Image \n");
-            status |= vxReleaseImage(&obj->ldc_out);
+            if (NULL != obj->ldc_out_frames[buf_id])
+            {
+                APP_PRINTF("releasing LDC Output Image[%d] \n", buf_id);
+                status |= vxReleaseImage(&(obj->ldc_out_frames[buf_id]));
+            }
         }
+        obj->ldc_out = NULL;
 
         if (NULL != obj->mesh_params_obj)
         {
@@ -2006,6 +2184,179 @@ static void app_run_screen_task_delete(AppObj *obj)
 }
 #endif
 
+static vx_status app_run_graph_file_read(AppObj *obj)
+{
+    vx_status status = VX_SUCCESS;
+    vx_uint32 i;
+    vx_uint32 frm_loop_cnt;
+    uint32_t buf_id;
+    uint32_t frame_counter = 0;
+    uint32_t num_refs;
+    tivx_raw_image out_raw_frame;
+    char raw_image_fname[APP_MAX_FILE_PATH];
+    uint32_t seq_idx;
+
+#if defined(A72) || defined(A53)
+#if defined(LINUX)
+    appDccUpdatefromFS(obj->sensor_name, obj->sensor_wdr_mode,
+                        obj->node_viss, 0,
+                        obj->node_aewb, 0,
+                        obj->node_ldc, 0,
+                        obj->context);
+#endif
+#endif
+
+    /* Pre-load and enqueue all raw buffers so TIOVX can start pipelining
+     * immediately, mirroring the live-capture prefill in app_run_graph(). */
+    for(buf_id=0; buf_id<obj->num_cap_buf; buf_id++)
+    {
+        seq_idx = obj->file_read_start_seq;
+        if (obj->file_read_seq_count > 0)
+        {
+            seq_idx += (frame_counter % obj->file_read_seq_count);
+        }
+        snprintf(raw_image_fname, APP_MAX_FILE_PATH, "%s/img_%04d.raw",
+                 obj->file_read_dir, seq_idx);
+
+        if (status == VX_SUCCESS)
+        {
+            if (read_test_image_raw(raw_image_fname, obj->raw_frames[buf_id], 2) < 0)
+            {
+                printf("Failed to read raw file %s\n", raw_image_fname);
+                status = VX_FAILURE;
+            }
+        }
+        if (status == VX_SUCCESS)
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, 0, (vx_reference*)&(obj->raw_frames[buf_id]), 1);
+        }
+#ifdef _APP_DEBUG_
+        if((status == VX_SUCCESS) && (obj->y8_r8_c2_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, obj->y8_r8_c2_graph_param_idx,
+                        (vx_reference*)&(obj->y8_r8_c2_frames[buf_id]), 1);
+        }
+        if((status == VX_SUCCESS) && (obj->h3a_aew_af_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, obj->h3a_aew_af_graph_param_idx,
+                        (vx_reference*)&(obj->h3a_aew_af_frames[buf_id]), 1);
+        }
+        if((status == VX_SUCCESS) && (obj->ldc_out_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, obj->ldc_out_graph_param_idx,
+                        (vx_reference*)&(obj->ldc_out_frames[buf_id]), 1);
+        }
+#endif
+        frame_counter++;
+    }
+
+    /* Same convention as app_run_graph(): a few extra iterations are run to
+     * drain the AEWB convergence/pipeline latency.                        */
+    frm_loop_cnt = obj->num_frames_to_run;
+    frm_loop_cnt += obj->num_cap_buf;
+
+    if (obj->is_interactive)
+    {
+        frm_loop_cnt = 0xFFFFFFFF;
+    }
+
+    for(i = 0; i < frm_loop_cnt; i++)
+    {
+#ifdef _APP_DEBUG_
+        vx_image out_y8_r8_c2 = NULL;
+        vx_user_data_object out_h3a = NULL;
+        vx_image out_ldc = NULL;
+        uint32_t num_refs_debug;
+#endif
+        appPerfPointBegin(&obj->total_perf);
+
+        if (status == VX_SUCCESS)
+        {
+            status = vxGraphParameterDequeueDoneRef(obj->graph, 0, (vx_reference*)&out_raw_frame, 1, &num_refs);
+        }
+
+#ifdef _APP_DEBUG_
+        if((status == VX_SUCCESS) && (obj->y8_r8_c2_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterDequeueDoneRef(obj->graph, obj->y8_r8_c2_graph_param_idx,
+                        (vx_reference*)&out_y8_r8_c2, 1, &num_refs_debug);
+        }
+        if((status == VX_SUCCESS) && (obj->h3a_aew_af_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterDequeueDoneRef(obj->graph, obj->h3a_aew_af_graph_param_idx,
+                        (vx_reference*)&out_h3a, 1, &num_refs_debug);
+        }
+        if((status == VX_SUCCESS) && (obj->ldc_out_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterDequeueDoneRef(obj->graph, obj->ldc_out_graph_param_idx,
+                        (vx_reference*)&out_ldc, 1, &num_refs_debug);
+        }
+
+        if (status == VX_SUCCESS)
+        {
+            app_update_debug_cache_and_dump(obj, vx_false_e, out_raw_frame, NULL,
+                            out_y8_r8_c2, out_h3a, NULL,
+                            obj->ldc_enable ? out_ldc : NULL);
+        }
+#endif
+
+        if (status == VX_SUCCESS)
+        {
+            seq_idx = obj->file_read_start_seq;
+            if (obj->file_read_seq_count > 0)
+            {
+                seq_idx += (frame_counter % obj->file_read_seq_count);
+            }
+            snprintf(raw_image_fname, APP_MAX_FILE_PATH, "%s/img_%04d.raw",
+                     obj->file_read_dir, seq_idx);
+
+            if (read_test_image_raw(raw_image_fname, out_raw_frame, 2) < 0)
+            {
+                printf("Failed to read raw file %s\n", raw_image_fname);
+                status = VX_FAILURE;
+            }
+        }
+        frame_counter++;
+
+        if (status == VX_SUCCESS)
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, 0, (vx_reference*)&out_raw_frame, 1);
+        }
+
+#ifdef _APP_DEBUG_
+        if((status == VX_SUCCESS) && (obj->y8_r8_c2_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, obj->y8_r8_c2_graph_param_idx,
+                        (vx_reference*)&out_y8_r8_c2, 1);
+        }
+        if((status == VX_SUCCESS) && (obj->h3a_aew_af_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, obj->h3a_aew_af_graph_param_idx,
+                        (vx_reference*)&out_h3a, 1);
+        }
+        if((status == VX_SUCCESS) && (obj->ldc_out_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, obj->ldc_out_graph_param_idx,
+                        (vx_reference*)&out_ldc, 1);
+        }
+#endif
+
+        appPerfPointEnd(&obj->total_perf);
+
+        if ((obj->stop_task) || (status != VX_SUCCESS))
+        {
+            break;
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = vxWaitGraph(obj->graph);
+    }
+
+    return status;
+}
+
 vx_status app_run_graph(AppObj *obj)
 {
     vx_status status = VX_SUCCESS;
@@ -2024,6 +2375,12 @@ vx_status app_run_graph(AppObj *obj)
         printf("sensor name is NULL \n");
         return VX_FAILURE;
     }
+
+    if (obj->file_read_enable)
+    {
+        return app_run_graph_file_read(obj);
+    }
+
     status = appStartImageSensor(obj->sensor_name, channel_mask);
     if(status < 0)
     {
@@ -2055,6 +2412,23 @@ vx_status app_run_graph(AppObj *obj)
         {
             status = vxGraphParameterEnqueueReadyRef(obj->graph, 1,
                         (vx_reference*)&(obj->scaler_out_imgs[buf_id]), 1);
+        }
+#endif
+#ifdef _APP_DEBUG_
+        if((status == VX_SUCCESS) && (obj->y8_r8_c2_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, obj->y8_r8_c2_graph_param_idx,
+                        (vx_reference*)&(obj->y8_r8_c2_frames[buf_id]), 1);
+        }
+        if((status == VX_SUCCESS) && (obj->h3a_aew_af_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, obj->h3a_aew_af_graph_param_idx,
+                        (vx_reference*)&(obj->h3a_aew_af_frames[buf_id]), 1);
+        }
+        if((status == VX_SUCCESS) && (obj->ldc_out_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, obj->ldc_out_graph_param_idx,
+                        (vx_reference*)&(obj->ldc_out_frames[buf_id]), 1);
         }
 #endif
     }
@@ -2108,6 +2482,12 @@ vx_status app_run_graph(AppObj *obj)
 #else
         vx_image test_image;
 #endif
+#ifdef _APP_DEBUG_
+        vx_image out_y8_r8_c2 = NULL;
+        vx_user_data_object out_h3a = NULL;
+        vx_image out_ldc = NULL;
+        uint32_t num_refs_debug;
+#endif
         appPerfPointBegin(&obj->total_perf);
         graph_parameter_num = 0;
         if(status == VX_SUCCESS)
@@ -2149,6 +2529,48 @@ vx_status app_run_graph(AppObj *obj)
             populate_gatherer(obj->sensor_sel, 0, actual_checksum);
         }
 #endif
+#ifdef _APP_DEBUG_
+        if((status == VX_SUCCESS) && (obj->y8_r8_c2_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterDequeueDoneRef(obj->graph, obj->y8_r8_c2_graph_param_idx,
+                        (vx_reference*)&out_y8_r8_c2, 1, &num_refs_debug);
+        }
+        if((status == VX_SUCCESS) && (obj->h3a_aew_af_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterDequeueDoneRef(obj->graph, obj->h3a_aew_af_graph_param_idx,
+                        (vx_reference*)&out_h3a, 1, &num_refs_debug);
+        }
+        if((status == VX_SUCCESS) && (obj->ldc_out_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterDequeueDoneRef(obj->graph, obj->ldc_out_graph_param_idx,
+                        (vx_reference*)&out_ldc, 1, &num_refs_debug);
+        }
+
+        if (status == VX_SUCCESS)
+        {
+#if defined(SOC_AM62A) && (defined(LINUX) || defined(QNX))
+            vx_image debug_scaler_ref = obj->scaler_enable ? out_scaler_frame : NULL;
+#else
+            vx_image debug_scaler_ref = NULL;
+#endif
+            if (NULL == obj->capt_yuv_image)
+            {
+                tivx_raw_image cap_raw = (tivx_raw_image)vxGetObjectArrayItem(out_capture_frames, 0);
+                app_update_debug_cache_and_dump(obj, vx_false_e, cap_raw, NULL,
+                                out_y8_r8_c2, out_h3a, debug_scaler_ref,
+                                obj->ldc_enable ? out_ldc : NULL);
+                tivxReleaseRawImage(&cap_raw);
+            }
+            else
+            {
+                vx_image cap_yuv = (vx_image)vxGetObjectArrayItem(out_capture_frames, 0);
+                app_update_debug_cache_and_dump(obj, vx_true_e, NULL, cap_yuv,
+                                NULL, NULL, debug_scaler_ref,
+                                obj->ldc_enable ? out_ldc : NULL);
+                vxReleaseImage(&cap_yuv);
+            }
+        }
+#endif
         APP_PRINTF(" i %d...\n", i);
         graph_parameter_num = 0;
 #if !(defined(SOC_AM62A) && (defined(LINUX) || defined(QNX)))
@@ -2170,6 +2592,23 @@ vx_status app_run_graph(AppObj *obj)
         {
             status = vxGraphParameterEnqueueReadyRef(obj->graph, 1,
                         (vx_reference*)&out_scaler_frame, 1);
+        }
+#endif
+#ifdef _APP_DEBUG_
+        if((status == VX_SUCCESS) && (obj->y8_r8_c2_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, obj->y8_r8_c2_graph_param_idx,
+                        (vx_reference*)&out_y8_r8_c2, 1);
+        }
+        if((status == VX_SUCCESS) && (obj->h3a_aew_af_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, obj->h3a_aew_af_graph_param_idx,
+                        (vx_reference*)&out_h3a, 1);
+        }
+        if((status == VX_SUCCESS) && (obj->ldc_out_graph_param_idx >= 0))
+        {
+            status = vxGraphParameterEnqueueReadyRef(obj->graph, obj->ldc_out_graph_param_idx,
+                        (vx_reference*)&out_ldc, 1);
         }
 #endif
         appPerfPointEnd(&obj->total_perf);
@@ -2256,10 +2695,6 @@ static const char menu[] = {
     "\n"
     "\n p: Print performance statistics"
     "\n"
-#ifdef _APP_DEBUG_
-    "\n s: Save Sensor RAW, VISS Output and H3A output images to File System"
-    "\n"
-#endif
     "\n e: Export performance statistics"
 #if defined(A72) || defined(A53)
 #if defined(LINUX)
@@ -2308,11 +2743,6 @@ static vx_status app_run_graph_interactive(AppObj *obj)
                     appPerfPointReset(&obj->total_perf);
                     printf("\n");
                     break;
-#ifdef _APP_DEBUG_
-                case 's':
-                    save_debug_images(obj);
-                    break;
-#endif
                 case 'e':
                     perf_arr[0] = &obj->total_perf;
                     fp = appPerfStatsExportOpenFile(".", "basic_demos_app_single_cam");
@@ -2367,7 +2797,10 @@ static vx_status app_run_graph_interactive(AppObj *obj)
     }
     if(status == VX_SUCCESS)
     {
-        status = appStopImageSensor(obj->sensor_name, channel_mask);
+        if (!obj->file_read_enable)
+        {
+            status = appStopImageSensor(obj->sensor_name, channel_mask);
+        }
     }
     return status;
 }
@@ -2401,10 +2834,26 @@ int appSingleCamUpdateVpacDcc(AppObj *obj, uint8_t* dcc_buf, uint32_t dcc_buf_si
 #endif
 
 #ifdef _APP_DEBUG_
-int save_debug_images(AppObj *obj)
+/* Writes the RAW/VISS/H3A/LDC/scaler debug images using the specific
+ * buffer refs passed in -- never a persistent obj->raw/obj->y8_r8_c2/etc
+ * pointer -- so the caller must supply refs that TIOVX has confirmed
+ * complete (e.g. this iteration's dequeue result, or the mutex-guarded
+ * "last completed frame" cache). Shared by the continuous per-frame
+ * dump (app_update_debug_cache_and_dump()) and the on-demand ITT
+ * snapshot (save_debug_images()). Any ref that doesn't apply to the
+ * current pipeline configuration (e.g. ldc_out_ref when LDC is
+ * disabled) may be passed as NULL and is skipped.                      */
+static int app_write_debug_images(AppObj *obj,
+                                   vx_bool is_yuv_cam_input,
+                                   tivx_raw_image raw_ref,
+                                   vx_image cap_yuv_ref,
+                                   vx_image y8_r8_c2_ref,
+                                   vx_user_data_object h3a_ref,
+                                   vx_image scaler_out_ref,
+                                   vx_image ldc_out_ref)
 {
     int num_bytes_io = 0;
-    static int file_index = 0;
+    int file_index = obj->debug_save_file_index;
     char raw_image_fname[MAX_FNAME];
     char yuv_image_fname[MAX_FNAME];
     char h3a_image_fname[MAX_FNAME];
@@ -2428,11 +2877,11 @@ int save_debug_images(AppObj *obj)
     }
 #endif
 
-    if(NULL == obj->capt_yuv_image)
+    if(vx_false_e == is_yuv_cam_input)
     {
         snprintf(raw_image_fname, MAX_FNAME, "%s/%s_%04d.raw", test_data_path, "img", file_index);
         printf("RAW file name %s \n", raw_image_fname);
-        num_bytes_io = write_output_image_raw(raw_image_fname, obj->raw);
+        num_bytes_io = write_output_image_raw(raw_image_fname, raw_ref);
         if(num_bytes_io < 0)
         {
             printf("Error writing to RAW file \n");
@@ -2441,7 +2890,7 @@ int save_debug_images(AppObj *obj)
 
         snprintf(yuv_image_fname, MAX_FNAME, "%s/%s_%04d.yuv", test_data_path, "img_viss", file_index);
         printf("YUV file name %s \n", yuv_image_fname);
-        num_bytes_io = write_output_image_nv12_8bit(yuv_image_fname, obj->y8_r8_c2);
+        num_bytes_io = write_output_image_nv12_8bit(yuv_image_fname, y8_r8_c2_ref);
         if(num_bytes_io < 0)
         {
             printf("Error writing to VISS NV12 file \n");
@@ -2450,7 +2899,7 @@ int save_debug_images(AppObj *obj)
 
         snprintf(h3a_image_fname, MAX_FNAME, "%s/%s_%04d.bin", test_data_path, "h3a", file_index);
         printf("H3A file name %s \n", h3a_image_fname);
-        num_bytes_io = write_h3a_image(h3a_image_fname, obj->h3a_aew_af);
+        num_bytes_io = write_h3a_image(h3a_image_fname, h3a_ref);
         if(num_bytes_io < 0)
         {
             printf("Error writing to H3A file \n");
@@ -2460,11 +2909,9 @@ int save_debug_images(AppObj *obj)
     }
     else
     {
-        vx_image cap_yuv;
         snprintf(raw_image_fname, MAX_FNAME, "%s/%s_%04d.yuv", test_data_path, "cap", file_index);
         printf("YUV file name %s \n", raw_image_fname);
-        cap_yuv = (vx_image)vxGetObjectArrayItem(obj->cap_frames[0], 0);
-        num_bytes_io = write_output_image_yuv422_8bit(raw_image_fname, cap_yuv);
+        num_bytes_io = write_output_image_yuv422_8bit(raw_image_fname, cap_yuv_ref);
         if(num_bytes_io < 0)
         {
             printf("Error writing to YUV file \n");
@@ -2472,11 +2919,11 @@ int save_debug_images(AppObj *obj)
         }
     }
 
-    if(obj->scaler_enable)
+    if(NULL != scaler_out_ref)
     {
         snprintf(yuv_image_fname, MAX_FNAME, "%s/%s_%04d.yuv", test_data_path, "img_msc", file_index);
         printf("YUV file name %s \n", yuv_image_fname);
-        num_bytes_io = write_output_image_nv12_8bit(yuv_image_fname, obj->scaler_out_img);
+        num_bytes_io = write_output_image_nv12_8bit(yuv_image_fname, scaler_out_ref);
         if(num_bytes_io < 0)
         {
             printf("Error writing to MSC NV12 file \n");
@@ -2484,11 +2931,11 @@ int save_debug_images(AppObj *obj)
         }
     }
 
-    if(obj->ldc_enable)
+    if(NULL != ldc_out_ref)
     {
         snprintf(yuv_image_fname, MAX_FNAME, "%s/%s_%04d.yuv", test_data_path, "img_ldc", file_index);
         printf("YUV file name %s \n", yuv_image_fname);
-        num_bytes_io = write_output_image_nv12_8bit(yuv_image_fname, obj->ldc_out);
+        num_bytes_io = write_output_image_nv12_8bit(yuv_image_fname, ldc_out_ref);
         if(num_bytes_io < 0)
         {
             printf("Error writing to LDC NV12 file \n");
@@ -2496,8 +2943,77 @@ int save_debug_images(AppObj *obj)
         }
     }
 
-    file_index++;
-    return (file_index-1);
+    obj->debug_save_file_index = file_index + 1;
+    return file_index;
+}
+
+/* Called once per iteration from app_run_graph()/app_run_graph_file_read(),
+ * on the graph-execution thread, immediately after this iteration's
+ * relevant dequeues complete and before re-enqueuing. Publishes the
+ * just-dequeued buffer refs into the mutex-guarded "last completed
+ * frame" cache (for save_debug_images()'s later on-demand use from the
+ * ITT thread), and, if save_debug_images_enable is set, writes the
+ * debug images immediately using these same just-dequeued refs.        */
+static void app_update_debug_cache_and_dump(AppObj *obj,
+                                             vx_bool is_yuv_cam_input,
+                                             tivx_raw_image raw_ref,
+                                             vx_image cap_yuv_ref,
+                                             vx_image y8_r8_c2_ref,
+                                             vx_user_data_object h3a_ref,
+                                             vx_image scaler_out_ref,
+                                             vx_image ldc_out_ref)
+{
+    tivxMutexLock(obj->debug_last_frame_mutex);
+
+    obj->debug_last_raw = raw_ref;
+    obj->debug_last_cap_yuv = cap_yuv_ref;
+    obj->debug_last_y8_r8_c2 = y8_r8_c2_ref;
+    obj->debug_last_h3a = h3a_ref;
+    obj->debug_last_scaler_out = scaler_out_ref;
+    obj->debug_last_ldc_out = ldc_out_ref;
+    obj->debug_last_frame_valid = vx_true_e;
+
+    if (obj->save_debug_images_enable)
+    {
+        (void)app_write_debug_images(obj, is_yuv_cam_input, raw_ref, cap_yuv_ref,
+                        y8_r8_c2_ref, h3a_ref, scaler_out_ref, ldc_out_ref);
+    }
+
+    tivxMutexUnlock(obj->debug_last_frame_mutex);
+}
+
+/* On-demand snapshot for the ITT server callback (iss_raw_save /
+ * iss_yuv_save). Reads the "last completed frame" cache that the
+ * graph-execution thread publishes once per iteration, under
+ * debug_last_frame_mutex, instead of touching obj->raw/obj->y8_r8_c2/
+ * obj->h3a_aew_af/obj->ldc_out/obj->cap_frames[0]/obj->scaler_out_img
+ * directly -- those are racy from any thread other than the graph
+ * thread itself (see app_update_debug_cache_and_dump()).                */
+int save_debug_images(AppObj *obj)
+{
+    int result;
+
+    tivxMutexLock(obj->debug_last_frame_mutex);
+
+    if (vx_false_e == obj->debug_last_frame_valid)
+    {
+        tivxMutexUnlock(obj->debug_last_frame_mutex);
+        printf("save_debug_images: no completed frame available yet \n");
+        return VX_FAILURE;
+    }
+
+    result = app_write_debug_images(obj,
+                    (NULL != obj->capt_yuv_image) ? vx_true_e : vx_false_e,
+                    obj->debug_last_raw,
+                    obj->debug_last_cap_yuv,
+                    obj->debug_last_y8_r8_c2,
+                    obj->debug_last_h3a,
+                    obj->scaler_enable ? obj->debug_last_scaler_out : NULL,
+                    obj->ldc_enable ? obj->debug_last_ldc_out : NULL);
+
+    tivxMutexUnlock(obj->debug_last_frame_mutex);
+
+    return result;
 }
 #endif //_APP_DEBUG_
 
@@ -2564,6 +3080,66 @@ static void app_parse_cfg_file(AppObj *obj, char *cfg_file_name)
                     {
                         obj->is_interactive = atoi(token);
                         printf("is_interactive = [%d]\n", obj->is_interactive);
+                    }
+                }
+                else
+                if(strcmp(token, "file_read_enable")==0)
+                {
+                    token = strtok(NULL, s);
+                    if (NULL != token)
+                    {
+                        obj->file_read_enable = atoi(token);
+                        printf("file_read_enable = [%d]\n", obj->file_read_enable);
+                    }
+                }
+                else
+                #ifdef SOC_FAMILY_TDA5
+                if(strcmp(token, "file_read_dir_tda5")==0)
+                #else
+                if(strcmp(token, "file_read_dir_tda4")==0)
+                #endif
+                {
+                    token = strtok(NULL, s);
+                    if (NULL != token)
+                    {
+                        size_t len = strlen(token);
+                        if (len > 0 && (token[len-1] == '\n' || token[len-1] == '\r'))
+                        {
+                            token[len-1] = '\0';
+                        }
+                        strncpy(obj->file_read_dir, token, APP_MAX_FILE_PATH-1);
+                        obj->file_read_dir[APP_MAX_FILE_PATH-1] = '\0';
+                        printf("file_read_dir = [%s]\n", obj->file_read_dir);
+                    }
+                }
+                else
+                if(strcmp(token, "file_read_seq_count")==0)
+                {
+                    token = strtok(NULL, s);
+                    if (NULL != token)
+                    {
+                        obj->file_read_seq_count = atoi(token);
+                        printf("file_read_seq_count = [%d]\n", obj->file_read_seq_count);
+                    }
+                }
+                else
+                if(strcmp(token, "file_read_start_seq")==0)
+                {
+                    token = strtok(NULL, s);
+                    if (NULL != token)
+                    {
+                        obj->file_read_start_seq = atoi(token);
+                        printf("file_read_start_seq = [%d]\n", obj->file_read_start_seq);
+                    }
+                }
+                else
+                if(strcmp(token, "save_debug_images_enable")==0)
+                {
+                    token = strtok(NULL, s);
+                    if (NULL != token)
+                    {
+                        obj->save_debug_images_enable = atoi(token);
+                        printf("save_debug_images_enable = [%d]\n", obj->save_debug_images_enable);
                     }
                 }
                 else
@@ -2772,4 +3348,3 @@ vx_status app_send_test_frame(vx_node cap_node, tivx_raw_image raw_img)
 
     return status;
 }
-

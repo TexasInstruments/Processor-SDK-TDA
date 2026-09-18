@@ -11,8 +11,8 @@ ifeq ($(BUILD_OS_TYPE), baremetal)
     APP_NAME = ddr_ip_fma_app_$(BUILD_OS_TYPE)
 endif
 
-SRCDIR = . src $(PDK_INSTALL_PATH)/ti/ip_fma/src
-INCDIR = . src $(PDK_INSTALL_PATH)/ti/ip_fma/inc
+SRCDIR = . src $(IP_FMA_COMP_PATH)/src
+INCDIR = . src $(IP_FMA_COMP_PATH)/inc
 
 # List all the external components/interfaces, whose interface header files
 #  need to be included for this component

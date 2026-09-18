@@ -32,6 +32,8 @@ ifneq ($(TARGET_PLATFORM),PC)
     ifeq ($(TARGET_OS), QNX)
         ifeq ($(SOC), tda54)
             CSOURCES := app_ipc_qnx_tda54.c
+            IDIRS    += $(PSDK_QNX_PATH)/src/resmgrs/ipc/tiipc-usr/include/legacy_mcu_plus_sdk/source/
+            IDIRS    += $(PSDK_QNX_PATH)/src/common/libs/dpl/inc
         else
             IDIRS    += $(PDK_QNX_PATH)/packages/ti/drv/ipc/
             IDIRS    += $(PDK_QNX_PATH)/packages/

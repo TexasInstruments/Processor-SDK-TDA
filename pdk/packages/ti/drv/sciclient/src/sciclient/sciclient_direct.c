@@ -60,7 +60,7 @@
 #include <ti/drv/sciclient/src/version/rmpmhal_version.h>
 #include <ti/drv/sciclient/src/sciclient/sciclient_trace_internal.h>
 
-#if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2)
+#if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J721S2)
 extern Sciclient_LpmData gSciclientLpmData;
 #endif
 
@@ -198,7 +198,7 @@ __attribute__((optnone)) static uint16_t boardcfgPmFindCertSize(uint32_t *msg);
 static int32_t boardcfg_RmAdjustReq(uint32_t *msg, uint16_t adjSize);
 static int32_t boardcfg_PmAdjustReq(uint32_t *msg, uint16_t adjSize);
 static int32_t Sciclient_queryFwCapsHandler(const uint32_t reqFlags, void *tx_msg);
-#if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2)
+#if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J721S2)
 static int32_t Sciclient_getNextSysMode(void *tx_msg);
 #endif
 
@@ -292,7 +292,7 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
             case TISCI_MSG_SYS_RESET:
             case TISCI_MSG_PREPARE_SLEEP:
             case TISCI_MSG_ENTER_SLEEP:
-            #if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2)
+            #if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J721S2)
             case TISCI_MSG_LPM_WAKE_REASON:
             case TISCI_MSG_GET_SUSPEND_INITIATOR:
             #endif
@@ -595,7 +595,7 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
                 pRespPrm->flags = hdr->flags;
                 break;
             case TISCI_MSG_LPM_GET_NEXT_SYS_MODE:
-                #if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2)
+                #if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J721S2)
                 memcpy(message, pReqPrm->pReqPayload, pReqPrm->reqPayloadSize);
                 Sciclient_printf("Next Sys Mode is processed internally by DM driver\n");
                 ret = Sciclient_getNextSysMode(message);
@@ -694,7 +694,7 @@ static int32_t board_config_pm_handler(uint32_t *msg_recv)
         ret = pm_init();
     }
 
-    #if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2)
+    #if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J721S2)
     Sciclient_LpmData *lpmLocal;
     bool lpmBcfgValid = is_lpm_boardcfg_valid();
     if (lpmBcfgValid == true)
@@ -716,7 +716,7 @@ static int32_t board_config_pm_handler(uint32_t *msg_recv)
     return ret;
 }
 
-#if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2)
+#if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J721S2)
 static int32_t Sciclient_getNextSysMode(void *tx_msg)
 {
     int32_t ret = CSL_PASS;
@@ -922,12 +922,25 @@ int32_t Sciclient_ProcessPmMessage(const uint32_t reqFlags  __attribute__((unuse
             break;
         case TISCI_MSG_ENTER_SLEEP              :
             {
-                #if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2)
+                #if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J721S2)
                 struct tisci_msg_enter_sleep_req *req = (struct tisci_msg_enter_sleep_req *) tx_msg;
                 if (gSciclientLpmData.suspend_initiator == (req->hdr.host))
                 {
-                    Sciclient_printf("TISCI_MSG_ENTER_SLEEP : Device enters into low power mode \n");
-                    ret = Sciclient_enterSleep((uint32_t*)tx_msg);
+                    /* Keep WKUP_I2C0 ON before starting the LPM sequence.
+                     * The sequence requires talking to the PMIC over WKUP_I2C0
+                     * to trigger IO and DDR retention.
+                     */
+                    ret = Sciclient_s2rEnableWkupI2c();
+                    if (ret != CSL_PASS)
+                    {
+                        Sciclient_printf("TISCI_MSG_ENTER_SLEEP : Failed to enable WKUP_I2C0, aborting LPM entry \n");
+                        ret = CSL_EFAIL;
+                    }
+                    else
+                    {
+                        Sciclient_printf("TISCI_MSG_ENTER_SLEEP : Device enters into low power mode \n");
+                        ret = Sciclient_enterSleep((uint32_t*)tx_msg);
+                    }
                 }
                 else
                 {
@@ -941,14 +954,14 @@ int32_t Sciclient_ProcessPmMessage(const uint32_t reqFlags  __attribute__((unuse
                 break;
             }
         case TISCI_MSG_LPM_WAKE_REASON:
-            #if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2)
+            #if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J721S2)
             ret = Sciclient_getWakeReason((uint32_t*)tx_msg);
             #else
             ret = CSL_EFAIL;
             #endif
             break;
         case TISCI_MSG_GET_SUSPEND_INITIATOR:
-            #if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2)
+            #if defined(SOC_J7200) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_J721S2)
             ret = Sciclient_getSuspendMaster((uint32_t*)tx_msg);
             #else
             ret = CSL_EFAIL;

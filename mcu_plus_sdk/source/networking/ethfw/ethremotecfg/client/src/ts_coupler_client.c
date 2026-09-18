@@ -76,6 +76,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <math.h>
 
 #include <enet.h>
 #include <include/per/cpsw.h>
@@ -97,6 +98,24 @@
 #define TS_COUPER_CLIENT_TASK_STACKALIGN        (32U)
 #define TS_COUPER_CLIENT_TASK_PRIORITY          (3U)
 
+#define PPMFACTOR                               (1000000U) 
+#define MAX_PPM_CORRECTION                      (1000U)
+
+/**
+ * The actual clock to CPTS is not restricted to 1GHz but
+ * the CPTS timestamp value is increamented by 1GHz without gPTP.
+ * In presence of gPTP this Timestamp is corrected by PPM
+ */
+#define CPTS_TIMER_FREQ                         (1000000000U)
+
+/**
+ *  ALPHA is the Learning rate coefficient. It is used for adjusting ppm correction
+ *  based on Last iteration errors.
+ *  ALPHA = 0 means no learning from past
+ *  ALPHA = 1.0 means fully use last ppm correction.
+ */
+#define ALPHA                                   (0.95)
+
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
@@ -107,7 +126,11 @@ typedef struct TSCouplerClient_Obj_s
 
     TsCouplerClient_Cfg tsCfg;
 
-    TsCouplerClient_timeSyncTupleTbl gTsTupleInfo;
+    uint32_t tupleIndex;
+    
+    TsCouplerClient_timeSyncTuple prevTuple;
+    
+    TsCouplerClient_timeSyncTuple currTuple;
 
     EthFwOsal_SemHandle hTimeSyncSem;
 
@@ -117,12 +140,10 @@ typedef struct TSCouplerClient_Obj_s
 
     uint64_t syncPeriodTicks;
 
-    double rate;
+    double baseRate;
 
-    double offset;
-#if defined(ETHFW_MTS_DEMO_TEST)
-    uint64_t timerIsrCtxLSyncTime;
-#endif
+    double ppmRate;
+
 } TSCouplerClient_Obj;
 
 /* ========================================================================== */
@@ -130,6 +151,10 @@ typedef struct TSCouplerClient_Obj_s
 /* ========================================================================== */
 
 static void TsCouplerClient_task(void* arg0);
+
+static void TsCouplerClient_TmrIsr(void* arg);
+
+static void TsCouplerClient_calculateRateAndOffset();
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -155,45 +180,23 @@ void TsCouplerClient_init(TsCouplerClient_initParams *params)
 
 void TsCouplerClient_start(TsCouplerClient_Cfg *cfg)
 {
-    EthFwOsal_TaskParams taskParams;
-
     EnetAppUtils_assert(cfg != NULL);
-
     memcpy(&gTSCoupCliObj.tsCfg, cfg, sizeof(TsCouplerClient_Cfg));
 
-    EthFwOsal_initTaskParams(&taskParams);
-    taskParams.priority  = TS_COUPER_CLIENT_TASK_PRIORITY;
-    taskParams.stack     = &gTsCouplerClientStackBuf[0];
-    taskParams.stacksize = sizeof(gTsCouplerClientStackBuf);
-    taskParams.name      = "TS Client Thread";
-
-    EthFwOsal_createTask(&TsCouplerClient_task, &taskParams);
-}
-
-static void TsCouplerClient_TmrIsr(void* arg)
-{
-    gTSCoupCliObj.syncEventCount++;
-    TsCouplerClient_timeSyncTuple *tuple;
-
-    tuple = &(gTSCoupCliObj.gTsTupleInfo.tuple[gTSCoupCliObj.gTsTupleInfo.tupleIndex % ENET_ARRAYSIZE(gTSCoupCliObj.gTsTupleInfo.tuple)]);
-
-    tuple->systemTime = ((uint64_t)gTSCoupCliObj.syncEventCount * (uint64_t)gTSCoupCliObj.syncPeriodTicks) + 
-                        (uint64_t)((TimerP_getCount(gTSCoupCliObj.hTimeSyncSysTimer) - TimerP_getReloadCount(gTSCoupCliObj.hTimeSyncSysTimer)) + 1);
-
-#if defined(ETHFW_MTS_DEMO_TEST)
-    gTSCoupCliObj.timerIsrCtxLSyncTime = TsCouplerClient_getSynchronizedTime(TS_COUPLER_CLIENT_TIMER_TYPE_GPTIMER);
-#endif
-}
-
-static void TsCouplerClient_task(void* arg0)
-{
-    bool exitTask = BFALSE;
     uint32_t freqHz;
     TimerP_Params timerParams;
     TimerP_Status status;
 
     if (gTSCoupCliObj.timerType == TS_COUPLER_CLIENT_TIMER_TYPE_GTC)
     {
+        freqHz = GTC_CLK_RATE_200_MHZ; 
+        gTSCoupCliObj.baseRate = (double)CPTS_TIMER_FREQ/(double)freqHz;
+        gTSCoupCliObj.ppmRate = 0;
+
+        ETHFWTRACE_INFO("Base rate: %lf",gTSCoupCliObj.baseRate);
+
+        GTC_init();
+
         GTC_disable();
 
         GTC_selectPushEvent(gTSCoupCliObj.tsCfg.pushEvtVal);
@@ -209,7 +212,11 @@ static void TsCouplerClient_task(void* arg0)
         freqHz = TIMERP_TIMER_FREQ_LO;
         EnetAppUtils_assert(TIMERP_TIMER_FREQ_HI == 0);
 
-        gTSCoupCliObj.syncPeriodTicks = ((float)(gTSCoupCliObj.tsCfg.periodinMs * 1000U)/ (1000U * 1000U)) * (freqHz);
+        gTSCoupCliObj.syncPeriodTicks = (uint64_t)(((double)(gTSCoupCliObj.tsCfg.periodinMs)/ 1000.0) * (freqHz));
+        gTSCoupCliObj.baseRate = (double)CPTS_TIMER_FREQ/(double)freqHz;
+        gTSCoupCliObj.ppmRate = 0;
+
+        ETHFWTRACE_INFO("Base rate: %lf",gTSCoupCliObj.baseRate);
 
         /* Register to Remote Timer to start TimeSync. */
         status = TsCouplerClient_registerRemoteTimer(gTSCoupCliObj.tsCfg.hwPushNum, gTSCoupCliObj.tsCfg.tsRouterTntrId);
@@ -222,10 +229,7 @@ static void TsCouplerClient_task(void* arg0)
         timerParams.period     = (gTSCoupCliObj.tsCfg.periodinMs) * 1000U; //TimerP period takes microseconds.
     
         gTSCoupCliObj.hTimeSyncSysTimer = TimerP_create(gTSCoupCliObj.tsCfg.timerIdx, (TimerP_Fxn)&TsCouplerClient_TmrIsr, &timerParams);
-        EnetAppUtils_assert(NULL != gTSCoupCliObj.hTimeSyncSysTimer);
-
-        status = TimerP_start(gTSCoupCliObj.hTimeSyncSysTimer);
-        EnetAppUtils_assert(TimerP_OK == status);
+        EnetAppUtils_assert(NULL != gTSCoupCliObj.hTimeSyncSysTimer);   
 
 #if defined(SOC_J784S4) || defined(SOC_J7200)
         status= EthFw_TimerP_enablePWMTrigger(gTSCoupCliObj.tsCfg.timerIdx, TimerP_PWM_MATCH_VALUE_MAX, TimerP_PWMPulseMode_SINGLE_PULSE);
@@ -236,15 +240,39 @@ static void TsCouplerClient_task(void* arg0)
         status= EthFw_TimerP_enablePWMTrigger(gTSCoupCliObj.tsCfg.timerIdx + 12U, TimerP_PWM_MATCH_VALUE_MAX, TimerP_PWMPulseMode_SINGLE_PULSE);
 #endif
         EnetAppUtils_assert(TimerP_OK == status);
+
+        status = TimerP_start(gTSCoupCliObj.hTimeSyncSysTimer);
+        EnetAppUtils_assert(TimerP_OK == status);
     }
     
+    EthFwOsal_TaskParams taskParams;
+    EthFwOsal_initTaskParams(&taskParams);
+    taskParams.priority  = TS_COUPER_CLIENT_TASK_PRIORITY;
+    taskParams.stack     = &gTsCouplerClientStackBuf[0];
+    taskParams.stacksize = sizeof(gTsCouplerClientStackBuf);
+    taskParams.name      = "TS Client Thread";
+
+    EthFwOsal_createTask(&TsCouplerClient_task, &taskParams);
+}
+
+static void TsCouplerClient_TmrIsr(void* arg)
+{
+    gTSCoupCliObj.syncEventCount++;
+}
+
+static void TsCouplerClient_task(void* arg0)
+{
+    bool exitTask = BFALSE;
+   
     while (!exitTask)
     {
         EthFwOsal_pendSemaphore(gTSCoupCliObj.hTimeSyncSem, ETHFWOSAL_WAIT_FOREVER);
 
-
-        /* Calculate rate and offset */
-        TsCouplerClient_calculateRateAndOffset(gTSCoupCliObj.gTsTupleInfo.tuple, TS_COUPLER_CLIENT_TUPLES_MAX_TUPLES, &gTSCoupCliObj.rate, &gTSCoupCliObj.offset);
+        /* Calculate rate and offset from previous and current tuples */
+        if(gTSCoupCliObj.syncEventCount >= 2)
+        {
+            TsCouplerClient_calculateRateAndOffset();
+        }
     }
 }
 
@@ -254,105 +282,144 @@ void TsCouplerClient_HwPushNotifyFxn(uint32_t notifyType,
 {
     TsCouplerClient_HwPushNotifyParams *params = (TsCouplerClient_HwPushNotifyParams *)notifyArg;
     TsCouplerClient_timeSyncTuple *tuple;
+    TsCouplerClient_timeSyncTuple *prevTuple;
 
-    tuple = &(gTSCoupCliObj.gTsTupleInfo.tuple[gTSCoupCliObj.gTsTupleInfo.tupleIndex % ENET_ARRAYSIZE(gTSCoupCliObj.gTsTupleInfo.tuple)]);
+    tuple = &gTSCoupCliObj.currTuple;
+    prevTuple = &gTSCoupCliObj.prevTuple;
+
+    memcpy(prevTuple,tuple,sizeof(TsCouplerClient_timeSyncTuple));
 
     if (gTSCoupCliObj.timerType == TS_COUPLER_CLIENT_TIMER_TYPE_GTC)
     {
-        if (gTSCoupCliObj.gTsTupleInfo.tupleIndex == 0U)
+        if (gTSCoupCliObj.tupleIndex == 0U)
         {
             tuple->phcTime = params->timestamp;
 
             GTC_disable();
-            tuple->systemTime = (uint64_t)(1U << gTSCoupCliObj.tsCfg.pushEvtVal);
+            tuple->systemTime = (uint64_t)(1ULL << gTSCoupCliObj.tsCfg.pushEvtVal);
             GTC_setCounter64(tuple->systemTime);
             GTC_enable();
         }
         else
         {
             tuple->phcTime = params->timestamp;
-            tuple->systemTime = (uint64_t)(gTSCoupCliObj.gTsTupleInfo.tuple[gTSCoupCliObj.gTsTupleInfo.tupleIndex - 1U].systemTime) + 
-                                (uint64_t)(1U << gTSCoupCliObj.tsCfg.pushEvtVal);
+            /**
+            * gTSCoupCliObj.tsCfg.pushEvtVal bit of GTC timer is used to generate CPTS Push event
+            * but CPTS Push event is triggered only on the rising edge. 
+            * Thus CPTS trigger and by extension this callback will occur every 2^(gTSCoupCliObj.tsCfg.pushEvtVal+1) ticks.
+            */
+            tuple->systemTime = (uint64_t)(gTSCoupCliObj.prevTuple.systemTime) +
+                                (uint64_t)(1ULL << (gTSCoupCliObj.tsCfg.pushEvtVal+1));
         }
+        gTSCoupCliObj.syncEventCount++;
     }
     else
     {
         tuple->phcTime = params->timestamp;
-
+        tuple->systemTime = ((uint64_t)gTSCoupCliObj.syncEventCount * (uint64_t)gTSCoupCliObj.syncPeriodTicks);
     }
 
-    gTSCoupCliObj.gTsTupleInfo.tupleIndex++;
-
-#if defined(ETHFW_MTS_DEMO_TEST)
-    /* For MTS accuracy test, print the delta between local synchronized time and remote time every 10s. */
-    if ((gTSCoupCliObj.syncEventCount % 10U == 0U) && (gTSCoupCliObj.timerIsrCtxLSyncTime != 0U))
-    {
-        uint64_t deltaTime = 0U;
-        
-        if (tuple->phcTime > gTSCoupCliObj.timerIsrCtxLSyncTime)
-        {
-            deltaTime = (uint64_t)(tuple->phcTime - gTSCoupCliObj.timerIsrCtxLSyncTime);
-        }
-        else
-        {
-            deltaTime = (uint64_t)(gTSCoupCliObj.timerIsrCtxLSyncTime - tuple->phcTime);
-        }
-        ETHFWTRACE_INFO("IsrPhcTime: %lld RemotePhcTime: %lld Delta time: %lld", (uint64_t)(gTSCoupCliObj.timerIsrCtxLSyncTime),(uint64_t)(tuple->phcTime), (uint64_t)(deltaTime));
-    }
-#endif
+    gTSCoupCliObj.tupleIndex++;
 
     EthFwOsal_postSemaphore((EthFwOsal_SemHandle)gTSCoupCliObj.hTimeSyncSem);
 }
 
-void TsCouplerClient_calculateRateAndOffset(TsCouplerClient_timeSyncTuple *entries,
-                                            uint32_t numEntries,
-                                            double *rate,
-                                            double *offset)
+static void TsCouplerClient_calculateRateAndOffset()
 {
-    uint64_t prevSystemTime = 0U;
-    uint64_t prevPhcTime = 0U;
-    double temp1 = 0.0;
-    double temp2 = 0.0;
+    int64_t timerDiff,cptsDiff,deltaTime;
+    uint64_t estimatedPhcTime;
+    double rate;
 
-    // Iterate through the entries to find the first two valid entries
-    for (uint32_t i = 0; i < numEntries; i++) {
-        if (entries[i].systemTime != 0 && entries[i].phcTime != 0) {
-            if (prevSystemTime == 0 && prevPhcTime == 0) {
-                prevSystemTime = entries[i].systemTime;
-                prevPhcTime = entries[i].phcTime;
-            } else {
-                // Calculate rate and offset using CRF algorithm
-                double systemTimeDiff = (double)(entries[i].systemTime - prevSystemTime);
-                double phcTimeDiff = (double)(entries[i].phcTime - prevPhcTime);
-                *rate = phcTimeDiff / systemTimeDiff;
-                temp1 = (double)entries[i].systemTime * ((double)prevPhcTime / systemTimeDiff);
-                temp2 = (double)prevSystemTime * ((double)entries[i].phcTime / systemTimeDiff);
-                *offset = temp1 - temp2;
+    /**
+    *  CPTS time  -> T
+    *  timer time -> t
+    *  Central equation of time estimation is 
+    *  T_(i+1) = T_i + (t_(i+1)-t_i)*(R+r*10^6)
+    *  Where R is base rate which is fixed to (CPTS_freq/timer_freq)
+    *  when gPTP is involved CPTS clock is PPM corrected
+    *  r tries to capture that PPM correction part.
+    *  value of r is changed based on the error.  
+    */
 
-                // Update previous system time and PHC time
-                prevSystemTime = entries[i].systemTime;
-                prevPhcTime = entries[i].phcTime;
-                break;
-            }
+    timerDiff =  gTSCoupCliObj.currTuple.systemTime - gTSCoupCliObj.prevTuple.systemTime;
+    cptsDiff  =  gTSCoupCliObj.currTuple.phcTime - gTSCoupCliObj.prevTuple.phcTime;
+
+    if( timerDiff < 0 || cptsDiff < 0)
+    {
+        EnetAppUtils_assert(false);
+    }
+    
+    rate = gTSCoupCliObj.baseRate + (gTSCoupCliObj.ppmRate/(double)PPMFACTOR);
+
+    if(!isfinite(rate))
+    {
+        EnetAppUtils_assert(false);
+    }
+
+    estimatedPhcTime = gTSCoupCliObj.prevTuple.phcTime + (uint64_t)(timerDiff*rate);
+
+    deltaTime = gTSCoupCliObj.currTuple.phcTime - estimatedPhcTime;
+
+    if(timerDiff != 0)
+    {
+        double currentPpmRate = (((double)cptsDiff - (double)timerDiff*gTSCoupCliObj.baseRate)*PPMFACTOR)/(double)timerDiff;
+        /**
+         * If following condition is false, that indecates CPTS timer value is "Set" in the beginning of gPTP.
+         * Excluding this tuple instance in order to maintain stability of ppmRate 
+         */
+        if(fabs(currentPpmRate/gTSCoupCliObj.baseRate) < MAX_PPM_CORRECTION)
+        {
+            gTSCoupCliObj.ppmRate += (ALPHA*deltaTime*PPMFACTOR)/(timerDiff);
+        }
+        else
+        {
+            ETHFWTRACE_INFO("CPTS set detected");
         }
     }
+    else
+    {
+        ETHFWTRACE_INFO("Zero Timer diff: indicates Timer ISR miss");
+    }
+
+#if defined(ETHFW_MTS_DEMO_TEST)
+    if(gTSCoupCliObj.syncEventCount % 10 == 0)
+    {
+        
+        ETHFWTRACE_INFO(" %lld Timer ticks: %lld CPTS timestamp: %lld Delta time: %5lld ns Estimated PPM %lf",\
+                gTSCoupCliObj.syncEventCount ,gTSCoupCliObj.currTuple.systemTime, gTSCoupCliObj.currTuple.phcTime, (uint64_t)(deltaTime),(gTSCoupCliObj.ppmRate/gTSCoupCliObj.baseRate));
+    }
+#endif
 }
 
-uint64_t TsCouplerClient_getSynchronizedTime(TsCouplerClient_TimerType timerType)
+uint64_t TsCouplerClient_getSynchronizedTime()
 {
     uint64_t localTime = 0U, synchronizedTime = 0U;
+    double rate = gTSCoupCliObj.baseRate + (gTSCoupCliObj.ppmRate/(double)PPMFACTOR);
 
-    if(timerType == TS_COUPLER_CLIENT_TIMER_TYPE_GTC)
+    if(gTSCoupCliObj.timerType == TS_COUPLER_CLIENT_TIMER_TYPE_GTC)
     {
         localTime = GTC_readCounter64();
     }
     else
     {
-        localTime = ((uint64_t)gTSCoupCliObj.syncEventCount * (uint64_t)gTSCoupCliObj.syncPeriodTicks) + 
-                    (uint64_t)((TimerP_getCount(gTSCoupCliObj.hTimeSyncSysTimer) - TimerP_getReloadCount(gTSCoupCliObj.hTimeSyncSysTimer)) + 1);
+        /**
+         * Following loop is to prevent race condition with TsCouplerClient_TmrIsr.
+         * as gTSCoupCliObj.syncEventCount is shared variable.
+        */
+        uint64_t overflow_count1, overflow_count2,current_timercount;
+        do
+        {
+            overflow_count1 = gTSCoupCliObj.syncEventCount;
+            current_timercount = (uint64_t)((TimerP_getCount(gTSCoupCliObj.hTimeSyncSysTimer) - TimerP_getReloadCount(gTSCoupCliObj.hTimeSyncSysTimer)) + 1);
+            overflow_count2 = gTSCoupCliObj.syncEventCount;
+        }
+        while(overflow_count1 != overflow_count2);
+        localTime = ((uint64_t)overflow_count2 * (uint64_t)gTSCoupCliObj.syncPeriodTicks);
+        localTime += current_timercount;      
     }
-
-    synchronizedTime = (uint64_t)((double)localTime * gTSCoupCliObj.rate + gTSCoupCliObj.offset);
+    
+    synchronizedTime = gTSCoupCliObj.currTuple.phcTime;
+    synchronizedTime += (uint64_t)((double)(localTime - gTSCoupCliObj.currTuple.systemTime) * rate);
 
     return synchronizedTime;
 }

@@ -206,7 +206,7 @@ xMPU_CONFIG_PARAMETERS __attribute__((section(".startupData"))) gMPUConfigParms[
         /* ulRegionNumber */
         .ulRegionNumber         = 7U,
         /* Starting address */
-        .ulRegionBeginAddress   = APP_FILEIO_MEM_ADDR,
+        .ulRegionBeginAddress   = IPC_VRING_MEM_ADDR + 0x04000000U,
         /* Access permission */
         {
             .ulexeNeverControl  = 1U,
@@ -217,7 +217,7 @@ xMPU_CONFIG_PARAMETERS __attribute__((section(".startupData"))) gMPUConfigParms[
             .ulmemAttr          = 0U,
         },
         /* ulRegionSize */
-        .ulRegionSize           = (16U * 1024U * 1024U),
+        .ulRegionSize           = (32U * 1024U * 1024U),
         /* ulSubRegionDisable */
         .ulSubRegionDisable     = mpuREGION_ALL_SUB_REGIONS_ENABLED,
     },

@@ -68,19 +68,19 @@ core_config_t core_config[] = {
     {APP_IPC_CPU_MPU1_0, false, true},
 #endif
 #ifdef ENABLE_IPC_MCU0
-    {APP_IPC_CPU_MCU0_M55, false, true},
+    {APP_IPC_CPU_MCU0_M55, true, true},
 #endif
 #ifdef ENABLE_IPC_MCU1
-    {APP_IPC_CPU_MCU1_M55, false, true},
+    {APP_IPC_CPU_MCU1_M55, true, true},
 #endif
 #ifdef ENABLE_IPC_MCU2
-    {APP_IPC_CPU_MCU2_M55, false, true},
+    {APP_IPC_CPU_MCU2_M55, true, true},
 #endif
 #ifdef ENABLE_IPC_MCU4
-    {APP_IPC_CPU_MCU3_M55, false, true},
+    {APP_IPC_CPU_MCU3_M55, true, true},
 #endif
 #ifdef ENABLE_IPC_MCU4
-    {APP_IPC_CPU_MCU4_M55, false, true},
+    {APP_IPC_CPU_MCU4_M55, true, true},
 #endif
 #ifdef ENABLE_IPC_MCU1_0
     {APP_IPC_CPU_MCU1_0, true, true},
@@ -107,22 +107,22 @@ core_config_t core_config[] = {
     {APP_IPC_CPU_MCU4_1, true, true},
 #endif
 #ifdef ENABLE_IPC_RMCU0_0
-    {APP_IPC_CPU_RMCU0_0, false, true},
+    {APP_IPC_CPU_RMCU0_0, true, true},
 #endif
 #ifdef ENABLE_IPC_RMCU0_1
-    {APP_IPC_CPU_RMCU0_1, false, true},
+    {APP_IPC_CPU_RMCU0_1, true, true},
 #endif
 #ifdef ENABLE_IPC_RMCU1_0
-    {APP_IPC_CPU_RMCU1_0, false, true},
+    {APP_IPC_CPU_RMCU1_0, true, true},
 #endif
 #ifdef ENABLE_IPC_RMCU1_1
-    {APP_IPC_CPU_RMCU1_1, false, true},
+    {APP_IPC_CPU_RMCU1_1, true, true},
 #endif
 #ifdef ENABLE_IPC_RMCU2_0
-    {APP_IPC_CPU_RMCU2_0, false, true},
+    {APP_IPC_CPU_RMCU2_0, true, true},
 #endif
 #ifdef ENABLE_IPC_RMCU2_1
-    {APP_IPC_CPU_RMCU2_1, false, true},
+    {APP_IPC_CPU_RMCU2_1, true, true},
 #endif
 #ifdef ENABLE_IPC_C6x_1
     {APP_IPC_CPU_C6x_1, true, true},

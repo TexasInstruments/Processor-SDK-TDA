@@ -332,38 +332,57 @@ static int32_t RPMessage_enqueMsg(RPMessage_EndptPool *pool, RPMessage_MsgHeader
     RPMessage_Object   *obj = NULL;
     Ipc_OsalPrms        *pOsalPrms = &gIpcObject.initPrms.osalPrms;
 
-    /* Protect from RPMessage_delete */
-    if ((NULL != pOsalPrms->lockHIsrGate) &&
-        (NULL != pOsalPrms->unLockHIsrGate))
+    /* Message will be silently dropped when the following if conditions are not met,
+     * The message is found in Vring, now if destination endPt is incorrect, we don't have
+     * any corresponding endPt queue for processing it so it will be ignored, vring buffer will
+     * be marked free after this api as done for a legit message */
+    if((NULL == msg) || (msg->dstAddr >= MAXENDPOINTS))
     {
-        key = pOsalPrms->lockHIsrGate(module.gateSwi);
-        obj = RPMessage_lookupEndpt(pool, msg->dstAddr);
-        pOsalPrms->unLockHIsrGate(module.gateSwi, key);
+#ifdef DEBUG_PRINT
+        if (msg != NULL)
+        {
+            SystemP_printf("Endpt Received %d is out of range! \n", msg->dstAddr);
+        }
+#endif
+        status = IPC_EFAIL;
     }
 
-#ifdef IPC_EXCLUDE_CTRL_TASKS
-    if (msg->dstAddr == IPC_CTRL_ENDPOINT_ID)
+    if (status == IPC_SOK)
     {
-        /* This message is for the ctrl endpoint */
-        RPMessage_Announcement *amsg = (RPMessage_Announcement*)msg->payload;
-        if (amsg->ctrl.type == CNTRLMSG_ANNOUNCE)
+        /* Protect from RPMessage_delete */
+        if ((NULL != pOsalPrms->lockHIsrGate) &&
+            (NULL != pOsalPrms->unLockHIsrGate))
         {
-#ifdef DEBUG_PRINT
-            SystemP_printf("RPMessage_enqueMsg ...CNTRLMSG_ANNOUNCE\n");
-#endif
-            status = RPMessage_processAnnounceMsg(
-                (RPMessage_Announcement*)amsg, msg->srcProcId);
-            if(status != IPC_SOK)
+            key = pOsalPrms->lockHIsrGate(module.gateSwi);
+            obj = RPMessage_lookupEndpt(pool, msg->dstAddr);
+            pOsalPrms->unLockHIsrGate(module.gateSwi, key);
+        }
+
+    #ifdef IPC_EXCLUDE_CTRL_TASKS
+        if (msg->dstAddr == IPC_CTRL_ENDPOINT_ID)
+        {
+            /* This message is for the ctrl endpoint */
+            RPMessage_Announcement *amsg = (RPMessage_Announcement*)msg->payload;
+            if (amsg->ctrl.type == CNTRLMSG_ANNOUNCE)
             {
-                SystemP_printf("RPMessage_processAnnounceMsg: Failed");
+    #ifdef DEBUG_PRINT
+                SystemP_printf("RPMessage_enqueMsg ...CNTRLMSG_ANNOUNCE\n");
+    #endif
+                status = RPMessage_processAnnounceMsg(
+                    (RPMessage_Announcement*)amsg, msg->srcProcId);
+                if(status != IPC_SOK)
+                {
+                    SystemP_printf("RPMessage_processAnnounceMsg: Failed");
+                }
+            }
+            if ((status == IPC_SOK) && (NULL != gIpcObject.initPrms.newMsgFxn))
+            {
+                gIpcObject.initPrms.newMsgFxn(msg->srcAddr, msg->srcProcId);
             }
         }
-        if ((status == IPC_SOK) && (NULL != gIpcObject.initPrms.newMsgFxn))
-        {
-            gIpcObject.initPrms.newMsgFxn(msg->srcAddr, msg->srcProcId);
-        }
+    #endif /* IPC_EXCLUDE_CTRL_TASKS */
     }
-#endif /* IPC_EXCLUDE_CTRL_TASKS */
+
     if (NULL != obj)
     {
         key = pOsalPrms->lockHIsrGate(module.gateSwi);
@@ -457,7 +476,9 @@ static void RPMessage_swiLinuxFxn(uintptr_t arg0, uintptr_t arg1)
         gIpcObject.initPrms.osalPrms.unLockHIsrGate(module.gateSwi, key);
 
         /* Pass to desitination queue (which is on this proc): */
-        RPMessage_enqueMsg(cbdata->pool, msg);
+        /* status ignored as can't handle any enqueMsg failure in ISR, need to 
+         * release the buffer and send kick to the host as for success case */
+        (void)RPMessage_enqueMsg(cbdata->pool, msg);
 
         key = gIpcObject.initPrms.osalPrms.lockHIsrGate(module.gateSwi);
 
@@ -494,7 +515,9 @@ static void RPMessage_swiFxn(uintptr_t arg0, uintptr_t arg1)
         gIpcObject.initPrms.osalPrms.unLockHIsrGate(module.gateSwi, key);
 
         /* Pass to desitination queue (which is on this proc): */
-        RPMessage_enqueMsg(cbdata->pool, msg);
+        /* status ignored as can't handle any enqueMsg failure in ISR, need to 
+         * release the buffer and send kick to the host as for success case */
+        (void)RPMessage_enqueMsg(cbdata->pool, msg);
 
         key = gIpcObject.initPrms.osalPrms.lockHIsrGate(module.gateSwi);
 
@@ -788,8 +811,8 @@ int32_t RPMessage_getRemoteEndPtToken(uint32_t currProcId, const char* name, uin
     Bool               lookupStatus =FALSE;
     int32_t            rtnVal = IPC_SOK;
 #ifndef IPC_EXCLUDE_CTRL_TASKS
-    void              *semHandle;
-    RPMessage_WaiterElem   *taskWaiter = RPMessage_getFreeTaskWaiter();
+    void              *semHandle = NULL;
+    RPMessage_WaiterElem   *taskWaiter = NULL;
 #endif /* IPC_EXCLUDE_CTRL_TASKS */
     size_t             namelen;
     Ipc_OsalPrms      *pOsalPrms = &gIpcObject.initPrms.osalPrms;
@@ -803,8 +826,7 @@ int32_t RPMessage_getRemoteEndPtToken(uint32_t currProcId, const char* name, uin
 #ifndef IPC_EXCLUDE_CTRL_TASKS
     if ((NULL == pOsalPrms->createMutex) ||
         (NULL == pOsalPrms->lockMutex) ||
-        (NULL == pOsalPrms->deleteMutex) ||
-        (NULL == taskWaiter))
+        (NULL == pOsalPrms->deleteMutex))
     {
         rtnVal = IPC_EFAIL;
     }
@@ -818,15 +840,39 @@ int32_t RPMessage_getRemoteEndPtToken(uint32_t currProcId, const char* name, uin
     if (IPC_SOK == rtnVal)
     {
 #ifndef IPC_EXCLUDE_CTRL_TASKS
-        semHandle   = pOsalPrms->createMutex();
-        taskWaiter->waiterElem.semHandle = semHandle;
-        strncpy(taskWaiter->waiterElem.name, name, SERVICENAMELEN-1U);
-        taskWaiter->waiterElem.name[SERVICENAMELEN-1U] = '\0';
-        taskWaiter->waiterElem.procId = currProcId;
-        taskWaiter->waiterElem.endPt  = MAXENDPOINTS + 1U;
-        taskWaiter->waiterElem.token = token;
-#endif /* IPC_EXCLUDE_CTRL_TASKS */
+        key = pOsalPrms->lockHIsrGate(module.gateSwi);
 
+        taskWaiter  = RPMessage_getFreeTaskWaiter();
+        if (taskWaiter == NULL)
+        {
+            rtnVal = IPC_EFAIL;
+        }
+        else
+        {
+            semHandle = pOsalPrms->createMutex();
+            if (semHandle == NULL)
+            {
+                taskWaiter->occupied = 0;
+                rtnVal = IPC_EFAIL;
+            }
+        }
+
+        if (IPC_SOK == rtnVal)
+        {
+            taskWaiter->waiterElem.semHandle = semHandle;
+            strncpy(taskWaiter->waiterElem.name, name, SERVICENAMELEN-1U);
+            taskWaiter->waiterElem.name[SERVICENAMELEN-1U] = '\0';
+            taskWaiter->waiterElem.procId = currProcId;
+            taskWaiter->waiterElem.endPt  = MAXENDPOINTS + 1U;
+            taskWaiter->waiterElem.token = token;
+        }
+
+        pOsalPrms->unLockHIsrGate(module.gateSwi, key);
+#endif /* IPC_EXCLUDE_CTRL_TASKS */
+    }
+
+    if (IPC_SOK == rtnVal)
+    {
         /* The order of steps is critical here.  There must
          * not be an unprotected time between calling
          * RPMessage_lookupName() and the IpcUtils_Qput().

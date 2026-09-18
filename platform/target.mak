@@ -44,6 +44,9 @@ SYS_XDC_IDIRS = $(BIOS_PATH)/packages
 ifeq ($(TARGET_PLATFORM),PC)
     SYSIDIRS += $(GCC_WINDOWS_ROOT)/include
     SYSLDIRS += $(GCC_WINDOWS_ROOT)/lib
+    ifeq ($(BUILD_QNX_MPU),yes)
+        SYSDEFS += QNX
+    endif
 else
     ifeq ($(TARGET_FAMILY),ARM)
         ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))

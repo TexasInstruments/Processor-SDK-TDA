@@ -710,6 +710,8 @@ OSPI_v0_HwAttrs ospiInitCfg[SPI_OSPI_DOMAIN_CNT][SPI_OSPI_PER_CNT + 1U] =
             0,                                 /* Baudrate divider. Set to a non-zero value (2 to 32)
                                                 to override default divider settings */
             BFALSE,                            /* enable Cache */
+            4U,                                /* numAddrBytes: 4-byte addressing (PHY DDR).
+                                                  Override in flash driver for 2 or 3-byte devices. */
         },
         {
             1,                                  /* Instance Number */
@@ -752,6 +754,8 @@ OSPI_v0_HwAttrs ospiInitCfg[SPI_OSPI_DOMAIN_CNT][SPI_OSPI_PER_CNT + 1U] =
             10U,
             0,
             BFALSE,
+            4U,                                /* numAddrBytes: 4-byte addressing (PHY DDR).
+                                                  Override in flash driver for 2 or 3-byte devices. */
         },
         {
             (uintptr_t)(0U),

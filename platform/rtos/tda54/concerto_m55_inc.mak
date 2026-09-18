@@ -52,10 +52,10 @@ ifeq ($(TARGET_CPU),M55)
   TIOVX_LIBS += vx_target_kernels_source_sink
   TIOVX_LIBS += vx_target_kernels_display
   TIOVX_LIBS += vx_target_kernels_openvx_ext
+  TIOVX_LIBS += vx_target_kernels_capture
   # TIOVX_LIBS += vx_kernels_hwa_tests vx_kernels_hwa
   # TIOVX_LIBS += vx_target_kernels_vpac_viss vx_target_kernels_vpac_msc vx_target_kernels_vpac_ldc
   # TIOVX_LIBS += vx_target_kernels_dmpac_dof vx_target_kernels_dmpac_sde
-  # TIOVX_LIBS += vx_target_kernels_capture
   # TIOVX_LIBS += vx_target_kernels_csitx
   # TIOVX_LIBS += vx_target_kernels_j7_arm
   # TIOVX_LIBS += vx_target_kernels_display_m2m
@@ -67,12 +67,12 @@ ifeq ($(TARGET_CPU),M55)
   # IMAGING_LIBS += vx_kernels_imaging
   # IMAGING_LIBS += vx_target_kernels_imaging_aewb
   # IMAGING_LIBS += ti_imaging_aealg
-  # IMAGING_LIBS += ti_imaging_sensordrv
-  # IMAGING_LIBS += ti_imaging_ittsrvr
+  IMAGING_LIBS += ti_imaging_sensordrv
+  IMAGING_LIBS += ti_imaging_ittsrvr
   # IMAGING_LIBS += app_utils_sensors
-  # IMAGING_LIBS += app_utils_iss
+  IMAGING_LIBS += app_utils_iss
 
-  # SYS_STATIC_LIBS += $(IMAGING_LIBS)
+  SYS_STATIC_LIBS += $(IMAGING_LIBS)
 
   ifeq ($(RTOS),FREERTOS)
     ADDITIONAL_STATIC_LIBS += libfreertos-ti_sdk_cfg_default_m55_ti-arm-clang.a

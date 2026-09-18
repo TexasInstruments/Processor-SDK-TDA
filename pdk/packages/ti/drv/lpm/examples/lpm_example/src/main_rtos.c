@@ -1,64 +1,35 @@
 /*
-*
-* Copyright (c) 2021 Texas Instruments Incorporated
-*
-* All rights reserved not granted herein.
-*
-* Limited License.
-*
-* Texas Instruments Incorporated grants a world-wide, royalty-free, non-exclusive
-* license under copyrights and patents it now or hereafter owns or controls to make,
-* have made, use, import, offer to sell and sell ("Utilize") this software subject to the
-* terms herein.  With respect to the foregoing patent license, such license is granted
-* solely to the extent that any such patent is necessary to Utilize the software alone.
-* The patent license shall not apply to any combinations which include this software,
-* other than combinations with devices manufactured by or for TI ("TI Devices").
-* No hardware patent is licensed hereunder.
-*
-* Redistributions must preserve existing copyright notices and reproduce this license
-* (including the above copyright notice and the disclaimer and (if applicable) source
-* code license limitations below) in the documentation and/or other materials provided
-* with the distribution
-*
-* Redistribution and use in binary form, without modification, are permitted provided
-* that the following conditions are met:
-*
-* *       No reverse engineering, decompilation, or disassembly of this software is
-* permitted with respect to any software provided in binary form.
-*
-* *       any redistribution and use are licensed by TI for use only with TI Devices.
-*
-* *       Nothing shall obligate TI to provide you with source code for the software
-* licensed and provided to you in object code.
-*
-* If software source code is provided to you, modification and redistribution of the
-* source code are permitted provided that the following conditions are met:
-*
-* *       any redistribution and use of the source code, including any resulting derivative
-* works, are licensed by TI for use only with TI Devices.
-*
-* *       any redistribution and use of any object code compiled from the source code
-* and any resulting derivative works, are licensed by TI for use only with TI Devices.
-*
-* Neither the name of Texas Instruments Incorporated nor the names of its suppliers
-*
-* may be used to endorse or promote products derived from this software without
-* specific prior written permission.
-*
-* DISCLAIMER.
-*
-* THIS SOFTWARE IS PROVIDED BY TI AND TI'S LICENSORS "AS IS" AND ANY EXPRESS
-* OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-* OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL TI AND TI'S LICENSORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-* OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-* OF THE POSSIBILITY OF SUCH DAMAGE.
-*
-*/
+ *  Copyright (c) Texas Instruments Incorporated 2026
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *    Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ *    Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the
+ *    distribution.
+ *
+ *    Neither the name of Texas Instruments Incorporated nor the names of
+ *    its contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 /**
  *  \file main_rtos.c
@@ -80,6 +51,8 @@
 #include <ti/drv/sciclient/sciserver_tirtos.h>
 
 #include <ti/drv/lpm/lpm.h>
+#include <ti/drv/lpm/src/lpm_mcu_only_recovery.h>
+#include <ti/drv/lpm/src/lpm_uart_drv.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -148,6 +121,89 @@ int main(void)
     return(0);
 }
 
+
+/* MCU Only task */
+uint32_t Lpm_pmicApp(void)
+{
+    uint32_t status = 0;
+    uint8_t input=0;
+    Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG "Inside MCU ONLY task!\n");
+
+    /* Before entering MCU_ONLY mode we need to disable all VTM temp sensors in
+       the MAIN domain - VTM_TMPSENS1-4 */
+    /* Disabling the VTM MAXT_OUTRG_ALERT_THR */
+    Lpm_mcuOnlyDisableMaxOutrgAlert();
+
+    Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG
+                    "STATE INFO :: CURRENTLY IN ACTIVE MODE!\n");
+    Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG "LED LD5 should be ON\n");
+    Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG
+                    "Please measure TP133 and TP134!\n");
+    Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG
+                    "Expected values in ACTIVE mode:\nTP133: HIGH\nTP134: HIGH\n");
+
+    while(1)
+    {
+        Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG
+                        "Kindly unload Remoteproc modules from Linux. Type these commands in Linux CMD:\n   modprobe -r ti_k3_r5_remoteproc\n   modprobe -r ti_k3_dsp_remoteproc\n");
+        Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG "After modules have been removed, press 1 and enter\n");
+        UART_scanFmt("%d", &input);
+        if (1U == input)
+        {
+            /* Change state from ACTIVE to MCU ONLY */
+            if (0 == status)
+            {
+                Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG
+                                "############################ ACTIVE -> MCU ONLY MODE ############################\n");
+                /* The status is dummy currently */
+                status = Lpm_mcuOnlyActiveToMcuSwitch();
+                Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG
+                                "######################### ACTIVE -> MCU ONLY MODE DONE ##########################\n");
+            }
+            else
+            {
+                Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG">> ERROR :: Status not correct!!!\n");
+            }
+
+            Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG
+                            "STATE INFO :: NOW IN MCU ONLY MODE!\n");
+            Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG "LED LD5 should be OFF\n");
+            Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG
+                            "Sleeping for 10s, please measure TP133 and TP134!\n");
+            Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG
+                            "Expected values in MCU ONLY mode:\nTP133: HIGH\nTP134: LOW\n");
+            TaskP_sleep(10000);
+
+            /* Change state from MCU ONLY to ACTIVE */
+            if (0 == status)
+            {
+                Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG
+                                "############################ MCU ONLY -> ACTIVE MODE ############################\n");
+                Lpm_mcuOnlyToActiveSwitch();
+                Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG
+                                "######################### MCU ONLY -> ACTIVE MODE DONE ##########################\n");
+            }
+            else
+            {
+                Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG">> ERROR :: Status not correct!!!\n");
+            }
+
+            Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG
+                            "STATE INFO :: CURRENTLY IN ACTIVE MODE!\n");
+            Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG "LED LD5 should be ON\n");
+            Lpm_uartDrvPrintf(LPM_UART_MCU_ONLY_MSG
+                            "Expected values in ACTIVE mode:\nTP133: HIGH\nTP134: HIGH\n");
+            break;
+
+        }
+        else
+        {
+            Lpm_uartDrvPrintf("Invalid input: ");
+        }
+    }
+    return status;
+}
+
 static void MainApp_TaskFxn(void* a0, void* a1)
 {
 #if defined(UART_PRINT_DEBUG)
@@ -182,16 +238,16 @@ static void MainApp_TaskFxn(void* a0, void* a1)
         OS_stop();
     }
 
-    AppUtils_Printf(MSG_NORMAL, "\nMCU R5F App started at %d usecs\r\n", (uint32_t)TimerP_getTimeInUsecs());
+    Lpm_uartDrvPrintf("\nMCU R5F App started at %d usecs\r\n", (uint32_t)TimerP_getTimeInUsecs());
 
     Lpm_bootAppInit();
     Lpm_pmicInit();
-    AppUtils_Printf(MSG_NORMAL, "\nPMIC initialization done.\r\n");
+    Lpm_uartDrvPrintf("\nPMIC initialization done.\r\n");
 
     for(i=0; i<numBoots; i++)
     {
 #if defined(UART_PRINT_DEBUG)
-        AppUtils_Printf(MSG_NORMAL, "\nLoop %d starts!\n",i);
+        Lpm_uartDrvPrintf("\nLoop %d starts!\n",i);
         timeIPCStart = TimerP_getTimeInUsecs();
 #endif
 
@@ -199,10 +255,10 @@ static void MainApp_TaskFxn(void* a0, void* a1)
 
 #if defined(UART_PRINT_DEBUG)
         timeIPCFinish = TimerP_getTimeInUsecs();
-        AppUtils_Printf(MSG_NORMAL, "\nIPC Task started at %d usecs and finished at %d usecs\r\n",
+        Lpm_uartDrvPrintf("\nIPC Task started at %d usecs and finished at %d usecs\r\n",
                         (uint32_t)timeIPCStart,
                         (uint32_t)timeIPCFinish);
-        AppUtils_Printf(MSG_NORMAL, "************* Sleeping for 1 sec after IPC Task ***********\n");
+        Lpm_uartDrvPrintf("************* Sleeping for 1 sec after IPC Task ***********\n");
         TaskP_sleep(1000);
         timeBootAppStart = TimerP_getTimeInUsecs();
 #endif
@@ -211,19 +267,19 @@ static void MainApp_TaskFxn(void* a0, void* a1)
         
 #if defined(UART_PRINT_DEBUG)
         timeBootAppFinish = TimerP_getTimeInUsecs();
-        AppUtils_Printf(MSG_NORMAL, "\nBootApp Task started at %d usecs and finished at %d usecs\r\n",
+        Lpm_uartDrvPrintf("\nBootApp Task started at %d usecs and finished at %d usecs\r\n",
                         (uint32_t)timeBootAppStart,
                         (uint32_t)timeBootAppFinish);
-        AppUtils_Printf(MSG_NORMAL, "************* Sleeping for 1 sec after MCU Boot Task***********\n");
+        Lpm_uartDrvPrintf("************* Sleeping for 1 sec after MCU Boot Task***********\n");
         TaskP_sleep(1000);
-        AppUtils_Printf(MSG_NORMAL, "De-initializing the IPC driver and deleting the tasks\n");
+        Lpm_uartDrvPrintf("De-initializing the IPC driver and deleting the tasks\n");
 #endif
 
         Lpm_ipcExitResponseTask();
         TaskP_sleep(1000);
         
 #if defined(UART_PRINT_DEBUG)
-        AppUtils_Printf(MSG_NORMAL, "************* Slept for 1 sec after IPC de-initializing Task. IPC should have deinitialized now. ***********\n");
+        Lpm_uartDrvPrintf("************* Slept for 1 sec after IPC de-initializing Task. IPC should have deinitialized now. ***********\n");
         timeMcuOnlyAppStart = TimerP_getTimeInUsecs();
 #endif
 
@@ -231,10 +287,10 @@ static void MainApp_TaskFxn(void* a0, void* a1)
 
 #if defined(UART_PRINT_DEBUG)
         timeMcuOnlyAppFinish = TimerP_getTimeInUsecs();
-        AppUtils_Printf(MSG_NORMAL, "\nMCU Only Task started at %d usecs and finished at %d usecs\r\n",
+        Lpm_uartDrvPrintf("\nMCU Only Task started at %d usecs and finished at %d usecs\r\n",
                         (uint32_t)timeMcuOnlyAppStart,
                         (uint32_t)timeMcuOnlyAppFinish);
-        AppUtils_Printf(MSG_NORMAL, "\nLoop %d ends!\n",i);
+        Lpm_uartDrvPrintf("\nLoop %d ends!\n",i);
 #endif
     }
 
@@ -269,11 +325,11 @@ void SetupSciServer(void* a0, void* a1)
 
     if (ret == CSL_PASS)
     {
-        AppUtils_Printf(MSG_NORMAL, "Starting Sciserver..... PASSED\n");
+        Lpm_uartDrvPrintf("Starting Sciserver..... PASSED\n");
     }
     else
     {
-        AppUtils_Printf(MSG_NORMAL, "Starting Sciserver..... FAILED\n");
+        Lpm_uartDrvPrintf("Starting Sciserver..... FAILED\n");
     }
 
     return ;

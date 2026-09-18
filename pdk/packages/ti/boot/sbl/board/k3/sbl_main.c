@@ -391,6 +391,8 @@ SBL_log(SBL_LOG_MAX,"Write for COMPUTE_CLUSTER_CFG_WRAP_0_CC_CNTRL Register ..."
 #if defined(SOC_J784S4)
 *(unsigned int *)(0xC0000200) = 0x00000F00;
 #endif
+/* Cache write-back to ensure register write reaches hardware before DSP core power-up */
+CacheP_wb((const void *)0xC0000200, sizeof(unsigned int));
 SBL_log(SBL_LOG_MAX,"done.\n");
 
 SBL_log(SBL_LOG_MAX,"Clearing RAT for COMPUTE_CLUSTER_CFG_WRAP_0_CC_CNTRL Register ...");
@@ -522,6 +524,7 @@ SBL_log(SBL_LOG_MAX,"done.\n");
     SBL_log(SBL_LOG_MAX, "Initializing GTC ...");
     volatile uint32_t *gtcRegister = (uint32_t *) CSL_GTC0_GTC_CFG1_BASE;
     *gtcRegister = *gtcRegister | CSL_GTC_CFG1_CNTCR_EN_MASK | CSL_GTC_CFG1_CNTCR_HDBG_MASK;
+    CSL_REG32_WR(CSL_GTC0_GTC_CFG1_BASE + CSL_GTC_CFG1_CNTFID0, 200000000);
 
 #if defined(SOC_J721E) || (!defined(SBL_ENABLE_HLOS_BOOT) && defined(SOC_J7200)) || (!defined(SBL_ENABLE_HLOS_BOOT) && defined(SOC_J784S4))
 #if !defined (SBL_ENABLE_BIST)

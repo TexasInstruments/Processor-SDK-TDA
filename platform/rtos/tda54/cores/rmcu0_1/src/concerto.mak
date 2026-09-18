@@ -34,7 +34,7 @@ ifeq ($(BUILD_APP_RTOS_QNX),yes)
       _MODULE=$(OS_ID)
       include $(PRELUDE)
 
-      TARGET      := vx_app_rtos_qnx_mcu0_1
+      TARGET      := vx_app_rtos_qnx_rmcu0_1
       TARGETTYPE  := exe
       CSOURCES    := main.c
 

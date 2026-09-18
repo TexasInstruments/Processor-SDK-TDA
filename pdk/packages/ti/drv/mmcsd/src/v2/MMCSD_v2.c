@@ -516,34 +516,33 @@ void mmc_setupDescriptor(
 
 
 /* Wait for DAT0 to go low */
-static int32_t MMCSD_v2_waitDat0(MMCSD_Handle handle, MMCSD_v2_HwAttrs const *hwAttrs);
-static int32_t MMCSD_v2_waitDat0(MMCSD_Handle handle, MMCSD_v2_HwAttrs const *hwAttrs)
+static MMCSD_Error MMCSD_v2_waitDat0(MMCSD_Handle handle, MMCSD_v2_HwAttrs const *hwAttrs);
+static MMCSD_Error MMCSD_v2_waitDat0(MMCSD_Handle handle, MMCSD_v2_HwAttrs const *hwAttrs)
 {
   MMCSD_v2_Object  *object     = NULL;
   volatile uint32_t present_state_reg;
   uint32_t          timeout_ms;
   uint32_t          wait_dat0try = 0U;
-  int32_t           retVal = STW_EFAIL;
 
   /* Get the pointer to the object and hwAttrs */
   object = (MMCSD_v2_Object *)((MMCSD_Config *) handle)->object;
 
   timeout_ms = 10 * object->ecsd[MMCSD_EMMC_ECSD_GENERIC_CMD6_TIME];
-
+  
   do
   {
      /* Check for DAT0 to go low */
-      present_state_reg= HW_RD_REG32(hwAttrs->baseAddr + MMC_PSTATE);
+     present_state_reg= HW_RD_REG32(hwAttrs->baseAddr + MMC_PSTATE);
      if( (present_state_reg & (1 << 20)) == (1 << 20) )
      {
-       retVal = MMCSD_OK;
-       break;
+       return MMCSD_OK;
      }
+     
     Osal_delay(1);
     wait_dat0try++;
-  }while(wait_dat0try++ < timeout_ms);
+  }while(wait_dat0try < timeout_ms);
 
-  return retVal;
+  return MMCSD_ERR;
 }
 
 /* Waits for cmd inhibit to go low */
@@ -2106,7 +2105,6 @@ MMCSD_Error MMCSD_switch_eMMC_mode(MMCSD_Handle handle, MMCSD_SupportedMMCModes_
     /* Get the pointer to the object and hwAttrs */
     object = (MMCSD_v2_Object *)((MMCSD_Config *) handle)->object;
     hwAttrs = (MMCSD_v2_HwAttrs const *)((MMCSD_Config *) handle)->hwAttrs;
-    uint8_t timeout_ms=10*object->ecsd[MMCSD_EMMC_ECSD_GENERIC_CMD6_TIME];
 
     drvStrength = hwAttrs->drvStrength;
     phyDriverType= hwAttrs->phydrvStrength;
@@ -2188,7 +2186,6 @@ MMCSD_Error MMCSD_switch_eMMC_mode(MMCSD_Handle handle, MMCSD_SupportedMMCModes_
         ret = MMCSD_v2_transfer(handle, &transaction);
      }
 
-    Osal_delay(timeout_ms);
 
     if(MMCSD_OK == ret)
     {
@@ -2284,7 +2281,10 @@ MMCSD_Error MMCSD_switch_eMMC_mode(MMCSD_Handle handle, MMCSD_SupportedMMCModes_
          transaction.flags = MMCSD_CMDRSP_BUSY;
          ret = MMCSD_v2_transfer(handle, &transaction);
 
-        Osal_delay(timeout_ms);
+        if(MMCSD_OK == ret) {
+  		  /* Wait for DAT0 to go low */
+          ret = MMCSD_v2_waitDat0(handle, hwAttrs);
+	    }
 
 	  MMCSD_socPhyDisableDLL(hwAttrs);
 
@@ -2325,8 +2325,6 @@ MMCSD_Error MMCSD_switch_eMMC_mode(MMCSD_Handle handle, MMCSD_SupportedMMCModes_
           transaction.flags = MMCSD_CMDRSP_BUSY;
           ret = MMCSD_v2_transfer(handle, &transaction);
         }
-
-        Osal_delay(timeout_ms);
 
         if(MMCSD_OK == ret) {
   		  /* Wait for DAT0 to go low */
@@ -2751,7 +2749,7 @@ static MMCSD_Error MMCSD_v2_initEmmc(MMCSD_Handle handle)
     }
 #ifndef MMCSD_SUPPORT_MMC_HS400_DISABLED
     /* Read DEVICE_TYPE in the ECSD[196] to get the supported speeds */
-    if( ( (hwAttrs->supportedModes & MMCSD_SUPPORT_MMC_HS400) || (hwAttrs->supportedModes & MMCSD_SUPPORT_MMC_HS400)) &&  (object->ecsd[MMCSD_EMMC_ECSD_DEVICE_TYPE_INDEX] & MMCSD_EMMC_ECSD_DEVICE_TYPE_HS400_200MHZ_1P8V))
+    if( ( (hwAttrs->supportedModes & MMCSD_SUPPORT_MMC_HS400) || (hwAttrs->supportedModes & MMCSD_SUPPORT_MMC_HS400_ES)) &&  (object->ecsd[MMCSD_EMMC_ECSD_DEVICE_TYPE_INDEX] & MMCSD_EMMC_ECSD_DEVICE_TYPE_HS400_200MHZ_1P8V))
     {
 
       if( (hwAttrs->supportedModes & MMCSD_SUPPORT_MMC_HS400_ES) && (object->ecsd[MMCSD_ECSD_STROBE_SUPPORT_INDEX] == MMCSD_ECSD_STROBE_SUPPORT_ENHANCED_EN) )

@@ -39,6 +39,10 @@
 #include <ti/osal/TimerP.h>
 #include <ti/osal/CycleprofilerP.h>
 
+#if defined (BUILD_MCU)
+#include <ti/csl/arch/r5/csl_arm_r5_pmu.h>
+#endif
+
 #if defined (BUILD_C7X)
 #include <ti/csl/arch/csl_arch.h>
 #include <ti/osal/src/nonos/Nonos_config.h>
@@ -47,6 +51,14 @@
 #if defined (BUILD_C7X) || defined (BUILD_MCU)
 #define configTIMER_ID  configTICK_TIMER_ID
 #endif
+
+
+#if defined (BUILD_MCU)
+/* TimerP Global Variable Imports to be updated every tick interrupt */
+extern uint64_t gSafertosNumTicks;
+extern uint32_t gSafertosPmuLastTickCycleCount;
+#endif
+
 /* Timer Hook function handlers targeting the TI PDK libraries. */
 
 /* Timer interrupt handler function. */
@@ -140,6 +152,14 @@ void vApplicationSetupTickInterruptHook( portUInt32Type ulTimerClockHz,
 void vApplicationTickHook ( void )
 {
     CycleprofilerP_refreshCounter();
+
+#if defined (BUILD_MCU)
+    /* Ensure to add the logic in redefinition of vApplicationTickHook in order to 
+     * sync usec level core timing across WFI calls */
+    gSafertosNumTicks = gSafertosNumTicks + 1U;
+    /* Log the PMU count at Tick demarkation */
+    gSafertosPmuLastTickCycleCount = CSL_armR5PmuReadCntr(CSL_ARM_R5_PMU_CYCLE_COUNTER_NUM);
+#endif
 }
 
 /*-------------------------------------------------------------------------*/

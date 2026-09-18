@@ -1273,6 +1273,12 @@ static int16_t I2C_primeTransfer_v1(I2C_Handle handle,
                     }
                 }
             }
+
+            /* Recover bus if timeout occurred during polling mode */                                                                                                       
+            if (I2C_STS_ERR_TIMEOUT == status)                                                                                                                       
+            {                                                                                                                                                        
+                (void)I2C_v1_recoverBus(handle, I2C_DELAY_SMALL);                                                                                                    
+            }         
         }
     }
 #if (1U == CSL_I2C_ENABLE_SLAVE_MODE)
@@ -1881,6 +1887,13 @@ static int32_t I2C_v1_ctrlInit(I2C_Handle handle)
            }
 
            case I2C_1P0Mhz:
+           {
+                outputClk = 1000000U;
+                internalClk = I2C_MODULE_INTERNAL_CLK_12MHZ;
+                break;
+           }
+
+            case I2C_3P4Mhz:
            {
                outputClk = 3400000U;
                internalClk = I2C_MODULE_INTERNAL_CLK_12MHZ;

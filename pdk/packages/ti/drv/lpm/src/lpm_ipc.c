@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Texas Instruments Incorporated
+ *  Copyright (c) Texas Instruments Incorporated 2026
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without

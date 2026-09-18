@@ -91,7 +91,8 @@ static int32_t appLogCioOpen(const char *path, uint32_t flags, int32_t llv_fd)
 
 static int32_t appLogCioClose(int32_t dev_fd)
 {
-    if(g_app_log_cio_buf_idx>0)
+    if((g_app_log_cio_buf_idx > 0) &&
+       (g_app_log_cio_buf_idx < (sizeof(g_app_log_cio_buf)/g_app_log_cio_buf[0])))
     {
         g_app_log_cio_buf[g_app_log_cio_buf_idx] = (char)0;
         g_app_log_cio_buf_idx++;
@@ -144,7 +145,8 @@ static int32_t appLogCioWrite(int32_t dev_fd, const char *buf, uint32_t count)
         {
             flush_buf = 1;
         }
-        if(g_app_log_cio_buf_idx >= (APP_LOG_CIO_BUF_MAX_SIZE-1U))
+        if((g_app_log_cio_buf_idx >= (APP_LOG_CIO_BUF_MAX_SIZE-1U)) &&
+           (g_app_log_cio_buf_idx < (sizeof(g_app_log_cio_buf)/g_app_log_cio_buf[0])))
         {
             g_app_log_cio_buf[g_app_log_cio_buf_idx] = (char)0;
             g_app_log_cio_buf_idx++;

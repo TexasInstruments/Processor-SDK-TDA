@@ -11,6 +11,9 @@ ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), X86 x86_64 A72 A53 A720 R5F M55))
         IDIRS       += $(APP_UTILS_PATH)/
         IDIRS       += $(IMAGING_PATH)
         IDIRS       += $(IMAGING_PATH)/kernels/include
+        IDIRS       += $(HOST_ROOT)/kernels/video_io/host
+        IDIRS       += $(HOST_ROOT)/kernels/video_io/include
+        IDIRS       += $(TIOVX_PATH)/source/include
 
         ifeq ($(HOST_COMPILER),$(filter $(HOST_COMPILER),GCC GCC_LINARO GCC_WINDOWS GCC_LINUX GCC_LINUX_ARM GCC_QNX_ARM))
             CFLAGS += -Wno-unused-function
@@ -39,6 +42,15 @@ ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), X86 x86_64 A72 A53 A720 R5F M55))
 
         ifeq ($(BUILD_DISPLAY_M2M),yes)
             DEFS += BUILD_DISPLAY_M2M
+        endif
+
+        ifeq ($(LDRA_COVERAGE_ENABLED_VIDEO_IO),yes)
+            IDIRS       += $(HOST_ROOT)/kernels/video_io/coverage_files/include
+            BUILD_DEFS  += LDRA_COVERAGE_ENABLED_VIDEO_IO
+        endif
+
+        ifeq ($(ASF_TEST_ENABLED_CAPTURE),yes)
+            BUILD_DEFS  += ASF_TEST_ENABLED_CAPTURE
         endif
 
         include $(FINALE)

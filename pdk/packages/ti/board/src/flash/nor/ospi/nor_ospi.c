@@ -72,6 +72,7 @@ NOR_Info Nor_ospiInfo =
 
 static bool gPhyEnable;
 static bool gDtrEnable;
+static uint32_t gAddrBytes;
 
 static NOR_STATUS NOR_ospiCmdRead(OSPI_Handle handle, uint8_t *cmdBuf,
                             uint32_t cmdLen, uint8_t *rxBuf, uint32_t rxLen)
@@ -217,7 +218,7 @@ static NOR_STATUS Nor_ospiXipEnable(OSPI_Handle handle)
         stigCmd[2] = 0x7; /* read 0x7=8 data bytes (ignored) */
         stigCmd[3] = 0x1; /* enable cmd address */
         stigCmd[4] = 0x0; /* disable mode bits */
-        stigCmd[5] = 0x3; /* use 0x3=4 address bytes */
+        stigCmd[5] = gAddrBytes - 1; /* use (gAddrBytes-1) for address bytes */
         stigCmd[6] = 0x1; /* enable write operation */
         stigCmd[7] = 0x0; /* write 0x0=1 data byte */
         stigCmd[8] = 0x0; /* 0x7=8 dummy cycles */
@@ -251,6 +252,9 @@ static NOR_STATUS Nor_ospiSetDummyCycle(OSPI_Handle handle, uint32_t dummyCycle)
     uint32_t               data[3];
     uint32_t               addrBytes;
 
+    /* Address byte count for the VCR write STIG command.
+     * DDR (octal) mode requires 4-byte addressing → addrBytes field = 3.
+     * SDR / Legacy SPI uses 3-byte addressing → addrBytes field = 2. */
     if (BTRUE == gDtrEnable)
     {
         addrBytes = 3U;
@@ -263,14 +267,12 @@ static NOR_STATUS Nor_ospiSetDummyCycle(OSPI_Handle handle, uint32_t dummyCycle)
     /* Send Write Enable command */
     retVal = Nor_ospiCmdWrite(handle, &cmdWren, 1, 0);
 
-    /* Enable single transfer rate mode */
     if (NOR_PASS == retVal)
     {
-        /* send write VCR command to reg addr 0x0 to set to SDR mode */
         data[0] = (NOR_CMD_WRITE_VCR << 24)         | /* write volatile config reg cmd */
                   (0 << 23)                         | /* read data disable */
                   (7 << 20)                         | /* read 8 data bytes */
-                  (1 << 19)                         | /* enable cmd adddr */
+                  (1 << 19)                         | /* enable cmd address */
                   (addrBytes << 16)                 | /* address bytes */
                   (1 << 15);                          /* write data enable */
         data[1] = 1;                                  /* Dummy cycle config register address */
@@ -348,8 +350,27 @@ NOR_HANDLE Nor_ospiOpen(uint32_t norIntf, uint32_t portNum, void *params)
     /* Get the OSPI SoC configurations */
     OSPI_socGetInitCfg(SPI_OSPI_DOMAIN_MCU, portNum, &ospiCfg);
 
-    /* Save the DTR enable flag */
-    gDtrEnable = ospiCfg.dtrEnable;
+    /* Apply device-specific address and DDR settings from the device header.
+     * Always set numAddrBytes explicitly so that a previous test's SOC config
+     * value (e.g. 4 from an octal test) does not leak into a subsequent Legacy
+     * SPI open.  Octal mode requires NOR_OSPI_ADDR_BYTES (4); Legacy SPI uses
+     * 3-byte addressing.
+     * If address bytes are not programmable, PHY DDR is incompatible, force off. */
+    gAddrBytes             = NOR_OSPI_ADDR_BYTES;
+    gDtrEnable             = ospiCfg.dtrEnable;
+    if (NOR_ADDR_BYTES_PROGRAMMABLE == 0U)
+    {
+        gDtrEnable         = BFALSE;
+        ospiCfg.dtrEnable  = BFALSE;
+    }
+    if (OSPI_XFER_LINES_OCTAL == ospiCfg.xferLines)
+    {
+        ospiCfg.numAddrBytes = NOR_OSPI_ADDR_BYTES;  /* 4-byte for OPI/DOPI */
+    }
+    else
+    {
+        ospiCfg.numAddrBytes = 3U;                   /* 3-byte for Legacy SPI */
+    }
 
     /* Reset the PHY tunning configuration data when enabled */
     data = *(uint32_t *)params;
@@ -367,8 +388,10 @@ NOR_HANDLE Nor_ospiOpen(uint32_t norIntf, uint32_t portNum, void *params)
          * it turned off for open/erase/write operation
          */
         ospiCfg.phyEnable = BFALSE;
-        OSPI_socSetInitCfg(SPI_OSPI_DOMAIN_MCU, portNum, &ospiCfg);
     }
+    /* Always write back config so numAddrBytes and dtrEnable overrides
+     * are applied even when phyEnable was already BFALSE. */
+    OSPI_socSetInitCfg(SPI_OSPI_DOMAIN_MCU, portNum, &ospiCfg);
 
     /* Use default SPI config params if no params provided */
     OSPI_Params_init(&spiParams);
@@ -405,11 +428,11 @@ NOR_HANDLE Nor_ospiOpen(uint32_t norIntf, uint32_t portNum, void *params)
                 /* Reset device memory for all the other lines */
                 Nor_ospiResetMemory(hwHandle);
             }
-            
+
 			hwAttrs = (OSPI_v0_HwAttrs const *)hwHandle->hwAttrs;
             CSL_ospiSetDualByteOpcodeMode((const CSL_ospi_flash_cfgRegs *)(hwAttrs->baseAddr),
                                               UFALSE);
-            
+
             /* Set read/write opcode and read dummy cycles */
             Nor_ospiSetOpcode(hwHandle);
 
@@ -539,7 +562,7 @@ NOR_STATUS Nor_ospiRead(NOR_HANDLE handle, uint32_t addr,
         CSL_REG32_FINS(&pRegs->DEV_INSTR_RD_CONFIG_REG,
                     OSPI_FLASH_CFG_DEV_INSTR_RD_CONFIG_REG_DUMMY_RD_CLK_CYCLES_FLD,
                     NOR_OCTAL_READ_DUMMY_CYCLE - 1U);
-        
+
         if (NOR_FAIL == Nor_spiPhyTune(spiHandle, NOR_TUNING_DATA_OFFSET))
            return NOR_FAIL;
     }
@@ -601,7 +624,7 @@ NOR_STATUS Nor_ospiWrite(NOR_HANDLE handle, uint32_t addr, uint32_t len,
 
     spiHandle = (OSPI_Handle)norOspiInfo->hwHandle;
     hwAttrs = (OSPI_v0_HwAttrs *)spiHandle->hwAttrs;
-    
+
     /* Disable XIP Prefetch before programming flash memory */
     xipPrefetchEnable = UFALSE;
     OSPI_control(spiHandle, OSPI_V0_CMD_ENABLE_XIP_PREFETCH, (void *)&xipPrefetchEnable);
@@ -706,7 +729,7 @@ NOR_STATUS Nor_ospiErase(NOR_HANDLE handle, int32_t erLoc, bool blkErase)
 
         if (BTRUE == gDtrEnable)
         {
-            cmd[1] = (address >> 24) & 0xFF; /* 4 address bytes */
+            cmd[1] = (address >> 24) & 0xFF; /* 4 address bytes (octal DDR) */
             cmd[2] = (address >> 16) & 0xFF;
             cmd[3] = (address >>  8) & 0xFF;
             cmd[4] = (address >>  0) & 0xFF;
@@ -714,14 +737,13 @@ NOR_STATUS Nor_ospiErase(NOR_HANDLE handle, int32_t erLoc, bool blkErase)
         }
         else
         {
-            cmd[1] = (address >> 16) & 0xFF; /* 3 address bytes */
+            cmd[1] = (address >> 16) & 0xFF; /* 3 address bytes (SDR / Legacy SPI) */
             cmd[2] = (address >>  8) & 0xFF;
             cmd[3] = (address >>  0) & 0xFF;
             cmdLen = 4U;
         }
-
     }
-    
+
     /* Disable XIP Prefetch before programming flash memory */
     xipPrefetchEnable = UFALSE;
     OSPI_control(spiHandle, OSPI_V0_CMD_ENABLE_XIP_PREFETCH, (void *)&xipPrefetchEnable);

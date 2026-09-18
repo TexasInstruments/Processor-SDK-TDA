@@ -330,7 +330,7 @@ vx_status app_create_graph_aewb(vx_graph graph, AEWBObj *aewbObj, vx_object_arra
 #if defined(SOC_AM62A)
     vxSetNodeTarget(aewbObj->node, VX_TARGET_STRING, TIVX_TARGET_MCU1_0);
 #elif defined(SOC_TDA54)
-    vxSetNodeTarget(aewbObj->node, VX_TARGET_STRING, TIVX_TARGET_MCU2);
+    vxSetNodeTarget(aewbObj->node, VX_TARGET_STRING, TIVX_TARGET_MCU0);
 #else
     vxSetNodeTarget(aewbObj->node, VX_TARGET_STRING, TIVX_TARGET_MCU2_0);
 #endif

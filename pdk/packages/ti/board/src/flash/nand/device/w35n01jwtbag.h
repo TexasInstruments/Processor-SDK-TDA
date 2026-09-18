@@ -106,6 +106,21 @@ extern "C" {
 #define NAND_MANF_ID                  (0xEFU)   /* Manufacturer ID */
 #define NAND_DEVICE_ID                (0xDC21U) /* Device ID */
 
+/** \brief OSPI controller address configuration.
+ *  NAND_OSPI_ADDR_BYTES         : Number of address bytes the OSPI controller sends
+ *                                 for memory operations. Fixed by array geometry:
+ *                                 Column CA[12:0] + Page PA[15:0] both fit in 2 bytes.
+ *  NAND_ADDR_BYTES_PROGRAMMABLE : Whether the device supports switching address bytes
+ *                                 to 4 bytes. This device has fixed 2-byte addressing
+ *                                 determined by array geometry - not programmable.
+ *                                 Note: Nand_ospiSetOpcode() always configures the
+ *                                 controller for 2-byte addressing so DDR and PHY DDR
+ *                                 modes work correctly regardless of this setting.
+ *                                 Set to 1U for devices that support address byte switching.
+ */
+#define NAND_OSPI_ADDR_BYTES          (2U)
+#define NAND_ADDR_BYTES_PROGRAMMABLE  (0U)
+
 /** Status Register, Write-in-Progress bit */
 #define NAND_SR1_ADDR                 (0xA0U)
 #define NAND_SR2_ADDR                 (0xB0U)

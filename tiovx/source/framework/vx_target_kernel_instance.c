@@ -423,15 +423,17 @@ VX_API_ENTRY vx_status VX_API_CALL tivxSetTargetKernelInstanceErrorInfo(
 
             if (NULL != dst_error_info)
             {
-                uint32_t i;
-
-                /* Retry loop:
-                 *  - Prevents error_info/error_info_size from being overwritten
-                 *    with new error_info if the host hasn't read and cleared them yet.
-                 */
-                for (i = 0; (i < TIVX_MAX_ERROR_INFO_RETRIES) && ((uint16_t)0 != dst_error_info->error_info_size); i++)
+                if (tivxFlagIsBitSet(target_kernel_instance->node_obj_desc->flags, TIVX_NODE_FLAG_IS_USER_CALLBACK) == (vx_bool)vx_true_e)
                 {
-                    ownErrorInfoRetryWait(i, "Error_info");
+                    /* Retry loop:
+                     *  - Prevents error_info/error_info_size from being overwritten
+                     *    with new error_info if the host hasn't read and cleared them yet.
+                     */
+                    uint32_t i;
+                    for (i = 0; (i < TIVX_MAX_ERROR_INFO_RETRIES) && ((uint16_t)0 != dst_error_info->error_info_size); i++)
+                    {
+                        ownErrorInfoRetryWait(i, "Error_info");
+                    }
                 }
 
                 tivx_obj_desc_memcpy(dst_error_info->error_info,

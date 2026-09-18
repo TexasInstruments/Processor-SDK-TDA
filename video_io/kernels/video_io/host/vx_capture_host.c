@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2018 Texas Instruments Incorporated
+ * Copyright (c) 2018-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -69,7 +69,9 @@
 #include "TI/tivx_target_kernel.h"
 #include "tivx_video_io_host_priv.h"
 #include "TI/tivx_event.h"
+#include "TI/tivx_ext_raw_image.h"
 #include <TI/tivx_mutex.h>
+#include <VX/vx_khr_safe_casts.h>
 
 static vx_kernel vx_capture_kernel = NULL;
 
@@ -86,6 +88,8 @@ static vx_status VX_CALLBACK tivxAddKernelCaptureValidate(vx_node node,
             vx_uint32 num,
             vx_meta_format metas[])
 {
+    (void)node;
+    (void)metas;
     vx_status status = (vx_status)VX_SUCCESS;
 
     vx_user_data_object input = NULL;
@@ -96,6 +100,15 @@ static vx_status VX_CALLBACK tivxAddKernelCaptureValidate(vx_node node,
     vx_df_image img_fmt;
     vx_enum ref_type;
 
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    The test framework does not support the configuration required to trigger this error scenario.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the
+    error status and return the same to the application.
+    However, due to the stated rationale, this is not tested. 
+    <justification end> */
     if ( (num != TIVX_KERNEL_CAPTURE_MAX_PARAMS)
         || (NULL == parameters[TIVX_KERNEL_CAPTURE_INPUT_ARR_IDX])
         || (NULL == parameters[TIVX_KERNEL_CAPTURE_OUTPUT_IDX])
@@ -104,11 +117,12 @@ static vx_status VX_CALLBACK tivxAddKernelCaptureValidate(vx_node node,
         status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
         VX_PRINT(VX_ZONE_ERROR, "One or more REQUIRED parameters are set to NULL\n");
     }
+    /* LDRA_JUSTIFY_END */
 
     if ((vx_status)VX_SUCCESS == status)
     {
-        input = (vx_user_data_object)parameters[TIVX_KERNEL_CAPTURE_INPUT_ARR_IDX];
-        output = (vx_object_array)parameters[TIVX_KERNEL_CAPTURE_OUTPUT_IDX];
+        input  = vxCastRefAsUserDataObject(parameters[TIVX_KERNEL_CAPTURE_INPUT_ARR_IDX], NULL);
+        output = vxCastRefAsObjectArray(parameters[TIVX_KERNEL_CAPTURE_OUTPUT_IDX], NULL);
     }
 
 
@@ -140,11 +154,29 @@ static vx_status VX_CALLBACK tivxAddKernelCaptureValidate(vx_node node,
     {
         obj_arr_element = vxGetObjectArrayItem(output, 0);
 
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
+        Effect on this unit: If the control reaches here, our code base is expected to print the error status.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if (NULL != obj_arr_element)
+        /* LDRA_JUSTIFY_END */
         {
             tivxCheckStatus(&status, vxQueryReference(obj_arr_element, (vx_enum)VX_REFERENCE_TYPE, &ref_type, sizeof(ref_type)));
 
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            The test framework does not support the configuration required to trigger this error scenario.
+            Effect on this unit: If the control reaches here, our code base is expected to print the error status.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             if ((vx_status)VX_SUCCESS == status)
+            /* LDRA_JUSTIFY_END */
             {
                 if ( (TIVX_TYPE_RAW_IMAGE != ref_type) &&
                      ((vx_enum)VX_TYPE_IMAGE != ref_type) )
@@ -154,8 +186,7 @@ static vx_status VX_CALLBACK tivxAddKernelCaptureValidate(vx_node node,
                 }
                 else if ((vx_enum)VX_TYPE_IMAGE == ref_type)
                 {
-                    tivxCheckStatus(&status, vxQueryImage((vx_image)obj_arr_element, (vx_enum)VX_IMAGE_FORMAT, &img_fmt, sizeof(img_fmt)));
-
+                    tivxCheckStatus(&status, vxQueryImage(vxCastRefAsImage(obj_arr_element, NULL), (vx_enum)VX_IMAGE_FORMAT, &img_fmt, sizeof(img_fmt)));
                     if (((vx_df_image)VX_DF_IMAGE_RGBX != img_fmt) &&
                         ((vx_df_image)TIVX_DF_IMAGE_BGRX != img_fmt) &&
                         ((vx_df_image)VX_DF_IMAGE_U16 != img_fmt) &&
@@ -172,18 +203,50 @@ static vx_status VX_CALLBACK tivxAddKernelCaptureValidate(vx_node node,
                     /* do nothing */
                 }
             }
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            The test framework does not support the configuration required to trigger this error scenario.
+            Effect on this unit: If the control reaches here, our code base is expected to print the error status.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             else
             {
                 VX_PRINT(VX_ZONE_ERROR, "query 'output' object array reference failed \n");
             }
+            /* LDRA_JUSTIFY_END */
+            vx_status release_status = vxReleaseReference(&obj_arr_element);
 
-            vxReleaseReference(&obj_arr_element);
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            The test framework does not support the configuration required to trigger this error scenario.
+            Effect on this unit: If the control reaches here, our code base is expected to print the error status.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if ((vx_status)VX_SUCCESS != release_status)
+            {
+                status = release_status;
+                VX_PRINT(VX_ZONE_ERROR, "Cannot release reference obj_arr_element \n");
+            }
+            /* LDRA_JUSTIFY_END */
         }
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
+        Effect on this unit: If the control reaches here, our code base is expected to print the error status.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         else
         {
             status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
             VX_PRINT(VX_ZONE_ERROR, "'output' object array elements are NULL \n");
         }
+        /* LDRA_JUSTIFY_END */
     }
 
     return status;
@@ -193,8 +256,16 @@ static vx_status VX_CALLBACK tivxAddKernelCaptureInitialize(vx_node node,
             const vx_reference parameters[ ],
             vx_uint32 num_params)
 {
+    (void)node;
     vx_status status = (vx_status)VX_SUCCESS;
-
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    The test framework does not support the configuration required to trigger this error scenario.
+    Effect on this unit: If the control reaches here, our code base is expected to print the error status.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     if ( (num_params != TIVX_KERNEL_CAPTURE_MAX_PARAMS)
         || (NULL == parameters[TIVX_KERNEL_CAPTURE_INPUT_ARR_IDX])
         || (NULL == parameters[TIVX_KERNEL_CAPTURE_OUTPUT_IDX])
@@ -203,6 +274,7 @@ static vx_status VX_CALLBACK tivxAddKernelCaptureInitialize(vx_node node,
         status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
         VX_PRINT(VX_ZONE_ERROR, "One or more REQUIRED parameters are set to NULL\n");
     }
+    /* LDRA_JUSTIFY_END */
     return status;
 }
 
@@ -210,7 +282,7 @@ vx_status tivxAddKernelCapture(vx_context context)
 {
     vx_kernel kernel;
     vx_status status;
-    uint32_t index;
+    uint32_t idx;
     vx_enum kernel_id;
 
     status = vxAllocateUserKernelId(context, &kernel_id);
@@ -231,68 +303,134 @@ vx_status tivxAddKernelCapture(vx_context context)
                     tivxAddKernelCaptureInitialize,
                     NULL);
 
-        status = vxGetStatus((vx_reference)kernel);
+        status = vxGetStatus(vxCastRefFromKernel(kernel));
     }
     if (status == (vx_status)VX_SUCCESS)
     {
         vx_uint32 num_bufs = TIVX_CAPTURE_MIN_PIPEUP_BUFS;
 
-        vxSetKernelAttribute(kernel, (vx_enum)VX_KERNEL_PIPEUP_OUTPUT_DEPTH, &num_bufs, sizeof(num_bufs));
+        status = vxSetKernelAttribute(kernel, (vx_enum)VX_KERNEL_PIPEUP_OUTPUT_DEPTH, &num_bufs, sizeof(num_bufs));
 
-        status = vxGetStatus((vx_reference)kernel);
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach this portion.
+        This failure case is out of scope for the video_io test framework.
+        Effect on this unit: If the control reaches here, the code base is NOT expected to
+        accumulate and return an error. However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if ((vx_status)VX_SUCCESS == status)
+        /* LDRA_JUSTIFY_END */
+        {
+            status = vxGetStatus(vxCastRefFromKernel(kernel));
+        }
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach this portion.
+        This failure case is out of scope for the video_io test framework.
+        Effect on this unit: If the control reaches here, the code base is NOT expected to
+        accumulate and return an error. However, due to the stated rationale, this is not tested.
+        <justification end> */
+        else
+        {
+            VX_PRINT(VX_ZONE_ERROR, "vxSetKernelAttribute error! \n");
+        }
+        /* LDRA_JUSTIFY_END */
     }
     if (status == (vx_status)VX_SUCCESS)
     {
-        index = 0;
+        idx = 0;
 
         {
             status = vxAddParameterToKernel(kernel,
-                        index,
+                        idx,
                         (vx_enum)VX_INPUT,
                         VX_TYPE_USER_DATA_OBJECT,
                         (vx_enum)VX_PARAMETER_STATE_REQUIRED
             );
-            index++;
+            idx++;
         }
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start> 
+        Rationale: The component level negative test framework and test applications cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
+        Effect on this unit: If the control reaches here, our code base is expected to accumulate the
+        error status and return the same to the application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if (status == (vx_status)VX_SUCCESS)
+        /* LDRA_JUSTIFY_END */
         {
             status = vxAddParameterToKernel(kernel,
-                        index,
+                        idx,
                         (vx_enum)VX_OUTPUT,
                         (vx_enum)VX_TYPE_OBJECT_ARRAY,
                         (vx_enum)VX_PARAMETER_STATE_REQUIRED
             );
-            index++;
         }
+
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start> 
+        Rationale: The component level negative test framework and test applications cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
+        Effect on this unit: If the control reaches here, our code base is expected to accumulate the
+        error status and return the same to the application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if (status == (vx_status)VX_SUCCESS)
+        /* LDRA_JUSTIFY_END */
         {
             /* add supported target's */
-            tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE1);
-            tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE2);
-            tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE3);
-            tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE4);
+            (void)tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE1);
+            (void)tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE2);
+            (void)tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE3);
+            (void)tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE4);
             # if !defined(SOC_AM62A) && !defined(SOC_J722S)
-            tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE5);
-            tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE6);
-            tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE7);
-            tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE8);
+            (void)tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE5);
+            (void)tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE6);
+            (void)tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE7);
+            (void)tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE8);
             #if defined(SOC_J784S4) || defined(SOC_J742S2)
-            tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE9);
-            tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE10);
-            tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE11);
-            tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE12);
+            (void)tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE9);
+            (void)tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE10);
+            (void)tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE11);
+            (void)tivxAddKernelTarget(kernel, TIVX_TARGET_CAPTURE12);
             #endif
             #endif
         }
+
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start> 
+        Rationale: The component level negative test framework and test applications cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
+        Effect on this unit: If the control reaches here, our code base is expected to accumulate the
+        error status and return the same to the application. However, due to the stated rationale,
+        this is not tested.
+        <justification end> */
         if (status == (vx_status)VX_SUCCESS)
+        /* LDRA_JUSTIFY_END */
         {
             status = vxFinalizeKernel(kernel);
         }
+
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
+        Effect on this unit: If the control reaches here, our code base is expected to print the error status.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if (status != (vx_status)VX_SUCCESS)
         {
-            vxReleaseKernel(&kernel);
+            (void)vxReleaseKernel(&kernel);
             kernel = NULL;
         }
+        /* LDRA_JUSTIFY_END */
     }
     else
     {
@@ -348,7 +486,7 @@ void tivx_capture_params_init(tivx_capture_params_t *prms)
 /* Compares provided ref to existing ref to validate that it contains the same properties */
 static vx_status tivxCaptureValidateAllocFrame(vx_node node, vx_reference frame)
 {
-    vx_status status = VX_SUCCESS;
+    vx_status status = (vx_status)VX_SUCCESS;
     vx_reference node_ref;
     vx_parameter param = NULL;
 
@@ -356,17 +494,25 @@ static vx_status tivxCaptureValidateAllocFrame(vx_node node, vx_reference frame)
 
     if (NULL != param)
     {
-        vxQueryParameter(param, VX_PARAMETER_REF, &node_ref, sizeof(node_ref));
+        (void)vxQueryParameter(param, (vx_enum)VX_PARAMETER_REF, &node_ref, sizeof(node_ref));
 
         if (NULL != node_ref)
         {
-            vx_object_array output = (vx_object_array)node_ref;
+            vx_object_array output = vxCastRefAsObjectArray(node_ref, NULL);
             vx_reference obj_arr_element;
             vx_enum node_ref_type, recv_ref_type;
 
             obj_arr_element = vxGetObjectArrayItem(output, 0);
-
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            The test framework does not support the configuration required to trigger this error scenario.
+            Effect on this unit: If the control reaches here, our code base is expected to print the error status.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             if (NULL != obj_arr_element)
+            /* LDRA_JUSTIFY_END */
             {
                 tivxCheckStatus(&status, vxQueryReference(obj_arr_element, (vx_enum)VX_REFERENCE_TYPE, &node_ref_type, sizeof(node_ref_type)));
                 tivxCheckStatus(&status, vxQueryReference(frame, (vx_enum)VX_REFERENCE_TYPE, &recv_ref_type, sizeof(recv_ref_type)));
@@ -386,13 +532,13 @@ static vx_status tivxCaptureValidateAllocFrame(vx_node node, vx_reference frame)
                             vx_uint32   node_img_width,  recv_img_width;
                             vx_uint32   node_img_height, recv_img_height;
 
-                            tivxCheckStatus(&status, vxQueryImage((vx_image)obj_arr_element, (vx_enum)VX_IMAGE_FORMAT, &node_img_fmt, sizeof(node_img_fmt)));
-                            tivxCheckStatus(&status, vxQueryImage((vx_image)obj_arr_element, (vx_enum)VX_IMAGE_WIDTH, &node_img_width, sizeof(node_img_width)));
-                            tivxCheckStatus(&status, vxQueryImage((vx_image)obj_arr_element, (vx_enum)VX_IMAGE_HEIGHT, &node_img_height, sizeof(node_img_height)));
+                            tivxCheckStatus(&status, vxQueryImage(vxCastRefAsImage(obj_arr_element, NULL), (vx_enum)VX_IMAGE_FORMAT, &node_img_fmt, sizeof(node_img_fmt)));
+                            tivxCheckStatus(&status, vxQueryImage(vxCastRefAsImage(obj_arr_element, NULL), (vx_enum)VX_IMAGE_WIDTH, &node_img_width, sizeof(node_img_width)));
+                            tivxCheckStatus(&status, vxQueryImage(vxCastRefAsImage(obj_arr_element, NULL), (vx_enum)VX_IMAGE_HEIGHT, &node_img_height, sizeof(node_img_height)));
 
-                            tivxCheckStatus(&status, vxQueryImage((vx_image)frame, (vx_enum)VX_IMAGE_FORMAT, &recv_img_fmt, sizeof(recv_img_fmt)));
-                            tivxCheckStatus(&status, vxQueryImage((vx_image)frame, (vx_enum)VX_IMAGE_WIDTH, &recv_img_width, sizeof(recv_img_width)));
-                            tivxCheckStatus(&status, vxQueryImage((vx_image)frame, (vx_enum)VX_IMAGE_HEIGHT, &recv_img_height, sizeof(recv_img_height)));
+                            tivxCheckStatus(&status, vxQueryImage(vxCastRefAsImage(frame, NULL), (vx_enum)VX_IMAGE_FORMAT, &recv_img_fmt, sizeof(recv_img_fmt)));
+                            tivxCheckStatus(&status, vxQueryImage(vxCastRefAsImage(frame, NULL), (vx_enum)VX_IMAGE_WIDTH, &recv_img_width, sizeof(recv_img_width)));
+                            tivxCheckStatus(&status, vxQueryImage(vxCastRefAsImage(frame, NULL), (vx_enum)VX_IMAGE_HEIGHT, &recv_img_height, sizeof(recv_img_height)));
 
                             if (node_img_fmt != recv_img_fmt)
                             {
@@ -417,11 +563,11 @@ static vx_status tivxCaptureValidateAllocFrame(vx_node node, vx_reference frame)
                             vx_uint32   node_img_width,  recv_img_width;
                             vx_uint32   node_img_height, recv_img_height;
 
-                            tivxCheckStatus(&status, tivxQueryRawImage((tivx_raw_image)obj_arr_element, (vx_enum)TIVX_RAW_IMAGE_WIDTH, &node_img_width, sizeof(node_img_width)));
-                            tivxCheckStatus(&status, tivxQueryRawImage((tivx_raw_image)obj_arr_element, (vx_enum)TIVX_RAW_IMAGE_HEIGHT, &node_img_height, sizeof(node_img_height)));
+                            tivxCheckStatus(&status, tivxQueryRawImage(vxCastRefAsRawImage(obj_arr_element, NULL), (vx_enum)TIVX_RAW_IMAGE_WIDTH, &node_img_width, sizeof(node_img_width)));
+                            tivxCheckStatus(&status, tivxQueryRawImage(vxCastRefAsRawImage(obj_arr_element, NULL), (vx_enum)TIVX_RAW_IMAGE_HEIGHT, &node_img_height, sizeof(node_img_height)));
 
-                            tivxCheckStatus(&status, tivxQueryRawImage((tivx_raw_image)frame, (vx_enum)TIVX_RAW_IMAGE_WIDTH, &recv_img_width, sizeof(recv_img_width)));
-                            tivxCheckStatus(&status, tivxQueryRawImage((tivx_raw_image)frame, (vx_enum)TIVX_RAW_IMAGE_HEIGHT, &recv_img_height, sizeof(recv_img_height)));
+                            tivxCheckStatus(&status, tivxQueryRawImage(vxCastRefAsRawImage(frame, NULL), (vx_enum)TIVX_RAW_IMAGE_WIDTH, &recv_img_width, sizeof(recv_img_width)));
+                            tivxCheckStatus(&status, tivxQueryRawImage(vxCastRefAsRawImage(frame, NULL), (vx_enum)TIVX_RAW_IMAGE_HEIGHT, &recv_img_height, sizeof(recv_img_height)));
 
                             if (node_img_width != recv_img_width)
                             {
@@ -447,26 +593,35 @@ static vx_status tivxCaptureValidateAllocFrame(vx_node node, vx_reference frame)
                     VX_PRINT(VX_ZONE_ERROR, "query object failed \n");
                 }
 
-                vxReleaseObjectArray(&output);
-                vxReleaseReference(&obj_arr_element);
+                (void)vxReleaseObjectArray(&output);
+                (void)vxReleaseReference(&obj_arr_element);
             }
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            The test framework does not support the configuration required to trigger this error scenario.
+            Effect on this unit: If the control reaches here, our code base is expected to print the error status.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             else
             {
                 status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
                 VX_PRINT(VX_ZONE_ERROR, "'output' object array elements are NULL \n");
             }
+            /* LDRA_JUSTIFY_END */
         }
         else
         {
-            status = VX_FAILURE;
+            status = (vx_status)VX_FAILURE;
             VX_PRINT(VX_ZONE_ERROR, "Capture node index %d is NULL!!\n", TIVX_KERNEL_CAPTURE_OUTPUT_IDX);
         }
 
-        vxReleaseParameter(&param);
+        (void)vxReleaseParameter(&param);
     }
     else
     {
-        status = VX_FAILURE;
+        status = (vx_status)VX_FAILURE;
         VX_PRINT(VX_ZONE_ERROR, "Capture node index %d is NULL!!\n", TIVX_KERNEL_CAPTURE_OUTPUT_IDX);
     }
 
@@ -475,12 +630,20 @@ static vx_status tivxCaptureValidateAllocFrame(vx_node node, vx_reference frame)
 
 static vx_status tivxCaptureAllocFrame(vx_reference frame)
 {
-    vx_status status = VX_SUCCESS;
+    vx_status status = (vx_status)VX_SUCCESS;
     vx_enum ref_type;
 
     tivxCheckStatus(&status, vxQueryReference(frame, (vx_enum)VX_REFERENCE_TYPE, &ref_type, sizeof(ref_type)));
-
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this portion.
+    The test framework does not support the configuration required to trigger this error scenario.
+    Effect on this unit: If the control reaches here, our code base is expected to accumulate the error status
+    and return the same to the application. However, due to the stated rationale, this is not tested.
+    <justification end> */
     if ((vx_status)VX_SUCCESS == status)
+    /* LDRA_JUSTIFY_END */
     {
         if ((vx_enum)VX_TYPE_IMAGE == ref_type)
         {
@@ -491,26 +654,35 @@ static vx_status tivxCaptureAllocFrame(vx_reference frame)
             vx_uint32  img_width;
             vx_uint32  img_height;
 
-            vxQueryImage((vx_image)frame, VX_IMAGE_WIDTH, &img_width, sizeof(vx_uint32));
-            vxQueryImage((vx_image)frame, VX_IMAGE_HEIGHT, &img_height, sizeof(vx_uint32));
+            (void)vxQueryImage(vxCastRefAsImage(frame, NULL), (vx_enum)VX_IMAGE_WIDTH, &img_width, sizeof(vx_uint32));
+            (void)vxQueryImage(vxCastRefAsImage(frame, NULL), (vx_enum)VX_IMAGE_HEIGHT, &img_height, sizeof(vx_uint32));
 
             rect.start_x = 0;
             rect.start_y = 0;
             rect.end_x = img_width;
             rect.end_y = img_height;
 
-            status = vxMapImagePatch((vx_image)frame, &rect, 0, &map_id, &image_addr, &data_ptr, VX_READ_ONLY, VX_MEMORY_TYPE_HOST, 0);
+            status = vxMapImagePatch(vxCastRefAsImage(frame, NULL), &rect, 0, &map_id, &image_addr, &data_ptr, (vx_enum)VX_READ_ONLY, (vx_enum)VX_MEMORY_TYPE_HOST, 0);
 
             if ((vx_status)VX_SUCCESS == status)
             {
-                status = vxUnmapImagePatch((vx_image)frame, map_id);
+                status = vxUnmapImagePatch(vxCastRefAsImage(frame, NULL), map_id);
             }
             else
             {
                 VX_PRINT(VX_ZONE_ERROR, "Could not allocate capture frame\n");
             }
         }
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach this portion.
+        The test framework does not support the configuration required to trigger this error scenario.
+        Effect on this unit: If the control reaches here, the code base is NOT expected to accumulate and return an error.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         else if ((vx_enum)TIVX_TYPE_RAW_IMAGE == ref_type)
+        /* LDRA_JUSTIFY_END */
         {
             vx_map_id map_id;
             vx_rectangle_t rect;
@@ -519,25 +691,42 @@ static vx_status tivxCaptureAllocFrame(vx_reference frame)
             vx_uint32  img_width;
             vx_uint32  img_height;
 
-            tivxQueryRawImage((tivx_raw_image)frame, TIVX_RAW_IMAGE_WIDTH, &img_width, sizeof(vx_uint32));
-            tivxQueryRawImage((tivx_raw_image)frame, TIVX_RAW_IMAGE_HEIGHT, &img_height, sizeof(vx_uint32));
+            (void)tivxQueryRawImage(vxCastRefAsRawImage(frame, NULL), (vx_enum)TIVX_RAW_IMAGE_WIDTH, &img_width, sizeof(vx_uint32));
+            (void) tivxQueryRawImage(vxCastRefAsRawImage(frame, NULL), (vx_enum)TIVX_RAW_IMAGE_HEIGHT, &img_height, sizeof(vx_uint32));
 
             rect.start_x = 0;
             rect.start_y = 0;
             rect.end_x = img_width;
             rect.end_y = img_height;
 
-            status = tivxMapRawImagePatch((tivx_raw_image)frame, &rect, 0, &map_id, &image_addr, &data_ptr, VX_READ_ONLY, VX_MEMORY_TYPE_HOST, TIVX_RAW_IMAGE_ALLOC_BUFFER);
+            status = tivxMapRawImagePatch(vxCastRefAsRawImage(frame, NULL), &rect, 0, &map_id, &image_addr, &data_ptr, (vx_enum)VX_READ_ONLY, (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)TIVX_RAW_IMAGE_ALLOC_BUFFER);
 
             if ((vx_status)VX_SUCCESS == status)
             {
-                status = tivxUnmapRawImagePatch((tivx_raw_image)frame, map_id);
+                status = tivxUnmapRawImagePatch(vxCastRefAsRawImage(frame, NULL), map_id);
             }
             else
             {
                 VX_PRINT(VX_ZONE_ERROR, "Could not allocate capture frame\n");
             }
         }
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach this portion.
+        tivxCaptureValidateAllocFrame() only allows frame's reference type to reach
+        tivxCaptureAllocFrame() when it is VX_TYPE_IMAGE or TIVX_TYPE_RAW_IMAGE; any
+        other type is rejected with VX_ERROR_INVALID_PARAMETERS before this function
+        is ever invoked.
+        Effect on this unit: status is set to VX_FAILURE and an error message is
+        printed for an unsupported reference type.
+        <justification end> */
+        else
+        {
+            status = (vx_status)VX_FAILURE;
+            VX_PRINT(VX_ZONE_ERROR, "Unsupported reference type\n");
+        }
+        /* LDRA_JUSTIFY_END */
     }
 
     return status;

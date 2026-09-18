@@ -90,7 +90,11 @@ int32_t  appLogWrInit(app_log_init_prm_t *prm)
 
     appLogWrCreateLock(obj);
 
-    if(prm->self_cpu_index > APP_LOG_MAX_CPUS)
+    if(prm->self_cpu_index < APP_LOG_MAX_CPUS)
+    {
+        status = 0;
+    }
+    else
     {
         status = -1;
     }
@@ -283,7 +287,7 @@ void appLogPrintf(const char *format, ...)
             appLogDeviceWrite(obj->buf, APP_LOG_BUF_MAX);
             #endif
             #if defined(LINUX) || defined(QNX)
-            (void)printf(obj->buf);
+            (void)printf("%s", obj->buf);
             #endif
         }
         #else

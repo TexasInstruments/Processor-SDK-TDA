@@ -66,7 +66,7 @@
 #
 ifeq ($(lpm_component_make_include), )
 
-lpm_lib_BOARDLIST       = j721e_evm j7200_evm j784s4_evm
+lpm_lib_BOARDLIST       = j721e_evm j7200_evm j784s4_evm j742s2_evm j721s2_evm
 lpm_lib_j721e_CORELIST  = mcu1_0
 lpm_lib_j7200_CORELIST  = mcu1_0
 lpm_lib_j784s4_CORELIST  = mcu1_0
@@ -95,23 +95,28 @@ export lpm_CORE_DEPENDENCY = no
 export lpm_SOC_DEPENDENCY = yes
 lpm_PKG_LIST = lpm
 lpm_INCLUDE = $(lpm_PATH)
-export lpm_SOCLIST = j721e j7200 j784s4
+export lpm_SOCLIST = j721e j7200 j784s4 j742s2 j721s2
+
+# Only SOCs with actual lpm library support get a CORELIST (others use stub)
+ifneq ($(filter $(SOC), j721e j7200 j784s4),)
 export lpm_$(SOC)_CORELIST = mcu1_0
+endif
 lpm_LIB_LIST = lpm
 
 # lpm S2R
-lpm_s2r_COMP_LIST = lpm_s2r
-lpm_s2r_RELPATH = $(lpm_RELPATH)
-lpm_s2r_PATH = $(PDK_LPM_COMP_PATH)
-export lpm_s2r_LIBNAME = lpm_s2r
-export lpm_s2r_MAKEFILE = -fsrc/s2r/makefile
-export lpm_s2r_BOARD_DEPENDENCY = yes
-export lpm_s2r_CORE_DEPENDENCY = no
-export lpm_s2r_SOC_DEPENDENCY = yes
-export lpm_s2r_SOCLIST = j7200 j784s4 j742s2
-export lpm_s2r_$(SOC)_CORELIST = mcu1_0
-lpm_s2r_LIB_LIST = lpm_s2r
-lpm_s2r_PKG_LIST = lpm_s2r
+lpm_stub_COMP_LIST = lpm_stub
+lpm_stub_RELPATH = $(lpm_RELPATH)
+lpm_stub_PATH = $(PDK_LPM_COMP_PATH)
+export lpm_stub_LIBNAME = lpm_stub
+export lpm_stub_LIBPATH = $(lpm_PATH)/lib
+export lpm_stub_MAKEFILE = -fsrc/lpm_stub/makefile
+export lpm_stub_BOARD_DEPENDENCY = yes
+export lpm_stub_CORE_DEPENDENCY = no
+export lpm_stub_SOC_DEPENDENCY = yes
+export lpm_stub_SOCLIST = j7200 j721s2 j784s4 j742s2
+export lpm_stub_$(SOC)_CORELIST = mcu1_0
+lpm_stub_LIB_LIST = lpm_stub
+lpm_stub_PKG_LIST = lpm_stub
 
 ############################
 # lpm examples
@@ -172,7 +177,7 @@ lpm_EXAMPLE_LIST =
 endif
 
 export lpm_LIB_LIST
-export lpm_s2r_LIB_LIST
+export lpm_stub_LIB_LIST
 export lpm_EXAMPLE_LIST
 
 lpm_component_make_include := 1

@@ -284,6 +284,10 @@ typedef struct OSPI_v0_HwAttrs_s {
     uint32_t        baudRateDiv;
     /*! Enable Cache */
     bool            cacheEnable;
+    /*! Number of address bytes to use for memory-mapped and indirect access.
+     *  Valid values: 1, 2, 3, or 4. Set to 0 to use the default (3 bytes,
+     *  or 4 bytes when dtrEnable is true). */
+    uint32_t        numAddrBytes;
 
 } OSPI_v0_HwAttrs;
 

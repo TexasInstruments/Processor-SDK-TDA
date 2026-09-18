@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2018 Texas Instruments Incorporated
+ * Copyright (c) 2018-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -60,7 +60,6 @@
  *
  */
 
-#include <stdio.h>
 #include "TI/tivx.h"
 #include "TI/video_io_capture.h"
 #include "TI/tivx_event.h"
@@ -76,6 +75,15 @@
 #include <tivx_obj_desc_priv.h>
 #include <vx_reference.h>
 #include <vx_internal.h>
+
+#if !defined(SOC_J722S) && defined(ASF_TEST_ENABLED_CAPTURE)
+#include <ti/csl/csl_esm.h>
+#include <ti/csl/soc.h>
+#endif
+
+#if defined(LDRA_COVERAGE_ENABLED_VIDEO_IO)
+#include "ldra_remote_core_coverage_main.h"
+#endif
 
 #define CAPTURE_FRAME_DROP_LEN                          (4096U*4U)
 
@@ -203,11 +211,19 @@ struct tivxCaptureParams_t
 
     /* Make frame list instance specific */
     Fvid2_FrameList frmList;
+    tivx_capture_error_per_channel_t local_error_info[TIVX_CAPTURE_ERROR_INFO_NUM_CHANNELS + 1U];
+    /**< Pending CSIRX errors detected: indices [0, numCh) are per-channel,
+     *   frame-correlated errors; index [numCh] holds errors that cannot be
+     *   correlated to a channel or frame (its timestamp is always 0). */
 };
 
 static tivx_target_kernel vx_capture_target_kernel[CAPTURE_NUM_TARGETS] = {NULL};
 
-static vx_status captDrvCallback(Fvid2_Handle handle, void *appData, void *reserved);
+static vx_status captDrvCallback(Fvid2_Handle handle, void *appData);
+static void captDrvErrorCallback(Csirx_EventStatus eventStatus, void *appData);
+#if !defined(SOC_J722S)
+static void captDrvAsfCallback(Csirx_EventStatus eventStatus, void *appData);
+#endif
 static uint32_t tivxCaptureExtractInCsiDataType(uint32_t format);
 static uint32_t tivxCaptureExtractCcsFormat(uint32_t format);
 static uint32_t tivxCaptureExtractDataFormat(uint32_t format);
@@ -265,6 +281,31 @@ static uint32_t tivxCaptureIsAllChFrameAvailable(tivxCaptureParams *prms,
 /**
  *******************************************************************************
  *
+ * \brief Wrapper function to get time in microseconds
+ *
+ * This function is a simple wrapper around the tivxPlatformGetTimeInUsecs
+ * API and is used in contexts where a function pointer with the signature
+ * uint64_t (*)(void *) is required.
+ *
+ * \param  args   [IN] Argument not used in this implementation.
+ *                      It is explicitly cast to void to avoid
+ *                      unused-parameter compiler warnings.
+ *
+ * \return Current time in microseconds as returned by
+ *         tivxPlatformGetTimeInUsecs().
+ *
+ *******************************************************************************
+ */     
+static uint64_t tivxPlatformGetTimeInUsecsWrapper(void *args)
+{
+    (void)args;
+
+    return tivxPlatformGetTimeInUsecs();
+}   
+
+/**
+ *******************************************************************************
+ *
  * \brief Callback function from driver to application
  *
  * Callback function gets called from Driver to application on reception of
@@ -273,20 +314,243 @@ static uint32_t tivxCaptureIsAllChFrameAvailable(tivxCaptureParams *prms,
  * \param  handle       [IN] Driver handle for which callback has come.
  * \param  appData      [IN] Application specific data which is registered
  *                           during the callback registration.
- * \param  reserved     [IN] Reserved.
  *
  * \return  SYSTEM_LINK_STATUS_SOK on success
  *
  *******************************************************************************
  */
-static vx_status captDrvCallback(Fvid2_Handle handle, void *appData, void *reserved)
+static vx_status captDrvCallback(Fvid2_Handle handle, void *appData)
 {
+    (void)handle;
+    vx_status status;
+
     tivxCaptureParams *prms = (tivxCaptureParams*)appData;
 
-    tivxEventPost(prms->frame_available);
+    status = tivxEventPost(prms->frame_available);
 
-    return (vx_status)VX_SUCCESS;
+    return status;
 }
+
+/**
+*******************************************************************************
+*
+* \brief Callback for CSIRX error events
+*
+* Gets called by the CSIRX driver when an enabled error event is detected.
+* The detected errors are stored for the corresponding CSIRX instance and
+* reported by the Capture node during processing.
+*
+* \param eventStatus [IN] CSIRX event status containing the detected errors
+* \param appData     [IN] Capture parameters (tivxCaptureParams *)
+*
+*******************************************************************************
+*/
+static void captDrvErrorCallback(Csirx_EventStatus eventStatus, void *appData)
+{
+    tivxCaptureParams *prms;
+    uint16_t errors = 0U;
+    uintptr_t key;
+
+    prms = (tivxCaptureParams *)appData;
+
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach else
+    portion.
+    This callback is invoked only with the parameters this component supplied when the event was
+    registered, which cannot be altered through the video_io component interface.
+    Therefore, this case is out of scope for the video_io test framework.
+    Effect on this unit: If the callback parameters were invalid, the detected errors would not be
+    decoded or stored.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
+    if ((NULL != prms) &&
+        (CSIRX_EVENT_GROUP_ERROR == eventStatus.eventGroup))
+    /* LDRA_JUSTIFY_END */
+    {
+        if ((eventStatus.eventMasks &
+             CSIRX_EVENT_TYPE_ERR_HEADER_ECC) != 0U)
+        {
+            errors |= TIVX_CAPTURE_ERR_HEADER_ECC;
+        }
+
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        this portion.
+        This error is reported by the capture driver only in the event of a physical CSI-2 link
+        level fault, which cannot be stimulated through the video_io component interface.
+        Therefore, this failure case is out of scope for the video_io test framework.
+        Effect on this unit: errors is OR'd with TIVX_CAPTURE_ERR_PAYLOAD_CRC, which is later
+        reported to the application through the Capture node's error-event mechanism.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if ((eventStatus.eventMasks &
+             CSIRX_EVENT_TYPE_ERR_PAYLOAD_CRC) != 0U)
+        {
+            errors |= TIVX_CAPTURE_ERR_PAYLOAD_CRC;
+        }
+        /* LDRA_JUSTIFY_END */
+
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        this portion.
+        This error is reported by the capture driver only in the event of a hardware level data
+        overflow, which cannot be stimulated through the video_io component interface.
+        Therefore, this failure case is out of scope for the video_io test framework.
+        Effect on this unit: errors is OR'd with TIVX_CAPTURE_ERR_DATA_OVERFLOW, which is later
+        reported to the application through the Capture node's error-event mechanism.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if ((eventStatus.eventMasks &
+             (CSIRX_EVENT_TYPE_ERR_FIFO_OVERFLOW_FRONT |
+              CSIRX_EVENT_TYPE_ERR_FIFO_OVERFLOW_STRM0 |
+              CSIRX_EVENT_TYPE_ERR_FIFO_OVERFLOW_STRM1 |
+              CSIRX_EVENT_TYPE_ERR_FIFO_OVERFLOW_STRM2 |
+              CSIRX_EVENT_TYPE_ERR_FIFO_OVERFLOW_STRM3)) != 0U)
+        {
+            errors |= TIVX_CAPTURE_ERR_DATA_OVERFLOW;
+        }
+        /* LDRA_JUSTIFY_END */
+
+        if (0U != errors)
+        {
+            key = HwiP_disable();
+
+            /* Not correlated to a specific frame or channel: stored in the
+             * one reserved slot past the per-channel entries, timestamp left
+             * at 0. */
+            prms->local_error_info[prms->numCh].error_bitfield |= errors;
+
+            HwiP_restore(key);
+        }
+    }
+}
+
+#if !defined(SOC_J722S)
+/**
+*******************************************************************************
+*
+* \brief Callback for CSIRX ASF events
+*
+* Gets called by the CSIRX driver when ASF events are detected. These faults
+* carry no frame, channel, or instance context, so they are stored in the
+* one reserved slot past the per-channel entries.
+*
+* \param eventStatus [IN] CSIRX event status containing the detected errors
+* \param appData     [IN] Capture parameters (tivxCaptureParams *)
+*
+*******************************************************************************
+*/
+static void captDrvAsfCallback(Csirx_EventStatus eventStatus, void *appData)
+{
+    tivxCaptureParams *prms;
+    uint16_t errors = 0U;
+    uintptr_t key;
+    uint32_t masks;
+
+    prms = (tivxCaptureParams *)appData;
+
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach else
+    portion.
+    This callback is invoked only with the parameters this component supplied when the event was
+    registered, which cannot be altered through the video_io component interface.
+    Therefore, this case is out of scope for the video_io test framework.
+    Effect on this unit: If prms were NULL, the detected ASF errors would not be decoded or stored.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
+    if (NULL != prms)
+    /* LDRA_JUSTIFY_END */
+    {
+        masks = eventStatus.eventMasks &
+                (CSIRX_EVENT_TYPE_ASF_TRANS_TO_ERR |
+                 CSIRX_EVENT_TYPE_ASF_CSR_ERR |
+                 CSIRX_EVENT_TYPE_ASF_DAP_ERR);
+
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        the false outcome of this branch.
+        This branch outcome is determined by the set of error events reported by the capture driver
+        and cannot be selected through the video_io component interface.
+        Therefore, this case is out of scope for the video_io test framework.
+        Effect on this unit: errors is OR'd with TIVX_CAPTURE_ERR_ASF_TRANS_TIMEOUT.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if ((masks & CSIRX_EVENT_TYPE_ASF_TRANS_TO_ERR) != 0U)
+        {
+            errors |= TIVX_CAPTURE_ERR_ASF_TRANS_TIMEOUT;
+        }
+        /* LDRA_JUSTIFY_END */
+
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        the false outcome of this branch.
+        This branch outcome is determined by the set of error events reported by the capture driver
+        and cannot be selected through the video_io component interface.
+        Therefore, this case is out of scope for the video_io test framework.
+        Effect on this unit: errors is OR'd with TIVX_CAPTURE_ERR_ASF_CSR_PARITY.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if ((masks & CSIRX_EVENT_TYPE_ASF_CSR_ERR) != 0U)
+        {
+            errors |= TIVX_CAPTURE_ERR_ASF_CSR_PARITY;
+        }
+        /* LDRA_JUSTIFY_END */
+
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        the false outcome of this branch.
+        This branch outcome is determined by the set of error events reported by the capture driver
+        and cannot be selected through the video_io component interface.
+        Therefore, this case is out of scope for the video_io test framework.
+        Effect on this unit: errors is OR'd with TIVX_CAPTURE_ERR_ASF_DAP_PARITY.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if ((masks & CSIRX_EVENT_TYPE_ASF_DAP_ERR) != 0U)
+        {
+            errors |= TIVX_CAPTURE_ERR_ASF_DAP_PARITY;
+        }
+        /* LDRA_JUSTIFY_END */
+
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        the false outcome of this branch.
+        This branch outcome is determined by the set of error events reported by the capture driver
+        and cannot be selected through the video_io component interface.
+        Therefore, this case is out of scope for the video_io test framework.
+        Effect on this unit: The detected errors are stored in the uncorrelated error-info slot.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
+        if (0U != errors)
+        {
+            key = HwiP_disable();
+
+            /* Not correlated to a specific frame or channel: stored in the
+             * one reserved slot past the per-channel entries, timestamp left
+             * at 0. */
+            prms->local_error_info[prms->numCh].error_bitfield |= errors;
+
+            HwiP_restore(key);
+        }
+        /* LDRA_JUSTIFY_END */
+    }
+}
+#endif
 
 /* Waiting on capture frame available event based on timeout
  *    Log the wait time and subtract from the remaining time
@@ -302,7 +566,6 @@ static vx_status tivxCaptureTimeout(tivxCaptureParams *prms)
 
     /* Calculate time that the tivxEventWait waited */
     timestamp = tivxPlatformGetTimeInUsecs() - timestamp;
-
     if (1U == prms->enableErrorFrameTimeout)
     {
         /* Rounding up so that the timeout does not get clipped for each subsequent camera */
@@ -316,7 +579,7 @@ static vx_status tivxCaptureTimeout(tivxCaptureParams *prms)
             prms->timeoutRemaining = (((CAPTURE_MS_TO_US * prms->timeoutRemaining + CAPTURE_MS_TO_US) - timestamp) / CAPTURE_MS_TO_US);
         }
     }
-
+    
     return status;
 }
 
@@ -333,12 +596,13 @@ static vx_status tivxCaptureEnqueueFrameToDriver(
     uint32_t startChIdx, endChIdx, instIdx;
     tivxCaptureInstParams *instParams;
     uint16_t obj_desc_id;
+    uintptr_t temp_fvid2_frame;
 
     frmList = &prms->frmList;
     tivxGetObjDescList(output_desc->obj_desc_id, (tivx_obj_desc_t **)prms->img_obj_desc,
                        prms->numCh);
 
-    tivxQueuePut(&prms->pendingObjArrayQ, (uintptr_t)output_desc, TIVX_EVENT_TIMEOUT_NO_WAIT);
+    (void)tivxQueuePut(&prms->pendingObjArrayQ, (uintptr_t)output_desc, TIVX_EVENT_TIMEOUT_NO_WAIT);
 
     /* Prepare and queue frame-list for each instance */
     for (instIdx = 0U ; instIdx < prms->numOfInstUsed ; instIdx++)
@@ -350,7 +614,7 @@ static vx_status tivxCaptureEnqueueFrameToDriver(
         for (chId = startChIdx ; chId < endChIdx ; chId++)
         {
             /* Only enqueue the frame if it is a valid frame */
-            if (tivxFlagIsBitSet(prms->img_obj_desc[chId]->flags, TIVX_REF_FLAG_IS_INVALID) == 0U)
+            if (tivxFlagIsBitSet(prms->img_obj_desc[chId]->flags, TIVX_REF_FLAG_IS_INVALID) == (vx_bool)vx_false_e)
             {
                 if ((uint32_t)TIVX_OBJ_DESC_RAW_IMAGE == prms->img_obj_desc[chId]->type)
                 {
@@ -362,7 +626,7 @@ static vx_status tivxCaptureEnqueueFrameToDriver(
 
                     captured_frame = tivxMemShared2PhysPtr(
                         (raw_image->mem_ptr[0].shared_ptr + (uint64_t)tivxComputePatchOffset(0, 0, &raw_image->imagepatch_addr[0U])),
-                        TIVX_MEM_EXTERNAL);
+                        (vx_enum)TIVX_MEM_EXTERNAL);
                 }
                 else
                 {
@@ -373,12 +637,26 @@ static vx_status tivxCaptureEnqueueFrameToDriver(
 
                     captured_frame = tivxMemShared2PhysPtr(
                         (image->mem_ptr[0].shared_ptr + (uint64_t)tivxComputePatchOffset(0, 0, &image->imagepatch_addr[0U])),
-                        TIVX_MEM_EXTERNAL);
+                        (vx_enum)TIVX_MEM_EXTERNAL);
                 }
 
-                tivxQueueGet(&prms->freeFvid2FrameQ[chId], (uintptr_t*)&fvid2Frame, TIVX_EVENT_TIMEOUT_NO_WAIT);
+                (void)tivxQueueGet(&prms->freeFvid2FrameQ[chId], &temp_fvid2_frame, TIVX_EVENT_TIMEOUT_NO_WAIT);
+                fvid2Frame = (Fvid2_Frame *)temp_fvid2_frame;
 
+                /* LDRA_JUSTIFY_START
+                <metric start> branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach else portion.
+                This condition depends on internal state of this component, which cannot be altered
+                through the video_io component interface.
+                Therefore, this case is out of scope for the video_io test framework.
+                Effect on this unit: A NULL entry would prevent the frame from being added to the
+                driver frame list and cause an error message to be printed.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if (NULL != fvid2Frame)
+                /* LDRA_JUSTIFY_END */
                 {
                     uintptr_t obj_desc_id_u32 = (uintptr_t)obj_desc_id;
 
@@ -389,29 +667,55 @@ static vx_status tivxCaptureEnqueueFrameToDriver(
                     frmList->frames[frmList->numFrames]->appData  = (void *)obj_desc_id_u32;
                     frmList->numFrames++;
                 }
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach this portion.
+                This condition depends on internal state of this component, which cannot be altered
+                through the video_io component interface.
+                Therefore, this case is out of scope for the video_io test framework.
+                Effect on this unit: The frame is not added to the driver frame list and an error
+                message is printed.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 else
                 {
                     VX_PRINT(VX_ZONE_ERROR, " CAPTURE: Could not retrieve buffer from buffer queue!!!\n");
                 }
+                /* LDRA_JUSTIFY_END */
             }
             else
             {
-                tivxQueuePut(&prms->errorFrameQ[chId], (uintptr_t)output_desc->obj_desc_id[chId], TIVX_EVENT_TIMEOUT_NO_WAIT);
+                (void)tivxQueuePut(&prms->errorFrameQ[chId], (uintptr_t)output_desc->obj_desc_id[chId], TIVX_EVENT_TIMEOUT_NO_WAIT);
             }
         }
 
-        /* Only call Fvid2_queue if there are valid frames to enqueue */
         if (frmList->numFrames > 0U)
         {
             fvid2_status = Fvid2_queue(instParams->drvHandle, frmList, 0);
+
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot
+            reach this portion.
+            This failure is reported by the capture driver only in the event of a driver or hardware
+            level fault, which cannot be stimulated through the video_io component interface.
+            Therefore, this failure case is out of scope for the video_io test framework.
+            Effect on this unit: The function returns VX_FAILURE, prints an error message, and stops
+            queueing frames for the remaining Capture instances.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             if (FVID2_SOK != fvid2_status)
             {
                 status = (vx_status)VX_FAILURE;
                 VX_PRINT(VX_ZONE_ERROR, " CAPTURE: ERROR: Frame could not be queued for frame %d !!!\n", chId);
                 break;
             }
+            /* LDRA_JUSTIFY_END */
         }
-
+        
     }
 
     return status;
@@ -421,11 +725,37 @@ static uint32_t tivxCaptureExtractInCsiDataType(uint32_t format)
 {
     uint32_t inCsiDataType;
 
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach the
+    uncovered outcomes of this switch.
+    This configuration is rejected by the Capture host side validation before this unit is invoked.
+    Therefore, this case is out of scope for the video_io test framework.
+    Effect on this unit: Supported image formats are mapped to the corresponding driver CSI-2 data
+    types.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     switch (format)
     {
+    /* LDRA_JUSTIFY_END */
+
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level test framework and test applications cannot reach this
+        portion.
+        This configuration is rejected by the Capture host side validation before this unit is
+        invoked.
+        Therefore, this case is out of scope for the video_io test framework.
+        Effect on this unit: If reached, the input CSI data type would be set to
+        FVID2_CSI2_DF_RGB888.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         case (vx_df_image)VX_DF_IMAGE_RGB:
             inCsiDataType = FVID2_CSI2_DF_RGB888;
             break;
+        /* LDRA_JUSTIFY_END */
         case (vx_df_image)VX_DF_IMAGE_RGBX:
         case (vx_df_image)TIVX_DF_IMAGE_BGRX:
             inCsiDataType = FVID2_CSI2_DF_RGB888;
@@ -438,9 +768,23 @@ static uint32_t tivxCaptureExtractInCsiDataType(uint32_t format)
         case (vx_df_image)VX_DF_IMAGE_YUYV:
             inCsiDataType = FVID2_CSI2_DF_YUV422_8B;
             break;
+
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level test framework and test applications cannot reach this
+        portion.
+        This configuration is rejected by the Capture host side validation before this unit is
+        invoked.
+        Therefore, this case is out of scope for the video_io test framework.
+        Effect on this unit: The input CSI data type would be marked invalid, causing
+        tivxCaptureCreate() to return VX_FAILURE.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         default:
             inCsiDataType = CAPTURE_IN_CSI_DT_INVALID;
             break;
+        /* LDRA_JUSTIFY_END */
     }
 
     return inCsiDataType;
@@ -451,7 +795,7 @@ static uint32_t tivxCaptureExtractInCsiDataTypeFromRawImg(tivx_obj_desc_raw_imag
     uint32_t inCsiDataType = CAPTURE_IN_CSI_DT_INVALID;
     tivx_raw_image_create_params_t *params = &raw_img->params;
 
-    if (TIVX_RAW_IMAGE_16_BIT == params->format[0].pixel_container)
+    if ((uint32_t)TIVX_RAW_IMAGE_16_BIT == params->format[0].pixel_container)
     {
         switch (params->format[0].msb)
         {
@@ -471,7 +815,7 @@ static uint32_t tivxCaptureExtractInCsiDataTypeFromRawImg(tivx_obj_desc_raw_imag
                 break;
         }
     }
-    else if (TIVX_RAW_IMAGE_8_BIT == params->format[0].pixel_container)
+    else if ((uint32_t)TIVX_RAW_IMAGE_8_BIT == params->format[0].pixel_container)
     {
         switch (params->format[0].msb)
         {
@@ -488,12 +832,12 @@ static uint32_t tivxCaptureExtractInCsiDataTypeFromRawImg(tivx_obj_desc_raw_imag
                 break;
         }
     }
-    else if (TIVX_RAW_IMAGE_P12_BIT == params->format[0].pixel_container)
+    else if ((uint32_t)TIVX_RAW_IMAGE_P12_BIT == params->format[0].pixel_container)
     {
         if (11u == params->format[0].msb)
         {
             inCsiDataType = FVID2_CSI2_DF_RAW12;
-        }
+        }   
     }
     else
     {
@@ -529,6 +873,7 @@ static uint32_t tivxCaptureExtractCcsFormat(uint32_t format)
 static uint32_t tivxCaptureMapInstId(uint32_t instId)
 {
     uint32_t drvInstId = 0xFFFF;
+
     switch (instId)
     {
         case 0:
@@ -670,6 +1015,11 @@ static vx_status tivxCaptureSetCreateParams(
             createParams->instCfg.numPixelsStrm0       = params->instCfg[instIdx].numPixels;
             createParams->instCfg.enableStrm[CSIRX_CAPT_STREAM_ID] = 1U;
             createParams->instCfg.numDataLanes = params->instCfg[instIdx].numDataLanes;
+#if !defined(SOC_J722S) && defined(ASF_TEST_ENABLED_CAPTURE)
+            createParams->instCfg.trigAsfTestIntr.asfTransToErrTest = 1U;
+            createParams->instCfg.trigAsfTestIntr.asfCsrErrTest     = 1U;
+            createParams->instCfg.trigAsfTestIntr.asfDapErrTest     = 1U;
+#endif
             for (loopCnt = 0U ;
                  loopCnt < createParams->instCfg.numDataLanes ;
                  loopCnt++)
@@ -686,11 +1036,26 @@ static vx_status tivxCaptureSetCreateParams(
 
                 if ((uint32_t)TIVX_OBJ_DESC_RAW_IMAGE == prms->img_obj_desc[0]->type)
                 {
+                    /* LDRA_JUSTIFY_START
+                    <metric start> branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications
+                    cannot reach else portion.
+                    This condition depends on internal state of this component, which cannot be
+                    altered through the video_io component interface.
+                    Therefore, this case is out of scope for the video_io test framework.
+                    Effect on this unit: If raw_image were NULL, the CSI data type extraction
+                    function would not be called and the channel data type would not be assigned by
+                    this block.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
                     if (NULL != raw_image)
+                    /* LDRA_JUSTIFY_END */
                     {
                         createParams->chCfg[loopCnt].inCsiDataType =
                             tivxCaptureExtractInCsiDataTypeFromRawImg(raw_image);
                     }
+                    
                 }
                 else
                 {
@@ -723,15 +1088,30 @@ static vx_status tivxCaptureSetCreateParams(
             }
             /* set frame drop buffer parameters */
             createParams->frameDropBufLen = CAPTURE_FRAME_DROP_LEN;
-            createParams->frameDropBuf = (uint64_t)tivxMemAlloc(createParams->frameDropBufLen, (vx_enum)TIVX_MEM_EXTERNAL);
+            void *p_drop_buf = NULL;
+            p_drop_buf = tivxMemAlloc(createParams->frameDropBufLen, (vx_enum)TIVX_MEM_EXTERNAL);
+	        createParams->frameDropBuf = (uint64_t)(uintptr_t)p_drop_buf;
 
-            if (0 == createParams->frameDropBuf)
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot
+            reach this portion.
+            Reaching this portion requires an allocation from a shared memory region to fail, which
+            the video_io test framework cannot induce deterministically.
+            Therefore, this failure case is out of scope for the video_io test framework.
+            Effect on this unit: The code sets status to VX_ERROR_NO_MEMORY, prints an error
+            message, and stops configuring the remaining Capture instances.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if (0U == createParams->frameDropBuf)
             {
-                status = VX_ERROR_NO_MEMORY;
+                status = (vx_enum)VX_ERROR_NO_MEMORY;
                 VX_PRINT(VX_ZONE_ERROR,
                     " CAPTURE: ERROR: Insufficient memory for frameDropBuf!!!\n");
                 break;
             }
+            /* LDRA_JUSTIFY_END */
         }
     }
 
@@ -744,7 +1124,7 @@ static vx_status tivxCaptureSetCreateParams(
 
 static vx_status tivxCaptureStart(tivxCaptureParams *prms)
 {
-    vx_status status = VX_SUCCESS;
+    vx_status status = (vx_enum)VX_SUCCESS;
     uint32_t instIdx;
     int32_t fvid2_status = FVID2_SOK;
 
@@ -754,12 +1134,26 @@ static vx_status tivxCaptureStart(tivxCaptureParams *prms)
         for (instIdx = 0U ; instIdx < prms->numOfInstUsed ; instIdx++)
         {
             fvid2_status = Fvid2_start(prms->instParams[instIdx].drvHandle, NULL);
+            
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot
+            reach this portion.
+            This failure is reported by the capture driver only in the event of a driver or hardware
+            level fault, which cannot be stimulated through the video_io component interface.
+            Therefore, this failure case is out of scope for the video_io test framework.
+            Effect on this unit: The function returns VX_FAILURE, prints an error message, and stops
+            starting the remaining Capture instances.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             if (FVID2_SOK != fvid2_status)
             {
                 status = (vx_status)VX_FAILURE;
                 VX_PRINT(VX_ZONE_ERROR, " CAPTURE: ERROR: Could not start FVID2 !!!\n");
                 break;
             }
+            /* LDRA_JUSTIFY_END */
         }
     }
 
@@ -773,7 +1167,7 @@ static void tivxCaptureSetTimeout(tivxCaptureParams *prms)
     if (1U == prms->enableErrorFrameTimeout)
     {
         /* Using timeoutInitial if all channels are active, else using timeout */
-        if ( ((1<<(prms->numCh))-1) == prms->activeChannelMask)
+        if ((uint8_t)((1U << prms->numCh) - 1U) == prms->activeChannelMask)
         {
             prms->timeoutRemaining = prms->timeoutInitial;
         }
@@ -809,14 +1203,19 @@ static uint32_t tivxCaptureIsAllChFrameAvailable(tivxCaptureParams *prms,
     /* Initial loop through channel to check for inactive and active channels */
     for(chId = 0U ; chId < prms->numCh ; chId++)
     {
-        tivxQueuePeek(&prms->pendingFrameQ[chId], (uintptr_t*)&recv_obj_desc_id[chId]);
+        uintptr_t temp_desc_id;
+
+        if ((vx_status)VX_SUCCESS == tivxQueuePeek(&prms->pendingFrameQ[chId], &temp_desc_id))
+        {
+            recv_obj_desc_id[chId] = (uint16_t*)temp_desc_id;
+        }
 
         if (NULL==recv_obj_desc_id[chId])
         {
             /* Handle case that capture node timed out; set associated bit in activeChannelMask to 0 */
             if (CAPTURE_TIMEOUT_EXCEEDED == timeoutExceeded)
             {
-                prms->activeChannelMask &= ~(1<<chId);
+                prms->activeChannelMask &= (uint8_t)(~(1U<<chId));
                 VX_PRINT(VX_ZONE_INFO,
                     " Channel %d not received!!!\n", chId);
             }
@@ -824,7 +1223,7 @@ static uint32_t tivxCaptureIsAllChFrameAvailable(tivxCaptureParams *prms,
         else
         {
             /* Handle the case that a camera came back up and set associated bit in activeChannelMask to 1 */
-            prms->activeChannelMask |= (1<<chId);
+            prms->activeChannelMask |= (uint8_t)(1U<<chId);
         }
     }
 
@@ -832,7 +1231,12 @@ static uint32_t tivxCaptureIsAllChFrameAvailable(tivxCaptureParams *prms,
      * check if all frames have been received */
     for(chId = 0U ; chId < prms->numCh ; chId++)
     {
-        tivxQueuePeek(&prms->pendingFrameQ[chId], (uintptr_t*)&recv_obj_desc_id[chId]);
+        uintptr_t temp_desc_id;
+
+        if ((vx_status)VX_SUCCESS == tivxQueuePeek(&prms->pendingFrameQ[chId], &temp_desc_id))
+        {
+            recv_obj_desc_id[chId] = (uint16_t*)temp_desc_id;
+        }
 
         /* Handle case that capture node timed out */
         if (CAPTURE_TIMEOUT_VALID == timeoutExceeded)
@@ -840,7 +1244,7 @@ static uint32_t tivxCaptureIsAllChFrameAvailable(tivxCaptureParams *prms,
             /* Marks that a frame is not available only if this is an active channel; i.e., channel has died
              * or if no channel are active */
             if( ( (NULL==recv_obj_desc_id[chId]) &&
-                  ((1<<chId) & prms->activeChannelMask) ) ||
+                  ((1U<<chId) & prms->activeChannelMask) != 0U) ||
                 (0U == prms->activeChannelMask) )
             {
                 is_all_ch_frame_available = 0;
@@ -853,7 +1257,7 @@ static uint32_t tivxCaptureIsAllChFrameAvailable(tivxCaptureParams *prms,
 
 static vx_status tivxCaptureDequeueFrameFromDriver(tivxCaptureParams *prms)
 {
-    vx_status status = VX_SUCCESS;
+    vx_status status = (vx_enum)VX_SUCCESS;
     uint32_t instIdx, tmp_obj_desc_id = 0U, tmp_timestamp_lo = 0U, tmp_timestamp_hi = 0U;
     uint64_t tmp_timestamp = 0U;
     tivxCaptureInstParams *instParams;
@@ -877,6 +1281,8 @@ static vx_status tivxCaptureDequeueFrameFromDriver(tivxCaptureParams *prms)
         {
             for(frmIdx=0; frmIdx < frmList->numFrames; frmIdx++)
             {
+                uint16_t frameErrors = 0U;
+                uintptr_t key;
                 fvid2Frame = frmList->frames[frmIdx];
 
                 if (FVID2_FRAME_STATUS_COMPLETED != fvid2Frame->status)
@@ -899,18 +1305,140 @@ static vx_status tivxCaptureDequeueFrameFromDriver(tivxCaptureParams *prms)
                     &tmp_timestamp_lo
                 );
 
-                tivxQueuePut(&prms->freeFvid2FrameQ[chId], (uintptr_t)fvid2Frame, TIVX_EVENT_TIMEOUT_NO_WAIT);
-                tivxQueuePut(&prms->pendingFrameQ[chId], (uintptr_t)tmp_obj_desc_id, TIVX_EVENT_TIMEOUT_NO_WAIT);
-                tivxQueuePut(&prms->pendingFrameTimestampLoQ[chId], tmp_timestamp_lo, TIVX_EVENT_TIMEOUT_NO_WAIT);
-                tivxQueuePut(&prms->pendingFrameTimestampHiQ[chId], tmp_timestamp_hi, TIVX_EVENT_TIMEOUT_NO_WAIT);
+                /* LDRA_JUSTIFY_START
+                <metric start> branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach the uncovered outcomes of this switch.
+                This frame status is reported by the capture driver only in the event of a DMA level
+                fault, which cannot be stimulated through the video_io component interface.
+                Therefore, this failure case is out of scope for the video_io test framework.
+                Effect on this unit: The frame completion status reported by the driver is mapped to
+                the corresponding Capture error bit.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
+                switch (fvid2Frame->status)
+                {
+                /* LDRA_JUSTIFY_END */
+                    case FVID2_FRAME_STATUS_TRUNCATED:
+                        frameErrors |= TIVX_CAPTURE_ERR_SHORT_FRAME;
+                        break;
+
+                    case FVID2_FRAME_STATUS_ELONGATED:
+                        frameErrors |= TIVX_CAPTURE_ERR_LONG_FRAME;
+                        break;
+
+                    /* LDRA_JUSTIFY_START
+                    <metric start> statement branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications
+                    cannot reach this portion.
+                    This frame status is reported by the capture driver only in the event of a DMA
+                    level fault, which cannot be stimulated through the video_io component
+                    interface.
+                    Therefore, this failure case is out of scope for the video_io test framework.
+                    Effect on this unit: frameErrors is OR'd with TIVX_CAPTURE_ERR_DMA_SUBMISSION,
+                    which is later reported to the application through the Capture node's
+                    error-event mechanism.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
+                    case FVID2_FRAME_STATUS_SUBMISSION_ERROR:
+                        frameErrors |= TIVX_CAPTURE_ERR_DMA_SUBMISSION;
+                        break;
+                    /* LDRA_JUSTIFY_END */
+
+                    /* LDRA_JUSTIFY_START
+                    <metric start> statement branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications
+                    cannot reach this portion.
+                    This frame status is reported by the capture driver only in the event of a DMA
+                    level fault, which cannot be stimulated through the video_io component
+                    interface.
+                    Therefore, this failure case is out of scope for the video_io test framework.
+                    Effect on this unit: frameErrors is OR'd with TIVX_CAPTURE_ERR_DMA_ABORTED,
+                    which is later reported to the application through the Capture node's
+                    error-event mechanism.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
+                    case FVID2_FRAME_STATUS_ABORTED:
+                        frameErrors |= TIVX_CAPTURE_ERR_DMA_ABORTED;
+                        break;
+                    /* LDRA_JUSTIFY_END */
+
+                    /* LDRA_JUSTIFY_START
+                    <metric start> statement branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications
+                    cannot reach this portion.
+                    This frame status is reported by the capture driver only in the event of a DMA
+                    level fault, which cannot be stimulated through the video_io component
+                    interface.
+                    Therefore, this failure case is out of scope for the video_io test framework.
+                    Effect on this unit: frameErrors is OR'd with TIVX_CAPTURE_ERR_DMA_ERROR, which
+                    is later reported to the application through the Capture node's error-event
+                    mechanism.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
+                    case FVID2_FRAME_STATUS_ERROR:
+                        frameErrors |= TIVX_CAPTURE_ERR_DMA_ERROR;
+                        break;
+                    /* LDRA_JUSTIFY_END */
+
+                    case FVID2_FRAME_STATUS_COMPLETED:
+                    default:
+                        /* Status is not reported through Capture error information. */
+                        break;
+                }
+
+                if (0U != frameErrors)
+                {
+                    key = HwiP_disable();
+
+                    prms->local_error_info[chId].error_bitfield |= frameErrors;
+
+                    HwiP_restore(key);
+                    prms->local_error_info[chId].timestamp = (vx_uint16)tmp_timestamp;
+                }
+
+                (void)tivxQueuePut(&prms->freeFvid2FrameQ[chId], (uintptr_t)fvid2Frame, TIVX_EVENT_TIMEOUT_NO_WAIT);
+                (void)tivxQueuePut(&prms->pendingFrameQ[chId], (uintptr_t)tmp_obj_desc_id, TIVX_EVENT_TIMEOUT_NO_WAIT);
+                (void)tivxQueuePut(&prms->pendingFrameTimestampLoQ[chId], tmp_timestamp_lo, TIVX_EVENT_TIMEOUT_NO_WAIT);
+                (void)tivxQueuePut(&prms->pendingFrameTimestampHiQ[chId], tmp_timestamp_hi, TIVX_EVENT_TIMEOUT_NO_WAIT);
             }
         }
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level test framework and test applications cannot reach this
+        portion.
+        This failure is reported by the capture driver only in the event of a driver or hardware
+        level fault, which cannot be stimulated through the video_io component interface.
+        Therefore, this failure case is out of scope for the video_io test framework.
+        Effect on this unit: No error is recorded, and processing continues with the next Capture
+        instance.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         else if (fvid2_status == FVID2_ENO_MORE_BUFFERS)
         {
             /* continue: move onto next driver instance
               within node as current driver instance did
               not generate this CB */
         }
+        /* LDRA_JUSTIFY_END */
+
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level test framework and test applications cannot reach this
+        portion.
+        This failure is reported by the capture driver only in the event of a driver or hardware
+        level fault, which cannot be stimulated through the video_io component interface.
+        Therefore, this failure case is out of scope for the video_io test framework.
+        Effect on this unit: FVID2_EAGAIN is ignored, while any other status is converted to
+        VX_FAILURE and reported with an error message.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         else
         {
             /* TIOVX-687: Note: disabling for now until investigated further */
@@ -921,6 +1449,7 @@ static vx_status tivxCaptureDequeueFrameFromDriver(tivxCaptureParams *prms)
                     " CAPTURE: ERROR: FVID2 Dequeue failed !!!\n");
             }
         }
+        /* LDRA_JUSTIFY_END */
     }
 
     return status;
@@ -938,7 +1467,12 @@ static void tivxCaptureGetObjDesc(tivxCaptureParams *prms,
 
     for(chId = 0U ; chId < prms->numCh ; chId++)
     {
-        tivxQueueGet(&prms->pendingFrameQ[chId], (uintptr_t*)&recv_obj_desc_id[chId], TIVX_EVENT_TIMEOUT_NO_WAIT);
+        uintptr_t temp_desc_id;
+
+        if ((vx_status)VX_SUCCESS == tivxQueueGet(&prms->pendingFrameQ[chId], &temp_desc_id, TIVX_EVENT_TIMEOUT_NO_WAIT))
+        {
+            recv_obj_desc_id[chId] = (uint16_t*)temp_desc_id;
+        }
     }
 
     for(chId = 0U ; chId < prms->numCh ; chId++)
@@ -953,7 +1487,7 @@ static void tivxCaptureGetObjDesc(tivxCaptureParams *prms,
         }
         else
         {
-            tivxQueueGet(&prms->errorFrameQ[chId], (uintptr_t*)&tmp_desc_id_32, TIVX_EVENT_TIMEOUT_NO_WAIT);
+            (void)tivxQueueGet(&prms->errorFrameQ[chId], (uintptr_t*)&tmp_desc_id_32, TIVX_EVENT_TIMEOUT_NO_WAIT);
         }
 
         tmp_obj_desc_16 = (uint16_t)tmp_desc_id_32;
@@ -961,11 +1495,24 @@ static void tivxCaptureGetObjDesc(tivxCaptureParams *prms,
 
         output_desc->obj_desc_id[chId] = (uint16_t)tmp_obj_desc_16;
 
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        This condition depends on internal state of this component, which cannot be altered through
+        the video_io component interface.
+        Therefore, this case is out of scope for the video_io test framework.
+        Effect on this unit: If the descriptor is not found, its scope and timestamp are not
+        updated; this function does not return an error status.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if(tmp_obj_desc!=NULL)
+        /* LDRA_JUSTIFY_END */
         {
             tmp_obj_desc->scope_obj_desc_id = (uint16_t)output_desc->base.obj_desc_id;
-            tivxQueueGet(&prms->pendingFrameTimestampLoQ[chId], (uintptr_t*)&tmp_timestamp_lo, TIVX_EVENT_TIMEOUT_NO_WAIT);
-            tivxQueueGet(&prms->pendingFrameTimestampHiQ[chId], (uintptr_t*)&tmp_timestamp_hi, TIVX_EVENT_TIMEOUT_NO_WAIT);
+            (void)tivxQueueGet(&prms->pendingFrameTimestampLoQ[chId], (uintptr_t*)&tmp_timestamp_lo, TIVX_EVENT_TIMEOUT_NO_WAIT);
+            (void)tivxQueueGet(&prms->pendingFrameTimestampHiQ[chId], (uintptr_t*)&tmp_timestamp_hi, TIVX_EVENT_TIMEOUT_NO_WAIT);
 
             tivx_uint32_to_uint64(
                     &tmp_timestamp,
@@ -981,6 +1528,7 @@ static void tivxCaptureGetObjDesc(tivxCaptureParams *prms,
                 *timestamp = tmp_timestamp;
             }
         }
+        
     }
 }
 
@@ -989,6 +1537,7 @@ static vx_status VX_CALLBACK tivxCaptureProcess(
        tivx_obj_desc_t *obj_desc[],
        uint16_t num_params, void *priv_arg)
 {
+    (void)priv_arg;
     vx_status status = (vx_status)VX_SUCCESS;
     tivxCaptureParams *prms = NULL;
     tivx_obj_desc_object_array_t *output_desc;
@@ -997,6 +1546,18 @@ static vx_status VX_CALLBACK tivxCaptureProcess(
     uint64_t timestamp = 0U;
     uint8_t timeoutExceeded = CAPTURE_TIMEOUT_VALID;
 
+    /* LDRA_JUSTIFY_START
+    <metric start>  statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this
+    portion.
+    The callback arguments are supplied and pre-validated by the framework before this unit is
+    invoked, and cannot be altered through the video_io component interface.
+    Therefore, this failure case is out of scope for the video_io test framework.
+    Effect on this unit: Invalid callback parameters cause the function to return VX_FAILURE without
+    processing a Capture frame.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     if ( (num_params != TIVX_KERNEL_CAPTURE_MAX_PARAMS)
         || (NULL == obj_desc[TIVX_KERNEL_CAPTURE_INPUT_ARR_IDX])
         || (NULL == obj_desc[TIVX_KERNEL_CAPTURE_OUTPUT_IDX])
@@ -1004,26 +1565,66 @@ static vx_status VX_CALLBACK tivxCaptureProcess(
     {
         status = (vx_status)VX_FAILURE;
     }
+    /* LDRA_JUSTIFY_END */
 
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this
+    portion.
+    This outcome requires an earlier step in this unit to have failed, which is itself out of scope
+    for the video_io test framework as justified at its own location.
+    Effect on this unit: If parameter validation fails, the target kernel context and node state are
+    not retrieved.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     if((vx_status)VX_SUCCESS == status)
+    /* LDRA_JUSTIFY_END */
     {
+        void *temp_prms = NULL;
         output_desc = (tivx_obj_desc_object_array_t *)obj_desc[TIVX_KERNEL_CAPTURE_OUTPUT_IDX];
 
         status = tivxGetTargetKernelInstanceContext(kernel,
-            (void **)&prms, &size);
+            &temp_prms, &size);
+        prms = (tivxCaptureParams *)temp_prms;
 
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        this portion.
+        The kernel instance context used here is the one this component stored during Capture
+        creation, and cannot be replaced or invalidated through the video_io component interface.
+        Therefore, this failure case is out of scope for the video_io test framework.
+        Effect on this unit: An invalid kernel instance context would set the status to VX_FAILURE
+        and skip the node state retrieval below.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if (((vx_status)VX_SUCCESS != status) || (NULL == prms) ||
             (sizeof(tivxCaptureParams) != size))
         {
             status = (vx_status)VX_FAILURE;
         }
         else
+        /* LDRA_JUSTIFY_END */
         {
             status = tivxGetTargetKernelInstanceState(kernel, &state);
         }
     }
 
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach else
+    portion.
+    This outcome requires an earlier step in this unit to have failed, which is itself out of scope
+    for the video_io test framework as justified at its own location.
+    Effect on this unit: If the retrieval failed, no frame would be enqueued to or dequeued from the
+    capture driver and the failure status would be returned.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     if((vx_status)VX_SUCCESS == status)
+    /* LDRA_JUSTIFY_END */
     {
         /* Steady state: receives a buffer and returns a buffer */
         if ((vx_enum)VX_NODE_STATE_STEADY == state)
@@ -1031,25 +1632,65 @@ static vx_status VX_CALLBACK tivxCaptureProcess(
             /* Providing buffers to capture source */
             status = tivxCaptureEnqueueFrameToDriver(output_desc, prms);
 
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot
+            reach this portion.
+            This failure is reported by the capture driver only in the event of a driver or hardware
+            level fault, which cannot be stimulated through the video_io component interface.
+            Therefore, this failure case is out of scope for the video_io test framework.
+            Effect on this unit: The status is set to VX_FAILURE and an error message is printed,
+            and the capture driver is not started for this frame.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             if ((vx_status)VX_SUCCESS != status)
             {
                 status = (vx_status)VX_FAILURE;
                 VX_PRINT(VX_ZONE_ERROR, " CAPTURE: ERROR: Enqueue Frame to Driver failed !!!\n");
             }
+            /* LDRA_JUSTIFY_END */
 
             /* Starts FVID2 on initial frame */
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot
+            reach else portion.
+            This outcome requires an earlier step in this unit to have failed, which is itself out
+            of scope for the video_io test framework as justified at its own location.
+            Effect on this unit: If the enqueue failed, tivxCaptureStart() would be skipped and the
+            enqueue failure status would be returned to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             if ((vx_status)VX_SUCCESS == status)
+            /* LDRA_JUSTIFY_END */
             {
                 status = tivxCaptureStart(prms);
             }
 
             /* Pends until a frame is available then dequeue frames from capture driver */
+
+            /* LDRA_JUSTIFY_START
+            <metric start> branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot
+            reach else portion.
+            This outcome requires an earlier step in this unit to have failed, which is itself out
+            of scope for the video_io test framework as justified at its own location.
+            Effect on this unit: If the start failed, frame dequeuing would be skipped and the start
+            failure status would be returned to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             if ((vx_status)VX_SUCCESS == status)
+            /* LDRA_JUSTIFY_END */
             {
                 uint16_t *recv_obj_desc_id[TIVX_CAPTURE_MAX_CH];
                 tivx_obj_desc_object_array_t *recv_obj_arr_desc;
+                uintptr_t temp_arr_desc_id;
 
                 uint32_t is_all_ch_frame_available = 0;
+                vx_bool errorReported = (vx_bool)vx_false_e;
 
                 for(chId = 0U ; chId < TIVX_CAPTURE_MAX_CH ; chId++)
                 {
@@ -1057,7 +1698,6 @@ static vx_status VX_CALLBACK tivxCaptureProcess(
                 }
 
                 tivxCaptureSetTimeout(prms);
-
                 while(is_all_ch_frame_available == 0U)
                 {
                     /* Upon first entry into this while loop, tivxCaptureIsAllChFrameAvailable is called to determine if
@@ -1068,9 +1708,9 @@ static vx_status VX_CALLBACK tivxCaptureProcess(
                      * has been exceeded and if not, to dequeue frames from driver for all channels */
                     if(is_all_ch_frame_available == 0U)
                     {
-                        status |= tivxCaptureTimeout(prms);
-
-                        if (status != VX_SUCCESS)
+                        uint32_t status_bits = (uint32_t)status | (uint32_t)tivxCaptureTimeout(prms);
+                        status = (vx_status)status_bits;
+                        if (status != (vx_status)VX_SUCCESS)
                         {
                             prms->timeoutRemaining = 0;
                             timeoutExceeded = CAPTURE_TIMEOUT_EXCEEDED;
@@ -1082,10 +1722,43 @@ static vx_status VX_CALLBACK tivxCaptureProcess(
                             status = tivxCaptureDequeueFrameFromDriver(prms);
                         }
                     }
+
+                    {
+                        uint32_t has_error = 0U;
+                        for (chId = 0U; chId <= prms->numCh; chId++)
+                        {
+                            if (0U != prms->local_error_info[chId].error_bitfield)
+                            {
+                                has_error = 1U;
+                                break;
+                            }
+                        }
+
+                        if (0U != has_error)
+                        {
+                            uintptr_t key;
+
+                            key = HwiP_disable();
+                            (void)tivxSetTargetKernelInstanceErrorInfo(
+                                kernel,
+                                prms->local_error_info,
+                                (vx_uint16)(((uint32_t)prms->numCh + 1U) * sizeof(tivx_capture_error_per_channel_t)));
+                            (void)memset(prms->local_error_info, 0, TIVX_MAX_ERROR_INFO_SIZE);
+                            HwiP_restore(key);
+
+                            errorReported = (vx_bool)vx_true_e;
+                        }
+                    }
+                }
+
+                if ((vx_bool)vx_true_e == errorReported)
+                {
+                    status = (vx_status)VX_FAILURE;
                 }
 
                 /* Getting next obj arr obj desc from queue to populate with the latest dequeued frames */
-                tivxQueueGet(&prms->pendingObjArrayQ, (uintptr_t*)&recv_obj_arr_desc, TIVX_EVENT_TIMEOUT_NO_WAIT);
+                (void)tivxQueueGet(&prms->pendingObjArrayQ, &temp_arr_desc_id, TIVX_EVENT_TIMEOUT_NO_WAIT);
+                recv_obj_arr_desc = (tivx_obj_desc_object_array_t *)temp_arr_desc_id;
 
                 obj_desc[TIVX_KERNEL_CAPTURE_OUTPUT_IDX] = (tivx_obj_desc_t *)recv_obj_arr_desc;
 
@@ -1100,6 +1773,7 @@ static vx_status VX_CALLBACK tivxCaptureProcess(
                     prms->steady_state_started = 1;
                 }
             }
+    
         }
         /* Pipe-up state: only receives a buffer; does not return a buffer */
         else
@@ -1116,6 +1790,7 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
        tivx_obj_desc_t *obj_desc[],
        uint16_t num_params, void *priv_arg)
 {
+    (void)priv_arg;
     vx_status status = (vx_status)VX_SUCCESS;
     int32_t fvid2_status = FVID2_SOK;
     tivx_obj_desc_user_data_object_t *input_obj_desc;
@@ -1125,6 +1800,18 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
     tivxCaptureInstParams *instParams = NULL;
     Csirx_CreateParams *createParams;
 
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this
+    portion.
+    The callback arguments are supplied and pre-validated by the framework before this unit is
+    invoked, and cannot be altered through the video_io component interface.
+    Therefore, this failure case is out of scope for the video_io test framework.
+    Effect on this unit: Invalid callback parameters cause the function to return VX_FAILURE without
+    creating a Capture instance.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     if ( (num_params != TIVX_KERNEL_CAPTURE_MAX_PARAMS)
         || (NULL == obj_desc[TIVX_KERNEL_CAPTURE_INPUT_ARR_IDX])
         || (NULL == obj_desc[TIVX_KERNEL_CAPTURE_OUTPUT_IDX])
@@ -1133,23 +1820,63 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
         status = (vx_status)VX_FAILURE;
     }
     else
+    /* LDRA_JUSTIFY_END */
     {
         input_obj_desc = (tivx_obj_desc_user_data_object_t *)obj_desc[TIVX_KERNEL_CAPTURE_INPUT_ARR_IDX];
-        output_desc = (tivx_obj_desc_object_array_t *)obj_desc[TIVX_KERNEL_CAPTURE_OUTPUT_IDX];
+        output_desc    = (tivx_obj_desc_object_array_t *)obj_desc[TIVX_KERNEL_CAPTURE_OUTPUT_IDX];
 
         prms = tivxMemAlloc(sizeof(tivxCaptureParams), (vx_enum)TIVX_MEM_EXTERNAL);
 
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        Reaching this portion requires an allocation from a shared memory region to fail, which the
+        video_io test framework cannot induce deterministically.
+        Therefore, this failure case is out of scope for the video_io test framework.
+        Effect on this unit: If the allocation failed, the Capture parameter structure would not be
+        zero-initialized and the else block below reports VX_ERROR_NO_MEMORY.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if (NULL != prms)
+        /* LDRA_JUSTIFY_END */
         {
-            memset(prms, 0, sizeof(tivxCaptureParams));
+            (void)memset(prms, 0, sizeof(tivxCaptureParams));
         }
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        this portion.
+        Reaching this portion requires an allocation from a shared memory region to fail, which the
+        video_io test framework cannot induce deterministically.
+        Therefore, this failure case is out of scope for the video_io test framework.
+        Effect on this unit: An error message is printed and VX_ERROR_NO_MEMORY is returned to the
+        application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         else
         {
             VX_PRINT(VX_ZONE_ERROR, " CAPTURE: ERROR: Could allocate memory !!!\n");
             status = (vx_status)VX_ERROR_NO_MEMORY;
         }
+        /* LDRA_JUSTIFY_END */
 
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        This outcome requires an earlier step in this unit to have failed, which is itself out of
+        scope for the video_io test framework as justified at its own location.
+        Effect on this unit: If the allocation failed, the steady-state, error-timeout and
+        channel-count fields of prms would be left uninitialized and every later Capture
+        configuration step would be skipped.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if ((vx_status)VX_SUCCESS == status)
+        /* LDRA_JUSTIFY_END */
         {
             /* Initialize steady_state_started to 0 */
             prms->steady_state_started = 0;
@@ -1166,7 +1893,7 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
             /* Set number of channels to number of items in object array */
             prms->numCh = (uint8_t)output_desc->num_items;
 
-            prms->activeChannelMask = (1<<(prms->numCh))-1;
+            prms->activeChannelMask = (uint8_t)((1U<<(prms->numCh))-1U);
 
             if (prms->numCh > TIVX_CAPTURE_MAX_CH)
             {
@@ -1189,10 +1916,23 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
         {
             status = tivxEventCreate(&prms->frame_available);
 
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot
+            reach this portion.
+            Reaching this portion requires the creation of a shared OS resource to fail, which the
+            video_io test framework cannot induce deterministically.
+            Therefore, this failure case is out of scope for the video_io test framework.
+            Effect on this unit: An error message is printed and the event creation status is
+            propagated, skipping the capture driver creation below.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             if ((vx_status)VX_SUCCESS != status)
             {
                 VX_PRINT(VX_ZONE_ERROR, "Event creation failed in capture!!!\r\n");
             }
+            /* LDRA_JUSTIFY_END */
         }
 
         /* Creating FVID2 handle */
@@ -1211,38 +1951,122 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
                                                      &instParams->createPrms,
                                                      &instParams->createStatus,
                                                      &instParams->drvCbPrms);
-
-                if ((NULL == instParams) ||
-                    (NULL == instParams->drvHandle) ||
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach this portion.
+                This failure is reported by the capture driver only in the event of a driver or
+                hardware level fault, which cannot be stimulated through the video_io component
+                interface.
+                Therefore, this failure case is out of scope for the video_io test framework.
+                Effect on this unit: An error message is printed and the status is set to
+                VX_FAILURE, skipping the D-PHY and error-event configuration for this instance.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
+                if ((NULL == instParams->drvHandle) ||
                     (instParams->createStatus.retVal != FVID2_SOK))
                 {
                     VX_PRINT(VX_ZONE_ERROR, ": Capture Create Failed!!!\r\n");
                     status = (vx_status)VX_FAILURE;
                 }
                 else
+                /* LDRA_JUSTIFY_END */
                 {
                     fvid2_status = Fvid2_control(
                         instParams->drvHandle, IOCTL_CSIRX_SET_DPHY_CONFIG,
                         &instParams->dphyCfg, NULL);
+                    /* LDRA_JUSTIFY_START
+                    <metric start> statement branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications
+                    cannot reach this portion.
+                    This failure is reported by the capture driver only in the event of a driver or
+                    hardware level fault, which cannot be stimulated through the video_io component
+                    interface.
+                    Therefore, this failure case is out of scope for the video_io test framework.
+                    Effect on this unit: The status is set to VX_FAILURE and an error message is
+                    printed, skipping the error-event registration for this instance.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
                     if (FVID2_SOK != fvid2_status)
                     {
                         status = (vx_status)VX_FAILURE;
                         VX_PRINT(VX_ZONE_ERROR, ": Failed to set PHY Parameters!!!\r\n");
                     }
                     else
+                    /* LDRA_JUSTIFY_END */
                     {
                         /* Register Error Events */
                         Csirx_EventPrms eventPrms;
                         Csirx_eventPrmsInit(&eventPrms);
+                        eventPrms.eventCb = &captDrvErrorCallback;
+                        eventPrms.appData = prms;
                         fvid2_status = Fvid2_control(instParams->drvHandle,
                                                IOCTL_CSIRX_REGISTER_EVENT,
                                                &eventPrms,
                                                NULL);
+                        /* LDRA_JUSTIFY_START
+                        <metric start> statement branch <metric end>
+                        <justification start>
+                        Rationale: The component level negative test framework and test applications
+                        cannot reach this portion.
+                        This failure is reported by the capture driver only in the event of a driver
+                        or hardware level fault, which cannot be stimulated through the video_io
+                        component interface.
+                        Therefore, this failure case is out of scope for the video_io test
+                        framework.
+                        Effect on this unit: The status is set to VX_FAILURE and an error message is
+                        printed for this Capture instance.
+                        However, due to the stated rationale, this is not tested.
+                        <justification end> */
                         if (FVID2_SOK != fvid2_status)
                         {
                             status = (vx_status)VX_FAILURE;
                             VX_PRINT(VX_ZONE_ERROR, ": Failed to set Event Parameters!!!\r\n");
                         }
+                        /* LDRA_JUSTIFY_END */
+
+#if !defined(SOC_J722S)
+                        if ((0U == instIdx) && ((vx_status)VX_SUCCESS == status))
+                        {
+                            Csirx_EventPrms asfPrms;
+
+                            Csirx_eventPrmsInit(&asfPrms);
+                            asfPrms.eventGroup = CSIRX_ESM_LOW_EVENT_GROUP_ASF;
+                            asfPrms.eventMasks = CSIRX_EVENT_TYPE_ASF_TRANS_TO_ERR |
+                                                CSIRX_EVENT_TYPE_ASF_CSR_ERR |
+                                                CSIRX_EVENT_TYPE_ASF_DAP_ERR;
+                            asfPrms.eventCb    = &captDrvAsfCallback;
+                            asfPrms.appData    = prms;
+
+                            fvid2_status = Fvid2_control(instParams->drvHandle,
+                                                        IOCTL_CSIRX_REGISTER_EVENT,
+                                                        &asfPrms,
+                                                        NULL);
+                            /* LDRA_JUSTIFY_START
+                            <metric start> statement branch <metric end>
+                            <justification start>
+                            Rationale: The component level negative test framework and test
+                            applications cannot reach this portion.
+                            This failure is reported by the capture driver only in the event of a
+                            driver or hardware level fault, which cannot be stimulated through the
+                            video_io component interface.
+                            Therefore, this failure case is out of scope for the video_io test
+                            framework.
+                            Effect on this unit: The status is set to VX_FAILURE and an error
+                            message is printed for this Capture instance.
+                            However, due to the stated rationale, this is not tested.
+                            <justification end> */
+                            if (FVID2_SOK != fvid2_status)
+                            {
+                                status = (vx_status)VX_FAILURE;
+                                VX_PRINT(VX_ZONE_ERROR,
+                                        "Failed to register CSIRX ASF events !!!\r\n");
+                            }
+                            /* LDRA_JUSTIFY_END */
+                        }
+#endif
                     }
                 }
             }
@@ -1252,18 +2076,30 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
         {
             Fvid2_TimeStampParams tsParams;
 
-            tsParams.timeStampFxn = (Fvid2_TimeStampFxn)&tivxPlatformGetTimeInUsecs;
+            tsParams.timeStampFxn = (Fvid2_TimeStampFxn) &tivxPlatformGetTimeInUsecsWrapper;
             /* register time stamping function */
             fvid2_status = Fvid2_control(instParams->drvHandle,
                                    FVID2_REGISTER_TIMESTAMP_FXN,
                                    &tsParams,
                                    NULL);
-
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot
+            reach this portion.
+            This failure is reported by the capture driver only in the event of a driver or hardware
+            level fault, which cannot be stimulated through the video_io component interface.
+            Therefore, this failure case is out of scope for the video_io test framework.
+            Effect on this unit: The status is set to VX_FAILURE and an error message is printed,
+            skipping the driver frame queue creation below.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             if (FVID2_SOK != fvid2_status)
             {
                 status = (vx_status)VX_FAILURE;
                 VX_PRINT(VX_ZONE_ERROR, ": Failed to set PHY Parameters!!!\r\n");
             }
+            /* LDRA_JUSTIFY_END */
         }
 
         /* Creating FVID2 frame Q */
@@ -1273,15 +2109,28 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
             {
                 status = tivxQueueCreate(&prms->freeFvid2FrameQ[chId], TIVX_CAPTURE_MAX_NUM_BUFS, prms->fvid2_free_q_mem[chId], 0);
 
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach this portion.
+                The arguments supplied to this call are fixed by this unit, so the failure outcome
+                cannot be produced through the video_io component interface.
+                Therefore, this failure case is out of scope for the video_io test framework.
+                Effect on this unit: An error message is printed and the queue creation loop is
+                terminated, returning the failure status to the application.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if ((vx_status)VX_SUCCESS != status)
                 {
-                    VX_PRINT(VX_ZONE_ERROR, ": Capture queue create failed!!!\r\n");
+                    VX_PRINT(VX_ZONE_ERROR, ": Capture queue create failed!!!\n");
                     break;
                 }
+                /* LDRA_JUSTIFY_END */
 
                 for(bufId = 0u ; bufId < (TIVX_CAPTURE_MAX_NUM_BUFS) ; bufId++)
                 {
-                    tivxQueuePut(&prms->freeFvid2FrameQ[chId], (uintptr_t)&prms->fvid2Frames[chId][bufId], TIVX_EVENT_TIMEOUT_NO_WAIT);
+                    (void)tivxQueuePut(&prms->freeFvid2FrameQ[chId], (uintptr_t)&prms->fvid2Frames[chId][bufId], TIVX_EVENT_TIMEOUT_NO_WAIT);
                 }
             }
         }
@@ -1293,11 +2142,24 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
             {
                 status = tivxQueueCreate(&prms->pendingFrameQ[chId], TIVX_CAPTURE_MAX_NUM_BUFS, prms->pending_frame_free_q_mem[chId], 0);
 
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach this portion.
+                The arguments supplied to this call are fixed by this unit, so the failure outcome
+                cannot be produced through the video_io component interface.
+                Therefore, this failure case is out of scope for the video_io test framework.
+                Effect on this unit: An error message is printed and the queue creation loop is
+                terminated, returning the failure status to the application.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if ((vx_status)VX_SUCCESS != status)
                 {
                     VX_PRINT(VX_ZONE_ERROR, ": Capture create failed!!!\r\n");
                     break;
                 }
+                /* LDRA_JUSTIFY_END */
             }
         }
 
@@ -1305,11 +2167,23 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
         if ((vx_status)VX_SUCCESS == status)
         {
             status = tivxQueueCreate(&prms->pendingObjArrayQ, TIVX_CAPTURE_MAX_NUM_BUFS, prms->pending_obj_arr_q_mem, 0);
-
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot
+            reach this portion.
+            The arguments supplied to this call are fixed by this unit, so the failure outcome
+            cannot be produced through the video_io component interface.
+            Therefore, this failure case is out of scope for the video_io test framework.
+            Effect on this unit: An error message is printed and the queue creation status is
+            returned to the application.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             if ((vx_status)VX_SUCCESS != status)
             {
                 VX_PRINT(VX_ZONE_ERROR, ": Capture create failed!!!\r\n");
             }
+            /* LDRA_JUSTIFY_END */
         }
 
         /* TODO: Should there be a flag to determine whether or not to create this? */
@@ -1320,11 +2194,24 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
             {
                 status = tivxQueueCreate(&prms->errorFrameQ[chId], TIVX_CAPTURE_MAX_NUM_BUFS, prms->error_frame_q_mem[chId], 0);
 
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach this portion.
+                The arguments supplied to this call are fixed by this unit, so the failure outcome
+                cannot be produced through the video_io component interface.
+                Therefore, this failure case is out of scope for the video_io test framework.
+                Effect on this unit: An error message is printed and the queue creation loop is
+                terminated, returning the failure status to the application.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if ((vx_status)VX_SUCCESS != status)
                 {
                     VX_PRINT(VX_ZONE_ERROR, ": Capture create failed!!!\r\n");
                     break;
                 }
+                /* LDRA_JUSTIFY_END */
             }
         }
 
@@ -1335,11 +2222,24 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
             {
                 status = tivxQueueCreate(&prms->pendingFrameTimestampLoQ[chId], TIVX_CAPTURE_MAX_NUM_BUFS, prms->pending_frame_timestamp_lo_free_q_mem[chId], 0);
 
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach this portion.
+                The arguments supplied to this call are fixed by this unit, so the failure outcome
+                cannot be produced through the video_io component interface.
+                Therefore, this failure case is out of scope for the video_io test framework.
+                Effect on this unit: An error message is printed and the queue creation loop is
+                terminated, returning the failure status to the application.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if ((vx_status)VX_SUCCESS != status)
                 {
                     VX_PRINT(VX_ZONE_ERROR, ": Capture create failed!!!\r\n");
                     break;
                 }
+                /* LDRA_JUSTIFY_END */
             }
         }
 
@@ -1350,26 +2250,78 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
             {
                 status = tivxQueueCreate(&prms->pendingFrameTimestampHiQ[chId], TIVX_CAPTURE_MAX_NUM_BUFS, prms->pending_frame_timestamp_hi_free_q_mem[chId], 0);
 
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach this portion.
+                The arguments supplied to this call are fixed by this unit, so the failure outcome
+                cannot be produced through the video_io component interface.
+                Therefore, this failure case is out of scope for the video_io test framework.
+                Effect on this unit: An error message is printed and the queue creation loop is
+                terminated, returning the failure status to the application.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if ((vx_status)VX_SUCCESS != status)
                 {
                     VX_PRINT(VX_ZONE_ERROR, ": Capture create failed!!!\r\n");
                     break;
                 }
+                /* LDRA_JUSTIFY_END */
             }
         }
 
         if ((vx_status)VX_SUCCESS == status)
         {
-            tivxSetTargetKernelInstanceContext(kernel, prms, sizeof(tivxCaptureParams));
+            status = tivxSetTargetKernelInstanceContext(kernel, prms, sizeof(tivxCaptureParams));
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot reach this portion.
+            This failure case is out of scope for the video_io test framework.
+            Effect on this unit: If the control reaches here, the code base is NOT expected
+            to accumulate and return an error. However, due to the stated rationale, this is not tested.
+            <justification end> */
+            if ((vx_status)VX_SUCCESS != status)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "tivxSetTargetKernelInstanceContext failed %d \n", status);
+            }
+            /* LDRA_JUSTIFY_END */
         }
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        This outcome requires an earlier step in this unit to have failed, which is itself out of
+        scope for the video_io test framework as justified at its own location.
+        Effect on this unit: If prms were NULL, no Capture instance teardown would be performed and
+        the existing failure status would be returned unchanged.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         else if (NULL != prms)
+        /* LDRA_JUSTIFY_END */
         {
             for (instIdx = 0U ; instIdx < prms->numOfInstUsed ; instIdx++)
             {
                 instParams = &prms->instParams[instIdx];
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start>
+                Rationale: The component level test framework and test applications cannot reach
+                this portion.
+                This failure is reported by the capture driver only in the event of a driver or
+                hardware level fault, which cannot be stimulated through the video_io component
+                interface.
+                Therefore, this failure case is out of scope for the video_io test framework.
+                Effect on this unit: The capture driver error events are unregistered and the driver
+                handle of this Capture instance is deleted and cleared.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if (NULL != instParams->drvHandle)
                 {
                     /* Disable Error Events */
+
                     fvid2_status = Fvid2_control(instParams->drvHandle,
                                            IOCTL_CSIRX_UNREGISTER_EVENT,
                                            (void *)CSIRX_EVENT_GROUP_ERROR,
@@ -1379,26 +2331,69 @@ static vx_status VX_CALLBACK tivxCaptureCreate(
                         status = (vx_status)VX_FAILURE;
                         VX_PRINT(VX_ZONE_ERROR, ": Capture Event Unregister failed!!!\r\n");
                     }
-                    Fvid2_delete(instParams->drvHandle, NULL);
+
+#if !defined(SOC_J722S)
+                    /* Disable ASF Events -- see the matching unregister call
+                     * in tivxCaptureDelete() for why this is needed. */
+                    if (0U == instIdx)
+                    {
+                        fvid2_status = Fvid2_control(instParams->drvHandle,
+                                               IOCTL_CSIRX_UNREGISTER_EVENT,
+                                               (void *)CSIRX_ESM_LOW_EVENT_GROUP_ASF,
+                                               NULL);
+                        if(FVID2_SOK != fvid2_status)
+                        {
+                            status = (vx_status)VX_FAILURE;
+                            VX_PRINT(VX_ZONE_ERROR, ": Capture ASF Event Unregister failed!!!\r\n");
+                        }
+                    }
+#endif
+                    (void)Fvid2_delete(instParams->drvHandle, NULL);
                     instParams->drvHandle = NULL;
                 }
+                /* LDRA_JUSTIFY_END */
 
                 /* Freeing memory used for frame drop buf */
                 createParams = &instParams->createPrms;
-                tivxMemFree((void*)(uintptr_t)createParams->frameDropBuf, createParams->frameDropBufLen, (vx_enum)TIVX_MEM_EXTERNAL);
+                (void)tivxMemFree((void*)(uintptr_t)createParams->frameDropBuf, createParams->frameDropBufLen, (vx_enum)TIVX_MEM_EXTERNAL);
             }
-
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale: The component level negative test framework and test applications cannot
+            reach this portion.
+            This failure is reported by the capture driver only in the event of a driver or hardware
+            level fault, which cannot be stimulated through the video_io component interface.
+            Therefore, this failure case is out of scope for the video_io test framework.
+            Effect on this unit: The frame-available event created earlier in this function is
+            deleted before the Capture parameter structure is freed.
+            However, due to the stated rationale, this is not tested.
+            <justification end> */
             if (NULL != prms->frame_available)
             {
-                tivxEventDelete(&prms->frame_available);
+                (void)tivxEventDelete(&prms->frame_available);
             }
+            /* LDRA_JUSTIFY_END */
 
-            tivxMemFree(prms, sizeof(tivxCaptureParams), (vx_enum)TIVX_MEM_EXTERNAL);
+            (void)tivxMemFree(prms, sizeof(tivxCaptureParams), (vx_enum)TIVX_MEM_EXTERNAL);
         }
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        this portion.
+        Reaching this portion requires an allocation from a shared memory region to fail, which the
+        video_io test framework cannot induce deterministically.
+        Therefore, this failure case is out of scope for the video_io test framework.
+        Effect on this unit: No Capture resource is released, because the allocation that would have
+        created them never succeeded.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         else
         {
             /* do nothing */
         }
+        /* LDRA_JUSTIFY_END */
     }
 
     return status;
@@ -1409,34 +2404,60 @@ static void tivxCapturePrintStatus(tivxCaptureInstParams *prms)
     int32_t fvid2_status;
     uint32_t cnt;
 
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach else
+    portion.
+    The only call site within this component supplies parameters that are always valid, so this
+    outcome cannot be produced through the video_io component interface.
+    Therefore, this case is out of scope for the video_io test framework.
+    Effect on this unit: If the argument is NULL, no driver status is queried or printed; this void
+    function does not return an error status.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     if (NULL != prms)
+    /* LDRA_JUSTIFY_END */
     {
         fvid2_status = Fvid2_control(prms->drvHandle,
                                 IOCTL_CSIRX_GET_INST_STATUS,
                                 &prms->captStatus,
                                 NULL);
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        This failure is reported by the capture driver only in the event of a driver or hardware
+        level fault, which cannot be stimulated through the video_io component interface.
+        Therefore, this failure case is out of scope for the video_io test framework.
+        Effect on this unit: If the status query fails, the Capture statistics are not printed and
+        control proceeds to the error-reporting block.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if (FVID2_SOK == fvid2_status)
+        /* LDRA_JUSTIFY_END */
         {
-            printf(   "==========================================================\r\n");
-            printf(   " Capture Status: Instance|%d\r\n", prms->instId);
-            printf(   "==========================================================\r\n");
-            printf(   " overflowCount: %d\r\n", prms->captStatus.overflowCount);
-            printf(   " spuriousUdmaIntrCount: %d\r\n", prms->captStatus.spuriousUdmaIntrCount);
-            printf(   " frontFIFOOvflCount: %d\r\n", prms->captStatus.frontFIFOOvflCount);
-            printf(   " crcCount: %d\r\n", prms->captStatus.crcCount);
-            printf(   " eccCount: %d\r\n", prms->captStatus.eccCount);
-            printf(   " correctedEccCount: %d\r\n", prms->captStatus.correctedEccCount);
-            printf(   " dataIdErrorCount: %d\r\n", prms->captStatus.dataIdErrorCount);
-            printf(   " invalidAccessCount: %d\r\n", prms->captStatus.invalidAccessCount);
-            printf(   " invalidSpCount: %d\r\n", prms->captStatus.invalidSpCount);
+            VX_PRINT(VX_ZONE_INFO,   "==========================================================\r\n");
+            VX_PRINT(VX_ZONE_INFO,   " Capture Status: Instance|%d\r\n", prms->instId);
+            VX_PRINT(VX_ZONE_INFO,   "==========================================================\r\n");
+            VX_PRINT(VX_ZONE_INFO,   " overflowCount: %d\r\n", prms->captStatus.overflowCount);
+            VX_PRINT(VX_ZONE_INFO,   " spuriousUdmaIntrCount: %d\r\n", prms->captStatus.spuriousUdmaIntrCount);
+            VX_PRINT(VX_ZONE_INFO,   " frontFIFOOvflCount: %d\r\n", prms->captStatus.frontFIFOOvflCount);
+            VX_PRINT(VX_ZONE_INFO,   " crcCount: %d\r\n", prms->captStatus.crcCount);
+            VX_PRINT(VX_ZONE_INFO,   " eccCount: %d\r\n", prms->captStatus.eccCount);
+            VX_PRINT(VX_ZONE_INFO,   " correctedEccCount: %d\r\n", prms->captStatus.correctedEccCount);
+            VX_PRINT(VX_ZONE_INFO,   " dataIdErrorCount: %d\r\n", prms->captStatus.dataIdErrorCount);
+            VX_PRINT(VX_ZONE_INFO,   " invalidAccessCount: %d\r\n", prms->captStatus.invalidAccessCount);
+            VX_PRINT(VX_ZONE_INFO,   " invalidSpCount: %d\r\n", prms->captStatus.invalidSpCount);
             for(cnt = 0U ; cnt < CSIRX_NUM_STREAM ; cnt ++)
             {
-                printf(   " strmFIFOOvflCount[%d]: %d\r\n", cnt, prms->captStatus.strmFIFOOvflCount[cnt]);
+                VX_PRINT(VX_ZONE_INFO,   " strmFIFOOvflCount[%d]: %d\r\n", cnt, prms->captStatus.strmFIFOOvflCount[cnt]);
             }
-            printf(   " Channel Num | Frame Queue Count | Frame De-queue Count | Frame Drop Count | Error Frame Count |\r\n");
+            VX_PRINT(VX_ZONE_INFO,   " Channel Num | Frame Queue Count | Frame De-queue Count | Frame Drop Count | Error Frame Count |\r\n");
             for(cnt = 0U ; cnt < prms->numCh ; cnt ++)
             {
-                printf(
+                VX_PRINT(VX_ZONE_INFO,
                       " %11d | %17d | %20d | %16d | %17d |\r\n",
                       cnt,
                       prms->captStatus.queueCount[cnt],
@@ -1445,10 +2466,23 @@ static void tivxCapturePrintStatus(tivxCaptureInstParams *prms)
                       prms->captStatus.errorFrameCount[cnt]);
             }
         }
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        this portion.
+        This failure is reported by the capture driver only in the event of a driver or hardware
+        level fault, which cannot be stimulated through the video_io component interface.
+        Therefore, this failure case is out of scope for the video_io test framework.
+        Effect on this unit: An error message is printed and no status is propagated because
+        tivxCapturePrintStatus() has no return value.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         else
         {
             VX_PRINT(VX_ZONE_ERROR, " CAPTURE: ERROR: FVID2 Control failed !!!\n");
         }
+        /* LDRA_JUSTIFY_END */
     }
 }
 
@@ -1457,6 +2491,7 @@ static vx_status VX_CALLBACK tivxCaptureDelete(
        tivx_obj_desc_t *obj_desc[],
        uint16_t num_params, void *priv_arg)
 {
+    (void)priv_arg;
     vx_status status = (vx_status)VX_SUCCESS;
     int32_t fvid2_status = FVID2_SOK;
     tivxCaptureParams *prms = NULL;
@@ -1464,6 +2499,18 @@ static vx_status VX_CALLBACK tivxCaptureDelete(
     uint32_t size, chId, bufId, instIdx;
     tivxCaptureInstParams *instParams;
 
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this
+    portion.
+    The callback arguments are supplied and pre-validated by the framework before this unit is
+    invoked, and cannot be altered through the video_io component interface.
+    Therefore, this failure case is out of scope for the video_io test framework.
+    Effect on this unit: Invalid callback parameters cause the function to return VX_FAILURE without
+    releasing any Capture resource.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     if ( (num_params != TIVX_KERNEL_CAPTURE_MAX_PARAMS)
         || (NULL == obj_desc[TIVX_KERNEL_CAPTURE_INPUT_ARR_IDX])
         || (NULL == obj_desc[TIVX_KERNEL_CAPTURE_OUTPUT_IDX])
@@ -1472,40 +2519,118 @@ static vx_status VX_CALLBACK tivxCaptureDelete(
         status = (vx_status)VX_FAILURE;
     }
     else
+    /* LDRA_JUSTIFY_END */
     {
-        status = tivxGetTargetKernelInstanceContext(kernel, (void **)&prms, &size);
+        void *temp_prms = NULL; 
+        status = tivxGetTargetKernelInstanceContext(kernel, &temp_prms, &size); 
+        prms = (tivxCaptureParams *)temp_prms;
 
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        this portion.
+        The kernel instance context used here is the one this component stored during Capture
+        creation, and cannot be replaced or invalidated through the video_io component interface.
+        Therefore, this failure case is out of scope for the video_io test framework.
+        Effect on this unit: An error message is printed and the context retrieval status is carried
+        into the teardown condition below.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if ((vx_status)VX_SUCCESS != status)
         {
             VX_PRINT(VX_ZONE_ERROR, " CAPTURE: ERROR: Could not obtain kernel instance context !!!\n");
         }
+        /* LDRA_JUSTIFY_END */
 
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        this portion.
+        The kernel instance context used here is the one this component stored during Capture
+        creation, and cannot be replaced or invalidated through the video_io component interface.
+        Therefore, this failure case is out of scope for the video_io test framework.
+        Effect on this unit: An error message is printed and the status is set to VX_FAILURE,
+        skipping the whole Capture teardown below.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if(NULL == prms)
         {
             VX_PRINT(VX_ZONE_ERROR, "Kernel instance context is NULL!!!\n");
             status = (vx_status)VX_FAILURE;
         }
-
+        /* LDRA_JUSTIFY_END */
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        This outcome requires an earlier step in this unit to have failed, which is itself out of
+        scope for the video_io test framework as justified at its own location.
+        Effect on this unit: If the context retrieval failed, all Capture instance teardown below
+        would be skipped and the failure status returned to the application.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if ((vx_status)VX_SUCCESS == status)
+        /* LDRA_JUSTIFY_END */
         {
             frmList = &prms->frmList;
             for (instIdx = 0U ; instIdx < prms->numOfInstUsed ; instIdx++)
             {
                 instParams = &prms->instParams[instIdx];
+
                 /* Stopping FVID2 Capture */
+                /* LDRA_JUSTIFY_START
+                <metric start> branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach else portion.
+                This outcome requires an earlier step in this unit to have failed, which is itself
+                out of scope for the video_io test framework as justified at its own location.
+                Effect on this unit: If a previous instance failed, the driver stop request for this
+                instance would be skipped.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if ((vx_status)VX_SUCCESS == status)
+                /* LDRA_JUSTIFY_END */
                 {
                     fvid2_status = Fvid2_stop(instParams->drvHandle, NULL);
-
+                    /* LDRA_JUSTIFY_START
+                    <metric start> statement branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications
+                    cannot reach this portion.
+                    This failure is reported by the capture driver only in the event of a driver or
+                    hardware level fault, which cannot be stimulated through the video_io component
+                    interface.
+                    Therefore, this failure case is out of scope for the video_io test framework.
+                    Effect on this unit: The status is set to VX_FAILURE and an error message is
+                    printed, skipping the frame drain for this instance.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
                     if (FVID2_SOK != fvid2_status)
                     {
                         status = (vx_status)VX_FAILURE;
                         VX_PRINT(VX_ZONE_ERROR, " CAPTURE: ERROR: FVID2 Capture not stopped !!!\n");
                     }
+                    /* LDRA_JUSTIFY_END */
                 }
 
                 /* Dequeue all the request from the driver */
+                /* LDRA_JUSTIFY_START
+                <metric start> branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach else portion.
+                This outcome requires an earlier step in this unit to have failed, which is itself
+                out of scope for the video_io test framework as justified at its own location.
+                Effect on this unit: If the stop request failed, the queued frames of this instance
+                would not be drained from the driver.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if ((vx_status)VX_SUCCESS == status)
+                /* LDRA_JUSTIFY_END */
                 {
                     Fvid2FrameList_init(frmList);
                     do
@@ -1517,52 +2642,196 @@ static vx_status VX_CALLBACK tivxCaptureDelete(
                             FVID2_TIMEOUT_NONE);
                     } while (FVID2_SOK == fvid2_status);
 
+                    /* LDRA_JUSTIFY_START
+                    <metric start> statement branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications
+                    cannot reach this portion.
+                    This failure is reported by the capture driver only in the event of a driver or
+                    hardware level fault, which cannot be stimulated through the video_io component
+                    interface.
+                    Therefore, this failure case is out of scope for the video_io test framework.
+                    Effect on this unit: An error message is printed and the status is set to
+                    VX_FAILURE, skipping the Capture statistics printout for this instance.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
                     if (FVID2_ENO_MORE_BUFFERS != fvid2_status)
                     {
                         VX_PRINT(VX_ZONE_ERROR, " CAPTURE: ERROR: FVID2 Capture Dequeue Failed !!!\n");
                         status = (vx_status)VX_FAILURE;
                     }
+                    /* LDRA_JUSTIFY_END */
                 }
 
+                /* LDRA_JUSTIFY_START
+                <metric start> branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach else portion.
+                This outcome requires an earlier step in this unit to have failed, which is itself
+                out of scope for the video_io test framework as justified at its own location.
+                Effect on this unit: If the drain failed, the Capture statistics of this instance
+                would not be printed.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if ((vx_status)VX_SUCCESS == status)
+                /* LDRA_JUSTIFY_END */
                 {
                     tivxCapturePrintStatus(instParams);
                 }
 
                 /* Freeing memory used for frame drop buf */
+                /* LDRA_JUSTIFY_START
+                <metric start> branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach else portion.
+                This outcome requires an earlier step in this unit to have failed, which is itself
+                out of scope for the video_io test framework as justified at its own location.
+                Effect on this unit: If an earlier step failed, the frame drop buffer of this
+                instance would not be freed.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if ((vx_status)VX_SUCCESS == status)
+                /* LDRA_JUSTIFY_END */
                 {
                     Csirx_CreateParams *createParams;
 
                     createParams = &instParams->createPrms;
 
-                    tivxMemFree((void*)(uintptr_t)createParams->frameDropBuf, createParams->frameDropBufLen, (vx_enum)TIVX_MEM_EXTERNAL);
+                    uintptr_t frame_drop_buf = (uintptr_t) createParams->frameDropBuf;
+                    void *p_drop_buf = (void *) frame_drop_buf;
+                    status = tivxMemFree(p_drop_buf, createParams->frameDropBufLen, (vx_enum)TIVX_MEM_EXTERNAL);
+
+                    /* LDRA_JUSTIFY_START
+                    <metric start> statement branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications cannot reach this portion.
+                    The test framework does not support the configuration required to trigger this error scenario.
+                    Effect on this unit: If the control reaches here, our code base is expected to print the error status.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
+                    if ((vx_status)VX_SUCCESS != status)
+                    {
+                        VX_PRINT(VX_ZONE_ERROR, "Capture tivxMemFree failed %d \n", status);
+                    }
+                    /* LDRA_JUSTIFY_END */
                 }
 
                 /* Disable Error Events */
+
                 fvid2_status = Fvid2_control(instParams->drvHandle,
                                        IOCTL_CSIRX_UNREGISTER_EVENT,
                                        (void *)CSIRX_EVENT_GROUP_ERROR,
                                        NULL);
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach this portion.
+                This failure is reported by the capture driver only in the event of a driver or
+                hardware level fault, which cannot be stimulated through the video_io component
+                interface.
+                Therefore, this failure case is out of scope for the video_io test framework.
+                Effect on this unit: The status is set to VX_FAILURE and an error message is
+                printed, skipping the driver handle deletion for this instance.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if(FVID2_SOK != fvid2_status)
                 {
                     status = (vx_status)VX_FAILURE;
                     VX_PRINT(VX_ZONE_ERROR, ": Capture Event Unregister failed!!!\r\n");
                 }
+                /* LDRA_JUSTIFY_END */
+
+#if !defined(SOC_J722S)
+                /* Disable ASF Events. Only registered for instIdx==0 at
+                 * create time, so only unregister it there too. Without
+                 * this, CsirxDrv_eventGroupRegister()'s eventInitDone latch
+                 * for CSIRX_ESM_LOW_EVENT_GROUP_ASF never clears, so a later
+                 * Csirx_create() in the same boot silently keeps this
+                 * instance's (now torn down) appData wired into
+                 * captDrvAsfCallback instead of the new instance's. */
+                if (0U == instIdx)
+                {
+                    fvid2_status = Fvid2_control(instParams->drvHandle,
+                                           IOCTL_CSIRX_UNREGISTER_EVENT,
+                                           (void *)CSIRX_ESM_LOW_EVENT_GROUP_ASF,
+                                           NULL);
+                    /* LDRA_JUSTIFY_START
+                    <metric start> statement branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications
+                    cannot reach this portion.
+                    This failure is reported by the capture driver only in the event of a driver or
+                    hardware level fault, which cannot be stimulated through the video_io component
+                    interface.
+                    Therefore, this failure case is out of scope for the video_io test framework.
+                    Effect on this unit: The status is set to VX_FAILURE and an error message is
+                    printed for this Capture instance.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
+                    if(FVID2_SOK != fvid2_status)
+                    {
+                        status = (vx_status)VX_FAILURE;
+                        VX_PRINT(VX_ZONE_ERROR, ": Capture ASF Event Unregister failed!!!\r\n");
+                    }
+                    /* LDRA_JUSTIFY_END */
+                }
+#endif
                 /* Deleting FVID2 handle */
+                /* Freeing memory used for frame drop buf */
+                /* LDRA_JUSTIFY_START
+                <metric start> branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach else portion.
+                This outcome requires an earlier step in this unit to have failed, which is itself
+                out of scope for the video_io test framework as justified at its own location.
+                Effect on this unit: If the event unregistration failed, the driver handle of this
+                instance would not be deleted.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if ((vx_status)VX_SUCCESS == status)
+                /* LDRA_JUSTIFY_END */
                 {
                     fvid2_status = Fvid2_delete(instParams->drvHandle, NULL);
-
+                    /* LDRA_JUSTIFY_START
+                    <metric start> statement branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications
+                    cannot reach this portion.
+                    This failure is reported by the capture driver only in the event of a driver or
+                    hardware level fault, which cannot be stimulated through the video_io component
+                    interface.
+                    Therefore, this failure case is out of scope for the video_io test framework.
+                    Effect on this unit: The status is set to VX_FAILURE and an error message is
+                    printed, leaving the driver handle of this instance unchanged.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
                     if (FVID2_SOK != fvid2_status)
                     {
                         status = (vx_status)VX_FAILURE;
                         VX_PRINT(VX_ZONE_ERROR, " CAPTURE: ERROR: FVID2 Delete Failed !!!\n");
                     }
+                    /* LDRA_JUSTIFY_END */
                 }
 
                 /* Free-ing kernel instance params */
+                /* Freeing memory used for frame drop buf */
+                /* LDRA_JUSTIFY_START
+                <metric start> branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach else portion.
+                This outcome requires an earlier step in this unit to have failed, which is itself
+                out of scope for the video_io test framework as justified at its own location.
+                Effect on this unit: If the deletion failed, the driver handle of this instance
+                would not be cleared.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
                 if ( (vx_status)VX_SUCCESS == status)
+                /* LDRA_JUSTIFY_END */
                 {
                     instParams->drvHandle = NULL;
                 }
@@ -1570,86 +2839,219 @@ static vx_status VX_CALLBACK tivxCaptureDelete(
         }
 
         /* Deleting FVID2 frame Q */
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        This outcome requires an earlier step in this unit to have failed, which is itself out of
+        scope for the video_io test framework as justified at its own location.
+        Effect on this unit: If an instance teardown step failed, the per-channel driver frame
+        queues would not be deleted.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if ((vx_status)VX_SUCCESS == status)
+        /* LDRA_JUSTIFY_END */
         {
             for(chId = 0U; chId < prms->numCh ; chId++)
             {
-                tivxQueueDelete(&prms->freeFvid2FrameQ[chId]);
+                (void)tivxQueueDelete(&prms->freeFvid2FrameQ[chId]);
             }
         }
 
         /* Deleting pending frame Q */
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        This outcome requires an earlier step in this unit to have failed, which is itself out of
+        scope for the video_io test framework as justified at its own location.
+        Effect on this unit: If a preceding cleanup step failed, the per-channel pending frame
+        queues would not be deleted.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if ((vx_status)VX_SUCCESS == status)
+        /* LDRA_JUSTIFY_END */
         {
             for(chId= 0U ; chId < prms->numCh ; chId++)
             {
-                tivxQueueDelete(&prms->pendingFrameQ[chId]);
+                (void)tivxQueueDelete(&prms->pendingFrameQ[chId]);
             }
         }
 
         /* Deleting pending frame Q */
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        This outcome requires an earlier step in this unit to have failed, which is itself out of
+        scope for the video_io test framework as justified at its own location.
+        Effect on this unit: If a preceding cleanup step failed, the pending object array queue
+        would not be deleted.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if ((vx_status)VX_SUCCESS == status)
+        /* LDRA_JUSTIFY_END */
         {
-            tivxQueueDelete(&prms->pendingObjArrayQ);
+            (void)tivxQueueDelete(&prms->pendingObjArrayQ);
         }
 
         /* Freeing error object descriptors if they have been allocated */
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        This outcome requires an earlier step in this unit to have failed, which is itself out of
+        scope for the video_io test framework as justified at its own location.
+        Effect on this unit: If a preceding cleanup step failed, the error object descriptors
+        allocated for the registered error frame would not be freed.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if (((vx_status)VX_SUCCESS == status) &&
             (1U == prms->enableErrorFrameTimeout))
+        /* LDRA_JUSTIFY_END */
         {
             for (chId = 0U; chId < prms->numCh; chId++)
             {
                 for (bufId = 0U; bufId < TIVX_CAPTURE_MAX_NUM_BUFS; bufId++)
                 {
+                    /* LDRA_JUSTIFY_START
+                    <metric start> branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications
+                    cannot reach else portion.
+                    This condition depends on internal state of this component, which cannot be
+                    altered through the video_io component interface.
+                    Therefore, this case is out of scope for the video_io test framework.
+                    Effect on this unit: A NULL entry would be skipped, leaving the error object
+                    descriptor for that channel and buffer unfreed.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
                     if(prms->error_obj_desc[chId][bufId]!=NULL)
+                    /* LDRA_JUSTIFY_END */
                     {
                         status = ownObjDescFree((tivx_obj_desc_t**)&prms->error_obj_desc[chId][bufId]);
                     }
-
+                    /* LDRA_JUSTIFY_START
+                    <metric start> statement branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications
+                    cannot reach this portion.
+                    This condition depends on internal state of this component, which cannot be
+                    altered through the video_io component interface.
+                    Therefore, this case is out of scope for the video_io test framework.
+                    Effect on this unit: The remaining buffers of this channel are skipped and the
+                    per-channel loop continues.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
                     if ((vx_status)VX_SUCCESS != status)
                     {
                         break;
                     }
+                    /* LDRA_JUSTIFY_END */
                 }
             }
         }
 
         /* Deleting pending frame Q */
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        This outcome requires an earlier step in this unit to have failed, which is itself out of
+        scope for the video_io test framework as justified at its own location.
+        Effect on this unit: If a preceding cleanup step failed, the per-channel error frame queues
+        would not be deleted.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if ((vx_status)VX_SUCCESS == status)
+        /* LDRA_JUSTIFY_END */
         {
             for(chId= 0U ; chId < prms->numCh ; chId++)
             {
-                tivxQueueDelete(&prms->errorFrameQ[chId]);
+                (void)tivxQueueDelete(&prms->errorFrameQ[chId]);
             }
         }
 
         /* Deleting pending frame Q */
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        This outcome requires an earlier step in this unit to have failed, which is itself out of
+        scope for the video_io test framework as justified at its own location.
+        Effect on this unit: If a preceding cleanup step failed, the per-channel low timestamp
+        queues would not be deleted.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if ((vx_status)VX_SUCCESS == status)
+        /* LDRA_JUSTIFY_END */
         {
             for(chId= 0U ; chId < prms->numCh ; chId++)
             {
-                tivxQueueDelete(&prms->pendingFrameTimestampLoQ[chId]);
+                (void)tivxQueueDelete(&prms->pendingFrameTimestampLoQ[chId]);
             }
         }
 
         /* Deleting pending frame Q */
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        This outcome requires an earlier step in this unit to have failed, which is itself out of
+        scope for the video_io test framework as justified at its own location.
+        Effect on this unit: If a preceding cleanup step failed, the per-channel high timestamp
+        queues would not be deleted.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if ((vx_status)VX_SUCCESS == status)
+        /* LDRA_JUSTIFY_END */
         {
             for(chId= 0U ; chId < prms->numCh ; chId++)
             {
-                tivxQueueDelete(&prms->pendingFrameTimestampHiQ[chId]);
+                (void)tivxQueueDelete(&prms->pendingFrameTimestampHiQ[chId]);
             }
         }
 
         /* Deleting event */
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        This outcome requires an earlier step in this unit to have failed, which is itself out of
+        scope for the video_io test framework as justified at its own location.
+        Effect on this unit: If a preceding cleanup step failed, the frame-available event would not
+        be deleted.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if ((vx_status)VX_SUCCESS == status)
+        /* LDRA_JUSTIFY_END */
         {
-            tivxEventDelete(&prms->frame_available);
+            (void)tivxEventDelete(&prms->frame_available);
         }
-
+        /* LDRA_JUSTIFY_START
+        <metric start> branch <metric end>
+        <justification start>
+        Rationale: The component level negative test framework and test applications cannot reach
+        else portion.
+        The kernel instance context used here is the one this component stored during Capture
+        creation, and cannot be replaced or invalidated through the video_io component interface.
+        Therefore, this failure case is out of scope for the video_io test framework.
+        Effect on this unit: If the size did not match, the Capture parameter structure would not be
+        freed.
+        However, due to the stated rationale, this is not tested.
+        <justification end> */
         if (sizeof(tivxCaptureParams) == size)
+        /* LDRA_JUSTIFY_END */
         {
-            tivxMemFree(prms, sizeof(tivxCaptureParams), (vx_status)TIVX_MEM_EXTERNAL);
+            (void)tivxMemFree(prms, sizeof(tivxCaptureParams), (vx_status)TIVX_MEM_EXTERNAL);
         }
     }
 
@@ -1681,7 +3083,9 @@ static void tivxCaptureCopyStatistics(tivxCaptureParams *prms,
         capt_status_prms->dataIdErrorCount[instIdx]      = instParams->captStatus.dataIdErrorCount;
         capt_status_prms->invalidAccessCount[instIdx]    = instParams->captStatus.invalidAccessCount;
         capt_status_prms->invalidSpCount[instIdx]        = instParams->captStatus.invalidSpCount;
-        for (strmIdx = 0U ; strmIdx < TIVX_CAPTURE_MAX_STRM ; strmIdx++)
+        (void)memset(capt_status_prms->strmFIFOOvflCount[instIdx],
+                     0, sizeof(capt_status_prms->strmFIFOOvflCount[instIdx]));
+        for (strmIdx = 0U ; strmIdx < CSIRX_NUM_STREAM ; strmIdx++)
         {
             capt_status_prms->strmFIFOOvflCount[instIdx][strmIdx] =
                             instParams->captStatus.strmFIFOOvflCount[strmIdx];
@@ -1697,7 +3101,20 @@ static vx_status tivxCaptureGetStatistics(tivxCaptureParams *prms,
     tivx_capture_statistics_t                 *capt_status_prms = NULL;
     void                                  *target_ptr;
 
-    if (NULL != usr_data_obj)
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach else
+    portion.
+    This condition depends on internal state of this component, which cannot be altered through the
+    video_io component interface.
+    Therefore, this case is out of scope for the video_io test framework.
+    Effect on this unit: A non-NULL user data object is mapped and its size is validated before the
+    Capture statistics are copied.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
+    if (NULL != usr_data_obj) 
+    /* LDRA_JUSTIFY_END */
     {
         target_ptr = tivxMemShared2TargetPtr(&usr_data_obj->mem_ptr);
 
@@ -1720,12 +3137,23 @@ static vx_status tivxCaptureGetStatistics(tivxCaptureParams *prms,
         tivxCheckStatus(&status, tivxMemBufferUnmap(target_ptr, usr_data_obj->mem_size,
             (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_WRITE_ONLY));
     }
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this
+    portion.
+    This condition depends on internal state of this component, which cannot be altered through the
+    video_io component interface.
+    Therefore, this case is out of scope for the video_io test framework.
+    Effect on this unit: An error message is printed and VX_ERROR_INVALID_PARAMETERS is returned.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     else
     {
         VX_PRINT(VX_ZONE_ERROR, "User Data Object is NULL \n");
         status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
     }
-
+    /* LDRA_JUSTIFY_END */
     return (status);
 }
 
@@ -1734,7 +3162,20 @@ static uint64_t ownReferenceGetHostRefFromObjDescId(uint16_t obj_desc_id)
     tivx_obj_desc_t *obj_desc = ownObjDescGet(obj_desc_id);
     uint64_t ref = 0;
 
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach else
+    portion.
+    This condition depends on internal state of this component, which cannot be altered through the
+    video_io component interface.
+    Therefore, this case is out of scope for the video_io test framework.
+    Effect on this unit: If the object descriptor is not found, the function returns zero instead of
+    its host reference.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     if(obj_desc!=NULL)
+    /* LDRA_JUSTIFY_END */
     {
         ref = (uint64_t)obj_desc->host_ref;
     }
@@ -1762,14 +3203,15 @@ static vx_status tivxCaptureAllocErrorDesc(tivxCaptureParams *prms,
             /* Passing a NULL pointer as "ref" then overwriting it the next line w/ the 64 bit value */
             prms->error_obj_desc[chId][bufId] = ownObjDescAlloc((vx_enum)obj_desc->type, ref);
 
-            /* Since vx_reference is a 32 bit address, this needs to use the 64 bit value of the host_ref */
-            prms->error_obj_desc[chId][bufId]->host_ref = ref64;
 
-            if (NULL != prms->error_obj_desc[chId][bufId])
+            if (NULL != prms->error_obj_desc[chId][bufId]) 
             {
+                /* Since vx_reference is a 32 bit address, this needs to use the 64 bit value of the host_ref */
+                prms->error_obj_desc[chId][bufId]->host_ref = ref64;
+
                 tivxFlagBitSet(&prms->error_obj_desc[chId][bufId]->flags, TIVX_REF_FLAG_IS_INVALID);
 
-                if ((uint32_t)TIVX_OBJ_DESC_RAW_IMAGE == (vx_enum)obj_desc->type)
+                if ((uint32_t)TIVX_OBJ_DESC_RAW_IMAGE == (uint32_t)obj_desc->type)
                 {
                     tivx_obj_desc_raw_image_t *tmp_raw_image;
                     tivx_obj_desc_raw_image_t *ref_raw_image;
@@ -1862,7 +3304,7 @@ static vx_status tivxCaptureAllocErrorDesc(tivxCaptureParams *prms,
                 }
 
                 obj_desc_id = prms->error_obj_desc[chId][bufId]->obj_desc_id;
-                tivxQueuePut(&prms->errorFrameQ[chId], (uintptr_t)obj_desc_id, TIVX_EVENT_TIMEOUT_NO_WAIT);
+                (void)tivxQueuePut(&prms->errorFrameQ[chId], (uintptr_t)obj_desc_id, TIVX_EVENT_TIMEOUT_NO_WAIT);
             }
             else
             {
@@ -1885,18 +3327,46 @@ static vx_status VX_CALLBACK tivxCaptureControl(
        uint32_t node_cmd_id, tivx_obj_desc_t *obj_desc[],
        uint16_t num_params, void *priv_arg)
 {
+    (void)num_params;
+	(void)priv_arg;
     vx_status status = (vx_status)VX_SUCCESS;
     int32_t fvid2_status = FVID2_SOK;
     uint32_t             size, instIdx;
     tivxCaptureParams *prms = NULL;
     tivxCaptureInstParams *instParams;
 
-    status = tivxGetTargetKernelInstanceContext(kernel, (void **)&prms, &size);
+    void *temp_prms = NULL;
+    status = tivxGetTargetKernelInstanceContext(kernel, &temp_prms, &size);
+	prms = (tivxCaptureParams *)temp_prms;
 
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this
+    portion.
+    The kernel instance context used here is the one this component stored during Capture creation,
+    and cannot be replaced or invalidated through the video_io component interface.
+    Therefore, this failure case is out of scope for the video_io test framework.
+    Effect on this unit: The context retrieval error is returned and an error message is printed.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     if ((vx_status)VX_SUCCESS != status)
     {
         VX_PRINT(VX_ZONE_ERROR, "Failed to Get Target Kernel Instance Context\n");
     }
+    /* LDRA_JUSTIFY_END */
+
+    /* LDRA_JUSTIFY_START
+    <metric start> statement branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach this
+    portion.
+    The kernel instance context used here is the one this component stored during Capture creation,
+    and cannot be replaced or invalidated through the video_io component interface.
+    Therefore, this failure case is out of scope for the video_io test framework.
+    Effect on this unit: The function status is set to VX_FAILURE and an error message is printed.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     else if ((NULL == prms) ||
         (sizeof(tivxCaptureParams) != size))
     {
@@ -1905,10 +3375,23 @@ static vx_status VX_CALLBACK tivxCaptureControl(
     }
     else
     {
-        /* do nothing */
+        /*Do nothing*/
     }
+    /* LDRA_JUSTIFY_END */
 
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level negative test framework and test applications cannot reach else
+    portion.
+    This outcome requires an earlier step in this unit to have failed, which is itself out of scope
+    for the video_io test framework as justified at its own location.
+    Effect on this unit: If context retrieval or validation failed, the requested control command
+    would be skipped and the existing failure status returned.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     if ((vx_status)VX_SUCCESS == status)
+    /* LDRA_JUSTIFY_END */
     {
         switch (node_cmd_id)
         {
@@ -1932,14 +3415,45 @@ static vx_status VX_CALLBACK tivxCaptureControl(
                                                 IOCTL_CSIRX_GET_INST_STATUS,
                                                 &instParams->captStatus,
                                                 NULL);
+
+                        /* LDRA_JUSTIFY_START
+                        <metric start> statement branch <metric end>
+                        <justification start>
+                        Rationale: The component level negative test framework and test applications
+                        cannot reach this portion.
+                        This failure is reported by the capture driver only in the event of a driver
+                        or hardware level fault, which cannot be stimulated through the video_io
+                        component interface.
+                        Therefore, this failure case is out of scope for the video_io test
+                        framework.
+                        Effect on this unit: The function status is set to VX_FAILURE, an error
+                        message is printed, and status retrieval stops for the remaining Capture
+                        instances.
+                        However, due to the stated rationale, this is not tested.
+                        <justification end> */
                         if (FVID2_SOK != fvid2_status)
                         {
                             VX_PRINT(VX_ZONE_ERROR, "Get status returned failure\n");
                             status = (vx_status)VX_FAILURE;
                             break;
                         }
+                        /* LDRA_JUSTIFY_END */
                     }
+
+                    /* LDRA_JUSTIFY_START
+                    <metric start> branch <metric end>
+                    <justification start>
+                    Rationale: The component level negative test framework and test applications
+                    cannot reach else portion.
+                    This outcome requires an earlier step in this unit to have failed, which is
+                    itself out of scope for the video_io test framework as justified at its own
+                    location.
+                    Effect on this unit: If the driver status query failed, Capture statistics would
+                    not be copied to the user data object and the command would return VX_FAILURE.
+                    However, due to the stated rationale, this is not tested.
+                    <justification end> */
                     if ((vx_status)VX_SUCCESS == status)
+                    /* LDRA_JUSTIFY_END */
                     {
                         status = tivxCaptureGetStatistics(prms,
                             (tivx_obj_desc_user_data_object_t *)obj_desc[0U]);
@@ -1948,8 +3462,8 @@ static vx_status VX_CALLBACK tivxCaptureControl(
                             VX_PRINT(VX_ZONE_ERROR, "Get status failed\n");
                             status = (vx_status)VX_FAILURE;
                         }
-
                     }
+                    
                 }
                 else
                 {
@@ -1962,7 +3476,7 @@ static vx_status VX_CALLBACK tivxCaptureControl(
             {
                 if ( NULL != obj_desc[0] )
                 {
-                    if (0U == prms->enableErrorFrameTimeout)
+                    if (0U == prms->enableErrorFrameTimeout) 
                     {
                         status = tivxCaptureAllocErrorDesc(prms, obj_desc[0U]);
                     }
@@ -1979,6 +3493,83 @@ static vx_status VX_CALLBACK tivxCaptureControl(
                 }
                 break;
             }
+#if defined(LDRA_COVERAGE_ENABLED_VIDEO_IO)
+            case TIVX_CAPTURE_COVERAGE_START:
+            {
+                VX_PRINT(VX_ZONE_ERROR,"################## LDRA INIT START  ##################\n");
+                ldra_initialize();
+                VX_PRINT(VX_ZONE_ERROR,"################## LDRA INIT FINISH ##################\n");
+                break;
+            }
+
+            /* LDRA_JUSTIFY_START
+            <metric start> statement branch <metric end>
+            <justification start>
+            Rationale:  The component level test framework and test applications CAN reach this portion.
+            The existing application can reach this part of the code, but given the nature of the LDRA framework
+            itself, this part of the code cannot be included in the final coverage.
+            Effect on this unit: However, due to the internal behavior and shutdown sequence of the LDRA
+            framework, this portion of the code cannot be captured by the LDRA coverage
+            instrumentation. Therefore, although executed, these statements are not
+            included in the final coverage results.
+            <justification end> */
+            case TIVX_CAPTURE_COVERAGE_END:
+            {
+                VX_PRINT(VX_ZONE_ERROR,"################## LDRA TERMINATION  START ##################\n");
+                ldra_terminate();
+                VX_PRINT(VX_ZONE_ERROR,"################## LDRA TERMINATION FINISH ##################\n");
+                break;
+            }
+            /* LDRA_JUSTIFY_END */
+#endif
+#if !defined(SOC_J722S) && defined(ASF_TEST_ENABLED_CAPTURE)
+            case TIVX_CAPTURE_INJECT_ASF_ERR:
+            {
+                /* CSIRX0 fatal/non-fatal (ASF) faults route through MAIN ESM
+                 * (bits 200/201) before reaching CsirxDrv_asfEsmLowEventIsrFxn
+                 * via CSIRX_ESM_LOW_EVENT_GROUP_ASF. Nothing else in the boot
+                 * chain enables this forwarding, so it must be armed here
+                 * before the test trigger can ever be observed. */
+                uint32_t esmBase = (uint32_t)CSL_ESM0_CFG_BASE;
+                uint32_t esmBit;
+
+                for (esmBit = 200U; esmBit <= 201U; esmBit++)
+                {
+                    (void)ESMClearIntrStatus(esmBase, esmBit);
+                    (void)ESMSetIntrPriorityLvl(esmBase, esmBit, ESM_INTR_PRIORITY_LEVEL_LOW);
+                    (void)ESMEnableIntr(esmBase, esmBit);
+                }
+                (void)ESMEnableGlobalIntr(esmBase);
+
+                fvid2_status = Fvid2_control(prms->instParams[0U].drvHandle,
+                            IOCTL_CSIRX_TRIG_ASF_EVENT,
+                            NULL,
+                            NULL);
+
+                /* LDRA_JUSTIFY_START
+                <metric start> statement branch <metric end>
+                <justification start>
+                Rationale: The component level negative test framework and test applications cannot
+                reach this portion.
+                This failure is reported by the capture driver only in the event of a driver or
+                hardware level fault, which cannot be stimulated through the video_io component
+                interface.
+                Therefore, this failure case is out of scope for the video_io test framework.
+                Effect on this unit: The status is set to VX_FAILURE and an error message is
+                printed, and that status is returned as the result of the
+                TIVX_CAPTURE_INJECT_ASF_ERR control command.
+                However, due to the stated rationale, this is not tested.
+                <justification end> */
+                if (FVID2_SOK != fvid2_status)
+                {
+                    status = (vx_status)VX_FAILURE;
+                    VX_PRINT(VX_ZONE_ERROR, ": Failed to trigger ASF event!!!\r\n");
+                }
+                /* LDRA_JUSTIFY_END */
+
+                break;
+            }
+#endif
             default:
             {
                 VX_PRINT(VX_ZONE_ERROR, "Invalid Command Id\n");
@@ -1997,7 +3588,20 @@ void tivxAddTargetKernelCapture(void)
 
     self_cpu = tivxGetSelfCpuId();
 
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The test framework and test apps cannot reach else portion.
+    The CPU identifier evaluated here is obtained from the platform configuration and is not
+    controlled by Capture node parameters; covering the other outcome would require executing this
+    registration on a different CPU.
+    Therefore, this case is out of scope for the video_io test framework.
+    Effect on this unit: On a different CPU, no Capture target kernels would be registered; this
+    void function would not report an error.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     if(self_cpu == (vx_enum)TIVX_CPU_ID_VIDEO_IO)
+    /* LDRA_JUSTIFY_END */
     {
         for (i = 0; i < CAPTURE_NUM_TARGETS; i++)
         {
@@ -2011,16 +3615,30 @@ void tivxAddTargetKernelCapture(void)
                                 NULL);
         }
     }
+
 }
 
+/* LDRA_JUSTIFY
+<metric start> statement branch <metric end>
+<function start> void tivxRemoveTargetKernelCapture.* <function end>
+<justification start>
+Rationale: The test framework and test apps cannot reach this portion.
+This function is called by the framework during the target kernel de-initialization sequence,
+which the test framework does not drive; it cannot be invoked through the video_io component
+interface.
+Effect on this unit: If the control reaches here, our code base is expected to remove the
+registered target kernels and report any failure to the application.
+However, due to the stated rationale, this is not tested.
+<justification end> */
 void tivxRemoveTargetKernelCapture(void)
 {
     vx_status status = (vx_status)VX_SUCCESS;
     vx_uint32 i = 0;
-
+    
     for (i = 0; i < CAPTURE_NUM_TARGETS; i++)
     {
         status = tivxRemoveTargetKernel(vx_capture_target_kernel[i]);
+
         if(status == (vx_status)VX_SUCCESS)
         {
             vx_capture_target_kernel[i] = NULL;
@@ -2037,7 +3655,20 @@ static void tivxCaptureGetChannelIndices(const tivxCaptureParams *prms,
 
     *startChIdx = 0U;
     *endChIdx   = 0U;
+
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level test framework and test applications cannot reach this portion.
+    The only call site within this component supplies parameters that are always valid, so this
+    outcome cannot be produced through the video_io component interface.
+    Therefore, this case is out of scope for the video_io test framework.
+    Effect on this unit: The loop calculates the first node channel index by accumulating the
+    channel counts of the preceding Capture instances.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     for (instIdx = 0U ; instIdx < prms->numOfInstUsed ; instIdx++)
+    /* LDRA_JUSTIFY_END */
     {
         /* get start channel ID here */
         if (instIdx == instId)
@@ -2049,11 +3680,26 @@ static void tivxCaptureGetChannelIndices(const tivxCaptureParams *prms,
             *startChIdx += prms->instParams[instIdx].numCh;
         }
     }
+
     /* Get last channel ID here */
+
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level test framework and test applications cannot reach else portion.
+    The only call site within this component supplies parameters that are always valid, so this
+    outcome cannot be produced through the video_io component interface.
+    Therefore, this case is out of scope for the video_io test framework.
+    Effect on this unit: If the instance index were invalid, endChIdx would remain at its
+    initialized value of zero; this void function would not report an error.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     if (instIdx < prms->numOfInstUsed)
+    /* LDRA_JUSTIFY_END */
     {
         *endChIdx = *startChIdx + prms->instParams[instIdx].numCh;
     }
+    
 }
 
 static uint32_t tivxCaptureGetNodeChannelNum(const tivxCaptureParams *prms,
@@ -2063,7 +3709,20 @@ static uint32_t tivxCaptureGetNodeChannelNum(const tivxCaptureParams *prms,
     uint32_t instIdx, chIdx = 0U;
 
     /* Get addition of all the channels processed on all previous driver instances */
+
+    /* LDRA_JUSTIFY_START
+    <metric start> branch <metric end>
+    <justification start>
+    Rationale: The component level test framework and test applications cannot reach this portion.
+    The only call site within this component supplies parameters that are always valid, so this
+    outcome cannot be produced through the video_io component interface.
+    Therefore, this case is out of scope for the video_io test framework.
+    Effect on this unit: The function returns the node channel index calculated from the channel
+    counts of preceding Capture instances and the driver channel index.
+    However, due to the stated rationale, this is not tested.
+    <justification end> */
     for (instIdx = 0U ; instIdx < prms->numOfInstUsed ; instIdx++)
+    /* LDRA_JUSTIFY_END */
     {
         if (instIdx == instId)
         {
@@ -2085,6 +3744,7 @@ static uint32_t tivxCaptureGetDrvInstIndex(const tivxCaptureParams *prms,
     uint32_t instIdx, instVal;
 
     instVal = tivxCaptureMapInstId(instId);
+
     for (instIdx = 0U ; instIdx < prms->numOfInstUsed ; instIdx++)
     {
         if (prms->instParams[instIdx].instId == instVal)

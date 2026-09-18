@@ -113,7 +113,6 @@ static int32_t appMemAllocTest(int32_t  loopCnt, void **ptr, const char *str, bo
     uint32_t    size = 1024;
     int32_t     i;
     uint32_t    offset;
-    uint64_t    cur_time;
     int32_t     status = 0;
     int32_t     numAllocs = 0;
     int32_t     numDeAllocs = 0;

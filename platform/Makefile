@@ -93,9 +93,9 @@ hlos:
 
 pc:
 	$(MAKE) -C $(PLATFORM_PATH) app_init_pc_common
+	$(MAKE) -C $(PLATFORM_PATH) app_utils_init_vdk_stub
 ifeq ($(VDK),yes)
 	$(MAKE) -C $(PLATFORM_PATH) app_utils_init_vdk
-	$(MAKE) -C $(PLATFORM_PATH) app_utils_init_vdk_stub
 endif
 
 rtos: all

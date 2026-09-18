@@ -312,8 +312,10 @@ void TaskP_sleepInMsecs(uint32_t timeoutInMsecs)
 
     /* portTICK_PERIOD_MS is in units of msecs */
     ticks = timeoutInMsecs / portTICK_PERIOD_MS;
-
-    vTaskDelay(ticks);
+    
+    /* This API gaurantees a minimum delay for the number of mentioned milliseconds 
+     * Adding a tick gaurantees the minimum delay limit */
+    vTaskDelay(ticks + 1U);
 }
 
 void TaskP_setPrio(TaskP_Handle handle, uint32_t priority)

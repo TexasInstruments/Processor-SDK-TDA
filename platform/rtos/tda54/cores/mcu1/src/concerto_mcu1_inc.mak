@@ -20,6 +20,7 @@ endif
 
 ifeq ($(BUILD_MCU_BOARD_DEPENDENCIES),yes)
   SYS_STATIC_LIBS += app_utils_dss
+  SYS_STATIC_LIBS += app_utils_csi
 endif
 
 DEFS+= $(RTOS)

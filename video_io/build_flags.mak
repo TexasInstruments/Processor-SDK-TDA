@@ -44,3 +44,14 @@ else
     BUILD_CT_TIOVX_VIDEO_IO_DISPLAY_TESTS=yes
 endif
 
+
+# Enable ASF_TEST_ENABLED_CAPTURE when LDRA coverage is enabled (Exception: j722s does not support ASF testing)
+ifeq ($(LDRA_COVERAGE_ENABLED_VIDEO_IO),yes)
+    ifneq ($(SOC),j722s)
+        export ASF_TEST_ENABLED_CAPTURE?=yes
+    else
+        export ASF_TEST_ENABLED_CAPTURE?=no
+    endif
+else
+    export ASF_TEST_ENABLED_CAPTURE?=no
+endif

@@ -28,6 +28,7 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A720 x86_64))
     IDIRS       += $(APP_KERNELS_IDIRS)
 
     STATIC_LIBS += $(APP_KERNELS_LIBS)
+    STATIC_LIBS += $(APP_KERNELS_UTILS_LIBS)
 
     ifneq ($(SOC),$(filter $(SOC), j784s4 tda54))
         SKIPBUILD=1

@@ -298,6 +298,9 @@ static void x86_app_delete_graph(AppObj *obj)
 
 extern tivx_ae_awb_params_t g_ae_awb_result;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 static vx_status x86_app_run_graph(AppObj *obj)
 {
     vx_status status = VX_SUCCESS;
@@ -376,8 +379,6 @@ static vx_status x86_app_run_graph(AppObj *obj)
 AEWB result is available after 1 frame and is applied after 2 frames
 Therefore, first 2 output images will have wrong colors
 */
-    char output_file_path[3] = ".";
-
     for(i=obj->start_seq; i<obj->num_frames_to_process; i++)
     {
         if (obj->test_mode == 1)
@@ -492,6 +493,7 @@ Therefore, first 2 output images will have wrong colors
 
     return status;
 }
+#pragma GCC diagnostic pop
 
 static void app_show_usage(int argc, char* argv[])
 {
@@ -504,12 +506,13 @@ static void app_show_usage(int argc, char* argv[])
     APP_PRINTF("\n");
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
 static void x86_app_parse_cfg_file(AppObj *obj, char *cfg_file_name)
 {
     FILE *fp = fopen(cfg_file_name, "r");
     char line_str[1024];
     char *token;
-    struct stat s;
 
     if(fp==NULL)
     {
@@ -640,6 +643,7 @@ static void x86_app_parse_cfg_file(AppObj *obj, char *cfg_file_name)
         obj->height_out = 128;
 
 }
+#pragma GCC diagnostic pop
 
 static void x86_app_parse_cmd_line_args(AppObj *obj, int argc, char *argv[])
 {

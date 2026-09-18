@@ -143,6 +143,18 @@ typedef struct {
 void Sciclient_goRetention(uint32_t mode);
 
 /**
+ *  \brief Sciclient_s2rEnableWkupI2c Force WKUP_I2C0 device state to ON before
+ *         entering an LPM sequence.
+ *
+ *  The LPM entry sequence communicates with the PMIC over WKUP_I2C0 to trigger
+ *  IO and DDR retention. This call ensures the device is explicitly kept ON so
+ *  that the lpm stub can use it to send commands to the PMIC.
+ *
+ *  \return CSL_PASS on success, else failure
+ */
+int32_t Sciclient_s2rEnableWkupI2c(void);
+
+/**
  *  \brief Sciclient_getWakeReason Get the reason for wakeup from a low power mode
  *
  *  \param  msg       Pointer to TISCI request

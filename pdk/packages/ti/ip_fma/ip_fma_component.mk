@@ -123,7 +123,7 @@ c7x_mma_CORELIST  = c7x_1
 define C7X_MMA_TESTAPP_RULE
 export c7x_mma_error_injection_testapp_$(1)_COMP_LIST = c7x_mma_error_injection_testapp_$(1)
 c7x_mma_error_injection_testapp_$(1)_RELPATH = ti/ip_fma/examples/c7x_mma_error_injection
-c7x_mma_error_injection_testapp_$(1)_PATH = $(PDK_INSTALL_PATH)/ti/ip_fma/examples/c7x_mma_error_injection
+c7x_mma_error_injection_testapp_$(1)_PATH = $(IP_FMA_COMP_PATH)/examples/c7x_mma_error_injection
 export c7x_mma_error_injection_testapp_$(1)_BOARD_DEPENDENCY = yes
 export c7x_mma_error_injection_testapp_$(1)_CORE_DEPENDENCY = yes
 export c7x_mma_error_injection_testapp_$(1)_XDC_CONFIGURO = $(if $(findstring tirtos, $(1)), yes, no)
@@ -151,7 +151,7 @@ c7x_cpu_register_CORELIST  = c7x_1
 define C7X_CPU_REGISTER_READBACK_TESTAPP_RULE
 export c7x_cpu_register_readback_testapp_$(1)_COMP_LIST = c7x_cpu_register_readback_testapp_$(1)
 c7x_cpu_register_readback_testapp_$(1)_RELPATH = ti/ip_fma/examples/c7x_cpu_register_readback
-c7x_cpu_register_readback_testapp_$(1)_PATH = $(PDK_INSTALL_PATH)/ti/ip_fma/examples/c7x_cpu_register_readback
+c7x_cpu_register_readback_testapp_$(1)_PATH = $(IP_FMA_COMP_PATH)/examples/c7x_cpu_register_readback
 export c7x_cpu_register_readback_testapp_$(1)_BOARD_DEPENDENCY = yes
 export c7x_cpu_register_readback_testapp_$(1)_CORE_DEPENDENCY = yes
 export c7x_cpu_register_readback_testapp_$(1)_XDC_CONFIGURO = $(if $(findstring tirtos, $(1)), yes, no)
@@ -179,7 +179,7 @@ c7x_se_CORELIST  = c7x_1
 define C7X_SE_ERROR_INJECTION_TESTAPP_RULE
 export c7x_se_error_injection_testapp_$(1)_COMP_LIST = c7x_se_error_injection_testapp_$(1)
 c7x_se_error_injection_testapp_$(1)_RELPATH = ti/ip_fma/examples/c7x_se_error_injection
-c7x_se_error_injection_testapp_$(1)_PATH = $(PDK_INSTALL_PATH)/ti/ip_fma/examples/c7x_se_error_injection
+c7x_se_error_injection_testapp_$(1)_PATH = $(IP_FMA_COMP_PATH)/examples/c7x_se_error_injection
 export c7x_se_error_injection_testapp_$(1)_BOARD_DEPENDENCY = yes
 export c7x_se_error_injection_testapp_$(1)_CORE_DEPENDENCY = yes
 export c7x_se_error_injection_testapp_$(1)_XDC_CONFIGURO = $(if $(findstring tirtos, $(1)), yes, no)
@@ -207,7 +207,7 @@ c7x_ILLEGAL_INSTRUCTION_CORELIST  = c7x_1
 define C7X_ILLEGAL_INSTRUCTION_TESTAPP_RULE
 export c7x_illegal_instruction_testapp_$(1)_COMP_LIST = c7x_illegal_instruction_testapp_$(1)
 c7x_illegal_instruction_testapp_$(1)_RELPATH = ti/ip_fma/examples/c7x_illegal_instruction
-c7x_illegal_instruction_testapp_$(1)_PATH = $(PDK_INSTALL_PATH)/ti/ip_fma/examples/c7x_illegal_instruction
+c7x_illegal_instruction_testapp_$(1)_PATH = $(IP_FMA_COMP_PATH)/examples/c7x_illegal_instruction
 export c7x_illegal_instruction_testapp_$(1)_BOARD_DEPENDENCY = yes
 export c7x_illegal_instruction_testapp_$(1)_CORE_DEPENDENCY = yes
 export c7x_illegal_instruction_testapp_$(1)_XDC_CONFIGURO = $(if $(findstring tirtos, $(1)), yes, no)
@@ -236,7 +236,7 @@ c7x_mmu_CORELIST  = c7x_1
 define C7X_MMU_TESTAPP_RULE
 export c7x_mmu_error_injection_testapp_$(1)_COMP_LIST = c7x_mmu_error_injection_testapp_$(1)
 c7x_mmu_error_injection_testapp_$(1)_RELPATH = ti/ip_fma/examples/c7x_mmu_error_injection
-c7x_mmu_error_injection_testapp_$(1)_PATH = $(PDK_INSTALL_PATH)/ti/ip_fma/examples/c7x_mmu_error_injection
+c7x_mmu_error_injection_testapp_$(1)_PATH = $(IP_FMA_COMP_PATH)/examples/c7x_mmu_error_injection
 export c7x_mmu_error_injection_testapp_$(1)_BOARD_DEPENDENCY = yes
 export c7x_mmu_error_injection_testapp_$(1)_CORE_DEPENDENCY = yes
 export c7x_mmu_error_injection_testapp_$(1)_XDC_CONFIGURO = $(if $(findstring tirtos, $(1)), yes, no)
@@ -472,6 +472,38 @@ CLK_MACRO_LIST := $(foreach curos, baremetal, $(call CLK_TESTAPP_RULE,$(curos)))
 $(eval ${CLK_MACRO_LIST})
 
 
+# CLK IP FMA RB ENABLE APP
+
+define CLK_TESTAPP_RB_ENABLE_RULE
+
+clk_ip_fma_app_rb_enable_$(1)_COMP_LIST  = clk_ip_fma_app_rb_enable_$(1)
+clk_ip_fma_app_rb_enable_$(1)_RELPATH    = ti/ip_fma/examples/clk_ip_fma_app
+clk_ip_fma_app_rb_enable_$(1)_PATH       = $(IP_FMA_COMP_PATH)/examples/clk_ip_fma_app
+clk_ip_fma_app_rb_enable_$(1)_MAKEFILE   = -fmakefile BUILD_OS_TYPE=$(1) RB_ENABLE=TRUE
+export clk_ip_fma_app_rb_enable_$(1)_MAKEFILE
+clk_ip_fma_app_rb_enable_$(1)_SOC_DEPENDENCY   = yes
+clk_ip_fma_app_rb_enable_$(1)_CORE_DEPENDENCY  = yes
+clk_ip_fma_app_rb_enable_$(1)_BOARD_DEPENDENCY = yes
+export clk_ip_fma_app_rb_enable_$(1)_COMP_LIST
+export clk_ip_fma_app_rb_enable_$(1)_SOC_DEPENDENCY
+export clk_ip_fma_app_rb_enable_$(1)_CORE_DEPENDENCY
+export clk_ip_fma_app_rb_enable_$(1)_BOARD_DEPENDENCY
+clk_ip_fma_app_rb_enable_$(1)_PKG_LIST  = clk_ip_fma_app_rb_enable_$(1)
+clk_ip_fma_app_rb_enable_$(1)_INCLUDE   = $(clk_ip_fma_app_rb_enable_$(1)_PATH)
+clk_ip_fma_app_rb_enable_$(1)_BOARDLIST = $(ip_fma_clk_BOARDLIST)
+export clk_ip_fma_app_rb_enable_$(1)_BOARDLIST
+clk_ip_fma_app_rb_enable_$(1)_$(SOC)_CORELIST = $(ip_fma_clk_CORELIST)
+export clk_ip_fma_app_rb_enable_$(1)_$(SOC)_CORELIST
+ip_fma_EXAMPLE_LIST += clk_ip_fma_app_rb_enable_$(1)
+clk_ip_fma_app_rb_enable_$(1)_SBL_APPIMAGEGEN = yes
+export clk_ip_fma_app_rb_enable_$(1)_SBL_APPIMAGEGEN
+endef
+
+CLK_RB_ENABLE_MACRO_LIST := $(foreach curos, baremetal, $(call CLK_TESTAPP_RB_ENABLE_RULE,$(curos)))
+
+$(eval ${CLK_RB_ENABLE_MACRO_LIST})
+
+
 # MSMC IP FMA APP
 ip_fma_msmc_SOCLIST         = j784s4 j721s2
 ip_fma_msmc_BOARDLIST       = j784s4_evm j721s2_evm
@@ -587,7 +619,7 @@ define DSS_F1_LUT_REFRESH_TESTAPP_RULE
 
 export dssf1_ip_fma_app_$(1)_COMP_LIST = dssf1_ip_fma_app_$(1)
 dssf1_ip_fma_app_$(1)_RELPATH = ti/ip_fma/examples/dss_f1_ip_fma_app
-dssf1_ip_fma_app_$(1)_PATH = $(PDK_INSTALL_PATH)/ti/ip_fma/examples/dss_f1_ip_fma_app
+dssf1_ip_fma_app_$(1)_PATH = $(IP_FMA_COMP_PATH)/examples/dss_f1_ip_fma_app
 export dssf1_ip_fma_app_$(1)_SOC_DEPENDENCY = yes
 export dssf1_ip_fma_app_$(1)_BOARD_DEPENDENCY = yes
 export dssf1_ip_fma_app_$(1)_CORE_DEPENDENCY = yes
@@ -603,6 +635,34 @@ endef
 DSS_F1_LUT_REFRESH_MACRO_LIST := $(foreach curos, baremetal, $(call DSS_F1_LUT_REFRESH_TESTAPP_RULE,$(curos)))
 
 $(eval ${DSS_F1_LUT_REFRESH_MACRO_LIST})
+
+
+# DSS-F1 IP FMA RB ENABLE APP
+
+dss_f1_lut_refresh_rb_enable_SOCLIST   = j721s2 j784s4
+dss_f1_lut_refresh_rb_enable_BOARDLIST = j721s2_evm j784s4_evm
+dss_f1_lut_refresh_rb_enable_CORELIST  = mcu2_0
+
+define DSS_F1_LUT_REFRESH_RB_ENABLE_TESTAPP_RULE
+
+export dssf1_ip_fma_app_rb_enable_$(1)_COMP_LIST = dssf1_ip_fma_app_rb_enable_$(1)
+dssf1_ip_fma_app_rb_enable_$(1)_RELPATH = ti/ip_fma/examples/dss_f1_ip_fma_app
+dssf1_ip_fma_app_rb_enable_$(1)_PATH = $(IP_FMA_COMP_PATH)/examples/dss_f1_ip_fma_app
+export dssf1_ip_fma_app_rb_enable_$(1)_SOC_DEPENDENCY = yes
+export dssf1_ip_fma_app_rb_enable_$(1)_BOARD_DEPENDENCY = yes
+export dssf1_ip_fma_app_rb_enable_$(1)_CORE_DEPENDENCY = yes
+export dssf1_ip_fma_app_rb_enable_$(1)_MAKEFILE = -f makefile BUILD_OS_TYPE=$(1) RB_ENABLE=TRUE
+dssf1_ip_fma_app_rb_enable_$(1)_PKG_LIST = dssf1_ip_fma_app_rb_enable_$(1)
+dssf1_ip_fma_app_rb_enable_$(1)_INCLUDE = $(dssf1_ip_fma_app_rb_enable_$(1)_PATH)
+export dssf1_ip_fma_app_rb_enable_$(1)_BOARDLIST = $(dss_f1_lut_refresh_rb_enable_BOARDLIST)
+export dssf1_ip_fma_app_rb_enable_$(1)_$(SOC)_CORELIST = $(dss_f1_lut_refresh_rb_enable_CORELIST)
+export dssf1_ip_fma_app_rb_enable_$(1)_SBL_APPIMAGEGEN = yes
+ip_fma_EXAMPLE_LIST += dssf1_ip_fma_app_rb_enable_$(1)
+endef
+
+DSS_F1_LUT_REFRESH_RB_ENABLE_MACRO_LIST := $(foreach curos, baremetal, $(call DSS_F1_LUT_REFRESH_RB_ENABLE_TESTAPP_RULE,$(curos)))
+
+$(eval ${DSS_F1_LUT_REFRESH_RB_ENABLE_MACRO_LIST})
 
 
 # SAUL5 IP FMA APP
@@ -813,6 +873,42 @@ PSC_MACRO_LIST := $(foreach curos, baremetal, $(call PSC_TESTAPP_RULE,$(curos)))
 $(eval ${PSC_MACRO_LIST})
 
 
+# PSC IP FMA RB ENABLE APP
+
+ip_fma_psc_rb_enable_SOCLIST           = j784s4 j721s2
+ip_fma_psc_rb_enable_BOARDLIST         = j784s4_evm j721s2_evm
+ip_fma_psc_rb_enable_CORELIST          = mcu2_0 mcu1_0
+
+define PSC_RB_ENABLE_TESTAPP_RULE
+
+psc_ip_fma_app_rb_enable_$(1)_COMP_LIST  = psc_ip_fma_app_rb_enable_$(1)
+psc_ip_fma_app_rb_enable_$(1)_RELPATH    = ti/ip_fma/examples/psc_ip_fma_app
+psc_ip_fma_app_rb_enable_$(1)_PATH       = $(IP_FMA_COMP_PATH)/examples/psc_ip_fma_app
+psc_ip_fma_app_rb_enable_$(1)_MAKEFILE   = -fmakefile BUILD_OS_TYPE=$(1) RB_ENABLE=TRUE
+export psc_ip_fma_app_rb_enable_$(1)_MAKEFILE
+psc_ip_fma_app_rb_enable_$(1)_SOC_DEPENDENCY = yes
+psc_ip_fma_app_rb_enable_$(1)_CORE_DEPENDENCY  = yes
+psc_ip_fma_app_rb_enable_$(1)_BOARD_DEPENDENCY  = yes
+export psc_ip_fma_app_rb_enable_$(1)_COMP_LIST
+export psc_ip_fma_app_rb_enable_$(1)_SOC_DEPENDENCY
+export psc_ip_fma_app_rb_enable_$(1)_CORE_DEPENDENCY
+export psc_ip_fma_app_rb_enable_$(1)_BOARD_DEPENDENCY
+psc_ip_fma_app_rb_enable_$(1)_PKG_LIST  = psc_ip_fma_app_rb_enable_$(1)
+psc_ip_fma_app_rb_enable_$(1)_INCLUDE   = $(psc_ip_fma_app_rb_enable_$(1)_PATH)
+psc_ip_fma_app_rb_enable_$(1)_BOARDLIST = $(ip_fma_psc_rb_enable_BOARDLIST)
+export psc_ip_fma_app_rb_enable_$(1)_BOARDLIST
+psc_ip_fma_app_rb_enable_$(1)_$(SOC)_CORELIST = $(ip_fma_psc_rb_enable_CORELIST)
+export psc_ip_fma_app_rb_enable_$(1)_$(SOC)_CORELIST
+ip_fma_EXAMPLE_LIST += psc_ip_fma_app_rb_enable_$(1)
+psc_ip_fma_app_rb_enable_$(1)_SBL_APPIMAGEGEN = yes
+export psc_ip_fma_app_rb_enable_$(1)_SBL_APPIMAGEGEN
+endef
+
+PSC_RB_ENABLE_MACRO_LIST := $(foreach curos, baremetal, $(call PSC_RB_ENABLE_TESTAPP_RULE,$(curos)))
+
+$(eval ${PSC_RB_ENABLE_MACRO_LIST})
+
+
 # R5F IP FMA APP
 ip_fma_r5f_SOCLIST           = j784s4 j721s2
 ip_fma_r5f_BOARDLIST         = j784s4_evm j721s2_evm
@@ -952,6 +1048,42 @@ endef
 SMS_MACRO_LIST := $(foreach curos, baremetal, $(call SMS_TESTAPP_RULE,$(curos)))
 
 $(eval ${SMS_MACRO_LIST})
+
+
+# R5F CPU6 RB ENABLE IP FMA APP
+ip_fma_r5f_cpu6_rb_enable_SOCLIST        = j784s4 j721s2
+ip_fma_r5f_cpu6_rb_enable_BOARDLIST      = j784s4_evm j721s2_evm
+ip_fma_r5f_cpu6_rb_enable_CORELIST 	     = mcu1_0
+
+define R5F_CPU6_RB_ENABLE_TESTAPP_RULE
+
+r5f_cpu6_ip_fma_app_rb_enable_$(1)_COMP_LIST = r5f_cpu6_ip_fma_app_rb_enable_$(1)
+r5f_cpu6_ip_fma_app_rb_enable_$(1)_RELPATH   = ti/ip_fma/examples/r5f/r5f_cpu6_ip_fma_app
+r5f_cpu6_ip_fma_app_rb_enable_$(1)_PATH      = $(IP_FMA_COMP_PATH)/examples/r5f/r5f_cpu6_ip_fma_app
+r5f_cpu6_ip_fma_app_rb_enable_$(1)_MAKEFILE  = -fmakefile BUILD_OS_TYPE=$(1) RB_ENABLE=true
+export r5f_cpu6_ip_fma_app_rb_enable_$(1)_MAKEFILE
+r5f_cpu6_ip_fma_app_rb_enable_$(1)_SOC_DEPENDENCY = yes
+r5f_cpu6_ip_fma_app_rb_enable_$(1)_CORE_DEPENDENCY  = yes
+r5f_cpu6_ip_fma_app_rb_enable_$(1)_BOARD_DEPENDENCY  = yes
+export r5f_cpu6_ip_fma_app_rb_enable_$(1)_COMP_LIST
+export r5f_cpu6_ip_fma_app_rb_enable_$(1)_SOC_DEPENDENCY
+export r5f_cpu6_ip_fma_app_rb_enable_$(1)_CORE_DEPENDENCY
+export r5f_cpu6_ip_fma_app_rb_enable_$(1)_BOARD_DEPENDENCY
+r5f_cpu6_ip_fma_app_rb_enable_$(1)_PKG_LIST = r5f_cpu6_ip_fma_app_rb_enable_$(1)
+r5f_cpu6_ip_fma_app_rb_enable_$(1)_INCLUDE  = $(r5f_cpu6_ip_fma_app_rb_enable_$(1)_PATH) $(IP_FMA_COMP_PATH)/examples/r5f/common/inc
+r5f_cpu6_ip_fma_app_rb_enable_$(1)_APP_STAGE_FILES  = $(IP_FMA_COMP_PATH)/examples/r5f/common/src/ip_fma_r5f_app_utils.c
+r5f_cpu6_ip_fma_app_rb_enable_$(1)_BOARDLIST = $(ip_fma_r5f_cpu6_rb_enable_BOARDLIST)
+export r5f_cpu6_ip_fma_app_rb_enable_$(1)_BOARDLIST
+r5f_cpu6_ip_fma_app_rb_enable_$(1)_$(SOC)_CORELIST = $(ip_fma_r5f_cpu6_rb_enable_CORELIST)
+export r5f_cpu6_ip_fma_app_rb_enable_$(1)_$(SOC)_CORELIST
+ip_fma_EXAMPLE_LIST += r5f_cpu6_ip_fma_app_rb_enable_$(1)
+r5f_cpu6_ip_fma_app_rb_enable_$(1)_SBL_APPIMAGEGEN = yes
+export r5f_cpu6_ip_fma_app_rb_enable_$(1)_SBL_APPIMAGEGEN
+endef
+
+R5F_CPU6_RB_ENABLE_MACRO_LIST := $(foreach curos, baremetal, $(call R5F_CPU6_RB_ENABLE_TESTAPP_RULE,$(curos)))
+
+$(eval ${R5F_CPU6_RB_ENABLE_MACRO_LIST})
 
 
 # ADC IP FMA APP
@@ -1107,7 +1239,7 @@ define UTC_LEGAL_TR_CHECK_TESTAPP_RULE
 
 export utc_legal_tr_check_ip_fma_app_$(1)_COMP_LIST = utc_legal_tr_check_ip_fma_app_$(1)
 utc_legal_tr_check_ip_fma_app_$(1)_RELPATH = ti/ip_fma/examples/utc_legal_tr_check_ip_fma_app
-utc_legal_tr_check_ip_fma_app_$(1)_PATH = $(PDK_INSTALL_PATH)/ti/ip_fma/examples/utc_legal_tr_check_ip_fma_app
+utc_legal_tr_check_ip_fma_app_$(1)_PATH = $(IP_FMA_COMP_PATH)/examples/utc_legal_tr_check_ip_fma_app
 export utc_legal_tr_check_ip_fma_app_$(1)_BOARD_DEPENDENCY = yes
 export utc_legal_tr_check_ip_fma_app_$(1)_CORE_DEPENDENCY  = yes
 export utc_legal_tr_check_ip_fma_app_$(1)_XDC_CONFIGURO    = $(if $(findstring tirtos, $(1)), yes, no)
@@ -1237,7 +1369,7 @@ define UTC_OVRFLW_TESTAPP_RULE
 
 export dru8_ip_fma_app_$(1)_COMP_LIST = dru8_ip_fma_app_$(1)
 dru8_ip_fma_app_$(1)_RELPATH = ti/ip_fma/examples/dru8_ip_fma_app
-dru8_ip_fma_app_$(1)_PATH = $(PDK_INSTALL_PATH)/ti/ip_fma/examples/dru8_ip_fma_app
+dru8_ip_fma_app_$(1)_PATH = $(IP_FMA_COMP_PATH)/examples/dru8_ip_fma_app
 export dru8_ip_fma_app_$(1)_BOARD_DEPENDENCY = yes
 export dru8_ip_fma_app_$(1)_CORE_DEPENDENCY = yes
 export dru8_ip_fma_app_$(1)_SOC_DEPENDENCY = yes

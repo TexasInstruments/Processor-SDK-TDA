@@ -1071,7 +1071,7 @@ static vx_status add_graph_parameter_by_node_index(vx_graph graph, vx_node node,
 static vx_status app_init(AppObj *obj)
 {
     vx_status status = VX_SUCCESS;
-#if !defined(SOC_AM62A)
+#if !defined(SOC_AM62A) && !defined(x86_64)
     app_grpx_init_prms_t grpx_prms;
 #endif
     /* Create OpenVx Context */
@@ -1394,6 +1394,8 @@ static vx_status app_verify_graph(AppObj *obj)
 }
 
 #ifndef APP_ENABLE_PIPELINE_FLOW
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
 static vx_status app_run_graph_for_one_frame_sequential(AppObj *obj, vx_int32 frame_id)
 {
     vx_status status = VX_SUCCESS;
@@ -1475,7 +1477,10 @@ static vx_status app_run_graph_for_one_frame_sequential(AppObj *obj, vx_int32 fr
 
     return status;
 }
+#pragma GCC diagnostic pop
 #else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
 static vx_status app_run_graph_for_one_frame_pipeline(AppObj *obj, vx_int32 frame_id)
 {
     vx_status status = VX_SUCCESS;
@@ -1610,6 +1615,7 @@ static vx_status app_run_graph_for_one_frame_pipeline(AppObj *obj, vx_int32 fram
 
     return status;
 }
+#pragma GCC diagnostic pop
 #endif
 
 static vx_status app_run_graph(AppObj *obj)

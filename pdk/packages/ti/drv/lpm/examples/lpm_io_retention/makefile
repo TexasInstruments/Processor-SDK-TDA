@@ -62,7 +62,7 @@ EXTERNAL_LNKCMD_FILE_LOCAL = overrides/$(SOC)/$(CORE)/linker_r5_freertos.lds
 
 # Common source files and CFLAGS across all platforms and cores
 PACKAGE_SRCS_COMMON = .
-SRCS_COMMON += 
+SRCS_COMMON += ../../../lpm/src/lpm_uart_drv.c
 
 CFLAGS_LOCAL_COMMON = $(PDK_CFLAGS) -DDEVICE_NAME=j7vcl_core 
 

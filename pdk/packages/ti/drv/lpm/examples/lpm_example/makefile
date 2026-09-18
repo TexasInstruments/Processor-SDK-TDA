@@ -28,7 +28,7 @@ COMP_LIST_COMMON += sciserver_tirtos ipc sbl_lib_cust spi_dma lpm
 
 # Common source files and CFLAGS across all platforms and cores
 PACKAGE_SRCS_COMMON = .
-SRCS_COMMON +=
+SRCS_COMMON += ../../../lpm/src/lpm_uart_drv.c
 
 CFLAGS_LOCAL_COMMON = $(PDK_CFLAGS)
 

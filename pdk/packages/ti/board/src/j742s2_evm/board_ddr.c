@@ -63,18 +63,6 @@ static Board_STATUS Board_DDRSetPLLClock(uint32_t ddrInstance, uint64_t frequenc
                                    frequency);
             break;
 
-         case BOARD_DDR_INSTANCE_2:
-            status = Board_PLLInit(TISCI_DEV_DDR2,
-                                   TISCI_DEV_DDR2_DDRSS_DDR_PLL_CLK,
-                                   frequency);
-            break;
-
-         case BOARD_DDR_INSTANCE_3:
-            status = Board_PLLInit(TISCI_DEV_DDR3,
-                                   TISCI_DEV_DDR3_DDRSS_DDR_PLL_CLK,
-                                   frequency);
-            break;
-
          default:
             status = BOARD_INVALID_PARAM;
             break;
@@ -498,20 +486,6 @@ static Board_DdrHandle Board_DDROpen(uint32_t ddrInstance)
                     ddrHandle->ddrPhyIndepReg = DDRSS1_phyIndepReg;
                     ddrHandle->ddrPhyReg      = DDRSS1_phyReg;
                     ddrHandle->eccAddr        = (void *)CSL_COMPUTE_CLUSTER0_VBUSP_DDRSS1_SSCFG_BASE;
-                    break;
-                 case BOARD_DDR_INSTANCE_2:
-                    ddrHandle->ddrCtlAddr     = (void *)BOARD_DDR2_CTL_CFG_BASE;
-                    ddrHandle->ddrCtlReg      = DDRSS2_ctlReg;
-                    ddrHandle->ddrPhyIndepReg = DDRSS2_phyIndepReg;
-                    ddrHandle->ddrPhyReg      = DDRSS2_phyReg;
-                    ddrHandle->eccAddr        = (void *)CSL_COMPUTE_CLUSTER0_VBUSP_DDRSS2_SSCFG_BASE;
-                    break;
-                 case BOARD_DDR_INSTANCE_3:
-                    ddrHandle->ddrCtlAddr     = (void *)BOARD_DDR3_CTL_CFG_BASE;
-                    ddrHandle->ddrCtlReg      = DDRSS3_ctlReg;
-                    ddrHandle->ddrPhyIndepReg = DDRSS3_phyIndepReg;
-                    ddrHandle->ddrPhyReg      = DDRSS3_phyReg;
-                    ddrHandle->eccAddr        = (void *)CSL_COMPUTE_CLUSTER0_VBUSP_DDRSS3_SSCFG_BASE;
                     break;
             }
         }

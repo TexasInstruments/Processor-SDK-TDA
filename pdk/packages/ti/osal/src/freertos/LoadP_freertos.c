@@ -249,7 +249,13 @@ uint32_t LoadP_calcCounterDiff(uint32_t cur, uint32_t last)
 static uint32_t LoadP_calcPercentLoad(uint64_t threadTime, uint64_t totalTime)
 {
     uint32_t percentLoad;
-
+    
+    /* If thread time of a particular task is shown greater than the totalTime 
+     * due to a Kernel Sync of threadTime, set totalTime equal to threadTime */
+    if(threadTime > totalTime)
+    {
+        totalTime = threadTime;
+    }
     percentLoad = (uint32_t)(threadTime  / (totalTime / 100U));
 
     return percentLoad;

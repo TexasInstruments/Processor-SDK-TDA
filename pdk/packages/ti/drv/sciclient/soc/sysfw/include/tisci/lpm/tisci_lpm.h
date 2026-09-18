@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021-2025 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2026 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -86,9 +86,14 @@
 #define TISCI_MSG_VALUE_SLEEP_MODE_SOC_OFF              0x5U
 
 /**
- * Sleep mode in which complete SOC except the RTC and DDR is off
+ * Sleep mode in which complete SOC except the RTC, WKUP I/Os and DDR is off
  */
-#define TISCI_MSG_VALUE_SLEEP_MODE_RTC_PLUS_DDR         0x6U
+#define TISCI_MSG_VALUE_SLEEP_MODE_RTC_PLUS_IO_PLUS_DDR 0x6U
+
+/**
+ * Sleep mode in which complete SOC except the RTC is turned off
+ */
+#define TISCI_MSG_VALUE_SLEEP_MODE_RTC_ONLY             0x7U
 
 /**
  * Value passed to request device manager for low power mode selection.
@@ -155,6 +160,8 @@
 #define TISCI_MSG_VALUE_LPM_WAKE_SOURCE_MCU_IO                          0x81U
 #define TISCI_MSG_VALUE_LPM_WAKE_SOURCE_CAN_IO                          0x82U
 #define TISCI_MSG_VALUE_LPM_WAKE_SOURCE_MCU_IPC                         0x90U
+#define TISCI_MSG_VALUE_LPM_WAKE_SOURCE_EARLY_WAKE_IPOR                 0xA0U
+#define TISCI_MSG_VALUE_LPM_WAKE_SOURCE_PMIC_GPIO                       0xB0U
 #define TISCI_MSG_VALUE_LPM_WAKE_SOURCE_INVALID                         0xFFU
 
 /** Used by TISCI_MSG_LPM_WAKE_REASON to return wake pin number as invalid */

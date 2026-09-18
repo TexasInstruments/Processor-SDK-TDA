@@ -91,6 +91,10 @@
 #include <ti/drv/ipc/examples/rtos/ipc_negative_test/ipc_neg_setup.h>
 #endif
 
+#ifdef IPC_INVALID_ENDPT_TEST
+#include <ti/drv/ipc/examples/rtos/ipc_invalid_endpt_test/ipc_invalid_endpt_test.h>
+#endif
+
 /* This needs to be enabled only for extended test cases */
 #ifdef IPC_EXTENDED_TEST
 #include <ti/drv/ipc/examples/rtos/ipc_extended_test/ipc_extended_setup.h>
@@ -174,7 +178,7 @@ TaskP_Params gTrace_taskParams;
 static uint8_t  gTrace_TskStackMain[APP_TSK_STACK_MAIN];
 #endif
 
-#if (defined (BUILD_MCU1_0) && (defined (SOC_J7200) || defined (SOC_J784S4) || defined (SOC_J742S2)))
+#if (defined (BUILD_MCU1_0) && (defined (SOC_J7200) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J721S2)))
 extern uint32_t gLpmWakeReason;
 #endif
 
@@ -317,7 +321,7 @@ int main(void)
 
 static void taskFxn(void* a0, void* a1)
 {
-#if (defined (BUILD_MCU1_0) && (defined (SOC_J7200) || defined (SOC_J784S4) || defined (SOC_J742S2)))
+#if (defined (BUILD_MCU1_0) && (defined (SOC_J7200) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2)))
     if (gLpmWakeReason == 0xFFFFFFFFU)
     {
         /* The first two bytes store the wakeup reason */
@@ -363,6 +367,8 @@ static void taskFxn(void* a0, void* a1)
     Ipc_echo_neg_test();
 #elif defined IPC_EXTENDED_TEST
     IpcApp_extTest();
+#elif defined IPC_INVALID_ENDPT_TEST
+    ipc_invalid_endpt_test();
 #else
     Ipc_echo_test();
 

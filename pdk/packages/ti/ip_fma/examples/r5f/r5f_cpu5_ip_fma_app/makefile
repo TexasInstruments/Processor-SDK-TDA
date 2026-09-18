@@ -12,8 +12,8 @@ ifeq ($(BUILD_OS_TYPE), baremetal)
   APP_NAME = r5f_cpu5_ip_fma_app_$(BUILD_OS_TYPE)
 endif
 
-SRCDIR = . ./src $(PDK_INSTALL_PATH)/ti/ip_fma/src $(PDK_INSTALL_PATH)/ti/ip_fma/examples/r5f/common/src
-INCDIR = . ./inc $(PDK_INSTALL_PATH)/ti/ip_fma/inc $(PDK_INSTALL_PATH)/ti/ip_fma/examples/r5f/common/inc
+SRCDIR = . ./src $(IP_FMA_COMP_PATH)/src $(IP_FMA_COMP_PATH)/examples/r5f/common/src
+INCDIR = . ./inc $(IP_FMA_COMP_PATH)/inc $(IP_FMA_COMP_PATH)/examples/r5f/common/inc
 
 # List all the external components/interfaces, whose interface header files
 #  need to be included for this component
@@ -24,7 +24,7 @@ ifeq ($(BUILD_OS_TYPE), baremetal)
   INCLUDE_EXTERNAL_INTERFACES += baremetal
   SRCS_COMMON += main_baremetal.c
   SRCS_COMMON += ip_fma_r5f_cpu5.c
-  SRCS_COMMON += $(PDK_INSTALL_PATH)/ti/ip_fma/examples/r5f/common/src/ip_fma_r5f_app_utils.c
+  SRCS_COMMON += $(IP_FMA_COMP_PATH)/examples/r5f/common/src/ip_fma_r5f_app_utils.c
 endif
 
 # List all the specific components required by the application

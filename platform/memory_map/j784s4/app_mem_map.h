@@ -4,7 +4,7 @@
  */ 
 /* 
  * 
- * Copyright (c) 2025-2026 Texas Instruments Incorporated 
+ * Copyright (c) 2026 Texas Instruments Incorporated 
  * 
  * All rights reserved not granted herein. 
  * 
@@ -63,8 +63,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE. 
  * 
  */ 
-#ifndef SOC_MMAP_H
-#define SOC_MMAP_H
+#ifndef MMAP_H
+#define MMAP_H
 
 
 /* Main OCRAM for MCU2_0 [ size 256.00 KB ] */
@@ -199,9 +199,17 @@
 #define APP_LOG_MEM_ADDR (0xAF000000u)
 #define APP_LOG_MEM_SIZE (0x00040000u)
 
-/* Memory for TI OpenVX shared memory. MUST be non-cached or cache-coherent [ size 31.75 MB ] */
+/* Memory for TI OpenVX shared memory. MUST be non-cached or cache-coherent [ size 27.75 MB ] */
 #define TIOVX_OBJ_DESC_MEM_ADDR (0xAF040000u)
-#define TIOVX_OBJ_DESC_MEM_SIZE (0x01FC0000u)
+#define TIOVX_OBJ_DESC_MEM_SIZE (0x01BC0000u)
+
+/* Memory for VISS configuration data for MCU2_0 [ size  2.00 MB ] */
+#define DDR_MCU2_0_VISS_READBACK_ADDR_ADDR (0xB0C00000u)
+#define DDR_MCU2_0_VISS_READBACK_ADDR_SIZE (0x00200000u)
+
+/* Memory for VISS configuration data for MCU4_0 [ size  2.00 MB ] */
+#define DDR_MCU4_0_VISS_READBACK_ADDR_ADDR (0xB0E00000u)
+#define DDR_MCU4_0_VISS_READBACK_ADDR_SIZE (0x00200000u)
 
 /* Memory for remote core file operations [ size  4.00 MB ] */
 #define APP_FILEIO_MEM_ADDR (0xB1000000u)
@@ -638,5 +646,5 @@
 #define DDR_64BIT_BASE_VADDR (0x100000000u)
 #define DDR_64BIT_BASE_PADDR (0x880000000u)
 
-#endif /* SOC_MMAP_H */
+#endif /* MMAP_H */
 

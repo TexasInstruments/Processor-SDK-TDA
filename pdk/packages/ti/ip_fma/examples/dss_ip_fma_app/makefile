@@ -14,8 +14,8 @@ endif
 
 
 SRCDIR = . src
-SRCDIR += $(PDK_INSTALL_PATH)/ti/ip_fma/src
-INCDIR = . $(PDK_INSTALL_PATH)/ti/ip_fma/inc
+SRCDIR += $(IP_FMA_COMP_PATH)/src
+INCDIR = . $(IP_FMA_COMP_PATH)/inc
 
 EXT_LIB_PATHS += $(PDK_INSTALL_PATH)/ti/drv/dss/
 

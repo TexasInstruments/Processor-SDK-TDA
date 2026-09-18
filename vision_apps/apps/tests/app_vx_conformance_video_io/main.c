@@ -109,6 +109,10 @@ void TestModuleUnRegister();
 int vision_apps_test_main(int argc, char* argv[]);
 int CT_main(int argc, char* argv[], const char* version_str, CT_RegisterTestCaseFN register_fns[]);
 
+#if defined(LDRA_COVERAGE_ENABLED_VIDEO_IO)
+void video_io_capture_coverage(int32_t start_stop);
+#endif
+
 #ifdef SYSBIOS
 
 
@@ -118,7 +122,13 @@ int main(int argc, char* argv[])
     int status;
     appInit();
     TestModuleRegister();
+#if defined(LDRA_COVERAGE_ENABLED_VIDEO_IO)
+    video_io_capture_coverage(1U);
+#endif
     status = vision_apps_test_main(argc, argv);
+#if defined(LDRA_COVERAGE_ENABLED_VIDEO_IO)
+    video_io_capture_coverage(0U);
+#endif
     TestModuleUnRegister();
     appDeInit();
     return status;

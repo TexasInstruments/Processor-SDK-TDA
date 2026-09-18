@@ -88,9 +88,7 @@ extern "C" {
 
 #define BOARD_DDR_INSTANCE_0                    (0U)
 #define BOARD_DDR_INSTANCE_1                    (1U)
-#define BOARD_DDR_INSTANCE_2                    (2U)
-#define BOARD_DDR_INSTANCE_3                    (3U)
-#define BOARD_DDR_INSTANCE_MAX                  (4U)
+#define BOARD_DDR_INSTANCE_MAX                  (2U)
 #define BOARD_DDR_INSTANCE_START                (BOARD_DDR_INSTANCE_0)
 #define BOARD_DDR_INSTANCE_END                  (BOARD_DDR_INSTANCE_1)
 

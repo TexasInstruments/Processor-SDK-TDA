@@ -353,7 +353,7 @@ static void rpmsg_responderFxn(void* arg0, void* arg1)
     void        *buf;
     uint32_t    bufSize = RPMSG_DATA_SIZE;
     #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
-    RPMessage_Object*    handle;
+    RPMessage_Object*    handle = NULL;
     RPMessage_CreateParams params;
     uint32_t    myEndPt = 0;
     uint16_t    remoteProcId;
@@ -494,7 +494,10 @@ static void rpmsg_responderFxn(void* arg0, void* arg1)
     #if defined(PDK)
     RPMessage_delete(&handle);
     #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
-    RPMessage_destruct(handle);
+    if(handle != NULL)
+    {
+        RPMessage_destruct(handle);
+    }
     #if !defined(THREADX)
     #if defined(SAFERTOS)
     #if defined(R5F)
@@ -522,7 +525,7 @@ static void rpmsg_senderFxn(void* arg0, void* arg1)
     uint32_t            remoteProcId;
     uint8_t            *buf1;
     #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
-    RPMessage_Object*    handle;
+    RPMessage_Object*    handle = NULL;
     RPMessage_CreateParams params;
     uint32_t            myEndPt = 0;
     uint16_t            remoteProcId;
@@ -684,7 +687,10 @@ static void rpmsg_senderFxn(void* arg0, void* arg1)
     #if defined(PDK)
     RPMessage_delete(&handle);
     #elif defined(MCU_PLUS_SDK) || defined(MCU_SDK)
-    RPMessage_destruct(handle);
+    if(handle != NULL)
+    {
+        RPMessage_destruct(handle);
+    }
     #if !defined(THREADX)
     #if defined(SAFERTOS)
     #if defined(R5F)

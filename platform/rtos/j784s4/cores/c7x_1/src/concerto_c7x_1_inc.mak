@@ -7,16 +7,10 @@ ifeq ($(RTOS),SYSBIOS)
 endif
 ifeq ($(RTOS),FREERTOS)
   LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_freertos.cmd
+  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map.cmd
 endif
 ifeq ($(RTOS),SAFERTOS)
   LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_safertos.cmd
-endif
-
-ifeq ($(RTOS),FREERTOS)
-  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map.cmd
-endif
-
-ifeq ($(RTOS),SAFERTOS)
   LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map_safertos.cmd
 endif
 

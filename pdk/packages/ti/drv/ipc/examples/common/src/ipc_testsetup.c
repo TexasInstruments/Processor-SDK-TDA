@@ -99,7 +99,6 @@ extern uint32_t  selfProcId;
 extern uint32_t *pRemoteProcArray;
 extern uint32_t  gNumRemoteProc;
 
-uint32_t gRecvTaskBufIdx = 0;
 uint32_t gSendTaskBufIdx[IPC_MAX_PROCS] = {0};
 
 uint32_t rpmsgDataSize = RPMSG_DATA_SIZE;
@@ -192,8 +191,19 @@ void rpmsg_responderFxn(void *arg0, void *arg1)
     uint32_t         cores;
     char             str[MSGSIZE];
 
+    if (requestedEpt == service_ping.endPt)
+    {
+        buf = &pRecvTaskBuf[0];
+    }
+    else if (requestedEpt == service_chrdev.endPt)
+    {
+        buf = &pRecvTaskBuf[rpmsgDataSize];
+    }
+    else
+    {
+        buf = NULL;
+    }
 
-    buf = &pRecvTaskBuf[gRecvTaskBufIdx++ * rpmsgDataSize];
     if(buf == NULL)
     {
         App_printf("RecvTask: buffer allocation failed\n");
@@ -548,7 +558,6 @@ static void IpcRpMboxCallback(uint32_t remoteCoreId, uint32_t msgVal)
         {
             gbSuspendSystem = 1U;
             gbSuspendSystemRemotecoreID = remoteCoreId;
-            RPMessage_unblock((RPMessage_Handle)&pRecvTaskBuf[0]);
             RPMessage_unblock((RPMessage_Handle)&pRecvTaskBuf[rpmsgDataSize]);
             for(i = 0; i < gNumRemoteProc; i++)
             {

@@ -338,7 +338,7 @@ SBL_MCU4_CPU1_BTCM_BASE_ADDR_SOC
 /*                           Internal Functions                               */
 /* ========================================================================== */
 
-#if defined(SOC_J721S2)
+#if defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2)
 __attribute__((weak)) uint32_t SBL_getBoardEcuType(void){
     return 0U; /** BOARD_ECU_NONE */
 }
@@ -891,7 +891,7 @@ void SBL_SlaveCoreBoot(cpu_core_id_t core_id, uint32_t freqHz, sblEntryPoint_t *
 
         if (sblSlaveCoreInfoPtr->tisci_dev_id != SBL_INVALID_ID)
         {
-            #if defined(SOC_J721S2)
+            #if defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2)
             slave_clk_freq_hz = Board_ecuGetCpuClock(sblSlaveCoreInfoPtr->tisci_dev_id, SBL_getBoardEcuType());
             #endif
 

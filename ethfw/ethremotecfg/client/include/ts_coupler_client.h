@@ -59,7 +59,6 @@ extern "C" {
 /*                                 Macros                                     */
 /* ========================================================================== */
 
-#define TS_COUPLER_CLIENT_TUPLES_MAX_TUPLES          (100U)
 
 /* ========================================================================== */
 /*                         Structures and Enums                               */
@@ -94,12 +93,6 @@ typedef struct TsCouplerClient_timeSyncTuple_s
     uint64_t systemTime;
     uint64_t phcTime;
 } TsCouplerClient_timeSyncTuple;
-
-typedef struct TsCouplerClient_timeSyncTupleTbl_s
-{
-   uint32_t tupleIndex;
-   TsCouplerClient_timeSyncTuple tuple[TS_COUPLER_CLIENT_TUPLES_MAX_TUPLES];
-}TsCouplerClient_timeSyncTupleTbl;
 
 /*!
  * \brief CPTS HW push notify params.
@@ -140,19 +133,12 @@ void TsCouplerClient_HwPushNotifyFxn(uint32_t notifyType,
                                      void *notifyArg,
                                      void *cbArg);
 
-void TsCouplerClient_calculateRateAndOffset(TsCouplerClient_timeSyncTuple *entries,
-                                            uint32_t numEntries,
-                                            double *rate,
-                                            double *offset);
-
-
 int32_t TsCouplerClient_allocHwPushInst(uint32_t *hwPushNum);
 
 int32_t TsCouplerClient_registerRemoteTimer(uint32_t hwPushNum,
                                             uint32_t tsRouterTntrId);
 
-
-uint64_t TsCouplerClient_getSynchronizedTime(TsCouplerClient_TimerType timerType);
+uint64_t TsCouplerClient_getSynchronizedTime();
 
 /* ========================================================================== */
 /*                        Deprecated Function Declarations                    */

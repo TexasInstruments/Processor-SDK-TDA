@@ -60,9 +60,13 @@
  *
  */
 
+#if defined(SOC_FAMILY_TDA5)
+#if !defined(VDK_STUB)
 #include <Ipc_Notify_Hal.h>
 #include <RPMessage_Hal_Linux_ResourceTable.h>
 #include <RPMessage_Hal.h>
+#endif /* #if !defined(VDK_STUB) */
+#endif /* #if defined(SOC_FAMILY_TDA5) */
 
 #include <utils/ipc/include/app_ipc.h>
 #include <utils/ipc/include/mcu_sdk_ipc.h>
@@ -86,7 +90,7 @@
 #include <TI/hwa_dmpac_dof.h>
 #if !defined(VDK_STUB)
 #include <TI/tivx_img_proc.h>
-#endif
+#endif /* #if !defined(VDK_STUB) */
 
 #include <sys/prctl.h>
 #include <sys/mman.h>
@@ -98,17 +102,17 @@
 #define DUMMY_HANDLER_INIT_ADDR 0xDE7EC7ED
 #define RPMSG_VRING_ADDR_ANY (~0)
 
+#if defined(SOC_FAMILY_TDA5)
 typedef struct
 {
     uint32_t cur_core;
     uint32_t enabled_cores;
 } vdk_core_init_args_t;
 
-static uint8_t gAppCommonInitDone = 0;
-
 #if !defined(VDK_STUB)
+static uint8_t gAppCommonInitDone = 0;
 static uint8_t gAppWrLogInitDone = 0;
-#endif
+#endif /* #if !defined(VDK_STUB) */
 
 #if !defined(QNX)
 static uint64_t cpu_dts_addr_list[CORE_ID_MAX] =
@@ -133,6 +137,7 @@ static uint64_t cpu_dts_addr_list[CORE_ID_MAX] =
 };
 #endif /* #if !defined(QNX) */
 
+#if !defined(VDK_STUB)
 static uint32_t g_ipc_to_app_cpu_id[CORE_ID_MAX] =
 {
     APP_IPC_CPU_INVALID,
@@ -152,6 +157,7 @@ static uint32_t g_ipc_to_app_cpu_id[CORE_ID_MAX] =
     APP_IPC_CPU_INVALID,
     APP_IPC_CPU_INVALID,
 };
+#endif /* #if !defined(VDK_STUB) */
 
 static uint32_t g_ipc_to_ovx_cpu_id[CORE_ID_MAX] =
 {
@@ -173,6 +179,7 @@ static uint32_t g_ipc_to_ovx_cpu_id[CORE_ID_MAX] =
     TIVX_CPU_ID_INVALID,
 };
 
+#if !defined(VDK_STUB)
 static char* g_ipc_to_cpu_name[CORE_ID_MAX] =
 {
     "INVALID",
@@ -192,11 +199,15 @@ static char* g_ipc_to_cpu_name[CORE_ID_MAX] =
     "INVALID",
     "INVALID",
 };
+#endif /* #if !defined(VDK_STUB) */
 
 static void appRegisterOpenVXTargetKernels();
+
+#if !defined(VDK_STUB)
 static void appUnRegisterOpenVXTargetKernels();
 
 static void *appVdkIpcInitTaskMain(void *args);
+#endif /* #if !defined(VDK_STUB) */
 
 #if !defined(QNX)
 static RPMessage_Hal_ResourceTable *ipc_resource_table[CORE_ID_MAX];
@@ -250,11 +261,14 @@ static void appVdkResourceTableInit(uint32_t core_id)
     }
 }
 #endif /* #if !defined(QNX) */
+#endif /* #if defined(SOC_FAMILY_TDA5) */
 
 int32_t appVdkInit(void)
 {
     int32_t status = 0;
 
+    #if defined(SOC_FAMILY_TDA5)
+    #if !defined(VDK_STUB)
     if (gAppCommonInitDone == 0)
     {
         pthread_attr_t thread_attr;
@@ -329,15 +343,17 @@ int32_t appVdkInit(void)
     gAppCommonInitDone++;
 
     tivx_clr_debug_zone(VX_ZONE_INFO);
+    #endif /* #if !defined(VDK_STUB) */
+    #endif /* #if defined(SOC_FAMILY_TDA5) */
 
     return status;
 }
 
+#if defined(SOC_FAMILY_TDA5)
+#if !defined(VDK_STUB)
 static void *appVdkIpcInitTaskMain(void *args)
 {
-    #if !defined(VDK_STUB)
     app_remote_service_init_prms_t init_prms;
-    #endif /* #if !defined(VDK_STUB) */
 
     int32_t status = 0;
     app_ipc_init_prm_t ipc_init_prm;
@@ -469,7 +485,6 @@ static void *appVdkIpcInitTaskMain(void *args)
 
     status = appIpcInit(&ipc_init_prm);
 
-    #if !defined(VDK_STUB)
     if (status == 0)
     {
         VX_PRINT(VX_ZONE_INFO, "Call to appIpcInit passsed\n");
@@ -504,15 +519,18 @@ static void *appVdkIpcInitTaskMain(void *args)
     {
         appLogPrintf("Call to appIpcInit failed\n");
     }
-    #endif /* #if !defined(VDK_STUB) */
 
     free(core_init_args);
 
     return NULL;
 }
+#endif /* #if !defined(VDK_STUB) */
+#endif /* #if defined(SOC_FAMILY_TDA5) */
 
 int32_t appVdkDeInit()
 {
+    #if defined(SOC_FAMILY_TDA5)
+    #if !defined(VDK_STUB)
     uint32_t cur_core;
     uint32_t enabled_cores = tivxVdkGetEmulatedCores();
 
@@ -526,10 +544,13 @@ int32_t appVdkDeInit()
             appUnRegisterOpenVXTargetKernels();
         }
     }
+    #endif /* #if defined(VDK_STUB) */
+    #endif /* #if defined(SOC_FAMILY_TDA5) */
 
     return 0;
 }
 
+#if defined(SOC_FAMILY_TDA5)
 void appVdkRegisterKernels()
 {
     uint32_t cur_core;
@@ -562,6 +583,8 @@ static void appRegisterOpenVXTargetKernels()
     void tivxRegisterTestKernelsTargetDspKernels(void);
     tivxRegisterTestKernelsTargetDspKernels();
 
+    tivxRegisterImagingTargetAewbKernels();
+
     tivxRegisterHwaTargetVpacMscKernels();
     tivxRegisterHwaTargetVpacLdcKernels();
     tivxRegisterHwaTargetVpacVissKernels();
@@ -588,11 +611,10 @@ static void appRegisterOpenVXTargetKernels()
     appLogPrintf("APP: OpenVX Target kernel init ... Done !!!\n");
 }
 
+#if !defined(VDK_STUB)
 static void appUnRegisterOpenVXTargetKernels()
 {
     appLogPrintf("APP: OpenVX Target kernel deinit ... !!!\n");
-
-    #if !defined(VDK_STUB)
 
     void tivxUnRegisterTestKernelsTargetDspKernels(void);
     tivxUnRegisterTestKernelsTargetDspKernels();
@@ -602,6 +624,8 @@ static void appUnRegisterOpenVXTargetKernels()
 
     void tivxUnRegisterTestKernelsTargetArmKernels(void);
     tivxUnRegisterTestKernelsTargetArmKernels();
+
+    tivxUnRegisterImagingTargetAewbKernels();
 
     tivxUnRegisterHwaTargetVpacMscKernels();
     tivxUnRegisterHwaTargetVpacLdcKernels();
@@ -622,10 +646,10 @@ static void appUnRegisterOpenVXTargetKernels()
 
     */
 
-    #endif /* #if !defined(VDK_STUB) */
-
     appLogPrintf("APP: OpenVX Target kernel deinit ... Done !!!\n");
 }
+#endif /* #if !defined(VDK_STUB) */
+#endif /* #if defined(SOC_FAMILY_TDA5) */
 
 uint32_t appGetHostOSType(void);
 uint32_t appGetHostOSType(void)

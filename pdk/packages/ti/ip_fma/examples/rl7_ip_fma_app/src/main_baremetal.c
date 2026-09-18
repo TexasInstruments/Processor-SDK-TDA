@@ -46,7 +46,7 @@
 #include <ti/drv/uart/UART_stdio.h>
 #include <ti/board/src/devices/common/common.h>
 
-#include <ti/ip_fma/inc/ip_fma_rl7.h>
+#include <ip_fma_rl7.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */

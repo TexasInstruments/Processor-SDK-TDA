@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2018-2024
+ *  Copyright (c) Texas Instruments Incorporated 2026
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -137,10 +137,10 @@ int io_retention_main()
     {
 
         Lpm_pmicInit();
-        AppUtils_Printf(MSG_NORMAL, "Press 1 to enter low power mode with MAIN IO Retention configured\n");
-        AppUtils_Printf(MSG_NORMAL, "Press 2 to enter low power mode with MCU IO Retention configured\n");
-        AppUtils_Printf(MSG_NORMAL, "Press 3 to enter low power mode with both MCU & MAIN IO Retention configured\n");
-        AppUtils_Printf(MSG_NORMAL, "Input: ");
+        Lpm_uartDrvPrintf("Press 1 to enter low power mode with MAIN IO Retention configured\n");
+        Lpm_uartDrvPrintf("Press 2 to enter low power mode with MCU IO Retention configured\n");
+        Lpm_uartDrvPrintf("Press 3 to enter low power mode with both MCU & MAIN IO Retention configured\n");
+        Lpm_uartDrvPrintf("Input: ");
 
         while(!done)
         {
@@ -150,23 +150,29 @@ int io_retention_main()
             {
                 case 1:
                     main_configure_can_uart_lock_dmsc();
-                    Lpm_activeToIoRetSwitch();
+                    Lpm_uartDrvPrintf(LPM_UART_IO_RETENTION_MSG
+                        "PMIC STATE CHANGE: ACTIVE -> IO Retention\n");
+                    Lpm_pmicStateChangeActiveToIORetention();
                     done = 0xFF;
                     break;
                 case 2:
                     wkup_configure_can_uart_lock_dmsc();
-                    Lpm_activeToIoRetSwitch();
+                    Lpm_uartDrvPrintf(LPM_UART_IO_RETENTION_MSG
+                        "PMIC STATE CHANGE: ACTIVE -> IO Retention\n");
+                    Lpm_pmicStateChangeActiveToIORetention();
                     done = 0xFF;
                     break;
                 case 3:
                     main_configure_can_uart_lock_dmsc();
                     wkup_configure_can_uart_lock_dmsc();
-                    Lpm_activeToIoRetSwitch();
+                    Lpm_uartDrvPrintf(LPM_UART_IO_RETENTION_MSG
+                        "PMIC STATE CHANGE: ACTIVE -> IO Retention\n");
+                    Lpm_pmicStateChangeActiveToIORetention();
                     done = 0xFF;
                     break;
                 default:
-                    AppUtils_Printf(MSG_NORMAL, "Invalid option - please enter 1 to enter MAIN IO retention mode, 2 to enter MCU IO retention mode, or 3 to enter both.\n");
-                    AppUtils_Printf(MSG_NORMAL, "Input: ");
+                    Lpm_uartDrvPrintf("Invalid option - please enter 1 to enter MAIN IO retention mode, 2 to enter MCU IO retention mode, or 3 to enter both.\n");
+                    Lpm_uartDrvPrintf("Input: ");
                     break;
             }
         }
@@ -306,7 +312,7 @@ int wkup_io_pm_seq (void)
 
 /* Enable to check that wakeup events are being received */
 #if defined(LPM_DEBUG_ENABLE)
-    AppUtils_Printf(MSG_NORMAL, "Trigger the interrupt and then press enter : ");
+    Lpm_uartDrvPrintf("Trigger the interrupt and then press enter : ");
     int c;
     UART_scanFmt("%d", &c);
     UART_printf("PADCONFIG52 (0x4301c0d0) immediately after manual trigger : 0x%x\n", *mkptr(CSL_WKUP_CTRL_MMR0_CFG0_BASE, 0x1c0d0));
@@ -369,7 +375,7 @@ void wkup_configure_can_uart_lock_dmsc()
     {
         int c;
         UART_printf("PADCONFIG52 (0x4301c0d0) immediately after entering IO retention : 0x%x\n", *mkptr(CSL_WKUP_CTRL_MMR0_CFG0_BASE, 0x1c0d0));
-        AppUtils_Printf(MSG_NORMAL, "Press enter key to send I2C commands to PMIC to enter low power mode... ");
+        Lpm_uartDrvPrintf("Press enter key to send I2C commands to PMIC to enter low power mode... ");
         UART_scanFmt("%d", &c);
     }
 }
@@ -490,11 +496,11 @@ int32_t SetupSciServer(void)
 
     if (ret == CSL_PASS)
     {
-        AppUtils_Printf(MSG_NORMAL, "Starting Sciserver..... PASSED\n");
+        Lpm_uartDrvPrintf("Starting Sciserver..... PASSED\n");
     }
     else
     {
-        AppUtils_Printf(MSG_NORMAL, "Starting Sciserver..... FAILED\n");
+        Lpm_uartDrvPrintf("Starting Sciserver..... FAILED\n");
     }
 
     return ret;

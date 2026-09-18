@@ -4,7 +4,6 @@ let common = system.getScript("/common");
 let pinmux = system.getScript("/drivers/pinmux/pinmux");
 
 let soc = system.getScript(`/networking/soc/networking_${common.getSocName()}`);
-let device = common.getDeviceName();
 //Get packet pool configuration script
 const pktPoolScript = system.getScript("./enet_pkt_pool_config");
 //Get ALE configuration script
@@ -126,7 +125,8 @@ const enet_cpsw_system_config = {
         },
         {
             name: "macAddrList",
-            description: "MAC address to set in the driver. Enter MAC address. Seperate multiple MAC address with comma. Eg.: aa:bb:bb:cc:dd:ee,01:22:33:aa:bb:ee. Note: Each device on the network must have a unique MAC address. Duplicate MAC addresses will cause network conflicts.",
+            description: "MAC address to set in the driver.",
+            longDescription: "Enter MAC address. Seperate multiple MAC address with comma. Eg.: aa:bb:bb:cc:dd:ee,01:22:33:aa:bb:ee. Note: Each device on the network must have a unique MAC address. Duplicate MAC addresses will cause network conflicts.",
             displayName: "MAC Address List",
             default: "70:ff:76:1d:ec:f2,70:ff:76:1d:ec:e3",
             hidden: true,
@@ -179,9 +179,10 @@ function getPeripheralPinNames(inst)
 
 function getEnetClockConfig(device_name)
 {
-  var enet_clock_config;
+    var enet_clock_config;
 
-    if (device_name === "am261x-lp")
+    if((device_name == "AM261x_ZFG") || (device_name == "AM261x_ZCZ") ||
+       (device_name == "AM261x_ZNC") || (device_name == "AM261x_ZEJ"))
     {
 enet_clock_config =
     {
@@ -201,12 +202,13 @@ enet_clock_config =
     ],
     }
     }
-    else if (device_name === "am261x-som")
+    else if((device_name == "AM261x_ZFG_400") || (device_name == "AM261x_ZCZ_400") ||
+            (device_name == "AM261x_ZNC_400") || (device_name == "AM261x_ZEJ_400"))
     {
 enet_clock_config =
     {
 
-    clockIds        : [ "SOC_RcmPeripheralId_CPTS", , "SOC_RcmPeripheralId_CPSW_5_50_250"],
+    clockIds        : [ "SOC_RcmPeripheralId_CPTS", "SOC_RcmPeripheralId_CPSW_5_50_250"],
     clockFrequencies: [
         {
             moduleId: "SOC_RcmPeripheralId_CPTS",
@@ -221,17 +223,22 @@ enet_clock_config =
     ],
     }
     }
+    else
+    {
+        throw new Error(`enet_cpsw_am261x: unrecognized device "${device_name}" - ` +
+                        `expected AM261x_ZFG/ZCZ/ZNC/ZEJ with or without _400 suffix`);
+    }
 
     return enet_clock_config;
 }
 
 function getClockEnableIds(instance) {
-    let instConfig = getEnetClockConfig(device);
+    let instConfig = getEnetClockConfig(system.deviceData.device);
     return instConfig.clockIds;
 }
 
 function getClockFrequencies(inst) {
-    let instConfig = getEnetClockConfig(device);
+    let instConfig = getEnetClockConfig(system.deviceData.device);
     return instConfig.clockFrequencies;
 }
 

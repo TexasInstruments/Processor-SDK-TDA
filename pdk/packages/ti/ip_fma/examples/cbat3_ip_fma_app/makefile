@@ -10,8 +10,8 @@ ifeq ($(BUILD_OS_TYPE), baremetal)
     APP_NAME = cbat3_ip_fma_app_$(BUILD_OS_TYPE)
 endif
 
-SRCDIR = . src $(PDK_INSTALL_PATH)/ti/ip_fma/src
-INCDIR = . $(PDK_INSTALL_PATH)/ti/ip_fma/inc $(PDK_INSTALL_PATH)/ti/drv/sciclient 
+SRCDIR = . src $(IP_FMA_COMP_PATH)/src
+INCDIR = . $(IP_FMA_COMP_PATH)/inc $(PDK_INSTALL_PATH)/ti/drv/sciclient 
 
 # List all the external components/interfaces, whose interface header files
 # need to be included for this component

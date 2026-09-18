@@ -677,7 +677,7 @@ OSPI_v0_HwAttrs ospiInitCfg[SPI_OSPI_DOMAIN_CNT][SPI_OSPI_PER_CNT + 1U] =
     #else
             (uintptr_t)CSL_MCU_FSS0_DAT_REG1_BASE,
     #endif
-            CSL_OSPI_CFG_PHY_OP_MODE_MASTER,   /* PHY operating mode */ 
+            CSL_OSPI_CFG_PHY_OP_MODE_MASTER,   /* PHY operating mode */
             CSL_OSPI_CFG_PHY_DLL_MODE_DEFAULT,   /* PHY DLL force half cycle lock */
             OSPI_MODULE_CLOCK,                 /* Input frequency */
     #if defined(BUILD_MPU)
@@ -711,6 +711,7 @@ OSPI_v0_HwAttrs ospiInitCfg[SPI_OSPI_DOMAIN_CNT][SPI_OSPI_PER_CNT + 1U] =
             0,                                 /* Baudrate divider. Set to a non-zero value (2 to 32)
                                                 to override default divider settings */
             BFALSE,                            /* enable Cache */
+            4U,                                /* numAddrBytes */
         },
         {
             1,                                  /* Instance Number */
@@ -753,6 +754,7 @@ OSPI_v0_HwAttrs ospiInitCfg[SPI_OSPI_DOMAIN_CNT][SPI_OSPI_PER_CNT + 1U] =
             10U,
             0,
             BFALSE,
+            4U,                                /* numAddrBytes */
         },
         {
             (uintptr_t)(0U),

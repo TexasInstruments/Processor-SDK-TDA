@@ -96,7 +96,13 @@
 #include <utils/csi/include/app_csi.h>
 #endif
 
+/* Workaround: Disable I2C since no I2C driver is available in MCU_SDK as of today
+               for EVM, It should be enabled back once It should go in tandom with
+               ENABLE_CSI2RX macro to configure sensors
+
 #if defined(ENABLE_I2C) && defined(ENABLE_CSI2RX)
+*/
+#if defined(ENABLE_CSI2RX)
 #include <utils/sensors/include/app_sensors.h>
 #include <utils/iss/include/app_iss.h>
 #endif
@@ -627,12 +633,20 @@ int32_t appInit()
     APP_ASSERT_SUCCESS(status);
 #endif
 
+/* Workaround: Disable I2C since no I2C driver is available in MCU_SDK as of today
+               for EVM, It should be enabled back once It should go in tandom with
+               ENABLE_CSI2RX macro to configure sensors
+
 #if defined(ENABLE_I2C) && defined(ENABLE_CSI2RX)
+*/
+#if defined(ENABLE_CSI2RX)
     status = appIssInit();
     APP_ASSERT_SUCCESS(status);
 
+    #if 0
     status = appRemoteServiceSensorInit();
     APP_ASSERT_SUCCESS(status);
+    #endif
 #endif
 
 #if defined(ENABLE_VHWA_VPAC0) || defined(ENABLE_VHWA_VPAC1) || defined(ENABLE_VHWA_VPAC2)
@@ -735,9 +749,17 @@ void appDeInit()
     appVissRemoteServiceDeInit();
 #endif
 
+/* Workaround: Disable I2C since no I2C driver is available in MCU_SDK as of today
+               for EVM, It should be enabled back once It should go in tandom with
+               ENABLE_CSI2RX macro to configure sensors
+
 #if defined(ENABLE_I2C) && defined(ENABLE_CSI2RX)
+*/
+#if defined(ENABLE_CSI2RX)
     appIssDeInit();
+    #if 0
     appRemoteServiceSensorDeInit();
+    #endif
 #endif
 
     /* De-init GTC timer */

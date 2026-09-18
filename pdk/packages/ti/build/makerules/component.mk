@@ -298,8 +298,8 @@ endif
 ifneq ($(lpm_LIB_LIST),)
   pdk_LIB_LIST += $(lpm_LIB_LIST)
 endif
-ifneq ($(lpm_s2r_LIB_LIST),)
-  pdk_LIB_LIST += $(lpm_s2r_LIB_LIST)
+ifneq ($(lpm_stub_LIB_LIST),)
+  pdk_LIB_LIST += $(lpm_stub_LIB_LIST)
 endif
 ifneq ($(lpm_EXAMPLE_LIST),)
   pdk_EXAMPLE_LIST += $(lpm_EXAMPLE_LIST)
@@ -971,7 +971,7 @@ endif
 ifeq ($(SOC),$(filter $(SOC), j7200))
   PDK_COMMON_COMP = csl uart i2c board udma gpio pmic pm_lib gtc
   ifeq ($(CORE),mcu1_0)
-    PDK_COMMON_COMP += sciclient_direct rm_pm_hal
+    PDK_COMMON_COMP += rm_pm_hal lpm_stub sciclient_direct
   else
     PDK_COMMON_COMP += sciclient
   endif
@@ -980,7 +980,7 @@ endif
 ifeq ($(SOC),$(filter $(SOC), j721s2 j784s4 j742s2))
   PDK_COMMON_COMP = csl uart board udma i2c gpio pm_lib gtc
   ifeq ($(CORE),mcu1_0)
-    PDK_COMMON_COMP += sciclient_direct rm_pm_hal
+    PDK_COMMON_COMP += rm_pm_hal lpm_stub sciclient_direct
   else
     PDK_COMMON_COMP += sciclient
   endif

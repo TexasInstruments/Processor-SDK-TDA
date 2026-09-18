@@ -10,6 +10,8 @@ ifneq ($(APP_CONFIG_BASE_PATH),)
 endif
 
 BUILD_DEFS += $(SOC_DEF)
+BUILD_DEFS += $(SOC_FAMILY)
+BUILD_DEFS += $(VPAC_VERSION)
 BUILD_DEFS += $(ECU_BUILD_DEF)
 
 ifeq ($(SOC), am62a)
@@ -93,6 +95,7 @@ else
             DIRECTORIES += apps/tests/app_vx_conformance_hwa
             DIRECTORIES += apps/tests/app_vx_conformance_core
             DIRECTORIES += apps/tests/app_vx_conformance_video_io
+            DIRECTORIES += apps/basic_demos/app_single_cam
             DIRECTORIES += apps/dl_demos/app_tidl
             DIRECTORIES += apps/dl_demos/app_tidl_od
             DIRECTORIES += apps/dl_demos/app_tidl_bev

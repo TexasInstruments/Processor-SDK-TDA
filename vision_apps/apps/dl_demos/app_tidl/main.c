@@ -458,6 +458,8 @@ int app_tidl_main(int argc, char* argv[])
     return status;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
 static int app_init(AppObj *obj)
 {
 
@@ -675,6 +677,7 @@ static int app_init(AppObj *obj)
 
     return status;
 }
+#pragma GCC diagnostic pop
 
 static void app_deinit(AppObj *obj)
 {
@@ -1733,13 +1736,18 @@ static vx_status app_verify_graph(AppObj *obj)
     return status;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
 static vx_status app_run_graph_for_one_frame(AppObj *obj, char *curFileName, vx_uint32 counter)
 {
     vx_status status = VX_SUCCESS;
 
     vx_char input_file_name[APP_MAX_FILE_PATH];
     vx_char output_file_name[APP_MAX_FILE_PATH];
-    vx_uint32 tensor_actual_checksum = 0, display_actual_checksum = 0;
+    vx_uint32 tensor_actual_checksum = 0;
+#ifndef x86_64
+    vx_uint32 display_actual_checksum = 0;
+#endif
 
     appPerfPointBegin(&obj->total_perf);
 
@@ -1889,6 +1897,7 @@ static vx_status app_run_graph_for_one_frame(AppObj *obj, char *curFileName, vx_
 
     return status;
 }
+#pragma GCC diagnostic pop
 
 static vx_status app_run_graph(AppObj *obj)
 {

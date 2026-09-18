@@ -110,6 +110,12 @@ static        uint32_t    gTimerInitDone = UFALSE;
 static        uint32_t    gTimerAnyMask;
 #if defined (BUILD_MCU)
 static        bool        gUpdateFlag = BTRUE;
+#if defined(SAFERTOS)
+/* Data Structure which maintains tick count for Safertos Applications*/
+volatile uint64_t gSafertosNumTicks = 0U;
+/* PMU cycle count logged at last tick interrupt in Safertos */
+volatile uint32_t gSafertosPmuLastTickCycleCount = 0U;
+#endif
 #endif
 
 /* external variables */
@@ -1040,6 +1046,22 @@ uint64_t TimerP_getTimeInUsecs(void)
     #else
       curTime = uiPortGetRunTimeCounterValue();
     #endif
+    #elif defined(SAFERTOS) && defined(BUILD_MCU)
+    osalArch_TimestampInit();
+    uint64_t freqInMHz = osalArch_TimeStampGetFreqKHz() / 1000U;
+    
+    /* Create a critical section while reading interrupt  */
+    uint32_t  key = (uint32_t)HwiP_disable();
+    uint32_t currentPmuCount = CSL_armR5PmuReadCntr(CSL_ARM_R5_PMU_CYCLE_COUNTER_NUM);
+    /* Formula: Time in Usec = Number of Ticks * 1000U + Difference in PMU cycles/Frequency of CPU in MHz */
+    curTime = gSafertosNumTicks * 1000U + ((uint64_t)(currentPmuCount - gSafertosPmuLastTickCycleCount)/freqInMHz);
+    
+    /* Deal with overflow case of PMU 32-bit counter */
+    if (currentPmuCount <= gSafertosPmuLastTickCycleCount)
+    {
+      curTime += (((uint64_t)1U << 32U)/freqInMHz);
+    }
+    HwiP_restore(key);
     #else
     TimeStamp_Struct timestamp64;
     uint64_t         cur_ts, freq;
@@ -1050,7 +1072,6 @@ uint64_t TimerP_getTimeInUsecs(void)
 
     /* Get the frequency of the timeStamp provider */
     tsFreqKHz  = osalArch_TimeStampGetFreqKHz();
-
     cur_ts = ((uint64_t) timestamp64.hi << 32U) | timestamp64.lo;
     freq = (uint64_t) (tsFreqKHz);
     curTime = (cur_ts*1000U)/freq;

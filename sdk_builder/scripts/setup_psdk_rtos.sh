@@ -407,8 +407,11 @@ then
     if [ "${SOC}" == "tda54" ]; then
         RUSTC_VERSION=1.94.0
         RUSTC_TARGETS="thumbv8m.main-none-eabihf armv8r-none-eabihf"
+        CARGO_EXTENSIONS="cargo-bloat cargo-binutils"
+        RUSTC_COMPONENTS="rust-src clippy rustfmt llvm-tools"
         export RUSTUP_HOME=${PSDK_TOOLS_PATH}/rustup_${RUSTC_VERSION}
         export CARGO_HOME=${PSDK_TOOLS_PATH}/cargo_${RUSTC_VERSION}
+        export RUSTUP_USE_CURL=1  # use system curl for downloads (handles corporate proxy correctly)
         echo "[rustc] Checking ..."
         if [ -x "${CARGO_HOME}/bin/rustc" ]; then
             echo "rustc found: $(${CARGO_HOME}/bin/rustc --version)"
@@ -418,6 +421,22 @@ then
                     ${CARGO_HOME}/bin/rustup target add ${target}
                 fi
             done
+            
+            for component in ${RUSTC_COMPONENTS}; do
+                if ! ${CARGO_HOME}/bin/rustup component list --installed 2> /dev/null | grep -q "^${component}"; then
+                    echo "Adding missing component: ${component}"
+                    ${CARGO_HOME}/bin/rustup component add ${component}
+                fi
+            done
+
+            for extension in ${CARGO_EXTENSIONS}; do
+            # Check if the compiled executable file already exists in your isolated TI bin folder
+                if [ ! -x "${CARGO_HOME}/bin/${extension}" ]; then
+                    echo "Installing missing cargo extension: ${extension}"
+                    ${CARGO_HOME}/bin/cargo install ${extension}
+                fi
+            done
+            
         else
             if [ ! -f ${PSDK_TOOLS_PATH}/rustup-init.sh ]; then
                 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o ${PSDK_TOOLS_PATH}/rustup-init.sh
@@ -426,22 +445,16 @@ then
             ${PSDK_TOOLS_PATH}/rustup-init.sh -y --no-modify-path --default-toolchain ${RUSTC_VERSION} \
                 --target $(echo ${RUSTC_TARGETS} | tr ' ' ',')
             rm ${PSDK_TOOLS_PATH}/rustup-init.sh
+
+            echo "Installing required components (rust-src, clippy, rustfmt)..."
+            ${CARGO_HOME}/bin/rustup component add rust-src clippy rustfmt llvm-tools
+            
+            # 4. FIX: Safely compile required embedded binary analysis tools 
+            echo "Installing cargo extensions for development..."
+            ${CARGO_HOME}/bin/cargo install cargo-bloat cargo-binutils
             ${CARGO_HOME}/bin/rustc --version
             ${CARGO_HOME}/bin/cargo --version
         fi
-
-        RUSTC_BASHRC_MARKER="# rustc for TDA54 ethfw (added by setup_psdk_rtos.sh)"
-        if ! grep -qF "${RUSTC_BASHRC_MARKER}" "${HOME}/.bashrc" 2> /dev/null; then
-            {
-                echo ""
-                echo "${RUSTC_BASHRC_MARKER}"
-                echo "export RUSTUP_HOME=${RUSTUP_HOME}"
-                echo "export CARGO_HOME=${CARGO_HOME}"
-                echo "export PATH=\"${CARGO_HOME}/bin:\${PATH}\""
-            } >> "${HOME}/.bashrc"
-            echo "Added rustc env vars to ~/.bashrc."
-        fi
-        \. "${HOME}/.bashrc"
         echo "[rustc] Done"
     fi
 

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2019-2021 Texas Instruments Incorporated
+ * Copyright (c) 2019-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -109,6 +109,29 @@ extern "C" {
  */
 #define TIVX_CAPTURE_REGISTER_ERROR_FRAME                (0x40000002u)
 
+#if defined (LDRA_COVERAGE_ENABLED_VIDEO_IO)
+/*! \brief Control Command to start the LDRA coverage data capture for the CAPTURE modules.
+ *
+ *  \ingroup group_vision_function_capture
+ */
+#define TIVX_CAPTURE_COVERAGE_START                      (0x40000003u)
+
+/*! \brief Control Command to stop the LDRA coverage data capture for the CAPTURE modules.
+ *
+ *  \ingroup group_vision_function_capture
+ */
+#define TIVX_CAPTURE_COVERAGE_END                        (0x40000004u)
+#endif /* LDRA_COVERAGE_ENABLED_VIDEO_IO */
+
+#if !defined(SOC_J722S) && defined(ASF_TEST_ENABLED_CAPTURE)
+/*! \brief Control Command to trigger a software-injected ASF ESM error for
+ *         testing the Capture node's error-event reporting path.
+ *
+ *  \ingroup group_vision_function_capture
+ */
+#define TIVX_CAPTURE_INJECT_ASF_ERR                      (0x40000005u)
+#endif
+
 /* None */
 
 /*********************************
@@ -124,6 +147,7 @@ extern "C" {
 #else
 #define TIVX_CAPTURE_MAX_CH                                 (16U)
 #endif
+
 /*! \brief Maximum number of instances supported in the capture node.
  *
  *  \ingroup group_vision_function_capture
@@ -134,6 +158,28 @@ extern "C" {
 #define TIVX_CAPTURE_MAX_INST                               (1U)
 #else
 #define TIVX_CAPTURE_MAX_INST                               (2U)
+#endif
+
+/*! \brief CSI Rx driver instance ID 0. Available whenever TIVX_CAPTURE_MAX_INST >= 1.
+ *
+ *  \ingroup group_vision_function_capture
+ */
+#define TIVX_CAPTURE_INST_ID_0                              ((uint32_t) 0x0U)
+
+#if (TIVX_CAPTURE_MAX_INST >= 2U)
+/*! \brief CSI Rx driver instance ID 1. Available whenever TIVX_CAPTURE_MAX_INST >= 2.
+ *
+ *  \ingroup group_vision_function_capture
+ */
+#define TIVX_CAPTURE_INST_ID_1                              ((uint32_t) 0x1U)
+#endif
+
+#if (TIVX_CAPTURE_MAX_INST >= 3U)
+/*! \brief CSI Rx driver instance ID 2. Available whenever TIVX_CAPTURE_MAX_INST >= 3.
+ *
+ *  \ingroup group_vision_function_capture
+ */
+#define TIVX_CAPTURE_INST_ID_2                               ((uint32_t) 0x2U)
 #endif
 
 /*! \brief Maximum number of streams supported in a capture module.
@@ -262,9 +308,128 @@ extern "C" {
  */
 #define TIVX_CAPTURE_LANE_BAND_SPEED_2250_TO_2500_MBPS           ((uint32_t) 0x16U)
 
-/*********************************
- *      Capture STRUCTURES
- *********************************/
+/*! \defgroup group_vision_function_capture_errors Capture Error Information
+ * \ingroup group_vision_function_capture
+ * @{
+ */
+
+/*! \brief Frame-attributable errors correlated to a specific frame
+ *
+ * These errors can be associated with a specific frame timestamp.
+ * The timestamp field in the error info structure contains the
+ * frame identifier for correlation.
+ */
+
+/*! \brief Short frame detected on a CSI instance.
+ *
+ *  \ingroup group_vision_function_capture_errors
+ */
+#define TIVX_CAPTURE_ERR_SHORT_FRAME              ((uint16_t)(0x0001U))
+
+/*! \brief Long frame detected on a CSI instance.
+ *
+ *  \ingroup group_vision_function_capture_errors
+ */
+#define TIVX_CAPTURE_ERR_LONG_FRAME               ((uint16_t)(0x0002U))
+
+/*! \brief DMA submission failure detected for a CSI instance.
+ *
+ *  \ingroup group_vision_function_capture_errors
+ */
+#define TIVX_CAPTURE_ERR_DMA_SUBMISSION           ((uint16_t)(0x0004U))
+
+/*! \brief DMA aborted while processing a frame on a CSI instance.
+ *
+ *  \ingroup group_vision_function_capture_errors
+ */
+#define TIVX_CAPTURE_ERR_DMA_ABORTED              ((uint16_t)(0x0008U))
+
+/*! \brief DMA transfer error detected for a CSI instance.
+ *
+ *  \ingroup group_vision_function_capture_errors
+ */
+#define TIVX_CAPTURE_ERR_DMA_ERROR                ((uint16_t)(0x0010U))
+
+/*! \brief Channel-level errors not associated with a specific frame
+ *
+ * These errors are detected on the CSI receiver interface but cannot be
+ * correlated to a specific frame. The timestamp field will be 0.
+ */
+
+/*! \brief Header ECC error detected on a CSI instance.
+ *
+ *  \ingroup group_vision_function_capture_errors
+ */
+#define TIVX_CAPTURE_ERR_HEADER_ECC               ((uint16_t)(0x0020U))
+
+/*! \brief Payload CRC error detected on a CSI instance.
+ *
+ *  \ingroup group_vision_function_capture_errors
+ */
+#define TIVX_CAPTURE_ERR_PAYLOAD_CRC              ((uint16_t)(0x0040U))
+
+/*! \brief Data overflow detected on a CSI instance.
+ *
+ *  This includes FIFO overflow conditions reported by the
+ *  CSI receiver.
+ *
+ *  \ingroup group_vision_function_capture_errors
+ */
+#define TIVX_CAPTURE_ERR_DATA_OVERFLOW            ((uint16_t)(0x0080U))
+
+/*! \brief System-level faults not associated with a specific channel or frame
+ *
+ * These errors are advanced system faults that occur across the interface
+ * and cannot be correlated to a specific channel or frame timestamp.
+ * The timestamp field will be 0 for all channels.
+ */
+
+/*! \brief ASF transition to error timeout.
+ *
+ *  \ingroup group_vision_function_capture_errors
+ */
+#define TIVX_CAPTURE_ERR_ASF_TRANS_TIMEOUT        ((uint16_t)(0x0100U))
+
+/*! \brief ASF CSR parity error.
+ *
+ *  \ingroup group_vision_function_capture_errors
+ */
+#define TIVX_CAPTURE_ERR_ASF_CSR_PARITY           ((uint16_t)(0x0200U))
+
+/*! \brief ASF DAP parity error.
+ *
+ *  \ingroup group_vision_function_capture_errors
+ */
+#define TIVX_CAPTURE_ERR_ASF_DAP_PARITY           ((uint16_t)(0x0400U))
+
+/*! @} */
+
+/*! \brief Computes the number of error info entries based on the size of the error info array.
+ *
+ *  This macro calculates the number of tivx_capture_error_per_channel_t elements
+ *  that can fit in the TIVX_MAX_ERROR_INFO_SIZE buffer.
+ *
+ *  \ingroup group_vision_function_capture
+ */
+#define TIVX_CAPTURE_ERROR_INFO_NUM_CHANNELS \
+    ((TIVX_MAX_ERROR_INFO_SIZE / sizeof(tivx_capture_error_per_channel_t)) - 1U)
+
+/*! \brief Per-channel error information structure.
+ *
+ *  This structure holds error information for a single capture channel.
+ *  The timestamp field is valid and frame-correlated only for frame-attributable
+ *  errors (SHORT_FRAME, LONG_FRAME, DMA_SUBMISSION, DMA_ABORTED, DMA_ERROR).
+ *  For channel-level errors (HEADER_ECC, PAYLOAD_CRC, DATA_OVERFLOW) and
+ *  system-level ASF errors (ASF_TRANS_TIMEOUT, ASF_CSR_PARITY, ASF_DAP_PARITY),
+ *  the timestamp is set to 0 to indicate the error is not frame-attributable.
+ *
+ *  \ingroup group_vision_function_capture
+ */
+typedef struct {
+    vx_uint16 timestamp;     /*!< Lower 16-bits of frame identifier timestamp (0 for non-frame-attributable errors) */
+    vx_uint16 error_bitfield; /*!< Error bits, with each one being a defined error value that can be OR'd against */
+} tivx_capture_error_per_channel_t;
+
 /*!
  * \brief The CSIRX DRV instance configuration data structure used by the TIVX_KERNEL_CAPTURE kernel.
  *
@@ -477,11 +642,11 @@ void tivx_capture_params_init(tivx_capture_params_t *prms);
  *        processing of the OpenVX graph
  *
  * \param node  [in] Capture node reference
- * \param ref   [in] Error frame to be replicated
+ * \param frame [in] Error frame to be replicated
  *
  * \ingroup group_vision_function_capture
  */
-vx_status tivxCaptureRegisterErrorFrame(vx_node node, vx_reference ref);
+vx_status tivxCaptureRegisterErrorFrame(vx_node node, vx_reference frame);
 
 #ifdef __cplusplus
 }

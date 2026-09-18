@@ -73,7 +73,7 @@ vx_status app_send_test_frame(vx_node cap_node, tivx_raw_image raw_img);
 
 extern AppObj gAppObj;
 
-#if defined(A72) || defined(A53)
+#if defined(A72) || defined(A53) || defined(A720)
 #define _APP_DEBUG_
 #endif
 

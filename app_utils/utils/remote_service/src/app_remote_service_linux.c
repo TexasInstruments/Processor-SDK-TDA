@@ -294,7 +294,10 @@ void *appRemoteServiceRpmsgRxTaskMain(void *arg)
         }
 
         /* add fd to unblock from select and break from loop on exit */
-        FD_SET(obj->unblockfd, &rfds);
+        if ((obj->unblockfd >= 0) && (obj->unblockfd < FD_SETSIZE))
+        {
+            FD_SET(obj->unblockfd, &rfds);
+        }
 
         /* Add one to last fd created, this is mandated by select() */
         nfds = MAX(maxfd, obj->unblockfd) + 1;
@@ -303,7 +306,8 @@ void *appRemoteServiceRpmsgRxTaskMain(void *arg)
 
         if (status)
         {
-            if (FD_ISSET(obj->unblockfd, &rfds))
+            if ((obj->unblockfd >= 0) && (obj->unblockfd < FD_SETSIZE) &&
+                FD_ISSET(obj->unblockfd, &rfds))
             {
                 /*
                  * Event was signalled to break the loop

@@ -147,7 +147,7 @@ const CSL_ArmR5MpuRegionCfg  gCslR5MpuCfg[CSL_ARM_R5F_MPU_REGIONS_MAX] =
         .memAttr          = 0U,
     },
     {
-        /* Region 7 configuration: Ring buffer */
+        /* Region 7 configuration: Ring buffer + App Log Mem + TIOVX Obj Desc (lower half) */
         .regionId         = 7U,
         .enable           = 1U,
         .baseAddr         = IPC_VRING_MEM_ADDR,
@@ -162,11 +162,11 @@ const CSL_ArmR5MpuRegionCfg  gCslR5MpuCfg[CSL_ARM_R5F_MPU_REGIONS_MAX] =
     },
     {
         /* Region 8 configuration: Remaining noncache memory
-         * APP_FILEIO_MEM + TIOVX_LOG_RT_MEM */
+         * TIOVX Obj Desc (upper half) + VISS MEM + APP_FILEIO_MEM + TIOVX_LOG_RT_MEM */
         .regionId         = 8U,
         .enable           = 1U,
-        .baseAddr         = APP_FILEIO_MEM_ADDR,
-        .size             = CSL_ARM_R5_MPU_REGION_SIZE_16MB,
+        .baseAddr         = IPC_VRING_MEM_ADDR + 0x04000000U,
+        .size             = CSL_ARM_R5_MPU_REGION_SIZE_32MB,
         .subRegionEnable  = CSL_ARM_R5_MPU_SUB_REGION_ENABLE_ALL,
         .exeNeverControl  = 1U,
         .accessPermission = CSL_ARM_R5_ACC_PERM_PRIV_USR_RD_WR,

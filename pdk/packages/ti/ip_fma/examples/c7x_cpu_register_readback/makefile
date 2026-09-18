@@ -20,7 +20,7 @@ ifeq ($(BUILD_OS_TYPE), freertos)
   COMP_LIST_COMMON = $(PDK_COMMON_FREERTOS_COMP)
   INCLUDE_EXTERNAL_INTERFACES += freertos
   SRCS_COMMON = c7x_cpu_main.c
-  CONFIG_BLD_LNK_c7x = $(PDK_INSTALL_PATH)/ti/ip_fma/examples/c7x_cpu_register_readback/linker_c7x_freertos.lds
+  CONFIG_BLD_LNK_c7x = $(IP_FMA_COMP_PATH)/examples/c7x_cpu_register_readback/linker_c7x_freertos.lds
 endif
 
 # Add include directories

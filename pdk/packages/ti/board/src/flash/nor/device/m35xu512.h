@@ -108,6 +108,18 @@
 #define NOR_MANF_ID                  (0x2CU)    /* Manufacturer ID */
 #define NOR_DEVICE_ID                (0x5B1A)   /* Device ID */
 
+/** \brief OSPI controller address configuration.
+ *  NOR_OSPI_ADDR_BYTES          : 4-byte addressing required — device is 64MB and
+ *                                 3-byte addresses can only cover 16MB (0xFFFFFF).
+ *                                 Note: EXT_ADDRESS_ENABLE controls command opcodes
+ *                                 only; address byte count is independent.
+ *  NOR_ADDR_BYTES_PROGRAMMABLE  : 1U — device supports 4-byte addressing, so PHY DDR
+ *                                 remains available (controlled by dtrEnable in the
+ *                                 SOC config).
+ */
+#define NOR_OSPI_ADDR_BYTES          (4U)
+#define NOR_ADDR_BYTES_PROGRAMMABLE  (1U)
+
 /** Status Register, Write-in-Progress bit */
 #define NOR_SR_WIP                   (1U << 0U)
 

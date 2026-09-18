@@ -214,9 +214,13 @@ app_log_mem_addr        = ipc_vring_mem_addr + ipc_vring_mem_size;
 app_log_mem_size        = 256*KB;
 
 tiovx_obj_desc_mem_addr = app_log_mem_addr + app_log_mem_size;
-tiovx_obj_desc_mem_size = 32*MB - app_log_mem_size;
+tiovx_obj_desc_mem_size = 28*MB - app_log_mem_size;
 
-app_fileio_mem_addr     =  tiovx_obj_desc_mem_addr + tiovx_obj_desc_mem_size;
+viss_readback_mem_size = 2*MB;
+viss_readback_mem_mcu2_0 = tiovx_obj_desc_mem_addr + tiovx_obj_desc_mem_size;
+viss_readback_mem_mcu4_0 = tiovx_obj_desc_mem_addr + tiovx_obj_desc_mem_size + viss_readback_mem_size;
+
+app_fileio_mem_addr     =  viss_readback_mem_mcu4_0 + viss_readback_mem_size;
 app_fileio_mem_size     = 4*MB;
 
 tiovx_log_rt_mem_addr   = app_fileio_mem_addr + app_fileio_mem_size;
@@ -577,8 +581,10 @@ c7x_3_ddr_total.setDtsName("vision_apps_c71_2_memory_region", "vision-apps-c71_2
 # Shared memory memory sections in DDR
 app_log_mem            = MemSection("APP_LOG_MEM"        , "", app_log_mem_addr       , app_log_mem_size       , "Memory for remote core logging");
 tiovx_obj_desc_mem     = MemSection("TIOVX_OBJ_DESC_MEM" , "", tiovx_obj_desc_mem_addr, tiovx_obj_desc_mem_size, "Memory for TI OpenVX shared memory. MUST be non-cached or cache-coherent");
-app_fileio_mem        = MemSection("APP_FILEIO_MEM"        , "", app_fileio_mem_addr       , app_fileio_mem_size       , "Memory for remote core file operations");
-tiovx_log_rt_mem     = MemSection("TIOVX_LOG_RT_MEM" , "", tiovx_log_rt_mem_addr, tiovx_log_rt_mem_size, "Memory for TI OpenVX shared memory for Run-time logging. MUST be non-cached or cache-coherent");
+viss_ddr_mcu2_0        = MemSection("DDR_MCU2_0_VISS_READBACK_ADDR"    , "", viss_readback_mem_mcu2_0   , viss_readback_mem_size   , "Memory for VISS configuration data for MCU2_0");
+viss_ddr_mcu4_0        = MemSection("DDR_MCU4_0_VISS_READBACK_ADDR"    , "", viss_readback_mem_mcu4_0   , viss_readback_mem_size   , "Memory for VISS configuration data for MCU4_0");
+app_fileio_mem         = MemSection("APP_FILEIO_MEM"        , "", app_fileio_mem_addr       , app_fileio_mem_size       , "Memory for remote core file operations");
+tiovx_log_rt_mem       = MemSection("TIOVX_LOG_RT_MEM" , "", tiovx_log_rt_mem_addr, tiovx_log_rt_mem_size, "Memory for TI OpenVX shared memory for Run-time logging. MUST be non-cached or cache-coherent");
 
 ipc_vring_mem      = MemSection("IPC_VRING_MEM"     , "", ipc_vring_mem_addr     , ipc_vring_mem_size     , "Memory for IPC Vring's. MUST be non-cached or cache-coherent");
 ipc_vring_mem.setDtsName("vision_apps_rtos_ipc_memory_region", "vision-apps-rtos-ipc-memory-region");
@@ -587,6 +593,8 @@ vision_apps_ddr_total  = MemSection("DDR_VISION_APPS_DTS", "", 0                
 vision_apps_ddr_total.concat(app_log_mem);
 vision_apps_ddr_total.concat(app_fileio_mem);
 vision_apps_ddr_total.concat(tiovx_obj_desc_mem);
+vision_apps_ddr_total.concat(viss_ddr_mcu2_0);
+vision_apps_ddr_total.concat(viss_ddr_mcu4_0);
 vision_apps_ddr_total.concat(tiovx_log_rt_mem);
 vision_apps_ddr_total.setDtsName("vision_apps_memory_region", "vision-apps-dma-memory");
 
@@ -671,6 +679,7 @@ mcu2_0_mmap.addMemSection( mcu2_0_ddr_resource_table  );
 mcu2_0_mmap.addMemSection( mcu2_0_ddr         );
 mcu2_0_mmap.addMemSection( app_log_mem        );
 mcu2_0_mmap.addMemSection( tiovx_obj_desc_mem );
+mcu2_0_mmap.addMemSection( viss_ddr_mcu2_0 );
 mcu2_0_mmap.addMemSection( app_fileio_mem        );
 mcu2_0_mmap.addMemSection( ipc_vring_mem      );
 mcu2_0_mmap.addMemSection( mcu2_0_ddr_local_heap  );
@@ -736,6 +745,7 @@ mcu4_0_mmap.addMemSection( mcu4_0_ddr_resource_table  );
 mcu4_0_mmap.addMemSection( mcu4_0_ddr         );
 mcu4_0_mmap.addMemSection( app_log_mem        );
 mcu4_0_mmap.addMemSection( tiovx_obj_desc_mem );
+mcu4_0_mmap.addMemSection( viss_ddr_mcu4_0 );
 mcu4_0_mmap.addMemSection( app_fileio_mem        );
 mcu4_0_mmap.addMemSection( ipc_vring_mem      );
 mcu4_0_mmap.addMemSection( mcu4_0_ddr_local_heap  );
@@ -931,6 +941,8 @@ html_mmap.addMemSection( c7x_3_ddr_scratch_phys );
 html_mmap.addMemSection( uboot_reloc_mem    );
 html_mmap.addMemSection( app_log_mem        );
 html_mmap.addMemSection( tiovx_obj_desc_mem );
+html_mmap.addMemSection( viss_ddr_mcu2_0 );
+html_mmap.addMemSection( viss_ddr_mcu4_0 );
 html_mmap.addMemSection( app_fileio_mem        );
 html_mmap.addMemSection( ipc_vring_mem      );
 html_mmap.addMemSection( ddr_shared_mem     );
@@ -1024,6 +1036,8 @@ c_header_mmap.addMemSection( c7x_3_ddr_scratch_phys);
 c_header_mmap.addMemSection( tiovx_log_rt_mem );
 c_header_mmap.addMemSection( app_log_mem        );
 c_header_mmap.addMemSection( tiovx_obj_desc_mem );
+c_header_mmap.addMemSection( viss_ddr_mcu2_0 );
+c_header_mmap.addMemSection( viss_ddr_mcu4_0 );
 c_header_mmap.addMemSection( app_fileio_mem        );
 c_header_mmap.addMemSection( ipc_vring_mem      );
 c_header_mmap.addMemSection( ddr_shared_mem     );

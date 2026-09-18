@@ -101,6 +101,11 @@
  * context. */
 #define portNO_FLOATING_POINT_CONTEXT    ( ( StackType_t ) 0 )
 
+
+/* Define a interrupt number and priority to be register for port yielding */
+#define PORT_YIELD_INTERRUPT_NUM            (2U)
+#define PORT_YIELD_INTERRUPT_PRIORITY       (7U)
+
 /* A variable is used to keep track of the critical section nesting.  This
  * variable has to be stored as part of the task context and must be initialised to
  * a non zero value to ensure interrupts don't inadvertently become unmasked before
@@ -239,6 +244,9 @@ void vApplicationIdleHook(void);
 int32_t _system_pre_init(void);
 void _system_post_cinit(void);
 
+/* Prototype ISR to be called when the port yield interrupt is triggered */
+void vPortYieldISR( void );
+
 static void prvTaskExitError( void )
 {
     /* A function that implements a task must not exit or attempt to return to
@@ -368,12 +376,25 @@ static void prvPortStartTickTimer(void)
 
 BaseType_t xPortStartScheduler(void)
 {
+    /* Define Local Variables */
+    HwiP_Params hwiParams;
+    
     /* Interrupts are turned off in the CPU itself to ensure tick does
      * not execute	while the scheduler is being started.  Interrupts are
      * automatically turned back on in the CPU when the first task starts
      * executing.
      */
     portDISABLE_INTERRUPTS();
+
+    /* Register the Port Yield interrupt before the start of the scheduler */
+    HwiP_disableInterrupt(PORT_YIELD_INTERRUPT_NUM);
+
+    HwiP_Params_init(&hwiParams);
+    hwiParams.priority = PORT_YIELD_INTERRUPT_PRIORITY;
+    HwiP_create(PORT_YIELD_INTERRUPT_NUM, (HwiP_Fxn) vPortYieldISR, &hwiParams);
+
+    HwiP_enableInterrupt(PORT_YIELD_INTERRUPT_NUM);
+    /* END: Register the Port Yield interrupt before the start of the scheduler */
 
     prvPortInitTickTimer();
     Hwi_switchFromBootStack();
@@ -546,28 +567,18 @@ void vPortRestoreTaskContext( void )
 
 void vPortYield( void )
 {
-    void **oldSP;
-    void **newSP;
-
     portDISABLE_INTERRUPTS();
-    oldSP = ( void ** )( &pxCurrentTCB->pxTopOfStack );
-    vTaskSwitchContext();
-    newSP = ( void ** )( &pxCurrentTCB->pxTopOfStack );
-    /* We should not be swapping from one task back to same task. Indicates bug in invocation of vPortYield */
-    if(oldSP != newSP)
-    {
-        TaskSupport_swap( oldSP, newSP );
-    }
-    else
-    {
-        DebugP_log1("Doing switch to same task:%p",(uintptr_t)oldSP);
-        uxPortIncorrectYieldCount++;
-    }
+    HwiP_post(PORT_YIELD_INTERRUPT_NUM);
     if (0U == pxCurrentTCB->uxCriticalNesting)
     {
         /* Enable interrupts if task was preempted outside critical section */
         portENABLE_INTERRUPTS();
     }
+}
+
+void vPortYieldISR( void )
+{
+    ulPortYieldRequired = pdTRUE;
 }
 
 void vPortYieldAsyncFromISR( void )

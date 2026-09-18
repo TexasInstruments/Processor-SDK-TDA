@@ -26,9 +26,9 @@ ifeq ($(TARGET_CPU),x86_64)
 
 	STATIC_LIBS += app_utils_mem
 	STATIC_LIBS += app_init_pc_common
+	STATIC_LIBS += app_utils_init_vdk_stub
 
 	ifeq ($(SOC_FAMILY), SOC_FAMILY_TDA5)
-		STATIC_LIBS += app_utils_init_vdk_stub
 		STATIC_LIBS += app_utils_console_io
 		STATIC_LIBS += app_utils_timer
 		STATIC_LIBS += app_utils_ipc

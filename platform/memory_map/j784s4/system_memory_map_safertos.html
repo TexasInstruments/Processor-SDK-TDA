@@ -371,10 +371,26 @@
             <tr>
                 <td class="tg-6sgx">TIOVX_OBJ_DESC_MEM</td>
                 <td class="tg-6sgx">0xAF040000</td>
-                <td class="tg-6sgx">0xB0FFFFFF</td>
-                <td class="tg-6sgx">31.75 MB</td>
+                <td class="tg-6sgx">0xB0BFFFFF</td>
+                <td class="tg-6sgx">27.75 MB</td>
                 <td class="tg-6sgx"></td>
                 <td class="tg-6sgx">Memory for TI OpenVX shared memory. MUST be non-cached or cache-coherent</td>
+            </tr>
+            <tr>
+                <td class="tg-kftd">DDR_MCU2_0_VISS_READBACK_ADDR</td>
+                <td class="tg-kftd">0xB0C00000</td>
+                <td class="tg-kftd">0xB0DFFFFF</td>
+                <td class="tg-kftd"> 2.00 MB</td>
+                <td class="tg-kftd"></td>
+                <td class="tg-kftd">Memory for VISS configuration data for MCU2_0</td>
+            </tr>
+            <tr>
+                <td class="tg-6sgx">DDR_MCU4_0_VISS_READBACK_ADDR</td>
+                <td class="tg-6sgx">0xB0E00000</td>
+                <td class="tg-6sgx">0xB0FFFFFF</td>
+                <td class="tg-6sgx"> 2.00 MB</td>
+                <td class="tg-6sgx"></td>
+                <td class="tg-6sgx">Memory for VISS configuration data for MCU4_0</td>
             </tr>
             <tr>
                 <td class="tg-kftd">APP_FILEIO_MEM</td>
@@ -603,647 +619,647 @@
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_LOCAL_HEAP_NON_CACHEABLE</td>
                 <td class="tg-kftd">0x100000000</td>
-                <td class="tg-kftd">0x107FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x10FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_1 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_LOCAL_HEAP_NON_CACHEABLE</td>
                 <td class="tg-6sgx">0x100000000</td>
-                <td class="tg-6sgx">0x107FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x10FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of Non-cacheable DDR for c7x_2 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_LOCAL_HEAP_NON_CACHEABLE</td>
                 <td class="tg-kftd">0x100000000</td>
-                <td class="tg-kftd">0x107FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x10FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of Non-cacheable DDR for c7x_3 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_LOCAL_HEAP_NON_CACHEABLE</td>
                 <td class="tg-6sgx">0x100000000</td>
-                <td class="tg-6sgx">0x107FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x10FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of Non-cacheable DDR for c7x_4 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_LOCAL_HEAP</td>
-                <td class="tg-kftd">0x108000000</td>
-                <td class="tg-kftd">0x10FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x110000000</td>
+                <td class="tg-kftd">0x11FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_1 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_LOCAL_HEAP</td>
-                <td class="tg-6sgx">0x108000000</td>
-                <td class="tg-6sgx">0x10FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x110000000</td>
+                <td class="tg-6sgx">0x11FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of Cacheable DDR for c7x_2 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_LOCAL_HEAP</td>
-                <td class="tg-kftd">0x108000000</td>
-                <td class="tg-kftd">0x10FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x110000000</td>
+                <td class="tg-kftd">0x11FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of Cacheable DDR for c7x_3 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_LOCAL_HEAP</td>
-                <td class="tg-6sgx">0x108000000</td>
-                <td class="tg-6sgx">0x10FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x110000000</td>
+                <td class="tg-6sgx">0x11FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of Cacheable DDR for c7x_4 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x110000000</td>
-                <td class="tg-kftd">0x117FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x120000000</td>
+                <td class="tg-kftd">0x12FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_1 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x110000000</td>
-                <td class="tg-6sgx">0x117FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x120000000</td>
+                <td class="tg-6sgx">0x12FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of Non-cacheable DDR for c7x_2 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x110000000</td>
-                <td class="tg-kftd">0x117FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x120000000</td>
+                <td class="tg-kftd">0x12FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of Non-cacheable DDR for c7x_3 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x110000000</td>
-                <td class="tg-6sgx">0x117FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x120000000</td>
+                <td class="tg-6sgx">0x12FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of Non-cacheable DDR for c7x_4 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_SCRATCH</td>
-                <td class="tg-kftd">0x118000000</td>
-                <td class="tg-kftd">0x11FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x130000000</td>
+                <td class="tg-kftd">0x13FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_1 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_SCRATCH</td>
-                <td class="tg-6sgx">0x118000000</td>
-                <td class="tg-6sgx">0x11FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x130000000</td>
+                <td class="tg-6sgx">0x13FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_2 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_SCRATCH</td>
-                <td class="tg-kftd">0x118000000</td>
-                <td class="tg-kftd">0x11FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x130000000</td>
+                <td class="tg-kftd">0x13FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_3 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_SCRATCH</td>
-                <td class="tg-6sgx">0x118000000</td>
-                <td class="tg-6sgx">0x11FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x130000000</td>
+                <td class="tg-6sgx">0x13FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_4 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_2_LOCAL_HEAP_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x120000000</td>
-                <td class="tg-kftd">0x127FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x140000000</td>
+                <td class="tg-kftd">0x14FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_2 for local heap wrt c7x_1</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_1_LOCAL_HEAP_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x120000000</td>
-                <td class="tg-6sgx">0x127FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x140000000</td>
+                <td class="tg-6sgx">0x14FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of non-cacheable DDR for c7x_1 for local heap wrt c7x_2</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_1_LOCAL_HEAP_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x120000000</td>
-                <td class="tg-kftd">0x127FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x140000000</td>
+                <td class="tg-kftd">0x14FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_1 for local heap wrt c7x_3</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_1_LOCAL_HEAP_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x120000000</td>
-                <td class="tg-6sgx">0x127FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x140000000</td>
+                <td class="tg-6sgx">0x14FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of non-cacheable DDR for c7x_1 for local heap wrt c7x_4</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_3_LOCAL_HEAP_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x128000000</td>
-                <td class="tg-kftd">0x12FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x150000000</td>
+                <td class="tg-kftd">0x15FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_3 for local heap wrt c7x_1</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_3_LOCAL_HEAP_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x128000000</td>
-                <td class="tg-6sgx">0x12FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x150000000</td>
+                <td class="tg-6sgx">0x15FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of non-cacheable DDR for c7x_3 for local heap wrt c7x_2</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_2_LOCAL_HEAP_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x128000000</td>
-                <td class="tg-kftd">0x12FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x150000000</td>
+                <td class="tg-kftd">0x15FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_2 for local heap wrt c7x_3</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_2_LOCAL_HEAP_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x128000000</td>
-                <td class="tg-6sgx">0x12FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x150000000</td>
+                <td class="tg-6sgx">0x15FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of non-cacheable DDR for c7x_2 for local heap wrt c7x_4</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_4_LOCAL_HEAP_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x130000000</td>
-                <td class="tg-kftd">0x137FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x160000000</td>
+                <td class="tg-kftd">0x16FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_4 for local heap wrt c7x_1</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_4_LOCAL_HEAP_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x130000000</td>
-                <td class="tg-6sgx">0x137FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x160000000</td>
+                <td class="tg-6sgx">0x16FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of non-cacheable DDR for c7x_4 for local heap wrt c7x_2</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_4_LOCAL_HEAP_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x130000000</td>
-                <td class="tg-kftd">0x137FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x160000000</td>
+                <td class="tg-kftd">0x16FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_4 for local heap wrt c7x_3</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_3_LOCAL_HEAP_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x130000000</td>
-                <td class="tg-6sgx">0x137FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x160000000</td>
+                <td class="tg-6sgx">0x16FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of non-cacheable DDR for c7x_3 for local heap wrt c7x_4</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_2_LOCAL_HEAP</td>
-                <td class="tg-kftd">0x138000000</td>
-                <td class="tg-kftd">0x13FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x170000000</td>
+                <td class="tg-kftd">0x17FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_2 for local heap wrt c7x_1</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_1_LOCAL_HEAP</td>
-                <td class="tg-6sgx">0x138000000</td>
-                <td class="tg-6sgx">0x13FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x170000000</td>
+                <td class="tg-6sgx">0x17FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_1 for local heap wrt c7x_2</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_1_LOCAL_HEAP</td>
-                <td class="tg-kftd">0x138000000</td>
-                <td class="tg-kftd">0x13FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x170000000</td>
+                <td class="tg-kftd">0x17FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_1 for local heap wrt c7x_3</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_1_LOCAL_HEAP</td>
-                <td class="tg-6sgx">0x138000000</td>
-                <td class="tg-6sgx">0x13FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x170000000</td>
+                <td class="tg-6sgx">0x17FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_1 for local heap wrt c7x_4</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_3_LOCAL_HEAP</td>
-                <td class="tg-kftd">0x140000000</td>
-                <td class="tg-kftd">0x147FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x180000000</td>
+                <td class="tg-kftd">0x18FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_3 for local heap wrt c7x_1</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_3_LOCAL_HEAP</td>
-                <td class="tg-6sgx">0x140000000</td>
-                <td class="tg-6sgx">0x147FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x180000000</td>
+                <td class="tg-6sgx">0x18FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_3 for local heap wrt c7x_2</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_2_LOCAL_HEAP</td>
-                <td class="tg-kftd">0x140000000</td>
-                <td class="tg-kftd">0x147FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x180000000</td>
+                <td class="tg-kftd">0x18FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_2 for local heap wrt c7x_3</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_2_LOCAL_HEAP</td>
-                <td class="tg-6sgx">0x140000000</td>
-                <td class="tg-6sgx">0x147FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x180000000</td>
+                <td class="tg-6sgx">0x18FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_2 for local heap wrt c7x_4</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_4_LOCAL_HEAP</td>
-                <td class="tg-kftd">0x148000000</td>
-                <td class="tg-kftd">0x14FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x190000000</td>
+                <td class="tg-kftd">0x19FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_4 for local heap wrt c7x_1</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_4_LOCAL_HEAP</td>
-                <td class="tg-6sgx">0x148000000</td>
-                <td class="tg-6sgx">0x14FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x190000000</td>
+                <td class="tg-6sgx">0x19FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_4 for local heap wrt c7x_2</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_4_LOCAL_HEAP</td>
-                <td class="tg-kftd">0x148000000</td>
-                <td class="tg-kftd">0x14FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x190000000</td>
+                <td class="tg-kftd">0x19FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_4 for local heap wrt c7x_3</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_3_LOCAL_HEAP</td>
-                <td class="tg-6sgx">0x148000000</td>
-                <td class="tg-6sgx">0x14FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x190000000</td>
+                <td class="tg-6sgx">0x19FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_3 for local heap wrt c7x_4</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_2_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x150000000</td>
-                <td class="tg-kftd">0x157FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x1A0000000</td>
+                <td class="tg-kftd">0x1AFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_2 for Scratch Memory wrt c7x_1</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_1_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x150000000</td>
-                <td class="tg-6sgx">0x157FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x1A0000000</td>
+                <td class="tg-6sgx">0x1AFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of non-cacheable DDR for c7x_1 for Scratch Memory wrt c7x_2</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_1_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x150000000</td>
-                <td class="tg-kftd">0x157FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x1A0000000</td>
+                <td class="tg-kftd">0x1AFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_1 for Scratch Memory wrt c7x_3</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_1_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x150000000</td>
-                <td class="tg-6sgx">0x157FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x1A0000000</td>
+                <td class="tg-6sgx">0x1AFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of non-cacheable DDR for c7x_1 for Scratch Memory wrt c7x_4</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_3_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x158000000</td>
-                <td class="tg-kftd">0x15FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x1B0000000</td>
+                <td class="tg-kftd">0x1BFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_3 for Scratch Memory wrt c7x_1</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_3_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x158000000</td>
-                <td class="tg-6sgx">0x15FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x1B0000000</td>
+                <td class="tg-6sgx">0x1BFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of non-cacheable DDR for c7x_3 for Scratch Memory wrt c7x_2</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_2_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x158000000</td>
-                <td class="tg-kftd">0x15FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x1B0000000</td>
+                <td class="tg-kftd">0x1BFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_2 for Scratch Memory wrt c7x_3</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_2_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x158000000</td>
-                <td class="tg-6sgx">0x15FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x1B0000000</td>
+                <td class="tg-6sgx">0x1BFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of non-cacheable DDR for c7x_2 for Scratch Memory wrt c7x_4</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_4_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x160000000</td>
-                <td class="tg-kftd">0x167FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x1C0000000</td>
+                <td class="tg-kftd">0x1CFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_4 for Scratch Memory wrt c7x_1</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_4_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x160000000</td>
-                <td class="tg-6sgx">0x167FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x1C0000000</td>
+                <td class="tg-6sgx">0x1CFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of non-cacheable DDR for c7x_4 for Scratch Memory wrt c7x_2</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_4_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-kftd">0x160000000</td>
-                <td class="tg-kftd">0x167FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x1C0000000</td>
+                <td class="tg-kftd">0x1CFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of non-cacheable DDR for c7x_4 for Scratch Memory wrt c7x_3</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_3_SCRATCH_NON_CACHEABLE</td>
-                <td class="tg-6sgx">0x160000000</td>
-                <td class="tg-6sgx">0x167FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x1C0000000</td>
+                <td class="tg-6sgx">0x1CFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of non-cacheable DDR for c7x_3 for Scratch Memory wrt c7x_4</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_2_SCRATCH</td>
-                <td class="tg-kftd">0x168000000</td>
-                <td class="tg-kftd">0x16FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x1D0000000</td>
+                <td class="tg-kftd">0x1DFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_2 for Scratch Memory wrt c7x_1</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_1_SCRATCH</td>
-                <td class="tg-6sgx">0x168000000</td>
-                <td class="tg-6sgx">0x16FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x1D0000000</td>
+                <td class="tg-6sgx">0x1DFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_1 for Scratch Memory wrt c7x_2</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_1_SCRATCH</td>
-                <td class="tg-kftd">0x168000000</td>
-                <td class="tg-kftd">0x16FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x1D0000000</td>
+                <td class="tg-kftd">0x1DFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_1 for Scratch Memory wrt c7x_3</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_1_SCRATCH</td>
-                <td class="tg-6sgx">0x168000000</td>
-                <td class="tg-6sgx">0x16FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x1D0000000</td>
+                <td class="tg-6sgx">0x1DFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_1 for Scratch Memory wrt c7x_4</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_3_SCRATCH</td>
-                <td class="tg-kftd">0x170000000</td>
-                <td class="tg-kftd">0x177FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x1E0000000</td>
+                <td class="tg-kftd">0x1EFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_3 for Scratch Memory wrt c7x_1</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_3_SCRATCH</td>
-                <td class="tg-6sgx">0x170000000</td>
-                <td class="tg-6sgx">0x177FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x1E0000000</td>
+                <td class="tg-6sgx">0x1EFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_3 for Scratch Memory wrt c7x_2</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_2_SCRATCH</td>
-                <td class="tg-kftd">0x170000000</td>
-                <td class="tg-kftd">0x177FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x1E0000000</td>
+                <td class="tg-kftd">0x1EFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_2 for Scratch Memory wrt c7x_3</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_2_SCRATCH</td>
-                <td class="tg-6sgx">0x170000000</td>
-                <td class="tg-6sgx">0x177FFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x1E0000000</td>
+                <td class="tg-6sgx">0x1EFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_2 for Scratch Memory wrt c7x_4</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_4_SCRATCH</td>
-                <td class="tg-kftd">0x178000000</td>
-                <td class="tg-kftd">0x17FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x1F0000000</td>
+                <td class="tg-kftd">0x1FFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_4 for Scratch Memory wrt c7x_1</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_4_SCRATCH</td>
-                <td class="tg-6sgx">0x178000000</td>
-                <td class="tg-6sgx">0x17FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x1F0000000</td>
+                <td class="tg-6sgx">0x1FFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_4 for Scratch Memory wrt c7x_2</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_4_SCRATCH</td>
-                <td class="tg-kftd">0x178000000</td>
-                <td class="tg-kftd">0x17FFFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x1F0000000</td>
+                <td class="tg-kftd">0x1FFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Virtual address of cacheable DDR for c7x_4 for Scratch Memory wrt c7x_3</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_3_SCRATCH</td>
-                <td class="tg-6sgx">0x178000000</td>
-                <td class="tg-6sgx">0x17FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x1F0000000</td>
+                <td class="tg-6sgx">0x1FFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Virtual address of cacheable DDR for c7x_3 for Scratch Memory wrt c7x_4</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_LOCAL_HEAP_NON_CACHEABLE_PHYS</td>
                 <td class="tg-kftd">0x880000000</td>
-                <td class="tg-kftd">0x887FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x88FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Physical address of non-cacheable DDR for c7x_1 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_1_LOCAL_HEAP_PHYS</td>
-                <td class="tg-6sgx">0x888000000</td>
-                <td class="tg-6sgx">0x88FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x890000000</td>
+                <td class="tg-6sgx">0x89FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Physical address of cacheable DDR for c7x_1 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_SCRATCH_NON_CACHEABLE_PHYS</td>
-                <td class="tg-kftd">0x890000000</td>
-                <td class="tg-kftd">0x897FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x8A0000000</td>
+                <td class="tg-kftd">0x8AFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Physical address of non-cacheable DDR for c7x_1 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_1_SCRATCH_PHYS</td>
-                <td class="tg-6sgx">0x898000000</td>
-                <td class="tg-6sgx">0x89FFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x8B0000000</td>
+                <td class="tg-6sgx">0x8BFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Physical address of cacheable DDR for c7x_1 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_2_LOCAL_HEAP_NON_CACHEABLE_PHYS</td>
-                <td class="tg-kftd">0x8A0000000</td>
-                <td class="tg-kftd">0x8A7FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x8C0000000</td>
+                <td class="tg-kftd">0x8CFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Non-cacheable DDR for c7x_2 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_LOCAL_HEAP_PHYS</td>
-                <td class="tg-6sgx">0x8A8000000</td>
-                <td class="tg-6sgx">0x8AFFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x8D0000000</td>
+                <td class="tg-6sgx">0x8DFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Physical address of Cacheable DDR for c7x_2 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_2_SCRATCH_NON_CACHEABLE_PHYS</td>
-                <td class="tg-kftd">0x8B0000000</td>
-                <td class="tg-kftd">0x8B7FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x8E0000000</td>
+                <td class="tg-kftd">0x8EFFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Physical address of Non-cacheable DDR for c7x_2 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_2_SCRATCH_PHYS</td>
-                <td class="tg-6sgx">0x8B8000000</td>
-                <td class="tg-6sgx">0x8BFFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x8F0000000</td>
+                <td class="tg-6sgx">0x8FFFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Physical address of cacheable DDR for c7x_2 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_LOCAL_HEAP_NON_CACHEABLE_PHYS</td>
-                <td class="tg-kftd">0x8C0000000</td>
-                <td class="tg-kftd">0x8C7FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x900000000</td>
+                <td class="tg-kftd">0x90FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Physical address of Non-cacheable DDR for c7x_3 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_3_LOCAL_HEAP_PHYS</td>
-                <td class="tg-6sgx">0x8C8000000</td>
-                <td class="tg-6sgx">0x8CFFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x910000000</td>
+                <td class="tg-6sgx">0x91FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Physical address of Cacheable DDR for c7x_3 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_3_SCRATCH_NON_CACHEABLE_PHYS</td>
-                <td class="tg-kftd">0x8D0000000</td>
-                <td class="tg-kftd">0x8D7FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x920000000</td>
+                <td class="tg-kftd">0x92FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Physical address of Non-cacheable DDR for c7x_3 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_3_SCRATCH_PHYS</td>
-                <td class="tg-6sgx">0x8D8000000</td>
-                <td class="tg-6sgx">0x8DFFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x930000000</td>
+                <td class="tg-6sgx">0x93FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Physical address of cacheable DDR for c7x_3 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_4_LOCAL_HEAP_NON_CACHEABLE_PHYS</td>
-                <td class="tg-kftd">0x8E0000000</td>
-                <td class="tg-kftd">0x8E7FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x940000000</td>
+                <td class="tg-kftd">0x94FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Physical address of Non-cacheable DDR for c7x_4 for local heap physical addr</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_LOCAL_HEAP_PHYS</td>
-                <td class="tg-6sgx">0x8E8000000</td>
-                <td class="tg-6sgx">0x8EFFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x950000000</td>
+                <td class="tg-6sgx">0x95FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Physical address of Cacheable DDR for c7x_4 for local heap</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_4_SCRATCH_NON_CACHEABLE_PHYS</td>
-                <td class="tg-kftd">0x8F0000000</td>
-                <td class="tg-kftd">0x8F7FFFFFF</td>
-                <td class="tg-kftd">128.00 MB</td>
+                <td class="tg-kftd">0x960000000</td>
+                <td class="tg-kftd">0x96FFFFFFF</td>
+                <td class="tg-kftd">256.00 MB</td>
                 <td class="tg-kftd">RWIX</td>
                 <td class="tg-kftd">Physical address of Non-cacheable DDR for c7x_4 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">DDR_C7X_4_SCRATCH_PHYS</td>
-                <td class="tg-6sgx">0x8F8000000</td>
-                <td class="tg-6sgx">0x8FFFFFFFF</td>
-                <td class="tg-6sgx">128.00 MB</td>
+                <td class="tg-6sgx">0x970000000</td>
+                <td class="tg-6sgx">0x97FFFFFFF</td>
+                <td class="tg-6sgx">256.00 MB</td>
                 <td class="tg-6sgx">RWIX</td>
                 <td class="tg-6sgx">Physical address of cacheable DDR for c7x_4 for Scratch Memory</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_SHARED_MEM_PHYS</td>
-                <td class="tg-kftd">0x900000000</td>
-                <td class="tg-kftd">0x93BFFFFFF</td>
+                <td class="tg-kftd">0xA00000000</td>
+                <td class="tg-kftd">0xA3BFFFFFF</td>
                 <td class="tg-kftd">960.00 MB</td>
                 <td class="tg-kftd"></td>
                 <td class="tg-kftd">Physical address of memory for shared memory buffers in DDR</td>

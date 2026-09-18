@@ -20,6 +20,7 @@ ifeq ($(TARGET_OS), $(filter $(TARGET_OS), QNX FREERTOS SAFERTOS THREADX))
     else
         ifeq ($(TARGET_PLATFORM)$(TARGET_OS), TDA54QNX)
             CSOURCES := app_rtos_mcu.c
+            IDIRS += $(PSDK_QNX_PATH)/src/common/libs/dpl/inc
         else
             CSOURCES := app_rtos_pdk.c
         endif

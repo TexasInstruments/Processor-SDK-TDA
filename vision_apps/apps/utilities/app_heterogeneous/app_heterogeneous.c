@@ -451,7 +451,11 @@ static void testGraphProcessing(int wflag, int port_idx[2], int sensor_idx[2], i
         local_capture_config.numCh          = 1;                    // 1x camera per Des
 
         local_capture_config.instId[0]                       = ci;
+        #if defined(SOC_FAMILY_J7) || defined(SOC_FAMILY_AM)
         local_capture_config.instCfg[0].enableCsiv2p0Support = (uint32_t)vx_true_e;
+        #elif defined(SOC_FAMILY_TDA5)
+        local_capture_config.instCfg[0].phyMode              = TIVX_CAPTURE_DPHY_MODE;
+        #endif
         local_capture_config.instCfg[0].numDataLanes         = sensorParams[ci].sensorInfo.numDataLanes;
         local_capture_config.instCfg[0].laneBandSpeed        = sensorParams[ci].sensorInfo.csi_laneBandSpeed;
 
@@ -465,7 +469,7 @@ static void testGraphProcessing(int wflag, int port_idx[2], int sensor_idx[2], i
 
         capture_config = vxCreateUserDataObject(context, user_data_object_name, sizeof(tivx_capture_params_t), &local_capture_config);
 
-        printf("\n\nto create capture node %d\n\n", ci); 
+        printf("\n\nto create capture node %d\n\n", ci);
         node_capture[ci] = tivxCaptureNode(graph, capture_config, capture_frames[ci][0]);
 
 #if !defined (CAPTURE_ONLY_MODE)
@@ -654,7 +658,7 @@ static void testGraphProcessing(int wflag, int port_idx[2], int sensor_idx[2], i
 
     app_perf_point_t perf_point;
     appPerfPointReset(&perf_point);
-    
+
     /* wait for graph instances to complete, compare output and recycle data buffers, schedule again */
     for (int loop_id = 0; loop_id < loop_cnt + num_buf; loop_id++)
     {
@@ -746,7 +750,7 @@ static void testGraphProcessing(int wflag, int port_idx[2], int sensor_idx[2], i
         vxReleaseUserDataObject(&msc_coeff_obj[ci]);
         vxReleaseNode(&node_scaler[ci]);
     }
-    
+
     /* Display */
     for (int ci = 0; ci < nn; ci++)
     {

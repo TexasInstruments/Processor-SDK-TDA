@@ -109,9 +109,7 @@ int32_t appInit()
     {
         if (tivxVdkIsEnabled() == 1U)
         {
-            #ifdef VDK
             status = appVdkInit();
-            #endif
         }
     }
 
@@ -127,9 +125,7 @@ int32_t appDeInit()
 
     if (tivxVdkIsEnabled() == 1U)
     {
-        #ifdef VDK
         appVdkDeInit();
-        #endif
     }
 
     status = appCommonDeInit();

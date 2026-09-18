@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2023
+ *  Copyright (c) Texas Instruments Incorporated 2026
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -49,46 +49,39 @@
 #if defined(SOC_J7200)
 #include <ti/csl/soc/j7200/src/cslr_soc.h>
 #include <ti/board/src/j7200_evm/include/board_internal.h>
-#include <ti/drv/lpm/src/s2r/j7200_evm/lpm_s2r.h>
+#endif
+#if defined(SOC_J721S2)
+#include <ti/csl/soc/j721s2/src/cslr_soc.h>
+#include <ti/board/src/j721s2_evm/include/board_internal.h>
 #endif
 #if defined(SOC_J784S4)
 #include <ti/csl/soc/j784s4/src/cslr_soc.h>
 #include <ti/board/src/j784s4_evm/include/board_internal.h>
-#include <ti/drv/lpm/src/s2r/j784s4_evm/lpm_s2r.h>
 #endif
 #if defined(SOC_J742S2)
 #include <ti/csl/soc/j784s4/src/cslr_soc.h>
 #include <ti/board/src/j742s2_evm/include/board_internal.h>
-#include <ti/drv/lpm/src/s2r/j742s2_evm/lpm_s2r.h>
 #endif
 #include <ti/board/board.h>
 #include <ti/drv/sciclient/sciclient.h>
+#include <ti/drv/lpm/include/lpm_stub.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
-#define SCICLIENT_MSMC_CFGS0_CACHE_CTRL   (0x00001000U)
+#define SCICLIENT_MSMC_CFGS0_CACHE_CTRL      (0x00001000U)
 
-/**
- * Address in BT SRAM where to load the code that will take care of the
- * DDR retention and PMIC S2R configuration.
- */
-#define SCICLIENT_S2R_SRAM_CODE_ADDRESS (0x41011000U)
+/* Address to point the sp register in R5F-BTCM */
+#define SCICLIENT_STUB_SRAM_STACK_POINTER    (0x41014000U)
 
-/* Address to point the sp register in SRAM */
-#define SCICLIENT_S2R_SRAM_STACK_POINTER (0x41014000U)
+#define SCICLIENT_SAVE_STACK_PTR(sp)         asm volatile("mov sp, %0" : : "r" ((sp)))
 
-#define SAVE_LPM_MODE(lpm_mode)     asm volatile("ldr r2, %0" : : "m" ((lpm_mode)) : "r2")
-#define SAVE_STACK_PTR(sp)          asm volatile("mov sp, %0" : : "r" ((sp)))
-#define JMP_TO_BTCM(btcm)           asm volatile("blx %0" : : "r" ((btcm)))
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
 
 uint32_t gLpmWakeReason = SCICLIENT_LPM_WAKE_SOURCE_INVALID;
-
-const uint32_t gSciclientLpmSramCode[] __attribute__ ((section (".rodata"))) = LPM_SRAM_S2R;
 
 /* ========================================================================== */
 /*                         Function Declarations                              */
@@ -100,10 +93,6 @@ static void Sciclient_s2rCleanAllDCache(void);
 /* Clear the L3 cache in MSMC */
 static bool Sciclient_s2rCleanL3Cache(void);
 
-/* Set the stack pointer to BTCM and jump to "Lpm_enterRetention"
- * which is placed in BTCM at address SCICLIENT_S2R_SRAM_CODE_ADDRESS */
-static void Sciclient_jmpToS2R(uint32_t mode);
-
 Sciclient_LpmData gSciclientLpmData = {
     .lpm_mode = 0xFFU,
     .suspend_initiator = 0xFFU,
@@ -114,6 +103,19 @@ Sciclient_LpmData gSciclientLpmData = {
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */
+
+int32_t Sciclient_s2rEnableWkupI2c(void)
+{
+    /* The LPM entry sequence communicates with the PMIC over WKUP_I2C0 to
+     * trigger IO retention and DDR retention.
+     * Hence, make sure DM explicitly turns on the I2C instance
+     * so that it can be used in the lpm_stub.
+     */
+    return Sciclient_pmSetModuleState(TISCI_DEV_WKUP_I2C0,
+                                      TISCI_MSG_VALUE_DEVICE_SW_STATE_ON,
+                                      TISCI_MSG_FLAG_AOP,
+                                      SCICLIENT_SERVICE_WAIT_FOREVER);
+}
 
 int32_t Sciclient_getWakeReason(uint32_t *msg_recv)
 {
@@ -197,6 +199,13 @@ static bool Sciclient_s2rCleanL3Cache(void)
     uint64_t t;
     bool ret = true;
 
+    /*
+     * Do not flush the L3 cache if is not enabled, otherwise writing in
+     * SCICLIENT_MSMC_CFGS0_CACHE_CTRL register hangs the SoC.
+     */
+    if (CSL_REG32_RD_OFF(CSL_COMPUTE_CLUSTER0_MSMC_CFGS0_BASE, SCICLIENT_MSMC_CFGS0_CACHE_CTRL) == 0U)
+        return ret;
+
     CSL_REG32_WR_OFF(CSL_COMPUTE_CLUSTER0_MSMC_CFGS0_BASE, SCICLIENT_MSMC_CFGS0_CACHE_CTRL, 0U);
 
     t = TimerP_getTimeInUsecs();
@@ -222,25 +231,12 @@ void Sciclient_goRetention(uint32_t mode)
     }
 
     Sciclient_s2rCleanAllDCache();
-
-    /* load DDR retention code and PMIC S2R into SRAM */
-    memcpy((void*)SCICLIENT_S2R_SRAM_CODE_ADDRESS,
-           (const void*)&gSciclientLpmSramCode[0],
-           LPM_SRAM_S2R_SIZE_IN_BYTES);
-
     Sciclient_debugPrintf("Suspending\n");
 
-    Sciclient_jmpToS2R(mode);
+    SCICLIENT_SAVE_STACK_PTR(SCICLIENT_STUB_SRAM_STACK_POINTER);
+    Lpm_stubEnterRetention(mode);
+
     /* We never reach this point as we enter into low power mode
      * and we reload the DM during resume.
      */
-}
-
-static void __attribute__ ((noinline)) Sciclient_jmpToS2R(uint32_t mode)
-{
-    volatile uint32_t lpm_mode = mode;
-
-    SAVE_LPM_MODE(lpm_mode);
-    SAVE_STACK_PTR(SCICLIENT_S2R_SRAM_STACK_POINTER);
-    JMP_TO_BTCM(SCICLIENT_S2R_SRAM_CODE_ADDRESS);
 }

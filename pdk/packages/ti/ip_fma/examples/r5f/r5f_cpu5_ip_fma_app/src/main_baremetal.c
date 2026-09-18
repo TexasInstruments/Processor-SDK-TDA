@@ -51,7 +51,7 @@
 
 #include <ip_fma_r5f.h>
 #include <ip_fma_r5f_cpu5.h>
-#include <ti/ip_fma/examples/r5f/common/inc/ip_fma_r5f_app_utils.h>
+#include <ip_fma_r5f_app_utils.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */

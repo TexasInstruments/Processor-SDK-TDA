@@ -71,7 +71,16 @@
 
 #define ENABLE_UDMA
 
-#define ENABLE_DSS
 #define ENABLE_FVID2
+
+/* Workaround: Disable I2C since no I2C driver is available in MCU_SDK as of today
+               for EVM, It should be enabled back once It should go in tandom with
+               ENABLE_CSI2RX macro to configure sensors
+
+#define ENABLE_I2C
+*/
+#define ENABLE_CSI2RX
+
+#define ENABLE_DSS
 
 #endif /* CORE_CFG_H_ */

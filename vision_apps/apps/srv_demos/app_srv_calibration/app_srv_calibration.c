@@ -624,7 +624,11 @@ static vx_status app_create_capture(SrvCalibAppObj *obj)
         capture_params.numInst                          = 1U;
         capture_params.numCh                            = 4U;
         capture_params.instId[0U]                       = CAPT_INST_ID;
+        #if defined(SOC_FAMILY_J7) || defined(SOC_FAMILY_AM)
         capture_params.instCfg[0U].enableCsiv2p0Support = (uint32_t)vx_true_e;
+        #elif defined(SOC_FAMILY_TDA5)
+        capture_params.instCfg[0U].phyMode              = TIVX_CAPTURE_DPHY_MODE;
+        #endif
         capture_params.instCfg[0U].numDataLanes         = 4U;
         for (loop_id=0U; loop_id<capture_params.instCfg[0U].numDataLanes; loop_id++)
         {

@@ -795,7 +795,7 @@ void appPerfStatsDdrStatsReadCounters(uint32_t *val0, uint32_t *val1, uint32_t *
     cnt3[0]    = (volatile uint32_t *)0x02980110;
     #endif
 
-    #if defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2)
+    #if defined(SOC_J721S2) || defined(SOC_J784S4) || defined(SOC_J742S2) || defined(SOC_TDA54)
     cnt_sel[1] = (volatile uint32_t *)0x029A0100;
     cnt0[1]    = (volatile uint32_t *)0x029A0104;
     cnt1[1]    = (volatile uint32_t *)0x029A0108;
@@ -803,7 +803,7 @@ void appPerfStatsDdrStatsReadCounters(uint32_t *val0, uint32_t *val1, uint32_t *
     cnt3[1]    = (volatile uint32_t *)0x029A0110;
     #endif
 
-    #if defined(SOC_J784S4)
+    #if defined(SOC_J784S4) || defined(SOC_TDA54)
     cnt_sel[2] = (volatile uint32_t *)0x029C0100;
     cnt0[2]    = (volatile uint32_t *)0x029C0104;
     cnt1[2]    = (volatile uint32_t *)0x029C0108;

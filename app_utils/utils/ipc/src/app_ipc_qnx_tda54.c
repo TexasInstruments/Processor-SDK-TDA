@@ -77,8 +77,6 @@
 
 /* #defines */
 #define IPC_SOK                 SystemP_SUCCESS
-#define CSL_CORE_ID_MAX         (17U)
-#define CORE_ID_MAX             (20U)
 
 #define IPC_RPMESSAGE_OBJ_SIZE      (256u)
 #define IPC_RPMESSAGE_MSG_SIZE      (496u + 32u)
@@ -143,7 +141,7 @@ static uint32_t g_app_to_ipc_cpu_id[APP_IPC_CPU_MAX] =
     CSL_CORE_ID_DSP3
 };
 
-static uint32_t g_ipc_to_app_cpu_id[CORE_ID_MAX] =
+static uint32_t g_ipc_to_app_cpu_id[CSL_CORE_ID_MAX] =
 {
     APP_MCUSDK_IPC_CPU_INVALID,
     APP_IPC_CPU_MCU0_M55,
@@ -182,6 +180,9 @@ const char *SOC_getCoreName(uint16_t coreId)
         "dsp2",
         "dsp3",
         "a720-0",
+        "a720-1",
+        "a720-2",
+        "a720-3",
         "rmcu0-0",
         "rmcu0-1",
         "rmcu1-0",
@@ -268,6 +269,22 @@ uint32_t SOC_getCoreId(const char * coreName)
     else if (strcmp("rmcu2-1", coreName) == 0)
     {
         return CSL_CORE_ID_RMCU2_1;
+    }
+    else if (strcmp("a720-0", coreName) == 0)
+    {
+        return CSL_CORE_ID_A720_0;
+    }
+    else if (strcmp("a720-1", coreName) == 0)
+    {
+        return CSL_CORE_ID_A720_1;
+    }
+    else if (strcmp("a720-2", coreName) == 0)
+    {
+        return CSL_CORE_ID_A720_2;
+    }
+    else if (strcmp("a720-3", coreName) == 0)
+    {
+        return CSL_CORE_ID_A720_3;
     }
     return CSL_CORE_ID_MAX;
 }
@@ -780,7 +797,7 @@ uint32_t appIpcGetAppCpuId(char *name)
     uint32_t app_cpu_id = APP_IPC_CPU_INVALID;
 
     ipc_cpu_id = SOC_getCoreId(name);
-    if(ipc_cpu_id < CORE_ID_MAX)
+    if(ipc_cpu_id < CSL_CORE_ID_MAX)
     {
         app_cpu_id = g_ipc_to_app_cpu_id[ipc_cpu_id];
     }

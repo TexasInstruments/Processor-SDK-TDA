@@ -49,9 +49,13 @@
 #include "rtsPort.h"
 #include "task.h"
 #include "mpuARM.h"
+
+/* PDK Includes */
 #include <ti/osal/src/nonos/Nonos_config.h>
 #include <ti/drv/sciclient/sciclient.h>
 #include <ti/csl/arch/csl_arch.h>
+#include <TimerP.h>
+#include <ti/csl/arch/r5/csl_arm_r5_pmu.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -92,6 +96,10 @@ static portTaskHandleType xIdleTaskHandle = NULL;
 static portUInt32Type ulRtsLastTickCount = 0U;
 
 static portBaseType xIdleTaskFirstExecution = pdTRUE;
+
+/* TimerP Global Variable Imports to be updated every tick interrupt */
+extern uint64_t gSafertosNumTicks;
+extern uint32_t gSafertosPmuLastTickCycleCount;
 
 /*-----------------------------------------------------------------------------
  * TI PDK variables required by the interrupt handler.
@@ -395,6 +403,11 @@ void vApplicationTickHook ( void )
 #if defined (configINCLUDE_RUNTIMESTATS) && ( configINCLUDE_RUNTIMESTATS == 1 )
     vUpdateRTSFromTick();
 #endif
+    /* Ensure to add the logic in redefinition of vApplicationTickHook in order to 
+     * sync usec level core timing across WFI calls */
+    gSafertosNumTicks = gSafertosNumTicks + 1U;
+    /* Log the PMU count at Tick demarkation */
+    gSafertosPmuLastTickCycleCount = CSL_armR5PmuReadCntr(CSL_ARM_R5_PMU_CYCLE_COUNTER_NUM);
 }
 
 /*-------------------------------------------------------------------------*/

@@ -110,10 +110,12 @@ ifeq ($(TARGET_CPU),x86_64)
         APP_UTILS_LIBS += app_utils_console_io
         APP_UTILS_LIBS += app_utils_file_io
         ifeq ($(SOC),$(filter $(SOC), tda54))
-            APP_UTILS_LIBS += app_utils_ipc
-            APP_UTILS_LIBS += app_utils_timer
-            APP_UTILS_LIBS += app_utils_pc_osal
-            APP_UTILS_LIBS += app_utils_remote_service
+            ifeq ($(VDK), yes)
+                APP_UTILS_LIBS += app_utils_ipc
+                APP_UTILS_LIBS += app_utils_timer
+                APP_UTILS_LIBS += app_utils_pc_osal
+                APP_UTILS_LIBS += app_utils_remote_service
+            endif
         endif
 
         SYS_STATIC_LIBS += $(APP_UTILS_LIBS)
@@ -144,7 +146,7 @@ ifeq ($(TARGET_CPU),x86_64)
         IMAGING_LIBS += vx_kernels_imaging
         IMAGING_LIBS += ti_imaging_aealg
         IMAGING_LIBS += ti_imaging_awbalg
-        ifeq ($(SOC),$(filter $(SOC), j721e j722s j721s2 j784s4 j742s2))
+        ifeq ($(SOC),$(filter $(SOC), j721e j722s j721s2 j784s4 j742s2 tda54))
             IMAGING_LIBS += vx_target_kernels_imaging_aewb
         endif
 
@@ -176,14 +178,17 @@ ifeq ($(TARGET_CPU),x86_64)
         else ifeq ($(TISDK_IMAGE), adas)
             VISION_APPS_UTILS_LIBS += app_utils_draw2d
         endif
-        ifeq ($(SOC),$(filter $(SOC), j721e j721s2 j784s4 j742s2))
+        ifeq ($(SOC),$(filter $(SOC), j721e j721s2 j784s4 j742s2 tda54))
             VISION_APPS_UTILS_LIBS += app_utils_grpx
             VISION_APPS_UTILS_LIBS += app_utils_hwa
         endif
 
         HLOS_PLATFORM_LIBS += app_init_pc_common
-        ifeq ($(SOC),$(filter $(SOC), tda54))
+
+        ifeq ($(SOC)$(VDK),tda54yes)
             HLOS_PLATFORM_LIBS += app_utils_init_vdk
+        else
+            HLOS_PLATFORM_LIBS += app_utils_init_vdk_stub
         endif
 
         VISION_APPS_MODULES_LIBS += vx_app_modules
@@ -285,6 +290,7 @@ ifeq ($(TARGET_CPU),x86_64)
         STATIC_LIBS = $(MMA_LIBS)
         STATIC_LIBS += $(TIOVX_LIBS)
         STATIC_LIBS += $(HLOS_PLATFORM_LIBS)
+        STATIC_LIBS += $(IMAGING_LIBS)
         STATIC_LIBS += $(TIDL_LIBS)
         STATIC_LIBS += vxlib_$(TARGET_CPU) c6xsim_$(TARGET_CPU)_C66
         STATIC_LIBS += $(VISION_APPS_UTILS_LIBS)

@@ -118,6 +118,16 @@ extern "C" {
 #define NOR_MANF_ID                  (0x34U)   /* Manufacturer ID */
 #define NOR_DEVICE_ID                (0x5B1A)  /* Device ID */
 
+/** \brief OSPI controller address configuration.
+ *  NOR_OSPI_ADDR_BYTES          : Number of address bytes the OSPI controller sends.
+ *                                 S28HS512T supports 4-byte addressing for PHY DDR.
+ *  NOR_ADDR_BYTES_PROGRAMMABLE  : 1U — device supports switching to 4-byte addressing,
+ *                                 enabling PHY DDR mode on the controller.
+ *                                 Set to 0U for devices with fixed 2/3-byte addressing.
+ */
+#define NOR_OSPI_ADDR_BYTES          (4U)
+#define NOR_ADDR_BYTES_PROGRAMMABLE  (1U)
+
 /** Status Register, Write-in-Progress bit */
 #define NOR_SR_WIP			         (1U << 0U)
 

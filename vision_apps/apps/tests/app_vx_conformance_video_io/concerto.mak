@@ -23,23 +23,56 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86_64 A72 A53 A720))
 
     CFLAGS      += -DBUILD_CT_TIOVX_VIDEO_IO
 
+    ifeq ($(LDRA_COVERAGE_ENABLED_VIDEO_IO),yes)
+        RUN_CT_TIOVX_VIDEO_IO_CAPTURE_TESTS?=yes
+        RUN_CT_TIOVX_VIDEO_IO_DISPLAY_TESTS?=no
+        RUN_CT_TIOVX_VIDEO_IO_DISPLAY_M2M_TESTS?=no
+        RUN_CT_TIOVX_VIDEO_IO_CSITX_TESTS?=no
+    else
+        RUN_CT_TIOVX_VIDEO_IO_CAPTURE_TESTS?=yes
+        RUN_CT_TIOVX_VIDEO_IO_DISPLAY_TESTS?=yes
+        RUN_CT_TIOVX_VIDEO_IO_DISPLAY_M2M_TESTS?=yes
+        RUN_CT_TIOVX_VIDEO_IO_CSITX_TESTS?=yes
+    endif
+
     ifeq ($(SOC),$(filter $(SOC), am62a))
-        CFLAGS      += -DBUILD_CT_TIOVX_VIDEO_IO_CAPTURE_TESTS
+        ifeq ($(RUN_CT_TIOVX_VIDEO_IO_CAPTURE_TESTS),yes)
+            CFLAGS      += -DBUILD_CT_TIOVX_VIDEO_IO_CAPTURE_TESTS
+        endif
     endif
 
     ifeq ($(SOC),$(filter $(SOC), tda54))
-        CFLAGS      += -DBUILD_CT_TIOVX_VIDEO_IO_DISPLAY_TESTS
-        CFLAGS      += -DBUILD_DISPLAY_M2M
+        ifeq ($(RUN_CT_TIOVX_VIDEO_IO_DISPLAY_TESTS),yes)
+            CFLAGS      += -DBUILD_CT_TIOVX_VIDEO_IO_DISPLAY_TESTS
+        endif
+        ifeq ($(RUN_CT_TIOVX_VIDEO_IO_CSITX_TESTS),yes)
+            CFLAGS      += -DBUILD_CSITX
+        endif
+        ifeq ($(RUN_CT_TIOVX_VIDEO_IO_CAPTURE_TESTS),yes)
+            CFLAGS      += -DBUILD_CT_TIOVX_VIDEO_IO_CAPTURE_TESTS
+        endif
     endif
 
     ifeq ($(SOC),$(filter $(SOC), j721e j722s j721s2 j784s4 j742s2))
-        CFLAGS      += -DBUILD_CT_TIOVX_VIDEO_IO_DISPLAY_TESTS
-        CFLAGS      += -DBUILD_CSITX
-        CFLAGS      += -DBUILD_CT_TIOVX_VIDEO_IO_CAPTURE_TESTS
+        ifeq ($(RUN_CT_TIOVX_VIDEO_IO_DISPLAY_TESTS),yes)
+            CFLAGS      += -DBUILD_CT_TIOVX_VIDEO_IO_DISPLAY_TESTS
+        endif
+        ifeq ($(RUN_CT_TIOVX_VIDEO_IO_CSITX_TESTS),yes)
+            CFLAGS      += -DBUILD_CSITX
+        endif
+        ifeq ($(RUN_CT_TIOVX_VIDEO_IO_CAPTURE_TESTS),yes)
+            CFLAGS      += -DBUILD_CT_TIOVX_VIDEO_IO_CAPTURE_TESTS
+        endif
     endif
 
     ifeq ($(SOC),$(filter $(SOC), j721e j721s2 j784s4 j742s2))
-        CFLAGS      += -DBUILD_DISPLAY_M2M
+        ifeq ($(RUN_CT_TIOVX_VIDEO_IO_DISPLAY_M2M_TESTS),yes)
+            CFLAGS      += -DBUILD_DISPLAY_M2M
+        endif
+    endif
+
+    ifeq ($(LDRA_COVERAGE_ENABLED_VIDEO_IO),yes)
+        BUILD_DEFS += LDRA_COVERAGE_ENABLED_VIDEO_IO
     endif
 
     include $(FINALE)

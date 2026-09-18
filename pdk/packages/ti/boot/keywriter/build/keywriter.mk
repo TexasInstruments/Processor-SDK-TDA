@@ -44,6 +44,10 @@ INCLUDE_EXTERNAL_INTERFACES  = pdk
 
 # List all the components required by the application
 COMP_LIST_COMMON             = sciclient_direct board uart osal_nonos csl csl_init i2c gpio rm_pm_hal
+ifeq ($(SOC),$(filter $(SOC), j7200 j784s4 j742s2 j721s2))
+COMP_LIST_COMMON += lpm_stub
+endif
+
 ifeq ($(VPP_EN_CONTROL),pmic)
 COMP_LIST_COMMON            += pmic
 endif

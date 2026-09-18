@@ -204,9 +204,6 @@ vApplicationPrefetchAbortHandlerConst: .word vPrefetchAbort_c
         .arm
 
 vApplicationUndefAbortHook:
-;  Return to the instruction following the interrupted.
-    SUB    lr, lr, #4
-
     ;  Push the return address and SPSR.
     PUSH    {lr}
     MRS    lr, SPSR

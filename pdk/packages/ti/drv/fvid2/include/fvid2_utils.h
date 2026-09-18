@@ -288,7 +288,7 @@ void Fvid2Utils_memcpy(void *dest, const void *src, size_t byteCount);
  */
 int32_t Fvid2Utils_memcmp(const void *mem1,
                           const void *mem2,
-                          uint32_t byteCount);
+                          size_t byteCount);
 
 /**
  *  Fvid2Utils_constructLinkList

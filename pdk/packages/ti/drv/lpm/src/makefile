@@ -10,10 +10,15 @@ endif
 MODULE_NAME = lpm
 
 SRCDIR  = src
-SRCDIR += soc/$(SOC)
-INCDIR = 
+INCDIR =
 #INCDIR = include soc/$(SOC)
 INCDIR += $(PDK_SBL_COMP_PATH)/soc/k3
+
+# Only SOCs with soc-specific boot core definitions have a soc/ subdirectory
+lpm_LIB_SOC_LIST = j721e j7200 j784s4
+ifneq ($(filter $(SOC), $(lpm_LIB_SOC_LIST)),)
+SRCDIR += soc/$(SOC)
+endif
 INCDIR += $(PDK_INSTALL_PATH)/ti/drv/pmic/include
 INCDIR += $(PDK_INSTALL_PATH)/ti/build/unit-test/config
 
@@ -31,24 +36,27 @@ PACKAGE_SRCS_COMMON += include/lpm_mmr_functions.h
 PACKAGE_SRCS_COMMON += include/io_retention/cgt_pragmas.h
 PACKAGE_SRCS_COMMON += include/io_retention/dev_info.h
 PACKAGE_SRCS_COMMON += include/io_retention/dmsc_cm.h
-PACKAGE_SRCS_COMMON += src/lpm_utils.h
+PACKAGE_SRCS_COMMON += src/lpm_uart_baremetal.h
+PACKAGE_SRCS_COMMON += src/lpm_uart_drv.h
+ifneq ($(filter $(SOC), $(lpm_LIB_SOC_LIST)),)
 PACKAGE_SRCS_COMMON += soc/$(SOC)/boot_core_defs.h
+endif
 PACKAGE_SRCS_COMMON += config_mk.bld package.bld package.xdc package.xs
 PACKAGE_SRCS_COMMON += Settings.xdc.xdt lpmver.h lpmver.h.xdt
 
 # Common source files and CFLAGS across all platforms and cores
 SRCS_COMMON  = lpm_boot.c
-SRCS_COMMON += lpm_pmic.c
+SRCS_COMMON += lpm_mcu_only_recovery.c
 SRCS_COMMON += lpm_ipc.c
-SRCS_COMMON += lpm_utils.c
+SRCS_COMMON += lpm_uart_drv.c
 SRCS_COMMON += lpm_mmr_functions.c
+ifneq ($(filter $(SOC), $(lpm_LIB_SOC_LIST)),)
 SRCS_COMMON += soc/$(SOC)/boot_core_defs.c
-
-CFLAGS_LOCAL_COMMON = $(PDK_CFLAGS) -DUNITY_INCLUDE_CONFIG_V2_H -DLINUX_OS -DA72_LINUX_OS -DA72_LINUX_OS_IPC_ATTACH -DSBL_LOG_LEVEL=3 -DMPU1_HLOS_BOOT_ENABLED
-
-ifeq ($(SOC), "j721e")
-CFLAGS_LOCAL_COMMON += -DPMIC_USE_DRV
 endif
+SRCS_COMMON += lpm_pmic_i2c_drv.c
+
+# To enable debug halt loops in mcu_only and io_retention examples, add -DLPM_DEBUG to CFLAGS_LOCAL_COMMON
+CFLAGS_LOCAL_COMMON = $(PDK_CFLAGS) -DUNITY_INCLUDE_CONFIG_V2_H -DLINUX_OS -DA72_LINUX_OS -DA72_LINUX_OS_IPC_ATTACH -DSBL_LOG_LEVEL=3 -DMPU1_HLOS_BOOT_ENABLED
 
 ifeq ($(SOC), j784s4)
 CFLAGS_LOCAL_COMMON += -DENABLE_DMA

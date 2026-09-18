@@ -129,7 +129,7 @@ else ifeq ($(SOC),j742s2)
 else ifeq ($(SOC),j722s)
   export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-j722s-evm-11_02_01_03
 else ifeq ($(SOC),tda54)
-    export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-tda54-vdk-12_01_00_06
+    export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-adas-tda54-vdk-12_01_00_09
 else ifeq ($(SOC),am62a)
     ifeq ($(TISDK_IMAGE), edgeai)
         export PSDK_LINUX_PATH ?= $(HOME)/ti-processor-sdk-linux-edgeai-am62a-evm-11.02.09.03

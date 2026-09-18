@@ -8,7 +8,11 @@ include $(RULES_MAKE)
 endif
 
 ifeq ($(BUILD_OS_TYPE), baremetal)
+  ifeq ($(RB_ENABLE), TRUE)
+    APP_NAME = dssf1_ip_fma_app_rb_enable_$(BUILD_OS_TYPE)
+  else
     APP_NAME = dssf1_ip_fma_app_$(BUILD_OS_TYPE)
+  endif
 endif
 
 SRCDIR = . src/
@@ -21,6 +25,12 @@ INCLUDE_EXTERNAL_INTERFACES = pdk
 ifeq ($(BUILD_OS_TYPE), baremetal)
   COMP_LIST_COMMON += $(PDK_COMMON_BAREMETAL_COMP)
   COMP_LIST_COMMON += dss_app_utils
+
+  ifeq ($(RB_ENABLE), TRUE)
+    COMP_LIST_COMMON := $(filter-out csl,$(COMP_LIST_COMMON))
+    COMP_LIST_COMMON += csl_ipfma
+  endif
+
   SRCS_COMMON += main_baremetal.c dss_display_test.c
 endif
 

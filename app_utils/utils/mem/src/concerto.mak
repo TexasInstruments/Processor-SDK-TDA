@@ -20,8 +20,7 @@ ifneq ($(TARGET_PLATFORM),PC)
         ifeq ($(SOC), tda54)
             IDIRS += $(PSDK_QNX_PATH)/src/resmgrs/sharedmemallocator/usr/public
             IDIRS += $(PSDK_QNX_PATH)/src/resmgrs/sharedmemallocator/resmgr/public
-            IDIRS += $(PSDK_QNX_PATH)/src/common/lld_source/source/kernel/dpl
-            IDIRS += $(PSDK_QNX_PATH)/src/common/lld_source/source/
+            IDIRS += $(PSDK_QNX_PATH)/src/common/libs/dpl/inc
         else
             IDIRS    += $(PSDK_QNX_PATH)/qnx/sharedmemallocator/usr/public
             IDIRS    += $(PSDK_QNX_PATH)/qnx/sharedmemallocator/resmgr/public
