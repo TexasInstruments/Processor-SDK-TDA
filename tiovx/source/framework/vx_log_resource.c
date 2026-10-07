@@ -203,7 +203,7 @@ tivx_resource_stats_t g_tivx_resource_stats_table[] = {
                                                                  (vx_bool)vx_false_e, (vx_bool)vx_false_e
     },
     {
-        TIVX_GRAPH_MAX_DATA_REF_QUEUE, 0, 0, 1, "TIVX_GRAPH_MAX_DATA_REF_QUEUE", { {(uint32_t)TIVX_TYPE_DATA_REF_QUEUE_LIST, \
+        TIVX_GRAPH_MAX_DATA_REF_QUEUE, 0, 0, 4, "TIVX_GRAPH_MAX_DATA_REF_QUEUE", { {(uint32_t)TIVX_TYPE_DATA_REF_QUEUE_LIST, \
                                                                                     (uint32_t)TIVX_TYPE_DELAY_DATA_REF_QUEUE_LIST}, \
                                                                                    {TIVX_GRAPH_MAX_OBJECTS, TIVX_GRAPH_MAX_OBJECTS} }, \
                                                                                  (vx_bool)vx_false_e, (vx_bool)vx_false_e
@@ -390,7 +390,7 @@ tivx_resource_stats_t g_tivx_resource_stats_table[] = {
                                                                                          (vx_bool)vx_true_e, (vx_bool)vx_true_e
     },
     {
-        TIVX_ERROR_MAX_OBJECTS, 0, 0, 25, "TIVX_ERROR_MAX_OBJECTS", { {(uint32_t)VX_TYPE_ERROR, (uint32_t)VX_TYPE_BOOL}, \
+        TIVX_ERROR_MAX_OBJECTS, 0, 0, 27, "TIVX_ERROR_MAX_OBJECTS", { {(uint32_t)VX_TYPE_ERROR, (uint32_t)VX_TYPE_BOOL}, \
                                                                       {1, 1} }, \
                                                                     (vx_bool)vx_false_e, (vx_bool)vx_true_e
     },
@@ -441,7 +441,7 @@ tivx_resource_stats_t g_tivx_resource_stats_table[] = {
                                                                            (vx_bool)vx_false_e, (vx_bool)vx_true_e
     },
     {
-        TIVX_DATA_REF_Q_MAX_OBJECTS, 0, 0, 1, "TIVX_DATA_REF_Q_MAX_OBJECTS", { {(uint32_t)TIVX_TYPE_DATA_REF_Q, (uint32_t)VX_TYPE_BOOL}, \
+        TIVX_DATA_REF_Q_MAX_OBJECTS, 0, 0, 8, "TIVX_DATA_REF_Q_MAX_OBJECTS", { {(uint32_t)TIVX_TYPE_DATA_REF_Q, (uint32_t)VX_TYPE_BOOL}, \
                                                                                {1, 1} }, \
                                                                              (vx_bool)vx_true_e, (vx_bool)vx_true_e
     },

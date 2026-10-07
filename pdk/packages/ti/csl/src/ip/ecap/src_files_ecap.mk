@@ -15,7 +15,7 @@ ifeq ($(SOC),$(filter $(SOC), tpr12 awr294x))
 PACKAGE_SRCS_COMMON += csl_ecap.h cslr_ecap.h src/ip/ecap/src_files_ecap.mk src/ip/ecap/V1
 endif
 
-ifeq ($(SOC),$(filter $(SOC), am62x am62a am62px am275x))
+ifeq ($(SOC),$(filter $(SOC), am62x am62a am62px am275x am283x))
 PACKAGE_SRCS_COMMON += cslr_ecap.h src/ip/ecap/src_files_ecap.mk src/ip/ecap/V2
 INCDIR += . src/ip/ecap/V2
 endif

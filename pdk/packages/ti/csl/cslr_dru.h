@@ -38,7 +38,7 @@
 
 #if defined (SOC_AM65XX) 
 #include <ti/csl/src/ip/dru/V0/cslr_dru.h>
-#elif defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X)
+#elif defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/dru/V2/cslr_dru.h>
 #endif
 

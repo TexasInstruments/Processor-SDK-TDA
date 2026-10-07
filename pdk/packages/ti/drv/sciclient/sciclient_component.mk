@@ -367,11 +367,17 @@ export sciclient_merged_testapp_$(1)_$(SOC)_CORELIST = mcu1_0
 export sciclient_merged_testapp_$(1)_SBL_APPIMAGEGEN = yes
 export sciclient_merged_testapp_$(1)_MAKEFILE = -f makefile BUILD_OS_TYPE=$(1)
 export sciclient_merged_testapp_$(1)_XDC_CONFIGURO = $(if $(findstring tirtos, $(1)), yes, no)
+ifneq ($(1),$(filter $(1), safertos))
 sciclient_EXAMPLE_LIST += sciclient_merged_testapp_$(1)
+else
+ifneq ($(wildcard $(SAFERTOS_KERNEL_INSTALL_PATH)),)
+sciclient_EXAMPLE_LIST += sciclient_merged_testapp_$(1)
+endif
+endif
 
 endef
 
-SCICLIENT_MERGED_TESTAPP_MACRO_LIST := $(foreach curos, $(drvsciclient_RTOS_LIST), $(call SCICLIENT_MERGED_TESTAPP_RULE,$(curos)))
+SCICLIENT_MERGED_TESTAPP_MACRO_LIST := $(foreach curos, $(drvsciclient_RTOS_LIST) safertos, $(call SCICLIENT_MERGED_TESTAPP_RULE,$(curos)))
 
 $(eval ${SCICLIENT_MERGED_TESTAPP_MACRO_LIST})
 
@@ -391,11 +397,17 @@ export sciclient_merged_combined_testapp_$(1)_$(SOC)_CORELIST = $(filter-out mcu
 export sciclient_merged_combined_testapp_$(1)_SBL_APPIMAGEGEN = no
 export sciclient_merged_combined_testapp_$(1)_MAKEFILE = -f sciclient_merged_combined_testapp.mk BUILD_OS_TYPE=$(1)
 export sciclient_merged_combined_testapp_$(1)_XDC_CONFIGURO = $(if $(findstring tirtos, $(1)), yes, no)
+ifneq ($(1),$(filter $(1), safertos))
 sciclient_EXAMPLE_LIST += sciclient_merged_combined_testapp_$(1)
+else
+ifneq ($(wildcard $(SAFERTOS_KERNEL_INSTALL_PATH)),)
+sciclient_EXAMPLE_LIST += sciclient_merged_combined_testapp_$(1)
+endif
+endif
 
 endef
 
-SCICLIENT_MERGED_COMBINED_TESTAPP_MACRO_LIST := $(foreach curos, $(drvsciclient_RTOS_LIST), $(call SCICLIENT_MERGED_COMBINED_TESTAPP_RULE,$(curos)))
+SCICLIENT_MERGED_COMBINED_TESTAPP_MACRO_LIST := $(foreach curos, $(drvsciclient_RTOS_LIST) safertos, $(call SCICLIENT_MERGED_COMBINED_TESTAPP_RULE,$(curos)))
 
 $(eval ${SCICLIENT_MERGED_COMBINED_TESTAPP_MACRO_LIST})
 

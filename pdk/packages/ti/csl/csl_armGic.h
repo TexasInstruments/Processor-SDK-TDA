@@ -48,7 +48,7 @@
 
 #include <ti/csl/csl.h>
 
-#if defined(SOC_AM65XX) || defined(SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X)
+#if defined(SOC_AM65XX) || defined(SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #else
 #include <ti/csl/src/ip/arm_gic/V0/csl_armGic.h>
 #endif

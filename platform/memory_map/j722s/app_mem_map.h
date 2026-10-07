@@ -4,7 +4,7 @@
  */ 
 /* 
  * 
- * Copyright (c) 2024-2026 Texas Instruments Incorporated 
+ * Copyright (c) 2026 Texas Instruments Incorporated 
  * 
  * All rights reserved not granted herein. 
  * 
@@ -63,8 +63,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE. 
  * 
  */ 
-#ifndef SOC_MMAP_H
-#define SOC_MMAP_H
+#ifndef APP_MEM_MAP_H
+#define APP_MEM_MAP_H
 
 
 /* L3 for C7x_1 [ size  2.00 MB ] */
@@ -270,5 +270,5 @@
 #define DDR_64BIT_BASE_VADDR (0x100000000u)
 #define DDR_64BIT_BASE_PADDR (0x880000000u)
 
-#endif /* SOC_MMAP_H */
+#endif /* APP_MEM_MAP_H */
 

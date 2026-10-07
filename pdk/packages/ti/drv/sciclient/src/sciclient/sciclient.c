@@ -604,7 +604,7 @@ int32_t Sciclient_serviceGetThreadIds (const Sciclient_ReqPrm_t *pReqPrm,
     if (status == CSL_PASS)
     {
         /* Get the context ID from the message */
-        *contextId = Sciclient_getCurrentContext(pReqPrm->messageType);
+        *contextId = Sciclient_getCurrentContext(pReqPrm);
     }
     if(*contextId < SCICLIENT_CONTEXT_MAX_NUM)
     {
@@ -858,6 +858,9 @@ int32_t Sciclient_serviceSecureProxy(const Sciclient_ReqPrm_t *pReqPrm,
     }
     if (CSL_PASS == status)
     {
+        /* Flush/reset Tx thread before using/writing */
+        Sciclient_txFlush(txThread, gSciclient_maxMsgSizeBytes);
+
         /* Send Message */
         initialCount = Sciclient_readThreadCount(rxThread);
         Sciclient_printf("Send the message request to TIFS using the thread id %u\n", txThread);
@@ -1124,34 +1127,6 @@ int32_t Sciclient_abiCheck(void)
     }
 
     return status;
-}
-
-uint32_t Sciclient_getCurrentContext(uint16_t messageType)
-{
-    uint32_t retVal = SCICLIENT_CONTEXT_MAX_NUM;
-
-    if((TISCI_MSG_BOOT_NOTIFICATION == messageType) ||
-       (TISCI_MSG_BOARD_CONFIG == messageType) ||
-       (TISCI_MSG_BOARD_CONFIG_RM == messageType) ||
-       (TISCI_MSG_BOARD_CONFIG_SECURITY == messageType) ||
-       (TISCI_MSG_BOARD_CONFIG_PM == messageType) ||
-       (TISCI_MSG_SA2UL_SET_DKEK == messageType) ||
-       (TISCI_MSG_SA2UL_RELEASE_DKEK == messageType) ||
-       (TISCI_MSG_SA2UL_GET_DKEK == messageType))
-    {
-        retVal = gSecContextId;
-    }
-    else
-    {
-        /* For all other message type use non-secure context */
-        retVal = gNonSecContextId;
-        if(gSciclientHandle.isSecureMode == 1U)
-        {
-            retVal = gSecContextId;
-        }
-    }
-
-    return retVal;
 }
 
 /* -------------------------------------------------------------------------- */

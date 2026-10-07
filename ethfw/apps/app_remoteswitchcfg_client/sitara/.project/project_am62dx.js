@@ -100,6 +100,8 @@ const defines_r5f = {
         "SOC_AM62DX",
         "CPU_mcu2_1",
         "ENABLE_MAC_ONLY_PORTS",
+        "ETHFW_MTS_SUPPORT",
+        "ETHFW_MTS_DEMO_TEST",
     ],
 };
 

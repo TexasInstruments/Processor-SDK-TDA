@@ -6542,6 +6542,166 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
+        "description": "A simple \"IP FMA DRU\" Example.  CPU is MAIN-R5FSS0-0 running FREERTOS.",
+        "name": "ip_fma_dru",
+        "location": "../../examples/ip_fma/dru_static_regs_readback/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "ip_fma",
+            "dru_static_regs_readback",
+            "main-r5fss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
+        "description": "A simple \"IP FMA DRU\" Example.  CPU is C75SS0-0 running FREERTOS.",
+        "name": "ip_fma_dru",
+        "location": "../../examples/ip_fma/dru_static_regs_readback/j722s-evm/c75ss0-0_freertos/ti-c7000/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ccs"
+        ],
+        "subCategories": [
+            "ip_fma",
+            "dru_static_regs_readback",
+            "c75ss0-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
+        "description": "A simple \"IP FMA DRU\" Example.  CPU is C75SS1-0 running FREERTOS.",
+        "name": "ip_fma_dru",
+        "location": "../../examples/ip_fma/dru_static_regs_readback/j722s-evm/c75ss1-0_freertos/ti-c7000/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "freertos"
+        ],
+        "compiler": [
+            "ccs"
+        ],
+        "subCategories": [
+            "ip_fma",
+            "dru_static_regs_readback",
+            "c75ss1-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
+        "description": "A simple \"IP FMA CSIRX\" Example.  CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "ip_fma_csirx",
+        "location": "../../examples/ip_fma/csirx_static_regs_readback/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "ip_fma",
+            "csirx_static_regs_readback",
+            "mcu-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
+        "description": "A simple \"IP FMA DRU\" Example.  CPU is MAIN-R5FSS0-0 running NORTOS.",
+        "name": "dru_tr_of",
+        "location": "../../examples/ip_fma/dru_active_tr_event_overflow_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "ip_fma",
+            "dru_active_tr_event_overflow_detection",
+            "main-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
         "description": "CSIRX safety checkers app CPU is MAIN-R5FSS0-0 running FREERTOS.",
         "name": "SafetyCheckersApp_csirx",
         "location": "../../source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
@@ -7156,6 +7316,38 @@
             "examples",
             "dm_power_analysis_app",
             "c75ss1-0_freertos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "Clock IP FMA application example CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "clk_ip_fma_app",
+        "location": "../../examples/ip_fma/clk_ip_fma_app/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "ip_fma",
+            "clk_ip_fma_app",
+            "mcu-r5fss0-0_nortos"
         ],
         "mainCategories": [
             [

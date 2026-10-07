@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2026 Texas Instruments Incorporated
+ * Copyright (c) 2018-2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -61,12 +61,11 @@
  */
 
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <stdint.h>
 #include <pthread.h>
 #include <utils/mem/include/app_mem.h>
-#include <utils/console_io/include/app_log.h>
 #include <utils/timer/include/app_timer.h>
 #include <utils/ipc/include/app_ipc.h>
 #include <utils/remote_service/include/app_remote_service.h>
@@ -76,9 +75,11 @@
 
 #include <platform.h>
 
+#if defined(QNX)
 #include <hw/inout.h>
 #include <sys/mman.h>
 #include <sys/neutrino.h>
+#endif
 
 /* Mutex for controlling access to Init/De-Init. */
 static pthread_mutex_t gMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -108,22 +109,12 @@ int32_t appCommonInit()
 
     pthread_mutex_unlock(&gMutex);
 
-    if (status == 0)
-    {
-
-        tivxInit();
-        tivxHostInit();
-    }
-
     return status;
 }
 
 int32_t appCommonDeInit()
 {
     int32_t status = 0;
-
-    tivxHostDeInit();
-    tivxDeInit();
 
     pthread_mutex_lock(&gMutex);
 
@@ -149,36 +140,21 @@ int32_t appCommonDeInit()
 static int32_t appCommonInitLocal()
 {
     int32_t status = 0;
-    app_log_init_prm_t log_init_prm;
     app_ipc_init_prm_t ipc_init_prm;
     app_remote_service_init_prms_t remote_service_init_prm;
 
-    printf("APP: Init QNX ... !!!\n");
+    printf("APP: Init ... !!!\n");
 
-    #ifndef SOC_FAMILY_TDA5
     status = appLogGlobalTimeInit();
     if(status!=0)
     {
         printf("APP: ERROR: Global timer init failed !!!\n");
     }
-    #endif
-
     if(status==0)
     {
-        appLogInitPrmSetDefault(&log_init_prm);
 
-        log_init_prm.shared_mem = (app_log_shared_mem_t *)APP_LOG_MEM_ADDR;
-        log_init_prm.self_cpu_index = APP_IPC_CPU_MPU1_0;
-        strncpy(log_init_prm.self_cpu_name, "MPU1_0", APP_LOG_MAX_CPU_NAME);
+        #if defined(QNX)
 
-        status = appLogWrInit(&log_init_prm);
-        if(status!=0)
-        {
-            printf("APP: ERROR: Log writer init failed !!!\n");
-        }
-    }
-    if(status==0)
-    {
         app_mem_init_prm_t mem_init_prm;
         #if defined (SOC_J721E) || defined (SOC_AM62A)
         mem_init_prm.base = DDR_SHARED_MEM_ADDR;
@@ -189,6 +165,13 @@ static int32_t appCommonInitLocal()
         #endif
 
         status = appMemInit(&mem_init_prm);
+
+        #else /* defined(QNX) */
+
+        status = appMemInit(NULL);
+
+        #endif /* defined(QNX) */
+
         if(status!=0)
         {
             printf("APP: ERROR: Memory init failed !!!\n");
@@ -207,6 +190,9 @@ static int32_t appCommonInitLocal()
         ipc_init_prm.num_cpus = num_cores;
         ipc_init_prm.self_cpu_id = APP_IPC_CPU_MPU1_0;
 
+
+        #if defined(QNX)
+
         /* Adding so vring memory not NULL */
         ipc_init_prm.ipc_vring_mem =  (void *)  IPC_VRING_MEM_ADDR;
         ipc_init_prm.ipc_vring_mem_size = IPC_VRING_MEM_SIZE;
@@ -214,11 +200,18 @@ static int32_t appCommonInitLocal()
         ipc_init_prm.tiovx_obj_desc_mem   = (void *) mmap_device_memory(0, TIOVX_OBJ_DESC_MEM_SIZE,
                 PROT_READ|PROT_WRITE|PROT_NOCACHE, 0,
                 TIOVX_OBJ_DESC_MEM_ADDR);
-        ipc_init_prm.tiovx_obj_desc_mem_size = TIOVX_OBJ_DESC_MEM_SIZE;
-
         ipc_init_prm.tiovx_log_rt_mem   = (void *) mmap_device_memory(0, TIOVX_LOG_RT_MEM_SIZE,
                 PROT_READ|PROT_WRITE|PROT_NOCACHE, 0,
                 TIOVX_LOG_RT_MEM_ADDR);
+
+        #else /* defined(QNX) */
+
+        ipc_init_prm.tiovx_obj_desc_mem = (void*)TIOVX_OBJ_DESC_MEM_ADDR;
+        ipc_init_prm.tiovx_log_rt_mem   = (void*)TIOVX_LOG_RT_MEM_ADDR;
+
+        #endif /* defined(QNX) */
+
+        ipc_init_prm.tiovx_obj_desc_mem_size = TIOVX_OBJ_DESC_MEM_SIZE;
         ipc_init_prm.tiovx_log_rt_mem_size = TIOVX_LOG_RT_MEM_SIZE;
 
         status = appIpcInit(&ipc_init_prm);
@@ -231,7 +224,6 @@ static int32_t appCommonInitLocal()
         {
             printf("APP: ERROR: Remote service init failed !!!\n");
         }
-        #ifndef SOC_FAMILY_TDA5
         status = appPerfStatsInit();
         if(status!=0)
         {
@@ -242,8 +234,8 @@ static int32_t appCommonInitLocal()
         {
             printf("APP: ERROR: Perf stats remote service init failed !!!\n");
         }
-        #endif
-        #endif
+        #endif /* ENABLE_IPC */
+
         appLogPrintGtcFreq();
     }
     printf("APP: Init ... Done !!!\n");
@@ -258,13 +250,8 @@ static int32_t appCommonDeInitLocal()
 
     appRemoteServiceDeInit();
     appIpcDeInit();
-    appLogWrDeInit();
     appMemDeInit();
-
-    /* De-init GTC timer */
-    #ifndef SOC_FAMILY_TDA5
     status = appLogGlobalTimeDeInit();
-    #endif
 
     printf("APP: Deinit ... Done !!!\n");
 
@@ -276,12 +263,22 @@ int32_t appInit()
     int32_t status;
     status = appCommonInit();
 
+    if (status == 0)
+    {
+        tivxInit();
+        tivxHostInit();
+    }
+
     return status;
 }
 
 int32_t appDeInit()
 {
     int32_t status;
+
+    tivxHostDeInit();
+    tivxDeInit();
+
     status = appCommonDeInit();
 
     return status;

@@ -1469,6 +1469,12 @@ TEST_WITH_ARG(tivxVideoIOCsitxCsirx, testCsitxCsirxloopback, Arg, PARAMETERS)
     }
 }
 
+/*
+ * testCsitxMultiInstance - Tests multiple CSITX instances concurrently
+ *
+ * This test requires two independent CSITX hardware instances.
+ * J721E has only one CSITX instance, so this test is excluded for J721E.
+ */
 TEST(tivxVideoIOCsitxCsirx, testCsitxMultiInstance)
 {
     context = context_->vx_context_;
@@ -1758,7 +1764,9 @@ TEST(tivxVideoIOCsitxCsirx, negativeTestCsitx)
 
 TESTCASE_TESTS(tivxVideoIOCsitxCsirx,
                testCsitxCsirxloopback,
+#if !defined(SOC_J721E)
                testCsitxMultiInstance,
+#endif
                negativeTestCsitx)
 
 #endif /* BUILD_CSITX */

@@ -21,14 +21,14 @@ SRCDIR += src/ip/mmc/V3/priv
 INCDIR += . src/ip/mmc/V3 src/ip/mmc/V3/priv
 endif
 
-ifeq ($(SOC),$(filter $(SOC),j7200 j721e j721s2 j784s4 j742s2 am64x am62x am62a am62px am62lx am275x))
+ifeq ($(SOC),$(filter $(SOC),j7200 j721e j721s2 j784s4 j742s2 am64x am62x am62a am62px am62lx am275x am283x))
 PACKAGE_SRCS_COMMON += src/ip/mmc/V4
 SRCS_COMMON += mmcsd.c mmcsdphy.c low_level_hw.c
 SRCDIR += src/ip/mmc/V4/priv
 INCDIR += . src/ip/mmc/V4 src/ip/mmc/V4/priv
 endif
 
-ifeq ($(SOC),$(filter $(SOC), am275x))
+ifeq ($(SOC),$(filter $(SOC), am275x am283x))
 PACKAGE_SRCS_COMMON += src/ip/mmc/V5
 INCDIR += . src/ip/mmc/V5
 endif

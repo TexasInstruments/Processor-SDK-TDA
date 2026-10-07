@@ -36,14 +36,14 @@
 #include <ti/csl/cslr.h>
 #include <ti/csl/tistdtypes.h>
 
-#if defined(SOC_AM65XX) || defined (SOC_J721E) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J7200) || defined(SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined(SOC_AM62LX) || defined (SOC_AM275X)
+#if defined(SOC_AM65XX) || defined (SOC_J721E) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J7200) || defined(SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined(SOC_AM62LX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #if defined(SOC_AM65XX)
 #define CSL_GIC500_GICR_CORE_CONTROL_OFFSET     (0x80000U)
 #define CSL_GIC500_GICR_CORE_SGI_PPI_OFFSET     (0x90000U)
 #elif defined (SOC_J721E) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J7200)
 #define CSL_GIC500_GICR_CORE_CONTROL_OFFSET     (0x100000U)
 #define CSL_GIC500_GICR_CORE_SGI_PPI_OFFSET     (0x110000U)
-#elif defined(SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X)
+#elif defined(SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #define CSL_GIC500_GICR_CORE_CONTROL_OFFSET     (0x40000U)
 #define CSL_GIC500_GICR_CORE_SGI_PPI_OFFSET     (0x50000U)
 #endif

@@ -75,7 +75,7 @@ class Mcu1_0_Syscfg :
         MB = KB*KB;
         GB = KB*MB;
 
-        with open("./mcu1_0/example.syscfg", "r") as file:
+        with open("../../rtos/am62a/cores/mcu1_0/src/example.syscfg", "r") as file:
             data = file.read()
 
         for key, memSection in sorted(self.memoryMap.memoryMap.items()):
@@ -90,6 +90,6 @@ class Mcu1_0_Syscfg :
             string2 = f'{regions}.size         = {x};'
             size_pattern = rf'{regions}.size\s*=\s*\d+;'
             data = re.sub(size_pattern, string2, data)
-        
-        with open("./mcu1_0/example.syscfg","w") as file:
+
+        with open("../../rtos/am62a/cores/mcu1_0/src/example.syscfg","w") as file:
             file.write(data)

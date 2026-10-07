@@ -6,7 +6,7 @@ SRCDIR += src/ip/gpio/V1/priv
 INCDIR += . src/ip/gpio/V1
 endif
 
-ifeq ($(SOC),$(filter $(SOC), k2h k2k k2l k2e k2g c6657 c6678 omapl137 omapl138 am65xx j7200 j721e j721s2 j784s4 j742s2 am64x am62x am62a am62px am62lx am275x))
+ifeq ($(SOC),$(filter $(SOC), k2h k2k k2l k2e k2g c6657 c6678 omapl137 omapl138 am65xx j7200 j721e j721s2 j784s4 j742s2 am64x am62x am62a am62px am62lx am275x am283x))
 PACKAGE_SRCS_COMMON += cslr_gpio.h csl_gpio.h src/ip/gpio/src_files_gpio.mk src/ip/gpio/csl_gpio.h src/ip/gpio/V0
 SRCS_COMMON += gpio.c
 PACKAGE_SRCS_COMMON += csl_gpioAux.h

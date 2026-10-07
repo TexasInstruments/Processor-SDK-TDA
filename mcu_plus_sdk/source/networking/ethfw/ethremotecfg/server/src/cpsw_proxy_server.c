@@ -89,8 +89,11 @@
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
-
+#if defined(MCU_PLUS_SDK)
+#define CPSWPROXY_CPSW9G_HWPUSH_BASE                     (10U)
+#else
 #define CPSWPROXY_CPSW9G_HWPUSH_BASE                     (26U)
+#endif
 #define CPSWPROXY_CPTS_HWPUSH_EVENTS_OR_MASK             (0xFFU)
 
 #define CPSWPROXY_AUTOSAR_ETHDRIVER_TASK_NAME            ("ASRETHDEVICE")

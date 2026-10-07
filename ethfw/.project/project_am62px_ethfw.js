@@ -43,6 +43,10 @@ const files = {
         "ic_queue.c",
         "pbufQ_ic.c",
         "custom_pbuf_ic.c",
+
+        /* Multi Core Timesync */
+        "ts_coupler_client.c",
+        "ts_coupler_server.c"
     ],
 };
 
@@ -176,6 +180,8 @@ const defines_r5f = {
         "ETHFW_PROXY_ARP_SUPPORT",
         "ETHFW_INTERCORE_ETH_SUPPORT",
         "ETHFW_IPERF_SERVER_SUPPORT",
+        "ETHFW_MTS_SUPPORT",
+        "ETHFW_MTS_DEMO_TEST",
         "MCU_PLUS_SDK",
         "SOC_AM62PX"
     ],
@@ -195,6 +201,8 @@ const defines_wkup_r5f = {
         "ENET_ENABLE_PER_CPSW=1",
         "ENABLE_ENET_LOG",
         "FREERTOS",
+        "ETHFW_MTS_SUPPORT",
+        "ETHFW_MTS_DEMO_TEST",
         "ENABLE_SCICLIENT_DIRECT",
         "ETHFW_PROXY_ARP_SUPPORT",
         "ETHFW_INTERCORE_ETH_SUPPORT",

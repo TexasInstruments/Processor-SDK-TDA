@@ -36,7 +36,7 @@
 #include <ti/csl/soc.h>
 #include <ti/csl/csl.h>
 
-#if defined (SOC_AM275X)
+#if defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/rl2_of/V0/cslr_rl2_of_cba4.h>
 #endif
 

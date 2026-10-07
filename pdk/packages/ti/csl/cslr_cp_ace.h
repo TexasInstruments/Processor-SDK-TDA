@@ -56,7 +56,7 @@
 #include <ti/csl/src/ip/sa/V3/cslr_cp_ace.h>
 #include <ti/csl/src/ip/sa/V2/cslr_eip_29t2_ram.h>
 
-#elif defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X)
+#elif defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 
 #include <ti/csl/src/ip/sa/V5/cslr_cp_ace.h>
 #include <ti/csl/src/ip/sa/V2/cslr_eip_29t2_ram.h>

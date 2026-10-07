@@ -28,6 +28,8 @@ ifeq ($(TARGET_CPU), x86_64)
     IDIRS       += $(MCU_SDK_PATH)/source/device/$(SOC)/include/hw
     IDIRS       += $(MCU_SDK_PATH)/source/compatibility/dpl/include
     IDIRS       += $(MCU_SDK_PATH)/source/arch/include
+
+    DEFS        += $(SOC_FAMILY)
   endif
 
   CSOURCES   := ../app_init_vdk.c

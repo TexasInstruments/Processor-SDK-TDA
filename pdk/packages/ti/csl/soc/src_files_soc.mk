@@ -53,6 +53,11 @@ ifeq ($(SOC),$(filter $(SOC), am275x))
   INCDIR += ./soc
 endif
 
+ifeq ($(SOC),$(filter $(SOC), am283x))
+  PACKAGE_SRCS_COMMON += soc/$(SOC) soc/cslr_soc_ctrl_mmr.h soc/cslr_soc_intr.h
+  INCDIR += ./soc
+endif
+
 ifeq ($(SOC),$(filter $(SOC), tpr12 awr294x))
   PACKAGE_SRCS_COMMON += soc/$(SOC)
   SRCDIR += ./soc/$(SOC)/src

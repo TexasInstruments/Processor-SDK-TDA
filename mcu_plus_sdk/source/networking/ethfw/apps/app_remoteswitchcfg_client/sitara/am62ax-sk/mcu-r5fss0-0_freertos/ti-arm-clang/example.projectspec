@@ -82,6 +82,8 @@
             -DMCU_PLUS_SDK
             -DSOC_AM62AX
             -DCPU_mcu2_1
+            -DETHFW_MTS_SUPPORT
+            -DETHFW_MTS_DEMO_TEST
         "
         linkerBuildOptions="
             -i${MCU_PLUS_SDK_PATH}/source/kernel/freertos/lib

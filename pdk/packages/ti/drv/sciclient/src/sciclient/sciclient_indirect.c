@@ -70,7 +70,9 @@
 /*                            Global Variables                                */
 /* ========================================================================== */
 
-/* None */
+extern uint32_t gSecContextId;
+extern uint32_t gNonSecContextId;
+extern Sciclient_ServiceHandle_t gSciclientHandle;
 
 /* ========================================================================== */
 /*                          Function Definitions                              */
@@ -198,6 +200,49 @@ int32_t Sciclient_service_rsmgr(const Sciclient_ReqPrm_t *pReqPrm,
     *fwdStatus = SCISERVER_NO_FORWARD_MSG;
 
     return Sciclient_serviceSecureProxy(pReqPrm, pRespPrm);
+}
+
+
+#if defined(SCICLIENT_MERGED)
+uint32_t Sciclient_getCurrentContextIndirect(const Sciclient_ReqPrm_t *pReqPrm)
+#else
+uint32_t Sciclient_getCurrentContext(const Sciclient_ReqPrm_t *pReqPrm)
+#endif
+{
+    uint32_t retVal = SCICLIENT_CONTEXT_MAX_NUM;
+
+    if (NULL != pReqPrm)
+    {
+        switch(pReqPrm->messageType) {
+            case TISCI_MSG_BOOT_NOTIFICATION:
+            case TISCI_MSG_BOARD_CONFIG:
+            case TISCI_MSG_BOARD_CONFIG_RM:
+            case TISCI_MSG_BOARD_CONFIG_SECURITY:
+            case TISCI_MSG_BOARD_CONFIG_PM:
+            case TISCI_MSG_SA2UL_SET_DKEK:
+            case TISCI_MSG_SA2UL_RELEASE_DKEK:
+            case TISCI_MSG_SA2UL_GET_DKEK:
+            {
+                retVal = gSecContextId;
+                break;
+            }
+            default:
+            {
+                /* For all other message type use non-secure context */
+                if(1U == gSciclientHandle.isSecureMode)
+                {
+                    retVal = gSecContextId;
+                }
+                else
+                {
+                    retVal = gNonSecContextId;
+                }
+                break;
+            }
+        }
+    }
+
+    return retVal;
 }
 
 /* -------------------------------------------------------------------------- */

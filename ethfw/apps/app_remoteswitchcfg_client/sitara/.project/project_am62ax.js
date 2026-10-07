@@ -99,6 +99,8 @@ const defines_r5f = {
         "MCU_PLUS_SDK",
         "SOC_AM62AX",
         "CPU_mcu2_1",
+        "ETHFW_MTS_SUPPORT",
+        "ETHFW_MTS_DEMO_TEST",
     ],
 };
 

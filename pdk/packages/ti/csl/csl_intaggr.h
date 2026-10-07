@@ -44,7 +44,7 @@
 #include <ti/csl/csl.h>
 #include <ti/csl/cslr_intaggr.h>
 
-#if defined (SOC_AM65XX) || defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X)
+#if defined (SOC_AM65XX) || defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/intaggr/V0/csl_intaggr.h>
 #endif
 

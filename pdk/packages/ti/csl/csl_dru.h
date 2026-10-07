@@ -45,7 +45,7 @@
 #include <ti/csl/tistdtypes.h>
 #include <ti/csl/cslr_dru.h>
 
-#if defined (SOC_AM65XX) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X)
+#if defined (SOC_AM65XX) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/dru/V0/csl_dru.h>
 #endif
 

@@ -123,12 +123,16 @@ const example_file_list = [
     "examples/sdl/stog/.project/project.js",
     "examples/sdl/vtm/vtm_uc/.project/project.js",
     "examples/drivers/sciclient/dm_unit_testapp/.project/project.js",
+    "examples/ip_fma/dru_static_regs_readback/.project/project.js",
+    "examples/ip_fma/csirx_static_regs_readback/.project/project_j722s.js",
+    "examples/ip_fma/dru_active_tr_event_overflow_detection/.project/project.js",
     "source/safety_checkers/examples/csirx_checkers_app/.project/project.js",
     "source/safety_checkers/examples/pm_checkers_app/.project/project.js",
     "source/safety_checkers/examples/pm_checkers_warm_reset/.project/project.js",
     "source/safety_checkers/examples/rm_checkers_app/.project/project.js",
     "source/safety_checkers/examples/tifs_checkers_app/.project/project.js",
     "source/pdm_utils/examples/dm_power_analysis_app/.project/project.js",
+    "examples/ip_fma/clk_ip_fma_app/.project/project.js",
 
     /* Test Applications */
     "test/board/flash/.project/project.js",

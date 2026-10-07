@@ -65,6 +65,7 @@
 #include "itidl_ti.h"
 #include "app_common.h"
 #include "app_test.h"
+#include "app_dump_output.h"
 #include <TI/hwa_kernels.h>
 #include <TI/dl_kernels.h>
 #include <TI/video_io_kernels.h>
@@ -182,6 +183,7 @@ typedef struct {
     uint32_t is_interactive;
     vx_int32 test_mode;
     vx_int32 test_case;
+    vx_int32 dump_output;
 
     tivx_task task;
     uint32_t stop_task;
@@ -226,7 +228,7 @@ static vx_user_data_object setOutArgs(vx_context context);
 static void createInputTensors(AppObj *obj, vx_context context, vx_user_data_object config, vx_tensor *input_tensors);
 static void createOutputTensors(AppObj *obj, vx_context context, vx_user_data_object config, vx_tensor *output_tensors);
 static vx_status readInput(AppObj *obj, vx_context context, vx_user_data_object config, vx_tensor *input_tensors, char *input_file);
-static void displayOutput(AppObj *obj, vx_user_data_object config, vx_tensor *output_tensors, char *output_file);
+static void displayOutput(AppObj *obj, vx_user_data_object config, vx_tensor *output_tensors, char *output_file, vx_uint32 counter);
 static vx_size getTensorDataType(vx_int32 tidl_type);
 #ifdef APP_WRITE_PRE_PROC_OUTPUT
 static vx_status writePreProcOutput(char* file_name, vx_tensor output);
@@ -1005,6 +1007,7 @@ static int app_parse_cmd_line_args(AppObj *obj, int argc, char *argv[])
 {
     int i;
     vx_bool set_test_mode = vx_false_e;
+    vx_bool dump_output = vx_false_e;
 
     app_set_cfg_default(obj);
 
@@ -1036,6 +1039,11 @@ static int app_parse_cmd_line_args(AppObj *obj, int argc, char *argv[])
         {
             set_test_mode = vx_true_e;
         }
+        else
+        if(strcmp(argv[i], "--dump")==0)
+        {
+            dump_output = vx_true_e;
+        }
     }
 
     if (set_test_mode == vx_true_e)
@@ -1044,6 +1052,20 @@ static int app_parse_cmd_line_args(AppObj *obj, int argc, char *argv[])
         obj->is_interactive = 0;
         obj->display_option = 1;
         obj->delay_in_msecs = 100;
+    }
+
+    if (dump_output == vx_true_e)
+    {
+        obj->dump_output = 1;
+        obj->is_interactive = 0;
+        obj->display_option = 0;
+        obj->num_iterations = 1;
+        APP_PRINTF("Output dumping is enabled\n");
+    }
+    else
+    {
+        obj->dump_output = 0;
+        APP_PRINTF("Output dumping is disabled\n");
     }
 
     #ifdef x86_64
@@ -1798,7 +1820,7 @@ static vx_status app_run_graph_for_one_frame(AppObj *obj, char *curFileName, vx_
         appPerfPointBegin(&obj->draw_perf);
 
         /* Display the output */
-        displayOutput(obj, obj->config, obj->output_tensors, &output_file_name[0]);
+        displayOutput(obj, obj->config, obj->output_tensors, &output_file_name[0], counter);
 
 
         appPerfPointEnd(&obj->draw_perf);
@@ -1934,6 +1956,11 @@ static vx_status app_run_graph(AppObj *obj)
         test_result = vx_true_e;
         obj->num_iterations = 1;
         max_frames = (sizeof(checksums_expected[0])/sizeof(checksums_expected[0][0])) + TEST_BUFFER;
+    }
+
+    if (obj->dump_output == 1)
+    {
+        max_frames = PIPELINE_TOTAL_NO_OF_FRAMES + 1;
     }
     for(cur_iteration=0; cur_iteration<obj->num_iterations; cur_iteration++)
     {
@@ -2632,7 +2659,7 @@ static vx_status readInput(AppObj *obj, vx_context context, vx_user_data_object 
     return status;
 }
 
-static void displayOutput(AppObj *obj, vx_user_data_object config, vx_tensor *output_tensors, char *output_file)
+static void displayOutput(AppObj *obj, vx_user_data_object config, vx_tensor *output_tensors, char *output_file, vx_uint32 counter)
 {
     vx_status status = VX_SUCCESS;
 
@@ -2867,9 +2894,24 @@ static void displayOutput(AppObj *obj, vx_user_data_object config, vx_tensor *ou
       }
     }
 
-    if (obj->display_option == 0)
+    if ((obj->display_option == 0) && (obj->dump_output != 1))
     {
         tivx_utils_bmp_write(output_file, obj->pDisplayBuf888, DISPLAY_WIDTH, DISPLAY_HEIGHT, (DISPLAY_WIDTH * 4), VX_DF_IMAGE_RGBX);
+    }
+
+    if ((obj->dump_output == 1) && (obj->display_option == 0))
+    {
+        vx_int32 i;
+        for (i = 0; i < NUMBER_OF_FRAMES_DUMPS; i++)
+        {
+            if ((gDumpOutputFramesInfo[i].frame_index == (vx_int32)counter) && (gDumpOutputFramesInfo[i].is_dumped == vx_false_e))
+            {
+                printf("Dumping output for frame index : %d\n", gDumpOutputFramesInfo[i].frame_index);
+                tivx_utils_bmp_write(output_file, obj->pDisplayBuf888, DISPLAY_WIDTH, DISPLAY_HEIGHT, (DISPLAY_WIDTH * 4), VX_DF_IMAGE_RGBX);
+                gDumpOutputFramesInfo[i].is_dumped = vx_true_e;
+                printf("App Dumping Outputs Done!\n");
+            }
+        }
     }
 
     /* Release the bmp buffer created in readInput() */

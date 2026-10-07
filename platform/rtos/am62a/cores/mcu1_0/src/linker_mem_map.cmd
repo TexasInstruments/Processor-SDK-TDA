@@ -4,7 +4,7 @@
  */ 
 /* 
  * 
- * Copyright (c) 2018 Texas Instruments Incorporated 
+ * Copyright (c) 2026 Texas Instruments Incorporated 
  * 
  * All rights reserved not granted herein. 
  * 
@@ -84,10 +84,10 @@ MEMORY
     DDR_DM_R5F_IPC_TRACEBUF  ( RWIX ) : ORIGIN = 0x9C900400 , LENGTH = 0x000FFC00
     /* DDR for LPM Data [ size 640.00 KB ] */
     DDR_LPM_DATA             ( RWIX ) : ORIGIN = 0x9CA00000 , LENGTH = 0x000A0000
-    /* DDR for RM/PM HAL trace buffer [size 20 KB] */
-    DDR_DM_RMPM_TRACE (RWIX)    : ORIGIN = 0x9CAA0000 LENGTH = 0x00005000
-    /* DDR for DM R5F for code/data [ size 28.36 MB ] */
-    DDR_DM_R5F               ( RWIX ) : ORIGIN = 0x9CAA5000 , LENGTH = 0x01C5B000
+    /* DDR_DM_RMPM_TRACE [ size 20.00 KB ] */
+    DDR_DM_RMPM_TRACE        ( RWIX ) : ORIGIN = 0x9CAA0000 , LENGTH = 0x00005000
+    /* DDR for DM R5F for code/data [ size 28.38 MB ] */
+    DDR_DM_R5F               ( RWIX ) : ORIGIN = 0x9CAA0000 , LENGTH = 0x01C60000
     /* Memory for IPC Vring's. MUST be non-cached or cache-coherent [ size 16.00 MB ] */
     IPC_VRING_MEM                     : ORIGIN = 0xA0000000 , LENGTH = 0x01000000
     /* Memory for remote core logging [ size 256.00 KB ] */
@@ -98,8 +98,8 @@ MEMORY
     APP_FILEIO_MEM                    : ORIGIN = 0xA2000000 , LENGTH = 0x00400000
     /* Memory for shared memory buffers in DDR [ size 172.00 MB ] */
     DDR_SHARED_MEM                    : ORIGIN = 0xA3000000 , LENGTH = 0x0AC00000
-    /* Memory for storing DMA buffers for VISS configuration [ size 4.00 MB ] */
-    DDR_DM_R5F_VISS_CONFIG_HEAP  ( RW )     : ORIGIN = 0xADC00000 , LENGTH = 0x00400000
+    /* DDR for storing DMA buffers for VISS configuration [ size  4.00 MB ] */
+    DDR_DM_R5F_VISS_CONFIG_HEAP (   RW ) : ORIGIN = 0xADC00000 , LENGTH = 0x00400000
     /* DDR for DM R5F for local heap [ size 16.00 MB ] */
     DDR_DM_R5F_LOCAL_HEAP    ( RWIX ) : ORIGIN = 0xAF000000 , LENGTH = 0x01000000
 }

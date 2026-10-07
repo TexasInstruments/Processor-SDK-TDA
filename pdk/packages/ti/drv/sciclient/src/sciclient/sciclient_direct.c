@@ -214,6 +214,8 @@ const char gcSciclientDirectExtBootX509MagicWord[
     SCICLIENT_DIRECT_EXTBOOT_X509_MAGIC_WORD_LEN] =
     { 'E', 'X', 'T', 'B', 'O', 'O', 'T', (char)0};
 
+extern uint32_t gSecContextId;
+extern uint32_t gNonSecContextId;
 extern Sciclient_ServiceHandle_t gSciclientHandle;
 
 /* Number of active cores. When reached 0, ready to shutdown */
@@ -359,17 +361,14 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
                     /*
                      * For TISCI_MSG_SET_DEVICE and TISCI_MSG_SET_DEVICE_RESETS request messages
                      * have id value at the same memory location in pReqPrm->pReqPayload.
-                     * typecasting pReqPrm->pReqPayload to anyone of its request structure 
+                     * typecasting pReqPrm->pReqPayload to anyone of its request structure
                      * can gives us the correct id value.
                      */
-                    struct tisci_msg_set_device_req *req = 
+                    struct tisci_msg_set_device_req *req =
                         (struct tisci_msg_set_device_req *) pReqPrm->pReqPayload;
                     uint32_t id = req->id;
                     if ((id == SCICLIENT_DEV_MCU_R5FSS0_CORE0) || (id == SCICLIENT_DEV_MCU_R5FSS0_CORE1))
                     {
-                        uint32_t bkupMode;
-                        bkupMode = gSciclientHandle.isSecureMode;
-                        gSciclientHandle.isSecureMode = 1U;
                         Sciclient_printf("This request is related to MCU R5F Power Management.");
                         Sciclient_printf("Therefore, it will be forwarded to TIFS\n");
                         ret = Sciclient_serviceSecureProxy(pReqPrm, pRespPrm);
@@ -378,8 +377,6 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
                         {
                             Sciclient_printf("ERROR:: Sciclient_service: TIFS failed to process PM message for MCU R5F\n");
                         }
-
-                        gSciclientHandle.isSecureMode = bkupMode;
                     }
                     else
                     {
@@ -626,9 +623,6 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
                  * The MCU1_0 will always be secure when trying to send the message
                  * to the TIFS directly to avoid self blocking.
                  */
-                uint32_t bkupMode;
-                bkupMode = gSciclientHandle.isSecureMode;
-                gSciclientHandle.isSecureMode = 1U;
                 Sciclient_printf("This is either baseport or security message and forwarded to TIFS\n");
                 ret = Sciclient_serviceSecureProxy(pReqPrm, pRespPrm);
 
@@ -637,7 +631,6 @@ int32_t Sciclient_service (const Sciclient_ReqPrm_t *pReqPrm,
                     Sciclient_printf("ERROR:: Sciclient_service: Failed to process baseport or ");
                     Sciclient_printf("security message forwarded to TIFS\n");
                 }
-                gSciclientHandle.isSecureMode = bkupMode;
                 break;
             }
         }
@@ -672,6 +665,98 @@ void Sciclient_TisciMsgSetNakResp(struct tisci_header *hdr)
 {
     Sciclient_printf("Requested service in DM results in failure\n");
     hdr->flags &= (~TISCI_MSG_FLAG_ACK);
+}
+
+#if defined(SCICLIENT_MERGED)
+uint32_t Sciclient_getCurrentContextDirect(const Sciclient_ReqPrm_t *pReqPrm)
+#else
+uint32_t Sciclient_getCurrentContext(const Sciclient_ReqPrm_t *pReqPrm)
+#endif
+{
+    uint32_t retVal = SCICLIENT_CONTEXT_MAX_NUM;
+
+    if (NULL != pReqPrm)
+    {
+        switch(pReqPrm->messageType) {
+            case TISCI_MSG_SET_CLOCK:
+            case TISCI_MSG_GET_CLOCK:
+            case TISCI_MSG_SET_CLOCK_PARENT:
+            case TISCI_MSG_GET_CLOCK_PARENT:
+            case TISCI_MSG_GET_NUM_CLOCK_PARENTS:
+            case TISCI_MSG_SET_FREQ:
+            case TISCI_MSG_QUERY_FREQ:
+            case TISCI_MSG_GET_FREQ:
+            case TISCI_MSG_GET_DEVICE:
+            case TISCI_MSG_SYS_RESET:
+            case TISCI_MSG_PREPARE_SLEEP:
+            case TISCI_MSG_ENTER_SLEEP:
+            case TISCI_MSG_LPM_WAKE_REASON:
+            case TISCI_MSG_GET_SUSPEND_INITIATOR:
+            case TISCI_MSG_RM_GET_RESOURCE_RANGE:
+            case TISCI_MSG_RM_UDMAP_FLOW_CFG:
+            case TISCI_MSG_RM_UDMAP_FLOW_SIZE_THRESH_CFG:
+            case TISCI_MSG_RM_UDMAP_FLOW_DELEGATE:
+            case TISCI_MSG_RM_UDMAP_GCFG_CFG:
+            case TISCI_MSG_RM_IRQ_SET:
+            case TISCI_MSG_RM_IRQ_RELEASE:
+            case TISCI_MSG_RM_RING_CFG:
+            case TISCI_MSG_RM_RING_MON_CFG:
+            case TISCI_MSG_RM_UDMAP_TX_CH_CFG:
+            case TISCI_MSG_RM_UDMAP_RX_CH_CFG:
+            case TISCI_MSG_RM_PROXY_CFG:
+            case TISCI_MSG_RM_PSIL_PAIR:
+            case TISCI_MSG_RM_PSIL_UNPAIR:
+            case TISCI_MSG_RM_PSIL_READ:
+            case TISCI_MSG_RM_PSIL_WRITE:
+            case TISCI_MSG_QUERY_FW_CAPS:
+            case TISCI_MSG_DM_VERSION:
+            case TISCI_MSG_LPM_GET_NEXT_SYS_MODE:
+            {
+                if(1U == gSciclientHandle.isSecureMode)
+                {
+                    retVal = gSecContextId;
+                }
+                else
+                {
+                    retVal = gNonSecContextId;
+                }
+                break;
+            }
+            case TISCI_MSG_SET_DEVICE:
+            case TISCI_MSG_SET_DEVICE_RESETS:
+            {
+                if (NULL != pReqPrm->pReqPayload)
+                {
+                    struct tisci_msg_set_device_req *req =
+                    (struct tisci_msg_set_device_req *) pReqPrm->pReqPayload;
+                    uint32_t id = req->id;
+                    if ((id == SCICLIENT_DEV_MCU_R5FSS0_CORE0) || (id == SCICLIENT_DEV_MCU_R5FSS0_CORE1))
+                    {
+                        retVal = gSecContextId;
+                    }
+                    else
+                    {
+                        if(1U == gSciclientHandle.isSecureMode)
+                        {
+                            retVal = gSecContextId;
+                        }
+                        else
+                        {
+                            retVal = gNonSecContextId;
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+            {
+                retVal = gSecContextId;
+                break;
+            }
+        }
+    }
+
+    return retVal;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1357,7 +1442,7 @@ int32_t Sciclient_processDMVersionMessage(void *tx_msg)
                 ret = CSL_EFAIL;
             }
         }
-        
+
         if ((((struct tisci_header *) tx_msg)->flags & TISCI_MSG_FLAG_AOP) != 0U) {
             if (ret != CSL_PASS) {
                 Sciclient_TisciMsgSetNakResp((struct tisci_header *)tx_msg);

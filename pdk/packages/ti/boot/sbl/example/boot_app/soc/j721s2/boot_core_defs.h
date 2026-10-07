@@ -82,7 +82,7 @@ extern "C" {
 #define OSPI_OFFSET_A72IMG3          (0x1EC0000U)
 
 #define MAIN_DOMAIN_APPS_FLASH_ADDR  (0x1FC0000U)
-#define MAIN_DOMAIN_APPS_FLASH_ADDR2 (0x27C0000U)
+#define MAIN_DOMAIN_APPS_FLASH_ADDR2 (0x23C0000U)
 #define MAIN_DOMAIN_APPS_FLASH_ADDR3 (0x37C0000U)
 
 /* Location Address used as flag to indicate loading of

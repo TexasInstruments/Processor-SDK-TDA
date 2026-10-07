@@ -39,6 +39,8 @@ FILES_common := \
     ic_queue.c \
     pbufQ_ic.c \
     custom_pbuf_ic.c \
+    ts_coupler_client.c \
+    ts_coupler_server.c \
 
 FILES_PATH_common = \
     ${MCU_PLUS_SDK_PATH}/source/networking/enet/core/utils/V2 \
@@ -130,6 +132,8 @@ DEFINES_common := \
     -DENET_ENABLE_PER_CPSW=1 \
     -DENABLE_ENET_LOG \
     -DFREERTOS \
+    -DETHFW_MTS_SUPPORT \
+    -DETHFW_MTS_DEMO_TEST \
     -DENABLE_SCICLIENT_DIRECT \
     -DETHFW_PROXY_ARP_SUPPORT \
     -DETHFW_INTERCORE_ETH_SUPPORT \

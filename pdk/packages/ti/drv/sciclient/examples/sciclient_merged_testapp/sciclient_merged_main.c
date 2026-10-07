@@ -57,7 +57,7 @@
 /* ========================================================================== */
 
 /* Test application stack size */
-#define SCICLIENT_APP_TASK_STACK_MAIN (8U * 1024U)
+#define SCICLIENT_APP_TASK_STACK_MAIN (32U * 1024U)
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -65,7 +65,7 @@
 
 #if defined(SAFERTOS)
 /* Test application stack */
-static uint8_t gSciclientAppTaskStackMain[SCICLIENT_APP_TASK_STACK_MAIN] __attribute__((aligned(SCICLIENT_APP_TASK_STACK_MAIN)));
+static uint8_t gSciclientAppTaskStackMain[SCICLIENT_APP_TASK_STACK_MAIN] __attribute__((aligned(SCICLIENT_APP_TASK_STACK_MAIN))) = {0};
 #else
 /* Test application stack */
 static uint8_t gSciclientAppTaskStackMain[SCICLIENT_APP_TASK_STACK_MAIN] __attribute__((aligned(32)));

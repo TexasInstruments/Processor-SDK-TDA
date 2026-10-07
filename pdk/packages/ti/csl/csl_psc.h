@@ -49,7 +49,7 @@ extern "C" {
 #include <ti/csl/tistdtypes.h>
 #if defined (SOC_OMAPL137) || defined(SOC_OMAPL138)
 #include <ti/csl/src/ip/psc/V1/csl_psc.h>
-#elif defined (SOC_AM65XX) || defined (SOC_J721E) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J7200) || defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X)
+#elif defined (SOC_AM65XX) || defined (SOC_J721E) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J7200) || defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/psc/V2/csl_psc.h>
 #else
 #include <ti/csl/src/ip/psc/V0/csl_psc.h>

@@ -16,7 +16,7 @@ ifeq ($(SOC),$(filter $(SOC), tda2xx tda2px tda2ex dra75x dra78x tda3xx am572x a
 -include $(PDK_CSL_COMP_PATH)/arch/arp32/src_files_arp32.mk
 endif
 
-ifeq ($(SOC),$(filter $(SOC), am65xx am77x j7200 j721e j721s2 j784s4 j742s2 tpr12 awr294x am64x am263x am62x am62a am62px am275x))
+ifeq ($(SOC),$(filter $(SOC), am65xx am77x j7200 j721e j721s2 j784s4 j742s2 tpr12 awr294x am64x am263x am62x am62a am62px am275x am283x))
 -include $(PDK_CSL_COMP_PATH)/arch/r5/src_files_r5.mk
 -include $(PDK_CSL_COMP_PATH)/arch/r5/src_files_r5_vim.mk
 -include $(PDK_CSL_COMP_PATH)/arch/r5/src_files_r5_ccmr5.mk
@@ -25,7 +25,7 @@ ifeq ($(SOC),$(filter $(SOC), am65xx am77x j7200 j721e j721s2 j784s4 j742s2 tpr1
 -include $(PDK_CSL_COMP_PATH)/arch/r5/src_files_r5_hard_err_cache.mk
 endif
 
-ifeq ($(SOC),$(filter $(SOC), am65xx am64x am62x am62a am62px am275x))
+ifeq ($(SOC),$(filter $(SOC), am65xx am64x am62x am62a am62px am275x am283x))
 -include $(PDK_CSL_COMP_PATH)/arch/a53/src_files_a53.mk
 endif
 

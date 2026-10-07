@@ -221,6 +221,17 @@ void Sciclient_flush(uint32_t thread, uint32_t maxMsgSizeBytes)
     return ;
 }
 
+void Sciclient_txFlush(uint32_t thread, uint32_t maxMsgSizeBytes)
+{
+    uint8_t idx = 0U;
+    uintptr_t threadAddr = CSL_secProxyGetDataAddr(pSciclient_secProxyCfg, thread, 0U);
+    for (idx = 0U; idx < (uint8_t)((maxMsgSizeBytes/4U)-1U); idx++)
+    {
+        CSL_REG32_WR(threadAddr, 0U);
+        threadAddr += sizeof(uint32_t);
+    }
+}
+
 /* -------------------------------------------------------------------------- */
 /*                 Internal Function Definitions                              */
 /* -------------------------------------------------------------------------- */

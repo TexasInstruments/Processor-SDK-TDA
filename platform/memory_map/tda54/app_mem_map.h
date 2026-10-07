@@ -63,8 +63,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE. 
  * 
  */ 
-#ifndef MMAP_H
-#define MMAP_H
+#ifndef APP_MEM_MAP_H
+#define APP_MEM_MAP_H
 
 
 /* Main OCRAM Physical Address for MCU2 [ size  2.00 MB ] */
@@ -658,5 +658,5 @@
 #define DDR_64BIT_BASE_VADDR (0x100000000u)
 #define DDR_64BIT_BASE_PADDR (0x2080000000u)
 
-#endif /* MMAP_H */
+#endif /* APP_MEM_MAP_H */
 

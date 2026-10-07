@@ -188,6 +188,10 @@
 
 #include <ti/csl/soc/am275x/src/cslr_soc.h>
 
+#elif defined (SOC_AM283X)
+
+#include <ti/csl/soc/am283x/src/cslr_soc.h>
+
 #endif /* SOC_XXXXX */
 
 #endif  /* CSL_SOC_H*/

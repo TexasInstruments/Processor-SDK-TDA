@@ -49,7 +49,7 @@
 #include <ti/csl/src/ip/gpio/V1/gpio_v2.h>
 #elif defined (SOC_AM335x) || defined (SOC_AM437x)
 #include <ti/csl/src/ip/gpio/V1/gpio_v2.h>
-#elif defined (SOC_AM65XX) || defined (SOC_J721E) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J7200) || defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X)
+#elif defined (SOC_AM65XX) || defined (SOC_J721E) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J7200) || defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/gpio/V0/gpio.h>
 #elif defined (SOC_TPR12) || defined (SOC_AWR294X)
 #include <ti/csl/src/ip/gpio/V3/gpio_v3.h>

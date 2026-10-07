@@ -36,7 +36,7 @@
 #include <ti/csl/soc.h>
 #include <ti/csl/csl.h>
 
-#if defined (SOC_AM65XX) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X)
+#if defined (SOC_AM65XX) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/udmap/V0/cslr_udmap.h>
 #endif
 

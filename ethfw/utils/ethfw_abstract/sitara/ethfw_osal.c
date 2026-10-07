@@ -76,6 +76,8 @@
 #include <kernel/dpl/EventP.h>
 #include <kernel/dpl/SemaphoreP.h>
 #include <kernel/dpl/MailboxP.h>
+#include "FreeRTOS.h"
+#include "task.h"
 
 #include <string.h>
 #include "stdlib.h"
@@ -394,7 +396,7 @@ void EthFwOsal_sleepTaskinMsecs(uint32_t timeoutInMsecs)
 
 void EthFwOsal_sleepTask(uint32_t timeout)
 {
-    ClockP_sleep(timeout);
+    vTaskDelay(timeout);
 }
 
 uint64_t EthFwOsal_getTimeInUsecs(void)

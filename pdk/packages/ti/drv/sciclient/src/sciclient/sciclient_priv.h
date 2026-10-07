@@ -246,11 +246,11 @@ int32_t Sciclient_boardCfg(const Sciclient_BoardCfgPrms_t * pInPrms);
  *           a given code, users of SCICLENT would need to modify this function
  *           and recompile.
  *
- *  \param   messageType The Message ID to be checked.
+ *  \param   pReqPrm Sciclient request parameters
  *
- *  \return  retVal     SCICLENT Context of the CPU
+ *  \return  retVal  SCICLENT Context of the CPU
  */
-uint32_t Sciclient_getCurrentContext(uint16_t messageType);
+uint32_t Sciclient_getCurrentContext(const Sciclient_ReqPrm_t *pReqPrm);
 
 /**
  *  \brief   Gives the address for status register for a particular thread.
@@ -345,6 +345,15 @@ int32_t Sciclient_contextIdFromIntrNum(uint32_t intrNum);
  */
 void Sciclient_flush(uint32_t thread, uint32_t maxMsgSizeBytes);
 
+/**
+ *  \brief   API to flush/reset all message data on a tx thread .
+ *
+ *  \param   thread             Index of the thread.
+ *  \param   maxMsgSizeBytes    Maximum message size in Bytes.
+ *
+ *  \return None
+ */
+void Sciclient_txFlush(uint32_t thread, uint32_t maxMsgSizeBytes);
 
 /**
  *  \brief  This API allows communicating with the System firmware which can be
@@ -432,8 +441,8 @@ int32_t Sciclient_mergedInit(void);
 
 /**
  *  \brief  This API is rename of Sciclient_init API. This API is renamed because
- *          to have a wrapper API in which another APIs can also be called. It is 
- *          not recommended to use this API. This API is only for internal use in 
+ *          to have a wrapper API in which another APIs can also be called. It is
+ *          not recommended to use this API. This API is only for internal use in
  *          sciclient merged library and done for maintaining the backward
  *          compatibility.
  *
@@ -526,6 +535,32 @@ int32_t Sciclient_serviceIndirect(const Sciclient_ReqPrm_t *pReqPrm,
  *
  */
 uint32_t Sciclient_getR5CoreId(void);
+
+/**
+ *  \brief  This API identifies the current context when the Sciclient driver is
+ *          running on the DM Core (MCU1_0) in Merged Mode.
+ *
+ *          This API is only for internal use by the SciClient merged library.
+ *
+ *  \param pReqPrm        [IN]  Pointer to #Sciclient_ReqPrm_t
+ *
+ *  \return SCICLIENT context ID for the current CPU.
+ *
+ */
+uint32_t Sciclient_getCurrentContextDirect(const Sciclient_ReqPrm_t *pReqPrm);
+
+/**
+ *  \brief  This API identifies the current context when the Sciclient driver is
+ *          running on a NON-DM Core in Merged Mode.
+ *
+ *          This API is only for internal use by the SciClient merged library.
+ *
+ *  \param pReqPrm        [IN]  Pointer to #Sciclient_ReqPrm_t
+ *
+ *  \return SCICLIENT context ID for the current CPU.
+ *
+ */
+uint32_t Sciclient_getCurrentContextIndirect(const Sciclient_ReqPrm_t *pReqPrm);
 #endif
 
 #ifdef __cplusplus

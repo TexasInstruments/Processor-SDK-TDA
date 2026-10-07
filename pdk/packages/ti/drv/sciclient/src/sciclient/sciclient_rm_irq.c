@@ -837,9 +837,14 @@ int32_t Sciclient_rmProgramInterruptRoute (const struct tisci_msg_rm_irq_set_req
                                            uint32_t timeout)
 {
     int32_t r = CSL_PASS;
-    uint16_t messageType = TISCI_MSG_RM_IRQ_SET;
     uint8_t dst_host;
     struct Sciclient_rmIrqCfg cfg;
+    const Sciclient_ReqPrm_t reqPrm =
+    {
+        .messageType = TISCI_MSG_RM_IRQ_SET,
+        .pReqPayload = (const uint8_t *)req,
+        .reqPayloadSize = sizeof(*req)
+    };
 
     memset(&cfg, 0, sizeof(cfg));
 
@@ -852,7 +857,7 @@ int32_t Sciclient_rmProgramInterruptRoute (const struct tisci_msg_rm_irq_set_req
                                  TISCI_MSG_VALUE_RM_SECONDARY_HOST_VALID) == (bool)true)) {
         dst_host = req->secondary_host;
     } else {
-        dst_host = (uint8_t) gSciclientMap[Sciclient_getCurrentContext(messageType)].hostId;
+        dst_host = (uint8_t) gSciclientMap[Sciclient_getCurrentContext(&reqPrm)].hostId;
     }
 
     if ((r == CSL_PASS) &&
@@ -929,9 +934,14 @@ int32_t Sciclient_rmClearInterruptRoute (const struct tisci_msg_rm_irq_release_r
                                          uint32_t timeout)
 {
     int32_t r = CSL_PASS;
-    uint16_t messageType = TISCI_MSG_RM_IRQ_RELEASE;
     uint8_t dst_host;
     struct Sciclient_rmIrqCfg cfg;
+    const Sciclient_ReqPrm_t reqPrm =
+    {
+        .messageType = TISCI_MSG_RM_IRQ_RELEASE,
+        .pReqPayload = (const uint8_t *)req,
+        .reqPayloadSize = sizeof(*req)
+    };
 
     memset(&cfg, 0, sizeof(cfg));
 
@@ -945,7 +955,7 @@ int32_t Sciclient_rmClearInterruptRoute (const struct tisci_msg_rm_irq_release_r
                                  TISCI_MSG_VALUE_RM_SECONDARY_HOST_VALID) == (bool)true)) {
         dst_host = req->secondary_host;
     } else {
-        dst_host = (uint8_t) gSciclientMap[Sciclient_getCurrentContext(messageType)].hostId;
+        dst_host = (uint8_t) gSciclientMap[Sciclient_getCurrentContext(&reqPrm)].hostId;
     }
 
     if ((r == CSL_PASS) &&
@@ -2357,7 +2367,7 @@ static int32_t Sciclient_rmIrqDeleteRoute(struct Sciclient_rmIrqCfg    *cfg,
         }
         retValSum = retValSum + retVal;
     }
-    
+
     if (retValSum != CSL_PASS)
     {
         retValSum = CSL_EFAIL;

@@ -51,7 +51,7 @@
 #include <ti/csl/src/ip/serdes_sb/V1/csl_serdes3.h>
 #elif defined (SOC_J721E)
 #include <ti/csl/src/ip/serdes_cd/V0/csl_serdes3.h>
-#elif defined (SOC_J7200) || defined(SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X)
+#elif defined (SOC_J7200) || defined(SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/serdes_cd/V1/csl_serdes3.h>
 #elif defined(SOC_J721S2)
 #include <ti/csl/src/ip/serdes_cd/V2/csl_serdes3.h>

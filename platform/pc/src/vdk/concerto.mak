@@ -29,7 +29,9 @@ ifeq ($(SOC), tda54)
     IDIRS       += $(MCU_SDK_PATH)/source/compatibility/dpl/include
     IDIRS       += $(MCU_SDK_PATH)/source/arch/include
 
-    CSOURCES   := ../app_init_vdk.c
+    DEFS        += $(SOC_FAMILY)
+
+    CSOURCES    := ../app_init_vdk.c
 
     $(shell touch $(PLATFORM_PATH)/pc/src/app_init_vdk.c)
 

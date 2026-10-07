@@ -73,7 +73,14 @@
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 
-/* None */
+/* DDR low power interface Registers */
+#define LPM_DDR_LPI_THRESH_REGS_COUNT           (0x7U)
+
+#define LPM_DDR_LPI_SHIFT                       (0x8U)
+#define LPM_DDR_LPI_THRESH_MASK                 (0xFU)
+
+#define LPM_DDR_DENALI_CTL_139_LAST_THRESH      (16U)
+#define LPM_DDR_DENALI_CTL_LAST_THRESH          (24U)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -224,6 +231,26 @@ static const struct Lpm_DdrInstanceConfig gLpmDdr[] =
 #error "Unsupported SoC for LPM"
 #endif
 
+/*
+ * ERRATA i2166: LPI wakeup threshold register offsets used to compute the
+ * maximum threshold value that must be programmed into PHY_LP_WAKEUP.
+ *
+ * The Denali controller packs four independent 4-bit LPI wakeup threshold
+ * fields into each register at bit positions [27:24], [19:16], [11:8], [3:0].
+ * Registers CTL_133 through CTL_139 collectively cover all LPI modes
+ * (SR, SRPD, PD, CTRL_IDLE, TIMER, MCCLK_GATE) across all three frequency
+ * set points (F0, F1, F2).
+ */
+static const uint32_t gLpmLpiThreshRegs[LPM_DDR_LPI_THRESH_REGS_COUNT] = {
+    CSL_EMIF_CTLCFG_DENALI_CTL_133,
+    CSL_EMIF_CTLCFG_DENALI_CTL_134,
+    CSL_EMIF_CTLCFG_DENALI_CTL_135,
+    CSL_EMIF_CTLCFG_DENALI_CTL_136,
+    CSL_EMIF_CTLCFG_DENALI_CTL_137,
+    CSL_EMIF_CTLCFG_DENALI_CTL_138,
+    CSL_EMIF_CTLCFG_DENALI_CTL_139,
+};
+
 /* ========================================================================== */
 /*                  Internal/Private Function Declarations                    */
 /* ========================================================================== */
@@ -264,6 +291,17 @@ static void Lpm_ddrInitiateFspFreqChange(const struct Lpm_DdrInstanceConfig *ddr
  *        subsequent writes to PLL12 (DDR PLL) control and HSDIV registers.
  */
 static void Lpm_ddrUnlockPll(void);
+
+/**
+ * \brief Workaround for ERRATA i2166: program PHY_LP_WAKEUP
+ *        (DENALI_PHY_1318[15:8]) on one DDR controller to a value strictly
+ *        greater than every LPI wakeup threshold across all three frequency
+ *        set points (F0/F1/F2), preventing the PHY from entering the Deep
+ *        Sleep low-power state.
+ *
+ * \param ddr  Pointer to the DDR instance configuration.
+ */
+static void Lpm_ddrApplyLpiWakeupErrata(const struct Lpm_DdrInstanceConfig *ddr);
 
 /**
  * \brief Switch one DDR controller to FSP0 in preparation for self-refresh entry.
@@ -321,6 +359,15 @@ void Lpm_ddrEnterSelfRefresh(void)
     /* Unlock DDR PLL CTRL and HSDIV registers directly via the PLL MMR */
     Lpm_ddrUnlockPll();
 
+    /* ERRATA i2166: prevent the DDR PHY from entering Deep Sleep so it cannot
+     * exit Deep Sleep before the PHY PLL is disabled, which would otherwise
+     * misalign internal clocks and cause timing failures.
+     */
+    for (uint32_t i = 0U; gLpmDdr[i].ddrBase > 0U; i++)
+    {
+        Lpm_ddrApplyLpiWakeupErrata(&gLpmDdr[i]);
+    }
+
     /* Switch each DDR controller to FSP0 (low-frequency mode) before self-refresh. */
     for (uint32_t i = 0U; gLpmDdr[i].ddrBase > 0U; i++)
     {
@@ -337,6 +384,86 @@ void Lpm_ddrEnterSelfRefresh(void)
 /* ========================================================================== */
 /*                       Static Function Definitions                          */
 /* ========================================================================== */
+
+/*
+ * CTL_133..CTL_138: four 4-bit threshold fields per register at bits
+ * 27:24, 19:16, 11:8, and 3:0. CTL_139 has only 3 threshold fields, at
+ * 19:16, 11:8, and 3:0.
+ *
+ * CTL Register Map:
+ * ┌─────────────────┬──────────────────────────────────────────────┐
+ * │ Register        │ Fields (bits)                                │
+ * ├─────────────────┼──────────────────────────────────────────────┤
+ * │ CTL_133         │ [27:24] LPI_SR_LONG_MCCLK_GATE_WAKEUP_F0     │
+ * │                 │ [19:16] LPI_SR_LONG_WAKEUP_F0                │
+ * │                 │ [11:8]  LPI_SR_SHORT_WAKEUP_F0               │
+ * │                 │ [3:0]   LPI_CTRL_IDLE_WAKEUP_F0              │
+ * ├─────────────────┼──────────────────────────────────────────────┤
+ * │ CTL_134         │ [27:24] LPI_SRPD_LONG_MCCLK_GATE_WAKEUP_F0   │
+ * │                 │ [19:16] LPI_SRPD_LONG_WAKEUP_F0              │
+ * │                 │ [11:8]  LPI_SRPD_SHORT_WAKEUP_F0             │
+ * │                 │ [3:0]   LPI_PD_WAKEUP_F0                     │
+ * ├─────────────────┼──────────────────────────────────────────────┤
+ * │ CTL_135         │ [27:24] LPI_SR_LONG_WAKEUP_F1                │
+ * │                 │ [19:16] LPI_SR_SHORT_WAKEUP_F1               │
+ * │                 │ [11:8]  LPI_CTRL_IDLE_WAKEUP_F1              │
+ * │                 │ [3:0]   LPI_TIMER_WAKEUP_F0                  │
+ * ├─────────────────┼──────────────────────────────────────────────┤
+ * │ CTL_136         │ [27:24] LPI_SRPD_LONG_WAKEUP_F1              │
+ * │                 │ [19:16] LPI_SRPD_SHORT_WAKEUP_F1             │
+ * │                 │ [11:8]  LPI_PD_WAKEUP_F1                     │
+ * │                 │ [3:0]   LPI_SR_LONG_MCCLK_GATE_WAKEUP_F1     │
+ * ├─────────────────┼──────────────────────────────────────────────┤
+ * │ CTL_137         │ [27:24] LPI_SR_SHORT_WAKEUP_F2               │
+ * │                 │ [19:16] LPI_CTRL_IDLE_WAKEUP_F2              │
+ * │                 │ [11:8]  LPI_TIMER_WAKEUP_F1                  │
+ * │                 │ [3:0]   LPI_SRPD_LONG_MCCLK_GATE_WAKEUP_F1   │
+ * ├─────────────────┼──────────────────────────────────────────────┤
+ * │ CTL_138         │ [27:24] LPI_SRPD_SHORT_WAKEUP_F2             │
+ * │                 │ [19:16] LPI_PD_WAKEUP_F2                     │
+ * │                 │ [11:8]  LPI_SR_LONG_MCCLK_GATE_WAKEUP_F2     │
+ * │                 │ [3:0]   LPI_SR_LONG_WAKEUP_F2                │
+ * ├─────────────────┼──────────────────────────────────────────────┤
+ * │ CTL_139         │ [29:24] LPI_WAKEUP_EN                        │
+ * │                 │ [19:16] LPI_TIMER_WAKEUP_F2                  │
+ * │                 │ [11:8]  LPI_SRPD_LONG_MCCLK_GATE_WAKEUP_F2   │
+ * │                 │ [3:0]   LPI_SRPD_LONG_WAKEUP_F2              │
+ * └─────────────────┴──────────────────────────────────────────────┘
+ */
+static void Lpm_ddrApplyLpiWakeupErrata(const struct Lpm_DdrInstanceConfig *ddr)
+{
+    uint32_t max_thresh = 0U;
+    uint32_t reg_idx, shift, regval, field, last_threshold;
+
+    for (reg_idx = 0U; reg_idx < LPM_DDR_LPI_THRESH_REGS_COUNT; reg_idx++)
+    {
+        regval = CSL_REG32_RD_OFF(ddr->ddrBase, gLpmLpiThreshRegs[reg_idx]);
+
+        /* CTL_139 only has three thresholds; at 19:16, 11:8, and 3:0 respectively */
+        if (gLpmLpiThreshRegs[reg_idx] == CSL_EMIF_CTLCFG_DENALI_CTL_139)
+        {
+            last_threshold = LPM_DDR_DENALI_CTL_139_LAST_THRESH;
+        }
+        else
+        {
+            last_threshold = LPM_DDR_DENALI_CTL_LAST_THRESH;
+        }
+
+        for (shift = 0U; shift <= last_threshold; shift += LPM_DDR_LPI_SHIFT)
+        {
+            field = (regval >> shift) & LPM_DDR_LPI_THRESH_MASK;
+            if (field > max_thresh)
+            {
+                max_thresh = field;
+            }
+        }
+    }
+
+    /* PHY_LP_WAKEUP must be strictly greater than max_thresh */
+    regval = CSL_REG32_RD_OFF(ddr->ddrBase, CSL_EMIF_CTLCFG_DENALI_PHY_1318);
+    regval = (regval & ~(LPM_DDR_LPI_THRESH_MASK << LPM_DDR_LPI_SHIFT)) | ((max_thresh + 1U) << LPM_DDR_LPI_SHIFT);
+    CSL_REG32_WR_OFF(ddr->ddrBase, CSL_EMIF_CTLCFG_DENALI_PHY_1318, regval);
+}
 
 static void Lpm_ddrSwitchToFsp0(const struct Lpm_DdrInstanceConfig *ddr)
 {

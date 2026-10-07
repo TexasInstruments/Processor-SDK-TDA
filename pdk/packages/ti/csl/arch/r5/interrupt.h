@@ -110,7 +110,7 @@ typedef void  (*exptnHandlerPtr)(void *ptr);
 #define CSL_MCU_DOMAIN_VIM_BASE_ADDR0           (0x50F00000U)
 #define CSL_MCU_DOMAIN_VIM_BASE_ADDR1           (0x50F00000U)
 
-#elif defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM275X)
+#elif defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM275X) || defined (SOC_AM283X)
 /** \brief Base address of MCU Domain R5 VIM */
 #define CSL_MCU_DOMAIN_VIM_BASE_ADDR            (0x2fff0000U)
 #define CSL_MCU_DOMAIN_VIM_BASE_ADDR0           (CSL_MCU_DOMAIN_VIM_BASE_ADDR)

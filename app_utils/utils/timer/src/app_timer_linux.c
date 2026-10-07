@@ -84,6 +84,7 @@ static void *GTC_BASE_ADDR = NULL;
 #define GET_GTC_LO_VALUE  (*(volatile uint32_t*)(GTC_BASE_ADDR + 0x8U))
 #define GET_GTC_HI_VALUE  (*(volatile uint32_t*)(GTC_BASE_ADDR + 0xCU))
 #define GET_GTC_FREQUENCY (*(volatile uint64_t*)(GTC_BASE_ADDR + 0x20))
+
 static uint64_t mhzFreq = 0;
 
 #define PRI_MAX  sched_get_priority_max(SCHED_FIFO)

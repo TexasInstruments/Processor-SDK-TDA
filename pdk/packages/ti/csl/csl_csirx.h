@@ -42,7 +42,7 @@
 #include <ti/csl/tistdtypes.h>
 #include <ti/csl/cslr_csirx.h>
 
-#if defined (SOC_J721E) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined(SOC_AM62X) || defined (SOC_AM62A) || defined(SOC_AM62PX) || defined (SOC_AM275X)
+#if defined (SOC_J721E) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined(SOC_AM62X) || defined (SOC_AM62A) || defined(SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/csirx/V0/cdn_errno.h>
 #include <ti/csl/src/ip/csirx/V0/csirx_if.h>
 #include <ti/csl/src/ip/csirx/V0/csirx_structs_if.h>

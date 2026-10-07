@@ -63,8 +63,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE. 
  * 
  */ 
-#ifndef MMAP_H
-#define MMAP_H
+#ifndef APP_MEM_MAP_H
+#define APP_MEM_MAP_H
 
 
 /* Main OCRAM for MCU2_0 [ size 256.00 KB ] */
@@ -646,5 +646,5 @@
 #define DDR_64BIT_BASE_VADDR (0x100000000u)
 #define DDR_64BIT_BASE_PADDR (0x880000000u)
 
-#endif /* MMAP_H */
+#endif /* APP_MEM_MAP_H */
 

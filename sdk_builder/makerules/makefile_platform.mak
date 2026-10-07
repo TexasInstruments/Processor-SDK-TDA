@@ -36,15 +36,15 @@ ifeq ($(BUILD_CPU_MCU2_0),yes)
 endif
 ifeq ($(BUILD_CPU_MCU1_0),yes)
 	@echo Generating SysConfig files for mcu1_0 vision_apps
-	$(SYSCFG_NODE) $(SYSCFG_CLI_PATH)/dist/cli.js --product $(MCU_PLUS_SDK_PATH)/.metadata/product.json --context wkup-r5fss0-0 --part Default --package AMW --output $(PLATFORM_PATH)/rtos/$(SOC)/cores/mcu1_0/src/generated $(PLATFORM_PATH)/rtos/$(SOC)/cores/mcu1_0/src/$(MCU_SYSCFG_FILE)
+	$(SYSCFG_NODE) $(SYSCFG_CLI_PATH)/dist/cli.js --product $(MCU_PLUS_SDK_PATH)/.metadata/product.json --context wkup-r5fss0-0 --part Default --package AMW --output $(PLATFORM_PATH)/rtos/$(SOC)/cores/mcu1_0/src/generated $(PLATFORM_PATH)/rtos/$(SOC)/cores/mcu1_0/src/$(RTOS_TYPE).syscfg
 endif
 ifeq ($(BUILD_CPU_C7x_1),yes)
 	@echo Generating SysConfig files for c7x_1 vision_apps
-	$(SYSCFG_NODE) $(SYSCFG_CLI_PATH)/dist/cli.js --product $(MCU_PLUS_SDK_PATH)/.metadata/product.json --context c75ss0-0 --part Default --package AMW --output $(PLATFORM_PATH)/rtos/$(SOC)/cores/c7x_1/src/generated $(PLATFORM_PATH)/rtos/$(SOC)/cores/c7x_1/src/$(MCU_SYSCFG_FILE)
+	$(SYSCFG_NODE) $(SYSCFG_CLI_PATH)/dist/cli.js --product $(MCU_PLUS_SDK_PATH)/.metadata/product.json --context c75ss0-0 --part Default --package AMW --output $(PLATFORM_PATH)/rtos/$(SOC)/cores/c7x_1/src/generated $(PLATFORM_PATH)/rtos/$(SOC)/cores/c7x_1/src/$(RTOS_TYPE).syscfg
 endif
 ifeq ($(BUILD_CPU_C7x_2),yes)
 	@echo Generating SysConfig files for c7x_2 vision_apps
-	$(SYSCFG_NODE) $(SYSCFG_CLI_PATH)/dist/cli.js --product $(MCU_PLUS_SDK_PATH)/.metadata/product.json --context c75ss1-0 --part Default --package AMW --output $(PLATFORM_PATH)/rtos/$(SOC)/cores/c7x_2/src/generated $(PLATFORM_PATH)/rtos/$(SOC)/cores/c7x_2/src/$(MCU_SYSCFG_FILE)
+	$(SYSCFG_NODE) $(SYSCFG_CLI_PATH)/dist/cli.js --product $(MCU_PLUS_SDK_PATH)/.metadata/product.json --context c75ss1-0 --part Default --package AMW --output $(PLATFORM_PATH)/rtos/$(SOC)/cores/c7x_2/src/generated $(PLATFORM_PATH)/rtos/$(SOC)/cores/c7x_2/src/$(RTOS_TYPE).syscfg
 endif
 endif
 ifeq ($(SOC), am62a)

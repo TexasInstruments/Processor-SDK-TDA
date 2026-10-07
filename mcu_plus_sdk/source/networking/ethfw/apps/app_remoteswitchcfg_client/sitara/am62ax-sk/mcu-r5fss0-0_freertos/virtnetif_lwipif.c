@@ -1752,3 +1752,56 @@ void LwipifEnetApp_setupProxyArphandler(const Enet_Type enetType, const uint32_t
     /* For ETHFW use case, clients don't support reception for ARP packets, hence returns NULL */
     hRx->handlePktFxn = NULL;
 }
+
+#if defined(ETHFW_MTS_SUPPORT)
+int32_t TsCouplerClient_allocHwPushInst(uint32_t *hwPushNum)
+{
+    int32_t status = CPSWPROXY_SOK;
+    CpswRemoteApp_VirtNetif *virtNetif = &gVirtNetifObj.virtNetif[0];
+
+    /* Send request to Ethfw to alloc HW push instance */
+    status = CpswProxy_allocHwPushInst(virtNetif->hCpswProxy,
+                                       hwPushNum);
+
+    return status;
+}
+
+int32_t TsCouplerClient_registerRemoteTimer(uint32_t hwPushNum,
+                                            uint32_t tsRouterTntrId)
+{
+    int32_t status = CPSWPROXY_SOK;
+    CpswRemoteApp_VirtNetif *virtNetif = &gVirtNetifObj.virtNetif[0];
+
+    /* Send request to Ethfw to configure TSR */
+    status = CpswProxy_registerRemoteTimer(virtNetif->hCpswProxy,
+                                           tsRouterTntrId,
+                                           hwPushNum);
+
+    return status;
+}
+
+/**
+ * TODO: This function here is a temporary-fix SDK team will implement this in properly in Timer module: SITREQ-7000
+ */
+void TimerP_enablePWMTrigger(uint32_t baseaddr)
+{
+    const uint32_t TIMER_TCLR              = (uint32_t)0x38U;
+    const uint32_t TIMER_TCLR_TRG_MASK     = (uint32_t)0xC00U;
+    const uint32_t TIMER_TCLR_TRG_SHIFT    = (uint32_t)0x0AU;
+    const uint32_t TIMER_TWPS              = (0x48u);
+    const uint32_t TIMER_TCLR_PEND_SHIFT   = (0U);
+    const uint32_t TIMER_TCLR_PEND_MASK    = (1U << TIMER_TCLR_PEND_SHIFT);
+    
+    uint32_t regVal = 0U;
+    volatile uint32_t* twps_addr = (volatile uint32_t *)(baseaddr + TIMER_TWPS);
+    volatile uint32_t *addr = (volatile uint32_t *)(baseaddr + TIMER_TCLR);
+    while((*twps_addr & TIMER_TCLR_PEND_MASK) == TIMER_TCLR_PEND_MASK)
+    {}
+    regVal = *addr;
+    regVal &= ~TIMER_TCLR_TRG_MASK;
+    regVal |= (1 << TIMER_TCLR_TRG_SHIFT);
+    *addr = regVal;
+    while((*twps_addr & TIMER_TCLR_PEND_MASK) == TIMER_TCLR_PEND_MASK)
+    {}
+}
+#endif

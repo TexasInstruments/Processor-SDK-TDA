@@ -45,7 +45,7 @@
 #include <ti/csl/tistdtypes.h>
 #include <ti/csl/cslr_bcdma.h>
 
-#if defined (SOC_AM64X)|| defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X)
+#if defined (SOC_AM64X)|| defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/bcdma/V0/csl_bcdma.h>
 #include <ti/csl/src/ip/udmap/V0/csl_udmap_tr.h>
 #endif

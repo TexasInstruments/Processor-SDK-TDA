@@ -75,7 +75,7 @@ class C7x_1_Syscfg :
         MB = KB*KB;
         GB = KB*MB;
 
-        with open("./c7x_1/example.syscfg", "r") as file:
+        with open("../../rtos/am62a/cores/c7x_1/src/example.syscfg", "r") as file:
             data = file.read()
 
         for key, memSection in sorted(self.memoryMap.memoryMap.items()):
@@ -91,6 +91,6 @@ class C7x_1_Syscfg :
             string3 = f'{regions}.size      = 0x{memSection.length:06X};'
             size_pattern  = rf'{regions}.size\s*=\s*0x[0-9A-Fa-f]+;'
             data = re.sub(size_pattern, string3, data)
-        
-        with open("./c7x_1/example.syscfg","w") as file:
+
+        with open("../../rtos/am62a/cores/c7x_1/src/example.syscfg","w") as file:
             file.write(data)

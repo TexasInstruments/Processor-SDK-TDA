@@ -44,7 +44,7 @@
 
 #if defined(SOC_AM574x) || defined (SOC_TDA2XX) || defined (SOC_TDA2PX) || defined (SOC_TDA2EX) || defined (SOC_TDA3XX) || defined (SOC_DRA72x) || defined (SOC_DRA75x) || defined (SOC_DRA78x) || defined (SOC_AM437x) || defined (SOC_AM572x) || defined (SOC_AM571x) || defined(SOC_AM335x) || defined (SOC_K2G) || defined (SOC_OMAPL137) || defined (SOC_OMAPL138)
 #include <ti/csl/src/ip/epwm/V0/cslr_epwm.h>
-#elif defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X)
+#elif defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/epwm/V0/hw_pwmss_epwm.h>
 #include <ti/csl/src/ip/epwm/V0_2/cslr_epwm.h>
 #endif

@@ -64,7 +64,7 @@ INCDIR += src/ip/emif/V5
 SRCS_COMMON += csl_emif.c
 endif
 
-ifeq ($(SOC),$(filter $(SOC), am62a am62px am275x))
+ifeq ($(SOC),$(filter $(SOC), am62a am62px am275x am283x))
 PACKAGE_SRCS_COMMON += cslr_emif.h csl_emif.h src/ip/emif/src_files_emif.mk src/ip/emif/V2 src/ip/emif/V4 src/ip/emif/V6
 SRCDIR += src/ip/emif/V4/priv
 INCDIR += src/ip/emif/V2 src/ip/emif/V6

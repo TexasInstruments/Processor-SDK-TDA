@@ -138,6 +138,8 @@ const defines_r5f = {
         'SITARA',
         'GPTP_ENABLED=1',
         "ETHAPP_ENABLE_IPERF_SERVER",
+        "ETHFW_MTS_SUPPORT",
+        "ETHFW_MTS_DEMO_TEST",
         "MCU_PLUS_SDK",
         "SOC_AM62PX",
         "CPU_mcu2_1",

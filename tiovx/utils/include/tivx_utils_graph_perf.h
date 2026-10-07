@@ -82,7 +82,7 @@ extern "C" {
 #define TIVX_UTILS_MAX_LINE_SIZE     (1024u)
 
 /** \brief Max matched input reference object */
-#define TIVX_UTILS_MAX_MATCHED_INPUT_REF  (32u)
+#define TIVX_UTILS_MAX_MATCHED_INPUT_REF  (64u)
 
 /**
  * \brief Print graph performance information to stdout via 'printf'

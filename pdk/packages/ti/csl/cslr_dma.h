@@ -40,7 +40,7 @@
 #include <ti/csl/cslr_udmap.h>
 #endif
 
-#if defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X)
+#if defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/cslr_pktdma.h>
 #include <ti/csl/src/ip/pktdma/V0/csl_pktdma_alias_udmap_api.h>
 #endif

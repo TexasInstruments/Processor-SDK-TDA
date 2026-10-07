@@ -61,11 +61,9 @@
  */
 
 #if defined(SOC_FAMILY_TDA5)
-#if !defined(VDK_STUB)
 #include <Ipc_Notify_Hal.h>
 #include <RPMessage_Hal_Linux_ResourceTable.h>
 #include <RPMessage_Hal.h>
-#endif /* #if !defined(VDK_STUB) */
 #endif /* #if defined(SOC_FAMILY_TDA5) */
 
 #include <utils/ipc/include/app_ipc.h>

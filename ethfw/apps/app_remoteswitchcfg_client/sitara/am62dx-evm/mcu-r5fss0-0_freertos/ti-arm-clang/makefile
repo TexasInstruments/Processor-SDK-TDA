@@ -107,6 +107,8 @@ DEFINES_common := \
 	-DSOC_AM62DX \
 	-DCPU_mcu2_1 \
 	-DENABLE_MAC_ONLY_PORTS \
+	-DETHFW_MTS_SUPPORT \
+	-DETHFW_MTS_DEMO_TEST \
 
 CFLAGS_common := \
 	-mcpu=cortex-r5 \

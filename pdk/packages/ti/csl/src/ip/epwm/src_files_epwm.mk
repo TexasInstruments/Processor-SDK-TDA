@@ -19,7 +19,7 @@ SRCDIR += src/ip/epwm/V0/priv src/ip/epwm/V0_1/priv
 SRCS_COMMON += csl_epwm.c csl_hrpwm.c
 endif
 
-ifeq ($(SOC),$(filter $(SOC), am64x am62x am62a am62px am62lx am275x))
+ifeq ($(SOC),$(filter $(SOC), am64x am62x am62a am62px am62lx am275x am283x))
 PACKAGE_SRCS_COMMON += src/ip/epwm/V0_1/hw_pwmss_submodule_offsets.h
 PACKAGE_SRCS_COMMON += src/ip/epwm/V0_2
 PACKAGE_SRCS_COMMON += cslr_epwm.h csl_epwm.h src/ip/epwm/src_files_epwm.mk src/ip/epwm/V0

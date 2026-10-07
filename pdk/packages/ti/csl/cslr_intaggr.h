@@ -38,7 +38,7 @@
 
 #if defined (SOC_AM65XX) 
 #include <ti/csl/src/ip/intaggr/V0/V0_1/cslr_intaggr.h>
-#elif defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X)
+#elif defined (SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/intaggr/V0/V0_2/cslr_intaggr.h>
 #endif
 

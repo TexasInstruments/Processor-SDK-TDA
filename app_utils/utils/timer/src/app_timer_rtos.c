@@ -87,7 +87,7 @@ static uint64_t mhzFreq = 0;
 
 /* JIRA: ADASVISION-7144 - Temporarily disabled, to be enabled once sci-client is enabled in mcu_sdk*/
 #if defined(SOC_TDA54)
-#define GTC_CLOCK_FREQ (200 * 1000 * 1000)
+#define GTC_CLOCK_FREQ (500 * 1000 * 1000)
 #endif
 
 #ifdef APP_TIMER_USE_GLOBAL_TIME

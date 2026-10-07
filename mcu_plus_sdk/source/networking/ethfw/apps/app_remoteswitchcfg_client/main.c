@@ -118,6 +118,16 @@
  * for dmTimer12, id =1 is for dmTimer13, id = 2 is for dmTimer14 etc.
  */
 #define CPSW_REMOTE_APP_TIMESYNC_TIMER_IDX       (3U)
+#elif defined(SOC_AM62PX) || defined(SOC_AM62DX) || defined(SOC_AM62AX)
+/**
+ * On Sitara deives (ie AM62P, AM62D, AM62A) 4 Main domain timers have connection to Timesync Router
+ * Timer0 is connected to TIMESYNC_EVENT_INTROUTER0_IN_IN_0
+ * Timer1 is connected to TIMESYNC_EVENT_INTROUTER0_IN_IN_1
+ * Timer2 is connected to TIMESYNC_EVENT_INTROUTER0_IN_IN_2
+ * Timer3 is connected to TIMESYNC_EVENT_INTROUTER0_IN_IN_3
+ */
+#define CPSW_REMOTE_APP_TIMESYNC_TIMER_IDX        (2U)
+#define CPSW_REMOTE_APP_TIMESYNC_ROUTER_INPUT     (CPSW_REMOTE_APP_TIMESYNC_TIMER_IDX)
 #endif
 
 #define CPSW_REMOTE_APP_TIMESYNC_TIMERPERIOD_MS  (1000U) //1 second
@@ -491,23 +501,11 @@ void CpswRemoteApp_initTask(void* a0)
     memset(&tsClientCfg, 0, sizeof(tsClientCfg));
 
     initTsClientParams.timerType = TS_COUPLER_CLIENT_TIMER_TYPE_GPTIMER;
-    TsCouplerClient_init(&initTsClientParams);
 
-    /* To DO: ETHFW-3048 - There is tight couple of CPSW proxy handle and virtnetif_lwipif.c
-     * which needs to be cleaned up, main should have handle of CPSW proxy instead
-     * and should be the one giving it to virtnetif_lwipif.c or other sub modules on
-     * client side. Delay is needed to get attach being done by virtnetif_lwipif.c
-     * before calling CPSW proxy commands that requires valid handles. */
-    EthFwOsal_sleepTask(2000U);
+    tsClientCfg.periodinMs       = CPSW_REMOTE_APP_TIMESYNC_TIMERPERIOD_MS;
+    tsClientCfg.timerIdx         = CPSW_REMOTE_APP_TIMESYNC_TIMER_IDX;
 
-    /* Alloc the CPTS HW push instance */
-    status = TsCouplerClient_allocHwPushInst(&tsClientCfg.hwPushNum);
-    localAssert(status == ENET_SOK);
-
-    tsClientCfg.timerIdx       = CPSW_REMOTE_APP_TIMESYNC_TIMER_IDX;
-    tsClientCfg.periodinMs     = CPSW_REMOTE_APP_TIMESYNC_TIMERPERIOD_MS;
-
-    /* App must fill the corresponding Timesync interrupt router input for the applicable timerType. */
+#if !defined(MCU_PLUS_SDK)
     if (initTsClientParams.timerType == TS_COUPLER_CLIENT_TIMER_TYPE_GPTIMER)
     {
         tsClientCfg.tsRouterTntrId = CSLR_TIMESYNC_INTRTR0_IN_TIMER14_TIMER_PWM_0;
@@ -517,7 +515,23 @@ void CpswRemoteApp_initTask(void* a0)
         tsClientCfg.pushEvtVal     = CPSW_REMOTE_APP_GTC_PUSHEVT_BIT_SEL;
         tsClientCfg.tsRouterTntrId = CSLR_TIMESYNC_INTRTR0_IN_GTC0_GTC_PUSH_EVENT_0;
     }
+#else
+        tsClientCfg.tsRouterTntrId = CPSW_REMOTE_APP_TIMESYNC_ROUTER_INPUT;
+#endif
 
+    TsCouplerClient_init(&initTsClientParams);
+
+    /* To DO: ETHFW-3048 - There is tight couple of CPSW proxy handle and virtnetif_lwipif.c
+     * which needs to be cleaned up, main should have handle of CPSW proxy instead
+     * and should be the one giving it to virtnetif_lwipif.c or other sub modules on
+     * client side. Delay is needed to get attach being done by virtnetif_lwipif.c
+     * before calling CPSW proxy commands that requires valid handles. */
+    EthFwOsal_sleepTaskinMsecs(2000U);
+
+    /* Alloc the CPTS HW push instance */
+    status = TsCouplerClient_allocHwPushInst(&tsClientCfg.hwPushNum);
+    localAssert(status == ENET_SOK);
+    
     TsCouplerClient_start(&tsClientCfg);
 #endif
 }

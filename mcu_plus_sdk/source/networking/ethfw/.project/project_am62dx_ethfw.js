@@ -43,6 +43,10 @@ const files = {
         "ic_queue.c",
         "pbufQ_ic.c",
         "custom_pbuf_ic.c",
+
+        /* Multi Core Timesync */
+        "ts_coupler_client.c",
+        "ts_coupler_server.c"
     ],
 };
 
@@ -181,6 +185,8 @@ const defines_r5f = {
         "MCU_PLUS_SDK",
         "SOC_AM62DX",
         "ENABLE_MAC_ONLY_PORTS",
+        "ETHFW_MTS_SUPPORT",
+        "ETHFW_MTS_DEMO_TEST",
     ],
     debug: [
         "ENET_CFG_DEV_ERROR=1",
@@ -209,6 +215,8 @@ const defines_dm_r5f = {
         "SOC_AM62DX",
         "ENABLE_MAC_ONLY_PORTS",
         "AVTP_ENABLED=1",
+        "ETHFW_MTS_SUPPORT",
+        "ETHFW_MTS_DEMO_TEST",
     ],
     debug: [
         "ENET_CFG_DEV_ERROR=1",

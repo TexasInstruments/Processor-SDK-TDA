@@ -45,7 +45,7 @@
 #include <ti/csl/tistdtypes.h>
 #include <ti/csl/cslr_udmap.h>
 
-#if defined (SOC_AM65XX) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X)
+#if defined (SOC_AM65XX) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/udmap/V0/csl_udmap.h>
 #include <ti/csl/src/ip/udmap/V0/csl_udmap_cppi5.h>
 #include <ti/csl/src/ip/udmap/V0/csl_udmap_tr.h>

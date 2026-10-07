@@ -39,6 +39,8 @@ FILES_common := \
     ic_queue.c \
     pbufQ_ic.c \
     custom_pbuf_ic.c \
+    ts_coupler_client.c \
+    ts_coupler_server.c \
 
 FILES_PATH_common = \
     ${MCU_PLUS_SDK_PATH}/source/networking/enet/core/utils/V2 \
@@ -136,6 +138,8 @@ DEFINES_common := \
     -DMCU_PLUS_SDK \
     -DSOC_AM62DX \
     -DENABLE_MAC_ONLY_PORTS \
+    -DETHFW_MTS_SUPPORT \
+    -DETHFW_MTS_DEMO_TEST \
     -DSW_VERSION=$(SW_VERSION)
 
 DEFINES_debug := \

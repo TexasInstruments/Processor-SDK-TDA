@@ -600,6 +600,7 @@ static void Lwip2Enet_initRxObj(Enet_Type enetType, uint32_t instId, uint32_t ch
 
         hRx->refCount = 1U;
         hRx->chEntryIdx = chEntryIdx;
+        hRx->enetType = enetType;
         for (uint32_t portIdx = 0; portIdx < CPSW_STATS_MACPORT_MAX; portIdx++)
         {
             hRx->mapPortToNetif[portIdx] = NULL;
@@ -671,6 +672,7 @@ static void Lwip2Enet_initTxObj(Enet_Type enetType, uint32_t instId, uint32_t ch
         pTx->hCh = outArgs.hTxChannel;
         Lwip2Enet_assert(pTx->hCh != NULL);
         pTx->disableEvent = outArgs.disableEvent;
+        Lwip2Enet_setTxCsumOffloadTarget(pTx, ENET_CSUM_OFFLOAD_TARGET_CPSW_DMA);
 
         pTx->stats.freeAppPktEnq = outArgs.numPackets;
 
@@ -758,7 +760,7 @@ void Lwip2Enet_sendTxPackets(Lwip2Enet_netif_t* pInterface, const Enet_MacPort m
                 pCurrDmaPacket->appPriv    = hPbufPkt;
                 pCurrDmaPacket->txPortNum  = macPort;
                 pCurrDmaPacket->node.next  = NULL;
-                pCurrDmaPacket->chkSumInfo = LWIPIF_LWIP_getChkSumInfo(hPbufPkt);
+                pCurrDmaPacket->chkSumInfo = LWIPIF_LWIP_getChkSumInfo(hPbufPkt, hTx->csumOffloadTarget);
 
                 ENET_UTILS_COMPILETIME_ASSERT(offsetof(EnetDma_Pkt, node) == 0U);
                 EnetQueue_enq(&txSubmitQ, &(pCurrDmaPacket->node));
@@ -1013,7 +1015,7 @@ static void Lwip2Enet_pbufQ2PktInfoQ(Lwip2Enet_TxObj *tx,
 
             pCurrDmaPacket->node.next = NULL;
             pCurrDmaPacket->txPortNum  = macPort;
-            pCurrDmaPacket->chkSumInfo = LWIPIF_LWIP_getChkSumInfo(hPbufPkt);
+            pCurrDmaPacket->chkSumInfo = LWIPIF_LWIP_getChkSumInfo(hPbufPkt, tx->csumOffloadTarget);
 
             ENET_UTILS_COMPILETIME_ASSERT(offsetof(EnetDma_Pkt, node) == 0U);
             EnetQueue_enq(pDmaPktInfoQ, &(pCurrDmaPacket->node));
@@ -1289,7 +1291,16 @@ static uint32_t Lwip2Enet_prepRxPktQ(Lwip2Enet_RxObj *rx,
                      * as default value of this field when offload not enabled is false */
                     const uint32_t csumInfo =  pCurrDmaPacket->chkSumInfo;
 
-                    if (ENETDMA_RXCSUMINFO_GET_IPV4_FLAG(csumInfo) ||
+                    if (Enet_isIcssFamily(rx->enetType))
+                    {
+                        /* ICSSG carries a tri-state PRU FW checksum flag in the low byte, not
+                         * CPSW's FHOST bit layout -- FAIL is 0x00, which would otherwise
+                         * be silently swallowed by the IPV4/IPV6_FLAG check below (both
+                         * read as unset), so this must be its own branch, not a fallthrough. */
+                        uint32_t csumFlag = ENETDMA_RXCSUMINFO_GET_PRU_CSUM_FLAG(csumInfo);
+                        isChksumError = (csumFlag == ENETDMA_RXCSUMINFO_PRU_CSUM_FAIL_FLAG);
+                    }
+                    else if (ENETDMA_RXCSUMINFO_GET_IPV4_FLAG(csumInfo) ||
                         ENETDMA_RXCSUMINFO_GET_IPV6_FLAG(csumInfo))
                     {
                         isChksumError = ENETDMA_RXCSUMINFO_GET_CHKSUM_ERR_FLAG(csumInfo);
@@ -1717,4 +1728,9 @@ void Lwip2Enet_setRxNotifyCallback(Lwip2Enet_RxHandle hRx, Enet_notify_t *pRxPkt
 void Lwip2Enet_setTxNotifyCallback(Lwip2Enet_TxHandle hTx, Enet_notify_t *pTxPktNotify)
 {
     hTx->txPktNotify = *pTxPktNotify;
+}
+
+void Lwip2Enet_setTxCsumOffloadTarget(Lwip2Enet_TxHandle hTx, uint32_t target)
+{
+    hTx->csumOffloadTarget = target;
 }

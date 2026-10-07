@@ -97,6 +97,7 @@
 #include "app_pose_viz_module.h"
 #include "app_img_mosaic_module.h"
 #include "app_display_module.h"
+#include "app_dump_output.h"
 
 /*Maximum tensor for TIDL and is made dependent maximum input tensor for visualization (or TIDL output)*/
 #define TIDL_NODE_MAX_TENSORS        (2)
@@ -152,6 +153,7 @@ typedef struct {
     vx_int32 raw_tidl_op;
 
     vx_int32 en_out_img_write;
+    vx_int32 dump_output;
 
     vx_uint32 delay_in_msecs;
     vx_uint32 num_iterations;
@@ -814,6 +816,7 @@ static void app_parse_cfg_file(AppObj *obj, vx_char *cfg_file_name)
 static void app_parse_cmd_line_args(AppObj *obj, vx_int32 argc, vx_char *argv[])
 {
     vx_int32 i;
+    vx_bool dump_output = vx_false_e;
 
 
     if(argc==1)
@@ -832,7 +835,6 @@ static void app_parse_cmd_line_args(AppObj *obj, vx_int32 argc, vx_char *argv[])
                 app_show_usage(argc, argv);
             }
             app_parse_cfg_file(obj, argv[i]);
-            break;
         }
         else
         if(strcmp(argv[i], "--help")==0)
@@ -840,6 +842,27 @@ static void app_parse_cmd_line_args(AppObj *obj, vx_int32 argc, vx_char *argv[])
             app_show_usage(argc, argv);
             exit(0);
         }
+        else
+        if(strcmp(argv[i], "--dump")==0)
+        {
+            dump_output = vx_true_e;
+        }
+    }
+
+    if (dump_output == vx_true_e)
+    {
+        obj->dump_output = 1;
+        obj->num_iterations = 1;
+        obj->is_interactive = 0;
+        obj->start_frame = 0;
+        obj->skip_frames = 1;
+        obj->num_frames = PIPELINE_TOTAL_NO_OF_FRAMES + 1;
+        APP_PRINTF("Output dumping is enabled\n");
+    }
+    else
+    {
+        obj->dump_output = 0;
+        APP_PRINTF("Output dumping is disabled\n");
     }
 
     #ifdef x86_64
@@ -1160,7 +1183,7 @@ static vx_status app_create_graph(AppObj *obj)
     graph_parameters_queue_params_list[graph_parameter_index].refs_list = (vx_reference*)&obj->input_images[0];
     graph_parameter_index++;
 
-    if (obj->en_out_img_write == 1)
+    if ((obj->en_out_img_write == 1) || (obj->dump_output == 1))
     {
       add_graph_parameter_by_node_index(obj->graph, obj->imgMosaicObj.node, 1);
       obj->imgMosaicObj.graph_parameter_index = graph_parameter_index;
@@ -1189,7 +1212,7 @@ static vx_status app_create_graph(AppObj *obj)
 
     tivxSetNodeParameterNumBufByIndex(obj->poseVizObj.node, 3, APP_BUFFER_Q_DEPTH);
 
-    if(!(obj->en_out_img_write == 1))
+    if(!((obj->en_out_img_write == 1) || (obj->dump_output == 1)))
     {
         tivxSetNodeParameterNumBufByIndex(obj->imgMosaicObj.node, 1, 4);
     }
@@ -1299,7 +1322,7 @@ static vx_status app_run_graph_for_one_frame_pipeline(AppObj *obj, vx_int32 fram
     if(obj->pipeline < 0)
     {
         /* Enqueue outpus */
-        if (obj->en_out_img_write == 1)
+        if ((obj->en_out_img_write == 1) || (obj->dump_output == 1))
         {
             vxGraphParameterEnqueueReadyRef(obj->graph, imgMosaicObj->graph_parameter_index, (vx_reference*)&imgMosaicObj->output_image[obj->enqueueCnt], 1);
         }
@@ -1329,19 +1352,39 @@ static vx_status app_run_graph_for_one_frame_pipeline(AppObj *obj, vx_int32 fram
         /* Dequeue input */
         vxGraphParameterDequeueDoneRef(obj->graph, scalerObj->graph_parameter_index, (vx_reference*)&scaler_input_image, 1, &num_refs);
 
-        if(obj->en_out_img_write == 1)
+        if((obj->en_out_img_write == 1) || (obj->dump_output == 1))
         {
             vx_char output_file_name[APP_MAX_FILE_PATH];
 
             /* Dequeue output */
             vxGraphParameterDequeueDoneRef(obj->graph, imgMosaicObj->graph_parameter_index, (vx_reference*)&mosaic_output_image, 1, &num_refs);
 
-            APP_PRINTF("App Writing Outputs Start...\n");
+            if (obj->en_out_img_write == 1)
+            {
+                APP_PRINTF("App Writing Outputs Start...\n");
 
-            snprintf(output_file_name, APP_MAX_FILE_PATH, "%s/mosaic_output_%010d_1920x1080.yuv", obj->output_file_path, (frame_id - APP_BUFFER_Q_DEPTH));
-            writeMosaicOutput(output_file_name, mosaic_output_image);
+                snprintf(output_file_name, APP_MAX_FILE_PATH, "%s/mosaic_output_%010d_1920x1080.yuv", obj->output_file_path, (frame_id - APP_BUFFER_Q_DEPTH));
+                writeMosaicOutput(output_file_name, mosaic_output_image);
 
-            APP_PRINTF("App Writing Outputs Done!\n");
+                APP_PRINTF("App Writing Outputs Done!\n");
+            }
+
+            if (obj->dump_output == 1)
+            {
+                for (int i = 0; i < NUMBER_OF_FRAMES_DUMPS; i++)
+                {
+                    vx_uint32 expected_idx = frame_id - obj->start_frame - 1;
+
+                    if (gDumpOutputFramesInfo[i].frame_index == expected_idx && gDumpOutputFramesInfo[i].is_dumped == vx_false_e)
+                    {
+                        printf("Dumping output for frame index : %d\n", gDumpOutputFramesInfo[i].frame_index);
+                        snprintf(output_file_name, APP_MAX_FILE_PATH, "%s/mosaic_output_%010d_1920x1080.yuv", obj->output_file_path, (frame_id - APP_BUFFER_Q_DEPTH));
+                        writeMosaicOutput(output_file_name, mosaic_output_image);
+                        gDumpOutputFramesInfo[i].is_dumped = vx_true_e;
+                        printf("App Dumping Outputs Done!\n");
+                    }
+                }
+            }
 
             /* Enqueue output */
             vxGraphParameterEnqueueReadyRef(obj->graph, imgMosaicObj->graph_parameter_index, (vx_reference*)&mosaic_output_image, 1);

@@ -107,8 +107,8 @@ class CHeaderFile :
         GB = KB*MB;
 
         self.open();
-        self.write_line("#ifndef MMAP_H");
-        self.write_line("#define MMAP_H");
+        self.write_line("#ifndef APP_MEM_MAP_H");
+        self.write_line("#define APP_MEM_MAP_H");
         self.write_line( "" );
         self.write_line( "" );
         for key,memSection in sorted(self.memoryMap.memoryMap.items(), key=CHeaderFile.sortKey):
@@ -133,6 +133,6 @@ class CHeaderFile :
         self.write_line( "#define DDR_64BIT_BASE_VADDR (0x%08Xu)"  % (self.virt_addr_base));
         self.write_line( "#define DDR_64BIT_BASE_PADDR (0x%08Xu)"  % (self.phys_addr_base));
         self.write_line( "" );
-        self.write_line("#endif /* MMAP_H */");
+        self.write_line("#endif /* APP_MEM_MAP_H */");
         self.write_line( "" );
         self.close();

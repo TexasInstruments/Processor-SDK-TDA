@@ -6,7 +6,7 @@ SRCDIR += src/ip/mailbox/V0/priv
 INCDIR += . src/ip/mailbox/V0 src/ip/mailbox/V0/V0_0
 endif
 
-ifeq ($(SOC),$(filter $(SOC), am65xx am64x am62x am62a am62px am62lx am275x))
+ifeq ($(SOC),$(filter $(SOC), am65xx am64x am62x am62a am62px am62lx am275x am283x))
 PACKAGE_SRCS_COMMON += cslr_mailbox.h csl_mailbox.h src/ip/mailbox/src_files_mailbox.mk src/ip/mailbox/V0 src/ip/mailbox/V0/V0_1
 SRCS_COMMON += mailbox.c
 SRCDIR += src/ip/mailbox/V0/priv

@@ -1,0 +1,34 @@
+--- a/packages/ti/drv/sciclient/src/sciserver_version_makefile
++++ b/packages/ti/drv/sciclient/src/sciserver_version_makefile
+@@ -23,16 +23,16 @@ ifneq ($(OS),Windows_NT)
+ endif
+
+ gen_sciserver_version:
+-ifneq ($(OS),Windows_NT)
+-	@$(ECHO) \# Check and update: src/version/sciserver_version.h
+-	@TMPFILE=$$(mktemp) && \
+-	src/version/generate_sciserver_ver.sh > $$TMPFILE && \
+-	if [ -s $$TMPFILE ]; \
+-	then \
+-		if cmp -s src/version/sciserver_version.h $$TMPFILE; \
+-		then rm $$TMPFILE; \
+-		else mv $$TMPFILE src/version/sciserver_version.h; \
+-		fi; \
+-	else rm $$TMPFILE; \
+-	fi
+-endif
+\ No newline at end of file
++# ifneq ($(OS),Windows_NT)
++# 	@$(ECHO) \# Check and update: src/version/sciserver_version.h
++# 	@TMPFILE=$$(mktemp) && \
++# 	src/version/generate_sciserver_ver.sh > $$TMPFILE && \
++# 	if [ -s $$TMPFILE ]; \
++# 	then \
++# 		if cmp -s src/version/sciserver_version.h $$TMPFILE; \
++# 		then rm $$TMPFILE; \
++# 		else mv $$TMPFILE src/version/sciserver_version.h; \
++# 		fi; \
++# 	else rm $$TMPFILE; \
++# 	fi
++# endif
+\ No newline at end of file

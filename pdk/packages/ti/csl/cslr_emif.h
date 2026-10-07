@@ -51,7 +51,7 @@
 #include <ti/csl/src/ip/emif/V4/cslr_emif.h>
 #elif defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2)
 #include <ti/csl/src/ip/emif/V5/cslr_emif.h>
-#elif defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X)
+#elif defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/emif/V6/cslr_emif.h>
 #elif defined (SOC_AM62LX)
 #include <ti/csl/src/ip/emif/V7/cslr_emif.h>

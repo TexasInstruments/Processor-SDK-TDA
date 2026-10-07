@@ -39,6 +39,8 @@ FILES_common := \
     ic_queue.c \
     pbufQ_ic.c \
     custom_pbuf_ic.c \
+    ts_coupler_client.c \
+    ts_coupler_server.c \
 
 FILES_PATH_common = \
     ${MCU_PLUS_SDK_PATH}/source/networking/enet/core/utils/V2 \
@@ -133,6 +135,8 @@ DEFINES_common := \
     -DETHFW_PROXY_ARP_SUPPORT \
     -DETHFW_INTERCORE_ETH_SUPPORT \
     -DETHFW_IPERF_SERVER_SUPPORT \
+    -DETHFW_MTS_SUPPORT \
+    -DETHFW_MTS_DEMO_TEST \
     -DMCU_PLUS_SDK \
     -DSOC_AM62AX \
     -DSW_VERSION=$(SW_VERSION)

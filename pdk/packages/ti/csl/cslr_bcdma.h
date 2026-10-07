@@ -38,7 +38,7 @@
 
 #if defined (SOC_AM64X)
 #include <ti/csl/src/ip/bcdma/V0/V0_1/cslr_bcdma.h>
-#elif defined (SOC_AM62PX) || defined (SOC_AM275X)
+#elif defined (SOC_AM62PX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/bcdma/V0/V0_2/cslr_bcdma.h>
 #elif defined (SOC_AM62X) || defined (SOC_AM62A)
 #include <ti/csl/src/ip/bcdma/V0/V0_3/cslr_bcdma.h>

@@ -45,7 +45,7 @@
 #include <ti/csl/tistdtypes.h>
 #include <ti/csl/cslr_rti.h>
 
-#if defined (SOC_TDA3XX) || defined (SOC_DRA78x) || defined (SOC_AM65XX) || defined (SOC_J721E) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J7200) || defined (SOC_TPR12) || defined (SOC_AWR294X) || defined (SOC_AM64X) || defined (SOC_AM263X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X)
+#if defined (SOC_TDA3XX) || defined (SOC_DRA78x) || defined (SOC_AM65XX) || defined (SOC_J721E) || defined (SOC_J721S2) || defined (SOC_J784S4) || defined (SOC_J742S2) || defined (SOC_J7200) || defined (SOC_TPR12) || defined (SOC_AWR294X) || defined (SOC_AM64X) || defined (SOC_AM263X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/rti/V0/rti.h>
 #endif
 

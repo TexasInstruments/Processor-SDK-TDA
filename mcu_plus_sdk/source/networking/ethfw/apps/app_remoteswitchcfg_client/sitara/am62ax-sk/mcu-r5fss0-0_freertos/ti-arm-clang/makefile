@@ -107,6 +107,8 @@ DEFINES_common := \
 	-DMCU_PLUS_SDK \
 	-DSOC_AM62AX \
 	-DCPU_mcu2_1 \
+	-DETHFW_MTS_SUPPORT \
+	-DETHFW_MTS_DEMO_TEST \
 
 CFLAGS_common := \
 	-mcpu=cortex-r5 \

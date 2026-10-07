@@ -78,4 +78,8 @@
 #include <ti/csl/soc/am275x/src/cslr_soc_ctrl_mmr.h>
 #endif
 
+#if defined (SOC_AM283X)
+#include <ti/csl/soc/am283x/src/cslr_soc_ctrl_mmr.h>
+#endif
+
 #endif /* CSLR_SOC_CTRL_MMR_TOP_H */

@@ -5,11 +5,7 @@ ifeq ($(TARGET_OS),$(filter $(TARGET_OS), LINUX QNX))
     TARGET      := app_init_hlos_common
     TARGETTYPE  := library
 
-    ifeq ($(TARGET_OS), LINUX)
-      CSOURCES    += app_init_linux.c
-    else
-      CSOURCES    += app_init_qnx.c
-    endif
+    CSOURCES    += app_init.c
 
     IDIRS+=$(PLATFORM_PATH)
 

@@ -32,7 +32,11 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86_64 A72 A53 A720))
         RUN_CT_TIOVX_VIDEO_IO_CAPTURE_TESTS?=yes
         RUN_CT_TIOVX_VIDEO_IO_DISPLAY_TESTS?=yes
         RUN_CT_TIOVX_VIDEO_IO_DISPLAY_M2M_TESTS?=yes
-        RUN_CT_TIOVX_VIDEO_IO_CSITX_TESTS?=yes
+        ifeq ($(SOC),$(filter $(SOC), tda54))
+            RUN_CT_TIOVX_VIDEO_IO_CSITX_TESTS?=no
+        else
+            RUN_CT_TIOVX_VIDEO_IO_CSITX_TESTS?=yes
+        endif
     endif
 
     ifeq ($(SOC),$(filter $(SOC), am62a))

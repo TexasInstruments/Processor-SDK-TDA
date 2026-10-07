@@ -17,15 +17,21 @@ endif
 SRCDIR = . $(PDK_INSTALL_PATH)/ti/drv/sciclient/examples/common
 INCDIR = . $(PDK_INSTALL_PATH)/ti/drv/sciclient/examples/common
 
-COMP_LIST_COMMON = csl csl_init uart i2c board rm_pm_hal sciclient_merged$(HS_SUFFIX)
+COMP_LIST_COMMON = csl uart i2c board rm_pm_hal sciclient_merged$(HS_SUFFIX)
 ifeq ($(SOC),$(filter $(SOC), j7200 j721s2 j784s4 j742s2))
 COMP_LIST_COMMON += lpm_stub
 endif
 
 ifeq ($(BUILD_OS_TYPE), freertos)
 CFLAGS_OS_DEFINES = -DFREERTOS
-COMP_LIST_COMMON  += osal_freertos freertos
+COMP_LIST_COMMON  += osal_freertos freertos csl_init
 EXTERNAL_INTERFACES = freertos
+endif
+
+ifeq ($(BUILD_OS_TYPE), safertos)
+CFLAGS_OS_DEFINES = -DSAFERTOS
+COMP_LIST_COMMON  += osal_safertos safertos csl_init
+EXTERNAL_INTERFACES = safertos
 endif
 
 # List all the external components/interfaces, whose interface header files

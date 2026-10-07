@@ -38,7 +38,7 @@ ifeq ($(SOC),$(filter $(SOC), tda2xx tda2px am572x am574x dra75x tda2ex dra72x a
   PACKAGE_SRCS_COMMON += cslr_cpsw.h src/ip/cpsw/src_files_cpsw.mk src/ip/cpsw/V3 src/ip/cpdma/V0
 endif
 
-ifeq ($(SOC),$(filter $(SOC), am65xx j7200 j721e j721s2 j784s4 j742s2 am64x am62x am62a am62px am62lx tpr12 awr294x am275x))
+ifeq ($(SOC),$(filter $(SOC), am65xx j7200 j721e j721s2 j784s4 j742s2 am64x am62x am62a am62px am62lx tpr12 awr294x am275x am283x))
   PACKAGE_SRCS_COMMON += cslr_cpsw.h csl_cpswitch.h src/ip/cpsw/src_files_cpsw.mk src/ip/cpsw/V5/priv
   PACKAGE_SRCS_COMMON += src/ip/cpsw/V5/csl_cpsw.h src/ip/cpsw/V5/cslr_ale_tblwd_cpsw4g.h src/ip/cpsw/V5/cslr_ale_tblwd_cpsw9g.h
   SRCDIR += src/ip/cpsw/V5/priv
@@ -47,7 +47,7 @@ ifeq ($(SOC),$(filter $(SOC), am65xx j7200 j721e j721s2 j784s4 j742s2 am64x am62
   SRCS_COMMON += csl_cpsw_ss.c
   SRCS_COMMON += csl_cpsw_ale_4g_tblcfg.c
   SRCS_COMMON += csl_cpsw_ale_9g_tblcfg.c
-  ifeq ($(SOC),$(filter $(SOC), am65xx j7200 j721e j721s2 j784s4 j742s2 am64x am62x am62a am62px am62lx am275x))
+  ifeq ($(SOC),$(filter $(SOC), am65xx j7200 j721e j721s2 j784s4 j742s2 am64x am62x am62a am62px am62lx am275x am283x))
     PACKAGE_SRCS_COMMON += src/ip/cpsw/V5/V5_0
     SRCDIR += src/ip/cpsw/V5/V5_0/priv
     INCDIR += . src/ip/cpsw/V5/V5_0

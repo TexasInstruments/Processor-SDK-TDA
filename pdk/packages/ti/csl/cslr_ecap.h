@@ -41,7 +41,7 @@ extern "C"
 #include <ti/csl/tistdtypes.h>
 
 
-#if defined(SOC_AM62X) || defined(SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X)
+#if defined(SOC_AM62X) || defined(SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 #include <ti/csl/src/ip/ecap/V2/cslr_ecap.h>
 #elif defined(SOC_TPR12) || defined(SOC_AWR294X)
 #include <ti/csl/src/ip/ecap/V1/cslr_ecap.h>

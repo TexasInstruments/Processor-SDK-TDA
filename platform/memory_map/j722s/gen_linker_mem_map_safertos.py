@@ -625,10 +625,10 @@ dts_mmap.checkOverlap();
 #
 # Generate linker command files containing "MEMORY" definitions
 #
-LinkerCmdFile(c7x_1_mmap , "../../rtos/j722s/cores/c7x_1/src/linker_mem_map.cmd" ).export();
-LinkerCmdFile(c7x_2_mmap , "../../rtos/j722s/cores/c7x_2/src/linker_mem_map.cmd" ).export();
-LinkerCmdFile(mcu1_0_mmap, "../../rtos/j722s/cores/mcu1_0/src/linker_mem_map.cmd").export();
-LinkerCmdFile(mcu2_0_mmap, "../../rtos/j722s/cores/mcu2_0/src/linker_mem_map.cmd").export();
+LinkerCmdFile(c7x_1_mmap , "../../rtos/j722s/cores/c7x_1/src/linker_mem_map_safertos.cmd" ).export();
+LinkerCmdFile(c7x_2_mmap , "../../rtos/j722s/cores/c7x_2/src/linker_mem_map_safertos.cmd" ).export();
+LinkerCmdFile(mcu1_0_mmap, "../../rtos/j722s/cores/mcu1_0/src/linker_mem_map_safertos.cmd").export();
+LinkerCmdFile(mcu2_0_mmap, "../../rtos/j722s/cores/mcu2_0/src/linker_mem_map_safertos.cmd").export();
 
 HtmlMmapTable(html_mmap, "./system_memory_map.html").export();
 

@@ -246,6 +246,11 @@ typedef struct Lwip2Enet_RxObj_s
     /*! Whether RX event should be disabled or not. When disabled, it relies on pacing timer
      *  to retrieve packets from RX channel/flow */
     bool disableEvent;
+
+    /*! Peripheral type this RX flow belongs to. Set in Lwip2Enet_initRxObj().
+     *  Used to select the RX checksum flag decode (CPSW FHOST bits vs ICSSG PRU FW
+     *  tri-state checksum flag) in Lwip2Enet_prepRxPktQ(). */
+    Enet_Type enetType;
 } Lwip2Enet_RxObj, *Lwip2Enet_RxHandle;
 
 /*!
@@ -278,6 +283,10 @@ typedef struct Lwip2Enet_TxObj_s
     /*! Whether TX event should be disabled or not. When disabled, "lazy" descriptor recycle
      *  is used instead, which defers retrieval till none is available */
     bool disableEvent;
+
+    /*! TX checksum offload target: ENET_CSUM_OFFLOAD_TARGET_CPSW_DMA or _PRU_FW.
+     *  Set via Lwip2Enet_setTxCsumOffloadTarget() before first packet transmission. */
+    uint32_t csumOffloadTarget;
 } Lwip2Enet_TxObj, *Lwip2Enet_TxHandle;
 
 /**
@@ -400,6 +409,8 @@ extern void Lwip2Enet_periodicFxn(struct netif *netif);
 void Lwip2Enet_setRxNotifyCallback(Lwip2Enet_RxHandle hRx, Enet_notify_t *pRxPktNotify);
 
 void Lwip2Enet_setTxNotifyCallback(Lwip2Enet_TxHandle hTx, Enet_notify_t *pTxPktNotify);
+
+void Lwip2Enet_setTxCsumOffloadTarget(Lwip2Enet_TxHandle hTx, uint32_t target);
 
 void Lwip2Enet_rxPktHandler(Lwip2Enet_RxHandle hRx);
 

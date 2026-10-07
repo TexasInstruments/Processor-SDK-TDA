@@ -168,6 +168,10 @@ int32_t appCsi2TxInit(void)
         SET_DEVICE_STATE_ON(TISCI_DEV_CSI_TX_IF1);
     #endif
 
+    #if defined(SOC_J721E)
+        SET_DEVICE_STATE_ON(TISCI_DEV_CSI_TX_IF0);
+    #endif
+
     #if defined(SOC_J721S2)
         SET_DEVICE_STATE_ON(TISCI_DEV_CSI_TX_IF_V2_0);
         SET_DEVICE_STATE_ON(TISCI_DEV_CSI_TX_IF_V2_1);

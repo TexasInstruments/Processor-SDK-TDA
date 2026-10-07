@@ -278,6 +278,11 @@ help:
 	@echo  $(MAKE) -s -C examples/sdl/stog/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C examples/sdl/vtm/vtm_uc/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang [all clean syscfg-gui syscfg]
+	@echo  $(MAKE) -s -C examples/ip_fma/dru_static_regs_readback/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang [all clean syscfg-gui syscfg]
+	@echo  $(MAKE) -s -C examples/ip_fma/dru_static_regs_readback/j722s-evm/c75ss0-0_freertos/ti-c7000 [all clean syscfg-gui syscfg]
+	@echo  $(MAKE) -s -C examples/ip_fma/dru_static_regs_readback/j722s-evm/c75ss1-0_freertos/ti-c7000 [all clean syscfg-gui syscfg]
+	@echo  $(MAKE) -s -C examples/ip_fma/csirx_static_regs_readback/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang [all clean syscfg-gui syscfg]
+	@echo  $(MAKE) -s -C examples/ip_fma/dru_active_tr_event_overflow_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C source/safety_checkers/examples/pm_checkers_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C source/safety_checkers/examples/pm_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang [all clean syscfg-gui syscfg]
@@ -296,6 +301,7 @@ help:
 	@echo  $(MAKE) -s -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss0-0_freertos/ti-c7000 [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss1-0_freertos/ti-c7000 [all clean syscfg-gui syscfg]
+	@echo  $(MAKE) -s -C examples/ip_fma/clk_ip_fma_app/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C test/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C test/drivers/csirx/csirx_ut/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C source/networking/enet/core/examples/enet_loopback/enet_cpsw_loopback/loopback_mac_end/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang [all clean syscfg-gui syscfg]
@@ -852,6 +858,11 @@ BUILD_COMBO_EXAMPLE_ALL += rti_app_uc4_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clan
 BUILD_COMBO_EXAMPLE_ALL += tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang
+BUILD_COMBO_EXAMPLE_ALL += ip_fma_dru_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang
+BUILD_COMBO_EXAMPLE_ALL += ip_fma_dru_j722s-evm_c75ss0-0_freertos_ti-c7000
+BUILD_COMBO_EXAMPLE_ALL += ip_fma_dru_j722s-evm_c75ss1-0_freertos_ti-c7000
+BUILD_COMBO_EXAMPLE_ALL += ip_fma_csirx_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang
+BUILD_COMBO_EXAMPLE_ALL += dru_tr_of_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += SafetyCheckersApp_pm_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += SafetyCheckersApp_pm_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang
@@ -870,6 +881,7 @@ BUILD_COMBO_EXAMPLE_ALL += dm_power_analysis_app_j722s-evm_mcu-r5fss0-0_freertos
 BUILD_COMBO_EXAMPLE_ALL += dm_power_analysis_app_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += dm_power_analysis_app_j722s-evm_c75ss0-0_freertos_ti-c7000
 BUILD_COMBO_EXAMPLE_ALL += dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000
+BUILD_COMBO_EXAMPLE_ALL += clk_ip_fma_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += csirx_ut_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += enet_cpsw_loopback_mac_end_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang
@@ -1484,6 +1496,21 @@ examples-private: dm_app
  dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang:
 	$(MAKE) -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile all
 
+ ip_fma_dru_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang:
+	$(MAKE) -C examples/ip_fma/dru_static_regs_readback/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile all
+
+ ip_fma_dru_j722s-evm_c75ss0-0_freertos_ti-c7000:
+	$(MAKE) -C examples/ip_fma/dru_static_regs_readback/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile all
+
+ ip_fma_dru_j722s-evm_c75ss1-0_freertos_ti-c7000:
+	$(MAKE) -C examples/ip_fma/dru_static_regs_readback/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile all
+
+ ip_fma_csirx_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
+	$(MAKE) -C examples/ip_fma/csirx_static_regs_readback/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+
+ dru_tr_of_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang:
+	$(MAKE) -C examples/ip_fma/dru_active_tr_event_overflow_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile all
+
  SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang:
 	$(MAKE) -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile all
 
@@ -1537,6 +1564,9 @@ examples-private: dm_app
 
  dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000:
 	$(MAKE) -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile all
+
+ clk_ip_fma_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
+	$(MAKE) -C examples/ip_fma/clk_ip_fma_app/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
 
  sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang:
 	$(MAKE) -C test/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile all
@@ -1727,6 +1757,11 @@ BUILD_COMBO_EXAMPLE_CLEAN_ALL += rti_app_uc4_j722s-evm_mcu-r5fss0-0_nortos_ti-ar
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_CLEAN_ALL += ip_fma_dru_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_CLEAN_ALL += ip_fma_dru_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
+BUILD_COMBO_EXAMPLE_CLEAN_ALL += ip_fma_dru_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
+BUILD_COMBO_EXAMPLE_CLEAN_ALL += ip_fma_csirx_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_CLEAN_ALL += dru_tr_of_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += SafetyCheckersApp_pm_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += SafetyCheckersApp_pm_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
@@ -1745,6 +1780,7 @@ BUILD_COMBO_EXAMPLE_CLEAN_ALL += dm_power_analysis_app_j722s-evm_mcu-r5fss0-0_fr
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += dm_power_analysis_app_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += dm_power_analysis_app_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
+BUILD_COMBO_EXAMPLE_CLEAN_ALL += clk_ip_fma_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += csirx_ut_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += enet_cpsw_loopback_mac_end_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
@@ -2353,6 +2389,21 @@ examples-private-clean: $(BUILD_COMBO_EXAMPLE_PRIVATE_CLEAN_ALL)
  dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_clean:
 	$(MAKE) -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile clean
 
+ ip_fma_dru_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
+	$(MAKE) -C examples/ip_fma/dru_static_regs_readback/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile clean
+
+ ip_fma_dru_j722s-evm_c75ss0-0_freertos_ti-c7000_clean:
+	$(MAKE) -C examples/ip_fma/dru_static_regs_readback/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile clean
+
+ ip_fma_dru_j722s-evm_c75ss1-0_freertos_ti-c7000_clean:
+	$(MAKE) -C examples/ip_fma/dru_static_regs_readback/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile clean
+
+ ip_fma_csirx_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/ip_fma/csirx_static_regs_readback/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+
+ dru_tr_of_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/ip_fma/dru_active_tr_event_overflow_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+
  SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
 	$(MAKE) -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile clean
 
@@ -2406,6 +2457,9 @@ examples-private-clean: $(BUILD_COMBO_EXAMPLE_PRIVATE_CLEAN_ALL)
 
  dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000_clean:
 	$(MAKE) -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile clean
+
+ clk_ip_fma_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/ip_fma/clk_ip_fma_app/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
 
  sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C test/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile clean
@@ -2596,6 +2650,11 @@ BUILD_COMBO_EXAMPLE_SCRUB_ALL += rti_app_uc4_j722s-evm_mcu-r5fss0-0_nortos_ti-ar
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += tog_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += vtm_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_scrub
+BUILD_COMBO_EXAMPLE_SCRUB_ALL += ip_fma_dru_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_scrub
+BUILD_COMBO_EXAMPLE_SCRUB_ALL += ip_fma_dru_j722s-evm_c75ss0-0_freertos_ti-c7000_scrub
+BUILD_COMBO_EXAMPLE_SCRUB_ALL += ip_fma_dru_j722s-evm_c75ss1-0_freertos_ti-c7000_scrub
+BUILD_COMBO_EXAMPLE_SCRUB_ALL += ip_fma_csirx_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub
+BUILD_COMBO_EXAMPLE_SCRUB_ALL += dru_tr_of_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += SafetyCheckersApp_pm_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += SafetyCheckersApp_pm_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_scrub
@@ -2614,6 +2673,7 @@ BUILD_COMBO_EXAMPLE_SCRUB_ALL += dm_power_analysis_app_j722s-evm_mcu-r5fss0-0_fr
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += dm_power_analysis_app_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += dm_power_analysis_app_j722s-evm_c75ss0-0_freertos_ti-c7000_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000_scrub
+BUILD_COMBO_EXAMPLE_SCRUB_ALL += clk_ip_fma_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += csirx_ut_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += enet_cpsw_loopback_mac_end_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_scrub
@@ -3222,6 +3282,21 @@ examples-scrub-private: $(BUILD_COMBO_EXAMPLE_PRIVATE_SCRUB_ALL)
  dm_unit_testapp_j722s-evm_wkup-r5fss0-0_freertos_ti-arm-clang_scrub:
 	$(MAKE) -C examples/drivers/sciclient/dm_unit_testapp/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang -f makefile scrub
 
+ ip_fma_dru_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_scrub:
+	$(MAKE) -C examples/ip_fma/dru_static_regs_readback/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile scrub
+
+ ip_fma_dru_j722s-evm_c75ss0-0_freertos_ti-c7000_scrub:
+	$(MAKE) -C examples/ip_fma/dru_static_regs_readback/j722s-evm/c75ss0-0_freertos/ti-c7000 -f makefile scrub
+
+ ip_fma_dru_j722s-evm_c75ss1-0_freertos_ti-c7000_scrub:
+	$(MAKE) -C examples/ip_fma/dru_static_regs_readback/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile scrub
+
+ ip_fma_csirx_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
+	$(MAKE) -C examples/ip_fma/csirx_static_regs_readback/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+
+ dru_tr_of_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_scrub:
+	$(MAKE) -C examples/ip_fma/dru_active_tr_event_overflow_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+
  SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_scrub:
 	$(MAKE) -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile scrub
 
@@ -3275,6 +3350,9 @@ examples-scrub-private: $(BUILD_COMBO_EXAMPLE_PRIVATE_SCRUB_ALL)
 
  dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000_scrub:
 	$(MAKE) -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss1-0_freertos/ti-c7000 -f makefile scrub
+
+ clk_ip_fma_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
+	$(MAKE) -C examples/ip_fma/clk_ip_fma_app/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
 
  sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_scrub:
 	$(MAKE) -C test/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile scrub

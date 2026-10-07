@@ -74,7 +74,7 @@
 
 /* Hardcoding to base address value since values are redefined in mcu_sdk hw_soc_baseaddress */
 #if defined(MCU_SDK)
-#define GTC_TIMER_MAPPED_BASE           (0x5e100000UL)
+#define GTC_TIMER_MAPPED_BASE           (0x5e150000UL)
 #elif defined(MCU_PLUS_SDK) || defined(PDK)
 #define GTC_TIMER_MAPPED_BASE           (0xa90000UL)
 #endif

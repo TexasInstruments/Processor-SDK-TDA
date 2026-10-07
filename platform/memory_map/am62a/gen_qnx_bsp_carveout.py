@@ -75,9 +75,9 @@ class QNX_BSP_UPDATE :
         MB = KB*KB;
         GB = KB*MB;
 
-        with open("../../../../psdkqa/qnx/bsp/images/am62a-evm-ti.build", "r") as file:
+        with open("../../../psdkqa/qnx/bsp/images/am62a-evm-ti.build", "r") as file:
             data = file.read()
-        
+
         carveout_text_1 = "[+keeplinked] startup-am62a-evm -u arg -v -r0x80000000,0x0007FFFF,1 -r"
 
         for key,memSection in sorted(self.memoryMap.memoryMap.items(), key=CHeaderFile.sortKey):
@@ -87,10 +87,10 @@ class QNX_BSP_UPDATE :
             if (memSection.name == "DDR_C7X_1_SCRATCH"):
                 bsp_size_bytes = memSection.origin + memSection.length - start_addr
                 string2 = f'0x{bsp_size_bytes:08X},1'
-        
+
         string = string1 + string2
         carveout_pattern = rf'{re.escape(carveout_text_1)}0x[0-9A-Fa-f]+,\s*0x[0-9A-Fa-f]+,1'
         data = re.sub(carveout_pattern, string, data)
 
-        with open("../../../../psdkqa/qnx/bsp/images/am62a-evm-ti.build", "w") as file:
+        with open("../../../psdkqa/qnx/bsp/images/am62a-evm-ti.build", "w") as file:
            data = file.write(data)

@@ -128,7 +128,7 @@ const CSL_ArmR5MpuRegionCfg __attribute__((section(".startupData"))) gCslR5MpuCf
 #if defined (SOC_J721S2) || defined (SOC_J742S2)
         .size             = CSL_ARM_R5_MPU_REGION_SIZE_4MB,
 #endif
-#if defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM275X)
+#if defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM275X) || defined (SOC_AM283X)
         .size             = CSL_ARM_R5_MPU_REGION_SIZE_64KB,
 #endif
         .subRegionEnable  = CSL_ARM_R5_MPU_SUB_REGION_ENABLE_ALL,
@@ -189,7 +189,7 @@ const CSL_ArmR5MpuRegionCfg __attribute__((section(".startupData"))) gCslR5MpuCf
         .cachePolicy      = CSL_ARM_R5_CACHE_POLICY_NON_CACHEABLE,
         .memAttr          = 0U,
     },
-#if defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM275X)
+#if defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM275X) || defined (SOC_AM283X)
      {
         /* Region 7 configuration: 256KB of HSM RAM, Program is currently loaded here*/
         .regionId         = 7U,
