@@ -240,6 +240,8 @@ typedef struct
     int32_t  enableConcatNoOp;
     /* Enable zero-point for Output DataConvert*/
     int32_t enableZeroPointForOutputDataConvert;
+    /* Enable moveTranspose optimization*/
+    int32_t moveTranspose;
 } tidl_import_config;
 
 extern sTokenMapping gsTokenMap_tidl_import_config[MAX_ITEMS_TO_PARSE];

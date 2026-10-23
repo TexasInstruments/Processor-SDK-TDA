@@ -74,6 +74,9 @@
 #include "tidl_commonUtils.h"
 #include <math.h>
 #include "tidl_gatherElements_ref.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 /**
  * @brief This is main function perform gatherElements on differnt elementTypes
@@ -147,6 +150,22 @@ template<class Tin, class Tindx, class Tout> static int32_t TIDL_refGatherElemen
   int32_t axis = params->axis;
 
 
+#ifdef BUILD_WITH_CUDA_GATHER_ELEMENTS
+  TIDL_cudaGatherElements<Tin, Tindx, Tout>(data, indices, output,
+      inIndicesBatches, inIndicesDim1, inIndicesDim2,
+      inIndicesNumChs, inIndicesNumRows, inIndicesNumCols,
+      inIndicesRoiPitch, inIndicesDim1Pitch, inIndicesDim2Pitch,
+      inIndicesChPitch, inIndicesPitch,
+      inDataRoiPitch, inDataDim1Pitch, inDataDim2Pitch,
+      inDataChPitch, inDataPitch,
+      (int32_t)inDataParams->dimValues[TIDL_DIM_BATCH],
+      (int32_t)inDataParams->dimValues[TIDL_DIM_DIM1],
+      (int32_t)inDataParams->dimValues[TIDL_DIM_DIM2],
+      (int32_t)inDataParams->dimValues[TIDL_DIM_NUMCH],
+      (int32_t)inDataParams->dimValues[TIDL_DIM_HEIGHT],
+      (int32_t)inDataParams->dimValues[TIDL_DIM_WIDTH],
+      outRoiPitch, outDim1Pitch, outDim2Pitch, outChPitch, outPitch, axis);
+#else
   for(i0=0; i0<inIndicesBatches; i0++)
     {
       for(i1=0; i1<inIndicesDim1; i1++)
@@ -160,7 +179,7 @@ template<class Tin, class Tindx, class Tout> static int32_t TIDL_refGatherElemen
               for(i5=0; i5<inIndicesNumCols; i5++)
               {
                 index = (int32_t)indices[(i0*inIndicesRoiPitch) + (i1*inIndicesDim1Pitch) + (i2*inIndicesDim2Pitch) + (i3*inIndicesChPitch) + (i4*inIndicesPitch) + i5];
-                
+
                 if(axis == TIDL_DIM_BATCH)
                 {
                   if(index < 0)
@@ -220,6 +239,7 @@ template<class Tin, class Tindx, class Tout> static int32_t TIDL_refGatherElemen
         }
       }
     }
+#endif // BUILD_WITH_CUDA_GATHER_ELEMENTS
 
   return status;
 }

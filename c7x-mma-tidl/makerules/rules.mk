@@ -65,27 +65,11 @@
 include $(ALGBASE_PATH)/makerules/config.mk
 
 BUILD_FOLDER      := $(ALGBASE_PATH)\out
-
-ifdef SystemRoot
-#Windows OS
-    ifndef UTILS_PATH
-      $(error You must define UTILS_PATH!)
-    endif
-    RM_CMD = $(UTILS_PATH)\rm -rf
-    MKDIR_CMD = $(UTILS_PATH)\mkdir -p $(1)
-    CHANGE_PATHSEP=$(subst /,\,$(1))
-    CAT_CMD = $(UTILS_PATH)\cat
-    MAKE = gmake
-else
-    ifeq ($(shell uname), Linux)
-#Linux
-      RM_CMD = rm -rf
-      MKDIR_CMD = mkdir -p $(1)
-      CHANGE_PATHSEP=$(subst \,/,$(1))
-      CAT_CMD = cat
-      MAKE = make
-    endif
-endif
+RM_CMD = rm -rf
+MKDIR_CMD = mkdir -p $(1)
+CHANGE_PATHSEP=$(subst \,/,$(1))
+CAT_CMD = cat
+MAKE = make
 
 ifeq ($(SHOW_COMMANDS),1)
 Q:=
@@ -100,13 +84,7 @@ COMMA:=$(EMPTY),$(EMPTY)
 
 _MAKEPATH := $(abspath .)
 _MAKEPATH:= $(call  CHANGE_PATHSEP,$(_MAKEPATH))
-
-
-ifdef SystemRoot
-_MODPATH  := $(subst $(ALGBASE_PATH)\,,$(_MAKEPATH))
-else
 _MODPATH  := $(subst $(ALGBASE_PATH)/,,$(_MAKEPATH))
-endif
 _MODPATH:= $(call CHANGE_PATHSEP,$(_MODPATH))
 
 
@@ -168,52 +146,7 @@ CURR_BUILD_FOLDER:= $(call  CHANGE_PATHSEP,$(CURR_BUILD_FOLDER))
 
 ##############################################################
 ifeq ($(TARGET_PLATFORM) , PC)
-ifdef SystemRoot
-  #Window Host Emulation
-  CC = CL
-  CP = CL
-  AS = $(TARGET_CPU)ASM
-  AR = LIB
-  LD = LINK
 
-
-  #Scalable API Support for PC-Windows
-  COMPILER_FLAGS += /D__C7X_UNSTABLE_API
-
-  #Top Level C7100/C7120 Define:
-  COMPILER_FLAGS += /D__$(TARGET_C7X_VERSION)__
-
-  ifeq ($(TARGET_BUILD), release)
-    COMPILER_FLAGS += /EHsc /TP /W0 /FS /wd4505 /D_CRT_SECURE_NO_WARNINGS /DHOST_EMULATION /D_HOST_BUILD /c /nologo /Ox /D_NDEBUG /MT /Zi /D_HOST_BUILD  /D_HAS_ITERATOR_DEBUGGING=0 /D_ITERATOR_DEBUG_LEVEL=0 /DMSVC_BUILD /std:c++14
-    LDDEBUG := /DEBUG
-
-  else
-    COMPILER_FLAGS += /EHsc /TP /W0 /FS /wd4505 /D_CRT_SECURE_NO_WARNINGS /DHOST_EMULATION /D_HOST_BUILD /c /nologo /Od /MT /Zi /D_HAS_ITERATOR_DEBUGGING=0 /D_ITERATOR_DEBUG_LEVEL=0 /D_HOST_BUILD /DMSVC_BUILD /std:c++14
-    LDDEBUG := /DEBUG
-  endif
-
-  ifeq ($(BUILD_WITH_OPENACC),yes)
-    COMPILER_FLAGS += /DBUILD_WITH_OPENACC
-  endif
-
-  ifeq ($(ENABLE_PERFORMANCE_MODELLING),1)
-  ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J721S2 j721s2 J784S4 j784s4 J722S j722s AM62A am62a J721E j721e))
-    COMPILER_FLAGS += /DPERF_MODELLING
-    COMPILER_FLAGS += /DPERF_MODELING
-  endif
-  endif
-
-  ifeq ($(BUILD_WITH_CUDA),yes)
-  ARFLAGS := /nologo /MACHINE:x64 /ignore:4099
-  else
-  ARFLAGS := /nologo /MACHINE:x64 /ignore:4099
-  endif
-
-  ifeq ($(TARGET_CPU),C64T)
-  #COMPILER_FLAGS += /D__C7100__
-  endif
-else
-  #Linux Host Emulation
 ifeq ($(BUILD_WITH_OPENACC),yes)
   CC=nvc++ -c -fast -acc -gpu=ccall -tp=px
 else
@@ -239,12 +172,12 @@ endif
   endif
 
   #Top Level C7100/C7120/C7504 Define:
-  COMPILER_FLAGS += -D__$(TARGET_C7X_VERSION)__
+  COMPILER_FLAGS += -D__$(C7X_VERSION)__
 
   ifeq ($(BUILD_WITH_CUDA),yes)
     ifeq ($(TARGET_BUILD), debug)
       COMPILER_FLAGS += -std=c++17  -DHOST_EMULATION -w -D_HOST_BUILD -DGCC_BUILD -O0
-      GCC_DEBUG_CFLAGS :=-g 
+      GCC_DEBUG_CFLAGS :=-g
       CUDA_BUILD_FLAGS := -g -G
     else
       ifeq ($(DEVELOPER_BUILD), 0)
@@ -279,7 +212,7 @@ else
   LD=g++-$(TIDL_GCC_VERSION)
 endif
   LDFLAGS +=
-endif
+
   ifeq ($(CORE),eve)
   COMPILER_FLAGS += -DCORE_EVE -DVCOP_HOST_EMULATION
   endif
@@ -327,9 +260,9 @@ else
     endif
   endif
   ifeq ($(CORE),dsp)
-    CC = $(DSP_TOOLS)\bin\cl7x
-    LD = $(DSP_TOOLS)\bin\lnk7x
-    AR = $(DSP_TOOLS)\bin\ar7x
+    CC = $(CGT7X_ROOT)\bin\cl7x
+    LD = $(CGT7X_ROOT)\bin\lnk7x
+    AR = $(CGT7X_ROOT)\bin\ar7x
     ifeq ($(TARGET_BUILD), release)
       CFLAGS = -O3  -DUSE_LEVEL_1_MACROS -D$(DEFINE_FLAGS)
     else
@@ -360,7 +293,7 @@ else
         ifneq ($(CODE_COVERAGE_ENABLED_FOR_TIDL),yes)
         CFLAGS += --emit_warnings_as_errors
         endif
-        ifeq ($(TARGET_C7X_VERSION),C7100)
+        ifeq ($(C7X_VERSION),C7100)
           CFLAGS += --silicon_errata_i2117 -D=xdc_target_name=C71 --abi=eabi --rtti -mo
         else
           CFLAGS += -D=xdc_target_name=C71 --abi=eabi --rtti -mo
@@ -368,7 +301,7 @@ else
    endif
     ARFLAGS = r
     LDFLAGS += --cinit_compression=off
-    CFLAGS += -I $(DSP_TOOLS)/include/libcxx -I $(DSP_TOOLS)/include
+    CFLAGS += -I $(CGT7X_ROOT)/include/libcxx -I $(CGT7X_ROOT)/include
   endif
   ifeq ($(CORE),arm)
 	CFLAGS_GLOBAL_m4vpss = -g -ms -D___DSPBIOS___ -D___DUCATI_FW___ --obj_extension=obj
@@ -515,11 +448,7 @@ endif
 endif
 ##############################################################
 # 'all' rules
-ifdef SystemRoot
-all :  dir $(OUTFILE)
-else
 all :  | dir $(OUTFILE)
-endif
 
 # Define a ".gitignore" file which will help in making sure the module's output
 # folder always exists.
@@ -530,99 +459,56 @@ endif
 dir: $(OBJDIRS)
 
 $(OUTFILE): $(KOFILES) $(OFILES)
-
-ifdef SystemRoot
-$(BUILDDIR)\%.obj: .\%.k
-else
 $(BUILDDIR)%.obj: %.k
-endif
 ifeq ($(TARGET_PLATFORM) , PC)
 	$(Q)echo compiling $<
-ifdef SystemRoot
-  #Window Host Emulation
-	$(Q)$(CC) $(CFLAGS) $< /Fo$@ /Fd$(BUILDDIR)$*.pdb
-else
 	$(Q)$(CC) $(CFLAGS) $(GCC_DEBUG_CFLAGS)  -fPIC $< -o $@
-endif
 else
 	$(Q)echo compiling $<
 	$(Q)$(CC) $(CFLAGS) --compile_only -fr=$(dir $@) -fs=$(dir $@) "$<"
 endif
 
-ifdef SystemRoot
-$(BUILDDIR)\%.obj: .\%.c
-else
 $(BUILDDIR)%.obj: %.c
-endif
+
+	$(Q) $(MKDIR_CMD) $(dir $(BUILDDIR)$*.dep)
+
 ifeq ($(TARGET_PLATFORM) , PC)
 	$(Q)echo compiling $<
-ifdef SystemRoot
-  #Window Host Emulation
-	$(Q)$(CC) $(CFLAGS) $< /Fo$@ /Fd$(BUILDDIR)$*.pdb
-else
 	$(Q)$(CC) $(CFLAGS) $(GCC_DEBUG_CFLAGS) -fPIC  $< -o $@
-endif
 else
 	$(Q)echo compiling $<
 	$(Q)$(CC) $(CFLAGS) --preproc_with_compile -fr=$(dir $@) -fs=$(dir $@) -ppd="$(BUILDDIR)$*.dep" $<
 endif
-ifdef SystemRoot
-$(BUILDDIR)\%.obj: ./%.cu
-else
+
 $(BUILDDIR)%.obj: %.cu
-endif
+
 ifeq ($(TARGET_PLATFORM) , PC)
 	$(Q)echo compiling $<
-ifdef SystemRoot
-ifeq ($(BUILD_WITH_CUDA),yes)
-	$(Q)$(CUDA_PATH)/bin/nvcc -I $(CUDNN_PATH)/include $(INCLUDE_PATHS) -D BUILD_WITH_CUDA -o $@ -c $<
-else
-	$(Q)$(CC) $(CFLAGS) $< /Fo$@ /Fd$(BUILDDIR)$*.pdb
-endif
-else
 ifeq ($(BUILD_WITH_CUDA),yes)
 	$(Q)$(CUDA_PATH)/bin/nvcc --cudart static -ccbin  $(CC) $(CFLAGS) $(GENCODE_FLAGS) $(CUDA_BUILD_FLAGS) -Xcompiler -fPIC -o $@ -c $<
 else
 	$(Q)$(CC) $(CFLAGS) $(GCC_DEBUG_CFLAGS) -fPIC  $< -o $@
 endif
-endif
 else
 	$(Q)echo compiling $<
 	$(Q)$(CC) $(CFLAGS) --preproc_with_compile -fr=$(dir $@) -fs=$(dir $@) -ppd="$(BUILDDIR)$*.dep" $<
 endif
 
-
-ifdef SystemRoot
-$(BUILDDIR)\%.obj: ./%.cpp
-else
 $(BUILDDIR)%.obj: %.cpp
-endif
+	$(Q) $(MKDIR_CMD) $(dir $(BUILDDIR)$*.dep)
+
 ifeq ($(TARGET_PLATFORM) , PC)
 	$(Q)echo compiling $<
-ifdef SystemRoot
-  #Window Host Emulation
-	$(Q)$(CC) $(CFLAGS) $< /Fo$@ /Fd$(BUILDDIR)$*.pdb
-else
 	$(Q)$(CC) $(CFLAGS)  $(GCC_DEBUG_CFLAGS) -fPIC  $< -o $@
-endif
 else
 	$(Q)echo compiling $<
 	$(Q)$(CC) $(CFLAGS) --preproc_with_compile -fr=$(dir $@) -fs=$(dir $@) -ppd="$(BUILDDIR)$*.dep" $<
 endif
 
-ifdef SystemRoot
-$(BUILDDIR)\%.obj: ./%.cc
-else
 $(BUILDDIR)%.obj: %.cc
-endif
 ifeq ($(TARGET_PLATFORM) , PC)
 	$(Q)echo compiling $<
-ifdef SystemRoot
-  #Window Host Emulation
-	$(Q)$(CC) $(CFLAGS) $< /Fo$@ /Fd$(BUILDDIR)$*.pdb
-else
 	$(Q)$(CC) $(CFLAGS)  $(GCC_DEBUG_CFLAGS) -fPIC  $< -o $@
-endif
 else
 	$(Q)echo compiling $<
 	$(Q)$(CC) $(CFLAGS) --preproc_with_compile -fr=$(dir $@) -fs=$(dir $@) -ppd="$(BUILDDIR)$*.dep" $<
@@ -630,12 +516,8 @@ endif
 
 
 ifneq ($(TARGET_PLATFORM) , PC)
-ifdef SystemRoot
-$(BUILDDIR)\%.obj : ./%.asm
-else
 $(BUILDDIR)%.obj : %.asm
-endif
-	$(Q)$(CC) $(CFLAGS) -c $^ --output_file=$@
+$(Q)$(CC) $(CFLAGS) -c $^ --output_file=$@
 endif
 ##############################################################
 
@@ -650,18 +532,9 @@ print :
 # clean rules
 .IGNORE: clean
 clean:
-ifdef SystemRoot
-	@echo echo OFF > temp_pps.bat
-	@FOR %%i IN ($(OFILES) $(KOFILES)) DO echo del %%i >> temp_pps.bat
-ifneq ($(TARGET_PLATFORM) , PC)
-	@FOR %%i IN ( $(DEPILES)) DO echo del %%i >> temp_pps.bat
-endif
-	@echo echo ON >> temp_pps.bat
-	@temp_pps.bat
-	@-del temp_pps.bat
-else
+
 	$(Q)$(RM_CMD) $(OFILES) $(KOFILES)
-endif
+
 ifneq ($(BUILD_MODE),OBJ)
 	$(Q)$(RM_CMD) $(LIBDIR)
 endif
@@ -674,26 +547,10 @@ endif
 .PHONY: libfile
 libfile: $(LIBDIR) $(KOFILES) $(OFILES) $(ARFILES)
 ifeq ($(TARGET_PLATFORM) , PC)
-ifdef SystemRoot
-  #Window Host Emulation
-	$(Q)echo Linking $(OUTFILE)
-	$(Q)echo $(ARFLAGS) /OUT:$(OUTFILE) > ar_cmd.txt
-	$(Q)FOR %%i IN ($(OFILES) $(KOFILES) $(ARFILES)) DO echo %%i >> ar_cmd.txt
-	$(Q)$(AR) @ar_cmd.txt
-	$(Q)-del ar_cmd.txt
-else
 	$(Q)$(AR) $(ARFLAGS) $(OUTFILE) $(KOFILES) $(OFILES) $(ARFILES)
-endif
 else
 	$(Q)$(RM_CMD) $(OUTFILE)
-ifdef SystemRoot
-	$(Q)echo $(ARFLAGS) $(OUTFILE) > ar_cmd.txt
-	$(Q)FOR %%i IN ($(OFILES) $(KOFILES) $(ARFILES)) DO echo %%i >> ar_cmd.txt
-	$(Q)$(AR) @ar_cmd.txt
-	$(Q)$(RM_CMD) ar_cmd.txt
-else
 	$(Q)@$(AR) $(ARFLAGS) $(OUTFILE) $(KOFILES) $(OFILES) $(ARFILES)
-endif
 endif
 $(LIBDIR):
 	$(Q) $(MKDIR_CMD) $(LIBDIR) || cd $(LIBDIR)
@@ -703,34 +560,10 @@ $(LIBDIR):
 pllibfile: $(LIBDIR) $(OFILES) $(LDFILES)
 ifeq ($(TARGET_PLATFORM) , PC)
 	$(Q)echo Linking $(OUTFILE)
-ifdef SystemRoot
-  #Window Host Emulation
-	$(Q)echo $(ARFLAGS) /OUT:$(OUTFILE) > ar_cmd.txt
-	$(Q)FOR %%i IN ($(OFILES) $(ARFILES)) DO echo %%i >> ar_cmd.txt
-	$(Q)$(AR) @ar_cmd.txt
-	$(Q)-del ar_cmd.txt
-else
 	$(Q)$(AR) $(ARFLAGS) $(OUTFILE) $(KOFILES) $(OFILES) $(ARFILES)
-endif
-else
-ifdef SystemRoot
-	$(Q)echo $(ARFLAGS) temp_pl.lib > ar_cmd.txt
-	$(Q)FOR %%i IN ($(RESTOF_OFILES) $(KOFILES) $(ARFILES)) DO echo %%i >> ar_cmd.txt
-	$(Q)$(AR) @ar_cmd.txt
-	$(Q)-del ar_cmd.txt
-	$(Q)if exist $(OUTFILE) del $(OUTFILE)
-	$(Q)$(LD) -r $(LDFLAGS) --output_file="plink.out"  $(FIRST_OFILES) $(LDFILES) -m "plink.map" -l temp_pl.lib
-	$(Q)echo $(ARFLAGS) $(OUTFILE) > ar_cmd.txt
-	$(Q)echo plink.out >> ar_cmd.txt
-	$(Q)$(AR) @ar_cmd.txt
-	$(Q)-del temp_pl.lib
-	$(Q)-del ar_cmd.txt
-	$(Q)-del plink.map
-	$(Q)-del plink.out
 else
 	$(Q)$(LD) -r --output_file="plink.out"  $(FIRST_OFILES) $(RESTOF_OFILES) $(KOFILES) -m "plink.map"
 	$(Q)$(AR) $(ARFLAGS) $(OUTFILE) plink.out
-endif
 endif
 
 ##############################################################
@@ -751,20 +584,11 @@ endif
 .PHONY: outfile
 outfile: $(OUTDIR) $(KOFILES) $(OFILES) $(LDFILES)
 ifeq ($(TARGET_PLATFORM) , PC)
-ifdef SystemRoot
-	$(Q)if exist $(OUTFILE).exe del $(OUTFILE).exe
-ifeq ($(BUILD_WITH_CUDA),yes)
-	$(Q)$(CUDA_PATH)/bin/nvcc  -o $(OUTFILE) $(KOFILES) $(OFILES) $(LDFILES) $(ALL_LIBS) "User32.lib"
-else
-	$(Q)$(LD) /stack:16000000 $(ALL_LIBS) $(LDDEBUG) $(ARFLAGS) /OUT:$(OUTFILE).exe $(KOFILES) $(OFILES) $(LDFILES)
-endif
-else
 	$(Q)$(RM_CMD) $(OUTFILE)
 ifeq ($(BUILD_WITH_CUDA),yes)
 	$(Q)$(CUDA_PATH)/bin/nvcc --cudart static -ccbin $(LD) -o $(OUTFILE) $(KOFILES) $(OFILES) $(LDFILES) $(LDFLAGS) -lpthread -ldl -lrt -m64
 else
 	$(Q)$(LD) -o $(OUTFILE) $(KOFILES) $(OFILES) $(LDFILES) $(LDFLAGS)
-endif
 endif
 else
 	$(Q)$(RM_CMD) $(OUTFILE)
@@ -775,19 +599,10 @@ $(OUTDIR):
 
 ##############################################################
 .PHONY: sharedlibfile
-ifdef SystemRoot
-DLLLIB=$(basename $(OUTFILE)).lib
-endif
 sharedlibfile: $(OUTDIR) $(KOFILES) $(OFILES) $(LDFILES)
 ifeq ($(TARGET_PLATFORM) , PC)
-ifdef SystemRoot
-	$(Q)if exist $(OUTFILE) del $(OUTFILE)
-	$(Q)if exist $(DLLLIB) del $(DLLLIB)
-	$(Q)$(LD) /DLL $(ALL_LIBS) $(LDDEBUG) /OUT:$(OUTFILE) $(KOFILES) $(OFILES) $(LDFILES)
-else
 	$(Q)$(RM_CMD) $(OUTFILE)
 	$(Q)$(LD) -shared -o $(OUTFILE) $(KOFILES) $(OFILES) $(LDFILES) $(LDFLAGS)
-endif
 else
 	$(Q)$(RM_CMD) $(OUTFILE)
 	$(Q)$(LD) --dynamic=lib $(LDFLAGS) --output_file=$(OUTFILE) $(KOFILES) $(OFILES) $(LDFILES) -m "$(OUTFILE)".map

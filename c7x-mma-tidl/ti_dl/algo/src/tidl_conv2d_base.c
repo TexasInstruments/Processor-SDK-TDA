@@ -262,8 +262,7 @@ int32_t TIDL_conv2dFillPerChannelParamters(const sTIDL_ConvParams_t *conv2dparam
     if (isPerChannelQuantizationEnabled(conv2dparams, commonParams->net->calibrationOption) == 1 )
     {
 
-      sTIDL_DataParams_t * dataParams = TIDL_getDataParams(commonParams->net,
-                                                           commonParams->net->TIDLLayers[layerIdx].inData[0]);
+      sTIDL_DataParams_t * dataParams = &commonParams->net->TIDLLayers[commonParams->net->TIDLLayers[layerIdx].inData[0]].outData;
       int32_t chIdx;
       float32_tidl perChannelAccScale;
       float32_tidl tempRoundBits = 0.0f;
@@ -317,28 +316,11 @@ void TIDL_conv2dSetupBiasPointers(sTIDL_ConvParams_t *conv2dparams,
     targetDevice = TIDL_disablePadOTF(targetDevice);
   }
 
-  sTIDL_DataParams_t * inDataParams = TIDL_getDataParams(commonParams->net,
-    commonParams->net->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_DataParams_t * inDataParams = &commonParams->net->TIDLLayers[commonParams->net->TIDLLayers[layerIdx].inData[0]].outData;
 
-  //Deprecate TFL:
   if(TIDL_QuantStyleAsymNP2_TFL == commonParams->net->quantizationStyle)
   {
-    //Populate scale and shift for MMA for convolution:
-    //Scale ratio
-    float32_tidl scaleRatio = 1;
-    float32_tidl* weightScalePtr = (float32_tidl *)get_int8_t_pointer((int8_t *)(commonParams->net), conv2dparams->weightScales);
-    float32_tidl scale_x = inDataParams->tensorScale;
-    float32_tidl scale_y = commonParams->net->TIDLLayers[layerIdx].outData.tensorScale;
     int32_t axisCtr;
-    uint8_t* scaleBuffer = (uint8_t*)algLayer->layerParams.convParams.mmaScalesPtr;
-    uint8_t* shiftBuffer = (uint8_t*)algLayer->layerParams.convParams.mmaShiftsPtr;
-    //Assuming per axis: (should be single iteration for non per ch) !Replace with axis length
-    //Temp logic:
-    for(axisCtr = 0; axisCtr < conv2dparams->numOutChannels; axisCtr++)
-    {
-      scaleRatio = (scale_x * weightScalePtr[axisCtr])/scale_y;
-      TIDL_getMMAv2_ScaleAndShift(scaleRatio, &scaleBuffer[axisCtr],&shiftBuffer[axisCtr]);
-    }
     int32_t * orgbiasptr = (int32_t *)get_int8_t_pointer((int8_t *)(commonParams->net), conv2dparams->bias);
     orgbiasptr = orgbiasptr + algLayer->layerParams.convParams.biasMultiCoreExtraOffset;
     int32_t * biasPtr  = (int32_t *)algLayer->layerParams.convParams.biasParamMem;
@@ -346,6 +328,16 @@ void TIDL_conv2dSetupBiasPointers(sTIDL_ConvParams_t *conv2dparams,
     for(axisCtr = 0; axisCtr < conv2dparams->numOutChannels; axisCtr++)
     {
       biasPtr[axisCtr] = orgbiasptr[axisCtr];
+    }
+    /*Copy over derived scales & shifts*/
+    uint8_t* derivedScales = (uint8_t *)get_int8_t_pointer((int8_t *)(commonParams->net), conv2dparams->derivedScales + algLayer->layerParams.convParams.biasMultiCoreExtraOffset);
+    uint8_t* derivedShifts = (uint8_t *)get_int8_t_pointer((int8_t *)(commonParams->net), conv2dparams->derivedShifts + algLayer->layerParams.convParams.biasMultiCoreExtraOffset);
+    uint8_t* scaleBuffer = (uint8_t*)algLayer->layerParams.convParams.mmaScalesPtr + algLayer->layerParams.convParams.biasMultiCoreExtraOffset;
+    uint8_t* shiftBuffer = (uint8_t*)algLayer->layerParams.convParams.mmaShiftsPtr + algLayer->layerParams.convParams.biasMultiCoreExtraOffset;
+    for(axisCtr = 0; axisCtr < conv2dparams->numOutChannels; axisCtr++)
+    {
+      scaleBuffer[axisCtr] = derivedScales[axisCtr];
+      shiftBuffer[axisCtr] = derivedShifts[axisCtr];
     }
   }
   else if(TIDL_isKernelHighPrecision(layerKernelType) != (int32_t)FALSE)

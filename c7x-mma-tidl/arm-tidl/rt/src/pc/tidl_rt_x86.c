@@ -60,7 +60,11 @@
 *
 */
 
+#ifdef ENABLE_NEW_VISION_APPS_STRUCTURE
 #include <app_init.h>
+#else
+#include <utils/app_init/include/app_init.h>
+#endif
 
 static int32_t tidlrt_instance_count = 0;
 int tidlrt_printf(const char *fmt, ...);

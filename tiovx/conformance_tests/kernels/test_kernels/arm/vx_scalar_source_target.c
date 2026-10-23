@@ -213,6 +213,11 @@ static vx_status VX_CALLBACK tivxScalarSourceDelete(
 
 void tivxAddTargetKernelScalarSource(void)
 {
+    #if !(defined(SOC_J722S) || defined(SOC_AM62A) || defined(SOC_TDA54))
+    vx_enum self_cpu;
+    self_cpu = tivxGetSelfCpuId();
+    #endif
+
     char target_name[TIVX_TARGET_MAX_NAME];
 
     if( ((vx_status)VX_SUCCESS == tivxKernelsTargetUtilsAssignTargetNameMcu(target_name)) ||
@@ -229,10 +234,43 @@ void tivxAddTargetKernelScalarSource(void)
                             tivxScalarSourceControl,
                             NULL);
     }
+    #if !(defined(SOC_J722S) || defined(SOC_AM62A) || defined(SOC_TDA54))
+    else if (self_cpu == TIVX_CPU_ID_MCU3_0)
+    {
+        strncpy(target_name, TIVX_TARGET_MCU3_0, TIVX_TARGET_MAX_NAME);
+        tivxAddTargetKernelByName(
+                            TIVX_KERNEL_SCALAR_SOURCE_NAME,
+                            target_name,
+                            tivxScalarSourceProcess,
+                            tivxScalarSourceCreate,
+                            tivxScalarSourceDelete,
+                            tivxScalarSourceControl,
+                            NULL);
+    }
+    #endif
+    #if defined(SOC_J784S4)
+    else if (self_cpu == TIVX_CPU_ID_MCU4_0)
+    {
+        strncpy(target_name, TIVX_TARGET_MCU4_0, TIVX_TARGET_MAX_NAME);
+        tivxAddTargetKernelByName(
+                            TIVX_KERNEL_SCALAR_SOURCE_NAME,
+                            target_name,
+                            tivxScalarSourceProcess,
+                            tivxScalarSourceCreate,
+                            tivxScalarSourceDelete,
+                            tivxScalarSourceControl,
+                            NULL);
+    }
+    #endif
 }
 
 void tivxRemoveTargetKernelScalarSource(void)
 {
+    #if !(defined(SOC_J722S) || defined(SOC_AM62A) || defined(SOC_TDA54))
+    vx_enum self_cpu;
+    self_cpu = tivxGetSelfCpuId();
+    #endif
+
     char target_name[TIVX_TARGET_MAX_NAME];
 
     if( ((vx_status)VX_SUCCESS == tivxKernelsTargetUtilsAssignTargetNameMcu(target_name)) ||
@@ -243,6 +281,22 @@ void tivxRemoveTargetKernelScalarSource(void)
         tivxRemoveTargetKernelByName(TIVX_KERNEL_SCALAR_SOURCE_NAME,
             target_name);
     }
+    #if !(defined(SOC_J722S) || defined(SOC_AM62A) || defined(SOC_TDA54))
+    else if (self_cpu == TIVX_CPU_ID_MCU3_0)
+    {
+        strncpy(target_name, TIVX_TARGET_MCU3_0, TIVX_TARGET_MAX_NAME);
+        tivxRemoveTargetKernelByName(TIVX_KERNEL_SCALAR_SOURCE_NAME,
+            target_name);
+    }
+    #endif
+    #if defined(SOC_J784S4)
+    else if (self_cpu == TIVX_CPU_ID_MCU4_0)
+    {
+        strncpy(target_name, TIVX_TARGET_MCU4_0, TIVX_TARGET_MAX_NAME);
+        tivxRemoveTargetKernelByName(TIVX_KERNEL_SCALAR_SOURCE_NAME,
+            target_name);
+    }
+    #endif
 }
 
 

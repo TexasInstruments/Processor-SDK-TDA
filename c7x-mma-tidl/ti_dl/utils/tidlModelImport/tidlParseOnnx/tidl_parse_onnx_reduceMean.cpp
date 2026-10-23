@@ -73,7 +73,7 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("ReduceMean")> ()
   layer.layerType = TIDL_ReduceMeanLayer;
   layer.numInBufs = 1;
   NodeProto node  = graph.node(index);
-  getIntAttr(node, "keepdims", &layer.layerPCParams.reduceMeanParams.reduceDims, 0);
+  getIntAttr(node, "keepdims", &layer.layerPCParams.reduceMeanParams.keepDims, 0);
 
   sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
   /** If shape inference is not done on model, we assume the tensor is of 4 dimensions by default*/

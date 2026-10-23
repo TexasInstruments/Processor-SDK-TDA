@@ -75,6 +75,9 @@
 #include <math.h>
 #include <limits>
 #include "tidl_gatherLayer_ref.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 /**
  * @brief This is main function perform scatterElements on differnt elementTypes
@@ -126,11 +129,19 @@ template<class Tin, class Tindx, class Tout> static int32_t TIDL_refGather(Tin *
 
   Tout *output = (Tout *)outPtr + (outDataParams->padH * outPitch) + outDataParams->padW;
 
+  // Initialize output with zeros
+  memset(output, 0, outDataParams->dimValues[TIDL_DIM_BATCH] * outDataParams->pitch[TIDL_ROI_PITCH] * sizeof(Tout));
+
   int32_t inDataNumRows = inDataParams->dimValues[TIDL_DIM_HEIGHT];
   int32_t inDataNumCols = inDataParams->dimValues[TIDL_DIM_WIDTH];
 
   int32_t src_index, dst_index, index;
 
+#ifdef BUILD_WITH_CUDA_GATHER
+  TIDL_cudaGather<Tin, Tindx, Tout>(data, indices, output,
+      inIndicesNumCols, inDataNumRows, inDataNumCols,
+      inDataPitch, (int32_t)inDataParams->tensorZeroPoint, (int32_t)params->axis);
+#else
   for (i0 = 0; i0 < inIndicesNumCols; i0++)
   {
     index = (int32_t)indices[i0];
@@ -138,7 +149,7 @@ template<class Tin, class Tindx, class Tout> static int32_t TIDL_refGather(Tin *
     if(params->axis != TIDL_DIM_WIDTH)
     {
       // Invalid index
-      if ((index >= inDataNumRows) || (index < (-inDataNumRows)))
+      if ((index >= inDataNumRows) || ((params->thresholdPadSize != 0) && (index < 0) && ((index >= -(params->thresholdPadSize)) || (index < (-inDataNumRows))))) 
       {
         /*in case of invalid index filling with zero tensor point*/
         tidl_printf(0, "Invalid index for gather layer - %d\n", index);
@@ -154,7 +165,7 @@ template<class Tin, class Tindx, class Tout> static int32_t TIDL_refGather(Tin *
       // Wrap around for negative indices
       if ((index < 0))
       {
-        index = index + inDataNumRows;
+        index = index + inDataNumRows + params->thresholdPadSize;
       }
 
       dst_index = i0 * inDataNumCols;
@@ -169,7 +180,7 @@ template<class Tin, class Tindx, class Tout> static int32_t TIDL_refGather(Tin *
     else
     {
       // Invalid index
-      if ((index >= inDataNumCols) || (index < (-inDataNumCols)))
+      if ((index >= inDataNumCols) || ((params->thresholdPadSize != 0) && (index < 0) && ((index >= -(params->thresholdPadSize)) || (index < (-inDataNumCols)))))
       {
         /*in case of invalid index filling with zero tensor point*/
         tidl_printf(0, "Invalid index for gather layer - %d\n", index);
@@ -183,7 +194,7 @@ template<class Tin, class Tindx, class Tout> static int32_t TIDL_refGather(Tin *
       // Wrap around for negative indices
       if ((index < 0))
       {
-        index = index + inDataNumCols;
+        index = index + inDataNumCols + params->thresholdPadSize;
       }
 
       for (i1 = 0; i1 < inDataNumRows; i1++)
@@ -192,6 +203,7 @@ template<class Tin, class Tindx, class Tout> static int32_t TIDL_refGather(Tin *
       }
     }
   }
+#endif // BUILD_WITH_CUDA_GATHER
 
   return status;
 }

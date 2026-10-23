@@ -65,6 +65,10 @@
  *
  *  \brief File containing the APIs needed for importing custom layer.
  *
+ *  \note This file is distributed to customers as part of the TIDL custom layer
+ *        support package. Customers are free to modify the code in this file.
+ *        The code present here serves only as an example of how to implement
+ *        custom layer import.
  */
 
 /* ========================================================================== */
@@ -134,7 +138,7 @@ using ::google::protobuf::io::CodedOutputStream;
 
 extern int32_t gloab_data_format;
 
-static int32_t getAttrIdx(const onnx::NodeProto& node, char * name)
+static int32_t getAttrIdx(const onnx::NodeProto& node, const char * name)
 {
   int32_t i;
   for (i = 0; i < node.attribute_size(); i++)
@@ -147,7 +151,7 @@ static int32_t getAttrIdx(const onnx::NodeProto& node, char * name)
   return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
 }
 
-static int32_t getIntAttr(const onnx::NodeProto& node, char * name, int32_t * valuePtr, int32_t idx)
+static int32_t getIntAttr(const onnx::NodeProto& node, const char * name, int32_t * valuePtr, int32_t idx)
 {
   int32_t i = getAttrIdx(node, name);
   if(i != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
@@ -530,7 +534,9 @@ int32_t TIDL_mapCustomParams_v2(sTIDL_LayerPC_t*       layer,
   {
     onnx::GraphProto* onnxGraph = (onnx::GraphProto*) parserObjGraph;
     TIDL_setDefaultCustomParams(&(layer->layerParams.customParams));
-    const char  * currLayerName = onnxGraph->node(nodeIndex).output(0).c_str();
+    
+    /* Node name is used here to identify the custom layer - see file-level note. */
+    const char  * currLayerName = onnxGraph->node(nodeIndex).name().c_str();
     if (strcmp(currLayerName, (const char *)"MaxPool_A") == 0)
     {
       onnx::NodeProto node = (onnxGraph->node(nodeIndex));

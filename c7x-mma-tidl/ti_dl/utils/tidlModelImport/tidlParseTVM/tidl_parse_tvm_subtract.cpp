@@ -85,6 +85,19 @@ int32_t TidlParseTVM::parse<OpNameStr("subtract")>()
     int weight_zp = 0;
     float weight_scale = 1.0f;
     layer.weights = TIDL_extractConstantTensorData(call, layer.allowlistingMetaData.constTensorIndices[0], layer.allowlistingMetaData, 0, weight_zp, weight_scale);
+    if(layer.weights.ptr==NULL)
+    {
+      TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", layer.allowlistingMetaData.constTensorIndices[0]);
+      return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+    }
+    if(layer.allowlistingMetaData.numConstInputs==2){
+      layer.bias=TIDL_extractConstantTensorData(call, layer.allowlistingMetaData.constTensorIndices[1], layer.allowlistingMetaData, 1, weight_zp, weight_scale);
+      if(layer.bias.ptr==NULL)
+      {
+          TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", layer.allowlistingMetaData.constTensorIndices[1]);
+          return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+      }
+    }
   }
 
   return TIDL_ALLOWLISTING_LAYER_CHECK_PASSED;

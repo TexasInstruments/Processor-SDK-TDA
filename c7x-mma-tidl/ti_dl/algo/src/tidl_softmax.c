@@ -172,21 +172,6 @@ static int32_t TIDL_HwLUTSupportsDatatype(int32_t inputDataType, int32_t outputD
   return doesSupport;
 };
 #endif
-#ifdef HOST_EMULATION
-static inline int32_t TIDL_softmaxForceRef(const TIDL_NetworkCommonParams *commonParams,
-                                           int32_t layerIdx)
-{
-  int32_t forceRef = 0;
-  const sTIDL_Layer_t *tidlLayer = &commonParams->net->TIDLLayers[layerIdx];
-  if (((commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_DSP_NATC) == TIDL_FLOW_CTRL_DSP_NATC) &&
-      (tidlLayer->outData.elementType == TIDL_SinglePrecFloat))
-  {
-    /* NatC not currently supported for float output */
-    forceRef = 1;
-  }
-  return forceRef;
-}
-#endif
 #if (defined(__C7100__)) || (defined(__C7120__))
 static int32_t TIDL_softmaxInitLUTParams(sTIDL_Network_t *net,
                                          int32_t layerIdx,
@@ -197,7 +182,7 @@ static int32_t TIDL_softmaxInitLUTParams(sTIDL_Network_t *net,
   int32_t status = IALG_EOK;
 
   sTIDL_Layer_t *tidlLayer = &net->TIDLLayers[layerIdx];
-  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(net, tidlLayer->inData[0]);
+  sTIDL_DataParams_t *inDataParams = &net->TIDLLayers[tidlLayer->inData[0]].outData;
   sTIDL_DataParams_t *outDataParams = &tidlLayer->outData;
 
   if ((TIDL_HwLUTSupportsDatatype(inDataParams->elementType, outDataParams->elementType) != 0) && (TIDL_DeviceSupportsLUT(net->deviceName) != 0))
@@ -250,8 +235,7 @@ int32_t TIDL_softmaxAllocNew(const TIDL_LayerSpecificParams *layerSpecificParams
 {
   int32_t status = IALG_EOK;
   #ifdef HOST_EMULATION
-  int32_t forceRef = TIDL_softmaxForceRef(commonParams, layerIdx);
-  if (((commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != TIDL_FLOW_CTRL_REF_ONLY) && (forceRef != 1))
+  if (((commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != TIDL_FLOW_CTRL_REF_ONLY))
   #endif
   {
     status = TIDL_deviceUtilsCommonAlloc(layerSpecificParams, commonParams, layerIdx, memorySize);
@@ -299,9 +283,7 @@ int32_t TIDL_softmaxInitNew(const TIDL_LayerSpecificParams *layerSpecificParams,
 {
   int32_t status = IALG_EOK;
   #ifdef HOST_EMULATION
-  int32_t forceRef = TIDL_softmaxForceRef(commonParams, layerIdx);
-
-  if (((commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != TIDL_FLOW_CTRL_REF_ONLY) && (forceRef != 1))
+  if (((commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != TIDL_FLOW_CTRL_REF_ONLY))
   #endif
   {
     /* presently, L1D would be allocated for the LUT table in the kernel code from x0000.
@@ -431,8 +413,7 @@ int32_t TIDL_softmaxProcessNew(TIDL_NetworkCommonParams *commonParams,
   int32_t status = IALG_EOK;
 
   #ifdef HOST_EMULATION
-  int32_t forceRef = TIDL_softmaxForceRef(commonParams, layerIdx);
-  if ((((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != TIDL_FLOW_CTRL_REF_ONLY) && (forceRef != 1))
+  if ((((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != TIDL_FLOW_CTRL_REF_ONLY))
   #endif
   {
     status = TIDL_deviceUtilsCommonProcess(commonParams,
@@ -445,7 +426,7 @@ int32_t TIDL_softmaxProcessNew(TIDL_NetworkCommonParams *commonParams,
   #ifdef HOST_EMULATION
   else
   {
-    sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(commonParams->createParams->net, tidlLayer->inData[0]);
+    sTIDL_DataParams_t *inDataParams = &commonParams->createParams->net->TIDLLayers[tidlLayer->inData[0]].outData;
 
     int32_t imWidth = inDataParams->dimValues[TIDL_DIM_WIDTH];
     int32_t inPitch = (int32_t)inDataParams->pitch[TIDL_LINE_PITCH];

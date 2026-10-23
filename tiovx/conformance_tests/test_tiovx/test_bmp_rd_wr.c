@@ -444,6 +444,132 @@ cleanup:
     TIVX_TEST_UPDATE_STATUS(testFail);
 }
 
+typedef struct
+{
+    const char  *name;
+    vx_df_image  dstFormat;
+
+} RgbExpandTestArg;
+
+#define RGB_EXPAND_TEST_PARAMS \
+    CT_GENERATE_PARAMETERS("RGBX", ARG, VX_DF_IMAGE_RGBX), \
+    CT_GENERATE_PARAMETERS("RGBA", ARG, VX_DF_IMAGE_RGBA)
+
+/* Verifies that tivx_utils_load_vximage_from_bmpfile() can load a BMP file
+ * (which is always decoded as either U8 or RGB) into a pre-allocated
+ * VX_DF_IMAGE_RGBX or VX_DF_IMAGE_RGBA destination image. This exercises
+ * the RGB->RGBX/RGBA expansion path, where each decoded RGB pixel is
+ * copied into the first 3 bytes of the destination pixel and the 4th
+ * (X/A) byte is set to 255.
+ */
+TEST_WITH_ARG(tivxBmpRdWr, testBmpLoadRgbToRgbx, RgbExpandTestArg,
+              RGB_EXPAND_TEST_PARAMS)
+{
+    vx_context  context = context_->vx_context_;
+    vx_image    rgbImg  = NULL;
+    vx_image    dstImg  = NULL;
+    char        inFileName[TIOVX_UTILS_MAXPATHLENGTH];
+    vx_uint32   width  = 0;
+    vx_uint32   height = 0;
+
+    VX_CALL(tivx_utils_expand_file_path("${VX_TEST_DATA_PATH}/colors.bmp",
+                                        inFileName));
+
+    /* Reference image: BMP file decoded natively as RGB. */
+    ASSERT_VX_OBJECT(rgbImg = tivx_utils_create_vximage_from_bmpfile(
+                         context, inFileName, (vx_bool)vx_false_e),
+                     VX_TYPE_IMAGE);
+
+    VX_CALL(vxQueryImage(rgbImg, (vx_enum)VX_IMAGE_WIDTH,  &width,  sizeof(width)));
+    VX_CALL(vxQueryImage(rgbImg, (vx_enum)VX_IMAGE_HEIGHT, &height, sizeof(height)));
+
+    /* Destination image is RGBX or RGBA (per arg_->dstFormat). The BMP
+     * file itself is always decoded as RGB, so loading it into this
+     * image exercises the RGB->RGBX/RGBA conversion path.
+     */
+    ASSERT_VX_OBJECT(dstImg = vxCreateImage(context, width, height,
+                                             arg_->dstFormat),
+                     VX_TYPE_IMAGE);
+
+    VX_CALL(tivx_utils_load_vximage_from_bmpfile(dstImg, inFileName,
+                                                 (vx_bool)vx_false_e));
+
+    /* Verify every pixel: R,G,B must match the reference RGB image and
+     * the 4th (X/A) byte must be filled with 255.
+     */
+    {
+        vx_imagepatch_addressing_t rgbAddr, dstAddr;
+        vx_rectangle_t  rect = { 0, 0, width, height };
+        vx_map_id       rgbMapId, dstMapId;
+        uint8_t        *rgbData = NULL;
+        uint8_t        *dstData = NULL;
+        uint32_t        x, y;
+
+        VX_CALL(vxMapImagePatch(rgbImg, &rect, 0, &rgbMapId, &rgbAddr,
+                                (void **)&rgbData, (vx_enum)VX_READ_ONLY,
+                                (vx_enum)VX_MEMORY_TYPE_HOST,
+                                (vx_enum)VX_NOGAP_X));
+
+        VX_CALL(vxMapImagePatch(dstImg, &rect, 0, &dstMapId, &dstAddr,
+                                (void **)&dstData, (vx_enum)VX_READ_ONLY,
+                                (vx_enum)VX_MEMORY_TYPE_HOST,
+                                (vx_enum)VX_NOGAP_X));
+
+        for (y = 0; y < height; y++)
+        {
+            uint8_t *rgbRow = rgbData + ((size_t)y * rgbAddr.stride_y);
+            uint8_t *dstRow = dstData + ((size_t)y * dstAddr.stride_y);
+
+            for (x = 0; x < width; x++)
+            {
+                ASSERT_EQ_INT(rgbRow[(3U*x) + 0U], dstRow[(4U*x) + 0U]);
+                ASSERT_EQ_INT(rgbRow[(3U*x) + 1U], dstRow[(4U*x) + 1U]);
+                ASSERT_EQ_INT(rgbRow[(3U*x) + 2U], dstRow[(4U*x) + 2U]);
+                ASSERT_EQ_INT(255,                 dstRow[(4U*x) + 3U]);
+            }
+        }
+
+        VX_CALL(vxUnmapImagePatch(rgbImg, rgbMapId));
+        VX_CALL(vxUnmapImagePatch(dstImg, dstMapId));
+    }
+
+    VX_CALL(vxReleaseImage(&rgbImg));
+    VX_CALL(vxReleaseImage(&dstImg));
+}
+
+/* Verifies that tivx_utils_load_vximage_from_bmpfile() still correctly
+ * rejects the unsupported U8->RGBX/RGBA format combination (i.e. loading
+ * a BMP file that was decoded as grayscale into a RGBX/RGBA destination
+ * image), returning VX_ERROR_INVALID_PARAMETERS.
+ */
+TEST_WITH_ARG(tivxBmpRdWr, negativeTestBmpLoadGrayToRgbx, RgbExpandTestArg,
+              RGB_EXPAND_TEST_PARAMS)
+{
+    vx_context  context = context_->vx_context_;
+    vx_image    dstImg  = NULL;
+    char        inFileName[TIOVX_UTILS_MAXPATHLENGTH];
+    vx_status   vxStatus;
+
+    VX_CALL(tivx_utils_expand_file_path("${VX_TEST_DATA_PATH}/colors.bmp",
+                                        inFileName));
+
+    ASSERT_VX_OBJECT(dstImg = vxCreateImage(context, 1, 1, arg_->dstFormat),
+                     VX_TYPE_IMAGE);
+
+    /* convert_to_gray_scale = vx_true_e forces the BMP file to be
+     * decoded as U8, regardless of its actual (color) content, so that
+     * the U8->RGBX/RGBA mismatch is exercised deterministically.
+     */
+    vxStatus = tivx_utils_load_vximage_from_bmpfile(dstImg, inFileName,
+                                                     (vx_bool)vx_true_e);
+
+    ASSERT_EQ_VX_STATUS(VX_ERROR_INVALID_PARAMETERS, vxStatus);
+
+    VX_CALL(vxReleaseImage(&dstImg));
+}
+
 TESTCASE_TESTS(tivxBmpRdWr,
-               testBmpRd)
+               testBmpRd,
+               testBmpLoadRgbToRgbx,
+               negativeTestBmpLoadGrayToRgbx)
 

@@ -139,7 +139,11 @@ void * TIDLRT_allocSharedMem(int32_t alignment, int32_t size)
   if(mem_rec >= 0)
   {
     sDevice_Mem_t *dm = &device_mems[mem_rec];
+    #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
+    dm->base_addr = tivxMemAlloc(((uint32_t)size + (uint32_t)alignment), (vx_enum)TIVX_MEM_EXTERNAL_SHARED);
+    #else
     dm->base_addr = tivxMemAlloc(((uint32_t)size + (uint32_t)alignment), (vx_enum)TIVX_MEM_EXTERNAL);
+    #endif
     dm->size = (size + alignment);
     if (dm->base_addr != NULL)
     {
@@ -166,7 +170,11 @@ void TIDLRT_freeSharedMem(void * ptr)
     if(mem_rec >= 0)
     {
       sDevice_Mem_t *dm = &device_mems[mem_rec];
+      #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
+      (void)tivxMemFree(dm->base_addr, (uint32_t)dm->size, (vx_enum)TIVX_MEM_EXTERNAL_SHARED);
+      #else
       (void)tivxMemFree(dm->base_addr, (uint32_t)dm->size, (vx_enum)TIVX_MEM_EXTERNAL);
+      #endif
       dm->base_addr = NULL;
       dm->aligned_addr = NULL;
       dm->size = 0;

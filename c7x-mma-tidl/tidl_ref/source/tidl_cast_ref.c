@@ -70,6 +70,9 @@
 #include "tidl_commonUtils.h"
 #include "tidl_cast_ref.h"
 #include "tidl_device_utils.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 
 /**
@@ -107,6 +110,13 @@ template<class Tin, class Tout> void TIDL_castRef(const Tin *pIn,
     int32_t outDim1Pitch = tidlLayer->outData.pitch[TIDL_DIM1_PITCH];
     int32_t outDim2Pitch = tidlLayer->outData.pitch[TIDL_DIM2_PITCH];
 
+    #ifdef BUILD_WITH_CUDA_CAST
+    TIDL_cudaCast(
+      pIn, pOut,
+      batch, dim1, dim2, numCh, height, width,
+      inRoiPitch, inDim1Pitch, inDim2Pitch, inChPitch, inLinePitch,
+      outRoiPitch, outDim1Pitch, outDim2Pitch, outChPitch, outLinePitch);
+    #else
     for (int32_t b = 0; b < batch; b++) {
       for (int32_t d1 = 0; d1 < dim1; d1++) {
         for (int32_t d2 = 0; d2 < dim2; d2++) {
@@ -122,6 +132,7 @@ template<class Tin, class Tout> void TIDL_castRef(const Tin *pIn,
         }
       }
     }
+    #endif
     TIDL_L1DandL2CacheWbInv();
 }
 

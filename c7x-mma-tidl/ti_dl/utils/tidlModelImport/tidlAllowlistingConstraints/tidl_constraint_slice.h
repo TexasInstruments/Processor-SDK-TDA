@@ -217,19 +217,37 @@ const vector<TidlConstraint> tidlConstraintSlice = {
             }    
             return true;     
         }
-    ), 
+    ),
     TIDL_CSTR(
-        "Slice with stride greater than 0 is supported",
-        "Slice with stride greater than 0 is supported",
-        "Slice with stride greater than 0 is supported",
+        "Slice with stride != 1 is only supported if input data dimension is greater than 1D",
+        "Slice with stride != 1 is only supported if input data dimension is greater than 1D",
+        "Slice with stride != 1 is only supported if input data dimension is greater than 1D",
         [](const sTIDL_LayerPC_t *layer, string &logs){
+
+            /*
+             * Slice with stride!=1 is coverted to gather in optimizer, 
+             * gather has a constraint that "Input data dimensions must be greater than 1D"
+             * Hence deny strided slice here if input data dimension is 1D 
+             */
             auto params = layer->layerParams.sliceParams;
-            if (params.stride < 0)
+            if (params.stride != 1)
             {
-                stringstream ss;
-                ss<<"Only slice with stride > 0 is supported, stride found = "<<params.stride;
-                logs = ss.str();
-                return false;
+                sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+                int32_t dataNumDims = TIDL_DIM_MAX;
+
+                if (md.numVarInputs > 0 && md.varTensorIndices[0] == 0)
+                {
+                    dataNumDims = md.varTensorsDims[0].size();
+                }
+                else if (md.numConstInputs > 0 && md.constTensorIndices[0] == 0)
+                {
+                    dataNumDims = md.constTensorsDims[0].size();
+                }
+
+                if (dataNumDims <= 1)
+                {
+                    return false;
+                }
             }
             return true;
         }

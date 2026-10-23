@@ -75,7 +75,7 @@ Edit `config.json`:
 python app.py
 ```
 
-Server runs on `http://0.0.0.0:8000`
+Server runs on `http://0.0.0.0:9000`
 
 ## Add New Jobs
 

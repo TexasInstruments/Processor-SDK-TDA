@@ -72,7 +72,8 @@ using namespace tvm;
 
 template<> int32_t TidlParseTVM::parse<OpNameStr("tidl.slice")>()
 {
-    int32_t axis = 0, numDim,isMultipleAxis = 1; 
+    int32_t axis = 0, numDim,isMultipleAxis = 1;
+    bool axisFromAttr = false;
     sTIDL_SliceLayerParams_t &sliceParams = layer.layerParams.sliceParams;
     sBuffer_t buf;
     sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
@@ -84,16 +85,18 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("tidl.slice")>()
     const auto* attrs = fn->attrs.as<DictAttrsNode>();
     if(attrs)
     {
-        if (attrs->dict.count("axes")) 
+        if (attrs->dict.count("axes"))
         {
             auto axes_ref = attrs->dict.at("axes");
             if (axes_ref.as<ArrayNode>()) {
                 auto axes_array = Downcast<Array<Integer>>(axes_ref);
                 if (axes_array.size() > 0) {
                     axis = axes_array[0]->value;
+                    axisFromAttr = true;
                 }
             } else if (axes_ref.as<IntImmNode>()) {
                 axis = Downcast<Integer>(axes_ref)->value;
+                axisFromAttr = true;
             }
         }
         if (attrs->dict.count("starts")) 
@@ -130,18 +133,25 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("tidl.slice")>()
     }
     if(isMultipleAxis!=1)
     {
-        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Slice layer : TIDL_RT only supports single slice axis");
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Slice layer : Only single axis slice is supported");
         return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
     }
     
-    if(md.numInputs<4){
+    if(md.numInputs<4 && !axisFromAttr){
         axis=0;
     }
     else if(md.numInputs==5)
     {
-        if(call->args[4].as<tvm::relay::ConstantNode>())
-        {    
-            buf=TIDL_extractConstantTensorData(call,4,md,3);
+        auto stepsIt = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 4);
+        if(stepsIt != md.constTensorIndices.end())
+        {
+            int32_t stepsConstIdx = std::distance(md.constTensorIndices.begin(), stepsIt);
+            buf=TIDL_extractConstantTensorData(call,4,md,stepsConstIdx);
+            if(buf.ptr==NULL)
+            {
+                TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", 4);
+                return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+            }
             long long int *ptr = (long long int *)buf.ptr;
             if (ptr[0] != 1)
             {
@@ -154,23 +164,40 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("tidl.slice")>()
 
     }
 
-    if(md.numConstInputs>=3)
+    /* Read starts and ends when supplied as constant inputs (Slice-10 style).
+     * The axes tensor is optional: some lowerings only supply data+starts+ends
+     * (axis is implied by attrs / defaults to 0), so starts/ends must not be
+     * gated on an axes tensor being present as well. */
+    auto startsIt = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 1);
+    auto endsIt   = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 2);
+    auto axesIt   = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 3);
+    if(startsIt != md.constTensorIndices.end() &&
+       endsIt   != md.constTensorIndices.end())
     {
+        int32_t startsConstIdx = std::distance(md.constTensorIndices.begin(), startsIt);
+        int32_t endsConstIdx   = std::distance(md.constTensorIndices.begin(), endsIt);
+
         sBuffer_t starts;
-        starts=TIDL_extractConstantTensorData(call,1,md,0);
+        starts=TIDL_extractConstantTensorData(call,1,md,startsConstIdx);
+        if(starts.ptr==NULL)
+        {
+            TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", 1);
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
         long long int *startsPtr = (long long int *)starts.ptr;
 
         sBuffer_t ends;
-        ends= buf=TIDL_extractConstantTensorData(call,2,md,1);
+        ends=TIDL_extractConstantTensorData(call,2,md,endsConstIdx);
+        if(ends.ptr==NULL)
+        {
+            TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", 2);
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
         long long int *endsPtr = (long long int *)ends.ptr;
 
-        sBuffer_t axes;
-        axes= buf=TIDL_extractConstantTensorData(call,3,md,2);
-        long long int *axesPtr = (long long int *)axes.ptr;
-    
         if(starts.bufSize > 1)
         {
-            TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowisting : Slice layer : TIDL_RT only supports single slice axis");
+            TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowisting : Slice layer : Only single axis slice is supported");
             return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
         }
         else
@@ -180,11 +207,14 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("tidl.slice")>()
             {
                 sliceParams.slicePoints[1] = 0x7fffffff;
             }
+            else if(endsPtr[0] == (-0x7fffffffffffffff))
+            {
+            sliceParams.slicePoints[1] = -0x7fffffff;
+            }
             else
             {
                 sliceParams.slicePoints[1] = endsPtr[0];
             }
-            axis = axesPtr[0];
         }
         free(startsPtr);
         starts.ptr = NULL;
@@ -192,24 +222,47 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("tidl.slice")>()
         free(endsPtr);
         ends.ptr = NULL;
         ends.bufSize = 0;
-        free(axesPtr);
-        axes.ptr = NULL;
-        axes.bufSize = 0;
+
+        /* axes tensor is optional; only override axis when it is actually present */
+        if(axesIt != md.constTensorIndices.end())
+        {
+            int32_t axesConstIdx = std::distance(md.constTensorIndices.begin(), axesIt);
+            sBuffer_t axes;
+            axes=TIDL_extractConstantTensorData(call,3,md,axesConstIdx);
+            if(axes.ptr==NULL)
+            {
+                TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", 3);
+                return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+            }
+            long long int *axesPtr = (long long int *)axes.ptr;
+            axis = axesPtr[0];
+            free(axesPtr);
+            axes.ptr = NULL;
+            axes.bufSize = 0;
+        }
     }
-    if (layer.allowlistingMetaData.varTensorsDims.size() != 0)
-    {
-        numDim = layer.allowlistingMetaData.varTensorsDims[0].size();
-        numDim = (numDim == 0)? 4:numDim;
-    }
-    else
-    {
-        numDim = 4;
-    }
+
+    /** Get numDim from data tensor (input 0), whether it is variable or const */
+    numDim = TIDL_getNumDimsForTensorIndex(md, 0);
 
     /** Adjust axis to TIDL dimensions*/
     axis = TIDL_relayNormalizeAxis(axis, numDim);
-    
+
     layer.layerParams.sliceParams.axis = axis;
+
+    /* If data input (input 0) is a constant, store it in layer.weights
+     * so tidl_addConstDataLayers can create the appropriate ConstDataLayer */
+    auto dataConstIt = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 0);
+    if (dataConstIt != md.constTensorIndices.end())
+    {
+        int32_t dataConstIdx = std::distance(md.constTensorIndices.begin(), dataConstIt);
+        layer.weights = TIDL_extractConstantTensorData(call, 0, md, dataConstIdx);
+        if (layer.weights.ptr == NULL)
+        {
+            TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Slice layer : Unable to read constant data input");
+            return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+        }
+    }
 
   return TIDL_ALLOWLISTING_LAYER_CHECK_PASSED;
 }

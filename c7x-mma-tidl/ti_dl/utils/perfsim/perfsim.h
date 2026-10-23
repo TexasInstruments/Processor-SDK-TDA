@@ -50,7 +50,6 @@
 #define L2MEM_SCRATCH_BUF_SIZEKB (2U)  /**< Size of L2 MEM used for TIDL scratch buffers */
 
 #define  ERR_FLAG_SPATIAL_JOIN_NOT_SUPPORTED  (1U)
-#define  ERR_FLAG_OTF_NOT_SUPPORTED           (2U)
 
 #define FILE_NAME_SIZE  (512)
 
@@ -111,7 +110,6 @@ typedef enum
   FRAME         = 3  /**< Frame level buffer */
 } eDataFlowBuffer ;
 
-#define GETDATAFLOW_BUFTYPE(dataflow)              (((uint32_t)dataflow) & 0xFU)
 
 /**< Assumption of maximum forks and joints in CNN network */
 #define MAX_BRANCH (128)

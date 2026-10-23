@@ -51,6 +51,7 @@ help:
 	@echo  $(MAKE) -s -f makefile.j722s freertos_r5f.ti-arm-clang freertos_c75x.ti-c7000
 	@echo  $(MAKE) -s -f makefile.j722s safertos_r5f.ti-arm-clang safertos_c75x.ti-c7000
 	@echo  $(MAKE) -s -f makefile.j722s sdl_mcu-r5f.ti-arm-clang
+	@echo  $(MAKE) -s -f makefile.j722s sdl_ipfma_mcu-r5f.ti-arm-clang
 	@echo  $(MAKE) -s -f makefile.j722s safety_checkers_r5f.ti-arm-clang
 	@echo  $(MAKE) -s -f makefile.j722s pdm_utils_wkup-r5fss0-0.ti-arm-clang pdm_utils_mcu-r5fss0-0.ti-arm-clang pdm_utils_main-r5fss0-0.ti-arm-clang pdm_utils_c75ss0-0.ti-c7000 pdm_utils_c75ss1-0.ti-c7000
 	@echo  $(MAKE) -s -f makefile.j722s enet-cpsw_r5f.ti-arm-clang enet-cpsw_mcu-r5f.ti-arm-clang
@@ -79,6 +80,7 @@ help:
 	@echo  $(MAKE) -s -f makefile.j722s freertos_r5f.ti-arm-clang_clean freertos_c75x.ti-c7000_clean
 	@echo  $(MAKE) -s -f makefile.j722s safertos_r5f.ti-arm-clang_clean safertos_c75x.ti-c7000_clean
 	@echo  $(MAKE) -s -f makefile.j722s sdl_mcu-r5f.ti-arm-clang_clean
+	@echo  $(MAKE) -s -f makefile.j722s sdl_ipfma_mcu-r5f.ti-arm-clang_clean
 	@echo  $(MAKE) -s -f makefile.j722s safety_checkers_r5f.ti-arm-clang_clean
 	@echo  $(MAKE) -s -f makefile.j722s pdm_utils_wkup-r5fss0-0.ti-arm-clang_clean pdm_utils_mcu-r5fss0-0.ti-arm-clang_clean pdm_utils_main-r5fss0-0.ti-arm-clang_clean pdm_utils_c75ss0-0.ti-c7000_clean pdm_utils_c75ss1-0.ti-c7000_clean
 	@echo  $(MAKE) -s -f makefile.j722s enet-cpsw_r5f.ti-arm-clang_clean enet-cpsw_mcu-r5f.ti-arm-clang_clean
@@ -283,6 +285,8 @@ help:
 	@echo  $(MAKE) -s -C examples/ip_fma/dru_static_regs_readback/j722s-evm/c75ss1-0_freertos/ti-c7000 [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C examples/ip_fma/csirx_static_regs_readback/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C examples/ip_fma/dru_active_tr_event_overflow_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang [all clean syscfg-gui syscfg]
+	@echo  $(MAKE) -s -C examples/ip_fma/dru_basic_tests_with_crc_check/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang [all clean syscfg-gui syscfg]
+	@echo  $(MAKE) -s -C examples/ip_fma/dcc_readback_of_written_config/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C source/safety_checkers/examples/pm_checkers_app/j722s-evm/mcu-r5fss0-0_freertos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C source/safety_checkers/examples/pm_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang [all clean syscfg-gui syscfg]
@@ -302,6 +306,7 @@ help:
 	@echo  $(MAKE) -s -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss0-0_freertos/ti-c7000 [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C source/pdm_utils/examples/dm_power_analysis_app/j722s-evm/c75ss1-0_freertos/ti-c7000 [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C examples/ip_fma/clk_ip_fma_app/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang [all clean syscfg-gui syscfg]
+	@echo  $(MAKE) -s -C examples/ip_fma/dru_unsupported_tr_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C test/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C test/drivers/csirx/csirx_ut/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang [all clean syscfg-gui syscfg]
 	@echo  $(MAKE) -s -C source/networking/enet/core/examples/enet_loopback/enet_cpsw_loopback/loopback_mac_end/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang [all clean syscfg-gui syscfg]
@@ -329,6 +334,7 @@ BUILD_COMBO_nortos = nortos_r5f.ti-arm-clang
 BUILD_COMBO_freertos = freertos_r5f.ti-arm-clang freertos_c75x.ti-c7000
 BUILD_COMBO_safertos = safertos_r5f.ti-arm-clang safertos_c75x.ti-c7000
 BUILD_COMBO_sdl = sdl_mcu-r5f.ti-arm-clang
+BUILD_COMBO_sdl_ipfma = sdl_ipfma_mcu-r5f.ti-arm-clang
 BUILD_COMBO_safety_checkers = safety_checkers_r5f.ti-arm-clang
 BUILD_COMBO_pdm_utils = pdm_utils_wkup-r5fss0-0.ti-arm-clang pdm_utils_mcu-r5fss0-0.ti-arm-clang pdm_utils_main-r5fss0-0.ti-arm-clang pdm_utils_c75ss0-0.ti-c7000 pdm_utils_c75ss1-0.ti-c7000
 BUILD_COMBO_enet-cpsw = enet-cpsw_r5f.ti-arm-clang enet-cpsw_mcu-r5f.ti-arm-clang
@@ -344,7 +350,7 @@ BUILD_COMBO_rm_pm_hal = rm_pm_hal_wkup-r5f.ti-arm-clang
 BUILD_COMBO_rm_pm_hal_sbl = rm_pm_hal_sbl_wkup-r5f.ti-arm-clang
 
 # Combine all Components
-BUILD_COMBO_ALL = $(BUILD_COMBO_board) $(BUILD_COMBO_drivers) $(BUILD_COMBO_sciclient_direct) $(BUILD_COMBO_sciclient_direct_sbl) $(BUILD_COMBO_sciserver) $(BUILD_COMBO_self_reset) $(BUILD_COMBO_dmautils) $(BUILD_COMBO_freertos_fat) $(BUILD_COMBO_nortos) $(BUILD_COMBO_freertos) $(BUILD_COMBO_sdl) $(BUILD_COMBO_safety_checkers) $(BUILD_COMBO_pdm_utils) $(BUILD_COMBO_enet-cpsw) $(BUILD_COMBO_lwip-freertos) $(BUILD_COMBO_lwip-contrib-freertos) $(BUILD_COMBO_ethfw) $(BUILD_COMBO_lwipif-cpsw-freertos) $(BUILD_COMBO_tsn_combase-freertos) $(BUILD_COMBO_tsn_gptp-freertos) $(BUILD_COMBO_tsn_uniconf-freertos) $(BUILD_COMBO_tsn_unibase-freertos) $(BUILD_COMBO_rm_pm_hal) $(BUILD_COMBO_rm_pm_hal_sbl)
+BUILD_COMBO_ALL = $(BUILD_COMBO_board) $(BUILD_COMBO_drivers) $(BUILD_COMBO_sciclient_direct) $(BUILD_COMBO_sciclient_direct_sbl) $(BUILD_COMBO_sciserver) $(BUILD_COMBO_self_reset) $(BUILD_COMBO_dmautils) $(BUILD_COMBO_freertos_fat) $(BUILD_COMBO_nortos) $(BUILD_COMBO_freertos) $(BUILD_COMBO_sdl) $(BUILD_COMBO_sdl_ipfma) $(BUILD_COMBO_safety_checkers) $(BUILD_COMBO_pdm_utils) $(BUILD_COMBO_enet-cpsw) $(BUILD_COMBO_lwip-freertos) $(BUILD_COMBO_lwip-contrib-freertos) $(BUILD_COMBO_ethfw) $(BUILD_COMBO_lwipif-cpsw-freertos) $(BUILD_COMBO_tsn_combase-freertos) $(BUILD_COMBO_tsn_gptp-freertos) $(BUILD_COMBO_tsn_uniconf-freertos) $(BUILD_COMBO_tsn_unibase-freertos) $(BUILD_COMBO_rm_pm_hal) $(BUILD_COMBO_rm_pm_hal_sbl)
 
 # Combine all External Components
 BUILD_COMBO_EXTERNAL_ALL =
@@ -403,6 +409,9 @@ $(BUILD_COMBO_sdl):
 		echo "Skipping SDL (not present in this snapshot)"; \
 	fi
 
+$(BUILD_COMBO_sdl_ipfma):
+	$(MAKE) -C source/sdl/sdl_ipfma -f makefile.j722s.$(subst sdl_ipfma_,,$@) all
+
 $(BUILD_COMBO_safety_checkers):
 	$(MAKE) -C source/safety_checkers -f makefile.j722s.$(subst safety_checkers_,,$@) all
 
@@ -456,6 +465,7 @@ BUILD_COMBO_CLEAN_nortos = nortos_r5f.ti-arm-clang_clean
 BUILD_COMBO_CLEAN_freertos = freertos_r5f.ti-arm-clang_clean freertos_c75x.ti-c7000_clean
 BUILD_COMBO_CLEAN_safertos = safertos_r5f.ti-arm-clang_clean safertos_c75x.ti-c7000_clean
 BUILD_COMBO_CLEAN_sdl = sdl_mcu-r5f.ti-arm-clang_clean
+BUILD_COMBO_CLEAN_sdl_ipfma = sdl_ipfma_mcu-r5f.ti-arm-clang_clean
 BUILD_COMBO_CLEAN_safety_checkers = safety_checkers_r5f.ti-arm-clang_clean
 BUILD_COMBO_CLEAN_pdm_utils = pdm_utils_wkup-r5fss0-0.ti-arm-clang_clean pdm_utils_mcu-r5fss0-0.ti-arm-clang_clean pdm_utils_main-r5fss0-0.ti-arm-clang_clean pdm_utils_c75ss0-0.ti-c7000_clean pdm_utils_c75ss1-0.ti-c7000_clean
 BUILD_COMBO_CLEAN_enet-cpsw = enet-cpsw_r5f.ti-arm-clang_clean enet-cpsw_mcu-r5f.ti-arm-clang_clean
@@ -471,7 +481,7 @@ BUILD_COMBO_CLEAN_rm_pm_hal = rm_pm_hal_wkup-r5f.ti-arm-clang_clean
 BUILD_COMBO_CLEAN_rm_pm_hal_sbl = rm_pm_hal_sbl_wkup-r5f.ti-arm-clang_clean
 
 # Combine all Components Clean
-BUILD_COMBO_CLEAN_ALL = $(BUILD_COMBO_CLEAN_board) $(BUILD_COMBO_CLEAN_drivers) $(BUILD_COMBO_CLEAN_sciclient_direct) $(BUILD_COMBO_CLEAN_sciclient_direct_sbl) $(BUILD_COMBO_CLEAN_sciserver) $(BUILD_COMBO_CLEAN_self_reset) $(BUILD_COMBO_CLEAN_dmautils) $(BUILD_COMBO_CLEAN_freertos_fat) $(BUILD_COMBO_CLEAN_nortos) $(BUILD_COMBO_CLEAN_freertos) $(BUILD_COMBO_CLEAN_sdl) $(BUILD_COMBO_CLEAN_safety_checkers) $(BUILD_COMBO_CLEAN_pdm_utils) $(BUILD_COMBO_CLEAN_enet-cpsw) $(BUILD_COMBO_CLEAN_lwip-freertos) $(BUILD_COMBO_CLEAN_lwip-contrib-freertos) $(BUILD_COMBO_CLEAN_ethfw) $(BUILD_COMBO_CLEAN_lwipif-cpsw-freertos) $(BUILD_COMBO_CLEAN_tsn_combase-freertos) $(BUILD_COMBO_CLEAN_tsn_gptp-freertos) $(BUILD_COMBO_CLEAN_tsn_uniconf-freertos) $(BUILD_COMBO_CLEAN_tsn_unibase-freertos) $(BUILD_COMBO_CLEAN_rm_pm_hal) $(BUILD_COMBO_CLEAN_rm_pm_hal_sbl)
+BUILD_COMBO_CLEAN_ALL = $(BUILD_COMBO_CLEAN_board) $(BUILD_COMBO_CLEAN_drivers) $(BUILD_COMBO_CLEAN_sciclient_direct) $(BUILD_COMBO_CLEAN_sciclient_direct_sbl) $(BUILD_COMBO_CLEAN_sciserver) $(BUILD_COMBO_CLEAN_self_reset) $(BUILD_COMBO_CLEAN_dmautils) $(BUILD_COMBO_CLEAN_freertos_fat) $(BUILD_COMBO_CLEAN_nortos) $(BUILD_COMBO_CLEAN_freertos) $(BUILD_COMBO_CLEAN_sdl) $(BUILD_COMBO_CLEAN_sdl_ipfma) $(BUILD_COMBO_CLEAN_safety_checkers) $(BUILD_COMBO_CLEAN_pdm_utils) $(BUILD_COMBO_CLEAN_enet-cpsw) $(BUILD_COMBO_CLEAN_lwip-freertos) $(BUILD_COMBO_CLEAN_lwip-contrib-freertos) $(BUILD_COMBO_CLEAN_ethfw) $(BUILD_COMBO_CLEAN_lwipif-cpsw-freertos) $(BUILD_COMBO_CLEAN_tsn_combase-freertos) $(BUILD_COMBO_CLEAN_tsn_gptp-freertos) $(BUILD_COMBO_CLEAN_tsn_uniconf-freertos) $(BUILD_COMBO_CLEAN_tsn_unibase-freertos) $(BUILD_COMBO_CLEAN_rm_pm_hal) $(BUILD_COMBO_CLEAN_rm_pm_hal_sbl)
 
 # Combine all External Components Clean
 BUILD_COMBO_EXTERNAL_CLEAN_ALL =
@@ -530,6 +540,9 @@ $(BUILD_COMBO_CLEAN_sdl):
 		echo "Skipping SDL clean (not present in this snapshot)"; \
 	fi
 
+$(BUILD_COMBO_CLEAN_sdl_ipfma):
+	$(MAKE) -C source/sdl/sdl_ipfma -f makefile.j722s.$(subst sdl_ipfma_,,$(subst _clean,,$@)) clean
+
 $(BUILD_COMBO_CLEAN_safety_checkers):
 	$(MAKE) -C source/safety_checkers -f makefile.j722s.$(subst safety_checkers_,,$(subst _clean,,$@)) clean
 
@@ -583,6 +596,7 @@ BUILD_COMBO_SCRUB_nortos = nortos_r5f.ti-arm-clang_scrub
 BUILD_COMBO_SCRUB_freertos = freertos_r5f.ti-arm-clang_scrub freertos_c75x.ti-c7000_scrub
 BUILD_COMBO_SCRUB_safertos = safertos_r5f.ti-arm-clang_scrub safertos_c75x.ti-c7000_scrub
 BUILD_COMBO_SCRUB_sdl = sdl_mcu-r5f.ti-arm-clang_scrub
+BUILD_COMBO_SCRUB_sdl_ipfma = sdl_ipfma_mcu-r5f.ti-arm-clang_scrub
 BUILD_COMBO_SCRUB_safety_checkers = safety_checkers_r5f.ti-arm-clang_scrub
 BUILD_COMBO_SCRUB_pdm_utils = pdm_utils_wkup-r5fss0-0.ti-arm-clang_scrub pdm_utils_mcu-r5fss0-0.ti-arm-clang_scrub pdm_utils_main-r5fss0-0.ti-arm-clang_scrub pdm_utils_c75ss0-0.ti-c7000_scrub pdm_utils_c75ss1-0.ti-c7000_scrub
 BUILD_COMBO_SCRUB_enet-cpsw = enet-cpsw_r5f.ti-arm-clang_scrub enet-cpsw_mcu-r5f.ti-arm-clang_scrub
@@ -598,7 +612,7 @@ BUILD_COMBO_SCRUB_rm_pm_hal = rm_pm_hal_wkup-r5f.ti-arm-clang_scrub
 BUILD_COMBO_SCRUB_rm_pm_hal_sbl = rm_pm_hal_sbl_wkup-r5f.ti-arm-clang_scrub
 
 # Combine all Components Scrub Targets
-BUILD_COMBO_SCRUB_ALL = $(BUILD_COMBO_SCRUB_board) $(BUILD_COMBO_SCRUB_drivers) $(BUILD_COMBO_SCRUB_sciclient_direct) $(BUILD_COMBO_SCRUB_sciclient_direct_sbl) $(BUILD_COMBO_SCRUB_sciserver) $(BUILD_COMBO_SCRUB_self_reset) $(BUILD_COMBO_SCRUB_dmautils) $(BUILD_COMBO_SCRUB_freertos_fat) $(BUILD_COMBO_SCRUB_nortos) $(BUILD_COMBO_SCRUB_freertos) $(BUILD_COMBO_SCRUB_sdl) $(BUILD_COMBO_SCRUB_safety_checkers) $(BUILD_COMBO_SCRUB_pdm_utils) $(BUILD_COMBO_SCRUB_enet-cpsw) $(BUILD_COMBO_SCRUB_lwip-freertos) $(BUILD_COMBO_SCRUB_lwip-contrib-freertos) $(BUILD_COMBO_SCRUB_ethfw) $(BUILD_COMBO_SCRUB_lwipif-cpsw-freertos) $(BUILD_COMBO_SCRUB_tsn_combase-freertos) $(BUILD_COMBO_SCRUB_tsn_gptp-freertos) $(BUILD_COMBO_SCRUB_tsn_uniconf-freertos) $(BUILD_COMBO_SCRUB_tsn_unibase-freertos) $(BUILD_COMBO_SCRUB_rm_pm_hal) $(BUILD_COMBO_SCRUB_rm_pm_hal_sbl)
+BUILD_COMBO_SCRUB_ALL = $(BUILD_COMBO_SCRUB_board) $(BUILD_COMBO_SCRUB_drivers) $(BUILD_COMBO_SCRUB_sciclient_direct) $(BUILD_COMBO_SCRUB_sciclient_direct_sbl) $(BUILD_COMBO_SCRUB_sciserver) $(BUILD_COMBO_SCRUB_self_reset) $(BUILD_COMBO_SCRUB_dmautils) $(BUILD_COMBO_SCRUB_freertos_fat) $(BUILD_COMBO_SCRUB_nortos) $(BUILD_COMBO_SCRUB_freertos) $(BUILD_COMBO_SCRUB_sdl) $(BUILD_COMBO_SCRUB_sdl_ipfma) $(BUILD_COMBO_SCRUB_safety_checkers) $(BUILD_COMBO_SCRUB_pdm_utils) $(BUILD_COMBO_SCRUB_enet-cpsw) $(BUILD_COMBO_SCRUB_lwip-freertos) $(BUILD_COMBO_SCRUB_lwip-contrib-freertos) $(BUILD_COMBO_SCRUB_ethfw) $(BUILD_COMBO_SCRUB_lwipif-cpsw-freertos) $(BUILD_COMBO_SCRUB_tsn_combase-freertos) $(BUILD_COMBO_SCRUB_tsn_gptp-freertos) $(BUILD_COMBO_SCRUB_tsn_uniconf-freertos) $(BUILD_COMBO_SCRUB_tsn_unibase-freertos) $(BUILD_COMBO_SCRUB_rm_pm_hal) $(BUILD_COMBO_SCRUB_rm_pm_hal_sbl)
 
 # Combine all External Components Scrub Targets
 BUILD_COMBO_EXTERNAL_SCRUB_ALL =
@@ -656,6 +670,9 @@ $(BUILD_COMBO_SCRUB_sdl):
 	else \
 		echo "Skipping SDL scrub (not present in this snapshot)"; \
 	fi
+
+$(BUILD_COMBO_SCRUB_sdl_ipfma):
+	$(MAKE) -C source/sdl/sdl_ipfma -f makefile.j722s.$(subst sdl_ipfma_,,$(subst _scrub,,$@)) scrub
 
 $(BUILD_COMBO_SCRUB_safety_checkers):
 	$(MAKE) -C source/safety_checkers -f makefile.j722s.$(subst safety_checkers_,,$(subst _scrub,,$@)) scrub
@@ -863,6 +880,8 @@ BUILD_COMBO_EXAMPLE_ALL += ip_fma_dru_j722s-evm_c75ss0-0_freertos_ti-c7000
 BUILD_COMBO_EXAMPLE_ALL += ip_fma_dru_j722s-evm_c75ss1-0_freertos_ti-c7000
 BUILD_COMBO_EXAMPLE_ALL += ip_fma_csirx_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += dru_tr_of_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang
+BUILD_COMBO_EXAMPLE_ALL += dru_basic_tests_with_crc_check_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang
+BUILD_COMBO_EXAMPLE_ALL += dcc_readback_of_written_config_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += SafetyCheckersApp_pm_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += SafetyCheckersApp_pm_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang
@@ -882,6 +901,7 @@ BUILD_COMBO_EXAMPLE_ALL += dm_power_analysis_app_j722s-evm_main-r5fss0-0_freerto
 BUILD_COMBO_EXAMPLE_ALL += dm_power_analysis_app_j722s-evm_c75ss0-0_freertos_ti-c7000
 BUILD_COMBO_EXAMPLE_ALL += dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000
 BUILD_COMBO_EXAMPLE_ALL += clk_ip_fma_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang
+BUILD_COMBO_EXAMPLE_ALL += dru_tr_legal_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += csirx_ut_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang
 BUILD_COMBO_EXAMPLE_ALL += enet_cpsw_loopback_mac_end_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang
@@ -1511,6 +1531,12 @@ examples-private: dm_app
  dru_tr_of_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang:
 	$(MAKE) -C examples/ip_fma/dru_active_tr_event_overflow_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile all
 
+ dru_basic_tests_with_crc_check_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang:
+	$(MAKE) -C examples/ip_fma/dru_basic_tests_with_crc_check/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile all
+
+ dcc_readback_of_written_config_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
+	$(MAKE) -C examples/ip_fma/dcc_readback_of_written_config/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+
  SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang:
 	$(MAKE) -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile all
 
@@ -1567,6 +1593,9 @@ examples-private: dm_app
 
  clk_ip_fma_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang:
 	$(MAKE) -C examples/ip_fma/clk_ip_fma_app/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile all
+
+ dru_tr_legal_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang:
+	$(MAKE) -C examples/ip_fma/dru_unsupported_tr_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile all
 
  sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang:
 	$(MAKE) -C test/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile all
@@ -1762,6 +1791,8 @@ BUILD_COMBO_EXAMPLE_CLEAN_ALL += ip_fma_dru_j722s-evm_c75ss0-0_freertos_ti-c7000
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += ip_fma_dru_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += ip_fma_csirx_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += dru_tr_of_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_CLEAN_ALL += dru_basic_tests_with_crc_check_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_CLEAN_ALL += dcc_readback_of_written_config_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += SafetyCheckersApp_pm_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += SafetyCheckersApp_pm_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
@@ -1781,6 +1812,7 @@ BUILD_COMBO_EXAMPLE_CLEAN_ALL += dm_power_analysis_app_j722s-evm_main-r5fss0-0_f
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += dm_power_analysis_app_j722s-evm_c75ss0-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += clk_ip_fma_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean
+BUILD_COMBO_EXAMPLE_CLEAN_ALL += dru_tr_legal_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += csirx_ut_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
 BUILD_COMBO_EXAMPLE_CLEAN_ALL += enet_cpsw_loopback_mac_end_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean
@@ -2404,6 +2436,12 @@ examples-private-clean: $(BUILD_COMBO_EXAMPLE_PRIVATE_CLEAN_ALL)
  dru_tr_of_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/ip_fma/dru_active_tr_event_overflow_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile clean
 
+ dru_basic_tests_with_crc_check_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/ip_fma/dru_basic_tests_with_crc_check/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+
+ dcc_readback_of_written_config_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/ip_fma/dcc_readback_of_written_config/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+
  SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_clean:
 	$(MAKE) -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile clean
 
@@ -2460,6 +2498,9 @@ examples-private-clean: $(BUILD_COMBO_EXAMPLE_PRIVATE_CLEAN_ALL)
 
  clk_ip_fma_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C examples/ip_fma/clk_ip_fma_app/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile clean
+
+ dru_tr_legal_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_clean:
+	$(MAKE) -C examples/ip_fma/dru_unsupported_tr_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile clean
 
  sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_clean:
 	$(MAKE) -C test/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile clean
@@ -2655,6 +2696,8 @@ BUILD_COMBO_EXAMPLE_SCRUB_ALL += ip_fma_dru_j722s-evm_c75ss0-0_freertos_ti-c7000
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += ip_fma_dru_j722s-evm_c75ss1-0_freertos_ti-c7000_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += ip_fma_csirx_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += dru_tr_of_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_scrub
+BUILD_COMBO_EXAMPLE_SCRUB_ALL += dru_basic_tests_with_crc_check_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_scrub
+BUILD_COMBO_EXAMPLE_SCRUB_ALL += dcc_readback_of_written_config_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += SafetyCheckersApp_pm_j722s-evm_mcu-r5fss0-0_freertos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += SafetyCheckersApp_pm_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_scrub
@@ -2674,6 +2717,7 @@ BUILD_COMBO_EXAMPLE_SCRUB_ALL += dm_power_analysis_app_j722s-evm_main-r5fss0-0_f
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += dm_power_analysis_app_j722s-evm_c75ss0-0_freertos_ti-c7000_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += dm_power_analysis_app_j722s-evm_c75ss1-0_freertos_ti-c7000_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += clk_ip_fma_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub
+BUILD_COMBO_EXAMPLE_SCRUB_ALL += dru_tr_legal_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += csirx_ut_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_scrub
 BUILD_COMBO_EXAMPLE_SCRUB_ALL += enet_cpsw_loopback_mac_end_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_scrub
@@ -3297,6 +3341,12 @@ examples-scrub-private: $(BUILD_COMBO_EXAMPLE_PRIVATE_SCRUB_ALL)
  dru_tr_of_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_scrub:
 	$(MAKE) -C examples/ip_fma/dru_active_tr_event_overflow_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
 
+ dru_basic_tests_with_crc_check_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_scrub:
+	$(MAKE) -C examples/ip_fma/dru_basic_tests_with_crc_check/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+
+ dcc_readback_of_written_config_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
+	$(MAKE) -C examples/ip_fma/dcc_readback_of_written_config/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+
  SafetyCheckersApp_csirx_j722s-evm_main-r5fss0-0_freertos_ti-arm-clang_scrub:
 	$(MAKE) -C source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang -f makefile scrub
 
@@ -3353,6 +3403,9 @@ examples-scrub-private: $(BUILD_COMBO_EXAMPLE_PRIVATE_SCRUB_ALL)
 
  clk_ip_fma_app_j722s-evm_mcu-r5fss0-0_nortos_ti-arm-clang_scrub:
 	$(MAKE) -C examples/ip_fma/clk_ip_fma_app/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
+
+ dru_tr_legal_j722s-evm_main-r5fss0-0_nortos_ti-arm-clang_scrub:
+	$(MAKE) -C examples/ip_fma/dru_unsupported_tr_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang -f makefile scrub
 
  sbl_non_booted_core_test_j722s-evm_wkup-r5fss0-0_nortos_ti-arm-clang_scrub:
 	$(MAKE) -C test/drivers/boot/sbl_non_booted_core_test/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang -f makefile scrub

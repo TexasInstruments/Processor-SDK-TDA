@@ -71,86 +71,119 @@ include $(ALGBASE_PATH)/config.mk
 all: rt tfl_delegate onnxrt_ep tidlrt_ep
 
 rt:
-	@echo .
-	@echo ======== MAKING TIDL RT =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  BUILD: TIDL RT"
+	@echo "======================================================================"
 	$(MAKE) -C ./rt -f makefile all
 
 rt_clean:
-	@echo .
-	@echo ======== CLEANING TIDL RT =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  CLEAN: TIDL RT"
+	@echo "======================================================================"
 	$(MAKE) -C ./rt -f makefile clean
 
 rt_scrub:
-	@echo .
-	@echo ======== Scrubbing TIDL RT =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  SCRUB: TIDL RT"
+	@echo "======================================================================"
 	rm -rf ./rt/out ./rt/lib
 
 
 tfl_delegate: rt
-	@echo .
-	@echo ======== MAKING TIDL TFLITE DELEGATE =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  BUILD: TIDL TFLITE DELEGATE"
+	@echo "======================================================================"
 	$(MAKE) -C ./tfl_delegate -f makefile all
 
 tfl_delegate_clean:
-	@echo .
-	@echo ======== CLEANING TIDL TFLITE DELEGATE =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  CLEAN: TIDL TFLITE DELEGATE"
+	@echo "======================================================================"
 	$(MAKE) -C ./tfl_delegate -f makefile clean
 
 tfl_delegate_scrub:
-	@echo .
-	@echo ======== Scrubbing TIDL TFLITE DELEGATE  =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  SCRUB: TIDL TFLITE DELEGATE"
+	@echo "======================================================================"
 	rm -rf ./tfl_delegate/out ./tfl_delegate/lib
 
 onnxrt_ep: rt
-	@echo .
-	@echo ======== MAKING TIDL ONNXRT EP =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  BUILD: TIDL ONNXRT EP"
+	@echo "======================================================================"
 	$(MAKE) -C ./onnxrt_ep -f makefile all
 
 onnxrt_ep_clean:
-	@echo .
-	@echo ======== CLEANING TIDL ONNXRT EP =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  CLEAN: TIDL ONNXRT EP"
+	@echo "======================================================================"
 	$(MAKE) -C ./onnxrt_ep -f makefile clean
 
 onnxrt_ep_scrub:
-	@echo .
-	@echo ======== Scrubbing TIDL TFLITE DELEGATE  =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  SCRUB: TIDL ONNXRT EP"
+	@echo "======================================================================"
 	rm -rf ./onnxrt_ep/out ./onnxrt_ep/lib
 
 tidlrt_ep: rt
-	@echo .
-	@echo ======== MAKING TIDL RT EP =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  BUILD: TIDL RT EP"
+	@echo "======================================================================"
 	$(MAKE) -C ./tidlrt_ep -f makefile all
 
 tidlrt_ep_clean:
-	@echo .
-	@echo ======== CLEANING TIDL RT EP =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  CLEAN: TIDL RT EP"
+	@echo "======================================================================"
 	$(MAKE) -C ./tidlrt_ep -f makefile clean
 
 tidlrt_ep_scrub:
-	@echo .
-	@echo ======== Scrubbing TIDL RT EP  =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  SCRUB: TIDL RT EP"
+	@echo "======================================================================"
 	rm -rf ./tidlrt_ep/out ./tidlrt_ep/lib
 
 tidl_tiovx_arm_kernels:
-	@echo .
-	@echo ======== MAKING TIDL TIOVX ARM KERNELS =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  BUILD: TIDL TIOVX ARM KERNELS"
+	@echo "======================================================================"
 	$(MAKE) -C ./tiovx_kernels -f makefile all
 
 tidl_tiovx_arm_kernels_clean:
-	@echo .
-	@echo ======== CLEANING TIDL TIOVX ARM KERNELS =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  CLEAN: TIDL TIOVX ARM KERNELS"
+	@echo "======================================================================"
 	$(MAKE) -C ./tiovx_kernels -f makefile clean
 
 tidl_tiovx_arm_kernels_scrub:
-	@echo .
-	@echo ======== SCRUBBING TIDL TIOVX ARM KERNELS  =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  SCRUB: TIDL TIOVX ARM KERNELS"
+	@echo "======================================================================"
 	rm -rf ./tiovx_kernels/out ./tiovx_kernels/lib
 
 tidl_tiovx_arm_kernels_install:
 ifndef TIDL_PATH
 	$(error TIDL_PATH is not defined. Please set TIDL_PATH before running install)
 else
-	@echo "Installing TIDL TIOVX ARM KERNELS to $(TIDL_PATH)..."
+	@echo ""
+	@echo "======================================================================"
+	@echo "  INSTALL: TIDL TIOVX ARM KERNELS"
+	@echo "======================================================================"
 	@if [ -d "$(TIDL_PATH)" ]; then \
 		mkdir -p $(TIDL_PATH)/arm-tidl/tiovx_kernels/lib/; \
 		mkdir -p $(TIDL_PATH)/arm-tidl/tiovx_kernels/out/; \
@@ -171,7 +204,10 @@ install: tidl_tiovx_arm_kernels_install
 ifndef TIDL_PATH
 	$(error TIDL_PATH is not defined. Please set TIDL_PATH before running install)
 else
-	@echo "Installing to $(TIDL_PATH)..."
+	@echo ""
+	@echo "======================================================================"
+	@echo "  INSTALL: TIDL ARM COMPONENTS"
+	@echo "======================================================================"
 	@if [ -d "$(TIDL_PATH)" ]; then \
 		mkdir -p $(TIDL_PATH)/arm-tidl/rt/inc/; \
 		mkdir -p $(TIDL_PATH)/arm-tidl/rt/lib/; \

@@ -976,6 +976,19 @@ static int32_t TIDL_dataConvertRefProcess(TIDL_Handle intAlgHandle,
   int32_t inZeroPoint = inDataParams->tensorZeroPoint;
   int32_t outZeroPoint = tidlLayer->outData.tensorZeroPoint;
 
+  if ((uint32_t)params->layout == TIDL_LT_NHWC)
+  {
+    inElPitch = inChs;
+    inPitch = inChs * outWidth;
+    inChPitch = 1;
+  }
+  if ((uint32_t)params->outLayout == TIDL_LT_NHWC)
+  {
+    outElPitch = inChs;
+    outPitch = inChs * outWidth;
+    outChPitch = 1;
+  }
+
   if ((uint32_t)params->type == TIDL_DC_TYPE_INPUT)
   {
     inZeroPoint = params->inZeroPoint;
@@ -1038,15 +1051,6 @@ static int32_t TIDL_dataConvertRefProcess(TIDL_Handle intAlgHandle,
         }
       }
     }
-    if (status == TIDL_SUCCESS)
-    {
-      if ((uint32_t)params->layout == TIDL_LT_NHWC)
-      {
-        inElPitch = inChs;
-        inPitch = inChs * outWidth;
-        inChPitch = 1;
-      }
-    }
   }
   else if ((uint32_t)params->type == TIDL_DC_TYPE_OUTPUT)
   {
@@ -1058,13 +1062,6 @@ static int32_t TIDL_dataConvertRefProcess(TIDL_Handle intAlgHandle,
       inZeroPoint = inDataParams->tensorZeroPoint;
       outZeroPoint = tidlLayer->outData.tensorZeroPoint;
     }
-
-    if ((uint32_t)params->layout == TIDL_LT_NHWC)
-    {
-      outElPitch = inChs;
-      outPitch = inChs * outWidth;
-      outChPitch = 1;
-    }
   }
   else
   {
@@ -1075,22 +1072,6 @@ static int32_t TIDL_dataConvertRefProcess(TIDL_Handle intAlgHandle,
     {
       inZeroPoint = inDataParams->tensorZeroPoint;
       outZeroPoint = tidlLayer->outData.tensorZeroPoint;
-    }
-
-    if (params->layout != params->outLayout)
-    {
-      if (((uint32_t)params->layout == TIDL_LT_NCHW) && ((uint32_t)params->outLayout == TIDL_LT_NHWC))
-      {
-        outElPitch = inChs;
-        outPitch = inChs * outWidth;
-        outChPitch = 1;
-      }
-      else
-      {
-        inElPitch = inChs;
-        inPitch = inChs * outWidth;
-        inChPitch = 1;
-      }
     }
   }
   if (status == TIDL_SUCCESS)

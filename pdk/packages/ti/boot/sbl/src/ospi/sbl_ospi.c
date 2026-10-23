@@ -776,11 +776,18 @@ int32_t SBL_ospiCopyHsmImage(uint8_t** dstAddr, uint32_t srcOffsetAddr, uint32_t
         *dstAddr = (uint8_t *) (ospi_cfg.dataAddr + SBL_OSPI_OFFSET_HSM);
     }
 
-    /* Check if HSM binary is present or not */
-    uint8_t* ptr = (uint8_t *) *dstAddr;
-    if (*ptr != SBL_HSM_HEADER)
+    /* HS/HSFS Device: Check if HSM binary is present or not based on SBL_HSM_HEADER.
+       GP Device: The HSM binary is not signed so skip checking SBL_HSM_HEADER.
+                  Always copy the image from HSM image offset.
+    */
+    if (SBL_IsAuthReq() != SBL_NEVER_AUTH_APP)
     {
-        retVal = SBL_HSM_IMG_NOT_FOUND;
+        /* Check if HSM binary is present or not */
+        uint8_t* ptr = (uint8_t *) *dstAddr;
+        if (*ptr != SBL_HSM_HEADER)
+        {
+            retVal = SBL_HSM_IMG_NOT_FOUND;
+        }
     }
     return retVal;
 }

@@ -87,6 +87,11 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("split")>()
     layer.inData[0].numDim = numDim;
     layer.numOutBufs = md.numOutputs;
 
+    for (int32_t j = 0; j < layer.numOutBufs; j++)
+    {
+        layer.outData[j].elementType = tidl_getElementType(1);
+    }
+
     // Initialize input tensor dimensions from metadata
     // TIDL requires all TIDL_DIM_MAX (6) dimensions to be > 0
     if (md.varTensorsDims.size() > 0 && md.varTensorsDims[0].size() > 0)
@@ -183,10 +188,6 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("split")>()
                 long long int val = (long long int)arr[itr_slice]->value;
                 sliceParams.slicePoints[itr_slice + 1] = (int32_t)val;
             }
-            for (int j = 0; j < layer.numOutBufs; j++)
-            {
-                layer.outData[j].elementType = tidl_getElementType(1);
-            }
         }
     }
     else if (md.numConstInputs >= 1) /* Corresponds to case when Split indices come as constant inputs */
@@ -197,6 +198,11 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("split")>()
         int32_t numElements = 1;
 
         split_buffer = TIDL_extractConstantTensorData(call, 1, md, 0);
+        if(split_buffer.ptr==NULL)
+        {
+            TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", 1);
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
 
         long long int *split_ptr = (long long int *)split_buffer.ptr;
 
@@ -221,6 +227,20 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("split")>()
 
     int32_t tidl_axis = TIDL_relayNormalizeAxis(original_axis, numDim);
     layer.layerParams.sliceParams.axis = (long long int)tidl_axis;
+
+    /* If data input (input 0) is a constant, store it in layer.weights
+     * so tidl_addConstDataLayers can create the appropriate ConstDataLayer */
+    auto dataConstIt = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 0);
+    if (dataConstIt != md.constTensorIndices.end())
+    {
+        int32_t dataConstIdx = std::distance(md.constTensorIndices.begin(), dataConstIt);
+        layer.weights = TIDL_extractConstantTensorData(call, 0, md, dataConstIdx);
+        if (layer.weights.ptr == NULL)
+        {
+            TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Split layer : Unable to read constant data input");
+            return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+        }
+    }
 
     return TIDL_ALLOWLISTING_LAYER_CHECK_PASSED;
 }

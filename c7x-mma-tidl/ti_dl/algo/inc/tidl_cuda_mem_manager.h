@@ -40,6 +40,7 @@ typedef struct {
     int32_t  isAllocated;      /**< Flag indicating if GPU memory is allocated */
     int32_t  needsSync;        /**< Flag indicating if sync is needed */
     int32_t  lastSyncDirection;/**< 0=none, 1=H2D, 2=D2H */
+    int32_t  isHostPinned;     /**< Flag indicating if memory is pinned or pageable */
 } TIDL_CudaMemRecord;
 
 typedef struct {

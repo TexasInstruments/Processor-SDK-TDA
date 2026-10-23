@@ -65,12 +65,31 @@
 const vector<TidlConstraint> tidlConstraintResize =
 {
     TIDL_CSTR(
-        "Number of non-singleton variable input dimensions must be <= 4",
-        "Number of non-singleton variable input dimensions must be <= 4",
-        "Number of non-singleton variable input dimensions must be <= 4",
+        "Number of non-singleton input dimensions must be <= 4",
+        "Number of non-singleton input dimensions must be <= 4",
+        "Number of non-singleton input dimensions must be <= 4",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             ostringstream oss;
-            int32_t numDims = tidlGetNonSingletonNumDims(layer->allowlistingMetaData.varTensorsDims[0]);
+            sTIDL_allowlistingMetaData md = layer->allowlistingMetaData;
+            vector<int32_t> inputDims;
+
+            // Check if first input is variable or constant
+            if (md.numVarInputs > 0 && md.varTensorIndices[0] == 0)
+            {
+                inputDims = md.varTensorsDims[0];
+            }
+            else if (md.numConstInputs > 0 && md.constTensorIndices[0] == 0)
+            {
+                inputDims = md.constTensorsDims[0];
+            }
+            else
+            {
+                oss << "Unable to find dimensions for first input";
+                logs = oss.str();
+                return false;
+            }
+
+            int32_t numDims = tidlGetNonSingletonNumDims(inputDims);
             if(numDims > 4)
             {
                 oss << "Maximum number of input dimension supported is 4, found " << numDims << " input dimensions";
@@ -176,7 +195,7 @@ const vector<TidlConstraint> tidlConstraintResize =
                     will be placed by combination of 4x4 resize layer and 2x2
                     resize layer
                 */
-                TIDL_GLOBAL_REPORT_WARNING("Resize layer - %s with scales > 4 is not optimal", (char*)layer->name);
+                TIDL_GLOBAL_REPORT_WARNING("Resize [%s]: scales > 4 is not optimal", (char*)layer->name);
             }
             return true;
         }
@@ -215,14 +234,31 @@ const vector<TidlConstraint> tidlConstraintResize =
             if(gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_ONNX || gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_ONNX_RT || gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TVM_RELAY)
             {
                 int32_t coordinate_transformation_mode = layer->layerPCParams.resizeParams.coordinate_transformation_mode;
-                if(coordinate_transformation_mode == TIDL_Resize_align_corners)
+
+                if(coordinate_transformation_mode == TIDL_Resize_half_pixel ||
+                   coordinate_transformation_mode == TIDL_Resize_asymmetric ||
+                   coordinate_transformation_mode == TIDL_Resize_pytorch_half_pixel)
                 {
-                    TIDL_GLOBAL_REPORT_WARNING("Resize layer - %s with 'align_corners' coordinate_transformation_mode is not optimal and might result in incorrect output", (char*)layer->name);
+                    return true;
                 }
-                if(!(coordinate_transformation_mode == TIDL_Resize_half_pixel || coordinate_transformation_mode == TIDL_Resize_asymmetric
-                    || coordinate_transformation_mode == TIDL_Resize_pytorch_half_pixel || coordinate_transformation_mode == TIDL_Resize_align_corners))
+                else
                 {
-                    return false;
+                    /*
+                     * HACK: This is temporary. TIDL_Resize_align_corners is officially not supported by
+                     * TIDL but we still allow it with TIDLRT interface since the error rate might be acceptable.
+                     * For compilation via OSRT, deny it to not rely on accidental low error rate.
+                     * 
+                     * TODO: Remove this conditions when TIDL_Resize_align_corners is supported
+                     * and add it to the if condition above.
+                     */
+                    if (coordinate_transformation_mode == TIDL_Resize_align_corners && layer->optimized == 1)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
             }
             return true;
@@ -243,7 +279,7 @@ const vector<TidlConstraint> tidlConstraintResize =
                 {
                     if(nearest_mode == TIDL_Resize_round_prefer_floor)
                     {
-                        TIDL_GLOBAL_REPORT_WARNING("Resize layer - %s with 'round_prefer_floor' nearest mode is not optimal", (char*)layer->name);
+                        TIDL_GLOBAL_REPORT_WARNING("Resize [%s]: 'round_prefer_floor' nearest mode is not optimal", (char*)layer->name);
                     }
                     if(!(nearest_mode == TIDL_Resize_round_prefer_ceil || nearest_mode == TIDL_Resize_round_prefer_floor))
                     {

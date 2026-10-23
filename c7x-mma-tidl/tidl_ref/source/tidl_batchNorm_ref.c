@@ -463,13 +463,13 @@ static void TIDL_HighAccuracySigmoidProcess(Tin  *inPtr,
   satLow = std::numeric_limits<Tout>::lowest();
   int32_t numChannels = params->numChannels;
   Tout out = 0;
-  #if 0
+  #ifdef BUILD_WITH_CUDA_SIGMOID
   // call CUDA wrapper for High Accuracy Sigmoid
   TIDL_cudaHighAccuracySigmoid<Tin, Tout>(inData, outData,
                                           numTotBatches, numChannels, imWidth, imHeight, inDim1, inDim2,
                                           inBatchPitch, inChPitch, inDim1Pitch, inDim2Pitch, inPitch,
                                           outBatchPitch, outChPitch, outDim1Pitch, outDim2Pitch, outPitch,
-                                          inputScale, outDataParams->tensorScale);
+                                          inDataScaleFact, outDataParams->tensorScale, inDataParams->tensorZeroPoint);
   #else
     // OPENACC(parallel loop collapse(4))
   for (i5 = 0; i5 < numTotBatches; i5++)
@@ -615,7 +615,7 @@ static int32_t TIDL_refSigmoidCore(Tin  *inPtr,
       satLow = std::numeric_limits<Tout>::lowest();
       int32_t temp_min = 0, temp_max = 0;
 
-      #if 0
+      #ifdef BUILD_WITH_CUDA_SIGMOID
       // call CUDA sigmoid kernel
       TIDL_cudaSigmoid<Tin, Tout, Tacc>(inData, refAccPtr,
                                         numTotBatches, numChannels, imWidth, imHeight,
@@ -735,7 +735,7 @@ static int32_t TIDL_refSigmoidCore(Tin  *inPtr,
       }
       /* LDRA_JUSTIFY_END */
 
-      #if 0
+      #ifdef BUILD_WITH_CUDA_SIGMOID
       // call CUDA saturation kernel
       TIDL_cudaSigmoidSaturation<Tacc, Tout>(refAccPtr, outData,
                                             numTotBatches, numChannels, imWidth, imHeight,
@@ -1324,7 +1324,7 @@ static int32_t TIDL_refSigmoidProcess(TIDL_Handle intAlgHandle,
 
     int32_t c = params->numChannels;
 
-    #if 0
+    #ifdef BUILD_WITH_CUDA_SIGMOID
     // Call CUDA float sigmoid wrapper
     status = TIDL_cudaFloatSigmoid<float32_tidl, float32_tidl>(inData, outData,
                                    numTotBatches, params->numChannels, imWidth, imHeight, inDim1, inDim2,

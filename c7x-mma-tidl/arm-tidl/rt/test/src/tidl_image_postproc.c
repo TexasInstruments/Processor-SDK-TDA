@@ -527,7 +527,7 @@ APP_drawBoldBoxRGB
   int32_t  xmax ;
   int32_t  ymax ;
   int32_t i;
-  for (i = 0; i < lineThickNess; i++)
+  for (i = 0; i < (int32_t)lineThickNess; i++)
   {
     xmin = clip_offst(x1 + i, width);
     ymin = clip_offst(y1 + i, height);
@@ -546,7 +546,8 @@ float TIDL_findMax(
   int32_t  bufSize)
 {
   int32_t i;
-  float data, max = -FLT_MAX;
+  float data = -FLT_MAX;
+  float max = -FLT_MAX;
   for (i = 0; i < bufSize; i++)
   {
     if(elementType ==  TIDL_UnsignedChar)
@@ -783,7 +784,7 @@ int32_t tidl_tb_postProc(int32_t width, int32_t height, int32_t n, int32_t frame
 {
   int32_t i,j;
   int32_t idx;
-  char imageFileName[500];
+  char imageFileName[1024];
   char gtName[500];
   char baseFileName[500];
 
@@ -823,7 +824,7 @@ int32_t tidl_tb_postProc(int32_t width, int32_t height, int32_t n, int32_t frame
     TIDL_ODLayerObjInfo * bboxPtr = (TIDL_ODLayerObjInfo*)(((char *)fPtr) + (int32_t)objDetHeader->objInfoOffset);
     TIDL_ODLayerObjectPose *objectPosePtr ;
     // TIDL_ODLayerRawObjInfo *rawDataPtr;    
-    char detTextFileName[500];
+    char detTextFileName[1024];
     FILE * fp;
     int32_t kpIdx;
 
@@ -949,7 +950,7 @@ int32_t tidl_tb_postProc(int32_t width, int32_t height, int32_t n, int32_t frame
     uint16_t * segPtr16 = (uint16_t *)fPtr;
     int32_t * segPtr32 = (int32_t *)fPtr;
     float * segPtrSP = (float *)fPtr;
-    int32_t segValue;
+    int32_t segValue = 0;
     float score;
     float Meanscore = 0;
     float IdxScale = 0;
@@ -1053,7 +1054,7 @@ int32_t tidl_tb_postProc(int32_t width, int32_t height, int32_t n, int32_t frame
           segValue = (int)segPtr32[i];
         }
 
-        if ((segValue < gParams.totNumClasses) && (gtData[i] < gParams.totNumClasses))
+        if ((segValue < (int32_t)gParams.totNumClasses) && (gtData[i] < gParams.totNumClasses))
         {
           confusion_matrix[(gtData[i])][segValue]++;
         }
@@ -1066,16 +1067,16 @@ int32_t tidl_tb_postProc(int32_t width, int32_t height, int32_t n, int32_t frame
       int32_t numNonZeroScores = 0 ;
       tidl_tb_printf(0, " A ");
       int32_t label;
-      for (label = 0; label < gParams.totNumClasses; label++)
+      for (label = 0; label < (int32_t)gParams.totNumClasses; label++)
       {
         int64_t ture_pos = confusion_matrix[label][label];
         int64_t label_count = 0;
-        for (j = 0; j < gParams.totNumClasses; j++)
+        for (j = 0; j < (int32_t)gParams.totNumClasses; j++)
         {
           label_count += confusion_matrix[label][j];
         }
         int64_t label_observed = 0;
-        for (j = 0; j < gParams.totNumClasses; j++)
+        for (j = 0; j < (int32_t)gParams.totNumClasses; j++)
         {
           label_observed += confusion_matrix[j][label];
         }
@@ -1155,7 +1156,7 @@ int32_t tidl_tb_postProc(int32_t width, int32_t height, int32_t n, int32_t frame
     TIDL_ODLayerHeaderInfo * objDetHeader = (TIDL_ODLayerHeaderInfo *)fPtr;
     TIDL_3DODLayerObjInfo * box3dPtr = (TIDL_3DODLayerObjInfo*)(((char *)fPtr) + (int32_t)objDetHeader->objInfoOffset);
     char dirName[500];
-    char detTextFileName[500];
+    char detTextFileName[1024];
     FILE * fp;
 
     if (gParams.inFileFormat == 5)

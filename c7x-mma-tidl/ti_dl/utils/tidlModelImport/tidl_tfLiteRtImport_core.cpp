@@ -117,6 +117,7 @@ using namespace tflite;
 #include "tidlParseTflite/tidl_parse_tflite.h"
 #include "tidlAllowlistingConstraints/tidl_constraint.h"
 
+#undef __MODULE__
 #define __MODULE__ "[PARSER]"
 
 using namespace object_detection;
@@ -2994,7 +2995,7 @@ int32_t TIDL_tfliteAllowlistNode(const TfLiteRegistration* registration, const T
     }
     if(isNodeInAllowListName == 0)
     {
-      TIDL_LOG_INFO(gDiags.gDiagList, "Layer %s added to unsupported nodes since it is not part of allow list specified in runtime options --- tflite layer code - %s", tensor->name, registration->builtin_code);
+      TIDL_LOG_INFO(gDiags.gDiagList, "Node (%s) - tflite layer code %d : Added to unsupported nodes since it is not part of allow list specified in runtime options", tensor->name, registration->builtin_code);
       if (osrtDebugPrintLevel)
       {
         gDiags.reportLastModeDiag();
@@ -3036,7 +3037,7 @@ int32_t TIDL_tfliteAllowlistNode(const TfLiteRegistration* registration, const T
 
   if(isNodeInDenyList || isNodeInDenyListType || isNodeInDenyListName)              //option for deny_list
   {
-    TIDL_LOG_INFO(gDiags.gDiagList, "Layer %s added to unsupported nodes as specified in deny list --- tflite layer code - %d", tensor->name, registration->builtin_code);
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Node (%s) - tflite layer code %d : Explicitly denied via deny list", tensor->name, registration->builtin_code);
     if (osrtDebugPrintLevel)
     {
       gDiags.reportLastModeDiag();
@@ -3059,7 +3060,7 @@ int32_t TIDL_tfliteAllowlistNode(const TfLiteRegistration* registration, const T
           numDims = tensor->dims->size;
           if(numDims != 4)
           {
-            TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Layer %d --- tflite layer type - %d, number of input dims(%d) is not supported by TIDL, maximum dimension allowed is %d", node_index, registration->builtin_code, numDims, TIDL_DIM_MAX);
+            TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Node (%d) - tflite layer code %d : Number of input dims(%d) is not supported by TIDL, maximum dimension allowed is %d", node_index, registration->builtin_code, numDims, TIDL_DIM_MAX);
             if (osrtDebugPrintLevel)
             {
               gDiags.reportLastModeDiag();
@@ -3080,7 +3081,7 @@ int32_t TIDL_tfliteAllowlistNode(const TfLiteRegistration* registration, const T
   if(TIDL_checkLayerInputDimConstraints(context, node) == -1) //if layer input has more than 4 dimensions, not supported
   {
       int32_t numDims =  getNodeInputShape(context, node).size();
-      TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Layer %d --- Tflite layer type - %d, number of input dims(%d) is not supported by TIDL, maximum dimension allowed is %d", node_index, registration->builtin_code, numDims, TIDL_DIM_MAX);
+      TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Node (%d) - tflite layer code %d : Number of input dims(%d) is not supported by TIDL, maximum dimension allowed is %d", node_index, registration->builtin_code, numDims, TIDL_DIM_MAX);
       if (osrtDebugPrintLevel)
       {
         gDiags.reportLastModeDiag();
@@ -3179,7 +3180,7 @@ int32_t TIDL_tfliteRtImportInit(TfLiteContext* context, const TfLiteDelegatePara
 
   int32_t status;
 
-  sprintf((char *)gParams.metaLayersNamesList, osrt_options->m_meta_layers_names_list.c_str());
+  sprintf((char *)gParams.metaLayersNamesList, "%s", osrt_options->m_meta_layers_names_list.c_str());
   int currInIdx = 0, currOutIdx = 0;
   void *ptr;
   int32_t elementSize;

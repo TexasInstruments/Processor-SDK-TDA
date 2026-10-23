@@ -133,7 +133,6 @@ unordered_map<string, TidlParseOnnxJTEntry> tidlParseOnnxJumpTable =
     Onnx_JTE( "Clip",                             TIDL_ClipLayer),
     Onnx_JTE( "Identity",                         TIDL_IdentityLayer),
     Onnx_JTE( "Cast",                             TIDL_CastLayer),
-    Onnx_JTE( "Erf",                              TIDL_IdentityLayer),
     Onnx_JTE( "Sqrt",                             TIDL_SqrtLayer),
     Onnx_JTE( "Pow",                              TIDL_PowLayer),
     Onnx_JTE( "ReduceMean",                       TIDL_ReduceMeanLayer),
@@ -203,6 +202,9 @@ unordered_map<string, TidlParseOnnxJTEntry> tidlParseOnnxJumpTable =
     Onnx_JTE( "Size",                             TIDL_SizeLayer),
     Onnx_JTE( "Attention",                        TIDL_AttentionLayer),
     Onnx_JTE( "NonZero",                          TIDL_NonZeroLayer),
+    Onnx_JTE( "GroupQueryAttention",              TIDL_GroupQueryAttentionLayer),
+    Onnx_JTE( "MatMulNBits",                      TIDL_MatMulNBitsLayer),
+    Onnx_JTE( "RotaryEmbedding",                  TIDL_RotaryEmbeddingLayer),
 };
 
 

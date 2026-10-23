@@ -305,6 +305,7 @@ int TIDL_cudaEltWiseOp(
         {
             /*Log Error*/
             printf("Eltwise: Unable to find input pointer\n");
+            return IALG_EFAIL;
         }
     }
 
@@ -314,6 +315,7 @@ int TIDL_cudaEltWiseOp(
         {
             /*Log Error*/
             printf("Eltwise: Unable to allocate accumulator pointer\n");
+            return IALG_EFAIL;
         }
     }
 
@@ -405,6 +407,7 @@ int TIDL_cudaEltWiseMMAv2Quantize(
         {
             /*Log Error*/
             printf("Eltwise: Unable to find output pointer\n");
+            return IALG_EFAIL;
         }
     }
 
@@ -470,6 +473,7 @@ int TIDL_cudaEltWiseQuantize(
         {
             /*Log Error*/
             printf("Eltwise: Unable to find output pointer\n");
+            return IALG_EFAIL;
         }
     }
 

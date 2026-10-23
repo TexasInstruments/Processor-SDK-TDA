@@ -71,6 +71,9 @@
 #include "tidl_commonUtils.h"
 #include "tidl_alg_utils.h"
 #include "tidl_size_ref.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 template <class Tout>
 int32_t TIDL_computeInputSize(sTIDL_Network_t      *net,
@@ -88,7 +91,11 @@ int32_t TIDL_computeInputSize(sTIDL_Network_t      *net,
     totalElements *= inDataParams->dimValues[i];
   }
   // outPtr will always be a scalar (single element) for Size operator
+  #ifdef BUILD_WITH_CUDA_SIZE
+  TIDL_cudaSize(outPtr, totalElements);
+  #else
   outPtr[0] = (Tout)totalElements;
+  #endif
   TIDL_L1DandL2CacheWbInv();
   return status;
 }

@@ -76,6 +76,9 @@
 #include <limits>
 #include <math.h>
 #include "tidl_nonZero_ref.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 
 template <class Tin>
@@ -87,6 +90,20 @@ int32_t TIDL_fillOutBufAndUpdateOutShape(sTIDL_DataParams_t * inDataParams,
 {
     int32_t status = IALG_EOK;
     uint32_t numNonZeroElements = 0;
+    #ifdef BUILD_WITH_CUDA_NONZERO
+    int32_t cudaNumNonZeroElements = 0;
+    TIDL_cudaNonZero(
+        inPtr, outPtr, &cudaNumNonZeroElements,
+        inDataParams->dimValues[TIDL_DIM_BATCH], inDataParams->dimValues[TIDL_DIM_DIM1],
+        inDataParams->dimValues[TIDL_DIM_DIM2], inDataParams->dimValues[TIDL_DIM_NUMCH],
+        inDataParams->dimValues[TIDL_DIM_HEIGHT], inDataParams->dimValues[TIDL_DIM_WIDTH],
+        inDataParams->pitch[TIDL_ROI_PITCH], inDataParams->pitch[TIDL_DIM1_PITCH],
+        inDataParams->pitch[TIDL_DIM2_PITCH], inDataParams->pitch[TIDL_CHANNEL_PITCH],
+        inDataParams->pitch[TIDL_LINE_PITCH],
+        outDataParams->pitch[TIDL_LINE_PITCH], params->numValidInputDims,
+        outDataParams->dimValues[TIDL_DIM_HEIGHT]);
+    numNonZeroElements = (uint32_t)cudaNumNonZeroElements;
+    #else
     for ( int32_t batchIdx = 0; batchIdx < inDataParams->dimValues[TIDL_DIM_BATCH] ; batchIdx++ )
     {
         for ( int32_t dim1Idx = 0; dim1Idx < inDataParams->dimValues[TIDL_DIM_DIM1] ; dim1Idx++ )
@@ -102,21 +119,22 @@ int32_t TIDL_fillOutBufAndUpdateOutShape(sTIDL_DataParams_t * inDataParams,
                             int32_t inOffset = (batchIdx * inDataParams->pitch[TIDL_ROI_PITCH]) + (dim1Idx * inDataParams->pitch[TIDL_DIM1_PITCH]) + (dim2Idx * inDataParams->pitch[TIDL_DIM2_PITCH]) + (chIdx * inDataParams->pitch[TIDL_CHANNEL_PITCH]) + (heightIdx * inDataParams->pitch[TIDL_LINE_PITCH]) + (widthIdx * 1);
                             if ( inPtr[inOffset] != 0)
                             {
-                                uint32_t nonZeroElementIdx[TIDL_DIM_MAX] = {batchIdx, dim1Idx, dim2Idx, chIdx, heightIdx, widthIdx};
+                                int32_t nonZeroElementIdx[TIDL_DIM_MAX] = {batchIdx, dim1Idx, dim2Idx, chIdx, heightIdx, widthIdx};
                                 for ( int dim = 0 ; dim < params->numValidInputDims ; dim++)
                                 {
                                     int32_t outOffset = (outDataParams->pitch[TIDL_LINE_PITCH] * dim) + (numNonZeroElements * 1);
-                                    outPtr[outOffset] = nonZeroElementIdx[TIDL_DIM_MAX - outDataParams->dimValues[TIDL_DIM_HEIGHT] + dim ]; 
+                                    outPtr[outOffset] = nonZeroElementIdx[TIDL_DIM_MAX - outDataParams->dimValues[TIDL_DIM_HEIGHT] + dim ];
                                 }
                                 numNonZeroElements += 1;
                             }
-                            
+
                         }
                     }
                 }
             }
         }
     }
+    #endif
 
     outDataParams->dimValues[TIDL_DIM_WIDTH] = numNonZeroElements;
     return status;

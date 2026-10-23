@@ -31,19 +31,11 @@ CFLAGS+= -I ../../inc
 CFLAGS+= -I ../tidlModelDump
 CFLAGS+= -I $(COMMON_DIR)
 CFLAGS+= -I $(TIDL_GRAPHVIZ_PATH)/include/graphviz
-
-ifdef SystemRoot
-CFLAGS+= /DTIDL_IMPORT_TOOL
-LDFLAGS+=-l $(TIDL_GRAPHVIZ_PATH)/lib/cgraph.lib
-LDFLAGS+=-l $(TIDL_GRAPHVIZ_PATH)/lib/gvc.lib
-else
 CFLAGS+= -DTIDL_IMPORT_TOOL
 CFLAGS += -Werror=return-type -Wno-unused-result -Wno-format-overflow
 LDFLAGS+= -L $(TIDL_GRAPHVIZ_PATH)/lib
-
 LDFLAGS+= -lcgraph -lgvc
 CFLAGS+= -I $(TIDL_GRAPHVIZ_PATH)/
-endif
 CFLAGS += -I ../perfsim
 
 ##############################################################

@@ -143,7 +143,7 @@ static void splitCommandLineToArgv(int8_t *str, int32_t *argc, int8_t ***argv)
 {
   char **rargv = NULL, *res;
   int rargc = 0;
-  while(res = strtok((char *)str, " "))
+  while((res = strtok((char *)str, " ")))
   {
     str = NULL;
     rargv = (char **)realloc(rargv, (rargc + 1) * sizeof(char *));
@@ -161,7 +161,7 @@ static void splitCommandLineToArgv(int8_t *str, int32_t *argc, int8_t ***argv)
   *argc = rargc;
 }
 /* Convenience function to add a "struct option" to a NULL-terminated list */
-static struct option *addOption(struct option *lopts, char *opt, int flag)
+static struct option *addOption(struct option *lopts, const char *opt, int flag)
 {
   int i = 0;
 
@@ -350,8 +350,8 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
   #if (!BUILD_WITH_STATIC_ARRAYS)
   int8_t **perConfigArgs;
   int32_t perConfigArgsCount = 0;
-  int32_t tidlModelSize;
-  int32_t tidlIOSize;
+  uint32_t tidlModelSize;
+  uint32_t tidlIOSize;
   #endif
   int32_t status = IALG_EOK, configCnt = 0;
   uint64_t i, j;
@@ -370,6 +370,8 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
 
   void *origNetPtr = NULL;
   void *origIOPtr = NULL;
+
+  prms.dumpNetInitBackupData = 0;
   
   #if (BUILD_WITH_STATIC_ARRAYS)
     //In this case parent loop over configcnt loop
@@ -491,12 +493,43 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
       char cwd[TIDL_STRING_SIZE];
       if (getcwd(cwd, sizeof(cwd)) == NULL) tidl_tb_printf(0, "Could not get current working directory \n");
       /* For EVM, only base name is required, core number is added by app_utils file write utility */
-      sprintf((char *)params->traceDumpBaseName, "%s/trace/%s_" , (char *)cwd, getFileNameFromPath((char *)(configNames[configCnt])));
+      /* Use manual memcpy to avoid format truncation warning */
+      {
+        char *fileNamePtr = getFileNameFromPath((char *)(configNames[configCnt]));
+        size_t cwdLen = strlen(cwd);
+        size_t fileLen = strlen(fileNamePtr);
+        size_t offset = 0;
+        (void)memcpy((char *)params->traceDumpBaseName + offset, cwd, cwdLen);
+        offset += cwdLen;
+        (void)memcpy((char *)params->traceDumpBaseName + offset, "/trace/", 7);
+        offset += 7;
+        (void)memcpy((char *)params->traceDumpBaseName + offset, fileNamePtr, fileLen);
+        offset += fileLen;
+        (void)memcpy((char *)params->traceDumpBaseName + offset, "_", 1);
+        offset += 1;
+        ((char *)params->traceDumpBaseName)[offset] = '\0';
+      }
 #if defined(HOST_EMULATION)
       if ( gIOParams.inferenceMode == TIDL_inferenceModeDefault)
       {
         /* Default mode - Core number needs to be added in test bench */
-        sprintf((char *)params->traceDumpBaseName, "%s/trace/C7x_%d_%s_" , (char *)cwd, params->coreNum, getFileNameFromPath((char *)(configNames[configCnt])));
+        char *fileNamePtr = getFileNameFromPath((char *)(configNames[configCnt]));
+        char coreIdStr[4];
+        int coreIdLen = snprintf(coreIdStr, sizeof(coreIdStr), "%d", params->coreNum);
+        size_t cwdLen = strlen(cwd);
+        size_t fileLen = strlen(fileNamePtr);
+        size_t offset = 0;
+        (void)memcpy((char *)params->traceDumpBaseName + offset, cwd, cwdLen);
+        offset += cwdLen;
+        (void)memcpy((char *)params->traceDumpBaseName + offset, "/trace/C7x_", 11);
+        offset += 11;
+        (void)memcpy((char *)params->traceDumpBaseName + offset, coreIdStr, coreIdLen);
+        offset += coreIdLen;
+        (void)memcpy((char *)params->traceDumpBaseName + offset, "_", 1);
+        offset += 1;
+        (void)memcpy((char *)params->traceDumpBaseName + offset, fileNamePtr, fileLen);
+        offset += fileLen;
+        ((char *)params->traceDumpBaseName)[offset] = '\0';
       }
       /* For high throughput and low latency mode host emulation, core number is added by mpu tiovx kernels, so no need to add in test bench */
 #endif
@@ -544,8 +577,8 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
 #else
     tidlModelSize = tidl_getFileSize(params->netBinFile);
     tidlIOSize = tidl_getFileSize(params->ioConfigFile);
-    TIDLTB_ASSERT_EXIT(tidlModelSize != -1);
-    TIDLTB_ASSERT_EXIT(tidlIOSize != -1);
+    TIDLTB_ASSERT_EXIT(tidlModelSize != 0);
+    TIDLTB_ASSERT_EXIT(tidlIOSize != 0);
     prms.netPtr = (sTIDL_Network_t *)malloc(tidlModelSize);
     origNetPtr = (void *) prms.netPtr;
     prms.ioBufDescPtr = malloc(tidlIOSize);
@@ -582,6 +615,7 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
 
     prms.flowCtrl     = params->flowCtrl | (params->reservedCtrl << 16);
     prms.traceLogLevel          = params->debugTraceLevel;
+    prms.enableDDRPerfStats     = params->enableDDRPerfStats;
     prms.forceNegativeTest      = params->forceNegativeTest;
     /* If user requested enableLayerPerfTraces then set traceLogLevel = 1 to enable prints */
     if ( params->enableLayerPerfTraces )
@@ -779,7 +813,7 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
       fp1    = tidl_tb_handle[configCnt].inFile ;
 
       dimsFp = NULL;
-      for (j = 0; j < gIOParams.numInputBuf; j++)
+      for (j = 0; j < (uint64_t)gIOParams.numInputBuf; j++)
       {
         if (gIOParams.inIsDynamic[j])
         {
@@ -814,9 +848,9 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
           if ((params->postProcType == 3) || (params->postProcType == 4))
           {
             int32_t i0, i1;
-            for (i0 = 0; i0 < params->totNumClasses; i0++)
+            for (i0 = 0; i0 < (int32_t)params->totNumClasses; i0++)
             {
-              for (i1 = 0; i1 < params->totNumClasses; i1++)
+              for (i1 = 0; i1 < (int32_t)params->totNumClasses; i1++)
               {
                 confusion_matrix[i0][i1] = 0;
               }
@@ -839,12 +873,12 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
           }
           if(status == IALG_EOK)
           {
-            for(j = 0; j < gIOParams.numInputBuf; j++)
+            for(j = 0; j < (uint64_t)gIOParams.numInputBuf; j++)
             {
               in[j] = &(ins[j]);
             }
 
-            for(j = 0; j < gIOParams.numOutputBuf; j++)
+            for(j = 0; j < (uint64_t)gIOParams.numOutputBuf; j++)
             {
               out[j] = &(outs[j]);
             }
@@ -937,7 +971,7 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
           read_bytes_total  = 0.0;
           write_bytes_total = 0.0;
 
-          for (k = 0; k < params->numItrPerf; k++)
+          for (k = 0; k < (int32_t)params->numItrPerf; k++)
           {
 
 #if (TIDLRT_BUILD)
@@ -1083,21 +1117,43 @@ int32_t tidlMultiInstanceTest(int8_t** configNames, int32_t totalInsts, void * u
   }
 
   #ifdef CODE_COVERAGE_ENABLED_FOR_TIDL
-  // if((status == IALG_EOK) && (currConfigIdx == (gConfigCount - 1)))
-  /* status may not be propagated below as multi core kernels don't have the control
-    callback set
-  */
+
+  /* Test TIDLRT_setMutableOptions control call */
+  if ((status == IALG_EOK) && (params->enableCodeCoverage == 5))
+  {
+    tidl_tb_printf(0, "\n...TIDLRT_setMutableOptions Control Call Testing...\n");
+
+    sTIDLRT_Params_t mutableOptsPrms;
+    mutableOptsPrms.traceLogLevel   = 1;
+    mutableOptsPrms.traceWriteLevel = params->writeTraceLevel + 1;
+    (void)strncpy(mutableOptsPrms.traceBaseName, "/tmp/tidl_trace_cov", TIDLRT_STRING_SIZE - 1);
+    mutableOptsPrms.traceBaseName[TIDLRT_STRING_SIZE - 1] = '\0';
+    (void)strncpy(mutableOptsPrms.traceSubgraphName, "cov_subgraph", TIDLRT_STRING_SIZE - 1);
+    mutableOptsPrms.traceSubgraphName[TIDLRT_STRING_SIZE - 1] = '\0';
+    status |= TIDLRT_setMutableOptions(handle,
+                                       TIDLRT_MUTABLE_OPT_TRACE_LOG_LEVEL | TIDLRT_MUTABLE_OPT_TRACE_WRITE_LEVEL | TIDLRT_MUTABLE_OPT_TRACE_BASE_NAME,
+                                       &mutableOptsPrms);
+
+    mutableOptsPrms.traceWriteLevel = params->writeTraceLevel;
+    status |= TIDLRT_setMutableOptions(handle, TIDLRT_MUTABLE_OPT_TRACE_WRITE_LEVEL, &mutableOptsPrms);
+
+    status |= TIDLRT_setMutableOptions(handle, 0u, &mutableOptsPrms);
+  
+    TIDLRT_uploadCodeCoverage(handle);
+  }
+
   /* enableCodeCoverage = 5 for covering control call */
-   if ((status == IALG_EOK) && (params->enableCodeCoverage == 5)) 
+  if ((status == IALG_EOK) && (params->enableCodeCoverage == 5))
   {
     tidl_tb_printf(0, "\n...Control Call Testing...\n");
-    TIDLRT_controlCallTest(&prms, handle);
+    TIDLRT_runCtrlCoverageTest(handle);
   }
+
   if ((status == IALG_EOK) && (params->enableCodeCoverage == 1))
   {
-    /* LDRA coverage enabled, so call TIDLRT_control to dump coverage data */
+    /* LDRA coverage enabled, so call TIDLRT_uploadCodeCoverage to dump coverage data */
     tidl_tb_printf(0, "\n...LDRA coverage enabled, dumping coverage data...\n");
-    TIDLRT_control(&prms, handle);
+    TIDLRT_uploadCodeCoverage(handle);
   }
   #endif
 

@@ -81,22 +81,9 @@ HFILES += ti_dl.h
 
 TARGET_PLATFORM = PC
 BUILD_WITH_CUDA = no
-
-ifdef SystemRoot
-PROTOBUF_LIB_DIR?=$(TIDL_PROTOBUF_PATH)/lib/Release
-PROTOBUF_INC_DIR?="$(TIDL_PROTOBUF_PATH)/src"
-else
 PROTOBUF_LIB_DIR?="$(TIDL_PROTOBUF_PATH)/src/.libs"
 PROTOBUF_INC_DIR?="$(TIDL_PROTOBUF_PATH)/src"
-endif
-
-
-ifdef SystemRoot
-OUTFILE= ./lib/tidl_model_protos.lib
-else
 OUTFILE= ./lib/libtidl_model_protos.a
-
-endif
 
 ##############################################################
 
@@ -117,12 +104,8 @@ CFLAGS += -I ../perfsim
 
 
 #CFLAGS+= /D_MSC_VER=1700 /Gd
-ifdef SystemRoot
-CFLAGS+= /DTIDL_IMPORT_TOOL
-else
 CFLAGS+= -DTIDL_IMPORT_TOOL
 CFLAGS += -Werror=return-type -Wno-unused-result -Wno-format-overflow
-endif
 
 ##############################################################
 

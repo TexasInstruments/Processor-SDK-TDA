@@ -125,22 +125,6 @@ void TIDL_GetTensorHigherDimensions(const sTIDL_Network_t *myNet,
                               int32_t *outDim1,
                               int32_t *outDim2,
                               int32_t *outBatch);
-/**
-----------------------------------------------------------------------------
-@ingroup    TIDL_IVISION_SUPPORT
-@fn         TIDL_getDataParams
-@brief      Function to Check whether current data buffer is Input to
-            current algorithm instance
-
-@param      pTIDLNetStructure : Base pointer for myNet
-@param      dataId            : Current data buffer ID
-@remarks    None
-@return     Address of the Data Params Structure Base - If Successful
-            NULL - If Faile - Requested dataID Not found
-----------------------------------------------------------------------------
-*/
-sTIDL_DataParams_t * TIDL_getDataParams(sTIDL_Network_t * pTIDLNetStructure,
-int32_t dataId);
 
 /**
 ----------------------------------------------------------------------------

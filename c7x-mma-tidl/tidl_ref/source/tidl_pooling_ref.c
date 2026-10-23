@@ -77,6 +77,9 @@
 #include "tidl_device_functions.h"
 #include "tidl_pooling_ref.h"
 #include "tidl_forceNegativeTest.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 using namespace floating_point::bf16_c7x;
 
@@ -317,6 +320,12 @@ template<class Tin, class Tout, class Tacc, class Tscale> static int32_t TIDL_re
 
     if (TIDL_SUCCESS == status)
     {
+#if defined BUILD_WITH_CUDA_GLOBALAVGPOOL
+      TIDL_cudaGlobalAvgPoolingv2<Tin, Tacc>(inData, accPtr, (uint8_t)scaleValue, biasTerm,
+          numBatches, numOutChannels, height, width,
+          (int32_t)inBatchPitch, inChPitch, inPitch,
+          (int32_t)outBatchPitch, outChPitch);
+#else
       OPENACC(parallel loop collapse(2))
       for (i0 = 0; i0 < numBatches; i0++)
       {
@@ -339,6 +348,7 @@ template<class Tin, class Tout, class Tacc, class Tscale> static int32_t TIDL_re
           accPtr[(i0 * outBatchPitch) + (i1 * outChPitch)] = result;
         }
       }
+#endif // BUILD_WITH_CUDA_POOL
 
       int32_t satLow;
       int32_t satHigh;
@@ -350,6 +360,14 @@ template<class Tin, class Tout, class Tacc, class Tscale> static int32_t TIDL_re
       satHigh = (int32_t)(temp);
       int64_t tempAcc;
 
+#if defined BUILD_WITH_CUDA_GLOBALAVGPOOL
+      TIDL_cudaPoolingQuantize<Tacc, Tout>(accPtr, outData,
+          numBatches, numOutChannels,
+          1, 1,
+          (int32_t)outBatchPitch, outChPitch, outChPitch,
+          (int32_t)mmaShift, satLow, satHigh, 0,
+          0.0f, 0.0f);
+#else
       OPENACC(parallel loop collapse(2))
       for (i0 = 0; i0 < numBatches; i0++)
       {
@@ -381,6 +399,7 @@ template<class Tin, class Tout, class Tacc, class Tscale> static int32_t TIDL_re
           outData[(i0 * outBatchPitch) + (i1 * outChPitch)] = (Tout)result;
         }
       }
+#endif // BUILD_WITH_CUDA_POOL
     }
   }
   return status;
@@ -463,6 +482,12 @@ template<class Tin, class Tout, class Tacc, class Tscale> static int32_t TIDL_re
 
     if (TIDL_SUCCESS == status)
     {
+#if defined BUILD_WITH_CUDA_GLOBALAVGPOOL
+      TIDL_cudaGlobalAvgPooling<Tin, Tacc, Tscale>(inData, accPtr, scaleValue,
+          numBatches, numOutChannels, height, width,
+          inBatchPitch, inChPitch, inPitch,
+          outBatchPitch, outChPitch);
+#else
       OPENACC(parallel loop collapse(2) reduction(min : min) reduction(max : max))
       for (i0 = 0; i0 < numBatches; i0++)
       {
@@ -484,6 +509,7 @@ template<class Tin, class Tout, class Tacc, class Tscale> static int32_t TIDL_re
           accPtr[(i0 * outBatchPitch) + (i1 * outChPitch)] = result;
         }
       }
+#endif // BUILD_WITH_CUDA_POOL
     }
 
     int32_t satLow;
@@ -523,6 +549,16 @@ template<class Tin, class Tout, class Tacc, class Tscale> static int32_t TIDL_re
 
     if (TIDL_SUCCESS == status)
     {
+#if defined BUILD_WITH_CUDA_GLOBALAVGPOOL
+      float floatSatLow, floatSatHigh;
+      TIDL_getSaturationFloat(&net->TIDLLayers[layerIdx], &floatSatLow, &floatSatHigh);
+      TIDL_cudaPoolingQuantize<Tacc, Tout>(accPtr, outData,
+          numBatches, numOutChannels,
+          1, 1,
+          outBatchPitch, outChPitch, outChPitch,
+          roundBits, satLow, satHigh, mixedPrecision,
+          floatSatLow, floatSatHigh);
+#else
       OPENACC(parallel loop collapse(2))
       for (i0 = 0; i0 < numBatches; i0++)
       {
@@ -553,6 +589,7 @@ template<class Tin, class Tout, class Tacc, class Tscale> static int32_t TIDL_re
           outData[(i0 * outBatchPitch) + (i1 * outChPitch)] = (Tout)result;
         }
       }
+#endif // BUILD_WITH_CUDA_POOL
     }
   }
 
@@ -927,22 +964,23 @@ template<class Tin> static void TIDL_refSpatialMaxPooling(sTIDL_Network_t *net,
   int32_t validPosXMin, validPosXMax, validPosYMin, validPosYMax;
   int32_t batchOffset, channelOffset, spatialOffsetY, spatialOffsetX;
 
-  // For float pass we are making assumptions of padded buffer whereas fixed pass uses OTF pad.
-  if (inDataParams->elementType == TIDL_SinglePrecFloat || inDataParams->elementType == TIDL_BFloat16)
-  {
-    validPosXMin = tidlLayer->layerParams.poolParams.padL;
-    validPosXMax = tidlLayer->layerParams.poolParams.padL + width;
-    validPosYMin = tidlLayer->layerParams.poolParams.padT;
-    validPosYMax = tidlLayer->layerParams.poolParams.padT + orgInTensorHeight;
-  }
-  else
+  //For float pass we are making assumptions of padded buffer whereas fixed pass uses OTF pad.
+  //Setting the parameters marking for pixels on borders
+  if(TIDL_isPadOTF(net->deviceName) == TRUE)
   {
     validPosXMin = padW;
     validPosXMax = padW + width;
     validPosYMin = padH;
     validPosYMax = padH + orgInTensorHeight;
   }
-
+  else
+  {
+    validPosXMin = tidlLayer->layerParams.poolParams.padL;
+    validPosXMax = tidlLayer->layerParams.poolParams.padL + width;
+    validPosYMin = tidlLayer->layerParams.poolParams.padT;
+    validPosYMax = tidlLayer->layerParams.poolParams.padT + orgInTensorHeight;
+  }
+  
   int32_t numRows, numCols;
   numRows = tidlLayer->outData.dimValues[TIDL_DIM_HEIGHT];
   numCols = tidlLayer->outData.dimValues[TIDL_DIM_WIDTH];
@@ -983,6 +1021,28 @@ template<class Tin> static void TIDL_refSpatialMaxPooling(sTIDL_Network_t *net,
       inData = inData + (((padH - tidlLayer->layerParams.poolParams.padT) * inDataParams->pitch[TIDL_LINE_PITCH]) + (padW - tidlLayer->layerParams.poolParams.padL));
     }
 
+#ifdef BUILD_WITH_CUDA_POOL
+
+    int32_t padT, padL;
+    if (TIDL_isPadOTF(net->deviceName) == TRUE)
+    {
+      padT = algLayer->layerParams.poolParams.virtualPad.padT;
+      padL = algLayer->layerParams.poolParams.virtualPad.padL;
+    }
+    else
+    {
+      padT = tidlLayer->layerParams.poolParams.padT;
+      padL = tidlLayer->layerParams.poolParams.padL;
+    }
+    TIDL_cudaSpatialMaxPooling<Tin>(inData, outData,
+        numBatches, numOutChannels,
+        height, width, numRows, numCols,
+        (int32_t)inBatchPitch, inChPitch, inPitch,
+        (int32_t)outBatchPitch, outChPitch, outPitch,
+        kernelH, kernelW, strideH, strideW,
+        startRowNumberInTensor,
+        validPosXMin, validPosXMax, validPosYMin, validPosYMax, padT, padL);
+#else
     // OPENACC(parallel loop collapse(4))
     for (i0 = 0; i0 < numBatches; i0++)
     {
@@ -1031,6 +1091,7 @@ template<class Tin> static void TIDL_refSpatialMaxPooling(sTIDL_Network_t *net,
         }
       }
     }
+#endif // BUILD_WITH_CUDA_POOL
   }
 }
 
@@ -1081,6 +1142,7 @@ template<class Tin, class Tout, class Tacc> static int32_t TIDL_refSpatialAvgPoo
 {
   Tacc inRowCol;
   int32_t i0, i1, i2, i3, i4, i5;
+  int32_t padT = 0, padB = 0, padL = 0, padR = 0, poolSize;
   Tacc sumBlock;
   Tacc result = 0;
   Tacc scaleValue;
@@ -1091,33 +1153,27 @@ template<class Tin, class Tout, class Tacc> static int32_t TIDL_refSpatialAvgPoo
   Tin *inData = (Tin *)pInChannel;
   Tout *outData = (Tout *)pOutChannel;
   int32_t numRows, numCols, roundVal;
-
-  int32_t isOTFpad = 0;
   int32_t startRowNumberInTensor = algLayer->layerParams.poolParams.startRowNumberInTensor;
-
-  if (TIDL_isPadOTF(net->deviceName) != 0U)
-  {
-    isOTFpad = 1;
-  }
+  int32_t countIncludePad = (int32_t)tidlLayer->layerParams.poolParams.countIncludePad;
 
   int32_t isBorderPixel;
   int32_t validPosXMin, validPosXMax, validPosYMin, validPosYMax;
   int32_t spatialOffsetY, spatialOffsetX;
 
-  // For float pass we are making assumptions of padded buffer whereas fixed pass uses OTF pad.
-  if (inDataParams->elementType == TIDL_SinglePrecFloat || inDataParams->elementType == TIDL_BFloat16)
+  //For float pass we are making assumptions of padded buffer whereas fixed pass uses OTF pad.
+  if((TIDL_isPadOTF(net->deviceName) == TRUE) && (inDataParams->elementType != TIDL_SinglePrecFloat))
   {
-    validPosXMin = tidlLayer->layerParams.poolParams.padL;
-    validPosXMax = tidlLayer->layerParams.poolParams.padL + width;
-    validPosYMin = tidlLayer->layerParams.poolParams.padT;
-    validPosYMax = tidlLayer->layerParams.poolParams.padT + algLayer->layerParams.poolParams.orgInTensorHeight;
+    padT = algLayer->layerParams.poolParams.virtualPad.padT;
+    padL = algLayer->layerParams.poolParams.virtualPad.padL;
+    padR = algLayer->layerParams.poolParams.virtualPad.padR;
+    padB = algLayer->layerParams.poolParams.virtualPad.padB;
   }
   else
   {
-    validPosXMin = padW;
-    validPosXMax = padW + width;
-    validPosYMin = padH;
-    validPosYMax = padH + algLayer->layerParams.poolParams.orgInTensorHeight;
+    padT = tidlLayer->layerParams.poolParams.padT;
+    padL = tidlLayer->layerParams.poolParams.padL;
+    padR = tidlLayer->layerParams.poolParams.padR;
+    padB = tidlLayer->layerParams.poolParams.padB;
   }
 
   int32_t status = TIDL_SUCCESS;
@@ -1170,38 +1226,58 @@ template<class Tin, class Tout, class Tacc> static int32_t TIDL_refSpatialAvgPoo
                   copyout(outData[:1 + ((numBatches - 1) * outBatchPitch) + ((numOutChannels - 1) * outChPitch) + ((numRows - 1) * outPitch) + (numCols - 1)]))
   {
 
-    if (TIDL_isPadOTF(net->deviceName) == TRUE)
-    {
-      /* TIDL_adjustOTFinPtr(&inData, net, algLayer, inDataParams);
-      Adjust input data pointer for OTF padding
-      not calling adjustOTFinPtr because we have already checked the condition for isPadOTF and don't want to check it again inside adjustOTFinPtr function.
-      */
-      inData = inData - (((algLayer->layerParams.poolParams.virtualPad.padT * inDataParams->pitch[TIDL_LINE_PITCH]) + algLayer->layerParams.poolParams.virtualPad.padL));
-    }
-    else
+    if(TIDL_isPadOTF(net->deviceName) == FALSE)
     {
       /*
-      input is padded with padH and padW, for the case where padT and padL are zero we have to move input pointer to valid position.
-
-      input data padded with padH and padW                input ptr position is determined by the padT and padL not by padH and padW,
-                                                          we have to move input ptr to the correct position, so we have to jump (padH-padT)
-                                                          amount on height and (padW-padL) amount width wise.
-
+      input is padded with padH and padW, we have to move input pointer to valid position.
+      
+      input data padded with padH and padW                we have to move input ptr to the correct position, so we have to jump (padH) 
+                                                          amount on height and (padW) amount width wise.
+                                                          
+      
       ex: padH = 2, padW = 2                               padT = 1, padL = 1
 
-            inPtr-> ptr 0  0  0  0  0  0                           0   0   0  0  0  0  0
-                    0   0  0  0  0  0  0                           0   ptr 0  0  0  0  0
+            inPtr-> ptr 0  0  0  0  0  0                           0   0   0  0  0  0  0 
+                    0   0  0  0  0  0  0                           0   0   0  0  0  0  0 
+                    0   0  x  x  x  x  x                           0   0  ptr  x  x  x  x
                     0   0  x  x  x  x  x                           0   0   x  x  x  x  x
                     0   0  x  x  x  x  x                           0   0   x  x  x  x  x
-                    0   0  x  x  x  x  x                           0   0   x  x  x  x  x
-
+      
       */
-      // move this function into adjustOTFFinPtr function after testing average poolqq
-      inData = inData + (((padH - tidlLayer->layerParams.poolParams.padT) * inDataParams->pitch[TIDL_LINE_PITCH]) + (padW - tidlLayer->layerParams.poolParams.padL));
+      inData = inData + (((padH) * inDataParams->pitch[TIDL_LINE_PITCH]) + (padW));
     }
 
     if (TIDL_SUCCESS == status)
     {
+#ifdef BUILD_WITH_CUDA_POOL
+      int32_t padT, padL;
+      if (TIDL_isPadOTF(net->deviceName) == TRUE)
+      {
+        padT = algLayer->layerParams.poolParams.virtualPad.padT;
+        padL = algLayer->layerParams.poolParams.virtualPad.padL;
+      }
+      else
+      {
+        padT = tidlLayer->layerParams.poolParams.padT;
+        padL = tidlLayer->layerParams.poolParams.padL;
+      }
+      int32_t isOTFpad = ((TIDL_isPadOTF(net->deviceName) == TRUE) &&
+                          (inDataParams->elementType != TIDL_SinglePrecFloat)) ? 1 : 0;
+      validPosXMin = 0;
+      validPosXMax = width;
+      validPosYMin = 0;
+      validPosYMax = algLayer->layerParams.poolParams.orgInTensorHeight;
+      TIDL_cudaSpatialAvgPooling<Tin, Tacc>(inData, accPtr,
+          numBatches, numOutChannels,
+          height, width, numRows, numCols,
+          (int32_t)inBatchPitch, inChPitch, inPitch,
+          (int32_t)outBatchPitch, outChPitch, outPitch,
+          kernelH, kernelW, strideH, strideW,
+          padH, padW, roundVal, isOTFpad,
+          countIncludePad,
+          startRowNumberInTensor,
+          validPosXMin, validPosXMax, validPosYMin, validPosYMax, padT, padL);
+#else
       OPENACC(parallel loop collapse(4) reduction(min : min) reduction(max : max))
       for (i0 = 0; i0 < numBatches; i0++)
       {
@@ -1218,21 +1294,31 @@ template<class Tin, class Tout, class Tacc> static int32_t TIDL_refSpatialAvgPoo
                *  the average computed will be the sum of the 6 valid values divided by the the pooling size which will be 6.
                *  https://github.com/BVLC/caffe/blob/master/src/caffe/layers/pooling_layer.cpp
                */
-              int32_t startH = i2 * strideH;
-              int32_t startW = i3 * strideW;
+              int32_t startH = i2 * strideH - padT;
+              int32_t startW = i3 * strideW - padL;
 
-              int32_t hEndComp = startH + kernelH;
-              int32_t hEndBound = height + padH;
-              int32_t endH = (hEndComp < hEndBound) ? hEndComp : hEndBound;
+              int32_t hEndComp  = startH + kernelH;
+              int32_t hEndBound = height;
 
-              int32_t wEndComp = startW + kernelW;
-              int32_t wEndBound = width + padW;
-              int32_t endW = (wEndComp < wEndBound) ? wEndComp : wEndBound;
+              startH = std::max(startH, 0);
+              int32_t endH = std::min(hEndComp, hEndBound);
+
+              int32_t wEndComp  = startW + kernelW;
+              int32_t wEndBound = width;
+              startW = std::max(startW, 0);
+              int32_t endW = std::min(wEndComp, wEndBound);
 
               /* The values startH, endH, startW, endW contain the boundaries for valid indices.
                * In the following code please note that we compute the average for only the valid indices.
                */
-              int32_t poolSize = (endH - startH) * (endW - startW);
+              if(countIncludePad)
+              {
+                poolSize = kernelH * kernelW;
+              }
+              else
+              {
+                poolSize  = (endH - startH) * (endW - startW);
+              }
 
               sumBlock = 0;
 
@@ -1245,8 +1331,8 @@ template<class Tin, class Tout, class Tacc> static int32_t TIDL_refSpatialAvgPoo
                   spatialOffsetY = i4;
                   spatialOffsetX = i5;
                   OPENACC(routine(TIDL_checkPixelInPadRegion))
-                  isBorderPixel = TIDL_checkPixelInPadRegion(spatialOffsetY + startRowNumberInTensor, spatialOffsetX, validPosXMin, validPosXMax, validPosYMin, validPosYMax);
-                  if (((uint32_t)isBorderPixel & (uint32_t)isOTFpad) != 0U)
+                  isBorderPixel = TIDL_checkPixelInPadRegion(spatialOffsetY + startRowNumberInTensor, spatialOffsetX, 0, width, 0, algLayer->layerParams.poolParams.orgInTensorHeight);
+                  if((uint32_t)isBorderPixel)
                   {
                     inRowCol = 0;
                   }
@@ -1278,6 +1364,7 @@ template<class Tin, class Tout, class Tacc> static int32_t TIDL_refSpatialAvgPoo
           }
         }
       }
+#endif // BUILD_WITH_CUDA_POOL
     }
 
     roundBits = net->TIDLLayers[layerIdx].outData.roundBits;
@@ -1308,6 +1395,16 @@ template<class Tin, class Tout, class Tacc> static int32_t TIDL_refSpatialAvgPoo
 
     if (TIDL_SUCCESS == status)
     {
+#ifdef BUILD_WITH_CUDA_POOL
+      float floatSatLow, floatSatHigh;
+      TIDL_getSaturationFloat(&net->TIDLLayers[layerIdx], &floatSatLow, &floatSatHigh);
+      TIDL_cudaPoolingQuantize<Tacc, Tout>(accPtr, outData,
+          numBatches, numOutChannels,
+          numRows, numCols,
+          (int32_t)outBatchPitch, outChPitch, outPitch,
+          roundBits, satLow, satHigh, mixedPrecision,
+          floatSatLow, floatSatHigh);
+#else
       OPENACC(parallel loop collapse(4) reduction(min : min) reduction(max : max))
       for (i0 = 0; i0 < numBatches; i0++)
       {
@@ -1340,6 +1437,7 @@ template<class Tin, class Tout, class Tacc> static int32_t TIDL_refSpatialAvgPoo
           }
         }
       }
+#endif // BUILD_WITH_CUDA_POOL
     }
   }
 
@@ -1766,7 +1864,7 @@ int32_t TIDL_poolingRefProcess(TIDL_NetworkCommonParams *commonParams,
   if (isGlobalPooling == 0)
   {
     sTIDL_DataParams_t *inDataParams;
-    inDataParams = TIDL_getDataParams(commonParams->createParams->net, tidlLayer->inData[0]);
+    inDataParams = &commonParams->createParams->net->TIDLLayers[tidlLayer->inData[0]].outData;
     sTIDL_DataParams_t *outDataParams = &tidlLayer->outData;
     TIDL_SpatialPoolingBuffParams_t poolingBuffParams;
     poolingBuffParams.inWidth = inDataParams->dimValues[TIDL_DIM_WIDTH];
@@ -1796,7 +1894,7 @@ int32_t TIDL_poolingRefProcess(TIDL_NetworkCommonParams *commonParams,
   else /* (isGlobalPooling == TRUE)  */
   {
     sTIDL_DataParams_t *inDataParams;
-    inDataParams = TIDL_getDataParams(commonParams->net, tidlLayer->inData[0]);
+    inDataParams = &commonParams->net->TIDLLayers[tidlLayer->inData[0]].outData;
     sTIDL_DataParams_t *outDataParams = &tidlLayer->outData;
     TIDL_SpatialPoolingBuffParams_t poolingBuffParams;
     poolingBuffParams.inWidth = inDataParams->dimValues[TIDL_DIM_WIDTH];
@@ -1827,14 +1925,9 @@ int32_t TIDL_poolingRefProcess(TIDL_NetworkCommonParams *commonParams,
 
     if (TIDL_QuantStyleAsymNP2_TFL == quantizationStyle)
     {
-      float32_tidl scaleRatio = inDataParams->tensorScale / (tidlLayer->outData.tensorScale * (float32_tidl)inDataParams->dimValues[TIDL_DIM_WIDTH] * (float32_tidl)inDataParams->dimValues[TIDL_DIM_HEIGHT]);
-      uint8_t mmaScale;
-      uint8_t mmaShift;
-      TIDL_getMMAv2_ScaleAndShift(scaleRatio, &mmaScale, &mmaShift);
-      float32_tidl biasTerm = ((float32_tidl)tidlLayer->outData.tensorZeroPoint / scaleRatio) - ((float32_tidl)inDataParams->tensorZeroPoint * (float32_tidl)inDataParams->dimValues[TIDL_DIM_WIDTH] * (float32_tidl)inDataParams->dimValues[TIDL_DIM_HEIGHT]);
-      poolingBuffParams.biasTerm = round(biasTerm);
-      poolingBuffParams.mmaShift = mmaShift;
-      poolingBuffParams.scaleValue = mmaScale;
+      poolingBuffParams.biasTerm = params->biasTerm;
+      poolingBuffParams.mmaShift = params->mmaShift;
+      poolingBuffParams.scaleValue = params->mmaScale;
     }
 
     status = TIDL_refGlobalPoolingProcess(commonParams->net,

@@ -153,7 +153,7 @@ const vector<TidlConstraint> tidlConstraintDeconv =
         "Change to Upsample/Resize if possible. Upsample/Resize will be more efficient",
         "Change to Resize if possible. Resize will be more efficient",
         [](const sTIDL_LayerPC_t *layer, string &logs){
-            TIDL_GLOBAL_REPORT_WARNING("Change to Upsample/Resize if possible instead of Deconvolution. It will be more efficient")
+            TIDL_GLOBAL_REPORT_WARNING("Deconvolution [%s]: change to Upsample/Resize if possible for better efficiency")
             return true;
         }
     ),

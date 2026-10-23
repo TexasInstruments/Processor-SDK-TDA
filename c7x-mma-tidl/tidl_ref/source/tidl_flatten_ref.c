@@ -72,6 +72,9 @@
 #include "tidl_alg_int.h"
 #include "tidl_commonUtils.h"
 #include "tidl_flatten_ref.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 /**
  * @brief This is reference implementation of Flatten layer
@@ -106,23 +109,31 @@ template<class Tin, class Tout> void TIDL_flattenRefProcess(const Tin *pIn,
 {
   int32_t i0, i1, i2, i3;
   int32_t outCount;
-  for (i0 = 0; i0 < numROIs; i0++)
-  {
-    outCount = 0;
-    for (i1 = 0; i1 < numChs; i1++)
+  #ifdef BUILD_WITH_CUDA_FLATTEN
+    // call cuda flatten wrapper
+    TIDL_refCudaFlatten(pIn,pOut,
+      inPtrOffset, outPtrOffset,
+      width, height, numChs, numROIs,
+      inLinePitch, inChPitch, inROIPitch, outROIPitch);
+  #else
+    for (i0 = 0; i0 < numROIs; i0++)
     {
-      for (i2 = 0; i2 < height; i2++)
+      outCount = 0;
+      for (i1 = 0; i1 < numChs; i1++)
       {
-        for (i3 = 0; i3 < width; i3++)
+        for (i2 = 0; i2 < height; i2++)
         {
-          int32_t inOffset = inPtrOffset + (i0 * inROIPitch) + (i1 * inChPitch) + (i2 * inLinePitch) + i3;
-          int32_t outOffset = outPtrOffset + (i0 * outROIPitch) + outCount;
-          pOut[outOffset] = pIn[inOffset];
-          outCount++;
+          for (i3 = 0; i3 < width; i3++)
+          {
+            int32_t inOffset = inPtrOffset + (i0 * inROIPitch) + (i1 * inChPitch) + (i2 * inLinePitch) + i3;
+            int32_t outOffset = outPtrOffset + (i0 * outROIPitch) + outCount;
+            pOut[outOffset] = pIn[inOffset];
+            outCount++;
+          }
         }
       }
     }
-  }
+  #endif
   TIDL_L1DandL2CacheWbInv();
 }
 

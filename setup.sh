@@ -4,11 +4,11 @@ set -e
 #############################################################
 ########################[ Variables ]########################
 
-CICD_TAG="CICD.PSDK.ANALYTICS.12.00.00.06"
+CICD_TAG="CICD.PSDK.ANALYTICS.12.01.00.00"
 REPO_URL="https://github.com/TexasInstruments/Processor-SDK-TDA"
 RELEASE_ARTIFACTS_URL="$REPO_URL/releases/download/$CICD_TAG"
 
-MMALIB_VERSION="12_01_00_01"
+MMALIB_VERSION="12_01_00_12"
 DSPLIB_VERSION="3_4_0_0"
 MATHLIB_VERSION="3_1_2_1"
 
@@ -37,21 +37,24 @@ install_mmalib(){
     local FILE_URL="$1"
     local DSP_VERSION="$2"
     local MMALIB_VERSION="$3"
+    local MMA_LIB_PARENT_DIR="c7x-mma-tidl/mmalib-kernels"
     local TAR_FILE_NAME=$(basename "$FILE_URL")
-    local OUT_DIR="mmalib_${MMALIB_VERSION}_${SOC}"
+    local MMA_LIB_DIR="mmalib_${MMALIB_VERSION}_${SOC}"
 
-    if [ -d "$OUT_DIR" ]; then
-        echo "[ Info ]: mmalib version $MMALIB_VERSION for SOC $SOC already exists in $OUT_DIR, skipping download and extraction."
-        ln -sfn "$OUT_DIR" "mmalib_$MMALIB_VERSION"
+    if [ -d "$MMA_LIB_PARENT_DIR/$MMA_LIB_DIR" ]; then
+        echo "[ Info ]: mmalib version $MMALIB_VERSION for SOC $SOC already exists in $MMA_LIB_PARENT_DIR/$MMA_LIB_DIR, skipping download and extraction."
+        ln -sfn "$MMA_LIB_DIR" "mmalib"
         return 0
     fi
     
     # Download the tar file, extract it, and organize the contents
+    cd "$MMA_LIB_PARENT_DIR"
     wget $FILE_URL
-    mkdir -p "$OUT_DIR"
-    tar -xf "$TAR_FILE_NAME" --strip=2 -C "$OUT_DIR"
+    mkdir -p "$MMA_LIB_DIR"
+    tar -xf "$TAR_FILE_NAME" --strip=2 -C "$MMA_LIB_DIR"
     rm -rf "$TAR_FILE_NAME"
-    ln -s "$OUT_DIR" "mmalib_$MMALIB_VERSION"
+    ln -sfn "$MMA_LIB_DIR" "mmalib" 
+    cd -
 }
 
 install_bin(){

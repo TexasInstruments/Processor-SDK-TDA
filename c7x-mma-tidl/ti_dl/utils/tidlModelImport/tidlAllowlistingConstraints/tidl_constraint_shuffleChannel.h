@@ -69,7 +69,7 @@ const vector<TidlConstraint> tidlConstraintShuffleChannel =
         "ShuffleChannel layer is not optimal",
         "ShuffleChannel layer is not optimal",
         [](const sTIDL_LayerPC_t *layer, string &logs){
-            TIDL_GLOBAL_REPORT_WARNING("ShuffleChannel layer is not optimal");
+            TIDL_GLOBAL_REPORT_WARNING("ShuffleChannel [%s]: Layer is not optimal", (char *)layer->name);
             return true;
         }
     ),

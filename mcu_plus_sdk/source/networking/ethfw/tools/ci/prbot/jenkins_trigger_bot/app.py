@@ -6,6 +6,7 @@ PR Bot - Jenkins Build Trigger for Bitbucket Webhooks
 import json
 import logging
 import os
+import re
 import jenkins
 import requests
 from flask import Flask, request, jsonify
@@ -141,6 +142,17 @@ class BitbucketClient:
         except Exception as e:
             logger.error(f"Failed to fetch PR commits: {e}")
             return []
+
+    def get_pr_source_branch(self, project, repo, pr_number):
+        """Get the source branch (fromRef) of a PR"""
+        url = f"{self.base_url}/rest/api/1.0/projects/{project}/repos/{repo}/pull-requests/{pr_number}"
+        try:
+            response = requests.get(url, auth=self.auth)
+            response.raise_for_status()
+            return response.json().get('fromRef', {}).get('displayId')
+        except Exception as e:
+            logger.error(f"Failed to fetch source branch for {project}/{repo} PR #{pr_number}: {e}")
+            return None
 
     def get_pr_changes(self, project, repo, pr_number):
         """Get changed files in a PR"""
@@ -348,6 +360,41 @@ Requirements:
 
         return "\n".join(description_parts)
 
+def resolve_dependent_tag(pr_description, bitbucket_client, project, repo, default_value):
+    """Resolve a tag from a dependent PR of the given project/repo linked in
+    the PR description (as a full Bitbucket PR URL), falling back to
+    default_value if no such link is found or the lookup fails."""
+    pattern = re.compile(
+        rf'https?://bitbucket\.itg\.ti\.com/projects/{re.escape(project)}/repos/{re.escape(repo)}/pull-requests/(\d+)',
+        re.IGNORECASE
+    )
+    match = pattern.search(pr_description or '')
+    if not match:
+        return default_value
+
+    dependent_pr_number = match.group(1)
+    branch = bitbucket_client.get_pr_source_branch(project, repo, dependent_pr_number)
+
+    if not branch:
+        logger.warning(
+            f"Found dependent {project}/{repo} PR #{dependent_pr_number} in description "
+            f"but failed to resolve its source branch; falling back to {default_value!r}"
+        )
+        return default_value
+
+    logger.info(f"Resolved tag={branch} from dependent {project}/{repo} PR #{dependent_pr_number}")
+    return branch
+
+# tag keys (as used in default_tag/%tag% templates) that should be resolved
+# from a dependent PR linked in the description, keyed to their (project,
+# repo) on Bitbucket. Falls back to the JSON-configured default_tag value
+# when no dependent PR link is found.
+DEPENDENT_TAG_REPOS = {
+    "pdk_tag": ("PROCESSOR-SDK", "pdk"),
+    "enet_tag": ("PROCESSOR-SDK", "enet-lld"),
+    "tsn_tag": ("PROCESSOR-SDK", "enet-tsn-stack"),
+}
+
 def substitute_params(param_template, webhook_data):
     """Substitute placeholders in parameters with actual values"""
     result = {}
@@ -361,6 +408,15 @@ def substitute_params(param_template, webhook_data):
         # Override with branch name for the repo being built
         substitutions = default_tags.copy()
         substitutions[webhook_data['repo']] = webhook_data['branch']
+
+        # Resolve dependent-PR tags (pdk/enet-lld/enet-tsn-stack), falling
+        # back to the JSON default_tag value when no dependent PR is linked
+        pr_description = webhook_data.get('pr_description', '')
+        for tag_key, (dep_project, dep_repo) in DEPENDENT_TAG_REPOS.items():
+            if tag_key in substitutions:
+                substitutions[tag_key] = resolve_dependent_tag(
+                    pr_description, bitbucket_client, dep_project, dep_repo, substitutions[tag_key]
+                )
 
         # Substitute %tag% placeholders
         for key, value in template.items():
@@ -387,7 +443,11 @@ def substitute_params(param_template, webhook_data):
                 pr_description=webhook_data['pr_description'],
                 project=webhook_data['project'],
                 repo=webhook_data['repo'],
-                target_repo=f"{webhook_data['project']}/{webhook_data['repo']}"
+                target_repo=f"{webhook_data['project']}/{webhook_data['repo']}",
+                mcusdk_tag=webhook_data.get('mcusdk_tag', ''),
+                pdk_tag=webhook_data.get('pdk_tag', ''),
+                tsn_tag=webhook_data.get('tsn_tag', ''),
+                enet_tag=webhook_data.get('enet_tag', '')
             )
         else:
             result[key] = value
@@ -450,6 +510,7 @@ def extract_webhook_data(payload):
         repository = to_ref.get("repository", {})
         repo_name = repository.get("slug")
         project_key = repository.get("project", {}).get("key")
+        target_branch = to_ref.get("displayId", "")
 
         # Comment data (for comment events)
         comment_text = None
@@ -464,6 +525,7 @@ def extract_webhook_data(payload):
             "project": project_key,
             "repo": repo_name,
             "branch": branch_name,
+            "target_branch": target_branch,
             "commit_id": commit_id,
             "pr_number": pr_number,
             "pr_title": pr_title,
@@ -499,7 +561,7 @@ def webhook():
     logger.info(f"Event: {webhook_data['event_type']}")
     logger.info(f"Project: {webhook_data['project']}, Repo: {webhook_data['repo']}")
     logger.info(f"PR #{webhook_data['pr_number']}: {webhook_data['pr_title']}")
-    logger.info(f"Branch: {webhook_data['branch']}, Commit: {webhook_data['commit_id']}")
+    logger.info(f"Branch: {webhook_data['branch']}, Target Branch: {webhook_data['target_branch']}, Commit: {webhook_data['commit_id']}")
 
     # Track if Build command was explicitly requested (to override [DNT])
     explicit_build_requested = False
@@ -614,13 +676,26 @@ def webhook():
     # Look up job configuration using project/repo key
     job_key = f"{webhook_data['project']}/{webhook_data['repo']}"
     job_configs = CONFIG['jobs'].get(job_key)
-    print("=========")
-    print(job_key)
-    print("=========")
-    print(CONFIG['jobs'])
+    logger.debug("=========")
+    logger.debug(job_key)
+    logger.debug("=========")
+    logger.debug(CONFIG['jobs'])
     if not job_configs:
         logger.warning(f"No job configuration found for {job_key}")
         return jsonify({"status": "error", "message": f"No configuration for {job_key}"}), 404
+
+    # Resolve tags from dependent PRs linked in the description (each falls
+    # back to its default if no matching link is found or the lookup fails)
+    pr_description = webhook_data['pr_description']
+    webhook_data['pdk_tag'] = resolve_dependent_tag(
+        pr_description, bitbucket_client, "PROCESSOR-SDK", "pdk", ""
+    )
+    webhook_data['tsn_tag'] = resolve_dependent_tag(
+        pr_description, bitbucket_client, "PROCESSOR-SDK", "enet-tsn-stack", "next"
+    )
+    webhook_data['enet_tag'] = resolve_dependent_tag(
+        pr_description, bitbucket_client, "PROCESSOR-SDK", "enet-lld", "mcupsdk_next"
+    )
 
     # Trigger all enabled jobs
     triggered_jobs = []
@@ -632,10 +707,30 @@ def webhook():
             logger.info(f"Skipping disabled job: {job_config['job_name']}")
             continue
 
+        # Skip jobs scoped to a different target branch (jobs with no
+        # target_branch key are unconditional, e.g. the ethfw PR bot)
+        config_target_branch = job_config.get('target_branch')
+        if config_target_branch and config_target_branch != webhook_data['target_branch']:
+            logger.info(
+                f"Skipping job '{job_config['job_name']}': target_branch "
+                f"'{config_target_branch}' does not match PR target branch "
+                f"'{webhook_data['target_branch']}'"
+            )
+            continue
+
         # Get job details
         root_url = job_config['root_url']
         job_name = job_config['job_name']
         token = job_config.get('token', '')
+
+        # Resolve mcusdk_tag using this job's own default (falls back to the
+        # dependent PR's branch, or this job's configured default if no
+        # matching link is found or the lookup fails)
+        mcusdk_default = job_config.get('default_tag', {}).get('mcu_plus_sdk')
+        if mcusdk_default is not None:
+            webhook_data['mcusdk_tag'] = resolve_dependent_tag(
+                pr_description, bitbucket_client, "PROCESSOR-SDK-MCU", "mcu_plus_sdk", mcusdk_default
+            )
 
         # Merge params and other fields for substitution
         param_template = job_config.get('params', {}).copy()
@@ -694,5 +789,5 @@ if __name__ == '__main__':
     llm_client = LLMClient(CONFIG['litellm'])
 
     # Start Flask app
-    logger.info("Starting PR Bot on port 8000")
-    app.run(host='0.0.0.0', port=8000, debug=False)
+    logger.info("Starting PR Bot on port 9000")
+    app.run(host='0.0.0.0', port=9000, debug=False)

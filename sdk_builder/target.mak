@@ -82,6 +82,7 @@ else
             SYSIDIRS += $(MCU_SDK_PATH)/ti_sdk_config/$(SOC)/default/Hal_Cfg
             SYSIDIRS += $(MCU_SDK_PATH)/ti_sdk_config/$(SOC)/default/device_support/include
             SYSIDIRS += $(MCU_SDK_PATH)/source/arch/include
+            SYSIDIRS += $(MCU_SDK_PATH)/source/hal/Common/v0/include
             ifeq ($(TARGET_CPU),M55)
                 SYSIDIRS += $(MCU_SDK_PATH)/source/compiler/m55-ti-arm-clang
             else ifeq ($(TARGET_CPU),C7604)

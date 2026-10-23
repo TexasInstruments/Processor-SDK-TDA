@@ -71,6 +71,9 @@
 #include "tidl_commonUtils.h"
 #include "tidl_alg_utils.h"
 #include "tidl_tile_ref.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 int32_t TIDL_repeatData(sTIDL_AlgLayer_t     *algLayer,
                         sTIDL_TileParams_t   *params,
@@ -90,6 +93,32 @@ int32_t TIDL_repeatData(sTIDL_AlgLayer_t     *algLayer,
 
   int32_t elementSize = TIDL_getDatElementSize(inDataParams->elementType);
 
+#ifdef BUILD_WITH_CUDA_TILE
+  status = TIDL_cudaTile(
+      inPtr, outPtr, elementSize,
+      inDataParams->dimValues[TIDL_DIM_BATCH],
+      inDataParams->dimValues[TIDL_DIM_DIM1],
+      inDataParams->dimValues[TIDL_DIM_DIM2],
+      inDataParams->dimValues[TIDL_DIM_NUMCH],
+      inDataParams->dimValues[TIDL_DIM_HEIGHT],
+      inDataParams->dimValues[TIDL_DIM_WIDTH],
+      inDataParams->pitch[TIDL_ROI_PITCH],
+      inDataParams->pitch[TIDL_DIM1_PITCH],
+      inDataParams->pitch[TIDL_DIM2_PITCH],
+      inDataParams->pitch[TIDL_CHANNEL_PITCH],
+      inDataParams->pitch[TIDL_LINE_PITCH],
+      outDataParams->dimValues[TIDL_DIM_BATCH],
+      outDataParams->dimValues[TIDL_DIM_DIM1],
+      outDataParams->dimValues[TIDL_DIM_DIM2],
+      outDataParams->dimValues[TIDL_DIM_NUMCH],
+      outDataParams->dimValues[TIDL_DIM_HEIGHT],
+      outDataParams->dimValues[TIDL_DIM_WIDTH],
+      outDataParams->pitch[TIDL_ROI_PITCH],
+      outDataParams->pitch[TIDL_DIM1_PITCH],
+      outDataParams->pitch[TIDL_DIM2_PITCH],
+      outDataParams->pitch[TIDL_CHANNEL_PITCH],
+      outDataParams->pitch[TIDL_LINE_PITCH]);
+#else
   uint32_t outIdx[TIDL_DIM_MAX] = {0};
   uint8_t done = 0;
   while (!done)
@@ -135,6 +164,7 @@ int32_t TIDL_repeatData(sTIDL_AlgLayer_t     *algLayer,
     }
   }
   TIDL_L1DandL2CacheWbInv();
+#endif
   return status;
 }
 

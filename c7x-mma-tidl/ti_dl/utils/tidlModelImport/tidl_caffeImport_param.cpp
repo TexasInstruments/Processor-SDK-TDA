@@ -77,8 +77,6 @@
 #include "caffe.pb.h"
 #include "tidl_import_diag.h"
 
-#define __MODULE__ "[PARSER]"
-
 using namespace std;
 using namespace caffe;
 using ::google::protobuf::Message;
@@ -92,6 +90,9 @@ using ::google::protobuf::io::CodedOutputStream;
 
 #include "tidl_import_common.h"
 #include "tidl_caffeImport_param.h"
+
+#undef __MODULE__
+#define __MODULE__ "[PARSER]"
 
 extern sTIDL_OrgNetwork_t      orgTIDLNetStructure;
 extern sTIDL_OrgNetwork_t      tempTIDLNetStructure;

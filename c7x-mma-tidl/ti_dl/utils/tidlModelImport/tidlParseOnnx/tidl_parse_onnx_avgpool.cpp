@@ -74,6 +74,7 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("AveragePool")> ()
   sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
 
   sTIDL_PoolingParams_t &poolParams = layer.layerParams.poolParams;
+  poolParams.countIncludePad = 0;
 
   std::vector<int32_t> attr;
 
@@ -112,7 +113,10 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("AveragePool")> ()
     return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
   }
 
-  
+  if(getAttrIdx(graph.node(index), "count_include_pad") != -1)
+  {
+    attr.push_back(getIntAttr(graph.node(index), "count_include_pad", &poolParams.countIncludePad, 0));
+  }
 
   if(std::find(attr.begin(), attr.end(), -1) != attr.end())
   {

@@ -55,11 +55,6 @@ int main(int argc, char **argv)
 	L3Scratch = (uint8_t*)memalign(L3_TOTAL_MEMORY_SIZE, L3_MEM_SIZE);
 	L4Scratch = (uint8_t*)malloc(L4_MEM_SIZE);
 
-	printf(0, "%6s, %12s, %12s\n" ,"Mem", "StartAdd", "endAdd");
-
-	printf(0, "%6s, %12x, %12x\n" ,"L2", L2Scratch, L2Scratch + L2_MEM_SIZE );
-	printf(0, "%6s, %12x, %12x\n" ,"L3", L3Scratch, L3Scratch + L3_MEM_SIZE );
-
 #if HOST_EMULATION
     if((argc != 1) && ((strcmp(argv[1], "NNW") == 0) || (strcmp(argv[1], "NWL") == 0)))
 	{

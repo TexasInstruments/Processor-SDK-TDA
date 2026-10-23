@@ -727,7 +727,7 @@ void TIDL_refConv2dKernelAvxProc16bit(
   Tacc *aPtr;
   Tacc lmin = *min;
   Tacc lmax = *max;
-  Tacc mask[32] = {0};
+  uint64_t mask[32] = {0};
   int32_t indataOffset;
   int32_t outdataOffset;
 
@@ -792,7 +792,7 @@ void TIDL_refConv2dKernelAvxProc16bit(
   {
     for(j=0;j<remSize;j++)
     {
-      mask[j]=((Tacc)1)<<63;
+      mask[j] =  UINT64_C(1) << 63;
     }
     __m256i mask_0 = _mm256_loadu_si256((__m256i *)&mask[0]);
     __m256i mask_1 = _mm256_loadu_si256((__m256i *)&mask[4]);
@@ -902,7 +902,7 @@ void TIDL_refConv2dKernelAvxProc16bitGen(
   Tacc *aPtr;
   Tacc lmin = *min;
   Tacc lmax = *max;
-  Tacc mask[32] = {0};
+  uint64_t mask[32] = {0};
   int32_t indataOffset;
   int32_t outdataOffset;
 
@@ -967,7 +967,7 @@ void TIDL_refConv2dKernelAvxProc16bitGen(
   {
     for(j=0;j<remSize;j++)
     {
-      mask[j]=((Tacc)1)<<63;
+      mask[j] = UINT64_C(1) << 63;
     }
     __m256i mask_0 = _mm256_loadu_si256((__m256i *)&mask[0]);
     __m256i mask_1 = _mm256_loadu_si256((__m256i *)&mask[4]);
@@ -1075,7 +1075,7 @@ void TIDL_refConv2dKernelAvxIn8bitProc16bit(
   Tacc *aPtr;
   Tacc lmin = *min;
   Tacc lmax = *max;
-  Tacc mask[32] = {0};
+  uint64_t mask[32] = {0};
   int32_t indataOffset;
   int32_t outdataOffset;
 
@@ -1140,7 +1140,7 @@ void TIDL_refConv2dKernelAvxIn8bitProc16bit(
   {
     for(j=0;j<remSize;j++)
     {
-      mask[j]=((Tacc)1)<<63;
+      mask[j] = UINT64_C(1) << 63;
     }
     __m256i mask_0 = _mm256_loadu_si256((__m256i *)&mask[0]);
     __m256i mask_1 = _mm256_loadu_si256((__m256i *)&mask[4]);
@@ -1250,7 +1250,7 @@ void TIDL_refConv2dKernelAvxIn8bitProc16bitGen(
   Tacc *aPtr;
   Tacc lmin = *min;
   Tacc lmax = *max;
-  Tacc mask[32] = {0};
+  uint64_t mask[32] = {0};
   int32_t indataOffset;
   int32_t outdataOffset;
 
@@ -1315,7 +1315,7 @@ void TIDL_refConv2dKernelAvxIn8bitProc16bitGen(
   {
     for(j=0;j<remSize;j++)
     {
-      mask[j]=((Tacc)1)<<63;
+      mask[j] = UINT64_C(1) << 63;
     }
     __m256i mask_0 = _mm256_loadu_si256((__m256i *)&mask[0]);
     __m256i mask_1 = _mm256_loadu_si256((__m256i *)&mask[4]);

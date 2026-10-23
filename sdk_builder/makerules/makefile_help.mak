@@ -6,9 +6,6 @@ sdk_help:
 	#
 	# Use below make targets to build SDK and/or different components with the SDK
 	#
-	# make mmalib                # Build MMALIB (needs MMALIB source package)
-	# make mmalib_clean          # Clean MMALIB (needs MMALIB source package)
-	#
 	# make tidl                  # Build TIDL (needs TIDL source package)
 	# make tidl_clean            # Clean TIDL (needs TIDL source package)
 	#

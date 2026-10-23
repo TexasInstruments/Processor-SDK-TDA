@@ -75,7 +75,6 @@
 #include "tidl_alg_utils.h"
 #include "tidl_commonUtils.h"
 #include "tidl_innerProduct_ref.h"
-using namespace floating_point::bf16_mma;
 
 
 #ifdef BUILD_WITH_CUDA
@@ -140,15 +139,22 @@ template<class Tin, class TBin, class Tw, class Tb, class Tout, class Tacc>
         int32_t satLow,
         int32_t satHigh)
 {
+  /* Scoped (not file-scope) so it doesn't leak bf16_mma's operators
+   * into other templates instantiated later in this translation unit (e.g.
+   * tidl_alg_int.h's bf16_c7x-based scalar helpers), which would otherwise
+   * make those operators ambiguous between bf16_mma and bf16_c7x. This is
+   * the MMA-accumulator pipeline the design in bfloat16.h calls out as
+   * needing an explicit (here, function-scoped) bf16_mma import. */
+  using namespace floating_point::bf16_mma;
   int32_t status = TIDL_SUCCESS;
   sTIDL_Network_t *net = intAlgHandle->createParams->net;
   int32_t quantizationStyle = intAlgHandle->createParams->net->quantizationStyle;
   int32_t mmaScale = 1;
   sTIDL_Layer_t *tidlLayer = &net->TIDLLayers[layerIdx];
 
-  sTIDL_DataParams_t *inADataParams = TIDL_getDataParams(net, tidlLayer->inData[0]);
-  sTIDL_DataParams_t *inBDataParams = TIDL_getDataParams(net, tidlLayer->inData[1]);
-  sTIDL_DataParams_t *outDataParams = TIDL_getDataParams(net, tidlLayer->outData.dataId);
+  sTIDL_DataParams_t *inADataParams = &net->TIDLLayers[tidlLayer->inData[0]].outData;
+  sTIDL_DataParams_t *inBDataParams = &net->TIDLLayers[tidlLayer->inData[1]].outData;
+  sTIDL_DataParams_t *outDataParams = &net->TIDLLayers[tidlLayer->outData.dataId].outData;
 
   Tb *pBiasData = NULL;
   int32_t roundBits = 0;

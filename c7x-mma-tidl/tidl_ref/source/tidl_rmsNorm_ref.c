@@ -78,6 +78,9 @@
 #include "tidl_rmsNorm.h"
 #include "tidl_rmsNorm_ref.h"
 #include "tidl_forceNegativeTest.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -124,8 +127,7 @@ static void TIDL_updateRmsNormMemorySizes(const TIDL_LayerSpecificParams *layerS
   int32_t scratchDataSize;
   int32_t paramMemSize = 0;
   int32_t outDataSize = TIDL_refGetOutDataSize(commonParams, layerSpecificParams, layerIdx);
-  sTIDL_DataParams_t *dataParams = TIDL_getDataParams(commonParams->net,
-                                                      commonParams->net->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_DataParams_t *dataParams = &commonParams->net->TIDLLayers[commonParams->net->TIDLLayers[layerIdx].inData[0]].outData;
 
   outBatchPitch = commonParams->net->TIDLLayers[layerIdx].outData.pitch[TIDL_ROI_PITCH];
   scratchDataSize = commonParams->net->TIDLLayers[layerIdx].outData.dimValues[TIDL_DIM_BATCH] * outBatchPitch * sizeof(float32_tidl);
@@ -1155,8 +1157,16 @@ template<class Tin, class Tout> static int32_t TIDL_refRmsNormCoreFloat(Tin *inP
 
   if (status == TIDL_SUCCESS)
   {
+#ifdef BUILD_WITH_CUDA_RMSNORM
+    status = TIDL_cudaRmsNormFloat<Tin, Tout>(
+        inPtr, outPtr, axis,
+        icnt[0], icnt[1], icnt[2], icnt[3], icnt[4], icnt[5],
+        dim[0], dim[1], dim[2], dim[3], dim[4],
+        epsilon);
+    return status;
+#else
     /* Initialize scratch memory to zero */
-    memset(eX2, 0, scratchSizeRequired);  
+    memset(eX2, 0, scratchSizeRequired);
     if(axis == TIDL_DIM_DIM1)
     {
       /* Normalize along dim1 dimension (i1) */
@@ -1396,6 +1406,7 @@ template<class Tin, class Tout> static int32_t TIDL_refRmsNormCoreFloat(Tin *inP
         }
       }
     }
+#endif /* BUILD_WITH_CUDA_RMSNORM */
   }
   return status;
 }

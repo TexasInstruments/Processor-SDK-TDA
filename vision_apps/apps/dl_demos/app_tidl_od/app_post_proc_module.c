@@ -116,6 +116,17 @@ vx_status app_update_post_proc(vx_context context, PostProcObj *postProcObj, vx_
     postProcObj->num_input_tensors = ioBufDesc->numInputBuf;
     postProcObj->num_output_tensors = ioBufDesc->numOutputBuf;
 
+    /* TODO: no flag in iobuf yet tells us whether the compiled
+     * model is TIDLRT  or OSRT -- infer from tensor count for now. */
+    if (postProcObj->num_input_tensors == 1)
+    {
+        postProcObj->params.od_prms.outputFormat = TIVX_DL_POST_PROC_OD_OUTPUT_NATIVE;
+    }
+    else
+    {
+        postProcObj->params.od_prms.outputFormat = TIVX_DL_POST_PROC_OD_OUTPUT_REFORMATTED;
+    }
+
     postProcObj->kernel = tivxAddKernelDLPostProc(context, postProcObj->num_input_tensors);
     status = vxGetStatus((vx_reference)postProcObj->kernel);
 

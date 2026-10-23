@@ -40,6 +40,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include <drivers/device_manager/sciserver/sciserver_init.h>
+#include <utils/ethfw_abstract/ethfw_ipc.h>
 
 #define TASK_PRI_MAIN_THREAD  (configMAX_PRIORITIES-1)
 #define TASK_PRI_BOOT_THREAD  (configMAX_PRIORITIES-1)
@@ -91,6 +92,9 @@ void main_thread(void *args)
     status = Board_driversOpen();
     DebugP_assert(status==SystemP_SUCCESS);
 
+    EthFwIpc_resetObj();
+    EthFwIpc_enableControlEndPt();
+
     sciServer_init(&sciserverCfg);
 
     EthApp_initTaskFxn(NULL);
@@ -134,7 +138,7 @@ void check_bootMode(void *args)
 }
 
 int main()
-{
+{  
     Bootloader_profileReset();
     /* init SOC specific modules */
     System_init();

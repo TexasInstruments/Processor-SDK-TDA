@@ -104,7 +104,6 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("LayerNormalization")> ()
   }
 
   layer.layerParams.layerNormParams.epsilon = epsilon;
-
   status = copyFloatConst(graph, index, 1, layer.weights, INPUT_REQUIRED);
   if(status == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
   {

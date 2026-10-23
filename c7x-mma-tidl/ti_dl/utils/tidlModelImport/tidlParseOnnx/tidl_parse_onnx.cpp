@@ -103,32 +103,40 @@ TidlParseOnnx::TidlParseOnnx(GraphProto& onnxGraph, int32_t index, sTIDL_LayerPC
 #endif
   }
 
-  if ((customStatus == -1) && (jumpTableEntry != tidlParseOnnxJumpTable.end()))
+  if (customStatus == -1)
   {
-    status = (this->*(jumpTableEntry->second))(); // Call the parse function
+    if(jumpTableEntry != tidlParseOnnxJumpTable.end())
+    {
+      status = (this->*(jumpTableEntry->second))(); // Call the parse function
 
-    if (status == -1)
-    {
-      layer.parseStatus = TIDL_ParseFailed;
-    }
-    else
-    {
-      if(isModelShapeInfered &&
-         checkShapeInferenceforOnnx(layer.allowlistingMetaData) == TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
+      if (status == -1)
       {
-        if(isLayerIODataTypesSupported(layer) && isLayerIONumSupported(layer))
-        {
-          layer.parseStatus = TIDL_ParsePassed;
-        }
-        else
-        {
-          layer.parseStatus = TIDL_ParseFailed;
-        }
+        layer.parseStatus = TIDL_ParseFailed;
       }
       else
       {
-        isModelShapeInfered = false;
+        if(isModelShapeInfered &&
+          checkShapeInferenceforOnnx(layer.allowlistingMetaData) == TIDL_IMPORT_DIAGNOSIS_RETURN_OK)
+        {
+          if(isLayerIODataTypesSupported(layer) && isLayerIONumSupported(layer))
+          {
+            layer.parseStatus = TIDL_ParsePassed;
+          }
+          else
+          {
+            layer.parseStatus = TIDL_ParseFailed;
+          }
+        }
+        else
+        {
+          isModelShapeInfered = false;
+        }
       }
+    }
+    else
+    {
+      // Op not in jumptable and not handled by custom layers - mark unsupported
+      status = -1;
     }
   }
 

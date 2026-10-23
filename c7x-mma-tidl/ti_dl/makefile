@@ -59,28 +59,30 @@
 #
 #
 
-ifdef SystemRoot
-    MAKE = gmake
-else
-    ifeq ($(shell uname), Linux)
-      MAKE = make
-    endif
-endif
+MAKE = make
 
 all:
-	@echo .
-	@echo ======== tidl ALGO =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  BUILD: TIDL ALGO"
+	@echo "======================================================================"
 	$(MAKE) -C ./algo -f makefile
-	@echo .
-	@echo ======== tidl TEST =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  BUILD: TIDL TEST"
+	@echo "======================================================================"
 	$(MAKE) -C ./test -f makefile
-	
+
 .IGNORE: clean
 clean:
-	@echo .
-	@echo ======== tidl ALGO =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  CLEAN: TIDL ALGO"
+	@echo "======================================================================"
 	$(MAKE) -C ./algo -f makefile clean
-	@echo .
-	@echo ======== tidl TEST =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  CLEAN: TIDL TEST"
+	@echo "======================================================================"
 	$(MAKE) -C ./test -f makefile clean
 	

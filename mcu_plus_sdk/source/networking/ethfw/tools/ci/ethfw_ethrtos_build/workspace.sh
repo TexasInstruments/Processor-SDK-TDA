@@ -610,20 +610,51 @@ download_components() {
           echo "DEBUG: Fixed fsdk_link to: ${fixed_fsdk_link}"
       fi
 
+      # soc for FSDK must come from the fsdk_link filename itself, not the outer
+      # ${soc} var - that var gets clobbered to the LAST board's soc by the
+      # download_${soc}_components loop above, wrong for multi-board release builds.
+      local fsdk_soc
+      fsdk_soc=$(basename "${fixed_fsdk_link}" | grep -oP 'ti-processor-sdk-rtos-\K[a-z0-9]+(?=-[0-9_]+\.tar\.gz)')
+      if [ -z "${fsdk_soc}" ]; then
+          fsdk_soc="${soc}"
+          echo "DEBUG: Could not parse soc from fsdk_link filename, falling back to \${soc}=${soc}"
+      fi
+      echo "DEBUG: FSDK soc = ${fsdk_soc}"
+
       # Get the base directory URL and find the actual available tarball via pattern matching.
-      # The version in fsdk_link may be stale; the server may have a newer patch version.
+      # Never trust the version string in fsdk_link - the server's "latest" build rotates
+      # and the exact version will drift over time. Always resolve by scanning the
+      # directory listing for the soc pattern only, picking the HIGHEST version present
+      # (sort -V, not alphabetic sort -u -> head -1, which breaks on bumps like
+      # 11_02_00_00 -> 11_02_02_00 -> 11_02_10_00). Retry the scrape - the "latest"
+      # pointer can flip to a snapshot dir before all artifacts finish uploading to it.
       local fsdk_base_url
       fsdk_base_url="$(dirname "${fixed_fsdk_link}")"
       echo "DEBUG: FSDK base URL: ${fsdk_base_url}"
 
-      local actual_tarball
-      actual_tarball=$(wget -q -O - "${fsdk_base_url}/" 2>/dev/null | \
-          grep -oE "ti-processor-sdk-rtos-${soc}-[0-9_]+\\.tar\\.gz" | \
-          grep -v 'docs_only' | grep -v 'windows_codegen_tools' | \
-          sort -u | head -1)
+      local actual_tarball=""
+      local scrape_attempt=1
+      local scrape_max_attempts=5
+      local scrape_retry_wait=15
+      while [ ${scrape_attempt} -le ${scrape_max_attempts} ]; do
+          actual_tarball=$(wget -q -O - "${fsdk_base_url}/" 2>/dev/null | \
+              grep -oE "ti-processor-sdk-rtos-${fsdk_soc}-[0-9_]+\\.tar\\.gz" | \
+              grep -v 'docs_only' | grep -v 'windows_codegen_tools' | \
+              sort -uV | tail -1)
+
+          if [ -n "${actual_tarball}" ]; then
+              break
+          fi
+
+          echo "WARNING: FSDK tarball scrape attempt ${scrape_attempt}/${scrape_max_attempts} found nothing at ${fsdk_base_url}/, retrying in ${scrape_retry_wait}s (server dir listing may be mid-update)..."
+          sleep ${scrape_retry_wait}
+          scrape_attempt=$((scrape_attempt + 1))
+      done
 
       if [ -z "${actual_tarball}" ]; then
-          echo "ERROR: Could not find FSDK tarball matching ti-processor-sdk-rtos-${soc}-*.tar.gz on server"
+          echo "ERROR: Could not find FSDK tarball matching ti-processor-sdk-rtos-${fsdk_soc}-*.tar.gz on server after ${scrape_max_attempts} attempts"
+          echo "DEBUG: Full directory listing at ${fsdk_base_url}/:"
+          wget -q -O - "${fsdk_base_url}/" 2>/dev/null | sed 's/^/  /'
           exit 1
       fi
 
@@ -643,11 +674,18 @@ download_components() {
       # download the FSDK Tarball and use that directly to package
       cd ${workarea_dir}
       echo "DEBUG: About to wget from: ${fixed_fsdk_link}"
-      wget -q "${fixed_fsdk_link}"
-      if [ $? -ne 0 ]; then
-          echo "ERROR: wget failed to download FSDK tarball from ${fixed_fsdk_link}"
-          exit 1
-      fi
+      local dl_attempt=1
+      local dl_max_attempts=3
+      while :; do
+          wget -q "${fixed_fsdk_link}" && break
+          if [ ${dl_attempt} -ge ${dl_max_attempts} ]; then
+              echo "ERROR: wget failed to download FSDK tarball from ${fixed_fsdk_link} after ${dl_max_attempts} attempts"
+              exit 1
+          fi
+          echo "WARNING: wget download attempt ${dl_attempt}/${dl_max_attempts} failed, retrying in 15s..."
+          sleep 15
+          dl_attempt=$((dl_attempt + 1))
+      done
 
       echo "DEBUG: Checking for downloaded tar file: $fsdk_folder.tar.gz"
       if [ -f "$fsdk_folder.tar.gz" ]; then

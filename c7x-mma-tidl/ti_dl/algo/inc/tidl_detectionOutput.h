@@ -115,9 +115,9 @@ void TIDL_sparseLocDataFetchiX(sTIDL_DetectOutputParams_t *params, sTIDL_ALgDete
 
                                void TIDL_boxParamsDecoding(const sTIDL_DetectOutputParams_t *params, const sTIDL_ALgDetectOutputParams_t *algDetLyrParams, float32_tidl *priorData, int32_t countK);
 
-int32_t TIDL_applyNMSFast(const sTIDL_DetectOutputParams_t *params, const sTIDL_ALgDetectOutputParams_t *algDetLyrParams, int32_t inCount);
+int32_t TIDL_applyNMSFast(const sTIDL_DetectOutputParams_t *params, const sTIDL_ALgDetectOutputParams_t *algDetLyrParams, int32_t countK);
 
-int32_t TIDL_filterNotInRangeBox(const sTIDL_DetectOutputParams_t *params, const sTIDL_ALgDetectOutputParams_t *algDetLyrParams, int32_t inCount);
+int32_t TIDL_filterNotInRangeBox(const sTIDL_DetectOutputParams_t *params, const sTIDL_ALgDetectOutputParams_t *algDetLyrParams, int32_t countK);
 
 template <typename Tloc>
 int32_t TIDL_objOuputPreperation(const sTIDL_DetectOutputParams_t *params, const sTIDL_ALgDetectOutputParams_t *algDetLyrParams, float32_tidl *priorData, float32_tidl *objData, int32_t keepKCnt, int32_t numDet, int32_t cls);
@@ -153,6 +153,10 @@ int32_t TIDL_odFindValidLocAndScoreKernelInit(const TIDL_CreateParams *params,
                                               int32_t procType,
                                               int32_t inHeight,
                                               int32_t outHeight);
+
+int32_t TIDL_odFindValidLocAndScoreKernelExec(void *handle, const void *src,
+                                              void *dst, const void *pKerInArgs,
+                                              void *pKerOutArgs);
 
 void TIDL_UpdateScaleFactors(TIDL_Handle intAlgHandle, int32_t i, int32_t updateStats, int64_t accMin, int64_t accMax);
 

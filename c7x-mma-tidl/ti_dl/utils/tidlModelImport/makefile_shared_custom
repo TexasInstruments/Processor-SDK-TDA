@@ -75,22 +75,13 @@ HFILES += $(CUSTOM_DIR)/tidl_custom.h
 TARGET_PLATFORM = PC
 BUILD_WITH_CUDA = no
 
-ifdef SystemRoot
-PROTOBUF_LIB_DIR?=$(TIDL_PROTOBUF_PATH)/lib/Release
-PROTOBUF_INC_DIR?="$(TIDL_PROTOBUF_PATH)/src"
-else
 PROTOBUF_LIB_DIR?="$(TIDL_PROTOBUF_PATH)/src/.libs"
 PROTOBUF_INC_DIR?="$(TIDL_PROTOBUF_PATH)/src"
-endif
 FLATBUF_INC_DIR ?= $(TIDL_FLATBUF_PATH)/include
 
 LIBNAME = tidl_model_custom_import
 
-ifdef SystemRoot
-OUTFILE= ./out/$(LIBNAME).dll
-else
 OUTFILE= ./out/$(LIBNAME).so
-endif
 
 ##############################################################
 
@@ -115,19 +106,15 @@ CFLAGS += -I ../tfliteImport
 CFLAGS += -I .
 CFLAGS += -I ../../../arm-tidl/rt/inc
 CFLAGS += -I ../../common
-
-#CFLAGS+= /D_MSC_VER=1700 /Gd
-ifdef SystemRoot
-CFLAGS += -I $(COMMON_DIR)/asprintf
-CFLAGS += /DTIDL_IMPORT_TOOL
-CFLAGS += /DDLL_EXPORT
-else
 CFLAGS += -D_GNU_SOURCE
 CFLAGS += -DTIDL_IMPORT_TOOL
 CFLAGS += -Werror=return-type -Wno-unused-result -Wno-format-overflow
-endif
 
 ifeq ($(MAKECMDGOALS),tvm_relay)
+# TVM provides its own logging implementation that should override dmlc-core's logging.
+# DMLC_USE_LOGGING_LIBRARY tells dmlc-core to include TVM's logging.h instead of its own.
+# This prevents "VLOG redefined" warnings when both TVM and dmlc-core headers are included.
+CFLAGS += -DDMLC_USE_LOGGING_LIBRARY=\"tvm/runtime/logging.h\"
 CFLAGS += -I $(TVM_HOME)/tvm/include
 CFLAGS += -I $(TVM_HOME)/tvm/3rdparty/dmlc-core/include
 CFLAGS += -I $(TVM_HOME)/tvm/3rdparty/dlpack/include
@@ -146,11 +133,6 @@ endif
 ##############################################################
 
 ##############################################################
-ifdef SystemRoot
-LDFLAGS+=-l $(PROTOBUF_LIB_DIR)/libprotoc.lib
-LDFLAGS+=-l $(PROTOBUF_LIB_DIR)/libprotobuf.lib
-LDFLAGS+=-l ./lib/tidl_model_protos.lib
-else
 LDFLAGS+=-L$(PROTOBUF_LIB_DIR)
 LDFLAGS+=-L$(TIDL_FLATBUF_PATH)
 LDFLAGS+=-L./lib
@@ -158,7 +140,7 @@ LDFLAGS+=-lprotoc -lprotobuf -ltidl_model_protos -lprotobuf-lite
 ifeq ($(MAKECMDGOALS),tflite_runtime)
 LDFLAGS+=-lflatbuffers
 endif
-endif
+
 
 # defs needed by all platforms
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J7 J721E j721e))

@@ -124,8 +124,8 @@ template<class Tin, class Tacc> void TIDL_refConcat(
   int64_t tempAcc = 0;
   int32_t outElemSize = TIDL_getDatElementSize(concatBuffParams->outElemType);
   int32_t outElemType = concatBuffParams->outElemType;
-  int32_t min = std::numeric_limits<float32_tidl>::min();
-  int32_t max = std::numeric_limits<float32_tidl>::max();
+  int32_t min = (int32_t)std::numeric_limits<float32_tidl>::min();
+  int32_t max = (int32_t)std::numeric_limits<float32_tidl>::max();
   if (outElemType == TIDL_SignedChar)
   {
     min = std::numeric_limits<int8_t>::min();
@@ -372,7 +372,7 @@ int32_t TIDL_refConcatProcess(
     int32_t outElemSize = TIDL_getDatElementSize(concatBuffParams->outElemType);
     for (j = 0; j < tidlLayer->numInBufs; j++)
     {
-      sTIDL_DataParams_t *indata = TIDL_getDataParams(intAlgHandle->createParams->net, tidlLayer->inData[j]);
+      sTIDL_DataParams_t *indata = &intAlgHandle->createParams->net->TIDLLayers[tidlLayer->inData[j]].outData;
       inDataScale[j] = (accScale / indata->tensorScale);
       if (isKernelHighPrecision == TRUE)
       {

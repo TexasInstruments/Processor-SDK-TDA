@@ -96,7 +96,7 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.grid_sample")>()
 	{
 		layer.layerParams.gridSampleParams.mode = TIDL_ModeNearest;
 	}
-	else if (mode == "bilinear")
+	else if (mode == "bilinear" || mode =="linear")
 	{
 		layer.layerParams.gridSampleParams.mode = TIDL_ModeBilinear;
 	}

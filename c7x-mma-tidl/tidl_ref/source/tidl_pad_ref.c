@@ -71,6 +71,9 @@
 #include "tidl_alg_int.h"
 #include "tidl_pad_ref.h"
 #include "tidl_commonUtils.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 using namespace floating_point::bf16_c7x;
 
@@ -147,6 +150,19 @@ void TIDL_padRefProcess(
   Tin padValueFinal;
   padValueFinal = padValue;
 
+  #ifdef BUILD_WITH_CUDA_PAD
+  // call cuda pad wrapper
+  TIDL_refCudaPad(pIn, pOut,
+    inPtrOffset, outPtrOffset,
+    inHeight, outWidth, outHeight, numChs,
+    outDataDim1, outDataDim2, numROIs,
+    inLinePitch, outLinePitch, inChPitch, outChPitch,
+    inDim1Pitch, outDim1Pitch, inDim2Pitch, outDim2Pitch,
+    inROIPitch, outROIPitch,
+    padT, padB, padL, padR, padValue, padType,
+    padPerChannelPtr, tensorScaleInput);
+  #else
+
   /* OPENACC(data copyin(padPerChannelPtr[0:numChs], pIn[0: 1 + inPtrOffset  + (numROIs*inROIPitch)   + (numChs* inChPitch)   + ((outHeight - padT) * inLinePitch)   + (outWidth - padL)]) \
                copyout(pOut[0: 1 + outPtrOffset + (numROIs*outROIPitch)  + (numChs* outChPitch)  + (outHeight * outLinePitch)  + outWidth])) */
   // OPENACC(parallel loop collapse(2))
@@ -209,6 +225,7 @@ void TIDL_padRefProcess(
       }
     }
   }
+  #endif
   TIDL_L1DandL2CacheWbInv();
 }
 

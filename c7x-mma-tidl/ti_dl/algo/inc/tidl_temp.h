@@ -123,6 +123,12 @@ typedef struct
   const TIDL_CreateParams *createParams;
   /* TIDL core params */
   WorkloadUnitExec_CommonParams *tidlCommonParams;
+  /* Per-call cache layer control */
+  int32_t cacheImport;
+  /* Per-call cache layer control */
+  int32_t cacheExport;
+  /* Per-call cache layer control */
+  int32_t cacheClear;
 }TIDL_NetworkCommonParams;
 
 

@@ -100,7 +100,7 @@ typedef struct{
 
 /*! \brief Runtime info needed by TVM C runtime and TIDL */
 typedef struct{
-  /** Flag to indicate TVM RT debug level*/
+  /** Flag to indicate TVM RT debug level (bits 0-2) and TVM trace write level (bits 3-5) */
   vx_int32 tvm_rt_debug_level;
   /** Flag to indicate TIDL debug trace log level*/
   vx_int32 tidl_trace_log_level;
@@ -118,6 +118,10 @@ typedef struct{
   vx_int32  tvm_rt_target_priority;
   /** On which DSP core we are running (1, 2, 3, 4) */
   vx_int32  tvm_rt_core_num;
+  /** File-based trace output path prefix (must match tidl_api.h layout, offset 40) */
+  char tvm_rt_trace_base_path[256];
+  /** Span name filter for level-1 single-node trace (must match tidl_api.h layout, offset 296) */
+  char tvm_rt_trace_write_node[256];
 } tvm_tidl_rt_info;
 
 /*!

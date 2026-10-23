@@ -95,6 +95,13 @@ static int tidl_relay_debuglevel = 0;
                                 printf("RelayImportDebug: " __VA_ARGS__)
 static int tidl_relay_max_batch_size = 1;
 
+const std::vector<int32_t> unsupportedDataTypes = {
+    TIDL_UnsignedDoubleWord,
+    TIDL_SignedDoubleWord,
+    TIDL_SignedWord,
+    TIDL_UnsignedWord
+};
+
 /// @brief Parses TVM layers
 struct TidlParseTVM
 {
@@ -118,10 +125,34 @@ struct TidlParseTVM
     // Utility Functions
     int32_t saveAllowlistingMetaData(relay::Call call, int32_t numInputs=0);
     bool TIDL_RelayBroadcast(Expr tensor, Expr constant, int32_t &numCh);
-    int32_t getTIDLDataTypeFromTVMDataType(int32_t tvmDataType);
+    int32_t getTIDLDataTypeFromTVMDataType(int32_t tvmDataType, int32_t bits = 0);
     int32_t convertIndicesToInt32(sBuffer_t& weights);
     bool isLayerIONumSupported(sTIDL_LayerPC_t &layer);
+
+    // Shared helpers for recurrent-layer parsers (LSTM, GRU, RNN)
+    static const std::map<std::string, int32_t> recurrentActivationMap;
+    static const std::map<int32_t, std::pair<float32_tidl, float32_tidl>> recurrentActivationAlphaBetaMap;
+    static bool getConstDim(const PrimExpr& expr, int64_t& val);
+    bool isLayerIODataTypesSupported(sTIDL_LayerPC_t &layer);
+    int32_t parseLogicalBinaryOp(int32_t opType, const char* errMsg,
+                                 int32_t weightIdx = 0, int32_t biasIdx = 1);
 };
+
+/* Maps a TVM/DLPack (dtype.code, dtype.bits) pair to a TIDL eTIDL_ElementType,
+ * or -1 if unsupported. Single source of truth for TVM->TIDL dtype mapping,
+ * shared by the class method getTIDLDataTypeFromTVMDataType and the free
+ * constant-extraction helpers in tidl_relayImport.cpp. */
+int32_t TIDL_getTidlTypeFromTVMDataType(int32_t code, int32_t bits);
+
+/* True if the expression's checked type is int64 - the index dtype that the
+ * gather/scatter/squeeze parsers must down-convert to int32. Centralizes the
+ * previously copy-pasted DLDataType2String(...) == "int64" checks. */
+bool TIDL_relayIsInt64Type(const Expr& expr);
+
+/* Returns the number of dimensions of the tensor at relay input position
+ * tensorIndex (checked against both var and const inputs), or defaultNumDim
+ * if that tensor's dims aren't recorded. */
+int32_t TIDL_getNumDimsForTensorIndex(const sTIDL_allowlistingMetaData &md, int32_t tensorIndex, int32_t defaultNumDim = 4);
 
 int32_t TIDL_relayExprDims(Expr expr);
 
@@ -134,6 +165,10 @@ int32_t balancePadding(sTIDL_LayerPC_t &layer, int32_t before, int32_t after);
 float* NDArrtoFloat(const runtime::NDArray &ndArr, int nelem, int ndarr_zp=0, float ndarr_scale=1.0f);
 
 long long int* NDArrtoInt64(const runtime::NDArray &ndArr, int nelem);
+
+int32_t* NDArrtoInt32(const runtime::NDArray &ndArr, int nelem);
+
+uint8_t* NDArrtoBool(const runtime::NDArray &ndArr, int nelem);
 
 sBuffer_t TIDL_extractConstantTensorData(const relay::Call& call, int arg_index,
                                         const sTIDL_allowlistingMetaData& md, int const_index, int ndarr_zp=0, float ndarr_scale=1.0f);

@@ -92,13 +92,12 @@ using ::google::protobuf::io::CodedOutputStream;
 #include "tidl_custom_import.h"
 #include "tidl_import_diag.h"
 
+#undef __MODULE__
 #define __MODULE__ "[PARSER]"
 
 extern sTIDL_OrgNetwork_t      orgTIDLNetStructure;
 extern sTIDL_OrgNetwork_t      tempTIDLNetStructure;
 extern sTIDL_Network_t         tIDLNetStructure;
-
-#define MAX_INPUT (100)
 
 typedef struct sTIDL_caffeLayerParamMap {
   int8_t name[TIDL_STRING_SIZE];
@@ -397,7 +396,7 @@ int32_t tidl_caffeLayerFillRenameTensorNames(sTIDL_OrgNetwork_t   *pOrgTIDLNetSt
     if(inPlaceIdx != inPlaceTotal-1)
     {
       // not the last layer, bottom is changed
-      char appendix[MAX_INPUT];
+      char appendix[100];
       strcpy(appendix, netStructure.layer(caffeLayerIdx).bottom(n).c_str());
       sprintf((char*)pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].inDataNames[n], "%s_TIDL_%d", appendix, inPlaceIdx+1);
     }
@@ -419,7 +418,7 @@ int32_t tidl_caffeLayerFillRenameTensorNames(sTIDL_OrgNetwork_t   *pOrgTIDLNetSt
     else
     {
       // not the last layer, top/output is changed
-      char appendix[MAX_INPUT];
+      char appendix[100];
       strcpy(appendix, netStructure.layer(caffeLayerIdx).top(m).c_str());
       sprintf((char*)pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].outDataNames[m], "%s_TIDL_%d", appendix, inPlaceIdx);
     }

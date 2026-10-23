@@ -289,6 +289,16 @@ extern "C" {
 #define TIVX_DL_POST_PROC_MAX_NUM_CLASSNAMES        (1000)
 #define TIVX_DL_POST_PROC_MAX_SIZE_CLASSNAME        (64)
 
+/* Detection output layout produced by the compiled TIDL model:
+ * NATIVE      - TIDLRT flow, raw TIDL_DetectionOutputLayer output: a single
+ *               tensor holding a TIDL_ODLayerHeaderInfo header followed by
+ *               TIDL_ODLayerObjInfo records (normalized [0,1] boxes)
+ * REFORMATTED - OSRT flow, TIDL_OdOutputReformatLayer splits output into
+ *               separate boxes/scores and labels tensors (pixel-space boxes)
+ */
+#define TIVX_DL_POST_PROC_OD_OUTPUT_NATIVE           (0U)
+#define TIVX_DL_POST_PROC_OD_OUTPUT_REFORMATTED      (1U)
+
 /** \brief Index of input image 1 in parameter list */
 #define APP_C7X_IMG_ADD_IN0_IMG_IDX   (0u)
 /** \brief Index of input image 2 in parameter list */
@@ -422,6 +432,9 @@ typedef struct{
 
     /** scaleY */
     vx_float32 scaleY;
+
+    /** Detection output layout, one of TIVX_DL_POST_PROC_OD_OUTPUT_* */
+    vx_uint32 outputFormat;
 
 }od_params;
 

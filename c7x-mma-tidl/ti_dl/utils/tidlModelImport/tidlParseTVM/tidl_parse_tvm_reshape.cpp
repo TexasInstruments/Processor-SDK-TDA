@@ -74,6 +74,12 @@ int32_t TidlParseTVM:: parse<OpNameStr("reshape")> ()
   int32_t * shape;
   sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
 
+  if (attrs == nullptr)
+  {
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Reshape layer : Unable to get ReshapeAttrs");
+    return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+  }
+
   layer.layerType = TIDL_ReshapeLayer;
   layer.weights.ptr = my_malloc(attrs->newshape.size()*sizeof(int32_t));
   layer.weights.bufSize = attrs->newshape.size();
@@ -83,61 +89,43 @@ int32_t TidlParseTVM:: parse<OpNameStr("reshape")> ()
     shape[i] = (int32_t)attrs->newshape[i]->value;
   }
 
-  status = checkShapeInferenceforOnnx(md);
-  
-  /**
-  * Handling 0 in the shape attribute
-  */
-  if ((status != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL) && (attrs->allowzero == 0))
+  /* Load const data tensor (input[0]) into layer.bias when it is a constant. */
   {
-    shape = (int32_t*)layer.weights.ptr;
-    for (int32_t i = 0; i < layer.weights.bufSize; i++)
+    auto constIt = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 0);
+    if (constIt != md.constTensorIndices.end())
     {
-      if (shape[i] == 0)
-      {
-        if (i < md.varTensorsDims[0].size())
-        {
-          shape[i] = md.varTensorsDims[0][i];
-        }
-        else
-        {
-          shape[i] = 1;
-        }
-      }
+      layer.bias = TIDL_extractConstantTensorData(call, 0, md, 0);
+    }
+    else
+    {
+      layer.bias.ptr     = NULL;
+      layer.bias.bufSize = 0;
     }
   }
 
-  /**
-  * Handling -1 in the shape attribute
-  */
+  status = checkShapeInferenceforOnnx(md);
+
+  layer.layerParams.reshapeParams.minusOneDimIdx  = -1;
+  layer.layerParams.reshapeParams.passthroughMask = 0;
   if (status != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
   {
-    shape = (int32_t*)layer.weights.ptr;
-    int32_t inputTotalVol = 1;
-    int32_t shapeTotalVol = 1;
-
-    int32_t negIdx = -1;
+    shape             = (int32_t*)layer.weights.ptr;
+    int32_t remDim    = TIDL_DIM_MAX - layer.weights.bufSize;
+    int32_t negIdx    = -1;
+    int32_t ptMask6D  = 0;
     for (int32_t i = 0; i < layer.weights.bufSize; i++)
     {
-      if (shape[i] == -1)
+      if (shape[i] == 0 && attrs->allowzero == 0)
+      {
+        ptMask6D |= (1 << (remDim + i));
+      }
+      else if (shape[i] == -1)
       {
         negIdx = i;
       }
-      else
-      {
-        shapeTotalVol = shapeTotalVol * shape[i];
-      }
     }
-
-    // Found -1 at negIdx
-    if(negIdx != -1)
-    {
-      for (int32_t i = 0; i < md.varTensorsDims[0].size(); i++)
-      {
-        inputTotalVol = inputTotalVol * md.varTensorsDims[0][i];
-      }
-      shape[negIdx] = inputTotalVol/shapeTotalVol;
-    }
+    layer.layerParams.reshapeParams.passthroughMask = ptMask6D;
+    layer.layerParams.reshapeParams.minusOneDimIdx  = (negIdx >= 0) ? (remDim + negIdx) : -1;
   }
 
   layer.layerPCParams.reshapeParams.allowZero = attrs->allowzero;

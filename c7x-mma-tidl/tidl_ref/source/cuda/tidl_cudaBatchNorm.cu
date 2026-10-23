@@ -187,6 +187,7 @@ int TIDL_cudaBatchNorm(
         {
             /*Log Error*/
             printf("BatchNorm: Unable to find input pointer\n");
+            return IALG_EFAIL;
         }
     }
 
@@ -195,6 +196,7 @@ int TIDL_cudaBatchNorm(
         if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), weights, (void**)&d_weights, weights_size) != IALG_EOK)
         {
             printf("BatchNorm: Unable to find weights pointer\n");
+            return IALG_EFAIL;
         }
         /* Will be copied async on stream below */
     }
@@ -204,6 +206,7 @@ int TIDL_cudaBatchNorm(
         if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), slopes, (void**)&d_slopes, slopes_size) != IALG_EOK)
         {
             printf("BatchNorm: Unable to find slopes pointer\n");
+            return IALG_EFAIL;
         }
         /* Will be copied async on stream below */
     }
@@ -213,12 +216,18 @@ int TIDL_cudaBatchNorm(
         if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), bias, (void**)&d_bias, bias_size) != IALG_EOK)
         {
             printf("BatchNorm: Unable to find bias pointer\n");
+            return IALG_EFAIL;
         }
     }
 
     if(TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accumulator, (void**)&dpAccumulator, acc_size) != IALG_EOK)
     {
-        printf("BatchNorm: Unable to find accumulator pointer\n");
+        if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), accumulator, (void**)&dpAccumulator, acc_size) != IALG_EOK)
+        {
+            /*Log Error*/
+            printf("BatchNorm: Unable to find accumulator pointer\n");
+            return IALG_EFAIL;
+        }
     }
 
     // ---- CUDA Streams Optimization ----------------------------------------
@@ -275,6 +284,7 @@ int TIDL_cudaBatchNormSaturation(
         {
             /*Log Error*/
             printf("BatchNorm: Unable to find output pointer\n");
+            return IALG_EFAIL;
         }
     }
 
@@ -315,7 +325,7 @@ int TIDL_cudaBatchNormSaturation(
 // CUDA device functions for High Accuracy Sigmoid - matching reference implementation exactly
 __device__ float cuda_div_sp(float x, float y) {
     // Newton-Raphson division matching reference div_sp implementation
-    float recp_y = __frcp_rn(y);  // CUDA reciprocal approximation
+    float recp_y = __recip_bitmatch(y);  // CUDA reciprocal approximation
     float TWO = 2.0f;
     float result;
     
@@ -366,11 +376,11 @@ __global__ void HighAccuracySigmoidKernel(
     int numTotBatches, int numChannels, int imWidth, int imHeight, int inDim1, int inDim2,
     int inBatchPitch, int inChPitch, int inDim1Pitch, int inDim2Pitch, int inPitch,
     int outBatchPitch, int outChPitch, int outDim1Pitch, int outDim2Pitch, int outPitch,
-    float inputScale, float outputScale)
+    float inDataScaleFact, float outputScale, float tensorZeroPoint)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int total_elements = numTotBatches * inDim1 * inDim2 * numChannels * imHeight * imWidth;
-    
+
     if (idx >= total_elements) return;
 
     // Convert linear index to 6D coordinates (batch, dim1, dim2, channel, height, width)
@@ -384,12 +394,9 @@ __global__ void HighAccuracySigmoidKernel(
 
     // Get input value - exact same indexing as reference
     Tin inDataVal = inData[(b*inBatchPitch) + (d1*inDim1Pitch) + (d2*inDim2Pitch) + (c*inChPitch) + (h*inPitch) + w];
-    
-    // Calculate inDataScaleFact as per reference implementation
-    float inDataScaleFact = ((-1.0f) * 1.44269504090f) / inputScale;
-    
-    // High accuracy sigmoid computation - exact same as reference
-    float inValF = inDataVal * inDataScaleFact;
+
+    // High accuracy sigmoid computation - subtract tensorZeroPoint before scaling (matches reference)
+    float inValF = ((float)inDataVal - tensorZeroPoint) * inDataScaleFact;
     float outValF = cuda_div_sp(1.0f, (cuda_exp_taylor_sigmoid(inValF) + 1.0f));
     outValF = outValF * outputScale;
     
@@ -409,7 +416,7 @@ int TIDL_cudaHighAccuracySigmoid(
     int numTotBatches, int numChannels, int imWidth, int imHeight, int inDim1, int inDim2,
     int inBatchPitch, int inChPitch, int inDim1Pitch, int inDim2Pitch, int inPitch,
     int outBatchPitch, int outChPitch, int outDim1Pitch, int outDim2Pitch, int outPitch,
-    float inputScale, float outputScale)
+    float inDataScaleFact, float outputScale, float tensorZeroPoint)
 {
     // Calculate memory sizes
     size_t input_size = numTotBatches * inBatchPitch * sizeof(Tin);
@@ -418,29 +425,40 @@ int TIDL_cudaHighAccuracySigmoid(
     Tin* dpInput = NULL;
     Tout* dpOutput = NULL;
 
-    void* inPtrs[1] = {(void*)input};
-    uint32_t inDataSizes[1] = {(uint32_t)input_size};
-    TIDL_cudaMemManagerPreLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), inPtrs, NULL, 1, inDataSizes);
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size) != IALG_EOK)
+        {
+            printf("HighAccuracySigmoid: Unable to find input pointer\n");
+        }
+    }
 
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size);
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size);
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size) != IALG_EOK)
+        {
+            printf("HighAccuracySigmoid: Unable to find output pointer\n");
+        }
+    }
+
+    cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
+
+    checkCudaErr(cudaMemcpyAsync(dpInput, input, input_size, cudaMemcpyHostToDevice, stream));
 
     // Launch kernel
     int total_elements = numTotBatches * inDim1 * inDim2 * numChannels * imHeight * imWidth;
     int gridSize = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-    
-    HighAccuracySigmoidKernel<Tin, Tout><<<gridSize, THREADS_PER_BLOCK>>>(
+
+    HighAccuracySigmoidKernel<Tin, Tout><<<gridSize, THREADS_PER_BLOCK, 0, stream>>>(
         dpInput, dpOutput,
         numTotBatches, numChannels, imWidth, imHeight, inDim1, inDim2,
         inBatchPitch, inChPitch, inDim1Pitch, inDim2Pitch, inPitch,
         outBatchPitch, outChPitch, outDim1Pitch, outDim2Pitch, outPitch,
-        inputScale, outputScale);
+        inDataScaleFact, outputScale, tensorZeroPoint);
 
+    checkCudaErr(cudaMemcpyAsync(output, dpOutput, output_size, cudaMemcpyDeviceToHost, stream));
+    checkCudaErr(cudaStreamSynchronize(stream));
     checkCudaErr(cudaGetLastError());
-    
-    void* outPtrs[1] = {(void*)output};
-    uint32_t outDataSizes[1] = {(uint32_t)output_size};
-    TIDL_cudaMemManagerPostLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), outPtrs, 1, outDataSizes);
 
     return IALG_EOK;
 }
@@ -505,20 +523,50 @@ int TIDL_cudaSigmoid(
     Tout* dpSlope = NULL;
     Tout* dpOffset = NULL;
 
-    void* inPtrs[1] = {(void*)input};
-    uint32_t inDataSizes[1] = {(uint32_t)input_size};
-    TIDL_cudaMemManagerPreLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), inPtrs, NULL, 1, inDataSizes);
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size) != IALG_EOK)
+        {
+            printf("Sigmoid: Unable to find input pointer\n");
+        }
+    }
 
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size);
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accumulator, (void**)&dpAccumulator, acc_size);
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), slope, (void**)&dpSlope, slope_size);
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), offset, (void**)&dpOffset, offset_size);
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accumulator, (void**)&dpAccumulator, acc_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size) != IALG_EOK)
+        {
+            printf("Sigmoid: Unable to find accumulator pointer\n");
+        }
+        
+    }
+
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), slope, (void**)&dpSlope, slope_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), slope, (void**)&dpSlope, slope_size) != IALG_EOK)
+        {
+            printf("Sigmoid: Unable to find slope pointer\n");
+        }
+    }
+
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), offset, (void**)&dpOffset, offset_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), offset, (void**)&dpOffset, offset_size) != IALG_EOK)
+        {
+            printf("Sigmoid: Unable to find offset pointer\n");
+        }
+    }
+
+    cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
+
+    checkCudaErr(cudaMemcpyAsync(dpInput, input, input_size, cudaMemcpyHostToDevice, stream));
+    if (dpSlope  != NULL) checkCudaErr(cudaMemcpyAsync(dpSlope,  slope,  slope_size,  cudaMemcpyHostToDevice, stream));
+    if (dpOffset != NULL) checkCudaErr(cudaMemcpyAsync(dpOffset, offset, offset_size, cudaMemcpyHostToDevice, stream));
 
     // Launch kernel
     int total_elements = numTotBatches * numChannels * imHeight * imWidth;
     int gridSize = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-    
-    TIDL_CudaSigmoidKernel<Tin, Tout, Tacc><<<gridSize, THREADS_PER_BLOCK>>>(
+
+    TIDL_CudaSigmoidKernel<Tin, Tout, Tacc><<<gridSize, THREADS_PER_BLOCK, 0, stream>>>(
         dpInput, dpAccumulator,
         numTotBatches, numChannels, imWidth, imHeight,
         inBatchPitch, inChPitch, inPitch,
@@ -526,6 +574,7 @@ int TIDL_cudaSigmoid(
         threshold0, threshold1, threshold2, inDataScale,
         dpSlope, dpOffset, offsetScale);
 
+    checkCudaErr(cudaStreamSynchronize(stream));
     checkCudaErr(cudaGetLastError());
 
     return IALG_EOK;
@@ -578,24 +627,34 @@ int TIDL_cudaSigmoidSaturation(
     Tacc* dpAccumulator = NULL;
     Tout* dpOutput = NULL;
 
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accumulator, (void**)&dpAccumulator, acc_size);
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size);
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accumulator, (void**)&dpAccumulator, acc_size) != IALG_EOK)
+    {
+        printf("SigmoidSaturation: Unable to find accumulator pointer\n");
+    }
+
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size) != IALG_EOK)
+        {
+            printf("SigmoidSaturation: Unable to find output pointer\n");
+        }
+    }
+
+    cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
 
     // Launch kernel
     int total_elements = numTotBatches * numChannels * imHeight * imWidth;
     int gridSize = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-    
-    SigmoidSaturateKernel<Tacc, Tout><<<gridSize, THREADS_PER_BLOCK>>>(
+
+    SigmoidSaturateKernel<Tacc, Tout><<<gridSize, THREADS_PER_BLOCK, 0, stream>>>(
         dpAccumulator, dpOutput,
         numTotBatches, numChannels, imWidth, imHeight,
         outBatchPitch, outChPitch, outPitch,
         outRoundBits, satLow, satHigh);
 
+    checkCudaErr(cudaMemcpyAsync(output, dpOutput, output_size, cudaMemcpyDeviceToHost, stream));
+    checkCudaErr(cudaStreamSynchronize(stream));
     checkCudaErr(cudaGetLastError());
-    
-    void* outPtrs[1] = {(void*)output};
-    uint32_t outDataSizes[1] = {(uint32_t)output_size};
-    TIDL_cudaMemManagerPostLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), outPtrs, 1, outDataSizes);
 
     return IALG_EOK;
 }
@@ -649,29 +708,40 @@ int TIDL_cudaFloatSigmoid(
     Tin* dpInput = NULL;
     Tout* dpOutput = NULL;
 
-    void* inPtrs[1] = {(void*)input};
-    uint32_t inDataSizes[1] = {(uint32_t)input_size};
-    TIDL_cudaMemManagerPreLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), inPtrs, NULL, 1, inDataSizes);
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size) != IALG_EOK)
+        {
+            printf("FloatSigmoid: Unable to find input pointer\n");
+        }
+    }
 
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size);
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size);
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size) != IALG_EOK)
+        {
+            printf("FloatSigmoid: Unable to find output pointer\n");
+        }
+    }
+
+    cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
+
+    checkCudaErr(cudaMemcpyAsync(dpInput, input, input_size, cudaMemcpyHostToDevice, stream));
 
     // Launch kernel
     int total_elements = numTotBatches * inDim1 * inDim2 * numChannels * imHeight * imWidth;
     int gridSize = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-    
-    FloatSigmoidKernel<Tin, Tout><<<gridSize, THREADS_PER_BLOCK>>>(
+
+    FloatSigmoidKernel<Tin, Tout><<<gridSize, THREADS_PER_BLOCK, 0, stream>>>(
         dpInput, dpOutput,
         numTotBatches, numChannels, imWidth, imHeight, inDim1, inDim2,
         inBatchPitch, inChPitch, inDim1Pitch, inDim2Pitch, inPitch,
         outBatchPitch, outChPitch, outDim1Pitch, outDim2Pitch, outPitch);
 
+    checkCudaErr(cudaMemcpyAsync(output, dpOutput, output_size, cudaMemcpyDeviceToHost, stream));
+    checkCudaErr(cudaStreamSynchronize(stream));
     checkCudaErr(cudaGetLastError());
-    
-    void* outPtrs[1] = {(void*)output};
-    uint32_t outDataSizes[1] = {(uint32_t)output_size};
-    TIDL_cudaMemManagerPostLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), outPtrs, 1, outDataSizes);
-    
+
     return IALG_EOK;
 }
 
@@ -722,37 +792,51 @@ int TIDL_cudaNonLinearLUT(
     // Calculate memory sizes
     size_t input_size = numTotBatches * inBatchPitch * sizeof(Tin);
     size_t output_size = numTotBatches * outBatchPitch * sizeof(Tout);
+    int32_t lut_table_size = 0; // needs to be set correctly when enabled
 
     Tin* dpInput = NULL;
     Tout* dpOutput = NULL;
     Tout* d_lutTable = NULL;
 
-    
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size) != IALG_EOK)
+        {
+            printf("NonLinearLUT: Unable to find input pointer\n");
+        }
+    }
 
-    void* inPtrs[1] = {(void*)input};
-    uint32_t inDataSizes[1] = {(uint32_t)input_size};
-    TIDL_cudaMemManagerPreLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), inPtrs, NULL, 1, inDataSizes);
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size) != IALG_EOK)
+        {
+            printf("NonLinearLUT: Unable to find output pointer\n");
+        }
+    }
 
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size);
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size);
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), lutTable, (void**)&d_lutTable, NULL);
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), lutTable, (void**)&d_lutTable, lut_table_size) != IALG_EOK)
+    {
+        printf("NonLinearLUT: Unable to find lutTable pointer\n");
+    }
+
+    cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
+
+    checkCudaErr(cudaMemcpyAsync(dpInput, input, input_size, cudaMemcpyHostToDevice, stream));
 
     // Launch kernel
     int total_elements = numTotBatches * inDim1 * inDim2 * numChannels * imHeight * imWidth;
     int gridSize = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-    
-    NonLinearLUTKernel<Tin, Tout><<<gridSize, THREADS_PER_BLOCK>>>(
+
+    NonLinearLUTKernel<Tin, Tout><<<gridSize, THREADS_PER_BLOCK, 0, stream>>>(
         dpInput, dpOutput, d_lutTable,
         numTotBatches, numChannels, imWidth, imHeight, inDim1, inDim2,
         inBatchPitch, inChPitch, inDim1Pitch, inDim2Pitch, inPitch,
         outBatchPitch, outChPitch, outDim1Pitch, outDim2Pitch, outPitch,
         readOffsetLUT);
 
+    checkCudaErr(cudaMemcpyAsync(output, dpOutput, output_size, cudaMemcpyDeviceToHost, stream));
+    checkCudaErr(cudaStreamSynchronize(stream));
     checkCudaErr(cudaGetLastError());
-    
-    void* outPtrs[1] = {(void*)output};
-    uint32_t outDataSizes[1] = {(uint32_t)output_size};
-    TIDL_cudaMemManagerPostLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), outPtrs, 1, outDataSizes);
 
     return IALG_EOK;
 }
@@ -848,39 +932,54 @@ int TIDL_cudaNonLinearInterpolLUT(
     int outBatchPitch, int outChPitch, int outDim1Pitch, int outDim2Pitch, int outPitch,
     int32_t f1, int32_t f2, int32_t inoffset)
 {
-
     // Calculate memory sizes
     size_t input_size = numTotBatches * inBatchPitch * sizeof(Tin);
     size_t output_size = numTotBatches * outBatchPitch * sizeof(Tout);
+    int32_t lut_table_size = 0; // needs to be set correctly when enabled
 
     Tin* dpInput = NULL;
     Tout* dpOutput = NULL;
     Tout* d_lutTable = NULL;
 
-    void* inPtrs[1] = {(void*)input};
-    uint32_t inDataSizes[1] = {(uint32_t)input_size};
-    TIDL_cudaMemManagerPreLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), inPtrs, NULL, 1, inDataSizes);
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size) != IALG_EOK)
+        {
+            printf("NonLinearInterpolLUT: Unable to find input pointer\n");
+        }
+    }
 
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), input, (void**)&dpInput, input_size);
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size);
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), lutTable, (void**)&d_lutTable, NULL);
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), output, (void**)&dpOutput, output_size) != IALG_EOK)
+        {
+            printf("NonLinearInterpolLUT: Unable to find output pointer\n");
+        }
+    }
+
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), lutTable, (void**)&d_lutTable, lut_table_size) != IALG_EOK)
+    {
+        printf("NonLinearInterpolLUT: Unable to find lutTable pointer\n");
+    }
+
+    cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
+
+    checkCudaErr(cudaMemcpyAsync(dpInput, input, input_size, cudaMemcpyHostToDevice, stream));
 
     // Launch kernel
     int total_elements = numTotBatches * inDim1 * inDim2 * numChannels * imHeight * imWidth;
     int gridSize = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-    
-    NonLinearInterpolLUTKernel<Tin, Tout><<<gridSize, THREADS_PER_BLOCK>>>(
+
+    NonLinearInterpolLUTKernel<Tin, Tout><<<gridSize, THREADS_PER_BLOCK, 0, stream>>>(
         dpInput, dpOutput, d_lutTable,
         numTotBatches, numChannels, imWidth, imHeight, inDim1, inDim2,
         inBatchPitch, inChPitch, inDim1Pitch, inDim2Pitch, inPitch,
         outBatchPitch, outChPitch, outDim1Pitch, outDim2Pitch, outPitch,
         f1, f2, inoffset);
 
+    checkCudaErr(cudaMemcpyAsync(output, dpOutput, output_size, cudaMemcpyDeviceToHost, stream));
+    checkCudaErr(cudaStreamSynchronize(stream));
     checkCudaErr(cudaGetLastError());
-    
-    void* outPtrs[1] = {(void*)output};
-    uint32_t outDataSizes[1] = {(uint32_t)output_size};
-    TIDL_cudaMemManagerPostLayerSync(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx(), outPtrs, 1, outDataSizes);
 
     return IALG_EOK;
 }
@@ -932,10 +1031,11 @@ template int TIDL_cudaBatchNormSaturation<int, bfloat16_tidl>(int const*, bfloat
 template int TIDL_cudaBatchNormSaturation<long, bfloat16_tidl>(long const*, bfloat16_tidl*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
 
 
-template int TIDL_cudaHighAccuracySigmoid<short, unsigned short>(short const*, unsigned short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaHighAccuracySigmoid<unsigned char, unsigned char>(unsigned char const*, unsigned char*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaHighAccuracySigmoid<signed char, unsigned char>(signed char const*, unsigned char*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
-template int TIDL_cudaHighAccuracySigmoid<unsigned short, unsigned short>(unsigned short const*, unsigned short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float);
+template int TIDL_cudaHighAccuracySigmoid<short, unsigned short>(short const*, unsigned short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float, float);
+template int TIDL_cudaHighAccuracySigmoid<unsigned char, unsigned char>(unsigned char const*, unsigned char*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float, float);
+template int TIDL_cudaHighAccuracySigmoid<signed char, unsigned char>(signed char const*, unsigned char*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float, float);
+template int TIDL_cudaHighAccuracySigmoid<unsigned short, unsigned short>(unsigned short const*, unsigned short*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float, float);
+template int TIDL_cudaHighAccuracySigmoid<floating_point::bfloat16_t, floating_point::bfloat16_t>(floating_point::bfloat16_t const*, floating_point::bfloat16_t*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, float, float, float);
 
 template int TIDL_cudaFloatSigmoid<float, float>(float const*, float*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int);
 

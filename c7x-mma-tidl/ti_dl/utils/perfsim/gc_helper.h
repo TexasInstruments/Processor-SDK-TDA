@@ -46,7 +46,6 @@
 */
 typedef enum {
   LINK_X_FM_IN_FULL_TO_PART = 0,    /**< Feature map full to part                 */
-  LINK_X_COEFF_IN_FULL_TO_ADV,      /**< Coeffs full to advance                   */
   LINK_X_COEFF_IN_FULL_TO_STAGE,    /**< Coeffs full to intermediate              */
   LINK_X_COEFF_IN_ANY_TO_FINAL,     /**< Coeffs from any place to final           */
   LINK_X_BIAS_IN_FULL_TO_FINAL,     /**< Bias from full to final                  */
@@ -163,12 +162,12 @@ typedef struct
 
 typedef struct
 {
-  uint64_t numSplitB : 8;
-  int64_t inNumBatch : 8;
-  int64_t outNumBatch : 8;
-  int64_t numInCh : 16;
-  int64_t numOutCh : 16;
-  int64_t numGrp : 8;
+  uint64_t numSplitB : 12;
+  uint64_t inNumBatch : 7;
+  uint64_t outNumBatch : 7;
+  uint64_t numInCh : 15;
+  uint64_t numOutCh : 15;
+  uint64_t numGrp : 8;
 } sIntWLMetaDataIDExt_t;
 
 /**<
@@ -329,7 +328,6 @@ int32_t getLinkIdx(const sWorkloadUnit_t *pWL, int32_t linkSubType, int32_t *lin
 //:TODO: Temporary location need to work on right location for this structure
 typedef struct
 {
-  int32_t groupIdx;
   int32_t subGroupIdx;
   int32_t countIdx;
   int32_t workLoadIdx;
@@ -338,7 +336,7 @@ typedef struct
   int32_t layerGroupId;
   sTIDL_Network_t       *net;
   sGCHelperHandle * gcHelperHandle;
-  sWorkloadSuperGroup_t *wlSuperGroup;
+  sWorkloadGroup_t *wlGroup;
 }sGetLayerIdContext_t;
 
 
@@ -362,7 +360,7 @@ void getLayerIdInit(void * getIdContext,
                             int32_t layerGroupId,
                             sTIDL_Network_t       *net_m,
                             sGCHelperHandle         *gcHelperHandle,
-                            sWorkloadSuperGroup_t *wlSuperGroup);
+                            sWorkloadGroup_t *wlGroup);
 
 /**
 ----------------------------------------------------------------------------
@@ -385,7 +383,7 @@ int32_t getLayerIdToExecute(void * getIdContext,
                                          sWorkloadUnit_t        **workLoadUnit);
 
 int32_t getNumSplits(const void *workloadHandle);
-int8_t * get_int8_t_pointer(int8_t arr[], int32_t offset);
+int8_t * get_int8_t_pointer(int8_t arr[], uint32_t offset);
 void TIDL_factorizeBy64K(uint32_t icnt0, uint32_t icnt1, uint32_t *factorLarge, uint32_t *factorSmall);
 int8_t * getGCDataBase(sGraphCompilerOutArgs_t *gcInfo, int32_t dataBaseType);
 
@@ -398,79 +396,4 @@ int32_t getNumInChforCore(int32_t coreIdx, int32_t numCore, int32_t totalNi, int
 /*this function is used calculate output channel to be processed by a core across multi-core channel split*/
 int32_t getNumOutChforCore(int32_t coreIdx, int32_t numCore, int32_t totalNo, int32_t totalGrpNum, int32_t layerType);
 #endif
-
-#if 0
-
-/*--------------------------------------------------------------------------- */
-/* For a given network, given layer - there can be one or multiple workload   */
-/* unit, we shall provide query functions to retrieve multiple                */
-/* information. Some of the key information are                               */
-/* 1. Number of links                                                         */
-/* 2. Number of iterations                                                    */
-/* 3. For a given link by subtype                                             */
-/*  a.Number of source                                                        */
-/*  b.what kind of data is at given source index                              */
-/*  c.buffer data base index for a given source index                         */
-/*  d.Meta information of the workload unit to which the link belongs to      */
-/*   d.1 {inwidth, inheight, inChannels, outChannels, Fr, Fc, grp, pad}       */
-/*   d.2 {subWidth, subHeight, subNi, subNo, startX, startY, startNi, startNo}*/
-/*   d.3 {procWidth, procHeight, procNi, procNo}                              */
-/*--------------------------------------------------------------------------- */
-
-typedef struct
-{
-  int32_t Fr;
-  int32_t Fc;
-  int32_t grp;
-  int32_t dilationR;
-  int32_t dilationC;
-} sMetaDataPramas_t;
-
-typedef struct
-{
-  int32_t width;
-  int32_t height;
-  int32_t channels;
-  int32_t batch;
-  int32_t layout;
-} sMetaDataTensorDim_t;
-
-typedef struct
-{
-  int32_t startX;
-  int32_t startY;
-  int32_t startChannel;
-  int32_t startBatch;
-} sMetaDataTensorPos_t;
-
-typedef enum
-{
-TENSOR_FULL = 0,
-TENSOR_SUB,
-TENSOR_PROC
-} eTensorSizeType;
-
-typedef enum
-{
-IN = 0,
-OUT
-} eDir;
-
-int32_t getTensorPosInfo(
-  sMetaDataTensorPos_t *pTensor,
-  int32_t networkId,
-  int32_t layerId,
-  int32_t subLayerId,
-  int32_t tenosrSizeType,
-  int32_t dir);
-
-int32_t getTensorDimInfo(
-  sMetaDataTensorDim_t  *pTensor,
-  int32_t networkId,
-  int32_t layerId,
-  int32_t subLayerId,
-  int32_t tenosrSizeType,
-  int32_t dir);
-#endif
-
 

@@ -190,6 +190,8 @@ static const char * TIDL_LayerString[] =
 "TIDL_SizeLayer            ",
 "TIDL_AttentionLayer       ",
 "TIDL_NonZeroLayer         ",
+"TIDL_GroupQueryAttentionLayer",
+"TIDL_MatMulNBitsLayer     ",
 "TIDL_UnsupportedLayer     ",
 };
 
@@ -414,6 +416,7 @@ int32_t getNumberOfLinesIntheFile(char * fileName)
 {
   FILE * fp1;
   int32_t lineCnt = 0;
+  char * fgetStatus = NULL;
 
   fp1 = fopen((const char *)fileName, "r");
   if (fp1 == NULL)
@@ -423,7 +426,8 @@ int32_t getNumberOfLinesIntheFile(char * fileName)
   }
   while (!feof(fp1))
   {
-    fgets(line, TIDL_CFG_MAX_LINE_SIZE, fp1);
+    fgetStatus = fgets(line, TIDL_CFG_MAX_LINE_SIZE, fp1);
+    (void)fgetStatus;
     if(line[strlen(line) - 1] != '\n')
     {
       tidl_tb_printf(0, "Malformed line %d in %s file, no terminating newline \n", lineCnt, fileName);
@@ -477,6 +481,7 @@ int32_t getConfigFileNamesList(char * fileName, int32_t *multiInstance, int8_t**
   int32_t stringSize;
   int32_t mtDetected = 0;
   int32_t pos = 0;
+  char * fgetStatus = NULL;
 
   fp1 = fopen((const char *)fileName, "r");
   if (fp1 == NULL)
@@ -486,7 +491,8 @@ int32_t getConfigFileNamesList(char * fileName, int32_t *multiInstance, int8_t**
   }
   while (!feof(fp1))
   {
-    fgets(line, TIDL_CFG_MAX_LINE_SIZE, fp1);
+    fgetStatus = fgets(line, TIDL_CFG_MAX_LINE_SIZE, fp1);
+    (void)fgetStatus;
     sscanf(line, "%d%n",&config_cmd, &pos);
     if(config_cmd == 4)
     {
@@ -676,6 +682,7 @@ void setDefaultParams(tidl_net_config * params)
   strcpy((char*)params->tempBufferDir, "/dev/shm");
   params->forceNegativeTest         = 0;
   params->enableCodeCoverage        = 0;
+  params->enableDDRPerfStats        = 0;
   params->releaseIOTensorsAtCreate  = 0;
 #if (HOST_EMULATION)
   params->logStats                  = 0;
@@ -898,7 +905,8 @@ void tidl_tb_dataConvert(void *src, void *dst, int32_t src_offset, int32_t dst_o
                          float in_zf, float out_zf, float in_scale, float out_scale, int32_t in_type, int32_t out_type)
 {
     int32_t ii, i0, i1, i2, i3, i4, in_idx, out_idx;
-    float data, scale = out_scale / in_scale;
+    float data = 0.0f;
+    float scale = out_scale / in_scale;
     for  (ii = 0; ii < batch; ii++)
     {
       for (i0 = 0; i0 < nd1; i0++)
@@ -1075,10 +1083,10 @@ int32_t readRAWData(TI_FILE *fptr, void *ptr, int32_t batch, int32_t n, int32_t 
 }
 
 //Usage is to get Net file size or IO Desc file size
-int32_t tidl_getFileSize(uint8_t * fileString)
+uint32_t tidl_getFileSize(uint8_t * fileString)
 {
   TI_FILE * fptr;
-  int32_t netSize;
+  uint32_t netSize;
 
   fptr = FOPEN((const char *)fileString, "rb");
   if (fptr)
@@ -1092,7 +1100,7 @@ int32_t tidl_getFileSize(uint8_t * fileString)
   {
     tidl_tb_printf(0, "Could Not Open Files %s\n", fileString);
   }
-  return -1;
+  return 0;
 }
 
 int32_t tidl_getTotalStaticNetworks(void* ptr)
@@ -1297,18 +1305,18 @@ int32_t tidl_writeAsStaticArray(uint8_t * ptr, int8_t * FileName, int32_t size, 
 int32_t tidl_readFile(void * file, uint8_t * fileString)
 {
   TI_FILE * fptr;
-  int32_t fileSize = tidl_getFileSize(fileString);
-  int32_t   freadStatus = 0;
-
+  uint32_t fileSize = tidl_getFileSize(fileString);
+  TIDLTB_ASSERT_EXIT(fileSize != 0);
+  int32_t freadStatus = 0;
   fptr = FOPEN((const char *)fileString, "rb");
   if(fptr)
   {
     freadStatus = FREAD(file, 1, fileSize, fptr);
+    FCLOSE(fptr);
     if ( freadStatus == 0 )
     {
       return -1;
     }
-    FCLOSE(fptr);
     return 0;
   }
   else
@@ -1383,7 +1391,8 @@ int32_t tidl_updateNet(sTIDL_Network_t * netDst, sTIDL_Network_t * netSrc, tidl_
 
 int32_t tidl_writeNetWithStats(tidl_net_config * params, sTIDL_Network_t * net)
 {
-  int32_t netSize = tidl_getFileSize(params->netBinFile);
+  uint32_t netSize = tidl_getFileSize(params->netBinFile);
+  TIDLTB_ASSERT_EXIT(netSize != 0);
   sTIDL_Network_t * origNet = (sTIDL_Network_t *)malloc(netSize);
   if (origNet != NULL)
   {
@@ -1403,7 +1412,7 @@ int32_t tidl_writeNetWithStats(tidl_net_config * params, sTIDL_Network_t * net)
   return 0;
 }
 
-int32_t tidl_tb_WriteBinToFile(const char * fileName, void * addr, int32_t size, int32_t count)
+int32_t tidl_tb_WriteBinToFile(const char * fileName, void * addr, uint32_t size, int32_t count)
 {
   bool select_layer = false;
   bool convert_to_text = false; // useful in visualizing the float data. Should be enabled in float data only for debugging
@@ -1466,7 +1475,7 @@ int32_t tidl_tb_WriteBinToFile(const char * fileName, void * addr, int32_t size,
           int32_t line_pitch=elements_per_line;
           if (fptr)
           {
-            for(i = 0; i< size/4; i+=line_pitch)
+            for(i = 0; i< (int32_t)(size/4); i+=line_pitch)
             {
               for(j = 0; j < elements_per_line; j++)
               {
@@ -1501,13 +1510,15 @@ int32_t tidl_tb_WriteBinToFile(const char * fileName, void * addr, int32_t size,
   }
   return -1;
 }
-int32_t tidl_tb_ReadBinFromFile(const char * fileName, void * addr, int32_t size, int32_t count)
+int32_t tidl_tb_ReadBinFromFile(const char * fileName, void * addr, uint32_t size, int32_t count)
 {
   TI_FILE * fptr = NULL;
+  size_t fReadSize = 0;
   fptr = FOPEN((const char *)fileName, "rb");
   if(fptr)
   {
-    FREAD(addr, size, 1, fptr);
+    fReadSize = FREAD(addr, size, 1, fptr);
+    (void)fReadSize;
     FCLOSE(fptr);
     return 0;
   }
@@ -1963,6 +1974,7 @@ int32_t tidl_CompareNetOutputMem(tidl_net_config *params, sTIDL_IOBufDesc_t *ioP
   int32_t i;
   int8_t * readPtr;
   int32_t status, readSize = 0;
+  size_t freadStatus = 0;
 
   if(firstOutWrite)
   {
@@ -1987,7 +1999,8 @@ int32_t tidl_CompareNetOutputMem(tidl_net_config *params, sTIDL_IOBufDesc_t *ioP
         exit(-1);
     }
 
-    FREAD(readPtr, 1, readSize, refCompareFile);
+    freadStatus = FREAD(readPtr, 1, readSize, refCompareFile);
+    (void)freadStatus;
     status = memcmp(readPtr,out[i]->ptr, readSize);
     free(readPtr);
     if (status)
@@ -2049,7 +2062,7 @@ int32_t tidl_NetOutputPostproc(tidl_net_config *params, sTIDL_IOBufDesc_t * ioPr
     int32_t numOutputsPerCore = ioPrms->numOutputBuf / numBatches;
     for(i = 0; i < ioPrms->numOutputBuf; i++)
     {
-      if((i % numOutputsPerCore) == params->postProcDataId)
+      if((i % numOutputsPerCore) == (int32_t)params->postProcDataId)
       {
         tidl_tb_postProc(ioPrms->outWidth[i], ioPrms->outHeight[i], ioPrms->outNumChannels[i], frameCount + i/numOutputsPerCore, out[i]->ptr, out[i]->elementType);
       }
@@ -2183,7 +2196,7 @@ int32_t tidltb_printNetInfo(sTIDL_Network_t * pTIDLNetStructure,
     }
     sprintf(printBuf + strlen(printBuf),"|");
     sprintf(printBuf + strlen(printBuf),"%3d       |",pTIDLNetStructure->TIDLLayers[i].outData.dataId);
-    for (j = 0; j < TIDL_DIM_MAX; j++) //changed
+    for (j = 0; j < (int32_t)TIDL_DIM_MAX; j++) //changed
     {
       sprintf(printBuf + strlen(printBuf),"%8d ",pTIDLNetStructure->TIDLLayers[i].outData.dimValues[j]);
     }
@@ -2335,7 +2348,7 @@ int32_t tidl_tb_printf(int8_t traceLevel, const char *format, ...)
 {
   int32_t status = 0;
 
-  if(traceLevel <= gParams.debugTraceLevel)
+  if(traceLevel <= (int8_t)gParams.debugTraceLevel)
   {
     va_list args;
     va_start(args, format);
@@ -2354,7 +2367,7 @@ void tidl_tb_progressBar(float progress)
   int32_t i;
   tidl_tb_printf(0,"[");
   int32_t pos = progress * TIDL_PROGRESS_BAR_WIDTH;
-  for(i = 0; i < TIDL_PROGRESS_BAR_WIDTH; i++)
+  for(i = 0; i < (int32_t)TIDL_PROGRESS_BAR_WIDTH; i++)
   {
     if (i < pos)
     {
@@ -2370,7 +2383,7 @@ void tidl_tb_progressBar(float progress)
     }
   }
   tidl_tb_printf(0,"]");
-  tidl_tb_printf(0," %d %\r", (int)(progress * 100.0));
+  tidl_tb_printf(0," %d%%\r", (int)(progress * 100.0));
 }
 
 #define TIDL_TB_MAX_CORENUM (TIDL_MAX_NUM_CORES) /* IMP: Should be in synch and same as TIDL_MAX_CORENUM*/

@@ -310,7 +310,7 @@ int32_t TIDL_roiPoolingRefProcess(
   numInChannels = featInDataParams->dimValues[TIDL_DIM_NUMCH];
 
   numBoxes = objDetHeader->numDetObjects;
-  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(intAlgHandle->createParams->net, tidlLayer->inData[0]);
+  sTIDL_DataParams_t *inDataParams = &intAlgHandle->createParams->net->TIDLLayers[tidlLayer->inData[0]].outData;
 
   for (boxIdx = 0; boxIdx < numBoxes; boxIdx++)
   {

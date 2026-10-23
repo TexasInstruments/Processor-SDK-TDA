@@ -147,12 +147,32 @@ double TIDL_getReadAccessCycles(const void* srcAddr, const uint32_t numBytes)
 
 double TIDL_getWriteAccessCycles(const void* dstAddr, const uint32_t numBytes)
 {
-    double writeCycles;
-    int32_t writeSpace;
-    
-    writeSpace = TIDL_getMemSpace((void*)dstAddr);
-    writeCycles = (double)numBytes/memSpaceProp[writeSpace].bytesPerCPUCycle;
-    
+    int32_t writeSpace = TIDL_getMemSpace((void*)dstAddr);
+
+    /* Nominal number of 64-byte cache-line blocks */
+    uint32_t numBlocks = (numBytes + 63U) / 64U;
+
+    /* Alignment RMW penalty (applies to DDR; MSMC uses byte-enables, no RMW needed):
+     *   - Misaligned start:  first CL is a partial write → needs RMW pre-read → +1
+     *   - Misaligned end (different CL from start): last CL is partial → +1
+     * So: aligned write → 0 penalty; only-start misaligned → n+1; both misaligned
+     * and spanning ≥2 CLs → n+2.
+     * Guard (actualBlocks > 1) prevents double-counting when start AND end are
+     * both non-zero but lie in the SAME cache line (e.g. bytes 10→49: penalty=1 not 2).
+     */
+    uint32_t alignPenalty = 0U;
+    if (writeSpace == MEMSPACE_DDR)
+    {
+        uint32_t startOffset  = (uint32_t)((uintptr_t)dstAddr & 63U);
+        uint32_t endOffset    = (uint32_t)((startOffset + numBytes) & 63U);
+        uint32_t actualBlocks = (startOffset + numBytes + 63U) / 64U;
+        if (startOffset != 0U)                          alignPenalty++;  /* RMW for first partial CL */
+        if (endOffset   != 0U && actualBlocks > 1U)     alignPenalty++;  /* RMW for last partial CL */
+    }
+
+    double writeCycles = (double)(numBlocks + alignPenalty) *
+                         (64.0 / (double)memSpaceProp[writeSpace].bytesPerCPUCycle);
+
     if(writeSpace == MEMSPACE_DDR)
     {
       DmaUtilsAutoInc3dMemBwData[DMA_DDR_WRITE_IDX] += (uint64_t)numBytes;

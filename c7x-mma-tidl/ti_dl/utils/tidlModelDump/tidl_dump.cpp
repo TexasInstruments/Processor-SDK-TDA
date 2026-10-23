@@ -332,8 +332,24 @@ void TIDL_dump::dumpLayer(int layerNum)
     case TIDL_GatherLayer:
       dumpGatherParams(layer);
       break;
+    case TIDL_GroupQueryAttentionLayer:
+      dumpGQAParams(layer);
+      break;
+    case TIDL_MatMulNBitsLayer:
+      break;
+    case TIDL_RotaryEmbeddingLayer:
+      dumpRotaryEmbeddingParams(layer);
+      break;
+    case TIDL_CacheLayer:
+      dumpCacheParams(layer);
+      break;
+    case TIDL_MemCopyLayer:
+      break;
+    case TIDL_ReshapeLayer:
+      dumpReshapeParams(layer);
+      break;
     case TIDL_UnsupportedLayer:
-       break;
+      break;
   }
 
   dumpActParams(&layer->actParams);
@@ -762,6 +778,47 @@ void TIDL_dump::dumpNonZeroParams (const sTIDL_Layer_t *pLayer)
   const sTIDL_NonZeroParams_t *pNonZero = &pLayer->layerParams.nonZeroParams;
   os << format("numValidInputDims=%d\n", pNonZero->numValidInputDims);
   os << format("\n");  
+}
+
+void TIDL_dump::dumpRotaryEmbeddingParams (const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_RotaryEmbeddingParams_t *pRoPE = &pLayer->layerParams.rotaryEmbeddingParams;
+  os << format("rotationDim=%d\n", pRoPE->rotationDim);
+  os << format("interleaved=%d\n", pRoPE->interleaved);
+  os << format("numHeads=%d\n", pRoPE->numHeads);
+  os << format("\n");
+}
+
+void TIDL_dump::dumpCacheParams (const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_CacheParams_t *pCache = &pLayer->layerParams.cacheParams;
+  os << format("axis=%d, maxCapacity=%d", pCache->axis, pCache->maxCapacity);
+  os << format("\n");
+}
+
+void TIDL_dump::dumpReshapeParams (const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_ReshapeRtParams_t *pReshape = &pLayer->layerParams.reshapeParams;
+  int i;
+  os << format("minusOneDimIdx=%d\n", pReshape->minusOneDimIdx);
+  os << format("passthroughMask=[");
+  for (i = 0; i < TIDL_DIM_MAX; ++i)
+  {
+    os << format("%d", (pReshape->passthroughMask >> i) & 1);
+    if (i != TIDL_DIM_MAX-1) os << format(",");
+  }
+  os << format("]\n");
+  os << format("\n");
+}
+
+void TIDL_dump::dumpGQAParams (const sTIDL_Layer_t *pLayer)
+{
+  const sTIDL_GroupQueryAttentionParams_t *p = &pLayer->layerParams.gqaParams;
+  os << format("numHeads=%d, kvNumHeads=%d, headSize=%d\n", p->numHeads, p->kvNumHeads, p->headSize);
+  os << format("scale=%f, softcap=%f, localWindowSize=%d\n", p->scale, p->softcap, p->localWindowSize);
+  os << format("isPackedQKV=%d, hasPast=%d, doRotary=%d, rotaryInterleaved=%d, rotaryDim=%d\n",
+               p->isPackedQKV, p->hasPast, p->doRotary, p->rotaryInterleaved, p->rotaryDim);
+  os << format("\n");
 }
 
 void TIDL_dump::dumpTileParams (const sTIDL_Layer_t *pLayer)

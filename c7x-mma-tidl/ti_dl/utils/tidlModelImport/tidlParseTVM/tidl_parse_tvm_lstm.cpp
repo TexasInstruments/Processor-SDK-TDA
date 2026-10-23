@@ -83,18 +83,8 @@ using namespace std;
 #include <tvm/relay/attrs/nn.h>
 #include <tvm/relay/function.h>
 
-// activation map to convert strings to TIDL activation constants.
-static std::map<std::string, int32_t> activationMap = {
-    {"Relu",            TIDL_RelU},
-    {"Tanh",            TIDL_Tanh},
-    {"Sigmoid",         TIDL_Sigmoid},
-    {"LeakyRelu",       TIDL_LeakyReLU},
-    {"HardSigmoid",     TIDL_HardSigmoid},
-    {"Elu",             TIDL_ELU}
-};
-
 // Helper function to get TIDL activation name for logging
-const char* getTidlActivationName(int32_t activation) {
+static const char* getTidlActivationName(int32_t activation) {
     switch (activation) {
         case TIDL_Sigmoid: return "Sigmoid";
         case TIDL_Tanh: return "Tanh";
@@ -102,21 +92,6 @@ const char* getTidlActivationName(int32_t activation) {
         default: return "Unknown";
     }
 }
-
-// Extracts the integer value of a TVM PrimExpr dimension.
-// Returns false if the dimension is symbolic (non-IntImm), true otherwise.
-static bool getConstDim(const PrimExpr& expr, int64_t& val) {
-    const IntImmNode* node = expr.as<IntImmNode>();
-    if (!node) return false;
-    val = node->value;
-    return true;
-}
-
-static std::map<int32_t, std::pair<float32_tidl, float32_tidl>> activationAlphaBetaMap = {
-    {TIDL_LeakyReLU,       {0.01f, 0.0f}},
-    {TIDL_HardSigmoid,     {0.2f, 0.5f}},
-    {TIDL_ELU,             {1.0f, 0.0f}}
-};
 
 /**
  * @brief Parse TVM LSTM layer and populate TIDL layer parameters
@@ -232,12 +207,12 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("tidl.lstm")> ()
 
             for (int32_t idx = 0; idx < availableActivations; idx++) {
                 std::string activation = activationsArray[idx];
-                if(activationMap.find(activation) == activationMap.end())
+                if(recurrentActivationMap.find(activation) == recurrentActivationMap.end())
                 {
                     TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : LSTM layer : Activation %s is not supported for node %s", activation.c_str(), span_name);
                     return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
                 }
-                lstmParams.activations[idx] = activationMap[activation];
+                lstmParams.activations[idx] = recurrentActivationMap.at(activation);
             }
         }
 
@@ -301,15 +276,15 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("tidl.lstm")> ()
         if (!activationAlphaFound || !activationBetaFound) {
             for(int32_t idx = 0; idx < availableActivations; idx++)
             {
-                if(activationAlphaBetaMap.find(lstmParams.activations[idx]) != activationAlphaBetaMap.end())
+                if(recurrentActivationAlphaBetaMap.find(lstmParams.activations[idx]) != recurrentActivationAlphaBetaMap.end())
                 {
                     if(!activationAlphaFound)
                     {
-                        lstmParams.activation_alpha[idx] = activationAlphaBetaMap[lstmParams.activations[idx]].first;
+                        lstmParams.activation_alpha[idx] = recurrentActivationAlphaBetaMap.at(lstmParams.activations[idx]).first;
                     }
                     if(!activationBetaFound)
                     {
-                        lstmParams.activation_beta[idx] = activationAlphaBetaMap[lstmParams.activations[idx]].second;
+                        lstmParams.activation_beta[idx] = recurrentActivationAlphaBetaMap.at(lstmParams.activations[idx]).second;
                     }
                 }
                 else

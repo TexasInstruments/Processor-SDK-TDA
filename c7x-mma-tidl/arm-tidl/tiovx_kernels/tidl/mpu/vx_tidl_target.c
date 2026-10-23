@@ -592,6 +592,19 @@ static vx_status tivxInitCmd(tivxTIDLNestedKernelObj * prms)
     return status;
 }
 
+static vx_status tivxSetMutableOptionsCmd(tivxTIDLNestedKernelObj * prms, vx_user_data_object mutableOptions)
+{
+    vx_status status = (vx_status)VX_SUCCESS;
+
+    for(uint32_t i = 0; (i < prms->num_cores) && (i < (uint32_t)TIDL_MAX_NUM_CORES); i++)
+    {
+        vx_reference refs[2];
+        refs[0] = (vx_reference)mutableOptions;
+        status |= tivxNodeSendCommand(prms->node[i], 0, TIVX_TIDL_CMD_SET_MUTABLE_OPTIONS, refs, 1u);
+    }
+    return status;
+}
+
 static vx_status VX_CALLBACK tivxKernelTIDLCreate
 (
   tivx_target_kernel_instance kernel,
@@ -784,6 +797,27 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
                 }
             }
 
+            /* Create inner-context copies of outer tensors before use in nested nodes.
+             * Outer tensors (scope=&outerObjArray) cannot be passed to createObjArray(innerCtx)
+             * due to scope mismatch, and must not be scope-mutated by ownAddRefToObjArray. */
+            for(uint32_t j = 0U; j < prms->num_virtual_cores; j++)
+            {
+                for(uint32_t i = 0U; i < num_input_tensors_per_core; i++)
+                {
+                    vx_tensor src = prms->inputTensors[j][i];
+                    prms->inputTensors[j][i] = (vx_tensor)tivxCreateReferenceFromExemplar(
+                                                    context, (vx_reference)src);
+                    status |= copyTensorHandles(src, prms->inputTensors[j][i]);
+                }
+                for(uint32_t i = 0U; i < num_output_tensors_per_core; i++)
+                {
+                    vx_tensor src = prms->outputTensors[j][i];
+                    prms->outputTensors[j][i] = (vx_tensor)tivxCreateReferenceFromExemplar(
+                                                    context, (vx_reference)src);
+                    status |= copyTensorHandles(src, prms->outputTensors[j][i]);
+                }
+            }
+
             if(prms->inference_mode == (uint32_t)TIDL_inferenceModeLowLatency) /* Create num_cores (4) copies from num_virtual_cores (1) input/output tensors for individual cores */
             {
                 for(uint32_t j = 1U; j < prms->num_cores ; j++)
@@ -827,7 +861,7 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
                 
                 /* vx_kernel kernel = vxGetKernelByName(context, TIVX_KERNEL_TIDL_NAME); */
                 #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
-                if ((prms->num_input_tensors + prms->num_output_tensors) > (TIVX_KERNEL_MAX_PARAMS - TIVX_KERNEL_TIDL_NUM_BASE_PARAMETERS))
+                if ((num_input_tensors_per_core + num_output_tensors_per_core) > (TIVX_KERNEL_MAX_PARAMS - TIVX_KERNEL_TIDL_NUM_BASE_PARAMETERS))
                 {
                     prms->kernel = NULL;
                 }
@@ -891,11 +925,28 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
 #if defined (HOST_EMULATION)
                                 /* Update trace name with core id for host emulation mode. For target mode, this is done by the remote file io utility in app_utils */
                                 char fileName[TIDL_STRING_SIZE], dirName[TIDL_STRING_SIZE];
+                                char coreIdStr[4];
+
                                 (void)strcpy(fileName, traceBaseNameOrig);
                                 (void)strcpy(dirName, traceBaseNameOrig);
                                 char * fileNamePtr = getFileNameFromPath(fileName);
                                 getDirFromPath(dirName);
-                                (void)snprintf((char *)traceBaseName, TIDL_STRING_SIZE, "%s/C7x_%d_%s", dirName, (prms->core_start_idx + i + 1), (char *)fileNamePtr);
+
+                                int coreIdLen = snprintf(coreIdStr, sizeof(coreIdStr), "%d",  (prms->core_start_idx + i + 1));
+                                size_t dirLen = strlen(dirName);
+                                size_t fileLen = strlen((char *)fileNamePtr);
+                                size_t offset = 0;
+                                (void)memcpy((char *)traceBaseName + offset, dirName, dirLen);
+                                offset += dirLen;
+                                (void)memcpy((char *)traceBaseName + offset, "/C7x_", 5);
+                                offset += 5;
+                                (void)memcpy((char *)traceBaseName + offset, coreIdStr, coreIdLen);
+                                offset += coreIdLen;
+                                (void)memcpy((char *)traceBaseName + offset, "_", 1);
+                                offset += 1;
+                                (void)memcpy((char *)traceBaseName + offset, fileNamePtr, fileLen);
+                                offset += fileLen;
+                                ((char *)traceBaseName)[offset] = '\0';
                                 (void)strncpy(mappedObjects[i]->traceBaseName, (char *)traceBaseName, TIDL_STRING_SIZE);
 #endif
                                 /*status check can be skipped as status is already
@@ -906,7 +957,7 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
                         nestedNodeParams[TIVX_KERNEL_TIDL_IN_OUT_ARGS_IDX] = (vx_reference)prms->outArgs[i];
                         
                         #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
-                        if ((prms->num_input_tensors + prms->num_output_tensors) > (TIVX_KERNEL_MAX_PARAMS - TIVX_KERNEL_TIDL_NUM_BASE_PARAMETERS))
+                        if ((num_input_tensors_per_core + num_output_tensors_per_core) > (TIVX_KERNEL_MAX_PARAMS - TIVX_KERNEL_TIDL_NUM_BASE_PARAMETERS))
                         {
                             /* Packing Input tensors in vx_object_array */
                             prms->input_tensor_list[i] = createObjArray(context, prms->inputTensors[i], num_input_tensors_per_core);
@@ -1098,18 +1149,15 @@ static vx_status VX_CALLBACK tivxKernelTIDLDelete(
                 status |= vxReleaseObjectArray(&prms->output_tensor_list[j]);
             }
             
-            if((prms->inference_mode == (uint32_t)TIDL_inferenceModeLowLatency) && (j != 0U))
+            for(uint32_t i = 0U; i < num_input_tensors_per_core; i++)
             {
-                for(uint32_t i = 0U; i < num_input_tensors_per_core; i++)
-                {
-                    status |= removeTensorHandles(prms->inputTensors[j][i]);
-                    status |= vxReleaseTensor(&prms->inputTensors[j][i]);
-                }
-                for(uint32_t i = 0U; i < num_output_tensors_per_core; i++)
-                {
-                    status |= removeTensorHandles(prms->outputTensors[j][i]);
-                    status |= vxReleaseTensor(&prms->outputTensors[j][i]);
-                }
+                status |= removeTensorHandles(prms->inputTensors[j][i]);
+                status |= vxReleaseTensor(&prms->inputTensors[j][i]);
+            }
+            for(uint32_t i = 0U; i < num_output_tensors_per_core; i++)
+            {
+                status |= removeTensorHandles(prms->outputTensors[j][i]);
+                status |= vxReleaseTensor(&prms->outputTensors[j][i]);
             }
             status |= vxReleaseUserDataObject(&prms->outArgs[j]);
         }
@@ -1185,11 +1233,37 @@ static vx_status VX_CALLBACK tivxKernelTIDLControl(
     if(status == (vx_status)VX_SUCCESS)
     {
         /* LDRA_JUSTIFY_END */
-        if(prms->forceNegativeTest == TIDL_SAFETY_FLAG_TIDL_RT_FORCE_CTRL_NFNT)
+        if(node_cmd_id == TIVX_TIDL_CMD_SET_MUTABLE_OPTIONS)
         {
-            for(int32_t i = 0; i < (int32_t)prms->num_cores; i++) // Sending cmd data for only first DSP core 
+            /* This command carries a payload (TIDL_controlMutableOptions). Unlike the other
+               control commands above, the payload must be forwarded to every real per-core
+               DSP node, so it cannot use the no-argument tivxNodeSendCommand(..., NULL, 0u)
+               pattern used elsewhere in this function. */
+            if((num_params > 0U) && (obj_desc[0] != NULL))
             {
-              status |= tivxNodeSendCommand(prms->node[0], 0, node_cmd_id, NULL, 0u);                
+                tivx_obj_desc_user_data_object_t * mutable_opts_desc = (tivx_obj_desc_user_data_object_t *)obj_desc[0];
+                void * mutable_opts_target_ptr = tivxMemShared2TargetPtr(&mutable_opts_desc->mem_ptr);
+                TIDL_controlMutableOptions mutableOptions;
+
+                (void)tivxMemBufferMap(mutable_opts_target_ptr, mutable_opts_desc->mem_size, (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_ONLY);
+                (void)memcpy((void *)&mutableOptions, mutable_opts_target_ptr, sizeof(TIDL_controlMutableOptions));
+                (void)tivxMemBufferUnmap(mutable_opts_target_ptr, mutable_opts_desc->mem_size, (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_ONLY);
+
+                vx_context context = vxGetContext((vx_reference)prms->graph);
+                vx_user_data_object mutableOptionsRef = vxCreateUserDataObject(context, "TIDL_controlMutableOptions", sizeof(TIDL_controlMutableOptions), &mutableOptions);
+                status = tivxSetMutableOptionsCmd(prms, mutableOptionsRef);
+                (void)vxReleaseUserDataObject(&mutableOptionsRef);
+            }
+            else
+            {
+                status = (vx_status)VX_FAILURE;
+            }
+        }
+        else if(prms->forceNegativeTest == TIDL_SAFETY_FLAG_TIDL_RT_FORCE_CTRL_NFNT)
+        {
+            for(int32_t i = 0; i < (int32_t)prms->num_cores; i++) // Sending cmd data for only first DSP core
+            {
+              status |= tivxNodeSendCommand(prms->node[0], 0, node_cmd_id, NULL, 0u);
             }
         }
         else
@@ -1197,7 +1271,7 @@ static vx_status VX_CALLBACK tivxKernelTIDLControl(
             status |= tivxNodeSendCommand(prms->node[0], 0, node_cmd_id, NULL, 0u);
         }
     }
-  
+
     return status;
-    
+
 }

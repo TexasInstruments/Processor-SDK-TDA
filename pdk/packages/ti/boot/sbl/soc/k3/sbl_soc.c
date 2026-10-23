@@ -517,15 +517,25 @@ int32_t SBL_loadAndAuthHsmBinary()
         SblErrLoop(__FILE__, __LINE__);
     }
 
-    authReq.certificate_address_hi = 0;
-    authReq.certificate_address_lo = (uint32_t) sblScratchMem;
-    /* Request TIS to authenticate and load the HSM image */
-    SBL_log(SBL_LOG_MAX, "Calling Sciclient_procBootAuthAndStart ... \n");
-    retVal = Sciclient_procBootAuthAndStart(&authReq, SCICLIENT_SERVICE_WAIT_FOREVER);
-    if (retVal != CSL_PASS)
+    if (SBL_IsAuthReq() == SBL_ALWAYS_AUTH_APP)
     {
-        SBL_log(SBL_LOG_ERR, "Sciclient_procBootAuthAndStart...FAILED \n");
-        SblErrLoop(__FILE__, __LINE__);
+        authReq.certificate_address_hi = 0;
+        authReq.certificate_address_lo = (uint32_t) sblScratchMem;
+        /* Request TIS to authenticate and load the HSM image */
+        SBL_log(SBL_LOG_MAX, "Calling Sciclient_procBootAuthAndStart ... \n");
+        retVal = Sciclient_procBootAuthAndStart(&authReq, SCICLIENT_SERVICE_WAIT_FOREVER);
+        if (retVal != CSL_PASS)
+        {
+            SBL_log(SBL_LOG_ERR, "Sciclient_procBootAuthAndStart...FAILED \n");
+            SblErrLoop(__FILE__, __LINE__);
+        }
+    }
+    else
+    {
+        /* For GP device SBL should copy the hsm binary to hsm sram.
+           sblScratchMem is pointing to HSM image copied from SD card. */
+        uint8_t *hsmRamMem = ((uint8_t *)(SBL_HSM_SRAM_ADDR));
+        memcpy(hsmRamMem, sblScratchMem, SBL_HSM_IMG_MAX_SIZE);
     }
 
     /* Clearing HALT for Processor */

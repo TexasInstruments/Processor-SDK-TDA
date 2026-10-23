@@ -61,7 +61,7 @@
 #Other Variables
 
 # Inherit common build flags from root repo in SDK
--include $(PSDK_BUILDER_PATH)/build_flags.mak
+include $(PSDK_BUILDER_PATH)/build_flags.mak
 
 # Supported values: PC, TI_DEVICE (SIMULATORS or EMULATOR )
 TARGET_PLATFORM ?= TI_DEVICE
@@ -77,168 +77,23 @@ BUILD_CONFORMANCE_TEST ?=yes
 # Enable GCOV tool for code coverage
 GCOV_ENABLED ?= 0
 
-# Enable compatibility to build on 9.2 SDK
-ENABLE_SDK_9_2_COMPATIBILITY     ?= 0
-# Enable compatibility to build on 10.0 SDK
-ENABLE_SDK_10_0_COMPATIBILITY    ?= 0
-# Enable compatibility to build on 10.1 SDK
-ENABLE_SDK_10_1_COMPATIBILITY    ?= 0
-# Enable compatibility to build on 11.0 SDK
-ENABLE_SDK_11_0_COMPATIBILITY    ?= 0
-# Enable compatibility to build on 11.1 SDK
-ENABLE_SDK_11_1_COMPATIBILITY    ?= 0
-
-#Enable performance modelling flow 
-ENABLE_PERFORMANCE_MODELLING     ?= 0
-
-ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
-  CGT_C7X_VERSION := 6.1.0.STS
-  MMALIB_VERSION  := 11_02_01_04
-else
-  CGT_C7X_VERSION := 5.0.0.LTS
-  MMALIB_VERSION  := 12_01_00_01
-endif
-
-PSDK_TOOLS_PATH     ?= $(HOME)/ti
-
-CONCERTO_ROOT       ?=$(PSDK_BUILDER_PATH)/concerto
-IVISION_PATH        ?=$(PSDK_INSTALL_PATH)/ivision
+# arm-tidl builds against QNX SDP 7.1.0; set before tools_path.mak so
+# sdk_builder's ?= 800 default is a no-op.
+export QNX_SDP_VERSION ?= 710
+PSDK_PATH ?= $(PSDK_INSTALL_PATH)
+# To make sure if some other makefile includes arm-tidl/config.mk then they should define ARM_TIDL_PATH as happening in tiovx_kernels/makefile 
+ARM_TIDL_PATH ?= $(ALGBASE_PATH)
+include $(ARM_TIDL_PATH)/tools_path.mak
 
 ifeq ($(TARGET_PLATFORM), PC)
-MMALIB_PATH         ?=$(PSDK_INSTALL_PATH)/mmalib_$(MMALIB_VERSION)
-PDK_INSTALL_PATH    ?=$(PSDK_INSTALL_PATH)/pdk/packages
 # Below flag can be enabled in case opencv dependencies are present
 BUILD_WITH_OPENCV    ?= 0
 endif
-MCU_PLUS_SDK_PATH   ?=$(PSDK_INSTALL_PATH)/mcu_plus_sdk
 
-# Define MCU_SDK_PATH for TDA54 (separate from MCU_PLUS_SDK_PATH)
-ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
-MCU_SDK_PATH := $(PSDK_INSTALL_PATH)/mcu_sdk
-endif
-
-OS_VERSION := $(shell cat /etc/os-release | grep VERSION_ID= | sed -e "s|VERSION_ID=\"||" | sed -e "s|\"||")
-
-# DSP compiler required for tiovx kernels target dsp build
-DSP_TOOLS           ?=$(PSDK_TOOLS_PATH)/ti-cgt-c7000_$(CGT_C7X_VERSION)
-
-ifeq ($(ENABLE_SDK_9_2_COMPATIBILITY), 1)
-  ENABLE_SDK_10_0_COMPATIBILITY = 0
-  ENABLE_SDK_10_1_COMPATIBILITY = 0
-  ENABLE_SDK_11_0_COMPATIBILITY = 0
-  ENABLE_SDK_11_1_COMPATIBILITY = 0
-else ifeq ($(ENABLE_SDK_10_0_COMPATIBILITY), 1)
-  ENABLE_SDK_9_2_COMPATIBILITY = 0
-  ENABLE_SDK_10_1_COMPATIBILITY = 0
-  ENABLE_SDK_11_0_COMPATIBILITY = 0
-  ENABLE_SDK_11_1_COMPATIBILITY = 0
-else ifeq ($(ENABLE_SDK_10_1_COMPATIBILITY), 1)
-  ENABLE_SDK_9_2_COMPATIBILITY = 0
-  ENABLE_SDK_10_0_COMPATIBILITY = 0
-  ENABLE_SDK_11_0_COMPATIBILITY = 0
-  ENABLE_SDK_11_1_COMPATIBILITY = 0
-else ifeq ($(ENABLE_SDK_11_0_COMPATIBILITY), 1)
-  ENABLE_SDK_9_2_COMPATIBILITY = 0
-  ENABLE_SDK_10_0_COMPATIBILITY = 0
-  ENABLE_SDK_10_1_COMPATIBILITY = 0
-  ENABLE_SDK_11_1_COMPATIBILITY = 0
-else ifeq ($(ENABLE_SDK_11_1_COMPATIBILITY), 1)
-  ENABLE_SDK_9_2_COMPATIBILITY = 0
-  ENABLE_SDK_10_0_COMPATIBILITY = 0
-  ENABLE_SDK_10_1_COMPATIBILITY = 0
-  ENABLE_SDK_11_0_COMPATIBILITY = 0
-endif
-
-ifeq ($(ENABLE_SDK_9_2_COMPATIBILITY), 1)
-  GCC_LINUX_ARM_ROOT  ?=$(PSDK_TOOLS_PATH)/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-linux-gnu
-else ifeq ($(ENABLE_SDK_10_0_COMPATIBILITY), 1)
-  GCC_LINUX_ARM_ROOT  ?=$(PSDK_TOOLS_PATH)/arm-gnu-toolchain-13.2.Rel1-x86_64-aarch64-none-linux-gnu
-else
-  GCC_LINUX_ARM_ROOT ?= $(PSDK_INSTALL_PATH)/toolchain/sysroots/x86_64-arago-linux/usr
-  CROSS_COMPILE_LINARO ?= aarch64-oe-linux/aarch64-oe-linux-
-endif
-
-LINUX_SYSROOT_ARM    =$(PSDK_INSTALL_PATH)/targetfs
-
-VXLIB_PATH          ?=$(PSDK_INSTALL_PATH)/vxlib
-PDK_INSTALL_PATH    ?=$(PSDK_INSTALL_PATH)/pdk/packages
-
-TIDL_PATH           ?=$(abspath ../../)
-TIOVX_PATH          ?=$(PSDK_INSTALL_PATH)/tiovx
-PLATFORM_PATH       ?=$(PSDK_INSTALL_PATH)/platform
-APP_UTILS_PATH      ?=$(PSDK_INSTALL_PATH)/app_utils
-TIDL_PROTOBUF_PATH  ?=$(PSDK_INSTALL_PATH)/protobuf-3.21.12
-CUDA_PATH           ?= /usr/local/cuda
-
-LINUX_FS_PATH       ?=$(PSDK_INSTALL_PATH)/targetfs
-# The TF-lite RT and ONNX RT paths are taken from targetfs
-TF_REPO_PATH        ?=$(LINUX_FS_PATH)/usr/include/tensorflow
-
-ONNX_REPO_PATH      ?=$(LINUX_FS_PATH)/usr/include/onnxruntime
-
-TIDL_OPENCV_PATH    ?="$(PSDK_INSTALL_PATH)/opencv-4.1.0"
-
-export QNX_SDP_VERSION ?= 710
-ifeq ($(QNX_SDP_VERSION),700)
-  export QNX_BASE ?= $(HOME)/qnx700
-  export QNX_CROSS_COMPILER_TOOL ?= aarch64-unknown-nto-qnx7.0.0-
-else
-  export QNX_BASE ?= $(HOME)/qnx710
-  export QNX_CROSS_COMPILER_TOOL ?= aarch64-unknown-nto-qnx7.1.0-
-  # Adding this path for QNX SDP 7.1 which has a need to set the path
-  # variable for the g++ tool to properly invloke the ld tool
-  PATH := $(QNX_BASE)/host/linux/x86_64/usr/bin:$(PATH)
-endif
-export QNX_HOST ?= $(QNX_BASE)/host/linux/x86_64
-export QNX_TARGET ?= $(QNX_BASE)/target/qnx7
-export GCC_QNX_ROOT ?= $(QNX_HOST)/usr/bin
-export GCC_QNX_ARM_ROOT ?= $(QNX_HOST)/usr/bin
-export GCC_QNX_ARM ?= $(QNX_HOST)/usr/bin
-
-#C7x Version (C7120/C7100)
 #Compiles code for a particular C7x mode
 C7x_HOSTEMU_COMPILER_STRING:=
-ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J721E j721e))
-C7X_TARGET ?= C71
-C7X_VERSION ?= C7100
-MPU_CPU=A72
-RTOS_SDK ?= pdk
-else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J721S2 j721s2 J784S4 j784s4 J742S2 j742s2))
-C7X_TARGET ?= C7120
-C7X_VERSION ?= C7120
-MPU_CPU=A72
-RTOS_SDK ?= pdk
-else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a))
-C7X_TARGET ?= C7504
-C7X_VERSION ?= C7504
-MPU_CPU=A53
-RTOS_SDK ?= mcu_plus_sdk
-else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J722S j722s))
-C7X_TARGET ?= C7524
-C7X_VERSION ?= C7524
-MPU_CPU=A53
-RTOS_SDK ?= mcu_plus_sdk
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J722S j722s))
 C7x_HOSTEMU_COMPILER_STRING:=-MMA2_256
 else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
-C7X_TARGET ?= C7604
-C7X_VERSION ?= C7604
-MPU_CPU=A720
-RTOS_SDK ?= mcu_sdk
 C7x_HOSTEMU_COMPILER_STRING:=-MMA3_1024
-endif
-
-
-ifeq ($(RTOS_SDK),mcu_plus_sdk)
-  DMA_UTILS_PATH      ?=$(MCU_PLUS_SDK_PATH)/source/drivers/dmautils
-  PDK_INSTALL_PATH    = .
-  MCU_SDK_PATH        = .
-else ifeq ($(RTOS_SDK),mcu_sdk)
-  DMA_UTILS_PATH      ?=$(PSDK_INSTALL_PATH)/dmautils
-  PDK_INSTALL_PATH    = .
-  MCU_PLUS_SDK_PATH   = .
-else
-  # PDK
-  DMA_UTILS_PATH      ?=$(PDK_INSTALL_PATH)/ti/drv/udma/dmautils
-  MCU_PLUS_SDK_PATH   = .
-  MCU_SDK_PATH        = .
 endif

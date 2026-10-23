@@ -376,16 +376,10 @@ int32_t TIDL_innerProductInitNew(const TIDL_LayerSpecificParams *layerSpecificPa
   int32_t *orgbiasptr;
   if (TIDL_QuantStyleAsymNP2_TFL == quantizationStyle)
   {
-    // Populate scale and shift for MMA for convolution:
-    // Scale ratio
-    float32_tidl scaleRatio = 1;
-    float32_tidl weightScalePtr = innerProductParams->weightScale;
-    float32_tidl scale_x = inDataParams->tensorScale;
-    float32_tidl scale_y = commonParams->net->TIDLLayers[layerIdx].outData.tensorScale;
-    // Assuming per axis: (should be single iteration for non per ch) !Replace with axis length
-    // Temp logic:
-    scaleRatio = (scale_x * weightScalePtr) / scale_y;
-    TIDL_getMMAv2_ScaleAndShift(scaleRatio, &algLayer->layerParams.innerProductParams.mmaScale, &algLayer->layerParams.innerProductParams.mmaShift);
+    uint8_t *mmav2_Scales = (uint8_t *)get_int8_t_pointer((int8_t *)(commonParams->net), commonParams->net->TIDLLayers[layerIdx].layerParams.innerProductParams.derivedScales);
+    uint8_t *mmav2_Shifts = (uint8_t *)get_int8_t_pointer((int8_t *)(commonParams->net), commonParams->net->TIDLLayers[layerIdx].layerParams.innerProductParams.derivedShifts);
+    algLayer->layerParams.innerProductParams.mmaScale = mmav2_Scales[0];
+    algLayer->layerParams.innerProductParams.mmaShift = mmav2_Shifts[0];
     int32_t axisCtr;
     orgbiasptr = (int32_t *)get_int8_t_pointer((int8_t *)(commonParams->net), innerProductParams->bias);
     biasPtr = (int32_t *)algLayer->layerParams.innerProductParams.biasParamMem;

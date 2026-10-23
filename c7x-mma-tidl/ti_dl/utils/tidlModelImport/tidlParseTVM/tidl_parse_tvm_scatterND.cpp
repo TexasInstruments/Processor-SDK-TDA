@@ -74,7 +74,6 @@ template<>
 int32_t TidlParseTVM::parse<OpNameStr("tidl.scatter_nd")> ()
 {
     layer.layerType = TIDL_ScatterElementsLayer;
-
     sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
     layer.numInBufs = md.numInputs;
     const auto* fn_node = call->op.as<tvm::relay::FunctionNode>();
@@ -90,7 +89,6 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.scatter_nd")> ()
     {
         reduction = Downcast<String>(attrs->dict.at("reduction"));
     }
-
     // Map reduction string to TIDL reduction type
     if (strcmp(reduction.c_str(), "update") == 0)
     {
@@ -117,24 +115,39 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.scatter_nd")> ()
         layer.layerParams.scatterElementsParams.reduction = TIDL_ScatterElementsUnsupported;
     }
 
-    string index_type;
+    bool indexIsInt64 = false;
 
     // Handle constant inputs
     if (md.numConstInputs == 1)
     {
         layer.weights = TIDL_extractConstantTensorData(call, md.constTensorIndices[0], md, 0);
+        if(layer.weights.ptr==NULL)
+        {
+            TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "ScatterND layer : Cannot read constant tensor : Only float, int32 and int64 tensor is supported");
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
     }
 
     if (md.numConstInputs == 2)
     {
         layer.weights = TIDL_extractConstantTensorData(call, md.constTensorIndices[0], md, 0);
+        if(layer.weights.ptr==NULL)
+        {
+            TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "ScatterND layer : Cannot read constant tensor : Only float, int32 and int64 tensor is supported");
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
         layer.bias = TIDL_extractConstantTensorData(call, md.constTensorIndices[1], md, 1);
+        if(layer.bias.ptr==NULL)
+        {
+            TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "ScatterND layer : Cannot read constant tensor : Only float, int32 and int64 tensor is supported");
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
     }
 
     // Check if indices are int64 and need conversion to int32
     if (call->args[1].as<tvm::relay::ConstantNode>())
     {
-        index_type = DLDataType2String(call->args[1]->checked_type().as<TensorTypeNode>()->dtype);
+        indexIsInt64 = TIDL_relayIsInt64Type(call->args[1]);
     }
 
     // tidl offload for scalar inputs have a bug causing inference failure so denying the scalar input cases
@@ -148,7 +161,7 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.scatter_nd")> ()
 
     int32_t result = TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
     // Convert int64 indices to int32 if needed
-    if (index_type == "int64")
+    if (indexIsInt64)
     {
         if (md.constTensorIndices[0] == 1)
         {

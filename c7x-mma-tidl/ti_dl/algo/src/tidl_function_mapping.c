@@ -118,7 +118,7 @@ static const TIDL_CoreFunctionMap gTIDLCoreFunctionMapping[] =
   {/*TIDL_GatherLayer           */ TIDL_gatherLayerAllocNew, TIDL_gatherLayerInitNew, TIDL_gatherLayerProcessNew},
   {/*TIDL_TransposeLayer        */ TIDL_transposeAllocNew, TIDL_transposeInitNew, TIDL_transposeProcessNew},
   {/*TIDL_LayerNormLayer        */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_layerNormProcess},
-  {/*TIDL_GridSampleLayer        */ TIDL_gridsampleAlloc, TIDL_gridsampleInit, TIDL_gridsampleProcess},
+  {/*TIDL_GridSampleLayer        */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_gridsampleProcess},
   {/*TIDL_TopKLayer             */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_topKProcess},
   {/*TIDL_DeformConvLayer        */ TIDL_deformConvAlloc, TIDL_deformConvInit, TIDL_deformConvProcess},
   {/*TIDL_TileLayer             */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_tileProcessNew},
@@ -138,6 +138,11 @@ static const TIDL_CoreFunctionMap gTIDLCoreFunctionMapping[] =
   {/*TIDL_SizeLayer             */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_sizeProcessNew},
   {/*TIDL_AttentionLayer        */ NULL, NULL, NULL},
   {/*TIDL_NonZeroLayer          */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_nonZeroLayerProcessNew},
+  {/*TIDL_GroupQueryAttentionLayer  */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_gqaProcessNew},
+  {/*TIDL_MatMulNBitsLayer      */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_matMulNBitsProcessNew},
+  {/*TIDL_RotaryEmbeddingLayer  */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_RotaryEmbeddingProcessNew},
+  {/*TIDL_CacheLayer            */ TIDL_cacheAllocNew, TIDL_cacheInitNew, TIDL_cacheProcessNew},
+  {/*TIDL_MemCopyLayer          */ TIDL_deviceCommonAlloc, TIDL_deviceCommonInit, TIDL_memCopyProcessNew},
   {/*TIDL_UnsupportedLayer      */ NULL, NULL, NULL},
 };
 

@@ -161,7 +161,6 @@ int32_t readResizeCrop(uint8_t *imageFile, uint8_t *data, int32_t resizeWidth, i
   int32_t startY = halfHeight - cropHeight / 2;
 
   cv::Rect myROI(startX, startY,cropWidth, cropHeight);
-  int32_t imreadChannels = image.channels();
   cv::resize(image, tempImage, Size(resizeWidth, resizeHeight), 0, 0, cv::INTER_AREA);
   image = tempImage(myROI);
 

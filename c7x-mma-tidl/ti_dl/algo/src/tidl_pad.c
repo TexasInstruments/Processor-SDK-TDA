@@ -174,8 +174,7 @@ int32_t TIDL_padProcessNew(TIDL_NetworkCommonParams *commonParams,
   int32_t status = IALG_EOK;
 
   #ifdef HOST_EMULATION
-  const sTIDL_DataParams_t *inDataParams   = TIDL_getDataParams(commonParams->createParams->net,
-  tidlLayer->inData[0]);
+  const sTIDL_DataParams_t *inDataParams   = &commonParams->createParams->net->TIDLLayers[tidlLayer->inData[0]].outData;
 
   sTIDL_AlgPadParams_t* algPadParams = &algLayer->layerParams.padParams;
   sTIDL_PadLayerParams_t *params = &tidlLayer->layerParams.padLayerParams;
@@ -293,19 +292,64 @@ int32_t TIDL_padProcessNew(TIDL_NetworkCommonParams *commonParams,
 #ifdef PERF_MODELLING
   DmaUtilsAutoInc3d_getDmaPerformance(&perfDmaDatawl[0]);
   DmaUtilsAutoInc3d_getDmaMemBwData(&perfDmaBWDatawl[0]);
-  
-  TIDL_updateprofileData(profilePoint,
-                             TIDL_PROFILE_CORE_LOOP,
-                             0,
-                             perfDmaDatawl[0]);
-  TIDL_updateprofileData(profilePoint,
-                             TIDL_PROFILE_DDR_BW_READ,
-                             0,
-                             perfDmaBWDatawl[DMA_DDR_READ_IDX]);
-  TIDL_updateprofileData(profilePoint,
-                             TIDL_PROFILE_DDR_BW_WRITE,
-                             0,
-                             perfDmaBWDatawl[DMA_DDR_WRITE_IDX]);
+
+  /* --- Pad layer overhead constants (derived from J784S4 HW measurements) ---
+   * PAD_OH_DMA_SETUP          : DMA API setup: main-copy + row-fill type7/type8 calls = 5189 cy
+   * PAD_OH_COLFILL_WRAP_PERCH : WrapAround scalar loop cost per output channel = 167 cy/ch
+   *                             Inner loop per channel: (padT+1+padB+1)×(padL+padR) scalar stores.
+   *                             Measured lyr=152 (padT=padB=padL=padR=1, Ni=128):
+   *                             params=21434 cy / 128 ch = 167.4 cy/ch
+   *                             Only applies when padType == TIDL_PadWrapAround.
+   * PAD_OH_COLFILL_TMPL       : SA0 template setup always run after WrapAround block:
+   *                             tmpl(166) + sa0Open(2) + sa0Close(2)             = 170 cy
+   * PAD_OH_SYNC_WB            : spad + dmaWait + l1dWbInv                       = 1066 cy
+   *
+   * SA0 loop model:
+   *   cycles/iter = TIDL_getWriteAccessCycles(basePtr, 64) x 2
+   *   The x2 is for the predicated VSTORE: every iteration hits DECDIM1 (numColPad < simdW)
+   *   → partial vector store → hardware RMW on the destination cache line.
+   *   TIDL_getWriteAccessCycles adds an additional alignment penalty (+1 or +2 blocks)
+   *   for DDR when the store address is not 64B-aligned.
+   */
+  const double PAD_OH_DMA_SETUP          = 5189.0;
+  const double PAD_OH_COLFILL_WRAP_PERCH = 167.0;
+  const double PAD_OH_COLFILL_TMPL       = 170.0;
+  const double PAD_OH_SYNC_WB            = 1066.0;
+
+  /* FillPaddedCols SA0 loop cycles: ceil(numColPad/simdW) x Ni x fillH x cyclesPerStore */
+  int32_t padElemSz  = TIDL_getDatElementSize(tidlLayer->outData.elementType);
+  int32_t simdWidth  = 64 / padElemSz;
+  int32_t numColPad  = params->padL + params->padR + (int32_t)tidlLayer->outData.padW;
+  int32_t Ni_pad     = algLayer->wlPadParams.outChannels;
+  int32_t fillH      = inDataParams->dimValues[TIDL_DIM_HEIGHT] + 1;
+  int32_t numPadVecs = (numColPad > 0) ? ((numColPad + simdWidth - 1) / simdWidth) : 0;
+
+  /* Compute SA0 basePtr address: same offset as TIDL_DspFillPaddedColsPadLayer computes
+   * ptrOffset = linePitch*(padT + outDataPadH + 1) - padR (in elements), then × elemSz */
+  int32_t linePitch  = (int32_t)tidlLayer->outData.pitch[TIDL_LINE_PITCH];
+  int32_t ptrOff     = (linePitch * (params->padT + (int32_t)tidlLayer->outData.padH + 1))
+                       - params->padR;
+  const void *basePtr = (const uint8_t *)outPtrs[0] + (ptrOff * padElemSz);
+
+  /* cyclesPerStore = getWriteCycles(64B, with alignment RMW) x 2 (predicated VSTORE RMW) */
+  double cyclesPerStore = TIDL_getWriteAccessCycles(basePtr, 64U) * 2.0;
+
+  double colFillLoop = (double)(numPadVecs * Ni_pad * fillH) * cyclesPerStore;
+
+  /* WrapAround scalar loop: runs once per output channel regardless of numColPad */
+  double wrapOH    = ((uint32_t)params->padType == (uint32_t)TIDL_PadWrapAround) ?
+                     (PAD_OH_COLFILL_WRAP_PERCH * (double)Ni_pad) : 0.0;
+  /* SA0 template+open+close always execute inside TIDL_DspFillPaddedColsPadLayer */
+  double colFillOH = wrapOH + PAD_OH_COLFILL_TMPL;
+
+  double totalOverhead = PAD_OH_DMA_SETUP + colFillOH + colFillLoop + PAD_OH_SYNC_WB;
+
+  TIDL_updateprofileData(profilePoint, TIDL_PROFILE_CORE_LOOP,    0,
+                         perfDmaDatawl[0] + totalOverhead);
+  TIDL_updateprofileData(profilePoint, TIDL_PROFILE_DDR_BW_READ,  0,
+                         perfDmaBWDatawl[DMA_DDR_READ_IDX]);
+  TIDL_updateprofileData(profilePoint, TIDL_PROFILE_DDR_BW_WRITE, 0,
+                         perfDmaBWDatawl[DMA_DDR_WRITE_IDX]);
 #endif
 
   return status;

@@ -665,6 +665,7 @@ int TIDL_cudaConv2DSaturateFloat(
     if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), outPtr, (void**)&dpOut, sizeof(Tout) * sizeOutstream) != IALG_EOK)
     {
       printf("Convolve2D: Unable to find output pointer\n");
+      return IALG_EFAIL;
     }
   }
 
@@ -774,6 +775,7 @@ int TIDL_cudaSaturateFixedPoint(
     if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), outPtr, (void**)&dpOut, sizeof(Tout) * sizeOutstream) != IALG_EOK)
     {
       printf("Convolve2D: Unable to find output pointer\n");
+      return IALG_EFAIL;
     }
   }
 
@@ -953,6 +955,7 @@ int TIDL_cudaConvolve2d(
       {
         /*Log Error*/
       printf("Convolve2D: Unable to find input pointer\n");
+      return IALG_EFAIL;
       }
   }
 
@@ -966,6 +969,7 @@ int TIDL_cudaConvolve2d(
     if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), pCoeffs, (void**)&dpCoeffs, filterSize * sizeof(Tw)) != IALG_EOK)
     {
       printf("Convolve2D: Unable to find coefficient pointer\n");
+      return IALG_EFAIL;
     }
     needsCopyCoeffs = true;
   }
@@ -973,7 +977,12 @@ int TIDL_cudaConvolve2d(
   // Accumulator (output) buffer
   if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accPtr, (void**)&dpAcc, sizeof(Tacc) * outSize) != IALG_EOK)
   {
-    printf("Convolve2D: Unable to find accumulator pointer\n");
+    if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), accPtr, (void**)&dpAcc, sizeof(Tacc) * outSize) != IALG_EOK)
+    {
+        /*Log Error*/
+        printf("Convolve2D: Unable to find accumulator pointer\n");
+        return IALG_EFAIL;
+    }
   }
 
   if(enableBias && biasSize > 0)
@@ -983,6 +992,7 @@ int TIDL_cudaConvolve2d(
       if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), pBias, (void**)&dpBias, sizeof(Tb) * biasSize) != IALG_EOK)
       {
         printf("Convolve2D: Unable to find bias pointer\n");
+        return IALG_EFAIL;
       }
     }
   }

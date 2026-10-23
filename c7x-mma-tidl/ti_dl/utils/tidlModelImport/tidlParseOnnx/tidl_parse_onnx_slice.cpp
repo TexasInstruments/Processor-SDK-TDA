@@ -86,11 +86,9 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Slice")> ()
 
   if (getIntAttr(node, "starts", &isMultipleAxis, 1) != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
   {
-    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Slice layer : TIDL_RT only supports single slice axis");
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Slice layer : Only single axis slice is supported");
     return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
   }
-
-
 
   if(node.input_size() < 4)
   {
@@ -157,20 +155,27 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Slice")> ()
 
       if(starts.bufSize > 1)
       {
-        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowisting : Slice layer : TIDL_RT only supports single slice axis");
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowisting : Slice layer : Only single axis slice is supported");
         return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
       }
       else
       {
         sliceParams.slicePoints[0] = startsPtr[0];
+
+        // Calmp min/max values of the end slice pointer
         if(endsPtr[0] == 0x7fffffffffffffff)
         {
           sliceParams.slicePoints[1] = 0x7fffffff;
+        }
+        else if(endsPtr[0] == (-0x7fffffffffffffff))
+        {
+          sliceParams.slicePoints[1] = -0x7fffffff;
         }
         else
         {
           sliceParams.slicePoints[1] = endsPtr[0];
         }
+
         axis = axesPtr[0];
       }
       free(startsPtr);

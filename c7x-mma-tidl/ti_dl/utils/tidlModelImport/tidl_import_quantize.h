@@ -104,6 +104,7 @@ void TIDL_convert8bitLayersTo16Bit(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure,tid
 int32_t TIDL_asymUpdateNetworkWithConstraints(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure,
                               tidl_import_config * params,
                               int32_t numLayers);
+void TIDL_getMMAv2_ScaleAndShift(float scaleRatio, uint8_t *scale, uint8_t *shift, int32_t weightBits, float32_tidl maxScaleMMAv2);
 
 #endif /*TIDL_QUANTIZE_INCLUDE_H_ */
 

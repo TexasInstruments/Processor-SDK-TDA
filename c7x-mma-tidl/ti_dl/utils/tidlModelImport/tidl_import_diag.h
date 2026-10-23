@@ -80,7 +80,9 @@
 
 /* Handy macros */
 // #define __MODULE__ TIDL_ImportDiagnostics::getModuleFromFile(__FILE__).c_str()
+#ifndef __MODULE__
 #define __MODULE__ ""
+#endif
 
 /*
 *  This class represents a warning or error diagnostic that applies to a model:

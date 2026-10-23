@@ -77,6 +77,7 @@
 #include "tidl_import_config.h"
 #include "tidl_import_diag.h"
 
+#undef __MODULE__
 #define __MODULE__ ""
 
 using namespace std;

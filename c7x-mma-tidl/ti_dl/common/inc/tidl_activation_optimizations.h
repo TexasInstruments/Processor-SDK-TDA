@@ -92,7 +92,7 @@ std::unordered_map<int32_t, std::pair<float32_tidl, float32_tidl>> tidl_activati
   {TIDL_Sigmoid, {-11.783479181074f, 11.783479181074f}},
   {TIDL_Tanh,    {-5.8917f, 5.8917f}},
   {TIDL_HardSigmoid, {-3.0f, 3.0f}},
-  {TIDL_ELU,    {-4.0f, FLT_MAX}},
+  {TIDL_ELU,    {-11.0f, FLT_MAX}},
   {TIDL_GELU,  {-5.0f, FLT_MAX}}, // GeLU@-5.0 = -1.43325786e-06
   {TIDL_Asin,  {-1.0f, 1.0f}},
   {TIDL_HardSwish, {-3.0f, FLT_MAX}},

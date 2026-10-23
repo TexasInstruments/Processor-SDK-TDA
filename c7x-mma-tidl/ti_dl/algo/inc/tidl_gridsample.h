@@ -104,23 +104,5 @@ int32_t TIDL_gridsampleProcess(TIDL_NetworkCommonParams *commonParams,
                                           void                 * outPtrs[],
                                           int32_t                layerIdx);
 
-
-int32_t TIDL_gridsampleInit(const TIDL_LayerSpecificParams *layerSpecificParams,
-                                const TIDL_NetworkCommonParams  *commonParams,
-                                sTIDL_AlgLayer_t               *algLayer,
-                                int32_t layerIdx,
-                                uint8_t *memory[TIDL_LAYER_MEMORY_MAX],
-                                int32_t memorySize[TIDL_LAYER_MEMORY_MAX],
-                                void    **outPtr);
-
-int32_t TIDL_gridsampleAlloc(const TIDL_LayerSpecificParams *layerSpecificParams,
-                                   const TIDL_NetworkCommonParams *commonParams,
-                                   int32_t layerIdx,
-                                   int32_t memorySize[TIDL_LAYER_MEMORY_MAX]);
-
-int32_t TIDL_gridSampleDspAlloc(const TIDL_LayerSpecificParams *layerSpecificParams,
-                             const TIDL_NetworkCommonParams *commonParams,
-                             int32_t layerIdx,
-                             int32_t memorySize[TIDL_LAYER_MEMORY_MAX]);
 #endif /* ITIDL_GRIDSAMPLE_H*/
 

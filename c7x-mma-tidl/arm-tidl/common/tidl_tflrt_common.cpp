@@ -230,7 +230,7 @@ int32_t TIDL_setRtTensorParameters(TfLiteTensor * tfliteTensor, sTIDLRT_Tensor_t
 
 TfLiteStatus TIDL_subgraphRtInvoke(int32_t osrtDebugPrintLevel, TfLiteContext *context, TfLiteNode *node, sTIDL_tidlRtParams_t *tidlRtParams, sTIDL_tidlRtDynamicLoading_t * infer_ops, int32_t isInfer)
 {
-  TIDL_osrtDebugPrint(osrtDebugPrintLevel, "*******   In TIDL_subgraphRtInvoke  ******** \n");
+  TIDL_osrtDebugPrint(osrtDebugPrintLevel, "========== TIDL_subgraphRtInvoke Start ==========\n");
   int status = 0;
   int currTensorNum = 0;
 
@@ -302,8 +302,8 @@ TfLiteStatus TIDL_subgraphRtInvoke(int32_t osrtDebugPrintLevel, TfLiteContext *c
   {
     TIDL_printSubgraphStats(stats);
   }
-  TIDL_osrtDebugPrint(osrtDebugPrintLevel, "*******  TIDL_subgraphRtInvoke done  ******** \n");
-  
+  TIDL_osrtDebugPrint(osrtDebugPrintLevel, "========== TIDL_subgraphRtInvoke End ==========\n");
+
   return kTfLiteOk;
 }
 

@@ -288,12 +288,15 @@ tivxKernelTVMCreate
       {
         tvmObj->dspload_handle = dspload_load_program(deploy_mod_target_ptr,
                                                       deploy_mod->mem_size);
-        tvmObj->tvm_main_create  = (TVM_CREATE_FUNC) dspload_query_symbol(
-                                    tvmObj->dspload_handle, "tvm_main_create");
-        tvmObj->tvm_main_process = (TVM_PROCESS_FUNC) dspload_query_symbol(
-                                    tvmObj->dspload_handle, "tvm_main_process");
-        tvmObj->tvm_main_delete  = (TVM_NOARG_FUNC) dspload_query_symbol(
-                                    tvmObj->dspload_handle, "tvm_main_delete");
+        if (tvmObj->dspload_handle != NULL)
+        {
+          tvmObj->tvm_main_create  = (TVM_CREATE_FUNC) dspload_query_symbol(
+                                      tvmObj->dspload_handle, "tvm_main_create");
+          tvmObj->tvm_main_process = (TVM_PROCESS_FUNC) dspload_query_symbol(
+                                      tvmObj->dspload_handle, "tvm_main_process");
+          tvmObj->tvm_main_delete  = (TVM_NOARG_FUNC) dspload_query_symbol(
+                                      tvmObj->dspload_handle, "tvm_main_delete");
+        }
         VX_PRINT(VX_ZONE_INFO, "tvm_main funcs: %p %p %p\n",
                  tvmObj->tvm_main_create,
                  tvmObj->tvm_main_process,

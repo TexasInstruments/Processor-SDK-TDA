@@ -257,8 +257,8 @@ template<class Tin, class Tgrid, class Tout>
                   /* round function in c rounds away from zero in case of 0.5, Ex: 1.5 -> 2, 2.5 -> 3
                   Onnxruntime uses round to even number which is nearbyintf function in c, it will round 1.5 to 2, 2.5 to 2,
                   hence using nearintf in place of round */
-                  int32_t xint_round = nearbyintf(x);
-                  int32_t yint_round = nearbyintf(y);
+                  xint_round = nearbyintf(x);
+                  yint_round = nearbyintf(y);
                 }
                 /*Bounds check for pad to get outVal:*/
                 out_val = ((yint_round >= 0) && (yint_round < data_h) && (xint_round >= 0) && (xint_round < data_w)) ? (float32_tidl)data[(i0 * inBatchPitch) + (i1 * inDim1Pitch) + (i2 * inDim2Pitch) + (c * 1) + (yint_round * inChannelPitch) + (xint_round * inLinePitch)] : 0.0F;
@@ -821,63 +821,6 @@ int32_t TIDL_gridsampleProcess(TIDL_NetworkCommonParams *commonParams,
                                            inPtrs,
                                            outPtrs,
                                            layerIdx);
-  }
-
-  return status;
-}
-
-int32_t TIDL_gridsampleAlloc(const TIDL_LayerSpecificParams *layerSpecificParams,
-                             const TIDL_NetworkCommonParams *commonParams,
-                             int32_t layerIdx,
-                             int32_t memorySize[TIDL_LAYER_MEMORY_MAX])
-{
-  int32_t status = IALG_EOK;
-
-#ifdef HOST_EMULATION
-  if (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != 0U)
-  {
-    status = TIDL_deviceCommonRefAlloc(layerSpecificParams, commonParams, layerIdx, memorySize);
-  }
-  else
-#endif
-  {
-    status = TIDL_gridSampleDspAlloc(layerSpecificParams, commonParams, layerIdx, memorySize);
-  }
-
-  return status;
-}
-
-int32_t TIDL_gridsampleInit(const TIDL_LayerSpecificParams *layerSpecificParams,
-                            const TIDL_NetworkCommonParams *commonParams,
-                            sTIDL_AlgLayer_t *algLayer,
-                            int32_t layerIdx,
-                            uint8_t *memory[TIDL_LAYER_MEMORY_MAX],
-                            int32_t memorySize[TIDL_LAYER_MEMORY_MAX],
-                            void **outPtr)
-{
-  int32_t status = IALG_EOK;
-
-#ifdef HOST_EMULATION
-  if (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != 0U)
-  {
-    status = TIDL_deviceCommonRefInit(layerSpecificParams,
-                                      commonParams,
-                                      algLayer,
-                                      layerIdx,
-                                      memory,
-                                      memorySize,
-                                      outPtr);
-  }
-  else
-#endif
-  {
-    status = TIDL_deviceUtilsCommonInit(layerSpecificParams,
-                                        commonParams,
-                                        algLayer,
-                                        layerIdx,
-                                        memory,
-                                        memorySize,
-                                        outPtr);
   }
 
   return status;

@@ -4,23 +4,11 @@
 # Edit this file to suit your specific build needs
 #
 
-export MMALIB_PATH
 export PSDK_INSTALL_PATH=$(PSDK_PATH)
 
 include $(CONCERTO_ROOT)/shell.mak
 
 NUM_THREADS := $(shell nproc --ignore=2)
-
-mmalib:
-ifeq ($(BUILD_TARGET_MODE),yes)
-	$(MAKE) -C $(MMALIB_PATH) mmalib mmalib_cn common SRC_DIR=cnn TARGET_BUILD=release
-endif
-ifeq ($(BUILD_EMULATION_MODE),yes)
-	$(MAKE) -C $(MMALIB_PATH) mmalib mmalib_cn common SRC_DIR=cnn TARGET_CPU=x86_64 TARGET_SCPU=$(C7X_TARGET) TARGET_PLATFORM=PC TARGET_BUILD=release
-endif
-
-mmalib_clean mmalib_scrub:
-	rm -rf $(MMALIB_PATH)/out
 
 tidl_lib:
 ifeq ($(BUILD_EMULATION_MODE),yes)
@@ -208,4 +196,4 @@ ifeq ($(BUILD_LINUX_MPU),yes)
 endif
 endif
 
-.PHONY: tidl_lib tidl_lib_clean tidl_lib_scrub tidl_tiovx_kernels tidl_tiovx_kernels_clean tidl_tiovx_kernels_scrub tidl_rt tidl_rt_clean tidl_rt_scrub mmalib mmalib_clean mmalib_scrub
+.PHONY: tidl_lib tidl_lib_clean tidl_lib_scrub tidl_tiovx_kernels tidl_tiovx_kernels_clean tidl_tiovx_kernels_scrub tidl_rt tidl_rt_clean tidl_rt_scrub

@@ -83,11 +83,7 @@ endif
 endif
 
 ifeq ($(TARGET_PLATFORM) , PC)
-ifdef SystemRoot
-OUTFILE=$(LIBDIR)/tidl_ref.lib
-else
 OUTFILE=$(LIBDIR)/libtidl_ref.a
-endif
 else
 OUTFILE=$(LIBDIR)/tidl_ref.lib
 endif

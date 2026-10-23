@@ -654,7 +654,7 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
   int32_t numBatches = buffParams->numTotRoi;
   uint16_t numGroups = params->numGroups;
   float32_tidl *perChannelWeightScalePtr = (float32_tidl *)((int8_t *)(net) + params->perChannelWeightScaleOffset) + algLayer->layerParams.convParams.biasRefExtraOffset + algLayer->layerParams.convParams.biasMultiCoreExtraOffset;
-  sTIDL_DataParams_t *indata = TIDL_getDataParams(net, net->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_DataParams_t *indata = &net->TIDLLayers[net->TIDLLayers[layerIdx].inData[0]].outData;
   float32_tidl tensorScale = indata->tensorScale;
 
   int32_t i2, i3, i6, i8;
@@ -1823,8 +1823,7 @@ static int32_t TIDL_conv2dRefGetScratchDataSize(const TIDL_NetworkCommonParams *
 {
   int32_t outBatchPitch;
   int32_t scratchDataSize;
-  sTIDL_DataParams_t *dataParams = TIDL_getDataParams(commonParams->net,
-                                                      commonParams->net->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_DataParams_t *dataParams = &commonParams->net->TIDLLayers[commonParams->net->TIDLLayers[layerIdx].inData[0]].outData;
 
   outBatchPitch = commonParams->net->TIDLLayers[layerIdx].outData.pitch[TIDL_ROI_PITCH];
   scratchDataSize = commonParams->net->TIDLLayers[layerIdx].outData.dimValues[TIDL_DIM_BATCH] * outBatchPitch *
@@ -1942,7 +1941,7 @@ int32_t TIDL_conv2dRefAlloc(const sTIDL_ConvParams_t *conv2dparams,
   int32_t outDataSize;
   int32_t paramMemSize = 0;
 
-  (void)memset(memorySize, 0, sizeof(memorySize));
+  (void)memset(memorySize, 0, TIDL_LAYER_MEMORY_MAX);
 
   paramMemSize = TIDL_conv2dPersistentMemAllocateAndComputeSize(NULL,
                                                                 conv2dparams,

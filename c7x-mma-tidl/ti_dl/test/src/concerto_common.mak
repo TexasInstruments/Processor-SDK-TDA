@@ -45,7 +45,11 @@ IDIRS += $(MCU_PLUS_SDK_PATH)
 IDIRS += $(MCU_PLUS_SDK_PATH)/source
 IDIRS += $(MCU_PLUS_SDK_PATH)/source/drivers
 IDIRS += $(MCU_PLUS_SDK_PATH)/source/drivers/dmautils
+ifeq ($(ENABLE_NEW_VISION_APPS_STRUCTURE),yes)
 IDIRS += $(PLATFORM_PATH)
+else
+IDIRS += $(VISION_APPS_PATH)
+endif
 else ifeq ($(RTOS_SDK),pdk)
 IDIRS += $(PDK_PATH)
 IDIRS += $(PDK_PATH)/ti/drv/udma/dmautils

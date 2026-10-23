@@ -106,25 +106,23 @@ typedef char valueCategory_t ;
 
 
 typedef struct {
-  char *string;
+  const char  *string;
   struct {
-    int ival;
+    int   ival;
     float fval;
   } valSubst;
 } sTokenStringSubst;
 
 typedef struct {
-  char           *tokenName;
-  void           *place;
-  infoType_t      type;
-  valueCategory_t valCat ;
-  bool            mandatory;
-  bool            provided;
-  sTokenStringSubst
-                 *subStr;
-  char           *shortHelp;
-  char           *longHelp;
-
+  const char        *tokenName;
+  void              *place;
+  infoType_t        type;
+  valueCategory_t   valCat ;
+  bool              mandatory;
+  bool              provided;
+  sTokenStringSubst *subStr;
+  const char        *shortHelp;
+  const char        *longHelp;
 } sTokenMapping;
 
 

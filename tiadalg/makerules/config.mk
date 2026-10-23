@@ -60,17 +60,21 @@
 #
 
 ifdef SystemRoot
+
 PSDK_PATH ?= C:\ti
-PSDK_TOOLS_PATH ?= C:\ti
-PSDK_BUILDER_PATH ?= C:\ti\sdk_builder
+PSDK_BUILDER_PATH ?= $(PSDK_PATH)\sdk_builder
+
+include $(PSDK_BUILDER_PATH)\tools_path.mak
+
 else
+
 PSDK_PATH ?= $(abspath ..)
-PSDK_TOOLS_PATH ?= $(HOME)/ti
 PSDK_BUILDER_PATH ?= $(PSDK_PATH)/sdk_builder
+
+include $(PSDK_BUILDER_PATH)/tools_path.mak
+
 endif
 
-CGT6X_ROOT          ?=$(PSDK_TOOLS_PATH)/ti-cgt-c6000_8.3.7
-CGT7X_ROOT          ?=$(PSDK_TOOLS_PATH)/ti-cgt-c7000_5.0.0.LTS
 SHOW_COMMANDS       ?= 0
 UTILS_PATH          ?= C:\\ti\\ccs930\\ccs\\utils\\cygwin
 

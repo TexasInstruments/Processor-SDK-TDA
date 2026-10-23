@@ -74,6 +74,9 @@
 #include "tidl_commonUtils.h"
 #include "tidl_alg_utils.h"
 #include "tidl_argop_ref.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 using namespace floating_point::bf16_c7x;
 
@@ -134,42 +137,49 @@ int32_t TIDL_argmaxRefProcess(
   OPENACC(data copyin(inData[:1 + (numTotRoi - 1) * params->numChannels * inChPitch + ((params->numChannels - 1) * inChPitch) + ((imHeight - 1) * inPitch) + (imWidth - 1)])
               copyout(outData[:1 + (numTotRoi - 1) * outChPitch + (imHeight - 1) * outPitch + (imWidth - 1)]))
   OPENACC(parallel loop collapse(3))
-
-  for (i5 = 0; i5 < numTotRoi; i5++)
-  {
-    for (i4 = 0; i4 < inDIM1; i4++)
+  #ifdef BUILD_WITH_CUDA_ARGOP
+    // call cuda slice wrapper
+    TIDL_cudaArgOpMax(inPtr, outPtr,
+      numTotRoi, inDIM1, inDIM2, (uint32_t)params->numChannels, imHeight, imWidth,
+      inBatchPitch, inDIM1Pitch, inDIM2Pitch, inChPitch, inPitch,
+      outBatchPitch, outDIM1Pitch, outChPitch, outPitch, params->selectLastIndex);
+  #else
+    for (i5 = 0; i5 < numTotRoi; i5++)
     {
-      for (i3 = 0; i3 < inDIM2; i3++)
+      for (i4 = 0; i4 < inDIM1; i4++)
       {
-        for (i0 = 0; i0 < imHeight; i0++)
+        for (i3 = 0; i3 < inDIM2; i3++)
         {
-          for (i1 = 0; i1 < imWidth; i1++)
+          for (i0 = 0; i0 < imHeight; i0++)
           {
-            maxIdx = 0;
-            OPENACC(loop)
-            for (i2 = 0; i2 < (uint32_t)params->numChannels; i2++)
+            for (i1 = 0; i1 < imWidth; i1++)
             {
-              currVal = inData[(i5 * inBatchPitch) + (i4 * inDIM1Pitch) + (i3 * inDIM2Pitch) + (i2 * inChPitch) + (i0 * inPitch) + i1];
-              if (i2 == 0U)
+              maxIdx = 0;
+              OPENACC(loop)
+              for (i2 = 0; i2 < (uint32_t)params->numChannels; i2++)
               {
-                maxVal = currVal;
+                currVal = inData[(i5 * inBatchPitch) + (i4 * inDIM1Pitch) + (i3 * inDIM2Pitch) + (i2 * inChPitch) + (i0 * inPitch) + i1];
+                if (i2 == 0U)
+                {
+                  maxVal = currVal;
+                }
+                if (currVal > maxVal)
+                {
+                  maxVal = currVal;
+                  maxIdx = i2;
+                }
+                else if (currVal == maxVal && params->selectLastIndex == 1)
+                {
+                  maxIdx = i2;
+                }
               }
-              if (currVal > maxVal)
-              {
-                maxVal = currVal;
-                maxIdx = i2;
-              }
-              else if (currVal == maxVal && params->selectLastIndex == 1)
-              {
-                maxIdx = i2;
-              }
+              outData[(i5 * outBatchPitch) + (i4 * outDIM1Pitch) + (i3 * outChPitch) + (i0 * outPitch) + i1] = maxIdx;
             }
-            outData[(i5 * outBatchPitch) + (i4 * outDIM1Pitch) + (i3 * outChPitch) + (i0 * outPitch) + i1] = maxIdx;
           }
         }
       }
     }
-  }
+  #endif
   TIDL_L1DandL2CacheWbInv();
   return status;
 }
@@ -213,41 +223,49 @@ int32_t TIDL_argminRefProcess(
                copyout(outData[:1+(numTotRoi-1)*outChPitch + (imHeight-1)*outPitch + (imWidth-1)]))
   OPENACC(parallel loop collapse(3))
 
-  for(i5 = 0; i5 < numTotRoi; i5++)
-  {
-    for(i4 = 0; i4 < inDIM1; i4++)
+  #ifdef BUILD_WITH_CUDA_ARGOP
+    // call cuda slice wrapper
+    TIDL_cudaArgOpMin(inPtr, outPtr,
+      numTotRoi, inDIM1, inDIM2, (uint32_t)params->numChannels, imHeight, imWidth,
+      inBatchPitch, inDIM1Pitch, inDIM2Pitch, inChPitch, inPitch,
+      outBatchPitch, outDIM1Pitch, outChPitch, outPitch, params->selectLastIndex);
+  #else
+    for(i5 = 0; i5 < numTotRoi; i5++)
     {
-      for(i3 = 0; i3 < inDIM2; i3++)
+      for(i4 = 0; i4 < inDIM1; i4++)
       {
-        for(i0 = 0; i0 < imHeight; i0++)
+        for(i3 = 0; i3 < inDIM2; i3++)
         {
-          for(i1 = 0; i1 < imWidth; i1++)
+          for(i0 = 0; i0 < imHeight; i0++)
           {
-            minIdx = 0;
-            OPENACC(loop)
-            for(i2 = 0; i2 < (uint32_t)params->numChannels; i2++)
+            for(i1 = 0; i1 < imWidth; i1++)
             {
-              currVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
-              if(i2 == 0U)
+              minIdx = 0;
+              OPENACC(loop)
+              for(i2 = 0; i2 < (uint32_t)params->numChannels; i2++)
               {
-                minVal = currVal;
+                currVal = inData[(i5*inBatchPitch) + (i4*inDIM1Pitch) + (i3*inDIM2Pitch) + (i2*inChPitch) + (i0*inPitch) + i1];
+                if(i2 == 0U)
+                {
+                  minVal = currVal;
+                }
+                if(currVal < minVal)
+                {
+                  minVal = currVal;
+                  minIdx = i2;
+                }
+                else if (currVal == minVal && params->selectLastIndex == 1)
+                {
+                  minIdx = i2;
+                }
               }
-              if(currVal < minVal)
-              {
-                minVal = currVal;
-                minIdx = i2;
-              }
-              else if (currVal == minVal && params->selectLastIndex == 1)
-              {
-                minIdx = i2;
-              }
+              outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outChPitch) + (i0*outPitch) + i1] = minIdx;
             }
-            outData[(i5*outBatchPitch) + (i4*outDIM1Pitch) + (i3*outChPitch) + (i0*outPitch) + i1] = minIdx;
           }
         }
       }
     }
-  }
+  #endif
   TIDL_L1DandL2CacheWbInv();
   return status;
 }

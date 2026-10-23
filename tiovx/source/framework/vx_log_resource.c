@@ -1192,7 +1192,7 @@ vx_status tivxExportMemoryConsumption(char * outputFile, const char * unit, vx_e
                 total_size += size;
                 total_rem += rem_size;
             }
-            if (strncmp(row.name, "TIVX_PLAT_MAX_OBJ_DESC_SHM_INST", TIVX_RESOURCE_NAME_MAX) == 0)
+            if (strncmp(row.name, "TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST", TIVX_RESOURCE_NAME_MAX) == 0)
             {
                 total_obj_size = (vx_float64)row.max_used_value * (vx_float64)(sizeof(tivx_obj_desc_shm_entry_t));
             }
@@ -1464,7 +1464,7 @@ vx_status tivxExportMemoryConsumption(char * outputFile, const char * unit, vx_e
             }
             if (displayMode != (vx_enum)TIVX_MEM_LOG_GLOBAL)
             {
-                if ((row.is_obj_desc == (vx_bool)vx_true_e) && (strncmp(row.name, "TIVX_PLAT_MAX_OBJ_DESC_SHM_INST", TIVX_RESOURCE_NAME_MAX)!=0))
+                if ((row.is_obj_desc == (vx_bool)vx_true_e) && (strncmp(row.name, "TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST", TIVX_RESOURCE_NAME_MAX)!=0))
                 {
                     obj_size = (vx_float64)(sizeof(tivx_obj_desc_shm_entry_t)) * (vx_float64)(g_tivx_obj_desc_shm_table[obj_count].value);
                     obj_units = applyMemoryUnit(&obj_size, unit);

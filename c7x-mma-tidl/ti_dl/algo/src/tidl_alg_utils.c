@@ -173,43 +173,6 @@ void TIDL_getMMAv2_ScaleAndShift(float32_tidl scaleRatio, uint8_t *scale, uint8_
   *scale = (newScaleRatio + 0.5);
 }
 
-void TIDL_getMMAv2_EltwiseScalesAndShift(float32_tidl scale1, float32_tidl scale2, uint8_t *intScale1, uint8_t *intScale2, uint8_t *cScale, uint8_t *shift)
-{
-  float32_tidl fMax;
-  float32_tidl fMin;
-  int32_t maxScaleID;
-  /*TIDL's MMA based eltwise addition kernel has a restriction that the scales in the A vector and B panel need to be 7-bit,
-    hence the max ceiling is set to 127U (0b1111111)*/
-  uint8_t fScaleVal = 127U;
-  if (scale1 > scale2)
-  {
-    maxScaleID = 0;
-    fMax = scale1;
-    fMin = scale2;
-  }
-  else
-  {
-    maxScaleID = 1;
-    fMax = scale2;
-    fMin = scale1;
-  }
-  float32_tidl fVal = fMax / (float32_tidl)fScaleVal;
-  float64_tidl iMin;
-  TIDL_getMMAv2_ScaleAndShift(fVal, cScale, shift);
-  float32_tidl commonFactor = (float32_tidl)(*cScale) / (pow(2, (*shift)));
-  iMin = floor((float64_tidl)fMin / commonFactor);
-  /*Add nudge of 0.5 to round correctly:*/
-  if (maxScaleID == 0)
-  {
-    *intScale1 = (float32_tidl)fScaleVal + 0.5f;
-    *intScale2 = iMin + 0.5;
-  }
-  else
-  {
-    *intScale1 = iMin + 0.5;
-    *intScale2 = (float32_tidl)fScaleVal + 0.5;
-  }
-}
 
 /**
  * @brief This function fills padded rows with zero
@@ -476,7 +439,7 @@ void *TIDL_getMemoryChunkFromSysmem(sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX
   uint8_t *mem;
   uint8_t *ptrCurr = &((uint8_t *)sysMems[space].base)[sysMems[space].offset];
   int32_t alignmentBytes;
-  int32_t offsetOrig = sysMems[space].offset;
+  uint32_t offsetOrig = sysMems[space].offset;
   if (alignment > 0U)
   {
     uint32_t tempAlignBytes = (((((uintptr_t)ptrCurr) + alignment - 1U) & (~(alignment - 1U))) - ((uintptr_t)ptrCurr));
@@ -646,36 +609,6 @@ int32_t TIDL_isInDataBuff(const sTIDL_Network_t *pTIDLNetStructure,
   }
 
   return status;
-}
-
-/**
-----------------------------------------------------------------------------
-@ingroup    TIDL_IVISION_SUPPORT
-@fn         TIDL_getLayerNum
-@brief      Function to get the layer index of data ID
-
-@param      pTIDLNetStructure : Base pointer for net
-@param      dataId            : Current data buffer ID
-@remarks    None
-@return     IALG_EOK   - Successful
-IALG_EFAIL - Unspecified error
-----------------------------------------------------------------------------
-*/
-int32_t TIDL_getLayerNum(const sTIDL_Network_t *pTIDLNetStructure, int32_t dataId)
-{
-  int32_t i, j;
-  int32_t layerNum = -1;
-  for (i = 0; i < pTIDLNetStructure->numLayers; i++)
-  {
-    for (j = 0; j < pTIDLNetStructure->TIDLLayers[i].numOutBufs; j++)
-    {
-      if (pTIDLNetStructure->TIDLLayers[i].outData.dataId == dataId)
-      {
-        layerNum = i;
-      }
-    }
-  }
-  return layerNum;
 }
 
 /**
@@ -978,8 +911,7 @@ int32_t TIDL_refGetScratchDataSize(const TIDL_NetworkCommonParams *commonParams,
 {
   int32_t outBatchPitch;
   int32_t scratchDataSize;
-  sTIDL_DataParams_t *dataParams = TIDL_getDataParams(commonParams->net,
-                                                      commonParams->net->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_DataParams_t *dataParams = &commonParams->net->TIDLLayers[commonParams->net->TIDLLayers[layerIdx].inData[0]].outData;
 
   outBatchPitch = commonParams->net->TIDLLayers[layerIdx].outData.pitch[TIDL_ROI_PITCH];
   scratchDataSize = commonParams->net->TIDLLayers[layerIdx].outData.dimValues[TIDL_DIM_BATCH] * outBatchPitch *
@@ -1033,7 +965,7 @@ void TIDL_outBuffAlloc(const TIDL_CreateParams *params,
   if ((TIDL_isOutDataBuff(params->net,
                           params->net->TIDLLayers[layerIdx].outData.dataId,
                           params->currLayersGroupId) == 0) &&
-      (params->net->dataFlowInfo == NULL))
+      (params->net->dataFlowInfo == 0))
   {
     memRec[ALG_SCRATCH_DATA_BUFF_MEMREC].size += ((uint32_t)outDataSize + 128U);
     // tidl_printf(0," ALG_SCRATCH_DATA_BUFF_MEMREC Size for Layer , %4d,  %8d \n", layerIdx, memRec[ALG_SCRATCH_DATA_BUFF_MEMREC].size);
@@ -1108,7 +1040,7 @@ void TIDL_outBuffInit(const TIDL_CreateParams *params,
                           params->net->TIDLLayers[layerIdx].outData.dataId,
                           params->currLayersGroupId) == 1)
 #ifdef HOST_EMULATION
-      || (params->net->dataFlowInfo != NULL)
+      || (params->net->dataFlowInfo != 0)
 #endif
   )
   /* LDRA_JUSTIFY_END */
@@ -1259,296 +1191,7 @@ int32_t TIDL_padInit(
 
   return status;
 }
-#endif
 
-/**
-----------------------------------------------------------------------------
-@fn         TIDL_detectOutAlloc
-@brief      Function to Request Memory required by the SSD detcetion output layer
-
-@param      params       : Create Parameters
-@param      layerIdx     : Current Layer index in Net structure
-@param      memRec       : memory table populated by the Algorithm
-@param      TIDLLayersBuf: Temp structure to store outDataSize and Data Id's
-@remarks    None
-@return     IALG_EOK   - Successful
-IALG_EFAIL - Unspecified error
-----------------------------------------------------------------------------
-*/
-int32_t TIDL_detectOutAlloc(const TIDL_CreateParams *params,
-                            int32_t layerIdx, IALG_MemRec *memRec, sTIDL_LayerBuf_t *TIDLLayersBufPtr)
-{
-  int32_t outDataSize = TIDL_updateDataParamsPitch(&params->net->TIDLLayers[layerIdx].outData);
-  int32_t numConfPts = 0;
-  int32_t curData = 0;
-  int32_t scratchDataSize;
-  uint32_t curCnfPlaneSize = 0;
-  uint32_t maxConfPlaneSize = 0;
-  uint32_t elementSize = 0;
-  int32_t priorBoxParamSize;
-
-  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(params->net,
-                                                        params->net->TIDLLayers[layerIdx].inData[0]);
-  elementSize = TIDL_getDatElementSize(inDataParams->elementType);
-
-  sTIDL_DetectOutputParams_t *detectOutParams = &params->net->TIDLLayers[layerIdx].layerParams.detectOutParams;
-  priorBoxParamSize = detectOutParams->numHeads * detectOutParams->numSubHeads * (int32_t)sizeof(sTIDL_AnchorBoxParams_t);
-  memRec[ALG_LAYERS_PARAMS_BUFF_MEMREC].size += ((uint32_t)priorBoxParamSize + 128U);
-
-  if (detectOutParams->metaArchType != (int32_t)TIDL_metaArchTIDLYolo)
-  {
-    /*total number input buffers will be twice the number of heads, and first half are location heads,
-      and second half is confidence head*/
-    for (int32_t i = ((uint32_t)params->net->TIDLLayers[layerIdx].numInBufs >> 1U); i < (params->net->TIDLLayers[layerIdx].numInBufs); i++)
-    {
-      const int32_t (*indimValues)[TIDL_DIM_MAX] =
-          (const int32_t (*)[TIDL_DIM_MAX])
-              inDataParams->dimValues;
-
-      const int32_t (*inpitchValues)[TIDL_DIM_MAX] =
-          (const int32_t (*)[TIDL_DIM_MAX])
-              inDataParams->pitch;
-
-      curData = ((int32_t)(*indimValues)[TIDL_DIM_BATCH] *
-                 (int32_t)(*indimValues)[TIDL_DIM_NUMCH] *
-                 ((int32_t)(*indimValues)[TIDL_DIM_HEIGHT]) *
-                 ((int32_t)(*inpitchValues)[TIDL_LINE_PITCH]));
-
-      curCnfPlaneSize = ((int32_t)(*indimValues)[TIDL_DIM_HEIGHT]) * ((int32_t)(*inpitchValues)[TIDL_LINE_PITCH]);
-
-      numConfPts += curData;
-
-      if (maxConfPlaneSize < curCnfPlaneSize)
-      {
-        maxConfPlaneSize = curCnfPlaneSize;
-      }
-    }
-  }
-  else
-  {
-    for (int32_t i = 0; i < (params->net->TIDLLayers[layerIdx].numInBufs); i++)
-    {
-      const int32_t (*indimValues)[TIDL_DIM_MAX] =
-          (const int32_t (*)[TIDL_DIM_MAX])
-              inDataParams->dimValues;
-
-      const int32_t (*inpitchValues)[TIDL_DIM_MAX] =
-          (const int32_t (*)[TIDL_DIM_MAX])
-              inDataParams->pitch;
-
-      curData = ((int32_t)(*indimValues)[TIDL_DIM_BATCH] *
-                 (((int32_t)(*indimValues)[TIDL_DIM_NUMCH]) - 5) * // yolo has conf and location as common head, and it has 5 channels for box parameter(4) and objectness score(1)
-                 ((int32_t)(*indimValues)[TIDL_DIM_HEIGHT]) *
-                 ((int32_t)(*inpitchValues)[TIDL_LINE_PITCH]));
-
-      numConfPts += curData;
-
-      curCnfPlaneSize = ((int32_t)(*indimValues)[TIDL_DIM_HEIGHT]) * ((int32_t)(*inpitchValues)[TIDL_LINE_PITCH]);
-
-      if (maxConfPlaneSize < curCnfPlaneSize)
-      {
-        maxConfPlaneSize = curCnfPlaneSize;
-      }
-    }
-  }
-
-  if (params->optimiseExtMem != TIDL_OptimiseExtMemL0)
-  {
-#ifdef HOST_EMULATION
-    if (((uint32_t)params->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != 0U)
-    {
-      outDataSize = TIDL_findFreeOutBuff(params, layerIdx, outDataSize, TIDLLayersBufPtr);
-    }
-#endif
-    TIDLLayersBufPtr->outDataSize[layerIdx] = outDataSize;
-  }
-  TIDL_outBuffAlloc(params, layerIdx, memRec, outDataSize);
-
-  /*For worst scenario all the sratch memory is reserved in DDR*/
-
-  // L2 related pointers
-  /* topMScore, topMScoreSorted, topMIndices, topMIndicesSorted*/
-  scratchDataSize = (numConfPts * (((int64_t)sizeof(int16_t) * 2) + ((int64_t)sizeof(int32_t) * 2))) + (128 * 4);
-
-  // L1 related pointers
-  scratchDataSize += ((detectOutParams->topK * (int64_t)sizeof(BBox)) + 128);               // topKBbox
-  scratchDataSize += ((detectOutParams->topK * (int64_t)sizeof(uint16_t)) + 128);           // topKScore
-  scratchDataSize += ((detectOutParams->topK * (int64_t)sizeof(int32_t)) + 128);            // topKIndices
-  scratchDataSize += ((detectOutParams->topK * (int64_t)sizeof(int32_t)) + 128);            // nmsKeptIndices
-  scratchDataSize += (((int64_t)sizeof(int32_t) * detectOutParams->numClasses) + 128);      // countMList
-  scratchDataSize += (((int64_t)sizeof(int32_t) * detectOutParams->numClasses) + 128);      // countMListAcc
-  scratchDataSize += ((detectOutParams->numClasses * (int64_t)sizeof(float32_tidl)) + 128); // if (softmax) tempScore
-
-  // L3 related pointers
-  maxConfPlaneSize = (maxConfPlaneSize >> 6U) << 6U; // make it multiple of 64 for SIMD width
-  uint32_t tempSizeValue = 0U;
-  tempSizeValue = (((maxConfPlaneSize + 63U) >> 1U) + 128U);
-  scratchDataSize += (int32_t)tempSizeValue; // pred
-  tempSizeValue = ((maxConfPlaneSize * 2U * elementSize) + 128U);
-  scratchDataSize += (int32_t)tempSizeValue; // featMaxMinVal
-
-  if ((uint32_t)scratchDataSize > memRec[ALG_SCRATCH_DDR_MEM_MEMREC].size)
-  {
-    memRec[ALG_SCRATCH_DDR_MEM_MEMREC].size = (uint32_t)(scratchDataSize);
-  }
-
-  return 0;
-}
-
-/**
-----------------------------------------------------------------------------
-@ingroup    TIDL_IVISION_SUPPORT
-@fn         TIDL_detectOutInit
-@brief      Function to Initialize the SSD detcetion output layer specific params
-
-@param      params       : Create Parameters
-@param      layerIdx     : Current Layer index in Net structure
-@param      algLayer     : Pointer to current layer algorithm specific params
-@param      paramMemTabOffset : Current Offset in ALG_LAYERS_PARAMS_BUFF_MEMREC
-@param      dataMemTabOffset : Current Offset in ALG_SCRATCH_DATA_BUFF_MEMREC
-@param      memRec       : memory table populated by the Algorithm
-@param      outPtr       : Pointer to Layer output Pointers list
-@param      TIDLLayersBuf: Temp structure to store outDataSize and Data Id's
-@remarks    None
-@return     IALG_EOK   - Successful
-IALG_EFAIL - Unspecified error
-----------------------------------------------------------------------------
-*/
-int32_t TIDL_detectOutInit(
-    const TIDL_CreateParams *params, int32_t layerIdx,
-    sTIDL_AlgLayer_t *algLayer, int32_t *paramMemTabOffset,
-    int32_t *dataMemTabOffset, const IALG_MemRec *memRec,
-    void **outPtr, sTIDL_LayerBuf_t *TIDLLayersBufPtr)
-{
-  int32_t status = IALG_EOK;
-  int32_t outDataSize = TIDL_updateDataParamsPitch(&params->net->TIDLLayers[layerIdx].outData);
-  int32_t numConfPts = 0;
-  uint32_t priorBoxParamSize;
-  int32_t curData = 0;
-  int32_t scratchDataSize;
-  int32_t locScratchOffset = 0;
-  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(params->net,
-                                                        params->net->TIDLLayers[layerIdx].inData[0]);
-  sTIDL_ALgDetectOutputParams_t *algDetectOutParams = &algLayer->layerParams.detectionOutputParams;
-  float32_tidl *priorData;
-
-  sTIDL_DetectOutputParams_t *detectOutParams = &params->net->TIDLLayers[layerIdx].layerParams.detectOutParams;
-  priorData = (float32_tidl *)(((int8_t *)params->net) + detectOutParams->priorBox);
-
-  if (detectOutParams->metaArchType != (int32_t)TIDL_metaArchTIDLYolo)
-  {
-    /*total number input buffers will be twice the number of heads, and first half are location heads,
-      and second half is confidence head*/
-    for (int32_t i = ((uint32_t)params->net->TIDLLayers[layerIdx].numInBufs >> 1U); i < (params->net->TIDLLayers[layerIdx].numInBufs); i++)
-    {
-      const int32_t (*indimValues)[TIDL_DIM_MAX] =
-          (const int32_t (*)[TIDL_DIM_MAX])
-              inDataParams->dimValues;
-
-      const int32_t (*inpitchValues)[TIDL_DIM_MAX] =
-          (const int32_t (*)[TIDL_DIM_MAX])
-              inDataParams->pitch;
-
-      curData = ((int32_t)(*indimValues)[TIDL_DIM_BATCH] *
-                 (int32_t)(*indimValues)[TIDL_DIM_NUMCH] *
-                 ((int32_t)(*indimValues)[TIDL_DIM_HEIGHT]) *
-                 ((int32_t)(*inpitchValues)[TIDL_LINE_PITCH]));
-
-      numConfPts += curData;
-    }
-  }
-  else
-  {
-    for (int32_t i = 0; i < (params->net->TIDLLayers[layerIdx].numInBufs); i++)
-    {
-      const int32_t (*indimValues)[TIDL_DIM_MAX] =
-          (const int32_t (*)[TIDL_DIM_MAX])
-              inDataParams->dimValues;
-
-      const int32_t (*inpitchValues)[TIDL_DIM_MAX] =
-          (const int32_t (*)[TIDL_DIM_MAX])
-              inDataParams->pitch;
-
-      curData = ((int32_t)(*indimValues)[TIDL_DIM_BATCH] *
-                 (((int32_t)(*indimValues)[TIDL_DIM_NUMCH]) - 5) * // yolo has conf and location as common head, and it has 5 channels for box parameter(4) and objectness score(1)
-                 ((int32_t)(*indimValues)[TIDL_DIM_HEIGHT]) *
-                 ((int32_t)(*inpitchValues)[TIDL_LINE_PITCH]));
-
-      numConfPts += curData;
-    }
-  }
-
-  if (params->optimiseExtMem != TIDL_OptimiseExtMemL0)
-  {
-#ifdef HOST_EMULATION
-    if (((uint32_t)params->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) != 0U)
-    {
-      outDataSize = TIDL_findFreeOutBuff(params, layerIdx, outDataSize, TIDLLayersBufPtr);
-    }
-#endif
-    TIDLLayersBufPtr->outDataSize[layerIdx] = outDataSize;
-  }
-
-  priorBoxParamSize = detectOutParams->numHeads * detectOutParams->numSubHeads * (int32_t)sizeof(sTIDL_AnchorBoxParams_t);
-  algDetectOutParams->priorBoxPtr =
-      get_uint8_t_pointer((uint8_t *)(void *)memRec[ALG_LAYERS_PARAMS_BUFF_MEMREC].base, *paramMemTabOffset);
-  uint32_t tempAlignSize = ALIGN_SIZE(priorBoxParamSize, 128U);
-  *paramMemTabOffset += (int32_t)tempAlignSize;
-  (void)memcpy((void *)algDetectOutParams->priorBoxPtr, (const void *)priorData, priorBoxParamSize);
-
-  uint32_t alignScratchData = 0U;
-
-  TIDL_outBuffInit(params, layerIdx, dataMemTabOffset, memRec, outPtr, outDataSize);
-  // if (status == IALG_EOK)  /* TIDL_outBuffInit() function doesn't support error handling */
-  {
-    algLayer->scratchSize = 0;
-    scratchDataSize = numConfPts * (int64_t)sizeof(int16_t);
-    algLayer->layerParams.detectionOutputParams.topMScoreDdr =
-        (uint16_t *)get_uint8_t_pointer((uint8_t *)(void *)memRec[ALG_SCRATCH_DDR_MEM_MEMREC].base, locScratchOffset);
-    alignScratchData = ALIGN_SIZE((uint32_t)scratchDataSize, 128U);
-    locScratchOffset = locScratchOffset + (int32_t)alignScratchData;
-
-    scratchDataSize = numConfPts * (int64_t)sizeof(int16_t);
-    algLayer->layerParams.detectionOutputParams.topMScoreSortedDdr =
-        (uint16_t *)get_uint8_t_pointer((uint8_t *)(void *)memRec[ALG_SCRATCH_DDR_MEM_MEMREC].base, locScratchOffset);
-    alignScratchData = ALIGN_SIZE((uint32_t)scratchDataSize, 128U);
-    locScratchOffset = locScratchOffset + (int32_t)alignScratchData;
-
-    scratchDataSize = numConfPts * (int64_t)sizeof(int32_t);
-    algLayer->layerParams.detectionOutputParams.topMIndicesDdr =
-        (int32_t *)get_uint8_t_pointer((uint8_t *)(void *)memRec[ALG_SCRATCH_DDR_MEM_MEMREC].base, locScratchOffset);
-    alignScratchData = ALIGN_SIZE((uint32_t)scratchDataSize, 128U);
-    locScratchOffset = locScratchOffset + (int32_t)alignScratchData;
-
-    scratchDataSize = numConfPts * (int64_t)sizeof(int32_t);
-    algLayer->layerParams.detectionOutputParams.topMIndicesSortedDdr =
-        (int32_t *)get_uint8_t_pointer((uint8_t *)(void *)memRec[ALG_SCRATCH_DDR_MEM_MEMREC].base, locScratchOffset);
-    alignScratchData = ALIGN_SIZE((uint32_t)scratchDataSize, 128U);
-    locScratchOffset = locScratchOffset + (int32_t)alignScratchData;
-
-    algLayer->layerParams.detectionOutputParams.topMDdr = numConfPts;
-    algLayer->layerParams.detectionOutputParams.scratchDDRConsumed = locScratchOffset;
-
-    algLayer->metaData.totalOps =
-        (params->net->TIDLLayers[layerIdx].outData.dimValues[TIDL_DIM_NUMCH] *
-         params->net->TIDLLayers[layerIdx].layerParams.eltWiseParams.numInData);
-    algLayer->metaData.actualOps = algLayer->metaData.totalOps;
-
-    params->net->TIDLLayers[algLayer->layerIdx].layerParams.detectOutParams.reserve3 = params->forceNegativeTest;
-    TIDL_collectLocConfHeadInfo(params->net->TIDLLayers, algLayer, NULL, algDetectOutParams->priorBoxPtr);
-
-#ifdef HOST_EMULATION
-    if (((uint32_t)params->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == 0U)
-#endif
-    {
-      status = TIDL_odFindValidLocAndScoreKernelInit(params, algLayer, &params->net->TIDLLayers[layerIdx], 0, 0, 0);
-    }
-  }
-
-  return status;
-}
-
-#if defined TIDL_COVERAGE_DEAD_CODE
 /**
 ----------------------------------------------------------------------------
 @ingroup    TIDL_IVISION_SUPPORT
@@ -1682,6 +1325,83 @@ int32_t TIDL_getScaleMemSize(sTIDL_PoolingParams_t *poolParams,
 
 #if defined TIDL_DYNAMIC_SHAPE
 /**
+ * @brief After shape inference succeeds for an inducer layer (LSTM/GRU/RNN/TopK),
+ *        scan the net for induced Slice layers that consume the inducer's output
+ *        and update their slicePoints + outData along the slice axis.
+ *
+ * @param net          : Pointer to the TIDL network
+ * @param inducerLayer : The layer whose shape was just inferred
+ */
+static void TIDL_updateInducedSlicePoints(sTIDL_Network_t *net,
+                                          sTIDL_Layer_t   *inducerLayer)
+{
+    int32_t i = 0;
+    int32_t layerType     = inducerLayer->layerType;
+    int32_t inducerDataId = inducerLayer->outData.dataId;
+
+    for (i = 0; i < net->numLayers; i++)
+    {
+        sTIDL_Layer_t            *sl = &net->TIDLLayers[i];
+        sTIDL_SliceLayerParams_t *sp;
+        int32_t                   axis, start, len;
+
+        if (sl->layerType != TIDL_SliceLayer)
+        {
+          continue;
+        }
+
+        sp = &sl->layerParams.sliceParams;
+
+        if (!sp->isInduced || sl->inData[0] != inducerDataId)
+        {
+          continue;
+        }
+
+        axis = sp->axis;
+
+        if (layerType == TIDL_TopKLayer)
+        {
+            /* packed dim = values + indices; increment factor derived from element size */
+            int32_t bits      = TIDL_getDatElementSize(inducerLayer->outData.elementType) * 8;
+            int32_t increment = (bits <= 8) ? TOPK_BUFFER_INCREMENT_8BIT :
+                                (bits <= 16) ? TOPK_BUFFER_INCREMENT_16BIT :
+                                               TOPK_BUFFER_INCREMENT_32BIT;
+            int32_t packed    = inducerLayer->outData.dimValues[axis];
+            int32_t valLen    = packed / increment;
+            if (sp->inducedSegIdx == 0) { start = 0;      len = valLen;          }  /* values */
+            else                        { start = valLen;  len = packed - valLen; }  /* indices */
+        }
+        else if (layerType == TIDL_GroupQueryAttentionLayer)
+        {
+            /* packed dim along WIDTH = attnOut | presentKey | presentValue */
+            const sTIDL_GroupQueryAttentionParams_t *gqap = &inducerLayer->layerParams.gqaParams;
+            int32_t seg0 = gqap->attnOutElems;
+            int32_t seg1 = gqap->presentKeyElems;
+            int32_t seg2 = gqap->presentValueElems;
+            if      (sp->inducedSegIdx == 0) { start = 0;            len = seg0; }
+            else if (sp->inducedSegIdx == 1) { start = seg0;         len = seg1; }
+            else                             { start = seg0 + seg1;  len = seg2; }
+        }
+        else  /* LSTM / GRU / RNN */
+        {
+            /* packed dim along incrementAxis = seq + nStateSlots */
+            int32_t packed = inducerLayer->outData.dimValues[axis];
+            int32_t nState = (layerType == TIDL_LSTMLayer) ? 2 : 1;
+            int32_t seq    = packed - nState;
+
+            if      (sp->inducedSegIdx == 0) { start = 0;      len = seq; }
+            else if (sp->inducedSegIdx == 1) { start = seq;    len = 1;   }
+            else                             { start = seq + 1; len = 1;  }
+        }
+
+        sp->slicePoints[0]          = start;
+        sp->slicePoints[1]          = start + len;
+        sl->outData.dimValues[axis] = len;
+        TIDL_recalcDataParamsPitch(&sl->outData);
+    }
+}
+
+/**
  * @brief This function returns resolves the output shape of a layer
  *
  * @param inBufs : Input buffers
@@ -1769,7 +1489,21 @@ int32_t TIDL_resolveLayerOutputShape(IVISION_InBufs *inBufs,
           outData->padW = 1;
         }
 
-        TIDL_recalcDataParamsPitch(outData);
+        // Do not update the pitch for cache layer
+        if (layerType != TIDL_CacheLayer)
+        {
+          TIDL_recalcDataParamsPitch(outData);
+        }
+
+        /* After inducer layer shape inference, update downstream induced Slice points */
+        if (layerType == TIDL_LSTMLayer                ||
+            layerType == TIDL_GRULayer                 ||
+            layerType == TIDL_RNNLayer                 ||
+            layerType == TIDL_TopKLayer                ||
+            layerType == TIDL_GroupQueryAttentionLayer)
+        {
+            TIDL_updateInducedSlicePoints(intAlgHandle->createParams->net, TIDLLayer);
+        }
       }
       else if (shapeStatus == TIDL_SHAPE_INFERENCE_ERR_UNSUPPORTED_LAYER)
       {
@@ -1904,8 +1638,7 @@ int32_t TIDL_getLayerInPtrs(
     }
     else if (algLayer->isInOutData[j] == 1)
     {
-      sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(intAlgHandle->createParams->net,
-                                                            TIDLLayer->inData[j]);
+      sTIDL_DataParams_t *inDataParams = &intAlgHandle->createParams->net->TIDLLayers[TIDLLayer->inData[j]].outData;
 
       inPtrs[j] =
           TIDL_getDataBuff(outBufs->bufDesc, outBufs->numBufs, curInDataId, inDataParams->dimValues[TIDL_DIM_BATCH], inDataParams->pitch);
@@ -2016,8 +1749,7 @@ int32_t TIDL_getLayerInPtrs(
         int32_t totalBufSize = 0;
         for (j = 0; j < TIDLLayer->numInBufs; j++)
         {
-          sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(intAlgHandle->createParams->net,
-                                                                TIDLLayer->inData[j]);
+          sTIDL_DataParams_t *inDataParams = &intAlgHandle->createParams->net->TIDLLayers[TIDLLayer->inData[j]].outData;
 
           int32_t dataElementSize = TIDL_getDatElementSize(inDataParams->elementType);
           int32_t totalBatchesToCopy = inDataParams->dimValues[TIDL_DIM_BATCH];
@@ -2126,10 +1858,13 @@ int32_t TIDL_getLayerOutPtrs(
     }
 
 #ifdef HOST_EMULATION
-    if (((uint32_t)intAlgHandle->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY)
+    if ((((uint32_t)intAlgHandle->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY) &&
+        (TIDLLayer->layerType != TIDL_CacheLayer))
     {
       /* This is required so that padded regions are filled with zero's as Padding is done only
-      when NC information is available */
+      when NC information is available. Skipped for TIDL_CacheLayer - outPtrs[j] is the
+      persistent buffer here, and zeroing it every call would destroy previously
+      cached content before TIDL_cacheProcessNew runs. */
       if (intAlgHandle->createParams->net->dataFlowInfo == 0)
       {
         int32_t dataElementSize = TIDL_getDatElementSize(TIDLLayer->outData.elementType);
@@ -2211,65 +1946,56 @@ int32_t TIDL_copyPersistentWeightsToIntMem(TIDL_Handle intAlgHandle)
   if ((intAlgHandle->gcHelperHandle != NULL) &&
       (((uint32_t)intAlgHandle->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == 0U))
   {
-    /* Need to get group number somehow */
-    int32_t groupId = intAlgHandle->groupId;
-    if (groupId <= (intAlgHandle->wlSuperGrp->numGroups - 1))
+    int32_t wlActivateGrpIdx;
+    sWorkloadGroup_t *wlGroup = intAlgHandle->wlGrp;
+    sGCHelperHandle *gcHelperHandle = intAlgHandle->gcHelperHandle;
+
+    wlActivateGrpIdx = wlGroup->activateGroup.startIndexWLUnitDB;
+
+    while (wlActivateGrpIdx <= wlGroup->activateGroup.endIndexWLUnitDB)
     {
-      int32_t wlActivateGrpIdx;
-      sWorkloadGroup_t *wlGroup = &intAlgHandle->wlSuperGrp->workloadGrpList[groupId];
-      sGCHelperHandle *gcHelperHandle = intAlgHandle->gcHelperHandle;
-
-      wlActivateGrpIdx = wlGroup->activateGroup.startIndexWLUnitDB;
-
-      while (wlActivateGrpIdx <= wlGroup->activateGroup.endIndexWLUnitDB)
+      sWorkloadUnit_t *workloadUnit = getWLUnitPtr(gcHelperHandle, wlActivateGrpIdx);
+      if ((workloadUnit != NULL))
       {
-        sWorkloadUnit_t *workloadUnit = getWLUnitPtr(gcHelperHandle, wlActivateGrpIdx);
-        if ((workloadUnit != NULL))
+        for (int32_t linkIdx = 0; (linkIdx < workloadUnit->numLinks); linkIdx++)
         {
-          for (int32_t linkIdx = 0; (linkIdx < workloadUnit->numLinks); linkIdx++)
+          sLink_t *linkPtrList[MAX_LINKS_PER_WL];
+          getLinkPtrs(workloadUnit, NOT_VALID, linkIdx, linkPtrList);
+          sLink_t *link = linkPtrList[0];
+          if (link->type == (int32_t)LINK_PROC)
           {
-            sLink_t *linkPtrList[MAX_LINKS_PER_WL];
-            getLinkPtrs(workloadUnit, NOT_VALID, linkIdx, linkPtrList);
-            sLink_t *link = linkPtrList[0];
-            if (link->type == (int32_t)LINK_PROC)
-            {
-              status = TIDL_ERROR_ALGUTILS_INVALID_LNKTYPE_ERROR;
-              tidl_printf(0, "Process link with id = %d not supported during activate\n", link->id);
-              break;
-            }
-            else
-            {
-              int8_t *pSrcMem = (int8_t *)TIDL_getPointerFromGC(&(link->src[0]), gcHelperHandle, (TIDL_sysScratchPtr *)&intAlgHandle->sysScratchPtr);
-              int8_t *pDstMem = (int8_t *)TIDL_getPointerFromGC(&(link->sink), gcHelperHandle, (TIDL_sysScratchPtr *)&intAlgHandle->sysScratchPtr);
+            status = TIDL_ERROR_ALGUTILS_INVALID_LNKTYPE_ERROR;
+            tidl_printf(0, "Process link with id = %d not supported during activate\n", link->id);
+            break;
+          }
+          else
+          {
+            int8_t *pSrcMem = (int8_t *)TIDL_getPointerFromGC(&(link->src[0]), gcHelperHandle, (TIDL_sysScratchPtr *)&intAlgHandle->sysScratchPtr);
+            int8_t *pDstMem = (int8_t *)TIDL_getPointerFromGC(&(link->sink), gcHelperHandle, (TIDL_sysScratchPtr *)&intAlgHandle->sysScratchPtr);
 
-              int32_t srcElemSize = getByteCnt(getBufParamsFromBufIndex(gcHelperHandle, link->src[0].bufDBindex)->dataType);
-              int32_t dstElemSize = getByteCnt(getBufParamsFromBufIndex(gcHelperHandle, link->sink.bufDBindex)->dataType);
+            int32_t srcElemSize = getByteCnt(getBufParamsFromBufIndex(gcHelperHandle, link->src[0].bufDBindex)->dataType);
+            int32_t dstElemSize = getByteCnt(getBufParamsFromBufIndex(gcHelperHandle, link->sink.bufDBindex)->dataType);
 
-              if (link->src[0].flowCnt[FLOW_PIPELINE][0] != 0)
-              {
-                (void)TIDL_memcpy2D(pDstMem,
-                                    pSrcMem,
-                                    link->src[0].flowCnt[FLOW_PIPELINE][0] * srcElemSize,
-                                    link->src[0].flowCnt[FLOW_PIPELINE][1],
-                                    link->sink.flowDim[FLOW_PIPELINE][0] * dstElemSize,
-                                    link->src[0].flowDim[FLOW_PIPELINE][0] * srcElemSize,
-                                    intAlgHandle->dmaUtilsContext,
-                                    intAlgHandle->memcpyTr);
-              }
+            if (link->src[0].flowCnt[FLOW_PIPELINE][0] != 0)
+            {
+              (void)TIDL_memcpy2D(pDstMem,
+                                  pSrcMem,
+                                  link->src[0].flowCnt[FLOW_PIPELINE][0] * srcElemSize,
+                                  link->src[0].flowCnt[FLOW_PIPELINE][1],
+                                  link->sink.flowDim[FLOW_PIPELINE][0] * dstElemSize,
+                                  link->src[0].flowDim[FLOW_PIPELINE][0] * srcElemSize,
+                                  intAlgHandle->dmaUtilsContext,
+                                  intAlgHandle->memcpyTr);
             }
           }
         }
-        else
-        {
-          status = TIDL_ERROR_ALGUTILS_INVALID_GRPID_ERROR; /*input for grpidx is grpid so keeping same error code as grpid*/
-        }
-
-        wlActivateGrpIdx++;
       }
-    }
-    else
-    {
-      status = TIDL_ERROR_ALGUTILS_INVALID_GRPID_ERROR;
+      else
+      {
+        status = TIDL_ERROR_ALGUTILS_INVALID_GRPID_ERROR; /*input for grpidx is grpid so keeping same error code as grpid*/
+      }
+
+      wlActivateGrpIdx++;
     }
   }
   return status;
@@ -2466,8 +2192,11 @@ uint32_t TIDL_getSizeNet(const TIDL_CreateParams *pCreateParams)
 #ifdef HOST_EMULATION
     if (TIDL_referencFlow(pCreateParams) != 0)
     {
-      /* TIDL_NET_PARAMS_BUF is allocated memory at the last position in ALG_PERSIST_DDR_NET_MEMREC */
-      size = pCreateParams->net->netBufInfo[TIDL_NET_GC_BUF].offset + pCreateParams->net->netBufInfo[TIDL_NET_GC_BUF].size;
+      /* TIDL_NET_PARAMS_BUF is allocated memory at the last position in ALG_PERSIST_DDR_NET_MEMREC.
+       * The [paramsBufExcludeStartOffset, paramsBufExcludeEndOffset) region (ConstData) is not
+       * copied into rec13, so its size is excluded here too. */
+      uint32_t gapSize = pCreateParams->net->paramsBufExcludeEndOffset - pCreateParams->net->paramsBufExcludeStartOffset;
+      size = pCreateParams->net->netBufInfo[TIDL_NET_GC_BUF].offset + pCreateParams->net->netBufInfo[TIDL_NET_GC_BUF].size - gapSize;
     }
 #endif
   }
@@ -2483,27 +2212,29 @@ void *TIDL_CopyAndReturnGCPrivateMemPtr(TIDL_Handle algHandle, const IALG_MemRec
   src = get_int8_t_pointer(pBaseSrc, pNet->originalGcBufInfoOffset); /* Copy over GC info from the original offset in net to the params offset, new offset is updated below */
   if (pNet->netInitBackupDataOffset[0] == 0)
   {
-    int32_t dstPtrOffset; // = pNet->originalGcBufInfoOffset;
+    uint32_t dstPtrOffset;
 #ifdef HOST_EMULATION
-    dstPtrOffset = pNet->originalGcBufInfoOffset;
-    if (isReferenceFlow != 1)
+    if (isReferenceFlow == 1)
+    {
+      /* Ref flow: PARAMS_BUF is compacted in rec13 by excluding [paramsBufExcludeStartOffset,
+       * paramsBufExcludeEndOffset) (ConstData). GC sits after the whole PARAMS_BUF regardless
+       * of where that gap falls internally, so it simply shifts back by the gap size. */
+      dstPtrOffset = pNet->originalGcBufInfoOffset - (pNet->paramsBufExcludeEndOffset - pNet->paramsBufExcludeStartOffset);
+    }
+    else
 #endif
     {
-      /* For target flow we do not need parameters from the net as they are not
-      required during process (whatever is required will be copied in a separate memrec as
-      part of either reorder or direct copy), hence use the offset for parameters for storing
-      GC. This way we will not be required to allocate memory for parameters */
+      /* Target flow: parameters not needed at process time, reuse parameter space for GC */
       dstPtrOffset = pNet->netBufInfo[TIDL_NET_PARAMS_BUF].offset;
     }
+
     dst = get_int8_t_pointer((int8_t *)memRec[ALG_PERSIST_DDR_NET_MEMREC].base, dstPtrOffset);
+
     (void)memcpy(dst, src, pNet->netBufInfo[TIDL_NET_GC_BUF].size);
-#ifdef HOST_EMULATION
-    if (isReferenceFlow != 1)
-#endif
-    {
-      /* For target flow update the offsets for GC as it will be using the offset for parameters*/
-      pNet->netBufInfo[TIDL_NET_GC_BUF].offset = pNet->netBufInfo[TIDL_NET_PARAMS_BUF].offset;
-    }
+
+    /* Keep netBufInfo[TIDL_NET_GC_BUF].offset consistent with where GC actually landed,
+     * for both ref (compacted) and target (reusing PARAMS_BUF space) flows. */
+    pNet->netBufInfo[TIDL_NET_GC_BUF].offset = dstPtrOffset;
   }
   else
   {
@@ -2519,7 +2250,7 @@ int32_t TIDL_MoveNetToPrivateMemory(TIDL_Handle algHandle,
   sTIDL_Network_t *pNet = algHandle->createParams->net;
   if (pNet->netInitBackupDataOffset[0] == 0)
   {
-    int32_t size;
+    uint32_t size;
     uint32_t bufIdx;
     int8_t *src, *dst, *pBaseSrc;
     int32_t isReference = TIDL_referencFlow(algHandle->createParams);
@@ -2531,6 +2262,43 @@ int32_t TIDL_MoveNetToPrivateMemory(TIDL_Handle algHandle,
           (bufIdx == TIDL_NET_STRUCTURE_BUF) ||
           (bufIdx == TIDL_NET_COMPILER_BUF))
       {
+#ifdef HOST_EMULATION
+        if (isReference != 0)
+        {
+          if (bufIdx == TIDL_NET_GC_BUF)
+          {
+            /* GC was already placed at its compacted offset by TIDL_CopyAndReturnGCPrivateMemPtr;
+             * netBufInfo[GC_BUF].offset now holds that compacted value, which does NOT correspond
+             * to a valid location in the original (uncompacted) net, so the generic copy below
+             * must not run for this bufIdx. */
+            continue;
+          }
+          if (bufIdx == TIDL_NET_PARAMS_BUF)
+          {
+            /* Copy PARAMS_BUF in two chunks, skipping [paramsBufExcludeStartOffset,
+             * paramsBufExcludeEndOffset). This region (currently ConstData) is accessed
+             * via layer-level persistent memory at process time and need not be in rec13. */
+            uint32_t paramsBase = pNet->netBufInfo[TIDL_NET_PARAMS_BUF].offset;
+            uint32_t excStart   = pNet->paramsBufExcludeStartOffset;
+            uint32_t excEnd     = pNet->paramsBufExcludeEndOffset;
+            uint32_t paramsEnd  = paramsBase + pNet->netBufInfo[TIDL_NET_PARAMS_BUF].size;
+
+            /* Chunk 1: paramsBase .. excStart */
+            src = get_int8_t_pointer(pBaseSrc, paramsBase);
+            dst = get_int8_t_pointer((int8_t *)memRec[ALG_PERSIST_DDR_NET_MEMREC].base, paramsBase);
+            (void)memcpy(dst, src, excStart - paramsBase);
+
+            /* Chunk 2: excEnd .. paramsEnd (Conv/Deconv weights, bias, scales, etc.), compacted
+             * immediately after chunk 1 in rec13 (i.e. shifted back by the excluded gap size).
+             * Offsets stored in TIDLLayers[].layerParams.convParams are corrected below, once,
+             * after the net pointer is repointed to this copy. */
+            src = get_int8_t_pointer(pBaseSrc, excEnd);
+            dst = get_int8_t_pointer((int8_t *)memRec[ALG_PERSIST_DDR_NET_MEMREC].base, excStart);
+            (void)memcpy(dst, src, paramsEnd - excEnd);
+            continue;
+          }
+        }
+#endif
         src = get_int8_t_pointer(pBaseSrc, pNet->netBufInfo[bufIdx].offset);
         dst = get_int8_t_pointer((int8_t *)memRec[ALG_PERSIST_DDR_NET_MEMREC].base,
                                  pNet->netBufInfo[bufIdx].offset);
@@ -2539,6 +2307,46 @@ int32_t TIDL_MoveNetToPrivateMemory(TIDL_Handle algHandle,
       }
     }
     algHandle->createParams->net = (sTIDL_Network_t *)memRec[ALG_PERSIST_DDR_NET_MEMREC].base;
+
+#ifdef HOST_EMULATION
+    if (isReference != 0)
+    {
+      /* Conv/Deconv weights/bias/scales/etc. were compacted (shifted back by the excluded
+       * gap size) in the chunk-2 copy above. Correct the stored offsets in the rec13 copy
+       * so every existing net-relative read (weightPtr, biasPtr, perChannelWeightScalePtr, ...)
+       * keeps working unchanged. */
+      uint32_t gapSize = pNet->paramsBufExcludeEndOffset - pNet->paramsBufExcludeStartOffset;
+
+      /* gapSize is 0 when the model has no ConstData layers (start/end offsets coincide) -
+       * nothing was shifted, so skip the per-layer walk entirely. */
+      if (gapSize > 0)
+      {
+        uint32_t excEndOffset = pNet->paramsBufExcludeEndOffset;
+        sTIDL_Network_t *dstNet = algHandle->createParams->net;
+        int32_t li;
+
+        for (li = 0; li < dstNet->numLayers; li++)
+        {
+          if ((dstNet->TIDLLayers[li].layerType == TIDL_ConvolutionLayer) ||
+              (dstNet->TIDLLayers[li].layerType == TIDL_Deconv2DLayer))
+          {
+            sTIDL_ConvParams_t *cp = &dstNet->TIDLLayers[li].layerParams.convParams;
+
+            if (cp->weights >= excEndOffset) { cp->weights -= gapSize; }
+            if (cp->bias >= excEndOffset) { cp->bias -= gapSize; }
+            if (cp->weightScales >= excEndOffset) { cp->weightScales -= gapSize; }
+            if (cp->weightZeroPoints >= excEndOffset) { cp->weightZeroPoints -= gapSize; }
+            if (cp->biasScales >= excEndOffset) { cp->biasScales -= gapSize; }
+            if (cp->biasZeroPoints >= excEndOffset) { cp->biasZeroPoints -= gapSize; }
+            if (cp->derivedBias >= excEndOffset) { cp->derivedBias -= gapSize; }
+            if (cp->derivedScales >= excEndOffset) { cp->derivedScales -= gapSize; }
+            if (cp->derivedShifts >= excEndOffset) { cp->derivedShifts -= gapSize; }
+            if (cp->perChannelWeightScaleOffset >= excEndOffset) { cp->perChannelWeightScaleOffset -= gapSize; }
+          }
+        }
+      }
+    }
+#endif
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
     <justification start>
@@ -2552,7 +2360,7 @@ int32_t TIDL_MoveNetToPrivateMemory(TIDL_Handle algHandle,
       sGraphCompilerOutArgs_t *gcOutArgs = NULL;
       sGCDataBase_t *gcDatabase = NULL;
       sGCCommonDataBase_t *gcCommonDataBase = NULL;
-      sWorkloadSuperGroup_t *wlSuperGrp = NULL;
+      sWorkloadGroup_t *wlGrp = NULL;
       sGraphCompilerOutArgsCore_t *gcOut = NULL;
       // TODO: [8.5 rebase]. Make this similar to perfsimInfo
 
@@ -2561,8 +2369,8 @@ int32_t TIDL_MoveNetToPrivateMemory(TIDL_Handle algHandle,
       gcOut = (sGraphCompilerOutArgsCore_t *)getGCDataBase(gcOutArgs, (int32_t)DATABASE_GCOUT_1 + relCoreId);
       gcDatabase = &gcOut->dataBase;
       gcCommonDataBase = (sGCCommonDataBase_t *)getGCDataBase(gcOutArgs, DATABASE_COMMON);
-      wlSuperGrp = &gcOut->superWorkload;
-      algHandle->wlSuperGrp = wlSuperGrp;
+      wlGrp = &gcOut->workload;
+      algHandle->wlGrp = wlGrp;
 
       sBufParams_t *bufNodesDB = (sBufParams_t *)&gcCommonDataBase->dbPayLoad[gcCommonDataBase->dbParams[DB_COMMON_BUF].startOffset];
       sWorkloadUnit_t *workLoadUnitDB = (sWorkloadUnit_t *)&gcDatabase->dbPayLoad[gcDatabase->dbParams[DB_WL].startOffset];
@@ -2626,8 +2434,8 @@ void *TIDL_getNetObjBufPtr(sTIDL_Network_t *pNet,
 {
   void *netMemberSrcAddr = NULL;
   void *netMemberDstAddr = NULL;
-  int32_t size = 0;
-  int32_t offset = 0;
+  uint32_t size = 0;
+  uint32_t offset = 0;
   int32_t checkflag = 1;
 #if defined TIDL_COVERAGE_DEAD_CODE
   if (netMember >= TIDL_NET_TOTAL_BUF)

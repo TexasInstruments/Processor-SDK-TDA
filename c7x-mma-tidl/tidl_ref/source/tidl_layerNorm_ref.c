@@ -198,14 +198,10 @@ template<class Tin, class Tout, class typeExEx2> static int32_t TIDL_refLayerNor
   /*Scratch required for E(x) & E((X-E(X))^2*/
   int32_t scratchSizeRequired = (2U * icnt[4] * sizeof(typeExEx2));
 
-  int32_t minValueOutput = 0;
-  minValueOutput = std::numeric_limits<Tout>::lowest();
-  int32_t maxValueOutput = 0;
-  maxValueOutput = std::numeric_limits<Tout>::max();
-  int32_t minValueAcc = 0;
-  minValueAcc = std::numeric_limits<typeExEx2>::lowest();
-  int32_t maxValueAcc = 0;
-  maxValueAcc = std::numeric_limits<typeExEx2>::max();
+  int32_t minValueOutput = (int32_t)std::numeric_limits<Tout>::lowest();
+  int32_t maxValueOutput = (int32_t)std::numeric_limits<Tout>::max();
+  int32_t minValueAcc = (int32_t)std::numeric_limits<typeExEx2>::lowest();
+  int32_t maxValueAcc = (int32_t)std::numeric_limits<typeExEx2>::max();
 
   typeExEx2 *eX;
   typeExEx2 *eX2;

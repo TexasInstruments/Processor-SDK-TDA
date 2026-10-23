@@ -184,7 +184,7 @@ sTIDL_Network_t *read_network(const char *net_filename)
      exit(1);
   }
   fseek(net_file, 0, SEEK_END);
-  int32_t model_size = ftell(net_file);
+  uint32_t model_size = (uint32_t)ftell(net_file);
   fseek(net_file, 0, SEEK_SET);
   sTIDL_Network_t *network = (sTIDL_Network_t *)malloc(model_size);
   if (fread(network, model_size, 1, net_file) != 1)

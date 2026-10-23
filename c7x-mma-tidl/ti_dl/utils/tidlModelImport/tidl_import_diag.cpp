@@ -382,7 +382,7 @@ void TIDL_printProgressBar(float progress)
   //progressBar << "]";
   printf("]");
   //progressBar << " " << (int)(progress * 100.0) << "%\r";
-  printf(" %d %\r",(int)(progress * 100.0));
+  printf(" %d%%\r",(int)(progress * 100.0));
   fflush(stdout);
 }
 

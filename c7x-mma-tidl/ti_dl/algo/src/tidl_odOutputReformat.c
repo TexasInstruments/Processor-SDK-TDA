@@ -514,7 +514,7 @@ int32_t TIDL_OdOutputReformatAlloc(const TIDL_LayerSpecificParams *layerSpecific
                           params->net->TIDLLayers[layerIdx].outData.dataId,
                           params->currLayersGroupId) == 0
         ) 
-        || !(params->net->dataFlowInfo == NULL)
+        || !(params->net->dataFlowInfo == 0)
       )
   {
     outDataSize = 0;
@@ -573,7 +573,7 @@ int32_t TIDL_OdOutputReformatInit(const TIDL_LayerSpecificParams *layerSpecificP
                           params->net->TIDLLayers[layerIdx].outData.dataId,
                           params->currLayersGroupId) == 1)
 #ifdef HOST_EMULATION
-        || (params->net->dataFlowInfo != NULL)
+        || (params->net->dataFlowInfo != 0)
 #endif
     )
     {
@@ -651,9 +651,6 @@ int32_t TIDL_OdOutputReformatProcess(TIDL_NetworkCommonParams *commonParams,
 
   if (((uint32_t)commonParams->createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)
   {
-    int32_t layerIdx;
-    layerIdx = algLayer->layerIdx;
-
     TIDL_Obj intAlgObj;
     TIDL_CreateParams createParams;
     (void)memcpy(&createParams, commonParams->createParams, sizeof(TIDL_CreateParams));

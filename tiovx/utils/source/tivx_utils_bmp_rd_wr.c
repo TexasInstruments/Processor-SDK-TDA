@@ -379,7 +379,7 @@ vx_status tivx_utils_load_vximage_from_bmpfile(vx_image image, char *filename, v
     void *data_ptr = NULL;
     void *dst_data_ptr = NULL;
     uint32_t copy_width, copy_height, src_start_x, src_start_y, dst_start_x, dst_start_y;
-    vx_bool enable_rgb2gray, enable_gray2rgb;
+    vx_bool enable_rgb2gray, enable_gray2rgb, enable_rgb2rgbx;
     vx_map_id map_id;
 
     status = tivx_utils_expand_file_path(filename, outFilePath);
@@ -442,6 +442,7 @@ vx_status tivx_utils_load_vximage_from_bmpfile(vx_image image, char *filename, v
 
         enable_rgb2gray = (vx_bool)vx_false_e;
         enable_gray2rgb = (vx_bool)vx_false_e;
+        enable_rgb2rgbx = (vx_bool)vx_false_e;
 
         if(df!=img_df)
         {
@@ -453,6 +454,12 @@ vx_status tivx_utils_load_vximage_from_bmpfile(vx_image image, char *filename, v
             if((df==(vx_df_image)VX_DF_IMAGE_U8) && (img_df==(vx_df_image)VX_DF_IMAGE_RGB))
             {
                 enable_gray2rgb = (vx_bool)vx_true_e;
+            }
+            else
+            if((df==(vx_df_image)VX_DF_IMAGE_RGB) &&
+               ((img_df==(vx_df_image)VX_DF_IMAGE_RGBX) || (img_df==(vx_df_image)VX_DF_IMAGE_RGBA)))
+            {
+                enable_rgb2rgbx = (vx_bool)vx_true_e;
             }
             else
             {
@@ -510,7 +517,7 @@ vx_status tivx_utils_load_vximage_from_bmpfile(vx_image image, char *filename, v
                 (vx_enum)VX_NOGAP_X
                 );
 
-            if((enable_rgb2gray == (vx_bool)vx_false_e) && (enable_gray2rgb == (vx_bool)vx_false_e))
+            if((enable_rgb2gray == (vx_bool)vx_false_e) && (enable_gray2rgb == (vx_bool)vx_false_e) && (enable_rgb2rgbx == (vx_bool)vx_false_e))
             {
                 uint32_t y;
 
@@ -554,6 +561,24 @@ vx_status tivx_utils_load_vximage_from_bmpfile(vx_image image, char *filename, v
                         ((uint8_t*)dst_data_ptr)[(3U*x) + 0U] = (uint8_t)g;
                         ((uint8_t*)dst_data_ptr)[(3U*x) + 1U] = (uint8_t)g;
                         ((uint8_t*)dst_data_ptr)[(3U*x) + 2U] = (uint8_t)g;
+                    }
+                    data_ptr = (void*)((uint8_t*)data_ptr + stride);
+                    dst_data_ptr = (void*)((uint8_t*)dst_data_ptr + image_addr.stride_y);
+                }
+            }
+            else
+            if(enable_rgb2rgbx != 0)
+            {
+                uint32_t x, y;
+
+                for(y=0; y<copy_height; y++)
+                {
+                    for(x=0; x<copy_width; x++)
+                    {
+                        ((uint8_t*)dst_data_ptr)[(4U*x) + 0U] = ((uint8_t*)data_ptr)[(3U*x) + 0U];
+                        ((uint8_t*)dst_data_ptr)[(4U*x) + 1U] = ((uint8_t*)data_ptr)[(3U*x) + 1U];
+                        ((uint8_t*)dst_data_ptr)[(4U*x) + 2U] = ((uint8_t*)data_ptr)[(3U*x) + 2U];
+                        ((uint8_t*)dst_data_ptr)[(4U*x) + 3U] = 255U;
                     }
                     data_ptr = (void*)((uint8_t*)data_ptr + stride);
                     dst_data_ptr = (void*)((uint8_t*)dst_data_ptr + image_addr.stride_y);

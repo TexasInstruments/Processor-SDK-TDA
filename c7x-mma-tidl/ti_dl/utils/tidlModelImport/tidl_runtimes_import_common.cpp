@@ -93,6 +93,7 @@ using ::google::protobuf::Message;
 #include "tidl_import_common_tidlrt_osrt.h"
 #include "tidl_import_diag.h"
 
+#undef __MODULE__
 #define __MODULE__ ""
 
 #define MAX_NUM_TIDL_SUBGRAPHS (16)
@@ -554,6 +555,15 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
   {
     options->m_nc_temp_info_dir = option_value;
   }
+  if(!strcmp("advanced_options:external_data_dir", option_name.c_str()))
+  {
+    options->m_external_data_dir = option_value;
+    if(!TIDL_checkIsDir(options->m_external_data_dir.c_str()))
+    {
+      TIDL_GLOBAL_REPORT_ERROR("Directory for ONNX external data (external_data_dir - %s) does not exist", options->m_external_data_dir.c_str());
+      return false;
+    }
+  }
   if(!strcmp("advanced_options:temp_buffer_dir", option_name.c_str()))
   {
     options->m_temp_buffer_dir = option_value;
@@ -681,22 +691,6 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
         }
         catch(std::string &e) {
             TIDL_GLOBAL_REPORT_ERROR("Could not parse malformed deny_list option");
-            return false;
-        }
-    }
-
-    if (strcmp("advanced_options:custom_layers_names_list", option_name.c_str()) == 0)        //option for custom_layer_list
-    {
-        try
-        {
-          std::string str = option_value;
-          char *cstr = new char[str.length() + 1];
-          strcpy(cstr, str.c_str());
-          options->m_custom_layers_names_list = TIDL_readCommaSeparatedString(cstr);
-          delete[] cstr;
-        }
-        catch(std::string &e) {
-            TIDL_GLOBAL_REPORT_ERROR("Could not parse malformed custom_layers_names_list option");
             return false;
         }
     }
@@ -874,6 +868,11 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
       std::stringstream(option_value) >> options->m_high_resolution_optimization;
     }
 
+    if (!strcmp("advanced_options:high_resolution_group_info_file", option_name.c_str()))
+    {
+      std::stringstream(option_value) >> options->m_high_resolution_group_info_file;
+    }
+
     if (!strcmp("advanced_options:pre_batchnorm_fold", option_name.c_str()))
     {
         std::stringstream(option_value) >> options->m_pre_batchnorm_fold;
@@ -891,6 +890,11 @@ bool TIDL_readInterfaceOptions(TIDL_osrtOptions * options, std::string option_na
     if (!strcmp("advanced_options:graph_optimization_level", option_name.c_str()))
     {
         std::stringstream(option_value) >> options->m_graph_optimization_level;
+    }
+
+    if (!strcmp("advanced_options:enable_move_transpose", option_name.c_str()))
+    {
+        std::stringstream(option_value) >> options->m_enable_move_transpose;
     }
 
     if (!strcmp("advanced_options:enable_shape_folding", option_name.c_str()))
@@ -1519,10 +1523,12 @@ void TIDL_setDefaultOptions(TIDL_osrtOptions * osrt_options)
   osrt_options->m_use_16bit_for_topk                           = 1;
   osrt_options->m_enable_tfr_optimization                      = -1;
   osrt_options->m_graph_optimization_level                     = TIDL_OPTIMIZE_LEVEL_BASIC;
+  osrt_options->m_enable_move_transpose                        = -1;
   osrt_options->m_enable_shape_folding                         = -1;
   osrt_options->m_optimize_batchnorm_higherdims                = 0;
   osrt_options->m_softmax_16bit_scale_update                   = 0;
   osrt_options->m_enable_concat_no_op                          = 1;
+  osrt_options->m_high_resolution_group_info_file                           = "";
 }
 
 
@@ -1544,6 +1550,7 @@ int32_t TIDL_runtimesGparamsInit(TIDL_osrtOptions * osrt_options, int32_t modelT
   gParams.packetizeMode = osrt_options->m_packetize_mode;
   gParams.inferenceMode = osrt_options->m_inference_mode;
   gParams.graphOptimizationLevel = osrt_options->m_graph_optimization_level;
+  gParams.moveTranspose = osrt_options->m_enable_move_transpose;
   gParams.enableShapeFolding = osrt_options->m_enable_shape_folding;
   gParams.optimizeBatchNormHigherDims = osrt_options->m_optimize_batchnorm_higherdims;
   gParams.enableHighResOptimization = osrt_options->m_high_resolution_optimization;
@@ -1564,6 +1571,7 @@ int32_t TIDL_runtimesGparamsInit(TIDL_osrtOptions * osrt_options, int32_t modelT
   strcpy((char*)gParams.ncTempInfoDir, osrt_options->m_nc_temp_info_dir.c_str());
   strcpy((char *)&gParams.spatialSplitLayersNames[0], const_cast<char *>(osrt_options->m_spatial_split_layers_names_list.c_str()));
   strcpy((char *)&gParams.channelSplitLayersNames[0], const_cast<char *>(osrt_options->m_channel_split_layers_names_list.c_str()));
+  strcpy((char*)gParams.fileNameGrpInfo, osrt_options->m_high_resolution_group_info_file.c_str());
 
   std::string quantParamsPrototxtFile((char*)gParams.quantParamsPrototxtFile);
 
@@ -1629,6 +1637,10 @@ int32_t TIDL_runtimesGparamsInit(TIDL_osrtOptions * osrt_options, int32_t modelT
     {
       gParams.enableShapeFolding = 1;
     }
+    if(gParams.moveTranspose == -1)
+    {
+      gParams.moveTranspose = 1;
+    }
     // Other higher optimization flag can be added here in future
   }
   else
@@ -1636,6 +1648,10 @@ int32_t TIDL_runtimesGparamsInit(TIDL_osrtOptions * osrt_options, int32_t modelT
     if(gParams.enableShapeFolding == -1)
     {
       gParams.enableShapeFolding = 0;
+    }
+    if(gParams.moveTranspose == -1)
+    {
+      gParams.moveTranspose = 0;
     }
     // Other higher optimization flag can be added here in future
   }
@@ -1651,7 +1667,7 @@ int32_t TIDL_addOutputDataLayer(int32_t idx, const char * layerName)
   layer.layerType         = TIDL_DataLayer;
   layer.numInBufs         = 1;
   layer.numOutBufs        = -1;
-  layer.outData[0].dataId = 0;
+  layer.outData[0].dataId = -1;
   strcpy((char*)layer.name, layerName);
   strcpy((char*)layer.inDataNames[0], layerName);
   strcpy((char*)layer.outDataNames[0], layerName);
@@ -1744,7 +1760,7 @@ int32_t tidl_setParamsForPostProcessNet(int32_t tensor_bits)
 }
 
 /** This function calls "TIDL_import_backend" to run calibration, quantization and save the final network files */
-int32_t TIDL_runtimesPostProcessNet(TIDL_osrtOptions * osrt_options, int32_t calibrationFrames, int32_t numParamBits, void * subGraphPtr, void * configParams, float * inQuantFactor, int32_t * zp, char* subGraphName)
+int32_t TIDL_runtimesPostProcessNet(TIDL_osrtOptions * osrt_options, int32_t calibrationFrames, int32_t numParamBits, void * subGraphPtr, void * configParams, float * inQuantFactor, int32_t * zp, const char* subGraphName)
 {
   TIDL_GLOBAL_REPORT_INFO(osrt_options->osrtDebugPrintLevel, "In TIDL_runtimesPostProcessNet ");
   int32_t status = 0;
@@ -1792,6 +1808,7 @@ int32_t TIDL_runtimesPostProcessNet(TIDL_osrtOptions * osrt_options, int32_t cal
   gParams.use16BitForTopK = osrt_options->m_use_16bit_for_topk;
   gParams.graphOptimizationLevel = osrt_options->m_graph_optimization_level;
   gParams.enableShapeFolding = osrt_options->m_enable_shape_folding;
+  gParams.moveTranspose = osrt_options->m_enable_move_transpose;
   gParams.optimizeBatchNormHigherDims = osrt_options->m_optimize_batchnorm_higherdims;
 
   if((gParams.addDataConvertToNet & ADD_DC_LAYER_AT_INPUT) == 0)
@@ -1848,6 +1865,14 @@ int32_t TIDL_runtimesPostProcessNet(TIDL_osrtOptions * osrt_options, int32_t cal
   {
     if(orgTIDLNetStructure.TIDLPCLayers[i].layerType != TIDL_DataLayer)
       orgTIDLNetStructure.TIDLPCLayers[i].weightsElementSizeInBits = gParams.numParamBits;
+  }
+
+  if (gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TFLITE_RT)
+  {
+    if(numParamBits == 32)
+    {
+      tidl_convertElementTypeGivenParambits(&orgTIDLNetStructure, orgTIDLNetStructure.numLayers, 32);
+    }
   }
 
   /* Relay import uses different names for these files, avoid re-initializating the names here */

@@ -88,11 +88,7 @@ endif
 endif
 
 ifeq ($(TARGET_PLATFORM) , PC)
-ifdef SystemRoot
-OUTFILE=$(LIBDIR)/tidl_algo.lib
-else
 OUTFILE=$(LIBDIR)/libtidl_algo.a
-endif
 else
 OUTFILE=$(LIBDIR)/tidl_algo.lib
 endif

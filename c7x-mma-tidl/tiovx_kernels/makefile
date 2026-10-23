@@ -69,7 +69,6 @@ include $(ALGBASE_PATH)/arm-tidl/config.mk
 BUILD_IGNORE_LIB_ORDER := yes
 GCC_LINUX_ROOT         := /usr
 
-CGT7X_ROOT := $(DSP_TOOLS)
 PDK_PATH   := $(PDK_INSTALL_PATH)
 
 BUILD_TARGET    := $(PSDK_BUILDER_PATH)/target.mak

@@ -24,16 +24,14 @@ PDK_QNX_PATH ?= $(PSDK_PATH)/psdkqa/pdk
 VXLIB_PATH ?= $(PSDK_PATH)/vxlib
 MATHLIB_PATH ?= $(PSDK_PATH)/mathlib_c66x_3_1_2_1
 
-ifeq ($(SOC),am62a)
-    MMALIB_PATH ?= $(PSDK_PATH)/mmalib_11_01_00_06
-else ifeq ($(SOC),tda54)
-    MMALIB_PATH ?= $(PSDK_PATH)/mmalib_11_02_01_04
-else
-    MMALIB_PATH ?= $(PSDK_PATH)/mmalib_12_01_00_01
-endif
-
 IVISION_PATH ?= $(PSDK_PATH)/ivision
 TIDL_PATH ?= $(PSDK_PATH)/c7x-mma-tidl
+ifeq ($(ENABLE_NEW_TIDL_STRUCTURE),yes)
+    MMALIB_PATH ?= $(TIDL_PATH)/mmalib-kernels/mmalib
+else
+    # am62a: mmalib at SDK root (old structure, ENABLE_NEW_TIDL_STRUCTURE=no)
+    MMALIB_PATH ?= $(PSDK_PATH)/mmalib_11_01_00_07
+endif
 APP_UTILS_PATH ?= $(PSDK_PATH)/app_utils
 TIOVX_PATH ?= $(PSDK_PATH)/tiovx
 

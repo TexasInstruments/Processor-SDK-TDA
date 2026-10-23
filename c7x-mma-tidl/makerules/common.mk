@@ -1,5 +1,5 @@
 ifeq ($(TARGET_PLATFORM) , PC)
-INCLUDE_PATHS += -I $(DSP_TOOLS)/host_emulation/include/C$(SI_VER)$(C7x_HOSTEMU_COMPILER_STRING)/
+INCLUDE_PATHS += -I $(CGT7X_ROOT)/host_emulation/include/$(C7X_VERSION)$(C7x_HOSTEMU_COMPILER_STRING)/
 else
 CFLAGS += -mv$(SI_VER)
 endif
@@ -91,7 +91,7 @@ endif
 
 # library search dirs are always platform specific
 LDIRS += $(CGT7X_ROOT)/lib
-LDIRS += $(MMALIB_PATH)/lib/$(TARGET_C7X_VERSION)/$(TARGET_BUILD)
+LDIRS += $(MMALIB_PATH)/lib/$(C7X_VERSION)/$(TARGET_BUILD)
 # path to tidl_algo and tidl_priv
 ifeq ($(TIDL_BUILD_PATHS), LEGACY)
 LDIRS += $($(_MODULE)_SDIR)/../../../lib/dsp/algo/$(TARGET_BUILD)
@@ -129,7 +129,7 @@ ifeq ($(RTOS_SDK),$(filter $(RTOS_SDK), mcu_plus_sdk mcu_sdk))
         endif
     endif
 else
-    ifeq ($(TARGET_C7X_VERSION), C7504)
+    ifeq ($(C7X_VERSION), C7504)
         LDIRS += $(PDK_PATH)/ti/csl/lib/$(SOC)/c75x/$(TARGET_BUILD)
     else
         LDIRS += $(PDK_PATH)/ti/csl/lib/$(SOC)/c7x/$(TARGET_BUILD)
@@ -140,7 +140,7 @@ else
     	LDIRS += $(PDK_PATH)/ti/osal/lib/tirtos/$(SOC)/c7x/$(TARGET_BUILD)
     else
     	LDIRS += $(PDK_PATH)/ti/kernel/lib/$(SOC)/c7x_$(C7X_CORE_ID)/$(TARGET_BUILD)
-        ifeq ($(TARGET_C7X_VERSION), C7504)
+        ifeq ($(C7X_VERSION), C7504)
         	LDIRS += $(PDK_PATH)/ti/osal/lib/freertos/$(SOC)/c75x/$(TARGET_BUILD)
         else
         	LDIRS += $(PDK_PATH)/ti/osal/lib/freertos/$(SOC)/c7x/$(TARGET_BUILD)
@@ -167,9 +167,9 @@ endif
 # External libraries
 
 ADDITIONAL_STATIC_LIBS += $(DMA_LIBS)
-ADDITIONAL_STATIC_LIBS += common_$(TARGET_C7X_VERSION).lib
-ADDITIONAL_STATIC_LIBS += mmalib_$(TARGET_C7X_VERSION).lib
-ADDITIONAL_STATIC_LIBS += mmalib_cn_$(TARGET_C7X_VERSION).lib
+ADDITIONAL_STATIC_LIBS += common_$(C7X_VERSION).lib
+ADDITIONAL_STATIC_LIBS += mmalib_$(C7X_VERSION).lib
+ADDITIONAL_STATIC_LIBS += mmalib_cn_$(C7X_VERSION).lib
 
 ifeq ($(RTOS),FREERTOS)
 	ADDITIONAL_STATIC_LIBS += ti.kernel.freertos.ae71

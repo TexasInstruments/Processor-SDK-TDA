@@ -114,9 +114,15 @@ extern char* strdup(const char *ptr);
 #define APP_ASSERT_VALID_REF(ref)   (APP_ASSERT(vxGetStatus((vx_reference)(ref))==VX_SUCCESS));
 #endif
 
+#ifndef ABS_FLT
 #define ABS_FLT(a) ((a) > 0)?(a):(-(a))
+#endif
+#ifndef MAX
 #define MAX(A,B) ((A) > (B) ? (A) : (B))
+#endif
+#ifndef MIN
 #define MIN(A,B) ((A) > (B) ? (B) : (A))
+#endif
 
 #define OFFSET_TO_MULTI_SUBGRAPH_NET_MAGIC_NUMBER (1)
 #define OFFSET_TO_MULTI_SUBGRAPH_IO_MAGIC_NUMBER (sizeof(sTIDL_IOBufDesc_t))
@@ -183,7 +189,7 @@ int32_t tidlrt_free_handle(void * ptr)
 
 
 static vx_user_data_object mapConfig(AppObj *obj, vx_context context, const sTIDLRT_Params_t *prms, uint32_t *num_input_tensors, uint32_t *num_output_tensors, int32_t * inferenceMode);
-static vx_user_data_object mapNetwork(AppObj *obj, void * netPtr, int32_t capacity);
+static vx_user_data_object mapNetwork(AppObj *obj, void * netPtr, uint32_t capacity);
 static int init_tidl_tiovx (AppObj *obj, sTIDLRT_Params_t *prms);
 static int32_t deinit_tidl_tiovx(AppObj *obj, const sTIDLRT_Params_t *prms);
 static vx_status create_graph_tidl_tiovx(AppObj *obj);
@@ -405,6 +411,42 @@ int32_t env = 0;
     return env;
 }
 
+/* Shared by TIDLRT_create (all bits set) and TIDLRT_setMutableOptions (mask-gated).
+ * prms is non-const because the resolved (joined/defaulted) traceBaseName is written
+ * back into it, matching historical TIDLRT_create behavior. */
+static void tidlrt_apply_trace_params(AppObj *obj, sTIDLRT_Params_t *prms, uint32_t updateMask)
+{
+  if((updateMask & TIDLRT_MUTABLE_OPT_TRACE_LOG_LEVEL) != 0u)
+  {
+    obj->traceLogLevel = prms->traceLogLevel;
+  }
+
+  if((updateMask & TIDLRT_MUTABLE_OPT_TRACE_WRITE_LEVEL) != 0u)
+  {
+    obj->traceWriteLevel = prms->traceWriteLevel;
+  }
+
+  if((updateMask & TIDLRT_MUTABLE_OPT_TRACE_BASE_NAME) != 0u)
+  {
+
+    if(prms->traceBaseName[0] != '\0')
+    {
+        if(strcmp(prms->traceSubgraphName, "") != 0)
+        {
+            char traceBaseNameTmp[(TIDLRT_STRING_SIZE * 2) + 2];
+            (void)snprintf(traceBaseNameTmp, ((TIDLRT_STRING_SIZE * 2) + 2), "%s_%s_", prms->traceBaseName, prms->traceSubgraphName);
+            (void)strncpy(prms->traceBaseName, traceBaseNameTmp, TIDLRT_STRING_SIZE);
+        }
+        (void)strncpy(obj->traceBaseName, prms->traceBaseName, TIDLRT_STRING_SIZE);
+    }
+    else
+    {
+        (void)strncpy(obj->traceBaseName, "/tmp/tidl_trace", TIDLRT_STRING_SIZE);
+        (void)strncpy(prms->traceBaseName, "/tmp/tidl_trace", TIDLRT_STRING_SIZE);
+    }
+  }
+}
+
 int32_t TIDLRT_setParamsDefault(sTIDLRT_Params_t *prms)
 {
     int32_t status                  = 0;
@@ -431,6 +473,10 @@ int32_t TIDLRT_setParamsDefault(sTIDLRT_Params_t *prms)
 
     prms->forceNegativeTest         = 0;
     prms->enableCodeCoverage        = 0;
+    prms->enableDDRPerfStats        = 0;
+    prms->cacheImport               = 0;
+    prms->cacheExport               = 0;
+    prms->cacheClear                = 0;
 
     prms->traceLogLevel             = 0;
     prms->traceWriteLevel           = 0;
@@ -514,9 +560,9 @@ int32_t TIDLRT_create(sTIDLRT_Params_t *prms, void **handle)
     int32_t netNumSubgraphs = 1;
     int32_t ioNumSubgraphs = 1;
     int32_t netPtrOffset[TIDLRT_MAX_HANDLES] = {0};
-    int32_t netCapacity[TIDLRT_MAX_HANDLES];
+    uint32_t netCapacity[TIDLRT_MAX_HANDLES];
     int32_t ioPtrOffset[TIDLRT_MAX_HANDLES] = {0};
-    int32_t ioCapacity[TIDLRT_MAX_HANDLES];
+    uint32_t ioCapacity[TIDLRT_MAX_HANDLES];
 
     for (int32_t i = 0; i < TIDLRT_MAX_HANDLES; i = i + 1)
     {
@@ -631,23 +677,7 @@ int32_t TIDLRT_create(sTIDLRT_Params_t *prms, void **handle)
             obj = &(rtHandle->gAppObj);
 
             // Copy values from user provided params
-            obj->traceLogLevel = prms->traceLogLevel;
-            obj->traceWriteLevel = prms->traceWriteLevel;
-            if(prms->traceBaseName[0] != '\0')
-            {
-                if(strcmp(prms->traceSubgraphName, "") != 0)
-                {
-                    char traceBaseNameTmp[(TIDLRT_STRING_SIZE * 2) + 2];
-                    (void)snprintf(traceBaseNameTmp, ((TIDLRT_STRING_SIZE * 2) + 2), "%s_%s_", prms->traceBaseName, prms->traceSubgraphName);
-                    (void)strncpy(prms->traceBaseName, traceBaseNameTmp, TIDLRT_STRING_SIZE);
-                }
-                (void)strncpy(obj->traceBaseName, prms->traceBaseName, TIDLRT_STRING_SIZE);
-            }
-            else
-            {
-                (void)strncpy(obj->traceBaseName, "/tmp/tidl_trace", TIDLRT_STRING_SIZE);
-                (void)strncpy(prms->traceBaseName, "/tmp/tidl_trace", TIDLRT_STRING_SIZE);
-            }
+            tidlrt_apply_trace_params(obj, prms, TIDLRT_MUTABLE_OPT_TRACE_LOG_LEVEL | TIDLRT_MUTABLE_OPT_TRACE_WRITE_LEVEL | TIDLRT_MUTABLE_OPT_TRACE_BASE_NAME);
             obj->maxPreEmptDelay = prms->maxPreEmptDelay;
             obj->targetPriority = prms->targetPriority;
             obj->coreNum = prms->coreNum;
@@ -902,7 +932,12 @@ int32_t TIDLRT_create(sTIDLRT_Params_t *prms, void **handle)
                 * FORCE NEGATIVE TEST END
                 */
 
+                #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
+                status = tivxMemFree(ref1Addr[0], size[0], (vx_enum)TIVX_MEM_EXTERNAL_SHARED);
+                #else
                 status = tivxMemFree(ref1Addr[0], size[0], (vx_enum)TIVX_MEM_EXTERNAL);
+                #endif
+
                 ref1Addr[0] = NULL;
 
                 if (status == (int32_t)VX_SUCCESS)
@@ -1023,7 +1058,11 @@ int32_t TIDLRT_create(sTIDLRT_Params_t *prms, void **handle)
                     * FORCE NEGATIVE TEST END
                     */
 
+                    #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
+                    status = tivxMemFree(ref1Addr[0], size[0], (vx_enum)TIVX_MEM_EXTERNAL_SHARED);
+                    #else
                     status = tivxMemFree(ref1Addr[0], size[0], (vx_enum)TIVX_MEM_EXTERNAL);
+                    #endif
 
                     if (status == (int32_t)VX_SUCCESS)
                     {
@@ -1110,7 +1149,11 @@ int32_t TIDLRT_create(sTIDLRT_Params_t *prms, void **handle)
                     * FORCE NEGATIVE TEST END
                     */
 
+                    #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
+                    status = tivxMemFree(ref1Addr[0], size[0], (vx_enum)TIVX_MEM_EXTERNAL_SHARED);
+                    #else
                     status = tivxMemFree(ref1Addr[0], size[0], (vx_enum)TIVX_MEM_EXTERNAL);
+                    #endif
 
                     if (status == (int32_t)VX_SUCCESS)
                     {
@@ -1826,7 +1869,7 @@ static int32_t deinit_tidl_tiovx(AppObj *obj, const sTIDLRT_Params_t *prms)
     vx_status status = VX_SUCCESS;
     tidlrt_printf("TIDL_RT_OVX: DeInit ... \n");
 
-    if(obj->traceWriteLevel != 0U)
+    if(obj->traceData != NULL)
     {
         (void)vxReleaseUserDataObject(&obj->traceData);
     }
@@ -1945,14 +1988,14 @@ static vx_user_data_object mapConfig(AppObj *obj, vx_context context, const sTID
     sTIDL_IOBufDesc_t *ioBufDesc = NULL;
     vx_user_data_object   config = NULL;
     vx_map_id map_id;
-    int32_t capacity = prms->io_capacity;
+    uint32_t capacity = prms->io_capacity;
     void *ioBufDescPtr = prms->ioBufDescPtr;
 
     tidlrt_printf("TIDL_RT_OVX: Mapping config file ...\n");
     
     if( (uint32_t)capacity != sizeof(sTIDL_IOBufDesc_t) )
     {
-        tidlrt_printf("TIDL_RT_OVX: ERROR: Config file size (%d bytes) does not match size of sTIDL_IOBufDesc_t (%d bytes)\n", capacity, (vx_uint32)sizeof(sTIDL_IOBufDesc_t));
+        tidlrt_printf("TIDL_RT_OVX: ERROR: Config file size (%u bytes) does not match size of sTIDL_IOBufDesc_t (%u bytes)\n", capacity, (vx_uint32)sizeof(sTIDL_IOBufDesc_t));
         status = (vx_status)VX_FAILURE;
     }
 
@@ -2031,8 +2074,8 @@ static vx_user_data_object mapConfig(AppObj *obj, vx_context context, const sTID
                     uint8_t *pPerfInfo = (uint8_t *)prms->netPtr + pNet->dataFlowInfo;
                     tidlParams->compute_config_checksum = 1;
                     tidlParams->compute_network_checksum = 1;
-                    tivx_tidl_j7_get_qc((uint8_t *)&tidlParams->ioBufDesc, (uint8_t *)tidlParams->config_checksum, (int32_t)(sizeof(sTIDL_IOBufDesc_t)));
-                    tivx_tidl_j7_get_qc((uint8_t *)pPerfInfo, (uint8_t *)tidlParams->network_checksum, (int32_t)(prms->net_capacity - pNet->dataFlowInfo));
+                    tivx_tidl_j7_get_qc((uint8_t *)&tidlParams->ioBufDesc, (uint8_t *)tidlParams->config_checksum, (uint32_t)(sizeof(sTIDL_IOBufDesc_t)));
+                    tivx_tidl_j7_get_qc((uint8_t *)pPerfInfo, (uint8_t *)tidlParams->network_checksum, prms->net_capacity - pNet->dataFlowInfo);
 
                     /*
                      * FORCE NEGATIVE TEST START
@@ -2081,7 +2124,7 @@ static vx_user_data_object mapConfig(AppObj *obj, vx_context context, const sTID
 
                 (void)vxUnmapUserDataObject(config, map_id);
 
-                tidlrt_printf("TIDL_RT_OVX: Mapping config file ... Done. %d bytes\n", (uint32_t)capacity);
+                tidlrt_printf("TIDL_RT_OVX: Mapping config file ... Done. %u bytes\n", (uint32_t)capacity);
                 tidlrt_printf("TIDL_RT_OVX: Tensors, input = %d, output = %d\n", *num_input_tensors, *num_output_tensors);
             }
         }
@@ -2090,7 +2133,7 @@ static vx_user_data_object mapConfig(AppObj *obj, vx_context context, const sTID
     return config;
 }
 
-static vx_user_data_object mapNetwork(AppObj* obj, void * netPtr, int32_t capacity)
+static vx_user_data_object mapNetwork(AppObj* obj, void * netPtr, uint32_t capacity)
 {
     vx_status status;
     vx_user_data_object  network;
@@ -2169,7 +2212,7 @@ static vx_user_data_object mapNetwork(AppObj* obj, void * netPtr, int32_t capaci
         }
     }
 
-    tidlrt_printf("TIDL_RT_OVX: Mapping network file... Done %d bytes\n", (uint32_t)capacity);
+    tidlrt_printf("TIDL_RT_OVX: Mapping network file... Done %u bytes\n", (uint32_t)capacity);
 
     return network;
 }
@@ -2242,6 +2285,10 @@ static vx_user_data_object setCreateParams(AppObj *obj, sTIDLRT_Params_t *prms, 
                 params->quantRangeExpansionFactor     = prms->quantRangeExpansionFactor;
                 params->quantRangeUpdateFactor        = prms->quantRangeUpdateFactor ;
                 params->forceNegativeTest             = prms->forceNegativeTest;
+                params->enableDDRPerfStats            = prms->enableDDRPerfStats;
+                params->cacheImport                   = prms->cacheImport;
+                params->cacheExport                   = prms->cacheExport;
+                params->cacheClear                    = prms->cacheClear;
             }
 
             /* LDRA_JUSTIFY_START
@@ -2255,7 +2302,7 @@ static vx_user_data_object setCreateParams(AppObj *obj, sTIDLRT_Params_t *prms, 
             <justification end> */
             else
             {
-                tidlrt_printf("TIDL_RT_OVX: ERROR: Unable to allocate memory for create time params! %d bytes\n", capacity);
+                tidlrt_printf("TIDL_RT_OVX: ERROR: Unable to allocate memory for create time params! %u bytes\n", capacity);
             }
             /* LDRA_JUSTIFY_END */
 
@@ -2333,7 +2380,7 @@ static vx_user_data_object setInArgs(AppObj *obj)
             <justification end> */
             else
             {
-                tidlrt_printf("TIDL_RT_OVX: Unable to allocate memory for inArgs! %d bytes\n", capacity);
+                tidlrt_printf("TIDL_RT_OVX: Unable to allocate memory for inArgs! %u bytes\n", capacity);
             }
             /* LDRA_JUSTIFY_END */
 
@@ -2405,7 +2452,7 @@ static vx_user_data_object setOutArgs(vx_context context)
             <justification end> */
             else
             {
-                tidlrt_printf("TIDL_RT_OVX: Unable to allocate memory for outArgs! %d bytes\n", capacity);
+                tidlrt_printf("TIDL_RT_OVX: Unable to allocate memory for outArgs! %u bytes\n", capacity);
             }
             /* LDRA_JUSTIFY_END */
 
@@ -3157,7 +3204,7 @@ static vx_status createInputTensors(AppObj *obj, vx_context context, vx_user_dat
                 /* Reset the input buffer, this will take care of padding requirement for TIDL */
                 (void)memset(input_buffer, 0, (capacity*input_strides[0]));
                 input_buf_size += ioBufDesc->inNumBatches[id]*ioBufDesc->inNumChannels[id]*ioBufDesc->inWidth[id]*ioBufDesc->inHeight[id];
-                tidlrt_printf("TIDL_RT_OVX: input_buffer = %p %d\n", input_buffer, capacity);
+                tidlrt_printf("TIDL_RT_OVX: input_buffer = %p %u\n", input_buffer, capacity);
                 (void)tivxUnmapTensorPatch(input_tensors[id], map_id_input);
             }
             /* LDRA_JUSTIFY_START
@@ -3398,7 +3445,11 @@ static vx_status set_in_tidlrt_tensor_refs(AppObj *obj, vx_tensor *input_tensors
             /* LDRA_JUSTIFY_END */
                 if((obj->firstProcessCall != 0U) && (ref1Addr[0] != NULL))
                 {
+                    #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
+                    (void)tivxMemFree(ref1Addr[0], size[0], (vx_enum)TIVX_MEM_EXTERNAL_SHARED);
+                    #else
                     (void)tivxMemFree(ref1Addr[0], size[0], (vx_enum)TIVX_MEM_EXTERNAL);
+                    #endif
                 }
                 ref1Addr[0] = in[tidlrt_id]->ptr;
 
@@ -3469,7 +3520,11 @@ static vx_status set_out_tidlrt_tensor_refs(AppObj *obj, vx_tensor *output_tenso
             /* LDRA_JUSTIFY_END */
                 if((obj->firstProcessCall != 0U) && (ref1Addr[0] != NULL))
                 {
+                    #if !defined (ENABLE_SDK_9_2_COMPATIBILITY) && !defined (ENABLE_SDK_10_0_COMPATIBILITY) && !defined (ENABLE_SDK_10_1_COMPATIBILITY) && !defined (ENABLE_SDK_11_0_COMPATIBILITY) && !defined (ENABLE_SDK_11_1_COMPATIBILITY)
+                    (void)tivxMemFree(ref1Addr[0], size[0], (vx_enum)TIVX_MEM_EXTERNAL_SHARED);
+                    #else
                     (void)tivxMemFree(ref1Addr[0], size[0], (vx_enum)TIVX_MEM_EXTERNAL);
+                    #endif
                 }
                 ref1Addr[0] = out[tidlrt_id]->ptr;
 
@@ -3638,7 +3693,7 @@ static vx_status map_cp_in_tidlrt_tensor_tiovx(AppObj *obj, vx_context context, 
             /* LDRA_JUSTIFY_END */
             {
                 status = cp_data_in_tidlrt_tensor_tiovx(obj, in, pinputBuffer, id, tidlrt_id);
-                tidlrt_printf("TIDL_RT_OVX: input_buffer = %p %d\n", pinputBuffer, capacity);
+                tidlrt_printf("TIDL_RT_OVX: input_buffer = %p %u\n", pinputBuffer, capacity);
                 (void)tivxUnmapTensorPatch(input_tensors[id], map_id_input);
             }
             /* LDRA_JUSTIFY_START
@@ -3814,7 +3869,7 @@ static vx_status map_cp_out_tensor_tidlrt_tiovx(AppObj *obj, vx_user_data_object
     }
     else
     {
-        tidlrt_printf("TIDL_RT_OVX: Unable to read outArgs! %d bytes\n", capacity);
+        tidlrt_printf("TIDL_RT_OVX: Unable to read outArgs! %u bytes\n", capacity);
     }
 
 
@@ -4449,15 +4504,110 @@ static vx_status allocate_intermediate_tensors(IntHandle_t *rtHandle)
 
     return status;
 }
+
+int32_t TIDLRT_setMutableOptions(void *handle, uint32_t updateMask, sTIDLRT_Params_t *prms)
+{
+    int32_t status = VX_SUCCESS;
+    IntHandle_t * rtHandle = (IntHandle_t*)handle;
+    AppObj * obj = &(rtHandle->gAppObj);
+    TIDL_controlMutableOptions mutableOptions;
+    vx_reference refs[2];
+    vx_user_data_object mutableOptionsRef;
+
+    memset(&mutableOptions, 0, sizeof(TIDL_controlMutableOptions));
+
+    tidlrt_apply_trace_params(obj, prms, updateMask);
+
+    if((updateMask & TIDLRT_MUTABLE_OPT_TRACE_LOG_LEVEL) != 0u)
+    {
+        mutableOptions.updateMask |= TIDL_MUTABLE_OPT_TRACE_LOG_LEVEL;
+        mutableOptions.traceLogLevel = obj->traceLogLevel;
+
+        /*
+         * setInArgs() bakes enableLayerPerfTraces into the persistent
+         * obj->inArgs user-data-object once at create time; refresh it here
+         * so per-layer profiling data doesn't stay frozen at its create-time
+         * enable state.
+         */
+        vx_map_id inArgsMapId;
+        void *inArgsBuffer = NULL;
+        vx_status inArgsStatus = vxMapUserDataObject(obj->inArgs, 0, sizeof(TIDL_InArgs), &inArgsMapId,
+                (void **)&inArgsBuffer, VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, 0);
+
+        /* LDRA_JUSTIFY_START
+        <metric start> statement branch <metric end>
+        <justification start>
+        Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+        vxMapUserDataObject fails if vx_user_data_object provided is NULL.
+        The vx_user_data_object provided here is config which is already
+        checked for NULL in vxGetStatus
+        Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
+        <justification end> */
+        if ((inArgsStatus == (vx_status)VX_SUCCESS) && (inArgsBuffer != NULL))
+        /* LDRA_JUSTIFY_END */
+        {
+            TIDL_InArgs *inArgs = (TIDL_InArgs *)inArgsBuffer;
+            inArgs->enableLayerPerfTraces = (obj->traceLogLevel != 0U) ? 1 : 0;
+            (void)vxUnmapUserDataObject(obj->inArgs, inArgsMapId);
+        }
+    }
+
+    if((updateMask & TIDLRT_MUTABLE_OPT_TRACE_WRITE_LEVEL) != 0u)
+    {
+        mutableOptions.updateMask |= TIDL_MUTABLE_OPT_TRACE_WRITE_LEVEL;
+        mutableOptions.traceWriteLevel = obj->traceWriteLevel;
+    }
+
+    if((updateMask & TIDLRT_MUTABLE_OPT_TRACE_BASE_NAME) != 0u)
+    {
+        mutableOptions.updateMask |= TIDL_MUTABLE_OPT_TRACE_BASE_NAME;
+        (void)strncpy(mutableOptions.traceBaseName, obj->traceBaseName, TIDL_STRING_SIZE);
+    }
+
+    if((updateMask & TIDLRT_MUTABLE_OPT_CACHE_IMPORT) != 0u)
+    {
+        mutableOptions.updateMask |= TIDL_MUTABLE_OPT_CACHE_IMPORT;
+        mutableOptions.cacheImport = prms->cacheImport;
+    }
+
+    if((updateMask & TIDLRT_MUTABLE_OPT_CACHE_EXPORT) != 0u)
+    {
+        mutableOptions.updateMask |= TIDL_MUTABLE_OPT_CACHE_EXPORT;
+        mutableOptions.cacheExport = prms->cacheExport;
+    }
+
+    if((updateMask & TIDLRT_MUTABLE_OPT_CACHE_CLEAR) != 0u)
+    {
+        mutableOptions.updateMask |= TIDL_MUTABLE_OPT_CACHE_CLEAR;
+        mutableOptions.cacheClear = prms->cacheClear;
+    }
+
+    if (mutableOptions.updateMask != 0U)
+    {
+        mutableOptionsRef = vxCreateUserDataObject(rtHandle->gAppObj.context, "TIDL_controlMutableOptions", sizeof(TIDL_controlMutableOptions), &mutableOptions);
+        refs[0] = (vx_reference)mutableOptionsRef;
+        status = tivxNodeSendCommand(rtHandle->gAppObj.tidl_node, 0, TIVX_TIDL_CMD_SET_MUTABLE_OPTIONS, refs, 1u);
+        (void)vxReleaseUserDataObject(&mutableOptionsRef);
+    }
+    else
+    {
+        /* No mask is set. Skip calling control command */
+    }
+
+    return status;
+}
+
 #ifdef CODE_COVERAGE_ENABLED_FOR_TIDL
-int32_t TIDLRT_control(sTIDLRT_Params_t *prms, void *handle)
+
+int32_t TIDLRT_uploadCodeCoverage(void *handle)
 {
     int32_t status = VX_SUCCESS;
     IntHandle_t * rtHandle = (IntHandle_t*)handle;
     status |= tivxNodeSendCommand(rtHandle->gAppObj.tidl_node, 0, TIVX_TIDL_CODE_COVERAGE_UPLOAD, NULL, 0u);
     return status;
 }
-int32_t TIDLRT_controlCallTest(sTIDLRT_Params_t *prms, void *handle)
+
+int32_t TIDLRT_runCtrlCoverageTest(void *handle)
 {
     int32_t status = VX_SUCCESS;
     IntHandle_t * rtHandle = (IntHandle_t*)handle;
@@ -4487,6 +4637,10 @@ int32_t TIDLRT_controlCallTest(sTIDLRT_Params_t *prms, void *handle)
     status |= tivxNodeSendCommand(rtHandle->gAppObj.tidl_node, 0, TIVX_TIDL_CMD_SET_C7X_PTRS, refs, 1u);
 
     status |= tivxNodeSendCommand(rtHandle->gAppObj.tidl_node, 0, TIVX_TIDL_CMD_INIT, NULL, 0u);
+
+    refs[0] = NULL;
+
+    status |= tivxNodeSendCommand(rtHandle->gAppObj.tidl_node, 0, TIVX_TIDL_CMD_SET_MUTABLE_OPTIONS, refs, 1u);
 
     status |= tivxNodeSendCommand(rtHandle->gAppObj.tidl_node, 0, TIVX_TIDL_CODE_COVERAGE_UPLOAD, NULL, 0u);
     return status;

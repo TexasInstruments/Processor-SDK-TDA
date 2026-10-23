@@ -62,7 +62,7 @@
 
 #include <tidl_import_lut_core.h>
 #include <tidl_import_diag.h>
-void * my_malloc(int32_t size); //my_malloc - need to remove later, shouldnt be used in this file
+void * my_malloc(uint32_t size); //my_malloc - need to remove later, shouldnt be used in this file
 void my_free(void *ptr);//my_free - need to remove later, shouldnt be used in this file
 
 

@@ -171,6 +171,25 @@ extern "C" {
 #define TIDLRT_LT_MAX               (TIDLRT_LT_NHWC+1)
 /* @} */
 
+/**
+ *  \anchor eTIDLRT_MutableOpt
+ *  \name   TIDL RT Mutable Option Flags
+ *
+ *  This group defines the bits that can be set in the updateMask argument of
+ *  \ref TIDLRT_setMutableOptions to select which fields of \ref sTIDLRT_Params_t
+ *  should be applied to a live instance. Fields whose bit is not set are ignored.
+ *  Future mutable options get the next free bit, no new API needed.
+ *
+ *  @{
+ */
+#define TIDLRT_MUTABLE_OPT_TRACE_LOG_LEVEL    ((uint32_t) 0x1)
+#define TIDLRT_MUTABLE_OPT_TRACE_WRITE_LEVEL  ((uint32_t) 0x2)
+#define TIDLRT_MUTABLE_OPT_TRACE_BASE_NAME    ((uint32_t) 0x4)
+#define TIDLRT_MUTABLE_OPT_CACHE_IMPORT       ((uint32_t) 0x8)
+#define TIDLRT_MUTABLE_OPT_CACHE_EXPORT       ((uint32_t) 0x10)
+#define TIDLRT_MUTABLE_OPT_CACHE_CLEAR        ((uint32_t) 0x20)
+/* @} */
+
 typedef struct {
 /** Unique name for the tensor holding feature vector ,
  * When we have multiple tensors as inputs, the tensors in the imported model and 
@@ -224,9 +243,9 @@ typedef struct {
   /** Pointer to the Input and Output tensors descriptor */
   void* ioBufDescPtr;
   /** Variable to store network size */
-  int32_t net_capacity; 
+  uint32_t net_capacity;
   /** Variable to store io params size */
-  int32_t io_capacity; 
+  uint32_t io_capacity;
 
   /*-------------------------------------------------------------------------*/
   /* Control Variables for DDR foot print and init time                      */
@@ -314,6 +333,11 @@ typedef struct {
   /*-----------------------------------------------------------------------*/
   /* Control Variables for Debug and Trace                                 */
   /*-----------------------------------------------------------------------*/
+  /** This flag is only for Internal usage and this will not affect the normal flow where DDR numbers are derived from TIDLRT_getDdrStats 
+   *  Enable DDR bandwidth stats collection independently of traceLogLevel.
+   *  When set to non-zero, DDR read/write counters are sampled per layer
+   *  without requiring traceLogLevel >= 2 (which adds verbose logging overhead). */
+  uint32_t enableDDRPerfStats;
   /** Flags to control debugTrace Level*/
   int32_t traceLogLevel;
   /**
@@ -330,18 +354,33 @@ typedef struct {
   char traceSubgraphName[TIDLRT_STRING_SIZE];
   /** Path to redirect temporary buffers */
   char tempBufferDir[TIDLRT_STRING_SIZE];
-  
+  /** 1 = append attached input DataLayer(s) into any TIDL_CacheLayer(s) this call.
+   *  Applied via TIDLRT_setMutableOptions, gated by TIDLRT_MUTABLE_OPT_CACHE_IMPORT;
+   *  see TIDL_CacheLayer. */
+  int32_t cacheImport;
+  /** 1 = copy TIDL_CacheLayer(s)' content to attached output DataLayer(s) this call.
+   *  Applied via TIDLRT_setMutableOptions, gated by TIDLRT_MUTABLE_OPT_CACHE_EXPORT. */
+  int32_t cacheExport;
+  /** 1 = reset any attached TIDL_CacheLayer(s). Orthogonal to cacheImport/
+   *  cacheExport: combined with cacheImport=1, resets before importing
+   *  ("fill"); combined with cacheExport=1 alone, resets after this call's
+   *  export ("flush" - the reset may complete on the TIDL_CacheLayer's next
+   *  invocation rather than this one); with neither, resets immediately
+   *  ("abandon"). Applied via TIDLRT_setMutableOptions, gated by
+   *  TIDLRT_MUTABLE_OPT_CACHE_CLEAR. */
+  int32_t cacheClear;
+
   /** Pointer to structure holding perf data */
   sTIDLRT_PerfStats_t *stats;
 
   /** Call back Function pointer to Write Log*/
   int32_t(*TIDLVprintf)(const char * format, va_list arg);
   /** Call back Function pointer to Write Binary data to a file*/
-  int32_t(*TIDLWriteBinToFile)(const char * fileName, void * addr, 
-    int32_t size, int32_t count);
+  int32_t(*TIDLWriteBinToFile)(const char * fileName, void * addr,
+    uint32_t size, int32_t count);
   /** Call back Function pointer to read data from a binary file */
-  int32_t(*TIDLReadBinFromFile)(const char * fileName, void * addr, 
-    int32_t size, int32_t count);
+  int32_t(*TIDLReadBinFromFile)(const char * fileName, void * addr,
+    uint32_t size, int32_t count);
 
 }sTIDLRT_Params_t;
 
@@ -441,8 +480,47 @@ void    TIDLRT_freeSharedMem(void *ptr);
 */
 int32_t TIDLRT_isSharedMem(void *ptr);
 
-int32_t TIDLRT_control(sTIDLRT_Params_t *prms, void *handle);
-int32_t TIDLRT_controlCallTest(sTIDLRT_Params_t *prms, void *handle);
+/**
+* \brief      Function to update a subset of options on a live TIDL RT instance, between invokes,
+*             without recreating the handle.
+* \param      handle      : Pointer to the Successfully created TIDL RT instance
+* \param      updateMask  : OR of \ref eTIDLRT_MutableOpt bits selecting which fields of prms to apply
+* \param      prms        : Pointer to a \ref sTIDLRT_Params_t; only fields flagged in updateMask are read.
+*                           If TIDLRT_MUTABLE_OPT_TRACE_BASE_NAME is set, the resolved (joined/defaulted)
+*                           trace base name is written back into prms->traceBaseName.
+* \remarks    None
+* \return     VX_SUCCESS  (0)    - Successful \n
+              VX_FAILURE  ( < 0) - Unspecified error
+*/
+int32_t TIDLRT_setMutableOptions(void *handle, uint32_t updateMask, sTIDLRT_Params_t *prms);
+
+#ifdef CODE_COVERAGE_ENABLED_FOR_TIDL
+
+/**
+* @brief      [Internal use only — not intended for application-level use]
+*             Trigger upload of LDRA code coverage data from the C7x firmware
+*             via TIVX_TIDL_CODE_COVERAGE_UPLOAD. This API is the mechanism by
+*             which LDRA instrumentation data is flushed from the C7x at the end
+*             of a coverage run; it has no effect in non-coverage builds.
+* @param      handle   : TIDL runtime handle returned by \ref TIDLRT_create
+* @remarks    Available only when CODE_COVERAGE_ENABLED_FOR_TIDL is defined
+* @return     VX_SUCCESS  (0)    - Successful \n
+*             VX_FAILURE  ( < 0) - Unspecified error
+*/
+int32_t TIDLRT_uploadCodeCoverage(void *handle);
+
+/**
+* @brief      [Internal use only — not intended for application-level use]
+*             Exercise all C7x control dispatch paths for LDRA code coverage.
+*
+* @param      handle   : TIDL runtime handle returned by \ref TIDLRT_create
+* @remarks    Available only when CODE_COVERAGE_ENABLED_FOR_TIDL is defined
+* @return     VX_SUCCESS  (0)    - Successful \n
+*             VX_FAILURE  ( < 0) - Unspecified error
+*/
+int32_t TIDLRT_runCtrlCoverageTest(void *handle);
+
+#endif /* CODE_COVERAGE_ENABLED_FOR_TIDL */
 
 #ifdef __cplusplus
 }

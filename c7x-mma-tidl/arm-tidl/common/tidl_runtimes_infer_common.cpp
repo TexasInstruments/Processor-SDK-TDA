@@ -68,7 +68,7 @@
 #include "tidl_runtimes_infer_common.h"
 
 /** Print debug prints based on debug print level */
-void TIDL_osrtDebugPrint(int32_t osrtDebugPrintLevel, char * format, ...)
+void TIDL_osrtDebugPrint(int32_t osrtDebugPrintLevel, const char * format, ...)
 {
   va_list args;
   if (osrtDebugPrintLevel)
@@ -129,7 +129,7 @@ bool TIDL_checkIsPath(const char *path) {
 }
 
 
-int32_t TIDL_readBinFromFile(const char *fileName, void *addr, int32_t size, int32_t count)
+int32_t TIDL_readBinFromFile(const char *fileName, void *addr, uint32_t size, int32_t count)
 {
     FILE *fptr = NULL;
     fptr = fopen((const char *)fileName, "rb");
@@ -195,14 +195,46 @@ void TIDL_printSubgraphStats(sTIDLRT_PerfStats_t *stats)
   printf("Sub Graph Stats %f %f %f \n", cp_in_time, proc_time, cp_out_time);
 }
 
+/** Map the single debugLevel knob to the underlying {traceLogLevel, traceWriteLevel} pair,
+ *  shared between create-time setup and live TIDL_subgraphRtSetMutableOptions updates. */
+static void TIDL_debugLevelToTraceParams(int32_t debugLevel, int32_t *traceLogLevel, int32_t *traceWriteLevel)
+{
+  if (debugLevel <= 2)
+  {
+    *traceLogLevel = debugLevel;
+    *traceWriteLevel = 0;
+  }
+  else if (debugLevel == 3)
+  {
+    *traceLogLevel = 1;
+    *traceWriteLevel = 1;
+  }
+  else if (debugLevel == 4)
+  {
+    *traceLogLevel = 1;
+    *traceWriteLevel = 3;
+  }
+  else if (debugLevel == 5)
+  {
+    *traceLogLevel = debugLevel;
+    *traceWriteLevel = 3;
+  }
+  else
+  {
+    *traceLogLevel = debugLevel;
+    *traceWriteLevel = 0;
+  }
+}
+
 /** This function reads tidl_net.bin and tidl_io_1.bin files in netPtr and ioBufDesc pointer parameters
-  * of TIDL RT, sets other default TIDL RT parameters and create a TIDL RT handle to be used for 
+  * of TIDL RT, sets other default TIDL RT parameters and create a TIDL RT handle to be used for
   * further processing
   */
-int32_t TIDL_subgraphRtCreate(sTIDL_subgraphRtCreateOptions_t* subgraphRtCreateOptions, sTIDL_tidlRtDynamicLoading_t * infer_ops, 
+int32_t TIDL_subgraphRtCreate(sTIDL_subgraphRtCreateOptions_t* subgraphRtCreateOptions, sTIDL_tidlRtDynamicLoading_t * infer_ops,
                               const char* subGraphName, sTIDL_tidlRtParams_t * subgraphParams)
 {
-  TIDL_osrtDebugPrint(subgraphRtCreateOptions->osrtDebugPrintLevel, "************ in TIDL_subgraphRtCreate ************ \n ");
+  TIDL_osrtDebugPrint(subgraphRtCreateOptions->osrtDebugPrintLevel, "========== TIDL_subgraphRtCreate Start (name:%s) ==========\n", subGraphName);
+
   int status = 0;
   sTIDLRT_Params_t prms;
   FILE *fp_network;
@@ -270,14 +302,14 @@ int32_t TIDL_subgraphRtCreate(sTIDL_subgraphRtCreateOptions_t* subgraphRtCreateO
   
   prms.TIDLReadBinFromFile = TIDL_readBinFromFile;
   status = prms.TIDLReadBinFromFile(&network_file[0], prms.netPtr, prms.net_capacity, 1);
-  
+
   cstr = new char[config_file.length() + 1];
   strcpy(cstr, config_file.c_str());
-  
+
   fp_config = fopen(cstr, "rb");
-  
+
   delete[] cstr;
-  
+
   if (fp_config == NULL)
   {
     printf("Invoke  : ERROR: Unable to open IO config file %s \n", config_file.c_str());
@@ -290,38 +322,26 @@ int32_t TIDL_subgraphRtCreate(sTIDL_subgraphRtCreateOptions_t* subgraphRtCreateO
   prms.ioBufDescPtr = malloc(prms.io_capacity);
   status = prms.TIDLReadBinFromFile(&config_file[0], prms.ioBufDescPtr, prms.io_capacity, 1);
 
-  int32_t debugLevel = subgraphRtCreateOptions->debugLevel;
-  if (debugLevel <= 2)
-  {
-    prms.traceLogLevel = debugLevel;
-    prms.traceWriteLevel = 0;
-  }
-  else if (debugLevel == 3)
-  {
-    prms.traceLogLevel = 1;
-    prms.traceWriteLevel = 1;
-  }
-  else if (debugLevel == 4)
-  {
-    prms.traceLogLevel = 1;
-    prms.traceWriteLevel = 3;
-  }
-  else if (debugLevel == 5)
-  {
-    prms.traceLogLevel = debugLevel;
-    prms.traceWriteLevel = 3;
-  }
-  else
-  {
-    prms.traceLogLevel = debugLevel;
-    prms.traceWriteLevel = 0;
-  }  
-  
+  TIDL_debugLevelToTraceParams(subgraphRtCreateOptions->debugLevel, &prms.traceLogLevel, &prms.traceWriteLevel);
+
+
   prms.targetPriority = subgraphRtCreateOptions->targetPriority;
   prms.maxPreEmptDelay = subgraphRtCreateOptions->maxPreEmptDelay;
   prms.coreNum = subgraphRtCreateOptions->coreNum;
   prms.coreStartIdx = subgraphRtCreateOptions->coreStartIdx;
-  
+  if (subgraphRtCreateOptions->cacheImport != -1)
+  {
+    prms.cacheImport = subgraphRtCreateOptions->cacheImport;
+  }
+  if (subgraphRtCreateOptions->cacheExport != -1)
+  {
+    prms.cacheExport = subgraphRtCreateOptions->cacheExport;
+  }
+  if (subgraphRtCreateOptions->cacheClear != -1)
+  {
+    prms.cacheClear = subgraphRtCreateOptions->cacheClear;
+  }
+
   strncpy(prms.traceSubgraphName, name.c_str(), TIDLRT_STRING_SIZE - 1);
   if(subgraphRtCreateOptions->traceBaseName[0] != '\0')
   {
@@ -344,14 +364,17 @@ int32_t TIDL_subgraphRtCreate(sTIDL_subgraphRtCreateOptions_t* subgraphRtCreateO
   subgraphParams->netPtr      = prms.netPtr;
   subgraphParams->ioBufDesc   = prms.ioBufDescPtr;
 
-  TIDL_osrtDebugPrint(subgraphRtCreateOptions->osrtDebugPrintLevel, "************ TIDL_subgraphRtCreate done ************ \n ");
-  if(subgraphParams->netPtr) free(subgraphParams->netPtr);
+  if(subgraphParams->netPtr)
+    free(subgraphParams->netPtr);
+
+  TIDL_osrtDebugPrint(subgraphRtCreateOptions->osrtDebugPrintLevel, "========== TIDL_subgraphRtCreate End (name:%s) ==========\n", subGraphName);
+
   return status;
 }
 
 int32_t TIDL_subgraphRtDelete(int32_t osrtDebugPrintLevel, sTIDL_tidlRtDynamicLoading_t * infer_ops, sTIDL_tidlRtParams_t * tidlRtParams)
 {
-  TIDL_osrtDebugPrint(osrtDebugPrintLevel, "************ in TIDL_subgraphRtDelete ************ \n ");
+  TIDL_osrtDebugPrint(osrtDebugPrintLevel, "========== TIDL_subgraphRtDelete Start ==========\n");
   int32_t status = 0;
   if(tidlRtParams->rtHandle)
   {
@@ -362,6 +385,59 @@ int32_t TIDL_subgraphRtDelete(int32_t osrtDebugPrintLevel, sTIDL_tidlRtDynamicLo
   free(tidlRtParams->rtOutList);
   free(tidlRtParams->stats);
   free(tidlRtParams->ioBufDesc);
+  TIDL_osrtDebugPrint(osrtDebugPrintLevel, "========== TIDL_subgraphRtDelete End ==========\n");
+  return status;
+}
+
+int32_t TIDL_subgraphRtSetMutableOptions(int32_t osrtDebugPrintLevel,
+                                         sTIDL_tidlRtDynamicLoading_t * infer_ops,
+                                         sTIDL_tidlRtParams_t * subgraphParams,
+                                         const sTIDL_subgraphRtCreateOptions_t * subgraphRtSetOptions,
+                                         const char * subgraphName)
+{
+  TIDL_osrtDebugPrint(osrtDebugPrintLevel, "========== TIDL_subgraphRtSetMutableOptions Start (name:%s) ==========\n", subgraphName);
+
+  int32_t status = 0;
+  sTIDLRT_Params_t prms;
+  uint32_t updateMask = 0;
+
+  if (subgraphRtSetOptions->debugLevel != -1)
+  {
+    updateMask |= TIDLRT_MUTABLE_OPT_TRACE_LOG_LEVEL | TIDLRT_MUTABLE_OPT_TRACE_WRITE_LEVEL;
+    TIDL_debugLevelToTraceParams(subgraphRtSetOptions->debugLevel, &prms.traceLogLevel, &prms.traceWriteLevel);
+  }
+
+  if (subgraphRtSetOptions->traceBaseName[0] != '\0')
+  {
+    updateMask |= TIDLRT_MUTABLE_OPT_TRACE_BASE_NAME;
+    strncpy(prms.traceBaseName, subgraphRtSetOptions->traceBaseName, TIDLRT_STRING_SIZE - 1);
+    prms.traceBaseName[TIDLRT_STRING_SIZE - 1] = '\0';
+    strncpy(prms.traceSubgraphName, subgraphName != nullptr ? subgraphName : "", TIDLRT_STRING_SIZE - 1);
+    prms.traceSubgraphName[TIDLRT_STRING_SIZE - 1] = '\0';
+  }
+
+  if (subgraphRtSetOptions->cacheImport != -1)
+  {
+    updateMask |= TIDLRT_MUTABLE_OPT_CACHE_IMPORT;
+    prms.cacheImport = subgraphRtSetOptions->cacheImport;
+  }
+
+  if (subgraphRtSetOptions->cacheExport != -1)
+  {
+    updateMask |= TIDLRT_MUTABLE_OPT_CACHE_EXPORT;
+    prms.cacheExport = subgraphRtSetOptions->cacheExport;
+  }
+
+  if (subgraphRtSetOptions->cacheClear != -1)
+  {
+    updateMask |= TIDLRT_MUTABLE_OPT_CACHE_CLEAR;
+    prms.cacheClear = subgraphRtSetOptions->cacheClear;
+  }
+
+  status = infer_ops->TIDLRT_setMutableOptions(subgraphParams->rtHandle, updateMask, &prms);
+
+  TIDL_osrtDebugPrint(osrtDebugPrintLevel, "========== TIDL_subgraphRtSetMutableOptions End (name:%s) ==========\n", subgraphName);
+
   return status;
 }
 
@@ -376,6 +452,7 @@ void TIDL_rtLoadSymbols(sTIDL_tidlRtDynamicLoading_t * infer_ops)
   infer_ops->TIDLRT_setTensorDefault = TIDL_loadSymbol<decltype(infer_ops->TIDLRT_setTensorDefault)>(infer_ops->lib, "TIDLRT_setTensorDefault");
   infer_ops->TIDLRT_getDdrStats = TIDL_loadSymbol<decltype(infer_ops->TIDLRT_getDdrStats)>(infer_ops->lib, "TIDLRT_getDdrStats");
   infer_ops->TIDLRT_isSharedMem = TIDL_loadSymbol<decltype(infer_ops->TIDLRT_isSharedMem)>(infer_ops->lib, "TIDLRT_isSharedMem");
+  infer_ops->TIDLRT_setMutableOptions = TIDL_loadSymbol<decltype(infer_ops->TIDLRT_setMutableOptions)>(infer_ops->lib, "TIDLRT_setMutableOptions");
 }
 
 } //extern C

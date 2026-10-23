@@ -115,15 +115,17 @@ uint8_t bmHeaderNmae[] = {66,77,54,48,42,0,0,0,0,0,54,0,0,0};
 uint8_t * tidl_loadBMP(const char *filepath, int32_t * width, int32_t * height)
 {
     TI_FILE *f = FOPEN(filepath, "rb");
+    int32_t fReadStatus;
     if (f)
     {
-      FREAD(bmHeader, sizeof(uint8_t), sizeof(tidl_bmpHeader), f);
+      fReadStatus = FREAD(bmHeader, sizeof(uint8_t), sizeof(tidl_bmpHeader), f);
       *width = *(int32_t *)(bmHeader + TIDL_BMP_OFST_WIDTH);
       *height = *(int32_t*)(bmHeader + TIDL_BMP_OFST_HEIGHT);
       unsigned int size = *width * *height * 3;
       uint8_t * pixels = (uint8_t *)malloc(size);
-      FREAD(pixels, sizeof(unsigned char), size, f);
+      fReadStatus = FREAD(pixels, sizeof(unsigned char), size, f);
       FCLOSE(f);
+      (void)fReadStatus;
       return pixels;
    }  
    return NULL;

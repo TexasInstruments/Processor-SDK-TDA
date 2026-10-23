@@ -14,6 +14,7 @@ const component_file_list = [
     "source/kernel/freertos/.project/project.js",
     "source/kernel/safertos/.project/project.js",
     "source/sdl/.project/project.js",
+    "source/sdl/sdl_ipfma/.project/project.js",
     "source/safety_checkers/.project/project.js",
     "source/pdm_utils/.project/project.js",
 
@@ -126,6 +127,8 @@ const example_file_list = [
     "examples/ip_fma/dru_static_regs_readback/.project/project.js",
     "examples/ip_fma/csirx_static_regs_readback/.project/project_j722s.js",
     "examples/ip_fma/dru_active_tr_event_overflow_detection/.project/project.js",
+    "examples/ip_fma/dru_basic_tests_with_crc_check/.project/project.js",
+    "examples/ip_fma/dcc_readback_of_written_config/.project/project.js",
     "source/safety_checkers/examples/csirx_checkers_app/.project/project.js",
     "source/safety_checkers/examples/pm_checkers_app/.project/project.js",
     "source/safety_checkers/examples/pm_checkers_warm_reset/.project/project.js",
@@ -133,6 +136,7 @@ const example_file_list = [
     "source/safety_checkers/examples/tifs_checkers_app/.project/project.js",
     "source/pdm_utils/examples/dm_power_analysis_app/.project/project.js",
     "examples/ip_fma/clk_ip_fma_app/.project/project.js",
+    "examples/ip_fma/dru_unsupported_tr_detection/.project/project.js",
 
     /* Test Applications */
     "test/board/flash/.project/project.js",

@@ -116,7 +116,7 @@ static int filelength(TI_FILE *fp)
 ********************************************************************************
 */
 
-static int ParameterNameToMapIndex (char *s, sTokenMapping *sTokenMap)
+static int ParameterNameToMapIndex (const char *s, sTokenMapping *sTokenMap)
 {
   int i = 0;
 
@@ -131,7 +131,7 @@ static int ParameterNameToMapIndex (char *s, sTokenMapping *sTokenMap)
   return -1;
 }/* ParameterNameToMapIndex */
 
-static bool checkBoundsInt(int val, int min, int max, char **errStr)
+static bool checkBoundsInt(int val, int min, int max, const char **errStr)
 {
   if(val < min || val > max) {
     *errStr = "Value out-of-bounds";
@@ -141,33 +141,33 @@ static bool checkBoundsInt(int val, int min, int max, char **errStr)
   return true;
 }
 
-static bool convertDirectInt(char *arg, int *val, char **errStr)
+static bool convertDirectInt(char *arg, int *val, const char **errStr)
 {
   int n, c;
 
   n = sscanf(arg, "%d%n", val, &c);
 
-  if(n == 1 && c == strlen(arg))
+  if(n == 1 && c == (int)strlen(arg))
     return true;
 
   *errStr = "Conversion error";
   return false;
 }
 
-static bool convertDirectFloat(char *arg, float *val, char **errStr)
+static bool convertDirectFloat(char *arg, float *val, const char **errStr)
 {
   int n, c;
 
   n = sscanf(arg, "%f%n", val, &c);
 
-  if(n == 1 && c == strlen(arg))
+  if(n == 1 && c == (int)strlen(arg))
     return true;
 
   *errStr = "Conversion error";
   return false;
 }
 
-static bool convertSubstInt(sTokenStringSubst *subst, char *arg, int *val, char **errStr)
+static bool convertSubstInt(sTokenStringSubst *subst, char *arg, int *val, const char **errStr)
 {
   int c = 0;
 
@@ -189,7 +189,7 @@ static bool convertSubstInt(sTokenStringSubst *subst, char *arg, int *val, char 
   return false;
 }
 
-static bool convertSubstFloat(sTokenStringSubst *subst, char *arg, float *val, char **errStr)
+static bool convertSubstFloat(sTokenStringSubst *subst, char *arg, float *val, const char **errStr)
 {
   int c = 0;
 
@@ -384,7 +384,7 @@ static int ParseContent (unsigned char *buf, int bufsize, sTokenMapping *sTokenM
     /* Get the map index into the token map array - corresponding to the      */
     /* first item - in a item-triplet                                         */
     /*------------------------------------------------------------------------*/
-    if (0 <= (MapIdx = ParameterNameToMapIndex (items[i], sTokenMap)))
+    if (0 <= (MapIdx = ParameterNameToMapIndex ((const char *)items[i], sTokenMap)))
     {
       /*----------------------------------------------------------------------*/
       /* Assert if the second item is indeed "=" symbol                       */
@@ -434,7 +434,7 @@ static int ParseContent (unsigned char *buf, int bufsize, sTokenMapping *sTokenM
           if(assignData)
           {
             bool e = true;
-            char *errStr;
+            const char *errStr;
 
             if (sTokenMap[MapIdx].type == INT_32)
             {
@@ -514,7 +514,7 @@ int readparamarg(const char *opt, sTokenMapping *sTokenMap, char **args)
   int MapIdx;
   int k, assignData;
 
-  if (0 <= (MapIdx = ParameterNameToMapIndex ((char *)opt, sTokenMap)))
+  if (0 <= (MapIdx = ParameterNameToMapIndex ((const char *)opt, sTokenMap)))
   {
     /*
      * This indicates that the parameter has been provided, irrespective of
@@ -553,7 +553,7 @@ int readparamarg(const char *opt, sTokenMapping *sTokenMap, char **args)
         if(assignData)
         {
           bool e = true;
-          char *errStr;
+          const char *errStr;
 
           if (sTokenMap[MapIdx].type == INT_32)
           {
@@ -658,6 +658,8 @@ int readparamfile(char *configFile, sTokenMapping *sTokenMap)
   }
   memset(fileBuffer, 0, fileSize + 2);
   int32_t freadStatus =  FREAD (fileBuffer, 1, fileSize, fConfigFile);
+  (void)freadStatus;
+
   /*--------------------------------------------------------------------------*/
   /* Put end of string marker and end of Line if not present                  */
   /*--------------------------------------------------------------------------*/

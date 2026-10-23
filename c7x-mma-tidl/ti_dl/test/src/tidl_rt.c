@@ -594,7 +594,7 @@ int32_t is_tidlrt_in_tensor_same( sTIDL_IOBufDesc_t *ioBufDesc, sTIDLRT_Tensor_t
     {
         return 0;
     }
-    if(in[tidlrt_id]->layout != ioBufDesc->inLayout[id])
+    if(in[tidlrt_id]->layout != (uint32_t)ioBufDesc->inLayout[id])
     {
         return 0;
     }
@@ -636,7 +636,7 @@ int32_t is_tidlrt_out_tensor_same( sTIDL_IOBufDesc_t *ioBufDesc, sTIDLRT_Tensor_
     {
         return 0;
     }
-    if(in[tidlrt_id]->layout != ioBufDesc->outLayout[id])
+    if(in[tidlrt_id]->layout != (uint32_t)ioBufDesc->outLayout[id])
     {
         return 0;
     }
@@ -681,7 +681,7 @@ static void tidl_copyRTTensorToInBufs(const sTIDL_Network_t *net, sTIDL_IOBufDes
        */
       int32_t h, w, lp, cp;
       int32_t i0, i1, i2, i3, offset, idx;
-      float data;
+      float data = 0.0f;
       w = ioPrms->inWidth[i];
       h = ioPrms->inHeight[i];
       lp = BufDescList[i].bufPlanes[0].width  ;
@@ -981,7 +981,8 @@ void tidl_copyOutBufsToRTTensor(sTIDL_IOBufDesc_t * ioPrms,  sTIDLRT_Tensor_t   
     {
       int32_t h, w, lp, cp;
       int32_t i0, i1, i2, i3, offset, zp, idx;
-      float data, outScale;
+      float data = 0.0f;
+      float outScale;
       w = ioPrms->outWidth[i];
       h = ioPrms->outHeight[i];
       lp = BufDescList[i].bufPlanes[0].width  ;
@@ -1135,7 +1136,7 @@ int32_t TIDL_disableInterrupts()
 }
 void TIDL_restoreInterrupts(int32_t oldIntState)
 {
-  uint32_t coreNum = TIDL_TEST_getCoreNum();
+  //uint32_t coreNum = TIDL_TEST_getCoreNum();
   //HwiP_restore(oldIntState);
   
   /* code to corrupt buffers */
@@ -1200,8 +1201,8 @@ int32_t TIDLRT_create(sTIDLRT_Params_t *prms, void ** handle)
   createPrms->flowCtrl                      = prms->flowCtrl;
   createPrms->forceNegativeTest             = prms->forceNegativeTest;
   createPrms->reservedCtrl                  = reservedCtrl;
-  createPrms->TIDLWriteBinToFile            = prms->TIDLWriteBinToFile;
-  createPrms->TIDLReadBinFromFile           = prms->TIDLReadBinFromFile;
+  createPrms->TIDLWriteBinToFile            = (int32_t(*)(const char*, void*, int32_t, int32_t))prms->TIDLWriteBinToFile;
+  createPrms->TIDLReadBinFromFile           = (int32_t(*)(const char*, void*, int32_t, int32_t))prms->TIDLReadBinFromFile;
   createPrms->TIDL_CustomLayerProcess       = TIDL_customLayerProcess;
   createPrms->TIDLVprintf = tidl_tb_utils_printf;
   if(createPrms->forceNegativeTest == TIDL_SAFETY_FLAG_ALLOC_FORCE_VPRINTF_NULL)
@@ -1238,7 +1239,7 @@ int32_t TIDLRT_create(sTIDLRT_Params_t *prms, void ** handle)
   createPrms->net = (sTIDL_Network_t *)prms->netPtr;
   if ((prms->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)
   {
-    createPrms->net->dataFlowInfo = NULL;
+    createPrms->net->dataFlowInfo = 0;
   }
 
   numMemRec = TIDL_VISION_FXNS.ialg.algNumAlloc();
@@ -1365,11 +1366,11 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
   }
   if (status == IALG_EOK)
   {
-    for (i = 0; i < inBufs.numBufs; i++)
+    for (i = 0; i < (int32_t)inBufs.numBufs; i++)
     {
       inBufDescList[i] = &inBufDesc[i];
     }
-    for (i = 0; i < outBufs.numBufs; i++)
+    for (i = 0; i < (int32_t)outBufs.numBufs; i++)
     {
       outBufDescList[i] = &outBufDesc[i];
     }
@@ -1383,9 +1384,9 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
 #else
     inArgs.enableLayerPerfTraces = (prms->traceLogLevel > 0);
 #endif
-    for (i = 0; i < inBufs.numBufs; i++)
+    for (i = 0; i < (int32_t)inBufs.numBufs; i++)
     {
-      for (j = 0; j < TIDL_DIM_MAX; j++)
+      for (j = 0; j < (int32_t)TIDL_DIM_MAX; j++)
       {
           inArgs.inDimValues[i][j] = (int32_t)in[i]->dimValues[j];
       }
@@ -1452,7 +1453,7 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
       {
         if( out[i]->isDynamic == 1 )
         {
-          for (j = 0; j < TIDL_DIM_MAX; j++)
+          for (j = 0; j < (int32_t)TIDL_DIM_MAX; j++)
           {
             out[i]->dimValues[j] = outArgs.outDimValues[i][j];
           }
@@ -1563,11 +1564,29 @@ int32_t TIDLRT_invoke(void *handle, sTIDLRT_Tensor_t *in[], sTIDLRT_Tensor_t *ou
         sTIDL_Layer_t* currLayer = &net->TIDLLayers[layerIdx];
         for(profileIdx = TIDL_PROFILE_LAYER; profileIdx < TIDL_PROFILE_MAX; profileIdx++)
         {
-          currLayer->profilePoints[profileIdx] = outArgs.metaDataLayer[layerIdx].profilePoint[profileIdx];
-        }
-        if(outArgs.metaDataLayer[layerIdx].layerExecId == -1)
-        {
-          currLayer->profilePoints[0] = 0xFFFFFFFFFFFFFFFFU;
+          if(outArgs.metaDataLayer[layerIdx].layerExecId == -1)
+          {
+            currLayer->profilePoints[profileIdx] = 0xFFFFFFFFFFFFFFFFU;
+          }
+          else
+          {
+            /**
+             * Update only relevant profile points in network
+             * Skipping others as they might differ run to run causing
+             * different sha for net.bin file in each model compilation run
+             */
+            if(profileIdx == TIDL_PROFILE_KERNEL_ONLY ||
+               profileIdx == TIDL_PROFILE_CORE_LOOP ||
+               profileIdx == TIDL_PROFILE_DDR_BW_READ ||
+               profileIdx == TIDL_PROFILE_DDR_BW_WRITE)
+            {
+              currLayer->profilePoints[profileIdx] = outArgs.metaDataLayer[layerIdx].profilePoint[profileIdx];
+            }
+            else
+            {
+              currLayer->profilePoints[profileIdx] = 0;
+            }
+          }
         }
       }
     }

@@ -123,7 +123,7 @@ int32_t TidlParseOnnx::numVariableLayerInputs(GraphProto& onnGraph, int32_t i, v
   return numVarInputs;
 }
 
-int32_t TidlParseOnnx::getAttrIdx(const NodeProto& node, char * name)
+int32_t TidlParseOnnx::getAttrIdx(const NodeProto& node, const char * name)
 {
   int32_t i;
   for (i = 0; i < node.attribute_size(); i++)
@@ -481,6 +481,7 @@ vector<int32_t> TidlParseOnnx::getNodeInputShape(GraphProto& onnxGraph, const st
   std::vector<int32_t> dims;
   int32_t nodeFound = 0;
 
+  // Check Inputs
   for (int k = 0; k < onnxGraph.input_size(); k++)
   {
     if((strcmp(onnxGraph.input(k).name().c_str(), name.c_str()) == 0))
@@ -495,9 +496,10 @@ vector<int32_t> TidlParseOnnx::getNodeInputShape(GraphProto& onnxGraph, const st
         }
       }
     }
+    if (nodeFound) break;
   }
 
-
+  // Check Value Info
   if (nodeFound == 0)
   {
     for (int k = 0; k < onnxGraph.value_info_size(); k++)
@@ -514,13 +516,11 @@ vector<int32_t> TidlParseOnnx::getNodeInputShape(GraphProto& onnxGraph, const st
           }
         }
       }
+      if (nodeFound) break;
     }
   }
 
-  /**
-   * Protecting the search under the flag as the dims vector can be filled twice when there is a node present as
-   * both input & output in the onnx graph.
-  */
+  // Check Outputs
   if (nodeFound == 0)
   {
     for (int k = 0; k < onnxGraph.output_size(); k++)
@@ -533,11 +533,14 @@ vector<int32_t> TidlParseOnnx::getNodeInputShape(GraphProto& onnxGraph, const st
           for (int j = 0; j < tensorShape.dim_size(); j++)
           {
             dims.push_back(tensorShape.dim(j).dim_value());
+            nodeFound = 1;
           }
         }
       }
+      if (nodeFound) break;
     }
   }
+
   return dims;
 }
 
@@ -560,6 +563,7 @@ vector<int32_t> TidlParseOnnx::getNodeOutputShape(GraphProto& onnxGraph, const s
         }
       }
     }
+    if (nodeFound) break;
   }
 
   if (nodeFound == 0)
@@ -574,16 +578,18 @@ vector<int32_t> TidlParseOnnx::getNodeOutputShape(GraphProto& onnxGraph, const s
           for (int j = 0; j < tensorShape.dim_size(); j++)
           {
             dims.push_back(tensorShape.dim(j).dim_value());
+            nodeFound = 1;
           }
         }
       }
+      if (nodeFound) break;
     }
   }
 
   return dims;
 }
 
-int32_t TidlParseOnnx::getIntAttr(const NodeProto& node, char * name, int32_t * valuePtr, int32_t idx)
+int32_t TidlParseOnnx::getIntAttr(const NodeProto& node, const char * name, int32_t * valuePtr, int32_t idx)
 {
   int32_t i = getAttrIdx(node, name);
   if(i != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
@@ -626,7 +632,7 @@ int32_t TidlParseOnnx::getIntAttr(const NodeProto& node, char * name, int32_t * 
   return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
 }
 
-int32_t TidlParseOnnx::getStringAttr(const NodeProto& node, char * name, char * valuePtr, int32_t idx)
+int32_t TidlParseOnnx::getStringAttr(const NodeProto& node, const char * name, char * valuePtr, int32_t idx)
 {
   strcpy(valuePtr, "");
   int32_t i = getAttrIdx(node, name);
@@ -1070,7 +1076,7 @@ int32_t TidlParseOnnx::copyFloatConst(GraphProto& onnGraph, int32_t nIdx, int32_
   return 0;
 }
 
-int32_t TidlParseOnnx::getFloatAttr(const NodeProto& node, char * name, float * valuePtr, int32_t idx)
+int32_t TidlParseOnnx::getFloatAttr(const NodeProto& node, const char * name, float * valuePtr, int32_t idx)
 {
   int32_t i = getAttrIdx(node, name);
   if (i != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
@@ -1157,6 +1163,7 @@ int32_t TidlParseOnnx::containsSuffix(std::string str, std::string suffix)
         }
         my_free(index_src_ptr);
         weights.ptr = (void*)index_dst_ptr;
+        weights.dataType = TIDL_SignedWord;
     
     return TIDL_ALLOWLISTING_LAYER_CHECK_PASSED;
 }
@@ -1284,6 +1291,24 @@ bool TidlParseOnnx::isLayerIODataTypesSupported(sTIDL_LayerPC_t &layer)
           // Not supported for other eltwise operations
           TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Layer %s : Unsupported data type for one of the input/output tensors", (char *)layer.name);
           status = TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+        }
+      }
+      else if(layer.layerType == TIDL_GroupQueryAttentionLayer)
+      {
+        /* seqlens_k (ONNX input 5) and total_sequence_length (ONNX input 6) are int32 —
+         * explicitly allowed. All other inputs (query/key/value/past/cos/sin) must be float. */
+        for(int32_t i = 0; i < md.numVarInputs; i++)
+        {
+          int32_t onnxIdx = varTensorIndices[i];
+          bool isInt32Allowed = (onnxIdx == 5 || onnxIdx == 6);
+          if(!isInt32Allowed &&
+             (md.inputDataTypes.size() > (size_t)onnxIdx) &&
+             (find(unsupportedDataTypes.begin(), unsupportedDataTypes.end(), md.inputDataTypes[onnxIdx]) != unsupportedDataTypes.end()))
+          {
+            TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Layer %s : Unsupported data type for input tensor %d", (char *)layer.name, onnxIdx);
+            status = TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+            break;
+          }
         }
       }
       // else layer is supported

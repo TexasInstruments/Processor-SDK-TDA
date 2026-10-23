@@ -229,25 +229,49 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Resize")> ()
     }
   }
 
-  /* Interpret axes attibute */
+
+  vector<int32_t> inputDims = {};
   int32_t numDims;
+  bool isInputConst = false;
+
+  /* If data input (input 0) is a constant initializer, store it in layer.weights
+   * so tidl_addConstDataLayers can create the appropriate ConstDataLayer */
+  for (int32_t i = 0; i < (int32_t)layer.allowlistingMetaData.numConstInputs; i++)
+  {
+    if (layer.allowlistingMetaData.constTensorIndices[i] == 0)
+    {
+      isInputConst = true;
+      status = copyFloatConst(graph, index, 0, layer.weights, INPUT_REQUIRED);
+      if (status != 0)
+      {
+        TIDL_LOG_ERROR(gDiags.gDiagList, "Allowlisting : Resize layer : Unable to read constant data input");
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      }
+      inputDims = layer.allowlistingMetaData.constTensorsDims[i];
+      break;
+    }
+  }
+
+  if (!isInputConst)
+  {
+    layer.weights.ptr = NULL;
+    layer.weights.bufSize = 0;
+    if (layer.allowlistingMetaData.varTensorsDims.size() > 0)
+    {
+      inputDims = layer.allowlistingMetaData.varTensorsDims[0];
+    }
+  }
 
   /** If shape inference is not done on model, we assume the tensor is of 4 dimensions by default*/
-  if (layer.allowlistingMetaData.varTensorsDims.size() != 0)
-  {
-    numDims = layer.allowlistingMetaData.varTensorsDims[0].size();
-    numDims = (numDims == 0)? 4:numDims;
-  }
-  else
-  {
-    numDims = 4;
-  }
+  numDims = (inputDims.empty()) ? 4 : inputDims.size();
+
   int32_t dimOffset = TIDL_DIM_MAX - numDims;
   /* initialize resizeRatio by 1, later will be changed acc to scales/sizes */
   for(int32_t i = 0; i < TIDL_DIM_MAX; i++)
   {
     layer.layerParams.resizeParams.resizeRatio[i] = 1.0;
   }
+
   int32_t *axes = NULL;
   axes_idx = getAttrIdx(node, "axes");
   if (axes_idx != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
@@ -302,11 +326,10 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Resize")> ()
       }
       /* calculate resize ratio using (output_shape / input_shape) */
       float32_tidl resizeRatios[sizes.bufSize];
-      vector<int32_t> inDims = md.varTensorsDims[0];
       int64_t *sizesPtr = (int64_t *)sizes.ptr;
       for (int32_t i = 0; i < node.attribute(axes_idx).ints_size(); i++)
       {
-        layer.layerParams.resizeParams.resizeRatio[axes[i]] = (sizesPtr[i] * 1.0) / (inDims[axes[i]-dimOffset]);
+        layer.layerParams.resizeParams.resizeRatio[axes[i]] = (sizesPtr[i] * 1.0) / (inputDims[axes[i]-dimOffset]);
       }
       my_free(sizesPtr);
     }
@@ -340,11 +363,10 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Resize")> ()
         TIDL_LOG_ERROR(gDiags.gDiagList, "Sizes length = %d should match with input rank = %d", sizes.bufSize, numDims);
         return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
       }
-      vector<int32_t> inDims = md.varTensorsDims[0];
       int64_t *sizesPtr = (int64_t *)sizes.ptr;
-      for(int32_t i = 0; i < inDims.size(); i++)
+      for(int32_t i = 0; i < inputDims.size(); i++)
       {
-        layer.layerParams.resizeParams.resizeRatio[i+dimOffset] = (sizesPtr[i]*1.0) / inDims[i];
+        layer.layerParams.resizeParams.resizeRatio[i+dimOffset] = (sizesPtr[i]*1.0) / inputDims[i];
       }
       my_free(sizesPtr);
     }

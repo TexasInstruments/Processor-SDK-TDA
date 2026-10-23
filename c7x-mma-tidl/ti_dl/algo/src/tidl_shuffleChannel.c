@@ -173,7 +173,7 @@ int32_t TIDL_shuffleChannelProcessNew(TIDL_NetworkCommonParams *commonParams,
   {
     sTIDL_ShuffleLayerParams_t *params = &tidlLayer->layerParams.shuffleLayerParams;
     sTIDL_DataParams_t *inDataParams;
-    inDataParams = TIDL_getDataParams(commonParams->createParams->net, tidlLayer->inData[0]);
+    inDataParams = &commonParams->createParams->net->TIDLLayers[tidlLayer->inData[0]].outData;
     int32_t shuffleGroups = params->numGroups;
     int32_t numROIs = inDataParams->dimValues[TIDL_DIM_BATCH]; /*ROI  */
     int32_t numInChannels = inDataParams->dimValues[TIDL_DIM_NUMCH];

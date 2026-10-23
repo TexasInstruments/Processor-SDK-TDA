@@ -62,6 +62,7 @@
 
 #include "tidl_parse_tvm.h"
 using namespace std;
+#include <tvm/relay/attrs/transform.h>
 
 template <>
 int32_t TidlParseTVM::parse<OpNameStr("cast")>()
@@ -71,7 +72,16 @@ int32_t TidlParseTVM::parse<OpNameStr("cast")>()
     layer.layerType = TIDL_CastLayer;
     layer.layerPCParams.castParams.terminal = TIDL_CastInputTerminal;
 
-    // Set default values to match ONNX parser behavior
+    auto attrs = call->attrs.as<CastAttrs>();
+    if (attrs == nullptr)
+    {
+        TIDL_LOG_ERROR(gDiags.gDiagList, "Cast layer: Unable to get CastAttrs");
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+    }
+    layer.layerPCParams.castParams.castTo = getTIDLDataTypeFromTVMDataType((int32_t)attrs->dtype.code(), (int32_t)attrs->dtype.bits());
+
+    // TVM's built-in cast op does not carry round_mode/saturate attributes,
+    // so default to match ONNX parser behavior when those attrs are absent
     layer.layerPCParams.castParams.roundMode = TIDL_CastRoundUp;  // Default round mode
     layer.layerPCParams.castParams.saturate = 1;  // Default saturate mode (required by constraint)
 

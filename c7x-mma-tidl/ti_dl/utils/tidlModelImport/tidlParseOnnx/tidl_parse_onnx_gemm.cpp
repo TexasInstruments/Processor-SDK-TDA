@@ -281,7 +281,7 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Gemm")> ()
       layer.weights.ptr = NULL;
       layer.weights.bufSize = 0;
       layer.bias.ptr= NULL;
-      layer.bias.bufSize = NULL;
+      layer.bias.bufSize = 0;
     }
 
     /* No bias in matmul */

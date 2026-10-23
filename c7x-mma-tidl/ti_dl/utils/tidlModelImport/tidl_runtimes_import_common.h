@@ -152,14 +152,17 @@ public:
   m_reserved_ctrl_2(0),
   m_nc_temp_info_dir("/tmp"),
   m_temp_buffer_dir("/dev/shm"),
+  m_external_data_dir(""),
   m_enable_tfr_optimization(-1),
   m_graph_optimization_level(0),
+  m_enable_move_transpose(-1),
   m_enable_shape_folding(-1),
   m_optimize_batchnorm_higherdims(0),
   m_softmax_16bit_scale_update(0),
   m_use_16bit_for_topk(1),
   m_enable_concat_no_op(1),
-  m_bias_calibration_factor(0.05)
+  m_bias_calibration_factor(0.05),
+  m_high_resolution_group_info_file("")
   {}
 
   int m_debug_level;
@@ -186,6 +189,7 @@ public:
   int m_num_cores;
   int m_enable_custom_layers;
   int m_graph_optimization_level;
+  int m_enable_move_transpose;
   int m_enable_shape_folding;
   int m_optimize_batchnorm_higherdims;
 
@@ -208,7 +212,6 @@ public:
   std::vector<std::string> m_deny_list_layer_type;  //option for deny_list_type
   std::vector<std::string> m_deny_list_layer_name;  //option for deny_list_name
   std::vector<std::string> m_allow_list_layer_name;  //option for allow_list_name
-  std::vector<std::string> m_custom_layers_names_list; //option for custom_layers_names_list.
   std::vector<int> m_net_inelement_type;
   std::string m_output_feature_16bit_names_list;
   std::string m_mp_16bit_resolved_feature_names_list;
@@ -218,12 +221,14 @@ public:
   std::string m_log_file_name;  // option to give log file name
   std::string m_nc_temp_info_dir;  // option to give path for dumping nc temp info files
   std::string m_temp_buffer_dir;  // option to give path to redirect temporary buffers
+  std::string m_external_data_dir;  // option to give directory containing ONNX external data files
 
   std::vector<int> m_reserved_ctrl_1; /* Layers forced to DDR */
   std::string m_single_core_layers_names_list; /* Layers forced to single core in multi core inference */
   std::string m_spatial_split_layers_names_list; /* Layers forced to spatial split in multi core inference */
   std::string m_channel_split_layers_names_list; /* Layers forced to channel split in multi core inference */
   std::string m_network_name;
+  std::string m_high_resolution_group_info_file; /* option to give supertiling grouping information file. */
 
   std::vector<std::pair<std::string,std::string>>  m_copy_tensor_quant_spec; /* Pair of tensor names to force same spec on */
 
@@ -275,7 +280,7 @@ int32_t TIDL_addInputDataLayer6D(int32_t idx, int32_t numBatches, int32_t numDim
 
 int32_t TIDL_runtimesOptimizeNet(int32_t debugLevel);
 
-int32_t TIDL_runtimesPostProcessNet(TIDL_osrtOptions * osrt_options, int32_t calibrationFrames, int32_t numParamBits, void * subGraphPtr, void * configParams, float * inQuantFactor, int32_t * zp, char* subGraphName);
+int32_t TIDL_runtimesPostProcessNet(TIDL_osrtOptions * osrt_options, int32_t calibrationFrames, int32_t numParamBits, void * subGraphPtr, void * configParams, float * inQuantFactor, int32_t * zp, const char* subGraphName);
 
 void TIDL_saveTidlSubGraph(void ** subGraphPtr);
 

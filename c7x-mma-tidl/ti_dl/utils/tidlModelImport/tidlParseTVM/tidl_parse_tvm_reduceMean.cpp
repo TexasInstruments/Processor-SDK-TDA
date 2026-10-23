@@ -118,7 +118,7 @@ int32_t TidlParseTVM:: parse<OpNameStr("mean")> ()
     return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
   }
 
-  layer.layerPCParams.reduceMeanParams.reduceDims = keepdims;
+  layer.layerPCParams.reduceMeanParams.keepDims = keepdims;
 
   /** Adjust axis to TIDL dimensions*/
   axis = TIDL_relayNormalizeAxis(axis, numDim);

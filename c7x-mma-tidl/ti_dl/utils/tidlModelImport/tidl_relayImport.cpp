@@ -92,6 +92,7 @@
 #include "tidlParseTVM/tidl_parse_tvm.h"
 #include "tidlAllowlistingConstraints/tidl_constraint.h"
 
+#undef __MODULE__
 #define __MODULE__ "[PARSER]"
 
 using namespace tvm;
@@ -112,6 +113,10 @@ static uint16_t g_relayConsumedOutputsMasks[TIDL_NUM_MAX_PC_LAYERS];
 
 /* Creating this vector to deny offload of TVM decomposed operators */
 std::vector<std::string> deny_list_layer_name_composite;
+/* Exception map: span_name -> op_name. A node with span_name in
+ * deny_list_layer_name_composite is still allowed if its 
+ * op_name is present in deny_list_exceptions */
+std::map<std::string, std::string> deny_list_exceptions;
 
 /* Global storage for TVMRT node info - maps diagnostic index to {opType, nodeName}
  * This provides TVMRT with equivalent context to ONNXRT's graph access
@@ -289,26 +294,58 @@ sBuffer_t TIDL_extractConstantTensorData(const relay::Call& call, int arg_index,
     sBuffer_t buffer;
     buffer.ptr = NULL;
     buffer.bufSize = 0;
-    if (call->args[arg_index].as<tvm::relay::ConstantNode>())
+    buffer.dataType = TIDL_SinglePrecFloat;
+
+    /* Variadic ops (e.g. concatenate) pack all their inputs into a single
+     * Tuple call arg, so arg_index indexes into that tuple's fields rather
+     * than call->args directly - matches the unwrapping already done in
+     * TidlParseTVM::saveAllowlistingMetaData when computing constTensorIndices. */
+    relay::Expr argExpr = call->args[0].as<TupleNode>() ?
+        call->args[0].as<TupleNode>()->fields[arg_index] : call->args[arg_index];
+
+    if (argExpr.as<tvm::relay::ConstantNode>())
     {
-        string data_type = DLDataType2String(call->args[arg_index]->checked_type().as<TensorTypeNode>()->dtype);
+        auto dtype = argExpr->checked_type().as<TensorTypeNode>()->dtype;
+        int32_t tidlType = TIDL_getTidlTypeFromTVMDataType((int32_t)dtype.code(), (int32_t)dtype.bits());
         int32_t numElements = 1;
 
         for (int i = 0; i < md.constTensorsDims[const_index].size(); i++)
         {
             numElements *= md.constTensorsDims[const_index][i];
         }
-        auto tensorExpr = call->args[arg_index].as<tvm::relay::ConstantNode>()->data;
+        auto tensorExpr = argExpr.as<tvm::relay::ConstantNode>()->data;
 
-        if (data_type == "int64")
+        buffer.dataType = tidlType;
+        // 64-bit and 32-bit integer constants are kept as raw int64/int32
+        // (e.g. gather/scatter/slice indices); every other supported type is
+        // materialized as float (with optional dequantization).
+        if (tidlType == TIDL_SignedDoubleWord || tidlType == TIDL_UnsignedDoubleWord)
         {
             buffer.ptr = NDArrtoInt64(tensorExpr, numElements);
             buffer.dataType = TIDL_SignedDoubleWord;
         }
-        else
+        else if (tidlType == TIDL_SignedWord)
+        {
+            buffer.ptr = NDArrtoInt32(tensorExpr, numElements);
+            buffer.dataType = TIDL_SignedWord;
+        }
+        else if (tidlType == TIDL_Bool)
+        {
+            buffer.ptr = NDArrtoBool(tensorExpr, numElements);
+            buffer.dataType = TIDL_Bool;
+        }
+        else if (tidlType == TIDL_SinglePrecFloat)
         {
             buffer.ptr = NDArrtoFloat(tensorExpr, numElements, ndarr_zp, ndarr_scale);
             buffer.dataType = TIDL_SinglePrecFloat;
+        }
+        else
+        {
+            TIDL_LOG_UNSUPPORTED(gDiags.gDiagList,
+                "Allowlisting : Constant tensor at arg index %d has unsupported data type '%s'",
+                arg_index,
+                runtime::DLDataType2String((DLDataType)dtype).c_str());
+            buffer.ptr=NULL;
         }
 
         buffer.bufSize = numElements;
@@ -317,88 +354,104 @@ sBuffer_t TIDL_extractConstantTensorData(const relay::Call& call, int arg_index,
     return buffer;
 }
 
-// Helper to convert NDArray to constant data pointer. If the NDArray is a
-// scalar, replicate it.
-static size_t DLDataTypeBytes(std::string& data_type)
+// Number of bytes per element for a TIDL element type. Wraps the shared
+// tidl_getElementSizeInBits() helper; returns 0 for an unsupported (-1) type.
+static size_t TIDL_tidlTypeBytes(int32_t tidlType)
 {
-  if (data_type == "uint8" || data_type == "int8")  return 1;
-  if (data_type == "float32")                       return 4;
-  if (data_type == "int32")                         return 4;
-  if (data_type == "int64")                         return 8;
-  TIDL_GLOBAL_REPORT_FATAL_AND_ABORT("Unknown DLDataType size in NDArray: %s", data_type.c_str());
-  return 0;
+  if (tidlType == -1) return 0;
+  return (size_t)(tidl_getElementSizeInBits(tidlType) / 8);
+}
+
+// Dequantize n raw elements of C type T into floats: dst[i] = (src[i] - zp) * scale.
+template<typename T>
+static void dequantizeToFloat(const void* src, float* dst, int n, int zp, float scale)
+{
+  const T* s = static_cast<const T*>(src);
+  for (int i = 0; i < n; ++i)
+    dst[i] = (static_cast<float>(s[i]) - zp) * scale;
+}
+
+// Convert n raw elements of the given TIDL element type into floats. bool is
+// treated as uint8 with no zero-point/scale applied. TIDL_SinglePrecFloat is
+// not handled here (the caller keeps float data as-is).
+static void convertRawToFloat(const void* src, float* dst, int n,
+                              int32_t tidlType, int zp, float scale)
+{
+  switch (tidlType)
+  {
+    case TIDL_UnsignedChar:  dequantizeToFloat<uint8_t> (src, dst, n, zp, scale); break;
+    case TIDL_SignedChar:    dequantizeToFloat<int8_t>  (src, dst, n, zp, scale); break;
+    case TIDL_UnsignedShort: dequantizeToFloat<uint16_t>(src, dst, n, zp, scale); break;
+    case TIDL_SignedShort:   dequantizeToFloat<int16_t> (src, dst, n, zp, scale); break;
+    case TIDL_UnsignedWord:  dequantizeToFloat<uint32_t>(src, dst, n, zp, scale); break;
+    case TIDL_SignedWord:    dequantizeToFloat<int32_t> (src, dst, n, zp, scale); break;
+    default: break;
+  }
+}
+
+// Shared prologue for the NDArrto* helpers below: resolve the NDArray's TVM
+// dtype to a TIDL element type, and copy 'nelem' elements' worth of raw
+// bytes into a freshly my_malloc'd buffer. Returns NULL (and logs) if the
+// dtype has no known TIDL element-size mapping. Reports the resolved TIDL
+// type via *tidlTypeOut (if non-null) so callers can decide whether the raw
+// bytes need further conversion.
+static void* NDArrRawBytes(const runtime::NDArray &ndArr, int nelem, int32_t *tidlTypeOut = nullptr)
+{
+  int32_t tidlType = TIDL_getTidlTypeFromTVMDataType((int32_t)ndArr->dtype.code, (int32_t)ndArr->dtype.bits);
+  size_t elem_bytes = TIDL_tidlTypeBytes(tidlType);
+  if (elem_bytes == 0)
+  {
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Unsupported DLDataType in NDArray: %s",
+                         runtime::DLDataType2String(ndArr->dtype).c_str());
+    return NULL;
+  }
+  void* data = my_malloc(nelem * elem_bytes);
+  ndArr.CopyToBytes(data, nelem * elem_bytes);
+  if (tidlTypeOut) *tidlTypeOut = tidlType;
+  return data;
 }
 
 long long int* NDArrtoInt64(const runtime::NDArray &ndArr, int nelem)
 {
-  auto shape = ndArr.Shape();
-  auto data_type = runtime::DLDataType2String(ndArr->dtype);
-  size_t elem_bytes = DLDataTypeBytes(data_type);
+  return (long long int*) NDArrRawBytes(ndArr, nelem);
+}
 
-  int32_t size = nelem * sizeof(long long int );
-  int32_t ndarr_size = nelem * elem_bytes;
-  long long int * data = (long long int  *) my_malloc(ndarr_size);
-  ndArr.CopyToBytes(data, ndarr_size);
+int32_t* NDArrtoInt32(const runtime::NDArray &ndArr, int nelem)
+{
+  return (int32_t*) NDArrRawBytes(ndArr, nelem);
+}
 
-  if (data_type == "int64")
-  {
-    void* tmp_data = data;
-    data = (long long int  *) my_malloc(size);
-    for (int i = 0; i < nelem; i++)
-    data[i] = (((long long int *) tmp_data)[i] );
-
-    my_free(tmp_data);
-  }
-
-  return data;
-
+uint8_t* NDArrtoBool(const runtime::NDArray &ndArr, int nelem)
+{
+  return (uint8_t*) NDArrRawBytes(ndArr, nelem);
 }
 
 float* NDArrtoFloat(const runtime::NDArray &ndArr, int nelem,
                            int ndarr_zp, float ndarr_scale)
 {
-  auto shape = ndArr.Shape();
-  auto data_type = runtime::DLDataType2String(ndArr->dtype);
-  size_t elem_bytes = DLDataTypeBytes(data_type);
-  if (shape.empty())
+  bool isScalar = ndArr.Shape().empty();
+  int32_t tidlType;
+  void* raw = NDArrRawBytes(ndArr, isScalar ? 1 : nelem, &tidlType);
+  if (raw == NULL) return NULL;
+
+  if (isScalar)
   {
     // replicate scalar value
     float value;
-    ndArr.CopyToBytes(&value, elem_bytes);
-
-    if (data_type == "uint8")
-      value = (*((uint8_t *) &value) - ndarr_zp) * ndarr_scale;
-    else if (data_type == "int8")
-      value = (*((int8_t *)  &value) - ndarr_zp) * ndarr_scale;
-    else if (data_type == "int32")
-      value = (*((int32_t *) &value) - ndarr_zp) * ndarr_scale;
-
+    if (tidlType == TIDL_SinglePrecFloat)
+      value = *(float*)raw;
+    else
+      convertRawToFloat(raw, &value, 1, tidlType, ndarr_zp, ndarr_scale);
+    my_free(raw);
     return floatConstant(value, nelem);
   }
 
-  int32_t size = nelem * sizeof(float);
-  int32_t ndarr_size = nelem * elem_bytes;
-  float* data = (float *) my_malloc(ndarr_size);
-  ndArr.CopyToBytes(data, ndarr_size);
+  if (tidlType == TIDL_SinglePrecFloat)
+    return (float*) raw;
 
-  if (data_type == "uint8" || data_type == "int8" || data_type == "int32")
-  {
-    void* tmp_data = data;
-    data = (float *) my_malloc(size);
-
-    if (data_type == "uint8")
-      for (int i = 0; i < nelem; i++)
-        data[i] = (((uint8_t *) tmp_data)[i] - ndarr_zp) * ndarr_scale;
-    else if (data_type == "int8")
-      for (int i = 0; i < nelem; i++)
-        data[i] = (((int8_t *)  tmp_data)[i] - ndarr_zp) * ndarr_scale;
-    else if (data_type == "int32")
-      for (int i = 0; i < nelem; i++)
-        data[i] = (((int32_t *) tmp_data)[i] - ndarr_zp) * ndarr_scale;
-
-    my_free(tmp_data);
-  }
-
+  float* data = (float*) my_malloc(nelem * sizeof(float));
+  convertRawToFloat(raw, data, nelem, tidlType, ndarr_zp, ndarr_scale);
+  my_free(raw);
   return data;
 }
 
@@ -605,6 +658,12 @@ void TIDL_relaySetActivation(int zp_len, int *zp, int scale_len, float *scale,
 // Initialize global config for TVM annotation or import
 int32_t TIDL_relayInit(int32_t is_nchw, tvm::Map<tvm::String, tvm::String> options_dict)
 {
+  // Reset all per-compilation global state so sequential model compilations don't bleed into each other
+  gDiags.gDiagList.clear();
+  gRelayNodeInfoMap.clear();
+  deny_list_layer_name_composite.clear();
+  deny_list_exceptions.clear();
+
   bool status;
   TIDL_setDefaultOptions(relayOptions);
 
@@ -692,9 +751,9 @@ int32_t TIDL_relayImportInit(int32_t subgraph_id,
     layer.outConsumerCnt[0] = 0;
 
     //if the input is int64 to skip quantization
-    if(input_descriptors[i].element_type==TIDL_SignedDoubleWord){
-       gParams.inElementType[i] =TIDL_SignedWord;
-    }
+    // if(input_descriptors[i].element_type==TIDL_SignedDoubleWord){
+    //    gParams.inElementType[i] =TIDL_SignedWord;
+    // }
 
     gParams.modelInElementType[i] = gParams.inElementType[i];
     TIDL_updateNamesList ((char*)gParams.inDataNamesList, i, (char *)input_descriptors[i].name);
@@ -1508,7 +1567,7 @@ int32_t TIDL_relayOptimizeNet(int32_t subgraph_id)
 
 // TIDL Only supported at the terminal nodes (Input/Output) of the network this function checks it:
 // remove this function if constraint is removed
-  status = tidl_checkCastConstraint();
+  // status = tidl_checkCastConstraint();
   if(status == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL) return status;
 
   TIDL_GLOBAL_REPORT_HEADING(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, TIDL_ModelDiagnostic::DK_Purple, "[Optimization for subgraph_%d started]", subgraph_id);
@@ -1533,9 +1592,11 @@ int32_t TIDL_relayPostProcessNet(int32_t numFrames)
 }
 
 
-void TIDL_relayUpdateDenyList(std::string span_name)
+void TIDL_relayUpdateDenyList(std::string span_name, std::string op_name = "")
 {
   deny_list_layer_name_composite.push_back(span_name);
+  if (!op_name.empty())
+    deny_list_exceptions[span_name] = op_name;
 }
 
 // Called externally from TVM annotation pass to identify nodes that are supported by TIDL.
@@ -1549,7 +1610,9 @@ int32_t TIDL_relayAllowNode(relay::Call call)
 
   if(std::find(deny_list_layer_name_composite.begin(), deny_list_layer_name_composite.end(), span_name) != deny_list_layer_name_composite.end())
   {
-    return 0;
+    auto it = deny_list_exceptions.find(span_name);
+    if (it == deny_list_exceptions.end() || it->second != op_name)
+      return 0;
   }
 
   if((std::find(relayOptions->m_deny_list.begin(), relayOptions->m_deny_list.end(), op_name) != relayOptions->m_deny_list.end())||
@@ -1590,13 +1653,6 @@ int32_t TIDL_relayAllowNode(relay::Call call)
   /* will use it to check the logs which got pushed while checking allowlisting for current layer */
   int32_t diagListSize = gDiags.gDiagList.size();
   layer = TidlParseTVM(call,0,layer).layer;
-
-  // Check I/O buffer count limits before constraint validation (following ONNX RT flow pattern)
-  TidlParseTVM parser(call, 0, layer);
-  if (!parser.isLayerIONumSupported(layer))
-  {
-    layer.parseStatus = TIDL_ParseFailed;
-  }
 
   status = tidlCheckAllowlistingConstraints(layer);
 
@@ -1669,8 +1725,6 @@ void TIDL_relayPrintParsingDiagnostics(int32_t numTotalNodes, int32_t numSupport
 
   TIDL_printParseTable(supportedNodesStr, offloadSubGraphStr, unsupportedNodesStr, denylistData);
 
-  // Clear only our state after printing - don't touch gDiags.gDiagList as it may be used elsewhere
-  gRelayNodeInfoMap.clear();
 }
 
 // Globally registered functions so that TVM can find and call
@@ -1705,7 +1759,69 @@ TVM_REGISTER_GLOBAL("TIDL_relayAllowNode")
 .set_body_typed(TIDL_relayAllowNode);
 
 TVM_REGISTER_GLOBAL("TIDL_relayUpdateDenyList")
-.set_body_typed(TIDL_relayUpdateDenyList);
+.set_body([](TVMArgs args, TVMRetValue* rv) {
+  std::string span_name = args[0].operator std::string();
+  std::string op_name = (args.size() > 1) ? args[1].operator std::string() : "";
+  TIDL_relayUpdateDenyList(span_name, op_name);
+});
 
 TVM_REGISTER_GLOBAL("TIDL_relayPrintParsingDiagnostics")
 .set_body_typed(TIDL_relayPrintParsingDiagnostics);
+
+/** Return parsing diagnostics as a JSON string for direct consumption by Python.
+ * Format: [{"op_type":"...","node_name":"...","reason":"..."}, ...]
+ * This is a read-only getter - it does NOT clear gRelayNodeInfoMap.
+ * Call TIDL_relayPrintParsingDiagnostics afterwards to print the table and
+ * clear the map as usual.
+ */
+static std::string TIDL_jsonEscape(const std::string& s)
+{
+  std::string result;
+  result.reserve(s.size());
+  for (char c : s)
+  {
+    switch (c)
+    {
+      case '"':  result += "\\\""; break;
+      case '\\': result += "\\\\"; break;
+      case '\n': result += "\\n";  break;
+      case '\r': result += "\\r";  break;
+      case '\t': result += "\\t";  break;
+      default:   result += c;      break;
+    }
+  }
+  return result;
+}
+
+std::string TIDL_relayGetParsingDiagnostics(int32_t numTotalNodes, int32_t numSupportedNodes, int32_t numSubgraphs)
+{
+  std::vector<std::vector<std::string>> denylistData;
+
+  TIDL_buildParseTableFromDiags(
+    gDiags.gDiagList,
+    denylistData,
+    [&](int index) -> std::pair<std::string, std::string> {
+      auto it = gRelayNodeInfoMap.find(index);
+      if (it != gRelayNodeInfoMap.end())
+      {
+        return it->second; // {opType, nodeName}
+      }
+      return {"Unknown", "N/A"};
+    }
+  );
+
+  std::string json = "[";
+  for (size_t i = 0; i < denylistData.size(); i++)
+  {
+    if (i > 0) json += ",";
+    const auto& row = denylistData[i]; // {opType, nodeName, reason}
+    json += "{\"op_type\":\"" + TIDL_jsonEscape(row[0]) + "\"";
+    json += ",\"node_name\":\"" + TIDL_jsonEscape(row[1]) + "\"";
+    json += ",\"reason\":\"" + TIDL_jsonEscape(row[2]) + "\"}";
+  }
+  json += "]";
+  return json;
+}
+
+TVM_REGISTER_GLOBAL("TIDL_relayGetParsingDiagnostics")
+.set_body_typed(TIDL_relayGetParsingDiagnostics);

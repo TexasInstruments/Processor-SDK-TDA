@@ -122,6 +122,24 @@ typedef struct {
     CT_GENERATE_PARAMETERS("random", ADD_SIZE_64x64, ADD_PIPE_6, ADD_BUF_2, ADD_LOOP_50, MEASURE_PERF_ON, ARG), \
     CT_GENERATE_PARAMETERS("random", ADD_SIZE_2048x1024, ADD_PIPE_3, ADD_BUF_3, ADD_LOOP_50, MEASURE_PERF_ON, ARG), \
 
+/* Same as PARAMETERS, but without the ADD_PIPE_MAX case. testMaxDataRef and
+ * negativeTestGraphMaxDataRef already build a node chain near TIVX_GRAPH_MAX_NODES /
+ * TIVX_GRAPH_MAX_DATA_REF_QUEUE in length; combining that with
+ * TIVX_GRAPH_MAX_PIPELINE_DEPTH-1 pipelining multiplies object descriptor usage
+ * (see tivxDataRefQueueCreate/ownNodeKernelInit) enough to exhaust
+ * TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST on some SOCs. No other test using PARAMETERS
+ * has a long enough chain to hit this, so these two tests use a reduced parameter
+ * list instead of silently clamping the pipeline depth at runtime. */
+#define PARAMETERS_MAX_DATA_REF \
+    CT_GENERATE_PARAMETERS("random", ADD_SIZE_256x256, ADD_PIPE_3, ADD_BUF_3, ADD_LOOP_10, MEASURE_PERF_OFF, ARG), \
+    CT_GENERATE_PARAMETERS("random", ADD_SIZE_64x64, ADD_PIPE_1, ADD_BUF_1, ADD_LOOP_0, MEASURE_PERF_OFF, ARG), \
+    CT_GENERATE_PARAMETERS("random", ADD_SIZE_64x64, ADD_PIPE_3, ADD_BUF_3, ADD_LOOP_1, MEASURE_PERF_OFF, ARG), \
+    CT_GENERATE_PARAMETERS("random", ADD_SIZE_64x64, ADD_PIPE_6, ADD_BUF_3, ADD_LOOP_50, MEASURE_PERF_OFF, ARG), \
+    CT_GENERATE_PARAMETERS("random", ADD_SIZE_64x64, ADD_PIPE_1, ADD_BUF_1, ADD_LOOP_50, MEASURE_PERF_OFF, ARG), \
+    CT_GENERATE_PARAMETERS("random", ADD_SIZE_64x64, ADD_PIPE_6, ADD_BUF_2, ADD_LOOP_50, MEASURE_PERF_OFF, ARG), \
+    CT_GENERATE_PARAMETERS("random", ADD_SIZE_64x64, ADD_PIPE_6, ADD_BUF_2, ADD_LOOP_50, MEASURE_PERF_ON, ARG), \
+    CT_GENERATE_PARAMETERS("random", ADD_SIZE_2048x1024, ADD_PIPE_3, ADD_BUF_3, ADD_LOOP_50, MEASURE_PERF_ON, ARG), \
+
 #if 0
     CT_GENERATE_PARAMETERS("random", ADD_SIZE_64x64, ADD_PIPE_3, ADD_BUF_3, ADD_LOOP_0, MEASURE_PERF_OFF, ARG), \
     CT_GENERATE_PARAMETERS("random", ADD_SIZE_64x64, ADD_PIPE_1, ADD_BUF_1, ADD_LOOP_0, MEASURE_PERF_OFF, ARG), \
@@ -1905,11 +1923,28 @@ TEST_WITH_ARG(tivxGraphPipeline, testFourNodes, Arg, PARAMETERS)
 
 /* Note: Modifying the data ref queue value depending on node relationship */
 /* Filed TIOVX-676 task to fix this */
-/* Note: this test case has been disabled as per bug TIOVX-1023 */
 #if (TIVX_GRAPH_MAX_NODES - 2) > TIVX_GRAPH_MAX_DATA_REF_QUEUE
-#define PIPELINE_TEST_MAX_DATA_REF_QUEUE TIVX_GRAPH_MAX_DATA_REF_QUEUE
+#define PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP TIVX_GRAPH_MAX_DATA_REF_QUEUE
 #else
-#define PIPELINE_TEST_MAX_DATA_REF_QUEUE (TIVX_GRAPH_MAX_NODES - 2)
+#define PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP (TIVX_GRAPH_MAX_NODES - 2)
+#endif
+/* testMaxDataRef chains all of its nodes onto a single target (TIVX_TARGET_DSP1), so
+ * its node count is additionally bounded by that target's kernel instance pool size
+ * (TIVX_TARGET_KERNEL_INSTANCE_MAX) so it fits exactly within the pool, independent
+ * of SOC.
+ * negativeTestGraphMaxDataRef intentionally uses the unclamped
+ * PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP (not this macro) since it needs to exceed
+ * TIVX_GRAPH_MAX_DATA_REF_QUEUE itself. That check runs in
+ * ownGraphCreateAndLinkDataReferenceQueues, strictly before any kernel instance is
+ * allocated, so it fails cleanly regardless of TIVX_TARGET_KERNEL_INSTANCE_MAX. Were
+ * it clamped by the kernel instance pool instead, it would no longer exceed
+ * TIVX_GRAPH_MAX_DATA_REF_QUEUE and would instead run into kernel instance
+ * exhaustion mid node-kernel-init, which leaves nodes partially initialized and
+ * causes vxReleaseGraph() to fail during teardown. */
+#if (TIVX_TARGET_KERNEL_INSTANCE_MAX - 1) < PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP
+#define PIPELINE_TEST_MAX_DATA_REF_QUEUE (TIVX_TARGET_KERNEL_INSTANCE_MAX - 1)
+#else
+#define PIPELINE_TEST_MAX_DATA_REF_QUEUE PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP
 #endif
 /*
  *  d0     n0     d1
@@ -1920,7 +1955,7 @@ TEST_WITH_ARG(tivxGraphPipeline, testFourNodes, Arg, PARAMETERS)
  * - Tests the limit of TIVX_GRAPH_MAX_DATA_REF_QUEUE
  *
  */
-TEST_WITH_ARG(tivxGraphPipeline, testMaxDataRef, Arg, PARAMETERS)
+TEST_WITH_ARG(tivxGraphPipeline2, testMaxDataRef, Arg, PARAMETERS_MAX_DATA_REF)
 {
     vx_context context = context_->vx_context_;
     vx_graph graph;
@@ -2085,12 +2120,12 @@ TEST_WITH_ARG(tivxGraphPipeline, testMaxDataRef, Arg, PARAMETERS)
  * - Negative test for the limit of TIVX_GRAPH_MAX_DATA_REF_QUEUE
  *
  */
-TEST_WITH_ARG(tivxGraphPipeline, negativeTestGraphMaxDataRef, Arg, PARAMETERS)
+TEST_WITH_ARG(tivxGraphPipeline2, negativeTestGraphMaxDataRef, Arg, PARAMETERS_MAX_DATA_REF)
 {
     vx_context context = context_->vx_context_;
     vx_graph graph;
-    vx_image d0[MAX_NUM_BUF] = {NULL}, d_virt[PIPELINE_TEST_MAX_DATA_REF_QUEUE+1] = {NULL}, d1[MAX_NUM_BUF] = {NULL};
-    vx_node  n[PIPELINE_TEST_MAX_DATA_REF_QUEUE+2];
+    vx_image d0[MAX_NUM_BUF] = {NULL}, d_virt[PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP+1] = {NULL}, d1[MAX_NUM_BUF] = {NULL};
+    vx_node  n[PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP+2];
     vx_graph_parameter_queue_params_t graph_parameters_queue_params_list[2];
 
     CT_Image ref_src[MAX_NUM_BUF] = {NULL}, vxdst;
@@ -2125,20 +2160,20 @@ TEST_WITH_ARG(tivxGraphPipeline, negativeTestGraphMaxDataRef, Arg, PARAMETERS)
         ASSERT_VX_OBJECT(d0[buf_id]    = vxCreateImage(context, width, height, VX_DF_IMAGE_U8), VX_TYPE_IMAGE);
         ASSERT_VX_OBJECT(d1[buf_id]    = vxCreateImage(context, width, height, VX_DF_IMAGE_U8), VX_TYPE_IMAGE);
     }
-    for (i = 0; i < PIPELINE_TEST_MAX_DATA_REF_QUEUE+1; i++)
+    for (i = 0; i < PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP+1; i++)
     {
         ASSERT_VX_OBJECT(d_virt[i]    = vxCreateVirtualImage(graph, width, height, VX_DF_IMAGE_U8), VX_TYPE_IMAGE);
     }
 
     ASSERT_VX_OBJECT(n[0]    = vxNotNode(graph, d0[0], d_virt[0]), VX_TYPE_NODE);
 
-    for (i = 0; i < PIPELINE_TEST_MAX_DATA_REF_QUEUE; i++)
+    for (i = 0; i < PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP; i++)
     {
         ASSERT_VX_OBJECT(n[i+1]    = vxNotNode(graph, d_virt[i], d_virt[i+1]), VX_TYPE_NODE);
     }
-    ASSERT_VX_OBJECT(n[PIPELINE_TEST_MAX_DATA_REF_QUEUE+1]    = vxNotNode(graph, d_virt[PIPELINE_TEST_MAX_DATA_REF_QUEUE], d1[0]), VX_TYPE_NODE);
+    ASSERT_VX_OBJECT(n[PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP+1]    = vxNotNode(graph, d_virt[PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP], d1[0]), VX_TYPE_NODE);
 
-    for (i = 0; i < PIPELINE_TEST_MAX_DATA_REF_QUEUE+2; i++)
+    for (i = 0; i < PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP+2; i++)
     {
         VX_CALL(vxSetNodeTarget(n[i], VX_TARGET_STRING, TIVX_TARGET_DSP1));
     }
@@ -2146,7 +2181,7 @@ TEST_WITH_ARG(tivxGraphPipeline, negativeTestGraphMaxDataRef, Arg, PARAMETERS)
     /* input @ n0 index 0, becomes graph parameter 0 */
     add_graph_parameter_by_node_index(graph, n[0], 0);
     /* input @ n3 index 1, becomes graph parameter 1 */
-    add_graph_parameter_by_node_index(graph, n[PIPELINE_TEST_MAX_DATA_REF_QUEUE+1], 1);
+    add_graph_parameter_by_node_index(graph, n[PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP+1], 1);
 
     /* set graph schedule config such that graph parameter @ index 0, 1, 2 are enqueuable */
     graph_parameters_queue_params_list[0].graph_parameter_index = 0;
@@ -2171,7 +2206,7 @@ TEST_WITH_ARG(tivxGraphPipeline, negativeTestGraphMaxDataRef, Arg, PARAMETERS)
 
     EXPECT_NE_VX_STATUS(VX_SUCCESS, vxVerifyGraph(graph));
 
-    for (i = 0; i < PIPELINE_TEST_MAX_DATA_REF_QUEUE+2; i++)
+    for (i = 0; i < PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP+2; i++)
     {
         VX_CALL(vxReleaseNode(&n[i]));
     }
@@ -2180,7 +2215,7 @@ TEST_WITH_ARG(tivxGraphPipeline, negativeTestGraphMaxDataRef, Arg, PARAMETERS)
         VX_CALL(vxReleaseImage(&d0[buf_id]));
         VX_CALL(vxReleaseImage(&d1[buf_id]));
     }
-    for (i = 0; i < PIPELINE_TEST_MAX_DATA_REF_QUEUE+1; i++)
+    for (i = 0; i < PIPELINE_TEST_MAX_DATA_REF_QUEUE_TMP+1; i++)
     {
         VX_CALL(vxReleaseImage(&d_virt[i]));
     }
@@ -9171,8 +9206,6 @@ TESTCASE_TESTS(tivxGraphPipeline,
     testInputMultipleEnqueue,
     testTwoNodes,
     testFourNodes,
-    /*testMaxDataRef,
-    negativeTestGraphMaxDataRef,*/
     negativeTestMaxDataRefQ,
     testUniformImage,
     testScalarOutput,
@@ -9218,7 +9251,9 @@ TESTCASE_TESTS(tivxGraphPipeline2,
     testEnqueuecountWithPyramid,
     testEnqueuecountWithPyramidAndEnqueueSingleImage,
     testNonSequentialGraphParameterIndices,
-    testDuplicateGraphParameterIndices
+    testDuplicateGraphParameterIndices,
+    testMaxDataRef,
+    negativeTestGraphMaxDataRef
 )
 
 TESTCASE_TESTS(

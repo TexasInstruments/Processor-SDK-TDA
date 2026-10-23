@@ -199,12 +199,7 @@ int32_t TIDL_setupKernelHandle(const TIDL_CreateParams *params,
                               int32_t layerIdx,
                               sTIDL_AlgLayer_t * algLayer
                               );
-
-
-int32_t TIDL_isNewGenericFlowEnabled(const TIDL_CreateParams *params,
-                                    int32_t layerIdx
-                                    );
-
+                              
 uint32_t TIDL_getNumGenericFlowHandles(const sTIDL_Layer_t *tidlLayer);
 
 

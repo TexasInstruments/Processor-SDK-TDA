@@ -63,9 +63,12 @@
 #ifndef TIDL_IMPORT_COMMONH_
 #define TIDL_IMPORT_COMMONH_ 1
 
+#include <map>
+#include <cstdint>
 #include "perfsim.h"
 #include <google/protobuf/message.h>
 #include "tidl_import_diag.h"
+
 using ::google::protobuf::Message;
 
 #define SAT_HI_UINT8   (255)
@@ -139,7 +142,7 @@ inline int32_t dispatchTypedBuffer(void* ptr, int32_t dataType, Func&& fn)
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
 
-int32_t TIDL_alignParamsWrite(FILE *fp, sBuffer_t * buf, uint32_t *totalParamSize, uint32_t numBytes);
+uint32_t TIDL_alignParamsWrite(FILE *fp, sBuffer_t * buf, uint32_t *totalParamSize, uint32_t numBytes);
 
 void TIDL_asymAllocScalesPointers(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure, uint32_t numLayers);
 void TIDL_setDefaultKernelType(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure, uint32_t numLayers);
@@ -155,8 +158,8 @@ int32_t TIDL_writeModel(sTIDL_Network_t * tIDLNetStructure,
                                             tidl_import_config * configParams);
 
 void  TIDL_fillDataBufPadRequirements(sTIDL_Network_t * tIDLNetStructure);
-void * my_malloc(int32_t size);
-void * my_calloc(int32_t num, int32_t size);
+void * my_malloc(uint32_t size);
+void * my_calloc(int32_t num, uint32_t size);
 void my_free(void *ptr);
 int32_t TIDL_writeInfo(const sTIDL_Network_t * tIDLNetStructure,
                                         const sTIDL_OrgNetwork_t * orgTIDLNetStructure,
@@ -176,12 +179,11 @@ int32_t TIDL_writeInfo(const sTIDL_Network_t * tIDLNetStructure,
 #define TIDL_ALLOWLISTING_LAYER_CHECK_PASSED (0)
 
 int32_t TIDL_getLayerIdx(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure, int32_t numLayer, const char *bufName);
-typedef struct {
-  int32_t layerType;
-  int32_t(*tidl_tfOutReshape)(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure,
-    int32_t              layerIndex);
-}sTIDL_tfOutReshapeMap_t;
-extern sTIDL_tfOutReshapeMap_t sTIDL_tfOutReshapeTable[];
+
+
+using OutReshapeFuncPtr = int32_t (*)(sTIDL_OrgNetwork_t *, int32_t);
+using sTIDL_tfOutReshapeMap_t = std::map<int32_t, OutReshapeFuncPtr>;
+extern sTIDL_tfOutReshapeMap_t sTIDL_tfOutReshapeTable;
 
 typedef struct {
   char           *layerName;
@@ -201,6 +203,18 @@ typedef struct {
 #define PRECISION_LAYER_FEATURE_IN_16BIT (1)
 #define PRECISION_LAYER_PARAMS_IN_16BIT  (0)
 #define PRECISION_LAYER_FEATURE_IN_16BIT_INDUCED  (1)
+
+#define TIDL_MOVE_TRANSPOSE (1)
+
+typedef int32_t(*tidl_transposeMovement)(
+    sTIDL_OrgNetwork_t &pOrgTIDLNetStructure,
+    int32_t transposeindex,
+    int32_t inpLayerIndex,
+    int32_t* dataIndex
+);
+
+extern std::unordered_map<int32_t, tidl_transposeMovement> sTIDL_transposeMovementDownwardsMap;
+
 typedef struct {
   int32_t  num_classes;
   int32_t  num_keypoints;
@@ -504,8 +518,10 @@ static std::unordered_set<int> quantizationPassThroughLayers = {
   TIDL_PoolingLayer,
   TIDL_ResizeLayer,
   TIDL_TileLayer,
-  TIDL_GatherNDLayer
-}; 
+  TIDL_GatherNDLayer,
+  TIDL_CacheLayer,
+  TIDL_MemCopyLayer
+};
 
 int32_t TIDL_updateOutElementTypeUnSupported(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t TIDL_updateOutElementTypeUnSigned(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
@@ -534,6 +550,7 @@ int32_t TIDL_tfOutReshapePoolingLayer(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure
 int32_t TIDL_tfOutReshapeIdentity(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t TIDL_tfOutReshapeTopKLayer(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t TIDL_tfOutReshapeTileLayer(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
+int32_t TIDL_tfOutReshapeExpand(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t TIDL_tfOutReshapeShapeLayer(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t TIDL_tfOutReshapeSizeLayer(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t TIDL_tfOutReshapeEltwise(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
@@ -590,6 +607,10 @@ int32_t TIDL_tfOutReshapeConstDataLayer(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructu
 int32_t TIDL_tfOutReshapeTransposeLayer(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t TIDL_tfOutReshapeSqueeze(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t TIDL_tfOutReshapeAttention(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
+int32_t TIDL_tfOutReshapeGroupQueryAttentionLayer(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
+int32_t TIDL_tfOutReshapeMatMulNBitsLayer(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
+int32_t TIDL_tfOutReshapeCacheLayer(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure, int32_t layerIndex);
+
 int32_t tidl_checkIfShapeUpdatedForLayer (sTIDL_OrgNetwork_t &orgTIDLNetStructure, sTIDL_LayerPC_t& layer);
 
 int32_t TIDL_getTfOpParamMapId(const char  * name);
@@ -604,7 +625,7 @@ int32_t tidl_upateAInDataId(sTIDL_OrgNetwork_t  *pOrgTIDLNetStructure, int32_t l
 int32_t tidl_sortDataIds(sTIDL_OrgNetwork_t  *pOrgTIDLNetStructure);
 int32_t tidl_makeDataIdLayerIdSame(sTIDL_OrgNetwork_t  *pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t tidl_updateConstDataLayerRange(sTIDL_OrgNetwork_t  *pOrgTIDLNetStructure, int32_t numLayers);
-int32_t tidl_updateOutDataShape(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t startIdx, int32_t layerIndex, sTIDL_tfOutReshapeMap_t * sTIDL_tfOutReshapeTable);
+int32_t tidl_updateOutDataShape(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t startIdx, int32_t layerIndex, sTIDL_tfOutReshapeMap_t & sTIDL_tfOutReshapeTable, bool isDFS = false);
 int32_t tidl_getInLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex, int32_t dataId);
 int32_t tidl_getOutLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex, int32_t dataId);
 int32_t tidl_getOutLayer(sTIDL_OrgNetwork_t  *pOrgTIDLNetStructure, int32_t layerIndex, int32_t dataId);
@@ -627,7 +648,7 @@ int32_t tidl_convertSkipSimplifiedLayerNorm (sTIDL_OrgNetwork_t  &orgTIDLNetStru
 int32_t tidl_mergeLayerNormLayer (sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t tidl_splitNormLayer(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t* dataIndex, int32_t numLayers, bool isInstanceNorm=false);
 int32_t tidl_convertInstanceNormalizationToLayerNorm(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t* dataIndex, int32_t layerIndex);
-int32_t tidl_convertConv2DToIpLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex, sTIDL_tfOutReshapeMap_t * sTIDL_tfOutReshapeTable,int32_t* dataIndex);
+int32_t tidl_convertConv2DToIpLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex, sTIDL_tfOutReshapeMap_t &sTIDL_tfOutReshapeTable,int32_t* dataIndex);
 int32_t tidl_copyPCNetToDeviceNet(sTIDL_OrgNetwork_t  * pOrgTIDLNetStructure,
                                                                   sTIDL_Network_t  * pTIDLNetStructure,
                                                                   tidl_import_config * configParams,
@@ -641,7 +662,7 @@ int32_t tidl_fillInDataLayerShape(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, tid
 void TIDL_convertDeconv2DtoConv(sTIDL_OrgNetwork_t   &pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t tidl_addInDataLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex, int32_t * dataIndex);
 int32_t tidl_addConstDataLayers(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex, int32_t * dataIndex, tidl_import_config *params);
-int32_t tidl_createConstDataLayer (sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t* dataIndex, void* data, int32_t dataSize, int32_t dataType, int32_t numLayers);
+int32_t tidl_createConstDataLayer (sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t* dataIndex, void* data, int32_t dataSize, int32_t dataType, int32_t numLayers, const char* customName = NULL);
 int32_t tidl_doesLayerSupportSpatialSplit(sTIDL_OrgNetwork_t& pOrgTIDLNetStructure, int32_t lyrIdx, int32_t numCores);
 void tidl_updateScratchMemoryRequirement(sTIDL_OrgNetwork_t& pOrgTIDLNetStructure);
 void tidl_updateMultiCoreState(sTIDL_OrgNetwork_t& pOrgTIDLNetStructure, tidl_import_config * params);
@@ -682,8 +703,8 @@ int32_t tidl_convertIpLayerInputShape(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure,
 int32_t tidl_convertSqueezeToFlattenLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t tidl_convertPoolToIdentityLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t tidl_convertSoftMaxLayerInputShape(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex);
-int32_t tf_getLayreTypeMapIdx(char* layerName, TIDL_TFLayerMapping_t* TIDL_TFLayerMap, int32_t tblSize);
-int32_t tf_isLayerType(char* layerName, int32_t  startLayer, sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, TIDL_TFLayerMapping_t* TIDL_TFLayerMap, int32_t tblSize);
+int32_t tf_getLayreTypeMapIdx(const char* layerName, TIDL_TFLayerMapping_t* TIDL_TFLayerMap, int32_t tblSize);
+int32_t tf_isLayerType(const char* layerName, int32_t  startLayer, sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, TIDL_TFLayerMapping_t* TIDL_TFLayerMap, int32_t tblSize);
 int32_t tidl_convertRelUToBNLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t tidl_getStringsFromList(char *list, char * names, int strLen);
 int32_t tidl_mergePreBNLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t layerIndex);
@@ -696,7 +717,7 @@ int32_t tidl_getElementType(int32_t sign);
 int32_t tidl_getElementSizeInBits(int32_t elementType);
 int32_t TIDL_doesLayerSupportMixedPrecision(sTIDL_LayerPC_t * layer);
 int32_t TIDL_getDatElementSign(int32_t elementType);
-const char* TIDL_getOutDataName(const sTIDL_OrgNetwork_t * pOrgTIDLNetStructure, int32_t dataId);
+const char* TIDL_getOutDataName(const sTIDL_OrgNetwork_t * pOrgTIDLNetStructure, int32_t dataId, int32_t layerIdx);
 const sTIDL_DataParams_t * TIDL_getOutDataInNet(const sTIDL_Network_t * tidlNet, int32_t dataId);
 const sTIDL_DataParams_t *TIDL_getOutData(const sTIDL_OrgNetwork_t *pOrgTIDLNetStructure, int32_t dataId);
 void getAbsPath(char *path, char *absPath);
@@ -796,7 +817,8 @@ extern int32_t numNetInData;
 extern int32_t numNetOutData;
 
 
-extern sTIDL_tfOutReshapeMap_t sTIDL_OutReshapeTable[];
+extern sTIDL_tfOutReshapeMap_t sTIDL_OutReshapeTable;
+
 int32_t tidl_FindOnnxShuffleLayer(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t tidl_FindMatMulBias(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, int32_t layerIndex);
 int32_t tidl_fuseLayerNormBetaGamma(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, int32_t layerIndex, int32_t* dataIndex);
@@ -816,6 +838,9 @@ int32_t tidl_handleTopKAxis (sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t l
 int32_t tidl_handleTopKLayers (sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t layerIndex, int32_t* dataIndex);
 int32_t tidl_bf16ChangeTopKIndicesSliceOutElementType(sTIDL_OrgNetwork_t &orgTIDLNetStructure);
 int32_t tidl_handleRecurrentLayers (sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t numLayers, int32_t* dataIndex);
+int32_t tidl_addDataConvertForRecurrentLayers(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t numLayers, int32_t* dataIndex);
+int32_t tidl_handleGQALayers(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t numLayers, int32_t* dataIndex);
+int32_t tidl_handleGQAInternalCache(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t numLayers, int32_t* dataIndex);
 int32_t tidl_addDataConvertForScatterLayers(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t& layerIndex, int32_t* dataIndex);
 int32_t tidl_addDataConvertLayer(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, int32_t layerIndex, int32_t *dataIndex, tidl_import_config *params);
 int32_t TIDL_handlePadforTransposeLayers (sTIDL_OrgNetwork_t &orgTIDLNetStructure, int32_t* dataIndex, int32_t numLayers);
@@ -873,7 +898,7 @@ std::vector<std::string> TIDL_splitString(std::string str, std::string delimiter
 bool TIDL_isSupportedInFirmwareVersion(const char *providedVersion, const char *queryVersion);
 int32_t tidl_batchProcessing(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t &dataIndex);
 int32_t tidl_detectBatchSupportedGroups (sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, std::vector<std::pair<std::pair<int32_t, int32_t>, std::vector<int32_t>>> &batchSupportedBlocks, std::vector<std::vector<std::vector<int32_t>>> &batchGroupBoundaries, uint8_t updateShapeAfterDetection);
-int32_t tidl_addReshapeAtBatchGroupBoundary(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, std::vector<std::pair<std::pair<int32_t, int32_t>, std::vector<int32_t>>> &batchSupportedBlocks, std::vector<std::vector<std::vector<int32_t>>> &batchGroupBoundaries, int32_t *dataIndex, sTIDL_tfOutReshapeMap_t * sTIDL_tfOutReshapeTable);
+int32_t tidl_addReshapeAtBatchGroupBoundary(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, std::vector<std::pair<std::pair<int32_t, int32_t>, std::vector<int32_t>>> &batchSupportedBlocks, std::vector<std::vector<std::vector<int32_t>>> &batchGroupBoundaries, int32_t *dataIndex, sTIDL_tfOutReshapeMap_t &sTIDL_tfOutReshapeTable);
 int32_t tidl_removeSingletonDimensions(sTIDL_OrgNetwork_t &orgTIDLNetStructure, int32_t* dataIndex, int32_t layerIndex, std::map<int32_t, sTIDL_ShapeFoldTracker>& shapeFoldTrackers, const std::string& stageName, bool &stopShapeFolding);
 int32_t tidl_mergeContiguousBroadcast(sTIDL_OrgNetwork_t &orgTIDLNetStructure, int32_t* dataIndex, int32_t layerIndex, std::map<int32_t, sTIDL_ShapeFoldTracker>& shapeFoldTrackers, const std::string& stageName, bool &stopShapeFolding);
 int32_t tidl_mergeHigherDimsToChannel(sTIDL_OrgNetwork_t &orgTIDLNetStructure, int32_t* dataIndex, int32_t layerIndex, std::map<int32_t, sTIDL_ShapeFoldTracker>& shapeFoldTrackers, const std::string& stageName, bool &stopShapeFolding);
@@ -903,6 +928,7 @@ int32_t tidl_convertReduceMeanReduceSumToMatMulLayer(sTIDL_OrgNetwork_t  &pOrgTI
 int32_t tidl_handleNegativePadValuesForPadLayers(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t numLayers, int32_t* dataIndex);
 int32_t tidl_addDataConvertLayerForMPConstraining(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, int32_t layerIndex, int32_t *dataIndex, tidl_import_config *params);
 int32_t tidl_addDataConvertLayerForMPConstrainingV2(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, int32_t layerIndex, int32_t *dataIndex, tidl_import_config *params);
+int32_t tidl_handleCacheLayerOptionalIO(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, int32_t *dataIndex);
 int32_t tidl_convertExpandToEltwiseSumLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t& layerIndex, int32_t& dataIndex);
 int32_t tidl_removeNoOpTileLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t& layerIndex, int32_t& dataIndex);
 int32_t addReshapeAcrossBatchNormLayer(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t& layerIndex, int32_t& dataIndex);
@@ -926,9 +952,18 @@ int32_t tidl_convertShapeAndSizeToConst(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructur
 int32_t tidl_splitAttentionLayer(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t& numLayers, int32_t* dataIndex);
 int32_t TIDL_getNonPassThroughProducers(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure, int32_t dataId, int32_t layerIdx, std::vector<int32_t> &producers);
 int32_t tidl_mergeConvToConvLayer(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure);
-int32_t tidl_fillGatherProp(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, int32_t numLayers);
+int32_t tidl_fillGatherProp(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, int32_t numLayers, int32_t* dataIndex);
 int32_t tidl_validateMPConfig(sTIDL_OrgNetwork_t &pOrgTIDLNetStructure, tidl_import_config *params);
 int32_t tidl_convertStridedSliceToContinousSlice(sTIDL_OrgNetwork_t &orgTIDLNetStructure, int32_t numLayers, int32_t* dataIndex);
 int32_t tidl_optimizeTransposeGatherTranspose(sTIDL_OrgNetwork_t &orgTIDLNetStructure, int32_t* dataIndex, int32_t numLayers);
 bool TIDL_isPassThroughLayer(sTIDL_LayerPC_t *layer);
+int32_t tidl_addTransposeForRotaryEmbedding(sTIDL_OrgNetwork_t &orgTIDLNetStructure, int32_t numLayers, int32_t* dataIndex);
+int32_t tidl_removeZeroPadFromGather(sTIDL_OrgNetwork_t &orgTIDLNetStructure, int32_t numLayers);
+int32_t tidl_moveTransposeDownWards(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t& layerIndex, int32_t* dataIndex, sTIDL_OrgNetwork_t  *ptempTIDLNetStructure);
+int32_t tidl_mergeOutTransposeWithSamePerm (sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, int32_t& layerIndex);
+int32_t tidl_moveTransposeBelowReshape(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t transposeIdx, int32_t reshapeIdx, int32_t* dataIndex);
+int32_t tidl_moveTransposeBelowEltwise(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t transposeIdx, int32_t eltwiseIdx, int32_t* dataIndex);
+int32_t tidl_moveSingleTransposeBelow(sTIDL_OrgNetwork_t  &orgTIDLNetStructure, int32_t transposeIndex, int32_t& layerIndex, int32_t* dataIndex);
+int32_t tidl_optimizeBatchNormIp(sTIDL_OrgNetwork_t &orgTIDLNetStructure);
+int32_t tidl_breakTransposeForMatmulOutTranspose(sTIDL_OrgNetwork_t& orgTIDLNetStructure, int32_t* dataIndex);
 #endif /*TIDL_IMPORT_COMMONH_ */

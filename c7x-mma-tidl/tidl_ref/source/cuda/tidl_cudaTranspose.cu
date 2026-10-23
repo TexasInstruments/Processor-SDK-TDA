@@ -82,6 +82,7 @@ int TIDL_cudaTranspose(
         if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), input, (void**)&d_input, input_size) != IALG_EOK)
         {
             printf("Transpose: Unable to find input pointer\n");
+            return IALG_EFAIL;
         }
     }
     if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size) != IALG_EOK)
@@ -89,6 +90,7 @@ int TIDL_cudaTranspose(
         if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size) != IALG_EOK)
         {
             printf("Transpose: Unable to find output pointer\n");
+            return IALG_EFAIL;
         }
     }
 
@@ -97,6 +99,7 @@ int TIDL_cudaTranspose(
 
     // Async H2D
     checkCudaErr(cudaMemcpyAsync(d_input, input, input_size, cudaMemcpyHostToDevice, stream));
+    checkCudaErr(cudaMemcpyAsync(d_output, output, output_size, cudaMemcpyHostToDevice, stream));
 
     // Launch kernel on stream
     int total_elements = inBatches * inDIM1 * inDIM2 * inChannels * inHeight * inWidth;

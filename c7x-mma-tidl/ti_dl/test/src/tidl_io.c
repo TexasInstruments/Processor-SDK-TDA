@@ -44,10 +44,9 @@ int32_t tidl_writeNetw(sTIDL_Network_t * net, uint8_t * fileString, int32_t mode
 int32_t modifyNetworkParams(char * fileName,  char * inputLayer, char * mdata , sTIDL_IOBufDesc_t * gIOParams )
 {
   uint32_t tidlModelSize = tidl_getFileSize((uint8_t*)fileName);
-  TIDLTB_ASSERT_EXIT(tidlModelSize != -1);
+  TIDLTB_ASSERT_EXIT(tidlModelSize != 0);
   net = (sTIDL_Network_t *)malloc(tidlModelSize);
   tidl_readFile((sTIDL_Network_t *)net, (uint8_t*)fileName);
-  sTIDL_DataParams_t *inDataParams;
   
   printf("net version %x", net->netVersion);
   if(strcmp(mdata , "netVersion") == 0)
@@ -62,9 +61,9 @@ int32_t modifyNetworkParams(char * fileName,  char * inputLayer, char * mdata , 
     if(strcmp(mdata , "IN") == 0)
     {
       
-      if((uint32_t)net->TIDLLayers[i].layerType == atoi(inputLayer))
+      if(net->TIDLLayers[i].layerType == atoi(inputLayer))
       {
-        if((uint32_t)net->TIDLLayers[i].layerType == TIDL_InnerProductLayer)
+        if(net->TIDLLayers[i].layerType == TIDL_InnerProductLayer)
         {
           net->TIDLLayers[i-1].outData.elementType = 10;
         }
@@ -81,32 +80,32 @@ int32_t modifyNetworkParams(char * fileName,  char * inputLayer, char * mdata , 
     }
     else if(strcmp(mdata , "OUT") == 0)
     {
-      if((uint32_t)net->TIDLLayers[i].layerType == atoi(inputLayer))
+      if(net->TIDLLayers[i].layerType == atoi(inputLayer))
       {
         net->TIDLLayers[i].outData.elementType = 10;
       }
       else if((atoi(inputLayer) == TIDL_DepthToSpaceLayer ) && 
-              ((uint32_t)net->TIDLLayers[i].layerType == TIDL_ConvolutionLayer) &&
+              (net->TIDLLayers[i].layerType == TIDL_ConvolutionLayer) &&
               (net->TIDLLayers[i].layerParams.convParams.enableDepthToSpace == true))
       {
         net->TIDLLayers[i].outData.elementType = 10;
       }
     }
     
-    if(((strcmp(mdata , "gatherindices")) == 0) && ((uint32_t)net->TIDLLayers[i].layerType == TIDL_GatherLayer))
+    if(((strcmp(mdata , "gatherindices")) == 0) && (net->TIDLLayers[i].layerType == TIDL_GatherLayer))
     {
       net->TIDLLayers[i-1].outData.elementType = 0;
     }
 
-    if(((strcmp(mdata , "mode")) == 0) && ((uint32_t)net->TIDLLayers[i].layerType == TIDL_ResizeLayer))
+    if(((strcmp(mdata , "mode")) == 0) && (net->TIDLLayers[i].layerType == TIDL_ResizeLayer))
     {
       net->TIDLLayers[i].layerParams.resizeParams.mode = 5;
     }
 
-    if(((strcmp(mdata , "resizeratio")) == 0) && ((uint32_t)net->TIDLLayers[i].layerType == TIDL_ResizeLayer))
+    if(((strcmp(mdata , "resizeratio")) == 0) && (net->TIDLLayers[i].layerType == TIDL_ResizeLayer))
     {
       /* initialize resizeRatio by 1.0 */
-      for(int32_t j = 0; j < TIDL_DIM_MAX; j++)
+      for(int32_t j = 0; j < (int32_t)TIDL_DIM_MAX; j++)
       {
         net->TIDLLayers[i].layerParams.resizeParams.resizeRatio[j] = 1.0;
       }
@@ -114,73 +113,73 @@ int32_t modifyNetworkParams(char * fileName,  char * inputLayer, char * mdata , 
       net->TIDLLayers[i].layerParams.resizeParams.resizeRatio[TIDL_DIM_HEIGHT] = 9;
     }
     
-    if(((strcmp(mdata , "axis")) == 0) && ((uint32_t)net->TIDLLayers[i].layerType == TIDL_SoftMaxLayer))
+    if(((strcmp(mdata , "axis")) == 0) && (net->TIDLLayers[i].layerType == TIDL_SoftMaxLayer))
     {
       
       net->TIDLLayers[i].layerParams.softMaxParams.axis = 9;
     }
-    if((strcmp(mdata , "stride")) == 0 && ((uint32_t)net->TIDLLayers[i].layerType == TIDL_Deconv2DLayer)  )
+    if((strcmp(mdata , "stride")) == 0 && (net->TIDLLayers[i].layerType == TIDL_Deconv2DLayer)  )
     {
       net->TIDLLayers[i].layerParams.convParams.strideW = 10;
       net->TIDLLayers[i].layerParams.convParams.strideH = 10;
     }
 
-    if((strcmp(mdata , "kernel")) == 0 && ((uint32_t)net->TIDLLayers[i].layerType == TIDL_Deconv2DLayer)  )
+    if((strcmp(mdata , "kernel")) == 0 && (net->TIDLLayers[i].layerType == TIDL_Deconv2DLayer)  )
     {
       net->TIDLLayers[i].layerParams.convParams.kernelH = 10;
       net->TIDLLayers[i].layerParams.convParams.kernelW = 10;
     }
-    if(strcmp(mdata , "changeact") == 0 && (uint32_t)net->TIDLLayers[i].layerType == TIDL_BatchNormLayer)
+    if(strcmp(mdata , "changeact") == 0 && (net->TIDLLayers[i].layerType == TIDL_BatchNormLayer)  )
     {
       net->TIDLLayers[i].actParams.actType = 10;
     }
     
-    if((strcmp(mdata , "kernel")) == 0 && ((uint32_t)net->TIDLLayers[i].layerType == TIDL_PoolingLayer)  )
+    if((strcmp(mdata , "kernel")) == 0 && (net->TIDLLayers[i].layerType == TIDL_PoolingLayer)  )
     {
       net->TIDLLayers[i].layerParams.poolParams.kernelH = 5;
       net->TIDLLayers[i].layerParams.poolParams.kernelW = 5;
     }
     
-    if((strcmp(mdata , "stride")) == 0 && ((uint32_t)net->TIDLLayers[i].layerType == TIDL_PoolingLayer)  )
+    if((strcmp(mdata , "stride")) == 0 && (net->TIDLLayers[i].layerType == TIDL_PoolingLayer)  )
     {
       net->TIDLLayers[i].layerParams.poolParams.strideH = 3;
       net->TIDLLayers[i].layerParams.poolParams.strideW = 3;
     }
 
-    if((strcmp(mdata , "strideW")) == 0 && ((uint32_t)net->TIDLLayers[i].layerType == TIDL_PoolingLayer)  )
+    if((strcmp(mdata , "strideW")) == 0 && (net->TIDLLayers[i].layerType == TIDL_PoolingLayer)  )
     {
       net->TIDLLayers[i].layerParams.poolParams.strideW = 4;
     }
 
-    if((strcmp(mdata , "axis")) == 0 && ((uint32_t)net->TIDLLayers[i].layerType == TIDL_SliceLayer)  )
+    if((strcmp(mdata , "axis")) == 0 && (net->TIDLLayers[i].layerType == TIDL_SliceLayer)  )
     {
       net->TIDLLayers[i].layerParams.sliceParams.axis = 7;
     }
-    if((uint32_t)net->TIDLLayers[i].layerType == TIDL_FlattenLayer && (strcmp(mdata , "layercorrupt") == 0))
+    if(net->TIDLLayers[i].layerType == TIDL_FlattenLayer && (strcmp(mdata , "layercorrupt") == 0))
     {
       net->TIDLLayers[i].layerType = 50;
     }
 
-    if((uint32_t)net->TIDLLayers[i].layerType == TIDL_ReduceLayer && (strcmp(mdata , "axis") == 0))
+    if(net->TIDLLayers[i].layerType == TIDL_ReduceLayer && (strcmp(mdata , "axis") == 0))
     {
       net->TIDLLayers[i].layerParams.reduceParams.axis = 5;
     }
 
-    if((uint32_t)net->TIDLLayers[i].layerType == TIDL_ConcatLayer && (strcmp(mdata , "axis") == 0))
+    if(net->TIDLLayers[i].layerType == TIDL_ConcatLayer && (strcmp(mdata , "axis") == 0))
     {
       net->TIDLLayers[i].layerParams.concatParams.axis = TIDL_DIM_BATCH;
     }
 
-    if((uint32_t)net->TIDLLayers[i].layerType == TIDL_LayerNormLayer && (strcmp(mdata , "axis") == 0))
+    if(net->TIDLLayers[i].layerType == TIDL_LayerNormLayer && (strcmp(mdata , "axis") == 0))
     {
       net->TIDLLayers[i].layerParams.layerNormParams.axis = TIDL_DIM_BATCH;
     }
     
-    if((uint32_t)net->TIDLLayers[i].layerType == TIDL_EltWiseLayer && (strcmp(mdata , "eltWiseType") == 0))
+    if(net->TIDLLayers[i].layerType == TIDL_EltWiseLayer && (strcmp(mdata , "eltWiseType") == 0))
     {
       net->TIDLLayers[i].layerParams.eltWiseParams.eltWiseType = TIDL_DIM_WIDTH;
     }
-    if((uint32_t)net->TIDLLayers[i].layerType == TIDL_InnerProductLayer && (strcmp(mdata , "indata") == 0) )
+    if(net->TIDLLayers[i].layerType == TIDL_InnerProductLayer && (strcmp(mdata , "indata") == 0) )
     {
       net->TIDLLayers[i].inData[0] = 4;
     }
@@ -190,11 +189,11 @@ int32_t modifyNetworkParams(char * fileName,  char * inputLayer, char * mdata , 
       net->dataFlowInfo = 0;
     }
     
-    if((uint32_t)net->TIDLLayers[i].layerType == TIDL_ConcatLayer && (strcmp(mdata, "dataId") == 0))
+    if(net->TIDLLayers[i].layerType == TIDL_ConcatLayer && (strcmp(mdata, "dataId") == 0))
     {
       net->TIDLLayers[i].outData.dataId = 0;
     }
-    if((uint32_t)net->TIDLLayers[i].layerType == TIDL_DataConvertLayer  && (strcmp(mdata, "outzeropoint") == 0))
+    if(net->TIDLLayers[i].layerType == TIDL_DataConvertLayer  && (strcmp(mdata, "outzeropoint") == 0))
     {
       net->TIDLLayers[i].layerParams.dataConvertParams.outZeroPoint = 9;
       net->TIDLLayers[i].layerParams.dataConvertParams.inZeroPoint = 9;
@@ -212,10 +211,10 @@ void * TIDL_getNetObjBufPtr( sTIDL_Network_t *pNet,
 {
   void* netMemberSrcAddr = NULL;
   void* netMemberDstAddr = NULL;
-  int32_t size = 0;
-  int32_t offset = 0;
+  uint32_t size = 0;
+  uint32_t offset = 0;
 
-  if (netMember >= TIDL_NET_TOTAL_BUF)
+  if (netMember >= (int32_t)TIDL_NET_TOTAL_BUF)
   {
     printf ("Member not available as part of net structure \n");
     assert(0);
@@ -226,6 +225,8 @@ void * TIDL_getNetObjBufPtr( sTIDL_Network_t *pNet,
 
   netMemberDstAddr = netMemberSrcAddr = (uint8_t *)get_int8_t_pointer((int8_t *)(pNet), offset);
 
+  (void)size;
+
   return netMemberDstAddr ;
 }
 
@@ -234,7 +235,7 @@ int32_t modifyWorkloadParams(char * fileName,  char * inputLayer, char * mdata ,
 {
   uint32_t status = 0;
   uint32_t tidlModelSize = tidl_getFileSize((uint8_t*)fileName);
-  TIDLTB_ASSERT_EXIT(tidlModelSize != -1);
+  TIDLTB_ASSERT_EXIT(tidlModelSize != 0);
   net = (sTIDL_Network_t *)malloc(tidlModelSize);
   tidl_readFile((sTIDL_Network_t *)net, (uint8_t*)fileName);
  
@@ -245,13 +246,13 @@ int32_t modifyWorkloadParams(char * fileName,  char * inputLayer, char * mdata ,
   sGraphCompilerOutArgs_t *gcOutArgs = NULL;
   sGraphCompilerOutArgsCore_t *gcOut = NULL;
   sGCCommonDataBase_t     *gcCommonDataBase = NULL;
-  sWorkloadSuperGroup_t *wlSuperGrp = NULL;
+  sWorkloadGroup_t *wlGrp = NULL;
  
   gcOutArgs    = (sGraphCompilerOutArgs_t *) TIDL_getNetObjBufPtr( net,  TIDL_NET_GC_BUF);
   gcOut = (sGraphCompilerOutArgsCore_t *)getGCDataBase(gcOutArgs , DATABASE_GCOUT_1+relativeCoreId);
   sGCDataBase_t *gcDatabase   = &gcOut->dataBase;
   gcCommonDataBase = (sGCCommonDataBase_t *)getGCDataBase(gcOutArgs,DATABASE_COMMON);
-  wlSuperGrp  = &gcOut->superWorkload;
+  wlGrp  = &gcOut->workload;
   sBufParams_t* bufNodesDB = (sBufParams_t*) &gcCommonDataBase->dbPayLoad[gcCommonDataBase->dbParams[DB_COMMON_BUF].startOffset];
   sWorkloadUnit_t* workLoadUnitDB = (sWorkloadUnit_t*) &gcDatabase->dbPayLoad[gcDatabase->dbParams[DB_WL].startOffset];
  
@@ -269,7 +270,7 @@ int32_t modifyWorkloadParams(char * fileName,  char * inputLayer, char * mdata ,
     uint32_t linkIdx = 0;
     sLink_t *linkPtrList[MAX_LINKS_PER_WL];
  
-    for( linkIdx = 0; linkIdx < pWLUnit->numLinks; linkIdx++)
+    for( linkIdx = 0; linkIdx < (uint32_t)pWLUnit->numLinks; linkIdx++)
     {
       getLinkPtrs(pWLUnit, NOT_VALID, linkIdx, linkPtrList);
       sLink_t * pLink = linkPtrList[0];
@@ -367,8 +368,12 @@ int32_t modifyWorkloadParams(char * fileName,  char * inputLayer, char * mdata ,
       
     }
   }
+
   status = tidl_writeNetw(net, (uint8_t*)fileName, tidlModelSize );
-  
+
+  (void)status;
+  (void)wlGrp;
+
   free(net);
   return 0;
 }

@@ -274,7 +274,9 @@ int32_t layerIdx, int32_t outDataSize, sTIDL_LayerBuf_t *TIDLLayersBufPtr)
              *   buffer size of previous layer
              * - Pad should be equal
              */
-            if ((TIDLLayerCur->layerType != TIDL_DataLayer) && (TIDLLayerCur->layerType != TIDL_ConstDataLayer))
+            if ((TIDLLayerCur->layerType != TIDL_DataLayer) &&
+                (TIDLLayerCur->layerType != TIDL_ConstDataLayer) &&
+                (TIDLLayerCur->layerType != TIDL_CacheLayer))
             {
               int32_t curNumBatch = TIDLLayerCur->outData.dimValues[TIDL_DIM_BATCH];
               int32_t curRoiPitch = TIDLLayerCur->outData.pitch[TIDL_ROI_PITCH];
@@ -343,9 +345,13 @@ int32_t layerIdx, int32_t outDataSize, sTIDL_LayerBuf_t *TIDLLayersBufPtr)
         }
 
         /*
-         * Special condition: We cannot reuse the output buffer if it is used
-         * as input to Slice Layer. But why?
+         * Removed: guard that blocked reuse when curOutDataId fed a Slice layer.
+         * In the ref without NC path Slice always copies to its own independent
+         * buffer, so overwriting curOutDataId at layer 'index' cannot corrupt
+         * any Slice consumer. This whole function is only called for allocation
+         * without NC
          */
+        /*
         skipLoop = 0;
         if(curOutDataId != outDataId)
         {
@@ -366,6 +372,7 @@ int32_t layerIdx, int32_t outDataSize, sTIDL_LayerBuf_t *TIDLLayersBufPtr)
             }
           }
         }
+        */
 
         /*
          * If free output buffer found in previous layer, we can re-use it.

@@ -4,7 +4,7 @@ include $(PRELUDE)
 
 CSOURCES    := tidl_rt_x86.c
 
-LDIRS += $(DSP_TOOLS)/host_emulation
+LDIRS += $(CGT7X_ROOT)/host_emulation
 LDIRS += $(MMALIB_PATH)/lib/$(C7X_VERSION)/$(TARGET_BUILD)
 
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a J722S j722s TDA54 tda54))
@@ -71,7 +71,11 @@ else
     LDIRS += $(TIDL_PATH)/ti_dl/lib/$(TARGET_SOC)/PC/algo/$(TARGET_BUILD)
 endif
 LDIRS += $(TIOVX_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+ifeq ($(ENABLE_NEW_VISION_APPS_STRUCTURE),yes)
 LDIRS += $(PLATFORM_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+else
+LDIRS += $(VISION_APPS_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+endif
 LDIRS += $(APP_UTILS_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 LDIRS += $(TIDL_PATH)/arm-tidl/tiovx_kernels/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 LDIRS += $(TIDL_PATH)/tiovx_kernels/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
@@ -109,6 +113,7 @@ TIOVX_LIBS += vx_target_kernels_dsp
 TIOVX_LIBS += vx_target_kernels_source_sink
 TIOVX_LIBS += vx_target_kernels_tutorial vx_kernels_test_kernels
 
+ifeq ($(ENABLE_NEW_VISION_APPS_STRUCTURE),yes)
 APP_UTILS_LIBS  =
 APP_UTILS_LIBS += app_utils_mem
 APP_UTILS_LIBS += app_utils_file_io
@@ -119,11 +124,21 @@ HLOS_PLATFORM_LIBS += app_init_pc_common
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
     # app_utils_timer provides appLogGetTimeInUsec/appLogGetGlobalTimeInUsec/appLogWaitMsecs
     # which are called by the TIOVX platform (vx_platform_pc).
-    # VDK/IPC/remote-service libs (app_utils_init_vdk, app_utils_ipc, etc.) are NOT
-    # needed for PC simulation - they register non-TIDL HW kernels and are only
-    # used by the armv8 EVM builds.
+    # app_utils_init_vdk_stub provides appVdkInit/appVdkDeInit called by app_init_pc_common.
     APP_UTILS_LIBS += app_utils_timer
-    HLOS_PLATFORM_LIBS += app_utils_init_vdk
+    HLOS_PLATFORM_LIBS += app_utils_init_vdk_stub
+endif
+else
+VISION_APPS_UTILS_LIBS  =
+VISION_APPS_UTILS_LIBS += app_utils_mem
+VISION_APPS_UTILS_LIBS += app_utils_init
+VISION_APPS_UTILS_LIBS += app_utils_file_io
+
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
+    # app_utils_timer provides appLogGetTimeInUsec/appLogGetGlobalTimeInUsec/appLogWaitMsecs
+    # which are called by the TIOVX platform (vx_platform_pc).
+    VISION_APPS_UTILS_LIBS += app_utils_timer
+endif
 endif
 
 
@@ -133,8 +148,12 @@ ADDITIONAL_STATIC_LIBS += $(IPC_NOTIFY_LIBS)
 STATIC_LIBS += $(TIDL_LIBS)
 STATIC_LIBS += $(MMA_LIBS)
 STATIC_LIBS += $(TIOVX_LIBS)
+ifeq ($(ENABLE_NEW_VISION_APPS_STRUCTURE),yes)
 STATIC_LIBS += $(APP_UTILS_LIBS)
 STATIC_LIBS += $(HLOS_PLATFORM_LIBS)
+else
+STATIC_LIBS += $(VISION_APPS_UTILS_LIBS)
+endif
 STATIC_LIBS += vxlib_$(TARGET_CPU) c6xsim_$(TARGET_CPU)_C66
 STATIC_LIBS += $(C7X_VERSION)$(C7x_HOSTEMU_COMPILER_STRING)-host-emulation
 
@@ -142,7 +161,9 @@ SHARED_LIBS += rt
 
 include $($(_MODULE)_SDIR)/../concerto_common.mak
 
+ifeq ($(ENABLE_NEW_VISION_APPS_STRUCTURE),yes)
 IDIRS += $(PLATFORM_PATH)/pc/include
+endif
 
 include $(FINALE)
 

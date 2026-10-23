@@ -236,6 +236,20 @@ static void ClkApp_TestSdlDccSingleshotmodeApp(void);
 /*                          Function Definitions                              */
 /* ========================================================================== */
 
+/*
+ * Read-back error callback for the "Software Read-back of Written Configuration"
+ * safety mechanism. The sdl_ipfma library calls this from HW_RB_CHECK on a
+ * write/read-back mismatch and provides no default, so the application must
+ * define it (the sdl_ipfma-linked build fails to link otherwise). In the plain
+ * 'sdl' build the read-back checks compile out, so this is never referenced -
+ * harmless dead code.
+ */
+void SDL_DCC_readbackErrCbk(uint32_t expVal, uint32_t readVal)
+{
+    DebugP_log("DCC read-back callback - register field MISMATCH."
+               " Expected: 0x%08X, Read: 0x%08X\r\n", expVal, readVal);
+}
+
 static void ClkApp_TestSdlDccSingleshotmodeApp(void)
 {
     int32_t status;

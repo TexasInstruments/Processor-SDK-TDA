@@ -31,7 +31,8 @@ int32_t TIDL_constDataInitNew(const TIDL_LayerSpecificParams *layerSpecificParam
   int32_t status = IALG_EOK;
   int8_t *src=NULL;
   int8_t *dst=NULL;
-  int32_t paramOffset, elemSize;
+  uint32_t paramOffset;
+  int32_t elemSize;
   int32_t tidlRoiPitch, tidlChannelPitch, tidlLinePitch, tidlDim1Pitch, tidlDim2Pitch, tidlDimBatch, tidlDimNumch, tidlDimWidth, tidlDimHeight, tidlDimDim1, tidlDimDim2;
   int32_t outWidth, outHeight, outChannels;
   int32_t i=0,ch=0,batch=0,dim1=0,dim2=0;

@@ -341,7 +341,11 @@ static int32_t TIDL_refScatterElements(Tin  *data,
   indices = (Tindx *)indices + (inIndicesParams->padH * inIndicesPitch) + inIndicesParams->padW;
   update = (Tin *)update + (inUpdateParams->padH * inUpdatePitch) + inUpdateParams->padW;
 
-  Tout *output = (Tout *)outPtr + (outDataParams->padH * outPitch) + outDataParams->padW;
+  Tout *output = (Tout *)outPtr;
+  if(TIDL_isPadOTF(intAlgHandle->createParams->net->deviceName) == 1U)
+  {
+    output += (outDataParams->padH * outPitch) + outDataParams->padW;
+  }
 
   int32_t numTotRoi        = (int32_t)inDataParams->dimValues[TIDL_DIM_BATCH];
   int32_t inDataDim2       = (int32_t)inDataParams->dimValues[TIDL_DIM_DIM2];

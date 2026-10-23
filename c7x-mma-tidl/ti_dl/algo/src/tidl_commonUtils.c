@@ -215,7 +215,7 @@ void tidlPerfStatsDdrStatsReadCounters(uint32_t *val0, uint32_t *val1, uint32_t 
   *val1 = 0;
   *val2 = 0;
   *val3 = 0;
-  if (tidl_getTraceLogLevel() >= 2)
+  if (tidl_getTraceLogLevel() >= 2 || tidl_getDdrPerfStatsEnabled())
   {
 #if !defined(HOST_EMULATION) && !defined(SOC_TDA54)
     static volatile uint32_t *cnt0[APP_PERF_NUM_DDR_INSTANCES];
@@ -464,6 +464,11 @@ int32_t tidl_getTraceLogLevel(void)
   return tidlLogLevel;
 }
 
+int32_t tidl_getDdrPerfStatsEnabled(void)
+{
+  return tidlDdrPerfStatsEnabled;
+}
+
 tidlWriteBinToFile_t tidl_getWriteBinToFile(void)
 {
   return tidlWriteBinToFile;
@@ -498,11 +503,13 @@ void *tidl_getTraceBaseName(void)
  * @param writeBinFuncPtr : Pointer to write bins
  * @param readBinFuncPtr : Pointer to the read bins
  * @param traceBaseName : Name of the trace buffer
+ * @param enableDDRPerfStats : non-zero to enable DDR BW counter sampling per layer
+ *                         independently of traceLogLevel
  * @return int32_t : Returns SUCCESS or FAIL
  */
 
 int32_t TIDL_initDebugTraceParams(int32_t traceLogLevel, int32_t traceWriteLevel, tidlVprintf_t tifVprintfFuncPtr, tidlWriteBinToFile_t writeBinFuncPtr,
-                                  tidlReadBinFromFile_t readBinFuncPtr, const char *traceBaseName)
+                                  tidlReadBinFromFile_t readBinFuncPtr, const char *traceBaseName, int32_t enableDDRPerfStats)
 {
   int32_t status = TIDL_SUCCESS;
 
@@ -519,6 +526,7 @@ int32_t TIDL_initDebugTraceParams(int32_t traceLogLevel, int32_t traceWriteLevel
     tidlVprintf = (tidlVprintf_t)tifVprintfFuncPtr;
     tidlLogLevel = traceLogLevel;
     tidlWriteLevel = traceWriteLevel;
+    tidlDdrPerfStatsEnabled = enableDDRPerfStats;
     strncpy(tidlTraceBaseName, (char *)traceBaseName, TIDL_STRING_SIZE);
   }
   return status;
@@ -1420,12 +1428,11 @@ int32_t tidl_writeTraceDataBuf(int8_t *ptr,
     int8_t *traceDumpName = (int8_t *)(orgScratchPtr);
     int8_t *traceBaseName = (int8_t *)(orgScratchPtr + (1U * TRACE_STRING_SIZE));
     int8_t *DataIDString = (int8_t *)(orgScratchPtr + (2U * TRACE_STRING_SIZE));
-    int32_t layerIdx;
+    int32_t layerIdx = dataBuffId;
     int32_t scratchSize = orgScratchSize - TRACE_STRINGS_MEM_SIZE;
     int32_t tidlWriteLevelOrig = tidl_getWriteLevel();
     sTIDL_DataParams_t *dataBuffParam;
-    dataBuffParam = TIDL_getDataParams(net, dataBuffId);
-    layerIdx = TIDL_getLayerNum(net, dataBuffId);
+    dataBuffParam = &net->TIDLLayers[dataBuffId].outData;
 
     if (algLayer->gcHelperHandle == NULL)
     {
@@ -1441,31 +1448,49 @@ int32_t tidl_writeTraceDataBuf(int8_t *ptr,
     {
       sTIDL_DataParams_t dataBuffParamOrig = *dataBuffParam;
 
+      /*
+       * Check if outLayout is NHWC i.e. data is stored as NHWC format and since shapes in TIDL graph
+       * are always in NCHW format, need to update shapes for reading data properly
+       */
+      bool isOutFormatNHWC = false;
       if (net->TIDLLayers[layerIdx].layerType == TIDL_DataConvertLayer)
       {
-        int32_t inLayout = net->TIDLLayers[layerIdx].layerParams.dataConvertParams.layout, outLayout = net->TIDLLayers[layerIdx].layerParams.dataConvertParams.outLayout;
-
-        if (((net->TIDLLayers[layerIdx].layerParams.dataConvertParams.layout == (int32_t)TIDL_LT_NHWC) && (net->TIDLLayers[layerIdx].layerParams.dataConvertParams.type == (int32_t)TIDL_DC_TYPE_OUTPUT)) ||
-            ((net->TIDLLayers[layerIdx].layerParams.dataConvertParams.type == (int32_t)TIDL_DC_TYPE_INTERMEDIATE) && (inLayout != outLayout)))
+        if (net->TIDLLayers[layerIdx].layerParams.dataConvertParams.outLayout == (int32_t)TIDL_LT_NHWC)
         {
-          dataBuffParam->dimValues[TIDL_DIM_WIDTH] = dataBuffParamOrig.dimValues[TIDL_DIM_NUMCH];
-          dataBuffParam->dimValues[TIDL_DIM_HEIGHT] = dataBuffParamOrig.dimValues[TIDL_DIM_WIDTH];
-          dataBuffParam->dimValues[TIDL_DIM_NUMCH] = dataBuffParamOrig.dimValues[TIDL_DIM_HEIGHT];
-          dataBuffParam->dimValues[TIDL_DIM_DIM2] = dataBuffParamOrig.dimValues[TIDL_DIM_DIM2];
-          dataBuffParam->dimValues[TIDL_DIM_DIM1] = dataBuffParamOrig.dimValues[TIDL_DIM_DIM1];
-          dataBuffParam->dimValues[TIDL_DIM_BATCH] = dataBuffParamOrig.dimValues[TIDL_DIM_BATCH];
-
-          dataBuffParam->pitch[TIDL_LINE_PITCH] = dataBuffParam->dimValues[TIDL_DIM_WIDTH];
-          dataBuffParam->pitch[TIDL_CHANNEL_PITCH] = dataBuffParam->pitch[TIDL_LINE_PITCH] * dataBuffParam->dimValues[TIDL_DIM_HEIGHT];
-          dataBuffParam->pitch[TIDL_DIM2_PITCH] = dataBuffParam->pitch[TIDL_CHANNEL_PITCH] * dataBuffParam->dimValues[TIDL_DIM_NUMCH];
-          dataBuffParam->pitch[TIDL_DIM1_PITCH] = dataBuffParam->pitch[TIDL_DIM2_PITCH] * dataBuffParam->dimValues[TIDL_DIM_DIM2];
-          dataBuffParam->pitch[TIDL_ROI_PITCH] = dataBuffParam->pitch[TIDL_DIM1_PITCH] * dataBuffParam->dimValues[TIDL_DIM_DIM1];
-          //: TODO: This needs to be correctly handled for super tiling cases
-          temp_height = dataBuffParam->dimValues[TIDL_DIM_HEIGHT];
-          temp_numChannels = dataBuffParam->dimValues[TIDL_DIM_NUMCH];
-          temp_currChPitch = dataBuffParam->pitch[TIDL_CHANNEL_PITCH];
+          isOutFormatNHWC = true;
         }
       }
+      else if(net->TIDLLayers[layerIdx].layerType == TIDL_DataLayer && net->TIDLLayers[layerIdx].numOutBufs > 0)
+      {
+        int32_t outLayerIdx = TIDL_getOutLayer(net, net->numLayers, net->TIDLLayers[layerIdx].outData.dataId);
+        /* Input data layer with data stored as NHWC format */
+        if(outLayerIdx != -1 &&
+           (net->TIDLLayers[outLayerIdx].layerType == TIDL_DataConvertLayer &&
+            net->TIDLLayers[outLayerIdx].layerParams.dataConvertParams.layout == (int32_t)TIDL_LT_NHWC))
+        {
+          isOutFormatNHWC = true;
+        }
+      }
+      if(isOutFormatNHWC == true)
+      {
+        dataBuffParam->dimValues[TIDL_DIM_WIDTH] = dataBuffParamOrig.dimValues[TIDL_DIM_NUMCH];
+        dataBuffParam->dimValues[TIDL_DIM_HEIGHT] = dataBuffParamOrig.dimValues[TIDL_DIM_WIDTH];
+        dataBuffParam->dimValues[TIDL_DIM_NUMCH] = dataBuffParamOrig.dimValues[TIDL_DIM_HEIGHT];
+        dataBuffParam->dimValues[TIDL_DIM_DIM2] = dataBuffParamOrig.dimValues[TIDL_DIM_DIM2];
+        dataBuffParam->dimValues[TIDL_DIM_DIM1] = dataBuffParamOrig.dimValues[TIDL_DIM_DIM1];
+        dataBuffParam->dimValues[TIDL_DIM_BATCH] = dataBuffParamOrig.dimValues[TIDL_DIM_BATCH];
+
+        dataBuffParam->pitch[TIDL_LINE_PITCH] = dataBuffParam->dimValues[TIDL_DIM_WIDTH];
+        dataBuffParam->pitch[TIDL_CHANNEL_PITCH] = dataBuffParam->pitch[TIDL_LINE_PITCH] * dataBuffParam->dimValues[TIDL_DIM_HEIGHT];
+        dataBuffParam->pitch[TIDL_DIM2_PITCH] = dataBuffParam->pitch[TIDL_CHANNEL_PITCH] * dataBuffParam->dimValues[TIDL_DIM_NUMCH];
+        dataBuffParam->pitch[TIDL_DIM1_PITCH] = dataBuffParam->pitch[TIDL_DIM2_PITCH] * dataBuffParam->dimValues[TIDL_DIM_DIM2];
+        dataBuffParam->pitch[TIDL_ROI_PITCH] = dataBuffParam->pitch[TIDL_DIM1_PITCH] * dataBuffParam->dimValues[TIDL_DIM_DIM1];
+        //: TODO: This needs to be correctly handled for super tiling cases
+        temp_height = dataBuffParam->dimValues[TIDL_DIM_HEIGHT];
+        temp_numChannels = dataBuffParam->dimValues[TIDL_DIM_NUMCH];
+        temp_currChPitch = dataBuffParam->pitch[TIDL_CHANNEL_PITCH];
+      }
+
       if (((dataBuffParam->numBatchW > 1) || (dataBuffParam->numBatchH > 1)) && (dataBuffParam->dimValues[TIDL_DIM_BATCH] == 1))
       {
         int32_t elementSizeBytes;
@@ -2029,13 +2054,11 @@ int32_t tidl_writeTraceDataBuf(int8_t * ptr, sTIDL_Network_t * net, int32_t data
     int8_t * traceDumpName = (int8_t *)(orgScratchPtr);
     int8_t * traceBaseName = (int8_t *)(orgScratchPtr  + (1*TRACE_STRING_SIZE));
     int8_t * DataIDString  = (int8_t *)(orgScratchPtr  + (2*TRACE_STRING_SIZE));
-    int32_t layerIdx;
+    int32_t layerIdx = dataBuffId;
     int32_t scratchSize =  orgScratchSize - TRACE_STRINGS_MEM_SIZE;
     int32_t tidlWriteLevelOrig = tidl_getWriteLevel();
     sTIDL_DataParams_t * dataBuffParam;
-    dataBuffParam = TIDL_getDataParams(net, dataBuffId);
-    layerIdx = TIDL_getLayerNum(net, dataBuffId);
-
+    dataBuffParam = &net->TIDLLayers[dataBuffId].outData;
 
     /* for trace Level 4 enable trace level 3 by default */
     if ( tidl_getWriteLevel() == 4 )
@@ -2982,7 +3005,7 @@ void TIDL_GetTensorDimensionsBatchReshape(const sTIDL_Network_t *net,
                                           int32_t *outBatch)
 {
   sTIDL_Network_t *tidlNet = (sTIDL_Network_t *)net;
-  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(tidlNet, tidlNet->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_DataParams_t *inDataParams = &tidlNet->TIDLLayers[tidlNet->TIDLLayers[layerIdx].inData[0]].outData;
   sWLMetaDataIDExt_t wlMetaDataExt = {0, 0, 0};
   const sWorkloadUnit_t *wlUnit = (sWorkloadUnit_t *)workloadUnit;
 
@@ -2990,7 +3013,7 @@ void TIDL_GetTensorDimensionsBatchReshape(const sTIDL_Network_t *net,
   {
     getWLMetaDataIDExt(wlUnit->metadataExt, &wlMetaDataExt);
   }
-  if (*inBatch != NULL)
+  if (*inBatch != 0)
   {
     *inBatch = inDataParams->dimValues[TIDL_DIM_BATCH];
     if (wlUnit != NULL)
@@ -2998,7 +3021,7 @@ void TIDL_GetTensorDimensionsBatchReshape(const sTIDL_Network_t *net,
       *inBatch = wlMetaDataExt.inNumBatch;
     }
   }
-  if (*outBatch != NULL)
+  if (*outBatch != 0)
   {
     *outBatch = tidlNet->TIDLLayers[layerIdx].outData.dimValues[TIDL_DIM_BATCH];
     if (wlUnit != NULL)
@@ -3769,6 +3792,33 @@ int32_t float_to_int_c7x(float32_tidl x)
 #endif
 
   return x_int;
+}
+
+/**
+----------------------------------------------------------------------------
+@fn         TIDL_getOutLayer
+@brief      Returns the layer index of the consumer layer. Returns -1 if no consumer is found.
+            Currently it returns the first consumer.
+
+@param      net        : Pointer to the TIDL network structure
+@param      numLayers  : Number of layers to search
+@param      dataId     : Output data buffer ID of the producer layer
+@return     Index of the consumer layer, or -1 if not found
+----------------------------------------------------------------------------
+*/
+int32_t TIDL_getOutLayer(sTIDL_Network_t *net, int32_t numLayers, int32_t dataId)
+{
+  for (int32_t i1 = 0; i1 < numLayers; i1++)
+  {
+    for (int32_t i2 = 0; i2 < net->TIDLLayers[i1].numInBufs; i2++)
+    {
+      if (net->TIDLLayers[i1].inData[i2] == dataId)
+      {
+        return (i1);
+      }
+    }
+  }
+  return -1;
 }
 
 /**

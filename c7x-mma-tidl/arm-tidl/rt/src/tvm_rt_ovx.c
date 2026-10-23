@@ -349,6 +349,15 @@ init_tvm_tiovx(TVMAppObj *obj, sTVMRT_Params_t *prms)
       tvmParams->rt_info.tvm_rt_trace_node = prms->tvm_rt_trace_node;
       tvmParams->rt_info.tvm_rt_target_priority = prms->targetPriority;
       tvmParams->rt_info.tvm_rt_core_num = prms->coreNum;
+      // Copy file-based trace path strings into rt_info for C7x binary access
+      strncpy(tvmParams->rt_info.tvm_rt_trace_base_path,
+              prms->tvm_rt_trace_base_path,
+              sizeof(tvmParams->rt_info.tvm_rt_trace_base_path) - 1);
+      tvmParams->rt_info.tvm_rt_trace_base_path[sizeof(tvmParams->rt_info.tvm_rt_trace_base_path) - 1] = '\0';
+      strncpy(tvmParams->rt_info.tvm_rt_trace_write_node,
+              prms->tvm_rt_trace_write_node,
+              sizeof(tvmParams->rt_info.tvm_rt_trace_write_node) - 1);
+      tvmParams->rt_info.tvm_rt_trace_write_node[sizeof(tvmParams->rt_info.tvm_rt_trace_write_node) - 1] = '\0';
       vxUnmapUserDataObject(obj->config, map_id);
     }
   }

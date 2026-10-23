@@ -100,7 +100,7 @@ const vector<TidlConstraint> tidlConstraintBatchNorm =
                 float momentum = layer->layerPCParams.batchNormParams.momentum;
                 if(abs(momentum - 0.9) >= 0.000001)
                 {
-                    TIDL_GLOBAL_REPORT_WARNING("TIDL does not use 'momentum' attribute in BatchNorm layer")
+                    TIDL_GLOBAL_REPORT_WARNING("BatchNorm [%s]: 'momentum' will be ignored", (char *)layer->name);
                 }
             }
             return true;

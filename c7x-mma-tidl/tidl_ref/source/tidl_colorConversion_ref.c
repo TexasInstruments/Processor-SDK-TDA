@@ -73,6 +73,9 @@
 #include "tidl_alg_int.h"
 #include "tidl_commonUtils.h"
 #include "tidl_alg_utils.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -135,6 +138,13 @@ template<class T> static void TIDL_refUV420Conv(const T *pIn,
   uint32_t inBatchPitch = (uint32_t)inDataParams->pitch[TIDL_ROI_PITCH];
   uint32_t outBatchPitch = (uint32_t)outDataParams->pitch[TIDL_ROI_PITCH];
 
+  #ifdef BUILD_WITH_CUDA_COLORCONVERSION
+  // call cuda color conversion wrapper
+  TIDL_refCudaUV420Conv(pIn, pOut,
+    inWidth, inHeight,
+    inLinePitch, outLinePitch, outChPitch,
+    numTotBatches, inBatchPitch, outBatchPitch);
+  #else
   for (i0 = 0; i0 < numTotBatches; i0++)
   {
     for (i1 = 0; i1 < inHeight; i1++)
@@ -155,6 +165,7 @@ template<class T> static void TIDL_refUV420Conv(const T *pIn,
       }
     }
   }
+  #endif
 }
 /**
  * @brief ColorConversion refernece implementation for different bit-depths
@@ -196,6 +207,7 @@ int32_t TIDL_colorConversionRefProcess(void *pIn,
     tidl_printf(0, " Unsupported elementType for for UV420 Conversion, Exiting from %s, %d\n", __FILE__, __LINE__);
     status = TIDL_ERR_INVALID_TYPE;
   }
+
   if (status == TIDL_SUCCESS)
   {
     TIDL_L1DandL2CacheWbInv();

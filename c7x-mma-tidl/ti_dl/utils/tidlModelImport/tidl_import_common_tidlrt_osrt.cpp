@@ -69,4 +69,5 @@
 #include <stdio.h>
 #include "tidl_import_diag.h"
 
+#undef __MODULE__
 #define __MODULE__ ""

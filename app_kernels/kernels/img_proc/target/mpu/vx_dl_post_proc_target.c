@@ -662,76 +662,123 @@ static vx_status VX_CALLBACK tivxKernelDLPostProcProcess
             img.width       = output_image_desc->width;
             img.height      = output_image_desc->height;
 
-            for(i = 0; i < prms->num_input_tensors; i++)
+            VX_PRINT(VX_ZONE_INFO, "od_prms.outputFormat = %u (0=NATIVE/TIDLRT, 1=REFORMATTED/OSRT)\n", prms->od_prms.outputFormat);
+
+            if(prms->od_prms.outputFormat == TIVX_DL_POST_PROC_OD_OUTPUT_NATIVE)
             {
-                output_buffer[i] = (vx_float32 *)in_tensor_target_ptr[i];
+                /* Native TIDL_DetectionOutputLayer output (TIDLRT flow, no
+                 * TIDL_OdOutputReformatLayer): a single tensor holding a
+                 * TIDL_ODLayerHeaderInfo header followed by numDetObjects
+                 * TIDL_ODLayerObjInfo records. Box coordinates are
+                 * normalized to [0,1] here, unlike the reformatted OSRT
+                 * layout below where they are already in pixel units. */
+                TIDL_ODLayerHeaderInfo *header = (TIDL_ODLayerHeaderInfo *)in_tensor_target_ptr[0];
+                TIDL_ODLayerObjInfo    *bboxPtr = (TIDL_ODLayerObjInfo *)(((uint8_t *)header) + (int32_t)header->objInfoOffset);
+                int32_t                 pitch = (int32_t)header->objInfoSize;
+                int32_t                 numDet = (int32_t)header->numDetObjects;
 
-                uint32_t nDims = in_tensor_desc[i]->number_of_dimensions;
-
-                for (j = 0; j < in_tensor_desc[i]->number_of_dimensions; j++)
+                for(i = 0; i < numDet; i++)
                 {
-                    if(in_tensor_desc[i]->dimensions[j] == 1)
+                    if (bboxPtr->score >= prms->od_prms.viz_th)
                     {
-                        nDims--;
+                        vx_int32 box[4];
+                        vx_int32 label = (vx_int32)bboxPtr->label;
+
+                        box[0] = (vx_int32)(bboxPtr->xmin * output_image_desc->width);
+                        box[1] = (vx_int32)(bboxPtr->ymin * output_image_desc->height);
+                        box[2] = (vx_int32)(bboxPtr->xmax * output_image_desc->width);
+                        box[3] = (vx_int32)(bboxPtr->ymax * output_image_desc->height);
+
+                        VX_PRINT(VX_ZONE_INFO, "box[0] = %d, box[1] = %d, box[2] =%d, box[3] = %d, label = %d, score = %f\n",
+                                                    box[0], box[1], box[2], box[3], label, bboxPtr->score);
+
+                        int32_t index = prms->od_prms.labelOffset[label - prms->od_prms.labelIndexOffset];
+                        char *classname = prms->od_prms.classnames[index];
+
+                        overlayBoundingBox(&img, box, classname, &boxColor,
+                                            &textColor, &textBGColor, &textFont);
                     }
-                }
 
-                if(nDims == 1)
-                {
-                    firstDims[i] = 1;
+                    bboxPtr = (TIDL_ODLayerObjInfo *)(((uint8_t *)bboxPtr) + pitch);
                 }
-                else
-                {
-                    firstDims[i] = in_tensor_desc[i]->dimensions[0];
-                }
-                VX_PRINT(VX_ZONE_INFO, "firstDims[%d] = %d \n", i, firstDims[i]); 
             }
-
-            int32_t numEntries = (in_tensor_desc[prms->num_input_tensors-1]->dimensions[0] *
-                                    in_tensor_desc[prms->num_input_tensors-1]->dimensions[1] *
-                                    in_tensor_desc[prms->num_input_tensors-1]->dimensions[2]) / firstDims[prms->num_input_tensors-1];
-
-            VX_PRINT(VX_ZONE_INFO, "numEntries = %d \n", numEntries);
-
-            for ( i = 0; i < numEntries; i++)
+            else if(prms->od_prms.outputFormat == TIVX_DL_POST_PROC_OD_OUTPUT_REFORMATTED)
             {
-                vx_float32      score;
-                vx_int32        label;
-                vx_int32        box[4];
-
-                if(prms->num_input_tensors > (sizeof(firstDims) / sizeof(firstDims[0]))
-                    || prms->num_input_tensors > (sizeof(output_buffer) / sizeof(output_buffer[0])))
+                for(i = 0; i < prms->num_input_tensors; i++)
                 {
-                    VX_PRINT(VX_ZONE_ERROR, "Number of input tensors can not be greater than size of 4. \n");
-                    return VX_FAILURE;
+                    output_buffer[i] = (vx_float32 *)in_tensor_target_ptr[i];
+
+                    uint32_t nDims = in_tensor_desc[i]->number_of_dimensions;
+
+                    for (j = 0; j < in_tensor_desc[i]->number_of_dimensions; j++)
+                    {
+                        if(in_tensor_desc[i]->dimensions[j] == 1)
+                        {
+                            nDims--;
+                        }
+                    }
+
+                    if(nDims == 1)
+                    {
+                        firstDims[i] = 1;
+                    }
+                    else
+                    {
+                        firstDims[i] = in_tensor_desc[i]->dimensions[0];
+                    }
+                    VX_PRINT(VX_ZONE_INFO, "firstDims[%d] = %d \n", i, firstDims[i]);
                 }
 
-                score = getVal(firstDims, prms->num_input_tensors, output_buffer, i, prms->od_prms.formatter[5]);
+                int32_t numEntries = (in_tensor_desc[prms->num_input_tensors-1]->dimensions[0] *
+                                        in_tensor_desc[prms->num_input_tensors-1]->dimensions[1] *
+                                        in_tensor_desc[prms->num_input_tensors-1]->dimensions[2]) / firstDims[prms->num_input_tensors-1];
 
-                VX_PRINT(VX_ZONE_INFO, "score = %f \n", score);
+                VX_PRINT(VX_ZONE_INFO, "numEntries = %d \n", numEntries);
 
-                if (score < prms->od_prms.viz_th)
+                for ( i = 0; i < numEntries; i++)
                 {
-                    continue;
+                    vx_float32      score;
+                    vx_int32        label;
+                    vx_int32        box[4];
+
+                    if(prms->num_input_tensors > (sizeof(firstDims) / sizeof(firstDims[0]))
+                        || prms->num_input_tensors > (sizeof(output_buffer) / sizeof(output_buffer[0])))
+                    {
+                        VX_PRINT(VX_ZONE_ERROR, "Number of input tensors can not be greater than size of 4. \n");
+                        return VX_FAILURE;
+                    }
+
+                    score = getVal(firstDims, prms->num_input_tensors, output_buffer, i, prms->od_prms.formatter[5]);
+
+                    VX_PRINT(VX_ZONE_INFO, "score = %f \n", score);
+
+                    if (score < prms->od_prms.viz_th)
+                    {
+                        continue;
+                    }
+
+                    box[0] = getVal(firstDims, prms->num_input_tensors, output_buffer, i, prms->od_prms.formatter[0]) * prms->od_prms.scaleX;
+                    box[1] = getVal(firstDims, prms->num_input_tensors, output_buffer, i, prms->od_prms.formatter[1]) * prms->od_prms.scaleY;
+                    box[2] = getVal(firstDims, prms->num_input_tensors, output_buffer, i, prms->od_prms.formatter[2]) * prms->od_prms.scaleX;
+                    box[3] = getVal(firstDims, prms->num_input_tensors, output_buffer, i, prms->od_prms.formatter[3]) * prms->od_prms.scaleY;
+
+                    label = (vx_int32)getVal(firstDims, prms->num_input_tensors, output_buffer, i, prms->od_prms.formatter[4]);
+
+                    VX_PRINT(VX_ZONE_INFO, "box[0] = %d, box[1] = %d, box[2] =%d, box[3] = %d, label = %d, score = %f\n",
+                                                box[0], box[1], box[2], box[3], label, score);
+
+                    VX_PRINT(VX_ZONE_INFO, " label = %d, prms->od_prms.labelIndexOffset = %d \n", label, prms->od_prms.labelIndexOffset);
+
+                    int32_t index = prms->od_prms.labelOffset[label - prms->od_prms.labelIndexOffset];
+                    char *classname = prms->od_prms.classnames[index];
+
+                    overlayBoundingBox(&img, box, classname, &boxColor,
+                                        &textColor, &textBGColor, &textFont);
                 }
-                
-                box[0] = getVal(firstDims, prms->num_input_tensors, output_buffer, i, prms->od_prms.formatter[0]) * prms->od_prms.scaleX;
-                box[1] = getVal(firstDims, prms->num_input_tensors, output_buffer, i, prms->od_prms.formatter[1]) * prms->od_prms.scaleY;
-                box[2] = getVal(firstDims, prms->num_input_tensors, output_buffer, i, prms->od_prms.formatter[2]) * prms->od_prms.scaleX;
-                box[3] = getVal(firstDims, prms->num_input_tensors, output_buffer, i, prms->od_prms.formatter[3]) * prms->od_prms.scaleY;
-
-                label = (vx_int32)getVal(firstDims, prms->num_input_tensors, output_buffer, i, prms->od_prms.formatter[4]);
-
-                VX_PRINT(VX_ZONE_INFO, "box[0] = %d, box[1] = %d, box[2] =%d, box[3] = %d, label = %d, score = %f\n",
-                                            box[0], box[1], box[2], box[3], label, score);
-
-                VX_PRINT(VX_ZONE_INFO, " label = %d, prms->od_prms.labelIndexOffset = %d \n", label, prms->od_prms.labelIndexOffset);
-
-                int32_t index = prms->od_prms.labelOffset[label - prms->od_prms.labelIndexOffset];
-                char *classname = prms->od_prms.classnames[index];
-
-                overlayBoundingBox(&img, box, classname, &boxColor, 
-                                    &textColor, &textBGColor, &textFont);
+            }
+            else
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Invalid output format for object detection post process\n");
             }
         }
         else if(prms->task_type == TIVX_DL_POST_PROC_SEGMENTATION_TASK_TYPE)

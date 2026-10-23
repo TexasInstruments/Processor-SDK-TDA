@@ -569,14 +569,6 @@ then
         fi
         echo "[tvm] Done"
 
-        if [ -d c7x-mma-tidl/ti_dl/utils/python ]
-        then
-            echo "[Configuring c7x-mma-tidl for ${SOC}] Checking ..."
-            cd c7x-mma-tidl/ti_dl/utils/python/
-            python3 configureRepoForDevice.py ${SOC} &> /dev/null
-            cd -
-        fi
-
         echo "[DL conformance Models] Checking ..."
         if [ -d c7x-mma-tidl/ti_dl/test/testvecs/models/public/caffe/mobileNet1.0v1 ]; then
             echo "c7x-mma-tidl/ti_dl/test/testvecs/models/public/caffe/mobileNet1.0v1 found!"

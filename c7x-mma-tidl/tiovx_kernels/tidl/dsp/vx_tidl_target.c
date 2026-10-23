@@ -71,7 +71,9 @@
 #include "tivx_kernels_target_utils.h"
 #include "tidl_custom.h"
 #include "app_fileio.h"
+#if !defined(SOC_TDA54)
 #include <app_udma.h>
+#endif
 #include "../../rt/inc/tidl_rt_force_negative_test.h"
 #include "tivx_tidl_kernels.h"
 
@@ -203,7 +205,7 @@ static int32_t tivxKernelTIDLLog(const char * format, va_list va_args_ptr);
 // static int32_t tivxKernelTIDLDumpToFile(const char * fileName, void * addr, int32_t size, void * tracePtr);
 
 /* File Private functions */
-static vx_status testChecksum(void *dataPtr, const uint8_t *refQC, vx_int32 data_size, uint32_t loc);
+static vx_status testChecksum(void *dataPtr, const uint8_t *refQC, uint32_t data_size, uint32_t loc);
 
 static int32_t tidl_AllocNetInputMem(IVISION_BufDesc *BufDescList, const sTIDL_IOBufDesc_t *pConfig);
 static int32_t tidl_AllocNetOutputMem(IVISION_BufDesc *BufDescList, const sTIDL_IOBufDesc_t *pConfig);
@@ -891,6 +893,32 @@ static vx_status VX_CALLBACK tivxKernelTIDLControl(
                 VX_PRINT(VX_ZONE_INFO, "TIDL control complete for TIVX_TIDL_CODE_COVERAGE_UPLOAD\n");
                 break;
             }
+            case TIVX_TIDL_CMD_SET_MUTABLE_OPTIONS:
+            {
+                VX_PRINT(VX_ZONE_INFO, "Running TIDL control for TIVX_TIDL_CMD_SET_MUTABLE_OPTIONS\n");
+                if((num_params > 0U) && (obj_desc[0] != NULL))
+                {
+                    tivx_obj_desc_user_data_object_t * mutable_opts_desc = (tivx_obj_desc_user_data_object_t *)obj_desc[0];
+                    void * mutable_opts_target_ptr = tivxMemShared2TargetPtr(&mutable_opts_desc->mem_ptr);
+                    (void)tivxMemBufferMap(mutable_opts_target_ptr, mutable_opts_desc->mem_size, (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_ONLY);
+
+                    status = tivxAlgiVisionControl
+                            (
+                                tidlObj->algHandle,
+                                (IALG_Cmd)node_cmd_id,
+                                (IALG_Params *)(mutable_opts_target_ptr),
+                                NULL
+                            );
+
+                    tivxCheckStatus(&status, tivxMemBufferUnmap(mutable_opts_target_ptr, mutable_opts_desc->mem_size, (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_ONLY));
+                }
+                else
+                {
+                    status = (vx_status)VX_FAILURE;
+                }
+                VX_PRINT(VX_ZONE_INFO, "TIDL control complete for TIVX_TIDL_CMD_SET_MUTABLE_OPTIONS\n");
+                break;
+            }
             default:
                 break;
         }
@@ -1050,7 +1078,7 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
 
           if(tidlObj->tidlParams.compute_config_checksum == 1U)
           {
-            status = testChecksum(&tidlObj->tidlParams.ioBufDesc, &tidlObj->tidlParams.config_checksum[0], (int32_t)(sizeof(sTIDL_IOBufDesc_t)), 0U);
+            status = testChecksum(&tidlObj->tidlParams.ioBufDesc, &tidlObj->tidlParams.config_checksum[0], (uint32_t)(sizeof(sTIDL_IOBufDesc_t)), 0U);
           }
         }
         if ((vx_status)VX_SUCCESS == status)
@@ -1091,10 +1119,10 @@ static vx_status VX_CALLBACK tivxKernelTIDLCreate
             sTIDL_Network_t *pNet = (sTIDL_Network_t *)network_target_ptr;
             uint8_t *pPerfInfo = (uint8_t *)network_target_ptr + pNet->dataFlowInfo;
 
-            VX_PRINT(VX_ZONE_INFO, "tidlObj->netSize = %d\n", tidlObj->netSize);
-            VX_PRINT(VX_ZONE_INFO, "pNet->dataFlowInfo = %d \n", pNet->dataFlowInfo);
+            VX_PRINT(VX_ZONE_INFO, "tidlObj->netSize = %u\n", tidlObj->netSize);
+            VX_PRINT(VX_ZONE_INFO, "pNet->dataFlowInfo = %u \n", pNet->dataFlowInfo);
 
-            status = testChecksum(pPerfInfo, &tidlObj->tidlParams.network_checksum[0], (int32_t)tidlObj->netSize - (int32_t)pNet->dataFlowInfo, 0U);
+            status = testChecksum(pPerfInfo, &tidlObj->tidlParams.network_checksum[0], tidlObj->netSize - pNet->dataFlowInfo, 0U);
           }
         }
 
@@ -1427,19 +1455,19 @@ static vx_status VX_CALLBACK tivxKernelTIDLDelete(
 }
 
 
-static vx_status testChecksum(void *dataPtr, const uint8_t *refQC, vx_int32 data_size, uint32_t loc)
+static vx_status testChecksum(void *dataPtr, const uint8_t *refQC, uint32_t data_size, uint32_t loc)
 {
     vx_status status = (vx_status)VX_SUCCESS;
 
     vx_uint8 qcData[TIVX_TIDL_J7_CHECKSUM_SIZE];
     int32_t match = 1;
-    int32_t x;
+    uint32_t x;
 
     /* Get QC of config params passed from host to target */
     tivx_tidl_j7_get_qc(dataPtr, qcData, data_size);
 
     /* Print QC */
-    for(x = 0; x < TIVX_TIDL_J7_CHECKSUM_SIZE; x++)
+    for(x = 0U; x < TIVX_TIDL_J7_CHECKSUM_SIZE; x++)
     {
       if(qcData[x] != refQC[x])
       {
@@ -1449,7 +1477,7 @@ static vx_status testChecksum(void *dataPtr, const uint8_t *refQC, vx_int32 data
     }
     if(match == 0)
     {
-      VX_PRINT(VX_ZONE_ERROR, "Computing checksum at 0x%08X, size = %d\n", dataPtr,  data_size);
+      VX_PRINT(VX_ZONE_ERROR, "Computing checksum at 0x%08X, size = %u\n", dataPtr,  data_size);
       VX_PRINT(VX_ZONE_ERROR, "QC code mismatch at %d \n", loc);
       status = (vx_status)VX_FAILURE;
     }

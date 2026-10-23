@@ -78,6 +78,7 @@ const char *TIDL_graphFontColors[] =
   "FFFFFF",
   "FFFFFF",
   "FFFFFF",
+  "FFFFFF",
   "FFFFFF"
 };
 
@@ -157,6 +158,11 @@ const char *TIDL_graphBgColors[] =
   "#00b4d8",    //"Size",
   "#eab676",    //"Attention"
   "#9cc576",    //"NonZero"
+  "#a14405",    //"GroupQueryAttention"
+  "#1572be",    //"MatMulNBits"
+  "#FF7F50",    //"RotaryEmbedding"
+  "#8e44ad",    //"Cache"
+  "#00acc1",    //"MemCopy"
   "#A84060",    //"UnSuported" ,
   "#A84060",    //"PriorBox" ,
   "#A84060",    //"Permute" ,
@@ -284,14 +290,14 @@ static void tidl_LegacyNodeInfo(char *nodeName, const sTIDL_Network_t* pTIDLNetS
   if(pTIDLNetStructure->TIDLLayers[i].numOutBufs != -1)
   {
     sprintf(nodeName,"Layer %d Data ID: %d: %s %s \nInput Dimensions : %dx%dx%dx%dx%dx%d\nOutput Dimensions : %dx%dx%dx%dx%dx%d\n", i, pTIDLNetStructure->TIDLLayers[i].outData.dataId, layerTypeName.c_str(),
-    layersInfo[i].layerName, pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_BATCH],layersInfo[i].layerName, pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM1],layersInfo[i].layerName, pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM2], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_NUMCH], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_HEIGHT], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_WIDTH]
+    layersInfo[i].layerName.c_str(), pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_BATCH], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM1], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM2], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_NUMCH], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_HEIGHT], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_WIDTH]
     , pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_BATCH],pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_DIM1],pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_DIM2], pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_NUMCH], pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_HEIGHT], pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_WIDTH]
     );
   }
   else
   {
     sprintf(nodeName,"Layer %d Data ID : %d: %s %s\nInput Dimensions : %dx%dx%dx%dx%dx%d\nOutput Dimensions : %dx%dx%dx%dx%dx%d\n", i, (pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dataId), layerTypeName.c_str(),
-    layersInfo[i].layerName, pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_BATCH],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM1],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM2], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_NUMCH], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_HEIGHT], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_WIDTH]
+    layersInfo[i].layerName.c_str(), pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_BATCH],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM1],pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_DIM2], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_NUMCH], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_HEIGHT], pTIDLNetStructure->TIDLLayers[inLayerIdx].outData.dimValues[TIDL_DIM_WIDTH]
     , pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_BATCH],pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_DIM1],pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_DIM2], pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_NUMCH], pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_HEIGHT], pTIDLNetStructure->TIDLLayers[i].outData.dimValues[TIDL_DIM_WIDTH]
     );
   }
@@ -398,6 +404,544 @@ static std::string tidl_NodeInfo(const sTIDL_Network_t* pTIDLNetStructure, const
    return oss.str();
 }
 
+static int32_t extractBlockId(const char *layerName)
+{
+    int N;
+    if (layerName && sscanf(layerName, "/model/layers.%d/", &N) == 1)
+        return N;
+    return -1;
+}
+
+static bool hasBlockStructure(const sTIDL_Network_t *net)
+{
+    if (net->numLayers <= 800) return false;
+    int blockCount = 0;
+    for (int i = 0; i < net->numLayers; i++)
+    {
+        if (!layersInfo[i].layerName.empty() &&
+            extractBlockId(layersInfo[i].layerName.c_str()) >= 0)
+            blockCount++;
+    }
+    return (blockCount * 2) > net->numLayers;
+}
+
+/**
+ * Cache input gated by cacheImport, output gated by
+ * cacheExport per invoke call. Shared by tidltb_dotPrintNetInfo's flat
+ * per-edge check and renderBlockSVG's three edge sites (intra-block,
+ * cross-block/boundary input, forward-pointing boundary output) -- src may
+ * be -1 (unresolved/generic-fallback producer) at the cross-block site, so
+ * callers must guard on src >= 0 before calling.
+ */
+static bool tidl_isCacheOptionalEdge(const sTIDL_Network_t *net, int32_t src, int32_t dst, int32_t dstInSlot)
+{
+    return (net->TIDLLayers[dst].layerType == TIDL_CacheLayer &&
+            net->TIDLLayers[dst].layerParams.cacheParams.isOptionalInput[dstInSlot] == 1) ||
+           (net->TIDLLayers[src].layerType == TIDL_CacheLayer &&
+            (net->TIDLLayers[dst].layerType == TIDL_DataLayer || net->TIDLLayers[dst].layerType == TIDL_MemCopyLayer));
+}
+
+static void setCommonGraphAttrs(Agraph_t *g)
+{
+    agattr(g, AGNODE, (char *)"color",     (char *)"#000000");
+    agattr(g, AGNODE, (char *)"fontcolor", (char *)"#FFFFFF");
+    agattr(g, AGNODE, (char *)"fontsize",  (char *)"10");
+    agattr(g, AGNODE, (char *)"height",    (char *)"0.24");
+    agattr(g, AGNODE, (char *)"style",     (char *)"rounded,filled");
+    agattr(g, AGNODE, (char *)"penwidth",  (char *)"2");
+    agattr(g, AGNODE, (char *)"fillcolor", (char *)"#000000");
+    agattr(g, AGNODE, (char *)"shape",     (char *)"box");
+    agattr(g, AGNODE, (char *)"label",     (char *)"");
+    agattr(g, AGNODE, (char *)"id",        (char *)"");
+    agattr(g, AGEDGE, (char *)"label",     (char *)"");
+    agattr(g, AGEDGE, (char *)"fontsize",  (char *)"8");
+    agattr(g, AGEDGE, (char *)"penwidth",  (char *)"0.7");
+    agattr(g, AGEDGE, (char *)"arrowhead", (char *)"vee");
+    agattr(g, AGEDGE, (char *)"arrowsize", (char *)"0.5");
+    agattr(g, AGRAPH, (char *)"rankdir",   (char *)"TB");
+    agattr(g, AGRAPH, (char *)"ranksep",   (char *)"0.1");
+    agattr(g, AGEDGE, (char *)"style",     (char *)"solid");
+}
+
+/* Render one transformer block's layers as a sub-graph. Returns malloc'd SVG string (caller frees). */
+static char* renderBlockSVG(const sTIDL_Network_t *net, sPerfSim_t *perSim,
+                             int32_t blockId, const int32_t *layerToBlock)
+{
+    GVC_t *gvc2 = gvContext();
+    char graphName[64];
+    snprintf(graphName, sizeof(graphName), "block_%d", blockId);
+    Agraph_t *g = agopen(graphName, Agdirected, NULL);
+    setCommonGraphAttrs(g);
+
+    Agnode_t *nodeArr[TIDL_NUM_MAX_LAYERS] = {NULL};
+    Agnode_t *inputBoundary = NULL;
+    char nodeName[512], edgeName[64];
+
+    /* Create a node for each layer in this block */
+    for (int i = 0; i < net->numLayers; i++)
+    {
+        if (layerToBlock[i] != blockId) continue;
+        std::string info = tidl_NodeInfo(net, perSim, i);
+        nodeArr[i] = agnode(g, (char*)info.c_str(), TRUE);
+        agset(nodeArr[i], (char *)"fillcolor", (char*)TIDL_graphBgColors[net->TIDLLayers[i].layerType]);
+        agset(nodeArr[i], (char *)"color",     (char*)TIDL_nodeElemTypeColors[net->TIDLLayers[i].outData.elementType]);
+        std::string lt = TIDL_Strings::layerTypeShort(net->TIDLLayers[i].layerType);
+        if (net->TIDLLayers[i].layerType == TIDL_EltWiseLayer)
+            lt = TIDL_Strings::eltwiseOpTypeString(net->TIDLLayers[i].layerParams.eltWiseParams.eltWiseType);
+        else if (net->TIDLLayers[i].layerType == TIDL_BatchNormLayer) {
+            if (net->TIDLLayers[i].actParams.actType != TIDL_NoAct)
+                lt = TIDL_Strings::actTypeShort(net->TIDLLayers[i].actParams.actType);
+            else if (net->TIDLLayers[i].clipParams.isClipEnabled == 1)
+                lt = "Clip";
+        }
+        else if (net->TIDLLayers[i].layerType == TIDL_ScatterElementsLayer &&
+                 net->TIDLLayers[i].layerParams.scatterElementsParams.axis == -1)
+            lt = "ScatterND";
+        else if (net->TIDLLayers[i].layerType == TIDL_ArgOpLayer)
+            lt = TIDL_Strings::argOpTypeString(net->TIDLLayers[i].layerParams.argOpParams.argOpType);
+        else if (net->TIDLLayers[i].layerType == TIDL_LogicalOpLayer)
+            lt = TIDL_Strings::logicalOpTypeString(net->TIDLLayers[i].layerParams.logicalOpLayerParams.operatorType);
+        snprintf(nodeName, sizeof(nodeName), "%s [%d %d]", lt.c_str(), net->TIDLLayers[i].outData.dataId, i);
+        agset(nodeArr[i],(char *) "label", nodeName);
+    }
+
+    /* Create edges.
+     * External inputs are split into three visual categories:
+     *   - Algorithm layers from other blocks  → one labeled node per source ("MatMul [N]\n(Block B)")
+     *   - DataLayer inputs (seqlens, KV etc.) → one labeled node per source (tensor name)
+     *   - ConstData (weights/biases)          → single grouped "Weights" node
+     */
+    Agnode_t *extAlgNodes[TIDL_NUM_MAX_LAYERS]  = {NULL}; /* one per cross-block algo source */
+    Agnode_t *dataInputNodes[TIDL_NUM_MAX_LAYERS] = {NULL}; /* one per DataLayer source */
+    Agnode_t *weightBoundary = NULL;
+    for (int i = 0; i < net->numLayers; i++)
+    {
+        if (layerToBlock[i] != blockId) continue;
+        for (int j = 0; j < net->TIDLLayers[i].numInBufs; j++)
+        {
+            int32_t src = tidl_getInLayer(net, net->numLayers, net->TIDLLayers[i].inData[j]);
+            if (src >= 0 && layerToBlock[src] == blockId && nodeArr[src])
+            {
+                /* Intra-block edge */
+                snprintf(edgeName, sizeof(edgeName), "E%d_%d", src, i);
+                Agedge_t *e = agedge(g, nodeArr[src], nodeArr[i], edgeName, TRUE);
+                std::string edgeHtml = TIDL_shapeHtmlLabel(&net->TIDLLayers[src].outData);
+                char *edgeHtmlLabel = agstrdup_html(g, (char*)edgeHtml.c_str());
+                agset(e, (char *)"label", edgeHtmlLabel);
+                if (tidl_isCacheOptionalEdge(net, src, i, j))
+                {
+                    agset(e, (char *)"style", (char *)"dashed");
+                }
+            }
+            else
+            {
+                /* Cross-block / external input */
+                Agnode_t *bNode = NULL;
+                bool addDimLabel = false;
+
+                if (src >= 0 && net->TIDLLayers[src].layerType == TIDL_ConstDataLayer)
+                {
+                    /* Group all weight/bias constants into one node */
+                    if (!weightBoundary)
+                    {
+                        weightBoundary = agnode(g, (char *)"Weights", TRUE);
+                        agset(weightBoundary, (char *)"fillcolor", (char *)"#444444");
+                        agset(weightBoundary, (char *)"label",     (char *)"Weights");
+                    }
+                    bNode = weightBoundary;
+                }
+                else if (src >= 0 && net->TIDLLayers[src].layerType == TIDL_DataLayer)
+                {
+                    /* DataLayer input: same appearance as real DataLayer nodes */
+                    if (!dataInputNodes[src])
+                    {
+                        std::string srcInfo = tidl_NodeInfo(net, perSim, src);
+                        std::string lt = TIDL_Strings::layerTypeShort(net->TIDLLayers[src].layerType);
+                        char dataId[64], dataLabel[128];
+                        snprintf(dataId,    sizeof(dataId),    "DI_%d", src);
+                        snprintf(dataLabel, sizeof(dataLabel), "%s [%d %d]", lt.c_str(),
+                                 net->TIDLLayers[src].outData.dataId, src);
+                        dataInputNodes[src] = agnode(g, (char*)srcInfo.c_str(), TRUE);
+                        agset(dataInputNodes[src], (char *)"id",        dataId);
+                        agset(dataInputNodes[src], (char *)"fillcolor", (char*)TIDL_graphBgColors[net->TIDLLayers[src].layerType]);
+                        agset(dataInputNodes[src], (char *)"color",     (char*)TIDL_nodeElemTypeColors[net->TIDLLayers[src].outData.elementType]);
+                        agset(dataInputNodes[src], (char *)"label",     dataLabel);
+                    }
+                    bNode = dataInputNodes[src];
+                    addDimLabel = true;
+                }
+                else if (src >= 0)
+                {
+                    /* Algorithm layer output from another block: label with type, dataId, block */
+                    if (!extAlgNodes[src])
+                    {
+                        std::string lt = TIDL_Strings::layerTypeShort(net->TIDLLayers[src].layerType);
+                        if (net->TIDLLayers[src].layerType == TIDL_EltWiseLayer)
+                            lt = TIDL_Strings::eltwiseOpTypeString(net->TIDLLayers[src].layerParams.eltWiseParams.eltWiseType);
+                        else if (net->TIDLLayers[src].layerType == TIDL_BatchNormLayer) {
+                            if (net->TIDLLayers[src].actParams.actType != TIDL_NoAct)
+                                lt = TIDL_Strings::actTypeShort(net->TIDLLayers[src].actParams.actType);
+                            else if (net->TIDLLayers[src].clipParams.isClipEnabled == 1)
+                                lt = "Clip";
+                        }
+                        else if (net->TIDLLayers[src].layerType == TIDL_ScatterElementsLayer &&
+                                 net->TIDLLayers[src].layerParams.scatterElementsParams.axis == -1)
+                            lt = "ScatterND";
+                        else if (net->TIDLLayers[src].layerType == TIDL_ArgOpLayer)
+                            lt = TIDL_Strings::argOpTypeString(net->TIDLLayers[src].layerParams.argOpParams.argOpType);
+                        else if (net->TIDLLayers[src].layerType == TIDL_LogicalOpLayer)
+                            lt = TIDL_Strings::logicalOpTypeString(net->TIDLLayers[src].layerParams.logicalOpLayerParams.operatorType);
+                        std::string srcInfo = tidl_NodeInfo(net, perSim, src);
+                        char extId[64], extLabel[128];
+                        /* id encodes src layer index + source block for JS navigation */
+                        snprintf(extId,    sizeof(extId),    "EXT_SRC_%d_BLK_%d", src, layerToBlock[src]);
+                        snprintf(extLabel, sizeof(extLabel), "%s [%d %d]\n(Block %d)", lt.c_str(),
+                                 net->TIDLLayers[src].outData.dataId, src, layerToBlock[src]);
+                        extAlgNodes[src] = agnode(g, (char*)srcInfo.c_str(), TRUE);
+                        agset(extAlgNodes[src], (char *)"id",        extId);
+                        agset(extAlgNodes[src], (char *)"fillcolor", (char *)"#2a5070");
+                        agset(extAlgNodes[src], (char *)"label",     extLabel);
+                        agset(extAlgNodes[src], (char *)"style",     (char *)"rounded,filled,dashed");
+                        agset(extAlgNodes[src], (char *)"penwidth",  (char *)"1");
+                    }
+                    bNode = extAlgNodes[src];
+                    addDimLabel = true;
+                }
+                else
+                {
+                    /* src not found — generic fallback */
+                    if (!inputBoundary)
+                    {
+                        inputBoundary = agnode(g, (char *)"Inputs", TRUE);
+                        agset(inputBoundary, (char *)"fillcolor", (char *)"#555555");
+                        agset(inputBoundary, (char *)"label",     (char *)"Inputs");
+                    }
+                    bNode = inputBoundary;
+                }
+
+                snprintf(edgeName, sizeof(edgeName), "EI%d_%d", i, j);
+                Agedge_t *e = agedge(g, bNode, nodeArr[i], edgeName, TRUE);
+                if (addDimLabel && src >= 0)
+                {
+                    std::string edgeHtml = TIDL_shapeHtmlLabel(&net->TIDLLayers[src].outData);
+                    char *edgeHtmlLabel = agstrdup_html(g, (char*)edgeHtml.c_str());
+                    agset(e, (char *)"label", edgeHtmlLabel);
+                }
+                if (src >= 0 && tidl_isCacheOptionalEdge(net, src, i, j))
+                {
+                    agset(e, (char *)"style", (char *)"dashed");
+                }
+            }
+        }
+    }
+
+    /* Forward-pointing boundary nodes: layers in this block whose output feeds a
+     * consumer resolved to a *different* block. Mirrors extAlgNodes above but in
+     * the opposite direction, so a viewer can navigate forward to whatever
+     * consumes this block's output. Dedup by destination layer, one proxy per
+     * cross-block consumer (a consumer may have several inputs from this block,
+     * but still only needs a single incoming proxy node here). */
+    Agnode_t *extDstNodes[TIDL_NUM_MAX_LAYERS] = {NULL};
+    for (int i = 0; i < net->numLayers; i++)
+    {
+        if (layerToBlock[i] != blockId) continue;
+        /* Shared DataLayer/ConstData sources (e.g. attention_mask, seqlens, tied
+         * weights) can get assigned into this block by the propagation heuristic
+         * even though they're really global resources reused by many blocks.
+         * Don't treat their fan-out to other blocks as a forward pointer. */
+        if (net->TIDLLayers[i].layerType == TIDL_DataLayer ||
+            net->TIDLLayers[i].layerType == TIDL_ConstDataLayer) continue;
+        for (int j = 0; j < net->numLayers; j++)
+        {
+            if (layerToBlock[j] < 0 || layerToBlock[j] == blockId) continue;
+            if (net->TIDLLayers[j].layerType == TIDL_DataLayer) continue;
+            bool consumesOutput = false;
+            for (int k = 0; k < net->TIDLLayers[j].numInBufs; k++)
+            {
+                if (net->TIDLLayers[j].inData[k] == net->TIDLLayers[i].outData.dataId)
+                {
+                    consumesOutput = true;
+                    break;
+                }
+            }
+            if (!consumesOutput) continue;
+
+            if (!extDstNodes[j])
+            {
+                std::string lt = TIDL_Strings::layerTypeShort(net->TIDLLayers[j].layerType);
+                if (net->TIDLLayers[j].layerType == TIDL_EltWiseLayer)
+                    lt = TIDL_Strings::eltwiseOpTypeString(net->TIDLLayers[j].layerParams.eltWiseParams.eltWiseType);
+                else if (net->TIDLLayers[j].layerType == TIDL_BatchNormLayer) {
+                    if (net->TIDLLayers[j].actParams.actType != TIDL_NoAct)
+                        lt = TIDL_Strings::actTypeShort(net->TIDLLayers[j].actParams.actType);
+                    else if (net->TIDLLayers[j].clipParams.isClipEnabled == 1)
+                        lt = "Clip";
+                }
+                else if (net->TIDLLayers[j].layerType == TIDL_ScatterElementsLayer &&
+                         net->TIDLLayers[j].layerParams.scatterElementsParams.axis == -1)
+                    lt = "ScatterND";
+                else if (net->TIDLLayers[j].layerType == TIDL_ArgOpLayer)
+                    lt = TIDL_Strings::argOpTypeString(net->TIDLLayers[j].layerParams.argOpParams.argOpType);
+                else if (net->TIDLLayers[j].layerType == TIDL_LogicalOpLayer)
+                    lt = TIDL_Strings::logicalOpTypeString(net->TIDLLayers[j].layerParams.logicalOpLayerParams.operatorType);
+                std::string dstInfo = tidl_NodeInfo(net, perSim, j);
+                char extId[64], extLabel[128];
+                /* id encodes dst layer index + dest block for JS navigation */
+                snprintf(extId,    sizeof(extId),    "EXT_DST_%d_BLK_%d", j, layerToBlock[j]);
+                snprintf(extLabel, sizeof(extLabel), "%s [%d %d]\n(Block %d)", lt.c_str(),
+                         net->TIDLLayers[j].outData.dataId, j, layerToBlock[j]);
+                extDstNodes[j] = agnode(g, (char*)dstInfo.c_str(), TRUE);
+                agset(extDstNodes[j], (char *)"id",        extId);
+                agset(extDstNodes[j], (char *)"fillcolor", (char *)"#2a5070");
+                agset(extDstNodes[j], (char *)"label",     extLabel);
+                agset(extDstNodes[j], (char *)"style",     (char *)"rounded,filled,dashed");
+                agset(extDstNodes[j], (char *)"penwidth",  (char *)"1");
+            }
+
+            snprintf(edgeName, sizeof(edgeName), "EO%d_%d", i, j);
+            Agedge_t *e = agedge(g, nodeArr[i], extDstNodes[j], edgeName, TRUE);
+            std::string edgeHtml = TIDL_shapeHtmlLabel(&net->TIDLLayers[i].outData);
+            char *edgeHtmlLabel = agstrdup_html(g, (char*)edgeHtml.c_str());
+            agset(e, (char *)"label", edgeHtmlLabel);
+            if (tidl_isCacheOptionalEdge(net, i, j, 0))
+            {
+                agset(e, (char *)"style", (char *)"dashed");
+            }
+        }
+    }
+
+    gvLayout(gvc2, g, "dot");
+    char *svgData = NULL;
+    unsigned int svgLen = 0;
+    gvRenderData(gvc2, g, "svg", &svgData, &svgLen);
+    gvFreeLayout(gvc2, g);
+    agclose(g);
+    gvFreeContext(gvc2);
+
+    /* Return a copy so caller owns it */
+    char *result = NULL;
+    if (svgData)
+    {
+        result = (char*)malloc(svgLen + 1);
+        if (result) { memcpy(result, svgData, svgLen); result[svgLen] = '\0'; }
+        gvFreeRenderData(svgData);
+    }
+    return result;
+}
+
+#define MAX_BLOCKS 256
+
+int32_t tidltb_dotPrintNetInfoGrouped(sTIDL_Network_t *pTIDLNetStructure, const char *fname)
+{
+    /* --- 1. Assign layers to blocks --- */
+    int32_t layerToBlock[TIDL_NUM_MAX_LAYERS];
+    int32_t maxBlockId = -1;
+    int32_t blockLayerCount[MAX_BLOCKS] = {0};
+
+    for (int i = 0; i < pTIDLNetStructure->numLayers; i++)
+        layerToBlock[i] = extractBlockId(layersInfo[i].layerName.c_str());
+
+    /* Forward propagation: push block IDs from consumers backward to producers.
+     * Handles custom-named intermediates (e.g. tidl_GQACustom) whose downstream
+     * Slice/Reshape layers carry proper /model/layers.N/ names. */
+    bool changed = true;
+    while (changed)
+    {
+        changed = false;
+        for (int i = 0; i < pTIDLNetStructure->numLayers; i++)
+        {
+            if (layerToBlock[i] >= 0) continue;
+            for (int j = i + 1; j < pTIDLNetStructure->numLayers; j++)
+            {
+                if (layerToBlock[j] < 0) continue;
+                for (int k = 0; k < pTIDLNetStructure->TIDLLayers[j].numInBufs; k++)
+                {
+                    if (pTIDLNetStructure->TIDLLayers[j].inData[k] ==
+                        pTIDLNetStructure->TIDLLayers[i].outData.dataId)
+                    {
+                        layerToBlock[i] = layerToBlock[j];
+                        changed = true;
+                        break;
+                    }
+                }
+                if (layerToBlock[i] >= 0) break;
+            }
+        }
+    }
+
+    /* Backward propagation: push block IDs from producers forward to consumers.
+     * Handles GQA/TopK/LSTM/GRU sibling outputs (present.N.key, present.N.value, etc.)
+     * that have NO downstream consumers so the forward pass cannot reach them,
+     * but whose producer (tidl_GQACustom) is already resolved to a block. */
+    changed = true;
+    while (changed)
+    {
+        changed = false;
+        for (int i = 0; i < pTIDLNetStructure->numLayers; i++)
+        {
+            if (layerToBlock[i] >= 0) continue;
+            if (pTIDLNetStructure->TIDLLayers[i].numInBufs == NOT_VALID) continue;
+            for (int j = 0; j < pTIDLNetStructure->TIDLLayers[i].numInBufs; j++)
+            {
+                int32_t src = tidl_getInLayer(pTIDLNetStructure, pTIDLNetStructure->numLayers,
+                                              pTIDLNetStructure->TIDLLayers[i].inData[j]);
+                if (src >= 0 && layerToBlock[src] >= 0)
+                {
+                    layerToBlock[i] = layerToBlock[src];
+                    changed = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    /* Compute maxBlockId and count layers per block */
+    for (int i = 0; i < pTIDLNetStructure->numLayers; i++)
+    {
+        if (layerToBlock[i] >= 0 && layerToBlock[i] < MAX_BLOCKS)
+        {
+            if (layerToBlock[i] > maxBlockId) maxBlockId = layerToBlock[i];
+            blockLayerCount[layerToBlock[i]]++;
+        }
+    }
+
+    if (maxBlockId < 0) return -1; /* shouldn't happen after hasBlockStructure check */
+
+    sPerfSim_t *perSim = NULL;
+    if (pTIDLNetStructure->dataFlowInfo != 0)
+        perSim = (sPerfSim_t *)((int8_t *)(pTIDLNetStructure) + pTIDLNetStructure->dataFlowInfo);
+
+    /* --- 2. Build collapsed summary graph --- */
+    GVC_t *gvc = gvContext();
+    Agraph_t *g = agopen((char*)"summary", Agdirected, NULL);
+    setCommonGraphAttrs(g);
+    agattr(g, AGRAPH, (char *)"pad", (char *)"0.5");
+
+    Agnode_t *inputNode = agnode(g, (char *)"Inputs", TRUE);
+    agset(inputNode, (char *)"fillcolor", (char *)"#555555");
+    agset(inputNode, (char *)"label", (char *)"Inputs");
+
+    Agnode_t *blockNodes[MAX_BLOCKS] = {NULL};
+    char blockKey[64], blockLabel[128], edgeKey[32];
+    for (int b = 0; b <= maxBlockId; b++)
+    {
+        snprintf(blockKey,   sizeof(blockKey),   "BLOCK_ID:%d", b);
+        snprintf(blockLabel, sizeof(blockLabel), "Block %d\n(%d layers)", b, blockLayerCount[b]);
+        blockNodes[b] = agnode(g, blockKey, TRUE);
+        agset(blockNodes[b], (char *)"fillcolor", (char *)"#00008b");
+        agset(blockNodes[b], (char *)"label",     blockLabel);
+        agset(blockNodes[b], (char *)"style",     (char *)"rounded,filled,dashed");
+        agset(blockNodes[b], (char *)"penwidth",  (char *)"2");
+    }
+
+    Agnode_t *outputNode = agnode(g, (char *)"Output", TRUE);
+    agset(outputNode, (char *)"fillcolor", (char *)"#555555");
+    agset(outputNode, (char *)"label", (char *)"Output");
+
+    snprintf(edgeKey, sizeof(edgeKey), "e_in_0");
+    agedge(g, inputNode, blockNodes[0], edgeKey, TRUE);
+    for (int b = 1; b <= maxBlockId; b++)
+    {
+        snprintf(edgeKey, sizeof(edgeKey), "e_%d_%d", b-1, b);
+        agedge(g, blockNodes[b-1], blockNodes[b], edgeKey, TRUE);
+    }
+    snprintf(edgeKey, sizeof(edgeKey), "e_%d_out", maxBlockId);
+    agedge(g, blockNodes[maxBlockId], outputNode, edgeKey, TRUE);
+
+    /* --- 3. Render summary SVG to memory --- */
+    gvLayout(gvc, g, "dot");
+    char *summarySvg = NULL;
+    unsigned int summaryLen = 0;
+    gvRenderData(gvc, g, "svg", &summarySvg, &summaryLen);
+    gvFreeLayout(gvc, g);
+    agclose(g);
+    gvFreeContext(gvc);
+
+    /* --- 4. Render per-block SVGs --- */
+    char **blockSvgs = (char**)calloc(maxBlockId + 1, sizeof(char*));
+    for (int b = 0; b <= maxBlockId; b++)
+        blockSvgs[b] = renderBlockSVG(pTIDLNetStructure, perSim, b, layerToBlock);
+
+    /* --- 5. Write HTML --- */
+    char htmlFileName[MAX_FILE_NAME_SIZE];
+    strcpy(htmlFileName, fname);
+    strcat(htmlFileName, ".html");
+
+    if (HTML_TEMPLATE == NULL || summarySvg == NULL)
+    {
+        printf("Could not generate HTML for grouped visualization.\n");
+        if (summarySvg) gvFreeRenderData(summarySvg);
+        for (int b = 0; b <= maxBlockId; b++) if (blockSvgs[b]) free(blockSvgs[b]);
+        free(blockSvgs);
+        return -1;
+    }
+
+    long templateSize = (long)strlen(HTML_TEMPLATE);
+
+    /* Find mainSvg insertion point */
+    const char *mainSvgMarker = "<div id=\"mainSvg\">";
+    char *insertPos = strstr((char*)HTML_TEMPLATE, mainSvgMarker);
+    if (!insertPos)
+    {
+        gvFreeRenderData(summarySvg);
+        for (int b = 0; b <= maxBlockId; b++) if (blockSvgs[b]) free(blockSvgs[b]);
+        free(blockSvgs);
+        return -1;
+    }
+    insertPos += strlen(mainSvgMarker);
+
+    /* Find block data placeholder */
+    const char *blockPlaceholder = "<!--BLOCK_DATA_PLACEHOLDER-->";
+    char *blockInsertPos = strstr((char*)HTML_TEMPLATE, blockPlaceholder);
+
+    FILE *htmlFile = fopen(htmlFileName, "w");
+    if (!htmlFile)
+    {
+        printf("Error creating HTML file: %s\n", htmlFileName);
+        gvFreeRenderData(summarySvg);
+        for (int b = 0; b <= maxBlockId; b++) if (blockSvgs[b]) free(blockSvgs[b]);
+        free(blockSvgs);
+        return -1;
+    }
+
+    /* Write template up to mainSvg insertion point, then summary SVG */
+    fwrite(HTML_TEMPLATE, 1, insertPos - HTML_TEMPLATE, htmlFile);
+    fwrite(summarySvg, 1, summaryLen, htmlFile);
+    gvFreeRenderData(summarySvg);
+
+    if (blockInsertPos)
+    {
+        /* Write rest of template up to block placeholder */
+        fwrite(insertPos, 1, blockInsertPos - insertPos, htmlFile);
+        /* Write per-block <template> elements */
+        for (int b = 0; b <= maxBlockId; b++)
+        {
+            if (blockSvgs[b])
+            {
+                fprintf(htmlFile, "<template id=\"block_detail_%d\">", b);
+                fwrite(blockSvgs[b], 1, strlen(blockSvgs[b]), htmlFile);
+                fprintf(htmlFile, "</template>\n");
+            }
+        }
+        /* Write rest of template after placeholder */
+        fwrite(blockInsertPos + strlen(blockPlaceholder),
+               1,
+               templateSize - (blockInsertPos + strlen(blockPlaceholder) - HTML_TEMPLATE),
+               htmlFile);
+    }
+    else
+    {
+        /* No placeholder found — just write rest of template */
+        fwrite(insertPos, 1, templateSize - (insertPos - HTML_TEMPLATE), htmlFile);
+    }
+
+    fclose(htmlFile);
+    for (int b = 0; b <= maxBlockId; b++) if (blockSvgs[b]) free(blockSvgs[b]);
+    free(blockSvgs);
+
+    return 0;
+}
+
 /**
 ----------------------------------------------------------------------------
 @fn         tidltb_dotPrintNetInfo
@@ -431,24 +975,24 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
   strcpy(htmlFileName, fname);
   strcat(htmlFileName, ".html");
   g = agopen((char*)fname, Agdirected, NULL);
-  sym = agattr(g, AGNODE,"color", "#000000");
-  sym = agattr(g,AGNODE, "fontcolor", "#FFFFFF");
-  sym = agattr(g,AGNODE, "fontsize", "10");
-  sym = agattr(g,AGNODE, "height", "0.24");
-  sym = agattr(g, AGNODE, "style", "rounded,filled");
-  sym = agattr(g, AGNODE, "penwidth", "2");
-  sym = agattr(g, AGNODE, "fillcolor", "#000000");
-  sym = agattr(g, AGRAPH, "pad", "6.5,0.2,6.5,0.5");
-  sym = agattr(g, AGRAPH, "rankdir", "TB");
-  sym = agattr(g, AGRAPH, "ranksep","0.1");
-  sym = agattr(g, AGNODE, "label","Default");
-  sym = agattr(g, AGEDGE, "label","Default");
-  sym = agattr(g,AGEDGE, "fontsize", "8");
-  sym = agattr(g, AGEDGE, "penwidth", "0.7");
-  sym = agattr(g, AGEDGE, "arrowhead", "vee");
-  sym = agattr(g, AGEDGE, "arrowsize", "0.5");
-  //sym = agattr(g,AGEDGE, "minlen", "1");
-  sym = agattr(g, AGNODE, "shape", "box");
+  sym = agattr(g, AGNODE, (char *)"color", (char *)"#000000");
+  sym = agattr(g, AGNODE, (char *)"fontcolor", (char *)"#FFFFFF");
+  sym = agattr(g, AGNODE, (char *)"fontsize", (char *)"10");
+  sym = agattr(g, AGNODE, (char *)"height", (char *)"0.24");
+  sym = agattr(g, AGNODE, (char *)"style", (char *)"rounded,filled");
+  sym = agattr(g, AGNODE, (char *)"penwidth", (char *)"2");
+  sym = agattr(g, AGNODE, (char *)"fillcolor", (char *)"#000000");
+  sym = agattr(g, AGRAPH, (char *)"pad", (char *)"6.5,0.2,6.5,0.5");
+  sym = agattr(g, AGRAPH, (char *)"rankdir", (char *)"TB");
+  sym = agattr(g, AGRAPH, (char *)"ranksep", (char *)"0.1");
+  sym = agattr(g, AGNODE, (char *)"label", (char *)"Default");
+  sym = agattr(g, AGEDGE, (char *)"label", (char *)"Default");
+  sym = agattr(g,AGEDGE,  (char *)"fontsize", (char *)"8");
+  sym = agattr(g, AGEDGE, (char *)"penwidth", (char *)"0.7");
+  sym = agattr(g, AGEDGE, (char *)"arrowhead", (char *)"vee");
+  sym = agattr(g, AGEDGE, (char *)"arrowsize", (char *)"0.5");
+  sym = agattr(g, AGEDGE, (char *)"style", (char *)"solid");
+  sym = agattr(g, AGNODE, (char *)"shape", (char *)"box");
   strcpy(liFileName, fname);
   strcat(liFileName, ".layer_info.txt");
   fpNames = fopen(liFileName, "r");
@@ -473,7 +1017,7 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
     }
     fclose(fpNames);
   }
-  if (pTIDLNetStructure->dataFlowInfo != NULL)
+  if (pTIDLNetStructure->dataFlowInfo != 0)
   {
     perSimInfo = (sPerfSim_t *)((int8_t *)(pTIDLNetStructure) +pTIDLNetStructure->dataFlowInfo);
   }
@@ -487,7 +1031,7 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
   sGraphCompilerOutArgsCore_t *gcOut = NULL;
   sGCCommonDataBase_t *commonDatabase = NULL;
   sGCDataBase_t           *gcDataBase = NULL;
-  sWorkloadSuperGroup_t *wlSuperGrp = NULL;
+  sWorkloadGroup_t *wlGrp = NULL;
   int32_t visited[MAX_LAYER_NODES] = {0};
   sGCHelperHandle           *gcHelperHandle = NULL;
   sGCHelperHandle            gcHelperHandleObj;
@@ -511,7 +1055,7 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
     gcOut->dataBaseInfo.wlAuxDB.pWLAuxList = auxilaryWorkloadDB;
     (void)initGCHelperHandle(gcHelperHandle, pTIDLNetStructure, &gcOut->dataBaseInfo, &gcOutArgs->commonDatabaseInfo);
     
-    wlSuperGrp = &gcOut->superWorkload;
+    wlGrp = &gcOut->workload;
   }
 
   for (i = 0 ; i < pTIDLNetStructure->numLayers; i++)
@@ -520,14 +1064,11 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
     if(pTIDLNetStructure->TIDLLayers[i].layerType == TIDL_DataLayer && pTIDLNetStructure->TIDLLayers[i].numInBufs == NOT_VALID)
     {
       std::string info = tidl_NodeInfo(pTIDLNetStructure, perSimInfo, i);
-      // printf("Layer %d: %s\n", pTIDLNetStructure->TIDLLayers[i].outData.dataId, layerTypeName.c_str());
-      // printf("info:\n-------------------\n%s\n----------------------\n", info.c_str());
-
       n[i] = agnode(g, (char*)info.c_str(), TRUE);
-      agset(n[i], "fillcolor", (char*)TIDL_graphBgColors[pTIDLNetStructure->TIDLLayers[i].layerType]);
-      agset(n[i],"color",(char*)TIDL_nodeElemTypeColors[pTIDLNetStructure->TIDLLayers[i].outData.elementType]);
+      agset(n[i], (char *)"fillcolor", (char*)TIDL_graphBgColors[pTIDLNetStructure->TIDLLayers[i].layerType]);
+      agset(n[i], (char *)"color",(char*)TIDL_nodeElemTypeColors[pTIDLNetStructure->TIDLLayers[i].outData.elementType]);
       sprintf(nodeName, "%s [%d %d]", layerTypeName.c_str(), layerIdxCount, pTIDLNetStructure->TIDLLayers[i].outData.dataId);
-      agset(n[i], "label", (char*)nodeName);
+      agset(n[i], (char *)"label", (char*)nodeName);
       for (j = 0; j < pTIDLNetStructure->TIDLLayers[i].numInBufs; j++)
       {
         sprintf(tempBuff, "EDGEFORLAYER%d%d", i, pTIDLNetStructure->TIDLLayers[i].outData.dataId);
@@ -537,7 +1078,7 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
         {
           std::string edgeHtml = TIDL_shapeHtmlLabel(&pTIDLNetStructure->TIDLLayers[inLayerIdx].outData);
           char *edgeHtmlLabel = agstrdup_html(g, (char*)edgeHtml.c_str());
-          agset(e[i], "label", edgeHtmlLabel);
+          agset(e[i], (char *)"label", edgeHtmlLabel);
         }
       }
       visited[pTIDLNetStructure->TIDLLayers[i].outData.dataId] = 1;
@@ -550,7 +1091,7 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
                       -1,
                       pTIDLNetStructure,
                       gcHelperHandle,
-                      wlSuperGrp);
+                      wlGrp);
 
   while(1)
   {
@@ -610,10 +1151,10 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
       // printf("info:\n-------------------\n%s\n----------------------\n", info.c_str());
 
       n[i] = agnode(g, (char*)info.c_str(), TRUE);
-      agset(n[i], "fillcolor", (char*)TIDL_graphBgColors[pTIDLNetStructure->TIDLLayers[i].layerType]);
-      agset(n[i],"color",(char*)TIDL_nodeElemTypeColors[pTIDLNetStructure->TIDLLayers[i].outData.elementType]);
+      agset(n[i], (char *)"fillcolor", (char*)TIDL_graphBgColors[pTIDLNetStructure->TIDLLayers[i].layerType]);
+      agset(n[i], (char *)"color",(char*)TIDL_nodeElemTypeColors[pTIDLNetStructure->TIDLLayers[i].outData.elementType]);
       sprintf(nodeName, "%s [%d %d]", layerTypeName.c_str(), layerIdxCount, pTIDLNetStructure->TIDLLayers[i].outData.dataId);
-      agset(n[i], "label", (char*)nodeName);
+      agset(n[i], (char *)"label", (char*)nodeName);
       for (j = 0; j < pTIDLNetStructure->TIDLLayers[i].numInBufs; j++)
       {
         sprintf(tempBuff, "EDGEFORLAYER%d%d", i, pTIDLNetStructure->TIDLLayers[i].outData.dataId);
@@ -623,13 +1164,18 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
         {
           std::string edgeHtml = TIDL_shapeHtmlLabel(&pTIDLNetStructure->TIDLLayers[inLayerIdx].outData);
           char *edgeHtmlLabel = agstrdup_html(g, (char*)edgeHtml.c_str());
-          agset(e[i], "label", edgeHtmlLabel);
+          agset(e[i], (char *)"label", edgeHtmlLabel);
+        }
+
+        if (tidl_isCacheOptionalEdge(pTIDLNetStructure, inLayerIdx, i, j))
+        {
+          agset(e[i], (char *)"style", (char *)"dashed");
         }
       }
       visited[pTIDLNetStructure->TIDLLayers[i].outData.dataId] = 1;
       layerIdxCount++;
     }
-    
+
   }
 
   for (i = 0 ; i < pTIDLNetStructure->numLayers; i++)
@@ -642,9 +1188,9 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
       // printf("info:\n-------------------\n%s\n----------------------\n", info.c_str());
 
       n[i] = agnode(g, (char*)info.c_str(), TRUE);
-      agset(n[i], "fillcolor", (char*)TIDL_graphBgColors[pTIDLNetStructure->TIDLLayers[i].layerType]);
+      agset(n[i], (char *)"fillcolor", (char*)TIDL_graphBgColors[pTIDLNetStructure->TIDLLayers[i].layerType]);
       sprintf(nodeName, "%s [%d %d]", layerTypeName.c_str(), layerIdxCount, pTIDLNetStructure->TIDLLayers[i].outData.dataId);
-      agset(n[i], "label", (char*)nodeName);
+      agset(n[i], (char *)"label", (char*)nodeName);
       for (j = 0; j < pTIDLNetStructure->TIDLLayers[i].numInBufs; j++)
       {
         sprintf(tempBuff, "EDGEFORLAYER%d%d", i, pTIDLNetStructure->TIDLLayers[i].outData.dataId);
@@ -654,7 +1200,7 @@ int32_t tidltb_dotPrintNetInfo(sTIDL_Network_t *pTIDLNetStructure, const char *f
         {
           std::string edgeHtml = TIDL_shapeHtmlLabel(&pTIDLNetStructure->TIDLLayers[inLayerIdx].outData);
           char *edgeHtmlLabel = agstrdup_html(g, (char*)edgeHtml.c_str());
-          agset(e[i], "label", edgeHtmlLabel);
+          agset(e[i], (char *)"label", edgeHtmlLabel);
         }
       }
       visited[pTIDLNetStructure->TIDLLayers[i].outData.dataId] = 1;
@@ -767,8 +1313,31 @@ int main(int argc,char *argv[])
       }
     else
       {
-        tidltb_dotPrintNetInfo(net,fname);
-        //printf("Dot generated for %s\n",fname);
+        /* Pre-read layer info so hasBlockStructure can inspect layer names */
+        char liFileName[MAX_FILE_NAME_SIZE];
+        strcpy(liFileName, fname);
+        strcat(liFileName, ".layer_info.txt");
+        FILE *fpNames = fopen(liFileName, "r");
+        if (fpNames != NULL)
+        {
+          for (int li = 0; li < net->numLayers; li++)
+          {
+            char name[300] = {0};
+            int t1, t2, t3 = -1;
+            if (net->inferenceMode != TIDL_inferenceModeLowLatency)
+              fscanf(fpNames, "%d %d %s", &t1, &t2, name);
+            else
+              fscanf(fpNames, "%d %d %d %s", &t1, &t2, &t3, name);
+            layersInfo[li].layerName = name;
+            layersInfo[li].multiCoreMode = (t3 != -1) ? t3 : TIDL_NOT_MULTI_CORE;
+          }
+          fclose(fpNames);
+        }
+
+        if (hasBlockStructure(net))
+          tidltb_dotPrintNetInfoGrouped(net, fname);
+        else
+          tidltb_dotPrintNetInfo(net, fname);
       }
     }
   }

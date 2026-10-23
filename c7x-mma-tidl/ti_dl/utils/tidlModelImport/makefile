@@ -59,40 +59,50 @@
 #
 #
 
-ifdef SystemRoot
-    MAKE = gmake
-else
-    ifeq ($(shell uname), Linux)
-      MAKE = make
-    endif
-endif
+MAKE = make
 
 all:
-	@echo .
-	@echo ======== tidl import protos =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  BUILD: TIDL IMPORT PROTOS"
+	@echo "======================================================================"
 	$(MAKE) -f makefile_lib
-	@echo
-	@echo ======== tidl custom_import library ==============
+	@echo ""
+	@echo "======================================================================"
+	@echo "  BUILD: TIDL CUSTOM IMPORT LIBRARY"
+	@echo "======================================================================"
 	$(MAKE) -f makefile_shared_custom
-	@echo
-	@echo ======== tidl import library ==============
+	@echo ""
+	@echo "======================================================================"
+	@echo "  BUILD: TIDL IMPORT LIBRARY"
+	@echo "======================================================================"
 	$(MAKE) -f makefile_shared
-	@echo .
-	@echo ======== tidl import main =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  BUILD: TIDL IMPORT MAIN"
+	@echo "======================================================================"
 	$(MAKE) -f makefile_bin
-	
+
 .IGNORE: clean
 clean:
-	@echo .
-	@echo ======== tidl import protos =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  CLEAN: TIDL IMPORT PROTOS"
+	@echo "======================================================================"
 	$(MAKE) -f makefile_lib clean
-	@echo
-	@echo ======== tidl custom_import library ==============
+	@echo ""
+	@echo "======================================================================"
+	@echo "  CLEAN: TIDL CUSTOM IMPORT LIBRARY"
+	@echo "======================================================================"
 	$(MAKE) -f makefile_shared_custom clean
-	@echo .
-	@echo  ======== tidl import library =============
+	@echo ""
+	@echo "======================================================================"
+	@echo "  CLEAN: TIDL IMPORT LIBRARY"
+	@echo "======================================================================"
 	$(MAKE) -f makefile_shared clean
-	@echo .
-	@echo ======== tidl import main =================
+	@echo ""
+	@echo "======================================================================"
+	@echo "  CLEAN: TIDL IMPORT MAIN"
+	@echo "======================================================================"
 	$(MAKE) -f makefile_bin clean
 	

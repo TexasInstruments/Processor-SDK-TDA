@@ -269,7 +269,7 @@ const vector<TidlConstraint> tidlConstraintPooling = {
 
             if(params.kernelH == 4 && params.kernelW == 4)
             {
-                TIDL_GLOBAL_REPORT_WARNING("4x4 pooling in [%s] is not efficient on MMA", (char*)layer->name);
+                TIDL_GLOBAL_REPORT_WARNING("Pooling [%s]: 4x4 pooling is not optimal", (char*)layer->name);
             }
             return true;
         }

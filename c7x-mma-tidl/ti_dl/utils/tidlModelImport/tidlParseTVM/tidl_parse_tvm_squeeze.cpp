@@ -74,8 +74,27 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("squeeze")>()
   int32_t num_axes_4_squeeze = -1;
   int32_t axes[TIDL_DIM_MAX]; 
   auto attrs = call->attrs.as<SqueezeAttrs>();
-  string index_type;
   sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
+
+  /* Get dims of data tensor (input 0), whether it is variable or const */
+  std::vector<int32_t> dataDims;
+  for (int32_t k = 0; k < (int32_t)md.varTensorIndices.size(); k++)
+  {
+    if (md.varTensorIndices[k] == 0)
+    {
+      dataDims = md.varTensorsDims[k];
+      break;
+    }
+  }
+  for (int32_t k = 0; k < (int32_t)md.constTensorIndices.size(); k++)
+  {
+    if (md.constTensorIndices[k] == 0)
+    {
+      dataDims = md.constTensorsDims[k];
+      break;
+    }
+  }
+
   if(attrs!=NULL)
   {
         auto axisList = attrs->axis;   
@@ -90,8 +109,8 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("squeeze")>()
   {    
     sBuffer_t buf;
     if(call->args[1].as<tvm::relay::ConstantNode>())
-    {   
-      index_type = DLDataType2String(call->args[1]->checked_type().as<TensorTypeNode>()->dtype);
+    {
+      bool indexIsInt64 = TIDL_relayIsInt64Type(call->args[1]);
       int32_t numIndices= 1;
       for(int i = 0 ; i < layer.allowlistingMetaData.constTensorsDims[0].size() ; i++)
       {
@@ -100,7 +119,12 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("squeeze")>()
       num_axes_4_squeeze=numIndices;
       auto indicesExpr = call->args[1].as<tvm::relay::ConstantNode>()->data;
       buf=TIDL_extractConstantTensorData(call,1,md,0);
-      if(index_type=="int64")
+      if(buf.ptr==NULL)
+      {
+        TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", 1);
+        return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+      }
+      if(indexIsInt64)
       {
           for(int  i=0;i<numIndices;i++){
             axes[i]=(int32_t)(*((int64_t*)buf.ptr + i));
@@ -119,10 +143,10 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("squeeze")>()
   else if (md.numInputs == 1)
   {
     int axes_size = 0;
-    // If axes is not provided, all the single dimensions will be removed from the shape 
-    for (int i = 0; i < md.varTensorsDims[0].size(); i++)
+    // If axes is not provided, all the single dimensions will be removed from the shape
+    for (int i = 0; i < (int32_t)dataDims.size(); i++)
     {
-      if(md.varTensorsDims[0][i] == 1){
+      if(dataDims[i] == 1){
         axes[axes_size] = i;
         axes_size += 1;
       }
@@ -135,29 +159,28 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("squeeze")>()
     return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
   }
 
-  /** If shape inference is not done on model, we assume the tensor is of 4 dimensions by default*/
-  if (layer.allowlistingMetaData.varTensorsDims.size() != 0)
+  if (num_axes_4_squeeze < 0)
   {
-    numDim = layer.allowlistingMetaData.varTensorsDims[0].size();
-    numDim = (numDim == 0)? 4:numDim;
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Squeeze layer : No axis given for Squeeze");
+    return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
   }
-  else
-  {
-    numDim = 4;
-  }
-  if(layer.allowlistingMetaData.varTensorsDims[0].size() != 0)
+
+  /** Get numDim from data tensor (input 0), whether it is variable or const */
+  numDim = (dataDims.size() != 0) ? (int32_t)dataDims.size() : 4;
+
+  if(dataDims.size() != 0)
   {
     for (i=0 ; i < num_axes_4_squeeze; i++)
     {
       int32_t axisToSqueeze = TIDL_relayNormalizeAxis(axes[i],numDim,nullptr,1);
-      if(md.varTensorsDims[0][axisToSqueeze] != 1)
+      if(dataDims[axisToSqueeze] != 1)
       {
         TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Squeeze layer : Input Dimension across given axes should be 1");
         return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
       }
     }
   }
-  
+
   for (i = 0; i < num_axes_4_squeeze; i++)
   {
     axes[i] = TIDL_relayNormalizeAxis(axes[i],numDim);
@@ -178,6 +201,22 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("squeeze")>()
       }
     }
   }
-return 0;
 
+  /* If data input (input 0) is a constant, store it in layer.weights
+   * so tidl_addConstDataLayers can create the appropriate ConstDataLayer */
+  for (int32_t i = 0; i < (int32_t)md.numConstInputs; i++)
+  {
+    if (md.constTensorIndices[i] == 0)
+    {
+      layer.weights = TIDL_extractConstantTensorData(call, 0, md, i);
+      if (layer.weights.ptr == NULL)
+      {
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Squeeze layer : Unable to read constant data input");
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      }
+      break;
+    }
+  }
+
+  return 0;
 }

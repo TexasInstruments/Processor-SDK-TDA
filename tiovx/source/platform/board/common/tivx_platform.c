@@ -74,7 +74,9 @@ uint64_t tivxPlatformGetTimeInUsecs(void)
 
 void ownPlatformPrintf(const char *format)
 {
+#if defined(BUILD_DEV)
     appLogPrintf(format);
+#endif /* #if defined(BUILD_DEV) */
 }
 
 void ownPlatformActivate(void)

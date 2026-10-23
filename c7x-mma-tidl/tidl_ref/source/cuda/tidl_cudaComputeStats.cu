@@ -28,7 +28,8 @@ void TIDL_cudaMinMax(
 )
 {
     Tsrc* d_ptr = NULL;
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), ptr, (void**)&d_ptr, NULL);
+    int32_t size = 0; // needs to be set correctly once stats collection kernels are enabled
+    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), ptr, (void**)&d_ptr, size);
     thrust::device_ptr<const Tsrc>pWrapper(d_ptr);
     thrust::pair<const thrust::device_ptr<const Tsrc>, const thrust::device_ptr<const Tsrc> > result = thrust::minmax_element(pWrapper, pWrapper + dataSize);
     *min=(TminMax)(*result.first);
@@ -116,9 +117,10 @@ int TIDL_cudaGetHistogram(
     Tsrc* d_ptr = NULL;
     int32_t* d_histPtr = NULL;
     size_t histogram_size = numBins * sizeof(int32_t);
+    int32_t size = 0; // needs to be set correctly once stats collection kernels are enabled
     checkCudaErr(cudaMalloc((void**)&d_histPtr, histogram_size));
     checkCudaErr(cudaMemset(d_histPtr, 0, histogram_size));
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), ptr, (void**)&d_ptr, NULL);
+    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), ptr, (void**)&d_ptr, size);
 
     int total_elements = numBatches * numChannels * height * width;
     int grid_size = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
@@ -301,6 +303,7 @@ int TIDL_cudaPerChannelMeans(
     float* d_reducedPtr = NULL;
     int meanSizeInBytes = 0;
     int reducedSizeInBytes = 0;
+    int32_t size = 0; // needs to be set correctly once stats collection kernels are enabled
     
     if(layerType == TIDL_InnerProductLayer && constIdx == 1)
     {
@@ -316,7 +319,7 @@ int TIDL_cudaPerChannelMeans(
     checkCudaErr(cudaMalloc((void**)&d_meanPtr, meanSizeInBytes));
     checkCudaErr(cudaMalloc((void**)&d_reducedPtr, reducedSizeInBytes));
     checkCudaErr(cudaMemcpy(d_meanPtr, meanPtr, meanSizeInBytes, cudaMemcpyHostToDevice));
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), ptr, (void**)&d_ptr, NULL);
+    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), ptr, (void**)&d_ptr, size);
 
     if(layerType == TIDL_InnerProductLayer && constIdx == 1)
     {

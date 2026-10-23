@@ -105,6 +105,7 @@ typedef struct
 
     int32_t  coreStartIdx;
     int32_t  forceNegativeTest;
+    uint32_t enableDDRPerfStats;
 
     float quantRangeExpansionFactor;
     float quantRangeUpdateFactor;

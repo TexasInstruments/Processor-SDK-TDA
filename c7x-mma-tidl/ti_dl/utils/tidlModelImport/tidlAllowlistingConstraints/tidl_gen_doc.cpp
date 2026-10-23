@@ -63,21 +63,25 @@
 #include "tidl_constraint_table.h"
 #include "../tidl_parse_tflite_jumptable.h"
 #include "../tidl_parse_onnx_jumptable.h"
+#include "../tidl_parse_tvm_jumptable.h"
 #include <fstream>
 #include <string>
 #include <unordered_map>
 #include <map>
 using namespace std;
 
-/* Internal Documentation: TIDL Layers to Onnx and TfLite Operators and Constraints */
+/* Internal Documentation: TIDL Layers to Onnx, TfLite and TVM Operators and Constraints */
 void operatorMapping();
 /* Onnx Operator Constraints and mapping to TIDL layers */
 void onnxConstraints();
 /* TfLite Operator Constraints and mapping to TIDL layers */
 void tfliteConstraints();
+/* TVM Operator Constraints and mapping to TIDL layers */
+void tvmConstraints();
 
 map<int32_t, vector<string>> tfLiteMappings;
 map<int32_t, vector<string>> onnxMappings;
+map<int32_t, vector<string>> tvmMappings;
 
 /* Generate all documentations */
 int main()
@@ -85,6 +89,7 @@ int main()
     operatorMapping();
     onnxConstraints();
     tfliteConstraints();
+    tvmConstraints();
 }
 
 
@@ -93,13 +98,14 @@ void operatorMapping()
     ofstream file("operator_mappings.md");
     file << "# Operator Mappings (TIDL-RT):" << endl << endl;
     file << "<center>" << endl << endl;
-    file << "| S. No. | TIDL Layer Type | Onnx Ops. | TfLite Ops. | Constraints |" << endl;
-    file << "|:------:|:----------------|:----------|:------------|:------|" << endl;
+    file << "| S. No. | TIDL Layer Type | Onnx Ops. | TfLite Ops. | TVM Ops. | Constraints |" << endl;
+    file << "|:------:|:----------------|:----------|:------------|:---------|:------|" << endl;
 
     for (auto jtEntry : tidlConstraintTable)
     {
         tfLiteMappings.insert({jtEntry.first, vector<string>{}});
         onnxMappings.insert({jtEntry.first, vector<string>{}});
+        tvmMappings.insert({jtEntry.first, vector<string>{}});
     }
 
     for (auto jtEntry: tidlParseTfliteJumpTable)
@@ -118,6 +124,14 @@ void operatorMapping()
             onnxMappingsEntry->second.push_back(jtEntry.second.second);
         }
     }
+    for (auto jtEntry: tidlParseTVMJumpTable)
+    {
+        auto tvmMappingsEntry = tvmMappings.find(jtEntry.second.first);
+        if (tvmMappingsEntry != tvmMappings.end())
+        {
+            tvmMappingsEntry->second.push_back(jtEntry.second.second);
+        }
+    }
 
     int index = 1;
     for (auto jtEntry : tidlConstraintTable)
@@ -130,8 +144,15 @@ void operatorMapping()
         }
 
         file << " </ul> | <ul> ";
-        
+
         for (string opName : tfLiteMappings[jtEntry.first])
+        {
+            file << "<li> " << opName << " </li>";
+        }
+
+        file << " </ul> | <ul> ";
+
+        for (string opName : tvmMappings[jtEntry.first])
         {
             file << "<li> " << opName << " </li>";
         }
@@ -171,6 +192,60 @@ void onnxConstraints()
         {
             file << onnxMap.second[i];
             if(i != onnxMap.second.size() - 1)
+            {
+                file << "/";
+            }
+        }
+        file << " | " << jtEntry.displayname << " | <ul> ";
+        vector<TidlConstraint> constraints = jtEntry.constraints;
+        for (auto constraint : constraints)
+        {
+            if (constraint.onnxComment.size() == 0)
+            {
+                continue;
+            }
+            file << "<li> " << constraint.onnxComment << " </li>";
+        }
+        file << "</ul> | " << endl;
+        index++;
+    }
+
+    file << endl << "</center>" << endl;
+    file.close();    
+}
+
+void tvmConstraints()
+{
+    ofstream file("tvm_operators.md");
+    file << "# TVM Operator Mappings:" << endl << endl;
+    file << "<center>" << endl << endl;
+    file << "| S. No. | Onnx operator | TI TVM Operator | TIDL Layer | Constriants |" << endl;
+    file << "|:------:|:--------------|:-----------------|:-----------|:------|" << endl;
+
+    int index = 1;
+    for(auto tvmMap: tvmMappings)
+    {
+        TidlConstraintTableEntry jtEntry = tidlConstraintTable.find(tvmMap.first)->second;
+        if(tvmMap.second.size() == 0)
+        {
+            /* No mapping from tvm node to this layer in parsing */
+            continue;
+        }
+        vector<string> onnxOpNames = onnxMappings[tvmMap.first];
+        file << "| " << to_string(index) << " | ";
+        for (int i = 0; i < onnxOpNames.size(); i++)
+        {
+            file << onnxOpNames[i];
+            if(i != onnxOpNames.size() - 1)
+            {
+                file << "/";
+            }
+        }
+        file << " | ";
+        for (int i = 0; i < tvmMap.second.size(); i++)
+        {
+            file << tvmMap.second[i];
+            if(i != tvmMap.second.size() - 1)
             {
                 file << "/";
             }

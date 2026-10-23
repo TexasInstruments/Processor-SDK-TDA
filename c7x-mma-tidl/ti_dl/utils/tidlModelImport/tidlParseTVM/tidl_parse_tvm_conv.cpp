@@ -375,7 +375,15 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.conv2d")>()
   convParams.padR = padR;
 
   // Extract and copy weights
-  auto weight_data = weight.as<tvm::relay::ConstantNode>()->data;
+  const auto* weight_const_node = weight.as<tvm::relay::ConstantNode>();
+  if (weight_const_node == nullptr)
+  {
+    // Weight is a Var/expression rather than a folded constant - TIDL requires
+    // static conv weights, so bail out cleanly instead of using uninitialized data.
+    TIDL_osrtDebugPrint(tidl_relay_debuglevel, "Conv layer : weight tensor is not a constant (variable weights are not supported)\n");
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+  }
+  auto weight_data = weight_const_node->data;
 
   // Calculate weight buffer size for all dimensions (2D, 3D, etc.)
   layer.weights.bufSize = 1;

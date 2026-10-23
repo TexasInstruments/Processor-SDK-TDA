@@ -244,7 +244,7 @@ static int32_t TIDL_batchNormInitBiasParamMem(sTIDL_Network_t *net,
 {
   int32_t status = TIDL_SUCCESS;
   sTIDL_Layer_t *tidlLayer  = &net->TIDLLayers[layerIdx];
-  sTIDL_DataParams_t * inDataParams = TIDL_getDataParams(net, tidlLayer->inData[0]);
+  sTIDL_DataParams_t * inDataParams = &net->TIDLLayers[tidlLayer->inData[0]].outData;
   sTIDL_BatchNormParams_t * batchNormParams = &tidlLayer->layerParams.batchNormParams;
   sTIDL_ALgBatchNormParams_t * algBatchNormParams = &algLayer->layerParams.batchNormParams;
   int32_t flattenedHigherDims = (tidlLayer->outData.dimValues[TIDL_DIM_DIM1] * tidlLayer->outData.dimValues[TIDL_DIM_DIM2]);

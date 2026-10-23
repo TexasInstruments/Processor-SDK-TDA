@@ -79,12 +79,6 @@ HFILES += ti_dl.h
 
 TARGET_PLATFORM = PC
 BUILD_WITH_CUDA = no
-
-ifdef SystemRoot
-CFILES += $(COMMON_DIR)/getopt/getopt.c
-CFILES += $(COMMON_DIR)/asprintf/asprintf.c
-endif
-
 OUTFILE= ./out/tidl_model_import.out
 ##############################################################
 
@@ -112,24 +106,14 @@ CFLAGS += -I ../../inc
 CFLAGS += -I $(COMMON_DIR)
 CFLAGS += -I .
 #CFLAGS+= /D_MSC_VER=1700 /Gd
-ifdef SystemRoot
-CFLAGS+= -I $(COMMON_DIR)/getopt
-CFLAGS+= -I $(COMMON_DIR)/asprintf
-CFLAGS += /DTIDL_IMPORT_TOOL
-else
 CFLAGS += -D_GNU_SOURCE
 CFLAGS += -DTIDL_IMPORT_TOOL
 CFLAGS += -Werror=return-type -Wno-unused-result -Wno-format-overflow
-
-endif
 
 ##############################################################
 
 ##############################################################
 # Link against the import shared library.
-ifdef SystemRoot
-LDFLAGS +=-l .\out\tidl_model_import.lib
-else
 # The -rpath option tells the loader to look in the same directory
 # as the executable when the tool runs (avoids the need for
 # LD_LIBRARY_PATH)
@@ -137,7 +121,6 @@ LDFLAGS +=-L ./out
 LDFLAGS +=-l :tidl_model_import.so
 LDFLAGS +=-Wl,-rpath -Wl,\$$ORIGIN
 LDFLAGS +=-pthread -Wl,--no-as-needed
-endif
 ##############################################################
 
 

@@ -44,6 +44,7 @@
 #define SBL_HSM_IMG_NOT_FOUND              (((int32_t)(-2)))
 #define SBL_OCMC_MEMORY_TO_LOAD_HSM_BINARY (0x41C90000U)
 #define SBL_HSM_IMG_MAX_SIZE               (0x40000)
+#define SBL_HSM_SRAM_ADDR                  (0x43C00000U)
 
 #if defined (SOC_J721E)
 #include <ti/csl/soc/j721e/src/cslr_wkup_ctrl_mmr.h>

@@ -23,6 +23,12 @@ IDIRS       += $(APP_UTILS_PATH)/utils/udma/include
 LDIRS       = $(APP_UTILS_PATH)/lib/$(TARGET_SOC)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 SYS_STATIC_LIBS += app_utils_file_io
 
+ifeq ($(CODE_COVERAGE_ENABLED_FOR_DSP),yes)
+SYS_STATIC_LIBS += app_utils_console_io
+SYS_STATIC_LIBS += app_utils_rtos
+SYS_STATIC_LIBS += app_utils_timer
+endif
+
 ifeq ($(RTOS_SDK),mcu_sdk)
   # Ensure MCU_SDK_PATH is defined for TDA54
   ifeq ($(MCU_SDK_PATH),)

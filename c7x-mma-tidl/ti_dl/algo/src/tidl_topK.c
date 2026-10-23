@@ -73,6 +73,9 @@
 #include <limits>
 #include "tidl_commonUtils.h"
 #include "tidl_forceNegativeTest.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 #ifdef HOST_EMULATION
 /* Function Prototypes */
@@ -115,7 +118,7 @@ template<class Tin, class Tout>
             /* If the values are same, then retain the old index */
             continue;
           }
-
+ 
           for(i3 = K - 1; i3 >= (i2 + 1); i3--)
           {
             pOut[i3 * outPitch] = pOut[(i3 - 1) * outPitch];
@@ -159,6 +162,37 @@ template<class Tin, class Tout>
     valueLimit = (Tout)std::numeric_limits<Tout>::max();
   }
 
+#ifdef BUILD_WITH_CUDA_TOPK
+  {
+    int32_t axisForIncrement = topKParams->incrementAxis;
+    int64_t indicesPitchCuda;
+    if (axisForIncrement != topKParams->axis)
+      indicesPitchCuda = (int64_t)tidlLayer->outData.pitch[axisForIncrement] * inDataParams->dimValues[axisForIncrement];
+    else
+      indicesPitchCuda = (int64_t)tidlLayer->outData.pitch[axisForIncrement] * topKParams->K;
+
+    status = TIDL_cudaTopK<Tin, Tout>(
+        pIn, pOut, indicesPitchCuda,
+        inDataParams->dimValues[TIDL_DIM_BATCH],
+        inDataParams->dimValues[TIDL_DIM_DIM1],
+        inDataParams->dimValues[TIDL_DIM_DIM2],
+        inDataParams->dimValues[TIDL_DIM_NUMCH],
+        inDataParams->dimValues[TIDL_DIM_HEIGHT],
+        inDataParams->dimValues[TIDL_DIM_WIDTH],
+        inDataParams->pitch[TIDL_ROI_PITCH],
+        inDataParams->pitch[TIDL_DIM1_PITCH],
+        inDataParams->pitch[TIDL_DIM2_PITCH],
+        inDataParams->pitch[TIDL_CHANNEL_PITCH],
+        inDataParams->pitch[TIDL_LINE_PITCH],
+        tidlLayer->outData.pitch[TIDL_ROI_PITCH],
+        tidlLayer->outData.pitch[TIDL_DIM1_PITCH],
+        tidlLayer->outData.pitch[TIDL_DIM2_PITCH],
+        tidlLayer->outData.pitch[TIDL_CHANNEL_PITCH],
+        tidlLayer->outData.pitch[TIDL_LINE_PITCH],
+        topKParams->K, topKParams->axis, topKParams->largest);
+    return status;
+  }
+#else
   for (i1 = 0; i1 < (tidlLayer->outData.dimValues[TIDL_DIM_BATCH] * tidlLayer->outData.pitch[TIDL_ROI_PITCH]); i1++)
   {
     pOut[i1] = valueLimit;
@@ -279,8 +313,9 @@ template<class Tin, class Tout>
   TIDL_L1DandL2CacheWbInv();
 
   return status;
+#endif /* BUILD_WITH_CUDA_TOPK */
 }
-#endif
+#endif /* HOST_EMULATION */
 
 /**
  ----------------------------------------------------------------------------

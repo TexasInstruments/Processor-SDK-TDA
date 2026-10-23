@@ -240,11 +240,10 @@ void getLayerIdInit(void *getIdContext,
                     int32_t layerGroupId, // Needed for backwards compatibility
                     sTIDL_Network_t *net,
                     sGCHelperHandle *gcHelperHandle,
-                    sWorkloadSuperGroup_t *wlSuperGroup)
+                    sWorkloadGroup_t *wlGroup)
 {
   sGetLayerIdContext_t *context = (sGetLayerIdContext_t *)getIdContext;
 
-  context->groupIdx = 0;
   context->subGroupIdx = 0;
   context->countIdx = 0;
   context->workLoadIdx = 0;
@@ -254,11 +253,11 @@ void getLayerIdInit(void *getIdContext,
   context->layerGroupId = layerGroupId;
   context->net = net;
   context->gcHelperHandle = gcHelperHandle;
-  context->wlSuperGroup = wlSuperGroup;
+  context->wlGroup = wlGroup;
 
-  if (wlSuperGroup != NULL)
+  if (wlGroup != NULL)
   {
-    context->workLoadIdx = wlSuperGroup->workloadGrpList[0].subGroup[0].startIndexWLUnitDB;
+    context->workLoadIdx = wlGroup->subGroup[0].startIndexWLUnitDB;
   }
 
   return;
@@ -277,12 +276,9 @@ int32_t getLayerIdToExecute(void *getIdContext,
   int32_t wlRepeat = 0;
   sWorkloadUnit_t *wlPtr = NULL;
 
-  //: TODO: Need to handle going to old flow if supertiling is enabled
-
-  if (context->wlSuperGroup != NULL)
+  if (context->wlGroup != NULL)
   {
-
-    const sWorkloadGroup_t *wlGroup = &context->wlSuperGroup->workloadGrpList[context->groupIdx];
+    const sWorkloadGroup_t *wlGroup = context->wlGroup;
     const sWorkloadSubGroup_t *wlSubGroup = &wlGroup->subGroup[context->subGroupIdx];
 
     workLoadId = context->workLoadIdx;
@@ -319,27 +315,8 @@ int32_t getLayerIdToExecute(void *getIdContext,
           }
           else
           {
-            context->groupIdx++;
+            context->workLoadIdx = NOT_VALID;
             context->subGroupIdx = 0;
-            /* LDRA_JUSTIFY_START
-            <metric start> statement branch <metric end>
-            <justification start>
-            Rationale - FUTURE_USE: This condition is present to support future testing scenarios and it is retained for robustness and exception handling.
-            Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
-            This does not impact functional correctness or safety.
-            <justification end> */
-            if (context->groupIdx < context->wlSuperGroup->numGroups)
-            {
-
-              const sWorkloadSubGroup_t *wlSubGroupNext = &wlGroup->subGroup[0];
-              context->workLoadIdx = wlSubGroupNext->startIndexWLUnitDB;
-            }
-            else
-            /* LDRA_JUSTIFY_END */
-            {
-              context->workLoadIdx = NOT_VALID;
-              context->groupIdx = 0;
-            }
           }
         }
       }
@@ -423,7 +400,7 @@ int32_t getNumSplits(const void *workloadHandle)
   return pWLMetaDataID.numSplit;
 }
 
-int8_t *get_int8_t_pointer(int8_t arr[], int32_t offset)
+int8_t *get_int8_t_pointer(int8_t arr[], uint32_t offset)
 {
   return &arr[offset];
 }

@@ -65,14 +65,14 @@
 const vector<TidlConstraint> tidlConstraintDequantizeLinear =
 {
     TIDL_CSTR(
-        "Only default axis = 1 is supported",
-        "Only default axis = 1 is supported",
+        "axis != 1 is not optimal",
+        "axis != 1 is not optimal",
         "",
         [](const sTIDL_LayerPC_t *layer, string &logs){
             int32_t axis = layer->layerPCParams.dequantParams.axis;
             if(axis != 1)
             {
-                TIDL_GLOBAL_REPORT_WARNING("Default axis = 1 is supported which is not optimal");
+                TIDL_GLOBAL_REPORT_WARNING("DequantizeLinear [%s]: axis %d is not optimal", (char *)layer->name, axis);
             }
             return true;
         }

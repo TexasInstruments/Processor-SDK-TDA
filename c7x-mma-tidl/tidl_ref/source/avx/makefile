@@ -39,11 +39,7 @@ endif
 endif
 
 ifeq ($(TARGET_PLATFORM) , PC)
-ifdef SystemRoot
-OUTFILE=$(LIBDIR)/tidl_avx_kernels.lib
-else
 OUTFILE=$(LIBDIR)/libtidl_avx_kernels.a
-endif
 else
 OUTFILE=$(LIBDIR)/tidl_avx_kernels.lib
 endif
@@ -64,11 +60,7 @@ INCLUDE_PATHS+= -I $(ALGBASE_PATH)/ti_dl/utils/perfsim
 CFLAGS += $(INCLUDE_PATHS)
 
 ifeq ($(TARGET_PLATFORM) , PC)
-    ifdef SystemRoot
-        CFLAGS += /arch:AVX2
-    else
-        CFLAGS += -mavx -mavx2  -mfma
-    endif
+    CFLAGS += -mavx -mavx2  -mfma
 endif
 
 ##############################################################

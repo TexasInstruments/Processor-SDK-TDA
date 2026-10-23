@@ -32,6 +32,7 @@
 #include "tidl_import_common_tidlrt_osrt.h"
 #include "tidl_import_diag.h"
 
+#undef __MODULE__
 #define __MODULE__ "[PARSER]"
 
 #define MAX_NUM_TIDL_SUBGRAPHS (16)
@@ -324,7 +325,7 @@ static bool TIDL_subgraphImport(TfLiteContext* context, TfLiteNode* node, tidlDe
             sprintf(subgraphName, "%d", subGraphDelegate->subgraphId_);
             TIDL_getInTensorScalesForQuantModels(context, node, &inQuantFactorAllTensors, &zp);
             int32_t rtStatus = TIDL_runtimesPostProcessNet(&data->osrt_options, data->osrt_options.m_calibration_frames, data->osrt_options.m_num_param_bits,
-                                                subGraphDelegate->subGraphPtr_, subGraphDelegate->gParams_, inQuantFactorAllTensors, zp, subgraphName);
+                                                subGraphDelegate->subGraphPtr_, subGraphDelegate->gParams_, inQuantFactorAllTensors, zp, (const char*)subgraphName);
             if(rtStatus == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
             {
                 return false;
@@ -376,7 +377,7 @@ static bool TIDL_subgraphImport(TfLiteContext* context, TfLiteNode* node, tidlDe
                 char subgraphName[10];
                 sprintf(subgraphName, "%d", subGraphDelegate->subgraphId_);
                 int32_t rtStatus = TIDL_runtimesPostProcessNet(&data->osrt_options, data->osrt_options.m_calibration_frames, data->osrt_options.m_num_param_bits,
-                                            subGraphDelegate->subGraphPtr_, subGraphDelegate->gParams_, inQuantFactorAllTensors, NULL, subgraphName);
+                                            subGraphDelegate->subGraphPtr_, subGraphDelegate->gParams_, inQuantFactorAllTensors, NULL, (const char *)subgraphName);
                 if(rtStatus == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
                 {
                     return false;
@@ -497,7 +498,7 @@ TfLiteStatus tidlDelegate::Init(TfLiteContext* context, const TfLiteDelegatePara
         char subgraphName[10];
         sprintf(subgraphName, "%d", subgraphId_);
 
-        status = TIDL_runtimesPostProcessNet(&data->osrt_options, 1, 32,  subGraphPtr_, gParams_, qfloat.data(), NULL, subgraphName);
+        status = TIDL_runtimesPostProcessNet(&data->osrt_options, 1, 32,  subGraphPtr_, gParams_, qfloat.data(), NULL, (const char*)subgraphName);
         if(status == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
         {
             return kTfLiteError;
@@ -634,11 +635,11 @@ TfLiteStatus tidlDelegate::Invoke(TfLiteContext* context, TfLiteNode* node)
                 }
 
                 int32_t numSuportedNodes = 0;
-                fprintf(fp, "%d\n", data_->supported_node_groups.size());
+                fprintf(fp, "%ld\n", data_->supported_node_groups.size());
                 for(int i = 0; i < data_->supported_node_groups.size(); i++)
                 {
                     std::vector<int> subgraph = data_->supported_node_groups[i];
-                    fprintf(fp, "%d\n", subgraph.size());
+                    fprintf(fp, "%ld\n", subgraph.size());
                     for(int j = 0; j < subgraph.size(); j++)
                     {
                     fprintf(fp, "%d\n", subgraph[j]);
@@ -668,8 +669,8 @@ TfLiteStatus tidlDelegate::Invoke(TfLiteContext* context, TfLiteNode* node)
 }
 
 tidlDelegate::~tidlDelegate() {
-    if(subGraphPtr_) delete subGraphPtr_; /* Not allocated memory in constructor so check if not NULL and then delete*/
-    if(gParams_) delete gParams_; /* Not allocated memory in constructor so check if not NULL and then delete*/
+    if(subGraphPtr_) delete static_cast<sTIDL_OrgNetwork_t*>(subGraphPtr_); /* Not allocated memory in constructor so check if not NULL and then delete*/
+    if(gParams_) delete static_cast<tidl_import_config*>(gParams_); /* Not allocated memory in constructor so check if not NULL and then delete*/
     if(gParams.quantizationStyle != TIDL_QuantStyleAsymNP2_TFL)
     {
         TIDL_subgraphRtDelete(data_->osrt_options.osrtDebugPrintLevel, &data_->infer_ops, &this->tidlRtParamsObj);

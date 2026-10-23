@@ -1090,7 +1090,8 @@ void  TIDL_restoreContextMemToIntMemForPreemption(const TIDL_preEmptContextObj  
               createParams->TIDLVprintf,
               createParams->TIDLWriteBinToFile,
               createParams->TIDLReadBinFromFile,
-              createParams->traceBaseName);
+              createParams->traceBaseName,
+              (int32_t)createParams->enableDDRPerfStats);
   }
 }
 

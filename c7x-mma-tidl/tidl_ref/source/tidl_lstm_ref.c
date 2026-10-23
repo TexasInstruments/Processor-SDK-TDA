@@ -77,6 +77,9 @@
 #include "tidl_alg_utils.h"
 #include "tidl_lstm_ref.h"
 #include "tidl_forceNegativeTest.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -125,8 +128,7 @@ static void TIDL_updateLSTMMemorySizes(const TIDL_LayerSpecificParams *layerSpec
   int32_t scratchDataSize;
   int32_t paramMemSize = 0;
   int32_t outDataSize = TIDL_refGetOutDataSize(commonParams, layerSpecificParams, layerIdx);
-  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(commonParams->net,
-                                                        commonParams->net->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_DataParams_t *inDataParams = &commonParams->net->TIDLLayers[commonParams->net->TIDLLayers[layerIdx].inData[0]].outData;
 
   outBatchPitch = commonParams->net->TIDLLayers[layerIdx].outData.pitch[TIDL_ROI_PITCH];
 
@@ -751,6 +753,24 @@ template<class Tin, class Tout> static int32_t TIDL_refLSTMCoreFloat(
     Tout *Y_h = Y + YhOffset;
     Tout *Y_c = Y + YcOffset;
 
+#ifdef BUILD_WITH_CUDA_LSTM
+  status = TIDL_cudaLSTM<Tin, Tout>(
+      inPtr, WPtr, RPtr, biasPtr,
+      initial_hPtr, initial_cPtr, peepholesPtr, outPtr, 
+      batch_size, seq_length, input_size, hidden_size,
+      num_directions, direction, layout, input_forget,
+      (int32_t)isClipSet, (float)clip,
+      params->activations, params->activation_alpha, params->activation_beta,
+      sequence_lens,
+      (int32_t)inDataParams->pitch[TIDL_CHANNEL_PITCH],
+      (int32_t)inDataParams->pitch[TIDL_LINE_PITCH],
+      (int32_t)outDataParams->pitch[TIDL_DIM2_PITCH],
+      (int32_t)outDataParams->pitch[TIDL_CHANNEL_PITCH],
+      (int32_t)outDataParams->pitch[TIDL_LINE_PITCH],
+      (int32_t)params->incrementAxis, YhOffset, YcOffset);
+  return status;
+#endif
+
     int32_t dirIdx, timeIdx, batchIdx, hiddenIdx, inputIdx;
 
     for (dirIdx = 0; dirIdx < num_directions; dirIdx++)
@@ -1277,6 +1297,18 @@ template<class Tin, class Tw, class Th, class Tc, class Tout, class Tacc> static
       Tw *P_dir = (peepholesPtr != NULL) ? peepholesPtr + dirIdx * 3 * hidden_size : NULL;
       Tw *Po    = (P_dir != NULL) ? P_dir + 1 * hidden_size : NULL;
 
+      /* W is [4H, input_size], R is [4H, H]*/
+      const int32_t H = hidden_size;
+      Tw *Wi = W_dir + 0*H*input_size;
+      Tw *Wo = W_dir + 1*H*input_size;
+      Tw *Wf = W_dir + 2*H*input_size;
+      Tw *Wc = W_dir + 3*H*input_size;
+
+      Tw *Ri = R_dir + 0*H*H;
+      Tw *Ro = R_dir + 1*H*H;
+      Tw *Rf = R_dir + 2*H*H;
+      Tw *Rc = R_dir + 3*H*H;
+
       /*
       * Initialize Ht and Ct from initial states
       * initial_h/c: [num_directions, batch_size, hidden_size]
@@ -1407,7 +1439,7 @@ template<class Tin, class Tw, class Th, class Tc, class Tout, class Tacc> static
           Tout *gate_c = gates + 3 * hidden_size;
 
           // Compute Input Gate
-          TIDL_MMA_Matmul<Tin, Tw, Tacc>(xt, W_dir, B_dir, inputGateAcc, 1, input_size, hidden_size, true);
+          TIDL_MMA_Matmul<Tin, Tw, Tacc>(xt, Wi, B_dir, inputGateAcc, 1, input_size, hidden_size, true);
           TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(inputGateAcc, hidden_size, mmaScales[0], mmaShifts[0]);
 
           TIDL_MMA_Matmul<Th, Tw, Tacc>(ht_prev, R_dir, B_dir + 4*hidden_size, intermediateAcc, 1, hidden_size, hidden_size, true);
@@ -1428,10 +1460,10 @@ template<class Tin, class Tw, class Th, class Tc, class Tout, class Tacc> static
           int32_t forgetGateWeightOffset = 2 * hidden_size * input_size;
           int32_t forgetGateBiasOffset = 2 * hidden_size;
 
-          TIDL_MMA_Matmul<Tin, Tw, Tacc>(xt, W_dir + forgetGateWeightOffset, B_dir + forgetGateBiasOffset, forgetGateAcc, 1, input_size, hidden_size, true);
+          TIDL_MMA_Matmul<Tin, Tw, Tacc>(xt, Wf, B_dir + forgetGateBiasOffset, forgetGateAcc, 1, input_size, hidden_size, true);
           TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(forgetGateAcc, hidden_size, mmaScales[3], mmaShifts[3]);
 
-          TIDL_MMA_Matmul<Th, Tw, Tacc>(ht_prev, R_dir + forgetGateWeightOffset, B_dir + forgetGateBiasOffset + 4*hidden_size, intermediateAcc, 1, hidden_size, hidden_size, true);
+          TIDL_MMA_Matmul<Th, Tw, Tacc>(ht_prev, Rf, B_dir + forgetGateBiasOffset + 4*hidden_size, intermediateAcc, 1, hidden_size, hidden_size, true);
           TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(intermediateAcc, hidden_size, mmaScales[4], mmaShifts[4]);
           TIDL_MMA_EltWiseSum<Tacc, Tacc, Tacc>(forgetGateAcc, intermediateAcc, forgetGateAcc, hidden_size);
 
@@ -1448,10 +1480,10 @@ template<class Tin, class Tw, class Th, class Tc, class Tout, class Tacc> static
           // Compute Cell Gate
           int32_t cellGateWeightOffset = 3 * hidden_size * input_size;
           int32_t cellGateBiasOffset = 3 * hidden_size;
-          TIDL_MMA_Matmul<Tin, Tw, Tacc>(xt, W_dir + cellGateWeightOffset, B_dir + cellGateBiasOffset, cellGateAcc, 1, input_size, hidden_size, true);
+          TIDL_MMA_Matmul<Tin, Tw, Tacc>(xt, Wc, B_dir + cellGateBiasOffset, cellGateAcc, 1, input_size, hidden_size, true);
           TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(cellGateAcc, hidden_size, mmaScales[6], mmaShifts[6]);
 
-          TIDL_MMA_Matmul<Th, Tw, Tacc>(ht_prev, R_dir + cellGateWeightOffset, B_dir + cellGateBiasOffset + 4*hidden_size, intermediateAcc, 1, hidden_size, hidden_size, true);
+          TIDL_MMA_Matmul<Th, Tw, Tacc>(ht_prev, Rc, B_dir + cellGateBiasOffset + 4*hidden_size, intermediateAcc, 1, hidden_size, hidden_size, true);
           TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(intermediateAcc, hidden_size, mmaScales[7], mmaShifts[7]);
           TIDL_MMA_EltWiseSum<Tacc, Tacc, Tacc>(cellGateAcc, intermediateAcc, cellGateAcc, hidden_size);
 
@@ -1474,10 +1506,10 @@ template<class Tin, class Tw, class Th, class Tc, class Tout, class Tacc> static
           int32_t outputGateWeightOffset = hidden_size * input_size;
           int32_t outputGateBiasOffset = hidden_size;
 
-          TIDL_MMA_Matmul<Tin, Tw, Tacc>(xt, W_dir + outputGateWeightOffset, B_dir + outputGateBiasOffset, outputGateAcc, 1, input_size, hidden_size, true);
+          TIDL_MMA_Matmul<Tin, Tw, Tacc>(xt, Wo, B_dir + outputGateBiasOffset, outputGateAcc, 1, input_size, hidden_size, true);
           TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(outputGateAcc, hidden_size, mmaScales[10], mmaShifts[10]);
 
-          TIDL_MMA_Matmul<Th, Tw, Tacc>(ht_prev, R_dir + outputGateWeightOffset, B_dir + outputGateBiasOffset + 4*hidden_size, intermediateAcc, 1, hidden_size, hidden_size, true);
+          TIDL_MMA_Matmul<Th, Tw, Tacc>(ht_prev, Ro, B_dir + outputGateBiasOffset + 4*hidden_size, intermediateAcc, 1, hidden_size, hidden_size, true);
           TIDL_MMA_ScaleShiftRound<Tacc, Tacc, Tout>(intermediateAcc, hidden_size, mmaScales[11], mmaShifts[11]);
           TIDL_MMA_EltWiseSum<Tacc, Tacc, Tacc>(outputGateAcc, intermediateAcc, outputGateAcc, hidden_size);
 

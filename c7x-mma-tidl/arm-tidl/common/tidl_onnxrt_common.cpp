@@ -254,7 +254,8 @@ int32_t TIDL_setRtTensorParameters(sTIDLRT_Tensor_t * allocatedPtrs, sTIDLRT_Ten
 /** Set input and output TIDL RT tensor properties and call TIDL RT Invoke */
 int32_t TIDL_subgraphRtInvoke(int32_t osrtDebugPrintLevel, OnnxTIDLSubGraphParams * subgraphParams, sTIDL_tidlRtDynamicLoading_t * infer_ops, int32_t isInfer)
 {
-  TIDL_osrtDebugPrint(osrtDebugPrintLevel, "*******   In TIDL_subgraphRtInvoke  ******** \n");
+  TIDL_osrtDebugPrint(osrtDebugPrintLevel, "========== TIDL_subgraphRtInvoke Start (name:%s) ==========\n", subgraphParams->subGraphName_);
+
   int status = 0;
   int j = 0;
   onnxRtParams_t * onnxRtParams = &subgraphParams->onnxRtParams;
@@ -311,7 +312,8 @@ int32_t TIDL_subgraphRtInvoke(int32_t osrtDebugPrintLevel, OnnxTIDLSubGraphParam
   {
     TIDL_printSubgraphStats(stats);
   }
-  TIDL_osrtDebugPrint(osrtDebugPrintLevel, "*******  TIDL_subgraphRtInvoke done  ******** \n");
+
+  TIDL_osrtDebugPrint(osrtDebugPrintLevel, "========== TIDL_subgraphRtInvoke End (name:%s) ==========\n", subgraphParams->subGraphName_);
   return status;
 }
 

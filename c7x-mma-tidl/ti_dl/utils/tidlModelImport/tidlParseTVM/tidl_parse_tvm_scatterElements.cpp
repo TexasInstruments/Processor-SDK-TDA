@@ -133,27 +133,42 @@ template<> int32_t TidlParseTVM::parse<OpNameStr("scatter_elements")> ()
     {
         layer.layerParams.scatterElementsParams.reduction =  TIDL_ScatterElementsUnsupported;
     }
-    string index_type;
+    bool indexIsInt64 = false;
     string varName;
 
     if(md.numConstInputs == 1)
-    {      
-        layer.weights = TIDL_extractConstantTensorData(call, layer.allowlistingMetaData.constTensorIndices[0], layer.allowlistingMetaData, 0 );  
+    {
+        layer.weights = TIDL_extractConstantTensorData(call, layer.allowlistingMetaData.constTensorIndices[0], layer.allowlistingMetaData, 0 );
+        if(layer.weights.ptr==NULL)
+        {
+            TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", layer.allowlistingMetaData.constTensorIndices[0]);
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
     }
 
     if(md.numConstInputs == 2)
     {
-        layer.weights = TIDL_extractConstantTensorData(call, layer.allowlistingMetaData.constTensorIndices[0], layer.allowlistingMetaData, 0);  
-        layer.bias = TIDL_extractConstantTensorData(call, layer.allowlistingMetaData.constTensorIndices[1], layer.allowlistingMetaData, 1);  
+        layer.weights = TIDL_extractConstantTensorData(call, layer.allowlistingMetaData.constTensorIndices[0], layer.allowlistingMetaData, 0);
+        if(layer.weights.ptr==NULL)
+        {
+            TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", layer.allowlistingMetaData.constTensorIndices[0]);
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
+        layer.bias = TIDL_extractConstantTensorData(call, layer.allowlistingMetaData.constTensorIndices[1], layer.allowlistingMetaData, 1);
+        if(layer.bias.ptr==NULL)
+        {
+            TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", layer.allowlistingMetaData.constTensorIndices[1]);
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
     }
 
     if(call->args[1].as<tvm::relay::ConstantNode>())
-    {   
-        index_type = DLDataType2String(call->args[1]->checked_type().as<TensorTypeNode>()->dtype);
+    {
+        indexIsInt64 = TIDL_relayIsInt64Type(call->args[1]);
     }
     int32_t result =-1;
     // Convert int64 indices to int32 if needed
-    if(index_type == "int64")
+    if(indexIsInt64)
     {
         if(layer.allowlistingMetaData.constTensorIndices[0]==1)
         {

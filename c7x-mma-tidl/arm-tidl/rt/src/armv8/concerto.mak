@@ -21,11 +21,16 @@ TARGET_OVX_PATH ?= TDA54
 endif
 
 LDIRS += $(TIOVX_PATH)/lib/$(TARGET_OVX_PATH)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+ifeq ($(ENABLE_NEW_VISION_APPS_STRUCTURE),yes)
 LDIRS += $(PLATFORM_PATH)/out/$(TARGET_OVX_PATH)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+else
+LDIRS += $(VISION_APPS_PATH)/out/$(TARGET_OVX_PATH)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
+endif
 LDIRS += $(LINUX_FS_PATH)/usr/lib
 LDIRS += $(APP_UTILS_PATH)/lib/$(TARGET_OVX_PATH)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 LDIRS += $(TIDL_PATH)/arm-tidl/tiovx_kernels/lib/$(TARGET_OVX_PATH)/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
 
+ifeq ($(ENABLE_NEW_VISION_APPS_STRUCTURE),yes)
 TIOVX_LIBS  =
 TIOVX_LIBS += vx_vxu vx_framework
 TIOVX_LIBS += vx_kernels_host_utils vx_kernels_target_utils
@@ -61,6 +66,40 @@ SHARED_LIBS += rt
 include $($(_MODULE)_SDIR)/../concerto_common.mak
 
 IDIRS += $(PLATFORM_PATH)/hlos/include
+else
+TIOVX_LIBS  =
+TIOVX_LIBS += vx_framework
+#TIOVX_LIBS += vx_platform_psdk_j7
+TIOVX_LIBS += vx_kernels_host_utils
+TIOVX_LIBS += vx_kernels_tidl
+TIOVX_LIBS += vx_nested_kernels_tidl
+TIOVX_LIBS += vx_kernels_tvm
+
+TIOVX_LIBS += vx_kernels_openvx_core
+TIOVX_LIBS += vx_utils
+
+VISION_APPS_UTILS_LIBS += app_utils_console_io
+VISION_APPS_UTILS_LIBS += app_utils_file_io
+VISION_APPS_UTILS_LIBS += app_utils_ipc
+VISION_APPS_UTILS_LIBS += app_rtos_linux_mpu1_common
+VISION_APPS_UTILS_LIBS += app_utils_remote_service
+VISION_APPS_UTILS_LIBS += app_utils_mem
+VISION_APPS_UTILS_LIBS += app_utils_perf_stats
+VISION_APPS_UTILS_LIBS += app_utils_init
+
+# STATIC_LIBS += $(TIOVX_LIBS)
+# STATIC_LIBS += $(VISION_APPS_UTILS_LIBS)
+
+SHARED_LIBS += ti_rpmsg_char
+SHARED_LIBS += tivision_apps
+SHARED_LIBS += rt
+
+# These are needed for dependent shared objets of tivision_apps
+$(_MODULE)_LOPT += -rpath-link=$(LINUX_FS_PATH)/lib
+$(_MODULE)_LOPT += -rpath-link=$(LINUX_FS_PATH)/usr/lib
+
+include $($(_MODULE)_SDIR)/../concerto_common.mak
+endif
 
 include $(FINALE)
 

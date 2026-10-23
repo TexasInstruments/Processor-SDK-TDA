@@ -65,9 +65,9 @@
 #ifndef TIDL_IMPORT_INCLUDE_H_
 #define TIDL_IMPORT_INCLUDE_H_
 
-int32_t TIDL_getAttr_data_format(const NodeDef& node, char * name);
-int32_t TIDL_getAttr_value(const NodeDef& node, char * name, int32_t * valuePtr, int32_t idx);
-int32_t TIDL_getAttr_padding(const NodeDef& node, char * name, int32_t * padType);
+int32_t TIDL_getAttr_data_format(const NodeDef& node, const char * name);
+int32_t TIDL_getAttr_value(const NodeDef& node, const char * name, int32_t * valuePtr, int32_t idx);
+int32_t TIDL_getAttr_padding(const NodeDef& node, const char * name, int32_t * padType);
 int32_t getNumberOfLinesIntheFile(char *fileName);
 
 #endif /*TIDL_IMPORT_INCLUDE_H_ */

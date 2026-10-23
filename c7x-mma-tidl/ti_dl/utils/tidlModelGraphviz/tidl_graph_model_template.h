@@ -49,6 +49,13 @@ const char* HTML_TEMPLATE = R"raw(
             <line x1="8" y1="11" x2="14" y2="11"></line>
         </svg>
     </div>
+    <div id="back-button" onclick="backToSummary()" title="Back to Summary" style="display:none;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        <span>Summary</span>
+    </div>
+    <div id="block-title"></div>
     <input type="file" id="perf-csv-input" accept=".csv" style="display:none">
     <div id="csv-upload-icon" onclick="document.getElementById('perf-csv-input').click()" title="Upload Performance CSV">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -431,6 +438,58 @@ const char* HTML_TEMPLATE = R"raw(
             stroke: #4CAF50;
         }
 
+        #back-button {
+            position: fixed;
+            top: 5px;
+            left: 45px;
+            z-index: 100;
+            padding: 5px 10px;
+            background-color: #4a90d9;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            font-family: Arial, sans-serif;
+        }
+
+        #back-button svg {
+            width: 16px;
+            height: 16px;
+            stroke: white;
+        }
+
+        #back-button:hover {
+            background-color: #357abd;
+        }
+
+        #block-title {
+            position: fixed;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            padding: 4px 16px;
+            background-color: rgba(0, 0, 60, 0.85);
+            color: white;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            display: none;
+            pointer-events: none;
+        }
+
+        #mainSvg.summary-view {
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            align-items: flex-start;
+            padding-top: 20px;
+        }
+
         .perf-subheader {
             font-size: 11px;
             font-weight: bold;
@@ -453,8 +512,9 @@ const char* HTML_TEMPLATE = R"raw(
 
     <script>
         var currentSelectedNodeId = null;
-        const nodeInfoMap = new Map();
-        const edgeInfoMap = new Map();
+        let nodeInfoMap = new Map();
+        let edgeInfoMap = new Map();
+        let summarySvgContent = null;
 
         // Performance data from CSV
         let perfDataMap = new Map();   // layerNum (string) -> { colName: value, ... }
@@ -749,6 +809,64 @@ const char* HTML_TEMPLATE = R"raw(
             window.URL.revokeObjectURL(a.href);
         }
 
+        function loadBlockSVG(blockId) {
+            const mainSvgDiv = document.getElementById('mainSvg');
+            const tmpl = document.getElementById('block_detail_' + blockId);
+            if (!tmpl) return;
+            // Only save as summary if we are currently showing the summary (not already in a block).
+            // This prevents block→block navigation from overwriting the real summary.
+            if (summarySvgContent === null) {
+                summarySvgContent = mainSvgDiv.innerHTML;
+            }
+            mainSvgDiv.classList.remove('summary-view');
+            mainSvgDiv.innerHTML = tmpl.innerHTML;
+            document.getElementById('back-button').style.display = 'flex';
+            const blockTitleEl = document.getElementById('block-title');
+            blockTitleEl.textContent = 'Block ' + blockId;
+            blockTitleEl.style.display = 'block';
+            closeSideBar();
+            currentSelectedNodeId = null;
+            nodeInfoMap = new Map();
+            edgeInfoMap = new Map();
+            initNodeHandlers();
+        }
+
+        function backToSummary() {
+            if (summarySvgContent === null) return;
+            const mainSvgDiv = document.getElementById('mainSvg');
+            mainSvgDiv.innerHTML = summarySvgContent;
+            mainSvgDiv.classList.add('summary-view');
+            summarySvgContent = null;
+            document.getElementById('back-button').style.display = 'none';
+            document.getElementById('block-title').style.display = 'none';
+            closeSideBar();
+            currentSelectedNodeId = null;
+            nodeInfoMap = new Map();
+            edgeInfoMap = new Map();
+            initNodeHandlers();
+        }
+
+        // Navigate to a source block and highlight the originating layer.
+        // Called when clicking a cross-block boundary node (EXT_SRC_N_BLK_K).
+        function navigateToSourceBlock(blockId, layerIdx) {
+            loadBlockSVG(blockId);
+            // After loadBlockSVG the DOM is synchronously updated; find the target node by layer index
+            const nodes = document.querySelectorAll('.node');
+            for (const node of nodes) {
+                const titleEl = node.querySelector('title');
+                if (!titleEl) continue;
+                const m = titleEl.textContent.match(/^Layer\s+(\d+):/);
+                if (m && parseInt(m[1]) === layerIdx) {
+                    scrollToNode(node.id);
+                    openSideBar(node.id);
+                    highlightCurrentNode(node.id);
+                    currentSelectedNodeId = node.id;
+                    break;
+                }
+            }
+        }
+
+
         // Function to calculate the maximum label width and adjust the CSS accordingly
         function setSideBarValues(nodeId) {
             const sidenav = document.getElementById('sidenav');
@@ -864,14 +982,20 @@ const char* HTML_TEMPLATE = R"raw(
                     i = 0;
                     while (i < value.length) {
                         const inputNode = nodeInfoMap.get(value[i]);
+                        if (!inputNode) { i++; continue; }
                         const newInputDiv = document.createElement('div');
                         newInputDiv.innerHTML = ioHtmlTemplate;
                         const labelElement = newInputDiv.querySelector(".property-label");
                         const valueElement = newInputDiv.querySelector(".property-value");
 
-                        labelElement.textContent = inputNode.get("layer");
-
-                        valueElement.textContent = inputNode.get("name").trim().replace(/^['"]|['"]$/g, '');
+                        const inputLayer = inputNode.get("layer") || '';
+                        if (/^Layer\s+\d+/.test(inputLayer)) {
+                            labelElement.textContent = inputLayer;
+                            valueElement.textContent = (inputNode.get("name") || '').trim().replace(/^['"]|['"]$/g, '');
+                        } else {
+                            labelElement.textContent = inputNode.get("op_type") || inputLayer;
+                            valueElement.textContent = '';
+                        }
                         valueElement.setAttribute("nodeId", value[i]);
                         valueElement.style.cursor = 'pointer';
                         newInputDiv.querySelector(".property-value").addEventListener('click', function(event) {
@@ -1343,41 +1467,57 @@ const char* HTML_TEMPLATE = R"raw(
                 });
             });
             
+            initNodeHandlers();
+            // For hierarchical (grouped) views, center the initial summary SVG.
+            if (document.getElementById('block_detail_0')) {
+                document.getElementById('mainSvg').classList.add('summary-view');
+            }
+        });
+
+        function initNodeHandlers() {
+            nodeInfoMap = new Map();
+            edgeInfoMap = new Map();
             var nodes = document.querySelectorAll('.node');
             var edges = document.querySelectorAll('.edge');
 
             nodes.forEach(function(node) {
-                const infoMap = new Map([['layer', null], ['name', null], ['op_type', null], ['input_edges', new Array()], ['output_edges', new Array()]]);
+                const infoMap = new Map([['layer', null], ['name', null], ['op_type', null], ['input_edges', new Array()], ['output_edges', new Array()], ['boundary_key', null], ['source_title', null]]);
                 var nodeTitle = node.querySelector('title');
                 if (nodeTitle) {
                     const nodeTitleTextContent = nodeTitle.textContent.trim();
                     const nodeColonIndex = nodeTitleTextContent.indexOf(':');
-                    var nodeLayer = nodeTitleTextContent;
-                    var nodeName = nodeTitleTextContent;
-                    if (nodeTitleTextContent !== -1) {
+                    var nodeLayer, nodeName;
+                    if (nodeColonIndex === -1) {
+                        // Boundary node (EXT_SRC_*, DI_*, Weights, Inputs): no colon in title
+                        nodeLayer = nodeTitleTextContent;
+                        nodeName = '';
+                        infoMap.set('boundary_key', nodeTitleTextContent);
+                    } else {
                         nodeLayer = nodeTitleTextContent.substring(0, nodeColonIndex);
                         nodeName = nodeTitleTextContent.substring(nodeColonIndex + 1).trim();
                         nodeName = nodeName.split(/\s+/).filter(word => word !== '')[1];
                     }
                     infoMap.set('layer', nodeLayer);
-                    infoMap.set('name', nodeName);
+                    infoMap.set('name', nodeName || '');
 
                     var nodeText = node.querySelector('text');
                     const nodeTextContent = nodeText.textContent.trim();
                     var nodeOpType = nodeTextContent;
                     infoMap.set('op_type', nodeOpType);
-                    
-                    edges.forEach(function(edge) {                
+
+                    edges.forEach(function(edge) {
                         var edgeTitle = edge.querySelector('title');
                         if (edgeTitle) {
                             const edgeTextContent = edgeTitle.textContent.trim();
                             const edgeColonIndex = edgeTextContent.indexOf(':');
-                            var edgeLayer = edgeTextContent;
-                            if (edgeTextContent !== -1) {
-                                edgeLayer = edgeTextContent.substring(0, edgeColonIndex);
-                            }
-                            if (nodeLayer == edgeLayer) {
-                                infoMap.get('output_edges').push(edge.id); 
+                            var edgeLayer = edgeColonIndex !== -1
+                                ? edgeTextContent.substring(0, edgeColonIndex)
+                                : edgeTextContent;
+                            // For boundary nodes (no colon in name) the edge title is
+                            // "BoundaryKey->Layer N:..." so edgeLayer contains the "->Layer N" part.
+                            // Match either by exact prefix or by startsWith(nodeLayer + '->').
+                            if (nodeLayer === edgeLayer || edgeTextContent.startsWith(nodeLayer + '->')) {
+                                infoMap.get('output_edges').push(edge.id);
                             }
                         }
                     });
@@ -1385,7 +1525,7 @@ const char* HTML_TEMPLATE = R"raw(
                 nodeInfoMap.set(node.id, infoMap);
             });
 
-            edges.forEach(function(edge) {                
+            edges.forEach(function(edge) {
                 const infoMap = new Map([['input_node', null], ['output_node', null]]);
                 var edgeTitle = edge.querySelector('title');
                 if (edgeTitle) {
@@ -1418,9 +1558,30 @@ const char* HTML_TEMPLATE = R"raw(
                 edgeInfoMap.set(edge.id, infoMap);
             });
 
+
             nodes.forEach(function(node) {
                 node.style.cursor = 'pointer';
                 node.addEventListener('click', () => {
+                    // Cross-block boundary node: SVG element id is EXT_SRC_N_BLK_K (input from
+                    // another block) or EXT_DST_N_BLK_K (output feeding another block) — both
+                    // just need to jump to block K and highlight layer N.
+                    const extMatch = node.id.match(/^EXT_(?:SRC|DST)_(\d+)_BLK_(\d+)$/);
+                    if (extMatch) {
+                        navigateToSourceBlock(parseInt(extMatch[2]), parseInt(extMatch[1]));
+                        return;
+                    }
+                    const titleEl = node.querySelector('title');
+                    const titleText = titleEl ? titleEl.textContent : '';
+                    const blockMatch = titleText.match(/BLOCK_ID:(\d+)/);
+                    if (blockMatch) {
+                        loadBlockSVG(parseInt(blockMatch[1]));
+                        return;
+                    }
+                    // Other boundary nodes (DI_*, Weights, Inputs): no action
+                    const info = nodeInfoMap.get(node.id);
+                    const boundaryKey = info ? info.get('boundary_key') : null;
+                    if (boundaryKey) return;
+                    if (!titleText.match(/^Layer\s+\d+/)) return;
                     scrollToNode(node.id);
                     openSideBar(node.id);
                     highlightCurrentNode(node.id);
@@ -1428,8 +1589,8 @@ const char* HTML_TEMPLATE = R"raw(
                 });
             });
 
-            edges.forEach(function(edge) {                
-    
+            edges.forEach(function(edge) {
+
                 edge.style.cursor = 'pointer';
                 const path = edge.querySelector("path");
                 const polygon = edge.querySelector("polygon");
@@ -1453,9 +1614,9 @@ const char* HTML_TEMPLATE = R"raw(
                     }
                 });
             });
-
-        });
+        }
     </script>
+    <!--BLOCK_DATA_PLACEHOLDER-->
 </body>
 </html>
 )raw";

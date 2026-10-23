@@ -79,6 +79,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <cmath>
 #include <stdint.h>
 #include "itidl_ti.h"
 #include "tidl_dataflow.h"
@@ -935,6 +936,13 @@ typedef struct {
   int32_t paramSize;
 }sTIDL_AlgConstDataParams_t;
 
+typedef struct {
+  /** Physical write cursor, mod maxCapacity; persists and advances every
+   *  call once the buffer wraps (ring-buffer overflow). Ref/host-emulation
+   *  only. */
+  int32_t head;
+}sTIDL_AlgCacheParams_t;
+
 
 
 /* CHECK_MISRA("-18.4")  -> Disable rule 18.4  */
@@ -954,6 +962,7 @@ typedef union {
   sTIDL_AlgPadParams_t               padParams;
   sTIDL_AlgCustomParams_t            customParams;
   sTIDL_AlgConstDataParams_t         constDataParams;
+  sTIDL_AlgCacheParams_t             cacheParams;
 }sTIDL_AlgLayerParams_t;
 /*RESET_MISRA("18.4")  -> Reset rule 18.4 */
 
@@ -1168,7 +1177,7 @@ typedef struct
   float32_tidl         * activationRangePtr;
   TIDL_sysScratchPtr  sysScratchPtr;
   sPerfSim_t             *perfSimOutput;
-  sWorkloadSuperGroup_t  *wlSuperGrp;
+  sWorkloadGroup_t  *wlGrp;
   sGCHelperHandle         gcHelperHandleObj;
   sGCHelperHandle         *gcHelperHandle;
   uint8_t * zeroVector1k;
@@ -1190,9 +1199,9 @@ typedef struct
   float32_tidl ddrBytesPerCPUCycle;
   void    * preEmptHandle;
   TIDL_preEmptContextObj  preEmptContextInfo;
-  int32_t groupId;
   TIDL_controlSetArgs controlArgs;
   void* cudaMemManager;  /**< Pointer to TIDL_CudaMemManager structure (opaque pointer) */
+  int32_t initTraceWriteLevel; /** traceWriteLevel captured at TIDL_init time */
 } TIDL_Obj;
 
 typedef TIDL_Obj * TIDL_Handle;
@@ -1263,10 +1272,6 @@ int32_t TIDL_conv2dParamsInit(sTIDL_AlgLayer_t * algLayer,
         const sTIDL_ConvParams_t * params,uint16_t imHeight,uint16_t imWidth,
         uint32_t l2ScratchSize, uint32_t l3ScratchSize, int32_t	quantizationStyle,
         uint16_t interElementSize, int32_t numCoeffsBytes);
-
-sTIDL_DataParams_t * TIDL_getDataParams(
-sTIDL_Network_t * pTIDLNetStructure,
-int32_t dataId);
 
 int32_t isPerChannelQuantizationEnabled(const sTIDL_ConvParams_t * convParams,
                                                  int32_t calibrationOption);
@@ -1529,41 +1534,110 @@ static inline float32_tidl exp_taylor(float32_tidl x)
   return ePwX;
 }
 
+/* Mirrored by name/values in tidl-kernels' tidl_FPx_math_constants.h
+ * (ExpOrder) - this file cannot include that header (layering: ti_dl/algo is
+ * lower-level than tidl-kernels), so the enum is duplicated here. If this
+ * enum's name or values ever change on either side, change both or
+ * exp_taylor_bf16_natc's delegation (tidl_FPx_math_natc.h) silently breaks
+ * the natc/CI bit-match. Kept as an enum (not the old TIDL_FPX_BF16_EXP_ORDER4
+ * macro) so a template argument selects order per call site instead of one
+ * build-wide choice.
+ *
+ * TIDL_EXPORDER_DEFINED_ guards this declaration (mirrored by the same macro
+ * name in tidl_FPx_math_constants.h) so a translation unit that includes
+ * both headers only sees ExpOrder declared once, regardless of include
+ * order. */
+#ifndef TIDL_EXPORDER_DEFINED_
+#define TIDL_EXPORDER_DEFINED_
+enum class ExpOrder
+{
+  Order3,
+  Order4
+};
+#endif /* TIDL_EXPORDER_DEFINED_ */
+
+/* Innermost Horner term of exp_taylor_bf16's 2^yf polynomial, the one part
+ * that differs between Order3 and Order4. Full specialization per ExpOrder
+ * value (not if constexpr - some build configs in this repo still compile
+ * as C++14) so the surrounding exp body stays a single, non-duplicated
+ * template. Mirrors bf16ExpInnerPoly in tidl-kernels' tidl_FPx_math_c7x.h. */
+template <ExpOrder Order>
+static inline bfloat16_tidl bf16ExpInnerPoly(bfloat16_tidl yf, bfloat16_tidl temp1, bfloat16_tidl temp2);
+
+template <>
+inline bfloat16_tidl bf16ExpInnerPoly<ExpOrder::Order3>(bfloat16_tidl yf, bfloat16_tidl temp1, bfloat16_tidl temp2)
+{
+  /* Explicit using-directive (matching exp_taylor_bf16's own) rather than
+   * relying on ADL through bfloat16.h's namespace-level "using namespace
+   * bf16_c7x" exposure: empirically, calling this function from within
+   * exp_taylor_bf16 (no local using-directive) produced a 1-ULP-wrong
+   * result vs calling the identical (yf*temp2)+temp1 expression directly
+   * with this using-directive in scope - a real, reproducible divergence,
+   * not a rounding-mode/state artifact. Being explicit here removes the
+   * ambiguity between this and floating_point's naive float-widening
+   * add/multiply overloads instead of depending on ADL to always prefer
+   * the bit-accurate bf16_c7x model. */
+  using namespace floating_point::bf16_c7x;
+  return (yf * temp2) + temp1; /* ln2^2/2 + yf*ln2^3/6 */
+}
+
+template <>
+inline bfloat16_tidl bf16ExpInnerPoly<ExpOrder::Order4>(bfloat16_tidl yf, bfloat16_tidl temp1, bfloat16_tidl temp2)
+{
+  using namespace floating_point::bf16_c7x;
+  bfloat16_tidl temp3 = (bfloat16_tidl)0.009618129f;   /* ln2^4 * 1/24 */
+  bfloat16_tidl poly  = (yf * temp3) + temp2;          /* ln2^3/6 + yf*ln2^4/24 */
+  return (yf * poly) + temp1;                          /* ln2^2/2 + yf*(...)    */
+}
+
+/* Mirrors exp_taylor_vectorized<Order>(bf16_vec) in tidl-kernels'
+ * tidl_FPx_math_c7x.h operation-for-operation: same Horner poly per Order,
+ * same round-to-nearest range reduction (VBFINTH), same arithmetic exponent
+ * clamp instead of an if-based final override. Bit-matches CI as a result -
+ * verified via TIDL_TEST_TANH on Loki. Order3 (default) intentionally drops
+ * the 4th-order term the previous version had; see git history for that
+ * version and the accuracy-vs-truncation analysis behind this choice. Order4
+ * restores it for accuracy-sensitive models (e.g. observed DETR
+ * degradation). Order was previously a TIDL_FPX_BF16_EXP_ORDER4 build macro;
+ * it's now a template argument so a caller can request either order per
+ * call site instead of one build-wide choice. */
+template <ExpOrder Order = ExpOrder::Order3>
 static inline bfloat16_tidl exp_taylor_bf16(bfloat16_tidl x)
 {
   using namespace floating_point::bf16_c7x;
 
-  bfloat16_tidl twoPwF, ePwX;
+  bfloat16_tidl oneVec   = (bfloat16_tidl)1.0f;
+  bfloat16_tidl maxVec   = std::numeric_limits<bfloat16_tidl>::max();
   bfloat16_tidl ln2      = (bfloat16_tidl)0.693147180559945f;
   bfloat16_tidl oneByLn2 = (bfloat16_tidl)1.44269504090f;
-  bfloat16_tidl oneBy6   = (bfloat16_tidl)0.1666667f;
-  bfloat16_tidl oneBy24  = (bfloat16_tidl)0.0416667f;
-  bfloat16_tidl y        = oneByLn2 * x;
-  int32_t yI            = (int32_t)y;
-  bfloat16_tidl yf       = y - (bfloat16_tidl)yI;
+  bfloat16_tidl temp1    = (bfloat16_tidl)0.240226507f;   /* ln2^2 * 0.5 */
+  bfloat16_tidl temp2    = (bfloat16_tidl)0.0555041209f;  /* ln2^3 * 1/6 */
 
-  bfloat16_tidl floatRes = yf * ln2;
+  bfloat16_tidl y  = oneByLn2 * x;
+  int32_t yS       = (int32_t)std::rint((float)y);
+  bfloat16_tidl yf = y - (bfloat16_tidl)yS;
 
-  /* Precomputing constant products to avoid cumulative quantization error */
-  bfloat16_tidl temp1 = (bfloat16_tidl)0.240226507f; /* ln2 * ln2 * 0.5 */
-  bfloat16_tidl temp2 = (bfloat16_tidl)0.0555041209f; /* ln2 * ln2 * ln2 * oneBy6 */
-  bfloat16_tidl temp3 = (bfloat16_tidl)0.00961813703f; /* ln2 * ln2 * ln2 * ln2 * oneBy24 */
+  /* Build 2^yS by clamping the biased exponent to [0,255] arithmetically
+   * (matching CI's __max/__min), same over/underflow behavior as before but
+   * via the exponent field itself rather than a post-hoc override:
+   *   biasedExp=0   -> expBits=0x0000 -> twoPwI=0.0  -> ePwX=0   (underflow)
+   *   biasedExp=255 -> expBits=0x7F80 -> twoPwI=+inf -> min -> maxVec (overflow) */
+  int32_t biasedExp = yS + 127;
+  biasedExp         = (biasedExp < 0) ? 0 : biasedExp;
+  biasedExp         = (biasedExp > 255) ? 255 : biasedExp;
+  uint16_t expBits  = (uint16_t)(((uint32_t) biasedExp) << 7);
+  bfloat16_tidl twoPwI(expBits, bfloat16_tidl::from_bits());
 
-  twoPwF = (bfloat16_tidl)1.0f + floatRes + ((yf * yf) * temp1);
-  twoPwF = twoPwF + ((yf * yf * yf) * temp2);
-  twoPwF = twoPwF + ((yf * yf * yf * yf) * temp3);
+  /* Horner polynomial for 2^yf, yf in [-0.5,0.5]:
+   *   2^yf = 1 + yf*(ln2 + yf*bf16ExpInnerPoly<Order>(yf, temp1, temp2)) */
+  bfloat16_tidl poly    = bf16ExpInnerPoly<Order>(yf, temp1, temp2);
+  poly                  = (yf * poly)  + ln2;
+  bfloat16_tidl twoPwF  = (yf * poly)  + oneVec;
 
-  uint16_t exponent = (uint16_t)(yI + 127);
-  exponent = (exponent << 7);
-  bfloat16_tidl twoPowK(exponent, bfloat16_tidl::from_bits());
-  ePwX = twoPwF * twoPowK;
+  bfloat16_tidl ePwX = twoPwF * twoPwI;
 
-  if(yI == 128) {
-    ePwX = std::numeric_limits<bfloat16_tidl>::max();
-  }
-  if(yI < -127) {
-    ePwX = (bfloat16_tidl)0.0f;
-  }
+  /* Clamp +inf (overflow path) to maxVec; 0 and normal values pass through. */
+  ePwX = ((float) ePwX > (float) maxVec) ? maxVec : ePwX;
 
   return ePwX;
 }
@@ -1815,9 +1889,11 @@ static inline bfloat16_tidl taylor_cos_bf16(bfloat16_tidl x){
     Y = HalfPI;
   }
 
-  // Quadrant index: N = floor(Y / pi)
+  // Quadrant index: N = round(Y / pi), round-to-nearest-even to match the
+  // c7x VBFINTH instruction (__bf16_to_short) used by CI - NOT truncation.
+  // Puts the reduced angle F in [-pi/2, pi/2], where the sin poly is accurate.
   bfloat16_tidl X = Y * InvPI;
-  int32_t       N = (int32_t)X;               // truncate == floor for positive Y
+  int32_t       N = (int32_t)std::rint((float)X);
   bfloat16_tidl Z = (bfloat16_tidl)N;
 
   // Sign: even quadrant -> +1, odd quadrant -> -1
@@ -1881,9 +1957,10 @@ static inline bfloat16_tidl taylor_sin_bf16(bfloat16_tidl x){
   // Large-angle guard: clamp to 0 when |x| > MAX so result is 0
   bfloat16_tidl Y = (absX > MAX) ? (bfloat16_tidl)0.0f : x;
 
-  // Quadrant index: N = floor(Y / pi)
+  // Quadrant index: N = round(Y / pi), round-to-nearest-even to match the
+  // c7x VBFINTH instruction (__bf16_to_short) used by CI - NOT truncation.
   bfloat16_tidl X = Y * InvPI;
-  int32_t       N = (int32_t)X;          // truncate == floor for positive Y
+  int32_t       N = (int32_t)std::rint((float)X);
   bfloat16_tidl Z = (bfloat16_tidl)N;
 
   // Sign: even quadrant -> +1, odd quadrant -> -1
@@ -2020,14 +2097,17 @@ static inline bfloat16_tidl taylor_atan_bf16(bfloat16_tidl x){
 
   bfloat16_tidl x_abs = (x < zero) ? -x : x;
 
-  // Reduction 1: map |x| > 1 → 1/|x| ∈ (0, 1)
+  // Reduction 1: map |x| > 1 → 1/|x| ∈ (0, 1). bf16_recip_bitmatch (bit-accurate
+  // VRCPBF model), not operator/ - that widens to float for the host-emulation
+  // fallback, diverging from the c7x kernel's vrecip<bf16_vec> (a single
+  // __recip(bf16_vec) call, no NR refinement).
   bool swap = (x_abs > one);
-  bfloat16_tidl t = swap ? ((bfloat16_tidl)1.0f / x_abs) : x_abs;
+  bfloat16_tidl t = swap ? bf16_recip_bitmatch(x_abs) : x_abs;
 
   // Reduction 2: map t ∈ (tan(π/8), 1] → u ∈ (-tan(π/8), 0]
   //   atan(t) = π/4 + atan((t-1)/(t+1))
   bool large = (t > tan_pi8);
-  bfloat16_tidl u = large ? ((t - one) / (t + one)) : t;
+  bfloat16_tidl u = large ? ((t - one) * bf16_recip_bitmatch(t + one)) : t;
 
   // 4-term Maclaurin polynomial on [-tan(π/8), tan(π/8)]
   bfloat16_tidl u2   = u * u;
@@ -2059,7 +2139,7 @@ static inline bfloat16_tidl taylor_tanh_bf16(bfloat16_tidl x){
   outVal = exp_taylor_bf16(inVal);
   numer = outVal - (bfloat16_tidl)1.0f;
   denom = outVal + (bfloat16_tidl)1.0f;
-  outVal = numer / denom;
+  outVal = numer * bf16_recip_bitmatch(denom);
 
   return outVal;
   
@@ -2285,7 +2365,6 @@ static inline BBox * get_Bbox_pointer(BBox arr[], int32_t offset)
   return &arr[offset];
 }
 
-int32_t TIDL_getLayerNum(const sTIDL_Network_t * pTIDLNetStructure, int32_t dataId);
 int32_t TIDL_getDatElementSign(int32_t elementType);
 
 int32_t TIDL_FillPaddedCols(
@@ -2318,7 +2397,6 @@ int32_t  TIDL_DspFillPaddedBatches(
     int32_t channelPitch,
     uint32_t batchPitch);
 
-void TIDL_getMMAv2_EltwiseScalesAndShift(float32_tidl scale1, float32_tidl scale2, uint8_t *intScale1, uint8_t *intScale2, uint8_t *cScale, uint8_t *shift);
 void TIDL_getMMAv2_ScaleAndShift(float32_tidl scaleRatio, uint8_t *scale, uint8_t *shift);
 
 

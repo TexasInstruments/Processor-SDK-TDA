@@ -176,8 +176,12 @@ int TIDL_cudaConcatOp(
     // Get GPU pointer for accumulator
     if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), accumulator, (void**)&dpAccumulator, accumulation_size) != IALG_EOK)
     {
-        printf("Concat: Unable to allocate accumulator pointer\n");
-        return IALG_EFAIL;
+        if(TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), accumulator, (void**)&dpAccumulator, accumulation_size) != IALG_EOK)
+        {
+            /*Log Error*/
+            printf("Concat: Unable to allocate accumulator pointer\n");
+            return IALG_EFAIL;
+        }
     }
 
     // ---- CUDA Streams Optimization ----------------------------------------

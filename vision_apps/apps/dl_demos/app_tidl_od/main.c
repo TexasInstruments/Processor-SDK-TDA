@@ -1797,6 +1797,9 @@ static void set_post_proc_defaults_od(PostProcObj *postProcObj){
     postProcObj->params.od_prms.classnames = img_labels;
 
     postProcObj->params.od_prms.viz_th = 0.4;
+
+    /* Placeholder; app_update_post_proc() overrides this */
+    postProcObj->params.od_prms.outputFormat = TIVX_DL_POST_PROC_OD_OUTPUT_NATIVE;
 }
 
 static void update_post_proc_params_od(AppObj *obj, PostProcObj *postProcObj)

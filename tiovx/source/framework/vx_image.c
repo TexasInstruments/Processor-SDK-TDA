@@ -3374,28 +3374,20 @@ VX_API_ENTRY vx_tensor VX_API_CALL vxCreateTensorFromROI(vx_image image, const v
 <metric start> branch <metric end>
 <justification start> TIOVX_BRANCH_COVERAGE_TIVX_IMAGE_UBR036
 <justification end> */
-        if (tensor != NULL)
+        if ((vx_bool)vx_true_e == ownIsValidSpecificReference(&tensor->base, (vx_enum)VX_TYPE_TENSOR))
 /* LDRA_JUSTIFY_END */
         {
             /* release the tensor if it was created */
-/* LDRA_JUSTIFY_START
-<metric start> branch <metric end>
-<justification start> TIOVX_BRANCH_COVERAGE_TIVX_IMAGE_UBR037
-<justification end> */
-            if (tensor->base.obj_desc != NULL)
-/* LDRA_JUSTIFY_END */
-            {
-                status = vxReleaseTensor(&tensor);
+            status = vxReleaseTensor(&tensor);
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
 <justification start> TIOVX_BRANCH_COVERAGE_TIVX_IMAGE_UBR038
 <justification end> */
-                if (status != (vx_status)VX_SUCCESS)
-                {
-                    VX_PRINT(VX_ZONE_ERROR, "Failed to release tensor\n");
-                }
-/* LDRA_JUSTIFY_END */
+            if (status != (vx_status)VX_SUCCESS)
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Failed to release tensor\n");
             }
+/* LDRA_JUSTIFY_END */
         }
     }
     return tensor;

@@ -117,7 +117,7 @@ int32_t TidlParseTVM:: parse<OpNameStr("sum")> ()
     return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
   }
 
-  layer.layerPCParams.reduceSumParams.reduceDims= keepdims;
+  layer.layerPCParams.reduceSumParams.keepDims= keepdims;
 
   /** Adjust axis to TIDL dimensions*/
   axis = TIDL_relayNormalizeAxis(axis, numDim);

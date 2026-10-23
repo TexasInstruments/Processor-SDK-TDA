@@ -64,25 +64,51 @@ using namespace std;
 
 template <>
 int32_t TidlParseTVM::parse<OpNameStr("tidl.expand")>()
-{    
+{
     int32_t status = 0;
     layer.layerType = TIDL_ExpandLayer;
     sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
 
     layer.numInBufs = 1;
-    if( md.numConstInputs > 0 )
+    for (int32_t i = 0; i < (int32_t)md.constTensorIndices.size(); i++)
     {
-        sBuffer_t buffer =  TIDL_extractConstantTensorData(call,md.constTensorIndices[0], md, 0);
-        for(int i = 0; i < TIDL_DIM_MAX; i++)
+        int constTensorIdx = md.constTensorIndices[i];
+        if (constTensorIdx == 1)
         {
-            layer.layerPCParams.expandParams.shape[i] = 1;
+            /* Shape input (input 1) is a constant — absorb into expandParams */
+            sBuffer_t buffer = TIDL_extractConstantTensorData(call, constTensorIdx, md, i);
+            if (buffer.ptr == NULL)
+            {
+                TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Expand: Cannot read shape tensor - only int32 and int64 tensors are supported");
+                return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+            }
+
+            for (int j = 0; j < TIDL_DIM_MAX; j++)
+            {
+                layer.layerPCParams.expandParams.shape[j] = 1;
+            }
+
+            int offset = std::max(0, ((int32_t)TIDL_DIM_MAX - (int32_t)buffer.bufSize));
+            for (int j = 0; j < buffer.bufSize; j++)
+            {
+                layer.layerPCParams.expandParams.shape[j + offset] = (int32_t)((int64_t*)buffer.ptr)[j];
+            }
+            layer.layerPCParams.expandParams.numDims = (int32_t)buffer.bufSize;
+
+            free(buffer.ptr);
+            buffer.ptr = NULL;
+            buffer.bufSize = 0;
         }
-
-        int offset = std::max(0, ((int32_t)TIDL_DIM_MAX - buffer.bufSize));
-
-        for(int i = 0; i < buffer.bufSize; i++)
+        else if (constTensorIdx == 0)
         {
-            layer.layerPCParams.expandParams.shape[i + offset] = (int32_t)((int64_t*)buffer.ptr)[i];
+            /* Data input (input 0) is a constant — store in layer.weights
+             * so tidl_addConstDataLayers can create the appropriate ConstDataLayer */
+            layer.weights = TIDL_extractConstantTensorData(call, constTensorIdx, md, i);
+            if (layer.weights.ptr == NULL)
+            {
+                TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Expand: Unable to read constant data input");
+                return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+            }
         }
     }
     return 0;

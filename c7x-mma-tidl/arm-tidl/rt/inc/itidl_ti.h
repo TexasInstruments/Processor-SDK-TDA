@@ -209,7 +209,12 @@ typedef void (*TIDL_Unlock_t) (int32_t val);
 #define TIDL_SizeLayer                 ((int32_t) 56)
 #define TIDL_AttentionLayer            ((int32_t) 57)
 #define TIDL_NonZeroLayer              ((int32_t) 58)
-#define TIDL_UnsupportedLayer          ((int32_t) 59)
+#define TIDL_GroupQueryAttentionLayer  ((int32_t) 59)
+#define TIDL_MatMulNBitsLayer          ((int32_t) 60)
+#define TIDL_RotaryEmbeddingLayer      ((int32_t) 61)
+#define TIDL_CacheLayer                ((int32_t) 62)
+#define TIDL_MemCopyLayer              ((int32_t) 63)
+#define TIDL_UnsupportedLayer          ((int32_t) 64)
 /* @} */
 
 /**
@@ -723,9 +728,9 @@ typedef struct
 */
 typedef struct
 {
-  void    *base;
-  int32_t  size;
-  int32_t  offset;
+  void     *base;
+  uint32_t  size;
+  uint32_t  offset;
 }sTIDL_sysMemHandle_t;
 
 typedef sTIDL_sysMemHandle_t sTIDL_NetBuffer_t ;
@@ -907,9 +912,9 @@ typedef struct {
   int32_t   padType;
   /** Offset where per channel values to be used for padding are stored.
   A value of zero indicates that this infomation is not valid */
-  int32_t   perChannelPadConstTensorOffset;
+  uint32_t  perChannelPadConstTensorOffset;
   /** size of buffer pointed by above mentioned offset */
-  int32_t   perChannelPadConstTensorSize ;
+  uint32_t  perChannelPadConstTensorSize ;
 }sTIDL_PadLayerParams_t;
 
 /**
@@ -1049,6 +1054,10 @@ typedef struct {
   int32_t  axis;
   /** Stride in Slice axis - Only Supported value is 1 */
   int32_t  stride;
+  /** 1 = slice was created by an inducer layer to split a packed output buffer */
+  int32_t  isInduced;
+  /** Segment index within the inducer's packed output (0-based); valid when isInduced=1 */
+  int32_t  inducedSegIdx;
 }sTIDL_SliceLayerParams_t;
 
 /**
@@ -1063,7 +1072,7 @@ typedef struct{
   /** Value indicators the shift factor for Bias */
   int32_t factorC;
   /** Offset for the lut table */
-  int32_t lutoffset;
+  uint32_t lutoffset;
   /** Buffer size of the lut table */
   int32_t lutBufSize;
   /** Value indicates different types of execution flow for Non Linear Activations \ref eTIDL_NonLinearActivationMethod_t*/
@@ -1077,7 +1086,7 @@ typedef struct{
 */
 typedef struct {
   /** Buffer containing Slope vales for PRelU */
-  int32_t   slope;
+  uint32_t  slope;
   /**  Floating point scale value of slope values for PRelU */
   float32_tidl     slopeScale;
   /** value indicates different types of ReLU supported \ref eTIDL_ActType*/
@@ -1202,6 +1211,16 @@ typedef struct {
   int32_t   useCeil;
   /** Global average pooling parameter for non-image data*/
   int32_t   avgDims;
+  /** Flag to indicate whether 0 padded values are to be counted 
+   *  for average pooling computation (denominator) 
+  */
+  int32_t   countIncludePad;
+  /** Scale factor for asymmetric quantization (multiplier applied after bias) */
+  uint8_t mmaScale;
+  /** Right-shift bits for asymmetric quantization (divider applied after scaling) */
+  uint8_t mmaShift;
+  /** Zero-point offset added during dequantization in asymmetric quantization */
+  int32_t biasTerm;
 }sTIDL_PoolingParams_t;
 
 /**
@@ -1262,9 +1281,9 @@ typedef struct {
   */
   int32_t doesLayerFillOutXPadding;
   /** This is a pass through variable and user shouldn't program/update it */
-  int32_t rsvdPassThrough;
+  uint32_t rsvdPassThrough;
   /** This is a pass through variable and user shouldn't program/update it */
-  int32_t rsvdPassThroughSize;
+  uint32_t rsvdPassThroughSize;
 }sTIDL_CustomParams_t;
 
 /**
@@ -1274,26 +1293,26 @@ typedef struct {
 */
 typedef struct {
   /** Offset to the kernel parameters */
-  int32_t   weights;
+  uint32_t  weights;
   /** Offset to the bias parameters  */
-  int32_t   bias;
+  uint32_t  bias;
   /** Offset to weight scales       */
-  int32_t   weightScales;
+  uint32_t  weightScales;
   /** Offset to weight zero points  */
-  int32_t   weightZeroPoints;
+  uint32_t  weightZeroPoints;
   /** Offset to bias scales         */
-  int32_t   biasScales;
+  uint32_t  biasScales;
   /** Offset to bias Zero points    */
-  int32_t   biasZeroPoints;
+  uint32_t  biasZeroPoints;
   /** Offset to derived bias values*/
-  int32_t   derivedBias;
+  uint32_t  derivedBias;
   /** Offset to derived bias values*/
-  int32_t   derivedScales;
+  uint32_t  derivedScales;
   /** Offset to derived bias values*/
-  int32_t   derivedShifts;
+  uint32_t  derivedShifts;
   /** Offset where per channel weight scales are stored for depthwise convolution layers.
  A value of zero indicates that this infomation is not valid (Deprecated)*/
-  int32_t   perChannelWeightScaleOffset;
+  uint32_t  perChannelWeightScaleOffset;
   /** Type of the convolution, Reserved for future use */
   int32_t   convolutionType;
   /** Number of input channels channels to be processed */
@@ -1378,23 +1397,23 @@ typedef struct {
 */
 typedef struct {
   /** Offset to the kernel parameters */
-  int32_t   weights;
+  uint32_t  weights;
   /** Offset to the bias parameters  */
-  int32_t   bias;
+  uint32_t  bias;
   /** Offset to weight scales       */
-  int32_t   weightScales;
+  uint32_t  weightScales;
   /** Offset to weight zero points  */
-  int32_t   weightZeroPoints;
+  uint32_t  weightZeroPoints;
   /** Offset to bias scales         */
-  int32_t   biasScales;
+  uint32_t  biasScales;
   /** Offset to bias Zero points    */
-  int32_t   biasZeroPoints;
+  uint32_t  biasZeroPoints;
   /** Offset to derived bias values*/
-  int32_t   derivedBias;
+  uint32_t  derivedBias;
   /** Offset to derived bias values*/
-  int32_t   derivedScales;
+  uint32_t  derivedScales;
   /** Offset to derived bias values*/
-  int32_t   derivedShifts;
+  uint32_t  derivedShifts;
   /** Type of the convolution, Reserved for future use */
   int32_t   convolutionType;
   /** Number of input channels channels to be processed */
@@ -1528,7 +1547,7 @@ typedef struct {
   /** Processing type to be done refer eTIDL_processingType */
    int32_t  processingType;
   /** Buffer containing the data required to form prior Bboxs */
-  int32_t  priorBox;
+  uint32_t priorBox;
   /** Size of the priorBox buffer required to form prior Bboxs  */
   int32_t  priorBoxSize;
   /** number of classes to be detected in the detection Output */
@@ -1681,11 +1700,11 @@ typedef struct {
   /** Q value for output data */
   int32_t  outDataQ;
   /** Offset to derived bias values*/
-  int32_t   derivedBias;
+  uint32_t  derivedBias;
   /** Offset to derived bias values*/
-  int32_t   derivedScales;
+  uint32_t  derivedScales;
   /** Offset to derived bias values*/
-  int32_t   derivedShifts;
+  uint32_t  derivedShifts;
   /** Flag to indicate if concat is No-OP */
   int32_t   isNoOp;
 }sTIDL_ConcatParams_t;
@@ -1699,9 +1718,9 @@ typedef struct {
 */
 typedef struct {
   /** Offset for kernel parameters  */
-  int32_t   weights;
+  uint32_t  weights;
   /** Offset for bias parameters  */
-  int32_t   bias;
+  uint32_t  bias;
   /** Number of channels channels to be processed */
   int32_t   numChannels;
   /** Bias value to fill the mmav2 acculumator */
@@ -1746,23 +1765,23 @@ typedef struct {
 */
 typedef struct {
   /** Offset for kernel parameters */
-  int32_t   weights;
+  uint32_t  weights;
   /** Offset for bias parameters */
-  int32_t   bias;
+  uint32_t  bias;
   /** Offset to weight scales       */
-  int32_t   weightScales;
+  uint32_t  weightScales;
   /** Offset to weight zero points  */
-  int32_t   weightZeroPoints;
+  uint32_t  weightZeroPoints;
   /** Offset to bias scales         */
-  int32_t   biasScales;
+  uint32_t  biasScales;
   /** Offset to bias Zero points    */
-  int32_t   biasZeroPoints;
+  uint32_t  biasZeroPoints;
   /** Offset to derived bias values*/
-  int32_t   derivedBias;
+  uint32_t  derivedBias;
   /** Offset to derived bias values*/
-  int32_t   derivedScales;
+  uint32_t  derivedScales;
   /** Offset to derived bias values*/
-  int32_t   derivedShifts;
+  uint32_t  derivedShifts;
   /** activation type to be used  */
   int32_t   activationType;
   /** Number of Baches of AxB matrix multiplication */
@@ -1829,11 +1848,11 @@ typedef struct {
   /*Is one tensor broadcasted*/
   int32_t isBroadcast;
   /** Offset to derived bias values*/
-  int32_t   derivedBias;
+  uint32_t  derivedBias;
   /** Offset to derived bias values*/
-  int32_t   derivedScales;
+  uint32_t  derivedScales;
   /** Offset to derived bias values*/
-  int32_t   derivedShifts;
+  uint32_t  derivedShifts;
   /** Attribute for Mod operation */
   int32_t fmodValue;
 }sTIDL_EltWiseParams_t;
@@ -1944,12 +1963,32 @@ typedef struct {
 */
 typedef struct {
   /*Offset for data parameter*/
-  int32_t offset;
+  uint32_t offset;
   /** floating point scale for weight */
   float32_tidl weightScale;
   /** Broadcast parameter*/
   int32_t isBroadcast;
 }sTIDL_ConstDataParams_t;
+
+/**
+ @struct  sTIDL_CacheParams_t
+ @brief   This structure defines the parameters for the Cache layer in TIDL.
+*/
+typedef struct {
+  /** Which dim (TIDL_DIM_BATCH..TIDL_DIM_WIDTH) grows every call,
+      static/import-time. Explicit rather than inferred from dynDimMask,
+      since dynDimMask may be set for reasons unrelated to this cache. */
+  int32_t axis;
+  /** Max length along axis, set at compile/import time. Stamped into
+      outData.dimValues[axis] at compile time by TIDL_shapeInfer_Cache;
+      at runtime that dimValue instead holds the active/valid length, so
+      this field is the only persistent record of the configured max. */
+  int32_t maxCapacity;
+  /** Indices (into inData[]/inLayerIdx[]) of inputs gated by
+      commonParams->cacheImport instead of being appended every call
+      unconditionally. 0-not-optional, 1-optional. */
+  int32_t isOptionalInput[TIDL_NUM_IN_BUFS];
+}sTIDL_CacheParams_t;
 
 typedef struct {
   int32_t   align_corners;
@@ -2038,7 +2077,7 @@ typedef struct {
   /** Whether clip is given in the network or not */
   int8_t isClipSet;
   /** Offset to tensor (of shape [batch_size]) specifying lengths of sequences in a batch */
-  int32_t sequence_lens;
+  uint32_t sequence_lens;
   /** alpha value used by activations */
   float32_tidl activation_alpha[TIDL_LSTM_MAX_ACTIVATIONS];
   /** beta value used by activations */
@@ -2077,7 +2116,7 @@ typedef struct {
   /** Whether clip is given in the network or not */
   int8_t isClipSet;
   /** Offset to tensor (of shape [batch_size]) specifying lengths of sequences in a batch */
-  int32_t sequence_lens;
+  uint32_t sequence_lens;
   /** alpha value used by activations */
   float32_tidl activation_alpha[TIDL_GRU_MAX_ACTIVATIONS];
   /** beta value used by activations */
@@ -2110,7 +2149,7 @@ typedef struct {
   /** Whether clip is given in the network or not */
   int8_t isClipSet;
   /** Offset to tensor (of shape [batch_size]) specifying lengths of sequences in a batch */
-  int32_t sequence_lens;
+  uint32_t sequence_lens;
   /** alpha value used by activations */
   float32_tidl activation_alpha[TIDL_RNN_MAX_ACTIVATIONS];
   /** beta value used by activations */
@@ -2148,7 +2187,6 @@ typedef struct {
   float32_tidl scale;
 }sTIDL_AttentionParams_t;
 
-
 /**
  @struct  sTIDL_NonZeroParams_t
  @brief   This structure define the parameters of NonZero layer in TIDL
@@ -2156,6 +2194,105 @@ typedef struct {
 typedef struct {
   int32_t numValidInputDims;
 }sTIDL_NonZeroParams_t;
+
+
+/**
+ @struct  sTIDL_GroupQueryAttentionParams_t
+ @brief   Parameters of GroupQueryAttention (ONNX com.microsoft contrib op).
+          Dedicated native (float) layer; computed only in the reference kernel.
+*/
+typedef struct {
+  /** Number of query heads */
+  int32_t   numHeads;
+  /** Number of key/value heads (grouped/multi-query) */
+  int32_t   kvNumHeads;
+  /** Per-head feature size = hidden / numHeads */
+  int32_t   headSize;
+  /** Softmax scale (default 1/sqrt(headSize)) */
+  float32_tidl scale;
+  /** Softcap value applied to attention logits (0 = disabled) */
+  float32_tidl softcap;
+  /** Local sliding-window size (-1 = disabled / full causal) */
+  int32_t   localWindowSize;
+  /** Whether rotary embedding is applied (0/1) */
+  int32_t   doRotary;
+  /** Rotary interleaved layout (0/1) */
+  int32_t   rotaryInterleaved;
+  /** Whether Q,K,V arrive as a single packed input (0/1) */
+  int32_t   isPackedQKV;
+  /** Whether past/present key-value cache buffers are present (0/1) */
+  int32_t   hasPast;
+  /** Rotary embedding dimension (0 = full headSize) */
+  int32_t   rotaryDim;
+  /** Offset to optional rotary cos cache float buffer (0 = absent) */
+  uint32_t  cosCache;
+  /** Offset to optional rotary sin cache float buffer (0 = absent) */
+  uint32_t  sinCache;
+  /** #elements for attn_out segment in packed output buffer */
+  int32_t   attnOutElems;
+  /** #elements for present_key segment in packed output buffer */
+  int32_t   presentKeyElems;
+  /** #elements for present_value segment in packed output buffer */
+  int32_t   presentValueElems;
+  /** TIDL input buffer index of seqlens_k (-1 = absent) */
+  int32_t   seqlensKBufIdx;
+  /** Past/present K,V are sourced from/managed by an upstream TIDL_CacheLayer */
+  int32_t   cacheManaged;
+}sTIDL_GroupQueryAttentionParams_t;
+
+
+/**
+ @struct  sTIDL_MatMulNBitsParams_t
+ @brief   This structure define the parameters of MatMulNBits
+          (block-wise N-bit weight-quantized MatMul, ONNX com.microsoft
+          contrib op) layer in TIDL. Weights are kept bit-packed and
+          dequantized inside the reference kernel.
+*/
+typedef struct {
+  /** Input feature dimension of the weight matrix (K) */
+  int32_t   K;
+  /** Output feature dimension of the weight matrix (N) */
+  int32_t   N;
+  /** Block size used for block-wise weight quantization along K */
+  int32_t   blockSize;
+  /** Bit-width used to quantize the weights (4 or 8) */
+  int32_t   bits;
+  /** Number of quantization blocks along K = ceil(K / blockSize) */
+  int32_t   kBlocks;
+  /** Minimum accuracy level hint for input A (unused by reference kernel) */
+  int32_t   accuracyLevel;
+  /** Offset to bit-packed uint8 weights (N, kBlocks, blobSize) */
+  uint32_t  weights;
+  /** Offset to per-block float scales (N, kBlocks) */
+  uint32_t  scales;
+  /** Offset to per-block zero points (format given by zeroPointType) */
+  uint32_t  zeroPoints;
+  /** Offset to optional float bias (N) */
+  uint32_t  bias;
+  /** Zero point storage: 0 = none (default 2^(bits-1)), 1 = packed uint8, 2 = float */
+  int32_t   zeroPointType;
+  /** Whether bias is present or not */
+  int32_t   isBias;
+}sTIDL_MatMulNBitsParams_t;
+
+/**
+ @struct  sTIDL_RotaryEmbeddingParams_t
+ @brief   Parameters of RotaryEmbedding (ONNX standard op).
+          Applies rotary positional embeddings to query/key tensors.
+          Computed only in the reference kernel.
+*/
+typedef struct {
+  /** Rotation dimension (dimension to apply rotary embedding to) */
+  int32_t   rotationDim;
+  /** Rotary layout: 0 = consecutive [x1,x2,x3,x4], 1 = interleaved [x1,x3,x2,x4] */
+  int32_t   interleaved;
+  /** Number of attention heads (for dimension calculations) */
+  int32_t   numHeads;
+  /** Position indices buffer  */
+  sBuffer_t positionIds;
+  /** TIDL input buffer index of a live seqlens_k source (-1 = absent). */
+  int32_t   seqlensKBufIdx;
+}sTIDL_RotaryEmbeddingParams_t;
 
 /**
  @struct  sTIDL_LayerParams_t
@@ -2206,6 +2343,10 @@ typedef union {
   sTIDL_AttentionParams_t                attentionParams;
   sTIDL_NonZeroParams_t                  nonZeroParams;
   sTIDL_ReshapeRtParams_t                reshapeParams;
+  sTIDL_GroupQueryAttentionParams_t      gqaParams;
+  sTIDL_MatMulNBitsParams_t              matMulNBitsParams;
+  sTIDL_RotaryEmbeddingParams_t          rotaryEmbeddingParams;
+  sTIDL_CacheParams_t                    cacheParams;
 }sTIDL_LayerParams_t;
 /*RESET_MISRA("18.4")  -> Reset rule 18.4 */
 
@@ -2271,15 +2412,15 @@ typedef struct {
 #define TIDL_NET_TOTAL_BUF     ((uint32_t) 4)
 /* @} */
 
-#define TIDL_TOOLS_VERSION "11_02_16_00"
-#define C7X_FIRMWARE_VERSION "11_02_16_00"
+#define TIDL_TOOLS_VERSION "12_00_00_00"
+#define C7X_FIRMWARE_VERSION "12_00_00_00"
 
 /* Based on last Updated Date */
 #define TIDL_NET_VERSION_FW_11_00_00_00  (0x20250429)
-#define TIDL_NET_VERSION_FW_11_02_16_00  (0x20260619)
+#define TIDL_NET_VERSION_FW_12_00_00_00  (0x20260921)
 
 // This denotes current active firmware version
-#define TIDL_NET_VERSION_FW_ACTIVE  (TIDL_NET_VERSION_FW_11_02_16_00)
+#define TIDL_NET_VERSION_FW_ACTIVE  (TIDL_NET_VERSION_FW_12_00_00_00)
 
 // This denotes passive for firmware version
 #define TIDL_NET_VERSION_FW_PASSIVE_CODE (TIDL_NET_VERSION_FW_ACTIVE < TIDL_NET_VERSION_FW_11_00_00_00)
@@ -2323,11 +2464,11 @@ typedef struct {
   option is set by user as part of eTIDL_CalibOption*/
   sTIDL_CalibParams_t    calibrationParams;
   /** dataFlow Info from offline Analysis */
-  int32_t dataFlowInfo;
+  uint32_t dataFlowInfo;
   /** Inidicator of whether Graph compiler Info is available during inference */
-  int32_t isGCInfoAvailable;
+  uint32_t isGCInfoAvailable;
   /** Init data offset, computed during offline Analysis */
-  int32_t netInitBackupDataOffset[TIDL_MAX_NUM_CORES];
+  uint32_t netInitBackupDataOffset[TIDL_MAX_NUM_CORES];
   /** Quantization statistics availability - Updated with tidl_quant_stats_tool */
   int32_t isQuantStatsAvailable;
   /** It is the WorstCaseDelay in milliSecond for pre-emption for the given network */
@@ -2345,7 +2486,12 @@ typedef struct {
    * primarily intended to be used for network contained buffers */
   sTIDL_NetBuffer_t netBufInfo[TIDL_NET_TOTAL_BUF];
   /** GC buffer info may undergo movement within the net bin file for size optimization - this variable stores the original GC buffer info offset before movement */
-  int32_t originalGcBufInfoOffset;
+  uint32_t originalGcBufInfoOffset;
+  /** Byte offset within PARAMS_BUF marking the start of the region for memory
+   * optimization on HOST_EMULATION mode */
+  uint32_t paramsBufExcludeStartOffset;
+  /** Byte offset within PARAMS_BUF marking the end (exclusive) */
+  uint32_t paramsBufExcludeEndOffset;
 
   /** Layer Parameter for each layer  */
   sTIDL_Layer_t TIDLLayers[TIDL_NUM_MAX_LAYERS];
@@ -2631,6 +2777,31 @@ typedef struct
   TIDL_sharedBufferProperties ctrlSetArgs[TIDL_MAX_NUM_CORES];
 } TIDL_controlSetArgs;
 
+#define TIDL_MUTABLE_OPT_TRACE_LOG_LEVEL   (0x1u)
+#define TIDL_MUTABLE_OPT_TRACE_WRITE_LEVEL (0x2u)
+#define TIDL_MUTABLE_OPT_TRACE_BASE_NAME   (0x4u)
+#define TIDL_MUTABLE_OPT_CACHE_IMPORT      (0x8u)
+#define TIDL_MUTABLE_OPT_CACHE_EXPORT      (0x10u)
+#define TIDL_MUTABLE_OPT_CACHE_CLEAR       (0x20u)
+
+/**
+  @struct TIDL_controlMutableOptions
+  @brief  This structure contains runtime-mutable TIDL options that can be
+          updated on a live handle via TIVX_TIDL_CMD_SET_MUTABLE_OPTIONS,
+          without recreating the handle. Only fields whose bit is set in
+          updateMask are applied.
+*/
+typedef struct
+{
+  uint32_t updateMask;
+  int32_t  traceLogLevel;
+  int32_t  traceWriteLevel;
+  char     traceBaseName[TIDL_STRING_SIZE];
+  int32_t  cacheImport;
+  int32_t  cacheExport;
+  int32_t  cacheClear;
+} TIDL_controlMutableOptions;
+
 
 /**
   @struct TIDL_CreateParams
@@ -2727,7 +2898,28 @@ typedef struct
                                 const sTIDL_sysMemHandle_t sysMems[TIDL_SYSMEM_MAX],
                                 int32_t execMode);
   int32_t forceNegativeTest;
-
+  /** Enable DDR bandwidth stats collection independently of traceLogLevel.
+   *  When set to non-zero, DDR read/write counters are sampled per layer
+   *  without requiring traceLogLevel >= 2 (which adds verbose logging overhead).
+   *  Set via TIDL_CreateParams at create/init time. */
+  uint32_t enableDDRPerfStats;
+  /** 1 = append attached input DataLayer(s) into any TIDL_CacheLayer(s) this call.
+   *  Runtime-mutable via TIVX_TIDL_CMD_SET_MUTABLE_OPTIONS, see TIDL_CacheLayer. */
+  int32_t cacheImport;
+  /** 1 = attached TIDL_MemCopyLayer(s) copy their input to their output this
+   *  call (used to expose a TIDL_CacheLayer's content through a normal output);
+   *  0 = they leave their previous output unchanged. Same update path as
+   *  cacheImport. */
+  int32_t cacheExport;
+  /** 1 = reset any attached TIDL_CacheLayer(s) this call. Orthogonal to
+   *  cacheImport/cacheExport: combined with cacheImport=1, the cache is reset
+   *  before importing ("fill" - this call's import starts from empty);
+   *  combined with cacheExport=1 alone, the cache is reset after this call's
+   *  export completes ("flush" - the reset may not take effect until the
+   *  TIDL_CacheLayer's next invocation, but the export always sees this
+   *  call's pre-clear contents); with neither, the cache is reset immediately
+   *  ("abandon"). Same update path as cacheImport. */
+  int32_t cacheClear;
 }
 TIDL_CreateParams;
 
@@ -2836,6 +3028,7 @@ typedef struct
 #define TIVX_TIDL_CMD_SET_C7X_PTRS     (0x10000002u)
 #define TIVX_TIDL_CMD_INIT             (0x10000003u)
 #define TIVX_TIDL_CODE_COVERAGE_UPLOAD (0x10000004u)
+#define TIVX_TIDL_CMD_SET_MUTABLE_OPTIONS (0x10000005u)
 
 /**
 @struct TIDL_ODLayerKeyPoint
@@ -2882,6 +3075,10 @@ static inline int TIDL_createParamsInit(TIDL_CreateParams * params)
   params->targetPriority           = 0;
   params->coreStartIdx             = 0;
   params->forceNegativeTest        = 0;
+  params->enableDDRPerfStats       = 0;
+  params->cacheImport              = 0;
+  params->cacheExport              = 0;
+  params->cacheClear               = 0;
   return IALG_EOK;
 }
 

@@ -273,24 +273,6 @@ int32_t dataId, int32_t layersGroupId);
 /**
 ----------------------------------------------------------------------------
 @ingroup    TIDL_IVISION_SUPPORT
-@fn         TIDL_getLayerNum
-@brief      Function to get the layer index of data ID
-
-@param      pTIDLNetStructure : Base pointer for net
-@param      dataId            : Current data buffer ID
-@param      layersGroupId     : current algorithm instance Group ID
-@remarks    None
-@return     IALG_EOK   - Successful
-IALG_EFAIL - Unspecified error
-----------------------------------------------------------------------------
-*/
-int32_t TIDL_getLayerNum(const sTIDL_Network_t * pTIDLNetStructure, int32_t dataId);
-
-
-
-/**
-----------------------------------------------------------------------------
-@ingroup    TIDL_IVISION_SUPPORT
 @fn         TIDL_getDataBuff
 @brief      Function to get base buffer pointer from Ivision buffer
 
@@ -409,48 +391,6 @@ IALG_EFAIL - Unspecified error
 */
 
 int32_t TIDL_flattenInit(
-  const TIDL_CreateParams *params, int32_t layerIdx,
-  sTIDL_AlgLayer_t * algLayer, int32_t *paramMemTabOffset,
-  int32_t *dataMemTabOffset, const IALG_MemRec *memRec,
-  void ** outPtr, sTIDL_LayerBuf_t *TIDLLayersBufPtr);
-
-/**
-----------------------------------------------------------------------------
-@ingroup    TIDL_IVISION_SUPPORT
-@fn         TIDL_detectOutAlloc
-@brief      Function to Request Memory required by the SSD detcetion output layer
-
-@param      params       : Create Parameters
-@param      layerIdx     : Current Layer index in Net structure
-@param      memRec       : memory table populated by the Algorithm
-@remarks    None
-@return     IALG_EOK   - Successful
-IALG_EFAIL - Unspecified error
-----------------------------------------------------------------------------
-*/
-int32_t TIDL_detectOutAlloc(const TIDL_CreateParams *params,
-  int32_t layerIdx, IALG_MemRec *memRec, sTIDL_LayerBuf_t *TIDLLayersBufPtr);
-
-
-/**
-----------------------------------------------------------------------------
-@ingroup    TIDL_IVISION_SUPPORT
-@fn         TIDL_detectOutInit
-@brief      Function to Initialize the SSD detcetion output layer specific params
-
-@param      params       : Create Parameters
-@param      layerIdx     : Current Layer index in Net structure
-@param      algLayer     : Pointer to current layer algorithm specific params
-@param      paramMemTabOffset : Current Offset in ALG_LAYERS_PARAMS_BUFF_MEMREC
-@param      dataMemTabOffset : Current Offset in ALG_SCRATCH_DATA_BUFF_MEMREC
-@param      memRec       : memory table populated by the Algorithm
-@param      outPtr       : Pointer to Layer output Pointers list
-@remarks    None
-@return     IALG_EOK   - Successful
-IALG_EFAIL - Unspecified error
-----------------------------------------------------------------------------
-*/
-int32_t TIDL_detectOutInit(
   const TIDL_CreateParams *params, int32_t layerIdx,
   sTIDL_AlgLayer_t * algLayer, int32_t *paramMemTabOffset,
   int32_t *dataMemTabOffset, const IALG_MemRec *memRec,

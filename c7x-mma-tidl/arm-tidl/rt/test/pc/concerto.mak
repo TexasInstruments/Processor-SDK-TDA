@@ -6,12 +6,14 @@ TARGETTYPE  := exe
 CSOURCES    := $(call all-c-files)
 
 # host emulation needs HE includes
-INCLUDE_PATHS+= -I $(DSP_TOOLS)/host_emulation/include/$(C7X_VERSION)$(C7x_HOSTEMU_COMPILER_STRING)/
+INCLUDE_PATHS+= -I $(CGT7X_ROOT)/host_emulation/include/$(C7X_VERSION)$(C7x_HOSTEMU_COMPILER_STRING)/
 
 
 # library search dirs are always platform specific
+ifeq ($(ENABLE_NEW_VISION_APPS_STRUCTURE),yes)
 LDIRS += $(PLATFORM_PATH)/out/PC/$(TARGET_CPU)/LINUX/$(TARGET_BUILD)
-LDIRS += $(DSP_TOOLS)/host_emulation
+endif
+LDIRS += $(CGT7X_ROOT)/host_emulation
 
 ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a J722S j722s TDA54 tda54))
 DEFS += DMA_UTILS_STANDALONE

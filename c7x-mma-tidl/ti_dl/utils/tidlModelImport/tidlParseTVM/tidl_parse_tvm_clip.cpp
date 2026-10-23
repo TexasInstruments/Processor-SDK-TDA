@@ -63,21 +63,46 @@
 #include "tidl_parse_tvm.h"
 using namespace std;
 #include <tvm/relay/attrs/transform.h>
+#include <limits>
 
 template <>
 int32_t TidlParseTVM::parse<OpNameStr("clip")>()
 {
-    int32_t status = 0;
     layer.layerType = TIDL_ClipLayer;
 
-
     auto attrs = call->attrs.as<ClipAttrs>();
-    auto a_min = attrs->a_min;
-    auto a_max = attrs->a_max;
+    if (attrs == nullptr)
+    {
+        TIDL_LOG_ERROR(gDiags.gDiagList, "Clip layer: Unable to get ClipAttrs");
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+    }
+
+    double a_min = attrs->a_min;
+    double a_max = attrs->a_max;
 
     layer.clipParams.isClipEnabled = 1;
-    layer.clipParams.clipMin = a_min;
-    layer.clipParams.clipMax = a_max;
+
+    /* If min not found (unbounded min comes through as -infinity) */
+    if (a_min == -std::numeric_limits<double>::infinity())
+    {
+        /* Set default value of min */
+        layer.clipParams.clipMin = (float32_tidl)std::numeric_limits<float>::lowest();
+    }
+    else
+    {
+        layer.clipParams.clipMin = (float32_tidl)a_min;
+    }
+
+    /* If max not found (unbounded max comes through as +infinity) */
+    if (a_max == std::numeric_limits<double>::infinity())
+    {
+        /* Set default value of max */
+        layer.clipParams.clipMax = (float32_tidl)std::numeric_limits<float>::max();
+    }
+    else
+    {
+        layer.clipParams.clipMax = (float32_tidl)a_max;
+    }
 
     return 0;
 }

@@ -79,8 +79,6 @@
 #include "tidl_import_config.h"
 #include "tidl_import_diag.h"
 
-#define __MODULE__ "[QUANTIZATION]"
-
 using namespace std;
 using namespace tidl_quant_params;
 using ::google::protobuf::Message;
@@ -95,6 +93,9 @@ using ::google::protobuf::io::CodedOutputStream;
 #include "tidl_import_quantize.h"
 
 #include <unordered_map>
+
+#undef __MODULE__
+#define __MODULE__ "[QUANTIZER]"
 
 /**
  * ---------------------------------------------------------------------------
@@ -195,7 +196,7 @@ void TIDL_getProtoMsgLayerIndexingArr(TIDLNetQuantParams *QuantParamsMsg,
                                       string *protoMsgLayerIdxArr)
 {
   // fill up the map if the protomsg isnt empty
-  if(QuantParamsMsg->ByteSize() > 0){
+  if(QuantParamsMsg->ByteSizeLong() > 0){
 
     // fill up the map with updated indexes
     for(int i = 0; i<QuantParamsMsg->layers_size(); i++)

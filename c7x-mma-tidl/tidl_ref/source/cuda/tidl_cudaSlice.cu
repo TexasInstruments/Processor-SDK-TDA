@@ -13,8 +13,6 @@
 #include "tidl_cudaUtilities.cu"
 #include <type_traits>
 #include "tidl_cuda_mem_manager.h"
-/* External declaration of the global memory manager pointer */
-extern TIDL_CudaMemManager* TIDL_cudaGetThreadManager();
 
 template <class Tin, class Tout>
 __global__ void SliceKernel(
@@ -56,22 +54,53 @@ int TIDL_refCudaSlice(
   int32_t outChPitch, int32_t inDim1Pitch, int32_t outDim1Pitch, int32_t inDim2Pitch,
   int32_t outDim2Pitch, int32_t inROIPitch, int32_t outROIPitch)
 {
-    size_t input_size = numROIs * inROIPitch * sizeof(Tin);
-    size_t output_size = numROIs * outROIPitch * sizeof(Tout);
+    // Calculate actual memory footprint needed based on access patterns
+    size_t input_elements = 1 + inPtrOffset +
+                           ((numROIs - 1) * inROIPitch) +
+                           ((numDim1 - 1) * inDim1Pitch) +
+                           ((numDim2 - 1) * inDim2Pitch) +
+                           ((numChs - 1) * inChPitch) +
+                           ((outHeight - 1) * inLinePitch) +
+                           (outWidth - 1);
+    size_t output_elements = 1 + outPtrOffset +
+                            ((numROIs - 1) * outROIPitch) +
+                            ((numDim1 - 1) * outDim1Pitch) +
+                            ((numDim2 - 1) * outDim2Pitch) +
+                            ((numChs - 1) * outChPitch) +
+                            ((outHeight - 1) * outLinePitch) +
+                            (outWidth - 1);
+    size_t input_size = input_elements * sizeof(Tin);
+    size_t output_size = output_elements * sizeof(Tout);
 
     Tin* d_input = NULL;
     Tout* d_output = NULL;
 
-    // Get GPU pointers after synchronization
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), pIn, (void**)&d_input, input_size);
-    TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), pOut,  (void**)&d_output, output_size);
+    // Get GPU pointers (allocate if needed)
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), pIn, (void**)&d_input, input_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), pIn, (void**)&d_input, input_size) != IALG_EOK)
+        {
+            printf("Slice: Unable to find input pointer\n");
+        }
+    }
+    if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), pOut, (void**)&d_output, output_size) != IALG_EOK)
+    {
+        if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), pOut, (void**)&d_output, output_size) != IALG_EOK)
+        {
+            printf("Slice: Unable to find output pointer\n");
+        }
+    }
 
-    checkCudaErr(cudaMemcpy(d_input, pIn, input_size, cudaMemcpyHostToDevice));
+    // ---- CUDA Streams Optimization ----------------------------------------
+    cudaStream_t stream = (cudaStream_t)TIDL_cudaGetLayerStream(TIDL_cudaGetThreadManager(), TIDL_cudaGetThreadLayerIdx());
 
+    // Async H2D
+    checkCudaErr(cudaMemcpyAsync(d_input, pIn, input_size, cudaMemcpyHostToDevice, stream));
+    checkCudaErr(cudaMemcpyAsync(d_output, pOut, output_size, cudaMemcpyHostToDevice, stream));
     int total_elements = numROIs * numDim1 * numDim2 * numChs * outHeight * outWidth;
     int grid_size = (total_elements + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
-    SliceKernel<Tin, Tout><<<grid_size, THREADS_PER_BLOCK>>>(
+    SliceKernel<Tin, Tout><<<grid_size, THREADS_PER_BLOCK, 0 , stream>>>(
     d_input, d_output,
     inPtrOffset,  outPtrOffset,
     outWidth,  outHeight, numChs,
@@ -81,7 +110,8 @@ int TIDL_refCudaSlice(
     outDim2Pitch,  inROIPitch,  outROIPitch);
 
     checkCudaErr(cudaGetLastError());
-    checkCudaErr(cudaMemcpy(pOut, d_output, output_size, cudaMemcpyDeviceToHost));
+    checkCudaErr(cudaMemcpyAsync(pOut, d_output, output_size, cudaMemcpyDeviceToHost, stream));
+    checkCudaErr(cudaStreamSynchronize(stream));
 
     return IALG_EOK;
 }

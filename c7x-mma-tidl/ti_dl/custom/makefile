@@ -90,11 +90,7 @@ endif
 endif
 
 ifeq ($(TARGET_PLATFORM) , PC)
-  ifdef SystemRoot
-    OUTFILE=$(LIBDIR)/tidl_custom.lib
-  else
-    OUTFILE=$(LIBDIR)/libtidl_custom.a
-  endif
+  OUTFILE=$(LIBDIR)/libtidl_custom.a
 else
   OUTFILE=$(LIBDIR)/tidl_custom.lib
 endif

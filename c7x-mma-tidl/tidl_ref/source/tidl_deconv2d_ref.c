@@ -73,6 +73,9 @@
 #include "tidl_deconv2d_ref.h"
 #include "tidl_commonUtils.h"
 #include <math.h>
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 using namespace floating_point::bf16_mma;
 
@@ -96,8 +99,7 @@ int32_t TIDL_deconv2DGetScratchDataSize(const TIDL_CreateParams *params, int32_t
     const sTIDL_ConvParams_t * conv2dparams =
       &params->net->TIDLLayers[layerIdx].layerParams.convParams;
 
-  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(params->net,
-                                                        params->net->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_DataParams_t *inDataParams = &params->net->TIDLLayers[params->net->TIDLLayers[layerIdx].inData[0]].outData;
 
   uint16_t width = inDataParams->dimValues[TIDL_DIM_WIDTH];
   uint16_t height = inDataParams->dimValues[TIDL_DIM_HEIGHT] + (conv2dparams->padH * 2);
@@ -390,9 +392,15 @@ template<class Tin, class Tw, class Tb, class Tout, class Tacc>
                  copy(pOutChanne[0 :1+(numTotRoi-1)*numTotOutChannels*outChPitch + (numTotOutChannels -1) * outChPitch + ((outHeight-1)* outImPitch) + (outWidth-1)])) */
     {
 
+#ifdef BUILD_WITH_CUDA_DECONV
+      TIDL_cudaDeconv2d(pInChannel, pCoeffs, pBias, accPtr, &min, &max, numTotRoi, numGroups, numInChannels,
+                              numOutChannels, inChPitch, accChPitch, width, height, inImPitch, accWidth,
+                              coeffsWidth, coeffsHeight, dilationWidth, dilationHeight, strideWidth, strideHeight, params->enableBias);
+#else
       TIDL_refDeconv2dKernel(pInChannel, pCoeffs, pBias, accPtr, &min, &max, numTotRoi, numGroups, numInChannels,
                              numOutChannels, inChPitch, accChPitch, width, height, inImPitch, accWidth,
                              coeffsWidth, coeffsHeight, dilationWidth, dilationHeight, strideWidth, strideHeight, params->enableBias);
+#endif // BUILD_WITH_CUDA_DECONV
 
       if (((uint32_t)createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT)
       {

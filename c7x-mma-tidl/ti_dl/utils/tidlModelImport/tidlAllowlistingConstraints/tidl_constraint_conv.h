@@ -445,7 +445,7 @@ const vector<TidlConstraint> tidlConstraintConv =
             if(convParams.kernelH == 11 && convParams.kernelW == 11 &&
                convParams.strideH == 4 && convParams.strideW == 4)
             {
-                TIDL_GLOBAL_REPORT_WARNING("Kernel size 11x11 with stride 4 in [%s] has gone through limited verification", (char*)layer->name);
+                TIDL_GLOBAL_REPORT_WARNING("Convolution [%s]: kernel size 11x11 with stride 4 has gone through only limited validation", (char*)layer->name);
             }
             return true;
         }
@@ -460,7 +460,7 @@ const vector<TidlConstraint> tidlConstraintConv =
             /* inData is not populated before allow-listing call in OSRT */
             if((convParams.kernelH * convParams.kernelW * layer->inData[0].dimValues[TIDL_DIM_NUMCH] / convParams.numGroups + convParams.enableBias) % 64)
             {
-                TIDL_GLOBAL_REPORT_WARNING("In Data in [%s] is not 64 byte aligned. The performance will not be efficient on MMA.", (char*)layer->name);
+                TIDL_GLOBAL_REPORT_WARNING("Convolution [%s]: Input data is not 64 byte aligned. The performance will not be optimal", (char*)layer->name);
             }
             return true;
         }
@@ -474,7 +474,7 @@ const vector<TidlConstraint> tidlConstraintConv =
             /* outData is not populated before allow-listing call in OSRT */
             if(layer->outData[0].dimValues[TIDL_DIM_NUMCH] / convParams.numGroups % 64)
             {
-                TIDL_GLOBAL_REPORT_WARNING("Out Data in [%s] is not 64 byte aligned. The performance will not be efficient on MMA.", (char*)layer->name);
+                TIDL_GLOBAL_REPORT_WARNING("Convolution [%s]: Output data is not 64 byte aligned. The performance will not be optimal", (char*)layer->name);
             }
             return true;
         }

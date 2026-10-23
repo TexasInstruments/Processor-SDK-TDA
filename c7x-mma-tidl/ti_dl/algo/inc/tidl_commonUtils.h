@@ -312,7 +312,7 @@ int32_t static inline TIDL_memcpy2DCacheWbInv(
   else if (((uint8_t *)dstPtr >= (uint8_t *)sysMems[TIDL_SYSMEM_L1_SCRATCH].base) && ((uint8_t *)dstPtr < &((uint8_t *)sysMems[TIDL_SYSMEM_L1_SCRATCH].base)[sysMems[TIDL_SYSMEM_L1_SCRATCH].size]))
   {
     /* No writeback needed if destination is L1D */
-#if defined(SOC_AM62A) /*for am62a we allocate L1 as part of L2 aux so we need to do cache op here */
+#if defined(SOC_AM62A) || defined(SOC_J722S) /*for am62a and j722s we allocate L1 as part of L2 aux so we need to do cache op here */
     TIDL_L1DCacheWbInv();
 #endif
   }
@@ -325,7 +325,7 @@ int32_t static inline TIDL_memcpy2DCacheWbInv(
   return retVal;
 }
 
-void *my_malloc(int32_t size);
+void *my_malloc(uint32_t size);
 void my_free(void *ptr);
 
 static inline void TIDL_getTscTime(uint64_t *time1)
@@ -609,5 +609,7 @@ int32_t TIDL_isConcatBalanced(TIDL_NetworkCommonParams *commonParams, sTIDL_Laye
 */
 int32_t TIDL_isOutDataBuff(const sTIDL_Network_t * pTIDLNetStructure,
 int32_t dataId, int32_t layersGroupId);
+
+int32_t TIDL_getOutLayer(sTIDL_Network_t *net, int32_t layerIndex, int32_t dataId);
 
 #endif /*ITIDL_COMMON_UTILS_H */

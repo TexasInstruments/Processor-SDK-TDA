@@ -4,7 +4,6 @@ include $(ALGBASE_PATH)/makerules/config.mk
 
 GCC_LINUX_ROOT := /usr
 
-CGT7X_ROOT := $(DSP_TOOLS)
 PDK_PATH   := $(PDK_INSTALL_PATH)
 
 ifeq ($(TARGET_BUILD),debug)
@@ -22,7 +21,7 @@ SYSDEFS := CONCERTO_BUILD
 ifeq ($(TIDL_BUILD_PATHS), LEGACY)
 TARGET_FAMILY ?= C71
 else
-TARGET_FAMILY ?= $(TARGET_C7X_VERSION)
+TARGET_FAMILY ?= $(C7X_VERSION)
 endif
 
 ifeq ($(TARGET_PLATFORM),TI_DEVICE)
@@ -45,17 +44,13 @@ ifeq ($(TARGET_PLATFORM),TI_DEVICE)
     endif
   endif
 else
-  ifdef SystemRoot
-    TARGET_COMBOS += PC:WINDOWS:x64:1:$(PROFILE):CL
+  ifeq ($(BUILD_WITH_CUDA),yes)
+    TARGET_COMBOS += PC:LINUX:x86_64:1:$(PROFILE):NVCC_LINUX
   else
-    ifeq ($(BUILD_WITH_CUDA),yes)
-      TARGET_COMBOS += PC:LINUX:x86_64:1:$(PROFILE):NVCC_LINUX
+    ifeq ($(BUILD_WITH_OPENACC),yes)
+      TARGET_COMBOS += PC:LINUX:x86_64:1:$(PROFILE):NVCPP_LINUX
     else
-      ifeq ($(BUILD_WITH_OPENACC),yes)
-        TARGET_COMBOS += PC:LINUX:x86_64:1:$(PROFILE):NVCPP_LINUX
-      else
-        TARGET_COMBOS += PC:LINUX:x86_64:1:$(PROFILE):GCC_LINUX
-      endif
+      TARGET_COMBOS += PC:LINUX:x86_64:1:$(PROFILE):GCC_LINUX
     endif
   endif
 endif
@@ -72,15 +67,7 @@ all:
 final_install: all
 	$(foreach mod, $(MODULES), $(call TIDL_EXE_COPY,  $($(mod)_TDIR)/$($(mod)_TARGET)$(BIN_EXT), $($(mod)_SDIR)/../.. ))
 
-
-ifdef SystemRoot
-define TIDL_EXE_COPY
-	-$(PRINT) Copying built libraries: $(1)   to    $(2)
-	-$(Q)if exist $(call PATH_CONV,$(1)) $(COPY) $(call PATH_CONV,$(1)) $(call PATH_CONV,$(2)) > NULL
-endef
-else
 define TIDL_EXE_COPY
 	-$(PRINT) Copying built libraries: $(1)   to    $(2)
 	-$(Q)$(COPY) $(1) $(2)
 endef
-endif

@@ -242,7 +242,7 @@ static void TIDL_resizeUpdateWorkload(const sWorkloadUnit_t *workloadUnit,
 static int32_t TIDL_resizeGetPermuteBufSize(sTIDL_Network_t *net, int32_t layerIdx)
 {
   sTIDL_Layer_t *tidlLayer = &net->TIDLLayers[layerIdx];
-  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(net, tidlLayer->inData[0]);
+  sTIDL_DataParams_t *inDataParams = &net->TIDLLayers[tidlLayer->inData[0]].outData;
   uint32_t resizeInWidth = inDataParams->dimValues[TIDL_DIM_WIDTH];
   uint32_t resizeOutWidth = tidlLayer->outData.dimValues[TIDL_DIM_WIDTH];
   uint32_t simdWidth = (TIDL_SIMD_WIDTH / 2U) - 2U;

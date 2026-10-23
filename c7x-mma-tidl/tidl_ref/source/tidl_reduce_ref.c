@@ -75,6 +75,9 @@
 #include <math.h>
 #include <limits>
 #include "tidl_reduce_ref.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 using namespace floating_point::bf16_c7x;
 
@@ -185,6 +188,13 @@ template<class Tin, class Tout> static int32_t TIDL_refReduceCore(Tin *inPtr,
                 copyout(outData[:1 + (outBatchPitch * (numOutBatches - 1)) + (outDim1Pitch * (numOutDim1 - 1)) + (outDim2Pitch * (numOutDim2 - 1)) +
                                  (outChPitch * (numOutChannels - 1)) + (outPitch * (numOutRows - 1)) + (numOutCols - 1)]))
     OPENACC(parallel loop collapse(5))
+  #ifdef BUILD_WITH_CUDA_REDUCE
+    // call cuda slice wrapper
+    TIDL_refCudaReduce(inData,outData,
+      numInCols, numInRows, numInChannels, numInDim2, numInDim1, numInBatches,
+      inPitch, inChPitch, inDim2Pitch, inDim1Pitch, inBatchPitch,
+      outChPitch, outDim2Pitch, outDim1Pitch, outBatchPitch, params->ops);
+  #else
     for (i0 = 0; i0 < numInBatches; i0++)
     {
       for (i1 = 0; i1 < numInDim1; i1++)
@@ -225,6 +235,7 @@ template<class Tin, class Tout> static int32_t TIDL_refReduceCore(Tin *inPtr,
         }
       }
     }
+  #endif
   }
   else
   {

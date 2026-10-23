@@ -78,7 +78,8 @@
 #include "tidl_bfloat16.h"
 #include "tidl_common_utils_infer_import.h"
 
-#define __MODULE__ "[QUANTIZATION]"
+#undef __MODULE__
+#define __MODULE__ "[QUANTIZER]"
 
 #define QUAN_STYLE2_ROUND ((gParams.quantRoundAdd*1.0 / 100))
 char *currLayerName;
@@ -100,7 +101,7 @@ static std::unordered_map<int32_t, pair<float32_tidl, float32_tidl>> activationP
   {TIDL_Sigmoid, {-11.783479181074f, 11.783479181074f}},
   {TIDL_Tanh,    {-5.8917f, 5.8917f}},
   {TIDL_HardSigmoid, {-3.0f, 3.0f}},
-  {TIDL_ELU,    {-4.0f, FLT_MAX}},
+  {TIDL_ELU,    {-11.0f, FLT_MAX}},
   {TIDL_GELU,  {-5.0f, FLT_MAX}}, // GeLU@-5.0 = -1.43325786e-06
   {TIDL_Asin,  {-1.0f, 1.0f}},
   {TIDL_HardSwish, {-3.0f, FLT_MAX}},
@@ -161,6 +162,7 @@ float32_tidl TIDL_clamp(float32_tidl value, float32_tidl minVal, float32_tidl ma
 }
 
 void TIDL_setWeightElementBitsFromElementType(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure);
+bool TIDL_isPassThroughLayer(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure, sTIDL_LayerPC_t *layer);
 
 //DUPLICATED FROM STRINGS.CPP:
 typedef std::map<int, const std::string> stringmap;
@@ -242,6 +244,11 @@ std::string layerTypeString(int32_t type)
       { TIDL_GatherElementsLayer, "TIDL_GatherElementsLayer"},
       { TIDL_ShapeLayer, "TIDL_ShapeLayer"},
       { TIDL_SizeLayer, "TIDL_SizeLayer"},
+      { TIDL_AttentionLayer, "TIDL_AttentionLayer"},
+      { TIDL_GroupQueryAttentionLayer, "TIDL_GroupQueryAttentionLayer"},
+      { TIDL_MatMulNBitsLayer, "TIDL_MatMulNBitsLayer"},
+      { TIDL_CacheLayer, "TIDL_CacheLayer"},
+      { TIDL_MemCopyLayer, "TIDL_MemCopyLayer"},
       { TIDL_UnsupportedLayer, "TIDL_UnsupportedLayer" },
    };
    return find(type, layerTypeNames);
@@ -506,6 +513,31 @@ void TIDL_prepareLUTForActivations_wrapper(sTIDL_OrgNetwork_t * orgTIDLNetStruct
     }
   }
 
+}
+
+/* Skip Reshapes introduced by Shape-Folding in producers recursively */
+int32_t TIDL_getNonPassThroughProducers(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure, int32_t layerIdx, std::vector<int32_t> &producers)
+{
+  sTIDL_LayerPC_t &currLayer = pOrgTIDLNetStructure->TIDLPCLayers[layerIdx];
+  if(currLayer.layerType == TIDL_DataLayer)
+  {
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
+  }
+  if(!(currLayer.layerType == TIDL_ReshapeLayer && currLayer.layerPCParams.reshapeParams.isInduced == TIDL_RESHAPE_SHAPE_FOLD))
+  {
+    producers.push_back(layerIdx);
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
+  }
+
+  // currLayer is Shape-Fold reshape, walk to its producer
+  int32_t producerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, currLayer.inData[0].dataId);
+  if(producerIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+  {
+    producers.push_back(layerIdx);
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
+  }
+
+  return TIDL_getNonPassThroughProducers(pOrgTIDLNetStructure, producerIdx, producers);
 }
 
 // Skip Reshapes introduced by Shape-Fodling in consumers recursively
@@ -1230,32 +1262,6 @@ float TIDL_findMaxQuantizationScale(float min, float max, int32_t elementSizeInB
 #define TIDL_INTERNAL_INDATA_Q              ((uint32_t)7)
 
 /**
- * @brief Function which finds the first producer layer
- *
- * @param pLayer : Pointer to the current layer
- * @return int32_t : returns updated required or not
- */
-
-int32_t TIDL_isProducerLayer(sTIDL_LayerPC_t * pLayer)
-{
-  int32_t isComputeLayer = 0;
-  if(pLayer->layerType == TIDL_ConvolutionLayer ||
-     pLayer->layerType == TIDL_Deconv2DLayer ||
-     pLayer->layerType == TIDL_EltWiseLayer  ||
-     pLayer->layerType == TIDL_InnerProductLayer ||
-     pLayer->layerType == TIDL_DeformableConvLayer
-     )
-  {
-    isComputeLayer = 1;
-  }
-  else if(pLayer->layerType == TIDL_DataConvertLayer && pLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_INPUT)
-  {
-    isComputeLayer = 1;
-  }
-  return isComputeLayer;  
-}
-
-/**
  * @brief Function which finds the first grid producer layer 8-bit -> 16-bit
  *
  * @param pLayer : Pointer to the current layer
@@ -1312,25 +1318,30 @@ int32_t TIDL_isGridProducerInputLayer(sTIDL_LayerPC_t * pLayer, tidl_import_conf
  * @return int32_t : returns updated required or not
  */
 
-int32_t TIDL_isComputeLayer(sTIDL_LayerPC_t * pLayer, tidl_import_config * configParams)
+bool TIDL_isComputeLayer(sTIDL_LayerPC_t * layer)
 {
-  int32_t isComputeLayer = 0;
-  if(pLayer->layerType == TIDL_ConvolutionLayer ||
-     pLayer->layerType == TIDL_Deconv2DLayer ||
-     pLayer->layerType == TIDL_EltWiseLayer  ||
-     pLayer->layerType == TIDL_InnerProductLayer ||
-     pLayer->layerType == TIDL_DeformableConvLayer ||
-     (pLayer->layerType == TIDL_ReduceLayer && pLayer->layerParams.reduceParams.ops == TIDL_inReduceOpMean))
+  bool isComputeLayer = false;
+  if(layer->layerType == TIDL_ConvolutionLayer ||
+     layer->layerType == TIDL_Deconv2DLayer ||
+     layer->layerType == TIDL_EltWiseLayer  ||
+     layer->layerType == TIDL_InnerProductLayer ||
+     layer->layerType == TIDL_DeformableConvLayer)
   {
-    isComputeLayer = 1;
+    isComputeLayer = true;
   }
-  else if(pLayer->layerType == TIDL_DataConvertLayer)
+  else if(layer->layerType == TIDL_PoolingLayer && layer->layerParams.poolParams.poolingType == TIDL_AveragePooling)
   {
-    if(pLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_INPUT)
-    {
-      isComputeLayer = 1;
-    }
+    isComputeLayer = true;
   }
+  else if(layer->layerType == TIDL_DataConvertLayer && layer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_INPUT)
+  {
+    isComputeLayer = true;
+  }
+  else if(layer->layerType == TIDL_BatchNormLayer && layer->actParams.actType == TIDL_Sigmoid)
+  {
+    isComputeLayer = true;
+  }
+
   return isComputeLayer;  
 }
 
@@ -1375,16 +1386,17 @@ int32_t TIDL_canUpdateTensorScale(sTIDL_LayerPC_t * pLayer, tidl_import_config *
       canUpdate = 0;
     }
   }
-  else if ((pLayer->layerType == TIDL_FlattenLayer)     ||
-            (pLayer->layerType == TIDL_CropLayer)       ||
-            (pLayer->layerType == TIDL_SplitLayer)      ||
-            (pLayer->layerType == TIDL_SliceLayer)      ||
-            (pLayer->layerType == TIDL_PadLayer)        ||
-            (pLayer->layerType == TIDL_GridSampleLayer) ||
-            (pLayer->layerType == TIDL_TransposeLayer) ||
-            (pLayer->layerType == TIDL_ReshapeLayer) ||
+  else if ((pLayer->layerType == TIDL_FlattenLayer)           ||
+            (pLayer->layerType == TIDL_CropLayer)             ||
+            (pLayer->layerType == TIDL_SplitLayer)            ||
+            (pLayer->layerType == TIDL_SliceLayer)            ||
+            (pLayer->layerType == TIDL_PadLayer)              ||
+            (pLayer->layerType == TIDL_GridSampleLayer)       ||
+            (pLayer->layerType == TIDL_TransposeLayer)        ||
+            (pLayer->layerType == TIDL_ReshapeLayer)          ||
             (pLayer->layerType == TIDL_OdOutputReformatLayer) ||
-            (pLayer->layerType == TIDL_TransposeLayer))
+            (pLayer->layerType == TIDL_CacheLayer)            ||
+            (pLayer->layerType == TIDL_MemCopyLayer))
   {
     canUpdate = 0;
   }
@@ -2140,8 +2152,11 @@ This is as good as not applying any additional scale on input and directly apply
       net->TIDLPCLayers[i].outData[0].minTensorValue = curMin;
       curMax = net->TIDLPCLayers[i].clipParams.clipMax;
       net->TIDLPCLayers[i].outData[0].maxTensorValue = curMax;
+
+      bool isAveragePool = ((net->TIDLPCLayers[i].layerType == TIDL_PoolingLayer) && (net->TIDLPCLayers[i].layerParams.poolParams.poolingType == TIDL_AveragePooling));
       /*Unsigned output is a better fit:*/
-      if(net->TIDLPCLayers[i].clipParams.clipMin >= 0.0)
+      /* Avoiding element type change for averagepooling since it does not support heterogenous input/output sign */
+      if(net->TIDLPCLayers[i].clipParams.clipMin >= 0.0 && isAveragePool == false)
       {
         if(net->TIDLPCLayers[i].outData[0].elementType == TIDL_SignedChar)
         {
@@ -2525,7 +2540,19 @@ This is as good as not applying any additional scale on input and directly apply
         uint8_t fixedScale, shiftVal;
         updateScale = net->TIDLPCLayers[updateLyrIdx].outData[0].tensorScale;
         dataScale = net->TIDLPCLayers[dataLayerIdx].outData[0].tensorScale;
-        scatterScale = min(updateScale, dataScale);
+        /* Check if producer is all 0s before taking min of updateScale & dataScale */
+        if(net->TIDLPCLayers[updateLyrIdx].outData[0].minTensorValue == 0 && net->TIDLPCLayers[updateLyrIdx].outData[0].maxTensorValue == 0)
+        {
+          scatterScale = dataScale;
+        }
+        else if(net->TIDLPCLayers[dataLayerIdx].outData[0].minTensorValue == 0 && net->TIDLPCLayers[dataLayerIdx].outData[0].maxTensorValue == 0)
+        {
+          scatterScale = updateScale;
+        }
+        else
+        {
+          scatterScale = min(updateScale, dataScale);
+        }
         net->TIDLPCLayers[i].outData[0].tensorScale = scatterScale;
         net->TIDLPCLayers[i].outData[0].roundBits = 0;
         /*Correct the data convert layer scales & ZP*/
@@ -2535,13 +2562,17 @@ This is as good as not applying any additional scale on input and directly apply
           TIDL_getMMAv2_ScaleShiftAndError((scatterScale/dataScale), &fixedScale, &shiftVal, 8U, TIDL_MMAV2_MAX_SCALE_16);
           net->TIDLPCLayers[dataLayerIdx].outData[0].tensorScale = scatterScale;
           net->TIDLPCLayers[dataLayerIdx].outData[0].roundBits = shiftVal;
+          net->TIDLPCLayers[dataLayerIdx].outData[0].elementType = net->TIDLPCLayers[updateLyrIdx].outData[0].elementType;
+          net->TIDLPCLayers[i].outData[0].elementType = net->TIDLPCLayers[updateLyrIdx].outData[0].elementType;
         }
         else
         {
           /*Update "Updates" DC layer's scale computation logic:*/
           TIDL_getMMAv2_ScaleShiftAndError((scatterScale/updateScale), &fixedScale, &shiftVal, 8U, TIDL_MMAV2_MAX_SCALE_16);
           net->TIDLPCLayers[updateLyrIdx].outData[0].tensorScale = scatterScale;
-          net->TIDLPCLayers[updateLyrIdx].outData[0].roundBits = shiftVal; 
+          net->TIDLPCLayers[updateLyrIdx].outData[0].roundBits = shiftVal;
+          net->TIDLPCLayers[updateLyrIdx].outData[0].elementType = net->TIDLPCLayers[dataLayerIdx].outData[0].elementType;
+          net->TIDLPCLayers[i].outData[0].elementType = net->TIDLPCLayers[dataLayerIdx].outData[0].elementType;
         }
       }
 
@@ -2551,12 +2582,14 @@ This is as good as not applying any additional scale on input and directly apply
       {
         net->TIDLPCLayers[dataLayerConsumerIdx].outData[0].tensorScale = net->TIDLPCLayers[dataLayerIdx].outData[0].tensorScale;
         net->TIDLPCLayers[dataLayerConsumerIdx].outData[0].roundBits = net->TIDLPCLayers[dataLayerIdx].outData[0].roundBits;
+        net->TIDLPCLayers[dataLayerConsumerIdx].outData[0].elementType = net->TIDLPCLayers[dataLayerIdx].outData[0].elementType;
       }
       int32_t updateLayerConsumerIdx = tidl_getOutLayer(*net, net->numLayers, net->TIDLPCLayers[updateLyrIdx].outData[0].dataId);
       if(net->TIDLPCLayers[updateLayerConsumerIdx].layerType == TIDL_ReshapeLayer)
       {
         net->TIDLPCLayers[updateLayerConsumerIdx].outData[0].tensorScale = net->TIDLPCLayers[updateLyrIdx].outData[0].tensorScale;
         net->TIDLPCLayers[updateLayerConsumerIdx].outData[0].roundBits = net->TIDLPCLayers[updateLyrIdx].outData[0].roundBits;
+        net->TIDLPCLayers[updateLayerConsumerIdx].outData[0].elementType = net->TIDLPCLayers[updateLyrIdx].outData[0].elementType;
       }
     }
     else
@@ -2722,6 +2755,91 @@ This is as good as not applying any additional scale on input and directly apply
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
 
+int32_t TIDL_getEltWiseSumQuantParams(float32_tidl Sx1, float32_tidl Sx2, float32_tidl Sy,
+                                  int8_t Zx1, int8_t Zx2, int8_t Zy,
+                                  uint8_t *mma_scale, uint8_t *mma_shift,
+                                  float32_tidl *intScale1, float32_tidl *intScale2,
+                                  int32_t *biasTerm)
+{
+  /*Inputs : Sx1, Sx2, Zx1, Zx2, Sy, Zy, precision(8bit/16bit) */
+  /*Outputs: intScale1, intScale2, biasTerm, mma_scale, mma_shift*/
+  /*Y = mma_scale/2**mma_shift (intScale1 * X1 + intScale2 * X2 + Bias)*/
+  float32_tidl scale1 = Sx1 / Sy;
+  float32_tidl scale2 = Sx2 / Sy;
+
+  float32_tidl fMax;
+  float32_tidl fMin;
+  int32_t maxScaleID;
+  /*TIDL's MMA based eltwise addition kernel has a restriction that the scales in the A vector and B panel need to be 7-bit,
+    hence the max ceiling is set to 127U (0b1111111)*/
+  uint8_t fScaleVal = 127U;
+  if (scale1 > scale2)
+  {
+    maxScaleID = 0;
+    fMax = scale1;
+    fMin = scale2;
+  }
+  else
+  {
+    maxScaleID = 1;
+    fMax = scale2;
+    fMin = scale1;
+  }
+
+  float32_tidl fVal = fMax / (float32_tidl)fScaleVal;
+  float64_tidl iMin;
+  TIDL_getMMAv2_ScaleAndShift(fVal, mma_scale, mma_shift,8U , TIDL_MMAV2_MAX_SCALE);
+  float32_tidl commonFactor = (float32_tidl)(*mma_scale) / (pow(2.0, (float32_tidl)(*mma_shift)));
+  iMin = floor((float64_tidl)fMin / commonFactor);
+  /*Add nudge of 0.5 to round correctly:*/
+  if (maxScaleID == 0)
+  {
+    *intScale1 = (float32_tidl)fScaleVal + 0.5f;
+    *intScale2 = iMin + 0.5;
+  }
+  else
+  {
+    *intScale1 = iMin + 0.5;
+    *intScale2 = (float32_tidl)fScaleVal + 0.5;
+  }
+
+  float32_tidl floatBias = (float32_tidl)Zy;
+  floatBias -= (((Sx1 * (float32_tidl)Zx1) + (Sx2 * (float32_tidl)Zx2)) / Sy);
+  float32_tidl mmaFloatScale = ((float32_tidl)(*mma_scale)) / pow(2.0, (float32_tidl)(*mma_shift));
+  floatBias *= (1.0f / mmaFloatScale);
+  *biasTerm = (int32_t)round(floatBias);
+
+  return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
+}
+
+int32_t TIDL_getGlobalAvgPoolingQuantParams(float32_tidl inScale, float32_tidl outScale,
+                                                int32_t inZeroPoint, int32_t outZeroPoint,
+                                                int32_t width, int32_t height,
+                                                uint8_t *mmaScale, uint8_t *mmaShift,
+                                                int32_t *biasTerm)
+{
+  float32_tidl scaleRatio = inScale / (outScale * (float32_tidl)width * (float32_tidl)height);
+  TIDL_getMMAv2_ScaleAndShift(scaleRatio, mmaScale, mmaShift,8U , TIDL_MMAV2_MAX_SCALE);
+  float32_tidl floatBias = ((float32_tidl)outZeroPoint / scaleRatio) - ((float32_tidl)inZeroPoint * (float32_tidl)width * (float32_tidl)height);
+  *biasTerm = (int32_t)round(floatBias);
+
+  return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
+}
+
+int32_t TIDL_getEltWiseProductQuantParams(float32_tidl Sx1, float32_tidl Sx2, float32_tidl Sy,
+                                      float32_tidl Zy, uint8_t *mma_scale, uint8_t *mma_shift,
+                                      int32_t *Bias)
+{
+  /*Inputs : Sx1, Sx2, Sy, Zy, precision(8bit/16bit) */
+  /*Outputs: Bias, mma_scale, mma_shift*/
+  /*Y = mma_scale/2**mma_shift ( (X1 - Zx1) * (X2 - Zx2) + Bias) */
+  float32_tidl scale = (Sx1 * Sx2) / Sy;
+  TIDL_getMMAv2_ScaleAndShift(scale, mma_scale, mma_shift, 8U, TIDL_MMAV2_MAX_SCALE);
+  float32_tidl floatBias = (Sy * Zy) / (Sx1 * Sx2);
+  *Bias = (int32_t)round(floatBias);
+
+  return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
+}
 
 #define TIDL_NUM_WEIGHT_HISTOGRAM_BINS (1024U)
 int32_t TIDL_importQuantLayerParams_HPTQ(sTIDL_OrgNetwork_t   * pOrgTIDLNetStructure,
@@ -2758,6 +2876,48 @@ int32_t TIDL_importQuantLayerParams_HPTQ(sTIDL_OrgNetwork_t   * pOrgTIDLNetStruc
     int32_t numGroups = pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.convParams.numGroups;
     int32_t numInChannels = pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.convParams.numInChannels;
     int32_t numOutChannels = pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.convParams.numOutChannels;
+
+    if (pOrgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_EltWiseLayer && (pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.eltWiseParams.eltWiseType == TIDL_EltWiseSum ))
+    {
+      uint8_t mmaScale, mmaShift;
+      float32_tidl intScale1, intScale2;
+      int32_t biasTerm;
+      float32_tidl Sx1 = pOrgTIDLNetStructure->TIDLPCLayers[i].inData[0].tensorScale;
+      float32_tidl Sx2 = pOrgTIDLNetStructure->TIDLPCLayers[i].inData[1].tensorScale;
+      float32_tidl Sy = pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].tensorScale;
+      int8_t Zx1 = pOrgTIDLNetStructure->TIDLPCLayers[i].inData[0].tensorZeroPoint;
+      int8_t Zx2 = pOrgTIDLNetStructure->TIDLPCLayers[i].inData[1].tensorZeroPoint;
+      int8_t Zy = pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].tensorZeroPoint;
+      TIDL_getEltWiseSumQuantParams(Sx1, Sx2, Sy, Zx1, Zx2, Zy, &mmaScale, &mmaShift, &intScale1, &intScale2, &biasTerm);
+      pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.eltWiseParams.mmaScale = mmaScale;
+      pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.eltWiseParams.mmaShift = mmaShift;
+      pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.eltWiseParams.biasTerm = biasTerm;
+
+      if (pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.ptr == NULL) {
+        pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.bufSize = 2;
+        pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.ptr = (int8_t *)my_calloc(2, sizeof(int8_t));
+        pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.dataType = TIDL_SignedChar;
+      }
+      int8_t *derivedScales = (int8_t *)pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.ptr;
+      derivedScales[0] = (intScale1);
+      derivedScales[1] = (intScale2);
+
+      pOrgTIDLNetStructure->TIDLPCLayers[i].layerKernelType = TIDL_HighPrecisionKernel;
+    }
+    else if (pOrgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_EltWiseLayer && (pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.eltWiseParams.eltWiseType == TIDL_EltWiseProduct ))
+    {
+      uint8_t mmaScale, mmaShift;
+      int32_t biasTerm;
+      float32_tidl Sx1 = pOrgTIDLNetStructure->TIDLPCLayers[i].inData[0].tensorScale;
+      float32_tidl Sx2 = pOrgTIDLNetStructure->TIDLPCLayers[i].inData[1].tensorScale;
+      float32_tidl Sy = pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].tensorScale;
+      float32_tidl Zy = pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].tensorZeroPoint;
+      TIDL_getEltWiseProductQuantParams(Sx1, Sx2, Sy, Zy, &mmaScale, &mmaShift, &biasTerm);
+      pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.eltWiseParams.mmaScale = mmaScale;
+      pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.eltWiseParams.mmaShift = mmaShift;
+      pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.eltWiseParams.biasTerm = biasTerm;
+      pOrgTIDLNetStructure->TIDLPCLayers[i].layerKernelType = TIDL_HighPrecisionKernel;
+    }
 
     if  ((pOrgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_ConvolutionLayer) ||
         (pOrgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_InnerProductLayer) ||
@@ -2799,6 +2959,18 @@ int32_t TIDL_importQuantLayerParams_HPTQ(sTIDL_OrgNetwork_t   * pOrgTIDLNetStruc
          float32_tidl scale_w = 1;
          float32_tidl nScale = 1;
          float32_tidl finalBias = 0;
+         if (pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.ptr == NULL) {
+           pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.bufSize = numOutChannels;
+           pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.ptr = (uint8_t *)my_calloc(numOutChannels, sizeof(uint8_t));
+           pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.dataType = TIDL_UnsignedChar;
+         }
+         if (pOrgTIDLNetStructure->TIDLPCLayers[i].derivedShifts.ptr == NULL) {
+           pOrgTIDLNetStructure->TIDLPCLayers[i].derivedShifts.bufSize = numOutChannels;
+           pOrgTIDLNetStructure->TIDLPCLayers[i].derivedShifts.ptr = (uint8_t *)my_calloc(numOutChannels, sizeof(uint8_t));
+           pOrgTIDLNetStructure->TIDLPCLayers[i].derivedShifts.dataType = TIDL_UnsignedChar;
+         }
+         uint8_t *derivedScales = (uint8_t *)pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.ptr;
+         uint8_t *derivedShifts = (uint8_t *)pOrgTIDLNetStructure->TIDLPCLayers[i].derivedShifts.ptr;
 
          for(outIdx = 0; outIdx < numOutChannels; outIdx++)
          {
@@ -2809,6 +2981,7 @@ int32_t TIDL_importQuantLayerParams_HPTQ(sTIDL_OrgNetwork_t   * pOrgTIDLNetStruc
              unitConvResult += pWeights[wtIdx + outIdx*numInWeights];
            }
            originalBias = pBias[outIdx];
+           float32_tidl scale_ratio = (scale_x * scale_w)/scale_y;
            nScale = scale_y/(scale_x * scale_w);
            finalBias = originalBias + ( z_y * nScale - (z_x * unitConvResult));
            float32_tidl absBias = finalBias < 0 ? (finalBias*-1) : finalBias;
@@ -2834,7 +3007,9 @@ int32_t TIDL_importQuantLayerParams_HPTQ(sTIDL_OrgNetwork_t   * pOrgTIDLNetStruc
            {
               pBias[outIdx] = round(finalBias);
            }
+           TIDL_getMMAv2_ScaleAndShift(scale_ratio, &derivedScales[outIdx], &derivedShifts[outIdx], 8U, TIDL_MMAV2_MAX_SCALE);
          }
+
        }
       }
       else if (pOrgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_InnerProductLayer)
@@ -2859,6 +3034,18 @@ int32_t TIDL_importQuantLayerParams_HPTQ(sTIDL_OrgNetwork_t   * pOrgTIDLNetStruc
         float32_tidl scale_w = 1;
         float32_tidl nScale = 1;
         float32_tidl finalBias = 0;
+        if (pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.ptr == NULL) {
+          pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.bufSize = numInBias;
+          pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.ptr = (uint8_t *)my_calloc(numInBias, sizeof(uint8_t));
+          pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.dataType = TIDL_UnsignedChar;
+        }
+        if (pOrgTIDLNetStructure->TIDLPCLayers[i].derivedShifts.ptr == NULL) {
+          pOrgTIDLNetStructure->TIDLPCLayers[i].derivedShifts.bufSize = numInBias;
+          pOrgTIDLNetStructure->TIDLPCLayers[i].derivedShifts.ptr = (uint8_t *)my_calloc(numInBias, sizeof(uint8_t));
+          pOrgTIDLNetStructure->TIDLPCLayers[i].derivedShifts.dataType = TIDL_UnsignedChar;
+        }
+        uint8_t *derivedScales = (uint8_t *)pOrgTIDLNetStructure->TIDLPCLayers[i].derivedScales.ptr;
+        uint8_t *derivedShifts = (uint8_t *)pOrgTIDLNetStructure->TIDLPCLayers[i].derivedShifts.ptr;
         for(outIdx = 0; outIdx <  numInBias; outIdx++)
         {
           unitConvResult = 0;
@@ -2895,6 +3082,8 @@ int32_t TIDL_importQuantLayerParams_HPTQ(sTIDL_OrgNetwork_t   * pOrgTIDLNetStruc
           {
             pBias[outIdx] = round(finalBias);
           }
+          float32_tidl scaleRatio = (scale_x * scale_w)/scale_y;
+          TIDL_getMMAv2_ScaleAndShift(scaleRatio, &derivedScales[outIdx], &derivedShifts[outIdx],8U, TIDL_MMAV2_MAX_SCALE);
         }
       }
       else if (pOrgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_BatchNormLayer)
@@ -2942,6 +3131,19 @@ int32_t TIDL_importQuantLayerParams_HPTQ(sTIDL_OrgNetwork_t   * pOrgTIDLNetStruc
             internal_pooling_weight= TIDL_INTERNAL_POOLING_WEIGHT_Q_U16;
           }
 
+        }
+        else if ((pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.poolParams.kernelW == 0) && (pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.poolParams.kernelH == 0))
+        {
+          uint8_t mmaScale;
+          uint8_t mmaShift;
+          int32_t biasTerm;
+          TIDL_getGlobalAvgPoolingQuantParams(indata->tensorScale, pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].tensorScale,
+                                          indata->tensorZeroPoint, pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].tensorZeroPoint,
+                                          indata->dimValues[TIDL_DIM_WIDTH], indata->dimValues[TIDL_DIM_HEIGHT],
+                                          &mmaScale, &mmaShift, &biasTerm);
+          pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.poolParams.mmaScale = mmaScale;
+          pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.poolParams.mmaShift = mmaShift;
+          pOrgTIDLNetStructure->TIDLPCLayers[i].layerParams.poolParams.biasTerm = biasTerm;
         }
         else
         {
@@ -3086,7 +3288,7 @@ int32_t TIDL_updateAsymRangeConstraints(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure
       int32_t gridLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, numLayers, currLayer->inData[0].dataId);
       sTIDL_LayerPC_t *gridLayer = &pOrgTIDLNetStructure->TIDLPCLayers[gridLayerIdx];
       int32_t traverseCount = 0;
-      while (gridLayerIdx != -1 && TIDL_isComputeLayer(gridLayer, params) == 0 && TIDL_isGridProducerInputLayer(gridLayer, params) == 0)
+      while (gridLayerIdx != -1 && TIDL_isComputeLayer(gridLayer) == false && TIDL_isGridProducerInputLayer(gridLayer, params) == 0)
       {
         gridLayerIdx = gridLayer->inData[0].dataId;
         gridLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, numLayers, gridLayerIdx);
@@ -3132,7 +3334,7 @@ int32_t TIDL_updateAsymRangeConstraints(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure
 
         gridLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, numLayers, currLayer->inData[0].dataId);
         gridLayer = &pOrgTIDLNetStructure->TIDLPCLayers[gridLayerIdx];
-        while (gridLayerIdx != -1 && TIDL_isComputeLayer(gridLayer, params) == 0 && TIDL_isGridProducerInputLayer(gridLayer, params) == 0)
+        while (gridLayerIdx != -1 && TIDL_isComputeLayer(gridLayer) == false && TIDL_isGridProducerInputLayer(gridLayer, params) == 0)
         {
           gridLayer->outData[0].minTensorValue = minVal;
           gridLayer->outData[0].maxTensorValue = maxVal;
@@ -3197,27 +3399,18 @@ int32_t TIDL_updateAsymRangeConstraints(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure
         TIDL_GLOBAL_REPORT_ERROR("Unable to find input for LSTM layer : %s", currLayer->outDataNames[0]);
         return -1;
       }
-      sTIDL_DataParams_t *inputData = &pOrgTIDLNetStructure->TIDLPCLayers[inputIdx].outData[0];
-      sTIDL_DataParams_t *initialHData = &pOrgTIDLNetStructure->TIDLPCLayers[initialHLayerIdx].outData[0];
-      sTIDL_DataParams_t *initialCData = &pOrgTIDLNetStructure->TIDLPCLayers[initialCLayerIdx].outData[0];
-      sTIDL_DataParams_t *outputData = &currLayer->outData[0];
-      float32_tidl minValue = std::min(outputData->minTensorValue, std::min(initialHData->minTensorValue, initialCData->minTensorValue));
-      float32_tidl maxValue = std::max(outputData->maxTensorValue, std::max(initialHData->maxTensorValue, initialCData->maxTensorValue));
-      initialHData->minTensorValue = initialCData->minTensorValue = outputData->minTensorValue = minValue;
-      initialHData->maxTensorValue = initialCData->maxTensorValue = outputData->maxTensorValue = maxValue;
 
-      if(pOrgTIDLNetStructure->TIDLPCLayers[initialHLayerIdx].clipParams.isClipEnabled == 1) {
-        pOrgTIDLNetStructure->TIDLPCLayers[initialHLayerIdx].clipParams.clipMin = minValue;
-        pOrgTIDLNetStructure->TIDLPCLayers[initialHLayerIdx].clipParams.clipMax = maxValue;
-      }
-      if(pOrgTIDLNetStructure->TIDLPCLayers[initialCLayerIdx].clipParams.isClipEnabled == 1) {
-        pOrgTIDLNetStructure->TIDLPCLayers[initialCLayerIdx].clipParams.clipMin = minValue;
-        pOrgTIDLNetStructure->TIDLPCLayers[initialCLayerIdx].clipParams.clipMax = maxValue;
-      }
-      if(currLayer->clipParams.isClipEnabled == 1) {
-        currLayer->clipParams.clipMin = minValue;
-        currLayer->clipParams.clipMax = maxValue;
-      }
+      /* If a shape-fold Reshape sits between the inserted DC and LSTM, skip it to reach the DC */
+      std::vector<int32_t> initialHProducers, initialCProducers;
+      TIDL_getNonPassThroughProducers(pOrgTIDLNetStructure, initialHLayerIdx, initialHProducers);
+      TIDL_getNonPassThroughProducers(pOrgTIDLNetStructure, initialCLayerIdx, initialCProducers);
+      int32_t effectiveHIdx = initialHProducers.empty() ? initialHLayerIdx : initialHProducers[0];
+      int32_t effectiveCIdx = initialCProducers.empty() ? initialCLayerIdx : initialCProducers[0];
+
+      sTIDL_DataParams_t *inputData = &pOrgTIDLNetStructure->TIDLPCLayers[inputIdx].outData[0];
+      sTIDL_DataParams_t *initialHData = &pOrgTIDLNetStructure->TIDLPCLayers[effectiveHIdx].outData[0];
+      sTIDL_DataParams_t *initialCData = &pOrgTIDLNetStructure->TIDLPCLayers[effectiveCIdx].outData[0];
+      sTIDL_DataParams_t *outputData = &currLayer->outData[0];
 
       int32_t outElementType = currLayer->weightsElementSizeInBits == 8 ? TIDL_SignedChar : ((currLayer->weightsElementSizeInBits == 16) ? TIDL_SignedShort : TIDL_SinglePrecFloat);
       inputData->elementType = initialHData->elementType = initialCData->elementType = outputData->elementType = outElementType;
@@ -3324,18 +3517,6 @@ int32_t TIDL_updateParamsRange(sTIDL_OrgNetwork_t   * pOrgTIDLNetStructure,
         if (pOrgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_ConstDataLayer )
         {
           dataType = pOrgTIDLNetStructure->TIDLPCLayers[i].weights.dataType;
-        }
-
-        /* For gather layer indices, use int32 dataType */
-        if(pOrgTIDLNetStructure->TIDLPCLayers[i].layerType == TIDL_ConstDataLayer)
-        {
-          int32_t outIdx = tidl_getOutLayer(pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, pOrgTIDLNetStructure->TIDLPCLayers[i].outData[0].dataId);
-          if(outIdx != -1 && ((pOrgTIDLNetStructure->TIDLPCLayers[outIdx].layerType == TIDL_GatherLayer) ||
-                              (pOrgTIDLNetStructure->TIDLPCLayers[outIdx].layerType == TIDL_GatherNDLayer) ||
-                              (pOrgTIDLNetStructure->TIDLPCLayers[outIdx].layerType == TIDL_GatherElementsLayer)))
-          {
-            dataType = TIDL_SignedWord;
-          }
         }
 
         if (dispatchTypedBuffer(*data, dataType, [dataSize, &min, &max](auto* typedPtr) {
@@ -5133,10 +5314,51 @@ int32_t TIDL_asymUpdateScalesAndShifts(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure
       sTIDL_LayerPC_t *lstmLayer = &pOrgTIDLNetStructure->TIDLPCLayers[layerIdx];
       TIDL_asymRangeToScale(&outData->tensorScale, &outData->tensorZeroPoint, outData->minTensorValue, outData->maxTensorValue, TIDL_SYMMETRIC_TENSOR, outData->elementType, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].quantizeConstraint);
 
-      for(int32_t inpIdx = TIDL_RecurrentInputB + 1; inpIdx <= TIDL_RecurrentInputB + 3; inpIdx++)
+      /* Find min scale among initial_h, initial_c input and lstm output */
+      float32_tidl minScale = lstmLayer->outData[0].tensorScale;
+      for(int32_t inpIdx = TIDL_RecurrentInputB + 1; inpIdx <= TIDL_RecurrentInputB + 2; inpIdx++)
       {
         int32_t inLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, lstmLayer->inData[inpIdx].dataId);
-        if(inLayerIdx == -1 || pOrgTIDLNetStructure->TIDLPCLayers[inLayerIdx].layerType != TIDL_ConstDataLayer) { 
+        std::vector<int32_t> producers;
+        TIDL_getNonPassThroughProducers(pOrgTIDLNetStructure, inLayerIdx, producers);
+        int32_t effectiveIdx = producers.empty() ? inLayerIdx : producers[0];
+        sTIDL_LayerPC_t *dcLayer = &pOrgTIDLNetStructure->TIDLPCLayers[effectiveIdx];
+        if(dcLayer->layerType != TIDL_DataConvertLayer)
+        {
+          continue;
+        }
+        if(dcLayer->outData[0].minTensorValue == 0.0f && dcLayer->outData[0].maxTensorValue == 0.0f)
+        {
+          continue;
+        }
+        minScale = std::min(minScale, dcLayer->outData[0].tensorScale);
+      }
+      lstmLayer->outData[0].tensorScale = minScale;
+
+      for(int32_t inpIdx = TIDL_RecurrentInputB + 1; (inpIdx < lstmLayer->numInBufs && inpIdx <= TIDL_RecurrentInputB + 3); inpIdx++)
+      {
+        int32_t inLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, lstmLayer->inData[inpIdx].dataId);
+        if(inLayerIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+        {
+          continue;
+        }
+        if(inpIdx <= TIDL_RecurrentInputB + 2 && pOrgTIDLNetStructure->TIDLPCLayers[inLayerIdx].layerType != TIDL_ConstDataLayer)
+        {
+          /* Non-const initialH/C: inserted DC layers, all should have same scale */
+          int32_t inLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, lstmLayer->inData[inpIdx].dataId);
+          std::vector<int32_t> producers;
+          TIDL_getNonPassThroughProducers(pOrgTIDLNetStructure, inLayerIdx, producers);
+          int32_t effectiveIdx = producers.empty() ? inLayerIdx : producers[0];
+          sTIDL_LayerPC_t *dcLayer = &pOrgTIDLNetStructure->TIDLPCLayers[effectiveIdx];
+          if(dcLayer->layerType != TIDL_DataConvertLayer)
+          {
+            continue;
+          }
+          uint8_t dcFixedScale, dcShiftVal;
+          TIDL_getMMAv2_ScaleShiftAndError(minScale / dcLayer->outData[0].tensorScale, &dcFixedScale, &dcShiftVal, 8U, TIDL_MMAV2_MAX_SCALE_16);
+          dcLayer->outData[0].tensorScale = minScale;
+          dcLayer->outData[0].roundBits   = dcShiftVal;
+          TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, dcLayer->outData[0].dataId);
           continue;
         }
         sTIDL_LayerPC_t *constLayer = &pOrgTIDLNetStructure->TIDLPCLayers[inLayerIdx];
@@ -5718,85 +5940,90 @@ int32_t TIDL_asymUpdateScalesAndShifts(sTIDL_OrgNetwork_t * pOrgTIDLNetStructure
       TIDL_asymRangeToScale(&outData->tensorScale, &outData->tensorZeroPoint, outData->minTensorValue, outData->maxTensorValue, TIDL_SYMMETRIC_TENSOR, outData->elementType, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].quantizeConstraint);
       TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, outData->dataId);      
     }
-    else if(quantizationPassThroughLayers.find(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType) != quantizationPassThroughLayers.end())
+    else if(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_DataConvertLayer &&
+            pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerParams.dataConvertParams.type == TIDL_DC_TYPE_INPUT)
     {
-      sTIDL_LayerPC_t * currLayer = &pOrgTIDLNetStructure->TIDLPCLayers[layerIdx];
-      if(currLayer->layerType == TIDL_DataConvertLayer && currLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_INPUT) {
-        const sTIDL_DataParams_t * inData = TIDL_getOutData(pOrgTIDLNetStructure, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].inData[0].dataId);
-        if(gParams.numParamBits == tidl_getElementSizeInBits(inData->elementType) && 
-           inData->tensorScale != 0 && inData->tensorScale != FLT_MIN) {
-          outData->elementType = inData->elementType;
-          outData->tensorScale = inData->tensorScale;
-          outData->tensorZeroPoint = inData->tensorZeroPoint;
-        } 
-        else {
-          TIDL_asymRangeToScale(&outData->tensorScale, &outData->tensorZeroPoint, outData->minTensorValue, outData->maxTensorValue, TIDL_SYMMETRIC_TENSOR, outData->elementType, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].quantizeConstraint);
-        }
-        TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, outData->dataId);
+      const sTIDL_DataParams_t * inData = TIDL_getOutData(pOrgTIDLNetStructure, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].inData[0].dataId);
+      if(gParams.numParamBits == tidl_getElementSizeInBits(inData->elementType) &&
+         inData->tensorScale != 0 && inData->tensorScale != FLT_MIN) {
+        outData->elementType = inData->elementType;
+        outData->tensorScale = inData->tensorScale;
+        outData->tensorZeroPoint = inData->tensorZeroPoint;
       }
-      else if(currLayer->layerType == TIDL_DataConvertLayer && currLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_MIXED_PRECISION) 
-      {
-        const sTIDL_DataParams_t* inData = TIDL_getOutData(pOrgTIDLNetStructure, currLayer->inData[0].dataId);
-        currLayer->outData[0].minTensorValue = inData->minTensorValue;
-        currLayer->outData[0].maxTensorValue = inData->maxTensorValue;
-        int32_t consumerLayerIdx = tidl_getOutLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, currLayer->outData[0].dataId);
-        if(consumerLayerIdx == -1) {
-          TIDL_GLOBAL_REPORT_ERROR("Error finding consumer layer for Mixed Precision Data Convert, Aborting");
-          return -1;
-        }
-        const sTIDL_LayerPC_t* consumerLayer = &pOrgTIDLNetStructure->TIDLPCLayers[consumerLayerIdx];
-        if(tidl_getElementSizeInBits(inData->elementType) == tidl_getElementSizeInBits(currLayer->outData[0].elementType)) {
-          currLayer->outData[0].elementType = inData->elementType;
-          currLayer->outData[0].tensorScale = inData->tensorScale;
-          currLayer->outData[0].tensorZeroPoint = inData->tensorZeroPoint;
-        }
-        else if(tidl_getElementSizeInBits(inData->elementType) > consumerLayer->weightsElementSizeInBits) {
-          /*Downscaling case, need to determine the new scale and zero point based on the consumer layer requirements*/
-          currLayer->outData[0].elementType = TIDL_getDatElementSign(inData->elementType) ? TIDL_SignedChar : TIDL_UnsignedChar;
-          TIDL_asymRangeToScale(
-            &currLayer->outData[0].tensorScale, 
-            &currLayer->outData[0].tensorZeroPoint, 
-            currLayer->outData[0].minTensorValue, 
-            currLayer->outData[0].maxTensorValue, 
-            currLayer->outData[0].tensorType, 
-            currLayer->outData[0].elementType, 
-            pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].quantizeConstraint
-          );
-          currLayer->weightsElementSizeInBits = std::max(tidl_getElementSizeInBits(inData->elementType), tidl_getElementSizeInBits(currLayer->outData[0].elementType));
-        }
-        else {
-          /*Upscaling case where we can keep the same scale and zero point as input and just change the element type*/
-          currLayer->outData[0].roundBits = inData->roundBits;
-          currLayer->outData[0].tensorScale = inData->tensorScale;
-          currLayer->outData[0].tensorZeroPoint = inData->tensorZeroPoint;
-          currLayer->outData[0].elementType = TIDL_increasePrecision(inData->elementType);
-          currLayer->weightsElementSizeInBits = std::max(tidl_getElementSizeInBits(inData->elementType), tidl_getElementSizeInBits(currLayer->outData[0].elementType));
-        }
-        currLayer->layerParams.dataConvertParams.inZeroPoint = inData->tensorZeroPoint;
-        currLayer->layerParams.dataConvertParams.outZeroPoint = currLayer->outData[0].tensorZeroPoint;
-        currLayer->layerKernelType = TIDL_HighPrecisionKernel;
-        TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, currLayer->outData[0].dataId);
-      }
-      else if(currLayer->layerType == TIDL_PoolingLayer && currLayer->layerParams.poolParams.poolingType == TIDL_AveragePooling)
-      {
-        TIDL_asymRangeToScale(&outData->tensorScale, &outData->tensorZeroPoint, outData->minTensorValue, outData->maxTensorValue, outData->tensorType, outData->elementType, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].quantizeConstraint);
-      }
-      else if(currLayer->layerType == TIDL_DetectionOutputLayer)
-      {
+      else {
         TIDL_asymRangeToScale(&outData->tensorScale, &outData->tensorZeroPoint, outData->minTensorValue, outData->maxTensorValue, TIDL_SYMMETRIC_TENSOR, outData->elementType, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].quantizeConstraint);
       }
-      else 
-      {
-        const sTIDL_DataParams_t* inData = TIDL_getOutData(pOrgTIDLNetStructure, currLayer->inData[0].dataId);
+      TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, outData->dataId);
+    }
+    else if(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_DataConvertLayer &&
+            pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerParams.dataConvertParams.type == TIDL_DC_TYPE_MIXED_PRECISION)
+    {
+      sTIDL_LayerPC_t * currLayer = &pOrgTIDLNetStructure->TIDLPCLayers[layerIdx];
+      const sTIDL_DataParams_t* inData = TIDL_getOutData(pOrgTIDLNetStructure, currLayer->inData[0].dataId);
+      currLayer->outData[0].minTensorValue = inData->minTensorValue;
+      currLayer->outData[0].maxTensorValue = inData->maxTensorValue;
+      int32_t consumerLayerIdx = tidl_getOutLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, currLayer->outData[0].dataId);
+      if(consumerLayerIdx == -1) {
+        TIDL_GLOBAL_REPORT_ERROR("Error finding consumer layer for Mixed Precision Data Convert, Aborting");
+        return -1;
+      }
+      const sTIDL_LayerPC_t* consumerLayer = &pOrgTIDLNetStructure->TIDLPCLayers[consumerLayerIdx];
+      if(tidl_getElementSizeInBits(inData->elementType) == tidl_getElementSizeInBits(currLayer->outData[0].elementType)) {
+        currLayer->outData[0].elementType = inData->elementType;
+        currLayer->outData[0].tensorScale = inData->tensorScale;
+        currLayer->outData[0].tensorZeroPoint = inData->tensorZeroPoint;
+      }
+      else if(tidl_getElementSizeInBits(inData->elementType) > consumerLayer->weightsElementSizeInBits) {
+        /*Downscaling case, need to determine the new scale and zero point based on the consumer layer requirements*/
+        currLayer->outData[0].elementType = TIDL_getDatElementSign(inData->elementType) ? TIDL_SignedChar : TIDL_UnsignedChar;
+        TIDL_asymRangeToScale(
+          &currLayer->outData[0].tensorScale,
+          &currLayer->outData[0].tensorZeroPoint,
+          currLayer->outData[0].minTensorValue,
+          currLayer->outData[0].maxTensorValue,
+          currLayer->outData[0].tensorType,
+          currLayer->outData[0].elementType,
+          pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].quantizeConstraint
+        );
+        currLayer->weightsElementSizeInBits = std::max(tidl_getElementSizeInBits(inData->elementType), tidl_getElementSizeInBits(currLayer->outData[0].elementType));
+      }
+      else {
+        /*Upscaling case where we can keep the same scale and zero point as input and just change the element type*/
         currLayer->outData[0].roundBits = inData->roundBits;
         currLayer->outData[0].tensorScale = inData->tensorScale;
         currLayer->outData[0].tensorZeroPoint = inData->tensorZeroPoint;
-        currLayer->outData[0].elementType = inData->elementType;
-        currLayer->outData[0].minTensorValue = inData->minTensorValue;
-        currLayer->outData[0].maxTensorValue = inData->maxTensorValue;
+        currLayer->outData[0].elementType = TIDL_increasePrecision(inData->elementType);
+        currLayer->weightsElementSizeInBits = std::max(tidl_getElementSizeInBits(inData->elementType), tidl_getElementSizeInBits(currLayer->outData[0].elementType));
       }
+      currLayer->layerParams.dataConvertParams.inZeroPoint = inData->tensorZeroPoint;
+      currLayer->layerParams.dataConvertParams.outZeroPoint = currLayer->outData[0].tensorZeroPoint;
+      currLayer->layerKernelType = TIDL_HighPrecisionKernel;
       TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, currLayer->outData[0].dataId);
     }
+    else if(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_PoolingLayer &&
+            pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerParams.poolParams.poolingType == TIDL_AveragePooling)
+    {
+      TIDL_asymRangeToScale(&outData->tensorScale, &outData->tensorZeroPoint, outData->minTensorValue, outData->maxTensorValue, outData->tensorType, outData->elementType, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].quantizeConstraint);
+      TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, outData->dataId);
+    }
+    else if(pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].layerType == TIDL_DetectionOutputLayer)
+    {
+      TIDL_asymRangeToScale(&outData->tensorScale, &outData->tensorZeroPoint, outData->minTensorValue, outData->maxTensorValue, TIDL_SYMMETRIC_TENSOR, outData->elementType, pOrgTIDLNetStructure->TIDLPCLayers[layerIdx].quantizeConstraint);
+      TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, outData->dataId);
+    }
+    else if(TIDL_isPassThroughLayer(pOrgTIDLNetStructure, &pOrgTIDLNetStructure->TIDLPCLayers[layerIdx]))
+    {
+      sTIDL_LayerPC_t * currLayer = &pOrgTIDLNetStructure->TIDLPCLayers[layerIdx];
+      const sTIDL_DataParams_t* inData = TIDL_getOutData(pOrgTIDLNetStructure, currLayer->inData[0].dataId);
+      currLayer->outData[0].roundBits = inData->roundBits;
+      currLayer->outData[0].tensorScale = inData->tensorScale;
+      currLayer->outData[0].tensorZeroPoint = inData->tensorZeroPoint;
+      currLayer->outData[0].elementType = inData->elementType;
+      currLayer->outData[0].minTensorValue = inData->minTensorValue;
+      currLayer->outData[0].maxTensorValue = inData->maxTensorValue;
+      TIDL_updateDataBufferScaleAndZeroPoint(pOrgTIDLNetStructure, currLayer->outData[0].dataId);
+    }
+
     return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
 
@@ -5816,19 +6043,23 @@ int32_t TIDL_updateActivationProducerRanges(sTIDL_OrgNetwork_t *pOrgTIDLNetStruc
     )
     {
       int32_t producerLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, numLayers, currLayer->inData[0].dataId);
-      while(producerLayerIdx != -1 && 
-         quantizationPassThroughLayers.find(pOrgTIDLNetStructure->TIDLPCLayers[producerLayerIdx].layerType) != quantizationPassThroughLayers.end() && 
-         pOrgTIDLNetStructure->TIDLPCLayers[producerLayerIdx].numOutBufs == 1
-      ) {
+      while(producerLayerIdx != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL &&
+            TIDL_isPassThroughLayer(pOrgTIDLNetStructure, &pOrgTIDLNetStructure->TIDLPCLayers[producerLayerIdx]) == true &&
+            pOrgTIDLNetStructure->TIDLPCLayers[producerLayerIdx].numOutBufs == 1)
+      {
         producerLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, numLayers, pOrgTIDLNetStructure->TIDLPCLayers[producerLayerIdx].inData[0].dataId);
       }
-      if(producerLayerIdx == -1) {
+      if(producerLayerIdx == TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
+      {
         TIDL_GLOBAL_REPORT_ERROR("Error finding producer layer for BatchNorm, Aborting");
-        return -1;
+        return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
       }
+
       sTIDL_LayerPC_t * producerLayer = &pOrgTIDLNetStructure->TIDLPCLayers[producerLayerIdx];
 
-      if(!(producerLayer->numOutBufs == 1 && quantizationPassThroughLayers.find(producerLayer->layerType) == quantizationPassThroughLayers.end() && TIDL_isProducerLayer(producerLayer))) {
+      if(!(producerLayer->numOutBufs == 1 && TIDL_isPassThroughLayer(pOrgTIDLNetStructure, &pOrgTIDLNetStructure->TIDLPCLayers[producerLayerIdx]) == false &&
+           TIDL_isComputeLayer(producerLayer)))
+      {
         continue;
       }
 
@@ -5859,28 +6090,27 @@ int32_t TIDL_updateActivationProducerRanges(sTIDL_OrgNetwork_t *pOrgTIDLNetStruc
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }
 
-int32_t TIDL_isPassThroughLayer(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure, sTIDL_LayerPC_t *layer) {
-  if(quantizationPassThroughLayers.find(layer->layerType) == quantizationPassThroughLayers.end()) {
-    return 0;
+/**
+ * Function to check if a layer is a pass-through layer.
+ * A pass-through layer is defined as a layer that does not perform any operation that can change the layer's output range.
+ */
+bool TIDL_isPassThroughLayer(sTIDL_OrgNetwork_t *pOrgTIDLNetStructure, sTIDL_LayerPC_t *layer)
+{
+  if(quantizationPassThroughLayers.find(layer->layerType) == quantizationPassThroughLayers.end())
+  {
+    return false;
   }
+
   bool isPassThrough = true;
-  if(layer->layerType == TIDL_DataConvertLayer && layer->layerParams.dataConvertParams.type != TIDL_DC_TYPE_INTERMEDIATE) {
+  if(layer->layerType == TIDL_DataConvertLayer && layer->layerParams.dataConvertParams.type != TIDL_DC_TYPE_INTERMEDIATE)
+  {
     isPassThrough = false;
   }
-  else if(layer->layerType == TIDL_PoolingLayer && layer->layerParams.poolParams.poolingType != TIDL_MaxPooling) {
+  else if(layer->layerType == TIDL_PoolingLayer && layer->layerParams.poolParams.poolingType != TIDL_MaxPooling)
+  {
     isPassThrough = false;
   }
-  else if(layer->layerType == TIDL_ResizeLayer && layer->layerParams.resizeParams.mode != TIDL_ResizeNearest) {
-    isPassThrough = false;
-  }
-  else if(layer->layerType == TIDL_TopKLayer) {
-    /* For topK if the consumer layers are not asymmetrical, then this layer cannot be asymmetrical */
-    std::vector<int32_t> outLayerIdxs = tidl_getOutLayers(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, layer->outData[0].dataId);
-    isPassThrough = true;
-    for(int32_t outLayerIdx: outLayerIdxs){
-      isPassThrough = isPassThrough && TIDL_doesLayerSupportAsymTensors(&pOrgTIDLNetStructure->TIDLPCLayers[outLayerIdx], pOrgTIDLNetStructure);
-    }
-  }
+
   return isPassThrough;
 }
 
@@ -5937,8 +6167,7 @@ int32_t TIDL_updateActivationRangeBasedElementTypes(sTIDL_OrgNetwork_t *pOrgTIDL
       if((currLayer->layerType == TIDL_EltWiseLayer) ||
          (currLayer->layerType == TIDL_ConcatLayer)  ||
          (currLayer->layerType == TIDL_PoolingLayer) ||
-         (currLayer->layerType != TIDL_DataConvertLayer &&
-          quantizationPassThroughLayers.find(currLayer->layerType) != quantizationPassThroughLayers.end()))
+         (currLayer->layerType != TIDL_DataConvertLayer && TIDL_isPassThroughLayer(pOrgTIDLNetStructure, currLayer) == true))
       {
         int32_t numInBufs = currLayer->numInBufs;
         int32_t inElementTypeSign = 0;
@@ -7372,7 +7601,9 @@ static bool TIDL_isRangeExemptLayerType(int32_t layerType)
          (layerType == TIDL_ConstDataLayer)   ||
          (layerType == TIDL_ReshapeLayer)     ||
          (layerType == TIDL_SliceLayer)       ||
-         (layerType == TIDL_TransposeLayer);
+         (layerType == TIDL_TransposeLayer)   ||
+         (layerType == TIDL_CacheLayer)       ||
+         (layerType == TIDL_MemCopyLayer);
 }
 
 /**
@@ -7686,12 +7917,16 @@ bool TIDL_doesLayerSupportAsymTensors(sTIDL_LayerPC_t * currLayer, sTIDL_OrgNetw
   }
   else if(currLayer->layerType == TIDL_BatchNormLayer)
   {
+    /*
+     * BatchNorm does not support asymmetric quantization, so return false for act types which goes
+     * to batchNorm kernel - RelU, PRelU, NoAct (Clip also comes under no act)
+     */
     if((currLayer->weightsElementSizeInBits == 8U && 
       (currLayer->actParams.actType == TIDL_LeakyReLU || 
       (currLayer->actParams.actType == TIDL_GELU && TIDL_isSupportedInFirmwareVersion((const char*)gParams.c7xFirmwareVersion,"10_01_04_00")) ||
       (currLayer->actParams.actType == TIDL_SiLU && TIDL_isSupportedInFirmwareVersion((const char*)gParams.c7xFirmwareVersion,"11_00_08_00")))) ||
-      ((currLayer->actParams.actType != TIDL_RelU && currLayer->actParams.actType != TIDL_PRelU &&
-       currLayer->actParams.actType != TIDL_NoAct && currLayer->clipParams.isClipEnabled != 1) && 
+      (!(currLayer->actParams.actType == TIDL_RelU || currLayer->actParams.actType == TIDL_PRelU ||
+         currLayer->actParams.actType == TIDL_NoAct) &&
        TIDL_isSupportedInFirmwareVersion((const char*)gParams.c7xFirmwareVersion,"11_01_06_00"))
     )
     {
@@ -7725,54 +7960,29 @@ bool TIDL_doesLayerSupportAsymTensors(sTIDL_LayerPC_t * currLayer, sTIDL_OrgNetw
   {
     isAsymSupported = true;
   }
-  else if(quantizationPassThroughLayers.find(currLayer->layerType) != quantizationPassThroughLayers.end() && pOrgTIDLNetStructure != NULL && TIDL_isSupportedInFirmwareVersion((const char*)gParams.c7xFirmwareVersion,"10_01_04_00"))
+  else if(pOrgTIDLNetStructure != NULL && TIDL_isSupportedInFirmwareVersion((const char*)gParams.c7xFirmwareVersion,"10_01_04_00"))
   {
-    if(currLayer->layerType == TIDL_DataConvertLayer && 
-      (currLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_OUTPUT || 
-        (currLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_MIXED_PRECISION  &&
-        !TIDL_isSupportedInFirmwareVersion((const char*)gParams.c7xFirmwareVersion,"11_02_00_00"))
-      )
-    )
-    {
-      isAsymSupported = false;
-    }
-    else if(currLayer->layerType == TIDL_DetectionOutputLayer)
+    if(currLayer->layerType == TIDL_DataConvertLayer &&
+       currLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_INPUT)
     {
       isAsymSupported = true;
     }
-    else if(currLayer->layerType == TIDL_DataConvertLayer && currLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_INPUT)
-    {
-      isAsymSupported = true;
-    }
-    else if(currLayer->layerType == TIDL_ReduceLayer && currLayer->layerParams.reduceParams.ops == TIDL_inReduceOpMean) {
-      isAsymSupported = false;
-    }
-    else if(currLayer->layerType == TIDL_ResizeLayer && currLayer->layerParams.resizeParams.mode != TIDL_ResizeNearest) {
-      isAsymSupported = false;
-    }
-    else if(currLayer->layerType == TIDL_TopKLayer) {
-      isAsymSupported = true;
-
-      /* For topK if the consumer layers are not asymmetrical, then this layer cannot be asymmetrical */
-      int32_t consumerLayerIdx = tidl_getOutLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, currLayer->outData[0].dataId);
-      if(consumerLayerIdx == -1) {
-        TIDL_GLOBAL_REPORT_ERROR("Consumer Not found for TopK layer");
-        return false;
-      }
-      /* When the TopK values output is unused no need to check for the consumer asymmetric support */
-      if(pOrgTIDLNetStructure->TIDLPCLayers[consumerLayerIdx].layerType != TIDL_SliceLayer) {
-        std::vector<int32_t> outLayerIdxs = tidl_getOutLayers(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, currLayer->outData[0].dataId);
-        for(int32_t outLayerIdx: outLayerIdxs){
-          isAsymSupported = isAsymSupported && TIDL_doesLayerSupportAsymTensors(&pOrgTIDLNetStructure->TIDLPCLayers[outLayerIdx], pOrgTIDLNetStructure);
-        }
-      }
-    }
-    else if(currLayer->layerType == TIDL_PoolingLayer && currLayer->layerParams.poolParams.poolingType != TIDL_MaxPooling) {
-      isAsymSupported = false;
-    }
-    else 
+    else if(currLayer->layerType == TIDL_DataConvertLayer &&
+            currLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_MIXED_PRECISION &&
+            TIDL_isSupportedInFirmwareVersion((const char*)gParams.c7xFirmwareVersion,"11_02_00_00"))
     {
       isAsymSupported = TIDL_canPropagateAsym(pOrgTIDLNetStructure, currLayer);
+    }
+    else if(TIDL_isPassThroughLayer(pOrgTIDLNetStructure, currLayer) == true)
+    {
+      if(currLayer->layerType == TIDL_DetectionOutputLayer)
+      {
+        isAsymSupported = true;
+      }
+      else
+      {
+        isAsymSupported = TIDL_canPropagateAsym(pOrgTIDLNetStructure, currLayer);
+      }
     }
   }
   else
@@ -7905,7 +8115,8 @@ int32_t TIDL_asymUpdateNetworkWithConstraints(sTIDL_OrgNetwork_t * pOrgTIDLNetSt
         going to be symmetric*/
 
         areConsumersAsym = TIDL_areConsumerLayersAsym(pOrgTIDLNetStructure, layerIdx );
-        if(quantizationPassThroughLayers.find(currLayer->layerType) != quantizationPassThroughLayers.end() && quantizationPassThroughMap.find(currLayer->outData[0].dataId) != quantizationPassThroughMap.end())
+        if(TIDL_isPassThroughLayer(pOrgTIDLNetStructure, currLayer) == true &&
+           quantizationPassThroughMap.find(currLayer->outData[0].dataId) != quantizationPassThroughMap.end())
         {
           int32_t inLayerIdx = tidl_getInLayer(*pOrgTIDLNetStructure, pOrgTIDLNetStructure->numLayers, currLayer->inData[0].dataId);
           bool isParentAsymOutput = pOrgTIDLNetStructure->TIDLPCLayers[inLayerIdx].outData[0].tensorType == TIDL_ASYMMETRIC_TENSOR; 

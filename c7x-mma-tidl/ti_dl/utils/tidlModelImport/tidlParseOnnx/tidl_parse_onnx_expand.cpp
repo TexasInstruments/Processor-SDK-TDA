@@ -97,6 +97,7 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Expand")> ()
       {
         layer.layerPCParams.expandParams.shape[j + offset] = (int32_t)((int64_t*)buffer.ptr)[j];
       }
+      layer.layerPCParams.expandParams.numDims = buffer.bufSize;
 
       if (buffer.ptr)
       {

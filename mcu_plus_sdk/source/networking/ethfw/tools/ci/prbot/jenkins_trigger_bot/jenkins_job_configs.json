@@ -1,12 +1,12 @@
 {
-         "PROCESSOR-SDK-VISION/ethfw": [
-         {
-            "root_url" : "https://jenkins-epsw.itg.ti.com",
-            "job_name" : "ethrtos_rtos_ethfw_pr_bot",
-            "auth_uname" : "JENKINS_PROC_AUTH_UNAME",
-            "auth_key" : "JENKINS_PROC_AUTH_KEY",
-            "token" : "",
-            "params" : {
+    "PROCESSOR-SDK-VISION/ethfw": [
+        {
+            "root_url": "https://jenkins-epsw.itg.ti.com",
+            "job_name": "ethrtos_rtos_ethfw_pr_bot",
+            "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
+            "auth_key": "JENKINS_EPSW_AUTH_KEY",
+            "token": "",
+            "params": {
                 "TARGET_REPO": "{repo}",
                 "COMMIT_ID": "{commit_id}",
                 "PR_ID": "{pr_number}",
@@ -14,16 +14,79 @@
                 "BB_URL": "https://bitbucket.itg.ti.com",
                 "BB_PROJECT": "{project}",
                 "BB_REPO": "{repo}",
-                "TARGET_BRANCH": "master"
+                "TARGET_BRANCH": "master",
+                "tag_info": "--ethfw_tag={branch},--tsn_tag={tsn_tag},--enet_tag={enet_tag}"
             },
-			"params_template" : "{\"manifest_tag\":\"%repo_manifests%\",\"ethfw_tag\":\"%ethfw%\",\"enet_tag\":\"%enet-lld%\",\"tsn_tag\":\"%enet-tsn-stack%\",\"pdk_tag\":\"%pdk%\"}",
-			"default_tag" : {
-				    "repo_manifests" : "master",
-				    "pdk" : "master",
-				    "enet-lld" : "master",
-				    "enet-tsn-stack" : "next",
-				    "ethfw" : "master"
-				    },
-            "disabled" : false
-         }]
+            "params_template": "{\"manifest_tag\":\"%repo_manifests%\",\"ethfw_tag\":\"%ethfw%\",\"enet_tag\":\"%enet_tag%\",\"tsn_tag\":\"%tsn_tag%\",\"pdk_tag\":\"%pdk_tag%\"}",
+            "default_tag": {
+                "repo_manifests": "master",
+                "pdk_tag": "master",
+                "enet_tag": "master",
+                "tsn_tag": "next",
+                "ethfw": "master"
+            },
+            "disabled": false
+        }
+    ],
+    "PROCESSOR-SDK/enet-lld": [
+        {
+            "target_branch": "master",
+            "root_url": "https://jenkins-epsw.itg.ti.com",
+            "job_name": "ethrtos_rtos_pdk_enet_pr_bot",
+            "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
+            "auth_key": "JENKINS_EPSW_AUTH_KEY",
+            "token": "",
+            "params": {
+                "COMMIT_ID": "{commit_id}",
+                "manifest_tag": "",
+                "enet_tag": "{branch}",
+                "tsn_tag": "{tsn_tag}",
+                "pdk_tag": "{pdk_tag}",
+                "pdk_docs_tag": "",
+                "csl_tag": "",
+                "mcusw_tag": ""
+            },
+            "disabled": false
+        },
+        {
+            "target_branch": "mcupsdk_next",
+            "root_url": "https://jenkins-epsw.itg.ti.com",
+            "job_name": "ethrtos_rtos_enet_pr_build",
+            "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
+            "auth_key": "JENKINS_EPSW_AUTH_KEY",
+            "token": "",
+            "params": {
+                "COMMIT_ID": "{commit_id}",
+                "mcusdk_tag": "{mcusdk_tag}",
+                "manifest_tag": "k3_main",
+                "mcupsdk_setup_tag": "k3_main",
+                "mcupsdk_internal_tag": "k3_main",
+                "tag_info": "--enet_tag={branch}"
+            },
+            "default_tag": {
+                "mcu_plus_sdk": "k3_next_jacinto"
+            },
+            "disabled": false
+        },
+        {
+            "target_branch": "mcupsdk_next",
+            "root_url": "https://jenkins-epsw.itg.ti.com",
+            "job_name": "sitmpurtos_mcu_plus_sdk_j722s_2",
+            "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
+            "auth_key": "JENKINS_EPSW_AUTH_KEY",
+            "token": "",
+            "params": {
+                "COMMIT_ID": "{commit_id}",
+                "mcusdk_tag": "{mcusdk_tag}",
+                "manifest_tag": "k3_main_jacinto",
+                "mcupsdk_setup_tag": "k3_main_jacinto",
+                "mcupsdk_internal_tag": "k3_main_jacinto",
+                "tag_info": "--enet_tag={branch}"
+            },
+            "default_tag": {
+                "mcu_plus_sdk": "k3_next_jacinto"
+            },
+            "disabled": false
+        }
+    ]
 }

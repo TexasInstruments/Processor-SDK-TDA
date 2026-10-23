@@ -118,6 +118,9 @@ TfLiteStatus tidlDelegate::Init(TfLiteContext* context, const TfLiteDelegatePara
   subgraphRtCreateOptions->coreStartIdx = options_.core_start_idx;
   subgraphRtCreateOptions->inferenceMode = -1;
   subgraphRtCreateOptions->flowCtrl = options_.flow_ctrl;
+  subgraphRtCreateOptions->cacheImport = 0;
+  subgraphRtCreateOptions->cacheExport = 0;
+  subgraphRtCreateOptions->cacheClear = 0;
   strcpy(subgraphRtCreateOptions->tempBufferDir, options_.temp_buffer_dir);
   strncpy(subgraphRtCreateOptions->traceBaseName, options_.trace_base_name, TIDLRT_STRING_SIZE - 1);
   subgraphRtCreateOptions->traceBaseName[TIDLRT_STRING_SIZE - 1] = '\0';

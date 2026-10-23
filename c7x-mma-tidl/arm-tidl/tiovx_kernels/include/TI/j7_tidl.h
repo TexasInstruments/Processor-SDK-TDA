@@ -88,7 +88,7 @@ extern "C" {
 #endif
 #endif
 
-#define TIVX_TIDL_J7_CHECKSUM_SIZE (64)
+#define TIVX_TIDL_J7_CHECKSUM_SIZE (64U)
 
 /* These correspond to parameter indices of the TIDL node
  * They can be useful to aid in setting replicate parameters if
@@ -138,23 +138,22 @@ typedef struct{
  * \brief Utility function to calculate quick checksum
  * \ingroup group_vision_function_tidl
  */
-static inline void tivx_tidl_j7_get_qc(uint8_t *pIn, uint8_t *pOut, int32_t inSize)
+static inline void tivx_tidl_j7_get_qc(uint8_t *pIn, uint8_t *pOut, uint32_t inSize)
 {
-  int32_t i, j;
+  uint32_t i, j, remSize;
   uint8_t vec[TIVX_TIDL_J7_CHECKSUM_SIZE];
-  int32_t remSize;
 
   /* Initialize vector */
-  for(j = 0; j < TIVX_TIDL_J7_CHECKSUM_SIZE; j++)
+  for(j = 0U; j < TIVX_TIDL_J7_CHECKSUM_SIZE; j++)
   {
-     vec[j] = 0;
+     vec[j] = 0U;
   }
 
   /* Create QC */
   remSize = inSize;
-  for(i = 0; i < inSize; i+=TIVX_TIDL_J7_CHECKSUM_SIZE)
+  for(i = 0U; i < inSize; i+=TIVX_TIDL_J7_CHECKSUM_SIZE)
   {
-    int32_t elems;
+    uint32_t elems;
 
     if (remSize < TIVX_TIDL_J7_CHECKSUM_SIZE)
     {
@@ -167,14 +166,14 @@ static inline void tivx_tidl_j7_get_qc(uint8_t *pIn, uint8_t *pOut, int32_t inSi
       remSize -= TIVX_TIDL_J7_CHECKSUM_SIZE;
     }
 
-    for(j = 0; j < elems; j++)
+    for(j = 0U; j < elems; j++)
     {
       vec[j] ^= pIn[i + j];
     }
   }
 
   /* Return QC */
-  for(j = 0; j < TIVX_TIDL_J7_CHECKSUM_SIZE; j++)
+  for(j = 0U; j < TIVX_TIDL_J7_CHECKSUM_SIZE; j++)
   {
     pOut[j] = vec[j];
   }

@@ -72,7 +72,7 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.avg_pool2d")>()
   layer.layerType = TIDL_PoolingLayer;
   sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
   sTIDL_PoolingParams_t &poolParams = layer.layerParams.poolParams;
-
+  poolParams.countIncludePad = 0;
   const auto* fn_node = call->op.as<tvm::relay::FunctionNode>();
   auto fn = GetRef<tvm::relay::Function>(fn_node);
   const auto* param = fn->attrs.as<DictAttrsNode>();
@@ -107,6 +107,11 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.avg_pool2d")>()
         return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
       }
     }
+  }
+
+  if(param->dict.count("count_include_pad"))
+  {
+    poolParams.countIncludePad = Downcast<Integer>(param->dict.at("count_include_pad"))->value;
   }
 
   int32_t isGlobalAvgPool = 0;

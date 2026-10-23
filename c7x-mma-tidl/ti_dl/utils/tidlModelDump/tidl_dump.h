@@ -169,6 +169,10 @@ private:
    void dumpGatherElementsParams(const sTIDL_Layer_t *pLayer);
    void dumpNonZeroParams(const sTIDL_Layer_t *pLayer);
    void dumpGatherParams(const sTIDL_Layer_t *pLayer);
+   void dumpRotaryEmbeddingParams(const sTIDL_Layer_t *pLayer);
+   void dumpGQAParams(const sTIDL_Layer_t *pLayer);
+   void dumpCacheParams(const sTIDL_Layer_t *pLayer);
+   void dumpReshapeParams(const sTIDL_Layer_t *pLayer);
    void dumpUnsupportedLayerParams(const sTIDL_Layer_t *pLayer);
    void dumpActParams(const sTIDL_ActParams_t *pActParams);
    void dumpClipParams(const sTIDL_ClipParams_t *pClipParams);

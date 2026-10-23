@@ -71,6 +71,9 @@
 #include "tidl_alg_int.h"
 #include "tidl_commonUtils.h"
 #include "tidl_batchReshape_ref.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 /**
  * @brief This is reference implementation of batchReshape layer
@@ -113,21 +116,30 @@ template<class Tin, class Tout> void TIDL_refBatchReshape(
   OPENACC(data copyin(pIn[:1 + inPtrOffset + ((numBatches - 1) * inBatchPitch) + ((numChs - 1) * inChPitch) + ((height - 1) * inLinePitch) + (width - 1)])
               copy(pOut[:1 + outPtrOffset + ((numBatches - 1) * outBatchPitch) + ((numChs - 1) * outChPitch) + ((height - 1) * outLinePitch) + (width - 1)]))
   OPENACC(parallel loop collapse(4))
-  for (i1 = 0; i1 < numBatches; i1++)
-  {
-    for (i2 = 0; i2 < numChs; i2++)
+  #ifdef BUILD_WITH_CUDA_BATCHRESHAPE
+    // call cuda flatten wrapper
+    TIDL_refCudaBatchReshape(pIn,pOut,
+      inPtrOffset, outPtrOffset,
+      width, height, numChs, numBatches,
+      inLinePitch, inChPitch, inBatchPitch,
+      outLinePitch, outChPitch, outBatchPitch);
+  #else
+    for (i1 = 0; i1 < numBatches; i1++)
     {
-      for (i3 = 0; i3 < height; i3++)
+      for (i2 = 0; i2 < numChs; i2++)
       {
-        for (i4 = 0; i4 < width; i4++)
+        for (i3 = 0; i3 < height; i3++)
         {
-          int32_t inOffset = inPtrOffset + (i1 * inBatchPitch) + (i2 * inChPitch) + (i3 * inLinePitch) + i4;
-          int32_t outOffset = outPtrOffset + (i1 * outBatchPitch) + (i2 * outChPitch) + (i3 * outLinePitch) + i4;
-          pOut[outOffset] = pIn[inOffset];
+          for (i4 = 0; i4 < width; i4++)
+          {
+            int32_t inOffset = inPtrOffset + (i1 * inBatchPitch) + (i2 * inChPitch) + (i3 * inLinePitch) + i4;
+            int32_t outOffset = outPtrOffset + (i1 * outBatchPitch) + (i2 * outChPitch) + (i3 * outLinePitch) + i4;
+            pOut[outOffset] = pIn[inOffset];
+          }
         }
       }
     }
-  }
+  #endif
 }
 /**
  * @brief This is reference implementation of batchReshape layer
@@ -207,7 +219,7 @@ int32_t TIDL_batchReshapeRefProcess(TIDL_NetworkCommonParams *commonParams,
                                     int32_t layerIdx)
 {
   int32_t status = TIDL_SUCCESS;
-  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(commonParams->createParams->net, tidlLayer->inData[0]);
+  sTIDL_DataParams_t *inDataParams = &commonParams->createParams->net->TIDLLayers[tidlLayer->inData[0]].outData;
   sTIDL_DataParams_t *outDataParams = &tidlLayer->outData;
   int32_t inWidth;  //= (int32_t)inDataParams->dimValues[TIDL_DIM_WIDTH];
   int32_t inHeight; //= (int32_t)inDataParams->dimValues[TIDL_DIM_HEIGHT];
@@ -232,8 +244,8 @@ int32_t TIDL_batchReshapeRefProcess(TIDL_NetworkCommonParams *commonParams,
 
   if ((uint32_t)commonParams->createParams->forceNegativeTest == TIDL_SAFETY_FLAG_BATCHRESHAPE_FORCE_INBATCH_OUTBATCH_NULL)
   {
-    inBatch = NULL;
-    outBatch = NULL;
+    inBatch = 0;
+    outBatch = 0;
   }
 
   // TODO: Need to review this after migrating to using gc info

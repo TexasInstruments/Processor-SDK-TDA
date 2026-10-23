@@ -572,7 +572,7 @@ template<class Tacc, class Tout> static void TIDL_refEltWiseMMAv2Quantize(TIDL_H
                 /* LDRA_JUSTIFY_END */
                 mmaAcc = pAcc[outOffset] + biasTerm;
                 tempAcc = mmaAcc * mmaScale;
-                pout[outOffset] = (Tout)TIDL_roundSat(tempAcc, mmaShift, std::numeric_limits<Tout>::lowest(), std::numeric_limits<Tout>::max());
+                pout[outOffset] = (Tout)TIDL_roundSat(tempAcc, mmaShift, (int32_t)std::numeric_limits<Tout>::lowest(), (int32_t)std::numeric_limits<Tout>::max());
               }
               /* LDRA_JUSTIFY_START
                <metric start> statement branch <metric end>
@@ -872,49 +872,6 @@ static int32_t TIDL_refEltWiseProcess(TIDL_Handle intAlgHandle,
     uint8_t commonScale = 1;
     uint8_t mmaShift = 0;
     int64_t biasTerm = 0;
-    if (TIDL_isAsymQuantEnabledTFL(quantizationStyle) != FALSE)
-    {
-      if (params->eltWiseType == TIDL_EltWiseSum)
-      {
-        // Currently for 2 tensor eltwise only.. fix!
-        sTIDL_DataParams_t *inDataParams1;
-        sTIDL_DataParams_t *inDataParams2;
-        inDataParams1 = &intAlgHandle->createParams->net->TIDLLayers[algLayer->inLayerIdx[0]].outData;
-        inDataParams2 = &intAlgHandle->createParams->net->TIDLLayers[algLayer->inLayerIdx[1]].outData;
-        float32_tidl scale1 = inDataParams1->tensorScale / tidlLayer->outData.tensorScale;
-        float32_tidl scale2 = inDataParams2->tensorScale / tidlLayer->outData.tensorScale;
-        uint8_t iScale1, iScale2;
-        TIDL_getMMAv2_EltwiseScalesAndShift(scale1, scale2, &iScale1, &iScale2, &commonScale, &mmaShift);
-        inDataScale[0] = iScale1;
-        inDataScale[1] = iScale2;
-        float32_tidl floatBias = tidlLayer->outData.tensorZeroPoint;
-        floatBias -= (((inDataParams1->tensorScale * (float32_tidl)inDataParams1->tensorZeroPoint) + (inDataParams2->tensorScale * (float32_tidl)inDataParams2->tensorZeroPoint)) / tidlLayer->outData.tensorScale);
-        // This term needs to be inverted by the mmaScale to be added to the accumulator:
-        float32_tidl mmaFloatScale = ((float32_tidl)commonScale) / pow(2, (mmaShift));
-        floatBias *= (1.0 / mmaFloatScale);
-        biasTerm = round(floatBias);
-      }
-      else if (params->eltWiseType == TIDL_EltWiseProduct)
-      {
-        sTIDL_DataParams_t *inDataParams1;
-        sTIDL_DataParams_t *inDataParams2;
-        inDataParams1 = &intAlgHandle->createParams->net->TIDLLayers[algLayer->inLayerIdx[0]].outData;
-        inDataParams2 = &intAlgHandle->createParams->net->TIDLLayers[algLayer->inLayerIdx[1]].outData;
-        float32_tidl scale1 = inDataParams1->tensorScale;
-        float32_tidl scale2 = inDataParams2->tensorScale;
-        float32_tidl scale = tidlLayer->outData.tensorScale;
-        scale = (scale1 * scale2) / scale;
-        TIDL_getMMAv2_ScaleAndShift(scale, &commonScale, &mmaShift);
-        inDataScale[0] = 1;
-        inDataScale[1] = 1;
-        float32_tidl floatBias = ((float32_tidl)tidlLayer->outData.tensorZeroPoint * tidlLayer->outData.tensorScale) / (inDataParams1->tensorScale * inDataParams2->tensorScale);
-        biasTerm = round(floatBias);
-      }
-      else
-      {
-        /*do nothing*/
-      }
-    }
 
     /*Asym support*/
     if ((TIDL_isKernelHighPrecision(tidlLayer->layerKernelType) == (int32_t)TRUE) &&

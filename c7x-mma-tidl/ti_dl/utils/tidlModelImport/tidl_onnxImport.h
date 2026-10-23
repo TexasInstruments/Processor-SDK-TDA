@@ -128,4 +128,12 @@ int32_t tidl_onnxLayerFillTensorNames(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructure
 std::vector<int32_t> getNodeInputShape(GraphProto& onnxGraph, const std::string name, int32_t debugLevel);
 std::vector<int32_t> getNodeOutputShape(GraphProto& onnxGraph, const std::string name, int32_t debugLevel);
 int32_t TIDL_onnxSaveAllowlistingMetaData(GraphProto& onnGraph, int32_t i, sTIDL_LayerPC_t &layer);
+
+/* ONNX External Data (https://onnx.ai/onnx/repo-docs/ExternalData.html) resolvers.
+ * Read tensor weights stored in separate files (relative to baseDir) into the tensor's
+ * raw_data field. No-op for tensors that are not stored externally.
+ * Return 0 on success, -1 on error. */
+int32_t TIDL_loadExternalDataForTensor(TensorProto* tensor, const std::string& baseDir);
+int32_t TIDL_loadExternalDataForGraph(GraphProto* graph, const std::string& baseDir);
+int32_t TIDL_loadExternalDataForModel(ModelProto* model, const std::string& baseDir);
 #endif  /* TIDL_ONNX_IMPORT_H */

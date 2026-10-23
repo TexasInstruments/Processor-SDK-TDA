@@ -88,8 +88,25 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.conv_transpose")>()
   auto weight = call->args[1];
   Array<PrimExpr> weight_shape =  weight->checked_type().as<TensorTypeNode>()->shape;
 
-  layer.layerPCParams.convParams.tensorHeight = weight_shape[2].as<IntImmNode>()->value;
-  layer.layerPCParams.convParams.tensorWidth = weight_shape[3].as<IntImmNode>()->value;
+  if (weight_shape.size() < 4)
+  {
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "ConvTranspose: kernel_shape is missing height axis.");
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+  }
+  if (weight_shape.size() > 4)
+  {
+    for (size_t i = 2; i < weight_shape.size() - 2; i++)
+    {
+      int32_t dimVal = weight_shape[i].as<IntImmNode>()->value;
+      if (dimVal != 1)
+      {
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "ConvTranspose: kernel_shape is only supported along width and height axis.");
+        return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+      }
+    }
+  }
+  layer.layerPCParams.convParams.tensorHeight = weight_shape[weight_shape.size() - 2].as<IntImmNode>()->value;
+  layer.layerPCParams.convParams.tensorWidth = weight_shape[weight_shape.size() - 1].as<IntImmNode>()->value;
 
   convParams.numGroups = 1;
   convParams.dilationW = 1;
@@ -123,8 +140,13 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.conv_transpose")>()
   if (param->dict.count("kernel_size"))
   {
     Array<PrimExpr> kshape = Downcast<Array<PrimExpr>>(param->dict.at("kernel_size"));
-    convParams.kernelH = Downcast<IntImm>(kshape[0])->value;
-    convParams.kernelW = Downcast<IntImm>(kshape[1])->value;
+    convParams.kernelH = Downcast<IntImm>(kshape[kshape.size() - 2])->value;
+    convParams.kernelW = Downcast<IntImm>(kshape[kshape.size() - 1])->value;
+  }
+  else
+  {
+    convParams.kernelH = weight_shape[weight_shape.size() - 2].as<IntImmNode>()->value;
+    convParams.kernelW = weight_shape[weight_shape.size() - 1].as<IntImmNode>()->value;
   }
 
   if (param->dict.count("output_padding"))
@@ -145,6 +167,16 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.conv_transpose")>()
   if (param->dict.count("output_shape"))
   {
     Array<PrimExpr> out_shape = Downcast<Array<PrimExpr>>(param->dict.at("output_shape"));
+    if (out_shape.size() > 2)
+    {
+      TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "ConvTranspose: output_shape attribute value should not include dimensions for batch size and channels, which are automatically inferred.");
+      return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+    }
+    else if (out_shape.size() < 2)
+    {
+      TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "ConvTranspose: output_shape attribute must contain height and width dimensions.");
+      return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+    }
     output_shape[0] = Downcast<IntImm>(out_shape[0])->value;
     output_shape[1] = Downcast<IntImm>(out_shape[1])->value;
 
@@ -281,15 +313,26 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.conv_transpose")>()
   convParams.padW = pads[3];
   convParams.padH = pads[2];
 
-  auto weight_data = weight.as<tvm::relay::ConstantNode>()->data;
+  const auto *weight_const = weight.as<tvm::relay::ConstantNode>();
+  if (weight_const == nullptr)
+  {
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "ConvTranspose: weight must be a constant tensor.");
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+  }
+  auto weight_data = weight_const->data;
 
   int shape0 = weight_shape[0].as<IntImmNode>()->value;
   int shape1 = weight_shape[1].as<IntImmNode>()->value;
-  int shape2 = weight_shape[2].as<IntImmNode>()->value;
-  int shape3 = weight_shape[3].as<IntImmNode>()->value;
+  int shape2 = weight_shape[weight_shape.size() - 2].as<IntImmNode>()->value;
+  int shape3 = weight_shape[weight_shape.size() - 1].as<IntImmNode>()->value;
 
   layer.weights.bufSize = shape0 * shape1 * shape2 * shape3;
   layer.weights.ptr = NDArrtoFloat(weight_data, layer.weights.bufSize);
+  if (layer.weights.ptr == nullptr)
+  {
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "ConvTranspose: Unable to copy weights.");
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+  }
 
   int32_t i0, i1, i2, i3;
   int32_t NoByG = convParams.numOutChannels / convParams.numGroups;
@@ -343,6 +386,11 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.conv_transpose")>()
   {
     convParams.enableBias = 1;
     layer.bias = TIDL_extractConstantTensorData(call, 2, md, 1);
+    if (layer.bias.ptr == nullptr)
+    {
+      TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", 2);
+      return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+    }
   }
 
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;

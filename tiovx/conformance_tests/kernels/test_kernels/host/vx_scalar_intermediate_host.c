@@ -220,6 +220,12 @@ vx_status tivxAddKernelScalarIntermediate(vx_context context)
             tivxKernelsHostUtilsAddKernelTargetMcu(kernel);
             tivxKernelsHostUtilsAddKernelTargetDsp(kernel);
             tivxAddKernelTarget(kernel, TIVX_TARGET_MPU_0);
+            #if !(defined(SOC_J722S) || defined(SOC_AM62A) || defined(SOC_TDA54))
+            tivxAddKernelTarget(kernel, TIVX_TARGET_MCU3_0);
+            #endif
+            #if defined(SOC_J784S4)
+            tivxAddKernelTarget(kernel, TIVX_TARGET_MCU4_0);
+            #endif
             #if defined(SOC_J721E)
             tivxAddKernelTarget(kernel, TIVX_TARGET_DSP_C7_1);
             #endif

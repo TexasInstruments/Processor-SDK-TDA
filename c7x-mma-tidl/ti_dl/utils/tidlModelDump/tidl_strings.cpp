@@ -162,6 +162,11 @@ std::string layerTypeString(int32_t type)
       { TIDL_ShapeLayer, "TIDL_ShapeLayer"},
       { TIDL_SizeLayer, "TIDL_SizeLayer"},
       { TIDL_NonZeroLayer, "TIDL_NonZeroLayer"},
+      { TIDL_GroupQueryAttentionLayer, "TIDL_GroupQueryAttentionLayer"},
+      { TIDL_MatMulNBitsLayer, "TIDL_MatMulNBitsLayer"},
+      { TIDL_RotaryEmbeddingLayer, "TIDL_RotaryEmbeddingLayer"},
+      { TIDL_CacheLayer, "TIDL_CacheLayer"},
+      { TIDL_MemCopyLayer, "TIDL_MemCopyLayer"},
       { TIDL_UnsupportedLayer, "TIDL_UnsupportedLayer" },
    };
    return find(type, layerTypeNames);
@@ -229,6 +234,11 @@ std::string layerTypeShort(int32_t type)
       { TIDL_ShapeLayer,            "Shape" },
       { TIDL_SizeLayer,             "Size" },
       { TIDL_NonZeroLayer,          "NonZero"},
+      { TIDL_GroupQueryAttentionLayer, "GroupQueryAttention"},
+      { TIDL_MatMulNBitsLayer,      "MatMulNBits"},
+      { TIDL_RotaryEmbeddingLayer,  "RoPE"},
+      { TIDL_CacheLayer,            "Cache" },
+      { TIDL_MemCopyLayer,          "MemCopy" },
       { TIDL_UnsupportedLayer,      "Unsupported" },
    };
    return find(type, layerTypeNames);

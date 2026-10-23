@@ -119,6 +119,11 @@
 #include "tidl_size.h"
 #include "tidl_shape.h"
 #include "tidl_nonZero.h"
+#include "tidl_gqa.h"
+#include "tidl_matMulNBits.h"
+#include "tidl_rope.h"
+#include "tidl_cache.h"
+#include "tidl_memcopy.h"
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */

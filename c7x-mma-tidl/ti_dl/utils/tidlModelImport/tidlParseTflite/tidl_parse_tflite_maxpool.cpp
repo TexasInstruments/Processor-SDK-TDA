@@ -73,6 +73,7 @@ template<> int32_t TidlParseTflite:: parse<kTfLiteBuiltinMaxPool2d> ()
 
   sTIDL_PoolingParams_t &poolParams = layer.layerParams.poolParams;
   sTIDL_PoolPCParams_t &poolPCParams = layer.layerPCParams.poolParams;
+  sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
 
   layer.layerType = TIDL_PoolingLayer;
   poolParams.poolingType = TIDL_MaxPooling;
@@ -104,17 +105,32 @@ template<> int32_t TidlParseTflite:: parse<kTfLiteBuiltinMaxPool2d> ()
   padType = Pool2DParams->padding;
   if (padType == kTfLitePaddingSame)
   {
-    poolParams.padW = ((poolParams.kernelW - 1)) / 2;
-    poolParams.padH = ((poolParams.kernelH - 1)) / 2;
-    poolParams.padT = ((poolParams.kernelH - 1)) / 2;
-    poolParams.padB = ((poolParams.kernelH - 1)) / 2;
-    poolParams.padL = ((poolParams.kernelW - 1)) / 2;
-    poolParams.padR = ((poolParams.kernelW - 1)) / 2;
+    int32_t inputDims = md.varTensorsDims[0].size();
+    int32_t inputWidth = md.varTensorsDims[0][inputDims - 1];
+    int32_t inputHeight = md.varTensorsDims[0][inputDims - 2];
+    /*
+     * For SAME padding, the output dimensions are calculated using ceil
+     * OutputHeight = ceil(InputHeight / StrideHeight)
+     * OutputWidth  = ceil(InputWidth / StrideWidth)
+     * The padding is then calculated to ensure that the output dimensions
+     * match the expected output dimensions. The padding is distributed equally
+     * on both sides of the input. If the padding is odd, the extra padding is
+     * added to the bottom and right sides of the input.
+     */
+    int32_t outputWidth = (inputWidth + poolParams.strideW - 1) / poolParams.strideW;
+    int32_t outputHeight = (inputHeight + poolParams.strideH - 1) / poolParams.strideH;
+    int32_t totalPadWidth = std::max(0, ((outputWidth - 1) * poolParams.strideW + poolParams.kernelW - inputWidth));
+    int32_t totalPadHeight = std::max(0, ((outputHeight - 1) * poolParams.strideH + poolParams.kernelH - inputHeight));
+    poolParams.padT = totalPadHeight / 2;
+    poolParams.padB = totalPadHeight - poolParams.padT;
+    poolParams.padL = totalPadWidth / 2;
+    poolParams.padR = totalPadWidth - poolParams.padL;
     poolPCParams.originalPadT = poolParams.padT;
     poolPCParams.originalPadB = poolParams.padB;
     poolPCParams.originalPadL = poolParams.padL;
     poolPCParams.originalPadR = poolParams.padR;
-
+    poolParams.padW = std::max(poolParams.padL, poolParams.padR);
+    poolParams.padH = std::max(poolParams.padT, poolParams.padB);
   }
 
   return 0;

@@ -77,8 +77,12 @@
 
 # Inherit common build flags from root repo in SDK
 PSDK_BUILDER_PATH ?= $(PSDK_INSTALL_PATH)/sdk_builder
+PSDK_PATH ?= $(PSDK_INSTALL_PATH)
+ARM_TIDL_PATH ?= $(ALGBASE_PATH)/arm-tidl
 
 include $(PSDK_BUILDER_PATH)/build_flags.mak
+include $(ARM_TIDL_PATH)/tools_path.mak
+
 
 # TIDL outputs files (trace files, output files)
 # to have platform prefix
@@ -144,173 +148,27 @@ TIDL_BIOS_BUILD        ?= 1
 BUILD_LIDAR_PREPROC    ?= 0
 GCOV_ENABLED           ?= 0
 
-# Enable compatibility to build on 9.2 SDK
-ENABLE_SDK_9_2_COMPATIBILITY     ?= 0
-# Enable compatibility to build on 10.0 SDK
-ENABLE_SDK_10_0_COMPATIBILITY    ?= 0
-# Enable compatibility to build on 10.1 SDK
-ENABLE_SDK_10_1_COMPATIBILITY    ?= 0
-# Enable compatibility to build on 11.0 SDK
-ENABLE_SDK_11_0_COMPATIBILITY    ?= 0
-# Enable compatibility to build on 11.1 SDK
-ENABLE_SDK_11_1_COMPATIBILITY    ?= 0
-
-#Enable performance modelling flow 
-ENABLE_PERFORMANCE_MODELLING     ?= 0
-
-ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
-  CGT_C7X_VERSION := 6.1.0.STS
-  MMALIB_VERSION  := 11_02_01_04
-else
-  CGT_C7X_VERSION := 5.0.0.LTS
-  MMALIB_VERSION  := 12_01_00_01
-endif
-
-ifdef SystemRoot
-PSDK_TOOLS_PATH     ?= "C:/ti"
-BIOS_PATH           ?="$(PSDK_INSTALL_PATH)\bios_6_83_02_07"
-XDCTOOLS_PATH       ?="$(PSDK_INSTALL_PATH)\xdctools_3_61_04_40_core"
-IVISION_PATH        ?="$(PSDK_INSTALL_PATH)\ivision"
-UTILS_PATH          ?="$(PSDK_INSTALL_PATH)\ccs910\ccs\utils\cygwin"
-TIDL_PROTOBUF_PATH  ?="$(PSDK_INSTALL_PATH)\protobuf-3.11.3_msvc_2015_x64"
-TIDL_OPENCV_PATH    ?=$(PSDK_INSTALL_PATH)\opencv_3.1.0_msvc_2015_x64\opencv\sources
-DSP_TOOLS           ?=$(PSDK_TOOLS_PATH)\ti-cgt-c7000_$(CGT_C7X_VERSION)
-TIDL_FLATBUF_PATH   ?=$(PSDK_INSTALL_PATH)\flatbuffers-1.12.0
-MMALIB_PATH         ?=$(PSDK_INSTALL_PATH)\mmalib_$(MMALIB_VERSION)
-PDK_INSTALL_PATH    ?=$(PSDK_INSTALL_PATH)\pdk\packages
-CONCERTO_ROOT       ?=$(PSDK_BUILDER_PATH)\concerto
-MCU_PLUS_SDK_PATH   ?=$(PSDK_INSTALL_PATH)\mcu_plus_sdk
-MCU_SDK_PATH        ?=$(PSDK_INSTALL_PATH)\mcu_sdk
-TIOVX_PATH          ?=$(PSDK_INSTALL_PATH)\tiovx
-PLATFORM_PATH       ?=$(PSDK_INSTALL_PATH)\platform
-
-ifeq ($(ENABLE_SDK_9_2_COMPATIBILITY), 1)
-  ENABLE_SDK_10_0_COMPATIBILITY = 0
-  ENABLE_SDK_10_1_COMPATIBILITY = 0
-  ENABLE_SDK_11_0_COMPATIBILITY = 0
-  ENABLE_SDK_11_1_COMPATIBILITY = 0
-else ifeq ($(ENABLE_SDK_10_0_COMPATIBILITY), 1)
-  ENABLE_SDK_9_2_COMPATIBILITY = 0
-  ENABLE_SDK_10_1_COMPATIBILITY = 0
-  ENABLE_SDK_11_0_COMPATIBILITY = 0
-  ENABLE_SDK_11_1_COMPATIBILITY = 0
-else ifeq ($(ENABLE_SDK_10_1_COMPATIBILITY), 1)
-  ENABLE_SDK_9_2_COMPATIBILITY = 0
-  ENABLE_SDK_10_0_COMPATIBILITY = 0
-  ENABLE_SDK_11_0_COMPATIBILITY = 0
-  ENABLE_SDK_11_1_COMPATIBILITY = 0
-else ifeq ($(ENABLE_SDK_11_0_COMPATIBILITY), 1)
-  ENABLE_SDK_9_2_COMPATIBILITY = 0
-  ENABLE_SDK_10_0_COMPATIBILITY = 0
-  ENABLE_SDK_10_1_COMPATIBILITY = 0
-  ENABLE_SDK_11_1_COMPATIBILITY = 0
-else ifeq ($(ENABLE_SDK_11_1_COMPATIBILITY), 1)
-  ENABLE_SDK_9_2_COMPATIBILITY = 0
-  ENABLE_SDK_10_0_COMPATIBILITY = 0
-  ENABLE_SDK_10_1_COMPATIBILITY = 0
-  ENABLE_SDK_11_0_COMPATIBILITY = 0
-endif
-
-ifeq ($(ENABLE_SDK_9_2_COMPATIBILITY), 1)
-  GCC_LINUX_ARM_ROOT  ?=$(PSDK_TOOLS_PATH)/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-linux-gnu
-else ifeq ($(ENABLE_SDK_10_0_COMPATIBILITY), 1)
-  GCC_LINUX_ARM_ROOT  ?=$(PSDK_TOOLS_PATH)/arm-gnu-toolchain-13.2.Rel1-x86_64-aarch64-none-linux-gnu
-else
-  GCC_LINUX_ARM_ROOT ?= $(PSDK_INSTALL_PATH)/toolchain/sysroots/x86_64-arago-linux/usr
-  CROSS_COMPILE_LINARO ?= aarch64-oe-linux/aarch64-oe-linux-
-endif
-
-TIDL_GRAPHVIZ_PATH  ?="$(PSDK_INSTALL_PATH)\graphviz-2.38_x64"
-# Location of the CUDA Toolkit
-CUDA_PATH ?= "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v9.0/"
-CUDNN_PATH ?= "D:/work/cuDNN/cudnn-9.0-v7.0/"
-else
-PSDK_TOOLS_PATH     ?= $(HOME)/ti
-# Set the default gcc based on the version of Ubuntu
-OS_VERSION := $(shell cat /etc/os-release | grep VERSION_ID= | sed -e "s|VERSION_ID=\"||" | sed -e "s|\"||")
-ifeq ($(OS_VERSION),18.04)
-	TIDL_GCC_VERSION?=5
-else ifeq  ($(OS_VERSION),22.04)
-	TIDL_GCC_VERSION?=11
-else ifeq  ($(OS_VERSION),24.04)
-	TIDL_GCC_VERSION?=13
-endif
-
-BIOS_PATH           ?="$(PSDK_INSTALL_PATH)/bios_6_83_02_07"
-XDCTOOLS_PATH       ?="$(PSDK_INSTALL_PATH)/xdctools_3_61_04_40_core"
-IVISION_PATH        ?="$(PSDK_INSTALL_PATH)/ivision"
-DSP_TOOLS           ?="$(PSDK_TOOLS_PATH)/ti-cgt-c7000_$(CGT_C7X_VERSION)"
-MMALIB_PATH         ?="$(PSDK_INSTALL_PATH)/mmalib_$(MMALIB_VERSION)"
-PDK_INSTALL_PATH    ?="$(PSDK_INSTALL_PATH)/pdk/packages"
-CONCERTO_ROOT       ?=$(PSDK_BUILDER_PATH)/concerto
-MCU_PLUS_SDK_PATH   ?=$(PSDK_INSTALL_PATH)/mcu_plus_sdk
-MCU_SDK_PATH        ?=$(PSDK_INSTALL_PATH)/mcu_sdk
-TIOVX_PATH          ?=$(PSDK_INSTALL_PATH)/tiovx
-PLATFORM_PATH       ?=$(PSDK_INSTALL_PATH)/platform
-
-LINUX_FS_PATH       ?=$(PSDK_INSTALL_PATH)/targetfs
-TVM_HOME            ?=$(PSDK_INSTALL_PATH)/targetfs/usr/include/tvm
-TF_REPO_PATH        ?=$(PSDK_INSTALL_PATH)/targetfs/usr/include/tensorflow
-ONNX_REPO_PATH      ?=$(PSDK_INSTALL_PATH)/targetfs/usr/include/onnxruntime
-
-# Below are only needed for PC emulation Test bench build
-TIDL_OPENCV_PATH    ?="$(PSDK_INSTALL_PATH)/opencv-4.1.0"
-TIDL_PROTOBUF_PATH  ?= $(PSDK_INSTALL_PATH)/protobuf-3.21.12
-TIDL_FLATBUF_PATH   ?="$(PSDK_INSTALL_PATH)/flatbuffers-1.12.0"
-TIDL_GRAPHVIZ_PATH  ?="/usr"
-
-
-
-# Location of the CUDA Toolkit
-CUDA_PATH ?= /usr/local/cuda
-endif
-
 SHOW_COMMANDS       ?= 0
 
 # Default CORE is dsp
 # Supported values: dsp, eve, arm
 CORE ?= dsp
 
-# Default RTOS is FREERTOS
-# Supported values: FREERTOS, SYSBIOS
-RTOS ?= FREERTOS
-
 # Default C66
 # Supported C64T, C64P, C64, C66, C674, C67, C67P, m4
 TARGET_CPU ?= C71
 
+#Defining Silicon version using TARGET_C7X_VERSION by droping first C
+SI_VER = $(subst C,,$(C7X_VERSION))
+
+
 #C7x Version (C7120/C7100/C7504)
 #Compiles code for a particular C7x mode
 C7x_HOSTEMU_COMPILER_STRING:=
-ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J721E j721e))
-    TARGET_C7X_VERSION ?= C7100
-    SI_VER = 7100
-else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J721S2 j721s2 J784S4 j784s4 J742S2 j742s2))
-    TARGET_C7X_VERSION ?= C7120
-    SI_VER = 7120
-else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), AM62A am62a))
-    TARGET_C7X_VERSION ?= C7504
-    SI_VER = 7504
-else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J722S j722s))
-    TARGET_C7X_VERSION ?= C7524
-    SI_VER = 7524
+ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), J722S j722s))
     C7x_HOSTEMU_COMPILER_STRING:=-MMA2_256
 else ifeq ($(TARGET_SOC),$(filter $(TARGET_SOC), TDA54 tda54))
-    TARGET_C7X_VERSION ?= C7604
-    SI_VER = 7604
     C7x_HOSTEMU_COMPILER_STRING:=-MMA3_1024
-endif
-
-ifeq ($(RTOS_SDK),mcu_sdk)
-  DMA_UTILS_PATH      ?=$(PSDK_INSTALL_PATH)/dmautils
-  PDK_INSTALL_PATH    = .
-else ifeq ($(RTOS_SDK),mcu_plus_sdk)
-  DMA_UTILS_PATH      ?=$(MCU_PLUS_SDK_PATH)/source/drivers/dmautils
-  PDK_INSTALL_PATH    = .
-else
-  DMA_UTILS_PATH      ?=$(PDK_INSTALL_PATH)/ti/drv/udma/dmautils
-  MCU_PLUS_SDK_PATH   = .
-  MCU_SDK_PATH        = .
 endif
 
 #Temporary flag to use older library paths

@@ -152,27 +152,8 @@ template<> int32_t TidlParseOnnx:: parse<OnnxStr("Gather")> ()
       /**
        * TIDL_GatherLayer doesn't support int64 indices, hence convert them to int32
       */
-      int32_t *index_dst_ptr = (int32_t*)malloc (sizeof(int32_t) * layer.weights.bufSize);
+      status = convertIndicesToInt32(layer.weights);
 
-      if (index_dst_ptr == NULL)
-      {
-        TIDL_LOG_ERROR(gDiags.gDiagList, "GatherLayer -- Node name %s : Could not allocate memory for gather constant indices",
-        graph.node(index).name().c_str());
-        return -1;
-      }
-
-      int64_t *index_src_ptr = (int64_t*) layer.weights.ptr;
-      int64_t val = 0;
-
-      for (int32_t j = 0; j < layer.weights.bufSize; j++)
-      {
-        val = index_src_ptr[j];
-        index_dst_ptr[j] = (int32_t)val;
-      }
-
-      /* Update the buffer pointer*/
-      free(index_src_ptr);
-      layer.weights.ptr = index_dst_ptr;
     }
   }
 

@@ -6702,6 +6702,70 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
+        "description": "A simple \"IP FMA DRU\" basic test with CRC check example.  CPU is MAIN-R5FSS0-0 running NORTOS.",
+        "name": "dru_basic_tests_with_crc_check",
+        "location": "../../examples/ip_fma/dru_basic_tests_with_crc_check/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "ip_fma",
+            "dru_basic_tests_with_crc_check",
+            "main-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "DCC Software read-back of written configuration Safety Mechanism example (shares clk_ip_fma_app main, links sdl_ipfma) CPU is MCU-R5FSS0-0 running NORTOS.",
+        "name": "dcc_readback_of_written_config",
+        "location": "../../examples/ip_fma/dcc_readback_of_written_config/j722s-evm/mcu-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "ip_fma",
+            "dcc_readback_of_written_config",
+            "mcu-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
         "description": "CSIRX safety checkers app CPU is MAIN-R5FSS0-0 running FREERTOS.",
         "name": "SafetyCheckersApp_csirx",
         "location": "../../source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",
@@ -7348,6 +7412,38 @@
             "ip_fma",
             "clk_ip_fma_app",
             "mcu-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
+        "description": "A DRU transfer-request legality check example.  CPU is MAIN-R5FSS0-0 running NORTOS.",
+        "name": "dru_tr_legal",
+        "location": "../../examples/ip_fma/dru_unsupported_tr_detection/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "ip_fma",
+            "dru_unsupported_tr_detection",
+            "main-r5fss0-0_nortos"
         ],
         "mainCategories": [
             [

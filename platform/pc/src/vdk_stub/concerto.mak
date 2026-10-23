@@ -30,6 +30,10 @@ ifeq ($(TARGET_CPU), x86_64)
     IDIRS       += $(MCU_SDK_PATH)/source/arch/include
 
     DEFS        += $(SOC_FAMILY)
+  else ifeq ($(SOC), $(filter $(SOC), j722s))
+    IDIRS       += $(MCU_PLUS_SDK_PATH)/source
+    IDIRS       += $(MCU_PLUS_SDK_PATH)/source/drivers
+    IDIRS       += $(MCU_PLUS_SDK_PATH)/source/kernel/dpl
   endif
 
   CSOURCES   := ../app_init_vdk.c

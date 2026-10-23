@@ -74,13 +74,21 @@ int32_t TidlParseTVM::parse<OpNameStr("concatenate")>()
     layer.layerType = TIDL_ConcatLayer;
     layer.numInBufs = md.numInputs;
 
-    /* check supported datatypes for concat */
+    /* check supported datatypes for concat, both inputs and output */
     vector<int32_t> supportedTypes = {TIDL_SignedChar, TIDL_UnsignedChar, TIDL_SignedShort, TIDL_UnsignedShort, TIDL_SinglePrecFloat};
     inTupleType = call->args[0]->checked_type().as<TupleTypeNode>();
     for(auto inputIdx=0; inputIdx < (int32_t)(inTupleType->fields.size()); inputIdx++)
     {
       inTensorType = inTupleType->fields[inputIdx].as<TensorTypeNode>();
-      if(find(supportedTypes.begin(), supportedTypes.end(), getTIDLDataTypeFromTVMDataType((int32_t)(inTensorType->dtype.code()))) == supportedTypes.end())
+      if(find(supportedTypes.begin(), supportedTypes.end(), getTIDLDataTypeFromTVMDataType((int32_t)(inTensorType->dtype.code()), (int32_t)(inTensorType->dtype.bits()))) == supportedTypes.end())
+      {
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Concat layer : Unsupported data type");
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      }
+    }
+    for(auto outType : md.outputDataTypes)
+    {
+      if(find(supportedTypes.begin(), supportedTypes.end(), outType) == supportedTypes.end())
       {
         TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Concat layer : Unsupported data type");
         return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
@@ -100,22 +108,12 @@ int32_t TidlParseTVM::parse<OpNameStr("concatenate")>()
 
     if (md.numConstInputs == 1)
     {
-        int32_t numEle = 1;
-        for(int i = 0 ; i < md.constTensorsDims[0].size() ; i++){
-            numEle *= md.constTensorsDims[0][i];
+        layer.weights = TIDL_extractConstantTensorData(call, layer.allowlistingMetaData.constTensorIndices[0], layer.allowlistingMetaData, 0);
+        if(layer.weights.ptr==NULL)
+        {
+          TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", layer.allowlistingMetaData.constTensorIndices[0]);
+          return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
         }
-
-        int weight_zp = 0;
-        float weight_scale = 1.0f;
-        // if (op_name == "qnn.concatenate"){
-        //   // TIDL_relayGetConstantVal_new(call->args[5],call->args[4],weight_zp,weight_scale);
-        //   weight_zp = TIDL_relayGetConstantVal<int32_t>(call->args[5]);
-        //   weight_scale = TIDL_relayGetConstantVal<float>(call->args[4]);
-        // }
-        auto constInput = call->args[0].as<TupleNode>()->fields[md.constTensorIndices[0]];
-        auto constExpr = constInput.as<tvm::relay::ConstantNode>()->data;
-        layer.weights.ptr = NDArrtoFloat(constExpr, numEle, weight_zp, weight_scale);
-        layer.weights.bufSize = numEle;
     }
     else if(md.numConstInputs > 1)
     {

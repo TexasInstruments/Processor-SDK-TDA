@@ -86,6 +86,7 @@ typedef int32_t(*tidlReadBinFromFile_t)(const char * fileName, void * addr, int3
 
 static int32_t tidlLogLevel;
 static int32_t tidlWriteLevel;
+static int32_t tidlDdrPerfStatsEnabled;
 static tidlVprintf_t tidlVprintf;
 static tidlWriteBinToFile_t tidlWriteBinToFile;
 static tidlReadBinFromFile_t tidlReadBinFromFile;
@@ -105,9 +106,10 @@ static char tidlTraceBaseName[TIDL_STRING_SIZE];
 #endif
 
 int32_t tidl_getTraceLogLevel(void);
+int32_t tidl_getDdrPerfStatsEnabled(void);
 
 int32_t TIDL_initDebugTraceParams(int32_t traceLogLevel, int32_t traceWriteLevel, tidlVprintf_t tifVprintfFuncPtr, tidlWriteBinToFile_t writeBinFuncPtr,
-                                    tidlReadBinFromFile_t readBinFuncPtr, const char * traceBaseName);
+                                    tidlReadBinFromFile_t readBinFuncPtr, const char * traceBaseName, int32_t enableDDRPerfStats);
 
 void TIDL_getSaturationLimits(int32_t elementType, int32_t *satLow, int32_t *satHigh);
 

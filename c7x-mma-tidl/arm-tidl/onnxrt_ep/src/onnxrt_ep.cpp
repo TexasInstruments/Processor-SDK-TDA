@@ -43,6 +43,9 @@ void TIDL_setDefaultOptions(TIDL_OnnxrtEPInferOptions * osrt_options)
   osrt_options->m_flow_ctrl = -1;
   osrt_options->m_temp_buffer_dir = "/dev/shm";
   osrt_options->m_trace_base_name = "";
+  osrt_options->cache_import = 0;
+  osrt_options->cache_export = 0;
+  osrt_options->cache_clear = 0;
 }
 
 /* Read interface options and populate to TIDL runtimes option class */
@@ -108,6 +111,33 @@ bool TIDL_populateOptions(std::vector<std::pair<std::string,std::string>> interf
         options->m_flow_ctrl = -1;
       }
     }
+    else if (!strcmp("advanced_options:cache_import", key.c_str()))
+    {
+      std::stringstream(value) >> options->cache_import;
+      if(options->cache_import != 0 && options->cache_import != 1)
+      {
+        printf("WARNING : Invalid cache_import %d given. Available options are 0 & 1. It will be ignored \n", options->cache_import);
+        options->cache_import = 0;
+      }
+    }
+    else if (!strcmp("advanced_options:cache_export", key.c_str()))
+    {
+      std::stringstream(value) >> options->cache_export;
+      if(options->cache_export != 0 && options->cache_export != 1)
+      {
+        printf("WARNING : Invalid cache_export %d given. Available options are 0 & 1. It will be ignored \n", options->cache_export);
+        options->cache_export = 0;
+      }
+    }
+    else if (!strcmp("advanced_options:cache_clear", key.c_str()))
+    {
+      std::stringstream(value) >> options->cache_clear;
+      if(options->cache_clear != 0 && options->cache_clear != 1)
+      {
+        printf("WARNING : Invalid cache_clear %d given. Available options are 0 & 1. It will be ignored \n", options->cache_clear);
+        options->cache_clear = 0;
+      }
+    }
     #ifdef x86_64
     else if (!strcmp("advanced_options:temp_buffer_dir", key.c_str()))
     {
@@ -158,6 +188,18 @@ bool TIDL_populateOptions(std::vector<std::pair<std::string,std::string>> interf
   {
     TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "flow_ctrl          = %d \n", data_->m_flow_ctrl);
   }
+  if(data_->cache_import != 0)
+  {
+    TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "cache_import         = %d \n", data_->cache_import);
+  }
+  if(data_->cache_export != 0)
+  {
+    TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "cache_export         = %d \n", data_->cache_export);
+  }
+  if(data_->cache_clear != 0)
+  {
+    TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "cache_clear          = %d \n", data_->cache_clear);
+  }
   #ifdef x86_64
   TIDL_osrtDebugPrint(options->osrtDebugPrintLevel, "temp_buffer_dir      = %s \n", data_->m_temp_buffer_dir.c_str());
   #endif
@@ -168,6 +210,62 @@ bool TIDL_populateOptions(std::vector<std::pair<std::string,std::string>> interf
 
   return true;
 }
+
+
+/* Called from ONNX runtime - update mutable inference options on a live
+ * subgraph RT handle, between invokes */
+int32_t TIDL_updateMutableInferOptions(OnnxTIDLSubGraphParams * state_subGraph, std::vector<std::pair<std::string,std::string>> options)
+{
+  sTIDL_subgraphRtCreateOptions_t subgraphRtSetOptions;
+  memset(&subgraphRtSetOptions, 0, sizeof(subgraphRtSetOptions));
+  subgraphRtSetOptions.debugLevel = -1;
+  subgraphRtSetOptions.cacheImport = -1;
+  subgraphRtSetOptions.cacheExport = -1;
+  subgraphRtSetOptions.cacheClear = -1;
+
+  for(auto option : options)
+  {
+    auto key = option.first;
+    auto value = option.second;
+    if (!strcmp("debug_level", key.c_str()))
+    {
+      std::stringstream(value) >> subgraphRtSetOptions.debugLevel;
+    }
+    else if (!strcmp("advanced_options:trace_base_name", key.c_str()))
+    {
+      strncpy(subgraphRtSetOptions.traceBaseName, value.c_str(), TIDLRT_STRING_SIZE - 1);
+    }
+    else if (!strcmp("advanced_options:cache_import", key.c_str()))
+    {
+      std::stringstream(value) >> subgraphRtSetOptions.cacheImport;
+    }
+    else if (!strcmp("advanced_options:cache_export", key.c_str()))
+    {
+      std::stringstream(value) >> subgraphRtSetOptions.cacheExport;
+    }
+    else if (!strcmp("advanced_options:cache_clear", key.c_str()))
+    {
+      std::stringstream(value) >> subgraphRtSetOptions.cacheClear;
+    }
+    else
+    {
+      printf("WARNING : Invalid mutable option %s provided. Ignoring it.\n", key.c_str());
+    }
+  }
+
+  if (subgraphRtSetOptions.debugLevel != -1)
+  {
+    data_->osrtDebugPrintLevel = (subgraphRtSetOptions.debugLevel == 0) ? 0 : 1;
+  }
+
+  sTIDL_tidlRtParams_t * subgraphParams = reinterpret_cast<sTIDL_tidlRtParams_t *>(&state_subGraph->tidlRtParams);
+  return TIDL_subgraphRtSetMutableOptions(data_->osrtDebugPrintLevel,
+                                          &data_->infer_ops,
+                                          subgraphParams,
+                                          &subgraphRtSetOptions,
+                                          state_subGraph->subGraphName_);
+}
+
 } //extern "C"
 
 /** This function splits a string into a vector of substrings based on delimiter */
@@ -319,13 +417,12 @@ void TIDL_readOnnxRtMetaDataForInference(OnnxTIDLSubGraphParams * state_subGraph
 int32_t TIDL_createStateInferFunc(OnnxTIDLSubGraphParams * state_subGraph, const std::string node_name)
 {
   int32_t status = 0;
-  TIDL_osrtDebugPrint(data_->osrtDebugPrintLevel, "In TIDL_createStateInfer \n");
   state_subGraph->currFrameIdx_ = 0;
   state_subGraph->subGraphPtr_ = NULL;
   state_subGraph->string_buf = NULL;
 
   TIDL_osrtDebugPrint(data_->osrtDebugPrintLevel, "Compute on node : %s\n",  node_name.c_str());
-  
+
   TIDL_readOnnxRtMetaDataForInference(state_subGraph, data_->m_artifacts_folder);
 
   sTIDL_tidlRtParams_t * subgraphParams = reinterpret_cast<sTIDL_tidlRtParams_t *>(&state_subGraph->tidlRtParams);
@@ -341,6 +438,9 @@ int32_t TIDL_createStateInferFunc(OnnxTIDLSubGraphParams * state_subGraph, const
   subgraphRtCreateOptions->coreStartIdx = data_->core_start_idx;
   subgraphRtCreateOptions->inferenceMode = -1;
   subgraphRtCreateOptions->flowCtrl = data_->m_flow_ctrl;
+  subgraphRtCreateOptions->cacheImport = data_->cache_import;
+  subgraphRtCreateOptions->cacheExport = data_->cache_export;
+  subgraphRtCreateOptions->cacheClear = data_->cache_clear;
   strcpy(subgraphRtCreateOptions->tempBufferDir, data_->m_temp_buffer_dir.c_str());
   strncpy(subgraphRtCreateOptions->traceBaseName, data_->m_trace_base_name.c_str(), TIDLRT_STRING_SIZE - 1);
   subgraphRtCreateOptions->traceBaseName[TIDLRT_STRING_SIZE - 1] = '\0';
@@ -364,8 +464,6 @@ int32_t TIDL_createStateInferFunc(OnnxTIDLSubGraphParams * state_subGraph, const
 }
 
 
-
-
 /* Called from ONNX runtime - call TIDL RT invoke from within this function */
 int32_t TIDL_computeInvokeFunc(OnnxTIDLSubGraphParams * state_subGraph)
 {
@@ -373,9 +471,6 @@ int32_t TIDL_computeInvokeFunc(OnnxTIDLSubGraphParams * state_subGraph)
   status = TIDL_subgraphRtInvoke(data_->osrtDebugPrintLevel, state_subGraph, &data_->infer_ops, 1);
   return status;
 }
-
-
-
 
 /* Called from ONNX runtime - Free any allocated memories, TIDL RT handles */
 int32_t TIDL_releaseRtFunc(OnnxTIDLSubGraphParams * state_subGraph)

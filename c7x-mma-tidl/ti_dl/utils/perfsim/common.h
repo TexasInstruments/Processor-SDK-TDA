@@ -38,9 +38,15 @@
 #define MAX_CORES (TIDL_MAX_NUM_CORES)
 #define MAX_MEM_PER_DRU_CHANNEL  (0xFFFFU)
 
+#ifndef MIN
 #define MIN(A,B) (((A) < (B)) ? (A) : (B))
+#endif
+#ifndef MAX
 #define MAX(A,B) (((A) > (B)) ? (A) : (B))
+#endif
+#ifndef ABS
 #define ABS(A)   (((A) > (0)) ? (A) : (-(A)))
+#endif
 
 /** To align to a integer boundary  -
     mainly used for aligning to matrix panel size or any buswidth size */

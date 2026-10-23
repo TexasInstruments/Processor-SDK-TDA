@@ -145,7 +145,7 @@ int32_t TIDL_customProcessNew(TIDL_NetworkCommonParams *commonParams,
 
   /* Get perfInfoOut */
 #ifdef HOST_EMULATION
-  if(NULL != createParams->net->dataFlowInfo)
+  if(0U != createParams->net->dataFlowInfo)
 #endif
   {
     perfInfoOut = (sPerfSim_t *)get_int8_t_pointer((int8_t *)(createParams->net), createParams->net->dataFlowInfo);
@@ -166,8 +166,7 @@ int32_t TIDL_customProcessNew(TIDL_NetworkCommonParams *commonParams,
   {
     for(i=0; i<(uint32_t)tidlLayer->numInBufs; i++)
     {
-      sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(createParams->net,
-                                                            tidlLayer->inData[i]);
+      sTIDL_DataParams_t *inDataParams = &createParams->net->TIDLLayers[tidlLayer->inData[i]].outData;
       (void) memcpy(&tidlLayer->inDataPtr[i], inDataParams, sizeof(sTIDL_DataParams_t));
     }
   }

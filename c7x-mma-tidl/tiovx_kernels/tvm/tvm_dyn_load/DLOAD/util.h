@@ -76,8 +76,12 @@ static int strncasecmp(const char* s1, const char* s2, size_t n)
 /*****************************************************************************/
 /* Define MIN and MAX macros.                                                */
 /*****************************************************************************/
+#ifndef MIN
 #define MIN(x,y)	(((x) > (y)) ? (y) : (x))
+#endif
+#ifndef MAX
 #define MAX(x,y)	(((x) >= (y)) ? (x) : (y))
+#endif
 
 /*****************************************************************************/
 /* C implementation of 'bool' type.                                          */

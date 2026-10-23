@@ -333,6 +333,9 @@ static inline void WorkloadRefExec_getPtrsFromWorkload(const TIDL_NetworkCommonP
                   /*in width wise gather, we are doing process in reverse order. So from NC offset will come in output, that is not required in ref with nc.*/
                   gcPtr = (uint8_t *)outPtrs[arrIdx];
                 }
+                else if((tidlLayer->layerType == TIDL_ResizeLayer) && (link->subType == (int32_t)LINK_X_FM_OUT_PART_TO_FULL)){
+                  gcPtr = (uint8_t *)outPtrs[arrIdx] + ((joint->offset - link->src[0].offset) * elemSize);
+                }
                 else{
                   gcPtr = (uint8_t *)outPtrs[arrIdx] + (joint->offset * elemSize);
                 }
@@ -374,7 +377,7 @@ static inline void WorkloadRefExec_getPtrsFromTIDL(const TIDL_NetworkCommonParam
 
   for (bufIdx = 0; bufIdx < tidlLayer->numInBufs; bufIdx++)
   {
-    dataParams = TIDL_getDataParams(commonParams->createParams->net, tidlLayer->inData[bufIdx]);
+    dataParams = &commonParams->createParams->net->TIDLLayers[tidlLayer->inData[bufIdx]].outData;
     elemSize = TIDL_getDatElementSize(dataParams->elementType);
     inPtrs[bufIdx] = (void *)((uint8_t *)inPtrs[bufIdx] + (WorkloadRefExec_getValidOffset(dataParams, tidlLayer, algLayer) * elemSize));
   }

@@ -92,8 +92,6 @@ int32_t TIDL_shapeInfer_PassThrough(
     TIDL_ShapeContext_t       *context)
 {
     (void)layerParams;
-    (void)context;
-
 
     outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
     outDataParam->dimValues[TIDL_DIM_DIM1]   = inDataParams[0]->dimValues[TIDL_DIM_DIM1];
@@ -101,6 +99,56 @@ int32_t TIDL_shapeInfer_PassThrough(
     outDataParam->dimValues[TIDL_DIM_NUMCH]  = inDataParams[0]->dimValues[TIDL_DIM_NUMCH];
     outDataParam->dimValues[TIDL_DIM_HEIGHT] = inDataParams[0]->dimValues[TIDL_DIM_HEIGHT];
     outDataParam->dimValues[TIDL_DIM_WIDTH]  = inDataParams[0]->dimValues[TIDL_DIM_WIDTH];
+
+    if ((context != NULL) && (context->isCompileTime != 0))
+    {
+        /* Identity op: output's dynamism exactly matches input's, dim for dim. */
+        outDataParam->dynDimMask = inDataParams[0]->dynDimMask;
+    }
+
+    return TIDL_SHAPE_INFERENCE_OK;
+}
+
+/* -------------------------------------------------------------------------
+ * Slice (dynamic shape support)
+ *
+ * Propagates dynamic non-axis dims (e.g. batch) from input to output for
+ * both induced and non-induced Slice layers.
+ *
+ * For non-induced Slices the axis dim is static and already set correctly
+ * at import time, so it is left unchanged.
+ *
+ * For induced Slices (isInduced=1), TIDL_updateInducedSlicePoints has
+ * already patched slicePoints to the new segment boundaries before this
+ * function is called, so the axis dim is recomputed from them.
+ * ------------------------------------------------------------------------- */
+int32_t TIDL_shapeInfer_Slice(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context)
+{
+    const sTIDL_SliceLayerParams_t *sp = &layerParams->sliceParams;
+    int32_t d;
+
+    (void)numInBufs;
+    (void)context;
+
+    /* Propagate dynamic non-axis dims from input.
+     * Leave the axis dim alone for non-induced Slices — it is static and
+     * already correct from import time.  For induced Slices,
+     * TIDL_updateInducedSlicePoints has already updated slicePoints to the new
+     * segment boundaries, so recompute the axis dim from them. */
+    for (d = 0; d < TIDL_DIM_MAX; d++)
+    {
+        if (d != sp->axis)
+            outDataParam->dimValues[d] = inDataParams[0]->dimValues[d];
+    }
+    if (sp->isInduced)
+    {
+        outDataParam->dimValues[sp->axis] = sp->slicePoints[1] - sp->slicePoints[0];
+    }
 
     return TIDL_SHAPE_INFERENCE_OK;
 }
@@ -139,16 +187,24 @@ int32_t TIDL_shapeInfer_Reshape(
         }
     }
 
-    /* Step 2: recompute the inferred (-1) dim */
+    /* Step 2: recompute the inferred (-1) dim.
+     * Compute in byte units so reinterpret Reshapes (e.g. uint8 → int32 for
+     * TopK indices) are handled correctly: output_dim = totalInputBytes /
+     * (outElemSize * partialOutputVol). For non-reinterpret Reshapes the
+     * element sizes cancel out and the result is identical to before. */
     if (minusOneDimIdx >= 0)
     {
-        int32_t totalInputVol    = 1;
+        int32_t inElemSize       = TIDL_getDatElementSize(inDataParams[0]->elementType);
+        int32_t outElemSize      = TIDL_getDatElementSize(outDataParam->elementType);
+        int32_t totalInputBytes  = 1;
         int32_t partialOutputVol = 1;
 
         for (d = 0; d < TIDL_DIM_MAX; d++)
         {
-            totalInputVol *= inDataParams[0]->dimValues[d];
+            totalInputBytes *= inDataParams[0]->dimValues[d];
         }
+        totalInputBytes *= inElemSize;
+
         for (d = 0; d < TIDL_DIM_MAX; d++)
         {
             if (d != minusOneDimIdx)
@@ -156,9 +212,9 @@ int32_t TIDL_shapeInfer_Reshape(
                 partialOutputVol *= outDataParam->dimValues[d];
             }
         }
-        if (partialOutputVol > 0)
+        if (partialOutputVol > 0 && outElemSize > 0)
         {
-            outDataParam->dimValues[minusOneDimIdx] = totalInputVol / partialOutputVol;
+            outDataParam->dimValues[minusOneDimIdx] = totalInputBytes / (outElemSize * partialOutputVol);
         }
     }
 
@@ -187,8 +243,6 @@ int32_t TIDL_shapeInfer_EltWise(
     int32_t i;
 
     (void)layerParams;
-    (void)context;
-
 
     outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
     outDataParam->dimValues[TIDL_DIM_DIM1]   = inDataParams[0]->dimValues[TIDL_DIM_DIM1];
@@ -208,6 +262,17 @@ int32_t TIDL_shapeInfer_EltWise(
             {
                 outDataParam->dimValues[d] = v;
             }
+        }
+    }
+
+    if ((context != NULL) && (context->isCompileTime != 0))
+    {
+        /* Per-dim OR across all inputs: mirrors the per-dim max() computation above -
+         * any input's dim d being dynamic makes output dim d dynamic. */
+        outDataParam->dynDimMask = 0;
+        for (i = 0; i < numInBufs; i++)
+        {
+            outDataParam->dynDimMask |= inDataParams[i]->dynDimMask;
         }
     }
 
@@ -279,6 +344,30 @@ int32_t TIDL_shapeInfer_Transpose(
             (pcLayer->isBatchGroupLayer == 1))
         {
             outDataParam->dimValues[TIDL_DIM_BATCH] = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
+        }
+
+        /* Permute input's dynDimMask bits through perm[] the same way dimValues are permuted.
+         * The k leading identity-padded dims stay static (never set). */
+        outDataParam->dynDimMask = 0;
+        for (i = 0; i < bufSize; i++)
+        {
+            if ((inDataParams[0]->dynDimMask >> perm[k + i]) & 1)
+            {
+                outDataParam->dynDimMask |= (1 << (k + i));
+            }
+        }
+
+        if ((configParams->inferenceMode == TIDL_inferenceModeHighThroughput) ||
+            (pcLayer->isBatchGroupLayer == 1))
+        {
+            if ((inDataParams[0]->dynDimMask >> TIDL_DIM_BATCH) & 1)
+            {
+                outDataParam->dynDimMask |= (1 << TIDL_DIM_BATCH);
+            }
+            else
+            {
+                outDataParam->dynDimMask &= ~(1 << TIDL_DIM_BATCH);
+            }
         }
     }
     else
@@ -482,7 +571,6 @@ int32_t TIDL_shapeInfer_GatherElements(
     TIDL_ShapeContext_t       *context)
 {
     (void)layerParams;
-    (void)context;
 
 
     outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
@@ -491,6 +579,14 @@ int32_t TIDL_shapeInfer_GatherElements(
     outDataParam->dimValues[TIDL_DIM_NUMCH]  = inDataParams[0]->dimValues[TIDL_DIM_NUMCH];
     outDataParam->dimValues[TIDL_DIM_HEIGHT] = inDataParams[0]->dimValues[TIDL_DIM_HEIGHT];
     outDataParam->dimValues[TIDL_DIM_WIDTH]  = inDataParams[0]->dimValues[TIDL_DIM_WIDTH];
+
+    if ((context != NULL) && (context->isCompileTime != 0))
+    {
+        /* Caller passes the indices tensor as inDataParams[0] (see
+         * TIDL_tfOutReshapeGatherElementsLayer): output shape equals indices
+         * shape dim-for-dim, so dynamism copies straight across too. */
+        outDataParam->dynDimMask = inDataParams[0]->dynDimMask;
+    }
 
     return TIDL_SHAPE_INFERENCE_OK;
 }
@@ -516,8 +612,7 @@ int32_t TIDL_shapeInfer_Gather(
     TIDL_ShapeContext_t       *context)
 {
     int32_t i;
-
-    (void)context;
+    int32_t isCompileTime = (context != NULL) && (context->isCompileTime != 0);
 
 
     const sTIDL_GatherLayerParams_t *gatherParams = &layerParams->gatherParams;
@@ -529,6 +624,11 @@ int32_t TIDL_shapeInfer_Gather(
     outDataParam->dimValues[TIDL_DIM_HEIGHT] = inDataParams[0]->dimValues[TIDL_DIM_HEIGHT];
     outDataParam->dimValues[TIDL_DIM_WIDTH]  = inDataParams[0]->dimValues[TIDL_DIM_WIDTH];
 
+    if (isCompileTime)
+    {
+        outDataParam->dynDimMask = inDataParams[0]->dynDimMask;
+    }
+
     if (gatherParams->isIdxScalar == 1)
     {
         for (i = gatherParams->axis; i > 0; i--)
@@ -536,6 +636,19 @@ int32_t TIDL_shapeInfer_Gather(
             outDataParam->dimValues[i] = outDataParam->dimValues[i-1];
         }
         outDataParam->dimValues[0] = 1;
+
+        if (isCompileTime)
+        {
+            /* Mirror the dimValues shift above bit-for-bit: the axis dim is
+             * squeezed out and a static (=1) dim is inserted at position 0. */
+            for (i = gatherParams->axis; i > 0; i--)
+            {
+                int32_t bit = (outDataParam->dynDimMask >> (i - 1)) & 1;
+                outDataParam->dynDimMask &= ~(1 << i);
+                outDataParam->dynDimMask |= (bit << i);
+            }
+            outDataParam->dynDimMask &= ~1;
+        }
     }
     else
     {
@@ -545,6 +658,17 @@ int32_t TIDL_shapeInfer_Gather(
             return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
         }
         outDataParam->dimValues[gatherParams->axis] = inDataParams[1]->dimValues[TIDL_DIM_WIDTH];
+
+        if (isCompileTime)
+        {
+            /* axis dim now holds the (possibly dynamic) index-tensor count;
+             * every other dim's dynamism already passed through above. */
+            outDataParam->dynDimMask &= ~(1 << gatherParams->axis);
+            if ((inDataParams[1]->dynDimMask >> TIDL_DIM_WIDTH) & 1)
+            {
+                outDataParam->dynDimMask |= (1 << gatherParams->axis);
+            }
+        }
     }
 
     return TIDL_SHAPE_INFERENCE_OK;
@@ -571,8 +695,6 @@ int32_t TIDL_shapeInfer_GatherND(
     TIDL_ShapeContext_t       *context)
 {
 
-    (void)context;
-
     if (inDataParams[1] == NULL)
     {
         return TIDL_SHAPE_INFERENCE_ERR_INVALID_ARGS;
@@ -595,39 +717,58 @@ int32_t TIDL_shapeInfer_GatherND(
     // Calculate starting index for output dimensions
     int32_t outputStartIdx = TIDL_DIM_MAX - totalOutDims;
     int32_t currentOutputIdx = outputStartIdx;
-    
+
+    int32_t isCompileTime = (context != NULL) && (context->isCompileTime != 0);
+    if (isCompileTime)
+    {
+        outDataParam->dynDimMask = 0;
+    }
+
     // Step 1: Copy batch dimensions from data tensor
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
     <justification start>
     Rationale - FUTURE_USE: GatherND with batch_dims > 0 requires dynamic reshape of NonZero output which is not currently supported; this loop is retained for future support when batch_dims > 0 models become available.
-    Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context. 
+    Effect on this UNIT - This condition results in partial structural coverage(eg. uncovered statement/branch) in the current test context.
     This does not impact functional correctness or safety.
     <justification end> */
     for (int32_t i = 0; i < batchDims && currentOutputIdx < TIDL_DIM_MAX; i++)
     {
         int32_t dataIdx = TIDL_DIM_MAX - dataDimCount + i;
         outDataParam->dimValues[currentOutputIdx] = inDataParams[0]->dimValues[dataIdx];
+        if (isCompileTime && ((inDataParams[0]->dynDimMask >> dataIdx) & 1))
+        {
+            outDataParam->dynDimMask |= (1 << currentOutputIdx);
+        }
         currentOutputIdx++;
     }
     /* LDRA_JUSTIFY_END */
-    
+
     // Step 2: Copy indices dimensions (excluding last dimension, starting from batch_dims)
     for (int32_t i = batchDims; i < indicesDimCount - 1 && currentOutputIdx < TIDL_DIM_MAX; i++)
     {
         int32_t indicesIdx = TIDL_DIM_MAX - indicesDimCount + i;
         outDataParam->dimValues[currentOutputIdx] = inDataParams[1]->dimValues[indicesIdx];
+        if (isCompileTime && ((inDataParams[1]->dynDimMask >> indicesIdx) & 1))
+        {
+            outDataParam->dynDimMask |= (1 << currentOutputIdx);
+        }
         currentOutputIdx++;
     }
-    
+
     // Step 3: Copy remaining data dimensions
     int32_t remainingDataStart = batchDims + indicesLastDim;
     for (int32_t i = remainingDataStart; i < dataDimCount && currentOutputIdx < TIDL_DIM_MAX; i++)
     {
         int32_t dataIdx = TIDL_DIM_MAX - dataDimCount + i;
         outDataParam->dimValues[currentOutputIdx] = inDataParams[0]->dimValues[dataIdx];
+        if (isCompileTime && ((inDataParams[0]->dynDimMask >> dataIdx) & 1))
+        {
+            outDataParam->dynDimMask |= (1 << currentOutputIdx);
+        }
         currentOutputIdx++;
     }
+
     return TIDL_SHAPE_INFERENCE_OK;
 }
 
@@ -649,7 +790,6 @@ int32_t TIDL_shapeInfer_Cast(
     TIDL_ShapeContext_t       *context)
 {
     (void)layerParams;
-    (void)context;
 
 
     outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
@@ -658,6 +798,13 @@ int32_t TIDL_shapeInfer_Cast(
     outDataParam->dimValues[TIDL_DIM_NUMCH]  = inDataParams[0]->dimValues[TIDL_DIM_NUMCH];
     outDataParam->dimValues[TIDL_DIM_HEIGHT] = inDataParams[0]->dimValues[TIDL_DIM_HEIGHT];
     outDataParam->dimValues[TIDL_DIM_WIDTH]  = inDataParams[0]->dimValues[TIDL_DIM_WIDTH];
+
+    if ((context != NULL) && (context->isCompileTime != 0))
+    {
+        /* Cast only changes element type, not shape: dynamism exactly
+         * matches input's, dim for dim. */
+        outDataParam->dynDimMask = inDataParams[0]->dynDimMask;
+    }
 
     return TIDL_SHAPE_INFERENCE_OK;
 }
@@ -797,6 +944,62 @@ int32_t TIDL_shapeInfer_Tile(
 }
 
 /* -------------------------------------------------------------------------
+ * Expand
+ *
+ * Broadcasts the input tensor to a target shape using NumPy broadcasting:
+ *
+ *   COMPILE-TIME path (context != NULL && context->isCompileTime != 0):
+ *     For each dimension d in [0, TIDL_DIM_MAX):
+ *       out.dimValues[d] = max(in.dimValues[d], expandParams.shape[d])
+ *
+ *     expandParams.shape[] is left-padded with 1s at import time, so the
+ *     max rule handles rank extension without special-casing.
+ *
+ *   RUNTIME path (context == NULL or context->isCompileTime == 0):
+ *     expandParams is PC-only; output dims are baked in at import.
+ *     Returns TIDL_SHAPE_INFERENCE_ERR_UNSUPPORTED_LAYER so the static
+ *     dimValues are preserved.
+ *
+ * Preconditions: nIn >= 1.
+ * ------------------------------------------------------------------------- */
+int32_t TIDL_shapeInfer_Expand(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context)
+{
+    (void)layerParams;
+
+#ifdef HOST_EMULATION
+    if ((context == NULL) || (context->isCompileTime == 0) || (context->pcLayer == NULL))
+    {
+        return TIDL_SHAPE_INFERENCE_ERR_UNSUPPORTED_LAYER;
+    }
+
+    {
+        const sTIDL_LayerPC_t *pcLayer = (const sTIDL_LayerPC_t *)context->pcLayer;
+        const int32_t         *shape   = pcLayer->layerPCParams.expandParams.shape;
+        int32_t                i;
+
+        for (i = 0; i < TIDL_DIM_MAX; i++)
+        {
+            int32_t inDim = inDataParams[0]->dimValues[i];
+            outDataParam->dimValues[i] = (inDim > shape[i]) ? inDim : shape[i];
+        }
+    }
+
+    return TIDL_SHAPE_INFERENCE_OK;
+#else
+    (void)inDataParams;
+    (void)numInBufs;
+    (void)outDataParam;
+    (void)context;
+    return TIDL_SHAPE_INFERENCE_ERR_UNSUPPORTED_LAYER;
+#endif
+}
+
+/* -------------------------------------------------------------------------
  * LogicalOp (broadcast-aware)
  *
  * Computes the output shape of a logical/comparison operation (And, Or, Not,
@@ -909,9 +1112,6 @@ int32_t TIDL_shapeInfer_SoftMax(
 {
     int32_t tmp;
 
-    (void)context;
-
-
     outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
     outDataParam->dimValues[TIDL_DIM_DIM1]   = inDataParams[0]->dimValues[TIDL_DIM_DIM1];
     outDataParam->dimValues[TIDL_DIM_DIM2]   = inDataParams[0]->dimValues[TIDL_DIM_DIM2];
@@ -925,6 +1125,18 @@ int32_t TIDL_shapeInfer_SoftMax(
         tmp = outDataParam->dimValues[TIDL_DIM_HEIGHT];
         outDataParam->dimValues[TIDL_DIM_HEIGHT] = outDataParam->dimValues[TIDL_DIM_WIDTH];
         outDataParam->dimValues[TIDL_DIM_WIDTH]  = tmp;
+    }
+
+    if ((context != NULL) && (context->isCompileTime != 0))
+    {
+        outDataParam->dynDimMask = inDataParams[0]->dynDimMask;
+        if (layerParams->softMaxParams.outTranspose == 1)
+        {
+            int32_t hBit = (outDataParam->dynDimMask >> TIDL_DIM_HEIGHT) & 1;
+            int32_t wBit = (outDataParam->dynDimMask >> TIDL_DIM_WIDTH) & 1;
+            outDataParam->dynDimMask &= ~((1 << TIDL_DIM_HEIGHT) | (1 << TIDL_DIM_WIDTH));
+            outDataParam->dynDimMask |= (hBit << TIDL_DIM_WIDTH) | (wBit << TIDL_DIM_HEIGHT);
+        }
     }
 
     return TIDL_SHAPE_INFERENCE_OK;
@@ -950,8 +1162,6 @@ int32_t TIDL_shapeInfer_Concat(
     int32_t totDim;
     int32_t i;
 
-    (void)context;
-
 
 
     for (i = 0; i < TIDL_DIM_MAX; i++)
@@ -966,6 +1176,18 @@ int32_t TIDL_shapeInfer_Concat(
         totDim += inDataParams[i]->dimValues[layerParams->concatParams.axis];
     }
     outDataParam->dimValues[layerParams->concatParams.axis] = totDim;
+
+    if ((context != NULL) && (context->isCompileTime != 0))
+    {
+        /* Per-dim OR across all inputs: the axis dim is a sum (dynamic if
+         * any addend is), and non-axis dims must agree across all inputs,
+         * so either one being dynamic makes the shared dim dynamic. */
+        outDataParam->dynDimMask = 0;
+        for (i = 0; i < numInBufs; i++)
+        {
+            outDataParam->dynDimMask |= inDataParams[i]->dynDimMask;
+        }
+    }
 
     return TIDL_SHAPE_INFERENCE_OK;
 }
@@ -1155,6 +1377,15 @@ int32_t TIDL_shapeInfer_TopK(
     }
     outDataParam->dimValues[layerParams->topKParams.incrementAxis] *= increment;
 
+    if ((context != NULL) && (context->isCompileTime != 0))
+    {
+        /* Passthrough input dynamism on every axis except topKParams.axis,
+         * which is overwritten with the static K and is therefore never
+         * dynamic. incrementAxis is left as a natural passthrough since it
+         * only scales the existing dim value by a static factor. */
+        outDataParam->dynDimMask = inDataParams[0]->dynDimMask & (~(1 << layerParams->topKParams.axis));
+    }
+
     return TIDL_SHAPE_INFERENCE_OK;
 }
 
@@ -1200,9 +1431,6 @@ int32_t TIDL_shapeInfer_LSTM(
 {
     int32_t seq_length, batch_size, hidden_size, num_directions;
 
-    (void)context;
-
-
     const sTIDL_LSTMParams_t *lstmParams = &layerParams->lstmParams;
 
     /* Extract seq_length and batch_size from input shape based on layout.
@@ -1242,6 +1470,30 @@ int32_t TIDL_shapeInfer_LSTM(
         outDataParam->dimValues[TIDL_DIM_DIM2]   = batch_size;
         outDataParam->dimValues[TIDL_DIM_NUMCH]  = seq_length + 2;
         outDataParam->dimValues[TIDL_DIM_HEIGHT] = num_directions;
+    }
+
+    if ((context != NULL) && (context->isCompileTime != 0))
+    {
+        /* WIDTH (hidden_size) and num_directions are static params, never
+         * dynamic. The packed seq+2 axis is dynamic iff seq_length's source
+         * dim is dynamic; the batch_size dim is dynamic iff its own source
+         * dim is dynamic. BATCH/DIM1 pass through unchanged. */
+        int32_t seqAxis   = (lstmParams->layout == 0) ? TIDL_DIM_DIM2   : TIDL_DIM_NUMCH;
+        int32_t batchAxis = (lstmParams->layout == 0) ? TIDL_DIM_HEIGHT : TIDL_DIM_DIM2;
+        int32_t seqSrc    = (lstmParams->layout == 0) ? TIDL_DIM_NUMCH  : TIDL_DIM_HEIGHT;
+        int32_t batchSrc  = (lstmParams->layout == 0) ? TIDL_DIM_HEIGHT : TIDL_DIM_NUMCH;
+
+        outDataParam->dynDimMask = inDataParams[0]->dynDimMask &
+            ((1 << TIDL_DIM_BATCH) | (1 << TIDL_DIM_DIM1));
+
+        if ((inDataParams[0]->dynDimMask >> seqSrc) & 1)
+        {
+            outDataParam->dynDimMask |= (1 << seqAxis);
+        }
+        if ((inDataParams[0]->dynDimMask >> batchSrc) & 1)
+        {
+            outDataParam->dynDimMask |= (1 << batchAxis);
+        }
     }
 
     return TIDL_SHAPE_INFERENCE_OK;
@@ -1289,9 +1541,6 @@ int32_t TIDL_shapeInfer_GRU(
 {
     int32_t seq_length, batch_size, hidden_size, num_directions;
 
-    (void)context;
-
-
     const sTIDL_GRUParams_t *gruParams = &layerParams->gruParams;
 
     /* Extract seq_length and batch_size from input shape based on layout.
@@ -1329,6 +1578,30 @@ int32_t TIDL_shapeInfer_GRU(
         outDataParam->dimValues[TIDL_DIM_DIM2]   = batch_size;
         outDataParam->dimValues[TIDL_DIM_NUMCH]  = seq_length + 1;
         outDataParam->dimValues[TIDL_DIM_HEIGHT] = num_directions;
+    }
+
+    if ((context != NULL) && (context->isCompileTime != 0))
+    {
+        /* WIDTH (hidden_size) and num_directions are static params, never
+         * dynamic. The packed seq+1 axis is dynamic iff seq_length's source
+         * dim is dynamic; the batch_size dim is dynamic iff its own source
+         * dim is dynamic. BATCH/DIM1 pass through unchanged. */
+        int32_t seqAxis   = (gruParams->layout == 0) ? TIDL_DIM_DIM2   : TIDL_DIM_NUMCH;
+        int32_t batchAxis = (gruParams->layout == 0) ? TIDL_DIM_HEIGHT : TIDL_DIM_DIM2;
+        int32_t seqSrc    = (gruParams->layout == 0) ? TIDL_DIM_NUMCH  : TIDL_DIM_HEIGHT;
+        int32_t batchSrc  = (gruParams->layout == 0) ? TIDL_DIM_HEIGHT : TIDL_DIM_NUMCH;
+
+        outDataParam->dynDimMask = inDataParams[0]->dynDimMask &
+            ((1 << TIDL_DIM_BATCH) | (1 << TIDL_DIM_DIM1));
+
+        if ((inDataParams[0]->dynDimMask >> seqSrc) & 1)
+        {
+            outDataParam->dynDimMask |= (1 << seqAxis);
+        }
+        if ((inDataParams[0]->dynDimMask >> batchSrc) & 1)
+        {
+            outDataParam->dynDimMask |= (1 << batchAxis);
+        }
     }
 
     return TIDL_SHAPE_INFERENCE_OK;
@@ -1376,9 +1649,6 @@ int32_t TIDL_shapeInfer_RNN(
 {
     int32_t seq_length, batch_size, hidden_size, num_directions;
 
-    (void)context;
-
-
     const sTIDL_RNNParams_t *rnnParams = &layerParams->rnnParams;
 
     /* Extract seq_length and batch_size from input shape based on layout.
@@ -1416,6 +1686,30 @@ int32_t TIDL_shapeInfer_RNN(
         outDataParam->dimValues[TIDL_DIM_DIM2]   = batch_size;
         outDataParam->dimValues[TIDL_DIM_NUMCH]  = seq_length + 1;
         outDataParam->dimValues[TIDL_DIM_HEIGHT] = num_directions;
+    }
+
+    if ((context != NULL) && (context->isCompileTime != 0))
+    {
+        /* WIDTH (hidden_size) and num_directions are static params, never
+         * dynamic. The packed seq+1 axis is dynamic iff seq_length's source
+         * dim is dynamic; the batch_size dim is dynamic iff its own source
+         * dim is dynamic. BATCH/DIM1 pass through unchanged. */
+        int32_t seqAxis   = (rnnParams->layout == 0) ? TIDL_DIM_DIM2   : TIDL_DIM_NUMCH;
+        int32_t batchAxis = (rnnParams->layout == 0) ? TIDL_DIM_HEIGHT : TIDL_DIM_DIM2;
+        int32_t seqSrc    = (rnnParams->layout == 0) ? TIDL_DIM_NUMCH  : TIDL_DIM_HEIGHT;
+        int32_t batchSrc  = (rnnParams->layout == 0) ? TIDL_DIM_HEIGHT : TIDL_DIM_NUMCH;
+
+        outDataParam->dynDimMask = inDataParams[0]->dynDimMask &
+            ((1 << TIDL_DIM_BATCH) | (1 << TIDL_DIM_DIM1));
+
+        if ((inDataParams[0]->dynDimMask >> seqSrc) & 1)
+        {
+            outDataParam->dynDimMask |= (1 << seqAxis);
+        }
+        if ((inDataParams[0]->dynDimMask >> batchSrc) & 1)
+        {
+            outDataParam->dynDimMask |= (1 << batchAxis);
+        }
     }
 
     return TIDL_SHAPE_INFERENCE_OK;
@@ -1467,12 +1761,12 @@ int32_t TIDL_shapeInfer_Reduce(
         }
         else if (pcLayer->layerType == TIDL_ReduceSumLayer)
         {
-            keepDims = pcLayer->layerPCParams.reduceSumParams.reduceDims;
+            keepDims = pcLayer->layerPCParams.reduceSumParams.keepDims;
             axis = pcLayer->layerPCParams.reduceSumParams.axis;
         }
         else
         {
-            keepDims = pcLayer->layerPCParams.reduceMeanParams.reduceDims;
+            keepDims = pcLayer->layerPCParams.reduceMeanParams.keepDims;
             axis = pcLayer->layerPCParams.reduceMeanParams.axis;
         }
     }
@@ -1625,6 +1919,191 @@ int32_t TIDL_shapeInfer_InnerProduct(
     outDataParam->dimValues[TIDL_DIM_WIDTH]  = innerProductParams->numOutCols;
 
     innerProductParams->numBatches = outDataParam->dimValues[TIDL_DIM_BATCH];
+
+    if ((context != NULL) && (context->isCompileTime != 0))
+    {
+        /* BATCH..NUMCH: broadcast max(input0[d], input1[d]) -> dynamic if either input's bit is set. */
+        outDataParam->dynDimMask = 0;
+        for (d = 0; d < TIDL_DIM_HEIGHT; d++)
+        {
+            int32_t bit0 = (inDataParams[0]->dynDimMask >> d) & 1;
+            int32_t bit1 = ((numInBufs >= 2) && (inDataParams[1] != NULL)) ?
+                ((inDataParams[1]->dynDimMask >> d) & 1) : 0;
+            if (bit0 || bit1)
+            {
+                outDataParam->dynDimMask |= (1 << d);
+            }
+        }
+
+        /* HEIGHT tracks a single source dim of input[0] only (transpose-dependent). */
+        {
+            int32_t heightSrc = (innerProductParams->inputATranspose != 0) ? TIDL_DIM_WIDTH : TIDL_DIM_HEIGHT;
+            if ((inDataParams[0]->dynDimMask >> heightSrc) & 1)
+            {
+                outDataParam->dynDimMask |= (1 << TIDL_DIM_HEIGHT);
+            }
+        }
+
+        /* WIDTH tracks a single source dim of input[1] only (transpose-dependent). */
+        if ((numInBufs >= 2) && (inDataParams[1] != NULL))
+        {
+            int32_t widthSrc = (innerProductParams->inputBTranspose != 0) ? TIDL_DIM_HEIGHT : TIDL_DIM_WIDTH;
+            if ((inDataParams[1]->dynDimMask >> widthSrc) & 1)
+            {
+                outDataParam->dynDimMask |= (1 << TIDL_DIM_WIDTH);
+            }
+        }
+    }
+
+    return TIDL_SHAPE_INFERENCE_OK;
+}
+
+/* -------------------------------------------------------------------------
+ * GroupQueryAttention
+ *
+ * At runtime isOutputSliced is always 1 (set by tidl_handleGQALayers at import).
+ * Computes flat packed output shape [1,1,1,1,1, attnOut+presentKey+presentValue]
+ * and writes element counts back into params for TIDL_updateInducedSlicePoints.
+ * Non-packed (import-time) shape setup is handled in TIDL_tfOutReshapeGroupQueryAttentionLayer.
+ * ------------------------------------------------------------------------- */
+int32_t TIDL_shapeInfer_GroupQueryAttention(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context)
+{
+    sTIDL_GroupQueryAttentionParams_t *p = &layerParams->gqaParams;
+
+    /* Packed output: [1,1,B,1,1, per_batch_total] where per_batch_total =
+     * attnOut + presentKey + presentValue. Element counts are per-batch,
+     * derived from current (possibly dynamic) input dims, and written back
+     * into params for use by TIDL_updateInducedSlicePoints. */
+    int32_t batch        = inDataParams[0]->dimValues[TIDL_DIM_DIM2];
+    int32_t seq          = inDataParams[0]->dimValues[TIDL_DIM_HEIGHT];
+
+    /* totalSeq = current seq + past seq from KV cache input (when hasPast=1). */
+    int32_t pastIdx  = p->isPackedQKV ? 1 : 3;
+    int32_t pastSeq  = 0;
+    if (p->hasPast && numInBufs > pastIdx)
+    {
+        pastSeq = inDataParams[pastIdx]->dimValues[TIDL_DIM_HEIGHT];
+        if (pastSeq < 0) pastSeq = 0;
+    }
+    int32_t totalSeq = seq + pastSeq;
+
+    /* Per-batch element counts: batch is preserved in DIM2, not folded into WIDTH.
+     * cacheManaged: past_key/past_value are owned by an upstream TIDL_CacheLayer,
+     * which already carries the full history and is never re-emitted as
+     * present_key/present_value here - only attn_out is produced. */
+    int32_t attnOutElems = seq      * p->numHeads   * p->headSize;
+    int32_t presentElems = p->cacheManaged ? 0 : (totalSeq * p->kvNumHeads * p->headSize);
+
+    p->attnOutElems      = attnOutElems;
+    p->presentKeyElems   = presentElems;
+    p->presentValueElems = presentElems;
+
+    for (int32_t d = 0; d < TIDL_DIM_MAX; d++)
+        outDataParam->dimValues[d] = 1;
+
+    outDataParam->dimValues[TIDL_DIM_DIM2]  = batch;
+    outDataParam->dimValues[TIDL_DIM_WIDTH] = attnOutElems + presentElems + presentElems;
+
+    if ((context != NULL) && (context->isCompileTime != 0))
+    {
+        /* BATCH,DIM1,NUMCH,HEIGHT are hardcoded constants (=1), never dynamic. */
+        outDataParam->dynDimMask = 0;
+        if ((inDataParams[0]->dynDimMask >> TIDL_DIM_DIM2) & 1)
+        {
+            outDataParam->dynDimMask |= (1 << TIDL_DIM_DIM2);
+        }
+        if (((inDataParams[0]->dynDimMask >> TIDL_DIM_HEIGHT) & 1) ||
+            (!p->cacheManaged && p->hasPast && (numInBufs > pastIdx) &&
+            ((inDataParams[pastIdx]->dynDimMask >> TIDL_DIM_HEIGHT) & 1)))
+        {
+            outDataParam->dynDimMask |= (1 << TIDL_DIM_WIDTH);
+        }
+    }
+
+    return TIDL_SHAPE_INFERENCE_OK;
+}
+
+/* -------------------------------------------------------------------------
+ * MatMulNBits
+ *
+ * Y = A * dequant(B)^T (+ bias). The output shape equals the input A shape
+ * with the last (WIDTH) dimension replaced by N (the weight output-feature
+ * count). All other dimensions are copied from input A.
+ * ------------------------------------------------------------------------- */
+int32_t TIDL_shapeInfer_MatMulNBits(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context)
+{
+    const sTIDL_MatMulNBitsParams_t *p = &layerParams->matMulNBitsParams;
+
+    (void)numInBufs;
+
+    outDataParam->dimValues[TIDL_DIM_BATCH]  = inDataParams[0]->dimValues[TIDL_DIM_BATCH];
+    outDataParam->dimValues[TIDL_DIM_DIM1]   = inDataParams[0]->dimValues[TIDL_DIM_DIM1];
+    outDataParam->dimValues[TIDL_DIM_DIM2]   = inDataParams[0]->dimValues[TIDL_DIM_DIM2];
+    outDataParam->dimValues[TIDL_DIM_NUMCH]  = inDataParams[0]->dimValues[TIDL_DIM_NUMCH];
+    outDataParam->dimValues[TIDL_DIM_HEIGHT] = inDataParams[0]->dimValues[TIDL_DIM_HEIGHT];
+    outDataParam->dimValues[TIDL_DIM_WIDTH]  = p->N;
+
+    if ((context != NULL) && (context->isCompileTime != 0))
+    {
+        /* WIDTH always static: output WIDTH is the static weight param N,
+         * never dependent on input's WIDTH/contraction dim. */
+        outDataParam->dynDimMask = inDataParams[0]->dynDimMask &
+            ((1 << TIDL_DIM_BATCH) | (1 << TIDL_DIM_DIM1) | (1 << TIDL_DIM_DIM2) |
+             (1 << TIDL_DIM_NUMCH) | (1 << TIDL_DIM_HEIGHT));
+    }
+
+    return TIDL_SHAPE_INFERENCE_OK;
+}
+
+int32_t TIDL_shapeInfer_Cache(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context)
+{
+    int32_t axis = layerParams->cacheParams.axis;
+    int32_t d;
+
+    (void)numInBufs;
+
+    for (d = 0; d < (int32_t)TIDL_DIM_MAX; d++)
+    {
+        if (d == axis)
+        {
+            // Compile time set to maxCapacity
+            if ((context != NULL) && (context->isCompileTime != 0))
+            {
+                outDataParam->dimValues[axis] = layerParams->cacheParams.maxCapacity;
+            }
+            else
+            {
+                /*
+                 * Inference time, outDataParam->dimValues[axis] is set by
+                 * cache process call and is equal to current valid length.
+                 * Do nothing here.
+                 */
+            }
+        }
+        else
+        {
+            outDataParam->dimValues[d] = inDataParams[0]->dimValues[d];
+        }
+    }
+
+    /* Only the growth axis is dynamic (live valid-length); all other dims
+     * are treated as static regardless of input[0]'s dynamism. */
+    outDataParam->dynDimMask = (int32_t)(1 << axis);
 
     return TIDL_SHAPE_INFERENCE_OK;
 }
@@ -1929,6 +2408,11 @@ int32_t TIDL_shapeInfer_BatchNorm(
     {
         layerParams->batchNormParams.numChannels = inDataParams[0]->dimValues[TIDL_DIM_NUMCH];
     }
+    else
+    {
+        /* Identity op: output's dynamism exactly matches input's, dim for dim. */
+        outDataParam->dynDimMask = inDataParams[0]->dynDimMask;
+    }
 
     return TIDL_SHAPE_INFERENCE_OK;
 }
@@ -2053,8 +2537,8 @@ const TIDL_ShapeInferEntry_t
     /* [13] TIDL_SplitLayer — static (split sizes baked in at import) */
     { TIDL_SplitLayer,              NULL                        },
 
-    /* [14] TIDL_SliceLayer - static (slice sizes baked in at import)*/
-    { TIDL_SliceLayer,              NULL                        },
+    /* [14] TIDL_SliceLayer */
+    { TIDL_SliceLayer,              TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Slice) },
 
     /* [15] TIDL_CropLayer — 2-input: H/W from inData[1]; runtime numChannels update */
     { TIDL_CropLayer,               TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Crop) },
@@ -2188,7 +2672,22 @@ const TIDL_ShapeInferEntry_t
     /* [58] TIDL_NonZeroLayer */
     { TIDL_NonZeroLayer,            TIDL_shapeInfer_NonZero     },
 
-    /* [59] TIDL_UnsupportedLayer */
+    /* [59] TIDL_GroupQueryAttentionLayer */
+    { TIDL_GroupQueryAttentionLayer, TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_GroupQueryAttention) },
+
+    /* [60] TIDL_MatMulNBitsLayer */
+    { TIDL_MatMulNBitsLayer,        TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_MatMulNBits) },
+    
+    /* [61] TIDL_RotaryEmbeddingLayer */
+    { TIDL_RotaryEmbeddingLayer,    TIDL_shapeInfer_PassThrough },
+
+    /* [61] TIDL_CacheLayer */
+    { TIDL_CacheLayer,              TIDL_SHAPE_FN_IMPORT_ONLY(TIDL_shapeInfer_Cache) },
+
+    /* [62] TIDL_MemCopyLayer */
+    { TIDL_MemCopyLayer,            TIDL_shapeInfer_PassThrough },
+
+    /* [63] TIDL_UnsupportedLayer */
     { TIDL_UnsupportedLayer,        NULL                        },
 };
 

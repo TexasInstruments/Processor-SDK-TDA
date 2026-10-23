@@ -95,11 +95,6 @@ CFILES += ../perfsim/gc_helper.c
 HFILES = ../caffeImport/caffe.pb.h
 HFILES += ti_dl.h
 HFILES += tidl_import_diag.h
-
-ifdef SystemRoot
-CFILES += $(COMMON_DIR)/asprintf/asprintf.c
-endif
-
 HFILES += tidlAllowlistingConstraints/tidl_constraint.h
 HFILES += tidlAllowlistingConstraints/tidl_jumptable.h
 
@@ -194,14 +189,8 @@ CFILES += ../../common/src/tidl_shapeInference.c
 
 TARGET_PLATFORM = PC
 BUILD_WITH_CUDA = no
-
-ifdef SystemRoot
-PROTOBUF_LIB_DIR?=$(TIDL_PROTOBUF_PATH)/lib/Release
-PROTOBUF_INC_DIR?="$(TIDL_PROTOBUF_PATH)/src"
-else
 PROTOBUF_LIB_DIR?="$(TIDL_PROTOBUF_PATH)/src/.libs"
 PROTOBUF_INC_DIR?="$(TIDL_PROTOBUF_PATH)/src"
-endif
 FLATBUF_INC_DIR ?= $(TIDL_FLATBUF_PATH)/include
 
 LIBNAME = tidl_model_import
@@ -218,11 +207,7 @@ ifeq ($(MAKECMDGOALS),onnx_runtime)
 LIBNAME = tidl_model_import_onnx
 endif
 
-ifdef SystemRoot
-OUTFILE= ./out/$(LIBNAME).dll
-else
 OUTFILE= ./out/$(LIBNAME).so
-endif
 
 ##############################################################
 
@@ -251,17 +236,15 @@ CFLAGS += -I ../../common
 CFLAGS += -I ../../common/inc
 
 #CFLAGS+= /D_MSC_VER=1700 /Gd
-ifdef SystemRoot
-CFLAGS += -I $(COMMON_DIR)/asprintf
-CFLAGS += /DTIDL_IMPORT_TOOL
-CFLAGS += /DDLL_EXPORT
-else
 CFLAGS += -D_GNU_SOURCE
 CFLAGS += -DTIDL_IMPORT_TOOL
 CFLAGS += -Werror=return-type -Wno-unused-result -Wno-format-overflow
-endif
 
 ifeq ($(MAKECMDGOALS),tvm_relay)
+# TVM provides its own logging implementation that should override dmlc-core's logging.
+# DMLC_USE_LOGGING_LIBRARY tells dmlc-core to include TVM's logging.h instead of its own.
+# This prevents "VLOG redefined" warnings when both TVM and dmlc-core headers are included.
+CFLAGS += -DDMLC_USE_LOGGING_LIBRARY=\"tvm/runtime/logging.h\"
 CFLAGS += -I $(TVM_HOME)/tvm/include
 CFLAGS += -I $(TVM_HOME)/tvm/3rdparty/dmlc-core/include
 CFLAGS += -I $(TVM_HOME)/tvm/3rdparty/dlpack/include
@@ -280,11 +263,6 @@ endif
 ##############################################################
 
 ##############################################################
-ifdef SystemRoot
-LDFLAGS+=-l $(PROTOBUF_LIB_DIR)/libprotoc.lib
-LDFLAGS+=-l $(PROTOBUF_LIB_DIR)/libprotobuf.lib
-LDFLAGS+=-l ./lib/tidl_model_protos.lib
-else
 LDFLAGS+=-L$(PROTOBUF_LIB_DIR)
 LDFLAGS+=-L$(TIDL_FLATBUF_PATH)
 LDFLAGS+=-L./lib
@@ -295,7 +273,6 @@ LDFLAGS +=-Wl,-rpath -Wl,\$$ORIGIN
 LDFLAGS +=-pthread -Wl,--no-as-needed
 ifeq ($(MAKECMDGOALS),tflite_runtime)
 LDFLAGS+=-lflatbuffers
-endif
 endif
 
 # defs needed by all platforms
@@ -319,14 +296,11 @@ endif
 
 ### Latest TVM requires c++17 to compile
 ifeq ($(MAKECMDGOALS),tvm_relay)
-  ifdef SystemRoot
-    CFLAGS += /std:c++17
-  else
-    ifeq ($(TIDL_GCC_VERSION),5)
-      CC = g++-7 -c
-    endif
-    CFLAGS += -std=c++17
+  ifeq ($(TIDL_GCC_VERSION),5)
+    CC = g++-7 -c
   endif
+  CFLAGS += -std=c++17
+
 endif
 
 ##############################################################

@@ -71,6 +71,9 @@
 #include "tidl_commonUtils.h"
 #include "tidl_alg_utils.h"
 #include "tidl_shape_ref.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 template <class Tout>
 int32_t TIDL_getInputShape(sTIDL_Network_t      *net,
@@ -89,12 +92,16 @@ int32_t TIDL_getInputShape(sTIDL_Network_t      *net,
   
   int32_t min = satHigh;
   int32_t max = satLow;
+  #ifdef BUILD_WITH_CUDA_SHAPE
+  TIDL_cudaShape(&inDataParams->dimValues[params->start], outPtr, params->end - params->start);
+  #else
   for (i = params->start; i < params->end; i++)
   {
     // outPtr will always be a 1D tensor for Shape operator
     outPtr[idx] = inDataParams->dimValues[i];
     idx++;
   }
+  #endif
   TIDL_L1DandL2CacheWbInv();
   return status;
 }

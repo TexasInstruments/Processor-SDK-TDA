@@ -70,6 +70,7 @@
 
 
 #include "tidl_commonUtils_stats.h"
+#include "tidl_commonUtils.h"
 #include "tidl_device_utils.h"
 #include "tidl_device_utils_nc.h"
 #include <stdint.h>
@@ -367,28 +368,33 @@ float32_tidl TIDL_clamp(float32_tidl value, float32_tidl minVal, float32_tidl ma
 }
 
 /**
- * @brief Function which finds the first producer layer
+ * @brief Function which checks if the layer is a compute layer
  *
  * @param pLayer : Pointer to the current layer
- * @return int32_t : returns updated required or not
+ * @return bool : returns true if the layer is a compute layer, false otherwise
  */
 
-bool TIDL_isProducerLayer(sTIDL_Layer_t *pLayer)
+bool TIDL_isComputeLayer(sTIDL_Layer_t *layer)
 {
   bool isComputeLayer = false;
-  if(pLayer->layerType == TIDL_ConvolutionLayer ||
-     pLayer->layerType == TIDL_Deconv2DLayer ||
-     pLayer->layerType == TIDL_EltWiseLayer  ||
-     pLayer->layerType == TIDL_InnerProductLayer ||
-     pLayer->layerType == TIDL_DeformableConvLayer
-     )
+  if(layer->layerType == TIDL_ConvolutionLayer ||
+     layer->layerType == TIDL_Deconv2DLayer ||
+     layer->layerType == TIDL_EltWiseLayer  ||
+     layer->layerType == TIDL_InnerProductLayer ||
+     layer->layerType == TIDL_DeformableConvLayer
+    )
   {
     isComputeLayer = true;
   }
-  else if(pLayer->layerType == TIDL_DataConvertLayer && pLayer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_INPUT)
+  else if(layer->layerType == TIDL_PoolingLayer && layer->layerParams.poolParams.poolingType == TIDL_AveragePooling)
   {
     isComputeLayer = true;
   }
+  else if(layer->layerType == TIDL_DataConvertLayer && layer->layerParams.dataConvertParams.type == TIDL_DC_TYPE_INPUT)
+  {
+    isComputeLayer = true;
+  }
+
   return isComputeLayer;  
 }
 
@@ -408,20 +414,6 @@ int32_t TIDL_getNumOutputs(sTIDL_Network_t *net, int32_t layerIndex, int32_t dat
   return numOutputs;
 }
 
-int32_t TIDL_getOutLayer(sTIDL_Network_t *net, int32_t layerIndex, int32_t dataId)
-{
-  for (int32_t i1 = 0; i1 < layerIndex; i1++)
-  {
-    for (int32_t i2 = 0; i2 < net->TIDLLayers[i1].numInBufs; i2++)
-    {
-      if (net->TIDLLayers[i1].inData[i2] == dataId)
-      {
-        return (i1);
-      }
-    }
-  }
-  return -1;
-}
 
 /* When the consumer of the layer is a range optimized activation such as Sigmoid, Tanh, the 
   per channel mean of layer in float pass should be computed based on the activation range constraints 
@@ -432,14 +424,18 @@ int32_t TIDL_getOutLayer(sTIDL_Network_t *net, int32_t layerIndex, int32_t dataI
 */
 void TIDL_isLayerConsumerRangeOptimizedActivation(sTIDL_Network_t *net, int32_t layerIdx) 
 {
-  if(!TIDL_isProducerLayer(&(net->TIDLLayers[layerIdx])) || TIDL_getNumOutputs(net, net->numLayers, net->TIDLLayers[layerIdx].outData.dataId) > 1) {
+  if(TIDL_isComputeLayer(&(net->TIDLLayers[layerIdx])) == false || TIDL_getNumOutputs(net, net->numLayers, net->TIDLLayers[layerIdx].outData.dataId) > 1)
+  {
     return;
   }
 
   int32_t consumerLayerIdx = TIDL_getOutLayer(net, net->numLayers, net->TIDLLayers[layerIdx].outData.dataId);
   bool consumerIsRangeOptimizedActivation = false;
-  while((consumerLayerIdx != -1) && (consumerLayerIdx < net->numLayers) && !TIDL_isProducerLayer(&net->TIDLLayers[consumerLayerIdx])) 
+  while((consumerLayerIdx != -1) && (consumerLayerIdx < net->numLayers) && TIDL_isComputeLayer(&net->TIDLLayers[consumerLayerIdx]) == false)
   {
+    if(net->TIDLLayers[consumerLayerIdx].layerType == TIDL_DataLayer) {
+      break;
+    }
     if(TIDL_isLayerRangeOptimizedActivation(&net->TIDLLayers[consumerLayerIdx])) {
       consumerIsRangeOptimizedActivation = true;
       break;
@@ -663,7 +659,7 @@ static int32_t TIDL_UpdateTensorRangeStats(TIDL_Handle intAlgHandle, int32_t lay
   int32_t * histogramPtr = NULL;
   sTIDL_DataParams_t dataBuffParamOrig = net->TIDLLayers[layerIdx].outData;
   /* inDataPrms is utilized in the case of argmax and topK, so we always consider the first input */
-  sTIDL_DataParams_t *inDataPrms = TIDL_getDataParams(net, net->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_DataParams_t *inDataPrms = &net->TIDLLayers[net->TIDLLayers[layerIdx].inData[0]].outData;
   /* Update the dim and pitch values as expected by NHWC format and layer change it back to original */
   if ( net->TIDLLayers[layerIdx].layerType == TIDL_DataConvertLayer )
   {

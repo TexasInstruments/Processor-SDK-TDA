@@ -152,6 +152,12 @@ typedef struct {
   uint32_t coreNum;
   /** Force a negative test case */
   int32_t  forceNegativeTest;
+  /**  File-based trace write level (0=disabled, 1=single node, 2=all nodes) */
+  int32_t tvm_rt_trace_write_level;
+  /**  File-based trace base path prefix  */
+  char tvm_rt_trace_base_path[128];
+  /**  File-based trace node filter */
+  char tvm_rt_trace_write_node[128];
 } sTVMRT_Params_t;
 
 

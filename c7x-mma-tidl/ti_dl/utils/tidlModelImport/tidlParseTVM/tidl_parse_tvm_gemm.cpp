@@ -135,6 +135,11 @@ int32_t TidlParseTVM:: parse<OpNameStr("tidl.gemm")> ()
       {
         int32_t filterIdx = md.constTensorIndices[0];
         layer.weights=TIDL_extractConstantTensorData(call,filterIdx,md,0);
+        if(layer.weights.ptr==NULL)
+        {
+          TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", filterIdx);
+          return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
         filterDims = md.constTensorsDims[0];
         if(md.varTensorIndices[0] < md.constTensorIndices[0])
         {
@@ -161,6 +166,11 @@ int32_t TidlParseTVM:: parse<OpNameStr("tidl.gemm")> ()
         {
           int32_t biasIndex = md.constTensorIndices[0];
           layer.bias=TIDL_extractConstantTensorData(call,biasIndex,md,0);
+          if(layer.bias.ptr==NULL)
+          {
+            TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", biasIndex);
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+          }
           innerProductParams.isBias = 1;
           biasDims = md.constTensorsDims[0];
         }
@@ -169,6 +179,11 @@ int32_t TidlParseTVM:: parse<OpNameStr("tidl.gemm")> ()
         {
           int32_t filterIdx = md.constTensorIndices[0];
           layer.weights=TIDL_extractConstantTensorData(call,filterIdx,md,0);
+          if(layer.weights.ptr==NULL)
+          {
+            TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", filterIdx);
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+          }
           filterDims = md.constTensorsDims[0];
           if(md.varTensorIndices[0] < md.constTensorIndices[0])
           {
@@ -186,6 +201,11 @@ int32_t TidlParseTVM:: parse<OpNameStr("tidl.gemm")> ()
       {
         int32_t filterIdx = md.constTensorIndices[0];
         layer.weights=TIDL_extractConstantTensorData(call,filterIdx,md,0);
+        if(layer.weights.ptr==NULL)
+        {
+          TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", filterIdx);
+          return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
         if(md.constTensorIndices[0] == 1)
         {
           /* B is constant */
@@ -200,6 +220,11 @@ int32_t TidlParseTVM:: parse<OpNameStr("tidl.gemm")> ()
         {
              int32_t biasIndex = md.constTensorIndices[1];
              layer.bias=TIDL_extractConstantTensorData(call,biasIndex,md,1);
+             if(layer.bias.ptr==NULL)
+             {
+               TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", biasIndex);
+               return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+             }
         }
         biasDims = md.constTensorsDims[1];
          if(md.constTensorIndices[0] == 0 && md.constTensorIndices[1] == 1)
@@ -233,6 +258,11 @@ int32_t TidlParseTVM:: parse<OpNameStr("tidl.gemm")> ()
     {
       int32_t filterIdx = md.constTensorIndices[0];
       layer.weights=TIDL_extractConstantTensorData(call,filterIdx,md,0);
+      if(layer.weights.ptr==NULL)
+      {
+        TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", filterIdx);
+        return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+      }
       filterDims = md.constTensorsDims[0];
       if (md.varTensorIndices[0] < md.constTensorIndices[0])
       {
@@ -259,7 +289,7 @@ int32_t TidlParseTVM:: parse<OpNameStr("tidl.gemm")> ()
       layer.weights.ptr = NULL;
       layer.weights.bufSize = 0;
       layer.bias.ptr= NULL;
-      layer.bias.bufSize = NULL;
+      layer.bias.bufSize = 0;
     }
 
     /* No bias in matmul */

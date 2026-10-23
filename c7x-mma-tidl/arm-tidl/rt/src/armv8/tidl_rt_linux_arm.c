@@ -71,7 +71,11 @@
 #include <utils/remote_service/include/app_remote_service.h>
 #include <utils/perf_stats/src/app_perf_stats_priv.h>
 #include <utils/ipc/include/app_ipc.h>
+#ifdef ENABLE_NEW_VISION_APPS_STRUCTURE
 #include <app_init.h>
+#else
+#include <utils/app_init/include/app_init.h>
+#endif
 #include "itidl_rt.h"
 #include "../tidl_rt_ovx_utils.h"
 

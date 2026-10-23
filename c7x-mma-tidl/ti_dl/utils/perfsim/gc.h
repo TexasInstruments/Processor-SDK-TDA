@@ -64,38 +64,28 @@ _____sGCDataBase_t___________________________________________________________
 |    +-----+-----+-----+-----+-----+-----+-----+-----+--------------+-----+   |
 |    |     |     |     |     |     |     |     |     |............. |     |   |
 |    +-----+-----+-----+-----+-----+-----+-----+-----+--------------+-----+   |
-|                                                                             |
-|    proc Link Data Base                                                      |
-|    +-----+-----+-----+-----+-----+-----+-----+-----+--------------+-----+   |
-|    |     |     |     |     |     |     |     |     |............. |     |   |
-|    +-----+-----+-----+-----+-----+-----+-----+-----+--------------+-----+   |
-|                                                                             |
 |_____________________________________________________________________________|
 
 
- ___________ sWorkloadSuperGroup_t____________________________________________________________________________________________________
-|                                                                                                                                     |
-|   ________________sWorkloadGroup_t______________________________________________________________________________________________    |
-|  |                                                                                                            |     |     |     |   |
-|  |     id, dependid[],                                                                                        |     |     |     |   |
-|  |                                                                                                            |     |     |     |   |
-|  |	 ________________sWorkloadSubGroup_t__________________________________________________________________    |     |     |     |   |
-|  |	|                                                                                |      |      |      |   |     |     |     |   |
-|  |	|      _____________sWorkloadUnit_t____________________________________________  |      |      |      |   |     |     |     |   |
-|  |	|     |                                                |     |     |    |     |  |      |      |      |   |     |     |     |   |
-|  |	|     |  numLinks, numIter, layerId, networkId         |     |     |    |     |  |      |      |      |   |     |     |     |   |
-|  |	|     |  Links                                         |     |     |    |     |  |      |      |      |   |     |     |     |   |
-|  |	|     |  ________________________________________      |     |     |....|     |  |      | .... |      |   |     | ... |     |   |
-|  |	|     |  |      |      |      |      |..........|      |     |     |    |     |  |      |      |      |   |     |     |     |   |
-|  |	|     |  |______|______|______|______|__________|      |     |     |    |     |  |      |      |      |   |     |     |     |   |
-|  |	|     |											                           |     |     |    |     |  |      |      |      |   |     |     |     |   |
-|  |	|     |________________________________________________|_____|_____|____|_____|  |      |      |      |   |     |     |     |   |
-|  |	|     											                                                     |      |      |      |   |     |     |     |   |
-|  |  |________________________________________________________________________________|______|______|______|   |     |     |     |   |
-|  |                                                                                                            |     |     |     |   |
-|  |____________________________________________________________________________________________________________|_____|_____|_____|   |
-|  																													                                                                          |
-|_____________________________________________________________________________________________________________________________________|
+ ________________sWorkloadGroup_t______________________________________________________________________________________________  
+|                                                                                                            |     |     |     | 
+|     id, dependid[],                                                                                        |     |     |     | 
+|                                                                                                            |     |     |     | 
+|	  ________________sWorkloadSubGroup_t__________________________________________________________________    |     |     |     |  
+|	 |                                                                                |      |      |      |   |     |     |     |  
+|	 |      _____________sWorkloadUnit_t____________________________________________  |      |      |      |   |     |     |     |  
+|	 |     |                                                |     |     |    |     |  |      |      |      |   |     |     |     |  
+|	 |     |  numLinks, numIter, layerId, networkId         |     |     |    |     |  |      |      |      |   |     |     |     |  
+|	 |     |  Links                                         |     |     |    |     |  |      |      |      |   |     |     |     |  
+|	 |     |  ________________________________________      |     |     |....|     |  |      | .... |      |   |     | ... |     |  
+|	 |     |  |      |      |      |      |..........|      |     |     |    |     |  |      |      |      |   |     |     |     |  
+|	 |     |  |______|______|______|______|__________|      |     |     |    |     |  |      |      |      |   |     |     |     |  
+|	 |     |											                          |     |     |    |     |  |      |      |      |   |     |     |     |
+|	 |     |________________________________________________|_____|_____|____|_____|  |      |      |      |   |     |     |     |  
+|	 |     											                                                      |      |      |      |   |     |     |     |
+|  |________________________________________________________________________________|______|______|______|   |     |     |     | 
+|                                                                                                            |     |     |     | 
+|____________________________________________________________________________________________________________|_____|_____|_____| 
 
 
 <> Joint,
@@ -206,7 +196,6 @@ typedef struct
   int32_t rows;
 } sPadParams_t;
 
-
 /**
 *  @enum       eBufShapeType
 *  @brief      define macros for different shapes of buffer
@@ -214,7 +203,6 @@ typedef struct
   #define BUF_LINEAR     0   /**< Linear buffer */
   #define BUF_CIRCULAR   1   /**< Circular buffer */
   #define BUF_PING_PONG  2   /**< Ping Pong buffer */
-
 
 /**
 *  @enum       eBufType
@@ -229,7 +217,6 @@ typedef enum {
   BUF_COEFF_FULL,     /**< coeffs - full data                       */
   BUF_COEFF_IN_STAGE, /**< Intermediate buffer for weights (coeffs) */
   BUF_COEFF_IN_FINAL, /**< Final buffer space for  weights (coeffs) */
-  BUF_COEFF_IN_ADV,   /**< Advance transfer weights (coeffs)        */
   BUF_BIAS_FULL,      /**< Bias - full Data (in DDR)                */
   BUF_BIAS_IN_FINAL,  /**< Final buffer space for bias/scale/shift  */
   BUF_CTXT,           /**< Context information                      */
@@ -237,7 +224,6 @@ typedef enum {
   BUF_UNKNOWN,        /**< Not known buffer type                    */
   MAX_BUF_PER_LINK,   /**< Maximum buffers per Link                 */
 } eBuftype;
-
 
 typedef enum
 {
@@ -919,24 +905,12 @@ typedef struct
 ****************************************************************************/
 typedef struct
 {
-
   sWorkloadSubGroup_t activateGroup ;
   sWorkloadSubGroup_t subGroup[TIDL_MAX_NUM_GROUPS*3U]; //Points to the workload unit data base
   int32_t numSubGroups;
 } sWorkloadGroup_t;
 
 #define MAX_BATCH_GROUPS (TIDL_NUM_MAX_LAYERS)
-#define MAX_WORKLOAD_GRP_PER_CORE (8) //!< For now limiting workload group to be 8 per core
-/**<
-*****************************************************************************
-* @struct sWorkLoadSuperGroup_t                                             *
-* @brief  Object for entire workload                                        *
-* @param workloadGrpList : List of workload groups scheduled per core       *
-****************************************************************************/
-typedef struct {
-  sWorkloadGroup_t workloadGrpList[MAX_WORKLOAD_GRP_PER_CORE];
-  int32_t numGroups;
-} sWorkloadSuperGroup_t;
 
 typedef struct{
   int32_t bufDBIndexToBackup[TIDL_NUM_MAX_LAYERS * 3][20];
@@ -957,7 +931,7 @@ typedef struct{
 typedef struct
 {
   int32_t               memoryRequirementPerCore[SUPERMEMTYPE_TOTAL];
-  sWorkloadSuperGroup_t superWorkload;
+  sWorkloadGroup_t      workload;
   sGCDataBaseInfo_t     dataBaseInfo;
   sPreEmption_t         preEmptionInfo;
   sGCDataBase_t         dataBase;

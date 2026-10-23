@@ -91,6 +91,7 @@ typedef struct
   decltype(&::TIDLRT_setTensorDefault) TIDLRT_setTensorDefault;
   decltype(&::TIDLRT_getDdrStats) TIDLRT_getDdrStats;
   decltype(&::TIDLRT_isSharedMem) TIDLRT_isSharedMem;
+  decltype(&::TIDLRT_setMutableOptions) TIDLRT_setMutableOptions;
 } sTIDL_tidlRtDynamicLoading_t;
 
 /** Parameters related to TIDL RT used for runtimes */
@@ -120,27 +121,59 @@ typedef struct
   int32_t flowCtrl;
   char tempBufferDir[TIDLRT_STRING_SIZE];  /* Path to redirect temporary buffers instead of /dev/shm */
   char traceBaseName[TIDLRT_STRING_SIZE];  /* Base name for trace files, defaults to /tmp/tidl_trace */
+  int32_t cacheImport;  /* -1 = leave unchanged, 0/1 = append inputs into TIDL_CacheLayer(s) this call */
+  int32_t cacheExport;  /* -1 = leave unchanged, 0/1 = copy TIDL_CacheLayer(s) to outputs this call */
+  int32_t cacheClear;   /* -1 = leave unchanged, 0/1 = reset TIDL_CacheLayer(s), see TIDLRT_MUTABLE_OPT_CACHE_CLEAR */
 } sTIDL_subgraphRtCreateOptions_t;
 
 extern "C"
 {
 
+/** Check whether path resolves (after following symlinks) to a directory. */
 bool TIDL_checkIsDir(const char *path);
+
+/** Check whether path resolves (after following symlinks) to a regular file. */
 bool TIDL_checkIsPath(const char *path);
 
-int32_t TIDL_readBinFromFile(const char *fileName, void *addr, int32_t size, int32_t count);
+/** Read count elements of size bytes each from fileName into addr. */
+int32_t TIDL_readBinFromFile(const char *fileName,
+                             void *addr,
+                             uint32_t size,
+                             int32_t count);
 
+/** List of TIDL allowed nodes is written to a text file during compilation;
+ *  read it back during inference. */
 std::vector<std::vector<int>> TIDL_readAllowedNodesList(std::string artifactsFolder);
 
-int32_t TIDL_subgraphRtCreate(sTIDL_subgraphRtCreateOptions_t* subgraphRtCreateOptions, sTIDL_tidlRtDynamicLoading_t * infer_ops,
-                              const char* subGraphName, sTIDL_tidlRtParams_t * subgraphParams);
+/** Read the tidl_net.bin and tidl_io_1.bin files into netPtr and ioBufDesc, set the
+ *  remaining default TIDL RT parameters, and create a TIDL RT handle to be used for
+ *  further processing. */
+int32_t TIDL_subgraphRtCreate(sTIDL_subgraphRtCreateOptions_t *subgraphRtCreateOptions,
+                              sTIDL_tidlRtDynamicLoading_t *infer_ops,
+                              const char* subGraphName,
+                              sTIDL_tidlRtParams_t *subgraphParams);
 
-int32_t TIDL_subgraphRtDelete(int32_t osrtDebugPrintLevel, sTIDL_tidlRtDynamicLoading_t * infer_ops, sTIDL_tidlRtParams_t * tidlRtParams);
+/** Deactivate and delete a subgraph RT handle created by TIDL_subgraphRtCreate, and free
+ *  the associated host-side buffers. */
+int32_t TIDL_subgraphRtDelete(int32_t osrtDebugPrintLevel,
+                              sTIDL_tidlRtDynamicLoading_t *infer_ops,
+                              sTIDL_tidlRtParams_t *tidlRtParams);
 
-void TIDL_osrtDebugPrint(int32_t osrtDebugPrintLevel, char * format, ...);
+/** Update mutable inference options on a live subgraph RT handle, between invokes,
+ * without recreating it. */
+int32_t TIDL_subgraphRtSetMutableOptions(int32_t osrtDebugPrintLevel,
+                                         sTIDL_tidlRtDynamicLoading_t * infer_ops,
+                                         sTIDL_tidlRtParams_t *subgraphParams,
+                                         const sTIDL_subgraphRtCreateOptions_t *subgraphRtSetOptions,
+                                         const char *subgraphName);
 
-void TIDL_rtLoadSymbols(sTIDL_tidlRtDynamicLoading_t * infer_ops);
+/** Print debug prints based on debug print level. */
+void TIDL_osrtDebugPrint(int32_t osrtDebugPrintLevel, const char *format, ...);
 
+/** Dynamically load symbols from TIDL RT (libvx_tidl_rt.so) library needed for runtimes. */
+void TIDL_rtLoadSymbols(sTIDL_tidlRtDynamicLoading_t *infer_ops);
+
+/** Compute processing, copy-input, and copy-output times from available stats and print them. */
 void TIDL_printSubgraphStats(sTIDLRT_PerfStats_t *stats);
 
 } //extern "C"

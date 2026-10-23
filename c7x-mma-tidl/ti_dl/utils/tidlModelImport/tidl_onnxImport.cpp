@@ -71,6 +71,7 @@
 #include <float.h>
 #include <cmath>
 #include <limits>
+#include <fstream>
 
 #include "ti_dl.h"
 #include "tidl_import_api.h"
@@ -86,6 +87,8 @@
 
 #include "tidlParseOnnx/tidl_parse_onnx.h"
 #include "tidlAllowlistingConstraints/tidl_constraint.h"
+
+#undef __MODULE__
 #define __MODULE__ "[PARSER]"
 
 using namespace std;
@@ -330,7 +333,7 @@ int32_t TIDL_onnxNumVariableLayerInputs(GraphProto& onnGraph, int32_t i, std::ve
   return numVarInputs;
 }
 
-int32_t TIDL_onnxGetAttrIdx(const NodeProto& node, char * name)
+int32_t TIDL_onnxGetAttrIdx(const NodeProto& node, const char * name)
 {
   int32_t i;
   for (i = 0; i < node.attribute_size(); i++)
@@ -362,50 +365,8 @@ std::vector<int32_t> getNodeOutputShape(GraphProto& onnxGraph, const std::string
         }
       }
     }
+    if (nodeFound) break;
   }
-
-  if (nodeFound == 0)
-  {
-    for (int k = 0; k < onnxGraph.value_info_size(); k++)
-    {
-      if((strcmp(onnxGraph.value_info(k).name().c_str(), name.c_str()) == 0))
-      {
-        if( onnxGraph.value_info(k).type().tensor_type().has_shape() )
-        {
-          auto& tensorShape = onnxGraph.value_info(k).type().tensor_type().shape();
-          for (int j = 0; j < tensorShape.dim_size(); j++)
-          {
-            dims.push_back(tensorShape.dim(j).dim_value());
-          }
-        }
-      }
-    }
-  }
-
-  return dims;
-}
-
-std::vector<int32_t> getNodeInputShape(GraphProto& onnxGraph, const std::string name, int32_t debugLevel)
-{
-  std::vector<int32_t> dims;
-  int32_t nodeFound = 0;
-
-  for (int k = 0; k < onnxGraph.input_size(); k++)
-  {
-    if((strcmp(onnxGraph.input(k).name().c_str(), name.c_str()) == 0))
-    {
-      if( onnxGraph.input(k).type().tensor_type().has_shape() )
-      {
-        auto& tensorShape = onnxGraph.input(k).type().tensor_type().shape();
-        for (int j = 0; j < tensorShape.dim_size(); j++)
-        {
-          dims.push_back(tensorShape.dim(j).dim_value());
-          nodeFound = 1;
-        }
-      }
-    }
-  }
-
 
   if (nodeFound == 0)
   {
@@ -423,13 +384,58 @@ std::vector<int32_t> getNodeInputShape(GraphProto& onnxGraph, const std::string 
           }
         }
       }
+      if (nodeFound) break;
     }
   }
 
-  /**
-   * Protecting the search under the flag as the dims vector can be filled twice when there is a node present as
-   * both input & output in the onnx graph.
-  */
+  return dims;
+}
+
+std::vector<int32_t> getNodeInputShape(GraphProto& onnxGraph, const std::string name, int32_t debugLevel)
+{
+  std::vector<int32_t> dims;
+  int32_t nodeFound = 0;
+
+  // Check Inputs
+  for (int k = 0; k < onnxGraph.input_size(); k++)
+  {
+    if((strcmp(onnxGraph.input(k).name().c_str(), name.c_str()) == 0))
+    {
+      if( onnxGraph.input(k).type().tensor_type().has_shape() )
+      {
+        auto& tensorShape = onnxGraph.input(k).type().tensor_type().shape();
+        for (int j = 0; j < tensorShape.dim_size(); j++)
+        {
+          dims.push_back(tensorShape.dim(j).dim_value());
+          nodeFound = 1;
+        }
+      }
+    }
+    if (nodeFound) break;
+  }
+
+  // Check Value Info
+  if (nodeFound == 0)
+  {
+    for (int k = 0; k < onnxGraph.value_info_size(); k++)
+    {
+      if((strcmp(onnxGraph.value_info(k).name().c_str(), name.c_str()) == 0))
+      {
+        if( onnxGraph.value_info(k).type().tensor_type().has_shape() )
+        {
+          auto& tensorShape = onnxGraph.value_info(k).type().tensor_type().shape();
+          for (int j = 0; j < tensorShape.dim_size(); j++)
+          {
+            dims.push_back(tensorShape.dim(j).dim_value());
+            nodeFound = 1;
+          }
+        }
+      }
+      if (nodeFound) break;
+    }
+  }
+
+  // Check Outputs
   if (nodeFound == 0)
   {
     for (int k = 0; k < onnxGraph.output_size(); k++)
@@ -442,15 +448,18 @@ std::vector<int32_t> getNodeInputShape(GraphProto& onnxGraph, const std::string 
           for (int j = 0; j < tensorShape.dim_size(); j++)
           {
             dims.push_back(tensorShape.dim(j).dim_value());
+            nodeFound = 1;
           }
         }
       }
+      if (nodeFound) break;
     }
   }
+
   return dims;
 }
 
-int32_t TIDL_onnxGetIntAttr(const NodeProto& node, char * name, int32_t * valuePtr, int32_t idx)
+int32_t TIDL_onnxGetIntAttr(const NodeProto& node, const char * name, int32_t * valuePtr, int32_t idx)
 {
   int32_t i = TIDL_onnxGetAttrIdx(node, name);
   if(i != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
@@ -493,7 +502,7 @@ int32_t TIDL_onnxGetIntAttr(const NodeProto& node, char * name, int32_t * valueP
   return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
 }
 
-int32_t TIDL_onnxGetFloatAttr(const NodeProto& node, char * name, float * valuePtr, int32_t idx)
+int32_t TIDL_onnxGetFloatAttr(const NodeProto& node, const char * name, float * valuePtr, int32_t idx)
 {
   int32_t i = TIDL_onnxGetAttrIdx(node, name);
   if (i != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
@@ -528,7 +537,7 @@ int32_t TIDL_geTensorDim(TensorProto& tensor, int32_t idx)
 }
 
 
-int32_t TIDL_onnxGetStringAttr(const NodeProto& node, char * name, char * valuePtr, int32_t idx)
+int32_t TIDL_onnxGetStringAttr(const NodeProto& node, const char * name, char * valuePtr, int32_t idx)
 {
   strcpy(valuePtr, "");
   int32_t i = TIDL_onnxGetAttrIdx(node, name);
@@ -1782,7 +1791,9 @@ bool TIDL_checkPatchMerging(GraphProto& onnxGraph, std::vector<int>supportedNode
   sBuffer_t starts, axes, steps;
 
   int32_t reshapeIdx = supportedNodesIndices[0];
-  int32_t concatIdx;
+  int32_t concatIdx = -1;
+
+  uint8_t startAcc = 0;
 
   std::vector<int32_t> sliceIndices;
   std::vector<int32_t> firstLevelSliceIndices;
@@ -1809,81 +1820,99 @@ bool TIDL_checkPatchMerging(GraphProto& onnxGraph, std::vector<int>supportedNode
     }
   }
 
-  sliceIndices = firstLevelSliceIndices;
-  sliceIndices.insert(sliceIndices.end(), secondLevelSliceIndices.begin(), secondLevelSliceIndices.end());
-
-  /* check for starts, axes and stride */
-  uint8_t startAcc = 0;
-  for (int32_t i = 0; i < sliceIndices.size(); i++)
+  // Should have a valid concat node
+  if (concatIdx == -1)
   {
-    int32_t sliceIdx = sliceIndices[i];
-    auto node = onnxGraph.node(sliceIdx);
-    TIDL_onnxSaveAllowlistingMetaData(onnxGraph, sliceIdx, sliceLayer);
-    md = sliceLayer.allowlistingMetaData;
-    int32_t numInDims = md.varTensorsDims[0].size();
-    if (node.input_size() == 5)
+    isSupported = false;
+  }
+
+  // Should have 4 slice along first level and 4 along second
+  if (firstLevelSliceIndices.size() != 4 || secondLevelSliceIndices.size() != 4)
+  {
+    isSupported = false;
+  }
+
+  if (isSupported == true)
+  {
+    sliceIndices = firstLevelSliceIndices;
+    sliceIndices.insert(sliceIndices.end(), secondLevelSliceIndices.begin(), secondLevelSliceIndices.end());
+
+    for (int32_t i = 0; i < sliceIndices.size(); i++)
     {
-      TIDL_tfCopyFloatInitializerTensor(onnxGraph, sliceIdx, 1, starts);
-      TIDL_tfCopyFloatInitializerTensor(onnxGraph, sliceIdx, 3, axes);
-      TIDL_tfCopyFloatInitializerTensor(onnxGraph, sliceIdx, 4, steps);
-      /* single starts, single axes, single step*/
-      if ((starts.bufSize == 1) && (axes.bufSize == 1) && (steps.bufSize == 1))
+      int32_t sliceIdx = sliceIndices[i];
+      auto node = onnxGraph.node(sliceIdx);
+      TIDL_onnxSaveAllowlistingMetaData(onnxGraph, sliceIdx, sliceLayer);
+      md = sliceLayer.allowlistingMetaData;
+      int32_t numInDims = md.varTensorsDims[0].size();
+      if (node.input_size() == 5)
       {
-        int64_t startsVal = *((int64_t*)starts.ptr);
-        int64_t axesVal = *((int64_t*)axes.ptr);
-        int64_t stepVal = *((int64_t*)steps.ptr);
-
-        /* Normalize negative axis to positive equivalent */
-        if (axesVal < 0)
+        TIDL_tfCopyFloatInitializerTensor(onnxGraph, sliceIdx, 1, starts);
+        TIDL_tfCopyFloatInitializerTensor(onnxGraph, sliceIdx, 3, axes);
+        TIDL_tfCopyFloatInitializerTensor(onnxGraph, sliceIdx, 4, steps);
+        /* single starts, single axes, single step*/
+        if ((starts.bufSize == 1) && (axes.bufSize == 1) && (steps.bufSize == 1))
         {
-          axesVal += numInDims;
-        }
+          int64_t startsVal = *((int64_t*)starts.ptr);
+          int64_t axesVal = *((int64_t*)axes.ptr);
+          int64_t stepVal = *((int64_t*)steps.ptr);
 
-        /* accumulate starts value */
-        if (startsVal == 0 || startsVal == 1)
-        {
-          /* accumulate to check later */
-          startAcc <<= 1;
-          startAcc |= startsVal;
+          /* Normalize negative axis to positive equivalent */
+          if (axesVal < 0)
+          {
+            axesVal += numInDims;
+          }
+
+          /* accumulate starts value */
+          if (startsVal == 0 || startsVal == 1)
+          {
+            /* accumulate to check later */
+            startAcc <<= 1;
+            startAcc |= startsVal;
+          }
+          else
+          {
+            isSupported = false;
+            break;
+          }
+
+          /* if slice 0, 1, 2, 3 (firstLevelSlice) - axes = channel*/
+          if (i < 4)
+          {
+            bool ischannelAxis = ((numInDims - axesVal) == 3);
+            if(!ischannelAxis)
+            {
+              isSupported = false;
+              break;
+            }
+          }
+          /* if slice 4, 5, 6, 7 (secondLevelSlice) - axes = height */
+          else
+          {
+            bool isHeightAxis = ((numInDims - axesVal) == 2);
+            if (!isHeightAxis)
+            {
+              isSupported = false;
+              break;
+            }
+          }
+
+          /* step = 2 */
+          if (stepVal == 2)
+          {
+            /* okay */
+          }
+          else
+          {
+            isSupported = false;
+            break;
+          }
+
         }
         else
         {
           isSupported = false;
           break;
         }
-
-        /* if slice 0, 1, 2, 3 (firstLevelSlice) - axes = channel*/
-        if (i < 4)
-        {
-          bool ischannelAxis = ((numInDims - axesVal) == 3);
-          if(!ischannelAxis)
-          {
-            isSupported = false;
-            break;
-          }
-        }
-        /* if slice 4, 5, 6, 7 (secondLevelSlice) - axes = height */
-        else
-        {
-          bool isHeightAxis = ((numInDims - axesVal) == 2);
-          if (!isHeightAxis)
-          {
-            isSupported = false;
-            break;
-          }
-        }
-
-        /* step = 2 */
-        if (stepVal == 2)
-        {
-          /* okay */
-        }
-        else
-        {
-          isSupported = false;
-          break;
-        }
-
       }
       else
       {
@@ -1891,25 +1920,24 @@ bool TIDL_checkPatchMerging(GraphProto& onnxGraph, std::vector<int>supportedNode
         break;
       }
     }
+  }
+
+  if (isSupported == true)
+  {
+    /* check if starts is b01010011 = 83 */
+    if (startAcc == 83)
+    {
+      /* okay */
+    }
     else
     {
       isSupported = false;
-      break;
     }
   }
 
-  /* check if starts is b01010011 = 83 */
-  if (startAcc == 83)
+  if (isSupported == true)
   {
-    /* okay */
-  }
-  else
-  {
-    isSupported = false;
-  }
-
-  /* Check Concat axis is the width (last) axis */
-  {
+    /* Check Concat axis is the width (last) axis */
     NodeProto concatNode = onnxGraph.node(concatIdx);
     sTIDL_LayerPC_t concatLayer;
     TIDL_onnxSaveAllowlistingMetaData(onnxGraph, concatIdx, concatLayer);
@@ -2419,7 +2447,7 @@ int32_t TIDL_onnxMapSliceBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_Lay
 
   if (TIDL_onnxGetIntAttr(node, "starts", &isMultipleAxis, 1) != TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL)
   {
-    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Slice layer : TIDL_RT only supports single slice axis");
+    TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Slice layer : Only single axis slice is supported");
     return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
   }
 
@@ -2490,7 +2518,7 @@ int32_t TIDL_onnxMapSliceBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_Lay
 
       if(starts.bufSize > 1)
       {
-        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Slice layer : TIDL_RT only supports single slice axis");
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Slice layer : Only single axis slice is supported");
         return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
       }
       else
@@ -2500,9 +2528,9 @@ int32_t TIDL_onnxMapSliceBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_Lay
         {
           sliceParams.slicePoints[1] = 0x7fffffff;
         }
-        else if(endsPtr[0] == -1)
+        else if(endsPtr[0] == (-0x7fffffffffffffff))
         {
-          sliceParams.slicePoints[1] = -1;
+          sliceParams.slicePoints[1] = -0x7fffffff;
         }
         else
         {
@@ -2767,7 +2795,7 @@ int32_t TIDL_onnxGemmBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL_LayerPC
       layer.weights.ptr = NULL;
       layer.weights.bufSize = 0;
       layer.bias.ptr= NULL;
-      layer.bias.bufSize = NULL;
+      layer.bias.bufSize = 0;
     }
   }
 
@@ -5556,7 +5584,7 @@ int32_t TIDL_onnxMapReduceMeanBaseParams(GraphProto&   onnGraph, int32_t i, sTID
   NodeProto node  = onnGraph.node(i);
   int32_t axis = -1;
   int32_t status = TIDL_onnxGetIntAttr(node, "axes",   &layer.layerPCParams.reduceMeanParams.axis, 0);
-  TIDL_onnxGetIntAttr(node, "keepdims", &layer.layerPCParams.reduceMeanParams.reduceDims, 0);
+  TIDL_onnxGetIntAttr(node, "keepdims", &layer.layerPCParams.reduceMeanParams.keepDims, 0);
 
   status = TIDL_onnxSaveAllowlistingMetaData(onnGraph, i, layer);
   if(status != 0)
@@ -5615,7 +5643,7 @@ int32_t TIDL_onnxMapReduceSumBaseParams(GraphProto&   onnGraph, int32_t i, sTIDL
   NodeProto node  = onnGraph.node(i);
   int32_t axis = -1;
   int32_t status = TIDL_onnxGetIntAttr(node, "axes",   &layer.layerPCParams.reduceSumParams.axis, 0);
-  TIDL_onnxGetIntAttr(node, "keepdims", &layer.layerPCParams.reduceSumParams.reduceDims, 0);
+  TIDL_onnxGetIntAttr(node, "keepdims", &layer.layerPCParams.reduceSumParams.keepDims, 0);
 
   status = TIDL_onnxSaveAllowlistingMetaData(onnGraph, i, layer);
   if(status != 0)
@@ -6342,11 +6370,14 @@ int32_t tidl_fuseLayerNormBetaGamma(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, i
               }
             }
             /*Update bias by adding broadCastAdd x W*/
+            int32_t bT = layerNormConsumer.layerParams.innerProductParams.inputBTranspose; 
             for(i3 = 0; i3 < numOutCols; i3++)
             {
               for(i2 = 0; i2 < numInCols; i2++)
               {
-                pBias[i3] += pWeights[i2*numOutCols + i3] * pBeta[i2];
+                // weights may be stored as [in][out] (bT is 0) or [out][in] (bT is 1)
+                int32_t wIdx = bT ? (i3*numInCols + i2) : (i2*numOutCols + i3);
+                pBias[i3] += pWeights[wIdx] * pBeta[i2];
               }
             }
             free(pBeta);
@@ -6355,7 +6386,8 @@ int32_t tidl_fuseLayerNormBetaGamma(sTIDL_OrgNetwork_t  &pOrgTIDLNetStructure, i
             {
               for(i3 = 0; i3 < numOutCols; i3++)
               {
-                pWeights[i2*numOutCols + i3] *= pGamma[i2];
+                int32_t wIdx = bT ? (i3*numInCols + i2) : (i2*numOutCols + i3);
+                pWeights[wIdx] *= pGamma[i2];
               }
             }
             free(pGamma);
@@ -7735,6 +7767,227 @@ int32_t tidl_handleLayerswithMultipleOutputs (sTIDL_LayerPC_t &TIDLPCLayer, Grap
   return 0;
 }
 
+/** Reject external-data 'location' strings that are absolute paths or contain a ".."
+ * component, to prevent reading files outside the model's directory (path traversal). */
+static bool TIDL_isSafeExternalDataLocation(const std::string& location)
+{
+  if (location.empty())
+  {
+    return false;
+  }
+  /* Absolute POSIX/Windows path or Windows drive specifier are not allowed. */
+  if (location[0] == '/' || location[0] == '\\')
+  {
+    return false;
+  }
+  if ((location.size() >= 2) && (location[1] == ':'))
+  {
+    return false;
+  }
+  /* No path component may be "..". */
+  size_t start = 0;
+  for (size_t i = 0; i <= location.size(); i++)
+  {
+    if ((i == location.size()) || (location[i] == '/') || (location[i] == '\\'))
+    {
+      std::string component = location.substr(start, i - start);
+      if (component == "..")
+      {
+        return false;
+      }
+      start = i + 1;
+    }
+  }
+  return true;
+}
+
+/** Load the raw bytes of a single tensor whose data is stored in an external file
+ * (TensorProto.data_location == EXTERNAL) into the tensor's raw_data field, so that
+ * the rest of the importer can consume it like any in-memory tensor.
+ * Implements https://onnx.ai/onnx/repo-docs/ExternalData.html
+ * Returns 0 on success (or when the tensor has no external data), -1 on error. */
+int32_t TIDL_loadExternalDataForTensor(TensorProto* tensor, const std::string& baseDir)
+{
+  if (tensor->data_location() != TensorProto_DataLocation_EXTERNAL)
+  {
+    return 0;
+  }
+
+  std::string location;
+  long long   offset     = 0;
+  long long   length     = -1;
+  bool        haveLength = false;
+
+  for (int i = 0; i < tensor->external_data_size(); i++)
+  {
+    const StringStringEntryProto& entry = tensor->external_data(i);
+    const std::string&            key   = entry.key();
+    const std::string&            value = entry.value();
+    try
+    {
+      if (key == "location")
+      {
+        location = value;
+      }
+      else if (key == "offset")
+      {
+        offset = std::stoll(value);
+      }
+      else if (key == "length")
+      {
+        length     = std::stoll(value);
+        haveLength = true;
+      }
+      /* "checksum" is intentionally ignored. */
+    }
+    catch (const std::exception&)
+    {
+      TIDL_GLOBAL_REPORT_ERROR("Invalid external_data '%s' value '%s' for tensor '%s'",
+                               key.c_str(), value.c_str(), tensor->name().c_str());
+      return -1;
+    }
+  }
+
+  if (location.empty())
+  {
+    TIDL_GLOBAL_REPORT_ERROR("External data for tensor '%s' has no 'location' entry", tensor->name().c_str());
+    return -1;
+  }
+  if (!TIDL_isSafeExternalDataLocation(location))
+  {
+    TIDL_GLOBAL_REPORT_ERROR("External data location '%s' for tensor '%s' is not a safe relative path",
+                             location.c_str(), tensor->name().c_str());
+    return -1;
+  }
+
+  std::string fullPath = baseDir;
+  if (!fullPath.empty() && (fullPath.back() != '/'))
+  {
+    fullPath += "/";
+  }
+  fullPath += location;
+
+  std::ifstream ifs(fullPath.c_str(), std::ios::binary);
+  if (!ifs.is_open())
+  {
+    TIDL_GLOBAL_REPORT_ERROR("Could not open external data file '%s' for tensor '%s'",
+                             fullPath.c_str(), tensor->name().c_str());
+    return -1;
+  }
+
+  ifs.seekg(0, std::ios::end);
+  long long fileSize = (long long)ifs.tellg();
+  if ((offset < 0) || (offset > fileSize))
+  {
+    TIDL_GLOBAL_REPORT_ERROR("External data offset %lld out of range (file size %lld) for tensor '%s'",
+                             offset, fileSize, tensor->name().c_str());
+    return -1;
+  }
+  if (!haveLength || (length < 0))
+  {
+    length = fileSize - offset;
+  }
+  if ((offset + length) > fileSize)
+  {
+    TIDL_GLOBAL_REPORT_ERROR("External data range [%lld, %lld) exceeds file size %lld for tensor '%s'",
+                             offset, offset + length, fileSize, tensor->name().c_str());
+    return -1;
+  }
+
+  std::string buffer;
+  buffer.resize((size_t)length);
+  ifs.seekg(offset, std::ios::beg);
+  if (length > 0)
+  {
+    ifs.read(&buffer[0], (std::streamsize)length);
+  }
+  if (!ifs)
+  {
+    TIDL_GLOBAL_REPORT_ERROR("Failed to read %lld bytes at offset %lld from external data file '%s' for tensor '%s'",
+                             length, offset, fullPath.c_str(), tensor->name().c_str());
+    return -1;
+  }
+
+  tensor->set_raw_data(buffer);
+  tensor->clear_data_location();
+  tensor->clear_external_data();
+  return 0;
+}
+
+/** Recursively resolve external data for all tensors reachable from a graph:
+ * graph initializers, Constant/attribute tensors, and the bodies of control-flow
+ * subgraphs (If/Loop/Scan). Returns 0 on success, -1 on error. */
+int32_t TIDL_loadExternalDataForGraph(GraphProto* graph, const std::string& baseDir)
+{
+  int32_t status = 0;
+
+  for (int i = 0; i < graph->initializer_size(); i++)
+  {
+    status = TIDL_loadExternalDataForTensor(graph->mutable_initializer(i), baseDir);
+    if (status != 0)
+    {
+      return status;
+    }
+  }
+
+  for (int i = 0; i < graph->node_size(); i++)
+  {
+    NodeProto* node = graph->mutable_node(i);
+    for (int a = 0; a < node->attribute_size(); a++)
+    {
+      AttributeProto* attr = node->mutable_attribute(a);
+      switch (attr->type())
+      {
+        case AttributeProto_AttributeType_TENSOR:
+        {
+          status = TIDL_loadExternalDataForTensor(attr->mutable_t(), baseDir);
+          break;
+        }
+        case AttributeProto_AttributeType_TENSORS:
+        {
+          for (int t = 0; (t < attr->tensors_size()) && (status == 0); t++)
+          {
+            status = TIDL_loadExternalDataForTensor(attr->mutable_tensors(t), baseDir);
+          }
+          break;
+        }
+        case AttributeProto_AttributeType_GRAPH:
+        {
+          status = TIDL_loadExternalDataForGraph(attr->mutable_g(), baseDir);
+          break;
+        }
+        case AttributeProto_AttributeType_GRAPHS:
+        {
+          for (int g = 0; (g < attr->graphs_size()) && (status == 0); g++)
+          {
+            status = TIDL_loadExternalDataForGraph(attr->mutable_graphs(g), baseDir);
+          }
+          break;
+        }
+        default:
+          break;
+      }
+      if (status != 0)
+      {
+        return status;
+      }
+    }
+  }
+  return 0;
+}
+
+/** Resolve external data (ONNX External Data format) for an entire model, reading the
+ * referenced weight files relative to baseDir. No-op for tensors that are not external.
+ * Returns 0 on success, -1 on error. */
+int32_t TIDL_loadExternalDataForModel(ModelProto* model, const std::string& baseDir)
+{
+  if (model->has_graph())
+  {
+    return TIDL_loadExternalDataForGraph(model->mutable_graph(), baseDir);
+  }
+  return 0;
+}
+
 int32_t onnx_import(tidl_import_config * params, int32_t *totalData, int32_t* totalLayers)
 {
   int32_t                    i,j;
@@ -7769,6 +8022,20 @@ int32_t onnx_import(tidl_import_config * params, int32_t *totalData, int32_t* to
     TIDL_GLOBAL_REPORT_ERROR("Reading models params file failed");
     return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
   }
+
+  /* Resolve ONNX external data (weights stored in separate files alongside the model).
+   * The external_data 'location' is relative to the directory containing the model file. */
+  {
+    std::string modelPath((const char *)params->inputNetFile);
+    size_t      slashPos = modelPath.find_last_of("/\\");
+    std::string baseDir  = (slashPos == std::string::npos) ? std::string(".") : modelPath.substr(0, slashPos);
+    if (TIDL_loadExternalDataForModel(&onnxModel, baseDir) != 0)
+    {
+      TIDL_GLOBAL_REPORT_ERROR("Failed to load ONNX external data for model %s", (const char *)params->inputNetFile);
+      return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+    }
+  }
+
   GraphProto onnxGraph = onnxModel.graph();
   auto & opset_import = onnxModel.opset_import(0);
   onnxOpSetVersion =  opset_import.version();

@@ -76,6 +76,9 @@
 #include <limits>
 #include <math.h>
 #include "tidl_logicalOpLayer_ref.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -113,8 +116,19 @@ int32_t TIDL_LogicalOperatorRefProcess(sTIDL_DataParams_t * inDataParamsA,
     TIDL_ComputeBroadcastPitches(inDataParamsA, &inwidthPitchA, &inheightPitchA, &inchPitchA, &inDIM1PitchA, &inDIM2PitchA, &inbatchPitchA);
     TIDL_ComputeBroadcastPitches(inDataParamsB, &inwidthPitchB, &inheightPitchB, &inchPitchB, &inDIM1PitchB, &inDIM2PitchB, &inbatchPitchB);
     TIDL_ComputeBroadcastPitches(outDataParams, &outwidthPitch, &outheightPitch, &outchPitch, &outDIM1Pitch, &outDIM2Pitch, &outbatchPitch);
-
-
+                        
+    #ifdef BUILD_WITH_CUDA_LOGICAL
+    int32_t inputA_size = inDataParamsA->dimValues[TIDL_DIM_BATCH] * inDataParamsA->pitch[TIDL_ROI_PITCH];
+    int32_t inputB_size = inDataParamsB->dimValues[TIDL_DIM_BATCH] * inDataParamsB->pitch[TIDL_ROI_PITCH];
+    TIDL_cudaLogicalOp(inPtrA,
+                        inPtrB,
+                        outPtr,
+                        outDataParams->dimValues[TIDL_DIM_BATCH], outDataParams->dimValues[TIDL_DIM_DIM1], outDataParams->dimValues[TIDL_DIM_DIM2], outDataParams->dimValues[TIDL_DIM_NUMCH],
+                        outDataParams->dimValues[TIDL_DIM_HEIGHT], outDataParams->dimValues[TIDL_DIM_WIDTH],
+                        inbatchPitchA, inDIM1PitchA, inDIM2PitchA, inchPitchA, inheightPitchA,inwidthPitchA,
+                        inbatchPitchB, inDIM1PitchB, inDIM2PitchB, inchPitchB, inheightPitchB,inwidthPitchB,
+                        outbatchPitch, outDIM1Pitch, outDIM2Pitch, outchPitch, outheightPitch,outwidthPitch, logicalOperatorType, inputA_size, inputB_size);
+    #else
     for ( int32_t batchIdx = 0; batchIdx < outDataParams->dimValues[TIDL_DIM_BATCH] ; batchIdx++ )
     {
         for ( int32_t dim1Idx = 0; dim1Idx < outDataParams->dimValues[TIDL_DIM_DIM1] ; dim1Idx++ )
@@ -148,6 +162,7 @@ int32_t TIDL_LogicalOperatorRefProcess(sTIDL_DataParams_t * inDataParamsA,
             }
         }
     } 
+    #endif
     return 0;
 }
 
@@ -164,7 +179,17 @@ int32_t TIDL_Not_IsInf_IsNan_RefProcess(sTIDL_DataParams_t * inDataParamsA,
     TIDL_ComputeBroadcastPitches(inDataParamsA, &inwidthPitchA, &inheightPitchA, &inchPitchA, &inDIM1PitchA, &inDIM2PitchA, &inbatchPitchA);
     TIDL_ComputeBroadcastPitches(outDataParams, &outwidthPitch, &outheightPitch, &outchPitch, &outDIM1Pitch, &outDIM2Pitch, &outbatchPitch);
 
-
+    #ifdef BUILD_WITH_CUDA_LOGICAL
+    int32_t inputA_size = inDataParamsA->dimValues[TIDL_DIM_BATCH] * inDataParamsA->pitch[TIDL_ROI_PITCH];
+    TIDL_cudaNotIsInfIsNan(inPtrA,
+                        outPtr,
+                        outDataParams->dimValues[TIDL_DIM_BATCH], outDataParams->dimValues[TIDL_DIM_DIM1],
+                        outDataParams->dimValues[TIDL_DIM_DIM2], outDataParams->dimValues[TIDL_DIM_NUMCH],
+                        outDataParams->dimValues[TIDL_DIM_HEIGHT], outDataParams->dimValues[TIDL_DIM_WIDTH],
+                        inbatchPitchA, inDIM1PitchA, inDIM2PitchA, inchPitchA, inheightPitchA, inwidthPitchA,
+                        outbatchPitch, outDIM1Pitch, outDIM2Pitch, outchPitch, outheightPitch, outwidthPitch,
+                        booleanOperatorType, params->detect_negative, params->detect_positive, inputA_size);
+    #else
     for ( int32_t batchIdx = 0; batchIdx < outDataParams->dimValues[TIDL_DIM_BATCH] ; batchIdx++ )
     {
         for ( int32_t dim1Idx = 0; dim1Idx < outDataParams->dimValues[TIDL_DIM_DIM1] ; dim1Idx++ )
@@ -211,7 +236,8 @@ int32_t TIDL_Not_IsInf_IsNan_RefProcess(sTIDL_DataParams_t * inDataParamsA,
                 }
             }
         }
-    } 
+    }
+    #endif
     return 0;
 }
 
@@ -236,7 +262,24 @@ int32_t TIDL_Where_RefProcess(sTIDL_DataParams_t * inDataParamsCondition,
     TIDL_ComputeBroadcastPitches(inDataParamsY, &inwidthPitchY, &inheightPitchY, &inchPitchY, &inDIM1PitchY, &inDIM2PitchY, &inbatchPitchY);
     TIDL_ComputeBroadcastPitches(outDataParams, &outwidthPitch, &outheightPitch, &outchPitch, &outDIM1Pitch, &outDIM2Pitch, &outbatchPitch);
 
+    #ifdef BUILD_WITH_CUDA_LOGICAL
 
+    int32_t inputA_size = inDataParamsX->dimValues[TIDL_DIM_BATCH] * inDataParamsX->pitch[TIDL_ROI_PITCH];
+    int32_t inputB_size = inDataParamsY->dimValues[TIDL_DIM_BATCH] * inDataParamsY->pitch[TIDL_ROI_PITCH];
+    int32_t inPtrConditionSize = inDataParamsCondition->dimValues[TIDL_DIM_BATCH] * inDataParamsCondition->pitch[TIDL_ROI_PITCH];
+    
+    TIDL_cudaWhereOperator(inPtrX,
+                        inPtrY,
+                        inPtrCondition,
+                        outPtr,
+                        outDataParams->dimValues[TIDL_DIM_BATCH], outDataParams->dimValues[TIDL_DIM_DIM1], outDataParams->dimValues[TIDL_DIM_DIM2], outDataParams->dimValues[TIDL_DIM_NUMCH],
+                        outDataParams->dimValues[TIDL_DIM_HEIGHT], outDataParams->dimValues[TIDL_DIM_WIDTH],
+                        inbatchPitchX, inDIM1PitchX, inDIM2PitchX, inchPitchX, inheightPitchX,inwidthPitchX,
+                        inbatchPitchY, inDIM1PitchY, inDIM2PitchY, inchPitchY, inheightPitchY,inwidthPitchY,
+                        outbatchPitch, outDIM1Pitch, outDIM2Pitch, outchPitch, outheightPitch,outwidthPitch,
+                        inputA_size, inputB_size, inPtrConditionSize,
+                        inbatchPitchCondition,inDIM1PitchCondition,inDIM2PitchCondition,inchPitchCondition,inheightPitchCondition,inwidthPitchCondition);
+    #else
     for ( int32_t batchIdx = 0; batchIdx < outDataParams->dimValues[TIDL_DIM_BATCH] ; batchIdx++ )
     {
         for ( int32_t dim1Idx = 0; dim1Idx < outDataParams->dimValues[TIDL_DIM_DIM1] ; dim1Idx++ )
@@ -261,7 +304,8 @@ int32_t TIDL_Where_RefProcess(sTIDL_DataParams_t * inDataParamsCondition,
                 }
             }
         }
-    } 
+    }
+    #endif
     return 0;
 
 }
@@ -283,7 +327,19 @@ int32_t TIDL_ComparisonOperatorRefProcess(sTIDL_DataParams_t * inDataParamsA,
     TIDL_ComputeBroadcastPitches(inDataParamsB, &inwidthPitchB, &inheightPitchB, &inchPitchB, &inDIM1PitchB, &inDIM2PitchB, &inbatchPitchB);
     TIDL_ComputeBroadcastPitches(outDataParams, &outwidthPitch, &outheightPitch, &outchPitch, &outDIM1Pitch, &outDIM2Pitch, &outbatchPitch);
 
+    int32_t inputA_size = inDataParamsA->dimValues[TIDL_DIM_BATCH] * inDataParamsA->pitch[TIDL_ROI_PITCH];
+    int32_t inputB_size = inDataParamsB->dimValues[TIDL_DIM_BATCH] * inDataParamsB->pitch[TIDL_ROI_PITCH];
 
+    #ifdef BUILD_WITH_CUDA_LOGICAL
+    TIDL_cudaComparisonOperator(inPtrA,
+                        inPtrB,
+                        outPtr,
+                        outDataParams->dimValues[TIDL_DIM_BATCH], outDataParams->dimValues[TIDL_DIM_DIM1], outDataParams->dimValues[TIDL_DIM_DIM2], outDataParams->dimValues[TIDL_DIM_NUMCH],
+                        outDataParams->dimValues[TIDL_DIM_HEIGHT], outDataParams->dimValues[TIDL_DIM_WIDTH],
+                        inbatchPitchA, inDIM1PitchA, inDIM2PitchA, inchPitchA, inheightPitchA,inwidthPitchA,
+                        inbatchPitchB, inDIM1PitchB, inDIM2PitchB, inchPitchB, inheightPitchB,inwidthPitchB,
+                        outbatchPitch, outDIM1Pitch, outDIM2Pitch, outchPitch, outheightPitch,outwidthPitch, booleanOperatorType, inputA_size, inputB_size);
+    #else
     for ( int32_t batchIdx = 0; batchIdx < outDataParams->dimValues[TIDL_DIM_BATCH] ; batchIdx++ )
     {
         for ( int32_t dim1Idx = 0; dim1Idx < outDataParams->dimValues[TIDL_DIM_DIM1] ; dim1Idx++ )
@@ -327,6 +383,7 @@ int32_t TIDL_ComparisonOperatorRefProcess(sTIDL_DataParams_t * inDataParamsA,
             }
         }
     } 
+    #endif
     return 0;
 
 }

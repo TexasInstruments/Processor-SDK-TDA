@@ -94,20 +94,24 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.unsqueeze")>()
   }
   else if (md.numConstInputs >= 1)
   {
-    sBuffer_t buf;
-    buf = TIDL_extractConstantTensorData(call, 1, md, 0);
-    if (buf.ptr != NULL)
+    auto axesConstIt = std::find(md.constTensorIndices.begin(), md.constTensorIndices.end(), 1);
+    if (axesConstIt != md.constTensorIndices.end())
     {
-      axes_status = 0;
-      num_axes_4_squeeze = buf.bufSize;
-      long long int *axesPtr = (long long int *)buf.ptr;
-      for (int i = 0; i < num_axes_4_squeeze; i++)
+      int32_t axesConstIdx = std::distance(md.constTensorIndices.begin(), axesConstIt);
+      sBuffer_t buf = TIDL_extractConstantTensorData(call, 1, md, axesConstIdx);
+      if (buf.ptr != NULL)
       {
-        axes[i] = (int32_t)axesPtr[i];
+        axes_status = 0;
+        num_axes_4_squeeze = buf.bufSize;
+        long long int *axesPtr = (long long int *)buf.ptr;
+        for (int i = 0; i < num_axes_4_squeeze; i++)
+        {
+          axes[i] = (int32_t)axesPtr[i];
+        }
+        free(buf.ptr);
+        buf.ptr = NULL;
+        buf.bufSize = 0;
       }
-      free(buf.ptr);
-      buf.ptr = NULL;
-      buf.bufSize = 0;
     }
   }
   else if (md.numVarInputs > 1)
@@ -122,15 +126,8 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.unsqueeze")>()
     return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
   }
 
-  if (layer.allowlistingMetaData.varTensorsDims.size() != 0)
-  {
-    numDim = layer.allowlistingMetaData.varTensorsDims[0].size();
-    numDim = (numDim == 0) ? 4 : numDim;
-  }
-  else
-  {
-    numDim = 4;
-  }
+  /** Get numDim from data tensor (input 0), whether it is variable or const */
+  numDim = TIDL_getNumDimsForTensorIndex(md, 0);
 
   for (ii = 0; ii < TIDL_DIM_MAX; ii++)
   {
@@ -161,5 +158,22 @@ int32_t TidlParseTVM::parse<OpNameStr("tidl.unsqueeze")>()
       }
     }
   }
+
+  /* If data input (input 0) is a constant, store it in layer.weights
+   * so tidl_addConstDataLayers can create the appropriate ConstDataLayer */
+  for (int32_t i = 0; i < (int32_t)md.numConstInputs; i++)
+  {
+    if (md.constTensorIndices[i] == 0)
+    {
+      layer.weights = TIDL_extractConstantTensorData(call, 0, md, i);
+      if (layer.weights.ptr == NULL)
+      {
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Allowlisting : Unsqueeze layer : Unable to read constant data input");
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+      }
+      break;
+    }
+  }
+
   return TIDL_IMPORT_DIAGNOSIS_RETURN_OK;
 }

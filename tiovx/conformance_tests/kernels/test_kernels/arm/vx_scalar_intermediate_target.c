@@ -251,6 +251,11 @@ static vx_status VX_CALLBACK tivxScalarIntermediateControl(
 
 void tivxAddTargetKernelScalarIntermediate(void)
 {
+    #if !(defined(SOC_J722S) || defined(SOC_AM62A) || defined(SOC_TDA54))
+    vx_enum self_cpu;
+    self_cpu = tivxGetSelfCpuId();
+    #endif
+
     char target_name[TIVX_TARGET_MAX_NAME];
 
     if( ((vx_status)VX_SUCCESS == tivxKernelsTargetUtilsAssignTargetNameMcu(target_name)) ||
@@ -267,10 +272,43 @@ void tivxAddTargetKernelScalarIntermediate(void)
                             tivxScalarIntermediateControl,
                             NULL);
     }
+    #if !(defined(SOC_J722S) || defined(SOC_AM62A) || defined(SOC_TDA54))
+    else if (self_cpu == TIVX_CPU_ID_MCU3_0)
+    {
+        strncpy(target_name, TIVX_TARGET_MCU3_0, TIVX_TARGET_MAX_NAME);
+        tivxAddTargetKernelByName(
+                            TIVX_KERNEL_SCALAR_INTERMEDIATE_NAME,
+                            target_name,
+                            tivxScalarIntermediateProcess,
+                            tivxScalarIntermediateCreate,
+                            tivxScalarIntermediateDelete,
+                            tivxScalarIntermediateControl,
+                            NULL);
+    }
+    #endif
+    #if defined(SOC_J784S4)
+    else if (self_cpu == TIVX_CPU_ID_MCU4_0)
+    {
+        strncpy(target_name, TIVX_TARGET_MCU4_0, TIVX_TARGET_MAX_NAME);
+        tivxAddTargetKernelByName(
+                            TIVX_KERNEL_SCALAR_INTERMEDIATE_NAME,
+                            target_name,
+                            tivxScalarIntermediateProcess,
+                            tivxScalarIntermediateCreate,
+                            tivxScalarIntermediateDelete,
+                            tivxScalarIntermediateControl,
+                            NULL);
+    }
+    #endif
 }
 
 void tivxRemoveTargetKernelScalarIntermediate(void)
 {
+    #if !(defined(SOC_J722S) || defined(SOC_AM62A) || defined(SOC_TDA54))
+    vx_enum self_cpu;
+    self_cpu = tivxGetSelfCpuId();
+    #endif
+
     char target_name[TIVX_TARGET_MAX_NAME];
 
     if( ((vx_status)VX_SUCCESS == tivxKernelsTargetUtilsAssignTargetNameMcu(target_name)) ||
@@ -281,6 +319,22 @@ void tivxRemoveTargetKernelScalarIntermediate(void)
         tivxRemoveTargetKernelByName(TIVX_KERNEL_SCALAR_INTERMEDIATE_NAME,
             target_name);
     }
+    #if !(defined(SOC_J722S) || defined(SOC_AM62A) || defined(SOC_TDA54))
+    else if (self_cpu == TIVX_CPU_ID_MCU3_0)
+    {
+        strncpy(target_name, TIVX_TARGET_MCU3_0, TIVX_TARGET_MAX_NAME);
+        tivxRemoveTargetKernelByName(TIVX_KERNEL_SCALAR_INTERMEDIATE_NAME,
+            target_name);
+    }
+    #endif
+    #if defined(SOC_J784S4)
+    else if (self_cpu == TIVX_CPU_ID_MCU4_0)
+    {
+        strncpy(target_name, TIVX_TARGET_MCU4_0, TIVX_TARGET_MAX_NAME);
+        tivxRemoveTargetKernelByName(TIVX_KERNEL_SCALAR_INTERMEDIATE_NAME,
+            target_name);
+    }
+    #endif
 }
 
 

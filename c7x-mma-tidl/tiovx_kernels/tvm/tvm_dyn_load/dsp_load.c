@@ -122,6 +122,8 @@ static const char *dsp_syms_names[] = {
 "appMemFree",
 "appMemResetScratchHeap",
 "appUdmaGetObj",
+"appWriteBinToFile",
+"appReadBinFromFile",
 
 "DmaUtilsAutoInc3d_configure",
 "DmaUtilsAutoInc3d_convertTrVirtToPhyAddr",
@@ -174,6 +176,8 @@ dspload_get_dsp_syms_addrs(void)
   /* for symbol address only, type does not matter */
   extern int TIDL_VISION_FXNS;
   extern void *appUdmaGetObj(void);
+  extern int32_t appWriteBinToFile(const char *filename, void *ptr, int32_t size, int32_t count);
+  extern int32_t appReadBinFromFile(const char *filename, void *ptr, int32_t size, int32_t count);
   extern void DmaUtilsAutoInc3d_configure(void);
   extern void DmaUtilsAutoInc3d_convertTrVirtToPhyAddr(void);
   extern void DmaUtilsAutoInc3d_deconfigure(void);
@@ -207,6 +211,8 @@ dspload_get_dsp_syms_addrs(void)
   dsp_syms_addrs[i++] = &appMemFree;
   dsp_syms_addrs[i++] = &appMemResetScratchHeap;
   dsp_syms_addrs[i++] = &appUdmaGetObj;
+  dsp_syms_addrs[i++] = &appWriteBinToFile;
+  dsp_syms_addrs[i++] = &appReadBinFromFile;
   dsp_syms_addrs[i++] = &DmaUtilsAutoInc3d_configure;
   dsp_syms_addrs[i++] = &DmaUtilsAutoInc3d_convertTrVirtToPhyAddr;
   dsp_syms_addrs[i++] = &DmaUtilsAutoInc3d_deconfigure;

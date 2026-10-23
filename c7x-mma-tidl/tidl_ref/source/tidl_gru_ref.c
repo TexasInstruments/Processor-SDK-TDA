@@ -125,8 +125,7 @@ static void TIDL_updateGRUMemorySizes(const TIDL_LayerSpecificParams *layerSpeci
   int32_t scratchDataSize;
   int32_t paramMemSize = 0;
   int32_t outDataSize = TIDL_refGetOutDataSize(commonParams, layerSpecificParams, layerIdx);
-  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(commonParams->net,
-                                                        commonParams->net->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_DataParams_t *inDataParams = &commonParams->net->TIDLLayers[commonParams->net->TIDLLayers[layerIdx].inData[0]].outData;
 
   outBatchPitch = commonParams->net->TIDLLayers[layerIdx].outData.pitch[TIDL_ROI_PITCH];
 

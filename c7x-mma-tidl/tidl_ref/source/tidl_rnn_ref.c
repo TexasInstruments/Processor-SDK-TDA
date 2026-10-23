@@ -89,6 +89,9 @@
 #include "tidl_alg_utils.h"
 #include "tidl_rnn_ref.h"
 #include "tidl_forceNegativeTest.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+#endif
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -137,8 +140,7 @@ static void TIDL_updateRNNMemorySizes(const TIDL_LayerSpecificParams *layerSpeci
   int32_t scratchDataSize;
   int32_t paramMemSize = 0;
   int32_t outDataSize = TIDL_refGetOutDataSize(commonParams, layerSpecificParams, layerIdx);
-  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(commonParams->net,
-                                                        commonParams->net->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_DataParams_t *inDataParams = &commonParams->net->TIDLLayers[commonParams->net->TIDLLayers[layerIdx].inData[0]].outData;
 
   outBatchPitch = commonParams->net->TIDLLayers[layerIdx].outData.pitch[TIDL_ROI_PITCH];
 
@@ -564,6 +566,24 @@ template<class Tin, class Tout> static int32_t TIDL_refRNNCoreFloat(
   {
     sequence_lens = (int32_t *)get_int8_t_pointer((int8_t *)net, params->sequence_lens);
   }
+
+#ifdef BUILD_WITH_CUDA_RNN
+  status = TIDL_cudaRNN<Tin, Tout>(
+      inPtr, WPtr, RPtr, biasPtr,
+      initial_hPtr, outPtr,
+      batch_size, seq_length, input_size, hidden_size,
+      num_directions, direction, layout,
+      (int32_t)isClipSet, (float)clip,
+      params->activations, params->activation_alpha, params->activation_beta,
+      sequence_lens,
+      (int32_t)inDataParams->pitch[TIDL_CHANNEL_PITCH],
+      (int32_t)inDataParams->pitch[TIDL_LINE_PITCH],
+      (int32_t)outDataParams->pitch[TIDL_DIM2_PITCH],
+      (int32_t)outDataParams->pitch[TIDL_CHANNEL_PITCH],
+      (int32_t)outDataParams->pitch[TIDL_LINE_PITCH],
+      (int32_t)params->incrementAxis);
+  return status;
+#endif
 
   /* Scratch: Ht[batch_size * hidden_size] + ht_new[hidden_size] */
   int32_t requiredScratchSize = (batch_size * hidden_size + hidden_size) * sizeof(Tin);

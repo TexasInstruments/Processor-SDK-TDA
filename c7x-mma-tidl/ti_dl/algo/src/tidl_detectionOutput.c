@@ -90,8 +90,6 @@
 #define TWELEVE 12
 #define THIRTEEN 13
 
-#include "tidl_odFindValidLocAndScore_ixX_oxX_priv.h"
-
 #ifndef HOST_EMULATION
 #define TIDL_DET_LAYER_PROFILE
 #endif
@@ -2105,9 +2103,6 @@ int32_t TIDL_findValidLocAndScore(void *pKerPrivArgs,
   int32_t simdWidth = TIDL_SIMD_WIDTH >> 2;
   uint32_t simdShift = 0;
   simdShift = SIMD_SHIFT_FROM_WIDTH<(TIDL_SIMD_WIDTH >> 2)>::_value;
-
-  TIDL_odFindValidLocAndScore_ixX_oxX_PrivArgs *pKerPrivArgsL =
-      (TIDL_odFindValidLocAndScore_ixX_oxX_PrivArgs *)pKerPrivArgs;
 #ifdef HOST_EMULATION
   if ((((uint32_t)flowCtrl & TIDL_FLOW_CTRL_REF_ONLY) == TIDL_FLOW_CTRL_REF_ONLY))
   {
@@ -2171,7 +2166,7 @@ int32_t TIDL_findValidLocAndScore(void *pKerPrivArgs,
   else
 #endif
   {
-    countM = pKerPrivArgsL->execute((void *)pKerPrivArgsL, NULL, NULL, NULL, NULL);
+    countM = TIDL_odFindValidLocAndScoreKernelExec(pKerPrivArgs, NULL, NULL, NULL, NULL);
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
     <justification start>
@@ -2275,7 +2270,7 @@ int32_t TIDL_findValidLocAndScore(void *pKerPrivArgs,
     else
 #endif
     {
-      pKerPrivArgsL->execute((void *)pKerPrivArgsL, NULL, NULL, NULL, NULL);
+      TIDL_odFindValidLocAndScoreKernelExec(pKerPrivArgs, NULL, NULL, NULL, NULL);
     }
   }
   return status;
@@ -2523,8 +2518,7 @@ int32_t TIDL_DetectionOutputAlloc(const TIDL_LayerSpecificParams *layerSpecificP
   uint32_t elementSize = 0;
   int32_t priorBoxParamSize;
 
-  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(params->net,
-                                                        params->net->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_DataParams_t *inDataParams = &params->net->TIDLLayers[params->net->TIDLLayers[layerIdx].inData[0]].outData;
 
   sTIDL_DetectOutputParams_t *detectOutParams = &params->net->TIDLLayers[layerIdx].layerParams.detectOutParams;
 
@@ -2604,7 +2598,7 @@ int32_t TIDL_DetectionOutputAlloc(const TIDL_LayerSpecificParams *layerSpecificP
   if (!(TIDL_isOutDataBuff(params->net,
                             params->net->TIDLLayers[layerIdx].outData.dataId,
                             params->currLayersGroupId) == 0) ||
-      !(params->net->dataFlowInfo == NULL))
+      !(params->net->dataFlowInfo == 0))
   {
     outDataSize = 0;
   }
@@ -2675,8 +2669,7 @@ int32_t TIDL_DetectionOutputInit(const TIDL_LayerSpecificParams *layerSpecificPa
   uint32_t priorBoxParamSize;
   int32_t curData = 0;
   int32_t scratchDataSize;
-  sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(params->net,
-                                                        params->net->TIDLLayers[layerIdx].inData[0]);
+  sTIDL_DataParams_t *inDataParams = &params->net->TIDLLayers[params->net->TIDLLayers[layerIdx].inData[0]].outData;
   sTIDL_ALgDetectOutputParams_t *algDetectOutParams = &algLayer->layerParams.detectionOutputParams;
   float32_tidl *priorData;
 
@@ -2775,7 +2768,7 @@ int32_t TIDL_DetectionOutputInit(const TIDL_LayerSpecificParams *layerSpecificPa
                             params->net->TIDLLayers[layerIdx].outData.dataId,
                             params->currLayersGroupId) == 1)
   #ifdef HOST_EMULATION
-        || (params->net->dataFlowInfo != NULL)
+        || (params->net->dataFlowInfo != 0)
   #endif
     )
     {
@@ -3025,9 +3018,6 @@ int32_t TIDL_DetectionOutputProcess(TIDL_NetworkCommonParams *commonParams,
     In sigmoid acctual score are compared instead of upper bound in softmax.
   */
 
-    TIDL_odFindValidLocAndScore_ixX_oxX_PrivArgs *pKerPrivArgs =
-        (TIDL_odFindValidLocAndScore_ixX_oxX_PrivArgs *)algLayer->kernelHandle[0][0];
-
     if (status == TIDL_SUCCESS)
     {
       if (params->reserve3 == TIDL_SAFETY_FLAG_OD_FORCE_KERNEL_SCORECONVERT)
@@ -3042,7 +3032,7 @@ int32_t TIDL_DetectionOutputProcess(TIDL_NetworkCommonParams *commonParams,
       {
         /*Do nothing*/
       }
-      status = TIDL_findValidLocAndScore(pKerPrivArgs, params, algDetLyrParams, priorData, flowCtrl);
+      status = TIDL_findValidLocAndScore(algLayer->kernelHandle[0][0], params, algDetLyrParams, priorData, flowCtrl);
     }
 
 #ifdef TIDL_DET_LAYER_PROFILE

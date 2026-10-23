@@ -157,6 +157,9 @@
 #include "tidl_constraint_size.h"
 #include "tidl_constraint_attention.h"
 #include "tidl_constraint_nonZero.h"
+#include "tidl_constraint_gqa.h"
+#include "tidl_constraint_matMulNBits.h"
+#include "tidl_constraint_rope.h"
 
 
 /// @brief Contains the constraints and other metadata of TIDL layers
@@ -275,6 +278,9 @@ static const map<int32_t, TidlConstraintTableEntry> tidlConstraintTable =
     JTE( TIDL_SizeLayer                    , tidlConstraintSize),
     JTE( TIDL_AttentionLayer               , tidlConstraintAttention),
     JTE( TIDL_NonZeroLayer                 , tidlConstraintNonZero),
+    JTE( TIDL_GroupQueryAttentionLayer     , tidlConstraintGroupQueryAttention),
+    JTE( TIDL_MatMulNBitsLayer             , tidlConstraintMatMulNBits),
+    JTE( TIDL_RotaryEmbeddingLayer         , tidlConstraintRotaryEmbedding),
 };
 
 #endif /*TIDL_CONSTRAINT_TABLE_H_ */

@@ -78,6 +78,7 @@
 #include "tidl_custom_import.h"
 #include "tidl_import_diag.h"
 
+#undef __MODULE__
 #define __MODULE__ "[PARSER]"
 
 using namespace std;
@@ -218,7 +219,7 @@ TensorProto TIDL_getConstTensor(GraphDef& tfGraphDef, const string name)
 }
 
 
-int32_t TIDL_hasAttr(const NodeDef& node, char * name)
+int32_t TIDL_hasAttr(const NodeDef& node, const char * name)
 {
   for (auto&& it = node.attr().begin(); it != node.attr().end();)
   {
@@ -232,7 +233,7 @@ int32_t TIDL_hasAttr(const NodeDef& node, char * name)
   return (0);
 }
 
-int32_t TIDL_getAttr_type(const NodeDef& node, char * name, int32_t * type)
+int32_t TIDL_getAttr_type(const NodeDef& node, const char * name, int32_t * type)
 {
   if(TIDL_hasAttr(node,name))
   {
@@ -251,7 +252,7 @@ int32_t TIDL_getAttr_type(const NodeDef& node, char * name, int32_t * type)
   return (0);
 }
 
-int32_t TIDL_getAttr_padding(const NodeDef& node, char * name, int32_t * padType)
+int32_t TIDL_getAttr_padding(const NodeDef& node, const char * name, int32_t * padType)
 {
   if(TIDL_hasAttr(node,name))
   {
@@ -274,7 +275,7 @@ int32_t TIDL_getAttr_padding(const NodeDef& node, char * name, int32_t * padType
   }
   return (0);
 }
-int32_t TIDL_getAttr_data_format(const NodeDef& node, char * name)
+int32_t TIDL_getAttr_data_format(const NodeDef& node, const char * name)
 {
   if(TIDL_hasAttr(node,name))
   {
@@ -309,7 +310,7 @@ int32_t TIDL_getAttr_data_format(const NodeDef& node, char * name)
   }
   return (0);
 }
-int32_t TIDL_getAttr_value(const NodeDef& node, char * name, int32_t * valuePtr, int32_t idx)
+int32_t TIDL_getAttr_value(const NodeDef& node, const char * name, int32_t * valuePtr, int32_t idx)
 {
   if(TIDL_hasAttr(node,name))
   {
@@ -321,7 +322,7 @@ int32_t TIDL_getAttr_value(const NodeDef& node, char * name, int32_t * valuePtr,
   return (0);
 }
 
-int32_t TIDL_getAttr_bool(const NodeDef& node, char * name, bool * valuePtr)
+int32_t TIDL_getAttr_bool(const NodeDef& node, const char * name, bool * valuePtr)
 {
   if(TIDL_hasAttr(node,name))
   {
@@ -333,7 +334,7 @@ int32_t TIDL_getAttr_bool(const NodeDef& node, char * name, bool * valuePtr)
   return (0);
 }
 
-int32_t TIDL_getAttr_float(const NodeDef& node, char * name, float * valuePtr, int32_t idx)
+int32_t TIDL_getAttr_float(const NodeDef& node, const char * name, float * valuePtr, int32_t idx)
 {
   if (TIDL_hasAttr(node, name))
   {

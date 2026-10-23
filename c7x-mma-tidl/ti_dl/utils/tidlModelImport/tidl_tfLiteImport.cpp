@@ -85,6 +85,7 @@ using namespace tflite;
 #include "tidl_custom_import.h"
 #include "tidl_import_common_model_check.h"
 
+#undef __MODULE__
 #define __MODULE__ "[PARSER]"
 
 #define IS_SIGNED_DATA (1)
@@ -2031,13 +2032,13 @@ int32_t TIDL_tfliteMapStridedSliceParams(sTIDL_OrgNetwork_t   *pOrgTIDLNetStruct
 static int32_t tidl_getFBModel(uint8_t * fileString, uint8_t **buffer_pointer)
 {
   FILE * fptr;
-  int32_t netSize;
+  uint32_t netSize;
 
   fptr = fopen((const char *)fileString, "rb");
   if (fptr)
   {
     fseek(fptr, 0L, SEEK_END);
-    netSize = ftell(fptr);
+    netSize = (uint32_t)ftell(fptr);
     fseek(fptr, 0L, SEEK_SET);
     *buffer_pointer = (uint8_t *)malloc(netSize);
     fread(*buffer_pointer, 1, netSize, fptr);
@@ -2372,13 +2373,14 @@ int32_t tidl_tfliteLayerFillTensorNames(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructu
   auto tensors   = (*tfliteModel->subgraphs())[0]->tensors();
 
   const auto *op = operators->Get(i);
-  if(strlen(tensors->Get(op->outputs()->Get(0))->name()->c_str()) < TIDL_STRING_SIZE)
+  const auto *outName = tensors->Get(op->outputs()->Get(0))->name();
+  if((int32_t)outName->size() < TIDL_STRING_SIZE)
   {
-    strcpy((char*)pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].name, tensors->Get(op->outputs()->Get(0))->name()->c_str());
+    strcpy((char*)pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].name, outName->c_str());
   }
   else
   {
-    TIDL_GLOBAL_REPORT_ERROR("Tensor name(%s) exceeds %d characters, exiting", tensors->Get(op->outputs()->Get(0))->name()->c_str(), TIDL_STRING_SIZE);
+    TIDL_GLOBAL_REPORT_ERROR("Tensor name(%s) exceeds %d characters, exiting", outName->c_str(), TIDL_STRING_SIZE);
     return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
   }
 
@@ -2392,25 +2394,27 @@ int32_t tidl_tfliteLayerFillTensorNames(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructu
 
       if(pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].layerType == TIDL_Deconv2DLayer)
       {
-        if(strlen(tensors->Get(op->inputs()->Get(j+2))->name()->c_str()) < TIDL_STRING_SIZE)
+        const auto *inName = tensors->Get(op->inputs()->Get(j+2))->name();
+        if((int32_t)inName->size() < TIDL_STRING_SIZE)
         {
-          strcpy((char*)pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].inDataNames[j], tensors->Get(op->inputs()->Get(j+2))->name()->c_str());
+          strcpy((char*)pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].inDataNames[j], inName->c_str());
         }
         else
         {
-          TIDL_GLOBAL_REPORT_ERROR("Tensor name(%s) exceeds %d characters, exiting", tensors->Get(op->inputs()->Get(j+2))->name()->c_str(), TIDL_STRING_SIZE);
+          TIDL_GLOBAL_REPORT_ERROR("Tensor name(%s) exceeds %d characters, exiting", inName->c_str(), TIDL_STRING_SIZE);
           return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
         }
       }
       else
       {
-        if(strlen(tensors->Get(op->inputs()->Get(j))->name()->c_str()) < TIDL_STRING_SIZE)
+        const auto *inName = tensors->Get(op->inputs()->Get(j))->name();
+        if((int32_t)inName->size() < TIDL_STRING_SIZE)
         {
-          strcpy((char*)pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].inDataNames[j], tensors->Get(op->inputs()->Get(j))->name()->c_str());
+          strcpy((char*)pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].inDataNames[j], inName->c_str());
         }
         else
         {
-          TIDL_GLOBAL_REPORT_ERROR("Tensor name(%s) exceeds %d characters, exiting", tensors->Get(op->inputs()->Get(j))->name()->c_str(), TIDL_STRING_SIZE);
+          TIDL_GLOBAL_REPORT_ERROR("Tensor name(%s) exceeds %d characters, exiting", inName->c_str(), TIDL_STRING_SIZE);
           return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
         }
       }
@@ -2437,13 +2441,14 @@ int32_t tidl_tfliteLayerFillTensorNames(sTIDL_OrgNetwork_t   *pOrgTIDLNetStructu
     {
       auto *tensor = tensors->Get(op->outputs()->Get(j));
 
-      if(strlen(tensors->Get(op->outputs()->Get(j))->name()->c_str()) < TIDL_STRING_SIZE)
+      const auto *outName = tensors->Get(op->outputs()->Get(j))->name();
+      if((int32_t)outName->size() < TIDL_STRING_SIZE)
       {
-        strcpy((char *)pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].outDataNames[j], tensors->Get(op->outputs()->Get(j))->name()->c_str());
+        strcpy((char *)pOrgTIDLNetStructure->TIDLPCLayers[layerIndex].outDataNames[j], outName->c_str());
       }
       else
       {
-        TIDL_GLOBAL_REPORT_ERROR("Tensor name(%s) exceeds %d characters, exiting", tensors->Get(op->outputs()->Get(j))->name()->c_str(), TIDL_STRING_SIZE);
+        TIDL_GLOBAL_REPORT_ERROR("Tensor name(%s) exceeds %d characters, exiting", outName->c_str(), TIDL_STRING_SIZE);
         return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
       }
 

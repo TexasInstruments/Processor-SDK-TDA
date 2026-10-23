@@ -414,7 +414,7 @@ int32_t TIDL_alloc(const IALG_Params *params,
   TIDL_LayerSpecificParams layerSpecificParams;
   TIDL_NetworkCommonParams commonParams;
   uint32_t memorySize[TIDL_LAYER_MEMORY_MAX] = {0};
-  sWorkloadSuperGroup_t *wlSuperGrp = NULL;
+  sWorkloadGroup_t *wlGrp = NULL;
   int32_t flag = 1;
 
   /* TIDL_coverage_start is a ldra coverage tag to mark the start of coverage for TIDL */
@@ -424,7 +424,7 @@ int32_t TIDL_alloc(const IALG_Params *params,
   TIDL_odOutputReformat_dummyFunc();
 
   status = TIDL_initDebugTraceParams(createParams->traceLogLevel, createParams->traceWriteLevel, createParams->TIDLVprintf, createParams->TIDLWriteBinToFile,
-                                     createParams->TIDLReadBinFromFile, createParams->traceBaseName);
+                                     createParams->TIDLReadBinFromFile, createParams->traceBaseName, (int32_t)createParams->enableDDRPerfStats);
   tidl_printf(2, "TIDL_initDebugTraceParams Done \n");
   /* TIDL_LDRA_TAG_ALG_PRIOR_CHECK_002 */
   if (status != IALG_EOK)
@@ -509,10 +509,10 @@ int32_t TIDL_alloc(const IALG_Params *params,
         status = initGCHelperHandle(gcHelperHandle, createParams->net, &gcOut->dataBaseInfo, &gcOutArgs->commonDatabaseInfo);
         if (status == IALG_EOK)
         {
-          wlSuperGrp = &gcOut->superWorkload;
+          wlGrp = &gcOut->workload;
           if (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_WLSUPERGRP_NULL)
           {
-            wlSuperGrp = NULL;
+            wlGrp = NULL;
           }
           if (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_WLUNIT_NULL)
           {
@@ -694,7 +694,7 @@ int32_t TIDL_alloc(const IALG_Params *params,
                        createParams->currLayersGroupId,
                        createParams->net,
                        gcHelperHandle,
-                       wlSuperGrp);
+                       wlGrp);
         if (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_ALLOC_FORCE_LOOP_FLAG_CHECK)
         {
           flag = 0;
@@ -826,8 +826,7 @@ int32_t TIDL_alloc(const IALG_Params *params,
           for (i = 0; i < createParams->net->numLayers; i++)
           {
             uint32_t paramSize;
-            sTIDL_DataParams_t *dataParams = TIDL_getDataParams(createParams->net,
-                                                                createParams->net->TIDLLayers[i].outData.dataId);
+            sTIDL_DataParams_t *dataParams = &createParams->net->TIDLLayers[i].outData;
             outFeatMapSize = dataParams->dimValues[TIDL_DIM_BATCH] *
                              dataParams->dimValues[TIDL_DIM_DIM1] *
                              dataParams->dimValues[TIDL_DIM_DIM2] *
@@ -862,7 +861,7 @@ int32_t TIDL_alloc(const IALG_Params *params,
             inFeatMapSizeSum = 0;
             for (int32_t inDataIdx = 0; inDataIdx < createParams->net->TIDLLayers[i].numInBufs ; inDataIdx++)
             {
-              sTIDL_DataParams_t *dataParams = TIDL_getDataParams(createParams->net, createParams->net->TIDLLayers[i].inData[inDataIdx]);
+              sTIDL_DataParams_t *dataParams = &createParams->net->TIDLLayers[createParams->net->TIDLLayers[i].inData[inDataIdx]].outData;
               int32_t inFeatMapSize = dataParams->dimValues[TIDL_DIM_BATCH] *
                              dataParams->dimValues[TIDL_DIM_DIM1] *
                              dataParams->dimValues[TIDL_DIM_DIM2] *
@@ -899,7 +898,7 @@ int32_t TIDL_alloc(const IALG_Params *params,
           int32_t totalChannels = 0;
           for (i = 0; i < createParams->net->numLayers; i++)
           {
-            sTIDL_DataParams_t *dataParams = TIDL_getDataParams(createParams->net, createParams->net->TIDLLayers[i].outData.dataId);
+            sTIDL_DataParams_t *dataParams = &createParams->net->TIDLLayers[i].outData;
             totalChannels += dataParams->dimValues[TIDL_DIM_NUMCH];
           }
           int32_t totalChannelSize = totalChannels * (int32_t)sizeof(float32_tidl);
@@ -954,8 +953,6 @@ int32_t TIDL_alloc(const IALG_Params *params,
 #ifdef HOST_EMULATION
             else
             {
-              /*maxOutFeatMapSize is in bytes*/
-              memRec[ALG_REF_OUTPUT_BUFF_MEMREC].size = (2U * (uint32_t)maxOutFeatMapSize) + TRACE_STRINGS_MEM_SIZE; /* Twice for input and output */
               /*Allocating extra space for traces, ideally there should not be a reference/target specific condition for this:*/
               if (createParams->traceWriteLevel == 3)
               {
@@ -971,7 +968,41 @@ int32_t TIDL_alloc(const IALG_Params *params,
               }
               else
               {
-                /*do nothing*/
+                /*
+                 * Without traceWriteLevel, memRec[ALG_REF_OUTPUT_BUFF_MEMREC]
+                 * (mapped to algHandle->refScratchBuf) still needs the full
+                 * 2x maxOutFeatMapSize allocation in two independent cases:
+                 *
+                 * 1. dataFlowInfo != 0 (Ref with NC flow): used for input
+                 *    staging, since NC might reuse the same input/output
+                 *    buffer address for some layer and ref kernels do not
+                 *    handle that. As a safety measure we copy the input into
+                 *    this memory for ref flow. 2x is a further safety margin
+                 *    because NC may read/write beyond maxOutFeatMapSize
+                 *    depending on target kernel design, so allocate worst case.
+                 *    Refer tidl_alg_utils.c -> TIDL_getLayerInPtrs.
+                 *    TODO: Remove this when NC is decoupled from Ref.
+                 *
+                 * 2. TIDL_CalibOptionBiasCalibration is set AND stats
+                 *    collection can run, i.e. TIDL_FLOW_CTRL_REF_STAT is set,
+                 *    or quantRangeUpdateFactor != 0 during regular inference:
+                 *    used as scratch by TIDL_TensorPerChannelMeanStats, called
+                 *    via TIDL_updateAllLayersTensorStats. This is independent
+                 *    of dataFlowInfo. Refer workload_ref_exec.c (call site
+                 *    with matching condition) and tidl_commonUtils_stats.c.
+                 */
+                if ((createParams->net->dataFlowInfo != 0) ||
+                    (((((uint32_t)createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) == TIDL_FLOW_CTRL_REF_STAT) ||
+                      (createParams->quantRangeUpdateFactor != 0.0f)) &&
+                     (((uint32_t)createParams->net->calibrationOption & (uint32_t)TIDL_CalibOptionBiasCalibration) ==
+                      (uint32_t)TIDL_CalibOptionBiasCalibration)))
+                {
+                  memRec[ALG_REF_OUTPUT_BUFF_MEMREC].size = (2U * (uint32_t)maxOutFeatMapSize) + TRACE_STRINGS_MEM_SIZE;
+                }
+                else
+                {
+                  memRec[ALG_REF_OUTPUT_BUFF_MEMREC].size = 128U + TRACE_STRINGS_MEM_SIZE;
+                }
               }
             }
 
@@ -1073,7 +1104,7 @@ int32_t TIDL_alloc(const IALG_Params *params,
             }
 
             /* memTab to allocate memory for net structure along with compiled information*/
-            memRec[ALG_PERSIST_DDR_NET_MEMREC].size = (int32_t)TIDL_getSizeNet(createParams) + TIDL_ALIGNMENT_SIZE;
+            memRec[ALG_PERSIST_DDR_NET_MEMREC].size = TIDL_getSizeNet(createParams) + TIDL_ALIGNMENT_SIZE;
             memRec[ALG_PERSIST_DDR_NET_MEMREC].space = TIDL_DDR_MEMREC_CACHEABLE;
             memRec[ALG_PERSIST_DDR_NET_MEMREC].attrs = IALG_PERSIST;
             memRec[ALG_PERSIST_DDR_NET_MEMREC].alignment = 128;
@@ -1146,6 +1177,7 @@ int32_t TIDL_init(IALG_Handle handle,
     (void)memcpy(algHandle->memRec, memRec, sizeof(IALG_MemRec) * algHandle->numMemRecs);
     algHandle->ivision = &TIDL_VISION_FXNS;
     algHandle->createParams = (TIDL_CreateParams *)createParams;
+    algHandle->initTraceWriteLevel = createParams->traceWriteLevel;
 #if TIDL_DEVICE_MULTICORE
     if (((createParams->net->inferenceMode == (int32_t)TIDL_inferenceModeLowLatency)) && ((createParams->flowCtrl & TIDL_FLOW_CTRL_REF_STAT) != TIDL_FLOW_CTRL_REF_STAT))
     {
@@ -1197,10 +1229,10 @@ int32_t TIDL_init(IALG_Handle handle,
 
   uint8_t *memory[TIDL_LAYER_MEMORY_MAX] = {0};
   int32_t memorySize[TIDL_LAYER_MEMORY_MAX] = {0};
-  sWorkloadSuperGroup_t *wlSuperGrp = NULL;
+  sWorkloadGroup_t *wlGrp = NULL;
 
   status = TIDL_initDebugTraceParams(createParams->traceLogLevel, createParams->traceWriteLevel, createParams->TIDLVprintf, createParams->TIDLWriteBinToFile,
-                                     createParams->TIDLReadBinFromFile, createParams->traceBaseName);
+                                     createParams->TIDLReadBinFromFile, createParams->traceBaseName, (int32_t)createParams->enableDDRPerfStats);
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
   <justification start>
@@ -1273,8 +1305,7 @@ int32_t TIDL_init(IALG_Handle handle,
     l3ReservedSize = 128;
     l2SramSize = 128;
     algHandle->gcHelperHandle = NULL;
-    algHandle->wlSuperGrp = NULL;
-    algHandle->groupId = 0;
+    algHandle->wlGrp = NULL;
     /* LDRA_JUSTIFY_START
     <metric start> statement branch <metric end>
     <justification start>
@@ -1305,9 +1336,9 @@ int32_t TIDL_init(IALG_Handle handle,
       gcHelperHandle = &algHandle->gcHelperHandleObj;
       gcCommonDataBase = (sGCCommonDataBase_t *)getGCDataBase(gcOutArgs, DATABASE_COMMON);
 
-      wlSuperGrp = &gcOut->superWorkload;
+      wlGrp = &gcOut->workload;
       algHandle->gcHelperHandle = gcHelperHandle;
-      algHandle->wlSuperGrp = wlSuperGrp;
+      algHandle->wlGrp = wlGrp;
       sBufParams_t *bufNodesDB = (sBufParams_t *)&gcCommonDataBase->dbPayLoad[gcCommonDataBase->dbParams[DB_COMMON_BUF].startOffset];
       sWorkloadUnit_t *workLoadUnitDB = (sWorkloadUnit_t *)&gcDatabase->dbPayLoad[gcDatabase->dbParams[DB_WL].startOffset];
       // sWorkloadUnitAuxilary_t* auxilaryWorkloadDB = (sWorkloadUnitAuxilary_t*) gcDatabase->dbPayLoad[gcDatabase->dbParams[DB_BUF].size +
@@ -1711,7 +1742,7 @@ int32_t TIDL_init(IALG_Handle handle,
                    createParams->currLayersGroupId,
                    createParams->net,
                    gcHelperHandle,
-                   wlSuperGrp);
+                   wlGrp);
 #ifdef HOST_EMULATION
     int32_t prevDataIdExecuted = NOT_VALID;
 #endif
@@ -1819,7 +1850,7 @@ int32_t TIDL_init(IALG_Handle handle,
       for (j = 0; j < createParams->net->TIDLLayers[layerId].numInBufs; j++)
       {
         int32_t inDataId = createParams->net->TIDLLayers[layerId].inData[j];
-        algLayer->inLayerIdx[j] = (int16_t)TIDL_getLayerNum(createParams->net, inDataId);
+        algLayer->inLayerIdx[j] = inDataId;
         algLayer->isInData[j] = (int16_t)TIDL_isInDataBuff(createParams->net, inDataId, createParams->currLayersGroupId);
         algLayer->isInOutData[j] = (int16_t)TIDL_isOutDataBuff(createParams->net, inDataId, createParams->currLayersGroupId);
 
@@ -2328,36 +2359,10 @@ int32_t TIDL_init(IALG_Handle handle,
       sprintf(fileName, "%s_persistent_data_%d", createParams->traceBaseName, relativeCoreId);
       (void)createParams->TIDLWriteBinToFile(fileName, memRec[ALG_PERSIST_DDR_INIT_DATA].base, memRec[ALG_PERSIST_DDR_INIT_DATA].size, 1);
     }
-
-    // if(createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_2DMEMCPY_FORCE_INTALGHNDLE_NULL)
-    //{
-    //   algHandle->intAlgHandle = NULL;
-    // }
-    // if(createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_ACT_FORCE_ALGSTATE_INVALID)
-    //{
-    //   algHandle->algState = INT8_MAX;
-    // }
-    // if(createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_ACT_FORCE_2DMEMCPYSTATE_INVALID)
-    //{
-    //   algHandle->memRec[ALG_HANDLE_MEMREC].base = NULL;
-    // }
     if (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_PROCESS_FORCE_TRACEWRITE_INVALID)
     {
       algHandle->createParams->TIDLVprintf = NULL;
     }
-    // if(createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_GRPID_INVALID)
-    //{
-    //   algHandle->groupId = 2;
-    // }
-    // if(createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_LNKTYPE_INVALID)
-    //{
-    //   /* corrupting flowcnt here instead of bin corruption as bin corruption resulting in init failure */
-    //   sWorkloadUnit_t *workloadUnitLocal = getWLUnitPtr(gcHelperHandle, 20);
-    //   sLink_t *linkPtrListLocal[MAX_LINKS_PER_WL];
-    //   getLinkPtrs(workloadUnitLocal, NOT_VALID, 0, linkPtrListLocal);
-    //   sLink_t *linkLocal = linkPtrListLocal[0];
-    //   linkLocal->type = 0;
-    // }
     if (createParams->forceNegativeTest == TIDL_SAFETY_FLAG_ALG_UTILS_FORCE_FLOWCNT_INVALID)
     {
       /* corrupting flowcnt here instead of bin corruption as bin corruption resulting in init failure */
@@ -2536,6 +2541,73 @@ int32_t TIDL_control(IVISION_Handle Handle,
 #endif
       break;
     }
+    case TIVX_TIDL_CMD_SET_MUTABLE_OPTIONS:
+    {
+      /* LDRA_JUSTIFY_START
+      <metric start> branch <metric end>
+      <justification start>
+      Rationale - SAFETY_CHECK: Safe programming hard to hit this condition with real world data.
+      Effect on this UNIT - Safety checks to avoid undefined behavior and improves the stability and error handling.
+      <justification end> */
+      if (inParams == NULL)
+      {
+        /* LDRA_JUSTIFY_END */
+        status = IALG_EFAIL;
+      }
+      else
+      {
+        const TIDL_controlMutableOptions *inArgs = (const TIDL_controlMutableOptions *)inParams;
+
+        // Update traceLogLevel
+        if ((inArgs->updateMask & TIDL_MUTABLE_OPT_TRACE_LOG_LEVEL) != 0U)
+        {
+          algHandle->createParams->traceLogLevel = inArgs->traceLogLevel;
+        }
+
+        /*
+         * Update traceWriteLevel (clamp to initTraceWriteLevel set during init)
+         * as to not overrun init time allocation
+         */
+        if ((inArgs->updateMask & TIDL_MUTABLE_OPT_TRACE_WRITE_LEVEL) != 0U)
+        {
+          int32_t traceWriteLevel = inArgs->traceWriteLevel;
+          if (traceWriteLevel > algHandle->initTraceWriteLevel)
+          {
+            // This warning should be printed despite tidl_getTraceLogLevel in tidl_printf
+            tidl_printf(-1, "WARNING : Requested traceWriteLevel (%d) exceeds the level set at create time (%d), clamping to %d\n",
+                        traceWriteLevel, algHandle->initTraceWriteLevel, algHandle->initTraceWriteLevel);
+            traceWriteLevel = algHandle->initTraceWriteLevel;
+          }
+          algHandle->createParams->traceWriteLevel = traceWriteLevel;
+        }
+
+        // Update traceBaseName
+        if ((inArgs->updateMask & TIDL_MUTABLE_OPT_TRACE_BASE_NAME) != 0U)
+        {
+          (void)memcpy((void *)algHandle->createParams->traceBaseName, (const void *)inArgs->traceBaseName, TIDL_STRING_SIZE);
+        }
+
+        // Update cacheImport
+        if ((inArgs->updateMask & TIDL_MUTABLE_OPT_CACHE_IMPORT) != 0U)
+        {
+          algHandle->createParams->cacheImport = inArgs->cacheImport;
+        }
+
+        // Update cacheExport
+        if ((inArgs->updateMask & TIDL_MUTABLE_OPT_CACHE_EXPORT) != 0U)
+        {
+          algHandle->createParams->cacheExport = inArgs->cacheExport;
+        }
+
+        // Update cacheClear
+        if ((inArgs->updateMask & TIDL_MUTABLE_OPT_CACHE_CLEAR) != 0U)
+        {
+          algHandle->createParams->cacheClear = inArgs->cacheClear;
+        }
+
+      }
+      break;
+    }
     default:
     {
       tidl_printf(0, "Invalid Node Cmd Id\n");
@@ -2705,7 +2777,8 @@ int32_t TIDL_process(IVISION_Handle Handle,
                                      algHandle->createParams->TIDLVprintf,
                                      algHandle->createParams->TIDLWriteBinToFile,
                                      algHandle->createParams->TIDLReadBinFromFile,
-                                     algHandle->createParams->traceBaseName);
+                                     algHandle->createParams->traceBaseName,
+                                     (int32_t)algHandle->createParams->enableDDRPerfStats);
 
   /* LDRA_JUSTIFY_START
   <metric start> statement branch <metric end>
@@ -2860,7 +2933,7 @@ int32_t TIDL_process(IVISION_Handle Handle,
 #if defined TIDL_COVERAGE_DEAD_CODE
           if (intAlgHandle->createParams->net->TIDLLayers[id].layerType != TIDL_DataLayer)
           {
-            sTIDL_DataParams_t *inDataParams = TIDL_getDataParams(intAlgHandle->createParams->net, inBufs->bufDesc[i]->bufferId);
+            sTIDL_DataParams_t *inDataParams = &intAlgHandle->createParams->net->TIDLLayers[inBufs->bufDesc[i]->bufferId].outData;
             inDataParams->tensorScale = tidlInArgs->scale[i];
           }
 #endif
@@ -2890,7 +2963,7 @@ int32_t TIDL_process(IVISION_Handle Handle,
                        intAlgHandle->createParams->currLayersGroupId,
                        intAlgHandle->createParams->net,
                        intAlgHandle->gcHelperHandle,
-                       intAlgHandle->wlSuperGrp);
+                       intAlgHandle->wlGrp);
 
         tidlCommonParams.dmaChannelAllocContext = &intAlgHandle->dmaChannelAllocContext;
         tidlCommonParams.dmaUtilsContext = intAlgHandle->dmaUtilsContext;
@@ -2904,6 +2977,9 @@ int32_t TIDL_process(IVISION_Handle Handle,
         commonParams.net = intAlgHandle->createParams->net;
         commonParams.TIDLLayersBufPtr = intAlgHandle->TIDLLayersBuf; //: TODO: Check if this needs to be a global variable
         commonParams.tidlCommonParams = &tidlCommonParams;
+        commonParams.cacheImport = intAlgHandle->createParams->cacheImport;
+        commonParams.cacheExport = intAlgHandle->createParams->cacheExport;
+        commonParams.cacheClear = intAlgHandle->createParams->cacheClear;
 
         int32_t layer, numProfile;
         if (tidlInArgs->enableLayerPerfTraces == 1)
@@ -3288,9 +3364,6 @@ int32_t TIDL_process(IVISION_Handle Handle,
                                                  &wlRefParams.origOutHeight, &wlRefParams.origOutCh, &wlRefParams.origOutChPitch, &wlRefParams.origOutRoiPitch, &wlRefParams.origOutBatch);
               }
 
-              //: TODO: Need to handle copying persistent weights when group changes
-              intAlgHandle->groupId = getLayerIdContext.groupIdx;
-
               TIDL_getTscTime(&tEnd);
 
               TIDL_updateprofileData(intAlgHandle->alglayerParams[currAlgLayer].metaData.profilePoint, TIDL_PROFILE_LAYER, tStart, tEnd);
@@ -3446,8 +3519,10 @@ int32_t TIDL_process(IVISION_Handle Handle,
       }
       for (i = 0; i < (int32_t)outBufs->numBufs; i++)
       {
+        sTIDL_Layer_t *producerLayer;
         sTIDL_DataParams_t *dataParams;
-        dataParams = TIDL_getDataParams(intAlgHandle->createParams->net, outBufs->bufDesc[i]->bufferId);
+        producerLayer = &intAlgHandle->createParams->net->TIDLLayers[outBufs->bufDesc[i]->bufferId];
+        dataParams = &producerLayer->outData;
         tidlOutArgs->scale[i] = dataParams->tensorScale;
         tidlOutArgs->outDimValues[i][TIDL_DIM_BATCH] = dataParams->dimValues[TIDL_DIM_BATCH];
         tidlOutArgs->outDimValues[i][TIDL_DIM_DIM1] = dataParams->dimValues[TIDL_DIM_DIM1];
@@ -3455,6 +3530,13 @@ int32_t TIDL_process(IVISION_Handle Handle,
         tidlOutArgs->outDimValues[i][TIDL_DIM_NUMCH] = dataParams->dimValues[TIDL_DIM_NUMCH];
         tidlOutArgs->outDimValues[i][TIDL_DIM_HEIGHT] = dataParams->dimValues[TIDL_DIM_HEIGHT];
         tidlOutArgs->outDimValues[i][TIDL_DIM_WIDTH] = dataParams->dimValues[TIDL_DIM_WIDTH];
+        if ((producerLayer->layerType == TIDL_CacheLayer) && (intAlgHandle->createParams->cacheExport == 0))
+        {
+          /* If cacheExport is 0, set data layer dim value to 0 in order to
+           * avoid data visibility to the application */
+          int32_t growthAxis = producerLayer->layerParams.cacheParams.axis;
+          tidlOutArgs->outDimValues[i][growthAxis] = 0;
+        }
         tidlOutArgs->outPitchValues[i][TIDL_ROI_PITCH] = dataParams->pitch[TIDL_ROI_PITCH];
         tidlOutArgs->outPitchValues[i][TIDL_DIM1_PITCH] = dataParams->pitch[TIDL_DIM1_PITCH];
         tidlOutArgs->outPitchValues[i][TIDL_DIM2_PITCH] = dataParams->pitch[TIDL_DIM2_PITCH];

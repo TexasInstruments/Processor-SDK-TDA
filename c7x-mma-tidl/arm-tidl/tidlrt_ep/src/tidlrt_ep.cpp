@@ -138,6 +138,9 @@ int32_t TIDL_createInferSession(TIDL_TidlRtEPInferState *state)
     subgraphRtCreateOptions->coreStartIdx = options->m_core_start_idx;
     subgraphRtCreateOptions->inferenceMode = -1;
     subgraphRtCreateOptions->flowCtrl = options->m_flow_ctrl;
+    subgraphRtCreateOptions->cacheImport = 0;
+    subgraphRtCreateOptions->cacheExport = 0;
+    subgraphRtCreateOptions->cacheClear = 0;
 #ifdef x86_64
     strcpy(subgraphRtCreateOptions->tempBufferDir, options->m_temp_buffer_dir);
 #endif

@@ -77,6 +77,7 @@
 #include "tidl_import_diag.h"
 #include "tidl_import_session.h"
 
+#undef __MODULE__
 #define __MODULE__ ""
 
 struct deferredOption {
@@ -84,7 +85,7 @@ struct deferredOption {
   char **args;
 };
 
-void printTokenHelpAndExit(char *appname, char *token)
+void printTokenHelpAndExit(const char *appname, const char *token)
 {
   int c = 0;
 
@@ -180,11 +181,11 @@ bool isOptionATokenHelp(const char *opt, char **ret_token, bool leadingDashes)
   const char *helpToken = leadingDashes ? "--help-" : "help-";
 
   while(gsTokenMap_tidl_import_config[c].tokenName) {
-    char *token = gsTokenMap_tidl_import_config[c].tokenName;
+    const char *token = gsTokenMap_tidl_import_config[c].tokenName;
     if(strstr(opt, token) &&
         strlen(opt) == strlen(helpToken) + strlen(token) &&
         !strncmp(opt, helpToken, strlen(helpToken))) {
-      *ret_token = token;
+      strcpy(*ret_token, token);
       return true;
     }
     c++;
@@ -240,7 +241,7 @@ char **addArg(char **args, char *new_arg)
 }
 
 /* Convenience function to add an option to a NULL-terminated list */
-struct option *addOption(struct option *lopts, char *opt, int flag)
+struct option *addOption(struct option *lopts, const char *opt, int flag)
 {
   int i = 0;
 
@@ -273,6 +274,10 @@ int32_t parseOptimizationLevel(tidl_import_config& gParams)
     {
       gParams.enableShapeFolding = 1;
     }
+    if(gParams.moveTranspose == -1)
+    {
+      gParams.moveTranspose = 1;
+    }
     // Other higher optimization flag can be added here in future
   }
   else
@@ -280,6 +285,10 @@ int32_t parseOptimizationLevel(tidl_import_config& gParams)
     if(gParams.enableShapeFolding == -1)
     {
       gParams.enableShapeFolding = 0;
+    }
+    if(gParams.moveTranspose == -1)
+    {
+      gParams.moveTranspose = 0;
     }
     // Other higher optimization flag can be added here in future
   }
@@ -314,7 +323,7 @@ int32_t main(int32_t argc, char *argv[])
     lopts = addOption(lopts, gsTokenMap_tidl_import_config[c].tokenName, required_argument);
 
     asprintf(&str, "help-%s", gsTokenMap_tidl_import_config[c].tokenName);
-    lopts = addOption(lopts, str, no_argument);
+    lopts = addOption(lopts, (const char *)str, no_argument);
     free(str);
 
     c++;
@@ -325,7 +334,7 @@ int32_t main(int32_t argc, char *argv[])
   else if(!strcmp(argv[1], "-h"))
     printHelpAndExit(argv[0]);
   else if(isOptionATokenHelp((const char *)argv[1], &token, true))
-    printTokenHelpAndExit(argv[0], token);
+    printTokenHelpAndExit((const char*)argv[0], (const char*)token);
 
   /* Must be config file if it did not exit */
   fp = fopen(argv[1], "r");
@@ -377,7 +386,7 @@ int32_t main(int32_t argc, char *argv[])
         }
 
         else if(isOptionATokenHelp(lopt, &token, false))
-          printTokenHelpAndExit(argv[0], token);
+          printTokenHelpAndExit((const char*)argv[0], (const char*)token);
         else if(!strcmp(lopt, "help"))
           printHelpAndExit(argv[0]);
         else
@@ -431,9 +440,9 @@ int32_t main(int32_t argc, char *argv[])
 
  sTokenMapping deviceConfigTokenMap[] =
     {
-      {(char* )"DEVICE_NAME", &gParams.deviceName, INT_32, SINGLE, false, false, NULL, "NR", NULL},
-      {(char* )"NUMCORES", &gParams.numCores, INT_32, SINGLE, false, false, NULL, "NR", NULL},
-      {(char* )NULL    , NULL , INT_32, SINGLE, false, false, NULL, NULL, NULL}
+      {"DEVICE_NAME", &gParams.deviceName, INT_32, SINGLE, false, false, NULL, "NR", NULL},
+      {"NUMCORES", &gParams.numCores, INT_32, SINGLE, false, false, NULL, "NR", NULL},
+      {NULL    , NULL , INT_32, SINGLE, false, false, NULL, NULL, NULL}
     };
 
   TIDL_IMPORT_CHECK_AND_RETURN(readparamfile((char *)gParams.perfSimConfig, &deviceConfigTokenMap[0]), "Failed to read device config");

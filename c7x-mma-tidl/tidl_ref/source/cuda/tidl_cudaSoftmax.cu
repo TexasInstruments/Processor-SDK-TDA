@@ -299,6 +299,7 @@ int TIDL_cudaSoftmaxFixed(
         if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), input, (void**)&d_input, input_size) != IALG_EOK)
         {
             printf("Softmax: Unable to find input pointer\n");
+            return IALG_EFAIL;
         }
     }
     if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size) != IALG_EOK)
@@ -306,6 +307,7 @@ int TIDL_cudaSoftmaxFixed(
         if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size) != IALG_EOK)
         {
             printf("Softmax: Unable to find output pointer\n");
+            return IALG_EFAIL;
         }
     }
 
@@ -355,6 +357,7 @@ int TIDL_cudaSoftmaxFloat(
         if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), input, (void**)&d_input, input_size) != IALG_EOK)
         {
             printf("Softmax: Unable to find input pointer\n");
+            return IALG_EFAIL;
         }
     }
     if (TIDL_cudaTranslatePtrCPUtoGPU(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size) != IALG_EOK)
@@ -362,6 +365,7 @@ int TIDL_cudaSoftmaxFloat(
         if (TIDL_cudaAllocBuffer(TIDL_cudaGetThreadManager(), output, (void**)&d_output, output_size) != IALG_EOK)
         {
             printf("Softmax: Unable to find output pointer\n");
+            return IALG_EFAIL;
         }
     }
 

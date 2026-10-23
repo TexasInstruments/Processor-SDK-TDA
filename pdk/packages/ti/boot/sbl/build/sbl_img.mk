@@ -32,7 +32,7 @@ ifeq ($(OSPI_NAND), yes)
   OSPI_NAND_SUFFIX=_nand
 endif
 SECURE_HSM_BOOT_SUFFIX=
-ifeq ($(BOOTMODE), uart)
+ifeq ($(BOOTMODE), $(filter $(BOOTMODE),uart ospi))
   ifeq ($(SECURE_HSM_BOOT), yes)
     SECURE_HSM_BOOT_SUFFIX=hsm_boot_
   endif

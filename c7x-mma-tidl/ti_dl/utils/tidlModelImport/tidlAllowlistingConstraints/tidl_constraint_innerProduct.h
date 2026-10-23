@@ -382,7 +382,7 @@ const vector<TidlConstraint> tidlConstraintInnerProduct = {
             int32_t y = layer->outData[0].dimValues[TIDL_DIM_WIDTH];
             if((x * y) > (2048 * 2048))
             {
-                TIDL_GLOBAL_REPORT_WARNING("Size larger than (2048*2048) in [%s] is not optimal", (char*)layer->name);
+                TIDL_GLOBAL_REPORT_WARNING("InnerProduct [%s]: size larger than (2048*2048) is not optimal", (char*)layer->name);
             }
             return true;
         }

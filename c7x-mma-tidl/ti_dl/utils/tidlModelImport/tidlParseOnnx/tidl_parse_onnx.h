@@ -114,7 +114,8 @@ const std::vector<int32_t> supportedLayerTypes = {
     TIDL_TileLayer,
     TIDL_LogicalOpLayer,
     TIDL_NonZeroLayer,
-    TIDL_EltWiseLayer
+    TIDL_EltWiseLayer,
+    TIDL_GroupQueryAttentionLayer
 };
 
 static std::map<std::string, int32_t> activationMap = {
@@ -156,19 +157,19 @@ struct TidlParseOnnx
     int32_t numVariableLayerInputs(GraphProto& onnGraph, int32_t i, std::vector<int32_t>& varIdx);
     TensorProto getInitializerTensor(GraphProto& onnGraph, const string name, int32_t nIdx, int32_t& status);
     bool doesQuantOrDequantHaveConstTensor(GraphProto& onnGraph, const string name);
-    int32_t getAttrIdx(const NodeProto& node, char * name);
+    int32_t getAttrIdx(const NodeProto& node, const char * name);
     int32_t getNodeIdx(GraphProto& onnxGraph, const char *bufName);
     vector<vector<int32_t>> getNodeInputOutputTypes(GraphProto& onnxGraph, int32_t idx);
     vector<int32_t> getNodeInputShape(GraphProto& onnxGraph, const string name, int32_t debugLevel);
     vector<int32_t> getNodeOutputShape(GraphProto& onnxGraph, const string name, int32_t debugLevel);
-    int32_t getIntAttr(const NodeProto& node, char * name, int32_t * valuePtr, int32_t idx);
-    int32_t getStringAttr(const NodeProto& node, char * name, char * valuePtr, int32_t idx);
+    int32_t getIntAttr(const NodeProto& node, const char * name, int32_t * valuePtr, int32_t idx);
+    int32_t getStringAttr(const NodeProto& node, const char * name, char * valuePtr, int32_t idx);
     int32_t getTensorDim(TensorProto& tensor, int32_t idx);
     int32_t copyTensor(GraphProto& onnGraph, TensorProto& tensor, sBuffer_t &buf, const string name, int32_t inputRequired);
     bool isTensorDQ(GraphProto& onnGraph, TensorProto& tensor);
     int32_t getNodeIdxFromInput(GraphProto& onnxGraph, const char *bufName);
     int32_t copyFloatConst(GraphProto& onnGraph, int32_t nIdx, int32_t inIdx, sBuffer_t &buf, int32_t inputRequired);
-    int32_t getFloatAttr(const NodeProto& node, char * name, float * valuePtr, int32_t idx);
+    int32_t getFloatAttr(const NodeProto& node, const char * name, float * valuePtr, int32_t idx);
     void broadcastFloatTensor(sBuffer_t &buf, int32_t bufSize);
     int32_t getConstSize (TensorProto& tensor);
     int32_t containsSuffix(std::string str, std::string suffix);

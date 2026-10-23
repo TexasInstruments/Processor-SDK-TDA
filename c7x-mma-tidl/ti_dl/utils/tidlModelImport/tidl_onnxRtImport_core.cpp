@@ -93,10 +93,11 @@ using namespace onnx;
 #include "tidl_onnxrt_common.h"
 #include "tidl_import_diag.h"
 
-#define __MODULE__ "[PARSER]"
-
 #include "tidlParseOnnx/tidl_parse_onnx.h"
 #include "tidlAllowlistingConstraints/tidl_constraint.h"
+
+#undef __MODULE__
+#define __MODULE__ "[PARSER]"
 
 extern uint8_t tidl_OdOutputNames[TIDL_MAX_TF_SSD_LAYERS][TIDL_STRING_SIZE];
 
@@ -131,134 +132,6 @@ static const std::unordered_map<std::string, vector<int32_t>> ONNXNodeOptionalOu
   {"SkipSimplifiedLayerNormalization", {1,2,3}},
 };
 
-/*
-  Set of operators which can be individally supported,
-  maybe unconditionally or with some conditions imposed
-  (For e.g., Div is not supported with 2 Var inputs)
-  Whatever operator are not in here, are not supported
-  indiviually no matter any specifics of the layer
-  itself. They might be supported via fusion of a block,
-  but in that case this set should not be checked for
-  presence of that operator
-*/
-static const std::unordered_set<std::string> individualSupportedOnnxOps (
-  {
-    "Conv",
-    "Cast",
-    "CastLike",
-    "Relu",
-    "PRelu",
-    "LeakyRelu",
-    "Identity",
-    "Div",
-    "Clip",
-    "Sigmoid",
-    "Logistic",
-    "Tanh",
-    "HardSigmoid",
-    "Elu",
-    "Concat",
-    "Add",
-    "Sum",
-    "MaxPool",
-    "GlobalAveragePool",
-    "AveragePool",
-    "Upsample",
-    "Resize",
-    "ConvTranspose",
-    "Reshape",
-    "Transpose",
-    "ArgMax",
-    "ArgMin",
-    "BatchNormalization",
-    "Gemm",
-    "Softmax",
-    "Split",
-    "Slice",
-    "Flatten",
-    "Pad",
-    "Mul",
-    "DepthToSpace",
-    "DropOut",
-    "Squeeze",
-    "ReduceMax",
-    "ReduceMin",
-    "ScatterElements",
-    "ScatterND",
-    "Gather",
-    "MatMul",
-    "DequantizeLinear",
-    "QuantizeLinear",
-    "Sub",
-    "Max",
-    "Min",
-    "GridSample",
-    "DeformConv",
-    "LayerNormalization",
-    "Asin",
-    "Asinh",
-    "HardSwish",
-    "Mish",
-    "Log",
-    "Abs",
-    "Floor",
-    "Exp",
-    "Sin",
-    "TopK",
-    "Erf",
-    "Sqrt",
-    "Pow",
-    "InstanceNormalization",
-    "Unsqueeze",
-    "SpaceToDepth",
-    "Acos",
-    "Atan",
-    "Cos",
-    "Cosh",
-    "Neg",
-    "Sinh",
-    "Tan",
-    "ReduceMean",
-    "ReduceSum",
-    "Expand",
-    "Swish",
-    "Tile",
-    "And",
-    "Or",
-    "Xor",
-    "Equal",
-    "Greater",
-    "GreaterOrEqual",
-    "Less",
-    "LessOrEqual",
-    "Not",
-    "IsInf",
-    "IsNaN",
-    "Where",
-    "RMSNormalization",
-    "Softplus",
-    "Softsign",
-    "Ceil",
-    "Celu",
-    "Selu",
-    "Round",
-    "Sign",
-    "Mod",
-    "GroupNormalization",
-    "LSTM",
-    "GRU",
-    "RNN",
-    "GatherND",
-    "GatherElements",
-    "Shape",
-    "Size",
-    "Attention",
-    "NonZero",
-    "SimplifiedLayerNormalization",
-    "SkipSimplifiedLayerNormalization"
-  }
-);
-
   /*  List of layer types that support dynamic shapes, allowing their output dimensions to vary
    *  at runtime based on input data rather than being fixed during import */
 
@@ -268,7 +141,9 @@ static const std::unordered_set<std::string> individualSupportedOnnxOps (
     "Transpose",
     "GatherND" ,
     "Shape",
-    "Size"
+    "Size",
+    "GroupQueryAttention",
+    "MatMulNBits",
     }
   );
 
@@ -283,7 +158,9 @@ static const std::unordered_set<std::string> onnxNoOps (
     "Squeeze",
     "Unsqueeze",
     "Flatten",
-    "CastLike"
+    "CastLike",
+    "Shape",
+    "Size"
     // Think of adding Cast too but then Unit test models will have to change
   }
 );
@@ -389,25 +266,6 @@ std::vector<int> TIDL_getPostProcInputIds(GraphProto& onnxGraph, std::vector<std
     }
   }
   return odPostProcIndataIds;
-}
-
-
-/* Function to return status if a onnx operator is individually supported */
-static int32_t TIDL_onnxRtIndividualOpSupport(GraphProto&   onnxGraph, int32_t nodeIdx, sTIDL_LayerPC_t &layer, TIDL_osrtOptions* osrtOptions)
-{
-  for(int32_t i = 0; i < osrtOptions->m_custom_layers_names_list.size(); i++)
-  {
-    if(strcmp(onnxGraph.node(nodeIdx).output(0).c_str(), osrtOptions->m_custom_layers_names_list[i].c_str()) == 0)
-    {
-      return 0;
-    }
-  }
-
-  if (individualSupportedOnnxOps.find(onnxGraph.node(nodeIdx).op_type()) != individualSupportedOnnxOps.end())
-  {
-    return 0;
-  }
-  return TIDL_ALLOWLISTING_LAYER_TYPE_UNSUPPORTED;
 }
 
 // Convert a onnx operator to a TIDL layer
@@ -788,7 +646,6 @@ int32_t TIDL_onnxAllowlistNode(GraphProto&   onnxGraph, int32_t i, TIDL_osrtOpti
   /*C7x Firmware version needs to be copied before model check is run:*/
   strcpy((char*)gParams.c7xFirmwareVersion, osrtOptions->m_c7x_firmware_version.c_str());
 
-  status = TIDL_onnxRtIndividualOpSupport(onnxGraph, i, layer, osrtOptions);
   /* will use it to check the logs which got pushed while checking allowlisting for current layer */
   int32_t diagListSize = gDiags.gDiagList.size();
   
@@ -928,7 +785,7 @@ int32_t TIDL_onnxRtImportInit(GraphProto& onnxGraph, onnxRtParams_t *onnxRtParam
   onnxOpSetVersion = opSetVersion;
   TIDL_IMPORT_CHECK_AND_RETURN(TIDL_runtimesGparamsInit(osrt_options, TIDL_IMPORT_MODEL_FORMAT_ONNX_RT), "");
 
-  sprintf((char *)gParams.metaLayersNamesList, osrt_options->m_meta_layers_names_list.c_str());
+  sprintf((char *)gParams.metaLayersNamesList, "%s", osrt_options->m_meta_layers_names_list.c_str());
 
   if((outDataOd.size() == 0) || (! isSubgraphOD)) //Not an OD network / Subgaph does not contain OD post processing part
   {

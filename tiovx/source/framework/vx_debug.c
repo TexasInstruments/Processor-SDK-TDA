@@ -17,6 +17,7 @@
 
 #include <vx_internal.h>
 
+#if defined(BUILD_DEV)
 static void tivx_print(vx_enum zone, vx_uint32 debug_zonemask, const char *format, va_list ap);
 
 static vx_uint32 g_debug_zonemask = 0;
@@ -34,23 +35,31 @@ static struct vx_string_and_enum_e g_debug_enumnames[] = {
     STR2(VX_ZONE_INFO),
     {"UNKNOWN", -1} /* if the zone is not found, this will be returned. */
 };
+#endif /* #if defined(BUILD_DEV) */
 
 vx_char *tivx_find_zone_name(vx_enum zone)
 {
+    char *name = "\0";
+
+#if defined(BUILD_DEV)
     vx_uint32 i;
 
     for (i = 0; i < (dimof(g_debug_enumnames) - 1u); i++)
     {
         if (g_debug_enumnames[i].value == zone)
         {
+            name = g_debug_enumnames[i].name;
             break;
         }
     }
-    return g_debug_enumnames[i].name;
+#endif /* #if defined(BUILD_DEV) */
+
+    return name;
 }
 
 void tivx_set_debug_zone(vx_enum zone)
 {
+#if defined(BUILD_DEV)
     if ( (0 <= zone) && (zone < (vx_enum)VX_ZONE_MAX) )
     {
 
@@ -61,10 +70,12 @@ void tivx_set_debug_zone(vx_enum zone)
     {
         VX_PRINT(VX_ZONE_ERROR,"Invalid debug zone specified\n");
     }
+#endif /* #if defined(BUILD_DEV) */
 }
 
 void tivx_clr_debug_zone(vx_enum zone)
 {
+#if defined(BUILD_DEV)
     if ( (0 <= zone) && (zone < (vx_enum)VX_ZONE_MAX) )
     {
         g_debug_zonemask &= ~(ZONE_BIT((vx_uint32)zone));
@@ -74,28 +85,35 @@ void tivx_clr_debug_zone(vx_enum zone)
     {
         VX_PRINT(VX_ZONE_ERROR,"Invalid debug zone specified\n");
     }
+#endif /* #if defined(BUILD_DEV) */
 }
 
 vx_uint32 ownGetGlobalZonemask(void)
 {
-    return g_debug_zonemask;
+    vx_uint32 zonemask = 0U;
+
+#if defined(BUILD_DEV)
+    zonemask = g_debug_zonemask;
+#endif /* #if defined(BUILD_DEV) */
+
+    return zonemask;
 }
 
 vx_bool tivx_is_zone_enabled(vx_enum zone)
 {
-    vx_bool zone_enabled;
+    vx_bool zone_enabled = (vx_bool)vx_false_e;
 
+#if defined(BUILD_DEV)
     if ( (0 <= zone) && (zone < (vx_enum)VX_ZONE_MAX) )
     {
         zone_enabled = (((vx_uint32)g_debug_zonemask & ZONE_BIT((vx_uint32)zone)) != (vx_uint32)vx_false_e) ? (vx_bool)vx_true_e : (vx_bool)vx_false_e;
     }
-    else
-    {
-        zone_enabled = (vx_bool)vx_false_e;
-    }
+#endif /* #if defined(BUILD_DEV) */
+
     return zone_enabled;
 }
 
+#if defined(BUILD_DEV)
 static void tivx_print(vx_enum zone, vx_uint32 debug_zonemask, const char *format, va_list ap)
 {
     if ((debug_zonemask & ZONE_BIT((vx_uint32)zone)) != 0U)
@@ -110,19 +128,24 @@ static void tivx_print(vx_enum zone, vx_uint32 debug_zonemask, const char *forma
         ownPlatformPrintf(string);
     }
 }
+#endif /* #if defined(BUILD_DEV) */
 
 void tivx_print_global(vx_enum zone, const char *format, ...)
 {
+#if defined(BUILD_DEV)
     va_list args;
     va_start(args, format);
     tivx_print(zone, g_debug_zonemask, format, args);
     va_end(args);
+#endif /* #if defined(BUILD_DEV) */
 }
 
 void tivx_print_object(vx_enum zone, vx_uint32 debug_zonemask, const char *format, ...)
 {
+#if defined(BUILD_DEV)
     va_list args;
     va_start(args, format);
     tivx_print(zone, debug_zonemask, format, args);
     va_end(args);
+#endif /* #if defined(BUILD_DEV) */
 }

@@ -39,6 +39,10 @@ ifeq ($(CODE_COVERAGE_ENABLED_FOR_RT), yes)
 CFLAGS+= --no-warnings
 endif
 
+ifeq ($(ENABLE_NEW_VISION_APPS_STRUCTURE),yes)
+DEFS += ENABLE_NEW_VISION_APPS_STRUCTURE
+endif
+
 IDIRS :=
 IDIRS += $(IVISION_PATH)
 IDIRS += $(TIOVX_PATH)/include
@@ -47,4 +51,7 @@ IDIRS += $(TIDL_PATH)/arm-tidl/tiovx_kernels/include
 IDIRS += $(TIOVX_PATH)/utils/include
 IDIRS += $($(_MODULE)_SDIR)/../../../inc
 IDIRS += $($(_MODULE)_SDIR)/../../../rt/inc
+ifneq ($(ENABLE_NEW_VISION_APPS_STRUCTURE),yes)
+IDIRS += $(VISION_APPS_PATH)
+endif
 IDIRS += $(APP_UTILS_PATH)

@@ -409,6 +409,55 @@ int32_t TIDL_shapeInfer_NonZero(
 );
 
 /**
+ * @brief   GroupQueryAttention shape inference.
+ *
+ */
+int32_t TIDL_shapeInfer_GroupQueryAttention(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context
+);
+
+/**
+ * @brief   MatMulNBits shape inference.
+ *
+ *          Output shape == input A shape with the last (WIDTH) dimension
+ *          replaced by N (weight output-feature count). All other dimensions
+ *          are copied from input A.
+ *
+ *          Preconditions : nIn >= 1.
+ */
+int32_t TIDL_shapeInfer_MatMulNBits(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context
+);
+
+/**
+ * @brief   Cache shape inference.
+ *
+ *          All dimensions except cacheParams.axis are copied from input[0].
+ *          The axis dimension is set from cacheParams.maxCapacity at compile
+ *          time (context->isCompileTime != 0). At runtime it is left
+ *          untouched: it already holds the active/valid length, maintained
+ *          call-to-call by TIDL_cacheProcessNew (tidl_cache.c) rather than
+ *          by this generic shape-inference path.
+ *
+ *          Preconditions : nIn >= 1.
+ */
+int32_t TIDL_shapeInfer_Cache(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context
+);
+
+/**
  * @brief   Resize shape inference.
  *
  *          Scales the spatial dimensions (HEIGHT, WIDTH) of the input tensor
@@ -555,6 +604,37 @@ int32_t TIDL_shapeInfer_GatherND(
  *          Preconditions : nIn >= 1.
  */
 int32_t TIDL_shapeInfer_Tile(
+    sTIDL_LayerParams_t       *layerParams,
+    sTIDL_DataParams_t        *inDataParams[],
+    int32_t                    numInBufs,
+    sTIDL_DataParams_t        *outDataParam,
+    TIDL_ShapeContext_t       *context);
+
+/**
+ * @brief   Expand shape inference.
+ *
+ *          Broadcasts the input tensor to the target shape stored in
+ *          pcLayer->layerPCParams.expandParams.shape[] using NumPy-style
+ *          broadcasting semantics:
+ *
+ *          For each dimension d in [0, TIDL_DIM_MAX):
+ *              out.dimValues[d] = max(in.dimValues[d], expandParams.shape[d])
+ *
+ *          expandParams.shape[] is left-padded with 1s to TIDL_DIM_MAX at
+ *          import time, so the max rule handles rank extension automatically.
+ *
+ *          COMPILE-TIME path (context != NULL && context->isCompileTime != 0):
+ *            Reads the target shape from pcLayer->layerPCParams.expandParams.
+ *            Only available when HOST_EMULATION is defined (PC builds).
+ *
+ *          RUNTIME path (context == NULL or context->isCompileTime == 0):
+ *            expandParams is a PC-only field.  Output shape is baked in at
+ *            import time; returns TIDL_SHAPE_INFERENCE_ERR_UNSUPPORTED_LAYER
+ *            so the static dimValues are preserved.
+ *
+ *          Preconditions : nIn >= 1.
+ */
+int32_t TIDL_shapeInfer_Expand(
     sTIDL_LayerParams_t       *layerParams,
     sTIDL_DataParams_t        *inDataParams[],
     int32_t                    numInBufs,

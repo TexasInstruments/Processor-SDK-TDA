@@ -28,7 +28,11 @@ guide.
 * \subpage IP_FMA_DRU_REGS_PERIODIC_READBACK_PAGE - DRU – Periodic Software Readback of Static
   Configuration Registers
 * \subpage IP_FMA_DRU_TR_OVERFLOW_PAGE - DRU – UTC Active TR event overflow detection check
+* \subpage IP_FMA_DRU_BASIC_TESTS_WITH_CRC_CHECK - DRU – Basic Tests with CRC Check
 * \subpage IP_FMA_CSIRX_PAGE - CSI RX – Periodic Software Readback of Static
   Configuration Registers
 * \subpage IP_FMA_CLK_PAGE - CLK – Periodic Software Read-back of Static
   Configuration Registers
+* \subpage SDL_DCC_RB_WRITTEN_CONFIG_PAGE - CLK - Software Readback of Written Configuration
+  Test
+* \subpage IP_FMA_UTC_LEGAL_TR_CHECK_PAGE - UTC Legal TR Check - DRU unsupported/illegal TR detection

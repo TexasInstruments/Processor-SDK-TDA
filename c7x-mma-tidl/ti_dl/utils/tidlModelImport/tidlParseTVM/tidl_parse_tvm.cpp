@@ -67,10 +67,6 @@
 #include "tidl_runtimes_infer_common.h"
 #include <tvm/relay/function.h>
 
-// // #include "tidlParseTVM/tidl_parse_tvm.h"
-
-// #define __MODULE__ "[PARSER]"
-
 extern int32_t gloab_data_format;
 
 // TVM converts some operators to different names, so we need to map them to TIDL supported ops.
@@ -117,13 +113,19 @@ TidlParseTVM::TidlParseTVM(relay::Call call, int32_t index, sTIDL_LayerPC_t laye
   {
     status = (this->*(jumpTableEntry->second))(); // Call the parse function
 
-    if (status == -1)
+    if (status == TIDL_ALLOWLISTING_LAYER_TYPE_UNSUPPORTED || status == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
     {
       layer.parseStatus = TIDL_ParseFailed;
     }
     else
     {
-      layer.parseStatus = TIDL_ParsePassed;
+        if (!isLayerIODataTypesSupported(layer) || !isLayerIONumSupported(layer))
+        {
+          layer.layerType = TIDL_UnsupportedLayer;
+          layer.parseStatus = TIDL_ParseFailed;
+        }else{
+          layer.parseStatus = TIDL_ParsePassed;
+        }
     }
   }
   // else if (gParams.enableCustomLayers)
@@ -190,8 +192,13 @@ int32_t TidlParseTVM::saveAllowlistingMetaData(const relay::Call call, int32_t n
   {
     std::vector<int32_t> dims = TIDL_relayNormalizeShape(inputs[i]);
     auto tensorType = inputs[i]->checked_type().as<TensorTypeNode>();
-    int32_t tidlType = tensorType ? getTIDLDataTypeFromTVMDataType((int32_t)tensorType->dtype.code()) : -1;
+    int32_t tidlType = tensorType ? getTIDLDataTypeFromTVMDataType((int32_t)tensorType->dtype.code(), (int32_t)tensorType->dtype.bits()) : -1;
+    if (tidlType == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+    {
+      return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+    }
     almd.inputDataTypes.push_back(tidlType);
+
     if(inputs[i].as<ConstantNode>())
     {
       almd.constTensorIndices.push_back(i);
@@ -206,7 +213,7 @@ int32_t TidlParseTVM::saveAllowlistingMetaData(const relay::Call call, int32_t n
   almd.numVarInputs = almd.varTensorIndices.size();
   almd.numConstInputs = almd.constTensorIndices.size();
 
-  if (numOutputs > 1 && call->checked_type().as<TupleTypeNode>())
+  if (call->checked_type().as<TupleTypeNode>())
   {
     auto tuple_type = call->checked_type().as<TupleTypeNode>();
     for (int i = 0; i < tuple_type->fields.size(); i++)
@@ -219,9 +226,15 @@ int32_t TidlParseTVM::saveAllowlistingMetaData(const relay::Call call, int32_t n
         {
           tidl_shape.push_back(shape[j].as<IntImmNode>()->value);
         }
+        int32_t tidlOutType = getTIDLDataTypeFromTVMDataType(
+          (int32_t)tuple_type->fields[i].as<TensorTypeNode>()->dtype.code(),
+          (int32_t)tuple_type->fields[i].as<TensorTypeNode>()->dtype.bits());
+        if (tidlOutType == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+        {
+          return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+        }
         almd.outputTensorDims.emplace_back(tidl_shape);
-        almd.outputDataTypes.push_back(getTIDLDataTypeFromTVMDataType(
-          (int32_t)tuple_type->fields[i].as<TensorTypeNode>()->dtype.code()));
+        almd.outputDataTypes.push_back(tidlOutType);
       }
       else
       {
@@ -234,8 +247,13 @@ int32_t TidlParseTVM::saveAllowlistingMetaData(const relay::Call call, int32_t n
   {
     almd.outputTensorDims.emplace_back(TIDL_relayNormalizeShape(call));
     auto outTensorType = call->checked_type().as<TensorTypeNode>();
-    almd.outputDataTypes.push_back(outTensorType ?
-      getTIDLDataTypeFromTVMDataType((int32_t)outTensorType->dtype.code()) : -1);
+    int32_t tidlOutType = outTensorType ?
+      getTIDLDataTypeFromTVMDataType((int32_t)outTensorType->dtype.code(), (int32_t)outTensorType->dtype.bits()) : -1;
+    if (tidlOutType == TIDL_ALLOWLISTING_LAYER_CHECK_FAILED)
+    {
+      return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+    }
+    almd.outputDataTypes.push_back(tidlOutType);
   }
   // if the output dims is 0 then donot offload to TIDL
   if(numOutputs==1 &&almd.outputTensorDims[0].size()==0 ) 

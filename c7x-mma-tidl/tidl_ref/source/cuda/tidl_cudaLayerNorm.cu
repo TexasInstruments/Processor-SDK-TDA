@@ -370,6 +370,7 @@ int TIDL_cudaLayerNormFloat(
         {
             /* Log Error */
             printf("LayerNormFloat: Unable to find input pointer\n");
+            return IALG_EFAIL;
         }
     }
 
@@ -380,6 +381,7 @@ int TIDL_cudaLayerNormFloat(
         {
             /* Log Error */
             printf("LayerNormFloat: Unable to find output pointer\n");
+            return IALG_EFAIL;
         }
     }
 
@@ -734,6 +736,7 @@ int TIDL_cudaLayerNorm(
         {
             /* Log Error */
             printf("LayerNorm: Unable to find input pointer\n");
+            return IALG_EFAIL;
         }
     }
 
@@ -744,6 +747,7 @@ int TIDL_cudaLayerNorm(
         {
             /* Log Error */
             printf("LayerNorm: Unable to find output pointer\n");
+            return IALG_EFAIL;
         }
     }
 

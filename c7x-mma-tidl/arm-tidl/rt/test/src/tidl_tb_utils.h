@@ -196,8 +196,8 @@ int32_t tidltb_printNetInfo(sTIDL_Network_t * pTIDLNetStructure,
 TI_FILE * tidl_openNetInput(tidl_net_config *params);
 int32_t tidl_readFile(void * file, uint8_t * fileString);
 int32_t tidl_writeNetWithStats(tidl_net_config * params, sTIDL_Network_t * net);
-int32_t tidl_tb_WriteBinToFile(const char * fileName, void * addr, int32_t size, int32_t count);
-int32_t tidl_tb_ReadBinFromFile(const char * fileName, void * addr, int32_t size, int32_t count);
+int32_t tidl_tb_WriteBinToFile(const char * fileName, void * addr, uint32_t size, int32_t count);
+int32_t tidl_tb_ReadBinFromFile(const char * fileName, void * addr, uint32_t size, int32_t count);
 
 int32_t readIODescFile(char * fileName, sTIDL_IOBufDesc_t * gIOParams);
 void printIOTensorInfo(sTIDL_IOBufDesc_t * ioParams);
@@ -207,7 +207,7 @@ int32_t tidl_getStaticOffset(void* ptr);
 int32_t tidl_getTotalStaticNetworks(void* ptr);
 void setDefaultParams(tidl_net_config * params);
 void updateDefaultParams(tidl_net_config * params);
-int32_t tidl_getFileSize(uint8_t * fileString);
+uint32_t tidl_getFileSize(uint8_t * fileString);
 int32_t tidl_allocInOutTensors(sTIDL_IOBufDesc_t *ioPrms, sTIDLRT_Tensor_t *ins[], sTIDLRT_Tensor_t *outs[]);
 int32_t tidl_applyDimsFromFile(TI_FILE *dimsFp, sTIDL_IOBufDesc_t *ioPrms, sTIDLRT_Tensor_t *ins[]);
 int32_t tidl_freeInOutTensors(sTIDL_IOBufDesc_t *ioPrms, sTIDLRT_Tensor_t * ins[], sTIDLRT_Tensor_t * outs[]);

@@ -264,7 +264,7 @@ const vector<TidlConstraint> tidlConstraintScatterElements =
                 }
                 else
                 {
-                    TIDL_GLOBAL_REPORT_WARNING("Input data is expected to be a zero tensor; otherwise, ScatterND or ScatterElements layers may not function as expected.\n");
+                    TIDL_GLOBAL_REPORT_WARNING("ScatterND/ScatterElements [%s]: Input data is expected to be a zero tensor; otherwise functionality might be incorrect", (char *)layer->name);
                 }
             }
             return true;

@@ -81,6 +81,8 @@
 #include "tidlAllowlistingConstraints/tidl_constraint.h"
 
 #include "tidlAllowlistingConstraints/tidl_constraint.h"
+
+#undef __MODULE__
 #define __MODULE__ "[PARSER]"
 
 #define TIDL_SIMD_WIDTH (64)
@@ -105,6 +107,18 @@ int32_t TIDL_canConvertToBatchNorm (sTIDL_LayerPC_t &layer)
   {
     return 0;
   }
+
+  int32_t numDims = md.varTensorsDims[0].size();
+  if(gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TFLITE || gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TENSORFLOW ||
+     gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TFLITE_RT)
+  {
+    /* Avoid conversion in 3D or lower tensors for tflite due to ambuguity of format conversin */
+    if(numDims < 4)
+    {
+      return 0;
+    }
+  }
+
   if (md.constTensorsDims[0].size() == 0)
   {
     if(gParams.debugTraceLevel > 0)
@@ -133,7 +147,6 @@ int32_t TIDL_canConvertToBatchNorm (sTIDL_LayerPC_t &layer)
   }
   else if(nonSingletonDimNum == 1)
   {
-    int32_t numDims = md.varTensorsDims[0].size();
     if (numDims >= 3)
     {
       if(gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TFLITE || gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TENSORFLOW || gParams.modelType == TIDL_IMPORT_MODEL_FORMAT_TFLITE_RT)

@@ -302,6 +302,7 @@ int TIDL_cudaInnerProductFused(
         {
             /*Log Error*/
             printf("InnerProduct: Unable to find input pointer\n");
+            return IALG_EFAIL;
         }
     }
 
@@ -318,6 +319,7 @@ int TIDL_cudaInnerProductFused(
             {
                 /*Log Error*/
                 printf("InnerProduct: Unable to find inputB pointer\n");
+                return IALG_EFAIL;
             }
         }
         checkCudaErr(cudaMemcpyAsync(dpInB, inBPtr, sizeof(TBin) * inputBSize,
@@ -357,6 +359,7 @@ int TIDL_cudaInnerProductFused(
         {
             /*Log Error*/
             printf("InnerProduct: Unable to find output pointer\n");
+            return IALG_EFAIL;
         }
     }
 

@@ -106,10 +106,17 @@ public:
     /* Maximum Tolerated delay for TIDL pre-emption in milliSecond */
     float max_pre_empt_delay = FLT_MAX;
 
-    /* C7x core number to be used for inference */ 
+    /* C7x core number to be used for inference */
     int core_number = 1;
     /* Core id to start processing from */
     int core_start_idx = 1;
+
+    /* Import TIDL_CacheLayer state from artifacts folder at subgraph create time */
+    int cache_import = 0;
+    /* Export TIDL_CacheLayer state to outputs, starting from subgraph create time */
+    int cache_export = 0;
+    /* Clear TIDL_CacheLayer state at subgraph create time */
+    int cache_clear = 0;
 };
 
 #include "core/providers/tidl/tidl_execution_provider_common.h"

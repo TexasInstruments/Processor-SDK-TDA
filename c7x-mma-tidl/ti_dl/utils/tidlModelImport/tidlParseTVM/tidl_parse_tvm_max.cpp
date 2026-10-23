@@ -75,6 +75,11 @@ int32_t TidlParseTVM::parse<OpNameStr("maximum")>()
     if (layer.allowlistingMetaData.numConstInputs > 0)
     {
         layer.weights=TIDL_extractConstantTensorData(call, md.constTensorIndices[0], md, 0);
+        if(layer.weights.ptr==NULL)
+        {
+            TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", md.constTensorIndices[0]);
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
     }
 
   return 0;

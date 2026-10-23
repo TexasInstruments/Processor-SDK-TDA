@@ -87,13 +87,28 @@ using ::google::protobuf::Message;
 #include "ti_dl.h"
 #include "tidl_import_diag.h"
 #include "tidl_import_api.h"
+#include "tidl_onnxImport.h"
 
+#undef __MODULE__
 #define __MODULE__ "[PARSER]"
 
 using namespace std;
 using namespace onnx;
 
 static TIDL_OnnxrtEPData * data_ = new TIDL_OnnxrtEPData;
+
+/** Resolve ONNX external data for a freshly parsed model. The directory containing the
+ * external weight files is taken from the advanced_options:external_data_dir option,
+ * defaulting to the current working directory. No-op when no tensor is stored externally. */
+static int32_t TIDL_onnxRtResolveExternalData(ModelProto& model_proto)
+{
+  std::string baseDir = data_->osrt_options.m_external_data_dir;
+  if (baseDir.empty())
+  {
+    baseDir = ".";
+  }
+  return TIDL_loadExternalDataForModel(&model_proto, baseDir);
+}
 
 
 
@@ -126,71 +141,6 @@ GraphCache buildGraphCache(const onnx::GraphProto& graph)
   }
 
   return cache;
-}
-
-std::vector<int32_t> getNodeInputShape(GraphProto& onnxGraph, const std::string name, int32_t debugLevel)
-{
-  std::vector<int32_t> dims;
-  int32_t nodeFound = 0;
-
-  for (int k = 0; k < onnxGraph.input_size(); k++)
-  {
-    if((strcmp(onnxGraph.input(k).name().c_str(), name.c_str()) == 0))
-    {
-      if( onnxGraph.input(k).type().tensor_type().has_shape() )
-      {
-        auto& tensorShape = onnxGraph.input(k).type().tensor_type().shape();
-        for (int j = 0; j < tensorShape.dim_size(); j++)
-        {
-          dims.push_back(tensorShape.dim(j).dim_value());
-          nodeFound = 1;
-        }
-      }
-    }
-  }
-
-
-  if (nodeFound == 0)
-  {
-    for (int k = 0; k < onnxGraph.value_info_size(); k++)
-    {
-      if((strcmp(onnxGraph.value_info(k).name().c_str(), name.c_str()) == 0))
-      {
-        if( onnxGraph.value_info(k).type().tensor_type().has_shape() )
-        {
-          auto& tensorShape = onnxGraph.value_info(k).type().tensor_type().shape();
-          for (int j = 0; j < tensorShape.dim_size(); j++)
-          {
-            dims.push_back(tensorShape.dim(j).dim_value());
-            nodeFound = 1;
-          }
-        }
-      }
-    }
-  }
-
-  /**
-   * Protecting the search under the flag as the dims vector can be filled twice when there is a node present as
-   * both input & output in the onnx graph.
-  */
-  if (nodeFound == 0)
-  {
-    for (int k = 0; k < onnxGraph.output_size(); k++)
-    {
-      if((strcmp(onnxGraph.output(k).name().c_str(), name.c_str()) == 0))
-      {
-        if( onnxGraph.output(k).type().tensor_type().has_shape() )
-        {
-          auto& tensorShape = onnxGraph.output(k).type().tensor_type().shape();
-          for (int j = 0; j < tensorShape.dim_size(); j++)
-          {
-            dims.push_back(tensorShape.dim(j).dim_value());
-          }
-        }
-      }
-    }
-  }
-  return dims;
 }
 
 /* Read interface options and populate to TIDL runtimes option class */
@@ -1442,15 +1392,10 @@ void TIDL_getGraphVisualizationInfo(GraphProto& onnxGraph, std::vector<int> &sor
       std::vector<std::string> add_output_name;
       for(auto& adjNode : visInfo[i].outputAdjNodes)
       {
-        //Mark -1 added to identify the case in wich an nodes' output is also an input to other nodes and missed as an overall output
-        if(adjNode == -1)
+        // Mark -1 added to identify the case in wich an nodes' output is also an input to other nodes and missed as an overall output
+        if(adjNode != -1)
         {
-          //Total outputAdjNodes size could include mark "-1" and could confuse graphviz. Reduced by one to keep current graphviz code flow
-          outputsAdjNodesSize = visInfo[i].outputAdjNodes.size() -1;
-        }
-        else
-        {
-          outputsAdjNodesSize = visInfo[i].outputAdjNodes.size();
+          outputsAdjNodesSize++;
         }
       }
       if(visInfo[i].outputAdjNodes.size() == 0)
@@ -1501,9 +1446,9 @@ void TIDL_getGraphVisualizationInfo(GraphProto& onnxGraph, std::vector<int> &sor
       outfile << "additionalOutput " << add_output_cnt << " ";
       if(add_output_name.size() != 0)
       {
-        for(int i; i<add_output_name.size(); i++)
+        for(size_t j = 0; j < add_output_name.size(); j++)
         {
-          outfile << add_output_name[i] << " ";
+          outfile << add_output_name[j] << " ";
         }
       }
       outfile << "diagInfo " << visInfo[i].diagnosticInfo;
@@ -1778,6 +1723,13 @@ int32_t TIDL_getSupportedNodesImport(std::string& data, std::vector<std::vector<
       std::stringstream ss(prop.value());
       ss >> opSetVersion;
     }
+  }
+
+  if (TIDL_onnxRtResolveExternalData(model_proto) != 0)
+  {
+    TIDL_GLOBAL_REPORT_ERROR("Failed to load ONNX external data during allowlisting. Set advanced_options:external_data_dir to the directory containing the external weight files.");
+    nodeGroups = {{}};
+    return status;
   }
 
   auto onnxGraph = model_proto.graph();
@@ -2146,11 +2098,11 @@ int32_t TIDL_getSupportedNodesImport(std::string& data, std::vector<std::vector<
 
   /* Total nodes supported by C7x */
   int32_t numSuportedNodes = 0;
-  fprintf(fp, "%d\n", suportedNodeGroupsSubdivided.size());
+  fprintf(fp, "%ld\n", suportedNodeGroupsSubdivided.size());
   for(int i = 0; i < suportedNodeGroupsSubdivided.size(); i++)
   {
     std::vector<int> subgraph = suportedNodeGroupsSubdivided[i];
-    fprintf(fp, "%d\n", subgraph.size());
+    fprintf(fp, "%ld\n", subgraph.size());
     for(int j = 0; j < subgraph.size(); j++)
     {
       fprintf(fp, "%d\n", subgraph[j]);
@@ -2434,7 +2386,7 @@ int32_t TIDL_subgraphImport(onnxRtParams_t * onnxRtParams, TIDL_OnnxrtEPData* op
       {
         //TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "\n**********  Frame Index %d : Running fixed point mode for calibration **********\n", currFrameIdx);
         TIDL_IMPORT_CHECK_AND_RETURN(TIDL_runtimesPostProcessNet(&options->osrt_options, options->osrt_options.m_calibration_frames, options->osrt_options.m_num_param_bits, subGraphPtr, NULL,
-                                      inQuantFactorCurrTensor, NULL, subGraphName), "");
+                                      inQuantFactorCurrTensor, NULL, (const char*)subGraphName), "");
         TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "\n");
       }
     }
@@ -3119,6 +3071,12 @@ int32_t TIDL_computeImportFunc(OnnxTIDLSubGraphParams * state_subGraph, std::str
   model_proto.ParseFromString(*string_buf);
   std::string serialNumber = std::to_string(state_subGraph->serialNumber);
 
+  if (TIDL_onnxRtResolveExternalData(model_proto) != 0)
+  {
+    TIDL_GLOBAL_REPORT_ERROR("Failed to load ONNX external data during import. Set advanced_options:external_data_dir to the directory containing the external weight files.");
+    return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+  }
+
   auto onnxGraph = model_proto.graph();
 
   // Check if subgraph contains OD post processing part
@@ -3190,7 +3148,7 @@ int32_t TIDL_computeImportFunc(OnnxTIDLSubGraphParams * state_subGraph, std::str
     std::vector<float32_tidl> qfloat(TIDL_MAX_ALG_IN_BUFS);
     //TIDL_GLOBAL_REPORT_INFO(TIDL_IMPORT_DIAGNOSIS_DEBUG_LEVEL, "\n ************** Frame index 1 : Running float import ************* \n");
 
-    TIDL_IMPORT_CHECK_AND_RETURN(TIDL_runtimesPostProcessNet(&data_->osrt_options, 1, 32, state_subGraph->subGraphPtr_, NULL, qfloat.data(), NULL, state_subGraph->subGraphName_), "");
+    TIDL_IMPORT_CHECK_AND_RETURN(TIDL_runtimesPostProcessNet(&data_->osrt_options, 1, 32, state_subGraph->subGraphPtr_, NULL, qfloat.data(), NULL, (const char*)state_subGraph->subGraphName_), "");
 
     sTIDL_tidlRtParams_t * subgraphParams = reinterpret_cast<sTIDL_tidlRtParams_t *>(&state_subGraph->tidlRtParams);
 
@@ -3371,8 +3329,8 @@ int32_t TIDL_computeInvokeFunc(OnnxTIDLSubGraphParams * state_subGraph)
 int32_t TIDL_releaseRtFunc(OnnxTIDLSubGraphParams * state_subGraph)
 {
   int32_t status = 0;
-  delete state_subGraph->subGraphPtr_;
-  sTIDL_tidlRtParams_t * subgraphParams = reinterpret_cast<sTIDL_tidlRtParams_t *>(&state_subGraph->tidlRtParams);
+  if (state_subGraph->subGraphPtr_) delete static_cast<sTIDL_OrgNetwork_t*>(state_subGraph->subGraphPtr_);
+  sTIDL_tidlRtParams_t * subgraphParams = reinterpret_cast<sTIDL_tidlRtParams_t*>(&state_subGraph->tidlRtParams);
   status = TIDL_subgraphRtDelete(data_->osrt_options.osrtDebugPrintLevel, &data_->infer_ops, subgraphParams);
   return status;
 }

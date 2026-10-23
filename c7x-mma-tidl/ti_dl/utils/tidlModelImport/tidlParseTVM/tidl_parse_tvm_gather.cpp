@@ -67,20 +67,33 @@ using namespace tvm;
 #include <tvm/relay/expr.h>
 #include <tvm/relay/analysis.h>
 #include <tvm/runtime/ndarray.h>
+#include <cmath>
 
 template<>
 int32_t TidlParseTVM:: parse<OpNameStr("tidl.gather")> ()
 {
     int32_t status = 0, axis, numDim;
     layer.layerType = TIDL_GatherLayer;
-  
+
     sTIDL_allowlistingMetaData md = layer.allowlistingMetaData;
     layer.numInBufs = md.numInputs;
+    layer.layerParams.gatherParams.viewChannels = 1;
+    layer.layerParams.gatherParams.thresholdPadSize = 0;
+    layer.layerParams.gatherParams.thresholdPadValue = 0;
+
     const auto* fn_node = call->op.as<tvm::relay::FunctionNode>();
     auto fn = GetRef<tvm::relay::Function>(fn_node);
     const auto* attrs = fn->attrs.as<DictAttrsNode>();
-    /** If shape inference is not done on model, we assume the tensor is of 4 dimensions by default*/
-    if (md.varTensorsDims.size() != 0)
+
+    /** If shape inference is not done on model, we assume the tensor is of 4 dimensions by default.
+     *  numDim must reflect the DATA tensor rank for correct axis translation. */
+    if (md.numConstInputs > 0 && md.constTensorIndices[0] == 0)
+    {
+        // data is const: get rank from constTensorsDims
+        numDim = md.constTensorsDims[0].size();
+        numDim = (numDim == 0) ? 4 : numDim;
+    }
+    else if (md.varTensorsDims.size() != 0)
     {
         numDim = md.varTensorsDims[0].size();
         numDim = (numDim == 0) ? 4 : numDim;
@@ -97,62 +110,140 @@ int32_t TidlParseTVM:: parse<OpNameStr("tidl.gather")> ()
     {
         axis = Downcast<Integer>(attrs->dict.at("axis"))->value;
     }
-    axis = TIDL_relayNormalizeAxis(axis, numDim);
+
+    /* Translate to TIDL axis exactly as the ONNX Gather parser does (avoid
+     * TIDL_relayNormalizeAxis here: its NHWC channel-swap remap for axis
+     * values 1/2/3 does not apply to Gather and diverges from ONNX). */
+    if (axis >= 0)
+    {
+        axis += (TIDL_DIM_MAX - numDim);
+    }
+    else
+    {
+        axis = (TIDL_DIM_MAX + axis);
+    }
     layer.layerParams.gatherParams.axis = axis;
     layer.layerParams.gatherParams.isIdxScalar = 0;
+
+    if (md.numConstInputs > 1)
+    {
+        TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Gather layer : Both data and indices as constants is not supported");
+        return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+    }
 
     // Handle constant indices input
     if (md.numConstInputs > 0)
     {
-        // Check if the indices are provided as second argument (index 1)
-        if (call->args[1].as<tvm::relay::ConstantNode>())
+        int32_t constArgIdx = md.constTensorIndices[0];
+        if (constArgIdx == 0)
         {
-            // Extract the indices data
-            sBuffer_t buf = TIDL_extractConstantTensorData(call, 1, md, 0);
-            if(md.constTensorsDims[0].size()==0)
+            TIDL_LOG_UNSUPPORTED(gDiags.gDiagList, "Data cannot be a constant. Only indices can be constant.");
+            return TIDL_ALLOWLISTING_LAYER_CHECK_FAILED;
+        }
+
+        // Extract the indices data
+        sBuffer_t buf = TIDL_extractConstantTensorData(call, constArgIdx, md, 0);
+        if(buf.ptr==NULL)
+        {
+            TIDL_LOG_ERROR(gDiags.gDiagList, "Unable to read initializer tensor at index %d", constArgIdx);
+            return TIDL_IMPORT_DIAGNOSIS_RETURN_FAIL;
+        }
+        if(md.constTensorsDims[0].size()==0)
+        {
+            layer.layerParams.gatherParams.isIdxScalar = 1;
+        }
+        // Decide the conversion based on what TIDL_extractConstantTensorData actually
+        // produced (buf.dataType), not on a separately re-derived relay dtype check --
+        // those can disagree (e.g. a float-typed constant), which silently reinterprets
+        // float bytes as int32 garbage.
+        if (buf.dataType == TIDL_SignedDoubleWord || buf.dataType == TIDL_UnsignedDoubleWord)
+        {
+             // TIDL_GatherLayer doesn't support int64 indices, hence convert them to int32
+            int32_t *index_dst_ptr = (int32_t*)malloc(sizeof(int32_t) * buf.bufSize);
+
+            if (index_dst_ptr == NULL)
             {
-                layer.layerParams.gatherParams.isIdxScalar = 1;
+                TIDL_LOG_ERROR(gDiags.gDiagList, "GatherLayer : Could not allocate memory for gather constant indices");
+                return -1;
             }
-            // Check data type and handle int64 to int32 conversion if needed
-            string index_type = DLDataType2String(call->args[1]->checked_type().as<TensorTypeNode>()->dtype);
 
-            if (index_type == "int64")
+            int64_t *index_src_ptr = (int64_t*)buf.ptr;
+            int64_t val = 0;
+
+            for (int32_t j = 0; j < buf.bufSize; j++)
             {
-
-                 // TIDL_GatherLayer doesn't support int64 indices, hence convert them to int32
-                int32_t *index_dst_ptr = (int32_t*)malloc(sizeof(int32_t) * buf.bufSize);
-
-                if (index_dst_ptr == NULL)
-                {
-                    TIDL_LOG_ERROR(gDiags.gDiagList, "GatherLayer : Could not allocate memory for gather constant indices");
-                    return -1;
-                }
-
-                int64_t *index_src_ptr = (int64_t*)buf.ptr;
-                int64_t val = 0;
-
-                for (int32_t j = 0; j < buf.bufSize; j++)
-                {
-                    val = index_src_ptr[j];
-                    index_dst_ptr[j] = (int32_t)val;
-                }
-
-                layer.weights.ptr = index_dst_ptr;
-                layer.weights.bufSize = buf.bufSize;
-                /* Update the buffer pointer*/
+                val = index_src_ptr[j];
+                index_dst_ptr[j] = (int32_t)val;
             }
-            else
-            {
-                // Already int32, just assign
-                layer.weights.ptr = buf.ptr;
-                layer.weights.bufSize = buf.bufSize;
-            }
+
+            layer.weights.ptr = index_dst_ptr;
+            layer.weights.bufSize = buf.bufSize;
+            layer.weights.dataType = TIDL_SignedWord;
+            /* Update the buffer pointer*/
             free(buf.ptr);
+        }
+        else if (buf.dataType == TIDL_SinglePrecFloat)
+        {
+            // Constant-folded indices can come back as float; round to the
+            // nearest integer rather than reinterpreting the float bytes as int32.
+            int32_t *index_dst_ptr = (int32_t*)malloc(sizeof(int32_t) * buf.bufSize);
+
+            if (index_dst_ptr == NULL)
+            {
+                TIDL_LOG_ERROR(gDiags.gDiagList, "GatherLayer : Could not allocate memory for gather constant indices");
+                return -1;
+            }
+
+            float *index_src_ptr = (float*)buf.ptr;
+
+            for (int32_t j = 0; j < buf.bufSize; j++)
+            {
+                index_dst_ptr[j] = (int32_t)lroundf(index_src_ptr[j]);
+            }
+
+            layer.weights.ptr = index_dst_ptr;
+            layer.weights.bufSize = buf.bufSize;
+            layer.weights.dataType = TIDL_SignedWord;
+            free(buf.ptr);
+        }
+        else
+        {
+            // Already int32, just assign
+            layer.weights.ptr = buf.ptr;
+            layer.weights.bufSize = buf.bufSize;
+            layer.weights.dataType = TIDL_SignedWord;
         }
     }
 
-    layer.inData[0].numDim = md.varTensorsDims[0].size();
-    layer.inData[1].numDim = md.varTensorsDims[1].size();
+    int8_t dataIsVar = 0, indicesIsVar = 0;
+    for (int32_t i = 0; i < md.varTensorIndices.size(); i++)
+    {
+        if (md.varTensorIndices[i] == 0) dataIsVar = 1;
+        if (md.varTensorIndices[i] == 1) indicesIsVar = 1;
+    }
+
+    int32_t dataDimCount = 0, indicesDimCount = 0;
+
+    if (dataIsVar && indicesIsVar)
+    {
+        dataDimCount = md.varTensorsDims[0].size();
+        indicesDimCount = md.varTensorsDims[1].size();
+    }
+    // Data is variable and indices is constant
+    else if (dataIsVar && !indicesIsVar)
+    {
+        dataDimCount = md.varTensorsDims[0].size();
+        indicesDimCount = md.constTensorsDims[0].size();
+    }
+    // Data is constant and indices is variable
+    else if (!dataIsVar && indicesIsVar)
+    {
+        dataDimCount = md.constTensorsDims[0].size();
+        indicesDimCount = md.varTensorsDims[0].size();
+    }
+
+    layer.inData[0].numDim = dataDimCount;
+    layer.inData[1].numDim = indicesDimCount;
 
     return 0;
 }

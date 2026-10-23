@@ -71,6 +71,10 @@
 #include "tidl_alg_int.h"
 #include "tidl_commonUtils.h"
 #include "tidl_crop_ref.h"
+#ifdef BUILD_WITH_CUDA
+#include "tidl_cuda.h"
+static int CUDA_CROP_COUNTER = 0;
+#endif
 
 /**
  * @brief This is reference implementation of Crop layer
@@ -114,6 +118,16 @@ template<class Tin, class Tout> void TIDL_cropRefProcess(
     int32_t outDim1Pitch,
     int32_t outROIPitch)
 {
+
+  #ifdef BUILD_WITH_CUDA_CROP
+  // call cuda crop wrapper
+  TIDL_refCudaCrop(pIn,pOut,
+    inPtrOffset, outPtrOffset,
+    outWidth, outHeight, numChs, numDim2, numDim1, numROIs,
+    inLinePitch, outLinePitch, inChPitch, inDim2Pitch, inDim1Pitch, inROIPitch,
+    outChPitch, outDim2Pitch, outDim1Pitch, outROIPitch);
+  #else
+
   int32_t i0, i1, i2, i3, i4, i5;
 
   OPENACC(data copyin(pIn[:1 + inPtrOffset + ((numROIs - 1) * inROIPitch) + ((numChs - 1) * inChPitch) + ((outHeight - 1) * inLinePitch) + (outWidth - 1)])
@@ -140,6 +154,7 @@ template<class Tin, class Tout> void TIDL_cropRefProcess(
       }
     }
   }
+  #endif
   TIDL_L1DandL2CacheWbInv();
 }
 

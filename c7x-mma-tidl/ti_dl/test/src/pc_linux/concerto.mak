@@ -18,7 +18,7 @@ DEFS += BUILD_WITH_STATIC_ARRAYS
 endif
 
 # host emulation needs HE includes
-IDIRS += $(CGT7X_ROOT)/host_emulation/include/$(TARGET_C7X_VERSION)$(C7x_HOSTEMU_COMPILER_STRING)
+IDIRS += $(CGT7X_ROOT)/host_emulation/include/$(C7X_VERSION)$(C7x_HOSTEMU_COMPILER_STRING)
 ifeq ($(BUILD_LIDAR_PREPROC), 1)
 IDIRS += $(PSDK_INSTALL_PATH)/tiadalg/include
 endif
@@ -27,7 +27,7 @@ endif
 LDIRS += $(CGT7X_ROOT)/host_emulation
 LDIRS += $(PDK_PATH)/ti/csl/lib/$(SOC)/c7x-hostemu/$(TARGET_BUILD)
 
-LDIRS += $(MMALIB_PATH)/lib/$(TARGET_C7X_VERSION)/$(TARGET_BUILD)
+LDIRS += $(MMALIB_PATH)/lib/$(C7X_VERSION)/$(TARGET_BUILD)
 ifeq ($(BUILD_LIDAR_PREPROC), 1)
 LDIRS += $(PSDK_INSTALL_PATH)/tiadalg/lib/x86_64/$(TARGET_BUILD)
 endif
@@ -39,7 +39,7 @@ LDIRS += $($(_MODULE)_SDIR)/../../../lib/$(TARGET_SOC)/PC/algo/$(TARGET_BUILD)
 endif
 
 # AVV build needs runtime support library, not libc
-#ifeq ($(TARGET_C7X_VERSION), C7100)
+#ifeq ($(C7X_VERSION), C7100)
 #ADDITIONAL_STATIC_LIBS += rts7100_le.lib
 #else
 #ADDITIONAL_STATIC_LIBS += rts7120_le.lib
@@ -113,7 +113,7 @@ STATIC_LIBS += mmalib_cn_x86_64
 STATIC_LIBS += perfEst_x86_64
 STATIC_LIBS += mmalib_x86_64
 STATIC_LIBS += common_x86_64
-STATIC_LIBS += $(TARGET_C7X_VERSION)$(C7x_HOSTEMU_COMPILER_STRING)-host-emulation
+STATIC_LIBS += $(C7X_VERSION)$(C7x_HOSTEMU_COMPILER_STRING)-host-emulation
 ifeq ($(BUILD_LIDAR_PREPROC), 1)
 STATIC_LIBS += tiadalg_voxelization
 DEFS += BUILD_LIDAR_PREPROC
@@ -164,7 +164,7 @@ STATIC_LIBS += tidl_avx_kernels
 DEFS += HOST_EMULATION
 DEFS += _HOST_BUILD
 
-ifeq ($(TARGET_C7X_VERSION), C7100)
+ifeq ($(C7X_VERSION), C7100)
 else
 DEFS += _TEMP_REF_MODELS
 endif

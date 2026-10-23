@@ -301,17 +301,19 @@ typedef struct {
 
 typedef struct{
   int32_t axis;
-  int32_t reduceDims;
+  int32_t keepDims;
 }sTIDL_ReduceMeanParams_t;
 
 typedef struct{
   /** Buffer containing Dim values for output tensor */
   int32_t shape[TIDL_DIM_MAX];
+  /** Number of dimensions in the shape tensor (original rank before TIDL_DIM_MAX padding) */
+  int32_t numDims;
 }sTIDL_ExpandParams_t;
 
 typedef struct{
   int32_t axis;
-  int32_t reduceDims;
+  int32_t keepDims;
 }sTIDL_ReduceSumParams_t;
 
 typedef struct{
@@ -393,6 +395,7 @@ typedef struct{
 
 typedef struct{
   int32_t storage_order;
+  int32_t countIncludePad;
   int32_t dilationW;
   int32_t dilationH;
   /** Top Padding requirement in number of elements */
@@ -496,6 +499,26 @@ typedef struct{
   int8_t hasSumOut;
 }sTIDL_SkipSimplifiedLayerNormParams_t;
 
+typedef struct{
+  /** Optional rotary cos cache (float) */
+  sBuffer_t cosCache;
+  /** Optional rotary sin cache (float) */
+  sBuffer_t sinCache;
+  /** 1 = all outputs packed into single WIDTH-concatenated buffer + induced Slices (always 1 at runtime) */
+  int32_t   isOutputSliced;
+}sTIDL_GroupQueryAttentionPCParams_t;
+
+typedef struct{
+  /** Buffer containing bit-packed uint8 quantized weights (N, kBlocks, blobSize) */
+  sBuffer_t packedWeights;
+  /** Buffer containing per-block float scales (N, kBlocks) */
+  sBuffer_t scales;
+  /** Buffer containing per-block zero points (packed uint8 or float) */
+  sBuffer_t zeroPoints;
+  /** Buffer containing optional float bias (N) */
+  sBuffer_t bias;
+}sTIDL_MatMulNBitsPCParams_t;
+
 /**
 @struct sTIDL_allowlistingMetaData
 @brief  This structure contains layer level tensor related meta data to be used for allowlisting
@@ -575,6 +598,8 @@ typedef union {
   sTIDL_AttentionPCParams_t attentionParams;
   sTIDL_SlicePCParams_t sliceParams;
   sTIDL_SkipSimplifiedLayerNormParams_t skipSimplifiedLayerNormParams;
+  sTIDL_GroupQueryAttentionPCParams_t gqaParams;
+  sTIDL_MatMulNBitsPCParams_t matMulNBitsParams;
 } sTIDL_LayerPCParams_t;
 
 /**
