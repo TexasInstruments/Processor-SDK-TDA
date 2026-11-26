@@ -602,7 +602,9 @@ TEST(tivxConvolve, negativeTestQueryConvolution1)
     VX_CALL(test_utils_max_out_heap_mem(&tivx_shared_mem_info_array, &num_chunks, mheap_region));
 
     /* vxQueryConvolution should fail due to tivxMemBufferAlloc failure */
-    ASSERT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, vxQueryConvolution(conv, VX_CONVOLUTION_ROWS, &actual_n, sizeof(actual_n)));
+    /* Using EXPECT instead of ASSERT so that cleanup below still runs on failure,
+     * avoiding a permanent leak of the maxed-out heap memory and the convolution object */
+    EXPECT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, vxQueryConvolution(conv, VX_CONVOLUTION_ROWS, &actual_n, sizeof(actual_n)));
 
     /* Freeing all the previously allocated memory */
     VX_CALL(test_utils_release_maxed_out_heap_mem(tivx_shared_mem_info_array, num_chunks));
@@ -638,7 +640,9 @@ TEST(tivxConvolve, negativeTestCopyConvolutionCoefficients1)
     VX_CALL(test_utils_max_out_heap_mem(&tivx_shared_mem_info_array, &num_chunks, mheap_region));
 
     /* vxCopyConvolutionCoefficients should fail due to tivxMemBufferAlloc failure */
-    ASSERT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, vxCopyConvolutionCoefficients(conv, gx, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
+    /* Using EXPECT instead of ASSERT so that cleanup below still runs on failure,
+     * avoiding a permanent leak of the maxed-out heap memory and the convolution object */
+    EXPECT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, vxCopyConvolutionCoefficients(conv, gx, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
 
     /* Freeing all the previously allocated memory */
     VX_CALL(test_utils_release_maxed_out_heap_mem(tivx_shared_mem_info_array, num_chunks));

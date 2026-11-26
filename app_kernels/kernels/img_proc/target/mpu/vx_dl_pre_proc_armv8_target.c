@@ -79,17 +79,16 @@ static vx_status VX_CALLBACK tivxKernelDLPreProcArmv8Create
 )
 {
     vx_status status = VX_SUCCESS;
-    int32_t i;
 
     /* tivx_set_debug_zone(VX_ZONE_INFO); */
 
-    for (i = 0U; i < num_params; i ++)
+    /* Only validate required parameters: config (0), at least one image (1), and output tensor (7) */
+    /* Image slots 2-6 are optional and can be NULL */
+    if ((NULL == obj_desc[TIVX_KERNEL_DL_PRE_PROC_ARMV8_CONFIG_IDX]) ||
+        (NULL == obj_desc[TIVX_KERNEL_DL_PRE_PROC_ARMV8_INPUT_IMAGE_IDX]) ||
+        (NULL == obj_desc[TIVX_KERNEL_DL_PRE_PROC_ARMV8_OUTPUT_TENSOR_IDX]))
     {
-        if (NULL == obj_desc[i])
-        {
-            status = VX_FAILURE;
-            break;
-        }
+        status = VX_FAILURE;
     }
 
     tivxDLPreProcArmv8Params * kernelParams = NULL;
@@ -114,15 +113,14 @@ static vx_status VX_CALLBACK tivxKernelDLPreProcArmv8Delete(
     vx_uint16 num_params, void *priv_arg)
 {
     vx_status status = VX_SUCCESS;
-    uint32_t i;
 
-    for (i = 0U; i < num_params; i ++)
+    /* Only validate required parameters: config (0), at least one image (1), and output tensor (7) */
+    /* Image slots 2-6 are optional and can be NULL */
+    if ((NULL == obj_desc[TIVX_KERNEL_DL_PRE_PROC_ARMV8_CONFIG_IDX]) ||
+        (NULL == obj_desc[TIVX_KERNEL_DL_PRE_PROC_ARMV8_INPUT_IMAGE_IDX]) ||
+        (NULL == obj_desc[TIVX_KERNEL_DL_PRE_PROC_ARMV8_OUTPUT_TENSOR_IDX]))
     {
-        if (NULL == obj_desc[i])
-        {
-            status = VX_FAILURE;
-            break;
-        }
+        status = VX_FAILURE;
     }
 
     if (VX_SUCCESS == status)
@@ -153,16 +151,13 @@ static vx_status VX_CALLBACK tivxKernelDLPreProcArmv8Process
     vx_status status = VX_SUCCESS;
 
     tivxDLPreProcArmv8Params *prms = NULL;
-    vx_int32 i;
 
-    for (i = 0U; i < num_params; i ++)
-    {
-        if (NULL == obj_desc[i])
-        {
-            status = VX_FAILURE;
-            break;
-        }
-    }
+    if ((NULL == obj_desc[TIVX_KERNEL_DL_PRE_PROC_ARMV8_CONFIG_IDX]) ||                                                                                                
+      (NULL == obj_desc[TIVX_KERNEL_DL_PRE_PROC_ARMV8_OUTPUT_TENSOR_IDX]) ||                                                                                         
+      (NULL == obj_desc[TIVX_KERNEL_DL_PRE_PROC_ARMV8_INPUT_IMAGE_IDX]))                                                                                             
+    {                                                                                                                                                                  
+      status = VX_FAILURE;                                                                                                                      
+    }              
 
     if(status==VX_SUCCESS)
     {
@@ -182,50 +177,18 @@ static vx_status VX_CALLBACK tivxKernelDLPreProcArmv8Process
         tivx_obj_desc_user_data_object_t* config_desc;
         void * config_target_ptr;
 
-        tivx_obj_desc_image_t *in_img_desc;
-        void* in_img_target_ptr[2];
-
         tivx_obj_desc_tensor_t *out_tensor_desc;
         void *out_tensor_target_ptr;
 
         config_desc = (tivx_obj_desc_user_data_object_t *)obj_desc[TIVX_KERNEL_DL_PRE_PROC_ARMV8_CONFIG_IDX];
         config_target_ptr = tivxMemShared2TargetPtr(&config_desc->mem_ptr);
-        tivxMemBufferMap(config_target_ptr, config_desc->mem_size, VX_MEMORY_TYPE_HOST,VX_READ_ONLY);
-
-        in_img_desc  = (tivx_obj_desc_image_t *)obj_desc[TIVX_KERNEL_DL_PRE_PROC_ARMV8_INPUT_IMAGE_IDX];
-        in_img_target_ptr[0]  = tivxMemShared2TargetPtr(&in_img_desc->mem_ptr[0]);
-        tivxMemBufferMap(in_img_target_ptr[0], in_img_desc->mem_size[0], VX_MEMORY_TYPE_HOST, VX_READ_ONLY);
-        in_img_target_ptr[1]  = NULL;
-        if(in_img_desc->mem_ptr[1].shared_ptr != 0)
-        {
-            in_img_target_ptr[1]  = tivxMemShared2TargetPtr(&in_img_desc->mem_ptr[1]);
-            tivxMemBufferMap(in_img_target_ptr[1], in_img_desc->mem_size[1], VX_MEMORY_TYPE_HOST, VX_READ_ONLY);
-        }
+        tivxMemBufferMap(config_target_ptr, config_desc->mem_size, VX_MEMORY_TYPE_HOST, VX_READ_ONLY);
 
         out_tensor_desc = (tivx_obj_desc_tensor_t *)obj_desc[TIVX_KERNEL_DL_PRE_PROC_ARMV8_OUTPUT_TENSOR_IDX];
         out_tensor_target_ptr = tivxMemShared2TargetPtr(&out_tensor_desc->mem_ptr);
         tivxMemBufferMap(out_tensor_target_ptr, out_tensor_desc->mem_size, VX_MEMORY_TYPE_HOST, VX_WRITE_ONLY);
 
-        VX_PRINT(VX_ZONE_INFO, "Image channel 0\n");
-        VX_PRINT(VX_ZONE_INFO, "dim_x = %d\n", in_img_desc->imagepatch_addr[0].dim_x);
-        VX_PRINT(VX_ZONE_INFO, "dim_y = %d\n", in_img_desc->imagepatch_addr[0].dim_y);
-        VX_PRINT(VX_ZONE_INFO, "stride_y = %d\n", in_img_desc->imagepatch_addr[0].stride_y);
-        VX_PRINT(VX_ZONE_INFO, "stride_x = %d\n", in_img_desc->imagepatch_addr[0].stride_x);
-        VX_PRINT(VX_ZONE_INFO, "step_x = %d\n", in_img_desc->imagepatch_addr[0].step_x);
-        VX_PRINT(VX_ZONE_INFO, "step_y = %d\n", in_img_desc->imagepatch_addr[0].step_y);
-
-        if(in_img_target_ptr[1] != NULL)
-        {
-            VX_PRINT(VX_ZONE_INFO, "Image channel 1\n");
-            VX_PRINT(VX_ZONE_INFO, "dim_x = %d\n", in_img_desc->imagepatch_addr[1].dim_x);
-            VX_PRINT(VX_ZONE_INFO, "dim_y = %d\n", in_img_desc->imagepatch_addr[1].dim_y);
-            VX_PRINT(VX_ZONE_INFO, "stride_y = %d\n", in_img_desc->imagepatch_addr[1].stride_y);
-            VX_PRINT(VX_ZONE_INFO, "stride_x = %d\n", in_img_desc->imagepatch_addr[1].stride_x);
-            VX_PRINT(VX_ZONE_INFO, "step_x = %d\n", in_img_desc->imagepatch_addr[1].step_x);
-            VX_PRINT(VX_ZONE_INFO, "step_y = %d\n", in_img_desc->imagepatch_addr[1].step_y);
-        }
-
-        VX_PRINT(VX_ZONE_INFO, "Tensor input \n");
+        VX_PRINT(VX_ZONE_INFO, "Tensor output\n");
         VX_PRINT(VX_ZONE_INFO, "stride[0] = %d\n", out_tensor_desc->stride[0]);
         VX_PRINT(VX_ZONE_INFO, "stride[1] = %d\n", out_tensor_desc->stride[1]);
         VX_PRINT(VX_ZONE_INFO, "stride[2] = %d\n", out_tensor_desc->stride[2]);
@@ -234,46 +197,91 @@ static vx_status VX_CALLBACK tivxKernelDLPreProcArmv8Process
         VX_PRINT(VX_ZONE_INFO, "dimensions[2] = %d\n", out_tensor_desc->dimensions[2]);
 
         tivxDLPreProcArmv8Params *dlParams = (tivxDLPreProcArmv8Params *)config_target_ptr;
-        dlPreProcessImageParams params;
-
-        params.channel_order            = dlParams->channel_order;
-        params.tensor_format            = dlParams->tensor_format;
-        params.tensor_data_type         = out_tensor_desc->data_type;
-        params.input_width              = in_img_desc->imagepatch_addr[0].dim_x;
-        params.input_height             = in_img_desc->imagepatch_addr[0].dim_y;
-        params.in_stride_y              = in_img_desc->imagepatch_addr[0].stride_y;
-        params.in_img_target_ptr[0]     = in_img_target_ptr[0];
-        params.in_img_target_ptr[1]     = in_img_target_ptr[1];
-        params.output_dimensions[0]     = out_tensor_desc->dimensions[0];
-        params.output_dimensions[1]     = out_tensor_desc->dimensions[1];
-        params.output_dimensions[2]     = out_tensor_desc->dimensions[2];
-        params.out_tensor_target_ptr    = out_tensor_target_ptr;
-        params.mean[0]                  = dlParams->mean[0];
-        params.mean[1]                  = dlParams->mean[1];
-        params.mean[2]                  = dlParams->mean[2];
-        params.scale[0]                 = dlParams->scale[0];
-        params.scale[1]                 = dlParams->scale[1];
-        params.scale[2]                 = dlParams->scale[2];
-        params.channel_pitch            = dlParams->channel_pitch;
-
-        vx_df_image image_format = in_img_desc->format;
-
-        if(image_format == VX_DF_IMAGE_RGB)
+        vx_int32 num_images = (dlParams->num_images >= 1 &&
+                               dlParams->num_images <= TIVX_KERNEL_DL_PRE_PROC_ARMV8_MAX_INPUT_IMAGES)
+                              ? dlParams->num_images : 1;
+        vx_uint32 per_image_size = out_tensor_desc->mem_size / (vx_uint32)num_images;
+        /* For 4D tensors (e.g. BEV batched input), use the same batch_offset formula
+         * as the original BEV pre-proc kernel: channel_pitch*(C-1). This uses the actual
+         * channel pitch which accounts for padding/alignment, unlike dimensions[0]*dimensions[1]. */
+        vx_uint32 img_stride = (out_tensor_desc->number_of_dimensions == 4u)
+            ? (dlParams->channel_pitch * (out_tensor_desc->dimensions[2] - 1u))
+            : per_image_size;
+        vx_int32 img_idx;
+        for (img_idx = 0; img_idx < num_images; img_idx++)
         {
-            dlPreProcess_RGB_image(&params);
-        }
-        else if(image_format == VX_DF_IMAGE_NV12)
-        {
-            dlPreProcess_NV12_image(&params);
+            tivx_obj_desc_image_t *in_img_desc;
+            void* in_img_target_ptr[2];
+
+            in_img_desc = (tivx_obj_desc_image_t *)obj_desc[TIVX_KERNEL_DL_PRE_PROC_ARMV8_INPUT_IMAGE_IDX + img_idx];
+
+            in_img_target_ptr[0] = tivxMemShared2TargetPtr(&in_img_desc->mem_ptr[0]);
+            tivxMemBufferMap(in_img_target_ptr[0], in_img_desc->mem_size[0], VX_MEMORY_TYPE_HOST, VX_READ_ONLY);
+            in_img_target_ptr[1] = NULL;
+            if (in_img_desc->mem_ptr[1].shared_ptr != 0)
+            {
+                in_img_target_ptr[1] = tivxMemShared2TargetPtr(&in_img_desc->mem_ptr[1]);
+                tivxMemBufferMap(in_img_target_ptr[1], in_img_desc->mem_size[1], VX_MEMORY_TYPE_HOST, VX_READ_ONLY);
+            }
+
+            VX_PRINT(VX_ZONE_INFO, "Image[%d] channel 0\n", img_idx);
+            VX_PRINT(VX_ZONE_INFO, "dim_x = %d\n", in_img_desc->imagepatch_addr[0].dim_x);
+            VX_PRINT(VX_ZONE_INFO, "dim_y = %d\n", in_img_desc->imagepatch_addr[0].dim_y);
+            VX_PRINT(VX_ZONE_INFO, "stride_y = %d\n", in_img_desc->imagepatch_addr[0].stride_y);
+
+            /* Apply crop: offset input pointers so the kernel processes only the
+             * cropped region.  crop[0]=top, crop[1]=bottom, crop[2]=left, crop[3]=right.
+             * After cropping, input_width/height must equal the tensor dimensions. */
+            vx_uint32 crop_top  = (vx_uint32)dlParams->crop[0];
+            vx_uint32 crop_left = (vx_uint32)dlParams->crop[2];
+            vx_uint32 in_stride = in_img_desc->imagepatch_addr[0].stride_y;
+
+            dlPreProcessImageParams params;
+            params.channel_order         = dlParams->channel_order;
+            params.tensor_format         = dlParams->tensor_format;
+            params.tensor_data_type      = out_tensor_desc->data_type;
+            params.input_width           = out_tensor_desc->dimensions[0];
+            params.input_height          = out_tensor_desc->dimensions[1];
+            params.in_stride_y           = in_stride;
+            /* Offset Y plane pointer to the top-left of the crop region */
+            params.in_img_target_ptr[0]  = (uint8_t *)in_img_target_ptr[0]
+                                           + crop_top * in_stride + crop_left;
+            /* Offset UV plane (NV12: vertically sub-sampled by 2, UV pairs so left must be even) */
+            params.in_img_target_ptr[1]  = (in_img_target_ptr[1] != NULL)
+                                           ? (uint8_t *)in_img_target_ptr[1]
+                                             + (crop_top / 2u) * in_stride + (crop_left & ~1u)
+                                           : NULL;
+            params.output_dimensions[0]  = out_tensor_desc->dimensions[0];
+            params.output_dimensions[1]  = out_tensor_desc->dimensions[1];
+            params.output_dimensions[2]  = out_tensor_desc->dimensions[2];
+            params.out_tensor_target_ptr = (uint8_t *)out_tensor_target_ptr +
+                                           (vx_uint32)img_idx * img_stride;
+            params.mean[0]               = dlParams->mean[0];
+            params.mean[1]               = dlParams->mean[1];
+            params.mean[2]               = dlParams->mean[2];
+            params.scale[0]              = dlParams->scale[0];
+            params.scale[1]              = dlParams->scale[1];
+            params.scale[2]              = dlParams->scale[2];
+            params.channel_pitch         = dlParams->channel_pitch;
+
+            vx_df_image image_format = in_img_desc->format;
+            if (image_format == VX_DF_IMAGE_RGB)
+            {
+                dlPreProcess_RGB_image(&params);
+            }
+            else if (image_format == VX_DF_IMAGE_NV12)
+            {
+                dlPreProcess_NV12_image(&params);
+            }
+
+            tivxMemBufferUnmap(in_img_target_ptr[0], in_img_desc->mem_size[0], VX_MEMORY_TYPE_HOST, VX_READ_ONLY);
+            if (in_img_target_ptr[1] != NULL)
+            {
+                tivxMemBufferUnmap(in_img_target_ptr[1], in_img_desc->mem_size[1], VX_MEMORY_TYPE_HOST, VX_READ_ONLY);
+            }
         }
 
-        /* Write DL pre proc operation here */
         tivxMemBufferUnmap(out_tensor_target_ptr, out_tensor_desc->mem_size, VX_MEMORY_TYPE_HOST, VX_WRITE_ONLY);
-        tivxMemBufferUnmap(in_img_target_ptr[0], in_img_desc->mem_size[0], VX_MEMORY_TYPE_HOST, VX_READ_ONLY);
-        if (in_img_target_ptr[1] != NULL)
-        {
-            tivxMemBufferUnmap(in_img_target_ptr[1], in_img_desc->mem_size[1], VX_MEMORY_TYPE_HOST, VX_READ_ONLY);
-        }
         tivxMemBufferUnmap(config_target_ptr, config_desc->mem_size, VX_MEMORY_TYPE_HOST, VX_READ_ONLY);
     }
 

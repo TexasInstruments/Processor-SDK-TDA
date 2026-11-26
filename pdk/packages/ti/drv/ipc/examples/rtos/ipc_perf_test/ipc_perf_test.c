@@ -230,8 +230,7 @@ int32_t Ipc_perf_test(void)
     uint32_t            selfId     = Ipc_getCoreId();
     uint32_t            curHost    = FALSE;
     Ipc_Testcase*       tstcase    = NULL;
-    uint32_t            remoteEndPt;
-    uint32_t            remoteProcId;
+    TaskP_Handle        selfTaskHandle  = NULL;
 
     /* Setup the IPC framework */
     Ipc_perf_test_setup();
@@ -241,24 +240,6 @@ int32_t Ipc_perf_test(void)
     if(NULL != handle)
     {
         status = RPMessage_announce(RPMESSAGE_ALL, myEndPt, SERVICE);
-    }
-
-    /* MCU1_0 needs to kickstart the test */
-    if(IPC_MCU1_0 == selfId)
-    {
-        curTestIndex = 0;
-        tstcase = Ipc_getTestcase(curTestIndex);
-
-        Ipc_sendMessage(handle, myEndPt, tstcase->hostCore, IPC_PING);
-        status = RPMessage_getRemoteEndPt(tstcase->hostCore, SERVICE, &remoteProcId,
-            &remoteEndPt, osal_WAIT_FOREVER);
-        if(tstcase->hostCore != remoteProcId)
-        {
-            App_printf("Ipc_runPerfTest (remote %d): RPMessage_getRemoteEndPt() failed %d\n",
-                    tstcase->hostCore, status);
-        }
-
-        Ipc_sendNewTestIndex(handle, myEndPt, curTestIndex, tstcase->hostCore);
     }
 
     if(IPC_SOK == status)
@@ -272,8 +253,7 @@ int32_t Ipc_perf_test(void)
             {
                 /* If you are not host core or you are
                  * A72, wait for the message */
-                if( (selfId != tstcase->hostCore) ||
-                    ((PRINT_HOST_CORE == selfId) && (curTestIndex == 0)))
+                if(selfId != tstcase->hostCore)
                 {
                     SemaphoreP_pend(semHandle, SemaphoreP_WAIT_FOREVER);
                     if(testCompleted == TRUE )
@@ -303,6 +283,10 @@ int32_t Ipc_perf_test(void)
                     }
 
                 }
+                else
+                {
+                    curHost = TRUE;
+                }
 
                 /* Perform the test now */
                 Ipc_runPerfTest(tstcase->slaveCore, tstcase->param1, tstcase->testId);
@@ -329,15 +313,17 @@ int32_t Ipc_perf_test(void)
 
         if(tskHandle != NULL)
         {
-            TaskP_delete(tskHandle);
+            TaskP_delete(&tskHandle);
         }
 
-        if(TRUE == gPrintHostCore)
+        if (gPrintHostCore == FALSE)
         {
-            UART_printf("Performance Test : Completed\n");
+            App_printf("%s Performance Test : Completed\n", Ipc_mpGetSelfName());
         }
-
     }
+
+    selfTaskHandle = TaskP_self();
+    TaskP_delete(&selfTaskHandle);
 
     return IPC_SOK;
 }

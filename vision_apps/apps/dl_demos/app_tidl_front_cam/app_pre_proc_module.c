@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2025 Texas Instruments Incorporated
+ * Copyright (c) 2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -149,6 +149,8 @@ vx_status app_init_pre_proc(vx_context context, PreProcObj *preProcObj, char *ob
      * TIDL may apply DDR alignment that makes inChannelPitch != paddedW * paddedH.*/
     local_preproc_config->channel_pitch = (vx_uint32)ioBufDesc->inChannelPitch[0];
 
+    local_preproc_config->num_images = 1;
+
     preProcObj->config = vxCreateUserDataObject(context, "pre_proc_config", sizeof(tivxDLPreProcArmv8Params), local_preproc_config);
     status = vxGetStatus((vx_reference)preProcObj->config);
 
@@ -257,9 +259,11 @@ vx_status app_create_graph_pre_proc(vx_graph graph, PreProcObj *preProcObj, vx_o
     vxSetReferenceName((vx_reference)output, "PreProc_Output_Tensor"); 
 
     // A72 for j784s4 A53 for j722s
+    vx_image input_images[1] = {input};
     preProcObj->node = tivxDLPreProcArmv8Node(graph,
                                               preProcObj->config,
-                                              input,
+                                              input_images,
+                                              1,
                                               output);
 
     APP_ASSERT_VALID_REF(preProcObj->node);
@@ -267,8 +271,10 @@ vx_status app_create_graph_pre_proc(vx_graph graph, PreProcObj *preProcObj, vx_o
 
     vxSetReferenceName((vx_reference)preProcObj->node, node_name);
 
-    vx_bool replicate[] = {vx_false_e, vx_true_e, vx_true_e};
-    vxReplicateNode(graph, preProcObj->node, replicate, 3);
+    /* 8 params: config(0)=no, image1(1)=yes, images2-6(2-6)=no, output(7)=yes */
+    vx_bool replicate[8] = {vx_false_e, vx_true_e, vx_false_e, vx_false_e,
+                             vx_false_e, vx_false_e, vx_false_e, vx_true_e};
+    vxReplicateNode(graph, preProcObj->node, replicate, 8);
 
     vxReleaseImage(&input);
     vxReleaseTensor(&output);

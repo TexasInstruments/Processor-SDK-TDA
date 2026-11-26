@@ -13,12 +13,20 @@ ifeq ($(SOC),$(filter $(SOC), am65xx j7200 j721e))
 PACKAGE_SRCS_COMMON += cslr_esm.h csl_esm.h src/ip/esm/src_files_esm.mk src/ip/esm/V1
 SRCDIR += src/ip/esm/V1/priv
 INCDIR += src/ip/esm/V1/V1_0
-SRCS_COMMON += csl_esm.c
+ifeq ($(SOC),$(filter $(SOC), j7200 j721e))
+  SRCS_COMMON += csl_esm.c csl_esm_asil.c
+else
+  SRCS_COMMON += csl_esm.c
+endif
 endif
 
 ifeq ($(SOC),$(filter $(SOC), am64x am62x am62a am62px j721s2 j784s4 j742s2 am275x am283x))
 PACKAGE_SRCS_COMMON += cslr_esm.h csl_esm.h src/ip/esm/src_files_esm.mk src/ip/esm/V1
 SRCDIR += src/ip/esm/V1/priv
 INCDIR += src/ip/esm/V1/V1_1
-SRCS_COMMON += csl_esm.c
+ifeq ($(SOC),$(filter $(SOC), j721s2 j784s4 j742s2))
+  SRCS_COMMON += csl_esm.c csl_esm_asil.c
+else
+  SRCS_COMMON += csl_esm.c
+endif
 endif

@@ -94,9 +94,7 @@ int32_t appCommonInit()
 
 int32_t appCommonDeInit()
 {
-    appMemDeInit();
-
-    return 0;
+    return appMemDeInit();
 }
 
 int32_t appInit()

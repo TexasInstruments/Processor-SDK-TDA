@@ -68,6 +68,7 @@
 
 #include <utils/console_io/include/app_log.h>
 #include <utils/timer/include/app_timer.h>
+#include <utils/sciserver/include/app_sciserver.h>
 #include <utils/misc/include/app_misc.h>
 #include <utils/rtos/include/app_rtos.h>
 #include <utils/perf_stats/include/app_perf_stats.h>
@@ -130,8 +131,8 @@ static void appMain(void* arg0, void* arg1)
 
     if(NULL == sciserverInitTask)
     {
-        extern void vTaskEndScheduler( void );
-        vTaskEndScheduler();
+        extern void TaskP_endScheduler(void);
+        TaskP_endScheduler();
     }
 
     appInit();

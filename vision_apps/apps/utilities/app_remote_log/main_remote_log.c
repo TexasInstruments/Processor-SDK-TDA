@@ -75,8 +75,8 @@
 #define _SLOG_VISION_APPS 50
 #endif
 
-extern core_config_t core_config[];
-extern uint8_t num_cores;
+extern core_config_t g_platform_utils_core_config[];
+extern uint8_t g_platform_utils_num_cores;
 
 #if 0
 #if defined(QNX)
@@ -104,15 +104,15 @@ int main(void)
     appLogInitPrmSetDefault(&log_init_prm);
     appFileIOInitPrmSetDefault(&fileio_init_prm);
 
-    for (int i = 0; i < num_cores; i++)
+    for (int i = 0; i < g_platform_utils_num_cores; i++)
     {
-        if (core_config[i].enable_log_rd_cpu)
+        if (g_platform_utils_core_config[i].enable_log_rd_cpu)
         {
-            log_init_prm.log_rd_cpu_enable[core_config[i].cpu] = 1;
+            log_init_prm.log_rd_cpu_enable[g_platform_utils_core_config[i].cpu] = 1;
         }
-        if (core_config[i].enable_fileio)
+        if (g_platform_utils_core_config[i].enable_fileio)
         {
-            fileio_init_prm.fileio_rd_cpu_enable[core_config[i].cpu] = 1;
+            fileio_init_prm.fileio_rd_cpu_enable[g_platform_utils_core_config[i].cpu] = 1;
         }
     }
 

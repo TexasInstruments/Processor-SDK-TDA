@@ -135,9 +135,13 @@ extern "C" {
 #define TIVX_OBJ_DESC_DATA_REF_GRAPH_PARAM_ENQUEUED                     (0x00000010u)
 
 /*! \brief Shift for storing Object Descriptor id in 32bit variable
+ *  \details MUST be large enough to hold the full width of
+ *           TIVX_TARGET_ID_MASK (see tivx_target.h) in the lower bits of
+ *           the IPC payload without overlapping the Object Descriptor id
+ *           bits placed above it. See \ref ownIpcPayloadMake.
  * \ingroup group_tivx_obj_desc_priv
  */
-#define TIVX_OBJ_DESC_ID_SHIFT           (12u)
+#define TIVX_OBJ_DESC_ID_SHIFT           (14u)
 
 /*! \brief Mask for storing Object Descriptor id in 32bit variable
  * \ingroup group_tivx_obj_desc_priv

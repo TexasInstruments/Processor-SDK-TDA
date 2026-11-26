@@ -157,7 +157,12 @@ int main(void)
 {
     int32_t status = 0;
 
-    status = appCommonInit();
+    status = appCommonMemInit();
+
+    if (status == 0)
+    {
+        status = appCommonInit();
+    }
 #if defined (QNX)
     /* Get IO privileges */
     if (ThreadCtl(_NTO_TCTL_IO, NULL) == -1) {
@@ -169,6 +174,8 @@ int main(void)
     {
         appMemAllocTest();
         status = appCommonDeInit();
+
+        status |= appCommonMemDeInit();
     }
     return status;
 }

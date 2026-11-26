@@ -68,6 +68,7 @@
 #include <utils/remote_service/include/app_remote_service.h>
 #include <utils/mem/include/app_mem.h>
 #include <utils/rtos/include/app_rtos.h>
+#include <utils/rtos/src/app_rtos_priv.h>
 
 #if defined(R5F) || defined(M55)
 #include <utils/ipc/include/app_ipc.h>
@@ -79,11 +80,17 @@
 #if defined(FREERTOS)
 #if defined(PDK)
 #include <LoadP.h>
+#include <osal_soc.h>
+#include <FreeRTOS.h>
 #elif defined(MCU_PLUS_SDK)
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <TaskP.h>
+#include <SemaphoreP.h>
+#elif defined(MCU_SDK)
+#include <TaskP.h>
+#include <SemaphoreP.h>
 #endif
 #endif
 
@@ -1026,3 +1033,31 @@ void vApplicationIdleHook( void )
     asm ( " WFI " );
 }
 #endif
+
+void appPerfStatsUpdateOSObjectSizes(app_perf_stats_tiovx_stats_t *tiovx_stats)
+{
+    #if defined(FREERTOS)
+    #if defined(PDK)
+    /* APP_RTOS_MAX_SEMAPHORE_COUNT */
+    tiovx_stats->rtos_sem_object_types[0][0] = (sizeof(bool) + sizeof(StaticQueue_t) + sizeof(uintptr_t));
+    tiovx_stats->rtos_sem_object_types[0][1] = 0U;
+
+    /* APP_RTOS_MAX_TASK_COUNT */
+    tiovx_stats->rtos_task_object_types[0][0] = (2*sizeof(bool) + sizeof(uint32_t) + 5*sizeof(uintptr_t));
+    tiovx_stats->rtos_task_object_types[0][1] = (sizeof(StaticTask_t));
+
+    #else
+
+    /* APP_RTOS_MAX_SEMAPHORE_COUNT */
+    tiovx_stats->rtos_sem_object_types[0][0] = (sizeof(uintptr_t) * (SemaphoreP_OBJECT_SIZE_MAX/sizeof(uint32_t)));
+    tiovx_stats->rtos_sem_object_types[0][1] = (sizeof(uint8_t));
+
+    /* APP_RTOS_MAX_TASK_COUNT */
+    tiovx_stats->rtos_task_object_types[0][0] = (sizeof(uintptr_t) * (TaskP_OBJECT_SIZE_MAX/sizeof(uint32_t)));
+    tiovx_stats->rtos_task_object_types[0][1] = (sizeof(uint8_t));
+    #endif /* #if defined(PDK) */
+
+    tiovx_stats->rtos_max_semaphorep = APP_RTOS_MAX_SEMAPHORE_COUNT;
+    tiovx_stats->rtos_max_taskp = APP_RTOS_MAX_TASK_COUNT;
+    #endif
+}

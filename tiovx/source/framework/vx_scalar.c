@@ -288,9 +288,9 @@ VX_API_ENTRY vx_scalar VX_API_CALL vxCreateScalar(vx_context context, vx_enum da
     return (vx_scalar)scalar;
 } /* vxCreateScalar() */
 
-VX_API_ENTRY vx_status VX_API_CALL vxReleaseScalar(vx_scalar *s)
+VX_API_ENTRY vx_status VX_API_CALL vxReleaseScalar(vx_scalar *scalar)
 {
-    return ownReleaseReferenceInt(vxCastRefFromScalarP(s), (vx_enum)VX_TYPE_SCALAR, (vx_enum)VX_EXTERNAL, NULL);
+    return ownReleaseReferenceInt(vxCastRefFromScalarP(scalar), (vx_enum)VX_TYPE_SCALAR, (vx_enum)VX_EXTERNAL, NULL);
 } /* vxReleaseScalar() */
 
 VX_API_ENTRY vx_status VX_API_CALL vxQueryScalar(vx_scalar scalar, vx_enum attribute, void* ptr, vx_size size)

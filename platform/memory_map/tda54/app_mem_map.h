@@ -331,9 +331,17 @@
 #define DDR_SHARED_MEM_PHYS_ADDR (0xC0000000u)
 #define DDR_SHARED_MEM_PHYS_SIZE (0x1C000000u)
 
-/* Uboot DDR relocation memory [ size 64.00 MB ] */
-#define UBOOT_RELOC_MEM_ADDR (0xDC000000u)
-#define UBOOT_RELOC_MEM_SIZE (0x04000000u)
+/* Virtual Address of the memory shared between MPU and C7x to import/export context from one LLM/VLM session to other [ size 32.00 MB ] */
+#define DDR_SHARED_HEAP_RW_ADDR (0xDC000000u)
+#define DDR_SHARED_HEAP_RW_SIZE (0x02000000u)
+
+/* Physical Address of the memory shared between MPU and C7x to import/export context from one LLM/VLM session to other [ size 32.00 MB ] */
+#define DDR_SHARED_HEAP_RW_PHYS_ADDR (0xDC000000u)
+#define DDR_SHARED_HEAP_RW_PHYS_SIZE (0x02000000u)
+
+/* Physical Address of the memory shared between MPU and C7x to import/export TIDL network [ size 32.00 MB ] */
+#define DDR_SHARED_HEAP_CONST_ADDR (0xDE000000u)
+#define DDR_SHARED_HEAP_CONST_SIZE (0x02000000u)
 
 /* Virtual address of non-cacheable DDR for c7x_1 for local heap [ size 32.00 MB ] */
 #define DDR_C7X_1_LOCAL_HEAP_NON_CACHEABLE_ADDR (0xE0000000u)

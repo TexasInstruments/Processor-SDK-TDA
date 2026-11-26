@@ -1,0 +1,311 @@
+/**
+ * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
+ * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
+ * @cliArgs --device "J742S2" --part "Default" --package "AND_6" --context "c71ss0-0" --product "VISION_APPS@01.00.00"
+ * @v2CliArgs --device "TDA4APE-Q1" --package "FCBGA (AND)" --variant "TDA4APE6" --context "c71ss0-0" --product "VISION_APPS@01.00.00"
+ * @versions {"tool":"1.26.2+4477"}
+ */
+
+/**
+ * Import the modules used in this configuration.
+ */
+const default_linker      = scripting.addModule("/memory_configurator/default_linker", {}, false);
+const default_linker1     = default_linker.addInstance();
+const mmu_cfg   = scripting.addModule("/memory_configurator/mmu_cfg", {}, false);
+const mmu_cfg1  = mmu_cfg.addInstance();
+const mmu_cfg2  = mmu_cfg.addInstance();
+const mmu_cfg3  = mmu_cfg.addInstance();
+const mmu_cfg4  = mmu_cfg.addInstance();
+const mmu_cfg5  = mmu_cfg.addInstance();
+const mmu_cfg6  = mmu_cfg.addInstance();
+const mmu_cfg7  = mmu_cfg.addInstance();
+const mmu_cfg8  = mmu_cfg.addInstance();
+const mmu_cfg9  = mmu_cfg.addInstance();
+const mmu_cfg10 = mmu_cfg.addInstance();
+const mmu_cfg11 = mmu_cfg.addInstance();
+const mmu_cfg12 = mmu_cfg.addInstance();
+const mmu_cfg13 = mmu_cfg.addInstance();
+const mmu_cfg14 = mmu_cfg.addInstance();
+const mmu_cfg15 = mmu_cfg.addInstance();
+const mmu_cfg16 = mmu_cfg.addInstance();
+const mmu_cfg17 = mmu_cfg.addInstance();
+const mmu_cfg18 = mmu_cfg.addInstance();
+const mmu_cfg19 = mmu_cfg.addInstance();
+const mmu_cfg20 = mmu_cfg.addInstance();
+const mmu_cfg21 = mmu_cfg.addInstance();
+const mmu_cfg22 = mmu_cfg.addInstance();
+const mmu_cfg23 = mmu_cfg.addInstance();
+const mmu_cfg24 = mmu_cfg.addInstance();
+const mmu_cfg25 = mmu_cfg.addInstance();
+const mmu_cfg26 = mmu_cfg.addInstance();
+const mmu_cfg27 = mmu_cfg.addInstance();
+const mmu_cfg28 = mmu_cfg.addInstance();
+const mmu_cfg29 = mmu_cfg.addInstance();
+const region              = scripting.addModule("/memory_configurator/region", {}, false);
+const region1             = region.addInstance();
+
+/**
+ * Write custom configuration values to the imported modules.
+ */
+default_linker1.$name = "memory_configurator_default_linker0";
+
+mmu_cfg1.$name = "PERIPH_0x00000000";
+
+mmu_cfg2.$name = "PERIPH_0x20000000";
+mmu_cfg2.vAddr = 0x20000000;
+mmu_cfg2.pAddr = 0x20000000;
+
+mmu_cfg3.$name = "PERIPH_0x40000000";
+mmu_cfg3.vAddr = 0x40000000;
+mmu_cfg3.pAddr = 0x40000000;
+
+mmu_cfg4.$name = "PERIPH_0x60000000";
+mmu_cfg4.vAddr = 0x60000000;
+mmu_cfg4.pAddr = 0x60000000;
+mmu_cfg4.size  = 0x10000000;
+
+mmu_cfg5.$name = "CLEC_0x78000000";
+mmu_cfg5.vAddr = 0x78000000;
+mmu_cfg5.pAddr = 0x78000000;
+mmu_cfg5.size  = 0x8000000;
+
+mmu_cfg6.$name = "DDR_C7X_1_LOCAL_HEAP_NC";
+mmu_cfg6.vAddr = 0x100000000;
+mmu_cfg6.pAddr = 0x880000000;
+mmu_cfg6.size  = 0x8000000;
+
+mmu_cfg7.$name = "DDR_C7X_2_LOCAL_HEAP_NC";
+mmu_cfg7.vAddr = 0x120000000;
+mmu_cfg7.pAddr = 0x8A0000000;
+mmu_cfg7.size  = 0x8000000;
+
+mmu_cfg8.$name = "DDR_C7X_1_SCRATCH_NC";
+mmu_cfg8.vAddr = 0x110000000;
+mmu_cfg8.pAddr = 0x890000000;
+mmu_cfg8.size  = 0x8000000;
+
+mmu_cfg9.$name = "DDR_C7X_2_SCRATCH_NC";
+mmu_cfg9.vAddr = 0x130000000;
+mmu_cfg9.pAddr = 0x8B0000000;
+mmu_cfg9.size  = 0x8000000;
+
+mmu_cfg10.$name    = "OCMC_0x80000000";
+mmu_cfg10.vAddr    = 0x80000000;
+mmu_cfg10.pAddr    = 0x80000000;
+mmu_cfg10.attrIndx = "Mmu_AttrIndx_MAIR7";
+
+mmu_cfg11.$name    = "OCMC_0xA0000000";
+mmu_cfg11.vAddr    = 0xA0000000;
+mmu_cfg11.pAddr    = 0xA0000000;
+mmu_cfg11.attrIndx = "Mmu_AttrIndx_MAIR7";
+
+mmu_cfg12.$name    = "MSMC_SHARED";
+mmu_cfg12.vAddr    = 0x70000000;
+mmu_cfg12.pAddr    = 0x70000000;
+mmu_cfg12.size     = 0x400000;
+mmu_cfg12.attrIndx = "Mmu_AttrIndx_MAIR7";
+
+mmu_cfg13.$name    = "OCMC_0x41C00000";
+mmu_cfg13.vAddr    = 0x41C00000;
+mmu_cfg13.pAddr    = 0x41C00000;
+mmu_cfg13.size     = 0x100000;
+mmu_cfg13.attrIndx = "Mmu_AttrIndx_MAIR7";
+
+mmu_cfg14.$name    = "L2_SRAM";
+mmu_cfg14.vAddr    = 0x64800000;
+mmu_cfg14.pAddr    = 0x64800000;
+mmu_cfg14.size     = 0x200000;
+mmu_cfg14.attrIndx = "Mmu_AttrIndx_MAIR7";
+
+mmu_cfg15.$name    = "DDR_C7x_1_DTS";
+mmu_cfg15.vAddr    = 0xB2100000;
+mmu_cfg15.pAddr    = 0xB2100000;
+mmu_cfg15.size     = 0x1F00000;
+mmu_cfg15.attrIndx = "Mmu_AttrIndx_MAIR7";
+
+mmu_cfg16.$name    = "DDR_C7X_1_LOCAL_HEAP_MMU";
+mmu_cfg16.vAddr    = 0x108000000;
+mmu_cfg16.pAddr    = 0x888000000;
+mmu_cfg16.size     = 0x8000000;
+mmu_cfg16.attrIndx = "Mmu_AttrIndx_MAIR7";
+
+mmu_cfg17.$name    = "DDR_C7X_2_LOCAL_HEAP";
+mmu_cfg17.vAddr    = 0x128000000;
+mmu_cfg17.pAddr    = 0x8A8000000;
+mmu_cfg17.size     = 0x8000000;
+mmu_cfg17.attrIndx = "Mmu_AttrIndx_MAIR7";
+
+mmu_cfg18.$name    = "DDR_C7X_1_SCRATCH_MMU";
+mmu_cfg18.vAddr    = 0x118000000;
+mmu_cfg18.pAddr    = 0x898000000;
+mmu_cfg18.size     = 0x8000000;
+mmu_cfg18.attrIndx = "Mmu_AttrIndx_MAIR7";
+
+mmu_cfg19.$name    = "DDR_C7X_2_SCRATCH";
+mmu_cfg19.vAddr    = 0x138000000;
+mmu_cfg19.pAddr    = 0x8B8000000;
+mmu_cfg19.size     = 0x8000000;
+mmu_cfg19.attrIndx = "Mmu_AttrIndx_MAIR7";
+
+mmu_cfg20.$name    = "DDR_SHARED_MEM";
+mmu_cfg20.vAddr    = 0xC0000000;
+mmu_cfg20.pAddr    = 0x900000000;
+mmu_cfg20.attrIndx = "Mmu_AttrIndx_MAIR7";
+
+mmu_cfg21.$name    = "MSMC_C7x_1_MMU";
+mmu_cfg21.vAddr    = 0x68000000;
+mmu_cfg21.pAddr    = 0x68000000;
+mmu_cfg21.size     = 0x300000;
+mmu_cfg21.attrIndx = "Mmu_AttrIndx_MAIR7";
+
+mmu_cfg22.$name    = "APP_LOG_MEM";
+mmu_cfg22.vAddr    = 0xAF000000;
+mmu_cfg22.pAddr    = 0xAF000000;
+mmu_cfg22.size     = 0x40000;
+mmu_cfg22.attrIndx = "Mmu_AttrIndx_MAIR4";
+
+mmu_cfg23.$name    = "APP_FILEIO_MEM";
+mmu_cfg23.vAddr    = 0xB1000000;
+mmu_cfg23.pAddr    = 0xB1000000;
+mmu_cfg23.size     = 0x400000;
+mmu_cfg23.attrIndx = "Mmu_AttrIndx_MAIR4";
+
+mmu_cfg24.$name    = "TIOVX_OBJ_DESC_MEM_HOST0";
+mmu_cfg24.vAddr    = 0xAF040000;
+mmu_cfg24.pAddr    = 0xAF040000;
+mmu_cfg24.size     = 0x940000;
+mmu_cfg24.attrIndx = "Mmu_AttrIndx_MAIR4";
+
+mmu_cfg25.$name    = "IPC_VRING_MEM";
+mmu_cfg25.vAddr    = 0xAC000000;
+mmu_cfg25.pAddr    = 0xAC000000;
+mmu_cfg25.size     = 0x3000000;
+mmu_cfg25.attrIndx = "Mmu_AttrIndx_MAIR4";
+
+mmu_cfg26.$name    = "DDR_C7x_1_IPC_MMU";
+mmu_cfg26.vAddr    = 0xB2000000;
+mmu_cfg26.pAddr    = 0xB2000000;
+mmu_cfg26.size     = 0x100000;
+mmu_cfg26.attrIndx = "Mmu_AttrIndx_MAIR4";
+
+mmu_cfg27.$name    = "TIOVX_LOG_RT_MEM";
+mmu_cfg27.vAddr    = 0xB1400000;
+mmu_cfg27.pAddr    = 0xB1400000;
+mmu_cfg27.size     = 0xC00000;
+mmu_cfg27.attrIndx = "Mmu_AttrIndx_MAIR4";
+
+mmu_cfg28.$name    = "TIOVX_OBJ_DESC_MEM_HOST1";
+mmu_cfg28.vAddr    = 0xAF980000;
+mmu_cfg28.pAddr    = 0xAF980000;
+mmu_cfg28.size     = 0x940000;
+mmu_cfg28.attrIndx = "Mmu_AttrIndx_MAIR4";
+
+mmu_cfg29.$name    = "TIOVX_OBJ_DESC_MEM_HOST2";
+mmu_cfg29.vAddr    = 0xB02C0000;
+mmu_cfg29.pAddr    = 0xB02C0000;
+mmu_cfg29.size     = 0x940000;
+mmu_cfg29.attrIndx = "Mmu_AttrIndx_MAIR4";
+
+region1.$name                                = "MEMORY_REGION_CONFIGURATION0";
+region1.memory_region.create(17);
+region1.memory_region[0].type                = "L2_C71SS0-0";
+region1.memory_region[0].$name               = "L2RAM_C7x_1";
+region1.memory_region[0].size                = 0x70000;
+region1.memory_region[0].auto                = false;
+region1.memory_region[0].attributes          = ["R","W","X"];
+region1.memory_region[1].type                = "L1_C71SS0-0";
+region1.memory_region[1].$name               = "L1RAM_C7x_1";
+region1.memory_region[1].size                = 0x4000;
+region1.memory_region[1].auto                = false;
+region1.memory_region[1].attributes          = ["R","W","X"];
+region1.memory_region[2].type                = "MSMC_C71SS0-0";
+region1.memory_region[2].$name               = "MSMC_C7x_1";
+region1.memory_region[2].size                = 0x300000;
+region1.memory_region[2].auto                = false;
+region1.memory_region[2].attributes          = ["R","W","X"];
+region1.memory_region[3].$name               = "DDR_C7x_1_IPC";
+region1.memory_region[3].size                = 0x100000;
+region1.memory_region[3].auto                = false;
+region1.memory_region[3].manualStartAddress  = 0xB2000000;
+region1.memory_region[3].attributes          = ["R","W","X"];
+region1.memory_region[4].$name               = "DDR_C7x_1_RESOURCE_TABLE";
+region1.memory_region[4].size                = 0x400;
+region1.memory_region[4].auto                = false;
+region1.memory_region[4].manualStartAddress  = 0xB2100000;
+region1.memory_region[4].attributes          = ["R","W","X"];
+region1.memory_region[5].$name               = "DDR_C7x_1_BOOT";
+region1.memory_region[5].size                = 0x400;
+region1.memory_region[5].auto                = false;
+region1.memory_region[5].manualStartAddress  = 0xB2200000;
+region1.memory_region[5].attributes          = ["R","W","X"];
+region1.memory_region[6].$name               = "DDR_C7x_1_VECS";
+region1.memory_region[6].size                = 0x4000;
+region1.memory_region[6].auto                = false;
+region1.memory_region[6].manualStartAddress  = 0xB2400000;
+region1.memory_region[6].attributes          = ["R","W","X"];
+region1.memory_region[7].$name               = "DDR_C7x_1_SECURE_VECS";
+region1.memory_region[7].size                = 0x4000;
+region1.memory_region[7].auto                = false;
+region1.memory_region[7].manualStartAddress  = 0xB2600000;
+region1.memory_region[7].attributes          = ["R","W","X"];
+region1.memory_region[8].$name               = "DDR_C7x_1";
+region1.memory_region[8].size                = 0x1800000;
+region1.memory_region[8].auto                = false;
+region1.memory_region[8].manualStartAddress  = 0xB2800000;
+region1.memory_region[8].attributes          = ["R","W","X"];
+region1.memory_region[9].type                = "DDR_HIGH_ALL";
+region1.memory_region[9].addressType         = "Virtual";
+region1.memory_region[9].$name               = "DDR_C7X_1_LOCAL_HEAP_NON_CACHEABLE";
+region1.memory_region[9].size                = 0x8000000;
+region1.memory_region[9].auto                = false;
+region1.memory_region[9].manualStartAddress  = 0x100000000;
+region1.memory_region[9].attributes          = ["R","W","X"];
+region1.memory_region[10].type               = "DDR_HIGH_ALL";
+region1.memory_region[10].addressType        = "Virtual";
+region1.memory_region[10].$name              = "DDR_C7X_1_LOCAL_HEAP";
+region1.memory_region[10].size               = 0x8000000;
+region1.memory_region[10].auto               = false;
+region1.memory_region[10].manualStartAddress = 0x108000000;
+region1.memory_region[10].attributes         = ["R","W","X"];
+region1.memory_region[11].type               = "DDR_HIGH_ALL";
+region1.memory_region[11].addressType        = "Virtual";
+region1.memory_region[11].$name              = "DDR_C7X_1_SCRATCH_NON_CACHEABLE";
+region1.memory_region[11].size               = 0x8000000;
+region1.memory_region[11].auto               = false;
+region1.memory_region[11].manualStartAddress = 0x110000000;
+region1.memory_region[11].attributes         = ["R","W","X"];
+region1.memory_region[12].type               = "DDR_HIGH_ALL";
+region1.memory_region[12].addressType        = "Virtual";
+region1.memory_region[12].$name              = "DDR_C7X_1_SCRATCH";
+region1.memory_region[12].size               = 0x8000000;
+region1.memory_region[12].auto               = false;
+region1.memory_region[12].manualStartAddress = 0x118000000;
+region1.memory_region[12].attributes         = ["R","W","X"];
+region1.memory_region[13].type               = "DDR_HIGH_ALL";
+region1.memory_region[13].addressType        = "Virtual";
+region1.memory_region[13].$name              = "DDR_C7X_1_2_LOCAL_HEAP_NON_CACHEABLE";
+region1.memory_region[13].size               = 0x8000000;
+region1.memory_region[13].auto               = false;
+region1.memory_region[13].manualStartAddress = 0x120000000;
+region1.memory_region[13].attributes         = ["R","W","X"];
+region1.memory_region[14].type               = "DDR_HIGH_ALL";
+region1.memory_region[14].addressType        = "Virtual";
+region1.memory_region[14].$name              = "DDR_C7X_1_2_LOCAL_HEAP";
+region1.memory_region[14].size               = 0x8000000;
+region1.memory_region[14].auto               = false;
+region1.memory_region[14].manualStartAddress = 0x128000000;
+region1.memory_region[14].attributes         = ["R","W","X"];
+region1.memory_region[15].type               = "DDR_HIGH_ALL";
+region1.memory_region[15].addressType        = "Virtual";
+region1.memory_region[15].$name              = "DDR_C7X_1_2_SCRATCH_NON_CACHEABLE";
+region1.memory_region[15].size               = 0x8000000;
+region1.memory_region[15].auto               = false;
+region1.memory_region[15].manualStartAddress = 0x130000000;
+region1.memory_region[15].attributes         = ["R","W","X"];
+region1.memory_region[16].type               = "DDR_HIGH_ALL";
+region1.memory_region[16].addressType        = "Virtual";
+region1.memory_region[16].$name              = "DDR_C7X_1_2_SCRATCH";
+region1.memory_region[16].size               = 0x8000000;
+region1.memory_region[16].auto               = false;
+region1.memory_region[16].manualStartAddress = 0x138000000;
+region1.memory_region[16].attributes         = ["R","W","X"];

@@ -954,13 +954,13 @@ void DmaUtilsAutoInc3d_wait(void * autoIncrementContext, int32_t channelId) {
   dmautilsContext = (DmaUtilsAutoInc3d_Context * ) autoIncrementContext;
 
   #ifndef HOST_EMULATION
-  volatile uint64_t eflRegisterVal;
   uint64_t waitWord;
 
   waitWord = dmautilsContext -> channelContext[channelId] -> waitWord;
-  eflRegisterVal = __get_indexed(__EFR, 0);
-  while ((eflRegisterVal & waitWord) != waitWord) {
-    eflRegisterVal = __get_indexed(__EFR, 0);
+  /* Read EFR straight in the condition so the polled value stays in a register.
+   * A volatile local here forces a stack store every iteration, which hits DDR
+   * when the stack is in non-cacheable DDR / write through DDR. */
+  while ((__get_indexed(__EFR, 0) & waitWord) != waitWord) {
   }
   __set_indexed(__EFCLR, 0, waitWord);
   #else

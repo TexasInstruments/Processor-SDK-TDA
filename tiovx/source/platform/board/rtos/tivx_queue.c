@@ -136,7 +136,6 @@ vx_status tivxQueueCreate(
         {
             queue->blockedOnGet = (vx_bool)vx_false_e;
             queue->blockedOnPut = (vx_bool)vx_false_e;
-            ownLogResourceAlloc("TIVX_QUEUE_MAX_OBJECTS", 1);
         }
         else
         {
@@ -175,7 +174,6 @@ vx_status tivxQueueDelete(tivx_queue *queue)
             (NULL != queue->block_wr))
         {
             status = tivxEventDelete(&queue->block_wr);
-            ownLogResourceFree("TIVX_QUEUE_MAX_OBJECTS", 1);
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_QUEUE_RTOS_UM002

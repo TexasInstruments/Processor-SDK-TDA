@@ -15,8 +15,10 @@ ifeq ($(BUILD_CPU_C7x_1),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_c7x_inc.mak
 
@@ -43,8 +45,10 @@ ifeq ($(BUILD_CPU_C7x_2),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_c7x_inc.mak
 
@@ -71,8 +75,10 @@ ifeq ($(BUILD_CPU_C7x_3),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_c7x_inc.mak
 
@@ -99,8 +105,10 @@ ifeq ($(BUILD_CPU_C7x_4),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_c7x_inc.mak
 
@@ -127,8 +135,10 @@ ifeq ($(BUILD_CPU_DMCU0),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_m55_inc.mak
 
@@ -155,8 +165,10 @@ ifeq ($(BUILD_CPU_MCU0),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_m55_inc.mak
 
@@ -183,8 +195,10 @@ ifeq ($(BUILD_CPU_MCU1),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_m55_inc.mak
 
@@ -211,8 +225,10 @@ ifeq ($(BUILD_CPU_MCU2),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_m55_inc.mak
 
@@ -239,8 +255,10 @@ ifeq ($(BUILD_CPU_MCU3),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_m55_inc.mak
 
@@ -267,8 +285,10 @@ ifeq ($(BUILD_CPU_MCU4),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_m55_inc.mak
 
@@ -295,8 +315,10 @@ ifeq ($(BUILD_CPU_RMCU0_0),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r52p_inc.mak
 
@@ -323,8 +345,10 @@ ifeq ($(BUILD_CPU_RMCU0_1),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r52p_inc.mak
 
@@ -351,8 +375,10 @@ ifeq ($(BUILD_CPU_RMCU1_0),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r52p_inc.mak
 
@@ -379,8 +405,10 @@ ifeq ($(BUILD_CPU_RMCU1_1),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r52p_inc.mak
 
@@ -407,8 +435,10 @@ ifeq ($(BUILD_CPU_RMCU2_0),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r52p_inc.mak
 
@@ -435,8 +465,10 @@ ifeq ($(BUILD_CPU_RMCU2_1),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r52p_inc.mak
 
@@ -462,8 +494,10 @@ ifeq ($(BUILD_CPU_MCU1_0),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r5f_inc.mak
 
@@ -489,8 +523,10 @@ ifeq ($(BUILD_CPU_MCU1_1),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r5f_inc.mak
 
@@ -516,8 +552,10 @@ ifeq ($(BUILD_CPU_MCU2_0),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r5f_inc.mak
 
@@ -543,8 +581,10 @@ ifeq ($(BUILD_CPU_MCU2_1),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r5f_inc.mak
 
@@ -570,8 +610,10 @@ ifeq ($(BUILD_CPU_MCU3_0),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r5f_inc.mak
 
@@ -597,8 +639,10 @@ ifeq ($(BUILD_CPU_MCU3_1),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r5f_inc.mak
 
@@ -624,8 +668,10 @@ ifeq ($(BUILD_CPU_MCU4_0),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r5f_inc.mak
 
@@ -651,8 +697,10 @@ ifeq ($(BUILD_CPU_MCU4_1),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_r5f_inc.mak
 
@@ -678,8 +726,10 @@ ifeq ($(BUILD_CPU_C6x_1),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_c6x_inc.mak
 
@@ -705,8 +755,10 @@ ifeq ($(BUILD_CPU_C6x_2),yes)
     IDIRS+=$(PLATFORM_PATH)/utils/mem/include
     IDIRS+=$(PLATFORM_PATH)/memory_map/$(SOC)
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores
+    IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
     DEFS+=CORE_CFG_FILE=\"$(CPU_ID)/include/core_cfg.h\"
+    DEFS+=CPU_$(CPU_ID)
 
     include $(PLATFORM_PATH)/rtos/$(SOC)/concerto_c6x_inc.mak
 

@@ -15,7 +15,7 @@ CSOURCES += generated/ti_pinmux_config.c
 CSOURCES += generated/ti_power_clock_config.c
 
 LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE).cmd
-LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map_$(RTOS_TYPE).cmd
+LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/generated/linker_mem_map_$(RTOS_TYPE).cmd
 
 IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/cores/mcu1_0/src/generated
 

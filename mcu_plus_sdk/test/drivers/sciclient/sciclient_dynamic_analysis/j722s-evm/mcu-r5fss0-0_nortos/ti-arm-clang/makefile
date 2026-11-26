@@ -69,6 +69,7 @@ INCLUDES_common := \
 
 DEFINES_common := \
 	-DSOC_J722S \
+	-DCONFIG_UDMAP_MULTI_CH_CFG \
 
 CFLAGS_common := \
 	-DBUILD_MCU_R5 \

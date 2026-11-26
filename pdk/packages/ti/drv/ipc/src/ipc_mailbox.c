@@ -116,7 +116,7 @@ static void Ipc_mailboxDisable(uintptr_t baseAddr, uint32_t userId, uint32_t que
 /* ========================================================================== */
 
 uint32_t               g_ipc_mBoxCnt = 0U;
-Ipc_MailboxData        g_ipc_mBoxData[IPC_MBOX_MAXDATA];
+static Ipc_MailboxData g_ipc_mBoxData[IPC_MBOX_MAXDATA];
 /**
  * \brief Maps mBoxData allocated to a given Remote Processor
  */

@@ -1,5 +1,223 @@
 
 let common = system.getScript("/common");
+const memoryRegs = system.getScript("/memory_configurator/helper");
+const module = system.modules['/kernel/dpl/mpu_armv7'];
+const physicalLayout = system.getScript("/memory_configurator/soc/physicalLayout.json")[system.deviceData.device];
+
+// Finds all memory configurator regions that overlap with the given MPU instance's address range.
+// Collects region name, type, shared status, and core ownership across all SysConfig cores.
+// Returns a struct used by the GUI info panel and conflict checker.
+function memoryRegionMapping(mpu_instance) {
+    let selfCoreName = common.getSelfSysCfgCoreName();
+
+    let memory_region_list = {
+        name: "",
+        type: "",
+        shared: false,
+        cores: "",
+        access_check: true
+    }
+
+    let all_core_memory_region_instances = memoryRegs.util_function("")
+    let memory_region_instances = []
+
+    for (const each_core_memory_module of all_core_memory_region_instances) {
+        if (each_core_memory_module.core.length === 0) {
+            continue;
+        }
+
+        for (const inst of each_core_memory_module.instances) {
+            let obj = { ...inst };
+            obj.core = each_core_memory_module.core;
+            memory_region_instances.push(obj);
+        }
+    }
+
+    let sorted_memory_regions = _.chain(memory_region_instances)
+        .sortBy((memory_region_instance) => (memory_region_instance.auto ? memory_region_instance.autoStartAddress: memory_region_instance.manualStartAddress))
+        .value();
+
+    let mpu_start = mpu_instance.baseAddr
+    let mpu_size = Math.pow(2, mpu_instance.size)
+    let mpu_end = Number(mpu_start) + Number(mpu_size) - 0x1
+
+    _.each(sorted_memory_regions, (region) => {
+
+        let memory_region_start = ( region.auto ? region.autoStartAddress: region.manualStartAddress )
+        let memory_region_end =  memory_region_start + region.size - 0x1
+
+        if (memory_region_end >= mpu_start && mpu_end >= memory_region_start)  // current mpu instance falls inside this memory region
+        {
+            let region_name = (region.$name).concat("_",region.core)
+            memory_region_list.name = (memory_region_list.name).concat(region_name, "\n")
+            if(!memory_region_list.type.split("\n").includes(region.type))
+                memory_region_list.type = (memory_region_list.type).concat(region.type, "\n")
+
+            if(!memory_region_list.cores.split("\n").includes(region.core))
+                memory_region_list.cores = (memory_region_list.cores).concat(region.core, "\n")
+
+            if(region.isShared)
+            {
+                memory_region_list.shared = true
+                let arr_cores = region.shared_cores
+
+                if(!region.core.includes(selfCoreName) && !arr_cores.includes(selfCoreName)) {
+                    memory_region_list.access_check = false;
+                }
+
+                _.each( arr_cores, (core) => {
+                    if(!memory_region_list.cores.split(" ").includes(core))
+                    memory_region_list.cores = (memory_region_list.cores).concat(core, " ")
+                } )
+            }
+        }
+    })
+
+    return memory_region_list;
+}
+
+// Formats the overlapping memory region names for display in the SysConfig GUI info panel.
+// Groups region names by core and returns a human-readable multi-line string.
+// Called by the "Name" getValue callback in the Memory Region config table.
+function displayName(inst) {
+
+    let mr_names = memoryRegionMapping(inst).name;
+    let mr_names_array = mr_names.split("\n");
+    let map = {};
+
+    _.each(mr_names_array, (name) => {
+
+        let lastIndex = name.lastIndexOf("_");
+        let region_name = name.substring(0, lastIndex);
+        let core_name = name.substring(lastIndex+1);
+
+        if(map.hasOwnProperty(core_name)) {
+            map[core_name].push(region_name);
+        }
+        else {
+            map[core_name] = [region_name];
+        }
+    })
+
+    let ans = "";
+
+    for(let key in map) {
+        if (map.hasOwnProperty(key)) {
+            if(key.length > 0) {
+                ans = ans.concat(key.toUpperCase()," --> \n\n")
+                let value = map[key];
+                _.each(value, ele => {
+                    ans = ans.concat(ele, "\n")
+            })
+            ans = ans.concat("\n");
+            }
+        }
+    }
+
+    return ans;
+}
+
+
+// When a memory region auto-creates an MPU entry, this function fills in its start address
+// by reading it directly from the parent memory region (auto-calculated or manual).
+// If the MPU entry was created by the user manually, there is no parent region so it returns 0x0.
+function readFromMemoryRegion(inst) {
+
+    let baseAddr = 0x0
+    if(inst.$ownedBy !== undefined) {
+
+        baseAddr = inst.$ownedBy.manualStartAddress;
+        if(inst.$ownedBy.auto){
+            baseAddr = inst.$ownedBy.autoStartAddress;
+        }
+    }
+    return baseAddr;
+}
+
+// When a memory region auto-creates an MPU entry, the user should not manually edit its address
+// or region info fields since those are already controlled by the parent memory region.
+// This function hides those redundant fields for auto-created entries and shows them for manually created ones.
+function changeDisplay(inst) {
+
+    if(inst.$ownedBy !== undefined) {
+        inst.$uiState.baseAddr_mr.hidden = false;
+
+        inst.$uiState.baseAddr.hidden = true;
+        inst.$uiState.memoryRegion_name.hidden = true;
+        inst.$uiState.memoryRegion_type.hidden = true;
+        inst.$uiState.memoryRegion_shared.hidden = true;
+        inst.$uiState.memoryRegion_core.hidden = true;
+    }
+    else {
+        inst.$uiState.baseAddr_mr.hidden = true;
+
+        inst.$uiState.baseAddr.hidden = false;
+        inst.$uiState.memoryRegion_name.hidden = false;
+        inst.$uiState.memoryRegion_type.hidden = false;
+        inst.$uiState.memoryRegion_shared.hidden = false;
+        inst.$uiState.memoryRegion_core.hidden = false;
+    }
+}
+
+// When a user configures an MPU entry, this function checks if the chosen settings (cache, access,
+// execute permissions) are consistent with the memory regions covered by that MPU range.
+// It only shows advisory hints in the GUI — it never raises errors or blocks the build.
+function checkConflictingConfig(report, mpu_instance){
+
+    let selfCoreName = common.getSelfSysCfgCoreName();
+    let shareable_cacheable_conflict = false;
+    let access_permission_conflict = false;
+    let excute_permission_conflict = false;
+    let region_config_violation = false;
+    let mpu_set = ""
+
+    if ( mpu_instance.$ownedBy ){
+        mpu_set = "_mpu"
+    }
+
+
+    let memory_region_list = memoryRegs.memoryRegionInformation(mpu_instance, mpu_set)
+    let mpu_accessPermissions = mpu_instance.accessPermissions
+    let mpu_attributes = mpu_instance.attributes
+
+    for(let i = 0; i < memory_region_list.name.length; i++ ){
+        if( mpu_attributes == "Cached" || mpu_attributes == "Cached+Sharable"){
+            if(memory_region_list.shared[i] == true){
+                shareable_cacheable_conflict = true;
+            }
+        }
+
+        if( mpu_accessPermissions.includes("RD+WR") && !memory_region_list.permissions[i].includes("W")){
+            access_permission_conflict = true;
+        }
+
+        if( mpu_instance.allowExecute && !memory_region_list.permissions[i].includes("X")){
+            excute_permission_conflict = true;
+        }
+
+        if( memory_region_list.cores[i] != selfCoreName && memory_region_list.shared[i] == false){
+            if(physicalLayout[memory_region_list.type[i]].access == "all"){ // Had "access" been "individual", it would mean it's specific to this core
+                region_config_violation = true;
+            }
+        }
+    }
+
+    if( shareable_cacheable_conflict ) {
+        report.logInfo( `Some memory region(s) within this range is Shared among cores. `, mpu_instance, "attributes");
+    }
+
+    if( access_permission_conflict ) {
+        report.logInfo( `Some memory region(s) within this range might not have the correct access permissions. `, mpu_instance, "accessPermissions");
+    }
+
+    if( excute_permission_conflict ) {
+        report.logInfo( `Some memory region(s) within this range might not have execute permissions. `, mpu_instance, "allowExecute");
+    }
+
+    if( region_config_violation ) {
+        report.logInfo( `This MPU region includes other cores' memory regions as well. Pl. make sure what you configure.`, mpu_instance, "$name");
+    }
+}
 
 let mpu_armv7_module = {
     displayName: "MPU ARMv7",
@@ -17,9 +235,18 @@ let mpu_armv7_module = {
         {
             name: "baseAddr",
             displayName: "Region Start Address (hex)",
-            longDescription: "Starting address of the region. MUST be <= 32 bits and MUST be region size aligned",
+            description: "Starting address of the region. MUST be <= 32 bits and MUST be region size aligned",
             default: 0x0,
             displayFormat: "hex",
+        },
+        {
+            name: "baseAddr_mr",
+            displayName: "Region Start Address (hex)",
+            description: "Starting address of the region. MUST be <= 32 bits and MUST be region size aligned",
+            default: 0x0,
+            hidden: true,
+            displayFormat: "hex",
+            getValue: readFromMemoryRegion
         },
         {
             name: "size",
@@ -27,6 +254,10 @@ let mpu_armv7_module = {
             description: "Size of the region in bytes.",
             default: 32,
             options: [
+                {
+                    name: 0,
+                    displayName: "0 B"
+                },
                 {
                     name: 5,
                     displayName: "32 B"
@@ -140,6 +371,7 @@ let mpu_armv7_module = {
                     displayName: "4 GB"
                 },
             ],
+            onChange: changeDisplay
         },
         {
             name: "accessPermissions",
@@ -165,7 +397,7 @@ let mpu_armv7_module = {
                 {
                     "name": "Supervisor BLOCK, User BLOCK",
                 },
-            ]
+            ],
         },
         {
             name: "attributes",
@@ -200,7 +432,7 @@ let mpu_armv7_module = {
                 },
                 {
                     "name": "Cached+Sharable",
-                    "displayName": "Cached+Sharable",
+                    "displayName": "Shareable",
                     "description": "Cache enabled and region marked as sharable. Outer and inner write-back, write-allocate.",
                 },
                 {
@@ -218,7 +450,7 @@ let mpu_armv7_module = {
         },
         {
             name: "subregionDisableMask",
-            displayName: "Sub-Region Disable Mark (hex)",
+            displayName: "Sub-Region Disable Mask (hex)",
             default: 0x0,
             displayFormat: "hex",
             description: "Value MUST be between 0x00 .. 0xFF"
@@ -285,6 +517,49 @@ let mpu_armv7_module = {
             hidden: true,
             description: "Refer ARMv7-R/M architecture manual for more details",
         },
+        {
+            name: "group_memory_region",
+            displayName: "Memory Region",
+            description: " ",
+            collapsed: false,
+            config : [
+                {
+                    name: "memoryRegion_name",
+                    displayName: "Name",
+                    multiline: true,
+                    default: "",
+                    description: 'Displays all the regions core wise which fall within this range.',
+                    readOnly: true,
+                    getValue: (inst) => { return displayName(inst); }
+                },
+                {
+                    name: "memoryRegion_type",
+                    displayName: "Type",
+                    multiline: true,
+                    default: "",
+                    description: 'Displays types of all the regions core wise which fall wthin this range.',
+                    readOnly: true,
+                    getValue: (inst) => { return memoryRegionMapping(inst).type ; }
+                },
+                {
+                    name: "memoryRegion_shared",
+                    displayName: "Shared",
+                    default: false,
+                    description: 'If checked, it means at least one of the regions falling in this range is shared.',
+                    readOnly: true,
+                    getValue: (inst) => { return memoryRegionMapping(inst).shared ; }
+                },
+                {
+                    name: "memoryRegion_core",
+                    displayName: "Cores Using It",
+                    multiline: true,
+                    default: " ",
+                    description: 'Displays all the cores that uses the regions falling within this range.',
+                    readOnly: true,
+                    getValue: (inst) => { return memoryRegionMapping(inst).cores ; }
+                },
+            ]
+        }
     ],
 
     validate : function (instance, report) {
@@ -304,6 +579,9 @@ let mpu_armv7_module = {
             report.logError( `Region start address must be <= 0x${(maxAddr-1).toString(16).toUpperCase()}`,
                     instance, "baseAddr");
         }
+
+        // mpu_access_violation(instance, report);
+        checkConflictingConfig(report, instance)
     },
     getSizeString(size) {
         size = 2**size;
@@ -411,4 +689,3 @@ let mpu_armv7_module = {
 };
 
 exports = mpu_armv7_module;
-

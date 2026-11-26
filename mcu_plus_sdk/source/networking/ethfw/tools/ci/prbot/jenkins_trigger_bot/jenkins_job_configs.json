@@ -1,8 +1,9 @@
 {
     "PROCESSOR-SDK-VISION/ethfw": [
         {
+            "target_branch": "master",
             "root_url": "https://jenkins-epsw.itg.ti.com",
-            "job_name": "ethrtos_rtos_ethfw_pr_bot",
+            "job_name": "ethrtos_ethfw_rtos",
             "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
             "auth_key": "JENKINS_EPSW_AUTH_KEY",
             "token": "",
@@ -17,13 +18,158 @@
                 "TARGET_BRANCH": "master",
                 "tag_info": "--ethfw_tag={branch},--tsn_tag={tsn_tag},--enet_tag={enet_tag}"
             },
-            "params_template": "{\"manifest_tag\":\"%repo_manifests%\",\"ethfw_tag\":\"%ethfw%\",\"enet_tag\":\"%enet_tag%\",\"tsn_tag\":\"%tsn_tag%\",\"pdk_tag\":\"%pdk_tag%\"}",
+            "params_template": "{\"manifest_tag\":\"%manifest_tag%\",\"ethfw_tag\":\"%ethfw%\",\"enet_tag\":\"%enet_tag%\",\"tsn_tag\":\"%tsn_tag%\",\"pdk_tag\":\"%pdk_tag%\",\"mcupsdk_setup_tag\":\"k3_main\",\"mcupsdk_internal_tag\":\"k3_main\"}",
             "default_tag": {
-                "repo_manifests": "master",
+                "manifest_tag": "master",
                 "pdk_tag": "master",
                 "enet_tag": "master",
                 "tsn_tag": "next",
                 "ethfw": "master"
+            },
+            "disabled": false
+        },
+        {
+            "target_branch": "master",
+            "root_url": "https://jenkins-epsw.itg.ti.com",
+            "job_name": "sitmpurtos_mcu_plus_sdk_am62ax",
+            "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
+            "auth_key": "JENKINS_EPSW_AUTH_KEY",
+            "token": "",
+            "params": {
+                "TARGET_REPO": "{repo}",
+                "COMMIT_ID": "{commit_id}",
+                "PR_ID": "{pr_number}",
+                "PR_DESCRIPTION": "{pr_description}",
+                "BB_URL": "https://bitbucket.itg.ti.com",
+                "BB_PROJECT": "{project}",
+                "BB_REPO": "{repo}",
+                "TARGET_BRANCH": "master",
+                "tag_info": "--ethfw_tag={branch},--tsn_tag={tsn_tag},--enet_tag={enet_tag}"
+            },
+            "params_template": "{\"manifest_tag\":\"%manifest_tag%\",\"ethfw_tag\":\"%ethfw%\",\"enet_tag\":\"%enet_tag%\",\"tsn_tag\":\"%tsn_tag%\",\"pdk_tag\":\"%pdk_tag%\",\"mcusdk_tag\":\"%mcusdk_tag%\",\"mcupsdk_setup_tag\":\"k3_main\",\"mcupsdk_internal_tag\":\"k3_main\"}",
+            "default_tag": {
+                "manifest_tag": "k3_main",
+                "pdk_tag": "master",
+                "enet_tag": "master",
+                "tsn_tag": "next",
+                "ethfw": "master",
+                "mcu_plus_sdk": "k3_next"
+            },
+            "disabled": false
+        },
+        {
+            "target_branch": "master",
+            "root_url": "https://jenkins-epsw.itg.ti.com",
+            "job_name": "sitmpurtos_mcu_plus_sdk_am62dx",
+            "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
+            "auth_key": "JENKINS_EPSW_AUTH_KEY",
+            "token": "",
+            "params": {
+                "TARGET_REPO": "{repo}",
+                "COMMIT_ID": "{commit_id}",
+                "PR_ID": "{pr_number}",
+                "PR_DESCRIPTION": "{pr_description}",
+                "BB_URL": "https://bitbucket.itg.ti.com",
+                "BB_PROJECT": "{project}",
+                "BB_REPO": "{repo}",
+                "TARGET_BRANCH": "master",
+                "tag_info": "--ethfw_tag={branch},--tsn_tag={tsn_tag},--enet_tag={enet_tag}"
+            },
+            "params_template": "{\"manifest_tag\":\"%manifest_tag%\",\"ethfw_tag\":\"%ethfw%\",\"enet_tag\":\"%enet_tag%\",\"tsn_tag\":\"%tsn_tag%\",\"pdk_tag\":\"%pdk_tag%\",\"mcusdk_tag\":\"%mcusdk_tag%\",\"mcupsdk_setup_tag\":\"k3_main\",\"mcupsdk_internal_tag\":\"k3_main\"}",
+            "default_tag": {
+                "manifest_tag": "k3_main",
+                "pdk_tag": "master",
+                "enet_tag": "master",
+                "tsn_tag": "next",
+                "ethfw": "master",
+                "mcu_plus_sdk": "k3_next"
+            },
+            "disabled": false
+        },
+        {
+            "target_branch": "master",
+            "root_url": "https://jenkins-epsw.itg.ti.com",
+            "job_name": "sitmpurtos_mcu_plus_sdk_am62lx",
+            "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
+            "auth_key": "JENKINS_EPSW_AUTH_KEY",
+            "token": "",
+            "params": {
+                "TARGET_REPO": "{repo}",
+                "COMMIT_ID": "{commit_id}",
+                "PR_ID": "{pr_number}",
+                "PR_DESCRIPTION": "{pr_description}",
+                "BB_URL": "https://bitbucket.itg.ti.com",
+                "BB_PROJECT": "{project}",
+                "BB_REPO": "{repo}",
+                "TARGET_BRANCH": "master",
+                "tag_info": "--ethfw_tag={branch},--tsn_tag={tsn_tag},--enet_tag={enet_tag}"
+            },
+            "params_template": "{\"manifest_tag\":\"%manifest_tag%\",\"ethfw_tag\":\"%ethfw%\",\"enet_tag\":\"%enet_tag%\",\"tsn_tag\":\"%tsn_tag%\",\"pdk_tag\":\"%pdk_tag%\",\"mcusdk_tag\":\"%mcusdk_tag%\",\"mcupsdk_setup_tag\":\"k3_main\",\"mcupsdk_internal_tag\":\"k3_main\"}",
+            "default_tag": {
+                "manifest_tag": "k3_main",
+                "pdk_tag": "master",
+                "enet_tag": "master",
+                "tsn_tag": "next",
+                "ethfw": "master",
+                "mcu_plus_sdk": "k3_next"
+            },
+            "disabled": false
+        },
+        {
+            "target_branch": "master",
+            "root_url": "https://jenkins-epsw.itg.ti.com",
+            "job_name": "sitmpurtos_mcu_plus_sdk_am62px",
+            "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
+            "auth_key": "JENKINS_EPSW_AUTH_KEY",
+            "token": "",
+            "params": {
+                "TARGET_REPO": "{repo}",
+                "COMMIT_ID": "{commit_id}",
+                "PR_ID": "{pr_number}",
+                "PR_DESCRIPTION": "{pr_description}",
+                "BB_URL": "https://bitbucket.itg.ti.com",
+                "BB_PROJECT": "{project}",
+                "BB_REPO": "{repo}",
+                "TARGET_BRANCH": "master",
+                "tag_info": "--ethfw_tag={branch},--tsn_tag={tsn_tag},--enet_tag={enet_tag}"
+            },
+            "params_template": "{\"manifest_tag\":\"%manifest_tag%\",\"ethfw_tag\":\"%ethfw%\",\"enet_tag\":\"%enet_tag%\",\"tsn_tag\":\"%tsn_tag%\",\"pdk_tag\":\"%pdk_tag%\",\"mcusdk_tag\":\"%mcusdk_tag%\",\"mcupsdk_setup_tag\":\"k3_main\",\"mcupsdk_internal_tag\":\"k3_main\"}",
+            "default_tag": {
+                "manifest_tag": "k3_main",
+                "pdk_tag": "master",
+                "enet_tag": "master",
+                "tsn_tag": "next",
+                "ethfw": "master",
+                "mcu_plus_sdk": "k3_next"
+            },
+            "disabled": false
+        },
+        {
+            "target_branch": "master",
+            "root_url": "https://jenkins-epsw.itg.ti.com",
+            "job_name": "sitmpurtos_mcu_plus_sdk_am62x",
+            "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
+            "auth_key": "JENKINS_EPSW_AUTH_KEY",
+            "token": "",
+            "params": {
+                "TARGET_REPO": "{repo}",
+                "COMMIT_ID": "{commit_id}",
+                "PR_ID": "{pr_number}",
+                "PR_DESCRIPTION": "{pr_description}",
+                "BB_URL": "https://bitbucket.itg.ti.com",
+                "BB_PROJECT": "{project}",
+                "BB_REPO": "{repo}",
+                "TARGET_BRANCH": "master",
+                "tag_info": "--ethfw_tag={branch},--tsn_tag={tsn_tag},--enet_tag={enet_tag}"
+            },
+            "params_template": "{\"manifest_tag\":\"%manifest_tag%\",\"ethfw_tag\":\"%ethfw%\",\"enet_tag\":\"%enet_tag%\",\"tsn_tag\":\"%tsn_tag%\",\"pdk_tag\":\"%pdk_tag%\",\"mcusdk_tag\":\"%mcusdk_tag%\",\"mcupsdk_setup_tag\":\"k3_main\",\"mcupsdk_internal_tag\":\"k3_main\"}",
+            "default_tag": {
+                "manifest_tag": "k3_main",
+                "pdk_tag": "master",
+                "enet_tag": "master",
+                "tsn_tag": "next",
+                "ethfw": "master",
+                "mcu_plus_sdk": "k3_next"
             },
             "disabled": false
         }
@@ -32,7 +178,7 @@
         {
             "target_branch": "master",
             "root_url": "https://jenkins-epsw.itg.ti.com",
-            "job_name": "ethrtos_rtos_pdk_enet_pr_bot",
+            "job_name": "ethrtos_enet_lld_rtos_daily",
             "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
             "auth_key": "JENKINS_EPSW_AUTH_KEY",
             "token": "",
@@ -51,7 +197,7 @@
         {
             "target_branch": "mcupsdk_next",
             "root_url": "https://jenkins-epsw.itg.ti.com",
-            "job_name": "ethrtos_rtos_enet_pr_build",
+            "job_name": "sitmpurtos_mcu_plus_sdk_am62ax",
             "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
             "auth_key": "JENKINS_EPSW_AUTH_KEY",
             "token": "",
@@ -64,7 +210,87 @@
                 "tag_info": "--enet_tag={branch}"
             },
             "default_tag": {
-                "mcu_plus_sdk": "k3_next_jacinto"
+                "mcu_plus_sdk": "k3_next"
+            },
+            "disabled": false
+        },
+        {
+            "target_branch": "mcupsdk_next",
+            "root_url": "https://jenkins-epsw.itg.ti.com",
+            "job_name": "sitmpurtos_mcu_plus_sdk_am62dx",
+            "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
+            "auth_key": "JENKINS_EPSW_AUTH_KEY",
+            "token": "",
+            "params": {
+                "COMMIT_ID": "{commit_id}",
+                "mcusdk_tag": "{mcusdk_tag}",
+                "manifest_tag": "k3_main",
+                "mcupsdk_setup_tag": "k3_main",
+                "mcupsdk_internal_tag": "k3_main",
+                "tag_info": "--enet_tag={branch}"
+            },
+            "default_tag": {
+                "mcu_plus_sdk": "k3_next"
+            },
+            "disabled": false
+        },
+        {
+            "target_branch": "mcupsdk_next",
+            "root_url": "https://jenkins-epsw.itg.ti.com",
+            "job_name": "sitmpurtos_mcu_plus_sdk_am62lx",
+            "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
+            "auth_key": "JENKINS_EPSW_AUTH_KEY",
+            "token": "",
+            "params": {
+                "COMMIT_ID": "{commit_id}",
+                "mcusdk_tag": "{mcusdk_tag}",
+                "manifest_tag": "k3_main",
+                "mcupsdk_setup_tag": "k3_main",
+                "mcupsdk_internal_tag": "k3_main",
+                "tag_info": "--enet_tag={branch}"
+            },
+            "default_tag": {
+                "mcu_plus_sdk": "k3_next"
+            },
+            "disabled": false
+        },
+        {
+            "target_branch": "mcupsdk_next",
+            "root_url": "https://jenkins-epsw.itg.ti.com",
+            "job_name": "sitmpurtos_mcu_plus_sdk_am62px",
+            "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
+            "auth_key": "JENKINS_EPSW_AUTH_KEY",
+            "token": "",
+            "params": {
+                "COMMIT_ID": "{commit_id}",
+                "mcusdk_tag": "{mcusdk_tag}",
+                "manifest_tag": "k3_main",
+                "mcupsdk_setup_tag": "k3_main",
+                "mcupsdk_internal_tag": "k3_main",
+                "tag_info": "--enet_tag={branch}"
+            },
+            "default_tag": {
+                "mcu_plus_sdk": "k3_next"
+            },
+            "disabled": false
+        },
+        {
+            "target_branch": "mcupsdk_next",
+            "root_url": "https://jenkins-epsw.itg.ti.com",
+            "job_name": "sitmpurtos_mcu_plus_sdk_am62x",
+            "auth_uname": "JENKINS_EPSW_AUTH_UNAME",
+            "auth_key": "JENKINS_EPSW_AUTH_KEY",
+            "token": "",
+            "params": {
+                "COMMIT_ID": "{commit_id}",
+                "mcusdk_tag": "{mcusdk_tag}",
+                "manifest_tag": "k3_main",
+                "mcupsdk_setup_tag": "k3_main",
+                "mcupsdk_internal_tag": "k3_main",
+                "tag_info": "--enet_tag={branch}"
+            },
+            "default_tag": {
+                "mcu_plus_sdk": "k3_next"
             },
             "disabled": false
         },

@@ -1,0 +1,20 @@
+obj/j722s/ti-arm-clang/release/main-r5f/drivers_ipfma//mcspi_v0.obj: \
+  ../mcspi/v0/mcspi_v0.c \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/mcspi.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/soc_config.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/j722s/soc_config.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/mcspi/v0/mcspi.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/SystemP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/DebugP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/SemaphoreP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/HwiP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/csl_types.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/cslr_mcspi.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/mcspi/v0/cslr_mcspi.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/cslr.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/tistdtypes.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/csl_utils.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/cslr64.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/mcspi/v0/dma/udma/mcspi_dma_udma.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/AddrTranslateP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/mcspi/v0/dma/mcspi_dma.h

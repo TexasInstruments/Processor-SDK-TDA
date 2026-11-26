@@ -198,8 +198,11 @@ const libs_freertos_c75ss1 = {
 const templates_freertos_c75ss0 =
 [
     {
-        input: ".project/templates/j722s/common/linker_c75ss.cmd.xdt",
-        output: "linker.cmd",
+        input: ".project/templates/j722s/common/sections_c75ss.cmd.xdt",
+        output: "sections.cmd",
+        options: {
+            stackSize: 64*1024,
+        },
     },
     {
         input: ".project/templates/j722s/freertos/main_freertos.c.xdt",
@@ -214,8 +217,11 @@ const templates_freertos_c75ss0 =
 const templates_freertos_c75ss1 =
 [
     {
-        input: ".project/templates/j722s/common/linker_c75ss.cmd.xdt",
-        output: "linker.cmd",
+        input: ".project/templates/j722s/common/sections_c75ss.cmd.xdt",
+        output: "sections.cmd",
+        options: {
+            stackSize: 64*1024,
+        },
     },
     {
         input: ".project/templates/j722s/freertos/main_freertos.c.xdt",
@@ -229,15 +235,17 @@ const templates_freertos_c75ss1 =
 
 const lnkfiles = {
     common: [
-        "linker.cmd",
+        "generated/linker_mem_map_freertos.cmd",
+        "sections.cmd",
     ]
 };
+
 
 const templates_nortos_main_r5f =
 [
     {
-        input: ".project/templates/j722s/common/linker_main-r5f_nortos.cmd.xdt",
-        output: "linker.cmd",
+        input: ".project/templates/j722s/common/sections_main-r5f.cmd.xdt",
+        output: "sections.cmd",
         options: {
             heapSize: 0x8000,
             stackSize: 0x4000,
@@ -246,7 +254,6 @@ const templates_nortos_main_r5f =
             fiqStackSize: 0x0100,
             abortStackSize: 0x0100,
             undefinedStackSize: 0x0100,
-            dmStubstacksize: 0x0400,
         },
     },
 	{
@@ -261,8 +268,8 @@ const templates_nortos_main_r5f =
 const templates_nortos_mcu_r5f =
 [
     {
-        input: ".project/templates/j722s/common/linker_mcu-r5f_nortos.cmd.xdt",
-        output: "linker.cmd",
+        input: ".project/templates/j722s/common/sections_mcu-r5f.cmd.xdt",
+        output: "sections.cmd",
         options: {
             heapSize: 0x8000,
             stackSize: 0x4000,
@@ -271,7 +278,6 @@ const templates_nortos_mcu_r5f =
             fiqStackSize: 0x0100,
             abortStackSize: 0x0100,
             undefinedStackSize: 0x0100,
-            dmStubstacksize: 0x0400,
         },
     },
 	{
@@ -286,8 +292,8 @@ const templates_nortos_mcu_r5f =
 const templates_freertos_main_r5f =
 [
     {
-        input: ".project/templates/j722s/common/linker_main-r5f.cmd.xdt",
-        output: "linker.cmd",
+        input: ".project/templates/j722s/common/sections_main-r5f.cmd.xdt",
+        output: "sections.cmd",
         options: {
             heapSize: 0x8000,
             stackSize: 0x4000,
@@ -296,7 +302,6 @@ const templates_freertos_main_r5f =
             fiqStackSize: 0x0100,
             abortStackSize: 0x0100,
             undefinedStackSize: 0x0100,
-            dmStubstacksize: 0x0400,
         },
     },
     {
@@ -311,8 +316,8 @@ const templates_freertos_main_r5f =
 const templates_freertos_mcu_r5f =
 [
     {
-        input: ".project/templates/j722s/common/linker_mcu-r5f.cmd.xdt",
-        output: "linker.cmd",
+        input: ".project/templates/j722s/common/sections_mcu-r5f.cmd.xdt",
+        output: "sections.cmd",
         options: {
             heapSize: 0x8000,
             stackSize: 0x4000,
@@ -321,7 +326,6 @@ const templates_freertos_mcu_r5f =
             fiqStackSize: 0x0100,
             abortStackSize: 0x0100,
             undefinedStackSize: 0x0100,
-            dmStubstacksize: 0x0400,
         },
     },
     {
@@ -336,8 +340,8 @@ const templates_freertos_mcu_r5f =
 const templates_nortos_wkup_r5f =
 [
     {
-        input: ".project/templates/j722s/common/linker_wkup-r5f_nortos.cmd.xdt",
-        output: "linker.cmd",
+        input: ".project/templates/j722s/common/sections_wkup-r5f.cmd.xdt",
+        output: "sections.cmd",
         options: {
             heapSize: 0x8000,
             stackSize: 0x4000,
@@ -346,7 +350,6 @@ const templates_nortos_wkup_r5f =
             fiqStackSize: 0x0100,
             abortStackSize: 0x0100,
             undefinedStackSize: 0x0100,
-            dmStubstacksize: 0x0400,
         },
     },
     {
@@ -361,8 +364,8 @@ const templates_nortos_wkup_r5f =
 const templates_freertos_wkup_r5f =
 [
     {
-        input: ".project/templates/j722s/common/linker_wkup-r5f.cmd.xdt",
-        output: "linker.cmd",
+        input: ".project/templates/j722s/common/sections_wkup-r5f.cmd.xdt",
+        output: "sections.cmd",
         options: {
             heapSize: 0x8000,
             stackSize: 0x4000,
@@ -371,7 +374,6 @@ const templates_freertos_wkup_r5f =
             fiqStackSize: 0x0100,
             abortStackSize: 0x0100,
             undefinedStackSize: 0x0100,
-            dmStubstacksize: 0x0400,
         },
     },
     {

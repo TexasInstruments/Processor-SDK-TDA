@@ -64,10 +64,14 @@
 #include <tivx_objects.h>
 
 const tivx_os_obj_sizes_t g_tivx_os_obj_sizes = {
-    .event_size = (uint32_t)sizeof(tivx_event_t),
-    .mutex_size = (uint32_t)sizeof(tivx_mutex_t),
-    .queue_size = (uint32_t)sizeof(tivx_queue_context_t),
-    .task_size  = (uint32_t)sizeof(tivx_task_context_t)
+    .posix_event_size = (uint32_t)sizeof(tivx_event_t),
+    .posix_mutex_size = (uint32_t)sizeof(tivx_mutex_t),
+    .posix_queue_size = (uint32_t)sizeof(tivx_queue_context_t),
+    .posix_task_size  = (uint32_t)sizeof(tivx_task_context_t),
+    .rtos_sem_obj_size    = 0U,
+    .rtos_sem_pool_size    = 0U,
+    .rtos_task_obj_size   = 0U,
+    .rtos_task_pool_size   = 0U
 };
 
 static tivx_platform_posix_t g_tivx_posix_objects;
@@ -86,7 +90,6 @@ static uint8_t *ownAllocPosixObject(
         {
             obj_ptr = obj_start_ptr;
             inUse[i] = (vx_bool)vx_true_e;
-            ownLogResourceAlloc(resource_name, 1);
             break;
         }
         obj_start_ptr += size;
@@ -102,7 +105,7 @@ static uint8_t *ownAllocPosixObject(
 
 static vx_status ownFreePosixObject(
     const uint8_t *obj_ptr, const uint8_t *obj_start_ptr, vx_bool inUse[],
-    uint32_t max_objects, uint32_t size, char *resource_name)
+    uint32_t max_objects, uint32_t size)
 {
     uint32_t i;
     vx_status status = (vx_status)VX_FAILURE;
@@ -113,7 +116,6 @@ static vx_status ownFreePosixObject(
         {
             inUse[i] = (vx_bool)vx_false_e;
             status = (vx_status)VX_SUCCESS;
-            ownLogResourceFree(resource_name, 1);
             break;
         }
         obj_start_ptr += size;
@@ -189,8 +191,7 @@ vx_status ownPosixObjectFree(uint8_t *obj, vx_enum type)
                                 (uint8_t *)g_tivx_posix_objects.event,
                                 g_tivx_posix_objects.isEventUse,
                                 TIVX_EVENT_MAX_OBJECTS,
-                                (uint32_t)sizeof(tivx_event_t),
-                                "TIVX_EVENT_MAX_OBJECTS");
+                                (uint32_t)sizeof(tivx_event_t));
                     if ((vx_status)VX_SUCCESS != status)
                     {
                         VX_PRINT(VX_ZONE_ERROR, "Free parameter object failed\n");
@@ -201,8 +202,7 @@ vx_status ownPosixObjectFree(uint8_t *obj, vx_enum type)
                                 (uint8_t *)g_tivx_posix_objects.mutex,
                                 g_tivx_posix_objects.isMutexUse,
                                 TIVX_MUTEX_MAX_OBJECTS,
-                                (uint32_t)sizeof(tivx_mutex_t),
-                                "TIVX_MUTEX_MAX_OBJECTS");
+                                (uint32_t)sizeof(tivx_mutex_t));
                     if ((vx_status)VX_SUCCESS != status)
                     {
                         VX_PRINT(VX_ZONE_ERROR, "Free parameter object failed\n");
@@ -213,8 +213,7 @@ vx_status ownPosixObjectFree(uint8_t *obj, vx_enum type)
                                 (uint8_t *)g_tivx_posix_objects.queue,
                                 g_tivx_posix_objects.isQueueUse,
                                 TIVX_QUEUE_MAX_OBJECTS,
-                                (uint32_t)sizeof(tivx_queue_context_t),
-                                "TIVX_QUEUE_MAX_OBJECTS");
+                                (uint32_t)sizeof(tivx_queue_context_t));
                     if ((vx_status)VX_SUCCESS != status)
                     {
                         VX_PRINT(VX_ZONE_ERROR, "Free parameter object failed\n");
@@ -225,8 +224,7 @@ vx_status ownPosixObjectFree(uint8_t *obj, vx_enum type)
                                 (uint8_t *)g_tivx_posix_objects.task,
                                 g_tivx_posix_objects.isTaskUse,
                                 TIVX_TASK_MAX_OBJECTS,
-                                (uint32_t)sizeof(tivx_task_context_t),
-                                "TIVX_TASK_MAX_OBJECTS");
+                                (uint32_t)sizeof(tivx_task_context_t));
                     if ((vx_status)VX_SUCCESS != status)
                     {
                         VX_PRINT(VX_ZONE_ERROR, "Free parameter object failed\n");
@@ -291,8 +289,7 @@ vx_status ownPosixObjectDeInit(void)
                                 (uint8_t *)g_tivx_posix_objects.mutex,
                                 g_tivx_posix_objects.isMutexUse,
                                 TIVX_MUTEX_MAX_OBJECTS,
-                                (uint32_t)sizeof(tivx_mutex_t),
-                                "TIVX_MUTEX_MAX_OBJECTS");
+                                (uint32_t)sizeof(tivx_mutex_t));
 
 /* LDRA_JUSTIFY_START
 <metric start> branch <metric end>

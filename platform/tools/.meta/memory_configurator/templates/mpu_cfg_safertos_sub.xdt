@@ -1,0 +1,73 @@
+  %%{
+  let mpu_module = system.modules["/memory_configurator/mpu_cfg"];
+  let instances  = (mpu_module !== undefined) ? mpu_module.$instances : [];
+  /* SafeRTOS: regions 0 and 11-15 reserved; user configures regions 1-10 only */
+  let safeInstances = instances.slice(0, 10);
+  %%}
+
+#include <stdlib.h>
+#include <stdint.h>
+#include <ti/csl/arch/r5/csl_arm_r5.h>
+#include <ti/csl/arch/r5/csl_arm_r5_mpu.h>
+#include <ti/csl/arch/r5/interrupt.h>
+#include <ti/csl/arch/r5/csl_cache.h>
+
+/* SafeRTOS includes */
+#include "SafeRTOS_API.h"
+#include <ti/osal/SafeRTOS_MPU.h>
+#include "mpuARM.h"
+
+/**
+ * \brief  TEX[2:0], C and B values.
+ *         CSL_ArmR5MemAttr is used as index here.
+ *         gMemAttr[x][0]: TEX[2:0] values
+ *         gMemAttr[x][1]: C bit value
+ *         gMemAttr[x][2]: B bit value
+ */
+static const uint32_t gMemAttr[CSL_ARM_R5_MEM_ATTR_MAX][3U] =
+{
+/*    TEX[2:0], C,     B bits */
+    {   0x0U,   0x0U,  0x0U,}, /* Strongly-ordered.*/
+    {   0x0U,   0x0U,  0x1U,}, /* Shareable Device.*/
+    {   0x0U,   0x1U,  0x0U,}, /* Outer and Inner write-through, no write-allocate. */
+    {   0x0U,   0x1U,  0x1U,}, /* Outer and Inner write-back, no write-allocate. */
+    {   0x1U,   0x0U,  0x0U,}, /* Outer and Inner Non-cacheable. */
+    {   0x1U,   0x1U,  0x1U,}, /* Outer and Inner write-back, write-allocate.*/
+    {   0x2U,   0x0U,  0x0U,}, /* Non-shareable Device.*/
+};
+
+xMPU_CONFIG_PARAMETERS __attribute__((section(".startupData"))) __attribute__((weak)) gMPUConfigParms[CSL_ARM_R5F_MPU_REGIONS_MAX] =
+{
+    /* DO NOT PROGRAM Regions 0, 11-15, these are reserved
+     * Region Summary:
+     * 0:     Programmed by __mpu_init hook in SafeRTOS_config_r5f.c
+     * 1-10:  Can be programmed in this file for global configuration
+     * 11,12: Task Specific regions, updated by OS on context switch
+     * 13:    Task Stack region, updated by OS on context switch
+     * 14,15: OS Kernel Functions, OS Kernel Data
+     */
+  % for (let i = 0; i < safeInstances.length; i++) {
+  % let inst      = safeInstances[i];
+  % let sizeExpr  = mpu_module.getSafertosSize(inst);
+  % let baseStr   = mpu_module.getBaseAddrStr(inst);
+  % let attrs     = mpu_module.getResolvedAttrs(inst);
+  % let memAttr   = mpu_module.getMemAttr(inst);
+  % let subRegStr = (inst.subRegionEnable === 0xFF) ? "mpuREGION_ALL_SUB_REGIONS_ENABLED" : ("0x" + inst.subRegionEnable.toString(16).toUpperCase() + "U");
+    {
+        /* `inst.$name` */
+        .ulRegionNumber         = `i + 1`U,
+        .ulRegionBeginAddress   = `baseStr`,
+        {
+            .ulexeNeverControl  = `inst.exeNeverControl ? "1U" : "0U"`,
+            .ulaccessPermission = `inst.accessPermission`,
+            .ulshareable        = `attrs.shareable ? "1U" : "0U"`,
+            .ulcacheable        = `attrs.cacheable ? "1U" : "0U"`,
+            .ulcachePolicy      = `attrs.cachePolicy`,
+            .ulmemAttr          = `memAttr`,
+        },
+        .ulRegionSize           = `sizeExpr`,
+        .ulSubRegionDisable     = `subRegStr`,
+    },
+  % }
+    /* DO NOT PROGRAM Regions 11-15, these are reserved for SAFERTOS */
+};

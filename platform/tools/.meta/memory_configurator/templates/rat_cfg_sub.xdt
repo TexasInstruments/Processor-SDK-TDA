@@ -1,0 +1,50 @@
+%%{
+let rat_module   = system.modules["/memory_configurator/rat_cfg"];
+let instances    = (rat_module !== undefined) ? rat_module.$instances : [];
+let common       = system.getScript("/common");
+let selfCoreName = common.getSelfSysCfgCoreName();
+let ratCfgBase   = selfCoreName.includes("mcu-r5fss") ? "CSL_MCU_R5FSS0_RAT_CFG_BASE"
+                 : selfCoreName.includes("r5fss")     ? "CSL_R5FSS0_RAT_CFG_BASE"
+                 :                                      "CSL_C66_COREPAC_C66_RATCFG_BASE";
+%%}
+% if (instances.length > 0) {
+
+#include <stdint.h>
+#include <utils/mem/include/app_mem.h>
+
+#define CONFIG_RAT_NUM_REGIONS  (`instances.length`U)
+#define APP_ASSERT_SUCCESS(x)  { if((x)!=0) while(1); }
+
+/* RAT region configuration table — one entry per configured region */
+app_mem_rat_prm_t RatRegionConfig[CONFIG_RAT_NUM_REGIONS] =
+{
+% for (let i = 0; i < instances.length; i++) {
+%     let inst     = instances[i];
+%     let size     = Math.pow(2, inst.size);
+%     let sizeHex  = "0x" + size.toString(16).toUpperCase() + "U";
+%     let localHex = "0x" + rat_module.getLocalAddr(inst).toString(16).toUpperCase().padStart(8, '0') + "U";
+%     let sysHex   = "0x" + inst.systemAddr.toString(16).toUpperCase() + "ULL";
+    /* `inst.$name` */
+    {
+        .size               = `sizeHex`,
+        .baseAddress        = `localHex`,
+        .translatedAddress  = `sysHex`,
+    },
+% }
+};
+
+void appConfigureRat(void)
+{
+    int32_t status;
+    uint32_t i;
+
+    status = appMemSetRatRegs((CSL_ratRegs *)(`ratCfgBase`));
+    APP_ASSERT_SUCCESS(status);
+
+    for (i = 0U; i < CONFIG_RAT_NUM_REGIONS; i++)
+    {
+        status = appMemAddrTranslate(&RatRegionConfig[i]);
+        APP_ASSERT_SUCCESS(status);
+    }
+}
+% }

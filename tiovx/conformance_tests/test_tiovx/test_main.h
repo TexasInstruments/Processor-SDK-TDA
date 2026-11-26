@@ -144,6 +144,8 @@ TESTCASE(tivxRawImage)
 
 TESTCASE(tivxReference)
 
+TESTCASE(tivxReferenceMemHeapRegion)
+
 TESTCASE(tivxRemap)
 
 TESTCASE(tivxReplicate)

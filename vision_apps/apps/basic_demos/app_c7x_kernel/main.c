@@ -66,14 +66,26 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 #include "app_c7x_kernel.h"
 #include "app_test.h"
+#include <utils/mem/include/app_mem.h>
+#include <platform.h>
 
 #define APP_MAX_FILE_PATH           (256u)
 #define APP_ASSERT(x)               assert((x))
 #define APP_ASSERT_VALID_REF(ref)   (APP_ASSERT(vxGetStatus((vx_reference)(ref))==VX_SUCCESS));
+
+#ifdef SOC_FAMILY_TDA5
+/* Shared-heap control-command test buffers only need to hold a single
+ * int32_t value, since the target-side TIVX_ADD_KERNEL_READ/READ_WRITE
+ * commands just read (and, for RW, increment) that value. */
+#define APP_C7X_KERNEL_SHARED_MEM_TEST_BUF_SIZE        (sizeof(int32_t))
+#define APP_C7X_KERNEL_SHARED_MEM_TEST_CONST_VALUE     (1234)
+#define APP_C7X_KERNEL_SHARED_MEM_TEST_RW_VALUE        (5678)
+#endif
 
 typedef struct {
 
@@ -103,6 +115,9 @@ static vx_status app_deinit(AppObj *obj);
 static vx_status app_create_graph(AppObj *obj);
 static vx_status app_run_graph(AppObj *obj);
 static void app_delete_graph(AppObj *obj);
+#ifdef SOC_FAMILY_TDA5
+static vx_status app_test_shared_mem(AppObj *obj);
+#endif
 
 int app_c7x_kernel_main(int argc, char* argv[])
 {
@@ -114,6 +129,12 @@ int app_c7x_kernel_main(int argc, char* argv[])
     if(status == VX_SUCCESS)
     {
         status = app_create_graph(obj);
+    }
+    if(status == VX_SUCCESS)
+    {
+        #ifdef SOC_FAMILY_TDA5
+        app_test_shared_mem(obj);
+        #endif
     }
     if(status == VX_SUCCESS)
     {
@@ -248,6 +269,151 @@ static void app_delete_graph(AppObj *obj)
     vxReleaseImage(&obj->input_img2);
     vxReleaseImage(&obj->output_img);
 }
+
+#ifdef SOC_FAMILY_TDA5
+static vx_status app_test_shared_mem(AppObj *obj)
+{
+    vx_status status = VX_SUCCESS;
+    app_mem_init_prm_t const_mem_prm;
+    app_mem_init_prm_t rw_mem_prm;
+    int32_t const_init_status;
+    int32_t rw_init_status;
+    vx_user_data_object const_buf_obj = NULL;
+    vx_user_data_object rw_buf_obj = NULL;
+    vx_enum const_heap_region = TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY_CONST;
+    vx_enum rw_heap_region = TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY;
+
+    memset(&const_mem_prm, 0, sizeof(const_mem_prm));
+    const_mem_prm.base = DDR_SHARED_HEAP_CONST_ADDR;
+    const_mem_prm.start = DDR_SHARED_HEAP_CONST_ADDR;
+    const_mem_prm.size = DDR_SHARED_HEAP_CONST_SIZE;
+    const_mem_prm.flags = 0U;
+    const_mem_prm.heap_id = APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY_CONST;
+    strncpy(const_mem_prm.name, "MPU_0_64B_CONST", APP_MEM_HEAP_NAME_MAX);
+    strncpy(const_mem_prm.dma_carveout_name,
+        "/dev/dma_heap/carveout_ddr-shared-heap-const",
+        APP_MEM_DMA_CARVEOUT_NAME_MAX);
+
+    memset(&rw_mem_prm, 0, sizeof(rw_mem_prm));
+    rw_mem_prm.base = DDR_SHARED_HEAP_RW_ADDR;
+    rw_mem_prm.start = DDR_SHARED_HEAP_RW_ADDR;
+    rw_mem_prm.size = DDR_SHARED_HEAP_RW_SIZE;
+    rw_mem_prm.flags = 0U;
+    rw_mem_prm.heap_id = APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY;
+    strncpy(rw_mem_prm.name, "MPU_0_64B", APP_MEM_HEAP_NAME_MAX);
+    strncpy(rw_mem_prm.dma_carveout_name,
+        "/dev/dma_heap/carveout_ddr-shared-heap-rw",
+        APP_MEM_DMA_CARVEOUT_NAME_MAX);
+
+    const_init_status = appMemInit(&const_mem_prm);
+    if (const_init_status != 0)
+    {
+        printf(" ERROR: Shared-mem heap test SKIPPED: appMemInit() failed for CONST heap.\n");
+        status = VX_FAILURE;
+    }
+
+    rw_init_status = appMemInit(&rw_mem_prm);
+    if (rw_init_status != 0)
+    {
+        printf(" ERROR: Shared-mem heap test SKIPPED: appMemInit() failed for RW heap.\n");
+        status = VX_FAILURE;
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        const_buf_obj = vxCreateUserDataObject(obj->context, "ConstHeapTestBuf",
+            APP_C7X_KERNEL_SHARED_MEM_TEST_BUF_SIZE, NULL);
+        rw_buf_obj = vxCreateUserDataObject(obj->context, "RwHeapTestBuf",
+            APP_C7X_KERNEL_SHARED_MEM_TEST_BUF_SIZE, NULL);
+
+        status = vxGetStatus((vx_reference)const_buf_obj);
+        if (status == VX_SUCCESS)
+        {
+            status = vxGetStatus((vx_reference)rw_buf_obj);
+        }
+
+        if (status != VX_SUCCESS)
+        {
+            printf(" ERROR: Shared-mem heap test SKIPPED: vxCreateUserDataObject() failed.\n");
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        status = tivxSetReferenceAttribute((vx_reference)const_buf_obj,
+            TIVX_REFERENCE_MEM_HEAP_REGION, &const_heap_region, sizeof(const_heap_region));
+        if (status == VX_SUCCESS)
+        {
+            status = tivxSetReferenceAttribute((vx_reference)rw_buf_obj,
+                TIVX_REFERENCE_MEM_HEAP_REGION, &rw_heap_region, sizeof(rw_heap_region));
+        }
+
+        if (status != VX_SUCCESS)
+        {
+            printf(" ERROR: Shared-mem heap test SKIPPED: tivxSetReferenceAttribute() failed.\n");
+        }
+    }
+
+    if (status == VX_SUCCESS)
+    {
+        int32_t const_value = APP_C7X_KERNEL_SHARED_MEM_TEST_CONST_VALUE;
+        int32_t rw_value = APP_C7X_KERNEL_SHARED_MEM_TEST_RW_VALUE;
+
+        status = vxCopyUserDataObject(const_buf_obj, 0, sizeof(const_value),
+            &const_value, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+        if (status == VX_SUCCESS)
+        {
+            status = vxCopyUserDataObject(rw_buf_obj, 0, sizeof(rw_value),
+                &rw_value, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+        }
+
+        if (status == VX_SUCCESS)
+        {
+            vx_reference refs[1] = { (vx_reference)const_buf_obj };
+
+            status = tivxNodeSendCommand(obj->node, 0, TIVX_ADD_KERNEL_READ, refs, 1);
+
+            printf(" Shared-mem CONST heap read test: %s\n", (status == VX_SUCCESS) ? "TEST PASSED" : "TEST FAILED");
+        }
+
+        if (status == VX_SUCCESS)
+        {
+            vx_reference refs[1] = { (vx_reference)rw_buf_obj };
+
+            status = tivxNodeSendCommand(obj->node, 0, TIVX_ADD_KERNEL_READ_WRITE, refs, 1);
+
+            if (status == VX_SUCCESS)
+            {
+                int32_t readback = 0;
+
+                status = vxCopyUserDataObject(rw_buf_obj, 0, sizeof(readback),
+                    &readback, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+
+                if (status == VX_SUCCESS)
+                {
+                    status = (readback == (rw_value + 1)) ?
+                        VX_SUCCESS : VX_FAILURE;
+                }
+            }
+
+            printf(" Shared-mem RW heap read/write test: %s\n",
+                (status == VX_SUCCESS) ? "TEST PASSED" : "TEST FAILED");
+        }
+    }
+
+    if (const_buf_obj != NULL)
+    {
+        vxReleaseUserDataObject(&const_buf_obj);
+    }
+
+    if (rw_buf_obj != NULL)
+    {
+        vxReleaseUserDataObject(&rw_buf_obj);
+    }
+
+    return status;
+}
+#endif
 
 static vx_status app_run_graph(AppObj *obj)
 {

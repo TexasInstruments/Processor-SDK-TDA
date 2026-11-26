@@ -94,10 +94,10 @@ extern "C" {
  *  \details This is CPU from the perspective of different OS.  For example
  *  if there are dual core MPU running 1 instance of HLOS, then this counts
  *  as 1 CPU.
- *  Set assuming max 16 CPUs
+ *  Set assuming max 64 CPUs
  * \ingroup group_tivx_target
  */
-#define TIVX_CPU_ID_MASK    (0xFu)
+#define TIVX_CPU_ID_MASK    (0x3Fu)
 
 /*! \brief CPU ID bit shift
  *  \details CPU ID is in higher position, so shift of 8 to get above TIVX_TARGET_INST_MASK
@@ -118,7 +118,7 @@ extern "C" {
 
 /*! \brief Make target based on CPU ID
  *
- *         Currently it assumes there are max 16 CPUs in system
+ *         Currently it assumes there are max 64 CPUs in system
  *         and max 256 targets on a given CPU in system
  *
  * \ingroup group_tivx_target

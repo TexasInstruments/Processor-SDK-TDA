@@ -9,7 +9,7 @@ CSOURCES += generated/ti_pinmux_config.c
 CSOURCES += generated/ti_power_clock_config.c
 
 LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE).cmd
-LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map_$(RTOS_TYPE).cmd
+LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/generated/linker_mem_map_$(RTOS_TYPE).cmd
 
 ifeq ($(RTOS),SAFERTOS)
   IDIRS+=$(MCU_PLUS_SDK_PATH)/source/kernel/safertos/c75/api/$(SAFERTOS_ISA_EXT_c7x)

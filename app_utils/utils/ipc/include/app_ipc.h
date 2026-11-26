@@ -477,14 +477,14 @@ uint32_t appIpcIsCpuEnabled(uint32_t cpu_id);
  *
  * \return 0 if lock is acquire, -2 if timeout is hit, else failure
  */
-int32_t appIpcHwLockAcquire(uint32_t lock_id, uint32_t timeout);
+int32_t appIpcHwLockAcquire(uint32_t hw_lock_id, uint32_t timeout);
 
 /**
  * \brief Release a system wide HW lock
  *
- * \param lock_id [in] HW lock ID to use
+ * \param hw_lock_id [in] HW lock ID to use
  */
-int32_t appIpcHwLockRelease(uint32_t lock_id);
+int32_t appIpcHwLockRelease(uint32_t hw_lock_id);
 
 /**
  * \brief Get base address and size of memory region assigned for TIOVX obj_desc's

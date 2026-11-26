@@ -112,7 +112,9 @@
         </file>
         <file path="../main.c" openOnCreation="false" excludeFromBuild="false" action="copy">
         </file>
-        <file path="linker.cmd" openOnCreation="false" excludeFromBuild="false" action="copy">
+        <file path="generated/linker_mem_map_freertos.cmd" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="sections.cmd" openOnCreation="false" excludeFromBuild="false" action="copy">
         </file>
         <file path="../example.syscfg" openOnCreation="false" excludeFromBuild="false" action="copy">
         </file>

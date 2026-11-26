@@ -24,7 +24,7 @@ Implementation file for the copy and swap utilities
 
 static vx_status ownCopyMoveRemoveNode(vx_graph graph, const vx_uint32 node_index, const vx_reference old_reference, const vx_reference new_reference);
 static vx_bool ownCopyMoveReplaceInputCompatible(vx_reference old_reference, vx_reference new_reference);
-static vx_bool ownCopyMoveReplaceOutputCompatible(vx_reference old_reference, vx_reference new_reference);
+static vx_bool ownCopyMoveReplaceOutputCompatible(vx_reference new_reference, vx_reference old_reference);
 static void ownReassignGraphParameter(vx_graph graph, const vx_node node, const vx_uint32 index, const vx_reference ref, const vx_enum direction);
 static vx_uint16 makeCopyMoveNodeList(vx_graph graph, vx_uint16 copy_move_indices[TIVX_GRAPH_MAX_NODES]);
 

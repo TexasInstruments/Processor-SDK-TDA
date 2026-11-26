@@ -147,7 +147,9 @@ void appCacheMarInit(void)
     /* disable cache for non-cached sections */
     Cache_setMar((Ptr)DDR_C66x_1_IPC_ADDR, DDR_C66x_1_IPC_SIZE, Cache_Mar_DISABLE);
     Cache_setMar((Ptr)APP_LOG_MEM_ADDR, APP_LOG_MEM_SIZE, Cache_Mar_DISABLE);
-    Cache_setMar((Ptr)TIOVX_OBJ_DESC_MEM_ADDR, TIOVX_OBJ_DESC_MEM_SIZE, Cache_Mar_DISABLE);
+    Cache_setMar((Ptr)TIOVX_OBJ_DESC_MEM_HOST0_ADDR, TIOVX_OBJ_DESC_MEM_HOST0_SIZE, Cache_Mar_DISABLE);
+    Cache_setMar((Ptr)TIOVX_OBJ_DESC_MEM_HOST1_ADDR, TIOVX_OBJ_DESC_MEM_HOST1_SIZE, Cache_Mar_DISABLE);
+    Cache_setMar((Ptr)TIOVX_OBJ_DESC_MEM_HOST2_ADDR, TIOVX_OBJ_DESC_MEM_HOST2_SIZE, Cache_Mar_DISABLE);
     Cache_setMar((Ptr)IPC_VRING_MEM_ADDR, IPC_VRING_MEM_SIZE, Cache_Mar_DISABLE);
     Cache_setMar((Ptr)TIOVX_LOG_RT_MEM_ADDR, TIOVX_LOG_RT_MEM_SIZE, Cache_Mar_DISABLE);
 #else
@@ -160,7 +162,9 @@ void appCacheMarInit(void)
     /* disable cache for non-cached sections */
     CacheP_setMar((void *)DDR_C66x_1_IPC_ADDR, DDR_C66x_1_IPC_SIZE, CacheP_Mar_DISABLE);
     CacheP_setMar((void *)APP_LOG_MEM_ADDR, APP_LOG_MEM_SIZE, CacheP_Mar_DISABLE);
-    CacheP_setMar((void *)TIOVX_OBJ_DESC_MEM_ADDR, TIOVX_OBJ_DESC_MEM_SIZE, CacheP_Mar_DISABLE);
+    CacheP_setMar((void *)TIOVX_OBJ_DESC_MEM_HOST0_ADDR, TIOVX_OBJ_DESC_MEM_HOST0_SIZE, CacheP_Mar_DISABLE);
+    CacheP_setMar((void *)TIOVX_OBJ_DESC_MEM_HOST1_ADDR, TIOVX_OBJ_DESC_MEM_HOST1_SIZE, CacheP_Mar_DISABLE);
+    CacheP_setMar((void *)TIOVX_OBJ_DESC_MEM_HOST2_ADDR, TIOVX_OBJ_DESC_MEM_HOST2_SIZE, CacheP_Mar_DISABLE);
     CacheP_setMar((void *)IPC_VRING_MEM_ADDR, IPC_VRING_MEM_SIZE, CacheP_Mar_DISABLE);
     CacheP_setMar((void *)TIOVX_LOG_RT_MEM_ADDR, TIOVX_LOG_RT_MEM_SIZE, CacheP_Mar_DISABLE);
 #endif

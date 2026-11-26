@@ -159,12 +159,13 @@ void Ipc_configC66xIntrRouter(uint32_t input);
 #endif
 
 #if defined(BUILD_C7X)
-uint32_t Ipc_configClecRouter(uint32_t coreEvent, uint32_t coreEventBase);
+uint32_t Ipc_configClecRouter(uint32_t corePackEvent, uint32_t corePackEventBase);
 #endif
-
-int32_t Ipc_sciclientIrqRelease(uint16_t remoteId, uint32_t clusterId,
+/* remote core id is the first arguement for Ipc_sciclientIrqRelease
+ * and Ipc_sciclientIrqSet*/
+int32_t Ipc_sciclientIrqRelease(uint16_t coreId, uint32_t clusterId,
         uint32_t userId, uint32_t intNumber);
-int32_t Ipc_sciclientIrqSet(uint16_t remoteId, uint32_t clusterId,
+int32_t Ipc_sciclientIrqSet(uint16_t coreId, uint32_t clusterId,
         uint32_t userId, uint32_t intNumber);
 int32_t Ipc_getIntNumRange(uint32_t coreIndex, uint16_t *rangeStartP,
         uint16_t *rangeNumP);

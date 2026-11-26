@@ -29,6 +29,10 @@ SYSLDIRS :=
 
 SYSDEFS  :=
 
+ifeq ($(TARGET_OS),$(filter $(TARGET_OS), LINUX QNX))
+    SYSDEFS += HLOS
+endif
+
 ifeq ($(TARGET_PLATFORM),PC)
     SYSIDIRS += $(GCC_WINDOWS_ROOT)/include
     SYSLDIRS += $(GCC_WINDOWS_ROOT)/lib
@@ -72,6 +76,8 @@ else
             SYSIDIRS += $(MCU_SDK_PATH)/source
             SYSIDIRS += $(MCU_SDK_PATH)/source/drivers
             SYSIDIRS += $(MCU_SDK_PATH)/source/compatibility/dpl/include
+            SYSIDIRS += $(MCU_SDK_PATH)/ti_sdk_config/$(SOC)/default/Hal_Cfg
+            SYSIDIRS += $(MCU_SDK_PATH)/source/device/$(SOC)/include/hw
             SYSIDIRS += $(MCU_SDK_PATH)/source/arch/include
             ifeq ($(TARGET_CPU),M55)
                 SYSIDIRS += $(MCU_SDK_PATH)/source/compiler/m55-ti-arm-clang

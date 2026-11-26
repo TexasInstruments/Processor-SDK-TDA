@@ -26,6 +26,7 @@
 #define TIVX_REF_TEST_MAX_NUM_ADDR  (TIVX_PYRAMID_MAX_LEVEL_OBJECTS)
 
 TESTCASE(tivxReference, CT_VXContext, ct_setup_vx_context, 0)
+TESTCASE(tivxReferenceMemHeapRegion, CT_VXContext, ct_setup_vx_context, 0)
 
 TEST(tivxReference, testQueryTimestamp)
 {
@@ -468,6 +469,189 @@ TEST(tivxReference, negativeTesttivxReferenceImportHandle2)
     VX_CALL(vxReleaseImage(&image));
 }
 
+TEST(tivxReferenceMemHeapRegion, testSetMemHeapRegionImage)
+{
+    vx_context context = context_->vx_context_;
+    vx_image image;
+    vx_enum heap_region = TIVX_MEM_EXTERNAL_SHARED;
+    vx_rectangle_t rect = {0, 0, 64, 48};
+    vx_imagepatch_addressing_t ipa;
+    vx_map_id map_id;
+    void *ptr = NULL;
+    vx_bool is_allocated;
+
+    ASSERT_VX_OBJECT(image = vxCreateImage(context, 64, 48, VX_DF_IMAGE_U8), VX_TYPE_IMAGE);
+
+    VX_CALL(vxQueryReference((vx_reference)image, TIVX_REFERENCE_BUFFER_IS_ALLOCATED, &is_allocated, sizeof(is_allocated)));
+    ASSERT(is_allocated == vx_false_e);
+
+    VX_CALL(tivxSetReferenceAttribute((vx_reference)image, TIVX_REFERENCE_MEM_HEAP_REGION, &heap_region, sizeof(heap_region)));
+
+    VX_CALL(vxMapImagePatch(image, &rect, 0, &map_id, &ipa, &ptr, VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, 0));
+    VX_CALL(vxUnmapImagePatch(image, map_id));
+
+    VX_CALL(vxQueryReference((vx_reference)image, TIVX_REFERENCE_BUFFER_IS_ALLOCATED, &is_allocated, sizeof(is_allocated)));
+    ASSERT(is_allocated == vx_true_e);
+
+    VX_CALL(vxReleaseImage(&image));
+}
+
+TEST(tivxReferenceMemHeapRegion, testSetMemHeapRegionUserDataObject)
+{
+    vx_context context = context_->vx_context_;
+    vx_user_data_object user_data_object = 0;
+    vx_enum heap_region = TIVX_MEM_EXTERNAL_SHARED;
+    vx_map_id map_id;
+    void *ptr = NULL;
+    vx_bool is_allocated;
+
+    ASSERT_VX_OBJECT(user_data_object = vxCreateUserDataObject(context, NULL, 100, NULL),
+                     (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+    VX_CALL(vxQueryReference((vx_reference)user_data_object, TIVX_REFERENCE_BUFFER_IS_ALLOCATED, &is_allocated, sizeof(is_allocated)));
+    ASSERT(is_allocated == vx_false_e);
+
+    VX_CALL(tivxSetReferenceAttribute((vx_reference)user_data_object, TIVX_REFERENCE_MEM_HEAP_REGION, &heap_region, sizeof(heap_region)));
+
+    VX_CALL(vxMapUserDataObject(user_data_object, 0, 100, &map_id, &ptr, VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, 0));
+    VX_CALL(vxUnmapUserDataObject(user_data_object, map_id));
+
+    VX_CALL(vxQueryReference((vx_reference)user_data_object, TIVX_REFERENCE_BUFFER_IS_ALLOCATED, &is_allocated, sizeof(is_allocated)));
+    ASSERT(is_allocated == vx_true_e);
+
+    VX_CALL(vxReleaseUserDataObject(&user_data_object));
+}
+
+TEST(tivxReferenceMemHeapRegion, negativeTestSetMemHeapRegionAfterAlloc)
+{
+    vx_context context = context_->vx_context_;
+    vx_image image;
+    vx_enum heap_region = TIVX_MEM_EXTERNAL_SHARED;
+    vx_rectangle_t rect = {0, 0, 64, 48};
+    vx_imagepatch_addressing_t ipa;
+    vx_map_id map_id;
+    void *ptr = NULL;
+
+    ASSERT_VX_OBJECT(image = vxCreateImage(context, 64, 48, VX_DF_IMAGE_U8), VX_TYPE_IMAGE);
+
+    VX_CALL(vxMapImagePatch(image, &rect, 0, &map_id, &ipa, &ptr, VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, 0));
+    VX_CALL(vxUnmapImagePatch(image, map_id));
+
+    ASSERT_EQ_VX_STATUS(VX_ERROR_NOT_SUPPORTED, tivxSetReferenceAttribute((vx_reference)image, TIVX_REFERENCE_MEM_HEAP_REGION, &heap_region, sizeof(heap_region)));
+
+    VX_CALL(vxReleaseImage(&image));
+}
+
+TEST(tivxReferenceMemHeapRegion, negativeTestSetMemHeapRegionBadParam)
+{
+    vx_context context = context_->vx_context_;
+    vx_image image;
+    vx_enum heap_region = TIVX_MEM_EXTERNAL_SHARED;
+
+    ASSERT_VX_OBJECT(image = vxCreateImage(context, 64, 48, VX_DF_IMAGE_U8), VX_TYPE_IMAGE);
+
+    ASSERT_EQ_VX_STATUS(VX_ERROR_INVALID_PARAMETERS, tivxSetReferenceAttribute((vx_reference)image, TIVX_REFERENCE_MEM_HEAP_REGION, &heap_region, sizeof(vx_uint64)));
+    ASSERT_EQ_VX_STATUS(VX_ERROR_INVALID_PARAMETERS, tivxSetReferenceAttribute((vx_reference)image, TIVX_REFERENCE_MEM_HEAP_REGION, NULL, sizeof(heap_region)));
+
+    VX_CALL(vxReleaseImage(&image));
+}
+
+TEST(tivxReferenceMemHeapRegion, negativeTestSetMemHeapRegionNonSharedRegion)
+{
+    vx_context context = context_->vx_context_;
+    vx_image image;
+    vx_enum heap_region = TIVX_MEM_EXTERNAL_SCRATCH;
+
+    ASSERT_VX_OBJECT(image = vxCreateImage(context, 64, 48, VX_DF_IMAGE_U8), VX_TYPE_IMAGE);
+
+    ASSERT_EQ_VX_STATUS(VX_ERROR_INVALID_PARAMETERS, tivxSetReferenceAttribute((vx_reference)image, TIVX_REFERENCE_MEM_HEAP_REGION, &heap_region, sizeof(heap_region)));
+
+    VX_CALL(vxReleaseImage(&image));
+}
+
+TEST(tivxReferenceMemHeapRegion, negativeTestSetMemHeapRegionUnsupportedType)
+{
+    vx_context context = context_->vx_context_;
+    vx_scalar scalar;
+    vx_int32 scalar_val = 0;
+    vx_enum heap_region = TIVX_MEM_EXTERNAL_SHARED;
+
+    ASSERT_VX_OBJECT(scalar = vxCreateScalar(context, VX_TYPE_INT32, &scalar_val), VX_TYPE_SCALAR);
+
+    ASSERT_EQ_VX_STATUS(VX_ERROR_NOT_SUPPORTED, tivxSetReferenceAttribute((vx_reference)scalar, TIVX_REFERENCE_MEM_HEAP_REGION, &heap_region, sizeof(heap_region)));
+
+    VX_CALL(vxReleaseScalar(&scalar));
+}
+
+TEST(tivxReferenceMemHeapRegion, testQueryMemHeapRegionImage)
+{
+    vx_context context = context_->vx_context_;
+    vx_image image;
+    vx_enum heap_region = TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY;
+    vx_enum queried_heap_region = 0;
+
+    ASSERT_VX_OBJECT(image = vxCreateImage(context, 64, 48, VX_DF_IMAGE_U8), VX_TYPE_IMAGE);
+
+    VX_CALL(vxQueryReference((vx_reference)image, TIVX_REFERENCE_MEM_HEAP_REGION, &queried_heap_region, sizeof(queried_heap_region)));
+    ASSERT(queried_heap_region == TIVX_MEM_EXTERNAL_SHARED);
+
+    VX_CALL(tivxSetReferenceAttribute((vx_reference)image, TIVX_REFERENCE_MEM_HEAP_REGION, &heap_region, sizeof(heap_region)));
+
+    VX_CALL(vxQueryReference((vx_reference)image, TIVX_REFERENCE_MEM_HEAP_REGION, &queried_heap_region, sizeof(queried_heap_region)));
+    ASSERT(queried_heap_region == heap_region);
+
+    VX_CALL(vxReleaseImage(&image));
+}
+
+TEST(tivxReferenceMemHeapRegion, testQueryMemHeapRegionUserDataObject)
+{
+    vx_context context = context_->vx_context_;
+    vx_user_data_object user_data_object = 0;
+    vx_enum heap_region = TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY;
+    vx_enum queried_heap_region = 0;
+
+    ASSERT_VX_OBJECT(user_data_object = vxCreateUserDataObject(context, NULL, 100, NULL),
+                     (enum vx_type_e)VX_TYPE_USER_DATA_OBJECT);
+
+    VX_CALL(vxQueryReference((vx_reference)user_data_object, TIVX_REFERENCE_MEM_HEAP_REGION, &queried_heap_region, sizeof(queried_heap_region)));
+    ASSERT(queried_heap_region == TIVX_MEM_EXTERNAL_SHARED);
+
+    VX_CALL(tivxSetReferenceAttribute((vx_reference)user_data_object, TIVX_REFERENCE_MEM_HEAP_REGION, &heap_region, sizeof(heap_region)));
+
+    VX_CALL(vxQueryReference((vx_reference)user_data_object, TIVX_REFERENCE_MEM_HEAP_REGION, &queried_heap_region, sizeof(queried_heap_region)));
+    ASSERT(queried_heap_region == heap_region);
+
+    VX_CALL(vxReleaseUserDataObject(&user_data_object));
+}
+
+TEST(tivxReferenceMemHeapRegion, negativeTestQueryMemHeapRegionBadParam)
+{
+    vx_context context = context_->vx_context_;
+    vx_image image;
+    vx_enum queried_heap_region = 0;
+
+    ASSERT_VX_OBJECT(image = vxCreateImage(context, 64, 48, VX_DF_IMAGE_U8), VX_TYPE_IMAGE);
+
+    ASSERT_EQ_VX_STATUS(VX_ERROR_INVALID_PARAMETERS, vxQueryReference((vx_reference)image, TIVX_REFERENCE_MEM_HEAP_REGION, &queried_heap_region, sizeof(vx_uint64)));
+    ASSERT_EQ_VX_STATUS(VX_ERROR_INVALID_PARAMETERS, vxQueryReference((vx_reference)image, TIVX_REFERENCE_MEM_HEAP_REGION, NULL, sizeof(queried_heap_region)));
+
+    VX_CALL(vxReleaseImage(&image));
+}
+
+TEST(tivxReferenceMemHeapRegion, negativeTestQueryMemHeapRegionUnsupportedType)
+{
+    vx_context context = context_->vx_context_;
+    vx_scalar scalar;
+    vx_int32 scalar_val = 0;
+    vx_enum queried_heap_region = 0;
+
+    ASSERT_VX_OBJECT(scalar = vxCreateScalar(context, VX_TYPE_INT32, &scalar_val), VX_TYPE_SCALAR);
+
+    ASSERT_EQ_VX_STATUS(VX_ERROR_NOT_SUPPORTED, vxQueryReference((vx_reference)scalar, TIVX_REFERENCE_MEM_HEAP_REGION, &queried_heap_region, sizeof(queried_heap_region)));
+
+    VX_CALL(vxReleaseScalar(&scalar));
+}
+
 TESTCASE_TESTS(
     tivxReference,
     testQueryTimestamp,
@@ -490,7 +674,7 @@ TESTCASE_TESTS(
     negativeTestSetTimestamp,
     negativetestSetTimestamp1,
     negativeTestGetStatus1,
-    negativeTestGetStatus2,    
+    negativeTestGetStatus2,
     negativeTestvxReferenceExportHandle,
     testGetContext,
     negativeTestvxIsReferenceMetaFormatEqual1,
@@ -499,4 +683,18 @@ TESTCASE_TESTS(
     negativeTesttivxReferenceImportHandle,
     negativeTesttivxReferenceImportHandle1,
     negativeTesttivxReferenceImportHandle2
+)
+
+TESTCASE_TESTS(
+    tivxReferenceMemHeapRegion,
+    testSetMemHeapRegionImage,
+    testSetMemHeapRegionUserDataObject,
+    negativeTestSetMemHeapRegionAfterAlloc,
+    negativeTestSetMemHeapRegionBadParam,
+    negativeTestSetMemHeapRegionNonSharedRegion,
+    negativeTestSetMemHeapRegionUnsupportedType,
+    testQueryMemHeapRegionImage,
+    testQueryMemHeapRegionUserDataObject,
+    negativeTestQueryMemHeapRegionBadParam,
+    negativeTestQueryMemHeapRegionUnsupportedType
 )

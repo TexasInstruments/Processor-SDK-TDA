@@ -26,6 +26,11 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
     APP_SAMPLE_IDIRS += $(APP_KERNELS_PATH)/kernels/sample/include
     APP_SAMPLE_IDIRS += $(APP_KERNELS_PATH)/kernels/sample/host
 
+    VISION_APPS_MODULES_IDIRS =
+    VISION_APPS_MODULES_IDIRS += $(VISION_APPS_PATH)/core/include
+    VISION_APPS_MODULES_IDIRS += $(VISION_APPS_PATH)/modules/include
+    VISION_APPS_MODULES_IDIRS += $(VISION_APPS_PATH)/utils/cfg_parser/include
+
     VISION_APPS_APPLIBS_IDIRS =
     VISION_APPS_APPLIBS_IDIRS += $(VISION_APPS_PATH)/applibs
 
@@ -276,10 +281,16 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
         # vx_app_modules not used for AM62A EdgeAI Linux
         ifneq ($(TARGET_PLATFORM),AM62A)
             VISION_APPS_MODULES_LIBS += vx_app_modules
+            VISION_APPS_MODULES_LIBS += vx_app_modules_core
+            VISION_APPS_MODULES_LIBS += app_utils_cfg_parser
         else ifneq ($(TISDK_IMAGE),edgeai)
             VISION_APPS_MODULES_LIBS += vx_app_modules
+            VISION_APPS_MODULES_LIBS += vx_app_modules_core
+            VISION_APPS_MODULES_LIBS += app_utils_cfg_parser
         else ifneq ($(TARGET_OS),LINUX)
             VISION_APPS_MODULES_LIBS += vx_app_modules
+            VISION_APPS_MODULES_LIBS += vx_app_modules_core
+            VISION_APPS_MODULES_LIBS += app_utils_cfg_parser
         else
         endif
 
@@ -307,6 +318,7 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
         STATIC_LIBS += $(TIOVX_LIBS)
         STATIC_LIBS += $(VISION_APPS_UTILS_LIBS)
         STATIC_LIBS += $(HLOS_PLATFORM_LIBS)
+
         ifeq ($(TARGET_OS),QNX)
             STATIC_LIBS += app_utils_rtos
         endif

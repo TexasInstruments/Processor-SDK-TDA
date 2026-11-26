@@ -174,13 +174,17 @@ enum tivx_type_e {
     TIVX_TYPE_EVENT = (vx_enum)VX_TYPE_VENDOR_STRUCT_START + 17, /*! \brief A <tt>\ref tivx_event_t</tt>. */
     TIVX_TYPE_MUTEX = (vx_enum)VX_TYPE_VENDOR_STRUCT_START + 18, /*! \brief A <tt>\ref tivx_mutex_t</tt>. */
     TIVX_TYPE_QUEUE = (vx_enum)VX_TYPE_VENDOR_STRUCT_START + 19, /*! \brief A <tt>\ref tivx_queue_context_t</tt>. */
-    TIVX_TYPE_TASK = (vx_enum)VX_TYPE_VENDOR_STRUCT_START + 20 /*! \brief A <tt>\ref tivx_task_context_t</tt>. */
+    TIVX_TYPE_TASK = (vx_enum)VX_TYPE_VENDOR_STRUCT_START + 20, /*! \brief A <tt>\ref tivx_task_context_t</tt>. */
+    TIVX_TYPE_RTOS_OSAL_SEM_OBJ = (vx_enum)VX_TYPE_VENDOR_STRUCT_START + 21, /*! \brief A representation of an RTOS semaphore object. */
+    TIVX_TYPE_RTOS_OSAL_SEM_POOL = (vx_enum)VX_TYPE_VENDOR_STRUCT_START + 22, /*! \brief A representation of RTOS semaphore pool. */
+    TIVX_TYPE_RTOS_OSAL_TASK_OBJ = (vx_enum)VX_TYPE_VENDOR_STRUCT_START + 23, /*! \brief A representation of RTOS task object. */
+    TIVX_TYPE_RTOS_OSAL_TASK_POOL = (vx_enum)VX_TYPE_VENDOR_STRUCT_START + 24 /*! \brief A representation of RTOS tsak pool. */
 };
 
 /*! \brief A parameter checker for size and alignment.
  * \ingroup group_vx_utils
  */
-#define VX_CHECK_PARAM(ptr, size, type, align) ((NULL != ptr) && (size == sizeof(type)) && (((vx_size)ptr & align) == 0U))
+#define VX_CHECK_PARAM(ptr, size, type, align) ((NULL != (ptr)) && ((size) == sizeof(type)) && (((vx_size)(ptr) & (align)) == 0U))
 
 static inline void tivx_uint32_to_uint64(volatile uint64_t *val, uint32_t h, uint32_t l);
 static inline void tivx_uint64_to_uint32(uint64_t val, volatile uint32_t *h, volatile uint32_t *l);
@@ -199,7 +203,7 @@ static inline void tivx_uint32_to_uint64(volatile uint64_t *val, uint32_t h, uin
 static inline void tivx_uint64_to_uint32(uint64_t val, volatile uint32_t *h, volatile uint32_t *l)
 {
     *h = (uint32_t)(val >> 32);
-    *l = (uint32_t)(val >>  0);
+    *l = (uint32_t)(val);
 }
 
 

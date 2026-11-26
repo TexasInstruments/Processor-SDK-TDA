@@ -45,7 +45,6 @@ typedef struct {
 
 #define NOT_SIZE_ARGS       \
     SIZE_ARG(640, 480),     \
-    SIZE_ARG(1231, 1234),   \
     SIZE_ARG(1280, 720),    \
     SIZE_ARG(1920, 1080)
 

@@ -1,0 +1,20 @@
+obj/j722s/ti-arm-clang/debug/main-r5f/drivers_ipfma//ospi_phy.obj: \
+  ../ospi/v0/ospi_phy.c \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/ClockP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/SystemP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/DebugP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/ospi.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/soc_config.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/j722s/soc_config.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/ospi/v0/ospi.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/HwiP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/SemaphoreP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/csl_types.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/cslr_ospi.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/ospi/v0/cslr_ospi.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/ospi/v0/ospi_tuning/ospi_tuning_algo/algo_v1/ospi_phy_tuning.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/ospi/v0/vtm.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/cslr.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/tistdtypes.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/csl_utils.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/cslr64.h

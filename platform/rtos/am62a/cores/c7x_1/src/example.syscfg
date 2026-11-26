@@ -31,6 +31,8 @@ const mmu_armv818 = mmu_armv8.addInstance();
 const mmu_armv819 = mmu_armv8.addInstance();
 const mmu_armv820 = mmu_armv8.addInstance();
 const mmu_armv821 = mmu_armv8.addInstance();
+const mmu_armv822 = mmu_armv8.addInstance();
+const mmu_armv823 = mmu_armv8.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
@@ -116,11 +118,11 @@ mmu_armv815.pAddr     = 0xA2000000;
 mmu_armv815.size      = 0x400000;
 mmu_armv815.attribute = "MAIR4";
 
-mmu_armv816.$name     = "TIOVX_OBJ_DESC_MEM";
-mmu_armv816.vAddr     = 0xA1040000;
-mmu_armv816.pAddr     = 0xA1040000;
-mmu_armv816.size      = 0xFC0000;
-mmu_armv816.attribute = "MAIR4";
+mmu_armv8816.$name     = "TIOVX_OBJ_DESC_MEM_HOST0";
+mmu_armv8816.vAddr     = 0xA1040000;
+mmu_armv8816.pAddr     = 0xA1040000;
+mmu_armv8816.size      = 0x540000;
+mmu_armv8816.attribute = "MAIR4";
 
 mmu_armv817.$name     = "IPC_VRING_MEM";
 mmu_armv817.vAddr     = 0xA0000000;
@@ -151,3 +153,15 @@ mmu_armv821.vAddr     = 0xB1000000;
 mmu_armv821.pAddr     = 0xB1000000;
 mmu_armv821.size      = 0x1000000;
 mmu_armv821.attribute = "MAIR4";
+
+mmu_armv8822.$name     = "TIOVX_OBJ_DESC_MEM_HOST1";
+mmu_armv8822.vAddr     = 0xA1580000;
+mmu_armv8822.pAddr     = 0xA1580000;
+mmu_armv8822.size      = 0x540000;
+mmu_armv8822.attribute = "MAIR4";
+
+mmu_armv8823.$name     = "TIOVX_OBJ_DESC_MEM_HOST2";
+mmu_armv8823.vAddr     = 0xA1AC0000;
+mmu_armv8823.pAddr     = 0xA1AC0000;
+mmu_armv8823.size      = 0x540000;
+mmu_armv8823.attribute = "MAIR4";

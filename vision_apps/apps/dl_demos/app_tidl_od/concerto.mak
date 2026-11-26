@@ -1,28 +1,19 @@
 ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86_64 A72 A53 A720))
 
     include $(PRELUDE)
-
+    
     TARGET      := vx_app_tidl_od
-    CSOURCES    := main.c
-    CSOURCES    += app_pre_proc_module.c
-    CSOURCES    += app_post_proc_module.c
+    CPPSOURCES  := main.cpp
+    CPPSOURCES  +=config/app_od_cfg_params.cpp
 
-    ifeq ($(HOST_COMPILER),GCC_LINUX)
-        CFLAGS += -Wno-unused-function
-    endif
+    CFLAGS += -Wno-unused-function -Wno-parentheses -Wno-sign-compare -Wno-format-truncation
 
     ifeq ($(TARGET_CPU),x86_64)
 
         TARGETTYPE  := exe
-        CSOURCES    += main_x86.c
 
         include $(VISION_APPS_PATH)/apps/concerto_x86_64_inc.mak
 
-        IDIRS       += $(APP_KERNELS_IDIRS)
-        IDIRS       += $(VISION_APPS_MODULES_IDIRS)
-
-        STATIC_LIBS += $(APP_KERNELS_LIBS)
-        STATIC_LIBS += $(VISION_APPS_MODULES_LIBS)
         STATIC_LIBS += $(TIADALG_LIBS)
 
     endif
@@ -31,16 +22,8 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86_64 A72 A53 A720))
         ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53 A720))
 
             TARGETTYPE  := exe
-            CSOURCES    += main_linux_arm.c
 
             include $(VISION_APPS_PATH)/apps/concerto_mpu_inc.mak
-
-            IDIRS       += $(APP_KERNELS_IDIRS)
-            IDIRS       += $(VISION_APPS_MODULES_IDIRS)
-
-            STATIC_LIBS += $(APP_KERNELS_LIBS)
-            STATIC_LIBS += $(APP_KERNELS_UTILS_LIBS)
-            STATIC_LIBS += $(VISION_APPS_MODULES_LIBS)
 
             # AM62A Linux: Link drm_wrapper for DRM/KMS display with zero-copy
             ifeq ($(TARGET_PLATFORM)$(TARGET_OS), AM62ALINUX)
@@ -51,6 +34,18 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86_64 A72 A53 A720))
             endif
 
         endif
+    endif
+
+ 	IDIRS       += $(APP_KERNELS_IDIRS)
+    IDIRS       += $(VISION_APPS_MODULES_IDIRS)
+
+	STATIC_LIBS += $(IMAGING_LIBS)
+	STATIC_LIBS += $(APP_KERNELS_LIBS)
+	STATIC_LIBS += $(APP_KERNELS_UTILS_LIBS)
+    STATIC_LIBS += $(VISION_APPS_MODULES_LIBS)
+
+    ifeq ($(TARGET_OS),QNX)
+        SHARED_LIBS += c++ m
     endif
 
     ifeq ($(SOC), $(filter $(SOC), am62a))

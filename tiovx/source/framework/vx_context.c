@@ -1361,41 +1361,41 @@ vx_context ownGetContext(void)
     return context;
 }
 
-VX_API_ENTRY vx_status VX_API_CALL vxReleaseContext(vx_context *c)
+VX_API_ENTRY vx_status VX_API_CALL vxReleaseContext(vx_context *context)
 {
     vx_status status = (vx_status)VX_SUCCESS;
     vx_status status1 = (vx_status)VX_SUCCESS;
     vx_bool do_break = (vx_bool)vx_false_e;
-    vx_context context;
+    vx_context ctx;
     vx_uint32 r;
     uint32_t idx;
 
-    if(c != NULL)
+    if(context != NULL)
     {
-        context = *c;
+        ctx = *context;
     }
     else
     {
-        context = NULL;
+        ctx = NULL;
     }
 
-    if (c != NULL)
+    if (context != NULL)
     {
-        *c = NULL;
+        *context = NULL;
     }
     ownPlatformSystemLock((vx_enum)TIVX_PLATFORM_LOCK_CONTEXT);
-    if (ownIsValidContext(context) == (vx_bool)vx_true_e)
+    if (ownIsValidContext(ctx) == (vx_bool)vx_true_e)
     {
-        if (ownDecrementReference(&context->base, (vx_enum)VX_EXTERNAL) == 0U)
+        if (ownDecrementReference(&ctx->base, (vx_enum)VX_EXTERNAL) == 0U)
         {
-            ownContextSetKernelRemoveLock(context, (vx_bool)vx_true_e);
+            ownContextSetKernelRemoveLock(ctx, (vx_bool)vx_true_e);
 
             for (idx = 0;
                  idx < (sizeof(g_context_default_load_module)/sizeof(g_context_default_load_module[0]));
                  idx ++)
             {
                 /* Unload kernels */
-                status = vxUnloadKernels(context, g_context_default_load_module[idx]);
+                status = vxUnloadKernels(ctx, g_context_default_load_module[idx]);
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_CONTEXT_UM004
@@ -1415,10 +1415,10 @@ VX_API_ENTRY vx_status VX_API_CALL vxReleaseContext(vx_context *c)
 /* LDRA_JUSTIFY_END */
             {
 
-                ownContextSetKernelRemoveLock(context, (vx_bool)vx_false_e);
+                ownContextSetKernelRemoveLock(ctx, (vx_bool)vx_false_e);
 
                 /* Deregister any log callbacks if there is any registered */
-                vxRegisterLogCallback(context, NULL, (vx_bool)vx_false_e);
+                vxRegisterLogCallback(ctx, NULL, (vx_bool)vx_false_e);
 
                 /*! \internal Garbage Collect All References */
                 /* Details:
@@ -1430,9 +1430,9 @@ VX_API_ENTRY vx_status VX_API_CALL vxReleaseContext(vx_context *c)
                 *   4. This garbage collection must be done before the targets are released since some of
                 *      these external references may have internal references to target kernels.
                 */
-                for (r = 0; r < dimof(context->reftable); r++)
+                for (r = 0; r < dimof(ctx->reftable); r++)
                 {
-                    vx_reference ref = context->reftable[r];
+                    vx_reference ref = ctx->reftable[r];
 
                     /* Warnings should only come when users have not released all external references */
                     if ((NULL != ref) && (ref->external_count > 0U) ) {
@@ -1514,16 +1514,16 @@ VX_API_ENTRY vx_status VX_API_CALL vxReleaseContext(vx_context *c)
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_CONTEXT_UM026
 <justification end> */
-                for (r = 0; r < dimof(context->reftable); r++)
+                for (r = 0; r < dimof(ctx->reftable); r++)
                 {
-                    if(context->reftable[r] != NULL)
+                    if(ctx->reftable[r] != NULL)
                     {
                         VX_PRINT(VX_ZONE_ERROR,"Reference %d not removed\n", r);
                     }
                 }
 /* LDRA_JUSTIFY_END */
 
-                status1 = ownContextDeleteCmdObj(context);
+                status1 = ownContextDeleteCmdObj(ctx);
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_CONTEXT_UM013
@@ -1535,7 +1535,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxReleaseContext(vx_context *c)
                 }
 /* LDRA_JUSTIFY_END */
 
-                status1 = ownEventQueueDelete(&context->event_queue);
+                status1 = ownEventQueueDelete(&ctx->event_queue);
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_CONTEXT_UM014
@@ -1549,9 +1549,9 @@ VX_API_ENTRY vx_status VX_API_CALL vxReleaseContext(vx_context *c)
 
                 ownLogResourceFree("TIVX_CONTEXT_MAX_OBJECTS", 1);
 
-                /*! \internal wipe away the context memory first */
-                /* Normally destroy sem is part of release reference, but can't for context */
-                status1 = tivxMutexDelete(&context->base.lock);
+                /*! \internal wipe away the ctx memory first */
+                /* Normally destroy sem is part of release reference, but can't for ctx */
+                status1 = tivxMutexDelete(&ctx->base.lock);
 
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
@@ -1564,7 +1564,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxReleaseContext(vx_context *c)
                 }
 /* LDRA_JUSTIFY_END */
 
-                status1 = tivxMutexDelete(&context->log_lock);
+                status1 = tivxMutexDelete(&ctx->log_lock);
 
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
@@ -1577,7 +1577,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxReleaseContext(vx_context *c)
                 }
 /* LDRA_JUSTIFY_END */
 
-                status1 = tivxMutexDelete(&context->lock);
+                status1 = tivxMutexDelete(&ctx->lock);
 
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
@@ -1590,7 +1590,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxReleaseContext(vx_context *c)
                 }
 /* LDRA_JUSTIFY_END */
 
-                (void)memset(context, 0, sizeof(tivx_context_t));
+                (void)memset(ctx, 0, sizeof(tivx_context_t));
 
                 g_context_handle = NULL;
             }
@@ -2159,14 +2159,14 @@ VX_API_ENTRY vx_kernel VX_API_CALL vxGetKernelByName(vx_context context, const v
     return kernel;
 }
 
-VX_API_ENTRY vx_kernel VX_API_CALL vxGetKernelByEnum(vx_context context, vx_enum kernelenum)
+VX_API_ENTRY vx_kernel VX_API_CALL vxGetKernelByEnum(vx_context context, vx_enum kernel)
 {
-    vx_kernel kernel = NULL;
+    vx_kernel kern = NULL;
     uint32_t idx;
 
     if( ownIsValidContext(context) == (vx_bool)vx_false_e )
     {
-        kernel = NULL;
+        kern = NULL;
     }
     else
     {
@@ -2178,27 +2178,27 @@ VX_API_ENTRY vx_kernel VX_API_CALL vxGetKernelByEnum(vx_context context, vx_enum
         {
             for(idx=0; idx<dimof(context->kerneltable); idx++)
             {
-                kernel = context->kerneltable[idx];
-                if((ownIsValidSpecificReference(vxCastRefFromKernel(kernel), (vx_enum)VX_TYPE_KERNEL) != (vx_bool)vx_false_e)
+                kern = context->kerneltable[idx];
+                if((ownIsValidSpecificReference(vxCastRefFromKernel(kern), (vx_enum)VX_TYPE_KERNEL) != (vx_bool)vx_false_e)
                     &&
-                    ( kernel->enumeration == kernelenum )
+                    ( kern->enumeration == kernel )
                     )
                 {
                     /* found match and setting it as void since return value 'count' is not used further */
-                    (void)ownIncrementReference(&kernel->base, (vx_enum)VX_EXTERNAL);
+                    (void)ownIncrementReference(&kern->base, (vx_enum)VX_EXTERNAL);
                     break;
                 }
             }
             if(idx>=dimof(context->kerneltable))
             {
                 /* not found */
-                kernel = NULL;
+                kern = NULL;
             }
             (void)ownContextUnlock(context);
         }
     }
 
-    return kernel;
+    return kern;
 }
 
 vx_bool ownContextGetKernelRemoveLock(vx_context context)

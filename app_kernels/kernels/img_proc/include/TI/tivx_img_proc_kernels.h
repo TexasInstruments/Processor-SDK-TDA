@@ -93,11 +93,6 @@ extern "C" {
  */
 #define TIVX_KERNEL_IMG_PREPROCESS_NAME     "com.ti.img_proc.img.preprocess"
 
-/*! \brief Kernel Name: Image Pre Processing-4D
- *  \see group_vision_apps_kernels_img_proc
- */
-#define TIVX_KERNEL_DL_PRE_PROC_ARMV8_4D_NAME          "com.ti.img_proc.dev.dl.pre.proc.armv8"
-
 /*! \brief Kernel Name: OC Pre Processing
  *  \see group_vision_apps_kernels_img_proc
  */
@@ -308,6 +303,20 @@ extern "C" {
 /** \brief Total number of parameters for this function */
 #define APP_C7X_IMG_ADD_MAX_PARAMS    (3u)
 
+/*********************************
+ * C7x Add Kernel Control Commands
+ *********************************/
+
+/*! \brief Control Command to read the value from DSP
+ *  \ingroup group_vision_apps_kernels_img_proc
+ */
+#define TIVX_ADD_KERNEL_READ                    (0x00000000u)
+
+/*! \brief Control Command to increment and return the same to application
+ *  \ingroup group_vision_apps_kernels_img_proc
+ */
+#define TIVX_ADD_KERNEL_READ_WRITE                      (0x00000001u)
+
 /*!
  * \brief
  * \ingroup group_vision_apps_kernels_img_proc
@@ -340,29 +349,6 @@ typedef struct{
 
 }tivxImgPreProcParams;
 
-typedef struct {
-
-  /** Skip processing */
-  vx_int32 skip_flag;
-
-  /* Scale values to be applied per channel in the range of 0.0 to 1.0 */
-  vx_float32 scale[3];
-
-  /* Mean value per channel to be subtracted, range depends on channel bit-depth */
-  vx_float32 mean[3];
-
-  /* Channel ordering, 0-NCHW, 1-NHWC */
-  vx_int32 channel_order;
-
-  /* Tensor format, 0-RGB, 1-BGR */
-  vx_int32 tensor_format;
-
-  /* Crop values to be applied, 0-Top, 1-Bottom, 2-Right, 3-Left */
-  vx_int32 crop[4];
-
-  vx_int32 channel_pitch;
-
-}tivxDLPreProcArmv8Params4D;
 /*!
  * \brief DL Pre processing to be used with DL-RT
  * \ingroup group_app_tiovx_kernels_img_proc
@@ -387,6 +373,10 @@ typedef struct {
   /* Crop values to be applied, 0-Top, 1-Bottom, 2-Right, 3-Left */
   vx_int32 crop[4];
 
+  /* Number of input images: 1 = normal (OD), 2-6 = BEV (multi-camera) */
+  vx_int32 num_images;
+
+  /* Channel pitch in bytes from TIDL IO buf desc (inChannelPitch) */
   vx_uint32 channel_pitch;
 
 }tivxDLPreProcArmv8Params;

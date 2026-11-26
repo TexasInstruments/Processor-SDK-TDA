@@ -60,6 +60,7 @@
  *
  */
 
+
 #include <TI/tivx_img_proc.h>
 #include <TI/tivx_target_kernel.h>
 #include <tivx_kernels_host_utils.h>
@@ -97,7 +98,7 @@ static vx_status VX_CALLBACK tivxAddKernelDLPreProcArmv8Validate(vx_node node,
 
     if ( (num != TIVX_KERNEL_DL_PRE_PROC_ARMV8_MAX_PARAMS)
         || (NULL == parameters[TIVX_KERNEL_DL_PRE_PROC_ARMV8_CONFIG_IDX])
-        || (NULL == parameters[TIVX_KERNEL_DL_PRE_PROC_ARMV8_INPUT_IMAGE_IDX])
+        || (NULL == parameters[TIVX_KERNEL_DL_PRE_PROC_ARMV8_INPUT_IMAGE_IDX])   /* first image required */
         || (NULL == parameters[TIVX_KERNEL_DL_PRE_PROC_ARMV8_OUTPUT_TENSOR_IDX])
     )
     {
@@ -137,7 +138,7 @@ static vx_status VX_CALLBACK tivxAddKernelDLPreProcArmv8Validate(vx_node node,
             VX_PRINT(VX_ZONE_ERROR, "'config' should be an user data object of type:\n tivxDLPreProcArmv8Params \n");
         }
 
-        if (out_tensor_dims != 3)
+        if (out_tensor_dims != 3 && out_tensor_dims != 4)
         {
             status = VX_ERROR_INVALID_PARAMETERS;
             VX_PRINT(VX_ZONE_ERROR, "Out image data type or dimension is not as per expectation %d\n", out_tensor_dims);
@@ -202,6 +203,7 @@ vx_status tivxAddKernelDLPreProcArmv8(vx_context context)
     if (status == VX_SUCCESS)
     {
         index = 0;
+        int i;
 
         {
             status = vxAddParameterToKernel(kernel,
@@ -212,15 +214,19 @@ vx_status tivxAddKernelDLPreProcArmv8(vx_context context)
             );
             index++;
         }
-        if (status == VX_SUCCESS)
+        for (i = 0; i < TIVX_KERNEL_DL_PRE_PROC_ARMV8_MAX_INPUT_IMAGES; i++)
         {
-            status = vxAddParameterToKernel(kernel,
-                        index,
-                        VX_INPUT,
-                        VX_TYPE_IMAGE,
-                        VX_PARAMETER_STATE_REQUIRED
-            );
-            index++;
+            if (status == VX_SUCCESS)
+            {
+                status = vxAddParameterToKernel(kernel,
+                            index,
+                            VX_INPUT,
+                            VX_TYPE_IMAGE,
+                            (i == 0) ? VX_PARAMETER_STATE_REQUIRED
+                                     : VX_PARAMETER_STATE_OPTIONAL
+                );
+                index++;
+            }
         }
         if (status == VX_SUCCESS)
         {

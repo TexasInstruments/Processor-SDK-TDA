@@ -54,8 +54,12 @@ Since this is a bootloader, the example will be run every time you boot an appli
   and build it using the CCS project menu (see \ref CCS_PROJECTS_PAGE).
 - **When using makefiles to build**, note the required combination and build using
   make command (see \ref MAKEFILE_BUILD_PAGE)
+\cond SOC_J722S
+- To flash the HSM binary, use the dedicated configuration file default_sbl_ospi_hsm_<security_type>. Otherwise, use the standard default_sbl_ospi_<security_type> configuration  file corresponding to your board variant (e.g., hs, hs_fs).
+\endcond
 - Refer to the page \ref BASIC_STEPS_TO_FLASH_FILES to flash this bootloader along with the application to boot.
 
+\cond !SOC_J722S
 ## Create HSM Appimage
 \cond SOC_AM275X
 \note Change DEVICE_TYPE to HS in ${SDK_INSTALL_PATH}/devconfig/devconfig.mak and then generate HSM Appimage for HS-SE device.
@@ -64,6 +68,7 @@ Since this is a bootloader, the example will be run every time you boot an appli
 - Create a HSM Appimage
 - This can be done by running the makefile at {SDK_INSTALL_PATH}/tools/boot/HSMAppimageGen
 - Refer \ref HSM_APPIMAGE_GEN_TOOL for more details
+\endcond
 
 ## Run the example
 

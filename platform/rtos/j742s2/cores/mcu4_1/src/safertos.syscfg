@@ -1,0 +1,67 @@
+/**
+ * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
+ * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
+ * @cliArgs --device "J742S2" --part "Default" --package "AND_6" --context "r5fss2-1" --product "J742S2_VISION_APPS@01.00.00"
+ * @v2CliArgs --device "TDA4APE-Q1" --package "FCBGA (AND)" --variant "TDA4APE6" --context "r5fss2-1" --product "J742S2_VISION_APPS@01.00.00"
+ * @versions {"tool":"1.26.2+4477"}
+ */
+
+/**
+ * Import the modules used in this configuration.
+ */
+const default_linker  = scripting.addModule("/memory_configurator/default_linker", {}, false);
+const default_linker1 = default_linker.addInstance();
+const rat_cfg         = scripting.addModule("/memory_configurator/rat_cfg", {}, false);
+const rat_cfg1        = rat_cfg.addInstance();
+const region          = scripting.addModule("/memory_configurator/region", {}, false);
+const region1         = region.addInstance();
+
+/**
+ * Write custom configuration values to the imported modules.
+ */
+default_linker1.$name = "memory_configurator_default_linker0";
+
+rat_cfg1.$name      = "DDR_SHARED_MEM_RAT";
+rat_cfg1.localAddr  = 0xC0000000;
+rat_cfg1.systemAddr = 0x900000000;
+
+region1.$name                               = "MEMORY_REGION_CONFIGURATION0";
+region1.memory_region.create(7);
+region1.memory_region[0].$name              = "R5F_TCMA_VECS";
+region1.memory_region[0].size               = 0x40;
+region1.memory_region[0].auto               = false;
+region1.memory_region[0].attributes         = ["X"];
+region1.memory_region[1].$name              = "R5F_TCMA";
+region1.memory_region[1].size               = 0x7FC0;
+region1.memory_region[1].auto               = false;
+region1.memory_region[1].manualStartAddress = 0x40;
+region1.memory_region[1].attributes         = ["R","W","X"];
+region1.memory_region[2].type               = "TCMB_R5F";
+region1.memory_region[2].$name              = "R5F_TCMB0";
+region1.memory_region[2].size               = 0x8000;
+region1.memory_region[2].auto               = false;
+region1.memory_region[2].attributes         = ["R","W","X"];
+region1.memory_region[3].type               = "DDR_LOW_ALL";
+region1.memory_region[3].$name              = "DDR_MCU4_1_IPC";
+region1.memory_region[3].size               = 0x100000;
+region1.memory_region[3].auto               = false;
+region1.memory_region[3].manualStartAddress = 0xAA000000;
+region1.memory_region[3].attributes         = ["R","W","X"];
+region1.memory_region[4].type               = "DDR_LOW_ALL";
+region1.memory_region[4].$name              = "DDR_MCU4_1_RESOURCE_TABLE";
+region1.memory_region[4].size               = 0x400;
+region1.memory_region[4].auto               = false;
+region1.memory_region[4].manualStartAddress = 0xAA100000;
+region1.memory_region[4].attributes         = ["R","W","X"];
+region1.memory_region[5].type               = "DDR_LOW_ALL";
+region1.memory_region[5].$name              = "DDR_MCU4_1";
+region1.memory_region[5].size               = 0xEFFC00;
+region1.memory_region[5].auto               = false;
+region1.memory_region[5].manualStartAddress = 0xAA100400;
+region1.memory_region[5].attributes         = ["R","W","X"];
+region1.memory_region[6].type               = "DDR_LOW_ALL";
+region1.memory_region[6].$name              = "DDR_MCU4_1_LOCAL_HEAP";
+region1.memory_region[6].size               = 0x800000;
+region1.memory_region[6].auto               = false;
+region1.memory_region[6].manualStartAddress = 0xBB800000;
+region1.memory_region[6].attributes         = ["R","W","X"];

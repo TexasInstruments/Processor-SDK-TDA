@@ -252,6 +252,24 @@ typedef enum _tivx_reference_attribute_extensions_e {
      * Use a <tt>\ref vx_bool</tt> parameter.
      */
     TIVX_REFERENCE_BUFFER_IS_ALLOCATED = VX_ATTRIBUTE_BASE(VX_ID_TI, (vx_enum)VX_TYPE_REFERENCE) + 0x2,
+
+    /*! \brief Get or set the memory heap region from which this reference's
+     * data buffer will be allocated, overriding the default
+     * (\ref TIVX_MEM_EXTERNAL_SHARED).
+     * When setting, this must be done before the reference's buffer has
+     * been allocated by the framework (e.g. before the first API call that
+     * triggers allocation, or before \ref vxVerifyGraph if the reference is
+     * used in a graph). If the buffer has already been allocated,
+     * \ref VX_ERROR_NOT_SUPPORTED is returned.
+     * Read-Write.
+     * Use a <tt>\ref vx_enum</tt> parameter containing one of
+     * \ref TIVX_MEM_EXTERNAL_SHARED, \ref TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY,
+     * or \ref TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY_CONST. When setting, any
+     * other \ref tivx_mem_heap_region_e value is rejected with
+     * \ref VX_ERROR_INVALID_PARAMETERS, since data object buffers must be
+     * allocated out of a shared heap region.
+     */
+    TIVX_REFERENCE_MEM_HEAP_REGION = VX_ATTRIBUTE_BASE(VX_ID_TI, (vx_enum)VX_TYPE_REFERENCE) + 0x3,
 } tivx_reference_attribute_extensions_e;
 
 /*! \brief TI attribute extensions for the kernel object
@@ -677,7 +695,7 @@ vx_status VX_API_CALL tivxSetGraphPipelineDepth(vx_graph graph, vx_uint32 pipeli
  *          same or different nodes from different threads
  *
  * \param [in] node Reference of the node to which this command is to be sent.
- * \param [in] replicate_nodex_idx: In case of a non-replicated node this
+ * \param [in] replicated_node_idx: In case of a non-replicated node this
  *             should be 0, For a replicated node this is the index
  *             of the replicated node to which the command is targeted.
  *             To send same command to all replicated nodes use
@@ -704,7 +722,7 @@ vx_status VX_API_CALL tivxSetGraphPipelineDepth(vx_graph graph, vx_uint32 pipeli
  * \ingroup group_tivx_node
  */
 vx_status VX_API_CALL tivxNodeSendCommand(vx_node node,
-    uint32_t replicate_nodex_idx, uint32_t node_cmd_id,
+    uint32_t replicated_node_idx, uint32_t node_cmd_id,
     vx_reference ref[], uint32_t num_refs);
 
 /*!
@@ -718,7 +736,7 @@ vx_status VX_API_CALL tivxNodeSendCommand(vx_node node,
  *          same or different nodes from different threads
  *
  * \param [in] node Reference of the node to which this command is to be sent.
- * \param [in] replicate_nodex_idx: In case of a non-replicated node this
+ * \param [in] replicated_node_idx: In case of a non-replicated node this
  *             should be 0, For a replicated node this is the index
  *             of the replicated node to which the command is targeted.
  *             To send same command to all replicated nodes use
@@ -747,7 +765,7 @@ vx_status VX_API_CALL tivxNodeSendCommand(vx_node node,
  * \ingroup group_tivx_node
  */
 vx_status VX_API_CALL tivxNodeSendCommandTimed(vx_node node,
-    uint32_t replicate_nodex_idx, uint32_t node_cmd_id,
+    uint32_t replicated_node_idx, uint32_t node_cmd_id,
     vx_reference ref[], uint32_t num_refs, uint32_t timeout);
 
 /*!
@@ -780,6 +798,8 @@ VX_API_ENTRY vx_status VX_API_CALL tivxSetNodeTileSize(vx_node node, vx_uint32 b
 
 /*! \brief Sets reference attributes for the below enums:
  *         \ref TIVX_REFERENCE_TIMESTAMP
+ *         \ref TIVX_REFERENCE_INVALID
+ *         \ref TIVX_REFERENCE_MEM_HEAP_REGION
  * \param [in] ref       The reference object.
  * \param [in] attribute The attribute of the reference to be set.
  * \param [in] ptr       The value of the reference attribute to be set.

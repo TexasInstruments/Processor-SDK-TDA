@@ -155,6 +155,12 @@ vx_status ownMemRegionTranslate (uint32_t mem_heap_region, uint32_t *heap_id)
             case (vx_enum)TIVX_MEM_EXTERNAL_SHARED:
                 *heap_id = APP_MEM_HEAP_DDR_SHARED;
                 break;
+            case (vx_enum)TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY:
+                *heap_id = APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY;
+                break;
+            case (vx_enum)TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY_CONST:
+                *heap_id = APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY_CONST;
+                break;
 
             default:
                 VX_PRINT(VX_ZONE_ERROR, "Invalid memtype\n");
@@ -310,7 +316,7 @@ vx_status tivxMemBufferFree(tivx_shared_mem_ptr_t *mem_ptr, uint32_t size)
     return (status);
 }
 
-void tivxMemStats(tivx_mem_stats *stats, vx_enum mem_heap_region)
+void tivxMemStats(tivx_mem_stats *stats, vx_enum mem_type)
 {
     if (NULL == stats)
     {
@@ -324,9 +330,9 @@ void tivxMemStats(tivx_mem_stats *stats, vx_enum mem_heap_region)
         stats->mem_size = 0;
         stats->free_size = 0;
 
-        if( ((vx_enum)TIVX_MEM_INTERNAL_L1 == mem_heap_region) ||
-            ((vx_enum)TIVX_MEM_INTERNAL_L2 == mem_heap_region) ||
-            ((vx_enum)TIVX_MEM_INTERNAL_L3 == mem_heap_region))
+        if( ((vx_enum)TIVX_MEM_INTERNAL_L1 == mem_type) ||
+            ((vx_enum)TIVX_MEM_INTERNAL_L2 == mem_type) ||
+            ((vx_enum)TIVX_MEM_INTERNAL_L3 == mem_type))
         {
             stats->mem_size = TIVX_MEM_L2RAM_SIZE;
             stats->free_size = (uint32_t)TIVX_MEM_L2RAM_SIZE - gL2RAM_mem_offset;
@@ -415,7 +421,7 @@ uint64_t tivxMemShared2PhysPtr(uint64_t shared_ptr, vx_enum mem_heap_region)
     return (shared_ptr);
 }
 
-int32_t tivxMemResetScratchHeap(vx_enum mem_heap_region)
+vx_status tivxMemResetScratchHeap(vx_enum mem_heap_region)
 {
     vx_status status = (vx_status)VX_FAILURE;
 

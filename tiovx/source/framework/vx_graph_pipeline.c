@@ -342,8 +342,12 @@ VX_API_ENTRY vx_status vxSetGraphScheduleConfig(
                 /* Pipelining is enabled */
                 graph->is_pipelining_enabled = (vx_bool)vx_true_e;
 
-                for(i=0; (i<graph_parameters_list_size) && (status == (vx_status)VX_SUCCESS); i++)
+                for(i=0; i<graph_parameters_list_size; i++)
                 {
+                    if ((vx_status)VX_SUCCESS != status)
+                    {
+                        break;
+                    }
                     if(graph_parameters_queue_params_list[i].refs_list!=NULL)
                     {
                         if((graph_parameters_queue_params_list[i].graph_parameter_index
@@ -396,7 +400,6 @@ VX_API_ENTRY vx_status vxSetGraphScheduleConfig(
                     {
                         status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
                         VX_PRINT(VX_ZONE_ERROR, "Invalid parameters: graph_parameters_queue_params_list at index %d is NULL\n", i);
-                        break;
                     }
                 }
             }
@@ -641,8 +644,12 @@ static vx_status ownGraphParameterEnqueueReadyRef(vx_graph graph,
         vx_uint32 num_enqueue = 0;
         vx_node node = graph->parameters[graph_parameter_index].node;
 
-        for(ref_id=0; (ref_id < num_refs) && ((vx_status)VX_SUCCESS == status); ref_id++)
+        for(ref_id=0; ref_id < num_refs; ref_id++)
         {
+            if ((vx_status)VX_SUCCESS != status)
+            {
+                break;
+            }
             vx_reference ref = refs[ref_id];
             status = (vx_status)VX_FAILURE;
             if (NULL != ref)
@@ -1160,8 +1167,8 @@ VX_API_ENTRY vx_status VX_API_CALL vxGraphParameterCheckDoneRef(vx_graph graph,
 }
 
 VX_API_ENTRY vx_status VX_API_CALL vxGetGraphParameterRefsList(vx_graph graph,
-            vx_uint32 graph_parameter_index,
-            vx_uint32 refs_list_size,
+            vx_uint32 param,
+            vx_uint32 ref_list_size,
             vx_reference refs_list[])
 {
     vx_status status = (vx_status)VX_SUCCESS;
@@ -1171,13 +1178,13 @@ VX_API_ENTRY vx_status VX_API_CALL vxGetGraphParameterRefsList(vx_graph graph,
         {
             if ( (vx_bool)vx_true_e == graph->verified)
             {   
-                if ((graph->num_params > graph_parameter_index) && 
-                    (graph->parameters[graph_parameter_index].num_buf <= refs_list_size))
+                if ((graph->num_params > param) && 
+                    (graph->parameters[param].num_buf <= ref_list_size))
                 {
                     vx_uint32 refIdx;
-                    for (refIdx = 0; refIdx < refs_list_size; refIdx++)
+                    for (refIdx = 0; refIdx < ref_list_size; refIdx++)
                     {
-                        refs_list[refIdx] = graph->parameters[graph_parameter_index].refs_list[refIdx];
+                        refs_list[refIdx] = graph->parameters[param].refs_list[refIdx];
                         /* Setting it as void since the return value 'count' is not used further */
                         (void)ownIncrementReference(refs_list[refIdx], (vx_enum)VX_EXTERNAL);
                     }                 
@@ -1844,7 +1851,8 @@ void ownGraphDetectAndSetNumBuf(vx_graph graph)
              * graph parameter if needed to be consumed downstream */
             if ((vx_bool)vx_false_e == isLeafNode(graph, node_cur))
             {
-                for(prm_cur_idx=0; prm_cur_idx<ownNodeGetNumParameters(node_cur); prm_cur_idx++)
+                uint32_t num_params = ownNodeGetNumParameters(node_cur);
+                for(prm_cur_idx=0; prm_cur_idx<num_params; prm_cur_idx++)
                 {
                     ref = ownNodeGetParameterRef(node_cur, prm_cur_idx);
                     prm_dir = (uint32_t)ownNodeGetParameterDir(node_cur, prm_cur_idx);

@@ -4,6 +4,7 @@ const component_file_list = [
     /* Libraries */
     "source/board/.project/project.js",
     "source/drivers/.project/project.js",
+    "source/drivers/drivers_ipfma/.project/project.js",
     "source/drivers/device_manager/sciclient_direct/.project/project.js",
     "source/drivers/device_manager/sciclient_direct/sbl/.project/project.js",
     "source/drivers/device_manager/sciserver/.project/project.js",
@@ -129,6 +130,8 @@ const example_file_list = [
     "examples/ip_fma/dru_active_tr_event_overflow_detection/.project/project.js",
     "examples/ip_fma/dru_basic_tests_with_crc_check/.project/project.js",
     "examples/ip_fma/dcc_readback_of_written_config/.project/project.js",
+    "examples/ip_fma/dss_readback_of_written_config/.project/project.js",
+    "examples/ip_fma/ddr_readback_of_written_config/.project/project.js",
     "source/safety_checkers/examples/csirx_checkers_app/.project/project.js",
     "source/safety_checkers/examples/pm_checkers_app/.project/project.js",
     "source/safety_checkers/examples/pm_checkers_warm_reset/.project/project.js",

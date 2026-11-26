@@ -60,7 +60,7 @@
  *
  */
 
-#if defined(LINUX) || defined(QNX)
+#if defined(HLOS)
 
 #include "TI/tivx.h"
 #include "TI/tivx_test_kernels.h"
@@ -372,4 +372,4 @@ void tivxRemoveTargetKernelNotNot_arm(void)
     }
 }
 
-#endif
+#endif /* #if defined(HLOS) */

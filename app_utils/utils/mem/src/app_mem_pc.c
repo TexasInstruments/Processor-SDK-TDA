@@ -136,7 +136,9 @@ static char fd_path[MAX_SHM_PATH_NAME_LEN] = {0};
 /* Return true if specified memory region is enabled, return false otherwise*/
 bool appMemRegionQuery(uint32_t heap_id)
 {
-    return ((heap_id == APP_MEM_HEAP_DDR) || (heap_id == APP_MEM_HEAP_DDR_SHARED));
+    return ((heap_id == APP_MEM_HEAP_DDR) || (heap_id == APP_MEM_HEAP_DDR_SHARED) ||
+            (heap_id == APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY) ||
+            (heap_id == APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY_CONST));
 }
 
 void appMemPrintMemAllocInfo()
@@ -681,7 +683,7 @@ uint64_t appMemGetVirt2PhyBufPtr(uint64_t virtPtr, uint32_t heap_id)
     return (uint64_t)virtPtr;
 }
 
-void *appMemAlloc(uint32_t block, uint32_t size, uint32_t align)
+void *appMemAlloc(uint32_t heap_id, uint32_t size, uint32_t align)
 {
     app_mem_obj_t  *obj = &g_app_mem_obj;
     uint64_t        virtual_ptr = 0;
@@ -815,7 +817,7 @@ void *appMemAlloc(uint32_t block, uint32_t size, uint32_t align)
     return ((void *)(uintptr_t)virtual_ptr);
 }
 
-int32_t appMemFree(uint32_t block, void *virPtr, uint32_t size )
+int32_t appMemFree(uint32_t heap_id, void *ptr, uint32_t size)
 {
     app_mem_obj_t  *obj = &g_app_mem_obj;
     app_mem_list_t *mem_map_list = obj->plist;
@@ -827,11 +829,11 @@ int32_t appMemFree(uint32_t block, void *virPtr, uint32_t size )
 
     while(mem_map_list != NULL)
     {
-        if (mem_map_list->mem_data.virt_addr == (uint64_t)(virPtr))
+        if (mem_map_list->mem_data.virt_addr == (uint64_t)(ptr))
         {
 #ifdef APP_MEM_DEBUG
             printf("MEM: Freeing virt addr = %p -> phy addr = %lx, size = %d (FD = %d) !!!\n",
-                (void*)virPtr, mem_map_list->mem_data.phys_addr, size,
+                (void*)ptr, mem_map_list->mem_data.phys_addr, size,
                 mem_map_list->mem_data.buf_fd
                 );
 #endif
@@ -848,7 +850,7 @@ int32_t appMemFree(uint32_t block, void *virPtr, uint32_t size )
     if (1 != b_found_addr)
     {
         status = -1;
-        printf("MEM: ERROR: Failed to free memory at virt addr = %p !!!\n", virPtr);
+        printf("MEM: ERROR: Failed to free memory at virt addr = %p !!!\n", ptr);
     }
     else
     {

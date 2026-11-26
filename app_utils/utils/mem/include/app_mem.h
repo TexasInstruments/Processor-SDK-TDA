@@ -99,7 +99,10 @@ extern "C" {
  */
 
 /** \brief Max characters to use for heap name */
-#define APP_MEM_HEAP_NAME_MAX   (16u)
+#define APP_MEM_HEAP_NAME_MAX           (16u)
+
+/** \brief Max characters to use for dma carveout name */
+#define APP_MEM_DMA_CARVEOUT_NAME_MAX   (64u)
 
 /**
  *  \anchor APP_MEM_HEAP
@@ -133,34 +136,40 @@ typedef uint64_t (*app_mem_shared_target_fxn)(const uint64_t sharedAddr);
 typedef uint64_t (*app_mem_target_shared_fxn)(const uint64_t targetAddr);
 
 /** \brief Heap located in DDR for local CPU use only */
-#define APP_MEM_HEAP_DDR        (0u)
+#define APP_MEM_HEAP_DDR                          (0u)
 
 /** \brief Heap located in L3 memory (MSMC) */
-#define APP_MEM_HEAP_L3         (1u)
+#define APP_MEM_HEAP_L3                           (1u)
 
 /** \brief Heap located in L2 local memory of a CPU */
-#define APP_MEM_HEAP_L2         (2u)
+#define APP_MEM_HEAP_L2                           (2u)
 
 /** \brief Heap located in L1 local memory of a CPU */
-#define APP_MEM_HEAP_L1         (3u)
+#define APP_MEM_HEAP_L1                           (3u)
 
 /** \brief Heap located in DDR and is used as scratch */
-#define APP_MEM_HEAP_DDR_SCRATCH (4u)
+#define APP_MEM_HEAP_DDR_SCRATCH                  (4u)
 
 /** \brief Heap located in DDR and in non-cache memory of persistent property */
-#define APP_MEM_HEAP_DDR_NON_CACHE  (5u)
+#define APP_MEM_HEAP_DDR_NON_CACHE                (5u)
 
 /** \brief Heap located in DDR and in non-cache memory of scratch property */
-#define APP_MEM_HEAP_DDR_NON_CACHE_SCRATCH  (6u)
+#define APP_MEM_HEAP_DDR_NON_CACHE_SCRATCH        (6u)
 
 /** \brief Heap located in DDR and in cache memory which is configured as write through */
-#define APP_MEM_HEAP_DDR_WT_CACHE  (7u)
+#define APP_MEM_HEAP_DDR_WT_CACHE                 (7u)
 
 /** \brief Heap located in DDR to be shared across cores */
-#define APP_MEM_HEAP_DDR_SHARED        (8u)
+#define APP_MEM_HEAP_DDR_SHARED                   (8u)
+
+/** \brief Heap located in DDR to be shared across only the 64-bit initators */
+#define APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY        (9u)
+
+/** \brief Heap located in DDR storing constant data to be shared across only the 64-bit initators */
+#define APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY_CONST  (10u)
 
 /** \brief Max heaps in system */
-#define APP_MEM_HEAP_MAX        (9u)
+#define APP_MEM_HEAP_MAX                          (11u)
 
 /* @} */
 
@@ -198,7 +207,7 @@ typedef struct {
 
     void    *base;                   /**< heap memory base address */
     char    name[APP_MEM_HEAP_NAME_MAX];  /**< heap name */
-    uint32_t size;                   /**< heap size in bytes */
+    uint64_t size;                   /**< heap size in bytes */
     uint32_t flags;                  /**< flags, see \ref APP_MEM_HEAP_FLAGS */
     uint32_t align;                  /**< heap allocation alignment in bytes, must be a power of 2 */
 
@@ -224,7 +233,14 @@ typedef struct {
     #endif
     #if defined(A72) || defined(A53) || defined(A720)|| defined(PC)
     uint64_t base;                   /**< heap memory base address */
-    uint32_t size;                   /**< heap size in bytes */
+    uint64_t start;                  /**< heap memory start address */
+    uint64_t size;                   /**< heap size in bytes */
+    uint32_t flags;                  /**< access flags: 0=MPU can allocate, 1=remote-only (MPU read/write access) */
+    uint32_t heap_id;                /**< logical heap this call configures, see \ref APP_MEM_HEAP.
+                                           Must be APP_MEM_HEAP_DDR_SHARED, APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY,
+                                           or APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY_CONST */
+    char     name[APP_MEM_HEAP_NAME_MAX]; /**< heap name for debugging (e.g., "MPU_0", "MCU2_0") */
+    char     dma_carveout_name[APP_MEM_DMA_CARVEOUT_NAME_MAX]; /**< name of heap carveout region */
     #endif
 } app_mem_init_prm_t;
 
@@ -342,7 +358,7 @@ void static inline appMemEnableL1DandL2CacheWb(void)
  *
  * \param prm [out] Default initialized parameters
  */
-void    appMemInitPrmSetDefault(app_mem_init_prm_t *prm);
+void appMemInitPrmSetDefault(app_mem_init_prm_t *prm);
 
 /**
  * \brief Init heaps for memory allocation
@@ -370,7 +386,7 @@ int32_t appMemDeInit(void);
  *
  * \return pointer to memory or NULL in case of failure
  */
-void    *appMemAlloc(uint32_t heap_id, uint32_t size, uint32_t align);
+void *appMemAlloc(uint32_t heap_id, uint32_t size, uint32_t align);
 
 /**
  * \brief Check is specified memory region is enabled
@@ -473,7 +489,7 @@ int32_t appMemStats(uint32_t heap_id, app_mem_stats_t *stats);
  * \param size [in] Size of memory to perform the cache ops
  *
  */
-void  appMemCacheInv(void *ptr, uint32_t size);
+void appMemCacheInv(void *ptr, uint32_t size);
 
 /**
  * \brief Write back a section of memory from cache
@@ -482,7 +498,7 @@ void  appMemCacheInv(void *ptr, uint32_t size);
  * \param size [in] Size of memory to perform the cache ops
  *
  */
-void  appMemCacheWb(void *ptr, uint32_t size);
+void appMemCacheWb(void *ptr, uint32_t size);
 
 /**
  * \brief Write back and invalidate a section of memory from cache
@@ -491,7 +507,7 @@ void  appMemCacheWb(void *ptr, uint32_t size);
  * \param size [in] Size of memory to perform the cache ops
  *
  */
-void  appMemCacheWbInv(void *ptr, uint32_t size);
+void appMemCacheWbInv(void *ptr, uint32_t size);
 
 /**
  * \brief Print memory allocation from shared memory region
@@ -527,17 +543,17 @@ uint64_t appMemShared2TargetPtr(uint64_t shared_ptr);
  *
  *  \return pointer to mapped virtual memory
  */
-void     *appMemMap(void *phys_addr, uint32_t size);
+void *appMemMap(void *phys_addr, uint32_t size);
 
 /**
  * \brief Unmap the provided virtual memory
  *
- * \param virt_addr     [in] pointer to virtual memory
+ * \param virt_ptr      [in] pointer to virtual memory
  * \param size          [in] size of virtual memory
  *
  *  \return status of the operation
  */
-int32_t   appMemUnMap(void *virt_addr, uint32_t size);
+int32_t appMemUnMap(void *virt_ptr, uint32_t size);
 
 /**
  * \brief Get number of memory allocation
@@ -560,6 +576,15 @@ int32_t appMemAddrTranslate(app_mem_rat_prm_t *prm);
  * \param prm [in] Pointer of type \ref CSL_ratRegs used for setting RAT address
  */
 int32_t appMemSetRatRegs(CSL_ratRegs *pRatRegs);
+#endif
+
+#if defined(LINUX)
+/**
+ * \brief Check if rpmsg char has been initialized
+ *
+ * \return 1 if rpmsg char is initialized, 0 otherwise
+ */
+uint8_t appMemIsCharInit(void);
 #endif
 
 #if defined(x86_64)

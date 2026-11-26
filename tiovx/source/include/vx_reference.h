@@ -344,6 +344,12 @@ vx_status VX_CALLBACK ownKernelCallbackGeneric(vx_enum kernel_enum, vx_bool vali
  */
 void ownUpdateEnumTypeSizes(void);
 
+/*! \brief This API updates the size of certain remote enum types like RTOS objects
+ *
+ * \ingroup group_vx_reference
+ */
+void ownUpdateRemoteEnumTypeSizes(void *os_obj_sizes);
+
 #ifdef __cplusplus
 }
 #endif

@@ -4,15 +4,11 @@ ifeq ($(RTOS),SYSBIOS)
   XDC_CFG_FILE = $($(_MODULE)_SDIR)/c6x_1.cfg
   XDC_PLATFORM = "ti.platforms.c6x:J7ES"
   LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker.cmd
-endif
-ifeq ($(RTOS),FREERTOS)
-  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_freertos.cmd
-endif
-ifeq ($(RTOS),SAFERTOS)
-  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_safertos.cmd
+else
+  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE).cmd
 endif
 
-LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map.cmd
+LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/generated/linker_mem_map_$(RTOS_TYPE).cmd
 
 
 ifeq ($(RTOS),SAFERTOS)

@@ -62,8 +62,11 @@ This is a bootloader example, which shows an example of booting Linux/U-Boot/QNX
     - mmc dev 0 1
     - fatload mmc 1 ${loadaddr} sbl/tiboot3.bin
     - mmc write ${loadaddr} 0x0 0x300 (size of app in blocks)
+    - (Optional) If HSM is required, flash HSM by executing the following commands. Otherwise, skip this step.
+        - fatload mmc 1 ${loadaddr} sbl/hsm.bin
+        - mmc write ${loadaddr} 0x400 0x130 (size of app in blocks)
     - fatload mmc 1 ${loadaddr} sbl/app
-    - mmc write ${loadaddr} 0x400 0x800 (size of app in blocks)
+    - mmc write ${loadaddr} 0x600 0xB300 (size of app in blocks)
     - mmc partconf 0 1 1 1
     - mmc bootbus 0 2 0 0
 - Note: one block is of size 512 bytes

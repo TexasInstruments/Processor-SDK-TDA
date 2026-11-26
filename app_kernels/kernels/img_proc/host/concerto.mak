@@ -30,7 +30,6 @@ ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), x86_64 A72 A53 A720 R5F M55))
       CSOURCES    += tivx_dl_draw_box_host.c
       CSOURCES    += tivx_dl_color_convert_host.c
       ifeq ($(SOC), $(filter $(SOC), j784s4 tda54))
-        CSOURCES    += tivx_dl_bev_pre_proc_armv8_host.c
         CSOURCES    += tivx_dl_bev_post_proc_host.c
         CSOURCES    += tivx_dl_bev_cam_post_proc_host.c
       endif

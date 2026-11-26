@@ -60,7 +60,6 @@
  *
  */
 
-#include <stdio.h>
 #include <string.h>
 #include <utils/console_io/include/app_log.h>
 #include <utils/timer/include/app_timer.h>
@@ -94,7 +93,7 @@ static uint8_t g_app_rpmessage_rpmsg_rx_buf[APP_IPC_RPMESSAGE_RPMSG_RX_BUF_SIZE]
  * - AND stack assigned for task context is "size - 8KB"
  *       - 8KB chunk for the stack area is used for interrupt handling in this task context
  */
-#define APP_IPC_RPMESSAGE_RX_TASK_STACK_SIZE   (64*1024u)
+#define APP_IPC_RPMESSAGE_RX_TASK_STACK_SIZE   (64u*1024u)
 #define APP_IPC_RPMESSAGE_RX_TASK_PRI          (10u)
 
 /* HW Spinlock */
@@ -205,7 +204,8 @@ static uint32_t g_ipc_to_app_cpu_id[IPC_MAX_PROCS] =
     APP_IPC_CPU_MCU3_1,
     APP_IPC_CPU_C6x_1,
     APP_IPC_CPU_C6x_2,
-    APP_IPC_CPU_C7x_1
+    APP_IPC_CPU_C7x_1,
+    APP_IPC_CPU_INVALID
 };
 #endif
 
@@ -233,7 +233,8 @@ static uint32_t g_ipc_to_app_cpu_id[IPC_MAX_PROCS] =
     APP_IPC_CPU_MCU3_0,
     APP_IPC_CPU_MCU3_1,
     APP_IPC_CPU_C7x_1,
-    APP_IPC_CPU_C7x_2
+    APP_IPC_CPU_C7x_2,
+    APP_IPC_CPU_INVALID
 };
 #endif
 
@@ -269,7 +270,8 @@ static uint32_t g_ipc_to_app_cpu_id[IPC_MAX_PROCS] =
     APP_IPC_CPU_C7x_1,
     APP_IPC_CPU_C7x_2,
     APP_IPC_CPU_C7x_3,
-    APP_IPC_CPU_C7x_4
+    APP_IPC_CPU_C7x_4,
+    APP_IPC_CPU_INVALID
 };
 #endif
 
@@ -303,7 +305,8 @@ static uint32_t g_ipc_to_app_cpu_id[IPC_MAX_PROCS] =
     APP_IPC_CPU_MCU4_1,
     APP_IPC_CPU_C7x_1,
     APP_IPC_CPU_C7x_2,
-    APP_IPC_CPU_C7x_3
+    APP_IPC_CPU_C7x_3,
+    APP_IPC_CPU_INVALID
 };
 #endif
 
@@ -330,7 +333,8 @@ static uint32_t g_app_to_ipc_cpu_id[APP_IPC_CPU_MAX] =
     IPC_MCU1_0,
     IPC_MAIN_R5F,
     IPC_C7X_1,
-    IPC_C7X_2
+    IPC_C7X_2,
+    IPC_INVALID_PROCID
 };
 
 static uint32_t g_ipc_to_app_cpu_id[IPC_MAX_PROCS] =
@@ -339,7 +343,8 @@ static uint32_t g_ipc_to_app_cpu_id[IPC_MAX_PROCS] =
     APP_IPC_CPU_MCU1_0,
     APP_IPC_CPU_MCU2_0,
     APP_IPC_CPU_C7x_1,
-    APP_IPC_CPU_C7x_2
+    APP_IPC_CPU_C7x_2,
+    APP_IPC_CPU_INVALID
 };
 #endif
 
@@ -357,7 +362,7 @@ static void appIpcRpmsgRxHandler(RPMessage_Handle rpmsg_handle,
         payload = *(uint32_t*)data;
 
         #ifdef APP_IPC_DEBUG
-        printf("IPC: RX: %s (port %d) -> %s (port %d) msg = 0x%08x\n",
+        appLogPrintf("IPC: RX: %s (port %d) -> %s (port %d) msg = 0x%08x\n",
             Ipc_mpGetName(src_cpu_id),
             (uint32_t)src_endpt,
             Ipc_mpGetSelfName(),
@@ -369,7 +374,7 @@ static void appIpcRpmsgRxHandler(RPMessage_Handle rpmsg_handle,
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_IPC_QNX_UM08
 <justification end> */
-        if((payload & 0xFFFF0000) == 0xDEAD0000)
+        if((payload & 0xFFFF0000U) == 0xDEAD0000U)
         {
             appLogPrintf("IPC: RX: %s (port %d) -> %s (port %d) msg = 0x%08x\n",
                 appIpcGetCpuName(app_cpu_id),
@@ -390,11 +395,22 @@ static void appIpcRpmsgRxHandler(RPMessage_Handle rpmsg_handle,
 <metric start> branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_IPC_QNX_UM14
 <justification end> */
-            if(obj->ipc_notify_handler)
+            if (NULL != obj->ipc_notify_handler)
 /* LDRA_JUSTIFY_END */
             {
                 obj->ipc_notify_handler(app_cpu_id, payload);
             }
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_IPC_QNX_UM14
+<justification end> */
+            else
+            {
+                appLogPrintf("IPC: ERROR: RX handler is invalid! Message from %s -> %s was dropped\n",
+                    appIpcGetCpuName(app_cpu_id),
+                    appIpcGetCpuName(appIpcGetSelfCpuId()));
+            }
+/* LDRA_JUSTIFY_END */
         }
     }
 }
@@ -407,12 +423,12 @@ static void appIpcRpmsgRxTaskMain(void* arg0,
     uint16_t len;
     int32_t status = 0;
 
-    while(!done) /* TIOVX-1940- LDRA Uncovered Branch Id: TIOVX_CODE_COVERAGE_IPC_QNX_UM15 */
+    while(done == 0U) /* TIOVX-1940- LDRA Uncovered Branch Id: TIOVX_CODE_COVERAGE_IPC_QNX_UM15 */
     {
         len = 0;
         src_cpu_id = 0;
         reply_endpt = 0;
-        memset(&obj->rpmsg_rx_msg_buf, 0, IPC_RPMESSAGE_MSG_SIZE);
+        (void)memset(&obj->rpmsg_rx_msg_buf, 0, IPC_RPMESSAGE_MSG_SIZE);
         status = RPMessage_recv(obj->rpmsg_rx_handle,
                         &obj->rpmsg_rx_msg_buf,
                         &len,
@@ -432,7 +448,7 @@ static void appIpcRpmsgRxTaskMain(void* arg0,
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_IPC_QNX_UM09
 <justification end> */
-            if(len != 4 && reply_endpt != obj->prm.tiovx_rpmsg_port_id)
+            if(len != 4U && reply_endpt != obj->prm.tiovx_rpmsg_port_id)
             {
                 appLogPrintf("IPC: ERROR: appIpcRpmsgRxTaskMain: RPMessage_recv failed (%d %d %d %d)!!!\n",
                     status, len, reply_endpt, src_cpu_id
@@ -472,8 +488,8 @@ static void appIpcRpmsgRxTaskMain(void* arg0,
                         obj->rpmsg_rx_msg_buf,
                         len,
                         src_cpu_id,
-                        reply_endpt,
-                        obj->tiovx_rpmsg_rx_endpt);
+                        (uint16_t)reply_endpt,
+                        (uint16_t)obj->tiovx_rpmsg_rx_endpt);
         }
     }
 } /* TIOVX-1940- LDRA Uncovered Branch Id: TIOVX_CODE_COVERAGE_IPC_QNX_UM15 */
@@ -492,8 +508,8 @@ static int32_t appIpcCreateRpmsgRxTask(app_ipc_obj_t *obj)
     qnx_task_prms.name = (const char*)&obj->task_name[0];
     qnx_task_prms.taskfxn = &appIpcRpmsgRxTaskMain;
 
-    strncpy(obj->task_name, "IPC_RX", APP_IPC_MAX_TASK_NAME);
-    obj->task_name[APP_IPC_MAX_TASK_NAME-1] = 0;
+    (void)strncpy(obj->task_name, "IPC_RX", APP_IPC_MAX_TASK_NAME);
+    obj->task_name[APP_IPC_MAX_TASK_NAME-1U] = '\0';
 
     obj->task_handle = (void*)appRtosTaskCreate(&qnx_task_prms);
 
@@ -503,7 +519,7 @@ static int32_t appIpcCreateRpmsgRxTask(app_ipc_obj_t *obj)
 <justification end> */
     if(obj->task_handle==NULL)
     {
-        printf("IPC: ERROR: Unable to create RX task \n");
+        appLogPrintf("IPC: ERROR: Unable to create RX task \n");
         status = -1;
     }
 /* LDRA_JUSTIFY_END */
@@ -514,7 +530,7 @@ static int32_t appIpcCreateRpmsgRxTask(app_ipc_obj_t *obj)
 static void appIpcDeleteRpmsgRxTask(app_ipc_obj_t *obj)
 {
     RPMessage_unblock(obj->rpmsg_rx_handle);
-    appRtosTaskDelete(&obj->task_handle);
+    (void)appRtosTaskDelete(&obj->task_handle);
 }
 
 void appIpcInitPrmSetDefault(app_ipc_init_prm_t *prm)
@@ -546,7 +562,7 @@ int32_t appIpcInit(app_ipc_init_prm_t *prm)
 
     app_ipc_obj_t *obj = &g_app_ipc_obj;
 
-    printf("%s: IPC: Init QNX ... !!!\n", __func__);
+    appLogPrintf("%s: IPC: Init QNX ... !!!\n", __func__);
 
     obj->prm = *prm;
     obj->rpmsg_rx_handle = NULL;
@@ -566,32 +582,32 @@ int32_t appIpcInit(app_ipc_init_prm_t *prm)
 <justification end> */
     if(obj->spin_lock_ptr == MAP_FAILED)
     {
-           printf("IPC: ERROR: Unable to map spin lock memory !!!\n");
+           appLogPrintf("IPC: ERROR: Unable to map spin lock memory !!!\n");
            status = -1;
     }
     if(prm->num_cpus>APP_IPC_CPU_MAX)
     {
-        printf("IPC: ERROR: Invalid number of CPUs !!!\n");
+        appLogPrintf("IPC: ERROR: Invalid number of CPUs !!!\n");
         status = -1;
     }
-    if( (obj->prm.tiovx_obj_desc_mem==MAP_FAILED) || (obj->prm.tiovx_obj_desc_mem_size==0) )
+    if( (obj->prm.tiovx_obj_desc_mem==MAP_FAILED) || (obj->prm.tiovx_obj_desc_mem_size==0U) )
     {
-        printf("IPC: ERROR: Invalid tiovx obj desc memory address or size !!!\n");
+        appLogPrintf("IPC: ERROR: Invalid tiovx obj desc memory address or size !!!\n");
         status = -1;
     }
-    if( (obj->prm.tiovx_log_rt_mem==MAP_FAILED) || (obj->prm.tiovx_log_rt_mem_size==0) )
+    if( (obj->prm.tiovx_log_rt_mem==MAP_FAILED) || (obj->prm.tiovx_log_rt_mem_size==0U) )
     {
-        printf("IPC: ERROR: Invalid tiovx rt memory address or size !!!\n");
+        appLogPrintf("IPC: ERROR: Invalid tiovx rt memory address or size !!!\n");
         status = -1;
     }
-    if( (prm->ipc_vring_mem==NULL) || (prm->ipc_vring_mem_size==0) )
+    if( (prm->ipc_vring_mem==NULL) || (prm->ipc_vring_mem_size==0U) )
     {
-        printf("IPC: ERROR: Invalid ipc vring memory address/%ld or size/%d !!!\n",(long int) prm->ipc_vring_mem, prm->ipc_vring_mem_size);
+        appLogPrintf("IPC: ERROR: Invalid ipc vring memory address/%ld or size/%d !!!\n",(long int) prm->ipc_vring_mem, prm->ipc_vring_mem_size);
         status = -1;
     }
     if(prm->self_cpu_id>=APP_IPC_CPU_MAX)
     {
-        printf("IPC: ERROR: Invalid self cpu id !!!\n");
+        appLogPrintf("IPC: ERROR: Invalid self cpu id !!!\n");
         status = -1;
     }
 /* LDRA_JUSTIFY_END */
@@ -610,7 +626,7 @@ int32_t appIpcInit(app_ipc_init_prm_t *prm)
 <justification end> */
             if(prm->enabled_cpu_id_list[cpu_id]>=APP_IPC_CPU_MAX)
             {
-                printf("IPC: ERROR: Invalid cpu id in enabled_cpu_id_list @ index %d !!!\n", cpu_id);
+                appLogPrintf("IPC: ERROR: Invalid cpu id in enabled_cpu_id_list @ index %d !!!\n", cpu_id);
                 status = -1;
             }
 /* LDRA_JUSTIFY_END */
@@ -629,7 +645,7 @@ int32_t appIpcInit(app_ipc_init_prm_t *prm)
 
         status = Ipc_mpSetConfig(
                     IPC_MPU1_0,
-                    ipc_num_proc,
+                    (uint16_t)ipc_num_proc,
                     g_app_ipc_remote_proc
                     );
 
@@ -639,7 +655,7 @@ int32_t appIpcInit(app_ipc_init_prm_t *prm)
 <justification end> */
         if(status!=0)
         {
-            printf("IPC: ERROR: Ipc_mpSetConfig failed !!!\n");
+            appLogPrintf("IPC: ERROR: Ipc_mpSetConfig failed !!!\n");
         }
 /* LDRA_JUSTIFY_END */
 
@@ -664,7 +680,7 @@ int32_t appIpcInit(app_ipc_init_prm_t *prm)
         RPMessage_Params rpmsg_prm;
         uint32_t rx_endpt;
 
-        RPMessageParams_init(&rpmsg_prm);
+        (void)RPMessageParams_init(&rpmsg_prm);
 
         rpmsg_prm.requestedEndpt = RPMESSAGE_ANY;
         rpmsg_prm.buf = g_app_rpmessage_rpmsg_rx_buf;
@@ -679,7 +695,7 @@ int32_t appIpcInit(app_ipc_init_prm_t *prm)
 <justification end> */
         if(obj->rpmsg_rx_handle==NULL)
         {
-            printf("IPC: ERROR: Unable to create rpmessage rx handle !!!\n");
+            appLogPrintf("IPC: ERROR: Unable to create rpmessage rx handle !!!\n");
             status = -1;
         }
 /* LDRA_JUSTIFY_END */
@@ -699,22 +715,22 @@ int32_t appIpcInit(app_ipc_init_prm_t *prm)
 <justification end> */
         if(status!=0)
         {
-            printf("IPC: ERROR: appIpcCreateRpmsgRxTask failed !!!\n");
+            appLogPrintf("IPC: ERROR: appIpcCreateRpmsgRxTask failed !!!\n");
         }
 /* LDRA_JUSTIFY_END */
     }
-    printf("%s: IPC: Init ... Done !!!\n",__func__);
+    appLogPrintf("%s: IPC: Init ... Done !!!\n",__func__);
 
     return status;
 }
 
-int32_t appIpcDeInit()
+int32_t appIpcDeInit(void)
 {
     int32_t status = 0;
 
     app_ipc_obj_t *obj = &g_app_ipc_obj;
 
-    printf("IPC: Deinit ... !!!\n");
+    appLogPrintf("IPC: Deinit ... !!!\n");
 
     appIpcDeleteRpmsgRxTask(obj);
 
@@ -725,17 +741,17 @@ int32_t appIpcDeInit()
     if(obj->rpmsg_rx_handle!=NULL)
 /* LDRA_JUSTIFY_END */
     {
-        RPMessage_delete(&obj->rpmsg_rx_handle);
+        (void)RPMessage_delete(&obj->rpmsg_rx_handle);
         obj->rpmsg_rx_handle = NULL;
     }
 
-    Ipc_deinit();
+    (void)Ipc_deinit();
 
-    munmap_device_memory(obj->prm.tiovx_log_rt_mem, obj->prm.tiovx_log_rt_mem_size);
-    munmap_device_memory(obj->prm.tiovx_obj_desc_mem, obj->prm.tiovx_obj_desc_mem_size);
-    munmap_device_memory(obj->spin_lock_ptr, APP_IPC_HW_SPIN_LOCK_MMR_SIZE);
+    (void)munmap_device_memory(obj->prm.tiovx_log_rt_mem, obj->prm.tiovx_log_rt_mem_size);
+    (void)munmap_device_memory(obj->prm.tiovx_obj_desc_mem, obj->prm.tiovx_obj_desc_mem_size);
+    (void)munmap_device_memory(obj->spin_lock_ptr, APP_IPC_HW_SPIN_LOCK_MMR_SIZE);
 
-    printf("IPC: Deinit ... Done !!!\n");
+    appLogPrintf("IPC: Deinit ... Done !!!\n");
 
     return status;
 }
@@ -774,7 +790,7 @@ int32_t appIpcSendNotifyPort(uint32_t dest_cpu_id, uint32_t payload, uint32_t po
                     port_id, /* dst end pt */
                     obj->tiovx_rpmsg_rx_endpt, /* src endpt */
                     &payload,
-                    sizeof(payload)
+                    (uint16_t)sizeof(payload)
                     );
         if(status!=0)
         {
@@ -804,7 +820,7 @@ int32_t appIpcSendNotify(uint32_t dest_cpu_id, uint32_t payload)
     return status;
 }
 
-uint32_t appIpcGetSelfCpuId()
+uint32_t appIpcGetSelfCpuId(void)
 {
     app_ipc_obj_t *obj = &g_app_ipc_obj;
 
@@ -847,9 +863,9 @@ int32_t appIpcGetTiovxObjDescSharedMemInfo(void **addr, uint32_t *size)
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_IPC_QNX_UM05
 <justification end> */
-    if(obj->prm.tiovx_obj_desc_mem==NULL||obj->prm.tiovx_obj_desc_mem_size==0)
+    if(obj->prm.tiovx_obj_desc_mem==NULL||obj->prm.tiovx_obj_desc_mem_size==0U)
     {
-        printf("%s: Error, obj_desc_mem not set\n",__func__);
+        appLogPrintf("%s: Error, obj_desc_mem not set\n",__func__);
         *addr = NULL;
         *size = 0;
         status = -1;
@@ -877,7 +893,7 @@ void appIpcGetTiovxLogRtSharedMemInfo(void **shm_base, uint32_t *shm_size)
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_IPC_QNX_UM06
 <justification end> */
-    if(obj->prm.tiovx_log_rt_mem==NULL||obj->prm.tiovx_log_rt_mem_size==0)
+    if(obj->prm.tiovx_log_rt_mem==NULL||obj->prm.tiovx_log_rt_mem_size==0U)
     {
         *shm_base = NULL;
         *shm_size = 0;
@@ -917,7 +933,7 @@ int32_t appIpcHwLockAcquire(uint32_t hw_lock_id, uint32_t timeout)
             /* spin until lock is free */
             while(*reg_addr == 1u )
             {
-                sched_yield();
+                (void)sched_yield();
                 /* keep spinning */
             }
             status = 0;

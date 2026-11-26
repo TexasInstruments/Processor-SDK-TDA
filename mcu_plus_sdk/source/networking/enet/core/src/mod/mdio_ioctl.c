@@ -662,7 +662,12 @@ static int32_t Mdio_readRegC45(CSL_mdioHandle mdioRegs,
     int32_t status;
 
     c45EnMask = CSL_MDIO_getClause45EnableMask(mdioRegs);
-    if (ENET_IS_BIT_SET(c45EnMask, phyAddr))
+    if (userCh >= (uint32_t)ENET_MDIO_GROUP_NUM)
+    {
+        ENETTRACE_ERR("invalid MDIO group %u\n", userCh);
+        status = ENET_EINVALIDPARAMS;
+    }
+    else if (ENET_IS_BIT_SET(c45EnMask, phyAddr))
     {
 
         /* Wait for any ongoing transaction to complete */
@@ -720,7 +725,12 @@ static int32_t Mdio_readRegTriggerC45(CSL_mdioHandle mdioRegs,
     bool accessRegBusy = true;
 
     c45EnMask = CSL_MDIO_getClause45EnableMask(mdioRegs);
-    if (ENET_IS_BIT_SET(c45EnMask, phyAddr))
+    if (userCh >= (uint32_t)ENET_MDIO_GROUP_NUM)
+    {
+        ENETTRACE_ERR("invalid MDIO group %u\n", userCh);
+        status = ENET_EINVALIDPARAMS;
+    }
+    else if (ENET_IS_BIT_SET(c45EnMask, phyAddr))
     {
 
         /* Wait for any ongoing transaction to complete */
@@ -755,7 +765,12 @@ static int32_t Mdio_readRegCompleteC45(CSL_mdioHandle mdioRegs,
     bool accessRegBusy = true;
 
     c45EnMask = CSL_MDIO_getClause45EnableMask(mdioRegs);
-    if (ENET_IS_BIT_SET(c45EnMask, phyAddr))
+    if (userCh >= (uint32_t)ENET_MDIO_GROUP_NUM)
+    {
+        ENETTRACE_ERR("invalid MDIO group %u\n", userCh);
+        status = ENET_EINVALIDPARAMS;
+    }
+    else if (ENET_IS_BIT_SET(c45EnMask, phyAddr))
     {
     /* Wait for register read transaction to complete */
         if (CSL_MDIO_isPhyRegAccessComplete(mdioRegs, userCh))
@@ -806,7 +821,12 @@ static int32_t Mdio_writeRegC45(CSL_mdioHandle mdioRegs,
     int32_t status;
 
     c45EnMask = CSL_MDIO_getClause45EnableMask(mdioRegs);
-    if (ENET_IS_BIT_SET(c45EnMask, phyAddr))
+    if (userCh >= (uint32_t)ENET_MDIO_GROUP_NUM)
+    {
+        ENETTRACE_ERR("invalid MDIO group %u\n", userCh);
+        status = ENET_EINVALIDPARAMS;
+    }
+    else if (ENET_IS_BIT_SET(c45EnMask, phyAddr))
     {
         /* Wait for any ongoing transaction to complete */
         do
@@ -852,7 +872,12 @@ static int32_t Mdio_writeRegTriggerC45(CSL_mdioHandle mdioRegs,
     bool accessRegBusy = true;
 
     c45EnMask = CSL_MDIO_getClause45EnableMask(mdioRegs);
-    if (ENET_IS_BIT_SET(c45EnMask, phyAddr))
+    if (userCh >= (uint32_t)ENET_MDIO_GROUP_NUM)
+    {
+        ENETTRACE_ERR("invalid MDIO group %u\n", userCh);
+        status = ENET_EINVALIDPARAMS;
+    }
+    else if (ENET_IS_BIT_SET(c45EnMask, phyAddr))
     {
         if(CSL_MDIO_isPhyRegAccessComplete(mdioRegs, userCh))
         {
@@ -888,7 +913,12 @@ static int32_t Mdio_writeRegCompleteC45(CSL_mdioHandle mdioRegs,
     int32_t status = CSL_EFAIL;
 
     c45EnMask = CSL_MDIO_getClause45EnableMask(mdioRegs);
-    if (ENET_IS_BIT_SET(c45EnMask, phyAddr))
+    if (userCh >= (uint32_t)ENET_MDIO_GROUP_NUM)
+    {
+        ENETTRACE_ERR("invalid MDIO group %u\n", userCh);
+        status = ENET_EINVALIDPARAMS;
+    }
+    else if (ENET_IS_BIT_SET(c45EnMask, phyAddr))
     {
         if(CSL_MDIO_isPhyRegAccessComplete(mdioRegs, userCh))
         {

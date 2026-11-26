@@ -295,6 +295,7 @@ void EnetBoard_getMacAddrList(uint8_t macAddr[][ENET_MAC_ADDR_LEN],
                               uint32_t maxMacEntries,
                               uint32_t *pAvailMacEntries)
 {
+    EnetAppUtils_assert(pAvailMacEntries != NULL);
     *pAvailMacEntries = 0;
 %if (cpsw_instance.macAddrConfig  !== "Manual Entry"){
     /* For AM62D-EVM, the MAC Addresses are programmed on the Addon cards.

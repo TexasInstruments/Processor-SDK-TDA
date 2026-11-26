@@ -69,12 +69,12 @@
 extern uint64_t *Mmu_level1Table;
 #pragma DATA_SECTION(Mmu_tableArray, ".data.Mmu_tableArray");
 #pragma DATA_ALIGN(Mmu_tableArray, 4096);
-uint64_t Mmu_tableArray[16*512];
+uint64_t Mmu_tableArray[16*512] = {0};
 extern uint64_t  Mmu_tableArraySlot;
 
 #pragma DATA_SECTION(gMmu_tableArray_NS, ".data.gMmu_tableArray_NS");
 #pragma DATA_ALIGN(gMmu_tableArray_NS, 4096);
-uint64_t gMmu_tableArray_NS[16*512];
+uint64_t gMmu_tableArray_NS[16*512] = {0};
 extern uint64_t *Mmu_level1Table_NS;
 extern uint64_t  Mmu_tableArraySlot_NS;
 

@@ -649,7 +649,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetTensorAttribute(
 }
 
 VX_API_ENTRY vx_status VX_API_CALL vxCopyTensorPatch(vx_tensor tensor,
-        vx_size number_of_dimensions, const vx_size * view_start, const vx_size * view_end,
+        vx_size number_of_dims, const vx_size * view_start, const vx_size * view_end,
         const vx_size * user_stride, void * user_ptr, vx_enum usage, vx_enum user_memory_type)
 {
     vx_status status = (vx_status)VX_SUCCESS;
@@ -690,18 +690,18 @@ VX_API_ENTRY vx_status VX_API_CALL vxCopyTensorPatch(vx_tensor tensor,
 
     if ((vx_status)VX_SUCCESS == status)
     {
-        if ((obj_desc->number_of_dimensions < number_of_dimensions) || (number_of_dimensions < 1U))
+        if ((obj_desc->number_of_dimensions < number_of_dims) || (number_of_dims < 1U))
         {
             VX_PRINT(VX_ZONE_ERROR, "Invalid number of patch dimensions\n");
             status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
         }
 
-        if (ownTensorCheckSizes(obj_desc->dimensions, view_start, view_end, number_of_dimensions) != (vx_status)VX_SUCCESS)
+        if (ownTensorCheckSizes(obj_desc->dimensions, view_start, view_end, number_of_dims) != (vx_status)VX_SUCCESS)
         {
             status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
         }
 
-        for (i = 1; i < number_of_dimensions; i++)
+        for (i = 1; i < number_of_dims; i++)
         {
             if ((user_stride[i] < (view_end[i-1U] - view_start[i-1U])))
             {
@@ -728,7 +728,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxCopyTensorPatch(vx_tensor tensor,
     {
         vx_uint8* user_curr_ptr = (vx_uint8*)user_ptr;
         vx_uint8* tensor_ptr = (vx_uint8*)(uintptr_t)obj_desc->mem_ptr.host_ptr;
-        vx_size patch_size = ownComputePatchSize (view_start, view_end, number_of_dimensions);
+        vx_size patch_size = ownComputePatchSize (view_start, view_end, number_of_dims);
         vx_uint32 elements_per_line = (vx_uint32)view_end[0]-(vx_uint32)view_start[0];
         vx_uint32 bytes_per_line = (vx_uint32)obj_desc->stride[0] * elements_per_line;
 
@@ -736,7 +736,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxCopyTensorPatch(vx_tensor tensor,
             vx_size patch_pos = 0;
             vx_size tensor_pos = 0;
 
-            ownComputePositionsFromIndex(i,view_start, view_end, obj_desc->stride, user_stride, number_of_dimensions, &tensor_pos, &patch_pos);
+            ownComputePositionsFromIndex(i,view_start, view_end, obj_desc->stride, user_stride, number_of_dims, &tensor_pos, &patch_pos);
 
             /* Copy from tensor object to user memory */
             if ((vx_enum)VX_READ_ONLY == usage)
@@ -771,11 +771,11 @@ VX_API_ENTRY vx_status VX_API_CALL tivxMapTensorPatch(
     vx_size number_of_dims,
     const vx_size * view_start,
     const vx_size * view_end,
-    vx_map_id* map_id,
+    vx_map_id * map_id,
     vx_size * stride,
-    void** ptr,
+    void ** ptr,
     vx_enum usage,
-    vx_enum memory_type)
+    vx_enum mem_type)
 {
     vx_status status = (vx_status)VX_SUCCESS;
     tivx_obj_desc_tensor_t *obj_desc = NULL;
@@ -882,7 +882,7 @@ VX_API_ENTRY vx_status VX_API_CALL tivxMapTensorPatch(
                 {
                     tensor->maps[map_idx].map_addr = host_addr;
                     tensor->maps[map_idx].map_size = map_size;
-                    tensor->maps[map_idx].mem_type = memory_type;
+                    tensor->maps[map_idx].mem_type = mem_type;
                     tensor->maps[map_idx].usage = usage;
                     break;
                 }
@@ -904,7 +904,7 @@ VX_API_ENTRY vx_status VX_API_CALL tivxMapTensorPatch(
                 uintptr_t temp_map_size0 = (uintptr_t)end_addr - (uintptr_t)host_addr;
                 map_size = (vx_uint32)temp_map_size0;
                 tivxCheckStatus(&status, tivxMemBufferMap(map_addr, map_size,
-                    memory_type, usage));
+                    mem_type, usage));
 
                 ownLogSetResourceUsedValue("TIVX_TENSOR_MAX_MAPS", (vx_uint16)map_idx+1U);
             }

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2023
+ *  Copyright (c) Texas Instruments Incorporated 2026
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,13 @@
 
 #include <stdint.h>
 #include <drivers/hw_include/csl_dss.h>
+/* This translation unit's readback identity: the DSS module. Readback is active
+ * only when REG_READBACK_ENABLED is defined and REG_READBACK_MODULE_MASK
+ * includes REG_RB_MOD_DSS (otherwise every RB_CHECK_* below compiles to a
+ * no-op). This #define MUST precede reg_readback.h, which latches
+ * REG_READBACK_MODULE at include time and defaults it to REG_RB_MOD_NONE. */
+#define REG_READBACK_MODULE  REG_RB_MOD_DSS
+#include <drivers/hw_include/reg_readback.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -419,6 +426,8 @@ void CSL_dssSetCbaConfig(CSL_dss_commRegs *commRegs,
              DSS_COMMON_DSS_CBA_CFG_PRI_LO,
              cbaCfg->priLow);
     CSL_REG32_WR(&commRegs->DSS_CBA_CFG, regVal);
+    RB_CHECK_REG32(&commRegs->DSS_CBA_CFG, regVal, RB_MASK_ALL_BITS_32,
+                   CSL_DSSReadbackErr);
 }
 
 /* ========================================================================== */

@@ -98,9 +98,8 @@ typedef struct Ipc_NotifyIdEntry_s
     int32_t    rxNotifyId;
 } Ipc_NotifyIdEntry;
 
-int32_t  virtio_cnt = 0;
+static int32_t  virtio_cnt = 0;
 static uint32_t g_vqItemCnt = 0;
-extern uint32_t g_ipc_mBoxCnt;
 
 /**
  *  \brief Used for defining the size of the virtqueue registry
@@ -188,7 +187,7 @@ static Virtio_Object *queueRegistry[MAX_VIRTQUEUES];
 /* Application provides the memory for storing local Virtio */
 static void*    vqBaseAddr = NULL;
 static uint32_t vqSizeLeft = 0U;
-static void*    rscTable   = NULL;
+static void*    gRscTable = NULL;
 
 static Ipc_TranslationTable  vrTranslationTable =
 {
@@ -396,7 +395,7 @@ uint32_t Ipc_getVqObjMemoryRequiredPerCore(void)
 uint8_t Virtio_isRemoteLinux(uint16_t procId)
 {
     uint8_t  retVal;
-    if((procId == IPC_MPU1_0) && (rscTable != NULL))
+    if((procId == IPC_MPU1_0) && (gRscTable != NULL))
     {
         retVal = 1;
     }
@@ -422,7 +421,7 @@ Bool Ipc_isRemoteReady(uint16_t procId)
 
     if(TRUE == Virtio_isRemoteLinux(procId))
     {
-        rsc = (Ipc_ResourceTable*)rscTable;
+        rsc = (Ipc_ResourceTable*)gRscTable;
         CacheP_Inv(rsc, (int32_t)sizeof(Ipc_ResourceTable));
         if(rsc->rpmsg_vdev.status != 0x7U)
         {
@@ -471,16 +470,16 @@ int32_t Ipc_initVirtIO(Ipc_VirtIoParams *vqParam)
  *  \brief Saves the resourcetable to be used for
  *  vring for remotecore A72 running Linux
  */
-int32_t Ipc_loadResourceTable(void *rsctbl)
+int32_t Ipc_loadResourceTable(void *rsctable)
 {
-    rscTable = rsctbl;
+    gRscTable = rsctable;
     return IPC_SOK;
 }
 
-void Ipc_resetCoreVirtIO(uint32_t coreId)
+void Ipc_resetCoreVirtIO(uint32_t remoteId)
 {
-    Virtio_Handle rxVqHandle = Virtio_getHandle(coreId, VIRTIO_RX);
-    Virtio_Handle txVqHandle = Virtio_getHandle(coreId, VIRTIO_TX);
+    Virtio_Handle rxVqHandle = Virtio_getHandle(remoteId, VIRTIO_RX);
+    Virtio_Handle txVqHandle = Virtio_getHandle(remoteId, VIRTIO_TX);
 
     txVqHandle->last_avail_idx = 0U;
     txVqHandle->last_used_idx = 0U;
@@ -505,8 +504,8 @@ void * Ipc_getResourceTraceBufPtr(void)
     Ipc_Trace *entry = NULL;
     void *tracePtr = NULL;
 
-    if (rscTable != NULL) {
-        rsc = (Ipc_ResourceTable*)rscTable;
+    if (gRscTable != NULL) {
+        rsc = (Ipc_ResourceTable*)gRscTable;
 
         for (i = 0; i < rsc->base.num; i++) {
             offset = (uintptr_t)((uint8_t *)rsc + rsc->offset[i]);
@@ -779,20 +778,22 @@ static void Virtio_isr(uint32_t* msg, uint32_t priv)
 
 /**
  *  \brief Virtio_getHandle
+ *  processor id correponds to the first arguement i.e vqid
  */
-Virtio_Handle Virtio_getHandle(uint32_t procId, VIRTIO_DIR dir)
+Virtio_Handle Virtio_getHandle(uint32_t vqid, VIRTIO_DIR dir)
 {
-    uint32_t  vqIndex = (2U*procId) + (uint32_t)dir;
+    uint32_t  vqIndex = (2U*vqid) + (uint32_t)dir;
     return queueRegistry[vqIndex];
 }
 
 /**
  *  \brief Virtio_setCallback
+ *  procId correponds to the first arguement i.e vqid
  */
-int32_t Virtio_setCallback(uint32_t procId, Virtio_callback callback, uint32_t* priv)
+int32_t Virtio_setCallback(uint32_t vqid, Virtio_callback callback, uint32_t* priv)
 {
     int32_t status = 1;
-    Virtio_Object *vq = Virtio_getHandle(procId, VIRTIO_RX);
+    Virtio_Object *vq = Virtio_getHandle(vqid, VIRTIO_RX);
 
     if (NULL != vq)
     {
@@ -985,7 +986,7 @@ static void Ipc_updateVirtioInfo(uint32_t numProc, const void *baseAddr, uint32_
      */
     if(TRUE == Virtio_isRemoteLinux((uint16_t)(info->remoteId)))
     {
-        Ipc_ResourceTable *rsc = (Ipc_ResourceTable*)rscTable;
+        Ipc_ResourceTable *rsc = (Ipc_ResourceTable*)gRscTable;
         info->daTx      = rsc->rpmsg_vring0.da;
         info->daRx      = rsc->rpmsg_vring1.da;
         info->primeBuf  = info->daTx + (2U*vrBufSize);
@@ -1073,7 +1074,7 @@ int32_t Ipc_lateVirtioCreate(uint16_t procId)
         vqInfo.remoteId   = procId;
         vqInfo.selfId     = Ipc_mpGetSelfId();
 
-        rsc = (Ipc_ResourceTable*)rscTable;
+        rsc = (Ipc_ResourceTable*)gRscTable;
         if(rsc != NULL)
         {
             vqInfo.align     = rsc->rpmsg_vring0.align;

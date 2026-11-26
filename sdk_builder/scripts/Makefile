@@ -14,6 +14,9 @@ else ifeq ($(SOC),tda54)
 -include $(MCU_SDK_INSTALL_PATH)/imports.mk
 else
 -include $(PDK_INSTALL_PATH)/ti/build/Rules.make
+# Set default SysConfig version
+SYSCONFIG_VERSION ?= 1.26.2
+SYSCONFIG_BUILD ?= 4477
 endif
 
 # The get_component_versions rule will echo the versions of the components.

@@ -17,7 +17,7 @@ endif
 ifeq ($(RTOS),FREERTOS)
   ifeq ($(RTOS_SDK),pdk)
     CSOURCES += $(SOC)_mpu_cfg.c
-    LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_freertos.cmd
+    LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE).cmd
   else
     CSOURCES += generated/ti_board_config.c
     CSOURCES += generated/ti_board_open_close.c
@@ -26,7 +26,7 @@ ifeq ($(RTOS),FREERTOS)
     CSOURCES += generated/ti_drivers_open_close.c
     CSOURCES += generated/ti_pinmux_config.c
     CSOURCES += generated/ti_power_clock_config.c
-    LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_freertos_mcuplus.cmd
+    LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE)_mcuplus.cmd
   endif
 endif
 ifeq ($(RTOS),THREADX)
@@ -37,7 +37,7 @@ ifeq ($(RTOS),THREADX)
   CSOURCES += generated/ti_drivers_open_close.c
   CSOURCES += generated/ti_pinmux_config.c
   CSOURCES += generated/ti_power_clock_config.c
-  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_threadx_mcuplus.cmd
+  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE)_mcuplus.cmd
 endif
 
 LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map.cmd

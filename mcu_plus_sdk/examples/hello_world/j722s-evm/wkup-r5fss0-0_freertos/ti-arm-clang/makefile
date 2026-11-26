@@ -96,7 +96,8 @@ CFLAGS_release := \
 	-Os \
 
 LNK_FILES_common = \
-	linker.cmd \
+	generated/linker_mem_map_freertos.cmd \
+	sections.cmd \
 
 LIBS_PATH_common = \
 	-Wl,-i${MCU_PLUS_SDK_PATH}/source/drivers/device_manager/sciserver/lib \

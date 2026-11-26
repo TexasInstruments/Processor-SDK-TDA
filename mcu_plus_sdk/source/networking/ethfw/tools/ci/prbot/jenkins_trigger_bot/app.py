@@ -393,6 +393,7 @@ DEPENDENT_TAG_REPOS = {
     "pdk_tag": ("PROCESSOR-SDK", "pdk"),
     "enet_tag": ("PROCESSOR-SDK", "enet-lld"),
     "tsn_tag": ("PROCESSOR-SDK", "enet-tsn-stack"),
+    "manifest_tag": ("PROCESSOR-SDK-MCU", "repo_manifests"),
 }
 
 def substitute_params(param_template, webhook_data):
@@ -408,6 +409,8 @@ def substitute_params(param_template, webhook_data):
         # Override with branch name for the repo being built
         substitutions = default_tags.copy()
         substitutions[webhook_data['repo']] = webhook_data['branch']
+        if 'mcusdk_tag' in webhook_data:
+            substitutions['mcusdk_tag'] = webhook_data['mcusdk_tag']
 
         # Resolve dependent-PR tags (pdk/enet-lld/enet-tsn-stack), falling
         # back to the JSON default_tag value when no dependent PR is linked

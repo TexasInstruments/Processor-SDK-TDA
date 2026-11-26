@@ -1,0 +1,242 @@
+/**
+ * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
+ * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
+ * @cliArgs --device "J721E_DRA829_TDA4VM_AM752x" --part "Default" --package "ALF" --context "r5fss0-0" --product "VISION_APPS@01.00.00"
+ * @v2CliArgs --device "DRA829J-Q1" --package "FCBGA (ALF)" --context "r5fss0-0" --product "VISION_APPS@01.00.00"
+ * @versions {"tool":"1.26.2+4477"}
+ */
+
+/**
+ * Import the modules used in this configuration.
+ */
+const default_linker  = scripting.addModule("/memory_configurator/default_linker", {}, false);
+const default_linker1 = default_linker.addInstance();
+const mpu_cfg         = scripting.addModule("/memory_configurator/mpu_cfg", {}, false);
+const mpu_cfg1        = mpu_cfg.addInstance();
+const mpu_cfg2        = mpu_cfg.addInstance();
+const mpu_cfg3        = mpu_cfg.addInstance();
+const mpu_cfg4        = mpu_cfg.addInstance();
+const mpu_cfg5        = mpu_cfg.addInstance();
+const mpu_cfg6        = mpu_cfg.addInstance();
+const mpu_cfg7        = mpu_cfg.addInstance();
+const mpu_cfg8        = mpu_cfg.addInstance();
+const mpu_cfg9        = mpu_cfg.addInstance();
+const mpu_cfg10       = mpu_cfg.addInstance();
+const region          = scripting.addModule("/memory_configurator/region", {}, false);
+const region1         = region.addInstance();
+
+/**
+ * Write custom configuration values to the imported modules.
+ */
+default_linker1.$name = "memory_configurator_default_linker0";
+
+mpu_cfg1.$name      = "R5F_ATCM";
+mpu_cfg1.attributes = "Cached";
+
+mpu_cfg2.$name      = "MCU_OCSRAM";
+mpu_cfg2.baseAddr   = 0x41C00000;
+mpu_cfg2.sizeBytes  = 524288;
+mpu_cfg2.attributes = "Cached";
+
+mpu_cfg3.$name      = "DDR_2GB";
+mpu_cfg3.baseAddr   = 0x80000000;
+mpu_cfg3.sizeBytes  = 2147483648;
+mpu_cfg3.attributes = "Cached";
+
+mpu_cfg4.$name      = "R5F_BTCM";
+mpu_cfg4.baseAddr   = 0x41010000;
+mpu_cfg4.attributes = "ADVANCED";
+mpu_cfg4.cacheable  = true;
+
+mpu_cfg5.$name           = "IPC_VRING";
+mpu_cfg5.baseAddr        = 0xAA000000;
+mpu_cfg5.sizeBytes       = 33554432;
+mpu_cfg5.exeNeverControl = true;
+
+mpu_cfg6.$name           = "APP_LOG_TIOVX_OBJ_DESC";
+mpu_cfg6.baseAddr        = 0xAC000000;
+mpu_cfg6.sizeBytes       = 67108864;
+mpu_cfg6.exeNeverControl = true;
+
+mpu_cfg7.$name           = "APP_FILEIO_TIOVX_LOG_RT";
+mpu_cfg7.baseAddr        = 0xB0000000;
+mpu_cfg7.sizeBytes       = 33554432;
+mpu_cfg7.exeNeverControl = true;
+
+mpu_cfg8.$name           = "DDR_MCU2_0_IPC_MPU";
+mpu_cfg8.baseAddr        = 0xA2000000;
+mpu_cfg8.sizeBytes       = 1048576;
+mpu_cfg8.exeNeverControl = true;
+
+mpu_cfg9.$name           = "INTERCORE_ETH_DESC";
+mpu_cfg9.baseAddr        = 0xE4000000;
+mpu_cfg9.sizeBytes       = 2097152;
+mpu_cfg9.exeNeverControl = true;
+mpu_cfg9.attributes      = "ADVANCED";
+mpu_cfg9.shareable       = true;
+mpu_cfg9.memAttr         = "CSL_ARM_R5_MEM_ATTR_STRONGLY_NON_CACHED";
+
+mpu_cfg10.$name           = "VISS_CONFIG_HEAP";
+mpu_cfg10.baseAddr        = 0xD9F00000;
+mpu_cfg10.sizeBytes       = 1048576;
+mpu_cfg10.exeNeverControl = true;
+mpu_cfg10.attributes      = "ADVANCED";
+mpu_cfg10.cacheable       = true;
+mpu_cfg10.cachePolicy     = "CSL_ARM_R5_CACHE_POLICY_WT_NO_WA";
+mpu_cfg10.memAttr         = "CSL_ARM_R5_MEM_ATTR_CACHED_WT_NO_WA";
+
+region1.$name                                = "MEMORY_REGION_CONFIGURATION0";
+region1.memory_region.create(22);
+region1.memory_region[0].$name               = "R5F_TCMA_VECS";
+region1.memory_region[0].size                = 0x40;
+region1.memory_region[0].auto                = false;
+region1.memory_region[0].attributes          = ["X"];
+region1.memory_region[1].$name               = "R5F_TCMA";
+region1.memory_region[1].size                = 0x7FC0;
+region1.memory_region[1].auto                = false;
+region1.memory_region[1].manualStartAddress  = 0x40;
+region1.memory_region[1].attributes          = ["R","W","X"];
+region1.memory_region[2].type                = "OCRAM_SHARED_ALL";
+region1.memory_region[2].$name               = "MAIN_OCRAM_MCU2_0";
+region1.memory_region[2].size                = 0x40000;
+region1.memory_region[2].auto                = false;
+region1.memory_region[2].attributes          = ["R","W","X"];
+region1.memory_region[3].type                = "TCMB_R5F";
+region1.memory_region[3].$name               = "R5F_TCMB0";
+region1.memory_region[3].size                = 0x8000;
+region1.memory_region[3].auto                = false;
+region1.memory_region[3].attributes          = ["R","W","X"];
+region1.memory_region[4].type                = "DDR_LOW_ALL";
+region1.memory_region[4].$name               = "DDR_MCU2_0_IPC";
+region1.memory_region[4].size                = 0x100000;
+region1.memory_region[4].auto                = false;
+region1.memory_region[4].manualStartAddress  = 0xA2000000;
+region1.memory_region[4].attributes          = ["R","W","X"];
+region1.memory_region[5].type                = "DDR_LOW_ALL";
+region1.memory_region[5].$name               = "DDR_MCU2_0_RESOURCE_TABLE";
+region1.memory_region[5].size                = 0x400;
+region1.memory_region[5].auto                = false;
+region1.memory_region[5].manualStartAddress  = 0xA2100000;
+region1.memory_region[5].attributes          = ["R","W","X"];
+region1.memory_region[6].type                = "DDR_LOW_ALL";
+region1.memory_region[6].$name               = "DDR_MCU2_0";
+region1.memory_region[6].size                = 0x1EFFC00;
+region1.memory_region[6].auto                = false;
+region1.memory_region[6].manualStartAddress  = 0xA2100400;
+region1.memory_region[6].attributes          = ["R","W","X"];
+region1.memory_region[7].type                = "DDR_LOW_ALL";
+region1.memory_region[7].$name               = "IPC_VRING_MEM";
+region1.memory_region[7].size                = 0x2000000;
+region1.memory_region[7].auto                = false;
+region1.memory_region[7].manualStartAddress  = 0xAA000000;
+region1.memory_region[7].attributes          = ["R","W"];
+region1.memory_region[7].isShared            = true;
+region1.memory_region[7].shared_cores        = ["c66ss0-0","c66ss1-0","c71ss0-0","mcu-r5fss0-0","r5fss0-1","r5fss1-0","r5fss1-1"];
+region1.memory_region[8].type                = "DDR_LOW_ALL";
+region1.memory_region[8].$name               = "APP_LOG_MEM";
+region1.memory_region[8].size                = 0x40000;
+region1.memory_region[8].auto                = false;
+region1.memory_region[8].manualStartAddress  = 0xAC000000;
+region1.memory_region[8].attributes          = ["R","W"];
+region1.memory_region[8].isShared            = true;
+region1.memory_region[8].shared_cores        = ["c66ss0-0","c66ss1-0","c71ss0-0","mcu-r5fss0-0","r5fss0-1","r5fss1-0","r5fss1-1"];
+region1.memory_region[9].type                = "DDR_LOW_ALL";
+region1.memory_region[9].$name               = "TIOVX_OBJ_DESC_MEM_HOST0";
+region1.memory_region[9].size                = 0x1540000;
+region1.memory_region[9].auto                = false;
+region1.memory_region[9].manualStartAddress  = 0xAC040000;
+region1.memory_region[9].attributes          = ["R","W"];
+region1.memory_region[9].isShared            = true;
+region1.memory_region[9].shared_cores        = ["c66ss0-0","c66ss1-0","c71ss0-0","mcu-r5fss0-0","r5fss0-1","r5fss1-0","r5fss1-1"];
+region1.memory_region[10].type               = "DDR_LOW_ALL";
+region1.memory_region[10].$name              = "TIOVX_OBJ_DESC_MEM_HOST1";
+region1.memory_region[10].size               = 0x1540000;
+region1.memory_region[10].auto               = false;
+region1.memory_region[10].manualStartAddress = 0xAD580000;
+region1.memory_region[10].attributes         = ["R","W"];
+region1.memory_region[10].isShared           = true;
+region1.memory_region[10].shared_cores       = ["c66ss0-0","c66ss1-0","c71ss0-0","mcu-r5fss0-0","r5fss0-1","r5fss1-0","r5fss1-1"];
+region1.memory_region[11].type               = "DDR_LOW_ALL";
+region1.memory_region[11].$name              = "TIOVX_OBJ_DESC_MEM_HOST2";
+region1.memory_region[11].size               = 0x1540000;
+region1.memory_region[11].auto               = false;
+region1.memory_region[11].manualStartAddress = 0xAEAC0000;
+region1.memory_region[11].attributes         = ["R","W"];
+region1.memory_region[11].isShared           = true;
+region1.memory_region[11].shared_cores       = ["c66ss0-0","c66ss1-0","c71ss0-0","mcu-r5fss0-0","r5fss0-1","r5fss1-0","r5fss1-1"];
+region1.memory_region[12].type               = "DDR_LOW_ALL";
+region1.memory_region[12].$name              = "APP_FILEIO_MEM";
+region1.memory_region[12].size               = 0x400000;
+region1.memory_region[12].auto               = false;
+region1.memory_region[12].manualStartAddress = 0xB0000000;
+region1.memory_region[12].attributes         = ["R","W"];
+region1.memory_region[12].isShared           = true;
+region1.memory_region[12].shared_cores       = ["c66ss0-0","c66ss1-0","c71ss0-0","mcu-r5fss0-0","r5fss0-1","r5fss1-0","r5fss1-1"];
+region1.memory_region[13].type               = "DDR_LOW_ALL";
+region1.memory_region[13].$name              = "DDR_SHARED_MEM";
+region1.memory_region[13].size               = 0x20000000;
+region1.memory_region[13].auto               = false;
+region1.memory_region[13].manualStartAddress = 0xB8000000;
+region1.memory_region[13].attributes         = ["R","W","X"];
+region1.memory_region[13].isShared           = true;
+region1.memory_region[13].shared_cores       = ["c66ss0-0","c66ss1-0","c71ss0-0","mcu-r5fss0-0","r5fss0-1","r5fss1-0","r5fss1-1"];
+region1.memory_region[13].allowOverlap       = true;
+region1.memory_region[14].type               = "DDR_LOW_ALL";
+region1.memory_region[14].$name              = "DDR_SHARED_MEM_HOST0";
+region1.memory_region[14].size               = 0xAAAA000;
+region1.memory_region[14].auto               = false;
+region1.memory_region[14].manualStartAddress = 0xB8000000;
+region1.memory_region[14].attributes         = ["R","W","X"];
+region1.memory_region[14].isShared           = true;
+region1.memory_region[14].shared_cores       = ["c66ss0-0","c66ss1-0","c71ss0-0","mcu-r5fss0-0","r5fss0-1","r5fss1-0","r5fss1-1"];
+region1.memory_region[15].type               = "DDR_LOW_ALL";
+region1.memory_region[15].$name              = "DDR_SHARED_MEM_HOST1";
+region1.memory_region[15].size               = 0xAAAA000;
+region1.memory_region[15].auto               = false;
+region1.memory_region[15].manualStartAddress = 0xC2AAA000;
+region1.memory_region[15].attributes         = ["R","W","X"];
+region1.memory_region[15].isShared           = true;
+region1.memory_region[15].shared_cores       = ["c66ss0-0","c66ss1-0","c71ss0-0","mcu-r5fss0-0","r5fss0-1","r5fss1-0","r5fss1-1"];
+region1.memory_region[16].type               = "DDR_LOW_ALL";
+region1.memory_region[16].$name              = "DDR_SHARED_MEM_HOST2";
+region1.memory_region[16].size               = 0xAAAA000;
+region1.memory_region[16].auto               = false;
+region1.memory_region[16].manualStartAddress = 0xCD554000;
+region1.memory_region[16].attributes         = ["R","W","X"];
+region1.memory_region[16].isShared           = true;
+region1.memory_region[16].shared_cores       = ["c66ss0-0","c66ss1-0","c71ss0-0","mcu-r5fss0-0","r5fss0-1","r5fss1-0","r5fss1-1"];
+region1.memory_region[17].type               = "DDR_LOW_ALL";
+region1.memory_region[17].$name              = "DDR_MCU2_0_LOCAL_HEAP";
+region1.memory_region[17].size               = 0xF00000;
+region1.memory_region[17].auto               = false;
+region1.memory_region[17].manualStartAddress = 0xD9000000;
+region1.memory_region[17].attributes         = ["R","W","X"];
+region1.memory_region[18].type               = "DDR_LOW_ALL";
+region1.memory_region[18].$name              = "DDR_MCU2_0_VISS_CONFIG_HEAP";
+region1.memory_region[18].size               = 0x100000;
+region1.memory_region[18].auto               = false;
+region1.memory_region[18].manualStartAddress = 0xD9F00000;
+region1.memory_region[18].attributes         = ["R","W","X"];
+region1.memory_region[19].type               = "DDR_LOW_ALL";
+region1.memory_region[19].$name              = "INTERCORE_ETH_DESC_MEM";
+region1.memory_region[19].size               = 0x800000;
+region1.memory_region[19].auto               = false;
+region1.memory_region[19].manualStartAddress = 0xE4000000;
+region1.memory_region[19].attributes         = ["R","W"];
+region1.memory_region[19].isShared           = true;
+region1.memory_region[19].shared_cores       = ["c66ss0-0","c66ss1-0","c71ss0-0","mcu-r5fss0-0","r5fss0-1","r5fss1-0","r5fss1-1"];
+region1.memory_region[20].type               = "DDR_LOW_ALL";
+region1.memory_region[20].$name              = "INTERCORE_ETH_DATA_MEM";
+region1.memory_region[20].size               = 0x1800000;
+region1.memory_region[20].auto               = false;
+region1.memory_region[20].manualStartAddress = 0xE4800000;
+region1.memory_region[20].attributes         = ["R","W"];
+region1.memory_region[20].isShared           = true;
+region1.memory_region[20].shared_cores       = ["c66ss0-0","c66ss1-0","c71ss0-0","mcu-r5fss0-0","r5fss0-1","r5fss1-0","r5fss1-1"];
+region1.memory_region[21].type               = "DDR_LOW_ALL";
+region1.memory_region[21].auto               = false;
+region1.memory_region[21].size               = 0x1C00000;
+region1.memory_region[21].$name              = "TIOVX_LOG_RT_MEM";
+region1.memory_region[21].manualStartAddress = 0xB0400000;
+region1.memory_region[21].isShared           = true;
+region1.memory_region[21].shared_cores       = ["c66ss0-0","c66ss1-0","c71ss0-0","mcu-r5fss0-0","r5fss0-1","r5fss1-0","r5fss1-1"];

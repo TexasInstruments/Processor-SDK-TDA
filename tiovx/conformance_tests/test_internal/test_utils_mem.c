@@ -131,20 +131,25 @@ TEST(tivxDmaHeap, testAppMemAlloc)
 
 TEST(tivxDmaHeap, testAppMemTranslateQnx)
 {
-    shm_buf buf;
     uint32_t size = 1024;
     uint32_t align = 1024;
-    uint32_t region = 0;
+    uint32_t region = APP_MEM_HEAP_DDR_SHARED;
     void     *phyAddr;
     void     *virtAddr;
+    void     *ptr;
+    uint64_t dmaBufFd;
 
-    SHM_alloc_aligned((int)size, align, &buf);
+    ptr = appMemAlloc(region, size, align);
 
-    ASSERT(buf.vir_addr != 0);
+    ASSERT(ptr != NULL);
 
-    VX_CALL(tivxMemTranslateFd(buf.phy_addr, size, &virtAddr, &phyAddr));
+    dmaBufFd = appMemGetDmaBufFd(ptr, NULL);
 
-    VX_CALL(appMemFree(region, (void *)buf.vir_addr, size));
+    VX_CALL(tivxMemTranslateFd(dmaBufFd, size, &virtAddr, &phyAddr));
+
+    ASSERT(virtAddr == (void *)ptr);
+
+    VX_CALL(appMemFree(region, ptr, size));
 }
 
 #endif

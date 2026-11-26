@@ -64,6 +64,7 @@
 #include <string.h>
 
 #include <app_run.h>
+#include <app_init.h>
 #include CORE_CFG_FILE
 #include <platform.h>
 

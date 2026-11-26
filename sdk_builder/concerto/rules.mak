@@ -126,11 +126,12 @@ ifndef NO_TARGETS
 
 depend::
 
-all: prebuilt_libs release
+all: prebuilt_libs
+	$(MAKE) release
 
 # This rule copies the libs to the lib folder when 'make all' is called
 release: build
-	$(foreach joined,$(JOINED_OUTS),$(call RELEASE_OUT,$(call LOCAL_TARGET_OUT, $(joined)), $(call LOCAL_TARGET_LIB_OUT, $(joined)) ))
+	$(MAKE) cp_to_lib
 
 # This rule copies the libs to the lib folder when explicitly called
 cp_to_lib:

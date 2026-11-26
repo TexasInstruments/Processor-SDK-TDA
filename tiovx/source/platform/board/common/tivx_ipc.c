@@ -193,9 +193,9 @@ static void tivxIpcHandler(uint32_t src_cpu_id, uint32_t payload)
 /* LDRA_JUSTIFY_END */
 }
 
-void ownIpcRegisterHandler(tivx_ipc_handler_f notifyCb)
+void ownIpcRegisterHandler(tivx_ipc_handler_f ipc_handler_func)
 {
-    g_ipc_handler = notifyCb;
+    g_ipc_handler = ipc_handler_func;
 }
 
 vx_status ownIpcSendMsg(
@@ -233,7 +233,7 @@ vx_status ownIpcSendMsg(
 
         if( status != (vx_status)VX_SUCCESS)
         {
-            VX_PRINT(VX_ZONE_ERROR, "OpenVX send notification failed\n");
+            VX_PRINT(VX_ZONE_ERROR, "OpenVX send notification failed, cpu: %d, payload: %d\n",vsdk_cpu_id, payload);
             status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
         }
     }

@@ -1,0 +1,27 @@
+obj/j722s/ti-arm-clang/debug/main-r5f/drivers_ipfma//csl_dssVideoPipe.obj: \
+  ../dss/v1/hw_include/V3/csl_dssVideoPipe.c \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/csl_dss.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/soc_config.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/j722s/soc_config.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/csl_types.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/cslr.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/tistdtypes.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/csl_utils.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/cslr64.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/V3/cslr_dss.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/V3/csl_dssTop.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/fvid2.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/fvid2/v0/fvid2.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/fvid2/v0/fvid2_dataTypes.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/fvid2/v0/fvid2_trace.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/fvid2/v0/fvid2_utils.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/HwiP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/SystemP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/DebugP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/fvid2/v0/fvid2_api.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/fvid2/v0/fvid2_drvMgr.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/fvid2/v0/fvid2_graph.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/V3/csl_dssCommon.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/V3/csl_dssVideoPipe.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/V3/csl_dssOverlay.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/V3/csl_dssVideoPort.h

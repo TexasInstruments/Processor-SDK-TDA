@@ -64,6 +64,10 @@ ifeq ($(TARGET_PLATFORM),PC)
 			IDIRS += $(MCU_SDK_PATH)/source/drivers/Ipc_Notify/v0/include
 			IDIRS += $(MCU_SDK_PATH)/source/drivers/Ipc_Notify/v0/src
 			IDIRS += $(MCU_SDK_PATH)/source/drivers/Ipc_Notify/vPC/include
+			IDIRS += $(MCU_SDK_PATH)/source/pdmi_client/source/common/v0/include
+			IDIRS += $(MCU_SDK_PATH)/source/pdmi_client/source/hal/v0/include
+			IDIRS += $(MCU_SDK_PATH)/source/hal/SecureProxy/v0/include
+			IDIRS += $(PDM_PATH)/source/protocol/include
 			IDIRS += $(MCU_SDK_PATH)/source/hal/Ipc_Notify/v0/include
 			IDIRS += $(MCU_SDK_PATH)/source/hal/Ipc_Notify/v0/src
 			IDIRS += $(MCU_SDK_PATH)/source/hal/Ipc_Notify/vPC/include

@@ -188,7 +188,7 @@ enum tivx_raw_image_pixel_container_e {
  * \ingroup group_raw_image
  */
 VX_API_ENTRY tivx_raw_image VX_API_CALL tivxCreateRawImage(vx_context context,
-                                                           tivx_raw_image_create_params_t *params);
+                                                           const tivx_raw_image_create_params_t *params);
 
 /*!
  * \brief Releases a reference of a raw image.

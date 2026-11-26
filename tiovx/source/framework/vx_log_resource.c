@@ -74,7 +74,7 @@ static char *test_file_path(void);
 static char * applyMemoryUnit(vx_float64 * size_bytes, const char * unit);
 static void printOutput (FILE *ofp, const char* format, ...);
 
-static tivx_mutex g_tivx_log_resource_lock;
+static tivx_mutex g_tivx_log_resource_lock = NULL;
 
 static tivx_shm_obj_count_t g_tivx_obj_desc_shm_table[] = {
     {
@@ -505,6 +505,12 @@ tivx_resource_stats_t g_tivx_resource_stats_table[] = {
         TIVX_TASK_MAX_OBJECTS, 0, 0, 1 , "TIVX_TASK_MAX_OBJECTS", { {(uint32_t)TIVX_TYPE_TASK}, \
                                                                       {1} }, \
                                                                     (vx_bool)vx_false_e, (vx_bool)vx_true_e
+    },
+    {
+        0, 0, 0, 1 , "RTOS_OSAL_SEMAPHORE_MAX_OBJECTS", {{0}, {0}}, (vx_bool)vx_false_e, (vx_bool)vx_false_e
+    },
+    {
+        0, 0, 0, 1 , "RTOS_OSAL_TASK_MAX_OBJECTS", {{0}, {0}}, (vx_bool)vx_false_e, (vx_bool)vx_false_e
     }
 };
 
@@ -542,24 +548,56 @@ static int32_t getNumDigits(int32_t value)
 static void ownLogUpdateTargetValues(void)
 {
     vx_status status = (vx_status)VX_SUCCESS;
-    uint32_t i, j;
+    uint32_t i, j, k, index;
     tivx_resource_stats_t resource;
-    char target_resources[TIVX_TARGET_RESOURCE_COUNT][TIVX_RESOURCE_NAME_MAX] = {"TIVX_TARGET_MAX_TARGETS_IN_CPU",
-                                                                                       "TIVX_MAX_TARGETS_PER_KERNEL",
-                                                                                       "TIVX_TARGET_KERNEL_INSTANCE_MAX",
-                                                                                       "TIVX_TARGET_KERNEL_MAX"};
-    uint32_t target_values[TIVX_TARGET_RESOURCE_COUNT] = {0, 0, 0, 0};
+    char target_resources[TIVX_TARGET_RESOURCE_COUNT][TIVX_RESOURCE_NAME_MAX] =
+                                                                                    {"TIVX_TARGET_MAX_TARGETS_IN_CPU",
+                                                                                    "TIVX_MAX_TARGETS_PER_KERNEL",
+                                                                                    "TIVX_TARGET_KERNEL_INSTANCE_MAX",
+                                                                                    "TIVX_TARGET_KERNEL_MAX",
+                                                                                    "RTOS_OSAL_SEMAPHORE_MAX_OBJECTS",
+                                                                                    "RTOS_OSAL_TASK_MAX_OBJECTS",
+                                                                                    "RTOS_OSAL_SEMAPHORE_MAX_OBJECTS",
+                                                                                    "RTOS_OSAL_TASK_MAX_OBJECTS"};
+    uint32_t target_values[TIVX_TARGET_RESOURCE_COUNT] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint32_t rtos_sem_object_types[TIVX_TARGET_RTOS_MAX_COUNT][TIVX_TARGET_RTOS_MAX_COUNT];
+    uint32_t rtos_task_object_types[TIVX_TARGET_RTOS_MAX_COUNT][TIVX_TARGET_RTOS_MAX_COUNT];
     uint32_t cpu_map[TIVX_CPU_ID_MAX];
+    tivx_resource_stats_t *row;
 
     ownIpcGetCpuMap(cpu_map);
 
-    for (i = 0; i < (uint32_t)TIVX_CPU_ID_MAX; i++)
+    for (i = 0U; i < (uint32_t)TIVX_CPU_ID_MAX; i++)
     {
-        if ((cpu_map[i] != 0) && (ownIsCpuEnabled(cpu_map[i])))
+        if ((cpu_map[i] != 0U) && (ownIsCpuEnabled(cpu_map[i])))
         {
-            ownPlatformGetTargetPerfStats(cpu_map[i], target_values);
+            ownPlatformGetTargetPerfStats(cpu_map[i], target_values, rtos_sem_object_types, rtos_task_object_types);
 
-            for (j = 0; j < TIVX_TARGET_RESOURCE_COUNT; j++)
+            for (j = 0U; j < TIVX_TARGET_RTOS_MAX_COUNT; j++)
+            {
+                uint32_t (*obj_types)[TIVX_TARGET_RTOS_MAX_COUNT] =
+                    (j == 0U) ? rtos_sem_object_types : rtos_task_object_types;
+
+                index = TIVX_TARGET_RTOS_USED_COUNT+j;
+                for (k = 0U; k < TIVX_RESOURCE_STATS_TABLE_SIZE; k++)
+                {
+                    row = &g_tivx_resource_stats_table[k];
+                    if (strncmp(row->name, target_resources[index],
+                        TIVX_RESOURCE_NAME_MAX) == 0)
+                    {
+                        /* Update type enums */
+                        row->object_types[0][0] = obj_types[1][0];
+                        row->object_types[0][1] = obj_types[1][1];
+                        /* Update multiplication factors */
+                        row->object_types[1][0] = 1U;
+                        row->object_types[1][1] = 1U;
+                        row->max_value = target_values[index];
+                        break;
+                    }
+                }
+            }
+
+            for (j = 0U; j < TIVX_TARGET_RTOS_USED_COUNT; j++)
             {
                 status = tivxQueryResourceStats(target_resources[j], &resource);
 
@@ -683,6 +721,17 @@ void ownLogResourceInit(void)
 
     /* Defined structure size should match calculated size */
     BUILD_ASSERT(((TIVX_RESOURCE_STATS_TABLE_SIZE == dimof(g_tivx_resource_stats_table) ? 1 : 0)));
+
+    /* host_port_id[] in tivx_obj_desc_t is indexed by CPU ID, so it must be
+       sized to cover every CPU ID supported on this SoC */
+    BUILD_ASSERT(((TIVX_CPU_ID_MAX <= TIVX_OBJ_DESC_MAX_HOST_PORT_ID_CPU) ? 1 : 0));
+
+    /* The IPC payload (see ownIpcPayloadMake in vx_obj_desc.c) packs the
+       full target id (TIVX_TARGET_ID_MASK) into the lower bits of a 32-bit
+       value, with the object descriptor id shifted above it at
+       TIVX_OBJ_DESC_ID_SHIFT. The target id must fit entirely below that
+       shift or it will overlap/corrupt the object descriptor id bits. */
+    BUILD_ASSERT(((TIVX_TARGET_ID_MASK < ((uint32_t)1u << TIVX_OBJ_DESC_ID_SHIFT)) ? 1 : 0));
 #ifdef TIVX_RESOURCE_LOG_ENABLE
     if((vx_status)VX_SUCCESS != tivxMutexCreate(&g_tivx_log_resource_lock))
     {
@@ -691,6 +740,11 @@ void ownLogResourceInit(void)
     else
     {
         ownUpdateEnumTypeSizes();
+
+        /* Track allocation of g_tivx_objects_lock mutex which
+        * occurred during ownPosixObjectInit() before ownLogResourceInit()
+        * was called */
+        ownLogResourceAlloc("TIVX_MUTEX_MAX_OBJECTS", 1);
     }
 #endif
 #endif /* #if defined(BUILD_DEV) */
@@ -700,6 +754,11 @@ void ownLogResourceDeInit(void)
 {
 #if defined(BUILD_DEV)
 #ifdef TIVX_RESOURCE_LOG_ENABLE
+    /* Track free of g_tivx_objects_lock mutex which occurs
+     * during ownPosixObjectDeInit() after ownLogResourceDeInit
+     * will be called */
+    ownLogResourceFree("TIVX_MUTEX_MAX_OBJECTS", 1);
+
     if((vx_status)VX_SUCCESS != tivxMutexDelete(&g_tivx_log_resource_lock))
     {
         VX_PRINT(VX_ZONE_ERROR,"Failed to delete mutex\n");
@@ -1437,7 +1496,14 @@ vx_status tivxExportMemoryConsumption(char * outputFile, const char * unit, vx_e
                 printOutput(ofp, " ");
             }
             printOutput(ofp, "%u  |", (row.max_value));
-            percent_used = (vx_float64)100 * ((vx_float64)useCount / (vx_float64)row.max_value);
+            if (row.max_value > 0U)
+            {
+                percent_used = (vx_float64)100 * ((vx_float64)useCount / (vx_float64)row.max_value);
+            }
+            else
+            {
+                percent_used = (vx_float64)0;
+            }
             numDigits = getNumDigits((int32_t)percent_used);
             for (k = 0; k < (3 - (int32_t)numDigits); k++)
             {
@@ -1688,7 +1754,7 @@ vx_status tivxExportMemoryConsumption(char * outputFile, const char * unit, vx_e
         }
 
     /* Note: this requires access to the filesystem in order to generate this, and thus excluding from RTOS builds */
-    #if defined(LINUX) || defined(QNX)
+    #if defined(HLOS)
         const char *env;
         env = test_file_path();
         if (NULL != env)
@@ -1735,8 +1801,8 @@ vx_status tivxExportMemoryConsumption(char * outputFile, const char * unit, vx_e
         {
             VX_PRINT(VX_ZONE_ERROR, "VX_TEST_DATA_PATH has not been set!\n");
         }
-#endif
-    } /* if ((vx_status)VX_SUCCESS==status) */
+    #endif /* #if defined(HLOS) */
+    }
 
 #endif
 #endif /* #if defined(BUILD_DEV) */

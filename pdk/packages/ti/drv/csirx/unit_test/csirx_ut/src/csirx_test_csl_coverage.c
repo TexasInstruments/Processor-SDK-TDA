@@ -45,6 +45,7 @@
 /* ========================================================================== */
 #include <csirx_test.h>
 #include <csirx_drvPriv.h>
+#include <ti/csl/csl_esm.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -86,6 +87,7 @@ static int32_t CsirxCovCsl_testProbe(CsirxTestTaskObj *taskObj);
 static int32_t CsirxCovCsl_testIfRegFunctions(CsirxTestTaskObj *taskObj);
 static int32_t CsirxCovCsl_testIntdFunctions(CsirxTestTaskObj *taskObj);
 static int32_t CsirxCovCsl_testIsrFunction(CsirxTestTaskObj *taskObj);
+static int32_t CsirxCovCsl_testCSLESMFunction(CsirxTestTaskObj *taskObj);
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -165,7 +167,7 @@ int32_t CsirxCovCsl_runAllTests(CsirxTestTaskObj *taskObj)
     Fvid2_CbParams cbPrms;
     uint32_t passCount = 0U;
     uint32_t failCount = 0U;
-    uint32_t totalTests = 9U;
+    uint32_t totalTests = 10U;
 
     GT_0trace(gAppTrace, GT_INFO,
               "\r\n ===============================================\r\n");
@@ -192,7 +194,7 @@ int32_t CsirxCovCsl_runAllTests(CsirxTestTaskObj *taskObj)
 
     /* Run CSL-level coverage test functions */
     GT_0trace(gAppTrace, GT_INFO,
-              "\r\n [Test 1/9] CSL-level Stream Control functions\r\n");
+              "\r\n [Test 1/10] CSL-level Stream Control functions\r\n");
     retVal = CsirxCovCsl_testStreamControlFuncs(taskObj);
     if (CSIRX_COV_TEST_PASS == retVal)
     {
@@ -204,7 +206,7 @@ int32_t CsirxCovCsl_runAllTests(CsirxTestTaskObj *taskObj)
     }
 
     GT_0trace(gAppTrace, GT_INFO,
-              "\r\n [Test 2/9] CSL-level Test IRQ functions\r\n");
+              "\r\n [Test 2/10] CSL-level Test IRQ functions\r\n");
     retVal = CsirxCovCsl_testIrqFunctions(taskObj);
     if (CSIRX_COV_TEST_PASS == retVal)
     {
@@ -216,7 +218,7 @@ int32_t CsirxCovCsl_runAllTests(CsirxTestTaskObj *taskObj)
     }
 
     GT_0trace(gAppTrace, GT_INFO,
-              "\r\n [Test 3/9] CSL-level Test DPHY functions\r\n");
+              "\r\n [Test 3/10] CSL-level Test DPHY functions\r\n");
     retVal = CsirxCovCsl_testDphyFunctions(taskObj);
     if (CSIRX_COV_TEST_PASS == retVal)
     {
@@ -228,7 +230,7 @@ int32_t CsirxCovCsl_runAllTests(CsirxTestTaskObj *taskObj)
     }
 
     GT_0trace(gAppTrace, GT_INFO,
-              "\r\n [Test 4/9] CSL-level Test ASF functions\r\n");
+              "\r\n [Test 4/10] CSL-level Test ASF functions\r\n");
     retVal = CsirxCovCsl_testAsfFunctions(taskObj);
     if (CSIRX_COV_TEST_PASS == retVal)
     {
@@ -240,7 +242,7 @@ int32_t CsirxCovCsl_runAllTests(CsirxTestTaskObj *taskObj)
     }
 
     GT_0trace(gAppTrace, GT_INFO,
-              "\r\n [Test 5/9] CSL-level Test Magic Number / Probe\r\n");
+              "\r\n [Test 5/10] CSL-level Test Magic Number / Probe\r\n");
     retVal = CsirxCovCsl_testProbe(taskObj);
     if (CSIRX_COV_TEST_PASS == retVal)
     {
@@ -252,7 +254,7 @@ int32_t CsirxCovCsl_runAllTests(CsirxTestTaskObj *taskObj)
     }
 
     GT_0trace(gAppTrace, GT_INFO,
-              "\r\n [Test 6/9] CSL-level Static Config & Debug\r\n");
+              "\r\n [Test 6/10] CSL-level Static Config & Debug\r\n");
     retVal = CsirxCovCsl_testCfg(taskObj);
     if (CSIRX_COV_TEST_PASS == retVal)
     {
@@ -264,7 +266,7 @@ int32_t CsirxCovCsl_runAllTests(CsirxTestTaskObj *taskObj)
     }
 
     GT_0trace(gAppTrace, GT_INFO,
-              "\r\n [Test 7/9] CSL-level IF Register functions\r\n");
+              "\r\n [Test 7/10] CSL-level IF Register functions\r\n");
     retVal = CsirxCovCsl_testIfRegFunctions(taskObj);
     if (CSIRX_COV_TEST_PASS == retVal)
     {
@@ -276,7 +278,7 @@ int32_t CsirxCovCsl_runAllTests(CsirxTestTaskObj *taskObj)
     }
 
     GT_0trace(gAppTrace, GT_INFO,
-              "\r\n [Test 8/9] CSL-level INTD functions\r\n");
+              "\r\n [Test 8/10] CSL-level INTD functions\r\n");
     retVal = CsirxCovCsl_testIntdFunctions(taskObj);
     if (CSIRX_COV_TEST_PASS == retVal)
     {
@@ -288,8 +290,20 @@ int32_t CsirxCovCsl_runAllTests(CsirxTestTaskObj *taskObj)
     }
 
     GT_0trace(gAppTrace, GT_INFO,
-              "\r\n [Test 9/9] ISR function\r\n");
+              "\r\n [Test 9/10] ISR function\r\n");
     retVal = CsirxCovCsl_testIsrFunction(taskObj);
+    if (CSIRX_COV_TEST_PASS == retVal)
+    {
+        passCount++;
+    }
+    else
+    {
+        failCount++;
+    }
+
+    GT_0trace(gAppTrace, GT_INFO,
+              "\r\n [Test 10/10] CSL ESM functions\r\n");
+    retVal = CsirxCovCsl_testCSLESMFunction(taskObj);
     if (CSIRX_COV_TEST_PASS == retVal)
     {
         passCount++;
@@ -2794,6 +2808,32 @@ static int32_t CsirxCovCsl_testIsrFunction(CsirxTestTaskObj *taskObj)
         pD->infoHandler      = origInfoH;
         pD->monitorHandler   = origMonH;
         pD->dphyErrorHandler = origDphyH;
+    }
+
+    GT_1trace(gAppTrace, GT_INFO,
+              " CSIRX_COV_CSL: ISR function test - %s\r\n",
+              (CSIRX_COV_TEST_PASS == testResult) ? "PASS" : "FAIL");
+
+    return testResult;
+}
+
+/**
+ * Test CSL ESM functions */
+static int32_t CsirxCovCsl_testCSLESMFunction(CsirxTestTaskObj *taskObj)
+{
+    int32_t testResult = CSIRX_COV_TEST_PASS;
+    int32_t retVal = CSL_PASS;
+
+    retVal = ESMClearIntrStatus(0,0);
+    if(retVal != CSL_EBADARGS)
+    {
+        testResult = CSIRX_COV_TEST_FAIL;
+    }
+
+    retVal = ESMWriteEOI(0,0);
+    if(retVal != CSL_EBADARGS)
+    {
+        testResult = CSIRX_COV_TEST_FAIL;
     }
 
     GT_1trace(gAppTrace, GT_INFO,

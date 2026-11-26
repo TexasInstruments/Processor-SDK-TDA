@@ -94,6 +94,8 @@ MEMORY
     APP_FILEIO_MEM                    : ORIGIN = 0xBF040000 , LENGTH = 0x00400000
     /* Memory for shared memory buffers in DDR [ size 448.00 MB ] */
     DDR_SHARED_MEM                    : ORIGIN = 0xC0000000 , LENGTH = 0x1C000000
+    /* Virtual Address of the memory shared between MPU and C7x to import/export context from one LLM/VLM session to other [ size 32.00 MB ] */
+    DDR_SHARED_HEAP_RW       ( RWIX ) : ORIGIN = 0xDC000000 , LENGTH = 0x02000000
     /* Virtual address of Non-cacheable DDR for c7x_4 for local heap [ size 32.00 MB ] */
     DDR_C7X_4_LOCAL_HEAP_NON_CACHEABLE ( RWIX ) : ORIGIN = 0xE0000000 , LENGTH = 0x02000000
     /* Virtual address of Cacheable DDR for c7x_4 for local heap [ size 32.00 MB ] */

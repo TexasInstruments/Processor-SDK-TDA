@@ -98,6 +98,25 @@ uint32_t LPDDR4_EnablePIInitiator(const LPDDR4_PrivateData* pD);
 void LPDDR4_CheckWrLvlError(LPDDR4_CtlRegs* ctlRegBase, LPDDR4_DebugInfo* debugInfo, bool* errFoundPtr);
 uint32_t LPDDR4_CheckMmrReadError(const LPDDR4_PrivateData* pD, uint64_t* mmrValue, uint8_t* mrrStatus);
 uint32_t LPDDR4_getDSliceMask(uint32_t dSliceNum, uint32_t arrayOffset );
+
+/**
+ *  \brief Callback invoked when a register readback check fails.
+ *
+ *  This function is called if the actual value read from a register does not
+ *  match the expected value. By default, this implementation does nothing.
+ *
+ *  It is declared as a weak function so that the application can override it
+ *  with a custom implementation. To override, define a function with the same
+ *  name in your application code. The custom function will then be called
+ *  whenever a register mismatch occurs.
+ *
+ *  \param expVal   Expected register value.
+ *  \param readVal  Actual value read from the register.
+ */
+
+void LPDDR4_ddrReadbackErr(uint32_t expVal,
+                        uint32_t readVal) __attribute__((weak));
+
 #ifdef __cplusplus
 }
 #endif

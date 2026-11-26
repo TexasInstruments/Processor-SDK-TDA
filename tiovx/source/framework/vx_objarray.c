@@ -25,15 +25,15 @@ static vx_bool ownIsValidObjArrayType(vx_reference ref);
 static vx_status ownDestructObjArray(vx_reference ref);
 static vx_status ownInitObjArrayFromObject(vx_context context,
             vx_object_array objarr, vx_reference exemplar);
-static vx_status ownAllocObjArrayBuffer(vx_reference ref);
+static vx_status ownAllocObjArrayBuffer(vx_reference objarr_ref);
 static vx_status ownAddRefToObjArray(vx_context context,
-            vx_object_array objarr, vx_reference ref, uint32_t i);
+            vx_object_array objarr, vx_reference ref, uint32_t idx);
 static vx_status ownReleaseRefFromObjArray(
-            vx_object_array objarr, uint32_t num_items);
+            vx_object_array objarr, uint32_t idx);
 static vx_object_array ownCreateObjArrayInt(vx_context context, vx_reference* src, 
             vx_size count, vx_bool is_virtual, vx_bool is_from_list, vx_graph graph);
-static vx_status ownInitObjArrayFromList(vx_context context, 
-            vx_object_array objArray, vx_reference list[]);
+static vx_status ownInitObjArrayFromList(vx_context context,
+            vx_object_array objarr, vx_reference list[]);
 
 static vx_status VX_CALLBACK objectArrayKernelCallback(vx_enum kernel_enum, vx_bool validate_only, const vx_reference input, const vx_reference output)
 {
@@ -50,22 +50,29 @@ static vx_status VX_CALLBACK objectArrayKernelCallback(vx_enum kernel_enum, vx_b
         {
             status = (vx_status)VX_ERROR_NOT_COMPATIBLE;
         }
-        for (i = 0U; (i < num_items) && ((vx_status)VX_SUCCESS == status); ++i)
+        for (i = 0U; i < num_items; ++i)
         {
+            if ((vx_status)VX_SUCCESS != status)
+            {
+                break;
+            }
             vx_reference p2[2] = {vxCastRefAsObjectArray(input, &status)->ref[i], vxCastRefAsObjectArray(output, &status)->ref[i]};
             if (tivxIsReferenceMetaFormatEqual(p2[0], p2[1]) != (vx_bool)vx_true_e)
             {
                 VX_PRINT(VX_ZONE_ERROR, "Corresponding children of object array from list have mismatched meta-data, no copy/swap possible.\n");
                 status = (vx_status)VX_ERROR_NOT_COMPATIBLE;
-                break;
             }
         }
     }
     else    /* dispatch to each sub-object in turn */
     {
         vx_uint32 item;
-        for (item = 0U; (item < num_items) && ((vx_status)VX_SUCCESS == status); ++item)
+        for (item = 0U; item < num_items; ++item)
         {
+            if ((vx_status)VX_SUCCESS != status)
+            {
+                break;
+            }
             vx_reference p2[2] = {vxCastRefAsObjectArray(input, &status)->ref[item], vxCastRefAsObjectArray(output, &status)->ref[item]};
             vx_kernel_callback_f kf = p2[0]->kernel_callback;
             if ((kf != NULL) && /* TIOVX-1896- LDRA Uncovered Branch Id: TIOVX_BRANCH_COVERAGE_TIVX_OBJARRAY_UBR010 */
@@ -127,7 +134,7 @@ static vx_bool ownIsValidObjArrayType(vx_reference ref)
         status = (vx_bool)vx_true_e;
     }
     else if ((vx_enum)VX_TYPE_OBJECT_ARRAY == type) {
-        (void)(vxQueryObjectArray((vx_object_array)ref, VX_OBJECT_ARRAY_ITEMTYPE, &item_type, sizeof(item_type)));
+        (void)(vxQueryObjectArray((vx_object_array)ref, (vx_enum)VX_OBJECT_ARRAY_ITEMTYPE, &item_type, sizeof(item_type)));
         if (item_type != (vx_enum)VX_TYPE_OBJECT_ARRAY) {
             status = (vx_bool)vx_true_e;
         }
@@ -202,11 +209,11 @@ VX_API_ENTRY vx_object_array VX_API_CALL tivxCreateVirtualObjectArrayFromList(
 }
 
 VX_API_ENTRY vx_reference VX_API_CALL vxGetObjectArrayItem(
-    vx_object_array objarr, vx_uint32 index)
+    vx_object_array arr, vx_uint32 index)
 {
     vx_reference ref = NULL;
 
-    if (ownIsValidSpecificReference(vxCastRefFromObjectArray(objarr), (vx_enum)VX_TYPE_OBJECT_ARRAY) == (vx_bool)vx_false_e)
+    if (ownIsValidSpecificReference(vxCastRefFromObjectArray(arr), (vx_enum)VX_TYPE_OBJECT_ARRAY) == (vx_bool)vx_false_e)
     {
         vx_context context = ownGetContext();
         if (ownIsValidContext(context) == (vx_bool)vx_true_e)
@@ -225,9 +232,9 @@ VX_API_ENTRY vx_reference VX_API_CALL vxGetObjectArrayItem(
     else
     {
         tivx_obj_desc_object_array_t *obj_desc =
-            (tivx_obj_desc_object_array_t *)objarr->base.obj_desc;
+            (tivx_obj_desc_object_array_t *)arr->base.obj_desc;
 
-        if ((ownIsValidSpecificReference(vxCastRefFromObjectArray(objarr), (vx_enum)VX_TYPE_OBJECT_ARRAY) ==
+        if ((ownIsValidSpecificReference(vxCastRefFromObjectArray(arr), (vx_enum)VX_TYPE_OBJECT_ARRAY) ==
                 (vx_bool)vx_true_e) && /* TIOVX-1896- LDRA Uncovered Branch Id: TIOVX_BRANCH_COVERAGE_TIVX_OBJARRAY_UBR001 */
                 (obj_desc != NULL) &&
             (index < obj_desc->num_items))
@@ -251,9 +258,9 @@ VX_API_ENTRY vx_reference VX_API_CALL vxGetObjectArrayItem(
 <justification end> */
             else
             {
-                vxAddLogEntry(&objarr->base.context->base, (vx_status)VX_ERROR_NO_RESOURCES,
+                vxAddLogEntry(&arr->base.context->base, (vx_status)VX_ERROR_NO_RESOURCES,
                     "Object array item is invalid\n");
-                ref = ownGetErrorObject(objarr->base.context, (vx_status)VX_ERROR_NO_RESOURCES);
+                ref = ownGetErrorObject(arr->base.context, (vx_status)VX_ERROR_NO_RESOURCES);
                 VX_PRINT(VX_ZONE_ERROR, "Object array item is invalid\n");
             }
 /* LDRA_JUSTIFY_END */
@@ -264,13 +271,13 @@ VX_API_ENTRY vx_reference VX_API_CALL vxGetObjectArrayItem(
 }
 
 VX_API_ENTRY vx_status VX_API_CALL vxQueryObjectArray(
-    vx_object_array objarr, vx_enum attribute, void *ptr, vx_size size)
+    vx_object_array arr, vx_enum attribute, void *ptr, vx_size size)
 {
     vx_status status = (vx_status)VX_SUCCESS;
 
-    if ((ownIsValidSpecificReference(vxCastRefFromObjectArray(objarr), (vx_enum)VX_TYPE_OBJECT_ARRAY) == (vx_bool)vx_false_e)
+    if ((ownIsValidSpecificReference(vxCastRefFromObjectArray(arr), (vx_enum)VX_TYPE_OBJECT_ARRAY) == (vx_bool)vx_false_e)
         ||
-        (objarr->base.obj_desc == NULL)
+        (arr->base.obj_desc == NULL)
         )
     {
         VX_PRINT(VX_ZONE_ERROR, "Invalid object array reference\n");
@@ -284,7 +291,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryObjectArray(
                 if (VX_CHECK_PARAM(ptr, size, vx_enum, 0x3U))
                 {
                     tivx_obj_desc_object_array_t *obj_desc =
-                        (tivx_obj_desc_object_array_t *)objarr->base.obj_desc;
+                        (tivx_obj_desc_object_array_t *)arr->base.obj_desc;
 
                     *(vx_enum *)ptr = obj_desc->item_type;
                 }
@@ -298,7 +305,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryObjectArray(
                 if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3U))
                 {
                     tivx_obj_desc_object_array_t *obj_desc =
-                        (tivx_obj_desc_object_array_t *)objarr->base.obj_desc;
+                        (tivx_obj_desc_object_array_t *)arr->base.obj_desc;
 
                     *(vx_size *)ptr = obj_desc->num_items;
                 }
@@ -312,7 +319,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryObjectArray(
                 if (VX_CHECK_PARAM(ptr, size, vx_bool, 0x3U))
                     {
                         tivx_obj_desc_object_array_t *obj_desc =
-                            (tivx_obj_desc_object_array_t *)objarr->base.obj_desc;
+                            (tivx_obj_desc_object_array_t *)arr->base.obj_desc;
 
                         *(vx_bool *)ptr = obj_desc->is_from_list;
                     }
@@ -564,7 +571,7 @@ static vx_status ownInitObjArrayFromList(
     return (status);
 }
 
-static vx_status ownAddRefToObjArray(vx_context context, vx_object_array objarr, vx_reference ref, uint32_t i)
+static vx_status ownAddRefToObjArray(vx_context context, vx_object_array objarr, vx_reference ref, uint32_t idx)
 {
     vx_status status = (vx_status)VX_SUCCESS;
 /* LDRA_JUSTIFY_START
@@ -577,12 +584,12 @@ static vx_status ownAddRefToObjArray(vx_context context, vx_object_array objarr,
         tivx_obj_desc_object_array_t *obj_desc =
             (tivx_obj_desc_object_array_t *)objarr->base.obj_desc;
 
-        objarr->ref[i] = ref;
-        obj_desc->obj_desc_id[i] =
+        objarr->ref[idx] = ref;
+        obj_desc->obj_desc_id[idx] =
             ref->obj_desc->obj_desc_id;
 
         /* Setting the element index so that we can index into object array */
-        ref->obj_desc->element_idx = i;
+        ref->obj_desc->element_idx = idx;
 
         if (obj_desc->is_from_list == (vx_bool)vx_false_e)
         {
@@ -625,31 +632,31 @@ static vx_status ownAddRefToObjArray(vx_context context, vx_object_array objarr,
    return status;
 }
 
-static vx_status ownReleaseRefFromObjArray(vx_object_array objarr, uint32_t i)
+static vx_status ownReleaseRefFromObjArray(vx_object_array objarr, uint32_t idx)
 {
     vx_status status = (vx_status)VX_SUCCESS;
 
-    if (NULL != objarr->ref[i])
+    if (NULL != objarr->ref[idx])
     {
         /* decrement the internal counter on the object, not the
          * external one. Setting it as void since the return value
          * 'count' is not used further.
          */
-        (void)ownDecrementReference(objarr->ref[i], (vx_enum)VX_INTERNAL);
+        (void)ownDecrementReference(objarr->ref[idx], (vx_enum)VX_INTERNAL);
 
         /* Rescope the child to the context if the parent is destroyed.
          * This way, a list of references can be reused.
          */
-        objarr->ref[i]->scope = objarr->base.scope;
+        objarr->ref[idx]->scope = objarr->base.scope;
 
-        status = vxReleaseReference(&objarr->ref[i]);
+        status = vxReleaseReference(&objarr->ref[idx]);
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_OBJARRAY_UM002
 <justification end> */
         if ((vx_status)VX_SUCCESS != status)
         {
-            VX_PRINT(VX_ZONE_ERROR, "Release object array element %d failed!\n", i);
+            VX_PRINT(VX_ZONE_ERROR, "Release object array element %d failed!\n", idx);
         }
 /* LDRA_JUSTIFY_END */
     }

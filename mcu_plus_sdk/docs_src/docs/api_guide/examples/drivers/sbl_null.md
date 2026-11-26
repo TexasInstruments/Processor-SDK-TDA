@@ -24,8 +24,14 @@ ddr1.eccEnd2       = 0x5FFFF;
 If you are using older sysconfig file but driver from 09.02 SDK, please change the ECC end address
 to match all the conditions. Refer \ref ENABLE_DDR_INLINE_ECC_IN_SYSCONFIG
 
+\cond !SOC_J722S
 \note
 The default appimages in the SDK are built with authentication type 0  and load address 0x84000000. The gAppimage section in the bootloader application also has to be linked to the same address (0x84000000). If gAppimage section address is changed or multiple gAppimage buffers are used in the bootloader application, please ensure application's makefile is also updated with the corresponding load address.
+\endcond
+\cond SOC_J722S
+\note
+The default appimages in the SDK are built with authentication type 0  and load address 0xC2000000. The gAppimage section in the bootloader application also has to be linked to the same address (0xC2000000). If gAppimage section address is changed or multiple gAppimage buffers are used in the bootloader application, please ensure application's makefile is also updated with the corresponding load address.
+\endcond
 \endcond
 
 # Supported Combinations {#EXAMPLES_DRIVERS_SBL_NULL_COMBOS}
@@ -130,6 +136,10 @@ Since this is a bootloader and is used as a SOC initialization binary, the examp
 - **When using makefiles to build**, note the required combination and build using
   make command (see \ref MAKEFILE_BUILD_PAGE)
 - Flash this bootloader by following steps mentioned in \ref EVM_FLASH_SOC_INIT
+
+## Run the example
+
+- Boot the EVM in OSPI NOR boot mode.
 
 # See Also
 

@@ -39,6 +39,7 @@ endif
 
 FILES_common := \
 	enet_layer2_icssg.c \
+	enet_layer2_menu.c \
 	main.c \
 	ti_drivers_config.c \
 	ti_drivers_open_close.c \
@@ -75,6 +76,7 @@ INCLUDES_common := \
 	-I${MCU_PLUS_SDK_PATH}/source/networking/enet/core/include \
 	-I${MCU_PLUS_SDK_PATH}/source/networking/enet/core/include/phy \
 	-I${MCU_PLUS_SDK_PATH}/source/networking/enet/core/include/core \
+	-I${MCU_PLUS_SDK_PATH}/source/networking/enet/core/examples/enet_layer2_icssg \
 	-I${MCU_PLUS_SDK_PATH}/source/networking/enet/soc/k3/am64x_am243x \
 	-I${MCU_PLUS_SDK_PATH}/source/networking/enet/hw_include \
 	-I${MCU_PLUS_SDK_PATH}/source/networking/enet/hw_include/mdio/V4 \

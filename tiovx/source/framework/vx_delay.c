@@ -415,7 +415,7 @@ static void ownDelayInit(vx_delay delay, vx_size count, vx_enum type)
 
 VX_API_ENTRY vx_delay VX_API_CALL vxCreateDelay(vx_context context,
                               vx_reference exemplar,
-                              vx_size count)
+                              vx_size num_slots)
 {
     vx_status status = (vx_status)VX_SUCCESS;
     vx_delay delay = NULL;
@@ -424,7 +424,7 @@ VX_API_ENTRY vx_delay VX_API_CALL vxCreateDelay(vx_context context,
 
     if ( ownIsValidContext(context) != 0 )
     {
-        if (count <= TIVX_DELAY_MAX_OBJECT)
+        if (num_slots <= TIVX_DELAY_MAX_OBJECT)
         {
             if ((ownIsValidReference(exemplar) != (vx_bool)vx_false_e) && (ownIsValidObject(exemplar->type) != (vx_bool)vx_false_e))
             {
@@ -434,9 +434,9 @@ VX_API_ENTRY vx_delay VX_API_CALL vxCreateDelay(vx_context context,
                 {
                     /*status set to NULL due to preceding type check*/
                     delay = vxCastRefAsDelay(ref, NULL);
-                    ownDelayInit(delay, count, exemplar->type);
+                    ownDelayInit(delay, num_slots, exemplar->type);
 
-                    for(i=0; i<count; i++)
+                    for(i=0; i<num_slots; i++)
                     {
                         ref = tivxCreateReferenceFromExemplar(context, exemplar);
 
@@ -454,7 +454,7 @@ VX_API_ENTRY vx_delay VX_API_CALL vxCreateDelay(vx_context context,
                     }
                     if(status == (vx_status)VX_SUCCESS)
                     {
-                        ownLogSetResourceUsedValue("TIVX_DELAY_MAX_OBJECT", (uint16_t)count);
+                        ownLogSetResourceUsedValue("TIVX_DELAY_MAX_OBJECT", (uint16_t)num_slots);
                     }
                     if ( (status == (vx_status)VX_SUCCESS) && (exemplar->type == (vx_enum)VX_TYPE_OBJECT_ARRAY) )
                     {
@@ -476,8 +476,8 @@ VX_API_ENTRY vx_delay VX_API_CALL vxCreateDelay(vx_context context,
                             {
                                 /*status set to NULL due to preceding type check*/
                                 objarrdelay = vxCastRefAsDelay(ref, NULL);
-                                ownDelayInit(objarrdelay, count, item_type);
-                                for (i = 0; i < count; i++)
+                                ownDelayInit(objarrdelay, num_slots, item_type);
+                                for (i = 0; i < num_slots; i++)
                                 {
 /* LDRA_JUSTIFY_START
 <metric start> branch <metric end>
@@ -534,8 +534,8 @@ VX_API_ENTRY vx_delay VX_API_CALL vxCreateDelay(vx_context context,
                             {
                                 /*status set to NULL due to preceding type check*/
                                 pyrdelay = vxCastRefAsDelay((ref), NULL);
-                                ownDelayInit(pyrdelay, count, (vx_enum)VX_TYPE_IMAGE);
-                                for (i = 0; i < count; i++)
+                                ownDelayInit(pyrdelay, num_slots, (vx_enum)VX_TYPE_IMAGE);
+                                for (i = 0; i < num_slots; i++)
                                 {
 /* LDRA_JUSTIFY_START
 <metric start> branch <metric end>
@@ -580,7 +580,7 @@ VX_API_ENTRY vx_delay VX_API_CALL vxCreateDelay(vx_context context,
         }
         else
         {
-            VX_PRINT(VX_ZONE_ERROR, "count > TIVX_DELAY_MAX_OBJECT\n");
+            VX_PRINT(VX_ZONE_ERROR, "num_slots > TIVX_DELAY_MAX_OBJECT\n");
             VX_PRINT_BOUND_ERROR("TIVX_DELAY_MAX_OBJECT");
             delay = (vx_delay)ownGetErrorObject(context, (vx_status)VX_ERROR_NO_RESOURCES);
         }
@@ -655,9 +655,9 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryDelay(vx_delay delay,
     return status;
 }
 
-VX_API_ENTRY vx_status VX_API_CALL vxReleaseDelay(vx_delay *d)
+VX_API_ENTRY vx_status VX_API_CALL vxReleaseDelay(vx_delay *delay)
 {
-    return ownReleaseReferenceInt(vxCastRefFromDelayP(d), (vx_enum)VX_TYPE_DELAY, (vx_enum)VX_EXTERNAL, NULL);
+    return ownReleaseReferenceInt(vxCastRefFromDelayP(delay), (vx_enum)VX_TYPE_DELAY, (vx_enum)VX_EXTERNAL, NULL);
 }
 
 VX_API_ENTRY vx_status VX_API_CALL vxAgeDelay(vx_delay delay)

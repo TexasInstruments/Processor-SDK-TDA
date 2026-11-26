@@ -330,6 +330,7 @@ void EnetBoard_getMacAddrList(uint8_t macAddr[][ENET_MAC_ADDR_LEN],
                               uint32_t maxMacEntries,
                               uint32_t *pAvailMacEntries)
 {
+    EnetAppUtils_assert(pAvailMacEntries != NULL);
     *pAvailMacEntries = 0;
 
 }

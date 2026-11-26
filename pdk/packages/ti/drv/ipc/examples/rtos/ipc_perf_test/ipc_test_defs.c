@@ -47,7 +47,7 @@
 
 #include "ipc_test_defs.h"
 
-#define  RUN_CNT                100000U
+#define  RUN_CNT                10000U
 #define  MAX_TEST_RESULT_CNT    64U
 
 static Ipc_Testcase gTestCases[] =

@@ -111,9 +111,17 @@
 #define APP_LOG_MEM_ADDR (0xA1000000u)
 #define APP_LOG_MEM_SIZE (0x00040000u)
 
-/* Memory for TI OpenVX shared memory. MUST be non-cached or cache-coherent [ size 15.75 MB ] */
-#define TIOVX_OBJ_DESC_MEM_ADDR (0xA1040000u)
-#define TIOVX_OBJ_DESC_MEM_SIZE (0x00FC0000u)
+/* First portion of TI OpenVX shared memory. MUST be non-cached or cache-coherent [ size  5.25 MB ] */
+#define TIOVX_OBJ_DESC_MEM_HOST0_ADDR (0xA1040000u)
+#define TIOVX_OBJ_DESC_MEM_HOST0_SIZE (0x00540000u)
+
+/* Second portion of TI OpenVX shared memory. MUST be non-cached or cache-coherent [ size  5.25 MB ] */
+#define TIOVX_OBJ_DESC_MEM_HOST1_ADDR (0xA1580000u)
+#define TIOVX_OBJ_DESC_MEM_HOST1_SIZE (0x00540000u)
+
+/* Third portion of TI OpenVX shared memory. MUST be non-cached or cache-coherent [ size  5.25 MB ] */
+#define TIOVX_OBJ_DESC_MEM_HOST2_ADDR (0xA1AC0000u)
+#define TIOVX_OBJ_DESC_MEM_HOST2_SIZE (0x00540000u)
 
 /* Memory for remote core file operations [ size  4.00 MB ] */
 #define APP_FILEIO_MEM_ADDR (0xA2000000u)
@@ -126,6 +134,34 @@
 /* Memory for shared memory buffers in DDR [ size 172.00 MB ] */
 #define DDR_SHARED_MEM_ADDR (0xA3000000u)
 #define DDR_SHARED_MEM_SIZE (0x0AC00000u)
+
+/* Physical address of memory for shared memory buffers in DDR [ size 172.00 MB ] */
+#define DDR_SHARED_MEM_PHYS_ADDR (0xA3000000u)
+#define DDR_SHARED_MEM_PHYS_SIZE (0x0AC00000u)
+
+/* Host 0 accesses the first portion of the shared memory carveout [ size 57.33 MB ] */
+#define DDR_SHARED_MEM_HOST0_ADDR (0xA3000000u)
+#define DDR_SHARED_MEM_HOST0_SIZE (0x03955000u)
+
+/* Physical address of heap 0 in shared memory carveout [ size 57.33 MB ] */
+#define DDR_SHARED_MEM_HOST0_PHYS_ADDR (0xA3000000u)
+#define DDR_SHARED_MEM_HOST0_PHYS_SIZE (0x03955000u)
+
+/* Physical address of heap 1 in shared memory carveout [ size 57.33 MB ] */
+#define DDR_SHARED_MEM_HOST1_PHYS_ADDR (0xA3000000u)
+#define DDR_SHARED_MEM_HOST1_PHYS_SIZE (0x03955000u)
+
+/* Physical address of heap 2 in shared memory carveout [ size 57.33 MB ] */
+#define DDR_SHARED_MEM_HOST2_PHYS_ADDR (0xA3000000u)
+#define DDR_SHARED_MEM_HOST2_PHYS_SIZE (0x03955000u)
+
+/* Host 1 accesses the second portion of the shared memory carveout [ size 57.33 MB ] */
+#define DDR_SHARED_MEM_HOST1_ADDR (0xA6955000u)
+#define DDR_SHARED_MEM_HOST1_SIZE (0x03955000u)
+
+/* Host 2 accesses the third portion of the shared memory carveout [ size 57.33 MB ] */
+#define DDR_SHARED_MEM_HOST2_ADDR (0xAA2AA000u)
+#define DDR_SHARED_MEM_HOST2_SIZE (0x03955000u)
 
 /* DDR for storing DMA buffers for VISS configuration [ size  4.00 MB ] */
 #define DDR_DM_R5F_VISS_CONFIG_HEAP_ADDR (0xADC00000u)

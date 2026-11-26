@@ -144,13 +144,21 @@ typedef struct _tivx_shm_obj_count_t {
  */
 typedef struct _tivx_os_obj_sizes_t {
 
-    const uint32_t  event_size; /**< Size of an event object */
+    const uint32_t  posix_event_size; /**< Size of a posix event object */
 
-    const uint32_t  mutex_size; /**< Size of a mutex object */
+    const uint32_t  posix_mutex_size; /**< Size of a posix mutex object */
 
-    const uint32_t  queue_size; /**< Size of a queue object */
+    const uint32_t  posix_queue_size; /**< Size of a posix queue object */
 
-    const uint32_t  task_size;  /**< Size of a task object */
+    const uint32_t  posix_task_size;  /**< Size of a posix task object */
+
+    const uint32_t  rtos_sem_obj_size;    /**< Size of an rtos semaphore object */
+
+    const uint32_t  rtos_sem_pool_size;    /**< Size of an rtos semaphore pool */
+
+    const uint32_t  rtos_task_obj_size;   /**< Size of an rtos task object */
+
+    const uint32_t  rtos_task_pool_size;   /**< Size of an rtos task pool */
 
 } tivx_os_obj_sizes_t;
 
@@ -299,7 +307,10 @@ void ownPlatformTaskInit(void);
  *
  * \ingroup group_tivx_platform
  */
-void ownPlatformGetTargetPerfStats(uint32_t app_cpu_id, uint32_t target_values[TIVX_TARGET_RESOURCE_COUNT]);
+void ownPlatformGetTargetPerfStats(uint32_t app_cpu_id,
+                                    uint32_t target_values[TIVX_TARGET_RESOURCE_COUNT],
+                                    uint32_t rtos_sem_object_types[TIVX_TARGET_RTOS_MAX_COUNT][TIVX_TARGET_RTOS_MAX_COUNT],
+                                    uint32_t rtos_task_object_types[TIVX_TARGET_RTOS_MAX_COUNT][TIVX_TARGET_RTOS_MAX_COUNT]);
 
 #ifdef __cplusplus
 }

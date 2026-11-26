@@ -89,15 +89,6 @@ VX_API_ENTRY vx_node VX_API_CALL tivxImgPreProcNode(vx_graph   graph,
                                                     vx_image   in_img,
                                                     vx_tensor  out_tensor);
 
-VX_API_ENTRY vx_node VX_API_CALL tivxDL4DPreProcArmv8Node(vx_graph             graph,
-                                                        vx_user_data_object  config,
-                                                        vx_image             input_image,
-                                                        vx_image             input_image2,
-                                                        vx_image             input_image3,
-                                                        vx_image             input_image4,
-                                                        vx_image             input_image5,
-                                                        vx_image             input_image6,
-                                                        vx_tensor            output_tensor);
 
 /*! \brief Creates a OC Pre Processing Node.
  *
@@ -486,23 +477,25 @@ VX_API_ENTRY vx_node VX_API_CALL tivxDLDrawBoxNode(vx_graph             graph,
 VX_API_ENTRY vx_node VX_API_CALL tivxDLColorConvertNode(vx_graph             graph,
                                                         vx_image             input_image,
                                                         vx_image             output_image);
-
 /*! \brief DL Pre-processing Armv8 Node
-  *
-  * Transforms input image to a format as required for DL processing
-  *
-  * \param [in] graph              reference to the graph
-  * \param [in] config             reference to tivxDLPreProcArmv8Prams
-  * \param [in] input_image        Input image
-  * \param [out] output_tensor     Output tensor
-  *
-  * \ingroup group_app_tiovx_kernels_img_proc
-  *
-  * \retval vx_node A node reference. Any possible errors preventing a successful creation should be checked using <tt>vxGetStatus</tt>
-  */
+ *
+ * Transforms input image to a format as required for DL processing.
+ * Supportsmulti-image processing.
+ *
+ * \param [in] graph             The reference to the graph.
+ * \param [in] config            User data object element type tivxDLPreProcArmv8Params
+ * \param [in] input_images      Array of input images (1-6 images)
+ * \param [in] num_images        Number of input images
+ * \param [out] output_tensor    Output tensor
+ *
+ * \ingroup group_app_tiovx_kernels_img_proc
+ *
+ * \retval vx_node A node reference. Any possible errors preventing a successful creation should be checked using <tt>vxGetStatus</tt>
+ */
 VX_API_ENTRY vx_node VX_API_CALL tivxDLPreProcArmv8Node(vx_graph             graph,
                                                         vx_user_data_object  config,
-                                                        vx_image             input_image,
+                                                        vx_image             input_images[],
+                                                        vx_uint32            num_images,
                                                         vx_tensor            output_tensor);
 
 /*! \brief DL Post Process Node

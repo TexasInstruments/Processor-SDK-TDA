@@ -1,0 +1,58 @@
+/**
+ * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
+ * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
+ * @cliArgs --device "J721E_DRA829_TDA4VM_AM752x" --part "Default" --package "ALF" --context "c66ss1-0" --product "VISION_APPS@01.00.00"
+ * @v2CliArgs --device "DRA829J-Q1" --package "FCBGA (ALF)" --context "c66ss1-0" --product "VISION_APPS@01.00.00"
+ * @versions {"tool":"1.26.2+4477"}
+ */
+
+/**
+ * Import the modules used in this configuration.
+ */
+const default_linker  = scripting.addModule("/memory_configurator/default_linker", {}, false);
+const default_linker1 = default_linker.addInstance();
+const region          = scripting.addModule("/memory_configurator/region", {}, false);
+const region1         = region.addInstance();
+
+/**
+ * Write custom configuration values to the imported modules.
+ */
+default_linker1.$name = "memory_configurator_default_linker0";
+
+region1.$name                               = "MEMORY_REGION_CONFIGURATION0";
+region1.memory_region.create(7);
+region1.memory_region[0].type               = "L2_C66SS1-0";
+region1.memory_region[0].$name              = "L2RAM_C66x_2";
+region1.memory_region[0].size               = 0x38000;
+region1.memory_region[0].auto               = false;
+region1.memory_region[0].attributes         = ["R","W","X"];
+region1.memory_region[1].size               = 0x100000;
+region1.memory_region[1].auto               = false;
+region1.memory_region[1].manualStartAddress = 0xA8000000;
+region1.memory_region[1].attributes         = ["R","W","X"];
+region1.memory_region[1].$name              = "DDR_C66x_2_IPC";
+region1.memory_region[2].$name              = "DDR_C66x_2_RESOURCE_TABLE";
+region1.memory_region[2].size               = 0x400;
+region1.memory_region[2].auto               = false;
+region1.memory_region[2].manualStartAddress = 0xA9100000;
+region1.memory_region[2].attributes         = ["R","W","X"];
+region1.memory_region[3].$name              = "DDR_C66x_2";
+region1.memory_region[3].size               = 0xDFFC00;
+region1.memory_region[3].auto               = false;
+region1.memory_region[3].manualStartAddress = 0xA9200400;
+region1.memory_region[3].attributes         = ["R","W","X"];
+region1.memory_region[4].size               = 0x1000000;
+region1.memory_region[4].auto               = false;
+region1.memory_region[4].manualStartAddress = 0xE0000000;
+region1.memory_region[4].attributes         = ["R","W","X"];
+region1.memory_region[4].$name              = "DDR_C66X_2_LOCAL_HEAP";
+region1.memory_region[5].size               = 0x3000000;
+region1.memory_region[5].auto               = false;
+region1.memory_region[5].manualStartAddress = 0xE1000000;
+region1.memory_region[5].attributes         = ["R","W","X"];
+region1.memory_region[5].$name              = "DDR_C66X_2_SCRATCH";
+region1.memory_region[6].$name              = "DDR_C66x_2_BOOT";
+region1.memory_region[6].size               = 0x400;
+region1.memory_region[6].auto               = false;
+region1.memory_region[6].manualStartAddress = 0xA9200000;
+region1.memory_region[6].attributes         = ["R","W","X"];

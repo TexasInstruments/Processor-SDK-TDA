@@ -83,12 +83,11 @@ VX_API_ENTRY vx_status VX_API_CALL vxReleaseKernel(vx_kernel *kernel)
     return status;
 }
 
-VX_API_ENTRY vx_status VX_API_CALL vxQueryKernel(vx_kernel kern, vx_enum attribute, void *ptr, vx_size size)
+VX_API_ENTRY vx_status VX_API_CALL vxQueryKernel(vx_kernel kernel, vx_enum attribute, void *ptr, vx_size size)
 {
     vx_status status = (vx_status)VX_SUCCESS;
-    if (ownIsValidSpecificReference(vxCastRefFromKernel(kern), (vx_enum)VX_TYPE_KERNEL) == (vx_bool)vx_true_e)
+    if (ownIsValidSpecificReference(vxCastRefFromKernel(kernel), (vx_enum)VX_TYPE_KERNEL) == (vx_bool)vx_true_e)
     {
-        vx_kernel kernel = kern;
         switch (attribute)
         {
             case (vx_enum)VX_KERNEL_PARAMETERS:

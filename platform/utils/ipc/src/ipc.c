@@ -63,7 +63,7 @@
 #include <platform_util_ipc.h>
 #include <utils/ipc/include/app_ipc.h>
 
-core_config_t core_config[] = {
+core_config_t g_platform_utils_core_config[] = {
 #ifdef ENABLE_IPC_MPU1
     {APP_IPC_CPU_MPU1_0, false, true},
 #endif
@@ -144,4 +144,4 @@ core_config_t core_config[] = {
 #endif
 };
 
-uint8_t num_cores = sizeof(core_config)/sizeof(core_config[0]);
+uint8_t g_platform_utils_num_cores = sizeof(g_platform_utils_core_config)/sizeof(g_platform_utils_core_config[0]);

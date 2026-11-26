@@ -9,7 +9,7 @@ include $(PSDK_BUILDER_PATH)/makerules/makefile_ecu.mak
 
 # Used to version control the tivision_apps.so
 ifeq ($(SOC_FAMILY), SOC_FAMILY_TDA5)
-    PSDK_VERSION?=12.1.0
+    PSDK_VERSION?=12.1.1
 else ifeq ($(SOC_FAMILY), $(filter $(SOC_FAMILY), SOC_FAMILY_AM SOC_FAMILY_J7))
     PSDK_VERSION?=11.2.1
 endif

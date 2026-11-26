@@ -612,9 +612,11 @@ vx_status app_create_graph_pre_proc_queued(vx_graph graph,
             (void)vxSetReferenceName((vx_reference)output,
                                      "PreProc_Output_Tensor");
 
+            vx_image input_images[1] = {input};
             preProcObj->node = tivxDLPreProcArmv8Node(graph,
                                                      preProcObj->config,
-                                                     input,
+                                                     input_images,
+                                                     1,
                                                      output);
 
             status = vxGetStatus((vx_reference)preProcObj->node);

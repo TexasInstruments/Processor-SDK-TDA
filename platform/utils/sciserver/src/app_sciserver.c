@@ -81,8 +81,11 @@
 #else
 #include <kernel/dpl/DebugP.h>
 #include <drivers/hw_include/csl_types.h>
-#if !defined(THREADX)
+#if !defined(THREADX) && !defined(SAFERTOS)
 extern     void vTaskDelete( void* xTaskToDelete );
+#endif
+#if defined(SAFERTOS)
+extern     signed long xTaskDelete( void* xTaskToDelete );
 #endif
 #endif
 #endif
@@ -259,7 +262,11 @@ void appSciserverInit(void* arg0, void* arg1)
     #endif
 
     #if defined(MCU_PLUS_SDK) && !defined(THREADX)
+    #if defined(SAFERTOS)
+    xTaskDelete( NULL );
+    #else
     vTaskDelete( NULL );
+    #endif
     #endif
 }
 

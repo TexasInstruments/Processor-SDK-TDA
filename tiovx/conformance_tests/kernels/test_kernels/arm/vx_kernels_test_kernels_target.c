@@ -80,10 +80,10 @@ static Tivx_Target_Kernel_List  gTivx_target_kernel_list[] = {
     {&tivxAddTargetKernelCmdTimeoutTest, &tivxRemoveTargetKernelCmdTimeoutTest},
     {&tivxAddTargetKernelTiovxOverhead, &tivxRemoveTargetKernelTiovxOverhead},
     {&tivxAddTargetKernelTestErrorInfo, &tivxRemoveTargetKernelTestErrorInfo},
-#if defined(LINUX) || defined(QNX)
+#if defined(HLOS)
     {&tivxAddTargetKernelNotNot_arm, &tivxRemoveTargetKernelNotNot_arm},
     {&tivxAddTargetKernelMultiDSPNotNot_arm, &tivxRemoveTargetKernelMultiDSPNotNot_arm},
-#endif
+#endif /* #if defined(HLOS) */
 };
 
 void tivxRegisterTestKernelsTargetArmKernels(void)

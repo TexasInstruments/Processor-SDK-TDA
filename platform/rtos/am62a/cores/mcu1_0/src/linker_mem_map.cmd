@@ -92,12 +92,20 @@ MEMORY
     IPC_VRING_MEM                     : ORIGIN = 0xA0000000 , LENGTH = 0x01000000
     /* Memory for remote core logging [ size 256.00 KB ] */
     APP_LOG_MEM                       : ORIGIN = 0xA1000000 , LENGTH = 0x00040000
-    /* Memory for TI OpenVX shared memory. MUST be non-cached or cache-coherent [ size 15.75 MB ] */
-    TIOVX_OBJ_DESC_MEM                : ORIGIN = 0xA1040000 , LENGTH = 0x00FC0000
+    /* First portion of TI OpenVX shared memory. MUST be non-cached or cache-coherent [ size  5.25 MB ] */
+    TIOVX_OBJ_DESC_MEM_HOST0          : ORIGIN = 0xA1040000 , LENGTH = 0x00540000
+    /* Second portion of TI OpenVX shared memory. MUST be non-cached or cache-coherent [ size  5.25 MB ] */
+    TIOVX_OBJ_DESC_MEM_HOST1          : ORIGIN = 0xA1580000 , LENGTH = 0x00540000
+    /* Third portion of TI OpenVX shared memory. MUST be non-cached or cache-coherent [ size  5.25 MB ] */
+    TIOVX_OBJ_DESC_MEM_HOST2          : ORIGIN = 0xA1AC0000 , LENGTH = 0x00540000
     /* Memory for remote core file operations [ size  4.00 MB ] */
     APP_FILEIO_MEM                    : ORIGIN = 0xA2000000 , LENGTH = 0x00400000
-    /* Memory for shared memory buffers in DDR [ size 172.00 MB ] */
-    DDR_SHARED_MEM                    : ORIGIN = 0xA3000000 , LENGTH = 0x0AC00000
+    /* Host 0 accesses the first portion of the shared memory carveout [ size 57.33 MB ] */
+    DDR_SHARED_MEM_HOST0              : ORIGIN = 0xA3000000 , LENGTH = 0x03955000
+    /* Host 1 accesses the second portion of the shared memory carveout [ size 57.33 MB ] */
+    DDR_SHARED_MEM_HOST1              : ORIGIN = 0xA6955000 , LENGTH = 0x03955000
+    /* Host 2 accesses the third portion of the shared memory carveout [ size 57.33 MB ] */
+    DDR_SHARED_MEM_HOST2              : ORIGIN = 0xAA2AA000 , LENGTH = 0x03955000
     /* DDR for storing DMA buffers for VISS configuration [ size  4.00 MB ] */
     DDR_DM_R5F_VISS_CONFIG_HEAP (   RW ) : ORIGIN = 0xADC00000 , LENGTH = 0x00400000
     /* DDR for DM R5F for local heap [ size 16.00 MB ] */

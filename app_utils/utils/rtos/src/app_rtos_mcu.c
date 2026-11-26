@@ -66,7 +66,6 @@
 #include <kernel/dpl/SemaphoreP.h>
 #include <kernel/dpl/TaskP.h>
 #include <kernel/dpl/ClockP.h>
-#include <app_rtos_mcu_priv.h>
 #include <stddef.h>
 #elif defined(MCU_SDK)
 #include <stddef.h>
@@ -77,8 +76,8 @@
 #include <ClockP.h>
 #include <TaskP.h>
 #include <SystemP.h>
-#include <app_rtos_mcu_priv.h>
 #endif
+#include <app_rtos_priv.h>
 
 #ifndef QNX
 #if defined(SOC_J722S)

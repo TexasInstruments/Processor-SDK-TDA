@@ -64,7 +64,7 @@
 		"${MCU_PLUS_SDK_PATH}/test/unity/",
 	    ],
 	};
-	
+
 	const includes_freertos_c75ss0 = {
 	    common: [
 		"${MCU_PLUS_SDK_PATH}/source/kernel/freertos/FreeRTOS-Kernel/include",
@@ -116,6 +116,30 @@
 	    ],
 	};
 
+	const defines_mcu_r5 = {
+	    common: [
+		"CONFIG_UDMAP_MULTI_CH_CFG",
+	    ],
+	};
+
+	const defines_main_r5 = {
+	    common: [
+		"CONFIG_UDMAP_MULTI_CH_CFG",
+	    ],
+	};
+
+	const defines_c75ss0 = {
+	    common: [
+		"CONFIG_UDMAP_MULTI_CH_CFG",
+	    ],
+	};
+
+	const defines_c75ss1 = {
+	    common: [
+		"CONFIG_UDMAP_MULTI_CH_CFG",
+	    ],
+	};
+
 	const lnkfiles = {
 	    common: [
 		"linker.cmd",
@@ -154,7 +178,6 @@
 	    }
 	];
 
-	
 	const templates_freertos_c75ss0 =
 	[
 	    {
@@ -220,26 +243,30 @@
 		build_property.libdirs = libdirs_mcu_nortos;
 		build_property.libs = libs_nortos_mcu_r5f;
 		build_property.templates = templates_nortos_mcu_r5f;
+		build_property.defines = defines_mcu_r5;
 	    }
 	    else if(buildOption.cpu.match(/main-r5f*/)) {
 		build_property.includes = includes_nortos;
 		build_property.libdirs = libdirs_main_nortos;
 		build_property.libs = libs_nortos_main_r5f;
 		build_property.templates = templates_nortos_main_r5f;
+		build_property.defines = defines_main_r5;
 	    }
 	    else if(buildOption.cpu.match(/c75ss0-0*/)) {
 		build_property.includes = includes_freertos_c75ss0;
 		build_property.libdirs = libdirs_freertos_c75ss0;
 		build_property.libs = libs_freertos_c75ss0;
 		build_property.templates = templates_freertos_c75ss0;
+		build_property.defines = defines_c75ss0;
 	    }
 	    else if(buildOption.cpu.match(/c75ss1-0*/)) {
 		build_property.includes = includes_freertos_c75ss1;
 		build_property.libdirs = libdirs_freertos_c75ss1;
 		build_property.libs = libs_freertos_c75ss1;
 		build_property.templates = templates_freertos_c75ss1;
+		build_property.defines = defines_c75ss1;
 	    }
-	       
+
 	    return build_property;
 	}
 

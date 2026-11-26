@@ -1,0 +1,20 @@
+obj/j722s/ti-arm-clang/debug/main-r5f/drivers_ipfma//i2c_v0.obj: \
+  ../i2c/v0/i2c_v0.c \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/i2c.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/soc_config.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/j722s/soc_config.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/i2c/v0/i2c.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/SemaphoreP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/SystemP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/DebugP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/HwiP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/ClockP.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/i2c/v0/lld/i2c_lld.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/i2c/v0/cslr_i2c.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/cslr.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/tistdtypes.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/csl_utils.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/cslr64.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/i2c/v0/soc/i2c_soc.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/i2c/v0/soc/j722s/i2c_soc.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/kernel/dpl/AddrTranslateP.h

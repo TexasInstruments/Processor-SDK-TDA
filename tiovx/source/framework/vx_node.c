@@ -250,14 +250,14 @@ static vx_status ownRemoveNodeInt(const vx_node *n)
     return status;
 }
 
-static void ownNodeUserKernelUpdateParamsFlags(vx_kernel kernel, vx_reference params[], vx_uint32 num_params, vx_bool kernel_entry)
+static void ownNodeUserKernelUpdateParamsFlags(vx_kernel kernel, vx_reference params[], vx_uint32 num_params, vx_bool is_accessible)
 {
     vx_uint32 i;
     for(i=0; i<num_params ; i++)
     {
         if (NULL != params[i])
         {
-            if ((vx_bool)vx_true_e == kernel_entry)
+            if ((vx_bool)vx_true_e == is_accessible)
             {
                 /* Set flag to say we are in the kernel function */
                 tivxFlagBitSet(&params[i]->obj_desc->flags, TIVX_REF_FLAG_IS_IN_KERNEL);
@@ -271,7 +271,7 @@ static void ownNodeUserKernelUpdateParamsFlags(vx_kernel kernel, vx_reference pa
             }
             if ((vx_enum)VX_INPUT ==  kernel->signature.directions[i])
             {
-                if ((vx_bool)vx_true_e == kernel_entry)
+                if ((vx_bool)vx_true_e == is_accessible)
                 {
                     tivxFlagBitSet(&params[i]->obj_desc->flags, TIVX_REF_FLAG_IS_INPUT);
                 }
@@ -282,7 +282,7 @@ static void ownNodeUserKernelUpdateParamsFlags(vx_kernel kernel, vx_reference pa
             }
             if((params[i]->is_virtual != (vx_bool)vx_false_e))
             {
-                params[i]->is_accessible = kernel_entry;
+                params[i]->is_accessible = is_accessible;
             }
         }
     }
@@ -339,7 +339,7 @@ vx_status ownNodeKernelValidate(vx_node node, vx_meta_format meta[])
     return status;
 }
 
-vx_status tivxNodeSendCommandTimed(vx_node node, uint32_t replicated_node_idx,
+vx_status VX_API_CALL tivxNodeSendCommandTimed(vx_node node, uint32_t replicated_node_idx,
     uint32_t node_cmd_id, vx_reference ref[], uint32_t num_refs, uint32_t timeout)
 {
     vx_status status = (vx_status)VX_SUCCESS;
@@ -451,7 +451,7 @@ vx_status tivxNodeSendCommandTimed(vx_node node, uint32_t replicated_node_idx,
     return (status);
 }
 
-vx_status tivxNodeSendCommand(vx_node node, uint32_t replicated_node_idx,
+vx_status VX_API_CALL tivxNodeSendCommand(vx_node node, uint32_t replicated_node_idx,
     uint32_t node_cmd_id, vx_reference ref[], uint32_t num_refs)
 {
     vx_status status;
@@ -614,11 +614,15 @@ vx_status ownNodeKernelInit(vx_node node)
 
                 if (is_parent_from_list == (vx_bool)vx_true_e)
                 {
-                    for(i=0; (i < num_params) && (((vx_status)VX_SUCCESS == status)); i++)
+                    for(i=0; i < num_params; i++)
                     {
+                        if (status != (vx_status)VX_SUCCESS)
+                        {
+                            break;
+                        }
                         /* Initialize meta-format array for revalidation */
                         meta[i] = ownCreateMetaFormat(node->graph->base.context);
-                        /* This should not fail at all */ 
+                        /* This should not fail at all */
                         if (vxGetStatus(vxCastRefFromMetaFormat(meta[i])) != (vx_status)VX_SUCCESS)
                         {
                             VX_PRINT_GRAPH(VX_ZONE_ERROR, node->graph, "Unable to create meta format object\n");
@@ -675,7 +679,7 @@ vx_status ownNodeKernelInit(vx_node node)
                         status = node->kernel->validate(node, params, num_params, meta);
                         ownNodeSetAccessibility(node, num_params, (vx_bool)vx_false_e);
                     }
-                    if (status == VX_SUCCESS)
+                    if (status == (vx_status)VX_SUCCESS)
                     {
                         /* LDRA_JUSTIFY_START
 <metric start> branch <metric end>
@@ -1615,11 +1619,13 @@ static uint16_t ownNodeGetObjDescId(vx_node node, uint32_t pipeline_id)
 void ownNodeSetObjDescParamDirection(vx_node node)
 {
     uint32_t prm_idx, prm_dir, is_prm_input, is_prm_bidi;
+    uint32_t num_params;
 
     is_prm_input = 0;
     is_prm_bidi = 0;
+    num_params = ownNodeGetNumParameters(node);
 
-    for(prm_idx=0; prm_idx < ownNodeGetNumParameters(node); prm_idx++)
+    for(prm_idx=0; prm_idx < num_params; prm_idx++)
     {
         prm_dir = (uint32_t)ownNodeGetParameterDir(node, prm_idx);
 
@@ -1856,9 +1862,9 @@ VX_API_ENTRY vx_node VX_API_CALL vxCreateGenericNode(vx_graph graph, vx_kernel k
     return node;
 }
 
-VX_API_ENTRY vx_status VX_API_CALL vxReleaseNode(vx_node *n)
+VX_API_ENTRY vx_status VX_API_CALL vxReleaseNode(vx_node *node)
 {
-    return ownReleaseReferenceInt(vxCastRefFromNodeP(n), (vx_enum)VX_TYPE_NODE, (vx_enum)VX_EXTERNAL, NULL);
+    return ownReleaseReferenceInt(vxCastRefFromNodeP(node), (vx_enum)VX_TYPE_NODE, (vx_enum)VX_EXTERNAL, NULL);
 }
 
 VX_API_ENTRY vx_status VX_API_CALL vxQueryNode(vx_node node, vx_enum attribute, void *ptr, vx_size size)
@@ -2185,23 +2191,23 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetNodeAttribute(vx_node node, vx_enum attr
     return status;
 }
 
-VX_API_ENTRY vx_status VX_API_CALL vxRemoveNode(vx_node *n)
+VX_API_ENTRY vx_status VX_API_CALL vxRemoveNode(vx_node *node)
 {
-    vx_node node;
+    vx_node n;
 
-    if( n != NULL)
+    if( node != NULL)
     {
-        node = *n;
+        n = *node;
     }
     else
     {
-        node = NULL;
+        n = NULL;
     }
 
     vx_status status =  (vx_status)VX_ERROR_INVALID_REFERENCE;
-    if (ownIsValidSpecificReference(vxCastRefFromNode(node), (vx_enum)VX_TYPE_NODE) != (vx_bool)vx_false_e)
+    if (ownIsValidSpecificReference(vxCastRefFromNode(n), (vx_enum)VX_TYPE_NODE) != (vx_bool)vx_false_e)
     {
-        status = ownRemoveNodeInt(n);
+        status = ownRemoveNodeInt(node);
         if(status == (vx_status)VX_SUCCESS) {
             /* Interpretation of spec is to release all external
                references of Nodes when vxReleaseGraph() is called AND
@@ -2209,8 +2215,8 @@ VX_API_ENTRY vx_status VX_API_CALL vxRemoveNode(vx_node *n)
                However, it may be possible that the user would have
                already released its external reference so we need to
                check. */
-            if(node->base.external_count != 0U) {
-                status = ownReleaseReferenceInt(vxCastRefFromNodeP(&node),
+            if(n->base.external_count != 0U) {
+                status = ownReleaseReferenceInt(vxCastRefFromNodeP(&n),
                     (vx_enum)VX_TYPE_NODE, (vx_enum)VX_EXTERNAL, NULL);
                 if (status != (vx_status)VX_SUCCESS)
                 {
@@ -2218,7 +2224,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxRemoveNode(vx_node *n)
                 }
             }
             if(status == (vx_status)VX_SUCCESS) {
-                *n = NULL;
+                *node = NULL;
             }
         }
         else

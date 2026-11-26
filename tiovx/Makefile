@@ -142,6 +142,7 @@ include $(CONCERTO_ROOT)/rules.mak
 # Makefile targets need no leading indent
 ifeq ($(BUILD_EMULATION_MODE),yes)
 platform_utils:
+	BUILD_TARGET_MODE=no $(MAKE) -C $(PSDK_BUILDER_PATH) platform_syscfg
 	BUILD_TARGET_MODE=no $(MAKE) -C $(PLATFORM_PATH) app_init_pc_common
 	BUILD_TARGET_MODE=no $(MAKE) -C $(PLATFORM_PATH) app_utils_init_vdk_stub
 	BUILD_TARGET_MODE=no $(MAKE) -C $(PLATFORM_PATH) cp_to_lib

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2020 Texas Instruments Incorporated
+ * Copyright (c) 2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -59,8 +59,12 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#ifndef _APP_MODULES
-#define _APP_MODULES
+#ifndef _APP_CORE_MODULE
+#define _APP_CORE_MODULE
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <TI/tivx.h>
 #include <TI/tivx_task.h>
@@ -71,7 +75,10 @@
 #include <TI/j7_tidl.h>
 #include <tivx_utils_file_rd_wr.h>
 #include <tivx_utils_graph_perf.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wparentheses"
 #include <utils/iss/include/app_iss.h>
+#pragma GCC diagnostic pop
 #include <TI/tivx_img_proc.h>
 #include <TI/tivx_fileio.h>
 
@@ -90,9 +97,7 @@
 #define APP_MODULES_MAX_TENSORS         (8u)
 #define APP_MODULES_MAX_PARAMS          (16u)
 
-#ifdef APP_DEBUG
-#define APP_PRINTF(f_, ...) printf((f_), ##__VA_ARGS__)
-#else
+#ifndef APP_PRINTF
 #define APP_PRINTF(f_, ...)
 #endif
 
@@ -134,4 +139,7 @@ static inline vx_enum get_vx_tensor_datatype(int32_t tidl_datatype)
     return (tiovx_datatype);
 }
 
-#endif //_APP_MODULES
+#ifdef __cplusplus
+}
+#endif
+#endif //_APP_CORE_MODULE

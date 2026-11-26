@@ -333,10 +333,10 @@ vx_status ownWaitEventQueue(
                 event->event_info.node_error.error_info_size = elem->param5.error_info_size;
                 if(elem->param5.error_info_size > 0U)
                 {
-                    memcpy(event->event_info.node_error.error_info,
+                    (void)memcpy(event->event_info.node_error.error_info,
                         elem->param5.error_info, elem->param5.error_info_size);
                     /* Clear the event queue memory for hygiene */
-                    memset(elem->param5.error_info, 0, (uint32_t)elem->param5.error_info_size);
+                    (void)memset(elem->param5.error_info, 0, (uint32_t)elem->param5.error_info_size);
                     elem->param5.error_info_size = 0;
                 }
             }

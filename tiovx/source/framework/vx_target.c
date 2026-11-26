@@ -62,7 +62,7 @@
 
 #include <vx_internal.h>
 
-#define VX_PRINT_OBJECT(zone, object, message, ...) do { tivx_print_object(((vx_enum)zone), object->debug_zonemask, "[%s:%u] " message, __FUNCTION__, __LINE__, ## __VA_ARGS__); } while (1 == 0)
+#define VX_PRINT_OBJECT(zone, object, message, ...) do { tivx_print_object(((vx_enum)(zone)), (object)->debug_zonemask, "[%s:%u] " message, __FUNCTION__, __LINE__, ## __VA_ARGS__); } while (1 == 0)
 
 #ifndef PC
 #define TIVX_TARGET_MAX_CPUS_IN_EXE (1u)
@@ -381,18 +381,18 @@ static void ownTargetNodeDescNodeExecuteKernel(
 void ownErrorInfoRetryWait(uint32_t iteration, const char *field_name)
 {
     tivxTaskWaitMsecs(1);
-    if (iteration == TIVX_MAX_ERROR_INFO_RETRIES - 1)
+    if (iteration == (TIVX_MAX_ERROR_INFO_RETRIES - 1U))
     {
         VX_PRINT(VX_ZONE_ERROR, "[TARGET] %s write still BLOCKED. WAITED %u MS! Proceeding with write OVER previous %s!", field_name, TIVX_MAX_ERROR_INFO_RETRIES, field_name);
         VX_PRINT(VX_ZONE_ERROR, "%s may be incorrect! Please increase your pipeline depth or TIVX_MAX_ERROR_INFO_RETRIES to prevent this from happening!", field_name);
     }
-    else if (iteration == 0)
+    else if (iteration == 0U)
     {
         VX_PRINT(VX_ZONE_WARNING, "[TARGET] %s write BLOCKED. WAITED 1 MS!\n", field_name);
     }
     else
     {
-        ;
+        /* Do nothing, required by MISRA-C */
     }
 }
 
@@ -410,8 +410,8 @@ static void ownTargetNodeDescNodeExecuteTargetKernel(
     tivx_obj_desc_node_error_info_t *error_info_obj_desc = NULL;
 
     /* Local placeholders for target_kernel_exec statuses in the case of an error */
-    vx_status aggregated_status = 0;
-    vx_status replica_statuses[TIVX_NODE_MAX_REPLICATE] = {0};
+    uint32_t aggregated_status = 0;
+    uint32_t replica_statuses[TIVX_NODE_MAX_REPLICATE] = {0};
 
     if (tivxFlagIsBitSet(node_obj_desc->flags,TIVX_NODE_FLAG_IS_REPLICATED) ==
         (vx_bool)vx_true_e)
@@ -665,14 +665,14 @@ static void ownTargetNodeDescNodeExecuteTargetKernel(
             {
                 params[0] = (tivx_obj_desc_t *) ownObjDescGet( node_obj_desc->base.scope_obj_desc_id );
 
-                replica_statuses[cnt] = ownTargetKernelExecute(target_kernel_instance, params,
+                replica_statuses[cnt] = (uint32_t)ownTargetKernelExecute(target_kernel_instance, params,
                     1);
             }
             else
             #endif
             {
                 ownTargetSetTimestamp(node_obj_desc, params);
-                replica_statuses[cnt] = ownTargetKernelExecute(target_kernel_instance, params,
+                replica_statuses[cnt] = (uint32_t)ownTargetKernelExecute(target_kernel_instance, params,
                     (uint16_t)node_obj_desc->num_params);
             }
 
@@ -739,7 +739,7 @@ static void ownTargetNodeDescNodeExecuteTargetKernel(
      * This inaccuracy applies to the tivx_error_info statuses in the node_obj_desc's error_node_obj_desc as well.
      * These fields are internal to the framework and is not visible to the end user, so this is an accepted limitation of pipelining.
      */
-    if (aggregated_status != (vx_status)VX_SUCCESS)
+    if (aggregated_status != (uint32_t)VX_SUCCESS)
     {
         /* Since retry loop is done to buy time for host to read error and clear exe_status,
          * only run loop if the host is determined to actually be listening.
@@ -751,7 +751,7 @@ static void ownTargetNodeDescNodeExecuteTargetKernel(
              *  - Prevents the node_obj_desc fields exe_status, replica/node error_info from being overwritten
              *    with a new error_info if the host hasn't read and cleared them yet.
              */
-            for (i = 0; (i < TIVX_MAX_ERROR_INFO_RETRIES) && ((vx_status)VX_SUCCESS != node_obj_desc->exe_status); i++)
+            for (i = 0; (i < TIVX_MAX_ERROR_INFO_RETRIES) && ((uint32_t)VX_SUCCESS != node_obj_desc->exe_status); i++)
             {
                 ownErrorInfoRetryWait(i, "Error status");
             }
@@ -763,21 +763,23 @@ static void ownTargetNodeDescNodeExecuteTargetKernel(
          */
         if (NULL == error_info_obj_desc)
         {
-            /* If not replicated and in this branch, the status will always not be Success */
-            node_obj_desc->single_error_info.replica_status = (uint32_t)replica_statuses[0];
+            /* Write non_success to non-replicated node's status field */
+            node_obj_desc->single_error_info.replica_status = replica_statuses[0];
         }
-        else /* Is replicated, store to the right spots in error_info_obj_desc. */
+        else /* Is replicated, store to the right status spots in error_info_obj_desc. */
         {
             for (cnt = 0; cnt < loop_max; cnt++)
             {
                 /* Check prevents old error info from being clobbered with a success */
-                if (replica_statuses[cnt] != (vx_status)VX_SUCCESS)
-                   error_info_obj_desc->replicated_node_error_info[cnt].replica_status = (uint32_t)replica_statuses[cnt];
+                if (replica_statuses[cnt] != (uint32_t)VX_SUCCESS)
+                {
+                    error_info_obj_desc->replicated_node_error_info[cnt].replica_status = replica_statuses[cnt];
+                }
             }
         }
 
         /* NOTE: Legacy field, kept as "did anything fail" gate. */
-        node_obj_desc->exe_status = (uint32_t)aggregated_status;
+        node_obj_desc->exe_status = aggregated_status;
     }
 }
 
@@ -1054,8 +1056,12 @@ static vx_status ownTargetNodeDescNodeCreate(tivx_obj_desc_node_t *node_obj_desc
         kernel_name = kernel_name_obj_desc->kernel_name;
     }
 /* LDRA_JUSTIFY_END */
-    for (cnt = 0; (cnt < loop_max) && (status == (vx_status)VX_SUCCESS); cnt ++)
+    for (cnt = 0; cnt < loop_max; cnt ++)
     {
+        if (status != (vx_status)VX_SUCCESS)
+        {
+            break;
+        }
         target_kernel_instance = ownTargetKernelInstanceAlloc(
             (vx_enum)node_obj_desc->kernel_id, kernel_name, (vx_enum)node_obj_desc->target_id);
 
@@ -1910,7 +1916,7 @@ void ownTargetSetDefaultCreateParams(tivx_target_create_params_t *params)
     params->task_stack_size = 0;
     params->task_core_affinity = 0;
     params->task_priority = TIVX_TASK_PRI_LOWEST;
-    (void)strncpy(params->task_name, "TIVX_TARGET", TIVX_MAX_TASK_NAME);
+    (void)strncpy(params->task_name, "TIVX_TARGET", TIVX_MAX_TASK_NAME-1U);
     params->task_name[TIVX_MAX_TASK_NAME-1U] = '\0';
 }
 

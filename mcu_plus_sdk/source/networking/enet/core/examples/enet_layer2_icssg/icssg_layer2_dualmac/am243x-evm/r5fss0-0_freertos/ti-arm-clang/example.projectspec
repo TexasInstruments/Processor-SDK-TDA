@@ -44,6 +44,7 @@
             -I${MCU_PLUS_SDK_PATH}/source/networking/enet/core/include
             -I${MCU_PLUS_SDK_PATH}/source/networking/enet/core/include/phy
             -I${MCU_PLUS_SDK_PATH}/source/networking/enet/core/include/core
+            -I${MCU_PLUS_SDK_PATH}/source/networking/enet/core/examples/enet_layer2_icssg
             -I${MCU_PLUS_SDK_PATH}/source/networking/enet/soc/k3/am64x_am243x
             -I${MCU_PLUS_SDK_PATH}/source/networking/enet/hw_include
             -I${MCU_PLUS_SDK_PATH}/source/networking/enet/hw_include/mdio/V4
@@ -116,6 +117,8 @@
         ></configuration>
         <pathVariable name="MCU_PLUS_SDK_PATH" path="${COM_TI_MCU_PLUS_SDK_AMXXX_INSTALL_DIR}" scope="project" />
         <file path="../../../../enet_layer2_icssg.c" openOnCreation="false" excludeFromBuild="false" action="copy">
+        </file>
+        <file path="../../../../enet_layer2_menu.c" openOnCreation="false" excludeFromBuild="false" action="copy">
         </file>
         <file path="../main.c" openOnCreation="false" excludeFromBuild="false" action="copy">
         </file>

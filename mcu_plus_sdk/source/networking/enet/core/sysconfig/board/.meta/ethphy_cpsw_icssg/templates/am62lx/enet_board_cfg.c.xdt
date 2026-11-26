@@ -275,6 +275,7 @@ void EnetBoard_getMacAddrList(uint8_t macAddr[][ENET_MAC_ADDR_LEN],
                               uint32_t maxMacEntries,
                               uint32_t *pAvailMacEntries)
 {
+    EnetAppUtils_assert(pAvailMacEntries != NULL);
     *pAvailMacEntries = 0;
 %if (cpsw_instance.macAddrConfig  !== "Manual Entry"){
     int32_t status = ENET_SOK;
@@ -288,8 +289,6 @@ void EnetBoard_getMacAddrList(uint8_t macAddr[][ENET_MAC_ADDR_LEN],
     EnetAppUtils_assert(status == ENET_SOK);
     EnetAppUtils_assert(ENET_GET_NUM_MAC_ADDR(numMacMax) <= ENET_BOARD_NUM_MACADDR_MAX);
     macAddrCnt = EnetUtils_min(ENET_GET_NUM_MAC_ADDR(numMacMax), maxMacEntries);
-
-    EnetAppUtils_assert(pAvailMacEntries != NULL);
 
     status = EEPROM_read(gEepromHandle[CONFIG_EEPROM0], I2C_EEPROM_MAC_DATA_OFFSET, macAddrBuf, (macAddrCnt * ENET_MAC_ADDR_LEN));
     EnetAppUtils_assert(status == ENET_SOK);

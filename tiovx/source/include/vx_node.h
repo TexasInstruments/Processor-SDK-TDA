@@ -252,7 +252,7 @@ vx_status ownNodeReplaceOutNode(vx_node node, vx_node old_out_node, vx_node new_
 /*! \brief Associate a input node with a given node
  * \ingroup group_vx_node
  */
-vx_status ownNodeAddInNode(vx_node node, vx_node out_node);
+vx_status ownNodeAddInNode(vx_node node, vx_node in_node);
 
 /*! \brief Replace an input node for a given node with a new input node
  * \ingroup group_vx_node

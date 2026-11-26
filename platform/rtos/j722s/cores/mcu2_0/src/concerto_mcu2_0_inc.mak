@@ -24,7 +24,7 @@ ifeq ($(BUILD_ENABLE_ETHFW),yes)
 endif
 
 LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE).cmd
-LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map_$(RTOS_TYPE).cmd
+LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/generated/linker_mem_map_$(RTOS_TYPE).cmd
 
 IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)
 

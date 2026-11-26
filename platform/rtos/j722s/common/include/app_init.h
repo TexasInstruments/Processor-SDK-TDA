@@ -80,6 +80,11 @@
 
 #define ENABLE_TIOVX
 
+/* Comment/uncomment these lines to enable/disable additional TIOVX hosts */
+// #define ENABLE_MCU2_0_TIOVX_HOST
+#include <app_host_target_cfg.h>
+/**************************************************************************/
+
 int32_t appInit();
 void    appDeInit();
 void    appRun();

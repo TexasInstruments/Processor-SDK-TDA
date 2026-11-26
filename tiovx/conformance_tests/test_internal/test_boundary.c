@@ -54,9 +54,6 @@ TESTCASE(tivxObjDescBoundary, CT_VXContext, ct_setup_vx_context, 0)
 
 TEST(tivxObjDescBoundary, negativeTestObjDescBoundary)
 {
-    extern tivx_obj_desc_t *ownObjDescAlloc(vx_enum type, vx_reference ref);
-    extern vx_status ownObjDescFree(tivx_obj_desc_t **obj_desc);
-
     vx_context context = context_->vx_context_;
     int i, j;
     tivx_obj_desc_t *obj_desc[TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST] = {NULL};
@@ -87,9 +84,6 @@ TEST(tivxObjDescBoundary, negativeTestObjDescBoundary)
 
 TEST(tivxObjDescBoundary, negativeBoundaryThreshold)
 {
-    extern tivx_obj_desc_t *ownObjDescAlloc(vx_enum type, vx_reference ref);
-    extern vx_status ownObjDescFree(tivx_obj_desc_t **obj_desc);
-
     vx_context context = context_->vx_context_;
     int i, j;
     tivx_obj_desc_t *obj_desc[TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST] = {NULL};

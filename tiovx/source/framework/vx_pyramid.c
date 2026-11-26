@@ -23,7 +23,7 @@ static vx_status ownDestructPyramid(vx_reference ref);
 static vx_status ownAllocPyramidBuffer(vx_reference ref);
 static vx_status ownInitPyramid(vx_pyramid prmd);
 static vx_status isPyramidCopyable(vx_reference input, vx_reference output);
-static vx_status VX_CALLBACK pyramidKernelCallback(vx_enum kernel_enum, vx_bool validate_only, const vx_reference input, const vx_reference output);
+static vx_status VX_CALLBACK pyramidKernelCallback(vx_enum kernel_enum, vx_bool validate_only, vx_reference input, vx_reference output);
 
 static const vx_float32 gOrbScaleFactor
     [TIVX_PYRAMID_MAX_LEVELS_ORB] =
@@ -118,8 +118,12 @@ static vx_status VX_CALLBACK pyramidKernelCallback(vx_enum kernel_enum, vx_bool 
     else    /* dispatch to each sub-image in turn */
     {
         vx_uint32 lvl;
-        for (lvl = 0U; (lvl < ((tivx_obj_desc_pyramid_t *)input->obj_desc)->num_levels) && ((vx_status)VX_SUCCESS == status); ++lvl)
+        for (lvl = 0U; lvl < ((tivx_obj_desc_pyramid_t *)input->obj_desc)->num_levels; ++lvl)
         {
+            if ((vx_status)VX_SUCCESS != status)
+            {
+                break;
+            }
             vx_reference p2[2] = {&(vxCastRefAsPyramid(input, &status)->img[lvl]->base), &(vxCastRefAsPyramid(output, &status)->img[lvl]->base)};
             vx_kernel_callback_f kf = p2[0]->kernel_callback;
 /* LDRA_JUSTIFY_START
@@ -166,10 +170,10 @@ static vx_status VX_CALLBACK pyramidKernelCallback(vx_enum kernel_enum, vx_bool 
 }
 
 
-VX_API_ENTRY vx_status VX_API_CALL vxReleasePyramid(vx_pyramid *prmd)
+VX_API_ENTRY vx_status VX_API_CALL vxReleasePyramid(vx_pyramid *pyr)
 {
     return (ownReleaseReferenceInt(
-        vxCastRefFromPyramidP(prmd), (vx_enum)VX_TYPE_PYRAMID, (vx_enum)VX_EXTERNAL, NULL));
+        vxCastRefFromPyramidP(pyr), (vx_enum)VX_TYPE_PYRAMID, (vx_enum)VX_EXTERNAL, NULL));
 }
 
 VX_API_ENTRY vx_pyramid VX_API_CALL vxCreatePyramid(
@@ -287,11 +291,11 @@ VX_API_ENTRY vx_pyramid VX_API_CALL vxCreatePyramid(
     return (prmd);
 }
 
-VX_API_ENTRY vx_image VX_API_CALL vxGetPyramidLevel(vx_pyramid prmd, vx_uint32 index)
+VX_API_ENTRY vx_image VX_API_CALL vxGetPyramidLevel(vx_pyramid pyr, vx_uint32 index)
 {
     vx_image img = NULL;
 
-    if (ownIsValidSpecificReference(vxCastRefFromPyramid(prmd), (vx_enum)VX_TYPE_PYRAMID) == (vx_bool)vx_false_e)
+    if (ownIsValidSpecificReference(vxCastRefFromPyramid(pyr), (vx_enum)VX_TYPE_PYRAMID) == (vx_bool)vx_false_e)
     {
         vx_context context = ownGetContext();
         if (ownIsValidContext(context) == (vx_bool)vx_true_e)
@@ -315,15 +319,15 @@ VX_API_ENTRY vx_image VX_API_CALL vxGetPyramidLevel(vx_pyramid prmd, vx_uint32 i
 <metric start> branch <metric end>
 <justification start> TIOVX_BRANCH_COVERAGE_TIVX_PYRAMID_UBR001
 <justification end> */
-        if ((ownIsValidSpecificReference(vxCastRefFromPyramid(prmd),
+        if ((ownIsValidSpecificReference(vxCastRefFromPyramid(pyr),
             (vx_enum)VX_TYPE_PYRAMID) == (vx_bool)vx_true_e) &&
-            (prmd->base.obj_desc != NULL) &&
-            (index < ((tivx_obj_desc_pyramid_t *)prmd->base.obj_desc)->num_levels) &&
-            ((NULL != prmd->img[0]) ||
-                ((vx_status)VX_SUCCESS == ownInitPyramid(prmd))))
- 
+            (pyr->base.obj_desc != NULL) &&
+            (index < ((tivx_obj_desc_pyramid_t *)pyr->base.obj_desc)->num_levels) &&
+            ((NULL != pyr->img[0]) ||
+                ((vx_status)VX_SUCCESS == ownInitPyramid(pyr))))
+
         {
-            img = prmd->img[index];
+            img = pyr->img[index];
 
             /* Should increment the reference count,
              * To release this image, app should explicitly call ReleaseImage.
@@ -336,9 +340,9 @@ VX_API_ENTRY vx_image VX_API_CALL vxGetPyramidLevel(vx_pyramid prmd, vx_uint32 i
         }
         else
         {
-            vxAddLogEntry(&prmd->base.context->base, (vx_status)VX_ERROR_NO_RESOURCES,
+            vxAddLogEntry(&pyr->base.context->base, (vx_status)VX_ERROR_NO_RESOURCES,
                 "Invalid pyramid reference\n");
-            img = (vx_image)ownGetErrorObject(prmd->base.context,
+            img = (vx_image)ownGetErrorObject(pyr->base.context,
                 (vx_status)VX_ERROR_INVALID_PARAMETERS);
             VX_PRINT(VX_ZONE_ERROR, "Invalid pyramid reference\n");
         }
@@ -458,20 +462,20 @@ vx_status ownInitVirtualPyramid(
 }
 
 VX_API_ENTRY vx_status VX_API_CALL vxQueryPyramid(
-    vx_pyramid prmd, vx_enum attribute, void *ptr, vx_size size)
+    vx_pyramid pyr, vx_enum attribute, void *ptr, vx_size size)
 {
     vx_status status = (vx_status)VX_SUCCESS;
     tivx_obj_desc_pyramid_t *obj_desc = NULL;
 
-    if ((ownIsValidSpecificReference(vxCastRefFromPyramid(prmd), (vx_enum)VX_TYPE_PYRAMID) == (vx_bool)vx_false_e)
-            || (prmd->base.obj_desc == NULL))
+    if ((ownIsValidSpecificReference(vxCastRefFromPyramid(pyr), (vx_enum)VX_TYPE_PYRAMID) == (vx_bool)vx_false_e)
+            || (pyr->base.obj_desc == NULL))
     {
         VX_PRINT(VX_ZONE_ERROR, "Invalid reference\n");
         status = (vx_status)VX_ERROR_INVALID_REFERENCE;
     }
     else
     {
-        obj_desc = (tivx_obj_desc_pyramid_t *)prmd->base.obj_desc;
+        obj_desc = (tivx_obj_desc_pyramid_t *)pyr->base.obj_desc;
         switch (attribute)
         {
             case (vx_enum)VX_PYRAMID_LEVELS:

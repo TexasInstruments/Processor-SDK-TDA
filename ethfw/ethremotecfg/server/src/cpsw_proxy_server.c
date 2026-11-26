@@ -349,7 +349,11 @@ static int32_t CpswProxyServer_unregMacPortFlow(Enet_Handle hEnet,
                                                 uint32_t flowStartIdx,
                                                 uint32_t flowIdx);
 
+#if defined(MCU_PLUS_SDK)
+static void CpswProxyServer_hwPushNotifyFxn(void *arg, CpswCpts_HwPush hwPushNum, uint64_t tsVal);
+#else
 static void CpswProxyServer_hwPushNotifyFxn(void *arg, CpswCpts_HwPush hwPushNum);
+#endif
 
 static void CpswProxyServer_notifyServiceTaskFxn(void* arg0);
 
@@ -3884,8 +3888,15 @@ static void CpswProxyServer_remoteClientEthDriverTaskFxn(void* arg0)
     }
 }
 
+#if defined(MCU_PLUS_SDK)
+static void CpswProxyServer_hwPushNotifyFxn(void *arg, CpswCpts_HwPush hwPushNum, uint64_t tsVal)
+#else
 static void CpswProxyServer_hwPushNotifyFxn(void *arg, CpswCpts_HwPush hwPushNum)
+#endif
 {
+#if defined(MCU_PLUS_SDK)
+    (void)tsVal;
+#endif
     if (arg != NULL)
     {
         CpswProxyServer_Obj *hServer = (CpswProxyServer_Obj *)arg;

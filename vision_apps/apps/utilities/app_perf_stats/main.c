@@ -69,7 +69,12 @@ int main(int argc, char *argv[])
 {
     int32_t status = 0;
 
-    status = appCommonInit();
+    status = appCommonMemInit();
+
+    if (status == 0)
+    {
+        status = appCommonInit();
+    }
 
     if(status == 0)
     {
@@ -85,6 +90,8 @@ int main(int argc, char *argv[])
         }
 
         status = appCommonDeInit();
+
+        status |= appCommonMemDeInit();
 
     }
     printf("APP PERF STATS: Done !!!\n");

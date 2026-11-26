@@ -258,10 +258,14 @@ static vx_reference ownCreatePyramidFromExemplar(
     if ((vx_status)VX_SUCCESS == vxGetStatus((vx_reference)pmd) && (NULL != exemplar->base.supplementary_data))
     {
         vx_uint32 i;
-        vx_status status = (vx_status)VX_SUCCESS;
-        for (i = 0U; (i < levels) && ((vx_status)VX_SUCCESS == status); ++i)
+        vx_status status;
+        for (i = 0U; i < levels; ++i)
         {
             status = vxSetSupplementaryUserDataObject(&pmd->img[i]->base, exemplar->base.supplementary_data);
+            if ((vx_status)VX_SUCCESS != status)
+            {
+                break;
+            }
         }
     }
 
@@ -384,8 +388,12 @@ static vx_reference ownCreateObjectArrayFromExemplar(
 
     (void)vxQueryObjectArray(exemplar, (vx_enum)VX_OBJECT_ARRAY_NUMITEMS, &count, sizeof(count));
 
-    for (i = 0U; (i < count) && ((vx_status)VX_SUCCESS == status); ++i)
+    for (i = 0U; i < count; ++i)
     {
+        if ((vx_status)VX_SUCCESS != status)
+        {
+            break;
+        }
         objarr_item = vxGetObjectArrayItem(exemplar, i);
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>

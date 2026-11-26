@@ -1,0 +1,20 @@
+obj/j722s/ti-arm-clang/release/main-r5f/drivers_ipfma//dphy_if_sanity.obj: \
+  ../dss/v1/hw_include/dphy/src/dphy_if_sanity.c \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/dphy/csl_dphy.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/dphy/cslr_dphy.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/V3/cslr_dss.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/cslr.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/tistdtypes.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/csl_utils.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/hw_include/cslr64.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/dphy/include/dphy_regs.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/common/cps_drv.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/common/cps.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/common/cdn_stdtypes.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/common/cdn_stdint.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/dphy/include/dphy_regs_macros.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/dphy/include/cslr_wiz16b8m4cdt.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/dphy/include/cdn_errno.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/dphy/include/dphy_if.h \
+  /home/dockeruser/psdk_installer_build_top_workarea/scratch_workarea/staging_area/mcu_plus_sdk/source/drivers/dss/v1/hw_include/dphy/include/dphy_structs_if.h \
+  ../dss/v1/hw_include/dphy/src/dphy_if_sanity.h

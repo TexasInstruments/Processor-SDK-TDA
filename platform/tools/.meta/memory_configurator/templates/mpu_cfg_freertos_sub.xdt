@@ -1,0 +1,44 @@
+  %%{
+  let mpu_module = system.modules["/memory_configurator/mpu_cfg"];
+  let instances  = (mpu_module !== undefined) ? mpu_module.$instances : [];
+  %%}
+
+#include <stdlib.h>
+#include <stdint.h>
+#include <ti/csl/arch/r5/csl_arm_r5.h>
+#include <ti/csl/arch/r5/csl_arm_r5_mpu.h>
+#include <ti/csl/arch/r5/interrupt.h>
+#include <ti/csl/arch/r5/csl_cache.h>
+
+/*
+ * This structure specifies the entries for mpu configuration to override the
+ * default MPU configuration which is part of the CSL init.
+ */
+const CSL_ArmR5MpuRegionCfg  gCslR5MpuCfg[CSL_ARM_R5F_MPU_REGIONS_MAX]
+__attribute__ ((section(".mpu_cfg")));
+
+const CSL_ArmR5MpuRegionCfg  gCslR5MpuCfg[CSL_ARM_R5F_MPU_REGIONS_MAX] =
+{
+  % for (let i = 0; i < instances.length; i++) {
+  % let inst = instances[i];
+  % let sizeEnum   = mpu_module.getSizeEnum(inst);
+  % let baseStr    = mpu_module.getBaseAddrStr(inst);
+  % let attrs      = mpu_module.getResolvedAttrs(inst);
+  % let memAttr    = mpu_module.getMemAttr(inst);
+  % let subRegStr  = (inst.subRegionEnable === 0xFF) ? "CSL_ARM_R5_MPU_SUB_REGION_ENABLE_ALL" : ("0x" + inst.subRegionEnable.toString(16).toUpperCase() + "U");
+    {
+        /* `inst.$name` */
+        .regionId         = `i`U,
+        .enable           = 1U,
+        .baseAddr         = `baseStr`,
+        .size             = `sizeEnum`,
+        .subRegionEnable  = `subRegStr`,
+        .exeNeverControl  = `inst.exeNeverControl ? "1U" : "0U"`,
+        .accessPermission = `inst.accessPermission`,
+        .shareable        = `attrs.shareable ? "1U" : "0U"`,
+        .cacheable        = (uint32_t)`attrs.cacheable ? "UTRUE" : "UFALSE"`,
+        .cachePolicy      = `attrs.cachePolicy`,
+        .memAttr          = `memAttr`,
+    },
+  % }
+};

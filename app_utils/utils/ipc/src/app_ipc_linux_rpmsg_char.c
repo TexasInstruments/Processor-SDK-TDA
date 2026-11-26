@@ -273,9 +273,20 @@ static void appIpcRpmsgRxHandler(uint32_t app_cpu_id, uint32_t payload)
 <metric start> branch <metric end>
 <justification start> APP_UTILS_BRANCH_COVERAGE_RPMSG_CHAR_UBR002
 <justification end> */
-            if(obj->ipc_notify_handler != NULL)
+            if (NULL != obj->ipc_notify_handler)
+/* LDRA_JUSTIFY_END */
             {
                 obj->ipc_notify_handler(app_cpu_id, payload);
+            }
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> APP_UTILS_BRANCH_COVERAGE_RPMSG_CHAR_UBR002
+<justification end> */
+            else
+            {
+                appLogPrintf("IPC: ERROR: RX handler is invalid! Message from %s -> %s was dropped\n",
+                    appIpcGetCpuName(app_cpu_id),
+                    appIpcGetCpuName(appIpcGetSelfCpuId()));
             }
 /* LDRA_JUSTIFY_END */
         }

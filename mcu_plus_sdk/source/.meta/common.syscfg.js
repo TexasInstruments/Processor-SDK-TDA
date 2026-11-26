@@ -149,7 +149,7 @@ function getSocName() {
         return "am62px";
     if(system.deviceData.device == "AM275x")
         return "am275x";
-    if(system.deviceData.device == "J722S_TDA4VEN_TDA4AEN_AM67")
+    if(system.deviceData.device == "J722S_TDA4VEN_TDA4AEN_AM67" || system.deviceData.device == "j722s")
         return "j722s";
     if(system.deviceData.device == "AM62Lx")
         return "am62lx";
@@ -180,7 +180,7 @@ function getDeviceName() {
         return "am62px-sk";
     if(system.deviceData.device == "AM275x")
         return "am275x-evm";
-    if(system.deviceData.device == "J722S_TDA4VEN_TDA4AEN_AM67")
+    if(system.deviceData.device == "J722S_TDA4VEN_TDA4AEN_AM67" || system.deviceData.device == "j722s")
         return "j722s-evm";
     if(system.deviceData.device == "AM62Lx")
         return "am62lx-evm";

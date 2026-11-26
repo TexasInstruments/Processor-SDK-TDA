@@ -84,7 +84,7 @@ static void tivxDeInitLocal(void);
  */
 static uint32_t gInitCount = 0U;
 
-#if defined(LINUX) || defined(QNX)
+#if defined(HLOS)
 #include <pthread.h>
 #include <tivx_platform_posix.h>
 
@@ -110,7 +110,8 @@ void tivxDeInit(void)
     (void)pthread_mutex_unlock(&g_mutex);
 }
 
-#else
+#else /* #if defined(HLOS) */
+
 void tivxInit(void)
 {
 #if defined(REMOTE_COVERAGE)
@@ -130,7 +131,7 @@ void tivxDeInit(void)
 {
     tivxDeInitLocal();
 }
-#endif // defined(LINUX) || defined(QNX)
+#endif /* #if defined(HLOS) */
 
 static void tivxInitLocal(void)
 {
@@ -140,10 +141,10 @@ static void tivxInitLocal(void)
         tivx_set_debug_zone((int32_t)VX_ZONE_WARNING);
         tivx_set_debug_zone((int32_t)VX_ZONE_INFO);
 
-#if defined(LINUX) || defined(QNX)
+#if defined(HLOS)
         /* Initialize the POSIX objects */
         (void)ownPosixObjectInit();
-#endif
+#endif /* #if defined(HLOS) */
 
         /* Initialize resource logging */
         ownLogResourceInit();
@@ -277,10 +278,10 @@ static void tivxDeInitLocal(void)
             /* DeInitialize resource logging */
             ownLogResourceDeInit();
 
-#if defined(LINUX) || defined(QNX)
+#if defined(HLOS)
             /* DeInitialize the POSIX objects */
             (void)ownPosixObjectDeInit();
-#endif
+#endif /* #if defined(HLOS) */
 
             VX_PRINT(VX_ZONE_INFO, "De-Initialization Done !!!\n");
         }

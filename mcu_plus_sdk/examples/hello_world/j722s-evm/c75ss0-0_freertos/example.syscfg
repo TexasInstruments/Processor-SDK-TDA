@@ -18,6 +18,10 @@ const mmu_armv85 = mmu_armv8.addInstance();
 const mmu_armv86 = mmu_armv8.addInstance();
 const mmu_armv87 = mmu_armv8.addInstance();
 const mmu_armv88 = mmu_armv8.addInstance();
+const default_linker  = scripting.addModule("/memory_configurator/default_linker", {}, false);
+const default_linker1 = default_linker.addInstance();
+const region          = scripting.addModule("/memory_configurator/region", {}, false);
+const region1         = region.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
@@ -149,6 +153,44 @@ mmu_armv88.pAddr     = 0xA3410000;
 mmu_armv88.size      = 0x1000;
 mmu_armv88.attribute = "MAIR4";
 mmu_armv88.$name     = "CCS_DEBUG_LOG_MEM";
+
+default_linker1.$name = "memory_configurator_default_linker0";
+
+region1.$name                               = "MEMORY_REGION_CONFIGURATION0";
+region1.memory_region.create(7);
+region1.memory_region[0].auto               = false;
+region1.memory_region[0].type               = "L3_C75";
+region1.memory_region[0].$name              = "L2SRAM";
+region1.memory_region[0].size               = 0x200000;
+region1.memory_region[1].type               = "DDR_LOW_ALL";
+region1.memory_region[1].auto               = false;
+region1.memory_region[1].size               = 0x19800000;
+region1.memory_region[1].$name              = "DDR0_RESERVED";
+region1.memory_region[2].type               = "DDR_LOW_ALL";
+region1.memory_region[2].auto               = false;
+region1.memory_region[2].manualStartAddress = 0xA3000000;
+region1.memory_region[2].$name              = "C7X_IPC_D";
+region1.memory_region[2].size               = 0x100000;
+region1.memory_region[3].type               = "DDR_LOW_ALL";
+region1.memory_region[3].auto               = false;
+region1.memory_region[3].$name              = "C7X_BOOT_D";
+region1.memory_region[3].size               = 0x400;
+region1.memory_region[3].manualStartAddress = 0xA3200000;
+region1.memory_region[4].type               = "DDR_LOW_ALL";
+region1.memory_region[4].auto               = false;
+region1.memory_region[4].$name              = "C7X_VECS_D";
+region1.memory_region[4].size               = 0x4000;
+region1.memory_region[4].manualStartAddress = 0xA3400000;
+region1.memory_region[5].type               = "DDR_LOW_ALL";
+region1.memory_region[5].$name              = "C7X_CIO_MEM";
+region1.memory_region[5].auto               = false;
+region1.memory_region[5].size               = 0x1000;
+region1.memory_region[5].manualStartAddress = 0xA3410000;
+region1.memory_region[6].type               = "DDR_LOW_ALL";
+region1.memory_region[6].$name              = "C7X_DDR_SPACE";
+region1.memory_region[6].auto               = false;
+region1.memory_region[6].manualStartAddress = 0xA3411000;
+region1.memory_region[6].size               = 0xBEF000;
 
 /**
  * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future

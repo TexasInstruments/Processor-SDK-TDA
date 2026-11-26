@@ -1,6 +1,6 @@
 ifeq ($(RTOS),FREERTOS)
   ifeq ($(RTOS_SDK),pdk)
-    LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_freertos.cmd
+    LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE).cmd
   else
     CSOURCES += generated/ti_board_config.c
     CSOURCES += generated/ti_board_open_close.c
@@ -9,7 +9,7 @@ ifeq ($(RTOS),FREERTOS)
     CSOURCES += generated/ti_drivers_open_close.c
     CSOURCES += generated/ti_pinmux_config.c
     CSOURCES += generated/ti_power_clock_config.c
-    LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_freertos_mcuplus.cmd
+    LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE)_mcuplus.cmd
     IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/c7x_1/generated
   endif
 endif

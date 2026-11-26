@@ -39,6 +39,8 @@ ifeq ($(filter $(TARGET_OS),LINUX CYGWIN DARWIN NO_OS SYSBIOS),)
 $(error TARGET_OS $(TARGET_OS) is not supported by this compiler)
 endif
 
+CONCERTO_GCC_VERSION ?= $(shell gcc -dumpversion | cut -d. -f1)
+
 ifneq ($(GCC_LINUX_ROOT),)
 CC = $(GCC_LINUX_ROOT)/bin/gcc-$(CONCERTO_GCC_VERSION)
 CP = $(GCC_LINUX_ROOT)/bin/g++-$(CONCERTO_GCC_VERSION)

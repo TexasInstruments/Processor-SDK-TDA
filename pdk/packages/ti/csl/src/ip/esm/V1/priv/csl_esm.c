@@ -532,6 +532,7 @@ int32_t ESMGetGroupIntrStatus(uint32_t baseAddr, esmIntrPriorityLvl_t intrPrioTy
     return (retVal);
 }
 
+#if defined(SOC_AM65XX) || defined(SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 /**
  *  Requirement: REQ_TAG(PDK-6028)
  *  Design: did_csl_handle_esm_cfg_err_int
@@ -550,6 +551,7 @@ int32_t ESMClearIntrStatus(uint32_t baseAddr, uint32_t intrSrc)
     }
     return retVal;
 }
+#endif
 
 /**
  *  Requirement: REQ_TAG(PDK-6028) REQ_TAG(PDK-6027)
@@ -595,6 +597,7 @@ int32_t ESMGetIntrStatusRAW(uint32_t baseAddr, uint32_t intrSrc, uint32_t *pStat
     return (retVal);
 }
 
+#if defined(SOC_AM65XX) || defined(SOC_AM64X) || defined (SOC_AM62X) || defined (SOC_AM62A) || defined (SOC_AM62PX) || defined (SOC_AM62LX) || defined (SOC_AM275X) || defined (SOC_AM283X)
 /**
  *  Requirement: REQ_TAG(PDK-6028)
  *  Design: did_csl_handle_esm_cfg_err_int
@@ -609,6 +612,7 @@ int32_t ESMWriteEOI(uint32_t baseAddr, esmIntrType_t intrType)
     }
     return retVal;
 }
+#endif
 
 /**
  *  Requirement: REQ_TAG(PDK-6036)

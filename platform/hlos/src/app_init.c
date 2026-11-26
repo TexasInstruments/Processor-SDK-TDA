@@ -75,21 +75,37 @@
 
 #include <platform.h>
 
+#if defined(SOC_FAMILY_J7) || defined(SOC_FAMILY_AM)
+#define APP_TIOVX_OBJ_DESC_MEM_ADDR TIOVX_OBJ_DESC_MEM_HOST0_ADDR
+#define APP_TIOVX_OBJ_DESC_MEM_SIZE TIOVX_OBJ_DESC_MEM_HOST0_SIZE
+#else
+#define APP_TIOVX_OBJ_DESC_MEM_ADDR TIOVX_OBJ_DESC_MEM_ADDR
+#define APP_TIOVX_OBJ_DESC_MEM_SIZE TIOVX_OBJ_DESC_MEM_SIZE
+#endif
+
 #if defined(QNX)
 #include <hw/inout.h>
 #include <sys/mman.h>
 #include <sys/neutrino.h>
 #endif
 
-/* Mutex for controlling access to Init/De-Init. */
-static pthread_mutex_t gMutex = PTHREAD_MUTEX_INITIALIZER;
-extern core_config_t core_config[];
-extern uint8_t num_cores;
+#ifdef SOC_AM62A
+#define DMA_HEAP_NAME          "/dev/dma_heap/carveout_edgeai_shared-memories"
+#else
+#define DMA_HEAP_NAME          "/dev/dma_heap/carveout_vision_apps_shared-memories"
+#endif
 
-/* Counter for tracking the {init, de-init} calls. This is also used to
+/* Mutexes for controlling access to Init/De-Init. */
+static pthread_mutex_t gMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t gMemLock = PTHREAD_MUTEX_INITIALIZER;
+extern core_config_t g_platform_utils_core_config[];
+extern uint8_t g_platform_utils_num_cores;
+
+/* Counters for tracking the {init, de-init} calls. This is also used to
  * guarantee a single init/de-init operation.
  */
 static uint32_t gInitCount = 0U;
+static uint32_t gMemInitCount = 0U;
 
 static int32_t appCommonInitLocal();
 static int32_t appCommonDeInitLocal();
@@ -152,89 +168,64 @@ static int32_t appCommonInitLocal()
     }
     if(status==0)
     {
-
-        #if defined(QNX)
-
-        app_mem_init_prm_t mem_init_prm;
-        #if defined (SOC_J721E) || defined (SOC_AM62A)
-        mem_init_prm.base = DDR_SHARED_MEM_ADDR;
-        mem_init_prm.size = DDR_SHARED_MEM_SIZE;
-        #else
-        mem_init_prm.base = DDR_SHARED_MEM_PHYS_ADDR;
-        mem_init_prm.size = DDR_SHARED_MEM_PHYS_SIZE;
-        #endif
-
-        status = appMemInit(&mem_init_prm);
-
-        #else /* defined(QNX) */
-
-        status = appMemInit(NULL);
-
-        #endif /* defined(QNX) */
-
-        if(status!=0)
+        if (appMemIsCharInit() == 1U)
         {
-            printf("APP: ERROR: Memory init failed !!!\n");
+            #ifdef ENABLE_IPC
+            appIpcInitPrmSetDefault(&ipc_init_prm);
+            appRemoteServiceInitSetDefault(&remote_service_init_prm);
+
+            for (int i = 0; i < g_platform_utils_num_cores; i++)
+            {
+                ipc_init_prm.enabled_cpu_id_list[i] = g_platform_utils_core_config[i].cpu;
+            }
+            ipc_init_prm.num_cpus = g_platform_utils_num_cores;
+            ipc_init_prm.self_cpu_id = APP_IPC_CPU_MPU1_0;
+
+            #if defined(QNX)
+
+            /* Adding so vring memory not NULL */
+            ipc_init_prm.ipc_vring_mem =  (void *)  IPC_VRING_MEM_ADDR;
+            ipc_init_prm.ipc_vring_mem_size = IPC_VRING_MEM_SIZE;
+
+            ipc_init_prm.tiovx_obj_desc_mem   = (void *) mmap_device_memory(0, APP_TIOVX_OBJ_DESC_MEM_SIZE,
+                    PROT_READ|PROT_WRITE|PROT_NOCACHE, 0,
+                    APP_TIOVX_OBJ_DESC_MEM_ADDR);
+            ipc_init_prm.tiovx_log_rt_mem   = (void *) mmap_device_memory(0, TIOVX_LOG_RT_MEM_SIZE,
+                    PROT_READ|PROT_WRITE|PROT_NOCACHE, 0,
+                    TIOVX_LOG_RT_MEM_ADDR);
+
+            #else /* defined(QNX) */
+
+            ipc_init_prm.tiovx_obj_desc_mem = (void*)APP_TIOVX_OBJ_DESC_MEM_ADDR;
+            ipc_init_prm.tiovx_log_rt_mem   = (void*)TIOVX_LOG_RT_MEM_ADDR;
+
+            #endif /* defined(QNX) */
+
+            ipc_init_prm.tiovx_obj_desc_mem_size = APP_TIOVX_OBJ_DESC_MEM_SIZE;
+            ipc_init_prm.tiovx_log_rt_mem_size   = TIOVX_LOG_RT_MEM_SIZE;
+
+            status = appIpcInit(&ipc_init_prm);
+            if(status!=0)
+            {
+                printf("APP: ERROR: IPC init failed !!!\n");
+            }
+            status = appRemoteServiceInit(&remote_service_init_prm);
+            if(status!=0)
+            {
+                printf("APP: ERROR: Remote service init failed !!!\n");
+            }
+            status = appPerfStatsInit();
+            if(status!=0)
+            {
+                printf("APP: ERROR: Perf stats init failed !!!\n");
+            }
+            status = appPerfStatsRemoteServiceInit();
+            if(status!=0)
+            {
+                printf("APP: ERROR: Perf stats remote service init failed !!!\n");
+            }
+            #endif /* ENABLE_IPC */
         }
-    }
-    if(status==0)
-    {
-        #ifdef ENABLE_IPC
-        appIpcInitPrmSetDefault(&ipc_init_prm);
-        appRemoteServiceInitSetDefault(&remote_service_init_prm);
-
-        for (int i = 0; i < num_cores; i++)
-        {
-            ipc_init_prm.enabled_cpu_id_list[i] = core_config[i].cpu;
-        }
-        ipc_init_prm.num_cpus = num_cores;
-        ipc_init_prm.self_cpu_id = APP_IPC_CPU_MPU1_0;
-
-
-        #if defined(QNX)
-
-        /* Adding so vring memory not NULL */
-        ipc_init_prm.ipc_vring_mem =  (void *)  IPC_VRING_MEM_ADDR;
-        ipc_init_prm.ipc_vring_mem_size = IPC_VRING_MEM_SIZE;
-
-        ipc_init_prm.tiovx_obj_desc_mem   = (void *) mmap_device_memory(0, TIOVX_OBJ_DESC_MEM_SIZE,
-                PROT_READ|PROT_WRITE|PROT_NOCACHE, 0,
-                TIOVX_OBJ_DESC_MEM_ADDR);
-        ipc_init_prm.tiovx_log_rt_mem   = (void *) mmap_device_memory(0, TIOVX_LOG_RT_MEM_SIZE,
-                PROT_READ|PROT_WRITE|PROT_NOCACHE, 0,
-                TIOVX_LOG_RT_MEM_ADDR);
-
-        #else /* defined(QNX) */
-
-        ipc_init_prm.tiovx_obj_desc_mem = (void*)TIOVX_OBJ_DESC_MEM_ADDR;
-        ipc_init_prm.tiovx_log_rt_mem   = (void*)TIOVX_LOG_RT_MEM_ADDR;
-
-        #endif /* defined(QNX) */
-
-        ipc_init_prm.tiovx_obj_desc_mem_size = TIOVX_OBJ_DESC_MEM_SIZE;
-        ipc_init_prm.tiovx_log_rt_mem_size = TIOVX_LOG_RT_MEM_SIZE;
-
-        status = appIpcInit(&ipc_init_prm);
-        if(status!=0)
-        {
-            printf("APP: ERROR: IPC init failed !!!\n");
-        }
-        status = appRemoteServiceInit(&remote_service_init_prm);
-        if(status!=0)
-        {
-            printf("APP: ERROR: Remote service init failed !!!\n");
-        }
-        status = appPerfStatsInit();
-        if(status!=0)
-        {
-            printf("APP: ERROR: Perf stats init failed !!!\n");
-        }
-        status = appPerfStatsRemoteServiceInit();
-        if(status!=0)
-        {
-            printf("APP: ERROR: Perf stats remote service init failed !!!\n");
-        }
-        #endif /* ENABLE_IPC */
 
         appLogPrintGtcFreq();
     }
@@ -250,7 +241,6 @@ static int32_t appCommonDeInitLocal()
 
     appRemoteServiceDeInit();
     appIpcDeInit();
-    appMemDeInit();
     status = appLogGlobalTimeDeInit();
 
     printf("APP: Deinit ... Done !!!\n");
@@ -258,10 +248,71 @@ static int32_t appCommonDeInitLocal()
     return status;
 }
 
+int32_t appCommonMemInit()
+{
+    int32_t status = 0U;
+
+    pthread_mutex_lock(&gMemLock);
+
+    if (gMemInitCount == 0U)
+    {
+        app_mem_init_prm_t mem_init_prm;
+
+        mem_init_prm.base = DDR_SHARED_MEM_PHYS_ADDR;
+        mem_init_prm.start = DDR_SHARED_MEM_PHYS_ADDR;
+        mem_init_prm.size = DDR_SHARED_MEM_PHYS_SIZE;
+        mem_init_prm.flags = 0U;
+        mem_init_prm.heap_id = APP_MEM_HEAP_DDR_SHARED;
+        strncpy(mem_init_prm.name, "MPU_0", APP_MEM_HEAP_NAME_MAX);
+        strncpy(mem_init_prm.dma_carveout_name, DMA_HEAP_NAME, APP_MEM_DMA_CARVEOUT_NAME_MAX);
+
+        status = appMemInit(&mem_init_prm);
+
+        if(status != 0)
+        {
+            printf("APP: ERROR: Memory init failed !!!\n");
+        }
+
+    }
+
+    gMemInitCount++;
+
+    pthread_mutex_unlock(&gMemLock);
+
+    return status;
+}
+
+int32_t appCommonMemDeInit()
+{
+    int32_t status = 0U;
+
+    pthread_mutex_lock(&gMemLock);
+
+    if (gMemInitCount > 0U)
+    {
+        gMemInitCount--;
+
+        if (gMemInitCount == 0U)
+        {
+            status = appMemDeInit();
+        }
+    }
+
+    pthread_mutex_unlock(&gMemLock);
+
+    return status;
+}
+
 int32_t appInit()
 {
     int32_t status;
-    status = appCommonInit();
+
+    status = appCommonMemInit();
+
+    if (status == 0)
+    {
+        status = appCommonInit();
+    }
 
     if (status == 0)
     {
@@ -280,6 +331,8 @@ int32_t appDeInit()
     tivxDeInit();
 
     status = appCommonDeInit();
+
+    status |= appCommonMemDeInit();
 
     return status;
 }

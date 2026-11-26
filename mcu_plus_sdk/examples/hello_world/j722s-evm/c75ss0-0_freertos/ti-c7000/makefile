@@ -100,7 +100,8 @@ CFLAGS_release := \
 	-DBUILD_C75X \
 
 LNK_FILES_common = \
-	linker.cmd \
+	generated/linker_mem_map_freertos.cmd \
+	sections.cmd \
 
 LIBS_PATH_common = \
 	-i${MCU_PLUS_SDK_PATH}/source/kernel/freertos/lib \

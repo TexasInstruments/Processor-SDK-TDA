@@ -24,6 +24,7 @@ In this SDK, SysConfig is used to:
  - Generate clock and power configurations
  - Generate pinmux for various peripherals
 
+\cond !SOC_J722S
 ## Opening SysConfig GUI from CCS
 
 - To open the Sysconfig GUI from CCS, import the CCS project for the example and simply double click on the example.syscfg in the project explorer window
@@ -34,6 +35,7 @@ In this SDK, SysConfig is used to:
     \imageStyle{sysconfig_in_ccs_20p1.png, width:50%}
     \image html sysconfig_in_ccs_20p1.png "SysConfig GUI when opened from command line"
 
+\endcond
 ## Opening SysConfig GUI from command line and makefiles
 
 - You can also open the Syscfg GUI from the command line. You can refer to \ref MAKEFILE_EXAMPLE_BUILD to do this.

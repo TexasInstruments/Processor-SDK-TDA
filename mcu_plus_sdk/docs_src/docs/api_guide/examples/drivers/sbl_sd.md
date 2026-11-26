@@ -51,9 +51,13 @@ If a multicore appimage file is found at the location, the SBL reads the file in
 
 \endif
 
-\cond !SOC_AM275X
+\cond !SOC_AM275X && !SOC_J722S
 \note
 The default appimages in the SDK are built with authentication type 0  and load address 0x84000000. The gAppimage section in the bootloader application also has to be linked to the same address (0x84000000). If gAppimage section address is changed or multiple gAppimage buffers are used in the bootloader application, please ensure application's makefile is also updated with the corresponding load address.
+\endcond
+\cond SOC_J722S
+\note
+The default appimages in the SDK are built with authentication type 0  and load address 0xC2000000. The gAppimage section in the bootloader application also has to be linked to the same address (0xC2000000). If gAppimage section address is changed or multiple gAppimage buffers are used in the bootloader application, please ensure application's makefile is also updated with the corresponding load address.
 \endcond
 
 # Supported Combinations {#EXAMPLES_DRIVERS_SBL_SD_COMBOS}
@@ -122,6 +126,10 @@ Since this is a bootloader, the example will be run every time you boot an appli
 - **When using makefiles to build**, note the required combination and build using
   make command (see \ref MAKEFILE_BUILD_PAGE)
 - Refer to the page \ref BASIC_STEPS_TO_FLASH_FILES to flash this bootloader along with the application to boot.
+
+## Run the example
+
+- Boot the EVM in SD boot mode.
 
 # See Also
 

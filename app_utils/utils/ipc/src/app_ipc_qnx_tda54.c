@@ -336,11 +336,22 @@ static void appIpcRpmsgRxHandler(RPMessage_Object rpmsg_handle,
 <metric start> branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_IPC_QNX_UM14
 <justification end> */
-            if(obj->ipc_notify_handler)
+            if (NULL != obj->ipc_notify_handler)
 /* LDRA_JUSTIFY_END */
             {
                 obj->ipc_notify_handler(app_cpu_id, payload);
             }
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_IPC_QNX_UM14
+<justification end> */
+            else
+            {
+                appLogPrintf("IPC: ERROR: RX handler is invalid! Message from %s -> %s was dropped\n",
+                    appIpcGetCpuName(app_cpu_id),
+                    appIpcGetCpuName(appIpcGetSelfCpuId()));
+            }
+/* LDRA_JUSTIFY_END */
         }
     }
 }
@@ -535,7 +546,7 @@ int32_t appIpcInit(app_ipc_init_prm_t *prm)
     return status;
 }
 
-int32_t appIpcDeInit()
+int32_t appIpcDeInit(void)
 {
     int32_t status = 0;
 
@@ -620,7 +631,7 @@ int32_t appIpcSendNotify(uint32_t dest_cpu_id, uint32_t payload)
     return status;
 }
 
-uint32_t appIpcGetSelfCpuId()
+uint32_t appIpcGetSelfCpuId(void)
 {
     app_ipc_obj_t *obj = &g_app_ipc_obj;
 

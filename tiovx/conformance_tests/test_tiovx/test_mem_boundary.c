@@ -106,14 +106,14 @@ TEST(tivxMemBoundary, negativeTestMemBufferAllocBoundary)
     VX_CALL(test_utils_max_out_heap_mem(&tivx_shared_mem_info_array, &num_chunks, mheap_region));
 
     /* Below APIs should fail due to tivxMemBufferAlloc failure */
-    ASSERT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, vxCopyDistribution(dist, udata, usage, user_mem_type));
-    ASSERT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, vxCopyLUT(lut, user_data, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
-    ASSERT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, vxCopyMatrix(matrix, data, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
+    EXPECT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, vxCopyDistribution(dist, udata, usage, user_mem_type));
+    EXPECT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, vxCopyLUT(lut, user_data, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
+    EXPECT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, vxCopyMatrix(matrix, data, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
     EXPECT_VX_ERROR(matrix1 = vxCreateMatrixFromPattern(context, VX_PATTERN_OTHER, columns, rows), VX_ERROR_NO_RESOURCES);
-    ASSERT_EQ_VX_STATUS(VX_ERROR_INVALID_REFERENCE, vxSetRemapPoint(remap, 0, 0, 0, 0));
+    EXPECT_EQ_VX_STATUS(VX_ERROR_INVALID_REFERENCE, vxSetRemapPoint(remap, 0, 0, 0, 0));
     EXPECT_VX_ERROR(image = vxCreateImageFromChannel(img,VX_CHANNEL_Y), VX_ERROR_NO_RESOURCES);
     EXPECT_VX_ERROR(image = vxCreateImageFromROI(img,&rect), VX_ERROR_NO_RESOURCES);
-    ASSERT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, tivxCopyRawImagePatch(raw_image, &rect1, 1, &addr, (void *)&ptr,
+    EXPECT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, tivxCopyRawImagePatch(raw_image, &rect1, 1, &addr, (void *)&ptr,
                                   VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, TIVX_RAW_IMAGE_PIXEL_BUFFER));
     EXPECT_VX_ERROR(user_data_object = vxCreateUserDataObject(context, tname, sizeof(vx_uint32), &userdata),VX_ERROR_INVALID_PARAMETERS);
 

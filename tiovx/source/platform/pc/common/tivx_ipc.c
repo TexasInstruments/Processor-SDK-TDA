@@ -110,50 +110,6 @@ uint32_t g_ipc_csl_id_map[TIVX_CPU_ID_MAX] = {
     CORE_ID_MCU4
 };
 
-static char* g_app_ipc_name_map[APP_IPC_CPU_MAX] =
-{
-    "INVALID\0",
-    "TIVX_MCU0\0",
-    "TIVX_MCU1\0",
-    "TIVX_MCU2\0",
-    "TIVX_MCU3\0",
-    "TIVX_MCU4\0",
-    "TIVX_R52P0\0",
-    "INVALID\0",
-    "INVALID\0",
-    "INVALID\0",
-    "INVALID\0",
-    "INVALID\0",
-    "TIVX_C71\0",
-    "TIVX_C72\0",
-    "TIVX_C73\0",
-    "TIVX_C74\0",
-};
-
-
-static char* g_ipc_csl_name_map[CORE_ID_MAX] = {
-    "INVALID",
-    "TIVX_MCU0",
-    "TIVX_MCU1",
-    "TIVX_MCU2",
-    "TIVX_MCU3",
-    "TIVX_MCU4",
-    "TIVX_C71",
-    "TIVX_C72",
-    "TIVX_C73",
-    "TIVX_C74",
-    "INVALID",
-    "INVALID",
-    "INVALID",
-    "INVALID",
-    "TIVX_R52P0",
-    "INVALID",
-    "INVALID",
-    "INVALID",
-    "INVALID",
-    "INVALID",
-};
-
 static tivx_vdk_ipc_send_mbox_f gVdkIpcSendMbox = NULL;
 
 void ownUpdateIpcSendMboxFunctionPtr(tivx_vdk_ipc_send_mbox_f ptr)
@@ -184,9 +140,9 @@ static void tivxIpcHandler(uint32_t src_cpu_id, uint32_t payload)
 }
 #endif
 
-void ownIpcRegisterHandler(tivx_ipc_handler_f notifyCb)
+void ownIpcRegisterHandler(tivx_ipc_handler_f ipc_handler_func)
 {
-    g_ipc_handler = notifyCb;
+    g_ipc_handler = ipc_handler_func;
 }
 
 void ownIpcInit(void)

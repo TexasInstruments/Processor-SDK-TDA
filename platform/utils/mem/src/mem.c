@@ -61,6 +61,7 @@
  */
 
 #include <app_mem_map.h>
+#include <app_init.h>
 #include CORE_CFG_FILE
 #include <platform_util_mem.h>
 
@@ -122,7 +123,35 @@ __attribute__ ((aligned(4096)))
         ;
 #endif
 
-soc_mem_config_t mem_regions[] = {
+#ifdef ENABLE_TIOVX
+#ifdef ENABLE_TIOVX_HOST
+#if (ENABLE_TIOVX_HOST == 0U)
+#define TIOVX_HOST_DDR_SHARED_MEM_SIZE (DDR_SHARED_MEM_HOST0_SIZE)
+uint8_t g_tiovx_host_shared_mem[TIOVX_HOST_DDR_SHARED_MEM_SIZE]
+__attribute__ ((section(".bss:tiovx_host_shared_mem0")))
+__attribute__ ((aligned(4096)))
+        ;
+#endif /* #if (ENABLE_TIOVX_HOST == 0U) */
+
+#if (ENABLE_TIOVX_HOST == 1U)
+#define TIOVX_HOST_DDR_SHARED_MEM_SIZE (DDR_SHARED_MEM_HOST1_SIZE)
+uint8_t g_tiovx_host_shared_mem[TIOVX_HOST_DDR_SHARED_MEM_SIZE]
+__attribute__ ((section(".bss:tiovx_host_shared_mem1")))
+__attribute__ ((aligned(4096)))
+        ;
+#endif /* #if (ENABLE_TIOVX_HOST == 1U) */
+
+#if (ENABLE_TIOVX_HOST == 2U)
+#define TIOVX_HOST_DDR_SHARED_MEM_SIZE (DDR_SHARED_MEM_HOST2_SIZE)
+uint8_t g_tiovx_host_shared_mem[TIOVX_HOST_DDR_SHARED_MEM_SIZE]
+__attribute__ ((section(".bss:tiovx_host_shared_mem2")))
+__attribute__ ((aligned(4096)))
+        ;
+#endif /* #if (ENABLE_TIOVX_HOST == 2U) */
+#endif /* #ifdef ENABLE_TIOVX_HOST */
+#endif /* #ifdef ENABLE_TIOVX */
+
+soc_mem_config_t g_platform_utils_mem_regions[] = {
 #ifdef DDR_HEAP_MEM_SIZE
         {
             .name = "DDR_LOCAL_MEM",
@@ -193,8 +222,17 @@ soc_mem_config_t mem_regions[] = {
             .size = DDR_VISS_HEAP_MEM_SIZE,
             .base = g_ddr_cache_wt_mem,
             .flag = 0,
+        },
+#endif
+#ifdef TIOVX_HOST_DDR_SHARED_MEM_SIZE
+        {
+            .name = "DDR_SHARED_MEM",
+            .heap_id = APP_MEM_HEAP_DDR_SHARED,
+            .size = TIOVX_HOST_DDR_SHARED_MEM_SIZE,
+            .base = g_tiovx_host_shared_mem,
+            .flag = APP_MEM_HEAP_FLAGS_IS_SHARED,
         }
 #endif
 };
 
-uint8_t num_mem_regions = sizeof(mem_regions)/sizeof(mem_regions[0]);
+uint8_t g_platform_utils_num_mem_regions = sizeof(g_platform_utils_mem_regions)/sizeof(g_platform_utils_mem_regions[0]);

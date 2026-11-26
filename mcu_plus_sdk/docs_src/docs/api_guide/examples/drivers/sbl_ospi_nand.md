@@ -4,7 +4,7 @@
 
 # Introduction
 
-This bootloader does SOC initializations and attempts to boot a multicore appimage present at 0x80000 location in the OSPI Flash. To flash a multicore appimage at this location, follow the steps mentioned in \ref BASIC_STEPS_TO_FLASH_FILES.
+This bootloader does SOC initializations and attempts to boot a multicore appimage present at 0xC0000 location in the OSPI Flash. To flash a multicore appimage at this location, follow the steps mentioned in \ref BASIC_STEPS_TO_FLASH_FILES.
 
 If a multicore appimage is found at the location, the SBL parses it, splits it into RPRCs for each core applicable. Each core is then initialized, RPRC image is loaded, entry points are set and the core is released from reset. For more on bootflow/bootloaders, please refer \ref BOOTFLOW_GUIDE
 
@@ -30,11 +30,37 @@ Since this is a bootloader, the example will be run every time you boot an appli
 - **When using makefiles to build**, note the required combination and build using
   make command (see \ref MAKEFILE_BUILD_PAGE)
 - Flash SBL, Appimage to OSPI Flash, follow below steps to flash the binaries
+\cond !SOC_J722S
 \note Before running the following command, user needs to build sbl_uart_uniflash_stage1, sbl_uart_uniflash_stage2_nand, sbl_ospi_nand, appimage and edit the cfg file according to appimage that we are booting
+\endcond
+\cond SOC_J722S
+\note Before running the following command, user needs to build sbl_uart_uniflash_nand, sbl_ospi_nand, appimage and edit the cfg file according to appimage that we are booting
+\endcond
+\cond !SOC_J722S
 - If Linux PC is used, assuming SDK is installed at ~/ti/mcu_plus_sdk
 
       cd ~/ti/mcu_plus_sdk/tools/boot
        python uart_uniflash.py -p <main UART COM port> --cfg=~/ti/mcu_plus_sdk/tools/sbl_prebuilt/j722s-evm/default_sbl_ospi_nand_hs_fs.cfg
+\endcond
+\cond SOC_J722S
+- If Linux PC is used, assuming SDK is installed at ~/ti/mcu_plus_sdk
+
+    - If HSM is not required, use the standard cfg_file 
+        \code
+            cd ~/ti/mcu_plus_sdk/tools/boot
+            python uart_uniflash.py -p <main UART COM port> --cfg=~/ti/mcu_plus_sdk/tools/boot/sbl_prebuilt/j722s-evm/default_sbl_ospi_nand_hs_fs.cfg
+        \endcode
+    - If HSM is required, use the corresponding HSM cfg_file
+        \code
+            cd ~/ti/mcu_plus_sdk/tools/boot
+            python uart_uniflash.py -p <main UART COM port> --cfg=~/ti/mcu_plus_sdk/tools/boot/sbl_prebuilt/j722s-evm/default_sbl_ospi_nand_hsm_hs_fs.cfg
+        \endcode
+\endcond
+
+## Run the example
+
+- Boot the EVM in OSPI NAND boot mode.
+
 # See Also
 
 \ref DRIVERS_BOOTLOADER_PAGE

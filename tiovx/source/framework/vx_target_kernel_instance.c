@@ -401,7 +401,7 @@ VX_API_ENTRY vx_status VX_API_CALL tivxSetTargetKernelInstanceErrorInfo(
 
     if ((NULL != target_kernel_instance) && (NULL != error_info))
     {
-        if ((error_info_size <= TIVX_MAX_ERROR_INFO_SIZE) && (error_info_size > 0))
+        if ((error_info_size <= TIVX_MAX_ERROR_INFO_SIZE) && (error_info_size > 0U))
         {
             volatile tivx_error_info_t *dst_error_info = NULL;
 

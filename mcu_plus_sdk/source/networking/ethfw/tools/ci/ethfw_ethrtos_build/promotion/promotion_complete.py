@@ -22,11 +22,13 @@ import argparse
 import base64
 import configparser
 import fcntl
+import html
 import json
 import logging
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -544,6 +546,184 @@ def execute_git_promotion(repo_cfg: Dict[str, str], dry_run: bool = True) -> Dic
             logger.warning('Failed to clean up clone directory %s: %s', tmp, e)
 
 
+def _format_duration_ms(duration_ms: Optional[int]) -> str:
+    """Format a Jenkins build duration (milliseconds) as human-readable text"""
+    if duration_ms is None:
+        return 'N/A'
+    total_seconds = int(duration_ms) // 1000
+    minutes, seconds = divmod(total_seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours:
+        return f'{hours}h {minutes}m {seconds}s'
+    if minutes:
+        return f'{minutes}m {seconds}s'
+    return f'{seconds}s'
+
+
+def generate_promotion_result_html(job_status: Dict[str, Dict[str, Any]],
+                                   dependencies: Dict[str, List[str]],
+                                   build_job_mapping: Dict[str, str],
+                                   base_url: str, test_base_url: str,
+                                   results: Dict[str, Any],
+                                   artifacts_dir: str) -> str:
+    """
+    Build the artifacts/result.html summary report from the job tracking
+    state accumulated during this promotion run (parsing, row compilation,
+    output path creation, and file writing are all handled here)
+
+    Returns:
+        Path to the written result.html file
+    """
+    test_validation_by_job = {v['job']: v for v in results.get('test_validations', [])}
+
+    def job_row(job_id: str) -> Dict[str, str]:
+        status = job_status[job_id]
+        is_build = job_id.startswith('build_')
+        job_name = build_job_mapping.get(job_id, job_id) if is_build else job_id
+        jenkins_url = base_url if is_build else test_base_url
+        build_num = status.get('build_num')
+
+        if not status['triggered']:
+            job_status_text = 'Not Even Run'
+            raw_result = None
+            duration_ms = None
+        elif not status['completed']:
+            job_status_text = 'Aborted'
+            raw_result = None
+            duration_ms = None
+        else:
+            raw = status.get('result') or {}
+            raw_result = raw.get('result')
+            duration_ms = raw.get('duration')
+            if raw_result == 'SUCCESS':
+                job_status_text = 'Completed Successfully'
+            elif raw_result == 'ABORTED':
+                job_status_text = 'Aborted'
+            elif raw_result == 'FAILURE':
+                job_status_text = 'Failed'
+            else:
+                job_status_text = 'Failed'
+
+        link = f"{jenkins_url.rstrip('/')}/job/{job_name}/{build_num}/" if build_num else jenkins_url.rstrip('/') + f'/job/{job_name}/'
+
+        row = {
+            'job_id': job_id,
+            'job_name': job_name,
+            'link': link,
+            'duration': _format_duration_ms(duration_ms),
+            'status': job_status_text,
+            'build_metric': '',
+            'total': '',
+            'passed': '',
+            'failed': '',
+            'not_executed': ''
+        }
+
+        if is_build:
+            row['build_metric'] = 'PASS' if raw_result == 'SUCCESS' else ('FAIL' if job_status_text != 'Not Even Run' and job_status_text != 'Aborted' else 'N/A')
+        else:
+            if job_status_text == 'Aborted':
+                row['not_executed'] = 'N/A'
+            elif job_status_text == 'Not Even Run':
+                row['total'] = row['passed'] = row['failed'] = 'N/A'
+            else:
+                validation = test_validation_by_job.get(job_id)
+                summary = validation['test_summary'] if validation else None
+                if summary:
+                    row['total'] = str(summary.get('tests_executed', 'N/A'))
+                    row['passed'] = str(summary.get('passed', 'N/A'))
+                    row['failed'] = str(summary.get('failed', 'N/A'))
+                else:
+                    row['total'] = row['passed'] = row['failed'] = 'N/A'
+
+        return row
+
+    build_rows = [job_row(j) for j in dependencies if j.startswith('build_')]
+    test_rows = [job_row(j) for j in dependencies if not j.startswith('build_')]
+
+    def render_rows(rows: List[Dict[str, str]], is_build: bool) -> str:
+        out = []
+        for r in rows:
+            link_html = f'<a href="{html.escape(r["link"])}">{html.escape(r["job_name"])}</a>'
+            if is_build:
+                out.append(
+                    '<tr>'
+                    f'<td>{link_html}</td><td>{html.escape(r["duration"])}</td>'
+                    f'<td>{html.escape(r["status"])}</td><td>{html.escape(r["build_metric"])}</td>'
+                    '</tr>'
+                )
+            else:
+                out.append(
+                    '<tr>'
+                    f'<td>{link_html}</td><td>{html.escape(r["duration"])}</td>'
+                    f'<td>{html.escape(r["status"])}</td><td>{html.escape(r["total"])}</td>'
+                    f'<td>{html.escape(r["passed"])}</td><td>{html.escape(r["failed"])}</td>'
+                    f'<td>{html.escape(r["not_executed"])}</td>'
+                    '</tr>'
+                )
+        return '\n'.join(out)
+
+    html_doc = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ETHFW/ETHRTOS Promotion Build Report</title>
+<style>
+body {{ font-family: Arial, sans-serif; margin: 20px; }}
+table {{ border-collapse: collapse; width: 100%; margin-bottom: 30px; }}
+th, td {{ border: 1px solid #999; padding: 6px 10px; text-align: left; }}
+th {{ background-color: #ddd; }}
+</style>
+</head>
+<body>
+<h1>ETHFW/ETHRTOS Promotion Build Report</h1>
+
+<h2>Build Jobs</h2>
+<table>
+<tr><th>Job Link</th><th>Duration</th><th>Job Status</th><th>Build Job Metrics</th></tr>
+{render_rows(build_rows, True)}
+</table>
+
+<h2>Test Jobs</h2>
+<table>
+<tr><th>Job Link</th><th>Duration</th><th>Job Status</th><th>Total Tests Run</th><th>Passed</th><th>Failed</th><th>Not Executed</th></tr>
+{render_rows(test_rows, False)}
+</table>
+
+</body>
+</html>
+"""
+
+    os.makedirs(artifacts_dir, exist_ok=True)
+    out_path = os.path.join(artifacts_dir, 'result.html')
+    with open(out_path, 'w') as f:
+        f.write(html_doc)
+
+    logger.info('Promotion result report written to: %s', out_path)
+
+    build_number = os.environ.get('BUILD_NUMBER')
+    if not build_number:
+        logger.warning('BUILD_NUMBER not set in environment; skipping NAS upload of result.html')
+        return out_path
+
+    nas_login = 'epswbld@epswnas.itg.ti.com'
+    nas_dir = f'/data/eth_rtos_cicd/nightly_builds/ethrtos_branch_promotion_{build_number}'
+    ssh_opts = ['-o', 'StrictHostKeyChecking=no']
+
+    try:
+        subprocess.run(['ssh'] + ssh_opts + [nas_login, f'mkdir -p {nas_dir}'],
+                        check=True, timeout=60)
+        subprocess.run(['rsync', '--rsync-path=/usr/bin/rsync',
+                         '-e', 'ssh -o StrictHostKeyChecking=no', '-Wav', '--inplace',
+                         out_path, f'{nas_login}:{nas_dir}/result.html'],
+                        check=True, timeout=120)
+        logger.info('Uploaded result.html to NAS: %s/result.html', nas_dir)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        logger.warning('Failed to upload result.html to NAS: %s', e)
+
+    return out_path
+
+
 def promotion_flow(args: argparse.Namespace) -> int:
     """
     Main promotion workflow
@@ -736,6 +916,18 @@ def _promotion_flow_impl(args: argparse.Namespace) -> int:
         'test_validations': []
     }
 
+    def _handle_abort_signal(signum, frame):
+        logger.error('Received signal %s; promotion aborted', signum)
+        try:
+            generate_promotion_result_html(job_status, dependencies, build_job_mapping,
+                                            base_url, test_base_url, results, args.artifacts_dir)
+        except Exception as e:
+            logger.warning('Failed to generate promotion result HTML on abort: %s', e)
+        sys.exit(2)
+
+    signal.signal(signal.SIGTERM, _handle_abort_signal)
+    signal.signal(signal.SIGINT, _handle_abort_signal)
+
     # ===== MAIN EXECUTION LOOP =====
     logger.info('')
     logger.info('=' * 80)
@@ -843,6 +1035,11 @@ def _promotion_flow_impl(args: argparse.Namespace) -> int:
                                 if js.get('result') != 'SUCCESS':
                                    logger.error('Job %s #%s FAILED with result: %s', job_id, status['build_num'], js.get('result'))
                                    logger.error('Stopping promotion due to job failure')
+                                   try:
+                                       generate_promotion_result_html(job_status, dependencies, build_job_mapping,
+                                                                        base_url, test_base_url, results, args.artifacts_dir)
+                                   except Exception as e:
+                                       logger.warning('Failed to generate promotion result HTML: %s', e)
                                    return 2
     
                                 # Store result
@@ -872,6 +1069,11 @@ def _promotion_flow_impl(args: argparse.Namespace) -> int:
                                     if not artifact_content:
                                         logger.error('Failed to fetch results.html from %s #%s', job_id, status['build_num'])
                                         logger.error('Stopping promotion due to missing test results')
+                                        try:
+                                            generate_promotion_result_html(job_status, dependencies, build_job_mapping,
+                                                                            base_url, test_base_url, results, args.artifacts_dir)
+                                        except Exception as e:
+                                            logger.warning('Failed to generate promotion result HTML: %s', e)
                                         return 2
     
                                     # Parse results.html
@@ -897,6 +1099,11 @@ def _promotion_flow_impl(args: argparse.Namespace) -> int:
                                     if not approved:
                                         logger.error('Test validation failed for %s #%s', job_id, status['build_num'])
                                         logger.error('Stopping promotion due to test validation failure')
+                                        try:
+                                            generate_promotion_result_html(job_status, dependencies, build_job_mapping,
+                                                                            base_url, test_base_url, results, args.artifacts_dir)
+                                        except Exception as e:
+                                            logger.warning('Failed to generate promotion result HTML: %s', e)
                                         return 2
                         except Exception:
                             pass
@@ -1066,6 +1273,12 @@ def _promotion_flow_impl(args: argparse.Namespace) -> int:
 
     with open(out_file, 'w') as f:
         json.dump(summary, f, indent=2)
+
+    try:
+        generate_promotion_result_html(job_status, dependencies, build_job_mapping,
+                                        base_url, test_base_url, results, args.artifacts_dir)
+    except Exception as e:
+        logger.warning('Failed to generate promotion result HTML: %s', e)
 
     logger.info('')
     logger.info('Promotion summary written to: %s', out_file)

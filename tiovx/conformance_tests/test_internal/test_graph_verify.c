@@ -522,7 +522,7 @@ TEST(tivxInternalGraphVerify, negativeTestOwnGraphAddSingleDataReference)
 
     ASSERT_VX_OBJECT(color_convert_node = vxColorConvertNode(graph, input, output), VX_TYPE_NODE);
 
-    ASSERT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, vxVerifyGraph(graph));
+    EXPECT_EQ_VX_STATUS(VX_ERROR_NO_MEMORY, vxVerifyGraph(graph));
 
     /* Freeing all the previously allocated memory */
     VX_CALL(test_utils_release_maxed_out_heap_mem(shared_mem_info_array, num_chunks));

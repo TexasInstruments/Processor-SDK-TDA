@@ -77,9 +77,7 @@
 #include <ti/osal/CacheP.h>
 #include <ti/csl/soc.h>
 #include <ti/csl/arch/csl_arch.h>
-#include <ti/csl/arch/c7x/Cache.h>
 #include <ti/csl/arch/c7x/Hwi.h>
-#include <ti/csl/arch/c7x/Mmu.h>
 
 #if (defined (SAFERTOS))
 #include "SafeRTOS_API.h"
@@ -106,14 +104,6 @@ static void appMain(void* arg0, void* arg1)
 }
 
 void StartupEmulatorWaitFxn (void)
-{
-    volatile uint32_t enableDebug = 0;
-    do
-    {
-    }while (enableDebug);
-}
-
-void StartupEmulatorWaitFxn1 (void)
 {
     volatile uint32_t enableDebug = 0;
     do
@@ -199,7 +189,7 @@ int main(void)
     app_rtos_task_params_t tskParams;
     app_rtos_task_handle_t task;
     /* This is for debug purpose - see the description of function header */
-    StartupEmulatorWaitFxn1();
+    StartupEmulatorWaitFxn();
     OS_init();
 
     #if ENABLE_C7X_2_CLEC_INIT
@@ -223,242 +213,6 @@ int main(void)
     OS_start();
 
     return 0;
-}
-
-uint32_t g_app_rtos_c7x_mmu_map_error = 0;
-
-void appMmuMap(Bool is_secure)
-{
-    Bool            retVal;
-    Mmu_MapAttrs    attrs;
-
-    uint32_t ns = 1;
-
-    if(is_secure)
-        ns = 0;
-    else
-        ns = 1;
-
-    Mmu_initMapAttrs(&attrs);
-
-    attrs.attrIndx = Mmu_AttrIndx_MAIR0;
-    attrs.ns = ns;
-
-    retVal = Mmu_map(0x00000000U, 0x00000000U, 0x20000000U, &attrs, is_secure);
-    if(retVal==UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(0x20000000U, 0x20000000U, 0x20000000U, &attrs, is_secure);
-    if(retVal==UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(0x40000000U, 0x40000000U, 0x20000000U, &attrs, is_secure);
-    if(retVal==UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(0x60000000U, 0x60000000U, 0x10000000U, &attrs, is_secure);
-    if(retVal==UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(0x78000000U, 0x78000000U, 0x08000000U, &attrs, is_secure); /* CLEC */
-    if(retVal==UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    /* DDR Local heap non cacheable */
-    retVal = Mmu_map(DDR_C7X_2_LOCAL_HEAP_NON_CACHEABLE_ADDR, DDR_C7X_2_LOCAL_HEAP_NON_CACHEABLE_PHYS_ADDR, DDR_C7X_2_LOCAL_HEAP_NON_CACHEABLE_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(DDR_C7X_2_1_LOCAL_HEAP_NON_CACHEABLE_ADDR, DDR_C7X_1_LOCAL_HEAP_NON_CACHEABLE_PHYS_ADDR, DDR_C7X_1_LOCAL_HEAP_NON_CACHEABLE_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    /* DDR scratch non cacheable */
-    retVal = Mmu_map(DDR_C7X_2_SCRATCH_NON_CACHEABLE_ADDR, DDR_C7X_2_SCRATCH_NON_CACHEABLE_PHYS_ADDR, DDR_C7X_2_SCRATCH_NON_CACHEABLE_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(DDR_C7X_2_1_SCRATCH_NON_CACHEABLE_ADDR, DDR_C7X_1_SCRATCH_NON_CACHEABLE_PHYS_ADDR, DDR_C7X_1_SCRATCH_NON_CACHEABLE_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    /*-------------------------------------------------------*/
-    /* Cachable region memory attributes                     */
-    /*-------------------------------------------------------*/
-
-    attrs.attrIndx = Mmu_AttrIndx_MAIR7;
-
-    retVal = Mmu_map(0x80000000U, 0x80000000U, 0x20000000U, &attrs, is_secure); /* OCMC - 1MB */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(0xA0000000U, 0xA0000000U, 0x20000000U, &attrs, is_secure); /* OCMC - 1MB */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(0x70000000U, 0x70000000U, 0x00400000U, &attrs, is_secure); /* MSMC - 4MB */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(0x41C00000U, 0x41C00000U, 0x00100000U, &attrs, is_secure); /* OCMC - 1MB */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    /*The region mapped by the MMU is intentionally set to 2MB for L2 SRAM since
-      page sizes are a function of the region size and having smaller page sizes
-      negatively affects the performance of L2 SRAM as the table walks with the
-      translation table in DDR are expensive, especially in context of high-
-      throughput, low-latency memory like L2 SRAM*/
-    retVal = Mmu_map(L2RAM_C7x_2_ADDR, L2RAM_C7x_2_ADDR, 0x00200000, &attrs, is_secure); /* L2 sram 448KB        */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(DDR_C7x_2_DTS_ADDR, DDR_C7x_2_DTS_ADDR, DDR_C7x_2_DTS_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    /* DDR local heap */
-    retVal = Mmu_map(DDR_C7X_2_LOCAL_HEAP_ADDR, DDR_C7X_2_LOCAL_HEAP_PHYS_ADDR, DDR_C7X_2_LOCAL_HEAP_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(DDR_C7X_2_1_LOCAL_HEAP_ADDR, DDR_C7X_1_LOCAL_HEAP_PHYS_ADDR, DDR_C7X_1_LOCAL_HEAP_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    /* DDR scratch */
-    retVal = Mmu_map(DDR_C7X_2_SCRATCH_ADDR, DDR_C7X_2_SCRATCH_PHYS_ADDR, DDR_C7X_2_SCRATCH_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(DDR_C7X_2_1_SCRATCH_ADDR, DDR_C7X_1_SCRATCH_PHYS_ADDR, DDR_C7X_1_SCRATCH_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(DDR_SHARED_MEM_ADDR, DDR_SHARED_MEM_PHYS_ADDR, DDR_SHARED_MEM_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(MSMC_C7x_2_ADDR, MSMC_C7x_2_ADDR, MSMC_C7x_2_SIZE, &attrs, is_secure); /* Local MSMC   */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    attrs.attrIndx = Mmu_AttrIndx_MAIR4;
-
-    retVal = Mmu_map(APP_LOG_MEM_ADDR, APP_LOG_MEM_ADDR, APP_LOG_MEM_SIZE, &attrs, is_secure);
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(APP_FILEIO_MEM_ADDR, APP_FILEIO_MEM_ADDR, APP_FILEIO_MEM_SIZE, &attrs, is_secure);
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(TIOVX_OBJ_DESC_MEM_ADDR, TIOVX_OBJ_DESC_MEM_ADDR, TIOVX_OBJ_DESC_MEM_SIZE, &attrs, is_secure);
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(IPC_VRING_MEM_ADDR, IPC_VRING_MEM_ADDR, IPC_VRING_MEM_SIZE, &attrs, is_secure);
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(DDR_C7x_2_IPC_ADDR, DDR_C7x_2_IPC_ADDR, DDR_C7x_2_IPC_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(TIOVX_LOG_RT_MEM_ADDR, TIOVX_LOG_RT_MEM_ADDR, TIOVX_LOG_RT_MEM_SIZE, &attrs, is_secure);
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-mmu_exit:
-    if(retVal == UFALSE)
-    {
-        g_app_rtos_c7x_mmu_map_error++;
-    }
-
-
-
-    return;
-}
-
-void appCacheInit()
-{
-    Cache_Size  cacheSize;
-
-    /* init cache size here, since this needs to be done in secure mode */
-    cacheSize.l1pSize = Cache_L1Size_32K;
-    cacheSize.l1dSize = Cache_L1Size_32K;
-    cacheSize.l2Size  = Cache_L2Size_64K;
-
-    Cache_setSize(&cacheSize);
-}
-
-void InitMmu(void)
-{
-    /* This is for debug purpose - see the description of function header */
-    StartupEmulatorWaitFxn();
-
-    g_app_rtos_c7x_mmu_map_error = 0;
-
-    appC7xClecInitForNonSecAccess();
-
-    appMmuMap(UFALSE);
-    appMmuMap(UTRUE);
-
-    appCacheInit();
 }
 
 static void convertVirt2Phys(uint64_t virtAddr, uint64_t virtBase, uint64_t physBase, uint64_t size, uint64_t * phyAddr)

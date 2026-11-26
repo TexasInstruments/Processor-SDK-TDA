@@ -182,7 +182,7 @@ Bool VirtioIPC_getVirtQueues(uint32_t type, uint32_t procId, uint32_t rank,
  *
  *  \sa         VirtioIPC_init
  */
-int32_t VirtioIPC_init(Ipc_VirtIoParams* vqInfo);
+int32_t VirtioIPC_init(Ipc_VirtIoParams* vqParams);
 
 /**
  *  \brief      Create Virtio from a Shared Page
@@ -230,12 +230,13 @@ void* Ipc_allocVirtio(void);
  *
  *  \param  vq  [IN]      the Virtio.
  *  \param  buf [IN]     the buffer to be processed by the slave.
+ *  \param  head[IN]     used for indexing the descriptor list
  *
  *  \return     Remaining capacity of queue or a negative error.
  *
  *  \sa         Virtio_getUsedBuf
  */
-void Virtio_addAvailBuf(Virtio_Handle vq, void *buf, uint16_t token);
+void Virtio_addAvailBuf(Virtio_Handle vq, void *buf, uint16_t head);
 
 /**
  *  \brief      Get the next used buffer.
@@ -275,13 +276,13 @@ int16_t Virtio_getAvailBuf(Virtio_Handle vq, void **buf, int32_t *len);
  *              Only used by Slave.
  *
  *  \param  vq    [IN]    the Virtio.
- *  \param  token [IN]    token of the buffer to be added to vring used list.
+ *  \param  head [IN]    token/index of the buffer to be added to vring used list.
  *
  *  \return     Remaining capacity of queue or a negative error.
  *
  *  \sa         Virtio_getAvailBuf
  */
-int32_t Virtio_addUsedBuf(Virtio_Handle vq, int16_t token, int32_t len);
+int32_t Virtio_addUsedBuf(Virtio_Handle vq, int16_t head, int32_t len);
 
 /**
  * \brief    Checks if remote is A72 with Linux

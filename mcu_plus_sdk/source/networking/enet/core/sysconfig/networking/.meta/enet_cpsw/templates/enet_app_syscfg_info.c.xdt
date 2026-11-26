@@ -343,6 +343,7 @@ int32_t EnetAppSoc_getMacAddrList(Enet_Type enetType,
 {
     const uint32_t sharedListLen = MAC_ADDR_LIST_LEN_SHARED_PER_PER;
 
+    EnetAppUtils_assert(pAvailMacEntries != NULL);
     EnetApp_initializeMacAddrPool();
     *pAvailMacEntries = 0;
     for (uint32_t idx = 0; idx < sharedListLen; idx++)

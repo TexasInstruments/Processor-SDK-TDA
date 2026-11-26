@@ -227,11 +227,11 @@ static int32_t fvid2_deinit()
 
 // extern app_perf_registration_t * perf_fxns_list;
 
-extern core_config_t core_config[];
-extern uint8_t num_cores;
+extern core_config_t g_platform_utils_core_config[];
+extern uint8_t g_platform_utils_num_cores;
 
-extern soc_mem_config_t mem_regions[];
-extern uint8_t num_mem_regions;
+extern soc_mem_config_t g_platform_utils_mem_regions[];
+extern uint8_t g_platform_utils_num_mem_regions;
 
 static void appRegisterOpenVXTargetKernels();
 static void appUnRegisterOpenVXTargetKernels();
@@ -259,13 +259,13 @@ static int memInit()
     mem_init_prm.shared2TargetFxn = appShared2TargetConversion;
     mem_init_prm.target2SharedFxn = appTarget2SharedConversion;
 
-    for (i = 0; i < num_mem_regions; i++)
+    for (i = 0; i < g_platform_utils_num_mem_regions; i++)
     {
-        heap_prm = &mem_init_prm.heap_info[mem_regions[i].heap_id];
-        heap_prm->base = mem_regions[i].base;
-        strncpy(heap_prm->name, mem_regions[i].name, APP_MEM_HEAP_NAME_MAX);
-        heap_prm->size = mem_regions[i].size;
-        heap_prm->flags = mem_regions[i].flag;
+        heap_prm = &mem_init_prm.heap_info[g_platform_utils_mem_regions[i].heap_id];
+        heap_prm->base = g_platform_utils_mem_regions[i].base;
+        strncpy(heap_prm->name, g_platform_utils_mem_regions[i].name, APP_MEM_HEAP_NAME_MAX);
+        heap_prm->size = g_platform_utils_mem_regions[i].size;
+        heap_prm->flags = g_platform_utils_mem_regions[i].flag;
     }
 
     status = appMemInit(&mem_init_prm);
@@ -302,11 +302,11 @@ static int ipcInit()
         ipc_init_prm.enable_tiovx_ipc_announce = 0;
     }
 
-    for (i = 0; i < num_cores; i++)
+    for (i = 0; i < g_platform_utils_num_cores; i++)
     {
-        ipc_init_prm.enabled_cpu_id_list[i] = core_config[i].cpu;
+        ipc_init_prm.enabled_cpu_id_list[i] = g_platform_utils_core_config[i].cpu;
     }
-    ipc_init_prm.num_cpus = num_cores;
+    ipc_init_prm.num_cpus = g_platform_utils_num_cores;
 
     ipc_init_prm.self_cpu_id = CPU_ID;
     ipc_init_prm.tiovx_obj_desc_mem = (void*)g_tiovx_obj_desc_mem;
@@ -357,9 +357,9 @@ static int logInit()
     app_log_init_prm_t log_init_prm;
     appLogInitPrmSetDefault(&log_init_prm);
 
-    for (i = 0; i < num_cores; i++)
+    for (i = 0; i < g_platform_utils_num_cores; i++)
     {
-        log_init_prm.log_rd_cpu_enable[i] = core_config[i].enable_log_rd_cpu;
+        log_init_prm.log_rd_cpu_enable[i] = g_platform_utils_core_config[i].enable_log_rd_cpu;
         strncpy(log_init_prm.self_cpu_name, CPU_NAME, APP_LOG_MAX_CPU_NAME);
     }
     log_init_prm.shared_mem = &g_app_log_shared_mem;
@@ -393,9 +393,9 @@ static int fileIOInit()
     app_fileio_init_prm_t fileio_init_prm;
     appFileIOInitPrmSetDefault(&fileio_init_prm);
 
-    for (i = 0; i < num_cores; i++)
+    for (i = 0; i < g_platform_utils_num_cores; i++)
     {
-        fileio_init_prm.fileio_rd_cpu_enable[i] = core_config[i].enable_fileio;
+        fileio_init_prm.fileio_rd_cpu_enable[i] = g_platform_utils_core_config[i].enable_fileio;
         strncpy(fileio_init_prm.self_cpu_name, CPU_NAME, APP_LOG_MAX_CPU_NAME);
     }
     fileio_init_prm.shared_mem = &g_app_fileio_shared_mem;
@@ -422,11 +422,11 @@ static void fileIODeInit()
 {
     uint8_t i = 0;
 
-    for (i = 0; i < num_cores; i++)
+    for (i = 0; i < g_platform_utils_num_cores; i++)
     {
-        if (core_config[i].cpu == CPU_ID)
+        if (g_platform_utils_core_config[i].cpu == CPU_ID)
         {
-            if(core_config[i].enable_fileio)
+            if(g_platform_utils_core_config[i].enable_fileio)
             {
                 appFileIOWrDeInit();
             }
@@ -719,8 +719,6 @@ void appDeInit()
     appRemoteServiceDeInit();
     appIpcDeInit();
 #endif
-
-    appMemDeInit();
 
 #ifdef ENABLE_PRINTF_REDIRECT
     appLogCioDeInit();

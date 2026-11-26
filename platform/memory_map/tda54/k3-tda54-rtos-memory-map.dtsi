@@ -190,6 +190,14 @@
 		compatible = "dma-heap-carveout";
 		reg = <0x00 0xc0000000 0x00 0x1c000000>;
 	};
+	ddr_shared_heap_rw: ddr-shared-heap-rw {
+		compatible = "dma-heap-carveout";
+		reg = <0x00 0xdc000000 0x00 0x02000000>;
+	};
+	ddr_shared_heap_const: ddr-shared-heap-const {
+		compatible = "dma-heap-carveout";
+		reg = <0x00 0xde000000 0x00 0x02000000>;
+	};
 	c7x_ddr_heaps_hi: c7x-ddr-heaps-hi@2080000000 {
 		compatible = "shared-dma-pool";
 		reg = <0x20 0x80000000 0x00 0x20000000>;

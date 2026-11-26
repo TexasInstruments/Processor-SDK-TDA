@@ -454,6 +454,7 @@ int32_t EnetAppSoc_getMacAddrList(Enet_Type enetType,
 {
     uint32_t sharedListLen = MAC_ADDR_LIST_LEN_SHARED_PER_PER;
 
+    EnetAppUtils_assert(pAvailMacEntries != NULL);
     for (uint32_t i = 0U; i < ENET_SYSCFG_MAX_ENET_INSTANCES; i++)
     {
         if ((enetType == gInstMacAddrInfo[i].enetType) && (instId == gInstMacAddrInfo[i].instId))

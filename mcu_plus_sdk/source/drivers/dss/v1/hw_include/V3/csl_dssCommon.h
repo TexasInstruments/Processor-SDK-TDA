@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2023
+ *  Copyright (c) Texas Instruments Incorporated 2026
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -443,6 +443,19 @@ void CSL_dssGlobalVpGoBitEnable(CSL_dss_commRegs *commRegs,
  */
 void CSL_dssSetCbaConfig(CSL_dss_commRegs *commRegs,
                          const CSL_DssCbaCfg *cbaCfg);
+
+/**
+ * \brief   Callback invoked when a DSS register read-back value does not match
+ *          the expected (written) value. This is a mandatory application hook:
+ *          the CSL provides no default. Any application linked against a DSS
+ *          build with read-back enabled (drivers_ipfma) MUST define this function,
+ *          otherwise the link fails - the absence of an implementation is
+ *          reported at build time rather than silently ignored at run time.
+ *
+ * \param   expVal  Value that was written to the register.
+ * \param   readVal Value that was read back from the register.
+ */
+void CSL_DSSReadbackErr(uint32_t expVal, uint32_t readVal);
 
 /* ========================================================================== */
 /*                      Static Function Declarations                          */

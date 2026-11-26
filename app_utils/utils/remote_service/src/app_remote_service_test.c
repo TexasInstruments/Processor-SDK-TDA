@@ -688,14 +688,14 @@ int32_t appRemoteServiceTestRunCmd1(uint32_t cpu_id)
     uint64_t phys_ptr;
     void *virt_ptr;
 
-    virt_ptr = appMemAlloc(APP_MEM_HEAP_DDR, mem_size, 32);
+    virt_ptr = appMemAlloc(APP_MEM_HEAP_DDR_SHARED, mem_size, 32);
     if(NULL == virt_ptr)
     {
         appLogPrintf("REMOTE_SERVICE_TEST: Test failed!!!\n");
         return (-1);
     }
 
-    phys_ptr = appMemGetVirt2PhyBufPtr((uint64_t)(uintptr_t)virt_ptr, APP_MEM_HEAP_DDR);
+    phys_ptr = appMemGetVirt2PhyBufPtr((uint64_t)(uintptr_t)virt_ptr, APP_MEM_HEAP_DDR_SHARED);
 
     value = (uint64_t)phys_ptr;
 
@@ -745,7 +745,7 @@ int32_t appRemoteServiceTestRunCmd1(uint32_t cpu_id)
         #endif
     }
 
-    appMemFree(APP_MEM_HEAP_DDR, virt_ptr, mem_size);
+    appMemFree(APP_MEM_HEAP_DDR_SHARED, virt_ptr, mem_size);
     if(test_pass)
     {
         appLogPrintf("REMOTE_SERVICE_TEST: Test passed !!!\n");

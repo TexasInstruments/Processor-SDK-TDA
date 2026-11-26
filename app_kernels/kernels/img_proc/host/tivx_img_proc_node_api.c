@@ -66,28 +66,36 @@
 #include <tivx_img_mosaic_host.h>
 #include <tivx_dl_color_blend_host.h>
 #include <tivx_dl_draw_box_host.h>
+#include <tivx_dl_pre_proc_armv8_host.h>
+#include <tivx_dl_post_proc_host.h>
 #include <tivx_dl_bev_post_proc_host.h>
 #include <tivx_dl_bev_cam_post_proc_host.h>
-#include <tivx_dl_post_proc_host.h>
+
 
 VX_API_ENTRY vx_node VX_API_CALL tivxDLPreProcArmv8Node(vx_graph             graph,
                                                         vx_user_data_object  config,
-                                                        vx_image             input_image,
+                                                        vx_image             input_images[],
+                                                        vx_uint32            num_images,
                                                         vx_tensor            output_tensor)
 {
-    vx_reference prms[] = {
-            (vx_reference)config,
-            (vx_reference)input_image,
-            (vx_reference)output_tensor
-    };
+    vx_reference prms[TIVX_KERNEL_DL_PRE_PROC_ARMV8_MAX_PARAMS];
+    vx_uint32 i;
 
-    vx_node node = tivxCreateNodeByKernelName(graph,
-                                                TIVX_KERNEL_DL_PRE_PROC_ARMV8_NAME,
-                                                prms,
-                                                dimof(prms));
+    /* Always pass MAX_PARAMS (8). Unused optional image slots are set to NULL. */
+    prms[TIVX_KERNEL_DL_PRE_PROC_ARMV8_CONFIG_IDX] = (vx_reference)config;
+    for (i = 0; i < TIVX_KERNEL_DL_PRE_PROC_ARMV8_MAX_INPUT_IMAGES; i++)
+    {
+        prms[TIVX_KERNEL_DL_PRE_PROC_ARMV8_INPUT_IMAGE_IDX + i] =
+            (i < num_images) ? (vx_reference)input_images[i] : NULL;
+    }
+    prms[TIVX_KERNEL_DL_PRE_PROC_ARMV8_OUTPUT_TENSOR_IDX] = (vx_reference)output_tensor;
 
-    return(node);
+    return tivxCreateNodeByKernelName(graph,
+                                      TIVX_KERNEL_DL_PRE_PROC_ARMV8_NAME,
+                                      prms,
+                                      TIVX_KERNEL_DL_PRE_PROC_ARMV8_MAX_PARAMS);
 }
+
 
 VX_API_ENTRY vx_node VX_API_CALL tivxDLPostProcNode(vx_graph             graph,
                                                     vx_kernel            kernel,
@@ -141,7 +149,6 @@ VX_API_ENTRY vx_node VX_API_CALL tivxDLColorConvertArmv8Node(vx_graph  graph,
 
     return(node);
 }
-
 VX_API_ENTRY vx_node VX_API_CALL tivxODPostProcNode(vx_graph graph,
                                       vx_array             configuration,
                                       vx_tensor            input_key_points,
@@ -176,38 +183,6 @@ VX_API_ENTRY vx_node VX_API_CALL tivxImgPreProcNode(vx_graph graph,
     };
     vx_node node = tivxCreateNodeByKernelName(graph,
                                            TIVX_KERNEL_IMG_PREPROCESS_NAME,
-                                           prms,
-                                           dimof(prms));
-    return node;
-}
-
-VX_API_ENTRY vx_node VX_API_CALL tivxDL4DPreProcArmv8Node(vx_graph graph,
-                                      vx_user_data_object            configuration,
-                                      /* check if Array or vx_user_data_object*/
-                                      vx_image            in_img,
-                                      vx_image            in_img2,
-                                      vx_image            in_img3,
-                                      vx_image            in_img4,  
-                                      vx_image            in_img5,
-                                      vx_image            in_img6,
-                                      vx_tensor           out_img)
-{
-    vx_reference prms[] = {
-            (vx_reference)configuration,
-            (vx_reference)in_img,
-            (vx_reference)in_img2,
-            (vx_reference)in_img3,
-            (vx_reference)in_img4,
-            (vx_reference)in_img5,
-            (vx_reference)in_img6,
-            (vx_reference)out_img
-    };
-    /*#####################################################################################
-        MOdification to take 6 Camera Images and create 4D Tensor.
-
-    ###################################################################################*/
-    vx_node node = tivxCreateNodeByKernelName(graph,
-                                           TIVX_KERNEL_DL_PRE_PROC_ARMV8_4D_NAME,
                                            prms,
                                            dimof(prms));
     return node;

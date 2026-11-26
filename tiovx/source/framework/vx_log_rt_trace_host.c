@@ -64,14 +64,14 @@
 
 
 #if defined(BUILD_DEV)
-#if defined(LINUX) || defined(QNX)
+#if defined(HLOS)
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 
 static vx_status ownLogRtFileWrite(int32_t fd, uint8_t *buf, uint32_t bytes_to_write, uint8_t *tmp_buf, uint32_t tmp_buf_size);
-#endif
+#endif /* #if defined(HLOS) */
 
 static vx_bool ownLogRtTraceFindEventId(uint64_t event_id, uint16_t event_class);
 static vx_bool ownLogRtTraceFindEventName(char *event_name);
@@ -192,7 +192,7 @@ static void tivxLogRtTraceRemoveEventClass(uint64_t event_id, uint16_t event_cla
     }
 }
 
-#if defined(LINUX) || defined(QNX)
+#if defined(HLOS)
 static vx_status ownLogRtFileWrite(int32_t fd, uint8_t *buf, uint32_t bytes_to_write, uint8_t *tmp_buf, uint32_t tmp_buf_size)
 {
     uint32_t write_size;
@@ -224,7 +224,7 @@ static vx_status ownLogRtFileWrite(int32_t fd, uint8_t *buf, uint32_t bytes_to_w
     }
     return status;
 }
-#endif
+#endif /* #if defined(HLOS) */
 
 static vx_status ownLogRtTraceSetup(vx_graph graph, vx_bool is_enable)
 {
@@ -356,7 +356,7 @@ static vx_status ownLogRtTraceSetup(vx_graph graph, vx_bool is_enable)
 }
 #endif /* #if defined(BUILD_DEV) */
 
-#if defined(LINUX) || defined(QNX)
+#if defined(HLOS)
 vx_status tivxLogRtTraceExportToFile(char *filename)
 {
     vx_status status = (vx_status)VX_SUCCESS;
@@ -495,20 +495,20 @@ vx_status tivxLogRtTraceExportToFile(char *filename)
 
     return status;
 }
-#endif
+#endif /* #if defined(HLOS) */
 
 void tivxLogRtTraceKernelInstanceAddEvent(vx_node node, uint16_t event_index, char *event_name)
 {
 #if defined(BUILD_DEV)
     char name[TIVX_LOG_RT_EVENT_NAME_MAX];
-    #if defined(LINUX) || defined(QNX)
+    #if defined(HLOS)
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wformat-truncation"
-    #endif
+    #endif /* #if defined(HLOS) */
     (void)snprintf(name, TIVX_LOG_RT_EVENT_NAME_MAX, "%s_%s", node->base.name, event_name);
-    #if defined(LINUX) || defined(QNX)
+    #if defined(HLOS)
     #pragma GCC diagnostic pop
-    #endif
+    #endif /* #if defined(HLOS) */
 
     if((vx_bool)vx_false_e == ownLogRtTraceFindEventName(name))
     {

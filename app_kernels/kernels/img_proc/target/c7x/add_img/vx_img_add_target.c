@@ -91,6 +91,7 @@
 
 #include <TI/tivx.h>
 #include <TI/tivx_target_kernel.h>
+#include <tivx_kernels_common_utils.h>
 #include <TI/tivx_img_proc.h>
 #include "VXLIB_add_i8u_i8u_o8u_cn.h"
 
@@ -675,6 +676,106 @@ vx_status VX_CALLBACK tivxKernelImgAddProcess(
 }
 
 /**
+ * \brief Target kernel control function
+ *
+ * \param kernel [in] target kernel handle
+ * \param node_cmd_id [in] Control command passed from application
+ * \param param_obj_desc [in] Parameter object descriptors
+ * \param num_params [in] Number of parameter object descriptors
+ * \param priv_arg [in] kernel instance priv argument
+ */
+vx_status VX_CALLBACK tivxKernelImgAddControl(
+          tivx_target_kernel_instance kernel,
+          uint32_t node_cmd_id, tivx_obj_desc_t *obj_desc[],
+          uint16_t num_params, void *priv_arg)
+{
+    vx_status status = (vx_status)VX_SUCCESS;
+    tivxC7xKernelParams *prms = NULL;
+    tivx_obj_desc_user_data_object_t *read_ptr, *write_ptr;
+    uint32_t size;
+
+    status = tivxGetTargetKernelInstanceContext(kernel, (void **)&prms, &size);
+
+    if ((vx_status)VX_SUCCESS != status)
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Failed to Get Target Kernel Instance Context\n");
+    }
+    else if ((NULL == prms) ||
+        (sizeof(tivxC7xKernelParams) != size))
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Invalid Object Size\n");
+        status = (vx_status)VX_FAILURE;
+    }
+    else
+    {
+        /* do nothing */
+    }
+
+    if ((vx_status)VX_SUCCESS == status)
+    {
+        switch (node_cmd_id)
+        {
+            case TIVX_ADD_KERNEL_READ:
+            {
+              tivx_set_debug_zone(VX_ZONE_INFO);
+
+              void *read_target_ptr;
+
+              read_ptr = (tivx_obj_desc_user_data_object_t *)obj_desc[0];
+              /* Get the target pointer from the shared pointer */
+              read_target_ptr = tivxMemShared2TargetPtr(&read_ptr->mem_ptr);
+
+              /* Map all buffers, which invalidates the cache */
+              tivxCheckStatus(&status, tivxMemBufferMap(read_target_ptr, read_ptr->mem_size, VX_MEMORY_TYPE_HOST, VX_READ_ONLY));
+
+              int32_t value = *(volatile int32_t *)read_target_ptr;
+              VX_PRINT(VX_ZONE_INFO, "TIVX_ADD_KERNEL_READ TEST: Reading from TIDL read-only heap... value = %d\n", value);
+
+              /* Unmap all buffers, which invalidates the cache */
+              tivxCheckStatus(&status, tivxMemBufferUnmap(read_target_ptr, read_ptr->mem_size, VX_MEMORY_TYPE_HOST, VX_READ_ONLY));
+
+              tivx_clr_debug_zone(VX_ZONE_INFO);
+
+              break;
+            }
+            case TIVX_ADD_KERNEL_READ_WRITE:
+            {
+              tivx_set_debug_zone(VX_ZONE_INFO);
+
+              void *write_target_ptr;
+
+              write_ptr = (tivx_obj_desc_user_data_object_t *)obj_desc[0];
+              /* Get the target pointer from the shared pointer */
+              write_target_ptr = tivxMemShared2TargetPtr(&write_ptr->mem_ptr);
+
+              /* Map all buffers, which invalidates the cache */
+              tivxCheckStatus(&status, tivxMemBufferMap(write_target_ptr, write_ptr->mem_size, VX_MEMORY_TYPE_HOST, VX_READ_AND_WRITE));
+
+              int32_t value = *(volatile int32_t *)write_target_ptr;
+              VX_PRINT(VX_ZONE_INFO, "TIVX_ADD_KERNEL_READ_WRITE TEST: Value before writing to TIDL RW is %d\n", *(volatile int32_t *)write_target_ptr);
+
+             *(volatile int32_t *)write_target_ptr = value + 1;
+              VX_PRINT(VX_ZONE_INFO, "TIVX_ADD_KERNEL_READ_WRITE TEST: Value after writing to TIDL RW Heap is %d\n", *(volatile int32_t *)write_target_ptr);
+
+              /* Unmap all buffers, which invalidates the cache */
+              tivxCheckStatus(&status, tivxMemBufferUnmap(write_target_ptr, write_ptr->mem_size, VX_MEMORY_TYPE_HOST, VX_READ_AND_WRITE));
+
+              tivx_clr_debug_zone(VX_ZONE_INFO);
+
+              break;
+            }
+            default:
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Invalid Command Id\n");
+                status = (vx_status)VX_FAILURE;
+                break;
+            }
+        }
+    }
+    return status;
+}
+
+/**
  * \brief Target kernel create function
  *
  * \param kernel [in] target kernel handle
@@ -928,7 +1029,7 @@ void tivxAddTargetKernelImgAdd(void)
                     tivxKernelImgAddProcess,
                     tivxKernelImgAddCreate,
                     tivxKernelImgAddDelete,
-                    NULL,
+                    tivxKernelImgAddControl,
                     NULL);
         /** \endcode */
     }
@@ -951,4 +1052,3 @@ void tivxRemoveTargetKernelImgAdd(void)
     tivxRemoveTargetKernel(vx_img_add_target_kernel);
     /** \endcode */
 }
-

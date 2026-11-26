@@ -106,6 +106,20 @@ int32_t appInit();
  */
 int32_t appDeInit();
 
+/**
+ * \brief Initialize the common shared memory heap used across all cores.
+ *
+ * \return 0 on success else failure
+ */
+int32_t appCommonMemInit();
+
+/**
+ * \brief De-initializes the common shared memory heap used across all cores.
+ *
+ * \return 0 on success else failure
+ */
+int32_t appCommonMemDeInit();
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

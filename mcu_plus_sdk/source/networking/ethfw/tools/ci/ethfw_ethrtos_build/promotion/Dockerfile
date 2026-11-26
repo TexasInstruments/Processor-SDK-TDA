@@ -3,39 +3,27 @@ FROM ${DOCKER_IMAGE_LOCATION}
 
 WORKDIR /app
 
-# Define build arguments for SSH keys (passed during docker build)
-ARG ssh_prv_key
-ARG ssh_pub_key
-
 # Install git, openssh-client, and Python dependencies
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     git \
     openssh-client \
+    rsync \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages
 RUN pip3 install requests
 
-# Setup SSH keys from build arguments
+# No SSH keys baked into the image: the build agent's own ~/.ssh is bind-mounted
+# into the container at runtime instead (same pattern as lcpd-docker's docker_run(),
+# see ethrtos_ethfw_rtos's workspace.sh flow) - that identity is already authorized
+# on both bitbucket.itg.ti.com and epswnas.itg.ti.com.
 RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh && \
-    echo "$ssh_prv_key" > /root/.ssh/id_rsa && \
-    echo "$ssh_pub_key" > /root/.ssh/id_rsa.pub && \
-    chmod 600 /root/.ssh/id_rsa && \
-    chmod 600 /root/.ssh/id_rsa.pub
-
-# Add Bitbucket to known hosts to avoid SSH prompts
-# Use multiple methods to ensure it works
-RUN ssh-keyscan -H bitbucket.itg.ti.com >> /root/.ssh/known_hosts 2>&1 && \
+    ssh-keyscan -H bitbucket.itg.ti.com >> /root/.ssh/known_hosts 2>&1 && \
     ssh-keyscan -t rsa bitbucket.itg.ti.com >> /root/.ssh/known_hosts 2>&1 && \
+    ssh-keyscan -H epswnas.itg.ti.com >> /root/.ssh/known_hosts 2>&1 && \
     chmod 600 /root/.ssh/known_hosts
-
-# Create SSH config to disable strict host key checking as fallback
-RUN echo "Host bitbucket.itg.ti.com" > /root/.ssh/config && \
-    echo "    StrictHostKeyChecking no" >> /root/.ssh/config && \
-    echo "    UserKnownHostsFile /dev/null" >> /root/.ssh/config && \
-    chmod 600 /root/.ssh/config
 
 # Copy application files
 COPY promotion_complete.py .

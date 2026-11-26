@@ -60,7 +60,7 @@
 /**
  * \brief Main NavSS512 - Mailbox input line
  */
-uint32_t g_Navss512MbInput[IPC_MAILBOX_CLUSTER_CNT] =
+static uint32_t g_Navss512MbInput[IPC_MAILBOX_CLUSTER_CNT] =
 {
     CSLR_NAVSS0_INTR_0_IN_INTR_NAVSS0_MAILBOX_0_PEND_INTR_0,
     CSLR_NAVSS0_INTR_0_IN_INTR_NAVSS0_MAILBOX_1_PEND_INTR_0,
@@ -252,7 +252,7 @@ static Ipc_MailboxInfo   g_IPC_MailboxInfo[IPC_MAX_PROCS][IPC_MAX_PROCS] =
     }
 };
 
-int32_t Ipc_sciclientIrqTranslate(uint16_t coreId, uint32_t eventId,
+static int32_t Ipc_sciclientIrqTranslate(uint16_t coreId, uint32_t eventId,
         uint16_t *procIrq);
 
 
@@ -516,7 +516,7 @@ static const uint16_t req_subtype[] =
     TISCI_RESASG_SUBTYPE_IR_OUTPUT
 };
 
-int32_t Ipc_sciclientIrqTranslate(uint16_t coreId, uint32_t eventId,
+static int32_t Ipc_sciclientIrqTranslate(uint16_t coreId, uint32_t eventId,
         uint16_t *procIrq)
 {
     return Sciclient_rmIrqTranslateIrOutput(req_type[coreId],

@@ -1455,6 +1455,108 @@ TEST_WITH_ARG(tivxSourceNode, testNewSourcePipeline, Arg, STREAMING_PARAMETERS)
     tivxTestKernelsUnLoadKernels(context);
 }
 
+/*
+ *       n1
+ * SCALAR_SOURCE2 -- SCALAR (graph parameter 0)
+ *
+ * This tests bulk enqueueing of parameters.
+ * Pre-TIOVX-2649, a bulk enqueue of parameters would only count as 1 enqueue,
+ * so pipeup would've been exceeded but graph unstarted.
+ * In this test, all pipeup buffers plus one extra overshoot are enqueued in bulk
+ * The first execution consumes pipeup_depth buffers and the extra buffer triggers one more,
+ * so the graph must execute twice.
+ */
+TEST_WITH_ARG(tivxSourceNode, testNewSourcePipeupBatchEnqueue, Arg, STREAMING_PARAMETERS)
+{
+    vx_graph graph;
+    vx_context context = context_->vx_context_;
+    vx_kernel kernel;
+    vx_uint8  scalar_val = 0;
+    vx_scalar scalar[MAX_NUM_BUF];
+    vx_scalar done_scalar[2];
+    vx_uint32 pipeup_depth = 0, num_buf, num_refs, buf_id;
+    vx_enum graph_state;
+    vx_perf_t perf;
+    vx_node n1;
+    vx_graph_parameter_queue_params_t graph_parameters_queue_params_list[1];
+
+    tivxTestKernelsLoadKernels(context);
+
+    ASSERT_VX_OBJECT(kernel = vxGetKernelByName(context, TIVX_KERNEL_SCALAR_SOURCE2_NAME), VX_TYPE_KERNEL);
+    VX_CALL(vxQueryKernel(kernel, VX_KERNEL_PIPEUP_OUTPUT_DEPTH, &pipeup_depth, sizeof(pipeup_depth)));
+    VX_CALL(vxReleaseKernel(&kernel));
+
+    /* test is only meaningful if the source node requires pipeup */
+    ASSERT(pipeup_depth > 1U);
+
+    num_buf = pipeup_depth + 1U;
+    ASSERT(num_buf <= MAX_NUM_BUF);
+
+    ASSERT_VX_OBJECT(graph = vxCreateGraph(context), VX_TYPE_GRAPH);
+
+    for(buf_id = 0; buf_id < num_buf; buf_id++)
+    {
+        ASSERT_VX_OBJECT(scalar[buf_id] = vxCreateScalar(context, VX_TYPE_UINT8, &scalar_val), VX_TYPE_SCALAR);
+    }
+
+    ASSERT_VX_OBJECT(n1 = tivxScalarSource2Node(graph, scalar[0]), VX_TYPE_NODE);
+
+    /* output @ node index 0, becomes graph parameter 0 */
+    add_graph_parameter_by_node_index(graph, n1, 0);
+
+    graph_parameters_queue_params_list[0].graph_parameter_index = 0;
+    graph_parameters_queue_params_list[0].refs_list_size = num_buf;
+    graph_parameters_queue_params_list[0].refs_list = (vx_reference*)&scalar[0];
+
+    VX_CALL(vxSetGraphScheduleConfig(graph,
+            VX_GRAPH_SCHEDULE_MODE_QUEUE_AUTO,
+            1,
+            graph_parameters_queue_params_list
+            ));
+
+    VX_CALL(vxSetNodeTarget(n1, VX_TARGET_STRING, arg_->target_string));
+
+    VX_CALL(vxVerifyGraph(graph));
+    VX_CALL(vxQueryGraph(graph, VX_GRAPH_STATE, &graph_state, sizeof(graph_state)));
+    ASSERT_EQ_INT(VX_GRAPH_STATE_VERIFIED, graph_state);
+
+    /* enqueue all buffers in a single call, this must complete pipeup and trigger graph scheduling */
+    VX_CALL(vxGraphParameterEnqueueReadyRef(graph, 0, (vx_reference*)&scalar[0], num_buf));
+    /* ensure graph is going */
+    VX_CALL(vxQueryGraph(graph, VX_GRAPH_STATE, &graph_state, sizeof(graph_state)));
+    ASSERT((VX_GRAPH_STATE_RUNNING == graph_state) || (VX_GRAPH_STATE_COMPLETED == graph_state));
+
+    VX_CALL(vxWaitGraph(graph));
+    VX_CALL(vxQueryGraph(graph, VX_GRAPH_PERFORMANCE, &perf, sizeof(perf)));
+    ASSERT_EQ_INT(2, perf.num);
+
+    /* one buffer is returned per execution, the source node holds the remaining (pipeup_depth - 1) */
+    for(buf_id = 0; buf_id < 2U; buf_id++)
+    {
+        VX_CALL(vxGraphParameterDequeueDoneRef(graph, 0, (vx_reference*)&done_scalar[buf_id], 1, &num_refs));
+        ASSERT_EQ_INT(1, num_refs);
+    }
+    VX_CALL(vxGraphParameterCheckDoneRef(graph, 0, &num_refs));
+    ASSERT_EQ_INT(0, num_refs);
+
+    /* after pipeup, each enqueued buffer must trigger one execution */
+    VX_CALL(vxGraphParameterEnqueueReadyRef(graph, 0, (vx_reference*)&done_scalar[0], 2));
+
+    VX_CALL(vxWaitGraph(graph));
+    VX_CALL(vxQueryGraph(graph, VX_GRAPH_PERFORMANCE, &perf, sizeof(perf)));
+    ASSERT_EQ_INT(4, perf.num);
+
+    VX_CALL(vxReleaseNode(&n1));
+    VX_CALL(vxReleaseGraph(&graph));
+
+    for(buf_id = 0; buf_id < num_buf; buf_id++)
+    {
+        VX_CALL(vxReleaseScalar(&scalar[buf_id]));
+    }
+
+    tivxTestKernelsUnLoadKernels(context);
+}
+
 TEST_WITH_ARG(tivxSourceNode, testNewSourceSinkPipeline, Arg, STREAMING_PARAMETERS)
 {
     vx_graph graph;
@@ -2778,6 +2880,123 @@ TEST(tivxSourceNode, testMultiInOutEnqueue)
     tivxTestKernelsUnLoadKernels(context);
 }
 
+/*
+ * Checks enqueueing of graph parameters on nodes with multiple parameters
+ * Pre-TIOVX-2649, enqueueing to one node parameter would count as an enqueue for all parameters.
+ * This test sequences enqueues of buffers on each graph parameter back and forth,
+ * but only enough for only one execution
+ */
+TEST(tivxSourceNode, testMultiParameterPipeup)
+{
+    vx_graph graph;
+    vx_context context = context_->vx_context_;
+    vx_uint8  scalar_val = 0;
+    vx_scalar scalar_in1, scalar_in2;
+    vx_scalar scalar_out1[MAX_NUM_BUF], scalar_out2[MAX_NUM_BUF];
+    vx_node inNout;
+    vx_kernel kernel;
+    vx_reference done_ref;
+    vx_graph_parameter_queue_params_t graph_parameters_queue_params_list[2];
+    uint32_t num_buf = 3, buf_id, i;
+    vx_uint32 pipeup_depth = num_buf, num_refs;
+    vx_enum graph_state;
+    vx_perf_t perf;
+
+    tivxTestKernelsLoadKernels(context);
+
+    ASSERT_VX_OBJECT(kernel = vxGetKernelByName(context, TIVX_KERNEL_MULTI_IN_OUT_NAME), VX_TYPE_KERNEL);
+    VX_CALL(vxSetKernelAttribute(kernel, VX_KERNEL_PIPEUP_OUTPUT_DEPTH, &pipeup_depth, sizeof(pipeup_depth)));
+    VX_CALL(vxReleaseKernel(&kernel));
+
+    ASSERT_VX_OBJECT(graph = vxCreateGraph(context), VX_TYPE_GRAPH);
+    ASSERT_VX_OBJECT(scalar_in1  = vxCreateScalar(context, VX_TYPE_UINT8, &scalar_val), VX_TYPE_SCALAR);
+    ASSERT_VX_OBJECT(scalar_in2  = vxCreateScalar(context, VX_TYPE_UINT8, &scalar_val), VX_TYPE_SCALAR);
+
+    for (i = 0; i < num_buf; i++)
+    {
+        scalar_val = i;
+        ASSERT_VX_OBJECT(scalar_out1[i] = vxCreateScalar(context, VX_TYPE_UINT8, &scalar_val), VX_TYPE_SCALAR);
+        ASSERT_VX_OBJECT(scalar_out2[i] = vxCreateScalar(context, VX_TYPE_UINT8, &scalar_val), VX_TYPE_SCALAR);
+    }
+
+    ASSERT_VX_OBJECT(inNout = tivxMultiInOutNode(graph, scalar_in1, scalar_in2, scalar_out1[0], scalar_out2[0]), VX_TYPE_NODE);
+
+    ASSERT_EQ_VX_STATUS(VX_SUCCESS, set_graph_pipeline_depth(graph, num_buf));
+
+    // Set output scalars as graph parameter
+    add_graph_parameter_by_node_index(graph, inNout, 2);
+    add_graph_parameter_by_node_index(graph, inNout, 3);
+
+    // Set scalar_out1/2 arrays as graph parameter sources
+    graph_parameters_queue_params_list[0].graph_parameter_index = 0;
+    graph_parameters_queue_params_list[0].refs_list_size = num_buf;
+    graph_parameters_queue_params_list[0].refs_list = (vx_reference*)&scalar_out1[0];
+
+    graph_parameters_queue_params_list[1].graph_parameter_index = 1;
+    graph_parameters_queue_params_list[1].refs_list_size = num_buf;
+    graph_parameters_queue_params_list[1].refs_list = (vx_reference*)&scalar_out2[0];
+
+    /* Schedule mode auto to test graph is correctly scheduled automatically 
+     * based on certain combos of ref enqueues
+     */
+    VX_CALL(vxSetGraphScheduleConfig(graph,
+            VX_GRAPH_SCHEDULE_MODE_QUEUE_AUTO,
+            2,
+            graph_parameters_queue_params_list
+            ));
+
+    VX_CALL(vxVerifyGraph(graph));
+    VX_CALL(vxQueryGraph(graph, VX_GRAPH_STATE, &graph_state, sizeof(graph_state)));
+    ASSERT_EQ_INT(VX_GRAPH_STATE_VERIFIED, graph_state);
+
+    // Perform tests to ensure one enqueue doesn't decrement counter for both parameters
+    // Pre-TIOVX-2649, the graph would have been auto-scheduled despite both parameters not being ready
+    for(buf_id = 0; buf_id < (num_buf - 1U); buf_id++)
+    {
+        VX_CALL(vxGraphParameterEnqueueReadyRef(graph, 0, (vx_reference*)&scalar_out1[buf_id], 1));
+        VX_CALL(vxQueryGraph(graph, VX_GRAPH_STATE, &graph_state, sizeof(graph_state)));
+        ASSERT_EQ_INT(VX_GRAPH_STATE_VERIFIED, graph_state);
+        VX_CALL(vxGraphParameterEnqueueReadyRef(graph, 1, (vx_reference*)&scalar_out2[buf_id], 1));
+        VX_CALL(vxQueryGraph(graph, VX_GRAPH_STATE, &graph_state, sizeof(graph_state)));
+        ASSERT_EQ_INT(VX_GRAPH_STATE_VERIFIED, graph_state);
+    }
+
+    // Enqueue references for the num_buf'th time, which should actually trigger one execution
+    VX_CALL(vxGraphParameterEnqueueReadyRef(graph, 0, (vx_reference*)&scalar_out1[num_buf-1U], 1));
+    VX_CALL(vxQueryGraph(graph, VX_GRAPH_STATE, &graph_state, sizeof(graph_state)));
+    ASSERT_EQ_INT(VX_GRAPH_STATE_VERIFIED, graph_state);
+    VX_CALL(vxGraphParameterEnqueueReadyRef(graph, 1, (vx_reference*)&scalar_out2[num_buf-1U], 1));
+    VX_CALL(vxQueryGraph(graph, VX_GRAPH_STATE, &graph_state, sizeof(graph_state)));
+    ASSERT((VX_GRAPH_STATE_RUNNING == graph_state) || (VX_GRAPH_STATE_COMPLETED == graph_state));
+
+    // Ensure one execution passed
+    VX_CALL(vxWaitGraph(graph));
+    VX_CALL(vxQueryGraph(graph, VX_GRAPH_PERFORMANCE, &perf, sizeof(perf)));
+    ASSERT_EQ_INT(1, perf.num);
+
+    /* Ensure one parameter consumed */
+    VX_CALL(vxGraphParameterCheckDoneRef(graph, 0, &num_refs));
+    ASSERT_EQ_INT(1, num_refs);
+    VX_CALL(vxGraphParameterCheckDoneRef(graph, 1, &num_refs));
+    ASSERT_EQ_INT(1, num_refs);
+    VX_CALL(vxGraphParameterDequeueDoneRef(graph, 0, &done_ref, 1, &num_refs));
+    ASSERT_EQ_INT(1, num_refs);
+    VX_CALL(vxGraphParameterDequeueDoneRef(graph, 1, &done_ref, 1, &num_refs));
+    ASSERT_EQ_INT(1, num_refs);
+
+    VX_CALL(vxReleaseNode(&inNout));
+    VX_CALL(vxReleaseGraph(&graph));
+    VX_CALL(vxReleaseScalar(&scalar_in1));
+    VX_CALL(vxReleaseScalar(&scalar_in2));
+
+    for(buf_id = 0; buf_id < num_buf; buf_id++)
+    {
+        VX_CALL(vxReleaseScalar(&scalar_out1[buf_id]));
+        VX_CALL(vxReleaseScalar(&scalar_out2[buf_id]));
+    }
+
+    tivxTestKernelsUnLoadKernels(context);
+}
 
 TESTCASE_TESTS(tivxSourceNode,
                testMultiInOutEnqueue,
@@ -2811,5 +3030,7 @@ TESTCASE_TESTS(tivxSourceNode,
                testIntermediateNodePyramidReplicate,
                testSourceIntSinkPyramid,
                testContextRelease,
-               testVirtualImageInitDeinit)
+               testVirtualImageInitDeinit,
+               testMultiParameterPipeup,
+               testNewSourcePipeupBatchEnqueue)
 

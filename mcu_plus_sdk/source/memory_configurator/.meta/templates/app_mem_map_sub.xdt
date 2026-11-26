@@ -1,0 +1,136 @@
+% let common = system.getScript("/common");
+
+%%{
+function util_format_size(bytes) {
+    const KB = 1024;
+    const MB = KB * KB;
+    const GB = KB * MB;
+
+    if (bytes > GB) {
+        return (bytes / GB).toFixed(2) + ' GB';
+    } else if (bytes > MB) {
+        return (bytes / MB).toFixed(2) + ' MB';
+    } else if (bytes > KB) {
+        return (bytes / KB).toFixed(2) + ' KB';
+    } else {
+        return bytes + ' B';
+    }
+}
+
+function util_get_mmu_physical_address_from_all_cores(vAddr, size) {
+    // Search for MMU mapping in ANY core (for shared regions)
+    let coreNames = common.getSysCfgCoreNames();
+    if (!coreNames || coreNames.length === 0) {
+        coreNames = ["main-r5fss0-0", "wkup-r5fss0-0", "c75ss0-0", "c75ss1-0"];
+    }
+
+    for (let core of coreNames) {
+        let mmu_module = common.getModuleForCore("/kernel/dpl/mmu_armv8", core);
+        if (mmu_module === undefined || !mmu_module.$instances) {
+            continue;
+        }
+
+        // Find MMU entry that contains this virtual address
+        for (let mmu_inst of mmu_module.$instances) {
+            if (mmu_inst.vAddr !== undefined && mmu_inst.pAddr !== undefined && mmu_inst.size !== undefined) {
+                let mmu_end = mmu_inst.vAddr + mmu_inst.size;
+                let region_end = vAddr + size;
+
+                // Check if region vAddr is within this MMU range
+                if (vAddr >= mmu_inst.vAddr && vAddr < mmu_end) {
+                    // Calculate offset within the MMU range
+                    let offset = vAddr - mmu_inst.vAddr;
+                    // Apply same offset to physical address
+                    let phys_addr = mmu_inst.pAddr + offset;
+                    return phys_addr;
+                }
+            }
+        }
+    }
+    return null;
+}
+
+function util_get_all_regions() {
+    let coreNames = common.getSysCfgCoreNames();
+    if (!coreNames || coreNames.length === 0) {
+        coreNames = ["main-r5fss0-0", "wkup-r5fss0-0", "c75ss0-0", "c75ss1-0"];
+    }
+
+    let all_regions = [];
+    let region_to_core_map = {};
+    let seen_region_names = new Set();
+
+    for (let core of coreNames) {
+        let core_module_mpu = common.getModuleForCore("/memory_configurator/memory_region_mpu", core);
+        let core_module_mmu = common.getModuleForCore("/memory_configurator/memory_region_mmu", core);
+        let core_module = common.getModuleForCore("/memory_configurator/memory_region", core);
+
+        if (core_module_mpu !== undefined && core_module_mpu.$instances) {
+            for (let inst of core_module_mpu.$instances) {
+                if (!seen_region_names.has(inst.$name)) {
+                    all_regions.push(inst);
+                    region_to_core_map[inst.$name] = core;
+                    seen_region_names.add(inst.$name);
+                }
+            }
+        }
+        if (core_module_mmu !== undefined && core_module_mmu.$instances) {
+            for (let inst of core_module_mmu.$instances) {
+                if (!seen_region_names.has(inst.$name)) {
+                    all_regions.push(inst);
+                    region_to_core_map[inst.$name] = core;
+                    seen_region_names.add(inst.$name);
+                }
+            }
+        }
+        if (core_module !== undefined && core_module.$instances) {
+            for (let inst of core_module.$instances) {
+                if (!seen_region_names.has(inst.$name)) {
+                    all_regions.push(inst);
+                    region_to_core_map[inst.$name] = core;
+                    seen_region_names.add(inst.$name);
+                }
+            }
+        }
+    }
+
+    all_regions.__region_to_core_map = region_to_core_map;
+    return all_regions;
+}
+
+function sortByAddress(a, b) {
+    let addrA = a.auto ? a.autoStartAddress : a.manualStartAddress;
+    let addrB = b.auto ? b.autoStartAddress : b.manualStartAddress;
+    return addrA - addrB;
+}
+%%}
+
+#ifndef APP_MEM_MAP_H
+#define APP_MEM_MAP_H
+
+% let all_regions = util_get_all_regions();
+% let region_to_core_map = all_regions.__region_to_core_map;
+% all_regions.sort(sortByAddress);
+
+% for (let item of all_regions) {
+% if (item.$name.startsWith("R5F_TCM")) continue;
+% let sizeStr = util_format_size(item.size);
+% let addr = item.auto ? item.autoStartAddress : item.manualStartAddress;
+/* `item.$name` [ size `sizeStr` ] */
+#define `item.$name`_ADDR (0x`addr.toString(16).toUpperCase().padStart(8, '0')`u)
+#define `item.$name`_SIZE (0x`item.size.toString(16).toUpperCase().padStart(8, '0')`u)
+
+% // Check if this region has a physical address mapping (from any core's MMU)
+% let physAddr = util_get_mmu_physical_address_from_all_cores(addr, item.size);
+% if (physAddr !== null && physAddr !== addr) {
+/* `item.$name`_PHYS [ size `sizeStr` ] */
+#define `item.$name`_PHYS_ADDR (0x`physAddr.toString(16).toUpperCase().padStart(8, '0')`u)
+#define `item.$name`_PHYS_SIZE (0x`item.size.toString(16).toUpperCase().padStart(8, '0')`u)
+
+% }
+% }
+
+#define DDR_64BIT_BASE_VADDR (0x100000000u)
+#define DDR_64BIT_BASE_PADDR (0x880000000u)
+
+#endif /* APP_MEM_MAP_H */

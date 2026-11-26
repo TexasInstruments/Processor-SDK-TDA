@@ -104,8 +104,13 @@ SECTIONS
     .bss:ddr_cache_wt_mem   (NOLOAD) : {} > DDR_MCU2_0_VISS_CONFIG_HEAP
     .bss:app_log_mem        (NOLOAD) : {} > APP_LOG_MEM
     .bss:app_fileio_mem     (NOLOAD) : {} > APP_FILEIO_MEM
-    .bss:tiovx_obj_desc_mem (NOLOAD) : {} > TIOVX_OBJ_DESC_MEM
+    .bss:tiovx_obj_desc_mem0 (NOLOAD) : {} > TIOVX_OBJ_DESC_MEM_HOST0
+    .bss:tiovx_obj_desc_mem1 (NOLOAD) : {} > TIOVX_OBJ_DESC_MEM_HOST1
+    .bss:tiovx_obj_desc_mem2 (NOLOAD) : {} > TIOVX_OBJ_DESC_MEM_HOST2
     .bss:ipc_vring_mem      (NOLOAD) : {} > IPC_VRING_MEM
+    .bss:tiovx_host_shared_mem0 (NOLOAD) : {} > DDR_SHARED_MEM_HOST0
+    .bss:tiovx_host_shared_mem1 (NOLOAD) : {} > DDR_SHARED_MEM_HOST1
+    .bss:tiovx_host_shared_mem2 (NOLOAD) : {} > DDR_SHARED_MEM_HOST2
 
     /* This is where the stacks for different R5F modes go */
     .irqStack   : {. = . + __IRQ_STACK_SIZE;} align(4)      > DDR_MCU2_0  (HIGH)

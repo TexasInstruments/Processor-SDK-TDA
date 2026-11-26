@@ -1,0 +1,254 @@
+#
+# Auto generated makefile
+#
+
+export MCU_PLUS_SDK_PATH?=$(abspath ../../..)
+include $(MCU_PLUS_SDK_PATH)/imports.mak
+
+CG_TOOL_ROOT=$(CGT_TI_ARM_CLANG_PATH)
+
+CC=$(CGT_TI_ARM_CLANG_PATH)/bin/tiarmclang
+AR=$(CGT_TI_ARM_CLANG_PATH)/bin/tiarmar
+
+PROFILE?=release
+ConfigName:=$(PROFILE)
+
+LIBNAME:=drivers_ipfma.j722s.wkup-r5f.ti-arm-clang.$(PROFILE).lib
+
+FILES_common := \
+    bootloader.c \
+    bootloader_dma.c \
+    bootloader_flash.c \
+    bootloader_mem.c \
+    bootloader_mmcsd_raw.c \
+    bootloader_rprc.c \
+    bootloader_soc.c \
+    bootloader_xmodem.c \
+    bootloader_uniflash.c \
+    bootloader_profile.c \
+    crc16.c \
+    csl_bcdma.c \
+    csl_dru.c \
+    csl_emif.c \
+    csl_intaggr.c \
+    csl_lcdma_ringacc.c \
+    csl_pktdma.c \
+    csl_sec_proxy.c \
+    ddr.c \
+    ddr_soc.c \
+    ddr_perf.c \
+    gpio.c \
+    gtc.c \
+    gtc_soc.c \
+    i2c_soc.c \
+    i2c_v0.c \
+    i2c_v0_lld.c \
+    ipc_notify_v0.c \
+    ipc_notify_v0_cfg.c \
+    ipc_rpmsg.c \
+    ipc_rpmsg_vring.c \
+    lpddr4_obj_if.c \
+    lpddr4.c \
+    lpddr4_am6x.c \
+    lpddr4_ctl_regs_rw_masks.c \
+    mcan.c \
+    mcspi_dma.c \
+    mcspi_dma_udma.c \
+    mcspi_v0.c \
+    mmcsd_priv.c \
+    mmcsd_v0.c \
+    mmcsd_soc.c \
+    ospi_dma.c \
+    ospi_dma_udma.c \
+    ospi_nor_flash.c \
+    ospi_phy.c \
+    ospi_phy_tuning.c \
+    ospi_v0.c \
+    pinmux.c \
+    qos.c \
+    sciclient_defaultBoardcfg.c \
+    sciclient_fmwSecureProxyMap.c \
+    sciclient_irq_rm.c \
+    soc.c \
+    spinlock.c \
+    uart_dma.c \
+    uart_dma_udma.c \
+    uart_v0.c \
+    udma.c \
+    udma_ch.c \
+    udma_event.c \
+    udma_flow.c \
+    udma_ring_common.c \
+    udma_ring_lcdma.c \
+    udma_rm.c \
+    udma_rmcfg.c \
+    udma_rmcfg_common.c \
+    udma_soc.c \
+    udma_utils.c \
+    utils.c \
+    vtm.c \
+    xmodem.c \
+
+FILES_PATH_common = \
+    ../bootloader \
+    ../bootloader/soc/j722s \
+    ../ddr \
+    ../ddr/cdn_drv/ \
+    ../ddr/cdn_drv/common \
+    ../ddr/cdn_drv/v1 \
+    ../ddr/cdn_drv/v1/common \
+    ../ddr/cdn_drv/v1/common/include \
+    ../ddr/cdn_drv/v1/include \
+    ../ddr/v1 \
+    ../ddr/v1/soc \
+    ../ddr/v1/soc/j722s \
+    ../gpio/v0 \
+    ../gtc/v0 \
+    ../gtc/v0/soc/j722s \
+    ../hw_include/dru/v2 \
+    ../i2c/v0 \
+    ../i2c/v0/lld \
+    ../i2c/v0/soc/j722s \
+    ../ipc_notify/v0 \
+    ../ipc_notify/v0/soc/j722s \
+    ../ipc_rpmsg/ \
+    ../mcan/v0 \
+    ../mcspi/v0 \
+    ../mcspi/v0/dma \
+    ../mcspi/v0/dma/udma \
+    ../mmcsd \
+    ../mmcsd/v0 \
+    ../mmcsd/soc \
+    ../mmcsd/soc/j722s \
+    ../ospi \
+    ../ospi/v0 \
+    ../ospi/v0/dma \
+    ../ospi/v0/dma/udma \
+    ../ospi/v0/ospi_tuning/ospi_tuning_algo/algo_v1 \
+    ../pinmux/j722s \
+    ../qos \
+    ../qos/v0 \
+    ../sciclient \
+    ../sciclient/sciclient_default_boardcfg/j722s \
+    ../sciclient/soc/j722s \
+    ../soc/j722s \
+    ../spinlock/v0 \
+    ../uart/v0 \
+    ../uart/v0/dma \
+    ../uart/v0/dma/udma \
+    ../udma/v0 \
+    ../udma/v0/hw_include \
+    ../udma/v0/soc \
+    ../udma/v0/soc/j722s \
+    ../utils \
+
+INCLUDES_common := \
+    -I${CG_TOOL_ROOT}/include/c \
+    -I${MCU_PLUS_SDK_PATH}/source \
+
+DEFINES_common := \
+    -DSOC_J722S \
+    -DWKUP_R5 \
+    -DENABLE_SCICLIENT_DIRECT \
+    -DENABLE_PHY_TUNING_SOC_BUILD \
+    -DCONFIG_UDMAP_MULTI_CH_CFG \
+    -DREG_READBACK_ENABLED \
+    -DREG_READBACK_MODULE_MASK='(REG_RB_MOD_LPDDR)' \
+    -DSW_VERSION=$(SW_VERSION)
+
+CFLAGS_debug := \
+    -D_DEBUG_=1 \
+    -Og \
+
+CFLAGS_common := \
+    -DBUILD_WKUP_R5 \
+    -mcpu=cortex-r5 \
+    -mfloat-abi=hard \
+    -mfpu=vfpv3-d16 \
+    -mthumb \
+    -Wall \
+    -Werror \
+    -g \
+    -Wno-gnu-variable-sized-type-not-at-end \
+    -Wno-unused-function \
+
+CFLAGS_cpp_common := \
+    -Wno-c99-designator \
+    -Wno-extern-c-compat \
+    -Wno-c++11-narrowing \
+    -Wno-reorder-init-list \
+    -Wno-deprecated-register \
+    -Wno-writable-strings \
+    -Wno-enum-compare \
+    -Wno-reserved-user-defined-literal \
+    -Wno-unused-const-variable \
+    -x c++ \
+
+CFLAGS_release := \
+    -Os \
+
+ARFLAGS_common := \
+    rc \
+
+FILES := $(FILES_common) $(FILES_$(PROFILE))
+ASMFILES := $(ASMFILES_common) $(ASMFILES_$(PROFILE))
+ASMEXTNFILES := $(ASMEXTNFILES_common) $(ASMEXTNFILES_$(PROFILE))
+FILES_PATH := $(FILES_PATH_common) $(FILES_PATH_$(PROFILE))
+CFLAGS := $(CFLAGS_common) $(CFLAGS_$(PROFILE))
+ASMFLAGS := $(CFLAGS_common) $(CFLAGS_$(PROFILE))
+ifeq ($(CPLUSPLUS_BUILD), yes)
+CFLAGS += $(CFLAGS_cpp_common)
+endif
+DEFINES := $(DEFINES_common) $(DEFINES_$(PROFILE))
+INCLUDES := $(INCLUDES_common) $(INCLUDE_$(PROFILE))
+ARFLAGS := $(ARFLAGS_common) $(ARFLAGS_$(PROFILE))
+
+LIBDIR := lib
+OBJDIR := obj/j722s/ti-arm-clang/$(PROFILE)/wkup-r5f/drivers_ipfma/
+OBJS := $(FILES:%.c=%.obj)
+OBJS += $(ASMFILES:%.S=%.obj)
+OBJS += $(ASMEXTNFILES:%.asm=%.obj)
+DEPS := $(FILES:%.c=%.d)
+
+vpath %.obj $(OBJDIR)
+vpath %.c $(FILES_PATH)
+vpath %.S $(FILES_PATH)
+vpath %.asm $(FILES_PATH)
+
+$(OBJDIR)/%.obj %.obj: %.c
+	@echo  Compiling: $(LIBNAME): $<
+	$(CC) -c $(CFLAGS) $(INCLUDES) $(DEFINES) -MMD -o $(OBJDIR)/$@ $<
+
+$(OBJDIR)/%.obj %.obj: %.S
+	@echo  Compiling: $(LIBNAME): $<
+	$(CC) -c $(ASMFLAGS) -o $(OBJDIR)/$@ $<
+
+$(OBJDIR)/%.obj %.obj: %.asm
+	@echo  Compiling: $(LIBNAME): $<
+	$(CC) -c $(CFLAGS) -o $(OBJDIR)/$@ $<
+
+all: $(LIBDIR)/$(LIBNAME)
+
+$(LIBDIR)/$(LIBNAME): $(OBJS) | $(LIBDIR)
+	@echo  .
+	@echo  Archiving: $(LIBNAME) to $@ ...
+	$(AR) $(ARFLAGS) $@ $(addprefix $(OBJDIR), $(OBJS))
+	@echo  Archiving: $(LIBNAME) Done !!!
+	@echo  .
+
+clean:
+	@echo  Cleaning: $(LIBNAME) ...
+	$(RMDIR) $(OBJDIR)
+	$(RM) $(LIBDIR)/$(LIBNAME)
+
+scrub:
+	@echo  Scrubing: $(LIBNAME) ...
+	-$(RMDIR) obj/
+	-$(RMDIR) lib/
+
+$(OBJS): | $(OBJDIR)
+
+$(LIBDIR) $(OBJDIR):
+	$(MKDIR) $@
+
+-include $(addprefix $(OBJDIR)/, $(DEPS))

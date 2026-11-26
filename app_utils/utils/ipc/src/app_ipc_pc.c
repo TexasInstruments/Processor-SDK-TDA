@@ -198,9 +198,15 @@ static void appIpcRpmsgRxHandler(RPMessage_Object* rpmsg_handle,
         }
         else
         {
-            if(NULL != obj->ipc_notify_handler)
+            if (NULL != obj->ipc_notify_handler)
             {
                 obj->ipc_notify_handler(app_cpu_id, payload);
+            }
+            else
+            {
+                appLogPrintf("IPC: ERROR: RX handler is invalid! Message from %s -> %s was dropped\n",
+                    appIpcGetCpuName(app_cpu_id),
+                    appIpcGetCpuName(appIpcGetSelfCpuId()));
             }
         }
     }

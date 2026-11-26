@@ -2865,6 +2865,33 @@ int8_t test_sciclient_rm(void)
      .tx_sched_priority = 1
     };
 
+
+    struct tisci_msg_rm_udmap_tx_multi_ch_cfg_resp rmUdmapTxMultiResp;
+    struct tisci_msg_rm_udmap_tx_multi_ch_cfg_req rmUdmapTxMultiCfg =
+    {
+     .hdr.type = 0x1205,
+     .valid_params = 0xffff,
+     .nav_id = 30,
+     .start_index = 10,
+     .tx_pause_on_err = 1,
+     .tx_filt_einfo = 1,
+     .tx_filt_pswords = 1,
+     .tx_atype = 2,
+     .tx_chan_type = 2,
+     .tx_supr_tdpkt = 1,
+     .tx_fetch_size = 64,
+     .tx_credit_count = 1,
+     .start_txcq_qnum = 0,
+     .tx_priority = 1,
+     .tx_qos = 1,
+     .tx_orderid = 1,
+     .fdepth = 64,
+     .tx_sched_priority = 1,
+     .num_ch = 1,
+     .ch_offset = 1,
+     .txcq_offset = 1,
+    };
+
     struct tisci_msg_rm_udmap_rx_ch_cfg_resp rmUdmapRxResp;
     struct tisci_msg_rm_udmap_rx_ch_cfg_req rmUdmapRxCfg =
     {
@@ -2949,6 +2976,18 @@ int8_t test_sciclient_rm(void)
      .data = 0x80000000
     };
 
+    struct tisci_msg_rm_psil_multi_ch_write_req rmPsilMultiWriteCfg =
+    {
+     .hdr.type = 0x1283,
+     .nav_id = 25,
+     .thread = 0x100b,
+     .taddr = 0x2,
+     .num_threads = 1U,
+     .stride = 1U,
+     .data = 0x80000000,
+     .mask = 0x80000000,
+    };
+
     retVal = Sciclient_rmGetResourceRange(&rmGetResCfg, &rmGetResResp, (-1));
     if(retVal != SystemP_SUCCESS)
     {
@@ -2991,6 +3030,13 @@ int8_t test_sciclient_rm(void)
         failCount++;
     }
 
+    retVal = Sciclient_rmUdmapTxMultiChCfg(&rmUdmapTxMultiCfg, &rmUdmapTxMultiResp, (-1));
+    if(retVal != SystemP_SUCCESS)
+    {
+        DebugP_log("\r\n Testcase failed in %d and retVal is %d", __LINE__, retVal);
+        failCount++;
+    }
+
     retVal = Sciclient_rmUdmapRxChCfg(&rmUdmapRxCfg, &rmUdmapRxResp, (-1));
     if(retVal != SystemP_SUCCESS)
     {
@@ -3027,6 +3073,13 @@ int8_t test_sciclient_rm(void)
     }
 
     retVal = Sciclient_rmPsilWrite(&rmPsilWriteCfg, (-1));
+    if(retVal != SystemP_SUCCESS)
+    {
+        DebugP_log("\r\n Testcase failed in %d and retVal is %d", __LINE__, retVal);
+        failCount++;
+    }
+
+    retVal = Sciclient_rmPsilMultiChWrite(&rmPsilMultiWriteCfg, (-1));
     if(retVal != SystemP_SUCCESS)
     {
         DebugP_log("\r\n Testcase failed in %d and retVal is %d", __LINE__, retVal);
@@ -3140,6 +3193,31 @@ int8_t test_sciclient_rm(void)
          .tx_sched_priority = 1
     };
 
+    struct tisci_msg_rm_udmap_tx_multi_ch_cfg_resp rmUdmapTxMultiresp;
+    struct tisci_msg_rm_udmap_tx_multi_ch_cfg_req rmUdmapTxMultiCfg2 = {
+         .hdr.type = 0x1205,
+         .valid_params = 0xffff,
+         .nav_id = 30,
+         .start_index = 10019,
+         .tx_pause_on_err = 1,
+         .tx_filt_einfo = 1,
+         .tx_filt_pswords = 1,
+         .tx_atype = 2,
+         .tx_chan_type = 2,
+         .tx_supr_tdpkt = 1,
+         .tx_fetch_size = 64,
+         .tx_credit_count = 1,
+         .start_txcq_qnum = 0,
+         .tx_priority = 1,
+         .tx_qos = 1,
+         .tx_orderid = 1,
+         .fdepth = 64,
+         .tx_sched_priority = 1,
+         .ch_offset = 1,
+         .num_ch = 1,
+         .txcq_offset = 1,
+    };
+
     struct tisci_msg_rm_udmap_rx_ch_cfg_resp rmUdmapRxresp;
     struct tisci_msg_rm_udmap_rx_ch_cfg_req rmUdmapRxCfg2 = {
          .hdr.type = 0x1215,
@@ -3216,6 +3294,17 @@ int8_t test_sciclient_rm(void)
          .thread = 0xc300,
          .taddr = 0x2,
          .data = 0x80000000
+    };
+
+    struct tisci_msg_rm_psil_multi_ch_write_req rmPsilMultiWriteCfg2 = {
+         .hdr.type = 0x1283,
+         .nav_id = 33,
+         .thread = 0xc300,
+         .taddr = 0x2,
+         .num_threads = 1U,
+         .stride = 1U,
+         .data = 0x80000000,
+         .mask = 0x80000000,
     };
 
     struct tisci_msg_rm_get_resource_range_resp rmGetresp;
@@ -3345,6 +3434,20 @@ int8_t test_sciclient_rm(void)
         failCount++;
     }
 
+    retVal = Sciclient_rmUdmapTxMultiChCfg(&rmUdmapTxMultiCfg2, &rmUdmapTxMultiresp, (-1));
+    if(retVal == SystemP_SUCCESS)
+    {
+        DebugP_log("\r\n Testcase failed in %d and retVal is %d", __LINE__, retVal);
+        failCount++;
+    }
+
+    retVal = Sciclient_rmUdmapTxMultiChCfg(NULL, NULL, (-1));
+    if(retVal == SystemP_SUCCESS)
+    {
+        DebugP_log("\r\n Testcase failed in %d and retVal is %d", __LINE__, retVal);
+        failCount++;
+    }
+
     retVal = Sciclient_rmUdmapRxChCfg(NULL, NULL, (-1));
     if(retVal == SystemP_SUCCESS)
     {
@@ -3439,6 +3542,20 @@ int8_t test_sciclient_rm(void)
     }
 
     retVal = Sciclient_rmPsilWrite(&rmPsilWriteCfg2, (-1));
+    if(retVal == SystemP_SUCCESS)
+    {
+        DebugP_log("\r\n Testcase failed in %d and retVal is %d", __LINE__, retVal);
+        failCount++;
+    }
+
+    retVal = Sciclient_rmPsilMultiChWrite(NULL, (-1));
+    if(retVal == SystemP_SUCCESS)
+    {
+        DebugP_log("\r\n Testcase failed in %d and retVal is %d", __LINE__, retVal);
+        failCount++;
+    }
+
+    retVal = Sciclient_rmPsilMultiChWrite(&rmPsilMultiWriteCfg2, (-1));
     if(retVal == SystemP_SUCCESS)
     {
         DebugP_log("\r\n Testcase failed in %d and retVal is %d", __LINE__, retVal);

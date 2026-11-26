@@ -100,7 +100,8 @@ int32_t tivxVdkRegisterCallbacks(
     ownUpdateIpcSendMboxFunctionPtr(ipc_send_mbox);
     gVdkHandleSpinlock = handle_spinlock;
 
-    IpcNotify_Hal_VdkInit(ipc_send_mbox, get_host_ptr_from_phy_ptr, (IpcNotify_Hal_VdkGetCpuIdCallback)tivxVdkGetSelfCslIpcCpuId, obj);
+    IpcNotify_Hal_VdkInit(ipc_send_mbox, (IpcNotify_Hal_VdkHostPtrCallback)get_host_ptr_from_phy_ptr,
+                         (IpcNotify_Hal_VdkGetCpuIdCallback)tivxVdkGetSelfCslIpcCpuId, obj);
 
     IpcVdkPrintLogRegister(print_log);
 
@@ -225,7 +226,11 @@ tivx_obj_desc_shm_entry_t gTivxObjDescShmEntry
 
 int32_t tivxPlatformGetShmSize(uint32_t * shm_size)
 {
+    #ifdef SOC_FAMILY_TDA5
     *shm_size = TIOVX_OBJ_DESC_MEM_SIZE;
+    #else
+    *shm_size = TIOVX_OBJ_DESC_MEM_HOST0_SIZE;
+    #endif
     /* Always returns 0 for successful status as size is #defined */
     return 0;
 }
@@ -441,12 +446,24 @@ void ownPlatformDeactivate()
 {
 }
 
-void ownPlatformGetTargetPerfStats(uint32_t app_cpu_id, uint32_t target_values[TIVX_TARGET_RESOURCE_COUNT])
+void ownPlatformGetTargetPerfStats(uint32_t app_cpu_id,
+                                    uint32_t target_values[TIVX_TARGET_RESOURCE_COUNT],
+                                    uint32_t rtos_sem_object_types[TIVX_TARGET_RTOS_MAX_COUNT][TIVX_TARGET_RTOS_MAX_COUNT],
+                                    uint32_t rtos_task_object_types[TIVX_TARGET_RTOS_MAX_COUNT][TIVX_TARGET_RTOS_MAX_COUNT])
 {
-    uint32_t i;
+    uint32_t i, j;
 
-    for (i = 0; i < TIVX_TARGET_RESOURCE_COUNT; i++)
+    for (i = 0U; i < TIVX_TARGET_RESOURCE_COUNT; i++)
     {
-        target_values[i] = 0;
+        target_values[i] = 0U;
+    }
+
+    for (i = 0U; i < TIVX_TARGET_RTOS_MAX_COUNT; i++)
+    {
+        for (j = 0U; j < TIVX_TARGET_RTOS_MAX_COUNT; j++)
+        {
+            rtos_sem_object_types[i][j] = 0U;
+            rtos_task_object_types[i][j] = 0U;
+        }
     }
 }

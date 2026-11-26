@@ -71,7 +71,7 @@
 /**
  * \brief Main NavSS512 - Mailbox input line
  */
-uint32_t g_Navss512MbInput[IPC_MAILBOX_CLUSTER_CNT] =
+static uint32_t g_Navss512MbInput[IPC_MAILBOX_CLUSTER_CNT] =
 {
     NAVSS_INTRTR_INPUT_MAILBOX0_USER0,
     NAVSS_INTRTR_INPUT_MAILBOX1_USER0,
@@ -304,7 +304,7 @@ static Ipc_MailboxInfo   g_IPC_MailboxInfo[IPC_MAX_PROCS][IPC_MAX_PROCS] =
     }
 };
 
-int32_t Ipc_sciclientIrqTranslate(uint16_t coreId, uint32_t eventId,
+static int32_t Ipc_sciclientIrqTranslate(uint16_t coreId, uint32_t eventId,
         uint16_t *procIrq);
 
 
@@ -488,10 +488,10 @@ void Ipc_configC66xIntrRouter(uint32_t input)
 
     /* program C66_1/2 INTR_ROUTER physical addr to REGION_TRANS_L */
 #ifdef BUILD_C66X_1
-    RAT[2] = IPC_C66X_1_INTR_PA_BASE;
+    RAT[2] = (uint32_t)IPC_C66X_1_INTR_PA_BASE;
 #endif
 #ifdef BUILD_C66X_2
-    RAT[2] = IPC_C66X_2_INTR_PA_BASE;
+    RAT[2] = (uint32_t)IPC_C66X_2_INTR_PA_BASE;
 #endif
 
     /* enable region and set size to 512 B */
@@ -615,7 +615,7 @@ static const uint16_t req_subtype[] =
 #endif
 };
 
-int32_t Ipc_sciclientIrqTranslate(uint16_t coreId, uint32_t eventId,
+static int32_t Ipc_sciclientIrqTranslate(uint16_t coreId, uint32_t eventId,
         uint16_t *procIrq)
 {
     return Sciclient_rmIrqTranslateIrOutput(req_type[coreId],

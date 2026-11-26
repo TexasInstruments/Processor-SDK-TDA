@@ -5,6 +5,7 @@ let device = "am243x";
 const files = {
     common: [
             "enet_layer2_icssg.c",
+            "enet_layer2_menu.c",
             "main.c",
     ],
 };

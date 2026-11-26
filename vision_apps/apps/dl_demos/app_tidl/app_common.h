@@ -91,8 +91,7 @@
 
 #define MAX_IMG_WIDTH  (2048)
 #define MAX_IMG_HEIGHT (1024)
-#define DISPLAY_WIDTH  (1280)
-#define DISPLAY_HEIGHT (720)
+/* DISPLAY_WIDTH and DISPLAY_HEIGHT moved to app_display_module.hpp */
 #define NUM_CH    (1)
 #define NUM_ALGOS (5)
 
@@ -102,12 +101,6 @@
 #define APP_PRINTF(f_, ...) printf((f_), ##__VA_ARGS__)
 #else
 #define APP_PRINTF(f_, ...)
-#endif
-
-#if defined(SOC_AM62A) && defined(LINUX)
-/*AM62A: Linux to use DRM/KMS for displaying frames on A53 with zero-copy*/
-#include <utils/drm_wrapper/include/drm_wrapper.h>
-#define  DRM_FORMAT_NV12                0x3231564E
 #endif
 
 #endif

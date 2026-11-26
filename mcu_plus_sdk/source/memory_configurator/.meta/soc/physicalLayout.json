@@ -1,0 +1,62 @@
+{
+
+	"J722S_TDA4VEN_TDA4AEN_AM67": {
+        "TCMA_R5F": {
+        "start":0x0,
+        "size":0x00008000,
+        "access":"individual"
+        },
+
+        "TCMB_R5F": {
+        "start":0x0041010000,
+        "size": 0x000008000,
+        "access":"individual"
+        },
+
+        "DDR_HIGH_ALL": {
+        "start":0x0880000000,
+        "size":0x780000000,
+        "access":"all"
+        },
+
+        "DDR_LOW_ALL":{
+        "start":0x0080000000,
+        "size": 0x80000000,
+        "access":"all"
+        },
+
+        "L3_C75":{
+        "start":0x7E000000,
+        "size": 0x00400000,
+        "access":"individual"
+        },
+        "L2_C75SS0-0":{
+        "start":0x7F000000,
+        "size": 0x0003C000,
+        "access":"all"
+        },
+        "L1_C75SS0-0":{
+        "start":0x7F03C000,
+        "size": 0x00004000,
+        "access":"all"
+        },
+
+        "L2_C75SS1-0":{
+        "start":0x7F800000,
+        "size": 0x0003C000,
+        "access":"all"
+        },
+        "L1_C75SS1-0":{
+        "start":0x7F83C000,
+        "size": 0x00004000,
+        "access":"all"
+        },
+
+        "MSRAM_ALL": {
+        "start":0x0079100000,
+        "size":0x00080000,
+        "access":"all"
+        }
+  }
+
+}

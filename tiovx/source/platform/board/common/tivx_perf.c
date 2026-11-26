@@ -62,17 +62,25 @@
 
 
 #include <tivx_target_config.h>
-#include <utils/perf_stats/include/app_perf_stats.h>
 #include <tivx_platform.h>
+#include <utils/perf_stats/include/app_perf_stats.h>
+#if !defined(HLOS)
+#include <utils/rtos/src/app_rtos_priv.h>
+#endif /* #if !defined(HLOS) */
 
 #if defined(BUILD_DEV)
 extern tivx_resource_stats_t g_tivx_resource_stats_table[TIVX_RESOURCE_STATS_TABLE_SIZE];
 extern uint32_t g_ipc_cpu_id_map[TIVX_CPU_ID_MAX];
 
-void ownPlatformGetTargetPerfStats(uint32_t app_cpu_id, uint32_t target_values[TIVX_TARGET_RESOURCE_COUNT])
+void ownPlatformGetTargetPerfStats(uint32_t app_cpu_id,
+                                    uint32_t target_values[TIVX_TARGET_RESOURCE_COUNT],
+                                    uint32_t rtos_sem_object_types[TIVX_TARGET_RTOS_MAX_COUNT][TIVX_TARGET_RTOS_MAX_COUNT],
+                                    uint32_t rtos_task_object_types[TIVX_TARGET_RTOS_MAX_COUNT][TIVX_TARGET_RTOS_MAX_COUNT])
 {
     int32_t status;
     app_perf_stats_tiovx_stats_t tiovx_stats;
+    uint32_t i, j;
+
     status = appPerfStatsCpuTiovxStatsGet(app_cpu_id, &tiovx_stats);
 
     if (status == (vx_status)VX_SUCCESS)
@@ -81,6 +89,33 @@ void ownPlatformGetTargetPerfStats(uint32_t app_cpu_id, uint32_t target_values[T
         target_values[1] = tiovx_stats.max_targets_per_kernel;
         target_values[2] = tiovx_stats.target_kernel_instance_max;
         target_values[3] = tiovx_stats.target_kernel_max;
+        target_values[4] = tiovx_stats.osal_semaphore_max_objects;
+        target_values[5] = tiovx_stats.osal_task_max_objects;
+        target_values[6] = tiovx_stats.rtos_max_semaphorep;
+        target_values[7] = tiovx_stats.rtos_max_taskp;
+
+        tivx_os_obj_sizes_t os_obj_sizes =
+        {
+            .posix_event_size    = 0U,
+            .posix_mutex_size    = 0U,
+            .posix_queue_size    = 0U,
+            .posix_task_size     = 0U,
+            .rtos_sem_obj_size   = tiovx_stats.rtos_sem_object_types[0][0],
+            .rtos_sem_pool_size  = tiovx_stats.rtos_sem_object_types[0][1],
+            .rtos_task_obj_size  = tiovx_stats.rtos_task_object_types[0][0],
+            .rtos_task_pool_size = tiovx_stats.rtos_task_object_types[0][1]
+        };
+
+        ownUpdateRemoteEnumTypeSizes((void*)&os_obj_sizes);
+
+        for (i = 0U; i < TIVX_TARGET_RTOS_MAX_COUNT; i++)
+        {
+            for (j = 0U; j < TIVX_TARGET_RTOS_MAX_COUNT; j++)
+            {
+                rtos_sem_object_types[i][j] = tiovx_stats.rtos_sem_object_types[i][j];
+                rtos_task_object_types[i][j] = tiovx_stats.rtos_task_object_types[i][j];
+            }
+        }
     }
 }
 
@@ -97,8 +132,8 @@ void ownIpcGetCpuMap(uint32_t cpu_id_map[TIVX_CPU_ID_MAX])
 
 void tivxGetTiovxStats(app_perf_stats_tiovx_stats_t *tiovx_stats);
 
-app_perf_registration_t get_tiovx_stats = {&tivxGetTiovxStats};
-app_perf_registration_t * perf_fxns_list = &get_tiovx_stats;
+app_perf_registration_t perf_fxns = {&tivxGetTiovxStats};
+app_perf_registration_t * perf_fxns_list = &perf_fxns;
 
 void tivxGetTiovxStats(app_perf_stats_tiovx_stats_t *tiovx_stats)
 {
@@ -113,19 +148,35 @@ void tivxGetTiovxStats(app_perf_stats_tiovx_stats_t *tiovx_stats)
             {
                 tiovx_stats->targets_in_cpu = g_tivx_resource_stats_table[i].max_used_value;
             }
-            if ( strncmp(g_tivx_resource_stats_table[i].name, "TIVX_MAX_TARGETS_PER_KERNEL", TIVX_RESOURCE_NAME_MAX) == 0 )
+            else if ( strncmp(g_tivx_resource_stats_table[i].name, "TIVX_MAX_TARGETS_PER_KERNEL", TIVX_RESOURCE_NAME_MAX) == 0 )
             {
                 tiovx_stats->max_targets_per_kernel = g_tivx_resource_stats_table[i].max_used_value;
             }
-            if ( strncmp(g_tivx_resource_stats_table[i].name, "TIVX_TARGET_KERNEL_INSTANCE_MAX", TIVX_RESOURCE_NAME_MAX) == 0 )
+            else if ( strncmp(g_tivx_resource_stats_table[i].name, "TIVX_TARGET_KERNEL_INSTANCE_MAX", TIVX_RESOURCE_NAME_MAX) == 0 )
             {
-                tiovx_stats->target_kernel_instance_max = g_tivx_resource_stats_table[i].cur_used_value;
+                tiovx_stats->target_kernel_instance_max = g_tivx_resource_stats_table[i].max_used_value;
             }
-            if ( strncmp(g_tivx_resource_stats_table[i].name, "TIVX_TARGET_KERNEL_MAX", TIVX_RESOURCE_NAME_MAX) == 0 )
+            else if ( strncmp(g_tivx_resource_stats_table[i].name, "TIVX_TARGET_KERNEL_MAX", TIVX_RESOURCE_NAME_MAX) == 0 )
             {
                 tiovx_stats->target_kernel_max = g_tivx_resource_stats_table[i].max_used_value;
             }
+            else if ( strncmp(g_tivx_resource_stats_table[i].name, "RTOS_OSAL_SEMAPHORE_MAX_OBJECTS", TIVX_RESOURCE_NAME_MAX) == 0 )
+            {
+                tiovx_stats->osal_semaphore_max_objects = g_tivx_resource_stats_table[i].max_used_value;
+            }
+            else if ( strncmp(g_tivx_resource_stats_table[i].name, "RTOS_OSAL_TASK_MAX_OBJECTS", TIVX_RESOURCE_NAME_MAX) == 0 )
+            {
+                tiovx_stats->osal_task_max_objects = g_tivx_resource_stats_table[i].max_used_value;
+            }
         }
+
+        #if !defined(HLOS)
+        appPerfStatsUpdateOSObjectSizes(tiovx_stats);
+        tiovx_stats->rtos_sem_object_types[1][0] = TIVX_TYPE_RTOS_OSAL_SEM_OBJ;
+        tiovx_stats->rtos_sem_object_types[1][1] = TIVX_TYPE_RTOS_OSAL_SEM_POOL;
+        tiovx_stats->rtos_task_object_types[1][0] = TIVX_TYPE_RTOS_OSAL_TASK_OBJ;
+        tiovx_stats->rtos_task_object_types[1][1] = TIVX_TYPE_RTOS_OSAL_TASK_POOL;
+        #endif /* #if !defined(HLOS) */
     }
 #endif /* #if defined(BUILD_DEV) */
 }

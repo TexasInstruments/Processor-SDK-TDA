@@ -17,28 +17,28 @@
 
 #include <vx_internal.h>
 
-VX_API_ENTRY void VX_API_CALL vxRegisterLogCallback(vx_context cntxt, vx_log_callback_f callback, vx_bool reentrant)
+VX_API_ENTRY void VX_API_CALL vxRegisterLogCallback(vx_context context, vx_log_callback_f callback, vx_bool reentrant)
 {
-    if (ownIsValidContext(cntxt) == (vx_bool)vx_true_e)
+    if (ownIsValidContext(context) == (vx_bool)vx_true_e)
     {
-        if((vx_status)VX_SUCCESS != ownContextLock(cntxt))
+        if((vx_status)VX_SUCCESS != ownContextLock(context))
         {
             VX_PRINT(VX_ZONE_ERROR, "Failed to lock context\n");
         }
         else
         {
-            if ((cntxt->log_callback == NULL) && (callback != NULL))
+            if ((context->log_callback == NULL) && (callback != NULL))
             {
-                cntxt->log_enabled = (vx_bool)vx_true_e;
+                context->log_enabled = (vx_bool)vx_true_e;
 
                 /* reentrant is ignored, lock is always taken */
             }
-            if ((cntxt->log_callback != NULL) && (callback == NULL))
+            if ((context->log_callback != NULL) && (callback == NULL))
             {
-                cntxt->log_enabled = (vx_bool)vx_false_e;
+                context->log_enabled = (vx_bool)vx_false_e;
             }
-            cntxt->log_callback = callback;
-            (void)ownContextUnlock(cntxt);
+            context->log_callback = callback;
+            (void)ownContextUnlock(context);
         }
     }
 }

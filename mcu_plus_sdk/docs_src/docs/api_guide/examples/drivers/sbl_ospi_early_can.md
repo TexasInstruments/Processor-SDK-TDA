@@ -4,7 +4,7 @@
 
 # Introduction
 
-This bootloader does SOC initializations and attempts to boot a multicore appimage present at 0x80000 location in the OSPI Flash. To flash a multicore appimage at this location, follow the steps mentioned in \ref BASIC_STEPS_TO_FLASH_FILES.
+This bootloader does SOC initializations and attempts to boot a multicore appimage present at 0xC0000 location in the OSPI Flash. To flash a multicore appimage at this location, follow the steps mentioned in \ref BASIC_STEPS_TO_FLASH_FILES.
 
 If a multicore appimage is found at the location, the SBL parses it, splits it into RPRCs for each core applicable. Each core is then initialized, RPRC image is loaded, entry points are set and the core is released from reset. For more on bootflow/bootloaders, please refer \ref BOOTFLOW_GUIDE
 
@@ -36,7 +36,11 @@ Since this is a bootloader, the example will be run every time you boot an appli
 - If Linux PC is used, assuming SDK is installed at ~/ti/mcu_plus_sdk
 
       cd ~/ti/mcu_plus_sdk/tools/boot
-       python uart_uniflash.py -p <main UART COM port> --cfg=~/ti/mcu_plus_sdk/tools/sbl_prebuilt/j722s-evm/default_sbl_ospi_hs_fs.cfg
+       python uart_uniflash.py -p <main UART COM port> --cfg=~/ti/mcu_plus_sdk/tools/sbl_prebuilt/j722s-evm/default_sbl_ospi_early_can_hs_fs.cfg
+
+## Run the example
+
+- Boot the EVM in OSPI NOR boot mode.
 
 # See Also
 

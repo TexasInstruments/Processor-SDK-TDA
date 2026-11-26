@@ -271,14 +271,14 @@ static void exportTargetLegend(FILE *fp, vx_graph graph)
 
     for (target_id = 0; target_id < num_targets; target_id++)
     {
-        #if defined(LINUX) || defined(QNX)
+        #if defined(HLOS)
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wformat-truncation"
-        #endif
+        #endif /* #if defined(HLOS) */
         TIVX_EXPORT_WRITELN(fp, "        <TR><TD bgcolor=\"%s\">%s</TD></TR>", node_color_name_list[target_id], target_name_list[target_id]);
-        #if defined(LINUX) || defined(QNX)
+        #if defined(HLOS)
         #pragma GCC diagnostic pop
-        #endif
+        #endif /* #if defined(HLOS) */
     }
 
     TIVX_EXPORT_WRITELN(fp, "        </TABLE>>];\n");
@@ -308,20 +308,20 @@ static void exportDataRef(FILE *fp, vx_reference ref)
                 (ownIsValidSpecificReference(ref->scope, (vx_enum)VX_TYPE_OBJECT_ARRAY) == (vx_bool)vx_true_e)
                )
             {
-                #if defined(LINUX) || defined(QNX)
+                #if defined(HLOS)
                 #pragma GCC diagnostic push
                 #pragma GCC diagnostic ignored "-Wformat-truncation"
-                #endif
+                #endif /* #if defined(HLOS) */
                 (void)snprintf(is_replicated_label, 64, "| [in] %s", ref->scope->name);
-                #if defined(LINUX) || defined(QNX)
+                #if defined(HLOS)
                 #pragma GCC diagnostic pop
-                #endif
+                #endif /* #if defined(HLOS) */
             }
         }
-        #if defined(LINUX) || defined(QNX)
+        #if defined(HLOS)
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wformat-truncation"
-        #endif
+        #endif /* #if defined(HLOS) */
         TIVX_EXPORT_WRITELN(fp, "%s [shape=record %s, label=\"{%s %s %s}\"]",
                 ref->name,
                 is_virtual,
@@ -329,9 +329,9 @@ static void exportDataRef(FILE *fp, vx_reference ref)
                 is_virtual_label,
                 is_replicated_label
                 );
-        #if defined(LINUX) || defined(QNX)
+        #if defined(HLOS)
         #pragma GCC diagnostic pop
-        #endif
+        #endif /* #if defined(HLOS) */
         if ((ownIsValidSpecificReference(ref->scope, (vx_enum)VX_TYPE_PYRAMID) == (vx_bool)vx_true_e)
                 ||
             (ownIsValidSpecificReference(ref->scope, (vx_enum)VX_TYPE_OBJECT_ARRAY) == (vx_bool)vx_true_e)
@@ -529,10 +529,10 @@ static void exportDataRefObjDesc(FILE *fp, vx_reference ref)
 
         if(ref->obj_desc != NULL)
         {
-            #if defined(LINUX) || defined(QNX)
+            #if defined(HLOS)
             #pragma GCC diagnostic push
             #pragma GCC diagnostic ignored "-Wformat-truncation"
-            #endif
+            #endif /* #if defined(HLOS) */
             uint16_t obj_id;
             obj_id = ref->obj_desc->obj_desc_id;
             TIVX_EXPORT_WRITELN(fp, "d_%d [shape=record %s, label=\"{%s %s %s %s | desc %d}\"]",
@@ -544,9 +544,9 @@ static void exportDataRefObjDesc(FILE *fp, vx_reference ref)
                 buffer_size_label,
                 obj_id
                 );
-            #if defined(LINUX) || defined(QNX)
+            #if defined(HLOS)
             #pragma GCC diagnostic pop
-            #endif
+            #endif /* #if defined(HLOS) */
         }
         if ((ownIsValidSpecificReference(ref->scope, (vx_enum)VX_TYPE_PYRAMID) == (vx_bool)vx_true_e)
             ||
@@ -580,10 +580,10 @@ static void exportDataRefQueueObjDesc(FILE *fp, tivx_data_ref_queue ref,
         {
             if(ref->obj_desc[pipe_id] != NULL)
             {
-                #if defined(LINUX) || defined(QNX)
+                #if defined(HLOS)
                 #pragma GCC diagnostic push
                 #pragma GCC diagnostic ignored "-Wformat-truncation"
-                #endif
+                #endif /* #if defined(HLOS) */
                 char auto_age_delay_string[64]="";
                 uint32_t flags;
 
@@ -625,9 +625,9 @@ static void exportDataRefQueueObjDesc(FILE *fp, tivx_data_ref_queue ref,
                         }
                     }
                 }
-                #if defined(LINUX) || defined(QNX)
+                #if defined(HLOS)
                 #pragma GCC diagnostic pop
-                #endif
+                #endif /* #if defined(HLOS) */
             }
         }
     }

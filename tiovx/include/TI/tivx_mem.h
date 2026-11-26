@@ -204,6 +204,24 @@ typedef enum _tivx_mem_heap_region_e
      */
     TIVX_MEM_EXTERNAL_SHARED,
 
+    /*! \brief External shared memory for 64-bit architecture only.
+     *
+     *  Typically used to allocate buffers in a heap that is wider than 32 bits or spans
+     *  outside of the 32-bit-addressable \ref TIVX_MEM_EXTERNAL_SHARED heap. These buffers
+     *  are only shared between cores that can access 64-bit memory addresses.
+     */
+    TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY,
+
+    /*! \brief External shared memory for constant data, for 64-bit
+     *  architecture only.
+     *
+     *  Typically used to allocate buffers holding constant/read-only data in a heap that
+     *  is wider than 32 bits or spans outside of the 32-bit-addressable
+     *  \ref TIVX_MEM_EXTERNAL_SHARED heap. These buffers are only shared between cores that
+     *  can access 64-bit memory addresses.
+     */
+    TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY_CONST,
+
 } tivx_mem_heap_region_e;
 
 /*! \brief An enumeration of TI extension memory import types.
@@ -416,11 +434,11 @@ void tivxMemStats(tivx_mem_stats *stats, vx_enum mem_type);
  *
  * \param [in] mem_heap_region Memory segment ID
  *
- * \return 0 on success else failure
+ * \return VX_SUCCESS on success else VX_FAILURE
  *
  * \ingroup group_tivx_mem
  */
-int32_t tivxMemResetScratchHeap(vx_enum mem_heap_region);
+vx_status tivxMemResetScratchHeap(vx_enum mem_heap_region);
 
 /**
  * \brief Translates a given virtual address to a file descriptor and a

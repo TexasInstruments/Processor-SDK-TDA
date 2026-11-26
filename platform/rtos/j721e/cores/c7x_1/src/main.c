@@ -73,9 +73,7 @@
 #include <ti/csl/soc.h>
 #include <ti/csl/csl_clec.h>
 #include <ti/csl/arch/csl_arch.h>
-#include <ti/csl/arch/c7x/Cache.h>
 #include <ti/csl/arch/c7x/Hwi.h>
-#include <ti/csl/arch/c7x/Mmu.h>
 #include <app_init.h>
 #include <utils/perf_stats/include/app_perf_stats.h>
 
@@ -83,14 +81,6 @@
 #include "SafeRTOS_API.h"
 #include "SafeRTOSConfig.h"
 #endif
-
-/* For J7ES/J721E/TDA4VM the upper 2GB DDR starts from 0x0008_8000_0000 */
-/* This address is mapped to a virtual address of 0x0001_0000_0000 */
-#define DDR_C7X_1_LOCAL_HEAP_VADDR (DDR_C7X_1_LOCAL_HEAP_ADDR)
-#define DDR_C7X_1_LOCAL_HEAP_PADDR (DDR_64BIT_BASE_PADDR + (DDR_C7X_1_LOCAL_HEAP_ADDR - DDR_64BIT_BASE_VADDR))
-
-#define DDR_C7X_1_SCRATCH_VADDR (DDR_C7X_1_SCRATCH_ADDR)
-#define DDR_C7X_1_SCRATCH_PADDR (DDR_64BIT_BASE_PADDR + (DDR_C7X_1_SCRATCH_ADDR - DDR_64BIT_BASE_VADDR))
 
 static void appMain(void* arg0, void* arg1)
 {
@@ -175,6 +165,8 @@ int main(void)
     app_rtos_task_params_t tskParams;
     app_rtos_task_handle_t task;
 
+    StartupEmulatorWaitFxn();
+
     OS_init();
 
     appC7xClecInitDru();
@@ -196,191 +188,6 @@ int main(void)
     OS_start();
 
     return 0;
-}
-
-uint32_t g_app_rtos_c7x_mmu_map_error = 0;
-
-void appMmuMap(Bool is_secure)
-{
-    Bool            retVal;
-    Mmu_MapAttrs    attrs;
-
-    uint32_t ns = 1;
-
-    if(is_secure)
-        ns = 0;
-    else
-        ns = 1;
-
-    Mmu_initMapAttrs(&attrs);
-
-    attrs.attrIndx = Mmu_AttrIndx_MAIR0;
-    attrs.ns = ns;
-
-    retVal = Mmu_map(0x00000000, 0x00000000, 0x20000000, &attrs, is_secure);
-    if(retVal==UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(0x20000000, 0x20000000, 0x20000000, &attrs, is_secure);
-    if(retVal==UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(0x40000000, 0x40000000, 0x20000000, &attrs, is_secure);
-    if(retVal==UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(0x60000000, 0x60000000, 0x10000000, &attrs, is_secure);
-    if(retVal==UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(0x70000000, 0x70000000, 0x10000000, &attrs, is_secure);
-    if(retVal==UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    Mmu_initMapAttrs(&attrs);
-
-    attrs.attrIndx = Mmu_AttrIndx_MAIR4;
-    attrs.ns = ns;
-
-    retVal = Mmu_map(APP_LOG_MEM_ADDR, APP_LOG_MEM_ADDR, APP_LOG_MEM_SIZE, &attrs, is_secure);
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(APP_FILEIO_MEM_ADDR, APP_FILEIO_MEM_ADDR, APP_FILEIO_MEM_SIZE, &attrs, is_secure);
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(TIOVX_OBJ_DESC_MEM_ADDR, TIOVX_OBJ_DESC_MEM_ADDR, TIOVX_OBJ_DESC_MEM_SIZE, &attrs, is_secure);
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(IPC_VRING_MEM_ADDR, IPC_VRING_MEM_ADDR, IPC_VRING_MEM_SIZE, &attrs, is_secure);
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(DDR_C7x_1_IPC_ADDR, DDR_C7x_1_IPC_ADDR, DDR_C7x_1_IPC_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(TIOVX_LOG_RT_MEM_ADDR, TIOVX_LOG_RT_MEM_ADDR, TIOVX_LOG_RT_MEM_SIZE, &attrs, is_secure);
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    Mmu_initMapAttrs(&attrs);
-    attrs.attrIndx = Mmu_AttrIndx_MAIR7;
-    attrs.ns = ns;
-    retVal = Mmu_map(0x70000000, 0x70000000, 0x00800000, &attrs, is_secure); /* msmc  448KB      */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    Mmu_initMapAttrs(&attrs);
-    attrs.attrIndx = Mmu_AttrIndx_MAIR7;
-    attrs.ns = ns;
-    retVal = Mmu_map(0x64800000, 0x64800000, 0x00200000, &attrs, is_secure); /* L2 sram 448KB        */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    #if 0
-    Mmu_initMapAttrs(&attrs);
-    attrs.attrIndx = Mmu_AttrIndx_MAIR0;
-    attrs.ns = ns;
-    retVal = Mmu_map(0x64E00000, 0x64E00000, 0x00200000, &attrs, is_secure); /* L1D sram 16KB        */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-    #endif
-
-    Mmu_initMapAttrs(&attrs);
-    attrs.attrIndx = Mmu_AttrIndx_MAIR7;
-    attrs.ns = ns;
-
-    retVal = Mmu_map(DDR_C7x_1_DTS_ADDR, DDR_C7x_1_DTS_ADDR, DDR_C7x_1_DTS_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(DDR_C7X_1_LOCAL_HEAP_VADDR, DDR_C7X_1_LOCAL_HEAP_PADDR, DDR_C7X_1_LOCAL_HEAP_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(DDR_C7X_1_SCRATCH_VADDR, DDR_C7X_1_SCRATCH_PADDR, DDR_C7X_1_SCRATCH_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-    retVal = Mmu_map(DDR_SHARED_MEM_ADDR, DDR_SHARED_MEM_ADDR, DDR_SHARED_MEM_SIZE, &attrs, is_secure); /* ddr            */
-    if(retVal == UFALSE)
-    {
-        goto mmu_exit;
-    }
-
-mmu_exit:
-    if(retVal == UFALSE)
-    {
-        g_app_rtos_c7x_mmu_map_error++;
-    }
-
-
-
-    return;
-}
-
-void appCacheInit()
-{
-    Cache_Size  cacheSize;
-
-    /* init cache size here, since this needs to be done in secure mode */
-    cacheSize.l1pSize = Cache_L1Size_32K;
-    cacheSize.l1dSize = Cache_L1Size_32K;
-    cacheSize.l2Size  = Cache_L2Size_64K;
-
-    Cache_setSize(&cacheSize);
-}
-
-void InitMmu(void)
-{
-    /* This is for debug purpose - see the description of function header */
-    StartupEmulatorWaitFxn();
-
-    g_app_rtos_c7x_mmu_map_error = 0;
-
-    appC7xClecInitForNonSecAccess();
-
-    appMmuMap(UFALSE);
-    appMmuMap(UTRUE);
-
-    appCacheInit();
 }
 
 /* Offset to be added to convert virtual address to physical address */

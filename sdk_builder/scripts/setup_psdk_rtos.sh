@@ -458,8 +458,8 @@ then
         echo "[rustc] Done"
     fi
 
-    # Install sysconfig tool for MCU+SDK build
-    if [ ${SOC} = "am62a" ] || [ ${SOC} = "j722s" ]
+    # Install sysconfig tool
+    if [ -n "${SYSCONFIG_VERSION}" ]
     then
         echo "[sysconfig_${SYSCONFIG_VERSION}] Checking ..."
         if [ -d ${PSDK_TOOLS_PATH}/sysconfig_${SYSCONFIG_VERSION} ]; then

@@ -81,21 +81,21 @@ VX_API_ENTRY vx_convolution VX_API_CALL vxCreateConvolution(
     return (cnvl);
 }
 
-VX_API_ENTRY vx_status VX_API_CALL vxReleaseConvolution(vx_convolution *cnvl)
+VX_API_ENTRY vx_status VX_API_CALL vxReleaseConvolution(vx_convolution *conv)
 {
     return (ownReleaseReferenceInt(
-        vxCastRefFromConvolutionP(cnvl), (vx_enum)VX_TYPE_CONVOLUTION, (vx_enum)VX_EXTERNAL, NULL));
+        vxCastRefFromConvolutionP(conv), (vx_enum)VX_TYPE_CONVOLUTION, (vx_enum)VX_EXTERNAL, NULL));
 }
 
 VX_API_ENTRY vx_status VX_API_CALL vxQueryConvolution(
-    vx_convolution cnvl, vx_enum attribute, void *ptr, vx_size size)
+    vx_convolution conv, vx_enum attribute, void *ptr, vx_size size)
 {
     vx_status status = (vx_status)VX_SUCCESS;
     tivx_obj_desc_convolution_t *obj_desc = NULL;
 
-    if (0 != ownIsValidSpecificReference(vxCastRefFromConvolution(cnvl), (vx_enum)VX_TYPE_CONVOLUTION))
+    if (0 != ownIsValidSpecificReference(vxCastRefFromConvolution(conv), (vx_enum)VX_TYPE_CONVOLUTION))
     {
-        obj_desc = (tivx_obj_desc_convolution_t *)cnvl->base.obj_desc;
+        obj_desc = (tivx_obj_desc_convolution_t *)conv->base.obj_desc;
     }
 
     if (obj_desc == NULL)
@@ -106,7 +106,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryConvolution(
 
     if ((vx_status)VX_SUCCESS == status)
     {
-        status = ownAllocReferenceBufferGeneric(&cnvl->base);
+        status = ownAllocReferenceBufferGeneric(&conv->base);
 
         if ((vx_status)VX_SUCCESS != status)
         {
@@ -174,14 +174,14 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryConvolution(
 }
 
 VX_API_ENTRY vx_status VX_API_CALL vxSetConvolutionAttribute(
-    vx_convolution cnvl, vx_enum attribute, const void *ptr, vx_size size)
+    vx_convolution conv, vx_enum attribute, const void *ptr, vx_size size)
 {
     vx_status status = (vx_status)VX_SUCCESS;
     tivx_obj_desc_convolution_t *obj_desc = NULL;
 
-    if (0 != ownIsValidSpecificReference(vxCastRefFromConvolution(cnvl), (vx_enum)VX_TYPE_CONVOLUTION))
+    if (0 != ownIsValidSpecificReference(vxCastRefFromConvolution(conv), (vx_enum)VX_TYPE_CONVOLUTION))
     {
-        obj_desc = (tivx_obj_desc_convolution_t *)cnvl->base.obj_desc;
+        obj_desc = (tivx_obj_desc_convolution_t *)conv->base.obj_desc;
     }
 
     if (obj_desc == NULL)
@@ -192,7 +192,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetConvolutionAttribute(
 
     if ((vx_status)VX_SUCCESS == status)
     {
-        status = ownAllocReferenceBufferGeneric(&cnvl->base);
+        status = ownAllocReferenceBufferGeneric(&conv->base);
     }
 
     if ((vx_status)VX_SUCCESS == status)
@@ -229,15 +229,15 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetConvolutionAttribute(
 }
 
 VX_API_ENTRY vx_status VX_API_CALL vxCopyConvolutionCoefficients(
-    vx_convolution cnvl, void *user_ptr, vx_enum usage, vx_enum user_mem_type)
+    vx_convolution conv, void *user_ptr, vx_enum usage, vx_enum user_mem_type)
 {
     vx_status status = (vx_status)VX_SUCCESS;
     vx_uint32 size;
     tivx_obj_desc_convolution_t *obj_desc = NULL;
 
-    if (0 != ownIsValidSpecificReference(vxCastRefFromConvolution(cnvl), (vx_enum)VX_TYPE_CONVOLUTION))
+    if (0 != ownIsValidSpecificReference(vxCastRefFromConvolution(conv), (vx_enum)VX_TYPE_CONVOLUTION))
     {
-        obj_desc = (tivx_obj_desc_convolution_t *)cnvl->base.obj_desc;
+        obj_desc = (tivx_obj_desc_convolution_t *)conv->base.obj_desc;
     }
 
     if (obj_desc == NULL)
@@ -272,7 +272,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxCopyConvolutionCoefficients(
     {
         size = obj_desc->mem_size;
 
-        /* Copy from cnvl object to user memory */
+        /* Copy from conv object to user memory */
         if ((vx_enum)VX_READ_ONLY == usage)
         {
             tivxCheckStatus(&status, tivxMemBufferMap((void*)(uintptr_t)obj_desc->mem_ptr.host_ptr, size,
@@ -283,9 +283,9 @@ VX_API_ENTRY vx_status VX_API_CALL vxCopyConvolutionCoefficients(
             tivxCheckStatus(&status, tivxMemBufferUnmap((void*)(uintptr_t)obj_desc->mem_ptr.host_ptr, size,
                 (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_ONLY));
         }
-        else /* Copy from user memory to cnvl object */
+        else /* Copy from user memory to conv object */
         {
-            status = ownAllocReferenceBufferGeneric(&cnvl->base);
+            status = ownAllocReferenceBufferGeneric(&conv->base);
 
             if ((vx_status)VX_SUCCESS == status)
             {

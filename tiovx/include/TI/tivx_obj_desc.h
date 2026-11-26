@@ -167,7 +167,7 @@ extern "C" {
  *
  * \ingroup group_tivx_obj_desc
  */
-#define TIVX_OBJ_DESC_MAX_HOST_PORT_ID_CPU                (16u)
+#define TIVX_OBJ_DESC_MAX_HOST_PORT_ID_CPU                (64u)
 
 /*!
  * \brief Enum that list all possible object descriptor type's
@@ -358,7 +358,7 @@ typedef struct _tivx_obj_desc_t {
      *
      *         A connection to each remote CPU could be on a different host_port_id, hence this needs
      *         to hold host_port_id for each remote CPU, this array is indexed by TIOVX CPU ID.
-     *         TIVX_OBJ_DESC_MAX_HOST_PORT_ID_CPU MUST be <= TIVX_CPU_ID_MAX
+     *         TIVX_CPU_ID_MAX MUST be <= TIVX_OBJ_DESC_MAX_HOST_PORT_ID_CPU
      * */
     volatile uint16_t host_port_id[TIVX_OBJ_DESC_MAX_HOST_PORT_ID_CPU];
 

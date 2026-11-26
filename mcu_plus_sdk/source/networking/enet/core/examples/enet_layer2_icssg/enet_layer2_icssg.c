@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) Texas Instruments Incorporated 2024
+ *  Copyright (c) Texas Instruments Incorporated 2024-2026
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -63,14 +63,12 @@
 #include "ti_board_open_close.h"
 #include "ti_enet_open_close.h"
 #include "ti_enet_config.h"
+#include "enet_layer2_types.h"
+#include "enet_layer2_menu.h"
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
-
-/* Max number of ports supported per context */
-#define ENETMP_PORT_MAX                          (ENET_SYSCFG_NUM_EXT_MAC_PORTS)
-
 
 /* Max number of hardware RX channels. Note that this is different than Enet LLD's
  * RX channel concept which maps to UDMA hardware RX flows */
@@ -79,10 +77,6 @@
 
 /* Local flag to disable a peripheral from test list */
 #define ENETMP_DISABLED                          (0U)
-
-/* Max number of ports that can be tested with this app */
-#define ENETMP_ICSSG_INSTANCE_MAX                (2U)
-#define ENETMP_PER_MAX                           (ENETMP_ICSSG_INSTANCE_MAX)
 
 /* Task stack size */
 #define ENETMP_TASK_STACK_SZ                     (10U * 1024U)
@@ -113,126 +107,8 @@ typedef struct EnetMp_contextName_s
     char *name;
 } EnetMp_contextName;
 
-/* Context of a peripheral/port */
-typedef struct EnetMp_PerCtxt_s
-{
-    /* Peripheral type */
-    Enet_Type enetType;
-
-    /* Peripheral instance */
-    uint32_t instId;
-
-    /* Number of RX Flows associated to this context */
-    uint32_t rxChCount;
-
-    /* Start Channel ID of the RX Flow associated to this context. It is assumed
-     * that 'rxChCount' number of Rx Flows for this context is allocated contiguously
-     * from rxChStartId. Note that concept of channels inside flows is hidden to application */
-    uint32_t rxChStartId;
-
-    /* Number of TX Channels associated to this context */
-    uint32_t txChCount;
-
-    /* Start Channel ID of the TX Channels associated to this context. It is assumed
-     * that 'txChCount' number of Tx Channels for this context is allocated contiguously
-     * from txChStartId */
-    uint32_t txChStartId;
-
-    /* Peripheral's MAC ports to use */
-    Enet_MacPort macPort[ENETMP_PORT_MAX];
-
-    /* Number of MAC ports in macPorts array */
-    uint8_t macPortNum;
-
-    /* Name of this port to be used for logging */
-    char *name;
-
-    /* ICSSG configuration */
-    Icssg_Cfg icssgCfg;
-
-    /* Number of valid MAC address entries present in macAddr variable below*/
-    uint8_t numValidMacAddress;
-
-    /* MAC address. It's port's MAC address in Dual-MAC or
-     * host port's MAC addres in Switch */
-    uint8_t macAddr[ENET_SYSCFG_RX_FLOWS_NUM][ENET_MAC_ADDR_LEN];
-
-    /* UDMA driver configuration */
-    EnetDma_Cfg dmaCfg;
-
-    /* TX channel number */
-    uint32_t txChNum[ENET_SYSCFG_TX_CHANNELS_NUM];
-
-    /* TX channel handle */
-    EnetDma_TxChHandle hTxCh[ENET_SYSCFG_TX_CHANNELS_NUM];
-
-    /* Start flow index */
-    uint32_t rxStartFlowIdx[ENET_SYSCFG_RX_FLOWS_NUM];
-
-    /* Flow index */
-    uint32_t rxFlowIdx[ENET_SYSCFG_RX_FLOWS_NUM];
-
-    /* RX channel handle */
-    EnetDma_RxChHandle hRxCh[ENET_SYSCFG_RX_FLOWS_NUM];
-
-    /* RX task handle - receives packets, changes source/dest MAC addresses
-     * and transmits the packets back */
-    TaskP_Object rxTaskObj;
-
-    /* Semaphore posted from RX callback when packets have arrived */
-    SemaphoreP_Object rxSemObj;
-
-    /* Semaphore used to synchronize all RX tasks exits */
-    SemaphoreP_Object rxDoneSemObj;
-
-    /* Semaphore posted from event callback upon asynchronous IOCTL completion */
-    SemaphoreP_Object ayncIoctlSemObj;
-
-    /* Timestamp of the last received packets */
-    uint64_t rxTs[ENET_SYSCFG_TOTAL_NUM_RX_PKT];
-
-    /* Timestamp of the last transmitted packets */
-    uint64_t txTs[ENET_SYSCFG_TOTAL_NUM_RX_PKT];
-
-    /* Sequence number used as cookie for timestamp events. This value is passed
-     * to the DMA packet when submitting a packet for transmission. Driver will
-     * pass this same value when timestamp for that packet is ready. */
-    uint32_t txTsSeqId;
-
-    /* Semaphore posted from event callback upon asynchronous IOCTL completion */
-    SemaphoreP_Object txTsSemObj;
-
-    /* Enet and Udma handle info for the peripheral */
-    EnetApp_HandleInfo handleInfo;
-
-   /* Core attach info for the peripheral */
-    EnetPer_AttachCoreOutArgs attachInfo;
-
-} EnetMp_PerCtxt;
-
-typedef struct EnetMp_Obj_s
-{
-    /* Flag which indicates if test shall run */
-    volatile bool run;
-
-    /* This core's id */
-    uint32_t coreId;
-
-    /* Queue of free TX packets */
-    EnetDma_PktQ txFreePktInfoQ;
-
-    /* Array of all peripheral/port contexts used in the test */
-    EnetMp_PerCtxt perCtxt[ENETMP_PER_MAX];
-
-    /* Number of active contexts being used */
-    uint32_t numPerCtxts;
-
-    /* Whether promiscuous mode is enabled or not */
-    bool promisc;
-
-    /* Whether timestamp are enabled or not */
-    bool enableTs;
-} EnetMp_Obj;
+/* EnetMp_PerCtxt / EnetMp_Obj are declared in enet_layer2_types.h so that
+ * enet_layer2_menu.c can share the same types instead of redefining them. */
 
 /* ========================================================================== */
 /*                          Function Declarations                             */
@@ -321,7 +197,7 @@ static EnetMp_contextName testParamsName[] =
 /*                          Function Definitions                              */
 /* ========================================================================== */
 
-static void EnetMp_showMenu(void)
+static void EnetMp_showMenu(EnetMp_PerCtxt *perCtxt, uint32_t numPerCtxts)
 {
     EnetAppUtils_print("\nEnet Multiport Menu:\r\n");
     EnetAppUtils_print(" 'T'  -  Enable timestamp prints\r\n");
@@ -331,6 +207,14 @@ static void EnetMp_showMenu(void)
     EnetAppUtils_print(" 'm'  -  Show allocated MAC addresses\r\n");
     EnetAppUtils_print(" 'd'  -  Enable dscp based priority mapping\r\n");
     EnetAppUtils_print(" 'f'  -  Read all ICSSG FDB slots\r\n");
+    if (EnetLayer2_isSwitchBuild(perCtxt, numPerCtxts))
+    {
+        EnetAppUtils_print(" 'c'  -  Switch configuration menu (link speed / forwarding mode)\r\n");
+    }
+    else
+    {
+        EnetAppUtils_print(" 'c'  -  DUAL-MAC configuration menu (link speed)\r\n");
+    }
     EnetAppUtils_print(" 'x'  -  Stop the test\r\n\n");
 }
 
@@ -376,7 +260,7 @@ void EnetMp_mainTask(void *args)
     if (status == ENET_SOK)
     {
         /* Wait for user input to exit the test */
-        EnetMp_showMenu();
+        EnetMp_showMenu(gEnetMp.perCtxt, gEnetMp.numPerCtxts);
         while (true)
         {
             option = ' ';
@@ -421,10 +305,14 @@ void EnetMp_mainTask(void *args)
             {
                 EnetMp_readAllFdbSlots(gEnetMp.perCtxt, gEnetMp.numPerCtxts);
             }
+            else if (option == 'c')
+            {
+                EnetLayer2_showSwitchConfigMenu(gEnetMp.perCtxt, gEnetMp.numPerCtxts, gEnetMp.coreId);
+            }
             else
             {
                 EnetAppUtils_print("Invalid option, try again...\r\n");
-                EnetMp_showMenu();
+                EnetMp_showMenu(gEnetMp.perCtxt, gEnetMp.numPerCtxts);
             }
             TaskP_yield();
         }

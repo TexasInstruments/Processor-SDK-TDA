@@ -1,0 +1,120 @@
+/**
+ * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
+ * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
+ * @cliArgs --device "J784S4_TDA4AP_TDA4VP_TDA4AH_TDA4VH_AM69x" --part "Default" --package "ALY" --context "r5fss1-1" --product "VISION_APPS@01.00.00"
+ * @v2CliArgs --device "TDA4VH-Q1" --package "FCBGA (ALY)" --context "r5fss1-1" --product "VISION_APPS@01.00.00"
+ * @versions {"tool":"1.26.2+4477"}
+ */
+
+/**
+ * Import the modules used in this configuration.
+ */
+const default_linker  = scripting.addModule("/memory_configurator/default_linker", {}, false);
+const default_linker1 = default_linker.addInstance();
+const mpu_cfg         = scripting.addModule("/memory_configurator/mpu_cfg", {}, false);
+const mpu_cfg1        = mpu_cfg.addInstance();
+const mpu_cfg2        = mpu_cfg.addInstance();
+const mpu_cfg3        = mpu_cfg.addInstance();
+const mpu_cfg4        = mpu_cfg.addInstance();
+const mpu_cfg5        = mpu_cfg.addInstance();
+const mpu_cfg6        = mpu_cfg.addInstance();
+const mpu_cfg7        = mpu_cfg.addInstance();
+const mpu_cfg8        = mpu_cfg.addInstance();
+const mpu_cfg9        = mpu_cfg.addInstance();
+const mpu_cfg10       = mpu_cfg.addInstance();
+const rat_cfg         = scripting.addModule("/memory_configurator/rat_cfg", {}, false);
+const rat_cfg1        = rat_cfg.addInstance();
+const region          = scripting.addModule("/memory_configurator/region", {}, false);
+const region1         = region.addInstance();
+
+/**
+ * Write custom configuration values to the imported modules.
+ */
+default_linker1.$name = "memory_configurator_default_linker0";
+
+mpu_cfg1.$name           = "BACKGROUND_REGION";
+mpu_cfg1.sizeBytes       = 4294967296;
+mpu_cfg1.exeNeverControl = true;
+mpu_cfg1.attributes      = "StronglyOrdered";
+
+mpu_cfg2.$name      = "R5F_ATCM";
+mpu_cfg2.attributes = "Cached";
+
+mpu_cfg3.$name      = "R5F_ATCM_GLOBAL_ALIAS";
+mpu_cfg3.baseAddr   = 0x41000000;
+mpu_cfg3.attributes = "Cached";
+
+mpu_cfg4.$name      = "R5F_BTCM";
+mpu_cfg4.baseAddr   = 0x41010000;
+mpu_cfg4.attributes = "Cached";
+
+mpu_cfg5.$name      = "MCU_OCSRAM";
+mpu_cfg5.baseAddr   = 0x41C00000;
+mpu_cfg5.sizeBytes  = 1048576;
+mpu_cfg5.attributes = "Cached";
+
+mpu_cfg6.$name      = "MSMC";
+mpu_cfg6.baseAddr   = 0x70000000;
+mpu_cfg6.sizeBytes  = 8388608;
+mpu_cfg6.attributes = "Cached";
+
+mpu_cfg7.$name      = "DDR_2GB";
+mpu_cfg7.baseAddr   = 0x80000000;
+mpu_cfg7.sizeBytes  = 2147483648;
+mpu_cfg7.attributes = "Cached";
+
+mpu_cfg8.$name           = "IPC_VRING";
+mpu_cfg8.baseAddr        = 0xAC000000;
+mpu_cfg8.sizeBytes       = 67108864;
+mpu_cfg8.exeNeverControl = true;
+
+mpu_cfg9.$name           = "APP_FILEIO_TIOVX_LOG_RT";
+mpu_cfg9.baseAddr        = 0xB0000000;
+mpu_cfg9.sizeBytes       = 33554432;
+mpu_cfg9.exeNeverControl = true;
+
+mpu_cfg10.$name           = "DDR_MCU3_1_IPC_MPU";
+mpu_cfg10.baseAddr        = 0xA7000000;
+mpu_cfg10.sizeBytes       = 1048576;
+mpu_cfg10.exeNeverControl = true;
+
+rat_cfg1.$name      = "DDR_SHARED_MEM_RAT";
+rat_cfg1.localAddr  = 0xC0000000;
+rat_cfg1.systemAddr = 0xA00000000;
+rat_cfg1.size       = 30;
+
+region1.$name                               = "MEMORY_REGION_CONFIGURATION0";
+region1.memory_region.create(7);
+region1.memory_region[0].$name              = "R5F_TCMA_VECS";
+region1.memory_region[0].size               = 0x40;
+region1.memory_region[0].auto               = false;
+region1.memory_region[0].attributes         = ["X"];
+region1.memory_region[1].$name              = "R5F_TCMA";
+region1.memory_region[1].size               = 0x7FC0;
+region1.memory_region[1].auto               = false;
+region1.memory_region[1].manualStartAddress = 0x40;
+region1.memory_region[1].attributes         = ["X"];
+region1.memory_region[2].type               = "TCMB_R5F";
+region1.memory_region[2].$name              = "R5F_TCMB0";
+region1.memory_region[2].size               = 0x8000;
+region1.memory_region[2].auto               = false;
+region1.memory_region[3].type               = "DDR_LOW_ALL";
+region1.memory_region[3].$name              = "DDR_MCU3_1_IPC";
+region1.memory_region[3].size               = 0x100000;
+region1.memory_region[3].auto               = false;
+region1.memory_region[3].manualStartAddress = 0xA7000000;
+region1.memory_region[4].type               = "DDR_LOW_ALL";
+region1.memory_region[4].$name              = "DDR_MCU3_1_RESOURCE_TABLE";
+region1.memory_region[4].size               = 0x400;
+region1.memory_region[4].auto               = false;
+region1.memory_region[4].manualStartAddress = 0xA7100000;
+region1.memory_region[5].type               = "DDR_LOW_ALL";
+region1.memory_region[5].$name              = "DDR_MCU3_1";
+region1.memory_region[5].size               = 0xEFFC00;
+region1.memory_region[5].auto               = false;
+region1.memory_region[5].manualStartAddress = 0xA7100400;
+region1.memory_region[6].type               = "DDR_LOW_ALL";
+region1.memory_region[6].$name              = "DDR_MCU3_1_LOCAL_HEAP";
+region1.memory_region[6].size               = 0x800000;
+region1.memory_region[6].auto               = false;
+region1.memory_region[6].manualStartAddress = 0xBC800000;

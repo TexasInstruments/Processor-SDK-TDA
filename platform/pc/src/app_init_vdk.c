@@ -69,6 +69,7 @@
 #include <utils/ipc/include/app_ipc.h>
 #include <utils/ipc/include/mcu_sdk_ipc.h>
 #include <utils/console_io/include/app_log.h>
+#include <utils/file_io/include/app_fileio.h>
 #include <utils/remote_service/include/app_remote_service.h>
 
 #include <TI/tivx.h>
@@ -110,7 +111,6 @@ typedef struct
 #if !defined(VDK_STUB)
 static uint8_t gAppCommonInitDone = 0;
 static uint8_t gAppWrLogInitDone = 0;
-#endif /* #if !defined(VDK_STUB) */
 
 #if !defined(QNX)
 static uint64_t cpu_dts_addr_list[CORE_ID_MAX] =
@@ -135,7 +135,6 @@ static uint64_t cpu_dts_addr_list[CORE_ID_MAX] =
 };
 #endif /* #if !defined(QNX) */
 
-#if !defined(VDK_STUB)
 static uint32_t g_ipc_to_app_cpu_id[CORE_ID_MAX] =
 {
     APP_IPC_CPU_INVALID,
@@ -207,7 +206,7 @@ static void appUnRegisterOpenVXTargetKernels();
 static void *appVdkIpcInitTaskMain(void *args);
 #endif /* #if !defined(VDK_STUB) */
 
-#if !defined(QNX)
+#if !defined(QNX) && !defined(VDK_STUB)
 static RPMessage_Hal_ResourceTable *ipc_resource_table[CORE_ID_MAX];
 
 static void appVdkResourceTableInit(uint32_t core_id);
@@ -258,7 +257,7 @@ static void appVdkResourceTableInit(uint32_t core_id)
         *(RPMessage_Hal_ResourceTable *)(ipc_resource_table[core_id]) = temp;
     }
 }
-#endif /* #if !defined(QNX) */
+#endif /* #if !defined(QNX) && !defined(VDK_STUB) */
 #endif /* #if defined(SOC_FAMILY_TDA5) */
 
 int32_t appVdkInit(void)
@@ -356,11 +355,13 @@ static void *appVdkIpcInitTaskMain(void *args)
     int32_t status = 0;
     app_ipc_init_prm_t ipc_init_prm;
     app_log_init_prm_t log_init_prm;
+    app_fileio_init_prm_t fileio_init_prm;
     vdk_core_init_args_t *core_init_args = (vdk_core_init_args_t*)args;
     uint32_t cur_core = core_init_args->cur_core;
     void *tiovx_obj_desc_mem = (void *)TIOVX_OBJ_DESC_MEM_ADDR;
     void *ipc_vring_mem = (void *)IPC_VRING_MEM_ADDR;
     void *log_shared_mem = tivxVdkGetHostPtrFromSymbol("app_log_shared_mem");
+    void *fileio_shared_mem = tivxVdkGetHostPtrFromSymbol("app_fileio_shared_mem");
 
     prctl(PR_SET_NAME, g_ipc_to_cpu_name[cur_core]);
 
@@ -478,6 +479,21 @@ static void *appVdkIpcInitTaskMain(void *args)
         {
             appLogPrintf("Call to appLogWrInit failed\n");
         }
+        else
+        {
+            appFileIOInitPrmSetDefault(&fileio_init_prm);
+
+            strncpy(fileio_init_prm.self_cpu_name, "HOSTEMU", APP_LOG_MAX_CPU_NAME);
+            fileio_init_prm.shared_mem = fileio_shared_mem;
+            fileio_init_prm.self_cpu_index = ipc_init_prm.self_cpu_id;
+
+            status = appFileIOWrInit(&fileio_init_prm);
+
+            if (status != 0)
+            {
+                appLogPrintf("Call to appFileIOWrInit failed\n");
+            }
+        }
     }
     #endif /* #if !defined(VDK_STUB) */
 
@@ -581,6 +597,9 @@ static void appRegisterOpenVXTargetKernels()
     void tivxRegisterTestKernelsTargetDspKernels(void);
     tivxRegisterTestKernelsTargetDspKernels();
 
+    void tivxRegisterExtTargetMPUKernels(void);
+    tivxRegisterExtTargetMPUKernels();
+
     tivxRegisterImagingTargetAewbKernels();
 
     tivxRegisterHwaTargetVpacMscKernels();
@@ -595,6 +614,7 @@ static void appRegisterOpenVXTargetKernels()
     tivxRegisterTIDLTargetKernels();
 
     tivxRegisterImgProcTargetMcuKernels();
+    tivxRegisterImgProcTargetAddImageC7xKernels();
 
     /*
     void app_c7x_target_kernel_img_add_register(void);
@@ -623,6 +643,9 @@ static void appUnRegisterOpenVXTargetKernels()
     void tivxUnRegisterTestKernelsTargetArmKernels(void);
     tivxUnRegisterTestKernelsTargetArmKernels();
 
+    void tivxUnRegisterExtTargetMPUKernels(void);
+    tivxUnRegisterExtTargetMPUKernels();
+
     tivxUnRegisterImagingTargetAewbKernels();
 
     tivxUnRegisterHwaTargetVpacMscKernels();
@@ -637,6 +660,7 @@ static void appUnRegisterOpenVXTargetKernels()
     tivxUnRegisterTIDLTargetKernels();
 
     tivxUnRegisterImgProcTargetMcuKernels();
+    tivxUnRegisterImgProcTargetAddImageC7xKernels();
 
     /*
     void app_c7x_target_kernel_img_add_unregister(void);

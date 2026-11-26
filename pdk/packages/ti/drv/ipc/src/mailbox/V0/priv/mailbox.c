@@ -30,7 +30,7 @@
  *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 /**
  *  \file  mailbox.c
  *
@@ -64,7 +64,7 @@
 /* ========================================================================== */
 
 uint32_t Mailbox_getMessage(uintptr_t baseAddr,
-                            uint32_t queueId, 
+                            uint32_t queueId,
                             uint32_t *msgPtr)
 {
     uint32_t msgCount;
@@ -87,8 +87,8 @@ uint32_t Mailbox_getMessage(uintptr_t baseAddr,
     return retVal;
 }
 
-uint32_t Mailbox_sendMessage(uintptr_t baseAddr, 
-                             uint32_t queueId, 
+uint32_t Mailbox_sendMessage(uintptr_t baseAddr,
+                             uint32_t queueId,
                              uint32_t msg)
 {
     uint32_t fifoFull;
@@ -110,57 +110,58 @@ uint32_t Mailbox_sendMessage(uintptr_t baseAddr,
     return retVal;
 }
 
-void Mailbox_enableNewMsgInt(uintptr_t baseAddr, 
-                             uint32_t userId, 
+void Mailbox_enableNewMsgInt(uintptr_t baseAddr,
+                             uint32_t userId,
                              uint32_t queueId)
 {
+    uint32_t bitMask = (uint32_t)0x1 << (queueId * 2U);
     /* Set the NewMsgEnable field - Writing zero has no effect */
-    CSL_REG32_WR(baseAddr + CSL_MAILBOX_USER_IRQ_ENABLE_SET(userId), (uint32_t) 0x1 <<
-                (queueId * 2U));
+    CSL_REG32_WR(baseAddr + CSL_MAILBOX_USER_IRQ_ENABLE_SET(userId), bitMask);
 }
 
-void Mailbox_disableNewMsgInt(uintptr_t baseAddr, 
-                              uint32_t userId, 
+void Mailbox_disableNewMsgInt(uintptr_t baseAddr,
+                              uint32_t userId,
                               uint32_t queueId)
 {
+    uint32_t bitMask = (uint32_t)0x1 << (queueId * 2U);
     /* Set the NewMsgEnable field - Writing zero has no effect */
-    CSL_REG32_WR(baseAddr + CSL_MAILBOX_USER_IRQ_ENABLE_CLR(userId), (uint32_t) 0x1 <<
-                (queueId * 2U));
+    CSL_REG32_WR(baseAddr + CSL_MAILBOX_USER_IRQ_ENABLE_CLR(userId), bitMask);
 }
 
-void Mailbox_clrNewMsgStatus(uintptr_t baseAddr, 
-                             uint32_t userId, 
+void Mailbox_clrNewMsgStatus(uintptr_t baseAddr,
+                             uint32_t userId,
                              uint32_t queueId)
 {
+    uint32_t bitMask = (uint32_t)0x1 << (queueId * 2U);
     /* Set the NewMsgEnable field - Writing zero has no effect */
-    CSL_REG32_WR(baseAddr + CSL_MAILBOX_USER_IRQ_STATUS_CLR(userId), (uint32_t) 0x1 <<
-                (queueId * 2U));
+    CSL_REG32_WR(baseAddr + CSL_MAILBOX_USER_IRQ_STATUS_CLR(userId), bitMask);
 }
 
 uint32_t Mailbox_getRawNewMsgStatus(uintptr_t baseAddr,
-                                    uint32_t userId, 
+                                    uint32_t userId,
                                     uint32_t queueId)
 {
     uint32_t regVal;
+    uint32_t bitShift = queueId * 2U;
 
     /* Read the IRQSTATUSRAW */
     regVal = CSL_REG32_RD(baseAddr + CSL_MAILBOX_USER_IRQ_STATUS_RAW(userId));
 
     /* Mask & read the NewMsgStatus for given queueId */
-    regVal &= (uint32_t) 0x1 << (queueId * 2U);
+    regVal &= ((uint32_t)0x1 << bitShift);
 
-    return (regVal >> (queueId * 2U));
+    return (regVal >> bitShift);
 }
 
-uint32_t Mailbox_getMessageCount(uintptr_t baseAddr, 
+uint32_t Mailbox_getMessageCount(uintptr_t baseAddr,
                                  uint32_t queueId)
 {
     /* Return message count */
     return (CSL_REG32_RD(baseAddr + CSL_MAILBOX_MSG_STATUS(queueId)));
 }
 
-void Mailbox_writeMessage(uintptr_t baseAddr, 
-                          uint32_t queueId, 
+void Mailbox_writeMessage(uintptr_t baseAddr,
+                          uint32_t queueId,
                           uint32_t msg)
 {
     /* Write mailbox message */

@@ -60,8 +60,8 @@ platform/
 │       │           ├── main.c
 │       │           ├── linker.cmd          # Active linker script
 │       │           ├── linker_mem_map.cmd  # Memory map section for linker
-│       │           ├── <soc>_linker_freertos.cmd
-│       │           ├── <soc>_linker_freertos_mcuplus.cmd
+│       │           ├── <soc>_linker_$(RTOS_TYPE).cmd
+│       │           ├── <soc>_linker_$(RTOS_TYPE)_mcuplus.cmd
 │       │           ├── <soc>_mpu_cfg.c     # MPU region configuration
 │       │           └── concerto.mak
 │       └── concerto_<core>_inc.mak         # Per-SoC concerto include per core

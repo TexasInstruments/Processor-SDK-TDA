@@ -81,10 +81,13 @@ else
         DIRECTORIES += applibs
     endif
 
+    DIRECTORIES += core
     DIRECTORIES += modules
 
     ifeq ($(BUILD_EDGEAI),no)
         ifeq ($(SOC),tda54)
+
+            DIRECTORIES += utils/cfg_parser
             DIRECTORIES += utils/grpx
             DIRECTORIES += utils/draw2d
             DIRECTORIES += apps/utilities/app_remote_log
@@ -93,6 +96,7 @@ else
             DIRECTORIES += apps/utilities/app_mem
             DIRECTORIES += apps/tests/app_vx_conformance_tidl
             DIRECTORIES += apps/tests/app_vx_conformance_hwa
+            DIRECTORIES += apps/basic_demos/app_c7x_kernel
             DIRECTORIES += apps/tests/app_vx_conformance_core
             DIRECTORIES += apps/tests/app_vx_conformance_video_io
             DIRECTORIES += apps/basic_demos/app_single_cam

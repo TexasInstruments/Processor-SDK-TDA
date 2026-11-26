@@ -12,17 +12,12 @@ ifeq ($(RTOS),SYSBIOS)
   XDC_PLATFORM = "ti.platforms.cortexR:J7ES_MCU"
   LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker.cmd
 endif
-ifeq ($(RTOS),FREERTOS)
-  CSOURCES += $(SOC)_mpu_cfg.c
-  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_freertos.cmd
-endif
 
-ifeq ($(RTOS),SAFERTOS)
-  CSOURCES += $(SOC)_safertos_mpu_cfg.c
-  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_safertos.cmd
-endif
+CSOURCES += generated/rat_cfg.c
+CSOURCES += generated/mpu_cfg_$(RTOS_TYPE).c
 
-LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map.cmd
+LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE).cmd
+LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/generated/linker_mem_map_$(RTOS_TYPE).cmd
 
 IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)
 
@@ -47,6 +42,7 @@ endif
 LDIRS += $(PDK_PATH)/packages/ti/drv/ipc/lib/$(SOC)/mcu1_0/$(TARGET_BUILD)/
 LDIRS += $(PDK_PATH)/packages/ti/drv/udma/lib/$(SOC)/mcu1_0/$(TARGET_BUILD)/
 LDIRS += $(PDK_PATH)/packages/ti/drv/sciclient/lib/$(SOC)/mcu1_0/$(TARGET_BUILD)/
+LDIRS += $(PDK_PATH)/packages/ti/drv/lpm/lib/$(SOC)_evm/r5f/$(TARGET_BUILD)/
 
 include $($(_MODULE)_SDIR)/../../../concerto_r5f_inc.mak
 
@@ -63,5 +59,6 @@ STATIC_LIBS += app_utils_sciserver
 ADDITIONAL_STATIC_LIBS += sciclient_direct.aer5f
 ADDITIONAL_STATIC_LIBS += sciserver_tirtos.aer5f
 ADDITIONAL_STATIC_LIBS += rm_pm_hal.aer5f
+ADDITIONAL_STATIC_LIBS += lpm_stub.aer5f
 
 DEFS        += $(RTOS)

@@ -135,11 +135,11 @@ VX_API_ENTRY vx_node VX_API_CALL vxColorConvertNode(vx_graph graph, vx_image inp
 
 VX_API_ENTRY vx_node VX_API_CALL vxChannelExtractNode(vx_graph graph,
                              vx_image input,
-                             vx_enum channelNum,
+                             vx_enum channel,
                              vx_image output)
 {
     vx_context context = vxGetContext(vxCastRefFromGraph(graph));
-    vx_scalar scalar = vxCreateScalar(context, (vx_enum)VX_TYPE_ENUM, &channelNum);
+    vx_scalar scalar = vxCreateScalar(context, (vx_enum)VX_TYPE_ENUM, &channel);
     vx_reference params[] = {
         vxCastRefFromImage(input),
         vxCastRefFromScalar(scalar),
@@ -294,11 +294,11 @@ VX_API_ENTRY vx_node VX_API_CALL vxMeanStdDevNode(vx_graph graph, vx_image input
                                    dimof(params));
 }
 
-VX_API_ENTRY vx_node VX_API_CALL vxThresholdNode(vx_graph graph, vx_image input, vx_threshold thesh, vx_image output)
+VX_API_ENTRY vx_node VX_API_CALL vxThresholdNode(vx_graph graph, vx_image input, vx_threshold thresh, vx_image output)
 {
     vx_reference params[] = {
         vxCastRefFromImage(input),
-        vxCastRefFromThreshold(thesh),
+        vxCastRefFromThreshold(thresh),
         vxCastRefFromImage(output),
     };
     return tivxCreateNodeByKernelEnum(graph,
@@ -486,11 +486,11 @@ VX_API_ENTRY vx_node VX_API_CALL vxAccumulateWeightedImageNodeX(vx_graph graph, 
     return node;
 }
 
-VX_API_ENTRY vx_node VX_API_CALL vxAccumulateSquareImageNode(vx_graph graph, vx_image input, vx_scalar scalar, vx_image accum)
+VX_API_ENTRY vx_node VX_API_CALL vxAccumulateSquareImageNode(vx_graph graph, vx_image input, vx_scalar shift, vx_image accum)
 {
     vx_reference params[] = {
         vxCastRefFromImage(input),
-        vxCastRefFromScalar(scalar),
+        vxCastRefFromScalar(shift),
         vxCastRefFromImage(accum),
     };
     return tivxCreateNodeByKernelEnum(graph,

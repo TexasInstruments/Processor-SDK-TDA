@@ -11,6 +11,7 @@
         "/board/board",
         "/drivers/drivers",
         "/fs/fs",
+        "/memory_configurator/components",
         "/kernel/dpl",
         "/networking/networking",
         "/optiflash/optiflash",

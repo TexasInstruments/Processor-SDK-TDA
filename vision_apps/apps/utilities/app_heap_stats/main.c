@@ -179,7 +179,12 @@ int main(int argc, char *argv[])
     vx_status status = 0;
     int i;
 
-    status = appCommonInit();
+    status = appCommonMemInit();
+
+    if (status == VX_SUCCESS)
+    {
+        status = appCommonInit();
+    }
 
     if(status == VX_SUCCESS)
     {
@@ -207,6 +212,8 @@ int main(int argc, char *argv[])
         if(status == VX_SUCCESS)
         {
             status = appCommonDeInit();
+
+            status |= appCommonMemDeInit();
         }
     }
     printf("APP HEAP STATS: Done !!!\n");

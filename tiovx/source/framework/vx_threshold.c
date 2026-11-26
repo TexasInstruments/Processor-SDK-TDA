@@ -27,21 +27,21 @@ VX_API_ENTRY vx_status VX_API_CALL vxReleaseThreshold(vx_threshold *thresh)
 }
 
 VX_API_ENTRY vx_threshold VX_API_CALL vxCreateThreshold(
-    vx_context context, vx_enum thr_type, vx_enum data_type)
+    vx_context c, vx_enum thresh_type, vx_enum data_type)
 {
     vx_threshold thresh = NULL;
     vx_reference ref = NULL;
     tivx_obj_desc_threshold_t *obj_desc = NULL;
 
-    if(ownIsValidContext(context) == (vx_bool)vx_true_e)
+    if(ownIsValidContext(c) == (vx_bool)vx_true_e)
     {
-        if ((((vx_enum)VX_THRESHOLD_TYPE_BINARY == thr_type) ||
-             ((vx_enum)VX_THRESHOLD_TYPE_RANGE == thr_type)) &&
+        if ((((vx_enum)VX_THRESHOLD_TYPE_BINARY == thresh_type) ||
+             ((vx_enum)VX_THRESHOLD_TYPE_RANGE == thresh_type)) &&
             (((vx_enum)VX_TYPE_INT64 != data_type) &&
              ((vx_enum)VX_TYPE_UINT64 != data_type)))
         {
-            ref = ownCreateReference(context, (vx_enum)VX_TYPE_THRESHOLD,
-                (vx_enum)VX_EXTERNAL, &context->base);
+            ref = ownCreateReference(c, (vx_enum)VX_TYPE_THRESHOLD,
+                (vx_enum)VX_EXTERNAL, &c->base);
                 
             if ((vxGetStatus(ref) == (vx_status)VX_SUCCESS) &&
                 (ref->type == (vx_enum)VX_TYPE_THRESHOLD))
@@ -59,17 +59,17 @@ VX_API_ENTRY vx_threshold VX_API_CALL vxCreateThreshold(
                 if(obj_desc==NULL)
                 {
                     (void)vxReleaseThreshold(&thresh);
-                    vxAddLogEntry(&context->base, (vx_status)VX_ERROR_NO_RESOURCES,
+                    vxAddLogEntry(&c->base, (vx_status)VX_ERROR_NO_RESOURCES,
                         "Could not allocate thresh object descriptor\n");
                     thresh = (vx_threshold)ownGetErrorObject(
-                        context, (vx_status)VX_ERROR_NO_RESOURCES);
+                        c, (vx_status)VX_ERROR_NO_RESOURCES);
                     VX_PRINT(VX_ZONE_ERROR, "Could not allocate thresh object descriptor\n");
                     VX_PRINT(VX_ZONE_ERROR, "Exceeded max object descriptors available.\n");
                     VX_PRINT_BOUND_ERROR("TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST");
                 }
                 else
                 {
-                    obj_desc->type = thr_type;
+                    obj_desc->type = thresh_type;
                     obj_desc->data_type = data_type;
                     thresh->base.obj_desc = (tivx_obj_desc_t *)obj_desc;
                 }

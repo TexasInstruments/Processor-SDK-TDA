@@ -784,21 +784,21 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryGraph(vx_graph graph, vx_enum attribut
     return status;
 }
 
-VX_API_ENTRY vx_status VX_API_CALL vxReleaseGraph(vx_graph *g)
+VX_API_ENTRY vx_status VX_API_CALL vxReleaseGraph(vx_graph *graph)
 {
-    return ownReleaseReferenceInt(vxCastRefFromGraphP(g), (vx_enum)VX_TYPE_GRAPH, (vx_enum)VX_EXTERNAL, NULL);
+    return ownReleaseReferenceInt(vxCastRefFromGraphP(graph), (vx_enum)VX_TYPE_GRAPH, (vx_enum)VX_EXTERNAL, NULL);
 }
 
-VX_API_ENTRY vx_status VX_API_CALL vxAddParameterToGraph(vx_graph graph, vx_parameter param)
+VX_API_ENTRY vx_status VX_API_CALL vxAddParameterToGraph(vx_graph graph, vx_parameter parameter)
 {
     vx_status status = (vx_status)VX_ERROR_INVALID_REFERENCE;
     if ((ownIsValidSpecificReference(vxCastRefFromGraph(graph), (vx_enum)VX_TYPE_GRAPH) == (vx_bool)vx_true_e) &&
-        (ownIsValidSpecificReference(vxCastRefFromParameter(param), (vx_enum)VX_TYPE_PARAMETER) == (vx_bool)vx_true_e))
+        (ownIsValidSpecificReference(vxCastRefFromParameter(parameter), (vx_enum)VX_TYPE_PARAMETER) == (vx_bool)vx_true_e))
     {
         if(graph->num_params < TIVX_GRAPH_MAX_PARAMS)
         {
-            graph->parameters[graph->num_params].node = param->node;
-            graph->parameters[graph->num_params].index = param->index;
+            graph->parameters[graph->num_params].node = parameter->node;
+            graph->parameters[graph->num_params].index = parameter->index;
             graph->parameters[graph->num_params].queue_enable = (vx_bool)vx_false_e;
             graph->parameters[graph->num_params].is_enable_send_ref_consumed_event = (vx_bool)vx_false_e;
             graph->parameters[graph->num_params].is_enable_send_ref_consumed_graph_event = (vx_bool)vx_false_e;          
@@ -808,7 +808,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxAddParameterToGraph(vx_graph graph, vx_para
             graph->parameters[graph->num_params].num_buf = 0;
             graph->parameters[graph->num_params].type = (vx_enum)VX_TYPE_PARAMETER;
             graph->parameters[graph->num_params].num_other = 0;
-            graph->parameters[graph->num_params].pipeup_buf_idx = 0U;
+            graph->parameters[graph->num_params].pipeup_buf_idx = 0;
             graph->num_params++;
             ownLogSetResourceUsedValue("TIVX_GRAPH_MAX_PARAMS", (uint16_t)graph->num_params);
             status = (vx_status)VX_SUCCESS;
@@ -821,7 +821,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxAddParameterToGraph(vx_graph graph, vx_para
         }
     }
     else if ((ownIsValidSpecificReference(vxCastRefFromGraph(graph), (vx_enum)VX_TYPE_GRAPH) == (vx_bool)vx_true_e) &&
-              (ownIsValidSpecificReference(vxCastRefFromParameter(param), (vx_enum)VX_TYPE_PARAMETER) == (vx_bool)vx_false_e))
+              (ownIsValidSpecificReference(vxCastRefFromParameter(parameter), (vx_enum)VX_TYPE_PARAMETER) == (vx_bool)vx_false_e))
     {
         if(graph->num_params < TIVX_GRAPH_MAX_PARAMS)
         {

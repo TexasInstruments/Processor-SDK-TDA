@@ -71,6 +71,9 @@
 /* Length in words of R30 command */
 #define ICSSG_UTILS_R30_CMD_LEN                (4U)
 
+/* Index of the remote RTU word in an R30 command: {RXPRU, TXPRU, RTU, RTU_REM} */
+#define ICSSG_UTILS_R30_CMD_RTU_REM_SLOT       (3U)
+
 /* 64 registers, 1 per queue */
 #define ICSSG_UTILS_HWQ_MAX                    ((int32_t)64)
 /* 16 peekable hw queues, currently not used */
@@ -573,8 +576,10 @@ int32_t Icssg_R30SendAsyncIoctl(Icssg_Handle hIcssg,
                                 uint8_t *seqNum,
                                 uint32_t *asyncIoctlType)
 {
+    EnetPer_Handle hPer = (EnetPer_Handle)hIcssg;
     uint32_t inst = hIcssg->pruss->instance;
     uint32_t slice = IcssgUtils_getSliceNum(hIcssg, macPort);
+    uint32_t val;
     uint32_t i;
 
     ++(*seqNum);
@@ -585,7 +590,17 @@ int32_t Icssg_R30SendAsyncIoctl(Icssg_Handle hIcssg,
 
     for (i = 0U; i < ICSSG_UTILS_R30_CMD_LEN; i++)
     {
-        IcssgUtils_R30DmemAddr[inst][slice]->cmd[i] = IcssgUtils_R30Bitmask[cmd].cmd[i];
+        val = IcssgUtils_R30Bitmask[cmd].cmd[i];
+
+        /* Dual-MAC RTU firmware never consumes the remote RTU slot, so a command
+         * left there would never be acknowledged and the done check would fail. */
+        if ((i == ICSSG_UTILS_R30_CMD_RTU_REM_SLOT) &&
+            (hPer->enetType == ENET_ICSSG_DUALMAC))
+        {
+            val = ICSSG_UTILS_CMD_NONE;
+        }
+
+        IcssgUtils_R30DmemAddr[inst][slice]->cmd[i] = val;
     }
 
     return ENET_SINPROGRESS;

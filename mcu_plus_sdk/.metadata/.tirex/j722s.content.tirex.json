@@ -6766,6 +6766,70 @@
         "resourceSubClass": [
             "example.gettingstarted"
         ],
+        "description": "DSS Software read-back of written configuration Safety Mechanism example (reuses dss_display_test sources, links drivers_ipfma) CPU is MAIN-R5FSS0-0 running NORTOS.",
+        "name": "dss_readback_of_written_config",
+        "location": "../../examples/ip_fma/dss_readback_of_written_config/j722s-evm/main-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "ip_fma",
+            "dss_readback_of_written_config",
+            "main-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.general"
+        ],
+        "description": "A Ddr Readback Of Written Config Example. CPU is WKUP-R5FSS0-0 running NORTOS.",
+        "name": "ddr_readback_of_written_config",
+        "location": "../../examples/ip_fma/ddr_readback_of_written_config/j722s-evm/wkup-r5fss0-0_nortos/ti-arm-clang/example.projectspec",
+        "devtools": [
+            "J722SXH01EVM"
+        ],
+        "kernel": [
+            "nortos"
+        ],
+        "compiler": [
+            "ticlang"
+        ],
+        "subCategories": [
+            "ip_fma",
+            "ddr_readback_of_written_config",
+            "wkup-r5fss0-0_nortos"
+        ],
+        "mainCategories": [
+            [
+                "Examples",
+                "Development Tools"
+            ]
+        ]
+    },
+    {
+        "resourceType": "project.ccs",
+        "resourceClass": [
+            "example"
+        ],
+        "resourceSubClass": [
+            "example.gettingstarted"
+        ],
         "description": "CSIRX safety checkers app CPU is MAIN-R5FSS0-0 running FREERTOS.",
         "name": "SafetyCheckersApp_csirx",
         "location": "../../source/safety_checkers/examples/csirx_checkers_app/j722s-evm/main-r5fss0-0_freertos/ti-arm-clang/example.projectspec",

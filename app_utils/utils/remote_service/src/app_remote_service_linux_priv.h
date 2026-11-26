@@ -97,7 +97,6 @@ typedef struct {
 extern app_ipc_obj_t g_app_ipc_obj;
 
 
-int32_t appIpcHwLockInit(void);
 int32_t appIpcCreateRpmsgRxTask(app_ipc_obj_t *obj);
 int32_t appIpcDeleteRpmsgRxTask(app_ipc_obj_t *obj);
 

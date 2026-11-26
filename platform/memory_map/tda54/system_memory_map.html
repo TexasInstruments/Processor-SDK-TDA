@@ -865,12 +865,28 @@
                 <td class="tg-kftd">Physical address of memory for shared memory buffers in DDR</td>
             </tr>
             <tr>
-                <td class="tg-6sgx">UBOOT_RELOC_MEM</td>
+                <td class="tg-6sgx">DDR_SHARED_HEAP_RW</td>
                 <td class="tg-6sgx">0xDC000000</td>
+                <td class="tg-6sgx">0xDDFFFFFF</td>
+                <td class="tg-6sgx">32.00 MB</td>
+                <td class="tg-6sgx">RWIX</td>
+                <td class="tg-6sgx">Virtual Address of the memory shared between MPU and C7x to import/export context from one LLM/VLM session to other</td>
+            </tr>
+            <tr>
+                <td class="tg-kftd">DDR_SHARED_HEAP_RW_PHYS</td>
+                <td class="tg-kftd">0xDC000000</td>
+                <td class="tg-kftd">0xDDFFFFFF</td>
+                <td class="tg-kftd">32.00 MB</td>
+                <td class="tg-kftd">RWIX</td>
+                <td class="tg-kftd">Physical Address of the memory shared between MPU and C7x to import/export context from one LLM/VLM session to other</td>
+            </tr>
+            <tr>
+                <td class="tg-6sgx">DDR_SHARED_HEAP_CONST</td>
+                <td class="tg-6sgx">0xDE000000</td>
                 <td class="tg-6sgx">0xDFFFFFFF</td>
-                <td class="tg-6sgx">64.00 MB</td>
-                <td class="tg-6sgx"></td>
-                <td class="tg-6sgx">Uboot DDR relocation memory</td>
+                <td class="tg-6sgx">32.00 MB</td>
+                <td class="tg-6sgx">R</td>
+                <td class="tg-6sgx">Physical Address of the memory shared between MPU and C7x to import/export TIDL network</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_C7X_1_LOCAL_HEAP_NON_CACHEABLE</td>

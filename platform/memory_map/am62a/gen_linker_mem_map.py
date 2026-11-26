@@ -315,9 +315,18 @@ optee_mem          = MemSection("OPTEE_MEM"        , "", optee_addr       , opte
 
 # Shared memory memory sections in DDR
 app_log_mem            = MemSection("APP_LOG_MEM"        , "", app_log_mem_addr       , app_log_mem_size       , "Memory for remote core logging");
-tiovx_obj_desc_mem     = MemSection("TIOVX_OBJ_DESC_MEM" , "", tiovx_obj_desc_mem_addr, tiovx_obj_desc_mem_size, "Memory for TI OpenVX shared memory. MUST be non-cached or cache-coherent");
 app_fileio_mem        = MemSection("APP_FILEIO_MEM"        , "", app_fileio_mem_addr       , app_fileio_mem_size       , "Memory for remote core file operations");
 tiovx_log_rt_mem     = MemSection("TIOVX_LOG_RT_MEM" , "", tiovx_log_rt_mem_addr, tiovx_log_rt_mem_size, "Memory for TI OpenVX shared memory for Run-time logging. MUST be non-cached or cache-coherent");
+
+tiovx_obj_desc_mem_host0_addr = tiovx_obj_desc_mem_addr
+tiovx_obj_desc_mem_host0_size = (((tiovx_obj_desc_mem_size // 3) // 0x1000) * 0x1000)
+tiovx_obj_desc_mem_host1_addr = (tiovx_obj_desc_mem_host0_addr + tiovx_obj_desc_mem_host0_size)
+tiovx_obj_desc_mem_host1_size = (((tiovx_obj_desc_mem_size // 3) // 0x1000) * 0x1000)
+tiovx_obj_desc_mem_host2_addr = (tiovx_obj_desc_mem_host1_addr + tiovx_obj_desc_mem_host1_size)
+tiovx_obj_desc_mem_host2_size = (((tiovx_obj_desc_mem_size // 3) // 0x1000) * 0x1000)
+tiovx_obj_desc_mem_host0 = MemSection("TIOVX_OBJ_DESC_MEM_HOST0", "", tiovx_obj_desc_mem_host0_addr, tiovx_obj_desc_mem_host0_size, "First portion of TI OpenVX shared memory. MUST be non-cached or cache-coherent")
+tiovx_obj_desc_mem_host1 = MemSection("TIOVX_OBJ_DESC_MEM_HOST1", "", tiovx_obj_desc_mem_host1_addr, tiovx_obj_desc_mem_host1_size, "Second portion of TI OpenVX shared memory. MUST be non-cached or cache-coherent")
+tiovx_obj_desc_mem_host2 = MemSection("TIOVX_OBJ_DESC_MEM_HOST2", "", tiovx_obj_desc_mem_host2_addr, tiovx_obj_desc_mem_host2_size, "Third portion of TI OpenVX shared memory. MUST be non-cached or cache-coherent")
 
 ipc_vring_mem      = MemSection("IPC_VRING_MEM"     , "", ipc_vring_mem_addr     , ipc_vring_mem_size     , "Memory for IPC Vring's. MUST be non-cached or cache-coherent");
 ipc_vring_mem.setDtsName("rtos_ipc_memory_region", "ipc-memories");
@@ -327,17 +336,34 @@ ipc_vring_mem.setOriginTag(False);
 
 edgeai_ddr_total  = MemSection("DDR_EDGEAI_DTS", "", 0                      , 0                      , "DDR for EdgeAI for all sections, used for reserving memory in DTS file");
 edgeai_ddr_total.concat(app_log_mem);
-edgeai_ddr_total.concat(tiovx_obj_desc_mem);
+edgeai_ddr_total.concat(tiovx_obj_desc_mem_host0);
+edgeai_ddr_total.concat(tiovx_obj_desc_mem_host1);
+edgeai_ddr_total.concat(tiovx_obj_desc_mem_host2);
 edgeai_ddr_total.concat(app_fileio_mem);
 edgeai_ddr_total.concat(tiovx_log_rt_mem);
 edgeai_ddr_total.setDtsName("edgeai_memory_region", "edgeai-dma-memory");
 
 # this region should NOT have the "no-map" flag since we want ION to map this memory and do cache ops on it as needed
 ddr_shared_mem     = MemSection("DDR_SHARED_MEM"    , "", ddr_shared_mem_addr    , ddr_shared_mem_size    , "Memory for shared memory buffers in DDR");
+ddr_shared_mem_phys  = MemSection("DDR_SHARED_MEM_PHYS"    , "", ddr_shared_mem_addr  , ddr_shared_mem_size    , "Physical address of memory for shared memory buffers in DDR");
 ddr_shared_mem.setDtsName("edgeai_shared_region", "edgeai_shared-memories");
 ddr_shared_mem.setCompatibility("dma-heap-carveout");
 ddr_shared_mem.setNoMap(False);
 ddr_shared_mem.setOriginTag(False);
+
+ddr_shared_mem_host0_addr = ddr_shared_mem_addr
+ddr_shared_mem_host0_size = (((ddr_shared_mem_size // 3) // 0x1000) * 0x1000)
+ddr_shared_mem_host1_addr = (ddr_shared_mem_host0_addr + ddr_shared_mem_host0_size)
+ddr_shared_mem_host1_size = ddr_shared_mem_host0_size
+ddr_shared_mem_host2_addr = (ddr_shared_mem_host1_addr + ddr_shared_mem_host1_size)
+ddr_shared_mem_host2_size = ddr_shared_mem_host0_size
+ddr_shared_mem_host0 = MemSection("DDR_SHARED_MEM_HOST0", "", ddr_shared_mem_host0_addr, ddr_shared_mem_host0_size, "Host 0 accesses the first portion of the shared memory carveout");
+ddr_shared_mem_host1 = MemSection("DDR_SHARED_MEM_HOST1", "", ddr_shared_mem_host1_addr, ddr_shared_mem_host1_size, "Host 1 accesses the second portion of the shared memory carveout");
+ddr_shared_mem_host2 = MemSection("DDR_SHARED_MEM_HOST2", "", ddr_shared_mem_host2_addr, ddr_shared_mem_host2_size, "Host 2 accesses the third portion of the shared memory carveout");
+
+ddr_shared_mem_host0_phys = MemSection("DDR_SHARED_MEM_HOST0_PHYS", "", ddr_shared_mem_host0_addr, ddr_shared_mem_host0_size, "Physical address of heap 0 in shared memory carveout");
+ddr_shared_mem_host1_phys = MemSection("DDR_SHARED_MEM_HOST1_PHYS", "", ddr_shared_mem_host0_addr, ddr_shared_mem_host1_size, "Physical address of heap 1 in shared memory carveout");
+ddr_shared_mem_host2_phys = MemSection("DDR_SHARED_MEM_HOST2_PHYS", "", ddr_shared_mem_host0_addr, ddr_shared_mem_host2_size, "Physical address of heap 2 in shared memory carveout");
 
 edgeai_core_heaps = MemSection("DDR_EDGEAI_CORE_HEAPS_DTS", "", 0, 0, "EdgeAI Core Heaps in 32bit address range of DDR");
 edgeai_core_heaps.concat(ddr_viss_config_heap);
@@ -361,12 +387,16 @@ mcu_r5f_mmap.addMemSection( mcu_r5f_ddr_resource_table  );
 mcu_r5f_mmap.addMemSection( mcu_r5f_ddr_ipc_tracebuf  );
 mcu_r5f_mmap.addMemSection( mcu_r5f_ddr           );
 mcu_r5f_mmap.addMemSection( app_log_mem          );
-mcu_r5f_mmap.addMemSection( tiovx_obj_desc_mem   );
+mcu_r5f_mmap.addMemSection( tiovx_obj_desc_mem_host0 );
+mcu_r5f_mmap.addMemSection( tiovx_obj_desc_mem_host1 );
+mcu_r5f_mmap.addMemSection( tiovx_obj_desc_mem_host2 );
 mcu_r5f_mmap.addMemSection( app_fileio_mem          );
 mcu_r5f_mmap.addMemSection( ipc_vring_mem        );
 mcu_r5f_mmap.addMemSection( mcu_r5f_ddr_local_heap  );
 mcu_r5f_mmap.addMemSection( ddr_viss_config_heap  );
-mcu_r5f_mmap.addMemSection( ddr_shared_mem       );
+mcu_r5f_mmap.addMemSection( ddr_shared_mem_host0 );
+mcu_r5f_mmap.addMemSection( ddr_shared_mem_host1 );
+mcu_r5f_mmap.addMemSection( ddr_shared_mem_host2 );
 mcu_r5f_mmap.checkOverlap();
 
 dm_r5f_mmap = MemoryMap("dm_r5f");
@@ -382,11 +412,15 @@ dm_r5f_mmap.addMemSection( dm_r5f_ddr_ipc_tracebuf  );
 dm_r5f_mmap.addMemSection( linux_ddr_lpm_data  );
 dm_r5f_mmap.addMemSection( dm_r5f_ddr           );
 dm_r5f_mmap.addMemSection( app_log_mem          );
-dm_r5f_mmap.addMemSection( tiovx_obj_desc_mem   );
+dm_r5f_mmap.addMemSection( tiovx_obj_desc_mem_host0 );
+dm_r5f_mmap.addMemSection( tiovx_obj_desc_mem_host1 );
+dm_r5f_mmap.addMemSection( tiovx_obj_desc_mem_host2 );
 dm_r5f_mmap.addMemSection( app_fileio_mem          );
 dm_r5f_mmap.addMemSection( ipc_vring_mem        );
 dm_r5f_mmap.addMemSection( dm_r5f_ddr_local_heap  );
-dm_r5f_mmap.addMemSection( ddr_shared_mem       );
+dm_r5f_mmap.addMemSection( ddr_shared_mem_host0 );
+dm_r5f_mmap.addMemSection( ddr_shared_mem_host1 );
+dm_r5f_mmap.addMemSection( ddr_shared_mem_host2 );
 dm_r5f_mmap.addMemSection( ddr_viss_config_heap       );
 dm_r5f_mmap.checkOverlap();
 
@@ -401,14 +435,18 @@ c7x_1_mmap.addMemSection( c7x_1_ddr_boot     );
 c7x_1_mmap.addMemSection( c7x_1_ddr_vecs     );
 c7x_1_mmap.addMemSection( c7x_1_ddr          );
 c7x_1_mmap.addMemSection( app_log_mem        );
-c7x_1_mmap.addMemSection( tiovx_obj_desc_mem );
+c7x_1_mmap.addMemSection( tiovx_obj_desc_mem_host0 );
+c7x_1_mmap.addMemSection( tiovx_obj_desc_mem_host1 );
+c7x_1_mmap.addMemSection( tiovx_obj_desc_mem_host2 );
 c7x_1_mmap.addMemSection( app_fileio_mem        );
 c7x_1_mmap.addMemSection( ipc_vring_mem      );
 c7x_1_mmap.addMemSection( c7x_1_ddr_local_heap_non_cacheable  );
 c7x_1_mmap.addMemSection( c7x_1_ddr_scratch_non_cacheable  );
 c7x_1_mmap.addMemSection( c7x_1_ddr_local_heap  );
 c7x_1_mmap.addMemSection( c7x_1_ddr_scratch  );
-c7x_1_mmap.addMemSection( ddr_shared_mem     );
+c7x_1_mmap.addMemSection( ddr_shared_mem_host0 );
+c7x_1_mmap.addMemSection( ddr_shared_mem_host1 );
+c7x_1_mmap.addMemSection( ddr_shared_mem_host2 );
 c7x_1_mmap.checkOverlap();
 
 html_mmap = MemoryMap("System Memory Map for Linux+RTOS mode");
@@ -441,11 +479,19 @@ html_mmap.addMemSection( tifs_lpm_mem      );
 html_mmap.addMemSection( atf_mem      );
 html_mmap.addMemSection( optee_mem      );
 html_mmap.addMemSection( app_log_mem        );
-html_mmap.addMemSection( tiovx_obj_desc_mem );
+html_mmap.addMemSection( tiovx_obj_desc_mem_host0 );
+html_mmap.addMemSection( tiovx_obj_desc_mem_host1 );
+html_mmap.addMemSection( tiovx_obj_desc_mem_host2 );
 html_mmap.addMemSection( app_fileio_mem        );
 html_mmap.addMemSection( ipc_vring_mem      );
-html_mmap.addMemSection( ddr_shared_mem     );
+html_mmap.addMemSection( ddr_shared_mem_host0);
+html_mmap.addMemSection( ddr_shared_mem_host1);
+html_mmap.addMemSection( ddr_shared_mem_host2);
 html_mmap.addMemSection( tiovx_log_rt_mem );
+html_mmap.addMemSection( ddr_shared_mem_phys);
+html_mmap.addMemSection( ddr_shared_mem_host0_phys);
+html_mmap.addMemSection( ddr_shared_mem_host1_phys);
+html_mmap.addMemSection( ddr_shared_mem_host2_phys);
 html_mmap.checkOverlap();
 
 c_header_mmap = MemoryMap("Memory Map for C header file");
@@ -468,10 +514,19 @@ c_header_mmap.addMemSection( c7x_1_ddr_local_heap);
 c_header_mmap.addMemSection( c7x_1_ddr_scratch);
 c_header_mmap.addMemSection( tiovx_log_rt_mem );
 c_header_mmap.addMemSection( app_log_mem        );
-c_header_mmap.addMemSection( tiovx_obj_desc_mem );
+c_header_mmap.addMemSection( tiovx_obj_desc_mem_host0 );
+c_header_mmap.addMemSection( tiovx_obj_desc_mem_host1 );
+c_header_mmap.addMemSection( tiovx_obj_desc_mem_host2 );
 c_header_mmap.addMemSection( app_fileio_mem        );
 c_header_mmap.addMemSection( ipc_vring_mem      );
-c_header_mmap.addMemSection( ddr_shared_mem     );
+c_header_mmap.addMemSection( ddr_shared_mem );
+c_header_mmap.addMemSection( ddr_shared_mem_phys );
+c_header_mmap.addMemSection( ddr_shared_mem_host0 );
+c_header_mmap.addMemSection( ddr_shared_mem_host1 );
+c_header_mmap.addMemSection( ddr_shared_mem_host2 );
+c_header_mmap.addMemSection( ddr_shared_mem_host0_phys );
+c_header_mmap.addMemSection( ddr_shared_mem_host1_phys );
+c_header_mmap.addMemSection( ddr_shared_mem_host2_phys );
 c_header_mmap.checkOverlap();
 
 dts_mmap = MemoryMap("Memory Map for Linux kernel dts/dtsi file");
@@ -500,7 +555,9 @@ c7x_1_syscfg.addMemSection(c7x_1_ddr_local_heap);
 c7x_1_syscfg.addMemSection(c7x_1_ddr_scratch );
 c7x_1_syscfg.addMemSection(app_log_mem);
 c7x_1_syscfg.addMemSection(app_fileio_mem );
-c7x_1_syscfg.addMemSection(tiovx_obj_desc_mem);
+c7x_1_syscfg.addMemSection( tiovx_obj_desc_mem_host0 );
+c7x_1_syscfg.addMemSection( tiovx_obj_desc_mem_host1 );
+c7x_1_syscfg.addMemSection( tiovx_obj_desc_mem_host2 );
 c7x_1_syscfg.addMemSection(ipc_vring_mem);
 c7x_1_syscfg.addMemSection(c7x_1_ddr_ipc);
 c7x_1_syscfg.addMemSection(tiovx_log_rt_mem );

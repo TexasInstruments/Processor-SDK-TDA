@@ -67,6 +67,7 @@
 
 #define LARGE_CHUNK MB
 #define SMALL_CHUNK KB
+#define TINY_CHUNK  1U
 
 uint32_t link_index = 0;
 
@@ -102,7 +103,10 @@ static vx_status pushback_link(tivx_shared_mem_info_t ** head, tivx_shared_mem_p
 static vx_status create_link(tivx_shared_mem_info_t ** head)
 {
     vx_status status = VX_FAILURE;
-    tivx_shared_mem_info_t * newLink = tivxMemAlloc(sizeof(tivx_shared_mem_info_t), TIVX_MEM_EXTERNAL_SHARED);
+    /* Allocate the bookkeeping node from TIVX_MEM_EXTERNAL (plain malloc-backed),
+     * NOT from the heap region under test, so that this linked-list metadata
+     * never competes with the test's own exhaustion of TIVX_MEM_EXTERNAL_SHARED. */
+    tivx_shared_mem_info_t * newLink = tivxMemAlloc(sizeof(tivx_shared_mem_info_t), TIVX_MEM_EXTERNAL);
     if (newLink == NULL)
     {
         VX_PRINT(VX_ZONE_ERROR, "Cannot alloc new link for the shared mem info linked list!\n");
@@ -138,7 +142,7 @@ static vx_status create_link(tivx_shared_mem_info_t ** head)
             {
                 VX_PRINT(VX_ZONE_ERROR, "Last link is not used. No need to create new link!\n");
                 /* Free the temp link */
-                status = tivxMemFree(newLink, sizeof(tivx_shared_mem_info_t), TIVX_MEM_EXTERNAL_SHARED);
+                status = tivxMemFree(newLink, sizeof(tivx_shared_mem_info_t), TIVX_MEM_EXTERNAL);
                 if (status != VX_SUCCESS)
                 {
                     VX_PRINT(VX_ZONE_ERROR, "Temporary link buffer cannot be freed!\n");
@@ -169,7 +173,7 @@ static vx_status pop_head(tivx_shared_mem_info_t * head)
         head = (*current).next;
 
         /* Free the popped element's memory */
-        status = tivxMemFree(current, sizeof(tivx_shared_mem_info_t), TIVX_MEM_EXTERNAL_SHARED);
+        status = tivxMemFree(current, sizeof(tivx_shared_mem_info_t), TIVX_MEM_EXTERNAL);
         if (status != VX_SUCCESS)
         {
             VX_PRINT(VX_ZONE_ERROR, "Cannot free link from the shared mem info linked list!\n");
@@ -201,7 +205,7 @@ static vx_status pop_tail(tivx_shared_mem_info_t ** head)
         {
             /* Only the head remains */
             VX_PRINT(VX_ZONE_INFO, "Only the head remains!\n");
-            status = tivxMemFree(tail, sizeof(tivx_shared_mem_info_t), TIVX_MEM_EXTERNAL_SHARED);
+            status = tivxMemFree(tail, sizeof(tivx_shared_mem_info_t), TIVX_MEM_EXTERNAL);
             tail = NULL;
             *head = NULL;
         }
@@ -209,7 +213,7 @@ static vx_status pop_tail(tivx_shared_mem_info_t ** head)
         {
             /* Set the previous node as tail */
             previous->next = NULL;
-            status = tivxMemFree(tail, sizeof(tivx_shared_mem_info_t), TIVX_MEM_EXTERNAL_SHARED);
+            status = tivxMemFree(tail, sizeof(tivx_shared_mem_info_t), TIVX_MEM_EXTERNAL);
         }
 
         /* Free the popped element's memory */
@@ -255,8 +259,16 @@ vx_status test_utils_max_out_heap_mem(tivx_shared_mem_info_t** shared_mem_info_a
             else
             if (chunk_size == SMALL_CHUNK)
             {
-                VX_PRINT(VX_ZONE_ERROR, "Memory exhausted after Small chunk allocation!\n");
-                /* Break out of the loop after small chunk exhaustion */
+                VX_PRINT(VX_ZONE_ERROR, "Memory exhausted after Small chunk allocation! Starting Tiny chunk allocation.\n");
+                /* Try tiny chunk allocation to drain any remaining sub-SMALL_CHUNK
+                 * fragment, so the heap region is exhausted down to the smallest
+                 * possible allocation granularity */
+                chunk_size = TINY_CHUNK;
+            }
+            else
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Memory exhausted after Tiny chunk allocation!\n");
+                /* Break out of the loop after tiny chunk exhaustion */
                 break;
             }
         }
@@ -289,7 +301,7 @@ vx_status test_utils_max_out_heap_mem(tivx_shared_mem_info_t** shared_mem_info_a
     tivx_shared_mem_ptr_t temp_final_tivx_shared_mem_ptr;
 
     status = tivxMemBufferAlloc(&temp_final_tivx_shared_mem_ptr,
-                                            SMALL_CHUNK, mheap_region);
+                                            TINY_CHUNK, mheap_region);
 
 
     /* If all memory is allocated until exhausted, return success */
@@ -301,8 +313,8 @@ vx_status test_utils_max_out_heap_mem(tivx_shared_mem_info_t** shared_mem_info_a
     if (status == VX_SUCCESS)
     {
         VX_PRINT(VX_ZONE_ERROR, "Could allocate memory after exhaustion! Memory not exhausted fully! Releasing all allocated memory!\n", status);
-        /* Last small allocation passed. Memory is not exhausted. Free all allocated memory and return failure */
-        status = tivxMemBufferFree(&temp_final_tivx_shared_mem_ptr, SMALL_CHUNK);
+        /* Last tiny allocation passed. Memory is not exhausted. Free all allocated memory and return failure */
+        status = tivxMemBufferFree(&temp_final_tivx_shared_mem_ptr, TINY_CHUNK);
         if (status != VX_SUCCESS)
         {
             /* Couldn't free last allocated small buffer */

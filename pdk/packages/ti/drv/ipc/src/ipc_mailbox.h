@@ -83,6 +83,8 @@ typedef void (*Mailbox_hwiCallback)(uint32_t* arg1, uint32_t arg2);
 /*                          Function Declarations                             */
 /* ========================================================================== */
 
+extern uint32_t g_ipc_mBoxCnt;
+
 /** \brief Initializes mailbox module */
 int32_t Ipc_mailboxModuleStartup (void);
 

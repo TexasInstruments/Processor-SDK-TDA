@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2018 Texas Instruments Incorporated
+ * Copyright (c) 2026 Texas Instruments Incorporated
  *
  * All rights reserved not granted herein.
  *
@@ -76,6 +76,10 @@
 #include <stdint.h>
 #include <utils/draw2d/include/draw2d.h>
 #include <VX/vx.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * \brief User callback that is invoked every 'update_interval' msecs
@@ -226,5 +230,9 @@ int32_t appGrpxShowDdrLoad(uint16_t startx, uint16_t starty);
 void appGrpxDrawDefault(Draw2D_Handle *draw2d_obj, Draw2D_BufInfo *draw2d_buf_info, uint32_t update_type);
 
 /* @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

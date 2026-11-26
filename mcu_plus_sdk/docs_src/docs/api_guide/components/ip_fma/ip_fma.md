@@ -36,3 +36,6 @@ guide.
 * \subpage SDL_DCC_RB_WRITTEN_CONFIG_PAGE - CLK - Software Readback of Written Configuration
   Test
 * \subpage IP_FMA_UTC_LEGAL_TR_CHECK_PAGE - UTC Legal TR Check - DRU unsupported/illegal TR detection
+  Test
+* \subpage IP_FMA_DSS_RB_WRITTEN_CONFIG_PAGE - DSS - Software Readback of Written Configuration
+* \subpage IP_FMA_DDR_RB_WRITTEN_CONFIG_PAGE - DDR - Software Readback of Written Configuration

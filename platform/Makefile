@@ -6,6 +6,7 @@ include build_flags.mak
 # Project specific build defs (don't change across different combos):
 BUILD_DEFS :=
 BUILD_DEFS += $(SOC_DEF)
+BUILD_DEFS += $(SOC_FAMILY)
 BUILD_DEFS += $(ECU_BUILD_DEF)
 BUILD_DEFS += $(foreach CORE,$(ENABLED_IPC_CORES),$(CORE))
 

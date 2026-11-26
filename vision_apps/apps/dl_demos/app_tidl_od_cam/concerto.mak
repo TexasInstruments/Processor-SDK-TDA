@@ -3,78 +3,36 @@ ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86_64 A72 A53))
 include $(PRELUDE)
 
 TARGET      := vx_app_tidl_od_cam
-
-CSOURCES    := main.c
-CSOURCES    += app_pre_proc_module.c
-CSOURCES    += app_draw_detections_module.c
-
-ifeq ($(SOC),$(filter $(SOC), am62a))
-ifeq ($(TARGET_OS),$(filter $(TARGET_OS), LINUX QNX))
-CSOURCES    += app_post_proc_module.c
-endif
-endif
-
-ifeq ($(HOST_COMPILER),GCC_LINUX)
-CFLAGS += -Wno-unused-function
-endif
-
-ifeq ($(TARGET_CPU),x86_64)
-
 TARGETTYPE  := exe
 
-CSOURCES    += main_x86.c
+CPPSOURCES  := main.cpp
+CPPSOURCES  += config/app_od_cam_cfg_params.cpp
 
+CFLAGS += -Wno-parentheses -Wno-unused-function -Wno-sign-compare
+
+ifeq ($(TARGET_CPU),x86_64)
 include $(VISION_APPS_PATH)/apps/concerto_x86_64_inc.mak
-
-IDIRS       += $(APP_KERNELS_IDIRS)
-
-STATIC_LIBS += $(APP_KERNELS_LIBS)
-STATIC_LIBS += $(TIADALG_LIBS)
-STATIC_LIBS += $(IMAGING_LIBS)
-
 # Not building for PC
 SKIPBUILD=1
-
 endif
 
 ifeq ($(TARGET_OS),$(filter $(TARGET_OS), LINUX QNX))
 ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53))
-
-TARGETTYPE  := exe
-
-CSOURCES    += main_linux_arm.c
-
 include $(VISION_APPS_PATH)/apps/concerto_mpu_inc.mak
-
-# AM62A Linux: Link drm_wrapper for DRM/KMS display with zero-copy
-ifeq ($(TARGET_PLATFORM)$(TARGET_OS), AM62ALINUX)
-STATIC_LIBS += app_utils_drm_wrapper
-SYS_SHARED_LIBS += drm
-IDIRS += $(LINUX_FS_PATH)/usr/include/libdrm/
-IDIRS += $(LINUX_FS_PATH)/usr/include/drm/
+ifeq ($(TARGET_OS),QNX)
+SHARED_LIBS += c++
 endif
-
-IDIRS       += $(APP_KERNELS_IDIRS)
-
-STATIC_LIBS += $(APP_KERNELS_LIBS)
-STATIC_LIBS += $(TIADALG_LIBS)
-STATIC_LIBS += $(IMAGING_LIBS)
-
 endif
 endif
 
 IDIRS += $(IMAGING_IDIRS)
-IDIRS += $(VISION_APPS_PATH)/modules/include
-
-ifeq ($(SOC),$(filter $(SOC), am62a))
-ifeq ($(TARGET_OS),$(filter $(TARGET_OS), LINUX QNX))
 IDIRS += $(APP_KERNELS_IDIRS)
-IDIRS += $(TIOVX_PATH)/source/include
-endif
-endif
-
-STATIC_LIBS += $(TIADALG_LIBS)
+IDIRS += $(VISION_APPS_MODULES_IDIRS)
+STATIC_LIBS += $(IMAGING_LIBS)
+STATIC_LIBS += $(APP_KERNELS_LIBS)
+STATIC_LIBS += $(APP_KERNELS_UTILS_LIBS)
 STATIC_LIBS += $(VISION_APPS_MODULES_LIBS)
+STATIC_LIBS += $(TIADALG_LIBS)
 
 ifeq ($(SOC),j722s)
 SKIPBUILD=1

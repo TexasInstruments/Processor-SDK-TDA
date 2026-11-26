@@ -1,10 +1,7 @@
 DEFS+=CPU_mcu2
 RTOS_LC := $(call lowercase,$(RTOS))
 
-ifeq ($(RTOS),FREERTOS)
-
-  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_freertos.cmd
-endif
+LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE).cmd
 
 LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map.cmd
 

@@ -198,7 +198,7 @@ static inline void tivxKernelValidRectParams_init(
 {
     if (NULL != prms)
     {
-        memset(prms, 0, sizeof(tivxKernelValidRectParams));
+        (void)memset(prms, 0, sizeof(tivxKernelValidRectParams));
         prms->border_mode = (vx_enum)VX_BORDER_UNDEFINED;
     }
 }

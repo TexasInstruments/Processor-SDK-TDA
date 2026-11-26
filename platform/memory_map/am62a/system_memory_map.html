@@ -201,12 +201,28 @@
                 <td class="tg-6sgx">Memory for remote core logging</td>
             </tr>
             <tr>
-                <td class="tg-kftd">TIOVX_OBJ_DESC_MEM</td>
+                <td class="tg-kftd">TIOVX_OBJ_DESC_MEM_HOST0</td>
                 <td class="tg-kftd">0xA1040000</td>
-                <td class="tg-kftd">0xA1FFFFFF</td>
-                <td class="tg-kftd">15.75 MB</td>
+                <td class="tg-kftd">0xA157FFFF</td>
+                <td class="tg-kftd"> 5.25 MB</td>
                 <td class="tg-kftd"></td>
-                <td class="tg-kftd">Memory for TI OpenVX shared memory. MUST be non-cached or cache-coherent</td>
+                <td class="tg-kftd">First portion of TI OpenVX shared memory. MUST be non-cached or cache-coherent</td>
+            </tr>
+            <tr>
+                <td class="tg-6sgx">TIOVX_OBJ_DESC_MEM_HOST1</td>
+                <td class="tg-6sgx">0xA1580000</td>
+                <td class="tg-6sgx">0xA1ABFFFF</td>
+                <td class="tg-6sgx"> 5.25 MB</td>
+                <td class="tg-6sgx"></td>
+                <td class="tg-6sgx">Second portion of TI OpenVX shared memory. MUST be non-cached or cache-coherent</td>
+            </tr>
+            <tr>
+                <td class="tg-kftd">TIOVX_OBJ_DESC_MEM_HOST2</td>
+                <td class="tg-kftd">0xA1AC0000</td>
+                <td class="tg-kftd">0xA1FFFFFF</td>
+                <td class="tg-kftd"> 5.25 MB</td>
+                <td class="tg-kftd"></td>
+                <td class="tg-kftd">Third portion of TI OpenVX shared memory. MUST be non-cached or cache-coherent</td>
             </tr>
             <tr>
                 <td class="tg-6sgx">APP_FILEIO_MEM</td>
@@ -225,12 +241,60 @@
                 <td class="tg-kftd">Memory for TI OpenVX shared memory for Run-time logging. MUST be non-cached or cache-coherent</td>
             </tr>
             <tr>
-                <td class="tg-6sgx">DDR_SHARED_MEM</td>
+                <td class="tg-6sgx">DDR_SHARED_MEM_HOST0</td>
                 <td class="tg-6sgx">0xA3000000</td>
-                <td class="tg-6sgx">0xADBFFFFF</td>
-                <td class="tg-6sgx">172.00 MB</td>
+                <td class="tg-6sgx">0xA6954FFF</td>
+                <td class="tg-6sgx">57.33 MB</td>
                 <td class="tg-6sgx"></td>
-                <td class="tg-6sgx">Memory for shared memory buffers in DDR</td>
+                <td class="tg-6sgx">Host 0 accesses the first portion of the shared memory carveout</td>
+            </tr>
+            <tr>
+                <td class="tg-kftd">DDR_SHARED_MEM_PHYS</td>
+                <td class="tg-kftd">0xA3000000</td>
+                <td class="tg-kftd">0xADBFFFFF</td>
+                <td class="tg-kftd">172.00 MB</td>
+                <td class="tg-kftd"></td>
+                <td class="tg-kftd">Physical address of memory for shared memory buffers in DDR</td>
+            </tr>
+            <tr>
+                <td class="tg-6sgx">DDR_SHARED_MEM_HOST0_PHYS</td>
+                <td class="tg-6sgx">0xA3000000</td>
+                <td class="tg-6sgx">0xA6954FFF</td>
+                <td class="tg-6sgx">57.33 MB</td>
+                <td class="tg-6sgx"></td>
+                <td class="tg-6sgx">Physical address of heap 0 in shared memory carveout</td>
+            </tr>
+            <tr>
+                <td class="tg-kftd">DDR_SHARED_MEM_HOST1_PHYS</td>
+                <td class="tg-kftd">0xA3000000</td>
+                <td class="tg-kftd">0xA6954FFF</td>
+                <td class="tg-kftd">57.33 MB</td>
+                <td class="tg-kftd"></td>
+                <td class="tg-kftd">Physical address of heap 1 in shared memory carveout</td>
+            </tr>
+            <tr>
+                <td class="tg-6sgx">DDR_SHARED_MEM_HOST2_PHYS</td>
+                <td class="tg-6sgx">0xA3000000</td>
+                <td class="tg-6sgx">0xA6954FFF</td>
+                <td class="tg-6sgx">57.33 MB</td>
+                <td class="tg-6sgx"></td>
+                <td class="tg-6sgx">Physical address of heap 2 in shared memory carveout</td>
+            </tr>
+            <tr>
+                <td class="tg-kftd">DDR_SHARED_MEM_HOST1</td>
+                <td class="tg-kftd">0xA6955000</td>
+                <td class="tg-kftd">0xAA2A9FFF</td>
+                <td class="tg-kftd">57.33 MB</td>
+                <td class="tg-kftd"></td>
+                <td class="tg-kftd">Host 1 accesses the second portion of the shared memory carveout</td>
+            </tr>
+            <tr>
+                <td class="tg-6sgx">DDR_SHARED_MEM_HOST2</td>
+                <td class="tg-6sgx">0xAA2AA000</td>
+                <td class="tg-6sgx">0xADBFEFFF</td>
+                <td class="tg-6sgx">57.33 MB</td>
+                <td class="tg-6sgx"></td>
+                <td class="tg-6sgx">Host 2 accesses the third portion of the shared memory carveout</td>
             </tr>
             <tr>
                 <td class="tg-kftd">DDR_DM_R5F_VISS_CONFIG_HEAP</td>

@@ -18,7 +18,7 @@ ifeq ($(BUILD_APP_RTOS_LINUX),yes)
 
       include $($(_MODULE)_SDIR)/concerto_mcu1_0_inc.mak
 
-      IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common_linux
+      IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)/common/include
 
       STATIC_LIBS += app_rtos_linux
 

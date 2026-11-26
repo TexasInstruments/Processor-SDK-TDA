@@ -256,7 +256,9 @@ static void OSPI_hwiFxn_v0(uintptr_t arg)
                 CSL_ospiIntrClear((const CSL_ospi_flash_cfgRegs *)(hwAttrs->baseAddr),
                                   CSL_OSPI_INTR_MASK_ALL);
 
-                /* Call the call back function */
+                /* Clear transaction before callback so the next transfer can
+                 * be issued from within the callback without deadlocking */
+                object->transaction = NULL;
                 object->ospiParams.transferCallbackFxn((OSPI_Handle)arg, NULL);
             }
             else
@@ -315,7 +317,9 @@ static void OSPI_hwiFxn_v0(uintptr_t arg)
                 CSL_ospiIntrClear((const CSL_ospi_flash_cfgRegs *)(hwAttrs->baseAddr),
                                   CSL_OSPI_INTR_MASK_ALL);
 
-                /* Call the call back function */
+                /* Clear transaction before callback so the next transfer can
+                 * be issued from within the callback without deadlocking */
+                object->transaction = NULL;
                 object->ospiParams.transferCallbackFxn((OSPI_Handle)arg, NULL);
             }
             else
@@ -1484,109 +1488,100 @@ static int32_t OSPI_write_v0(OSPI_Handle handle, OSPI_Transaction *transaction)
  */
 static bool OSPI_transfer_v0(OSPI_Handle handle, OSPI_Transaction *transaction)
 {
-    bool                  ret = BFALSE; /* return value */
-    OSPI_v0_HwAttrs const *hwAttrs;     /* OSPI hardware attributes */
-    OSPI_v0_Object        *object;      /* OSPI object */
+    bool                  ret = BFALSE;
+    OSPI_v0_HwAttrs const *hwAttrs;
+    OSPI_v0_Object        *object;
     uintptr_t              key;
     int32_t                xferRet;
 
-    /* Check if anything needs to be written or read */
-    if ((NULL != handle) && (NULL != transaction) && (0U != (uint32_t)transaction->count))
+    /* Validate inputs */
+    if ((NULL == handle) || (NULL == transaction))
     {
-        /* Get the pointer to the object and hwAttrs */
-        object = (OSPI_v0_Object *)handle->object;
-        hwAttrs = (OSPI_v0_HwAttrs const *)handle->hwAttrs;
+        return BFALSE;
+    }
+    if (0U == transaction->count)
+    {
+        transaction->status = OSPI_TRANSFER_CANCELED;
+        return BFALSE;
+    }
 
-        /* Check if a transfer is in progress */
-        key = SPI_osalHardwareIntDisable();
-        if (NULL != object->transaction)
+    object = (OSPI_v0_Object *)handle->object;
+    hwAttrs = (OSPI_v0_HwAttrs const *)handle->hwAttrs;
+
+    /* Acquire mutex for this handle */
+    (void)SPI_osalPendLock(object->mutex, SemaphoreP_WAIT_FOREVER);
+
+    /* Atomically check if transfer in progress and claim the slot.
+     * Buffer pointers are set inside the critical section so the ISR
+     * cannot fire after the slot is claimed but before buffers are ready.
+     */
+    key = SPI_osalHardwareIntDisable();
+    if (NULL != object->transaction)
+    {
+        /* Transfer already in progress - reject */
+        SPI_osalHardwareIntRestore(key);
+        (void)SPI_osalPostLock(object->mutex);
+        transaction->status = OSPI_TRANSFER_CANCELED;
+        return BFALSE;
+    }
+
+    /* Claim the slot and set up buffer pointers for ISR access */
+    object->transaction   = transaction;
+    object->writeBufIdx   = (uint8_t *)transaction->txBuf;
+    object->writeCountIdx = (uint32_t)transaction->count;
+    object->readBufIdx    = (uint8_t *)transaction->rxBuf;
+    object->readCountIdx  = (uint32_t)transaction->count;
+
+    /* Enable interrupts for non-polling modes before restoring global interrupts */
+    if ((uint32_t)SPI_OPER_MODE_POLLING != object->intrPollMode)
+    {
+        SPI_osalHardwareIntrEnable(hwAttrs->intrNum, hwAttrs->eventId);
+    }
+
+    /* Critical section ends here - restore interrupts before starting transfer.
+     * OSPI_primeTransfer_v0 does the actual data movement which can take significant
+     * time; the ISR will handle data using the buffer pointers set above.
+     */
+    SPI_osalHardwareIntRestore(key);
+
+    /* Start the transfer */
+    xferRet = OSPI_primeTransfer_v0(handle, transaction);
+
+    if (SPI_STATUS_SUCCESS == xferRet)
+    {
+        ret = BTRUE;
+
+        /* Wait for completion in blocking modes */
+        if ((uint32_t)SPI_OPER_MODE_BLOCKING == object->intrPollMode)
         {
-            SPI_osalHardwareIntRestore(key);
-            /* Transfer is in progress */
-            transaction->status = OSPI_TRANSFER_CANCELED;
-        }
-        else
-        {
-            /* Save the pointer to the transaction */
-            object->transaction = transaction;
-
-            /* Acquire the lock for this particular I2C handle */
-            (void)SPI_osalPendLock(object->mutex, SemaphoreP_WAIT_FOREVER);
-
-            /* Book keeping of transmit and receive buffers. */
-            object->writeBufIdx = (uint8_t *)transaction->txBuf;
-            object->writeCountIdx = (uint32_t)transaction->count;
-            object->readBufIdx =  (uint8_t *)transaction->rxBuf;
-            object->readCountIdx = (uint32_t)transaction->count;
-
-             /*
-             * OSPI_primeTransfer_v0 is a longer process and
-             * protection is needed from the OSPI interrupt
-             */
-            if ((uint32_t)SPI_OPER_MODE_POLLING != object->intrPollMode)
+            if ((uint32_t)OSPI_OPER_MODE_IND_XFER == object->ospiMode)
             {
-                SPI_osalHardwareIntrEnable(hwAttrs->intrNum, hwAttrs->eventId);
+                (void)SPI_osalPendLock(object->transferComplete, SemaphoreP_WAIT_FOREVER);
             }
-
-            xferRet = OSPI_primeTransfer_v0(handle, transaction);
-            SPI_osalHardwareIntRestore(key);
-
-            if (SPI_STATUS_SUCCESS == xferRet)
-            {
-                if ((uint32_t)SPI_OPER_MODE_BLOCKING == object->intrPollMode)
-                {
-                    ret = BTRUE;
-                    if ((uint32_t)OSPI_OPER_MODE_IND_XFER == object->ospiMode)
-                    {
-                        /* In indirect transfer mode, wait for the lock
-                           posted form the word completion interrupt */
-                        (void)SPI_osalPendLock(object->transferComplete, SemaphoreP_WAIT_FOREVER);
-                    }
 #ifdef SPI_DMA_ENABLE
-                    if (((uint32_t)OSPI_OPER_MODE_DAC_XFER == object->ospiMode) && (BTRUE == hwAttrs->dmaEnable))
-                    {
-                        /* in direct transfer mode with DMA enabled, wait for the lock
-                           posted form the word completion interrupt */
-                        (void)SPI_osalPendLock(object->transferComplete, SemaphoreP_WAIT_FOREVER);
-                        if((uint32_t)SPI_TRANSACTION_TYPE_WRITE == object->transactionType)
-                        {
-                            ret = OSPI_waitDeviceReady(handle, OSPI_DAC_WRITE_TIMEOUT);
-                        }
-                    }
-#endif
-                    /* transfer is completed and semaphore is posted. */
-                }
-                else
+            if (((uint32_t)OSPI_OPER_MODE_DAC_XFER == object->ospiMode) && (BTRUE == hwAttrs->dmaEnable))
+            {
+                (void)SPI_osalPendLock(object->transferComplete, SemaphoreP_WAIT_FOREVER);
+                if ((uint32_t)SPI_TRANSACTION_TYPE_WRITE == object->transactionType)
                 {
-                    /* Always return BTRUE if in Asynchronous mode */
-                    ret = BTRUE;
+                    ret = OSPI_waitDeviceReady(handle, OSPI_DAC_WRITE_TIMEOUT);
                 }
-                transaction->status = OSPI_TRANSFER_COMPLETED;
-                /* Release the lock for this particular SPI handle */
-
-                (void)SPI_osalPostLock(object->mutex);
             }
-            else
-            {
-                transaction->status = OSPI_TRANSFER_FAILED;
-            }
-
-            if ((uint32_t)SPI_OPER_MODE_CALLBACK != object->intrPollMode)
-            {
-                object->transaction = NULL;
-            }
+#endif
         }
+
+        transaction->status = OSPI_TRANSFER_COMPLETED;
     }
     else
     {
-        if (NULL != transaction)
-        {
-            transaction->status = OSPI_TRANSFER_CANCELED;
-        }
+        transaction->status = OSPI_TRANSFER_FAILED;
     }
 
-    /* Return the number of bytes transferred by the I2C */
-    return (ret);
+    /* Release transaction slot; in callback mode the ISR already cleared it */
+    object->transaction = NULL;
+
+    (void)SPI_osalPostLock(object->mutex);
+    return ret;
 }
 
 /*

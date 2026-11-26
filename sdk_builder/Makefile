@@ -72,20 +72,10 @@ ifeq ($(BUILD_PTK),yes)
     SOC_VARIABLE_DOCS  += ptk_docs
 endif
 
-sdk: sdk_check_paths rtos_sdk
-	$(MAKE) app_utils
-	$(MAKE) vxlib
-	$(MAKE) tiovx
-	$(MAKE) platform_hlos
-	$(MAKE) imaging
-	$(MAKE) video_io
-	$(MAKE) $(SOC_VARIABLE_RULES)
-	$(MAKE) tidl_lib
-	$(MAKE) tidl_tiovx_kernels
+sdk: sdk_check_paths rtos_sdk app_utils tiovx vxlib platform_hlos imaging video_io app_kernels tidl_tiovx_kernels tidl_lib $(SOC_VARIABLE_RULES)
 ifeq ($(BUILD_ENABLE_TIDL_RT),yes)
 	$(MAKE) tidl_rt
 endif
-	$(MAKE) app_kernels
 	$(MAKE) vision_apps
 	$(MAKE) platform_rtos
 ifeq ($(BUILD_CPU_MCU1_0),yes)

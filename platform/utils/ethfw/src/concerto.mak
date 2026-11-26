@@ -100,6 +100,7 @@ ifeq ($(BUILD_ENABLE_ETHFW),yes)
             ifeq ($(RTOS_SDK),pdk)
               DEFS += ENABLE_QSGMII_PORTS
             endif
+            DEFS += ENABLE_MAC_ONLY_PORTS
           endif
 
           ifeq ($(ETHFW_IET_ENABLE),yes)

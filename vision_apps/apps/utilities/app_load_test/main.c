@@ -112,7 +112,12 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    status = appCommonInit();
+    status = appCommonMemInit();
+
+    if (status == VX_SUCCESS)
+    {
+        status = appCommonInit();
+    }
 
     core = atoi(argv[1]);
     load = atoi(argv[2]);
@@ -225,6 +230,8 @@ int main(int argc, char *argv[])
         if(status == VX_SUCCESS)
         {
             status = appCommonDeInit();
+
+            status |= appCommonMemDeInit();
         }
     }
     printf("APP IPC TIOVX: Done !!!\n");

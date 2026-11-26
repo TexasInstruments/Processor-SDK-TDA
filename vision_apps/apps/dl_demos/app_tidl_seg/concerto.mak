@@ -1,51 +1,45 @@
 ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), x86_64 A72 A53))
 
-include $(PRELUDE)
+    include $(PRELUDE)
 
-TARGET      := vx_app_tidl_seg
-TARGETTYPE  := exe
+    TARGET      := vx_app_tidl_seg
+    CPPSOURCES  := main.cpp
+    CPPSOURCES  += config/app_seg_cfg_params.cpp
 
-CSOURCES    := main.c
-CSOURCES    += app_pre_proc_module.c
-CSOURCES    += app_post_proc_module.c
+    CFLAGS += -Wno-unused-function -Wno-parentheses -Wno-sign-compare -Wno-format-truncation
 
-ifeq ($(HOST_COMPILER),GCC_LINUX)
-CFLAGS += -Wno-unused-function
-endif
+    ifeq ($(TARGET_CPU),x86_64)
 
-ifeq ($(TARGET_CPU),x86_64)
+        TARGETTYPE  := exe
 
-CSOURCES    += main_x86.c
+        include $(VISION_APPS_PATH)/apps/concerto_x86_64_inc.mak
 
-include $(VISION_APPS_PATH)/apps/concerto_x86_64_inc.mak
+        STATIC_LIBS += $(TIADALG_LIBS)
 
-IDIRS       += $(APP_KERNELS_IDIRS)
-IDIRS       += $(VISION_APPS_MODULES_IDIRS)
+    endif
 
-STATIC_LIBS += $(APP_KERNELS_LIBS)
-STATIC_LIBS += $(VISION_APPS_MODULES_LIBS)
+    ifeq ($(TARGET_OS),$(filter $(TARGET_OS), LINUX QNX))
+        ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53))
 
-STATIC_LIBS += $(TIADALG_LIBS)
+            TARGETTYPE  := exe
 
-endif
+            include $(VISION_APPS_PATH)/apps/concerto_mpu_inc.mak
 
-ifeq ($(TARGET_OS),$(filter $(TARGET_OS), LINUX QNX))
-ifeq ($(TARGET_CPU),$(filter $(TARGET_CPU), A72 A53))
-CSOURCES    += main_linux_arm.c
-include $(VISION_APPS_PATH)/apps/concerto_mpu_inc.mak
-endif
-endif
+        endif
+    endif
 
-IDIRS       += $(APP_KERNELS_IDIRS)
-IDIRS       += $(VISION_APPS_MODULES_IDIRS)
 
-STATIC_LIBS += $(APP_KERNELS_LIBS)
-STATIC_LIBS += $(VISION_APPS_MODULES_LIBS)
+ 	IDIRS       += $(APP_KERNELS_IDIRS)
+    IDIRS       += $(VISION_APPS_MODULES_IDIRS)
 
-ifeq ($(SOC),j722s)
-SKIPBUILD=1
-endif
+	STATIC_LIBS += $(IMAGING_LIBS)
+	STATIC_LIBS += $(APP_KERNELS_LIBS)
+	STATIC_LIBS += $(APP_KERNELS_UTILS_LIBS)
+    STATIC_LIBS += $(VISION_APPS_MODULES_LIBS)
 
-include $(FINALE)
+    ifeq ($(TARGET_OS),QNX)
+        SHARED_LIBS += c++ m
+    endif
 
+    include $(FINALE)
 endif

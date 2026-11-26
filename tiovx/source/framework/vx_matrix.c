@@ -18,14 +18,14 @@
 
 #include <vx_internal.h>
 
-VX_API_ENTRY vx_matrix VX_API_CALL vxCreateMatrix(vx_context context, vx_enum data_type, vx_size columns, vx_size rows)
+VX_API_ENTRY vx_matrix VX_API_CALL vxCreateMatrix(vx_context c, vx_enum data_type, vx_size columns, vx_size rows)
 {
     vx_matrix matrix = NULL;
     vx_reference ref = NULL;
     vx_size dim = 0U;
     tivx_obj_desc_matrix_t *obj_desc = NULL;
 
-    if(ownIsValidContext(context) == (vx_bool)vx_true_e)
+    if(ownIsValidContext(c) == (vx_bool)vx_true_e)
     {
         if ((data_type == (vx_enum)VX_TYPE_INT8) || (data_type == (vx_enum)VX_TYPE_UINT8))
         {
@@ -55,8 +55,8 @@ VX_API_ENTRY vx_matrix VX_API_CALL vxCreateMatrix(vx_context context, vx_enum da
 
         if ((rows != 0U) && (columns != 0U) && (dim != 0UL))
         {
-            ref = ownCreateReference(context, (vx_enum)VX_TYPE_MATRIX,
-                (vx_enum)VX_EXTERNAL, &context->base);
+            ref = ownCreateReference(c, (vx_enum)VX_TYPE_MATRIX,
+                (vx_enum)VX_EXTERNAL, &c->base);
 
             if ((vxGetStatus(ref) == (vx_status)VX_SUCCESS) &&
                 (ref->type == (vx_enum)VX_TYPE_MATRIX))
@@ -74,10 +74,10 @@ VX_API_ENTRY vx_matrix VX_API_CALL vxCreateMatrix(vx_context context, vx_enum da
                 {
                     (void)vxReleaseMatrix(&matrix);
 
-                    vxAddLogEntry(&context->base, (vx_status)VX_ERROR_NO_RESOURCES,
+                    vxAddLogEntry(&c->base, (vx_status)VX_ERROR_NO_RESOURCES,
                         "Could not allocate matrix object descriptor\n");
                     matrix = (vx_matrix)ownGetErrorObject(
-                        context, (vx_status)VX_ERROR_NO_RESOURCES);
+                        c, (vx_status)VX_ERROR_NO_RESOURCES);
                     VX_PRINT(VX_ZONE_ERROR, "Could not allocate matrix object descriptor\n");
                     VX_PRINT(VX_ZONE_ERROR, "Exceeded max object descriptors available.\n");
                     VX_PRINT_BOUND_ERROR("TIVX_PLATFORM_MAX_OBJ_DESC_SHM_INST");
@@ -321,14 +321,14 @@ VX_API_ENTRY vx_matrix VX_API_CALL vxCreateMatrixFromPattern(
 }
 
 VX_API_ENTRY vx_status VX_API_CALL vxQueryMatrix(
-    vx_matrix matrix, vx_enum attribute, void *ptr, vx_size size)
+    vx_matrix mat, vx_enum attribute, void *ptr, vx_size size)
 {
     vx_status status = (vx_status)VX_SUCCESS;
     tivx_obj_desc_matrix_t *obj_desc = NULL;
 
-    if ((ownIsValidSpecificReference(vxCastRefFromMatrix(matrix), (vx_enum)VX_TYPE_MATRIX) == (vx_bool)vx_false_e)
+    if ((ownIsValidSpecificReference(vxCastRefFromMatrix(mat), (vx_enum)VX_TYPE_MATRIX) == (vx_bool)vx_false_e)
         ||
-        (matrix->base.obj_desc == NULL)
+        (mat->base.obj_desc == NULL)
         )
     {
         VX_PRINT(VX_ZONE_ERROR, "Invalid matrix reference\n");
@@ -336,7 +336,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryMatrix(
     }
     else
     {
-        obj_desc = (tivx_obj_desc_matrix_t *)matrix->base.obj_desc;
+        obj_desc = (tivx_obj_desc_matrix_t *)mat->base.obj_desc;
         switch (attribute)
         {
             case (vx_enum)VX_MATRIX_TYPE:
@@ -419,10 +419,10 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryMatrix(
     return status;
 }
 
-VX_API_ENTRY vx_status VX_API_CALL vxReleaseMatrix(vx_matrix *matrix)
+VX_API_ENTRY vx_status VX_API_CALL vxReleaseMatrix(vx_matrix *mat)
 {
     return (ownReleaseReferenceInt(
-        vxCastRefFromMatrixP(matrix), (vx_enum)VX_TYPE_MATRIX, (vx_enum)VX_EXTERNAL, NULL));
+        vxCastRefFromMatrixP(mat), (vx_enum)VX_TYPE_MATRIX, (vx_enum)VX_EXTERNAL, NULL));
 }
 
 VX_API_ENTRY vx_status VX_API_CALL vxCopyMatrix(

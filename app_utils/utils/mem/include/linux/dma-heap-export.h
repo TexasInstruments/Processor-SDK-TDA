@@ -1,0 +1,51 @@
+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
+/*
+ * DMABUF Heaps Export Userspace API
+ *
+ * Copyright (C) 2026 Texas Instruments Incorporated - http://www.ti.com/
+ */
+#ifndef _UAPI_LINUX_DMABUF_HEAP_EXPORT_H
+#define _UAPI_LINUX_DMABUF_HEAP_EXPORT_H
+
+#include <linux/dma-heap.h>
+
+#ifndef DMA_HEAP_IOCTL_EXPORT
+
+#include <linux/ioctl.h>
+#include <linux/types.h>
+
+/**
+ * DOC: DMABUF Heaps Userspace API
+ */
+
+/**
+ * struct dma_heap_export_data - metadata passed from userspace for export
+ * @offset:		offset from heap base
+ * @len:		size of the allocation
+ * @fd:			will be populated with a fd which provides the
+ *			handle to the allocated dma-buf
+ * @fd_flags:		file descriptor flags used when allocating
+ * @heap_flags:		flags passed to heap
+ *
+ * Provided by userspace as an argument to the ioctl
+ */
+struct dma_heap_export_data {
+	__u64 offset;
+	__u64 len;
+	__u32 fd;
+	__u32 fd_flags;
+	__u64 heap_flags;
+};
+
+/**
+ * DOC: DMA_HEAP_IOCTL_EXPORT - allocate memory at offset
+ *
+ * Takes a dma_heap_export_data struct and returns it with the fd field
+ * populated with the dmabuf handle of the export.
+ */
+#define DMA_HEAP_IOCTL_EXPORT	_IOWR(DMA_HEAP_IOC_MAGIC, 0x1,\
+				      struct dma_heap_export_data)
+
+#endif /* DMA_HEAP_IOCTL_EXPORT */
+
+#endif /* _UAPI_LINUX_DMABUF_HEAP_EXPORT_H */

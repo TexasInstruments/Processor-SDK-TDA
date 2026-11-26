@@ -1413,7 +1413,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxReleaseDelay(vx_delay *delay);
  */
 VX_API_ENTRY vx_delay VX_API_CALL vxCreateDelay(vx_context context,
                               vx_reference exemplar,
-                              vx_size slots);
+                              vx_size num_slots);
 
 /*! \brief Retrieves a reference from a delay object.
  * \param [in] delay The reference to the delay object.
@@ -1778,7 +1778,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryThreshold(vx_threshold thresh, vx_enum
  * \param [in] data_type The unit format of the matrix. <tt>\ref VX_TYPE_UINT8</tt> or <tt>\ref VX_TYPE_INT32</tt> or <tt>\ref VX_TYPE_FLOAT32</tt>.
  * \param [in] columns The first dimensionality.
  * \param [in] rows The second dimensionality.
- * \returns An matrix reference <tt>\ref vx_matrix</tt>. Any possible errors preventing a 
+ * \returns An matrix reference <tt>\ref vx_matrix</tt>. Any possible errors preventing a
  * successful creation should be checked using <tt>\ref vxGetStatus</tt>.
  * \ingroup group_matrix
  */

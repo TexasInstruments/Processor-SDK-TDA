@@ -186,28 +186,78 @@ __attribute__ ((section(".bss:app_fileio_mem")))
 __attribute__ ((aligned(4096)))
         ;
 
-uint8_t g_tiovx_obj_desc_mem[TIOVX_OBJ_DESC_MEM_SIZE]
-__attribute__ ((section(".bss:tiovx_obj_desc_mem")))
-__attribute__ ((aligned(4096)))
-        ;
-
 uint8_t g_ipc_vring_mem[IPC_VRING_MEM_SIZE]
 __attribute__ ((section(".bss:ipc_vring_mem")))
 __attribute__ ((aligned(4096)))
         ;
 
+#ifdef ENABLE_TIOVX_HOST
+
+#if (ENABLE_TIOVX_HOST == 0U)
+#define TIOVX_HOST_OBJ_DESC_MEM_SIZE (TIOVX_OBJ_DESC_MEM_HOST0_SIZE)
+uint8_t g_tiovx_obj_desc_mem[TIOVX_HOST_OBJ_DESC_MEM_SIZE]
+__attribute__ ((section(".bss:tiovx_obj_desc_mem0")))
+__attribute__ ((aligned(4096)))
+        ;
+#endif /* #if (ENABLE_TIOVX_HOST == 0U) */
+
+#if (ENABLE_TIOVX_HOST == 1U)
+#define TIOVX_HOST_OBJ_DESC_MEM_SIZE (TIOVX_OBJ_DESC_MEM_HOST1_SIZE)
+uint8_t g_tiovx_obj_desc_mem[TIOVX_HOST_OBJ_DESC_MEM_SIZE]
+__attribute__ ((section(".bss:tiovx_obj_desc_mem1")))
+__attribute__ ((aligned(4096)))
+        ;
+#endif /* #if (ENABLE_TIOVX_HOST == 1U) */
+
+#if (ENABLE_TIOVX_HOST == 2U)
+#define TIOVX_HOST_OBJ_DESC_MEM_SIZE (TIOVX_OBJ_DESC_MEM_HOST2_SIZE)
+uint8_t g_tiovx_obj_desc_mem[TIOVX_HOST_OBJ_DESC_MEM_SIZE]
+__attribute__ ((section(".bss:tiovx_obj_desc_mem2")))
+__attribute__ ((aligned(4096)))
+        ;
+#endif /* #if (ENABLE_TIOVX_HOST == 2U) */
+
+#else /* #ifdef ENABLE_TIOVX_HOST */
+
+#if (TIOVX_REMOTE_HOST_ID == 0U)
+#define TIOVX_HOST_OBJ_DESC_MEM_SIZE (TIOVX_OBJ_DESC_MEM_HOST0_SIZE)
+uint8_t g_tiovx_obj_desc_mem[TIOVX_HOST_OBJ_DESC_MEM_SIZE]
+__attribute__ ((section(".bss:tiovx_obj_desc_mem0")))
+__attribute__ ((aligned(4096)))
+        ;
+#endif /* #if (TIOVX_REMOTE_HOST_ID == 0U) */
+
+#if (TIOVX_REMOTE_HOST_ID == 1U)
+#define TIOVX_HOST_OBJ_DESC_MEM_SIZE (TIOVX_OBJ_DESC_MEM_HOST1_SIZE)
+uint8_t g_tiovx_obj_desc_mem[TIOVX_HOST_OBJ_DESC_MEM_SIZE]
+__attribute__ ((section(".bss:tiovx_obj_desc_mem1")))
+__attribute__ ((aligned(4096)))
+        ;
+#endif /* #if (TIOVX_REMOTE_HOST_ID == 1U) */
+
+#if (TIOVX_REMOTE_HOST_ID == 2U)
+#define TIOVX_HOST_OBJ_DESC_MEM_SIZE (TIOVX_OBJ_DESC_MEM_HOST2_SIZE)
+uint8_t g_tiovx_obj_desc_mem[TIOVX_HOST_OBJ_DESC_MEM_SIZE]
+__attribute__ ((section(".bss:tiovx_obj_desc_mem2")))
+__attribute__ ((aligned(4096)))
+        ;
+#endif /* #if (TIOVX_REMOTE_HOST_ID == 2U) */
+
+#endif /* #ifdef ENABLE_TIOVX_HOST */
+
 extern app_perf_registration_t * perf_fxns_list;
 
-extern core_config_t core_config[];
-extern uint8_t num_cores;
+extern core_config_t g_platform_utils_core_config[];
+extern uint8_t g_platform_utils_num_cores;
 
-extern soc_mem_config_t mem_regions[];
-extern uint8_t num_mem_regions;
+extern soc_mem_config_t g_platform_utils_mem_regions[];
+extern uint8_t g_platform_utils_num_mem_regions;
 
 static void appRegisterOpenVXTargetKernels();
 static void appUnRegisterOpenVXTargetKernels();
 void appRtosTestRegister();
 void appRtosTestUnRegister();
+void appConfigureRat(void);
 
 #ifdef ENABLE_UART
 void appLogDeviceWrite(char *string, uint32_t max_size)
@@ -267,65 +317,19 @@ static int memInit()
     mem_init_prm.shared2TargetFxn = appShared2TargetConversion;
     mem_init_prm.target2SharedFxn = appTarget2SharedConversion;
 
-    for (i = 0; i < num_mem_regions; i++)
+    for (i = 0; i < g_platform_utils_num_mem_regions; i++)
     {
-        heap_prm = &mem_init_prm.heap_info[mem_regions[i].heap_id];
-        heap_prm->base = mem_regions[i].base;
-        strncpy(heap_prm->name, mem_regions[i].name, APP_MEM_HEAP_NAME_MAX);
-        heap_prm->size = mem_regions[i].size;
-        heap_prm->flags = mem_regions[i].flag;
+        heap_prm = &mem_init_prm.heap_info[g_platform_utils_mem_regions[i].heap_id];
+        heap_prm->base = g_platform_utils_mem_regions[i].base;
+        strncpy(heap_prm->name, g_platform_utils_mem_regions[i].name, APP_MEM_HEAP_NAME_MAX);
+        heap_prm->size = g_platform_utils_mem_regions[i].size;
+        heap_prm->flags = g_platform_utils_mem_regions[i].flag;
     }
 
     status = appMemInit(&mem_init_prm);
 
     #if defined(R5F)
-    #if defined(CPU_mcu1_0)
-    status = appMemSetRatRegs((CSL_ratRegs *)(CSL_MCU_R5FSS0_RAT_CFG_BASE));
-    #else
-    status = appMemSetRatRegs((CSL_ratRegs *)(CSL_R5FSS0_RAT_CFG_BASE));
-    #endif
-    APP_ASSERT_SUCCESS(status);
-    #endif
-
-    #if defined(CPU_mcu2_0) || defined(CPU_mcu2_1) || defined(CPU_mcu4_0)
-    app_mem_rat_prm_t l3_mem_rat_prm;
-    #ifdef L3_MEM_SIZE
-
-    l3_mem_rat_prm.size        = L3_MEM_SIZE;
-
-    #if defined(CPU_mcu2_0)
-    l3_mem_rat_prm.baseAddress       = MAIN_OCRAM_MCU2_0_ADDR;
-    l3_mem_rat_prm.translatedAddress = MAIN_OCRAM_MCU2_0_PHYS_ADDR;
-    #elif defined(CPU_mcu2_1)
-    l3_mem_rat_prm.baseAddress       = MAIN_OCRAM_MCU2_1_ADDR;
-    l3_mem_rat_prm.translatedAddress = MAIN_OCRAM_MCU2_1_PHYS_ADDR;
-    #elif defined(CPU_mcu4_0)
-    l3_mem_rat_prm.baseAddress       = MAIN_OCRAM_MCU4_0_ADDR;
-    l3_mem_rat_prm.translatedAddress = MAIN_OCRAM_MCU4_0_PHYS_ADDR;
-    #endif
-
-    status = appMemAddrTranslate(&l3_mem_rat_prm);
-    APP_ASSERT_SUCCESS(status);
-    #endif
-    #endif
-
-    #if defined(R5F)
-    app_mem_rat_prm_t ddr_mem_rat_prm;
-    /* Only programming RAT if the physical address is in high mem */
-    if (DDR_SHARED_MEM_PHYS_ADDR > 0xFFFFFFFF)
-    {
-        /* Making the DDR_SHARED_MEM size aligned to 1GB by adding the UBOOT_RELOC_MEM_SIZE.                        */
-        /* The UBOOT_RELOC_MEM_SIZE was subtracted from DDR_SHARED_MEM size while creating the memory map for J784S4*/
-        /* This was done because the 1GB DDR_SHARED_MEM size was overlapping the UBOOT_RELOC_MEM_ADDR at the end of */
-        /* low 2GB memory. For more details on this, please refer to 3.1.1.1.6. Available RAM for image download    */
-        /* section in processor-sdk-linux documentation                                                             */
-        ddr_mem_rat_prm.size              = DDR_SHARED_MEM_SIZE + UBOOT_RELOC_MEM_SIZE;
-        ddr_mem_rat_prm.baseAddress       = DDR_SHARED_MEM_ADDR;
-        ddr_mem_rat_prm.translatedAddress = DDR_SHARED_MEM_PHYS_ADDR;
-
-        status = appMemAddrTranslate(&ddr_mem_rat_prm);
-        APP_ASSERT_SUCCESS(status);
-    }
+    appConfigureRat();
     #endif
 
     #if defined(R5F)
@@ -368,15 +372,15 @@ static int ipcInit()
         ipc_init_prm.enable_tiovx_ipc_announce = 0;
     }
 
-    for (i = 0; i < num_cores; i++)
+    for (i = 0; i < g_platform_utils_num_cores; i++)
     {
-        ipc_init_prm.enabled_cpu_id_list[i] = core_config[i].cpu;
+        ipc_init_prm.enabled_cpu_id_list[i] = g_platform_utils_core_config[i].cpu;
     }
-    ipc_init_prm.num_cpus = num_cores;
+    ipc_init_prm.num_cpus = g_platform_utils_num_cores;
 
     ipc_init_prm.self_cpu_id = CPU_ID;
     ipc_init_prm.tiovx_obj_desc_mem = (void*)g_tiovx_obj_desc_mem;
-    ipc_init_prm.tiovx_obj_desc_mem_size = TIOVX_OBJ_DESC_MEM_SIZE;
+    ipc_init_prm.tiovx_obj_desc_mem_size = TIOVX_HOST_OBJ_DESC_MEM_SIZE;
     ipc_init_prm.tiovx_log_rt_mem      = (void*)TIOVX_LOG_RT_MEM_ADDR;
     ipc_init_prm.tiovx_log_rt_mem_size = TIOVX_LOG_RT_MEM_SIZE;
     ipc_init_prm.ipc_vring_mem = g_ipc_vring_mem;
@@ -421,9 +425,9 @@ static int logInit()
     app_log_init_prm_t log_init_prm;
     appLogInitPrmSetDefault(&log_init_prm);
 
-    for (i = 0; i < num_cores; i++)
+    for (i = 0; i < g_platform_utils_num_cores; i++)
     {
-        log_init_prm.log_rd_cpu_enable[i] = core_config[i].enable_log_rd_cpu;
+        log_init_prm.log_rd_cpu_enable[i] = g_platform_utils_core_config[i].enable_log_rd_cpu;
         strncpy(log_init_prm.self_cpu_name, CPU_NAME, APP_LOG_MAX_CPU_NAME);
     }
     log_init_prm.shared_mem = &g_app_log_shared_mem;
@@ -456,9 +460,9 @@ static int fileIOInit()
     app_fileio_init_prm_t fileio_init_prm;
     appFileIOInitPrmSetDefault(&fileio_init_prm);
 
-    for (i = 0; i < num_cores; i++)
+    for (i = 0; i < g_platform_utils_num_cores; i++)
     {
-        fileio_init_prm.fileio_rd_cpu_enable[i] = core_config[i].enable_fileio;
+        fileio_init_prm.fileio_rd_cpu_enable[i] = g_platform_utils_core_config[i].enable_fileio;
         strncpy(fileio_init_prm.self_cpu_name, CPU_NAME, APP_LOG_MAX_CPU_NAME);
     }
     fileio_init_prm.shared_mem = &g_app_fileio_shared_mem;
@@ -485,11 +489,11 @@ static void fileIODeInit()
 {
     uint8_t i = 0;
 
-    for (i = 0; i < num_cores; i++)
+    for (i = 0; i < g_platform_utils_num_cores; i++)
     {
-        if (core_config[i].cpu == CPU_ID)
+        if (g_platform_utils_core_config[i].cpu == CPU_ID)
         {
-            if (core_config[i].enable_fileio)
+            if (g_platform_utils_core_config[i].enable_fileio)
             {
                 appFileIOWrDeInit();
             }
@@ -830,8 +834,6 @@ void appDeInit()
     appRemoteServiceDeInit();
     appIpcDeInit();
     #endif
-
-    appMemDeInit();
 
     #ifdef ENABLE_PRINTF_REDIRECT
     appLogCioDeInit();

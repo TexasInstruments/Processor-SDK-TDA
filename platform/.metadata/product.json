@@ -1,0 +1,75 @@
+{
+  "name": "Memory Configurator",
+  "displayName": "Memory Configurator",
+  "version": "01.00.00",
+  "includePaths": [
+    "../tools",
+    "../rtos/j721e",
+    "../rtos/j721s2",
+    "../rtos/j742s2",
+    "../rtos/j784s4"
+  ],
+  "components": [
+    "/memory_configurator/components"
+  ],
+  "devices": [
+    "J721S2_TDA4VE_TDA4AL_TDA4VL_AM68x",
+    "J721E_DRA829_TDA4VM_AM752x",
+    "J742S2",
+    "J784S4_TDA4AP_TDA4VP_TDA4AH_TDA4VH_AM69x"
+  ],
+  "contexts": {
+    "J721S2_TDA4VE_TDA4AL_TDA4VL_AM68x": [
+      "mcu-r5fss0-0",
+      "r5fss0-0",
+      "r5fss0-1",
+      "r5fss1-0",
+      "r5fss1-1",
+      "c71ss0-0",
+      "c71ss1-0"
+    ],
+    "J721E_DRA829_TDA4VM_AM752x": [
+      "mcu-r5fss0-0",
+      "r5fss0-0",
+      "r5fss0-1",
+      "r5fss1-0",
+      "r5fss1-1",
+      "c66ss0-0",
+      "c66ss1-0",
+      "c71ss0-0"
+    ],
+    "J742S2": [
+      "mcu-r5fss0-0",
+      "r5fss0-0",
+      "r5fss0-1",
+      "r5fss1-0",
+      "r5fss1-1",
+      "r5fss2-0",
+      "r5fss2-1",
+      "c71ss0-0",
+      "c71ss1-0",
+      "c71ss2-0"
+    ],
+    "J784S4_TDA4AP_TDA4VP_TDA4AH_TDA4VH_AM69x": [
+      "mcu-r5fss0-0",
+      "r5fss0-0",
+      "r5fss0-1",
+      "r5fss1-0",
+      "r5fss1-1",
+      "r5fss2-0",
+      "r5fss2-1",
+      "c71ss0-0",
+      "c71ss1-0",
+      "c71ss2-0",
+      "c71ss3-0"
+    ]
+  },
+  "pinmuxUIOptions": {
+    "group": "merged",
+    "hidePeripheralTab": false,
+    "showPinTable": true,
+    "showSignals": true,
+    "showUsed": true
+  },
+  "minToolVersion": "1.26.2"
+}

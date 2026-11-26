@@ -265,13 +265,23 @@ typedef struct {
 
 /**
  * \brief TIOVX resource usage information
+ *
+ * note, this information is queried from the remote cores by the MPU to update
+ *       the global resource logging mechanism in TIOVX
  */
 typedef struct {
 
-    uint32_t targets_in_cpu;
-    uint32_t max_targets_per_kernel;
-    uint32_t target_kernel_instance_max;
-    uint32_t target_kernel_max;
+    uint32_t targets_in_cpu;               /**< max number of TIOVX targets on this CPU currently allocated/in use */
+    uint32_t max_targets_per_kernel;       /**< max number of targets for a single kernel currently allocated/in use*/
+    uint32_t target_kernel_instance_max;   /**< max number of target kernel instances currently allocated/in use */
+    uint32_t target_kernel_max;            /**< max number of target kernels currently allocated/in use */
+    uint32_t osal_semaphore_max_objects;   /**< max number of OSAL semaphore objects currently allocated/in use */
+    uint32_t osal_task_max_objects;        /**< max number of OSAL task objects currently allocated/in use */
+
+    uint32_t rtos_max_semaphorep;          /**< max number of RTOS semaphore objects available */
+    uint32_t rtos_max_taskp;               /**< max number of RTOS task objects available */
+    uint32_t rtos_sem_object_types[2][2];  /**< array of rtos semaphore multiplication factors */
+    uint32_t rtos_task_object_types[2][2]; /**< array of rtos task multiplication factors */
 
 } app_perf_stats_tiovx_stats_t;
 
@@ -707,6 +717,15 @@ int32_t appPerfStatsDdrStatsResetAll();
  * \return 0 on success
  */
 void appPerfStatsResetAll();
+
+/**
+ * \brief Update RTOS OSAL semaphore/task object and pool byte sizes
+ *
+ *        RTOS API
+ *
+ * \param tiovx_stats [in,out] tiovx statistics information
+ */
+void appPerfStatsUpdateOSObjectSizes(app_perf_stats_tiovx_stats_t *tiovx_stats);
 
 /* @} */
 

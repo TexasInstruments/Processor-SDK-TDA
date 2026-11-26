@@ -12,7 +12,6 @@ ifeq ($(TARGET_CPU), $(filter $(TARGET_CPU), A72 A53 x86_64 A720))
   CSOURCES    += vx_dl_post_proc_target.c
 
   ifeq ($(SOC), $(filter $(SOC), j784s4 tda54))
-    CSOURCES    += vx_dl_bev_pre_proc_armv8_target.c
     CSOURCES    += vx_dl_bev_post_proc_target.c
     CSOURCES    += vx_dl_bev_cam_post_proc_target.c
   endif

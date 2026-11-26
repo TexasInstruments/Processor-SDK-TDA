@@ -12,7 +12,9 @@ ifeq ($(TARGET_CPU),x86_64)
     IMAGING_IDIRS += $(IMAGING_PATH)/sensor_drv/include
 
     VISION_APPS_MODULES_IDIRS =
+    VISION_APPS_MODULES_IDIRS += $(VISION_APPS_PATH)/core/include
     VISION_APPS_MODULES_IDIRS += $(VISION_APPS_PATH)/modules/include
+    VISION_APPS_MODULES_IDIRS += $(VISION_APPS_PATH)/utils/cfg_parser/include
 
     APP_KERNELS_IDIRS =
     APP_KERNELS_IDIRS += $(APP_KERNELS_PATH)/kernels
@@ -43,7 +45,6 @@ ifeq ($(TARGET_CPU),x86_64)
     PLATFORM_IDIRS += $(PLATFORM_PATH)
 
     IDIRS += $(PLATFORM_IDIRS)
-
 
     LDIRS       += $(VISION_APPS_PATH)/out/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
     LDIRS       += $(PLATFORM_PATH)/lib/PC/$(TARGET_CPU)/$(TARGET_OS)/$(TARGET_BUILD)
@@ -126,9 +127,7 @@ ifeq ($(TARGET_CPU),x86_64)
         TIOVX_LIBS += vx_kernels_openvx_core vx_target_kernels_openvx_core
         TIOVX_LIBS += vx_kernels_openvx_ext vx_target_kernels_openvx_ext
         TIOVX_LIBS += vx_target_kernels_tutorial
-        ifneq ($(SOC), tda54)
-            TIOVX_LIBS += vx_target_kernels_add_img
-        endif
+        TIOVX_LIBS += vx_target_kernels_add_img
         TIOVX_LIBS += vx_utils
         TIOVX_LIBS += vx_kernels_tidl
 
@@ -196,6 +195,14 @@ ifeq ($(TARGET_CPU),x86_64)
         PTK_LIBS += ptk_base
         PTK_LIBS += ptk_algos
 
+
+
+        VISION_APPS_MODULES_LIBS  =
+        VISION_APPS_MODULES_LIBS += vx_app_modules
+        VISION_APPS_MODULES_LIBS += vx_app_modules_core
+        VISION_APPS_MODULES_LIBS += app_utils_cfg_parser
+
+
         TEST_LIBS += vx_tiovx_tests vx_tiovx_internal_tests vx_conformance_tests vx_conformance_tests_testmodule
         ifeq ($(SOC),$(filter $(SOC), j721e j722s j721s2 j784s4 j742s2))
             TEST_LIBS += vx_target_kernels_vpac_aewb
@@ -224,7 +231,7 @@ ifeq ($(TARGET_CPU),x86_64)
         ifneq ($(SOC), am62a)
             APP_KERNELS_LIBS += vx_target_kernels_img_proc_mcu
         endif
-        ifeq ($(SOC),$(filter $(SOC), j721s2 j784s4 j742s2))
+        ifeq ($(SOC),$(filter $(SOC), j721e j721s2 j784s4 j742s2))
             APP_KERNELS_LIBS += vx_target_kernels_img_proc_c7x
             APP_KERNELS_LIBS += vx_target_kernels_img_proc_c6x
         endif
@@ -233,6 +240,7 @@ ifeq ($(TARGET_CPU),x86_64)
         MMA_LIBS += mmalib_cn_x86_64
         MMA_LIBS += mmalib_x86_64
         MMA_LIBS += common_x86_64
+        MMA_LIBS += perfEst_x86_64
 
         TIDL_LIBS =
         TIDL_LIBS += tidl_algo
@@ -263,7 +271,6 @@ ifeq ($(TARGET_CPU),x86_64)
 
         APP_KERNELS_UTILS_LIBS =
         APP_KERNELS_UTILS_LIBS += vx_kernel_utils
-
         MCU_PLUS_SDK_LIBS =
         MCU_SDK_LIBS =
 
@@ -296,6 +303,8 @@ ifeq ($(TARGET_CPU),x86_64)
         STATIC_LIBS += $(VISION_APPS_UTILS_LIBS)
         STATIC_LIBS += $(APP_KERNELS_LIBS)
         STATIC_LIBS += $(APP_KERNELS_UTILS_LIBS)
+        STATIC_LIBS += $(TIADALG_LIBS)
+
 
         ifeq ($(SOC), j722s)
             STATIC_LIBS += C7524-MMA2_256-host-emulation

@@ -309,8 +309,6 @@ void IpcUtils_HeapFree(IpcUtils_HeapHandle *pHndl, void* block, uint32_t size)
 {
     if ((NULL != pHndl) && (NULL != block))
     {
-        /* Will flag MISRA C Violation for tempBufPtr casting,
-            no fix? */
         IpcUtils_Qenqueue(&pHndl->qHandle, (IpcUtils_QElem *) block);
         pHndl->numFreeBlocks++;
     }

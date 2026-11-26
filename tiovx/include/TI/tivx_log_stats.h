@@ -90,17 +90,29 @@ extern "C" {
  */
 #define TIVX_RESOURCE_NAME_MAX (39u)
 
+/*! \brief Number of RTOS used values ofa TIOVX perf stats object
+ *
+ * \ingroup group_tivx_log_resource
+ */
+#define TIVX_TARGET_RTOS_USED_COUNT (6u)
+
+/*! \brief Number of RTOS max values of a TIOVX perf stats object
+ *
+ * \ingroup group_tivx_log_resource
+ */
+#define TIVX_TARGET_RTOS_MAX_COUNT (2u)
+
 /*! \brief Number of resources of a TIOVX perf stats object
  *
  * \ingroup group_tivx_log_resource
  */
-#define TIVX_TARGET_RESOURCE_COUNT (4u)
+#define TIVX_TARGET_RESOURCE_COUNT (TIVX_TARGET_RTOS_USED_COUNT+TIVX_TARGET_RTOS_MAX_COUNT)
 
 /*! \brief Size of TIOVX resource statistics table
  *
  * \ingroup group_tivx_log_resource
  */
-#define TIVX_RESOURCE_STATS_TABLE_SIZE (63u)
+#define TIVX_RESOURCE_STATS_TABLE_SIZE (65u)
 
 
 /*! \brief Struct containing config parameters of given static resource. Allows

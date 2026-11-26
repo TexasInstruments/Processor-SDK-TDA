@@ -74,7 +74,7 @@ static uint8_t gInitCount = 0U;
 static void tivxHostInitLocal(void);
 static void tivxHostDeInitLocal(void);
 
-#if defined(LINUX) || defined(QNX)
+#if defined(HLOS)
 #include <pthread.h>
 
 /* Mutex for controlling access to Init/De-Init. */
@@ -99,7 +99,8 @@ void tivxHostDeInit(void)
     (void)pthread_mutex_unlock(&g_mutex);
 }
 
-#else
+#else /* #if defined(HLOS) */
+
 void tivxHostInit(void)
 {
     tivxHostInitLocal();
@@ -109,7 +110,7 @@ void tivxHostDeInit(void)
 {
     tivxHostDeInitLocal();
 }
-#endif // defined(LINUX) || defined(QNX)
+#endif /* #if defined(HLOS) */
 
 static void tivxHostInitLocal(void)
 {

@@ -63,11 +63,7 @@ By default this debug application is not part of DM firmware, We should enable t
    make -sj32 -C examples/drivers/sciclient/sciclient_get_version/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/ ENABLE_DM_TRACE=yes
    \endcode
 
-4.Copy the generated .out and .rprc binaries from:
-
-{MCU_PLUS_SDK_PATH}/examples/drivers/sciclient/sciclient_get_version/j722s-evm/wkup-r5fss0-0_freertos/ti-arm-clang/ to {MCU_PLUS_SDK_PATH}/tools/sysfw/sciserver_binary/j722s/
-
-5.Now build SBL and your DM application and Load them into your SD card.
+4.Now build SBL and your DM application and Load them into your SD card.
 
 **Follow these steps to enable this application in Linux:**
 

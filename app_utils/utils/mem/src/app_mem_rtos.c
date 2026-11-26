@@ -1075,9 +1075,9 @@ int32_t appMemSetRatRegs(CSL_ratRegs *pRatRegs)
 
 #endif
 
-void *appMemMap(void *phys_ptr, uint32_t size)
+void *appMemMap(void *phys_addr, uint32_t size)
 {
-    return phys_ptr; /* phys == virtual in rtos */
+    return phys_addr; /* phys == virtual in rtos */
 }
 
 int32_t appMemUnMap(void *virt_ptr, uint32_t size)

@@ -384,9 +384,11 @@ static vx_status ownGraphFindAndAddDataReferences(vx_graph graph)
 
     for(node_cur_idx=0; node_cur_idx<graph->num_nodes; node_cur_idx++)
     {
+        uint32_t num_node_params;
         node_cur = graph->nodes[node_cur_idx];
+        num_node_params = ownNodeGetNumParameters(node_cur);
 
-        for(prm_cur_idx=0; prm_cur_idx<ownNodeGetNumParameters(node_cur); prm_cur_idx++)
+        for(prm_cur_idx=0; prm_cur_idx<num_node_params; prm_cur_idx++)
         {
             ref = ownNodeGetParameterRef(node_cur, prm_cur_idx);
             prm_dir = (uint32_t)ownNodeGetParameterDir(node_cur, prm_cur_idx);
@@ -951,8 +953,12 @@ static vx_status ownGraphCalcInAndOutNodes(vx_graph graph)
     vx_reference ref1, ref2;
     vx_status status = (vx_status)VX_SUCCESS;
 
-    for (node_cur_idx = 0; (node_cur_idx < graph->num_nodes) && ((vx_status)VX_SUCCESS == status); node_cur_idx++)
+    for (node_cur_idx = 0; node_cur_idx < graph->num_nodes; node_cur_idx++)
     {
+        if ((vx_status)VX_SUCCESS != status)
+        {
+            break;
+        }
         node_cur = graph->nodes[node_cur_idx];
         uint32_t num_node_params = ownNodeGetNumParameters(node_cur);
 
@@ -965,13 +971,17 @@ static vx_status ownGraphCalcInAndOutNodes(vx_graph graph)
             /* HARD limit on the number of kernel parameters that can be processed */
             VX_PRINT(VX_ZONE_ERROR, "No more than TIVX_KERNEL_MAX_PARAMS parameters are allowed per kernel!");
             status = (vx_status)VX_ERROR_NO_RESOURCES;
+            num_node_params = 0;
         }
 /* LDRA_JUSTIFY_END */
         for (prm_cur_idx = 0;
-             (prm_cur_idx < num_node_params) &&
-               ((vx_status)VX_SUCCESS == status);
+             prm_cur_idx < num_node_params;
              prm_cur_idx++)
         {
+            if ((vx_status)VX_SUCCESS != status)
+            {
+                break;
+            }
             prm_cur_dir = (uint32_t)ownNodeGetParameterDir(node_cur, prm_cur_idx);
             ref1 = ownNodeGetParameterRef(node_cur, prm_cur_idx);
             if( (ref1) && ((prm_cur_dir == (uint32_t)VX_OUTPUT) || (prm_cur_dir == (uint32_t)VX_BIDIRECTIONAL)) )
@@ -987,14 +997,23 @@ static vx_status ownGraphCalcInAndOutNodes(vx_graph graph)
                     VX_PRINT(VX_ZONE_ERROR,"Cannot write to uniform image at node index %d failed\n", node_cur_idx);
                 }
                 /* for each output, see if it matches any node input data */
-                for (node_next_idx = 0; (node_next_idx < graph->num_nodes) && ((vx_status)VX_SUCCESS == status); node_next_idx++)
+                for (node_next_idx = 0; node_next_idx < graph->num_nodes; node_next_idx++)
                 {
+                    if ((vx_status)VX_SUCCESS != status)
+                    {
+                        break;
+                    }
+                    uint32_t num_next_params;
                     node_next = graph->nodes[node_next_idx];
+                    num_next_params = ownNodeGetNumParameters(node_next);
                     for (prm_next_idx = 0;
-                         (prm_next_idx < ownNodeGetNumParameters(node_next)) &&
-                           ((vx_status)VX_SUCCESS == status);
+                         prm_next_idx < num_next_params;
                          prm_next_idx++)
                     {
+                        if ((vx_status)VX_SUCCESS != status)
+                        {
+                            break;
+                        }
                         prm_next_dir = (uint32_t)ownNodeGetParameterDir(node_next, prm_next_idx);
                         ref2 = ownNodeGetParameterRef(node_next, prm_next_idx);
                         if (ref2 != NULL)
@@ -1062,15 +1081,20 @@ static vx_status ownGraphCalcInAndOutNodes(vx_graph graph)
                                        the output parameter node by the bidirectional parameter node in the in node list */
                                     ++biputs_attached;
                                     uint32_t i;
-                                    for (i = 0; (i < ownNodeGetNumOutNodes(node_cur)) && ((vx_status)VX_SUCCESS == status); ++i)
+                                    uint32_t num_out_nodes = ownNodeGetNumOutNodes(node_cur);
+                                    for (i = 0; i < num_out_nodes; ++i)
                                     {
+                                        if ((vx_status)VX_SUCCESS != status)
+                                        {
+                                            break;
+                                        }
                                         vx_node out_node = ownNodeGetNextNode(node_cur, i);
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
 <justification start> TIOVX_BRANCH_COVERAGE_TIVX_GRAPH_VERIFY_UBR023
 <justification end>*/
                                         if ((vx_node)NULL != out_node)
-/* LDRA_JUSTIFY_END */                 
+/* LDRA_JUSTIFY_END */
                                         {
                                           status = ownNodeReplaceInNode(out_node, node_cur, node_next);
                                         }
@@ -1179,8 +1203,12 @@ static vx_status ownGraphCalcHeadAndLeafNodes(vx_graph graph)
     graph->num_head_nodes = 0;
     graph->num_leaf_nodes = 0;
 
-    for(i=0; (i<graph->num_nodes) && (status == (vx_status)VX_SUCCESS); i++)
+    for(i=0; i<graph->num_nodes; i++)
     {
+        if ((vx_status)VX_SUCCESS != status)
+        {
+            break;
+        }
         node = graph->nodes[i];
 
 /* LDRA_JUSTIFY_START
@@ -1293,9 +1321,11 @@ static vx_status ownGraphAllocateDataObjects(vx_graph graph)
 
     for(node_cur_idx=0; node_cur_idx<graph->num_nodes; node_cur_idx++)
     {
+        uint32_t num_node_params;
         node_cur = graph->nodes[node_cur_idx];
+        num_node_params = ownNodeGetNumParameters(node_cur);
 
-        for(prm_cur_idx=0; prm_cur_idx<ownNodeGetNumParameters(node_cur); prm_cur_idx++)
+        for(prm_cur_idx=0; prm_cur_idx<num_node_params; prm_cur_idx++)
         {
             ref = ownNodeGetParameterRef(node_cur, prm_cur_idx);
 
@@ -1356,9 +1386,11 @@ static void ownGraphLinkArrayElements(vx_graph graph)
      */
     for(node_id=0; node_id<graph->num_nodes; node_id++)
     {
+        uint32_t num_params;
         node = graph->nodes[node_id];
+        num_params = ownNodeGetNumParameters(node);
 
-        for(prm_id=0; prm_id<ownNodeGetNumParameters(node); prm_id++)
+        for(prm_id=0; prm_id<num_params; prm_id++)
         {
             vx_reference ref;
 
@@ -1389,9 +1421,11 @@ static void ownGraphLinkDataReferenceQueuesToNodeIndex(vx_graph graph,
      */
     for(node_id=0; node_id<graph->num_nodes; node_id++)
     {
+        uint32_t num_params;
         node = graph->nodes[node_id];
+        num_params = ownNodeGetNumParameters(node);
 
-        for(prm_id=0; prm_id<ownNodeGetNumParameters(node); prm_id++)
+        for(prm_id=0; prm_id<num_params; prm_id++)
         {
             vx_reference ref;
 
@@ -2436,11 +2470,13 @@ static vx_status ownGraphNodePipeline(vx_graph graph)
             for(node_id=0; node_id<graph->num_nodes; node_id++)
             {
                 uint32_t prm_id;
+                uint32_t num_params;
                 vx_node node;
 
                 node = graph->nodes[node_id];
+                num_params = ownNodeGetNumParameters(node);
 
-                for(prm_id=0; prm_id<ownNodeGetNumParameters(node); prm_id++)
+                for(prm_id=0; prm_id<num_params; prm_id++)
                 {
                     status = ownGraphAddDataRefQ(graph, node, prm_id);
 /* LDRA_JUSTIFY_START
@@ -2487,8 +2523,13 @@ VX_API_ENTRY vx_status VX_API_CALL vxVerifyGraph(vx_graph graph)
         status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
     }
 
-    for (i = 0; (i < TIVX_KERNEL_MAX_PARAMS) && ((vx_status)VX_SUCCESS == status); i ++)
+    for (i = 0; i < TIVX_KERNEL_MAX_PARAMS; i ++)
     {
+        if ((vx_status)VX_SUCCESS != status)
+        {
+            break;
+        }
+
         meta[i] = ownCreateMetaFormat(graph->base.context);
 
         /* This should not fail at all */

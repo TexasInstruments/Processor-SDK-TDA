@@ -1,0 +1,75 @@
+%%{
+    let options = args.options;
+
+    let heapSize  = 0x20000;
+    let stackSize = 0x20000;
+    let globalScratchBuf = false;
+    let globalScratchBufSize = 0x2000000;
+
+    if(options && options.heapSize)   heapSize = options.heapSize;
+    if(options && options.stackSize)  stackSize = options.stackSize;
+    if(options && options.globalScratchBuf) {
+        globalScratchBuf = options.globalScratchBuf;
+        if(options.globalScratchBufSize) globalScratchBufSize = options.globalScratchBufSize;
+    }
+%%}
+
+--ram_model
+-heap  `heapSize`
+-stack `stackSize`
+--args 0x1000
+--diag_suppress=10068
+--cinit_compression=off
+-e _c_int00_secure
+
+SECTIONS
+{
+    boot:
+    {
+      boot.*<boot.oe71>(.text)
+    } load > C7X_BOOT_D
+    .vecs           >   C7X_VECS_D
+    .secure_vecs    >   C7X_DDR_SPACE ALIGN(0x100000)
+    .text:_c_int00_secure > C7X_DDR_SPACE ALIGN(0x200000)
+    .text           >   C7X_DDR_SPACE ALIGN(0x100000)
+
+    .bss            >   C7X_DDR_SPACE
+    RUN_START(__BSS_START)
+    RUN_END(__BSS_END)
+
+    .data           >   C7X_DDR_SPACE
+    .cinit          >   C7X_DDR_SPACE
+    .init_array     >   C7X_DDR_SPACE
+    .stack          >   C7X_DDR_SPACE ALIGN(0x2000)
+    .args           >   C7X_DDR_SPACE
+    .cio            >   C7X_CIO_MEM
+    .const          >   C7X_DDR_SPACE
+    .switch         >   C7X_DDR_SPACE
+    .sysmem         >   C7X_DDR_SPACE
+
+    GROUP:          >   C7X_DDR_SPACE
+    {
+        .data.Mmu_tableArray        : type=NOINIT
+        .data.Mmu_tableArraySlot    : type=NOINIT
+        .data.Mmu_level1Table       : type=NOINIT
+        .data.gMmu_tableArray_NS    : type=NOINIT
+        .data.Mmu_tableArraySlot_NS : type=NOINIT
+        .data.Mmu_level1Table_NS    : type=NOINIT
+    }
+
+    .benchmark_buffer : > C7X_DDR_SPACE ALIGN(32)
+
+    % if(args.project.isLinuxInSystem === true){
+    .resource_table: { __RESOURCE_TABLE = .;} > C7X_RT_D
+    .bss.debug_mem_trace_buf : {} palign(128) > LINUX_IPC_TRACE_BUFFER
+    % }
+    % if(args.project.isLogSHM === true){
+    .bss.log_shared_mem (NOLOAD) : {} > LOG_SHM_MEM
+    % }
+    % if(args.project.ipcVringRTOS === true){
+    .bss.ipc_vring_mem (NOLOAD) : {} > RTOS_NORTOS_IPC_SHM_MEM
+    % }
+    % if(globalScratchBuf == true) {
+    .globalScratchBuffer (NOLOAD) : {} > C7X_DDR_SPACE
+    % }
+}

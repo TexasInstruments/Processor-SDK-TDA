@@ -104,7 +104,7 @@
 #define NUM_CH    (1)
 #define NUM_ALGOS (5)
 
-#define APP_MAX_BUFQ_DEPTH (4)
+#define APP_MAX_BUFQ_DEPTH (8u)
 
 #ifdef APP_DEBUG
 #define APP_PRINTF(f_, ...) printf((f_), ##__VA_ARGS__)

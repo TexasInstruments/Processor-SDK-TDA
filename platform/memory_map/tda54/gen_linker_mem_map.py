@@ -132,8 +132,7 @@ main_ocram_mem_addr_phys = 0x23800000;
 #codec_carveout_size = 2*GB;
 
 #TODO:
-uboot_reloc_mem_addr = 0xDC000000;
-uboot_reloc_mem_size = 64*MB;
+c7x_heap_hole_size = 64*MB;
 #
 # Other constant sizes
 #
@@ -377,15 +376,24 @@ tiovx_log_rt_mem_size   = 14*MB - app_fileio_mem_size;
 # TODO: Shared Mem should be in high mem need RAT for that
 # Shared memory for DMA Buf FD carveout
 # ddr_shared_mem_addr     = tiovx_log_rt_mem_addr + tiovx_log_rt_mem_size;
-ddr_shared_mem_addr     = 0xC0000000;
+ddr_shared_mem_addr       = 0xC0000000;
 ddr_shared_mem_addr_phys  = 0xC0000000;
-ddr_shared_mem_size     = SHARED_MEM_SIZE - uboot_reloc_mem_size;
+ddr_shared_mem_size       = SHARED_MEM_SIZE - c7x_heap_hole_size;
 
 assert ddr_shared_mem_addr & (SHARED_MEM_SIZE - 1) == 0
 
+#KV Cache memory
+ddr_shared_mem_rw =  ddr_shared_mem_addr_phys + ddr_shared_mem_size;
+ddr_shared_mem_rw_phy_addr =  ddr_shared_mem_addr_phys + ddr_shared_mem_size;
+ddr_shared_mem_rw_size = 32*MB;
+
+#TIDL network binary region
+ddr_shared_mem_r_only_addr = ddr_shared_mem_rw_phy_addr + ddr_shared_mem_rw_size;
+ddr_shared_mem_r_only_size = 32*MB;
+
 # C7x 1 Persistent DDR
-c7x_1_ddr_local_heap_non_cacheable_addr  = 0xE0000000;
-c7x_1_ddr_local_heap_non_cacheable_addr_phys  = 0xE0000000;
+c7x_1_ddr_local_heap_non_cacheable_addr  = ddr_shared_mem_r_only_addr + ddr_shared_mem_r_only_size;
+c7x_1_ddr_local_heap_non_cacheable_addr_phys  = ddr_shared_mem_r_only_addr + ddr_shared_mem_r_only_size;
 c7x_1_ddr_local_heap_non_cacheable_size  = 32*MB;
 c7x_1_ddr_local_heap_addr = c7x_1_ddr_local_heap_non_cacheable_addr + c7x_1_ddr_local_heap_non_cacheable_size;
 c7x_1_ddr_local_heap_addr_phys = c7x_1_ddr_local_heap_non_cacheable_addr_phys + c7x_1_ddr_local_heap_non_cacheable_size;
@@ -404,7 +412,7 @@ total_c7x_1_scratch_ddr = c7x_1_ddr_scratch_non_cacheable_size + c7x_1_ddr_scrat
 total_c7x_1_ddr = total_c7x_1_local_ddr + total_c7x_1_scratch_ddr
 
 # C7x 2 Persistent DDR
-c7x_2_ddr_local_heap_non_cacheable_addr  = 0xE0000000;
+c7x_2_ddr_local_heap_non_cacheable_addr  = ddr_shared_mem_r_only_addr + ddr_shared_mem_r_only_size;
 c7x_2_ddr_local_heap_non_cacheable_addr_phys  = c7x_1_ddr_scratch_addr_phys + c7x_1_ddr_scratch_size;
 c7x_2_ddr_local_heap_non_cacheable_size  = 32*MB;
 c7x_2_ddr_local_heap_addr = c7x_2_ddr_local_heap_non_cacheable_addr + c7x_2_ddr_local_heap_non_cacheable_size;
@@ -424,7 +432,7 @@ total_c7x_2_scratch_ddr = c7x_2_ddr_scratch_non_cacheable_size + c7x_2_ddr_scrat
 total_c7x_2_ddr = total_c7x_2_local_ddr + total_c7x_2_scratch_ddr
 
 # C7x 3 Persistent DDR
-c7x_3_ddr_local_heap_non_cacheable_addr  = 0xE0000000;
+c7x_3_ddr_local_heap_non_cacheable_addr  = ddr_shared_mem_r_only_addr + ddr_shared_mem_r_only_size;
 c7x_3_ddr_local_heap_non_cacheable_addr_phys  = c7x_2_ddr_scratch_addr_phys + c7x_2_ddr_scratch_size;
 c7x_3_ddr_local_heap_non_cacheable_size  = 32*MB;
 c7x_3_ddr_local_heap_addr = c7x_3_ddr_local_heap_non_cacheable_addr + c7x_3_ddr_local_heap_non_cacheable_size;
@@ -443,7 +451,7 @@ total_c7x_3_scratch_ddr = c7x_3_ddr_scratch_non_cacheable_size + c7x_3_ddr_scrat
 total_c7x_3_ddr = total_c7x_3_local_ddr + total_c7x_3_scratch_ddr
 
 # C7x 4 Persistent DDR
-c7x_4_ddr_local_heap_non_cacheable_addr  = 0xE0000000;
+c7x_4_ddr_local_heap_non_cacheable_addr  = ddr_shared_mem_r_only_addr + ddr_shared_mem_r_only_size;
 c7x_4_ddr_local_heap_non_cacheable_addr_phys  = c7x_3_ddr_scratch_addr_phys + c7x_3_ddr_scratch_size;
 c7x_4_ddr_local_heap_non_cacheable_size  = 32*MB;
 c7x_4_ddr_local_heap_addr = c7x_4_ddr_local_heap_non_cacheable_addr + c7x_4_ddr_local_heap_non_cacheable_size;
@@ -552,8 +560,6 @@ c7x_3_msmc  = MemSection("MSMC_C7x_3", "RWIX", c7x_3_msmc_mem_addr  , c7x_3_msmc
 c7x_4_l2   = MemSection("L2RAM_C7x_4", "RWIX", c7x_4_l2_addr  , c7x_4_l2_size  , "L2 for C7x_4");
 # c7x_4_l1   = MemSection("L1RAM_C7x_4", "RWIX", c7x_4_l1_addr  , c7x_4_l1_size  , "L1 for C7x_4");
 c7x_4_msmc  = MemSection("MSMC_C7x_4", "RWIX", c7x_4_msmc_mem_addr  , c7x_4_msmc_size  , "MSMC for C7x_4");
-
-uboot_reloc_mem = MemSection("UBOOT_RELOC_MEM", "", uboot_reloc_mem_addr  , uboot_reloc_mem_size  , "Uboot DDR relocation memory");
 
 # Main OCRAM memory sections
 mcu2_main_ocram        = MemSection("MAIN_OCRAM_MCU2", "RWIX", mcu2_main_ocram_addr  , mcu2_main_ocram_size  , "Main OCRAM for MCU2");
@@ -951,6 +957,21 @@ ddr_shared_mem_phys.setNoMap(False);
 ddr_shared_mem_phys.setOriginTag(False);
 ddr_shared_mem_phys.splitOrigin(True)
 
+ddr_shared_heap_rw = MemSection("DDR_SHARED_HEAP_RW", "RWIX", ddr_shared_mem_rw, ddr_shared_mem_rw_size, "Virtual Address of the memory shared between MPU and C7x to import/export context from one LLM/VLM session to other");
+ddr_shared_heap_rw_phy = MemSection("DDR_SHARED_HEAP_RW_PHYS", "RWIX", ddr_shared_mem_rw_phy_addr, ddr_shared_mem_rw_size, "Physical Address of the memory shared between MPU and C7x to import/export context from one LLM/VLM session to other");
+ddr_shared_heap_rw_phy.setDtsName("ddr_shared_heap_rw", "ddr-shared-heap-rw");
+ddr_shared_heap_rw_phy.setCompatibility("dma-heap-carveout");
+ddr_shared_heap_rw_phy.setNoMap(False);
+ddr_shared_heap_rw_phy.setOriginTag(False);
+ddr_shared_heap_rw_phy.splitOrigin(True)
+
+ddr_shared_heap_r_only = MemSection("DDR_SHARED_HEAP_CONST", "R", ddr_shared_mem_r_only_addr, ddr_shared_mem_r_only_size, "Physical Address of the memory shared between MPU and C7x to import/export TIDL network");
+ddr_shared_heap_r_only.setDtsName("ddr_shared_heap_const", "ddr-shared-heap-const");
+ddr_shared_heap_r_only.setCompatibility("dma-heap-carveout");
+ddr_shared_heap_r_only.setNoMap(False);
+ddr_shared_heap_r_only.setOriginTag(False);
+ddr_shared_heap_r_only.splitOrigin(True)
+
 # TODO: EthFW ?
 # This region is for ethernet firmware, multi-core, multi-cast feature
 # intercore_eth_desc_mem = MemSection("INTERCORE_ETH_DESC_MEM", "", ddr_intercore_eth_desc_addr, ddr_intercore_eth_desc_size, "Inter-core ethernet shared desc queues. MUST be non-cached or cache-coherent");
@@ -1171,6 +1192,7 @@ c7x_1_mmap.addMemSection( c7x_1_4_ddr_local_heap  );
 c7x_1_mmap.addMemSection( c7x_1_4_ddr_scratch_non_cacheable  );
 c7x_1_mmap.addMemSection( c7x_1_4_ddr_scratch  );
 c7x_1_mmap.addMemSection( ddr_shared_mem     );
+c7x_1_mmap.addMemSection( ddr_shared_heap_rw     );
 c7x_1_mmap.checkOverlap();
 
 c7x_2_mmap = MemoryMap("c7x_2");
@@ -1205,6 +1227,7 @@ c7x_2_mmap.addMemSection( c7x_2_4_ddr_local_heap  );
 c7x_2_mmap.addMemSection( c7x_2_4_ddr_scratch_non_cacheable  );
 c7x_2_mmap.addMemSection( c7x_2_4_ddr_scratch  );
 c7x_2_mmap.addMemSection( ddr_shared_mem     );
+c7x_2_mmap.addMemSection( ddr_shared_heap_rw     );
 c7x_2_mmap.checkOverlap();
 #
 c7x_3_mmap = MemoryMap("c7x_3");
@@ -1239,6 +1262,7 @@ c7x_3_mmap.addMemSection( c7x_3_4_ddr_local_heap  );
 c7x_3_mmap.addMemSection( c7x_3_4_ddr_scratch_non_cacheable  );
 c7x_3_mmap.addMemSection( c7x_3_4_ddr_scratch  );
 c7x_3_mmap.addMemSection( ddr_shared_mem     );
+c7x_3_mmap.addMemSection( ddr_shared_heap_rw     );
 c7x_3_mmap.checkOverlap();
 #
 c7x_4_mmap = MemoryMap("c7x_4");
@@ -1273,6 +1297,7 @@ c7x_4_mmap.addMemSection( c7x_4_3_ddr_local_heap  );
 c7x_4_mmap.addMemSection( c7x_4_3_ddr_scratch_non_cacheable  );
 c7x_4_mmap.addMemSection( c7x_4_3_ddr_scratch  );
 c7x_4_mmap.addMemSection( ddr_shared_mem     );
+c7x_4_mmap.addMemSection( ddr_shared_heap_rw     );
 c7x_4_mmap.checkOverlap();
 
 #TODO:
@@ -1458,7 +1483,6 @@ html_mmap.addMemSection( c7x_4_ddr_local_heap_phys         );
 html_mmap.addMemSection( c7x_4_ddr_scratch_non_cacheable_phys );
 html_mmap.addMemSection( c7x_4_ddr_scratch_phys );
 
-html_mmap.addMemSection( uboot_reloc_mem    );
 html_mmap.addMemSection( app_log_mem        );
 html_mmap.addMemSection( tiovx_obj_desc_mem );
 html_mmap.addMemSection( app_fileio_mem        );
@@ -1471,6 +1495,9 @@ html_mmap.addMemSection( mcu4_main_ocram );
 #html_mmap.addMemSection( intercore_eth_desc_mem );
 #html_mmap.addMemSection( intercore_eth_data_mem );
 html_mmap.addMemSection( ddr_shared_mem_phys     );
+html_mmap.addMemSection( ddr_shared_heap_rw );
+html_mmap.addMemSection( ddr_shared_heap_rw_phy );
+html_mmap.addMemSection( ddr_shared_heap_r_only );
 html_mmap.checkOverlap();
 
 c_header_mmap = MemoryMap("Memory Map for C header file");
@@ -1622,13 +1649,15 @@ c_header_mmap.addMemSection( app_fileio_mem        );
 c_header_mmap.addMemSection( ipc_vring_mem      );
 c_header_mmap.addMemSection( ddr_shared_mem     );
 c_header_mmap.addMemSection( ddr_shared_mem_phys     );
-c_header_mmap.addMemSection( uboot_reloc_mem     );
 c_header_mmap.addMemSection( mcu2_main_ocram  );
 c_header_mmap.addMemSection( mcu3_main_ocram  );
 c_header_mmap.addMemSection( mcu4_main_ocram  );
 c_header_mmap.addMemSection( mcu2_main_ocram_phys  );
 c_header_mmap.addMemSection( mcu3_main_ocram_phys  );
 c_header_mmap.addMemSection( mcu4_main_ocram_phys  );
+c_header_mmap.addMemSection( ddr_shared_heap_rw  );
+c_header_mmap.addMemSection( ddr_shared_heap_rw_phy  );
+c_header_mmap.addMemSection( ddr_shared_heap_r_only  );
 # c_header_mmap.addMemSection( intercore_eth_desc_mem  );
 # c_header_mmap.addMemSection( intercore_eth_data_mem  );
 c_header_mmap.checkOverlap();
@@ -1669,6 +1698,8 @@ dts_mmap.addMemSection( vision_apps_ddr_total );
 dts_mmap.addMemSection( ipc_vring_mem      );
 dts_mmap.addMemSection( vision_apps_core_heaps_lo );
 dts_mmap.addMemSection( c7x_ddr_heaps_hi );
+dts_mmap.addMemSection( ddr_shared_heap_r_only );
+dts_mmap.addMemSection( ddr_shared_heap_rw_phy );
 # Should be ddr_shared_mem_phys
 dts_mmap.addMemSection( ddr_shared_mem );
 # dts_mmap.addMemSection( intercore_eth_desc_mem );

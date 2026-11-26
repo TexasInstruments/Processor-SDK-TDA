@@ -54,12 +54,49 @@ This is a bootloader example, which shows an example of booting Linux/U-Boot/QNX
 ## Run the Example
 
 - Flash SBL, Appimage to OSPI NAND Flash, follow below steps to flash the binaries
+\cond !SOC_J722S
 \note Before running the following command, user needs to build sbl_uart_uniflash_stage1, sbl_uart_uniflash_stage2_nand, sbl_ospi_nand_hlos, HLOS appimage and edit the cfg file according to HLOS appimage that we are booting
+\endcond
+\cond SOC_J722S
+\note Before running the following command, user needs to build sbl_uart_uniflash_nand, sbl_ospi_nand_hlos, HLOS appimage and edit the cfg file according to HLOS appimage that we are booting
+\endcond
+\cond !SOC_J722S
 - If Linux PC is used, assuming SDK is installed at `~/ti/mcu_plus_sdk`
 
         - cd ~/ti/mcu_plus_sdk/tools/boot
         - python uart_uniflash.py -p <main UART COM port> --cfg=~/ti/mcu_plus_sdk/tools/boot/sbl_prebuilt/@VAR_BOARD_NAME_LOWER/default_sbl_ospi_nand_hlos_hs_fs.cfg
+\endcond
+\cond SOC_J722S
+- If Linux PC is used, assuming SDK is installed at `~/ti/mcu_plus_sdk`
 
+    \code
+        cd ~/ti/mcu_plus_sdk/tools/boot
+        python uart_uniflash.py -p <main UART COM port> --cfg=<cfg_file>
+    \endcode
+
+- For J722S, select the cfg_file corresponding to the HLOS appimage being booted. If HSM is required, add the HSM binary flashing command to your cfg_file or use the corresponding HLOS HSM cfg_file.
+
+    - linux HLOS, if HSM is not required
+        \code
+            cd ~/ti/mcu_plus_sdk/tools/boot
+            python uart_uniflash.py -p <main UART COM port> --cfg=~/ti/mcu_plus_sdk/tools/boot/sbl_prebuilt/@VAR_BOARD_NAME_LOWER/default_sbl_ospi_nand_linux_hs_fs.cfg
+        \endcode
+    - linux HLOS, if HSM is required
+        \code
+            cd ~/ti/mcu_plus_sdk/tools/boot
+            python uart_uniflash.py -p <main UART COM port> --cfg=~/ti/mcu_plus_sdk/tools/boot/sbl_prebuilt/@VAR_BOARD_NAME_LOWER/default_sbl_ospi_nand_linux_hsm_hs_fs.cfg
+        \endcode
+    - qnx HLOS, if HSM is not required
+        \code
+            cd ~/ti/mcu_plus_sdk/tools/boot
+            python uart_uniflash.py -p <main UART COM port> --cfg=~/ti/mcu_plus_sdk/tools/boot/sbl_prebuilt/@VAR_BOARD_NAME_LOWER/default_sbl_ospi_nand_qnx_hs_fs.cfg
+        \endcode
+    - qnx HLOS, if HSM is required
+        \code
+            cd ~/ti/mcu_plus_sdk/tools/boot
+            python uart_uniflash.py -p <main UART COM port> --cfg=~/ti/mcu_plus_sdk/tools/boot/sbl_prebuilt/@VAR_BOARD_NAME_LOWER/default_sbl_ospi_nand_qnx_hsm_hs_fs.cfg
+        \endcode
+\endcond
 - Boot the EVM in OSPI NAND boot mode.
 - Another way to flash on to OSPI NAND
     - Create an SD card which boots U-boot
@@ -70,8 +107,12 @@ This is a bootloader example, which shows an example of booting Linux/U-Boot/QNX
         - mtd erase spi-nand0 0x0 0x4000000
         - fatload mmc 1 $loadaddr boot_imgs/tiboot3.bin
         - mtd write spi-nand0 $loadaddr 0x0 $filesize
+        - (Optional) If HSM is required, flash HSM by executing the following commands. Otherwise, skip this step.
+            - fatload mmc 1 ${loadaddr} boot_imgs/hsm.bin
+            - mtd write spi-nand0 ${loadaddr} 0x80000 $filesize
         - fatload mmc 1 $loadaddr boot_imgs/app
-        - mtd write spi-nand0 $loadaddr 0x80000 $filesize
+        - mtd write spi-nand0 $loadaddr 0xC0000 $filesize
+    - Now change the boot switch settings to OSPI NAND boot mode and reset the evm
 
 # See Also
 

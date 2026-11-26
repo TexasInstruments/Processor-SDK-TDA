@@ -294,7 +294,7 @@ vx_status ownObjectDeInit(void)
 
 
 
-vx_reference ownObjectAlloc(vx_enum type)
+vx_reference ownObjectAlloc(vx_enum reftype)
 {
     vx_status status;
     vx_reference ref = NULL;
@@ -303,7 +303,7 @@ vx_reference ownObjectAlloc(vx_enum type)
 
     if ((vx_status)VX_SUCCESS == status)
     {
-        switch(type)
+        switch(reftype)
         {
             case (vx_enum)VX_TYPE_META_FORMAT:
                 ref = (vx_reference)ownAllocObject(

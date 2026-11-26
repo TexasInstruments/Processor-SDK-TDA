@@ -146,7 +146,7 @@ static Ipc_MailboxInfo   g_IPC_MailboxInfo[IPC_MAX_PROCS][IPC_MAX_PROCS] =
     }
 };
 
-int32_t Ipc_sciclientIrqTranslate(uint16_t coreId, uint32_t eventId,
+static int32_t Ipc_sciclientIrqTranslate(uint16_t coreId, uint32_t eventId,
         uint16_t *procIrq);
 
 int32_t Ipc_getMailboxInfoTx(uint32_t selfId, uint32_t remoteId,
@@ -392,7 +392,7 @@ static const uint16_t map_src_id[] =
     TISCI_DEV_NAVSS0_MAILBOX0_CLUSTER11
 };
 
-int32_t Ipc_sciclientIrqTranslate(uint16_t coreId, uint32_t eventId,
+static int32_t Ipc_sciclientIrqTranslate(uint16_t coreId, uint32_t eventId,
         uint16_t *procIrq)
 {
     return Sciclient_rmIrqTranslateIrOutput(req_type[coreId],

@@ -5,14 +5,11 @@ ifeq ($(RTOS),SYSBIOS)
   XDC_PLATFORM = "ti.platforms.tms320C7x:J7ES"
   LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker.cmd
 endif
-ifeq ($(RTOS),FREERTOS)
-  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_freertos.cmd
-  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map.cmd
-endif
-ifeq ($(RTOS),SAFERTOS)
-  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_safertos.cmd
-  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map_safertos.cmd
-endif
+
+CSOURCES += generated/mmu_cfg.c
+
+LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/generated/linker_mem_map_$(RTOS_TYPE).cmd
+LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE).cmd
 
 ifeq ($(RTOS),SAFERTOS)
   IDIRS+=${SAFERTOS_KERNEL_INSTALL_PATH_c7x}/source_code_and_projects/SafeRTOS/api/$(SAFERTOS_ISA_EXT_c7x)

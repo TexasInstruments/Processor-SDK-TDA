@@ -93,10 +93,6 @@ vx_status tivxAddKernelDLDrawBox(vx_context context);
 vx_status tivxAddKernelDLColorConvert(vx_context context);
 #endif
 
-#if defined(SOC_J784S4) || defined(SOC_TDA54)
-vx_status tivxAddKernelDLPreProc4DArmv8(vx_context context);
-#endif
-
 vx_status tivxRemoveKernelAddImg(vx_context context);
 vx_status tivxRemoveKernelDLPreProcArmv8(vx_context context);
 vx_status tivxRemoveKernelDLColorConvertArmv8(vx_context context);
@@ -119,10 +115,6 @@ vx_status tivxRemoveKernelDLDrawBox(vx_context context);
 vx_status tivxRemoveKernelDLColorConvert(vx_context context);
 #endif
 
-#if defined(SOC_J784S4) || defined(SOC_TDA54)
-vx_status tivxRemoveKernelDLPreProc4DArmv8(vx_context context);
-#endif
-
 static Tivx_Host_Kernel_List  gTivx_host_kernel_list[] = {
     {&tivxAddKernelImgAdd, &tivxRemoveKernelAddImg},
     {&tivxAddKernelDLPreProcArmv8, &tivxRemoveKernelDLPreProcArmv8},
@@ -143,9 +135,6 @@ static Tivx_Host_Kernel_List  gTivx_host_kernel_list[] = {
     {&tivxAddKernelDLDrawBox, &tivxRemoveKernelDLDrawBox},
     {&tivxAddKernelDLColorConvert, &tivxRemoveKernelDLColorConvert},
     {&tivxAddKernelDLPreProc, &tivxRemoveKernelDLPreProc},
-    #endif
-    #if defined(SOC_J784S4) || defined(SOC_TDA54)
-    {&tivxAddKernelDLPreProc4DArmv8, &tivxRemoveKernelDLPreProc4DArmv8}
     #endif
 };
 
@@ -198,6 +187,11 @@ void tivxImgProcLoadKernels(vx_context context)
         tivxRegisterImgProcTargetC7xKernels();
         #endif
 
+        #if !defined (SOC_TDA54)
+        tivxSetSelfCpuId(TIVX_CPU_ID_DSP_C7_1);
+        tivxRegisterImgProcTargetAddImageC7xKernels();
+        #endif
+
         tivxSetSelfCpuId(TIVX_CPU_ID_VPAC1);
         tivxRegisterImgProcTargetMcuKernels();
 
@@ -223,6 +217,9 @@ void tivxImgProcUnLoadKernels(vx_context context)
         #if !defined (SOC_J722S) && !defined (SOC_TDA54)
         tivxUnRegisterImgProcTargetC6xKernels();
         tivxUnRegisterImgProcTargetC7xKernels();
+        #endif
+        #if !defined (SOC_TDA54)
+        tivxUnRegisterImgProcTargetAddImageC7xKernels();
         #endif
         #endif
         tivxUnRegisterImgProcTargetMpuKernels();

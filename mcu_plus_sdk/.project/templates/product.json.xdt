@@ -31,6 +31,7 @@
         "/board/board",
         "/drivers/drivers",
         "/fs/fs",
+        "/memory_configurator/components",
         "/kernel/dpl",
 % if((args.device == "am62x") || (args.device == "am62ax") ||  (args.device == "am62px") || (args.device == "am62dx") || (args.device == "am275x") || (args.device == "am62lx") || (args.device == "j722s") || isDevelopmentMode) {
         "/networking/networking",

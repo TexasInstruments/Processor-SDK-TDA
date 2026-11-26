@@ -8,17 +8,11 @@ ifeq ($(RTOS),SYSBIOS)
   XDC_PLATFORM = "ti.platforms.cortexR:J7ES_MAIN"
   LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker.cmd
 endif
-ifeq ($(RTOS),FREERTOS)
-  CSOURCES += $(SOC)_mpu_cfg.c
-  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_freertos.cmd
-endif
 
-ifeq ($(RTOS),SAFERTOS)
-  CSOURCES += $(SOC)_safertos_mpu_cfg.c
-  LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_safertos.cmd
-endif
+CSOURCES += generated/mpu_cfg_$(RTOS_TYPE).c
 
-LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/linker_mem_map.cmd
+LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/$(SOC)_linker_$(RTOS_TYPE).cmd
+LINKER_CMD_FILES +=  $($(_MODULE)_SDIR)/generated/linker_mem_map_$(RTOS_TYPE).cmd
 
 IDIRS+=$(PLATFORM_PATH)/rtos/$(SOC)
 IDIRS+=$(NDK_PATH)/packages

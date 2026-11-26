@@ -4,6 +4,7 @@ cscope.out
 tags
 *.bak
 rtos/*/cores/*/src/generated
+memory_map/j7*
 __pycache__
 *.pyc
 *.egg-info

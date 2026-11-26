@@ -1,0 +1,66 @@
+  %%{
+  let mmu_module = system.modules["/memory_configurator/mmu_cfg"];
+  let instances  = (mmu_module !== undefined) ? mmu_module.$instances : [];
+  %%}
+
+#include <stdint.h>
+#include <ti/csl/arch/c7x/Mmu.h>
+#include <ti/csl/arch/c7x/Cache.h>
+#include <utils/misc/include/app_misc.h>
+
+uint32_t g_app_rtos_c7x_mmu_map_error = 0;
+
+static void appMmuMap(Bool is_secure)
+{
+    Bool          retVal = UTRUE;
+    Mmu_MapAttrs  attrs;
+    uint32_t      ns = is_secure ? 0U : 1U;
+
+  % let lastAttrIndx = null;
+  % for (let i = 0; i < instances.length; i++) {
+  % let inst = instances[i];
+  % let vAddr = mmu_module.getVAddrStr(inst);
+  % let pAddr = mmu_module.getPAddrStr(inst);
+  % let sz    = mmu_module.getSizeStr(inst);
+  % if (inst.attrIndx !== lastAttrIndx) {
+  % lastAttrIndx = inst.attrIndx;
+
+    Mmu_initMapAttrs(&attrs);
+    attrs.attrIndx = `inst.attrIndx`;
+    attrs.ns       = ns;
+
+  % }
+    /* `inst.$name` */
+    retVal = Mmu_map(`vAddr`, `pAddr`, `sz`, &attrs, is_secure);
+    if (retVal == UFALSE) { goto mmu_exit; }
+
+  % }
+mmu_exit:
+    if (retVal == UFALSE)
+    {
+        g_app_rtos_c7x_mmu_map_error++;
+    }
+}
+
+static void appCacheInit(void)
+{
+    Cache_Size cacheSize;
+
+    cacheSize.l1pSize = Cache_L1Size_32K;
+    cacheSize.l1dSize = Cache_L1Size_32K;
+    cacheSize.l2Size  = Cache_L2Size_64K;
+
+    Cache_setSize(&cacheSize);
+}
+
+void InitMmu(void)
+{
+    g_app_rtos_c7x_mmu_map_error = 0;
+
+    appC7xClecInitForNonSecAccess();
+
+    appMmuMap(UFALSE);
+    appMmuMap(UTRUE);
+
+    appCacheInit();
+}

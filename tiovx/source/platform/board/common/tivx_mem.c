@@ -103,6 +103,22 @@ vx_status ownMemRegionTranslate (uint32_t mem_heap_region, uint32_t *heap_id)
             case (vx_enum)TIVX_MEM_EXTERNAL_SHARED:
                 *heap_id = APP_MEM_HEAP_DDR_SHARED;
                 break;
+            case (vx_enum)TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY:
+                #if defined(C7X_FAMILY) || defined(MPU)
+                *heap_id = APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY;
+                #else
+                VX_PRINT(VX_ZONE_ERROR, "This 32-bit CPU can NOT access this 64-bit heap region\n");
+                status = (vx_status)VX_FAILURE;
+                #endif /* #if defined(C7X_FAMILY) || defined(MPU) */
+                break;
+            case (vx_enum)TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY_CONST:
+                #if defined(C7X_FAMILY) || defined(MPU)
+                *heap_id = APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY_CONST;
+                #else
+                VX_PRINT(VX_ZONE_ERROR, "This 32-bit CPU can NOT access this 64-bit heap region\n");
+                status = (vx_status)VX_FAILURE;
+                #endif /* #if defined(C7X_FAMILY) || defined(MPU) */
+                break;
 
             /* Waiver here: leaving in so that if someone adds a new type it gets flagged */
             default:
@@ -260,7 +276,7 @@ vx_status tivxMemBufferFree(tivx_shared_mem_ptr_t *mem_ptr, uint32_t size)
     return (status);
 }
 
-void tivxMemStats(tivx_mem_stats *stats, vx_enum mem_heap_region)
+void tivxMemStats(tivx_mem_stats *stats, vx_enum mem_type)
 {
     int32_t ret_val;
     vx_status status = (vx_status)VX_SUCCESS;
@@ -276,7 +292,7 @@ void tivxMemStats(tivx_mem_stats *stats, vx_enum mem_heap_region)
         stats->mem_size = 0;
         stats->free_size = 0;
 
-        status = ownMemRegionTranslate((uint32_t)mem_heap_region, &heap_id);
+        status = ownMemRegionTranslate((uint32_t)mem_type, &heap_id);
 
         if ((vx_status)VX_SUCCESS == status)
         {
@@ -400,11 +416,24 @@ uint64_t tivxMemHost2SharedPtr(uint64_t host_ptr, vx_enum mem_heap_region)
 
 void* tivxMemShared2TargetPtr(const tivx_shared_mem_ptr_t *shared_ptr)
 {
-#ifdef TARGET_HLOS
-    return (void*)(uintptr_t)(shared_ptr->host_ptr);
+    void *target_ptr;
+
+#if defined(HLOS)
+    target_ptr = (void*)(uintptr_t)(shared_ptr->host_ptr);
 #else
-    return (void*)(uintptr_t)(appMemShared2TargetPtr(shared_ptr->shared_ptr));
-#endif
+    uint32_t heap_id;
+
+    if ((vx_status)VX_SUCCESS != ownMemRegionTranslate(shared_ptr->mem_heap_region, &heap_id))
+    {
+        target_ptr = NULL;
+    }
+    else
+    {
+        target_ptr = (void*)(uintptr_t)(appMemShared2TargetPtr(shared_ptr->shared_ptr));
+    }
+#endif /* #if defined(HLOS)*/
+
+    return target_ptr;
 }
 
 uint64_t tivxMemShared2PhysPtr(uint64_t shared_ptr, vx_enum mem_heap_region)

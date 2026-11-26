@@ -325,6 +325,9 @@ static void IpcApp_rpmsgResponderFxn(void *arg0, void *arg1)
         }
     }
 
+    /* This delay is required for MCU2_0 to wait before sending the shutdown message to MCU2_1 in the for loop below,
+     * otherwise, if it sends early then MCU2_1 just resets its virtio while it is in communication with MCU1_0 */
+    TaskP_sleepInMsecs(100);
     /* Below code will execute only in case of shutdown message */
     Sciclient_deinit();
 
@@ -472,6 +475,9 @@ static void IpcApp_rpmsgSenderFxn(void *arg0, void *arg1)
 
     /* Send shutdown message to MCU2_0 core */
 #if defined (BUILD_MCU2_1)
+    /* Need to wait before asking MCU2_0 to shutdown, because it might be in communication with the MCU1_0 core,
+     * therefore the responder task for MCU2_0 must not exit before ping pong is over */
+    TaskP_sleepInMsecs(1000);
     Ipc_mailboxSend(gIpcApp_SelfProcId, remoteShutdown, IPC_RP_MBOX_SHUTDOWN, 1U);
 #endif
 

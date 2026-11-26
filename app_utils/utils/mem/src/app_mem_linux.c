@@ -75,18 +75,15 @@
 #include <app_mem_priv.h>
 #include <utils/console_io/include/app_log.h>
 #include <utils/mem/include/linux/dma_buf_phys.h>
+#include <utils/mem/include/linux/dma-heap-export.h>
 #include <utils/mem/include/app_mem.h>
 #include <linux/dma-heap.h>
 #include <linux/dma-buf.h>
 
 /*MACROS*/
 /* #define APP_MEM_DEBUG */
-#ifdef SOC_AM62A
-#define DMA_HEAP_NAME          "/dev/dma_heap/carveout_edgeai_shared-memories"
-#else
-#define DMA_HEAP_NAME          "/dev/dma_heap/carveout_vision_apps_shared-memories"
-#endif
 #define DMA_HEAP_ALLOC_FLAGS   (0u)
+#define MAX_HEAP_REGIONS       (8u)
 
 /*STRUCTURES*/
 
@@ -97,7 +94,7 @@ typedef struct
     uint64_t phys_addr;
     uint64_t virt_addr;
     uint64_t offset;
-    uint32_t size;
+    uint64_t size;
 }app_mem_type_t;
 
 typedef struct mem_type_node
@@ -106,150 +103,427 @@ typedef struct mem_type_node
     struct mem_type_node *next;
 } app_mem_list_t;
 
+
 typedef struct
 {
-    app_mem_list_t *plist;
-    pthread_mutex_t list_mutex;
-    int dma_heap_fd;
-    uint32_t app_heap_id;
+    app_mem_list_t *plist;          /* Linked list of allocated buffers in this heap */
+    pthread_mutex_t list_mutex;     /* Mutex for this heap's list */
+    int dma_heap_fd;                /* File descriptor for the dma heap device */
+    uint32_t allow_alloc;           /* 1 = MPU can allocate, 0 = only remote cores allocate */
+    uint32_t heap_id;               /* Logical heap this slot serves, see APP_MEM_HEAP_* */
+    uint64_t base_phys_addr;        /* Base physical address of this heap region */
+    uint64_t size;                  /* Size of this heap region in bytes */
+    bool in_use;                    /* Is this heap slot initialized? */
+    char name[APP_MEM_HEAP_NAME_MAX]; /* Heap name for debugging */
 
+    /* Per-heap statistics */
+    uint64_t heap_alloc_bytes;      /* Total bytes allocated in this heap */
+    uint64_t heap_free_bytes;       /* Total bytes freed in this heap */
+    uint64_t heap_cur_alloc_bytes;  /* Currently allocated bytes in this heap */
+    uint64_t heap_num_alloc;        /* Number of allocations in this heap */
+    uint64_t heap_num_free;         /* Number of frees in this heap */
+    uint64_t heap_cur_alloc;        /* Current number of active allocations */
+} app_mem_heap_obj_t;
+
+typedef struct
+{
+    app_mem_heap_obj_t heaps[MAX_HEAP_REGIONS];  /* Array of heap regions */
+    uint32_t num_heaps;                          /* Number of initialized heaps */
+    pthread_mutex_t global_mutex;                /* Mutex for global operations */
+
+    /* Global statistics across all heaps */
     uint64_t total_alloc_bytes;
     uint64_t total_free_bytes;
     uint64_t cur_alloc_bytes;
     uint64_t num_alloc;
     uint64_t num_free;
     uint64_t cur_alloc;
-
 }app_mem_obj_t;
 
 /*GLOBALS*/
 app_mem_obj_t g_app_mem_obj;
+uint8_t g_char_init_done = 0U;
 
 /*INTERNAL FUNCTION DEFINITIONS*/
 static void appMemRemoveFromList(app_mem_list_t **list, app_mem_list_t *node);
 static int  appMemPushToList(app_mem_list_t **list, app_mem_type_t *data);
 static int  appMemDmaHeapGetPhys(int phys_fd, int fd, uint64_t *phys);
-static void appMemFreeList(app_mem_list_t *list);
-static int32_t appMemAddTupleToList(uint32_t dmaBufFd, uint32_t size, uint64_t *virtPtr, uint64_t *phyPtr);
-static void appMemFreeListItem(app_mem_list_t *mem_map_list);
+static void appMemFreeList(uint32_t heap_idx, app_mem_list_t *list);
+static int32_t appMemAddTupleToList(uint32_t heap_idx, uint32_t dmaBufFd, uint64_t size, uint64_t *virtPtr, uint64_t *phyPtr);
+static void appMemFreeListItem(uint32_t heap_idx, app_mem_list_t *mem_map_list);
 static int appMemDmaHeapAlloc(int dma_heap_fd, size_t len, unsigned int flags, int *dma_buf_fd);
+static int appMemDmaHeapExport(int dma_heap_fd, uint64_t offset, size_t len, unsigned int flags, int *dma_buf_fd);
 
-/* Return true if specified memory region is enabled, return false otherwise*/
 bool appMemRegionQuery(uint32_t heap_id)
 {
-    return ((heap_id == APP_MEM_HEAP_DDR) || (heap_id == APP_MEM_HEAP_DDR_SHARED));
+    return ((heap_id == APP_MEM_HEAP_DDR) || (heap_id == APP_MEM_HEAP_DDR_SHARED) ||
+            (heap_id == APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY) ||
+            (heap_id == APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY_CONST));
 }
 
 int32_t appMemInit(app_mem_init_prm_t *prm)
 {
     int32_t status = 0;
-
-    /* Initialize our book-keeping structures */
     app_mem_obj_t *obj = &g_app_mem_obj;
+    app_mem_heap_obj_t *heap = NULL;
+    uint32_t heap_idx = 0U;
+    char dma_carveout_name[APP_MEM_DMA_CARVEOUT_NAME_MAX];
 
-    obj->total_alloc_bytes = 0;
-    obj->total_free_bytes = 0;
-    obj->cur_alloc_bytes = 0;
-    obj->num_alloc = 0;
-    obj->num_free = 0;
-    obj->cur_alloc = 0;
+    static bool global_initialized = false;
+    if (!global_initialized)
+    {
+        obj->num_heaps = 0U;
+        obj->total_alloc_bytes = 0U;
+        obj->total_free_bytes = 0U;
+        obj->cur_alloc_bytes = 0U;
+        obj->num_alloc = 0U;
+        obj->num_free = 0U;
+        obj->cur_alloc = 0U;
+        (void)pthread_mutex_init(&obj->global_mutex, NULL);
 
-    obj->plist = NULL;
-    obj->dma_heap_fd = -1;
-    obj->app_heap_id = (uint32_t)-1;
+        for (uint32_t i = 0U; i < MAX_HEAP_REGIONS; i++)
+        {
+            obj->heaps[i].in_use = false;
+            obj->heaps[i].dma_heap_fd = -1;
+        }
 
-    /* Initialize the pthread mutex */
-    (void)pthread_mutex_init(&obj->list_mutex, NULL);
+        global_initialized = true;
+        appLogPrintf("MEM: Global init ... !!!\n");
+    }
 
-    appLogPrintf("MEM: Init ... !!!\n");
+    if (NULL == prm)
+    {
+        appLogPrintf("MEM: ERROR: appMemInit: NULL prm !!!\n");
+        status = (int32_t)-1;
+    }
 
-    /* Initialize the DMA HEAP module */
-    obj->dma_heap_fd = open(DMA_HEAP_NAME, (int)((uint32_t)O_RDONLY | (uint32_t)O_CLOEXEC));
+    if (pthread_mutex_lock(&obj->global_mutex) != 0)
+    {
+        appLogPrintf("MEM: ERROR: pthread_mutex_lock failed !!!\n");
+    }
+
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
-<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM01
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM16
 <justification end>*/
-    if (obj->dma_heap_fd < 0)
+    if (obj->num_heaps >= MAX_HEAP_REGIONS)
     {
-        appLogPrintf("MEM: ERROR: Failed to initialize DMA HEAP [%s] !!!\n", DMA_HEAP_NAME);
+        appLogPrintf("MEM: ERROR: Maximum number of heap regions (%d) reached!\n", MAX_HEAP_REGIONS);
         status = -1;
     }
-/* LDRA_JUSTIFY_END */
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM01
-<justification end>*/
-    else
-/* LDRA_JUSTIFY_END */
+
+    if (status == 0)
     {
-        appLogPrintf("MEM: Initialized DMA HEAP (fd=%d) !!!\n", obj->dma_heap_fd);
+        if ((prm->heap_id != APP_MEM_HEAP_DDR_SHARED) &&
+            (prm->heap_id != APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY) &&
+            (prm->heap_id != APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY_CONST))
+        {
+            appLogPrintf("MEM: ERROR: Invalid heap_id %d - must be APP_MEM_HEAP_DDR_SHARED, APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY, or APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY_CONST!\n",
+                        prm->heap_id);
+            status = -1;
+        }
     }
 
-    /* RPMSG init required for dmabuf virt to phys conversion */
-/* LDRA_JUSTIFY_START
-<metric start> branch <metric end>
-<justification start> APP_UTILS_BRANCH_COVERAGE_DMA_HEAP_UBR010
-<justification end> */
-    if (status==0)
-/* LDRA_JUSTIFY_END */
+    if (status == 0)
     {
-        status = rpmsg_char_init(NULL);
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM13
-<justification end>*/
-        if (status!=0)
+        for (heap_idx = 0U; heap_idx < MAX_HEAP_REGIONS; heap_idx++)
         {
-            appLogPrintf("MEM: ERROR: rpmsg_char_init() failed: %d\n", status);
+            if (!obj->heaps[heap_idx].in_use)
+            {
+                heap = &obj->heaps[heap_idx];
+                break;
+            }
+        }
+
+        if (heap == NULL)
+        {
+            appLogPrintf("MEM: ERROR: No available heap slot found!\n");
             status = -1;
         }
 /* LDRA_JUSTIFY_END */
     }
+    if (status == 0)
+    {
+        heap->plist = NULL;
+        heap->dma_heap_fd = -1;
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM15
+<justification end>*/
+        heap->allow_alloc = (prm->flags == 0) ? 1 : 0;  /* flags=0 means MPU can allocate */
+/* LDRA_JUSTIFY_END */
+        heap->heap_id = prm->heap_id;
+        heap->base_phys_addr = prm->base;
+        heap->size = prm->size;
+        heap->heap_alloc_bytes = 0;
+        heap->heap_free_bytes = 0;
+        heap->heap_cur_alloc_bytes = 0;
+        heap->heap_num_alloc = 0;
+        heap->heap_num_free = 0;
+        heap->heap_cur_alloc = 0;
+        (void)snprintf(heap->name, sizeof(heap->name), "%s", prm->name);
+
+        (void)pthread_mutex_init(&heap->list_mutex, NULL);
+
+        appLogPrintf("MEM: Init heap[%d] '%s' (heap_id=%d) ... !!!\n", heap_idx, heap->name, heap->heap_id);
+    }
+
+    if (status == 0)
+    {
+        (void)snprintf(dma_carveout_name, sizeof(dma_carveout_name), "%s", prm->dma_carveout_name);
+        heap->dma_heap_fd = open(dma_carveout_name, (int)((uint32_t)O_RDONLY | (uint32_t)O_CLOEXEC));
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM17
+<justification end>*/
+        if (heap->dma_heap_fd < 0)
+        {
+            appLogPrintf("MEM: ERROR: Failed to initialize DMA HEAP [%s] !!!\n", dma_carveout_name);
+            status = -1;
+        }
+        else
+/* LDRA_JUSTIFY_END */
+        {
+            appLogPrintf("MEM: Initialized DMA HEAP (fd=%d) for heap '%s' !!!\n", heap->dma_heap_fd, heap->name);
+        }
+    }
+
+    if (status == 0)
+    {
+        heap->in_use = true;
+        obj->num_heaps++;
+    }
+
+    if (pthread_mutex_unlock(&obj->global_mutex) != 0)
+    {
+        appLogPrintf("MEM: ERROR: pthread_mutex_unlock failed !!!\n");
+    }
+
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM13
+<justification end>*/
+    if (status == 0)
+    {
+        if (heap->allow_alloc == 0U)
+        {
+            int dma_buf_fd = -1;
+            uint64_t DDR_shared_addr_virt = 0;
+            uint64_t DDR_shared_addr_phys = 0;
+            uint32_t flags = DMA_HEAP_ALLOC_FLAGS;
+            uint64_t offset;
+
+            if (prm->start < prm->base)
+            {
+                appLogPrintf("MEM: ERROR: Invalid carveout config - start (0x%lx) < base (0x%lx) !!!\n",
+                            (uint64_t)prm->start, (uint64_t)prm->base);
+                (void)close(heap->dma_heap_fd);
+                heap->dma_heap_fd = -1;
+                status = -1;
+            }
+            else
+            {
+                offset = (prm->start - prm->base);
+            }
+
+            if (status == 0)
+            {
+                status = appMemDmaHeapExport(heap->dma_heap_fd,
+                                            offset,
+                                            prm->size,
+                                            flags,
+                                            &dma_buf_fd);
+
+                if (status != 0)
+                {
+                    appLogPrintf("MEM: ERROR: Failed to export DMA HEAP at offset 0x%lx [%s] !!!\n",
+                                (uint64_t)prm->base, dma_carveout_name);
+                    (void)close(heap->dma_heap_fd);
+                    heap->dma_heap_fd = -1;
+                }
+            }
+
+            if (status == 0)
+            {
+                status = appMemAddTupleToList(heap_idx, (uint32_t)dma_buf_fd, prm->size,
+                                            &DDR_shared_addr_virt, &DDR_shared_addr_phys);
+                if (status != 0)
+                {
+                    appLogPrintf("MEM: ERROR: Failed to map DMA HEAP export !!!\n");
+                    (void)close(heap->dma_heap_fd);
+                    heap->dma_heap_fd = -1;
+                }
+            }
+
+            if (status == 0)
+            {
+                appLogPrintf("MEM: Heap '%s' - Exported DMA heap region\n", heap->name);
+                appLogPrintf("MEM:   Carveout physical base: 0x%lx\n",(int64_t)prm->base);
+                appLogPrintf("MEM:   Heap physical start:    0x%lx\n",(int64_t)DDR_shared_addr_phys);
+                appLogPrintf("MEM:   Virtual start:          0x%lx\n",(int64_t)DDR_shared_addr_virt);
+                appLogPrintf("MEM:   Size:                   0x%lx\n",prm->size);
+                appLogPrintf("MEM:   Allow A72 alloc:        %s\n", (heap->allow_alloc == 1U) ? "YES" : "NO");
+            }
+            else
+            {
+                if (pthread_mutex_lock(&obj->global_mutex) != 0)
+                {
+                    appLogPrintf("MEM: ERROR: pthread_mutex_lock failed !!!\n");
+                }
+                heap->in_use = false;
+                if (obj->num_heaps > 0U)
+                {
+                    obj->num_heaps--;
+                }
+                if (pthread_mutex_unlock(&obj->global_mutex) != 0)
+                {
+                    appLogPrintf("MEM: ERROR: pthread_mutex_unlock failed !!!\n");
+                }
+            }
+        }
+    }
+/* LDRA_JUSTIFY_END */
 
     appLogPrintf("MEM: Init ... Done !!!\n");
 
-    return(status);
+    if (status == 0)
+    {
+        if (g_char_init_done == 0U)
+        {
+            status = rpmsg_char_init(NULL);
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM14
+<justification end>*/
+            if (status != 0)
+            {
+                appLogPrintf("MEM: ERROR: rpmsg_char_init() failed: %d\n", status);
+            }
+/* LDRA_JUSTIFY_END */
+            g_char_init_done++;
+        }
+    }
+
+    if (status == 0)
+    {
+        appLogPrintf("MEM: Init heap[%d] '%s' ... Done !!!\n", heap_idx, heap->name);
+    }
+
+    return status;
+}
+
+uint8_t appMemIsCharInit(void)
+{
+    return g_char_init_done;
 }
 
 void appMemPrintMemAllocInfo(void)
 {
     app_mem_obj_t *obj = &g_app_mem_obj;
 
-    appLogPrintf("DDR_SHARED_MEM: Alloc's: %ld alloc's of %ld bytes \n", obj->num_alloc, obj->total_alloc_bytes );
-    appLogPrintf("DDR_SHARED_MEM: Free's : %ld free's  of %ld bytes \n", obj->num_free, obj->total_free_bytes );
-    appLogPrintf("DDR_SHARED_MEM: Open's : %ld allocs  of %ld bytes \n", obj->cur_alloc, obj->cur_alloc_bytes );
+    appLogPrintf("=== Memory Allocation Info ===\n");
+
+    for (uint32_t i = 0U; i < MAX_HEAP_REGIONS; i++)
+    {
+        app_mem_heap_obj_t *heap = &obj->heaps[i];
+        if (heap->in_use)
+        {
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM20
+<justification end>*/
+            appLogPrintf("HEAP[%d] '%s' (heap_id=%d, base=0x%lx, size=%luMB, alloc=%s):\n",
+                         i, heap->name, heap->heap_id, heap->base_phys_addr, heap->size / (1024U*1024U),
+                         (heap->allow_alloc == 1U) ? "YES" : "NO");
+/* LDRA_JUSTIFY_END */
+            appLogPrintf("  Alloc's: %ld alloc's of %ld bytes\n",
+                         heap->heap_num_alloc, heap->heap_alloc_bytes);
+            appLogPrintf("  Free's : %ld free's  of %ld bytes\n",
+                         heap->heap_num_free, heap->heap_free_bytes);
+            appLogPrintf("  Open's : %ld allocs  of %ld bytes\n",
+                         heap->heap_cur_alloc, heap->heap_cur_alloc_bytes);
+        }
+    }
+
+    appLogPrintf("GLOBAL TOTAL:\n");
+    appLogPrintf("  Alloc's: %ld alloc's of %ld bytes\n", obj->num_alloc, obj->total_alloc_bytes);
+    appLogPrintf("  Free's : %ld free's  of %ld bytes\n", obj->num_free, obj->total_free_bytes);
+    appLogPrintf("  Open's : %ld allocs  of %ld bytes\n", obj->cur_alloc, obj->cur_alloc_bytes);
+    appLogPrintf("==============================\n");
 }
 
 int32_t appMemDeInit(void)
 {
     int32_t status = 0;
     int status1 = 0;
-
     app_mem_obj_t *obj = &g_app_mem_obj;
 
     appLogPrintf("MEM: Deinit ... !!!\n");
 
-    (void)pthread_mutex_lock(&obj->list_mutex);
-
-    /* Clear the heap off our memory map list */
-    appMemFreeList(obj->plist);
-
     appMemPrintMemAllocInfo();
 
-    (void)pthread_mutex_unlock(&obj->list_mutex);
+    for (uint32_t i = 0U; i < MAX_HEAP_REGIONS; i++)
+    {
+        app_mem_heap_obj_t *heap = &obj->heaps[i];
+        if (heap->in_use)
+        {
+            if (pthread_mutex_lock(&heap->list_mutex) != 0)
+            {
+                appLogPrintf("MEM: ERROR: pthread_mutex_lock failed !!!\n");
+            }
 
-    /* Deinitialize the DMA HEAP module */
-    status1 = close(obj->dma_heap_fd);
+            appMemFreeList(i, heap->plist);
+
+            if (pthread_mutex_unlock(&heap->list_mutex) != 0)
+            {
+                appLogPrintf("MEM: ERROR: pthread_mutex_unlock failed !!!\n");
+            }
+
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
-<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM02
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_U18
 <justification end>*/
-    if (status1 < 0)
-    {
-        appLogPrintf("MEM: ERROR: Failed to deinit the DMA HEAP module !!!\n");
-        status = -1;
-    }
+            if (heap->dma_heap_fd >= 0)
 /* LDRA_JUSTIFY_END */
+            {
+                status1 = close(heap->dma_heap_fd);
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM19
+<justification end>*/
+                if (status1 < 0)
+                {
+                    appLogPrintf("MEM: ERROR: Failed to deinit DMA HEAP for heap[%d] '%s' !!!\n",
+                                 i, heap->name);
+                    status = -1;
+                }
+/* LDRA_JUSTIFY_END */
+                heap->dma_heap_fd = -1;
+            }
+
+            /* Destroy the heap's mutex */
+            (void)pthread_mutex_destroy(&heap->list_mutex);
+
+            heap->in_use = false;
+            appLogPrintf("MEM: Deinit heap[%d] '%s' ... Done !!!\n", i, heap->name);
+        }
+    }
+
+    if (pthread_mutex_lock(&obj->global_mutex) != 0)
+    {
+        appLogPrintf("MEM: ERROR: pthread_mutex_lock failed !!!\n");
+    }
+    obj->num_heaps = 0;
+    obj->total_alloc_bytes = 0;
+    obj->total_free_bytes = 0;
+    obj->cur_alloc_bytes = 0;
+    obj->num_alloc = 0;
+    obj->num_free = 0;
+    obj->cur_alloc = 0;
+    if (pthread_mutex_unlock(&obj->global_mutex) != 0)
+    {
+        appLogPrintf("MEM: ERROR: pthread_mutex_unlock failed !!!\n");
+    }
 
     appLogPrintf("MEM: Deinit ... Done !!!\n");
 
@@ -259,40 +533,62 @@ int32_t appMemDeInit(void)
 uint32_t appMemGetDmaBufFd(void *virPtr, volatile uint32_t *dmaBufFdOffset)
 {
     app_mem_obj_t *obj = &g_app_mem_obj;
-
     int dmaBufFd = -1;
     uint64_t virt_addr = (uint64_t)(virPtr);
+    bool found = false;
+    uint32_t i;
 
     *dmaBufFdOffset = 0;
 
-    app_mem_list_t *mem_map_list;
-
-    /* Enter critical section */
-    (void)pthread_mutex_lock(&obj->list_mutex);
-    mem_map_list = obj->plist;
-    while(mem_map_list != NULL)
+    for (i = 0U; (i < MAX_HEAP_REGIONS) && (!found); i++)
     {
-        if( (virt_addr >= mem_map_list->mem_data.virt_addr)
-            && (virt_addr < (mem_map_list->mem_data.virt_addr+mem_map_list->mem_data.size))
-            )
+        app_mem_heap_obj_t *heap = &obj->heaps[i];
+        if (!heap->in_use)
         {
-            uint32_t offset = (uint32_t)(virt_addr - mem_map_list->mem_data.virt_addr);
-
-            dmaBufFd = (int)mem_map_list->mem_data.dma_buf_fd;
-            *dmaBufFdOffset = offset;
-            break;
+            continue;
         }
-        mem_map_list = mem_map_list->next;
+
+        app_mem_list_t *mem_map_list;
+
+        if (pthread_mutex_lock(&heap->list_mutex) != 0)
+        {
+            appLogPrintf("MEM: ERROR: pthread_mutex_lock failed !!!\n");
+        }
+        mem_map_list = heap->plist;
+        while((mem_map_list != NULL) && (!found))
+        {
+            if( (virt_addr >= mem_map_list->mem_data.virt_addr)
+                && (virt_addr < (mem_map_list->mem_data.virt_addr+mem_map_list->mem_data.size))
+                )
+            {
+                uint32_t offset = (uint32_t)(virt_addr - mem_map_list->mem_data.virt_addr);
+
+                dmaBufFd = (int)mem_map_list->mem_data.dma_buf_fd;
+                *dmaBufFdOffset = offset;
+                found = true;
+            }
+            else
+            {
+                mem_map_list = mem_map_list->next;
+            }
+        }
+        if (pthread_mutex_unlock(&heap->list_mutex) != 0)
+        {
+            appLogPrintf("MEM: ERROR: pthread_mutex_unlock failed !!!\n");
+        }
     }
-    /* Exit critical section */
-    (void)pthread_mutex_unlock(&obj->list_mutex);
-    #ifdef APP_MEM_DEBUG
+
     if (dmaBufFd < 0)
     {
-        printf("MEM: ERROR: Failed to export dmaBufFd for virtPtr %p !!!\n", virPtr);
+        appLogPrintf("MEM: ERROR: Failed to get dmaBufFd for virtPtr %p !!!\n", virPtr);
+        appLogPrintf("MEM: ERROR: Buffer may be APP_MEM_HEAP_DDR (local-only, not DMA-heap backed) !!!\n");
     }
-    printf("MEM: Exported dmaBufFd %d @ offset = %d bytes !!!\n", dmaBufFd, *dmaBufFdOffset);
-    #endif
+    else
+    {
+        #ifdef APP_MEM_DEBUG
+        appLogPrintf("MEM: Exported dmaBufFd %d @ offset = %d bytes !!!\n", dmaBufFd, *dmaBufFdOffset);
+        #endif
+    }
 
     return (uint32_t)(dmaBufFd);
 }
@@ -300,41 +596,136 @@ uint32_t appMemGetDmaBufFd(void *virPtr, volatile uint32_t *dmaBufFdOffset)
 int32_t appMemTranslateDmaBufFd(uint32_t dmaBufFd, uint32_t size, uint64_t *virtPtr, uint64_t *phyPtr)
 {
     app_mem_obj_t  *obj = &g_app_mem_obj;
-    app_mem_list_t *mem_map_list;
     int32_t         status = 0;
+    bool            found = false;
+    uint32_t i;
 
     *virtPtr = 0;
     *phyPtr  = 0;
 
-    /* Enter critical section */
-    (void)pthread_mutex_lock(&obj->list_mutex);
-    mem_map_list = obj->plist;
-    while(mem_map_list != NULL)
+    for (i = 0U; (i < MAX_HEAP_REGIONS) && (!found); i++)
     {
-        if (dmaBufFd == mem_map_list->mem_data.dma_buf_fd)
+        app_mem_heap_obj_t *heap = &obj->heaps[i];
+        if (!heap->in_use)
         {
-            app_mem_type_t *mem_data = &mem_map_list->mem_data;
-            uint32_t offset = (uint32_t)mem_data->offset;
-
-            *virtPtr = mem_data->virt_addr + offset;
-            *phyPtr  = mem_data->phys_addr + offset;
-            break;
+            continue;
         }
 
-        mem_map_list = mem_map_list->next;
+        app_mem_list_t *mem_map_list;
+
+        if (pthread_mutex_lock(&heap->list_mutex) != 0)
+        {
+            appLogPrintf("MEM: ERROR: pthread_mutex_lock failed !!!\n");
+        }
+        mem_map_list = heap->plist;
+        while((mem_map_list != NULL) && (!found))
+        {
+            if (dmaBufFd == mem_map_list->mem_data.dma_buf_fd)
+            {
+                app_mem_type_t *mem_data = &mem_map_list->mem_data;
+                uint32_t offset = (uint32_t)mem_data->offset;
+
+                *virtPtr = mem_data->virt_addr + offset;
+                *phyPtr  = mem_data->phys_addr + offset;
+                found = true;
+            }
+            else
+            {
+                mem_map_list = mem_map_list->next;
+            }
+        }
+
+        if (pthread_mutex_unlock(&heap->list_mutex) != 0)
+        {
+            appLogPrintf("MEM: ERROR: pthread_mutex_unlock failed !!!\n");
+        }
     }
 
-    /* Exit critical section */
-    (void)pthread_mutex_unlock(&obj->list_mutex);
-
-    if (*virtPtr == 0u)
+    if (!found)
     {
-        /* We do not have the record of the 'dmaBufFd' in the list.
-         * Create a record, translate it to 'virtPtr, 'phyPtr' and add a
-         * record for later use.
-         */
-        status = appMemAddTupleToList(dmaBufFd, size, virtPtr, phyPtr);
+        uint64_t temp_phys = 0;
+        uint32_t target_heap_idx = 0;
+        bool heap_found = false;
+        int32_t dmabuf2phys_fd = -1;
+
+        dmabuf2phys_fd = open("/dev/remoteproc0", (int)((uint32_t)O_RDONLY | (uint32_t)O_CLOEXEC));
+
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_U21
+<justification end>*/
+        if (dmabuf2phys_fd < 0)
+        {
+            appLogPrintf("MEM: ERROR: Failed to open /dev/remoteproc0 for dmaBufFd translation\n");
+            status = -1;
+        }
+/* LDRA_JUSTIFY_END */
+        else
+        {
+            status = appMemDmaHeapGetPhys(dmabuf2phys_fd, (int)dmaBufFd, &temp_phys);
+            (void)close(dmabuf2phys_fd);
+
+            if (status != 0)
+            {
+                appLogPrintf("MEM: ERROR: Failed to get physical address for dmaBufFd %d\n", dmaBufFd);
+            }
+        }
+
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_U22
+<justification end>*/
+        if (status == 0)
+        {
+            for (i = 0U; i < MAX_HEAP_REGIONS; i++)
+            {
+                app_mem_heap_obj_t *heap = &obj->heaps[i];
+
+                if (heap->in_use)
+                {
+                    uint64_t heap_start = heap->base_phys_addr;
+                    uint64_t heap_end = heap->base_phys_addr + heap->size;
+
+                    if ((temp_phys >= heap_start) && (temp_phys < heap_end))
+                    {
+                        target_heap_idx = i;
+                        heap_found = true;
+                        appLogPrintf("MEM: dmaBufFd %d (phys=0x%lx) belongs to heap[%d] '%s'\n",
+                                     dmaBufFd, temp_phys, i, heap->name);
+                        break;
+                    }
+                }
+            }
+
+            if (!heap_found)
+            {
+                /* Physical address doesn't match any known heap - use first allocatable heap as fallback */
+                appLogPrintf("MEM: WARNING: dmaBufFd %d (phys=0x%lx) does not match any heap range\n",
+                             dmaBufFd, temp_phys);
+                for (i = 0U; i < MAX_HEAP_REGIONS; i++)
+                {
+                    if ((obj->heaps[i].in_use) && (obj->heaps[i].allow_alloc == 1U))
+                    {
+                        target_heap_idx = i;
+                        heap_found = true;
+                        appLogPrintf("MEM: Using fallback heap[%d] '%s'\n", i, obj->heaps[i].name);
+                        break;
+                    }
+                }
+            }
+
+            if (heap_found)
+            {
+                status = appMemAddTupleToList(target_heap_idx, dmaBufFd, size, virtPtr, phyPtr);
+            }
+            else
+            {
+                appLogPrintf("MEM: ERROR: No suitable heap found for dmaBufFd %d\n", dmaBufFd);
+                status = -1;
+            }
+        }
     }
+/* LDRA_JUSTIFY_END */
 
     if ((*virtPtr == 0u) || (*phyPtr == 0u))
     {
@@ -343,7 +734,7 @@ int32_t appMemTranslateDmaBufFd(uint32_t dmaBufFd, uint32_t size, uint64_t *virt
     }
 
     #ifdef APP_MEM_DEBUG
-    printf("MEM: Translated dmaBufFd %d to virtPtr %p and phyPtr %p!!!\n",
+    appLogPrintf("MEM: Translated dmaBufFd %d to virtPtr %p and phyPtr %p!!!\n",
            dmaBufFd, (void*)*virtPtr, (void*)*phyPtr);
     #endif
 
@@ -396,46 +787,105 @@ static int appMemDmaHeapAlloc(int dma_heap_fd, size_t len, unsigned int flags, i
     return ret;
 }
 
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<function start> static int appMemDmaHeapExport.* <function end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_U23
+<justification end>*/
+static int appMemDmaHeapExport(int dma_heap_fd, uint64_t offset, size_t len, unsigned int flags, int *dma_buf_fd)
+{
+    int ret = 0;
+    if (dma_buf_fd == NULL)
+    {
+        ret = -EINVAL;
+    }
+    if (0 == ret)
+    {
+        struct dma_heap_export_data data = {
+            .offset = offset,
+            .len = len,
+            .fd = 0,
+            .fd_flags = (uint32_t)O_CLOEXEC | (uint32_t)O_RDWR,
+            .heap_flags = flags,
+        };
+
+        *dma_buf_fd = -1;
+
+        ret = ioctl(dma_heap_fd, DMA_HEAP_IOCTL_EXPORT, &data);
+        if (ret < 0)
+        {
+            ret = errno;
+        }
+        else
+        {
+            *dma_buf_fd = (int)data.fd;
+        }
+    }
+    return ret;
+}
+
 uint64_t appMemGetVirt2PhyBufPtr(uint64_t virtPtr, uint32_t heap_id)
 {
     off_t phyPtr = 0;
     app_mem_obj_t *obj = &g_app_mem_obj;
-    /* Find out the physical address of this buffer */
-
-    app_mem_list_t *mem_map_list;
-
     uint64_t virt_addr = (uint64_t)(virtPtr);
+    bool found = false;
+    uint32_t i;
 
-    /* Enter critical section */
-    (void)pthread_mutex_lock(&obj->list_mutex);
-    mem_map_list = obj->plist;
-    while(mem_map_list != NULL)
+    for (i = 0U; (i < MAX_HEAP_REGIONS) && (!found); i++)
     {
-        if( (virt_addr >= mem_map_list->mem_data.virt_addr)
-            && (virt_addr < (mem_map_list->mem_data.virt_addr+mem_map_list->mem_data.size))
-            )
+        app_mem_heap_obj_t *heap = &obj->heaps[i];
+        if (!heap->in_use)
         {
-            uint32_t offset = (uint32_t)(virt_addr - mem_map_list->mem_data.virt_addr);
-
-            phyPtr = (off_t)(mem_map_list->mem_data.phys_addr) + (off_t)offset;
-            break;
+            continue;
         }
-        mem_map_list = mem_map_list->next;
+
+        app_mem_list_t *mem_map_list;
+
+        if (pthread_mutex_lock(&heap->list_mutex) != 0)
+        {
+            appLogPrintf("MEM: ERROR: pthread_mutex_lock failed !!!\n");
+        }
+        mem_map_list = heap->plist;
+        while((mem_map_list != NULL) && (!found))
+        {
+            if( (virt_addr >= mem_map_list->mem_data.virt_addr)
+                && (virt_addr < (mem_map_list->mem_data.virt_addr+mem_map_list->mem_data.size))
+                )
+            {
+                uint32_t offset = (uint32_t)(virt_addr - mem_map_list->mem_data.virt_addr);
+
+                phyPtr = (off_t)(mem_map_list->mem_data.phys_addr) + (off_t)offset;
+                found = true;
+            }
+            else
+            {
+                mem_map_list = mem_map_list->next;
+            }
+        }
+        /* Exit critical section */
+        if (pthread_mutex_unlock(&heap->list_mutex) != 0)
+        {
+            appLogPrintf("MEM: ERROR: pthread_mutex_unlock failed !!!\n");
+        }
     }
-    /* Exit critical section */
-    (void)pthread_mutex_unlock(&obj->list_mutex);
+
     #ifdef APP_MEM_DEBUG
     if (phyPtr == 0)
     {
-        printf("MEM: ERROR: Failed to get physical address of virt addr = %p !!!\n", (void*)virtPtr);
+        appLogPrintf("MEM: ERROR: Failed to get physical address for virt addr %p !!!\n", (void*)virtPtr);
+        appLogPrintf("MEM: ERROR: Buffer may be APP_MEM_HEAP_DDR (local-only, not DMA-heap backed) !!!\n");
     }
-    printf("MEM: Translated virt addr = %p -> phy addr = %lx !!!\n", (void*)virtPtr, phyPtr);
+    else
+    {
+        appLogPrintf("MEM: Translated virt addr = %p -> phy addr = %lx !!!\n", (void*)virtPtr, phyPtr);
+    }
     #endif
 
     return (uint64_t)(phyPtr);
 }
 
-void *appMemAlloc(uint32_t block, uint32_t size, uint32_t align)
+void *appMemAlloc(uint32_t heap_id, uint32_t size, uint32_t align)
 {
     app_mem_obj_t  *obj = &g_app_mem_obj;
     uint64_t        virtual_ptr = 0;
@@ -443,47 +893,97 @@ void *appMemAlloc(uint32_t block, uint32_t size, uint32_t align)
     uint64_t        phys_addr = 0;
     uint32_t        flags = DMA_HEAP_ALLOC_FLAGS;
     int             status = -1;
+    uint32_t        heap_idx = 0;
+    uint32_t        i;
 
-    /* On MPU, direct both shared and non-shared requests to the same
-     * shared heap for backward compatibility */
-    if((APP_MEM_HEAP_DDR == block) ||
-       (APP_MEM_HEAP_DDR_SHARED == block))
+    if ((APP_MEM_HEAP_DDR_SHARED == heap_id) || (APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY == heap_id) ||
+        (APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY_CONST == heap_id))
     {
-        /* align is ignored, all DMA HEAP allcoated buffers are minimum 4KB aligned
+        /* align is ignored, all DMA HEAP allocated buffers are minimum 4KB aligned
         * The alignment information can be found in ${PSDKL}/board-support/linux-*\/
         * dma-buf/dma-heap.c or by running "getconf PAGESIZE" on the target
         */
-        /* alloc memory from DMA HEAP */
-        status = appMemDmaHeapAlloc(obj->dma_heap_fd,
-                                        size,
-                                        flags,
-                                        &dma_buf_fd
-                                    );
 
-        if(status != 0)
+    if (pthread_mutex_lock(&obj->global_mutex) != 0)
+    {
+        appLogPrintf("MEM: ERROR: pthread_mutex_lock failed !!!\n");
+    }
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM24
+<justification end>*/
+        for (i = 0U; i < MAX_HEAP_REGIONS; i++)
         {
-            appLogPrintf("MEM: ERROR: Alloc failed with status = %d !!!\n", status);
+            if ((obj->heaps[i].in_use) && (obj->heaps[i].allow_alloc == 1U) && (obj->heaps[i].heap_id == heap_id))
+            {
+                heap_idx = i;
+                break;
+            }
         }
+/* LDRA_JUSTIFY_END */
+    if (pthread_mutex_unlock(&obj->global_mutex) != 0)
+    {
+        appLogPrintf("MEM: ERROR: pthread_mutex_unlock failed !!!\n");
+    }
 
-        if (status == 0)
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM25
+<justification end>*/
+        if (i != MAX_HEAP_REGIONS)
+/* LDRA_JUSTIFY_END */
         {
-            /* Create the {dma_buf_fd, virtual_ptr, phys_addr} mapping and add it
-            * to the list for later use.
-            */
-            (void)appMemAddTupleToList((uint32_t)dma_buf_fd, size, &virtual_ptr, &phys_addr);
+
+            app_mem_heap_obj_t *heap = &obj->heaps[heap_idx];
+
+            status = appMemDmaHeapAlloc(heap->dma_heap_fd,
+                                            size,
+                                            flags,
+                                            &dma_buf_fd
+                                        );
+
+            if(status != 0)
+            {
+                appLogPrintf("MEM: ERROR: Alloc failed for heap[%d] '%s' with status = %d !!!\n",
+                            heap_idx, heap->name, status);
+            }
+
+            if (status == 0)
+            {
+                (void)appMemAddTupleToList(heap_idx, (uint32_t)dma_buf_fd, size, &virtual_ptr, &phys_addr);
+            }
         }
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM26
+<justification end>*/
+        else
+        {
+            appLogPrintf("MEM: ERROR: No heap available for MPU allocation from heap_id %d!\n", heap_id);
+        }
+/* LDRA_JUSTIFY_END */
+    }
+    else if (APP_MEM_HEAP_DDR == heap_id)
+    {
+        /* APP_MEM_HEAP_DDR uses malloc() for local-only allocations.
+         * WARNING: These buffers are NOT tracked in the DMA heap list,
+         * so appMemGetVirt2PhyBufPtr() and appMemGetDmaBufFd() will fail.
+         * Use APP_MEM_HEAP_DDR_SHARED for buffers that need physical address
+         * translation or DMA buffer fd access. */
+        virtual_ptr = (uint64_t)malloc(size);
     }
     else
     {
-        appLogPrintf("MEM: ERROR: Invalid memory block\n");
+        appLogPrintf("MEM: ERROR: Invalid memory block/heap_id\n");
     }
 
     return ((void *)(uintptr_t)virtual_ptr);
 }
 
-static void appMemFreeListItem(app_mem_list_t *mem_map_list)
+static void appMemFreeListItem(uint32_t heap_idx, app_mem_list_t *mem_map_list)
 {
     app_mem_obj_t *obj = &g_app_mem_obj;
+    app_mem_heap_obj_t *heap = &obj->heaps[heap_idx];
     uint32_t dmaBufFd = (uint32_t)-1;
     uint32_t dmabuf2phys_fd = (uint32_t)-1;
     uint32_t size;
@@ -495,26 +995,47 @@ static void appMemFreeListItem(app_mem_list_t *mem_map_list)
     (void)close((int)dmabuf2phys_fd);
     (void)close((int)dmaBufFd);
 
+    heap->heap_free_bytes += size;
+    heap->heap_num_free++;
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM27
+<justification end>*/
+    if( (heap->heap_cur_alloc_bytes < size) || (heap->heap_cur_alloc==0u) )
+    {
+        appLogPrintf("MEM: WARNING: Free'ing more memory than allocated in heap[%d] '%s'\n",
+                     heap_idx, heap->name);
+    }
+    else
+    {
+        heap->heap_cur_alloc_bytes -= size;
+        heap->heap_cur_alloc--;
+    }
+/* LDRA_JUSTIFY_END */
+
+    if (pthread_mutex_lock(&obj->global_mutex) != 0)
+    {
+        appLogPrintf("MEM: ERROR: pthread_mutex_lock failed !!!\n");
+    }
     obj->total_free_bytes += size;
     obj->num_free++;
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
-<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM04
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM28
 <justification end>*/
     if( (obj->cur_alloc_bytes < size) || (obj->cur_alloc==0u) )
     {
-        appLogPrintf("MEM: WARNING: Free'ing more memory than allocated\n");
+        appLogPrintf("MEM: WARNING: Free'ing more memory than allocated globally\n");
     }
-/* LDRA_JUSTIFY_END */
-/* LDRA_JUSTIFY_START
-<metric start> statement branch <metric end>
-<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM04
-<justification end>*/
     else
-/* LDRA_JUSTIFY_END */
     {
         obj->cur_alloc_bytes -= size;
         obj->cur_alloc--;
+    }
+/* LDRA_JUSTIFY_END */
+    if (pthread_mutex_unlock(&obj->global_mutex) != 0)
+    {
+        appLogPrintf("MEM: ERROR: pthread_mutex_unlock failed !!!\n");
     }
 
     #ifdef APP_MEM_DEBUG
@@ -523,56 +1044,103 @@ static void appMemFreeListItem(app_mem_list_t *mem_map_list)
 }
 
 
-int32_t appMemFree(uint32_t block, void *virPtr, uint32_t size )
+int32_t appMemFree(uint32_t heap_id, void *ptr, uint32_t size)
 {
     int32_t status = 0;
     uint8_t b_found_addr = 0;
-
     app_mem_obj_t *obj = &g_app_mem_obj;
-    app_mem_list_t *mem_map_list;
+    uint32_t i;
 
-    /* On MPU, direct both shared and non-shared requests to the same
-     * shared heap for backward compatibility */
-    if((APP_MEM_HEAP_DDR == block) ||
-       (APP_MEM_HEAP_DDR_SHARED == block))
+    if( (APP_MEM_HEAP_DDR_SHARED == heap_id) || (APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY == heap_id) ||
+        (APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY_CONST == heap_id) )
     {
-        (void)pthread_mutex_lock(&(obj->list_mutex));
-        mem_map_list = obj->plist;
-
-        while(mem_map_list != NULL)
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM29
+<justification end>*/
+        for (i = 0U; (i < MAX_HEAP_REGIONS) && (b_found_addr == 0u); i++)
+/* LDRA_JUSTIFY_END */
         {
-            if(mem_map_list->mem_data.virt_addr == (uint64_t)(virPtr))
+            app_mem_heap_obj_t *heap = &obj->heaps[i];
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM30
+<justification end>*/
+            if ((!heap->in_use) || (heap->heap_id != heap_id))
             {
-                #ifdef APP_MEM_DEBUG
-                printf("MEM: Freeing virt addr = %p -> phy addr = %lx, size = %d (FD's = %d %d) !!!\n",
-                    (void*)virPtr, mem_map_list->mem_data.phys_addr, size,
-                    mem_map_list->mem_data.dmabuf2phys_fd,
-                    mem_map_list->mem_data.dma_buf_fd
-                    );
-                #endif
-
-                appMemFreeListItem(mem_map_list);
-
-                b_found_addr = 1;
-                break;
+                continue;
             }
-            mem_map_list = mem_map_list->next;
+/* LDRA_JUSTIFY_END */
+
+            app_mem_list_t *mem_map_list;
+
+            if (pthread_mutex_lock(&(heap->list_mutex)) != 0)
+            {
+                appLogPrintf("MEM: ERROR: pthread_mutex_lock failed !!!\n");
+            }
+            mem_map_list = heap->plist;
+
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM31
+<justification end>*/
+            while((mem_map_list != NULL) && (b_found_addr == 0u))
+/* LDRA_JUSTIFY_END */
+            {
+                if(mem_map_list->mem_data.virt_addr == (uint64_t)(ptr))
+                {
+                    #ifdef APP_MEM_DEBUG
+                    appLogPrintf("MEM: Freeing virt addr = %p -> phy addr = %lx, size = %d (FD's = %d %d) from heap[%d] '%s' !!!\n",
+                        (void*)ptr, mem_map_list->mem_data.phys_addr, size,
+                        mem_map_list->mem_data.dmabuf2phys_fd,
+                        mem_map_list->mem_data.dma_buf_fd,
+                        i, heap->name
+                        );
+                    #endif
+
+                    appMemFreeListItem(i, mem_map_list);
+                    appMemRemoveFromList(&(heap->plist), mem_map_list);
+
+                    b_found_addr = 1;
+                }
+                else
+                {
+                    mem_map_list = mem_map_list->next;
+                }
+            }
+
+            if (pthread_mutex_unlock(&(heap->list_mutex)) != 0)
+            {
+                appLogPrintf("MEM: ERROR: pthread_mutex_unlock failed !!!\n");
+            }
         }
 
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM32
+<justification end>*/
         if(1u != b_found_addr)
         {
             status = -1;
-            appLogPrintf("MEM: ERROR: Failed to free memory at virt addr = %p !!!\n", virPtr);
+            appLogPrintf("MEM: ERROR: Failed to free memory at virt addr = %p !!!\n", ptr);
+        }
+/* LDRA_JUSTIFY_END */
+    }
+    else if (APP_MEM_HEAP_DDR == heap_id)
+    {
+        if ( ptr != NULL )
+        {
+            free(ptr);
         }
         else
         {
-            appMemRemoveFromList(&(obj->plist), mem_map_list);
+            appLogPrintf("MEM: ERROR: NULL Pointer\n");
+            status = -1;
         }
-        (void)pthread_mutex_unlock(&(obj->list_mutex));
     }
     else
     {
-        appLogPrintf("MEM: ERROR: Invalid memory block\n");
+        appLogPrintf("MEM: ERROR: Invalid memory block/heap_id\n");
         status = -1;
     }
 
@@ -581,17 +1149,55 @@ int32_t appMemFree(uint32_t block, void *virPtr, uint32_t size )
 
 int32_t appMemStats(uint32_t heap_id, app_mem_stats_t *stats)
 {
-    if( (heap_id==APP_MEM_HEAP_DDR_SHARED) && (stats != NULL) )
+    uint32_t i;
+    app_mem_obj_t *obj = &g_app_mem_obj;
+
+    if( stats != NULL )
     {
-        stats->heap_id = heap_id;
-        (void)strncpy(stats->heap_name, "DDR", APP_MEM_HEAP_NAME_MAX);
-        stats->heap_name[APP_MEM_HEAP_NAME_MAX-1u]=(char)0;
-        stats->heap_size = 0;
-        stats->free_size = 0;
-    }
-    else
-    {
-        if(stats!=NULL)
+        if ((heap_id == APP_MEM_HEAP_DDR_SHARED) || (heap_id == APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY) ||
+            (heap_id == APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY_CONST))
+        {
+            const char *heap_name_str;
+
+            if (heap_id == APP_MEM_HEAP_DDR_SHARED)
+            {
+                heap_name_str = "DDR_SHARED";
+            }
+            else if (heap_id == APP_MEM_HEAP_DDR_SHARED_64BIT_ONLY)
+            {
+                heap_name_str = "DDR_SHARED_64B";
+            }
+            else
+            {
+                heap_name_str = "DDR_SHARED_64BC";
+            }
+
+            stats->heap_id = heap_id;
+            (void)strncpy(stats->heap_name, heap_name_str, APP_MEM_HEAP_NAME_MAX);
+            stats->heap_name[APP_MEM_HEAP_NAME_MAX-1u]=(char)0;
+
+            uint64_t total_size = 0;
+            uint64_t used_size = 0;
+
+            for (i = 0U; i < MAX_HEAP_REGIONS; i++)
+            {
+                if ((obj->heaps[i].in_use) && (obj->heaps[i].heap_id == heap_id))
+                {
+                    total_size += obj->heaps[i].size;
+                    used_size += obj->heaps[i].heap_cur_alloc_bytes;
+                }
+            }
+
+            stats->heap_size = total_size;
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM33
+<justification end>*/
+            stats->free_size = (total_size > used_size) ?
+                            (total_size - used_size) : 0U;
+/* LDRA_JUSTIFY_END */
+        }
+        else
         {
             stats->heap_id = heap_id;
             (void)strncpy(stats->heap_name, "INVALID", APP_MEM_HEAP_NAME_MAX);
@@ -600,6 +1206,7 @@ int32_t appMemStats(uint32_t heap_id, app_mem_stats_t *stats)
             stats->free_size = 0;
         }
     }
+
     return(0);
 }
 
@@ -750,14 +1357,14 @@ static int appMemPushToList(app_mem_list_t **list, app_mem_type_t *data)
     return status;
 }
 
-static void appMemFreeList(app_mem_list_t *list)
+static void appMemFreeList(uint32_t heap_idx, app_mem_list_t *list)
 {
     app_mem_list_t *tmp;
     while(list != NULL)
     {
         tmp = list;
         list = list->next;
-        appMemFreeListItem(tmp);
+        appMemFreeListItem(heap_idx, tmp);
         free(tmp);
     }
 }
@@ -797,9 +1404,10 @@ static void appMemRemoveFromList(app_mem_list_t **list, app_mem_list_t *node)
     }
 }
 
-static int32_t appMemAddTupleToList(uint32_t dmaBufFd, uint32_t size, uint64_t *virtPtr, uint64_t *phyPtr)
+static int32_t appMemAddTupleToList(uint32_t heap_idx, uint32_t dmaBufFd, uint64_t size, uint64_t *virtPtr, uint64_t *phyPtr)
 {
     app_mem_obj_t  *obj = &g_app_mem_obj;
+    app_mem_heap_obj_t *heap = &obj->heaps[heap_idx];
     void           *vPtr = NULL;
     app_mem_type_t  m;
     int32_t         dmabuf2phys_fd = -1;
@@ -808,11 +1416,16 @@ static int32_t appMemAddTupleToList(uint32_t dmaBufFd, uint32_t size, uint64_t *
     *virtPtr = 0;
     *phyPtr  = 0;
 
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM34
+<justification end>*/
     if (size == 0u)
     {
         appLogPrintf("MEM: ERROR: Mapped memory size cannot be 0.\n");
         status = -1;
     }
+/* LDRA_JUSTIFY_END */
 
     if (status == 0)
     {
@@ -854,6 +1467,10 @@ static int32_t appMemAddTupleToList(uint32_t dmaBufFd, uint32_t size, uint64_t *
 /* LDRA_JUSTIFY_END */
     }
 
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM35
+<justification end>*/
     /* get physical address */
     if (status == 0)
     {
@@ -866,6 +1483,7 @@ static int32_t appMemAddTupleToList(uint32_t dmaBufFd, uint32_t size, uint64_t *
                    dmaBufFd, dmabuf2phys_fd);
         }
     }
+/* LDRA_JUSTIFY_END */
 
     /* add to local linked list for later retrival and conversion */
     if(status==0)
@@ -878,19 +1496,35 @@ static int32_t appMemAddTupleToList(uint32_t dmaBufFd, uint32_t size, uint64_t *
         m.size      = size;
 
         /* Enter critical section */
-        (void)pthread_mutex_lock(&(obj->list_mutex));
+        if (pthread_mutex_lock(&(heap->list_mutex)) != 0)
+        {
+            appLogPrintf("MEM: ERROR: pthread_mutex_lock failed !!!\n");
+        }
 
-        status = appMemPushToList(&(obj->plist), &m);
+        status = appMemPushToList(&(heap->plist), &m);
 /* LDRA_JUSTIFY_START
 <metric start> branch <metric end>
 <justification start> APP_UTILS_BRANCH_COVERAGE_DMA_HEAP_UBR007
 <justification end>*/
         if(status==0)
         {
+            heap->heap_alloc_bytes += size;
+            heap->heap_cur_alloc_bytes += size;
+            heap->heap_num_alloc++;
+            heap->heap_cur_alloc++;
+
+            if (pthread_mutex_lock(&(obj->global_mutex)) != 0)
+            {
+                appLogPrintf("MEM: ERROR: pthread_mutex_lock failed !!!\n");
+            }
             obj->total_alloc_bytes += size;
             obj->cur_alloc_bytes += size;
             obj->num_alloc++;
             obj->cur_alloc++;
+            if (pthread_mutex_unlock(&(obj->global_mutex)) != 0)
+            {
+                appLogPrintf("MEM: ERROR: pthread_mutex_unlock failed !!!\n");
+            }
 
             #ifdef APP_MEM_DEBUG
             appMemPrintMemAllocInfo();
@@ -898,7 +1532,10 @@ static int32_t appMemAddTupleToList(uint32_t dmaBufFd, uint32_t size, uint64_t *
         }
 /* LDRA_JUSTIFY_END */
         /* Exit critical section */
-        (void)pthread_mutex_unlock(&(obj->list_mutex));
+        if (pthread_mutex_unlock(&(heap->list_mutex)) != 0)
+        {
+            appLogPrintf("MEM: ERROR: pthread_mutex_unlock failed !!!\n");
+        }
 /* LDRA_JUSTIFY_START
 <metric start> statement branch <metric end>
 <justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM09
@@ -910,10 +1547,14 @@ static int32_t appMemAddTupleToList(uint32_t dmaBufFd, uint32_t size, uint64_t *
 /* LDRA_JUSTIFY_END */
     }
 
+/* LDRA_JUSTIFY_START
+<metric start> statement branch <metric end>
+<justification start> TIOVX_CODE_COVERAGE_LINUX_DMA_HEAP_UM36
+<justification end>*/
     if(status==0)
     {
         #ifdef APP_MEM_DEBUG
-        printf("MEM: Allocated virt addr = %lx -> phy addr = %lx, size = %d (FD's = %d %d) !!!\n",
+        appLogPrintf("MEM: Allocated virt addr = %lx -> phy addr = %lx, size = %d (FD's = %d %d) !!!\n",
             *virtPtr, *phyPtr, size,
             dmaBufFd,
             dmabuf2phys_fd
@@ -948,9 +1589,10 @@ static int32_t appMemAddTupleToList(uint32_t dmaBufFd, uint32_t size, uint64_t *
         appLogPrintf("MEM: ERROR: Failed to translate dmaBufFd [%d]\n", dmaBufFd);
         status = -1;
     }
+/* LDRA_JUSTIFY_END */
 
     #ifdef APP_MEM_DEBUG
-    printf("MEM: Translated dmaBufFd %d to virtPtr %p and phyPtr %p!!!\n",
+    appLogPrintf("MEM: Translated dmaBufFd %d to virtPtr %p and phyPtr %p!!!\n",
            dmaBufFd, (void*)*virtPtr, (void*)*phyPtr);
     #endif
 
@@ -964,7 +1606,55 @@ uint64_t appMemShared2PhysPtr(uint64_t shared_ptr, uint32_t heap_id)
 
 uint64_t appMemShared2TargetPtr(uint64_t shared_ptr)
 {
-    return shared_ptr;
+    uint64_t virt_addr = 0U;
+    app_mem_obj_t *obj = &g_app_mem_obj;
+    bool found = false;
+    uint32_t i;
+
+    for (i = 0U; (i < MAX_HEAP_REGIONS) && (!found); i++)
+    {
+        app_mem_heap_obj_t *heap = &obj->heaps[i];
+        if (!heap->in_use)
+        {
+            continue;
+        }
+
+        app_mem_list_t *mem_map_list;
+
+        if (pthread_mutex_lock(&heap->list_mutex) != 0)
+        {
+            appLogPrintf("MEM: ERROR: pthread_mutex_lock failed !!!\n");
+        }
+        mem_map_list = heap->plist;
+        while((mem_map_list != NULL) && (!found))
+        {
+            app_mem_type_t *mem_data = &mem_map_list->mem_data;
+            uint64_t phys_base = mem_data->phys_addr;
+            uint64_t phys_end = phys_base + mem_data->size;
+
+            if ((shared_ptr >= phys_base) && (shared_ptr < phys_end))
+            {
+                uint64_t offset = shared_ptr - phys_base;
+                virt_addr = mem_data->virt_addr + offset;
+                found = true;
+            }
+            else
+            {
+                mem_map_list = mem_map_list->next;
+            }
+        }
+        if (pthread_mutex_unlock(&heap->list_mutex) != 0)
+        {
+            appLogPrintf("MEM: ERROR: pthread_mutex_unlock failed !!!\n");
+        }
+    }
+
+    if (virt_addr == 0U)
+    {
+        virt_addr = shared_ptr;
+    }
+
+    return virt_addr;
 }
 
 uint32_t appMemGetNumAllocs(void)
@@ -974,7 +1664,7 @@ uint32_t appMemGetNumAllocs(void)
     return (uint32_t)obj->cur_alloc;
 }
 
-void *appMemMap(void *phys_ptr, uint32_t size)
+void *appMemMap(void *phys_addr, uint32_t size)
 {
     uint32_t  pageSize = (uint32_t)getpagesize ();
     uintptr_t taddr;
@@ -1001,10 +1691,10 @@ void *appMemMap(void *phys_ptr, uint32_t size)
     && (dev_mem_fd >= 0) ) /* TIOVX-1909- LDRA Uncovered Branch Id: APP_UTILS_BRANCH_COVERAGE_DMA_HEAP_UBR009 */
     {
         #ifdef APP_MEM_DEBUG
-        printf("APP_MEM: Mapping %p ...\n", phys_ptr);
+        appLogPrintf("APP_MEM: Mapping %p ...\n", phys_addr);
         #endif
         /* Mapping this physical address to linux user space */
-        taddr = (uintptr_t)phys_ptr;
+        taddr = (uintptr_t)phys_addr;
         tsize = size;
 
         /* Align the physical address to page boundary */
@@ -1030,10 +1720,10 @@ void *appMemMap(void *phys_ptr, uint32_t size)
         else
 /* LDRA_JUSTIFY_END */
         {
-            virt_ptr = (void*)((uintptr_t)virt_ptr + ((uintptr_t)phys_ptr % pageSize));
+            virt_ptr = (void*)((uintptr_t)virt_ptr + ((uintptr_t)phys_addr % pageSize));
         }
         #ifdef APP_MEM_DEBUG
-        printf("APP_MEM: Mapped %p -> %p of size %d bytes \n", phys_ptr, virt_ptr, size);
+        appLogPrintf("APP_MEM: Mapped %p -> %p of size %d bytes \n", phys_addr, virt_ptr, size);
         #endif
     }
 /* LDRA_JUSTIFY_START
@@ -1042,7 +1732,7 @@ void *appMemMap(void *phys_ptr, uint32_t size)
 <justification end>*/
     if(virt_ptr==NULL)
     {
-        appLogPrintf("APP_MEM: ERROR: Unable to map memory @ %p of size %d bytes !!!\n", phys_ptr, size);
+        appLogPrintf("APP_MEM: ERROR: Unable to map memory @ %p of size %d bytes !!!\n", phys_addr, size);
     }
 /* LDRA_JUSTIFY_END */
     return virt_ptr;
@@ -1056,7 +1746,7 @@ int32_t appMemUnMap(void *virt_ptr, uint32_t size)
     uint32_t  tsize;
 
     #ifdef APP_MEM_DEBUG
-    printf("APP_MEM: UnMapped memory at virtual address @ 0x%p of size %d bytes \n", virt_ptr, size);
+    appLogPrintf("APP_MEM: UnMapped memory at virtual address @ 0x%p of size %d bytes \n", virt_ptr, size);
     #endif
 
     taddr = (uint64_t)virt_ptr;

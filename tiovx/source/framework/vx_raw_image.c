@@ -21,9 +21,9 @@ static vx_bool ownIsValidRawImage(tivx_raw_image image);
 static vx_uint32 ownComputePatchOffset(vx_uint32 x, vx_uint32 y, const vx_imagepatch_addressing_t* addr);
 static vx_status ownDestructRawImage(vx_reference ref);
 static vx_status ownAllocRawImageBuffer(vx_reference ref);
-static void ownInitRawImage(tivx_raw_image image, tivx_raw_image_create_params_t *params);
+static void ownInitRawImage(tivx_raw_image image, const tivx_raw_image_create_params_t *params);
 static tivx_raw_image ownCreateRawImageInt(vx_context context,
-                                           tivx_raw_image_create_params_t *params,
+                                           const tivx_raw_image_create_params_t *params,
                                            tivx_image_create_type_e create_type);
 static vx_status ownCopyAndMapCheckParams(
     tivx_raw_image image,
@@ -382,7 +382,7 @@ static vx_status ownAllocRawImageBuffer(vx_reference ref)
                          * obj_desc->mem_ptr[exp_idx].host_ptr is NULL or not
                          * and status is set according to that.
                          */
-                        (void)tivxMemBufferAlloc(&obj_desc->mem_ptr[exp_idx], obj_desc->mem_size[exp_idx], (vx_enum)TIVX_MEM_EXTERNAL_SHARED);
+                        (void)tivxMemBufferAlloc(&obj_desc->mem_ptr[exp_idx], obj_desc->mem_size[exp_idx], (vx_enum)obj_desc->mem_ptr[exp_idx].mem_heap_region);
 
                         if(obj_desc->mem_ptr[exp_idx].host_ptr == (uint64_t)0)
                         {
@@ -397,7 +397,7 @@ static vx_status ownAllocRawImageBuffer(vx_reference ref)
                                 tivxMemHost2SharedPtr(
                                     obj_desc->mem_ptr[exp_idx].
                                     host_ptr,
-                                    (vx_enum)TIVX_MEM_EXTERNAL_SHARED);
+                                    (vx_enum)obj_desc->mem_ptr[exp_idx].mem_heap_region);
                             tivxCheckStatus(&status, tivxMemBufferMap((void *)(uintptr_t)obj_desc->mem_ptr[exp_idx].host_ptr, (uint32_t)obj_desc->mem_size[exp_idx],
                                 (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_AND_WRITE));
                             ref->is_allocated = (vx_bool)vx_true_e;
@@ -436,7 +436,7 @@ static vx_status ownAllocRawImageBuffer(vx_reference ref)
     return status;
 }
 
-static void ownInitRawImage(tivx_raw_image image, tivx_raw_image_create_params_t *params)
+static void ownInitRawImage(tivx_raw_image image, const tivx_raw_image_create_params_t *params)
 {
 #if 0
     vx_uint16 subimage_ndx;
@@ -530,7 +530,7 @@ static void ownInitRawImage(tivx_raw_image image, tivx_raw_image_create_params_t
 }
 
 static tivx_raw_image ownCreateRawImageInt(vx_context context,
-                                           tivx_raw_image_create_params_t *params,
+                                           const tivx_raw_image_create_params_t *params,
                                            tivx_image_create_type_e create_type)
 {
     tivx_raw_image raw_image = NULL;
@@ -690,7 +690,7 @@ static vx_status ownCopyAndMapCheckParams(
     return status;
 }
 
-VX_API_ENTRY tivx_raw_image VX_API_CALL tivxCreateRawImage(vx_context context, tivx_raw_image_create_params_t *params)
+VX_API_ENTRY tivx_raw_image VX_API_CALL tivxCreateRawImage(vx_context context, const tivx_raw_image_create_params_t *params)
 {
     tivx_raw_image raw_image;
 
@@ -699,17 +699,17 @@ VX_API_ENTRY tivx_raw_image VX_API_CALL tivxCreateRawImage(vx_context context, t
     return raw_image;
 }
 
-VX_API_ENTRY vx_status VX_API_CALL tivxReleaseRawImage(tivx_raw_image* image)
+VX_API_ENTRY vx_status VX_API_CALL tivxReleaseRawImage(tivx_raw_image* raw_image)
 {
 /* Not used in current TIOVX spec, can be implemented and improved if/when it's added  */
 #if 0
-    if (image != NULL)
+    if (raw_image != NULL)
     {
-        tivx_raw_image this_image = image[0];
+        tivx_raw_image this_image = raw_image[0];
         if (ownIsValidSpecificReference((vx_reference)this_image, TIVX_TYPE_RAW_IMAGE) == (vx_bool)vx_true_e)
         {
             tivx_raw_image parent = this_image->parent;
-            /* clear this image from its parent' subimages list */
+            /* clear this raw_image from its parent' subimages list */
             if ((NULL != parent) &&
                 (ownIsValidSpecificReference((vx_reference)parent, TIVX_TYPE_RAW_IMAGE) ==
                     (vx_bool)vx_true_e) )
@@ -729,7 +729,7 @@ VX_API_ENTRY vx_status VX_API_CALL tivxReleaseRawImage(tivx_raw_image* image)
     }
 #endif
 
-    return ownReleaseReferenceInt((vx_reference *)image, TIVX_TYPE_RAW_IMAGE, (vx_enum)VX_EXTERNAL, NULL);
+    return ownReleaseReferenceInt((vx_reference *)raw_image, TIVX_TYPE_RAW_IMAGE, (vx_enum)VX_EXTERNAL, NULL);
 }
 
 VX_API_ENTRY vx_status VX_API_CALL tivxQueryRawImage(tivx_raw_image raw_image, vx_enum attribute, volatile void *ptr, vx_size size)
@@ -1249,7 +1249,7 @@ VX_API_ENTRY vx_status VX_API_CALL tivxMapRawImagePatch(
     const vx_rectangle_t *rect,
     vx_uint32 exposure_index,
     vx_map_id *map_id,
-    vx_imagepatch_addressing_t *user_addr,
+    vx_imagepatch_addressing_t *addr,
     void **user_ptr,
     vx_enum usage,
     vx_enum mem_type,
@@ -1271,7 +1271,7 @@ VX_API_ENTRY vx_status VX_API_CALL tivxMapRawImagePatch(
 
     if(status == (vx_status)VX_SUCCESS)
     {
-        status = ownCopyAndMapCheckParams(raw_image, rect, (vx_imagepatch_addressing_t *)user_addr, exposure_index, usage, (uint32_t)buffer_select);
+        status = ownCopyAndMapCheckParams(raw_image, rect, (vx_imagepatch_addressing_t *)addr, exposure_index, usage, (uint32_t)buffer_select);
     }
 
     if(status == (vx_status)VX_SUCCESS)
@@ -1337,25 +1337,25 @@ VX_API_ENTRY vx_status VX_API_CALL tivxMapRawImagePatch(
             if(map_idx<TIVX_RAW_IMAGE_MAX_MAPS)
             {
                 *map_id = map_idx;
-                tivx_obj_desc_memcpy(user_addr, image_addr, (uint32_t)sizeof(vx_imagepatch_addressing_t));
+                tivx_obj_desc_memcpy(addr, image_addr, (uint32_t)sizeof(vx_imagepatch_addressing_t));
                 *user_ptr = map_addr;
 
                 if( buffer_select == (vx_enum)TIVX_RAW_IMAGE_PIXEL_BUFFER)
                 {
-                    user_addr->dim_x = rect->end_x - rect->start_x;
-                    user_addr->dim_y = rect->end_y - rect->start_y;
+                    addr->dim_x = rect->end_x - rect->start_x;
+                    addr->dim_y = rect->end_y - rect->start_y;
                 }
                 else if (buffer_select == (vx_enum)TIVX_RAW_IMAGE_META_BEFORE_BUFFER)
                 {
-                    user_addr->dim_x = obj_desc->params.meta_height_before * (vx_uint32)image_addr->stride_y;
+                    addr->dim_x = obj_desc->params.meta_height_before * (vx_uint32)image_addr->stride_y;
                 }
                 else if (buffer_select == (vx_enum)TIVX_RAW_IMAGE_META_AFTER_BUFFER)
                 {
-                    user_addr->dim_x = obj_desc->params.meta_height_after * (vx_uint32)image_addr->stride_y;
+                    addr->dim_x = obj_desc->params.meta_height_after * (vx_uint32)image_addr->stride_y;
                 }
                 else
                 {
-                    user_addr->dim_x = map_size;
+                    addr->dim_x = map_size;
                 }
 
                 end_addr = &(host_addr[map_size]);

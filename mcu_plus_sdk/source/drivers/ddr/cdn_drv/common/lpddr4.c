@@ -37,6 +37,11 @@
 #include "include/lpddr4_if.h"
 #include "lpddr4.h"
 #include "include/lpddr4_structs_if.h"
+/* This translation unit's readback identity: the LPDDR/DDR module. Readback is
+ * active only when REG_READBACK_ENABLED is defined and REG_READBACK_MODULE_MASK
+ * includes REG_RB_MOD_LPDDR (otherwise RB_CHECK_* compile to no-ops). */
+#define REG_READBACK_MODULE  REG_RB_MOD_LPDDR
+#include <drivers/hw_include/reg_readback.h>
 
 
 //#define  CPS_DelayNs(x) {uint32_t i; for(i=0U; i<x ;i++) {} }
@@ -342,16 +347,22 @@ static uint32_t LPDDR4_getPhyRwMask( uint32_t regOffset ){
     /* Fetch the read-write mask from the respective mask array */
     if (sliceNum < DSLICE_NUM) {
         rwMask = LPDDR4_getDSliceMask( sliceNum, arrayOffset );
+    } else if (sliceNum < (DSLICE_NUM + ASLICE_NUM)) {
+        /* All address slices share the address-slice-0 register layout/mask.
+         * Previously only address slice 0 was handled here and the remaining
+         * address slices fell through to the phy_core mask, which applies the
+         * wrong mask to every address-slice-1/2 register (over-reporting on
+         * observation registers) on parts with more than one address slice
+         * (e.g. ASLICE_NUM = 3). The mask array holds ASLICE0_REG_COUNT + 1
+         * entries (arrayOffset 0..ASLICE0_REG_COUNT), so bound with "<=" to
+         * also cover the top register of each address slice. */
+        if (arrayOffset <= ASLICE0_REG_COUNT) {
+            rwMask = g_lpddr4_address_slice_0_rw_mask[arrayOffset];
+        }
     } else {
-        if (sliceNum == DSLICE_NUM) {
-            if (arrayOffset < ASLICE0_REG_COUNT) {
-                rwMask = g_lpddr4_address_slice_0_rw_mask[arrayOffset];
-            }
-        } else {
-            if (arrayOffset < PHY_CORE_REG_COUNT) {
-                /* Since the regOffset is valid, should be phy_core */
-                rwMask = g_lpddr4_phy_core_rw_mask[arrayOffset];
-            }
+        if (arrayOffset < PHY_CORE_REG_COUNT) {
+            /* Since the regOffset is valid, should be phy_core */
+            rwMask = g_lpddr4_phy_core_rw_mask[arrayOffset];
         }
     }
     return rwMask;
@@ -458,6 +469,7 @@ uint32_t LPDDR4_WriteReg(const LPDDR4_PrivateData* pD, LPDDR4_RegBlock cpp, uint
                 result = (uint32_t)CDN_EINVAL;
             } else {
                 CPS_REG_WRITE(LPDDR4_AddOffset(&(ctlRegBase->DENALI_CTL_0), regOffset), regValue);
+                RB_CHECK_REG32(LPDDR4_AddOffset(&(ctlRegBase->DENALI_CTL_0), regOffset), regValue, g_lpddr4_ddr_controller_rw_mask[regOffset], LPDDR4_ddrReadbackErr);
             }
         } else if (cpp == LPDDR4_PHY_REGS) {
             if (regOffset >= LPDDR4_INTR_PHY_REG_COUNT) {
@@ -465,6 +477,7 @@ uint32_t LPDDR4_WriteReg(const LPDDR4_PrivateData* pD, LPDDR4_RegBlock cpp, uint
                 result = (uint32_t)CDN_EINVAL;
             } else {
                 CPS_REG_WRITE(LPDDR4_AddOffset(&(ctlRegBase->DENALI_PHY_0), regOffset), regValue);
+                RB_CHECK_REG32(LPDDR4_AddOffset(&(ctlRegBase->DENALI_PHY_0), regOffset), regValue, LPDDR4_getPhyRwMask(regOffset), LPDDR4_ddrReadbackErr);
             }
         } else {
             if (regOffset >= LPDDR4_INTR_PHY_INDEP_REG_COUNT) {
@@ -472,6 +485,7 @@ uint32_t LPDDR4_WriteReg(const LPDDR4_PrivateData* pD, LPDDR4_RegBlock cpp, uint
                 result = (uint32_t)CDN_EINVAL;
             } else {
                 CPS_REG_WRITE(LPDDR4_AddOffset(&(ctlRegBase->DENALI_PI_0), regOffset), regValue);
+                RB_CHECK_REG32(LPDDR4_AddOffset(&(ctlRegBase->DENALI_PI_0), regOffset), regValue, g_lpddr4_pi_rw_mask[regOffset], LPDDR4_ddrReadbackErr);
             }
         }
     }
@@ -1426,4 +1440,9 @@ uint32_t CPS_UncachedRead32(volatile uint32_t* address)
 void CPS_UncachedWrite32(volatile uint32_t* address, uint32_t value)
 {
     *address = value;
+}
+
+__attribute__((weak)) void LPDDR4_ddrReadbackErr(uint32_t expVal, uint32_t readVal)
+{
+    // this is a default empty function
 }

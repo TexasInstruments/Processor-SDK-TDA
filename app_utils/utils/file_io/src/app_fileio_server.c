@@ -349,10 +349,12 @@ int appFileIORdInit(app_fileio_init_prm_t *prm)
     int32_t i;
     app_fileio_rd_obj_t *obj = &g_app_fileio_rd_obj;
 
-    if(prm->shared_mem == NULL || prm->fileio_rd_max_cpus >= APP_FILEIO_MAX_CPUS)
+    if(prm->shared_mem == NULL || prm->fileio_rd_max_cpus > APP_FILEIO_MAX_CPUS)
     {
+        appLogPrintf("ERROR: APP_FILEIO_MEM_ADDR is NULL or fileio_rd_max_cpus is too large\n");
         status = -1;
     }
+
     if(status==0)
     {
         obj->shared_mem = appFileIOMemMap(prm->shared_mem, sizeof(app_fileio_shared_mem_t));
@@ -384,7 +386,7 @@ int appFileIORdInit(app_fileio_init_prm_t *prm)
         }
     }
 
-    return 0;
+    return status;
 }
 
 void appFileIORdRun(app_fileio_rd_obj_t * obj)

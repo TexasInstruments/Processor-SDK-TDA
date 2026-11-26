@@ -1,0 +1,480 @@
+%%{
+
+let common = system.getScript("/common");
+
+/* ── SOC detection ── */
+function getSocKey() {
+    const d = system.deviceData.device;
+    if (d === "J721E_DRA829_TDA4VM_AM752x" || d === "J721E") return "J721E";
+    if (d === "J721S2_TDA4VE_TDA4AL_TDA4VL_AM68x" || d === "J721S2") return "J721S2";
+    if (d === "J784S4_TDA4AP_TDA4VP_TDA4AH_TDA4VH_AM69x" || d === "J784S4") return "J784S4";
+    if (d === "J742S2" || d === "J742S2_TDA4VH") return "J742S2";
+    return null;
+}
+
+const SOC_KEY = getSocKey();
+
+/*
+ * Per-SOC configuration table (compact form).
+ *
+ * Region names and labels are generated dynamically from patterns.
+ * Only SOC-specific exceptions and counts are stored here.
+ *
+ * r5fCoreIds: MCU core identifiers (e.g., "MCU1_0", "MCU2_0")
+ * c7xCount: number of C7x cores
+ * c66xCount: number of C66x cores (j721e only)
+ * hasEth: whether INTERCORE_ETH_DESC/DATA_MEM nodes are emitted
+ * ipcVringLegacy: use legacy IPC_VRING format (no compatible, has alignment)
+ * heapsHiLabel/heapsHiNode: DTSI label and node name for C7x high-DDR carveout
+ * heapsLoExtra: additional regions for heaps_lo beyond base R5F local heaps
+ */
+
+/* ── Helper: expand R5F core config from MCU IDs ── */
+function expandR5fCores(coreIds) {
+    return coreIds.map(id => {
+        let match = id.match(/MCU(\d+)_(\d+)/);
+        let mcuNum = parseInt(match[1]);
+        let coreNum = parseInt(match[2]);
+        let isMcu = (mcuNum === 1);
+        let fssNum = mcuNum - (isMcu ? 1 : 2);
+
+        return {
+            ipc: `DDR_${id}_IPC`,
+            main: [`DDR_${id}_RESOURCE_TABLE`, `DDR_${id}`],
+            ipcLabel: `vision_apps_${isMcu ? 'mcu' : 'main'}_r5fss${fssNum}_core${coreNum}_dma_memory_region`,
+            mainLabel: `vision_apps_${isMcu ? 'mcu' : 'main'}_r5fss${fssNum}_core${coreNum}_memory_region`,
+        };
+    });
+}
+
+/* ── Helper: expand C7x core config from count ── */
+function expandC7xCores(count, isJ721e) {
+    let cores = [];
+    for (let i = 1; i <= count; i++) {
+        let coreIdx = i - 1;
+        cores.push({
+            ipc: `DDR_C7x_${i}_IPC`,
+            main: [`DDR_C7x_${i}_RESOURCE_TABLE`, `DDR_C7x_${i}_BOOT`,
+                   `DDR_C7x_${i}_VECS`, `DDR_C7x_${i}_SECURE_VECS`, `DDR_C7x_${i}`],
+            ipcLabel: `vision_apps_c71_${coreIdx}_dma_memory_region`,
+            mainLabel: `vision_apps_c71_${coreIdx}_memory_region`,
+            /* First C7x IPC node never has suffix; main node has no suffix only for j721e single C7x */
+            ipcNode: (i === 1) ? "vision-apps-c71-dma-memory" : `vision-apps-c71_${coreIdx}-dma-memory`,
+            mainNode: (i === 1 && isJ721e) ? "vision-apps-c71-memory" : `vision-apps-c71_${coreIdx}-memory`,
+        });
+    }
+    return cores;
+}
+
+/* ── Helper: expand C66x cores for j721e (with label swap) ── */
+function expandC66xCores() {
+    /* j721e legacy: swapped labels between C66x_1 and C66x_2 */
+    return [
+        { ipc: "DDR_C66x_1_IPC", main: ["DDR_C66x_1_RESOURCE_TABLE", "DDR_C66x_1_BOOT", "DDR_C66x_1"],
+          ipcLabel: "vision_apps_c66_0_dma_memory_region",
+          mainLabel: "vision_apps_c66_1_memory_region",
+          ipcNode: "vision-apps-c66-dma-memory", mainNode: "vision-apps-c66-memory" },
+        { ipc: "DDR_C66x_2_IPC", main: ["DDR_C66x_2_RESOURCE_TABLE", "DDR_C66x_2_BOOT", "DDR_C66x_2"],
+          ipcLabel: "vision_apps_c66_1_dma_memory_region",
+          mainLabel: "vision_apps_c66_0_memory_region",
+          ipcNode: "vision-apps-c66-dma-memory", mainNode: "vision-apps-c66-memory" },
+    ];
+}
+
+/* ── Helper: build heapsLo region list ── */
+function buildHeapsLoRegs(r5fCoreIds, extraRegs) {
+    /* Base: all R5F LOCAL_HEAP regions */
+    let baseHeaps = r5fCoreIds.map(id => `DDR_${id}_LOCAL_HEAP`);
+    return baseHeaps.concat(extraRegs || []);
+}
+
+const SOC_CONFIG_COMPACT = {
+    /* ── J721E ──────────────────────────────────────────────────────────── */
+    "J721E": {
+        coreNames: ["mcu-r5fss0-0","r5fss0-0","r5fss0-1",
+                    "r5fss1-0","r5fss1-1","c71ss0-0","c66ss0-0","c66ss1-0"],
+        r5fCoreIds: ["MCU1_0", "MCU2_0", "MCU2_1", "MCU3_0", "MCU3_1"],
+        c7xCount: 1,
+        c66xCount: 2,
+        heapsLoExtra: ["DDR_C66X_1_LOCAL_HEAP", "DDR_C66X_2_LOCAL_HEAP"],
+        heapsHiLabel: "vision_apps_core_heaps_hi",
+        heapsHiNode: "vision-apps-core-heap-memory-hi",
+        ipcVringLegacy: true,
+        hasEth: true,
+    },
+
+    /* ── J721S2 ─────────────────────────────────────────────────────────── */
+    "J721S2": {
+        coreNames: ["mcu-r5fss0-0","r5fss0-0","r5fss0-1",
+                    "r5fss1-0","r5fss1-1","c71ss0-0","c71ss1-0"],
+        r5fCoreIds: ["MCU1_0", "MCU2_0", "MCU2_1", "MCU3_0", "MCU3_1"],
+        c7xCount: 2,
+        c66xCount: 0,
+        heapsLoExtra: ["DDR_MCU2_0_VISS_CONFIG_HEAP"],
+        heapsHiLabel: "c7x_ddr_heaps_hi",
+        heapsHiNode: "c7x_ddr_heaps_hi-apps-core-heap-memory-hi",
+        ipcVringLegacy: false,
+        hasEth: false,
+    },
+
+    /* ── J784S4 ─────────────────────────────────────────────────────────── */
+    "J784S4": {
+        coreNames: ["mcu-r5fss0-0","r5fss0-0","r5fss0-1",
+                    "r5fss1-0","r5fss1-1","r5fss2-0","r5fss2-1",
+                    "c71ss0-0","c71ss1-0","c71ss2-0","c71ss3-0"],
+        r5fCoreIds: ["MCU1_0", "MCU2_0", "MCU2_1", "MCU3_0", "MCU3_1", "MCU4_0", "MCU4_1"],
+        c7xCount: 4,
+        c66xCount: 0,
+        heapsLoExtra: ["DDR_MCU2_0_VISS_CONFIG_HEAP", "DDR_MCU4_0_VISS_CONFIG_HEAP"],
+        heapsHiLabel: "c7x_ddr_heaps_hi",
+        heapsHiNode: "c7x-ddr-heaps-hi",
+        ipcVringLegacy: false,
+        hasEth: true,
+    },
+
+    /* ── J742S2 ─────────────────────────────────────────────────────────── */
+    "J742S2": {
+        coreNames: ["mcu-r5fss0-0","r5fss0-0","r5fss0-1",
+                    "r5fss1-0","r5fss1-1","r5fss2-0","r5fss2-1",
+                    "c71ss0-0","c71ss1-0","c71ss2-0"],
+        r5fCoreIds: ["MCU1_0", "MCU2_0", "MCU2_1", "MCU3_0", "MCU3_1", "MCU4_0", "MCU4_1"],
+        c7xCount: 3,
+        c66xCount: 0,
+        heapsLoExtra: ["DDR_MCU2_0_VISS_CONFIG_HEAP", "DDR_MCU4_0_VISS_CONFIG_HEAP"],
+        heapsHiLabel: "c7x_ddr_heaps_hi",
+        heapsHiNode: "c7x-ddr-heaps-hi",
+        ipcVringLegacy: false,
+        hasEth: true,
+    },
+};
+
+/* ── Expand compact config into full config with arrays ── */
+const cfg_compact = SOC_CONFIG_COMPACT[SOC_KEY] || null;
+let cfg = null;
+if (cfg_compact) {
+    cfg = {
+        coreNames: cfg_compact.coreNames,
+        r5fCores: expandR5fCores(cfg_compact.r5fCoreIds),
+        c66Cores: (cfg_compact.c66xCount > 0) ? expandC66xCores() : [],
+        c7xCores: expandC7xCores(cfg_compact.c7xCount, SOC_KEY === "J721E"),
+        sharedMemRegs: ["APP_LOG_MEM", "TIOVX_OBJ_DESC_MEM", "APP_FILEIO_MEM", "TIOVX_LOG_RT_MEM"],
+        heapsLoRegs: buildHeapsLoRegs(cfg_compact.r5fCoreIds, cfg_compact.heapsLoExtra),
+        heapsHiLabel: cfg_compact.heapsHiLabel,
+        heapsHiNode: cfg_compact.heapsHiNode,
+        ipcVringLegacy: cfg_compact.ipcVringLegacy,
+        hasEth: cfg_compact.hasEth,
+    };
+}
+
+/*
+ * Build a flat map of { regionName -> { origin, size } } by scanning all cores.
+ * Uses the same cross-core iteration pattern as app_mem_map.xdt.
+ */
+function buildRegionMap() {
+    let coreNames = common.getSysCfgCoreNames();
+    if (!coreNames || coreNames.length === 0) {
+        coreNames = cfg ? cfg.coreNames : ["mcu-r5fss0-0","r5fss0-0","c71ss0-0"];
+    }
+    let regionMap = {};
+    for (let core of coreNames) {
+        let mod    = common.getModuleForCore("/memory_configurator/memory_region",     core);
+        let modMpu = common.getModuleForCore("/memory_configurator/memory_region_mpu", core);
+        let modMmu = common.getModuleForCore("/memory_configurator/memory_region_mmu", core);
+        let instances = [];
+        if (mod    !== undefined && mod.$instances)    instances = instances.concat(mod.$instances);
+        if (modMpu !== undefined && modMpu.$instances) instances = instances.concat(modMpu.$instances);
+        if (modMmu !== undefined && modMmu.$instances) instances = instances.concat(modMmu.$instances);
+        for (let inst of instances) {
+            if (regionMap[inst.$name] !== undefined) continue;
+            let origin = inst.auto ? inst.autoStartAddress : inst.manualStartAddress;
+            let size   = (modMpu !== undefined && modMpu.$instances && modMpu.$instances.includes(inst))
+                         ? Math.pow(2, inst.size) : inst.size;
+            regionMap[inst.$name] = { origin, size };
+        }
+    }
+    return regionMap;
+}
+
+const REGION_MAP = buildRegionMap();
+
+/* Lookup helpers */
+function getOrigin(name) { return REGION_MAP[name] !== undefined ? REGION_MAP[name].origin : -1; }
+function getSize(name)   { return REGION_MAP[name] !== undefined ? REGION_MAP[name].size   : -1; }
+
+/* Concat: span from min(origin) to max(origin+size) across a list of region names */
+function concatRegions(regionNames) {
+    let start = Infinity, end = 0;
+    for (let name of regionNames) {
+        let o = getOrigin(name), s = getSize(name);
+        if (o < start)   start = o;
+        if (o + s > end) end   = o + s;
+    }
+    return { origin: start, size: end - start };
+}
+
+function hex8(n) { return (n >>> 0).toString(16).padStart(8, "0"); }
+
+function splitAddr(addr) {
+    return { hi: Math.floor(addr / 0x100000000) & 0xFF, lo: addr & 0xFFFFFFFF };
+}
+
+/*
+ * Resolve the physical address of DDR_SHARED_MEM dynamically.
+ *
+ * DDR_SHARED_MEM has a virtual start address; its physical address is in either:
+ *   - mmu_armv8 instances (C7x cores): vAddr == sharedVAddr  ->  pAddr
+ *   - addr_translate instances (R5F cores): localAddr == sharedVAddr  ->  systemAddr
+ */
+function resolveSharedMemPhysical() {
+    let sharedVAddr = getOrigin("DDR_SHARED_MEM");
+    let sharedSize  = getSize("DDR_SHARED_MEM");
+    if (sharedVAddr === -1) return { phys: -1, size: -1 };
+    let coreNames = common.getSysCfgCoreNames();
+    if (!coreNames || coreNames.length === 0)
+        coreNames = cfg ? cfg.coreNames : ["mcu-r5fss0-0","r5fss0-0","c71ss0-0"];
+    for (let core of coreNames) {
+        /* C7x: mmu_armv8 (j722s2) or mmu_cfg (j721e) */
+        let mmuMod = common.getModuleForCore("/kernel/dpl/mmu_armv8", core);
+        if (mmuMod === undefined) {
+            mmuMod = common.getModuleForCore("/memory_configurator/mmu_cfg", core);
+        }
+        if (mmuMod !== undefined && mmuMod.$instances) {
+            for (let inst of mmuMod.$instances) {
+                if (inst.vAddr !== undefined && inst.vAddr === sharedVAddr)
+                    return { phys: inst.pAddr, size: sharedSize };
+            }
+        }
+        /* R5F: addr_translate */
+        let atMod = common.getModuleForCore("/kernel/dpl/addr_translate", core);
+        if (atMod !== undefined && atMod.$instances) {
+            for (let inst of atMod.$instances) {
+                if (inst.localAddr !== undefined && inst.localAddr === sharedVAddr)
+                    return { phys: inst.systemAddr, size: sharedSize };
+            }
+        }
+    }
+    return { phys: -1, size: -1 };
+}
+
+/*
+ * Build the list of DTSI nodes.
+ * Each entry: { label, node, origin, size, split, compatible, nomap, originTag, extraProps }
+ * Defaults (applied at emit time): compatible="shared-dma-pool", nomap=true,
+ *   originTag=true, split=false
+ * extraProps: optional array of additional DT properties to emit, e.g. ["alignment = <0x1000>"]
+ */
+let nodes  = [];
+let errors = [];
+
+const sharedMem = resolveSharedMemPhysical();
+if (sharedMem.phys === -1) {
+    errors.push("DDR_SHARED_MEM physical address not found — no MMU/addr_translate entry maps 0x" +
+                getOrigin("DDR_SHARED_MEM").toString(16));
+}
+
+/*
+ * Resolve the C7x high-DDR physical carveout dynamically.
+ *
+ * Scans all C7x mmu_armv8 entries whose pAddr >= 0x800000000 (excluding the
+ * shared-mem mapping) and returns the contiguous physical span across all of them.
+ * This works for any SOC without hardcoding a per-SOC region list.
+ */
+function resolveC7xHighPhysical() {
+    let coreNames = common.getSysCfgCoreNames();
+    if (!coreNames || coreNames.length === 0)
+        coreNames = cfg ? cfg.coreNames.filter(c => c.includes("c71")) : [];
+    let minPAddr = Infinity, maxEnd = 0;
+    for (let core of coreNames) {
+        /* C7x: mmu_armv8 (j722s2) or mmu_cfg (j721e) */
+        let mmuMod = common.getModuleForCore("/kernel/dpl/mmu_armv8", core);
+        if (mmuMod === undefined) {
+            mmuMod = common.getModuleForCore("/memory_configurator/mmu_cfg", core);
+        }
+        if (mmuMod === undefined || !mmuMod.$instances) continue;
+        for (let inst of mmuMod.$instances) {
+            if (inst.pAddr !== undefined &&
+                inst.pAddr >= 0x800000000 &&
+                inst.pAddr !== sharedMem.phys) {
+                if (inst.pAddr < minPAddr) minPAddr = inst.pAddr;
+                let end = inst.pAddr + inst.size;
+                if (end > maxEnd) maxEnd = end;
+            }
+        }
+    }
+    if (minPAddr === Infinity) return { phys: -1, size: -1 };
+    return { phys: minPAddr, size: maxEnd - minPAddr };
+}
+
+const c7xHigh = resolveC7xHighPhysical();
+
+function addDirect(label, node, regionName) {
+    let origin = getOrigin(regionName);
+    let size   = getSize(regionName);
+    if (origin === -1 || size === -1) {
+        errors.push("region '" + regionName + "' not found — check region name in SysConfig");
+        return;
+    }
+    nodes.push({ label, node, origin, size });
+}
+
+function addConcat(label, node, regionNames) {
+    for (let name of regionNames) {
+        if (getOrigin(name) === -1 || getSize(name) === -1) {
+            errors.push("region '" + name + "' not found — check region name in SysConfig");
+            return;
+        }
+    }
+    let span = concatRegions(regionNames);
+    nodes.push({ label, node, origin: span.origin, size: span.size });
+}
+
+/* addOptionalConcat: only emit if at least one region is present. Silently skips missing
+ * entries so that optional regions (e.g. VISS_CONFIG_HEAP on some SOCs) do not cause
+ * errors when absent. */
+function addOptionalConcat(label, node, regionNames) {
+    let present = regionNames.filter(n => getOrigin(n) !== -1 && getSize(n) !== -1);
+    if (present.length === 0) return;
+    let span = concatRegions(present);
+    nodes.push({ label, node, origin: span.origin, size: span.size });
+}
+
+/* ── Error if SOC is unknown ── */
+if (!cfg) {
+    errors.push("Unsupported device '" + system.deviceData.device +
+                "' — add it to SOC_CONFIG in linux_rtos_memory_map.xdt");
+} else {
+
+    /* ── R5F IPC DMA regions (one per core) ── */
+    for (let core of cfg.r5fCores) {
+        addDirect(core.ipcLabel, "vision-apps-r5f-dma-memory", core.ipc);
+    }
+
+    /* ── R5F main DDR concat (resource_table + code/data, no IPC_TRACE) ── */
+    for (let core of cfg.r5fCores) {
+        addConcat(core.mainLabel, "vision-apps-r5f-memory", core.main);
+    }
+
+    /* ── C66x DSP IPC and main regions (j721e only) ── */
+    /* Emit IPC first, then main (not interleaved) to match existing dtsi order */
+    for (let core of cfg.c66Cores) {
+        addDirect(core.ipcLabel,  core.ipcNode,  core.ipc);
+    }
+    for (let core of cfg.c66Cores) {
+        addConcat(core.mainLabel, core.mainNode,  core.main);
+    }
+
+    /* ── IPC vring shared across all cores ── */
+    if (cfg.ipcVringLegacy) {
+        /* j721e legacy: no compatible, no @addr suffix, has alignment property */
+        let origin = getOrigin("IPC_VRING_MEM");
+        let size   = getSize("IPC_VRING_MEM");
+        if (origin === -1 || size === -1) {
+            errors.push("region 'IPC_VRING_MEM' not found — check region name in SysConfig");
+        } else {
+            nodes.push({ label: "vision_apps_rtos_ipc_memory_region",
+                         node:  "vision-apps-rtos-ipc-memory-region",
+                         origin, size,
+                         compatible: null, originTag: false, nomap: true,
+                         extraProps: ["alignment = <0x1000>"] });
+        }
+    } else {
+        addDirect("vision_apps_rtos_ipc_memory_region",
+                  "vision-apps-rtos-ipc-memory-region", "IPC_VRING_MEM");
+    }
+
+    /* ── Vision Apps shared DDR (log + obj_desc + fileio + log_rt) ── */
+    /* Per-host object descriptor slices replace the single TIOVX_OBJ_DESC_MEM region on SOCs that define them */
+    let sharedMemRegs = cfg.sharedMemRegs.flatMap(n =>
+        (n === "TIOVX_OBJ_DESC_MEM" && getOrigin(n) === -1 && getOrigin("TIOVX_OBJ_DESC_MEM_HOST0") !== -1)
+            ? ["TIOVX_OBJ_DESC_MEM_HOST0", "TIOVX_OBJ_DESC_MEM_HOST1", "TIOVX_OBJ_DESC_MEM_HOST2"] : [n]);
+    addConcat("vision_apps_memory_region", "vision-apps-dma-memory", sharedMemRegs);
+
+    /* ── C7x IPC DMA regions ── */
+    for (let core of cfg.c7xCores) {
+        addDirect(core.ipcLabel, core.ipcNode, core.ipc);
+    }
+
+    /* ── C7x main DDR concat (resource_table + boot + vecs + secure_vecs + code/data) ── */
+    for (let core of cfg.c7xCores) {
+        addConcat(core.mainLabel, core.mainNode, core.main);
+    }
+
+    /* ── Core heaps lo (all R5F local heaps; VISS_CONFIG_HEAP where present) ── */
+    addOptionalConcat("vision_apps_core_heaps_lo",
+                      "vision-apps-core-heap-memory-lo", cfg.heapsLoRegs);
+
+    /* ── Ethernet inter-core shared regions (where supported) ── */
+    if (cfg.hasEth) {
+        addDirect("vision_apps_main_r5fss0_core0_shared_memory_queue_region",
+                  "vision-apps-r5f-virtual-eth-queues",  "INTERCORE_ETH_DESC_MEM");
+        addDirect("vision_apps_main_r5fss0_core0_shared_memory_bufpool_region",
+                  "vision-apps-r5f-virtual-eth-buffers", "INTERCORE_ETH_DATA_MEM");
+    }
+
+    /* ── C7x high-DDR carveout (40-bit physical, split address) ── */
+    if (c7xHigh.phys !== -1) {
+        nodes.push({ label: cfg.heapsHiLabel, node: cfg.heapsHiNode,
+                     origin: c7xHigh.phys, size: c7xHigh.size, split: true });
+    }
+
+    /* ── DDR_SHARED_MEM dma-heap carveout (physical addr, no no-map, no @addr suffix) ── */
+    if (sharedMem.phys !== -1) {
+        nodes.push({ label: "vision_apps_shared_region", node: "vision_apps_shared-memories",
+                     origin: sharedMem.phys, size: sharedMem.size,
+                     split: true, compatible: "dma-heap-carveout", nomap: false, originTag: false });
+    }
+}
+
+/* Sort all nodes by origin address ascending */
+nodes.sort((a, b) => a.origin - b.origin);
+
+%%}
+
+% if (errors.length > 0) {
+  /* !! DTSI GENERATION ERRORS - OUTPUT IS INCOMPLETE !!
+% for (let e of errors) {
+   * ERROR: `e`
+% }
+   * Fix: ensure all required region names exist in SysConfig and match the
+   * lookup table in linux_rtos_memory_map.xdt
+   */
+% }
+% for (let n of nodes) {
+%   let compatible = n.compatible !== undefined ? n.compatible : "shared-dma-pool";
+%   let nomap      = n.nomap      !== undefined ? n.nomap      : true;
+%   let originTag  = n.originTag  !== undefined ? n.originTag  : true;
+%   let split = n.split !== undefined ? n.split : false;
+%   let extraProps = n.extraProps !== undefined ? n.extraProps : [];
+%
+%   let nodeHeader;
+%   if (originTag) {
+%       if (split) {
+%           let p = splitAddr(n.origin);
+%           nodeHeader = n.label + ": " + n.node + "@" + (p.hi.toString(16) + hex8(p.lo)).replace(/^0+/, "") + " {";
+%       } else {
+%           nodeHeader = n.label + ": " + n.node + "@" + hex8(n.origin) + " {";
+%       }
+%   } else {
+%       nodeHeader = n.label + ": " + n.node + " {";
+%   }
+%
+%   let regLine;
+%   if (split) {
+%       let p = splitAddr(n.origin);
+%       regLine = "reg = <0x" + p.hi.toString(16).padStart(2, "0") + " 0x" + hex8(p.lo) + " 0x00 0x" + hex8(n.size) + ">;";
+%   } else {
+%       regLine = "reg = <0x00 0x" + hex8(n.origin) + " 0x00 0x" + hex8(n.size) + ">;";
+%   }
+	`nodeHeader`
+% if (compatible !== null) {
+		compatible = "`compatible`";
+% }
+		`regLine`
+% if (nomap) {
+		no-map;
+% }
+% for (let prop of extraProps) {
+		`prop`;
+% }
+	};
+% }

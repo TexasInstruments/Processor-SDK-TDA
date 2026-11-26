@@ -266,7 +266,7 @@ int set_ccr(client_connect_request_t *ccr, avtptc_data_t *avtptcd)
     char astr[32];
     if(avtptcd->mode==LISTENER_MODE){ccr->con_mode=AVTP_LISTENER_CONNECTION;}
     else{ccr->con_mode=AVTP_TALKER_CONNECTION;}
-    strcpy(ccr->netdev, avtptcd->netdev);
+    (void)ub_strncpy(ccr->netdev, avtptcd->netdev, sizeof(ccr->netdev));
     ccr->promisc=avtptcd->promisc;
     if(avtptcd->vid){ccr->tagged=true;}
     ccr->rec_tagged=avtptcd->rec_tagged;
@@ -279,7 +279,7 @@ int set_ccr(client_connect_request_t *ccr, avtptc_data_t *avtptcd)
     ccr->avtpd_bufftime=avtptcd->avtpd_buftime;
     if(!avtptcd->sid){sprintf(astr, "00:01:02:03:04:05:%02X:%02X",
             avtptcd->sidl2>>8, avtptcd->sidl2&0xff);}
-    else{strcpy(astr, avtptcd->sid);}
+    else{(void)ub_strncpy(astr, avtptcd->sid, sizeof(astr));}
     ub_ssid2bsid(astr, stream_id);
     avbtp_set_stream_id(&ccr->ht.preset_cmsh, stream_id);
     ccr->ht.preset_cmsh.hh.subtype=avtptcd->subtype;

@@ -97,7 +97,11 @@ static vx_enum_type_size_t g_reference_enum_type_sizes[] = {
     {(vx_enum)TIVX_TYPE_EVENT, 0U},
     {(vx_enum)TIVX_TYPE_MUTEX, 0U},
     {(vx_enum)TIVX_TYPE_QUEUE, 0U},
-    {(vx_enum)TIVX_TYPE_TASK, 0U}
+    {(vx_enum)TIVX_TYPE_TASK, 0U},
+    {(vx_enum)TIVX_TYPE_RTOS_OSAL_SEM_OBJ, 0U},
+    {(vx_enum)TIVX_TYPE_RTOS_OSAL_SEM_POOL, 0U},
+    {(vx_enum)TIVX_TYPE_RTOS_OSAL_TASK_OBJ, 0U},
+    {(vx_enum)TIVX_TYPE_RTOS_OSAL_TASK_POOL, 0U}
 };
 
 static vx_bool ownIsGenericAllocReferenceType(vx_enum ref_type);
@@ -129,22 +133,60 @@ void ownUpdateEnumTypeSizes(void)
         {
             case (vx_enum)TIVX_TYPE_EVENT:
             {
-                g_reference_enum_type_sizes[i].item_size = g_tivx_os_obj_sizes.event_size;
+                g_reference_enum_type_sizes[i].item_size = g_tivx_os_obj_sizes.posix_event_size;
                 break;
             }
             case (vx_enum)TIVX_TYPE_MUTEX:
             {
-                g_reference_enum_type_sizes[i].item_size = g_tivx_os_obj_sizes.mutex_size;
+                g_reference_enum_type_sizes[i].item_size = g_tivx_os_obj_sizes.posix_mutex_size;
                 break;
             }
             case (vx_enum)TIVX_TYPE_QUEUE:
             {
-                g_reference_enum_type_sizes[i].item_size = g_tivx_os_obj_sizes.queue_size;
+                g_reference_enum_type_sizes[i].item_size = g_tivx_os_obj_sizes.posix_queue_size;
                 break;
             }
             case (vx_enum)TIVX_TYPE_TASK:
             {
-                g_reference_enum_type_sizes[i].item_size = g_tivx_os_obj_sizes.task_size;
+                g_reference_enum_type_sizes[i].item_size = g_tivx_os_obj_sizes.posix_task_size;
+                break;
+            }
+            default:
+            {
+                /* do nothing */
+                break;
+            }
+        }
+    }
+}
+
+void ownUpdateRemoteEnumTypeSizes(void *os_obj_sizes)
+{
+    uint32_t i;
+    tivx_os_obj_sizes_t *obj_sizes = (tivx_os_obj_sizes_t *)os_obj_sizes;
+
+    for (i = 0U; i < dimof(g_reference_enum_type_sizes); i++)
+    {
+        switch (g_reference_enum_type_sizes[i].item_type)
+        {
+            case (vx_enum)TIVX_TYPE_RTOS_OSAL_SEM_OBJ:
+            {
+                g_reference_enum_type_sizes[i].item_size = obj_sizes->rtos_sem_obj_size;
+                break;
+            }
+            case (vx_enum)TIVX_TYPE_RTOS_OSAL_SEM_POOL:
+            {
+                g_reference_enum_type_sizes[i].item_size = obj_sizes->rtos_sem_pool_size;
+                break;
+            }
+            case (vx_enum)TIVX_TYPE_RTOS_OSAL_TASK_OBJ:
+            {
+                g_reference_enum_type_sizes[i].item_size = obj_sizes->rtos_task_obj_size;
+                break;
+            }
+            case (vx_enum)TIVX_TYPE_RTOS_OSAL_TASK_POOL:
+            {
+                g_reference_enum_type_sizes[i].item_size = obj_sizes->rtos_task_pool_size;
                 break;
             }
             default:
@@ -366,14 +408,16 @@ vx_status ownAllocReferenceBufferGeneric(vx_reference ref)
             /* memory is not allocated, so allocate it */
             if(mem_ptr->host_ptr == (uint64_t)0)
             {
+                vx_enum heap_region = (vx_enum)mem_ptr->mem_heap_region;
+
                 status = tivxMemBufferAlloc(
                     mem_ptr, mem_size,
-                    (vx_enum)TIVX_MEM_EXTERNAL_SHARED);
+                    heap_region);
 
                 if ((vx_status)VX_SUCCESS == status)
                 {
                     mem_ptr->shared_ptr = tivxMemHost2SharedPtr(
-                        mem_ptr->host_ptr, (vx_enum)TIVX_MEM_EXTERNAL_SHARED);
+                        mem_ptr->host_ptr, heap_region);
 
                     tivxCheckStatus(&status, tivxMemBufferMap((void *)(uintptr_t)mem_ptr->host_ptr, (uint32_t)mem_size,
                         (vx_enum)VX_MEMORY_TYPE_HOST, (vx_enum)VX_READ_AND_WRITE));
@@ -779,36 +823,36 @@ vx_uint32 ownIncrementReference(vx_reference ref, vx_enum reftype)
     return count;
 }
 
-vx_status ownReleaseReferenceInt(vx_reference *pref,
+vx_status ownReleaseReferenceInt(vx_reference *ref,
                         vx_enum ref_type,
                         vx_enum reftype,
-                        tivx_reference_callback_f special_destructor)
+                        tivx_reference_callback_f destructor)
 {
     vx_status status = (vx_status)VX_SUCCESS;
-    vx_reference ref;
+    vx_reference reference;
     vx_bool is_removed = (vx_bool)vx_true_e;
 
-    if (pref != NULL)
+    if (ref != NULL)
     {
-        ref = *pref;
+        reference = *ref;
     }
     else
     {
-        ref = NULL;
+        reference = NULL;
     }
 
-    if (ownIsValidSpecificReference(ref, ref_type) == (vx_bool)vx_true_e)
+    if (ownIsValidSpecificReference(reference, ref_type) == (vx_bool)vx_true_e)
     {
-        if (ownDecrementReference(ref, reftype) == 0U)
+        if (ownDecrementReference(reference, reftype) == 0U)
         {
-            tivx_reference_callback_f destructor = special_destructor;
+            tivx_reference_callback_f destructor_cb = destructor;
 
-            if ((NULL != ref->supplementary_data) && (NULL != (ref->supplementary_data->base.release_callback)))
+            if ((NULL != reference->supplementary_data) && (NULL != (reference->supplementary_data->base.release_callback)))
             {
-                (void)ref->supplementary_data->base.release_callback((vx_reference *)&ref->supplementary_data);
+                (void)reference->supplementary_data->base.release_callback((vx_reference *)&reference->supplementary_data);
             }
 
-            is_removed = ownRemoveReferenceFromContext(ref->context, ref);
+            is_removed = ownRemoveReferenceFromContext(reference->context, reference);
 
             if (is_removed  == (vx_bool)vx_false_e)
             {
@@ -818,15 +862,15 @@ vx_status ownReleaseReferenceInt(vx_reference *pref,
             else
             {
                 /* find the destructor method */
-                if (destructor==NULL)
+                if (destructor_cb==NULL)
                 {
-                    destructor = ref->destructor_callback;
+                    destructor_cb = reference->destructor_callback;
                 }
 
                 /* if there is a destructor, call it. */
-                if (destructor != NULL)
+                if (destructor_cb != NULL)
                 {
-                    status = destructor(ref);
+                    status = destructor_cb(reference);
 
                     if (status != (vx_status)VX_SUCCESS)
                     {
@@ -834,15 +878,15 @@ vx_status ownReleaseReferenceInt(vx_reference *pref,
                     }
                 }
 
-                (void)ownDeleteReferenceLock(ref);
-                ref->magic = TIVX_BAD_MAGIC; /* make sure no existing copies of refs can use ref again */
-                if((vx_status)VX_SUCCESS != ownObjectFree(ref))
+                (void)ownDeleteReferenceLock(reference);
+                reference->magic = TIVX_BAD_MAGIC; /* make sure no existing copies of refs can use ref again */
+                if((vx_status)VX_SUCCESS != ownObjectFree(reference))
                 {
                     VX_PRINT(VX_ZONE_ERROR, "Failed to free memory of reference \n");
                 }
             }
         }
-        *pref = NULL;
+        *ref = NULL;
     } else {
         VX_PRINT(VX_ZONE_ERROR,"Invalid reference\n");
         status = (vx_status)VX_ERROR_INVALID_REFERENCE;
@@ -1106,6 +1150,89 @@ VX_API_ENTRY vx_status VX_API_CALL tivxSetReferenceAttribute(vx_reference ref, v
                     status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
+            case (vx_enum)TIVX_REFERENCE_MEM_HEAP_REGION:
+                if ((VX_CHECK_PARAM(ptr, size, vx_enum, 0x3U)) && (NULL != ref->obj_desc) &&
+                    ((*(const vx_enum *)ptr == (vx_enum)TIVX_MEM_EXTERNAL_SHARED) ||
+                     (*(const vx_enum *)ptr == (vx_enum)TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY) ||
+                     (*(const vx_enum *)ptr == (vx_enum)TIVX_MEM_EXTERNAL_SHARED_64BIT_ONLY_CONST)))
+                {
+                    vx_bool is_allocated = (vx_bool)vx_false_e;
+                    uint32_t i;
+
+                    if (ref->type == (vx_enum)VX_TYPE_IMAGE)
+                    {
+                        tivx_obj_desc_image_t *obj_desc = (tivx_obj_desc_image_t *)ref->obj_desc;
+
+                        for (i = 0U; i < obj_desc->planes; i++)
+                        {
+                            if (obj_desc->mem_ptr[i].host_ptr != (uint64_t)0)
+                            {
+                                is_allocated = (vx_bool)vx_true_e;
+                                break;
+                            }
+                        }
+
+                        if ((vx_bool)vx_false_e == is_allocated)
+                        {
+                            for (i = 0U; i < obj_desc->planes; i++)
+                            {
+                                obj_desc->mem_ptr[i].mem_heap_region = *(const vx_enum *)ptr;
+                            }
+                        }
+                    }
+                    else if (ref->type == TIVX_TYPE_RAW_IMAGE)
+                    {
+                        tivx_obj_desc_raw_image_t *obj_desc = (tivx_obj_desc_raw_image_t *)ref->obj_desc;
+
+                        for (i = 0U; i < obj_desc->params.num_exposures; i++)
+                        {
+                            if (obj_desc->mem_ptr[i].host_ptr != (uint64_t)0)
+                            {
+                                is_allocated = (vx_bool)vx_true_e;
+                                break;
+                            }
+                        }
+
+                        if ((vx_bool)vx_false_e == is_allocated)
+                        {
+                            for (i = 0U; i < obj_desc->params.num_exposures; i++)
+                            {
+                                obj_desc->mem_ptr[i].mem_heap_region = *(const vx_enum *)ptr;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        tivx_shared_mem_ptr_t *mem_ptr = NULL;
+                        uint32_t mem_size = 0;
+
+                        if ((vx_status)VX_SUCCESS != ownReferenceGetMemAttrsFromObjDesc(ref, &mem_ptr, &mem_size))
+                        {
+                            VX_PRINT(VX_ZONE_ERROR, "reference type does not support TIVX_REFERENCE_MEM_HEAP_REGION\n");
+                            status = (vx_status)VX_ERROR_NOT_SUPPORTED;
+                        }
+                        else if (mem_ptr->host_ptr != (uint64_t)0)
+                        {
+                            is_allocated = (vx_bool)vx_true_e;
+                        }
+                        else
+                        {
+                            mem_ptr->mem_heap_region = *(const vx_enum *)ptr;
+                        }
+                    }
+
+                    if ((vx_bool)vx_true_e == is_allocated)
+                    {
+                        VX_PRINT(VX_ZONE_ERROR, "cannot set TIVX_REFERENCE_MEM_HEAP_REGION after buffer has been allocated\n");
+                        status = (vx_status)VX_ERROR_NOT_SUPPORTED;
+                    }
+                }
+                else
+                {
+                    VX_PRINT(VX_ZONE_ERROR, "error setting reference mem heap region\n");
+                    status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
+                }
+                break;
             default:
                 VX_PRINT(VX_ZONE_ERROR, "Invalid attribute\n");
                 status = (vx_status)VX_ERROR_NOT_SUPPORTED;
@@ -1217,6 +1344,43 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryReference(vx_reference ref, vx_enum at
                     status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
+            case (vx_enum)TIVX_REFERENCE_MEM_HEAP_REGION:
+                if ((VX_CHECK_PARAM(ptr, size, vx_enum, 0x3U)) && (NULL != ref->obj_desc))
+                {
+                    if (ref->type == (vx_enum)VX_TYPE_IMAGE)
+                    {
+                        tivx_obj_desc_image_t *obj_desc = (tivx_obj_desc_image_t *)ref->obj_desc;
+
+                        *(vx_enum *)ptr = (vx_enum)obj_desc->mem_ptr[0].mem_heap_region;
+                    }
+                    else if (ref->type == TIVX_TYPE_RAW_IMAGE)
+                    {
+                        tivx_obj_desc_raw_image_t *obj_desc = (tivx_obj_desc_raw_image_t *)ref->obj_desc;
+
+                        *(vx_enum *)ptr = (vx_enum)obj_desc->mem_ptr[0].mem_heap_region;
+                    }
+                    else
+                    {
+                        tivx_shared_mem_ptr_t *mem_ptr = NULL;
+                        uint32_t mem_size = 0;
+
+                        if ((vx_status)VX_SUCCESS != ownReferenceGetMemAttrsFromObjDesc(ref, &mem_ptr, &mem_size))
+                        {
+                            VX_PRINT(VX_ZONE_ERROR, "reference type does not support TIVX_REFERENCE_MEM_HEAP_REGION\n");
+                            status = (vx_status)VX_ERROR_NOT_SUPPORTED;
+                        }
+                        else
+                        {
+                            *(vx_enum *)ptr = (vx_enum)mem_ptr->mem_heap_region;
+                        }
+                    }
+                }
+                else
+                {
+                    VX_PRINT(VX_ZONE_ERROR, "Query reference mem heap region failed\n");
+                    status = (vx_status)VX_ERROR_INVALID_PARAMETERS;
+                }
+                break;
             default:
                 VX_PRINT(VX_ZONE_ERROR, "Invalid attribute\n");
                 status = (vx_status)VX_ERROR_NOT_SUPPORTED;
@@ -1284,25 +1448,25 @@ VX_API_ENTRY vx_status VX_API_CALL vxRetainReference(vx_reference ref)
     return status;
 }
 
-VX_API_ENTRY vx_status VX_API_CALL vxGetStatus(vx_reference ref)
+VX_API_ENTRY vx_status VX_API_CALL vxGetStatus(vx_reference reference)
 {
     vx_status status = (vx_status)VX_FAILURE;
 
-    if (ref == NULL)
+    if (reference == NULL)
     {
         /*! \internal probably ran out of handles or memory */
         VX_PRINT(VX_ZONE_ERROR, "Reference is NULL\n");
         status = (vx_status)VX_ERROR_NO_RESOURCES;
     }
-    else if (ownIsValidContext((vx_context)ref) == (vx_bool)vx_true_e)
+    else if (ownIsValidContext((vx_context)reference) == (vx_bool)vx_true_e)
     {
         status = (vx_status)VX_SUCCESS;
     }
-    else if (ownIsValidReference(ref) == (vx_bool)vx_true_e)
+    else if (ownIsValidReference(reference) == (vx_bool)vx_true_e)
     {
-        if (ref->type == (vx_enum)VX_TYPE_ERROR)
+        if (reference->type == (vx_enum)VX_TYPE_ERROR)
         {
-            tivx_error_t *error = (tivx_error_t *)ref;
+            tivx_error_t *error = (tivx_error_t *)reference;
             status = error->status;
         }
         else
@@ -2005,11 +2169,14 @@ vx_status tivxReferenceImportHandle(vx_reference ref, const void *addr[], const 
                             /* Propagate to subimages */
                             vx_image image = vxCastRefAsImage(ref,NULL);
 
-                            for (subimage_idx = 0; ((subimage_idx < TIVX_IMAGE_MAX_SUBIMAGES) &&
-                                        (image->subimages[subimage_idx] != NULL) && 
-                                        (status == (vx_status)VX_SUCCESS)); 
+                            for (subimage_idx = 0; (subimage_idx < TIVX_IMAGE_MAX_SUBIMAGES) &&
+                                        (image->subimages[subimage_idx] != NULL);
                                 subimage_idx++)
                             {
+                                if (status != (vx_status)VX_SUCCESS)
+                                {
+                                    break;
+                                }
                                 tivx_obj_desc_image_t *si_obj_desc;
                                 si_obj_desc = (tivx_obj_desc_image_t *)image->subimages[subimage_idx]->base.obj_desc;
 
